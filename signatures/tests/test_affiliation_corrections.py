@@ -135,3 +135,127 @@ class SignatureAffiliationCorrectionTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "영어회화전문강사/영어46")
         self.assertNotContains(response, "영어회화전문강사/ 영어46")
+
+    def test_print_view_without_roster_sorts_by_corrected_affiliation_naturally(self):
+        Signature.objects.create(
+            training_session=self.session,
+            participant_name="둘반",
+            participant_affiliation="2-1",
+            signature_data="data:image/png;base64,SIG21",
+        )
+        Signature.objects.create(
+            training_session=self.session,
+            participant_name="열반",
+            participant_affiliation="1-10",
+            signature_data="data:image/png;base64,SIG110",
+        )
+        Signature.objects.create(
+            training_session=self.session,
+            participant_name="정정반",
+            participant_affiliation="1 / 2",
+            corrected_affiliation="1-2",
+            signature_data="data:image/png;base64,SIG12",
+        )
+
+        response = self.client.get(reverse("signatures:print", kwargs={"uuid": self.session.uuid}))
+        self.assertEqual(response.status_code, 200)
+
+        ordered_names = [item["name"] for item in response.context["pages"][0]["left_items"]]
+        self.assertEqual(ordered_names[:3], ["정정반", "열반", "둘반"])
+
+    def test_detail_view_without_roster_uses_sorted_signature_rows(self):
+        Signature.objects.create(
+            training_session=self.session,
+            participant_name="마지막",
+            participant_affiliation="2-3",
+            signature_data="data:image/png;base64,SIG23",
+        )
+        Signature.objects.create(
+            training_session=self.session,
+            participant_name="첫번째",
+            participant_affiliation="1-1",
+            signature_data="data:image/png;base64,SIG11",
+        )
+        Signature.objects.create(
+            training_session=self.session,
+            participant_name="두번째",
+            participant_affiliation="1-2",
+            signature_data="data:image/png;base64,SIG12B",
+        )
+
+        response = self.client.get(reverse("signatures:detail", kwargs={"uuid": self.session.uuid}))
+        self.assertEqual(response.status_code, 200)
+
+        ordered_names = [sig.participant_name for sig in response.context["signature_rows"]]
+        self.assertEqual(ordered_names[:3], ["첫번째", "두번째", "마지막"])
+
+    def test_signature_sort_mode_can_switch_to_submitted_order(self):
+        Signature.objects.create(
+            training_session=self.session,
+            participant_name="먼저사인",
+            participant_affiliation="2-1",
+            signature_data="data:image/png;base64,SIGA",
+        )
+        Signature.objects.create(
+            training_session=self.session,
+            participant_name="나중사인",
+            participant_affiliation="1-1",
+            signature_data="data:image/png;base64,SIGB",
+        )
+
+        response = self.client.post(
+            reverse("signatures:update_signature_sort_mode", kwargs={"uuid": self.session.uuid}),
+            data='{"sort_mode":"submitted"}',
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.session.refresh_from_db()
+        self.assertEqual(self.session.signature_sort_mode, TrainingSession.SIGNATURE_SORT_SUBMITTED)
+
+        detail_response = self.client.get(reverse("signatures:detail", kwargs={"uuid": self.session.uuid}))
+        ordered_names = [sig.participant_name for sig in detail_response.context["signature_rows"]]
+        self.assertEqual(ordered_names[:2], ["먼저사인", "나중사인"])
+
+    def test_manual_signature_order_updates_detail_and_print(self):
+        Signature.objects.create(
+            training_session=self.session,
+            participant_name="첫줄",
+            participant_affiliation="1-1",
+            signature_data="data:image/png;base64,SIGM1",
+        )
+        Signature.objects.create(
+            training_session=self.session,
+            participant_name="둘째줄",
+            participant_affiliation="1-2",
+            signature_data="data:image/png;base64,SIGM2",
+        )
+        third = Signature.objects.create(
+            training_session=self.session,
+            participant_name="셋째줄",
+            participant_affiliation="2-1",
+            signature_data="data:image/png;base64,SIGM3",
+        )
+
+        response = self.client.post(
+            reverse(
+                "signatures:update_signature_manual_order",
+                kwargs={"uuid": self.session.uuid, "signature_id": third.id},
+            ),
+            data='{"position":1}',
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.session.refresh_from_db()
+        self.assertEqual(self.session.signature_sort_mode, TrainingSession.SIGNATURE_SORT_MANUAL)
+
+        ordered_manual = list(self.session.signatures.order_by("manual_sort_order", "id"))
+        self.assertEqual([sig.participant_name for sig in ordered_manual], ["셋째줄", "첫줄", "둘째줄"])
+        self.assertEqual([sig.manual_sort_order for sig in ordered_manual], [1, 2, 3])
+
+        detail_response = self.client.get(reverse("signatures:detail", kwargs={"uuid": self.session.uuid}))
+        ordered_names = [sig.participant_name for sig in detail_response.context["signature_rows"]]
+        self.assertEqual(ordered_names[:3], ["셋째줄", "첫줄", "둘째줄"])
+
+        print_response = self.client.get(reverse("signatures:print", kwargs={"uuid": self.session.uuid}))
+        print_names = [item["name"] for item in print_response.context["pages"][0]["left_items"]]
+        self.assertEqual(print_names[:3], ["셋째줄", "첫줄", "둘째줄"])

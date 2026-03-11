@@ -12,6 +12,7 @@ urlpatterns = [
     path("<uuid:uuid>/edit/", views.session_edit, name="edit"),
     path("<uuid:uuid>/delete/", views.session_delete, name="delete"),
     path("<uuid:uuid>/print/", views.print_view, name="print"),
+    path("<uuid:uuid>/signature-sort-mode/", views.update_signature_sort_mode, name="update_signature_sort_mode"),
     path("<uuid:uuid>/toggle/", views.toggle_active, name="toggle"),
     path("sign/<uuid:uuid>/", views.sign, name="sign"),
     path("signature/<int:pk>/delete/", views.delete_signature, name="delete_signature"),
@@ -32,6 +33,11 @@ urlpatterns = [
         name="correct_participant_affiliation",
     ),
     path("<uuid:uuid>/signatures/<int:signature_id>/match/", views.match_signature, name="match_signature"),
+    path(
+        "<uuid:uuid>/signatures/<int:signature_id>/manual-order/",
+        views.update_signature_manual_order,
+        name="update_signature_manual_order",
+    ),
     path(
         "<uuid:uuid>/signatures/<int:signature_id>/correct-affiliation/",
         views.correct_signature_affiliation,

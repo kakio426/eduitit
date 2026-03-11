@@ -50,6 +50,7 @@ class SignaturePublicSigningTests(TestCase):
         self.assertEqual(signature.ip_address, "198.51.100.10")
         self.assertEqual(signature.user_agent, "SignatureAgent/1.0")
         self.assertEqual(signature.submission_mode, Signature.SUBMISSION_MODE_OPEN)
+        self.assertEqual(signature.manual_sort_order, 1)
 
         log = SignatureAuditLog.objects.get(training_session=self.session, signature=signature)
         self.assertEqual(log.event_type, SignatureAuditLog.EVENT_SIGN_SUBMITTED)

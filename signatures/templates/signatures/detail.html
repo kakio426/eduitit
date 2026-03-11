@@ -489,9 +489,36 @@
 
         <!-- Signature List -->
         <div class="clay-card p-4 md:p-6">
-            <h2 class="text-base md:text-lg font-bold text-gray-700 mb-3 md:mb-4">
-                <i class="fa-solid fa-list-check text-purple-500 mr-1"></i>서명 목록 ({{ signatures.count }})
-            </h2>
+            <div class="flex flex-col gap-3 mb-3 md:mb-4 {% if can_customize_signature_sort %}xl:flex-row xl:items-start xl:justify-between{% endif %}">
+                <div>
+                    <h2 class="text-base md:text-lg font-bold text-gray-700">
+                        <i class="fa-solid fa-list-check text-purple-500 mr-1"></i>서명 목록 ({{ signatures.count }})
+                    </h2>
+                    {% if can_customize_signature_sort %}
+                    <p class="mt-1 text-xs md:text-sm text-gray-500">목록과 출력이 같은 순서로 보입니다.</p>
+                    {% endif %}
+                </div>
+                {% if can_customize_signature_sort %}
+                <div class="rounded-2xl border border-gray-200 bg-gray-50 p-3">
+                    <p class="text-[11px] font-bold tracking-wide text-gray-500">정렬 방식</p>
+                    <div class="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                        {% for value, label in signature_sort_choices %}
+                        <button
+                            type="button"
+                            onclick="updateSignatureSortMode('{{ value }}')"
+                            data-sort-mode-btn="{{ value }}"
+                            class="rounded-xl px-3 py-2 text-xs md:text-sm font-bold transition {% if signature_sort_mode == value %}bg-purple-600 text-white shadow-sm{% else %}bg-white text-gray-700 border border-gray-200 hover:border-purple-300 hover:text-purple-700{% endif %}"
+                        >
+                            {{ label }}
+                        </button>
+                        {% endfor %}
+                    </div>
+                    {% if signature_sort_mode == 'manual' %}
+                    <p class="mt-2 text-[11px] text-gray-500">순번을 바꾸면 출력 순서도 바로 같이 바뀝니다.</p>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
             {% if signatures %}
             <div class="overflow-x-auto -mx-4 md:mx-0">
                 <table class="w-full text-sm md:text-base text-left">
@@ -506,9 +533,52 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for sig in signatures %}
+                        {% for sig in signature_rows %}
                         <tr class="border-b border-gray-100 hover:bg-gray-50/50" id="row-{{ sig.pk }}">
-                            <td class="py-2 px-2 md:px-4 text-gray-600 text-xs md:text-sm">{{ forloop.counter }}</td>
+                            <td class="py-2 px-2 md:px-4 text-gray-600 text-xs md:text-sm align-top">
+                                <div class="flex flex-col gap-1">
+                                    <span class="font-semibold">{{ forloop.counter }}</span>
+                                    {% if can_customize_signature_sort and signature_sort_mode == 'manual' %}
+                                    <div class="flex items-center gap-1">
+                                        <button
+                                            type="button"
+                                            onclick="shiftSignaturePosition('{{ sig.id }}', {{ forloop.counter }}, -1)"
+                                            class="h-7 w-7 rounded-lg border border-gray-200 bg-white text-gray-600 hover:border-purple-300 hover:text-purple-700 transition {% if forloop.first %}opacity-40 cursor-not-allowed{% endif %}"
+                                            {% if forloop.first %}disabled{% endif %}
+                                            title="위로"
+                                        >
+                                            <i class="fa-solid fa-arrow-up text-[10px]"></i>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onclick="shiftSignaturePosition('{{ sig.id }}', {{ forloop.counter }}, 1)"
+                                            class="h-7 w-7 rounded-lg border border-gray-200 bg-white text-gray-600 hover:border-purple-300 hover:text-purple-700 transition {% if forloop.last %}opacity-40 cursor-not-allowed{% endif %}"
+                                            {% if forloop.last %}disabled{% endif %}
+                                            title="아래로"
+                                        >
+                                            <i class="fa-solid fa-arrow-down text-[10px]"></i>
+                                        </button>
+                                    </div>
+                                    <div class="flex items-center gap-1">
+                                        <input
+                                            id="manualOrderInput-{{ sig.id }}"
+                                            type="number"
+                                            min="1"
+                                            max="{{ signatures.count }}"
+                                            value="{{ forloop.counter }}"
+                                            class="w-14 rounded-lg border border-gray-200 bg-white px-2 py-1 text-[11px] text-gray-700"
+                                        >
+                                        <button
+                                            type="button"
+                                            onclick="setSignatureManualOrder('{{ sig.id }}')"
+                                            class="rounded-lg bg-purple-50 px-2 py-1 text-[11px] font-bold text-purple-700 hover:bg-purple-100 transition"
+                                        >
+                                            적용
+                                        </button>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </td>
                             <td class="py-2 px-2 md:px-4 text-xs md:text-sm text-gray-700">
                                 <div class="flex items-center gap-2">
                                     <span class="font-semibold">{{ sig.display_affiliation|default:"-" }}</span>
@@ -660,6 +730,79 @@
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
+    }
+
+    async function parseJsonResponse(response) {
+        let payload = {};
+        try {
+            payload = await response.json();
+        } catch (error) {
+            payload = {};
+        }
+        if (!response.ok) {
+            throw new Error(payload.error || '요청 처리 중 오류가 발생했습니다.');
+        }
+        return payload;
+    }
+
+    async function updateSignatureSortMode(sortMode) {
+        try {
+            const response = await fetch(`/signatures/${sessionUuid}/signature-sort-mode/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}',
+                },
+                body: JSON.stringify({ sort_mode: sortMode }),
+            });
+            const data = await parseJsonResponse(response);
+            if (!data.success) {
+                alert('오류: ' + (data.error || '정렬 방식을 바꾸지 못했습니다.'));
+                return;
+            }
+            location.reload();
+        } catch (error) {
+            alert('오류: ' + error.message);
+        }
+    }
+
+    async function saveSignatureManualOrder(signatureId, position) {
+        try {
+            const response = await fetch(`/signatures/${sessionUuid}/signatures/${signatureId}/manual-order/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}',
+                },
+                body: JSON.stringify({ position }),
+            });
+            const data = await parseJsonResponse(response);
+            if (!data.success) {
+                alert('오류: ' + (data.error || '순서를 바꾸지 못했습니다.'));
+                return;
+            }
+            location.reload();
+        } catch (error) {
+            alert('오류: ' + error.message);
+        }
+    }
+
+    function setSignatureManualOrder(signatureId) {
+        const input = document.getElementById(`manualOrderInput-${signatureId}`);
+        if (!input) return;
+        const position = Number(input.value);
+        if (!Number.isInteger(position) || position < 1) {
+            alert('순번은 1 이상의 숫자로 입력해 주세요.');
+            input.focus();
+            return;
+        }
+        saveSignatureManualOrder(signatureId, position);
+    }
+
+    function shiftSignaturePosition(signatureId, currentPosition, delta) {
+        const nextPosition = Number(currentPosition) + Number(delta);
+        if (nextPosition < 1) return;
+        saveSignatureManualOrder(signatureId, nextPosition);
     }
 
     function openQrModal() {

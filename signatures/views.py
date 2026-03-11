@@ -10,6 +10,7 @@ import qrcode
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.db import transaction
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
 from django.urls import reverse
@@ -54,6 +55,108 @@ def _normalize_affiliation_text(value):
     normalized = re.sub(r"\s*/\s*", "/", normalized)
     normalized = re.sub(r"\s*-\s*", "-", normalized)
     return normalized[:100]
+
+
+def _natural_string_sort_key(value):
+    normalized = _normalize_affiliation_text(value).lower()
+    if not normalized:
+        return ((1, ""),)
+
+    parts = re.split(r"(\d+)", normalized)
+    key = []
+    for part in parts:
+        if not part:
+            continue
+        if part.isdigit():
+            key.append((0, int(part)))
+        else:
+            key.append((1, part))
+    return tuple(key)
+
+
+def _signature_affiliation_sort_key(signature):
+    affiliation = signature.display_affiliation
+    return (
+        1 if not affiliation else 0,
+        _natural_string_sort_key(affiliation),
+        _natural_string_sort_key(signature.participant_name),
+        signature.created_at,
+        signature.id,
+    )
+
+
+def _signature_submitted_sort_key(signature):
+    return (
+        signature.created_at,
+        signature.id,
+    )
+
+
+def _signature_manual_sort_key(signature):
+    return (
+        signature.manual_sort_order or 0,
+        signature.created_at,
+        signature.id,
+    )
+
+
+def _get_signature_sort_mode(session):
+    sort_mode = str(session.signature_sort_mode or "").strip()
+    valid_modes = {
+        TrainingSession.SIGNATURE_SORT_SUBMITTED,
+        TrainingSession.SIGNATURE_SORT_AFFILIATION,
+        TrainingSession.SIGNATURE_SORT_MANUAL,
+    }
+    if sort_mode not in valid_modes:
+        return TrainingSession.SIGNATURE_SORT_AFFILIATION
+    return sort_mode
+
+
+def _sort_signatures_for_display(signatures, sort_mode):
+    signature_list = list(signatures)
+    if sort_mode == TrainingSession.SIGNATURE_SORT_SUBMITTED:
+        return sorted(signature_list, key=_signature_submitted_sort_key)
+    if sort_mode == TrainingSession.SIGNATURE_SORT_MANUAL:
+        return sorted(signature_list, key=_signature_manual_sort_key)
+    return sorted(signature_list, key=_signature_affiliation_sort_key)
+
+
+def _resequence_manual_signature_order(session):
+    ordered_signatures = _sort_signatures_for_display(
+        session.signatures.all(),
+        TrainingSession.SIGNATURE_SORT_MANUAL,
+    )
+    updates = []
+    for index, signature in enumerate(ordered_signatures, start=1):
+        if signature.manual_sort_order == index:
+            continue
+        signature.manual_sort_order = index
+        updates.append(signature)
+    if updates:
+        Signature.objects.bulk_update(updates, ["manual_sort_order"])
+    return ordered_signatures
+
+
+def _move_signature_to_position(session, signature, target_position):
+    ordered_signatures = _resequence_manual_signature_order(session)
+    total_count = len(ordered_signatures)
+    if total_count <= 1:
+        return ordered_signatures
+
+    target_position = max(1, min(int(target_position), total_count))
+    current_index = next(
+        (index for index, item in enumerate(ordered_signatures) if item.id == signature.id),
+        None,
+    )
+    if current_index is None:
+        return ordered_signatures
+
+    signature_item = ordered_signatures.pop(current_index)
+    ordered_signatures.insert(target_position - 1, signature_item)
+    for index, item in enumerate(ordered_signatures, start=1):
+        item.manual_sort_order = index
+    Signature.objects.bulk_update(ordered_signatures, ["manual_sort_order"])
+    return ordered_signatures
 
 
 def _request_client_ip(request):
@@ -477,9 +580,16 @@ def session_detail(request, uuid):
         session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
         signatures = session.signatures.all()
         expected = session.expected_participants.all()
+        has_expected_participants = expected.exists()
+        signature_sort_mode = _get_signature_sort_mode(session)
+        signature_rows = (
+            _sort_signatures_for_display(signatures, signature_sort_mode)
+            if not has_expected_participants
+            else list(signatures)
+        )
 
         suggestions = []
-        if expected.exists():
+        if has_expected_participants:
             matched_sig_ids = expected.filter(
                 matched_signature__isnull=False
             ).values_list('matched_signature_id', flat=True)
@@ -537,6 +647,10 @@ def session_detail(request, uuid):
         return render(request, 'signatures/detail.html', {
             'session': session,
             'signatures': signatures,
+            'signature_rows': signature_rows,
+            'signature_sort_mode': signature_sort_mode,
+            'signature_sort_choices': TrainingSession.SIGNATURE_SORT_CHOICES,
+            'can_customize_signature_sort': not has_expected_participants,
             'expected_participants': expected,
             'unmatched_suggestions': suggestions,
             'duplicates': duplicates,
@@ -654,6 +768,7 @@ def sign(request, uuid):
 def print_view(request, uuid):
     """출석부 인쇄 페이지 - 명단 유무에 따라 동작 변경"""
     session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
+    signature_sort_mode = _get_signature_sort_mode(session)
     
     # 데이터 준비
     print_items = []
@@ -694,7 +809,7 @@ def print_view(request, uuid):
         
     else:
         # Case B: 명단이 없는 경우 (Phase 1) -> 서명 기준
-        signatures = session.signatures.all().order_by('participant_name')
+        signatures = _sort_signatures_for_display(session.signatures.all(), signature_sort_mode)
         for sig in signatures:
             print_items.append({
                 'name': sig.participant_name,
@@ -749,6 +864,84 @@ def print_view(request, uuid):
         'signed_count': signed_count,
         'unsigned_count': max(0, total_expected - signed_count),
         'total_pages': len(pages),
+        'signature_sort_mode': signature_sort_mode,
+    })
+
+
+@login_required
+@require_POST
+def update_signature_sort_mode(request, uuid):
+    """명단 없는 연수의 서명 정렬 방식을 변경."""
+    session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
+    if session.expected_participants.exists():
+        return JsonResponse(
+            {'success': False, 'error': '명단이 있는 연수는 명단 기준으로 출력됩니다.'},
+            status=400,
+        )
+
+    try:
+        payload = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': '요청 형식이 올바르지 않습니다.'}, status=400)
+
+    sort_mode = str(payload.get("sort_mode") or "").strip()
+    valid_modes = {choice[0] for choice in TrainingSession.SIGNATURE_SORT_CHOICES}
+    if sort_mode not in valid_modes:
+        return JsonResponse({'success': False, 'error': '정렬 방식을 다시 확인해 주세요.'}, status=400)
+
+    if sort_mode == TrainingSession.SIGNATURE_SORT_MANUAL:
+        _resequence_manual_signature_order(session)
+
+    if session.signature_sort_mode != sort_mode:
+        session.signature_sort_mode = sort_mode
+        session.save(update_fields=["signature_sort_mode"])
+
+    ordered_signatures = _sort_signatures_for_display(session.signatures.all(), sort_mode)
+    return JsonResponse({
+        'success': True,
+        'sort_mode': sort_mode,
+        'ordered_signature_ids': [signature.id for signature in ordered_signatures],
+    })
+
+
+@login_required
+@require_POST
+def update_signature_manual_order(request, uuid, signature_id):
+    """명단 없는 연수에서 수동 순서를 저장."""
+    session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
+    if session.expected_participants.exists():
+        return JsonResponse(
+            {'success': False, 'error': '명단이 있는 연수는 명단 기준으로 출력됩니다.'},
+            status=400,
+        )
+
+    signature = get_object_or_404(Signature, id=signature_id, training_session=session)
+
+    try:
+        payload = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': '요청 형식이 올바르지 않습니다.'}, status=400)
+
+    raw_position = payload.get("position")
+    try:
+        target_position = int(raw_position)
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': '이동할 순번을 숫자로 입력해 주세요.'}, status=400)
+
+    if target_position < 1:
+        return JsonResponse({'success': False, 'error': '순번은 1 이상이어야 합니다.'}, status=400)
+
+    with transaction.atomic():
+        ordered_signatures = _move_signature_to_position(session, signature, target_position)
+        if session.signature_sort_mode != TrainingSession.SIGNATURE_SORT_MANUAL:
+            session.signature_sort_mode = TrainingSession.SIGNATURE_SORT_MANUAL
+            session.save(update_fields=["signature_sort_mode"])
+
+    return JsonResponse({
+        'success': True,
+        'sort_mode': TrainingSession.SIGNATURE_SORT_MANUAL,
+        'ordered_signature_ids': [item.id for item in ordered_signatures],
+        'ordered_signature_names': [item.participant_name for item in ordered_signatures],
     })
 
 
@@ -770,8 +963,13 @@ def toggle_active(request, uuid):
 def delete_signature(request, pk):
     """개별 서명 삭제 (AJAX)"""
     signature = get_object_or_404(Signature, pk=pk, training_session__created_by=request.user)
+    session = signature.training_session
     signature.delete()
+    if not session.expected_participants.exists():
+        _resequence_manual_signature_order(session)
     return JsonResponse({'success': True})
+
+
 @login_required
 def style_list(request):
     """내 서명 스타일 즐겨찾기 목록"""
