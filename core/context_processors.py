@@ -5,27 +5,12 @@ from .active_classroom import (
     list_hs_classrooms_for_user,
 )
 from .product_visibility import filter_discoverable_products
+from .service_launcher import build_service_launcher_items
 from django.utils import timezone
 from django.contrib import messages as django_messages
 import logging
 
 logger = logging.getLogger(__name__)
-
-SEARCH_HIDDEN_ROUTE_NAMES = {"sheetbook:index"}
-SEARCH_PUBLIC_TITLE_BY_ROUTE = {
-    "classcalendar:main": "학급 캘린더",
-    "sheetbook:index": "학급 기록 보드",
-}
-
-
-def _search_public_title(product):
-    route_name = str(getattr(product, "launch_route_name", "") or "").strip()
-    title = str(getattr(product, "title", "") or "").strip()
-    return SEARCH_PUBLIC_TITLE_BY_ROUTE.get(route_name, title)
-
-
-def _search_public_text(text, title):
-    return str(text or "").replace("교무수첩", title).replace("교무 수첩", title)
 
 def visitor_counts(request):
     """
@@ -96,6 +81,7 @@ def site_config(request):
             'banner_active': config.banner_active,
             'banner_color': config.banner_color,
             'banner_link': config.banner_link,
+            'notebook_manual_url': getattr(config, 'notebook_manual_url', ''),
         }
     except Exception:
         return {
@@ -103,11 +89,12 @@ def site_config(request):
             'banner_active': False,
             'banner_color': '#7c3aed',
             'banner_link': '',
+            'notebook_manual_url': '',
         }
 
 
 def search_products(request):
-    """Ctrl+K 검색 모달용 서비스 목록 JSON 제공."""
+    """글로벌 서비스 런처용 서비스 목록 JSON 제공."""
     from django.conf import settings as django_settings
     if not getattr(django_settings, 'GLOBAL_SEARCH_ENABLED', True):
         return {}
@@ -119,23 +106,11 @@ def search_products(request):
         products = filter_discoverable_products(
             Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
         )
-        items = []
-        for p in products:
-            route_name = str(getattr(p, 'launch_route_name', '') or '').strip()
-            if route_name in SEARCH_HIDDEN_ROUTE_NAMES:
-                continue
-            public_title = _search_public_title(p)
-            items.append({
-                'id': p.id,
-                'title': public_title,
-                'description': _search_public_text((p.description or '')[:80], public_title),
-                'solve_text': _search_public_text(p.solve_text or '', public_title),
-                'icon': p.icon or '',
-                'service_type': p.service_type or '',
-            })
-        return {'search_products_json': json.dumps(items, ensure_ascii=False)}
+        items = build_service_launcher_items(products)
+        return {'service_launcher_json': json.dumps(items, ensure_ascii=False)}
     except Exception:
-        return {'search_products_json': '[]'}
+        logger.exception("[ServiceLauncher] payload build failed")
+        return {'service_launcher_json': '[]'}
 
 
 def seo_meta(request):

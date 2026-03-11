@@ -1,10 +1,11 @@
-## [Canonical Top Summary] 2026-02-27
+## [Canonical Top Summary] 2026-03-11
 - Declare UI change scope first: global/app/page
 - Do not force one style on all services; preserve existing stable UI
 - Prioritize behavior parity over visual polish
 - Recover Korean text integrity before continuing feature work
 - Validate with python manage.py check (+ node --check when JS changes)
 - New services MUST create `ServiceManual` (+ 3+ `ManualSection`) at the same time
+- New services MUST appear in the global service launcher by default
 - Lock classroom core journey first: `teacher create -> publish -> student QR join`
 - Keep one clear path per goal: merge duplicated cards/buttons/sections
 - Classroom distribution screen MUST support immediate QR fullscreen
@@ -14,7 +15,7 @@
 
 ---
 
-## [Canonical Body v3] 2026-02-27
+## [Canonical Body v3] 2026-03-11
 이 섹션은 서비스 통합 작업 시 우선 적용하는 최신 기준이다. 아래 기준과 기존 본문이 충돌하면 이 섹션을 우선한다.
 
 ### 1) 변경 범위 선언
@@ -63,6 +64,20 @@
 - 구현 위치는 `products/management/commands/ensure_<app_name>.py`로 통일한다.
 - 위 항목이 누락된 서비스는 "구현 완료"로 간주하지 않으며 배포/머지 대상에서 제외한다.
 - 상단바 `이용방법`(`service_guide_list`)에서 즉시 노출되는지 확인한다.
+
+### 7-1) 글로벌 서비스 런처 계약 (MUST)
+- 신규 서비스는 전역 상단바 `서비스 찾기` 런처에서 별도 수작업 없이 자동 노출되어야 한다.
+- 런처 노출 조건은 `products/management/commands/ensure_<app_name>.py` 단계에서 완결한다.
+  - 내부 서비스: `Product.launch_route_name` 필수
+  - 외부 서비스: 절대 URL `Product.external_url`만 허용
+  - 런처 요약용 문구: `solve_text` 또는 `lead_text` 또는 `description` 중 최소 1개 필수
+  - `icon`, `service_type`, `ServiceManual`, `ManualSection 3+` 동시 준비
+- discoverable 서비스는 기본적으로 런처 자동 포함이고, 숨겨야 하는 서비스만 명시적 denylist로 관리한다.
+- 런처의 직접 실행 URL SSOT는 `core.service_launcher.resolve_product_launch_url()`이며, 검색 payload SSOT는 `service_launcher_json`이다.
+- 배포 전 확인:
+  - `Ctrl+K` 또는 상단바 버튼으로 런처 열림
+  - 빈 검색어 상태에서 전체 서비스 목록 노출
+  - 결과 클릭 시 상품 상세가 아니라 실제 서비스로 직접 진입
 
 ### 8) 교실형 서비스 단순성/현장성 계약 (MUST)
 - 교실형 서비스는 구현 전 핵심 여정을 먼저 고정한다: `교사 문제 준비 -> 배포 -> 학생 즉시 입장`.

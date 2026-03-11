@@ -95,7 +95,9 @@ description: Core guardrails for Eduitit service development and maintenance, in
   - mirror flags in `settings.py` and `settings_production.py`
 - Do not ship hover-only critical actions; ensure touch-accessible controls.
 - New service must be discoverable on day one:
-  - search payload exposure (`search_products_json`)
+  - global launcher payload exposure (`service_launcher_json`)
+  - direct launch URL available from `core.service_launcher.resolve_product_launch_url()`
+  - launcher summary source prepared (`solve_text` or `lead_text` or `description`)
   - category/service_type metadata verified
 - Required tests before merge:
   - launch routing success

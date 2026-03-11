@@ -26,6 +26,21 @@ from .active_classroom import (
     clear_active_classroom_session,
     set_default_classroom_for_user,
 )
+from .service_launcher import (
+    CALENDAR_HUB_PUBLIC_NAME,
+    HOME_AUXILIARY_SECTIONS,
+    HOME_MAIN_SECTIONS,
+    HOME_SECTION_FALLBACK_BY_TYPE,
+    HOME_SECTION_META_BY_KEY,
+    SHEETBOOK_PUBLIC_NAME,
+    get_public_product_name as _get_public_product_name,
+    is_calendar_hub_product as _is_calendar_hub_product,
+    is_sheetbook_cross_surface_hidden as _is_sheetbook_cross_surface_hidden,
+    is_sheetbook_product as _is_sheetbook_product,
+    replace_public_service_terms as _replace_public_service_terms,
+    resolve_home_section_key as _resolve_home_section_key,
+    resolve_product_launch_url as _resolve_product_launch_url,
+)
 from .teacher_first_cards import build_workbench_card_meta
 from django.contrib import messages
 from django.db import transaction
@@ -232,144 +247,6 @@ def _has_active_comment_restriction(user):
         Q(until__isnull=True) | Q(until__gt=timezone.now())
     ).exists()
 
-# =============================================================================
-# V2 홈 목적별 섹션 매핑 (메인 4 + 보조 3)
-# =============================================================================
-HOME_MAIN_SECTIONS = [
-    {
-        "key": "collect_sign",
-        "title": "수합·서명",
-        "subtitle": "링크로 받고 증빙까지",
-        "icon": "fa-solid fa-inbox",
-        "color": "blue",
-    },
-    {
-        "key": "doc_write",
-        "title": "문서·작성",
-        "subtitle": "문서 생성과 정리를 빠르게",
-        "icon": "fa-solid fa-file-lines",
-        "color": "emerald",
-    },
-    {
-        "key": "class_ops",
-        "title": "수업·학급 운영",
-        "subtitle": "교실 진행과 운영을 한 번에",
-        "icon": "fa-solid fa-chalkboard-user",
-        "color": "violet",
-    },
-    {
-        "key": "class_activity",
-        "title": "교실 활동",
-        "subtitle": "바로 시작하는 교실 활동",
-        "icon": "fa-solid fa-gamepad",
-        "color": "cyan",
-    },
-]
-
-HOME_AUXILIARY_SECTIONS = [
-    {
-        "key": "refresh",
-        "title": "상담·리프레시",
-        "subtitle": "성향·운세·리프레시",
-        "icon": "fa-solid fa-heart",
-        "color": "violet",
-    },
-    {
-        "key": "guide",
-        "title": "가이드·인사이트",
-        "subtitle": "도구 안내와 인사이트",
-        "icon": "fa-solid fa-lightbulb",
-        "color": "cyan",
-    },
-    {
-        "key": "external",
-        "title": "외부 서비스",
-        "subtitle": "연동/제휴 서비스",
-        "icon": "fa-solid fa-up-right-from-square",
-        "color": "emerald",
-    },
-]
-
-HOME_SECTION_BY_ROUTE = {
-    "collect:landing": "collect_sign",
-    "consent:landing": "collect_sign",
-    "signatures:landing": "collect_sign",
-    "signatures:list": "collect_sign",
-    "handoff:landing": "collect_sign",
-    "noticegen:main": "doc_write",
-    "hwpxchat:main": "doc_write",
-    "version_manager:landing": "doc_write",
-    "hwp_converter:landing": "doc_write",
-    "classcalendar:main": "class_ops",
-    "happy_seed:landing": "class_ops",
-    "reservations:dashboard_landing": "class_ops",
-    "reservations:landing": "class_ops",
-    "textbooks:main": "class_ops",
-    "edu_materials:main": "class_ops",
-    "qrgen:landing": "class_ops",
-    "seed_quiz:landing": "class_ops",
-    "ppobgi:main": "class_ops",
-    "artclass:main": "class_ops",
-    "studentmbti:start": "refresh",
-    "ssambti:main": "refresh",
-    "fortune:landing": "refresh",
-    "saju:landing": "refresh",
-    "notebooklm_guide:main": "guide",
-    "prompt_recipe:main": "guide",
-    "insights:list": "guide",
-}
-
-HOME_SECTION_KEYWORDS = [
-    ("동의서", "collect_sign"),
-    ("수합", "collect_sign"),
-    ("서명", "collect_sign"),
-    ("배부", "collect_sign"),
-    ("소식지", "doc_write"),
-    ("멘트", "doc_write"),
-    ("문서", "doc_write"),
-    ("pdf", "doc_write"),
-    ("최종", "doc_write"),
-    ("캘린더", "class_ops"),
-    ("예약", "class_ops"),
-    ("알림판", "class_ops"),
-    ("퀴즈", "class_ops"),
-    ("qr", "class_ops"),
-    ("행복의 씨앗", "class_ops"),
-    ("추첨기", "class_ops"),
-    ("미술 수업", "class_ops"),
-    ("윷놀이", "class_activity"),
-    ("체스", "class_activity"),
-    ("장기", "class_activity"),
-    ("커넥트 포", "class_activity"),
-    ("이솔레이션", "class_activity"),
-    ("아택스", "class_activity"),
-    ("브레이크스루", "class_activity"),
-    ("bti", "refresh"),
-    ("운세", "refresh"),
-    ("사주", "refresh"),
-    ("가이드", "guide"),
-    ("레시피", "guide"),
-    ("백과사전", "guide"),
-    ("insight", "guide"),
-    ("스쿨잇", "external"),
-    ("탈알고리즘", "external"),
-]
-
-HOME_SECTION_FALLBACK_BY_TYPE = {
-    "collect_sign": "collect_sign",
-    "classroom": "class_ops",
-    "work": "doc_write",
-    "game": "class_activity",
-    "counsel": "refresh",
-    "edutech": "guide",
-    "etc": "external",
-}
-
-HOME_SECTION_META_BY_KEY = {
-    section["key"]: section
-    for section in [*HOME_MAIN_SECTIONS, *HOME_AUXILIARY_SECTIONS]
-}
-
 HOME_COMPANION_SECTION_MAP = {
     'collect_sign': ['doc_write', 'class_ops'],
     'doc_write': ['collect_sign', 'class_ops'],
@@ -436,23 +313,6 @@ def _build_home_v2_display_groups(sections, aux_sections):
     return primary_display_sections, secondary_display_sections
 
 
-def _resolve_home_section_key(product):
-    route_name = (product.launch_route_name or "").strip().lower()
-    if route_name in HOME_SECTION_BY_ROUTE:
-        return HOME_SECTION_BY_ROUTE[route_name]
-
-    title = (product.title or "").strip().lower()
-    for keyword, section_key in HOME_SECTION_KEYWORDS:
-        if keyword.lower() in title:
-            return section_key
-
-    external_url = (product.external_url or "").strip().lower()
-    if external_url.startswith("http://") or external_url.startswith("https://"):
-        return "external"
-
-    return HOME_SECTION_FALLBACK_BY_TYPE.get(product.service_type, "guide")
-
-
 def get_purpose_sections(products_qs, preview_limit=None):
     """Product list -> 메인 섹션, 보조 섹션, 활동 배너."""
     bucket = {}
@@ -482,28 +342,6 @@ def get_purpose_sections(products_qs, preview_limit=None):
 
     games = list(bucket.get("class_activity", []))
     return main_sections, aux_sections, games
-
-
-def _resolve_product_launch_url(product):
-    """Resolve direct launch URL for quick actions."""
-    route_name = (product.launch_route_name or '').strip()
-    external_url = (product.external_url or '').strip()
-
-    # Absolute URLs are treated as truly external services.
-    if external_url.startswith("http://") or external_url.startswith("https://"):
-        return external_url, True
-
-    if route_name:
-        try:
-            return reverse(route_name), False
-        except NoReverseMatch:
-            logger.warning("Launch route missing for product '%s' (%s).", product.title, route_name)
-
-    # Legacy internal path fallback (e.g. /products/yut/)
-    if external_url:
-        return external_url, False
-
-    return reverse('product_detail', kwargs={'pk': product.pk}), False
 
 
 CALENDAR_HUB_PUBLIC_NAME = "학급 캘린더"

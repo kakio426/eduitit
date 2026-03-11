@@ -531,17 +531,6 @@ function homeCalendarWidget() {
 
         <!-- 메인 콘텐츠 -->
         <main class="flex-1 min-w-0 p-4 md:px-6 lg:px-7 xl:px-8 2xl:px-10 pt-0 md:pt-0">
-
-            {% if search_products_json %}
-            <div class="mb-4 flex justify-center lg:justify-end">
-                <button onclick="if(window.openSearchModal) openSearchModal()" class="flex w-full max-w-xl lg:w-auto lg:max-w-none lg:flex-shrink-0 items-center justify-center lg:justify-start gap-3 bg-white rounded-2xl lg:rounded-xl px-5 lg:px-3.5 py-3 lg:py-2.5 border border-slate-200 text-slate-400 hover:border-indigo-300 hover:text-indigo-500 transition-all text-sm shadow-sm lg:shadow-none min-h-12 lg:min-h-0" title="Ctrl+K" aria-label="서비스 검색 열기">
-                    <i class="fa-solid fa-magnifying-glass text-sm md:text-xs"></i>
-                    <span class="whitespace-nowrap">서비스 검색...</span>
-                    <kbd class="hidden lg:inline-block ml-1 px-1.5 py-0.5 text-[10px] font-bold bg-slate-100 rounded border border-slate-200">Ctrl+K</kbd>
-                </button>
-            </div>
-            {% endif %}
-
             <div class="home-v2-content-shell">
                 <section class="mb-6 home-v2-top-zone" data-home-v2-top-zone="true">
                     <div class="home-v2-top-center" data-home-v2-top-center="true">

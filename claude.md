@@ -1,4 +1,4 @@
-## [Canonical Top Summary] 2026-02-17
+## [Canonical Top Summary] 2026-03-11
 - Declare UI scope before edits: global/app/page
 - Declare `target_app` and `do_not_touch_apps` before edits
 - Preserve stable service UI language by default
@@ -6,6 +6,7 @@
 - If Korean text is corrupted: recover encoding/text first, then re-apply feature/style changes
 - Run python manage.py check (and node --check for changed JS)
 - For changed JS, do a runtime smoke test (load page + click core tabs/buttons once) and confirm browser console has zero `ReferenceError`
+- New services must auto-appear in the global service launcher
 - For user-triggered `fetch` actions, never use empty `catch`; enforce `response.ok` check and show failure feedback (toast/alert)
 - For form pages: never hide required model fields without making them optional/defaulted, and always render form errors
 - For JS confirmation UX (modal/step): keep a non-JS submit fallback so critical actions never become "no response"
@@ -65,7 +66,7 @@
 - JS 확인 UX에는 `noscript` 또는 직접 제출 폴백을 반드시 제공한다
 
 ### 5) 신규 서비스 추가 가드레일
-- 서비스 시작 URL의 SSOT는 `core/views.py`의 `_resolve_product_launch_url`이다.
+- 서비스 시작 URL의 SSOT는 `core.service_launcher`의 `resolve_product_launch_url()`이며 `core/views.py`는 같은 함수를 재사용한다.
 - 내부 서비스는 `Product.launch_route_name`을 반드시 채운다.
   - 예: `collect:landing`, `seed_quiz:landing`, `fairy_games:play_dobutsu`
 - 외부 서비스만 `Product.external_url`을 사용한다.
@@ -78,7 +79,8 @@
 - 대화면 전용 서비스는 phone 차단 + 롤백 플래그(`ALLOW_TABLET_ACCESS`) + 우회 경로(`force_desktop=1`) 제공
 - 기능 플래그는 목적별로 분리한다 (공통 기능을 화면 플래그에 묶지 않기)
 - 모바일/태블릿에서 핵심 액션은 hover 의존 금지
-- 신규 서비스는 등록과 동시에 `search_products_json`에 노출 가능해야 한다
+- 신규 서비스는 등록과 동시에 전역 `서비스 찾기` 런처 payload(`service_launcher_json`)에 자동 노출 가능해야 한다
+- 런처 summary 소스는 `solve_text -> lead_text -> description` 순으로 준비한다
 - 테스트 게이트: 서비스 진입 라우팅 / 모달 열기·닫기 / phone·iPad·desktop 정책 / 플래그 ON·OFF 동작
 - 문서 동기화: `CLAUDE.md` + `codex/SKILL.md` 같은 커밋에서 처리
 

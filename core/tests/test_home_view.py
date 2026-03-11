@@ -77,10 +77,10 @@ class HomeViewTest(TestCase):
         response = self.client.get(reverse('home'))
         self.assertEqual(response.status_code, 200)
 
-    def test_v1_search_products_json_in_context(self):
-        """V1 홈에서도 글로벌 검색 컨텍스트를 제공"""
+    def test_v1_service_launcher_json_in_context(self):
+        """V1 홈에서도 글로벌 런처 컨텍스트를 제공"""
         response = self.client.get(reverse('home'))
-        self.assertIn('search_products_json', response.context)
+        self.assertIn('service_launcher_json', response.context)
 
     @override_settings(SHEETBOOK_DISCOVERY_VISIBLE=False)
     def test_v1_home_hides_sheetbook_product_when_discovery_disabled(self):
@@ -93,20 +93,20 @@ class HomeViewTest(TestCase):
         self.assertNotContains(response, '숨김 교무수첩')
 
     @override_settings(SHEETBOOK_DISCOVERY_VISIBLE=False)
-    def test_v1_search_products_json_hides_sheetbook_when_discovery_disabled(self):
+    def test_v1_service_launcher_json_hides_sheetbook_when_discovery_disabled(self):
         self._create_sheetbook_product()
 
         response = self.client.get(reverse('home'))
-        payload = json.loads(response.context['search_products_json'])
+        payload = json.loads(response.context['service_launcher_json'])
         titles = [item['title'] for item in payload]
 
         self.assertNotIn('숨김 교무수첩', titles)
 
     @override_settings(GLOBAL_SEARCH_ENABLED=False)
-    def test_search_products_json_absent_when_global_search_disabled(self):
-        """글로벌 검색 비활성화 시 컨텍스트에서 검색 데이터 제외"""
+    def test_service_launcher_json_absent_when_global_search_disabled(self):
+        """글로벌 검색 비활성화 시 컨텍스트에서 런처 데이터 제외"""
         response = self.client.get(reverse('home'))
-        self.assertNotIn('search_products_json', response.context)
+        self.assertNotIn('service_launcher_json', response.context)
 
     def test_v1_mobile_sns_more_uses_toggle_not_anchor(self):
         response = self.client.get(reverse('home'))
@@ -221,7 +221,8 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         self.assertNotIn('선생님, 안녕하세요', content)
-        self.assertIn('openSearchModal', content)
+        self.assertIn('data-global-service-launcher-trigger="true"', content)
+        self.assertNotIn('서비스 검색...', content)
 
     def test_v2_authenticated_uses_stacked_top_zone_and_real_calendar(self):
         """V2 로그인 홈은 가운데 적층 + 오른쪽 월간 캘린더를 사용"""
@@ -376,16 +377,21 @@ class HomeV2ViewTest(TestCase):
         self.assertLessEqual(len(quick_actions), 5)
         self.assertGreaterEqual(len(quick_actions), 1)
 
-    def test_v2_has_search_button(self):
-        """V2 홈에 검색 버튼 존재"""
+    def test_v2_has_global_service_launcher_trigger(self):
+        """V2 홈은 전역 상단바 런처 트리거를 사용"""
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('openSearchModal', content)
+        self.assertIn('data-global-service-launcher-trigger="true"', content)
+        self.assertIn('서비스 찾기', content)
+        self.assertNotIn('서비스 검색...', content)
+        self.assertNotIn('slice(0, 8)', content)
+        self.assertNotIn('window.openModal(p.id)', content)
+        self.assertIn('window.location.href = item.href;', content)
 
-    def test_v2_search_products_json_in_context(self):
-        """V2 홈에 search_products_json 컨텍스트 존재"""
+    def test_v2_service_launcher_json_in_context(self):
+        """V2 홈에 service_launcher_json 컨텍스트 존재"""
         response = self.client.get(reverse('home'))
-        self.assertIn('search_products_json', response.context)
+        self.assertIn('service_launcher_json', response.context)
 
     @override_settings(SHEETBOOK_DISCOVERY_VISIBLE=False)
     def test_v2_home_hides_sheetbook_from_discovery_surfaces(self):
@@ -412,7 +418,7 @@ class HomeV2ViewTest(TestCase):
             section_product_ids.extend(product.id for product in section.get('overflow_products', []))
         self.assertNotIn(hidden_product.id, section_product_ids)
         self.assertNotIn(hidden_product.id, [product.id for product in response.context.get('games', [])])
-        search_payload = json.loads(response.context['search_products_json'])
+        search_payload = json.loads(response.context['service_launcher_json'])
         self.assertNotIn('숨김 교무수첩', [item['title'] for item in search_payload])
 
     @override_settings(SHEETBOOK_ENABLED=True, SHEETBOOK_DISCOVERY_VISIBLE=False)
@@ -764,7 +770,7 @@ class HomeV3ViewTest(TestCase):
         )
 
         response = self.client.get(reverse('home'))
-        payload = json.loads(response.context['search_products_json'])
+        payload = json.loads(response.context['service_launcher_json'])
         titles = [item['title'] for item in payload]
 
         self.assertIn('학급 캘린더', titles)

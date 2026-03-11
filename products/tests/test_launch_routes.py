@@ -1,6 +1,7 @@
 from django.test import TestCase
 from django.urls import reverse
 
+from core.service_launcher import build_service_launcher_items
 from core.views import _resolve_product_launch_url
 from products.models import Product
 
@@ -67,3 +68,20 @@ class ProductLaunchRouteTests(TestCase):
         href, is_external = _resolve_product_launch_url(product)
         self.assertEqual(href, reverse("collect:landing"))
         self.assertFalse(is_external)
+
+    def test_service_launcher_uses_same_launch_ssot(self):
+        product = Product.objects.create(
+            title="Launcher Route Product",
+            description="desc",
+            solve_text="바로 실행합니다",
+            price=0,
+            is_active=True,
+            launch_route_name="collect:landing",
+            service_type="collect_sign",
+        )
+
+        href, is_external = _resolve_product_launch_url(product)
+        launcher_item = build_service_launcher_items([product])[0]
+
+        self.assertEqual(launcher_item["href"], href)
+        self.assertEqual(launcher_item["is_external"], is_external)
