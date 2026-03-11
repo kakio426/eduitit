@@ -24,6 +24,11 @@
                     <a href="{% url 'classcalendar:main' %}" class="inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-black text-slate-700 hover:border-indigo-300 hover:text-indigo-600 transition">
                         <i class="fa-solid fa-calendar-days"></i> 캘린더 열기
                     </a>
+                    {% if calendar_hub.message_enabled %}
+                    <button type="button" @click="openMessageHub($event, 'capture', { resetCapture: true })" class="inline-flex items-center gap-2 rounded-2xl border border-indigo-200 bg-indigo-50 px-3.5 py-2 text-xs font-black text-indigo-700 hover:bg-indigo-100 transition">
+                        <i class="fa-solid fa-comment-dots"></i> 메시지
+                    </button>
+                    {% endif %}
                     <button type="button" @click="openCreateModalForSelectedDate()" class="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-3.5 py-2 text-xs font-black text-white hover:bg-indigo-700 transition">
                         <i class="fa-solid fa-plus"></i> 일정 추가
                     </button>
@@ -152,4 +157,6 @@
             </form>
         </div>
     </div>
+
+    {% include "classcalendar/_message_hub.html" %}
 </section>

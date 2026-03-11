@@ -1,0 +1,294 @@
+<div
+    x-show="messageHubOpen"
+    x-cloak
+    class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 px-3 py-4 sm:px-4"
+    @click.self="closeMessageHub()"
+    @keydown.escape.window="closeMessageHub()"
+>
+    <div class="my-auto w-full max-w-5xl overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-2xl">
+        <div class="border-b border-slate-200 px-5 py-4 sm:px-6">
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <h3 class="text-xl font-extrabold text-slate-900 sm:text-2xl">메시지</h3>
+                    <p class="mt-1 text-sm text-slate-600">메시지를 붙여넣어 일정으로 저장하거나, 예전에 저장한 메시지를 다시 불러올 수 있어요.</p>
+                </div>
+                <button
+                    type="button"
+                    @click="closeMessageHub()"
+                    class="inline-flex items-center rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
+                >
+                    닫기
+                </button>
+            </div>
+            <div class="mt-4 flex flex-wrap gap-2">
+                <button
+                    type="button"
+                    @click="switchMessageHubTab('capture')"
+                    :class="messageHubActiveTab === 'capture' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-300'"
+                    class="rounded-full border px-4 py-2 text-sm font-bold transition"
+                >
+                    등록하기
+                </button>
+                <button
+                    type="button"
+                    @click="switchMessageHubTab('archive')"
+                    :class="messageHubActiveTab === 'archive' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-300'"
+                    class="rounded-full border px-4 py-2 text-sm font-bold transition"
+                >
+                    보관함
+                </button>
+            </div>
+        </div>
+
+        <div x-show="messageHubActiveTab === 'capture'" class="max-h-[80vh] overflow-y-auto px-5 py-5 sm:px-6">
+            <div class="mx-auto max-w-4xl" x-show="messageCaptureStep === 'input'">
+                <div class="space-y-4">
+                    <div>
+                        <label class="mb-1.5 block text-sm font-bold text-slate-700">메시지 입력</label>
+                        <textarea
+                            x-model="messageCaptureInputText"
+                            rows="10"
+                            class="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm leading-6 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                            placeholder="예) 3월 19일(목) 학부모총회가 실시됩니다. 12일(목)까지 연수물 수정 부탁드립니다."
+                        ></textarea>
+                    </div>
+                    <div>
+                        <label class="mb-1.5 block text-sm font-bold text-slate-700">파일 첨부</label>
+                        <div
+                            class="rounded-2xl border-2 border-dashed p-4 transition"
+                            :class="messageCaptureDropActive ? 'border-indigo-400 bg-indigo-50/70' : 'border-slate-300 bg-slate-50'"
+                            @dragover.prevent="messageCaptureDropActive = true"
+                            @dragleave.prevent="messageCaptureDropActive = false"
+                            @drop.prevent="handleMessageCaptureDrop($event)"
+                        >
+                            <p class="text-sm font-semibold text-slate-700">여기로 파일을 끌어오거나 선택 버튼을 눌러주세요.</p>
+                            <p class="mt-1 text-xs text-slate-500" x-text="messageCaptureFileLimitText()"></p>
+                            <div class="mt-3">
+                                <input
+                                    x-ref="messageCaptureFileInput"
+                                    type="file"
+                                    class="hidden"
+                                    multiple
+                                    @change="handleMessageCaptureFileInput($event)"
+                                >
+                                <button
+                                    type="button"
+                                    @click="$refs.messageCaptureFileInput.click()"
+                                    class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                                >
+                                    파일 선택
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <template x-if="messageCaptureFileErrors.length > 0">
+                        <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3">
+                            <template x-for="(errorText, index) in messageCaptureFileErrors" :key="`capture-file-error-${index}`">
+                                <p class="text-sm font-semibold text-rose-700" x-text="errorText"></p>
+                            </template>
+                        </div>
+                    </template>
+                    <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3" x-show="messageCaptureFiles.length > 0">
+                        <p class="mb-2 text-xs font-bold text-slate-700">첨부 목록</p>
+                        <template x-for="fileItem in messageCaptureFiles" :key="fileItem.id">
+                            <div class="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
+                                <div class="min-w-0">
+                                    <p class="truncate text-sm font-semibold text-slate-800" x-text="fileItem.name"></p>
+                                    <p class="text-xs text-slate-500" x-text="formatBytes(fileItem.size)"></p>
+                                </div>
+                                <button type="button" @click="removeMessageCaptureFile(fileItem.id)" class="text-xs font-bold text-rose-600">삭제</button>
+                            </div>
+                        </template>
+                    </div>
+                    <p x-show="messageCaptureErrorText" class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700" x-text="messageCaptureErrorText"></p>
+                </div>
+                <div class="mx-auto mt-5 flex max-w-4xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+                    <button type="button" @click="closeMessageHub()" class="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-bold text-slate-700">닫기</button>
+                    <button type="button" @click="submitMessageCaptureParse()" :disabled="isParsingMessageCapture" class="rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-extrabold text-white disabled:opacity-60">자동 읽기</button>
+                </div>
+            </div>
+
+            <div class="mx-auto max-w-4xl space-y-4" x-show="messageCaptureStep === 'confirm'">
+                <div class="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <div>
+                        <p class="text-sm font-extrabold text-slate-900" x-text="messageCaptureSummaryText || `찾은 일정 ${messageCaptureCandidates.length}개`"></p>
+                        <p class="mt-1 text-xs font-semibold text-slate-500">틀리면 여기서 바로 고친 뒤 저장하면 됩니다.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold" :class="messageCaptureStatusClass()" x-text="messageCaptureStatusText()"></span>
+                        <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold" :class="messageCaptureConfidenceClass()" x-text="messageCaptureConfidenceText()"></span>
+                        <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold" :class="messageCapturePredictionBadgeClass()" x-text="messageCapturePredictionText()"></span>
+                    </div>
+                </div>
+                <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3" x-show="messageCaptureWarnings.length > 0">
+                    <template x-for="(warningText, index) in messageCaptureWarnings" :key="`capture-warning-${index}`">
+                        <p class="text-sm font-semibold text-amber-800" x-text="warningText"></p>
+                    </template>
+                </div>
+                <div x-show="messageCaptureServerAttachments.length > 0" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <p class="mb-2 text-xs font-bold text-slate-700">첨부</p>
+                    <template x-for="attachment in messageCaptureServerAttachments" :key="`capture-attachment-${attachment.id}`">
+                        <div class="mb-2 rounded-xl border border-slate-200 bg-white px-3 py-2 last:mb-0">
+                            <p class="text-sm font-semibold text-slate-800" x-text="attachment.original_name"></p>
+                            <p class="text-xs text-slate-500" x-text="formatBytes(attachment.size_bytes)"></p>
+                        </div>
+                    </template>
+                </div>
+                <div class="space-y-3">
+                    <template x-for="candidate in messageCaptureVisibleCandidates()" :key="candidate.candidate_id">
+                        <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-bold" :class="candidate.badge_class" x-text="candidate.badge_text"></span>
+                                    <span x-show="candidate.already_saved" class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">이미 저장됨</span>
+                                </div>
+                                <label class="inline-flex items-center gap-2 text-sm font-bold text-slate-700" x-show="!candidate.already_saved">
+                                    <input type="checkbox" x-model="candidate.selected" class="rounded border-slate-300">
+                                    저장
+                                </label>
+                            </div>
+                            <p class="mt-2 text-base font-extrabold text-slate-900" x-text="candidate.title"></p>
+                            <p class="mt-1 text-sm font-bold text-slate-600" x-text="formatMessageCaptureCandidateDate(candidate)"></p>
+                            <p class="mt-2 whitespace-pre-line text-sm leading-6 text-slate-700" x-text="candidate.summary || '한 줄 설명이 없어요.'"></p>
+                            <button type="button" @click="toggleMessageCaptureCandidateEdit(candidate)" class="mt-3 text-xs font-bold text-indigo-600">날짜/시간 고치기</button>
+                            <div x-show="candidate.edit_open" class="mt-3 grid grid-cols-1 gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:grid-cols-2">
+                                <div>
+                                    <label class="mb-1 block text-xs font-bold text-slate-700">시작일</label>
+                                    <input x-model="candidate.start_date" type="date" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                </div>
+                                <div>
+                                    <label class="mb-1 block text-xs font-bold text-slate-700">종료일</label>
+                                    <input x-model="candidate.end_date" type="date" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                </div>
+                                <label class="inline-flex items-center gap-2 text-xs font-bold text-slate-700 sm:col-span-2">
+                                    <input x-model="candidate.has_time" type="checkbox" class="rounded border-slate-300">
+                                    시간 직접 지정
+                                </label>
+                                <div x-show="candidate.has_time">
+                                    <label class="mb-1 block text-xs font-bold text-slate-700">시작 시간</label>
+                                    <input x-model="candidate.start_clock" type="time" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                </div>
+                                <div x-show="candidate.has_time">
+                                    <label class="mb-1 block text-xs font-bold text-slate-700">종료 시간</label>
+                                    <input x-model="candidate.end_clock" type="time" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                <details x-show="messageCaptureHiddenCandidates().length > 0" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <summary class="cursor-pointer text-sm font-bold text-slate-700" x-text="`나머지 일정 더 보기 (${messageCaptureHiddenCandidates().length})`"></summary>
+                    <div class="mt-3 space-y-3">
+                        <template x-for="candidate in messageCaptureHiddenCandidates()" :key="`hidden-${candidate.candidate_id}`">
+                            <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+                                <p class="text-base font-extrabold text-slate-900" x-text="candidate.title"></p>
+                                <p class="mt-1 text-sm font-bold text-slate-600" x-text="formatMessageCaptureCandidateDate(candidate)"></p>
+                            </div>
+                        </template>
+                    </div>
+                </details>
+                <p x-show="messageCaptureErrorText" class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700" x-text="messageCaptureErrorText"></p>
+                <div class="mx-auto flex max-w-4xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <button type="button" @click="backToMessageCaptureInput()" class="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-bold text-slate-700">다시 입력</button>
+                    <button type="button" @click="submitMessageCaptureCommit()" :disabled="isCommittingMessageCapture" class="rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-extrabold text-white disabled:opacity-60">검토 후 저장</button>
+                </div>
+            </div>
+
+            <div class="mx-auto max-w-3xl space-y-4 text-center" x-show="messageCaptureStep === 'done'">
+                <div class="rounded-3xl border border-emerald-200 bg-emerald-50 px-5 py-5">
+                    <p class="text-lg font-black text-emerald-900">일정을 저장했어요.</p>
+                    <p class="mt-2 text-sm font-semibold text-emerald-800" x-text="messageCaptureSavedMessage || '달력에서 바로 확인할 수 있어요.'"></p>
+                </div>
+                <div x-show="messageCaptureSavedEvents.length > 0" class="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left shadow-sm">
+                    <p class="mb-3 text-sm font-extrabold text-slate-900">방금 저장한 일정</p>
+                    <template x-for="savedEvent in messageCaptureSavedEvents" :key="savedEvent.id">
+                        <div class="mb-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 last:mb-0">
+                            <p class="text-sm font-bold text-slate-900" x-text="savedEvent.title"></p>
+                            <p class="mt-1 text-xs font-semibold text-slate-500" x-text="formatArchiveSavedEventDate(savedEvent)"></p>
+                        </div>
+                    </template>
+                </div>
+                <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                    <button type="button" @click="startAnotherMessageCapture()" class="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-bold text-slate-700">다른 메시지 등록</button>
+                    <button type="button" @click="openMessageArchiveFromSuccess()" class="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-extrabold text-white">보관함 보기</button>
+                </div>
+            </div>
+        </div>
+
+        <div x-show="messageHubActiveTab === 'archive'" class="max-h-[80vh] overflow-y-auto px-5 py-5 sm:px-6">
+            <div class="grid grid-cols-1 gap-4 lg:grid-cols-[22rem_minmax(0,1fr)]">
+                <div class="min-h-0 overflow-hidden rounded-[24px] border border-slate-200 bg-slate-50">
+                    <div class="space-y-3 border-b border-slate-200 px-4 py-4">
+                        <input x-model="messageArchiveQuery" @keydown.enter.prevent="loadMessageArchive({ reset: true })" type="search" placeholder="메시지나 첨부 이름으로 찾기" class="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm">
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" @click="setMessageArchiveFilter('all')" :class="messageArchiveFilter === 'all' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-300'" class="rounded-full border px-3 py-1.5 text-xs font-bold transition">전체 <span x-text="messageArchiveCounts.all || 0"></span></button>
+                            <button type="button" @click="setMessageArchiveFilter('saved')" :class="messageArchiveFilter === 'saved' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-300'" class="rounded-full border px-3 py-1.5 text-xs font-bold transition">저장 완료 <span x-text="messageArchiveCounts.saved || 0"></span></button>
+                            <button type="button" @click="setMessageArchiveFilter('pending')" :class="messageArchiveFilter === 'pending' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-300'" class="rounded-full border px-3 py-1.5 text-xs font-bold transition">미저장 <span x-text="messageArchiveCounts.pending || 0"></span></button>
+                        </div>
+                    </div>
+                    <div class="space-y-3 px-3 py-3">
+                        <p x-show="messageArchiveErrorText" class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700" x-text="messageArchiveErrorText"></p>
+                        <div x-show="isLoadingMessageArchive && messageArchiveItems.length === 0" class="rounded-2xl border border-slate-200 bg-white px-4 py-5 text-sm font-semibold text-slate-500">보관 메시지를 불러오는 중이에요.</div>
+                        <template x-for="item in messageArchiveItems" :key="item.capture_id">
+                            <button type="button" @click="selectMessageArchiveItem(item.capture_id)" class="w-full rounded-[22px] border bg-white px-4 py-4 text-left shadow-sm transition" :class="messageArchiveSelectedCapture && messageArchiveSelectedCapture.capture_id === item.capture_id ? 'border-indigo-300 ring-2 ring-indigo-200' : 'border-slate-200 hover:border-slate-300'">
+                                <div class="flex items-start justify-between gap-2">
+                                    <div class="min-w-0">
+                                        <p class="text-xs font-bold text-slate-500" x-text="formatMessageArchiveCreatedAt(item.created_at)"></p>
+                                        <p class="mt-2 whitespace-pre-line text-sm font-extrabold text-slate-900 line-clamp-2" x-text="item.preview_text || '원문이 비어 있어요.'"></p>
+                                    </div>
+                                    <span class="inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[11px] font-bold" :class="archiveStatusBadgeClass(item.archive_status)" x-text="item.archive_status_label"></span>
+                                </div>
+                            </button>
+                        </template>
+                        <div x-show="!isLoadingMessageArchive && messageArchiveItems.length === 0" class="rounded-2xl border border-slate-200 bg-white px-4 py-5 text-sm font-semibold text-slate-500">아직 저장된 메시지가 없어요.</div>
+                        <button type="button" x-show="messageArchiveHasNext" @click="loadMoreMessageArchive()" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700">더 보기</button>
+                    </div>
+                </div>
+
+                <div class="min-h-0 overflow-hidden rounded-[24px] border border-slate-200 bg-white">
+                    <div x-show="isLoadingMessageArchiveDetail" class="flex items-center justify-center px-6 py-10 text-sm font-semibold text-slate-500">메시지를 불러오는 중이에요.</div>
+                    <div x-show="!isLoadingMessageArchiveDetail && !messageArchiveSelectedCapture" class="flex items-center justify-center px-6 py-10 text-center text-sm font-semibold text-slate-500">왼쪽에서 메시지를 선택하면 원문과 찾은 일정을 볼 수 있어요.</div>
+                    <div x-show="!isLoadingMessageArchiveDetail && messageArchiveSelectedCapture" class="space-y-4 px-5 py-5 sm:px-6">
+                        <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                            <p class="text-sm font-extrabold text-slate-900" x-text="messageArchiveSelectedCapture ? (messageArchiveSelectedCapture.summary_text || '저장된 메시지') : ''"></p>
+                            <p class="mt-1 text-xs font-semibold text-slate-500" x-text="messageArchiveSelectedCapture ? formatMessageArchiveCreatedAt(messageArchiveSelectedCapture.created_at) : ''"></p>
+                        </div>
+                        <div>
+                            <p class="mb-2 text-sm font-extrabold text-slate-900">원문</p>
+                            <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm leading-6 text-slate-700 whitespace-pre-line" x-text="messageArchiveSelectedCapture ? (messageArchiveSelectedCapture.raw_text || '원문이 비어 있어요.') : ''"></div>
+                        </div>
+                        <div>
+                            <p class="mb-2 text-sm font-extrabold text-slate-900">찾은 일정</p>
+                            <div class="space-y-3" x-show="messageArchiveSelectedCapture && messageArchiveSelectedCapture.candidates && messageArchiveSelectedCapture.candidates.length > 0">
+                                <template x-for="candidate in (messageArchiveSelectedCapture ? messageArchiveSelectedCapture.candidates : [])" :key="candidate.candidate_id">
+                                    <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-bold" :class="archiveCandidateBadgeClass(candidate.kind)" x-text="candidate.badge_text"></span>
+                                            <span x-show="candidate.already_saved" class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">이미 저장됨</span>
+                                        </div>
+                                        <p class="mt-2 text-base font-extrabold text-slate-900" x-text="candidate.title"></p>
+                                        <p class="mt-1 text-sm font-bold text-slate-600" x-text="formatArchiveCandidateDate(candidate)"></p>
+                                    </div>
+                                </template>
+                            </div>
+                            <div x-show="messageArchiveSelectedCapture && (!messageArchiveSelectedCapture.candidates || messageArchiveSelectedCapture.candidates.length === 0)" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold text-slate-500">이 메시지에서는 저장할 날짜를 찾지 못했어요.</div>
+                        </div>
+                        <div>
+                            <p class="mb-2 text-sm font-extrabold text-slate-900">이미 저장한 일정</p>
+                            <div class="space-y-2" x-show="messageArchiveSelectedCapture && messageArchiveSelectedCapture.saved_events && messageArchiveSelectedCapture.saved_events.length > 0">
+                                <template x-for="event in (messageArchiveSelectedCapture ? messageArchiveSelectedCapture.saved_events : [])" :key="event.id">
+                                    <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                        <p class="text-sm font-bold text-slate-900" x-text="event.title"></p>
+                                        <p class="mt-1 text-xs font-semibold text-slate-500" x-text="formatArchiveSavedEventDate(event)"></p>
+                                    </div>
+                                </template>
+                            </div>
+                            <div x-show="messageArchiveSelectedCapture && (!messageArchiveSelectedCapture.saved_events || messageArchiveSelectedCapture.saved_events.length === 0)" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold text-slate-500">아직 이 메시지에서 저장한 일정이 없어요.</div>
+                        </div>
+                        <button type="button" x-show="messageArchiveSelectedCapture" @click="replayMessageArchiveCapture()" class="w-full rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-extrabold text-white">이 메시지 다시 사용하기</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1670,12 +1670,17 @@ def _build_home_calendar_summary_context(request):
         "upcoming_items": [],
         "main_url": "",
         "create_api_url": "",
+        "message_enabled": False,
+        "message_item_types_enabled": False,
+        "message_limits_json": {},
+        "message_urls_json": {},
     }
     if not request.user.is_authenticated:
         return summary
 
     try:
         from classcalendar.models import CalendarEvent
+        from classcalendar.views import build_message_capture_ui_context
     except Exception:
         logger.exception("[HomeV3] classcalendar import failed")
         return summary
@@ -1716,6 +1721,11 @@ def _build_home_calendar_summary_context(request):
         }
         for event in upcoming_events
     ]
+    message_capture_ui = build_message_capture_ui_context(request.user)
+    summary["message_enabled"] = bool(message_capture_ui["enabled"])
+    summary["message_item_types_enabled"] = bool(message_capture_ui["item_types_enabled"])
+    summary["message_limits_json"] = message_capture_ui["limits"]
+    summary["message_urls_json"] = message_capture_ui["urls"]
     summary["enabled"] = bool(summary["main_url"] and summary["create_api_url"])
     return summary
 
@@ -1850,6 +1860,10 @@ def _build_home_calendar_hub_context(request):
         "continue_items": continue_items,
         "main_url": calendar_summary.get("main_url") or _safe_reverse("classcalendar:main"),
         "create_api_url": calendar_summary.get("create_api_url", ""),
+        "message_enabled": bool(calendar_summary.get("message_enabled")),
+        "message_item_types_enabled": bool(calendar_summary.get("message_item_types_enabled")),
+        "message_limits_json": calendar_summary.get("message_limits_json") or {},
+        "message_urls_json": calendar_summary.get("message_urls_json") or {},
         "primary_cta_label": f"{CALENDAR_HUB_PUBLIC_NAME} 열기",
         "secondary_cta_label": "일정 추가",
         "record_board_enabled": bool(sheetbook_workspace.get("enabled")),
@@ -2098,6 +2112,7 @@ def _home_v3(request, products, posts, page_obj, feed_scope):
         context.update(
             {
                 "favorite_product_ids": favorite_product_ids,
+                "calendar_hub": calendar_hub,
                 "primary_zone": {
                     "today_tasks": today_context.get("today_items", [])[:4],
                     "today_date_text": today_context.get("today_date_text", ""),
@@ -2198,6 +2213,7 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
         workbench_bundles = _get_user_workbench_bundles(request.user, product_list)
         weekly_bundle_items = _get_weekly_workbench_bundle_highlights(request.user, product_list)
         today_context = _build_today_context(request)
+        calendar_hub = _build_home_calendar_hub_context(request)
         home_calendar_summary = next(iter(today_context.get('today_items', [])), None)
         home_sections = [*sections, *aux_sections]
 
@@ -2218,6 +2234,7 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
             'discovery_items': discovery_items,
             'workbench_bundles': workbench_bundles,
             'weekly_bundle_items': weekly_bundle_items,
+            'calendar_hub': calendar_hub,
             'home_calendar_summary': home_calendar_summary,
             'community_summary': community_summary,
             'posts': posts,

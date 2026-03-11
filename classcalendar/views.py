@@ -228,6 +228,32 @@ def _build_message_capture_limits_payload():
     }
 
 
+def _build_message_capture_urls_payload():
+    capture_placeholder = "00000000-0000-0000-0000-000000000000"
+    return {
+        "parse": reverse("classcalendar:api_message_capture_parse"),
+        "archive": reverse("classcalendar:api_message_capture_archive"),
+        "archive_detail_template": reverse(
+            "classcalendar:api_message_capture_archive_detail",
+            kwargs={"capture_id": capture_placeholder},
+        ).replace(capture_placeholder, "__capture_id__"),
+        "commit_template": reverse(
+            "classcalendar:api_message_capture_commit",
+            kwargs={"capture_id": capture_placeholder},
+        ).replace(capture_placeholder, "__capture_id__"),
+    }
+
+
+def build_message_capture_ui_context(user):
+    enabled = bool(getattr(user, "is_authenticated", False)) and _is_message_capture_enabled_for_user(user)
+    return {
+        "enabled": enabled,
+        "item_types_enabled": enabled and _is_message_capture_item_types_enabled_for_user(user),
+        "limits": _build_message_capture_limits_payload(),
+        "urls": _build_message_capture_urls_payload(),
+    }
+
+
 def _serialize_temporal_value(value):
     if value is None:
         return ""
@@ -1674,6 +1700,7 @@ def _build_main_view_context(request, *, embedded_sheetbook_context=None):
     integration_setting = _get_integration_setting_for_user(request.user)
     _ensure_retention_notice_event_for_user(request.user, integration_setting)
     service = Product.objects.filter(launch_route_name=SERVICE_ROUTE).first()
+    message_capture_ui = build_message_capture_ui_context(request.user)
     return {
         "service": service,
         "title": service.title if service else "달력 (Eduitit Calendar)",
@@ -1697,9 +1724,10 @@ def _build_main_view_context(request, *, embedded_sheetbook_context=None):
         "owner_collaborators": _build_owner_collaborator_rows(request.user),
         "incoming_calendars": incoming_calendars,
         "show_retention_notice_banner": integration_setting.retention_notice_banner_dismissed_at is None,
-        "message_capture_enabled": _is_message_capture_enabled_for_user(request.user),
-        "message_capture_item_types_enabled": _is_message_capture_item_types_enabled_for_user(request.user),
-        "message_capture_limits_json": _build_message_capture_limits_payload(),
+        "message_capture_enabled": message_capture_ui["enabled"],
+        "message_capture_item_types_enabled": message_capture_ui["item_types_enabled"],
+        "message_capture_limits_json": message_capture_ui["limits"],
+        "message_capture_urls_json": message_capture_ui["urls"],
         "embedded_sheetbook_context": embedded_sheetbook_context,
         "embedded_sheetbook_context_json": embedded_sheetbook_context or {},
         "is_embedded_in_sheetbook": bool(embedded_sheetbook_context),

@@ -219,8 +219,11 @@ document.addEventListener('DOMContentLoaded', () => {
     syncFavoriteButtons();
 });
 
+{% include 'classcalendar/_message_hub_script.html' %}
+
 function homeCalendarWidget() {
     return {
+        ...buildCalendarMessageHubState(),
         currentDate: new Date(),
         events: [],
         createModalOpen: false,
@@ -241,6 +244,12 @@ function homeCalendarWidget() {
         },
 
         init() {
+            initCalendarMessageHub(this, {
+                enabled: {{ calendar_hub.message_enabled|yesno:"true,false" }},
+                itemTypesEnabled: {{ calendar_hub.message_item_types_enabled|yesno:"true,false" }},
+                messageLimitsScriptId: 'home-calendar-message-limits-data',
+                messageUrlsScriptId: 'home-calendar-message-urls-data',
+            });
             this.syncSelectedDate(new Date());
             this.refreshEvents();
             this.refreshTicker = setInterval(() => this.refreshEvents(), 120000);
@@ -712,5 +721,7 @@ function homeCalendarWidget() {
         </main>
     </div>
 </div>
+{{ calendar_hub.message_limits_json|json_script:"home-calendar-message-limits-data" }}
+{{ calendar_hub.message_urls_json|json_script:"home-calendar-message-urls-data" }}
 {{ favorite_product_ids|json_script:"home-favorite-ids-data" }}
 {% endblock %}

@@ -240,6 +240,22 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('dayEventsModalOpen', content)
         self.assertNotIn('개인 캘린더', content)
 
+    @override_settings(
+        FEATURE_MESSAGE_CAPTURE_ENABLED=True,
+        FEATURE_MESSAGE_CAPTURE_ALLOWLIST_USERNAMES='capturehome',
+        FEATURE_MESSAGE_CAPTURE_ITEM_TYPES=True,
+    )
+    def test_v2_authenticated_calendar_hub_shows_single_message_entry(self):
+        self._login('capturehome')
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('home-calendar-message-limits-data', content)
+        self.assertIn('home-calendar-message-urls-data', content)
+        self.assertIn('openMessageHub($event, \'capture\', { resetCapture: true })', content)
+        self.assertIn('fa-comment-dots', content)
+        self.assertNotIn('openMessageCaptureModal($event)', content)
+
     def test_v2_authenticated_widens_content_shell_and_keeps_favorites_two_up(self):
         self._login('balanceuser')
         response = self.client.get(reverse('home'))
