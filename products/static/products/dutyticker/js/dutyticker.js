@@ -237,6 +237,8 @@ class DutyTickerManager {
             ? availableHeight
             : Math.max(viewportHeight, leftHeight, 0);
         const isStudentPanelExpanded = !this.missionPanelCollapsed;
+        const isMissionFontLarge = ['lg', 'xl', 'xxl'].includes(this.missionFontSize);
+        const isMissionFontHuge = this.missionFontSize === 'xl' || this.missionFontSize === 'xxl';
         const isDisplayFullscreen = !!document.fullscreenElement;
         const displayMode = isDisplayFullscreen ? 'fullscreen' : 'windowed';
 
@@ -246,11 +248,13 @@ class DutyTickerManager {
                 viewportHeight < 720
                 || timerHeight < 430
                 || (isStudentPanelExpanded && effectiveAvailableHeight < 760)
+                || (isStudentPanelExpanded && isMissionFontHuge && timerHeight < 560)
             );
             const shouldUseBalanced = shouldUseCompact || (
                 viewportHeight < 820
                 || timerHeight < 520
                 || (isStudentPanelExpanded && effectiveAvailableHeight < 900)
+                || (isStudentPanelExpanded && isMissionFontLarge && timerHeight < 620)
             );
             density = shouldUseCompact ? 'compact' : (shouldUseBalanced ? 'balanced' : 'presentation');
         }

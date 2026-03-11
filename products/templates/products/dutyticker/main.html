@@ -1988,6 +1988,86 @@
         line-height: 1.18;
     }
 
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="presentation"][data-mission-panel="expanded"] .dt-timer-main {
+        gap: clamp(0.4rem, 0.72vh, 0.62rem);
+    }
+
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"][data-mission-panel="expanded"] .dt-timer-main {
+        gap: clamp(0.28rem, 0.56vh, 0.46rem);
+    }
+
+    #mainAppContainer[data-display-mode="windowed"][data-mission-panel="expanded"] .dt-clock-stage {
+        align-items: flex-end;
+        padding-top: 0;
+    }
+
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="presentation"][data-mission-panel="expanded"] .dt-clock-shell {
+        width: min(100%, 50rem);
+        padding: clamp(0.26rem, 0.52vw, 0.48rem) clamp(0.62rem, 1vw, 0.86rem);
+    }
+
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"][data-mission-panel="expanded"] .dt-clock-shell {
+        width: min(100%, 46rem);
+        padding: clamp(0.2rem, 0.42vw, 0.38rem) clamp(0.52rem, 0.88vw, 0.74rem);
+    }
+
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="presentation"][data-mission-panel="expanded"] .dt-mission-stage {
+        width: min(100%, 43rem);
+        padding: clamp(0.38rem, 0.72vw, 0.58rem) clamp(0.66rem, 1.08vw, 0.9rem);
+    }
+
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"][data-mission-panel="expanded"] .dt-mission-stage {
+        width: min(100%, 39rem);
+        padding: clamp(0.32rem, 0.6vw, 0.5rem) clamp(0.56rem, 0.94vw, 0.76rem);
+    }
+
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="presentation"][data-mission-panel="expanded"] .dt-mission-lane,
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"][data-mission-panel="expanded"] .dt-mission-lane {
+        gap: clamp(0.14rem, 0.36vh, 0.28rem);
+    }
+
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="presentation"][data-mission-panel="expanded"] .dt-mission-kicker,
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"][data-mission-panel="expanded"] .dt-mission-kicker {
+        padding: 0.22rem 0.5rem;
+        font-size: clamp(0.5rem, 0.5rem + 0.05vw, 0.6rem);
+    }
+
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="presentation"][data-mission-panel="expanded"] #mainTimerDisplay {
+        font-size: clamp(3.44rem, min(13.2vw, 12.6vh), 7.6rem);
+        line-height: 0.86;
+    }
+
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"][data-mission-panel="expanded"] #mainTimerDisplay {
+        font-size: clamp(2.88rem, min(11vw, 10.8vh), 6.1rem);
+        line-height: 0.86;
+    }
+
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="presentation"][data-mission-panel="expanded"] #mainMissionTitle {
+        font-size: clamp(1.3rem, 2.36vw, 1.96rem);
+        line-height: 1.02;
+        max-width: min(100%, 24rem);
+    }
+
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"][data-mission-panel="expanded"] #mainMissionTitle {
+        font-size: clamp(1.12rem, 2.04vw, 1.7rem);
+        line-height: 1.02;
+        max-width: min(100%, 22rem);
+    }
+
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="presentation"][data-mission-panel="expanded"] #mainMissionDesc {
+        font-size: clamp(0.8rem, 1vw, 0.96rem);
+        max-width: min(100%, 32rem);
+        line-height: 1.12;
+        word-break: keep-all;
+    }
+
+    #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"][data-mission-panel="expanded"] #mainMissionDesc {
+        font-size: clamp(0.74rem, 0.92vw, 0.88rem);
+        max-width: min(100%, 30rem);
+        line-height: 1.1;
+        word-break: keep-all;
+    }
+
     #mainAppContainer[data-layout-density="presentation"] #timerControls {
         margin-top: clamp(0.66rem, 1.45vh, 1.08rem);
         row-gap: 0.54rem;
