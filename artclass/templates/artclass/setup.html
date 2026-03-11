@@ -171,7 +171,7 @@
                         유튜브 정책으로 내장 재생이 막히는 영상은 새 창 재생 모드를 선택하면 수업 진행이 끊기지 않습니다.
                     </p>
                     <p class="text-xs text-gray-500 mt-1">
-                        수업 화면 상단의 <b>화면 분할 시작</b> 버튼으로 유튜브와 안내 화면을 반반 배치할 수 있습니다.
+                        수업 화면에서는 런처가 먼저 보이고, 필요하면 브라우저 분할로도 이어서 진행할 수 있습니다.
                     </p>
                     <div class="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
                         <p class="text-sm font-heavy text-emerald-900">
@@ -191,6 +191,33 @@
                         </p>
                         {% endif %}
                     </div>
+                    <div id="externalLauncherGuide"
+                        class="mt-4 hidden rounded-[1.75rem] border-2 border-emerald-300 bg-gradient-to-br from-emerald-50 via-white to-emerald-100 p-5 shadow-sm">
+                        <div class="flex items-start gap-3">
+                            <div class="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md">
+                                <i class="fa-solid fa-rocket"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-lg font-heavy text-emerald-950">이 수업은 런처가 필요합니다</p>
+                                <p class="mt-1 text-sm text-emerald-900/80 leading-relaxed">
+                                    저장 후 다음 화면에서 보이는 초록 버튼으로 런처를 실행하면 영상과 안내 화면이 자동으로 나뉩니다.
+                                </p>
+                            </div>
+                        </div>
+                        <ol class="mt-4 space-y-2 text-sm text-emerald-950">
+                            <li class="flex items-center gap-2">
+                                <span class="w-6 h-6 rounded-full bg-emerald-600 text-white text-xs font-heavy flex items-center justify-center">1</span>
+                                아래 버튼으로 저장하고 수업 화면으로 이동합니다.
+                            </li>
+                            <li class="flex items-center gap-2">
+                                <span class="w-6 h-6 rounded-full bg-emerald-600 text-white text-xs font-heavy flex items-center justify-center">2</span>
+                                자동 실행이 안 되면 다음 화면의 큰 초록 버튼을 누르세요.
+                            </li>
+                        </ol>
+                        <p class="mt-4 text-xs font-bold text-emerald-800">
+                            브라우저가 외부 앱 실행을 막을 수 있어서, 다음 화면에서 한 번 더 눌러 주는 흐름을 함께 보여 드립니다.
+                        </p>
+                    </div>
                 </div>
 
                 <div class="max-w-xs mx-auto mb-8">
@@ -203,10 +230,13 @@
                     </div>
                 </div>
 
-                <button type="submit"
+                <button type="submit" id="setupSubmitButton"
                     class="w-full md:w-auto px-12 py-4 rounded-full bg-green-500 text-white text-2xl font-heavy shadow-lg hover:bg-green-600 hover:scale-105 active:scale-95 transition-all">
-                    수업 시작하기 <i class="fa-solid fa-play ml-2 text-xl"></i>
+                    <span id="setupSubmitLabel">수업 시작하기</span> <i class="fa-solid fa-play ml-2 text-xl"></i>
                 </button>
+                <p id="setupSubmitHelp" class="mt-3 text-sm font-bold text-emerald-800 hidden">
+                    저장 후 다음 화면에서 큰 초록 버튼으로 런처를 실행해 주세요.
+                </p>
             </div>
         </form>
 
@@ -231,6 +261,10 @@
     const geminiWarningListEl = document.getElementById('geminiWarningList');
     const btnLaunchGeminiFlowEl = document.getElementById('btnLaunchGeminiFlow');
     const btnApplyGeminiResultEl = document.getElementById('btnApplyGeminiResult');
+    const playbackModeEl = document.getElementById('playbackMode');
+    const externalLauncherGuideEl = document.getElementById('externalLauncherGuide');
+    const setupSubmitLabelEl = document.getElementById('setupSubmitLabel');
+    const setupSubmitHelpEl = document.getElementById('setupSubmitHelp');
     let geminiApplyInProgress = false;
     let lastAppliedGeminiText = '';
 
@@ -300,6 +334,25 @@ JSON 스키마 예시:
 
     if (videoUrlEl) {
         videoUrlEl.addEventListener('input', updateGeminiPrompt);
+    }
+
+    function syncPlaybackModeGuidance() {
+        const isExternalMode = playbackModeEl?.value === 'external_window';
+        if (externalLauncherGuideEl) {
+            externalLauncherGuideEl.classList.toggle('hidden', !isExternalMode);
+        }
+        if (setupSubmitLabelEl) {
+            setupSubmitLabelEl.textContent = isExternalMode
+                ? '저장하고 런처 화면으로 이동'
+                : '수업 시작하기';
+        }
+        if (setupSubmitHelpEl) {
+            setupSubmitHelpEl.classList.toggle('hidden', !isExternalMode);
+        }
+    }
+
+    if (playbackModeEl) {
+        playbackModeEl.addEventListener('change', syncPlaybackModeGuidance);
     }
 
     function renderSteps() {
@@ -499,6 +552,7 @@ JSON 스키마 예시:
 
     // Init
     updateGeminiPrompt();
+    syncPlaybackModeGuidance();
     renderGeminiWarnings([]);
     renderSteps();
 </script>
