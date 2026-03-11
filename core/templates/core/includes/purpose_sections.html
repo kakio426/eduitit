@@ -2,12 +2,12 @@
 {# 사용: {% include 'core/includes/purpose_sections.html' with sections=sections %} #}
 <div
     x-data="{ openSection: null }"
-    class="grid gap-4 md:grid-cols-2 md:gap-5 md:items-start md:justify-items-start"
+    class="grid gap-3.5 md:grid-cols-2 md:gap-4 md:items-start md:justify-items-start"
     data-home-v2-service-board="true"
 >
 {% for section in sections %}
-    <section class="w-full rounded-[2rem] border border-slate-200 bg-white/90 p-5 md:p-6 shadow-sm" data-home-v2-service-section="{{ section.key }}">
-        <div class="mb-4 flex items-start justify-between gap-3">
+    <section class="w-full rounded-[1.75rem] border border-slate-200 bg-white/90 p-4 md:p-5 shadow-sm" data-home-v2-service-section="{{ section.key }}">
+        <div class="mb-3 flex items-start justify-between gap-3">
             <div class="flex items-center gap-3">
                 <div class="flex h-11 w-11 items-center justify-center rounded-2xl text-white text-base shadow-sm {% if section.color == 'blue' %}bg-gradient-to-br from-blue-500 to-blue-600{% elif section.color == 'emerald' %}bg-gradient-to-br from-emerald-500 to-emerald-600{% elif section.color == 'violet' %}bg-gradient-to-br from-violet-500 to-violet-600{% elif section.color == 'cyan' %}bg-gradient-to-br from-cyan-500 to-cyan-600{% else %}bg-gradient-to-br from-slate-500 to-slate-600{% endif %}">
                     <i class="{{ section.icon }}"></i>
@@ -38,7 +38,7 @@
             {% endif %}
         </div>
 
-        <div class="space-y-3" data-home-v2-service-grid="true">
+        <div class="space-y-2.5 md:space-y-3" data-home-v2-service-grid="true">
             {% for product in section.products %}
             {% include 'core/includes/mini_card.html' with product=product %}
             {% endfor %}
@@ -53,7 +53,7 @@
                 x-transition:leave="transition ease-in duration-180"
                 x-transition:leave-start="opacity-100 translate-y-0"
                 x-transition:leave-end="opacity-0 -translate-y-2"
-                class="space-y-3"
+                class="space-y-2.5 md:space-y-3"
             >
                 {% for product in section.overflow_products %}
                 {% include 'core/includes/mini_card.html' with product=product %}

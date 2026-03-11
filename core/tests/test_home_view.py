@@ -280,7 +280,19 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
         self.assertIn('수업을 준비해요', content)
         self.assertIn('data-home-v2-service-card-body="true"', content)
+        self.assertIn('data-home-v2-service-card-header="true"', content)
         self.assertIn('전체 보기', content)
+
+    def test_v2_authenticated_favorite_cards_show_compact_body(self):
+        user = self._login('favoritebodyuser')
+        ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('data-home-v2-favorite-card-header="true"', content)
+        self.assertIn('data-home-v2-favorite-card-body="true"', content)
+        self.assertIn('수업을 준비해요', content)
 
     def test_v2_service_board_uses_balanced_two_column_shell(self):
         response = self.client.get(reverse('home'))
@@ -296,6 +308,23 @@ class HomeV2ViewTest(TestCase):
             self.assertLessEqual(len(section.get('products', [])), 2)
         for section in response.context.get('aux_sections', []):
             self.assertLessEqual(len(section.get('products', [])), 2)
+
+    def test_v2_display_groups_pair_class_ops_with_refresh(self):
+        Product.objects.create(
+            title="상담 도구",
+            description="상담용",
+            price=0,
+            is_active=True,
+            service_type='counsel',
+        )
+
+        response = self.client.get(reverse('home'))
+
+        primary_keys = [section['key'] for section in response.context.get('primary_display_sections', [])]
+        secondary_keys = [section['key'] for section in response.context.get('secondary_display_sections', [])]
+
+        self.assertEqual(primary_keys[:4], ['collect_sign', 'doc_write', 'class_ops', 'refresh'])
+        self.assertNotIn('refresh', secondary_keys)
 
     def test_v2_authenticated_tablet_nav_does_not_render_login_cta_for_logged_in_user(self):
         self._login('tabletnav')

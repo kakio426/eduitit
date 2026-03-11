@@ -91,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             <!-- 목적별 섹션 -->
             <div class="mb-6" data-aos="fade-up" data-aos-delay="50" data-home-v2-service-groups="true">
-                {% include 'core/includes/purpose_sections.html' with sections=sections %}
+                {% include 'core/includes/purpose_sections.html' with sections=primary_display_sections|default:sections %}
             </div>
 
             <!-- 교실 활동 배너 -->
@@ -99,9 +99,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 {% include 'core/includes/game_banner.html' with games=games %}
             </div>
 
-            {% if aux_sections %}
+            {% if secondary_display_sections|default:aux_sections %}
             <div class="mb-6" data-aos="fade-up" data-aos-delay="80" data-home-v2-service-groups="true">
-                {% include 'core/includes/purpose_sections.html' with sections=aux_sections %}
+                {% include 'core/includes/purpose_sections.html' with sections=secondary_display_sections|default:aux_sections %}
             </div>
             {% endif %}
 

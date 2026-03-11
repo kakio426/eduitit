@@ -578,8 +578,8 @@ function homeCalendarWidget() {
                             {% if favorite_items %}
                             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                 {% for item in favorite_items|slice:":4" %}
-                                {% with favorite_title=item.product.public_service_name|default:item.product.title %}
-                                <div class="relative rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-4 shadow-sm transition product-card hover:border-amber-300 hover:bg-white"
+                                {% with favorite_title=item.product.public_service_name|default:item.product.title favorite_body=item.product.home_card_summary|default:item.product.teacher_first_support_label|default:item.product.solve_text|default:item.product.description %}
+                                <div class="rounded-[1.4rem] border border-slate-200 bg-slate-50 px-4 py-3.5 shadow-sm transition product-card hover:border-amber-300 hover:bg-white"
                                     data-home-v2-favorite-card="true"
                                     data-product-id="{{ item.product.id }}"
                                     data-launch-href="{{ item.href }}"
@@ -588,24 +588,31 @@ function homeCalendarWidget() {
                                     data-track-label="{{ item.product.title }}"
                                     role="button"
                                     tabindex="0">
-                                    <button type="button"
-                                        class="favorite-toggle-btn absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-300 hover:border-amber-300 hover:text-amber-500 transition-colors"
-                                        data-product-id="{{ item.product.id }}"
-                                        data-favorite-toggle="true"
-                                        aria-pressed="false"
-                                        aria-label="{{ item.product.public_service_name|default:item.product.title }} 즐겨찾기 토글"
-                                        title="즐겨찾기">
-                                        <i class="fa-solid fa-star text-[10px]"></i>
-                                    </button>
-                                    <div class="pr-10">
-                                        <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-base shadow-sm {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-violet-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-pink-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
+                                    <div class="space-y-2">
+                                        <div class="flex items-start gap-3" data-home-v2-favorite-card-header="true">
+                                            <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-white text-base shadow-sm {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-violet-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-pink-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
                                             {% if item.product.icon %}
                                                 {% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }}"></i>{% else %}{{ item.product.icon }}{% endif %}
                                             {% else %}
                                                 <i class="fa-solid fa-sparkles"></i>
                                             {% endif %}
+                                            </div>
+                                            <div class="min-w-0 flex-1 pt-0.5">
+                                                <p class="text-[1.05rem] md:text-[1.12rem] font-black leading-6 text-slate-900 line-clamp-2" data-home-v2-favorite-card-title="true">{{ favorite_title }}</p>
+                                            </div>
+                                            <button type="button"
+                                                class="favorite-toggle-btn inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-300 hover:border-amber-300 hover:text-amber-500 transition-colors"
+                                                data-product-id="{{ item.product.id }}"
+                                                data-favorite-toggle="true"
+                                                aria-pressed="false"
+                                                aria-label="{{ item.product.public_service_name|default:item.product.title }} 즐겨찾기 토글"
+                                                title="즐겨찾기">
+                                                <i class="fa-solid fa-star text-[10px]"></i>
+                                            </button>
                                         </div>
-                                        <p class="mt-3 text-base md:text-lg font-black leading-6 text-slate-900 line-clamp-2" data-home-v2-favorite-card-title="true">{{ favorite_title }}</p>
+                                        {% if favorite_body %}
+                                        <p class="pl-[3.25rem] text-[0.9rem] leading-5 text-slate-500 line-clamp-1" data-home-v2-favorite-card-body="true">{{ favorite_body|truncatechars:66 }}</p>
+                                        {% endif %}
                                     </div>
                                 </div>
                                 {% endwith %}
@@ -685,16 +692,16 @@ function homeCalendarWidget() {
                 </section>
 
                 <section class="mb-6" data-home-v2-service-groups="true">
-                    {% include 'core/includes/purpose_sections.html' with sections=sections %}
+                    {% include 'core/includes/purpose_sections.html' with sections=primary_display_sections|default:sections %}
                 </section>
 
                 <div class="mb-6" data-home-v2-game-section="true">
                     {% include 'core/includes/game_banner.html' with games=games %}
                 </div>
 
-                {% if aux_sections %}
+                {% if secondary_display_sections|default:aux_sections %}
                 <section class="mb-6" data-home-v2-service-groups="true">
-                    {% include 'core/includes/purpose_sections.html' with sections=aux_sections %}
+                    {% include 'core/includes/purpose_sections.html' with sections=secondary_display_sections|default:aux_sections %}
                 </section>
                 {% endif %}
             </div>

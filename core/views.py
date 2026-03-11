@@ -408,6 +408,26 @@ def _build_section_payload(section, items, preview_limit=None):
     }
 
 
+def _build_home_v2_display_groups(sections, aux_sections):
+    ordered_sections = [*sections, *aux_sections]
+    section_by_key = {section["key"]: section for section in ordered_sections}
+
+    primary_keys = ("collect_sign", "doc_write", "class_ops", "refresh")
+    secondary_keys = ("guide", "external")
+
+    primary_display_sections = [section_by_key[key] for key in primary_keys if key in section_by_key]
+    used_keys = {section["key"] for section in primary_display_sections}
+
+    secondary_display_sections = [section_by_key[key] for key in secondary_keys if key in section_by_key and key not in used_keys]
+    used_keys.update(section["key"] for section in secondary_display_sections)
+
+    secondary_display_sections.extend(
+        section for section in ordered_sections if section["key"] not in used_keys
+    )
+
+    return primary_display_sections, secondary_display_sections
+
+
 def _resolve_home_section_key(product):
     route_name = (product.launch_route_name or "").strip().lower()
     if route_name in HOME_SECTION_BY_ROUTE:
@@ -2109,6 +2129,7 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
         product_list,
         preview_limit=2,
     )
+    primary_display_sections, secondary_display_sections = _build_home_v2_display_groups(sections, aux_sections)
     sns_summary_posts = _build_home_community_summary_posts(page_obj, limit=2)
     community_summary = {
         'title': '실시간 소통',
@@ -2176,6 +2197,8 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
             'products': products,
             'sections': sections,
             'aux_sections': aux_sections,
+            'primary_display_sections': primary_display_sections,
+            'secondary_display_sections': secondary_display_sections,
             'home_sections': home_sections,
             'games': games,
             'quick_actions': quick_action_items,
@@ -2203,6 +2226,8 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
         'featured_product': featured_product,
         'sections': sections,
         'aux_sections': aux_sections,
+        'primary_display_sections': primary_display_sections,
+        'secondary_display_sections': secondary_display_sections,
         'games': games,
         'community_summary': community_summary,
         'posts': posts,
