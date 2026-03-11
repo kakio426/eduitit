@@ -315,6 +315,8 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
+        self.assertIn('class="home-mini-app-grid"', content)
+        self.assertNotIn('home-mini-app-track-wrap', content)
         self.assertContains(response, 'data-home-mini-app-key="noticegen"', count=1, html=False)
         self.assertContains(response, 'data-home-mini-app-key="qrgen"', count=1, html=False)
         self.assertContains(response, 'data-home-mini-app-key="prompt_lab"', count=1, html=False)

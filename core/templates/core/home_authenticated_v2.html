@@ -34,32 +34,21 @@
         align-content: start;
     }
 
-    .home-mini-app-track-wrap {
-        overflow-x: auto;
-        padding-bottom: 0.25rem;
-        scroll-snap-type: x proximity;
-    }
-
-    .home-mini-app-track {
-        display: flex;
+    .home-mini-app-grid {
+        display: grid;
         gap: 1rem;
-        align-items: stretch;
-        min-width: min-content;
+        align-items: start;
     }
 
     .home-mini-app-card {
-        flex: 0 0 calc(100vw - 3rem);
-        max-width: 31rem;
-        scroll-snap-align: start;
+        width: 100%;
+        max-width: none;
+        align-self: start;
     }
 
     @media (min-width: 640px) {
         .home-calendar-day {
             min-height: 82px;
-        }
-
-        .home-mini-app-card {
-            flex-basis: min(29rem, calc(100vw - 5rem));
         }
     }
 
@@ -69,8 +58,8 @@
             gap: 1.25rem;
         }
 
-        .home-mini-app-card {
-            flex-basis: min(32rem, calc(50vw - 3.5rem));
+        .home-mini-app-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
         }
     }
 
@@ -81,10 +70,6 @@
 
         .home-v2-top-zone {
             grid-template-columns: minmax(360px, 430px) minmax(460px, 1fr);
-        }
-
-        .home-mini-app-card {
-            flex-basis: calc((100% - 1rem) / 2);
         }
     }
 </style>
