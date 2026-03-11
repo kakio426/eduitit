@@ -370,6 +370,26 @@ HOME_COMPANION_SECTION_MAP = {
     'refresh': ['doc_write'],
 }
 
+HOME_TO_CATALOG_SECTION_KEY = {
+    "collect_sign": "collect",
+    "doc_write": "prep",
+    "class_ops": "today_ops",
+    "class_activity": "activity",
+    "refresh": "counsel",
+    "guide": "reference",
+    "external": "reference",
+}
+
+HOME_CARD_SUMMARY_FALLBACK_BY_SECTION = {
+    "collect_sign": "회수부터 서명 확인까지 바로 이어서 처리합니다.",
+    "doc_write": "문서 초안과 정리를 빠르게 시작할 수 있습니다.",
+    "class_ops": "오늘 운영 흐름에 맞춰 바로 실행할 수 있습니다.",
+    "class_activity": "교실 분위기를 바로 살릴 수 있는 활동입니다.",
+    "refresh": "상담과 리프레시가 필요할 때 바로 엽니다.",
+    "guide": "필요한 안내와 참고를 빠르게 확인합니다.",
+    "external": "외부 서비스로 바로 이어집니다.",
+}
+
 
 def _resolve_section_preview_limit(section_key, preview_limit):
     if isinstance(preview_limit, dict):
@@ -380,6 +400,14 @@ def _resolve_section_preview_limit(section_key, preview_limit):
     return preview_limit
 
 
+def _build_home_section_catalog_url(section_key):
+    catalog_section_key = HOME_TO_CATALOG_SECTION_KEY.get(section_key, "")
+    base_url = reverse("product_list")
+    if not catalog_section_key:
+        return "", ""
+    return catalog_section_key, f"{base_url}?section={catalog_section_key}"
+
+
 def _build_section_payload(section, items, preview_limit=None):
     resolved_preview_limit = _resolve_section_preview_limit(section["key"], preview_limit)
     if resolved_preview_limit and resolved_preview_limit > 0:
@@ -388,6 +416,7 @@ def _build_section_payload(section, items, preview_limit=None):
         preview_items = items
     overflow_items = items[len(preview_items):]
     remaining_count = max(0, len(items) - len(preview_items))
+    catalog_section_key, catalog_url = _build_home_section_catalog_url(section["key"])
     return {
         **section,
         "products": preview_items,
@@ -395,6 +424,8 @@ def _build_section_payload(section, items, preview_limit=None):
         "total_count": len(items),
         "remaining_count": remaining_count,
         "has_more": remaining_count > 0,
+        "catalog_section_key": catalog_section_key,
+        "catalog_url": catalog_url,
     }
 
 
@@ -613,6 +644,8 @@ CATALOG_SCENARIO_SECTIONS = [
     },
 ]
 
+VALID_CATALOG_SECTION_KEYS = {section["key"] for section in CATALOG_SCENARIO_SECTIONS}
+
 GUIDE_ENTRY_POINT_META = [
     {
         "key": "start",
@@ -768,6 +801,29 @@ def _build_teacher_first_product_labels(product):
     }
 
 
+def _build_home_card_summary(product):
+    public_service_name = str(
+        getattr(product, "public_service_name", "") or getattr(product, "title", "") or ""
+    ).strip()
+
+    for candidate in (
+        getattr(product, "teacher_first_support_label", ""),
+        getattr(product, "solve_text", ""),
+        getattr(product, "description", ""),
+    ):
+        summary = str(candidate or "").strip()
+        if summary and summary != public_service_name:
+            return _replace_public_service_terms(summary, product)
+
+    section_key = _resolve_home_section_key(product)
+    fallback = HOME_CARD_SUMMARY_FALLBACK_BY_SECTION.get(section_key)
+    if not fallback:
+        fallback = HOME_SECTION_META_BY_KEY.get(section_key, {}).get("subtitle", "")
+    if not fallback:
+        fallback = "필요한 순간 바로 열 수 있습니다."
+    return _replace_public_service_terms(fallback, product)
+
+
 def _build_product_guide_url_map(products):
     product_ids = [product.id for product in products if getattr(product, "id", None)]
     if not product_ids:
@@ -809,6 +865,7 @@ def _attach_product_launch_meta(products):
         product.sample_url = ""
         for attr_name, attr_value in _build_teacher_first_product_labels(product).items():
             setattr(product, attr_name, attr_value)
+        product.home_card_summary = _build_home_card_summary(product)
         prepared.append(product)
     return prepared
 
@@ -1792,6 +1849,13 @@ def _build_home_calendar_hub_context(request):
     }
 
 
+def _normalize_catalog_section_key(raw_value):
+    value = str(raw_value or "").strip().lower()
+    if value in VALID_CATALOG_SECTION_KEYS:
+        return value
+    return ""
+
+
 def _resolve_catalog_scenario_key(product):
     if _is_sheetbook_cross_surface_hidden(product):
         return None
@@ -1845,7 +1909,8 @@ def _build_catalog_hub_context(product_list):
     }
 
 
-def _build_catalog_scenario_sections(product_list):
+def _build_catalog_scenario_sections(product_list, selected_section_key=""):
+    selected_section_key = _normalize_catalog_section_key(selected_section_key)
     bucket = {section["key"]: [] for section in CATALOG_SCENARIO_SECTIONS}
     for product in product_list:
         section_key = _resolve_catalog_scenario_key(product)
@@ -1855,6 +1920,8 @@ def _build_catalog_scenario_sections(product_list):
 
     sections = []
     for section in CATALOG_SCENARIO_SECTIONS:
+        if selected_section_key and section["key"] != selected_section_key:
+            continue
         items = bucket.get(section["key"], [])
         if not items:
             continue
@@ -2061,11 +2128,15 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
     product_list = _attach_product_launch_meta(list(products))
     sections, aux_sections, games = get_purpose_sections(
         product_list,
-        preview_limit={
-            "default": 2,
-            "class_ops": 3,
-        },
+        preview_limit=2,
     )
+    sns_summary_posts = _build_home_community_summary_posts(page_obj, limit=2)
+    community_summary = {
+        'title': '실시간 소통',
+        'description': '공지와 최근 소통 두 가지만 먼저 보고, 전체 소통은 따로 이어서 확인합니다.',
+        'posts': sns_summary_posts,
+        'full_url': reverse('community_feed'),
+    }
 
     if request.user.is_authenticated:
         UserProfile.objects.get_or_create(user=request.user)
@@ -2138,6 +2209,7 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
             'workbench_bundles': workbench_bundles,
             'weekly_bundle_items': weekly_bundle_items,
             'home_calendar_summary': home_calendar_summary,
+            'community_summary': community_summary,
             'posts': posts,
             'page_obj': page_obj,
             'feed_scope': feed_scope,
@@ -2153,6 +2225,7 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
         'sections': sections,
         'aux_sections': aux_sections,
         'games': games,
+        'community_summary': community_summary,
         'posts': posts,
         'page_obj': page_obj,
         'feed_scope': feed_scope,
@@ -3209,6 +3282,7 @@ def service_guide_list(request):
             'teacher_first_task_label',
             'teacher_first_service_label',
             'teacher_first_support_label',
+            'home_card_summary',
             'public_service_name',
             'detail_context_chips',
             'home_context_chips',

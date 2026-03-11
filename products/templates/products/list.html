@@ -28,6 +28,12 @@
                 <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">현재 노출 서비스 {{ total_count }}개</span>
                 <span class="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">학급 캘린더를 기준으로 정렬</span>
                 <span class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">업무 상황 중심 탐색</span>
+                {% if selected_scenario_section %}
+                <span class="inline-flex items-center rounded-full bg-violet-50 px-3 py-1 text-xs font-bold text-violet-700">선택된 보기 {{ selected_scenario_section.title }}</span>
+                <a href="{% url 'product_list' %}" class="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-bold text-slate-600 transition hover:border-indigo-300 hover:text-indigo-600">
+                    전체 카탈로그 보기
+                </a>
+                {% endif %}
             </div>
         </header>
 

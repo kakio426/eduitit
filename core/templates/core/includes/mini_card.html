@@ -1,6 +1,6 @@
 {# 미니 서비스 카드 - teacher-first 공통 카드 #}
 {# 사용: {% include 'core/includes/mini_card.html' with product=product %} #}
-{% with card_title=product.public_service_name|default:product.teacher_first_service_label|default:product.title card_body=product.teacher_first_support_label|default:product.solve_text|default:product.description %}
+{% with card_title=product.public_service_name|default:product.title card_body=product.home_card_summary|default:product.teacher_first_support_label|default:product.solve_text|default:product.description %}
 <div class="relative rounded-[1.8rem] border border-slate-200 bg-white px-5 py-5 shadow-sm transition-all cursor-pointer group product-card hover:border-indigo-200 hover:shadow-md"
     data-home-v2-service-card="true"
     data-teacher-first-card="true"
@@ -29,11 +29,11 @@
                 <i class="fa-solid fa-sparkles"></i>
             {% endif %}
         </div>
-        <h4 class="mt-4 text-xl md:text-[1.4rem] font-black leading-8 text-slate-900 group-hover:text-indigo-600 transition-colors line-clamp-2">
+        <h4 class="mt-4 text-[1.35rem] md:text-[1.55rem] xl:text-[1.45rem] font-black leading-8 text-slate-900 group-hover:text-indigo-600 transition-colors line-clamp-2">
             {{ card_title }}
         </h4>
-        {% if card_body and card_body != card_title %}
-        <p class="mt-2 text-sm md:text-[0.95rem] leading-6 text-slate-500 line-clamp-2">
+        {% if card_body %}
+        <p class="mt-2 text-sm xl:text-[0.95rem] leading-6 text-slate-500 line-clamp-2 md:line-clamp-1 xl:line-clamp-2" data-home-v2-service-card-body="true">
             {{ card_body|truncatechars:82 }}
         </p>
         {% endif %}

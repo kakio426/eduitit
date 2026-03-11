@@ -476,6 +476,25 @@
                     {% endif %}
                 </div>
 
+                <!-- Tablet Auth State -->
+                <div class="hidden md:flex lg:hidden items-center gap-2">
+                    {% if user.is_authenticated %}
+                    <div class="inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-2 shadow-clay-inner text-sm font-bold text-gray-700">
+                        <span class="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100 text-purple-500">
+                            <i class="fa-solid fa-user text-xs"></i>
+                        </span>
+                        <span class="max-w-[120px] truncate">
+                            {% if user.userprofile.nickname %}{{ user.userprofile.nickname }}{% elif user.username %}{{ user.username }}{% else %}사용자{% endif %}님
+                        </span>
+                    </div>
+                    {% else %}
+                    <a href="{% url 'account_login' %}" class="inline-flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-sm font-bold text-purple-600 shadow-clay">
+                        <i class="fa-solid fa-user-lock text-xs"></i>
+                        로그인
+                    </a>
+                    {% endif %}
+                </div>
+
                 <!-- Mobile Hamburger Button -->
                 <button id="mobileMenuBtn" onclick="toggleMobileMenu()"
                     class="lg:hidden w-12 h-12 rounded-full shadow-clay-inner flex items-center justify-center text-gray-500 hover:text-purple-600 transition"

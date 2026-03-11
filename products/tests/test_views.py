@@ -119,6 +119,13 @@ class SheetbookDiscoveryVisibilityTests(TestCase):
             service_type='classroom',
             launch_route_name='classcalendar:main',
         )
+        self.prep_product = Product.objects.create(
+            title="문서 작성 도구",
+            description="문서 작성",
+            price=0,
+            is_active=True,
+            service_type='work',
+        )
         self.visible_manual = ServiceManual.objects.create(
             product=self.visible_product,
             title="학급 캘린더 시작하기",
@@ -164,6 +171,25 @@ class SheetbookDiscoveryVisibilityTests(TestCase):
         self.assertIn(f'{card_cta_prefix}시작하기', content)
         self.assertNotIn(f'{card_cta_prefix}열기', content)
         self.assertTrue(visible_product.guide_url.endswith(reverse('service_guide_detail', kwargs={'pk': self.visible_manual.pk})))
+
+    def test_catalog_section_filter_shows_selected_scenario_only(self):
+        response = self.client.get(f"{reverse('product_list')}?section=today_ops")
+        section_titles = [section['title'] for section in response.context['scenario_sections']]
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(section_titles, ['오늘 운영'])
+        self.assertEqual(response.context['selected_scenario_section']['key'], 'today_ops')
+        self.assertContains(response, '선택된 보기 오늘 운영')
+        self.assertNotContains(response, '수업 준비')
+
+    def test_catalog_invalid_section_filter_falls_back_to_full_catalog(self):
+        response = self.client.get(f"{reverse('product_list')}?section=unknown")
+        section_titles = [section['title'] for section in response.context['scenario_sections']]
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.context['selected_scenario_section'])
+        self.assertIn('오늘 운영', section_titles)
+        self.assertIn('수업 준비', section_titles)
 
 
 class ProductDevicePolicyTests(TestCase):

@@ -191,10 +191,12 @@ def _should_block_for_large_screen_service(request):
 
 def product_list(request):
     from core.views import (
+        CATALOG_SCENARIO_SECTIONS,
         _attach_product_launch_meta,
         _build_catalog_hub_context,
         _build_catalog_scenario_sections,
         _is_sheetbook_cross_surface_hidden,
+        _normalize_catalog_section_key,
     )
 
     products = filter_discoverable_products(
@@ -202,13 +204,26 @@ def product_list(request):
     )
     product_list = _attach_product_launch_meta(list(products))
     surface_products = [product for product in product_list if not _is_sheetbook_cross_surface_hidden(product)]
+    selected_section_key = _normalize_catalog_section_key(request.GET.get('section'))
+    scenario_sections = _build_catalog_scenario_sections(
+        surface_products,
+        selected_section_key=selected_section_key,
+    )
+    if not scenario_sections:
+        selected_section_key = ''
+        scenario_sections = _build_catalog_scenario_sections(surface_products)
+    selected_scenario_section = next(
+        (section for section in CATALOG_SCENARIO_SECTIONS if section["key"] == selected_section_key),
+        None,
+    )
     return render(
         request,
         'products/list.html',
         {
             'products': surface_products,
             'catalog_hub': _build_catalog_hub_context(surface_products),
-            'scenario_sections': _build_catalog_scenario_sections(surface_products),
+            'scenario_sections': scenario_sections,
+            'selected_scenario_section': selected_scenario_section,
             'total_count': len(surface_products),
         },
     )

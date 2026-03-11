@@ -1,6 +1,6 @@
 <div
     x-data="{
-        snsOpen: true,
+        snsOpen: {{ start_open|default:'true' }},
         openPost(postId) {
             this.snsOpen = true;
             this.$nextTick(() => {

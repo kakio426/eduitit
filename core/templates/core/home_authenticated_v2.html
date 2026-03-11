@@ -39,20 +39,20 @@
         }
     }
 
-    @media (min-width: 1024px) {
+    @media (min-width: 768px) {
         .home-v2-top-zone {
-            grid-template-columns: minmax(360px, 430px) minmax(460px, 1fr);
+            grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
             gap: 1.25rem;
         }
     }
 
-    @media (min-width: 1440px) {
+    @media (min-width: 1280px) {
         .home-v2-content-shell {
             max-width: 1240px;
         }
 
         .home-v2-top-zone {
-            grid-template-columns: minmax(380px, 450px) minmax(520px, 1fr);
+            grid-template-columns: minmax(360px, 430px) minmax(460px, 1fr);
         }
     }
 </style>
@@ -224,10 +224,10 @@ function homeCalendarWidget() {
         currentDate: new Date(),
         events: [],
         createModalOpen: false,
-        dayEventsModalOpen: false,
         selectedDateKey: '',
         selectedDateLabel: '',
         selectedDateEvents: [],
+        selectedDateIsEmpty: true,
         isSubmitting: false,
         createContextDateText: '',
         refreshTicker: null,
@@ -241,6 +241,7 @@ function homeCalendarWidget() {
         },
 
         init() {
+            this.syncSelectedDate(new Date());
             this.refreshEvents();
             this.refreshTicker = setInterval(() => this.refreshEvents(), 120000);
             window.addEventListener('focus', () => this.refreshEvents());
@@ -250,10 +251,7 @@ function homeCalendarWidget() {
             try {
                 const payload = await this.requestJson('{% url "classcalendar:api_events" %}');
                 this.events = (payload.events || []).map((event) => this.normalizeEvent(event));
-                if (this.dayEventsModalOpen && this.selectedDateKey) {
-                    const selectedDate = this.parseDateKey(this.selectedDateKey);
-                    this.selectedDateEvents = this.getEventsForDate(selectedDate);
-                }
+                this.syncSelectedDate(this.selectedDateKey ? this.parseDateKey(this.selectedDateKey) : new Date());
             } catch (err) {
                 if (window.showToast) {
                     window.showToast('홈 캘린더를 불러오지 못했습니다.', 'error');
@@ -361,6 +359,10 @@ function homeCalendarWidget() {
             return date.getDate() === t.getDate() && date.getMonth() === t.getMonth() && date.getFullYear() === t.getFullYear();
         },
 
+        isSelected(date) {
+            return this.selectedDateKey === this.dateKey(date);
+        },
+
         getEventsForDate(date) {
             return this.events
                 .filter((e) => this.dateKey(e.start_time) === this.dateKey(date))
@@ -433,25 +435,17 @@ function homeCalendarWidget() {
             return `${this.formatAgendaDate(this.dateKey(start))} ${this.formatClock(start)} ~ ${this.formatAgendaDate(this.dateKey(end))} ${this.formatClock(end)}`;
         },
 
-        handleDateClick(date) {
-            const events = this.getEventsForDate(date);
-            if (events.length) {
-                this.openDayEventsModalForDate(date);
-                return;
-            }
-            this.openCreateModalForDate(date);
-        },
-
-        openDayEventsModalForDate(date) {
-            const key = this.dateKey(date);
+        syncSelectedDate(date) {
+            const selectedDate = new Date(date);
+            const key = this.dateKey(selectedDate);
             this.selectedDateKey = key;
             this.selectedDateLabel = this.formatAgendaDate(key);
-            this.selectedDateEvents = this.getEventsForDate(date);
-            this.dayEventsModalOpen = true;
+            this.selectedDateEvents = this.getEventsForDate(selectedDate);
+            this.selectedDateIsEmpty = this.selectedDateEvents.length === 0;
         },
 
-        closeDayEventsModal() {
-            this.dayEventsModalOpen = false;
+        handleDateClick(date) {
+            this.syncSelectedDate(date);
         },
 
         openCreateModalForSelectedDate() {
@@ -464,8 +458,8 @@ function homeCalendarWidget() {
         },
 
         openCreateModalForDate(date) {
-            this.dayEventsModalOpen = false;
             const base = new Date(date);
+            this.syncSelectedDate(base);
             const start = new Date(base.getFullYear(), base.getMonth(), base.getDate(), 9, 0, 0, 0);
             const end = new Date(start);
             end.setHours(start.getHours() + 1, 0, 0, 0);
@@ -552,7 +546,7 @@ function homeCalendarWidget() {
                             </div>
                             {% if today_items %}
                             <div class="space-y-3">
-                                {% for item in today_items|slice:":3" %}
+                                {% for item in today_items|slice:":2" %}
                                 <a href="{{ item.href }}" class="block rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-4 transition hover:border-indigo-200 hover:bg-white">
                                     <div class="flex items-start gap-3">
                                         <span class="text-2xl leading-none">
@@ -584,7 +578,7 @@ function homeCalendarWidget() {
                             {% if favorite_items %}
                             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                 {% for item in favorite_items|slice:":4" %}
-                                {% with favorite_title=item.product.public_service_name|default:item.product.title favorite_body=item.product.teacher_first_support_label|default:item.product.solve_text|default:item.product.description %}
+                                {% with favorite_title=item.product.public_service_name|default:item.product.title %}
                                 <div class="relative rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-4 shadow-sm transition product-card hover:border-amber-300 hover:bg-white"
                                     data-home-v2-favorite-card="true"
                                     data-product-id="{{ item.product.id }}"
@@ -611,10 +605,7 @@ function homeCalendarWidget() {
                                                 <i class="fa-solid fa-sparkles"></i>
                                             {% endif %}
                                         </div>
-                                        <p class="mt-3 text-base md:text-lg font-black leading-6 text-slate-900 line-clamp-2">{{ favorite_title }}</p>
-                                        {% if favorite_body and favorite_body != favorite_title %}
-                                        <p class="mt-1.5 text-xs md:text-sm leading-5 text-slate-500 line-clamp-2">{{ favorite_body|truncatechars:54 }}</p>
-                                        {% endif %}
+                                        <p class="mt-3 text-base md:text-lg font-black leading-6 text-slate-900 line-clamp-2" data-home-v2-favorite-card-title="true">{{ favorite_title }}</p>
                                     </div>
                                 </div>
                                 {% endwith %}
@@ -631,17 +622,58 @@ function homeCalendarWidget() {
                     {% include 'core/partials/home_calendar_panel.html' %}
                 </section>
 
-                <div class="mb-6">
-                    {% include 'core/includes/purpose_sections.html' with sections=home_sections %}
-                </div>
+                <section class="mb-6 hidden md:block xl:hidden" data-home-v2-tablet-community-summary="true">
+                    <div class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <h2 class="text-lg font-black text-slate-900 flex items-center gap-2">
+                                    <i class="ph-fill ph-chat-circle-text text-indigo-600 text-xl"></i>
+                                    {{ community_summary.title }}
+                                </h2>
+                                <p class="mt-1 text-sm text-slate-500">{{ community_summary.description }}</p>
+                            </div>
+                            <a href="{{ community_summary.full_url }}" class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 transition hover:border-indigo-300 hover:text-indigo-600">
+                                전체 보기
+                                <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                            </a>
+                        </div>
 
-                <div class="mb-6">
+                        <div class="mt-4 grid gap-3 md:grid-cols-2">
+                            {% for item in community_summary.posts %}
+                            <a href="{{ community_summary.full_url }}" class="block rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4 transition hover:border-indigo-200 hover:bg-white">
+                                <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">{{ item.eyebrow }}</p>
+                                {% if item.title %}
+                                <p class="mt-2 text-base font-black leading-6 text-slate-900 line-clamp-2">{{ item.title }}</p>
+                                {% endif %}
+                                <p class="mt-2 text-sm leading-6 text-slate-500 line-clamp-2">{{ item.body|default:item.post.content|default:"아직 올라온 소통 글이 없습니다." }}</p>
+                                <p class="mt-3 text-xs font-semibold text-slate-400">{{ item.post.created_at|timesince }} 전</p>
+                            </a>
+                            {% empty %}
+                            <div class="rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm font-bold text-slate-600 md:col-span-2">
+                                아직 올라온 소통 글이 없습니다.
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </section>
+
+                <section class="mb-6" data-home-v2-service-groups="true">
+                    {% include 'core/includes/purpose_sections.html' with sections=sections %}
+                </section>
+
+                <div class="mb-6" data-home-v2-game-section="true">
                     {% include 'core/includes/game_banner.html' with games=games %}
                 </div>
+
+                {% if aux_sections %}
+                <section class="mb-6" data-home-v2-service-groups="true">
+                    {% include 'core/includes/purpose_sections.html' with sections=aux_sections %}
+                </section>
+                {% endif %}
             </div>
 
             <!-- 모바일 전용 SNS 미리보기 -->
-            {% include 'core/partials/sns_mobile_preview_panel.html' with root_class='block xl:hidden mt-6 md:mt-8 px-1' section_id='sns-full-section-auth-v2' %}
+            {% include 'core/partials/sns_mobile_preview_panel.html' with root_class='block md:hidden mt-6 px-1' section_id='sns-full-section-auth-v2' start_open='true' %}
 
         </main>
     </div>

@@ -156,6 +156,17 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
         self.assertIn('로그인하고 시작하기', content)
 
+    def test_v2_anonymous_moves_sns_preview_above_services_and_login_cta(self):
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        sns_index = content.index('sns-full-section-v2')
+        services_index = content.index('data-home-v2-service-groups="true"')
+        login_index = content.index('로그인하고 시작하기')
+
+        self.assertLess(sns_index, services_index)
+        self.assertLess(sns_index, login_index)
+
     def test_v2_anonymous_has_game_banner(self):
         """V2 비로그인 홈에 게임 배너 존재"""
         response = self.client.get(reverse('home'))
@@ -205,7 +216,8 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('data-home-v2-top-zone="true"', content)
         self.assertIn('학급 캘린더', content)
         self.assertIn('home-calendar-day', content)
-        self.assertNotIn('추천 빠른 실행', content)
+        self.assertIn('data-home-v2-calendar-agenda="true"', content)
+        self.assertNotIn('dayEventsModalOpen', content)
         self.assertNotIn('개인 캘린더', content)
 
     def test_v2_authenticated_widens_content_shell_and_keeps_favorites_two_up(self):
@@ -215,9 +227,8 @@ class HomeV2ViewTest(TestCase):
 
         self.assertIn('max-width: 1180px', content)
         self.assertIn('max-width: 1240px', content)
-        self.assertNotIn('max-width: 980px', content)
         self.assertIn('sm:grid-cols-2', content)
-        self.assertNotIn('lg:grid-cols-1', content)
+        self.assertIn('grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);', content)
 
     def test_v2_authenticated_has_sections(self):
         """V2 로그인 홈에 목적별 섹션 존재"""
@@ -226,6 +237,20 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
         self.assertIn('수합·서명', content)
         self.assertIn('문서·작성', content)
+
+    def test_v2_authenticated_orders_tablet_summary_before_services_and_game(self):
+        self._login('tabletorder')
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        top_zone_index = content.index('data-home-v2-top-zone="true"')
+        summary_index = content.index('data-home-v2-tablet-community-summary="true"')
+        service_index = content.index('data-home-v2-service-groups="true"')
+        game_index = content.index('data-home-v2-game-section="true"')
+
+        self.assertLess(top_zone_index, summary_index)
+        self.assertLess(summary_index, service_index)
+        self.assertLess(service_index, game_index)
 
     def test_v2_authenticated_does_not_render_show_all_toggle(self):
         """V2 로그인 홈에서도 전체 서비스 보기 토글 미노출"""
@@ -242,21 +267,35 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('data-home-v2-service-card="true"', content)
         self.assertIn(f'data-product-id="{self.p1.id}"', content)
 
-    def test_v2_mini_card_shows_solve_text(self):
-        """V2 미니 카드에 solve_text 표시"""
+    def test_v2_mini_card_shows_normalized_home_summary(self):
+        """V2 미니 카드는 홈 전용 요약 한 줄 계약을 사용"""
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         self.assertIn('수업을 준비해요', content)
-        self.assertNotIn('수업 도구 상세 설명 열기', content)
-        self.assertNotIn('추천 빠른 실행', content)
+        self.assertIn('data-home-v2-service-card-body="true"', content)
+        self.assertIn('전체 보기', content)
 
     def test_v2_service_board_uses_balanced_two_column_shell(self):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('xl:grid-cols-2 xl:items-start xl:justify-items-start', content)
-        self.assertIn('max-w-xl', content)
+        self.assertIn('md:grid-cols-2', content)
+        self.assertIn('data-home-v2-section-more-link="true"', content)
         self.assertNotIn('repeat(auto-fit, minmax(min(100%, 300px), 360px)); justify-content: start;', content)
+
+    def test_v2_context_section_preview_limit_is_two_for_all_sections(self):
+        response = self.client.get(reverse('home'))
+        for section in response.context.get('sections', []):
+            self.assertLessEqual(len(section.get('products', [])), 2)
+        for section in response.context.get('aux_sections', []):
+            self.assertLessEqual(len(section.get('products', [])), 2)
+
+    def test_v2_authenticated_tablet_nav_does_not_render_login_cta_for_logged_in_user(self):
+        self._login('tabletnav')
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        self.assertNotIn('fa-user-lock', content)
+        self.assertIn('tabletnav님', content)
 
     def test_v2_context_sections_count(self):
         """V2 컨텍스트에 sections 존재"""

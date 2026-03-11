@@ -86,24 +86,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 {% endif %}
             </div>
 
+            <!-- 모바일/태블릿 SNS 미리보기 -->
+            {% include 'core/partials/sns_mobile_preview_panel.html' with root_class='block xl:hidden mt-6 md:mt-0 px-1 mb-6' section_id='sns-full-section-v2' data_aos='fade-up' start_open='false' %}
+
             <!-- 목적별 섹션 -->
-            <div class="mb-6" data-aos="fade-up" data-aos-delay="50">
+            <div class="mb-6" data-aos="fade-up" data-aos-delay="50" data-home-v2-service-groups="true">
                 {% include 'core/includes/purpose_sections.html' with sections=sections %}
             </div>
 
+            <!-- 교실 활동 배너 -->
+            <div class="mb-6" data-aos="fade-up" data-aos-delay="100" data-home-v2-game-section="true">
+                {% include 'core/includes/game_banner.html' with games=games %}
+            </div>
+
             {% if aux_sections %}
-            <div class="mb-6" data-aos="fade-up" data-aos-delay="80">
-                <h3 class="text-sm font-bold text-slate-500 mb-3 flex items-center gap-1.5">
-                    <i class="fa-solid fa-layer-group text-cyan-500"></i> 보조 도구
-                </h3>
+            <div class="mb-6" data-aos="fade-up" data-aos-delay="80" data-home-v2-service-groups="true">
                 {% include 'core/includes/purpose_sections.html' with sections=aux_sections %}
             </div>
             {% endif %}
-
-            <!-- 교실 활동 배너 -->
-            <div class="mb-6" data-aos="fade-up" data-aos-delay="100">
-                {% include 'core/includes/game_banner.html' with games=games %}
-            </div>
 
             <!-- CTA: 로그인 유도 -->
             <div class="mb-6 text-center" data-aos="fade-up" data-aos-delay="150">
@@ -115,9 +115,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     </a>
                 </div>
             </div>
-
-            <!-- 모바일 전용 SNS 미리보기 -->
-            {% include 'core/partials/sns_mobile_preview_panel.html' with root_class='block xl:hidden mt-6 md:mt-8 px-1' section_id='sns-full-section-v2' data_aos='fade-up' %}
 
         </main>
     </div>
