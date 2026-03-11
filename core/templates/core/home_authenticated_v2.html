@@ -17,7 +17,8 @@
     }
 
     .home-v2-content-shell {
-        max-width: 980px;
+        width: 100%;
+        max-width: 1180px;
     }
 
     .home-v2-top-zone {
@@ -29,6 +30,7 @@
     .home-v2-top-center {
         display: grid;
         gap: 1rem;
+        align-content: start;
     }
 
     @media (min-width: 640px) {
@@ -39,8 +41,18 @@
 
     @media (min-width: 1024px) {
         .home-v2-top-zone {
-            grid-template-columns: minmax(300px, 360px) minmax(360px, 440px);
-            justify-content: start;
+            grid-template-columns: minmax(360px, 430px) minmax(460px, 1fr);
+            gap: 1.25rem;
+        }
+    }
+
+    @media (min-width: 1440px) {
+        .home-v2-content-shell {
+            max-width: 1240px;
+        }
+
+        .home-v2-top-zone {
+            grid-template-columns: minmax(380px, 450px) minmax(520px, 1fr);
         }
     }
 </style>
@@ -570,8 +582,9 @@ function homeCalendarWidget() {
                                 <p class="mt-1 text-xs font-semibold text-slate-400">자주 쓰는 서비스만 가까이에 둡니다.</p>
                             </div>
                             {% if favorite_items %}
-                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                 {% for item in favorite_items|slice:":4" %}
+                                {% with favorite_title=item.product.public_service_name|default:item.product.title favorite_body=item.product.teacher_first_support_label|default:item.product.solve_text|default:item.product.description %}
                                 <div class="relative rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-4 shadow-sm transition product-card hover:border-amber-300 hover:bg-white"
                                     data-home-v2-favorite-card="true"
                                     data-product-id="{{ item.product.id }}"
@@ -598,9 +611,13 @@ function homeCalendarWidget() {
                                                 <i class="fa-solid fa-sparkles"></i>
                                             {% endif %}
                                         </div>
-                                        <p class="mt-3 text-base font-black leading-6 text-slate-900 line-clamp-2">{{ item.product.public_service_name|default:item.product.title }}</p>
+                                        <p class="mt-3 text-base md:text-lg font-black leading-6 text-slate-900 line-clamp-2">{{ favorite_title }}</p>
+                                        {% if favorite_body and favorite_body != favorite_title %}
+                                        <p class="mt-1.5 text-xs md:text-sm leading-5 text-slate-500 line-clamp-2">{{ favorite_body|truncatechars:54 }}</p>
+                                        {% endif %}
                                     </div>
                                 </div>
+                                {% endwith %}
                                 {% endfor %}
                             </div>
                             {% else %}

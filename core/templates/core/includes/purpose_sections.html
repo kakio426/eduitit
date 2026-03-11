@@ -2,12 +2,11 @@
 {# 사용: {% include 'core/includes/purpose_sections.html' with sections=sections %} #}
 <div
     x-data="{ openSection: null }"
-    class="grid gap-4 md:gap-5"
+    class="grid gap-4 md:gap-5 xl:grid-cols-2 xl:items-start xl:justify-items-start"
     data-home-v2-service-board="true"
-    style="grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 360px)); justify-content: start;"
 >
 {% for section in sections %}
-    <section class="rounded-[2rem] border border-slate-200 bg-white/90 p-5 md:p-6 shadow-sm" data-home-v2-service-section="{{ section.key }}">
+    <section class="w-full max-w-xl rounded-[2rem] border border-slate-200 bg-white/90 p-5 md:p-6 shadow-sm" data-home-v2-service-section="{{ section.key }}">
         <div class="mb-4 flex items-center gap-3">
             <div class="flex h-11 w-11 items-center justify-center rounded-2xl text-white text-base shadow-sm {% if section.color == 'blue' %}bg-gradient-to-br from-blue-500 to-blue-600{% elif section.color == 'emerald' %}bg-gradient-to-br from-emerald-500 to-emerald-600{% elif section.color == 'violet' %}bg-gradient-to-br from-violet-500 to-violet-600{% elif section.color == 'cyan' %}bg-gradient-to-br from-cyan-500 to-cyan-600{% else %}bg-gradient-to-br from-slate-500 to-slate-600{% endif %}">
                 <i class="{{ section.icon }}"></i>

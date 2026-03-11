@@ -208,6 +208,17 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('추천 빠른 실행', content)
         self.assertNotIn('개인 캘린더', content)
 
+    def test_v2_authenticated_widens_content_shell_and_keeps_favorites_two_up(self):
+        self._login('balanceuser')
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('max-width: 1180px', content)
+        self.assertIn('max-width: 1240px', content)
+        self.assertNotIn('max-width: 980px', content)
+        self.assertIn('sm:grid-cols-2', content)
+        self.assertNotIn('lg:grid-cols-1', content)
+
     def test_v2_authenticated_has_sections(self):
         """V2 로그인 홈에 목적별 섹션 존재"""
         self._login('secuser')
@@ -238,6 +249,14 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('수업을 준비해요', content)
         self.assertNotIn('수업 도구 상세 설명 열기', content)
         self.assertNotIn('추천 빠른 실행', content)
+
+    def test_v2_service_board_uses_balanced_two_column_shell(self):
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('xl:grid-cols-2 xl:items-start xl:justify-items-start', content)
+        self.assertIn('max-w-xl', content)
+        self.assertNotIn('repeat(auto-fit, minmax(min(100%, 300px), 360px)); justify-content: start;', content)
 
     def test_v2_context_sections_count(self):
         """V2 컨텍스트에 sections 존재"""
