@@ -9,20 +9,38 @@
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     .custom-scrollbar { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
 
-    /* 퀵 액션 스크롤 */
-    .quick-scroll { -ms-overflow-style: none; scrollbar-width: none; }
-    .quick-scroll::-webkit-scrollbar { display: none; }
-
     .sns-preview-card { background: white; border-radius: 1.5rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.06); transition: all 0.3s ease; }
     .sns-preview-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-2px); }
 
     .home-calendar-day {
-        min-height: 88px;
+        min-height: 74px;
+    }
+
+    .home-v2-content-shell {
+        max-width: 980px;
+    }
+
+    .home-v2-top-zone {
+        display: grid;
+        gap: 1rem;
+        align-items: start;
+    }
+
+    .home-v2-top-center {
+        display: grid;
+        gap: 1rem;
     }
 
     @media (min-width: 640px) {
         .home-calendar-day {
-            min-height: 104px;
+            min-height: 82px;
+        }
+    }
+
+    @media (min-width: 1024px) {
+        .home-v2-top-zone {
+            grid-template-columns: minmax(300px, 360px) minmax(360px, 440px);
+            justify-content: start;
         }
     }
 </style>
@@ -99,7 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 카드 클릭: 즉시 서비스 진입
     document.querySelectorAll('.product-card').forEach(card => {
         card.addEventListener('click', function(e) {
-            if (e.target.closest('.product-info-trigger') || e.target.closest('[data-favorite-toggle="true"]')) return;
+            if (e.target.closest('[data-favorite-toggle="true"]')) return;
             launchCard(this);
         });
         card.addEventListener('keydown', (e) => {
@@ -150,16 +168,6 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) {
                 showFeedback(error.message || '즐겨찾기 처리 중 오류가 발생했습니다.', 'error');
             }
-        });
-    });
-
-    // 우측 상세 버튼: 모달 열기
-    document.querySelectorAll('.product-info-trigger').forEach(button => {
-        button.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            const id = this.dataset.productId || this.closest('[data-product-id]')?.dataset.productId;
-            if (id && window.openModal) window.openModal(id);
         });
     });
 
@@ -348,12 +356,12 @@ function homeCalendarWidget() {
         },
 
         getVisibleEventsForDate(date) {
-            return this.getEventsForDate(date).slice(0, 2);
+            return this.getEventsForDate(date).slice(0, 1);
         },
 
         getOverflowCountForDate(date) {
             const total = this.getEventsForDate(date).length;
-            return total > 2 ? total - 2 : 0;
+            return total > 1 ? total - 1 : 0;
         },
 
         formatEventTimeShort(dateValue, isAllDay = false) {
@@ -519,239 +527,101 @@ function homeCalendarWidget() {
             </div>
             {% endif %}
 
-            {% if sheetbook_workspace.enabled %}
-            <div class="mb-6 space-y-4">
-                <section class="bg-white rounded-2xl border border-slate-200 p-4 md:p-5">
-                    <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 mb-4">
-                        <div class="min-w-0">
-                            <h3 class="text-sm font-black text-slate-700 flex items-center gap-2">
-                                <i class="fa-solid fa-book-open text-indigo-500"></i> 교무수첩 워크스페이스
-                            </h3>
-                            <p class="text-xs text-slate-500 mt-1">
-                                {% if sheetbook_workspace.recent_sheetbooks %}
-                                오늘 일정과 최근 수첩을 한 자리에서 바로 이어서 열 수 있습니다.
-                                {% else %}
-                                첫 수첩을 만들면 오늘 일정과 최근 작업이 여기에 함께 정리됩니다.
-                                {% endif %}
-                            </p>
-                        </div>
-                        <div class="flex flex-wrap gap-1.5">
-                            <a href="{{ sheetbook_workspace.entry_url }}" class="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[11px] font-black text-indigo-700 hover:bg-indigo-100 transition">
-                                <i class="fa-solid fa-book-open"></i>
-                                {% if sheetbook_workspace.recent_sheetbooks %}최근 수첩 열기{% else %}수첩 화면 보기{% endif %}
-                            </a>
-                            {% if sheetbook_workspace.create_action_url %}
-                            <form method="post" action="{{ sheetbook_workspace.create_action_url }}" class="inline-flex">
-                                {% csrf_token %}
-                                <input type="hidden" name="source" value="workspace_home_create">
-                                <button type="submit" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-black text-slate-700 hover:border-slate-400 transition">
-                                    <i class="fa-solid fa-plus"></i>
-                                    {% if sheetbook_workspace.recent_sheetbooks %}새 수첩{% else %}첫 수첩 만들기{% endif %}
-                                </button>
-                            </form>
-                            {% else %}
-                            <a href="{{ sheetbook_workspace.create_url }}" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-black text-slate-700 hover:border-slate-400 transition">
-                                <i class="fa-solid fa-plus"></i>
-                                {% if sheetbook_workspace.recent_sheetbooks %}새 수첩{% else %}첫 수첩 만들기{% endif %}
-                            </a>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.7fr)_minmax(280px,1fr)] gap-3">
-                        <div class="rounded-2xl bg-slate-50 border border-slate-200 p-4">
-                            <div class="flex items-center justify-between gap-3 mb-3">
-                                <h4 class="text-sm font-black text-slate-700 flex items-center gap-2">
-                                    <i class="fa-solid fa-calendar-day text-indigo-500"></i> 오늘
-                                </h4>
-                                <span class="text-xs text-slate-400">{{ sheetbook_workspace.today_date_text }}</span>
+            <div class="home-v2-content-shell">
+                <section class="mb-6 home-v2-top-zone" data-home-v2-top-zone="true">
+                    <div class="home-v2-top-center" data-home-v2-top-center="true">
+                        <article class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm" data-home-v2-top-today="true">
+                            <div class="mb-4">
+                                <h2 class="text-lg md:text-xl font-black text-slate-900 flex items-center gap-2">
+                                    <i class="fa-solid fa-calendar-day text-indigo-500"></i>
+                                    오늘 할 일
+                                </h2>
+                                <p class="mt-1 text-xs font-semibold text-slate-400">{{ today_date_text }}</p>
                             </div>
-                            {% if sheetbook_workspace.today_rows %}
-                            <div class="space-y-2">
-                                {% for row in sheetbook_workspace.today_rows %}
-                                <a href="{{ row.href }}" class="block rounded-xl border border-slate-200 bg-white px-3 py-2 hover:border-indigo-200 hover:bg-indigo-50 transition">
-                                    <p class="text-sm font-bold text-slate-700">{{ row.title }}</p>
-                                    <p class="text-xs text-slate-500 mt-1">{{ row.sheetbook_title }}</p>
-                                </a>
-                                {% endfor %}
-                            </div>
-                            {% else %}
-                            <div class="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-6 text-center">
-                                <p class="text-sm font-bold text-slate-600">오늘 일정이 없습니다.</p>
-                                <p class="text-xs text-slate-500 mt-1">
-                                    {% if sheetbook_workspace.recent_sheetbooks %}
-                                    최근 수첩을 열어 오늘 일정을 추가해 보세요.
-                                    {% else %}
-                                    상단에서 첫 수첩을 만들면 오늘 일정이 여기에 표시됩니다.
-                                    {% endif %}
-                                </p>
-                            </div>
-                            {% endif %}
-                        </div>
-
-                        <div class="rounded-2xl bg-slate-50 border border-slate-200 p-4">
-                            <div class="mb-3">
-                                <h4 class="text-sm font-black text-slate-700 flex items-center gap-2">
-                                    {% if sheetbook_workspace.recent_sheetbooks %}
-                                    <i class="fa-solid fa-book text-indigo-500"></i> 최근 수첩
-                                    {% else %}
-                                    <i class="fa-solid fa-list-check text-indigo-500"></i> 시작 체크리스트
-                                    {% endif %}
-                                </h4>
-                            </div>
-                            {% if sheetbook_workspace.recent_sheetbooks %}
-                            <div class="space-y-2">
-                                {% for book in sheetbook_workspace.recent_sheetbooks %}
-                                <a href="{{ book.href }}" class="flex items-start justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 hover:border-indigo-200 transition">
-                                    <div class="min-w-0">
-                                        <p class="text-sm font-bold text-slate-700 truncate">{{ book.title }}</p>
-                                        <p class="text-xs text-slate-400 mt-1">{{ book.tab_count }}개 탭</p>
+                            {% if today_items %}
+                            <div class="space-y-3">
+                                {% for item in today_items|slice:":3" %}
+                                <a href="{{ item.href }}" class="block rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-4 transition hover:border-indigo-200 hover:bg-white">
+                                    <div class="flex items-start gap-3">
+                                        <span class="text-2xl leading-none">
+                                            {% if item.emoji %}{{ item.emoji }}{% else %}<i class="fa-solid fa-folder-open text-slate-400"></i>{% endif %}
+                                        </span>
+                                        <div class="min-w-0 flex-1">
+                                            <p class="text-base font-black leading-6 text-slate-900 line-clamp-2">{{ item.title }}</p>
+                                            <p class="mt-1.5 text-sm leading-6 text-slate-500 line-clamp-2">{{ item.description }}</p>
+                                        </div>
                                     </div>
-                                    <span class="text-[11px] text-slate-400 whitespace-nowrap">{{ book.updated_at|timesince }} 전</span>
                                 </a>
                                 {% endfor %}
                             </div>
                             {% else %}
-                            <div class="rounded-xl border border-dashed border-slate-300 bg-white px-3 py-4">
-                                <ol class="space-y-2">
-                                    <li class="flex items-center gap-2 text-xs font-bold text-slate-600">
-                                        <span class="inline-flex w-5 h-5 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">1</span>
-                                        첫 수첩 만들기
-                                    </li>
-                                    <li class="flex items-center gap-2 text-xs font-bold text-slate-600">
-                                        <span class="inline-flex w-5 h-5 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">2</span>
-                                        탭 1개 추가하기
-                                    </li>
-                                    <li class="flex items-center gap-2 text-xs font-bold text-slate-600">
-                                        <span class="inline-flex w-5 h-5 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">3</span>
-                                        오늘 일정 1건 등록
-                                    </li>
-                                </ol>
+                            <div class="rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center">
+                                <p class="text-sm font-bold text-slate-600">오늘 바로 처리할 항목이 없습니다.</p>
                             </div>
                             {% endif %}
-                        </div>
-                    </div>
-                </section>
+                        </article>
 
-                {% if favorite_items or sheetbook_workspace.quick_actions %}
-                <section class="bg-white rounded-2xl border border-slate-200 p-4">
-                    <h3 class="text-sm font-black text-slate-700 mb-3 flex items-center gap-2">
-                        {% if favorite_items %}
-                        <i class="fa-solid fa-star text-amber-500"></i> 즐겨찾기
-                        {% else %}
-                        <i class="fa-solid fa-bolt text-amber-500"></i> 빠른 실행
-                        {% endif %}
-                    </h3>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-                        {% if favorite_items %}
-                        {% for item in favorite_items|slice:":4" %}
-                        <a href="{{ item.href }}"
-                            {% if item.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
-                            data-product-id="{{ item.product.id }}"
-                            data-track="quick_action" data-track-label="{{ item.product.title }}"
-                            class="inline-flex items-center justify-center gap-2 rounded-xl border border-amber-200 px-3 py-2 text-sm font-bold text-slate-700 hover:border-amber-300 hover:text-indigo-700 transition">
-                            <span>{% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }} {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-blue-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-violet-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}"></i>{% else %}{{ item.product.icon }}{% endif %}</span>
-                            <span class="whitespace-nowrap">{{ item.product.title }}</span>
-                        </a>
-                        {% endfor %}
-                        {% else %}
-                        {% for action in sheetbook_workspace.quick_actions %}
-                        <a href="{{ action.href }}" class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700 hover:border-indigo-200 hover:text-indigo-700 transition">
-                            <i class="{{ action.icon }}"></i>{{ action.title }}
-                        </a>
-                        {% endfor %}
-                        {% endif %}
-                    </div>
-                </section>
-                {% endif %}
-            </div>
-            {% endif %}
-
-            {% if not sheetbook_workspace.enabled and today_items %}
-            <div class="mb-6">
-                <h3 class="text-sm font-bold text-slate-500 mb-3 flex items-center gap-1.5">
-                    <i class="fa-solid fa-calendar-day text-indigo-500"></i> 오늘 할 일
-                </h3>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                    {% for item in today_items %}
-                    <a href="{{ item.href }}" class="bg-white rounded-2xl border border-slate-200 p-4 hover:border-indigo-200 hover:shadow-md transition-all group">
-                        <div class="flex items-start gap-3">
-                            <span class="text-2xl leading-none">{{ item.emoji }}</span>
-                            <div class="min-w-0 flex-1">
-                                <div class="flex items-center justify-between gap-2 mb-1">
-                                    <p class="text-sm font-black text-slate-800 group-hover:text-indigo-700 transition-colors">{{ item.title }}</p>
-                                    <span class="text-xs font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full">{{ item.count_text }}</span>
-                                </div>
-                                <p class="text-xs text-slate-500">{{ item.description }}</p>
-                                <p class="text-xs font-bold text-indigo-600 mt-2">{{ item.cta_text }}</p>
+                        <article class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm" data-home-v2-top-favorites="true">
+                            <div class="mb-4">
+                                <h2 class="text-lg md:text-xl font-black text-slate-900 flex items-center gap-2">
+                                    <i class="fa-solid fa-star text-amber-500"></i>
+                                    즐겨찾기
+                                </h2>
+                                <p class="mt-1 text-xs font-semibold text-slate-400">자주 쓰는 서비스만 가까이에 둡니다.</p>
                             </div>
-                        </div>
-                    </a>
-                    {% endfor %}
+                            {% if favorite_items %}
+                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                                {% for item in favorite_items|slice:":4" %}
+                                <div class="relative rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-4 shadow-sm transition product-card hover:border-amber-300 hover:bg-white"
+                                    data-home-v2-favorite-card="true"
+                                    data-product-id="{{ item.product.id }}"
+                                    data-launch-href="{{ item.href }}"
+                                    data-launch-external="{{ item.is_external|yesno:'true,false' }}"
+                                    data-track="quick_action"
+                                    data-track-label="{{ item.product.title }}"
+                                    role="button"
+                                    tabindex="0">
+                                    <button type="button"
+                                        class="favorite-toggle-btn absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-300 hover:border-amber-300 hover:text-amber-500 transition-colors"
+                                        data-product-id="{{ item.product.id }}"
+                                        data-favorite-toggle="true"
+                                        aria-pressed="false"
+                                        aria-label="{{ item.product.public_service_name|default:item.product.title }} 즐겨찾기 토글"
+                                        title="즐겨찾기">
+                                        <i class="fa-solid fa-star text-[10px]"></i>
+                                    </button>
+                                    <div class="pr-10">
+                                        <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-base shadow-sm {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-violet-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-pink-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
+                                            {% if item.product.icon %}
+                                                {% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }}"></i>{% else %}{{ item.product.icon }}{% endif %}
+                                            {% else %}
+                                                <i class="fa-solid fa-sparkles"></i>
+                                            {% endif %}
+                                        </div>
+                                        <p class="mt-3 text-base font-black leading-6 text-slate-900 line-clamp-2">{{ item.product.public_service_name|default:item.product.title }}</p>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center">
+                                <p class="text-sm font-bold text-slate-600">별표한 서비스가 여기에 모입니다.</p>
+                            </div>
+                            {% endif %}
+                        </article>
+                    </div>
+
+                    {% include 'core/partials/home_calendar_panel.html' %}
+                </section>
+
+                <div class="mb-6">
+                    {% include 'core/includes/purpose_sections.html' with sections=home_sections %}
+                </div>
+
+                <div class="mb-6">
+                    {% include 'core/includes/game_banner.html' with games=games %}
                 </div>
             </div>
-            {% endif %}
-
-            <!-- 추천 빠른 실행 -->
-            {% if not sheetbook_workspace.enabled %}
-            {% if favorite_items or quick_actions %}
-            <div class="mb-6">
-                <h3 class="text-sm font-bold text-slate-500 mb-3 flex items-center gap-1.5">
-                    {% if favorite_items %}
-                    <i class="fa-solid fa-star text-amber-500"></i> 즐겨찾기
-                    {% else %}
-                    <i class="fa-solid fa-bolt text-amber-500"></i> 추천 빠른 실행
-                    {% endif %}
-                </h3>
-                <div class="flex gap-3 overflow-x-auto quick-scroll pb-2">
-                    {% if favorite_items %}
-                    {% for item in favorite_items %}
-                    <a href="{{ item.href }}"
-                        {% if item.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
-                        data-product-id="{{ item.product.id }}"
-                        data-track="quick_action" data-track-label="{{ item.product.title }}"
-                        class="flex-shrink-0 flex items-center gap-2.5 bg-white rounded-2xl px-4 py-3 shadow-sm border border-amber-200 hover:shadow-md hover:border-amber-300 transition-all group">
-                        <span class="text-lg">{% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }} {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-blue-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-violet-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}"></i>{% else %}{{ item.product.icon }}{% endif %}</span>
-                        <span class="font-bold text-sm text-slate-700 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{{ item.product.title }}</span>
-                    </a>
-                    {% endfor %}
-                    {% else %}
-                    {% for qa in quick_actions %}
-                    <a href="{{ qa.href }}"
-                        {% if qa.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
-                        class="flex-shrink-0 flex items-center gap-2.5 bg-white rounded-2xl px-4 py-3 shadow-sm border border-slate-100 hover:shadow-md hover:border-indigo-200 transition-all group"
-                        data-track="quick_action" data-track-label="{{ qa.product.title }}">
-                        <span class="text-lg">{% if "fa-" in qa.product.icon %}<i class="{{ qa.product.icon }} {% if qa.product.service_type == 'collect_sign' %}text-blue-500{% elif qa.product.service_type == 'classroom' %}text-blue-500{% elif qa.product.service_type == 'work' %}text-emerald-500{% elif qa.product.service_type == 'game' %}text-red-500{% elif qa.product.service_type == 'counsel' %}text-violet-500{% elif qa.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}"></i>{% else %}{{ qa.product.icon }}{% endif %}</span>
-                        <span class="font-bold text-sm text-slate-700 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{{ qa.product.title }}</span>
-                    </a>
-                    {% endfor %}
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
-            {% endif %}
-
-            <!-- 목적별 섹션 -->
-            <div class="mb-6">
-                {% include 'core/includes/purpose_sections.html' with sections=sections %}
-            </div>
-
-            {% if aux_sections %}
-            <div class="mb-6">
-                <h3 class="text-sm font-bold text-slate-500 mb-3 flex items-center gap-1.5">
-                    <i class="fa-solid fa-layer-group text-cyan-500"></i> 보조 도구
-                </h3>
-                {% include 'core/includes/purpose_sections.html' with sections=aux_sections %}
-            </div>
-            {% endif %}
-
-            <!-- 교실 활동 배너 -->
-            <div class="mb-6">
-                {% include 'core/includes/game_banner.html' with games=games %}
-            </div>
-
-            <!-- 홈 동기화 캘린더 -->
-            {% include 'core/partials/home_calendar_panel.html' %}
 
             <!-- 모바일 전용 SNS 미리보기 -->
             {% include 'core/partials/sns_mobile_preview_panel.html' with root_class='block xl:hidden mt-6 md:mt-8 px-1' section_id='sns-full-section-auth-v2' %}
@@ -761,5 +631,3 @@ function homeCalendarWidget() {
 </div>
 {{ favorite_product_ids|json_script:"home-favorite-ids-data" }}
 {% endblock %}
-
-

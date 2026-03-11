@@ -178,8 +178,10 @@ def _build_post_feed_queryset(feed_scope=POST_FEED_SCOPE_ALL):
 
 def _get_home_layout_version():
     raw_version = str(getattr(settings, 'HOME_LAYOUT_VERSION', '') or '').strip().lower()
-    if raw_version in {'v1', 'v2', 'v3'}:
+    if raw_version in {'v1', 'v2'}:
         return raw_version
+    if raw_version == 'v3':
+        return 'v2'
     return 'v2' if getattr(settings, 'HOME_V2_ENABLED', False) else 'v1'
 
 
