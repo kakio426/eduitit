@@ -370,16 +370,6 @@ HOME_COMPANION_SECTION_MAP = {
     'refresh': ['doc_write'],
 }
 
-HOME_TO_CATALOG_SECTION_KEY = {
-    "collect_sign": "collect",
-    "doc_write": "prep",
-    "class_ops": "today_ops",
-    "class_activity": "activity",
-    "refresh": "counsel",
-    "guide": "reference",
-    "external": "reference",
-}
-
 HOME_CARD_SUMMARY_FALLBACK_BY_SECTION = {
     "collect_sign": "회수부터 서명 확인까지 바로 이어서 처리합니다.",
     "doc_write": "문서 초안과 정리를 빠르게 시작할 수 있습니다.",
@@ -400,14 +390,6 @@ def _resolve_section_preview_limit(section_key, preview_limit):
     return preview_limit
 
 
-def _build_home_section_catalog_url(section_key):
-    catalog_section_key = HOME_TO_CATALOG_SECTION_KEY.get(section_key, "")
-    base_url = reverse("product_list")
-    if not catalog_section_key:
-        return "", ""
-    return catalog_section_key, f"{base_url}?section={catalog_section_key}"
-
-
 def _build_section_payload(section, items, preview_limit=None):
     resolved_preview_limit = _resolve_section_preview_limit(section["key"], preview_limit)
     if resolved_preview_limit and resolved_preview_limit > 0:
@@ -416,7 +398,6 @@ def _build_section_payload(section, items, preview_limit=None):
         preview_items = items
     overflow_items = items[len(preview_items):]
     remaining_count = max(0, len(items) - len(preview_items))
-    catalog_section_key, catalog_url = _build_home_section_catalog_url(section["key"])
     return {
         **section,
         "products": preview_items,
@@ -424,8 +405,6 @@ def _build_section_payload(section, items, preview_limit=None):
         "total_count": len(items),
         "remaining_count": remaining_count,
         "has_more": remaining_count > 0,
-        "catalog_section_key": catalog_section_key,
-        "catalog_url": catalog_url,
     }
 
 

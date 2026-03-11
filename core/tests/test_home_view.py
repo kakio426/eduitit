@@ -280,7 +280,7 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
 
         self.assertIn('md:grid-cols-2', content)
-        self.assertIn('data-home-v2-section-more-link="true"', content)
+        self.assertNotIn('data-home-v2-section-more-link="true"', content)
         self.assertNotIn('repeat(auto-fit, minmax(min(100%, 300px), 360px)); justify-content: start;', content)
 
     def test_v2_context_section_preview_limit_is_two_for_all_sections(self):
@@ -434,7 +434,7 @@ class HomeV2ViewTest(TestCase):
         class_ops = next((section for section in sections if section.get('key') == 'class_ops'), None)
 
         self.assertIsNotNone(class_ops)
-        self.assertLessEqual(len(class_ops['products']), 3)
+        self.assertLessEqual(len(class_ops['products']), 2)
         self.assertGreaterEqual(class_ops['total_count'], len(class_ops['products']))
         self.assertEqual(class_ops['remaining_count'], class_ops['total_count'] - len(class_ops['products']))
 
@@ -456,8 +456,9 @@ class HomeV2ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('data-track="section_more_toggle"', content)
-        self.assertIn('더보기', content)
+        self.assertIn('data-home-v2-section-more-toggle="true"', content)
+        self.assertIn('전체 보기', content)
+        self.assertNotIn('href="/products/?section=', content)
 
     def test_v2_section_overflow_items_are_rendered_in_markup(self):
         Product.objects.create(
@@ -479,6 +480,27 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
         self.assertIn('Classroom Overflow A', content)
         self.assertIn('Classroom Overflow B', content)
+
+    def test_v2_authenticated_tablet_summary_uses_richer_preview_cards(self):
+        author = _create_onboarded_user('tabletcommunityauthor')
+        Post.objects.create(
+            author=author,
+            content='학급 운영 팁을 공유합니다.',
+            post_type='news_link',
+            source_url='https://example.com/community',
+            og_title='이번 주 소통 요약',
+            og_description='중요한 공지와 최근 이야기를 먼저 확인하세요.',
+            og_image_url='https://example.com/community.jpg',
+            publisher='테스트 매체',
+        )
+
+        self._login('tabletcommunityuser')
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('data-home-v2-tablet-community-summary="true"', content)
+        self.assertIn('data-home-v2-tablet-community-card="true"', content)
+        self.assertIn('https://example.com/community.jpg', content)
 
     def test_v2_uses_xl_breakpoint_for_sns_sidebar(self):
         response = self.client.get(reverse('home'))

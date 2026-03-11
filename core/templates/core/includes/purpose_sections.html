@@ -17,21 +17,28 @@
                     <p class="text-xs md:text-sm text-slate-500">{{ section.subtitle }}</p>
                 </div>
             </div>
-            {% if section.catalog_url %}
-            <a href="{{ section.catalog_url }}" class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-black text-slate-600 transition hover:border-indigo-300 hover:text-indigo-600" data-home-v2-section-more-link="true">
-                전체 보기
-                <i class="fa-solid fa-arrow-right text-[10px]"></i>
-            </a>
+            {% if section.has_more %}
+            <button
+                type="button"
+                @click="openSection = openSection === '{{ section.key }}' ? null : '{{ section.key }}'"
+                :aria-expanded="openSection === '{{ section.key }}'"
+                class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-black text-slate-600 transition hover:border-indigo-300 hover:text-indigo-600"
+                data-home-v2-section-more-toggle="true"
+                data-track="section_more_toggle"
+                data-track-label="{{ section.key }}"
+            >
+                <span x-text="openSection === '{{ section.key }}' ? '접기' : '전체 보기'"></span>
+                <span
+                    x-show="openSection !== '{{ section.key }}'"
+                    x-cloak
+                    class="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500"
+                >{{ section.remaining_count }}</span>
+                <i class="fa-solid text-[10px]" :class="openSection === '{{ section.key }}' ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+            </button>
             {% endif %}
         </div>
 
-        <div class="hidden md:block space-y-3" data-home-v2-service-grid="true">
-            {% for product in section.products %}
-            {% include 'core/includes/mini_card.html' with product=product %}
-            {% endfor %}
-        </div>
-
-        <div class="md:hidden space-y-2">
+        <div class="space-y-3" data-home-v2-service-grid="true">
             {% for product in section.products %}
             {% include 'core/includes/mini_card.html' with product=product %}
             {% endfor %}
@@ -39,45 +46,18 @@
             {% if section.has_more %}
             <div
                 x-show="openSection === '{{ section.key }}'"
+                x-cloak
                 x-transition:enter="transition ease-out duration-250"
                 x-transition:enter-start="opacity-0 -translate-y-2"
                 x-transition:enter-end="opacity-100 translate-y-0"
                 x-transition:leave="transition ease-in duration-180"
                 x-transition:leave-start="opacity-100 translate-y-0"
                 x-transition:leave-end="opacity-0 -translate-y-2"
-                class="space-y-2"
+                class="space-y-3"
             >
                 {% for product in section.overflow_products %}
                 {% include 'core/includes/mini_card.html' with product=product %}
                 {% endfor %}
-            </div>
-
-            <div class="pt-1">
-                <button
-                    type="button"
-                    x-show="openSection !== '{{ section.key }}'"
-                    @click="openSection = '{{ section.key }}'"
-                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 font-bold text-xs flex items-center justify-between hover:border-indigo-300 hover:text-indigo-600 transition-all"
-                    aria-expanded="false"
-                    data-track="section_more_toggle"
-                    data-track-label="{{ section.key }}"
-                >
-                    <span>더보기 {{ section.remaining_count }}개</span>
-                    <i class="fa-solid fa-chevron-down text-[10px]"></i>
-                </button>
-
-                <button
-                    type="button"
-                    x-show="openSection === '{{ section.key }}'"
-                    @click="openSection = null"
-                    class="w-full py-2 text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors flex items-center justify-center gap-1"
-                    aria-expanded="true"
-                    data-track="section_more_toggle"
-                    data-track-label="{{ section.key }}"
-                >
-                    <span>접기</span>
-                    <i class="fa-solid fa-chevron-up text-[10px]"></i>
-                </button>
             </div>
             {% endif %}
         </div>
