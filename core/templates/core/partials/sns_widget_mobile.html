@@ -11,7 +11,7 @@
         <div class="flex items-center gap-1">
             <button class="text-slate-400 hover:text-indigo-600 transition-colors p-2 rounded-full hover:bg-slate-50"
                 hx-get="{% url 'home' %}?target={{ list_target_id }}"
-                hx-vals='js:{"feed_scope": (document.getElementById("{{ list_target_id }}") ? document.getElementById("{{ list_target_id }}").dataset.feedScope : "all")}'
+                hx-vals='js:{"feed_scope": (document.getElementById("{{ list_target_id }}") ? document.getElementById("{{ list_target_id }}").dataset.feedScope : "all"), "compact_posts": {{ compact_posts|yesno:"true,false" }}}'
                 hx-target="#{{ list_target_id }}"
                 hx-swap="outerHTML">
                 <i class="ph ph-arrows-clockwise text-xl"></i>
@@ -42,7 +42,7 @@
         {% endif %}
 
         <form hx-post="{% url 'post_create' %}" hx-target="#{{ list_target_id }}" hx-swap="outerHTML"
-            hx-vals='js:{"feed_scope": (document.getElementById("{{ list_target_id }}") ? document.getElementById("{{ list_target_id }}").dataset.feedScope : "all"), "post_list_target_id": "{{ list_target_id }}"}'
+            hx-vals='js:{"feed_scope": (document.getElementById("{{ list_target_id }}") ? document.getElementById("{{ list_target_id }}").dataset.feedScope : "all"), "post_list_target_id": "{{ list_target_id }}", "compact_posts": {{ compact_posts|yesno:"true,false" }}}'
             hx-on::after-request="this.reset(); var previewEl = document.getElementById('mobile-image-preview-container'); if(previewEl) previewEl.classList.add('hidden'); var inputEl = document.getElementById('mobile-post-image-input'); if(inputEl) inputEl.value = '';"
             hx-indicator="find .js-mobile-post-create-loading" hx-disabled-elt="find button[type='submit']"
             hx-on::response-error="alert('게시글 등록 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
@@ -104,7 +104,7 @@
         </div>
         {% endif %}
 
-        {% include 'core/partials/post_feed_container.html' with expand_all_mobile=expand_all_mobile post_list_target_id=list_target_id feed_scope=feed_scope %}
+        {% include 'core/partials/post_feed_container.html' with expand_all_mobile=expand_all_mobile post_list_target_id=list_target_id feed_scope=feed_scope compact_posts=compact_posts %}
 
     </div>
 </div>

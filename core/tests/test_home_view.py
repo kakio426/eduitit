@@ -19,6 +19,19 @@ def _create_onboarded_user(username, email=None, nickname=None):
     return user
 
 
+def _create_posts(count=4, *, username='snsauthor'):
+    author = _create_onboarded_user(username)
+    created_posts = []
+    for index in range(count):
+        created_posts.append(
+            Post.objects.create(
+                author=author,
+                content=f'소통 글 {index + 1}',
+            )
+        )
+    return created_posts
+
+
 @override_settings(HOME_V2_ENABLED=False)
 class HomeViewTest(TestCase):
     def setUp(self):
@@ -620,6 +633,40 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('@click="snsOpen = true"', content)
         self.assertNotIn('hx-select="#mobile-post-list-container"', content)
         self.assertNotIn('href="#sns-full-section-auth-v2"', content)
+
+    def test_v2_home_sns_shows_expand_button_after_three_posts(self):
+        _create_posts()
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('data-home-sns-expand="true"', content)
+        self.assertEqual(content.count('aria-label="소통 글 상세 보기"'), 3)
+        self.assertIn('compact_posts=1', content)
+
+    def test_v2_home_htmx_post_feed_keeps_compact_expand_button(self):
+        _create_posts(username='snshtmxauthor')
+
+        response = self.client.get(
+            reverse('home'),
+            {'target': 'post-list-container', 'compact_posts': '1'},
+            HTTP_HX_REQUEST='true',
+        )
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('data-home-sns-expand="true"', content)
+        self.assertIn('이전 글 더 보기', content)
+
+    def test_v2_community_feed_keeps_full_sns_list_without_home_expand_button(self):
+        _create_posts(username='snscommunityauthor')
+
+        response = self.client.get(reverse('community_feed'))
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn('data-home-sns-expand="true"', content)
+        self.assertNotIn('compact_posts=1', content)
 
 
 @override_settings(HOME_LAYOUT_VERSION='v3')

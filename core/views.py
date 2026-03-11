@@ -113,6 +113,13 @@ def _get_post_feed_scope(request):
     return POST_FEED_SCOPE_ALL
 
 
+def _get_compact_posts(request):
+    raw_value = request.GET.get('compact_posts') or request.POST.get('compact_posts')
+    if raw_value is None:
+        return False
+    return str(raw_value).strip().lower() in {'1', 'true', 'yes', 'on'}
+
+
 def _render_post_list_partial(request, page_obj, feed_scope):
     empty_title = None
     empty_subtitle = None
@@ -128,6 +135,7 @@ def _render_post_list_partial(request, page_obj, feed_scope):
             'page_obj': page_obj,
             'post_list_target_id': _get_post_list_target_id(request),
             'feed_scope': feed_scope,
+            'compact_posts': _get_compact_posts(request),
             'empty_title': empty_title,
             'empty_subtitle': empty_subtitle,
         },

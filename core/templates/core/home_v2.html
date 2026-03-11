@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         <!-- PC 전용 SNS 사이드바 -->
         <div class="hidden xl:block flex-shrink-0">
-            {% include 'core/partials/sns_widget.html' %}
+            {% include 'core/partials/sns_widget.html' with compact_posts=True %}
         </div>
 
         <!-- 메인 콘텐츠 -->

@@ -5,7 +5,7 @@
             <button
                 type="button"
                 class="rounded-lg px-3 py-1.5 text-xs font-semibold transition {% if feed_scope != 'notice' %}bg-indigo-600 text-white shadow-sm{% else %}text-slate-500 hover:bg-slate-100{% endif %}"
-                hx-get="{% url 'home' %}?feed_scope=all&target={{ list_target_id }}"
+                hx-get="{% url 'home' %}?feed_scope=all&target={{ list_target_id }}{% if compact_posts %}&compact_posts=1{% endif %}"
                 hx-target="#{{ list_target_id }}"
                 hx-swap="outerHTML"
             >
@@ -14,7 +14,7 @@
             <button
                 type="button"
                 class="rounded-lg px-3 py-1.5 text-xs font-semibold transition {% if feed_scope == 'notice' %}bg-indigo-600 text-white shadow-sm{% else %}text-slate-500 hover:bg-slate-100{% endif %}"
-                hx-get="{% url 'home' %}?feed_scope=notice&target={{ list_target_id }}"
+                hx-get="{% url 'home' %}?feed_scope=notice&target={{ list_target_id }}{% if compact_posts %}&compact_posts=1{% endif %}"
                 hx-target="#{{ list_target_id }}"
                 hx-swap="outerHTML"
             >
@@ -26,6 +26,6 @@
         {% endif %}
     </div>
 
-    {% include 'core/partials/post_list.html' with post_list_target_id=list_target_id feed_scope=feed_scope empty_title=empty_title empty_subtitle=empty_subtitle %}
+    {% include 'core/partials/post_list.html' with post_list_target_id=list_target_id feed_scope=feed_scope compact_posts=compact_posts empty_title=empty_title empty_subtitle=empty_subtitle %}
 </div>
 {% endwith %}
