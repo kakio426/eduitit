@@ -50,6 +50,13 @@ class HomeViewTest(TestCase):
         self.assertIn('테스트 서비스', content)
         self.assertIn(f'data-product-id="{self.product.id}"', content)
 
+    def test_home_nav_contains_single_help_hub_link(self):
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('이용 안내', content)
+        self.assertIn('https://padlet.com/kakio1q2w/eduitit-wrjbzmk8oufxdzcv', content)
+
     def test_home_authenticated_200(self):
         """로그인 홈 200 응답"""
         _create_onboarded_user('testuser')

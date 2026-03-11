@@ -361,6 +361,12 @@
                 <!-- Desktop Navigation -->
                 <div class="hidden lg:flex gap-4 xl:gap-6 mt-1 text-base xl:text-lg font-bold text-gray-500 items-center min-w-0">
                     <a href="{% url 'portfolio:list' %}" class="hover:text-purple-600 transition">포트폴리오</a>
+                    <a href="https://padlet.com/kakio1q2w/eduitit-wrjbzmk8oufxdzcv"
+                        target="_blank" rel="noopener noreferrer"
+                        class="hover:text-purple-600 transition"
+                        aria-label="이용 안내 열기 (새 탭)">
+                        이용 안내
+                    </a>
 
                     {% if show_visitor_counts %}
                     <!-- Visitor Count (Desktop / Superuser only) -->
@@ -515,6 +521,12 @@
                     <a href="{% url 'portfolio:list' %}"
                         class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
                         <i class="fa-solid fa-briefcase mr-3 text-blue-400"></i> 포트폴리오
+                    </a>
+                    <a href="https://padlet.com/kakio1q2w/eduitit-wrjbzmk8oufxdzcv"
+                        target="_blank" rel="noopener noreferrer"
+                        class="hover:text-purple-600 transition py-2 border-b border-gray-200/50"
+                        aria-label="이용 안내 열기 (새 탭)">
+                        <i class="fa-solid fa-book-open mr-3 text-violet-400"></i> 이용 안내
                     </a>
 
                     {% if show_visitor_counts %}
