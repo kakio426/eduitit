@@ -1,0 +1,35 @@
+<div
+    id="home-mini-noticegen-result"
+    class="rounded-[1.4rem] border px-4 py-3 {% if state_status == 'success' and result_text %}border-emerald-200 bg-emerald-50 text-emerald-800{% elif state_status == 'error' %}border-red-200 bg-red-50 text-red-700{% elif state_status == 'loading' %}border-indigo-200 bg-indigo-50 text-indigo-700{% else %}border-slate-200 bg-slate-50 text-slate-600{% endif %}"
+    data-mini-app-state="{{ state_status|default:'idle' }}"
+    {% if result_text %}data-mini-copy-value="{{ result_text }}"{% endif %}
+>
+    {% if state_status == 'success' and result_text %}
+    <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0 flex-1">
+            <p class="text-sm font-black text-slate-900">결과 미리보기</p>
+            {% if state_message %}<p class="mt-1 text-xs text-emerald-700">{{ state_message }}</p>{% endif %}
+        </div>
+        <div x-data="{ copied: false, copyError: '', async copyText(text) { try { await navigator.clipboard.writeText(text); this.copyError = ''; this.copied = true; setTimeout(() => this.copied = false, 1800); } catch (error) { this.copied = false; this.copyError = '복사에 실패했습니다. 직접 선택해 복사해 주세요.'; } } }" class="flex-shrink-0">
+            <button
+                type="button"
+                class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs font-black text-emerald-700 transition hover:bg-emerald-100"
+                @click="copyText($refs.output.value)"
+                data-mini-app-action="copy"
+            >
+                <i class="fa-solid" :class="copied ? 'fa-check' : 'fa-copy'"></i>
+                <span x-show="!copied">복사</span>
+                <span x-show="copied">완료</span>
+            </button>
+            <textarea x-ref="output" class="hidden">{{ result_text }}</textarea>
+        </div>
+    </div>
+    <p class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700 line-clamp-4">{{ result_text }}</p>
+    {% elif state_status == 'error' %}
+    <p class="text-sm font-semibold leading-6">{{ state_message|default:'입력을 다시 확인해 주세요.' }}</p>
+    {% elif state_status == 'loading' %}
+    <p class="text-sm font-semibold leading-6">{{ state_message|default:'문장을 만드는 중이에요...' }}</p>
+    {% else %}
+    <p class="text-sm leading-6">{{ state_message|default:'대상과 전달 사항을 적으면 바로 복사할 문장이 나옵니다.' }}</p>
+    {% endif %}
+</div>

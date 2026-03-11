@@ -1,0 +1,20 @@
+<section class="mb-6" data-home-v2-mini-app-rail="true">
+    <div class="mb-3 flex items-end justify-between gap-3">
+        <div>
+            <h2 class="text-lg md:text-xl font-black text-slate-900 flex items-center gap-2">
+                <i class="fa-solid fa-bolt text-amber-500"></i>
+                오늘 바로 써보기
+            </h2>
+            <p class="mt-1 text-sm text-slate-500">짧게 실행하고, 더 깊은 설정은 전체 페이지에서 이어갑니다.</p>
+        </div>
+        <p class="hidden md:block text-xs font-semibold text-slate-400">파일럿 3종</p>
+    </div>
+
+    <div class="home-mini-app-track-wrap">
+        <div class="home-mini-app-track">
+            {% for entry in mini_app_entries %}
+            {% include 'core/includes/home_mini_app_shell.html' with entry=entry %}
+            {% endfor %}
+        </div>
+    </div>
+</section>

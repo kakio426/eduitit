@@ -41,6 +41,8 @@ from .service_launcher import (
     resolve_home_section_key as _resolve_home_section_key,
     resolve_product_launch_url as _resolve_product_launch_url,
 )
+from .mini_apps import build_home_mini_app_entries
+from .prompt_lab_data import get_prompt_lab_catalog
 from .teacher_first_cards import build_workbench_card_meta
 from django.contrib import messages
 from django.db import transaction
@@ -2048,6 +2050,7 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
         workbench_slots = _build_workbench_slots(favorite_items)
         recent_items = _build_product_link_items(recent_products, include_section_meta=True)
         discovery_items = _build_product_link_items(discovery_products, include_section_meta=True)
+        mini_app_entries = build_home_mini_app_entries(product_list)
         workbench_bundles = _get_user_workbench_bundles(request.user, product_list)
         weekly_bundle_items = _get_weekly_workbench_bundle_highlights(request.user, product_list)
         today_context = _build_today_context(request)
@@ -2065,6 +2068,7 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
             'games': games,
             'quick_actions': quick_action_items,
             'favorite_items': favorite_items,
+            'mini_app_entries': mini_app_entries,
             'workbench_slots': workbench_slots,
             'favorite_product_ids': [p.id for p in favorite_products],
             'recent_items': recent_items,
@@ -2672,7 +2676,13 @@ def insight_sns_action(request, pk):
     return redirect('insight_sns_queue')
 
 def prompt_lab(request):
-    return render(request, 'core/prompt_lab.html')
+    return render(
+        request,
+        'core/prompt_lab.html',
+        {
+            'prompt_lab_catalog': get_prompt_lab_catalog(),
+        },
+    )
 
 TEACHER_FIRST_PRODUCT_CONTRACT_PATH = 'docs/plans/CONTRACT_teacher_first_product_2026-03-08.md'
 

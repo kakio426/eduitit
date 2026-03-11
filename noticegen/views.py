@@ -371,6 +371,27 @@ def _render_result(request, payload, *, status=200):
     return render(request, "noticegen/main.html", page_context, status=status)
 
 
+def _render_mini_result(request, payload, *, status=200):
+    message = (
+        payload.get("error_message")
+        or payload.get("limit_message")
+        or payload.get("info_message")
+        or "대상과 전달 사항을 적으면 바로 복사할 문장이 나옵니다."
+    )
+    state_status = "success" if payload.get("result_text") else "error" if status >= 400 or payload.get("error_message") or payload.get("limit_message") else "idle"
+    return render(
+        request,
+        "noticegen/partials/mini_result_panel.html",
+        {
+            "state_status": state_status,
+            "state_message": message,
+            "result_text": payload.get("result_text", ""),
+            "form_id": "home-mini-noticegen-form",
+        },
+        status=status,
+    )
+
+
 def main(request):
     prefill = {}
     seed_token = (request.GET.get("sb_seed") or "").strip()
@@ -402,8 +423,7 @@ def main(request):
     return render(request, "noticegen/main.html", context)
 
 
-@require_POST
-def generate_notice(request):
+def _generate_notice_payload(request):
     target = (request.POST.get("target") or "").strip()
     topic = (request.POST.get("topic") or "").strip()
     keywords = (request.POST.get("keywords") or "").strip()
@@ -423,13 +443,9 @@ def generate_notice(request):
             charged=False,
             error_code="INVALID_INPUT",
         )
-        return _render_result(
-            request,
-            {
-                "error_message": "대상, 주제, 전달 사항을 정확히 입력해 주세요.",
-            },
-            status=400,
-        )
+        return 400, {
+            "error_message": "대상, 주제, 전달 사항을 정확히 입력해 주세요.",
+        }
 
     tone = get_tone_for_target(target)
     key_data = _build_cache_key_data(target, topic, tone, keywords, context_values, length_style)
@@ -447,16 +463,13 @@ def generate_notice(request):
             charged=False,
             key_hash=key_hash,
         )
-        return _render_result(
-            request,
-            {
-                "info_message": "저장된 멘트를 불러왔습니다.",
-                "result_text": exact_cache.result_text,
-                "remaining_count": _remaining_count(request),
-                "daily_limit": _daily_limit(request),
-                **_build_followup_context(target, topic, key_data["length_style"], keywords, exact_cache.result_text),
-            },
-        )
+        return 200, {
+            "info_message": "저장된 멘트를 불러왔습니다.",
+            "result_text": exact_cache.result_text,
+            "remaining_count": _remaining_count(request),
+            "daily_limit": _daily_limit(request),
+            **_build_followup_context(target, topic, key_data["length_style"], keywords, exact_cache.result_text),
+        }
 
     if _usage_count_today(request) >= _daily_limit(request):
         _record_attempt(
@@ -469,15 +482,11 @@ def generate_notice(request):
             key_hash=key_hash,
             error_code="DAILY_LIMIT_REACHED",
         )
-        return _render_result(
-            request,
-            {
-                "limit_message": f"오늘 멘트 생성 횟수({_daily_limit(request)}회)를 모두 사용했습니다.",
-                "remaining_count": 0,
-                "daily_limit": _daily_limit(request),
-            },
-            status=429,
-        )
+        return 429, {
+            "limit_message": f"오늘 멘트 생성 횟수({_daily_limit(request)}회)를 모두 사용했습니다.",
+            "remaining_count": 0,
+            "daily_limit": _daily_limit(request),
+        }
 
     similar_scored = _collect_similar_caches(target, topic, tone, key_data["length_style"], key_data["signature"])
     best_reuse = similar_scored[0] if similar_scored else None
@@ -501,17 +510,14 @@ def generate_notice(request):
             charged=False,
             key_hash=key_hash,
         )
-        return _render_result(
-            request,
-            {
-                "info_message": "유사한 행사 멘트를 재사용했습니다. 필요하면 전달사항을 조금 바꿔 다시 생성해 보세요.",
-                "result_text": reused_cache.result_text,
-                "remaining_count": _remaining_count(request),
-                "daily_limit": _daily_limit(request),
-                "similar_items": similar_items,
-                **_build_followup_context(target, topic, key_data["length_style"], keywords, reused_cache.result_text),
-            },
-        )
+        return 200, {
+            "info_message": "유사한 행사 멘트를 재사용했습니다. 필요하면 전달사항을 조금 바꿔 다시 생성해 보세요.",
+            "result_text": reused_cache.result_text,
+            "remaining_count": _remaining_count(request),
+            "daily_limit": _daily_limit(request),
+            "similar_items": similar_items,
+            **_build_followup_context(target, topic, key_data["length_style"], keywords, reused_cache.result_text),
+        }
 
     attempt = _record_attempt(
         request,
@@ -544,15 +550,12 @@ def generate_notice(request):
             status=NoticeGenerationAttempt.STATUS_LLM_FAIL,
             error_code=error_code,
         )
-        return _render_result(
-            request,
-            {
-                "error_message": FALLBACK_ERROR_MESSAGE,
-                "remaining_count": _remaining_count(request),
-                "daily_limit": _daily_limit(request),
-                "similar_items": similar_items,
-            },
-        )
+        return 200, {
+            "error_message": FALLBACK_ERROR_MESSAGE,
+            "remaining_count": _remaining_count(request),
+            "daily_limit": _daily_limit(request),
+            "similar_items": similar_items,
+        }
 
     NoticeGenerationAttempt.objects.filter(pk=attempt.pk).update(
         status=NoticeGenerationAttempt.STATUS_LLM_SUCCESS,
@@ -578,17 +581,26 @@ def generate_notice(request):
         target,
         topic,
     )
-    return _render_result(
-        request,
-        {
-            "info_message": "멘트를 생성했습니다.",
-            "result_text": result_text,
-            "remaining_count": _remaining_count(request),
-            "daily_limit": _daily_limit(request),
-            "similar_items": similar_items,
-            **_build_followup_context(target, topic, key_data["length_style"], keywords, result_text),
-        },
-    )
+    return 200, {
+        "info_message": "멘트를 생성했습니다.",
+        "result_text": result_text,
+        "remaining_count": _remaining_count(request),
+        "daily_limit": _daily_limit(request),
+        "similar_items": similar_items,
+        **_build_followup_context(target, topic, key_data["length_style"], keywords, result_text),
+    }
+
+
+@require_POST
+def generate_notice(request):
+    status, payload = _generate_notice_payload(request)
+    return _render_result(request, payload, status=status)
+
+
+@require_POST
+def generate_notice_mini(request):
+    status, payload = _generate_notice_payload(request)
+    return _render_mini_result(request, payload, status=status)
 
 
 @login_required

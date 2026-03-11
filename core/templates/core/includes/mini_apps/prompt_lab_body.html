@@ -1,0 +1,80 @@
+<div
+    x-data="createHomePromptLabMiniApp('{{ entry.catalog_script_id }}')"
+    x-init="init()"
+    class="space-y-3"
+>
+    <div class="mini-app-input-row" data-mini-app-input-row="true">
+        <label class="block">
+            <span class="mb-1 block text-xs font-black text-slate-700">카테고리</span>
+            <select
+                x-model="activeKey"
+                @change="selectCategory(activeKey)"
+                class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:border-indigo-300 focus:outline-none"
+            >
+                <option value="">카테고리 선택</option>
+                {% for category in entry.prompt_categories %}
+                <option value="{{ category.key }}">{{ category.mini_title }}</option>
+                {% endfor %}
+            </select>
+        </label>
+    </div>
+
+    <div
+        class="rounded-[1.4rem] border px-4 py-3"
+        :class="{
+            'border-slate-200 bg-slate-50 text-slate-600': state.status === 'idle' || state.status === 'empty',
+            'border-red-200 bg-red-50 text-red-700': state.status === 'error',
+            'border-emerald-200 bg-emerald-50 text-emerald-800': state.status === 'success'
+        }"
+        :data-mini-app-state="state.status"
+    >
+        <p class="text-sm leading-6" x-text="state.message"></p>
+
+        <template x-if="recommendations.length">
+            <div class="mt-3 space-y-2">
+                <template x-for="item in recommendations" :key="item.title">
+                    <div class="rounded-xl border border-white/80 bg-white/80 px-3 py-3">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0 flex-1">
+                                <p class="text-sm font-black text-slate-900" x-text="item.title"></p>
+                                <p class="mt-1 text-xs leading-5 text-slate-500 line-clamp-2" x-text="item.desc"></p>
+                            </div>
+                            <button
+                                type="button"
+                                class="inline-flex flex-shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 transition hover:border-indigo-300 hover:text-indigo-600"
+                                @click="copyPrompt(item.code, item.title)"
+                                data-mini-app-action="copy"
+                            >
+                                <i class="fa-regular fa-copy"></i>
+                                복사
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </template>
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+        <button
+            type="button"
+            class="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+            @click="copyPrimary()"
+            :disabled="!copyValue"
+            data-mini-app-action="copy"
+        >
+            <i class="fa-regular fa-copy text-xs"></i>
+            {{ entry.primary_action_label }}
+        </button>
+        <button
+            type="button"
+            class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-700 transition hover:border-slate-300"
+            @click="reset()"
+            data-mini-app-action="reset"
+        >
+            초기화
+        </button>
+    </div>
+
+    {{ entry.prompt_catalog|json_script:entry.catalog_script_id }}
+</div>

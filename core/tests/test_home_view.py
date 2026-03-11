@@ -176,6 +176,13 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
         self.assertIn('로그인하고 시작하기', content)
 
+    def test_v2_anonymous_keeps_guest_home_without_mini_app_rail(self):
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertNotIn('data-home-v2-mini-app-rail="true"', content)
+        self.assertNotIn('data-home-mini-app-shell="true"', content)
+
     def test_v2_anonymous_moves_sns_preview_above_services_and_login_cta(self):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
@@ -288,6 +295,35 @@ class HomeV2ViewTest(TestCase):
         self.assertLess(top_zone_index, summary_index)
         self.assertLess(summary_index, service_index)
         self.assertLess(service_index, game_index)
+
+    def test_v2_authenticated_renders_mini_app_rail_below_top_zone_and_before_services(self):
+        self._login('minirailuser')
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        top_zone_index = content.index('data-home-v2-top-zone="true"')
+        mini_rail_index = content.index('data-home-v2-mini-app-rail="true"')
+        summary_index = content.index('data-home-v2-tablet-community-summary="true"')
+        service_index = content.index('data-home-v2-service-groups="true"')
+
+        self.assertLess(top_zone_index, mini_rail_index)
+        self.assertLess(mini_rail_index, summary_index)
+        self.assertLess(mini_rail_index, service_index)
+
+    def test_v2_authenticated_mini_app_rail_renders_three_pilot_shells(self):
+        self._login('miniappuser')
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertContains(response, 'data-home-mini-app-key="noticegen"', count=1, html=False)
+        self.assertContains(response, 'data-home-mini-app-key="qrgen"', count=1, html=False)
+        self.assertContains(response, 'data-home-mini-app-key="prompt_lab"', count=1, html=False)
+        self.assertContains(response, 'data-mini-app-action="open_full"', count=3, html=False)
+        self.assertContains(response, 'data-mini-app-action="run"', count=2, html=False)
+        self.assertIn(reverse('noticegen:generate_mini'), content)
+        self.assertIn('createQrgenSingleLinkMiniApp', content)
+        self.assertIn('createHomePromptLabMiniApp', content)
+        self.assertIn('home-mini-app-card', content)
 
     def test_v2_authenticated_does_not_render_show_all_toggle(self):
         """V2 로그인 홈에서도 전체 서비스 보기 토글 미노출"""
@@ -776,6 +812,17 @@ class HomeV3ViewTest(TestCase):
         self.assertIn('학급 캘린더', titles)
         self.assertNotIn('교무수첩', titles)
         self.assertNotIn('학급 기록 보드', titles)
+
+
+class PromptLabViewTest(TestCase):
+    def test_prompt_lab_page_uses_shared_catalog_script(self):
+        response = self.client.get(reverse('prompt_lab'))
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('id="prompt-lab-catalog"', content)
+        self.assertIn("window.initPromptLabPage({ catalogScriptId: 'prompt-lab-catalog' });", content)
+        self.assertIn('core/js/prompt_lab.js', content)
 
 
 @override_settings(HOME_V2_ENABLED=True)

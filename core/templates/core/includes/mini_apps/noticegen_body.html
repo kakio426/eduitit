@@ -1,0 +1,75 @@
+<div class="space-y-3">
+    <form
+        id="home-mini-noticegen-form"
+        method="post"
+        action="{% url 'noticegen:generate_mini' %}"
+        hx-post="{% url 'noticegen:generate_mini' %}"
+        hx-target="#home-mini-noticegen-result"
+        hx-swap="outerHTML"
+        hx-indicator="#home-mini-noticegen-loading"
+        class="space-y-3"
+        data-home-mini-app-form="true"
+    >
+        {% csrf_token %}
+        <input type="hidden" name="length_style" value="medium">
+        <div class="mini-app-input-row grid grid-cols-1 gap-2 sm:grid-cols-2" data-mini-app-input-row="true">
+            <label class="min-w-0">
+                <span class="mb-1 block text-xs font-black text-slate-700">대상</span>
+                <select name="target" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:border-indigo-300 focus:outline-none">
+                    {% for value, label in entry.target_choices %}
+                    <option value="{{ value }}" {% if entry.default_target == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="min-w-0">
+                <span class="mb-1 block text-xs font-black text-slate-700">주제</span>
+                <select name="topic" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:border-indigo-300 focus:outline-none">
+                    {% for value, label in entry.topic_choices %}
+                    <option value="{{ value }}" {% if entry.default_topic == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        </div>
+
+        <div class="mini-app-input-row" data-mini-app-input-row="true">
+            <label class="block">
+                <span class="mb-1 block text-xs font-black text-slate-700">전달 사항</span>
+                <textarea
+                    name="keywords"
+                    rows="3"
+                    required
+                    placeholder="예: 수학 3단원 평가, 실내화 지참"
+                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:border-indigo-300 focus:outline-none"
+                ></textarea>
+            </label>
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+            <button
+                type="submit"
+                class="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-indigo-700"
+                data-mini-app-action="run"
+            >
+                <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
+                {{ entry.primary_action_label }}
+            </button>
+            <button
+                type="reset"
+                class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-700 transition hover:border-slate-300"
+                data-mini-app-action="reset"
+            >
+                초기화
+            </button>
+        </div>
+    </form>
+
+    <div
+        id="home-mini-noticegen-loading"
+        class="htmx-indicator rounded-[1.4rem] border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-700"
+        data-mini-app-state="loading"
+    >
+        문장을 만드는 중이에요...
+    </div>
+
+    {% include 'noticegen/partials/mini_result_panel.html' with state_status=entry.state.status state_message=entry.state.message form_id='home-mini-noticegen-form' %}
+</div>

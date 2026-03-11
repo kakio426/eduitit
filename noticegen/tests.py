@@ -144,6 +144,58 @@ class NoticeGenViewTests(TestCase):
         self.assertEqual(attempt.status, NoticeGenerationAttempt.STATUS_LLM_SUCCESS)
         self.assertEqual(NoticeGenerationCache.objects.count(), 1)
 
+    @patch("noticegen.views._call_deepseek")
+    def test_generate_mini_success_renders_compact_success_panel(self, mock_call):
+        mock_call.return_value = "준비물을 꼭 챙기고 안전하게 이동합니다."
+
+        response = self.client.post(
+            reverse("noticegen:generate_mini"),
+            self._payload(),
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-mini-app-state="success"', html=False)
+        self.assertContains(response, "결과 미리보기")
+        self.assertContains(response, 'data-mini-app-action="copy"', html=False)
+        self.assertContains(response, "준비물을 꼭 챙기고 안전하게 이동합니다.")
+
+    def test_generate_mini_validation_error_renders_error_state(self):
+        response = self.client.post(
+            reverse("noticegen:generate_mini"),
+            self._payload(keywords=""),
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertContains(response, 'data-mini-app-state="error"', status_code=400, html=False)
+        self.assertContains(response, "대상, 주제, 전달 사항을 정확히 입력해 주세요.", status_code=400)
+
+    def test_generate_mini_daily_limit_uses_compact_error_panel(self):
+        session = self.client.session
+        session.save()
+        session_key = session.session_key
+
+        for _ in range(5):
+            NoticeGenerationAttempt.objects.create(
+                session_key=session_key,
+                target="student_low",
+                topic="safety",
+                tone=get_tone_for_target("student_low"),
+                charged=True,
+                status=NoticeGenerationAttempt.STATUS_LLM_SUCCESS,
+            )
+
+        response = self.client.post(
+            reverse("noticegen:generate_mini"),
+            self._payload(),
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 429)
+        self.assertContains(response, 'data-mini-app-state="error"', status_code=429, html=False)
+        self.assertContains(response, "오늘 멘트 생성 횟수(5회)를 모두 사용했습니다.", status_code=429)
+
     def test_parent_prompt_has_length_and_natural_flow_rules(self):
         system_prompt = build_system_prompt("parent", LENGTH_LONG)
         user_prompt = build_user_prompt("parent", "notice", "실내화를 챙겨 주세요", "", LENGTH_LONG)
