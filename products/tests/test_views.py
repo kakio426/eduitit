@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 from core.models import UserProfile
-from products.models import DTSettings, Product
+from products.models import DTSettings, Product, ServiceManual
 
 
 @override_settings(HOME_V2_ENABLED=False)
@@ -112,12 +112,18 @@ class SheetbookDiscoveryVisibilityTests(TestCase):
             launch_route_name='sheetbook:index',
         )
         self.visible_product = Product.objects.create(
-            title="학급 달력",
+            title="학급 캘린더",
             description="일정 관리",
             price=0,
             is_active=True,
             service_type='classroom',
             launch_route_name='classcalendar:main',
+        )
+        self.visible_manual = ServiceManual.objects.create(
+            product=self.visible_product,
+            title="학급 캘린더 시작하기",
+            description="일정 흐름 안내",
+            is_published=True,
         )
 
     @override_settings(SHEETBOOK_DISCOVERY_VISIBLE=False)
@@ -129,22 +135,35 @@ class SheetbookDiscoveryVisibilityTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertNotIn('교무수첩', product_titles)
-        self.assertIn('학급 달력', product_titles)
+        self.assertIn('학급 캘린더', product_titles)
         self.assertNotContains(response, '교무수첩')
         self.assertEqual(response.context['total_count'], expected_count)
+        self.assertEqual(response.context['catalog_hub']['title'], '학급 캘린더')
 
     @override_settings(SHEETBOOK_DISCOVERY_VISIBLE=True)
-    def test_catalog_shows_sheetbook_when_discovery_enabled(self):
+    def test_catalog_still_hides_sheetbook_when_discovery_enabled(self):
         response = self.client.get(reverse('product_list'))
 
         product_titles = [product.title for product in response.context['products']]
-        expected_count = Product.objects.filter(is_active=True).count()
+        expected_count = Product.objects.filter(is_active=True).exclude(launch_route_name='sheetbook:index').count()
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn('교무수첩', product_titles)
-        self.assertIn('학급 달력', product_titles)
-        self.assertContains(response, '교무수첩')
+        self.assertNotIn('교무수첩', product_titles)
+        self.assertIn('학급 캘린더', product_titles)
+        self.assertNotContains(response, '교무수첩')
         self.assertEqual(response.context['total_count'], expected_count)
+
+    def test_catalog_cards_use_start_copy_and_public_meta_contract(self):
+        response = self.client.get(reverse('product_list'))
+        content = ''.join(response.content.decode('utf-8').split())
+        visible_product = next(product for product in response.context['products'] if product.id == self.visible_product.id)
+        card_cta_prefix = 'inline-flexitems-centergap-1.5rounded-xlbg-slate-900px-3py-2text-smfont-boldtext-whitetransitiongroup-hover:bg-indigo-600">'
+
+        self.assertIn('로그인필요', content)
+        self.assertIn('시작하기', content)
+        self.assertIn(f'{card_cta_prefix}시작하기', content)
+        self.assertNotIn(f'{card_cta_prefix}열기', content)
+        self.assertTrue(visible_product.guide_url.endswith(reverse('service_guide_detail', kwargs={'pk': self.visible_manual.pk})))
 
 
 class ProductDevicePolicyTests(TestCase):
