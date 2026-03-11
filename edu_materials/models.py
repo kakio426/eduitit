@@ -26,9 +26,15 @@ class EduMaterial(models.Model):
         on_delete=models.CASCADE,
         related_name="edu_materials",
     )
-    subject = models.CharField(max_length=20, choices=SUBJECT_CHOICES, verbose_name="과목")
-    grade = models.CharField(max_length=50, blank=True, verbose_name="학년/학기")
-    unit_title = models.CharField(max_length=200, verbose_name="단원명")
+    subject = models.CharField(
+        max_length=20,
+        choices=SUBJECT_CHOICES,
+        default="OTHER",
+        blank=True,
+        verbose_name="과목",
+    )
+    grade = models.CharField(max_length=50, blank=True, default="", verbose_name="학년/학기")
+    unit_title = models.CharField(max_length=200, blank=True, default="", verbose_name="단원명")
     title = models.CharField(max_length=200, verbose_name="자료 제목")
     html_content = models.TextField(verbose_name="HTML 코드")
     input_mode = models.CharField(
@@ -38,7 +44,7 @@ class EduMaterial(models.Model):
         verbose_name="입력 방식",
     )
     original_filename = models.CharField(max_length=255, blank=True)
-    is_published = models.BooleanField(default=False, verbose_name="공개 여부")
+    is_published = models.BooleanField(default=True, verbose_name="공개 여부")
     view_count = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

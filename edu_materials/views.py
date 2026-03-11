@@ -10,16 +10,41 @@ from .models import EduMaterial
 from .services import build_material_qr_data_url, get_service, validate_html_upload
 
 
+def _resolve_teacher_display_name(user):
+    if not user:
+        return "익명의 선생님"
+
+    nickname = ""
+    try:
+        nickname = (user.userprofile.nickname or "").strip()
+    except Exception:
+        nickname = ""
+
+    if nickname:
+        return nickname
+
+    username = (getattr(user, "username", "") or "").strip()
+    return username or "익명의 선생님"
+
+
 @login_required
 def main_view(request):
-    materials = EduMaterial.objects.filter(teacher=request.user).order_by("-updated_at")
+    my_materials = EduMaterial.objects.filter(teacher=request.user).order_by("-updated_at")
+    shared_materials = list(
+        EduMaterial.objects.select_related("teacher")
+        .filter(is_published=True)
+        .order_by("-updated_at")
+    )
+    for material in shared_materials:
+        material.teacher_display_name = _resolve_teacher_display_name(material.teacher)
+
     return render(
         request,
         "edu_materials/main.html",
         {
             "service": get_service(),
-            "materials": materials,
-            "subject_choices": EduMaterial.SUBJECT_CHOICES,
+            "my_materials": my_materials,
+            "shared_materials": shared_materials,
             "input_mode_choices": EduMaterial.INPUT_MODE_CHOICES,
         },
     )
@@ -28,10 +53,7 @@ def main_view(request):
 @login_required
 @require_POST
 def create_material(request):
-    subject = (request.POST.get("subject") or "").strip()
-    grade = (request.POST.get("grade") or "").strip()
-    unit_title = (request.POST.get("unit_title") or "").strip()
-    title = (request.POST.get("title") or "").strip() or f"{unit_title or '새'} 교육 자료"
+    title = (request.POST.get("title") or "").strip()
     input_mode = (request.POST.get("input_mode") or EduMaterial.INPUT_PASTE).strip()
     html_content = request.POST.get("html_content", "")
     original_filename = ""
@@ -40,8 +62,8 @@ def create_material(request):
         messages.error(request, "입력 방식을 다시 선택해 주세요.")
         return redirect("edu_materials:main")
 
-    if not subject or not unit_title:
-        messages.error(request, "과목과 단원명은 필수입니다.")
+    if not title:
+        messages.error(request, "자료 제목을 입력해 주세요.")
         return redirect("edu_materials:main")
 
     if input_mode == EduMaterial.INPUT_FILE:
@@ -58,15 +80,51 @@ def create_material(request):
 
     material = EduMaterial.objects.create(
         teacher=request.user,
-        subject=subject,
-        grade=grade,
-        unit_title=unit_title,
+        subject="OTHER",
+        grade="",
+        unit_title="",
         title=title,
         html_content=html_content,
         input_mode=input_mode,
         original_filename=original_filename,
+        is_published=True,
     )
-    messages.success(request, f'"{material.title}" 자료를 저장했습니다.')
+    messages.success(request, f'"{material.title}" 자료를 저장했고 바로 공개했습니다.')
+    return redirect("edu_materials:detail", pk=material.id)
+
+
+@login_required
+@require_POST
+def update_material(request, material_id):
+    material = get_object_or_404(EduMaterial, id=material_id, teacher=request.user)
+    title = (request.POST.get("title") or "").strip()
+    html_content = request.POST.get("html_content", "")
+
+    if not title:
+        messages.error(request, "자료 제목을 입력해 주세요.")
+        return redirect("edu_materials:detail", pk=material.id)
+
+    uploaded_file = request.FILES.get("html_file")
+    if uploaded_file:
+        try:
+            metadata = validate_html_upload(uploaded_file)
+        except Exception as exc:
+            messages.error(request, " ".join(getattr(exc, "messages", [str(exc)])))
+            return redirect("edu_materials:detail", pk=material.id)
+        material.html_content = metadata["html_content"]
+        material.original_filename = metadata["original_filename"]
+        material.input_mode = EduMaterial.INPUT_FILE
+    elif html_content.strip():
+        material.html_content = html_content
+        material.original_filename = ""
+        material.input_mode = EduMaterial.INPUT_PASTE
+    else:
+        messages.error(request, "HTML 코드를 입력하거나 새 HTML 파일을 올려 주세요.")
+        return redirect("edu_materials:detail", pk=material.id)
+
+    material.title = title
+    material.save()
+    messages.success(request, f'"{material.title}" 자료를 수정했습니다.')
     return redirect("edu_materials:detail", pk=material.id)
 
 
@@ -84,6 +142,16 @@ def material_detail(request, pk):
             "public_qr_data_url": build_material_qr_data_url(public_url) if material.is_published else "",
         },
     )
+
+
+@login_required
+@require_POST
+def delete_material(request, material_id):
+    material = get_object_or_404(EduMaterial, id=material_id, teacher=request.user)
+    title = material.title
+    material.delete()
+    messages.success(request, f'"{title}" 자료를 삭제했습니다.')
+    return redirect("edu_materials:main")
 
 
 @login_required

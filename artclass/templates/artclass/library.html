@@ -34,8 +34,12 @@
         <!-- Header & Search -->
         <div class="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16 px-2">
             <div class="space-y-4">
-                <h1 class="text-4xl md:text-5xl font-black text-gray-800 tracking-tight">📚 미술 수업 도서관</h1>
-                <p class="text-xl text-gray-500 font-bold">선생님들의 노력이 담긴 최고의 수업들</p>
+                <h1 class="text-4xl md:text-5xl font-black text-gray-800 tracking-tight">미술 수업 도서관</h1>
+                <p class="text-xl text-gray-500 font-bold">내 수업은 따로 관리하고, 공개 수업은 함께 둘러봅니다.</p>
+                <a href="{% url 'artclass:setup' %}"
+                    class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-[1.4rem] bg-purple-600 text-white text-base font-black shadow-lg shadow-purple-200 hover:bg-purple-700 transition-all">
+                    <i class="fa-solid fa-plus"></i> 새 수업 만들기
+                </a>
             </div>
 
             <form method="GET" class="w-full md:w-[34rem] space-y-3">
@@ -69,8 +73,88 @@
             </form>
         </div>
 
+        {% if user.is_authenticated %}
+        <section class="mb-14 px-2">
+            <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
+                <div>
+                    <p class="text-sm font-black uppercase tracking-[0.24em] text-purple-500">My Classes</p>
+                    <h2 class="text-3xl font-black text-gray-800 mt-2">내가 만든 수업</h2>
+                    <p class="text-gray-500 font-bold mt-2">수정, 삭제, 바로 수업 시작은 여기서 처리합니다.</p>
+                </div>
+                <div class="inline-flex items-center rounded-full bg-white border border-purple-100 px-4 py-2 text-sm font-black text-gray-500">
+                    총 {{ my_classes|length }}개
+                </div>
+            </div>
+
+            {% if my_classes %}
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {% for item in my_classes %}
+                <article class="clay-card p-6 bg-white/90 flex flex-col gap-5">
+                    <div class="space-y-3">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="text-[10px] font-black tracking-widest uppercase {% if item.is_shared %}text-emerald-700 bg-emerald-100{% else %}text-amber-700 bg-amber-100{% endif %} px-2.5 py-1 rounded-lg">
+                                {% if item.is_shared %}공개 라이브러리 표시 중{% else %}내 공간 전용{% endif %}
+                            </span>
+                            <span class="text-[10px] font-black tracking-widest uppercase text-purple-600 bg-purple-100 px-2.5 py-1 rounded-lg">
+                                {{ item.steps_count }} STEPS
+                            </span>
+                            <span class="text-[10px] font-black tracking-widest uppercase text-gray-400">
+                                {{ item.created_at|date:"Y.m.d" }}
+                            </span>
+                        </div>
+                        <h3 class="text-2xl font-black text-gray-800 leading-snug break-keep">{{ item.display_title }}</h3>
+                        {% if item.auto_tags %}
+                        <div class="flex flex-wrap gap-1.5">
+                            {% for tag in item.auto_tags|slice:":4" %}
+                            <span class="text-[11px] px-2 py-1 rounded-md bg-gray-100 text-gray-500 font-bold">#{{ tag }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2 pt-2">
+                        <a href="{% url 'artclass:classroom' item.pk %}{% if item.playback_mode == 'external_window' %}?autostart_launcher=1{% endif %}"
+                            class="flex items-center justify-center rounded-2xl bg-green-500 px-3 py-3 text-sm font-black text-white hover:bg-green-600 transition-all">
+                            수업 시작
+                        </a>
+                        <a href="{% url 'artclass:setup_edit' item.pk %}"
+                            class="flex items-center justify-center rounded-2xl border-2 border-purple-100 px-3 py-3 text-sm font-black text-purple-600 hover:border-purple-300 hover:bg-purple-50 transition-all">
+                            수정
+                        </a>
+                        <form method="post" action="{% url 'artclass:delete' pk=item.pk %}">
+                            {% csrf_token %}
+                            <button type="submit"
+                                class="w-full rounded-2xl border-2 border-red-100 px-3 py-3 text-sm font-black text-red-600 hover:border-red-300 hover:bg-red-50 transition-all">
+                                삭제
+                            </button>
+                        </form>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="clay-card p-10 text-center bg-white/90">
+                <p class="text-xl font-black text-gray-700">아직 만든 수업이 없습니다.</p>
+                <p class="mt-2 text-gray-500 font-bold">새 수업 만들기 버튼으로 첫 수업을 준비해 보세요.</p>
+            </div>
+            {% endif %}
+        </section>
+        {% endif %}
+
+        <section class="px-2">
+            <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
+                <div>
+                    <p class="text-sm font-black uppercase tracking-[0.24em] text-indigo-500">Shared Library</p>
+                    <h2 class="text-3xl font-black text-gray-800 mt-2">함께 보는 공개 수업</h2>
+                    <p class="text-gray-500 font-bold mt-2">다른 선생님 수업과 내 공개 수업이 함께 보입니다.</p>
+                </div>
+                <div class="inline-flex items-center rounded-full bg-white border border-indigo-100 px-4 py-2 text-sm font-black text-gray-500">
+                    총 {{ shared_classes|length }}개
+                </div>
+            </div>
+
         {% if popular_tags %}
-        <div class="mb-10 flex flex-wrap gap-2 px-2">
+        <div class="mb-10 flex flex-wrap gap-2">
             {% for tag in popular_tags %}
             <a href="?{% if query %}q={{ query|urlencode }}&amp;{% endif %}{% if selected_category %}category={{ selected_category|urlencode }}&amp;{% endif %}{% if selected_grade %}grade={{ selected_grade|urlencode }}&amp;{% endif %}tag={{ tag|urlencode }}"
                 class="px-3 py-1.5 rounded-full text-xs font-black border {% if selected_tag == tag %}bg-purple-600 text-white border-purple-600{% else %}bg-white text-purple-700 border-purple-200 hover:border-purple-400{% endif %}">
@@ -88,19 +172,6 @@
 
         <!-- Library Grid -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            <!-- Create New Card -->
-            <a href="{% url 'artclass:setup' %}"
-                class="clay-card p-8 flex flex-col items-center justify-center text-center gap-6 border-4 border-dashed border-purple-100 group hover:border-purple-400 hover:bg-purple-50/30 transition-all duration-500 min-h-[320px]">
-                <div
-                    class="w-20 h-20 rounded-[2rem] bg-purple-50 flex items-center justify-center text-purple-500 text-4xl group-hover:bg-purple-600 group-hover:text-white group-hover:rotate-90 transition-all duration-500 shadow-inner">
-                    <i class="fa-solid fa-plus"></i>
-                </div>
-                <div>
-                    <h3 class="text-2xl font-black text-gray-700">새 수업 만들기</h3>
-                    <p class="text-gray-500 font-bold mt-2">나만의 커리큘럼 설계</p>
-                </div>
-            </a>
-
             {% for item in shared_classes %}
             <div class="clay-card overflow-hidden art-card flex flex-col bg-white/90 focus:ring-4 focus:ring-purple-300 outline-none"
                 data-aos="fade-up" data-aos-delay="{{ forloop.counter }}00" data-pk="{{ item.pk }}"
@@ -131,6 +202,11 @@
                                 class="text-[10px] font-black tracking-widest uppercase text-purple-600 bg-purple-100 px-2.5 py-1 rounded-lg">
                                 {{ item.steps_count }} STEPS
                             </span>
+                            {% if user.is_authenticated and item.created_by_id == user.id %}
+                            <span class="text-[10px] font-black tracking-widest uppercase text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-lg">
+                                내 수업
+                            </span>
+                            {% endif %}
                             {% if item.auto_category %}
                             <span class="text-[10px] font-black tracking-widest uppercase text-indigo-600 bg-indigo-100 px-2.5 py-1 rounded-lg">
                                 {{ item.auto_category }}
@@ -171,6 +247,7 @@
             </div>
             {% endfor %}
         </div>
+        </section>
     </div>
 </main>
 

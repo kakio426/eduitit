@@ -880,6 +880,44 @@ class ArtClassAutoMetadataTest(TestCase):
         self.assertContains(response, "익명의 선생님")
         self.assertNotContains(response, "user694")
 
+    def test_library_separates_my_classes_and_shared_classes_for_logged_in_teacher(self):
+        self.client.force_login(self.owner)
+        other_user = User.objects.create_user(
+            username="other_owner",
+            password="pw123456",
+            email="other_owner@example.com",
+        )
+
+        my_private = ArtClass.objects.create(
+            title="내 비공개 수업",
+            youtube_url="https://www.youtube.com/watch?v=private01",
+            default_interval=10,
+            created_by=self.owner,
+            is_shared=False,
+        )
+        my_shared = ArtClass.objects.create(
+            title="내 공개 수업",
+            youtube_url="https://www.youtube.com/watch?v=shared01",
+            default_interval=10,
+            created_by=self.owner,
+            is_shared=True,
+        )
+        other_shared = ArtClass.objects.create(
+            title="다른 선생님 공개 수업",
+            youtube_url="https://www.youtube.com/watch?v=shared02",
+            default_interval=10,
+            created_by=other_user,
+            is_shared=True,
+        )
+
+        response = self.client.get(reverse("artclass:library"))
+
+        self.assertEqual(response.status_code, 200)
+        my_titles = {item.display_title for item in response.context["my_classes"]}
+        shared_titles = {item.display_title for item in response.context["shared_classes"]}
+        self.assertEqual(my_titles, {my_private.display_title, my_shared.display_title})
+        self.assertEqual(shared_titles, {my_shared.display_title, other_shared.display_title})
+
 
 class ArtClassYoutubeTitleBackfillCommandTest(TestCase):
     @patch("artclass.management.commands.backfill_artclass_youtube_titles._fetch_youtube_title")

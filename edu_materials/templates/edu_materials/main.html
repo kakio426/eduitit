@@ -30,11 +30,11 @@
             <div>
                 <p class="text-sm font-bold uppercase tracking-[0.32em] text-emerald-600">Interactive Lesson Materials</p>
                 <h1 class="text-4xl md:text-5xl font-black text-slate-900 mt-2">HTML 교육 자료를 바로 열어 수업에 씁니다</h1>
-                <p class="text-slate-600 mt-4 max-w-3xl text-lg">바이브코딩 툴에서 만든 교육용 HTML 코드를 붙여넣거나 파일로 올리면, 같은 화면에서 확인하고 학생에게 QR로 바로 열어줄 수 있습니다.</p>
+                <p class="text-slate-600 mt-4 max-w-3xl text-lg">자료 제목만 적고 HTML을 붙여넣거나 파일로 올리면, 저장 직후 학생에게 바로 열어줄 수 있습니다.</p>
             </div>
             <div class="rounded-3xl bg-white/70 border border-emerald-100 px-5 py-4 text-sm text-slate-600">
-                <div>붙여넣기와 파일 업로드를 모두 지원합니다.</div>
-                <div>학생 화면은 sandbox iframe으로 분리 실행됩니다.</div>
+                <div>새 자료는 저장 즉시 학생 공개 상태로 들어갑니다.</div>
+                <div>필요하면 나중에 공개를 끄거나 다시 수정할 수 있습니다.</div>
             </div>
         </div>
 
@@ -42,33 +42,14 @@
             <div class="edu-materials-panel rounded-[32px] p-6 md:p-8">
                 <div class="mb-6">
                     <h2 class="text-2xl font-black text-slate-900">새 자료 올리기</h2>
-                    <p class="text-sm text-slate-500 mt-1">코드를 붙여넣거나 `.html` 파일을 올려서 바로 실행 가능한 자료로 저장합니다.</p>
+                    <p class="text-sm text-slate-500 mt-1">자료 제목과 HTML만 넣으면 바로 실행 가능한 수업 자료로 저장됩니다.</p>
                 </div>
 
                 <form action="{% url 'edu_materials:create' %}" method="post" enctype="multipart/form-data" class="space-y-4">
                     {% csrf_token %}
                     <div>
-                        <label class="block text-sm font-bold text-slate-700 mb-2">과목</label>
-                        <select name="subject" class="edu-materials-input" required>
-                            <option value="">과목을 선택하세요</option>
-                            {% for value, label in subject_choices %}
-                            <option value="{{ value }}">{{ label }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="grid gap-4 md:grid-cols-2">
-                        <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-2">학년/학기</label>
-                            <input name="grade" class="edu-materials-input" placeholder="예: 4학년 2학기">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-2">단원명</label>
-                            <input name="unit_title" class="edu-materials-input" placeholder="예: 화산과 지진" required>
-                        </div>
-                    </div>
-                    <div>
                         <label class="block text-sm font-bold text-slate-700 mb-2">자료 제목</label>
-                        <input name="title" class="edu-materials-input" placeholder="학생에게 보일 제목">
+                        <input name="title" class="edu-materials-input" placeholder="학생에게 보일 제목" required>
                     </div>
                     <fieldset class="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
                         <legend class="px-2 text-sm font-bold text-slate-700">입력 방식</legend>
@@ -88,49 +69,114 @@
                     <div>
                         <label class="block text-sm font-bold text-slate-700 mb-2">또는 HTML 파일 업로드</label>
                         <input type="file" name="html_file" accept=".html,.htm,text/html" class="edu-materials-input">
-                        <p class="text-xs text-slate-500 mt-2">붙여넣기와 파일 업로드 중 선택한 방식만 저장됩니다.</p>
+                        <p class="text-xs text-slate-500 mt-2">저장하면 바로 학생 공개 상태로 등록됩니다.</p>
                     </div>
                     <button type="submit" class="w-full rounded-2xl bg-emerald-600 py-4 text-white text-lg font-black shadow-lg shadow-emerald-600/15 hover:-translate-y-0.5 transition">자료 저장하기</button>
                 </form>
             </div>
 
-            <div class="space-y-4">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h2 class="text-2xl font-black text-slate-900">내 교육 자료</h2>
-                        <p class="text-sm text-slate-500 mt-1">최근 수정한 자료부터 표시됩니다.</p>
+            <div class="space-y-8">
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-2xl font-black text-slate-900">내가 만든 자료</h2>
+                            <p class="text-sm text-slate-500 mt-1">수정, 삭제, 공개 상태 관리는 여기서 바로 합니다.</p>
+                        </div>
+                        <div class="rounded-full bg-white/70 border border-slate-200 px-4 py-2 text-sm text-slate-600">
+                            총 {{ my_materials|length }}개
+                        </div>
                     </div>
-                    <div class="rounded-full bg-white/70 border border-slate-200 px-4 py-2 text-sm text-slate-600">
-                        총 {{ materials|length }}개
+
+                    {% if my_materials %}
+                    <div class="grid gap-4 md:grid-cols-2">
+                        {% for material in my_materials %}
+                        <article class="edu-materials-panel rounded-[28px] p-5 group hover:-translate-y-1 transition flex flex-col">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <div class="text-xs font-bold uppercase tracking-[0.28em] {% if material.is_published %}text-emerald-600{% else %}text-amber-600{% endif %}">
+                                        {% if material.is_published %}공개 중{% else %}비공개{% endif %}
+                                    </div>
+                                    <a href="{% url 'edu_materials:detail' material.id %}" class="text-xl font-black text-slate-900 mt-2 group-hover:text-emerald-700 transition block">{{ material.title }}</a>
+                                </div>
+                                <span class="rounded-full bg-emerald-100 text-emerald-700 px-3 py-1 text-xs font-bold">{{ material.get_input_mode_display }}</span>
+                            </div>
+                            <p class="text-slate-500 mt-3 text-sm">최근 수정 {{ material.updated_at|date:"n월 j일 H:i" }}</p>
+                            <div class="mt-4 flex items-center justify-between text-sm text-slate-500">
+                                <span>{% if material.original_filename %}파일 업로드{% else %}코드 붙여넣기{% endif %}</span>
+                                <span>열람 {{ material.view_count }}회</span>
+                            </div>
+                            <div class="mt-5 grid grid-cols-3 gap-2">
+                                {% if material.is_published %}
+                                <a href="{% url 'edu_materials:run' material.id %}" target="_blank" rel="noopener" class="rounded-2xl bg-slate-900 px-3 py-3 text-center text-sm font-bold text-white">학생 화면</a>
+                                {% else %}
+                                <form method="post" action="{% url 'edu_materials:toggle_publish' material.id %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="publish">
+                                    <button type="submit" class="w-full rounded-2xl bg-emerald-600 px-3 py-3 text-center text-sm font-bold text-white">공개 켜기</button>
+                                </form>
+                                {% endif %}
+                                <a href="{% url 'edu_materials:detail' material.id %}#edit-form" class="rounded-2xl border border-slate-200 px-3 py-3 text-center text-sm font-bold text-slate-700">수정</a>
+                                <form method="post" action="{% url 'edu_materials:delete' material.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="w-full rounded-2xl border border-rose-200 px-3 py-3 text-center text-sm font-bold text-rose-600">삭제</button>
+                                </form>
+                            </div>
+                        </article>
+                        {% endfor %}
                     </div>
+                    {% else %}
+                    <div class="edu-materials-panel rounded-[28px] p-10 text-center text-slate-500">
+                        <p class="text-lg font-bold text-slate-700">아직 내가 만든 교육 자료가 없습니다.</p>
+                        <p class="mt-2">왼쪽 패널에서 첫 HTML 자료를 올려보세요.</p>
+                    </div>
+                    {% endif %}
                 </div>
 
-                {% if materials %}
-                <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    {% for material in materials %}
-                    <a href="{% url 'edu_materials:detail' material.id %}" class="edu-materials-panel rounded-[28px] p-5 group hover:-translate-y-1 transition block">
-                        <div class="flex items-start justify-between gap-3">
-                            <div>
-                                <div class="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600">{{ material.get_subject_display }}</div>
-                                <h3 class="text-xl font-black text-slate-900 mt-2 group-hover:text-emerald-700 transition">{{ material.title }}</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-2xl font-black text-slate-900">함께 보는 공개 자료</h2>
+                            <p class="text-sm text-slate-500 mt-1">다른 선생님 자료와 내 공개 자료가 함께 보입니다.</p>
+                        </div>
+                        <div class="rounded-full bg-white/70 border border-slate-200 px-4 py-2 text-sm text-slate-600">
+                            총 {{ shared_materials|length }}개
+                        </div>
+                    </div>
+
+                    {% if shared_materials %}
+                    <div class="grid gap-4 md:grid-cols-2">
+                        {% for material in shared_materials %}
+                        <article class="edu-materials-panel rounded-[28px] p-5 flex flex-col">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <div class="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600">
+                                        {% if material.teacher_id == request.user.id %}내 자료{% else %}{{ material.teacher_display_name }}{% endif %}
+                                    </div>
+                                    <h3 class="text-xl font-black text-slate-900 mt-2">{{ material.title }}</h3>
+                                </div>
+                                <span class="rounded-full bg-emerald-100 text-emerald-700 px-3 py-1 text-xs font-bold">{{ material.get_input_mode_display }}</span>
                             </div>
-                            <span class="rounded-full bg-emerald-100 text-emerald-700 px-3 py-1 text-xs font-bold">{{ material.get_input_mode_display }}</span>
-                        </div>
-                        <p class="text-slate-500 mt-3 line-clamp-2 min-h-[3rem]">{{ material.unit_title }}{% if material.grade %} · {{ material.grade }}{% endif %}</p>
-                        <div class="mt-4 flex items-center justify-between text-sm text-slate-500">
-                            <span>{% if material.is_published %}학생 공개 중{% else %}비공개{% endif %}</span>
-                            <span>열람 {{ material.view_count }}회</span>
-                        </div>
-                    </a>
-                    {% endfor %}
+                            <p class="text-slate-500 mt-3 text-sm">최근 수정 {{ material.updated_at|date:"n월 j일 H:i" }}</p>
+                            <div class="mt-4 flex items-center justify-between text-sm text-slate-500">
+                                <span>공개 자료</span>
+                                <span>열람 {{ material.view_count }}회</span>
+                            </div>
+                            <div class="mt-5 grid {% if material.teacher_id == request.user.id %}grid-cols-2{% else %}grid-cols-1{% endif %} gap-2">
+                                <a href="{% url 'edu_materials:run' material.id %}" target="_blank" rel="noopener" class="rounded-2xl bg-slate-900 px-3 py-3 text-center text-sm font-bold text-white">바로 열기</a>
+                                {% if material.teacher_id == request.user.id %}
+                                <a href="{% url 'edu_materials:detail' material.id %}" class="rounded-2xl border border-slate-200 px-3 py-3 text-center text-sm font-bold text-slate-700">내 자료 관리</a>
+                                {% endif %}
+                            </div>
+                        </article>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="edu-materials-panel rounded-[28px] p-10 text-center text-slate-500">
+                        <p class="text-lg font-bold text-slate-700">아직 공개된 교육 자료가 없습니다.</p>
+                        <p class="mt-2">첫 자료를 올리면 이 공간에도 바로 나타납니다.</p>
+                    </div>
+                    {% endif %}
                 </div>
-                {% else %}
-                <div class="edu-materials-panel rounded-[28px] p-10 text-center text-slate-500">
-                    <div class="text-5xl mb-3">🧩</div>
-                    <p class="text-lg font-bold text-slate-700">아직 저장한 교육 자료가 없습니다.</p>
-                    <p class="mt-2">왼쪽 패널에서 첫 HTML 자료를 올려보세요.</p>
-                </div>
-                {% endif %}
             </div>
         </div>
     </div>

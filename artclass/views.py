@@ -493,6 +493,17 @@ def library_view(request):
     selected_category = (request.GET.get('category') or '').strip()
     selected_grade = (request.GET.get('grade') or '').strip()
     selected_tag = (request.GET.get('tag') or '').strip()
+    my_classes = []
+
+    if request.user.is_authenticated:
+        my_classes = list(
+            ArtClass.objects.select_related('created_by', 'created_by__userprofile')
+            .annotate(steps_count=Count('steps'))
+            .filter(created_by=request.user)
+            .distinct()
+        )
+        for item in my_classes:
+            item.creator_display_name = _resolve_creator_display_name(item.created_by)
 
     shared_classes = ArtClass.objects.select_related('created_by', 'created_by__userprofile').annotate(
         steps_count=Count('steps')
@@ -534,6 +545,7 @@ def library_view(request):
     popular_tags = collect_popular_tags(shared_only)
 
     return render(request, 'artclass/library.html', {
+        'my_classes': my_classes,
         'shared_classes': shared_classes,
         'query': query,
         'selected_category': selected_category,

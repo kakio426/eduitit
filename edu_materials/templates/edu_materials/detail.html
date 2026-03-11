@@ -27,9 +27,10 @@
             <div>
                 <a href="{% url 'edu_materials:main' %}" class="text-sm font-bold text-slate-500 hover:text-slate-900 transition">&larr; 교육 자료실로 돌아가기</a>
                 <h1 class="text-4xl font-black text-slate-900 mt-3">{{ material.title }}</h1>
-                <p class="text-slate-600 mt-2">{{ material.get_subject_display }} · {{ material.unit_title }}{% if material.grade %} · {{ material.grade }}{% endif %}</p>
+                <p class="text-slate-600 mt-2">최근 수정 {{ material.updated_at|date:"Y년 n월 j일 H:i" }}</p>
             </div>
             <div class="flex gap-3 flex-wrap">
+                <a href="#edit-form" class="rounded-2xl px-5 py-3 font-black border border-slate-200 text-slate-700 bg-white">수정하기</a>
                 <form method="post" action="{% url 'edu_materials:toggle_publish' material.id %}">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="{% if material.is_published %}unpublish{% else %}publish{% endif %}">
@@ -87,6 +88,38 @@
                     {% else %}
                     <p class="mt-4 text-slate-500 leading-7">학생에게 열어주려면 먼저 공개를 켜세요. 공개 전에는 링크로 직접 들어와도 열리지 않습니다.</p>
                     {% endif %}
+                </div>
+
+                <div id="edit-form" class="edu-materials-panel rounded-[32px] p-6">
+                    <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">자료 수정</div>
+                    <h2 class="text-2xl font-black text-slate-900 mt-2">제목과 HTML 바꾸기</h2>
+                    <form method="post" action="{% url 'edu_materials:update' material.id %}" enctype="multipart/form-data" class="mt-5 space-y-4">
+                        {% csrf_token %}
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">자료 제목</label>
+                            <input name="title" class="edu-materials-input" value="{{ material.title }}" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">HTML 코드</label>
+                            <textarea name="html_content" class="edu-materials-input min-h-[220px]">{{ material.html_content }}</textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">새 HTML 파일로 교체</label>
+                            <input type="file" name="html_file" accept=".html,.htm,text/html" class="edu-materials-input">
+                            <p class="text-xs text-slate-500 mt-2">파일을 올리면 위 코드를 대신 사용합니다.</p>
+                        </div>
+                        <button type="submit" class="w-full rounded-2xl bg-emerald-600 py-3 text-white text-base font-black">수정 저장하기</button>
+                    </form>
+                </div>
+
+                <div class="edu-materials-panel rounded-[32px] p-6 border border-rose-100">
+                    <div class="text-xs font-bold uppercase tracking-[0.32em] text-rose-500">자료 삭제</div>
+                    <h2 class="text-2xl font-black text-slate-900 mt-2">이 자료 지우기</h2>
+                    <p class="mt-3 text-sm text-slate-500">삭제하면 목록과 학생 링크에서 모두 사라집니다.</p>
+                    <form method="post" action="{% url 'edu_materials:delete' material.id %}" class="mt-4">
+                        {% csrf_token %}
+                        <button type="submit" class="w-full rounded-2xl border border-rose-200 py-3 text-rose-600 text-base font-black">자료 삭제하기</button>
+                    </form>
                 </div>
             </aside>
         </div>

@@ -30,9 +30,6 @@ class EduMaterialViewTests(TestCase):
         response = self.client.post(
             reverse("edu_materials:create"),
             {
-                "subject": "SCIENCE",
-                "grade": "4학년 1학기",
-                "unit_title": "화산과 지진",
                 "title": "화산 시뮬레이션",
                 "input_mode": "paste",
                 "html_content": "<html><body><h1>lesson</h1></body></html>",
@@ -42,15 +39,14 @@ class EduMaterialViewTests(TestCase):
         material = EduMaterial.objects.get(title="화산 시뮬레이션")
         self.assertEqual(material.input_mode, EduMaterial.INPUT_PASTE)
         self.assertIn("lesson", material.html_content)
+        self.assertTrue(material.is_published)
+        self.assertEqual(material.subject, "OTHER")
 
     def test_create_material_from_html_file(self):
         upload = SimpleUploadedFile("volcano.html", b"<html><body>volcano</body></html>", content_type="text/html")
         response = self.client.post(
             reverse("edu_materials:create"),
             {
-                "subject": "SCIENCE",
-                "grade": "4학년 1학기",
-                "unit_title": "화산과 지진",
                 "title": "파일형 자료",
                 "input_mode": "file",
                 "html_file": upload,
@@ -67,9 +63,6 @@ class EduMaterialViewTests(TestCase):
         response = self.client.post(
             reverse("edu_materials:create"),
             {
-                "subject": "SCIENCE",
-                "grade": "4학년 1학기",
-                "unit_title": "화산과 지진",
                 "title": "잘못된 파일",
                 "input_mode": "file",
                 "html_file": upload,
@@ -78,14 +71,93 @@ class EduMaterialViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertFalse(EduMaterial.objects.filter(title="잘못된 파일").exists())
 
+    def test_create_material_requires_title(self):
+        response = self.client.post(
+            reverse("edu_materials:create"),
+            {
+                "title": "",
+                "input_mode": "paste",
+                "html_content": "<html><body>lesson</body></html>",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(EduMaterial.objects.count(), 0)
+
+    def test_update_material_from_paste(self):
+        material = EduMaterial.objects.create(
+            teacher=self.user,
+            title="이전 제목",
+            html_content="<html><body>before</body></html>",
+        )
+
+        response = self.client.post(
+            reverse("edu_materials:update", args=[material.id]),
+            {
+                "title": "수정된 제목",
+                "html_content": "<html><body>after</body></html>",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        material.refresh_from_db()
+        self.assertEqual(material.title, "수정된 제목")
+        self.assertEqual(material.input_mode, EduMaterial.INPUT_PASTE)
+        self.assertIn("after", material.html_content)
+
+    def test_delete_material(self):
+        material = EduMaterial.objects.create(
+            teacher=self.user,
+            title="삭제할 자료",
+            html_content="<html><body>delete</body></html>",
+        )
+
+        response = self.client.post(reverse("edu_materials:delete", args=[material.id]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(EduMaterial.objects.filter(id=material.id).exists())
+
+    def test_main_view_separates_my_materials_and_shared_materials(self):
+        other_user = User.objects.create_user(
+            username="another-teacher",
+            email="another@example.com",
+            password="pw123456",
+        )
+        other_user.userprofile.nickname = "옆반선생님"
+        other_user.userprofile.save(update_fields=["nickname"])
+
+        my_private = EduMaterial.objects.create(
+            teacher=self.user,
+            title="내 비공개 자료",
+            html_content="<html><body>mine</body></html>",
+            is_published=False,
+        )
+        my_public = EduMaterial.objects.create(
+            teacher=self.user,
+            title="내 공개 자료",
+            html_content="<html><body>mine-public</body></html>",
+            is_published=True,
+        )
+        other_public = EduMaterial.objects.create(
+            teacher=other_user,
+            title="다른 교사 자료",
+            html_content="<html><body>other</body></html>",
+            is_published=True,
+        )
+
+        response = self.client.get(reverse("edu_materials:main"))
+
+        self.assertEqual(response.status_code, 200)
+        my_titles = {item.title for item in response.context["my_materials"]}
+        shared_titles = {item.title for item in response.context["shared_materials"]}
+        self.assertEqual(my_titles, {my_private.title, my_public.title})
+        self.assertEqual(shared_titles, {my_public.title, other_public.title})
+
     def test_run_view_requires_published_material(self):
         material = EduMaterial.objects.create(
             teacher=self.user,
-            subject="SCIENCE",
-            grade="4학년 1학기",
-            unit_title="화산과 지진",
             title="비공개 자료",
             html_content="<html><body>private</body></html>",
+            is_published=False,
         )
         response = self.client.get(reverse("edu_materials:run", args=[material.id]))
         self.assertEqual(response.status_code, 404)
@@ -93,9 +165,6 @@ class EduMaterialViewTests(TestCase):
     def test_run_view_renders_sandboxed_iframe_and_tracks_views(self):
         material = EduMaterial.objects.create(
             teacher=self.user,
-            subject="SCIENCE",
-            grade="4학년 1학기",
-            unit_title="화산과 지진",
             title="공개 자료",
             html_content="<html><body><script>window.lesson=true;</script></body></html>",
             is_published=True,
@@ -220,5 +289,4 @@ class EduMaterialMigrationHelperTests(TestCase):
         self.assertIn("HTML 자료", titles)
         self.assertIn("Markdown 자료", titles)
         self.assertNotIn("PDF 자료", titles)
-
 
