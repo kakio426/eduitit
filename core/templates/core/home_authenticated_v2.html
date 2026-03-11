@@ -557,7 +557,7 @@ function homeCalendarWidget() {
                                 <span class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white text-sm {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-blue-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-violet-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
                                         {% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }}"></i>{% else %}{{ item.product.icon }}{% endif %}
                                     </span>
-                                <span class="min-w-0 flex-1 truncate text-[0.95rem] font-black leading-5 text-slate-900">{{ item.product.public_service_name|default:item.product.title }}</span>
+                                <span class="min-w-0 flex-1 truncate text-[0.95rem] font-black leading-5 text-slate-900" title="{{ item.product.public_service_name|default:item.product.title }}">{{ item.product.public_service_name|default:item.product.title }}</span>
                                 <button type="button"
                                     class="favorite-toggle-btn inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-300 hover:border-amber-300 hover:text-amber-500 transition-colors"
                                     data-product-id="{{ item.product.id }}"
