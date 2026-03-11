@@ -59,7 +59,7 @@ class SignaturePublicSigningTests(TestCase):
         self.assertEqual(log.event_meta.get("participant_name"), "홍길동")
         self.assertEqual(log.event_meta.get("submission_mode"), Signature.SUBMISSION_MODE_OPEN)
 
-    def test_session_detail_shows_repeated_ip_warning(self):
+    def test_session_detail_does_not_show_repeated_ip_warning(self):
         Signature.objects.create(
             training_session=self.session,
             participant_name="홍길동",
@@ -83,8 +83,5 @@ class SignaturePublicSigningTests(TestCase):
         response = self.client.get(reverse("signatures:detail", kwargs={"uuid": self.session.uuid}))
 
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.context["has_repeated_ips"])
-        self.assertEqual(len(response.context["repeated_ip_groups"]), 1)
-        self.assertContains(response, "반복 IP 제출")
-        self.assertContains(response, "198.51.100.20")
-        self.assertContains(response, "출석·참여 확인용")
+        self.assertNotContains(response, "반복 IP 제출")
+        self.assertNotContains(response, "198.51.100.20")

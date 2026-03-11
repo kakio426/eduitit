@@ -112,6 +112,28 @@ def _get_signature_sort_mode(session):
     return sort_mode
 
 
+def _get_participant_sort_mode(session):
+    sort_mode = str(session.participant_sort_mode or "").strip()
+    valid_modes = {
+        TrainingSession.SIGNATURE_SORT_SUBMITTED,
+        TrainingSession.SIGNATURE_SORT_AFFILIATION,
+        TrainingSession.SIGNATURE_SORT_MANUAL,
+    }
+    if sort_mode not in valid_modes:
+        return TrainingSession.SIGNATURE_SORT_SUBMITTED
+    return sort_mode
+
+
+def _get_attendance_sort_choices(has_expected_participants):
+    if has_expected_participants:
+        return [
+            (TrainingSession.SIGNATURE_SORT_SUBMITTED, "명단 입력 순서"),
+            (TrainingSession.SIGNATURE_SORT_AFFILIATION, "학년반/이름 정렬"),
+            (TrainingSession.SIGNATURE_SORT_MANUAL, "직접 순서 정하기"),
+        ]
+    return TrainingSession.SIGNATURE_SORT_CHOICES
+
+
 def _sort_signatures_for_display(signatures, sort_mode):
     signature_list = list(signatures)
     if sort_mode == TrainingSession.SIGNATURE_SORT_SUBMITTED:
@@ -119,6 +141,79 @@ def _sort_signatures_for_display(signatures, sort_mode):
     if sort_mode == TrainingSession.SIGNATURE_SORT_MANUAL:
         return sorted(signature_list, key=_signature_manual_sort_key)
     return sorted(signature_list, key=_signature_affiliation_sort_key)
+
+
+def _participant_submitted_sort_key(participant):
+    return (
+        participant.created_at,
+        participant.id,
+    )
+
+
+def _expected_participant_sort_key(participant):
+    affiliation = participant.display_affiliation
+    return (
+        1 if not affiliation else 0,
+        _natural_string_sort_key(affiliation),
+        _natural_string_sort_key(participant.name),
+        participant.created_at,
+        participant.id,
+    )
+
+
+def _participant_manual_sort_key(participant):
+    return (
+        participant.manual_sort_order or 0,
+        participant.created_at,
+        participant.id,
+    )
+
+
+def _sort_expected_participants_for_display(participants, sort_mode):
+    participant_list = list(participants)
+    if sort_mode == TrainingSession.SIGNATURE_SORT_SUBMITTED:
+        return sorted(participant_list, key=_participant_submitted_sort_key)
+    if sort_mode == TrainingSession.SIGNATURE_SORT_MANUAL:
+        return sorted(participant_list, key=_participant_manual_sort_key)
+    return sorted(participant_list, key=_expected_participant_sort_key)
+
+
+def _resequence_manual_participant_order(session):
+    ordered_participants = _sort_expected_participants_for_display(
+        session.expected_participants.all(),
+        TrainingSession.SIGNATURE_SORT_MANUAL,
+    )
+    updates = []
+    for index, participant in enumerate(ordered_participants, start=1):
+        if participant.manual_sort_order == index:
+            continue
+        participant.manual_sort_order = index
+        updates.append(participant)
+    if updates:
+        ExpectedParticipant.objects.bulk_update(updates, ["manual_sort_order"])
+    return ordered_participants
+
+
+def _move_participant_to_position(session, participant, target_position):
+    ordered_participants = _resequence_manual_participant_order(session)
+    total_count = len(ordered_participants)
+    if total_count <= 1:
+        return ordered_participants
+
+    target_position = max(1, min(int(target_position), total_count))
+    current_index = next(
+        (index for index, item in enumerate(ordered_participants) if item.id == participant.id),
+        None,
+    )
+    if current_index is None:
+        return ordered_participants
+
+    participant_item = ordered_participants.pop(current_index)
+    ordered_participants.insert(target_position - 1, participant_item)
+    for index, item in enumerate(ordered_participants, start=1):
+        item.manual_sort_order = index
+    ExpectedParticipant.objects.bulk_update(ordered_participants, ["manual_sort_order"])
+    return ordered_participants
 
 
 def _resequence_manual_signature_order(session):
@@ -572,7 +667,7 @@ def session_create(request):
 
 @login_required
 def session_detail(request, uuid):
-    """연수 상세 (관리자용) - 미매칭, 중복, 반복 IP 감지 포함"""
+    """연수 상세 (관리자용) - 미매칭과 중복 점검 포함"""
     from django.http import HttpResponse
     import traceback
 
@@ -582,10 +677,13 @@ def session_detail(request, uuid):
         expected = session.expected_participants.all()
         has_expected_participants = expected.exists()
         signature_sort_mode = _get_signature_sort_mode(session)
+        participant_sort_mode = _get_participant_sort_mode(session)
+        attendance_sort_mode = participant_sort_mode if has_expected_participants else signature_sort_mode
+        attendance_sort_choices = _get_attendance_sort_choices(has_expected_participants)
         signature_rows = (
             _sort_signatures_for_display(signatures, signature_sort_mode)
             if not has_expected_participants
-            else list(signatures)
+            else list(signatures.order_by("created_at", "id"))
         )
 
         suggestions = []
@@ -609,30 +707,11 @@ def session_detail(request, uuid):
                 })
 
         sig_dict = defaultdict(list)
-        ip_dict = defaultdict(list)
         for sig in signatures:
             key = (sig.participant_name, sig.display_affiliation or '')
             sig_dict[key].append(sig)
-            if sig.ip_address:
-                ip_dict[sig.ip_address].append(sig)
 
         duplicates = [sigs for sigs in sig_dict.values() if len(sigs) > 1]
-        repeated_ip_groups = []
-        suspicious_window = timedelta(minutes=10)
-        for ip_address, ip_signatures in ip_dict.items():
-            ordered = sorted(ip_signatures, key=lambda item: item.created_at)
-            is_suspicious = any(
-                (ordered[idx].created_at - ordered[idx - 1].created_at) <= suspicious_window
-                for idx in range(1, len(ordered))
-            )
-            if is_suspicious and len(ordered) > 1:
-                repeated_ip_groups.append({
-                    'ip_address': ip_address,
-                    'signatures': ordered,
-                    'count': len(ordered),
-                    'first_at': ordered[0].created_at,
-                    'last_at': ordered[-1].created_at,
-                })
 
         share_link = request.build_absolute_uri(
             reverse("signatures:sign", kwargs={"uuid": session.uuid})
@@ -643,21 +722,31 @@ def session_detail(request, uuid):
             "signature",
             "expected_participant",
         )[:20]
+        unmatched_expected_participants = (
+            _sort_expected_participants_for_display(
+                expected.filter(matched_signature__isnull=True),
+                participant_sort_mode,
+            )
+            if has_expected_participants
+            else []
+        )
 
         return render(request, 'signatures/detail.html', {
             'session': session,
             'signatures': signatures,
             'signature_rows': signature_rows,
+            'attendance_sort_mode': attendance_sort_mode,
+            'attendance_sort_choices': attendance_sort_choices,
+            'participant_sort_mode': participant_sort_mode,
             'signature_sort_mode': signature_sort_mode,
-            'signature_sort_choices': TrainingSession.SIGNATURE_SORT_CHOICES,
             'can_customize_signature_sort': not has_expected_participants,
+            'can_customize_participant_sort': has_expected_participants,
             'expected_participants': expected,
+            'unmatched_expected_participants': unmatched_expected_participants,
             'unmatched_suggestions': suggestions,
             'duplicates': duplicates,
-            'repeated_ip_groups': repeated_ip_groups,
             'has_unmatched': len(suggestions) > 0,
             'has_duplicates': len(duplicates) > 0,
-            'has_repeated_ips': len(repeated_ip_groups) > 0,
             'share_link': share_link,
             'share_qr_data_url': share_qr_data_url,
             'affiliation_suggestions': _build_affiliation_suggestions(session),
@@ -769,6 +858,7 @@ def print_view(request, uuid):
     """출석부 인쇄 페이지 - 명단 유무에 따라 동작 변경"""
     session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
     signature_sort_mode = _get_signature_sort_mode(session)
+    participant_sort_mode = _get_participant_sort_mode(session)
     
     # 데이터 준비
     print_items = []
@@ -776,7 +866,10 @@ def print_view(request, uuid):
     
     if session.expected_participants.exists():
         # Case A: 명단이 있는 경우 (Phase 2) -> 명단 기준 + 미매칭 서명
-        participants = session.expected_participants.all().order_by('name')
+        participants = _sort_expected_participants_for_display(
+            session.expected_participants.all(),
+            participant_sort_mode,
+        )
         
         # 1. 예상 참석자 추가
         for p in participants:
@@ -793,7 +886,10 @@ def print_view(request, uuid):
                 
         # 2. 명단에 없는 추가 서명(Walk-ins) 추가
         matched_sig_ids = [p.matched_signature.id for p in participants if p.matched_signature]
-        unmatched_sigs = session.signatures.exclude(id__in=matched_sig_ids)
+        unmatched_sigs = _sort_signatures_for_display(
+            session.signatures.exclude(id__in=matched_sig_ids),
+            signature_sort_mode,
+        )
         
         for sig in unmatched_sigs:
             print_items.append({
@@ -871,13 +967,9 @@ def print_view(request, uuid):
 @login_required
 @require_POST
 def update_signature_sort_mode(request, uuid):
-    """명단 없는 연수의 서명 정렬 방식을 변경."""
+    """명단 유무에 따라 출석부 정렬 방식을 변경."""
     session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
-    if session.expected_participants.exists():
-        return JsonResponse(
-            {'success': False, 'error': '명단이 있는 연수는 명단 기준으로 출력됩니다.'},
-            status=400,
-        )
+    has_expected_participants = session.expected_participants.exists()
 
     try:
         payload = json.loads(request.body or "{}")
@@ -889,18 +981,31 @@ def update_signature_sort_mode(request, uuid):
     if sort_mode not in valid_modes:
         return JsonResponse({'success': False, 'error': '정렬 방식을 다시 확인해 주세요.'}, status=400)
 
-    if sort_mode == TrainingSession.SIGNATURE_SORT_MANUAL:
-        _resequence_manual_signature_order(session)
+    if has_expected_participants:
+        if sort_mode == TrainingSession.SIGNATURE_SORT_MANUAL:
+            _resequence_manual_participant_order(session)
+        if session.participant_sort_mode != sort_mode:
+            session.participant_sort_mode = sort_mode
+            session.save(update_fields=["participant_sort_mode"])
+        ordered_items = _sort_expected_participants_for_display(
+            session.expected_participants.all(),
+            sort_mode,
+        )
+        ordered_ids = [participant.id for participant in ordered_items]
+    else:
+        if sort_mode == TrainingSession.SIGNATURE_SORT_MANUAL:
+            _resequence_manual_signature_order(session)
+        if session.signature_sort_mode != sort_mode:
+            session.signature_sort_mode = sort_mode
+            session.save(update_fields=["signature_sort_mode"])
+        ordered_items = _sort_signatures_for_display(session.signatures.all(), sort_mode)
+        ordered_ids = [signature.id for signature in ordered_items]
 
-    if session.signature_sort_mode != sort_mode:
-        session.signature_sort_mode = sort_mode
-        session.save(update_fields=["signature_sort_mode"])
-
-    ordered_signatures = _sort_signatures_for_display(session.signatures.all(), sort_mode)
     return JsonResponse({
         'success': True,
         'sort_mode': sort_mode,
-        'ordered_signature_ids': [signature.id for signature in ordered_signatures],
+        'ordered_ids': ordered_ids,
+        'uses_participants': has_expected_participants,
     })
 
 
@@ -942,6 +1047,41 @@ def update_signature_manual_order(request, uuid, signature_id):
         'sort_mode': TrainingSession.SIGNATURE_SORT_MANUAL,
         'ordered_signature_ids': [item.id for item in ordered_signatures],
         'ordered_signature_names': [item.participant_name for item in ordered_signatures],
+    })
+
+
+@login_required
+@require_POST
+def update_expected_participant_manual_order(request, uuid, participant_id):
+    """명단이 있는 연수에서 참석자 수동 순서를 저장."""
+    session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
+    participant = get_object_or_404(ExpectedParticipant, id=participant_id, training_session=session)
+
+    try:
+        payload = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': '요청 형식이 올바르지 않습니다.'}, status=400)
+
+    raw_position = payload.get("position")
+    try:
+        target_position = int(raw_position)
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': '이동할 순번을 숫자로 입력해 주세요.'}, status=400)
+
+    if target_position < 1:
+        return JsonResponse({'success': False, 'error': '순번은 1 이상이어야 합니다.'}, status=400)
+
+    with transaction.atomic():
+        ordered_participants = _move_participant_to_position(session, participant, target_position)
+        if session.participant_sort_mode != TrainingSession.SIGNATURE_SORT_MANUAL:
+            session.participant_sort_mode = TrainingSession.SIGNATURE_SORT_MANUAL
+            session.save(update_fields=["participant_sort_mode"])
+
+    return JsonResponse({
+        'success': True,
+        'sort_mode': TrainingSession.SIGNATURE_SORT_MANUAL,
+        'ordered_participant_ids': [item.id for item in ordered_participants],
+        'ordered_participant_names': [item.name for item in ordered_participants],
     })
 
 
@@ -1183,10 +1323,14 @@ def get_expected_participants(request, uuid):
     from .models import ExpectedParticipant
     
     session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
-    participants = session.expected_participants.all()
+    participant_sort_mode = _get_participant_sort_mode(session)
+    participants = _sort_expected_participants_for_display(
+        session.expected_participants.all(),
+        participant_sort_mode,
+    )
     
     data = []
-    for p in participants:
+    for index, p in enumerate(participants, start=1):
         data.append({
             'id': p.id,
             'name': p.name,
@@ -1197,9 +1341,13 @@ def get_expected_participants(request, uuid):
             'has_signed': p.has_signed,
             'signature_id': p.matched_signature.id if p.matched_signature else None,
             'match_note': p.match_note,
+            'position': index,
         })
     
-    return JsonResponse({'participants': data})
+    return JsonResponse({
+        'participants': data,
+        'sort_mode': participant_sort_mode,
+    })
 
 
 @login_required
@@ -1215,6 +1363,7 @@ def delete_expected_participant(request, uuid, participant_id):
         training_session=session
     )
     participant.delete()
+    _resequence_manual_participant_order(session)
     
     return JsonResponse({'success': True})
 

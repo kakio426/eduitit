@@ -66,6 +66,13 @@ class TrainingSession(models.Model):
         default=SIGNATURE_SORT_AFFILIATION,
         help_text="명단 없이 받은 서명을 어떤 순서로 보여주고 출력할지 정합니다.",
     )
+    participant_sort_mode = models.CharField(
+        "명단 정렬 방식",
+        max_length=20,
+        choices=SIGNATURE_SORT_CHOICES,
+        default=SIGNATURE_SORT_SUBMITTED,
+        help_text="명단이 있는 경우 출석부에 어떤 순서로 보여줄지 정합니다.",
+    )
 
     class Meta:
         verbose_name = '연수'
@@ -216,6 +223,7 @@ class ExpectedParticipant(models.Model):
         blank=True,
         help_text='예: 오타 수정 (박영이 → 박영희)'
     )
+    manual_sort_order = models.PositiveIntegerField('수동 정렬 순서', default=0, db_index=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     
@@ -230,6 +238,18 @@ class ExpectedParticipant(models.Model):
         if display_affiliation:
             return f"{self.name} ({display_affiliation})"
         return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.manual_sort_order and self.training_session_id:
+            current_max = (
+                ExpectedParticipant.objects.filter(training_session_id=self.training_session_id)
+                .exclude(pk=self.pk)
+                .aggregate(max_order=Max("manual_sort_order"))
+                .get("max_order")
+                or 0
+            )
+            self.manual_sort_order = current_max + 1
+        super().save(*args, **kwargs)
     
     @property
     def has_signed(self):

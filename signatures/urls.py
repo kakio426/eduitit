@@ -28,6 +28,11 @@ urlpatterns = [
     path("<uuid:uuid>/participants/", views.get_expected_participants, name="get_participants"),
     path("<uuid:uuid>/participants/<int:participant_id>/delete/", views.delete_expected_participant, name="delete_participant"),
     path(
+        "<uuid:uuid>/participants/<int:participant_id>/manual-order/",
+        views.update_expected_participant_manual_order,
+        name="update_participant_manual_order",
+    ),
+    path(
         "<uuid:uuid>/participants/<int:participant_id>/correct-affiliation/",
         views.correct_expected_participant_affiliation,
         name="correct_participant_affiliation",

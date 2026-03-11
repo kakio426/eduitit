@@ -163,6 +163,14 @@
                     </div>
                     {% endif %}
                     <div class="flex gap-2">
+                        {% if unmatched_expected_participants %}
+                        <button
+                            type="button"
+                            onclick="openMatchPicker('{{ item.signature.id }}', '{{ item.signature.participant_name|escapejs }}', '{{ item.signature.display_affiliation|default:''|escapejs }}')"
+                            class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition text-sm font-bold">
+                            <i class="fa-solid fa-link mr-1"></i> 명단에서 찾아 연결
+                        </button>
+                        {% endif %}
                         <button onclick="deleteSignature('{{ item.signature.pk }}')"
                             class="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition text-sm font-bold">
                             <i class="fa-solid fa-trash mr-1"></i> 서명 삭제
@@ -207,33 +215,6 @@
         </div>
         {% endif %}
 
-        {% if has_repeated_ips %}
-        <div class="clay-card p-4 md:p-6 mb-4 md:mb-6 bg-rose-50/50">
-            <h2 class="text-base md:text-lg font-bold text-gray-700 mb-3">
-                <i class="fa-solid fa-network-wired text-rose-500 mr-1"></i>반복 IP 제출 ({{ repeated_ip_groups|length }})
-            </h2>
-            <p class="text-xs md:text-sm text-gray-600 mb-3">같은 IP에서 10분 안에 여러 건이 제출된 경우를 표시합니다.</p>
-            <div class="space-y-4">
-                {% for ip_group in repeated_ip_groups %}
-                <div class="p-4 bg-white rounded-xl shadow-sm border-l-4 border-rose-300">
-                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3">
-                        <p class="font-bold text-gray-700">IP {{ ip_group.ip_address }} · {{ ip_group.count }}건</p>
-                        <p class="text-xs text-gray-500">{{ ip_group.first_at|date:"H:i:s" }} ~ {{ ip_group.last_at|date:"H:i:s" }}</p>
-                    </div>
-                    <div class="grid md:grid-cols-2 gap-3">
-                        {% for sig in ip_group.signatures %}
-                        <div class="rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-700">
-                            <p class="font-semibold">{{ sig.participant_name }}{% if sig.display_affiliation %} ({{ sig.display_affiliation }}){% endif %}</p>
-                            <p class="text-xs text-gray-500 mt-1">{{ sig.created_at|date:"Y-m-d H:i:s" }}</p>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
         <!-- Expected Participants Management -->
         <div class="clay-card p-4 md:p-6 mb-4 md:mb-6">
             <div class="flex items-start justify-between mb-3 md:mb-4">
@@ -252,6 +233,27 @@
                     <span class="hidden sm:inline">가이드</span>
                 </button>
             </div>
+
+            {% if can_customize_participant_sort %}
+            <div class="mb-4 rounded-2xl border border-gray-200 bg-gray-50 p-3">
+                <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <p class="text-[11px] font-bold tracking-wide text-gray-500">출력 순서</p>
+                        <p class="mt-1 text-xs text-gray-500">기본은 명단을 넣은 순서 그대로이고, 필요할 때만 바꿔 쓰면 됩니다.</p>
+                    </div>
+                    <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                        {% for value, label in attendance_sort_choices %}
+                        <button
+                            type="button"
+                            onclick="updateAttendanceSortMode('{{ value }}')"
+                            class="rounded-xl px-3 py-2 text-xs md:text-sm font-bold transition {% if attendance_sort_mode == value %}bg-purple-600 text-white shadow-sm{% else %}bg-white text-gray-700 border border-gray-200 hover:border-purple-300 hover:text-purple-700{% endif %}">
+                            {{ label }}
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
 
             <!-- 안내 메시지 (토글 가능) -->
             <div id="participantGuide"
@@ -502,18 +504,18 @@
                 <div class="rounded-2xl border border-gray-200 bg-gray-50 p-3">
                     <p class="text-[11px] font-bold tracking-wide text-gray-500">정렬 방식</p>
                     <div class="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
-                        {% for value, label in signature_sort_choices %}
+                        {% for value, label in attendance_sort_choices %}
                         <button
                             type="button"
-                            onclick="updateSignatureSortMode('{{ value }}')"
+                            onclick="updateAttendanceSortMode('{{ value }}')"
                             data-sort-mode-btn="{{ value }}"
-                            class="rounded-xl px-3 py-2 text-xs md:text-sm font-bold transition {% if signature_sort_mode == value %}bg-purple-600 text-white shadow-sm{% else %}bg-white text-gray-700 border border-gray-200 hover:border-purple-300 hover:text-purple-700{% endif %}"
+                            class="rounded-xl px-3 py-2 text-xs md:text-sm font-bold transition {% if attendance_sort_mode == value %}bg-purple-600 text-white shadow-sm{% else %}bg-white text-gray-700 border border-gray-200 hover:border-purple-300 hover:text-purple-700{% endif %}"
                         >
                             {{ label }}
                         </button>
                         {% endfor %}
                     </div>
-                    {% if signature_sort_mode == 'manual' %}
+                    {% if attendance_sort_mode == 'manual' %}
                     <p class="mt-2 text-[11px] text-gray-500">순번을 바꾸면 출력 순서도 바로 같이 바뀝니다.</p>
                     {% endif %}
                 </div>
@@ -674,19 +676,60 @@
         </div>
     </div>
 </div>
+<div id="matchPickerModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/70">
+    <div class="relative w-full max-w-2xl rounded-2xl bg-white p-5 md:p-6 shadow-2xl">
+        <button type="button" onclick="closeMatchPicker()"
+            class="absolute right-3 top-3 w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+        <h3 class="text-lg md:text-xl font-black text-gray-800 mb-1">명단에서 찾아 연결</h3>
+        <p id="matchPickerTargetLabel" class="text-xs text-gray-500 mb-3"></p>
+        <input
+            id="matchPickerSearch"
+            type="text"
+            placeholder="이름이나 학년반으로 찾기"
+            class="w-full px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm mb-3"
+        >
+        <div id="matchPickerList" class="max-h-[50vh] overflow-y-auto space-y-2 pr-1">
+            {% if unmatched_expected_participants %}
+            {% for participant in unmatched_expected_participants %}
+            <button
+                type="button"
+                class="match-picker-option w-full text-left rounded-xl border border-gray-200 bg-white px-4 py-3 hover:border-purple-300 hover:bg-purple-50 transition"
+                data-participant-id="{{ participant.id }}"
+                data-search-text="{{ participant.name|lower }} {{ participant.display_affiliation|default:''|lower }}"
+                onclick="confirmMatchFromPicker('{{ participant.id }}')"
+            >
+                <span class="block font-bold text-gray-800">{{ participant.name }}</span>
+                <span class="block text-sm text-gray-500">{{ participant.display_affiliation|default:"-" }}</span>
+            </button>
+            {% endfor %}
+            {% else %}
+            <p class="rounded-xl bg-gray-50 px-4 py-5 text-sm text-gray-500">연결할 수 있는 명단 항목이 없습니다.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
     const sessionUuid = '{{ session.uuid }}';
+    const canCustomizeParticipantSort = {{ can_customize_participant_sort|yesno:"true,false" }};
     const correctionModalEl = document.getElementById('affiliationCorrectionModal');
     const correctionModalTargetLabelEl = document.getElementById('correctionModalTargetLabel');
     const correctionModalOriginalValueEl = document.getElementById('correctionModalOriginalValue');
     const correctionModalValueEl = document.getElementById('correctionModalValue');
     const correctionModalReasonEl = document.getElementById('correctionModalReason');
+    const matchPickerModalEl = document.getElementById('matchPickerModal');
+    const matchPickerTargetLabelEl = document.getElementById('matchPickerTargetLabel');
+    const matchPickerSearchEl = document.getElementById('matchPickerSearch');
     const correctionModalState = {
         targetType: '',
         targetId: '',
+    };
+    const matchPickerState = {
+        signatureId: '',
     };
 
     function toggleGuide() {
@@ -745,7 +788,7 @@
         return payload;
     }
 
-    async function updateSignatureSortMode(sortMode) {
+    async function updateAttendanceSortMode(sortMode) {
         try {
             const response = await fetch(`/signatures/${sessionUuid}/signature-sort-mode/`, {
                 method: 'POST',
@@ -787,6 +830,27 @@
         }
     }
 
+    async function saveParticipantManualOrder(participantId, position) {
+        try {
+            const response = await fetch(`/signatures/${sessionUuid}/participants/${participantId}/manual-order/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}',
+                },
+                body: JSON.stringify({ position }),
+            });
+            const data = await parseJsonResponse(response);
+            if (!data.success) {
+                alert('오류: ' + (data.error || '명단 순서를 바꾸지 못했습니다.'));
+                return;
+            }
+            location.reload();
+        } catch (error) {
+            alert('오류: ' + error.message);
+        }
+    }
+
     function setSignatureManualOrder(signatureId) {
         const input = document.getElementById(`manualOrderInput-${signatureId}`);
         if (!input) return;
@@ -803,6 +867,58 @@
         const nextPosition = Number(currentPosition) + Number(delta);
         if (nextPosition < 1) return;
         saveSignatureManualOrder(signatureId, nextPosition);
+    }
+
+    function setParticipantManualOrder(participantId) {
+        const input = document.getElementById(`participantManualOrderInput-${participantId}`);
+        if (!input) return;
+        const position = Number(input.value);
+        if (!Number.isInteger(position) || position < 1) {
+            alert('순번은 1 이상의 숫자로 입력해 주세요.');
+            input.focus();
+            return;
+        }
+        saveParticipantManualOrder(participantId, position);
+    }
+
+    function shiftParticipantPosition(participantId, currentPosition, delta) {
+        const nextPosition = Number(currentPosition) + Number(delta);
+        if (nextPosition < 1) return;
+        saveParticipantManualOrder(participantId, nextPosition);
+    }
+
+    function openMatchPicker(signatureId, participantName, affiliation) {
+        matchPickerState.signatureId = String(signatureId || '');
+        const detailLabel = affiliation ? `${participantName} (${affiliation})` : participantName;
+        matchPickerTargetLabelEl.textContent = `${detailLabel} 서명을 연결할 명단을 선택하세요.`;
+        matchPickerSearchEl.value = '';
+        filterMatchPickerOptions('');
+        matchPickerModalEl.classList.remove('hidden');
+        matchPickerModalEl.classList.add('flex');
+        matchPickerSearchEl.focus();
+    }
+
+    function closeMatchPicker() {
+        matchPickerState.signatureId = '';
+        if (!matchPickerModalEl) return;
+        matchPickerModalEl.classList.add('hidden');
+        matchPickerModalEl.classList.remove('flex');
+    }
+
+    function filterMatchPickerOptions(keyword) {
+        const normalized = String(keyword || '').trim().toLowerCase();
+        document.querySelectorAll('.match-picker-option').forEach((button) => {
+            const searchText = button.dataset.searchText || '';
+            const shouldShow = !normalized || searchText.includes(normalized);
+            button.classList.toggle('hidden', !shouldShow);
+        });
+    }
+
+    function confirmMatchFromPicker(participantId) {
+        if (!matchPickerState.signatureId) return;
+        const signatureId = matchPickerState.signatureId;
+        closeMatchPicker();
+        matchSignature(signatureId, participantId, '');
     }
 
     function openQrModal() {
@@ -879,19 +995,59 @@
                 list.innerHTML = '<p class="text-gray-400 text-center py-8">명단을 등록해주세요</p>';
                 return;
             }
+            const isManualSort = canCustomizeParticipantSort && data.sort_mode === 'manual';
             let html = '<div class="space-y-2">';
             data.participants.forEach(p => {
                 const hasCorrection = !!p.corrected_affiliation;
                 const safeName = escapeHtml(p.name || '');
                 const safeDisplayAffiliation = escapeHtml(p.display_affiliation || '');
                 const safeOriginalAffiliation = escapeHtml(p.original_affiliation || '-');
+                const moveControls = isManualSort ? `
+                    <div class="flex items-center gap-1 flex-wrap">
+                        <span class="text-[11px] font-bold text-gray-500">#${p.position}</span>
+                        <button
+                            type="button"
+                            onclick="shiftParticipantPosition(${p.id}, ${p.position}, -1)"
+                            class="h-7 w-7 rounded-lg border border-gray-200 bg-white text-gray-600 hover:border-purple-300 hover:text-purple-700 transition ${p.position === 1 ? 'opacity-40 cursor-not-allowed' : ''}"
+                            ${p.position === 1 ? 'disabled' : ''}
+                        >
+                            <i class="fa-solid fa-arrow-up text-[10px]"></i>
+                        </button>
+                        <button
+                            type="button"
+                            onclick="shiftParticipantPosition(${p.id}, ${p.position}, 1)"
+                            class="h-7 w-7 rounded-lg border border-gray-200 bg-white text-gray-600 hover:border-purple-300 hover:text-purple-700 transition ${p.position === data.participants.length ? 'opacity-40 cursor-not-allowed' : ''}"
+                            ${p.position === data.participants.length ? 'disabled' : ''}
+                        >
+                            <i class="fa-solid fa-arrow-down text-[10px]"></i>
+                        </button>
+                        <input
+                            id="participantManualOrderInput-${p.id}"
+                            type="number"
+                            min="1"
+                            max="${data.participants.length}"
+                            value="${p.position}"
+                            class="w-14 rounded-lg border border-gray-200 bg-white px-2 py-1 text-[11px] text-gray-700"
+                        >
+                        <button
+                            type="button"
+                            onclick="setParticipantManualOrder(${p.id})"
+                            class="rounded-lg bg-purple-50 px-2 py-1 text-[11px] font-bold text-purple-700 hover:bg-purple-100 transition"
+                        >
+                            적용
+                        </button>
+                    </div>
+                ` : '';
                 html += `
-                <div class="flex items-center justify-between p-2 rounded hover:bg-white/50 transition">
-                    <div class="flex items-center gap-2">
-                        ${p.has_signed ? '<span class="text-green-600">✅</span>' : '<span class="text-orange-400">⏳</span>'}
-                        <span class="font-bold text-gray-700">${safeName}</span>
-                        <span class="text-gray-500 text-sm">${safeDisplayAffiliation}</span>
-                        ${hasCorrection ? `<span class="text-[11px] text-gray-400">(원본: ${safeOriginalAffiliation})</span>` : ''}
+                <div class="flex items-start justify-between gap-3 p-2 rounded hover:bg-white/50 transition">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            ${p.has_signed ? '<span class="text-green-600">✅</span>' : '<span class="text-orange-400">⏳</span>'}
+                            <span class="font-bold text-gray-700">${safeName}</span>
+                            <span class="text-gray-500 text-sm">${safeDisplayAffiliation}</span>
+                            ${hasCorrection ? `<span class="text-[11px] text-gray-400">(원본: ${safeOriginalAffiliation})</span>` : ''}
+                        </div>
+                        ${moveControls}
                     </div>
                     <div class="flex items-center gap-2">
                         <button
@@ -1014,16 +1170,23 @@
         });
     }
 
-    function matchSignature(sigId, partId) {
-        if (!confirm('연결하시겠습니까?')) return;
-        fetch(`/signatures/${sessionUuid}/signatures/${sigId}/match/`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
-            body: JSON.stringify({ participant_id: partId })
-        }).then(res => res.json()).then(data => {
-            if (data.success) location.reload();
-            else alert('오류: ' + data.error);
-        });
+    async function matchSignature(sigId, partId, confirmMessage = '연결하시겠습니까?') {
+        if (confirmMessage && !confirm(confirmMessage)) return;
+        try {
+            const response = await fetch(`/signatures/${sessionUuid}/signatures/${sigId}/match/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+                body: JSON.stringify({ participant_id: partId })
+            });
+            const data = await parseJsonResponse(response);
+            if (!data.success) {
+                alert('오류: ' + (data.error || '연결에 실패했습니다.'));
+                return;
+            }
+            location.reload();
+        } catch (error) {
+            alert('오류: ' + error.message);
+        }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -1039,11 +1202,22 @@
                 if (event.target === correctionModalEl) closeAffiliationCorrectionModal();
             });
         }
+        if (matchPickerModalEl) {
+            matchPickerModalEl.addEventListener('click', (event) => {
+                if (event.target === matchPickerModalEl) closeMatchPicker();
+            });
+        }
+        if (matchPickerSearchEl) {
+            matchPickerSearchEl.addEventListener('input', (event) => {
+                filterMatchPickerOptions(event.target.value);
+            });
+        }
     });
     document.addEventListener('keydown', (event) => {
         if (event.key !== 'Escape') return;
         closeQrModal();
         closeAffiliationCorrectionModal();
+        closeMatchPicker();
     });
 </script>
 {% endblock %}

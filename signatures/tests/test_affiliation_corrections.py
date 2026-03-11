@@ -163,6 +163,31 @@ class SignatureAffiliationCorrectionTests(TestCase):
         ordered_names = [item["name"] for item in response.context["pages"][0]["left_items"]]
         self.assertEqual(ordered_names[:3], ["정정반", "열반", "둘반"])
 
+    def test_print_view_with_roster_defaults_to_roster_input_order(self):
+        ExpectedParticipant.objects.create(
+            training_session=self.session,
+            name="둘반",
+            affiliation="2-1",
+        )
+        ExpectedParticipant.objects.create(
+            training_session=self.session,
+            name="열반",
+            affiliation="1-10",
+        )
+        ExpectedParticipant.objects.create(
+            training_session=self.session,
+            name="정정반",
+            affiliation="1 / 2",
+            corrected_affiliation="1-2",
+        )
+
+        response = self.client.get(reverse("signatures:print", kwargs={"uuid": self.session.uuid}))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["session"].participant_sort_mode, TrainingSession.SIGNATURE_SORT_SUBMITTED)
+
+        ordered_names = [item["name"] for item in response.context["pages"][0]["left_items"]]
+        self.assertEqual(ordered_names[:3], ["둘반", "열반", "정정반"])
+
     def test_detail_view_without_roster_uses_sorted_signature_rows(self):
         Signature.objects.create(
             training_session=self.session,
@@ -259,3 +284,112 @@ class SignatureAffiliationCorrectionTests(TestCase):
         print_response = self.client.get(reverse("signatures:print", kwargs={"uuid": self.session.uuid}))
         print_names = [item["name"] for item in print_response.context["pages"][0]["left_items"]]
         self.assertEqual(print_names[:3], ["셋째줄", "첫줄", "둘째줄"])
+
+    def test_roster_sort_mode_can_switch_to_affiliation_order_for_list_and_print(self):
+        ExpectedParticipant.objects.create(
+            training_session=self.session,
+            name="둘반",
+            affiliation="2-1",
+        )
+        ExpectedParticipant.objects.create(
+            training_session=self.session,
+            name="열반",
+            affiliation="1-10",
+        )
+        ExpectedParticipant.objects.create(
+            training_session=self.session,
+            name="정정반",
+            affiliation="1 / 2",
+            corrected_affiliation="1-2",
+        )
+
+        response = self.client.post(
+            reverse("signatures:update_signature_sort_mode", kwargs={"uuid": self.session.uuid}),
+            data='{"sort_mode":"affiliation"}',
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["uses_participants"])
+
+        self.session.refresh_from_db()
+        self.assertEqual(self.session.participant_sort_mode, TrainingSession.SIGNATURE_SORT_AFFILIATION)
+
+        list_response = self.client.get(reverse("signatures:get_participants", kwargs={"uuid": self.session.uuid}))
+        self.assertEqual(list_response.status_code, 200)
+        self.assertEqual(
+            [item["name"] for item in list_response.json()["participants"]],
+            ["정정반", "열반", "둘반"],
+        )
+
+        print_response = self.client.get(reverse("signatures:print", kwargs={"uuid": self.session.uuid}))
+        self.assertEqual(print_response.status_code, 200)
+        print_names = [item["name"] for item in print_response.context["pages"][0]["left_items"]]
+        self.assertEqual(print_names[:3], ["정정반", "열반", "둘반"])
+
+    def test_manual_participant_order_updates_list_and_print(self):
+        ExpectedParticipant.objects.create(
+            training_session=self.session,
+            name="첫줄",
+            affiliation="1-1",
+        )
+        ExpectedParticipant.objects.create(
+            training_session=self.session,
+            name="둘째줄",
+            affiliation="1-2",
+        )
+        third = ExpectedParticipant.objects.create(
+            training_session=self.session,
+            name="셋째줄",
+            affiliation="2-1",
+        )
+
+        response = self.client.post(
+            reverse(
+                "signatures:update_participant_manual_order",
+                kwargs={"uuid": self.session.uuid, "participant_id": third.id},
+            ),
+            data='{"position":1}',
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+
+        self.session.refresh_from_db()
+        self.assertEqual(self.session.participant_sort_mode, TrainingSession.SIGNATURE_SORT_MANUAL)
+
+        ordered_manual = list(self.session.expected_participants.order_by("manual_sort_order", "id"))
+        self.assertEqual([participant.name for participant in ordered_manual], ["셋째줄", "첫줄", "둘째줄"])
+        self.assertEqual([participant.manual_sort_order for participant in ordered_manual], [1, 2, 3])
+
+        list_response = self.client.get(reverse("signatures:get_participants", kwargs={"uuid": self.session.uuid}))
+        self.assertEqual(
+            [item["name"] for item in list_response.json()["participants"]],
+            ["셋째줄", "첫줄", "둘째줄"],
+        )
+
+        print_response = self.client.get(reverse("signatures:print", kwargs={"uuid": self.session.uuid}))
+        print_names = [item["name"] for item in print_response.context["pages"][0]["left_items"]]
+        self.assertEqual(print_names[:3], ["셋째줄", "첫줄", "둘째줄"])
+
+    def test_detail_view_with_roster_shows_match_picker_for_unmatched_signature(self):
+        ExpectedParticipant.objects.create(
+            training_session=self.session,
+            name="김연결",
+            affiliation="1-1",
+        )
+        ExpectedParticipant.objects.create(
+            training_session=self.session,
+            name="박찾기",
+            affiliation="2-3",
+        )
+        Signature.objects.create(
+            training_session=self.session,
+            participant_name="누군지모름",
+            participant_affiliation="1학년",
+            signature_data="data:image/png;base64,SIGPICK",
+        )
+
+        response = self.client.get(reverse("signatures:detail", kwargs={"uuid": self.session.uuid}))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "명단에서 찾아 연결")
+        self.assertContains(response, "김연결")
+        self.assertContains(response, "박찾기")
