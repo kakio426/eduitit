@@ -43,7 +43,7 @@ from .service_launcher import (
 )
 from .mini_apps import build_home_mini_app_entries
 from .prompt_lab_data import get_prompt_lab_catalog
-from .teacher_first_cards import build_workbench_card_meta
+from .teacher_first_cards import build_favorite_service_title, build_workbench_card_meta
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Case, Count, DateTimeField, F, IntegerField, Max, Q, Value, When
@@ -851,12 +851,18 @@ def _build_product_link_items(products, include_section_meta=False):
     for product in products:
         href, is_external = _resolve_product_launch_url(product)
         workbench_meta = build_workbench_card_meta(product)
+        favorite_full_title = (
+            str(getattr(product, "public_service_name", "") or getattr(product, "title", "") or "").strip()
+            or "도구"
+        )
         item = {
             'product': product,
             'href': href,
             'is_external': is_external,
             'workbench_title': workbench_meta.title,
             'workbench_summary': workbench_meta.summary,
+            'favorite_title': build_favorite_service_title(favorite_full_title) or favorite_full_title,
+            'favorite_full_title': favorite_full_title,
         }
         if include_section_meta:
             section_key = _resolve_home_section_key(product)

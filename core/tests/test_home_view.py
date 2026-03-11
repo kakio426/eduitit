@@ -3,6 +3,7 @@ import json
 from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 from django.contrib.auth.models import User
+from core.teacher_first_cards import build_favorite_service_title
 from products.models import Product
 from core.models import Post, ProductFavorite, ProductUsageLog, UserProfile
 
@@ -476,6 +477,54 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('자주 쓰는 서비스만 가까이에 둡니다.', favorites_block)
         self.assertNotIn('data-home-v2-favorite-card-body="true"', favorites_block)
         self.assertNotIn('수업을 준비해요', favorites_block)
+
+    def test_v2_authenticated_top_favorites_use_compact_aliases_with_full_title_tooltips(self):
+        user = self._login('favoritealiases')
+        sparkling_board = Product.objects.create(
+            title="반짝반짝 우리반 알림판",
+            description="학급 소식",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+        )
+        reservation_system = Product.objects.create(
+            title="학교 예약 시스템",
+            description="특별실 예약",
+            price=0,
+            is_active=True,
+            service_type='work',
+        )
+        seed_quiz = Product.objects.create(
+            title="씨앗 퀴즈",
+            description="퀴즈 만들기",
+            price=0,
+            is_active=True,
+            service_type='game',
+        )
+        ProductFavorite.objects.create(user=user, product=sparkling_board, pin_order=1)
+        ProductFavorite.objects.create(user=user, product=reservation_system, pin_order=2)
+        ProductFavorite.objects.create(user=user, product=seed_quiz, pin_order=3)
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        favorites_index = content.index('data-home-v2-top-favorites="true"')
+        calendar_index = content.index('data-home-v2-top-calendar="true"')
+        favorites_block = content[favorites_index:calendar_index]
+
+        self.assertIn('title="반짝반짝 우리반 알림판">알림판</p>', favorites_block)
+        self.assertIn('aria-label="반짝반짝 우리반 알림판 즐겨찾기 토글"', favorites_block)
+        self.assertIn('title="학교 예약 시스템">학교 예약</p>', favorites_block)
+        self.assertIn('title="씨앗 퀴즈">씨앗 퀴즈</p>', favorites_block)
+
+    def test_build_favorite_service_title_prefers_head_nouns_for_decorated_names(self):
+        self.assertEqual(build_favorite_service_title("반짝반짝 우리반 알림판"), "알림판")
+        self.assertEqual(build_favorite_service_title("가뿐하게 서명 톡"), "서명")
+        self.assertEqual(build_favorite_service_title("두뇌 풀가동! 교실 체스"), "체스")
+        self.assertEqual(build_favorite_service_title("두뇌 풀가동! 교실 장기"), "장기")
+        self.assertEqual(build_favorite_service_title("왁자지껄 교실 윷놀이"), "윷놀이")
+        self.assertEqual(build_favorite_service_title("글솜씨 뚝딱! 소식지"), "소식지")
+        self.assertEqual(build_favorite_service_title("학교 예약 시스템"), "학교 예약")
 
     @override_settings(SHEETBOOK_ENABLED=True, SHEETBOOK_DISCOVERY_VISIBLE=False)
     def test_v2_workspace_context_disabled_when_sheetbook_discovery_hidden(self):

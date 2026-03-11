@@ -17,6 +17,25 @@ WORKBENCH_TITLE_ALIASES = (
     ("한글문서", "한글문서 AI"),
 )
 
+FAVORITE_TITLE_ALIASES = (
+    ("씨앗 퀴즈", "씨앗 퀴즈"),
+    ("반짝반짝", "알림판"),
+    ("가뿐하게 서명", "서명"),
+    ("교실 체스", "체스"),
+    ("교실 장기", "장기"),
+    ("교실 윷놀이", "윷놀이"),
+    ("글솜씨 뚝딱", "소식지"),
+    ("선생님 사주", "사주"),
+    ("선생님 운세", "운세"),
+    ("미술 수업", "미술 수업"),
+    ("교무수첩", "학급 기록 보드"),
+    ("학급 기록 보드", "학급 기록 보드"),
+    ("학교 예약", "학교 예약"),
+    ("교육 자료실", "교육 자료실"),
+    ("수업 발표 메이커", "수업 발표 메이커"),
+    ("한글문서", "한글문서 AI"),
+)
+
 
 @dataclass(frozen=True)
 class WorkbenchCardMeta:
@@ -28,12 +47,20 @@ def _clean_text(value: str | None) -> str:
     return " ".join(str(value or "").strip().split())
 
 
-def _short_service_title(service_label: str) -> str:
+def _build_compact_service_title(service_label: str, aliases: tuple[tuple[str, str], ...]) -> str:
     normalized = _clean_text(service_label)
-    for needle, alias in WORKBENCH_TITLE_ALIASES:
+    for needle, alias in aliases:
         if needle in normalized:
             return alias
     return normalized
+
+
+def build_workbench_service_title(service_label: str) -> str:
+    return _build_compact_service_title(service_label, WORKBENCH_TITLE_ALIASES)
+
+
+def build_favorite_service_title(service_label: str) -> str:
+    return _build_compact_service_title(service_label, FAVORITE_TITLE_ALIASES)
 
 
 def _build_summary(task_label: str, service_label: str, support_label: str) -> str:
@@ -41,7 +68,7 @@ def _build_summary(task_label: str, service_label: str, support_label: str) -> s
         text = _clean_text(candidate)
         if not text:
             continue
-        if text == _short_service_title(service_label):
+        if text == build_workbench_service_title(service_label):
             continue
         return text
     return ""
@@ -56,6 +83,6 @@ def build_workbench_card_meta(product) -> WorkbenchCardMeta:
         or getattr(product, "lead_text", "")
         or getattr(product, "description", "")
     )
-    title = _short_service_title(service_label or task_label)
+    title = build_workbench_service_title(service_label or task_label)
     summary = _build_summary(task_label, service_label, support_label)
     return WorkbenchCardMeta(title=title or service_label or "도구", summary=summary)
