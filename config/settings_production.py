@@ -590,6 +590,9 @@ STORAGES = {
 # =============================================================================
 MAINTENANCE_MODE = os.getenv('MAINTENANCE_MODE', 'False').lower() in ('true', '1', 'yes')
 AUTOARTICLE_EXPORT_LAYOUT = os.getenv('AUTOARTICLE_EXPORT_LAYOUT', 'v1')
+# Home layout rollout: set HOME_LAYOUT_VERSION to v1, v2, or v3 to lock a version.
+# If unset, legacy HOME_V2_ENABLED fallback decides between v1 and v2.
+HOME_LAYOUT_VERSION = os.environ.get('HOME_LAYOUT_VERSION', '').strip().lower()
 # UX-04 rollout rule: V2 is default-on. Set HOME_V2_ENABLED=False for immediate rollback.
 HOME_V2_ENABLED = os.environ.get('HOME_V2_ENABLED', 'True').lower() == 'true'
 ALLOW_TABLET_ACCESS = os.environ.get('ALLOW_TABLET_ACCESS', 'True').lower() in ('true', '1', 'yes')
@@ -769,4 +772,3 @@ if SENTRY_DSN and not DEBUG:
         pass
 else:
     pass  # Sentry disabled (no DSN or DEBUG mode)
-

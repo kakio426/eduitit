@@ -3,7 +3,7 @@ import json
 from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 from django.contrib.auth.models import User
-from products.models import Product
+from products.models import Product, ServiceManual
 from core.models import Post, ProductFavorite, ProductUsageLog, UserProfile
 
 
@@ -489,6 +489,188 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('@click="snsOpen = true"', content)
         self.assertNotIn('hx-select="#mobile-post-list-container"', content)
         self.assertNotIn('href="#sns-full-section-auth-v2"', content)
+
+
+@override_settings(HOME_LAYOUT_VERSION='v3')
+class HomeV3ViewTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.p1 = Product.objects.create(
+            title="수업 도구", description="수업용", price=0,
+            is_active=True, service_type='classroom', is_featured=True,
+            solve_text='수업을 준비해요',
+        )
+        self.p2 = Product.objects.create(
+            title="행정 도구", description="행정용", price=0,
+            is_active=True, service_type='work',
+        )
+        self.p3 = Product.objects.create(
+            title="테스트 게임", description="게임", price=0,
+            is_active=True, service_type='game',
+        )
+
+    def _login(self, username='v3user', nickname=None):
+        user = _create_onboarded_user(username, nickname=nickname)
+        self.client.login(username=username, password='pass1234')
+        return user
+
+    def test_v3_anonymous_uses_shared_slot_order(self):
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        primary_index = content.index('id="primary-zone"')
+        discovery_index = content.index('id="discovery-sections"')
+        secondary_index = content.index('id="secondary-sections"')
+
+        self.assertLess(primary_index, discovery_index)
+        self.assertLess(discovery_index, secondary_index)
+
+    def test_v3_authenticated_uses_shared_slot_order(self):
+        self._login('v3slots')
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        primary_index = content.index('id="primary-zone"')
+        discovery_index = content.index('id="discovery-sections"')
+        secondary_index = content.index('id="secondary-sections"')
+
+        self.assertLess(primary_index, discovery_index)
+        self.assertLess(discovery_index, secondary_index)
+
+    def test_v3_authenticated_orders_today_calendar_and_related_shortcuts(self):
+        self._login('v3sns')
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        today_index = content.index('data-home-v3-today="true"')
+        calendar_hub_index = content.index('data-home-v3-calendar-hub="true"')
+        related_index = content.index('data-home-v3-related-shortcuts="true"')
+
+        self.assertLess(today_index, calendar_hub_index)
+        self.assertLess(calendar_hub_index, related_index)
+
+    def test_v3_moves_sns_into_secondary_summary_panel(self):
+        self._login('v3snssecondary')
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('전체 소통 보기', content)
+        self.assertNotIn('hidden xl:block', content)
+        self.assertNotIn('block xl:hidden', content)
+        self.assertIn('Community Summary', content)
+        self.assertIn(reverse('community_feed'), content)
+        self.assertNotIn('data-home-v3-sns-toggle', content)
+
+    def test_v3_authenticated_has_single_related_shortcuts_block(self):
+        self._login('v3quick')
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(content.count('data-home-v3-related-shortcuts="true"'), 1)
+        self.assertIn('관련 바로가기', content)
+        self.assertNotIn('추천 빠른 실행', content)
+
+    def test_community_feed_uses_separate_full_screen_surface(self):
+        response = self.client.get(reverse('community_feed'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '실시간 소통')
+        self.assertContains(response, '홈에서는 요약만 보고')
+
+    @override_settings(SHEETBOOK_ENABLED=False)
+    def test_v3_calendar_hub_keeps_record_board_flow_hidden_when_sheetbook_disabled(self):
+        self._login('v3sheetbookoff')
+        response = self.client.get(reverse('home'))
+        calendar_hub = response.context['primary_zone']['calendar_hub']
+
+        self.assertFalse(calendar_hub['record_board_enabled'])
+        self.assertEqual(calendar_hub['continue_items'], [])
+        self.assertNotContains(response, '교무수첩')
+
+    @override_settings(SHEETBOOK_ENABLED=True, SHEETBOOK_DISCOVERY_VISIBLE=True)
+    def test_v3_calendar_hub_reuses_record_board_data_without_public_sheetbook_copy(self):
+        from sheetbook.models import Sheetbook
+
+        user = self._login('v3sheetbookon')
+        Sheetbook.objects.create(owner=user, title='운영 기록 보드', academic_year=2026)
+
+        response = self.client.get(reverse('home'))
+        calendar_hub = response.context['primary_zone']['calendar_hub']
+
+        self.assertTrue(calendar_hub['record_board_enabled'])
+        self.assertGreaterEqual(len(calendar_hub['continue_items']), 1)
+        self.assertContains(response, '학급 캘린더 열기')
+        self.assertNotContains(response, '교무수첩')
+        self.assertNotContains(response, '학급 기록 보드에서 이어서 정리합니다.')
+        descriptions = [item['description'] for item in calendar_hub['continue_items']]
+        self.assertTrue(
+            any(
+                description in {'기록 작업을 바로 이어서 정리합니다.', '이전 작업 0개 흐름을 이어서 엽니다.'}
+                or description.startswith('이전 작업 ')
+                for description in descriptions
+            )
+        )
+
+    def test_v3_calendar_summary_uses_summary_copy(self):
+        self._login('v3calendar')
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('Calendar Hub', content)
+        self.assertIn('일정 빠른 추가', content)
+        self.assertNotIn('개인 캘린더', content)
+        self.assertNotIn('homeCalendarWidget()', content)
+        self.assertNotIn('home-calendar-day', content)
+
+    def test_v3_home_cards_expose_state_badges_and_standardized_cta_copy(self):
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('로그인 필요', content)
+        self.assertIn('공개 체험', content)
+        self.assertIn('학생 참여', content)
+        self.assertIn('시작하기', content)
+        self.assertIn('가이드 보기', content)
+
+    def test_v3_product_cards_attach_optional_guide_url_contract(self):
+        manual = ServiceManual.objects.create(
+            product=self.p1,
+            title='수업 도구 시작하기',
+            description='바로 쓰는 안내',
+            is_published=True,
+        )
+
+        response = self.client.get(reverse('home'))
+        popular_items = response.context['discovery_sections']['popular_items']
+        guide_urls = [item['product'].guide_url for item in popular_items if item['product'].id == self.p1.id]
+
+        self.assertIn(reverse('service_guide_detail', kwargs={'pk': manual.pk}), guide_urls)
+
+    def test_v3_search_payload_hides_sheetbook_and_uses_calendar_public_name(self):
+        Product.objects.create(
+            title="교무수첩",
+            description="교무수첩 설명",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='classcalendar:main',
+        )
+        Product.objects.create(
+            title="교무수첩",
+            description="기록 도구",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='sheetbook:index',
+        )
+
+        response = self.client.get(reverse('home'))
+        payload = json.loads(response.context['search_products_json'])
+        titles = [item['title'] for item in payload]
+
+        self.assertIn('학급 캘린더', titles)
+        self.assertNotIn('교무수첩', titles)
+        self.assertNotIn('학급 기록 보드', titles)
 
 
 @override_settings(HOME_V2_ENABLED=True)

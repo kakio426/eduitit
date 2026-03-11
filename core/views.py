@@ -32,6 +32,7 @@ from django.db import transaction
 from django.db.models import Case, Count, DateTimeField, F, IntegerField, Max, Q, Value, When
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
+from datetime import timedelta
 from PIL import Image
 import logging
 
@@ -173,6 +174,13 @@ def _build_post_feed_queryset(feed_scope=POST_FEED_SCOPE_ALL):
         queryset = queryset.filter(post_type__in=POST_FEED_NOTICE_TYPES)
 
     return queryset.order_by('-active_feature_order', '-active_feature_from', '-created_at')
+
+
+def _get_home_layout_version():
+    raw_version = str(getattr(settings, 'HOME_LAYOUT_VERSION', '') or '').strip().lower()
+    if raw_version in {'v1', 'v2', 'v3'}:
+        return raw_version
+    return 'v2' if getattr(settings, 'HOME_V2_ENABLED', False) else 'v1'
 
 
 def _resolve_post_for_action(post_id, user):
@@ -458,6 +466,256 @@ def _resolve_product_launch_url(product):
     return reverse('product_detail', kwargs={'pk': product.pk}), False
 
 
+CALENDAR_HUB_PUBLIC_NAME = "학급 캘린더"
+SHEETBOOK_PUBLIC_NAME = "학급 기록 보드"
+
+PRODUCT_CONTEXT_CHIP_DEFAULTS = {
+    "collect_sign": ["안내 뒤 회수", "휴대폰 응답", "학급 전체", "10분 안팎"],
+    "classroom": ["오늘 운영", "PC·모바일", "학급 전체", "5분 안팎"],
+    "work": ["문서 준비", "PC 권장", "교사 1인", "10분 안팎"],
+    "game": ["수업 중 활동", "모둠·전체", "교실 화면", "5분 안팎"],
+    "counsel": ["상담 전후", "PC·모바일", "개별·소그룹", "5분 안팎"],
+    "edutech": ["막힐 때 참고", "PC·모바일", "교사 1인", "10분 안팎"],
+    "etc": ["필요할 때 참고", "PC·모바일", "교사 1인", "10분 안팎"],
+}
+
+PRODUCT_CONTEXT_CHIP_OVERRIDES = {
+    "classcalendar:main": ["오늘 일정", "PC·모바일", "학급 전체", "5분 안팎"],
+    "noticegen:main": ["안내문 준비", "PC 권장", "학급 전체", "10분 안팎"],
+    "collect:landing": ["안내 뒤 회수", "휴대폰 응답", "학급 전체", "10분 안팎"],
+    "consent:landing": ["안내 뒤 회수", "휴대폰 응답", "학급 전체", "10분 안팎"],
+    "signatures:landing": ["서명 받아야 할 때", "휴대폰 응답", "학급 전체", "10분 안팎"],
+    "handoff:landing": ["배부 뒤 확인", "휴대폰 응답", "학급 전체", "10분 안팎"],
+    "reservations:dashboard_landing": ["일정 잡을 때", "PC·모바일", "개별·소그룹", "5분 안팎"],
+    "reservations:landing": ["일정 잡을 때", "PC·모바일", "개별·소그룹", "5분 안팎"],
+    "hwpxchat:main": ["수업 준비", "PC 권장", "교사 1인", "10분 안팎"],
+}
+
+PUBLIC_EXPERIENCE_ROUTE_NAMES = {
+    "chess:play",
+    "janggi:play",
+    "reflex_game:main",
+    "yut_game",
+}
+
+FILE_REQUIRED_ROUTE_NAMES = {
+    "noticegen:main",
+    "hwpxchat:main",
+    "hwp_pdf:convert",
+}
+
+STUDENT_PARTICIPATION_ROUTE_NAMES = {
+    "chess:play",
+    "janggi:play",
+    "reflex_game:main",
+    "yut_game",
+}
+
+HOME_SHORTCUT_SPECS = [
+    {
+        "key": "calendar",
+        "title": "출결/일정",
+        "description": "오늘 일정과 출결 흐름을 먼저 열어 봅니다.",
+        "icon": "fa-solid fa-calendar-days",
+        "preferred_routes": ["classcalendar:main"],
+        "fallback_route": "classcalendar:main",
+    },
+    {
+        "key": "notice",
+        "title": "안내장/알림",
+        "description": "안내문과 공지를 빠르게 보내야 할 때 엽니다.",
+        "icon": "fa-solid fa-bullhorn",
+        "preferred_routes": ["noticegen:main"],
+        "fallback_route": "noticegen:main",
+    },
+    {
+        "key": "collect",
+        "title": "수합/서명",
+        "description": "응답, 동의, 서명을 한 번에 받는 흐름입니다.",
+        "icon": "fa-solid fa-inbox",
+        "preferred_routes": ["collect:landing", "consent:landing", "signatures:landing", "handoff:landing"],
+        "fallback_route": "collect:landing",
+    },
+    {
+        "key": "prepare",
+        "title": "예약/준비",
+        "description": "예약, 자료 준비, 수업 전 정리를 이어서 합니다.",
+        "icon": "fa-solid fa-wand-magic-sparkles",
+        "preferred_routes": ["reservations:dashboard_landing", "reservations:landing", "hwpxchat:main"],
+        "fallback_route": "reservations:landing",
+    },
+]
+
+GUEST_START_CARD_SPECS = [
+    {
+        "title": "오늘 일정 정리",
+        "description": "하루 흐름을 먼저 잡고 필요한 도구로 이어갑니다.",
+        "icon": "fa-solid fa-calendar-days",
+        "preferred_routes": ["classcalendar:main"],
+        "fallback_route": "classcalendar:main",
+    },
+    {
+        "title": "안내장 보내기",
+        "description": "가정 안내가 필요할 때 바로 시작합니다.",
+        "icon": "fa-solid fa-bullhorn",
+        "preferred_routes": ["noticegen:main"],
+        "fallback_route": "noticegen:main",
+    },
+    {
+        "title": "수합/서명 받기",
+        "description": "응답과 확인을 링크로 빠르게 모읍니다.",
+        "icon": "fa-solid fa-file-signature",
+        "preferred_routes": ["collect:landing", "consent:landing", "signatures:landing"],
+        "fallback_route": "collect:landing",
+    },
+    {
+        "title": "수업 활동 열기",
+        "description": "교실 분위기를 바로 살릴 활동형 도구입니다.",
+        "icon": "fa-solid fa-gamepad",
+        "preferred_routes": [],
+        "fallback_route": "",
+        "service_type": "game",
+    },
+]
+
+CATALOG_SCENARIO_SECTIONS = [
+    {
+        "key": "today_ops",
+        "title": "오늘 운영",
+        "description": "출결과 일정, 예약처럼 오늘 바로 이어야 하는 흐름입니다.",
+    },
+    {
+        "key": "collect",
+        "title": "안내와 회수",
+        "description": "안내장, 수합, 동의, 서명처럼 회신을 받아야 할 때 찾습니다.",
+    },
+    {
+        "key": "prep",
+        "title": "수업 준비",
+        "description": "문서 작성, 자료 정리, 발표 준비 도구를 모았습니다.",
+    },
+    {
+        "key": "activity",
+        "title": "수업 활동",
+        "description": "참여형 활동과 분위기 전환 도구를 모았습니다.",
+    },
+    {
+        "key": "counsel",
+        "title": "상담·소통",
+        "description": "상담 조율과 보호자 소통처럼 사람을 연결할 때 엽니다.",
+    },
+    {
+        "key": "reference",
+        "title": "참고·읽을거리",
+        "description": "가이드, 인사이트, 외부 참고 서비스를 필요할 때만 엽니다.",
+    },
+]
+
+GUIDE_ENTRY_POINT_META = [
+    {
+        "key": "start",
+        "title": "처음 시작",
+        "description": "홈과 첫 캘린더 흐름부터 짧게 확인",
+        "anchor": "#guide-start",
+    },
+    {
+        "key": "calendar",
+        "title": CALENDAR_HUB_PUBLIC_NAME,
+        "description": "일정에서 다른 업무로 이어지는 허브",
+        "anchor": "#guide-calendar",
+    },
+    {
+        "key": "tasks",
+        "title": "자주 하는 업무",
+        "description": "안내, 수합, 수업 준비를 상황별로 찾기",
+        "anchor": "#guide-tasks",
+    },
+]
+
+
+def _product_route_name(product):
+    return str(getattr(product, "launch_route_name", "") or "").strip().lower()
+
+
+def _product_title_text(product):
+    return str(getattr(product, "title", "") or "").strip()
+
+
+def _is_sheetbook_product(product):
+    route_name = _product_route_name(product)
+    title = _product_title_text(product)
+    return route_name.startswith("sheetbook:") or title in {"교무수첩", SHEETBOOK_PUBLIC_NAME}
+
+
+def _is_calendar_hub_product(product):
+    return _product_route_name(product) == "classcalendar:main"
+
+
+def _is_sheetbook_cross_surface_hidden(product):
+    return _product_route_name(product) == "sheetbook:index"
+
+
+def _get_public_product_name(product):
+    if _is_calendar_hub_product(product):
+        return CALENDAR_HUB_PUBLIC_NAME
+    if _is_sheetbook_product(product):
+        return SHEETBOOK_PUBLIC_NAME
+    return _product_title_text(product)
+
+
+def _replace_public_service_terms(text, product=None):
+    cleaned = str(text or "").strip()
+    if not cleaned:
+        return ""
+    replacement = _get_public_product_name(product) if product is not None else SHEETBOOK_PUBLIC_NAME
+    return cleaned.replace("교무수첩", replacement).replace("교무 수첩", replacement)
+
+
+def _build_product_context_chips(product, *, limit=None):
+    route_name = _product_route_name(product)
+    chips = PRODUCT_CONTEXT_CHIP_OVERRIDES.get(route_name)
+    if chips is None:
+        chips = PRODUCT_CONTEXT_CHIP_DEFAULTS.get(getattr(product, "service_type", ""), PRODUCT_CONTEXT_CHIP_DEFAULTS["etc"])
+    chip_list = list(chips)
+    if limit is not None:
+        chip_list = chip_list[:limit]
+    return chip_list
+
+
+def _build_product_state_labels(
+    product=None,
+    *,
+    route_name="",
+    service_type="",
+    launch_is_external=False,
+    is_guest_allowed=False,
+    limit=None,
+):
+    if product is not None:
+        route_name = _product_route_name(product)
+        service_type = str(getattr(product, "service_type", "") or "").strip()
+        launch_is_external = bool(getattr(product, "launch_is_external", False))
+        is_guest_allowed = bool(getattr(product, "is_guest_allowed", False))
+
+    access_status_label = "공개 체험" if (is_guest_allowed or service_type == "game" or route_name in PUBLIC_EXPERIENCE_ROUTE_NAMES) else "로그인 필요"
+
+    state_badges = []
+    if service_type == "game" or route_name in STUDENT_PARTICIPATION_ROUTE_NAMES:
+        state_badges.append("학생 참여")
+    if route_name in FILE_REQUIRED_ROUTE_NAMES:
+        state_badges.append("파일 필요")
+    if launch_is_external:
+        state_badges.append("외부 이동")
+
+    if limit is not None:
+        state_badges = state_badges[:limit]
+
+    return {
+        "home_access_status_label": access_status_label,
+        "home_state_badges": state_badges,
+    }
+
+
 def _build_teacher_first_product_labels(product):
     task_label = str(getattr(product, 'solve_text', '') or '').strip()
     service_label = str(getattr(product, 'title', '') or '').strip()
@@ -479,20 +737,74 @@ def _build_teacher_first_product_labels(product):
         else:
             support_label = ''
 
+    public_service_name = _get_public_product_name(product)
+    task_label = _replace_public_service_terms(task_label, product)
+    service_label = _replace_public_service_terms(service_label, product)
+    support_label = _replace_public_service_terms(support_label, product)
+
+    if public_service_name != _product_title_text(product):
+        service_label = public_service_name
+    if _is_calendar_hub_product(product) and task_label in {'', public_service_name}:
+        task_label = '오늘 일정 정리'
+    if _is_sheetbook_product(product) and task_label in {'', public_service_name}:
+        task_label = '기록 이어쓰기'
+
+    if not support_label:
+        if _is_calendar_hub_product(product):
+            support_label = '오늘 일정에서 안내장, 수합, 예약까지 바로 이어갑니다.'
+        elif _is_sheetbook_product(product):
+            support_label = '기록을 이어 쓰거나 정리한 뒤 필요한 업무로 연결합니다.'
+
     return {
         'teacher_first_task_label': task_label,
         'teacher_first_service_label': service_label,
         'teacher_first_support_label': support_label,
+        'public_service_name': public_service_name,
+        'home_context_chips': _build_product_context_chips(product, limit=2),
+        'detail_context_chips': _build_product_context_chips(product, limit=4),
+        **_build_product_state_labels(product, limit=2),
     }
+
+
+def _build_product_guide_url_map(products):
+    product_ids = [product.id for product in products if getattr(product, "id", None)]
+    if not product_ids:
+        return {}
+
+    try:
+        manuals = (
+            ServiceManual.objects.filter(
+                is_published=True,
+                product__is_active=True,
+                product_id__in=product_ids,
+            )
+            .order_by("product__display_order", "product__title", "id")
+        )
+    except Exception:
+        logger.exception("[ProductGuideMap] published manual lookup failed")
+        return {}
+
+    guide_url_map = {}
+    for manual in manuals:
+        if manual.product_id in guide_url_map:
+            continue
+        try:
+            guide_url_map[manual.product_id] = reverse("service_guide_detail", kwargs={"pk": manual.pk})
+        except NoReverseMatch:
+            continue
+    return guide_url_map
 
 
 def _attach_product_launch_meta(products):
     """Attach launch target metadata so templates can navigate directly without modal."""
+    guide_url_map = _build_product_guide_url_map(products)
     prepared = []
     for product in products:
         launch_href, launch_is_external = _resolve_product_launch_url(product)
         product.launch_href = launch_href
         product.launch_is_external = launch_is_external
+        product.guide_url = guide_url_map.get(product.id, "")
+        product.sample_url = ""
         for attr_name, attr_value in _build_teacher_first_product_labels(product).items():
             setattr(product, attr_name, attr_value)
         prepared.append(product)
@@ -964,7 +1276,7 @@ def _build_today_context(request):
     }
 
 
-def _build_sheetbook_workspace_context(request):
+def _build_sheetbook_workspace_context(request, *, require_discovery_visible=True):
     workspace = {
         "enabled": False,
         "entry_url": "",
@@ -981,7 +1293,7 @@ def _build_sheetbook_workspace_context(request):
     if (
         not request.user.is_authenticated
         or not getattr(settings, "SHEETBOOK_ENABLED", False)
-        or not is_sheetbook_discovery_visible()
+        or (require_discovery_visible and not is_sheetbook_discovery_visible())
     ):
         return {"sheetbook_workspace": workspace}
 
@@ -1098,6 +1410,650 @@ def _build_sheetbook_workspace_context(request):
     return {"sheetbook_workspace": workspace}
 
 
+def _build_home_v3_catalog_items(product_list, *, mode="popular", limit=4):
+    candidates = [
+        product for product in product_list
+        if _resolve_home_section_key(product) != "external"
+    ]
+    if mode == "new":
+        selected = sorted(
+            candidates,
+            key=lambda item: (item.created_at, item.id),
+            reverse=True,
+        )[:limit]
+    else:
+        selected = _get_home_discovery_products(None, candidates, limit=limit)
+    return _build_product_link_items(selected, include_section_meta=True)
+
+
+def _build_home_v3_trust_cards():
+    return [
+        {
+            "title": "오늘 판단은 캘린더 축에서 먼저 시작합니다",
+            "description": "첫 화면은 오늘 해야 하는 것, 학급 캘린더, 관련 바로가기만 먼저 보여주고 나머지는 아래로 내립니다.",
+        },
+        {
+            "title": "읽을거리는 발행 중 안내와 검토된 링크만 남깁니다",
+            "description": "하단 읽을거리는 서비스 가이드와 게시 중인 news_link를 재사용하고, 가짜 후기나 과한 홍보 문구는 넣지 않습니다.",
+        },
+        {
+            "title": "소통은 남기되 도구보다 먼저 튀지 않게 정리합니다",
+            "description": "공지와 최근 소통은 홈에서 바로 보되, 전체 소통은 별도 화면으로 보내 상단 실행 흐름을 방해하지 않게 둡니다.",
+        },
+    ]
+
+
+def _build_home_community_summary_posts(page_obj, *, limit=2):
+    object_list = list(getattr(page_obj, "object_list", []) or [])
+    prioritized = sorted(
+        enumerate(object_list),
+        key=lambda row: (
+            0 if getattr(row[1], "post_type", "") == "notice" else 1,
+            0 if getattr(getattr(row[1], "author", None), "is_staff", False) else 1,
+            row[0],
+        ),
+    )
+
+    items = []
+    for _, post in prioritized[:limit]:
+        image_url = ""
+        try:
+            if getattr(post, "image", None):
+                image_url = post.image.url
+        except Exception:
+            image_url = ""
+        if not image_url:
+            image_url = str(getattr(post, "og_image_url", "") or "").strip()
+
+        post_type = str(getattr(post, "post_type", "") or "").strip()
+        title = ""
+        body = ""
+        eyebrow = "최근 소통"
+
+        if post_type == "notice":
+            eyebrow = "공지"
+            title = str(getattr(post, "og_title", "") or "").strip()
+            body = str(getattr(post, "content", "") or "").strip()
+        elif post_type == "news_link":
+            eyebrow = "뉴스"
+            title = str(getattr(post, "og_title", "") or "").strip()
+            body = str(getattr(post, "og_description", "") or getattr(post, "content", "") or "").strip()
+        else:
+            body = str(getattr(post, "content", "") or "").strip()
+
+        if title and body:
+            if body == title:
+                body = ""
+            elif body.startswith(title):
+                body = body[len(title):].strip(" -:\n")
+
+        items.append(
+            {
+                "post": post,
+                "eyebrow": eyebrow,
+                "title": title,
+                "body": body,
+                "image_url": image_url,
+            }
+        )
+    return items
+
+
+def _build_home_v3_support_trust_panel():
+    return {
+        "title": "로그인하면 개인 홈이 바로 정리됩니다",
+        "description": "비로그인 상태에서는 지금 바로 열 수 있는 대표 도구와 운영 안내만 짧게 보여드립니다.",
+        "items": [
+            "운영 중인 서비스만 첫 화면 추천에 올라옵니다.",
+            "로그인 후에는 오늘 할 일, 빠른 실행, 일정 요약이 위쪽에 모입니다.",
+            "가이드는 발행 중인 안내만 연결하고 전체 탐색은 아래에서 이어집니다.",
+        ],
+    }
+
+
+def _build_home_v3_reading_cards(product_list, *, limit=3):
+    cards = []
+    seen_links = set()
+    product_map = {product.id: product for product in product_list}
+
+    try:
+        site_config = SiteConfig.load()
+        featured_manuals = list(
+            site_config.featured_manuals.filter(
+                is_published=True,
+                product__is_active=True,
+            )
+            .select_related("product")
+            .order_by("product__display_order", "product__title")[:limit]
+        )
+    except Exception:
+        logger.exception("[HomeV3] featured manuals load failed")
+        featured_manuals = []
+
+    for manual in featured_manuals:
+        href = reverse("service_guide_detail", kwargs={"pk": manual.pk})
+        if href in seen_links:
+            continue
+        product = product_map.get(manual.product_id, manual.product)
+        cards.append(
+            {
+                "kind": "manual",
+                "eyebrow": "서비스 가이드",
+                "title": _replace_public_service_terms(manual.title or f"{_get_public_product_name(product)} 시작 가이드", product),
+                "description": _replace_public_service_terms(
+                    manual.description or getattr(product, "teacher_first_support_label", "") or product.description or "",
+                    product,
+                ),
+                "meta": _get_public_product_name(product),
+                "href": href,
+                "is_external": False,
+            }
+        )
+        seen_links.add(href)
+        if len(cards) >= limit:
+            return cards
+
+    remaining = limit - len(cards)
+    if remaining <= 0:
+        return cards
+
+    news_posts = list(
+        _build_post_feed_queryset()
+        .filter(post_type="news_link")
+        .exclude(Q(source_url="") & Q(canonical_url=""))[:remaining]
+    )
+    for post in news_posts:
+        href = (post.source_url or post.canonical_url or "").strip()
+        if not href or href in seen_links:
+            continue
+        title = (post.og_title or post.content or "").strip()
+        description = (post.og_description or post.content or "").strip()
+        cards.append(
+            {
+                "kind": "post",
+                "eyebrow": "읽을거리",
+                "title": title[:80] or "교사를 위한 읽을거리",
+                "description": description[:120],
+                "meta": (post.publisher or "Insight Library").strip(),
+                "href": href,
+                "is_external": True,
+            }
+        )
+        seen_links.add(href)
+        if len(cards) >= limit:
+            break
+
+    return cards
+
+
+def _format_home_calendar_schedule(event):
+    start_dt = timezone.localtime(event.start_time)
+    end_dt = timezone.localtime(event.end_time)
+    if getattr(event, "is_all_day", False):
+        return f"{start_dt.month}월 {start_dt.day}일 · 하루 종일"
+    if start_dt.date() == end_dt.date():
+        return f"{start_dt.month}월 {start_dt.day}일 · {start_dt:%H:%M} - {end_dt:%H:%M}"
+    return f"{start_dt.month}월 {start_dt.day}일 {start_dt:%H:%M} ~ {end_dt.month}월 {end_dt.day}일 {end_dt:%H:%M}"
+
+
+def _build_home_calendar_summary_context(request):
+    summary = {
+        "enabled": False,
+        "today_count": 0,
+        "week_count": 0,
+        "upcoming_items": [],
+        "main_url": "",
+        "create_api_url": "",
+    }
+    if not request.user.is_authenticated:
+        return summary
+
+    try:
+        from classcalendar.models import CalendarEvent
+    except Exception:
+        logger.exception("[HomeV3] classcalendar import failed")
+        return summary
+
+    try:
+        summary["main_url"] = reverse("classcalendar:main")
+    except NoReverseMatch:
+        summary["main_url"] = ""
+
+    try:
+        summary["create_api_url"] = reverse("classcalendar:api_create_event")
+    except NoReverseMatch:
+        summary["create_api_url"] = ""
+
+    today = timezone.localdate()
+    week_start = today - timedelta(days=today.weekday())
+    week_end = week_start + timedelta(days=7)
+    now = timezone.now()
+
+    events_qs = CalendarEvent.objects.filter(author=request.user)
+    summary["today_count"] = events_qs.filter(start_time__date=today).count()
+    summary["week_count"] = events_qs.filter(
+        start_time__date__gte=week_start,
+        start_time__date__lt=week_end,
+    ).count()
+
+    upcoming_events = list(
+        events_qs.filter(
+            Q(end_time__gte=now) | Q(start_time__date__gte=today)
+        )
+        .order_by("start_time")[:3]
+    )
+    summary["upcoming_items"] = [
+        {
+            "title": event.title,
+            "schedule_text": _format_home_calendar_schedule(event),
+            "note": str(getattr(event, "note", "") or "").strip(),
+        }
+        for event in upcoming_events
+    ]
+    summary["enabled"] = bool(summary["main_url"] and summary["create_api_url"])
+    return summary
+
+
+def _safe_reverse(route_name):
+    try:
+        return reverse(route_name)
+    except NoReverseMatch:
+        return ""
+
+
+def _find_product_by_routes(product_list, route_names):
+    route_name_set = {str(route_name or "").strip().lower() for route_name in route_names or [] if route_name}
+    if not route_name_set:
+        return None
+    return next(
+        (product for product in product_list if _product_route_name(product) in route_name_set),
+        None,
+    )
+
+
+def _build_home_related_shortcuts(product_list):
+    items = []
+    for spec in HOME_SHORTCUT_SPECS:
+        product = _find_product_by_routes(product_list, spec.get("preferred_routes"))
+        href = getattr(product, "launch_href", "") if product else ""
+        is_external = bool(getattr(product, "launch_is_external", False)) if product else False
+        if not href:
+            href = _safe_reverse(spec.get("fallback_route"))
+        if not href:
+            continue
+        state_meta = _build_product_state_labels(
+            product,
+            route_name=spec.get("fallback_route", ""),
+            launch_is_external=is_external,
+            limit=2,
+        )
+        items.append(
+            {
+                "key": spec["key"],
+                "title": spec["title"],
+                "description": spec["description"],
+                "icon": spec["icon"],
+                "href": href,
+                "is_external": is_external,
+                "service_name": getattr(product, "public_service_name", "") if product else "",
+                "meta": (getattr(product, "home_context_chips", []) or [""])[0] if product else "",
+                "access_status_label": state_meta["home_access_status_label"],
+                "state_badges": state_meta["home_state_badges"],
+                "guide_url": getattr(product, "guide_url", "") if product else "",
+                "sample_url": getattr(product, "sample_url", "") if product else "",
+            }
+        )
+    return items
+
+
+def _build_home_guest_start_cards(product_list):
+    cards = []
+    for spec in GUEST_START_CARD_SPECS:
+        product = _find_product_by_routes(product_list, spec.get("preferred_routes"))
+        if product is None and spec.get("service_type"):
+            product = next(
+                (
+                    candidate for candidate in product_list
+                    if getattr(candidate, "service_type", "") == spec["service_type"]
+                ),
+                None,
+            )
+        href = getattr(product, "launch_href", "") if product else ""
+        is_external = bool(getattr(product, "launch_is_external", False)) if product else False
+        if not href:
+            href = _safe_reverse(spec.get("fallback_route"))
+        if not href:
+            continue
+        state_meta = _build_product_state_labels(
+            product,
+            route_name=spec.get("fallback_route", ""),
+            service_type=spec.get("service_type", ""),
+            launch_is_external=is_external,
+            limit=2,
+        )
+        cards.append(
+            {
+                "title": spec["title"],
+                "description": spec["description"],
+                "icon": spec["icon"],
+                "href": href,
+                "is_external": is_external,
+                "service_name": getattr(product, "public_service_name", "") if product else "",
+                "meta": (getattr(product, "home_context_chips", []) or [""])[0] if product else "",
+                "access_status_label": state_meta["home_access_status_label"],
+                "state_badges": state_meta["home_state_badges"],
+                "guide_url": getattr(product, "guide_url", "") if product else "",
+                "sample_url": getattr(product, "sample_url", "") if product else "",
+            }
+        )
+    return cards[:4]
+
+
+def _build_home_calendar_hub_context(request):
+    calendar_summary = _build_home_calendar_summary_context(request)
+    sheetbook_workspace = _build_sheetbook_workspace_context(
+        request,
+        require_discovery_visible=False,
+    )["sheetbook_workspace"]
+
+    continue_items = []
+    for row in sheetbook_workspace.get("today_rows", [])[:2]:
+        continue_items.append(
+            {
+                "title": row.get("title", ""),
+                "description": "기록 작업을 바로 이어서 정리합니다.",
+                "href": row.get("href", ""),
+            }
+        )
+    if not continue_items:
+        for sheetbook in sheetbook_workspace.get("recent_sheetbooks", [])[:2]:
+            continue_items.append(
+                {
+                    "title": sheetbook.get("title", ""),
+                    "description": f"이전 작업 {sheetbook.get('tab_count', 0)}개 흐름을 이어서 엽니다.",
+                    "href": sheetbook.get("href", ""),
+                }
+            )
+
+    return {
+        "title": CALENDAR_HUB_PUBLIC_NAME,
+        "description": "오늘 일정과 이어할 업무를 한 축에서 정리합니다.",
+        "today_count": calendar_summary.get("today_count", 0),
+        "week_count": calendar_summary.get("week_count", 0),
+        "upcoming_items": calendar_summary.get("upcoming_items", [])[:2],
+        "continue_items": continue_items,
+        "main_url": calendar_summary.get("main_url") or _safe_reverse("classcalendar:main"),
+        "create_api_url": calendar_summary.get("create_api_url", ""),
+        "primary_cta_label": f"{CALENDAR_HUB_PUBLIC_NAME} 열기",
+        "secondary_cta_label": "일정 추가",
+        "record_board_enabled": bool(sheetbook_workspace.get("enabled")),
+    }
+
+
+def _resolve_catalog_scenario_key(product):
+    if _is_sheetbook_cross_surface_hidden(product):
+        return None
+
+    route_name = _product_route_name(product)
+    service_type = str(getattr(product, "service_type", "") or "").strip()
+
+    if route_name in {"classcalendar:main", "reservations:dashboard_landing", "reservations:landing"}:
+        return "today_ops"
+    if route_name in {"collect:landing", "consent:landing", "signatures:landing", "handoff:landing"} or service_type == "collect_sign":
+        return "collect"
+    if service_type == "game":
+        return "activity"
+    if service_type == "counsel":
+        return "counsel"
+    if service_type in {"edutech", "etc"}:
+        return "reference"
+    if service_type == "work":
+        return "prep"
+    if service_type == "classroom":
+        return "today_ops"
+    return "reference"
+
+
+def _build_catalog_hub_context(product_list):
+    calendar_product = _find_product_by_routes(product_list, ["classcalendar:main"])
+    guide_url = ""
+    try:
+        manual = (
+            ServiceManual.objects.filter(
+                is_published=True,
+                product__is_active=True,
+                product__launch_route_name="classcalendar:main",
+            )
+            .order_by("product__display_order", "product__title")
+            .first()
+        )
+    except Exception:
+        manual = None
+    if manual is not None:
+        guide_url = reverse("service_guide_detail", kwargs={"pk": manual.pk})
+    if not guide_url:
+        guide_url = reverse("service_guide_list")
+
+    return {
+        "title": CALENDAR_HUB_PUBLIC_NAME,
+        "description": "오늘 일정과 이어할 업무를 한 축에서 정리합니다.",
+        "href": getattr(calendar_product, "launch_href", "") or _safe_reverse("classcalendar:main"),
+        "is_external": bool(getattr(calendar_product, "launch_is_external", False)) if calendar_product else False,
+        "guide_url": guide_url,
+    }
+
+
+def _build_catalog_scenario_sections(product_list):
+    bucket = {section["key"]: [] for section in CATALOG_SCENARIO_SECTIONS}
+    for product in product_list:
+        section_key = _resolve_catalog_scenario_key(product)
+        if not section_key:
+            continue
+        bucket.setdefault(section_key, []).append(product)
+
+    sections = []
+    for section in CATALOG_SCENARIO_SECTIONS:
+        items = bucket.get(section["key"], [])
+        if not items:
+            continue
+        sections.append(
+            {
+                **section,
+                "products": items,
+            }
+        )
+    return sections
+
+
+def _prepare_manual_display(manual):
+    product = manual.product
+    manual.public_title = _replace_public_service_terms(manual.title or f"{_get_public_product_name(product)} 안내", product)
+    manual.public_description = _replace_public_service_terms(
+        manual.description or getattr(product, "teacher_first_support_label", "") or product.description or "",
+        product,
+    )
+    manual.public_service_name = getattr(product, "public_service_name", _get_public_product_name(product))
+    manual.public_launch_label = f"{manual.public_service_name} 열기"
+    manual.public_chips = list(getattr(product, "detail_context_chips", []) or [])
+    return manual
+
+
+def _build_guide_entry_points():
+    return [
+        {
+            "key": item["key"],
+            "title": item["title"],
+            "description": item["description"],
+            "href": item["anchor"],
+        }
+        for item in GUIDE_ENTRY_POINT_META
+    ]
+
+
+def _build_guide_groups(manuals, products_without_manual):
+    prepared_manuals = [_prepare_manual_display(manual) for manual in manuals]
+
+    calendar_manuals = []
+    task_manuals = []
+    for manual in prepared_manuals:
+        if _is_calendar_hub_product(manual.product):
+            calendar_manuals.append(manual)
+        elif _is_sheetbook_product(manual.product):
+            continue
+        else:
+            task_manuals.append(manual)
+
+    calendar_href = _safe_reverse("classcalendar:main")
+    start_items = [
+        {
+            "title": "홈에서 어디를 먼저 보는지",
+            "description": "상단에서 오늘 해야 하는 것과 학급 캘린더를 먼저 보는 흐름입니다.",
+            "href": reverse("home"),
+            "meta": "홈에서 바로 확인",
+        },
+        {
+            "title": f"{CALENDAR_HUB_PUBLIC_NAME} 처음 열기",
+            "description": "오늘 일정과 이번 주 흐름부터 확인하고 필요한 업무로 이어갑니다.",
+            "href": calendar_href or reverse("home"),
+            "meta": CALENDAR_HUB_PUBLIC_NAME,
+        },
+        {
+            "title": "첫 일정 만들기",
+            "description": "캘린더에서 오늘 일정 한 건만 먼저 추가해도 흐름이 잡힙니다.",
+            "href": calendar_href or reverse("home"),
+            "meta": "일정 추가",
+        },
+        {
+            "title": "자주 쓰는 도구 저장하기",
+            "description": "홈에서 자주 쓰는 도구에 추가해 다음부터 바로 열 수 있습니다.",
+            "href": reverse("home"),
+            "meta": "홈에서 설정",
+        },
+    ]
+
+    pending_products = [
+        product for product in products_without_manual
+        if not _is_sheetbook_cross_surface_hidden(product)
+    ]
+    for product in pending_products:
+        product.pending_public_name = _get_public_product_name(product)
+
+    return [
+        {
+            "key": "start",
+            "anchor": "guide-start",
+            "title": "처음 시작",
+            "description": "홈과 첫 캘린더 흐름부터 짧게 확인합니다.",
+            "items": start_items,
+            "manuals": [],
+            "pending_products": [],
+        },
+        {
+            "key": "calendar",
+            "anchor": "guide-calendar",
+            "title": CALENDAR_HUB_PUBLIC_NAME,
+            "description": "오늘 일정 보기와 일정 추가처럼 캘린더에서 먼저 해야 할 흐름만 전면에서 안내합니다.",
+            "items": [],
+            "manuals": calendar_manuals,
+            "pending_products": [],
+        },
+        {
+            "key": "tasks",
+            "anchor": "guide-tasks",
+            "title": "자주 하는 업무",
+            "description": "안내장, 수합, 수업 준비, 활동, 상담 흐름을 상황별로 찾습니다.",
+            "items": [],
+            "manuals": task_manuals,
+            "pending_products": pending_products,
+        },
+    ]
+
+
+def _home_v3(request, products, posts, page_obj, feed_scope):
+    product_list = _attach_product_launch_meta(list(products))
+    surface_products = [product for product in product_list if not _is_sheetbook_cross_surface_hidden(product)]
+    sections, aux_sections, games = get_purpose_sections(
+        surface_products,
+        preview_limit={
+            "default": 2,
+            "class_ops": 3,
+        },
+    )
+    home_sections = [*sections, *aux_sections]
+    sns_preview_posts = _build_home_community_summary_posts(page_obj, limit=2)
+    discovery_sections = {
+        "classroom_games": games,
+        "work_sections": home_sections,
+        "popular_items": _build_home_v3_catalog_items(surface_products, mode="popular", limit=4),
+        "new_items": _build_home_v3_catalog_items(surface_products, mode="new", limit=4),
+    }
+    secondary_sections = {
+        "community_summary": {
+            "title": "소통 요약",
+            "description": "공지와 최근 소통은 홈에서 바로 보고, 전체 소통은 별도 화면으로 이어서 확인합니다.",
+            "posts": sns_preview_posts,
+            "full_url": reverse("community_feed"),
+        },
+        "trust_cards": _build_home_v3_trust_cards(),
+        "reading_cards": _build_home_v3_reading_cards(surface_products, limit=3),
+    }
+
+    context = {
+        "products": products,
+        "posts": posts,
+        "page_obj": page_obj,
+        "feed_scope": feed_scope,
+        "sections": sections,
+        "aux_sections": aux_sections,
+        "home_sections": home_sections,
+        "games": games,
+        "discovery_sections": discovery_sections,
+        "secondary_sections": secondary_sections,
+        "sns_preview_posts": sns_preview_posts,
+        **_build_home_student_games_qr_context(request),
+    }
+
+    if request.user.is_authenticated:
+        UserProfile.objects.get_or_create(user=request.user)
+        favorite_products = _get_user_favorite_products(request.user, product_list, limit=12)
+        favorite_product_ids = [product.id for product in favorite_products]
+        today_context = _build_today_context(request)
+        calendar_hub = _build_home_calendar_hub_context(request)
+        context.update(
+            {
+                "favorite_product_ids": favorite_product_ids,
+                "primary_zone": {
+                    "today_tasks": today_context.get("today_items", [])[:4],
+                    "today_date_text": today_context.get("today_date_text", ""),
+                    "calendar_hub": calendar_hub,
+                    "related_shortcuts": _build_home_related_shortcuts(surface_products),
+                },
+            }
+        )
+    else:
+        featured_product = next((product for product in surface_products if product.is_featured), surface_products[0] if surface_products else None)
+        context.update(
+            {
+                "featured_product": featured_product,
+                "primary_zone": {
+                    "value_line": "일정에서 시작해 안내장, 수합, 수업 준비까지 바로 이어집니다.",
+                    "cta_primary": {
+                        "label": "로그인하고 시작하기",
+                        "href": reverse("account_login"),
+                    },
+                    "cta_secondary": {
+                        "label": "가이드 보기",
+                        "href": reverse("service_guide_list"),
+                        "is_external": False,
+                    },
+                    "today_start_items": _build_home_guest_start_cards(surface_products),
+                },
+            }
+        )
+
+    return render(request, "core/home_v3.html", context)
+
+
 def _home_v2(request, products, posts, page_obj, feed_scope):
     """Feature flag on 시 호출되는 V2 홈."""
     product_list = _attach_product_launch_meta(list(products))
@@ -1211,7 +2167,6 @@ def home(request):
     posts = _build_post_feed_queryset(feed_scope=feed_scope)
 
     # 페이징 처리 (PC 우측 및 모바일 하단 SNS 위젯용)
-    from django.core.paginator import Paginator
     paginator = Paginator(posts, 5) # 한 페이지에 5개씩
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -1220,8 +2175,13 @@ def home(request):
     if request.headers.get('HX-Request'):
         return _render_post_list_partial(request, page_obj, feed_scope)
 
+    home_layout_version = _get_home_layout_version()
+
+    if home_layout_version == 'v3':
+        return _home_v3(request, products, posts, page_obj, feed_scope)
+
     # V2 홈: Feature flag on 시 분기
-    if settings.HOME_V2_ENABLED:
+    if home_layout_version == 'v2':
         return _home_v2(request, products, posts, page_obj, feed_scope)
 
     # If user is logged in, show the "dashboard-style" authenticated home
@@ -1261,6 +2221,27 @@ def home(request):
         'page_obj': page_obj,
         'feed_scope': feed_scope,
     })
+
+
+def community_feed(request):
+    feed_scope = _get_post_feed_scope(request)
+    posts = _build_post_feed_queryset(feed_scope=feed_scope)
+    paginator = Paginator(posts, 10)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    if request.headers.get('HX-Request'):
+        return _render_post_list_partial(request, page_obj, feed_scope)
+
+    return render(
+        request,
+        'core/community_feed.html',
+        {
+            'posts': posts,
+            'page_obj': page_obj,
+            'feed_scope': feed_scope,
+        },
+    )
+
 
 @login_required
 def dashboard(request):
@@ -1794,7 +2775,7 @@ TEACHER_FIRST_SERVICE_GUIDE_SECTIONS = [
     {
         'key': 'classroom',
         'title': '학급 운영',
-        'description': '교무수첩, 달력, 학급 운영 도구처럼 매일 쓰는 흐름을 먼저 보여줍니다.',
+        'description': '학급 캘린더, 학급 기록 보드, 학급 운영 도구처럼 매일 쓰는 흐름을 먼저 보여줍니다.',
     },
     {
         'key': 'counsel',
@@ -2215,7 +3196,8 @@ def service_guide_list(request):
     featured_manual_ids = featured_manuals_qs.values_list('id', flat=True)
     manuals = list(manuals_qs.exclude(id__in=featured_manual_ids))
     featured_manuals = list(featured_manuals_qs)
-    for manual in featured_manuals + manuals:
+    all_manuals = featured_manuals + manuals
+    for manual in all_manuals:
         prepared_product = product_map.get(manual.product_id)
         if not prepared_product:
             continue
@@ -2225,22 +3207,22 @@ def service_guide_list(request):
             'teacher_first_task_label',
             'teacher_first_service_label',
             'teacher_first_support_label',
+            'public_service_name',
+            'detail_context_chips',
+            'home_context_chips',
         ):
             setattr(manual.product, attr_name, getattr(prepared_product, attr_name, ''))
     manual_count = manuals_qs.count()
     product_ids_with_any_manual = set(manuals_all_qs.values_list('product_id', flat=True))
     products_without_manual = [
         product for product in active_products
-        if product.id not in product_ids_with_any_manual
+        if product.id not in product_ids_with_any_manual and not _is_sheetbook_cross_surface_hidden(product)
     ]
     missing_manual_count = len(products_without_manual)
 
     return render(request, 'core/service_guide_list.html', {
-        'entry_points': _build_teacher_first_entry_points('manuals'),
-        'guide_sections': _build_service_guide_sections(manuals, products_without_manual),
-        'manuals': manuals,
-        'featured_manuals': featured_manuals,
-        'products_without_manual': products_without_manual,
+        'guide_entry_points': _build_guide_entry_points(),
+        'guide_groups': _build_guide_groups(all_manuals, products_without_manual),
         'active_products_count': active_products_count,
         'manual_count': manual_count,
         'missing_manual_count': missing_manual_count,
@@ -2255,7 +3237,13 @@ def service_guide_detail(request, pk):
         is_published=True,
         product__is_active=True
     )
-    sections = manual.sections.all()
+    prepared_product = _attach_product_launch_meta([manual.product])[0]
+    manual.product = prepared_product
+    manual = _prepare_manual_display(manual)
+    sections = list(manual.sections.all())
+    for section in sections:
+        section.display_title = _replace_public_service_terms(section.title, manual.product)
+        section.display_content = _replace_public_service_terms(section.content, manual.product)
     launch_href, launch_is_external = _resolve_product_launch_url(manual.product)
     
     return render(request, 'core/service_guide_detail.html', {
@@ -2263,6 +3251,7 @@ def service_guide_detail(request, pk):
         'sections': sections,
         'launch_href': launch_href,
         'launch_is_external': launch_is_external,
+        'launch_label': f"{manual.public_service_name} 열기",
     })
 
 
@@ -2621,5 +3610,3 @@ def health_check(request):
     except Exception as e:
         logger.exception("Health check DB connection failed: %s", e)
         return JsonResponse({'status': 'error', 'db': 'unavailable'}, status=503)
-
-

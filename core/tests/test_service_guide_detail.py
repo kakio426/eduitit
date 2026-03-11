@@ -29,7 +29,9 @@ class ServiceGuideDetailLaunchTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, f'href="{reverse("classcalendar:main")}"')
-        self.assertContains(response, "바로 열기")
+        self.assertContains(response, "학급 캘린더 열기")
+        self.assertContains(response, "학급 캘린더 사용법")
         self.assertContains(response, "다른 안내 보기")
         self.assertNotContains(response, "준비 중인 서비스입니다")
         self.assertNotContains(response, "이제 직접 사용해보세요!")
+        self.assertNotContains(response, "교무수첩")

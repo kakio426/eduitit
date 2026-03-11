@@ -8,11 +8,12 @@ from products.models import Product, ServiceManual
 class TeacherFirstGuidePagesTests(TestCase):
     def setUp(self):
         self.classroom_product = Product.objects.create(
-            title='교무수첩',
+            title='학급 캘린더',
             description='학급 운영',
             price=0,
             is_active=True,
             service_type='classroom',
+            launch_route_name='classcalendar:main',
             icon='📘',
             color_theme='blue',
         )
@@ -37,7 +38,7 @@ class TeacherFirstGuidePagesTests(TestCase):
 
         self.classroom_manual = ServiceManual.objects.create(
             product=self.classroom_product,
-            title='교무수첩 시작하기',
+            title='학급 캘린더 시작하기',
             description='바로 쓰는 핵심 흐름',
             is_published=True,
         )
@@ -55,21 +56,19 @@ class TeacherFirstGuidePagesTests(TestCase):
         self.assertEqual(response.status_code, 200)
         content = response.content.decode('utf-8')
 
-        self.assertIn('빠른 사용 안내', content)
-        self.assertIn('홈', content)
-        self.assertIn('전체 서비스', content)
-        self.assertIn('지금 많이 찾는 안내', content)
-        self.assertIn('문서·작성', content)
-        self.assertIn('학급 운영', content)
-        self.assertIn('안내 준비 중', content)
+        self.assertIn('막힐 때만 짧게 보는 안내', content)
+        self.assertIn('처음 시작', content)
+        self.assertIn('학급 캘린더', content)
+        self.assertIn('자주 하는 업무', content)
+        self.assertIn('상담 예약', content)
         self.assertNotIn('추천 이용방법', content)
-        self.assertNotIn('전체 이용방법', content)
+        self.assertNotIn('교무수첩', content)
 
     def test_service_guide_list_uses_short_reference_copy(self):
         response = self.client.get(reverse('service_guide_list'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('막힐 때만 짧게 확인할 수 있도록', content)
+        self.assertIn('무엇을 설명하는지보다 언제 열면 되는지 먼저 보이도록', content)
         self.assertNotIn('홈에서 바로 시작하고, 막히는 순간에만 짧게 확인하는 안내만 남겼습니다.', content)
 
     def test_tool_guide_is_secondary_reference_not_showroom_modal(self):
@@ -92,5 +91,30 @@ class TeacherFirstGuidePagesTests(TestCase):
         response = self.client.get(reverse('service_guide_list'))
         content = response.content.decode('utf-8')
 
-        self.assertRegex(content, r'(?s)교무수첩 시작하기.*교무수첩')
+        self.assertRegex(content, r'(?s)학급 캘린더 시작하기.*학급 캘린더')
         self.assertRegex(content, r'(?s)가정통신문 빠르게 만들기.*가정통신문')
+
+    def test_service_guide_list_does_not_promote_record_board_as_calendar_peer(self):
+        sheetbook_product = Product.objects.create(
+            title='학급 기록 보드',
+            description='기록 작업',
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='sheetbook:index',
+            icon='📒',
+            color_theme='blue',
+        )
+        ServiceManual.objects.create(
+            product=sheetbook_product,
+            title='학급 기록 보드 이어쓰기',
+            description='기록 흐름 안내',
+            is_published=True,
+        )
+
+        response = self.client.get(reverse('service_guide_list'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('학급 캘린더', content)
+        self.assertNotIn('기록 보드 이어쓰기', content)
+        self.assertNotIn('학급 기록 보드 이어쓰기', content)

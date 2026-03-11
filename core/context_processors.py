@@ -11,6 +11,22 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+SEARCH_HIDDEN_ROUTE_NAMES = {"sheetbook:index"}
+SEARCH_PUBLIC_TITLE_BY_ROUTE = {
+    "classcalendar:main": "학급 캘린더",
+    "sheetbook:index": "학급 기록 보드",
+}
+
+
+def _search_public_title(product):
+    route_name = str(getattr(product, "launch_route_name", "") or "").strip()
+    title = str(getattr(product, "title", "") or "").strip()
+    return SEARCH_PUBLIC_TITLE_BY_ROUTE.get(route_name, title)
+
+
+def _search_public_text(text, title):
+    return str(text or "").replace("교무수첩", title).replace("교무 수첩", title)
+
 def visitor_counts(request):
     """
     Returns visitor count context variables.
@@ -105,11 +121,15 @@ def search_products(request):
         )
         items = []
         for p in products:
+            route_name = str(getattr(p, 'launch_route_name', '') or '').strip()
+            if route_name in SEARCH_HIDDEN_ROUTE_NAMES:
+                continue
+            public_title = _search_public_title(p)
             items.append({
                 'id': p.id,
-                'title': p.title,
-                'description': (p.description or '')[:80],
-                'solve_text': p.solve_text or '',
+                'title': public_title,
+                'description': _search_public_text((p.description or '')[:80], public_title),
+                'solve_text': _search_public_text(p.solve_text or '', public_title),
                 'icon': p.icon or '',
                 'service_type': p.service_type or '',
             })

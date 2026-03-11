@@ -24,8 +24,11 @@
                 </span>
                 {% endif %}
                 <h3 class="text-lg md:text-xl font-black text-gray-800 leading-snug break-keep truncate">
-                    {{ product.title }}
+                    {{ product.public_service_name|default:product.title }}
                 </h3>
+                {% if product.teacher_first_task_label and product.teacher_first_task_label != product.public_service_name %}
+                <p class="mt-1 text-sm font-bold text-slate-500">{{ product.teacher_first_task_label }}</p>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -36,15 +39,28 @@
         {% if product.lead_text %}
         <div class="pl-4 border-l-[3px] border-purple-500">
             <p class="text-base md:text-lg text-gray-700 font-bold leading-relaxed break-keep">
-                {{ product.lead_text|linebreaksbr }}
+                {{ product.teacher_first_support_label|default:product.lead_text|linebreaksbr }}
             </p>
         </div>
         {% endif %}
 
         <div class="bg-gray-50 rounded-xl p-4 md:p-5">
             <p class="text-sm md:text-base text-gray-600 font-medium leading-relaxed break-keep">
-                {{ product.description|linebreaksbr }}
+                {{ product.teacher_first_support_label|default:product.description|linebreaksbr }}
             </p>
+            {% if product.home_access_status_label or product.home_state_badges or product.detail_context_chips %}
+            <div class="mt-4 flex flex-wrap gap-2">
+                {% if product.home_access_status_label %}
+                <span class="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-[11px] font-bold text-indigo-700">{{ product.home_access_status_label }}</span>
+                {% endif %}
+                {% for badge in product.home_state_badges %}
+                <span class="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-[11px] font-bold text-amber-700">{{ badge }}</span>
+                {% endfor %}
+                {% for chip in product.detail_context_chips %}
+                <span class="inline-flex items-center rounded-full bg-white px-3 py-1 text-[11px] font-bold text-slate-500">{{ chip }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
         </div>
 
         {% if features %}
@@ -82,11 +98,19 @@
 
     <!-- Footer -->
     <div class="shrink-0 px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] md:px-8 md:py-5 border-t border-gray-100 bg-white">
-        <a href="{{ launch_href }}"
-            {% if launch_is_external %}target="_blank" rel="noopener noreferrer" {% endif %}
-            class="block w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-bold text-base text-center hover:shadow-lg hover:-translate-y-0.5 transition-all">
-            시작하기
-            <i class="fa-solid fa-{% if launch_is_external %}arrow-up-right-from-square{% else %}circle-play{% endif %} ml-1.5"></i>
-        </a>
+        <div class="grid gap-2 sm:grid-cols-2">
+            {% if product.guide_url %}
+            <a href="{{ product.guide_url }}"
+                class="block w-full py-3 border border-slate-200 bg-white text-slate-700 rounded-xl font-bold text-base text-center hover:border-indigo-300 hover:text-indigo-600 transition-all">
+                가이드 보기
+            </a>
+            {% endif %}
+            <a href="{{ launch_href }}"
+                {% if launch_is_external %}target="_blank" rel="noopener noreferrer" {% endif %}
+                class="block w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-bold text-base text-center hover:shadow-lg hover:-translate-y-0.5 transition-all {% if not product.guide_url %}sm:col-span-2{% endif %}">
+                시작하기
+                <i class="fa-solid fa-{% if launch_is_external %}arrow-up-right-from-square{% else %}circle-play{% endif %} ml-1.5"></i>
+            </a>
+        </div>
     </div>
 </div>

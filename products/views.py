@@ -190,22 +190,26 @@ def _should_block_for_large_screen_service(request):
 
 
 def product_list(request):
-    from core.views import _attach_product_launch_meta, get_purpose_sections
+    from core.views import (
+        _attach_product_launch_meta,
+        _build_catalog_hub_context,
+        _build_catalog_scenario_sections,
+        _is_sheetbook_cross_surface_hidden,
+    )
 
     products = filter_discoverable_products(
         Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
     )
     product_list = _attach_product_launch_meta(list(products))
-    sections, aux_sections, games = get_purpose_sections(product_list, preview_limit=None)
+    surface_products = [product for product in product_list if not _is_sheetbook_cross_surface_hidden(product)]
     return render(
         request,
         'products/list.html',
         {
-            'products': product_list,
-            'sections': sections,
-            'aux_sections': aux_sections,
-            'games': games,
-            'total_count': len(product_list),
+            'products': surface_products,
+            'catalog_hub': _build_catalog_hub_context(surface_products),
+            'scenario_sections': _build_catalog_scenario_sections(surface_products),
+            'total_count': len(surface_products),
         },
     )
 
@@ -228,7 +232,8 @@ def product_detail(request, pk):
 def product_preview(request, pk):
     product = get_object_or_404(Product, pk=pk, is_active=True)
     features = product.features.all()
-    from core.views import _resolve_product_launch_url
+    from core.views import _attach_product_launch_meta, _resolve_product_launch_url
+    product = _attach_product_launch_meta([product])[0]
     launch_href, launch_is_external = _resolve_product_launch_url(product)
     return render(request, 'products/partials/preview_modal.html', {
         'product': product,

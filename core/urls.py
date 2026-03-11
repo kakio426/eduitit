@@ -3,6 +3,7 @@ from . import views
 
 urlpatterns = [
     path('', views.home, name='home'),
+    path('community/', views.community_feed, name='community_feed'),
     path('dashboard/', views.dashboard, name='dashboard'),
     path('post/create/', views.post_create, name='post_create'),
     path('post/<int:pk>/like/', views.post_like, name='post_like'),
