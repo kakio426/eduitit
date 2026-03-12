@@ -176,10 +176,11 @@ class EduMaterialViewTests(TestCase):
             "sandbox=\"allow-downloads allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-scripts\"",
         )
         self.assertContains(response, reverse("edu_materials:render", args=[material.id]))
+        self.assertContains(response, "data-frame-mode=\"runtime\"")
         material.refresh_from_db()
         self.assertEqual(material.view_count, 1)
 
-    def test_detail_view_uses_render_url_for_preview(self):
+    def test_detail_view_renders_preview_toggle_and_metadata(self):
         material = EduMaterial.objects.create(
             teacher=self.user,
             title="미리보기 자료",
@@ -191,6 +192,12 @@ class EduMaterialViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, reverse("edu_materials:render", args=[material.id]))
         self.assertNotContains(response, "srcdoc=")
+        self.assertContains(response, "data-frame-mode=\"preview\"")
+        self.assertContains(response, "Desktop")
+        self.assertContains(response, "Mobile")
+        self.assertContains(response, "data-preview-width=\"1280\"")
+        self.assertContains(response, "data-preview-height=\"844\"")
+        self.assertEqual(response.context["preview_default_viewport"]["id"], "desktop")
 
     def test_render_view_allows_teacher_preview_before_publish(self):
         material = EduMaterial.objects.create(

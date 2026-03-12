@@ -17,6 +17,9 @@
         width: 100%;
         background: #fff;
     }
+    .edu-materials-preview-stage {
+        touch-action: pan-y;
+    }
 </style>
 {% endblock %}
 
@@ -66,7 +69,7 @@
                         </div>
                     </div>
 
-                    {% include 'edu_materials/includes/material_iframe.html' with material=material material_render_url=material_render_url frame_title='교사용 미리보기' frame_stage_classes='bg-slate-950 aspect-[16/9] min-h-[420px]' iframe_classes='block h-full w-full bg-white' %}
+                    {% include 'edu_materials/includes/material_iframe.html' with material=material material_render_url=material_render_url frame_mode='preview' frame_title='교사용 미리보기' preview_viewports=preview_viewports preview_default_viewport=preview_default_viewport %}
                 </div>
             </div>
 
@@ -125,4 +128,83 @@
         </div>
     </div>
 </section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const previewRoots = document.querySelectorAll('[data-preview-root]');
+        if (!previewRoots.length) {
+            return;
+        }
+
+        const getPreviewButtons = (root) => root.parentElement.querySelectorAll('[data-preview-button]');
+
+        const updatePreviewButtonState = (root, activeButton) => {
+            getPreviewButtons(root).forEach((button) => {
+                const isActive = button === activeButton;
+                button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+                button.classList.toggle('bg-emerald-400', isActive);
+                button.classList.toggle('text-slate-950', isActive);
+                button.classList.toggle('shadow-sm', isActive);
+                button.classList.toggle('text-slate-200', !isActive);
+                button.classList.toggle('hover:bg-white/10', !isActive);
+            });
+        };
+
+        const syncPreviewViewport = (root) => {
+            const stage = root.querySelector('[data-preview-stage]');
+            const viewport = root.querySelector('[data-preview-viewport]');
+            const iframe = root.querySelector('[data-preview-iframe]');
+            const sizeLabel = root.parentElement.querySelector('[data-preview-dimensions]');
+            const activeButton = root.parentElement.querySelector('[data-preview-button][aria-pressed="true"]')
+                || root.parentElement.querySelector('[data-preview-button]');
+
+            if (!stage || !viewport || !iframe || !activeButton) {
+                return;
+            }
+
+            const viewportWidth = Number(activeButton.dataset.previewWidth);
+            const viewportHeight = Number(activeButton.dataset.previewHeight);
+            const stageWidth = stage.clientWidth;
+            const stageHeight = stage.clientHeight;
+            const scale = Math.min(stageWidth / viewportWidth, stageHeight / viewportHeight);
+            const fitScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
+
+            viewport.style.width = `${viewportWidth}px`;
+            viewport.style.height = `${viewportHeight}px`;
+            viewport.style.transform = `scale(${fitScale})`;
+            iframe.width = viewportWidth;
+            iframe.height = viewportHeight;
+            iframe.style.width = `${viewportWidth}px`;
+            iframe.style.height = `${viewportHeight}px`;
+            root.dataset.activeViewport = activeButton.dataset.previewMode;
+            root.dataset.fitScale = fitScale.toFixed(4);
+
+            if (sizeLabel) {
+                sizeLabel.textContent = `${activeButton.dataset.previewLabel} ${viewportWidth}x${viewportHeight}`;
+            }
+        };
+
+        previewRoots.forEach((root) => {
+            const buttons = getPreviewButtons(root);
+            buttons.forEach((button) => {
+                button.addEventListener('click', () => {
+                    updatePreviewButtonState(root, button);
+                    syncPreviewViewport(root);
+                });
+            });
+
+            updatePreviewButtonState(root, root.parentElement.querySelector('[data-preview-button][aria-pressed="true"]') || buttons[0]);
+            syncPreviewViewport(root);
+
+            if ('ResizeObserver' in window) {
+                const observer = new ResizeObserver(() => syncPreviewViewport(root));
+                observer.observe(root.querySelector('[data-preview-stage]'));
+            } else {
+                window.addEventListener('resize', () => syncPreviewViewport(root));
+            }
+        });
+    });
+</script>
 {% endblock %}

@@ -10,6 +10,13 @@ from .models import EduMaterial
 from .services import build_material_qr_data_url, get_service, validate_html_upload
 
 
+PREVIEW_VIEWPORTS = (
+    {"id": "desktop", "label": "Desktop", "width": 1280, "height": 720},
+    {"id": "mobile", "label": "Mobile", "width": 390, "height": 844},
+)
+DEFAULT_PREVIEW_VIEWPORT_ID = "desktop"
+
+
 def _resolve_teacher_display_name(user):
     if not user:
         return "익명의 선생님"
@@ -25,6 +32,19 @@ def _resolve_teacher_display_name(user):
 
     username = (getattr(user, "username", "") or "").strip()
     return username or "익명의 선생님"
+
+
+def _build_preview_context():
+    preview_viewports = [dict(viewport) for viewport in PREVIEW_VIEWPORTS]
+    preview_default_viewport = next(
+        viewport
+        for viewport in preview_viewports
+        if viewport["id"] == DEFAULT_PREVIEW_VIEWPORT_ID
+    )
+    return {
+        "preview_viewports": preview_viewports,
+        "preview_default_viewport": preview_default_viewport,
+    }
 
 
 @login_required
@@ -142,6 +162,7 @@ def material_detail(request, pk):
             "material_render_url": material_render_url,
             "public_url": public_url,
             "public_qr_data_url": build_material_qr_data_url(public_url) if material.is_published else "",
+            **_build_preview_context(),
         },
     )
 
@@ -185,6 +206,7 @@ def run_material(request, pk):
             "material": material,
             "hide_navbar": True,
             "material_render_url": reverse("edu_materials:render", args=[material.id]),
+            **_build_preview_context(),
         },
     )
 

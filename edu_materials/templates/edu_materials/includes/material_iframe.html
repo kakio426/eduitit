@@ -1,22 +1,78 @@
-<div class="{{ frame_shell_classes|default:'overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950/95 shadow-xl shadow-slate-900/10' }}">
+<div
+    class="{{ frame_shell_classes|default:'overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950/95 shadow-xl shadow-slate-900/10' }}"
+    data-frame-mode="{{ frame_mode|default:'runtime' }}"
+>
     {% if not hide_frame_header %}
-    <div class="flex items-center justify-between px-5 py-4 text-white border-b border-white/10">
+    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 px-5 py-4 text-white">
         <div>
             <div class="text-xs uppercase tracking-[0.28em] text-emerald-300">Sandbox Preview</div>
-            <div class="font-black mt-1">{{ frame_title|default:material.title }}</div>
+            <div class="mt-1 font-black">{{ frame_title|default:material.title }}</div>
         </div>
-        <div class="text-xs text-slate-300">호스트 화면과 분리된 iframe 실행</div>
+        <div class="flex flex-wrap items-center justify-end gap-3">
+            {% if frame_mode == 'preview' %}
+            <div class="inline-flex rounded-full border border-white/10 bg-white/5 p-1" role="tablist" aria-label="미리보기 viewport">
+                {% for viewport in preview_viewports %}
+                <button
+                    type="button"
+                    class="rounded-full px-3 py-1.5 text-xs font-bold transition {% if viewport.id == preview_default_viewport.id %}bg-emerald-400 text-slate-950 shadow-sm{% else %}text-slate-200 hover:bg-white/10{% endif %}"
+                    data-preview-button
+                    data-preview-mode="{{ viewport.id }}"
+                    data-preview-label="{{ viewport.label }}"
+                    data-preview-width="{{ viewport.width }}"
+                    data-preview-height="{{ viewport.height }}"
+                    aria-pressed="{% if viewport.id == preview_default_viewport.id %}true{% else %}false{% endif %}"
+                >
+                    {{ viewport.label }}
+                </button>
+                {% endfor %}
+            </div>
+            <div class="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-slate-300" data-preview-dimensions>
+                {{ preview_default_viewport.label }} {{ preview_default_viewport.width }}x{{ preview_default_viewport.height }}
+            </div>
+            {% endif %}
+            <div class="text-xs text-slate-300">{{ frame_hint|default:'호스트 화면과 분리된 iframe 실행' }}</div>
+        </div>
     </div>
     {% endif %}
-    <div class="{{ frame_stage_classes|default:'bg-slate-950 aspect-[16/9] min-h-[420px]' }}">
-    <iframe
-        title="{{ frame_title|default:material.title }}"
-        class="{{ iframe_classes|default:'block h-full w-full bg-white' }}"
-        sandbox="{{ iframe_sandbox|default:'allow-downloads allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-scripts' }}"
-        loading="eager"
-        referrerpolicy="no-referrer"
-        src="{{ material_render_url }}"
-        allowfullscreen
-    ></iframe>
+
+    {% if frame_mode == 'preview' %}
+    <div
+        class="overflow-hidden border-t border-white/5 bg-slate-950/90 p-4 md:p-6"
+        data-preview-root
+        data-active-viewport="{{ preview_default_viewport.id }}"
+    >
+        <div class="edu-materials-preview-stage flex h-[clamp(420px,62vh,760px)] w-full items-center justify-center overflow-hidden rounded-[24px] border border-white/10 bg-black/40 p-4 md:p-6" data-preview-stage>
+            <div
+                class="shrink-0 transform-gpu transition-transform duration-200 ease-out"
+                data-preview-viewport
+                style="width: {{ preview_default_viewport.width }}px; height: {{ preview_default_viewport.height }}px; transform: scale(1); transform-origin: center center;"
+            >
+                <iframe
+                    title="{{ frame_title|default:material.title }}"
+                    class="block border-0 bg-white shadow-2xl"
+                    sandbox="{{ iframe_sandbox|default:'allow-downloads allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-scripts' }}"
+                    loading="eager"
+                    referrerpolicy="no-referrer"
+                    src="{{ material_render_url }}"
+                    width="{{ preview_default_viewport.width }}"
+                    height="{{ preview_default_viewport.height }}"
+                    data-preview-iframe
+                    allowfullscreen
+                ></iframe>
+            </div>
+        </div>
     </div>
+    {% else %}
+    <div class="{{ frame_stage_classes|default:'bg-slate-950 h-[100dvh] w-full' }}">
+        <iframe
+            title="{{ frame_title|default:material.title }}"
+            class="{{ iframe_classes|default:'block h-full w-full bg-white' }}"
+            sandbox="{{ iframe_sandbox|default:'allow-downloads allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-scripts' }}"
+            loading="eager"
+            referrerpolicy="no-referrer"
+            src="{{ material_render_url }}"
+            allowfullscreen
+        ></iframe>
+    </div>
+    {% endif %}
 </div>
