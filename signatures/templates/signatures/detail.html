@@ -1,33 +1,68 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ session.title }} - Eduitit{% endblock %}
+{% block title %}{{ session.title }} 참여 현황 - Eduitit{% endblock %}
 
 {% block content %}
 <main class="pt-20 md:pt-28 pb-8 md:pb-16 px-3 md:px-4 min-h-screen">
-    <div class="max-w-5xl mx-auto">
-        <!-- Header -->
-        <div class="mb-3 md:mb-6">
-            <a href="{% url 'signatures:list' %}"
-                class="text-base md:text-xl text-gray-500 hover:text-purple-600 transition">
-                <i class="fa-solid fa-arrow-left mr-1"></i> 목록
+    <div class="max-w-5xl mx-auto space-y-4 md:space-y-6">
+        <div>
+            <a href="{% url 'signatures:list' %}" class="text-sm md:text-base text-slate-500 hover:text-indigo-600 transition">
+                <i class="fa-solid fa-arrow-left mr-1"></i> 요청 목록으로
             </a>
         </div>
 
-        <!-- Messages -->
         {% if messages %}
         {% for message in messages %}
-        <div class="clay-card p-3 md:p-4 mb-3 md:mb-6 bg-green-50 text-green-700 text-base md:text-xl font-bold">
+        <div class="clay-card p-3 md:p-4 bg-green-50 text-green-700 text-base md:text-lg font-bold">
             <i class="fa-solid fa-check-circle mr-2"></i>{{ message }}
         </div>
         {% endfor %}
         {% endif %}
 
-        <!-- Session Info Card -->
-        <div class="clay-card p-4 md:p-6 mb-4 md:mb-6">
+        <section class="overflow-hidden rounded-[2rem] border border-indigo-100 bg-gradient-to-br from-white via-indigo-50 to-sky-50 p-5 md:p-7 shadow-[0_25px_60px_-45px_rgba(79,70,229,0.45)]">
+            <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+                <div class="max-w-2xl">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="rounded-full px-3 py-1 text-xs font-black {% if stage == 'ready' %}bg-sky-100 text-sky-700{% elif stage == 'collecting' %}bg-emerald-100 text-emerald-700{% else %}bg-slate-200 text-slate-700{% endif %}">
+                            {{ stage_badge }}
+                        </span>
+                        <span class="rounded-full bg-white/90 px-3 py-1 text-xs font-bold text-slate-600 shadow-sm">학교 내부 참석 확인용</span>
+                    </div>
+                    <h1 class="mt-4 text-2xl md:text-4xl font-black text-slate-800">{{ hero_title }}</h1>
+                    <p class="mt-3 text-sm md:text-base leading-relaxed text-slate-600">{{ hero_description }}</p>
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        <span class="rounded-full bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm">로그인 없이 참여</span>
+                        <span class="rounded-full bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm">휴대폰으로 바로 서명</span>
+                        {% if can_show_absentees %}
+                        <span class="rounded-full bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm">미참여자 이름 확인 가능</span>
+                        {% elif pending_count or pending_count == 0 %}
+                        <span class="rounded-full bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm">남은 인원 수 확인 가능</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="flex flex-col gap-3 lg:min-w-[320px]">
+                    {% for action in primary_actions %}
+                        {% if action.kind == 'button' %}
+                        <button type="button" onclick="{{ action.onclick }}"
+                            class="{% if action.variant == 'primary' %}bg-indigo-600 text-white hover:bg-indigo-700{% elif action.variant == 'secondary' %}border border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50{% else %}border border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:text-slate-900{% endif %} inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-black transition">
+                            {{ action.label }}
+                        </button>
+                        {% else %}
+                        <a href="{{ action.href }}"
+                            class="{% if action.variant == 'primary' %}bg-indigo-600 text-white hover:bg-indigo-700{% elif action.variant == 'secondary' %}border border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50{% else %}border border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:text-slate-900{% endif %} inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-black transition">
+                            {{ action.label }}
+                        </a>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+
+        <section class="clay-card p-4 md:p-6">
             <div class="flex flex-col lg:flex-row justify-between gap-4">
                 <div class="flex-1">
                     <div class="flex items-center flex-wrap gap-2 mb-3">
-                        <h1 class="text-xl md:text-3xl font-bold text-gray-700">{{ session.title }}</h1>
+                        <h2 class="text-xl md:text-3xl font-bold text-gray-700">{{ session.title }}</h2>
                         <button onclick="toggleActive()" id="statusBadge"
                             class="px-3 py-0.5 text-sm md:text-base rounded-full font-bold transition cursor-pointer {% if session.is_active %}bg-green-100 text-green-600 hover:bg-green-200{% else %}bg-gray-100 text-gray-500 hover:bg-gray-200{% endif %}">
                             <i class="fa-solid fa-circle text-xs mr-1"></i>
@@ -35,17 +70,10 @@
                         </button>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3 text-sm md:text-base text-gray-600">
-                        <p class="flex items-center"><i
-                                class="fa-solid fa-user-tie mr-2 text-purple-400 flex-shrink-0"></i><span
-                                class="truncate">{{ session.instructor }}</span></p>
-                        <p class="flex items-center"><i
-                                class="fa-solid fa-calendar mr-2 text-purple-400 flex-shrink-0"></i><span
-                                class="truncate">{{ session.datetime|date:"m.d H:i" }}</span></p>
-                        <p class="flex items-center"><i
-                                class="fa-solid fa-location-dot mr-2 text-purple-400 flex-shrink-0"></i><span
-                                class="truncate">{{ session.location }}</span></p>
-                        <p class="flex items-center"><i
-                                class="fa-solid fa-pen-nib mr-2 text-purple-400 flex-shrink-0"></i><span>{{signatures.count}}명{% if has_duplicates %}<span class="text-orange-500 text-xs ml-1">(중복)</span>{% endif %}</span></p>
+                        <p class="flex items-center"><i class="fa-solid fa-user-tie mr-2 text-purple-400 flex-shrink-0"></i><span class="truncate">{{ session.instructor }}</span></p>
+                        <p class="flex items-center"><i class="fa-solid fa-calendar mr-2 text-purple-400 flex-shrink-0"></i><span class="truncate">{{ session.datetime|date:"m.d H:i" }}</span></p>
+                        <p class="flex items-center"><i class="fa-solid fa-location-dot mr-2 text-purple-400 flex-shrink-0"></i><span class="truncate">{{ session.location }}</span></p>
+                        <p class="flex items-center"><i class="fa-solid fa-pen-nib mr-2 text-purple-400 flex-shrink-0"></i><span>{{ signature_count }}명{% if has_duplicates %}<span class="text-orange-500 text-xs ml-1">(중복)</span>{% endif %}</span></p>
                     </div>
                     {% if session.description %}
                     <p class="mt-3 text-sm md:text-base text-gray-500">{{ session.description }}</p>
@@ -57,10 +85,7 @@
                         </span>
                         <form method="post" action="{% url 'signatures:sync_roster' uuid=session.uuid %}">
                             {% csrf_token %}
-                            <button
-                                type="submit"
-                                class="px-2.5 py-1 rounded-full bg-purple-100 text-purple-700 hover:bg-purple-200 font-semibold transition"
-                            >
+                            <button type="submit" class="px-2.5 py-1 rounded-full bg-purple-100 text-purple-700 hover:bg-purple-200 font-semibold transition">
                                 명단 다시 가져오기
                             </button>
                         </form>
@@ -82,389 +107,87 @@
                     </a>
                 </div>
             </div>
-        </div>
+        </section>
 
-        <!-- Progress Indicator -->
+        {% if pending_count or pending_count == 0 %}
+        <section id="pendingSummary" class="clay-card p-4 md:p-6 {% if can_show_absentees and pending_count %}bg-amber-50/80{% else %}bg-slate-50/80{% endif %}">
+            <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div>
+                    <p class="text-xs font-black uppercase tracking-[0.18em] text-slate-400">미참여 요약</p>
+                    {% if can_show_absentees %}
+                        {% if pending_count %}
+                        <h2 class="mt-2 text-xl md:text-2xl font-black text-slate-800">아직 서명하지 않은 {{ pending_count }}명이 있습니다.</h2>
+                        <p class="mt-2 text-sm text-slate-500">명단을 연결해 두었기 때문에 이름 기준으로 바로 확인할 수 있습니다.</p>
+                        {% else %}
+                        <h2 class="mt-2 text-xl md:text-2xl font-black text-slate-800">명단 기준으로 모두 서명했습니다.</h2>
+                        <p class="mt-2 text-sm text-slate-500">이제 결과를 저장하거나 마감하면 됩니다.</p>
+                        {% endif %}
+                    {% else %}
+                        {% if pending_count %}
+                        <h2 class="mt-2 text-xl md:text-2xl font-black text-slate-800">예상 참여 인원 기준으로 {{ pending_count }}명이 남았습니다.</h2>
+                        <p class="mt-2 text-sm text-slate-500">명단이 없어서 이름은 보이지 않고, 남은 인원 수만 계산합니다.</p>
+                        {% else %}
+                        <h2 class="mt-2 text-xl md:text-2xl font-black text-slate-800">예상 참여 인원만큼 서명이 완료되었습니다.</h2>
+                        <p class="mt-2 text-sm text-slate-500">필요하면 더 받아도 되고, 지금 상태로 마감할 수도 있습니다.</p>
+                        {% endif %}
+                    {% endif %}
+                </div>
+                {% if can_show_absentees and pending_participants_preview %}
+                <div class="rounded-2xl bg-white/80 px-4 py-4 md:min-w-[260px]">
+                    <p class="text-sm font-black text-slate-800">지금 바로 확인할 이름</p>
+                    <ul class="mt-3 space-y-2 text-sm text-slate-600">
+                        {% for participant in pending_participants_preview %}
+                        <li>{{ participant.name }}{% if participant.display_affiliation %} ({{ participant.display_affiliation }}){% endif %}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+        {% endif %}
+
         {% if session.expected_count %}
-        <div class="clay-card p-4 md:p-6 mb-4 md:mb-6 bg-blue-50/50">
+        <section class="clay-card p-4 md:p-6 bg-blue-50/50">
             <div class="flex items-center justify-between mb-3">
                 <h2 class="text-base md:text-lg font-bold text-gray-700">
                     <i class="fa-solid fa-chart-line text-purple-500 mr-1"></i>진행률
                 </h2>
                 <div class="flex items-center gap-2">
-                    <span class="text-sm md:text-base text-gray-600">
-                        {{ signatures.count }}/{{ session.expected_count }}
-                    </span>
-                    <span class="text-sm md:text-base font-bold text-purple-600">
-                        {% widthratio signatures.count session.expected_count 100 %}%
-                    </span>
-                    {% if signatures.count < session.expected_count %} <span class="text-xl md:text-2xl">⚠️</span>
-                        {% elif signatures.count == session.expected_count %}
-                        <span class="text-xl md:text-2xl">✅</span>
-                        {% else %}
-                        <span class="text-xl md:text-2xl">📝</span>
-                        {% endif %}
+                    <span class="text-sm md:text-base text-gray-600">{{ signature_count }}/{{ session.expected_count }}</span>
+                    <span class="text-sm md:text-base font-bold text-purple-600">{% widthratio signature_count session.expected_count 100 %}%</span>
+                    {% if signature_count < session.expected_count %}
+                    <span class="text-xl md:text-2xl">⚠️</span>
+                    {% elif signature_count == session.expected_count %}
+                    <span class="text-xl md:text-2xl">✅</span>
+                    {% else %}
+                    <span class="text-xl md:text-2xl">📝</span>
+                    {% endif %}
                 </div>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-4 md:h-6">
-                {% widthratio signatures.count session.expected_count 100 as progress %}
+                {% widthratio signature_count session.expected_count 100 as progress %}
                 <div class="bg-purple-500 h-4 md:h-6 rounded-full transition-all" style="width: {{ progress }}%;"></div>
             </div>
-            {% if signatures.count < session.expected_count %} <p
-                class="text-xs md:text-sm text-orange-600 mt-2 text-right">
-                {{ session.expected_count|add:signatures.count|add:"-" }}명 미서명
-                </p>
-                {% elif signatures.count > session.expected_count %}
-                <p class="text-xs md:text-sm text-blue-600 mt-2 text-right">
-                    +{{ signatures.count|add:session.expected_count|add:"-" }}명 추가
-                </p>
-                {% endif %}
-        </div>
+            {% if signature_count < session.expected_count %}
+            <p class="text-xs md:text-sm text-orange-600 mt-2 text-right">{{ session.expected_count|add:signature_count|add:"-" }}명 미서명</p>
+            {% elif signature_count > session.expected_count %}
+            <p class="text-xs md:text-sm text-blue-600 mt-2 text-right">+{{ signature_count|add:session.expected_count|add:"-" }}명 추가</p>
+            {% endif %}
+        </section>
         {% endif %}
 
-        <!-- Unmatched Signatures Warnings -->
-        {% if has_unmatched %}
-        <div class="clay-card p-4 md:p-6 mb-4 md:mb-6 bg-orange-50/50">
+        <section class="clay-card p-4 md:p-6">
             <h2 class="text-base md:text-lg font-bold text-gray-700 mb-2 md:mb-3">
-                <i class="fa-solid fa-triangle-exclamation text-orange-500 mr-1"></i>미매칭 ({{unmatched_suggestions|length }})
+                <i class="fa-solid fa-share-nodes text-purple-500 mr-1"></i>참여 링크
             </h2>
-            <p class="text-xs md:text-sm text-gray-600 mb-3">명단과 연결되지 않은 서명</p>
-            <div class="space-y-4">
-                {% for item in unmatched_suggestions %}
-                <div class="p-4 bg-white rounded-xl shadow-sm border-l-4 border-orange-400">
-                    <div class="flex items-start justify-between mb-3">
-                        <div class="flex-1">
-                            <div class="flex items-center gap-3 mb-2">
-                                <span class="text-xl font-bold text-gray-700">{{ item.signature.participant_name}}</span>
-                                {% if item.signature.display_affiliation %}
-                                <span class="text-gray-500">({{ item.signature.display_affiliation }})</span>
-                                {% endif %}
-                                <span class="text-sm text-gray-400">{{ item.signature.created_at|date:"H:i" }}</span>
-                            </div>
-                            <img src="{{ item.signature.signature_data }}" alt="서명"
-                                class="h-16 max-w-[200px] object-contain border rounded p-1">
-                        </div>
-                    </div>
-                    {% if item.has_matches %}
-                    <div class="mb-3">
-                        <p class="text-sm text-gray-600 mb-2">💡 일치하는 예상 참석자:</p>
-                        <div class="flex flex-wrap gap-2">
-                            {% for participant in item.exact_matches %}
-                            <button onclick="matchSignature('{{ item.signature.id }}', '{{ participant.id }}')"
-                                class="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition text-sm font-bold">
-                                <span>{{ participant.name }}</span>
-                                {% if participant.display_affiliation %}
-                                <span class="font-normal">({{ participant.display_affiliation }})</span>
-                                {% endif %}
-                                <span>와 연결</span>
-                            </button>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% endif %}
-                    <div class="flex gap-2">
-                        {% if unmatched_expected_participants %}
-                        <button
-                            type="button"
-                            onclick="openMatchPicker('{{ item.signature.id }}', '{{ item.signature.participant_name|escapejs }}', '{{ item.signature.display_affiliation|default:''|escapejs }}')"
-                            class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition text-sm font-bold">
-                            <i class="fa-solid fa-link mr-1"></i> 명단에서 찾아 연결
-                        </button>
-                        {% endif %}
-                        <button onclick="deleteSignature('{{ item.signature.pk }}')"
-                            class="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition text-sm font-bold">
-                            <i class="fa-solid fa-trash mr-1"></i> 서명 삭제
-                        </button>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Duplicate Signatures Warnings -->
-        {% if has_duplicates %}
-        <div class="clay-card p-4 md:p-6 mb-4 md:mb-6 bg-yellow-50/50">
-            <h2 class="text-base md:text-lg font-bold text-gray-700 mb-3">
-                <i class="fa-solid fa-copy text-yellow-600 mr-1"></i>중복 서명 ({{ duplicates|length }})
-            </h2>
-            <div class="space-y-4">
-                {% for dup_group in duplicates %}
-                <div class="p-4 bg-white rounded-xl shadow-sm border-l-4 border-yellow-400">
-                    <p class="font-bold text-gray-700 mb-3">
-                        {{ dup_group.0.participant_name }} ({{ dup_group.0.display_affiliation|default:"-" }}) - {{dup_group|length }}번 서명
-                    </p>
-                    <div class="grid md:grid-cols-2 gap-3">
-                        {% for sig in dup_group %}
-                        <div class="p-3 bg-gray-50 rounded-lg flex items-center justify-between">
-                            <div>
-                                <img src="{{ sig.signature_data }}" alt="서명"
-                                    class="h-12 max-w-[150px] object-contain mb-1">
-                                <p class="text-sm text-gray-500">{{ sig.created_at|date:"H:i:s" }}</p>
-                            </div>
-                            <button onclick="deleteSignature('{{ sig.pk }}')"
-                                class="px-3 py-2 bg-red-100 text-red-600 rounded hover:bg-red-200 transition text-sm">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Expected Participants Management -->
-        <div class="clay-card p-4 md:p-6 mb-4 md:mb-6">
-            <div class="flex items-start justify-between mb-3 md:mb-4">
-                <div class="flex-1">
-                    <h2 class="text-base md:text-lg font-bold text-gray-700 mb-1 md:mb-2">
-                        <i class="fa-solid fa-users text-purple-500 mr-1"></i>참석자 명단
-                        <span class="text-sm md:text-base text-gray-400 font-normal">(선택)</span>
-                    </h2>
-                    <p class="text-xs md:text-sm text-gray-600 hidden md:block">
-                        명단을 미리 등록하면 출석 관리가 편리합니다
-                    </p>
-                </div>
-                <button onclick="toggleGuide()" type="button"
-                    class="px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-bold hover:bg-indigo-100 transition flex items-center gap-1 flex-shrink-0">
-                    <i class="fa-solid fa-circle-info text-xs"></i>
-                    <span class="hidden sm:inline">가이드</span>
-                </button>
-            </div>
-
-            {% if can_customize_participant_sort %}
-            <div class="mb-4 rounded-2xl border border-gray-200 bg-gray-50 p-3">
-                <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                    <div>
-                        <p class="text-[11px] font-bold tracking-wide text-gray-500">출력 순서</p>
-                        <p class="mt-1 text-xs text-gray-500">기본은 명단을 넣은 순서 그대로이고, 필요할 때만 바꿔 쓰면 됩니다.</p>
-                    </div>
-                    <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                        {% for value, label in attendance_sort_choices %}
-                        <button
-                            type="button"
-                            onclick="updateAttendanceSortMode('{{ value }}')"
-                            class="rounded-xl px-3 py-2 text-xs md:text-sm font-bold transition {% if attendance_sort_mode == value %}bg-purple-600 text-white shadow-sm{% else %}bg-white text-gray-700 border border-gray-200 hover:border-purple-300 hover:text-purple-700{% endif %}">
-                            {{ label }}
-                        </button>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- 안내 메시지 (토글 가능) -->
-            <div id="participantGuide"
-                class="mb-4 p-3 md:p-4 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl border border-purple-200 hidden">
-                <div class="flex items-start gap-3 mb-3">
-                    <div
-                        class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0">
-                        <i class="fa-solid fa-lightbulb text-white text-sm md:text-base"></i>
-                    </div>
-                    <div class="flex-1">
-                        <h3 class="text-sm md:text-base font-bold text-gray-800 mb-2">언제 사용하나요?</h3>
-                        <div class="space-y-2 text-xs md:text-sm text-gray-700">
-                            <div class="flex items-start gap-2">
-                                <span class="text-green-600 font-bold flex-shrink-0">✓</span>
-                                <p><strong>학교/기업 연수:</strong> 출석 확인 간편</p>
-                            </div>
-                            <div class="flex items-start gap-2">
-                                <span class="text-green-600 font-bold flex-shrink-0">✓</span>
-                                <p><strong>출석률 추적:</strong> 실시간 진행률</p>
-                            </div>
-                            <div class="flex items-start gap-2">
-                                <span class="text-green-600 font-bold flex-shrink-0">✓</span>
-                                <p><strong>오타 감지:</strong> 자동 매칭</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-white rounded-lg p-3 mt-3 border border-purple-100">
-                    <p class="text-xs md:text-sm text-gray-700 mb-2"><strong>사용 방법:</strong></p>
-                    <ol class="space-y-1 text-xs md:text-sm text-gray-600 list-decimal list-inside">
-                        <li>텍스트 입력 또는 파일 업로드</li>
-                        <li>자동 매칭</li>
-                        <li>진행률 확인</li>
-                    </ol>
-                </div>
-            </div>
-
-            <div class="grid md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
-                <!-- Inputs -->
-                <div>
-                    <div class="mb-4 md:mb-6">
-                        <div class="flex items-center justify-between mb-2">
-                            <label class="text-sm md:text-base font-bold">텍스트 입력</label>
-                            <button onclick="fillExample()" type="button"
-                                class="px-2 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-xs md:text-sm font-bold hover:bg-indigo-100 transition flex items-center gap-1">
-                                <i class="fa-solid fa-clipboard-list text-xs"></i>
-                                <span>예시</span>
-                            </button>
-                        </div>
-                        <textarea id="bulkInput" rows="4" placeholder="이름, 소속&#10;예: 홍길동, 1-1"
-                            class="w-full p-3 md:p-4 text-sm md:text-base rounded-xl shadow-clay-inner bg-bg-soft focus:outline-none focus:ring-2 focus:ring-purple-300 resize-none"></textarea>
-                        <button onclick="submitBulkInput()"
-                            class="mt-2 px-4 py-2 md:px-6 md:py-3 text-sm md:text-base bg-purple-500 text-white rounded-xl font-bold hover:bg-purple-600 transition w-full md:w-auto">
-                            <i class="fa-solid fa-plus mr-1"></i> 등록
-                        </button>
-                    </div>
-                    <div class="pt-4 md:pt-6 border-t border-gray-100">
-                        <div class="flex items-center justify-between mb-2">
-                            <label class="text-sm md:text-base font-bold">파일 업로드</label>
-                            <div class="flex gap-1">
-                                <a href="{% url 'signatures:download_template_csv' %}"
-                                    class="px-2 py-1 bg-green-50 text-green-600 rounded-lg text-xs md:text-sm font-bold hover:bg-green-100 transition flex items-center gap-1">
-                                    <i class="fa-solid fa-download text-xs"></i>
-                                    <span>CSV</span>
-                                </a>
-                                <a href="{% url 'signatures:download_template_excel' %}"
-                                    class="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-xs md:text-sm font-bold hover:bg-emerald-100 transition flex items-center gap-1">
-                                    <i class="fa-solid fa-download text-xs"></i>
-                                    <span>Excel</span>
-                                </a>
-                            </div>
-                        </div>
-                        <div class="flex gap-2">
-                            <input type="file" id="participantFile" accept=".csv, .xlsx"
-                                class="flex-1 px-3 py-2 text-xs md:text-sm rounded-xl shadow-clay-inner bg-bg-soft">
-                            <button onclick="uploadFile()"
-                                class="px-4 py-2 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 transition">
-                                <i class="fa-solid fa-upload"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <!-- List -->
-                <div>
-                    <label class="text-sm md:text-base font-bold mb-2 block">명단 (<span
-                            id="participantCount">0</span>)</label>
-                    <div id="participantList"
-                        class="h-48 md:h-64 overflow-y-auto p-3 md:p-4 text-sm md:text-base rounded-xl shadow-clay-inner bg-bg-soft">
-                        <p class="text-gray-400 text-center py-4 md:py-8 text-xs md:text-sm">명단을 등록해주세요</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Affiliation Bulk Correction -->
-        <div class="clay-card p-4 md:p-6 mb-4 md:mb-6">
-            <div class="flex items-center justify-between mb-3">
-                <h2 class="text-base md:text-lg font-bold text-gray-700">
-                    <i class="fa-solid fa-wand-magic-sparkles text-purple-500 mr-1"></i>직위/학년반 일괄 정정
-                </h2>
-                <span class="text-xs md:text-sm text-gray-500">원본 데이터는 보존되고 정정값만 별도 반영됩니다.</span>
-            </div>
-            <div class="grid md:grid-cols-4 gap-3">
-                <div>
-                    <label class="text-xs font-bold text-gray-500">원본 값</label>
-                    <input id="bulkSourceAffiliation" type="text" placeholder="예: 교사 /3-3"
-                        list="affiliationSuggestions"
-                        class="w-full mt-1 px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm">
-                </div>
-                <div>
-                    <label class="text-xs font-bold text-gray-500">정정 값</label>
-                    <input id="bulkCorrectedAffiliation" type="text" placeholder="예: 교사/3-3"
-                        list="affiliationSuggestions"
-                        class="w-full mt-1 px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm">
-                </div>
-                <div>
-                    <label class="text-xs font-bold text-gray-500">대상</label>
-                    <select id="bulkCorrectionTarget" class="w-full mt-1 px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm">
-                        <option value="all">전체(명단+서명)</option>
-                        <option value="participants">명단만</option>
-                        <option value="signatures">서명만</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="text-xs font-bold text-gray-500">사유 (선택)</label>
-                    <input id="bulkCorrectionReason" type="text" placeholder="예: 표기 통일"
-                        class="w-full mt-1 px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm">
-                </div>
-            </div>
-            <div class="mt-3">
-                <button onclick="applyBulkAffiliationCorrection()"
-                    class="px-4 py-2 bg-purple-600 text-white rounded-xl text-sm font-bold hover:bg-purple-700 transition">
-                    일괄 정정 적용
-                </button>
-            </div>
-            {% if affiliation_suggestions %}
-            <datalist id="affiliationSuggestions">
-                {% for option in affiliation_suggestions %}
-                <option value="{{ option }}"></option>
-                {% endfor %}
-            </datalist>
-            {% endif %}
-        </div>
-
-        <!-- Affiliation Correction History -->
-        <div class="clay-card p-4 md:p-6 mb-4 md:mb-6">
-            <div class="flex items-center justify-between mb-3">
-                <h2 class="text-base md:text-lg font-bold text-gray-700">
-                    <i class="fa-solid fa-clock-rotate-left text-purple-500 mr-1"></i>직위/학년반 정정 이력
-                </h2>
-                <span class="text-xs md:text-sm text-gray-500">최근 20건</span>
-            </div>
-            {% if affiliation_correction_logs %}
-            <div class="overflow-x-auto -mx-4 md:mx-0">
-                <table class="w-full text-sm text-left">
-                    <thead class="border-b border-gray-200 text-gray-500">
-                        <tr>
-                            <th class="py-2 px-2 md:px-4 text-xs">시각</th>
-                            <th class="py-2 px-2 md:px-4 text-xs">대상</th>
-                            <th class="py-2 px-2 md:px-4 text-xs">변경</th>
-                            <th class="py-2 px-2 md:px-4 text-xs">사유</th>
-                            <th class="py-2 px-2 md:px-4 text-xs">수정자</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for log in affiliation_correction_logs %}
-                        <tr class="border-b border-gray-100">
-                            <td class="py-2 px-2 md:px-4 text-xs text-gray-500">{{ log.created_at|date:"m.d H:i" }}</td>
-                            <td class="py-2 px-2 md:px-4 text-xs text-gray-700">
-                                {{ log.get_target_type_display }}
-                                {% if log.mode == "bulk" %}
-                                <span class="ml-1 text-[11px] text-purple-500">(일괄)</span>
-                                {% elif log.mode == "script" %}
-                                <span class="ml-1 text-[11px] text-indigo-500">(스크립트)</span>
-                                {% endif %}
-                            </td>
-                            <td class="py-2 px-2 md:px-4 text-xs text-gray-700">
-                                {{ log.before_affiliation|default:"-" }} → {{ log.after_affiliation|default:"-" }}
-                            </td>
-                            <td class="py-2 px-2 md:px-4 text-xs text-gray-600">{{ log.reason|default:"-" }}</td>
-                            <td class="py-2 px-2 md:px-4 text-xs text-gray-500">
-                                {% if log.corrected_by %}
-                                {{ log.corrected_by.username }}
-                                {% else %}
-                                system
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-            <p class="text-sm text-gray-400">아직 정정 이력이 없습니다.</p>
-            {% endif %}
-        </div>
-
-        <!-- Share Link -->
-        <div class="clay-card p-4 md:p-6 mb-4 md:mb-6">
-            <h2 class="text-base md:text-lg font-bold text-gray-700 mb-2 md:mb-3">
-                <i class="fa-solid fa-share-nodes text-purple-500 mr-1"></i>공유 링크
-            </h2>
-            <p class="text-xs md:text-sm text-gray-600 mb-3">공유 링크 기반의 출석·참여 확인용 서명입니다. 제출 IP와 브라우저 정보, 중복/미매칭/반복 IP 이상 징후를 함께 확인하세요.</p>
+            <p class="text-xs md:text-sm text-gray-600 mb-3">참여자는 로그인 없이 링크나 QR로 바로 서명합니다. 이 서명은 학교 내부 확인과 기록용입니다.</p>
             <div class="flex gap-2">
                 <input type="text" id="shareLink" readonly
                     value="{{ share_link }}"
                     class="flex-1 px-3 py-2 md:px-4 md:py-3 text-xs md:text-base rounded-xl shadow-clay-inner bg-bg-soft text-gray-600 truncate">
                 <button onclick="copyLink()"
                     class="px-4 py-2 md:px-6 md:py-3 clay-card text-sm md:text-base font-bold text-purple-600 hover:shadow-clay-hover transition whitespace-nowrap">
-                    <i class="fa-solid fa-copy mr-1"></i><span class="hidden sm:inline">복사</span>
+                    <i class="fa-solid fa-copy mr-1"></i><span class="hidden sm:inline">링크 복사</span>
                 </button>
             </div>
             {% if share_qr_data_url %}
@@ -475,30 +198,27 @@
                     </p>
                     <button type="button" onclick="openQrModal()"
                         class="px-3 py-1.5 bg-white text-purple-700 rounded-lg text-xs md:text-sm font-bold hover:bg-purple-100 transition w-fit">
-                        <i class="fa-solid fa-up-right-and-down-left-from-center mr-1"></i>크게 보기
+                        <i class="fa-solid fa-up-right-and-down-left-from-center mr-1"></i>QR 보기
                     </button>
                 </div>
                 <div class="flex flex-col md:flex-row items-center gap-4">
-                    <img src="{{ share_qr_data_url }}" alt="연수 참여 QR 코드"
+                    <img src="{{ share_qr_data_url }}" alt="서명 요청 참여 QR 코드"
                         class="w-40 h-40 md:w-52 md:h-52 rounded-xl border border-purple-200 bg-white p-2">
                     <p class="text-xs md:text-sm text-gray-600 leading-relaxed">
-                        연수 화면(프로젝터)에 QR을 띄우면 참석자가 휴대폰으로 바로 출석·참여 확인 서명 페이지에 접속할 수 있습니다.
+                        연수 화면이나 회의 프로젝터에 QR을 띄우면 참석자가 휴대폰으로 바로 서명 페이지에 들어올 수 있습니다.
                     </p>
                 </div>
             </div>
             {% endif %}
-        </div>
+        </section>
 
-        <!-- Signature List -->
-        <div class="clay-card p-4 md:p-6">
+        <section id="attendanceSummary" class="clay-card p-4 md:p-6">
             <div class="flex flex-col gap-3 mb-3 md:mb-4 {% if can_customize_signature_sort %}xl:flex-row xl:items-start xl:justify-between{% endif %}">
                 <div>
                     <h2 class="text-base md:text-lg font-bold text-gray-700">
-                        <i class="fa-solid fa-list-check text-purple-500 mr-1"></i>서명 목록 ({{ signatures.count }})
+                        <i class="fa-solid fa-list-check text-purple-500 mr-1"></i>참여 현황 ({{ signature_count }})
                     </h2>
-                    {% if can_customize_signature_sort %}
-                    <p class="mt-1 text-xs md:text-sm text-gray-500">목록과 출력이 같은 순서로 보입니다.</p>
-                    {% endif %}
+                    <p class="mt-1 text-xs md:text-sm text-gray-500">받은 서명은 여기에서 바로 확인하고, 필요하면 출력 순서도 맞출 수 있습니다.</p>
                 </div>
                 {% if can_customize_signature_sort %}
                 <div class="rounded-2xl border border-gray-200 bg-gray-50 p-3">
@@ -596,15 +316,11 @@
                                 <p class="text-[11px] text-gray-400 mt-1">원본: {{ sig.participant_affiliation|default:"-" }}</p>
                                 {% endif %}
                             </td>
-                            <td
-                                class="py-2 px-2 md:px-4 font-bold text-gray-700 text-xs md:text-sm truncate max-w-[80px] md:max-w-none">
-                                {{ sig.participant_name }}</td>
-                            <td class="py-2 px-2 md:px-4"><img src="{{ sig.signature_data }}" alt="서명"
-                                    class="h-6 md:h-10"></td>
+                            <td class="py-2 px-2 md:px-4 font-bold text-gray-700 text-xs md:text-sm truncate max-w-[80px] md:max-w-none">{{ sig.participant_name }}</td>
+                            <td class="py-2 px-2 md:px-4"><img src="{{ sig.signature_data }}" alt="서명" class="h-6 md:h-10"></td>
                             <td class="py-2 px-2 md:px-4 text-gray-500 text-xs md:text-sm hidden sm:table-cell">{{sig.created_at|date:"H:i" }}</td>
                             <td class="py-2 px-2 md:px-4 text-center">
-                                <button onclick="deleteSignature('{{ sig.pk }}')"
-                                    class="text-red-400 hover:text-red-600 p-1">
+                                <button onclick="deleteSignature('{{ sig.pk }}')" class="text-red-400 hover:text-red-600 p-1">
                                     <i class="fa-solid fa-trash text-xs md:text-sm"></i>
                                 </button>
                             </td>
@@ -614,30 +330,356 @@
                 </table>
             </div>
             {% else %}
-            <p class="text-center py-8 md:py-12 text-gray-400 text-sm md:text-base">아직 서명이 없습니다</p>
+            <p class="text-center py-8 md:py-12 text-gray-400 text-sm md:text-base">아직 들어온 서명이 없습니다. 링크 또는 QR을 보내면 여기에서 바로 확인할 수 있습니다.</p>
             {% endif %}
-        </div>
+        </section>
+
+        <details id="managementPanel" class="clay-card p-4 md:p-6" {% if has_unmatched or has_duplicates %}open{% endif %}>
+            <summary class="cursor-pointer list-none flex items-center justify-between gap-3">
+                <div>
+                    <p class="text-base md:text-lg font-black text-slate-800">관리 및 예외 처리</p>
+                    <p class="mt-1 text-xs md:text-sm text-slate-500">명단 연결, 미매칭/중복 처리, 정렬과 직위 정정은 필요할 때만 펼치세요.</p>
+                </div>
+                <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500">펼치기</span>
+            </summary>
+
+            <div class="mt-5 space-y-4 md:space-y-6">
+                {% if has_unmatched %}
+                <div class="rounded-2xl border border-orange-200 bg-orange-50/70 p-4 md:p-6">
+                    <h2 class="text-base md:text-lg font-bold text-gray-700 mb-2 md:mb-3">
+                        <i class="fa-solid fa-triangle-exclamation text-orange-500 mr-1"></i>미매칭 ({{unmatched_suggestions|length }})
+                    </h2>
+                    <p class="text-xs md:text-sm text-gray-600 mb-3">명단과 연결되지 않은 서명</p>
+                    <div class="space-y-4">
+                        {% for item in unmatched_suggestions %}
+                        <div class="p-4 bg-white rounded-xl shadow-sm border-l-4 border-orange-400">
+                            <div class="flex items-start justify-between mb-3">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <span class="text-xl font-bold text-gray-700">{{ item.signature.participant_name}}</span>
+                                        {% if item.signature.display_affiliation %}
+                                        <span class="text-gray-500">({{ item.signature.display_affiliation }})</span>
+                                        {% endif %}
+                                        <span class="text-sm text-gray-400">{{ item.signature.created_at|date:"H:i" }}</span>
+                                    </div>
+                                    <img src="{{ item.signature.signature_data }}" alt="서명" class="h-16 max-w-[200px] object-contain border rounded p-1">
+                                </div>
+                            </div>
+                            {% if item.has_matches %}
+                            <div class="mb-3">
+                                <p class="text-sm text-gray-600 mb-2">💡 일치하는 예상 참석자:</p>
+                                <div class="flex flex-wrap gap-2">
+                                    {% for participant in item.exact_matches %}
+                                    <button onclick="matchSignature('{{ item.signature.id }}', '{{ participant.id }}')"
+                                        class="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition text-sm font-bold">
+                                        <span>{{ participant.name }}</span>
+                                        {% if participant.display_affiliation %}
+                                        <span class="font-normal">({{ participant.display_affiliation }})</span>
+                                        {% endif %}
+                                        <span>와 연결</span>
+                                    </button>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                            <div class="flex gap-2">
+                                {% if unmatched_expected_participants %}
+                                <button
+                                    type="button"
+                                    onclick="openMatchPicker('{{ item.signature.id }}', '{{ item.signature.participant_name|escapejs }}', '{{ item.signature.display_affiliation|default:''|escapejs }}')"
+                                    class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition text-sm font-bold">
+                                    <i class="fa-solid fa-link mr-1"></i> 명단에서 찾아 연결
+                                </button>
+                                {% endif %}
+                                <button onclick="deleteSignature('{{ item.signature.pk }}')"
+                                    class="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition text-sm font-bold">
+                                    <i class="fa-solid fa-trash mr-1"></i> 서명 삭제
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if has_duplicates %}
+                <div class="rounded-2xl border border-yellow-200 bg-yellow-50/70 p-4 md:p-6">
+                    <h2 class="text-base md:text-lg font-bold text-gray-700 mb-3">
+                        <i class="fa-solid fa-copy text-yellow-600 mr-1"></i>중복 서명 ({{ duplicates|length }})
+                    </h2>
+                    <div class="space-y-4">
+                        {% for dup_group in duplicates %}
+                        <div class="p-4 bg-white rounded-xl shadow-sm border-l-4 border-yellow-400">
+                            <p class="font-bold text-gray-700 mb-3">
+                                {{ dup_group.0.participant_name }} ({{ dup_group.0.display_affiliation|default:"-" }}) - {{dup_group|length }}번 서명
+                            </p>
+                            <div class="grid md:grid-cols-2 gap-3">
+                                {% for sig in dup_group %}
+                                <div class="p-3 bg-gray-50 rounded-lg flex items-center justify-between">
+                                    <div>
+                                        <img src="{{ sig.signature_data }}" alt="서명" class="h-12 max-w-[150px] object-contain mb-1">
+                                        <p class="text-sm text-gray-500">{{ sig.created_at|date:"H:i:s" }}</p>
+                                    </div>
+                                    <button onclick="deleteSignature('{{ sig.pk }}')"
+                                        class="px-3 py-2 bg-red-100 text-red-600 rounded hover:bg-red-200 transition text-sm">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 md:p-6">
+                    <div class="flex items-start justify-between mb-3 md:mb-4">
+                        <div class="flex-1">
+                            <h2 class="text-base md:text-lg font-bold text-gray-700 mb-1 md:mb-2">
+                                <i class="fa-solid fa-users text-purple-500 mr-1"></i>참석자 명단
+                                <span class="text-sm md:text-base text-gray-400 font-normal">(선택)</span>
+                            </h2>
+                            <p class="text-xs md:text-sm text-gray-600 hidden md:block">누가 안 했는지 이름으로 보려면 명단을 여기에서 넣으면 됩니다.</p>
+                        </div>
+                        <button onclick="toggleGuide()" type="button"
+                            class="px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-bold hover:bg-indigo-100 transition flex items-center gap-1 flex-shrink-0">
+                            <i class="fa-solid fa-circle-info text-xs"></i>
+                            <span class="hidden sm:inline">가이드</span>
+                        </button>
+                    </div>
+
+                    {% if can_customize_participant_sort %}
+                    <div class="mb-4 rounded-2xl border border-gray-200 bg-gray-50 p-3">
+                        <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                            <div>
+                                <p class="text-[11px] font-bold tracking-wide text-gray-500">출력 순서</p>
+                                <p class="mt-1 text-xs text-gray-500">기본은 명단을 넣은 순서 그대로이고, 필요할 때만 바꿔 쓰면 됩니다.</p>
+                            </div>
+                            <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                                {% for value, label in attendance_sort_choices %}
+                                <button
+                                    type="button"
+                                    onclick="updateAttendanceSortMode('{{ value }}')"
+                                    class="rounded-xl px-3 py-2 text-xs md:text-sm font-bold transition {% if attendance_sort_mode == value %}bg-purple-600 text-white shadow-sm{% else %}bg-white text-gray-700 border border-gray-200 hover:border-purple-300 hover:text-purple-700{% endif %}">
+                                    {{ label }}
+                                </button>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div id="participantGuide" class="mb-4 p-3 md:p-4 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl border border-purple-200 hidden">
+                        <div class="flex items-start gap-3 mb-3">
+                            <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0">
+                                <i class="fa-solid fa-lightbulb text-white text-sm md:text-base"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="text-sm md:text-base font-bold text-gray-800 mb-2">언제 사용하나요?</h3>
+                                <div class="space-y-2 text-xs md:text-sm text-gray-700">
+                                    <div class="flex items-start gap-2">
+                                        <span class="text-green-600 font-bold flex-shrink-0">✓</span>
+                                        <p><strong>교내 연수/회의:</strong> 누가 안 했는지 이름으로 바로 확인</p>
+                                    </div>
+                                    <div class="flex items-start gap-2">
+                                        <span class="text-green-600 font-bold flex-shrink-0">✓</span>
+                                        <p><strong>출석률 추적:</strong> 실시간 진행률과 미참여 인원 확인</p>
+                                    </div>
+                                    <div class="flex items-start gap-2">
+                                        <span class="text-green-600 font-bold flex-shrink-0">✓</span>
+                                        <p><strong>오타 감지:</strong> 들어온 서명과 명단을 자동으로 연결</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-lg p-3 mt-3 border border-purple-100">
+                            <p class="text-xs md:text-sm text-gray-700 mb-2"><strong>사용 방법:</strong></p>
+                            <ol class="space-y-1 text-xs md:text-sm text-gray-600 list-decimal list-inside">
+                                <li>텍스트 입력 또는 파일 업로드로 명단을 넣기</li>
+                                <li>들어온 서명과 명단 연결 상태 확인하기</li>
+                                <li>미참여자나 출력 순서를 필요할 때만 정리하기</li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
+                        <div>
+                            <div class="mb-4 md:mb-6">
+                                <div class="flex items-center justify-between mb-2">
+                                    <label class="text-sm md:text-base font-bold">텍스트 입력</label>
+                                    <button onclick="fillExample()" type="button"
+                                        class="px-2 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-xs md:text-sm font-bold hover:bg-indigo-100 transition flex items-center gap-1">
+                                        <i class="fa-solid fa-clipboard-list text-xs"></i>
+                                        <span>예시</span>
+                                    </button>
+                                </div>
+                                <textarea id="bulkInput" rows="4" placeholder="이름, 소속&#10;예: 홍길동, 1-1"
+                                    class="w-full p-3 md:p-4 text-sm md:text-base rounded-xl shadow-clay-inner bg-bg-soft focus:outline-none focus:ring-2 focus:ring-purple-300 resize-none"></textarea>
+                                <button onclick="submitBulkInput()"
+                                    class="mt-2 px-4 py-2 md:px-6 md:py-3 text-sm md:text-base bg-purple-500 text-white rounded-xl font-bold hover:bg-purple-600 transition w-full md:w-auto">
+                                    <i class="fa-solid fa-plus mr-1"></i> 등록
+                                </button>
+                            </div>
+                            <div class="pt-4 md:pt-6 border-t border-gray-100">
+                                <div class="flex items-center justify-between mb-2">
+                                    <label class="text-sm md:text-base font-bold">파일 업로드</label>
+                                    <div class="flex gap-1">
+                                        <a href="{% url 'signatures:download_template_csv' %}"
+                                            class="px-2 py-1 bg-green-50 text-green-600 rounded-lg text-xs md:text-sm font-bold hover:bg-green-100 transition flex items-center gap-1">
+                                            <i class="fa-solid fa-download text-xs"></i>
+                                            <span>CSV</span>
+                                        </a>
+                                        <a href="{% url 'signatures:download_template_excel' %}"
+                                            class="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-xs md:text-sm font-bold hover:bg-emerald-100 transition flex items-center gap-1">
+                                            <i class="fa-solid fa-download text-xs"></i>
+                                            <span>Excel</span>
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <input type="file" id="participantFile" accept=".csv, .xlsx"
+                                        class="flex-1 px-3 py-2 text-xs md:text-sm rounded-xl shadow-clay-inner bg-bg-soft">
+                                    <button onclick="uploadFile()"
+                                        class="px-4 py-2 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 transition">
+                                        <i class="fa-solid fa-upload"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="text-sm md:text-base font-bold mb-2 block">명단 (<span id="participantCount">0</span>)</label>
+                            <div id="participantList"
+                                class="h-48 md:h-64 overflow-y-auto p-3 md:p-4 text-sm md:text-base rounded-xl shadow-clay-inner bg-bg-soft">
+                                <p class="text-gray-400 text-center py-4 md:py-8 text-xs md:text-sm">명단을 등록해주세요</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-slate-200 bg-white p-4 md:p-6">
+                        <div class="flex items-center justify-between mb-3">
+                            <h2 class="text-base md:text-lg font-bold text-gray-700">
+                                <i class="fa-solid fa-wand-magic-sparkles text-purple-500 mr-1"></i>직위/학년반 일괄 정정
+                            </h2>
+                            <span class="text-xs md:text-sm text-gray-500">원본 데이터는 보존되고 정정값만 별도 반영됩니다.</span>
+                        </div>
+                        <div class="grid md:grid-cols-4 gap-3">
+                            <div>
+                                <label class="text-xs font-bold text-gray-500">원본 값</label>
+                                <input id="bulkSourceAffiliation" type="text" placeholder="예: 교사 /3-3"
+                                    list="affiliationSuggestions"
+                                    class="w-full mt-1 px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm">
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-gray-500">정정 값</label>
+                                <input id="bulkCorrectedAffiliation" type="text" placeholder="예: 교사/3-3"
+                                    list="affiliationSuggestions"
+                                    class="w-full mt-1 px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm">
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-gray-500">대상</label>
+                                <select id="bulkCorrectionTarget" class="w-full mt-1 px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm">
+                                    <option value="all">전체(명단+서명)</option>
+                                    <option value="participants">명단만</option>
+                                    <option value="signatures">서명만</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-gray-500">사유 (선택)</label>
+                                <input id="bulkCorrectionReason" type="text" placeholder="예: 표기 통일"
+                                    class="w-full mt-1 px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm">
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <button onclick="applyBulkAffiliationCorrection()"
+                                class="px-4 py-2 bg-purple-600 text-white rounded-xl text-sm font-bold hover:bg-purple-700 transition">
+                                일괄 정정 적용
+                            </button>
+                        </div>
+                        {% if affiliation_suggestions %}
+                        <datalist id="affiliationSuggestions">
+                            {% for option in affiliation_suggestions %}
+                            <option value="{{ option }}"></option>
+                            {% endfor %}
+                        </datalist>
+                        {% endif %}
+                    </div>
+
+                    <div class="rounded-2xl border border-slate-200 bg-white p-4 md:p-6">
+                        <div class="flex items-center justify-between mb-3">
+                            <h2 class="text-base md:text-lg font-bold text-gray-700">
+                                <i class="fa-solid fa-clock-rotate-left text-purple-500 mr-1"></i>직위/학년반 정정 이력
+                            </h2>
+                            <span class="text-xs md:text-sm text-gray-500">최근 20건</span>
+                        </div>
+                        {% if affiliation_correction_logs %}
+                        <div class="overflow-x-auto -mx-4 md:mx-0">
+                            <table class="w-full text-sm text-left">
+                                <thead class="border-b border-gray-200 text-gray-500">
+                                    <tr>
+                                        <th class="py-2 px-2 md:px-4 text-xs">시각</th>
+                                        <th class="py-2 px-2 md:px-4 text-xs">대상</th>
+                                        <th class="py-2 px-2 md:px-4 text-xs">변경</th>
+                                        <th class="py-2 px-2 md:px-4 text-xs">사유</th>
+                                        <th class="py-2 px-2 md:px-4 text-xs">수정자</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for log in affiliation_correction_logs %}
+                                    <tr class="border-b border-gray-100">
+                                        <td class="py-2 px-2 md:px-4 text-xs text-gray-500">{{ log.created_at|date:"m.d H:i" }}</td>
+                                        <td class="py-2 px-2 md:px-4 text-xs text-gray-700">
+                                            {{ log.get_target_type_display }}
+                                            {% if log.mode == "bulk" %}
+                                            <span class="ml-1 text-[11px] text-purple-500">(일괄)</span>
+                                            {% elif log.mode == "script" %}
+                                            <span class="ml-1 text-[11px] text-indigo-500">(스크립트)</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="py-2 px-2 md:px-4 text-xs text-gray-700">
+                                            {{ log.before_affiliation|default:"-" }} → {{ log.after_affiliation|default:"-" }}
+                                        </td>
+                                        <td class="py-2 px-2 md:px-4 text-xs text-gray-600">{{ log.reason|default:"-" }}</td>
+                                        <td class="py-2 px-2 md:px-4 text-xs text-gray-500">
+                                            {% if log.corrected_by %}
+                                            {{ log.corrected_by.username }}
+                                            {% else %}
+                                            system
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <p class="text-sm text-gray-400">아직 정정 이력이 없습니다.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </details>
     </div>
 </main>
 
-<!-- QR Fullscreen Modal -->
 <div id="qrModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/70">
     <div class="relative w-full max-w-2xl rounded-2xl bg-white p-4 md:p-6 shadow-2xl">
         <button type="button" onclick="closeQrModal()"
             class="absolute right-3 top-3 w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600">
             <i class="fa-solid fa-xmark"></i>
         </button>
-        <h3 class="text-lg md:text-2xl font-black text-gray-800 mb-3">연수 참여 QR</h3>
+        <h3 class="text-lg md:text-2xl font-black text-gray-800 mb-3">서명 요청 QR</h3>
         {% if share_qr_data_url %}
         <div class="flex justify-center">
-            <img src="{{ share_qr_data_url }}" alt="연수 참여 QR 코드(확대)" class="w-72 h-72 md:w-[420px] md:h-[420px] max-w-full">
+            <img src="{{ share_qr_data_url }}" alt="서명 요청 참여 QR 코드(확대)" class="w-72 h-72 md:w-[420px] md:h-[420px] max-w-full">
         </div>
         <p class="text-center text-sm text-gray-500 mt-3 break-all">{{ share_link }}</p>
         {% endif %}
     </div>
 </div>
 
-<!-- Affiliation Correction Modal -->
 <div id="affiliationCorrectionModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/70">
     <div class="relative w-full max-w-lg rounded-2xl bg-white p-5 md:p-6 shadow-2xl">
         <button type="button" onclick="closeAffiliationCorrectionModal()"
@@ -676,6 +718,7 @@
         </div>
     </div>
 </div>
+
 <div id="matchPickerModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/70">
     <div class="relative w-full max-w-2xl rounded-2xl bg-white p-5 md:p-6 shadow-2xl">
         <button type="button" onclick="closeMatchPicker()"
@@ -751,19 +794,33 @@
 
         textarea.value = exampleText;
         textarea.focus();
-
-        // 살짝 애니메이션 효과
         textarea.style.backgroundColor = '#EEF2FF';
         setTimeout(() => {
             textarea.style.backgroundColor = '';
         }, 300);
     }
 
-    function copyLink() {
+    async function copyLink() {
         const input = document.getElementById('shareLink');
-        input.select();
-        navigator.clipboard.writeText(input.value);
-        alert('링크가 복사되었습니다!');
+        if (!input) {
+            alert('복사할 링크를 찾지 못했습니다.');
+            return;
+        }
+
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(input.value);
+            } else {
+                input.focus();
+                input.select();
+                document.execCommand('copy');
+            }
+            alert('링크가 복사되었습니다.');
+        } catch (error) {
+            input.focus();
+            input.select();
+            alert('링크 복사에 실패했습니다. 직접 복사해 주세요.');
+        }
     }
 
     function escapeHtml(value) {
@@ -933,64 +990,103 @@
         modal.classList.remove('flex');
     }
 
-    function toggleActive() {
-        fetch(`/signatures/${sessionUuid}/toggle/`, {
-            method: 'POST',
-            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
-        }).then(res => res.json()).then(data => {
-            const badge = document.getElementById('statusBadge');
-            const text = document.getElementById('statusText');
-            if (data.is_active) {
-                badge.className = 'px-4 py-1 text-lg rounded-full font-bold transition cursor-pointer bg-green-100 text-green-600 hover:bg-green-200';
-                text.textContent = '활성';
-            } else {
-                badge.className = 'px-4 py-1 text-lg rounded-full font-bold transition cursor-pointer bg-gray-100 text-gray-500 hover:bg-gray-200';
-                text.textContent = '비활성';
+    async function toggleActive() {
+        try {
+            const response = await fetch(`/signatures/${sessionUuid}/toggle/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+            });
+            const data = await parseJsonResponse(response);
+            if (!data.success) {
+                alert('상태를 바꾸지 못했습니다. 잠시 후 다시 시도해 주세요.');
+                return;
             }
-        });
+            location.reload();
+        } catch (error) {
+            alert('오류: ' + error.message);
+        }
     }
 
-    function deleteSignature(pk) {
+    async function deleteSignature(pk) {
         if (!confirm('이 서명을 삭제하시겠습니까?')) return;
-        fetch(`/signatures/signature/${pk}/delete/`, {
-            method: 'POST',
-            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
-        }).then(res => res.json()).then(data => {
-            if (data.success) location.reload();
-        });
+        try {
+            const response = await fetch(`/signatures/signature/${pk}/delete/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+            });
+            const data = await parseJsonResponse(response);
+            if (!data.success) {
+                alert('서명을 삭제하지 못했습니다.');
+                return;
+            }
+            location.reload();
+        } catch (error) {
+            alert('오류: ' + error.message);
+        }
     }
 
-    function submitBulkInput() {
+    async function submitBulkInput() {
         const input = document.getElementById('bulkInput');
-        if (!input.value.trim()) return alert('명단을 입력해주세요.');
-        fetch(`/signatures/${sessionUuid}/participants/add/`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
-            body: JSON.stringify({ participants: input.value.trim() })
-        }).then(res => res.json()).then(data => {
-            if (data.success) { alert(data.message); input.value = ''; loadParticipants(); location.reload(); }
-        });
+        if (!input.value.trim()) {
+            alert('명단을 입력해주세요.');
+            return;
+        }
+        try {
+            const response = await fetch(`/signatures/${sessionUuid}/participants/add/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+                body: JSON.stringify({ participants: input.value.trim() }),
+            });
+            const data = await parseJsonResponse(response);
+            if (!data.success) {
+                alert('오류: ' + (data.error || '명단 등록에 실패했습니다.'));
+                return;
+            }
+            alert(data.message || '명단을 등록했습니다.');
+            input.value = '';
+            await loadParticipants();
+            location.reload();
+        } catch (error) {
+            alert('오류: ' + error.message);
+        }
     }
 
-    function uploadFile() {
+    async function uploadFile() {
         const fileInput = document.getElementById('participantFile');
-        if (!fileInput.files[0]) return alert('파일을 선택해주세요.');
+        if (!fileInput.files[0]) {
+            alert('파일을 선택해주세요.');
+            return;
+        }
         const formData = new FormData();
         formData.append('file', fileInput.files[0]);
-        fetch(`/signatures/${sessionUuid}/participants/upload/`, {
-            method: 'POST',
-            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
-            body: formData
-        }).then(res => res.json()).then(data => {
-            if (data.success) { alert(data.message); loadParticipants(); location.reload(); }
-            else alert('오류: ' + data.error);
-        });
+        try {
+            const response = await fetch(`/signatures/${sessionUuid}/participants/upload/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+                body: formData,
+            });
+            const data = await parseJsonResponse(response);
+            if (!data.success) {
+                alert('오류: ' + (data.error || '파일 업로드에 실패했습니다.'));
+                return;
+            }
+            alert(data.message || '명단 파일을 반영했습니다.');
+            await loadParticipants();
+            location.reload();
+        } catch (error) {
+            alert('오류: ' + error.message);
+        }
     }
 
-    function loadParticipants() {
-        fetch(`/signatures/${sessionUuid}/participants/`).then(res => res.json()).then(data => {
-            const list = document.getElementById('participantList');
-            document.getElementById('participantCount').textContent = data.participants.length;
+    async function loadParticipants() {
+        const list = document.getElementById('participantList');
+        const countLabel = document.getElementById('participantCount');
+        if (!list || !countLabel) return;
+
+        try {
+            const response = await fetch(`/signatures/${sessionUuid}/participants/`);
+            const data = await parseJsonResponse(response);
+            countLabel.textContent = data.participants.length;
             if (data.participants.length === 0) {
                 list.innerHTML = '<p class="text-gray-400 text-center py-8">명단을 등록해주세요</p>';
                 return;
@@ -1062,15 +1158,29 @@
                 </div>`;
             });
             list.innerHTML = html + '</div>';
-        });
+        } catch (error) {
+            list.innerHTML = '<p class="text-red-500 text-center py-8">명단을 불러오지 못했습니다.</p>';
+            alert('오류: ' + error.message);
+        }
     }
 
-    function deleteParticipant(id) {
+    async function deleteParticipant(id) {
         if (!confirm('삭제하시겠습니까?')) return;
-        fetch(`/signatures/${sessionUuid}/participants/${id}/delete/`, {
-            method: 'POST',
-            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
-        }).then(res => res.json()).then(data => { if (data.success) loadParticipants(); });
+        try {
+            const response = await fetch(`/signatures/${sessionUuid}/participants/${id}/delete/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+            });
+            const data = await parseJsonResponse(response);
+            if (!data.success) {
+                alert('명단을 삭제하지 못했습니다.');
+                return;
+            }
+            await loadParticipants();
+            location.reload();
+        } catch (error) {
+            alert('오류: ' + error.message);
+        }
     }
 
     function openAffiliationCorrectionModal({ targetType, targetId, currentValue, originalValue }) {
@@ -1112,7 +1222,7 @@
         });
     }
 
-    function submitAffiliationCorrection() {
+    async function submitAffiliationCorrection() {
         const targetType = correctionModalState.targetType;
         const targetId = correctionModalState.targetId;
         if (!targetType || !targetId) return;
@@ -1123,11 +1233,13 @@
             ? `/signatures/${sessionUuid}/signatures/${targetId}/correct-affiliation/`
             : `/signatures/${sessionUuid}/participants/${targetId}/correct-affiliation/`;
 
-        fetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
-            body: JSON.stringify({ corrected_affiliation: correctedAffiliation, reason }),
-        }).then(res => res.json()).then(data => {
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+                body: JSON.stringify({ corrected_affiliation: correctedAffiliation, reason }),
+            });
+            const data = await parseJsonResponse(response);
             if (!data.success) {
                 alert('오류: ' + (data.error || '정정에 실패했습니다.'));
                 return;
@@ -1137,12 +1249,14 @@
                 location.reload();
                 return;
             }
-            loadParticipants();
-            setTimeout(() => location.reload(), 150);
-        });
+            await loadParticipants();
+            location.reload();
+        } catch (error) {
+            alert('오류: ' + error.message);
+        }
     }
 
-    function applyBulkAffiliationCorrection() {
+    async function applyBulkAffiliationCorrection() {
         const sourceAffiliation = document.getElementById('bulkSourceAffiliation').value.trim();
         const correctedAffiliation = document.getElementById('bulkCorrectedAffiliation').value.trim();
         const target = document.getElementById('bulkCorrectionTarget').value;
@@ -1151,23 +1265,27 @@
             alert('원본 값과 정정 값을 모두 입력해 주세요.');
             return;
         }
-        fetch(`/signatures/${sessionUuid}/affiliations/bulk-correct/`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
-            body: JSON.stringify({
-                source_affiliation: sourceAffiliation,
-                corrected_affiliation: correctedAffiliation,
-                target,
-                reason,
-            }),
-        }).then(res => res.json()).then(data => {
+        try {
+            const response = await fetch(`/signatures/${sessionUuid}/affiliations/bulk-correct/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+                body: JSON.stringify({
+                    source_affiliation: sourceAffiliation,
+                    corrected_affiliation: correctedAffiliation,
+                    target,
+                    reason,
+                }),
+            });
+            const data = await parseJsonResponse(response);
             if (!data.success) {
                 alert('오류: ' + (data.error || '일괄 정정에 실패했습니다.'));
                 return;
             }
             alert(`일괄 정정 완료: 총 ${data.updated_total}건 (서명 ${data.updated_signatures}건, 명단 ${data.updated_participants}건)`);
             location.reload();
-        });
+        } catch (error) {
+            alert('오류: ' + error.message);
+        }
     }
 
     async function matchSignature(sigId, partId, confirmMessage = '연결하시겠습니까?') {
@@ -1176,7 +1294,7 @@
             const response = await fetch(`/signatures/${sessionUuid}/signatures/${sigId}/match/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
-                body: JSON.stringify({ participant_id: partId })
+                body: JSON.stringify({ participant_id: partId }),
             });
             const data = await parseJsonResponse(response);
             if (!data.success) {
@@ -1213,6 +1331,7 @@
             });
         }
     });
+
     document.addEventListener('keydown', (event) => {
         if (event.key !== 'Escape') return;
         closeQrModal();

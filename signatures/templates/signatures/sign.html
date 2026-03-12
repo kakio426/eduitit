@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}서명하기 - {{ session.title }}{% endblock %}
+{% block title %}서명 참여 - {{ session.title }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -29,27 +29,31 @@
 
 {% block content %}
 <main class="pt-24 pb-16 px-4 min-h-screen">
-    <div class="max-w-lg mx-auto">
-        <!-- Session Info -->
-        <div class="clay-card p-6 mb-6 text-center">
-            <h1 class="text-3xl font-bold text-gray-700 mb-2">{{ session.title }}</h1>
-            <div class="text-xl text-gray-500 space-y-1">
+    <div class="max-w-xl mx-auto space-y-5">
+        <section class="rounded-[1.75rem] border border-indigo-100 bg-gradient-to-br from-white via-indigo-50 to-sky-50 p-6 text-center shadow-[0_24px_60px_-45px_rgba(79,70,229,0.45)]">
+            <p class="text-sm font-black uppercase tracking-[0.22em] text-indigo-600">서명 참여</p>
+            <h1 class="mt-3 text-3xl font-black text-slate-800">{{ session.title }}</h1>
+            <div class="mt-4 flex flex-wrap justify-center gap-2 text-sm">
+                <span class="rounded-full bg-white px-4 py-2 font-bold text-slate-700 shadow-sm">로그인 없이 참여</span>
+                <span class="rounded-full bg-white px-4 py-2 font-bold text-slate-700 shadow-sm">휴대폰으로 서명 가능</span>
+                <span class="rounded-full bg-white px-4 py-2 font-bold text-slate-700 shadow-sm">학교 내부 기록용</span>
+            </div>
+            <div class="mt-5 space-y-1 text-base text-slate-500">
                 <p><i class="fa-solid fa-user-tie mr-1"></i>{{ session.instructor }}</p>
                 <p><i class="fa-solid fa-calendar mr-1"></i>{{ session.datetime|date:"Y.m.d H:i" }}</p>
                 <p><i class="fa-solid fa-location-dot mr-1"></i>{{ session.location }}</p>
             </div>
-            <div class="mt-4 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
-                이 서명은 연수 출석·참여 확인용으로 기록됩니다. 제출 시 접속 IP와 브라우저 정보가 함께 저장됩니다.
+            <div class="mt-5 rounded-2xl border border-indigo-200 bg-white/80 px-4 py-4 text-sm leading-relaxed text-slate-700">
+                이 서명은 학교 내부 참석 확인과 기록용입니다. 법적 전자서명 용도는 아닙니다.
+                제출 시 접속 IP와 브라우저 정보가 함께 저장됩니다.
             </div>
-        </div>
+        </section>
 
-        <!-- Signature Form -->
-        <form method="post" id="signForm" class="clay-card p-6">
+        <form method="post" id="signForm" class="clay-card rounded-[1.75rem] p-6 md:p-7">
             {% csrf_token %}
 
-            <!-- Position/Class Input -->
             <div class="mb-6">
-                <label class="block text-2xl font-bold text-gray-600 mb-3">
+                <label class="block text-xl md:text-2xl font-black text-slate-700 mb-3">
                     <i class="fa-solid fa-id-card mr-1"></i> 직위/학년반
                 </label>
                 {{ form.participant_affiliation }}
@@ -64,7 +68,7 @@
                     <button
                         type="button"
                         onclick="setAffiliation('{{ option|escapejs }}')"
-                        class="px-3 py-1.5 rounded-full bg-purple-50 text-purple-700 text-sm font-semibold hover:bg-purple-100 transition"
+                        class="px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 text-sm font-semibold hover:bg-indigo-100 transition"
                     >
                         {{ option }}
                     </button>
@@ -73,18 +77,16 @@
                 {% endif %}
             </div>
 
-            <!-- Name Input -->
             <div class="mb-6">
-                <label class="block text-2xl font-bold text-gray-600 mb-3">
+                <label class="block text-xl md:text-2xl font-black text-slate-700 mb-3">
                     <i class="fa-solid fa-user mr-1"></i> 이름
                 </label>
                 {{ form.participant_name }}
             </div>
 
-            <!-- Signature Pad -->
             <div class="mb-6">
                 <div class="flex justify-between items-center mb-3">
-                    <label class="block text-2xl font-bold text-gray-600">
+                    <label class="block text-xl md:text-2xl font-black text-slate-700">
                         <i class="fa-solid fa-signature mr-1"></i> 서명
                     </label>
                     {% if user.is_authenticated %}
@@ -102,10 +104,9 @@
                     </button>
                 </div>
                 {{ form.signature_data }}
-                <p class="text-lg text-gray-400 mt-2 text-center">위 칸에 서명해 주세요</p>
+                <p class="mt-2 text-center text-sm text-slate-500">손가락이나 마우스로 위 칸에 서명해 주세요.</p>
             </div>
 
-            <!-- Saved Signatures Modal -->
             <div id="signatureModal"
                 class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm">
                 <div class="bg-white p-6 rounded-2xl w-full max-w-md shadow-2xl relative">
@@ -115,14 +116,12 @@
                     </button>
                     <h3 class="text-xl font-bold text-gray-800 mb-4">내 서명 보관함</h3>
                     <div id="signatureList" class="grid grid-cols-2 gap-4 max-h-60 overflow-y-auto p-2">
-                        <!-- JS Loaded -->
                     </div>
                 </div>
             </div>
 
-            <!-- Submit -->
             <button type="submit" id="submitBtn"
-                class="w-full clay-card py-4 text-2xl font-bold text-white bg-purple-500 hover:bg-purple-600 transition rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed">
+                class="w-full rounded-2xl bg-indigo-600 py-4 text-xl font-black text-white hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
                 <i class="fa-solid fa-paper-plane mr-2"></i>서명 제출하기
             </button>
         </form>
@@ -131,17 +130,14 @@
 {% endblock %}
 
 {% block extra_js %}
-<!-- Signature Pad Library -->
 <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
 <script>
-    // Initialize Signature Pad
     const canvas = document.getElementById('signaturePad');
     const signaturePad = new SignaturePad(canvas, {
         backgroundColor: 'rgb(248, 249, 250)',
         penColor: 'rgb(30, 30, 30)',
     });
 
-    // Resize canvas to fit container
     function resizeCanvas() {
         const ratio = Math.max(window.devicePixelRatio || 1, 1);
         const wrapper = canvas.parentElement;
@@ -154,7 +150,6 @@
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
-    // Clear signature
     function clearSignature() {
         signaturePad.clear();
     }
@@ -166,12 +161,10 @@
         affiliationInput.focus();
     }
 
-    // Form submission
     document.getElementById('signForm').addEventListener('submit', function (e) {
         const nameInput = document.querySelector('input[name="participant_name"]');
         const signatureInput = document.getElementById('id_signature_data');
 
-        // Validate name
         if (!nameInput.value.trim()) {
             e.preventDefault();
             alert('이름을 입력해 주세요.');
@@ -179,18 +172,15 @@
             return;
         }
 
-        // Validate signature
         if (signaturePad.isEmpty()) {
             e.preventDefault();
             alert('서명을 해 주세요.');
             return;
         }
 
-        // Save signature data
         signatureInput.value = signaturePad.toDataURL('image/png');
     });
 
-    // Load Signatures
     async function loadMySignatures() {
         try {
             const response = await fetch('{% url "signatures:get_my_signatures_api" %}');

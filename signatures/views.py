@@ -564,16 +564,221 @@ def _is_truthy_flag(value, *, default=True):
     return normalized not in {"0", "false", "off", "no", "n"}
 
 
+def _to_datetime_local_input_value(value):
+    if not value:
+        return ""
+    if timezone.is_aware(value):
+        value = timezone.localtime(value)
+    return value.strftime("%Y-%m-%dT%H:%M")
+
+
+def _build_copy_initial_from_session(session):
+    expected_count = session.expected_count or session.expected_participants.count() or ""
+    initial = {
+        "title": session.title,
+        "print_title": session.print_title,
+        "instructor": session.instructor,
+        "location": session.location,
+        "description": session.description,
+        "datetime": _to_datetime_local_input_value(session.datetime),
+        "expected_count": expected_count,
+        "is_active": True,
+    }
+    if session.shared_roster_group_id:
+        initial["shared_roster_group"] = session.shared_roster_group_id
+    return initial
+
+
+def _build_session_stage_payload(session, *, signature_count, pending_count=None, can_show_absentees=False):
+    if pending_count is None:
+        if can_show_absentees:
+            pending_count = session.expected_participants.filter(matched_signature__isnull=True).count()
+        elif session.expected_count:
+            pending_count = max(0, int(session.expected_count) - int(signature_count))
+
+    detail_href = reverse("signatures:detail", kwargs={"uuid": session.uuid})
+    copy_href = f"{reverse('signatures:create')}?copy_from={session.uuid}"
+
+    if not session.is_active:
+        stage = "closed"
+        stage_badge = "마감됨"
+        hero_title = "결과를 확인하세요"
+        if can_show_absentees and pending_count:
+            hero_description = f"미참여 {pending_count}명을 확인하고, 결과를 저장한 뒤 다시 열 수도 있습니다."
+        elif pending_count:
+            hero_description = f"예상 인원 기준으로 아직 {pending_count}명이 남았습니다. 결과를 저장하거나 새 요청으로 복제하세요."
+        else:
+            hero_description = "출력 또는 PDF 저장 후, 같은 형식으로 새 요청을 빠르게 만들 수 있습니다."
+        list_primary_action = {
+            "label": "결과 보기",
+            "href": detail_href,
+        }
+        primary_actions = [
+            {
+                "label": "결과 보기",
+                "kind": "anchor",
+                "href": "#attendanceSummary",
+                "variant": "primary",
+            },
+            {
+                "label": "출력/PDF 저장",
+                "kind": "link",
+                "href": reverse("signatures:print", kwargs={"uuid": session.uuid}),
+                "variant": "secondary",
+            },
+            {
+                "label": "다시 열기",
+                "kind": "button",
+                "onclick": "toggleActive()",
+                "variant": "secondary",
+            },
+            {
+                "label": "복제해서 새로 만들기",
+                "kind": "link",
+                "href": copy_href,
+                "variant": "ghost",
+            },
+        ]
+    elif signature_count == 0:
+        stage = "ready"
+        stage_badge = "공유 준비"
+        hero_title = "이제 참여 링크를 보내세요"
+        hero_description = "참석자는 로그인 없이 참여하고, 휴대폰에서 바로 서명할 수 있습니다."
+        list_primary_action = {
+            "label": "공유 시작",
+            "href": detail_href,
+        }
+        primary_actions = [
+            {
+                "label": "링크 복사",
+                "kind": "button",
+                "onclick": "copyLink()",
+                "variant": "primary",
+            },
+            {
+                "label": "QR 보기",
+                "kind": "button",
+                "onclick": "openQrModal()",
+                "variant": "secondary",
+            },
+            {
+                "label": "참여 현황 보기",
+                "kind": "anchor",
+                "href": "#attendanceSummary",
+                "variant": "ghost",
+            },
+        ]
+    else:
+        stage = "collecting"
+        stage_badge = "진행 중"
+        hero_title = "서명이 들어오고 있어요"
+        if can_show_absentees and pending_count:
+            hero_description = f"미참여 {pending_count}명을 이름으로 바로 확인할 수 있습니다."
+        elif pending_count:
+            hero_description = f"예상 인원 기준으로 아직 {pending_count}명이 남았습니다."
+        else:
+            hero_description = "현재 참여 현황을 보면서 필요할 때 바로 마감할 수 있습니다."
+        list_primary_action = {
+            "label": "참여 현황",
+            "href": detail_href,
+        }
+        pending_action_label = "미참여 보기" if can_show_absentees else "남은 인원 보기"
+        primary_actions = [
+            {
+                "label": "참여 현황",
+                "kind": "anchor",
+                "href": "#attendanceSummary",
+                "variant": "primary",
+            },
+            {
+                "label": pending_action_label,
+                "kind": "anchor",
+                "href": "#pendingSummary" if pending_count is not None else "#attendanceSummary",
+                "variant": "secondary",
+            },
+            {
+                "label": "마감하기",
+                "kind": "button",
+                "onclick": "toggleActive()",
+                "variant": "ghost",
+            },
+        ]
+
+    return {
+        "stage": stage,
+        "stage_badge": stage_badge,
+        "hero_title": hero_title,
+        "hero_description": hero_description,
+        "pending_count": pending_count,
+        "can_show_absentees": can_show_absentees,
+        "list_primary_action": list_primary_action,
+        "primary_actions": primary_actions,
+    }
+
+
 @login_required
 def session_list(request):
     """내가 만든 연수 목록"""
     sessions = TrainingSession.objects.filter(created_by=request.user)
-    return render(request, 'signatures/list.html', {'sessions': sessions})
+    session_cards = []
+    for session in sessions:
+        signature_count = session.signatures.count()
+        can_show_absentees = session.expected_participants.exists()
+        pending_count = (
+            session.expected_participants.filter(matched_signature__isnull=True).count()
+            if can_show_absentees
+            else max(0, int(session.expected_count or 0) - signature_count)
+            if session.expected_count
+            else None
+        )
+        stage_payload = _build_session_stage_payload(
+            session,
+            signature_count=signature_count,
+            pending_count=pending_count,
+            can_show_absentees=can_show_absentees,
+        )
+        session_cards.append(
+            {
+                "session": session,
+                "signature_count": signature_count,
+                "pending_count": pending_count,
+                "can_show_absentees": can_show_absentees,
+                **stage_payload,
+            }
+        )
+
+    example_scenarios = [
+        {
+            "title": "교내 연수 참석 확인",
+            "description": "연수 시작 전에 QR을 띄우고, 끝나면 참여 현황만 바로 확인합니다.",
+        },
+        {
+            "title": "회의 참석 서명",
+            "description": "회의 링크를 단톡방에 보내고 참석 서명을 종이 없이 정리합니다.",
+        },
+        {
+            "title": "전달 연수 수강 확인",
+            "description": "전달 자료와 함께 링크를 보내고 미참여자만 나중에 다시 확인합니다.",
+        },
+    ]
+    return render(
+        request,
+        'signatures/list.html',
+        {
+            'session_cards': session_cards,
+            'example_scenarios': example_scenarios,
+        },
+    )
 
 
 @login_required
 def session_create(request):
     """연수 생성"""
+    copy_from_uuid = (
+        request.POST.get("copy_from_uuid")
+        or request.GET.get("copy_from")
+        or ""
+    ).strip()
     sheetbook_seed_token = (
         request.POST.get("sheetbook_seed_token")
         or request.GET.get("sb_seed")
@@ -590,6 +795,17 @@ def session_create(request):
     prefill_source_label = (str(seed_data.get("source_label") or "").strip() if seed_data else "") or "교무수첩에서 가져온 내용으로 먼저 채워두었어요."
     prefill_origin_label = str(seed_data.get("origin_label") or "").strip() if seed_data else ""
     prefill_origin_url = str(seed_data.get("origin_url") or "").strip() if seed_data else ""
+    copy_source_session = None
+    copy_source_participants = []
+    if copy_from_uuid and not seed_data:
+        copy_source_session = get_object_or_404(
+            TrainingSession,
+            uuid=copy_from_uuid,
+            created_by=request.user,
+        )
+        copy_source_participants = list(
+            copy_source_session.expected_participants.order_by("manual_sort_order", "id")
+        )
 
     prefill_initial = {}
     if seed_data:
@@ -608,6 +824,8 @@ def session_create(request):
             prefill_initial["expected_count"] = int(str(expected_count))
         elif seed_participants:
             prefill_initial["expected_count"] = len(seed_participants)
+    elif copy_source_session:
+        prefill_initial = _build_copy_initial_from_session(copy_source_session)
 
     apply_sheetbook_participants = _is_truthy_flag(
         request.POST.get("apply_sheetbook_participants"),
@@ -634,6 +852,16 @@ def session_create(request):
                         seed_created_count += 1
                     else:
                         seed_skipped_count += 1
+            copied_participant_count = 0
+            if copy_source_session and not seed_participants:
+                for participant in copy_source_participants:
+                    _, was_created = ExpectedParticipant.objects.get_or_create(
+                        training_session=session,
+                        name=participant.name,
+                        affiliation=participant.affiliation,
+                    )
+                    if was_created:
+                        copied_participant_count += 1
             if sheetbook_seed:
                 _pop_sheetbook_seed(
                     request,
@@ -652,29 +880,43 @@ def session_create(request):
                 message_parts.append(f"연결된 서비스에서 참석자 후보 {seed_created_count}명을 반영했습니다.")
             elif seed_participants and apply_sheetbook_participants and seed_skipped_count > 0:
                 message_parts.append("연결된 서비스 참석자 후보는 이미 모두 포함되어 있었어요.")
+            if copied_participant_count > 0:
+                message_parts.append(f"이전 요청 명단 {copied_participant_count}명도 복사했습니다.")
             messages.success(request, " ".join(message_parts))
             return redirect('signatures:detail', uuid=session.uuid)
     else:
         form = TrainingSessionForm(owner=request.user, initial=prefill_initial)
 
     participant_preview = []
-    for participant in seed_participants[:5]:
-        if participant["affiliation"]:
-            participant_preview.append(f"{participant['name']} ({participant['affiliation']})")
+    preview_source = seed_participants
+    if not preview_source and copy_source_participants:
+        preview_source = copy_source_participants
+
+    for participant in preview_source[:5]:
+        if isinstance(participant, dict):
+            participant_name = participant["name"]
+            participant_affiliation = participant["affiliation"]
         else:
-            participant_preview.append(participant["name"])
+            participant_name = participant.name
+            participant_affiliation = participant.display_affiliation
+        if participant_affiliation:
+            participant_preview.append(f"{participant_name} ({participant_affiliation})")
+        else:
+            participant_preview.append(participant_name)
 
     return render(
         request,
         'signatures/create.html',
         {
             'form': form,
+            'copy_from_uuid': copy_from_uuid if copy_source_session else "",
+            'copy_source_session': copy_source_session,
             'sheetbook_seed_token': sheetbook_seed_token if seed_data else "",
             'sheetbook_prefill_active': bool(seed_data),
             'sheetbook_prefill_source_label': prefill_source_label if seed_data else "",
             'sheetbook_prefill_origin_label': prefill_origin_label,
             'sheetbook_prefill_origin_url': prefill_origin_url,
-            'sheetbook_prefill_participants_count': len(seed_participants),
+            'sheetbook_prefill_participants_count': len(seed_participants) or len(copy_source_participants),
             'sheetbook_prefill_participants_preview': participant_preview,
             'apply_sheetbook_participants': apply_sheetbook_participants,
         },
@@ -746,10 +988,25 @@ def session_detail(request, uuid):
             if has_expected_participants
             else []
         )
+        signature_count = signatures.count()
+        pending_count = (
+            len(unmatched_expected_participants)
+            if has_expected_participants
+            else max(0, int(session.expected_count or 0) - signature_count)
+            if session.expected_count
+            else None
+        )
+        stage_payload = _build_session_stage_payload(
+            session,
+            signature_count=signature_count,
+            pending_count=pending_count,
+            can_show_absentees=has_expected_participants,
+        )
 
         return render(request, 'signatures/detail.html', {
             'session': session,
             'signatures': signatures,
+            'signature_count': signature_count,
             'signature_rows': signature_rows,
             'attendance_sort_mode': attendance_sort_mode,
             'attendance_sort_choices': attendance_sort_choices,
@@ -767,6 +1024,8 @@ def session_detail(request, uuid):
             'share_qr_data_url': share_qr_data_url,
             'affiliation_suggestions': _build_affiliation_suggestions(session),
             'affiliation_correction_logs': correction_logs,
+            'pending_participants_preview': unmatched_expected_participants[:5],
+            **stage_payload,
         })
     except Exception as e:
         traceback.print_exc()
