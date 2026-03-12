@@ -117,8 +117,117 @@
                     {% include 'core/partials/home_calendar_panel.html' %}
                 </section>
 
-                {% if mini_app_entries %}
-                {% include 'core/includes/home_mini_app_rail.html' with mini_app_entries=mini_app_entries %}
+                {% if today_try_cards %}
+                <section class="mb-8" data-home-v2-try-now="true">
+                    <div class="mb-4">
+                        <h2 class="text-lg md:text-xl font-black text-slate-900 flex items-center gap-2">
+                            <i class="fa-solid fa-bolt text-amber-500"></i>
+                            오늘 바로 써보기
+                        </h2>
+                        <p class="mt-1 text-sm text-slate-500">지금 바로 여는 대표 작업만 앞에 둡니다.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2" data-home-v2-try-now-grid="true">
+                        {% for item in today_try_cards %}
+                        <article
+                            class="product-card group relative min-h-[164px] cursor-pointer rounded-[2rem] border border-slate-200 bg-white px-5 py-5 shadow-sm transition-all hover:border-indigo-200 hover:shadow-md"
+                            data-home-v2-try-now-card="primary"
+                            data-product-id="{{ item.product_id }}"
+                            data-launch-href="{{ item.href }}"
+                            data-launch-external="{{ item.is_external|yesno:'true,false' }}"
+                            data-track="mini_card"
+                            data-track-label="{{ item.track_label }}"
+                            role="button"
+                            tabindex="0"
+                        >
+                            <div class="flex items-start gap-3">
+                                <div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-lg shadow-sm {{ item.icon_color_class }}">
+                                    {% if "fa-" in item.icon %}
+                                    <i class="{{ item.icon }}"></i>
+                                    {% else %}
+                                    {{ item.icon }}
+                                    {% endif %}
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <h3 class="text-xl font-black leading-7 text-slate-900 transition-colors group-hover:text-indigo-600">{{ item.title }}</h3>
+                                    <p class="mt-2 text-sm leading-6 text-slate-500">{{ item.description }}</p>
+                                </div>
+                            </div>
+                            <div class="mt-6 flex items-end justify-between gap-3">
+                                <div class="flex min-w-0 flex-wrap items-center gap-2">
+                                    {% if item.access_status_label %}
+                                    <span class="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-1 text-[10px] font-black text-indigo-700">{{ item.access_status_label }}</span>
+                                    {% endif %}
+                                </div>
+                                <span class="inline-flex items-center gap-1 text-sm font-black text-indigo-600">
+                                    바로 열기
+                                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                </span>
+                            </div>
+                        </article>
+                        {% endfor %}
+                    </div>
+
+                    {% if today_try_support_cards %}
+                    <div class="mt-5" data-home-v2-try-now-support="true">
+                        <p class="mb-3 text-xs font-black uppercase tracking-[0.18em] text-slate-400">보조 실행</p>
+                        <div class="grid grid-cols-1 gap-3 md:grid-cols-2" data-home-v2-try-now-support-grid="true">
+                            {% for item in today_try_support_cards %}
+                            <article
+                                class="product-card group relative min-h-[132px] cursor-pointer rounded-[1.75rem] border border-slate-200 bg-slate-50 px-5 py-4 shadow-sm transition-all hover:border-indigo-200 hover:bg-white hover:shadow-md"
+                                data-home-v2-try-now-card="support"
+                                data-product-id="{{ item.product_id }}"
+                                data-launch-href="{{ item.href }}"
+                                data-launch-external="{{ item.is_external|yesno:'true,false' }}"
+                                data-track="mini_card"
+                                data-track-label="{{ item.track_label }}"
+                                role="button"
+                                tabindex="0"
+                            >
+                                <div class="flex items-start gap-3">
+                                    <div class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-white text-lg shadow-sm {{ item.icon_color_class }}">
+                                        {% if "fa-" in item.icon %}
+                                        <i class="{{ item.icon }}"></i>
+                                        {% else %}
+                                        {{ item.icon }}
+                                        {% endif %}
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <h3 class="text-lg font-black leading-6 text-slate-900 transition-colors group-hover:text-indigo-600">{{ item.title }}</h3>
+                                        <p class="mt-2 text-sm leading-6 text-slate-500 line-clamp-2">{{ item.description }}</p>
+                                    </div>
+                                </div>
+                                <div class="mt-4 flex items-center justify-between gap-3">
+                                    <div class="flex min-w-0 flex-wrap items-center gap-2">
+                                        {% if item.access_status_label %}
+                                        <span class="inline-flex items-center rounded-full bg-white px-2.5 py-1 text-[10px] font-black text-slate-500">{{ item.access_status_label }}</span>
+                                        {% endif %}
+                                    </div>
+                                    <span class="inline-flex items-center gap-1 text-xs font-black text-indigo-600">
+                                        바로 열기
+                                        <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                    </span>
+                                </div>
+                            </article>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </section>
+                {% endif %}
+
+                <section class="mb-6" data-home-v2-service-groups="true">
+                    {% include 'core/includes/purpose_sections.html' with sections=primary_display_sections|default:sections %}
+                </section>
+
+                <div class="mb-6" data-home-v2-game-section="true">
+                    {% include 'core/includes/game_banner.html' with games=games %}
+                </div>
+
+                {% if secondary_display_sections|default:aux_sections %}
+                <section class="mb-6" data-home-v2-service-groups="true">
+                    {% include 'core/includes/purpose_sections.html' with sections=secondary_display_sections|default:aux_sections %}
+                </section>
                 {% endif %}
 
                 <section class="mb-6 hidden md:block xl:hidden" data-home-v2-tablet-community-summary="true">
@@ -182,22 +291,6 @@
                         </div>
                     </div>
                 </section>
-
-                {% include 'core/includes/home_try_now_cards.html' %}
-
-                <section class="mb-6" data-home-v2-service-groups="true">
-                    {% include 'core/includes/purpose_sections.html' with sections=primary_display_sections|default:sections %}
-                </section>
-
-                <div class="mb-6" data-home-v2-game-section="true">
-                    {% include 'core/includes/game_banner.html' with games=games %}
-                </div>
-
-                {% if secondary_display_sections|default:aux_sections %}
-                <section class="mb-6" data-home-v2-service-groups="true">
-                    {% include 'core/includes/purpose_sections.html' with sections=secondary_display_sections|default:aux_sections %}
-                </section>
-                {% endif %}
             </div>
 
             <!-- 모바일 전용 SNS 미리보기 -->

@@ -80,8 +80,6 @@ document.addEventListener('DOMContentLoaded', () => {
             <!-- 모바일/태블릿 SNS 미리보기 -->
             {% include 'core/partials/sns_mobile_preview_panel.html' with root_class='block xl:hidden mt-6 md:mt-0 px-1 mb-6' section_id='sns-full-section-v2' data_aos='fade-up' start_open='false' %}
 
-            {% include 'core/includes/home_try_now_cards.html' %}
-
             <!-- 목적별 섹션 -->
             <div class="mb-6" data-aos="fade-up" data-aos-delay="50" data-home-v2-service-groups="true">
                 {% include 'core/includes/purpose_sections.html' with sections=primary_display_sections|default:sections %}

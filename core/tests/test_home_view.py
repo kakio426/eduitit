@@ -190,6 +190,29 @@ class HomeV2ViewTest(TestCase):
         )
         return notice, collect
 
+    def _create_try_now_support_products(self):
+        qr = Product.objects.create(
+            title="수업 QR 생성기",
+            description="QR 생성",
+            price=0,
+            is_active=True,
+            is_guest_allowed=True,
+            service_type='classroom',
+            launch_route_name='qrgen:landing',
+            icon='fa-solid fa-qrcode',
+        )
+        prompt = Product.objects.create(
+            title="AI 프롬프트 레시피",
+            description="프롬프트 추천",
+            price=0,
+            is_active=True,
+            is_guest_allowed=True,
+            service_type='edutech',
+            launch_route_name='prompt_lab',
+            icon='fa-solid fa-wand-magic-sparkles',
+        )
+        return qr, prompt
+
     def test_v2_anonymous_200(self):
         """V2 비로그인 홈 200 응답"""
         response = self.client.get(reverse('home'))
@@ -208,23 +231,15 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
         self.assertIn('로그인하고 시작하기', content)
 
-    def test_v2_anonymous_renders_today_try_now_notice_and_collect_cards(self):
-        notice, collect = self._create_try_now_products()
+    def test_v2_anonymous_does_not_render_today_try_now_section(self):
+        self._create_try_now_products()
+        self._create_try_now_support_products()
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('data-home-v2-try-now="true"', content)
-        self.assertIn('오늘 바로 써보기', content)
-        self.assertIn('알림장 멘트', content)
-        self.assertIn('간편 수합', content)
-        self.assertIn(f'data-product-id="{notice.id}"', content)
-        self.assertIn(f'data-product-id="{collect.id}"', content)
-        self.assertIn(f'data-launch-href="{reverse("noticegen:main")}"', content)
-        self.assertIn(f'data-launch-href="{reverse("collect:landing")}"', content)
-        self.assertIn('data-home-v2-try-now-grid="true"', content)
-        self.assertIn('grid-cols-1', content)
-        self.assertIn('md:grid-cols-2', content)
+        self.assertNotIn('data-home-v2-try-now="true"', content)
+        self.assertNotIn('data-home-v2-try-now-grid="true"', content)
 
     def test_v2_anonymous_keeps_guest_home_without_mini_app_rail(self):
         response = self.client.get(reverse('home'))
@@ -300,8 +315,9 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('dayEventsModalOpen', content)
         self.assertNotIn('개인 캘린더', content)
 
-    def test_v2_authenticated_places_today_try_now_between_top_zone_and_service_groups(self):
-        self._create_try_now_products()
+    def test_v2_authenticated_places_single_today_try_now_section_between_top_zone_and_service_groups(self):
+        notice, collect = self._create_try_now_products()
+        qr, prompt = self._create_try_now_support_products()
         self._login('trynowuser')
 
         response = self.client.get(reverse('home'))
@@ -310,11 +326,25 @@ class HomeV2ViewTest(TestCase):
         top_zone_index = content.index('data-home-v2-top-zone="true"')
         try_now_index = content.index('data-home-v2-try-now="true"')
         services_index = content.index('data-home-v2-service-groups="true"')
+        try_now_markup = content[try_now_index:services_index]
 
         self.assertLess(top_zone_index, try_now_index)
         self.assertLess(try_now_index, services_index)
-        self.assertIn(f'data-launch-href="{reverse("noticegen:main")}"', content)
-        self.assertIn(f'data-launch-href="{reverse("collect:landing")}"', content)
+        self.assertEqual(content.count('data-home-v2-try-now="true"'), 1)
+        self.assertIn(f'data-product-id="{notice.id}"', try_now_markup)
+        self.assertIn(f'data-product-id="{collect.id}"', try_now_markup)
+        self.assertIn(f'data-product-id="{qr.id}"', try_now_markup)
+        self.assertIn(f'data-product-id="{prompt.id}"', try_now_markup)
+        self.assertIn(f'data-launch-href="{reverse("noticegen:main")}"', try_now_markup)
+        self.assertIn(f'data-launch-href="{reverse("collect:landing")}"', try_now_markup)
+        self.assertIn(f'data-launch-href="{reverse("qrgen:landing")}"', try_now_markup)
+        self.assertIn(f'data-launch-href="{reverse("prompt_lab")}"', try_now_markup)
+        self.assertIn('data-home-v2-try-now-grid="true"', try_now_markup)
+        self.assertIn('data-home-v2-try-now-support-grid="true"', try_now_markup)
+        self.assertIn('md:grid-cols-2', try_now_markup)
+        self.assertNotIn('overflow-x-auto', try_now_markup)
+        self.assertNotIn('quick-scroll', try_now_markup)
+        self.assertNotIn('파일럿 3종', try_now_markup)
 
     @override_settings(
         FEATURE_MESSAGE_CAPTURE_ENABLED=True,
@@ -354,7 +384,7 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('수합·서명', content)
         self.assertIn('문서·작성', content)
 
-    def test_v2_authenticated_orders_tablet_summary_before_services_and_game(self):
+    def test_v2_authenticated_orders_tablet_summary_after_services_and_game(self):
         self._login('tabletorder')
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
@@ -365,43 +395,8 @@ class HomeV2ViewTest(TestCase):
         game_index = content.index('data-home-v2-game-section="true"')
 
         self.assertLess(top_zone_index, summary_index)
-        self.assertLess(summary_index, service_index)
         self.assertLess(service_index, game_index)
-
-    def test_v2_authenticated_renders_mini_app_rail_below_top_zone_and_before_services(self):
-        self._login('minirailuser')
-        response = self.client.get(reverse('home'))
-        content = response.content.decode('utf-8')
-
-        top_zone_index = content.index('data-home-v2-top-zone="true"')
-        mini_rail_index = content.index('data-home-v2-mini-app-rail="true"')
-        summary_index = content.index('data-home-v2-tablet-community-summary="true"')
-        service_index = content.index('data-home-v2-service-groups="true"')
-
-        self.assertLess(top_zone_index, mini_rail_index)
-        self.assertLess(mini_rail_index, summary_index)
-        self.assertLess(mini_rail_index, service_index)
-
-    def test_v2_authenticated_mini_app_rail_renders_three_pilot_shells(self):
-        self._login('miniappuser')
-        response = self.client.get(reverse('home'))
-        content = response.content.decode('utf-8')
-
-        self.assertIn('data-home-surface="action"', content)
-        self.assertIn('data-home-action-grid="true"', content)
-        self.assertNotIn('home-mini-app-track-wrap', content)
-        self.assertContains(response, 'data-home-mini-app-key="noticegen"', count=1, html=False)
-        self.assertContains(response, 'data-home-mini-app-key="qrgen"', count=1, html=False)
-        self.assertContains(response, 'data-home-mini-app-key="prompt_lab"', count=1, html=False)
-        self.assertContains(response, 'data-home-action-card-variant="starter"', count=1, html=False)
-        self.assertContains(response, 'data-home-action-card-variant="quick"', count=2, html=False)
-        self.assertContains(response, 'data-mini-app-action="open_full"', count=3, html=False)
-        self.assertContains(response, 'data-mini-app-action="run"', count=2, html=False)
-        self.assertIn(reverse('noticegen:generate_mini'), content)
-        self.assertIn('createQrgenSingleLinkMiniApp', content)
-        self.assertIn('createHomePromptLabMiniApp', content)
-        self.assertIn('home-action-card--starter', content)
-        self.assertIn('home-action-card--quick', content)
+        self.assertLess(game_index, summary_index)
 
     def test_v2_authenticated_does_not_render_show_all_toggle(self):
         """V2 로그인 홈에서도 전체 서비스 보기 토글 미노출"""

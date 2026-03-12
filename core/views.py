@@ -41,7 +41,6 @@ from .service_launcher import (
     resolve_home_section_key as _resolve_home_section_key,
     resolve_product_launch_url as _resolve_product_launch_url,
 )
-from .mini_apps import build_home_mini_app_entries
 from .prompt_lab_data import get_prompt_lab_catalog
 from .seo import (
     build_home_page_seo,
@@ -441,6 +440,7 @@ HOME_TRY_NOW_CARD_SPECS = [
         "preferred_routes": ["noticegen:main"],
         "fallback_route": "noticegen:main",
         "service_type": "work",
+        "is_guest_allowed": False,
     },
     {
         "key": "collect",
@@ -451,6 +451,31 @@ HOME_TRY_NOW_CARD_SPECS = [
         "preferred_routes": ["collect:landing"],
         "fallback_route": "collect:landing",
         "service_type": "collect_sign",
+        "is_guest_allowed": True,
+    },
+]
+
+HOME_TRY_NOW_SUPPORT_CARD_SPECS = [
+    {
+        "key": "qrgen",
+        "service_name": "수업 QR 생성기",
+        "title": "수업 QR 생성기",
+        "description": "수업 링크를 QR로 바로 엽니다.",
+        "icon": "fa-solid fa-qrcode",
+        "preferred_routes": ["qrgen:landing"],
+        "fallback_route": "qrgen:landing",
+        "service_type": "classroom",
+        "is_guest_allowed": True,
+    },
+    {
+        "key": "prompt",
+        "service_name": "AI 프롬프트 레시피",
+        "title": "AI 프롬프트 레시피",
+        "description": "검증된 프롬프트를 바로 꺼내 씁니다.",
+        "icon": "fa-solid fa-wand-magic-sparkles",
+        "preferred_routes": ["prompt_lab", "prompt_recipe:main"],
+        "fallback_route": "prompt_lab",
+        "service_type": "edutech",
         "is_guest_allowed": True,
     },
 ]
@@ -1541,9 +1566,9 @@ def _home_card_icon_color_class(service_type):
     return color_map.get(service_type, "text-slate-500")
 
 
-def _build_home_try_now_cards(product_list):
+def _build_home_try_now_card_entries(product_list, specs):
     cards = []
-    for spec in HOME_TRY_NOW_CARD_SPECS:
+    for spec in specs:
         product = _find_product_by_routes(product_list, spec.get("preferred_routes"))
         href = getattr(product, "launch_href", "") if product else ""
         is_external = bool(getattr(product, "launch_is_external", False)) if product else False
@@ -1576,6 +1601,14 @@ def _build_home_try_now_cards(product_list):
             }
         )
     return cards
+
+
+def _build_home_try_now_cards(product_list):
+    return _build_home_try_now_card_entries(product_list, HOME_TRY_NOW_CARD_SPECS)
+
+
+def _build_home_try_now_support_cards(product_list):
+    return _build_home_try_now_card_entries(product_list, HOME_TRY_NOW_SUPPORT_CARD_SPECS)
 
 
 def _build_home_guest_start_cards(product_list):
@@ -1859,6 +1892,7 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
     """Feature flag on 시 호출되는 V2 홈."""
     product_list = _attach_product_launch_meta(list(products))
     today_try_cards = _build_home_try_now_cards(product_list)
+    today_try_support_cards = _build_home_try_now_support_cards(product_list)
     sections, aux_sections, games = get_purpose_sections(
         product_list,
         preview_limit=2,
@@ -1921,19 +1955,12 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
         workbench_slots = _build_workbench_slots(favorite_items)
         recent_items = _build_product_link_items(recent_products, include_section_meta=True)
         discovery_items = _build_product_link_items(discovery_products, include_section_meta=True)
-        mini_app_entries = build_home_mini_app_entries(product_list)
         calendar_hub = _build_home_calendar_hub_context(request)
         workbench_bundles = _get_user_workbench_bundles(request.user, product_list)
         weekly_bundle_items = _get_weekly_workbench_bundle_highlights(request.user, product_list)
         today_context = _build_today_context(request)
         home_calendar_summary = next(iter(today_context.get('today_items', [])), None)
         home_sections = [*sections, *aux_sections]
-        home_surfaces = {
-            'workbench': {'key': 'workbench', 'label': '오늘 할 일, 즐겨찾기, 캘린더'},
-            'action': {'key': 'action', 'entries': mini_app_entries},
-            'service-board': {'key': 'service-board', 'label': '목적별 서비스 보드'},
-            'content': {'key': 'content', 'label': '소통과 읽을거리'},
-        }
         home_v2_frontend_config = {
             'toggleFavoriteUrl': reverse('toggle_product_favorite'),
             'trackUsageUrl': reverse('track_product_usage'),
@@ -1955,8 +1982,6 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
             'games': games,
             'quick_actions': quick_action_items,
             'favorite_items': favorite_items,
-            'mini_app_entries': mini_app_entries,
-            'home_surfaces': home_surfaces,
             'workbench_slots': workbench_slots,
             'favorite_product_ids': [p.id for p in favorite_products],
             'recent_items': recent_items,
@@ -1967,6 +1992,7 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
             'calendar_hub': calendar_hub,
             'home_calendar_summary': home_calendar_summary,
             'today_try_cards': today_try_cards,
+            'today_try_support_cards': today_try_support_cards,
             'home_v2_frontend_config': home_v2_frontend_config,
             'community_summary': community_summary,
             'posts': posts,
@@ -1987,7 +2013,6 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
         'primary_display_sections': primary_display_sections,
         'secondary_display_sections': secondary_display_sections,
         'games': games,
-        'today_try_cards': today_try_cards,
         'community_summary': community_summary,
         'posts': posts,
         'page_obj': page_obj,
