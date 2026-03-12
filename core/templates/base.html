@@ -186,7 +186,12 @@
 
                     {% if has_hs_classrooms %}
                     <!-- 현재 학급 단축키 -->
-                    <div class="relative flex-shrink-0" x-data="classroomPicker()" @click.away="open = false" x-init="init()">
+                    <div class="relative flex-shrink-0"
+                        x-data="classroomPicker()"
+                        data-classrooms="{{ hs_classrooms_payload|escape }}"
+                        data-current-classroom="{{ active_classroom_name_payload|escape }}"
+                        @click.outside="open = false"
+                        x-init="init()">
                         <button id="classroomMenuBtn" type="button" @click.stop="open = !open"
                             class="flex items-center gap-2 px-4 py-2 rounded-full shadow-clay-inner bg-[#E0E5EC]/50 hover:bg-white/50 transition-all font-bold text-gray-700 text-sm xl:text-base"
                             :title="current ? '현재 학급: ' + current + ' (로그인 시 자동 선택)' : '기본 학급을 선택하면 로그인 직후 자동으로 적용됩니다.'">
@@ -233,7 +238,7 @@
                     {% endif %}
 
                     <!-- User Dropdown -->
-                    <div class="relative flex-shrink-0" x-data="{ open: false }" @click.away="open = false">
+                    <div class="relative flex-shrink-0" x-data="{ open: false }" @click.outside="open = false">
                         <button id="userMenuBtn" type="button" @click.stop="open = !open" onclick="if(!window.Alpine){toggleDesktopMenu()}"
                             class="flex items-center gap-3 px-4 py-2 rounded-full shadow-clay-inner bg-[#E0E5EC]/50 hover:bg-white/50 transition-all font-bold text-gray-700">
                             <div
@@ -374,7 +379,11 @@
 
                     {% if has_hs_classrooms %}
                     <!-- 모바일 학급 단축키 -->
-                    <div x-data="classroomPicker()" x-init="init()" class="py-2 border-b border-gray-200/50">
+                    <div x-data="classroomPicker()"
+                        data-classrooms="{{ hs_classrooms_payload|escape }}"
+                        data-current-classroom="{{ active_classroom_name_payload|escape }}"
+                        x-init="init()"
+                        class="py-2 border-b border-gray-200/50">
                         <div class="px-3 mb-2">
                             <p class="text-sm text-slate-600 font-extrabold">현재 학급 단축키</p>
                             <p class="text-xs text-slate-500 font-medium mt-0.5">선택 시 로그인 직후 자동 적용되고, 별빛 추첨기·우리반BTI 명단에도 반영됩니다.</p>

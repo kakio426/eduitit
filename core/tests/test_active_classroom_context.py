@@ -1,4 +1,5 @@
 import uuid
+import json
 
 from django.contrib.auth.models import AnonymousUser, User
 from django.contrib.sessions.middleware import SessionMiddleware
@@ -35,6 +36,8 @@ class ActiveClassroomContextTest(TestCase):
         self.assertIsNone(context["default_classroom_id"])
         self.assertFalse(context["has_hs_classrooms"])
         self.assertEqual(context["hs_classrooms_json"], [])
+        self.assertEqual(context["hs_classrooms_payload"], "[]")
+        self.assertEqual(context["active_classroom_name_payload"], "null")
 
     def test_authenticated_user_gets_classroom_list_not_string(self):
         classroom = HSClassroom.objects.create(teacher=self.user, name="3학년 2반")
@@ -48,6 +51,8 @@ class ActiveClassroomContextTest(TestCase):
         self.assertTrue(context["has_hs_classrooms"])
         self.assertIsInstance(context["hs_classrooms_json"], list)
         self.assertEqual(context["hs_classrooms_json"][0]["name"], "3학년 2반")
+        self.assertEqual(json.loads(context["hs_classrooms_payload"])[0]["name"], "3학년 2반")
+        self.assertEqual(json.loads(context["active_classroom_name_payload"]), "3학년 2반")
 
     def test_invalid_selected_classroom_clears_session(self):
         HSClassroom.objects.create(teacher=self.user, name="4학년 1반")
@@ -74,3 +79,5 @@ class ActiveClassroomContextTest(TestCase):
         self.assertEqual(context["default_classroom_id"], str(classroom.id))
         self.assertEqual(request.session["active_classroom_source"], "hs")
         self.assertEqual(request.session["active_classroom_id"], str(classroom.id))
+        self.assertEqual(json.loads(context["hs_classrooms_payload"])[0]["name"], "4학년 2반")
+        self.assertEqual(json.loads(context["active_classroom_name_payload"]), "4학년 2반")

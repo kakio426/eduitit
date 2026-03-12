@@ -47,3 +47,6 @@ class UIAuthTestCase(TestCase):
         self.assertContains(response, 'id="classroomMenuBtn"')
         self.assertContains(response, 'id="desktopClassroomMenu"')
         self.assertContains(response, '@click.stop="open = !open"')
+        self.assertContains(response, '@click.outside="open = false"')
+        self.assertContains(response, 'data-classrooms="')
+        self.assertContains(response, 'data-current-classroom="')

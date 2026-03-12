@@ -9,6 +9,7 @@ from .service_launcher import build_service_launcher_items
 from .seo import build_default_page_seo
 from django.utils import timezone
 from django.contrib import messages as django_messages
+import json
 import logging
 
 logger = logging.getLogger(__name__)
@@ -141,6 +142,8 @@ def active_classroom(request):
             'default_classroom_id': None,
             'has_hs_classrooms': False,
             'hs_classrooms_json': [],
+            'hs_classrooms_payload': '[]',
+            'active_classroom_name_payload': 'null',
         }
 
     classroom = None
@@ -171,4 +174,6 @@ def active_classroom(request):
         'default_classroom_id': default_classroom_id,
         'has_hs_classrooms': bool(classrooms_data),
         'hs_classrooms_json': classrooms_data,
+        'hs_classrooms_payload': json.dumps(classrooms_data, ensure_ascii=False),
+        'active_classroom_name_payload': json.dumps(classroom.name if classroom else None, ensure_ascii=False),
     }

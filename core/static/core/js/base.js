@@ -20,6 +20,17 @@
         }
     }
 
+    function parseInlineJson(value, fallback) {
+        if (typeof value !== 'string' || !value.trim()) {
+            return fallback;
+        }
+        try {
+            return JSON.parse(value);
+        } catch (error) {
+            return fallback;
+        }
+    }
+
     document.addEventListener('htmx:configRequest', function (event) {
         var token = getCsrfToken();
         if (token) {
@@ -608,9 +619,18 @@
             current: null,
             getCsrfToken: getCsrfToken,
             init: function () {
-                var parsedClassrooms = parseJsonScript('hs-classrooms-data', []);
+                var inlineClassrooms = parseInlineJson(this.$el && this.$el.getAttribute('data-classrooms'), null);
+                var parsedClassrooms = inlineClassrooms;
+                if (!Array.isArray(parsedClassrooms)) {
+                    parsedClassrooms = parseJsonScript('hs-classrooms-data', []);
+                }
                 this.classrooms = Array.isArray(parsedClassrooms) ? parsedClassrooms : [];
-                this.current = parseJsonScript('hs-active-classroom-name', null);
+
+                var inlineCurrent = parseInlineJson(this.$el && this.$el.getAttribute('data-current-classroom'), null);
+                this.current = inlineCurrent;
+                if (this.current === null) {
+                    this.current = parseJsonScript('hs-active-classroom-name', null);
+                }
             },
             select: function (cls) {
                 var self = this;
