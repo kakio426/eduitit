@@ -4,6 +4,15 @@ from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 from django.contrib.auth.models import User
 from core.teacher_first_cards import build_favorite_service_title
+from core.mini_apps import (
+    HOME_LAYOUT_EXCLUDED,
+    HOME_LAYOUT_QUICK,
+    HOME_LAYOUT_STARTER,
+    HOME_OVERFLOW_PROMOTE,
+    HOME_SURFACE_ACTION,
+    HOME_SURFACE_CONTENT,
+    plan_home_action_surface,
+)
 from products.models import Product
 from core.models import Post, ProductFavorite, ProductUsageLog, UserProfile
 
@@ -271,10 +280,13 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('max-width: 1180px', content)
-        self.assertIn('max-width: 1240px', content)
+        self.assertIn("core/css/home_authenticated_v2.css", content)
         self.assertIn('data-home-v2-top-favorites-grid="true"', content)
-        self.assertIn('grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);', content)
+        self.assertIn('home-v2-content-shell', content)
+        self.assertIn('home-v2-top-zone', content)
+        self.assertNotIn('<style>', content)
+        self.assertNotIn('function initHomeV2Interactions()', content)
+        self.assertNotIn('function buildCalendarMessageHubState()', content)
 
     def test_v2_authenticated_has_sections(self):
         """V2 로그인 홈에 목적별 섹션 존재"""
@@ -317,17 +329,21 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('class="home-mini-app-grid"', content)
+        self.assertIn('data-home-surface="action"', content)
+        self.assertIn('data-home-action-grid="true"', content)
         self.assertNotIn('home-mini-app-track-wrap', content)
         self.assertContains(response, 'data-home-mini-app-key="noticegen"', count=1, html=False)
         self.assertContains(response, 'data-home-mini-app-key="qrgen"', count=1, html=False)
         self.assertContains(response, 'data-home-mini-app-key="prompt_lab"', count=1, html=False)
+        self.assertContains(response, 'data-home-action-card-variant="starter"', count=1, html=False)
+        self.assertContains(response, 'data-home-action-card-variant="quick"', count=2, html=False)
         self.assertContains(response, 'data-mini-app-action="open_full"', count=3, html=False)
         self.assertContains(response, 'data-mini-app-action="run"', count=2, html=False)
         self.assertIn(reverse('noticegen:generate_mini'), content)
         self.assertIn('createQrgenSingleLinkMiniApp', content)
         self.assertIn('createHomePromptLabMiniApp', content)
-        self.assertIn('home-mini-app-card', content)
+        self.assertIn('home-action-card--starter', content)
+        self.assertIn('home-action-card--quick', content)
 
     def test_v2_authenticated_does_not_render_show_all_toggle(self):
         """V2 로그인 홈에서도 전체 서비스 보기 토글 미노출"""
@@ -361,7 +377,7 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
 
         self.assertIn('data-home-v2-favorite-card-header="true"', content)
-        self.assertIn('data-home-v2-favorite-card-body="true"', content)
+        self.assertIn('data-home-v2-favorite-card-title="true"', content)
         self.assertIn('수업을 준비해요', content)
 
     def test_v2_service_board_uses_balanced_two_column_shell(self):
@@ -426,7 +442,8 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('서비스 검색...', content)
         self.assertNotIn('slice(0, 8)', content)
         self.assertNotIn('window.openModal(p.id)', content)
-        self.assertIn('window.location.href = item.href;', content)
+        self.assertIn('id="service-launcher-items-data"', content)
+        self.assertIn('core/js/base.js', content)
 
     def test_v2_service_launcher_json_in_context(self):
         """V2 홈에 service_launcher_json 컨텍스트 존재"""
@@ -892,6 +909,153 @@ class PromptLabViewTest(TestCase):
         self.assertIn('id="prompt-lab-catalog"', content)
         self.assertIn("window.initPromptLabPage({ catalogScriptId: 'prompt-lab-catalog' });", content)
         self.assertIn('core/js/prompt_lab.js', content)
+
+
+class HomePlacementPlannerTest(TestCase):
+    def test_planner_places_starter_before_two_quick_cards(self):
+        entries = [
+            {
+                'key': 'qrgen',
+                'title': 'QR',
+                'home_surface': HOME_SURFACE_ACTION,
+                'layout_kind': HOME_LAYOUT_QUICK,
+                'home_priority': 20,
+                'full_url': '/qr/',
+                'overflow_behavior': HOME_OVERFLOW_PROMOTE,
+                'fields': ('url',),
+                'preview_kind': 'qr',
+            },
+            {
+                'key': 'noticegen',
+                'title': 'Notice',
+                'home_surface': HOME_SURFACE_ACTION,
+                'layout_kind': HOME_LAYOUT_STARTER,
+                'home_priority': 10,
+                'full_url': '/notice/',
+                'overflow_behavior': HOME_OVERFLOW_PROMOTE,
+                'fields': ('target', 'topic', 'keywords'),
+                'preview_kind': 'text',
+            },
+            {
+                'key': 'prompt_lab',
+                'title': 'Prompt',
+                'home_surface': HOME_SURFACE_ACTION,
+                'layout_kind': HOME_LAYOUT_QUICK,
+                'home_priority': 30,
+                'full_url': '/prompts/',
+                'overflow_behavior': HOME_OVERFLOW_PROMOTE,
+                'fields': ('category',),
+                'preview_kind': 'text',
+            },
+        ]
+
+        planned = plan_home_action_surface(entries)
+
+        self.assertEqual([entry['key'] for entry in planned], ['noticegen', 'qrgen', 'prompt_lab'])
+        self.assertEqual(planned[0]['render_variant'], 'starter')
+        self.assertEqual(planned[0]['span'], 2)
+        self.assertEqual(planned[1]['render_variant'], 'quick')
+        self.assertEqual(planned[2]['render_variant'], 'quick')
+
+    def test_planner_promotes_last_quick_card_when_count_is_odd(self):
+        entries = [
+            {
+                'key': 'quick-a',
+                'title': 'A',
+                'home_surface': HOME_SURFACE_ACTION,
+                'layout_kind': HOME_LAYOUT_QUICK,
+                'home_priority': 10,
+                'full_url': '/a/',
+                'overflow_behavior': HOME_OVERFLOW_PROMOTE,
+                'fields': ('field-a',),
+                'preview_kind': 'text',
+            },
+            {
+                'key': 'quick-b',
+                'title': 'B',
+                'home_surface': HOME_SURFACE_ACTION,
+                'layout_kind': HOME_LAYOUT_QUICK,
+                'home_priority': 20,
+                'full_url': '/b/',
+                'overflow_behavior': HOME_OVERFLOW_PROMOTE,
+                'fields': ('field-b',),
+                'preview_kind': 'text',
+            },
+            {
+                'key': 'quick-c',
+                'title': 'C',
+                'home_surface': HOME_SURFACE_ACTION,
+                'layout_kind': HOME_LAYOUT_QUICK,
+                'home_priority': 30,
+                'full_url': '/c/',
+                'overflow_behavior': HOME_OVERFLOW_PROMOTE,
+                'fields': ('field-c',),
+                'preview_kind': 'text',
+            },
+        ]
+
+        planned = plan_home_action_surface(entries)
+
+        self.assertEqual([entry['render_variant'] for entry in planned], ['quick', 'quick', 'quick-wide'])
+        self.assertEqual(planned[-1]['span'], 2)
+
+    def test_planner_excludes_non_action_and_excluded_layout_entries(self):
+        entries = [
+            {
+                'key': 'community',
+                'title': 'Community',
+                'home_surface': HOME_SURFACE_CONTENT,
+                'layout_kind': HOME_LAYOUT_QUICK,
+                'home_priority': 10,
+                'full_url': '/community/',
+                'overflow_behavior': HOME_OVERFLOW_PROMOTE,
+            },
+            {
+                'key': 'excluded',
+                'title': 'Excluded',
+                'home_surface': HOME_SURFACE_ACTION,
+                'layout_kind': HOME_LAYOUT_EXCLUDED,
+                'home_priority': 20,
+                'full_url': '/excluded/',
+                'overflow_behavior': HOME_OVERFLOW_PROMOTE,
+            },
+        ]
+
+        self.assertEqual(plan_home_action_surface(entries), [])
+
+    def test_planner_excludes_quick_cards_that_break_field_contract(self):
+        entries = [
+            {
+                'key': 'quick-overflow',
+                'title': 'Overflow',
+                'home_surface': HOME_SURFACE_ACTION,
+                'layout_kind': HOME_LAYOUT_QUICK,
+                'home_priority': 10,
+                'full_url': '/overflow/',
+                'overflow_behavior': HOME_OVERFLOW_PROMOTE,
+                'fields': ('a', 'b', 'c'),
+                'preview_kind': 'text',
+            },
+        ]
+
+        self.assertEqual(plan_home_action_surface(entries), [])
+
+    def test_planner_excludes_invalid_preview_contracts(self):
+        entries = [
+            {
+                'key': 'starter-long-preview',
+                'title': 'Starter',
+                'home_surface': HOME_SURFACE_ACTION,
+                'layout_kind': HOME_LAYOUT_STARTER,
+                'home_priority': 10,
+                'full_url': '/starter/',
+                'overflow_behavior': HOME_OVERFLOW_PROMOTE,
+                'fields': ('a', 'b', 'c'),
+                'preview_kind': 'long-text',
+            },
+        ]
+
+        self.assertEqual(plan_home_action_surface(entries), [])
 
 
 @override_settings(HOME_V2_ENABLED=True)

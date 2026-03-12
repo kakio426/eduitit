@@ -6,6 +6,7 @@ from .active_classroom import (
 )
 from .product_visibility import filter_discoverable_products
 from .service_launcher import build_service_launcher_items
+from .seo import build_default_page_seo
 from django.utils import timezone
 from django.contrib import messages as django_messages
 import logging
@@ -114,19 +115,21 @@ def search_products(request):
 
 
 def seo_meta(request):
-    """
-    기본 OpenGraph 메타태그 제공.
-    각 앱 view에서 context로 override 가능:
-      return render(request, 'template.html', {
-          'og_title': '커스텀 타이틀',
-          'og_description': '커스텀 설명',
-      })
-    """
+    """기본 SEO/OpenGraph 메타태그 제공."""
+    default_meta = build_default_page_seo(request)
     return {
-        'default_og_title': 'Eduitit - 선생님의 스마트한 하루',
-        'default_og_description': 'AI 프롬프트 레시피, 도구 가이드, 교육용 게임까지. 교실에서의 혁신을 지금 시작하세요.',
-        'default_og_image': 'https://eduitit.site/static/images/eduitit_og.png',
-        'og_url': request.build_absolute_uri(),
+        'default_og_title': default_meta.title,
+        'default_og_description': default_meta.description,
+        'default_og_image': default_meta.og_image,
+        'page_title': default_meta.title,
+        'meta_description': default_meta.description,
+        'canonical_url': default_meta.canonical_url,
+        'og_title': default_meta.og_title,
+        'og_description': default_meta.og_description,
+        'og_url': default_meta.canonical_url,
+        'og_image': default_meta.og_image,
+        'og_type': default_meta.og_type,
+        'robots': default_meta.robots,
     }
 
 

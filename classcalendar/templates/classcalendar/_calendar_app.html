@@ -1,3 +1,4 @@
+{% load static %}
 <style>
     .calendar-grid-day {
         min-height: 112px;
@@ -758,6 +759,7 @@
 {{ message_capture_urls_json|json_script:"message-capture-urls-data" }}
 {{ embedded_sheetbook_context_json|json_script:"calendar-embed-context-data" }}
 
+<script src="{% static 'classcalendar/js/message_hub.js' %}"></script>
 <script>
 const CALENDAR_EMBEDDED_IN_SHEETBOOK = {{ is_embedded_in_sheetbook|yesno:"true,false" }};
 
@@ -789,8 +791,6 @@ function ensureCalendarToastBridge() {
 }
 
 ensureCalendarToastBridge();
-
-{% include "classcalendar/_message_hub_script.html" %}
 
 function notifyEmbeddedCalendarHeight() {
     if (!CALENDAR_EMBEDDED_IN_SHEETBOOK) return;

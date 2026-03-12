@@ -1,38 +1,5 @@
-<article
-    class="home-mini-app-card rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm"
-    data-home-mini-app-shell="true"
-    data-home-mini-app-key="{{ entry.key }}"
->
-    <div class="flex items-start gap-3">
-        <div class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-lg text-slate-700 shadow-sm">
-            {% if "fa-" in entry.icon %}
-            <i class="{{ entry.icon }}"></i>
-            {% else %}
-            {{ entry.icon }}
-            {% endif %}
-        </div>
-        <div class="min-w-0 flex-1">
-            <h3 class="text-[1.05rem] md:text-[1.15rem] font-black leading-6 text-slate-900">{{ entry.title }}</h3>
-            <p class="mt-1 text-sm leading-6 text-slate-500 line-clamp-2">{{ entry.summary }}</p>
-        </div>
-    </div>
-
-    <div class="mt-4">
-        {% include entry.body_template with entry=entry %}
-    </div>
-
-    <div class="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-3">
-        <p class="text-[11px] font-semibold text-slate-400">깊은 설정과 관리 기능은 전체 페이지에서 이어집니다.</p>
-        {% if entry.full_url %}
-        <a
-            href="{{ entry.full_url }}"
-            class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 transition hover:border-indigo-300 hover:text-indigo-600"
-            data-mini-app-action="open_full"
-            {% if entry.product_id %}data-track="mini_app_open" data-product-id="{{ entry.product_id }}"{% endif %}
-        >
-            {{ entry.full_label }}
-            <i class="fa-solid fa-arrow-right text-[10px]"></i>
-        </a>
-        {% endif %}
-    </div>
-</article>
+{% if entry.render_variant == 'starter' %}
+{% include 'core/includes/home_mini_app_shell_starter.html' with entry=entry %}
+{% else %}
+{% include 'core/includes/home_mini_app_shell_quick.html' with entry=entry %}
+{% endif %}

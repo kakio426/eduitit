@@ -1,0 +1,1013 @@
+function buildCalendarMessageHubState() {
+    return {
+        messageHubOpen: false,
+        messageHubActiveTab: 'capture',
+        messageHubReturnFocusElement: null,
+        messageArchiveLoadedOnce: false,
+        messageCaptureEnabled: false,
+        messageCaptureItemTypesEnabled: false,
+        messageCaptureStep: 'input',
+        messageCaptureInputText: '',
+        messageCaptureSourceHint: 'unknown',
+        messageCaptureDropActive: false,
+        messageCaptureFiles: [],
+        messageCaptureFileErrors: [],
+        messageCaptureServerAttachments: [],
+        messageCaptureCaptureId: '',
+        messageCaptureWarnings: [],
+        messageCaptureParseStatus: '',
+        messageCaptureConfidenceScore: 0,
+        messageCaptureConfidenceLabel: 'low',
+        messageCapturePredictedItemType: 'event',
+        messageCaptureSummaryText: '',
+        messageCaptureCandidates: [],
+        messageCaptureSuccessMode: '',
+        messageCaptureSavedMessage: '',
+        messageCaptureSavedEvents: [],
+        messageCaptureErrorText: '',
+        isSavingMessageCaptureArchive: false,
+        isParsingMessageCapture: false,
+        isCommittingMessageCapture: false,
+        messageCaptureIdempotencyKey: '',
+        messageCaptureLimits: {
+            max_files: 5,
+            max_file_bytes: 8 * 1024 * 1024,
+            allowed_extensions: [],
+        },
+        messageCaptureUrls: {
+            parse: '',
+            save: '',
+            parse_saved_template: '',
+            archive: '',
+            archive_detail_template: '',
+            commit_template: '',
+        },
+        messageArchiveItems: [],
+        messageArchiveQuery: '',
+        messageArchiveFilter: 'all',
+        messageArchiveCounts: {
+            all: 0,
+            unparsed: 0,
+            saved: 0,
+            pending: 0,
+            needs_review: 0,
+            failed: 0,
+        },
+        messageArchiveSelectedCapture: null,
+        messageArchivePage: 1,
+        messageArchiveHasNext: false,
+        messageArchiveErrorText: '',
+        isLoadingMessageArchive: false,
+        isLoadingMessageArchiveDetail: false,
+    };
+}
+
+function parseCalendarMessageHubScript(scriptId, fallbackValue) {
+    if (!scriptId) return fallbackValue;
+    const element = document.getElementById(scriptId);
+    if (!element) return fallbackValue;
+    try {
+        return JSON.parse(element.textContent || '');
+    } catch (error) {
+        return fallbackValue;
+    }
+}
+
+function initCalendarMessageHub(host, options = {}) {
+    const defaults = buildCalendarMessageHubState();
+    Object.keys(defaults).forEach((key) => {
+        if (typeof host[key] === 'undefined') {
+            host[key] = defaults[key];
+        }
+    });
+
+    const rawLimits = parseCalendarMessageHubScript(options.messageLimitsScriptId, {});
+    const rawUrls = parseCalendarMessageHubScript(options.messageUrlsScriptId, {});
+    host.messageCaptureEnabled = !!options.enabled;
+    host.messageCaptureItemTypesEnabled = !!options.itemTypesEnabled;
+    host.messageCaptureLimits = {
+        max_files: Number(rawLimits.max_files || host.messageCaptureLimits.max_files || 5),
+        max_file_bytes: Number(rawLimits.max_file_bytes || host.messageCaptureLimits.max_file_bytes || (8 * 1024 * 1024)),
+        allowed_extensions: Array.isArray(rawLimits.allowed_extensions) ? rawLimits.allowed_extensions : [],
+    };
+    host.messageCaptureUrls = {
+        parse: String(rawUrls.parse || ''),
+        save: String(rawUrls.save || ''),
+        parse_saved_template: String(rawUrls.parse_saved_template || ''),
+        archive: String(rawUrls.archive || ''),
+        archive_detail_template: String(rawUrls.archive_detail_template || ''),
+        commit_template: String(rawUrls.commit_template || ''),
+    };
+
+    if (typeof host.pad !== 'function') {
+        host.pad = function(value) {
+            return String(value).padStart(2, '0');
+        };
+    }
+    if (typeof host.dateKey !== 'function') {
+        host.dateKey = function(dateValue) {
+            const date = new Date(dateValue);
+            return `${date.getFullYear()}-${host.pad(date.getMonth() + 1)}-${host.pad(date.getDate())}`;
+        };
+    }
+    if (typeof host.parseDateKey !== 'function') {
+        host.parseDateKey = function(dateStr) {
+            const parts = String(dateStr || '').split('-').map(Number);
+            return new Date(parts[0], (parts[1] || 1) - 1, parts[2] || 1);
+        };
+    }
+    if (typeof host.toTimeInput !== 'function') {
+        host.toTimeInput = function(dateValue) {
+            const date = new Date(dateValue);
+            return `${host.pad(date.getHours())}:${host.pad(date.getMinutes())}`;
+        };
+    }
+    if (typeof host.getCsrfToken !== 'function') {
+        host.getCsrfToken = function() {
+            const field = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (field && field.value) return field.value;
+            const match = document.cookie.match(/csrftoken=([^;]+)/);
+            return match ? decodeURIComponent(match[1]) : '';
+        };
+    }
+    if (typeof host.requestJson !== 'function') {
+        host.requestJson = async function(url, fetchOptions = {}) {
+            const response = await fetch(url, fetchOptions);
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                const error = new Error(payload.message || '요청 처리에 실패했습니다.');
+                error.payload = payload;
+                throw error;
+            }
+            return payload;
+        };
+    }
+
+    const layoutSync = typeof options.onLayoutChange === 'function' ? options.onLayoutChange : function() {};
+    const notifyHost = typeof host.notifyEmbeddedHost === 'function' ? host.notifyEmbeddedHost.bind(host) : function() {};
+
+    Object.assign(host, {
+        syncMessageHubLayout: function() {
+            try {
+                layoutSync();
+            } catch (error) {
+                console.warn('message hub layout sync failed', error);
+            }
+        },
+
+        buildMessageCaptureParseUrl: function() {
+            return this.messageCaptureUrls.parse || '';
+        },
+
+        buildMessageCaptureSaveUrl: function() {
+            return this.messageCaptureUrls.save || '';
+        },
+
+        buildMessageCaptureParseSavedUrl: function(captureId) {
+            return String(this.messageCaptureUrls.parse_saved_template || '').replace('__capture_id__', String(captureId || ''));
+        },
+
+        buildMessageCaptureArchiveUrl: function(page = 1) {
+            const base = this.messageCaptureUrls.archive || '';
+            if (!base) return '';
+            const params = new URLSearchParams();
+            const query = String(this.messageArchiveQuery || '').trim();
+            if (query) params.set('query', query);
+            if (this.messageArchiveFilter && this.messageArchiveFilter !== 'all') {
+                params.set('filter', this.messageArchiveFilter);
+            }
+            params.set('page', String(page || 1));
+            const queryString = params.toString();
+            return queryString ? `${base}?${queryString}` : base;
+        },
+
+        buildMessageCaptureArchiveDetailUrl: function(captureId) {
+            return String(this.messageCaptureUrls.archive_detail_template || '').replace('__capture_id__', String(captureId || ''));
+        },
+
+        buildMessageCaptureCommitUrl: function(captureId) {
+            return String(this.messageCaptureUrls.commit_template || '').replace('__capture_id__', String(captureId || ''));
+        },
+
+        createMessageCaptureIdempotencyKey: function() {
+            if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+                return window.crypto.randomUUID().replace(/-/g, '');
+            }
+            return `${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+        },
+
+        formatBytes: function(sizeBytes) {
+            const size = Number(sizeBytes || 0);
+            if (size < 1024) return `${size}B`;
+            if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)}KB`;
+            return `${(size / (1024 * 1024)).toFixed(1)}MB`;
+        },
+
+        getFileExtension: function(fileName) {
+            const name = String(fileName || '');
+            const lastDot = name.lastIndexOf('.');
+            if (lastDot < 0) return '';
+            return name.slice(lastDot + 1).toLowerCase();
+        },
+
+        validateMessageCaptureFile: function(file) {
+            if (!file) return '파일을 읽을 수 없습니다.';
+            if (file.size > this.messageCaptureLimits.max_file_bytes) {
+                return `${file.name} 파일은 ${this.formatBytes(this.messageCaptureLimits.max_file_bytes)} 이하만 첨부할 수 있습니다.`;
+            }
+            const extension = this.getFileExtension(file.name);
+            const allowed = this.messageCaptureLimits.allowed_extensions || [];
+            if (allowed.length > 0 && !allowed.includes(extension)) {
+                return `${file.name} 파일 형식(.${extension || '없음'})은 지원하지 않습니다.`;
+            }
+            return '';
+        },
+
+        resetMessageArchiveState: function() {
+            this.messageArchiveItems = [];
+            this.messageArchiveQuery = '';
+            this.messageArchiveFilter = 'all';
+            this.messageArchiveCounts = {
+                all: 0,
+                unparsed: 0,
+                saved: 0,
+                pending: 0,
+                needs_review: 0,
+                failed: 0,
+            };
+            this.messageArchiveSelectedCapture = null;
+            this.messageArchivePage = 1;
+            this.messageArchiveHasNext = false;
+            this.messageArchiveErrorText = '';
+            this.isLoadingMessageArchive = false;
+            this.isLoadingMessageArchiveDetail = false;
+        },
+
+        archiveStatusBadgeClass: function(status) {
+            const map = {
+                unparsed: 'border-sky-200 bg-sky-50 text-sky-700',
+                saved: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+                pending: 'border-slate-200 bg-slate-100 text-slate-700',
+                needs_review: 'border-amber-200 bg-amber-50 text-amber-700',
+                failed: 'border-rose-200 bg-rose-50 text-rose-700',
+            };
+            return map[String(status || 'pending')] || map.pending;
+        },
+
+        archiveCandidateBadgeClass: function(kind) {
+            const map = {
+                event: 'border-indigo-200 bg-indigo-50 text-indigo-700',
+                deadline: 'border-rose-200 bg-rose-50 text-rose-700',
+                prep: 'border-amber-200 bg-amber-50 text-amber-700',
+            };
+            return map[String(kind || 'event')] || map.event;
+        },
+
+        parseArchiveDateTime: function(value) {
+            if (!value) return null;
+            const parsed = new Date(value);
+            if (!Number.isNaN(parsed.getTime())) return parsed;
+            if (/^\d{4}-\d{2}-\d{2}$/.test(String(value))) {
+                const fallbackDate = new Date(`${value}T00:00`);
+                if (!Number.isNaN(fallbackDate.getTime())) return fallbackDate;
+            }
+            return null;
+        },
+
+        formatMessageArchiveCreatedAt: function(value) {
+            const parsed = this.parseArchiveDateTime(value);
+            if (!parsed) return value || '';
+            return new Intl.DateTimeFormat('ko-KR', {
+                month: 'long',
+                day: 'numeric',
+                weekday: 'short',
+                hour: 'numeric',
+                minute: '2-digit',
+            }).format(parsed);
+        },
+
+        formatArchiveDay: function(value) {
+            const parsed = this.parseArchiveDateTime(value);
+            if (!parsed) return value || '';
+            return `${parsed.getMonth() + 1}월 ${parsed.getDate()}일`;
+        },
+
+        formatArchiveClock: function(value) {
+            const parsed = this.parseArchiveDateTime(value);
+            if (!parsed) return '';
+            return `${this.pad(parsed.getHours())}:${this.pad(parsed.getMinutes())}`;
+        },
+
+        formatArchiveDateRange: function(startValue, endValue, isAllDay) {
+            if (!startValue) return '날짜 확인이 필요해요';
+            const startText = this.formatArchiveDay(startValue);
+            const endText = this.formatArchiveDay(endValue || startValue);
+            if (isAllDay) {
+                return startText === endText ? `${startText} 종일` : `${startText} - ${endText}`;
+            }
+            const startClock = this.formatArchiveClock(startValue);
+            const endClock = this.formatArchiveClock(endValue || startValue);
+            if (startText === endText) {
+                return `${startText} ${startClock} - ${endClock}`.trim();
+            }
+            return `${startText} ${startClock} - ${endText} ${endClock}`.trim();
+        },
+
+        formatArchiveCandidateDate: function(candidate) {
+            return this.formatArchiveDateRange(
+                candidate ? candidate.start_time : '',
+                candidate ? candidate.end_time : '',
+                candidate ? candidate.is_all_day : false,
+            );
+        },
+
+        formatArchiveSavedEventDate: function(event) {
+            return this.formatArchiveDateRange(
+                event ? event.start_time : '',
+                event ? event.end_time : '',
+                event ? event.is_all_day : false,
+            );
+        },
+
+        openMessageHub: async function(event, tab = 'capture', hubOptions = {}) {
+            if (!this.messageCaptureEnabled) {
+                window.showToast('메시지 기능이 아직 열리지 않았습니다.', 'info');
+                return;
+            }
+            this.messageHubReturnFocusElement = event && event.currentTarget ? event.currentTarget : document.activeElement;
+            this.messageHubOpen = true;
+            if (hubOptions.resetCapture) {
+                this.resetMessageCaptureFlow();
+            }
+            await this.switchMessageHubTab(tab, hubOptions);
+            this.syncMessageHubLayout();
+        },
+
+        switchMessageHubTab: async function(tab, hubOptions = {}) {
+            const nextTab = tab === 'archive' ? 'archive' : 'capture';
+            this.messageHubActiveTab = nextTab;
+            if (nextTab === 'archive') {
+                const shouldLoad = hubOptions.forceReload || !this.messageArchiveLoadedOnce;
+                if (shouldLoad) {
+                    this.resetMessageArchiveState();
+                    await this.loadMessageArchive({
+                        reset: true,
+                        preferredCaptureId: hubOptions.preferredCaptureId || '',
+                    });
+                    this.messageArchiveLoadedOnce = true;
+                } else if (hubOptions.preferredCaptureId) {
+                    await this.selectMessageArchiveItem(hubOptions.preferredCaptureId);
+                }
+            }
+            this.syncMessageHubLayout();
+        },
+
+        closeMessageHub: function({ restoreFocus = true } = {}) {
+            this.messageHubOpen = false;
+            this.messageHubActiveTab = 'capture';
+            this.messageCaptureErrorText = '';
+            this.messageArchiveErrorText = '';
+            this.messageCaptureDropActive = false;
+            this.syncMessageHubLayout();
+            if (restoreFocus && this.messageHubReturnFocusElement && typeof this.messageHubReturnFocusElement.focus === 'function') {
+                setTimeout(() => {
+                    this.messageHubReturnFocusElement.focus();
+                }, 0);
+            }
+        },
+
+        openMessageCaptureModal: async function(event) {
+            await this.openMessageHub(event, 'capture', { resetCapture: true });
+        },
+
+        openMessageArchive: async function(event) {
+            await this.openMessageHub(event, 'archive');
+        },
+
+        openMessageArchiveFromSuccess: async function() {
+            await this.switchMessageHubTab('archive', {
+                preferredCaptureId: this.messageCaptureCaptureId || '',
+                forceReload: true,
+            });
+        },
+
+        closeMessageCaptureModal: function() {
+            this.closeMessageHub();
+        },
+
+        closeMessageCaptureFromSuccess: function() {
+            this.closeMessageHub();
+        },
+
+        closeMessageArchive: function(options = {}) {
+            this.closeMessageHub(options);
+        },
+
+        startAnotherMessageCapture: function() {
+            this.switchMessageHubTab('capture');
+            this.resetMessageCaptureFlow();
+        },
+
+        setMessageArchiveFilter: function(filterValue) {
+            this.messageArchiveFilter = String(filterValue || 'all');
+            this.loadMessageArchive({ reset: true });
+        },
+
+        loadMessageArchive: async function({ reset = false, page = null, preferredCaptureId = '' } = {}) {
+            if (this.isLoadingMessageArchive) return;
+            const url = this.buildMessageCaptureArchiveUrl(page || (reset ? 1 : this.messageArchivePage || 1));
+            if (!url) {
+                this.messageArchiveErrorText = '보관함 경로를 찾지 못했습니다.';
+                window.showToast(this.messageArchiveErrorText, 'error');
+                return;
+            }
+            const targetPage = page || (reset ? 1 : this.messageArchivePage || 1);
+            if (reset) {
+                this.messageArchiveItems = [];
+                this.messageArchiveSelectedCapture = null;
+                this.messageArchivePage = 1;
+                this.messageArchiveHasNext = false;
+            }
+            this.isLoadingMessageArchive = true;
+            this.messageArchiveErrorText = '';
+            try {
+                const payload = await this.requestJson(url);
+                const incomingItems = Array.isArray(payload.items) ? payload.items : [];
+                const merged = reset ? incomingItems : this.messageArchiveItems.concat(incomingItems);
+                const seen = new Set();
+                this.messageArchiveItems = merged.filter((item) => {
+                    const key = String(item.capture_id || '');
+                    if (!key || seen.has(key)) return false;
+                    seen.add(key);
+                    return true;
+                });
+                this.messageArchiveCounts = payload.counts || {
+                    all: 0,
+                    unparsed: 0,
+                    saved: 0,
+                    pending: 0,
+                    needs_review: 0,
+                    failed: 0,
+                };
+                this.messageArchivePage = Number(payload.page || targetPage || 1);
+                this.messageArchiveHasNext = !!payload.has_next;
+                const captureIdToSelect = String(preferredCaptureId || '');
+                if (captureIdToSelect) {
+                    await this.selectMessageArchiveItem(captureIdToSelect);
+                } else if (reset && this.messageArchiveItems.length > 0) {
+                    await this.selectMessageArchiveItem(this.messageArchiveItems[0].capture_id);
+                }
+            } catch (error) {
+                this.messageArchiveErrorText = error.message || '보관 메시지를 불러오지 못했습니다.';
+                window.showToast(this.messageArchiveErrorText, 'error');
+            } finally {
+                this.isLoadingMessageArchive = false;
+                this.syncMessageHubLayout();
+            }
+        },
+
+        loadMoreMessageArchive: async function() {
+            if (!this.messageArchiveHasNext || this.isLoadingMessageArchive) return;
+            await this.loadMessageArchive({ page: (this.messageArchivePage || 1) + 1 });
+        },
+
+        selectMessageArchiveItem: async function(captureId) {
+            if (!captureId) return;
+            const url = this.buildMessageCaptureArchiveDetailUrl(captureId);
+            if (!url) return;
+            this.isLoadingMessageArchiveDetail = true;
+            this.messageArchiveErrorText = '';
+            try {
+                const payload = await this.requestJson(url);
+                this.messageArchiveSelectedCapture = payload;
+            } catch (error) {
+                this.messageArchiveSelectedCapture = null;
+                this.messageArchiveErrorText = error.message || '메시지 상세를 불러오지 못했습니다.';
+                window.showToast(this.messageArchiveErrorText, 'error');
+            } finally {
+                this.isLoadingMessageArchiveDetail = false;
+                this.syncMessageHubLayout();
+            }
+        },
+
+        applyArchiveDetailToMessageCapture: function(detailPayload) {
+            this.resetMessageCaptureFlow();
+            this.messageHubOpen = true;
+            this.messageHubActiveTab = 'capture';
+            this.messageCaptureInputText = String(detailPayload.raw_text || '');
+            this.applyMessageCaptureResult(detailPayload);
+            this.syncMessageHubLayout();
+        },
+
+        replayMessageArchiveCapture: async function() {
+            const detail = this.messageArchiveSelectedCapture;
+            if (!detail) return;
+            this.messageHubActiveTab = 'capture';
+            if (Array.isArray(detail.candidates) && detail.candidates.length > 0) {
+                this.applyArchiveDetailToMessageCapture(detail);
+                window.showToast('저장된 일정 후보를 다시 불러왔어요.', 'success');
+                return;
+            }
+            if (detail.archive_status === 'unparsed' && detail.capture_id) {
+                await this.submitSavedMessageCaptureParse(detail.capture_id);
+                return;
+            }
+            this.resetMessageCaptureFlow();
+            this.messageCaptureInputText = String(detail.raw_text || '');
+            window.showToast('보관한 메시지를 다시 불러왔어요.', 'info');
+            this.syncMessageHubLayout();
+        },
+
+        resetMessageCaptureFlow: function() {
+            this.messageCaptureStep = 'input';
+            this.messageCaptureInputText = '';
+            this.messageCaptureSourceHint = 'unknown';
+            this.messageCaptureDropActive = false;
+            this.messageCaptureFiles = [];
+            this.messageCaptureFileErrors = [];
+            this.messageCaptureServerAttachments = [];
+            this.messageCaptureCaptureId = '';
+            this.messageCaptureWarnings = [];
+            this.messageCaptureParseStatus = '';
+            this.messageCaptureConfidenceScore = 0;
+            this.messageCaptureConfidenceLabel = 'low';
+            this.messageCapturePredictedItemType = 'event';
+            this.messageCaptureSummaryText = '';
+            this.messageCaptureCandidates = [];
+            this.messageCaptureSuccessMode = '';
+            this.messageCaptureSavedMessage = '';
+            this.messageCaptureSavedEvents = [];
+            this.messageCaptureErrorText = '';
+            this.isSavingMessageCaptureArchive = false;
+            this.isParsingMessageCapture = false;
+            this.isCommittingMessageCapture = false;
+            this.messageCaptureIdempotencyKey = this.createMessageCaptureIdempotencyKey();
+        },
+
+        handleMessageCaptureDrop: function(event) {
+            this.messageCaptureDropActive = false;
+            const droppedFiles = event && event.dataTransfer ? event.dataTransfer.files : null;
+            this.addMessageCaptureFiles(droppedFiles);
+        },
+
+        handleMessageCaptureFileInput: function(event) {
+            const selectedFiles = event && event.target ? event.target.files : null;
+            this.addMessageCaptureFiles(selectedFiles);
+            if (event && event.target) {
+                event.target.value = '';
+            }
+        },
+
+        addMessageCaptureFiles: function(fileList) {
+            if (!fileList || fileList.length === 0) return;
+            this.messageCaptureFileErrors = [];
+            const maxFiles = Number(this.messageCaptureLimits.max_files || 5);
+            for (const file of Array.from(fileList)) {
+                if (this.messageCaptureFiles.length >= maxFiles) {
+                    this.messageCaptureFileErrors.push(`첨부파일은 최대 ${maxFiles}개까지 추가할 수 있습니다.`);
+                    break;
+                }
+                const duplicate = this.messageCaptureFiles.find((item) => item.name === file.name && item.size === file.size);
+                if (duplicate) {
+                    this.messageCaptureFileErrors.push(`${file.name} 파일은 이미 추가되어 있습니다.`);
+                    continue;
+                }
+                const validationError = this.validateMessageCaptureFile(file);
+                if (validationError) {
+                    this.messageCaptureFileErrors.push(validationError);
+                    continue;
+                }
+                this.messageCaptureFiles.push({
+                    id: this.createMessageCaptureIdempotencyKey(),
+                    name: file.name,
+                    size: file.size,
+                    file,
+                });
+            }
+        },
+
+        removeMessageCaptureFile: function(fileId) {
+            this.messageCaptureFiles = this.messageCaptureFiles.filter((item) => item.id !== fileId);
+        },
+
+        normalizeMessageCaptureCandidate: function(raw) {
+            const start = raw.start_time ? new Date(raw.start_time) : null;
+            const end = raw.end_time ? new Date(raw.end_time) : (start ? new Date(raw.start_time) : null);
+            const fallbackDate = this.dateKey(new Date());
+            const kind = String(raw.kind || 'event');
+            const badgeClassMap = {
+                event: 'border-indigo-200 bg-indigo-50 text-indigo-700',
+                deadline: 'border-rose-200 bg-rose-50 text-rose-700',
+                prep: 'border-amber-200 bg-amber-50 text-amber-700',
+            };
+            return {
+                candidate_id: String(raw.candidate_id || ''),
+                kind,
+                badge_text: raw.badge_text || '행사',
+                badge_class: badgeClassMap[kind] || badgeClassMap.event,
+                title: String(raw.title || '').trim(),
+                summary: String(raw.summary || '').trim(),
+                evidence_text: String(raw.evidence_text || '').trim(),
+                selected: raw.already_saved ? false : raw.is_recommended !== false,
+                already_saved: !!raw.already_saved,
+                needs_check: !!raw.needs_check,
+                is_all_day: !!raw.is_all_day,
+                has_time: !!start && !!end && !raw.is_all_day,
+                start_date: start ? this.dateKey(start) : fallbackDate,
+                end_date: end ? this.dateKey(end) : (start ? this.dateKey(start) : fallbackDate),
+                start_clock: start ? this.toTimeInput(start) : '09:00',
+                end_clock: end ? this.toTimeInput(end) : '10:00',
+                edit_open: false,
+            };
+        },
+
+        applyMessageCaptureResult: function(payload) {
+            this.messageCaptureCaptureId = String(payload.capture_id || '');
+            this.messageCaptureParseStatus = String(payload.parse_status || '');
+            this.messageCaptureConfidenceScore = Number(payload.confidence_score || 0);
+            this.messageCaptureConfidenceLabel = String(payload.confidence_label || 'low');
+            this.messageCapturePredictedItemType = String(payload.predicted_item_type || 'event');
+            this.messageCaptureSummaryText = String(payload.summary_text || '').trim();
+            this.messageCaptureWarnings = Array.isArray(payload.warnings) ? payload.warnings : [];
+            this.messageCaptureServerAttachments = Array.isArray(payload.attachments)
+                ? payload.attachments.map((attachment) => ({
+                    id: String(attachment.id),
+                    original_name: attachment.original_name || '첨부파일',
+                    size_bytes: Number(attachment.size_bytes || 0),
+                }))
+                : [];
+            this.messageCaptureCandidates = Array.isArray(payload.candidates)
+                ? payload.candidates.map((candidate) => this.normalizeMessageCaptureCandidate(candidate))
+                : [];
+            this.messageCaptureSavedMessage = '';
+            this.messageCaptureSavedEvents = [];
+            this.messageCaptureErrorText = '';
+            this.messageCaptureStep = 'confirm';
+            this.messageHubActiveTab = 'capture';
+        },
+
+        applyMessageCaptureArchiveSaveResult: function(payload) {
+            this.messageCaptureCaptureId = String(payload.capture_id || '');
+            this.messageCaptureParseStatus = String(payload.parse_status || '');
+            this.messageCaptureSummaryText = String(payload.summary_text || '').trim();
+            this.messageCaptureWarnings = [];
+            this.messageCaptureServerAttachments = Array.isArray(payload.attachments)
+                ? payload.attachments.map((attachment) => ({
+                    id: String(attachment.id),
+                    original_name: attachment.original_name || '첨부파일',
+                    size_bytes: Number(attachment.size_bytes || 0),
+                }))
+                : [];
+            this.messageCaptureCandidates = [];
+            this.messageCaptureSuccessMode = 'archive';
+            this.messageCaptureSavedMessage = payload.message || '메시지를 보관함에 저장했어요.';
+            this.messageCaptureSavedEvents = [];
+            this.messageCaptureErrorText = '';
+            this.messageCaptureStep = 'done';
+            this.messageHubActiveTab = 'capture';
+        },
+
+        messageCaptureVisibleCandidates: function() {
+            return this.messageCaptureCandidates.slice(0, 5);
+        },
+
+        messageCaptureHiddenCandidates: function() {
+            return this.messageCaptureCandidates.slice(5);
+        },
+
+        messageCaptureSelectedCount: function() {
+            return this.messageCaptureCandidates.filter((candidate) => candidate.selected && !candidate.already_saved).length;
+        },
+
+        formatMessageCaptureDay: function(dateValue) {
+            if (!dateValue) return '';
+            const parsed = new Date(`${dateValue}T00:00`);
+            if (Number.isNaN(parsed.getTime())) return dateValue;
+            return `${parsed.getMonth() + 1}월 ${parsed.getDate()}일`;
+        },
+
+        formatMessageCaptureCandidateDate: function(candidate) {
+            if (!candidate.start_date) return '날짜 확인이 필요해요';
+            const startText = this.formatMessageCaptureDay(candidate.start_date);
+            const endText = this.formatMessageCaptureDay(candidate.end_date || candidate.start_date);
+            if (!candidate.has_time) {
+                if ((candidate.end_date || candidate.start_date) === candidate.start_date) {
+                    return `${startText} 종일`;
+                }
+                return `${startText} - ${endText}`;
+            }
+            if ((candidate.end_date || candidate.start_date) === candidate.start_date) {
+                return `${startText} ${candidate.start_clock} - ${candidate.end_clock}`;
+            }
+            return `${startText} ${candidate.start_clock} - ${endText} ${candidate.end_clock}`;
+        },
+
+        toggleMessageCaptureCandidateEdit: function(candidate) {
+            candidate.edit_open = !candidate.edit_open;
+        },
+
+        buildMessageCaptureCandidateTimes: function(candidate) {
+            if (!candidate.start_date || !candidate.end_date) {
+                this.messageCaptureErrorText = `${candidate.title || '일정'} 날짜를 확인해 주세요.`;
+                return null;
+            }
+            if (candidate.end_date < candidate.start_date) {
+                this.messageCaptureErrorText = `${candidate.title || '일정'} 종료일은 시작일보다 빠를 수 없습니다.`;
+                return null;
+            }
+            if (!candidate.has_time) {
+                return {
+                    start_time: `${candidate.start_date}T00:00`,
+                    end_time: `${candidate.end_date}T23:59`,
+                    is_all_day: true,
+                };
+            }
+            if (!candidate.start_clock || !candidate.end_clock) {
+                this.messageCaptureErrorText = `${candidate.title || '일정'} 시간을 입력해 주세요.`;
+                return null;
+            }
+            const start = new Date(`${candidate.start_date}T${candidate.start_clock}`);
+            const end = new Date(`${candidate.end_date}T${candidate.end_clock}`);
+            if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+                this.messageCaptureErrorText = `${candidate.title || '일정'} 시간 형식을 확인해 주세요.`;
+                return null;
+            }
+            if (end <= start) {
+                this.messageCaptureErrorText = `${candidate.title || '일정'} 종료 시간은 시작 시간보다 뒤여야 합니다.`;
+                return null;
+            }
+            return {
+                start_time: `${candidate.start_date}T${candidate.start_clock}`,
+                end_time: `${candidate.end_date}T${candidate.end_clock}`,
+                is_all_day: false,
+            };
+        },
+
+        buildSelectedMessageCaptureCandidatesPayload: function() {
+            const normalized = [];
+            for (const candidate of this.messageCaptureCandidates) {
+                const times = this.buildMessageCaptureCandidateTimes(candidate);
+                if (!times) return null;
+                normalized.push({
+                    candidate_id: candidate.candidate_id,
+                    selected: !!candidate.selected && !candidate.already_saved,
+                    title: String(candidate.title || '').trim(),
+                    start_time: times.start_time,
+                    end_time: times.end_time,
+                    is_all_day: times.is_all_day,
+                    summary: candidate.summary || '',
+                });
+            }
+            return normalized;
+        },
+
+        submitMessageCaptureParse: async function() {
+            if (!this.messageCaptureEnabled) {
+                window.showToast('메시지 기능이 아직 열리지 않았습니다.', 'info');
+                return;
+            }
+            const parseUrl = this.buildMessageCaptureParseUrl();
+            if (!parseUrl) {
+                window.showToast('메시지 읽기 경로를 찾지 못했습니다.', 'error');
+                return;
+            }
+            if (!this.messageCaptureInputText.trim() && this.messageCaptureFiles.length === 0) {
+                this.messageCaptureErrorText = '메시지 텍스트 또는 첨부파일을 하나 이상 입력해 주세요.';
+                window.showToast(this.messageCaptureErrorText, 'error');
+                return;
+            }
+            this.isParsingMessageCapture = true;
+            this.messageCaptureErrorText = '';
+            const formData = new FormData();
+            formData.append('raw_text', this.messageCaptureInputText);
+            formData.append('source_hint', this.messageCaptureSourceHint || 'unknown');
+            formData.append('idempotency_key', this.messageCaptureIdempotencyKey);
+            this.messageCaptureFiles.forEach((fileItem) => {
+                formData.append('files', fileItem.file);
+            });
+            try {
+                const payload = await this.requestJson(parseUrl, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': this.getCsrfToken() },
+                    body: formData,
+                });
+                this.applyMessageCaptureResult(payload);
+                window.showToast('찾은 일정을 확인해 주세요.', 'success');
+            } catch (error) {
+                this.messageCaptureErrorText = error.message || '메시지 읽기에 실패했습니다.';
+                window.showToast(this.messageCaptureErrorText, 'error');
+            } finally {
+                this.isParsingMessageCapture = false;
+            }
+        },
+
+        submitSavedMessageCaptureParse: async function(captureId) {
+            if (!this.messageCaptureEnabled) {
+                window.showToast('메시지 기능이 아직 열리지 않았습니다.', 'info');
+                return;
+            }
+            const parseSavedUrl = this.buildMessageCaptureParseSavedUrl(captureId);
+            if (!parseSavedUrl) {
+                window.showToast('보관 메시지 읽기 경로를 찾지 못했습니다.', 'error');
+                return;
+            }
+            this.isParsingMessageCapture = true;
+            this.messageCaptureErrorText = '';
+            try {
+                const payload = await this.requestJson(parseSavedUrl, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': this.getCsrfToken() },
+                });
+                this.messageArchiveSelectedCapture = payload;
+                this.applyArchiveDetailToMessageCapture(payload);
+                this.loadMessageArchive({ reset: true, preferredCaptureId: payload.capture_id });
+                window.showToast(payload.message || '보관한 메시지에서 일정을 찾았어요.', 'success');
+            } catch (error) {
+                this.messageCaptureErrorText = error.message || '보관한 메시지를 읽지 못했습니다.';
+                window.showToast(this.messageCaptureErrorText, 'error');
+            } finally {
+                this.isParsingMessageCapture = false;
+            }
+        },
+
+        submitMessageCaptureArchiveSave: async function() {
+            if (!this.messageCaptureEnabled) {
+                window.showToast('메시지 기능이 아직 열리지 않았습니다.', 'info');
+                return;
+            }
+            const saveUrl = this.buildMessageCaptureSaveUrl();
+            if (!saveUrl) {
+                window.showToast('보관함 저장 경로를 찾지 못했습니다.', 'error');
+                return;
+            }
+            if (!this.messageCaptureInputText.trim() && this.messageCaptureFiles.length === 0) {
+                this.messageCaptureErrorText = '메시지 텍스트 또는 첨부파일을 하나 이상 입력해 주세요.';
+                window.showToast(this.messageCaptureErrorText, 'error');
+                return;
+            }
+            this.isSavingMessageCaptureArchive = true;
+            this.messageCaptureErrorText = '';
+            const formData = new FormData();
+            formData.append('raw_text', this.messageCaptureInputText);
+            formData.append('source_hint', this.messageCaptureSourceHint || 'unknown');
+            formData.append('idempotency_key', this.messageCaptureIdempotencyKey);
+            this.messageCaptureFiles.forEach((fileItem) => {
+                formData.append('files', fileItem.file);
+            });
+            try {
+                const payload = await this.requestJson(saveUrl, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': this.getCsrfToken() },
+                    body: formData,
+                });
+                this.applyMessageCaptureArchiveSaveResult(payload);
+                window.showToast(payload.message || '메시지를 보관함에 저장했어요.', 'success');
+            } catch (error) {
+                this.messageCaptureErrorText = error.message || '보관함 저장에 실패했습니다.';
+                window.showToast(this.messageCaptureErrorText, 'error');
+            } finally {
+                this.isSavingMessageCaptureArchive = false;
+            }
+        },
+
+        backToMessageCaptureInput: function() {
+            this.messageCaptureStep = 'input';
+            this.messageCaptureErrorText = '';
+            this.messageCaptureIdempotencyKey = this.createMessageCaptureIdempotencyKey();
+        },
+
+        submitMessageCaptureCommit: async function() {
+            if (!this.messageCaptureCaptureId) {
+                this.messageCaptureErrorText = '저장 대상 메시지를 다시 읽어주세요.';
+                window.showToast(this.messageCaptureErrorText, 'error');
+                return;
+            }
+            if (this.messageCaptureSelectedCount() === 0) {
+                this.messageCaptureErrorText = '저장할 일정을 하나 이상 선택해 주세요.';
+                window.showToast(this.messageCaptureErrorText, 'error');
+                return;
+            }
+            const commitUrl = this.buildMessageCaptureCommitUrl(this.messageCaptureCaptureId);
+            if (!commitUrl) {
+                this.messageCaptureErrorText = '일정 저장 경로를 찾지 못했습니다.';
+                window.showToast(this.messageCaptureErrorText, 'error');
+                return;
+            }
+            const selectedCandidates = this.buildSelectedMessageCaptureCandidatesPayload();
+            if (!selectedCandidates) {
+                window.showToast(this.messageCaptureErrorText || '일정 정보를 확인해 주세요.', 'error');
+                return;
+            }
+            const body = {
+                selected_candidates: selectedCandidates,
+                selected_attachment_ids: this.messageCaptureServerAttachments.map((attachment) => attachment.id),
+            };
+            if (this.embeddedSheetbookContext) {
+                body.source_sheetbook_id = this.embeddedSheetbookContext.sheetbook_id;
+                body.source_tab_id = this.embeddedSheetbookContext.tab_id;
+            }
+            this.isCommittingMessageCapture = true;
+            this.messageCaptureErrorText = '';
+            try {
+                const payload = await this.requestJson(commitUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCsrfToken(),
+                    },
+                    body: JSON.stringify(body),
+                });
+                const warningMessages = Array.isArray(payload.warnings) ? payload.warnings : [];
+                this.messageCaptureSuccessMode = 'commit';
+                this.messageCaptureSavedMessage = payload.message || '선택한 일정을 저장했어요.';
+                this.messageCaptureSavedEvents = ([]).concat(payload.created_events || [], payload.reused_events || []);
+                this.messageCaptureStep = 'done';
+                notifyHost('classcalendar:event-saved', { source: 'message-capture' });
+                if (warningMessages.length > 0) {
+                    window.showToast(warningMessages[0], 'info');
+                } else {
+                    window.showToast('선택한 일정을 저장했어요.', 'success');
+                }
+                if (typeof this.refreshEvents === 'function') {
+                    try {
+                        await this.refreshEvents();
+                    } catch (refreshError) {
+                        console.warn('message capture refresh failed after commit', refreshError);
+                        if (warningMessages.length === 0) {
+                            window.showToast('일정은 저장했어요. 화면 반영이 잠시 늦을 수 있어요.', 'info');
+                        }
+                    }
+                }
+            } catch (error) {
+                this.messageCaptureErrorText = error.message || '일정 저장에 실패했습니다.';
+                window.showToast(this.messageCaptureErrorText, 'error');
+            } finally {
+                this.isCommittingMessageCapture = false;
+            }
+        },
+
+        messageCaptureFileLimitText: function() {
+            const maxFiles = Number(this.messageCaptureLimits.max_files || 5);
+            const maxBytes = Number(this.messageCaptureLimits.max_file_bytes || (8 * 1024 * 1024));
+            const extensions = Array.isArray(this.messageCaptureLimits.allowed_extensions)
+                ? this.messageCaptureLimits.allowed_extensions.join(', ')
+                : '';
+            return `최대 ${maxFiles}개, 파일당 ${this.formatBytes(maxBytes)} 이하${extensions ? `, 지원 형식: ${extensions}` : ''}`;
+        },
+
+        messageCaptureStatusText: function() {
+            const map = { parsed: '파싱 완료', needs_review: '검토 필요', failed: '파싱 실패' };
+            return map[this.messageCaptureParseStatus] || '확인 필요';
+        },
+
+        messageCaptureStatusClass: function() {
+            const map = {
+                parsed: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+                needs_review: 'border-amber-200 bg-amber-50 text-amber-700',
+                failed: 'border-rose-200 bg-rose-50 text-rose-700',
+            };
+            return map[this.messageCaptureParseStatus] || 'border-slate-200 bg-slate-100 text-slate-700';
+        },
+
+        messageCaptureConfidenceText: function() {
+            const score = Number(this.messageCaptureConfidenceScore || 0).toFixed(0);
+            const labelMap = { high: '높음', medium: '보통', low: '낮음' };
+            return `신뢰도 ${labelMap[this.messageCaptureConfidenceLabel] || '낮음'} (${score}점)`;
+        },
+
+        messageCaptureConfidenceClass: function() {
+            const map = {
+                high: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+                medium: 'border-amber-200 bg-amber-50 text-amber-700',
+                low: 'border-rose-200 bg-rose-50 text-rose-700',
+            };
+            return map[this.messageCaptureConfidenceLabel] || 'border-rose-200 bg-rose-50 text-rose-700';
+        },
+
+        messageCapturePredictionText: function() {
+            const map = { event: '일정으로 예측', task: '할 일로 예측', ignore: '안내 메시지로 예측', unknown: '직접 확인 필요' };
+            return map[this.messageCapturePredictedItemType] || '직접 확인 필요';
+        },
+
+        messageCapturePredictionBadgeClass: function() {
+            const map = {
+                event: 'border-sky-200 bg-sky-50 text-sky-700',
+                task: 'border-violet-200 bg-violet-50 text-violet-700',
+                ignore: 'border-amber-200 bg-amber-50 text-amber-800',
+                unknown: 'border-slate-200 bg-slate-100 text-slate-700',
+            };
+            return map[this.messageCapturePredictedItemType] || 'border-slate-200 bg-slate-100 text-slate-700';
+        },
+
+        messageCaptureDoneTitle: function() {
+            return this.messageCaptureSuccessMode === 'archive' ? '메시지를 보관했어요.' : '일정을 저장했어요.';
+        },
+
+        messageArchiveCandidateEmptyText: function() {
+            if (!this.messageArchiveSelectedCapture) return '';
+            return this.messageArchiveSelectedCapture.archive_status === 'unparsed'
+                ? '아직 이 메시지는 읽지 않았어요. 필요할 때 일정 찾기를 누르면 됩니다.'
+                : '이 메시지에서는 저장할 날짜를 찾지 못했어요.';
+        },
+    });
+}

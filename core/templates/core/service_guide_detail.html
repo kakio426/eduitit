@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static manual_extras cloudinary_extras %}
 
-{% block title %}{{ manual.public_title|default:manual.title }} - 서비스 가이드 - Eduitit{% endblock %}
+{% block title %}{{ page_title|default:'서비스 가이드 - Eduitit' }}{% endblock %}
 
 {% block extra_css %}
 <style>

@@ -13,6 +13,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 from openai import OpenAI
 
+from core.seo import build_noticegen_page_seo
 from products.models import Product
 
 from .models import (
@@ -420,6 +421,7 @@ def main(request):
 
     context = _build_page_context(prefill=prefill)
     context.update(_result_defaults())
+    context.update(build_noticegen_page_seo(request).as_context())
     return render(request, "noticegen/main.html", context)
 
 

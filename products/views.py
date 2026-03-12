@@ -11,6 +11,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.csrf import ensure_csrf_cookie
 
+from core.seo import build_product_detail_seo
 from core.product_visibility import filter_discoverable_products
 
 from .dutyticker_scope import get_active_classroom_for_request, get_or_create_settings_for_scope
@@ -242,6 +243,7 @@ def product_detail(request, pk):
         'launch_href': launch_href,
         'launch_is_external': launch_is_external,
         'can_launch': can_launch,
+        **build_product_detail_seo(request, product).as_context(),
     })
 
 def product_preview(request, pk):

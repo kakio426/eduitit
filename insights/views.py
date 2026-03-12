@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.db.models import Count
 from django.core.exceptions import ValidationError
+from core.seo import build_insight_detail_seo, build_insight_list_seo
 from .models import Insight
 from .forms import InsightForm, InsightPasteForm
 from .importer import upsert_insight_from_text
@@ -49,6 +50,12 @@ def insight_list(request):
         'current_sort': sort,
         'current_category': category,
         'current_tag': tag,
+        **build_insight_list_seo(
+            request,
+            current_category=category,
+            current_tag=tag,
+            current_sort=sort,
+        ).as_context(),
     })
 
 
@@ -61,6 +68,11 @@ class InsightDetailView(DetailView):
         return Insight.objects.annotate(
             likes_count_annotated=Count('likes', distinct=True)
         )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(build_insight_detail_seo(self.request, self.object).as_context())
+        return context
 
 
 @login_required

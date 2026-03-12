@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ product.title }} - Eduitit{% endblock %}
+{% block title %}{{ page_title|default:'서비스 상세 - Eduitit' }}{% endblock %}
 
 {% block extra_css %}
 <style>

@@ -15,12 +15,22 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
+from django.contrib.sitemaps.views import sitemap
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from core.views import health_check
+from core.seo_views import robots_txt
+from core.sitemaps import PublicUrlSitemap
+
+
+SITEMAPS = {
+    "public": PublicUrlSitemap,
+}
 
 urlpatterns = [
+    path('robots.txt', robots_txt, name='robots_txt'),
+    path('sitemap.xml', sitemap, {'sitemaps': SITEMAPS}, name='sitemap'),
     path('health/', health_check, name='health_check'),
     path('secret-admin-kakio/', admin.site.urls),
     path('', include('core.urls')),
@@ -66,4 +76,3 @@ if 'sheetbook.apps.SheetbookConfig' in settings.INSTALLED_APPS:
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-

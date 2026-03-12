@@ -1,0 +1,115 @@
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+.custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+}
+
+.sns-preview-card {
+    background: white;
+    border-radius: 1.5rem;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+}
+
+.sns-preview-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+}
+
+.home-calendar-day {
+    min-height: 74px;
+}
+
+.home-v2-content-shell {
+    width: 100%;
+    max-width: 1180px;
+}
+
+.home-v2-top-zone {
+    display: grid;
+    gap: 1rem;
+    align-items: start;
+}
+
+.home-v2-top-center {
+    display: grid;
+    gap: 1rem;
+    align-content: start;
+}
+
+.home-action-grid {
+    display: grid;
+    gap: 1rem;
+    align-items: start;
+}
+
+.home-action-card {
+    width: 100%;
+    max-width: none;
+    align-self: start;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.home-action-card__body {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.home-action-card__footer {
+    margin-top: auto;
+}
+
+.home-action-card--quick [data-mini-app-state] {
+    min-height: 8rem;
+}
+
+.home-action-card--quick-wide [data-mini-app-state] {
+    min-height: 7rem;
+}
+
+@media (min-width: 640px) {
+    .home-calendar-day {
+        min-height: 82px;
+    }
+}
+
+@media (min-width: 768px) {
+    .home-v2-top-zone {
+        grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+        gap: 1.25rem;
+    }
+
+    .home-action-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .home-action-card--starter,
+    .home-action-card--quick-wide {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (min-width: 1280px) {
+    .home-v2-content-shell {
+        max-width: 1240px;
+    }
+
+    .home-v2-top-zone {
+        grid-template-columns: minmax(360px, 430px) minmax(460px, 1fr);
+    }
+}

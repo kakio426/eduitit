@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from django.urls import NoReverseMatch, reverse
 
@@ -23,6 +23,17 @@ MINI_APP_ACTIONS_V1 = (
     "reset",
     "open_full",
 )
+HOME_SURFACE_WORKBENCH = "workbench"
+HOME_SURFACE_ACTION = "action"
+HOME_SURFACE_SERVICE_BOARD = "service-board"
+HOME_SURFACE_CONTENT = "content"
+HOME_LAYOUT_QUICK = "quick"
+HOME_LAYOUT_STARTER = "starter"
+HOME_LAYOUT_EXCLUDED = "excluded"
+HOME_OVERFLOW_PROMOTE = "promote"
+HOME_OVERFLOW_EXCLUDE = "exclude"
+HOME_PREVIEW_KIND_TEXT = "text"
+HOME_PREVIEW_KIND_QR = "qr"
 
 
 @dataclass(frozen=True)
@@ -65,6 +76,41 @@ class MiniAppDefinition:
     icon: str = "fa-solid fa-sparkles"
     full_label: str = "전체 보기"
     idle_message: str = ""
+    home_surface: str = HOME_SURFACE_ACTION
+    layout_kind: str = HOME_LAYOUT_QUICK
+    home_priority: int = 100
+    overflow_behavior: str = HOME_OVERFLOW_PROMOTE
+
+
+@dataclass(frozen=True)
+class HomePlacementEntry:
+    key: str
+    surface: str
+    layout_kind: str
+    span: int
+    render_variant: str
+    full_url: str
+
+
+@dataclass(frozen=True)
+class ActionCardContract:
+    layout_kind: str
+    max_fields: int
+    allowed_preview_kinds: tuple[str, ...]
+
+
+HOME_ACTION_CARD_CONTRACTS = {
+    HOME_LAYOUT_QUICK: ActionCardContract(
+        layout_kind=HOME_LAYOUT_QUICK,
+        max_fields=2,
+        allowed_preview_kinds=(HOME_PREVIEW_KIND_TEXT, HOME_PREVIEW_KIND_QR),
+    ),
+    HOME_LAYOUT_STARTER: ActionCardContract(
+        layout_kind=HOME_LAYOUT_STARTER,
+        max_fields=3,
+        allowed_preview_kinds=(HOME_PREVIEW_KIND_TEXT, HOME_PREVIEW_KIND_QR),
+    ),
+}
 
 
 HOME_MINI_APP_DEFINITIONS = (
@@ -104,11 +150,13 @@ HOME_MINI_APP_DEFINITIONS = (
             ),
         ),
         primary_action_label="문장 만들기",
-        preview_kind="text",
+        preview_kind=HOME_PREVIEW_KIND_TEXT,
         requires_auth=False,
         body_template="core/includes/mini_apps/noticegen_body.html",
         icon="fa-solid fa-pen-nib",
         idle_message="대상과 전달 사항을 적으면 바로 복사할 문장이 나옵니다.",
+        layout_kind=HOME_LAYOUT_STARTER,
+        home_priority=10,
     ),
     MiniAppDefinition(
         key="qrgen",
@@ -129,11 +177,13 @@ HOME_MINI_APP_DEFINITIONS = (
             ),
         ),
         primary_action_label="QR 만들기",
-        preview_kind="qr",
+        preview_kind=HOME_PREVIEW_KIND_QR,
         requires_auth=False,
         body_template="core/includes/mini_apps/qrgen_body.html",
         icon="fa-solid fa-qrcode",
         idle_message="수업 링크를 하나 넣으면 QR 미리보기가 바로 나옵니다.",
+        layout_kind=HOME_LAYOUT_QUICK,
+        home_priority=20,
     ),
     MiniAppDefinition(
         key="prompt_lab",
@@ -153,11 +203,13 @@ HOME_MINI_APP_DEFINITIONS = (
             ),
         ),
         primary_action_label="추천 복사",
-        preview_kind="text",
+        preview_kind=HOME_PREVIEW_KIND_TEXT,
         requires_auth=False,
         body_template="core/includes/mini_apps/prompt_lab_body.html",
         icon="fa-solid fa-wand-magic-sparkles",
         idle_message="카테고리를 고르면 추천 프롬프트 1~2개를 바로 볼 수 있습니다.",
+        layout_kind=HOME_LAYOUT_QUICK,
+        home_priority=30,
     ),
 )
 
@@ -167,6 +219,106 @@ def _safe_reverse(route_name):
         return reverse(route_name)
     except NoReverseMatch:
         return ""
+
+
+def _sort_home_entries(entries):
+    return sorted(
+        entries,
+        key=lambda entry: (
+            entry["home_priority"],
+            entry["title"],
+        ),
+    )
+
+
+def _resolve_home_action_layout_kind(entry):
+    layout_kind = entry.get("layout_kind", HOME_LAYOUT_EXCLUDED)
+    if entry.get("home_surface") != HOME_SURFACE_ACTION:
+        return layout_kind
+    if layout_kind == HOME_LAYOUT_EXCLUDED:
+        return HOME_LAYOUT_EXCLUDED
+
+    contract = HOME_ACTION_CARD_CONTRACTS.get(layout_kind)
+    if contract is None:
+        return HOME_LAYOUT_EXCLUDED
+
+    fields = entry.get("fields") or ()
+    preview_kind = entry.get("preview_kind", "")
+    if len(fields) > contract.max_fields:
+        return HOME_LAYOUT_EXCLUDED
+    if preview_kind not in contract.allowed_preview_kinds:
+        return HOME_LAYOUT_EXCLUDED
+    return layout_kind
+
+
+def plan_home_action_surface(entries):
+    normalized_entries = [
+        {
+            **entry,
+            "layout_kind": _resolve_home_action_layout_kind(entry),
+        }
+        for entry in entries
+    ]
+    eligible_entries = [
+        entry
+        for entry in normalized_entries
+        if entry["home_surface"] == HOME_SURFACE_ACTION and entry["layout_kind"] != HOME_LAYOUT_EXCLUDED
+    ]
+    starters = _sort_home_entries(
+        [entry for entry in eligible_entries if entry["layout_kind"] == HOME_LAYOUT_STARTER]
+    )
+    quick_entries = _sort_home_entries(
+        [entry for entry in eligible_entries if entry["layout_kind"] == HOME_LAYOUT_QUICK]
+    )
+    promote_last_quick = len(quick_entries) % 2 == 1
+
+    planned_entries = []
+    for entry in starters:
+        placement = HomePlacementEntry(
+            key=entry["key"],
+            surface=HOME_SURFACE_ACTION,
+            layout_kind=HOME_LAYOUT_STARTER,
+            span=2,
+            render_variant=HOME_LAYOUT_STARTER,
+            full_url=entry["full_url"],
+        )
+        planned_entries.append(
+            {
+                **entry,
+                "placement": placement,
+                "span": placement.span,
+                "render_variant": placement.render_variant,
+            }
+        )
+
+    quick_queue = list(quick_entries)
+    while quick_queue:
+        is_last_unpaired = len(quick_queue) == 1
+        entry = quick_queue.pop(0)
+        render_variant = (
+            "quick-wide"
+            if is_last_unpaired and promote_last_quick and entry["overflow_behavior"] == HOME_OVERFLOW_PROMOTE
+            else HOME_LAYOUT_QUICK
+        )
+        span = 2 if render_variant == "quick-wide" else 1
+        placement = HomePlacementEntry(
+            key=entry["key"],
+            surface=HOME_SURFACE_ACTION,
+            layout_kind=HOME_LAYOUT_QUICK,
+            span=span,
+            render_variant=render_variant,
+            full_url=entry["full_url"],
+        )
+        planned_entries.append(
+            {
+                **entry,
+                "placement": placement,
+                "span": placement.span,
+                "render_variant": placement.render_variant,
+            }
+        )
+
+    return planned_entries
 
 
 def build_home_mini_app_entries(product_list):
@@ -209,6 +361,10 @@ def build_home_mini_app_entries(product_list):
             "body_template": definition.body_template,
             "product": product,
             "product_id": getattr(product, "id", None),
+            "home_surface": definition.home_surface,
+            "layout_kind": definition.layout_kind,
+            "home_priority": definition.home_priority,
+            "overflow_behavior": definition.overflow_behavior,
         }
         if definition.key == "noticegen":
             entry.update(
@@ -226,4 +382,4 @@ def build_home_mini_app_entries(product_list):
             entry["prompt_catalog"] = get_prompt_lab_catalog()
             entry["catalog_script_id"] = "home-mini-prompt-lab-catalog"
         entries.append(entry)
-    return entries
+    return plan_home_action_surface(entries)

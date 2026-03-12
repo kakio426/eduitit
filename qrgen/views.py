@@ -1,5 +1,6 @@
 from django.shortcuts import render
 
+from core.seo import build_qrgen_page_seo
 from products.models import Product
 
 
@@ -12,6 +13,6 @@ def landing(request):
         {
             'service': service,
             'features': features,
+            **build_qrgen_page_seo(request).as_context(),
         },
     )
-

@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load cloudinary_extras insight_extras %}
 
-{% block title %}{{ insight.title }} - Insight Library{% endblock %}
+{% block title %}{{ page_title|default:'Insight Library - Eduitit' }}{% endblock %}
 
 {% block extra_head %}
 <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />

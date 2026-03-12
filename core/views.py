@@ -43,6 +43,13 @@ from .service_launcher import (
 )
 from .mini_apps import build_home_mini_app_entries
 from .prompt_lab_data import get_prompt_lab_catalog
+from .seo import (
+    build_home_page_seo,
+    build_prompt_lab_page_seo,
+    build_service_guide_detail_seo,
+    build_service_guide_list_seo,
+    build_tool_guide_page_seo,
+)
 from .teacher_first_cards import build_favorite_service_title, build_workbench_card_meta
 from django.contrib import messages
 from django.db import transaction
@@ -2057,12 +2064,28 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
         recent_items = _build_product_link_items(recent_products, include_section_meta=True)
         discovery_items = _build_product_link_items(discovery_products, include_section_meta=True)
         mini_app_entries = build_home_mini_app_entries(product_list)
+        calendar_hub = _build_home_calendar_hub_context(request)
         workbench_bundles = _get_user_workbench_bundles(request.user, product_list)
         weekly_bundle_items = _get_weekly_workbench_bundle_highlights(request.user, product_list)
         today_context = _build_today_context(request)
-        calendar_hub = _build_home_calendar_hub_context(request)
         home_calendar_summary = next(iter(today_context.get('today_items', [])), None)
         home_sections = [*sections, *aux_sections]
+        home_surfaces = {
+            'workbench': {'key': 'workbench', 'label': '오늘 할 일, 즐겨찾기, 캘린더'},
+            'action': {'key': 'action', 'entries': mini_app_entries},
+            'service-board': {'key': 'service-board', 'label': '목적별 서비스 보드'},
+            'content': {'key': 'content', 'label': '소통과 읽을거리'},
+        }
+        home_v2_frontend_config = {
+            'toggleFavoriteUrl': reverse('toggle_product_favorite'),
+            'trackUsageUrl': reverse('track_product_usage'),
+            'calendar': {
+                'eventsUrl': reverse('classcalendar:api_events'),
+                'createEventUrl': reverse('classcalendar:api_create_event'),
+                'messageEnabled': bool(calendar_hub.get('message_enabled')),
+                'messageItemTypesEnabled': bool(calendar_hub.get('message_item_types_enabled')),
+            },
+        }
 
         return render(request, 'core/home_authenticated_v2.html', {
             'products': products,
@@ -2075,6 +2098,7 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
             'quick_actions': quick_action_items,
             'favorite_items': favorite_items,
             'mini_app_entries': mini_app_entries,
+            'home_surfaces': home_surfaces,
             'workbench_slots': workbench_slots,
             'favorite_product_ids': [p.id for p in favorite_products],
             'recent_items': recent_items,
@@ -2084,10 +2108,12 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
             'weekly_bundle_items': weekly_bundle_items,
             'calendar_hub': calendar_hub,
             'home_calendar_summary': home_calendar_summary,
+            'home_v2_frontend_config': home_v2_frontend_config,
             'community_summary': community_summary,
             'posts': posts,
             'page_obj': page_obj,
             'feed_scope': feed_scope,
+            **build_home_page_seo(request).as_context(),
             **today_context,
             **_build_sheetbook_workspace_context(request),
             **_build_home_student_games_qr_context(request),
@@ -2106,6 +2132,7 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
         'posts': posts,
         'page_obj': page_obj,
         'feed_scope': feed_scope,
+        **build_home_page_seo(request).as_context(),
     })
 
 def home(request):
@@ -2157,6 +2184,7 @@ def home(request):
             'posts': page_obj,
             'page_obj': page_obj,
             'feed_scope': feed_scope,
+            **build_home_page_seo(request).as_context(),
         })
 
     # Else show the public home
@@ -2172,6 +2200,7 @@ def home(request):
         'posts': page_obj,
         'page_obj': page_obj,
         'feed_scope': feed_scope,
+        **build_home_page_seo(request).as_context(),
     })
 
 
@@ -2687,6 +2716,7 @@ def prompt_lab(request):
         'core/prompt_lab.html',
         {
             'prompt_lab_catalog': get_prompt_lab_catalog(),
+            **build_prompt_lab_page_seo(request).as_context(),
         },
     )
 
@@ -2863,6 +2893,7 @@ def tool_guide(request):
         'all_tools_count': len(tools),
         'new_tools_count': sum(1 for tool in tools if tool['is_new']),
         'teacher_first_contract_path': TEACHER_FIRST_PRODUCT_CONTRACT_PATH,
+        **build_tool_guide_page_seo(request).as_context(),
     })
 
 
@@ -3186,6 +3217,7 @@ def service_guide_list(request):
         'manual_count': manual_count,
         'missing_manual_count': missing_manual_count,
         'teacher_first_contract_path': TEACHER_FIRST_PRODUCT_CONTRACT_PATH,
+        **build_service_guide_list_seo(request).as_context(),
     })
 
 def service_guide_detail(request, pk):
@@ -3211,6 +3243,7 @@ def service_guide_detail(request, pk):
         'launch_href': launch_href,
         'launch_is_external': launch_is_external,
         'launch_label': f"{manual.public_service_name} 열기",
+        **build_service_guide_detail_seo(request, manual).as_context(),
     })
 
 
