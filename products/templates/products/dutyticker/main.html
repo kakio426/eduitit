@@ -18,9 +18,9 @@
         --dt-font-ui: "Pretendard Variable", "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
         --dt-font-code: "JetBrains Mono", "D2Coding", "SFMono-Regular", "Consolas", "Menlo", monospace;
         --dt-page-gutter: clamp(0.85rem, 1.6vw, 1.4rem);
-        --dt-right-rail-min: 24rem;
-        --dt-right-rail-fluid: 26vw;
-        --dt-right-rail-max: 29rem;
+        --dt-right-rail-min: 26rem;
+        --dt-right-rail-fluid: 28vw;
+        --dt-right-rail-max: 31rem;
         --dt-mission-collapsed-height: clamp(6.2rem, 8.2vh, 7.1rem);
         --dt-indigo: #6366f1;
         --dt-violet: #8b5cf6;
@@ -870,12 +870,16 @@
     .dt-role-title-wrap {
         min-width: 0;
         display: block;
+        flex: 1 1 14rem;
     }
 
     .dt-role-title {
         font-size: clamp(1.2rem, 1.08rem + 0.42vw, 1.52rem) !important;
         line-height: 1.1;
         letter-spacing: -0.01em;
+        flex-wrap: nowrap;
+        white-space: nowrap;
+        word-break: keep-all;
     }
 
     .dt-role-subtitle {
