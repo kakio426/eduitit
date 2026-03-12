@@ -35,6 +35,12 @@
         </div>
         {% endif %}
 
+        {% if return_to %}
+        <div class="mb-6 rounded-2xl border border-indigo-200 bg-indigo-50 px-5 py-4 text-sm text-indigo-800" data-aos="fade-down" data-aos-delay="60">
+            서명 요청에서 명단을 만들러 오셨습니다. 명단을 만든 뒤 아래 버튼으로 바로 돌아갈 수 있어요.
+        </div>
+        {% endif %}
+
         <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
             <div class="clay-card p-6 md:p-7" data-aos="fade-up">
                 <div class="flex items-center gap-3 mb-5">
@@ -46,6 +52,9 @@
 
                 <form action="{% url 'handoff:group_create' %}" method="post" class="space-y-4">
                     {% csrf_token %}
+                    {% if return_to %}
+                    <input type="hidden" name="return_to" value="{{ return_to }}">
+                    {% endif %}
                     <div>
                         <label class="block text-sm font-black text-gray-600 mb-1">{{ group_form.name.label }}</label>
                         {{ group_form.name }}
@@ -126,6 +135,9 @@
                             </div>
                             <form action="{% url 'handoff:group_delete' group.id %}" method="post" onsubmit="return confirm('명단을 삭제할까요?');">
                                 {% csrf_token %}
+                                {% if return_to %}
+                                <input type="hidden" name="return_to" value="{{ return_to }}">
+                                {% endif %}
                                 <button type="submit" class="w-9 h-9 rounded-full text-gray-300 hover:text-red-500 hover:bg-red-50 transition">
                                     <i class="fa-solid fa-trash"></i>
                                 </button>
@@ -134,10 +146,16 @@
                         <div class="text-xs text-gray-500 font-bold mb-3">
                             활성 {{ group.active_member_count }}명 / 전체 {{ group.total_member_count }}명
                         </div>
-                        <a href="{% url 'handoff:group_detail' group.id %}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 font-bold text-sm">
+                        <a href="{{ group.manage_url }}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 font-bold text-sm">
                             <i class="fa-solid fa-pen"></i>
                             <span>명단 관리</span>
                         </a>
+                        {% if group.continue_url %}
+                        <a href="{{ group.continue_url }}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-bold text-sm">
+                            <i class="fa-solid fa-arrow-right"></i>
+                            <span>이 명단으로 서명 요청 계속하기</span>
+                        </a>
+                        {% endif %}
                     </div>
                     {% endfor %}
                 </div>

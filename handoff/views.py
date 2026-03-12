@@ -1,5 +1,6 @@
 import csv
 from typing import Iterable
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -7,6 +8,8 @@ from django.db import IntegrityError
 from django.db.models import Count, Max, Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -69,6 +72,49 @@ def _session_summary_text(session: HandoffSession, pending_names: Iterable[str])
     return f"[{session.title}] 아직 수령 확인이 필요한 분: {joined}"
 
 
+def _append_query_params(url, **params):
+    split_result = urlsplit(url)
+    query = dict(parse_qsl(split_result.query, keep_blank_values=True))
+    for key, value in params.items():
+        if value in (None, ""):
+            query.pop(key, None)
+            continue
+        query[str(key)] = str(value)
+    return urlunsplit(
+        (
+            split_result.scheme,
+            split_result.netloc,
+            split_result.path,
+            urlencode(query),
+            split_result.fragment,
+        )
+    )
+
+
+def _get_safe_return_to(request):
+    raw_value = (
+        request.POST.get("return_to")
+        or request.GET.get("return_to")
+        or ""
+    ).strip()
+    if not raw_value:
+        return ""
+    if not url_has_allowed_host_and_scheme(
+        raw_value,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return ""
+    split_result = urlsplit(raw_value)
+    return urlunsplit(("", "", split_result.path or "/", split_result.query, ""))
+
+
+def _redirect_with_return(target_url, return_to):
+    if return_to:
+        return redirect(_append_query_params(target_url, return_to=return_to))
+    return redirect(target_url)
+
+
 def landing(request):
     if request.user.is_authenticated:
         return redirect("handoff:dashboard")
@@ -78,7 +124,8 @@ def landing(request):
 @login_required
 def dashboard(request):
     owner = request.user
-    groups = (
+    return_to = _get_safe_return_to(request)
+    groups = list(
         HandoffRosterGroup.objects.filter(owner=owner)
         .annotate(
             active_member_count=Count("members", filter=Q(members__is_active=True)),
@@ -86,6 +133,16 @@ def dashboard(request):
         )
         .order_by("-is_favorite", "name")
     )
+    for group in groups:
+        group.manage_url = _append_query_params(
+            reverse("handoff:group_detail", kwargs={"group_id": group.id}),
+            return_to=return_to,
+        )
+        group.continue_url = (
+            _append_query_params(return_to, shared_roster_group=group.id)
+            if return_to and group.active_member_count > 0
+            else ""
+        )
     sessions = (
         HandoffSession.objects.filter(owner=owner)
         .select_related("roster_group")
@@ -105,6 +162,7 @@ def dashboard(request):
             "sessions": sessions,
             "group_form": HandoffRosterGroupForm(),
             "session_form": HandoffSessionCreateForm(owner=owner),
+            "return_to": return_to,
         },
     )
 
@@ -112,12 +170,13 @@ def dashboard(request):
 @login_required
 @require_POST
 def group_create(request):
+    return_to = _get_safe_return_to(request)
     form = HandoffRosterGroupForm(request.POST)
     if not form.is_valid():
         for _, error_list in form.errors.items():
             for error in error_list:
                 messages.error(request, error)
-        return redirect("handoff:dashboard")
+        return _redirect_with_return(reverse("handoff:dashboard"), return_to)
 
     group = form.save(commit=False)
     group.owner = request.user
@@ -125,14 +184,18 @@ def group_create(request):
         group.save()
     except IntegrityError:
         messages.error(request, "같은 이름의 명단이 이미 있습니다.")
-        return redirect("handoff:dashboard")
+        return _redirect_with_return(reverse("handoff:dashboard"), return_to)
 
     messages.success(request, f"명단 '{group.name}'을 만들었습니다.")
-    return redirect("handoff:group_detail", group_id=group.id)
+    return _redirect_with_return(
+        reverse("handoff:group_detail", kwargs={"group_id": group.id}),
+        return_to,
+    )
 
 
 @login_required
 def group_detail(request, group_id):
+    return_to = _get_safe_return_to(request)
     group = get_object_or_404(HandoffRosterGroup, id=group_id, owner=request.user)
     members = group.members.order_by("sort_order", "id")
     active_member_count = group.members.filter(is_active=True).count()
@@ -147,6 +210,12 @@ def group_detail(request, group_id):
             "group_form": HandoffRosterGroupForm(instance=group),
             "bulk_form": HandoffMemberBulkAddForm(),
             "sessions_count": group.sessions.count(),
+            "return_to": return_to,
+            "continue_to_signatures_url": (
+                _append_query_params(return_to, shared_roster_group=group.id)
+                if return_to and active_member_count > 0
+                else ""
+            ),
         },
     )
 
@@ -154,47 +223,65 @@ def group_detail(request, group_id):
 @login_required
 @require_POST
 def group_update(request, group_id):
+    return_to = _get_safe_return_to(request)
     group = get_object_or_404(HandoffRosterGroup, id=group_id, owner=request.user)
     form = HandoffRosterGroupForm(request.POST, instance=group)
     if not form.is_valid():
         for _, error_list in form.errors.items():
             for error in error_list:
                 messages.error(request, error)
-        return redirect("handoff:group_detail", group_id=group.id)
+        return _redirect_with_return(
+            reverse("handoff:group_detail", kwargs={"group_id": group.id}),
+            return_to,
+        )
 
     try:
         form.save()
     except IntegrityError:
         messages.error(request, "같은 이름의 명단이 이미 있습니다.")
-        return redirect("handoff:group_detail", group_id=group.id)
+        return _redirect_with_return(
+            reverse("handoff:group_detail", kwargs={"group_id": group.id}),
+            return_to,
+        )
 
     messages.success(request, "명단 정보를 수정했습니다.")
-    return redirect("handoff:group_detail", group_id=group.id)
+    return _redirect_with_return(
+        reverse("handoff:group_detail", kwargs={"group_id": group.id}),
+        return_to,
+    )
 
 
 @login_required
 @require_POST
 def group_delete(request, group_id):
+    return_to = _get_safe_return_to(request)
     group = get_object_or_404(HandoffRosterGroup, id=group_id, owner=request.user)
     name = group.name
     group.delete()
     messages.success(request, f"명단 '{name}'을 삭제했습니다.")
-    return redirect("handoff:dashboard")
+    return _redirect_with_return(reverse("handoff:dashboard"), return_to)
 
 
 @login_required
 @require_POST
 def group_members_add(request, group_id):
+    return_to = _get_safe_return_to(request)
     group = get_object_or_404(HandoffRosterGroup, id=group_id, owner=request.user)
     form = HandoffMemberBulkAddForm(request.POST)
     if not form.is_valid():
         messages.error(request, "이름 목록을 확인해주세요.")
-        return redirect("handoff:group_detail", group_id=group.id)
+        return _redirect_with_return(
+            reverse("handoff:group_detail", kwargs={"group_id": group.id}),
+            return_to,
+        )
 
     names = _normalize_bulk_names(form.cleaned_data["names_text"])
     if not names:
         messages.error(request, "추가할 이름이 없습니다.")
-        return redirect("handoff:group_detail", group_id=group.id)
+        return _redirect_with_return(
+            reverse("handoff:group_detail", kwargs={"group_id": group.id}),
+            return_to,
+        )
 
     last_order = group.members.aggregate(max_order=Max("sort_order")).get("max_order") or 0
     payload = [
@@ -207,37 +294,51 @@ def group_members_add(request, group_id):
     ]
     HandoffRosterMember.objects.bulk_create(payload)
     messages.success(request, f"{len(payload)}명을 추가했습니다.")
-    return redirect("handoff:group_detail", group_id=group.id)
+    return _redirect_with_return(
+        reverse("handoff:group_detail", kwargs={"group_id": group.id}),
+        return_to,
+    )
 
 
 @login_required
 @require_POST
 def group_member_update(request, group_id, member_id):
+    return_to = _get_safe_return_to(request)
     group = get_object_or_404(HandoffRosterGroup, id=group_id, owner=request.user)
     member = get_object_or_404(HandoffRosterMember, id=member_id, group=group)
 
     display_name = (request.POST.get("display_name") or "").strip()
     if not display_name:
         messages.error(request, "이름은 비울 수 없습니다.")
-        return redirect("handoff:group_detail", group_id=group.id)
+        return _redirect_with_return(
+            reverse("handoff:group_detail", kwargs={"group_id": group.id}),
+            return_to,
+        )
 
     member.display_name = display_name
     member.note = (request.POST.get("note") or "").strip()[:120]
     member.is_active = bool(request.POST.get("is_active"))
     member.save(update_fields=["display_name", "note", "is_active", "updated_at"])
     messages.success(request, f"{member.display_name} 정보가 저장되었습니다.")
-    return redirect("handoff:group_detail", group_id=group.id)
+    return _redirect_with_return(
+        reverse("handoff:group_detail", kwargs={"group_id": group.id}),
+        return_to,
+    )
 
 
 @login_required
 @require_POST
 def group_member_delete(request, group_id, member_id):
+    return_to = _get_safe_return_to(request)
     group = get_object_or_404(HandoffRosterGroup, id=group_id, owner=request.user)
     member = get_object_or_404(HandoffRosterMember, id=member_id, group=group)
     name = member.display_name
     member.delete()
     messages.success(request, f"{name}을(를) 삭제했습니다.")
-    return redirect("handoff:group_detail", group_id=group.id)
+    return _redirect_with_return(
+        reverse("handoff:group_detail", kwargs={"group_id": group.id}),
+        return_to,
+    )
 
 
 @login_required

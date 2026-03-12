@@ -1,4 +1,5 @@
 from datetime import timedelta
+from urllib.parse import parse_qs, urlparse
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -6,6 +7,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from core.models import UserProfile
+from handoff.models import HandoffRosterGroup
 from signatures.models import ExpectedParticipant, Signature, TrainingSession
 
 
@@ -84,7 +86,56 @@ class SignatureTeacherFirstPagesTests(TestCase):
         self.assertContains(response, "참석자는 로그인 없이 참여합니다.")
         self.assertContains(response, "예상 참여 인원 (선택)")
         self.assertContains(response, "누가 안 했는지 이름으로 보려면 명단을 연결하세요.")
-        self.assertContains(response, "명단 없이 시작해도 남은 인원 수는 확인할 수 있습니다.")
+        self.assertContains(response, "아직 연결할 명단이 없습니다.")
+        self.assertContains(response, "명단 만들기")
+        self.assertContains(response, "이번에는 명단 없이 시작")
+
+    def test_create_page_shows_secondary_roster_button_when_rosters_exist(self):
+        HandoffRosterGroup.objects.create(owner=self.user, name="교무실 명단")
+
+        response = self.client.get(reverse("signatures:create"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "새 명단 만들기")
+        self.assertNotContains(response, "아직 연결할 명단이 없습니다.")
+
+    def test_prepare_roster_return_restores_draft_and_auto_selects_roster(self):
+        session_dt = timezone.localtime(timezone.now() + timedelta(days=1)).replace(minute=0, second=0, microsecond=0)
+        prepare_response = self.client.post(
+            reverse("signatures:prepare_roster_return"),
+            data={
+                "title": "복귀 테스트 요청",
+                "print_title": "",
+                "instructor": "강사",
+                "datetime": session_dt.strftime("%Y-%m-%dT%H:%M"),
+                "location": "시청각실",
+                "description": "명단 만들고 돌아옵니다.",
+                "expected_count": "24",
+                "is_active": "on",
+            },
+        )
+
+        self.assertEqual(prepare_response.status_code, 302)
+        redirect_url = prepare_response["Location"]
+        self.assertIn(reverse("handoff:dashboard"), redirect_url)
+
+        return_to = parse_qs(urlparse(redirect_url).query)["return_to"][0]
+        draft_token = parse_qs(urlparse(return_to).query)["draft_token"][0]
+
+        roster = HandoffRosterGroup.objects.create(owner=self.user, name="방금 만든 명단")
+        restored_response = self.client.get(
+            reverse("signatures:create"),
+            data={"draft_token": draft_token, "shared_roster_group": str(roster.id)},
+        )
+
+        self.assertEqual(restored_response.status_code, 200)
+        self.assertContains(restored_response, "방금 만든 명단")
+        self.assertEqual(restored_response.context["form"]["title"].value(), "복귀 테스트 요청")
+        self.assertEqual(str(restored_response.context["form"]["expected_count"].value()), "24")
+        self.assertEqual(
+            str(restored_response.context["form"]["shared_roster_group"].value()),
+            str(roster.id),
+        )
 
     def test_create_can_copy_from_existing_request_and_participants(self):
         source_session = TrainingSession.objects.create(

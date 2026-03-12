@@ -77,6 +77,77 @@ class HandoffFlowTest(TestCase):
         self.assertRedirects(delete_response, reverse("handoff:group_detail", args=[group.id]))
         self.assertEqual(group.members.count(), 1)
 
+    def test_return_to_is_preserved_for_group_creation_and_member_updates(self):
+        return_to = "/signatures/create/?draft_token=testdraft"
+        create_response = self.client.post(
+            reverse("handoff:group_create"),
+            data={
+                "name": "서명 복귀 명단",
+                "description": "",
+                "return_to": return_to,
+            },
+        )
+
+        group = HandoffRosterGroup.objects.get(owner=self.user, name="서명 복귀 명단")
+        self.assertRedirects(
+            create_response,
+            f"{reverse('handoff:group_detail', args=[group.id])}?return_to=%2Fsignatures%2Fcreate%2F%3Fdraft_token%3Dtestdraft",
+        )
+
+        detail_response = self.client.get(
+            reverse("handoff:group_detail", args=[group.id]),
+            data={"return_to": return_to},
+        )
+        self.assertContains(detail_response, "멤버를 먼저 추가해야 서명 요청에 연결할 수 있습니다")
+        self.assertNotContains(
+            detail_response,
+            f"{return_to}&amp;shared_roster_group={group.id}",
+            html=False,
+        )
+        dashboard_response = self.client.get(reverse("handoff:dashboard"), data={"return_to": return_to})
+        self.assertNotContains(dashboard_response, f"{return_to}&amp;shared_roster_group={group.id}", html=False)
+
+        add_response = self.client.post(
+            reverse("handoff:group_members_add", args=[group.id]),
+            data={
+                "names_text": "김민수",
+                "return_to": return_to,
+            },
+        )
+        self.assertRedirects(
+            add_response,
+            f"{reverse('handoff:group_detail', args=[group.id])}?return_to=%2Fsignatures%2Fcreate%2F%3Fdraft_token%3Dtestdraft",
+        )
+
+        detail_response = self.client.get(
+            reverse("handoff:group_detail", args=[group.id]),
+            data={"return_to": return_to},
+        )
+        self.assertContains(
+            detail_response,
+            f"{return_to}&amp;shared_roster_group={group.id}",
+            html=False,
+        )
+        dashboard_response = self.client.get(reverse("handoff:dashboard"), data={"return_to": return_to})
+        self.assertContains(
+            dashboard_response,
+            f"{return_to}&amp;shared_roster_group={group.id}",
+            html=False,
+        )
+
+    def test_external_return_to_is_ignored(self):
+        response = self.client.post(
+            reverse("handoff:group_create"),
+            data={
+                "name": "외부 복귀 차단 명단",
+                "description": "",
+                "return_to": "https://evil.example.com/phish",
+            },
+        )
+
+        group = HandoffRosterGroup.objects.get(owner=self.user, name="외부 복귀 차단 명단")
+        self.assertRedirects(response, reverse("handoff:group_detail", args=[group.id]))
+
     def test_session_create_generates_receipts_for_active_members(self):
         group, _ = self._create_group_with_members()
         response = self.client.post(

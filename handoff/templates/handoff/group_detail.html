@@ -11,10 +11,25 @@
                 <h1 class="text-4xl font-black text-gray-700">{{ group.name }}</h1>
                 <p class="text-gray-500 font-bold mt-1">활성 멤버 {{ active_member_count }}명 · 전체 {{ members|length }}명 · 연결된 세션 {{ sessions_count }}건</p>
             </div>
-            <a href="{% url 'handoff:dashboard' %}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-gray-600 font-bold shadow-clay hover:text-blue-600 transition-colors">
-                <i class="fa-solid fa-arrow-left"></i>
-                <span>대시보드로</span>
-            </a>
+            <div class="flex flex-wrap gap-2">
+                {% if return_to %}
+                    {% if continue_to_signatures_url %}
+                    <a href="{{ continue_to_signatures_url }}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-black shadow-clay hover:bg-indigo-500 transition-colors">
+                        <i class="fa-solid fa-arrow-right"></i>
+                        <span>이 명단으로 서명 요청 계속하기</span>
+                    </a>
+                    {% else %}
+                    <span class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-100 text-slate-500 font-bold shadow-sm">
+                        <i class="fa-solid fa-circle-info"></i>
+                        <span>멤버를 먼저 추가해야 서명 요청에 연결할 수 있습니다</span>
+                    </span>
+                    {% endif %}
+                {% endif %}
+                <a href="{% if return_to %}{% url 'handoff:dashboard' %}?return_to={{ return_to|urlencode }}{% else %}{% url 'handoff:dashboard' %}{% endif %}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-gray-600 font-bold shadow-clay hover:text-blue-600 transition-colors">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span>대시보드로</span>
+                </a>
+            </div>
         </div>
 
         {% if messages %}
@@ -40,6 +55,9 @@
                 <h2 class="text-2xl font-black text-gray-700 mb-4">명단 정보</h2>
                 <form action="{% url 'handoff:group_update' group.id %}" method="post" class="space-y-4">
                     {% csrf_token %}
+                    {% if return_to %}
+                    <input type="hidden" name="return_to" value="{{ return_to }}">
+                    {% endif %}
                     <div>
                         <label class="block text-sm font-black text-gray-600 mb-1">{{ group_form.name.label }}</label>
                         {{ group_form.name }}
@@ -62,6 +80,9 @@
                 <h2 class="text-2xl font-black text-gray-700 mb-4">멤버 일괄 추가</h2>
                 <form action="{% url 'handoff:group_members_add' group.id %}" method="post" class="space-y-4">
                     {% csrf_token %}
+                    {% if return_to %}
+                    <input type="hidden" name="return_to" value="{{ return_to }}">
+                    {% endif %}
                     <div>
                         <label class="block text-sm font-black text-gray-600 mb-1">{{ bulk_form.names_text.label }}</label>
                         {{ bulk_form.names_text }}
@@ -83,6 +104,9 @@
                     <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
                         <form action="{% url 'handoff:group_member_update' group.id member.id %}" method="post" class="md:col-span-11 grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
                             {% csrf_token %}
+                            {% if return_to %}
+                            <input type="hidden" name="return_to" value="{{ return_to }}">
+                            {% endif %}
                             <input type="text" name="display_name" value="{{ member.display_name }}" class="md:col-span-4 w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300" required>
                             <input type="text" name="note" value="{{ member.note }}" placeholder="메모 (선택)" class="md:col-span-5 w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
                             <label class="md:col-span-2 inline-flex items-center gap-2 text-sm font-bold text-gray-600">
@@ -95,6 +119,9 @@
                         </form>
                         <form action="{% url 'handoff:group_member_delete' group.id member.id %}" method="post" class="md:col-span-1" onsubmit="return confirm('멤버를 삭제할까요?');">
                             {% csrf_token %}
+                            {% if return_to %}
+                            <input type="hidden" name="return_to" value="{{ return_to }}">
+                            {% endif %}
                             <button type="submit" class="w-full px-3 py-2 rounded-lg bg-red-50 text-red-700 font-black text-sm border border-red-100">
                                 삭제
                             </button>

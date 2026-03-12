@@ -3,8 +3,10 @@ import io
 import json
 import logging
 import re
+import uuid
 from collections import Counter, defaultdict
 from datetime import timedelta
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import qrcode
 from django.shortcuts import render, redirect, get_object_or_404
@@ -16,6 +18,7 @@ from django.views.decorators.http import require_POST
 from django.urls import reverse
 from django.utils import timezone
 from django_ratelimit.decorators import ratelimit
+from handoff.models import HandoffRosterGroup
 from .models import (
     AffiliationCorrectionLog,
     ExpectedParticipant,
@@ -33,6 +36,7 @@ logger = logging.getLogger(__name__)
 CALENDAR_INTEGRATION_SOURCE = "signatures_training"
 WORKFLOW_ACTION_SEED_SESSION_KEY = "workflow_action_seeds"
 SHEETBOOK_ACTION_SEED_SESSION_KEY = "sheetbook_action_seeds"
+SIGNATURE_CREATE_DRAFT_SESSION_KEY = "signature_create_drafts"
 DEFAULT_AFFILIATION_SUGGESTIONS = [
     "교사",
     "교감",
@@ -572,6 +576,114 @@ def _to_datetime_local_input_value(value):
     return value.strftime("%Y-%m-%dT%H:%M")
 
 
+def _append_query_params(url, **params):
+    split_result = urlsplit(url)
+    query = dict(parse_qsl(split_result.query, keep_blank_values=True))
+    for key, value in params.items():
+        if value in (None, ""):
+            query.pop(key, None)
+            continue
+        query[str(key)] = str(value)
+    return urlunsplit(
+        (
+            split_result.scheme,
+            split_result.netloc,
+            split_result.path,
+            urlencode(query),
+            split_result.fragment,
+        )
+    )
+
+
+def _get_signature_create_drafts(request):
+    drafts = request.session.get(SIGNATURE_CREATE_DRAFT_SESSION_KEY, {})
+    if not isinstance(drafts, dict):
+        drafts = {}
+    return drafts
+
+
+def _peek_signature_create_draft(request, token):
+    token = str(token or "").strip()
+    if not token:
+        return {}
+    draft = _get_signature_create_drafts(request).get(token, {})
+    return draft if isinstance(draft, dict) else {}
+
+
+def _store_signature_create_draft(request, draft_payload, *, token=""):
+    token = str(token or "").strip() or uuid.uuid4().hex
+    drafts = _get_signature_create_drafts(request)
+    drafts[token] = draft_payload
+    request.session[SIGNATURE_CREATE_DRAFT_SESSION_KEY] = drafts
+    request.session.modified = True
+    return token
+
+
+def _pop_signature_create_draft(request, token):
+    token = str(token or "").strip()
+    if not token:
+        return {}
+    drafts = _get_signature_create_drafts(request)
+    draft = drafts.pop(token, {})
+    request.session[SIGNATURE_CREATE_DRAFT_SESSION_KEY] = drafts
+    request.session.modified = True
+    return draft if isinstance(draft, dict) else {}
+
+
+def _build_signature_create_draft_payload(data):
+    payload = {
+        "title": str(data.get("title") or "").strip()[:200],
+        "print_title": str(data.get("print_title") or "").strip()[:200],
+        "instructor": str(data.get("instructor") or "").strip()[:100],
+        "datetime": str(data.get("datetime") or "").strip()[:16],
+        "location": str(data.get("location") or "").strip()[:200],
+        "description": str(data.get("description") or "").strip()[:2000],
+        "shared_roster_group": str(data.get("shared_roster_group") or "").strip(),
+        "expected_count": str(data.get("expected_count") or "").strip()[:10],
+        "copy_from_uuid": str(data.get("copy_from_uuid") or "").strip(),
+        "sheetbook_seed_token": str(data.get("sheetbook_seed_token") or "").strip(),
+        "draft_token": str(data.get("draft_token") or "").strip(),
+        "apply_sheetbook_participants": _is_truthy_flag(
+            data.get("apply_sheetbook_participants"),
+            default=True,
+        ),
+        "is_active": _is_truthy_flag(data.get("is_active"), default=False),
+    }
+    return payload
+
+
+def _build_signature_create_initial_from_draft(draft_payload):
+    if not draft_payload:
+        return {}
+
+    initial = {
+        "title": draft_payload.get("title", ""),
+        "print_title": draft_payload.get("print_title", ""),
+        "instructor": draft_payload.get("instructor", ""),
+        "datetime": draft_payload.get("datetime", ""),
+        "location": draft_payload.get("location", ""),
+        "description": draft_payload.get("description", ""),
+        "is_active": bool(draft_payload.get("is_active", False)),
+    }
+    expected_count = str(draft_payload.get("expected_count") or "").strip()
+    if expected_count.isdigit() and int(expected_count) > 0:
+        initial["expected_count"] = int(expected_count)
+    shared_roster_group = str(draft_payload.get("shared_roster_group") or "").strip()
+    if shared_roster_group:
+        initial["shared_roster_group"] = shared_roster_group
+    return initial
+
+
+def _get_owned_roster_group(owner, group_id):
+    group_id = str(group_id or "").strip()
+    if not group_id:
+        return None
+    try:
+        return HandoffRosterGroup.objects.filter(owner=owner, id=group_id).first()
+    except Exception:
+        return None
+
+
 def _build_copy_initial_from_session(session):
     expected_count = session.expected_count or session.expected_participants.count() or ""
     initial = {
@@ -772,15 +884,45 @@ def session_list(request):
 
 
 @login_required
+@require_POST
+def prepare_roster_return(request):
+    """서명 생성 초안을 저장한 뒤 명단 서비스로 이동."""
+    draft_payload = _build_signature_create_draft_payload(request.POST)
+    draft_token = _store_signature_create_draft(
+        request,
+        draft_payload,
+        token=draft_payload.get("draft_token", ""),
+    )
+    return_to = _append_query_params(
+        reverse("signatures:create"),
+        draft_token=draft_token,
+    )
+    return redirect(
+        _append_query_params(
+            reverse("handoff:dashboard"),
+            return_to=return_to,
+        )
+    )
+
+
+@login_required
 def session_create(request):
     """연수 생성"""
+    draft_token = (
+        request.POST.get("draft_token")
+        or request.GET.get("draft_token")
+        or ""
+    ).strip()
+    draft_payload = _peek_signature_create_draft(request, draft_token)
     copy_from_uuid = (
         request.POST.get("copy_from_uuid")
+        or draft_payload.get("copy_from_uuid", "")
         or request.GET.get("copy_from")
         or ""
     ).strip()
     sheetbook_seed_token = (
         request.POST.get("sheetbook_seed_token")
+        or draft_payload.get("sheetbook_seed_token", "")
         or request.GET.get("sb_seed")
         or ""
     ).strip()
@@ -808,7 +950,9 @@ def session_create(request):
         )
 
     prefill_initial = {}
-    if seed_data:
+    if draft_payload:
+        prefill_initial = _build_signature_create_initial_from_draft(draft_payload)
+    elif seed_data:
         prefill_initial = {
             "title": str(seed_data.get("title") or "").strip()[:200],
             "print_title": str(seed_data.get("print_title") or "").strip()[:200],
@@ -827,8 +971,23 @@ def session_create(request):
     elif copy_source_session:
         prefill_initial = _build_copy_initial_from_session(copy_source_session)
 
+    selected_roster_group_id = (
+        request.GET.get("shared_roster_group")
+        or draft_payload.get("shared_roster_group", "")
+        or prefill_initial.get("shared_roster_group", "")
+    )
+    selected_roster_group = _get_owned_roster_group(request.user, selected_roster_group_id)
+    restored_roster_group = _get_owned_roster_group(
+        request.user,
+        request.GET.get("shared_roster_group"),
+    )
+    if selected_roster_group is not None:
+        prefill_initial["shared_roster_group"] = str(selected_roster_group.id)
+
     apply_sheetbook_participants = _is_truthy_flag(
-        request.POST.get("apply_sheetbook_participants"),
+        request.POST.get("apply_sheetbook_participants")
+        if request.method == "POST"
+        else draft_payload.get("apply_sheetbook_participants"),
         default=True,
     )
 
@@ -868,6 +1027,8 @@ def session_create(request):
                     sheetbook_seed_token,
                     expected_action="signature",
                 )
+            if draft_token:
+                _pop_signature_create_draft(request, draft_token)
             _sync_calendar_event_for_training(session)
             message_parts = []
             if roster_result["total"] > 0:
@@ -909,6 +1070,7 @@ def session_create(request):
         'signatures/create.html',
         {
             'form': form,
+            'draft_token': draft_token,
             'copy_from_uuid': copy_from_uuid if copy_source_session else "",
             'copy_source_session': copy_source_session,
             'sheetbook_seed_token': sheetbook_seed_token if seed_data else "",
@@ -919,6 +1081,8 @@ def session_create(request):
             'sheetbook_prefill_participants_count': len(seed_participants) or len(copy_source_participants),
             'sheetbook_prefill_participants_preview': participant_preview,
             'apply_sheetbook_participants': apply_sheetbook_participants,
+            'has_roster_groups': form.fields["shared_roster_group"].queryset.exists(),
+            'restored_roster_group': restored_roster_group,
         },
     )
 
@@ -1092,42 +1256,101 @@ def sign(request, uuid):
     """서명 페이지 (공개 - 로그인 불필요)"""
     session = get_object_or_404(TrainingSession, uuid=uuid)
     affiliation_suggestions = _build_affiliation_suggestions(session)
+    roster_participant_options = _sort_expected_participants_for_display(
+        session.expected_participants.all(),
+        _get_participant_sort_mode(session),
+    )
+    show_roster_selection = bool(roster_participant_options)
+    walk_in_mode = (
+        _is_truthy_flag(request.POST.get("walk_in_mode"), default=False)
+        if request.method == "POST" and show_roster_selection
+        else False
+    )
+    selected_expected_participant_id = (
+        request.POST.get("expected_participant_id")
+        if request.method == "POST"
+        else ""
+    ) or ""
 
     if not session.is_active:
         response = render(request, 'signatures/closed.html', {'session': session})
         return _apply_sensitive_cache_headers(response)
 
     if request.method == 'POST':
-        form = SignatureForm(request.POST)
+        form = SignatureForm(request.POST, use_roster_selection=show_roster_selection)
         if form.is_valid():
-            signature = form.save(commit=False)
-            signature.training_session = session
-            signature.participant_affiliation = _normalize_affiliation_text(signature.participant_affiliation)
-            signature.submission_mode = Signature.SUBMISSION_MODE_OPEN
-            signature.ip_address = _request_client_ip(request)
-            signature.user_agent = _request_user_agent(request)
-            signature.save()
-            SignatureAuditLog.objects.create(
-                training_session=session,
-                signature=signature,
-                event_type=SignatureAuditLog.EVENT_SIGN_SUBMITTED,
-                event_meta={
-                    'participant_name': signature.participant_name,
-                    'participant_affiliation': signature.display_affiliation,
-                    'submission_mode': signature.submission_mode,
-                },
-                ip_address=signature.ip_address,
-                user_agent=signature.user_agent,
-            )
-            response = render(request, 'signatures/sign_success.html', {'session': session})
-            return _apply_sensitive_cache_headers(response)
+            selected_participant = None
+            selected_participant_id = form.cleaned_data.get("expected_participant_id")
+
+            if show_roster_selection and selected_participant_id and not walk_in_mode:
+                selected_participant = (
+                    ExpectedParticipant.objects
+                    .filter(training_session=session, id=selected_participant_id)
+                    .first()
+                )
+                if selected_participant is None:
+                    form.add_error(None, "선택한 이름을 다시 확인해 주세요.")
+                elif selected_participant.matched_signature_id:
+                    form.add_error(None, "이미 서명이 완료된 이름입니다. 다른 이름을 선택해 주세요.")
+
+            if not form.errors:
+                with transaction.atomic():
+                    if show_roster_selection and selected_participant_id and not walk_in_mode:
+                        selected_participant = get_object_or_404(
+                            ExpectedParticipant.objects.select_for_update(),
+                            training_session=session,
+                            id=selected_participant_id,
+                        )
+                        if selected_participant.matched_signature_id:
+                            form.add_error(None, "이미 서명이 완료된 이름입니다. 다른 이름을 선택해 주세요.")
+
+                    if not form.errors:
+                        signature = form.save(commit=False)
+                        signature.training_session = session
+                        if selected_participant is not None:
+                            signature.participant_name = selected_participant.name
+                            signature.participant_affiliation = _normalize_affiliation_text(
+                                selected_participant.display_affiliation or selected_participant.affiliation
+                            )
+                        else:
+                            signature.participant_affiliation = _normalize_affiliation_text(signature.participant_affiliation)
+                        signature.submission_mode = Signature.SUBMISSION_MODE_OPEN
+                        signature.ip_address = _request_client_ip(request)
+                        signature.user_agent = _request_user_agent(request)
+                        signature.save()
+
+                        if selected_participant is not None:
+                            selected_participant.matched_signature = signature
+                            selected_participant.is_confirmed = True
+                            selected_participant.save(update_fields=["matched_signature", "is_confirmed"])
+
+                        SignatureAuditLog.objects.create(
+                            training_session=session,
+                            signature=signature,
+                            event_type=SignatureAuditLog.EVENT_SIGN_SUBMITTED,
+                            event_meta={
+                                'participant_name': signature.participant_name,
+                                'participant_affiliation': signature.display_affiliation,
+                                'submission_mode': signature.submission_mode,
+                                'expected_participant_id': selected_participant.id if selected_participant else None,
+                                'walk_in_mode': bool(selected_participant is None),
+                            },
+                            ip_address=signature.ip_address,
+                            user_agent=signature.user_agent,
+                        )
+                        response = render(request, 'signatures/sign_success.html', {'session': session})
+                        return _apply_sensitive_cache_headers(response)
     else:
-        form = SignatureForm()
+        form = SignatureForm(use_roster_selection=show_roster_selection)
 
     response = render(request, 'signatures/sign.html', {
         'session': session,
         'form': form,
         'affiliation_suggestions': affiliation_suggestions,
+        'show_roster_selection': show_roster_selection,
+        'roster_participant_options': roster_participant_options,
+        'walk_in_mode': walk_in_mode,
+        'selected_expected_participant_id': str(selected_expected_participant_id),
     })
     return _apply_sensitive_cache_headers(response)
 

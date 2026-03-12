@@ -51,13 +51,76 @@
 
         <form method="post" id="signForm" class="clay-card rounded-[1.75rem] p-6 md:p-7">
             {% csrf_token %}
+            {% if form.non_field_errors or form.participant_name.errors or form.participant_affiliation.errors or form.signature_data.errors or form.expected_participant_id.errors %}
+            <div class="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-700">
+                <p class="font-black">입력 내용을 다시 확인해 주세요.</p>
+                <ul class="mt-2 space-y-1">
+                    {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                    {% endfor %}
+                    {% for error in form.participant_name.errors %}
+                    <li>{{ error }}</li>
+                    {% endfor %}
+                    {% for error in form.participant_affiliation.errors %}
+                    <li>{{ error }}</li>
+                    {% endfor %}
+                    {% for error in form.expected_participant_id.errors %}
+                    <li>{{ error }}</li>
+                    {% endfor %}
+                    {% for error in form.signature_data.errors %}
+                    <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if show_roster_selection %}
+            <input type="hidden" name="walk_in_mode" id="walkInModeInput" value="{% if walk_in_mode %}1{% else %}0{% endif %}">
+            <div class="mb-6">
+                <label class="block text-xl md:text-2xl font-black text-slate-700 mb-3">
+                    <i class="fa-solid fa-list-check mr-1"></i> 이름 선택
+                </label>
+                <select
+                    name="expected_participant_id"
+                    id="expectedParticipantSelect"
+                    class="w-full px-4 py-4 text-lg rounded-2xl shadow-clay-inner bg-bg-soft focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                >
+                    <option value="">이름을 선택하세요</option>
+                    {% for participant in roster_participant_options %}
+                    <option
+                        value="{{ participant.id }}"
+                        data-name="{{ participant.name }}"
+                        data-affiliation="{{ participant.display_affiliation }}"
+                        {% if selected_expected_participant_id == participant.id|stringformat:"s" %}selected{% endif %}
+                        {% if participant.matched_signature_id %}disabled{% endif %}
+                    >
+                        {{ participant.name }}{% if participant.display_affiliation %} ({{ participant.display_affiliation }}){% endif %}{% if participant.matched_signature_id %} - 이미 완료{% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+                <div class="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                    <span class="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-600">이미 완료된 이름은 다시 제출할 수 없습니다.</span>
+                    <button
+                        type="button"
+                        id="walkInToggleBtn"
+                        onclick="toggleWalkInMode()"
+                        class="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-4 py-2 font-bold text-indigo-700 hover:bg-indigo-100 transition"
+                    >
+                        명단에 이름이 없어요
+                    </button>
+                </div>
+            </div>
+            {% endif %}
 
             <div class="mb-6">
                 <label class="block text-xl md:text-2xl font-black text-slate-700 mb-3">
                     <i class="fa-solid fa-id-card mr-1"></i> 직위/학년반
                 </label>
                 {{ form.participant_affiliation }}
-                {% if affiliation_suggestions %}
+                {% if show_roster_selection %}
+                <p class="mt-2 text-sm text-slate-500">명단에서 이름을 고르면 직위/학년반이 자동으로 채워집니다.</p>
+                {% endif %}
+                {% if affiliation_suggestions and not show_roster_selection %}
                 <datalist id="affiliationSuggestions">
                     {% for option in affiliation_suggestions %}
                     <option value="{{ option }}"></option>
@@ -77,11 +140,14 @@
                 {% endif %}
             </div>
 
-            <div class="mb-6">
+            <div class="mb-6 {% if show_roster_selection and not walk_in_mode %}hidden{% endif %}" id="participantNameSection">
                 <label class="block text-xl md:text-2xl font-black text-slate-700 mb-3">
                     <i class="fa-solid fa-user mr-1"></i> 이름
                 </label>
                 {{ form.participant_name }}
+                {% if show_roster_selection %}
+                <p class="mt-2 text-sm text-slate-500">명단에 없다면 이름과 직위/학년반을 직접 적어 제출할 수 있습니다.</p>
+                {% endif %}
             </div>
 
             <div class="mb-6">
@@ -161,14 +227,90 @@
         affiliationInput.focus();
     }
 
-    document.getElementById('signForm').addEventListener('submit', function (e) {
-        const nameInput = document.querySelector('input[name="participant_name"]');
-        const signatureInput = document.getElementById('id_signature_data');
+    const rosterSelect = document.getElementById('expectedParticipantSelect');
+    const walkInModeInput = document.getElementById('walkInModeInput');
+    const participantNameSection = document.getElementById('participantNameSection');
+    const participantNameInput = document.querySelector('input[name="participant_name"]');
+    const participantAffiliationInput = document.querySelector('input[name="participant_affiliation"]');
+    const walkInToggleBtn = document.getElementById('walkInToggleBtn');
 
-        if (!nameInput.value.trim()) {
+    function applySelectedParticipantAffiliation() {
+        if (!rosterSelect || !participantAffiliationInput) return;
+        const selectedOption = rosterSelect.options[rosterSelect.selectedIndex];
+        const affiliation = selectedOption ? selectedOption.dataset.affiliation || '' : '';
+        participantAffiliationInput.value = affiliation;
+    }
+
+    function updateWalkInUi() {
+        if (!walkInModeInput) return;
+        const isWalkInMode = walkInModeInput.value === '1';
+
+        if (participantNameSection) {
+            participantNameSection.classList.toggle('hidden', !isWalkInMode && !!rosterSelect);
+        }
+        if (participantAffiliationInput) {
+            participantAffiliationInput.readOnly = !!rosterSelect && !isWalkInMode;
+        }
+        if (walkInToggleBtn) {
+            walkInToggleBtn.textContent = isWalkInMode ? '명단에서 선택하기' : '명단에 이름이 없어요';
+        }
+
+        if (rosterSelect && !isWalkInMode) {
+            applySelectedParticipantAffiliation();
+            if (participantNameInput) {
+                participantNameInput.value = '';
+            }
+        }
+    }
+
+    function toggleWalkInMode() {
+        if (!walkInModeInput) return;
+        const isWalkInMode = walkInModeInput.value === '1';
+        if (isWalkInMode) {
+            walkInModeInput.value = '0';
+            if (rosterSelect) {
+                rosterSelect.focus();
+            }
+        } else {
+            walkInModeInput.value = '1';
+            if (rosterSelect) {
+                rosterSelect.value = '';
+            }
+            if (participantAffiliationInput) {
+                participantAffiliationInput.value = '';
+            }
+            if (participantNameInput) {
+                participantNameInput.focus();
+            }
+        }
+        updateWalkInUi();
+    }
+
+    if (rosterSelect) {
+        rosterSelect.addEventListener('change', function () {
+            if (walkInModeInput) {
+                walkInModeInput.value = '0';
+            }
+            updateWalkInUi();
+        });
+        updateWalkInUi();
+    }
+
+    document.getElementById('signForm').addEventListener('submit', function (e) {
+        const signatureInput = document.getElementById('id_signature_data');
+        const isWalkInMode = walkInModeInput ? walkInModeInput.value === '1' : true;
+
+        if (rosterSelect && !isWalkInMode) {
+            if (!rosterSelect.value) {
+                e.preventDefault();
+                alert('이름을 선택해 주세요.');
+                rosterSelect.focus();
+                return;
+            }
+        } else if (!participantNameInput.value.trim()) {
             e.preventDefault();
             alert('이름을 입력해 주세요.');
-            nameInput.focus();
+            participantNameInput.focus();
             return;
         }
 

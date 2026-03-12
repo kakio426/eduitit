@@ -8,6 +8,7 @@ urlpatterns = [
     # Existing training-signature track.
     path("", views.session_list, name="list"),
     path("create/", views.session_create, name="create"),
+    path("create/prepare-roster-return/", views.prepare_roster_return, name="prepare_roster_return"),
     path("<uuid:uuid>/", views.session_detail, name="detail"),
     path("<uuid:uuid>/edit/", views.session_edit, name="edit"),
     path("<uuid:uuid>/delete/", views.session_delete, name="delete"),

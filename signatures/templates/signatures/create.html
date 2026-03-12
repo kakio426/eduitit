@@ -82,10 +82,13 @@
             {% csrf_token %}
             {% if sheetbook_seed_token %}
             <input type="hidden" name="sheetbook_seed_token" value="{{ sheetbook_seed_token }}">
-            <input type="hidden" name="apply_sheetbook_participants" value="1">
+            <input type="hidden" name="apply_sheetbook_participants" value="{% if apply_sheetbook_participants %}1{% else %}0{% endif %}">
             {% endif %}
             {% if copy_from_uuid %}
             <input type="hidden" name="copy_from_uuid" value="{{ copy_from_uuid }}">
+            {% endif %}
+            {% if draft_token %}
+            <input type="hidden" name="draft_token" value="{{ draft_token }}">
             {% endif %}
 
             <section class="space-y-5">
@@ -139,14 +142,56 @@
                 <div class="mt-5 space-y-5">
                     <div class="rounded-2xl bg-white p-4">
                         <label class="mb-2 block text-sm font-black text-slate-700">공유 명단 연결 (선택)</label>
+                        {% if restored_roster_group %}
+                        <div class="mb-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                            방금 만든 명단 <span class="font-black">{{ restored_roster_group.name }}</span>을 연결해 두었어요.
+                        </div>
+                        {% endif %}
+
+                        {% if has_roster_groups %}
                         {{ form.shared_roster_group }}
                         <p class="mt-2 text-xs text-slate-500">누가 안 했는지 이름으로 보려면 명단을 연결하세요.</p>
+                        <div class="mt-4 flex flex-wrap gap-2">
+                            <button
+                                type="submit"
+                                formaction="{% url 'signatures:prepare_roster_return' %}"
+                                formmethod="post"
+                                formnovalidate
+                                class="inline-flex items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-700 hover:bg-indigo-100 transition"
+                            >
+                                <i class="fa-solid fa-plus"></i>새 명단 만들기
+                            </button>
+                        </div>
+                        {% else %}
+                        <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4">
+                            <p class="text-sm font-black text-slate-800">아직 연결할 명단이 없습니다.</p>
+                            <p class="mt-2 text-xs text-slate-500">누가 안 했는지 이름으로 보려면 명단을 연결하세요.</p>
+                            <p class="mt-2 text-xs text-slate-500">누가 안 했는지 이름으로 보려면 먼저 명단을 만들어 주세요.</p>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <button
+                                    type="submit"
+                                    formaction="{% url 'signatures:prepare_roster_return' %}"
+                                    formmethod="post"
+                                    formnovalidate
+                                    class="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-black text-white hover:bg-indigo-700 transition"
+                                >
+                                    <i class="fa-solid fa-plus"></i>명단 만들기
+                                </button>
+                                <a
+                                    href="#expectedCountField"
+                                    class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 hover:text-slate-800 transition"
+                                >
+                                    이번에는 명단 없이 시작
+                                </a>
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
 
-                    <div class="rounded-2xl bg-white p-4">
+                    <div class="rounded-2xl bg-white p-4" id="expectedCountField">
                         <label class="mb-2 block text-sm font-black text-slate-700">예상 참여 인원 (선택)</label>
                         {{ form.expected_count }}
-                        <p class="mt-2 text-xs text-slate-500">명단 없이 시작해도 남은 인원 수는 확인할 수 있습니다.</p>
+                        <p class="mt-2 text-xs text-slate-500">명단을 연결하면 누가 안 했는지 이름으로 보고, 명단 없이 시작하면 남은 인원 수만 확인할 수 있습니다.</p>
                     </div>
 
                     <div class="rounded-2xl bg-white p-4">

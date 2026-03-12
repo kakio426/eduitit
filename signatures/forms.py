@@ -73,6 +73,24 @@ class TrainingSessionForm(forms.ModelForm):
 class SignatureForm(forms.ModelForm):
     """서명 입력 폼"""
 
+    expected_participant_id = forms.IntegerField(required=False, widget=forms.HiddenInput())
+
+    def __init__(self, *args, **kwargs):
+        use_roster_selection = kwargs.pop("use_roster_selection", False)
+        super().__init__(*args, **kwargs)
+        if use_roster_selection:
+            self.fields["participant_name"].required = False
+            self.fields["participant_name"].widget.attrs["placeholder"] = "명단에 없으면 직접 입력하세요"
+            self.fields["participant_affiliation"].widget.attrs["placeholder"] = "이름을 고르면 자동으로 채워집니다"
+
+    def clean(self):
+        cleaned_data = super().clean()
+        expected_participant_id = cleaned_data.get("expected_participant_id")
+        participant_name = str(cleaned_data.get("participant_name") or "").strip()
+        if not expected_participant_id and not participant_name:
+            self.add_error("participant_name", "이름을 선택하거나 직접 입력해 주세요.")
+        return cleaned_data
+
     class Meta:
         model = Signature
         fields = ['participant_affiliation', 'participant_name', 'signature_data']
