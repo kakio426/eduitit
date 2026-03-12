@@ -11,6 +11,7 @@ urlpatterns = [
     
     # DutyTicker Main
     path('dutyticker/', views.dutyticker_view, name='dutyticker'),
+    path('dutyticker/student-games/issue/', views.dutyticker_student_games_issue, name='dt_student_games_issue'),
     path('dutyticker/student-games/launch/', views.dutyticker_student_games_launch, name='dt_student_games_launch'),
     path('dutyticker/student-games/portal/', views.dutyticker_student_games_portal, name='dt_student_games_portal'),
     path('dutyticker/student-games/exit/', views.dutyticker_student_games_exit, name='dt_student_games_exit'),

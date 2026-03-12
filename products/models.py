@@ -342,3 +342,31 @@ class DTSchedule(models.Model):
         
     def __str__(self):
         return f"{self.get_day_display()} {self.period} - {self.subject}"
+
+
+class DTStudentGamesLaunchTicket(models.Model):
+    """Short-lived launch ticket for the anonymous student games portal."""
+
+    issued_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="dutyticker_student_game_tickets",
+    )
+    classroom = models.ForeignKey(
+        "happy_seed.HSClassroom",
+        on_delete=models.CASCADE,
+        related_name="dutyticker_student_game_tickets",
+        null=True,
+        blank=True,
+    )
+    token_hash = models.CharField(max_length=64, unique=True)
+    expires_at = models.DateTimeField()
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        scope = self.classroom.name if self.classroom_id else "global"
+        return f"{self.issued_by.username} student games ticket ({scope})"

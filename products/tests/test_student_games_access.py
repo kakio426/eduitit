@@ -1,18 +1,19 @@
-import time
-from urllib.parse import urlencode
-
 from django.contrib.auth.models import User
-from django.core import signing
+from django.test import Client
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from core.models import SiteConfig, UserProfile
 from products import views as product_views
+from products.models import DTStudentGamesLaunchTicket
 
 
 class StudentGamesAccessTests(TestCase):
     def setUp(self):
         self.client = self.client_class()
+        self.teacher_client = Client()
+        self.student_client = Client()
         self.user = User.objects.create_user(
             username="teacher1",
             password="pass1234",
@@ -28,36 +29,80 @@ class StudentGamesAccessTests(TestCase):
         site_config.banner_text = "테스트 배너"
         site_config.save(update_fields=["banner_active", "banner_text"])
 
-    def _issue_token(self):
-        payload = {
-            "v": 1,
-            "issued_at": int(time.time()),
-            "issuer_id": self.user.id,
-        }
-        return signing.dumps(payload, salt=product_views.STUDENT_GAMES_TOKEN_SALT, compress=True)
+        self.teacher_client.login(username="teacher1", password="pass1234")
 
-    def test_dutyticker_view_includes_student_game_qr_for_authenticated_teacher(self):
+    def _issue_ticket_payload(self):
+        response = self.teacher_client.post(reverse("dt_student_games_issue"))
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["success"])
+        return payload
+
+    def test_dutyticker_view_exposes_issue_endpoint_without_token_in_html(self):
         self.client.login(username="teacher1", password="pass1234")
         response = self.client.get(reverse("dutyticker"))
         self.assertEqual(response.status_code, 200)
-        self.assertIn("student_games_launch_url", response.context)
-        self.assertIn("student_games_qr_data_url", response.context)
-        self.assertTrue(response.context["student_games_qr_data_url"].startswith("data:image/png;base64,"))
+        self.assertEqual(response.context["student_games_issue_url"], reverse("dt_student_games_issue"))
+        self.assertEqual(response.context["student_games_launch_ttl_minutes"], 15)
+        self.assertNotContains(response, "launch/?token=", html=False)
+        self.assertContains(response, 'data-student-games-issue-url="/products/dutyticker/student-games/issue/"', html=False)
+
+    def test_student_games_issue_requires_login(self):
+        response = self.client.post(reverse("dt_student_games_issue"))
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json()["error"], "로그인이 필요합니다.")
+
+    def test_student_games_issue_returns_launch_url_and_qr_payload(self):
+        payload = self._issue_ticket_payload()
+        self.assertIn("/products/dutyticker/student-games/launch/?token=", payload["launch_url"])
+        self.assertTrue(payload["qr_data_url"].startswith("data:image/png;base64,"))
+        self.assertEqual(payload["expires_in_minutes"], 15)
 
     def test_student_games_launch_enables_session_mode(self):
-        token = self._issue_token()
-        launch_url = f"{reverse('dt_student_games_launch')}?{urlencode({'token': token})}"
-
-        response = self.client.get(launch_url)
+        payload = self._issue_ticket_payload()
+        response = self.student_client.get(payload["launch_url"])
         self.assertRedirects(response, reverse("dt_student_games_portal"))
 
-        session = self.client.session
+        session = self.student_client.session
         self.assertIn(product_views.STUDENT_GAMES_SESSION_KEY, session)
+        self.assertEqual(session[product_views.STUDENT_GAMES_SESSION_KEY]["issuer_id"], self.user.id)
 
     def test_student_games_launch_rejects_invalid_token(self):
         launch_url = f"{reverse('dt_student_games_launch')}?token=invalid-token"
-        response = self.client.get(launch_url)
+        response = self.student_client.get(launch_url)
         self.assertEqual(response.status_code, 403)
+        self.assertContains(response, "선생님께 새 QR을 요청하세요.", status_code=403)
+
+    def test_student_games_reissue_invalidates_previous_ticket(self):
+        first_payload = self._issue_ticket_payload()
+        second_payload = self._issue_ticket_payload()
+
+        first_response = self.student_client.get(first_payload["launch_url"])
+        self.assertEqual(first_response.status_code, 403)
+
+        second_response = self.student_client.get(second_payload["launch_url"])
+        self.assertRedirects(second_response, reverse("dt_student_games_portal"))
+
+    def test_student_games_expired_ticket_is_rejected(self):
+        payload = self._issue_ticket_payload()
+        ticket = DTStudentGamesLaunchTicket.objects.get()
+        ticket.expires_at = timezone.now() - timezone.timedelta(seconds=1)
+        ticket.save(update_fields=["expires_at"])
+
+        response = self.student_client.get(payload["launch_url"])
+        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, "선생님께 새 QR을 요청하세요.", status_code=403)
+
+    def test_existing_student_session_survives_teacher_reissue(self):
+        first_payload = self._issue_ticket_payload()
+        launch_response = self.student_client.get(first_payload["launch_url"])
+        self.assertRedirects(launch_response, reverse("dt_student_games_portal"))
+
+        second_payload = self._issue_ticket_payload()
+        self.assertIn("/products/dutyticker/student-games/launch/?token=", second_payload["launch_url"])
+
+        portal_response = self.student_client.get(reverse("dt_student_games_portal"))
+        self.assertEqual(portal_response.status_code, 200)
 
     def test_student_mode_does_not_block_home(self):
         session = self.client.session

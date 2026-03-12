@@ -242,6 +242,9 @@ ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
 ACCOUNT_EMAIL_VERIFICATION = 'none'
 ACCOUNT_SIGNUP_FORM_CLASS = 'core.signup_forms.CustomSignupForm'
 ACCOUNT_SESSION_REMEMBER = False  # 기본적으로 자동 로그인 해제 (보안을 위해)
+ACCOUNT_RATE_LIMITS = {
+    'login_failed': '10/m/ip,5/300s/key',
+}
 SESSION_COOKIE_AGE = 21600  # 내부 세션 정책값
 SESSION_SAVE_EVERY_REQUEST = False  # 매 요청마다 DB write 방지 (성능 개선)
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # 브라우저 닫으면 로그아웃
@@ -564,6 +567,9 @@ ONBOARDING_EXEMPT_PATH_PREFIXES = []
 if TESTING:
     ONBOARDING_EXEMPT_PATH_PREFIXES.append('/autoarticle/')
 DUTYTICKER_STUDENT_GAMES_MAX_AGE_SECONDS = int(os.environ.get('DUTYTICKER_STUDENT_GAMES_MAX_AGE_SECONDS', '28800'))
+DUTYTICKER_STUDENT_GAMES_LAUNCH_TICKET_TTL_SECONDS = int(
+    os.environ.get('DUTYTICKER_STUDENT_GAMES_LAUNCH_TICKET_TTL_SECONDS', '900')
+)
 SEED_QUIZ_BATCH_ENABLED = os.environ.get('SEED_QUIZ_BATCH_ENABLED', 'False').lower() in ('true', '1', 'yes')
 SEED_QUIZ_ALLOW_RAG = os.environ.get('SEED_QUIZ_ALLOW_RAG', 'False').lower() in ('true', '1', 'yes')
 SEED_QUIZ_CSV_MAX_FILE_BYTES = int(os.environ.get('SEED_QUIZ_CSV_MAX_FILE_BYTES', str(2 * 1024 * 1024)))

@@ -1063,19 +1063,11 @@ def _build_home_student_games_qr_context(request):
     if not request.user.is_authenticated:
         return {}
 
-    from products.views import (
-        _build_qr_data_url,
-        _build_student_games_launch_url,
-        _create_student_games_token,
-        _student_games_max_age_seconds,
-    )
+    from products.views import _student_games_launch_ticket_ttl_minutes
 
-    token = _create_student_games_token(request)
-    launch_url = _build_student_games_launch_url(request, token)
     return {
-        "student_games_launch_url": launch_url,
-        "student_games_qr_data_url": _build_qr_data_url(launch_url),
-        "student_games_expires_hours": max(1, _student_games_max_age_seconds() // 3600),
+        "student_games_issue_url": reverse("dt_student_games_issue"),
+        "student_games_launch_ttl_minutes": _student_games_launch_ticket_ttl_minutes(),
     }
 
 

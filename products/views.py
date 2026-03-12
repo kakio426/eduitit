@@ -1,26 +1,30 @@
 import base64
+import hashlib
 import io
 import logging
+import secrets
 import time
 from urllib.parse import urlencode
 
 import qrcode
 from django.conf import settings
-from django.core import signing
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.urls import reverse
 from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.http import require_POST
 
 from core.seo import build_product_detail_seo
 from core.product_visibility import filter_discoverable_products
 
 from .dutyticker_scope import get_active_classroom_for_request, get_or_create_settings_for_scope
-from .models import Product
+from .models import DTStudentGamesLaunchTicket, Product
 
 logger = logging.getLogger(__name__)
 
-STUDENT_GAMES_TOKEN_SALT = "dutyticker.student_games.v1"
-STUDENT_GAMES_TOKEN_MAX_AGE_SECONDS = 60 * 60 * 8
+STUDENT_GAMES_SESSION_MAX_AGE_SECONDS = 60 * 60 * 8
+STUDENT_GAMES_LAUNCH_TICKET_TTL_SECONDS = 60 * 15
 STUDENT_GAMES_SESSION_KEY = "dutyticker_student_games_mode"
 
 
@@ -28,40 +32,76 @@ def _student_games_mode_enabled(request):
     return bool(request.session.get(STUDENT_GAMES_SESSION_KEY))
 
 
-def _student_games_max_age_seconds():
-    configured = getattr(settings, "DUTYTICKER_STUDENT_GAMES_MAX_AGE_SECONDS", STUDENT_GAMES_TOKEN_MAX_AGE_SECONDS)
+def _student_games_session_max_age_seconds():
+    configured = getattr(
+        settings,
+        "DUTYTICKER_STUDENT_GAMES_MAX_AGE_SECONDS",
+        STUDENT_GAMES_SESSION_MAX_AGE_SECONDS,
+    )
     try:
         configured = int(configured)
     except (TypeError, ValueError):
-        configured = STUDENT_GAMES_TOKEN_MAX_AGE_SECONDS
+        configured = STUDENT_GAMES_SESSION_MAX_AGE_SECONDS
     return max(300, configured)
 
 
-def _create_student_games_token(request):
-    payload = {
-        "v": 1,
-        "issued_at": int(time.time()),
-        "issuer_id": request.user.id if request.user.is_authenticated else None,
-    }
-    return signing.dumps(payload, salt=STUDENT_GAMES_TOKEN_SALT, compress=True)
+def _student_games_launch_ticket_ttl_seconds():
+    configured = getattr(
+        settings,
+        "DUTYTICKER_STUDENT_GAMES_LAUNCH_TICKET_TTL_SECONDS",
+        STUDENT_GAMES_LAUNCH_TICKET_TTL_SECONDS,
+    )
+    try:
+        configured = int(configured)
+    except (TypeError, ValueError):
+        configured = STUDENT_GAMES_LAUNCH_TICKET_TTL_SECONDS
+    return max(60, configured)
 
 
-def _verify_student_games_token(token):
-    if not token:
+def _student_games_launch_ticket_ttl_minutes():
+    return max(1, _student_games_launch_ticket_ttl_seconds() // 60)
+
+
+def _hash_student_games_token(raw_token):
+    return hashlib.sha256((raw_token or "").encode("utf-8")).hexdigest()
+
+
+def _issue_student_games_launch_ticket(request):
+    classroom = get_active_classroom_for_request(request)
+    now = timezone.now()
+    DTStudentGamesLaunchTicket.objects.filter(
+        issued_by=request.user,
+        revoked_at__isnull=True,
+        expires_at__gt=now,
+    ).update(revoked_at=now)
+
+    raw_token = secrets.token_urlsafe(24)
+    ticket = DTStudentGamesLaunchTicket.objects.create(
+        issued_by=request.user,
+        classroom=classroom,
+        token_hash=_hash_student_games_token(raw_token),
+        expires_at=now + timezone.timedelta(seconds=_student_games_launch_ticket_ttl_seconds()),
+    )
+    return ticket, raw_token
+
+
+def _find_valid_student_games_launch_ticket(raw_token):
+    raw_token = (raw_token or "").strip()
+    if not raw_token:
         return None
+    token_hash = _hash_student_games_token(raw_token)
 
     try:
-        payload = signing.loads(
-            token,
-            salt=STUDENT_GAMES_TOKEN_SALT,
-            max_age=_student_games_max_age_seconds(),
-        )
-    except (signing.BadSignature, signing.SignatureExpired):
+        ticket = DTStudentGamesLaunchTicket.objects.select_related("issued_by", "classroom").get(token_hash=token_hash)
+    except DTStudentGamesLaunchTicket.DoesNotExist:
         return None
 
-    if not isinstance(payload, dict) or payload.get("v") != 1:
+    now = timezone.now()
+    if ticket.revoked_at is not None:
         return None
-    return payload
+    if ticket.expires_at <= now:
+        return None
+    return ticket
 
 
 def _student_games_catalog():
@@ -297,13 +337,10 @@ def dutyticker_view(request):
     if request.user.is_authenticated:
         classroom = get_active_classroom_for_request(request)
         dt_settings, _ = get_or_create_settings_for_scope(request.user, classroom)
-        token = _create_student_games_token(request)
-        launch_url = _build_student_games_launch_url(request, token)
         context.update(
             {
-                "student_games_launch_url": launch_url,
-                "student_games_qr_data_url": _build_qr_data_url(launch_url),
-                "student_games_expires_hours": max(1, _student_games_max_age_seconds() // 3600),
+                "student_games_issue_url": reverse("dt_student_games_issue"),
+                "student_games_launch_ttl_minutes": _student_games_launch_ticket_ttl_minutes(),
                 "initial_theme": dt_settings.theme or "deep_space",
             }
         )
@@ -311,22 +348,43 @@ def dutyticker_view(request):
     return render(request, 'products/dutyticker/main.html', context)
 
 
+@require_POST
+def dutyticker_student_games_issue(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"success": False, "error": "로그인이 필요합니다."}, status=401)
+
+    _, raw_token = _issue_student_games_launch_ticket(request)
+    launch_url = _build_student_games_launch_url(request, raw_token)
+    return JsonResponse(
+        {
+            "success": True,
+            "launch_url": launch_url,
+            "qr_data_url": _build_qr_data_url(launch_url),
+            "expires_in_minutes": _student_games_launch_ticket_ttl_minutes(),
+        }
+    )
+
+
 def dutyticker_student_games_launch(request):
     token = (request.GET.get("token") or "").strip()
-    payload = _verify_student_games_token(token)
-    if not payload:
+    ticket = _find_valid_student_games_launch_ticket(token)
+    if not ticket:
         return render(
             request,
             "products/dutyticker/student_games_invalid.html",
-            {"hide_navbar": True},
+            {
+                "hide_navbar": True,
+                "student_games_invalid_message": "링크가 만료되었거나 새 링크로 교체되었습니다. 선생님께 새 QR을 요청하세요.",
+            },
             status=403,
         )
 
     request.session[STUDENT_GAMES_SESSION_KEY] = {
-        "issuer_id": payload.get("issuer_id"),
+        "issuer_id": ticket.issued_by_id,
+        "classroom_id": ticket.classroom_id,
         "enabled_at": int(time.time()),
     }
-    request.session.set_expiry(_student_games_max_age_seconds())
+    request.session.set_expiry(_student_games_session_max_age_seconds())
     request.session.modified = True
 
     return redirect("dt_student_games_portal")

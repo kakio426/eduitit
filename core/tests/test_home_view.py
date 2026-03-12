@@ -217,7 +217,9 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         self.assertIn('학생용 QR', content)
-        self.assertIn('homeStudentGamesQrModal', content)
+        self.assertIn('studentGamesQrModal', content)
+        self.assertIn('data-student-games-issue-url="/products/dutyticker/student-games/issue/"', content)
+        self.assertNotIn('launch/?token=', content)
 
     def test_v2_anonymous_does_not_render_show_all_toggle(self):
         """V2 비로그인 홈에 전체 서비스 보기 토글이 노출되지 않음"""

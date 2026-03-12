@@ -23,3 +23,14 @@ class FrontendOptimizationTest(TestCase):
         if not settings_production.DEBUG:
             self.assertTrue(settings_production.SECURE_BROWSER_XSS_FILTER)
             self.assertTrue(settings_production.SECURE_CONTENT_TYPE_NOSNIFF)
+
+    def test_production_student_games_and_csp_hardening_defaults(self):
+        """학생 링크 TTL과 CSP 1차 하드닝 기본값 확인"""
+        from config import settings_production
+
+        self.assertEqual(
+            settings_production.ACCOUNT_RATE_LIMITS.get('login_failed'),
+            '10/m/ip,5/300s/key',
+        )
+        self.assertEqual(settings_production.DUTYTICKER_STUDENT_GAMES_LAUNCH_TICKET_TTL_SECONDS, 900)
+        self.assertNotIn('http:', settings_production.CSP_IMG_SRC)

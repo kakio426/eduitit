@@ -1,4 +1,5 @@
-{# 쉬는 시간 게임 배너 - V2 홈 #}
+{% load static %}
+{# 쉬는 시간 게임 배너 - 홈 공용 #}
 {# 사용: {% include 'core/includes/game_banner.html' with games=games %} #}
 {% if games %}
 <div>
@@ -7,9 +8,9 @@
             <span class="text-base leading-none">🎮</span> 교실 활동
             <span class="font-normal text-xs text-slate-400 ml-1">바로 시작</span>
         </h3>
-        {% if request.user.is_authenticated and student_games_launch_url and student_games_qr_data_url %}
+        {% if request.user.is_authenticated and student_games_issue_url %}
         <button type="button"
-            onclick="openHomeStudentGamesQrModal()"
+            data-student-games-open="studentGamesQrModal"
             class="flex-shrink-0 flex items-center gap-1.5 bg-white rounded-xl px-2.5 py-1.5 border border-slate-200 text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-all text-xs font-bold shadow-sm"
             title="학생 게임 QR 열기">
             <i class="fa-solid fa-qrcode"></i>
@@ -38,79 +39,64 @@
         {% endfor %}
     </div>
 </div>
-{% if request.user.is_authenticated and student_games_launch_url and student_games_qr_data_url %}
-<div id="homeStudentGamesQrModal"
+{% if request.user.is_authenticated and student_games_issue_url %}
+<div id="studentGamesQrModal"
+    data-student-games-launcher="true"
+    data-student-games-issue-url="{{ student_games_issue_url }}"
+    data-student-games-ttl-minutes="{{ student_games_launch_ttl_minutes }}"
     class="fixed inset-0 z-[220] hidden items-center justify-center bg-black/75 backdrop-blur-sm transition-opacity duration-200 opacity-0">
     <div
         class="bg-white rounded-3xl shadow-2xl w-[min(92vw,28rem)] border border-slate-200 p-6 transform scale-95 transition-transform">
         <div class="flex items-start justify-between mb-4">
             <div>
                 <h3 class="text-xl font-black text-slate-800">학생 게임 입장 QR</h3>
-                <p class="text-xs text-slate-500 mt-1">유효시간: {{ student_games_expires_hours }}시간</p>
+                <p data-student-games-expiry class="text-xs text-slate-500 mt-1">유효시간: {{ student_games_launch_ttl_minutes }}분</p>
             </div>
-            <button type="button" onclick="closeHomeStudentGamesQrModal()"
+            <button type="button" data-student-games-close
                 class="w-9 h-9 inline-flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
 
-        <div class="bg-white rounded-2xl border border-slate-200 p-3 flex justify-center mb-4">
-            <img src="{{ student_games_qr_data_url }}" alt="학생 게임 입장 QR 코드" class="w-56 h-56 max-w-full">
+        <div data-student-games-idle class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-500 text-center">
+            학생용 QR를 열면 새 링크를 준비합니다.
         </div>
-
-        <label for="homeStudentGamesLaunchUrl" class="block text-xs font-bold text-slate-500 mb-1">학생용 링크</label>
-        <input id="homeStudentGamesLaunchUrl" type="text" readonly value="{{ student_games_launch_url }}"
-            class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-700 text-sm mb-4">
-
-        <div class="grid grid-cols-2 gap-2">
-            <button type="button" onclick="copyHomeStudentGamesLink()"
-                class="py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition">
-                링크 복사
+        <div data-student-games-loading class="hidden rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500 text-center">
+            학생용 QR와 링크를 준비하고 있습니다.
+        </div>
+        <div data-student-games-error class="hidden rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-600 text-center">
+            <p data-student-games-error-message>학생용 링크를 준비하지 못했습니다.</p>
+            <button type="button" data-student-games-reissue
+                class="mt-3 inline-flex items-center justify-center rounded-xl bg-red-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-400">
+                다시 발급
             </button>
-            <a href="{{ student_games_launch_url }}" target="_blank" rel="noopener noreferrer"
-                class="py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm text-center transition">
-                새 창 미리보기
-            </a>
+        </div>
+        <div data-student-games-ready class="hidden">
+            <div class="bg-white rounded-2xl border border-slate-200 p-3 flex justify-center mb-4">
+                <img data-student-games-qr-image src="" alt="학생 게임 입장 QR 코드" class="w-56 h-56 max-w-full">
+            </div>
+
+            <label for="studentGamesLaunchUrl" class="block text-xs font-bold text-slate-500 mb-1">학생용 링크</label>
+            <input id="studentGamesLaunchUrl" data-student-games-url type="text" readonly value=""
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-700 text-sm mb-4">
+
+            <div class="grid grid-cols-2 gap-2">
+                <button type="button" data-student-games-copy
+                    class="py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition">
+                    링크 복사
+                </button>
+                <a data-student-games-preview href="#" target="_blank" rel="noopener noreferrer"
+                    class="py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm text-center transition">
+                    새 창 미리보기
+                </a>
+                <button type="button" data-student-games-reissue
+                    class="col-span-2 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-700 text-white font-bold text-sm transition">
+                    새 링크 발급
+                </button>
+            </div>
         </div>
     </div>
 </div>
-<script>
-    function openHomeStudentGamesQrModal() {
-        const modal = document.getElementById('homeStudentGamesQrModal');
-        if (!modal) return;
-        modal.classList.remove('hidden');
-        requestAnimationFrame(() => {
-            modal.classList.remove('opacity-0');
-            const panel = modal.firstElementChild;
-            if (panel) panel.classList.remove('scale-95');
-        });
-    }
-
-    function closeHomeStudentGamesQrModal() {
-        const modal = document.getElementById('homeStudentGamesQrModal');
-        if (!modal) return;
-        modal.classList.add('opacity-0');
-        const panel = modal.firstElementChild;
-        if (panel) panel.classList.add('scale-95');
-        setTimeout(() => modal.classList.add('hidden'), 180);
-    }
-
-    async function copyHomeStudentGamesLink() {
-        const input = document.getElementById('homeStudentGamesLaunchUrl');
-        if (!input) return;
-        try {
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                await navigator.clipboard.writeText(input.value);
-            } else {
-                input.select();
-                document.execCommand('copy');
-                window.getSelection().removeAllRanges();
-            }
-            alert('학생용 링크를 복사했습니다.');
-        } catch (error) {
-            alert('링크 복사에 실패했습니다. 직접 선택해서 복사해 주세요.');
-        }
-    }
-</script>
+<script src="{% static 'products/dutyticker/js/student_games_launcher.js' %}?v=20260312a"></script>
 {% endif %}
 {% endif %}

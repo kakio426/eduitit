@@ -53,13 +53,6 @@
                         선생님의 개인정보는 안전하게 보호됩니다.
                     </p>
                 </div>
-
-                <!-- Hidden Admin Login Link (Optional) -->
-                <div class="text-center mt-8">
-                    <a href="{% url 'admin:index' %}" class="text-gray-300 text-sm hover:text-gray-400 transition">관리자
-                        접속</a>
-                </div>
-
                 <!-- Hidden bot login form for automated testing -->
                 <div style="opacity: 0.01; position: absolute; z-index: -1; width: 1px; height: 1px; overflow: hidden;" aria-hidden="true">
                     <form method="post" action="{% url 'account_login' %}">
