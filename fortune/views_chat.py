@@ -5,15 +5,16 @@ from types import SimpleNamespace
 from asgiref.sync import sync_to_async
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, StreamingHttpResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django_ratelimit.core import is_ratelimited
 
+from core.seo import build_fortune_chat_page_seo
 from core.utils import ratelimit_key_for_master_only
 
 from .models import FortuneResult
-from .privacy import scrub_personal_fortune_text
+from .privacy import apply_private_fortune_headers, scrub_personal_fortune_text
 from .utils.chat_ai import get_ai_response_stream
 from .utils.chat_logic import build_system_prompt
 
@@ -59,10 +60,9 @@ def _build_runtime_context(payload):
     if not isinstance(natal_chart, dict) or not natal_chart.get('day'):
         return None
 
-    display_name = (payload.get('display_name') or '').strip() or '선생님'
     return {
-        'display_name': display_name,
-        'person_name': display_name,
+        'display_name': '선생님',
+        'person_name': '선생님',
         'gender': payload.get('gender') or 'female',
         'mode': payload.get('mode') or 'teacher',
         'day_master': payload.get('day_master') or {},
@@ -76,7 +76,12 @@ def _render_inline_message(content):
 
 @login_required
 def chat_main_page(request):
-    return render(request, 'fortune/chat_main.html')
+    response = render(
+        request,
+        'fortune/chat_main.html',
+        build_fortune_chat_page_seo(request).as_context(),
+    )
+    return apply_private_fortune_headers(response)
 
 
 @login_required
@@ -178,7 +183,7 @@ def save_chat_to_history(request):
     if mode not in {'teacher', 'general', 'daily'}:
         mode = 'teacher'
 
-    markdown_content = f"# Saju Chat with {working_context['display_name']}\n\n"
+    markdown_content = "# 사주 상담 기록\n\n"
     for msg in history:
         role = "Teacher" if msg['role'] == 'assistant' else "Student"
         content = msg['content'].replace('\n', '\n> ')

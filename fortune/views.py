@@ -11,10 +11,16 @@ from django_ratelimit.decorators import ratelimit
 from django_ratelimit.core import is_ratelimited
 from asgiref.sync import sync_to_async
 from core.utils import ratelimit_key_for_master_only, has_personal_api_key
+from core.seo import (
+    build_fortune_detail_page_seo,
+    build_fortune_history_page_seo,
+    build_fortune_saju_page_seo,
+)
 from .forms import SajuForm
 from .prompts import get_prompt
 from .libs import calculator
 from .privacy import (
+    apply_private_fortune_headers,
     build_user_pseudonymous_fingerprint,
     get_cached_pseudonymous_result,
     normalize_birth_payload,
@@ -26,7 +32,6 @@ from datetime import datetime
 import pytz
 import json
 import logging
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 # 로거 설정
@@ -36,6 +41,11 @@ logger = logging.getLogger(__name__)
 GEMINI_MODEL_NAME = "gemini-2.5-flash-lite"
 DEEPSEEK_MODEL_NAME = "deepseek-chat"
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
+
+
+def _render_private_fortune_page(request, template_name, context):
+    response = render(request, template_name, context)
+    return apply_private_fortune_headers(response)
 
 
 def _should_use_async_ai_stream():
@@ -379,10 +389,12 @@ def saju_view(request):
     """사주 분석 메인 뷰"""
     if getattr(request, 'limited', False):
         error_message = '선생님, 이 서비스는 개인 개발자의 사비로 운영되다 보니 공용 AI 무료 한도를 넉넉히 드리기 어렵습니다. 😭 [내 설정]에서 개인 Gemini API 키를 등록하시면 중단 없이 본격적으로 이용하실 수 있습니다! 😊'
-        
-        return render(request, 'fortune/saju_form.html', {
+
+        return _render_private_fortune_page(request, 'fortune/saju_form.html', {
             'form': SajuForm(request.POST),
-            'error': error_message
+            'error': error_message,
+            'kakao_js_key': settings.KAKAO_JS_KEY,
+            **build_fortune_saju_page_seo(request).as_context(),
         })
     result_html = None
     error_message = None
@@ -461,16 +473,16 @@ def saju_view(request):
         except Exception as e:
             logger.error(f"Error building chart data for template: {e}")
     
-    return render(request, 'fortune/saju_form.html', {
+    return _render_private_fortune_page(request, 'fortune/saju_form.html', {
         'form': form,
         'result': result_html,
         'error': error_message,
-        'name': request.POST.get('name') if request.method == 'POST' else None,
         'gender': request.POST.get('gender') if request.method == 'POST' else None,
         'mode': request.POST.get('mode') if request.method == 'POST' else 'teacher',
         'day_master': day_master_data,
         'chart': chart_data,
         'kakao_js_key': settings.KAKAO_JS_KEY,
+        **build_fortune_saju_page_seo(request).as_context(),
     })
 
 
@@ -505,7 +517,6 @@ async def saju_streaming_api(request):
     return response
 
 @login_required
-@csrf_exempt
 async def saju_api_view(request):
     """사주 분석 API (async)"""
     try:
@@ -545,7 +556,6 @@ async def saju_api_view(request):
         return JsonResponse({
             'success': True,
             'result': response_text,
-            'name': data['name'],
             'mode': mode,
             'day_master': {
                 'char': str(chart_context['day']['stem']),
@@ -572,7 +582,6 @@ async def saju_api_view(request):
         return JsonResponse({'error': 'AI_ERROR', 'message': '분석 중 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'}, status=500)
 
 
-@csrf_exempt
 async def daily_fortune_api(request):
     """특정 날짜의 일진(운세) 분석 API (async)"""
     try:
@@ -593,7 +602,6 @@ async def daily_fortune_api(request):
 
         target_date_str = data.get('target_date')
         natal_data = normalize_natal_chart_payload(data.get('natal_chart'))
-        name = data.get('name', '선생님')
         gender = data.get('gender', 'female')
         mode = data.get('mode', 'teacher')
 
@@ -642,7 +650,7 @@ async def daily_fortune_api(request):
 
         # Prompt
         from .prompts import get_daily_fortune_prompt
-        prompt = get_daily_fortune_prompt(name, gender, natal_context, target_dt, target_context, mode=mode)
+        prompt = get_daily_fortune_prompt(gender, natal_context, target_dt, target_context, mode=mode)
         cache_fingerprint, cached_response = await sync_to_async(
             _get_daily_cache_entry
         )(request.user, mode, target_date_str, natal_data)
@@ -704,7 +712,10 @@ def saju_history(request):
     """내 사주 보관함 목록"""
     from .models import FortuneResult
     history = FortuneResult.objects.filter(user=request.user)
-    return render(request, 'fortune/history.html', {'history': history})
+    return _render_private_fortune_page(request, 'fortune/history.html', {
+        'history': history,
+        **build_fortune_history_page_seo(request).as_context(),
+    })
 
 
 @login_required
@@ -869,7 +880,8 @@ def saju_history_detail(request, pk):
     """보관함 상세 보기 (공유 페이지로도 활용 가능 - 공개 접근 가능)"""
     from .models import FortuneResult
     item = get_object_or_404(FortuneResult, pk=pk)
-    return render(request, 'fortune/detail.html', {
+    return _render_private_fortune_page(request, 'fortune/detail.html', {
         'item': item,
-        'kakao_js_key': settings.KAKAO_JS_KEY
+        'kakao_js_key': settings.KAKAO_JS_KEY,
+        **build_fortune_detail_page_seo(request, item).as_context(),
     })

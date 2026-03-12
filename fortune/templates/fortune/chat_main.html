@@ -340,11 +340,11 @@
             saveBtn.classList.remove('hidden');
             resetBtn.classList.remove('hidden');
 
-            const displayName = context.display_name || '선생님';
+            const displayName = '선생님';
             const userTurns = (context.chat_history || []).filter(item => item.role === 'user').length;
             const remainingTurns = Math.max(0, MAX_CHAT_TURNS - userTurns);
 
-            contextLabel.textContent = `${displayName}님과 상담 중`;
+            contextLabel.textContent = `${displayName}과 상담 중`;
             turnCounter.textContent = remainingTurns;
 
             let html = `
@@ -355,7 +355,7 @@
         </div>
         <div class="glass-card p-4 max-w-[88%] rounded-tl-none text-gray-100 leading-relaxed shadow-lg backdrop-blur-md bg-white/5 border-l-4 border-l-purple-500">
             <p class="font-bold text-purple-300 mb-1 text-sm">사주 상담사</p>
-            <p>안녕하세요, <strong>${escapeHtml(displayName)}</strong>님.<br>궁금한 점을 편하게 물어보세요.</p>
+            <p>안녕하세요.<br>궁금한 점을 편하게 물어보세요.</p>
             <p class="text-xs text-gray-400 mt-2 border-t border-white/10 pt-2">
                 남은 질문: <span class="text-yellow-400 font-bold">${remainingTurns}</span>
             </p>
@@ -387,7 +387,6 @@
             }
 
             form.querySelector('#chatWorkingContextInput').value = JSON.stringify({
-                display_name: context.display_name,
                 gender: context.gender,
                 mode: context.mode,
                 day_master: context.day_master || {},
@@ -466,7 +465,6 @@
             const formData = new FormData();
             formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
             formData.append('working_context_json', JSON.stringify({
-                display_name: context.display_name,
                 gender: context.gender,
                 mode: context.mode,
                 day_master: context.day_master || {},

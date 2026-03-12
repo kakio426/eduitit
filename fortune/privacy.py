@@ -108,3 +108,13 @@ def store_cached_pseudonymous_result(user, purpose, fingerprint, result_text):
         },
     )
     return cache_entry
+
+
+def apply_private_fortune_headers(response):
+    if response is None:
+        return response
+
+    response["Cache-Control"] = "no-store, private, max-age=0"
+    response["Pragma"] = "no-cache"
+    response["X-Robots-Tag"] = "noindex, nofollow"
+    return response

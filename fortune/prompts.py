@@ -82,13 +82,13 @@ def get_teacher_prompt(data, chart_context=None):
 - 사용자의 정확한 생년월일시와 년주/월주/일주/시주의 문자값은 답변에 그대로 다시 쓰지 마세요.
 
 [Input Data]
-- 이름: {data['name']} / 성별: {gender_str}
+- 호칭: 선생님 / 성별: {gender_str}
 - 출생 정보는 이미 내부 계산에 반영되었습니다. 답변에는 원문 날짜를 다시 쓰지 마세요.
 {chart_info}
 
 
 ## 📌 1. 핵심 요약
-- {data['name']} 선생님의 성향을 일간 오행에 맞는 자연물로 비유하여 3줄 요약
+- 선생님의 성향을 일간 오행에 맞는 자연물로 비유하여 3줄 요약
 
 ## 📜 2. 기운 흐름 해석
 - 나의 중심 에너지: 일간의 오행에 맞는 자연물 비유로 설명
@@ -109,7 +109,7 @@ def get_teacher_prompt(data, chart_context=None):
 - 올해 키워드 / 좋은 시기 / 행운 아이템 / 힐링 팁
 
 ---
-💫 {data['name']} 선생님의 빛나는 교직 생활을 응원합니다!
+💫 선생님의 빛나는 교직 생활을 응원합니다!
 """
 
 
@@ -140,13 +140,13 @@ def get_general_prompt(data, chart_context=None):
 - 사용자의 정확한 생년월일시와 년주/월주/일주/시주의 문자값은 답변에 그대로 다시 쓰지 마세요.
 
 [Input Data]
-- 이름: {data['name']} / 성별: {gender_str}
+- 호칭: 이분 / 성별: {gender_str}
 - 출생 정보는 이미 내부 계산에 반영되었습니다. 답변에는 원문 날짜를 다시 쓰지 마세요.
 {chart_info}
 
 
 ## 📌 1. 핵심 요약
-- {data['name']}님의 성향을 일간 오행에 맞는 자연물로 비유하여 3줄 요약
+- 이분의 성향을 일간 오행에 맞는 자연물로 비유하여 3줄 요약
 
 ## 📜 2. 기운 흐름 해석
 - 나의 중심 에너지: 일간의 오행에 맞는 자연물 비유로 설명
@@ -170,10 +170,10 @@ def get_general_prompt(data, chart_context=None):
 
 ---
 
-💫 {data['name']}님의 행복한 미래를 응원합니다!
+💫 행복한 미래를 응원합니다!
 """
 
-def get_daily_fortune_prompt(name, gender, natal_context, target_date, target_context, mode='teacher'):
+def get_daily_fortune_prompt(gender, natal_context, target_date, target_context, mode='teacher'):
     """특정 날짜의 일진(운세) 분석 프롬프트 (구조화 및 가독성 최적화)"""
     gender_str = get_gender_korean(gender)
     natal_info = get_chart_info(natal_context)
@@ -181,7 +181,7 @@ def get_daily_fortune_prompt(name, gender, natal_context, target_date, target_co
     
     # 모드별 호칭 및 역할 설정
     is_teacher = (mode == 'teacher')
-    honorific = "선생님" if is_teacher else "님"
+    subject_label = "선생님" if is_teacher else "이분"
     role_desc = "30년 경력 교사 전문 명리 상담사" if is_teacher else "30년 경력 명리 전문가"
     
     mentor_desc = "교직 선배" if is_teacher else "인생 선배"
@@ -205,7 +205,7 @@ def get_daily_fortune_prompt(name, gender, natal_context, target_date, target_co
 - 오행 비유 시 반드시 해당 오행에 맞는 자연물을 사용하세요 (목=나무/숲, 화=불/태양, 토=흙/산, 금=보석/쇠, 수=물/비).
 - 원국의 정확한 년주/월주/일주/시주 글자는 답변에 그대로 반복하지 마세요.
 
-[User Data] {name}({gender_str}) / 모드: {'교사' if is_teacher else '일반'}
+[User Data] 호칭: {subject_label} / 성별: {gender_str} / 모드: {'교사' if is_teacher else '일반'}
 {natal_info}
 [Target Date] {target_date.strftime('%Y-%m-%d')}
 {target_info}
@@ -233,7 +233,7 @@ def get_daily_fortune_prompt(name, gender, natal_context, target_date, target_co
 
 ---
 
-## 💡 {name} {honorific}을 위한 조언
+## 💡 {subject_label}을 위한 조언
 
 ### ✅ 추천 행동
 - {"교직 생활/업무" if is_teacher else "업무/학업"}에서의 조언
@@ -255,7 +255,7 @@ def get_daily_fortune_prompt(name, gender, natal_context, target_date, target_co
 
 ---
 
-💫 {name} {honorific}의 빛나는 하루를 응원합니다!
+💫 {subject_label}의 빛나는 하루를 응원합니다!
 """
 
 def get_prompt(mode, data, chart_context=None):

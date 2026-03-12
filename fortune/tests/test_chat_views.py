@@ -66,7 +66,8 @@ class TestChatViews(TestCase):
     @patch('fortune.views_chat.is_ratelimited', return_value=False)
     def test_send_message_streams_response_without_db_chat_session(self, _mock_ratelimit):
         async def fake_stream(system_prompt, history, user_message):
-            self.assertIn('테스트선생님', system_prompt)
+            self.assertIn('User Label: 선생님', system_prompt)
+            self.assertNotIn('테스트선생님', system_prompt)
             self.assertEqual(history, [])
             self.assertEqual(user_message, '안녕하세요')
             yield {'html': '<p>첫 답변</p>', 'plain': '첫 답변'}
@@ -126,6 +127,7 @@ class TestChatViews(TestCase):
         self.assertIn('[비공개]', saved.result_text)
         self.assertNotIn('1990-01-01', saved.result_text)
         self.assertNotIn('1990년 1월 1일 13시', saved.result_text)
+        self.assertNotIn('테스트선생님', saved.result_text)
 
     def test_select_prior_general_results_returns_latest_general_only(self):
         FortuneResult.objects.create(

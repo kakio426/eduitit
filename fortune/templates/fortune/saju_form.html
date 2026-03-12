@@ -983,10 +983,11 @@
                 <!-- 이름 -->
                 <div class="mb-6">
                     <label for="id_name" class="block text-2xl font-bold text-gray-600 mb-3">
-                        <i class="fa-solid fa-user text-purple-500 mr-2"></i>이름
+                        <i class="fa-solid fa-user text-purple-500 mr-2"></i>이름 <span class="text-gray-400 font-normal text-xl">(선택)</span>
                     </label>
-                    <input type="text" name="name" id="id_name" class="saju-input" placeholder="이름을 입력해주세요" required
-                        maxlength="20">
+                    <input type="text" id="id_name" class="saju-input" placeholder="화면 표시용 이름 (선택)"
+                        maxlength="20" autocomplete="off">
+                    <p class="text-gray-400 text-xl mt-3 ml-1">입력한 이름은 이 탭의 화면 표시용으로만 쓰이고 서버에 저장되지 않습니다.</p>
                 </div>
 
                 <!-- 성별 -->
@@ -1250,73 +1251,26 @@
             </div>
         </div>
 
-        <!-- 저장/가입 유도 섹션 (User Requested Removal) -->
-        <!--
         <div id="saveSection" class="{% if not result %}hidden{% endif %}">
-            {% if user.is_authenticated %}
-            <div class="space-y-4">
-                <div class="bg-purple-50/50 rounded-3xl p-8 border border-purple-100">
-                    <div class="flex flex-col md:flex-row items-center justify-between gap-6">
-                        <div class="flex items-center gap-4">
-                            <div
-                                class="w-12 h-12 bg-purple-600/10 text-purple-600 rounded-2xl flex items-center justify-center text-2xl">
-                                <i class="fa-solid fa-bookmark"></i>
-                            </div>
-                            <div class="text-left">
-                                <h4 class="text-xl font-black text-slate-700">이 결과 보관하기</h4>
-                                <p class="text-slate-500 font-medium">선생님만의 운세 보관함에 저장해두고 언제든 꺼내보세요.
-                                </p>
-                            </div>
-                        </div>
-                        <button onclick="saveToLibrary()"
-                            class="px-8 py-4 bg-purple-600 hover:bg-neutral-800 text-white rounded-2xl font-black text-xl transition-all shadow-lg hover:-translate-y-1">
-                            보관함에 저장
-                        </button>
-                    </div>
-                </div>
-
-                <div class="bg-amber-50/50 rounded-3xl p-8 border border-amber-100">
-                    <div class="flex flex-col md:flex-row items-center justify-between gap-6">
-                        <div class="flex items-center gap-4">
-                            <div
-                                class="w-12 h-12 bg-amber-600/10 text-amber-600 rounded-2xl flex items-center justify-center text-2xl">
-                                <i class="fa-solid fa-bell"></i>
-                            </div>
-                            <div class="text-left">
-                                <h4 class="text-xl font-black text-slate-700">내일 운세 알림 받기</h4>
-                                <p class="text-slate-500 font-medium">내일 다시 방문하면 리마인더를 표시해드릴게요.</p>
-                            </div>
-                        </div>
-                        <button onclick="setTomorrowReminder()"
-                            class="px-8 py-4 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-black text-xl transition-all shadow-lg hover:-translate-y-1">
-                            알림 설정
-                        </button>
-                    </div>
-                </div>
-            </div>
-            {% else %}
-            <div class="bg-slate-100/50 rounded-3xl p-8 border border-slate-200">
-                <div class="flex flex-col md:flex-row items-center justify-between gap-6">
-                    <div class="flex items-center gap-4">
+            <div class="bg-purple-50/50 rounded-3xl p-6 md:p-8 border border-purple-100">
+                <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                    <div class="flex items-start gap-4">
                         <div
-                            class="w-12 h-12 bg-slate-400 text-white rounded-2xl flex items-center justify-center text-2xl">
-                            <i class="fa-solid fa-lock"></i>
+                            class="w-12 h-12 bg-purple-600/10 text-purple-600 rounded-2xl flex items-center justify-center text-2xl shrink-0">
+                            <i class="fa-solid fa-bookmark"></i>
                         </div>
                         <div class="text-left">
-                            <h4 class="text-xl font-black text-slate-700">분석 결과 보관 및 미래 일진 확인</h4>
-                            <p class="text-slate-500 font-medium">회원이 되시면 분석된 사주를 영구 보관하고 내일의 운세도 미리
-                                볼 수 있어요. 😊</p>
+                            <h4 class="text-xl font-black text-slate-700">원할 때만 보관함에 저장</h4>
+                            <p class="text-slate-500 font-medium">결과는 자동 저장하지 않습니다. 필요한 순간에만 직접 보관함에 저장해두세요.</p>
                         </div>
                     </div>
-                    <a href="{% url 'account_signup' %}?next={% url 'fortune:saju' %}"
-                        class="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-xl transition-all shadow-lg hover:-translate-y-1">
-                        가입하고 혜택 받기
-                    </a>
+                    <button id="saveResultButton" onclick="saveToLibrary()"
+                        class="w-full md:w-auto px-8 py-4 bg-purple-600 hover:bg-neutral-800 text-white rounded-2xl font-black text-xl transition-all shadow-lg hover:-translate-y-1">
+                        보관함에 저장
+                    </button>
                 </div>
             </div>
-            {% endif %}
         </div>
-        -->
 
         <div class="mt-10 text-center" id="restartSection">
             <button type="button" onclick="resetToForm()" class="inline-block px-12 py-5 rounded-2xl text-white font-bold text-2xl
@@ -1468,7 +1422,7 @@
         mode: 'teacher',
         savedId: null,
         result_text: null,
-        name: '',
+        display_name: '',
         gender: '',
         day_master: null,
     };
@@ -1504,6 +1458,24 @@
         }
     }
 
+    function getDisplayNameInput() {
+        return document.getElementById('id_name');
+    }
+
+    function getCurrentDisplayName() {
+        const displayName = window.currentSajuState?.display_name || getDisplayNameInput()?.value || '';
+        return String(displayName || '').trim();
+    }
+
+    function getDisplayLabel(mode = null) {
+        const resolvedMode = mode || document.getElementById('modeInput')?.value || 'teacher';
+        const displayName = getCurrentDisplayName();
+        if (displayName) {
+            return resolvedMode === 'teacher' ? `${displayName} 선생님` : `${displayName}님`;
+        }
+        return resolvedMode === 'teacher' ? '선생님' : '이분';
+    }
+
     function loadWorkingContext() {
         return safeJSONParse(sessionStorage.getItem(WORKING_CONTEXT_STORAGE_KEY), null);
     }
@@ -1512,7 +1484,6 @@
         const context = {
             natal_chart: state?.natal_chart || null,
             day_master: state?.day_master || null,
-            display_name: state?.name || state?.display_name || '',
             gender: state?.gender || '',
             mode: state?.mode || 'teacher',
             chat_history: options.resetChat ? [] : ((loadWorkingContext()?.chat_history) || []),
@@ -1560,8 +1531,24 @@
     // 새로운 사주 입력
     function showNewSajuForm() {
         sessionStorage.removeItem(WORKING_CONTEXT_STORAGE_KEY);
+        window.currentSajuState = {
+            natal_chart: null,
+            mode: 'teacher',
+            savedId: null,
+            result_text: null,
+            display_name: '',
+            gender: '',
+            day_master: null,
+        };
         document.getElementById('formContainer').classList.remove('hidden');
         document.getElementById('sajuForm').reset();
+        const saveBtn = document.getElementById('saveResultButton');
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '보관함에 저장';
+            saveBtn.classList.remove('bg-gray-400');
+            saveBtn.classList.add('bg-purple-600');
+        }
         setMode('teacher');
     }
     // 페이지 로드 시 프로필 로드 및 캐시 정리
@@ -1826,11 +1813,6 @@
         localStorage.removeItem('fortuneReminder');
     }
 
-    // 이전 사주 결과 복원 함수
-    function restorePendingSajuResult() {
-        return;
-    }
-
     const ELEMENT_MAP = {
         '甲': { element: 'wood', icon: '🌳', name: '갑목(甲木)', desc: '큰 나무처럼 곧고 강한 기운' },
         '乙': { element: 'wood', icon: '🌿', name: '을목(乙木)', desc: '풀과 넝쿨처럼 부드럽고 유연한 기운' },
@@ -1883,6 +1865,8 @@
 
         const form = e.target;
         const formData = new FormData(form);
+        const displayName = getCurrentDisplayName();
+        formData.delete('name');
 
         // [하루 5회 제한 검사] - 개인 API 키 사용자는 무제한
         // Django template에서 변수 주입 (False면 문자열 "False")
@@ -2000,12 +1984,12 @@
                 document.getElementById('resultContainer').classList.remove('hidden');
                 document.getElementById('shareSection').classList.remove('hidden');
                 document.getElementById('dailyFortuneSection').classList.remove('hidden');
+                document.getElementById('saveSection').classList.remove('hidden');
                 const chatCTA3 = document.getElementById('chatCTASection');
                 if (chatCTA3) chatCTA3.classList.remove('hidden');
-                // document.getElementById('saveSection').classList.remove('hidden');
 
                 // 결과 렌더링 (day_master 전달)
-                updatePremiumUI(accumulatedText, data.chart, data.mode, data.day_master, data.name);
+                updatePremiumUI(accumulatedText, data.chart, data.mode, data.day_master, displayName);
 
                 // 섹션 그룹화 적용
                 groupMarkdownSections();
@@ -2024,14 +2008,11 @@
                     mode: data.mode || 'teacher',
                     savedId: null,
                     result_text: accumulatedText,
-                    name: data.name,
+                    display_name: displayName,
                     gender: formData.get('gender'),
                     day_master: data.day_master || null,
                 };
                 saveWorkingContext(window.currentSajuState, { resetChat: true });
-
-                // Trigger Auto-Save
-                autoSaveResult();
             }, 800);
 
         } catch (err) {
@@ -2283,10 +2264,8 @@
 
     // 공유카드 업데이트 (이미지 저장용)
     function updateShareCard(markdown) {
-        const nameContext = "{{ name|default:'' }}";
         const mode = document.getElementById('modeInput').value;
-        const honorific = (mode === 'teacher') ? '선생님' : '님';
-        const displayName = nameContext ? `${nameContext} ${honorific}` : (mode === 'teacher' ? '선생님' : '당신');
+        const displayName = getDisplayLabel(mode);
 
         const titleElem = document.getElementById('shareCardTitle');
         if (titleElem) titleElem.textContent = `🔮 ${displayName}의 사주`;
@@ -2328,7 +2307,7 @@
                 return;
             }
 
-            const nameContext = "{{ name|default:'선생님' }}";
+            const displayName = getDisplayLabel(document.getElementById('modeInput').value);
             const resultText = document.getElementById('markdownResult')?.innerText || '';
 
             // 일간 정보에 따른 아이콘/이름 추출
@@ -2383,12 +2362,7 @@
             }
 
             // 이름 처리 (중복 방지)
-            let displayTitle = `${nameContext} 선생님의 사주 결과`;
-            if (nameContext === '선생님') {
-                displayTitle = `선생님의 사주 결과`;
-            } else if (nameContext.endsWith('선생님')) {
-                displayTitle = `${nameContext}의 사주 결과`;
-            }
+            const displayTitle = `${displayName}의 사주 결과`;
 
             Kakao.Share.sendDefault({
                 objectType: 'feed',
@@ -2503,8 +2477,8 @@
             captureArea.classList.remove('capture-active');
 
             const link = document.createElement('a');
-            const nameContext = "{{ name|default:'사주결과' }}";
-            link.download = `${nameContext}_사주분석리포트_${new Date().toISOString().split('T')[0]}.png`;
+            const displayName = getCurrentDisplayName() || '사주결과';
+            link.download = `${displayName}_사주분석리포트_${new Date().toISOString().split('T')[0]}.png`;
             link.href = canvas.toDataURL('image/png', 1.0);
             link.click();
             showToast('이미지가 성공적으로 저장되었습니다!');
@@ -2617,7 +2591,6 @@
                 body: JSON.stringify({
                     target_date: targetDate,
                     natal_chart: natalChart,
-                    name: (workingContext && workingContext.display_name) ? workingContext.display_name : "{{ name|default:'' }}",
                     gender: (workingContext && workingContext.gender) ? workingContext.gender : "{{ gender|default:'female' }}",
                     mode: currentMode
                 })
@@ -2698,10 +2671,8 @@
         }
 
         try {
-            const nameContext = "{{ name|default:'' }}";
             const mode = document.getElementById('modeInput').value;
-            const honorific = (mode === 'teacher') ? '선생님' : '님';
-            const displayName = nameContext ? `${nameContext} ${honorific}` : (mode === 'teacher' ? '선생님' : '당신');
+            const displayName = getDisplayLabel(mode);
 
             const dateStr = window.lastDailyFortune.date;
             const dateObj = new Date(dateStr);
@@ -2812,7 +2783,7 @@
 
         html2canvas(captureArea, options).then(canvas => {
             const link = document.createElement('a');
-            const nameContext = "{{ name|default:'운세' }}";
+            const nameContext = getCurrentDisplayName() || '운세';
             const dateStr = window.lastDailyFortune.date;
             link.download = `${nameContext}_${dateStr}_일진운세.png`;
             link.href = canvas.toDataURL('image/png', 1.0);
@@ -2827,49 +2798,6 @@
     // 저장된 결과 ID를 저장할 변수
     let savedResultId = null;
 
-    // 자동 저장 (Silent Auto-Save)
-    async function autoSaveResult() {
-        if ("{{ user.is_authenticated }}" !== "True") return;
-        if (!window.currentSajuState || !window.currentSajuState.result_text) return;
-        if (window.currentSajuState.savedId) return; // Already saved
-
-        console.log("Auto-saving results...");
-
-        try {
-            const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
-            if (!csrfInput) return;
-
-            const response = await fetch('{% url "fortune:save_fortune_api" %}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfInput.value
-                },
-                body: JSON.stringify({
-                    mode: window.currentSajuState.mode || 'teacher',
-                    result_text: window.currentSajuState.result_text,
-                    target_date: null // Main analysis, not daily
-                })
-            });
-
-            // [Mobile Robustness] Content-Type 체크 및 안전한 파싱
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                console.warn("[Mobile Debug] Auto-save Non-JSON Response", response.status);
-                return; // Auto-save failure is silent but logged
-            }
-
-            const data = await response.json();
-            if (data.success) {
-                window.currentSajuState.savedId = data.result_id;
-                savedResultId = data.result_id; // For sharing link
-                showToast('결과가 보관함에 자동 저장되었습니다! 📂');
-            }
-        } catch (e) {
-            console.error("Auto-save failed", e);
-        }
-    }
-
     // 보관함 저장
     async function saveToLibrary() {
         console.log("Saving to library...");
@@ -2882,6 +2810,11 @@
         const resultElem = document.getElementById('markdownResult');
         if (!resultElem) {
             console.error("Result element not found");
+            return;
+        }
+
+        if (window.currentSajuState?.savedId) {
+            showToast('이미 보관함에 저장된 결과입니다.');
             return;
         }
 
@@ -2922,10 +2855,13 @@
             }
 
             if (data.success) {
+                if (window.currentSajuState) {
+                    window.currentSajuState.savedId = data.result_id;
+                }
                 savedResultId = data.result_id; // 저장된 ID 저장
                 showToast('보관함에 저장되었습니다! 🎁');
                 // 버튼 상태 변경 (중복 저장 방지)
-                const saveBtn = document.querySelector('#saveSection button');
+                const saveBtn = document.getElementById('saveResultButton');
                 if (saveBtn) {
                     saveBtn.disabled = true;
                     saveBtn.innerHTML = '<i class="fa-solid fa-check mr-2"></i>저장 완료';
@@ -3028,13 +2964,13 @@
                 element: "{{ day_master.element|default:'' }}"
             };
 
-            updatePremiumUI(rawMarkdown, chartData, "{{ mode|default:'teacher' }}", dayMaster.char ? dayMaster : null, "{{ name|default:'' }}");
+            updatePremiumUI(rawMarkdown, chartData, "{{ mode|default:'teacher' }}", dayMaster.char ? dayMaster : null, getCurrentDisplayName());
             window.currentSajuState = {
                 natal_chart: chartData,
                 mode: "{{ mode|default:'teacher' }}",
                 savedId: null,
                 result_text: rawMarkdown,
-                name: "{{ name|default:'' }}",
+                display_name: getCurrentDisplayName(),
                 gender: "{{ gender|default:'' }}",
                 day_master: dayMaster.char ? dayMaster : null
             };

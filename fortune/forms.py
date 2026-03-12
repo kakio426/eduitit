@@ -26,9 +26,10 @@ class SajuForm(forms.Form):
     name = forms.CharField(
         label='이름',
         max_length=20,
+        required=False,
         widget=forms.TextInput(attrs={
             'class': 'saju-input',
-            'placeholder': '이름을 입력해주세요'
+            'placeholder': '화면 표시용 이름 (선택)'
         })
     )
     gender = forms.ChoiceField(

@@ -213,3 +213,44 @@ def build_qrgen_page_seo(request) -> PageSeoMeta:
         description="수업 링크 하나만 넣으면 바로 보여줄 QR 코드를 빠르게 만듭니다.",
         canonical_url=_absolute_url(reverse("qrgen:landing")),
     )
+
+
+def build_fortune_saju_page_seo(request) -> PageSeoMeta:
+    return _build_page_seo(
+        title="사주 운세 - Eduitit",
+        description="로그인 후 이용하는 비공개 사주 분석 화면입니다.",
+        canonical_url=_absolute_url(reverse("fortune:saju")),
+        robots="noindex,nofollow",
+    )
+
+
+def build_fortune_history_page_seo(request) -> PageSeoMeta:
+    return _build_page_seo(
+        title="내 사주 보관함 - Eduitit",
+        description="직접 저장한 사주 분석 결과를 다시 보는 비공개 보관함입니다.",
+        canonical_url=_absolute_url(reverse("fortune:history")),
+        robots="noindex,nofollow",
+    )
+
+
+def build_fortune_detail_page_seo(request, item) -> PageSeoMeta:
+    if getattr(item, "target_date", None):
+        description = f"{item.target_date:%Y년 %m월 %d일} 운세 보관 상세입니다."
+    else:
+        description = "저장한 사주 분석 결과 상세입니다."
+
+    return _build_page_seo(
+        title="사주 분석 상세보기 - Eduitit",
+        description=description,
+        canonical_url=_absolute_url(reverse("fortune:history_detail", kwargs={"pk": item.pk})),
+        robots="noindex,nofollow",
+    )
+
+
+def build_fortune_chat_page_seo(request) -> PageSeoMeta:
+    return _build_page_seo(
+        title="사주 선생님 채팅 - Eduitit",
+        description="현재 탭의 분석 결과를 바탕으로 이어서 상담하는 비공개 채팅 화면입니다.",
+        canonical_url=_absolute_url(reverse("fortune:chat_main")),
+        robots="noindex,nofollow",
+    )

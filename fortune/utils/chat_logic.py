@@ -72,7 +72,8 @@ def _build_general_history_block(general_results):
 
 
 def build_system_prompt(profile, natal_chart, general_results=None):
-    person_name = _get_context_value(profile, "person_name") or _get_context_value(profile, "display_name", "Student")
+    mode = _get_context_value(profile, "mode", "teacher")
+    person_name = "선생님" if mode != "general" else "이분"
     gender = _get_context_value(profile, "gender", "unknown")
     day_master = _extract_day_master(natal_chart)
     prior_general = _build_general_history_block(general_results or [])
@@ -86,7 +87,7 @@ Format: plain text only
 Length: 3-4 sentences
 
 [User Context]
-Name: {person_name}
+User Label: {person_name}
 Gender: {gender}
 Day Master: {day_master}
 Natal Chart Data: {normalized_chart}

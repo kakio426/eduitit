@@ -42,13 +42,14 @@ class TestChatLogic(SimpleTestCase):
 
         prompt = build_system_prompt(self.context, natal_chart, [])
 
-        self.assertIn("Name: 테스트학생", prompt)
+        self.assertIn("User Label: 선생님", prompt)
         self.assertIn("Day Master: 丙", prompt)
         self.assertIn("[Prior General Readings]", prompt)
         self.assertIn('Day Master is fixed as "丙"', prompt)
         self.assertIn("Never reveal or repeat raw birth date/time", prompt)
         self.assertNotIn("Birth Datetime:", prompt)
         self.assertNotIn("2015-05-05", prompt)
+        self.assertNotIn("테스트학생", prompt)
 
     def test_build_system_prompt_includes_prior_general_results(self):
         natal_chart = {"day": {"stem": "丙", "branch": "寅"}}
