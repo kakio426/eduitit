@@ -197,6 +197,8 @@ class EduMaterialViewTests(TestCase):
         self.assertContains(response, "Mobile")
         self.assertContains(response, "data-preview-width=\"1280\"")
         self.assertContains(response, "data-preview-height=\"844\"")
+        self.assertContains(response, "xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,400px)]")
+        self.assertContains(response, "min-w-0 space-y-6")
         self.assertEqual(response.context["preview_default_viewport"]["id"], "desktop")
 
     def test_render_view_allows_teacher_preview_before_publish(self):
