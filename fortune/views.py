@@ -14,12 +14,18 @@ from core.utils import ratelimit_key_for_master_only, has_personal_api_key
 from .forms import SajuForm
 from .prompts import get_prompt
 from .libs import calculator
+from .privacy import (
+    build_user_pseudonymous_fingerprint,
+    get_cached_pseudonymous_result,
+    normalize_birth_payload,
+    normalize_daily_payload,
+    scrub_personal_fortune_text,
+    store_cached_pseudonymous_result,
+)
 from datetime import datetime
-from django.core.cache import cache
 import pytz
 import json
 import logging
-import hashlib
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
@@ -200,18 +206,6 @@ def serialize_chart_context(chart_context):
     }
 
 
-def chart_context_to_legacy_chart(chart_context):
-    """Legacy 프론트 저장 포맷([stem, branch])으로 변환"""
-    if not chart_context:
-        return None
-    return {
-        'year': [str(chart_context['year']['stem']), str(chart_context['year']['branch'])],
-        'month': [str(chart_context['month']['stem']), str(chart_context['month']['branch'])],
-        'day': [str(chart_context['day']['stem']), str(chart_context['day']['branch'])],
-        'hour': [str(chart_context['hour']['stem']), str(chart_context['hour']['branch'])],
-    }
-
-
 def normalize_natal_chart_payload(natal_chart):
     """
     natal_chart를 canonical 포맷({'year': {'stem': '甲', 'branch': '子'}})으로 정규화.
@@ -240,35 +234,21 @@ def normalize_natal_chart_payload(natal_chart):
     return normalized or natal_chart
 
 
-def find_cached_fortune_result(user, mode, chart_context):
-    """
-    FortuneResult 캐시 조회.
-    1) canonical 포맷 조회
-    2) 과거 레거시 포맷 조회
-    """
-    from .models import FortuneResult
+def _get_full_analysis_cache_entry(user, data):
+    if not user or not user.is_authenticated:
+        return None, None
+    fingerprint = build_user_pseudonymous_fingerprint(user.id, normalize_birth_payload(data))
+    return fingerprint, get_cached_pseudonymous_result(user, 'full', fingerprint)
 
-    serialized_chart = serialize_chart_context(chart_context)
-    if not serialized_chart:
-        return None
 
-    result = FortuneResult.objects.filter(
-        user=user,
-        mode=mode,
-        natal_chart=serialized_chart
-    ).order_by('-created_at').first()
-    if result:
-        return result
-
-    legacy_chart = chart_context_to_legacy_chart(chart_context)
-    if not legacy_chart:
-        return None
-
-    return FortuneResult.objects.filter(
-        user=user,
-        mode=mode,
-        natal_chart=legacy_chart
-    ).order_by('-created_at').first()
+def _get_daily_cache_entry(user, mode, target_date, natal_chart):
+    if not user or not user.is_authenticated:
+        return None, None
+    fingerprint = build_user_pseudonymous_fingerprint(
+        user.id,
+        normalize_daily_payload(mode, target_date, normalize_natal_chart_payload(natal_chart)),
+    )
+    return fingerprint, get_cached_pseudonymous_result(user, 'daily', fingerprint)
 
 
 # ============================================
@@ -416,25 +396,19 @@ def saju_view(request):
 
             # Logic Engine: Calculate Pillars
             chart_context = get_chart_context(data)
-            
-            # [DEBUG] 로그: 입력 데이터와 계산된 사주 명식 확인
-            logger.info(f"User Input: {data}")
-            logger.info(f"Calculated Chart: {chart_context}")
-            
-            # [SERVER CACHE] 중복 분석 방지
-            existing_result = None
-            if request.user.is_authenticated:
-                existing_result = find_cached_fortune_result(request.user, mode, chart_context)
-
             prompt = get_prompt(mode, data, chart_context=chart_context)
+            cache_fingerprint, cached_result = _get_full_analysis_cache_entry(request.user, data)
 
             try:
-                if existing_result:
-                    logger.info(f"Found existing result in DB for user {request.user}, bypassing Gemini.")
-                    generated_text = existing_result.result_text
+                if cached_result:
+                    logger.info("[Fortune] Action: SAJU_ANALYZE, Cache: HIT, User: %s, Mode: %s", request.user.username, mode)
+                    generated_text = cached_result.result_text
                 else:
-                    # Wrap generator to maintain current sync behavior until Phase 4
                     generated_text = "".join(generate_ai_response(prompt, request))
+                    generated_text = scrub_personal_fortune_text(generated_text)
+                    if cache_fingerprint and generated_text:
+                        store_cached_pseudonymous_result(request.user, 'full', cache_fingerprint, generated_text)
+                    logger.info("[Fortune] Action: SAJU_ANALYZE, Cache: MISS, User: %s, Mode: %s", request.user.username, mode)
                 
                 # Validation: If result is empty/whitespace, treat as None/Error
                 if generated_text and generated_text.strip():
@@ -551,25 +525,22 @@ async def saju_api_view(request):
 
         data = form.cleaned_data
         mode = data['mode']
-        logger.info(f"Saju API Request - User: {request.user}, Mode: {mode}")
+        logger.info("[Fortune] Action: SAJU_API_REQUEST, User: %s, Mode: %s", request.user, mode)
 
         # Logic Engine (DB 조회 포함)
         chart_context = await sync_to_async(get_chart_context)(data)
-
-        # [SERVER CACHE] AJAX 요청에 대해서도 DB 캐시 확인
-        existing_result = None
-        if request.user.is_authenticated:
-            existing_result = await sync_to_async(find_cached_fortune_result)(
-                request.user, mode, chart_context
-            )
-
         prompt = get_prompt(mode, data, chart_context=chart_context)
+        cache_fingerprint, cached_result = await sync_to_async(_get_full_analysis_cache_entry)(request.user, data)
 
-        if existing_result:
-            logger.info(f"Found existing result in DB for user {request.user} (API), bypassing Gemini. Mode: {existing_result.mode}")
-            response_text = existing_result.result_text
+        if cached_result:
+            logger.info("[Fortune] Action: SAJU_API_REQUEST, Cache: HIT, User: %s, Mode: %s", request.user, mode)
+            response_text = cached_result.result_text
         else:
             response_text = await _collect_ai_response_async(prompt, request)
+            response_text = scrub_personal_fortune_text(response_text)
+            if cache_fingerprint and response_text:
+                await sync_to_async(store_cached_pseudonymous_result)(request.user, 'full', cache_fingerprint, response_text)
+            logger.info("[Fortune] Action: SAJU_API_REQUEST, Cache: MISS, User: %s, Mode: %s", request.user, mode)
 
         return JsonResponse({
             'success': True,
@@ -672,17 +643,19 @@ async def daily_fortune_api(request):
         # Prompt
         from .prompts import get_daily_fortune_prompt
         prompt = get_daily_fortune_prompt(name, gender, natal_context, target_dt, target_context, mode=mode)
-
-        # [SERVER CACHE] 일진 결과 서버 캐시 확인 (12시간 유효) - 모드 포함
-        cache_key = f"daily_fortune_{hashlib.md5(target_date_str.encode()).hexdigest()}_{hashlib.md5(json.dumps(natal_data, sort_keys=True, ensure_ascii=False).encode()).hexdigest()}_{mode}"
-        cached_response = await sync_to_async(cache.get)(cache_key)
+        cache_fingerprint, cached_response = await sync_to_async(
+            _get_daily_cache_entry
+        )(request.user, mode, target_date_str, natal_data)
 
         if cached_response:
-            logger.info(f"Found cached daily fortune for {name} ({mode}) on {target_date_str}, bypassing Gemini.")
-            response_text = cached_response
+            logger.info("[Fortune] Action: DAILY_ANALYZE, Cache: HIT, User: %s, Date: %s", request.user.username, target_date_str)
+            response_text = cached_response.result_text
         else:
             response_text = await _collect_ai_response_async(prompt, request)
-            await sync_to_async(cache.set)(cache_key, response_text, 60*60*12)
+            response_text = scrub_personal_fortune_text(response_text)
+            if cache_fingerprint and response_text:
+                await sync_to_async(store_cached_pseudonymous_result)(request.user, 'daily', cache_fingerprint, response_text)
+            logger.info("[Fortune] Action: DAILY_ANALYZE, Cache: MISS, User: %s, Date: %s", request.user.username, target_date_str)
 
         # 통계용 로그 저장
         if request.user.is_authenticated:
@@ -710,12 +683,14 @@ def save_fortune_api(request):
         data = json.loads(request.body)
         from .models import FortuneResult
 
-        normalized_natal_chart = normalize_natal_chart_payload(data.get('natal_chart'))
+        result_text = scrub_personal_fortune_text(data.get('result_text'))
+        if not result_text:
+            return JsonResponse({'success': False, 'error': '저장 가능한 결과가 없습니다.'}, status=400)
+
         saved_result = FortuneResult.objects.create(
             user=request.user,
             mode=data.get('mode', 'teacher'),
-            natal_chart=normalized_natal_chart,
-            result_text=data.get('result_text'),
+            result_text=result_text,
             target_date=data.get('target_date') if data.get('target_date') else None
         )
         return JsonResponse({'success': True, 'result_id': saved_result.pk})
@@ -747,96 +722,36 @@ def delete_history_api(request, pk):
 # ============================================
 
 def profile_list_api(request):
-    """사용자의 사주 프로필 목록 조회"""
-    if not request.user.is_authenticated:
-        return JsonResponse({'profiles': []})
-
-    from .models import UserSajuProfile
-    profiles = UserSajuProfile.objects.filter(user=request.user)
-    data = [{
-        'id': p.id,
-        'profile_name': p.profile_name,
-        'person_name': p.person_name,
-        'gender': p.gender,
-        'birth_date': f"{p.birth_year}.{p.birth_month:02d}.{p.birth_day:02d}",
-        'birth_year': p.birth_year,
-        'birth_month': p.birth_month,
-        'birth_day': p.birth_day,
-        'birth_hour': p.birth_hour,
-        'birth_minute': p.birth_minute,
-        'calendar_type': p.calendar_type,
-        'is_default': p.is_default,
-        'natal_chart': p.natal_chart
-    } for p in profiles]
-    return JsonResponse({'profiles': data})
+    """개인정보 비저장 전환 이후 프로필 목록은 더 이상 제공하지 않음"""
+    return JsonResponse({'profiles': []})
 
 
 @login_required
 @require_POST
 def profile_create_api(request):
-    """새 프로필 생성"""
-    from .models import UserSajuProfile
-    try:
-        data = json.loads(request.body)
-        profile = UserSajuProfile.objects.create(
-            user=request.user,
-            profile_name=data['profile_name'],
-            person_name=data['person_name'],
-            gender=data['gender'],
-            birth_year=data['birth_year'],
-            birth_month=data['birth_month'],
-            birth_day=data['birth_day'],
-            birth_hour=data.get('birth_hour'),
-            birth_minute=data.get('birth_minute'),
-            calendar_type=data.get('calendar_type', 'solar'),
-            is_default=data.get('is_default', False)
-        )
-        return JsonResponse({'success': True, 'profile_id': profile.id})
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+    """프로필 저장 기능은 개인정보 비저장 전환 후 종료됨"""
+    return JsonResponse({'success': False, 'error': '프로필 저장 기능이 종료되었습니다.'}, status=410)
 
 
 @login_required
 @require_POST
 def profile_update_api(request, pk):
-    """프로필 수정"""
-    from .models import UserSajuProfile
-    try:
-        profile = get_object_or_404(UserSajuProfile, pk=pk, user=request.user)
-        data = json.loads(request.body)
-
-        for field in ['profile_name', 'person_name', 'gender', 'birth_year',
-                      'birth_month', 'birth_day', 'birth_hour', 'birth_minute',
-                      'calendar_type', 'is_default', 'natal_chart']:
-            if field in data:
-                setattr(profile, field, data[field])
-
-        profile.save()
-        return JsonResponse({'success': True})
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+    """프로필 수정 기능은 개인정보 비저장 전환 후 종료됨"""
+    return JsonResponse({'success': False, 'error': '프로필 저장 기능이 종료되었습니다.'}, status=410)
 
 
 @login_required
 @require_POST
 def profile_delete_api(request, pk):
-    """프로필 삭제"""
-    from .models import UserSajuProfile
-    profile = get_object_or_404(UserSajuProfile, pk=pk, user=request.user)
-    profile.delete()
-    return JsonResponse({'success': True})
+    """프로필 삭제 기능은 개인정보 비저장 전환 후 종료됨"""
+    return JsonResponse({'success': False, 'error': '프로필 저장 기능이 종료되었습니다.'}, status=410)
 
 
 @login_required
 @require_POST
 def profile_set_default_api(request, pk):
-    """기본 프로필 설정"""
-    from .models import UserSajuProfile
-    profile = get_object_or_404(UserSajuProfile, pk=pk, user=request.user)
-    UserSajuProfile.objects.filter(user=request.user).update(is_default=False)
-    profile.is_default = True
-    profile.save()
-    return JsonResponse({'success': True})
+    """기본 프로필 기능은 개인정보 비저장 전환 후 종료됨"""
+    return JsonResponse({'success': False, 'error': '프로필 저장 기능이 종료되었습니다.'}, status=410)
 
 
 # ============================================

@@ -1,10 +1,8 @@
 from django.contrib import admin
-from django.db.models import Count
 from .models import (
-    Stem, Branch, SixtyJiazi, SajuProfile, NatalChart,
-    InterpretationRule, FortuneResult, ZooResult,
-    UserSajuProfile, FavoriteDate, DailyFortuneLog,
-    ChatSession, ChatMessage,
+    Stem, Branch, SixtyJiazi,
+    InterpretationRule, FortuneResult, FortunePseudonymousCache,
+    ZooResult, FavoriteDate, DailyFortuneLog,
 )
 
 
@@ -27,48 +25,6 @@ class SixtyJiaziAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('stem', 'branch')
-
-
-@admin.register(SajuProfile)
-class SajuProfileAdmin(admin.ModelAdmin):
-    list_display = ['user', 'gender', 'birth_date_gregorian', 'birth_city']
-    search_fields = ['user__username', 'birth_city']
-    raw_id_fields = ['user']
-
-    def get_queryset(self, request):
-        return super().get_queryset(request).select_related('user')
-
-
-@admin.register(NatalChart)
-class NatalChartAdmin(admin.ModelAdmin):
-    list_display = ['saju_profile', 'year_pillar', 'month_pillar', 'day_pillar', 'hour_pillar', 'day_master_strength', 'created_at']
-    list_filter = ['day_master_strength', 'created_at']
-    raw_id_fields = ['saju_profile']
-
-    def get_queryset(self, request):
-        return super().get_queryset(request).select_related(
-            'saju_profile__user',
-            'year_stem', 'year_branch',
-            'month_stem', 'month_branch',
-            'day_stem', 'day_branch',
-            'hour_stem', 'hour_branch',
-        )
-
-    def year_pillar(self, obj):
-        return f"{obj.year_stem}{obj.year_branch}"
-    year_pillar.short_description = '년주'
-
-    def month_pillar(self, obj):
-        return f"{obj.month_stem}{obj.month_branch}"
-    month_pillar.short_description = '월주'
-
-    def day_pillar(self, obj):
-        return f"{obj.day_stem}{obj.day_branch}"
-    day_pillar.short_description = '일주'
-
-    def hour_pillar(self, obj):
-        return f"{obj.hour_stem}{obj.hour_branch}"
-    hour_pillar.short_description = '시주'
 
 
 @admin.register(InterpretationRule)
@@ -100,65 +56,33 @@ class ZooResultAdmin(admin.ModelAdmin):
         return super().get_queryset(request).select_related('user')
 
 
-class FavoriteDateInline(admin.TabularInline):
-    model = FavoriteDate
-    extra = 0
+@admin.register(FavoriteDate)
+class FavoriteDateAdmin(admin.ModelAdmin):
+    list_display = ['user', 'date', 'label', 'color']
+    list_filter = ['color', 'date']
+    search_fields = ['user__username', 'label']
     raw_id_fields = ['user']
-
-
-@admin.register(UserSajuProfile)
-class UserSajuProfileAdmin(admin.ModelAdmin):
-    list_display = ['user', 'profile_name', 'person_name', 'gender', 'is_default', 'created_at']
-    list_filter = ['gender', 'is_default', 'calendar_type']
-    search_fields = ['user__username', 'profile_name', 'person_name']
-    raw_id_fields = ['user']
-    inlines = [FavoriteDateInline]
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('user')
 
 
-@admin.register(FavoriteDate)
-class FavoriteDateAdmin(admin.ModelAdmin):
-    list_display = ['user', 'profile', 'date', 'label', 'color']
-    list_filter = ['color', 'date']
-    search_fields = ['user__username', 'label']
-    raw_id_fields = ['user', 'profile']
-
-    def get_queryset(self, request):
-        return super().get_queryset(request).select_related('user', 'profile')
-
-
 @admin.register(DailyFortuneLog)
 class DailyFortuneLogAdmin(admin.ModelAdmin):
-    list_display = ['user', 'profile', 'target_date', 'viewed_at']
+    list_display = ['user', 'target_date', 'viewed_at']
     list_filter = ['target_date', 'viewed_at']
     search_fields = ['user__username']
-    raw_id_fields = ['user', 'profile']
+    raw_id_fields = ['user']
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related('user', 'profile')
+        return super().get_queryset(request).select_related('user')
 
+@admin.register(FortunePseudonymousCache)
+class FortunePseudonymousCacheAdmin(admin.ModelAdmin):
+    list_display = ['user', 'purpose', 'created_at', 'expires_at']
+    list_filter = ['purpose', 'created_at', 'expires_at']
+    search_fields = ['user__username', 'fingerprint']
+    raw_id_fields = ['user']
 
-class ChatMessageInline(admin.TabularInline):
-    model = ChatMessage
-    extra = 0
-    readonly_fields = ['created_at']
-
-
-@admin.register(ChatSession)
-class ChatSessionAdmin(admin.ModelAdmin):
-    list_display = ['user', 'profile', 'is_active', 'created_at', 'expires_at', 'message_count']
-    list_filter = ['is_active', 'created_at']
-    search_fields = ['user__username', 'profile__person_name']
-    raw_id_fields = ['user', 'profile']
-    inlines = [ChatMessageInline]
-    
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related('user', 'profile').annotate(
-             _message_count=Count('messages')
-        )
-
-    def message_count(self, obj):
-        return obj._message_count
-    message_count.admin_order_field = '_message_count'
+        return super().get_queryset(request).select_related('user')

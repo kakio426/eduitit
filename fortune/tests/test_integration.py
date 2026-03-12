@@ -1,87 +1,103 @@
-from django.test import TestCase, RequestFactory
-from django.contrib.auth.models import User
-from fortune.views import saju_view
-from fortune.models import SajuProfile, Stem, Branch
-from fortune.libs import calculator
-from unittest.mock import patch, MagicMock
-from django.utils import timezone
+import json
+from unittest.mock import AsyncMock, patch
+
+from django.contrib.auth import get_user_model
+from django.test import Client, TestCase
+from django.urls import reverse
+
+from fortune.models import Branch, FortunePseudonymousCache, FortuneResult, Stem
+
+User = get_user_model()
+
 
 class IntegrationTests(TestCase):
     def setUp(self):
-        self.factory = RequestFactory()
+        self.client = Client()
         self.user = User.objects.create_user(username='testuser', password='password')
-        # Ensure profile created
-        if not hasattr(self.user, 'saju_profile'):
-            SajuProfile.objects.create(user=self.user, gender='M', birth_date_gregorian=timezone.now(), birth_city='Seoul', longitude=127.0)
-            
-        # Seed basic stems/branches for testing
-        stems_data = [
-            ('Gap', '甲', 'yang', 'wood'), ('Eul', '乙', 'yin', 'wood'),
-            ('Byung', '丙', 'yang', 'fire'), ('Jung', '丁', 'yin', 'fire'),
-            ('Moo', '戊', 'yang', 'earth'), ('Gi', '己', 'yin', 'earth'),
-            ('Gyung', '庚', 'yang', 'metal'), ('Shin', '辛', 'yin', 'metal'),
-            ('Im', '壬', 'yang', 'water'), ('Gye', '癸', 'yin', 'water')
-        ]
-        branches_data = [
-            ('Ja', '子', 'yang', 'water'), ('Chuk', '丑', 'yin', 'earth'),
-            ('In', '寅', 'yang', 'wood'), ('Myo', '卯', 'yin', 'wood'),
-            ('Jin', '辰', 'yang', 'earth'), ('Sa', '巳', 'yin', 'fire'),
-            ('O', '午', 'yang', 'fire'), ('Mi', '未', 'yin', 'earth'),
-            ('Shin', '申', 'yang', 'metal'), ('Yoo', '酉', 'yin', 'metal'),
-            ('Sool', '戌', 'yang', 'earth'), ('Hae', '亥', 'yin', 'water')
-        ]
-        
-        for n, c, p, e in stems_data: Stem.objects.create(name=n, character=c, polarity=p, element=e)
-        for n, c, p, e in branches_data: Branch.objects.create(name=n, character=c, polarity=p, element=e)
-
-    @patch('fortune.views.get_gemini_client')
-    def test_view_calls_logic_and_llm(self, mock_get_client):
-        """Test that the view calls logic engine first, constructs prompt, then calls LLM"""
-        
-        # Mock LLM response
-        mock_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.text = "Saju Analysis Result"
-        mock_client.models.generate_content.return_value = mock_response
-        mock_get_client.return_value = mock_client
-        
-        # Input data
-        data = {
+        self.other_user = User.objects.create_user(username='otheruser', password='password')
+        self.form_data = {
             'mode': 'teacher',
-            'name': 'TestUser',
+            'name': '홍길동',
             'gender': 'male',
             'birth_year': '1990',
             'birth_month': '5',
             'birth_day': '5',
             'birth_hour': '14',
             'birth_minute': '30',
-            'calendar_type': 'solar'
+            'calendar_type': 'solar',
         }
-        
-        request = self.factory.post('/fortune/saju/', data)
-        request.user = self.user
-        
-        # We need to verify that Logic Engine was actually used.
-        # Ideally, we'd patch calculator.get_pillars too to verify call.
-        
-        with patch('fortune.libs.calculator.get_pillars') as mock_get_pillars:
-            mock_get_pillars.return_value = {
-                'year': {'stem': Stem.objects.get(name='Gyung'), 'branch': Branch.objects.get(name='O')},
-                'month': {'stem': Stem.objects.get(name='Shin'), 'branch': Branch.objects.get(name='Sa')},
-                'day': {'stem': Stem.objects.get(name='Byung'), 'branch': Branch.objects.get(name='In')},
-                'hour': {'stem': Stem.objects.get(name='Eul'), 'branch': Branch.objects.get(name='Mi')}
-            }
-            
-            # Since view logic changes aren't implemented yet, this test EXPECTS failure or old behavior 
-            # if we run it now against OLD view.
-            # But the plan says "RED: Write failing tests first".
-            # So this test should fail if the view doesn't use calculator yet.
-            
-            # However, I can't easily mock imports inside the view function unless I patch at top level.
-            # `fortune.views` imports `get_prompt` currently. I want it to use logic engine.
-            
-            response = saju_view(request)
-            
-            # Assertions
-            self.assertEqual(response.status_code, 200)
-            mock_get_pillars.assert_called() # Should fail currently
+        self.chart_context = self._build_chart_context()
+
+    def _build_chart_context(self):
+        stems = {
+            '甲': Stem.objects.create(name='Gap', character='甲', polarity='yang', element='wood'),
+            '乙': Stem.objects.create(name='Eul', character='乙', polarity='yin', element='wood'),
+            '丙': Stem.objects.create(name='Byung', character='丙', polarity='yang', element='fire'),
+            '丁': Stem.objects.create(name='Jung', character='丁', polarity='yin', element='fire'),
+        }
+        branches = {
+            '子': Branch.objects.create(name='Ja', character='子', polarity='yang', element='water'),
+            '丑': Branch.objects.create(name='Chuk', character='丑', polarity='yin', element='earth'),
+            '寅': Branch.objects.create(name='In', character='寅', polarity='yang', element='wood'),
+            '卯': Branch.objects.create(name='Myo', character='卯', polarity='yin', element='wood'),
+        }
+        return {
+            'year': {'stem': stems['甲'], 'branch': branches['子']},
+            'month': {'stem': stems['乙'], 'branch': branches['丑']},
+            'day': {'stem': stems['丙'], 'branch': branches['寅']},
+            'hour': {'stem': stems['丁'], 'branch': branches['卯']},
+        }
+
+    def test_same_user_reuses_pseudonymous_cache(self):
+        self.assertTrue(self.client.login(username='testuser', password='password'))
+        ai_mock = AsyncMock(return_value='요약: 1990년 5월 5일 14시 기준 분석 결과')
+
+        with patch('fortune.views._check_saju_ratelimit', new=AsyncMock(return_value=False)), \
+             patch('fortune.views.get_chart_context', return_value=self.chart_context), \
+             patch('fortune.views.get_prompt', return_value='PROMPT'), \
+             patch('fortune.views._collect_ai_response_async', new=ai_mock):
+            first = self.client.post(reverse('fortune:saju_api'), self.form_data)
+            second = self.client.post(reverse('fortune:saju_api'), self.form_data)
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(ai_mock.await_count, 1)
+        cache_entry = FortunePseudonymousCache.objects.get(user=self.user, purpose='full')
+        self.assertEqual(len(cache_entry.fingerprint), 64)
+        self.assertIn('[비공개]', cache_entry.result_text)
+        self.assertNotIn('1990년 5월 5일 14시', cache_entry.result_text)
+
+    def test_different_users_do_not_share_same_birth_cache(self):
+        ai_mock = AsyncMock(return_value='공통 입력이지만 사용자별로 따로 캐시되어야 합니다.')
+
+        with patch('fortune.views._check_saju_ratelimit', new=AsyncMock(return_value=False)), \
+             patch('fortune.views.get_chart_context', return_value=self.chart_context), \
+             patch('fortune.views.get_prompt', return_value='PROMPT'), \
+             patch('fortune.views._collect_ai_response_async', new=ai_mock):
+            self.assertTrue(self.client.login(username='testuser', password='password'))
+            first = self.client.post(reverse('fortune:saju_api'), self.form_data)
+            self.client.logout()
+            self.assertTrue(self.client.login(username='otheruser', password='password'))
+            second = self.client.post(reverse('fortune:saju_api'), self.form_data)
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(ai_mock.await_count, 2)
+        self.assertEqual(FortunePseudonymousCache.objects.filter(purpose='full').count(), 2)
+
+    def test_save_fortune_api_scrubs_and_stores_without_natal_chart(self):
+        self.assertTrue(self.client.login(username='testuser', password='password'))
+
+        response = self.client.post(
+            reverse('fortune:save_fortune_api'),
+            data=json.dumps({
+                'mode': 'teacher',
+                'result_text': '생일: 1990년 5월 5일 14시\n사주: 甲子 乙丑 丙寅 丁卯\n요약만 남겨주세요.',
+            }),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        saved = FortuneResult.objects.get(user=self.user)
+        self.assertEqual(saved.mode, 'teacher')
+        self.assertEqual(saved.result_text, '요약만 남겨주세요.')

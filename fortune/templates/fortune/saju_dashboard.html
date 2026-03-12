@@ -537,13 +537,6 @@
             document.getElementById('inputSection').classList.add('hidden');
             document.getElementById('dashboardSection').classList.remove('hidden');
 
-            // Save to LocalStorage for persistence check (optional)
-            localStorage.setItem('saju_dashboard_cache', JSON.stringify({
-                pillars: result.pillars,
-                user: currentUser,
-                timestamp: Date.now()
-            }));
-
         } catch (e) {
             console.error(e);
             const errorDisplay = document.getElementById('globalErrorDisplay');

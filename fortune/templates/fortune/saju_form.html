@@ -952,137 +952,6 @@
     </div>
     {% endif %}
 
-    <!-- 프로필 관리 섹션 (로그인 사용자만) -->
-    {% if user.is_authenticated %}
-    <div id="profileManagerSection" class="mb-8">
-        <div class="clay-card p-6 md:p-8" data-aos="fade-up">
-            <div class="flex items-center justify-between mb-6">
-                <div class="flex items-center gap-3">
-                    <div
-                        class="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-full flex items-center justify-center text-white text-2xl">
-                        <i class="fa-solid fa-users"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-2xl font-black text-gray-800">내 프로필</h3>
-                        <p class="text-gray-600 font-medium text-base">여러 사람의 사주를 저장하고 관리하세요</p>
-                    </div>
-                </div>
-                <button onclick="showProfileModal()"
-                    class="px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-xl font-bold text-base hover:shadow-lg transition-all">
-                    <i class="fa-solid fa-plus mr-2"></i>프로필 추가
-                </button>
-            </div>
-
-            <!-- 프로필 카드 목록 (가로 스크롤) -->
-            <div id="profileCardsContainer" class="overflow-x-auto pb-4 -mx-4 px-4">
-                <div id="profileCards" class="flex gap-4 min-w-max">
-                    <!-- 프로필 카드가 여기에 동적으로 추가됩니다 -->
-                    <div class="text-center text-gray-400 py-8">
-                        <i class="fa-solid fa-spinner fa-spin text-3xl mb-2"></i>
-                        <p>프로필 로딩 중...</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 즐겨찾기 날짜 & 통계 (로그인 사용자만) -->
-    <!--
-    {% if user.is_authenticated %}
-    <div class="grid md:grid-cols-2 gap-6 mb-8">
-        
-        <div class="clay-card p-6" data-aos="fade-up">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-xl font-black text-gray-800">
-                    <i class="fa-solid fa-star text-amber-500 mr-2"></i>
-                    즐겨찾기 날짜
-                </h3>
-                <button onclick="showFavoriteDateModal()" class="text-amber-500 hover:text-amber-600">
-                    <i class="fa-solid fa-plus text-2xl"></i>
-                </button>
-            </div>
-            <div id="favoriteDatesContainer" class="space-y-2 max-h-60 overflow-y-auto">
-                <p class="text-gray-400 text-center py-4">로딩 중...</p>
-            </div>
-        </div>
-
-        
-        <div class="clay-card p-6" data-aos="fade-up" data-aos-delay="100">
-            <h3 class="text-xl font-black text-gray-800 mb-4">
-                <i class="fa-solid fa-chart-line text-indigo-500 mr-2"></i>
-                활동 통계
-            </h3>
-            <div id="statisticsContainer" class="space-y-3">
-                <div class="flex items-center justify-between p-3 bg-indigo-50 rounded-xl">
-                    <span class="text-gray-700 font-bold">총 사주 분석</span>
-                    <span id="statTotalAnalyses" class="text-2xl font-black text-indigo-600">-</span>
-                </div>
-                <div class="flex items-center justify-between p-3 bg-purple-50 rounded-xl">
-                    <span class="text-gray-700 font-bold">일진 조회</span>
-                    <span id="statTotalDaily" class="text-2xl font-black text-purple-600">-</span>
-                </div>
-                <div class="flex items-center justify-between p-3 bg-green-50 rounded-xl">
-                    <span class="text-gray-700 font-bold">최근 7일 활동</span>
-                    <span id="statRecentActivity" class="text-2xl font-black text-green-600">-</span>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-    -->
-    {% endif %} <!-- 742번 라인의 프로필 관리 섹션 if 닫기 -->
-
-    <!-- 마지막으로 본 사주 카드 (빠른 접근) -->
-    <div id="quickAccessContainer" class="hidden mb-8">
-        <div class="clay-card p-8 md:p-10 bg-gradient-to-br from-purple-50/80 to-indigo-50/80 border-2 border-purple-200"
-            data-aos="fade-up">
-            <div class="flex items-center gap-3 mb-6">
-                <div class="w-16 h-16 bg-purple-600/10 rounded-full flex items-center justify-center text-4xl"
-                    id="quickAccessIcon">
-                    🔮
-                </div>
-                <div>
-                    <h3 class="text-2xl font-black text-gray-800">마지막으로 본 사주</h3>
-                    <p class="text-gray-600 font-medium">저장된 정보로 빠르게 다시 확인하세요</p>
-                </div>
-            </div>
-
-            <div class="bg-white/70 rounded-2xl p-6 mb-6">
-                <div class="grid grid-cols-2 gap-4 text-center">
-                    <div>
-                        <div class="text-sm text-gray-500 mb-1">이름</div>
-                        <div class="text-xl font-bold text-gray-800" id="quickAccessName">-</div>
-                    </div>
-                    <div>
-                        <div class="text-sm text-gray-500 mb-1">성별</div>
-                        <div class="text-xl font-bold text-gray-800" id="quickAccessGender">-</div>
-                    </div>
-                    <div>
-                        <div class="text-sm text-gray-500 mb-1">생년월일</div>
-                        <div class="text-xl font-bold text-gray-800" id="quickAccessBirthDate">-</div>
-                    </div>
-                    <div>
-                        <div class="text-sm text-gray-500 mb-1">상담 모드</div>
-                        <div class="text-xl font-bold text-gray-800" id="quickAccessMode">-</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="flex flex-col md:flex-row gap-3">
-                <button onclick="manualRestoreResult()" id="quickViewResultBtn" class="hidden flex-1 py-5 rounded-2xl text-white font-bold text-2xl transition-all
-                    bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600
-                    shadow-lg hover:shadow-xl hover:-translate-y-1">
-                    <i class="fa-solid fa-eye mr-2"></i>마지막 결과 바로보기
-                </button>
-                <button onclick="showNewSajuForm()" class="flex-1 py-5 rounded-2xl font-bold text-2xl transition-all
-                    bg-white text-gray-700 border-2 border-gray-300
-                    hover:border-purple-400 hover:text-purple-600 hover:-translate-y-1">
-                    <i class="fa-solid fa-plus mr-2"></i>새로운 사주 분석하기
-                </button>
-            </div>
-        </div>
-    </div>
-
     <!-- 입력 폼 섹션 -->
     <div id="formContainer" class="{% if result %}hidden{% endif %}">
         <div id="globalErrorDisplay"
@@ -1504,99 +1373,6 @@
         </div>
     </div>
 
-    <!-- 프로필 추가/수정 모달 -->
-    <div id="profileModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4"
-        onclick="closeProfileModalOnBackdrop(event)">
-        <div class="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl" onclick="event.stopPropagation()">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-2xl font-black text-gray-800">
-                    <i class="fa-solid fa-user-plus text-purple-500 mr-2"></i>
-                    <span id="modalTitle">프로필 추가</span>
-                </h3>
-                <button onclick="closeProfileModal()" class="text-gray-400 hover:text-gray-600 text-2xl">
-                    <i class="fa-solid fa-times"></i>
-                </button>
-            </div>
-
-            <form id="profileForm" class="space-y-4">
-                <input type="hidden" id="profileId" value="">
-
-                <div>
-                    <label class="block text-base font-bold text-gray-700 mb-2">프로필 이름</label>
-                    <input type="text" id="profileName" class="saju-input" placeholder="예: 나, 엄마, 친구" required
-                        maxlength="20">
-                </div>
-
-                <div>
-                    <label class="block text-base font-bold text-gray-700 mb-2">실제 이름</label>
-                    <input type="text" id="personName" class="saju-input" placeholder="이름을 입력하세요" required
-                        maxlength="20">
-                </div>
-
-                <div>
-                    <label class="block text-base font-bold text-gray-700 mb-2">성별</label>
-                    <div class="radio-group">
-                        <label>
-                            <input type="radio" name="profileGender" value="male" required>
-                            <span>남자</span>
-                        </label>
-                        <label>
-                            <input type="radio" name="profileGender" value="female">
-                            <span>여자</span>
-                        </label>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-base font-bold text-gray-700 mb-2">생년월일</label>
-                    <div class="grid grid-cols-3 gap-3">
-                        <input type="number" id="profileBirthYear" class="saju-input" placeholder="년도" required
-                            min="1940" max="2025">
-                        <input type="number" id="profileBirthMonth" class="saju-input" placeholder="월" required min="1"
-                            max="12">
-                        <input type="number" id="profileBirthDay" class="saju-input" placeholder="일" required min="1"
-                            max="31">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-base font-bold text-gray-700 mb-2">태어난 시간 (선택)</label>
-                    <div class="grid grid-cols-2 gap-3">
-                        <input type="number" id="profileBirthHour" class="saju-input" placeholder="시 (0~23)" min="0"
-                            max="23">
-                        <input type="number" id="profileBirthMinute" class="saju-input" placeholder="분 (0~59)" min="0"
-                            max="59">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-base font-bold text-gray-700 mb-2">양력/음력</label>
-                    <div class="radio-group">
-                        <label>
-                            <input type="radio" name="profileCalendarType" value="solar" checked>
-                            <span>양력</span>
-                        </label>
-                        <label>
-                            <input type="radio" name="profileCalendarType" value="lunar">
-                            <span>음력</span>
-                        </label>
-                    </div>
-                </div>
-
-                <div class="flex gap-3 mt-6">
-                    <button type="button" onclick="closeProfileModal()"
-                        class="flex-1 py-4 bg-gray-200 text-gray-700 rounded-2xl font-bold text-lg hover:bg-gray-300 transition">
-                        취소
-                    </button>
-                    <button type="submit"
-                        class="flex-1 py-4 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-2xl font-bold text-lg hover:shadow-lg transition">
-                        저장
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <!-- 공유카드 (이미지 저장용, 화면에 보이지 않음) -->
     <div id="shareCardContainer" class="share-card">
         <div class="share-card-inner">
@@ -1678,12 +1454,23 @@
         console.log("Kakao SDK Initialized:", Kakao.isInitialized());
     }
 
-    // Global State for Caching & Auto-Save
+    const WORKING_CONTEXT_STORAGE_KEY = 'saju_working_context';
+    const LEGACY_FORTUNE_STORAGE_KEYS = [
+        'pending_saju_input',
+        'lastSajuInput',
+        'pendingSajuResult',
+        'saju_dashboard_cache',
+    ];
+
+    // Global State for current tab only
     window.currentSajuState = {
         natal_chart: null,
         mode: 'teacher',
         savedId: null,
-        result_text: null
+        result_text: null,
+        name: '',
+        gender: '',
+        day_master: null,
     };
 
     /**
@@ -1717,9 +1504,36 @@
         }
     }
 
+    function loadWorkingContext() {
+        return safeJSONParse(sessionStorage.getItem(WORKING_CONTEXT_STORAGE_KEY), null);
+    }
+
+    function saveWorkingContext(state, options = {}) {
+        const context = {
+            natal_chart: state?.natal_chart || null,
+            day_master: state?.day_master || null,
+            display_name: state?.name || state?.display_name || '',
+            gender: state?.gender || '',
+            mode: state?.mode || 'teacher',
+            chat_history: options.resetChat ? [] : ((loadWorkingContext()?.chat_history) || []),
+        };
+        sessionStorage.setItem(WORKING_CONTEXT_STORAGE_KEY, JSON.stringify(context));
+    }
+
+    function clearLegacyFortuneStorage() {
+        LEGACY_FORTUNE_STORAGE_KEYS.forEach(key => localStorage.removeItem(key));
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+            const key = localStorage.key(i);
+            if (!key) continue;
+            if (key.startsWith('saju_result_') || key.startsWith('daily_saju_')) {
+                localStorage.removeItem(key);
+            }
+        }
+    }
 
     // UI Safe-guard: Ensure form is visible if no result
     document.addEventListener('DOMContentLoaded', () => {
+        clearLegacyFortuneStorage();
         const resultContainer = document.getElementById('resultContainer');
         const formContainer = document.getElementById('formContainer');
         const hasResult = document.getElementById('markdownResult')?.innerHTML.trim().length > 0;
@@ -1729,116 +1543,7 @@
             resultContainer.classList.add('hidden');
             formContainer.classList.remove('hidden');
         }
-
-        // Note: Automatic restoration removed to prevent confusion.
-        // Restoration is now manual via the "Quick View Last Result" button.
-
-        // [Restoration Plan] 미완료된(에러 등) 입력이 있으면 복구 시도
-        const pendingInput = localStorage.getItem('pending_saju_input');
-        if (pendingInput) {
-            try {
-                const data = JSON.parse(pendingInput);
-                const age = Date.now() - (data.timestamp || 0);
-                if (age < 60 * 60 * 1000) { // 1시간 이내 데이터만
-                    restoreFormInputs(data);
-                    showToast('입력하시던 정보를 복구했습니다. ✨', 'info');
-                }
-                localStorage.removeItem('pending_saju_input');
-            } catch (e) { console.warn("Restore failed", e); }
-        }
-
-        // 마지막 사주 정보 로드 및 빠른 접근 카드 표시
-        loadLastSajuInfo();
     });
-
-    // 폼 입력값 복구 함수
-    function restoreFormInputs(data) {
-        const form = document.getElementById('sajuForm');
-        if (!form) return;
-
-        for (const [key, value] of Object.entries(data)) {
-            const input = form.elements[key];
-            if (input) {
-                if (input.type === 'radio') {
-                    const target = Array.from(form.elements[key]).find(r => r.value === value);
-                    if (target) target.checked = true;
-                } else {
-                    input.value = value;
-                }
-            }
-        }
-        // 모드 토글 동기화
-        if (data.mode) setMode(data.mode);
-    }
-
-    // 마지막 사주 정보 로드
-    function loadLastSajuInfo() {
-        const lastSajuInput = localStorage.getItem('lastSajuInput');
-        const pendingResult = localStorage.getItem('pendingSajuResult');
-        const quickAccessContainer = document.getElementById('quickAccessContainer');
-        const formContainer = document.getElementById('formContainer');
-
-        // 결과가 이미 화면에 있으면 빠른 접근 카드 표시하지 않음
-        const hasResult = document.getElementById('markdownResult')?.innerHTML.trim().length > 0;
-        if (hasResult) return;
-
-        if (lastSajuInput) {
-            try {
-                const data = safeJSONParse(lastSajuInput, null);
-
-                // 7일 이내 데이터만 표시
-                const age = Date.now() - data.timestamp;
-                if (age > 7 * 24 * 60 * 60 * 1000) {
-                    localStorage.removeItem('lastSajuInput');
-                    formContainer?.classList.remove('hidden');
-                    return;
-                }
-
-                // 빠른 접근 카드 정보 채우기
-                const genderMap = { 'male': '남자', 'female': '여자' };
-                const modeMap = { 'teacher': '교사 모드', 'general': '일반 모드' };
-
-                const nameEl = document.getElementById('quickAccessName');
-                const genderEl = document.getElementById('quickAccessGender');
-                const birthEl = document.getElementById('quickAccessBirthDate');
-                const modeEl = document.getElementById('quickAccessMode');
-
-                if (nameEl) nameEl.textContent = data.name || '-';
-                if (genderEl) genderEl.textContent = genderMap[data.gender] || '-';
-                if (birthEl) birthEl.textContent = `${data.birth_year}.${String(data.birth_month).padStart(2, '0')}.${String(data.birth_day).padStart(2, '0')}`;
-                if (modeEl) modeEl.textContent = modeMap[data.mode] || '-';
-
-                // 일간 아이콘 표시
-                if (data.daystem && ELEMENT_MAP[data.daystem]) {
-                    const iconEl = document.getElementById('quickAccessIcon');
-                    if (iconEl) iconEl.textContent = ELEMENT_MAP[data.daystem].icon;
-                }
-
-                // 저장된 결과가 있으면 "바로보기" 버튼 활성화
-                if (pendingResult) {
-                    const btn = document.getElementById('quickViewResultBtn');
-                    if (btn) btn.classList.remove('hidden');
-                }
-
-                // UI 전환
-                quickAccessContainer?.classList.remove('hidden');
-                formContainer?.classList.add('hidden');
-            } catch (e) {
-                console.error('Failed to load last saju info:', e);
-                localStorage.removeItem('lastSajuInput');
-                formContainer?.classList.remove('hidden');
-            }
-        } else {
-            formContainer?.classList.remove('hidden');
-        }
-    }
-
-    // 수동 결과 복원 (버튼 클릭 시)
-    function manualRestoreResult() {
-        document.getElementById('quickAccessContainer')?.classList.add('hidden');
-        restorePendingSajuResult();
-        showToast('이전 분석 결과를 성공적으로 불러왔습니다.', 'success');
-    }
 
     // 폼으로 부드럽게 돌아가기
     function resetToForm() {
@@ -1848,333 +1553,21 @@
         if (resultContainer) resultContainer.classList.add('hidden');
         if (formContainer) {
             formContainer.classList.remove('hidden');
-            // 부드러운 스크롤
             formContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-    }
-
-    // 저장된 정보로 다시 보기
-    function useLastSajuInfo() {
-        const lastSajuInput = localStorage.getItem('lastSajuInput');
-        if (!lastSajuInput) {
-            showToast('저장된 정보가 없습니다.', 'error');
-            return;
-        }
-
-        try {
-            const data = safeJSONParse(lastSajuInput, null);
-            if (!data) {
-                showToast('저장된 정보가 유효하지 않습니다.', 'error');
-                localStorage.removeItem('lastSajuInput');
-                return;
-            }
-
-            // 폼 필드 채우기
-            document.querySelector('[name="name"]').value = data.name || '';
-            document.querySelector(`[name="gender"][value="${data.gender}"]`).checked = true;
-            document.querySelector('[name="birth_year"]').value = data.birth_year || '';
-            document.querySelector('[name="birth_month"]').value = data.birth_month || '';
-            document.querySelector('[name="birth_day"]').value = data.birth_day || '';
-            document.querySelector('[name="birth_hour"]').value = data.birth_hour || '';
-            document.querySelector('[name="birth_minute"]').value = data.birth_minute || '';
-            document.querySelector(`[name="calendar_type"][value="${data.calendar_type}"]`).checked = true;
-
-            // 모드 설정
-            setMode(data.mode || 'teacher');
-
-            // 빠른 접근 카드 숨기고 결과로 이동
-            document.getElementById('quickAccessContainer').classList.add('hidden');
-
-            // 폼 자동 제출
-            document.getElementById('sajuForm').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-        } catch (e) {
-            console.error('Failed to use last saju info:', e);
-            showToast('정보를 불러오는 중 오류가 발생했습니다.', 'error');
         }
     }
 
     // 새로운 사주 입력
     function showNewSajuForm() {
-        // 빠른 접근 카드 숨기기
-        document.getElementById('quickAccessContainer').classList.add('hidden');
-        // 폼 표시
+        sessionStorage.removeItem(WORKING_CONTEXT_STORAGE_KEY);
         document.getElementById('formContainer').classList.remove('hidden');
-        // 폼 초기화
         document.getElementById('sajuForm').reset();
         setMode('teacher');
     }
-
-    // ============================================
-    // 프로필 관리 함수
-    // ============================================
-
-    let currentProfiles = [];
-
-    // 프로필 목록 로드
-    async function loadProfiles() {
-        const isAuthenticated = "{{ user.is_authenticated }}" === "True";
-        if (!isAuthenticated) return;
-
-        try {
-            const response = await fetch('{% url "fortune:profile_list_api" %}');
-            const contentType = response.headers.get('content-type');
-
-            if (contentType && contentType.includes('application/json')) {
-                const data = await response.json();
-                currentProfiles = data.profiles;
-                renderProfileCards();
-            } else {
-                console.warn("[Mobile Debug] loadProfiles: Non-JSON response", response.status);
-            }
-        } catch (e) {
-            console.error('Failed to load profiles:', e);
-        }
-    }
-
-    // 프로필 카드 렌더링
-    function renderProfileCards() {
-        const container = document.getElementById('profileCards');
-        if (!container) return;
-
-        if (currentProfiles.length === 0) {
-            container.innerHTML = `
-                <div class="text-center text-gray-400 py-8 w-full">
-                    <i class="fa-solid fa-user-plus text-5xl mb-4 opacity-50"></i>
-                    <p class="text-lg">프로필을 추가하여 여러 사람의 사주를 관리하세요</p>
-                </div>
-            `;
-            return;
-        }
-
-        container.innerHTML = currentProfiles.map(profile => `
-            <div class="profile-card ${profile.is_default ? 'default' : ''}" data-profile-id="${profile.id}">
-                <div class="profile-card-header">
-                    <div class="profile-icon">
-                        ${profile.gender === 'male' ? '👨' : '👩'}
-                    </div>
-                    <div class="profile-info">
-                        <div class="profile-label">${profile.profile_name}</div>
-                        <div class="profile-name">${profile.person_name}</div>
-                        <div class="profile-date">${profile.birth_date}</div>
-                    </div>
-                    ${profile.is_default ? '<div class="default-badge">기본</div>' : ''}
-                </div>
-                <div class="profile-card-actions">
-                    <button onclick="selectProfile(${profile.id})" class="profile-btn primary">
-                        <i class="fa-solid fa-bolt"></i> 사주 보기
-                    </button>
-                    <button onclick="editProfile(${profile.id})" class="profile-btn">
-                        <i class="fa-solid fa-edit"></i>
-                    </button>
-                    <button onclick="deleteProfile(${profile.id})" class="profile-btn danger">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    // 프로필 선택 (폼 자동 채우기)
-    function selectProfile(profileId) {
-        const profile = currentProfiles.find(p => p.id === profileId);
-        if (!profile) return;
-
-        // 폼 필드 채우기
-        document.querySelector('[name="name"]').value = profile.person_name;
-        document.querySelector(`[name="gender"][value="${profile.gender}"]`).checked = true;
-        document.querySelector('[name="birth_year"]').value = profile.birth_year;
-        document.querySelector('[name="birth_month"]').value = profile.birth_month;
-        document.querySelector('[name="birth_day"]').value = profile.birth_day;
-        document.querySelector('[name="birth_hour"]').value = profile.birth_hour || '';
-        document.querySelector('[name="birth_minute"]').value = profile.birth_minute || '';
-        document.querySelector(`[name="calendar_type"][value="${profile.calendar_type}"]`).checked = true;
-
-        // 빠른 접근 카드와 프로필 섹션 숨기기
-        document.getElementById('quickAccessContainer')?.classList.add('hidden');
-        document.getElementById('profileManagerSection')?.classList.add('hidden');
-
-        // 폼 표시 및 스크롤
-        const formContainer = document.getElementById('formContainer');
-        formContainer.classList.remove('hidden');
-        formContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-        showToast(`${profile.person_name} 프로필을 불러왔습니다`, 'success');
-    }
-
-    // 프로필 모달 열기
-    function showProfileModal(profileId = null) {
-        const modal = document.getElementById('profileModal');
-        const form = document.getElementById('profileForm');
-        const modalTitle = document.getElementById('modalTitle');
-
-        form.reset();
-
-        if (profileId) {
-            const profile = currentProfiles.find(p => p.id === profileId);
-            if (profile) {
-                modalTitle.textContent = '프로필 수정';
-                document.getElementById('profileId').value = profile.id;
-                document.getElementById('profileName').value = profile.profile_name;
-                document.getElementById('personName').value = profile.person_name;
-                document.querySelector(`[name="profileGender"][value="${profile.gender}"]`).checked = true;
-                document.getElementById('profileBirthYear').value = profile.birth_year;
-                document.getElementById('profileBirthMonth').value = profile.birth_month;
-                document.getElementById('profileBirthDay').value = profile.birth_day;
-                document.getElementById('profileBirthHour').value = profile.birth_hour || '';
-                document.getElementById('profileBirthMinute').value = profile.birth_minute || '';
-                document.querySelector(`[name="profileCalendarType"][value="${profile.calendar_type}"]`).checked = true;
-            }
-        } else {
-            modalTitle.textContent = '프로필 추가';
-            document.getElementById('profileId').value = '';
-        }
-
-        modal.classList.remove('hidden');
-    }
-
-    function editProfile(profileId) {
-        showProfileModal(profileId);
-    }
-
-    // 프로필 모달 닫기
-    function closeProfileModal() {
-        document.getElementById('profileModal').classList.add('hidden');
-    }
-
-    function closeProfileModalOnBackdrop(event) {
-        if (event.target.id === 'profileModal') {
-            closeProfileModal();
-        }
-    }
-
-    // 프로필 폼 제출
-    document.getElementById('profileForm')?.addEventListener('submit', async function (e) {
-        e.preventDefault();
-
-        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
-        if (!csrfToken) {
-            showToast('페이지를 새로고침해주세요', 'error');
-            return;
-        }
-
-        const profileId = document.getElementById('profileId').value;
-        const genderChecked = document.querySelector('[name="profileGender"]:checked');
-        const calendarChecked = document.querySelector('[name="profileCalendarType"]:checked');
-
-        if (!genderChecked || !calendarChecked) {
-            showToast('모든 항목을 입력해주세요', 'error');
-            return;
-        }
-
-        const profileData = {
-            profile_name: document.getElementById('profileName').value,
-            person_name: document.getElementById('personName').value,
-            gender: genderChecked.value,
-            birth_year: parseInt(document.getElementById('profileBirthYear').value),
-            birth_month: parseInt(document.getElementById('profileBirthMonth').value),
-            birth_day: parseInt(document.getElementById('profileBirthDay').value),
-            birth_hour: document.getElementById('profileBirthHour').value ? parseInt(document.getElementById('profileBirthHour').value) : null,
-            birth_minute: document.getElementById('profileBirthMinute').value ? parseInt(document.getElementById('profileBirthMinute').value) : null,
-            calendar_type: calendarChecked.value,
-            is_default: currentProfiles.length === 0 // 첫 프로필이면 기본으로 설정
-        };
-
-        try {
-            const url = profileId
-                ? `{% url "fortune:profile_update_api" 0 %}`.replace('0', profileId)
-                : '{% url "fortune:profile_create_api" %}';
-
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken.value
-                },
-                body: JSON.stringify(profileData)
-            });
-
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                const errText = await response.text();
-                console.error("[Mobile Debug] saveProfile Non-JSON:", errText.substring(0, 200));
-                throw new Error(`서버 응답 오류 (${response.status})`);
-            }
-
-            const data = await response.json();
-
-            if (data.success) {
-                closeProfileModal();
-                await loadProfiles();
-                showToast(profileId ? '프로필이 수정되었습니다' : '프로필이 추가되었습니다', 'success');
-            } else {
-                showToast('오류: ' + data.error, 'error');
-            }
-        } catch (e) {
-            console.error(e);
-            showToast('서버 통신 오류가 발생했습니다', 'error');
-        }
-    });
-
-    // 프로필 삭제
-    async function deleteProfile(profileId) {
-        if (!confirm('이 프로필을 삭제하시겠습니까?')) return;
-
-        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
-        if (!csrfToken) {
-            showToast('페이지를 새로고침해주세요', 'error');
-            return;
-        }
-
-        try {
-            const response = await fetch(`{% url "fortune:profile_delete_api" 0 %}`.replace('0', profileId), {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': csrfToken.value
-                }
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                await loadProfiles();
-                showToast('프로필이 삭제되었습니다', 'success');
-            }
-        } catch (e) {
-            showToast('삭제 중 오류가 발생했습니다', 'error');
-        }
-    }
-
     // 페이지 로드 시 프로필 로드 및 캐시 정리
     if ("{{ user.is_authenticated }}" === "True") {
-        loadProfiles();
         loadFavoriteDates();
         loadStatistics();
-
-        // Cleanup old saju caches (Invaliding v1 for new prompt)
-        try {
-            const todayStr = new Date().toISOString().split('T')[0];
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (!key) continue;
-
-                // 1. Clear ALL old v1/v2 caches (v2 had mode-collision bug)
-                if (key.startsWith('saju_result_cache_') || key.startsWith('daily_saju_cache_') || key.startsWith('saju_result_v2_')) {
-                    localStorage.removeItem(key);
-                    i--;
-                    continue;
-                }
-
-                // 2. Clear expired v2 daily caches (keep only today)
-                if (key.startsWith('daily_saju_v2_')) {
-                    if (!key.endsWith(todayStr)) {
-                        localStorage.removeItem(key);
-                        i--;
-                    }
-                }
-            }
-        } catch (e) {
-            console.warn("Cache cleanup failed", e);
-        }
     }
 
 
@@ -2435,98 +1828,7 @@
 
     // 이전 사주 결과 복원 함수
     function restorePendingSajuResult() {
-        const isAuthenticated = "{{ user.is_authenticated }}" === "True";
-        const pendingData = localStorage.getItem('pendingSajuResult');
-
-        if (!pendingData) return;
-
-        try {
-            const data = safeJSONParse(pendingData, null);
-            const age = Date.now() - data.timestamp;
-
-            // 24시간 이내 데이터만 복원
-            if (age > 24 * 60 * 60 * 1000) {
-                localStorage.removeItem('pendingSajuResult');
-                return;
-            }
-
-            // 결과가 이미 있으면 복원하지 않음
-            const hasCurrentResult = document.getElementById('markdownResult')?.innerHTML.trim().length > 0;
-            if (hasCurrentResult) return;
-
-            // [FIX] 현재 선택된 모드와 데이터의 모드가 다르면 모드를 강제 동기화 (캐시 꼬임 및 오인 방지)
-            const modeInput = document.getElementById('modeInput');
-            if (data.mode && modeInput && data.mode !== modeInput.value) {
-                console.log(`Syncing mode for restoration: ${modeInput.value} -> ${data.mode}`);
-                setMode(data.mode);
-            }
-
-            // 결과 화면 표시
-            document.getElementById('formContainer').classList.add('hidden');
-            document.getElementById('resultContainer').classList.remove('hidden');
-            document.getElementById('shareSection').classList.remove('hidden');
-            document.getElementById('dailyFortuneSection').classList.remove('hidden');
-            const chatCTA = document.getElementById('chatCTASection');
-            if (chatCTA) chatCTA.classList.remove('hidden');
-            // document.getElementById('saveSection').classList.remove('hidden'); // Removed functionality
-
-            updatePremiumUI(data.result, data.chart, data.mode, data.day_master, data.name);
-
-            // Chart Data 복원 (Daily Fortune 등을 위해 필수)
-            // 기존 요소가 있으면 제거 후 재생성
-            const existingChartData = document.getElementById('saju-chart-data');
-            if (existingChartData) existingChartData.remove();
-
-            const chartDataContainer = document.createElement('script');
-            chartDataContainer.id = 'saju-chart-data';
-            chartDataContainer.type = 'application/json';
-            chartDataContainer.textContent = JSON.stringify(data.chart);
-            document.body.appendChild(chartDataContainer);
-
-            // 섹션 그룹화 적용
-            groupMarkdownSections();
-
-            // 스크롤
-            setTimeout(() => {
-                document.getElementById('resultContainer').scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
-            }, 100);
-
-            // 로그인한 경우 자동 저장 제안 - 가입 유도 메시지 분리
-            if (isAuthenticated) {
-                showToast('이전 사주 결과를 복원했습니다!');
-
-                // Cache Restoration
-                window.currentSajuState = {
-                    natal_chart: data.chart,
-                    mode: data.mode || 'teacher',
-                    savedId: null,
-                    result_text: data.result,
-                    name: data.name,
-                    gender: data.gender
-                };
-
-                // Trigger Auto-Save (if not already saved in session)
-                autoSaveResult();
-            } else {
-                showToast('이전 사주 결과를 복원했습니다! 회원가입하면 영구 보관할 수 있어요.');
-                // Helper for guests
-                window.currentSajuState = {
-                    natal_chart: data.chart,
-                    mode: data.mode || 'teacher',
-                    savedId: null,
-                    result_text: data.result,
-                    name: data.name,
-                    gender: data.gender
-                };
-            }
-
-        } catch (e) {
-            console.error('Failed to restore pending result:', e);
-            localStorage.removeItem('pendingSajuResult');
-        }
+        return;
     }
 
     const ELEMENT_MAP = {
@@ -2575,26 +1877,6 @@
         "긍정적인 마음가짐이 운명을 바꾸는 가장 큰 열쇠예요.",
     ];
 
-    // 사주 입력 데이터 기반 고유 캐시 키 생성 (이름, 성별, 생년월일시, 모드 포함)
-    function getSajuCacheKey(formData) {
-        const mode = formData.get('mode') || 'teacher';
-        const keyParts = [
-            mode,
-            formData.get('name') || '',
-            formData.get('gender') || '',
-            formData.get('birth_year') || '',
-            formData.get('birth_month') || '',
-            formData.get('birth_day') || '',
-            formData.get('birth_hour') || '',
-            formData.get('calendar_type') || ''
-        ];
-        console.log("Cache Key Generation - Mode:", mode);
-        const rawKey = keyParts.join('|');
-        // 한글 포함 키를 안전하게 해싱 (Base64 활용) — mode를 첫 번째로 배치하여 모드별 구분 보장
-        const hash = btoa(unescape(encodeURIComponent(rawKey))).substring(0, 32);
-        return `saju_result_v3_${hash}`;
-    }
-
     // 폼 제출 핸들러 (Premium Loading 적용)
     document.getElementById('sajuForm')?.addEventListener('submit', async function (e) {
         e.preventDefault();
@@ -2617,84 +1899,12 @@
             }
         }
 
-        // [Restoration Plan] 분석 시작 전 백업
-        try {
-            const currentInputs = Object.fromEntries(formData.entries());
-            localStorage.setItem('pending_saju_input', JSON.stringify({
-                ...currentInputs,
-                timestamp: Date.now()
-            }));
-        } catch (e) {
-            console.warn("Input backup failed", e);
-        }
-
         // UI 전환 및 모달 표시
         const loadingModal = document.getElementById('loadingModal');
         const loadingProgress = document.getElementById('loadingProgress');
         const loadingTitle = document.getElementById('loadingTitle');
         const loadingSubtitle = document.getElementById('loadingSubtitle');
         const loadingTip = document.getElementById('loadingTip');
-
-        // [중복 분석 방지: 캐시 체크]
-        const cacheKey = getSajuCacheKey(formData);
-        const cachedResult = localStorage.getItem(cacheKey);
-
-        if (cachedResult) {
-            console.log("Found cached saju result, simulating deep analysis for reliability.");
-            try {
-                const data = safeJSONParse(cachedResult, null);
-
-                // 로딩 모달 표시 및 가짜 프로그레스 시작
-                loadingModal.classList.add('show');
-                const randomMsg = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
-                loadingTitle.textContent = randomMsg.title;
-                loadingSubtitle.textContent = randomMsg.subtitle;
-                loadingTip.textContent = loadingTips[Math.floor(Math.random() * loadingTips.length)];
-
-                // 캐시된 결과이므로 좀 더 빠르게(1.5초 정도) 로딩 연출
-                let cacheProgress = 0;
-                const cacheInterval = setInterval(() => {
-                    cacheProgress += 10;
-                    loadingProgress.style.width = `${cacheProgress}%`;
-                    if (cacheProgress >= 100) clearInterval(cacheInterval);
-                }, 150);
-
-                setTimeout(() => {
-                    clearInterval(cacheInterval);
-                    loadingModal.classList.remove('show');
-
-                    updatePremiumUI(data.result, data.chart, data.mode, data.day_master, data.name);
-                    groupMarkdownSections();
-
-                    document.getElementById('formContainer').classList.add('hidden');
-                    document.getElementById('resultContainer').classList.remove('hidden');
-                    document.getElementById('shareSection').classList.remove('hidden');
-                    document.getElementById('dailyFortuneSection').classList.remove('hidden');
-                    const chatCTA2 = document.getElementById('chatCTASection');
-                    if (chatCTA2) chatCTA2.classList.remove('hidden');
-
-                    window.currentSajuState = {
-                        natal_chart: data.chart,
-                        mode: data.mode || 'teacher',
-                        savedId: null,
-                        result_text: data.result,
-                        name: data.name,
-                        gender: data.gender
-                    };
-
-                    setTimeout(() => {
-                        document.getElementById('resultContainer').scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }, 100);
-
-                    showToast('이전에 분석한 결과를 불러왔습니다. ✨', 'success');
-                }, 1500);
-
-                return; // API 호출 중단
-            } catch (e) {
-                console.warn("Cached result parse error, proceeding with API:", e);
-                localStorage.removeItem(cacheKey);
-            }
-        }
 
         loadingModal.classList.add('show');
 
@@ -2781,37 +1991,6 @@
             // 결과 데이터 추출
             const accumulatedText = data.result;
 
-            // 로컬 스토리지에 입력 정보 저장 (결과 포함)
-            const inputData = {
-                name: formData.get('name'),
-                gender: formData.get('gender'),
-                birth_year: parseInt(formData.get('birth_year')),
-                birth_month: parseInt(formData.get('birth_month')),
-                birth_day: parseInt(formData.get('birth_day')),
-                birth_hour: formData.get('birth_hour') ? parseInt(formData.get('birth_hour')) : '',
-                birth_minute: formData.get('birth_minute') ? parseInt(formData.get('birth_minute')) : '',
-                calendar_type: formData.get('calendar_type'),
-                mode: formData.get('mode'),
-                timestamp: Date.now(),
-                daystem: (accumulatedText.match(/일주[^:]*:\s*[\*\s]*([갑을병정무기경신임계])/) || [])[1]
-            };
-            localStorage.setItem('lastSajuInput', JSON.stringify(inputData));
-
-            // 캐시 저장 (3일간 유효하도록 타임스탬프 포함)
-            const cacheEntry = {
-                result: accumulatedText,
-                chart: data.chart,
-                name: data.name,
-                gender: formData.get('gender'),
-                mode: formData.get('mode'),
-                day_master: data.day_master,
-                timestamp: Date.now()
-            };
-            localStorage.setItem(cacheKey, JSON.stringify(cacheEntry));
-
-            // 비회원 결과 보존 (최신 1건)
-            localStorage.setItem('pendingSajuResult', JSON.stringify(cacheEntry));
-
             // 약간의 지연 후 결과 표시 (UX를 위해)
             setTimeout(() => {
                 loadingModal.classList.remove('show');
@@ -2846,8 +2025,10 @@
                     savedId: null,
                     result_text: accumulatedText,
                     name: data.name,
-                    gender: formData.get('gender')
+                    gender: formData.get('gender'),
+                    day_master: data.day_master || null,
                 };
+                saveWorkingContext(window.currentSajuState, { resetChat: true });
 
                 // Trigger Auto-Save
                 autoSaveResult();
@@ -3409,49 +2590,8 @@
             return;
         }
 
-        // Caching Logic: Unique key based on natal chart, date, AND mode
+        const workingContext = loadWorkingContext();
         const currentMode = document.getElementById('modeInput').value || 'teacher';
-        const natalKey = Object.values(natalChart).join('_');
-        const cacheKey = `daily_saju_v2_${btoa(unescape(encodeURIComponent(natalKey))).substring(0, 16)}_${targetDate}_${currentMode}`;
-        const cachedResult = localStorage.getItem(cacheKey);
-
-        if (cachedResult) {
-            console.log("Using cached daily fortune, simulating analysis for reliability...");
-
-            // 로딩 모달 표시 및 연출
-            loadingModal.classList.add('show');
-            // 일진 확인에 어울리는 메시지 선택
-            loadingTitle.textContent = "오늘의 기운을 분석하는 중... 🍀";
-            loadingSubtitle.textContent = `${targetDate}의 우주 에너지를 당신의 사주와 맞추고 있습니다.`;
-
-            let cacheProgress = 0;
-            const cacheInterval = setInterval(() => {
-                cacheProgress += 15;
-                if (cacheProgress > 100) cacheProgress = 100;
-                loadingProgress.style.width = `${cacheProgress}%`;
-            }, 100);
-
-            setTimeout(() => {
-                clearInterval(cacheInterval);
-                loadingModal.classList.remove('show');
-
-                // 전역 상태에 일진 결과 저장 (캐시)
-                window.lastDailyFortune = {
-                    date: targetDate,
-                    result: cachedResult,
-                    timestamp: Date.now()
-                };
-
-                const dailyResultDiv = document.getElementById('dailyFortuneResult');
-                const dailyContentDiv = document.getElementById('dailyFortuneContent');
-                dailyContentDiv.innerHTML = DOMPurify.sanitize(marked.parse(cachedResult));
-                dailyResultDiv.classList.remove('hidden');
-                dailyResultDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                showToast('오늘의 운세를 성공적으로 불러왔습니다.', 'success');
-            }, 1200);
-
-            return;
-        }
 
         loadingModal.classList.add('show');
         loadingTitle.textContent = loadingMessages[0].title;
@@ -3477,8 +2617,8 @@
                 body: JSON.stringify({
                     target_date: targetDate,
                     natal_chart: natalChart,
-                    name: (window.currentSajuState && window.currentSajuState.name) ? window.currentSajuState.name : "{{ name|default:'' }}",
-                    gender: (window.currentSajuState && window.currentSajuState.gender) ? window.currentSajuState.gender : "{{ gender|default:'female' }}",
+                    name: (workingContext && workingContext.display_name) ? workingContext.display_name : "{{ name|default:'' }}",
+                    gender: (workingContext && workingContext.gender) ? workingContext.gender : "{{ gender|default:'female' }}",
                     mode: currentMode
                 })
             });
@@ -3522,9 +2662,6 @@
                 document.getElementById('loadingModal').classList.remove('show');
 
                 if (data.success) {
-                    // Save to cache
-                    localStorage.setItem(cacheKey, data.result);
-
                     // 전역 상태에 일진 결과 저장
                     window.lastDailyFortune = {
                         date: targetDate,
@@ -3710,7 +2847,6 @@
                 },
                 body: JSON.stringify({
                     mode: window.currentSajuState.mode || 'teacher',
-                    natal_chart: window.currentSajuState.natal_chart,
                     result_text: window.currentSajuState.result_text,
                     target_date: null // Main analysis, not daily
                 })
@@ -3750,21 +2886,6 @@
         }
 
         const resultText = resultElem.innerText;
-        const chartDataElem = document.getElementById('saju-chart-data');
-        let natalChart = {};
-
-        if (chartDataElem) {
-            try {
-                natalChart = safeJSONParse(chartDataElem.textContent, {});
-            } catch (e) {
-                console.error("Chart JSON parse error", e);
-            }
-        } else {
-            // 스트리밍 모드인 경우 텍스트에서 간단히 일주 보존
-            const dayMatch = resultText.match(/일주[^가-힣]*[:：]\s*([가-힣]{2})/);
-            if (dayMatch) natalChart.day = dayMatch[1];
-        }
-
         const dailyResultDiv = document.getElementById('dailyFortuneResult');
         const dailyContentDiv = document.getElementById('dailyFortuneContent');
         const dailyText = (dailyResultDiv && !dailyResultDiv.classList.contains('hidden') && dailyContentDiv) ? dailyContentDiv.innerText : null;
@@ -3783,7 +2904,6 @@
                 },
                 body: JSON.stringify({
                     mode: document.getElementById('modeInput').value || 'teacher',
-                    natal_chart: natalChart,
                     result_text: dailyText ? dailyText : resultText,
                     target_date: dailyText ? document.getElementById('targetDateInput')?.value : null
                 })
@@ -3909,6 +3029,16 @@
             };
 
             updatePremiumUI(rawMarkdown, chartData, "{{ mode|default:'teacher' }}", dayMaster.char ? dayMaster : null, "{{ name|default:'' }}");
+            window.currentSajuState = {
+                natal_chart: chartData,
+                mode: "{{ mode|default:'teacher' }}",
+                savedId: null,
+                result_text: rawMarkdown,
+                name: "{{ name|default:'' }}",
+                gender: "{{ gender|default:'' }}",
+                day_master: dayMaster.char ? dayMaster : null
+            };
+            saveWorkingContext(window.currentSajuState, { resetChat: true });
         }
     });
 </script>

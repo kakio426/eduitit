@@ -280,80 +280,14 @@
         <p class="text-xl text-gray-600" id="stemDesc">{% if item.target_date %}{{ item.target_date|date:"Y.m.d" }} 일진 / {% endif %}{{ item.get_mode_display }} 상담 결과</p>
     </div>
 
-    <!-- 2. 사주 명식 카드 (강조) -->
-    {% if item.natal_chart %}
-    <div class="clay-card p-8 md:p-10 mb-8 bg-gradient-to-br from-purple-50/50 to-indigo-50/50 border-2 border-purple-200"
-        data-aos="fade-up">
-        <h2 class="text-2xl font-black text-gray-800 mb-6 text-center flex items-center justify-center gap-2">
-            <i class="fa-solid fa-yin-yang text-purple-500"></i>
-            사주 팔자 명식
-        </h2>
-
-        <div class="grid grid-cols-4 gap-2 md:gap-6 w-full">
-            <!-- 시주 -->
-            <div class="pillar-box">
-                <span class="pillar-top">시주</span>
-                <span class="pillar-main natal-char" data-char="{{ item.natal_chart.hour|first }}"></span>
-                <span class="pillar-main natal-char" data-char="{{ item.natal_chart.hour|last }}"></span>
-                <span class="pillar-sub">말년운</span>
-            </div>
-            <!-- 일주 (강조) -->
-            <div class="pillar-box border-2 border-purple-400 bg-purple-50/50 shadow-xl">
-                <span class="pillar-top text-purple-600">일주 ⭐</span>
-                <span class="pillar-main natal-char" data-char="{{ item.natal_chart.day|first }}"
-                    id="dayStemChar"></span>
-                <span class="pillar-main natal-char" data-char="{{ item.natal_chart.day|last }}"></span>
-                <span class="pillar-sub text-purple-600 font-black">나 자신</span>
-            </div>
-            <!-- 월주 -->
-            <div class="pillar-box">
-                <span class="pillar-top">월주</span>
-                <span class="pillar-main natal-char" data-char="{{ item.natal_chart.month|first }}"></span>
-                <span class="pillar-main natal-char" data-char="{{ item.natal_chart.month|last }}"></span>
-                <span class="pillar-sub">사회/청년</span>
-            </div>
-            <!-- 년주 -->
-            <div class="pillar-box">
-                <span class="pillar-top">년주</span>
-                <span class="pillar-main natal-char" data-char="{{ item.natal_chart.year|first }}"></span>
-                <span class="pillar-main natal-char" data-char="{{ item.natal_chart.year|last }}"></span>
-                <span class="pillar-sub">조상/초년</span>
-            </div>
-        </div>
-
-        <div class="mt-8 flex flex-wrap justify-center gap-3">
-            <div
-                class="flex items-center gap-2 text-sm font-bold px-4 py-2 bg-green-100 text-green-700 rounded-full shadow-sm">
-                🌳 목(Wood)
-            </div>
-            <div
-                class="flex items-center gap-2 text-sm font-bold px-4 py-2 bg-red-100 text-red-700 rounded-full shadow-sm">
-                🔥 화(Fire)
-            </div>
-            <div
-                class="flex items-center gap-2 text-sm font-bold px-4 py-2 bg-amber-100 text-amber-700 rounded-full shadow-sm">
-                ⛰️ 토(Earth)
-            </div>
-            <div
-                class="flex items-center gap-2 text-sm font-bold px-4 py-2 bg-slate-200 text-slate-700 rounded-full shadow-sm">
-                ⚔️ 금(Metal)
-            </div>
-            <div
-                class="flex items-center gap-2 text-sm font-bold px-4 py-2 bg-blue-100 text-blue-700 rounded-full shadow-sm">
-                💧 수(Water)
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- 3. AI 분석 내용 -->
+    <!-- 2. AI 분석 내용 -->
     <div class="clay-card p-8 md:p-12 bg-white analysis-content" data-aos="fade-up">
         <div id="markdown-output" class="prose prose-slate max-w-none md:columns-2 md:gap-10">
         </div>
     </div>
     </div><!-- /capture-area -->
 
-    <!-- 4. 공유 액션 카드 -->
+    <!-- 3. 공유 액션 카드 -->
     <div class="clay-card p-8 bg-white/50 border border-white/60 text-center mt-8 no-print" data-aos="fade-up">
         <h3 class="text-2xl font-bold text-gray-700 mb-6 font-title">
             친구에게도 공유하세요! 📢
@@ -393,76 +327,7 @@
 <!-- 카카오 SDK -->
 <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.0/kakao.min.js"></script>
 
-<!-- 데이터 안전 전달 -->
-{{ item.natal_chart|json_script:"natal-chart-data" }}
-
 <script>
-    // Element Mapping
-    const elementMap = {
-        '甲': 'wood', '乙': 'wood', '寅': 'wood', '卯': 'wood',
-        '丙': 'fire', '丁': 'fire', '巳': 'fire', '午': 'fire',
-        '戊': 'earth', '己': 'earth', '辰': 'earth', '戌': 'earth', '丑': 'earth', '未': 'earth',
-        '庚': 'metal', '辛': 'metal', '申': 'metal', '酉': 'metal',
-        '壬': 'water', '癸': 'water', '亥': 'water', '子': 'water'
-    };
-
-    // 천간 한글 매핑
-    const stemKoreanMap = {
-        '甲': '갑목', '乙': '을목',
-        '丙': '병화', '丁': '정화',
-        '戊': '무토', '己': '기토',
-        '庚': '경금', '辛': '신금',
-        '壬': '임수', '癸': '계수'
-    };
-
-    // 천간 이모지 매핑
-    const stemEmojiMap = {
-        '甲': '🌳', '乙': '🌿',
-        '丙': '☀️', '丁': '🕯️',
-        '戊': '⛰️', '己': '🏔️',
-        '庚': '⚔️', '辛': '💎',
-        '壬': '🌊', '癸': '💧'
-    };
-
-    // 천간 설명 매핑
-    const stemDescMap = {
-        '甲': '큰 나무처럼 곧고 강한 기운', '乙': '풀과 넝쿨처럼 부드럽고 유연한 기운',
-        '丙': '태양처럼 밝고 따뜻한 기운', '丁': '촛불처럼 온화하고 섬세한 기운',
-        '戊': '큰 산처럼 든든하고 포용력 있는 기운', '己': '논밭처럼 생산적이고 실용적인 기운',
-        '庚': '칼과 바위처럼 강하고 정의로운 기운', '辛': '보석처럼 아름답고 세련된 기운',
-        '壬': '바다처럼 넓고 깊은 기운', '癸': '비와 이슬처럼 부드럽고 지혜로운 기운'
-    };
-
-    // Initialize Coloring
-    let dayStemCharacter = null;
-    document.querySelectorAll('.natal-char').forEach(el => {
-        const char = el.getAttribute('data-char');
-        if (char && char !== '?') {
-            el.innerText = char;
-            const element = elementMap[char];
-            if (element) el.classList.add(`color-${element}`);
-
-            // 일주 천간 저장
-            if (el.id === 'dayStemChar') {
-                dayStemCharacter = char;
-            }
-        } else {
-            el.innerText = '?';
-            el.classList.add('text-slate-200');
-        }
-    });
-
-    // 헤더 카드 업데이트 (일간 정보)
-    if (dayStemCharacter && stemKoreanMap[dayStemCharacter]) {
-        const stemIcon = document.getElementById('stemIcon');
-        const stemName = document.getElementById('stemName');
-        const stemDesc = document.getElementById('stemDesc');
-
-        if (stemIcon) stemIcon.textContent = stemEmojiMap[dayStemCharacter];
-        if (stemName) stemName.textContent = stemKoreanMap[dayStemCharacter];
-        if (stemDesc) stemDesc.textContent = stemDescMap[dayStemCharacter];
-    }
-
     // Render Markdown (saju_form.html과 동일한 방식)
     const outputArea = document.getElementById('markdown-output');
     const rawMarkdown = "{{ item.result_text|escapejs }}";
@@ -488,11 +353,6 @@
     // 카카오톡 공유
     function shareToKakao() {
         try {
-            const natalChart = JSON.parse(document.getElementById('natal-chart-data').textContent);
-            const dayStem = natalChart.day ? natalChart.day[0] : '?';
-            const stemKorean = stemKoreanMap[dayStem] || '사주';
-            const stemEmoji = stemEmojiMap[dayStem] || '🔮';
-
             const mode = '{{ item.get_mode_display }}';
 
             // Use the new image
@@ -502,7 +362,7 @@
             Kakao.Share.sendDefault({
                 objectType: 'feed',
                 content: {
-                    title: `${stemEmoji} ${stemKorean} 기운의 사주 결과`,
+                    title: `🔮 저장된 ${mode} 상담 결과`,
                     description: `${mode} 상담 결과입니다.\n\n당신의 사주는 어떨까요? 지금 바로 확인해보세요! 🔮`,
                     imageUrl: imageUrl,
                     link: {

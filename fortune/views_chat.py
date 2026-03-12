@@ -1,181 +1,132 @@
-from django.shortcuts import render, get_object_or_404, redirect
-from django.http import StreamingHttpResponse, JsonResponse
-from django.views.decorators.http import require_POST
-from django.contrib.auth.decorators import login_required
-from django.template.loader import render_to_string
-from django.utils import timezone
-from asgiref.sync import sync_to_async
-from .models import ChatSession, ChatMessage, UserSajuProfile, FortuneResult
-from .utils.chat_logic import build_system_prompt, normalize_natal_chart_payload
-from .utils.chat_ai import get_ai_response_stream
-from django_ratelimit.decorators import ratelimit
-from django_ratelimit.core import is_ratelimited
-from core.utils import ratelimit_key_for_master_only
 import json
 import logging
 from types import SimpleNamespace
 
+from asgiref.sync import sync_to_async
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse, StreamingHttpResponse
+from django.shortcuts import redirect, render
+from django.utils import timezone
+from django.views.decorators.http import require_POST
+from django_ratelimit.core import is_ratelimited
+
+from core.utils import ratelimit_key_for_master_only
+
+from .models import FortuneResult
+from .privacy import scrub_personal_fortune_text
+from .utils.chat_ai import get_ai_response_stream
+from .utils.chat_logic import build_system_prompt
+
 logger = logging.getLogger(__name__)
 
+MAX_CHAT_TURNS = 10
 
-def _select_prior_general_results(user, profile_natal_chart, limit=2):
-    """
-    Select recent cached FortuneResult entries for chat grounding.
-    - mode='general' only
-    - Prefer entries matching current profile natal chart
-    - Fall back to latest general entries when profile chart is missing or no match exists
-    """
-    profile_chart_norm = normalize_natal_chart_payload(profile_natal_chart)
-    candidates = list(
+
+def _select_prior_general_results(user, limit=2):
+    return list(
         FortuneResult.objects.filter(user=user, mode='general')
         .order_by('-created_at')
-        .values('id', 'created_at', 'result_text', 'natal_chart')[:20]
+        .values('id', 'created_at', 'result_text')[:limit]
     )
 
-    if not candidates:
-        return []
-    if not profile_chart_norm:
-        return [
-            {
-                'id': item['id'],
-                'created_at': item['created_at'],
-                'result_text': item['result_text'],
-            }
-            for item in candidates[:limit]
-        ]
 
-    matched = []
-    for item in candidates:
-        result_chart_norm = normalize_natal_chart_payload(item.get('natal_chart'))
-        if result_chart_norm and result_chart_norm == profile_chart_norm:
-            matched.append(
-                {
-                    'id': item['id'],
-                    'created_at': item['created_at'],
-                    'result_text': item['result_text'],
-                }
-            )
-        if len(matched) >= limit:
-            break
-    if matched:
-        return matched
-    return [
-        {
-            'id': item['id'],
-            'created_at': item['created_at'],
-            'result_text': item['result_text'],
-        }
-        for item in candidates[:limit]
-    ]
+def _parse_json_payload(raw_value, default):
+    if not raw_value:
+        return default
+    try:
+        return json.loads(raw_value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _normalize_history(history):
+    normalized = []
+    for item in history or []:
+        if not isinstance(item, dict):
+            continue
+        role = item.get('role')
+        content = (item.get('content') or '').strip()
+        if role in {'user', 'assistant'} and content:
+            normalized.append({'role': role, 'content': content})
+    return normalized[-20:]
+
+
+def _build_runtime_context(payload):
+    if not isinstance(payload, dict):
+        return None
+
+    natal_chart = payload.get('natal_chart') or {}
+    if not isinstance(natal_chart, dict) or not natal_chart.get('day'):
+        return None
+
+    display_name = (payload.get('display_name') or '').strip() or '선생님'
+    return {
+        'display_name': display_name,
+        'person_name': display_name,
+        'gender': payload.get('gender') or 'female',
+        'mode': payload.get('mode') or 'teacher',
+        'day_master': payload.get('day_master') or {},
+        'natal_chart': natal_chart,
+    }
+
+
+def _render_inline_message(content):
+    return SimpleNamespace(role='assistant', content=content, created_at=timezone.now())
+
 
 @login_required
 def chat_main_page(request):
-    """
-    Render the main chat page.
-    Lists user's profiles to start chat with.
-    """
-    profiles = UserSajuProfile.objects.filter(user=request.user)
-    # Handle session reset
-    if request.GET.get('reset') == 'true':
-        ChatSession.objects.filter(user=request.user, is_active=True).update(is_active=False)
-        logger.info(f"[Fortune] Action: CHAT_SESSION_RESET, User: {request.user.username}")
-        return redirect('fortune:chat_main')
+    return render(request, 'fortune/chat_main.html')
 
-    # Check for active session
-    active_session = ChatSession.objects.filter(user=request.user, is_active=True).select_related('profile').first()
-    
-    return render(request, 'fortune/chat_main.html', {
-        'profiles': profiles, 
-        'active_session': active_session
-    })
 
 @login_required
 @require_POST
 def create_chat_session(request):
-    """
-    Create a new chat session. deactivates old one automatically via model save.
-    """
-    profile_id = request.POST.get('profile_id')
-    # If using test client, profile_id is string '1'.
-    profile = get_object_or_404(UserSajuProfile, id=profile_id, user=request.user)
-    
-    # Create new session
-    session = ChatSession.objects.create(
-        user=request.user,
-        profile=profile,
-        max_turns=10
+    return JsonResponse(
+        {'success': False, 'error': '저장 프로필 기반 채팅은 종료되었습니다. 현재 탭의 분석 결과로만 상담할 수 있습니다.'},
+        status=410,
     )
-    
-    logger.info(f"[Fortune] Action: CHAT_SESSION_CREATE, Status: SUCCESS, SessionID: {session.id}, User: {request.user.username}")
-    
-    # Render chat room partial or redirect
-    return render(request, 'fortune/partials/chat_room.html', {'session': session})
+
 
 @login_required
 async def send_chat_message(request):
-    """
-    Handle user message and stream AI response (async).
-    """
     if request.method != 'POST':
         return JsonResponse({'error': 'POST method required'}, status=405)
 
-    # Manual ratelimit check
     ratelimited = await sync_to_async(is_ratelimited)(
-        request, group='fortune_chat', key=ratelimit_key_for_master_only,
-        rate='20/d', method='POST', increment=True
+        request,
+        group='fortune_chat',
+        key=ratelimit_key_for_master_only,
+        rate='20/d',
+        method='POST',
+        increment=True,
     )
     if ratelimited:
         return JsonResponse({'error': 'DAILY_LIMIT_EXCEEDED', 'message': '오늘 채팅 한도를 모두 사용했습니다.'}, status=429)
 
-    session_id = request.POST.get('session_id')
     content = request.POST.get('message', '').strip()
-
     if not content:
         return JsonResponse({'error': 'Message required'}, status=400)
 
-    # Allow session lookup by user (security)
-    try:
-        session = await ChatSession.objects.aget(id=session_id, user=request.user)
-    except ChatSession.DoesNotExist:
-         return JsonResponse({'error': 'Session not found'}, status=404)
+    working_context = _build_runtime_context(_parse_json_payload(request.POST.get('working_context_json'), {}))
+    if not working_context:
+        return JsonResponse({'error': 'WORKING_CONTEXT_REQUIRED', 'message': '현재 분석 결과가 없어 상담을 시작할 수 없습니다.'}, status=400)
 
-    if not session.is_active:
-        return JsonResponse({'error': 'Session expired'}, status=403)
+    history = _normalize_history(_parse_json_payload(request.POST.get('history_json'), []))
+    used_turns = sum(1 for item in history if item.get('role') == 'user')
+    if used_turns >= MAX_CHAT_TURNS:
+        return await sync_to_async(render)(
+            request,
+            'fortune/partials/chat_message.html',
+            {'message': _render_inline_message('오늘 상담 한도를 모두 사용했습니다. 새 분석 결과로 다시 시작해주세요!')},
+        )
 
-    if session.expires_at and timezone.now() > session.expires_at:
-        session.is_active = False
-        await session.asave(update_fields=['is_active'])
-        expired_msg = SimpleNamespace(role='assistant', content='이 상담 세션이 만료되었습니다. 새로운 세션을 시작해주세요!', created_at=timezone.now())
-        return await sync_to_async(render)(request, 'fortune/partials/chat_message.html', {
-            'message': expired_msg
-        })
-
-    if session.current_turns >= session.max_turns:
-        limit_msg = SimpleNamespace(role='assistant', content='오늘 상담 한도를 모두 사용했습니다. 새로운 세션을 시작해주세요!', created_at=timezone.now())
-        return await sync_to_async(render)(request, 'fortune/partials/chat_message.html', {
-            'message': limit_msg
-        })
-
-    # Save User Message
-    user_msg_obj = await ChatMessage.objects.acreate(session=session, role='user', content=content)
-    session.current_turns += 1
-    await session.asave()
-
-    logger.info(f"[Fortune] Action: CHAT_MSG_USER, Status: RECEIVED, SessionID: {session.id}")
-
-    # Build context
-    profile = await sync_to_async(lambda: session.profile)()
-    natal_chart = await sync_to_async(lambda: profile.natal_chart or {})()
-    prior_general_results = await sync_to_async(_select_prior_general_results)(
-        request.user, natal_chart, 2
-    )
-    system_prompt = build_system_prompt(profile, natal_chart, prior_general_results)
-
-    # Fetch history excluding current user message
-    previous_history = ChatMessage.objects.filter(session=session).exclude(id=user_msg_obj.id).order_by('created_at')
+    prior_general_results = await sync_to_async(_select_prior_general_results)(request.user, 2)
+    system_prompt = build_system_prompt(working_context, working_context['natal_chart'], prior_general_results)
+    remaining_turns = max(0, MAX_CHAT_TURNS - (used_turns + 1))
 
     async def stream_response():
-        # 1. Yield AI Message start structure
+        full_response_parts = []
         yield """
 <div class="flex flex-col space-y-2 mb-6 w-full animate-in fade-in slide-in-from-bottom-2 duration-500">
     <div class="flex items-start gap-3 self-start max-w-[90%] mr-auto">
@@ -184,53 +135,65 @@ async def send_chat_message(request):
         </div>
         <div class="chat-ai-content glass-card p-5 rounded-tl-none bg-white/5 text-gray-100 leading-relaxed shadow-lg backdrop-blur-md border border-white/10 relative group prose prose-invert prose-p:my-1 prose-headings:text-purple-300 prose-strong:text-yellow-400 break-words whitespace-pre-wrap">
 """
-        # 2. Stream content from async AI generator
-        async for chunk in get_ai_response_stream(session, system_prompt, previous_history, content):
-            yield chunk
+        async for chunk in get_ai_response_stream(system_prompt, history, content):
+            full_response_parts.append(chunk['plain'])
+            yield chunk['html']
 
-        # 3. Closing tags
+        assistant_text = ''.join(full_response_parts).strip()
         yield """
             <span class="text-[10px] text-gray-400 mt-2 block opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-1 left-4">Now</span>
         </div>
     </div>
 </div>
+"""
+        yield f"""
 <script>
-    if (window.ChatUX) {
+    if (window.FortuneChat) {{
+        window.FortuneChat.recordExchange({json.dumps(content, ensure_ascii=False)}, {json.dumps(assistant_text, ensure_ascii=False)}, {remaining_turns});
+    }}
+    if (window.ChatUX) {{
         window.ChatUX.scrollToBottom(false);
-    } else {
-        const el = document.getElementById('chat-messages-container');
-        if (el) el.scrollTop = el.scrollHeight;
-    }
+    }}
 </script>
 """
 
+    logger.info(
+        "[Fortune] Action: CHAT_STREAM, Status: STARTED, User: %s, UsedTurns: %s",
+        request.user.username,
+        used_turns,
+    )
     return StreamingHttpResponse(stream_response(), content_type='text/html')
+
 
 @login_required
 @require_POST
 def save_chat_to_history(request):
-    """
-    Save current chat session to FortuneResult.
-    """
-    session_id = request.POST.get('session_id')
-    session = get_object_or_404(ChatSession, id=session_id, user=request.user)
-    
-    # Format chat history to Markdown
-    history = ChatMessage.objects.filter(session=session).order_by('created_at')
-    markdown_content = f"# Saju Chat with {session.profile.person_name}\n\n"
+    working_context = _build_runtime_context(_parse_json_payload(request.POST.get('working_context_json'), {}))
+    history = _normalize_history(_parse_json_payload(request.POST.get('history_json'), []))
+
+    if not working_context or not history:
+        return JsonResponse({'status': 'error', 'message': '저장할 상담 내용이 없습니다.'}, status=400)
+
+    mode = working_context.get('mode')
+    if mode not in {'teacher', 'general', 'daily'}:
+        mode = 'teacher'
+
+    markdown_content = f"# Saju Chat with {working_context['display_name']}\n\n"
     for msg in history:
-        role = "Teacher" if msg.role == 'assistant' else "Student"
-        content = msg.content.replace('\n', '\n> ') # Quote style
+        role = "Teacher" if msg['role'] == 'assistant' else "Student"
+        content = msg['content'].replace('\n', '\n> ')
         markdown_content += f"**{role}**: {content}\n\n"
-    
-    FortuneResult.objects.create(
+
+    sanitized_content = scrub_personal_fortune_text(markdown_content)
+    if not sanitized_content:
+        return JsonResponse({'status': 'error', 'message': '저장 가능한 상담 내용이 없습니다.'}, status=400)
+
+    saved_result = FortuneResult.objects.create(
         user=request.user,
-        mode='teacher',
-        natal_chart=session.profile.natal_chart or {},
-        result_text=markdown_content,
-        target_date=None
+        mode=mode,
+        result_text=sanitized_content,
+        target_date=None,
     )
-    
-    logger.info(f"[Fortune] Action: CHAT_SAVE, Status: SUCCESS, SessionID: {session.id}")
-    
-    return JsonResponse({'status': 'success', 'message': 'Saved to history'})
+
+    logger.info("[Fortune] Action: CHAT_SAVE, Status: SUCCESS, User: %s, ResultID: %s", request.user.username, saved_result.id)
+    return JsonResponse({'status': 'success', 'message': 'Saved to history', 'result_id': saved_result.id})

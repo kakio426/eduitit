@@ -55,7 +55,7 @@
                 {% if item.target_date %}
                 📅 {{ item.target_date|date:"m월 d일" }}의 운세
                 {% else %}
-                ✨ 정통 사주 분석 ({{ item.natal_chart.day }})
+                ✨ 저장된 상담 결과
                 {% endif %}
             </h3>
 
@@ -158,19 +158,7 @@
     });
 
     function clearSajuCaches() {
-        const keysToRemove = [];
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && (key.startsWith('saju_result_cache_') || key.startsWith('saju_result_v2_'))) {
-                keysToRemove.push(key);
-            }
-            if (key && (key.startsWith('daily_saju_cache_') || key.startsWith('daily_saju_v2_'))) {
-                keysToRemove.push(key);
-            }
-        }
-        keysToRemove.forEach(key => localStorage.removeItem(key));
-        localStorage.removeItem('pendingSajuResult');
-        localStorage.removeItem('lastSajuInput');
+        sessionStorage.removeItem('saju_working_context');
     }
 
     function showToast(msg) {

@@ -41,16 +41,10 @@ def _extract_day_master(natal_chart):
     return day.get("stem", "Unknown")
 
 
-def _format_birth(profile):
-    year = getattr(profile, "birth_year", "")
-    month = getattr(profile, "birth_month", "")
-    day = getattr(profile, "birth_day", "")
-    hour = getattr(profile, "birth_hour", None)
-    minute = getattr(profile, "birth_minute", None)
-
-    if hour is None or minute is None:
-        return f"{year}-{month:02d}-{day:02d}" if month and day else str(year)
-    return f"{year}-{month:02d}-{day:02d} {hour:02d}:{minute:02d}"
+def _get_context_value(profile, attr_name, fallback=""):
+    if isinstance(profile, dict):
+        return profile.get(attr_name, fallback)
+    return getattr(profile, attr_name, fallback)
 
 
 def _compress_text(text, max_len=320):
@@ -78,11 +72,11 @@ def _build_general_history_block(general_results):
 
 
 def build_system_prompt(profile, natal_chart, general_results=None):
-    person_name = getattr(profile, "person_name", getattr(profile, "name", "Student"))
-    gender = getattr(profile, "gender", "unknown")
+    person_name = _get_context_value(profile, "person_name") or _get_context_value(profile, "display_name", "Student")
+    gender = _get_context_value(profile, "gender", "unknown")
     day_master = _extract_day_master(natal_chart)
-    birth_text = _format_birth(profile)
     prior_general = _build_general_history_block(general_results or [])
+    normalized_chart = normalize_natal_chart_payload(natal_chart)
 
     prompt = f"""
 role: Saju Teacher
@@ -94,8 +88,8 @@ Length: 3-4 sentences
 [User Context]
 Name: {person_name}
 Gender: {gender}
-Birth Datetime: {birth_text}
 Day Master: {day_master}
+Natal Chart Data: {normalized_chart}
 
 [Prior General Readings]
 Use these as references for consistency.
@@ -110,7 +104,7 @@ If the user's new question conflicts with old readings, explain why briefly.
 5. If there is a conflict, explain the reason briefly without changing Day Master.
 6. Keep wording plain and avoid unnecessary jargon.
 7. Do not use markdown symbols like **, `, #, >, _, [, ] or headings.
-8. Never reveal or repeat full private birth data unless the user asks.
+8. Never reveal or repeat raw birth date/time or exact pillar strings unless the user explicitly asks.
 9. Answer in Korean honorific style.
 """
     return prompt.strip()

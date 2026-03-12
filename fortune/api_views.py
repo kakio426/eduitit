@@ -1,10 +1,8 @@
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
-from asgiref.sync import sync_to_async
 from .libs import calculator
-from .models import FortuneResult, Stem, Branch
+from .models import Stem, Branch
 import json
 import logging
 from datetime import datetime
@@ -12,7 +10,7 @@ import pytz
 import hashlib
 
 # Re-use existing AI response logic if possible
-from .views import get_chart_context, _collect_ai_response_async, _check_saju_ratelimit
+from .views import get_chart_context
 
 logger = logging.getLogger(__name__)
 
@@ -87,76 +85,17 @@ def calculate_pillars_only(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
-from django_ratelimit.decorators import ratelimit
-from django_ratelimit.core import is_ratelimited
-from .views import fortune_rate_h, fortune_rate_d
-from core.utils import ratelimit_key_for_master_only
-
 @login_required
 @csrf_exempt
 async def analyze_topic(request):
-    """
-    Step 2: 주제별 AI 분석 (DB 캐싱 적용, async)
-    """
-    if request.method != 'POST':
-        return JsonResponse({'error': 'POST required'}, status=405)
-
-    # Manual ratelimit check
-    if await _check_saju_ratelimit(request):
-        return JsonResponse({'error': 'LIMIT_EXCEEDED', 'message': '일일 분석 한도를 초과했습니다. 내일 다시 이용해주세요!'}, status=429)
-
-    try:
-        data = json.loads(request.body)
-        pillars = data.get('pillars')
-        topic = data.get('topic')
-        name = data.get('name', '가입자')
-        gender = data.get('gender', 'female')
-        natal_hash = data.get('natal_hash') or get_natal_hash(pillars)
-
-        # 1. DB Cache Check (For Authenticated Users)
-        if request.user.is_authenticated:
-            cached_result = await FortuneResult.objects.filter(
-                user=request.user,
-                natal_hash=natal_hash,
-                topic=topic
-            ).afirst()
-
-            if cached_result:
-                logger.info(f"Cache Hit: {request.user.username} - {topic}")
-                return JsonResponse({
-                    'success': True,
-                    'topic': topic,
-                    'result': cached_result.result_text,
-                    'cached': True
-                })
-
-        # 2. Build Prompt
-        prompt = build_focused_prompt(topic, pillars, name, gender)
-
-        # 3. Call AI (async)
-        response_text = await _collect_ai_response_async(prompt, request)
-
-        # 4. Auto Save (Cache)
-        if request.user.is_authenticated and response_text.strip():
-            await FortuneResult.objects.acreate(
-                user=request.user,
-                topic=topic,
-                natal_hash=natal_hash,
-                natal_chart=pillars,
-                result_text=response_text,
-                mode='general'
-            )
-
-        return JsonResponse({
-            'success': True,
-            'topic': topic,
-            'result': response_text,
-            'cached': False
-        })
-
-    except Exception as e:
-        logger.exception(f"Analysis Error ({topic})")
-        return JsonResponse({'error': str(e)}, status=500)
+    """개인정보 비저장 전환 이후 주제별 저장형 분석 API는 사용하지 않음."""
+    return JsonResponse(
+        {
+            'error': 'ENDPOINT_REMOVED',
+            'message': '개인정보 비저장 전환으로 주제별 저장형 분석 API는 종료되었습니다.',
+        },
+        status=410,
+    )
 
 def build_focused_prompt(topic, pillars, name, gender):
     """주제별 특화 프롬프트 생성을 위한 헬퍼"""

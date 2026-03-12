@@ -1,17 +1,11 @@
 import os
-import unittest
 from unittest.mock import patch, MagicMock
-from django.test import RequestFactory
-from django.contrib.auth.models import User
+from django.test import RequestFactory, SimpleTestCase
 from fortune.views import generate_ai_response
 
-class HybridAPITest(unittest.TestCase):
+class HybridAPITest(SimpleTestCase):
     def setUp(self):
         self.factory = RequestFactory()
-        self.user = User.objects.create_user(username='testuser', password='password')
-    
-    def tearDown(self):
-        self.user.delete()
 
     @patch('fortune.views.genai.Client')
     def test_user_gemini_key_priority(self, mock_genai_client):

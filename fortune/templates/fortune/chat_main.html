@@ -3,7 +3,6 @@
 
 {% block extra_css %}
 <style>
-    /* Modern Mystique & Glassmorphism Theme (Shared with Dashboard) */
     :root {
         --mystic-bg: linear-gradient(135deg, #1A1A2E 0%, #16213E 100%);
         --glass-border: 1px solid rgba(255, 255, 255, 0.1);
@@ -39,68 +38,11 @@
         color: white;
         transition: all 0.3s ease;
     }
-    
+
     .glass-input:focus {
         background: rgba(0, 0, 0, 0.4);
         border-color: #A78BFA;
         outline: none;
-    }
-
-    /* Message Bubbles */
-    .msg-teacher {
-        background: rgba(139, 92, 246, 0.2); /* Purple-ish */
-        border-radius: 1.5rem 1.5rem 1.5rem 0;
-        border: 1px solid rgba(139, 92, 246, 0.3);
-    }
-    
-    .msg-student {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 1.5rem 1.5rem 0 1.5rem;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-
-    /* Typing Animation */
-    @keyframes blink { 50% { opacity: 0; } }
-    .cursor-blink { animation: blink 1s infinite; }
-
-    /* Chat readability: clear visual hierarchy between title/body text */
-    .chat-ai-content h1,
-    .chat-ai-content h2,
-    .chat-ai-content h3 {
-        line-height: 1.35;
-        margin-top: 0.85rem;
-        margin-bottom: 0.55rem;
-        letter-spacing: 0.01em;
-    }
-
-    .chat-ai-content h1 {
-        font-size: 1.45rem;
-        font-weight: 800;
-        color: #fde68a;
-    }
-
-    .chat-ai-content h2 {
-        font-size: 1.2rem;
-        font-weight: 750;
-        color: #c4b5fd;
-    }
-
-    .chat-ai-content h3 {
-        font-size: 1.08rem;
-        font-weight: 700;
-        color: #bfdbfe;
-    }
-
-    .chat-ai-content p,
-    .chat-ai-content li {
-        font-size: 1rem;
-        font-weight: 450;
-        color: #e5e7eb;
-        line-height: 1.75;
-    }
-
-    .chat-room-shell {
-        min-height: 0;
     }
 
     .chat-scroll {
@@ -130,76 +72,98 @@
 {% endblock %}
 
 {% block content %}
-<div class="chat-container pt-24 pb-20 px-4"> <!-- Added pt-24 for navbar spacing -->
+<div class="chat-container pt-24 pb-20 px-4">
     <div class="max-w-4xl mx-auto h-[82dvh] md:h-[80dvh] flex flex-col">
-
-        <!-- Header -->
         <header class="flex justify-between items-center mb-4 px-2">
             <h1 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
                 <i class="fa-solid fa-comments mr-2"></i>사주 선생님
             </h1>
-            
-            {% if active_session %}
+
             <div class="flex gap-2">
-                <form hx-post="{% url 'fortune:save_chat_to_history' %}" hx-swap="none" hx-on::after-request="if(event.detail.successful){this.querySelector('button').innerHTML='<i class=\'fa-solid fa-check mr-1\'></i> 저장됨';this.querySelector('button').disabled=true;this.querySelector('button').classList.add('bg-green-500/30')}else{this.querySelector('button').innerHTML='<i class=\'fa-solid fa-xmark mr-1\'></i> 실패';setTimeout(()=>{this.querySelector('button').innerHTML='<i class=\'fa-solid fa-save mr-1\'></i> 저장'},2000)}">
-                    {% csrf_token %}
-                    <input type="hidden" name="session_id" value="{{ active_session.id }}">
-                    <button type="submit" class="text-white bg-white/10 hover:bg-white/20 px-3 py-1 rounded-full text-sm transition">
-                        <i class="fa-solid fa-save mr-1"></i> 저장
-                    </button>
-                </form>
-                <!-- New Session Button (Reloads page to select profile) -->
-                <a href="{% url 'fortune:chat_main' %}?reset=true" class="text-white bg-white/10 hover:bg-white/20 px-3 py-1 rounded-full text-sm transition">
+                <button id="chatSaveBtn" type="button" class="hidden text-white bg-white/10 hover:bg-white/20 px-3 py-1 rounded-full text-sm transition">
+                    <i class="fa-solid fa-save mr-1"></i> 저장
+                </button>
+                <button id="chatResetBtn" type="button" class="hidden text-white bg-white/10 hover:bg-white/20 px-3 py-1 rounded-full text-sm transition">
                     <i class="fa-solid fa-plus mr-1"></i> 새로 시작
-                </a>
+                </button>
             </div>
-            {% endif %}
         </header>
 
-        <!-- Main Content Area -->
         <main class="flex-1 glass-card overflow-hidden flex flex-col relative" id="chat-frame">
-            
-            {% if active_session %}
-                <!-- Chat Interface -->
-                {% include "fortune/partials/chat_room.html" with session=active_session %}
-            {% else %}
-                <!-- Profile Selection -->
-                <div class="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-6">
-                    <div class="w-24 h-24 rounded-full bg-white/10 flex items-center justify-center text-4xl mb-4 animate-bounce">
-                        🧙‍♂️
-                    </div>
-                    <h2 class="text-2xl font-bold text-white">누구의 사주를 상담할까요?</h2>
-                    <p class="text-purple-200 text-sm max-w-md">상담하고 싶은 프로필을 선택해주세요. 사주 선생님이 기다리고 있습니다.</p>
-                    
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-lg mt-8">
-                        {% for profile in profiles %}
-                        <form hx-post="{% url 'fortune:create_chat_session' %}" hx-target="#chat-frame" hx-swap="innerHTML">
-                            {% csrf_token %}
-                            <input type="hidden" name="profile_id" value="{{ profile.id }}">
-                            <button type="submit" class="w-full glass-card p-6 hover:bg-white/10 transition group text-left relative overflow-hidden">
-                                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
-                                    <i class="fa-solid fa-user text-4xl"></i>
-                                </div>
-                                <h3 class="text-lg font-bold text-white mb-1">{{ profile.profile_name }}</h3>
-                                <p class="text-sm text-gray-400">{{ profile.person_name }} ({{ profile.get_gender_display }})</p>
-                            </button>
-                        </form>
-                        {% empty %}
-                        <div class="col-span-2 text-center py-8 text-gray-400">
-                            등록된 프로필이 없습니다. <br>
-                            <a href="{% url 'fortune:saju' %}" class="text-purple-300 underline mt-2 inline-block">먼저 사주를 분석해주세요.</a>
+            <div id="chatNoContext" class="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-6">
+                <div class="w-24 h-24 rounded-full bg-white/10 flex items-center justify-center text-4xl mb-4">🧙‍♂️</div>
+                <h2 class="text-2xl font-bold text-white">현재 탭의 분석 결과가 없습니다</h2>
+                <p class="text-purple-200 text-sm max-w-md">개인정보 보호를 위해 저장 프로필을 없앴습니다. 같은 탭에서 방금 분석한 결과로만 상담을 이어갈 수 있어요.</p>
+                <a href="{% url 'fortune:saju' %}" class="px-5 py-3 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-bold transition">
+                    사주 분석하러 가기
+                </a>
+            </div>
+
+            <div id="chatRoomShell" class="chat-room-shell flex-1 flex flex-col h-full relative hidden">
+                <div id="chat-messages-container" class="chat-scroll flex-1 overflow-y-auto p-3 md:p-4 space-y-5 scroll-smooth pb-6">
+                    <div id="chat-history-root"></div>
+                    <div id="new-messages"></div>
+
+                    <div id="loading-indicator" class="htmx-indicator flex flex-col space-y-2">
+                        <div class="flex items-start gap-3">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center text-white text-lg shadow-lg shrink-0 border border-white/20 animate-pulse">
+                                <i class="fa-solid fa-hat-wizard"></i>
+                            </div>
+                            <div class="glass-card p-4 rounded-tl-none bg-white/5 text-gray-300 flex items-center gap-2">
+                                <span class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></span>
+                                <span class="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-100"></span>
+                                <span class="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-200"></span>
+                            </div>
                         </div>
-                        {% endfor %}
                     </div>
                 </div>
-            {% endif %}
-            
-        </main>
 
+                <button id="jump-latest-btn"
+                        type="button"
+                        class="chat-jump-btn hidden rounded-full bg-purple-600/90 hover:bg-purple-500 text-white text-xs px-3 py-2 shadow-lg"
+                        onclick="window.ChatUX && window.ChatUX.scrollToBottom(true)">
+                    최신으로
+                </button>
+
+                <div class="chat-input-wrap p-3 md:p-4 glass-card rounded-t-none border-t border-white/10 shrink-0 bg-black/30 backdrop-blur-xl">
+                    <div class="flex justify-between items-center mb-2 px-1">
+                        <span class="text-xs text-gray-400" id="chatContextLabel">상담 중</span>
+                        <span class="text-xs text-gray-400">남은 질문: <span class="text-yellow-400 font-bold" id="turnCounter">10</span></span>
+                    </div>
+
+                    <form id="chatSendForm"
+                          hx-post="{% url 'fortune:send_chat_message' %}"
+                          hx-target="#new-messages"
+                          hx-swap="beforeend"
+                          hx-indicator="#loading-indicator"
+                          hx-on::before-request="window.FortuneChat && window.FortuneChat.prepareSend(event, this)"
+                          hx-on::after-request="window.FortuneChat && window.FortuneChat.finishSend(event, this)">
+                        {% csrf_token %}
+                        <input type="hidden" name="working_context_json" id="chatWorkingContextInput">
+                        <input type="hidden" name="history_json" id="chatHistoryInput">
+
+                        <div class="flex items-end gap-2 relative">
+                            <textarea name="message" rows="1"
+                                      class="glass-input flex-1 px-4 py-3 rounded-2xl focus:ring-2 focus:ring-purple-500 placeholder-white/40 text-white text-base shadow-inner resize-none leading-6 max-h-36"
+                                      placeholder="궁금한 점을 입력하세요..."
+                                      autocomplete="off" required
+                                      oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,144)+'px';if(window.ChatUX){window.ChatUX.syncInputSpacer();window.ChatUX.updateJumpButton();}"
+                                      onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); this.form.requestSubmit();}"></textarea>
+
+                            <button type="submit" class="chat-send-btn bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-4 rounded-2xl font-bold transition flex items-center justify-center shadow-lg shadow-purple-500/30 group">
+                                <span class="text-xs md:text-sm mr-1">전송</span>
+                                <i class="fa-solid fa-paper-plane group-hover:-translate-y-1 group-hover:translate-x-1 transition-transform"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
     </div>
 </div>
+{% endblock %}
 
-<!-- Chat UX Helper -->
+{% block extra_js %}
 <script>
     window.ChatUX = (function () {
         let userPinnedToBottom = true;
@@ -299,6 +263,268 @@
         };
     })();
 
+    window.FortuneChat = (function () {
+        const STORAGE_KEY = 'saju_working_context';
+        const MAX_CHAT_TURNS = 10;
+
+        function parseContext() {
+            try {
+                return JSON.parse(sessionStorage.getItem(STORAGE_KEY) || 'null');
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function saveContext(context) {
+            sessionStorage.setItem(STORAGE_KEY, JSON.stringify(context));
+        }
+
+        function escapeHtml(text) {
+            return (text || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function formatMessageHtml(role, content) {
+            const safeContent = escapeHtml(content).replace(/\n/g, '<br>');
+            if (role === 'user') {
+                return `
+<div class="flex flex-col space-y-2 mb-6 w-full animate-in fade-in slide-in-from-bottom-2 duration-500">
+    <div class="flex items-end justify-end gap-3 self-end max-w-[85%] ml-auto">
+        <div class="glass-card p-4 rounded-tr-none bg-gradient-to-br from-indigo-600/80 to-purple-600/80 text-white shadow-lg backdrop-blur-md border border-white/20 relative group text-right">
+            <p class="text-base leading-relaxed break-words whitespace-pre-wrap">${safeContent}</p>
+        </div>
+        <div class="w-10 h-10 rounded-full bg-indigo-500 overflow-hidden shrink-0 border-2 border-white/20 shadow-lg flex items-center justify-center">
+            <i class="fa-solid fa-user text-white text-sm"></i>
+        </div>
+    </div>
+</div>`;
+            }
+
+            return `
+<div class="flex flex-col space-y-2 mb-6 w-full animate-in fade-in slide-in-from-bottom-2 duration-500">
+    <div class="flex items-start gap-3 self-start max-w-[90%] mr-auto">
+        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center text-white text-lg shadow-lg shrink-0 border border-white/20 relative top-1">
+            🧙‍♂️
+        </div>
+        <div class="chat-ai-content glass-card p-5 rounded-tl-none bg-white/5 text-gray-100 leading-relaxed shadow-lg backdrop-blur-md border border-white/10 relative group prose prose-invert prose-p:my-1 prose-headings:text-purple-300 prose-strong:text-yellow-400 break-words whitespace-pre-wrap">
+            ${safeContent}
+        </div>
+    </div>
+</div>`;
+        }
+
+        function renderStoredConversation() {
+            const context = parseContext();
+            const noContext = document.getElementById('chatNoContext');
+            const room = document.getElementById('chatRoomShell');
+            const historyRoot = document.getElementById('chat-history-root');
+            const contextLabel = document.getElementById('chatContextLabel');
+            const turnCounter = document.getElementById('turnCounter');
+            const saveBtn = document.getElementById('chatSaveBtn');
+            const resetBtn = document.getElementById('chatResetBtn');
+
+            if (!context || !context.natal_chart || !context.natal_chart.day) {
+                noContext.classList.remove('hidden');
+                room.classList.add('hidden');
+                saveBtn.classList.add('hidden');
+                resetBtn.classList.add('hidden');
+                return;
+            }
+
+            noContext.classList.add('hidden');
+            room.classList.remove('hidden');
+            saveBtn.classList.remove('hidden');
+            resetBtn.classList.remove('hidden');
+
+            const displayName = context.display_name || '선생님';
+            const userTurns = (context.chat_history || []).filter(item => item.role === 'user').length;
+            const remainingTurns = Math.max(0, MAX_CHAT_TURNS - userTurns);
+
+            contextLabel.textContent = `${displayName}님과 상담 중`;
+            turnCounter.textContent = remainingTurns;
+
+            let html = `
+<div class="flex flex-col space-y-2 fade-in slide-in-from-left-4 duration-500">
+    <div class="flex items-start gap-3">
+        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center text-white text-lg shadow-lg shrink-0 border border-white/20">
+            <i class="fa-solid fa-hat-wizard"></i>
+        </div>
+        <div class="glass-card p-4 max-w-[88%] rounded-tl-none text-gray-100 leading-relaxed shadow-lg backdrop-blur-md bg-white/5 border-l-4 border-l-purple-500">
+            <p class="font-bold text-purple-300 mb-1 text-sm">사주 상담사</p>
+            <p>안녕하세요, <strong>${escapeHtml(displayName)}</strong>님.<br>궁금한 점을 편하게 물어보세요.</p>
+            <p class="text-xs text-gray-400 mt-2 border-t border-white/10 pt-2">
+                남은 질문: <span class="text-yellow-400 font-bold">${remainingTurns}</span>
+            </p>
+        </div>
+    </div>
+</div>`;
+
+            (context.chat_history || []).forEach(item => {
+                html += formatMessageHtml(item.role, item.content);
+            });
+
+            historyRoot.innerHTML = html;
+            document.getElementById('new-messages').innerHTML = '';
+            if (window.ChatUX) {
+                window.ChatUX.attachScrollWatcher();
+                window.ChatUX.bindViewportWatcher();
+                window.ChatUX.syncInputSpacer();
+                window.ChatUX.scrollToBottom(true);
+            }
+        }
+
+        function prepareSend(event, form) {
+            const context = parseContext();
+            const input = form.querySelector('textarea[name=message]');
+            const val = input.value.trim();
+            if (!context || !context.natal_chart || !val) {
+                event.preventDefault();
+                return;
+            }
+
+            form.querySelector('#chatWorkingContextInput').value = JSON.stringify({
+                display_name: context.display_name,
+                gender: context.gender,
+                mode: context.mode,
+                day_master: context.day_master || {},
+                natal_chart: context.natal_chart,
+            });
+            form.querySelector('#chatHistoryInput').value = JSON.stringify(context.chat_history || []);
+
+            const tempId = 'temp-' + Date.now();
+            form.dataset.pendingTempId = tempId;
+            const container = document.getElementById('new-messages');
+            const bubble = `
+<div class='flex flex-col space-y-2 mb-6 w-full animate-in fade-in slide-in-from-bottom-2 duration-500' id='${tempId}'>
+    <div class='flex items-end justify-end gap-3 self-end max-w-[85%] ml-auto'>
+        <div class='glass-card p-4 rounded-tr-none bg-gradient-to-br from-indigo-600/80 to-purple-600/80 text-white shadow-lg backdrop-blur-md border border-white/20 relative group text-right'>
+            <p class='text-base leading-relaxed break-words whitespace-pre-wrap'>${escapeHtml(val).replace(/\n/g, '<br>')}</p>
+            <span class='text-[10px] text-indigo-200 mt-1 block opacity-100 absolute bottom-1 right-2 status-text'>전송 중...</span>
+        </div>
+        <div class='w-10 h-10 rounded-full bg-indigo-500 overflow-hidden shrink-0 border-2 border-white/20 shadow-lg flex items-center justify-center'>
+            <i class='fa-solid fa-user text-white text-sm'></i>
+        </div>
+    </div>
+</div>`;
+            container.insertAdjacentHTML('beforeend', bubble);
+            input.value = '';
+            input.style.height = 'auto';
+            if (window.ChatUX) {
+                window.ChatUX.afterOutgoingMessage();
+            }
+        }
+
+        function finishSend(event, form) {
+            const pendingId = form.dataset.pendingTempId || '';
+            const optimistic = pendingId ? document.getElementById(pendingId) : null;
+            if (optimistic) {
+                const status = optimistic.querySelector('.status-text');
+                if (status) {
+                    if (event.detail.successful) {
+                        status.textContent = '방금 전';
+                        status.parentElement.classList.remove('opacity-100');
+                        status.parentElement.classList.add('opacity-0', 'group-hover:opacity-100');
+                    } else {
+                        status.textContent = '전송 실패';
+                        status.classList.add('text-red-300');
+                    }
+                }
+                optimistic.id = '';
+            }
+            form.dataset.pendingTempId = '';
+            if (window.ChatUX) {
+                window.ChatUX.syncInputSpacer();
+                window.ChatUX.scrollToBottom(false);
+            }
+        }
+
+        function recordExchange(userMessage, assistantMessage, remainingTurns) {
+            const context = parseContext();
+            if (!context) return;
+            const history = Array.isArray(context.chat_history) ? context.chat_history.slice() : [];
+            history.push({ role: 'user', content: userMessage });
+            if (assistantMessage) {
+                history.push({ role: 'assistant', content: assistantMessage });
+            }
+            context.chat_history = history.slice(-20);
+            saveContext(context);
+            const turnCounter = document.getElementById('turnCounter');
+            if (turnCounter) turnCounter.textContent = remainingTurns;
+        }
+
+        async function saveConversation() {
+            const context = parseContext();
+            if (!context || !context.chat_history || !context.chat_history.length) {
+                alert('저장할 상담 내용이 없습니다.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+            formData.append('working_context_json', JSON.stringify({
+                display_name: context.display_name,
+                gender: context.gender,
+                mode: context.mode,
+                day_master: context.day_master || {},
+                natal_chart: context.natal_chart,
+            }));
+            formData.append('history_json', JSON.stringify(context.chat_history));
+
+            const button = document.getElementById('chatSaveBtn');
+            button.disabled = true;
+
+            try {
+                const response = await fetch('{% url "fortune:save_chat_to_history" %}', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+                const data = await response.json();
+                if (!response.ok || data.status !== 'success') {
+                    throw new Error(data.message || '저장에 실패했습니다.');
+                }
+                button.innerHTML = '<i class="fa-solid fa-check mr-1"></i> 저장됨';
+            } catch (error) {
+                alert(error.message || '저장에 실패했습니다.');
+                button.disabled = false;
+            }
+        }
+
+        function resetConversation() {
+            const context = parseContext();
+            if (!context) return;
+            context.chat_history = [];
+            saveContext(context);
+            renderStoredConversation();
+        }
+
+        function init() {
+            renderStoredConversation();
+
+            const saveBtn = document.getElementById('chatSaveBtn');
+            const resetBtn = document.getElementById('chatResetBtn');
+            if (saveBtn) {
+                saveBtn.addEventListener('click', saveConversation);
+            }
+            if (resetBtn) {
+                resetBtn.addEventListener('click', resetConversation);
+            }
+        }
+
+        return {
+            init,
+            prepareSend,
+            finishSend,
+            recordExchange,
+        };
+    })();
+
     document.body.addEventListener('htmx:afterSwap', function () {
         if (window.ChatUX) {
             window.ChatUX.attachScrollWatcher();
@@ -313,7 +539,9 @@
             window.ChatUX.attachScrollWatcher();
             window.ChatUX.bindViewportWatcher();
             window.ChatUX.syncInputSpacer();
-            window.ChatUX.scrollToBottom(true);
+        }
+        if (window.FortuneChat) {
+            window.FortuneChat.init();
         }
     });
 </script>
