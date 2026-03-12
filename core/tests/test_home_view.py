@@ -815,47 +815,9 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('compact_posts=1', content)
 
 
-@override_settings(HOME_LAYOUT_VERSION='v3')
-class HomeV3ViewTest(TestCase):
+class HomeSupplementaryViewTest(TestCase):
     def setUp(self):
         self.client = Client()
-        self.p1 = Product.objects.create(
-            title="수업 도구", description="수업용", price=0,
-            is_active=True, service_type='classroom', is_featured=True,
-            solve_text='수업을 준비해요',
-        )
-        self.p2 = Product.objects.create(
-            title="행정 도구", description="행정용", price=0,
-            is_active=True, service_type='work',
-        )
-        self.p3 = Product.objects.create(
-            title="테스트 게임", description="게임", price=0,
-            is_active=True, service_type='game',
-        )
-
-    def _login(self, username='v3user', nickname=None):
-        user = _create_onboarded_user(username, nickname=nickname)
-        self.client.login(username=username, password='pass1234')
-        return user
-
-    def test_v3_flag_falls_back_to_v2_anonymous_surface(self):
-        response = self.client.get(reverse('home'))
-        content = response.content.decode('utf-8')
-
-        self.assertIn('로그인하고 시작하기', content)
-        self.assertIn('수합·서명', content)
-        self.assertNotIn('id="primary-zone"', content)
-
-    def test_v3_flag_falls_back_to_v2_authenticated_layout(self):
-        self._login('v3slots')
-        response = self.client.get(reverse('home'))
-        content = response.content.decode('utf-8')
-
-        self.assertIn('data-home-v2-top-zone="true"', content)
-        self.assertIn('data-home-v2-top-calendar="true"', content)
-        self.assertIn('hidden xl:block', content)
-        self.assertIn('block xl:hidden', content)
-        self.assertNotIn('id="primary-zone"', content)
 
     def test_community_feed_uses_separate_full_screen_surface(self):
         response = self.client.get(reverse('community_feed'))
@@ -864,18 +826,7 @@ class HomeV3ViewTest(TestCase):
         self.assertContains(response, '실시간 소통')
         self.assertContains(response, '홈에서는 요약만 보고')
 
-    def test_v3_flag_uses_real_calendar_and_compact_service_cards(self):
-        self._login('v3calendar')
-        response = self.client.get(reverse('home'))
-        content = response.content.decode('utf-8')
-
-        self.assertIn('학급 캘린더', content)
-        self.assertIn('home-calendar-day', content)
-        self.assertIn('data-home-v2-service-card="true"', content)
-        self.assertNotIn('개인 캘린더', content)
-        self.assertNotIn('수업 도구 상세 설명 열기', content)
-
-    def test_v3_search_payload_hides_sheetbook_and_uses_calendar_public_name(self):
+    def test_home_search_payload_hides_sheetbook_and_uses_calendar_public_name(self):
         Product.objects.create(
             title="교무수첩",
             description="교무수첩 설명",

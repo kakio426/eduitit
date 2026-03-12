@@ -212,8 +212,6 @@ def _get_home_layout_version():
     raw_version = str(getattr(settings, 'HOME_LAYOUT_VERSION', '') or '').strip().lower()
     if raw_version in {'v1', 'v2'}:
         return raw_version
-    if raw_version == 'v3':
-        return 'v2'
     return 'v2' if getattr(settings, 'HOME_V2_ENABLED', False) else 'v1'
 
 
@@ -1321,39 +1319,6 @@ def _build_sheetbook_workspace_context(request, *, require_discovery_visible=Tru
     return {"sheetbook_workspace": workspace}
 
 
-def _build_home_v3_catalog_items(product_list, *, mode="popular", limit=4):
-    candidates = [
-        product for product in product_list
-        if _resolve_home_section_key(product) != "external"
-    ]
-    if mode == "new":
-        selected = sorted(
-            candidates,
-            key=lambda item: (item.created_at, item.id),
-            reverse=True,
-        )[:limit]
-    else:
-        selected = _get_home_discovery_products(None, candidates, limit=limit)
-    return _build_product_link_items(selected, include_section_meta=True)
-
-
-def _build_home_v3_trust_cards():
-    return [
-        {
-            "title": "오늘 판단은 캘린더 축에서 먼저 시작합니다",
-            "description": "첫 화면은 오늘 해야 하는 것, 학급 캘린더, 관련 바로가기만 먼저 보여주고 나머지는 아래로 내립니다.",
-        },
-        {
-            "title": "읽을거리는 발행 중 안내와 검토된 링크만 남깁니다",
-            "description": "하단 읽을거리는 서비스 가이드와 게시 중인 news_link를 재사용하고, 가짜 후기나 과한 홍보 문구는 넣지 않습니다.",
-        },
-        {
-            "title": "소통은 남기되 도구보다 먼저 튀지 않게 정리합니다",
-            "description": "공지와 최근 소통은 홈에서 바로 보되, 전체 소통은 별도 화면으로 보내 상단 실행 흐름을 방해하지 않게 둡니다.",
-        },
-    ]
-
-
 def _build_home_community_summary_posts(page_obj, *, limit=2):
     object_list = list(getattr(page_obj, "object_list", []) or [])
     prioritized = sorted(
@@ -1410,93 +1375,6 @@ def _build_home_community_summary_posts(page_obj, *, limit=2):
     return items
 
 
-def _build_home_v3_support_trust_panel():
-    return {
-        "title": "로그인하면 개인 홈이 바로 정리됩니다",
-        "description": "비로그인 상태에서는 지금 바로 열 수 있는 대표 도구와 운영 안내만 짧게 보여드립니다.",
-        "items": [
-            "운영 중인 서비스만 첫 화면 추천에 올라옵니다.",
-            "로그인 후에는 오늘 할 일, 빠른 실행, 일정 요약이 위쪽에 모입니다.",
-            "가이드는 발행 중인 안내만 연결하고 전체 탐색은 아래에서 이어집니다.",
-        ],
-    }
-
-
-def _build_home_v3_reading_cards(product_list, *, limit=3):
-    cards = []
-    seen_links = set()
-    product_map = {product.id: product for product in product_list}
-
-    try:
-        site_config = SiteConfig.load()
-        featured_manuals = list(
-            site_config.featured_manuals.filter(
-                is_published=True,
-                product__is_active=True,
-            )
-            .select_related("product")
-            .order_by("product__display_order", "product__title")[:limit]
-        )
-    except Exception:
-        logger.exception("[HomeV3] featured manuals load failed")
-        featured_manuals = []
-
-    for manual in featured_manuals:
-        href = reverse("service_guide_detail", kwargs={"pk": manual.pk})
-        if href in seen_links:
-            continue
-        product = product_map.get(manual.product_id, manual.product)
-        cards.append(
-            {
-                "kind": "manual",
-                "eyebrow": "서비스 가이드",
-                "title": _replace_public_service_terms(manual.title or f"{_get_public_product_name(product)} 시작 가이드", product),
-                "description": _replace_public_service_terms(
-                    manual.description or getattr(product, "teacher_first_support_label", "") or product.description or "",
-                    product,
-                ),
-                "meta": _get_public_product_name(product),
-                "href": href,
-                "is_external": False,
-            }
-        )
-        seen_links.add(href)
-        if len(cards) >= limit:
-            return cards
-
-    remaining = limit - len(cards)
-    if remaining <= 0:
-        return cards
-
-    news_posts = list(
-        _build_post_feed_queryset()
-        .filter(post_type="news_link")
-        .exclude(Q(source_url="") & Q(canonical_url=""))[:remaining]
-    )
-    for post in news_posts:
-        href = (post.source_url or post.canonical_url or "").strip()
-        if not href or href in seen_links:
-            continue
-        title = (post.og_title or post.content or "").strip()
-        description = (post.og_description or post.content or "").strip()
-        cards.append(
-            {
-                "kind": "post",
-                "eyebrow": "읽을거리",
-                "title": title[:80] or "교사를 위한 읽을거리",
-                "description": description[:120],
-                "meta": (post.publisher or "Insight Library").strip(),
-                "href": href,
-                "is_external": True,
-            }
-        )
-        seen_links.add(href)
-        if len(cards) >= limit:
-            break
-
-    return cards
-
-
 def _format_home_calendar_schedule(event):
     start_dt = timezone.localtime(event.start_time)
     end_dt = timezone.localtime(event.end_time)
@@ -1527,7 +1405,7 @@ def _build_home_calendar_summary_context(request):
         from classcalendar.models import CalendarEvent
         from classcalendar.views import build_message_capture_ui_context
     except Exception:
-        logger.exception("[HomeV3] classcalendar import failed")
+        logger.exception("[Home] classcalendar import failed")
         return summary
 
     try:
@@ -1904,92 +1782,6 @@ def _build_guide_groups(manuals, products_without_manual):
     ]
 
 
-def _home_v3(request, products, posts, page_obj, feed_scope):
-    product_list = _attach_product_launch_meta(list(products))
-    surface_products = [product for product in product_list if not _is_sheetbook_cross_surface_hidden(product)]
-    sections, aux_sections, games = get_purpose_sections(
-        surface_products,
-        preview_limit={
-            "default": 2,
-            "class_ops": 3,
-        },
-    )
-    home_sections = [*sections, *aux_sections]
-    sns_preview_posts = _build_home_community_summary_posts(page_obj, limit=2)
-    discovery_sections = {
-        "classroom_games": games,
-        "work_sections": home_sections,
-        "popular_items": _build_home_v3_catalog_items(surface_products, mode="popular", limit=4),
-        "new_items": _build_home_v3_catalog_items(surface_products, mode="new", limit=4),
-    }
-    secondary_sections = {
-        "community_summary": {
-            "title": "소통 요약",
-            "description": "공지와 최근 소통은 홈에서 바로 보고, 전체 소통은 별도 화면으로 이어서 확인합니다.",
-            "posts": sns_preview_posts,
-            "full_url": reverse("community_feed"),
-        },
-        "trust_cards": _build_home_v3_trust_cards(),
-        "reading_cards": _build_home_v3_reading_cards(surface_products, limit=3),
-    }
-
-    context = {
-        "products": products,
-        "posts": posts,
-        "page_obj": page_obj,
-        "feed_scope": feed_scope,
-        "sections": sections,
-        "aux_sections": aux_sections,
-        "home_sections": home_sections,
-        "games": games,
-        "discovery_sections": discovery_sections,
-        "secondary_sections": secondary_sections,
-        "sns_preview_posts": sns_preview_posts,
-        **_build_home_student_games_qr_context(request),
-    }
-
-    if request.user.is_authenticated:
-        UserProfile.objects.get_or_create(user=request.user)
-        favorite_products = _get_user_favorite_products(request.user, product_list, limit=12)
-        favorite_product_ids = [product.id for product in favorite_products]
-        today_context = _build_today_context(request)
-        calendar_hub = _build_home_calendar_hub_context(request)
-        context.update(
-            {
-                "favorite_product_ids": favorite_product_ids,
-                "calendar_hub": calendar_hub,
-                "primary_zone": {
-                    "today_tasks": today_context.get("today_items", [])[:4],
-                    "today_date_text": today_context.get("today_date_text", ""),
-                    "calendar_hub": calendar_hub,
-                    "related_shortcuts": _build_home_related_shortcuts(surface_products),
-                },
-            }
-        )
-    else:
-        featured_product = next((product for product in surface_products if product.is_featured), surface_products[0] if surface_products else None)
-        context.update(
-            {
-                "featured_product": featured_product,
-                "primary_zone": {
-                    "value_line": "일정에서 시작해 안내장, 수합, 수업 준비까지 바로 이어집니다.",
-                    "cta_primary": {
-                        "label": "로그인하고 시작하기",
-                        "href": reverse("account_login"),
-                    },
-                    "cta_secondary": {
-                        "label": "가이드 보기",
-                        "href": reverse("service_guide_list"),
-                        "is_external": False,
-                    },
-                    "today_start_items": _build_home_guest_start_cards(surface_products),
-                },
-            }
-        )
-
-    return render(request, "core/home_v3.html", context)
-
-
 def _home_v2(request, products, posts, page_obj, feed_scope):
     """Feature flag on 시 호출되는 V2 홈."""
     product_list = _attach_product_launch_meta(list(products))
@@ -2147,9 +1939,6 @@ def home(request):
         return _render_post_list_partial(request, page_obj, feed_scope)
 
     home_layout_version = _get_home_layout_version()
-
-    if home_layout_version == 'v3':
-        return _home_v3(request, products, posts, page_obj, feed_scope)
 
     # V2 홈: Feature flag on 시 분기
     if home_layout_version == 'v2':
