@@ -1,8 +1,9 @@
 from django.contrib.auth import get_user_model
-from django.test import Client, TestCase
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from classcalendar.models import CalendarEvent, EventPageBlock
+from core.models import UserProfile
 from happy_seed.models import HSClassroom
 
 User = get_user_model()
@@ -18,7 +19,11 @@ class PermissionTest(TestCase):
             slug="test-class-123",
         )
         self.client_teacher = Client()
-        self.client_teacher.login(username="teacher", password="pw")
+        self.client_teacher.force_login(self.teacher)
+        UserProfile.objects.update_or_create(
+            user=self.teacher,
+            defaults={"nickname": "teacher", "role": "school"},
+        )
         session = self.client_teacher.session
         session["active_classroom_source"] = "hs"
         session["active_classroom_id"] = str(self.classroom.id)
@@ -70,6 +75,21 @@ class PermissionTest(TestCase):
         text_block = event.blocks.filter(block_type="text").first()
         self.assertIsNotNone(text_block)
         self.assertEqual(text_block.content.get("text"), "실험 키트 챙기기\n학생 역할 분배")
+
+    @override_settings(
+        FEATURE_MESSAGE_CAPTURE_ENABLED=True,
+        FEATURE_MESSAGE_CAPTURE_ALLOWLIST_USERNAMES="teacher",
+        FEATURE_MESSAGE_CAPTURE_ITEM_TYPES=True,
+    )
+    def test_main_view_uses_today_memo_copy_for_message_hub(self):
+        response = self.client_teacher.get(reverse("classcalendar:main"))
+        content = response.content.decode("utf-8")
+
+        self.assertContains(response, "오늘 다시 볼 메모 만들기")
+        self.assertIn("오늘 다시 볼 메모", content)
+        self.assertIn("메모 보관함", content)
+        self.assertIn("체험학습 전날 학부모 안내문", content)
+        self.assertIn("학부모 안내", content)
 
     def test_create_event_rejects_invalid_time_range(self):
         response = self.client_teacher.post(

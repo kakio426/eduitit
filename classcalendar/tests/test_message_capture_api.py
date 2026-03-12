@@ -584,7 +584,7 @@ class MessageCaptureApiTests(TestCase):
         response = self.client.get(reverse("classcalendar:legacy_main"), follow=True)
         self.assertRedirects(response, reverse("classcalendar:main"))
         self.assertContains(response, "openMessageHub($event, 'capture', { resetCapture: true })")
-        self.assertContains(response, "메시지")
+        self.assertContains(response, "오늘 다시 볼 메모 만들기")
         self.assertNotContains(response, '@click.prevent="openMessageCaptureModal($event)"')
 
     @override_settings(FEATURE_MESSAGE_CAPTURE_ENABLED=False)

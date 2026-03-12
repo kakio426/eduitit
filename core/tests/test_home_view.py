@@ -1,8 +1,12 @@
 import json
+from datetime import datetime, time, timedelta
 
 from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 from django.contrib.auth.models import User
+from django.utils import timezone
+
+from classcalendar.models import CalendarEvent, EventPageBlock
 from core.teacher_first_cards import build_favorite_service_title
 from core.mini_apps import (
     HOME_LAYOUT_EXCLUDED,
@@ -213,6 +217,25 @@ class HomeV2ViewTest(TestCase):
         )
         return qr, prompt
 
+    def _create_calendar_event_with_note(self, user, *, title, note, start_time=None, end_time=None):
+        start_time = start_time or timezone.now().replace(second=0, microsecond=0)
+        end_time = end_time or (start_time + timedelta(hours=1))
+        event = CalendarEvent.objects.create(
+            title=title,
+            author=user,
+            start_time=start_time,
+            end_time=end_time,
+            color='indigo',
+            visibility=CalendarEvent.VISIBILITY_TEACHER,
+        )
+        EventPageBlock.objects.create(
+            event=event,
+            block_type='text',
+            content={'text': note},
+            order=0,
+        )
+        return event
+
     def test_v2_anonymous_200(self):
         """V2 비로그인 홈 200 응답"""
         response = self.client.get(reverse('home'))
@@ -359,8 +382,57 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('home-calendar-message-limits-data', content)
         self.assertIn('home-calendar-message-urls-data', content)
         self.assertIn('openMessageHub($event, \'capture\', { resetCapture: true })', content)
-        self.assertIn('fa-comment-dots', content)
+        self.assertIn('오늘 다시 볼 메모', content)
+        self.assertIn('메모 만들기', content)
+        self.assertIn('fa-note-sticky', content)
         self.assertNotIn('openMessageCaptureModal($event)', content)
+
+    def test_v2_authenticated_calendar_hub_shows_today_memo_preview(self):
+        user = self._login('memouser')
+        now = timezone.make_aware(datetime.combine(timezone.localdate(), time(hour=9)))
+        self._create_calendar_event_with_note(
+            user,
+            title='체험학습 안내',
+            note='1교시 전에 QR 띄우기\n준비물 다시 확인',
+            start_time=now,
+            end_time=now + timedelta(hours=1),
+        )
+        self._create_calendar_event_with_note(
+            user,
+            title='공개수업 준비',
+            note='마이크 배터리 확인\n학부모 동선 안내',
+            start_time=now + timedelta(hours=2),
+            end_time=now + timedelta(hours=3),
+        )
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('data-home-v2-calendar-preview="true"', content)
+        self.assertIn('data-home-v2-calendar-memos="true"', content)
+        self.assertIn('오늘 다시 볼 메모', content)
+        self.assertIn('1교시 전에 QR 띄우기', content)
+        self.assertIn('마이크 배터리 확인', content)
+
+    def test_v2_authenticated_calendar_hub_falls_back_to_upcoming_when_no_today_memo(self):
+        user = self._login('upcominguser')
+        tomorrow = timezone.make_aware(datetime.combine(timezone.localdate() + timedelta(days=1), time(hour=9)))
+        CalendarEvent.objects.create(
+            title='내일 학부모총회',
+            author=user,
+            start_time=tomorrow,
+            end_time=tomorrow + timedelta(hours=1),
+            color='indigo',
+            visibility=CalendarEvent.VISIBILITY_TEACHER,
+        )
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('data-home-v2-calendar-preview="true"', content)
+        self.assertIn('data-home-v2-calendar-upcoming="true"', content)
+        self.assertIn('다가오는 일정', content)
+        self.assertIn('내일 학부모총회', content)
 
     def test_v2_authenticated_widens_content_shell_and_keeps_favorites_two_up(self):
         user = self._login('balanceuser')

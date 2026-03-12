@@ -5,9 +5,9 @@
                 <div>
                     <h3 class="text-lg md:text-xl font-black text-slate-900 flex items-center gap-2">
                         <i class="fa-solid fa-calendar-days text-indigo-500"></i>
-                        학급 캘린더
+                        {{ calendar_hub.title }}
                     </h3>
-                    <p class="mt-1 text-xs font-semibold text-slate-400">날짜를 누르면 아래에서 그날 일정을 바로 확인합니다.</p>
+                    <p class="mt-1 text-xs font-semibold text-slate-400">오늘 일정과 오늘 다시 볼 메모를 함께 확인합니다.</p>
                 </div>
                 <div class="flex items-center gap-1.5">
                     <button type="button" @click="prevMonth()" class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50" aria-label="이전 달">
@@ -22,16 +22,13 @@
                 <h4 class="text-base font-black text-slate-800" x-text="currentMonthText"></h4>
                 <div class="flex flex-wrap items-center gap-2">
                     <a href="{% url 'classcalendar:main' %}" class="inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-black text-slate-700 hover:border-indigo-300 hover:text-indigo-600 transition">
-                        <i class="fa-solid fa-calendar-days"></i> 캘린더 열기
+                        <i class="fa-solid fa-calendar-days"></i> {{ calendar_hub.primary_cta_label }}
                     </a>
                     {% if calendar_hub.message_enabled %}
                     <button type="button" @click="openMessageHub($event, 'capture', { resetCapture: true })" class="inline-flex items-center gap-2 rounded-2xl border border-indigo-200 bg-indigo-50 px-3.5 py-2 text-xs font-black text-indigo-700 hover:bg-indigo-100 transition">
-                        <i class="fa-solid fa-comment-dots"></i> 메시지
+                        <i class="fa-solid fa-note-sticky"></i> {{ calendar_hub.secondary_cta_label }}
                     </button>
                     {% endif %}
-                    <button type="button" @click="openCreateModalForSelectedDate()" class="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-3.5 py-2 text-xs font-black text-white hover:bg-indigo-700 transition">
-                        <i class="fa-solid fa-plus"></i> 일정 추가
-                    </button>
                 </div>
             </div>
         </div>
@@ -81,15 +78,55 @@
             </template>
         </div>
 
+        <section class="rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-4" data-home-v2-calendar-preview="true">
+            {% if calendar_hub.today_memo_items %}
+            <div data-home-v2-calendar-memos="true">
+                <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">오늘 다시 볼 메모</p>
+                <p class="mt-1 text-sm font-semibold text-slate-500">교실에 들어가기 전에 다시 확인할 준비 메모만 먼저 보여 줍니다.</p>
+                <div class="mt-3 space-y-2.5">
+                    {% for item in calendar_hub.today_memo_items %}
+                    <a href="{{ item.href }}" class="block rounded-2xl border border-slate-200 bg-white px-4 py-3 hover:border-amber-300 hover:bg-amber-50/40 transition">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="min-w-0">
+                                <p class="text-sm font-black text-slate-900">{{ item.title }}</p>
+                                <p class="mt-1 text-xs font-semibold text-slate-500">{{ item.schedule_text }}</p>
+                            </div>
+                            <span class="inline-flex flex-shrink-0 items-center rounded-full bg-amber-100 px-2 py-1 text-[10px] font-black text-amber-700">오늘 메모</span>
+                        </div>
+                        <p class="mt-2 whitespace-pre-line text-sm leading-5 text-slate-600 line-clamp-3">{{ item.memo_excerpt }}</p>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% elif calendar_hub.upcoming_items %}
+            <div data-home-v2-calendar-upcoming="true">
+                <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">다가오는 일정</p>
+                <p class="mt-1 text-sm font-semibold text-slate-500">오늘 메모가 없으면 가까운 일정 흐름부터 보여 줍니다.</p>
+                <div class="mt-3 space-y-2.5">
+                    {% for item in calendar_hub.upcoming_items %}
+                    <a href="{{ calendar_hub.main_url }}" class="block rounded-2xl border border-slate-200 bg-white px-4 py-3 hover:border-indigo-300 hover:bg-indigo-50/40 transition">
+                        <p class="text-sm font-black text-slate-900">{{ item.title }}</p>
+                        <p class="mt-1 text-xs font-semibold text-slate-500">{{ item.schedule_text }}</p>
+                        {% if item.note %}
+                        <p class="mt-2 whitespace-pre-line text-sm leading-5 text-slate-600 line-clamp-2">{{ item.note }}</p>
+                        {% endif %}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <div class="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-6 text-center">
+                <p class="text-sm font-bold text-slate-600">{{ calendar_hub.today_memo_empty_message }}</p>
+            </div>
+            {% endif %}
+        </section>
+
         <section class="rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-4" data-home-v2-calendar-agenda="true">
             <div class="flex items-start justify-between gap-3">
                 <div>
                     <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">선택한 날짜</p>
                     <h4 class="mt-1 text-base font-black text-slate-900" x-text="selectedDateLabel"></h4>
                 </div>
-                <button type="button" @click="openCreateModalForSelectedDate()" class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-black text-slate-700 hover:border-indigo-300 hover:text-indigo-600 transition">
-                    <i class="fa-solid fa-plus text-[10px]"></i> 일정 추가
-                </button>
             </div>
 
             <div class="mt-3 space-y-2" x-show="!selectedDateIsEmpty">
@@ -110,7 +147,7 @@
                 data-home-v2-calendar-empty-state="true"
             >
                 <p class="text-sm font-black text-slate-700">이 날짜에는 일정이 없습니다.</p>
-                <p class="mt-1 text-xs font-semibold text-slate-500">아래 빈 공간을 눌러 바로 일정을 추가할 수 있습니다.</p>
+                <p class="mt-1 text-xs font-semibold text-slate-500">준비물이나 체크포인트와 함께 바로 일정을 남길 수 있습니다.</p>
             </button>
         </section>
     </div>
@@ -135,8 +172,8 @@
                     </div>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">노트</label>
-                    <textarea x-model="createForm.note" rows="3" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" placeholder="개인 메모를 남겨두세요."></textarea>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">그날 다시 볼 메모</label>
+                    <textarea x-model="createForm.note" rows="3" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" placeholder="준비물, 확인할 사람, 꼭 말할 멘트를 적어두세요."></textarea>
                 </div>
                 <div class="flex items-center justify-between">
                     <label class="inline-flex items-center gap-2 text-xs font-semibold text-slate-700">

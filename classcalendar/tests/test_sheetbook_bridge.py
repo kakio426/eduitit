@@ -27,14 +27,12 @@ class CalendarSheetbookBridgeTests(TestCase):
         response = self.client.get(reverse("classcalendar:main"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "새 일정")
-        self.assertContains(response, "메시지 바로 등록")
 
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_main_route_renders_calendar_when_sheetbook_enabled(self):
         response = self.client.get(reverse("classcalendar:main"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "새 일정")
-        self.assertContains(response, "메시지 바로 등록")
         self.assertNotContains(response, "교무수첩 만들기")
 
     @override_settings(SHEETBOOK_ENABLED=True)

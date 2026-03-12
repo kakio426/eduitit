@@ -10,6 +10,28 @@ function buildCalendarMessageHubState() {
         messageCaptureInputText: '',
         messageCaptureSourceHint: 'unknown',
         messageCaptureDropActive: false,
+        messageCaptureTemplates: [
+            {
+                id: 'parent_notice',
+                title: '학부모 안내',
+                body: '[날짜/행사]\n보낼 안내 한 줄\n준비물/회신 마감',
+            },
+            {
+                id: 'student_notice',
+                title: '학생 공지',
+                body: '[날짜/활동]\n학생에게 말할 핵심\n수업 전 확인',
+            },
+            {
+                id: 'prep_check',
+                title: '준비 체크',
+                body: '[행사/수업]\n준비물\n꼭 확인할 사람/순서',
+            },
+            {
+                id: 'self_memo',
+                title: '나에게 메모',
+                body: '[언제 다시 볼지]\n그때 해야 할 일\n꼭 말할 멘트',
+            },
+        ],
         messageCaptureFiles: [],
         messageCaptureFileErrors: [],
         messageCaptureServerAttachments: [],
@@ -331,7 +353,7 @@ function initCalendarMessageHub(host, options = {}) {
 
         openMessageHub: async function(event, tab = 'capture', hubOptions = {}) {
             if (!this.messageCaptureEnabled) {
-                window.showToast('메시지 기능이 아직 열리지 않았습니다.', 'info');
+                window.showToast('메모 기능이 아직 열리지 않았습니다.', 'info');
                 return;
             }
             this.messageHubReturnFocusElement = event && event.currentTarget ? event.currentTarget : document.activeElement;
@@ -458,7 +480,7 @@ function initCalendarMessageHub(host, options = {}) {
                     await this.selectMessageArchiveItem(this.messageArchiveItems[0].capture_id);
                 }
             } catch (error) {
-                this.messageArchiveErrorText = error.message || '보관 메시지를 불러오지 못했습니다.';
+                this.messageArchiveErrorText = error.message || '보관 메모를 불러오지 못했습니다.';
                 window.showToast(this.messageArchiveErrorText, 'error');
             } finally {
                 this.isLoadingMessageArchive = false;
@@ -482,7 +504,7 @@ function initCalendarMessageHub(host, options = {}) {
                 this.messageArchiveSelectedCapture = payload;
             } catch (error) {
                 this.messageArchiveSelectedCapture = null;
-                this.messageArchiveErrorText = error.message || '메시지 상세를 불러오지 못했습니다.';
+                this.messageArchiveErrorText = error.message || '메모 상세를 불러오지 못했습니다.';
                 window.showToast(this.messageArchiveErrorText, 'error');
             } finally {
                 this.isLoadingMessageArchiveDetail = false;
@@ -505,7 +527,7 @@ function initCalendarMessageHub(host, options = {}) {
             this.messageHubActiveTab = 'capture';
             if (Array.isArray(detail.candidates) && detail.candidates.length > 0) {
                 this.applyArchiveDetailToMessageCapture(detail);
-                window.showToast('저장된 일정 후보를 다시 불러왔어요.', 'success');
+                window.showToast('저장된 메모 후보를 다시 불러왔어요.', 'success');
                 return;
             }
             if (detail.archive_status === 'unparsed' && detail.capture_id) {
@@ -514,7 +536,7 @@ function initCalendarMessageHub(host, options = {}) {
             }
             this.resetMessageCaptureFlow();
             this.messageCaptureInputText = String(detail.raw_text || '');
-            window.showToast('보관한 메시지를 다시 불러왔어요.', 'info');
+            window.showToast('보관한 메모를 다시 불러왔어요.', 'info');
             this.syncMessageHubLayout();
         },
 
@@ -590,6 +612,20 @@ function initCalendarMessageHub(host, options = {}) {
             this.messageCaptureFiles = this.messageCaptureFiles.filter((item) => item.id !== fileId);
         },
 
+        applyMessageCaptureTemplate: function(templateId) {
+            const template = (this.messageCaptureTemplates || []).find((item) => item.id === templateId);
+            if (!template) return;
+            this.messageCaptureInputText = String(template.body || '');
+            this.messageCaptureErrorText = '';
+            if (typeof this.$nextTick === 'function') {
+                this.$nextTick(() => {
+                    if (this.$refs && this.$refs.messageCaptureInput) {
+                        this.$refs.messageCaptureInput.focus();
+                    }
+                });
+            }
+        },
+
         normalizeMessageCaptureCandidate: function(raw) {
             const start = raw.start_time ? new Date(raw.start_time) : null;
             const end = raw.end_time ? new Date(raw.end_time) : (start ? new Date(raw.start_time) : null);
@@ -660,7 +696,7 @@ function initCalendarMessageHub(host, options = {}) {
                 : [];
             this.messageCaptureCandidates = [];
             this.messageCaptureSuccessMode = 'archive';
-            this.messageCaptureSavedMessage = payload.message || '메시지를 보관함에 저장했어요.';
+            this.messageCaptureSavedMessage = payload.message || '메모를 보관함에 저장했어요.';
             this.messageCaptureSavedEvents = [];
             this.messageCaptureErrorText = '';
             this.messageCaptureStep = 'done';
@@ -763,16 +799,16 @@ function initCalendarMessageHub(host, options = {}) {
 
         submitMessageCaptureParse: async function() {
             if (!this.messageCaptureEnabled) {
-                window.showToast('메시지 기능이 아직 열리지 않았습니다.', 'info');
+                window.showToast('메모 기능이 아직 열리지 않았습니다.', 'info');
                 return;
             }
             const parseUrl = this.buildMessageCaptureParseUrl();
             if (!parseUrl) {
-                window.showToast('메시지 읽기 경로를 찾지 못했습니다.', 'error');
+                window.showToast('메모 읽기 경로를 찾지 못했습니다.', 'error');
                 return;
             }
             if (!this.messageCaptureInputText.trim() && this.messageCaptureFiles.length === 0) {
-                this.messageCaptureErrorText = '메시지 텍스트 또는 첨부파일을 하나 이상 입력해 주세요.';
+                this.messageCaptureErrorText = '메모나 안내문 텍스트 또는 첨부파일을 하나 이상 입력해 주세요.';
                 window.showToast(this.messageCaptureErrorText, 'error');
                 return;
             }
@@ -792,9 +828,9 @@ function initCalendarMessageHub(host, options = {}) {
                     body: formData,
                 });
                 this.applyMessageCaptureResult(payload);
-                window.showToast('찾은 일정을 확인해 주세요.', 'success');
+                window.showToast('다시 볼 날짜를 확인해 주세요.', 'success');
             } catch (error) {
-                this.messageCaptureErrorText = error.message || '메시지 읽기에 실패했습니다.';
+                this.messageCaptureErrorText = error.message || '메모 읽기에 실패했습니다.';
                 window.showToast(this.messageCaptureErrorText, 'error');
             } finally {
                 this.isParsingMessageCapture = false;
@@ -803,12 +839,12 @@ function initCalendarMessageHub(host, options = {}) {
 
         submitSavedMessageCaptureParse: async function(captureId) {
             if (!this.messageCaptureEnabled) {
-                window.showToast('메시지 기능이 아직 열리지 않았습니다.', 'info');
+                window.showToast('메모 기능이 아직 열리지 않았습니다.', 'info');
                 return;
             }
             const parseSavedUrl = this.buildMessageCaptureParseSavedUrl(captureId);
             if (!parseSavedUrl) {
-                window.showToast('보관 메시지 읽기 경로를 찾지 못했습니다.', 'error');
+                window.showToast('보관 메모 읽기 경로를 찾지 못했습니다.', 'error');
                 return;
             }
             this.isParsingMessageCapture = true;
@@ -821,9 +857,9 @@ function initCalendarMessageHub(host, options = {}) {
                 this.messageArchiveSelectedCapture = payload;
                 this.applyArchiveDetailToMessageCapture(payload);
                 this.loadMessageArchive({ reset: true, preferredCaptureId: payload.capture_id });
-                window.showToast(payload.message || '보관한 메시지에서 일정을 찾았어요.', 'success');
+                window.showToast(payload.message || '보관한 메모에서 날짜를 찾았어요.', 'success');
             } catch (error) {
-                this.messageCaptureErrorText = error.message || '보관한 메시지를 읽지 못했습니다.';
+                this.messageCaptureErrorText = error.message || '보관한 메모를 읽지 못했습니다.';
                 window.showToast(this.messageCaptureErrorText, 'error');
             } finally {
                 this.isParsingMessageCapture = false;
@@ -832,7 +868,7 @@ function initCalendarMessageHub(host, options = {}) {
 
         submitMessageCaptureArchiveSave: async function() {
             if (!this.messageCaptureEnabled) {
-                window.showToast('메시지 기능이 아직 열리지 않았습니다.', 'info');
+                window.showToast('메모 기능이 아직 열리지 않았습니다.', 'info');
                 return;
             }
             const saveUrl = this.buildMessageCaptureSaveUrl();
@@ -841,7 +877,7 @@ function initCalendarMessageHub(host, options = {}) {
                 return;
             }
             if (!this.messageCaptureInputText.trim() && this.messageCaptureFiles.length === 0) {
-                this.messageCaptureErrorText = '메시지 텍스트 또는 첨부파일을 하나 이상 입력해 주세요.';
+                this.messageCaptureErrorText = '메모나 안내문 텍스트 또는 첨부파일을 하나 이상 입력해 주세요.';
                 window.showToast(this.messageCaptureErrorText, 'error');
                 return;
             }
@@ -861,7 +897,7 @@ function initCalendarMessageHub(host, options = {}) {
                     body: formData,
                 });
                 this.applyMessageCaptureArchiveSaveResult(payload);
-                window.showToast(payload.message || '메시지를 보관함에 저장했어요.', 'success');
+                window.showToast(payload.message || '메모를 보관함에 저장했어요.', 'success');
             } catch (error) {
                 this.messageCaptureErrorText = error.message || '보관함 저장에 실패했습니다.';
                 window.showToast(this.messageCaptureErrorText, 'error');
@@ -878,7 +914,7 @@ function initCalendarMessageHub(host, options = {}) {
 
         submitMessageCaptureCommit: async function() {
             if (!this.messageCaptureCaptureId) {
-                this.messageCaptureErrorText = '저장 대상 메시지를 다시 읽어주세요.';
+                this.messageCaptureErrorText = '저장 대상 메모를 다시 읽어주세요.';
                 window.showToast(this.messageCaptureErrorText, 'error');
                 return;
             }
@@ -985,7 +1021,7 @@ function initCalendarMessageHub(host, options = {}) {
         },
 
         messageCapturePredictionText: function() {
-            const map = { event: '일정으로 예측', task: '할 일로 예측', ignore: '안내 메시지로 예측', unknown: '직접 확인 필요' };
+            const map = { event: '일정으로 예측', task: '할 일로 예측', ignore: '안내문만 예측', unknown: '직접 확인 필요' };
             return map[this.messageCapturePredictedItemType] || '직접 확인 필요';
         },
 
@@ -1000,14 +1036,14 @@ function initCalendarMessageHub(host, options = {}) {
         },
 
         messageCaptureDoneTitle: function() {
-            return this.messageCaptureSuccessMode === 'archive' ? '메시지를 보관했어요.' : '일정을 저장했어요.';
+            return this.messageCaptureSuccessMode === 'archive' ? '메모를 보관했어요.' : '메모에서 일정을 저장했어요.';
         },
 
         messageArchiveCandidateEmptyText: function() {
             if (!this.messageArchiveSelectedCapture) return '';
             return this.messageArchiveSelectedCapture.archive_status === 'unparsed'
-                ? '아직 이 메시지는 읽지 않았어요. 필요할 때 일정 찾기를 누르면 됩니다.'
-                : '이 메시지에서는 저장할 날짜를 찾지 못했어요.';
+                ? '아직 이 메모는 읽지 않았어요. 필요할 때 날짜 찾기를 누르면 됩니다.'
+                : '이 메모에서는 저장할 날짜를 찾지 못했어요.';
         },
     });
 }
