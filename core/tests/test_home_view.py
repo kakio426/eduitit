@@ -168,6 +168,28 @@ class HomeV2ViewTest(TestCase):
             launch_route_name='sheetbook:index',
         )
 
+    def _create_try_now_products(self):
+        notice = Product.objects.create(
+            title="알림장 & 주간학습 멘트 생성기",
+            description="안내문 작성",
+            price=0,
+            is_active=True,
+            service_type='work',
+            launch_route_name='noticegen:main',
+            icon='fa-solid fa-note-sticky',
+        )
+        collect = Product.objects.create(
+            title="간편 수합",
+            description="제출 수합",
+            price=0,
+            is_active=True,
+            is_guest_allowed=True,
+            service_type='collect_sign',
+            launch_route_name='collect:landing',
+            icon='fa-solid fa-inbox',
+        )
+        return notice, collect
+
     def test_v2_anonymous_200(self):
         """V2 비로그인 홈 200 응답"""
         response = self.client.get(reverse('home'))
@@ -185,6 +207,24 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         self.assertIn('로그인하고 시작하기', content)
+
+    def test_v2_anonymous_renders_today_try_now_notice_and_collect_cards(self):
+        notice, collect = self._create_try_now_products()
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('data-home-v2-try-now="true"', content)
+        self.assertIn('오늘 바로 써보기', content)
+        self.assertIn('알림장 멘트', content)
+        self.assertIn('간편 수합', content)
+        self.assertIn(f'data-product-id="{notice.id}"', content)
+        self.assertIn(f'data-product-id="{collect.id}"', content)
+        self.assertIn(f'data-launch-href="{reverse("noticegen:main")}"', content)
+        self.assertIn(f'data-launch-href="{reverse("collect:landing")}"', content)
+        self.assertIn('data-home-v2-try-now-grid="true"', content)
+        self.assertIn('grid-cols-1', content)
+        self.assertIn('md:grid-cols-2', content)
 
     def test_v2_anonymous_keeps_guest_home_without_mini_app_rail(self):
         response = self.client.get(reverse('home'))
@@ -259,6 +299,22 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('data-home-v2-calendar-agenda="true"', content)
         self.assertNotIn('dayEventsModalOpen', content)
         self.assertNotIn('개인 캘린더', content)
+
+    def test_v2_authenticated_places_today_try_now_between_top_zone_and_service_groups(self):
+        self._create_try_now_products()
+        self._login('trynowuser')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        top_zone_index = content.index('data-home-v2-top-zone="true"')
+        try_now_index = content.index('data-home-v2-try-now="true"')
+        services_index = content.index('data-home-v2-service-groups="true"')
+
+        self.assertLess(top_zone_index, try_now_index)
+        self.assertLess(try_now_index, services_index)
+        self.assertIn(f'data-launch-href="{reverse("noticegen:main")}"', content)
+        self.assertIn(f'data-launch-href="{reverse("collect:landing")}"', content)
 
     @override_settings(
         FEATURE_MESSAGE_CAPTURE_ENABLED=True,

@@ -431,6 +431,30 @@ HOME_SHORTCUT_SPECS = [
     },
 ]
 
+HOME_TRY_NOW_CARD_SPECS = [
+    {
+        "key": "notice",
+        "service_name": "알림장 & 주간학습 멘트 생성기",
+        "title": "알림장 멘트",
+        "description": "알림장과 주간학습 멘트를 바로 만듭니다.",
+        "icon": "fa-solid fa-note-sticky",
+        "preferred_routes": ["noticegen:main"],
+        "fallback_route": "noticegen:main",
+        "service_type": "work",
+    },
+    {
+        "key": "collect",
+        "service_name": "간편 수합",
+        "title": "간편 수합",
+        "description": "파일·링크·응답을 한 번에 모읍니다.",
+        "icon": "fa-solid fa-inbox",
+        "preferred_routes": ["collect:landing"],
+        "fallback_route": "collect:landing",
+        "service_type": "collect_sign",
+        "is_guest_allowed": True,
+    },
+]
+
 GUEST_START_CARD_SPECS = [
     {
         "title": "오늘 일정 정리",
@@ -1505,6 +1529,55 @@ def _build_home_related_shortcuts(product_list):
     return items
 
 
+def _home_card_icon_color_class(service_type):
+    color_map = {
+        "collect_sign": "text-blue-500",
+        "classroom": "text-violet-500",
+        "work": "text-emerald-500",
+        "game": "text-red-500",
+        "counsel": "text-pink-500",
+        "edutech": "text-cyan-500",
+    }
+    return color_map.get(service_type, "text-slate-500")
+
+
+def _build_home_try_now_cards(product_list):
+    cards = []
+    for spec in HOME_TRY_NOW_CARD_SPECS:
+        product = _find_product_by_routes(product_list, spec.get("preferred_routes"))
+        href = getattr(product, "launch_href", "") if product else ""
+        is_external = bool(getattr(product, "launch_is_external", False)) if product else False
+        if not href:
+            href = _safe_reverse(spec.get("fallback_route"))
+        if not href:
+            continue
+
+        service_type = str(getattr(product, "service_type", "") or spec.get("service_type", "") or "").strip()
+        state_meta = _build_product_state_labels(
+            product,
+            route_name=spec.get("fallback_route", ""),
+            service_type=service_type,
+            launch_is_external=is_external,
+            is_guest_allowed=bool(spec.get("is_guest_allowed", False)),
+            limit=1,
+        )
+        cards.append(
+            {
+                "key": spec["key"],
+                "product_id": getattr(product, "id", ""),
+                "title": spec["title"],
+                "description": spec["description"],
+                "icon": getattr(product, "icon", "") if product and "fa-" in str(getattr(product, "icon", "")) else spec["icon"],
+                "icon_color_class": _home_card_icon_color_class(service_type),
+                "href": href,
+                "is_external": is_external,
+                "track_label": getattr(product, "title", "") or spec["service_name"],
+                "access_status_label": state_meta["home_access_status_label"],
+            }
+        )
+    return cards
+
+
 def _build_home_guest_start_cards(product_list):
     cards = []
     for spec in GUEST_START_CARD_SPECS:
@@ -1785,6 +1858,7 @@ def _build_guide_groups(manuals, products_without_manual):
 def _home_v2(request, products, posts, page_obj, feed_scope):
     """Feature flag on 시 호출되는 V2 홈."""
     product_list = _attach_product_launch_meta(list(products))
+    today_try_cards = _build_home_try_now_cards(product_list)
     sections, aux_sections, games = get_purpose_sections(
         product_list,
         preview_limit=2,
@@ -1892,6 +1966,7 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
             'weekly_bundle_items': weekly_bundle_items,
             'calendar_hub': calendar_hub,
             'home_calendar_summary': home_calendar_summary,
+            'today_try_cards': today_try_cards,
             'home_v2_frontend_config': home_v2_frontend_config,
             'community_summary': community_summary,
             'posts': posts,
@@ -1912,6 +1987,7 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
         'primary_display_sections': primary_display_sections,
         'secondary_display_sections': secondary_display_sections,
         'games': games,
+        'today_try_cards': today_try_cards,
         'community_summary': community_summary,
         'posts': posts,
         'page_obj': page_obj,
