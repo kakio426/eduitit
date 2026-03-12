@@ -51,6 +51,12 @@ CHOICE_LEGACY_COLOR = "#9CA3AF"
 CHOICE_FILTER_OPTION_PREFIX = "option::"
 CHOICE_FILTER_OTHER = "__other__"
 CHOICE_FILTER_LEGACY = "__legacy__"
+SUBMISSION_TYPE_LABELS = {
+    "file": "파일",
+    "link": "링크",
+    "text": "텍스트",
+    "choice": "선택형",
+}
 
 
 def _request_client_ip(request):
@@ -83,6 +89,14 @@ def _collect_public_ratelimit_key(group, request):
     if not code:
         code = (request.POST.get("code") or request.GET.get("code") or "").strip()
     return f"{_request_client_ip(request) or 'unknown'}:{request_id or code or 'global'}"
+
+
+def _allowed_type_labels(collection_req):
+    return [
+        SUBMISSION_TYPE_LABELS[sub_type]
+        for sub_type in collection_req.allowed_submission_types
+        if sub_type in SUBMISSION_TYPE_LABELS
+    ]
 
 
 def _next_or_end(iterator):
@@ -525,7 +539,7 @@ def request_create(request):
             collection_req.template_file_name = request.FILES['template_file'].name
             
         collection_req.save()
-        return redirect('collect:request_detail', request_id=str(collection_req.id))
+        return redirect(f"{reverse('collect:request_detail', args=[collection_req.id])}?entry=created")
 
     # 폼 오류 시 대시보드로 복귀
     service = get_collect_service()
@@ -598,11 +612,14 @@ def request_detail(request, request_id):
     # 제출 유형별 통계
     type_stats = submissions.values('submission_type').annotate(count=Count('id'))
     choice_stats = _build_choice_stats(collection_req, submissions)
+    submitted_count = submissions.count()
 
     # 제출 대상자 현황
     expected = collection_req.expected_submitters_list
     submitted_names = set(submissions.values_list('contributor_name', flat=True))
     not_submitted = [name for name in expected if name not in submitted_names]
+    expected_count = len(expected)
+    not_submitted_count = len(not_submitted)
 
     # 파일 데이터 JSON 구성을 위한 리스트
     files_data = []
@@ -616,18 +633,40 @@ def request_detail(request, request_id):
                 'contributor': sub.contributor_name
             })
 
+    request_phase = 'share' if collection_req.status == 'active' else 'results'
+    allowed_type_labels = _allowed_type_labels(collection_req)
+    share_message = (
+        f"[가뿐수합] '{collection_req.title}' 요청에 참여해주세요.\n\n"
+        f"참여 링크: {short_url}\n"
+        f"입장 코드: {collection_req.access_code}"
+    )
+    has_downloadable_files = bool(files_data)
+    toggle_is_primary = request_phase == 'results' and not has_downloadable_files
+
     response = render(request, 'collect/request_detail.html', {
         'req': collection_req,
         'submissions': submissions,
         'qr_code_base64': qr_code_base64,
-        'total_count': submissions.count(),
+        'total_count': submitted_count,
+        'submitted_count': submitted_count,
         'type_stats': {s['submission_type']: s['count'] for s in type_stats},
         'choice_stats': choice_stats,
         'choice_filter_key': '',
         'active_choice_filter_label': '',
         'expected_submitters': expected,
+        'expected_count': expected_count,
         'not_submitted': not_submitted,
+        'not_submitted_count': not_submitted_count,
         'files_data': files_data,
+        'has_downloadable_files': has_downloadable_files,
+        'request_phase': request_phase,
+        'share_url': short_url,
+        'share_message': share_message,
+        'allowed_type_labels': allowed_type_labels,
+        'allowed_type_summary': " + ".join(allowed_type_labels),
+        'show_created_banner': request.GET.get("entry") == "created",
+        'toggle_is_primary': toggle_is_primary,
+        'show_secondary_toggle': not toggle_is_primary,
         'ssambti_launch_url': ssambti_launch_url,
         'studentmbti_launch_url': studentmbti_launch_url,
     })

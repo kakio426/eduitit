@@ -10,299 +10,348 @@
 
 {% block extra_css %}
 <style>
-    .qr-container {
-        background: white;
-        border-radius: 20px;
-        box-shadow: 8px 8px 16px #b8bec5, -8px -8px 16px #ffffff;
-        padding: 1.25rem;
-        text-align: center;
-    }
-
     .qr-image {
         width: 200px;
         height: 200px;
         margin: 0 auto;
-        border-radius: 12px;
+        border-radius: 16px;
     }
 
-    .dashboard-scrollbar::-webkit-scrollbar {
-        width: 6px;
+    details > summary {
+        list-style: none;
     }
 
-    .dashboard-scrollbar::-webkit-scrollbar-track {
-        background: transparent;
+    details > summary::-webkit-details-marker {
+        display: none;
     }
 
-    .dashboard-scrollbar::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
-        border-radius: 999px;
-    }
-
-    .dashboard-scrollbar {
-        scrollbar-width: thin;
-        scrollbar-color: #cbd5e1 transparent;
+    details[open] .more-toggle-icon {
+        transform: rotate(180deg);
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <section class="pt-32 pb-10 px-4 md:px-6 min-h-screen bg-[#E0E5EC] text-base md:text-lg" x-data="requestDetailPage()">
-    <div class="max-w-7xl mx-auto">
-        <div class="mb-6">
+    <div class="max-w-6xl mx-auto space-y-5">
+        <div>
             <a href="{% url 'collect:dashboard' %}" class="inline-flex items-center gap-2 text-base md:text-lg text-gray-600 hover:text-gray-800 transition-colors font-semibold">
                 <i class="fa-solid fa-arrow-left"></i>
                 <span class="font-medium">대시보드로 돌아가기</span>
             </a>
         </div>
 
-        <div class="clay-card p-6 mb-5">
-            <div class="flex items-start justify-between flex-wrap gap-4">
-                <div>
-                    <h1 class="text-4xl md:text-5xl font-black text-gray-700 mb-2">{{ req.title }}</h1>
-                    {% if req.description %}<p class="text-lg md:text-xl text-gray-600 mb-3">{{ req.description }}</p>{% endif %}
-                    <div class="flex items-center gap-4 flex-wrap text-base md:text-lg text-gray-600">
-                        {% if req.status == 'active' %}
-                        <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full font-bold">진행중</span>
-                        {% elif req.status == 'closed' %}
-                        <span class="bg-red-100 text-red-700 px-3 py-1 rounded-full font-bold">마감</span>
-                        {% else %}
-                        <span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full font-bold">보관</span>
-                        {% endif %}
-                        {% if req.deadline %}<span><i class="fa-solid fa-clock mr-1"></i>마감: {{ req.deadline|date:"Y-m-d H:i" }}</span>{% endif %}
-                        {% if req.retention_until %}<span><i class="fa-solid fa-hourglass-end mr-1"></i>보관 연장: {{ req.retention_until|date:"Y-m-d H:i" }}까지</span>{% endif %}
-                        <span><i class="fa-solid fa-paper-plane mr-1"></i><span id="total-count">{{ total_count }}건</span> 제출</span>
-                        {% if req.template_file %}<span class="text-emerald-600"><i class="fa-solid fa-file-lines mr-1"></i>양식 첨부</span>{% endif %}
-                    </div>
+        <div class="clay-card p-6 md:p-8">
+            <div class="space-y-5">
+                <div class="space-y-2">
+                    <h1 class="text-4xl md:text-5xl font-black text-gray-700">{{ req.title }}</h1>
+                    {% if req.description %}
+                    <p class="text-lg md:text-xl text-gray-600">{{ req.description }}</p>
+                    {% endif %}
                 </div>
-                <div class="flex flex-col items-end gap-2">
-                    <div class="flex gap-2 flex-wrap justify-end">
-                        <a href="{% url 'collect:request_edit' req.id %}" class="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-xl font-bold hover:bg-emerald-200 transition text-base md:text-lg"><i class="fa-solid fa-pen-to-square mr-1"></i>수정</a>
+
+                <div class="flex flex-wrap gap-2 text-sm md:text-base">
+                    {% if req.status == 'active' %}
+                    <span class="inline-flex items-center gap-2 rounded-full bg-green-100 px-3 py-1.5 font-bold text-green-700">
+                        <i class="fa-solid fa-circle-play"></i>진행중
+                    </span>
+                    {% elif req.status == 'closed' %}
+                    <span class="inline-flex items-center gap-2 rounded-full bg-red-100 px-3 py-1.5 font-bold text-red-700">
+                        <i class="fa-solid fa-circle-stop"></i>마감
+                    </span>
+                    {% else %}
+                    <span class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 font-bold text-slate-700">
+                        <i class="fa-solid fa-box-archive"></i>보관
+                    </span>
+                    {% endif %}
+
+                    <span class="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1.5 font-semibold text-slate-700 shadow-sm">
+                        <i class="fa-solid fa-paper-plane text-emerald-500"></i>
+                        {% if expected_count %}
+                        {{ submitted_count }}/{{ expected_count }} 제출
+                        {% else %}
+                        총 {{ submitted_count }}건 제출
+                        {% endif %}
+                    </span>
+
+                    {% if expected_count %}
+                    <span class="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1.5 font-semibold text-amber-700 shadow-sm">
+                        <i class="fa-solid fa-user-clock"></i>미제출 {{ not_submitted_count }}명
+                    </span>
+                    {% endif %}
+
+                    <span class="inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1.5 font-semibold text-sky-700 shadow-sm">
+                        <i class="fa-solid fa-layer-group"></i>제출 방식 {{ allowed_type_summary }}
+                    </span>
+
+                    <span class="inline-flex items-center gap-2 rounded-full bg-violet-50 px-3 py-1.5 font-semibold text-violet-700 shadow-sm">
+                        <i class="fa-solid fa-clock"></i>
+                        {% if req.deadline %}
+                        마감 {{ req.deadline|date:"Y-m-d H:i" }}
+                        {% else %}
+                        마감 없음
+                        {% endif %}
+                    </span>
+                </div>
+
+                <div class="space-y-3">
+                    <div class="grid gap-2 md:grid-cols-3">
+                        {% if request_phase == 'share' %}
+                        <button type="button" @click="copyShareLink()" class="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-3 text-base md:text-lg font-bold text-white shadow-lg transition hover:shadow-xl">
+                            <i class="fa-solid" :class="linkCopied ? 'fa-check' : 'fa-link'"></i>
+                            <span x-text="linkCopied ? '링크 복사됨' : '링크 복사'">링크 복사</span>
+                        </button>
+                        <button type="button" @click="showQrPanel = !showQrPanel" class="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-base md:text-lg font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
+                            <i class="fa-solid fa-qrcode text-emerald-600"></i>
+                            <span x-text="showQrPanel ? 'QR 닫기' : 'QR 보기'">QR 보기</span>
+                        </button>
+                        <a href="#submissions-section" @click.prevent="scrollToSubmissions()" class="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-base md:text-lg font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
+                            <i class="fa-solid fa-inbox text-emerald-600"></i>제출 확인
+                        </a>
+                        {% else %}
+                            {% if has_downloadable_files %}
+                            <button type="button" onclick="downloadAllFiles()" class="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-3 text-base md:text-lg font-bold text-white shadow-lg transition hover:shadow-xl">
+                                <i class="fa-solid fa-download"></i>제출 파일 받기
+                            </button>
+                            <a href="{% url 'collect:export_csv' req.id %}" class="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-base md:text-lg font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
+                                <i class="fa-solid fa-file-csv text-emerald-600"></i>표로 내보내기
+                            </a>
+                            {% else %}
+                            <a href="{% url 'collect:export_csv' req.id %}" class="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-3 text-base md:text-lg font-bold text-white shadow-lg transition hover:shadow-xl">
+                                <i class="fa-solid fa-file-csv"></i>표로 내보내기
+                            </a>
+                            <form action="{% url 'collect:request_toggle' req.id %}" method="post">
+                                {% csrf_token %}
+                                <button type="submit" class="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-base md:text-lg font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
+                                    <i class="fa-solid fa-rotate-left text-emerald-600"></i>수합 다시 열기
+                                </button>
+                            </form>
+                            {% endif %}
+                        <a href="#submissions-section" @click.prevent="scrollToSubmissions()" class="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-base md:text-lg font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
+                            <i class="fa-solid fa-inbox text-emerald-600"></i>제출 확인
+                        </a>
+                        {% endif %}
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <a href="{% url 'collect:request_edit' req.id %}" class="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-100 px-4 py-2.5 text-base md:text-lg font-bold text-emerald-700 transition hover:bg-emerald-200">
+                            <i class="fa-solid fa-pen-to-square"></i>수정
+                        </a>
+
+                        {% if show_secondary_toggle %}
                         <form action="{% url 'collect:request_toggle' req.id %}" method="post">
                             {% csrf_token %}
                             {% if req.status == 'active' %}
-                            <button type="submit" class="px-4 py-2 bg-red-100 text-red-600 rounded-xl font-bold hover:bg-red-200 transition text-base md:text-lg"><i class="fa-solid fa-stop mr-1"></i>마감하기</button>
+                            <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-xl bg-red-100 px-4 py-2.5 text-base md:text-lg font-bold text-red-700 transition hover:bg-red-200">
+                                <i class="fa-solid fa-stop"></i>수합 마감
+                            </button>
                             {% else %}
-                            <button type="submit" class="px-4 py-2 bg-green-100 text-green-600 rounded-xl font-bold hover:bg-green-200 transition text-base md:text-lg"><i class="fa-solid fa-play mr-1"></i>재개하기</button>
+                            <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-xl bg-green-100 px-4 py-2.5 text-base md:text-lg font-bold text-green-700 transition hover:bg-green-200">
+                                <i class="fa-solid fa-rotate-left"></i>수합 다시 열기
+                            </button>
                             {% endif %}
                         </form>
-                        <a href="{% url 'collect:export_csv' req.id %}" class="px-4 py-2 bg-blue-100 text-blue-600 rounded-xl font-bold hover:bg-blue-200 transition text-base md:text-lg"><i class="fa-solid fa-file-csv mr-1"></i>CSV</a>
-                        <form action="{% url 'collect:request_delete' req.id %}" method="post" onsubmit="return confirm('이 수합 요청을 삭제하시겠습니까? 모든 제출물도 함께 삭제됩니다.');">
-                            {% csrf_token %}
-                            <button type="submit" class="px-4 py-2 bg-red-100 text-red-600 rounded-xl font-bold hover:bg-red-200 transition text-base md:text-lg"><i class="fa-solid fa-trash mr-1"></i>삭제</button>
-                        </form>
-                    </div>
-                    <div class="flex gap-2 flex-wrap justify-end">
-                        <form action="{% url 'collect:request_extend_deadline' req.id %}" method="post">
-                            {% csrf_token %}
-                            <input type="hidden" name="days" value="1">
-                            <button type="submit" class="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-xl font-bold hover:bg-emerald-200 transition text-base md:text-lg"><i class="fa-solid fa-clock mr-1"></i>마감 +1일</button>
-                        </form>
-                        <form action="{% url 'collect:request_extend_retention' req.id %}" method="post">
-                            {% csrf_token %}
-                            <input type="hidden" name="days" value="7">
-                            <button type="submit" class="px-4 py-2 bg-amber-100 text-amber-700 rounded-xl font-bold hover:bg-amber-200 transition text-base md:text-lg"><i class="fa-solid fa-hourglass-end mr-1"></i>보관 +7일</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="mb-5">
-            <button type="button" @click="showRetention=!showRetention" class="text-base md:text-lg text-amber-700 hover:text-amber-800 font-semibold inline-flex items-center gap-1">
-                <i class="fa-solid" :class="showRetention ? 'fa-chevron-down' : 'fa-chevron-right'"></i> 자동 정리 안내
-            </button>
-            <div x-show="showRetention" x-transition class="mt-2 bg-amber-50 border border-amber-200 rounded-xl p-3 text-base md:text-lg text-amber-700">
-                <p>자동 삭제/정리는 백그라운드에서 처리됩니다.</p>
-                <p>제출 기간은 <strong>마감 연장</strong>, 보관 기간은 <strong>보관 연장</strong>으로 각각 조정할 수 있습니다.</p>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-5">
-            <div class="rounded-2xl bg-white border border-slate-200 shadow-sm p-3">
-                <p class="text-base md:text-lg text-slate-500 font-semibold">총 제출</p>
-                <p class="text-4xl md:text-5xl font-black text-slate-800">{{ total_count }}건</p>
-            </div>
-            <div class="rounded-2xl bg-emerald-50 border border-emerald-200 shadow-sm p-3">
-                <p class="text-base md:text-lg text-emerald-700 font-semibold">선택형 응답자</p>
-                <p class="text-4xl md:text-5xl font-black text-emerald-700">{{ type_stats.choice|default:"0" }}명</p>
-            </div>
-            <div class="rounded-2xl bg-violet-50 border border-violet-200 shadow-sm p-3">
-                <p class="text-base md:text-lg text-violet-700 font-semibold">최다 선택 항목</p>
-                <p class="text-2xl md:text-3xl font-black text-violet-700 truncate">
-                    {% if req.allow_choice and choice_stats.top_label %}{{ choice_stats.top_label }}{% else %}-{% endif %}
-                </p>
-            </div>
-            <div class="rounded-2xl bg-amber-50 border border-amber-200 shadow-sm p-3">
-                <p class="text-base md:text-lg text-amber-700 font-semibold">선택 집중도</p>
-                <p class="text-4xl md:text-5xl font-black text-amber-700">
-                    {% if req.allow_choice and choice_stats.has_responses %}{{ choice_stats.top_pct|floatformat:1 }}%{% else %}0%{% endif %}
-                </p>
-            </div>
-        </div>
-
-        <div class="grid gap-5 xl:grid-cols-12 xl:max-h-[70vh]">
-            <div class="space-y-5 xl:col-span-8 xl:min-h-0 xl:flex xl:flex-col">
-                <div class="clay-card p-4">
-                    <h3 class="text-xl md:text-2xl font-bold text-gray-700 mb-3">
-                        <i class="fa-solid fa-chart-pie text-emerald-500 mr-2"></i>제출 유형 분포
-                    </h3>
-                    <div class="space-y-3 text-base md:text-lg">
-                        <div>
-                            <div class="flex justify-between mb-1">
-                                <span class="text-gray-500">파일</span>
-                                <span class="font-bold">{{ type_stats.file|default:"0" }}건</span>
-                            </div>
-                            <div class="h-2.5 bg-gray-200 rounded-full overflow-hidden">
-                                <div class="h-full bg-blue-500" style="width: {% widthratio type_stats.file|default:0 total_count|default:1 100 %}%"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between mb-1">
-                                <span class="text-gray-500">링크</span>
-                                <span class="font-bold">{{ type_stats.link|default:"0" }}건</span>
-                            </div>
-                            <div class="h-2.5 bg-gray-200 rounded-full overflow-hidden">
-                                <div class="h-full bg-purple-500" style="width: {% widthratio type_stats.link|default:0 total_count|default:1 100 %}%"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between mb-1">
-                                <span class="text-gray-500">텍스트</span>
-                                <span class="font-bold">{{ type_stats.text|default:"0" }}건</span>
-                            </div>
-                            <div class="h-2.5 bg-gray-200 rounded-full overflow-hidden">
-                                <div class="h-full bg-amber-500" style="width: {% widthratio type_stats.text|default:0 total_count|default:1 100 %}%"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between mb-1">
-                                <span class="text-gray-500">선택형</span>
-                                <span class="font-bold">{{ type_stats.choice|default:"0" }}건</span>
-                            </div>
-                            <div class="h-2.5 bg-gray-200 rounded-full overflow-hidden">
-                                <div class="h-full bg-emerald-500" style="width: {% widthratio type_stats.choice|default:0 total_count|default:1 100 %}%"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {% if req.allow_choice %}
-                <div id="choice-stats-panel" data-url="{% url 'collect:choice_stats_partial' req.id %}" class="xl:min-h-0 xl:flex-1 xl:overflow-y-auto dashboard-scrollbar pr-1">
-                    {% include 'collect/partials/choice_stats_panel.html' %}
-                </div>
-                {% else %}
-                <div class="clay-card p-5 text-center text-slate-500">
-                    <p class="font-bold mb-1">이 요청은 선택형 제출을 사용하지 않습니다.</p>
-                    <p class="text-base md:text-lg">선택형을 켜면 항목별 비율 대시보드가 여기에 표시됩니다.</p>
-                </div>
-                {% endif %}
-            </div>
-
-            <aside class="space-y-5 xl:col-span-4 xl:min-h-0 xl:flex xl:flex-col">
-                <div class="qr-container">
-                    <img src="data:image/png;base64,{{ qr_code_base64 }}" alt="QR Code" class="qr-image mb-3 max-w-[160px] max-h-[160px]">
-                    <p class="text-base md:text-lg text-gray-600 mb-3">QR을 스캔하면 제출 페이지로 이동합니다.</p>
-                    <div class="bg-gray-100 rounded-xl p-3 flex items-center justify-between gap-2">
-                        <div class="flex flex-col items-start px-1 min-w-0">
-                            <span class="text-base text-gray-500 font-medium">입장코드</span>
-                            <span class="text-3xl md:text-4xl font-bold text-emerald-600 tracking-widest">{{ req.access_code }}</span>
-                        </div>
-                        <button @click="copyInvite()" class="px-3 py-2.5 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-600 transition flex items-center gap-2 shadow-sm text-base md:text-lg">
-                            <i class="fa-solid" :class="copied ? 'fa-check' : 'fa-copy'"></i>
-                            <span x-text="copied ? '복사됨' : '초대문구 복사'"></span>
-                        </button>
-                    </div>
-                </div>
-
-                {% if ssambti_launch_url or studentmbti_launch_url %}
-                <div class="clay-card p-4 bg-violet-50 border border-violet-200">
-                    <h3 class="text-lg md:text-xl font-bold text-violet-800 mb-2">
-                        <i class="fa-solid fa-link mr-1.5"></i>BTI 연동 링크
-                    </h3>
-                    <p class="text-sm md:text-base text-violet-700 mb-3">BTI 결과에서 이 수합으로 바로 넘어오게 설정할 수 있습니다.</p>
-
-                    {% if ssambti_launch_url %}
-                    <div class="mb-3">
-                        <p class="text-xs text-violet-600 font-semibold mb-1">쌤BTI 시작 링크</p>
-                        <div class="flex items-center gap-2">
-                            <input type="text" readonly value="{{ ssambti_launch_url }}"
-                                   class="flex-1 px-3 py-2 rounded-lg border border-violet-200 bg-white text-xs md:text-sm text-violet-800">
-                            <button type="button"
-                                    onclick="copyText('{{ ssambti_launch_url|escapejs }}', '쌤BTI 연동 링크가 복사되었습니다.')"
-                                    class="px-3 py-2 rounded-lg bg-violet-600 text-white text-xs md:text-sm font-bold hover:bg-violet-700 transition">
-                                복사
-                            </button>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    {% if studentmbti_launch_url %}
-                    <div>
-                        <p class="text-xs text-violet-600 font-semibold mb-1">우리반BTI 연동 시작 링크</p>
-                        <p class="text-[11px] text-violet-600 mb-2">이 링크로 우리반BTI 대시보드에 들어가 세션을 만들거나 열면, QR/입장코드가 이 수합으로 자동 연동됩니다.</p>
-                        <div class="flex items-center gap-2">
-                            <input type="text" readonly value="{{ studentmbti_launch_url }}"
-                                   class="flex-1 px-3 py-2 rounded-lg border border-violet-200 bg-white text-xs md:text-sm text-violet-800">
-                            <button type="button"
-                                    onclick="copyText('{{ studentmbti_launch_url|escapejs }}', '우리반BTI 연동 링크가 복사되었습니다.')"
-                                    class="px-3 py-2 rounded-lg bg-violet-600 text-white text-xs md:text-sm font-bold hover:bg-violet-700 transition">
-                                복사
-                            </button>
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
-                {% endif %}
-
-                {% if expected_submitters %}
-                <details class="clay-card p-4" open>
-                    <summary class="cursor-pointer list-none flex items-center justify-between">
-                        <h3 class="text-xl md:text-2xl font-bold text-gray-700">
-                            <i class="fa-solid fa-user-check text-emerald-500 mr-2"></i>제출 대상자
-                            <span class="text-base font-normal text-gray-500 ml-1">{{ expected_submitters|length }}명</span>
-                        </h3>
-                        <i class="fa-solid fa-chevron-down text-base text-gray-400"></i>
-                    </summary>
-                    <div class="mt-3">
-                        {% if not_submitted %}
-                        <p class="text-base md:text-lg text-red-500 font-bold mb-2"><i class="fa-solid fa-triangle-exclamation mr-1"></i>미제출 {{ not_submitted|length }}명</p>
-                        <div class="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto dashboard-scrollbar pr-1">
-                            {% for name in not_submitted %}<span class="px-2 py-1 bg-red-100 text-red-600 rounded-lg text-base font-medium whitespace-nowrap">{{ name }}</span>{% endfor %}
-                        </div>
-                        {% else %}
-                        <p class="text-base md:text-lg text-emerald-600 font-bold mb-2"><i class="fa-solid fa-circle-check mr-1"></i>전원 제출 완료</p>
                         {% endif %}
-                    </div>
-                </details>
-                {% endif %}
 
-                <div class="clay-card p-5 xl:min-h-0 xl:flex-1 xl:flex xl:flex-col">
-                    <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
-                        <h2 class="text-3xl md:text-4xl font-bold text-gray-700 flex items-center gap-2"><i class="fa-solid fa-inbox text-emerald-500"></i>제출물 목록</h2>
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <span id="submission-filter-pill" class="hidden px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-base md:text-lg font-bold"></span>
-                            <button id="submission-filter-clear" type="button" onclick="clearSubmissionFilter()" class="hidden px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-base md:text-lg font-bold hover:bg-slate-200 transition">
-                                필터 해제
-                            </button>
-                        </div>
-                        <label class="inline-flex items-center gap-2 text-base md:text-lg text-gray-600">
-                            <input id="auto-refresh" type="checkbox" checked class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
-                            5초 자동 갱신
-                        </label>
+                        <details class="w-full md:w-auto">
+                            <summary class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 py-2.5 text-base md:text-lg font-bold text-slate-700 transition hover:bg-slate-200">
+                                <i class="fa-solid fa-ellipsis"></i>더보기
+                                <i class="fa-solid fa-chevron-down text-sm transition more-toggle-icon"></i>
+                            </summary>
+                            <div class="mt-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-lg md:min-w-[340px]">
+                                <div class="space-y-2">
+                                    <button type="button" @click="copyShareMessage()" class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-slate-50 px-4 py-3 text-left text-base md:text-lg font-bold text-slate-700 transition hover:bg-slate-100">
+                                        <i class="fa-solid" :class="messageCopied ? 'fa-check' : 'fa-copy'"></i>
+                                        <span x-text="messageCopied ? '초대문구 복사됨' : '초대문구 복사'">초대문구 복사</span>
+                                    </button>
+
+                                    <a href="{{ share_url }}" target="_blank" rel="noopener noreferrer" class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-slate-50 px-4 py-3 text-base md:text-lg font-bold text-slate-700 transition hover:bg-slate-100">
+                                        <i class="fa-solid fa-arrow-up-right-from-square"></i>제출 페이지 열기
+                                    </a>
+
+                                    {% if request_phase == 'share' and has_downloadable_files %}
+                                    <button type="button" onclick="downloadAllFiles()" class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-slate-50 px-4 py-3 text-base md:text-lg font-bold text-slate-700 transition hover:bg-slate-100">
+                                        <i class="fa-solid fa-download"></i>제출 파일 받기
+                                    </button>
+                                    {% endif %}
+
+                                    {% if request_phase == 'share' %}
+                                    <a href="{% url 'collect:export_csv' req.id %}" class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-slate-50 px-4 py-3 text-base md:text-lg font-bold text-slate-700 transition hover:bg-slate-100">
+                                        <i class="fa-solid fa-file-csv"></i>표로 내보내기
+                                    </a>
+                                    {% endif %}
+
+                                    <form action="{% url 'collect:request_extend_deadline' req.id %}" method="post">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="days" value="1">
+                                        <button type="submit" class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-slate-50 px-4 py-3 text-base md:text-lg font-bold text-slate-700 transition hover:bg-slate-100">
+                                            <i class="fa-solid fa-clock"></i>마감 +1일
+                                        </button>
+                                    </form>
+
+                                    <form action="{% url 'collect:request_extend_retention' req.id %}" method="post">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="days" value="7">
+                                        <button type="submit" class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-slate-50 px-4 py-3 text-base md:text-lg font-bold text-slate-700 transition hover:bg-slate-100">
+                                            <i class="fa-solid fa-hourglass-end"></i>보관 +7일
+                                        </button>
+                                    </form>
+                                </div>
+
+                                {% if ssambti_launch_url or studentmbti_launch_url %}
+                                <div class="mt-4 rounded-xl border border-violet-200 bg-violet-50 p-4">
+                                    <h3 class="mb-2 text-base md:text-lg font-bold text-violet-800">
+                                        <i class="fa-solid fa-link mr-1.5"></i>BTI 연동 링크
+                                    </h3>
+                                    <div class="space-y-2">
+                                        {% if ssambti_launch_url %}
+                                        <div class="space-y-1">
+                                            <p class="text-sm font-semibold text-violet-700">쌤BTI 시작 링크</p>
+                                            <div class="flex flex-col gap-2 sm:flex-row">
+                                                <input type="text" readonly value="{{ ssambti_launch_url }}" class="min-w-0 flex-1 rounded-lg border border-violet-200 bg-white px-3 py-2 text-sm text-violet-800">
+                                                <button type="button" onclick="copyText('{{ ssambti_launch_url|escapejs }}', '쌤BTI 연동 링크가 복사되었습니다.')" class="rounded-lg bg-violet-600 px-3 py-2 text-sm font-bold text-white transition hover:bg-violet-700">
+                                                    복사
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+
+                                        {% if studentmbti_launch_url %}
+                                        <div class="space-y-1">
+                                            <p class="text-sm font-semibold text-violet-700">우리반BTI 시작 링크</p>
+                                            <div class="flex flex-col gap-2 sm:flex-row">
+                                                <input type="text" readonly value="{{ studentmbti_launch_url }}" class="min-w-0 flex-1 rounded-lg border border-violet-200 bg-white px-3 py-2 text-sm text-violet-800">
+                                                <button type="button" onclick="copyText('{{ studentmbti_launch_url|escapejs }}', '우리반BTI 연동 링크가 복사되었습니다.')" class="rounded-lg bg-violet-600 px-3 py-2 text-sm font-bold text-white transition hover:bg-violet-700">
+                                                    복사
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm md:text-base text-amber-800">
+                                    <p class="font-bold"><i class="fa-solid fa-circle-info mr-1"></i>자동 정리 안내</p>
+                                    <p class="mt-1">자동 삭제와 정리는 백그라운드에서 처리됩니다. 제출 기간은 마감 연장으로, 보관 기간은 보관 연장으로 조정할 수 있습니다.</p>
+                                </div>
+
+                                <form action="{% url 'collect:request_delete' req.id %}" method="post" class="mt-4" onsubmit="return confirm('이 수합 요청을 삭제하시겠습니까? 모든 제출물도 함께 삭제됩니다.');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-red-100 px-4 py-3 text-base md:text-lg font-bold text-red-700 transition hover:bg-red-200">
+                                        <i class="fa-solid fa-trash"></i>삭제
+                                    </button>
+                                </form>
+                            </div>
+                        </details>
                     </div>
 
-                    <div id="submissions-list" data-url="{% url 'collect:submissions_partial' req.id %}" data-choice-filter="" data-choice-filter-label="" class="xl:min-h-0 xl:flex-1 xl:overflow-y-auto dashboard-scrollbar pr-1">
-                        {% include 'collect/partials/submissions_list.html' %}
+                    {% if show_created_banner %}
+                    <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-base md:text-lg font-semibold text-emerald-800">
+                        요청이 만들어졌어요. 이제 링크를 보내면 됩니다.
                     </div>
+                    {% endif %}
                 </div>
 
-                {% if files_data %}
-                <button id="download-all-btn" onclick="downloadAllFiles()" class="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition text-lg md:text-xl">
-                    <i class="fa-solid fa-download mr-2"></i><span id="download-label">전체 파일 다운로드 (ZIP)</span>
-                </button>
+                {% if request_phase == 'share' %}
+                <div x-cloak x-show="showQrPanel" x-transition class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <div class="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)] lg:items-center">
+                        <div class="text-center">
+                            <img src="data:image/png;base64,{{ qr_code_base64 }}" alt="QR Code" class="qr-image">
+                            <p class="mt-3 text-sm md:text-base text-gray-500">QR을 스캔하면 제출 페이지로 이동합니다.</p>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="rounded-2xl bg-slate-50 p-4">
+                                <p class="text-sm font-semibold text-slate-500">입장코드</p>
+                                <p class="text-3xl md:text-4xl font-black tracking-widest text-emerald-600">{{ req.access_code }}</p>
+                            </div>
+                            <div class="rounded-2xl bg-slate-50 p-4">
+                                <label for="share-url-field" class="block text-sm font-semibold text-slate-500">제출 링크</label>
+                                <input id="share-url-field" type="text" readonly value="{{ share_url }}" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm md:text-base text-slate-700">
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <button type="button" @click="copyShareMessage()" class="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-base md:text-lg font-bold text-white transition hover:bg-emerald-600">
+                                    <i class="fa-solid" :class="messageCopied ? 'fa-check' : 'fa-copy'"></i>
+                                    <span x-text="messageCopied ? '초대문구 복사됨' : '초대문구 복사'">초대문구 복사</span>
+                                </button>
+                                <a href="{{ share_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-base md:text-lg font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
+                                    <i class="fa-solid fa-arrow-up-right-from-square text-emerald-600"></i>제출 페이지 열기
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 {% endif %}
-            </aside>
+            </div>
         </div>
+
+        <div class="clay-card p-5">
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <h2 class="text-2xl md:text-3xl font-bold text-gray-700">
+                        <i class="fa-solid fa-user-check mr-2 text-emerald-500"></i>미제출 현황
+                    </h2>
+                    <p class="mt-1 text-base md:text-lg text-gray-500">누가 아직 제출하지 않았는지 바로 확인할 수 있습니다.</p>
+                </div>
+                {% if expected_count %}
+                <span class="rounded-full bg-slate-100 px-3 py-1 text-sm md:text-base font-bold text-slate-700">{{ expected_count }}명 대상</span>
+                {% endif %}
+            </div>
+
+            <div class="mt-4">
+                {% if expected_submitters %}
+                    {% if not_submitted %}
+                    <p class="mb-3 text-base md:text-lg font-bold text-red-600">
+                        <i class="fa-solid fa-triangle-exclamation mr-1"></i>미제출 {{ not_submitted_count }}명
+                    </p>
+                    <div class="flex flex-wrap gap-2">
+                        {% for name in not_submitted %}
+                        <span class="rounded-xl bg-red-100 px-3 py-2 text-base font-medium text-red-700">{{ name }}</span>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="rounded-2xl bg-emerald-50 px-4 py-4 text-base md:text-lg font-bold text-emerald-700">
+                        <i class="fa-solid fa-circle-check mr-1"></i>전원 제출 완료
+                    </div>
+                    {% endif %}
+                {% else %}
+                <div class="rounded-2xl bg-slate-50 px-4 py-4 text-base md:text-lg text-slate-600">
+                    제출 대상자를 따로 지정하지 않았습니다. 제출 건수만 확인하며 바로 공유하는 흐름에 맞춰 사용할 수 있습니다.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div id="submissions-section" class="clay-card p-5">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div class="space-y-1">
+                    <h2 id="submissions-heading" tabindex="-1" class="text-3xl md:text-4xl font-bold text-gray-700 flex items-center gap-2 outline-none">
+                        <i class="fa-solid fa-inbox text-emerald-500"></i>제출물 목록
+                    </h2>
+                    <p class="text-base md:text-lg text-gray-500">실시간 제출 현황과 파일, 링크, 텍스트 응답을 여기서 확인합니다.</p>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span id="submission-filter-pill" class="hidden px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-base md:text-lg font-bold"></span>
+                    <button id="submission-filter-clear" type="button" onclick="clearSubmissionFilter()" class="hidden px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-base md:text-lg font-bold hover:bg-slate-200 transition">
+                        필터 해제
+                    </button>
+                    <label class="inline-flex items-center gap-2 text-base md:text-lg text-gray-600">
+                        <input id="auto-refresh" type="checkbox" checked class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
+                        5초 자동 갱신
+                    </label>
+                </div>
+            </div>
+
+            <div id="submissions-list" data-url="{% url 'collect:submissions_partial' req.id %}" data-choice-filter="" data-choice-filter-label="">
+                {% include 'collect/partials/submissions_list.html' %}
+            </div>
+        </div>
+
+        {% if req.allow_choice %}
+        <div id="choice-stats-panel" data-url="{% url 'collect:choice_stats_partial' req.id %}">
+            {% include 'collect/partials/choice_stats_panel.html' %}
+        </div>
+        {% endif %}
 
         <div class="mt-6 xl:hidden">
             {% include 'core/partials/service_suggestion.html' with service_key='collect' %}
@@ -316,23 +365,53 @@
 <script>
     function requestDetailPage() {
         return {
-            copied: false,
-            showRetention: false,
-            copyInvite() {
-                const title = '{{ req.title|escapejs }}';
-                const code = '{{ req.access_code }}';
-                const link = window.location.origin + '{% url 'collect:short_link' req.access_code %}';
-                const message = `[가뿐수합] '${title}' 요청에 참여해주세요.\n\n참여 링크: ${link}\n입장 코드: ${code}`;
-                navigator.clipboard.writeText(message);
-                this.copied = true;
-                setTimeout(() => { this.copied = false; }, 2000);
-            }
+            linkCopied: false,
+            messageCopied: false,
+            showQrPanel: false,
+            copyShareLink() {
+                this.copyWithFlag('{{ share_url|escapejs }}', 'linkCopied');
+            },
+            copyShareMessage() {
+                this.copyWithFlag('{{ share_message|escapejs }}', 'messageCopied');
+            },
+            copyWithFlag(value, flag) {
+                if (!navigator.clipboard || !navigator.clipboard.writeText) {
+                    alert('이 환경에서는 자동 복사를 지원하지 않습니다.');
+                    return;
+                }
+                navigator.clipboard.writeText(value || '').then(() => {
+                    this[flag] = true;
+                    setTimeout(() => {
+                        this[flag] = false;
+                    }, 2000);
+                }).catch(() => {
+                    alert('복사에 실패했습니다. 다시 시도해주세요.');
+                });
+            },
+            scrollToSubmissions() {
+                const section = document.getElementById('submissions-section');
+                const heading = document.getElementById('submissions-heading');
+                if (section) {
+                    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+                if (heading) {
+                    window.setTimeout(() => {
+                        heading.focus({ preventScroll: true });
+                    }, 250);
+                }
+            },
         };
     }
 
     window.copyText = function(value, message) {
+        if (!navigator.clipboard || !navigator.clipboard.writeText) {
+            alert('이 환경에서는 자동 복사를 지원하지 않습니다.');
+            return;
+        }
         navigator.clipboard.writeText(value || '').then(() => {
             alert(message || '복사되었습니다.');
+        }).catch(() => {
+            alert('복사에 실패했습니다. 다시 시도해주세요.');
         });
     };
 

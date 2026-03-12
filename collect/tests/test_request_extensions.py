@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from collect.models import CollectionRequest
+from collect.models import CollectionRequest, Submission
 from handoff.models import HandoffRosterGroup, HandoffRosterMember
 
 
@@ -235,8 +235,66 @@ class RequestExtensionTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         req = CollectionRequest.objects.get(creator=self.teacher, title="공유 명단 연동 수합")
+        self.assertEqual(
+            response.url,
+            f"{reverse('collect:request_detail', args=[req.id])}?entry=created",
+        )
         self.assertEqual(req.shared_roster_group_id, group.id)
         self.assertEqual(req.expected_submitters_list, ["김교사", "이교사"])
+
+    def test_request_detail_exposes_summary_context_and_created_banner(self):
+        self.client.force_login(self.teacher)
+        req = CollectionRequest.objects.create(
+            creator=self.teacher,
+            title="상세 화면 요약",
+            allow_file=True,
+            allow_link=False,
+            allow_text=True,
+            allow_choice=False,
+            expected_submitters="김교사\n이교사",
+            status="active",
+        )
+        Submission.objects.create(
+            collection_request=req,
+            contributor_name="김교사",
+            submission_type="text",
+            text_content="제출 완료",
+        )
+
+        response = self.client.get(
+            f"{reverse('collect:request_detail', args=[req.id])}?entry=created"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["request_phase"], "share")
+        self.assertEqual(response.context["expected_count"], 2)
+        self.assertEqual(response.context["not_submitted_count"], 1)
+        self.assertEqual(response.context["allowed_type_labels"], ["파일", "텍스트"])
+        self.assertTrue(response.context["show_created_banner"])
+        self.assertContains(response, "요청이 만들어졌어요. 이제 링크를 보내면 됩니다.")
+        self.assertContains(response, "링크 복사")
+        self.assertContains(response, "QR 보기")
+        self.assertContains(response, "제출 확인")
+
+    def test_closed_request_detail_uses_results_phase_actions(self):
+        self.client.force_login(self.teacher)
+        req = CollectionRequest.objects.create(
+            creator=self.teacher,
+            title="마감된 수합",
+            allow_file=False,
+            allow_link=True,
+            allow_text=True,
+            allow_choice=False,
+            status="closed",
+        )
+
+        response = self.client.get(reverse("collect:request_detail", args=[req.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["request_phase"], "results")
+        self.assertFalse(response.context["has_downloadable_files"])
+        self.assertContains(response, "표로 내보내기")
+        self.assertContains(response, "수합 다시 열기")
 
     def test_request_create_rejects_other_users_handoff_roster(self):
         self.client.force_login(self.teacher)
