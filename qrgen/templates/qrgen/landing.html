@@ -1,19 +1,15 @@
 {% extends "base.html" %}
-{% load static %}
 
-{% block title %}{{ page_title|default:'수업 QR 생성기 - Eduitit' }}{% endblock %}
+{% block title %}수업 QR 생성기 - Eduitit{% endblock %}
 
 {% block content %}
 <section class="pt-32 pb-20 px-4 min-h-screen">
-    <div class="max-w-6xl mx-auto" x-data="createQrgenApp()" x-init="init()" @keydown.window.escape="closeCycleMode()">
+    <div class="max-w-6xl mx-auto" x-data="qrgenApp()" x-init="init()" @keydown.window.escape="closeCycleMode()">
         <div class="text-center mb-8">
             <div class="text-5xl mb-3">{{ service.icon|default:'🔳' }}</div>
             <h1 class="text-3xl md:text-5xl font-black text-gray-800 font-title">{{ service.title|default:'수업 QR 생성기' }}</h1>
             <p class="text-gray-500 mt-3 text-sm md:text-base">
                 기본은 링크 1개 생성입니다. 필요할 때 링크를 추가해 자동 전환으로 QR을 보여주세요.
-            </p>
-            <p class="mt-3 text-xs font-bold text-amber-700">
-                localhost, 사설 IP, 학교 내부망 주소는 QR로 만들 수 없습니다. 학생에게 보여줄 공개 링크만 사용해 주세요.
             </p>
         </div>
 
@@ -148,5 +144,325 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-<script src="{% static 'qrgen/js/qrgen_shared.js' %}"></script>
+<script>
+function qrgenApp() {
+    return {
+        items: [],
+        nextUid: 1,
+        intervalSec: 8,
+        cycleMode: false,
+        isPlaying: false,
+        currentSlide: 0,
+        remainingSec: 8,
+        autoTimer: null,
+        countdownTimer: null,
+        renderTimer: null,
+
+        init() {
+            const initialUrl = '{{ initial_url|default:""|escapejs }}';
+            const initialTitle = '{{ initial_title|default:""|escapejs }}';
+            if (initialUrl) {
+                this.addItem(initialTitle || '링크 1', initialUrl);
+            } else {
+                this.addItem('링크 1', '');
+            }
+            this.queueRender();
+
+            document.addEventListener('fullscreenchange', () => {
+                if (!document.fullscreenElement && this.cycleMode) {
+                    this.closeCycleMode(true);
+                }
+            });
+            window.addEventListener('resize', () => {
+                if (this.cycleMode) {
+                    this.$nextTick(() => this.renderCycleQr());
+                }
+            });
+        },
+
+        addItem(defaultTitle = '', defaultUrl = '') {
+            const item = {
+                uid: this.nextUid++,
+                title: defaultTitle || `${this.items.length + 1}번 링크`,
+                url: defaultUrl || '',
+                normalizedUrl: '',
+                error: '',
+            };
+            this.items.push(item);
+            if (item.url) {
+                this.updateItem(item);
+            }
+        },
+
+        removeItem(uid) {
+            this.items = this.items.filter((item) => item.uid !== uid);
+            if (this.items.length === 0) {
+                this.addItem('링크 1', '');
+            }
+            this.queueRender();
+            this.syncCycleAfterDataChange();
+        },
+
+        parseUrl(raw) {
+            const text = (raw || '').trim();
+            if (!text) {
+                return { url: '', error: '' };
+            }
+
+            const withScheme = /^https?:\/\//i.test(text) ? text : `https://${text}`;
+            let parsed;
+            try {
+                parsed = new URL(withScheme);
+            } catch (err) {
+                return { url: '', error: '유효한 링크 형식이 아니에요.' };
+            }
+
+            if (!['http:', 'https:'].includes(parsed.protocol)) {
+                return { url: '', error: 'http/https 링크만 사용할 수 있어요.' };
+            }
+
+            if (!parsed.hostname || parsed.hostname.indexOf('.') === -1) {
+                return { url: '', error: '도메인이 포함된 링크를 입력해 주세요.' };
+            }
+
+            return { url: parsed.toString(), error: '' };
+        },
+
+        updateItem(item) {
+            const parsed = this.parseUrl(item.url);
+            item.normalizedUrl = parsed.url;
+            item.error = parsed.error;
+            this.queueRender();
+            this.syncCycleAfterDataChange();
+        },
+
+        validItems() {
+            return this.items.filter((item) => !!item.normalizedUrl);
+        },
+
+        queueRender() {
+            if (this.renderTimer) {
+                clearTimeout(this.renderTimer);
+            }
+            this.renderTimer = setTimeout(() => {
+                this.$nextTick(() => {
+                    this.renderAllPreviews();
+                    if (this.cycleMode) {
+                        this.renderCycleQr();
+                    }
+                });
+            }, 40);
+        },
+
+        renderAllPreviews() {
+            this.items.forEach((item) => {
+                const container = document.getElementById(`preview-qr-${item.uid}`);
+                if (!container) {
+                    return;
+                }
+                container.innerHTML = '';
+                if (!item.normalizedUrl) {
+                    return;
+                }
+                new QRCode(container, {
+                    text: item.normalizedUrl,
+                    width: 170,
+                    height: 170,
+                    colorDark: '#111827',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.M,
+                });
+            });
+        },
+
+        sanitizedInterval() {
+            let value = parseInt(this.intervalSec, 10);
+            if (Number.isNaN(value)) {
+                value = 8;
+            }
+            if (value < 2) {
+                value = 2;
+            }
+            if (value > 120) {
+                value = 120;
+            }
+            this.intervalSec = value;
+            return value;
+        },
+
+        onIntervalChange() {
+            const interval = this.sanitizedInterval();
+            this.remainingSec = interval;
+            if (this.cycleMode && this.isPlaying) {
+                this.startTimers();
+            }
+        },
+
+        activeItem() {
+            const valid = this.validItems();
+            if (!valid.length) {
+                return null;
+            }
+            if (this.currentSlide >= valid.length) {
+                this.currentSlide = 0;
+            }
+            return valid[this.currentSlide];
+        },
+
+        activeItemTitle() {
+            const item = this.activeItem();
+            return item ? (item.title || '링크') : '표시할 QR이 없습니다';
+        },
+
+        slideLabel() {
+            const total = this.validItems().length;
+            if (!total) {
+                return '0 / 0';
+            }
+            return `${this.currentSlide + 1} / ${total}`;
+        },
+
+        startCycleMode() {
+            if (!this.validItems().length) {
+                return;
+            }
+            this.cycleMode = true;
+            this.isPlaying = true;
+            this.currentSlide = 0;
+            this.remainingSec = this.sanitizedInterval();
+
+            this.$nextTick(() => {
+                this.renderCycleQr();
+                this.startTimers();
+                const stage = document.getElementById('cycleStage');
+                if (stage && !document.fullscreenElement && stage.requestFullscreen) {
+                    stage.requestFullscreen().catch(() => {});
+                }
+            });
+        },
+
+        closeCycleMode(skipExit = false) {
+            this.cycleMode = false;
+            this.isPlaying = false;
+            this.clearTimers();
+            if (!skipExit && document.fullscreenElement && document.exitFullscreen) {
+                document.exitFullscreen().catch(() => {});
+            }
+        },
+
+        syncCycleAfterDataChange() {
+            if (!this.cycleMode) {
+                return;
+            }
+            const valid = this.validItems();
+            if (!valid.length) {
+                this.closeCycleMode();
+                return;
+            }
+            if (this.currentSlide >= valid.length) {
+                this.currentSlide = 0;
+            }
+            if (this.isPlaying) {
+                this.startTimers();
+            } else {
+                this.renderCycleQr();
+            }
+        },
+
+        clearTimers() {
+            if (this.autoTimer) {
+                clearInterval(this.autoTimer);
+                this.autoTimer = null;
+            }
+            if (this.countdownTimer) {
+                clearInterval(this.countdownTimer);
+                this.countdownTimer = null;
+            }
+        },
+
+        startTimers() {
+            this.clearTimers();
+            if (!this.cycleMode || !this.isPlaying) {
+                return;
+            }
+
+            const interval = this.sanitizedInterval();
+            this.remainingSec = interval;
+
+            this.autoTimer = setInterval(() => {
+                this.nextSlide(false);
+            }, interval * 1000);
+
+            this.countdownTimer = setInterval(() => {
+                if (!this.cycleMode || !this.isPlaying) {
+                    return;
+                }
+                this.remainingSec -= 1;
+                if (this.remainingSec <= 0) {
+                    this.remainingSec = interval;
+                }
+            }, 1000);
+        },
+
+        togglePlay() {
+            if (!this.cycleMode) {
+                return;
+            }
+            this.isPlaying = !this.isPlaying;
+            if (this.isPlaying) {
+                this.startTimers();
+            } else {
+                this.clearTimers();
+            }
+        },
+
+        nextSlide(manual = true) {
+            const valid = this.validItems();
+            if (!valid.length) {
+                this.closeCycleMode();
+                return;
+            }
+            this.currentSlide = (this.currentSlide + 1) % valid.length;
+            this.renderCycleQr();
+            if (manual && this.isPlaying) {
+                this.startTimers();
+            }
+        },
+
+        prevSlide() {
+            const valid = this.validItems();
+            if (!valid.length) {
+                this.closeCycleMode();
+                return;
+            }
+            this.currentSlide = (this.currentSlide - 1 + valid.length) % valid.length;
+            this.renderCycleQr();
+            if (this.isPlaying) {
+                this.startTimers();
+            }
+        },
+
+        renderCycleQr() {
+            const container = document.getElementById('cycleQrCanvas');
+            if (!container) {
+                return;
+            }
+            container.innerHTML = '';
+            const item = this.activeItem();
+            if (!item) {
+                return;
+            }
+            const side = Math.max(280, Math.min(780, Math.floor(window.innerWidth * 0.76)));
+            new QRCode(container, {
+                text: item.normalizedUrl,
+                width: side,
+                height: side,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.M,
+            });
+        },
+    };
+}
+</script>
 {% endblock %}

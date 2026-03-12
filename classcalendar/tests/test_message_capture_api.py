@@ -38,9 +38,9 @@ class MessageCaptureApiTests(TestCase):
         profile.nickname = "메시지교사"
         profile.role = "school"
         profile.save(update_fields=["nickname", "role"])
-        self.save_url = reverse("classcalendar:api_message_capture_save")
         self.parse_url = reverse("classcalendar:api_message_capture_parse")
         self.archive_url = reverse("classcalendar:api_message_capture_archive")
+        self.quick_save_url = reverse("classcalendar:api_message_capture_quick_save")
 
     def _commit(self, capture_id, payload):
         return self.client.post(
@@ -60,6 +60,16 @@ class MessageCaptureApiTests(TestCase):
     def _archive_detail(self, capture_id):
         return self.client.get(
             reverse("classcalendar:api_message_capture_archive_detail", kwargs={"capture_id": str(capture_id)})
+        )
+
+    def _quick_save(self, *, raw_text, idempotency_key="quick-save-1", source_hint="home_mini"):
+        return self.client.post(
+            self.quick_save_url,
+            data={
+                "raw_text": raw_text,
+                "idempotency_key": idempotency_key,
+                "source_hint": source_hint,
+            },
         )
 
     def _build_selected_candidates(self, parse_payload):
@@ -88,13 +98,9 @@ class MessageCaptureApiTests(TestCase):
         with_candidate=False,
         saved=False,
         candidate_title="테스트 일정",
-        archive_only=False,
     ):
         owner = user or self.user
         capture_index = CalendarMessageCapture.objects.count() + 1
-        parse_payload = {"summary_text": summary_text} if summary_text else {}
-        if archive_only:
-            parse_payload["archive_only"] = True
         capture = CalendarMessageCapture.objects.create(
             author=owner,
             raw_text=raw_text,
@@ -102,7 +108,7 @@ class MessageCaptureApiTests(TestCase):
             parse_status=parse_status,
             idempotency_key=f"archive-capture-{capture_index}",
             content_cache_key=f"archive-cache-{capture_index}",
-            parse_payload=parse_payload,
+            parse_payload={"summary_text": summary_text} if summary_text else {},
         )
         if with_candidate:
             start_time = timezone.now().replace(second=0, microsecond=0)
@@ -133,56 +139,6 @@ class MessageCaptureApiTests(TestCase):
             )
         return capture
 
-    def test_save_stores_message_in_archive_without_parsing(self):
-        upload = SimpleUploadedFile("notice.txt", b"hello", content_type="text/plain")
-        response = self.client.post(
-            self.save_url,
-            data={
-                "raw_text": "다음 주 안내장을 먼저 보관합니다.",
-                "idempotency_key": "archive-save-only",
-                "files": upload,
-            },
-        )
-        self.assertEqual(response.status_code, 201)
-        payload = response.json()
-        self.assertEqual(payload.get("archive_status"), "unparsed")
-        self.assertEqual(payload.get("archive_status_label"), "미분석")
-        self.assertEqual(payload.get("candidates"), [])
-        self.assertEqual(len(payload.get("attachments") or []), 1)
-
-        capture = CalendarMessageCapture.objects.get(id=payload["capture_id"])
-        self.assertTrue((capture.parse_payload or {}).get("archive_only"))
-        self.assertEqual(capture.attachments.count(), 1)
-        self.assertEqual(capture.candidates.count(), 0)
-
-    def test_parse_saved_reads_archive_message_and_preserves_attachments(self):
-        upload = SimpleUploadedFile("notice.txt", b"hello", content_type="text/plain")
-        save_response = self.client.post(
-            self.save_url,
-            data={
-                "raw_text": "3월 19일 학부모총회 실시\n12일(목)까지 자료 제출 부탁드립니다.",
-                "idempotency_key": "archive-parse-saved",
-                "files": upload,
-            },
-        )
-        self.assertEqual(save_response.status_code, 201)
-        capture_id = save_response.json()["capture_id"]
-
-        parse_saved_response = self.client.post(
-            reverse("classcalendar:api_message_capture_parse_saved", kwargs={"capture_id": capture_id})
-        )
-        self.assertEqual(parse_saved_response.status_code, 200)
-        payload = parse_saved_response.json()
-        self.assertEqual(payload.get("capture_id"), capture_id)
-        self.assertNotEqual(payload.get("archive_status"), "unparsed")
-        self.assertGreater(len(payload.get("candidates") or []), 0)
-        self.assertEqual(len(payload.get("attachments") or []), 1)
-
-        capture = CalendarMessageCapture.objects.get(id=capture_id)
-        self.assertFalse((capture.parse_payload or {}).get("archive_only"))
-        self.assertEqual(capture.attachments.count(), 1)
-        self.assertGreater(capture.candidates.count(), 0)
-
     def test_parse_returns_candidates_and_reuses_same_content_cache(self):
         first_response = self.client.post(
             self.parse_url,
@@ -196,8 +152,10 @@ class MessageCaptureApiTests(TestCase):
         first_payload = first_response.json()
         self.assertEqual(first_payload.get("summary_text"), "찾은 일정 2개")
         self.assertEqual(len(first_payload.get("candidates") or []), 2)
-        self.assertEqual(first_payload["candidates"][0]["kind"], "deadline")
-        self.assertEqual(first_payload["candidates"][1]["kind"], "event")
+        self.assertEqual(
+            {candidate.get("kind") for candidate in (first_payload.get("candidates") or [])},
+            {"deadline", "event"},
+        )
 
         second_response = self.client.post(
             self.parse_url,
@@ -282,8 +240,25 @@ class MessageCaptureApiTests(TestCase):
         self.assertTrue(capture.llm_used)
 
     @override_settings(FEATURE_MESSAGE_CAPTURE_CLASSIFIER_ASSIST=True)
+    @patch("classcalendar.views.refine_message_capture_candidates")
     @patch("classcalendar.views.predict_message_capture_item_type")
-    def test_classifier_assist_does_not_override_strong_deadline_candidate(self, mock_predict):
+    def test_classifier_assist_does_not_override_strong_deadline_candidate(self, mock_predict, mock_refine):
+        mock_refine.return_value = [
+            {
+                "kind": "deadline",
+                "title": "연수물 수정 마감",
+                "summary": "학부모총회 전에 연수물을 수정해 주세요.",
+                "is_recommended": True,
+                "evidence_text": "12일(목)까지 연수물 수정 부탁드립니다.",
+            },
+            {
+                "kind": "event",
+                "title": "학부모총회",
+                "summary": "학부모총회가 실시됩니다.",
+                "is_recommended": True,
+                "evidence_text": "3월 19일 학부모총회 실시",
+            },
+        ]
         mock_predict.return_value = {
             "label": "event",
             "scores": {"event": 0.95, "task": 0.04, "ignore": 0.01},
@@ -450,6 +425,96 @@ class MessageCaptureApiTests(TestCase):
         self.assertEqual(len(archive_payload.get("items") or []), 1)
         self.assertEqual(archive_payload["items"][0]["capture_id"], first_payload["capture_id"])
 
+    @patch("classcalendar.views.parse_message_capture_draft")
+    @patch("classcalendar.views.refine_message_capture_candidates")
+    def test_quick_save_creates_pre_analysis_archive_item_without_running_analysis(self, mock_refine, mock_parse):
+        response = self._quick_save(
+            raw_text="4월 3일 공개수업 자료 제출 부탁드립니다.",
+            idempotency_key="quick-save-pre-analysis",
+        )
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+
+        capture = CalendarMessageCapture.objects.get(id=payload["capture_id"])
+        self.assertEqual(capture.parse_payload.get("storage_mode"), "quick_save")
+        self.assertEqual(capture.parse_payload.get("analysis_state"), "pre_analysis")
+        self.assertEqual(payload["item"]["archive_status"], "pre_analysis")
+        self.assertEqual(payload["item"]["archive_status_label"], "일정 찾기 전")
+        mock_parse.assert_not_called()
+        mock_refine.assert_not_called()
+
+        detail_response = self._archive_detail(payload["capture_id"])
+        self.assertEqual(detail_response.status_code, 200)
+        detail_payload = detail_response.json()
+        self.assertTrue(detail_payload.get("analysis_required"))
+        self.assertEqual(detail_payload.get("archive_status"), "pre_analysis")
+        self.assertEqual(detail_payload.get("candidates"), [])
+        mock_parse.assert_not_called()
+        mock_refine.assert_not_called()
+
+    def test_quick_save_is_not_counted_as_failed_or_needs_review_filter(self):
+        response = self._quick_save(
+            raw_text="5월 10일 연수 안내는 나중에 다시 확인해주세요.",
+            idempotency_key="quick-save-filter",
+        )
+        self.assertEqual(response.status_code, 201)
+        capture_id = response.json()["capture_id"]
+
+        all_payload = self._archive_list().json()
+        self.assertEqual(all_payload.get("counts", {}).get("all"), 1)
+        self.assertEqual(all_payload.get("counts", {}).get("needs_review"), 0)
+        self.assertEqual(all_payload.get("counts", {}).get("failed"), 0)
+
+        failed_ids = {item["capture_id"] for item in (self._archive_list(filter_value="failed").json().get("items") or [])}
+        review_ids = {item["capture_id"] for item in (self._archive_list(filter_value="needs_review").json().get("items") or [])}
+        self.assertNotIn(capture_id, failed_ids)
+        self.assertNotIn(capture_id, review_ids)
+
+    @patch("classcalendar.views.refine_message_capture_candidates")
+    def test_analyze_endpoint_runs_only_when_requested_for_quick_saved_message(self, mock_refine):
+        mock_refine.return_value = [
+            {
+                "kind": "deadline",
+                "title": "연수물 수정 마감",
+                "summary": "학부모총회 전에 연수물을 수정해 주세요.",
+                "is_recommended": True,
+                "evidence_text": "12일(목)까지 연수물 수정 부탁드립니다.",
+            },
+            {
+                "kind": "event",
+                "title": "학부모총회",
+                "summary": "학부모총회가 실시됩니다.",
+                "is_recommended": True,
+                "evidence_text": "3월 19일 학부모총회 실시",
+            },
+        ]
+        save_response = self._quick_save(
+            raw_text="3월 19일 학부모총회 실시\n12일(목)까지 연수물 수정 부탁드립니다.",
+            idempotency_key="quick-save-analyze",
+        )
+        self.assertEqual(save_response.status_code, 201)
+        capture_id = save_response.json()["capture_id"]
+
+        detail_response = self._archive_detail(capture_id)
+        self.assertEqual(detail_response.status_code, 200)
+        self.assertTrue(detail_response.json().get("analysis_required"))
+        mock_refine.assert_not_called()
+
+        analyze_url = reverse("classcalendar:api_message_capture_analyze", kwargs={"capture_id": capture_id})
+        analyze_response = self.client.post(analyze_url)
+        self.assertEqual(analyze_response.status_code, 200)
+        analyze_payload = analyze_response.json()
+        self.assertFalse(analyze_payload.get("analysis_required"))
+        self.assertTrue(analyze_payload.get("llm_used"))
+        self.assertGreaterEqual(len(analyze_payload.get("candidates") or []), 2)
+        mock_refine.assert_called_once()
+
+        mock_refine.reset_mock()
+        second_analyze_response = self.client.post(analyze_url)
+        self.assertEqual(second_analyze_response.status_code, 200)
+        self.assertFalse(second_analyze_response.json().get("analysis_required"))
+        mock_refine.assert_not_called()
+
     def test_archive_detail_shows_candidates_and_saved_events_for_committed_capture(self):
         parse_response = self.client.post(
             self.parse_url,
@@ -498,13 +563,6 @@ class MessageCaptureApiTests(TestCase):
         self.assertEqual(detail_payload.get("saved_events"), [])
 
     def test_archive_filters_saved_pending_review_and_failed(self):
-        unparsed_capture = self._create_archive_capture(
-            raw_text="첨부만 먼저 보관한 메시지",
-            parse_status=CalendarMessageCapture.ParseStatus.NEEDS_REVIEW,
-            summary_text="아직 일정으로 읽지 않은 메시지",
-            with_candidate=False,
-            archive_only=True,
-        )
         saved_capture = self._create_archive_capture(
             raw_text="3월 12일 저장된 일정",
             summary_text="저장된 일정",
@@ -537,20 +595,17 @@ class MessageCaptureApiTests(TestCase):
         all_response = self._archive_list()
         self.assertEqual(all_response.status_code, 200)
         counts = all_response.json().get("counts") or {}
-        self.assertEqual(counts.get("all"), 5)
-        self.assertEqual(counts.get("unparsed"), 1)
+        self.assertEqual(counts.get("all"), 4)
         self.assertEqual(counts.get("saved"), 1)
         self.assertEqual(counts.get("pending"), 1)
         self.assertEqual(counts.get("needs_review"), 1)
         self.assertEqual(counts.get("failed"), 1)
 
-        unparsed_ids = {item["capture_id"] for item in (self._archive_list(filter_value="unparsed").json().get("items") or [])}
         saved_ids = {item["capture_id"] for item in (self._archive_list(filter_value="saved").json().get("items") or [])}
         pending_ids = {item["capture_id"] for item in (self._archive_list(filter_value="pending").json().get("items") or [])}
         review_ids = {item["capture_id"] for item in (self._archive_list(filter_value="needs_review").json().get("items") or [])}
         failed_ids = {item["capture_id"] for item in (self._archive_list(filter_value="failed").json().get("items") or [])}
 
-        self.assertEqual(unparsed_ids, {str(unparsed_capture.id)})
         self.assertEqual(saved_ids, {str(saved_capture.id)})
         self.assertEqual(pending_ids, {str(pending_capture.id)})
         self.assertEqual(review_ids, {str(review_capture.id)})
@@ -583,12 +638,6 @@ class MessageCaptureApiTests(TestCase):
     def test_main_shows_message_capture_entry_for_allowlist_user(self):
         response = self.client.get(reverse("classcalendar:legacy_main"), follow=True)
         self.assertRedirects(response, reverse("classcalendar:main"))
-        self.assertContains(response, "openMessageHub($event, 'capture', { resetCapture: true })")
-        self.assertContains(response, "오늘 다시 볼 메모 만들기")
-        self.assertNotContains(response, '@click.prevent="openMessageCaptureModal($event)"')
-
-    @override_settings(FEATURE_MESSAGE_CAPTURE_ENABLED=False)
-    def test_main_hides_message_capture_entry_when_feature_off(self):
-        response = self.client.get(reverse("classcalendar:legacy_main"), follow=True)
-        self.assertRedirects(response, reverse("classcalendar:main"))
-        self.assertNotContains(response, "openMessageHub($event, 'capture', { resetCapture: true })")
+        self.assertContains(response, '@click.prevent="openMessageCaptureModal($event)"')
+        self.assertContains(response, "메시지 바로 등록")
+        self.assertContains(response, "메시지 보관함")

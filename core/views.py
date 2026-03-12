@@ -26,29 +26,6 @@ from .active_classroom import (
     clear_active_classroom_session,
     set_default_classroom_for_user,
 )
-from .service_launcher import (
-    CALENDAR_HUB_PUBLIC_NAME,
-    HOME_AUXILIARY_SECTIONS,
-    HOME_MAIN_SECTIONS,
-    HOME_SECTION_FALLBACK_BY_TYPE,
-    HOME_SECTION_META_BY_KEY,
-    SHEETBOOK_PUBLIC_NAME,
-    get_public_product_name as _get_public_product_name,
-    is_calendar_hub_product as _is_calendar_hub_product,
-    is_sheetbook_cross_surface_hidden as _is_sheetbook_cross_surface_hidden,
-    is_sheetbook_product as _is_sheetbook_product,
-    replace_public_service_terms as _replace_public_service_terms,
-    resolve_home_section_key as _resolve_home_section_key,
-    resolve_product_launch_url as _resolve_product_launch_url,
-)
-from .prompt_lab_data import get_prompt_lab_catalog
-from .seo import (
-    build_home_page_seo,
-    build_prompt_lab_page_seo,
-    build_service_guide_detail_seo,
-    build_service_guide_list_seo,
-    build_tool_guide_page_seo,
-)
 from .teacher_first_cards import build_favorite_service_title, build_workbench_card_meta
 from django.contrib import messages
 from django.db import transaction
@@ -58,6 +35,7 @@ from django.utils.dateparse import parse_datetime
 from datetime import timedelta
 from PIL import Image
 import logging
+from .prompt_recipes import PROMPT_RECIPE_CATALOG, get_prompt_recipe_category_options
 
 logger = logging.getLogger(__name__)
 
@@ -136,13 +114,6 @@ def _get_post_feed_scope(request):
     return POST_FEED_SCOPE_ALL
 
 
-def _get_compact_posts(request):
-    raw_value = request.GET.get('compact_posts') or request.POST.get('compact_posts')
-    if raw_value is None:
-        return False
-    return str(raw_value).strip().lower() in {'1', 'true', 'yes', 'on'}
-
-
 def _render_post_list_partial(request, page_obj, feed_scope):
     empty_title = None
     empty_subtitle = None
@@ -158,7 +129,6 @@ def _render_post_list_partial(request, page_obj, feed_scope):
             'page_obj': page_obj,
             'post_list_target_id': _get_post_list_target_id(request),
             'feed_scope': feed_scope,
-            'compact_posts': _get_compact_posts(request),
             'empty_title': empty_title,
             'empty_subtitle': empty_subtitle,
         },
@@ -253,22 +223,150 @@ def _has_active_comment_restriction(user):
         Q(until__isnull=True) | Q(until__gt=timezone.now())
     ).exists()
 
+# =============================================================================
+# V2 홈 목적별 섹션 매핑 (메인 4 + 보조 3)
+# =============================================================================
+HOME_MAIN_SECTIONS = [
+    {
+        "key": "collect_sign",
+        "title": "수합·서명",
+        "subtitle": "링크로 받고 증빙까지",
+        "icon": "fa-solid fa-inbox",
+        "color": "blue",
+    },
+    {
+        "key": "doc_write",
+        "title": "문서·작성",
+        "subtitle": "문서 생성과 정리를 빠르게",
+        "icon": "fa-solid fa-file-lines",
+        "color": "emerald",
+    },
+    {
+        "key": "class_ops",
+        "title": "수업·학급 운영",
+        "subtitle": "교실 진행과 운영을 한 번에",
+        "icon": "fa-solid fa-chalkboard-user",
+        "color": "violet",
+    },
+    {
+        "key": "class_activity",
+        "title": "교실 활동",
+        "subtitle": "바로 시작하는 교실 활동",
+        "icon": "fa-solid fa-gamepad",
+        "color": "cyan",
+    },
+]
+
+HOME_AUXILIARY_SECTIONS = [
+    {
+        "key": "refresh",
+        "title": "상담·리프레시",
+        "subtitle": "성향·운세·리프레시",
+        "icon": "fa-solid fa-heart",
+        "color": "violet",
+    },
+    {
+        "key": "guide",
+        "title": "가이드·인사이트",
+        "subtitle": "도구 안내와 인사이트",
+        "icon": "fa-solid fa-lightbulb",
+        "color": "cyan",
+    },
+    {
+        "key": "external",
+        "title": "외부 서비스",
+        "subtitle": "연동/제휴 서비스",
+        "icon": "fa-solid fa-up-right-from-square",
+        "color": "emerald",
+    },
+]
+
+HOME_SECTION_BY_ROUTE = {
+    "collect:landing": "collect_sign",
+    "consent:landing": "collect_sign",
+    "signatures:landing": "collect_sign",
+    "signatures:list": "collect_sign",
+    "handoff:landing": "collect_sign",
+    "noticegen:main": "doc_write",
+    "hwpxchat:main": "doc_write",
+    "version_manager:landing": "doc_write",
+    "hwp_converter:landing": "doc_write",
+    "classcalendar:main": "class_ops",
+    "happy_seed:landing": "class_ops",
+    "reservations:dashboard_landing": "class_ops",
+    "reservations:landing": "class_ops",
+    "textbooks:main": "class_ops",
+    "edu_materials:main": "class_ops",
+    "qrgen:landing": "class_ops",
+    "seed_quiz:landing": "class_ops",
+    "ppobgi:main": "class_ops",
+    "artclass:main": "class_ops",
+    "studentmbti:start": "refresh",
+    "ssambti:main": "refresh",
+    "fortune:landing": "refresh",
+    "saju:landing": "refresh",
+    "notebooklm_guide:main": "guide",
+    "prompt_recipe:main": "guide",
+    "insights:list": "guide",
+}
+
+HOME_SECTION_KEYWORDS = [
+    ("동의서", "collect_sign"),
+    ("수합", "collect_sign"),
+    ("서명", "collect_sign"),
+    ("배부", "collect_sign"),
+    ("소식지", "doc_write"),
+    ("멘트", "doc_write"),
+    ("문서", "doc_write"),
+    ("pdf", "doc_write"),
+    ("최종", "doc_write"),
+    ("캘린더", "class_ops"),
+    ("예약", "class_ops"),
+    ("알림판", "class_ops"),
+    ("퀴즈", "class_ops"),
+    ("qr", "class_ops"),
+    ("행복의 씨앗", "class_ops"),
+    ("추첨기", "class_ops"),
+    ("미술 수업", "class_ops"),
+    ("윷놀이", "class_activity"),
+    ("체스", "class_activity"),
+    ("장기", "class_activity"),
+    ("커넥트 포", "class_activity"),
+    ("이솔레이션", "class_activity"),
+    ("아택스", "class_activity"),
+    ("브레이크스루", "class_activity"),
+    ("bti", "refresh"),
+    ("운세", "refresh"),
+    ("사주", "refresh"),
+    ("가이드", "guide"),
+    ("레시피", "guide"),
+    ("백과사전", "guide"),
+    ("insight", "guide"),
+    ("스쿨잇", "external"),
+    ("탈알고리즘", "external"),
+]
+
+HOME_SECTION_FALLBACK_BY_TYPE = {
+    "collect_sign": "collect_sign",
+    "classroom": "class_ops",
+    "work": "doc_write",
+    "game": "class_activity",
+    "counsel": "refresh",
+    "edutech": "guide",
+    "etc": "external",
+}
+
+HOME_SECTION_META_BY_KEY = {
+    section["key"]: section
+    for section in [*HOME_MAIN_SECTIONS, *HOME_AUXILIARY_SECTIONS]
+}
+
 HOME_COMPANION_SECTION_MAP = {
     'collect_sign': ['doc_write', 'class_ops'],
     'doc_write': ['collect_sign', 'class_ops'],
     'class_ops': ['doc_write', 'collect_sign'],
     'class_activity': ['class_ops'],
     'refresh': ['doc_write'],
-}
-
-HOME_CARD_SUMMARY_FALLBACK_BY_SECTION = {
-    "collect_sign": "회수부터 서명 확인까지 바로 이어서 처리합니다.",
-    "doc_write": "문서 초안과 정리를 빠르게 시작할 수 있습니다.",
-    "class_ops": "오늘 운영 흐름에 맞춰 바로 실행할 수 있습니다.",
-    "class_activity": "교실 분위기를 바로 살릴 수 있는 활동입니다.",
-    "refresh": "상담과 리프레시가 필요할 때 바로 엽니다.",
-    "guide": "필요한 안내와 참고를 빠르게 확인합니다.",
-    "external": "외부 서비스로 바로 이어집니다.",
 }
 
 
@@ -299,24 +397,21 @@ def _build_section_payload(section, items, preview_limit=None):
     }
 
 
-def _build_home_v2_display_groups(sections, aux_sections):
-    ordered_sections = [*sections, *aux_sections]
-    section_by_key = {section["key"]: section for section in ordered_sections}
+def _resolve_home_section_key(product):
+    route_name = (product.launch_route_name or "").strip().lower()
+    if route_name in HOME_SECTION_BY_ROUTE:
+        return HOME_SECTION_BY_ROUTE[route_name]
 
-    primary_keys = ("collect_sign", "doc_write", "class_ops", "refresh")
-    secondary_keys = ("guide", "external")
+    title = (product.title or "").strip().lower()
+    for keyword, section_key in HOME_SECTION_KEYWORDS:
+        if keyword.lower() in title:
+            return section_key
 
-    primary_display_sections = [section_by_key[key] for key in primary_keys if key in section_by_key]
-    used_keys = {section["key"] for section in primary_display_sections}
+    external_url = (product.external_url or "").strip().lower()
+    if external_url.startswith("http://") or external_url.startswith("https://"):
+        return "external"
 
-    secondary_display_sections = [section_by_key[key] for key in secondary_keys if key in section_by_key and key not in used_keys]
-    used_keys.update(section["key"] for section in secondary_display_sections)
-
-    secondary_display_sections.extend(
-        section for section in ordered_sections if section["key"] not in used_keys
-    )
-
-    return primary_display_sections, secondary_display_sections
+    return HOME_SECTION_FALLBACK_BY_TYPE.get(product.service_type, "guide")
 
 
 def get_purpose_sections(products_qs, preview_limit=None):
@@ -348,6 +443,28 @@ def get_purpose_sections(products_qs, preview_limit=None):
 
     games = list(bucket.get("class_activity", []))
     return main_sections, aux_sections, games
+
+
+def _resolve_product_launch_url(product):
+    """Resolve direct launch URL for quick actions."""
+    route_name = (product.launch_route_name or '').strip()
+    external_url = (product.external_url or '').strip()
+
+    # Absolute URLs are treated as truly external services.
+    if external_url.startswith("http://") or external_url.startswith("https://"):
+        return external_url, True
+
+    if route_name:
+        try:
+            return reverse(route_name), False
+        except NoReverseMatch:
+            logger.warning("Launch route missing for product '%s' (%s).", product.title, route_name)
+
+    # Legacy internal path fallback (e.g. /products/yut/)
+    if external_url:
+        return external_url, False
+
+    return reverse('product_detail', kwargs={'pk': product.pk}), False
 
 
 CALENDAR_HUB_PUBLIC_NAME = "학급 캘린더"
@@ -480,6 +597,45 @@ HOME_TRY_NOW_SUPPORT_CARD_SPECS = [
     },
 ]
 
+HOME_MINI_APP_SPECS = [
+    {
+        "key": "notice",
+        "service_name": "알림장·주간학습 멘트 생성기",
+        "description": "대상과 키워드만 적고 바로 쓸 문장을 만듭니다.",
+        "icon": "fa-solid fa-note-sticky",
+        "preferred_routes": ["noticegen:main"],
+        "fallback_route": "noticegen:main",
+        "service_type": "work",
+    },
+    {
+        "key": "qr",
+        "service_name": "수업 QR 생성기",
+        "description": "수업 링크 1개를 QR로 바로 바꿔서 씁니다.",
+        "icon": "fa-solid fa-qrcode",
+        "preferred_routes": ["qrgen:landing"],
+        "fallback_route": "qrgen:landing",
+        "service_type": "classroom",
+    },
+    {
+        "key": "prompt",
+        "service_name": "AI 프롬프트 레시피",
+        "description": "카테고리 하나를 고르면 추천 프롬프트를 바로 꺼냅니다.",
+        "icon": "fa-solid fa-wand-magic-sparkles",
+        "preferred_routes": ["prompt_lab", "prompt_recipe:main"],
+        "fallback_route": "prompt_lab",
+        "service_type": "edutech",
+    },
+    {
+        "key": "message",
+        "service_name": "메시지 저장",
+        "description": "짧은 메시지를 보관함에 넣고 나중에 일정찾기로 이어갑니다.",
+        "icon": "fa-solid fa-box-archive",
+        "preferred_routes": ["classcalendar:main"],
+        "fallback_route": "classcalendar:main",
+        "service_type": "classroom",
+    },
+]
+
 GUEST_START_CARD_SPECS = [
     {
         "title": "오늘 일정 정리",
@@ -544,8 +700,6 @@ CATALOG_SCENARIO_SECTIONS = [
         "description": "가이드, 인사이트, 외부 참고 서비스를 필요할 때만 엽니다.",
     },
 ]
-
-VALID_CATALOG_SECTION_KEYS = {section["key"] for section in CATALOG_SCENARIO_SECTIONS}
 
 GUIDE_ENTRY_POINT_META = [
     {
@@ -702,29 +856,6 @@ def _build_teacher_first_product_labels(product):
     }
 
 
-def _build_home_card_summary(product):
-    public_service_name = str(
-        getattr(product, "public_service_name", "") or getattr(product, "title", "") or ""
-    ).strip()
-
-    for candidate in (
-        getattr(product, "teacher_first_support_label", ""),
-        getattr(product, "solve_text", ""),
-        getattr(product, "description", ""),
-    ):
-        summary = str(candidate or "").strip()
-        if summary and summary != public_service_name:
-            return _replace_public_service_terms(summary, product)
-
-    section_key = _resolve_home_section_key(product)
-    fallback = HOME_CARD_SUMMARY_FALLBACK_BY_SECTION.get(section_key)
-    if not fallback:
-        fallback = HOME_SECTION_META_BY_KEY.get(section_key, {}).get("subtitle", "")
-    if not fallback:
-        fallback = "필요한 순간 바로 열 수 있습니다."
-    return _replace_public_service_terms(fallback, product)
-
-
 def _build_product_guide_url_map(products):
     product_ids = [product.id for product in products if getattr(product, "id", None)]
     if not product_ids:
@@ -766,7 +897,6 @@ def _attach_product_launch_meta(products):
         product.sample_url = ""
         for attr_name, attr_value in _build_teacher_first_product_labels(product).items():
             setattr(product, attr_name, attr_value)
-        product.home_card_summary = _build_home_card_summary(product)
         prepared.append(product)
     return prepared
 
@@ -1434,68 +1564,20 @@ def _format_home_calendar_schedule(event):
     return f"{start_dt.month}월 {start_dt.day}일 {start_dt:%H:%M} ~ {end_dt.month}월 {end_dt.day}일 {end_dt:%H:%M}"
 
 
-def _extract_home_calendar_event_note(event):
-    try:
-        text_blocks = sorted(
-            (block for block in event.blocks.all() if block.block_type == "text"),
-            key=lambda block: (block.order, block.id),
-        )
-    except Exception:
-        return ""
-
-    if not text_blocks:
-        return ""
-
-    content = text_blocks[0].content
-    if isinstance(content, dict):
-        note_text = content.get("text") or content.get("note") or ""
-    elif isinstance(content, str):
-        note_text = content
-    else:
-        note_text = ""
-    return str(note_text).strip()
-
-
-def _build_home_calendar_memo_excerpt(note_text, *, max_length=120):
-    lines = [line.strip() for line in str(note_text or "").splitlines() if line.strip()]
-    if not lines:
-        return ""
-    normalized = "\n".join(lines)
-    if len(normalized) <= max_length:
-        return normalized
-    return f"{normalized[: max_length - 3].rstrip()}..."
-
-
-def _format_home_task_schedule(task):
-    if not getattr(task, "due_at", None):
-        return "오늘 다시 볼 할 일"
-    due_dt = timezone.localtime(task.due_at)
-    if getattr(task, "has_time", False):
-        return f"{due_dt.month}월 {due_dt.day}일 · {due_dt:%H:%M}까지"
-    return f"{due_dt.month}월 {due_dt.day}일 · 오늘 할 일"
-
-
 def _build_home_calendar_summary_context(request):
     summary = {
         "enabled": False,
         "today_count": 0,
         "week_count": 0,
         "upcoming_items": [],
-        "today_memo_items": [],
-        "today_memo_empty_message": "오늘 다시 볼 메모가 없으면 달력 일정만 확인하면 됩니다.",
         "main_url": "",
         "create_api_url": "",
-        "message_enabled": False,
-        "message_item_types_enabled": False,
-        "message_limits_json": {},
-        "message_urls_json": {},
     }
     if not request.user.is_authenticated:
         return summary
 
     try:
-        from classcalendar.models import CalendarEvent, CalendarTask
-        from classcalendar.views import build_message_capture_ui_context
+        from classcalendar.models import CalendarEvent
     except Exception:
         logger.exception("[Home] classcalendar import failed")
         return summary
@@ -1526,69 +1608,16 @@ def _build_home_calendar_summary_context(request):
         events_qs.filter(
             Q(end_time__gte=now) | Q(start_time__date__gte=today)
         )
-        .prefetch_related("blocks")
         .order_by("start_time")[:3]
     )
     summary["upcoming_items"] = [
         {
             "title": event.title,
             "schedule_text": _format_home_calendar_schedule(event),
-            "note": _build_home_calendar_memo_excerpt(_extract_home_calendar_event_note(event), max_length=90),
+            "note": str(getattr(event, "note", "") or "").strip(),
         }
         for event in upcoming_events
     ]
-
-    today_memo_items = []
-    today_events = list(
-        events_qs.filter(start_time__date=today)
-        .prefetch_related("blocks")
-        .order_by("start_time")[:8]
-    )
-    for event in today_events:
-        memo_excerpt = _build_home_calendar_memo_excerpt(_extract_home_calendar_event_note(event))
-        if not memo_excerpt:
-            continue
-        today_memo_items.append(
-            {
-                "title": event.title,
-                "memo_excerpt": memo_excerpt,
-                "schedule_text": _format_home_calendar_schedule(event),
-                "href": summary["main_url"],
-            }
-        )
-        if len(today_memo_items) >= 2:
-            break
-
-    if len(today_memo_items) < 2:
-        today_tasks = list(
-            CalendarTask.objects.filter(
-                author=request.user,
-                status=CalendarTask.Status.OPEN,
-                due_at__date=today,
-            )
-            .order_by("due_at", "created_at")[:8]
-        )
-        for task in today_tasks:
-            memo_excerpt = _build_home_calendar_memo_excerpt(task.note)
-            if not memo_excerpt:
-                continue
-            today_memo_items.append(
-                {
-                    "title": task.title,
-                    "memo_excerpt": memo_excerpt,
-                    "schedule_text": _format_home_task_schedule(task),
-                    "href": summary["main_url"],
-                }
-            )
-            if len(today_memo_items) >= 2:
-                break
-
-    summary["today_memo_items"] = today_memo_items
-    message_capture_ui = build_message_capture_ui_context(request.user)
-    summary["message_enabled"] = bool(message_capture_ui["enabled"])
-    summary["message_item_types_enabled"] = bool(message_capture_ui["item_types_enabled"])
-    summary["message_limits_json"] = message_capture_ui["limits"]
-    summary["message_urls_json"] = message_capture_ui["urls"]
     summary["enabled"] = bool(summary["main_url"] and summary["create_api_url"])
     return summary
 
@@ -1648,10 +1677,10 @@ def _build_home_related_shortcuts(product_list):
 def _home_card_icon_color_class(service_type):
     color_map = {
         "collect_sign": "text-blue-500",
-        "classroom": "text-violet-500",
+        "classroom": "text-blue-500",
         "work": "text-emerald-500",
         "game": "text-red-500",
-        "counsel": "text-pink-500",
+        "counsel": "text-violet-500",
         "edutech": "text-cyan-500",
     }
     return color_map.get(service_type, "text-slate-500")
@@ -1677,18 +1706,30 @@ def _build_home_try_now_card_entries(product_list, specs):
             is_guest_allowed=bool(spec.get("is_guest_allowed", False)),
             limit=1,
         )
+        chips = (
+            list(getattr(product, "home_context_chips", []) or [])[:1]
+            if product
+            else PRODUCT_CONTEXT_CHIP_DEFAULTS.get(service_type, PRODUCT_CONTEXT_CHIP_DEFAULTS["etc"])[:1]
+        )
+        service_name = (
+            str(getattr(product, "public_service_name", "") or getattr(product, "title", "") or "").strip()
+            if product
+            else ""
+        ) or spec["service_name"]
         cards.append(
             {
                 "key": spec["key"],
                 "product_id": getattr(product, "id", ""),
+                "service_name": service_name,
                 "title": spec["title"],
                 "description": spec["description"],
                 "icon": getattr(product, "icon", "") if product and "fa-" in str(getattr(product, "icon", "")) else spec["icon"],
                 "icon_color_class": _home_card_icon_color_class(service_type),
                 "href": href,
                 "is_external": is_external,
-                "track_label": getattr(product, "title", "") or spec["service_name"],
+                "track_label": getattr(product, "title", service_name) if product else service_name,
                 "access_status_label": state_meta["home_access_status_label"],
+                "chips": chips,
             }
         )
     return cards
@@ -1700,6 +1741,42 @@ def _build_home_try_now_cards(product_list):
 
 def _build_home_try_now_support_cards(product_list):
     return _build_home_try_now_card_entries(product_list, HOME_TRY_NOW_SUPPORT_CARD_SPECS)
+
+
+def _build_home_mini_apps_context(product_list):
+    try:
+        from noticegen.models import TARGET_CHOICES, TOPIC_CHOICES
+    except Exception:
+        TARGET_CHOICES = [("student_low", "저학년"), ("student_high", "고학년"), ("parent", "학부모")]
+        TOPIC_CHOICES = [("activity", "활동"), ("event", "행사"), ("safety", "안전"), ("notice", "알림장")]
+
+    apps = {}
+    for spec in HOME_MINI_APP_SPECS:
+        product = _find_product_by_routes(product_list, spec.get("preferred_routes"))
+        service_type = str(getattr(product, "service_type", "") or spec.get("service_type", "") or "").strip()
+        if spec["key"] == "message":
+            full_url = _safe_reverse("classcalendar:main")
+            if full_url:
+                full_url = f"{full_url}?panel=message-archive"
+        else:
+            full_url = _safe_reverse(spec.get("fallback_route"))
+        apps[spec["key"]] = {
+            "key": spec["key"],
+            "product_id": getattr(product, "id", ""),
+            "service_name": spec["service_name"],
+            "description": spec["description"],
+            "icon": getattr(product, "icon", "") if product and "fa-" in str(getattr(product, "icon", "")) else spec["icon"],
+            "icon_color_class": _home_card_icon_color_class(service_type),
+            "full_url": full_url,
+        }
+
+    return {
+        "home_mini_apps": apps,
+        "home_mini_notice_target_options": TARGET_CHOICES,
+        "home_mini_notice_topic_options": TOPIC_CHOICES,
+        "prompt_recipe_catalog": PROMPT_RECIPE_CATALOG,
+        "prompt_recipe_category_options": get_prompt_recipe_category_options(),
+    }
 
 
 def _build_home_guest_start_cards(product_list):
@@ -1777,26 +1854,33 @@ def _build_home_calendar_hub_context(request):
         "today_count": calendar_summary.get("today_count", 0),
         "week_count": calendar_summary.get("week_count", 0),
         "upcoming_items": calendar_summary.get("upcoming_items", [])[:2],
-        "today_memo_items": calendar_summary.get("today_memo_items", [])[:2],
-        "today_memo_empty_message": calendar_summary.get("today_memo_empty_message", ""),
         "continue_items": continue_items,
         "main_url": calendar_summary.get("main_url") or _safe_reverse("classcalendar:main"),
         "create_api_url": calendar_summary.get("create_api_url", ""),
-        "message_enabled": bool(calendar_summary.get("message_enabled")),
-        "message_item_types_enabled": bool(calendar_summary.get("message_item_types_enabled")),
-        "message_limits_json": calendar_summary.get("message_limits_json") or {},
-        "message_urls_json": calendar_summary.get("message_urls_json") or {},
-        "primary_cta_label": "오늘 메모 열기",
-        "secondary_cta_label": "메모 만들기",
+        "primary_cta_label": f"{CALENDAR_HUB_PUBLIC_NAME} 열기",
+        "secondary_cta_label": "일정 추가",
         "record_board_enabled": bool(sheetbook_workspace.get("enabled")),
     }
 
 
-def _normalize_catalog_section_key(raw_value):
-    value = str(raw_value or "").strip().lower()
-    if value in VALID_CATALOG_SECTION_KEYS:
-        return value
-    return ""
+def _build_home_v2_compact_top_zone(today_context, favorite_items, calendar_hub):
+    return {
+        "today_items": list(today_context.get("today_items", [])[:3]),
+        "today_date_text": today_context.get("today_date_text", ""),
+        "today_empty_message": "오늘 바로 처리할 항목이 없으면 아래 서비스에서 필요한 도구를 고르면 됩니다.",
+        "favorite_items": list(favorite_items[:4]),
+        "favorites_empty_message": "별표한 서비스가 여기에 모입니다.",
+        "calendar_hub": {
+            "title": calendar_hub.get("title", CALENDAR_HUB_PUBLIC_NAME),
+            "today_count": calendar_hub.get("today_count", 0),
+            "week_count": calendar_hub.get("week_count", 0),
+            "upcoming_items": list(calendar_hub.get("upcoming_items", [])[:2]),
+            "main_url": calendar_hub.get("main_url", ""),
+            "create_api_url": calendar_hub.get("create_api_url", ""),
+            "primary_cta_label": calendar_hub.get("primary_cta_label", f"{CALENDAR_HUB_PUBLIC_NAME} 열기"),
+            "secondary_cta_label": calendar_hub.get("secondary_cta_label", "일정 추가"),
+        },
+    }
 
 
 def _resolve_catalog_scenario_key(product):
@@ -1852,8 +1936,7 @@ def _build_catalog_hub_context(product_list):
     }
 
 
-def _build_catalog_scenario_sections(product_list, selected_section_key=""):
-    selected_section_key = _normalize_catalog_section_key(selected_section_key)
+def _build_catalog_scenario_sections(product_list):
     bucket = {section["key"]: [] for section in CATALOG_SCENARIO_SECTIONS}
     for product in product_list:
         section_key = _resolve_catalog_scenario_key(product)
@@ -1863,8 +1946,6 @@ def _build_catalog_scenario_sections(product_list, selected_section_key=""):
 
     sections = []
     for section in CATALOG_SCENARIO_SECTIONS:
-        if selected_section_key and section["key"] != selected_section_key:
-            continue
         items = bucket.get(section["key"], [])
         if not items:
             continue
@@ -1984,20 +2065,13 @@ def _build_guide_groups(manuals, products_without_manual):
 def _home_v2(request, products, posts, page_obj, feed_scope):
     """Feature flag on 시 호출되는 V2 홈."""
     product_list = _attach_product_launch_meta(list(products))
-    today_try_cards = _build_home_try_now_cards(product_list)
-    today_try_support_cards = _build_home_try_now_support_cards(product_list)
     sections, aux_sections, games = get_purpose_sections(
         product_list,
-        preview_limit=2,
+        preview_limit={
+            "default": 2,
+            "class_ops": 3,
+        },
     )
-    primary_display_sections, secondary_display_sections = _build_home_v2_display_groups(sections, aux_sections)
-    sns_summary_posts = _build_home_community_summary_posts(page_obj, limit=2)
-    community_summary = {
-        'title': '실시간 소통',
-        'description': '공지와 최근 소통 두 가지만 먼저 보고, 전체 소통은 따로 이어서 확인합니다.',
-        'posts': sns_summary_posts,
-        'full_url': reverse('community_feed'),
-    }
 
     if request.user.is_authenticated:
         UserProfile.objects.get_or_create(user=request.user)
@@ -2048,29 +2122,19 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
         workbench_slots = _build_workbench_slots(favorite_items)
         recent_items = _build_product_link_items(recent_products, include_section_meta=True)
         discovery_items = _build_product_link_items(discovery_products, include_section_meta=True)
-        calendar_hub = _build_home_calendar_hub_context(request)
         workbench_bundles = _get_user_workbench_bundles(request.user, product_list)
         weekly_bundle_items = _get_weekly_workbench_bundle_highlights(request.user, product_list)
         today_context = _build_today_context(request)
+        calendar_hub = _build_home_calendar_hub_context(request)
+        compact_top_zone = _build_home_v2_compact_top_zone(today_context, favorite_items, calendar_hub)
         home_calendar_summary = next(iter(today_context.get('today_items', [])), None)
         home_sections = [*sections, *aux_sections]
-        home_v2_frontend_config = {
-            'toggleFavoriteUrl': reverse('toggle_product_favorite'),
-            'trackUsageUrl': reverse('track_product_usage'),
-            'calendar': {
-                'eventsUrl': reverse('classcalendar:api_events'),
-                'createEventUrl': reverse('classcalendar:api_create_event'),
-                'messageEnabled': bool(calendar_hub.get('message_enabled')),
-                'messageItemTypesEnabled': bool(calendar_hub.get('message_item_types_enabled')),
-            },
-        }
+        sns_summary_posts = _build_home_community_summary_posts(page_obj, limit=2)
 
         return render(request, 'core/home_authenticated_v2.html', {
             'products': products,
             'sections': sections,
             'aux_sections': aux_sections,
-            'primary_display_sections': primary_display_sections,
-            'secondary_display_sections': secondary_display_sections,
             'home_sections': home_sections,
             'games': games,
             'quick_actions': quick_action_items,
@@ -2082,17 +2146,20 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
             'discovery_items': discovery_items,
             'workbench_bundles': workbench_bundles,
             'weekly_bundle_items': weekly_bundle_items,
-            'calendar_hub': calendar_hub,
             'home_calendar_summary': home_calendar_summary,
-            'today_try_cards': today_try_cards,
-            'today_try_support_cards': today_try_support_cards,
-            'home_v2_frontend_config': home_v2_frontend_config,
-            'community_summary': community_summary,
+            'compact_top_zone': compact_top_zone,
+            'calendar_hub': calendar_hub,
+            'community_summary': {
+                'title': '실시간 소통',
+                'description': '필요한 공지와 최근 소통만 짧게 보고, 전체 소통은 별도 화면에서 이어서 확인합니다.',
+                'posts': sns_summary_posts,
+                'full_url': reverse('community_feed'),
+            },
             'posts': posts,
             'page_obj': page_obj,
             'feed_scope': feed_scope,
-            **build_home_page_seo(request).as_context(),
             **today_context,
+            **_build_home_mini_apps_context(product_list),
             **_build_sheetbook_workspace_context(request),
             **_build_home_student_games_qr_context(request),
         })
@@ -2103,14 +2170,10 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
         'featured_product': featured_product,
         'sections': sections,
         'aux_sections': aux_sections,
-        'primary_display_sections': primary_display_sections,
-        'secondary_display_sections': secondary_display_sections,
         'games': games,
-        'community_summary': community_summary,
         'posts': posts,
         'page_obj': page_obj,
         'feed_scope': feed_scope,
-        **build_home_page_seo(request).as_context(),
     })
 
 def home(request):
@@ -2159,7 +2222,6 @@ def home(request):
             'posts': page_obj,
             'page_obj': page_obj,
             'feed_scope': feed_scope,
-            **build_home_page_seo(request).as_context(),
         })
 
     # Else show the public home
@@ -2175,7 +2237,6 @@ def home(request):
         'posts': page_obj,
         'page_obj': page_obj,
         'feed_scope': feed_scope,
-        **build_home_page_seo(request).as_context(),
     })
 
 
@@ -2686,12 +2747,15 @@ def insight_sns_action(request, pk):
     return redirect('insight_sns_queue')
 
 def prompt_lab(request):
+    initial_category = str(request.GET.get("category") or "").strip()
+    if initial_category not in PROMPT_RECIPE_CATALOG:
+        initial_category = ""
     return render(
         request,
         'core/prompt_lab.html',
         {
-            'prompt_lab_catalog': get_prompt_lab_catalog(),
-            **build_prompt_lab_page_seo(request).as_context(),
+            "prompt_recipe_catalog": PROMPT_RECIPE_CATALOG,
+            "prompt_recipe_initial_category": initial_category,
         },
     )
 
@@ -2868,7 +2932,6 @@ def tool_guide(request):
         'all_tools_count': len(tools),
         'new_tools_count': sum(1 for tool in tools if tool['is_new']),
         'teacher_first_contract_path': TEACHER_FIRST_PRODUCT_CONTRACT_PATH,
-        **build_tool_guide_page_seo(request).as_context(),
     })
 
 
@@ -3171,7 +3234,6 @@ def service_guide_list(request):
             'teacher_first_task_label',
             'teacher_first_service_label',
             'teacher_first_support_label',
-            'home_card_summary',
             'public_service_name',
             'detail_context_chips',
             'home_context_chips',
@@ -3192,7 +3254,6 @@ def service_guide_list(request):
         'manual_count': manual_count,
         'missing_manual_count': missing_manual_count,
         'teacher_first_contract_path': TEACHER_FIRST_PRODUCT_CONTRACT_PATH,
-        **build_service_guide_list_seo(request).as_context(),
     })
 
 def service_guide_detail(request, pk):
@@ -3211,19 +3272,14 @@ def service_guide_detail(request, pk):
         section.display_title = _replace_public_service_terms(section.title, manual.product)
         section.display_content = _replace_public_service_terms(section.content, manual.product)
     launch_href, launch_is_external = _resolve_product_launch_url(manual.product)
-
-    seo_meta = build_service_guide_detail_seo(request, manual)
-    response = render(request, 'core/service_guide_detail.html', {
+    
+    return render(request, 'core/service_guide_detail.html', {
         'manual': manual,
         'sections': sections,
         'launch_href': launch_href,
         'launch_is_external': launch_is_external,
         'launch_label': f"{manual.public_service_name} 열기",
-        **seo_meta.as_context(),
     })
-    if seo_meta.robots.startswith("noindex"):
-        response["X-Robots-Tag"] = seo_meta.robots.replace(",", ", ")
-    return response
 
 
 @require_POST

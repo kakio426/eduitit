@@ -1,306 +1,1085 @@
 {% extends 'base.html' %}
-{% load static %}
 
-{% block title %}{{ page_title|default:'에듀잇잇 - 선생님의 스마트한 하루' }}{% endblock %}
+{% block title %}에듀잇잇 - 선생님의 스마트한 하루{% endblock %}
 
 {% block extra_css %}
-<link href="{% static 'core/css/home_authenticated_v2.css' %}" rel="stylesheet">
+<style>
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .custom-scrollbar { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+
+    /* 퀵 액션 스크롤 */
+    .quick-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+    .quick-scroll::-webkit-scrollbar { display: none; }
+
+    .sns-preview-card { background: white; border-radius: 1.5rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.06); transition: all 0.3s ease; }
+    .sns-preview-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-2px); }
+
+    .home-calendar-day {
+        min-height: 88px;
+    }
+
+    .home-v2-top-grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 360px));
+        justify-content: start;
+    }
+
+    @media (min-width: 640px) {
+        .home-calendar-day {
+            min-height: 104px;
+        }
+    }
+</style>
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://unpkg.com/@phosphor-icons/web"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="{% static 'classcalendar/js/message_hub.js' %}"></script>
-<script src="{% static 'qrgen/js/qrgen_shared.js' %}"></script>
-<script src="{% static 'core/js/prompt_lab.js' %}"></script>
-<script src="{% static 'core/js/home_authenticated_v2.js' %}"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const favoriteIds = new Set();
+    const favoriteDataEl = document.getElementById('home-favorite-ids-data');
+    if (favoriteDataEl) {
+        try {
+            const parsed = JSON.parse(favoriteDataEl.textContent || '[]');
+            parsed.forEach((id) => {
+                const parsedId = parseInt(id, 10);
+                if (!Number.isNaN(parsedId)) {
+                    favoriteIds.add(parsedId);
+                }
+            });
+        } catch (error) {
+            console.warn('[Favorites] 초기 데이터 파싱 실패', error);
+        }
+    }
+
+    const getCsrfToken = () => {
+        const field = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (field && field.value) return field.value;
+        const match = document.cookie.match(/csrftoken=([^;]+)/);
+        return match ? decodeURIComponent(match[1]) : '';
+    };
+
+    const showFeedback = (message, type = 'info') => {
+        if (window.showToast) {
+            window.showToast(message, type);
+            return;
+        }
+        if (type === 'error') {
+            alert(message);
+        }
+    };
+
+    const updateFavoriteButtonState = (button, isFavorite) => {
+        if (!button) return;
+        button.setAttribute('aria-pressed', isFavorite ? 'true' : 'false');
+        button.classList.toggle('border-amber-300', isFavorite);
+        button.classList.toggle('text-amber-500', isFavorite);
+        button.classList.toggle('bg-amber-50', isFavorite);
+        button.classList.toggle('border-slate-200', !isFavorite);
+        button.classList.toggle('text-slate-300', !isFavorite);
+        button.classList.toggle('bg-white', !isFavorite);
+        button.title = isFavorite ? '즐겨찾기 해제' : '즐겨찾기';
+    };
+
+    const syncFavoriteButtons = () => {
+        document.querySelectorAll('[data-favorite-toggle="true"]').forEach((button) => {
+            const pid = parseInt(button.dataset.productId || '', 10);
+            const isFavorite = !Number.isNaN(pid) && favoriteIds.has(pid);
+            updateFavoriteButtonState(button, isFavorite);
+        });
+    };
+
+    const launchCard = (card) => {
+        const href = card.dataset.launchHref || `/products/${card.dataset.productId}/`;
+        if (!href) return;
+        const isExternal = card.dataset.launchExternal === 'true';
+        if (isExternal) {
+            window.open(href, '_blank', 'noopener');
+            return;
+        }
+        window.location.href = href;
+    };
+
+    // 카드 클릭: 즉시 서비스 진입
+    document.querySelectorAll('.product-card').forEach(card => {
+        card.addEventListener('click', function(e) {
+            if (e.target.closest('[data-favorite-toggle="true"]')) return;
+            launchCard(this);
+        });
+        card.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                launchCard(card);
+            }
+        });
+    });
+
+    document.querySelectorAll('[data-favorite-toggle="true"]').forEach((button) => {
+        button.addEventListener('click', async function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const pid = parseInt(this.dataset.productId || '', 10);
+            if (Number.isNaN(pid)) return;
+
+            const csrfToken = getCsrfToken();
+            if (!csrfToken) {
+                showFeedback('보안 토큰을 확인할 수 없습니다. 새로고침 후 다시 시도해 주세요.', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('{% url "toggle_product_favorite" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken,
+                    },
+                    body: JSON.stringify({ product_id: pid }),
+                });
+
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok || payload.status !== 'ok') {
+                    throw new Error(payload.error || '즐겨찾기 처리에 실패했습니다.');
+                }
+
+                if (payload.is_favorite) {
+                    favoriteIds.add(pid);
+                    showFeedback('즐겨찾기에 추가했습니다.', 'success');
+                } else {
+                    favoriteIds.delete(pid);
+                    showFeedback('즐겨찾기에서 제거했습니다.', 'success');
+                }
+                syncFavoriteButtons();
+            } catch (error) {
+                showFeedback(error.message || '즐겨찾기 처리 중 오류가 발생했습니다.', 'error');
+            }
+        });
+    });
+
+    // 클릭 계측 + 사용 기록
+    document.addEventListener('click', function(e) {
+        const el = e.target.closest('[data-track]');
+        if (!el) return;
+        const track = el.dataset.track;
+        const productId = el.dataset.productId || el.closest('[data-product-id]')?.dataset?.productId;
+        if (productId) {
+            const token = getCsrfToken();
+            if (token) {
+                const sourceMap = {
+                    quick_action: 'home_quick',
+                    mini_card: 'home_section',
+                    game_card: 'home_game',
+                    game_banner: 'home_game',
+                    section_more_toggle: 'home_section',
+                };
+                fetch('/api/track-usage/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': token },
+                    body: JSON.stringify({ product_id: parseInt(productId), action: 'launch', source: sourceMap[track] || 'other' })
+                })
+                .then((response) => {
+                    if (!response.ok) {
+                        showFeedback('사용 기록 저장에 실패했습니다.', 'error');
+                    }
+                })
+                .catch(function() {
+                    showFeedback('사용 기록 저장 중 네트워크 오류가 발생했습니다.', 'error');
+                });
+            }
+        }
+    });
+
+    syncFavoriteButtons();
+    initHomeMiniApps({ getCsrfToken, showFeedback });
+});
+
+function initHomeMiniApps({ getCsrfToken, showFeedback }) {
+    const root = document.querySelector('[data-home-mini-root="true"]');
+    if (!root) return;
+
+    const promptCatalogEl = document.getElementById('home-prompt-recipe-catalog-data');
+    let promptCatalog = {};
+    if (promptCatalogEl) {
+        try {
+            promptCatalog = JSON.parse(promptCatalogEl.textContent || '{}');
+        } catch (error) {
+            promptCatalog = {};
+        }
+    }
+
+    const buildUrl = (baseUrl, params) => {
+        const url = new URL(baseUrl, window.location.origin);
+        Object.entries(params || {}).forEach(([key, value]) => {
+            if (value === null || value === undefined || value === '') {
+                url.searchParams.delete(key);
+                return;
+            }
+            url.searchParams.set(key, value);
+        });
+        return `${url.pathname}${url.search}`;
+    };
+
+    const copyText = async (text) => {
+        const content = String(text || '').trim();
+        if (!content) return;
+        try {
+            await navigator.clipboard.writeText(content);
+            showFeedback('복사했습니다.', 'success');
+        } catch (error) {
+            showFeedback('복사에 실패했습니다. 다시 시도해 주세요.', 'error');
+        }
+    };
+
+    document.addEventListener('click', async (event) => {
+        const copyButton = event.target.closest('[data-copy-source-id]');
+        if (!copyButton) return;
+        const source = document.getElementById(copyButton.dataset.copySourceId || '');
+        const text = source ? (source.value || source.textContent || '') : '';
+        await copyText(text);
+    });
+
+    const noticeForm = root.querySelector('[data-home-mini-notice-form="true"]');
+    const noticeResult = document.getElementById('home-mini-notice-result');
+    const noticeFullOpen = root.querySelector('[data-home-mini-full-open="notice"]');
+    if (noticeForm && noticeResult) {
+        const syncNoticeFullOpen = () => {
+            if (!noticeFullOpen) return;
+            const formData = new FormData(noticeForm);
+            noticeFullOpen.href = buildUrl(noticeFullOpen.dataset.baseHref || noticeFullOpen.href, {
+                target: formData.get('target') || '',
+                topic: formData.get('topic') || '',
+                keywords: formData.get('keywords') || '',
+                origin_label: '홈으로 돌아가기',
+                source_label: '홈에서 입력한 내용을 이어서 편집할 수 있어요.',
+            });
+        };
+        syncNoticeFullOpen();
+        noticeForm.addEventListener('input', syncNoticeFullOpen);
+        noticeForm.addEventListener('change', syncNoticeFullOpen);
+        noticeForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const submitButton = noticeForm.querySelector('[data-home-mini-submit="notice"]');
+            if (submitButton) submitButton.disabled = true;
+            noticeResult.innerHTML = `
+                <div class="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-5 text-sm font-semibold text-slate-500">
+                    문장을 만드는 중이에요.
+                </div>
+            `;
+            try {
+                const response = await fetch(noticeForm.action, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                        'X-CSRFToken': getCsrfToken(),
+                    },
+                    body: new URLSearchParams(new FormData(noticeForm)).toString(),
+                });
+                const resultHtml = await response.text();
+                noticeResult.innerHTML = resultHtml;
+                if (!response.ok) {
+                    showFeedback('입력값을 확인해 주세요.', 'error');
+                }
+            } catch (error) {
+                noticeResult.innerHTML = `
+                    <div class="rounded-[1.5rem] border border-rose-200 bg-rose-50 px-4 py-5 text-sm font-semibold text-rose-700">
+                        문장 만들기에 실패했습니다. 잠시 후 다시 시도해 주세요.
+                    </div>
+                `;
+            } finally {
+                if (submitButton) submitButton.disabled = false;
+            }
+        });
+    }
+
+    const qrInput = root.querySelector('[data-home-mini-qr-url]');
+    const qrResult = root.querySelector('[data-home-mini-qr-result]');
+    const qrFullOpen = root.querySelector('[data-home-mini-full-open="qr"]');
+    const qrSubmit = root.querySelector('[data-home-mini-submit="qr"]');
+    const normalizeQrUrl = (raw) => {
+        const text = String(raw || '').trim();
+        if (!text) return { url: '', error: '' };
+        const withScheme = /^https?:\/\//i.test(text) ? text : `https://${text}`;
+        try {
+            const parsed = new URL(withScheme);
+            if (!['http:', 'https:'].includes(parsed.protocol)) {
+                return { url: '', error: 'http/https 링크만 사용할 수 있어요.' };
+            }
+            if (!parsed.hostname || parsed.hostname.indexOf('.') === -1) {
+                return { url: '', error: '도메인이 포함된 링크를 입력해 주세요.' };
+            }
+            return { url: parsed.toString(), error: '' };
+        } catch (error) {
+            return { url: '', error: '유효한 링크 형식이 아니에요.' };
+        }
+    };
+    const syncQrFullOpen = () => {
+        if (!qrFullOpen || !qrInput) return;
+        const parsed = normalizeQrUrl(qrInput.value);
+        qrFullOpen.href = buildUrl(qrFullOpen.dataset.baseHref || qrFullOpen.href, {
+            url: parsed.url || '',
+        });
+    };
+    const renderQrResult = (parsed) => {
+        if (!qrResult) return;
+        if (parsed.error) {
+            qrResult.innerHTML = `<div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm font-semibold text-rose-700">${parsed.error}</div>`;
+            return;
+        }
+        if (!parsed.url) {
+            qrResult.innerHTML = `<p class="text-sm font-semibold text-slate-500">링크를 넣고 QR 만들기를 누르면 여기서 바로 확인할 수 있어요.</p>`;
+            return;
+        }
+        qrResult.innerHTML = `
+            <div class="flex h-full flex-col items-center justify-center text-center">
+                <div id="home-mini-qr-canvas" class="rounded-2xl bg-white p-3 shadow-sm"></div>
+                <p class="mt-3 break-all text-xs font-semibold text-slate-500">${parsed.url}</p>
+                <textarea id="home-mini-qr-copy-source" class="hidden">${parsed.url}</textarea>
+                <button
+                    type="button"
+                    class="mt-3 inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:border-indigo-300 hover:text-indigo-600"
+                    data-copy-source-id="home-mini-qr-copy-source"
+                >
+                    <i class="fa-regular fa-copy"></i>
+                    링크 복사
+                </button>
+            </div>
+        `;
+        const qrCanvas = document.getElementById('home-mini-qr-canvas');
+        if (qrCanvas && window.QRCode) {
+            qrCanvas.innerHTML = '';
+            new QRCode(qrCanvas, {
+                text: parsed.url,
+                width: 144,
+                height: 144,
+                colorDark: '#0f172a',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.M,
+            });
+        }
+    };
+    if (qrInput && qrSubmit) {
+        syncQrFullOpen();
+        qrInput.addEventListener('input', syncQrFullOpen);
+        qrSubmit.addEventListener('click', () => {
+            renderQrResult(normalizeQrUrl(qrInput.value));
+        });
+    }
+
+    const promptCategory = root.querySelector('[data-home-mini-prompt-category]');
+    const promptResult = root.querySelector('[data-home-mini-prompt-result]');
+    const promptFullOpen = root.querySelector('[data-home-mini-full-open="prompt"]');
+    const promptSubmit = root.querySelector('[data-home-mini-submit="prompt"]');
+    const syncPromptFullOpen = () => {
+        if (!promptFullOpen || !promptCategory) return;
+        promptFullOpen.href = buildUrl(promptFullOpen.dataset.baseHref || promptFullOpen.href, {
+            category: promptCategory.value || '',
+        });
+    };
+    const renderPromptResult = () => {
+        if (!promptCategory || !promptResult) return;
+        const categoryKey = String(promptCategory.value || '');
+        const category = promptCatalog[categoryKey];
+        const item = category && Array.isArray(category.items) ? category.items[0] : null;
+        if (!category || !item) {
+            promptResult.innerHTML = `<p class="text-sm font-semibold text-slate-500">추천할 프롬프트를 찾지 못했어요.</p>`;
+            return;
+        }
+        const copyId = `home-mini-prompt-copy-${categoryKey}`;
+        promptResult.innerHTML = `
+            <div class="rounded-[1.5rem] border border-slate-200 bg-white px-4 py-4">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <p class="text-sm font-extrabold text-slate-900">${item.title}</p>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">${item.desc}</p>
+                    </div>
+                    <button
+                        type="button"
+                        class="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 transition hover:border-indigo-300 hover:text-indigo-600"
+                        data-copy-source-id="${copyId}"
+                    >
+                        <i class="fa-regular fa-copy"></i>
+                        복사
+                    </button>
+                </div>
+                <div class="mt-3 flex flex-wrap gap-1.5">
+                    ${(item.tags || []).map((tag) => `<span class="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-500">#${tag}</span>`).join('')}
+                </div>
+                <textarea id="${copyId}" class="hidden">${item.code}</textarea>
+            </div>
+        `;
+    };
+    if (promptCategory && promptSubmit) {
+        syncPromptFullOpen();
+        promptCategory.addEventListener('change', syncPromptFullOpen);
+        promptSubmit.addEventListener('click', renderPromptResult);
+    }
+
+    const messageForm = root.querySelector('[data-home-mini-message-form="true"]');
+    const messageFeedback = root.querySelector('[data-home-mini-message-feedback]');
+    const messageList = root.querySelector('[data-home-mini-message-list]');
+    const messageFullOpen = root.querySelector('[data-home-mini-full-open="message"]');
+    const messageSubmit = root.querySelector('[data-home-mini-submit="message"]');
+    const messageIdempotency = messageForm ? messageForm.querySelector('[name="idempotency_key"]') : null;
+    const updateMessageFullOpen = (captureId = '') => {
+        if (!messageFullOpen) return;
+        messageFullOpen.href = buildUrl(messageFullOpen.dataset.baseHref || messageFullOpen.href, {
+            capture_id: captureId || '',
+        });
+    };
+    const renderMessageItems = (items) => {
+        if (!messageList) return;
+        if (!items.length) {
+            messageList.innerHTML = `
+                <div class="rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm font-semibold text-slate-500">
+                    아직 저장된 메시지가 없어요.
+                </div>
+            `;
+            updateMessageFullOpen('');
+            return;
+        }
+        updateMessageFullOpen(items[0].capture_id || '');
+        messageList.innerHTML = items.slice(0, 3).map((item) => {
+            const copyId = `home-mini-message-copy-${item.capture_id}`;
+            return `
+                <div class="rounded-[1.5rem] border border-slate-200 bg-white px-4 py-3">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="text-[11px] font-bold text-slate-400">${item.archive_status_label || ''}</p>
+                            <p class="mt-1 text-sm font-semibold leading-6 text-slate-700 whitespace-pre-line">${item.preview_text || '저장된 메시지'}</p>
+                        </div>
+                        <button
+                            type="button"
+                            class="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 transition hover:border-indigo-300 hover:text-indigo-600"
+                            data-copy-source-id="${copyId}"
+                        >
+                            <i class="fa-regular fa-copy"></i>
+                            복사
+                        </button>
+                    </div>
+                    <textarea id="${copyId}" class="hidden">${item.preview_text || ''}</textarea>
+                </div>
+            `;
+        }).join('');
+    };
+    const loadMessageItems = async () => {
+        if (!messageList || !messageFeedback) return;
+        try {
+            const response = await fetch('{% url "classcalendar:api_message_capture_archive" %}?page=1', {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+            if (!response.ok) {
+                throw new Error('보관 메시지를 불러오지 못했습니다.');
+            }
+            const payload = await response.json();
+            const items = Array.isArray(payload.items) ? payload.items : [];
+            messageFeedback.textContent = items.length ? '최근 보관 메시지를 바로 복사하거나 전체 열기로 이어서 볼 수 있어요.' : '아직 저장된 메시지가 없어요.';
+            messageFeedback.className = 'mt-3 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-500';
+            renderMessageItems(items);
+        } catch (error) {
+            messageFeedback.textContent = '보관 메시지를 불러오지 못했습니다.';
+            messageFeedback.className = 'mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700';
+            renderMessageItems([]);
+        }
+    };
+    if (messageForm && messageSubmit && messageIdempotency) {
+        messageIdempotency.value = homeMiniRandomKey();
+        loadMessageItems();
+        messageForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const formData = new FormData(messageForm);
+            const rawText = String(formData.get('raw_text') || '').trim();
+            if (!rawText) {
+                messageFeedback.textContent = '저장할 메시지를 입력해 주세요.';
+                messageFeedback.className = 'mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700';
+                return;
+            }
+            messageSubmit.disabled = true;
+            try {
+                const response = await fetch('{% url "classcalendar:api_message_capture_quick_save" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                        'X-CSRFToken': getCsrfToken(),
+                    },
+                    body: new URLSearchParams(formData).toString(),
+                });
+                const payload = await response.json();
+                if (!response.ok || payload.status !== 'success') {
+                    throw new Error(payload.message || '메시지를 저장하지 못했습니다.');
+                }
+                messageFeedback.textContent = payload.message || '메시지 보관함에 저장했어요.';
+                messageFeedback.className = 'mt-3 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs font-semibold text-sky-700';
+                messageForm.reset();
+                messageIdempotency.value = homeMiniRandomKey();
+                await loadMessageItems();
+            } catch (error) {
+                messageFeedback.textContent = error.message || '메시지를 저장하지 못했습니다.';
+                messageFeedback.className = 'mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700';
+            } finally {
+                messageSubmit.disabled = false;
+            }
+        });
+    }
+}
+
+function homeMiniRandomKey() {
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+        return window.crypto.randomUUID().replace(/-/g, '');
+    }
+    return `${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+}
+
+function homeCalendarWidget() {
+    return {
+        currentDate: new Date(),
+        events: [],
+        createModalOpen: false,
+        dayEventsModalOpen: false,
+        selectedDateKey: '',
+        selectedDateLabel: '',
+        selectedDateEvents: [],
+        isSubmitting: false,
+        createContextDateText: '',
+        refreshTicker: null,
+        createForm: {
+            title: '',
+            note: '',
+            start_time: '',
+            end_time: '',
+            is_all_day: false,
+            color: 'indigo',
+        },
+
+        init() {
+            this.refreshEvents();
+            this.refreshTicker = setInterval(() => this.refreshEvents(), 120000);
+            window.addEventListener('focus', () => this.refreshEvents());
+        },
+
+        async refreshEvents() {
+            try {
+                const payload = await this.requestJson('{% url "classcalendar:api_events" %}');
+                this.events = (payload.events || []).map((event) => this.normalizeEvent(event));
+                if (this.dayEventsModalOpen && this.selectedDateKey) {
+                    const selectedDate = this.parseDateKey(this.selectedDateKey);
+                    this.selectedDateEvents = this.getEventsForDate(selectedDate);
+                }
+            } catch (err) {
+                if (window.showToast) {
+                    window.showToast('홈 캘린더를 불러오지 못했습니다.', 'error');
+                }
+            }
+        },
+
+        normalizeEvent(event) {
+            return {
+                ...event,
+                title: event.title || '일정',
+                color: event.color || 'indigo',
+                is_all_day: !!event.is_all_day,
+                start_time: new Date(event.start_time),
+                end_time: new Date(event.end_time),
+            };
+        },
+
+        getCsrfToken() {
+            const field = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (field && field.value) return field.value;
+            const match = document.cookie.match(/csrftoken=([^;]+)/);
+            return match ? decodeURIComponent(match[1]) : '';
+        },
+
+        async requestJson(url, options = {}) {
+            const response = await fetch(url, options);
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                const err = new Error(payload.message || '요청 처리에 실패했습니다.');
+                err.payload = payload;
+                throw err;
+            }
+            return payload;
+        },
+
+        pad(value) {
+            return String(value).padStart(2, '0');
+        },
+
+        dateKey(dateValue) {
+            const d = new Date(dateValue);
+            return `${d.getFullYear()}-${this.pad(d.getMonth() + 1)}-${this.pad(d.getDate())}`;
+        },
+
+        parseDateKey(dateStr) {
+            const [y, m, d] = dateStr.split('-').map(Number);
+            return new Date(y, m - 1, d);
+        },
+
+        toDatetimeLocal(dateValue) {
+            const d = new Date(dateValue);
+            return `${d.getFullYear()}-${this.pad(d.getMonth() + 1)}-${this.pad(d.getDate())}T${this.pad(d.getHours())}:${this.pad(d.getMinutes())}`;
+        },
+
+        get currentMonthText() {
+            return `${this.currentDate.getFullYear()}년 ${this.currentDate.getMonth() + 1}월`;
+        },
+
+        get todayEventsCount() {
+            return this.events.filter((e) => this.dateKey(e.start_time) === this.dateKey(new Date())).length;
+        },
+
+        get weekEventsCount() {
+            const now = new Date();
+            const start = new Date(now);
+            const mondayOffset = (now.getDay() + 6) % 7;
+            start.setDate(now.getDate() - mondayOffset);
+            start.setHours(0, 0, 0, 0);
+            const end = new Date(start);
+            end.setDate(start.getDate() + 7);
+            return this.events.filter((e) => e.start_time >= start && e.start_time < end).length;
+        },
+
+        get calendarDates() {
+            const y = this.currentDate.getFullYear();
+            const m = this.currentDate.getMonth();
+            const first = new Date(y, m, 1);
+            const last = new Date(y, m + 1, 0);
+            const start = new Date(first);
+            start.setDate(start.getDate() - start.getDay());
+            const end = new Date(last);
+            if (end.getDay() !== 6) end.setDate(end.getDate() + (6 - end.getDay()));
+            const dates = [];
+            for (let cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
+                dates.push(new Date(cursor));
+            }
+            return dates;
+        },
+
+        prevMonth() {
+            this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() - 1, 1);
+        },
+
+        nextMonth() {
+            this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + 1, 1);
+        },
+
+        isCurrentMonth(date) {
+            return date.getMonth() === this.currentDate.getMonth() && date.getFullYear() === this.currentDate.getFullYear();
+        },
+
+        isToday(date) {
+            const t = new Date();
+            return date.getDate() === t.getDate() && date.getMonth() === t.getMonth() && date.getFullYear() === t.getFullYear();
+        },
+
+        getEventsForDate(date) {
+            return this.events
+                .filter((e) => this.dateKey(e.start_time) === this.dateKey(date))
+                .sort((a, b) => a.start_time - b.start_time);
+        },
+
+        getVisibleEventsForDate(date) {
+            return this.getEventsForDate(date).slice(0, 2);
+        },
+
+        getOverflowCountForDate(date) {
+            const total = this.getEventsForDate(date).length;
+            return total > 2 ? total - 2 : 0;
+        },
+
+        formatEventTimeShort(dateValue, isAllDay = false) {
+            if (isAllDay) return '종일';
+            const d = new Date(dateValue);
+            return `${this.pad(d.getHours())}:${this.pad(d.getMinutes())}`;
+        },
+
+        eventLabel(event) {
+            const title = event.title || '일정';
+            return `${this.formatEventTimeShort(event.start_time, event.is_all_day)} ${title}`;
+        },
+
+        dayTooltip(date) {
+            const dateText = this.formatAgendaDate(this.dateKey(date));
+            const events = this.getEventsForDate(date);
+            if (!events.length) {
+                return `${dateText} 일정 추가`;
+            }
+            return `${dateText} 일정 ${events.length}건 보기`;
+        },
+
+        eventChipClass(event) {
+            const map = {
+                indigo: 'bg-indigo-50 border-indigo-200 text-indigo-700',
+                rose: 'bg-rose-50 border-rose-200 text-rose-700',
+                amber: 'bg-amber-50 border-amber-200 text-amber-700',
+                emerald: 'bg-emerald-50 border-emerald-200 text-emerald-700',
+                sky: 'bg-sky-50 border-sky-200 text-sky-700',
+            };
+            return map[event.color] || map.indigo;
+        },
+
+        formatAgendaDate(dateStr) {
+            const date = this.parseDateKey(dateStr);
+            const days = ['일', '월', '화', '수', '목', '금', '토'];
+            return `${date.getMonth() + 1}월 ${date.getDate()}일 (${days[date.getDay()]})`;
+        },
+
+        formatClock(dateValue) {
+            const d = new Date(dateValue);
+            const h = this.pad(d.getHours());
+            const m = this.pad(d.getMinutes());
+            return `${h}:${m}`;
+        },
+
+        formatEventRange(event) {
+            if (!event) return '';
+            const start = new Date(event.start_time);
+            const end = new Date(event.end_time);
+            if (event.is_all_day) {
+                return `${this.formatAgendaDate(this.dateKey(start))} · 하루 종일`;
+            }
+            if (this.dateKey(start) === this.dateKey(end)) {
+                return `${this.formatAgendaDate(this.dateKey(start))} · ${this.formatClock(start)} - ${this.formatClock(end)}`;
+            }
+            return `${this.formatAgendaDate(this.dateKey(start))} ${this.formatClock(start)} ~ ${this.formatAgendaDate(this.dateKey(end))} ${this.formatClock(end)}`;
+        },
+
+        handleDateClick(date) {
+            const events = this.getEventsForDate(date);
+            if (events.length) {
+                this.openDayEventsModalForDate(date);
+                return;
+            }
+            this.openCreateModalForDate(date);
+        },
+
+        openDayEventsModalForDate(date) {
+            const key = this.dateKey(date);
+            this.selectedDateKey = key;
+            this.selectedDateLabel = this.formatAgendaDate(key);
+            this.selectedDateEvents = this.getEventsForDate(date);
+            this.dayEventsModalOpen = true;
+        },
+
+        closeDayEventsModal() {
+            this.dayEventsModalOpen = false;
+        },
+
+        openCreateModalForSelectedDate() {
+            if (!this.selectedDateKey) {
+                this.openCreateModalForDate(new Date());
+                return;
+            }
+            const date = this.parseDateKey(this.selectedDateKey);
+            this.openCreateModalForDate(date);
+        },
+
+        openCreateModalForDate(date) {
+            this.dayEventsModalOpen = false;
+            const base = new Date(date);
+            const start = new Date(base.getFullYear(), base.getMonth(), base.getDate(), 9, 0, 0, 0);
+            const end = new Date(start);
+            end.setHours(start.getHours() + 1, 0, 0, 0);
+            this.createContextDateText = this.formatAgendaDate(this.dateKey(start));
+            this.createForm = {
+                title: '',
+                note: '',
+                start_time: this.toDatetimeLocal(start),
+                end_time: this.toDatetimeLocal(end),
+                is_all_day: false,
+                color: 'indigo',
+            };
+            this.createModalOpen = true;
+        },
+
+        async submitCreateEvent() {
+            this.isSubmitting = true;
+            const body = new URLSearchParams();
+            body.set('title', this.createForm.title);
+            body.set('note', this.createForm.note || '');
+            body.set('start_time', this.createForm.start_time);
+            body.set('end_time', this.createForm.end_time);
+            body.set('color', this.createForm.color);
+            if (this.createForm.is_all_day) body.set('is_all_day', 'on');
+            try {
+                await this.requestJson('{% url "classcalendar:api_create_event" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                        'X-CSRFToken': this.getCsrfToken(),
+                    },
+                    body: body.toString(),
+                });
+                this.createModalOpen = false;
+                await this.refreshEvents();
+                if (window.showToast) window.showToast('일정을 저장했습니다.', 'success');
+            } catch (err) {
+                const isValidationError = err.payload && err.payload.code === 'validation_error';
+                const message = isValidationError
+                    ? '입력값을 확인해 주세요. 종료 시간은 시작 시간 이후여야 합니다.'
+                    : (err.message || '일정 저장에 실패했습니다.');
+                if (window.showToast) window.showToast(message, 'error');
+            } finally {
+                this.isSubmitting = false;
+            }
+        },
+    };
+}
+</script>
 {% endblock %}
 
 {% block content %}
 <div class="min-h-screen bg-[#E0E5EC]">
-    <div class="flex flex-col xl:flex-row xl:gap-6 max-w-[1920px] mx-auto" style="padding-top: calc(var(--main-nav-height, 88px) + 0.75rem);">
+    <div class="max-w-[1920px] mx-auto" style="padding-top: calc(var(--main-nav-height, 88px) + 0.75rem);">
+        <main class="min-w-0 p-4 md:px-6 lg:px-7 xl:px-8 2xl:px-10 pt-0 md:pt-0">
 
-        <!-- PC 전용 SNS 사이드바 -->
-        <div class="hidden xl:block flex-shrink-0">
-            {% include 'core/partials/sns_widget.html' with compact_posts=True %}
-        </div>
+            {% if search_products_json %}
+            <div class="mb-4 flex justify-center lg:justify-end">
+                <button onclick="if(window.openSearchModal) openSearchModal()" class="flex w-full max-w-xl lg:w-auto lg:max-w-none lg:flex-shrink-0 items-center justify-center lg:justify-start gap-3 bg-white rounded-2xl lg:rounded-xl px-5 lg:px-3.5 py-3 lg:py-2.5 border border-slate-200 text-slate-400 hover:border-indigo-300 hover:text-indigo-500 transition-all text-sm shadow-sm lg:shadow-none min-h-12 lg:min-h-0" title="Ctrl+K" aria-label="서비스 검색 열기">
+                    <i class="fa-solid fa-magnifying-glass text-sm md:text-xs"></i>
+                    <span class="whitespace-nowrap">서비스 검색...</span>
+                    <kbd class="hidden lg:inline-block ml-1 px-1.5 py-0.5 text-[10px] font-bold bg-slate-100 rounded border border-slate-200">Ctrl+K</kbd>
+                </button>
+            </div>
+            {% endif %}
 
-        <!-- 메인 콘텐츠 -->
-        <main class="flex-1 min-w-0 p-4 md:px-6 lg:px-7 xl:px-8 2xl:px-10 pt-0 md:pt-0">
-            <div class="home-v2-content-shell">
-                <section class="mb-6 home-v2-top-zone" data-home-v2-top-zone="true">
-                    <div class="home-v2-top-center" data-home-v2-top-center="true">
-                        <article class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm" data-home-v2-top-today="true">
-                            <div class="mb-4">
-                                <h2 class="text-lg md:text-xl font-black text-slate-900 flex items-center gap-2">
-                                    <i class="fa-solid fa-calendar-day text-indigo-500"></i>
-                                    오늘 할 일
-                                </h2>
-                                <p class="mt-1 text-xs font-semibold text-slate-400">{{ today_date_text }}</p>
-                            </div>
-                            {% if today_items %}
-                            <div class="space-y-3">
-                                {% for item in today_items|slice:":2" %}
-                                <a href="{{ item.href }}" class="block rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-4 transition hover:border-indigo-200 hover:bg-white">
-                                    <div class="flex items-start gap-3">
-                                        <span class="text-2xl leading-none">
-                                            {% if item.emoji %}{{ item.emoji }}{% else %}<i class="fa-solid fa-folder-open text-slate-400"></i>{% endif %}
-                                        </span>
-                                        <div class="min-w-0 flex-1">
-                                            <p class="text-base font-black leading-6 text-slate-900 line-clamp-2">{{ item.title }}</p>
-                                            <p class="mt-1.5 text-sm leading-6 text-slate-500 line-clamp-2">{{ item.description }}</p>
-                                        </div>
-                                    </div>
-                                </a>
-                                {% endfor %}
-                            </div>
-                            {% else %}
-                            <div class="rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center">
-                                <p class="text-sm font-bold text-slate-600">오늘 바로 처리할 항목이 없습니다.</p>
-                            </div>
-                            {% endif %}
-                        </article>
-
-                        <article class="rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm md:p-5" data-home-v2-top-favorites="true">
-                            <div class="mb-3">
-                                <h2 class="text-lg md:text-xl font-black text-slate-900 flex items-center gap-2">
-                                    <i class="fa-solid fa-star text-amber-500"></i>
-                                    즐겨찾기
-                                </h2>
-                            </div>
-                            {% if favorite_items %}
-                            <div class="grid grid-cols-2 gap-2.5" data-home-v2-top-favorites-grid="true">
-                                {% for item in favorite_items|slice:":4" %}
-                                {% with favorite_title=item.favorite_title|default:item.favorite_full_title %}
-                                <div class="min-h-[74px] rounded-[1.35rem] border border-slate-200 bg-slate-50 px-3 py-2.5 shadow-sm transition product-card hover:border-amber-300 hover:bg-white"
-                                    data-home-v2-favorite-card="true"
-                                    data-product-id="{{ item.product.id }}"
-                                    data-launch-href="{{ item.href }}"
-                                    data-launch-external="{{ item.is_external|yesno:'true,false' }}"
-                                    data-track="quick_action"
-                                    data-track-label="{{ item.product.title }}"
-                                    role="button"
-                                    tabindex="0">
-                                    <div class="flex items-center gap-2.5" data-home-v2-favorite-card-header="true">
-                                        <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white text-sm shadow-sm {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-violet-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-pink-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
-                                            {% if item.product.icon %}
-                                                {% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }}"></i>{% else %}{{ item.product.icon }}{% endif %}
-                                            {% else %}
-                                                <i class="fa-solid fa-sparkles"></i>
-                                            {% endif %}
-                                        </div>
-                                        <div class="min-w-0 flex-1">
-                                            <p class="truncate text-[0.95rem] font-black leading-5 text-slate-900" data-home-v2-favorite-card-title="true" title="{{ item.favorite_full_title }}">{{ favorite_title }}</p>
-                                        </div>
-                                        <button type="button"
-                                            class="favorite-toggle-btn inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-300 hover:border-amber-300 hover:text-amber-500 transition-colors"
-                                            data-product-id="{{ item.product.id }}"
-                                            data-favorite-toggle="true"
-                                            aria-pressed="false"
-                                            aria-label="{{ item.favorite_full_title }} 즐겨찾기 토글"
-                                            title="즐겨찾기">
-                                            <i class="fa-solid fa-star text-[10px]"></i>
-                                        </button>
-                                    </div>
+            <section class="mb-8" data-home-v2-top-zone="true">
+                <div class="home-v2-top-grid">
+                    <article class="w-full rounded-3xl border border-slate-200 bg-white p-5 shadow-sm" style="max-width: 360px;" data-home-v2-top-today="true">
+                        <div class="mb-4">
+                            <h2 class="text-lg font-black text-slate-900 flex items-center gap-2">
+                                <i class="fa-solid fa-calendar-day text-indigo-500"></i>
+                                오늘 할 일
+                            </h2>
+                            <p class="mt-1 text-xs font-semibold text-slate-400">{{ compact_top_zone.today_date_text }}</p>
+                        </div>
+                        {% if compact_top_zone.today_items %}
+                        <div class="space-y-2.5">
+                            {% for item in compact_top_zone.today_items %}
+                            <a href="{{ item.href }}" class="block rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 hover:border-indigo-200 hover:bg-white transition">
+                                <div class="flex items-start justify-between gap-2">
+                                    <p class="min-w-0 text-base font-black leading-6 text-slate-900 line-clamp-2">{{ item.title }}</p>
+                                    <span class="inline-flex flex-shrink-0 items-center rounded-full bg-indigo-50 px-2 py-1 text-[11px] font-black text-indigo-700">{{ item.count_text }}</span>
                                 </div>
-                                {% endwith %}
-                                {% endfor %}
-                            </div>
-                            {% else %}
-                            <div class="rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center">
-                                <p class="text-sm font-bold text-slate-600">별표한 서비스가 여기에 모입니다.</p>
-                            </div>
-                            {% endif %}
-                        </article>
-                    </div>
+                                <p class="mt-1.5 text-sm leading-5 text-slate-500 line-clamp-2">{{ item.description }}</p>
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center">
+                            <p class="text-sm font-bold text-slate-600">{{ compact_top_zone.today_empty_message }}</p>
+                        </div>
+                        {% endif %}
+                    </article>
 
-                    {% include 'core/partials/home_calendar_panel.html' %}
-                </section>
-
-                {% if today_try_cards %}
-                <section class="mb-8" data-home-v2-try-now="true">
-                    <div class="mb-4">
-                        <h2 class="text-lg md:text-xl font-black text-slate-900 flex items-center gap-2">
-                            <i class="fa-solid fa-bolt text-amber-500"></i>
-                            오늘 바로 써보기
-                        </h2>
-                        <p class="mt-1 text-sm text-slate-500">지금 바로 여는 대표 작업만 앞에 둡니다.</p>
-                    </div>
-
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2" data-home-v2-try-now-grid="true">
-                        {% for item in today_try_cards %}
-                        <article
-                            class="product-card group relative min-h-[164px] cursor-pointer rounded-[2rem] border border-slate-200 bg-white px-5 py-5 shadow-sm transition-all hover:border-indigo-200 hover:shadow-md"
-                            data-home-v2-try-now-card="primary"
-                            data-product-id="{{ item.product_id }}"
-                            data-launch-href="{{ item.href }}"
-                            data-launch-external="{{ item.is_external|yesno:'true,false' }}"
-                            data-track="mini_card"
-                            data-track-label="{{ item.track_label }}"
-                            role="button"
-                            tabindex="0"
-                        >
-                            <div class="flex items-start gap-3">
-                                <div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-lg shadow-sm {{ item.icon_color_class }}">
-                                    {% if "fa-" in item.icon %}
-                                    <i class="{{ item.icon }}"></i>
-                                    {% else %}
-                                    {{ item.icon }}
-                                    {% endif %}
-                                </div>
-                                <div class="min-w-0 flex-1">
-                                    <h3 class="text-xl font-black leading-7 text-slate-900 transition-colors group-hover:text-indigo-600">{{ item.title }}</h3>
-                                    <p class="mt-2 text-sm leading-6 text-slate-500">{{ item.description }}</p>
-                                </div>
-                            </div>
-                            <div class="mt-6 flex items-end justify-between gap-3">
-                                <div class="flex min-w-0 flex-wrap items-center gap-2">
-                                    {% if item.access_status_label %}
-                                    <span class="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-1 text-[10px] font-black text-indigo-700">{{ item.access_status_label }}</span>
-                                    {% endif %}
-                                </div>
-                                <span class="inline-flex items-center gap-1 text-sm font-black text-indigo-600">
-                                    바로 열기
-                                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
-                                </span>
-                            </div>
-                        </article>
-                        {% endfor %}
-                    </div>
-
-                    {% if today_try_support_cards %}
-                    <div class="mt-5" data-home-v2-try-now-support="true">
-                        <p class="mb-3 text-xs font-black uppercase tracking-[0.18em] text-slate-400">보조 실행</p>
-                        <div class="grid grid-cols-1 gap-3 md:grid-cols-2" data-home-v2-try-now-support-grid="true">
-                            {% for item in today_try_support_cards %}
-                            <article
-                                class="product-card group relative min-h-[132px] cursor-pointer rounded-[1.75rem] border border-slate-200 bg-slate-50 px-5 py-4 shadow-sm transition-all hover:border-indigo-200 hover:bg-white hover:shadow-md"
-                                data-home-v2-try-now-card="support"
-                                data-product-id="{{ item.product_id }}"
-                                data-launch-href="{{ item.href }}"
-                                data-launch-external="{{ item.is_external|yesno:'true,false' }}"
-                                data-track="mini_card"
-                                data-track-label="{{ item.track_label }}"
-                                role="button"
-                                tabindex="0"
-                            >
-                                <div class="flex items-start gap-3">
-                                    <div class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-white text-lg shadow-sm {{ item.icon_color_class }}">
-                                        {% if "fa-" in item.icon %}
-                                        <i class="{{ item.icon }}"></i>
-                                        {% else %}
-                                        {{ item.icon }}
-                                        {% endif %}
-                                    </div>
-                                    <div class="min-w-0 flex-1">
-                                        <h3 class="text-lg font-black leading-6 text-slate-900 transition-colors group-hover:text-indigo-600">{{ item.title }}</h3>
-                                        <p class="mt-2 text-sm leading-6 text-slate-500 line-clamp-2">{{ item.description }}</p>
-                                    </div>
-                                </div>
-                                <div class="mt-4 flex items-center justify-between gap-3">
-                                    <div class="flex min-w-0 flex-wrap items-center gap-2">
-                                        {% if item.access_status_label %}
-                                        <span class="inline-flex items-center rounded-full bg-white px-2.5 py-1 text-[10px] font-black text-slate-500">{{ item.access_status_label }}</span>
-                                        {% endif %}
-                                    </div>
-                                    <span class="inline-flex items-center gap-1 text-xs font-black text-indigo-600">
-                                        바로 열기
-                                        <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                    <article class="w-full rounded-3xl border border-slate-200 bg-white p-4 shadow-sm md:p-5" style="max-width: 360px;" data-home-v2-top-favorites="true">
+                        <div class="mb-3">
+                            <h2 class="text-lg font-black text-slate-900 flex items-center gap-2">
+                                <i class="fa-solid fa-star text-amber-500"></i>
+                                즐겨찾기
+                            </h2>
+                        </div>
+                        {% if compact_top_zone.favorite_items %}
+                        <div class="grid grid-cols-2 gap-2.5" data-home-v2-top-favorites-grid="true">
+                            {% for item in compact_top_zone.favorite_items %}
+                            <a href="{{ item.href }}"
+                                {% if item.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+                                data-track="quick_action"
+                                data-track-label="{{ item.product.title }}"
+                                data-home-v2-top-favorite-card="true"
+                                class="flex min-h-[74px] items-center gap-2.5 rounded-[1.35rem] border border-slate-200 bg-slate-50 px-3 py-2.5 hover:border-amber-300 hover:bg-white transition">
+                                <span class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white text-sm {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-blue-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-violet-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
+                                        {% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }}"></i>{% else %}{{ item.product.icon }}{% endif %}
                                     </span>
-                                </div>
-                            </article>
+                                <span class="min-w-0 flex-1 truncate text-[0.95rem] font-black leading-5 text-slate-900" title="{{ item.favorite_full_title }}">{{ item.favorite_title }}</span>
+                                <button type="button"
+                                    class="favorite-toggle-btn inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-300 hover:border-amber-300 hover:text-amber-500 transition-colors"
+                                    data-product-id="{{ item.product.id }}"
+                                    data-favorite-toggle="true"
+                                    aria-pressed="false"
+                                    aria-label="{{ item.favorite_full_title }} 즐겨찾기 토글"
+                                    title="즐겨찾기">
+                                    <i class="fa-solid fa-star text-[10px]"></i>
+                                </button>
+                            </a>
                             {% endfor %}
                         </div>
-                    </div>
-                    {% endif %}
-                </section>
-                {% endif %}
-
-                <section class="mb-6" data-home-v2-service-groups="true">
-                    {% include 'core/includes/purpose_sections.html' with sections=primary_display_sections|default:sections %}
-                </section>
-
-                <div class="mb-6" data-home-v2-game-section="true">
-                    {% include 'core/includes/game_banner.html' with games=games %}
-                </div>
-
-                {% if secondary_display_sections|default:aux_sections %}
-                <section class="mb-6" data-home-v2-service-groups="true">
-                    {% include 'core/includes/purpose_sections.html' with sections=secondary_display_sections|default:aux_sections %}
-                </section>
-                {% endif %}
-
-                <section class="mb-6 hidden md:block xl:hidden" data-home-v2-tablet-community-summary="true">
-                    <div class="rounded-[2rem] border border-slate-200 bg-white p-5 md:p-6 shadow-sm">
-                        <div class="flex items-start justify-between gap-3">
-                            <div>
-                                <h2 class="text-lg font-black text-slate-900 flex items-center gap-2">
-                                    <i class="ph-fill ph-chat-circle-text text-indigo-600 text-xl"></i>
-                                    {{ community_summary.title }}
-                                </h2>
-                                <p class="mt-1 text-sm text-slate-500">{{ community_summary.description }}</p>
-                            </div>
-                            <a href="{{ community_summary.full_url }}" class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 transition hover:border-indigo-300 hover:text-indigo-600">
-                                전체 보기
-                                <i class="fa-solid fa-arrow-right text-[10px]"></i>
-                            </a>
+                        {% else %}
+                        <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center">
+                            <p class="text-sm font-bold text-slate-600">{{ compact_top_zone.favorites_empty_message }}</p>
                         </div>
+                        {% endif %}
+                    </article>
 
-                        <div class="mt-4 grid gap-3 md:grid-cols-2">
-                            {% for item in community_summary.posts %}
-                            <a
-                                href="{{ community_summary.full_url }}"
-                                class="group block overflow-hidden rounded-[1.6rem] border border-slate-200 bg-slate-50 transition hover:border-indigo-200 hover:bg-white"
-                                data-home-v2-tablet-community-card="true"
-                            >
-                                {% if item.image_url %}
-                                <div class="h-28 overflow-hidden border-b border-slate-200 bg-slate-100">
-                                    <img src="{{ item.image_url }}" alt="" class="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]">
-                                </div>
-                                {% else %}
-                                <div class="flex h-28 items-end justify-between bg-gradient-to-br from-indigo-50 via-sky-50 to-white px-4 py-3">
-                                    <div>
-                                        <p class="text-[11px] font-black uppercase tracking-[0.18em] text-indigo-400">{{ item.eyebrow }}</p>
-                                        <p class="mt-1 text-sm font-black text-slate-700">교실의 최신 소식</p>
-                                    </div>
-                                    <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-indigo-500 shadow-sm">
-                                        <i class="ph-fill ph-chat-circle-text text-xl"></i>
-                                    </div>
-                                </div>
-                                {% endif %}
-                                <div class="p-4">
-                                    <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">{{ item.eyebrow }}</p>
-                                    {% if item.title %}
-                                    <p class="mt-2 text-base font-black leading-6 text-slate-900 line-clamp-2">{{ item.title }}</p>
-                                    {% endif %}
-                                    <p class="mt-2 min-h-[3.5rem] text-sm leading-6 text-slate-500 line-clamp-3">{{ item.body|default:item.post.content|default:"아직 올라온 소통 글이 없습니다." }}</p>
-                                    <div class="mt-4 flex items-center justify-between gap-2">
-                                        <p class="text-xs font-semibold text-slate-400">{{ item.post.created_at|timesince }} 전</p>
-                                        <span class="inline-flex items-center gap-1 text-xs font-black text-indigo-600">
-                                            전체 소통
-                                            <i class="fa-solid fa-arrow-right text-[10px]"></i>
-                                        </span>
-                                    </div>
-                                </div>
-                            </a>
+                    <article x-data="homeCalendarWidget()" x-init="init()" class="w-full rounded-3xl border border-slate-200 bg-white p-5 shadow-sm" style="max-width: 360px;" data-home-v2-top-calendar="true">
+                        <div class="mb-4">
+                            <h2 class="text-lg font-black text-slate-900 flex items-center gap-2">
+                                <i class="fa-solid fa-calendar-days text-indigo-500"></i>
+                                {{ compact_top_zone.calendar_hub.title }}
+                            </h2>
+                            <p class="mt-1 text-xs font-semibold text-slate-400">오늘 일정과 이번 주 흐름만 먼저 봅니다.</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2.5">
+                            <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                <p class="text-[11px] font-black uppercase tracking-wide text-slate-400">오늘</p>
+                                <p class="mt-1 text-2xl font-black text-slate-900">{{ compact_top_zone.calendar_hub.today_count }}</p>
+                            </div>
+                            <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                <p class="text-[11px] font-black uppercase tracking-wide text-slate-400">이번 주</p>
+                                <p class="mt-1 text-2xl font-black text-slate-900">{{ compact_top_zone.calendar_hub.week_count }}</p>
+                            </div>
+                        </div>
+                        <div class="mt-3 space-y-2.5">
+                            {% for item in compact_top_zone.calendar_hub.upcoming_items %}
+                            <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                <p class="text-base font-black leading-6 text-slate-900 line-clamp-2">{{ item.title }}</p>
+                                <p class="mt-1 text-sm font-semibold text-slate-500 line-clamp-1">{{ item.schedule_text }}</p>
+                            </div>
                             {% empty %}
-                            <div class="rounded-[1.6rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm font-bold text-slate-600 md:col-span-2" data-home-v2-tablet-community-empty="true">
-                                아직 올라온 소통 글이 없습니다.
+                            <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center">
+                                <p class="text-sm font-bold text-slate-600">다가오는 일정이 없습니다.</p>
                             </div>
                             {% endfor %}
                         </div>
-                    </div>
-                </section>
+                        <div class="mt-4 flex flex-wrap gap-2">
+                            <a href="{{ compact_top_zone.calendar_hub.main_url }}" class="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-4 py-2.5 text-sm font-black text-white hover:bg-indigo-700 transition">
+                                <i class="fa-solid fa-calendar-days"></i>{{ compact_top_zone.calendar_hub.primary_cta_label }}
+                            </a>
+                            <button type="button" @click="openCreateModalForDate(new Date())" class="inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-black text-slate-700 hover:border-slate-400 transition">
+                                <i class="fa-solid fa-plus"></i>{{ compact_top_zone.calendar_hub.secondary_cta_label }}
+                            </button>
+                        </div>
+
+                        <div x-show="createModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4" @click.self="createModalOpen = false">
+                            <div class="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
+                                <h3 class="mb-1 text-lg font-extrabold text-slate-900">일정 빠른 추가</h3>
+                                <p class="mb-4 text-xs font-semibold text-slate-500" x-text="createContextDateText"></p>
+                                <form @submit.prevent="submitCreateEvent" class="space-y-3">
+                                    <div>
+                                        <label class="mb-1 block text-xs font-bold text-slate-700">제목</label>
+                                        <input x-model="createForm.title" type="text" required maxlength="200" class="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                                    </div>
+                                    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                        <div>
+                                            <label class="mb-1 block text-xs font-bold text-slate-700">시작</label>
+                                            <input x-model="createForm.start_time" type="datetime-local" required class="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                                        </div>
+                                        <div>
+                                            <label class="mb-1 block text-xs font-bold text-slate-700">종료</label>
+                                            <input x-model="createForm.end_time" type="datetime-local" required class="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="mb-1 block text-xs font-bold text-slate-700">노트</label>
+                                        <textarea x-model="createForm.note" rows="3" class="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" placeholder="개인 메모를 남겨두세요."></textarea>
+                                    </div>
+                                    <div class="flex items-center justify-between gap-3">
+                                        <label class="inline-flex items-center gap-2 text-xs font-semibold text-slate-700">
+                                            <input x-model="createForm.is_all_day" type="checkbox" class="rounded border-slate-300"> 하루 종일
+                                        </label>
+                                        <select x-model="createForm.color" class="rounded-2xl border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                                            <option value="indigo">인디고</option>
+                                            <option value="rose">로즈</option>
+                                            <option value="amber">앰버</option>
+                                            <option value="emerald">에메랄드</option>
+                                            <option value="sky">스카이</option>
+                                        </select>
+                                    </div>
+                                    <div class="flex justify-end gap-2 pt-1">
+                                        <button type="button" @click="createModalOpen = false" class="rounded-2xl border border-slate-300 px-3.5 py-2 text-sm font-semibold text-slate-700">취소</button>
+                                        <button type="submit" :disabled="isSubmitting" class="rounded-2xl bg-indigo-600 px-3.5 py-2 text-sm font-bold text-white disabled:opacity-60">저장</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            {% include "core/includes/home_try_now_mini_apps.html" %}
+
+            <section class="mb-6" data-home-v2-service-groups="true">
+                {% include 'core/includes/purpose_sections.html' with sections=sections %}
+            </section>
+
+            {% if aux_sections %}
+            <section class="mb-6" data-home-v2-service-groups="true">
+                <h3 class="text-sm font-bold text-slate-500 mb-3 flex items-center gap-1.5">
+                    <i class="fa-solid fa-layer-group text-cyan-500"></i> 보조 도구
+                </h3>
+                {% include 'core/includes/purpose_sections.html' with sections=aux_sections %}
+            </section>
+            {% endif %}
+
+            <div class="mb-6">
+                {% include 'core/includes/game_banner.html' with games=games %}
             </div>
 
-            <!-- 모바일 전용 SNS 미리보기 -->
-            {% include 'core/partials/sns_mobile_preview_panel.html' with root_class='block md:hidden mt-6 px-1' section_id='sns-full-section-auth-v2' start_open='true' %}
+            <section class="mb-6" data-home-v2-sns-summary="true">
+                <div class="w-full max-w-3xl rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <h2 class="text-lg font-black text-slate-900 flex items-center gap-2">
+                                <i class="ph-fill ph-chat-circle-text text-indigo-600 text-xl"></i>
+                                {{ community_summary.title }}
+                            </h2>
+                            <p class="mt-1 text-sm text-slate-500">{{ community_summary.description }}</p>
+                        </div>
+                        <a href="{{ community_summary.full_url }}" class="inline-flex items-center gap-2 self-start rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-black text-slate-700 hover:border-indigo-300 hover:text-indigo-600 transition">
+                            전체 보기
+                            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                        </a>
+                    </div>
+
+                    {% if request.user.is_staff %}
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        <a href="{{ community_summary.full_url }}" class="inline-flex items-center gap-2 rounded-2xl bg-indigo-50 px-3.5 py-2 text-xs font-black text-indigo-700 hover:bg-indigo-100 transition">
+                            <i class="fa-solid fa-pen"></i> 공지 작성
+                        </a>
+                        <a href="{% url 'news_review_queue' %}" class="inline-flex items-center gap-2 rounded-2xl bg-amber-50 px-3.5 py-2 text-xs font-black text-amber-700 hover:bg-amber-100 transition">
+                            <i class="ph ph-shield-check"></i> 뉴스 검토
+                        </a>
+                        <a href="{% url 'insight_sns_queue' %}" class="inline-flex items-center gap-2 rounded-2xl bg-violet-50 px-3.5 py-2 text-xs font-black text-violet-700 hover:bg-violet-100 transition">
+                            <i class="ph ph-lightbulb"></i> 인사이트 노출
+                        </a>
+                    </div>
+                    {% endif %}
+
+                    <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                        {% for item in community_summary.posts %}
+                        <a href="{{ community_summary.full_url }}" class="block rounded-3xl border border-slate-200 bg-slate-50 p-4 hover:border-indigo-200 hover:bg-white transition">
+                            {% if item.image_url %}
+                            <div class="mb-3 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                                <img src="{{ item.image_url }}" alt="" class="h-32 w-full object-cover" loading="lazy">
+                            </div>
+                            {% endif %}
+                            <p class="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">{{ item.eyebrow }}</p>
+                            {% if item.title %}
+                            <p class="mt-2 text-base font-black leading-6 text-slate-900 line-clamp-2">{{ item.title }}</p>
+                            {% endif %}
+                            <p class="mt-2 text-sm leading-6 text-slate-500 line-clamp-3">
+                                {{ item.body|default:item.post.content|default:"소통 글이 아직 없습니다." }}
+                            </p>
+                            <p class="mt-3 text-xs font-semibold text-slate-400">{{ item.post.created_at|timesince }} 전</p>
+                        </a>
+                        {% empty %}
+                        <div class="rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm font-bold text-slate-600 sm:col-span-2">
+                            아직 올라온 소통 글이 없습니다.
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
 
         </main>
     </div>
 </div>
-{{ calendar_hub.message_limits_json|json_script:"home-calendar-message-limits-data" }}
-{{ calendar_hub.message_urls_json|json_script:"home-calendar-message-urls-data" }}
 {{ favorite_product_ids|json_script:"home-favorite-ids-data" }}
-{{ home_v2_frontend_config|json_script:"home-v2-frontend-config" }}
+{{ prompt_recipe_catalog|json_script:"home-prompt-recipe-catalog-data" }}
 {% endblock %}
