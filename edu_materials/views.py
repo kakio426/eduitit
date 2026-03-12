@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import F
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
@@ -132,12 +132,14 @@ def update_material(request, material_id):
 def material_detail(request, pk):
     material = get_object_or_404(EduMaterial, id=pk, teacher=request.user)
     public_url = request.build_absolute_uri(reverse("edu_materials:run", args=[material.id]))
+    material_render_url = reverse("edu_materials:render", args=[material.id])
     return render(
         request,
         "edu_materials/detail.html",
         {
             "service": get_service(),
             "material": material,
+            "material_render_url": material_render_url,
             "public_url": public_url,
             "public_qr_data_url": build_material_qr_data_url(public_url) if material.is_published else "",
         },
@@ -182,5 +184,24 @@ def run_material(request, pk):
         {
             "material": material,
             "hide_navbar": True,
+            "material_render_url": reverse("edu_materials:render", args=[material.id]),
         },
     )
+
+
+def render_material(request, pk):
+    material = get_object_or_404(EduMaterial, id=pk)
+    is_teacher_preview = request.user.is_authenticated and material.teacher_id == request.user.id
+    if not material.is_published and not is_teacher_preview:
+        raise Http404()
+
+    response = HttpResponse(material.html_content, content_type="text/html; charset=utf-8")
+    # Keep raw HTML sandboxed even if the render URL is opened directly.
+    response["Content-Security-Policy"] = (
+        "sandbox allow-downloads allow-forms allow-modals allow-pointer-lock "
+        "allow-popups allow-popups-to-escape-sandbox allow-presentation allow-scripts; "
+        "frame-ancestors 'self';"
+    )
+    response["Referrer-Policy"] = "no-referrer"
+    response["X-Content-Type-Options"] = "nosniff"
+    return response

@@ -1,24 +1,18 @@
 {% extends 'base.html' %}
 
 {% block title %}{{ material.title }}{% endblock %}
+{% block footer_class %}hidden{% endblock %}
 
 {% block extra_css %}
 <style>
     .edu-materials-run-shell {
-        background: linear-gradient(180deg, #0f172a 0%, #111827 100%);
+        background: #020617;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<section class="edu-materials-run-shell min-h-screen px-4 py-8 md:px-8">
-    <div class="max-w-7xl mx-auto space-y-6">
-        <div class="rounded-[28px] border border-white/10 bg-white/5 px-6 py-5 text-white">
-            <div class="text-xs uppercase tracking-[0.32em] text-emerald-300">교육 자료 실행</div>
-            <h1 class="text-3xl font-black mt-2">{{ material.title }}</h1>
-            <p class="text-slate-300 mt-2">학생 화면으로 바로 실행 중입니다.</p>
-        </div>
-        {% include 'edu_materials/includes/material_iframe.html' with material=material frame_title='학생 실행 화면' %}
-    </div>
+<section class="edu-materials-run-shell min-h-screen">
+    {% include 'edu_materials/includes/material_iframe.html' with material=material material_render_url=material_render_url frame_title=material.title hide_frame_header=True frame_shell_classes='h-[100dvh] w-full bg-slate-950' frame_stage_classes='h-[100dvh] w-full bg-white' iframe_classes='block h-full w-full bg-white' %}
 </section>
 {% endblock %}

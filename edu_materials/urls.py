@@ -12,5 +12,6 @@ urlpatterns = [
     path("<uuid:material_id>/update/", views.update_material, name="update"),
     path("<uuid:material_id>/delete/", views.delete_material, name="delete"),
     path("<uuid:material_id>/publish/", views.toggle_material_publish, name="toggle_publish"),
+    path("<uuid:pk>/render/", views.render_material, name="render"),
     path("<uuid:pk>/run/", views.run_material, name="run"),
 ]

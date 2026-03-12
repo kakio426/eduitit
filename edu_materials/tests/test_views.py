@@ -171,9 +171,58 @@ class EduMaterialViewTests(TestCase):
         )
         response = self.client.get(reverse("edu_materials:run", args=[material.id]))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "sandbox=\"allow-downloads allow-forms allow-modals allow-popups allow-scripts\"")
+        self.assertContains(
+            response,
+            "sandbox=\"allow-downloads allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-scripts\"",
+        )
+        self.assertContains(response, reverse("edu_materials:render", args=[material.id]))
         material.refresh_from_db()
         self.assertEqual(material.view_count, 1)
+
+    def test_detail_view_uses_render_url_for_preview(self):
+        material = EduMaterial.objects.create(
+            teacher=self.user,
+            title="미리보기 자료",
+            html_content="<html><body>preview</body></html>",
+        )
+
+        response = self.client.get(reverse("edu_materials:detail", args=[material.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse("edu_materials:render", args=[material.id]))
+        self.assertNotContains(response, "srcdoc=")
+
+    def test_render_view_allows_teacher_preview_before_publish(self):
+        material = EduMaterial.objects.create(
+            teacher=self.user,
+            title="원본 렌더",
+            html_content="<html><body><button>play</button></body></html>",
+            is_published=False,
+        )
+
+        response = self.client.get(reverse("edu_materials:render", args=[material.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "<button>play</button>", html=True)
+        self.assertIn("sandbox allow-downloads", response["Content-Security-Policy"])
+
+    def test_render_view_requires_publish_for_public_access(self):
+        other_user = User.objects.create_user(
+            username="another-teacher",
+            email="another@example.com",
+            password="pw123456",
+        )
+        material = EduMaterial.objects.create(
+            teacher=other_user,
+            title="비공개 렌더",
+            html_content="<html><body>private</body></html>",
+            is_published=False,
+        )
+        self.client.logout()
+
+        response = self.client.get(reverse("edu_materials:render", args=[material.id]))
+
+        self.assertEqual(response.status_code, 404)
 
 
 class EduMaterialMigrationHelperTests(TestCase):
@@ -289,4 +338,3 @@ class EduMaterialMigrationHelperTests(TestCase):
         self.assertIn("HTML 자료", titles)
         self.assertIn("Markdown 자료", titles)
         self.assertNotIn("PDF 자료", titles)
-

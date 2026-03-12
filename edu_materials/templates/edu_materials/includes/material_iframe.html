@@ -1,4 +1,5 @@
-<div class="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950/95 shadow-xl shadow-slate-900/10">
+<div class="{{ frame_shell_classes|default:'overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950/95 shadow-xl shadow-slate-900/10' }}">
+    {% if not hide_frame_header %}
     <div class="flex items-center justify-between px-5 py-4 text-white border-b border-white/10">
         <div>
             <div class="text-xs uppercase tracking-[0.28em] text-emerald-300">Sandbox Preview</div>
@@ -6,12 +7,16 @@
         </div>
         <div class="text-xs text-slate-300">호스트 화면과 분리된 iframe 실행</div>
     </div>
+    {% endif %}
+    <div class="{{ frame_stage_classes|default:'bg-slate-950 aspect-[16/9] min-h-[420px]' }}">
     <iframe
         title="{{ frame_title|default:material.title }}"
-        class="block w-full min-h-[720px] bg-white"
-        sandbox="allow-downloads allow-forms allow-modals allow-popups allow-scripts"
+        class="{{ iframe_classes|default:'block h-full w-full bg-white' }}"
+        sandbox="{{ iframe_sandbox|default:'allow-downloads allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-scripts' }}"
         loading="eager"
         referrerpolicy="no-referrer"
-        srcdoc="{{ material.html_content|escape }}"
+        src="{{ material_render_url }}"
+        allowfullscreen
     ></iframe>
+    </div>
 </div>
