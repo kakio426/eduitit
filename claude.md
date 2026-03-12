@@ -1,10 +1,20 @@
-## [Canonical Top Summary] 2026-02-17
-- Declare UI scope before edits: global/app/page
+## [Canonical Top Summary] 2026-03-12
+- Declare UI scope before edits: `global` / `app-level` / `single-page`
 - Declare `target_app` and `do_not_touch_apps` before edits
 - Preserve stable service UI language by default
 - Validate behavior parity first (routing, modal close, ESC, focus)
 - If Korean text is corrupted: recover encoding/text first, then re-apply feature/style changes
-- Run python manage.py check (and node --check for changed JS)
+- Run `python manage.py check` (and `node --check` for changed JS)
+- New services MUST create `ServiceManual` (+ 3+ `ManualSection`) at the same time
+- Lock classroom core journey first: `teacher create -> publish -> student QR join`
+- Treat tablet as a first-class QA target
+- Stress-test repeated cards/lists with long text and `0 / 1 / 10 / 100` data states
+- Remove contradictory auth UI: no login CTA after login, no mixed public/auth/role copy
+- Review guest links/QR/codes for expiry, revoke, regenerate, and screenshot-forward risk
+- Never store sensitive data in `localStorage`, `sessionStorage`, or query strings
+- Keep `home` for starting work, `catalog` for browsing, and `manuals` for help
+- Home cards get one primary CTA; workflow UIs must change primary action by state
+- Existing service edits must record regression scope for `로그인/공개 상태`, `모바일`, `태블릿`, `핵심 사용자 여정`
 - For changed JS, do a runtime smoke test (load page + click core tabs/buttons once) and confirm browser console has zero `ReferenceError`
 - For user-triggered `fetch` actions, never use empty `catch`; enforce `response.ok` check and show failure feedback (toast/alert)
 - For form pages: never hide required model fields without making them optional/defaulted, and always render form errors
@@ -15,7 +25,7 @@
 
 ---
 
-## [운영 기준] 2026-02-17 (최신 규칙 — 충돌 시 이 섹션 우선)
+## [운영 기준] 2026-03-12 (최신 규칙 — 충돌 시 이 섹션 우선)
 
 ### 1) UI 변경 원칙
 - 변경 시작 전에 범위를 명시한다: `global` / `app-level` / `single-page`.
@@ -82,6 +92,42 @@
 - 테스트 게이트: 서비스 진입 라우팅 / 모달 열기·닫기 / phone·iPad·desktop 정책 / 플래그 ON·OFF 동작
 - 문서 동기화: `CLAUDE.md` + `codex/SKILL.md` 같은 커밋에서 처리
 
+### 5-1) Responsive & Breakpoint QA
+- `tablet`은 모바일 확대판이 아니라 별도 QA 대상이다.
+- 반복 카드/리스트는 긴 텍스트와 많은 항목 수에서도 무너지면 안 된다.
+- 기본 데이터 스트레스 검수는 `빈 상태 / 1개 / 10개 / 100개`로 고정한다.
+- 화면 폭이 줄어들면 컬럼 수 유지보다 가독성과 조작 가능성을 우선한다.
+
+### 5-2) Login/Public State Consistency
+- 로그인 후 로그인/회원가입 CTA가 남아 있으면 배포 금지다.
+- 공개/로그인 상태의 헤더, CTA, 진입 문구는 같은 접근 정책을 가리켜야 한다.
+- 관리자/참여자/게스트 상태를 같은 전면 우선순위로 섞지 않는다.
+
+### 5-3) Link/QR/Guest Security Rules
+- 학생/참여자 링크를 관리자 화면 DOM에 고정 노출하지 않는다.
+- 링크/QR/입장코드는 만료/회수/재발급 가능성을 먼저 검토한다.
+- 스크린샷/재전송/재사용 위험을 기본 전제로 둔다.
+
+### 5-4) Privacy & Data Minimization
+- 민감정보 서비스는 수집 목적, 저장 여부, 보관 기간, 삭제 흐름을 먼저 정한다.
+- 필수 아니면 이름/생년월일/학부모 연락처는 기본 비수집이다.
+- 민감정보를 `localStorage`, `sessionStorage`, query string에 남기지 않는다.
+
+### 5-5) Mini App / Home / Catalog IA Rules
+- `home`은 작업 시작판, `catalog`는 탐색판, `manuals`는 설명판으로 분리한다.
+- 홈 카드에는 단일 1차 CTA만 전면 배치한다.
+- 복잡한 서비스는 full service 구조를 유지하고, 가벼운 반복 작업형만 mini app 후보로 본다.
+
+### 5-6) State-based Workflow UI Rules
+- `빈 상태 -> 생성 직후 -> 진행 중 -> 완료 후`마다 주 버튼과 다음 행동이 달라야 한다.
+- 공유 단계와 관리 단계 액션을 같은 전면 우선순위로 두지 않는다.
+- 빈 상태에서는 설정 설명보다 예시와 다음 행동을 먼저 보여 준다.
+
+### 5-7) 기존 서비스 회귀 게이트
+- 기존 서비스 수정 시 영향 범위를 `로그인/공개 상태`, `모바일`, `태블릿`, `핵심 사용자 여정` 기준으로 기록한다.
+- 회귀 QA 메모를 남겨 같은 실패를 반복하지 않는다.
+- teacher-first IA/운영 검수는 release gate, mobile policy, home/catalog contract와 함께 본다.
+
 ### 6) Target Service Lock
 - 작업 시작 전 선언: `target_app` + `do_not_touch_apps`
 - 선언 범위 밖 파일 수정이 감지되면 즉시 중단하고 범위 재확인
@@ -140,6 +186,21 @@
 - 배포 전 차단 조건:
   - 교사 핵심 여정(생성→저장→미리보기→배포) 중 어느 단계든 "다음 행동"이 화면에서 즉시 보이지 않으면 배포 금지.
   - 핵심 버튼 클릭 시 처리 중 상태를 사용자가 인지할 수 없으면 배포 금지.
+
+### 11) 공용 상단바 Critical UI 가드레일 (2026-03-12)
+- `base.html` 같은 공용 상단바 변경은 작은 UI 수정으로 보더라도 `global` 작업으로 취급한다.
+- 학급 선택, 프로필 메뉴, 로그아웃처럼 모든 화면에서 쓰는 핵심 컨텍스트 UI는 "클라이언트 상태가 살아야만 목록이 보이는 구조"로 만들지 않는다.
+  - 학급 목록처럼 중요한 선택지는 가능하면 서버가 HTML에 직접 렌더한다.
+  - `x-for`, JSON script, hydration 실패 시 목록 자체가 사라질 수 있는 구조는 회피한다.
+- 드롭다운 닫힘은 프레임워크 초기화 성공 여부와 무관하게 동작해야 한다.
+  - 최소 기준: 바깥 클릭 닫힘, `Escape` 닫힘, 다시 클릭 시 닫힘.
+- 화살표 회전만 되고 패널이 비거나 멈춰 보이면, 데이터 삭제보다 먼저 "렌더링 상태/초기화 실패/닫힘 로직 충돌"을 의심한다.
+- 공용 상단바 수정 후 최소 실기능 스모크:
+  - 데스크톱 학급 목록이 HTML에 실제로 렌더되는지
+  - 학급 선택 후 라벨/기본 상태가 즉시 갱신되는지
+  - 바깥 클릭과 `Escape`로 닫히는지
+  - 프로필 드롭다운이 같이 회귀하지 않았는지
+  - 모바일 메뉴 안의 같은 기능도 동일하게 동작하는지
 
 ---
 
@@ -230,11 +291,17 @@ NavBar가 `fixed` 포지션이므로 모든 페이지에서 상단 여백 확보
 | `lg:` | 1024px | 데스크톱 |
 | `xl:` | 1280px | SNS 사이드바 분기 기준 |
 
+- `tablet`은 별도 설계/검수 대상이며, 반복 카드/리스트는 `빈 상태 / 1개 / 10개 / 100개`와 긴 라벨 상태까지 본다.
+- 화면 폭 감소 시 컬럼 수보다 가독성과 CTA 인지성을 우선한다.
+
 ## 문서 관리 UI 패턴 (Mobile-First)
 
 **목록 화면**: `hidden md:block` (데스크톱 table) / `md:hidden` (모바일 Card Grid)
 **상세 화면**: 모바일 Alpine.js 탭 / 데스크톱 2단 컬럼 (`lg:grid-cols-3`)
 **입력 폼**: 모바일 `py-3.5`, `text-base` 이상 / 버튼·입력창 `w-full`
+
+- `home`은 작업 시작판, `catalog`는 탐색판, `manuals`는 설명판으로 분리한다.
+- 홈 카드에는 핵심 가치 한 줄과 단일 1차 CTA만 전면 배치한다.
 
 ## SNS Sidebar 통합 패턴 (V2 기준)
 
@@ -886,6 +953,10 @@ bootstrap_runtime → uvicorn
 ---
 
 ## 보안 / UX
+
+- 로그인 후 로그인 CTA가 남지 않게 유지하고, 공개/로그인/역할 문구가 같은 정책을 가리키는지 먼저 확인한다.
+- guest 링크/QR/입장코드는 만료/회수/재발급 여부와 스크린샷 전파 위험을 같이 검토한다.
+- 민감정보를 `localStorage`, `sessionStorage`, query string에 남기지 않는다.
 
 ### 47. 비회원 관리 접근 권한 — UUID(Management ID) 사용
 ```python

@@ -1,20 +1,28 @@
-## [Canonical Top Summary] 2026-02-27
-- Declare UI change scope first: global/app/page
-- Do not force one style on all services; preserve existing stable UI
-- Prioritize behavior parity over visual polish
+## [Canonical Top Summary] 2026-03-12
+- Declare UI change scope first: `global` / `app-level` / `single-page`
+- Declare `target_app` and `do_not_touch_apps` before editing
+- Preserve stable service UI by default; prioritize behavior parity over visual polish
 - Recover Korean text integrity before continuing feature work
-- Validate with python manage.py check (+ node --check when JS changes)
+- Validate with `python manage.py check` (+ `node --check` when JS changes)
 - New services MUST create `ServiceManual` (+ 3+ `ManualSection`) at the same time
 - Lock classroom core journey first: `teacher create -> publish -> student QR join`
-- Keep one clear path per goal: merge duplicated cards/buttons/sections
 - Classroom distribution screen MUST support immediate QR fullscreen
 - Assume scale early: if list can exceed 100, include search + pagination
 - Replace developer jargon with teacher-friendly copy and concrete examples
-- Run a 30-second classroom smoke test before merge
+- Treat tablet as a first-class QA target, not a stretched mobile afterthought
+- Repeated cards/lists must survive long text and `0 / 1 / 10 / 100` item states
+- Remove contradictory auth UI: no login CTA after login, no mixed public/auth/role copy
+- Review guest links/QR/codes for expiry, revoke, regenerate, and screenshot-forward risk
+- Never store sensitive data in `localStorage`, `sessionStorage`, or query strings
+- Keep `home` for starting work, `catalog` for browsing, and `manuals` for help
+- Home cards get one short value line + one primary CTA
+- Workflow UIs must change primary action by state: `빈 상태 -> 생성 직후 -> 진행 중 -> 완료 후`
+- Existing service edits require regression notes for `로그인/공개 상태`, `모바일`, `태블릿`, `핵심 사용자 여정`
+- Keep one clear path per goal and run a 30-second classroom smoke test before merge
 
 ---
 
-## [Canonical Body v3] 2026-02-27
+## [Canonical Body v4] 2026-03-12
 이 섹션은 서비스 통합 작업 시 우선 적용하는 최신 기준이다. 아래 기준과 기존 본문이 충돌하면 이 섹션을 우선한다.
 
 ### 1) 변경 범위 선언
@@ -39,24 +47,19 @@
 - 한글이 많은 파일에서 파이프 기반 파일 재기록(`Get-Content | Set-Content`)을 금지한다.
 - 텍스트 손상(깨짐/모지바케) 의심 시 기능 작업을 중단하고, 텍스트 복구 후 기능 변경을 재적용한다.
 
-### 4) 장기/게임형 서비스 기준
-- 룰 정확성(정석 규칙)과 상태 일관성을 최우선으로 검증한다.
-- 보드/말 스타일 개선은 규칙 정확성 검증 이후 단계적으로 적용한다.
-- 상호작용 UI(선택/강조/취소)는 초등학생 사용성 기준(명확한 시각 피드백, 충분한 터치 영역)으로 검수한다.
-
-### 5) 배포 전 필수 검증
+### 4) 배포 전 필수 검증
 - `python manage.py check`
 - JS 변경 시 `node --check <changed_file.js>`
 - 대시보드 진입 -> 서비스 모달 -> 서비스 실행 경로 수동 점검
 
-### 6) 문서 동기화 규칙
+### 5) 문서 동기화 규칙
 - 아래 문서 3종은 같은 날짜 기준으로 동기화한다.
 - `claude.md`
 - `SERVICE_INTEGRATION_STANDARD.md`
 - `codex/SKILL.md`
 - 기능/정책 변경 시 3개 문서의 충돌 여부를 함께 점검한다.
 
-### 7) 신규 서비스 이용방법 동시 생성 (MUST)
+### 6) 신규 서비스 이용방법 동시 생성 (MUST)
 - 신규 서비스는 `Product` 생성과 동시에 이용방법(`ServiceManual`)을 반드시 생성한다.
 - `ServiceManual`은 기본값으로 `is_published=True`를 사용한다.
 - `ManualSection`은 최소 3개(예: 시작하기/주요 기능/활용 팁)를 함께 생성한다.
@@ -64,7 +67,7 @@
 - 위 항목이 누락된 서비스는 "구현 완료"로 간주하지 않으며 배포/머지 대상에서 제외한다.
 - 상단바 `이용방법`(`service_guide_list`)에서 즉시 노출되는지 확인한다.
 
-### 8) 교실형 서비스 단순성/현장성 계약 (MUST)
+### 7) 교실형 서비스 단순성/현장성 계약 (MUST)
 - 교실형 서비스는 구현 전 핵심 여정을 먼저 고정한다: `교사 문제 준비 -> 배포 -> 학생 즉시 입장`.
 - 학생 진입 기본값은 링크 수기 입력이 아니라 `QR 스캔`이며, 배포 직후 바로 띄울 수 있어야 한다.
 - 동일 목적 기능은 화면에 하나의 진입점으로 통합한다. (예: 선택/보관/랜덤 기능 중복 배치 금지)
@@ -72,10 +75,61 @@
 - 교사 대상 안내 문구는 개발자 용어(예: 헤더 줄, raw schema) 대신 작업 중심 문장으로 작성한다.
 - 배포 전 수업 시작 기준 30초 시나리오를 점검한다: `교사 배포 -> QR 전체화면 -> 학생 입장 확인`.
 
+### 8) Responsive & Breakpoint QA (MUST)
+- 반복 카드/리스트는 긴 텍스트와 많은 항목 수에서도 높이·줄바꿈·레이아웃이 붕괴하지 않아야 한다.
+- `tablet`은 모바일 확대판이 아니라 별도 설계 대상이다. 데스크톱/태블릿/모바일을 모두 확인한다.
+- 반복 카드 UI는 제목/설명 줄 수 제한(line clamp 또는 동등한 제어)을 기본으로 한다.
+- 화면 폭이 줄어들 때는 컬럼 수 유지보다 가독성과 조작 가능성을 우선한다.
+- QA 기본 상태는 `빈 상태 / 1개 / 10개 / 100개`다.
+
+### 9) Login/Public State Consistency (MUST)
+- 로그인 후 로그인/회원가입 CTA가 남아 있으면 배포 금지다.
+- 공개/로그인 상태에서 헤더, CTA, 진입 문구가 서로 모순되면 안 된다.
+- 관리자/참여자/게스트 상태는 같은 화면에서 같은 전면 우선순위로 섞지 않는다.
+- 접근 정책은 실제 라우팅/리다이렉트와 UI 문구가 같은 뜻을 가리켜야 한다.
+
+### 10) Link/QR/Guest Security Rules (MUST)
+- 학생/참여자 링크를 관리자 화면 HTML에 직접 박아두지 않는다. 필요 시 복사/생성 액션으로 제공한다.
+- 공유 링크/QR/입장코드는 권한 범위, 만료, 회수, 재발급 가능성을 먼저 검토한다.
+- 링크 기반 서비스는 재사용, 재전송, 스크린샷 확산 위험을 전제로 설계한다.
+- 삭제/만료/회수 흐름이 없다면 예외 사유를 계획 문서나 QA 메모에 명시한다.
+
+### 11) Privacy & Data Minimization (MUST)
+- 민감정보를 다루는 서비스는 수집 목적, 저장 여부, 보관 기간, 삭제 흐름을 먼저 정의한다.
+- 필수값이 아니면 이름, 생년월일, 학부모 연락처 등은 기본 비수집으로 설계한다.
+- 민감정보는 `localStorage`, `sessionStorage`, URL query string에 남기지 않는다.
+- 신규 서비스는 시작 전에 개인정보 영향도를 `P0 / P1 / P2`로 자체 평가한다.
+
+### 12) Mini App / Home / Catalog IA Rules (MUST)
+- `home`은 작업 시작판, `catalog`는 탐색판, `manuals`는 설명판으로 분리한다.
+- 홈 카드는 핵심 가치 한 줄 + 단일 1차 CTA만 전면 배치한다.
+- 가벼운 반복 작업형만 mini app 후보로 본다.
+- 복잡한 서비스는 메인 직접 실행보다 full service 구조를 유지한다.
+
+### 13) State-based Workflow UI Rules (MUST)
+- `빈 상태 -> 생성 직후 -> 진행 중 -> 완료 후`마다 화면의 주 버튼과 다음 행동이 달라야 한다.
+- 공유 단계 버튼과 관리 단계 버튼을 같은 전면 우선순위로 섞지 않는다.
+- 빈 상태에서는 설정 설명보다 사용 예시와 다음 행동을 먼저 보여 준다.
+- 완료 후에는 생성 CTA보다 공유/분석/정리 등 후속 액션을 우선한다.
+
+### 14) 장기/게임형 서비스 기준
+- 룰 정확성(정석 규칙)과 상태 일관성을 최우선으로 검증한다.
+- 보드/말 스타일 개선은 규칙 정확성 검증 이후 단계적으로 적용한다.
+- 상호작용 UI(선택/강조/취소)는 초등학생 사용성 기준(명확한 시각 피드백, 충분한 터치 영역)으로 검수한다.
+
+### 15) 운영 중 서비스 회귀 게이트 (MUST)
+- 기존 서비스 수정 시 영향 범위를 `로그인/공개 상태`, `모바일`, `태블릿`, `핵심 사용자 여정` 기준으로 기록한다.
+- 핵심 사용자 여정 회귀 테스트 결과를 남기고, 서비스별 QA 메모를 누적해 같은 실수를 반복하지 않는다.
+- 아래 문서를 운영 품질 SSOT 참고 문서로 함께 확인한다.
+  - `docs/plans/RELEASE_GATE_teacher_first_2026-03-09.md`
+  - `docs/plans/POLICY_teacher_first_mobile_2026-03-09.md`
+  - `docs/plans/CHECKLIST_eduitit_home_catalog_teacher_first_2026-03-08.md`
+  - `docs/plans/CONTRACT_teacher_first_product_2026-03-08.md`
+
 ---
 ## [Legacy Reference Notice]
 - 아래 본문은 과거 운영/기록 내용(레거시)이며 일부 텍스트 깨짐이 포함될 수 있다.
-- 실제 작업 기준은 상단 `Canonical Top Summary`, `Canonical Body v3`를 우선 적용한다.
+- 실제 작업 기준은 상단 `Canonical Top Summary`, `Canonical Body v4`를 우선 적용한다.
 - 레거시 본문은 삭제하지 않고 보존한다.
 
 # 🛠️ Eduitit Service Integration Standard (SIS)
@@ -134,6 +188,8 @@
 ## 4. 디자인 시스템 (UI/UX Standard)
 
 ### A. Claymorphism 규격
+> 참고: 이 섹션은 historical reference 성격의 디자인 예시다. 실제 구현에서는 상단 canonical의 "기존 stable UI 강제 통일 금지" 규칙을 우선한다.
+
 모든 카드는 `clay-card` 클래스를 사용하며, 배경색은 `#E0E5EC`를 기본으로 합니다.
 
 ```html
@@ -374,10 +430,16 @@ web: python3 manage.py migrate --noinput && python3 manage.py ensure_ssambti && 
 - [ ] 정적 파일(JS/CSS) 사용 시 `{% static %}` 태그를 사용했는가?
 - [ ] 사용자 프로필(`UserProfile`)이 없는 경우를 대비해 `hasattr` 체크를 하는가?
 - [ ] 모바일 뷰에서 `clay-card`의 패딩이 너무 넓지 않은가? (md:p-14, p-6 분리)
+- [ ] **[Responsive][MUST]** tablet breakpoint를 별도 화면으로 검수했는가? (모바일 확대판 취급 금지)
+- [ ] **[Responsive][MUST]** 반복 카드/리스트가 긴 텍스트와 많은 카드 수에서도 무너지지 않는가?
+- [ ] **[Stress QA][MUST]** `빈 상태 / 1개 / 10개 / 100개` 데이터 상태를 모두 확인했는가?
+- [ ] **[Responsive]** 화면 폭이 줄어들 때 컬럼 수보다 가독성/조작성이 우선되도록 정리했는가?
 - [ ] **[중요]** 해당 서비스가 독자적인 Django App으로 분리되어 있으며, 전용 `models.py`를 통해 데이터 영속성이 구현되었는가?
 - [ ] AI 로깅이 포함되어 있어 추후 에이전트가 자가 수복(Self-healing)하기 용이한가?
 - [ ] **[Design]** `Dongle` 폰트가 사용되지 않았으며, 나눔스퀘어라운드/Inter를 사용하는가?
 - [ ] **[Design]** "마케팅 용도" 등 불필요한 개인정보 수집 문구가 삭제되었는가?
+- [ ] **[Privacy][MUST]** 민감 서비스의 수집 목적/저장 여부/보관 기간/삭제 흐름을 먼저 정의했는가?
+- [ ] **[Privacy][MUST]** 민감정보를 `localStorage`, `sessionStorage`, query string에 남기지 않았는가?
 - [ ] **[UI]** 회원 탈퇴(Delete Account) 기능이 설정 페이지에 포함되었는가?
 - [ ] 사용자 경험(UX) 측면에서 `vibe_check`를 완료했는가? (브라우저 없이 코드로 직접 확인)
 - [ ] **[Efficiency]** 모든 로직 검증을 브라우저 실행 없이 터미널(`shell`, `check`)에서 완료했는가?
@@ -386,11 +448,18 @@ web: python3 manage.py migrate --noinput && python3 manage.py ensure_ssambti && 
 - [ ] **[Manual][MUST]** `ServiceManual(is_published=True)`과 최소 3개 이상의 `ManualSection`이 `ensure_` 커맨드를 통해 자동 생성되는가? (누락 시 배포/머지 금지)
 - [ ] **[Terminology]** 학생을 대상으로 할 때 MBTI/검사 등 지루한 용어가 순화(캐릭터/찾기 등)되었는가?
 - [ ] **[Auth]** 학생 참여 시 비로그인(Guest) 플로우가 원활한가?
+- [ ] **[Auth][MUST]** 로그인 후 로그인 CTA가 남아 있지 않은가?
+- [ ] **[Auth][MUST]** 공개/로그인/역할별 헤더, CTA, 진입 문구가 서로 같은 상태를 가리키는가?
 - [ ] **[Flow][MUST]** 핵심 여정(교사 준비 -> 배포 -> 학생 입장)이 30초 안에 끊김 없이 동작하는가?
 - [ ] **[Entry][MUST]** 학생 진입이 QR 스캔 중심으로 설계되어 있으며, 배포 직후 QR 전체화면을 즉시 띄울 수 있는가?
+- [ ] **[Link Security][MUST]** guest/student 링크가 관리자 화면 DOM에 고정 노출되지 않는가?
+- [ ] **[Link Security][MUST]** 링크/QR/입장코드에 만료/회수/재발급 흐름 또는 명시적 예외 사유가 있는가?
 - [ ] **[IA][MUST]** 동일 목적 UI(선택/보관/랜덤/배포 상태 등)가 중복 카드로 분산되지 않았는가?
+- [ ] **[IA][MUST]** `home` 카드에는 핵심 가치 한 줄 + 단일 1차 CTA만 전면 배치했는가?
 - [ ] **[Scale]** 데이터가 100개 이상일 때를 가정해 검색/페이지네이션(또는 동등한 탐색 UX)을 제공하는가?
 - [ ] **[Copy][MUST]** 교사 안내 문구가 개발자 용어 없이 이해 가능한 단계형 문장/예시로 작성되었는가?
+- [ ] **[Workflow][MUST]** 상태별(`빈 상태 -> 생성 직후 -> 진행 중 -> 완료 후`) 주 버튼과 다음 행동이 분리되어 있는가?
+- [ ] **[Regression][MUST]** 기존 서비스 수정 시 영향 범위와 회귀 QA 메모를 남겼는가?
 - [ ] **[Infra]** 새로운 라이브러리를 사용했다면 `requirements.txt`에 버전과 함께 명시했는가?
 - [ ] **[Infra]** `ensure_<app_name>` management command를 생성하고 `bootstrap_runtime` 실행 체인에 등록했는가? (`INSTALLED_APPS`, `config/urls.py`, `core/management/commands/bootstrap_runtime.py`, `Procfile`, `nixpacks.toml`) — 누락 시 대시보드 미노출 또는 라우팅 실패
 - [ ] **[Infra]** `nixpacks.toml`의 `[phases.start]` 명령이 `Procfile`과 동기화되어 있는가? (불일치 시 배포 환경에 따라 다른 명령이 실행됨)

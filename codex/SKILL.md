@@ -1,6 +1,6 @@
 ---
 name: eduitit-core
-description: Core guardrails for Eduitit service development and maintenance, including Django/HTMX changes, ensure command safety, ServiceManual setup, and deployment sync rules.
+description: Core guardrails for Eduitit service development and maintenance, including operational QA, auth/link safety, ServiceManual setup, and deployment sync rules.
 ---
 
 # Eduitit Core Guardrails
@@ -12,6 +12,10 @@ description: Core guardrails for Eduitit service development and maintenance, in
 - Keep Django template tags intact on one line when conditional tags are involved.
 - Always provide `ServiceManual` for new services with at least 3 `ManualSection` records.
 - Do not overwrite admin-managed fields in `ensure_*` commands (`service_type`, `display_order`, `color_theme`).
+- Treat `tablet` as a separate QA target for teacher-facing UI.
+- Repeated cards/lists must survive long labels and `0 / 1 / 10 / 100` data states.
+- Keep login/public/role UI consistent; no login CTA after auth.
+- Keep `home` for starting work, `catalog` for browsing, and `manuals` for help. Home cards get one primary CTA.
 
 ## Target Service Lock
 - Before editing, declare:
@@ -63,6 +67,7 @@ description: Core guardrails for Eduitit service development and maintenance, in
   - `python manage.py check`
   - target test suite (or health checks) pass
   - critical URL smoke check for changed service(s)
+- For existing service edits, include regression scope for `로그인/공개 상태`, `모바일`, `태블릿`, and core journey.
 - Final report must include:
   - included files
   - explicitly excluded files
@@ -123,6 +128,9 @@ description: Core guardrails for Eduitit service development and maintenance, in
 - Use migrations (`RunPython`) for DB data changes, not only Django shell edits.
 - Keep seed/init logic idempotent (`get_or_create` / `update_or_create`).
 - Treat `ensure_*` as existence guarantee, not forced reset.
+- For sensitive services, define purpose, storage, retention, and deletion flow first.
+- Never store sensitive data in `localStorage`, `sessionStorage`, or query strings.
+- Review guest links/QR/codes for expiry, revoke, regenerate, and screenshot-forward risk.
 
 ## Django/HTMX Stability
 - Use `select_related` only for required relationships.
@@ -139,6 +147,8 @@ description: Core guardrails for Eduitit service development and maintenance, in
 - Do not force Claymorphism on services that already use a different established UI language.
 - For game/interactive services, prioritize readability, tap-target size, and state clarity over decorative consistency.
 - Do not load HTMX/Alpine redundantly in child templates.
+- Prefer line-clamped titles/descriptions on repeated cards and favor readability over column count when width shrinks.
+- Workflow screens must change primary actions across `빈 상태 -> 생성 직후 -> 진행 중 -> 완료 후`.
 
 ## Mobile Board Fit Rule (Game Services)
 - Scope: all grid-board games (for example `isolation`, `breakthrough`, chess-like variants).
@@ -187,6 +197,14 @@ description: Core guardrails for Eduitit service development and maintenance, in
 - For platform-level policy updates, add a short canonical section near the top before legacy bodies.
 - Do not delete legacy sections without user approval; mark new rules as higher-priority canonical guidance.
 - When content is partially corrupted, add a clean canonical block first so operators can continue safely before full text restoration.
+- Keep the `2026-03-12` operational quality rules aligned across all three docs:
+  - responsive stress QA
+  - login/public state consistency
+  - link/QR/guest safety
+  - privacy/data minimization
+  - home/catalog/manual IA
+  - state-based workflow UI
+  - regression scope reporting
 
 ## Completion Checklist
 - Run `python manage.py check`.
