@@ -186,43 +186,44 @@
 
                     {% if has_hs_classrooms %}
                     <!-- 현재 학급 단축키 -->
-                    <div class="relative flex-shrink-0"
-                        x-data="classroomPicker()"
-                        data-classrooms="{{ hs_classrooms_payload|escape }}"
-                        data-current-classroom="{{ active_classroom_name_payload|escape }}"
-                        @click.outside="open = false"
-                        x-init="init()">
-                        <button id="classroomMenuBtn" type="button" @click.stop="open = !open"
+                    <div id="desktopClassroomPicker"
+                        class="relative flex-shrink-0"
+                        data-classroom-picker-root="desktop"
+                        data-current-classroom-id="{% if active_classroom %}{{ active_classroom.pk }}{% endif %}"
+                        data-current-classroom-name="{% if active_classroom %}{{ active_classroom.name }}{% endif %}"
+                        data-default-classroom-id="{% if default_classroom_id %}{{ default_classroom_id }}{% endif %}">
+                        <button id="classroomMenuBtn" type="button"
                             class="flex items-center gap-2 px-4 py-2 rounded-full shadow-clay-inner bg-[#E0E5EC]/50 hover:bg-white/50 transition-all font-bold text-gray-700 text-sm xl:text-base"
-                            :title="current ? '현재 학급: ' + current + ' (로그인 시 자동 선택)' : '기본 학급을 선택하면 로그인 직후 자동으로 적용됩니다.'">
+                            title="{% if active_classroom %}현재 학급: {{ active_classroom.name }} (로그인 시 자동 선택){% else %}기본 학급을 선택하면 로그인 직후 자동으로 적용됩니다.{% endif %}"
+                            aria-haspopup="true"
+                            aria-expanded="false"
+                            aria-controls="desktopClassroomMenu">
                             <i class="fa-solid fa-chalkboard-user text-purple-400"></i>
-                            <span x-text="current || '학급 선택'" class="max-w-[120px] truncate"></span>
-                            <i class="fa-solid fa-chevron-down text-sm transition-transform" :class="open ? 'rotate-180' : ''"></i>
+                            <span id="desktopClassroomCurrentLabel" data-classroom-current-label class="max-w-[120px] truncate">
+                                {% if active_classroom %}{{ active_classroom.name }}{% else %}학급 선택{% endif %}
+                            </span>
+                            <i data-classroom-menu-icon class="fa-solid fa-chevron-down text-sm transition-transform"></i>
                         </button>
-                        <div id="desktopClassroomMenu" x-show="open" x-cloak @click.stop
-                            class="absolute right-0 top-full mt-3 w-72 z-[60]"
-                            x-transition:enter="transition ease-out duration-200"
-                            x-transition:enter-start="opacity-0 translate-y-2 scale-95"
-                            x-transition:enter-end="opacity-100 translate-y-0 scale-100"
-                            x-transition:leave="transition ease-in duration-150"
-                            x-transition:leave-start="opacity-100 translate-y-0 scale-100"
-                            x-transition:leave-end="opacity-0 translate-y-2 scale-95">
+                        <div id="desktopClassroomMenu"
+                            class="absolute right-0 top-full mt-3 w-72 z-[60] hidden">
                             <div class="clay-card p-2 bg-white/90 backdrop-blur-xl border border-white/50">
                                 <p class="text-xs text-gray-400 font-normal px-3 pt-1">기본 학급 선택</p>
                                 <p class="text-[11px] text-slate-500 px-3 pb-2 leading-4">
                                     선택 시 로그인 직후 자동 적용되고, 별빛 추첨기/우리반BTI 명단에도 바로 반영됩니다.
                                 </p>
-                                <template x-for="cls in classrooms" :key="cls.id">
-                                    <button @click="select(cls)"
-                                        class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-purple-50 transition-all text-left"
-                                        :class="current === cls.name ? 'bg-purple-50 text-purple-600 font-bold' : 'text-gray-600'">
-                                        <i class="fa-solid fa-chalkboard-user text-purple-300 text-sm"></i>
-                                        <span class="text-xl font-bold truncate" x-text="cls.name"></span>
-                                        <span x-show="cls.is_default" class="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-600 font-bold">기본</span>
-                                    </button>
-                                </template>
+                                {% for cls in hs_classrooms_json %}
+                                <button type="button"
+                                    data-classroom-select="true"
+                                    data-classroom-id="{{ cls.id }}"
+                                    data-classroom-name="{{ cls.name }}"
+                                    class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-purple-50 transition-all text-left {% if active_classroom and cls.id == active_classroom.id|stringformat:'s' %}bg-purple-50 text-purple-600 font-bold{% else %}text-gray-600{% endif %}">
+                                    <i class="fa-solid fa-chalkboard-user text-purple-300 text-sm"></i>
+                                    <span class="text-xl font-bold truncate">{{ cls.name }}</span>
+                                    <span data-classroom-default-badge class="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-600 font-bold{% if not cls.is_default %} hidden{% endif %}">기본</span>
+                                </button>
+                                {% endfor %}
                                 <div class="h-px bg-gray-100 my-1"></div>
-                                <button @click="clear()"
+                                <button type="button" data-classroom-clear="true"
                                     class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-50 text-gray-400 hover:text-red-400 transition-all text-left text-xl">
                                     <i class="fa-solid fa-xmark text-sm"></i>
                                     <span>선택 해제</span>
@@ -379,27 +380,30 @@
 
                     {% if has_hs_classrooms %}
                     <!-- 모바일 학급 단축키 -->
-                    <div x-data="classroomPicker()"
-                        data-classrooms="{{ hs_classrooms_payload|escape }}"
-                        data-current-classroom="{{ active_classroom_name_payload|escape }}"
-                        x-init="init()"
-                        class="py-2 border-b border-gray-200/50">
+                    <div id="mobileClassroomPicker"
+                        class="py-2 border-b border-gray-200/50"
+                        data-classroom-picker-root="mobile">
                         <div class="px-3 mb-2">
                             <p class="text-sm text-slate-600 font-extrabold">현재 학급 단축키</p>
                             <p class="text-xs text-slate-500 font-medium mt-0.5">선택 시 로그인 직후 자동 적용되고, 별빛 추첨기·우리반BTI 명단에도 반영됩니다.</p>
                         </div>
                         <div class="flex flex-col gap-1">
-                            <template x-for="cls in classrooms" :key="cls.id">
-                                <button @click="select(cls)"
-                                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left"
-                                    :class="current === cls.name ? 'bg-purple-100 text-purple-600 font-bold' : 'text-gray-600 hover:bg-purple-50'">
-                                    <i class="fa-solid fa-chalkboard-user text-purple-300 text-sm"></i>
-                                    <span class="font-bold" x-text="cls.name"></span>
-                                    <span x-show="cls.is_default" class="ml-auto mr-2 text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-600 font-bold">기본</span>
-                                    <i x-show="current === cls.name" class="fa-solid fa-check text-purple-500 text-sm"></i>
-                                </button>
-                            </template>
-                            <button x-show="current" @click="clear()" class="flex items-center gap-2 px-3 py-1.5 text-red-400 hover:text-red-500 text-sm transition-all">
+                            {% for cls in hs_classrooms_json %}
+                            <button type="button"
+                                data-classroom-select="true"
+                                data-classroom-id="{{ cls.id }}"
+                                data-classroom-name="{{ cls.name }}"
+                                class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left {% if active_classroom and cls.id == active_classroom.id|stringformat:'s' %}bg-purple-100 text-purple-600 font-bold{% else %}text-gray-600 hover:bg-purple-50{% endif %}">
+                                <i class="fa-solid fa-chalkboard-user text-purple-300 text-sm"></i>
+                                <span class="font-bold">{{ cls.name }}</span>
+                                <span data-classroom-default-badge class="ml-auto mr-2 text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-600 font-bold{% if not cls.is_default %} hidden{% endif %}">기본</span>
+                                <i data-classroom-check class="fa-solid fa-check text-purple-500 text-sm{% if not active_classroom or cls.id != active_classroom.id|stringformat:'s' %} hidden{% endif %}"></i>
+                            </button>
+                            {% endfor %}
+                            <button type="button"
+                                data-classroom-clear="true"
+                                data-classroom-clear-conditional="true"
+                                class="flex items-center gap-2 px-3 py-1.5 text-red-400 hover:text-red-500 text-sm transition-all{% if not active_classroom %} hidden{% endif %}">
                                 <i class="fa-solid fa-xmark text-xs"></i> 선택 해제
                             </button>
                             <a href="{% url 'happy_seed:dashboard' %}"

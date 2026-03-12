@@ -57,6 +57,201 @@
         menu.removeAttribute('x-cloak');
     };
 
+    var classroomPickerState = {
+        currentId: '',
+        currentName: '',
+        defaultId: '',
+    };
+
+    function getDesktopClassroomElements() {
+        return {
+            root: document.getElementById('desktopClassroomPicker'),
+            button: document.getElementById('classroomMenuBtn'),
+            menu: document.getElementById('desktopClassroomMenu'),
+            icon: document.querySelector('[data-classroom-menu-icon]'),
+            label: document.getElementById('desktopClassroomCurrentLabel'),
+        };
+    }
+
+    function getClassroomStateRoot() {
+        return document.getElementById('desktopClassroomPicker') || document.getElementById('mobileClassroomPicker');
+    }
+
+    function writeClassroomPickerState() {
+        var currentId = classroomPickerState.currentId || '';
+        var currentName = classroomPickerState.currentName || '';
+        var defaultId = classroomPickerState.defaultId || '';
+        document.querySelectorAll('[data-classroom-picker-root]').forEach(function (root) {
+            root.setAttribute('data-current-classroom-id', currentId);
+            root.setAttribute('data-current-classroom-name', currentName);
+            root.setAttribute('data-default-classroom-id', defaultId);
+        });
+    }
+
+    function readClassroomPickerState() {
+        var root = getClassroomStateRoot();
+        if (!root) {
+            return false;
+        }
+        classroomPickerState.currentId = root.getAttribute('data-current-classroom-id') || '';
+        classroomPickerState.currentName = root.getAttribute('data-current-classroom-name') || '';
+        classroomPickerState.defaultId = root.getAttribute('data-default-classroom-id') || '';
+        return true;
+    }
+
+    function setDesktopClassroomMenuOpen(isOpen) {
+        var elements = getDesktopClassroomElements();
+        if (!elements.menu || !elements.button) {
+            return;
+        }
+        elements.menu.classList.toggle('hidden', !isOpen);
+        elements.button.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        if (elements.icon) {
+            elements.icon.classList.toggle('rotate-180', isOpen);
+        }
+    }
+
+    function syncClassroomPickerUi() {
+        var currentId = classroomPickerState.currentId || '';
+        var currentName = classroomPickerState.currentName || '';
+        var defaultId = classroomPickerState.defaultId || '';
+        var elements = getDesktopClassroomElements();
+
+        if (elements.label) {
+            elements.label.textContent = currentName || '학급 선택';
+        }
+        if (elements.button) {
+            elements.button.title = currentName
+                ? '현재 학급: ' + currentName + ' (로그인 시 자동 선택)'
+                : '기본 학급을 선택하면 로그인 직후 자동으로 적용됩니다.';
+        }
+
+        document.querySelectorAll('[data-classroom-select="true"]').forEach(function (button) {
+            var classroomId = button.getAttribute('data-classroom-id') || '';
+            var classroomName = button.getAttribute('data-classroom-name') || '';
+            var isCurrent = currentId ? classroomId === currentId : (!!currentName && classroomName === currentName);
+            var isDefault = !!defaultId && classroomId === defaultId;
+            var isDesktopButton = !!button.closest('#desktopClassroomMenu');
+            var defaultBadge = button.querySelector('[data-classroom-default-badge]');
+            var checkIcon = button.querySelector('[data-classroom-check]');
+
+            if (isDesktopButton) {
+                button.classList.toggle('bg-purple-50', isCurrent);
+                button.classList.toggle('text-purple-600', isCurrent);
+                button.classList.toggle('font-bold', isCurrent);
+                button.classList.toggle('text-gray-600', !isCurrent);
+            } else {
+                button.classList.toggle('bg-purple-100', isCurrent);
+                button.classList.toggle('text-purple-600', isCurrent);
+                button.classList.toggle('font-bold', isCurrent);
+                button.classList.toggle('text-gray-600', !isCurrent);
+                button.classList.toggle('hover:bg-purple-50', !isCurrent);
+            }
+
+            button.setAttribute('aria-pressed', isCurrent ? 'true' : 'false');
+            if (defaultBadge) {
+                defaultBadge.classList.toggle('hidden', !isDefault);
+            }
+            if (checkIcon) {
+                checkIcon.classList.toggle('hidden', !isCurrent);
+            }
+        });
+
+        document.querySelectorAll('[data-classroom-clear-conditional="true"]').forEach(function (button) {
+            button.classList.toggle('hidden', !currentId && !currentName);
+        });
+    }
+
+    function postClassroomSelection(payload) {
+        return fetch('/api/set-classroom/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken(),
+            },
+            body: JSON.stringify(payload),
+        }).then(function (response) {
+            if (!response.ok) {
+                throw new Error('classroom update failed');
+            }
+            return response.json();
+        });
+    }
+
+    function bindClassroomPicker() {
+        var hasPicker = readClassroomPickerState();
+        var button = document.getElementById('classroomMenuBtn');
+        if (!hasPicker && !button) {
+            return;
+        }
+
+        syncClassroomPickerUi();
+
+        if (button) {
+            button.addEventListener('click', function (event) {
+                var menu = document.getElementById('desktopClassroomMenu');
+                event.preventDefault();
+                event.stopPropagation();
+                if (!menu) {
+                    return;
+                }
+                setDesktopClassroomMenuOpen(menu.classList.contains('hidden'));
+            });
+        }
+
+        document.querySelectorAll('[data-classroom-select="true"]').forEach(function (optionButton) {
+            optionButton.addEventListener('click', function (event) {
+                var classroomId = optionButton.getAttribute('data-classroom-id') || '';
+                var classroomName = optionButton.getAttribute('data-classroom-name') || '';
+                event.preventDefault();
+                event.stopPropagation();
+                if (!classroomId) {
+                    return;
+                }
+                postClassroomSelection({
+                    source: 'hs',
+                    classroom_id: classroomId,
+                    persist_default: true,
+                }).then(function (payload) {
+                    if (payload.status !== 'ok') {
+                        throw new Error('classroom update failed');
+                    }
+                    classroomPickerState.currentId = classroomId;
+                    classroomPickerState.currentName = payload.name || classroomName;
+                    classroomPickerState.defaultId = classroomId;
+                    writeClassroomPickerState();
+                    syncClassroomPickerUi();
+                    setDesktopClassroomMenuOpen(false);
+                }).catch(function () {
+                    alert('학급 선택 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+                });
+            });
+        });
+
+        document.querySelectorAll('[data-classroom-clear="true"]').forEach(function (clearButton) {
+            clearButton.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                postClassroomSelection({
+                    classroom_id: '',
+                    persist_default: true,
+                }).then(function (payload) {
+                    if (payload.status !== 'cleared') {
+                        throw new Error('classroom clear failed');
+                    }
+                    classroomPickerState.currentId = '';
+                    classroomPickerState.currentName = '';
+                    classroomPickerState.defaultId = '';
+                    writeClassroomPickerState();
+                    syncClassroomPickerUi();
+                    setDesktopClassroomMenuOpen(false);
+                }).catch(function () {
+                    alert('학급 선택 해제에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+                });
+            });
+        });
+    }
+
     window.toggleMobileMenu = function () {
         var menu = document.getElementById('mobileMenu');
         var btn = document.getElementById('mobileMenuBtn');
@@ -95,6 +290,11 @@
             if (menu && button && !button.contains(event.target) && !menu.contains(event.target)) {
                 menu.style.display = 'none';
             }
+        }
+
+        var classroomRoot = document.getElementById('desktopClassroomPicker');
+        if (classroomRoot && !classroomRoot.contains(event.target)) {
+            setDesktopClassroomMenuOpen(false);
         }
 
         var mobileMenu = document.getElementById('mobileMenu');
@@ -612,88 +812,11 @@
         }, true);
     }
 
-    window.classroomPicker = function () {
-        return {
-            open: false,
-            classrooms: [],
-            current: null,
-            getCsrfToken: getCsrfToken,
-            init: function () {
-                var inlineClassrooms = parseInlineJson(this.$el && this.$el.getAttribute('data-classrooms'), null);
-                var parsedClassrooms = inlineClassrooms;
-                if (!Array.isArray(parsedClassrooms)) {
-                    parsedClassrooms = parseJsonScript('hs-classrooms-data', []);
-                }
-                this.classrooms = Array.isArray(parsedClassrooms) ? parsedClassrooms : [];
-
-                var inlineCurrent = parseInlineJson(this.$el && this.$el.getAttribute('data-current-classroom'), null);
-                this.current = inlineCurrent;
-                if (this.current === null) {
-                    this.current = parseJsonScript('hs-active-classroom-name', null);
-                }
-            },
-            select: function (cls) {
-                var self = this;
-                fetch('/api/set-classroom/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': this.getCsrfToken(),
-                    },
-                    body: JSON.stringify({ source: 'hs', classroom_id: cls.id, persist_default: true }),
-                })
-                    .then(function (response) {
-                        if (!response.ok) {
-                            throw new Error('set classroom failed');
-                        }
-                        return response.json();
-                    })
-                    .then(function (payload) {
-                        if (payload.status === 'ok') {
-                            self.current = payload.name || cls.name;
-                            self.classrooms = self.classrooms.map(function (item) {
-                                item.is_default = item.id === cls.id;
-                                return item;
-                            });
-                            self.open = false;
-                        }
-                    })
-                    .catch(function () {
-                        alert('학급 선택 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
-                    });
-            },
-            clear: function () {
-                var self = this;
-                fetch('/api/set-classroom/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': this.getCsrfToken(),
-                    },
-                    body: JSON.stringify({ classroom_id: '', persist_default: true }),
-                })
-                    .then(function (response) {
-                        if (!response.ok) {
-                            throw new Error('clear classroom failed');
-                        }
-                        return response.json();
-                    })
-                    .then(function (payload) {
-                        if (payload.status === 'cleared') {
-                            self.current = null;
-                            self.classrooms = self.classrooms.map(function (item) {
-                                item.is_default = false;
-                                return item;
-                            });
-                            self.open = false;
-                        }
-                    })
-                    .catch(function () {
-                        alert('학급 선택 해제에 실패했습니다. 잠시 후 다시 시도해 주세요.');
-                    });
-            },
-        };
-    };
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            setDesktopClassroomMenuOpen(false);
+        }
+    });
 
     document.addEventListener('keydown', function (event) {
         var unifiedModal = document.getElementById('unifiedModal');
@@ -722,6 +845,7 @@
 
         window.syncGlobalBannerOffset();
         window.syncMobileMenuOffset();
+        bindClassroomPicker();
 
         var banner = document.getElementById('globalBanner');
         if (banner && typeof ResizeObserver !== 'undefined') {

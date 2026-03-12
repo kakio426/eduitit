@@ -38,15 +38,17 @@ class UIAuthTestCase(TestCase):
         profile = UserProfile.objects.get(user=self.user)
         profile.role = "school"
         profile.save(update_fields=["role"])
-        HSClassroom.objects.create(teacher=self.user, name="3학년 2반")
+        classroom = HSClassroom.objects.create(teacher=self.user, name="3학년 2반")
 
         response = self.client.get(reverse("home"))
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "clay-card--overflow-visible")
+        self.assertContains(response, 'id="desktopClassroomPicker"')
         self.assertContains(response, 'id="classroomMenuBtn"')
         self.assertContains(response, 'id="desktopClassroomMenu"')
-        self.assertContains(response, '@click.stop="open = !open"')
-        self.assertContains(response, '@click.outside="open = false"')
-        self.assertContains(response, 'data-classrooms="')
-        self.assertContains(response, 'data-current-classroom="')
+        self.assertContains(response, 'data-classroom-select="true"')
+        self.assertContains(response, f'data-classroom-id="{classroom.pk}"')
+        self.assertContains(response, "3학년 2반")
+        self.assertContains(response, 'data-classroom-clear="true"')
+        self.assertNotContains(response, 'x-data="classroomPicker()"')
