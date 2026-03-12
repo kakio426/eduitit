@@ -47,6 +47,7 @@ class CalendarSharingTests(TestCase):
         setting = CalendarIntegrationSetting.objects.create(user=self.user, share_enabled=False)
         response = Client().get(reverse("classcalendar:shared", kwargs={"share_uuid": setting.share_uuid}))
         self.assertEqual(response.status_code, 404)
+        self.assertEqual(response["Cache-Control"], "no-store, private")
 
     def test_shared_view_shows_events_when_enabled(self):
         setting = CalendarIntegrationSetting.objects.create(user=self.user, share_enabled=True)
@@ -63,5 +64,11 @@ class CalendarSharingTests(TestCase):
 
         response = Client().get(reverse("classcalendar:shared", kwargs={"share_uuid": setting.share_uuid}))
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Cache-Control"], "no-store, private")
         self.assertContains(response, "공유 테스트 일정")
         self.assertContains(response, "읽기 전용")
+
+    def test_main_view_uses_workspace_cache_headers(self):
+        response = self.client.get(reverse("classcalendar:main"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Cache-Control"], "private, no-cache, must-revalidate")
