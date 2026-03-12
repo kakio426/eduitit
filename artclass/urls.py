@@ -12,6 +12,7 @@ urlpatterns = [
     path('api/classroom/<int:pk>/steps/<int:step_id>/text/', views.update_step_text_api, name='update_step_text_api'),
     path('api/classroom/<int:pk>/playback-mode/', views.update_playback_mode_api, name='update_playback_mode_api'),
     path('api/classroom/<int:pk>/launcher-start/', views.start_launcher_session_api, name='start_launcher_session_api'),
+    path('api/video-advice/', views.video_advice_api, name='video_advice_api'),
     path('api/parse-gemini-steps/', views.parse_gemini_steps_api, name='parse_gemini_steps_api'),
     path('library/', views.library_view, name='library'),
 ]

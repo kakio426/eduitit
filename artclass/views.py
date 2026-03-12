@@ -132,6 +132,110 @@ def _get_launcher_download_url():
     return ""
 
 
+VIDEO_ADVICE_STATUS_BROWSER_READY = "browser_ready"
+VIDEO_ADVICE_STATUS_LAUNCHER_RECOMMENDED = "launcher_recommended"
+VIDEO_ADVICE_STATUS_UNKNOWN = "unknown"
+
+ARTCLASS_SAMPLE_LESSON = {
+    "title": "봄 꽃병 꾸미기",
+    "videoUrl": "https://www.youtube.com/watch?v=2bBhnfh4StU",
+    "recommendedMode": ArtClass.PLAYBACK_MODE_EMBED,
+    "advice": {
+        "status": VIDEO_ADVICE_STATUS_BROWSER_READY,
+        "recommendedMode": ArtClass.PLAYBACK_MODE_EMBED,
+        "headline": "브라우저에서 바로 시작 가능",
+        "reason": "이 영상은 브라우저에서 바로 재생할 수 있는 경우가 많아요. 먼저 브라우저로 시작하고, 필요할 때만 런처로 전환해도 됩니다.",
+        "title": "봄 꽃병 꾸미기",
+    },
+    "steps": [
+        {"text": "[00:18-00:42] 꽃병의 큰 모양을 연필로 가볍게 잡는다.", "imagePreview": None, "existingStepId": None},
+        {"text": "준비물: 도화지, 연필, 색연필\n교사 팁: 꽃병 중심선을 먼저 잡아 주면 아이들이 훨씬 편해져요.", "imagePreview": None, "existingStepId": None},
+        {"text": "[01:10-01:45] 꽃과 잎을 크게 배치하고 색을 나눠 칠한다.", "imagePreview": None, "existingStepId": None},
+    ],
+    "geminiResult": json.dumps(
+        {
+            "video_title": "봄 꽃병 꾸미기",
+            "steps": [
+                {
+                    "start": "00:18",
+                    "end": "00:42",
+                    "summary": "꽃병의 큰 모양을 연필로 가볍게 잡는다.",
+                    "materials": ["도화지", "연필"],
+                    "teacher_tip": "꽃병 중심선을 먼저 잡아 주면 아이들이 편하다.",
+                },
+                {
+                    "start": "01:10",
+                    "end": "01:45",
+                    "summary": "꽃과 잎을 크게 배치하고 색을 나눠 칠한다.",
+                    "materials": ["색연필"],
+                    "teacher_tip": "색은 세 가지 안에서 고르게 하면 정리가 쉽다.",
+                },
+                {
+                    "summary": "완성한 작품을 서로 보여 주고 잘 된 점을 한 가지씩 말한다.",
+                    "teacher_tip": "마무리 질문을 한 문장씩 준비하면 발표가 부드럽다.",
+                },
+            ],
+        },
+        ensure_ascii=False,
+        indent=2,
+    ),
+}
+
+
+def _build_video_advice_payload(status, *, title=""):
+    resolved_title = str(title or "").strip()
+    if status == VIDEO_ADVICE_STATUS_BROWSER_READY:
+        return {
+            "status": VIDEO_ADVICE_STATUS_BROWSER_READY,
+            "recommendedMode": ArtClass.PLAYBACK_MODE_EMBED,
+            "headline": "브라우저에서 바로 시작 가능",
+            "reason": "이 영상은 브라우저에서 바로 재생할 수 있는 경우가 많아요. 먼저 브라우저로 시작하고, 필요할 때만 런처로 전환해도 됩니다.",
+            "title": resolved_title,
+        }
+    if status == VIDEO_ADVICE_STATUS_LAUNCHER_RECOMMENDED:
+        return {
+            "status": VIDEO_ADVICE_STATUS_LAUNCHER_RECOMMENDED,
+            "recommendedMode": ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW,
+            "headline": "임베드 제한 가능성이 있어 런처 권장",
+            "reason": "일부 유튜브 영상은 정책상 사이트 안에서 바로 재생되지 않습니다. 이 영상은 런처로 시작하면 수업 흐름을 더 안정적으로 이어갈 수 있어요.",
+            "title": resolved_title,
+        }
+    return {
+        "status": VIDEO_ADVICE_STATUS_UNKNOWN,
+        "recommendedMode": ArtClass.PLAYBACK_MODE_EMBED,
+        "headline": "먼저 브라우저로 시도하고, 막히면 런처로 이어갈 수 있어요",
+        "reason": "유효한 유튜브 주소를 넣으면 어떤 시작 방식이 더 편한지 바로 안내해 드릴게요. 확실하지 않을 때는 브라우저로 시작한 뒤 필요하면 런처로 전환하면 됩니다.",
+        "title": resolved_title,
+    }
+
+
+def _build_video_advice(video_url, *, playback_mode="", title_hint=""):
+    normalized_url = (video_url or "").strip()
+    title = (title_hint or "").strip()
+    video_id = _extract_youtube_video_id(normalized_url)
+
+    if not normalized_url or not video_id:
+        return _build_video_advice_payload(VIDEO_ADVICE_STATUS_UNKNOWN, title=title)
+
+    if playback_mode == ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW:
+        return _build_video_advice_payload(VIDEO_ADVICE_STATUS_LAUNCHER_RECOMMENDED, title=title)
+
+    if playback_mode == ArtClass.PLAYBACK_MODE_EMBED:
+        return _build_video_advice_payload(VIDEO_ADVICE_STATUS_BROWSER_READY, title=title)
+
+    if re.search(r"/(?:shorts|live)/", normalized_url, flags=re.IGNORECASE):
+        if not title:
+            title = _fetch_youtube_title(normalized_url)
+        return _build_video_advice_payload(VIDEO_ADVICE_STATUS_LAUNCHER_RECOMMENDED, title=title)
+
+    if not title:
+        title = _fetch_youtube_title(normalized_url)
+
+    if title:
+        return _build_video_advice_payload(VIDEO_ADVICE_STATUS_BROWSER_READY, title=title)
+    return _build_video_advice_payload(VIDEO_ADVICE_STATUS_LAUNCHER_RECOMMENDED, title=title)
+
+
 STEP_FORM_INDEX_RE = re.compile(r"^step_(?:text|existing_id|image)_(\d+)$")
 STEP_FORM_INDEX_LIMIT = 200
 
@@ -289,11 +393,23 @@ def setup_view(request, pk=None):
             for step in art_class.steps.all()
         ]
 
+    selected_mode = art_class.playback_mode if art_class else ""
+    video_advice = _build_video_advice(
+        art_class.youtube_url if art_class else "",
+        playback_mode=selected_mode,
+        title_hint=art_class.title if art_class else "",
+    )
+    if not selected_mode:
+        selected_mode = video_advice["recommendedMode"]
+
     return render(request, 'artclass/setup.html', {
         'art_class': art_class,
         'initial_steps': initial_steps,
+        'initial_playback_mode': selected_mode,
+        'video_advice': video_advice,
         'manual_prompt_template': build_manual_pipeline_prompt(art_class.youtube_url if art_class else ""),
         'launcher_download_url': _get_launcher_download_url(),
+        'sample_lesson': ARTCLASS_SAMPLE_LESSON,
     })
 
 
@@ -321,11 +437,17 @@ def classroom_view(request, pk):
         for step in steps
     ]
     
+    video_advice = _build_video_advice(
+        art_class.youtube_url,
+        playback_mode=art_class.playback_mode,
+        title_hint=art_class.title,
+    )
     data = {
         'videoUrl': art_class.youtube_url,
         'stepInterval': art_class.default_interval,
         'playbackMode': art_class.playback_mode,
-        'steps': steps_data
+        'steps': steps_data,
+        'videoAdvice': video_advice,
     }
     
     return render(request, 'artclass/classroom.html', {
@@ -336,6 +458,7 @@ def classroom_view(request, pk):
         'can_manage_classroom': can_manage_classroom,
         'display_mode': display_mode,
         'runtime_mode': runtime_mode,
+        'video_advice': video_advice,
         'launcher_download_url': _get_launcher_download_url(),
     })
 
@@ -448,6 +571,19 @@ def start_launcher_session_api(request, pk):
     )
 
 
+@require_POST
+def video_advice_api(request):
+    """유튜브 주소 기준으로 브라우저/런처 권장 상태를 반환한다."""
+    try:
+        payload = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "INVALID_JSON", "message": "요청 형식이 올바르지 않습니다."}, status=400)
+
+    video_url = str(payload.get("videoUrl") or "").strip()
+    advice = _build_video_advice(video_url)
+    return JsonResponse(advice)
+
+
 @ratelimit(key=ratelimit_key_for_master_only, rate='30/h', method='POST', block=True)
 def parse_gemini_steps_api(request):
     """Gemini 수동 복붙 결과 파싱/검증 API."""
@@ -504,6 +640,14 @@ def library_view(request):
         )
         for item in my_classes:
             item.creator_display_name = _resolve_creator_display_name(item.created_by)
+            if item.playback_mode == ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW:
+                item.start_mode_badge = "런처 권장"
+                item.start_mode_reason = "이 수업은 런처로 시작하면 영상 재생이 더 안정적입니다."
+                item.primary_action_label = "런처로 수업 시작하기"
+            else:
+                item.start_mode_badge = "브라우저 바로 가능"
+                item.start_mode_reason = "이 수업은 브라우저에서 바로 시작하기 좋습니다."
+                item.primary_action_label = "브라우저로 수업 시작하기"
 
     shared_classes = ArtClass.objects.select_related('created_by', 'created_by__userprofile').annotate(
         steps_count=Count('steps')
@@ -528,6 +672,14 @@ def library_view(request):
     shared_classes = list(shared_classes.distinct())
     for item in shared_classes:
         item.creator_display_name = _resolve_creator_display_name(item.created_by)
+        if item.playback_mode == ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW:
+            item.start_mode_badge = "런처 권장"
+            item.start_mode_reason = "이 수업은 런처로 시작하면 영상 재생이 더 안정적입니다."
+            item.primary_action_label = "런처로 수업 시작하기"
+        else:
+            item.start_mode_badge = "브라우저 바로 가능"
+            item.start_mode_reason = "이 수업은 브라우저에서 바로 시작하기 좋습니다."
+            item.primary_action_label = "브라우저로 수업 시작하기"
 
     shared_only = ArtClass.objects.filter(is_shared=True)
     category_options = list(

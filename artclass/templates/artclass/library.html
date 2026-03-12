@@ -112,11 +112,11 @@
                         {% endif %}
                     </div>
 
-                    <div class="grid grid-cols-3 gap-2 pt-2">
-                        <a href="{% url 'artclass:classroom' item.pk %}{% if item.playback_mode == 'external_window' %}?autostart_launcher=1{% endif %}"
-                            class="flex items-center justify-center rounded-2xl bg-green-500 px-3 py-3 text-sm font-black text-white hover:bg-green-600 transition-all">
-                            수업 시작
-                        </a>
+                        <div class="grid grid-cols-3 gap-2 pt-2">
+                            <a href="{% url 'artclass:classroom' item.pk %}{% if item.playback_mode == 'external_window' %}?autostart_launcher=1{% endif %}"
+                                class="flex items-center justify-center rounded-2xl bg-green-500 px-3 py-3 text-sm font-black text-white hover:bg-green-600 transition-all">
+                                {{ item.primary_action_label }}
+                            </a>
                         <a href="{% url 'artclass:setup_edit' item.pk %}"
                             class="flex items-center justify-center rounded-2xl border-2 border-purple-100 px-3 py-3 text-sm font-black text-purple-600 hover:border-purple-300 hover:bg-purple-50 transition-all">
                             수정
@@ -207,6 +207,9 @@
                                 내 수업
                             </span>
                             {% endif %}
+                            <span class="text-[10px] font-black tracking-widest uppercase {% if item.playback_mode == 'external_window' %}text-emerald-700 bg-emerald-100{% else %}text-blue-700 bg-blue-100{% endif %} px-2.5 py-1 rounded-lg">
+                                {{ item.start_mode_badge }}
+                            </span>
                             {% if item.auto_category %}
                             <span class="text-[10px] font-black tracking-widest uppercase text-indigo-600 bg-indigo-100 px-2.5 py-1 rounded-lg">
                                 {{ item.auto_category }}
@@ -225,6 +228,9 @@
                             class="text-xl font-black text-gray-800 leading-snug break-keep group-hover:text-purple-600">
                             {{ item.display_title }}
                         </h3>
+                        <p class="mt-3 text-sm font-bold {% if item.playback_mode == 'external_window' %}text-emerald-700{% else %}text-blue-700{% endif %}">
+                            {{ item.start_mode_reason }}
+                        </p>
                         {% if item.auto_tags %}
                         <div class="mt-3 flex flex-wrap gap-1.5">
                             {% for tag in item.auto_tags|slice:":4" %}
@@ -273,20 +279,29 @@
             <div class="space-y-2">
                 <h2 id="modalTitle" class="text-3xl font-black text-gray-800 leading-tight break-keep">수업 제목</h2>
                 <p class="text-gray-500 font-bold">선생님, 이 수업을 어떻게 시작할까요?</p>
+                <p id="modalRecommendation" class="text-sm font-black text-emerald-700"></p>
             </div>
 
             <div class="grid grid-cols-1 gap-4 pt-4">
                 <a id="playLink" href="#"
                     class="flex items-center justify-center gap-3 py-5 bg-green-500 text-white rounded-[2rem] text-xl font-black shadow-lg hover:bg-green-600 hover:scale-[1.02] active:scale-95 transition-all">
-                    <i class="fa-solid fa-play"></i> 바로 수업 시작하기
+                    <i class="fa-solid fa-play"></i> 브라우저로 수업 시작하기
                 </a>
                 {% if launcher_download_url %}
-                <a href="{{ launcher_download_url }}" target="_blank" rel="noopener noreferrer"
-                    class="flex items-center justify-center gap-3 py-4 bg-emerald-50 text-emerald-700 border-2 border-emerald-200 rounded-[2rem] text-base font-black shadow-sm hover:bg-emerald-100 hover:scale-[1.02] active:scale-95 transition-all">
-                    <i class="fa-solid fa-download"></i> 교사용 런처 설치파일 받기
-                </a>
+                <details id="modalInstallBlock" class="hidden rounded-[2rem] bg-emerald-50 text-left border-2 border-emerald-200 px-5 py-4 shadow-sm">
+                    <summary class="cursor-pointer list-none text-base font-black text-emerald-700">
+                        설치파일이 필요하면 보기
+                    </summary>
+                    <div class="mt-3 space-y-2 text-sm font-bold text-emerald-900/85">
+                        <p>런처가 필요할 때만 설치하면 됩니다.</p>
+                        <a href="{{ launcher_download_url }}" target="_blank" rel="noopener noreferrer"
+                            class="inline-flex items-center justify-center gap-3 py-3 px-4 bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-2xl text-sm font-black hover:bg-emerald-200 transition-all">
+                            <i class="fa-solid fa-download"></i> 교사용 런처 설치파일 받기
+                        </a>
+                    </div>
+                </details>
                 {% else %}
-                <p class="px-4 py-3 bg-amber-50 text-amber-700 border border-amber-200 rounded-2xl text-sm font-bold">
+                <p id="modalInstallMissing" class="hidden px-4 py-3 bg-amber-50 text-amber-700 border border-amber-200 rounded-2xl text-sm font-bold">
                     런처 설치 링크가 설정되지 않았습니다. 운영팀에 설치 링크 설정을 요청해 주세요.
                 </p>
                 {% endif %}
@@ -325,13 +340,34 @@
         const backdrop = document.getElementById('choiceBackdrop');
         const panel = document.getElementById('choicePanel');
         const deleteForm = document.getElementById('deleteForm');
+        const recommendationEl = document.getElementById('modalRecommendation');
+        const playLink = document.getElementById('playLink');
+        const installBlock = document.getElementById('modalInstallBlock');
+        const installMissing = document.getElementById('modalInstallMissing');
 
         // Populate content
         document.getElementById('modalTitle').textContent = title;
         const shouldAutoStartLauncher = playbackMode === 'external_window';
-        document.getElementById('playLink').href = shouldAutoStartLauncher
+        playLink.href = shouldAutoStartLauncher
             ? `/artclass/classroom/${pk}/?autostart_launcher=1`
             : `/artclass/classroom/${pk}/`;
+        playLink.innerHTML = shouldAutoStartLauncher
+            ? '<i class="fa-solid fa-rocket"></i> 런처로 수업 시작하기'
+            : '<i class="fa-solid fa-play"></i> 브라우저로 수업 시작하기';
+        if (recommendationEl) {
+            recommendationEl.textContent = shouldAutoStartLauncher
+                ? '이 수업은 런처로 시작하면 더 안정적이에요.'
+                : '이 수업은 브라우저로 바로 시작하기 좋아요.';
+            recommendationEl.className = shouldAutoStartLauncher
+                ? 'text-sm font-black text-emerald-700'
+                : 'text-sm font-black text-blue-700';
+        }
+        if (installBlock) {
+            installBlock.classList.toggle('hidden', !shouldAutoStartLauncher);
+        }
+        if (installMissing) {
+            installMissing.classList.toggle('hidden', !shouldAutoStartLauncher);
+        }
         document.getElementById('editLink').href = canDelete
             ? `/artclass/setup/${pk}/`
             : `/artclass/setup/from-library/${pk}/`;

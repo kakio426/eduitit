@@ -364,6 +364,62 @@ class ManualPipelineApiTest(TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()["error"], "FORBIDDEN")
 
+    @patch("artclass.views._fetch_youtube_title")
+    def test_video_advice_api_returns_browser_ready_for_embed_capable_video(self, mock_fetch_title):
+        mock_fetch_title.return_value = "봄 꽃병 꾸미기"
+        url = reverse("artclass:video_advice_api")
+
+        response = self.client.post(
+            url,
+            data=json.dumps({"videoUrl": "https://www.youtube.com/watch?v=2bBhnfh4StU"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["status"], "browser_ready")
+        self.assertEqual(payload["recommendedMode"], ArtClass.PLAYBACK_MODE_EMBED)
+        self.assertEqual(payload["headline"], "브라우저에서 바로 시작 가능")
+        self.assertEqual(payload["title"], "봄 꽃병 꾸미기")
+
+    @patch("artclass.views._fetch_youtube_title")
+    def test_video_advice_api_returns_launcher_recommended_when_title_fetch_fails(self, mock_fetch_title):
+        mock_fetch_title.return_value = ""
+        url = reverse("artclass:video_advice_api")
+
+        response = self.client.post(
+            url,
+            data=json.dumps({"videoUrl": "https://www.youtube.com/watch?v=UFQT5Wtamw0"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["status"], "launcher_recommended")
+        self.assertEqual(payload["recommendedMode"], ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW)
+
+    def test_video_advice_api_returns_unknown_for_invalid_url(self):
+        url = reverse("artclass:video_advice_api")
+
+        response = self.client.post(
+            url,
+            data=json.dumps({"videoUrl": "not-a-youtube-url"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["status"], "unknown")
+        self.assertEqual(payload["recommendedMode"], ArtClass.PLAYBACK_MODE_EMBED)
+
+    def test_video_advice_api_rejects_invalid_json(self):
+        url = reverse("artclass:video_advice_api")
+
+        response = self.client.post(url, data="{", content_type="application/json")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["error"], "INVALID_JSON")
+
     def test_update_step_text_api_success(self):
         art_class = ArtClass.objects.create(
             title="단계 저장 테스트",
@@ -596,9 +652,11 @@ class ArtClassSetupEditTest(TestCase):
         response = self.client.get(reverse("artclass:setup"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "제미나이에서 만든 답변을 붙여넣으면 수업 단계가 자동으로 채워집니다.")
-        self.assertContains(response, "여기에 제미나이 답변을 붙여넣으세요")
-        self.assertNotContains(response, "JSON 권장")
+        self.assertContains(response, "오늘 바로 시작하는 미술 수업")
+        self.assertContains(response, "샘플 영상으로 체험하기")
+        self.assertContains(response, "브라우저로 시작")
+        self.assertContains(response, "런처로 안정 진행")
+        self.assertContains(response, "응답 예시 보기")
 
     def test_setup_edit_preserves_existing_image_if_not_reuploaded(self):
         self.client.force_login(self.owner)
@@ -917,6 +975,55 @@ class ArtClassAutoMetadataTest(TestCase):
         shared_titles = {item.display_title for item in response.context["shared_classes"]}
         self.assertEqual(my_titles, {my_private.display_title, my_shared.display_title})
         self.assertEqual(shared_titles, {my_shared.display_title, other_shared.display_title})
+
+    def test_library_shows_start_mode_badge_and_reason(self):
+        art_class = ArtClass.objects.create(
+            title="런처 권장 공개 수업",
+            youtube_url="https://www.youtube.com/watch?v=UFQT5Wtamw0",
+            default_interval=10,
+            playback_mode=ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW,
+            created_by=self.owner,
+            is_shared=True,
+        )
+
+        response = self.client.get(reverse("artclass:library"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, art_class.display_title)
+        self.assertContains(response, "런처 권장")
+        self.assertContains(response, "이 수업은 런처로 시작하면 영상 재생이 더 안정적입니다.")
+
+
+class ArtClassPresentationUxTest(TestCase):
+    def test_classroom_shows_launcher_recommended_state_for_external_mode(self):
+        art_class = ArtClass.objects.create(
+            title="런처 상태 안내 수업",
+            youtube_url="https://www.youtube.com/watch?v=UFQT5Wtamw0",
+            default_interval=10,
+            playback_mode=ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW,
+        )
+        ArtStep.objects.create(art_class=art_class, step_number=1, description="기본 단계")
+
+        response = self.client.get(reverse("artclass:classroom", kwargs={"pk": art_class.pk}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "런처 권장 영상")
+        self.assertContains(response, "이 영상은 임베드 제한 가능성이 있어 런처 사용을 권장해요.")
+
+    def test_classroom_shows_browser_ready_state_for_embed_mode(self):
+        art_class = ArtClass.objects.create(
+            title="브라우저 상태 안내 수업",
+            youtube_url="https://www.youtube.com/watch?v=2bBhnfh4StU",
+            default_interval=10,
+            playback_mode=ArtClass.PLAYBACK_MODE_EMBED,
+        )
+        ArtStep.objects.create(art_class=art_class, step_number=1, description="기본 단계")
+
+        response = self.client.get(reverse("artclass:classroom", kwargs={"pk": art_class.pk}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "브라우저로 진행 중")
+        self.assertContains(response, "브라우저에서 바로 재생할 수 있어요")
 
 
 class ArtClassYoutubeTitleBackfillCommandTest(TestCase):
