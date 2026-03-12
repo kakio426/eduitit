@@ -412,6 +412,20 @@ class ManualPipelineApiTest(TestCase):
         self.assertEqual(payload["status"], "unknown")
         self.assertEqual(payload["recommendedMode"], ArtClass.PLAYBACK_MODE_EMBED)
 
+    @patch("artclass.views._fetch_youtube_title")
+    def test_video_advice_api_does_not_fetch_for_localhost_url(self, mock_fetch_title):
+        url = reverse("artclass:video_advice_api")
+
+        response = self.client.post(
+            url,
+            data=json.dumps({"videoUrl": "http://127.0.0.1:8000/private"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "unknown")
+        mock_fetch_title.assert_not_called()
+
     def test_video_advice_api_rejects_invalid_json(self):
         url = reverse("artclass:video_advice_api")
 
@@ -745,6 +759,50 @@ class ArtClassAutoMetadataTest(TestCase):
             user=self.owner,
             defaults={"nickname": "자동분류교사", "role": "school"},
         )
+
+    def test_setup_rejects_non_youtube_url_and_preserves_posted_steps(self):
+        response = self.client.post(
+            reverse("artclass:setup"),
+            data={
+                "videoUrl": "http://127.0.0.1:8000/private",
+                "stepInterval": "12",
+                "playbackMode": ArtClass.PLAYBACK_MODE_EMBED,
+                "step_count": "1",
+                "step_text_0": "도화지에 연필로 큰 원을 그린다.",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(ArtClass.objects.count(), 0)
+        self.assertContains(response, "유효한 유튜브 주소만 사용할 수 있어요.")
+        self.assertEqual(response.context["initial_steps"][0]["text"], "도화지에 연필로 큰 원을 그린다.")
+
+    def test_setup_rejects_invalid_step_image_type(self):
+        upload = SimpleUploadedFile("step.txt", b"hello", content_type="text/plain")
+
+        response = self.client.post(
+            reverse("artclass:setup"),
+            data={
+                "videoUrl": "https://www.youtube.com/watch?v=2bBhnfh4StU",
+                "stepInterval": "12",
+                "playbackMode": ArtClass.PLAYBACK_MODE_EMBED,
+                "step_count": "1",
+                "step_text_0": "도화지에 연필로 큰 원을 그린다.",
+                "step_image_0": upload,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(ArtClass.objects.count(), 0)
+        self.assertContains(response, "단계 이미지는 JPG, PNG, GIF, WEBP 파일만 사용할 수 있어요.")
+
+    def test_setup_page_shows_input_guardrails(self):
+        response = self.client.get(reverse("artclass:setup"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "유튜브가 아닌 링크, 내부망 주소, localhost 주소는 사용할 수 없습니다.")
+        self.assertContains(response, "외부 AI 서비스로 전송될 수 있습니다.")
+        self.assertContains(response, "JPG, PNG, GIF, WEBP 파일만 가능하며 5MB 이하")
 
     def test_setup_generates_auto_metadata_without_manual_title(self):
         response = self.client.post(

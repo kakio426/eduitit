@@ -8,6 +8,7 @@ from django.urls import reverse
 from insights.models import Insight
 from products.models import Product, ServiceManual
 
+from .discovery_policy import is_sensitive_discovery_target
 from .product_visibility import filter_discoverable_products
 
 
@@ -72,6 +73,8 @@ def build_public_sitemap_entries() -> tuple[PublicSitemapEntry, ...]:
         product__is_active=True,
     ).select_related("product")
     for manual in published_manuals:
+        if is_sensitive_discovery_target(manual):
+            continue
         entries.append(
             PublicSitemapEntry(
                 key=f"manuals:{manual.pk}",
@@ -86,6 +89,8 @@ def build_public_sitemap_entries() -> tuple[PublicSitemapEntry, ...]:
         Product.objects.filter(is_active=True).order_by("display_order", "-created_at")
     )
     for product in discoverable_products:
+        if is_sensitive_discovery_target(product):
+            continue
         entries.append(
             PublicSitemapEntry(
                 key=f"products:{product.pk}",

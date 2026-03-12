@@ -11,6 +11,21 @@ from products.models import Product, ServiceManual
 class SeoFoundationTests(TestCase):
     def setUp(self):
         self.product = Product.objects.create(
+            title="미술 수업 도우미",
+            description="유튜브 기반 수업 흐름을 빠르게 정리합니다.",
+            price=0,
+            is_active=True,
+            service_type="classroom",
+            launch_route_name="artclass:setup",
+            solve_text="수업 흐름과 단계 안내를 한 번에 정리합니다.",
+        )
+        self.manual = ServiceManual.objects.create(
+            product=self.product,
+            title="미술 수업 도우미 시작하기",
+            description="바로 열고 바로 단계 준비하는 흐름을 안내합니다.",
+            is_published=True,
+        )
+        self.sensitive_product = Product.objects.create(
             title="학급 캘린더",
             description="학급 일정을 빠르게 정리합니다.",
             price=0,
@@ -19,8 +34,8 @@ class SeoFoundationTests(TestCase):
             launch_route_name="classcalendar:main",
             solve_text="오늘 일정과 주간 흐름을 한 번에 정리합니다.",
         )
-        self.manual = ServiceManual.objects.create(
-            product=self.product,
+        self.sensitive_manual = ServiceManual.objects.create(
+            product=self.sensitive_product,
             title="학급 캘린더 시작하기",
             description="바로 열고 바로 일정 등록하는 흐름을 안내합니다.",
             is_published=True,
@@ -33,16 +48,17 @@ class SeoFoundationTests(TestCase):
             tags="#AI,#교실",
         )
 
-    def test_robots_txt_exposes_sitemap_and_major_disallow_rules(self):
+    def test_robots_txt_only_exposes_sitemap_without_internal_hints(self):
         response = self.client.get("/robots.txt")
         content = response.content.decode("utf-8")
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("Sitemap: https://eduitit.site/sitemap.xml", content)
-        self.assertIn("Disallow: /admin/", content)
-        self.assertIn("Disallow: /accounts/", content)
-        self.assertIn("Disallow: /api/", content)
-        self.assertIn("Disallow: */create/", content)
+        self.assertNotIn("/admin/", content)
+        self.assertNotIn("/accounts/", content)
+        self.assertNotIn("/secret-admin-kakio/", content)
+        self.assertNotIn("*/create/", content)
+        self.assertNotIn("*/edit/", content)
 
     def test_sitemap_xml_lists_public_home_manual_product_insight_and_tools(self):
         response = self.client.get("/sitemap.xml")
@@ -57,6 +73,8 @@ class SeoFoundationTests(TestCase):
         self.assertIn(reverse("insights:detail", kwargs={"pk": self.insight.pk}), content)
         self.assertIn(reverse("noticegen:main"), content)
         self.assertIn(reverse("qrgen:landing"), content)
+        self.assertNotIn(reverse("service_guide_detail", kwargs={"pk": self.sensitive_manual.pk}), content)
+        self.assertNotIn(reverse("product_detail", kwargs={"pk": self.sensitive_product.pk}), content)
         self.assertNotIn("/secret-admin-kakio/", content)
         self.assertNotIn(reverse("insights:create"), content)
         self.assertNotIn("/api/", content)
@@ -114,17 +132,31 @@ class SeoFoundationTests(TestCase):
         product_content = product_response.content.decode("utf-8")
 
         self.assertEqual(manual_response.status_code, 200)
-        self.assertIn("<title>학급 캘린더 시작하기 - 서비스 가이드 - Eduitit</title>", manual_content)
+        self.assertIn("<title>미술 수업 도우미 시작하기 - 서비스 가이드 - Eduitit</title>", manual_content)
         self.assertIn(
             f'<link rel="canonical" href="https://eduitit.site{reverse("service_guide_detail", kwargs={"pk": self.manual.pk})}">',
             manual_content,
         )
-        self.assertIn("바로 열고 바로 일정 등록하는 흐름", manual_content)
+        self.assertIn("바로 열고 바로 단계 준비하는 흐름", manual_content)
 
         self.assertEqual(product_response.status_code, 200)
-        self.assertIn("<title>학급 캘린더 - Eduitit</title>", product_content)
+        self.assertIn("<title>미술 수업 도우미 - Eduitit</title>", product_content)
         self.assertIn(
             f'<link rel="canonical" href="https://eduitit.site{reverse("product_detail", kwargs={"pk": self.product.pk})}">',
             product_content,
         )
-        self.assertIn("오늘 일정과 주간 흐름을 한 번에 정리합니다.", product_content)
+        self.assertIn("수업 흐름과 단계 안내를 한 번에 정리합니다.", product_content)
+
+    def test_sensitive_service_guides_and_products_use_noindex_headers(self):
+        manual_response = self.client.get(reverse("service_guide_detail", kwargs={"pk": self.sensitive_manual.pk}))
+        manual_content = manual_response.content.decode("utf-8")
+        product_response = self.client.get(reverse("product_detail", kwargs={"pk": self.sensitive_product.pk}))
+        product_content = product_response.content.decode("utf-8")
+
+        self.assertEqual(manual_response.status_code, 200)
+        self.assertIn('<meta name="robots" content="noindex,nofollow">', manual_content)
+        self.assertEqual(manual_response["X-Robots-Tag"], "noindex, nofollow")
+
+        self.assertEqual(product_response.status_code, 200)
+        self.assertIn('<meta name="robots" content="noindex,nofollow">', product_content)
+        self.assertEqual(product_response["X-Robots-Tag"], "noindex, nofollow")

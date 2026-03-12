@@ -7,6 +7,8 @@ from urllib.parse import urljoin
 from django.urls import reverse
 from django.utils.html import strip_tags
 
+from .discovery_policy import is_sensitive_discovery_target
+
 
 SITE_CANONICAL_BASE_URL = "https://eduitit.site"
 DEFAULT_OG_IMAGE_URL = f"{SITE_CANONICAL_BASE_URL}/static/images/eduitit_og.png"
@@ -143,6 +145,7 @@ def build_service_guide_detail_seo(request, manual) -> PageSeoMeta:
         title=f"{public_title} - 서비스 가이드 - Eduitit",
         description=description or f"{product_name} 사용 흐름을 빠르게 따라갈 수 있는 안내입니다.",
         canonical_url=_absolute_url(reverse("service_guide_detail", kwargs={"pk": manual.pk})),
+        robots="noindex,nofollow" if is_sensitive_discovery_target(manual) else "index,follow",
     )
 
 
@@ -196,6 +199,7 @@ def build_product_detail_seo(request, product) -> PageSeoMeta:
         description=description or f"{product_name} 소개 페이지입니다.",
         canonical_url=_absolute_url(reverse("product_detail", kwargs={"pk": product.pk})),
         og_image=image_url or DEFAULT_OG_IMAGE_URL,
+        robots="noindex,nofollow" if is_sensitive_discovery_target(product) else "index,follow",
     )
 
 

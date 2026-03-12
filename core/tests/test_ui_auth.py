@@ -33,6 +33,9 @@ class UIAuthTestCase(TestCase):
         self.assertContains(response, "카카오톡으로 시작하기")
         self.assertContains(response, "네이버로 시작하기")
         self.assertNotContains(response, "관리자 접속")
+        self.assertNotContains(response, "bot_login_input")
+        self.assertNotContains(response, "bot_password_input")
+        self.assertNotContains(response, "bot_login_submit")
 
     def test_home_nav_keeps_dropdown_shell_visible_for_classroom_shortcuts(self):
         profile = UserProfile.objects.get(user=self.user)

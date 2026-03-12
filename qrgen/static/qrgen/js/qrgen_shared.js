@@ -1,4 +1,45 @@
 (function () {
+    function isPrivateOrLocalHostname(hostname) {
+        const normalized = (hostname || "").trim().toLowerCase();
+        if (!normalized) {
+            return false;
+        }
+        if (normalized === "localhost" || normalized.endsWith(".local")) {
+            return true;
+        }
+        if (normalized === "::1" || normalized === "[::1]") {
+            return true;
+        }
+
+        const ipv6 = normalized.replace(/^\[|\]$/g, "");
+        if (ipv6.startsWith("fc") || ipv6.startsWith("fd") || ipv6.startsWith("fe80:")) {
+            return true;
+        }
+
+        const ipv4Match = normalized.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+        if (!ipv4Match) {
+            return false;
+        }
+        const octets = ipv4Match.slice(1).map((value) => parseInt(value, 10));
+        if (octets.some((value) => Number.isNaN(value) || value < 0 || value > 255)) {
+            return false;
+        }
+        const [first, second] = octets;
+        if (first === 10 || first === 127) {
+            return true;
+        }
+        if (first === 169 && second === 254) {
+            return true;
+        }
+        if (first === 172 && second >= 16 && second <= 31) {
+            return true;
+        }
+        if (first === 192 && second === 168) {
+            return true;
+        }
+        return false;
+    }
+
     function parseUrl(raw) {
         const text = (raw || "").trim();
         if (!text) {
@@ -17,6 +58,9 @@
             return { url: "", error: "http/https 링크만 사용할 수 있어요." };
         }
 
+        if (isPrivateOrLocalHostname(parsed.hostname)) {
+            return { url: "", error: "localhost, 사설 IP, 학교 내부망 주소는 QR로 만들 수 없어요." };
+        }
         if (!parsed.hostname || parsed.hostname.indexOf(".") === -1) {
             return { url: "", error: "도메인이 포함된 링크를 입력해 주세요." };
         }

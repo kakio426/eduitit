@@ -1,10 +1,14 @@
 from django.db import models
+from django.contrib.auth import get_user_model
+from django.contrib.auth.signals import user_logged_in, user_login_failed
 from django.dispatch import receiver
 from django.db.models.signals import post_delete, pre_save
 from django.conf import settings
+from django.db.models import Q
 import logging
 
 logger = logging.getLogger(__name__)
+auth_logger = logging.getLogger("core.auth_security")
 
 def should_cleanup():
     """Cloudinary 설정 여부 확인"""
@@ -71,3 +75,59 @@ def delete_file_on_change(sender, instance, **kwargs):
                     logger.info(f"[Cleanup] Deleted old file {old_file.name} from storage on {sender.__name__} update.")
                 except Exception as e:
                     logger.error(f"[Cleanup] Failed to delete old file {old_file.name} on {sender.__name__} update: {e}")
+
+
+def _client_ip(request):
+    if request is None:
+        return ""
+    forwarded_for = (request.META.get("HTTP_X_FORWARDED_FOR") or "").strip()
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    return (request.META.get("REMOTE_ADDR") or "").strip()
+
+
+def _login_identifier(credentials):
+    credentials = credentials or {}
+    for key in ("login", "username", "email"):
+        value = str(credentials.get(key) or "").strip()
+        if value:
+            return value
+    return ""
+
+
+def _looks_like_staff_login(identifier):
+    if not identifier:
+        return False
+    User = get_user_model()
+    return User.objects.filter(
+        Q(username__iexact=identifier) | Q(email__iexact=identifier),
+        is_staff=True,
+    ).exists()
+
+
+@receiver(user_logged_in)
+def log_staff_login_success(sender, request, user, **kwargs):
+    if not getattr(user, "is_staff", False):
+        return
+
+    auth_logger.info(
+        "staff login success username=%s user_id=%s ip=%s path=%s",
+        getattr(user, "username", ""),
+        getattr(user, "id", ""),
+        _client_ip(request),
+        getattr(request, "path", ""),
+    )
+
+
+@receiver(user_login_failed)
+def log_staff_login_failure(sender, credentials, request, **kwargs):
+    identifier = _login_identifier(credentials)
+    if not _looks_like_staff_login(identifier):
+        return
+
+    auth_logger.warning(
+        "staff login failed identifier=%s ip=%s path=%s",
+        identifier,
+        _client_ip(request),
+        getattr(request, "path", ""),
+    )

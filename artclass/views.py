@@ -5,6 +5,7 @@ import re
 import time
 from urllib.request import Request, urlopen
 from urllib.parse import parse_qs, urlencode, urlparse
+from PIL import Image, UnidentifiedImageError
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.contrib import messages
@@ -238,6 +239,15 @@ def _build_video_advice(video_url, *, playback_mode="", title_hint=""):
 
 STEP_FORM_INDEX_RE = re.compile(r"^step_(?:text|existing_id|image)_(\d+)$")
 STEP_FORM_INDEX_LIMIT = 200
+ARTCLASS_ALLOWED_VIDEO_HOSTS = {"youtube.com", "youtu.be"}
+ARTCLASS_ALLOWED_IMAGE_CONTENT_TYPES = {
+    "image/gif",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+}
+ARTCLASS_ALLOWED_IMAGE_EXTENSIONS = {".gif", ".jpeg", ".jpg", ".png", ".webp"}
+ARTCLASS_MAX_STEP_IMAGE_BYTES = 5 * 1024 * 1024
 
 
 def _normalize_int_input(value, *, default, min_value=None, max_value=None):
@@ -258,6 +268,19 @@ def _normalize_int_input(value, *, default, min_value=None, max_value=None):
 
 def _default_step_interval():
     return int(ArtClass._meta.get_field("default_interval").default)
+
+
+def _is_allowed_youtube_url(video_url):
+    video_url = (video_url or "").strip()
+    if not video_url:
+        return False
+    if not _extract_youtube_video_id(video_url):
+        return False
+    try:
+        hostname = (urlparse(video_url).hostname or "").lower().replace("www.", "")
+    except Exception:
+        hostname = ""
+    return hostname in ARTCLASS_ALLOWED_VIDEO_HOSTS or hostname.endswith(".youtube.com")
 
 
 def _resolve_step_indexes(request):
@@ -283,12 +306,111 @@ def _resolve_step_indexes(request):
     return sorted(indexes), corrected
 
 
+def _build_initial_steps(art_class):
+    if not art_class:
+        return []
+    return [
+        {
+            'id': step.pk,
+            'text': step.description,
+            'imagePreview': step.image.url if step.image else None,
+        }
+        for step in art_class.steps.all()
+    ]
+
+
+def _build_posted_initial_steps(request, art_class=None):
+    existing_steps = {}
+    if art_class:
+        existing_steps = {step.pk: step for step in art_class.steps.all()}
+
+    step_indexes, _ = _resolve_step_indexes(request)
+    initial_steps = []
+    for step_index in step_indexes:
+        existing_step = None
+        existing_step_id_raw = (request.POST.get(f"step_existing_id_{step_index}") or "").strip()
+        if existing_step_id_raw.isdigit():
+            existing_step = existing_steps.get(int(existing_step_id_raw))
+
+        initial_steps.append(
+            {
+                "id": existing_step.pk if existing_step else None,
+                "text": request.POST.get(f"step_text_{step_index}", ""),
+                "imagePreview": existing_step.image.url if existing_step and existing_step.image else None,
+            }
+        )
+    return initial_steps
+
+
+def _validate_step_image(uploaded_image):
+    file_name = str(getattr(uploaded_image, "name", "") or "").strip()
+    extension = os.path.splitext(file_name)[1].lower()
+    content_type = str(getattr(uploaded_image, "content_type", "") or "").lower()
+    file_size = int(getattr(uploaded_image, "size", 0) or 0)
+
+    if file_size > ARTCLASS_MAX_STEP_IMAGE_BYTES:
+        return "단계 이미지는 5MB 이하만 업로드할 수 있어요."
+    if extension not in ARTCLASS_ALLOWED_IMAGE_EXTENSIONS:
+        return "단계 이미지는 JPG, PNG, GIF, WEBP 파일만 사용할 수 있어요."
+    if content_type and content_type not in ARTCLASS_ALLOWED_IMAGE_CONTENT_TYPES:
+        return "단계 이미지는 JPG, PNG, GIF, WEBP 파일만 사용할 수 있어요."
+
+    current_position = None
+    try:
+        current_position = uploaded_image.tell()
+    except Exception:
+        current_position = None
+
+    try:
+        uploaded_image.seek(0)
+        with Image.open(uploaded_image) as image:
+            image.verify()
+    except (UnidentifiedImageError, OSError, SyntaxError, ValueError):
+        return "손상되었거나 지원하지 않는 이미지 파일입니다. JPG, PNG, GIF, WEBP만 사용해 주세요."
+    finally:
+        try:
+            uploaded_image.seek(0 if current_position is None else current_position)
+        except Exception:
+            pass
+
+    return ""
+
+
+def _build_setup_context(art_class=None, *, initial_steps=None, initial_playback_mode=None, setup_video_url=""):
+    initial_steps = initial_steps if initial_steps is not None else _build_initial_steps(art_class)
+    selected_mode = initial_playback_mode or (art_class.playback_mode if art_class else "")
+    video_url = setup_video_url if setup_video_url is not None else (art_class.youtube_url if art_class else "")
+    video_advice = _build_video_advice(
+        video_url,
+        playback_mode=selected_mode,
+        title_hint=art_class.title if art_class else "",
+    )
+    if not selected_mode:
+        selected_mode = video_advice["recommendedMode"]
+
+    return {
+        'art_class': art_class,
+        'initial_steps': initial_steps,
+        'initial_playback_mode': selected_mode,
+        'video_advice': video_advice,
+        'manual_prompt_template': build_manual_pipeline_prompt(video_url),
+        'launcher_download_url': _get_launcher_download_url(),
+        'sample_lesson': ARTCLASS_SAMPLE_LESSON,
+        'setup_video_url': video_url,
+    }
+
+
+def _render_setup_page(request, art_class=None, **kwargs):
+    return render(request, 'artclass/setup.html', _build_setup_context(art_class, **kwargs))
+
+
 def _resolve_setup_title(posted_title, art_class):
     if posted_title is None and art_class:
         return art_class.title
     return (posted_title or "").strip()
 
 
+@ratelimit(key=ratelimit_key_for_master_only, rate='24/10m', method='POST', block=True, group='artclass_setup_submit')
 def setup_view(request, pk=None):
     """Setup Page - 수업 준비 및 수정 페이지"""
     art_class = None
@@ -314,6 +436,30 @@ def setup_view(request, pk=None):
         valid_modes = {choice[0] for choice in ArtClass.PLAYBACK_MODE_CHOICES}
         playback_mode = selected_mode if selected_mode in valid_modes else ArtClass.PLAYBACK_MODE_EMBED
         auto_corrected = interval_corrected
+
+        if not _is_allowed_youtube_url(video_url):
+            messages.error(request, "유효한 유튜브 주소만 사용할 수 있어요. 유튜브 영상 링크를 다시 확인해 주세요.")
+            return _render_setup_page(
+                request,
+                art_class,
+                initial_steps=_build_posted_initial_steps(request, art_class),
+                initial_playback_mode=playback_mode,
+                setup_video_url=video_url,
+            )
+
+        for key, uploaded_image in request.FILES.items():
+            if not STEP_FORM_INDEX_RE.match(key):
+                continue
+            image_error = _validate_step_image(uploaded_image)
+            if image_error:
+                messages.error(request, image_error)
+                return _render_setup_page(
+                    request,
+                    art_class,
+                    initial_steps=_build_posted_initial_steps(request, art_class),
+                    initial_playback_mode=playback_mode,
+                    setup_video_url=video_url,
+                )
         
         if art_class:
             # 기존 수업 수정
@@ -385,32 +531,7 @@ def setup_view(request, pk=None):
             classroom_url = f"{classroom_url}?{urlencode({'autostart_launcher': '1'})}"
         return redirect(classroom_url)
     
-    # 수정 모드라면 기존 단계를 안전한 JSON 스크립트로 전달하여 JS에서 렌더링하도록 함
-    initial_steps = []
-    if art_class:
-        initial_steps = [
-            {'id': step.pk, 'text': step.description, 'imagePreview': step.image.url if step.image else None}
-            for step in art_class.steps.all()
-        ]
-
-    selected_mode = art_class.playback_mode if art_class else ""
-    video_advice = _build_video_advice(
-        art_class.youtube_url if art_class else "",
-        playback_mode=selected_mode,
-        title_hint=art_class.title if art_class else "",
-    )
-    if not selected_mode:
-        selected_mode = video_advice["recommendedMode"]
-
-    return render(request, 'artclass/setup.html', {
-        'art_class': art_class,
-        'initial_steps': initial_steps,
-        'initial_playback_mode': selected_mode,
-        'video_advice': video_advice,
-        'manual_prompt_template': build_manual_pipeline_prompt(art_class.youtube_url if art_class else ""),
-        'launcher_download_url': _get_launcher_download_url(),
-        'sample_lesson': ARTCLASS_SAMPLE_LESSON,
-    })
+    return _render_setup_page(request, art_class)
 
 
 def classroom_view(request, pk):
@@ -571,6 +692,7 @@ def start_launcher_session_api(request, pk):
     )
 
 
+@ratelimit(key=ratelimit_key_for_master_only, rate='180/10m', method='POST', block=True, group='artclass_video_advice')
 @require_POST
 def video_advice_api(request):
     """유튜브 주소 기준으로 브라우저/런처 권장 상태를 반환한다."""

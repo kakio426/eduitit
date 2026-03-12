@@ -277,14 +277,18 @@ def product_detail(request, pk):
     from core.views import _resolve_product_launch_url
     launch_href, launch_is_external = _resolve_product_launch_url(product)
     can_launch = bool(launch_href) and launch_href != request.path
-    return render(request, 'products/detail.html', {
+    seo_meta = build_product_detail_seo(request, product)
+    response = render(request, 'products/detail.html', {
         'product': product,
         'is_owned': is_owned,
         'launch_href': launch_href,
         'launch_is_external': launch_is_external,
         'can_launch': can_launch,
-        **build_product_detail_seo(request, product).as_context(),
+        **seo_meta.as_context(),
     })
+    if seo_meta.robots.startswith("noindex"):
+        response["X-Robots-Tag"] = seo_meta.robots.replace(",", ", ")
+    return response
 
 def product_preview(request, pk):
     product = get_object_or_404(Product, pk=pk, is_active=True)

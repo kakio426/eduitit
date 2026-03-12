@@ -739,6 +739,11 @@ LOGGING = {
             'level': 'INFO',
             'propagate': False,
         },
+        'core.auth_security': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
         'django': {
             'handlers': ['console'],
             'level': 'INFO',

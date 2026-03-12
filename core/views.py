@@ -3118,15 +3118,19 @@ def service_guide_detail(request, pk):
         section.display_title = _replace_public_service_terms(section.title, manual.product)
         section.display_content = _replace_public_service_terms(section.content, manual.product)
     launch_href, launch_is_external = _resolve_product_launch_url(manual.product)
-    
-    return render(request, 'core/service_guide_detail.html', {
+
+    seo_meta = build_service_guide_detail_seo(request, manual)
+    response = render(request, 'core/service_guide_detail.html', {
         'manual': manual,
         'sections': sections,
         'launch_href': launch_href,
         'launch_is_external': launch_is_external,
         'launch_label': f"{manual.public_service_name} 열기",
-        **build_service_guide_detail_seo(request, manual).as_context(),
+        **seo_meta.as_context(),
     })
+    if seo_meta.robots.startswith("noindex"):
+        response["X-Robots-Tag"] = seo_meta.robots.replace(",", ", ")
+    return response
 
 
 @require_POST
