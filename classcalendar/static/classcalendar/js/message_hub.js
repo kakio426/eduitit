@@ -1042,7 +1042,7 @@ function initCalendarMessageHub(host, options = {}) {
         messageArchiveCandidateEmptyText: function() {
             if (!this.messageArchiveSelectedCapture) return '';
             return this.messageArchiveSelectedCapture.archive_status === 'unparsed'
-                ? '아직 이 메모는 읽지 않았어요. 필요할 때 날짜 찾기를 누르면 됩니다.'
+                ? '아직 이 메모는 읽지 않았어요. 필요할 때 일정찾기를 누르면 됩니다.'
                 : '이 메모에서는 저장할 날짜를 찾지 못했어요.';
         },
     });

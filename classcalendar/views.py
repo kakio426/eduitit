@@ -41,6 +41,7 @@ from .message_capture_classifier import (
     DEFAULT_ASSIST_THRESHOLD,
     predict_item_type as predict_message_capture_item_type,
 )
+from .today_memos import build_today_memo_items
 from .models import (
     CalendarCollaborator,
     CalendarEvent,
@@ -1949,6 +1950,7 @@ def _build_main_view_context(request, *, embedded_sheetbook_context=None):
     _ensure_retention_notice_event_for_user(request.user, integration_setting)
     service = Product.objects.filter(launch_route_name=SERVICE_ROUTE).first()
     message_capture_ui = build_message_capture_ui_context(request.user)
+    initial_panel = str(request.GET.get("panel") or "").strip().lower()
     return {
         "service": service,
         "title": service.title if service else "달력 (Eduitit Calendar)",
@@ -1976,6 +1978,9 @@ def _build_main_view_context(request, *, embedded_sheetbook_context=None):
         "message_capture_item_types_enabled": message_capture_ui["item_types_enabled"],
         "message_capture_limits_json": message_capture_ui["limits"],
         "message_capture_urls_json": message_capture_ui["urls"],
+        "today_memo_items": build_today_memo_items(request.user, target_date=timezone.localdate()),
+        "today_memo_empty_message": "오늘 다시 볼 메모가 없으면 오늘 일정만 확인하면 됩니다.",
+        "today_memo_panel_open": initial_panel == "today-memos",
         "embedded_sheetbook_context": embedded_sheetbook_context,
         "embedded_sheetbook_context_json": embedded_sheetbook_context or {},
         "is_embedded_in_sheetbook": bool(embedded_sheetbook_context),

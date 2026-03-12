@@ -194,10 +194,11 @@
         var config = getHomeV2Config();
         var calendarConfig = config.calendar || {};
         return {
-            ...buildCalendarMessageHubState(),
             currentDate: new Date(),
             events: [],
             createModalOpen: false,
+            todayMemoModalOpen: false,
+            todayMemoReturnFocusElement: null,
             selectedDateKey: '',
             selectedDateLabel: '',
             selectedDateEvents: [],
@@ -215,12 +216,6 @@
             },
 
             init: function () {
-                initCalendarMessageHub(this, {
-                    enabled: !!calendarConfig.messageEnabled,
-                    itemTypesEnabled: !!calendarConfig.messageItemTypesEnabled,
-                    messageLimitsScriptId: 'home-calendar-message-limits-data',
-                    messageUrlsScriptId: 'home-calendar-message-urls-data',
-                });
                 this.syncSelectedDate(new Date());
                 this.refreshEvents();
                 this.refreshTicker = setInterval(() => this.refreshEvents(), 120000);
@@ -426,6 +421,18 @@
 
             handleDateClick: function (date) {
                 this.syncSelectedDate(date);
+            },
+
+            openTodayMemoModal: function (event) {
+                this.todayMemoReturnFocusElement = event && event.currentTarget ? event.currentTarget : document.activeElement;
+                this.todayMemoModalOpen = true;
+            },
+
+            closeTodayMemoModal: function () {
+                this.todayMemoModalOpen = false;
+                if (this.todayMemoReturnFocusElement && typeof this.todayMemoReturnFocusElement.focus === 'function') {
+                    window.setTimeout(() => this.todayMemoReturnFocusElement.focus(), 0);
+                }
             },
 
             openCreateModalForSelectedDate: function () {

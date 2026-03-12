@@ -10,8 +10,8 @@
         <div class="border-b border-slate-200 px-5 py-4 sm:px-6">
             <div class="flex items-start justify-between gap-3">
                 <div>
-                    <h3 class="text-xl font-extrabold text-slate-900 sm:text-2xl">오늘 다시 볼 메모</h3>
-                    <p class="mt-1 text-sm text-slate-600">체험학습 전날 안내, 공개수업 준비 체크, 오늘 꼭 말할 멘트를 날짜에 맞춰 미리 저장해 두세요.</p>
+                    <h3 class="text-xl font-extrabold text-slate-900 sm:text-2xl">메시지 보관함</h3>
+                    <p class="mt-1 text-sm text-slate-600">안내문이나 메모를 넣으면 날짜 후보를 찾아 저장하고, 나중에 다시 꺼내 볼 수 있습니다.</p>
                 </div>
                 <button
                     type="button"
@@ -28,7 +28,7 @@
                     :class="messageHubActiveTab === 'capture' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-300'"
                     class="rounded-full border px-4 py-2 text-sm font-bold transition"
                 >
-                    메모 만들기
+                    안내문에서 일정 찾기
                 </button>
                 <button
                     type="button"
@@ -36,7 +36,7 @@
                     :class="messageHubActiveTab === 'archive' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-300'"
                     class="rounded-full border px-4 py-2 text-sm font-bold transition"
                 >
-                    메모 보관함
+                    메시지 보관함
                 </button>
             </div>
         </div>
@@ -127,8 +127,8 @@
                 </div>
                 <div class="mx-auto mt-5 flex max-w-4xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
                     <button type="button" @click="closeMessageHub()" class="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-bold text-slate-700">닫기</button>
-                    <button type="button" @click="submitMessageCaptureArchiveSave()" :disabled="isSavingMessageCaptureArchive || isParsingMessageCapture" class="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-extrabold text-white disabled:opacity-60">메모 보관함에 저장</button>
-                    <button type="button" @click="submitMessageCaptureParse()" :disabled="isSavingMessageCaptureArchive || isParsingMessageCapture" class="rounded-2xl border border-indigo-200 bg-indigo-50 px-5 py-3 text-sm font-extrabold text-indigo-700 disabled:opacity-60">날짜 찾기</button>
+                    <button type="button" @click="submitMessageCaptureArchiveSave()" :disabled="isSavingMessageCaptureArchive || isParsingMessageCapture" class="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-extrabold text-white disabled:opacity-60">메시지 보관함에 저장</button>
+                    <button type="button" @click="submitMessageCaptureParse()" :disabled="isSavingMessageCaptureArchive || isParsingMessageCapture" class="rounded-2xl border border-indigo-200 bg-indigo-50 px-5 py-3 text-sm font-extrabold text-indigo-700 disabled:opacity-60">일정찾기</button>
                 </div>
             </div>
 
@@ -221,7 +221,7 @@
             <div class="mx-auto max-w-3xl space-y-4 text-center" x-show="messageCaptureStep === 'done'">
                 <div class="rounded-3xl border border-emerald-200 bg-emerald-50 px-5 py-5">
                     <p class="text-lg font-black text-emerald-900" x-text="messageCaptureDoneTitle()"></p>
-                    <p class="mt-2 text-sm font-semibold text-emerald-800" x-text="messageCaptureSavedMessage || '메모 보관함에서 다시 확인할 수 있어요.'"></p>
+                    <p class="mt-2 text-sm font-semibold text-emerald-800" x-text="messageCaptureSavedMessage || '메시지 보관함에서 다시 확인할 수 있어요.'"></p>
                 </div>
                 <div x-show="messageCaptureSuccessMode === 'commit' && messageCaptureSavedEvents.length > 0" class="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left shadow-sm">
                     <p class="mb-3 text-sm font-extrabold text-slate-900">방금 저장한 일정</p>
@@ -233,8 +233,8 @@
                     </template>
                 </div>
                 <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                    <button type="button" @click="startAnotherMessageCapture()" class="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-bold text-slate-700">다른 메모 만들기</button>
-                    <button type="button" @click="openMessageArchiveFromSuccess()" class="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-extrabold text-white">메모 보관함 보기</button>
+                    <button type="button" @click="startAnotherMessageCapture()" class="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-bold text-slate-700">다른 안내문 넣기</button>
+                    <button type="button" @click="openMessageArchiveFromSuccess()" class="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-extrabold text-white">메시지 보관함 보기</button>
                 </div>
             </div>
         </div>
@@ -321,7 +321,7 @@
                             </div>
                             <div x-show="messageArchiveSelectedCapture && (!messageArchiveSelectedCapture.saved_events || messageArchiveSelectedCapture.saved_events.length === 0)" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold text-slate-500">아직 이 메시지에서 저장한 일정이 없어요.</div>
                         </div>
-                        <button type="button" x-show="messageArchiveSelectedCapture" @click="replayMessageArchiveCapture()" :disabled="isLoadingMessageArchiveDetail || isParsingMessageCapture" class="w-full rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-60">이 메모로 다시 일정 만들기</button>
+                        <button type="button" x-show="messageArchiveSelectedCapture" @click="replayMessageArchiveCapture()" :disabled="isLoadingMessageArchiveDetail || isParsingMessageCapture" class="w-full rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-60">일정찾기</button>
                     </div>
                 </div>
             </div>

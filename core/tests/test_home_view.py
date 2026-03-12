@@ -379,13 +379,13 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('home-calendar-message-limits-data', content)
-        self.assertIn('home-calendar-message-urls-data', content)
-        self.assertIn('openMessageHub($event, \'capture\', { resetCapture: true })', content)
+        self.assertIn('openTodayMemoModal($event)', content)
+        self.assertIn('data-home-v2-today-memo-modal="true"', content)
         self.assertIn('오늘 다시 볼 메모', content)
-        self.assertIn('메모 만들기', content)
+        self.assertIn('오늘 메모 보기', content)
+        self.assertIn('캘린더 전체 열기', content)
         self.assertIn('fa-note-sticky', content)
-        self.assertNotIn('openMessageCaptureModal($event)', content)
+        self.assertNotIn('openMessageHub($event, \'capture\', { resetCapture: true })', content)
 
     def test_v2_authenticated_calendar_hub_shows_today_memo_preview(self):
         user = self._login('memouser')
@@ -410,6 +410,9 @@ class HomeV2ViewTest(TestCase):
 
         self.assertIn('data-home-v2-calendar-preview="true"', content)
         self.assertIn('data-home-v2-calendar-memos="true"', content)
+        self.assertIn('openTodayMemoModal($event)', content)
+        self.assertIn('캘린더 전체 열기', content)
+        self.assertIn('캘린더에서 관리하기', content)
         self.assertIn('오늘 다시 볼 메모', content)
         self.assertIn('1교시 전에 QR 띄우기', content)
         self.assertIn('마이크 배터리 확인', content)

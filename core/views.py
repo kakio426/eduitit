@@ -1484,18 +1484,15 @@ def _build_home_calendar_summary_context(request):
         "today_memo_items": [],
         "today_memo_empty_message": "오늘 다시 볼 메모가 없으면 달력 일정만 확인하면 됩니다.",
         "main_url": "",
+        "today_memo_panel_url": "",
         "create_api_url": "",
-        "message_enabled": False,
-        "message_item_types_enabled": False,
-        "message_limits_json": {},
-        "message_urls_json": {},
     }
     if not request.user.is_authenticated:
         return summary
 
     try:
         from classcalendar.models import CalendarEvent, CalendarTask
-        from classcalendar.views import build_message_capture_ui_context
+        from classcalendar.today_memos import build_today_memo_items
     except Exception:
         logger.exception("[Home] classcalendar import failed")
         return summary
@@ -1504,6 +1501,8 @@ def _build_home_calendar_summary_context(request):
         summary["main_url"] = reverse("classcalendar:main")
     except NoReverseMatch:
         summary["main_url"] = ""
+    if summary["main_url"]:
+        summary["today_memo_panel_url"] = f"{summary['main_url']}?panel=today-memos"
 
     try:
         summary["create_api_url"] = reverse("classcalendar:api_create_event")
@@ -1538,57 +1537,7 @@ def _build_home_calendar_summary_context(request):
         for event in upcoming_events
     ]
 
-    today_memo_items = []
-    today_events = list(
-        events_qs.filter(start_time__date=today)
-        .prefetch_related("blocks")
-        .order_by("start_time")[:8]
-    )
-    for event in today_events:
-        memo_excerpt = _build_home_calendar_memo_excerpt(_extract_home_calendar_event_note(event))
-        if not memo_excerpt:
-            continue
-        today_memo_items.append(
-            {
-                "title": event.title,
-                "memo_excerpt": memo_excerpt,
-                "schedule_text": _format_home_calendar_schedule(event),
-                "href": summary["main_url"],
-            }
-        )
-        if len(today_memo_items) >= 2:
-            break
-
-    if len(today_memo_items) < 2:
-        today_tasks = list(
-            CalendarTask.objects.filter(
-                author=request.user,
-                status=CalendarTask.Status.OPEN,
-                due_at__date=today,
-            )
-            .order_by("due_at", "created_at")[:8]
-        )
-        for task in today_tasks:
-            memo_excerpt = _build_home_calendar_memo_excerpt(task.note)
-            if not memo_excerpt:
-                continue
-            today_memo_items.append(
-                {
-                    "title": task.title,
-                    "memo_excerpt": memo_excerpt,
-                    "schedule_text": _format_home_task_schedule(task),
-                    "href": summary["main_url"],
-                }
-            )
-            if len(today_memo_items) >= 2:
-                break
-
-    summary["today_memo_items"] = today_memo_items
-    message_capture_ui = build_message_capture_ui_context(request.user)
-    summary["message_enabled"] = bool(message_capture_ui["enabled"])
-    summary["message_item_types_enabled"] = bool(message_capture_ui["item_types_enabled"])
-    summary["message_limits_json"] = message_capture_ui["limits"]
-    summary["message_urls_json"] = message_capture_ui["urls"]
+    summary["today_memo_items"] = build_today_memo_items(request.user, limit=2, target_date=today)
     summary["enabled"] = bool(summary["main_url"] and summary["create_api_url"])
     return summary
 
@@ -1781,13 +1730,10 @@ def _build_home_calendar_hub_context(request):
         "today_memo_empty_message": calendar_summary.get("today_memo_empty_message", ""),
         "continue_items": continue_items,
         "main_url": calendar_summary.get("main_url") or _safe_reverse("classcalendar:main"),
+        "today_memo_panel_url": calendar_summary.get("today_memo_panel_url") or _safe_reverse("classcalendar:main"),
         "create_api_url": calendar_summary.get("create_api_url", ""),
-        "message_enabled": bool(calendar_summary.get("message_enabled")),
-        "message_item_types_enabled": bool(calendar_summary.get("message_item_types_enabled")),
-        "message_limits_json": calendar_summary.get("message_limits_json") or {},
-        "message_urls_json": calendar_summary.get("message_urls_json") or {},
-        "primary_cta_label": "오늘 메모 열기",
-        "secondary_cta_label": "메모 만들기",
+        "primary_cta_label": "오늘 메모 보기",
+        "secondary_cta_label": "캘린더 전체 열기",
         "record_board_enabled": bool(sheetbook_workspace.get("enabled")),
     }
 
@@ -2060,8 +2006,6 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
             'calendar': {
                 'eventsUrl': reverse('classcalendar:api_events'),
                 'createEventUrl': reverse('classcalendar:api_create_event'),
-                'messageEnabled': bool(calendar_hub.get('message_enabled')),
-                'messageItemTypesEnabled': bool(calendar_hub.get('message_item_types_enabled')),
             },
         }
 

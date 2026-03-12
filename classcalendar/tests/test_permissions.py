@@ -1,6 +1,8 @@
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
+from datetime import timedelta
 
 from classcalendar.models import CalendarEvent, EventPageBlock
 from core.models import UserProfile
@@ -85,11 +87,31 @@ class PermissionTest(TestCase):
         response = self.client_teacher.get(reverse("classcalendar:main"))
         content = response.content.decode("utf-8")
 
-        self.assertContains(response, "오늘 다시 볼 메모 만들기")
-        self.assertIn("오늘 다시 볼 메모", content)
-        self.assertIn("메모 보관함", content)
+        self.assertContains(response, "안내문에서 일정 찾기")
+        self.assertIn("오늘 메모", content)
+        self.assertIn("메시지 보관함", content)
         self.assertIn("체험학습 전날 학부모 안내문", content)
         self.assertIn("학부모 안내", content)
+        self.assertIn('data-classcalendar-today-memo-panel="true"', content)
+
+    def test_main_view_today_memo_panel_uses_same_note_source(self):
+        event = self._create_event(title="오늘 메모 일정")
+        event.start_time = timezone.now()
+        event.end_time = event.start_time + timedelta(hours=1)
+        event.save(update_fields=["start_time", "end_time"])
+        EventPageBlock.objects.create(
+            event=event,
+            block_type="text",
+            order=1,
+            content={"text": "체육관 열쇠 챙기기\n방송 멘트 다시 확인"},
+        )
+
+        response = self.client_teacher.get(f"{reverse('classcalendar:main')}?panel=today-memos")
+        content = response.content.decode("utf-8")
+
+        self.assertContains(response, "오늘 메모")
+        self.assertIn("todayMemoPanelOpen: true", content)
+        self.assertIn("체육관 열쇠 챙기기", content)
 
     def test_create_event_rejects_invalid_time_range(self):
         response = self.client_teacher.post(

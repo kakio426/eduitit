@@ -10,7 +10,6 @@
 {% block extra_js %}
 <script src="https://unpkg.com/@phosphor-icons/web"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="{% static 'classcalendar/js/message_hub.js' %}"></script>
 <script src="{% static 'qrgen/js/qrgen_shared.js' %}"></script>
 <script src="{% static 'core/js/prompt_lab.js' %}"></script>
 <script src="{% static 'core/js/home_authenticated_v2.js' %}"></script>
@@ -299,8 +298,6 @@
         </main>
     </div>
 </div>
-{{ calendar_hub.message_limits_json|json_script:"home-calendar-message-limits-data" }}
-{{ calendar_hub.message_urls_json|json_script:"home-calendar-message-urls-data" }}
 {{ favorite_product_ids|json_script:"home-favorite-ids-data" }}
 {{ home_v2_frontend_config|json_script:"home-v2-frontend-config" }}
 {% endblock %}
