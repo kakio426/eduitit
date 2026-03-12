@@ -55,8 +55,8 @@
                             <i class="fas fa-user-plus text-purple-600"></i> 공유할 선생님 추가
                         </h3>
                         <p class="text-gray-600 text-sm leading-relaxed">
-                            URL만 보내도 열리던 방식 대신, <strong>교사 계정을 먼저 공유</strong>한 뒤 예약판 주소를 전달합니다.<br>
-                            공유된 선생님은 이후 같은 주소로 바로 열 수 있고, 공유되지 않은 계정은 접근할 수 없습니다.
+                            예약판 주소만 보내면 <strong>로그인 없이도 바로 예약</strong>할 수 있습니다.<br>
+                            아래 공유는 로그인한 교사 계정에 보기/편집 권한을 따로 관리하고 싶을 때만 사용하세요.
                         </p>
                     </div>
 
@@ -89,7 +89,7 @@
                         <div class="flex items-center justify-between gap-3">
                             <div>
                                 <p class="text-xs font-bold uppercase tracking-wide text-slate-500">예약판 주소</p>
-                                <p class="text-sm text-slate-600">공유한 선생님에게만 열리는 주소입니다.</p>
+                                <p class="text-sm text-slate-600">로그인 없이도 열리는 주소입니다.</p>
                             </div>
                             <button type="button" @click="copyToClipboard()"
                                 class="clay-btn px-4 py-2.5 text-sm font-bold text-purple-600 inline-flex items-center gap-2">
@@ -106,7 +106,7 @@
                     <div class="flex items-center justify-between gap-3">
                         <div>
                             <h4 class="text-lg font-bold text-slate-800">공유된 선생님</h4>
-                            <p class="text-sm text-slate-500">한 번 공유하면 같은 주소로 계속 사용할 수 있습니다.</p>
+                            <p class="text-sm text-slate-500">로그인한 교사에게만 보기/편집 권한을 따로 지정할 때 사용합니다.</p>
                         </div>
                         <span class="inline-flex items-center rounded-full bg-purple-100 px-3 py-1 text-xs font-bold text-purple-700">
                             {{ collaborators|length }}명

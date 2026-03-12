@@ -98,7 +98,7 @@ class ReservationsViewTest(TestCase):
         response = self.client.get(reverse('reservations:admin_dashboard', args=[self.school.slug]))
         self.assertEqual(response['Cache-Control'], 'no-store, private')
 
-    def test_unshared_user_sees_share_required_message(self):
+    def test_unshared_user_can_use_public_link(self):
         outsider = User.objects.create_user(username='outsider', password='password2', email='outsider@example.com')
         outsider_profile, _ = UserProfile.objects.get_or_create(user=outsider)
         outsider_profile.nickname = '외부교사'
@@ -107,8 +107,9 @@ class ReservationsViewTest(TestCase):
         self.client.force_login(outsider)
         response = self.client.get(reverse('reservations:reservation_index', args=[self.school.slug]))
 
-        self.assertEqual(response.status_code, 403)
-        self.assertContains(response, '공유가 필요합니다', status_code=403)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '로그인 없이 바로 예약할 수 있습니다.')
+        self.assertContains(response, '주소로 예약')
 
     def test_readonly_collaborator_can_view_but_cannot_create(self):
         viewer = User.objects.create_user(username='viewer', password='password2', email='viewer@example.com')
@@ -387,7 +388,7 @@ class ReservationsViewTest(TestCase):
         reservation.refresh_from_db()
         self.assertEqual(reservation.name, 'Protected Update')
 
-    def test_create_reservation_requires_login(self):
+    def test_anonymous_create_reservation_works(self):
         self.client.logout()
         create_url = reverse('reservations:create_reservation', args=[self.school.slug])
         data = {
@@ -399,8 +400,11 @@ class ReservationsViewTest(TestCase):
             'name': 'Anon Tester'
         }
         response = self.client.post(create_url, data)
-        self.assertEqual(response.status_code, 302)
-        self.assertFalse(Reservation.objects.filter(room=self.room, date=self.target_date, period=5).exists())
+        self.assertEqual(response.status_code, 200)
+        created = Reservation.objects.filter(room=self.room, date=self.target_date, period=5).first()
+        self.assertIsNotNone(created)
+        self.assertIsNone(created.created_by)
+        self.assertIn(created.id, self.client.session.get('owned_reservation_ids', []))
 
     def test_authenticated_create_surfaces_followup_actions_on_next_page(self):
         self.client.force_login(self.user)
@@ -481,6 +485,7 @@ class ReservationsViewTest(TestCase):
         self.assertContains(response, 'navigator.clipboard.writeText(this.shareUrl).then(() => {', html=False)
         self.assertContains(response, '복사에 실패했습니다. 다시 시도해 주세요.')
         self.assertContains(response, '공유할 선생님 추가')
+        self.assertContains(response, '로그인 없이도 열리는 주소입니다.')
 
     def test_admin_delete_reservation(self):
         reservation = Reservation.objects.create(
@@ -650,7 +655,7 @@ class ReservationsViewTest(TestCase):
         self.assertTrue(Reservation.objects.filter(room=self.room, date=self.target_date, period=3).exists())
         self.assertTrue(GradeRecurringLock.objects.filter(room=self.room, day_of_week=self.target_date.weekday(), period=3).exists())
 
-    def test_room_overview_requires_shared_access_and_groups_by_room(self):
+    def test_room_overview_allows_public_link_and_groups_by_room(self):
         second_room = SpecialRoom.objects.create(school=self.school, name='Music Room', icon='🎵')
         Reservation.objects.create(
             room=self.room,
@@ -674,11 +679,6 @@ class ReservationsViewTest(TestCase):
         url = reverse('reservations:room_overview', args=[self.school.slug])
         response = self.client.get(url)
 
-        self.assertEqual(response.status_code, 403)
-        self.assertContains(response, '공유가 필요합니다', status_code=403)
-
-        self.client.force_login(self.user)
-        response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, '특별실별 예약 현황')
         self.assertContains(response, 'Science Room')

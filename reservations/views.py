@@ -44,14 +44,16 @@ def _apply_sensitive_cache_headers(response):
 
 
 def _build_school_access(request, school):
+    public_access = {
+        "has_access": True,
+        "can_edit": True,
+        "can_manage": False,
+        "mode": "public",
+        "mode_label": "주소로 예약",
+    }
+
     if not request.user.is_authenticated:
-        return {
-            "has_access": False,
-            "can_edit": False,
-            "can_manage": False,
-            "mode": "anonymous",
-            "mode_label": "로그인 필요",
-        }
+        return public_access
 
     if school.owner_id == request.user.id:
         return {
@@ -76,13 +78,7 @@ def _build_school_access(request, school):
             "mode_label": "편집 가능" if relation.can_edit else "읽기 전용",
         }
 
-    return {
-        "has_access": False,
-        "can_edit": False,
-        "can_manage": False,
-        "mode": "missing_share",
-        "mode_label": "공유 필요",
-    }
+    return public_access
 
 
 def _render_share_required(request, school, *, status=403):
@@ -909,7 +905,6 @@ def start_parentcomm_followup(request, school_slug, reservation_id):
     )
     return redirect(f"{reverse('parentcomm:main')}?sb_seed={seed_token}")
 
-@login_required
 @require_POST
 def create_reservation(request, school_slug):
     school, access, access_response = _get_school_or_share_required(request, school_slug)
@@ -970,7 +965,7 @@ def create_reservation(request, school_slug):
         # 생성
         reservation = Reservation.objects.create(
             room=room,
-            created_by=request.user,
+            created_by=request.user if request.user.is_authenticated else None,
             date=target_date,
             period=period,
             grade=grade,
@@ -1002,7 +997,6 @@ def create_reservation(request, school_slug):
         return HttpResponse("예약 처리 중 오류가 발생했습니다.", status=500)
 
 
-@login_required
 @require_POST
 def update_reservation(request, school_slug, reservation_id):
     school, access, access_response = _get_school_or_share_required(request, school_slug)
@@ -1083,7 +1077,6 @@ def update_reservation(request, school_slug, reservation_id):
         logger.error(f"[Reservation Update Error] {e}")
         return HttpResponse("예약 수정 중 오류가 발생했습니다.", status=500)
 
-@login_required
 @require_POST
 def delete_reservation(request, school_slug, reservation_id):
     """
