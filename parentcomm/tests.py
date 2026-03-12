@@ -110,6 +110,7 @@ class ParentCommViewTests(TestCase):
     def test_main_page_renders(self):
         response = self.client.get(reverse("parentcomm:main"))
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Cache-Control"], "private, no-cache, must-revalidate")
 
     def test_main_page_uses_teacher_first_sections(self):
         response = self.client.get(reverse("parentcomm:main"))
@@ -262,6 +263,7 @@ class ParentCommViewTests(TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Cache-Control"], "no-store, private")
         self.assertFalse(ParentUrgentAlert.objects.filter(parent_contact=self.contact).exists())
 
     def test_parent_urgent_entry_accepts_message_within_20_chars(self):
@@ -306,3 +308,20 @@ class ParentCommViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         notice = ParentNotice.objects.get(title="내일 준비물 안내")
         self.assertTrue(bool(notice.attachment))
+
+    def test_teacher_downloads_notice_attachment_through_app_route(self):
+        notice = ParentNotice.objects.create(
+            teacher=self.teacher,
+            classroom_label="3-2",
+            title="첨부 있는 알림장",
+            content="첨부 확인",
+            attachment=SimpleUploadedFile("notice.txt", b"attached notice", content_type="text/plain"),
+        )
+
+        response = self.client.get(
+            reverse("parentcomm:download_notice_attachment", kwargs={"notice_id": notice.id})
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("attachment;", response["Content-Disposition"])
+        self.assertEqual(response["Cache-Control"], "no-store, private")

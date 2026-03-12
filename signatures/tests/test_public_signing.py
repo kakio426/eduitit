@@ -45,6 +45,7 @@ class SignaturePublicSigningTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Cache-Control"], "no-store, private")
         self.assertContains(response, "출석·참여 확인")
         signature = Signature.objects.get(training_session=self.session)
         self.assertEqual(signature.ip_address, "198.51.100.10")
@@ -85,3 +86,11 @@ class SignaturePublicSigningTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, "반복 IP 제출")
         self.assertNotContains(response, "198.51.100.20")
+
+    def test_print_view_uses_sensitive_cache_headers(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("signatures:print", kwargs={"uuid": self.session.uuid}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Cache-Control"], "no-store, private")

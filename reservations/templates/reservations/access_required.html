@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block title %}공유 필요{% endblock %}
+
+{% block content %}
+<section class="pb-20 px-6 min-h-screen"
+    style="padding-top: calc(var(--main-nav-height, 88px) + 1.75rem);">
+    <div class="max-w-xl mx-auto">
+        <div class="rounded-3xl border border-slate-200 bg-white px-6 py-8 shadow-sm text-center">
+            <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-purple-100 text-3xl text-purple-600">
+                <i class="fas fa-user-lock"></i>
+            </div>
+            <h1 class="mt-5 text-2xl font-black text-slate-900">{{ school.name }} 예약판은 공유가 필요합니다</h1>
+            <p class="mt-3 text-sm leading-6 text-slate-600">
+                이 예약판은 학교 관리자나 공유된 교사 계정만 열 수 있습니다.
+                {% if is_authenticated %}
+                아직 공유되지 않은 계정으로 접속하셨다면, 관리자 선생님께 공유를 요청해 주세요.
+                {% else %}
+                먼저 로그인한 뒤, 공유된 계정으로 다시 접속해 주세요.
+                {% endif %}
+            </p>
+            <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+                {% if not is_authenticated %}
+                <a href="{{ login_url }}"
+                    class="inline-flex items-center justify-center rounded-xl bg-purple-600 px-5 py-3 text-sm font-bold text-white hover:bg-purple-700 transition">
+                    로그인하고 다시 열기
+                </a>
+                {% endif %}
+                <a href="{% url 'reservations:dashboard_landing' %}"
+                    class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 transition">
+                    예약 시스템 홈으로
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

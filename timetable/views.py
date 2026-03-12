@@ -5,6 +5,7 @@ from urllib.parse import urlencode
 
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.urls import reverse
@@ -34,6 +35,19 @@ def _get_service():
     if service:
         return service
     return Product.objects.filter(title=SERVICE_TITLE).first()
+
+
+def _apply_workspace_cache_headers(response):
+    response["Cache-Control"] = "private, no-cache, must-revalidate"
+    response["Pragma"] = "no-cache"
+    return response
+
+
+def _apply_sensitive_cache_headers(response):
+    response["Cache-Control"] = "no-store, private"
+    response["Pragma"] = "no-cache"
+    response["Expires"] = "0"
+    return response
 
 
 def main(request):
@@ -117,7 +131,9 @@ def main(request):
         "generated_result": generated_result,
         "integration_result": integration_result,
         "preview_apply_info": preview_apply_info,
-        "can_use_overwrite_option": request.user.is_authenticated and bool(school_choices),
+        "can_use_overwrite_option": request.user.is_authenticated and (
+            request.user.is_superuser or any(school.owner_id == request.user.id for school in school_map.values())
+        ),
         "required_sheet_names": list(REQUIRED_SHEETS.keys()),
         "optional_sheet_names": list(OPTIONAL_SHEETS.keys()),
         "recent_sync_logs": _get_recent_sync_logs(request, log_filters=log_filters),
@@ -125,7 +141,8 @@ def main(request):
         "log_school_options": _get_sync_log_school_options(request, log_filters=log_filters),
         "csv_download_query": _build_sync_log_filter_query(log_filters),
     }
-    return render(request, "timetable/main.html", context)
+    response = render(request, "timetable/main.html", context)
+    return _apply_workspace_cache_headers(response)
 
 
 @login_required
@@ -176,7 +193,14 @@ def download_sync_logs_csv(request):
             ]
         )
 
-    return response
+    logger.info(
+        "[Timetable] sync log csv downloaded | user_id=%s | school_slug=%s | date_from=%s | date_to=%s",
+        getattr(request.user, "id", None),
+        log_filters.get("school_slug"),
+        log_filters.get("date_from_text"),
+        log_filters.get("date_to_text"),
+    )
+    return _apply_sensitive_cache_headers(response)
 
 
 def download_template(request):
@@ -194,11 +218,22 @@ def _get_school_choices(request):
         return [], {}
 
     try:
-        from reservations.models import School
+        from reservations.models import ReservationCollaborator, School
     except Exception:
         return [], {}
 
-    schools = list(School.objects.filter(owner=request.user).order_by("name"))
+    collaborator_school_ids = list(
+        ReservationCollaborator.objects.filter(
+            collaborator=request.user,
+            can_edit=True,
+        ).values_list("school_id", flat=True)
+    )
+    schools = list(
+        School.objects.filter(Q(owner=request.user) | Q(id__in=collaborator_school_ids))
+        .select_related("owner")
+        .distinct()
+        .order_by("name")
+    )
     choices = [(school.slug, school.name) for school in schools]
     school_map = {school.slug: school for school in schools}
     return choices, school_map

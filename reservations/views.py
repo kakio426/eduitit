@@ -1,5 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.views.decorators.http import require_POST
 from django.contrib import messages
 from django.urls import reverse
@@ -9,7 +10,16 @@ from django.utils import timezone
 from datetime import datetime, timedelta, date
 import uuid
 
-from .models import School, SchoolConfig, SpecialRoom, RecurringSchedule, GradeRecurringLock, BlackoutDate, Reservation
+from .models import (
+    BlackoutDate,
+    GradeRecurringLock,
+    RecurringSchedule,
+    Reservation,
+    ReservationCollaborator,
+    School,
+    SchoolConfig,
+    SpecialRoom,
+)
 from .utils import get_max_booking_date
 import logging
 
@@ -18,6 +28,101 @@ OWNED_RESERVATIONS_SESSION_KEY = 'owned_reservation_ids'
 WORKFLOW_ACTION_SEED_SESSION_KEY = 'workflow_action_seeds'
 SHEETBOOK_ACTION_SEED_SESSION_KEY = 'sheetbook_action_seeds'
 RESERVATION_FOLLOWUP_SESSION_KEY = 'reservation_followup_context'
+
+
+def _apply_workspace_cache_headers(response):
+    response["Cache-Control"] = "private, no-cache, must-revalidate"
+    response["Pragma"] = "no-cache"
+    return response
+
+
+def _apply_sensitive_cache_headers(response):
+    response["Cache-Control"] = "no-store, private"
+    response["Pragma"] = "no-cache"
+    response["Expires"] = "0"
+    return response
+
+
+def _build_school_access(request, school):
+    if not request.user.is_authenticated:
+        return {
+            "has_access": False,
+            "can_edit": False,
+            "can_manage": False,
+            "mode": "anonymous",
+            "mode_label": "로그인 필요",
+        }
+
+    if school.owner_id == request.user.id:
+        return {
+            "has_access": True,
+            "can_edit": True,
+            "can_manage": True,
+            "mode": "owner",
+            "mode_label": "관리자",
+        }
+
+    relation = (
+        ReservationCollaborator.objects.filter(school=school, collaborator=request.user)
+        .only("can_edit")
+        .first()
+    )
+    if relation:
+        return {
+            "has_access": True,
+            "can_edit": bool(relation.can_edit),
+            "can_manage": False,
+            "mode": "edit" if relation.can_edit else "view",
+            "mode_label": "편집 가능" if relation.can_edit else "읽기 전용",
+        }
+
+    return {
+        "has_access": False,
+        "can_edit": False,
+        "can_manage": False,
+        "mode": "missing_share",
+        "mode_label": "공유 필요",
+    }
+
+
+def _render_share_required(request, school, *, status=403):
+    response = render(
+        request,
+        "reservations/access_required.html",
+        {
+            "school": school,
+            "login_url": f"{reverse('account_login')}?next={request.get_full_path()}",
+            "is_authenticated": bool(request.user.is_authenticated),
+        },
+        status=status,
+    )
+    return _apply_sensitive_cache_headers(response)
+
+
+def _get_school_or_share_required(request, school_slug):
+    school = get_object_or_404(School, slug=school_slug)
+    access = _build_school_access(request, school)
+    if not access["has_access"]:
+        return school, access, _render_share_required(request, school)
+    return school, access, None
+
+
+def _build_school_collaborator_rows(school):
+    relations = (
+        ReservationCollaborator.objects.filter(school=school)
+        .select_related("collaborator")
+        .order_by("collaborator__username")
+    )
+    return [
+        {
+            "id": relation.collaborator_id,
+            "name": relation.collaborator.get_full_name() or relation.collaborator.username,
+            "username": relation.collaborator.username,
+            "email": relation.collaborator.email,
+            "can_edit": bool(relation.can_edit),
+        }
+        for relation in relations
+    ]
 
 
 def _can_edit_reservation(request, reservation):
@@ -173,6 +278,11 @@ def dashboard_landing(request):
     """
     # 사용자가 소유한 학교 목록 확인
     user_schools = School.objects.filter(owner=request.user)
+    shared_school_relations = (
+        ReservationCollaborator.objects.filter(collaborator=request.user)
+        .select_related("school", "school__owner")
+        .order_by("school__name")
+    )
     
     # 학교가 없거나 생성 요청(POST)인 경우 처리
     if request.method == 'POST':
@@ -197,10 +307,23 @@ def dashboard_landing(request):
             
             messages.success(request, f"{school.name}이(가) 생성되었습니다.")
             return redirect('reservations:admin_dashboard', school_slug=school.slug)
-    
-    return render(request, 'reservations/landing.html', {
-        'user_schools': user_schools
-    })
+
+    response = render(
+        request,
+        'reservations/landing.html',
+        {
+            'user_schools': user_schools,
+            'shared_schools': [
+                {
+                    "school": relation.school,
+                    "can_edit": bool(relation.can_edit),
+                    "owner_name": relation.school.owner.get_full_name() or relation.school.owner.username,
+                }
+                for relation in shared_school_relations
+            ],
+        },
+    )
+    return _apply_sensitive_cache_headers(response)
 
 @login_required
 @require_POST
@@ -239,8 +362,13 @@ def admin_dashboard(request, school_slug):
         'grade_locks': GradeRecurringLock.objects.filter(room__school=school).select_related('room').order_by('day_of_week', 'period', 'room__name'),
         'period_slots': config.get_period_slots(),
         'blackouts': school.blackoutdate_set.all().order_by('start_date'),
+        'reservation_entry_url': request.build_absolute_uri(
+            reverse('reservations:reservation_index', kwargs={'school_slug': school.slug})
+        ),
+        'collaborators': _build_school_collaborator_rows(school),
     }
-    return render(request, 'reservations/dashboard.html', context)
+    response = render(request, 'reservations/dashboard.html', context)
+    return _apply_sensitive_cache_headers(response)
 
 @login_required
 def room_settings(request, school_slug):
@@ -261,10 +389,79 @@ def room_settings(request, school_slug):
             SpecialRoom.objects.filter(id=room_id, school=school).delete()
             messages.success(request, "특별실이 삭제되었습니다.")
             
-    return render(request, 'reservations/partials/room_list.html', {
+    response = render(request, 'reservations/partials/room_list.html', {
         'rooms': school.specialroom_set.all(),
         'school': school
     })
+    return _apply_sensitive_cache_headers(response)
+
+
+@login_required
+@require_POST
+def collaborator_add(request, school_slug):
+    school = get_object_or_404(School, slug=school_slug, owner=request.user)
+    lookup = (request.POST.get("collaborator_query") or "").strip()
+    if not lookup:
+        messages.error(request, "공유할 선생님의 가입 이메일을 입력해 주세요.")
+        return redirect('reservations:admin_dashboard', school_slug=school.slug)
+
+    collaborator = (
+        User.objects.filter(email__iexact=lookup)
+        .only("id", "username", "email", "first_name", "last_name")
+        .first()
+    )
+    if not collaborator:
+        messages.error(request, "해당 이메일의 교사 계정을 찾지 못했습니다.")
+        return redirect('reservations:admin_dashboard', school_slug=school.slug)
+    if collaborator.id == request.user.id:
+        messages.error(request, "본인은 다시 공유 대상으로 추가할 수 없습니다.")
+        return redirect('reservations:admin_dashboard', school_slug=school.slug)
+
+    can_edit = str(request.POST.get("can_edit") or "").strip().lower() in {"1", "true", "on", "yes"}
+    relation, created = ReservationCollaborator.objects.update_or_create(
+        school=school,
+        collaborator=collaborator,
+        defaults={"can_edit": can_edit},
+    )
+    logger.info(
+        "[Reservations] collaborator share updated | school=%s | owner_id=%s | collaborator_id=%s | can_edit=%s | created=%s",
+        school.slug,
+        request.user.id,
+        collaborator.id,
+        can_edit,
+        created,
+    )
+    if created:
+        messages.success(request, f"{collaborator.get_full_name() or collaborator.username} 선생님을 공유 대상으로 추가했습니다.")
+    else:
+        mode_text = "편집 가능" if relation.can_edit else "읽기 전용"
+        messages.info(request, f"{collaborator.get_full_name() or collaborator.username} 선생님의 권한을 {mode_text}으로 업데이트했습니다.")
+    return redirect('reservations:admin_dashboard', school_slug=school.slug)
+
+
+@login_required
+@require_POST
+def collaborator_remove(request, school_slug, collaborator_id):
+    school = get_object_or_404(School, slug=school_slug, owner=request.user)
+    relation = (
+        ReservationCollaborator.objects.filter(school=school, collaborator_id=collaborator_id)
+        .select_related("collaborator")
+        .first()
+    )
+    if not relation:
+        messages.error(request, "공유된 선생님 정보를 찾지 못했습니다.")
+        return redirect('reservations:admin_dashboard', school_slug=school.slug)
+
+    collaborator_name = relation.collaborator.get_full_name() or relation.collaborator.username
+    relation.delete()
+    logger.info(
+        "[Reservations] collaborator share removed | school=%s | owner_id=%s | collaborator_id=%s",
+        school.slug,
+        request.user.id,
+        collaborator_id,
+    )
+    messages.info(request, f"{collaborator_name} 선생님과의 공유를 해제했습니다.")
+    return redirect('reservations:admin_dashboard', school_slug=school.slug)
 
 @login_required
 def recurring_settings(request, school_slug):
@@ -324,12 +521,13 @@ def recurring_settings(request, school_slug):
             'rows': rows
         })
     
-    return render(request, 'reservations/partials/recurring_matrix.html', {
+    response = render(request, 'reservations/partials/recurring_matrix.html', {
         'school': school,
         'rooms_data': rooms_data,
         'days': days,
         'day_names': ['월', '화', '수', '목', '금']
     })
+    return _apply_sensitive_cache_headers(response)
 
 @login_required
 def grade_lock_settings(request, school_slug):
@@ -373,11 +571,12 @@ def grade_lock_settings(request, school_slug):
 
     config, _ = SchoolConfig.objects.get_or_create(school=school)
     grade_locks = GradeRecurringLock.objects.filter(room__school=school).select_related('room').order_by('day_of_week', 'period', 'room__name')
-    return render(request, 'reservations/partials/grade_lock_list.html', {
+    response = render(request, 'reservations/partials/grade_lock_list.html', {
         'school': school,
         'grade_locks': grade_locks,
         'period_slots': config.get_period_slots(),
     })
+    return _apply_sensitive_cache_headers(response)
 
 @login_required
 @require_POST
@@ -432,7 +631,7 @@ def update_config(request, school_slug):
     response = HttpResponse()
     # 슬러그가 바뀌었을 수 있으므로 전체 새로고침
     response['HX-Refresh'] = "true"
-    return response
+    return _apply_sensitive_cache_headers(response)
 
 @login_required
 def blackout_settings(request, school_slug):
@@ -452,10 +651,11 @@ def blackout_settings(request, school_slug):
             BlackoutDate.objects.filter(id=item_id, school=school).delete()
             messages.success(request, "블랙아웃 기간이 삭제되었습니다.")
 
-    return render(request, 'reservations/partials/blackout_list.html', {
+    response = render(request, 'reservations/partials/blackout_list.html', {
         'blackouts': school.blackoutdate_set.all().order_by('start_date'),
         'school': school,
     })
+    return _apply_sensitive_cache_headers(response)
 
 # Public Reservation Views
 
@@ -464,7 +664,9 @@ def reservation_index(request, school_slug):
     사용자 예약 메인 페이지 (PC: 타임라인, Mobile: 리스트)
     - HTMX Polling 대상
     """
-    school = get_object_or_404(School, slug=school_slug)
+    school, access, access_response = _get_school_or_share_required(request, school_slug)
+    if access_response is not None:
+        return access_response
     config, _ = SchoolConfig.objects.get_or_create(school=school)
     
     # 날짜 처리
@@ -479,7 +681,7 @@ def reservation_index(request, school_slug):
     
     # [Weekly Limit Check]
     max_date = get_max_booking_date(school)
-    if not request.user.is_authenticated or school.owner != request.user:
+    if not access["can_manage"]:
         # 관리자는 제한 무시
         if max_date and target_date > max_date:
             # 예약 가능 날짜를 초과한 경우, max_date로 리다이렉트
@@ -555,7 +757,7 @@ def reservation_index(request, school_slug):
                 'grade_lock': grade_lock,
                 'state': state,
                 'can_edit': can_edit,
-                'can_admin_override': bool(request.user.is_authenticated and request.user == school.owner),
+                'can_admin_override': bool(access["can_manage"]),
             })
             
         rooms_data.append({
@@ -579,20 +781,26 @@ def reservation_index(request, school_slug):
         'period_labels': [p['label'] for p in periods_data],
         'max_date': max_date, # 템플릿에 전달하여 '다음' 버튼 비활성화에 사용
         'reservation_followup': reservation_followup,
+        'reservation_access': access,
+        'reservation_can_edit': bool(access["can_edit"]),
     }
     
     # HTMX 요청이면 부분 렌더링 (Polling 등)
     if request.headers.get('HX-Request'):
-        return render(request, 'reservations/partials/reservation_grid.html', context)
-        
-    return render(request, 'reservations/index.html', context)
+        response = render(request, 'reservations/partials/reservation_grid.html', context)
+        return _apply_workspace_cache_headers(response)
+
+    response = render(request, 'reservations/index.html', context)
+    return _apply_workspace_cache_headers(response)
 
 
 def room_overview(request, school_slug):
     """
     특별실별 예약 현황 요약/목록 (교사/일반 예약자 공용 조회)
     """
-    school = get_object_or_404(School, slug=school_slug)
+    school, access, access_response = _get_school_or_share_required(request, school_slug)
+    if access_response is not None:
+        return access_response
     config, _ = SchoolConfig.objects.get_or_create(school=school)
 
     from_str = request.GET.get('from')
@@ -662,16 +870,20 @@ def room_overview(request, school_slug):
         'end_date': end_date,
         'days': days,
         'total_count': sum(room_data['total_count'] for room_data in rooms_data),
+        'reservation_access': access,
     }
-    return render(request, 'reservations/room_overview.html', context)
+    response = render(request, 'reservations/room_overview.html', context)
+    return _apply_workspace_cache_headers(response)
 
 
 @login_required
 @require_POST
 def start_notice_followup(request, school_slug, reservation_id):
-    school = get_object_or_404(School, slug=school_slug)
+    school, access, access_response = _get_school_or_share_required(request, school_slug)
+    if access_response is not None:
+        return access_response
     reservation = get_object_or_404(Reservation.objects.select_related('room'), id=reservation_id, room__school=school)
-    if request.user != school.owner and not _can_edit_reservation(request, reservation):
+    if not access["can_edit"] or not _can_edit_reservation(request, reservation):
         return HttpResponseForbidden('후속 작업을 열 권한이 없습니다.')
     seed_token = _store_action_seed(
         request,
@@ -684,9 +896,11 @@ def start_notice_followup(request, school_slug, reservation_id):
 @login_required
 @require_POST
 def start_parentcomm_followup(request, school_slug, reservation_id):
-    school = get_object_or_404(School, slug=school_slug)
+    school, access, access_response = _get_school_or_share_required(request, school_slug)
+    if access_response is not None:
+        return access_response
     reservation = get_object_or_404(Reservation.objects.select_related('room'), id=reservation_id, room__school=school)
-    if request.user != school.owner and not _can_edit_reservation(request, reservation):
+    if not access["can_edit"] or not _can_edit_reservation(request, reservation):
         return HttpResponseForbidden('후속 작업을 열 권한이 없습니다.')
     seed_token = _store_action_seed(
         request,
@@ -695,9 +909,14 @@ def start_parentcomm_followup(request, school_slug, reservation_id):
     )
     return redirect(f"{reverse('parentcomm:main')}?sb_seed={seed_token}")
 
+@login_required
 @require_POST
 def create_reservation(request, school_slug):
-    school = get_object_or_404(School, slug=school_slug)
+    school, access, access_response = _get_school_or_share_required(request, school_slug)
+    if access_response is not None:
+        return access_response
+    if not access["can_edit"]:
+        return HttpResponseForbidden("이 예약판은 읽기 전용으로 공유되어 예약을 추가할 수 없습니다.")
     
     # 데이터 수신
     room_id = request.POST.get('room_id')
@@ -718,7 +937,7 @@ def create_reservation(request, school_slug):
         grade, class_no, target_label = _normalize_reservation_party(grade, class_no, target_label)
         
         # [Weekly Limit Check] 백엔드 검증
-        if not request.user.is_authenticated or school.owner != request.user: # 관리자는 제한 무시
+        if not access["can_manage"]: # 관리자는 제한 무시
             max_date = get_max_booking_date(school)
             if max_date and target_date > max_date:
                 return HttpResponse(
@@ -751,7 +970,7 @@ def create_reservation(request, school_slug):
         # 생성
         reservation = Reservation.objects.create(
             room=room,
-            created_by=request.user if request.user.is_authenticated else None,
+            created_by=request.user,
             date=target_date,
             period=period,
             grade=grade,
@@ -769,13 +988,12 @@ def create_reservation(request, school_slug):
             request.session.modified = True
         
         messages.success(request, f"{period}교시 예약이 완료되었습니다.")
-        if request.user.is_authenticated:
-            _set_reservation_followup_context(request, school, reservation)
+        _set_reservation_followup_context(request, school, reservation)
         
         # HTMX Redirect to refresh grid
         response = HttpResponse()
         response['HX-Refresh'] = "true" # 전체 리프레시가 가장 깔끔함 (모달 닫기 등)
-        return response
+        return _apply_workspace_cache_headers(response)
         
     except ValueError:
         return HttpResponse("학년/반 또는 기타 대상을 올바르게 입력해 주세요.", status=400)
@@ -784,12 +1002,15 @@ def create_reservation(request, school_slug):
         return HttpResponse("예약 처리 중 오류가 발생했습니다.", status=500)
 
 
+@login_required
 @require_POST
 def update_reservation(request, school_slug, reservation_id):
-    school = get_object_or_404(School, slug=school_slug)
+    school, access, access_response = _get_school_or_share_required(request, school_slug)
+    if access_response is not None:
+        return access_response
     reservation = get_object_or_404(Reservation, id=reservation_id, room__school=school)
 
-    if not _can_edit_reservation(request, reservation):
+    if not access["can_edit"] or not _can_edit_reservation(request, reservation):
         logger.warning(
             "[Reservation] Unauthorized update attempt blocked | reservation_id=%s | school=%s",
             reservation_id,
@@ -813,7 +1034,7 @@ def update_reservation(request, school_slug, reservation_id):
         room = get_object_or_404(SpecialRoom, id=room_id, school=school)
         grade, class_no, target_label = _normalize_reservation_party(grade, class_no, target_label)
 
-        if not request.user.is_authenticated or school.owner != request.user:
+        if not access["can_manage"]:
             max_date = get_max_booking_date(school)
             if max_date and target_date > max_date:
                 return HttpResponse(
@@ -850,12 +1071,11 @@ def update_reservation(request, school_slug, reservation_id):
         reservation.save(update_fields=['room', 'date', 'period', 'grade', 'class_no', 'target_label', 'name', 'memo'])
 
         messages.success(request, f"{period}교시 예약이 수정되었습니다.")
-        if request.user.is_authenticated:
-            _set_reservation_followup_context(request, school, reservation)
+        _set_reservation_followup_context(request, school, reservation)
 
         response = HttpResponse()
         response['HX-Refresh'] = "true"
-        return response
+        return _apply_workspace_cache_headers(response)
 
     except ValueError:
         return HttpResponse("학년/반 또는 기타 대상을 올바르게 입력해 주세요.", status=400)
@@ -863,6 +1083,7 @@ def update_reservation(request, school_slug, reservation_id):
         logger.error(f"[Reservation Update Error] {e}")
         return HttpResponse("예약 수정 중 오류가 발생했습니다.", status=500)
 
+@login_required
 @require_POST
 def delete_reservation(request, school_slug, reservation_id):
     """
@@ -870,11 +1091,13 @@ def delete_reservation(request, school_slug, reservation_id):
     - 생성 시 세션에 기록된 예약만 삭제 허용
     - URL 유추로 타인 예약 삭제하는 시도를 차단
     """
-    school = get_object_or_404(School, slug=school_slug)
+    school, access, access_response = _get_school_or_share_required(request, school_slug)
+    if access_response is not None:
+        return access_response
     reservation = get_object_or_404(Reservation, id=reservation_id, room__school=school)
 
     owned_ids = request.session.get(OWNED_RESERVATIONS_SESSION_KEY, [])
-    if not _can_edit_reservation(request, reservation):
+    if not access["can_edit"] or not _can_edit_reservation(request, reservation):
         logger.warning(
             "[Reservation] Unauthorized delete attempt blocked | reservation_id=%s | school=%s",
             reservation_id,
@@ -892,7 +1115,7 @@ def delete_reservation(request, school_slug, reservation_id):
     if request.htmx:
         response = HttpResponse(status=204)
         response['HX-Trigger'] = "refresh-reservations"
-        return response
+        return _apply_workspace_cache_headers(response)
 
     return redirect('reservations:reservation_index', school_slug=school.slug)
 
@@ -914,6 +1137,6 @@ def admin_delete_reservation(request, school_slug, reservation_id):
     if request.htmx:
         response = HttpResponse(status=204)
         response['HX-Trigger'] = "refresh-reservations"
-        return response
+        return _apply_sensitive_cache_headers(response)
         
     return redirect('reservations:reservation_index', school_slug=school.slug)

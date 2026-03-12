@@ -21,9 +21,12 @@
     </div>
 
     <div class="flex flex-wrap gap-2 mb-4">
-      <a href="{% url 'consent:send' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700">
-        {% if links_released %}학부모 링크 재발송(만료 재설정){% else %}학부모 링크 발송 시작{% endif %}
-      </a>
+      <form method="post" action="{% url 'consent:send' request_id=consent_request.request_id %}">
+        {% csrf_token %}
+        <button type="submit" class="min-h-11 px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700">
+          {% if links_released %}학부모 링크 재발송(이전 링크 교체){% else %}학부모 링크 발송 시작{% endif %}
+        </button>
+      </form>
       <a href="{% url 'consent:recipients' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-gray-700 font-semibold">수신자 등록/수정</a>
       <a href="{% url 'consent:document_source' request_id=consent_request.request_id %}" target="_blank" rel="noopener noreferrer" class="min-h-11 px-4 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-gray-700 font-semibold">원본 안내문 열기</a>
       <a href="{% url 'consent:download_csv' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700">제출 현황 CSV 다운로드</a>
@@ -174,7 +177,10 @@
                 <button type="button" class="js-copy px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700" data-copy-source="sign-link-{{ r.id }}">링크 복사</button>
                 <button type="button" class="js-copy px-3 py-1.5 rounded-lg bg-purple-600 text-white text-xs font-semibold hover:bg-purple-700" data-copy-source="sign-message-{{ r.id }}">안내문+링크 복사</button>
                 {% if r.status == "pending" or r.status == "verified" %}
-                <a href="{% url 'consent:regenerate_link' recipient_id=r.id %}" class="px-3 py-1.5 rounded-lg bg-slate-700 text-white text-xs font-semibold hover:bg-slate-800">링크 재발급</a>
+                <form method="post" action="{% url 'consent:regenerate_link' recipient_id=r.id %}">
+                  {% csrf_token %}
+                  <button type="submit" class="px-3 py-1.5 rounded-lg bg-slate-700 text-white text-xs font-semibold hover:bg-slate-800">링크 재발급</button>
+                </form>
                 {% endif %}
                 {% if r.status == "signed" or r.status == "declined" %}
                 <a href="{{ row.download_url }}" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700">개별 증빙 PDF</a>

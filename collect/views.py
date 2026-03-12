@@ -1,21 +1,25 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, FileResponse, StreamingHttpResponse
 from django.contrib import messages
 from django.db.models import Count
 from django.utils import timezone
 from django.conf import settings
 from django.urls import reverse
+from django.views.decorators.cache import never_cache
+from django_ratelimit.decorators import ratelimit
 from asgiref.sync import sync_to_async
 from urllib.parse import urlencode
 import json
 import csv
 import qrcode
+import mimetypes
 from io import BytesIO
 import base64
 import logging
 import requests
+from urllib.parse import quote
 
 from .models import CollectionRequest, Submission
 from .forms import CollectionRequestForm
@@ -49,6 +53,38 @@ CHOICE_FILTER_OTHER = "__other__"
 CHOICE_FILTER_LEGACY = "__legacy__"
 
 
+def _request_client_ip(request):
+    x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR", "")
+    if x_forwarded_for:
+        return x_forwarded_for.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR", "")
+
+
+def _apply_workspace_cache_headers(response):
+    response["Cache-Control"] = "private, no-cache, must-revalidate"
+    response["Pragma"] = "no-cache"
+    return response
+
+
+def _apply_sensitive_cache_headers(response):
+    response["Cache-Control"] = "no-store, private"
+    response["Pragma"] = "no-cache"
+    response["Expires"] = "0"
+    return response
+
+
+def _collect_public_ratelimit_key(group, request):
+    resolver_match = getattr(request, "resolver_match", None)
+    request_id = ""
+    code = ""
+    if resolver_match is not None:
+        request_id = resolver_match.kwargs.get("request_id", "")
+        code = resolver_match.kwargs.get("code", "")
+    if not code:
+        code = (request.POST.get("code") or request.GET.get("code") or "").strip()
+    return f"{_request_client_ip(request) or 'unknown'}:{request_id or code or 'global'}"
+
+
 def _next_or_end(iterator):
     return next(iterator, _STREAM_END)
 
@@ -69,6 +105,31 @@ def _remote_file_chunks(file_url, chunk_size=8192):
         for chunk in resp.iter_content(chunk_size=chunk_size):
             if chunk:
                 yield chunk
+
+
+def _build_download_response(file_field, *, filename):
+    content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+
+    try:
+        file_obj = file_field.open("rb")
+    except Exception:
+        file_url = getattr(file_field, "url", "")
+        if not file_url or not str(file_url).startswith("http"):
+            raise
+        response = StreamingHttpResponse(
+            _async_wrap_sync_iterable(_remote_file_chunks(file_url)),
+            content_type=content_type,
+        )
+        response["Content-Disposition"] = f"attachment; filename*=UTF-8''{quote(filename)}"
+        return _apply_sensitive_cache_headers(response)
+
+    response = FileResponse(
+        file_obj,
+        content_type=content_type,
+        as_attachment=True,
+        filename=filename,
+    )
+    return _apply_sensitive_cache_headers(response)
 
 
 def _parse_extension_days(raw_days, fallback):
@@ -139,7 +200,7 @@ def _render_submit_error(
     posted = form_data or request.POST
     choice_values = posted.getlist("choice_answers") if posted else []
     choice_other_text = posted.get("choice_other_text", "").strip() if posted else ""
-    return render(
+    response = render(
         request,
         "collect/submit.html",
         _get_submit_context(
@@ -153,6 +214,7 @@ def _render_submit_error(
             choice_other_text=choice_other_text,
         ),
     )
+    return _apply_sensitive_cache_headers(response)
 
 
 def _get_submit_prefill_context(request, collection_req):
@@ -419,10 +481,11 @@ def landing(request):
                 features.append(feature)
                 seen_titles.add(feature.title)
 
-    return render(request, 'collect/landing.html', {
+    response = render(request, 'collect/landing.html', {
         'service': service,
         'features': features,
     })
+    return _apply_workspace_cache_headers(response)
 
 
 # ================================
@@ -441,11 +504,12 @@ def dashboard(request):
 
     form = CollectionRequestForm(owner=request.user)
 
-    return render(request, 'collect/dashboard.html', {
+    response = render(request, 'collect/dashboard.html', {
         'service': service,
         'requests_list': requests_list,
         'form': form,
     })
+    return _apply_workspace_cache_headers(response)
 
 
 @login_required
@@ -471,11 +535,12 @@ def request_create(request):
         num_submissions=Count('submissions')
     ).order_by('-created_at')
 
-    return render(request, 'collect/dashboard.html', {
+    response = render(request, 'collect/dashboard.html', {
         'service': service,
         'requests_list': requests_list,
         'form': form,
     })
+    return _apply_workspace_cache_headers(response)
 
 
 @login_required
@@ -551,7 +616,7 @@ def request_detail(request, request_id):
                 'contributor': sub.contributor_name
             })
 
-    return render(request, 'collect/request_detail.html', {
+    response = render(request, 'collect/request_detail.html', {
         'req': collection_req,
         'submissions': submissions,
         'qr_code_base64': qr_code_base64,
@@ -566,6 +631,7 @@ def request_detail(request, request_id):
         'ssambti_launch_url': ssambti_launch_url,
         'studentmbti_launch_url': studentmbti_launch_url,
     })
+    return _apply_sensitive_cache_headers(response)
 
 
 @login_required
@@ -582,7 +648,7 @@ def submissions_partial(request, request_id):
     expected = collection_req.expected_submitters_list
     submitted_names = {sub.contributor_name for sub in all_submissions}
     not_submitted = [name for name in expected if name not in submitted_names]
-    return render(request, 'collect/partials/submissions_list.html', {
+    response = render(request, 'collect/partials/submissions_list.html', {
         'submissions': filtered_submissions,
         'total_count': full_total_count,
         'filtered_count': len(filtered_submissions),
@@ -591,6 +657,7 @@ def submissions_partial(request, request_id):
         'expected_submitters': expected,
         'not_submitted': not_submitted,
     })
+    return _apply_sensitive_cache_headers(response)
 
 
 @login_required
@@ -608,12 +675,13 @@ def choice_stats_partial(request, request_id):
         [],
         request.GET.get("choice_filter"),
     )
-    return render(request, 'collect/partials/choice_stats_panel.html', {
+    response = render(request, 'collect/partials/choice_stats_panel.html', {
         'req': collection_req,
         'choice_stats': _build_choice_stats(collection_req, submissions),
         'choice_filter_key': active_choice_filter_key,
         'active_choice_filter_label': active_choice_filter_label,
     })
+    return _apply_sensitive_cache_headers(response)
 
 
 @login_required
@@ -695,23 +763,32 @@ def export_csv(request, request_id):
             sub.submitted_at.strftime('%Y-%m-%d %H:%M'),
         ])
 
-    return response
+    logger.info(
+        "[collect] export csv request_id=%s user=%s submission_count=%s",
+        collection_req.id,
+        request.user.username,
+        submissions.count(),
+    )
+    return _apply_sensitive_cache_headers(response)
 
 
 # ================================
 # 제출자용 (비로그인)
 # ================================
 
+@ratelimit(key=_collect_public_ratelimit_key, rate="120/10m", method="GET", block=True, group="collect_short_link")
 def short_link(request, code):
     """단축 링크로 바로 제출 페이지 이동"""
     collection_req = get_object_or_404(CollectionRequest, access_code=code)
     
     if collection_req.status != 'active':
-        return render(request, 'collect/request_closed.html', {'req': collection_req})
+        response = render(request, 'collect/request_closed.html', {'req': collection_req})
+        return _apply_sensitive_cache_headers(response)
         
     return redirect('collect:submit', request_id=collection_req.id)
 
 
+@ratelimit(key=_collect_public_ratelimit_key, rate="120/10m", method=("GET", "POST"), block=True, group="collect_join")
 def join(request):
     """입장코드로 수합 참여"""
     code = request.GET.get('code', '').strip()
@@ -725,21 +802,25 @@ def join(request):
         # 마감된 수합인지 확인
         closed_req = CollectionRequest.objects.filter(access_code=code).first()
         if closed_req:
-            return render(request, 'collect/request_closed.html', {'req': closed_req})
-        return render(request, 'collect/landing.html', {
+            response = render(request, 'collect/request_closed.html', {'req': closed_req})
+            return _apply_sensitive_cache_headers(response)
+        response = render(request, 'collect/landing.html', {
             'service': get_collect_service(),
             'error': '유효하지 않은 입장코드입니다.',
         })
+        return _apply_sensitive_cache_headers(response)
 
     return redirect('collect:landing')
 
 
+@ratelimit(key=_collect_public_ratelimit_key, rate="120/10m", method="GET", block=True, group="collect_submit_page")
 def submit(request, request_id):
     """제출 페이지"""
     collection_req = get_object_or_404(CollectionRequest, id=request_id)
 
     if collection_req.status != 'active':
-        return render(request, 'collect/request_closed.html', {'req': collection_req})
+        response = render(request, 'collect/request_closed.html', {'req': collection_req})
+        return _apply_sensitive_cache_headers(response)
 
     # 마감일 초과 확인
     if collection_req.is_deadline_passed:
@@ -747,20 +828,23 @@ def submit(request, request_id):
         if not collection_req.closed_at:
             collection_req.closed_at = timezone.now()
         collection_req.save(update_fields=["status", "closed_at", "updated_at"])
-        return render(request, 'collect/request_closed.html', {'req': collection_req})
+        response = render(request, 'collect/request_closed.html', {'req': collection_req})
+        return _apply_sensitive_cache_headers(response)
 
     # 최대 제출 수 확인
     if collection_req.submission_count >= collection_req.max_submissions:
-        return render(request, 'collect/request_closed.html', {
+        response = render(request, 'collect/request_closed.html', {
             'req': collection_req,
             'reason': '최대 제출 건수에 도달했습니다.',
         })
+        return _apply_sensitive_cache_headers(response)
 
     if not collection_req.allowed_submission_types:
-        return render(request, 'collect/request_closed.html', {
+        response = render(request, 'collect/request_closed.html', {
             'req': collection_req,
             'reason': '이 요청은 현재 제출 가능한 유형이 없습니다.',
         })
+        return _apply_sensitive_cache_headers(response)
 
     prefill = _get_submit_prefill_context(request, collection_req)
     initial_submission_type = None
@@ -775,23 +859,27 @@ def submit(request, request_id):
         choice_values=choice_values,
     )
     context.update(prefill)
-    return render(request, 'collect/submit.html', context)
+    response = render(request, 'collect/submit.html', context)
+    return _apply_sensitive_cache_headers(response)
 
 
 @require_POST
+@ratelimit(key=_collect_public_ratelimit_key, rate="120/10m", method="POST", block=True, group="collect_submit_process")
 def submit_process(request, request_id):
     """제출 처리"""
     collection_req = get_object_or_404(CollectionRequest, id=request_id)
 
     if collection_req.status != 'active':
-        return render(request, 'collect/request_closed.html', {'req': collection_req})
+        response = render(request, 'collect/request_closed.html', {'req': collection_req})
+        return _apply_sensitive_cache_headers(response)
 
     allowed_types = collection_req.allowed_submission_types
     if not allowed_types:
-        return render(request, 'collect/request_closed.html', {
+        response = render(request, 'collect/request_closed.html', {
             'req': collection_req,
             'reason': '이 요청은 현재 제출 가능한 유형이 없습니다.',
         })
+        return _apply_sensitive_cache_headers(response)
 
     # 이름: 직접 입력 > 셀렉트 > 일반 입력
     contributor_name = request.POST.get('contributor_name_custom', '').strip()
@@ -913,11 +1001,12 @@ def submission_manage(request, management_id):
     # UUID 자체가 보안 코드 역할을 하므로 세션 체크 없이 접근 허용
     can_manage = True
     
-    return render(request, 'collect/submission_manage.html', {
+    response = render(request, 'collect/submission_manage.html', {
         'submission': submission,
         'req': submission.collection_request,
         'can_manage': can_manage
     })
+    return _apply_sensitive_cache_headers(response)
 
 
 def submission_edit(request, management_id):
@@ -1016,11 +1105,12 @@ def submission_edit(request, management_id):
         messages.success(request, '제출 정보가 수정되었습니다.')
         return redirect('collect:submission_manage', management_id=management_id)
 
-    return render(
+    response = render(
         request,
         'collect/submit.html',
         _get_submit_context(submission.collection_request, submission=submission, is_edit=True),
     )
+    return _apply_sensitive_cache_headers(response)
 
 
 @require_POST
@@ -1048,28 +1138,26 @@ def submission_download(request, submission_id):
 
     aff = f"[{submission.contributor_affiliation}]_" if submission.contributor_affiliation else ""
     safe_name = f"{aff}{submission.contributor_name}_{submission.original_filename}"
-    import urllib.parse
-    encoded_filename = urllib.parse.quote(safe_name)
-
-    from django.http import StreamingHttpResponse
-
-    file_url = submission.file.url
-    
-    if file_url.startswith('http'):
-        response = StreamingHttpResponse(_async_wrap_sync_iterable(_remote_file_chunks(file_url)))
-    else:
-        response = StreamingHttpResponse(_async_wrap_sync_iterable(submission.file.chunks()))
-
-    response['Content-Type'] = 'application/octet-stream'
-    response['Content-Disposition'] = f"attachment; filename*=UTF-8''{encoded_filename}"
-    
-    return response
+    logger.info(
+        "[collect] submission download request_id=%s submission_id=%s user=%s",
+        submission.collection_request_id,
+        submission.id,
+        request.user.username,
+    )
+    return _build_download_response(submission.file, filename=safe_name)
 
 
+@ratelimit(key=_collect_public_ratelimit_key, rate="60/10m", method="GET", block=True, group="collect_template_download")
 def template_download(request, request_id):
     """양식 파일 다운로드"""
     collection_req = get_object_or_404(CollectionRequest, id=request_id)
     if not collection_req.template_file:
         return HttpResponse("양식 파일이 없습니다.", status=404)
 
-    return redirect(collection_req.template_file.url)
+    download_name = collection_req.template_file_name or (collection_req.template_file.name or "").split("/")[-1] or "collect-template"
+    logger.info(
+        "[collect] template download request_id=%s ip=%s",
+        collection_req.id,
+        _request_client_ip(request),
+    )
+    return _build_download_response(collection_req.template_file, filename=download_name)

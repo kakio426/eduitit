@@ -6,6 +6,7 @@ import secrets
 from difflib import SequenceMatcher
 
 from django.contrib.auth.decorators import login_required
+from django_ratelimit.core import is_ratelimited
 from django.db.models import F
 from django.shortcuts import redirect, render
 from django.urls import reverse
@@ -53,6 +54,26 @@ SIMILAR_CANDIDATE_LIMIT = 60
 FALLBACK_ERROR_MESSAGE = "멘트 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
 WORKFLOW_ACTION_SEED_SESSION_KEY = "workflow_action_seeds"
 SHEETBOOK_ACTION_SEED_SESSION_KEY = "sheetbook_action_seeds"
+
+
+def _request_client_ip(request):
+    x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR", "")
+    if x_forwarded_for:
+        return x_forwarded_for.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR", "")
+
+
+def _apply_workspace_cache_headers(response):
+    response["Cache-Control"] = "private, no-cache, must-revalidate"
+    response["Pragma"] = "no-cache"
+    return response
+
+
+def _apply_sensitive_cache_headers(response):
+    response["Cache-Control"] = "no-store, private"
+    response["Pragma"] = "no-cache"
+    response["Expires"] = "0"
+    return response
 
 
 def _result_defaults():
@@ -211,6 +232,24 @@ def _daily_limit(request):
     return 10 if request.user.is_authenticated else 5
 
 
+def _noticegen_ratelimit_key(group, request):
+    if request.user.is_authenticated:
+        return f"user:{request.user.id}"
+    session_key = _ensure_session_key(request) or "anonymous"
+    return f"session:{session_key}:{_request_client_ip(request) or 'unknown'}"
+
+
+def _is_generation_rate_limited(request):
+    return is_ratelimited(
+        request=request,
+        group="noticegen_generate",
+        key=_noticegen_ratelimit_key,
+        rate="30/10m",
+        method="POST",
+        increment=True,
+    )
+
+
 def _usage_count_today(request):
     today = timezone.localdate()
     qs = NoticeGenerationAttempt.objects.filter(charged=True, created_at__date=today)
@@ -365,11 +404,13 @@ def _render_result(request, payload, *, status=200):
     context.update(payload)
 
     if request.headers.get("HX-Request") == "true":
-        return render(request, "noticegen/partials/result_panel.html", context, status=status)
+        response = render(request, "noticegen/partials/result_panel.html", context, status=status)
+        return _apply_sensitive_cache_headers(response)
 
     page_context = _build_page_context()
     page_context.update(context)
-    return render(request, "noticegen/main.html", page_context, status=status)
+    response = render(request, "noticegen/main.html", page_context, status=status)
+    return _apply_sensitive_cache_headers(response)
 
 
 def _render_mini_result(request, payload, *, status=200):
@@ -380,7 +421,7 @@ def _render_mini_result(request, payload, *, status=200):
         or "대상과 전달 사항을 적으면 바로 복사할 문장이 나옵니다."
     )
     state_status = "success" if payload.get("result_text") else "error" if status >= 400 or payload.get("error_message") or payload.get("limit_message") else "idle"
-    return render(
+    response = render(
         request,
         "noticegen/partials/mini_result_panel.html",
         {
@@ -391,6 +432,7 @@ def _render_mini_result(request, payload, *, status=200):
         },
         status=status,
     )
+    return _apply_sensitive_cache_headers(response)
 
 
 def main(request):
@@ -422,10 +464,21 @@ def main(request):
     context = _build_page_context(prefill=prefill)
     context.update(_result_defaults())
     context.update(build_noticegen_page_seo(request).as_context())
-    return render(request, "noticegen/main.html", context)
+    response = render(request, "noticegen/main.html", context)
+    return _apply_workspace_cache_headers(response)
 
 
 def _generate_notice_payload(request):
+    if _is_generation_rate_limited(request):
+        logger.warning(
+            "[NoticeGen] burst rate limit exceeded | user_id=%s | ip=%s",
+            getattr(request.user, "id", None) if request.user.is_authenticated else None,
+            _request_client_ip(request),
+        )
+        return 429, {
+            "limit_message": "짧은 시간에 생성 요청이 많았습니다. 잠시 후 다시 시도해 주세요.",
+        }
+
     target = (request.POST.get("target") or "").strip()
     topic = (request.POST.get("topic") or "").strip()
     keywords = (request.POST.get("keywords") or "").strip()

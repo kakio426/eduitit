@@ -293,7 +293,7 @@
                     <p class="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{{ notice.content|truncatechars:130 }}</p>
                     <p class="text-xs text-gray-500 mt-2">{{ notice.published_at|date:"Y-m-d H:i" }}</p>
                     {% if notice.attachment %}
-                    <a href="{{ notice.attachment.url }}" class="inline-flex mt-2 px-3 py-1.5 rounded-lg bg-slate-700 text-white text-sm" download>첨부파일 받기</a>
+                    <a href="{% url 'parentcomm:download_notice_attachment' notice_id=notice.id %}" class="inline-flex mt-2 px-3 py-1.5 rounded-lg bg-slate-700 text-white text-sm">첨부파일 받기</a>
                     {% endif %}
                 </article>
                 {% empty %}

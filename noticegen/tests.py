@@ -261,6 +261,10 @@ class NoticeGenViewTests(TestCase):
         self.assertNotContains(response, "결과 복사")
         self.assertNotContains(response, "길게 설명하지 않아도 됩니다. 핵심만 적어 주세요.")
 
+    def test_main_uses_workspace_cache_headers(self):
+        response = self.client.get(reverse("noticegen:main"))
+        self.assertEqual(response["Cache-Control"], "private, no-cache, must-revalidate")
+
     @patch("noticegen.views._call_deepseek")
     def test_result_panel_copy_button_has_failure_feedback(self, mock_call):
         mock_call.return_value = "준비물을 챙겨 주세요."
@@ -273,6 +277,42 @@ class NoticeGenViewTests(TestCase):
         self.assertContains(response, "copyError: '', async copyText(text)", html=False)
         self.assertContains(response, '@click="copyText($refs.output.value)"', html=False)
         self.assertContains(response, "복사에 실패했습니다. 직접 선택해 복사해 주세요.")
+        self.assertEqual(response["Cache-Control"], "no-store, private")
+
+    @patch("noticegen.views._call_deepseek")
+    def test_generate_mini_uses_sensitive_cache_headers(self, mock_call):
+        mock_call.return_value = "준비물을 꼭 챙기세요."
+
+        response = self.client.post(
+            reverse("noticegen:generate_mini"),
+            self._payload(),
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Cache-Control"], "no-store, private")
+
+    @patch("noticegen.views._daily_limit", return_value=999)
+    @patch("noticegen.views._call_deepseek")
+    def test_generate_uses_burst_ratelimit_for_abnormal_pattern(self, mock_call, _mock_daily_limit):
+        mock_call.return_value = "준비물을 꼭 챙겨 주세요."
+
+        for index in range(30):
+            response = self.client.post(
+                reverse("noticegen:generate"),
+                self._payload(keywords=f"체험학습 준비물 안내 {index}"),
+                HTTP_HX_REQUEST="true",
+            )
+            self.assertEqual(response.status_code, 200)
+
+        response = self.client.post(
+            reverse("noticegen:generate"),
+            self._payload(keywords="체험학습 준비물 안내 초과"),
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 429)
+        self.assertContains(response, "짧은 시간에 생성 요청이 많았습니다.", status_code=429)
 
     def test_main_prefills_from_sheetbook_seed(self):
         session = self.client.session

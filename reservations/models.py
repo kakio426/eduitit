@@ -16,6 +16,30 @@ class School(models.Model):
     def __str__(self):
         return self.name
 
+
+class ReservationCollaborator(models.Model):
+    school = models.ForeignKey(
+        School,
+        on_delete=models.CASCADE,
+        related_name="collaborators",
+    )
+    collaborator = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="shared_reservation_schools",
+    )
+    can_edit = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [("school", "collaborator")]
+        verbose_name = "예약 시스템 협업자"
+        verbose_name_plural = "예약 시스템 협업자"
+
+    def __str__(self):
+        permission = "편집" if self.can_edit else "보기"
+        return f"{self.school.name} -> {self.collaborator.username} ({permission})"
+
 class SchoolConfig(models.Model):
     school = models.OneToOneField(School, on_delete=models.CASCADE, related_name='config')
     max_periods = models.IntegerField(default=6) # Safety/Legacy

@@ -9,7 +9,7 @@ from django.test import Client, TestCase
 from django.utils import timezone
 
 from core.models import UserProfile
-from reservations.models import RecurringSchedule, School, SpecialRoom
+from reservations.models import RecurringSchedule, ReservationCollaborator, School, SpecialRoom
 from timetable.models import TimetableSyncLog
 from timetable.services import (
     REQUIRED_SHEETS,
@@ -26,6 +26,10 @@ class TimetablePhaseOneTest(TestCase):
         response = self.client.get("/timetable/")
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "전담 시간표·특별실 배치 도우미")
+
+    def test_main_page_uses_workspace_cache_headers(self):
+        response = self.client.get("/timetable/")
+        self.assertEqual(response["Cache-Control"], "private, no-cache, must-revalidate")
 
     def test_main_page_uses_teacher_first_sections(self):
         response = self.client.get("/timetable/")
@@ -285,10 +289,37 @@ class TimetablePhaseOneTest(TestCase):
         response = self.client.get("/timetable/sync-logs.csv")
         self.assertEqual(response.status_code, 200)
         self.assertIn("text/csv", response["Content-Type"])
+        self.assertEqual(response["Cache-Control"], "no-store, private")
         content = response.content.decode("utf-8-sig")
         self.assertIn("실행시각", content)
         self.assertIn("CSV학교", content)
         self.assertIn("바로반영", content)
+
+    def test_shared_school_is_available_for_edit_collaborator_sync(self):
+        owner = User.objects.create_user(
+            username="owner1",
+            password="pw-123456",
+            email="owner1@example.com",
+        )
+        owner_profile, _ = UserProfile.objects.get_or_create(user=owner)
+        owner_profile.nickname = "관리교사"
+        owner_profile.save(update_fields=["nickname"])
+        collaborator = User.objects.create_user(
+            username="shared1",
+            password="pw-123456",
+            email="shared1@example.com",
+        )
+        collaborator_profile, _ = UserProfile.objects.get_or_create(user=collaborator)
+        collaborator_profile.nickname = "공유교사"
+        collaborator_profile.save(update_fields=["nickname"])
+        school = School.objects.create(name="공유학교", slug="shared-school", owner=owner)
+        ReservationCollaborator.objects.create(school=school, collaborator=collaborator, can_edit=True)
+
+        self.client.login(username="shared1", password="pw-123456")
+        response = self.client.get("/timetable/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'value="shared-school"', html=False)
 
     def test_download_sync_logs_csv_filters_school_and_period(self):
         user = User.objects.create_user(

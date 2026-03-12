@@ -4,7 +4,16 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from core.models import UserProfile
 from .utils import get_max_booking_date
-from .models import School, SchoolConfig, SpecialRoom, RecurringSchedule, GradeRecurringLock, BlackoutDate, Reservation
+from .models import (
+    BlackoutDate,
+    GradeRecurringLock,
+    RecurringSchedule,
+    Reservation,
+    ReservationCollaborator,
+    School,
+    SchoolConfig,
+    SpecialRoom,
+)
 from datetime import date, timedelta
 
 class ReservationsViewTest(TestCase):
@@ -27,6 +36,7 @@ class ReservationsViewTest(TestCase):
              
         self.room = SpecialRoom.objects.create(school=self.school, name='Science Room')
         self.target_date = date.today()
+        self.client.force_login(self.user)
         
     def test_reservation_index(self):
         # Shell check
@@ -57,7 +67,13 @@ class ReservationsViewTest(TestCase):
         self.config.weekly_opening_mode = True
         self.config.save(update_fields=['weekly_opening_mode'])
         expected_max_date = get_max_booking_date(self.school)
+        teacher = User.objects.create_user(username='shared-teacher', password='password2', email='shared@example.com')
+        teacher_profile, _ = UserProfile.objects.get_or_create(user=teacher)
+        teacher_profile.nickname = '공유담임'
+        teacher_profile.save(update_fields=['nickname'])
+        ReservationCollaborator.objects.create(school=self.school, collaborator=teacher, can_edit=True)
 
+        self.client.force_login(teacher)
         response = self.client.get(reverse('reservations:reservation_index', args=[self.school.slug]))
 
         self.assertEqual(response.status_code, 200)
@@ -73,6 +89,102 @@ class ReservationsViewTest(TestCase):
         response = self.client.get(url, **headers)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Science Room')
+
+    def test_reservation_index_uses_workspace_cache_headers(self):
+        response = self.client.get(reverse('reservations:reservation_index', args=[self.school.slug]))
+        self.assertEqual(response['Cache-Control'], 'private, no-cache, must-revalidate')
+
+    def test_admin_dashboard_uses_sensitive_cache_headers(self):
+        response = self.client.get(reverse('reservations:admin_dashboard', args=[self.school.slug]))
+        self.assertEqual(response['Cache-Control'], 'no-store, private')
+
+    def test_unshared_user_sees_share_required_message(self):
+        outsider = User.objects.create_user(username='outsider', password='password2', email='outsider@example.com')
+        outsider_profile, _ = UserProfile.objects.get_or_create(user=outsider)
+        outsider_profile.nickname = '외부교사'
+        outsider_profile.save(update_fields=['nickname'])
+
+        self.client.force_login(outsider)
+        response = self.client.get(reverse('reservations:reservation_index', args=[self.school.slug]))
+
+        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, '공유가 필요합니다', status_code=403)
+
+    def test_readonly_collaborator_can_view_but_cannot_create(self):
+        viewer = User.objects.create_user(username='viewer', password='password2', email='viewer@example.com')
+        viewer_profile, _ = UserProfile.objects.get_or_create(user=viewer)
+        viewer_profile.nickname = '조회교사'
+        viewer_profile.save(update_fields=['nickname'])
+        ReservationCollaborator.objects.create(school=self.school, collaborator=viewer, can_edit=False)
+
+        self.client.force_login(viewer)
+        index_response = self.client.get(reverse('reservations:reservation_index', args=[self.school.slug]))
+        self.assertEqual(index_response.status_code, 200)
+        self.assertContains(index_response, '읽기 전용으로 공유되었습니다')
+
+        create_response = self.client.post(
+            reverse('reservations:create_reservation', args=[self.school.slug]),
+            {
+                'room_id': self.room.id,
+                'date': self.target_date.strftime('%Y-%m-%d'),
+                'period': 1,
+                'grade': 6,
+                'class_no': 1,
+                'name': '조회교사',
+            },
+        )
+        self.assertEqual(create_response.status_code, 403)
+
+    def test_edit_collaborator_can_create_reservation(self):
+        editor = User.objects.create_user(username='editor', password='password2', email='editor@example.com')
+        editor_profile, _ = UserProfile.objects.get_or_create(user=editor)
+        editor_profile.nickname = '공유교사'
+        editor_profile.save(update_fields=['nickname'])
+        ReservationCollaborator.objects.create(school=self.school, collaborator=editor, can_edit=True)
+
+        self.client.force_login(editor)
+        response = self.client.post(
+            reverse('reservations:create_reservation', args=[self.school.slug]),
+            {
+                'room_id': self.room.id,
+                'date': self.target_date.strftime('%Y-%m-%d'),
+                'period': 4,
+                'grade': 5,
+                'class_no': 2,
+                'name': '공유교사',
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        created = Reservation.objects.get(room=self.room, date=self.target_date, period=4)
+        self.assertEqual(created.created_by, editor)
+
+    def test_owner_can_share_school_with_teacher_by_email(self):
+        collaborator = User.objects.create_user(
+            username='collab',
+            password='password2',
+            email='collab@example.com',
+        )
+        collaborator_profile, _ = UserProfile.objects.get_or_create(user=collaborator)
+        collaborator_profile.nickname = '협업교사'
+        collaborator_profile.save(update_fields=['nickname'])
+
+        response = self.client.post(
+            reverse('reservations:collaborator_add', args=[self.school.slug]),
+            {
+                'collaborator_query': collaborator.email,
+                'can_edit': 'true',
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(
+            ReservationCollaborator.objects.filter(
+                school=self.school,
+                collaborator=collaborator,
+                can_edit=True,
+            ).exists()
+        )
         
     def test_create_reservation(self):
         url = reverse('reservations:create_reservation', args=[self.school.slug])
@@ -275,7 +387,7 @@ class ReservationsViewTest(TestCase):
         reservation.refresh_from_db()
         self.assertEqual(reservation.name, 'Protected Update')
 
-    def test_anonymous_can_delete_only_own_session_reservation(self):
+    def test_create_reservation_requires_login(self):
         self.client.logout()
         create_url = reverse('reservations:create_reservation', args=[self.school.slug])
         data = {
@@ -287,14 +399,8 @@ class ReservationsViewTest(TestCase):
             'name': 'Anon Tester'
         }
         response = self.client.post(create_url, data)
-        self.assertEqual(response.status_code, 200)
-
-        reservation = Reservation.objects.get(room=self.room, date=self.target_date, period=5)
-        delete_url = reverse('reservations:delete_reservation', args=[self.school.slug, reservation.id])
-        response = self.client.post(delete_url)
-
-        self.assertRedirects(response, reverse('reservations:reservation_index', args=[self.school.slug]))
-        self.assertFalse(Reservation.objects.filter(id=reservation.id).exists())
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(Reservation.objects.filter(room=self.room, date=self.target_date, period=5).exists())
 
     def test_authenticated_create_surfaces_followup_actions_on_next_page(self):
         self.client.force_login(self.user)
@@ -368,13 +474,13 @@ class ReservationsViewTest(TestCase):
         self.assertIn('Science Room', workflow_seed['data']['title'])
 
     def test_admin_dashboard_share_copy_has_failure_feedback(self):
-        self.client.force_login(self.user)
         response = self.client.get(reverse('reservations:admin_dashboard', args=[self.school.slug]))
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "copyError: '',", html=False)
-        self.assertContains(response, 'navigator.clipboard.writeText(text).then(() => {', html=False)
+        self.assertContains(response, 'navigator.clipboard.writeText(this.shareUrl).then(() => {', html=False)
         self.assertContains(response, '복사에 실패했습니다. 다시 시도해 주세요.')
+        self.assertContains(response, '공유할 선생님 추가')
 
     def test_admin_delete_reservation(self):
         reservation = Reservation.objects.create(
@@ -544,7 +650,7 @@ class ReservationsViewTest(TestCase):
         self.assertTrue(Reservation.objects.filter(room=self.room, date=self.target_date, period=3).exists())
         self.assertTrue(GradeRecurringLock.objects.filter(room=self.room, day_of_week=self.target_date.weekday(), period=3).exists())
 
-    def test_room_overview_is_public_and_grouped_by_room(self):
+    def test_room_overview_requires_shared_access_and_groups_by_room(self):
         second_room = SpecialRoom.objects.create(school=self.school, name='Music Room', icon='🎵')
         Reservation.objects.create(
             room=self.room,
@@ -568,6 +674,11 @@ class ReservationsViewTest(TestCase):
         url = reverse('reservations:room_overview', args=[self.school.slug])
         response = self.client.get(url)
 
+        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, '공유가 필요합니다', status_code=403)
+
+        self.client.force_login(self.user)
+        response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, '특별실별 예약 현황')
         self.assertContains(response, 'Science Room')
@@ -619,9 +730,3 @@ class ReservationsViewTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, '영양 박선생')
-
-
-
-
-
-

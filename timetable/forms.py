@@ -5,7 +5,7 @@ class TimetableUploadForm(forms.Form):
     reservation_school_slug = forms.ChoiceField(
         required=False,
         label="예약 반영 학교",
-        help_text="선택하면 '바로반영'으로 지정된 항목만 예약 시스템에 반영합니다.",
+        help_text="선택하면 '바로반영'으로 지정된 항목만 예약 시스템에 반영합니다. 공유된 학교만 표시됩니다.",
     )
     overwrite_existing = forms.BooleanField(
         required=False,

@@ -1,12 +1,18 @@
 import csv
+import logging
+import mimetypes
 from io import StringIO
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.http import FileResponse, Http404, StreamingHttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+import requests
+from urllib.parse import quote
+from django_ratelimit.decorators import ratelimit
 
 from products.models import Product
 
@@ -51,6 +57,70 @@ CONTACT_HEADER_ALIASES = {
 }
 WORKFLOW_ACTION_SEED_SESSION_KEY = 'workflow_action_seeds'
 SHEETBOOK_ACTION_SEED_SESSION_KEY = 'sheetbook_action_seeds'
+logger = logging.getLogger(__name__)
+
+
+def _request_client_ip(request):
+    x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR", "")
+    if x_forwarded_for:
+        return x_forwarded_for.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR", "")
+
+
+def _apply_workspace_cache_headers(response):
+    response["Cache-Control"] = "private, no-cache, must-revalidate"
+    response["Pragma"] = "no-cache"
+    return response
+
+
+def _apply_sensitive_cache_headers(response):
+    response["Cache-Control"] = "no-store, private"
+    response["Pragma"] = "no-cache"
+    response["Expires"] = "0"
+    return response
+
+
+def _urgent_entry_ratelimit_key(group, request):
+    resolver_match = getattr(request, "resolver_match", None)
+    access_id = ""
+    if resolver_match is not None:
+        access_id = resolver_match.kwargs.get("access_id", "")
+    return f"{_request_client_ip(request) or 'unknown'}:{access_id or 'unknown'}"
+
+
+def _remote_file_chunks(file_url, chunk_size=8192):
+    with requests.get(file_url, stream=True, timeout=(5, 60)) as resp:
+        resp.raise_for_status()
+        for chunk in resp.iter_content(chunk_size=chunk_size):
+            if chunk:
+                yield chunk
+
+
+def _build_secure_download_response(file_field, *, filename):
+    if not file_field or not file_field.name:
+        raise Http404("첨부파일을 찾을 수 없습니다.")
+
+    content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+    try:
+        file_obj = file_field.open("rb")
+    except Exception:
+        file_url = getattr(file_field, "url", "")
+        if not file_url or not str(file_url).startswith("http"):
+            raise
+        response = StreamingHttpResponse(
+            _remote_file_chunks(file_url),
+            content_type=content_type,
+        )
+        response["Content-Disposition"] = f"attachment; filename*=UTF-8''{quote(filename)}"
+        return _apply_sensitive_cache_headers(response)
+
+    response = FileResponse(
+        file_obj,
+        content_type=content_type,
+        as_attachment=True,
+        filename=filename,
+    )
+    return _apply_sensitive_cache_headers(response)
 
 
 def _get_service():
@@ -336,7 +406,8 @@ def main(request):
         "notice_prefill_origin_label": notice_prefill_origin_label if notice_prefill_active else "",
         "notice_prefill_origin_url": notice_prefill_origin_url if notice_prefill_active else "",
     }
-    return render(request, "parentcomm/main.html", context)
+    response = render(request, "parentcomm/main.html", context)
+    return _apply_workspace_cache_headers(response)
 
 
 def _normalize_contact_header(value):
@@ -482,6 +553,7 @@ def _upsert_parent_contacts(teacher, rows):
     return created_count, updated_count
 
 
+@ratelimit(key=_urgent_entry_ratelimit_key, rate="12/10m", method="POST", block=True, group="parentcomm_urgent_entry")
 def urgent_entry(request, access_id):
     contact = get_object_or_404(
         ParentContact.objects.select_related("teacher"),
@@ -497,13 +569,19 @@ def urgent_entry(request, access_id):
             alert.parent_contact = contact
             alert.full_clean()
             alert.save()
+            logger.info(
+                "[parentcomm] urgent alert created contact_id=%s teacher_id=%s ip=%s",
+                contact.id,
+                contact.teacher_id,
+                _request_client_ip(request),
+            )
             return redirect(f"{reverse('parentcomm:urgent_entry', kwargs={'access_id': access_id})}?sent=1")
     else:
         form = ParentUrgentAlertForm()
 
     sent = request.GET.get("sent") == "1"
     recent_alerts = ParentUrgentAlert.objects.filter(parent_contact=contact).order_by("-created_at")[:5]
-    return render(
+    response = render(
         request,
         "parentcomm/urgent_entry.html",
         {
@@ -513,6 +591,22 @@ def urgent_entry(request, access_id):
             "recent_alerts": recent_alerts,
         },
     )
+    return _apply_sensitive_cache_headers(response)
+
+
+@login_required
+def download_notice_attachment(request, notice_id):
+    notice = get_object_or_404(ParentNotice, id=notice_id, teacher=request.user)
+    if not notice.attachment:
+        raise Http404("첨부파일을 찾을 수 없습니다.")
+
+    original_name = (notice.attachment.name or "").split("/")[-1] or f"notice-{notice.id}"
+    logger.info(
+        "[parentcomm] notice attachment download notice_id=%s teacher_id=%s",
+        notice.id,
+        request.user.id,
+    )
+    return _build_secure_download_response(notice.attachment, filename=original_name)
 
 
 @login_required

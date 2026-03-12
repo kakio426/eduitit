@@ -32,17 +32,13 @@
         </div>
 
         <!-- Share Section -->
-        <div class="clay-card p-6 mb-8 border-l-8 border-purple-500 bg-white/80" data-aos="zoom-in" 
-             x-data="{ 
+        <div class="clay-card p-6 mb-8 border-l-8 border-purple-500 bg-white/80" data-aos="zoom-in"
+             x-data="{
                 copied: false,
-                shareUrl: '{{ request.scheme }}://{{ request.get_host }}{% url 'reservations:reservation_index' school.slug %}',
-                getShareMessage() {
-                    return `[{{ school.name }} 특별실 예약 안내]\n\n선생님 안녕하세요,\n특별실 예약 시스템이 오픈되었습니다. 아래 링크를 통해 원하시는 시간대에 예약을 진행해 주세요.\n\n🔗 예약 링크: ${this.shareUrl}\n\n* 필요 시 '이 기기에서 정보 기억'을 켜면 다음 예약이 빨라집니다.`;
-                },
+                shareUrl: '{{ reservation_entry_url|escapejs }}',
                 copyError: '',
                 copyToClipboard() {
-                    const text = this.getShareMessage();
-                    navigator.clipboard.writeText(text).then(() => {
+                    navigator.clipboard.writeText(this.shareUrl).then(() => {
                         this.copyError = '';
                         this.copied = true;
                         setTimeout(() => this.copied = false, 2000);
@@ -52,31 +48,100 @@
                     });
                 }
              }">
-            <div class="flex flex-col md:flex-row justify-between items-center gap-6">
-                <div class="flex-1">
-                    <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2 mb-2">
-                        <i class="fas fa-share-alt text-purple-600"></i> 선생님들께 링크 공유하기
-                    </h3>
-                    <p class="text-gray-600 text-sm">
-                        아래 버튼을 누르면 <strong>안내 문구가 포함된 예약 링크</strong>가 복사됩니다.<br>
-                        복사된 내용을 카카오톡, 메신저 등에 그대로 붙여넣으세요.
-                    </p>
-                </div>
-                <div class="w-full md:w-auto">
-                    <div class="w-full md:w-auto space-y-2">
-                        <button @click="copyToClipboard()"
-                                class="w-full md:w-auto clay-btn-primary px-8 py-4 flex items-center justify-center gap-3 text-lg transition-transform active:scale-95">
-                            <i class="fas" :class="copied ? 'fa-check-circle' : 'fa-copy'"></i>
-                            <span x-text="copied ? '복사 완료!' : '초대 문구 복사'"></span>
-                        </button>
-                        <p x-show="copyError" x-cloak class="text-xs font-semibold text-red-600" x-text="copyError"></p>
+            <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)] gap-6">
+                <div class="space-y-4">
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2 mb-2">
+                            <i class="fas fa-user-plus text-purple-600"></i> 공유할 선생님 추가
+                        </h3>
+                        <p class="text-gray-600 text-sm leading-relaxed">
+                            URL만 보내도 열리던 방식 대신, <strong>교사 계정을 먼저 공유</strong>한 뒤 예약판 주소를 전달합니다.<br>
+                            공유된 선생님은 이후 같은 주소로 바로 열 수 있고, 공유되지 않은 계정은 접근할 수 없습니다.
+                        </p>
+                    </div>
+
+                    <form method="post" action="{% url 'reservations:collaborator_add' school.slug %}" class="grid gap-3 md:grid-cols-[minmax(0,1fr)_140px_auto]">
+                        {% csrf_token %}
+                        <div>
+                            <label for="collaborator-query" class="block text-xs font-bold text-gray-500 mb-1">교사 계정 이메일</label>
+                            <input id="collaborator-query" type="email" name="collaborator_query" required
+                                placeholder="teacher@example.com"
+                                class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-purple-200">
+                        </div>
+                        <div>
+                            <label for="collaborator-can-edit" class="block text-xs font-bold text-gray-500 mb-1">권한</label>
+                            <select id="collaborator-can-edit" name="can_edit"
+                                class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-purple-200">
+                                <option value="false">보기</option>
+                                <option value="true" selected>편집</option>
+                            </select>
+                        </div>
+                        <div class="flex items-end">
+                            <button type="submit"
+                                class="w-full clay-btn-primary px-5 py-3 font-bold flex items-center justify-center gap-2">
+                                <i class="fas fa-share-nodes"></i>
+                                <span>공유 저장</span>
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="rounded-2xl border border-slate-200 bg-white/80 p-4">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <p class="text-xs font-bold uppercase tracking-wide text-slate-500">예약판 주소</p>
+                                <p class="text-sm text-slate-600">공유한 선생님에게만 열리는 주소입니다.</p>
+                            </div>
+                            <button type="button" @click="copyToClipboard()"
+                                class="clay-btn px-4 py-2.5 text-sm font-bold text-purple-600 inline-flex items-center gap-2">
+                                <i class="fas" :class="copied ? 'fa-check-circle' : 'fa-copy'"></i>
+                                <span x-text="copied ? '복사 완료' : '주소 복사'"></span>
+                            </button>
+                        </div>
+                        <div class="mt-3 rounded-xl bg-slate-50 px-3 py-3 text-xs text-slate-600 break-all">{{ reservation_entry_url }}</div>
+                        <p x-show="copyError" x-cloak class="mt-2 text-xs font-semibold text-red-600" x-text="copyError"></p>
                     </div>
                 </div>
-            </div>
-            
-            <div class="mt-4 p-4 clay-inner bg-gray-50/50 rounded-xl">
-                <p class="text-xs text-gray-500 font-bold uppercase mb-1">복사될 내용 미리보기</p>
-                <pre class="text-xs text-gray-600 whitespace-pre-wrap font-sans" x-text="getShareMessage()"></pre>
+
+                <div class="rounded-2xl border border-slate-200 bg-white/90 p-4">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <h4 class="text-lg font-bold text-slate-800">공유된 선생님</h4>
+                            <p class="text-sm text-slate-500">한 번 공유하면 같은 주소로 계속 사용할 수 있습니다.</p>
+                        </div>
+                        <span class="inline-flex items-center rounded-full bg-purple-100 px-3 py-1 text-xs font-bold text-purple-700">
+                            {{ collaborators|length }}명
+                        </span>
+                    </div>
+
+                    {% if collaborators %}
+                    <div class="mt-4 space-y-3">
+                        {% for collaborator in collaborators %}
+                        <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 flex items-center justify-between gap-3">
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <p class="text-sm font-bold text-slate-800 truncate">{{ collaborator.name }}</p>
+                                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold {% if collaborator.can_edit %}bg-emerald-100 text-emerald-700{% else %}bg-slate-200 text-slate-700{% endif %}">
+                                        {% if collaborator.can_edit %}편집{% else %}보기{% endif %}
+                                    </span>
+                                </div>
+                                <p class="text-xs text-slate-500 truncate">{{ collaborator.email }}</p>
+                            </div>
+                            <form method="post" action="{% url 'reservations:collaborator_remove' school.slug collaborator.id %}">
+                                {% csrf_token %}
+                                <button type="submit"
+                                    class="inline-flex items-center rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 transition">
+                                    공유 해제
+                                </button>
+                            </form>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+                        아직 공유된 선생님이 없습니다. 먼저 교사 계정을 추가해 주세요.
+                    </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
 
@@ -606,4 +671,3 @@
     })();
 </script>
 {% endblock %}
-

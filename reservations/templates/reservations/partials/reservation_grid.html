@@ -93,7 +93,7 @@
                             <i class="fas fa-lock text-xs mb-1"></i>
                             <span class="text-xs font-bold">{{ s.recurring.name }}</span>
                         </div>
-                        {% elif s.state == 'grade_locked' %}
+                        {% elif s.state == 'grade_locked' and reservation_can_edit %}
                         <button
                             @click="openBooking({{ room_data.room.id }}, '{{ room_data.room.name }}', {{ p.id }}, '{{ target_date|date:"Y-m-d" }}', '{{ p.display_label|escapejs }}', {{ s.grade_lock.grade }})"
                             class="w-full h-full bg-amber-50 rounded-xl border border-amber-200 hover:border-amber-300 hover:shadow-md flex flex-col justify-center items-center gap-1 group transition-all">
@@ -103,12 +103,21 @@
                             </div>
                             <div class="text-[10px] text-amber-500 group-hover:text-amber-600">다른 학년 예약 시 고정 해제</div>
                         </button>
+                        {% elif s.state == 'grade_locked' %}
+                        <div
+                            class="w-full h-full bg-slate-50 rounded-xl border border-slate-200 flex flex-col justify-center items-center gap-1 text-slate-400">
+                            <div class="text-xs font-extrabold flex items-center gap-1">
+                                <i class="fas fa-user-lock text-[10px]"></i>
+                                {{ s.grade_lock.grade }}학년 고정
+                            </div>
+                            <div class="text-[10px]">읽기 전용</div>
+                        </div>
                         {% elif s.state == 'blackout' %}
                         <div
                             class="w-full h-full bg-red-50 rounded-xl border border-red-100 flex justify-center items-center text-red-300 cursor-not-allowed">
                             <i class="fas fa-ban"></i>
                         </div>
-                        {% else %}
+                        {% elif reservation_can_edit %}
                         <!-- Available -->
                         <button
                             @click="openBooking({{ room_data.room.id }}, '{{ room_data.room.name }}', {{ p.id }}, '{{ target_date|date:"Y-m-d" }}', '{{ p.display_label|escapejs }}', null)"
@@ -116,6 +125,11 @@
                             <i
                                 class="fas fa-plus text-gray-200 group-hover:text-purple-400 transform group-hover:scale-110 transition-transform"></i>
                         </button>
+                        {% else %}
+                        <div
+                            class="w-full h-full bg-slate-50 rounded-xl border border-slate-200 flex justify-center items-center text-slate-400 text-xs font-bold">
+                            읽기 전용
+                        </div>
                         {% endif %}
                     </td>
                     {% endif %}
@@ -213,7 +227,7 @@
                         <i class="fas fa-lock text-[10px]"></i> {{ s.recurring.name }}
                     </div>
                 </div>
-                {% elif s.state == 'grade_locked' %}
+                {% elif s.state == 'grade_locked' and reservation_can_edit %}
                 <button
                     @click="openBooking({{ room_data.room.id }}, '{{ room_data.room.name }}', {{ s.period }}, '{{ target_date|date:"Y-m-d" }}', '{{ s.display_label|escapejs }}', {{ s.grade_lock.grade }})"
                     class="w-full bg-amber-50 rounded-lg p-3 border border-amber-200 h-20 flex flex-col justify-center items-center hover:shadow-md hover:border-amber-300 transition-all group relative">
@@ -227,6 +241,18 @@
                         <i class="fas fa-user-lock text-[10px]"></i> {{ s.grade_lock.grade }}학년 고정
                     </div>
                 </button>
+                {% elif s.state == 'grade_locked' %}
+                <div class="bg-slate-50 rounded-lg p-3 border border-slate-200 h-20 flex flex-col justify-center items-center text-center relative">
+                    <div class="absolute top-1 left-2 text-left leading-tight max-w-[78px]">
+                        <div class="text-[10px] font-bold text-slate-400 truncate">{{ s.label }}</div>
+                        {% if s.time %}
+                        <div class="text-[9px] text-slate-300 truncate">{{ s.time }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="text-slate-500 font-extrabold text-xs flex items-center gap-1">
+                        <i class="fas fa-user-lock text-[10px]"></i> {{ s.grade_lock.grade }}학년 고정
+                    </div>
+                </div>
                 {% elif s.state == 'blackout' %}
                 <div class="bg-red-50 rounded-lg p-3 h-20 flex justify-center items-center opacity-50 relative">
                     <div class="absolute top-1 left-2 text-left leading-tight max-w-[78px]">
@@ -237,7 +263,7 @@
                     </div>
                     <i class="fas fa-ban text-red-300"></i>
                 </div>
-                {% else %}
+                {% elif reservation_can_edit %}
                 <!-- Available -->
                 <button
                     @click="openBooking({{ room_data.room.id }}, '{{ room_data.room.name }}', {{ s.period }}, '{{ target_date|date:"Y-m-d" }}', '{{ s.display_label|escapejs }}', null)"
@@ -250,6 +276,16 @@
                     </div>
                     <div class="text-gray-300 font-bold text-sm group-hover:text-purple-500">예약 가능</div>
                 </button>
+                {% else %}
+                <div class="bg-slate-50 rounded-lg p-3 border border-slate-200 h-20 flex flex-col justify-center items-center text-center relative">
+                    <div class="absolute top-1 left-2 text-left leading-tight max-w-[78px]">
+                        <div class="text-[10px] font-bold text-slate-400 truncate">{{ s.label }}</div>
+                        {% if s.time %}
+                        <div class="text-[9px] text-slate-300 truncate">{{ s.time }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="text-slate-400 font-bold text-sm">읽기 전용</div>
+                </div>
                 {% endif %}
             </div>
             {% endfor %}
@@ -257,4 +293,3 @@
     </div>
     {% endfor %}
 </div>
-

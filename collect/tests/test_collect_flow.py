@@ -68,3 +68,43 @@ class CollectFlowTest(TestCase):
         self.assertIn(download_response.status_code, (200, 302))
         if download_response.status_code == 200:
             self.assertIn("attachment;", download_response["Content-Disposition"])
+            self.assertEqual(download_response["Cache-Control"], "no-store, private")
+
+    def test_template_download_is_proxied_with_sensitive_cache_headers(self):
+        req = CollectionRequest.objects.create(
+            creator=self.teacher,
+            title="양식 있는 수합",
+            description="양식을 내려받아 제출",
+            allow_file=True,
+            allow_link=False,
+            allow_text=False,
+            status="active",
+            template_file=SimpleUploadedFile(
+                "guide.txt",
+                b"collect template",
+                content_type="text/plain",
+            ),
+            template_file_name="제출양식.txt",
+        )
+
+        response = self.client.get(reverse("collect:template_download", args=[req.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("attachment;", response["Content-Disposition"])
+        self.assertEqual(response["Cache-Control"], "no-store, private")
+
+    def test_public_submit_page_uses_sensitive_cache_headers(self):
+        req = CollectionRequest.objects.create(
+            creator=self.teacher,
+            title="공개 수합",
+            description="설문 제출",
+            allow_file=False,
+            allow_link=True,
+            allow_text=True,
+            status="active",
+        )
+
+        response = self.client.get(reverse("collect:submit", args=[req.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Cache-Control"], "no-store, private")

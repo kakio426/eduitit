@@ -15,6 +15,7 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
 from django.urls import reverse
 from django.utils import timezone
+from django_ratelimit.decorators import ratelimit
 from .models import (
     AffiliationCorrectionLog,
     ExpectedParticipant,
@@ -44,6 +45,21 @@ DEFAULT_AFFILIATION_SUGGESTIONS = [
     "상담교사",
     "행정실",
 ]
+
+
+def _apply_sensitive_cache_headers(response):
+    response["Cache-Control"] = "no-store, private"
+    response["Pragma"] = "no-cache"
+    response["Expires"] = "0"
+    return response
+
+
+def _signature_public_ratelimit_key(group, request):
+    resolver_match = getattr(request, "resolver_match", None)
+    session_uuid = ""
+    if resolver_match is not None:
+        session_uuid = resolver_match.kwargs.get("uuid", "")
+    return f"{_request_client_ip(request) or 'unknown'}:{session_uuid or 'unknown'}"
 
 
 def _normalize_affiliation_text(value):
@@ -812,13 +828,15 @@ def session_delete(request, uuid):
     return render(request, 'signatures/delete_confirm.html', {'session': session})
 
 
+@ratelimit(key=_signature_public_ratelimit_key, rate="120/10m", method="POST", block=True, group="signatures_public_sign")
 def sign(request, uuid):
     """서명 페이지 (공개 - 로그인 불필요)"""
     session = get_object_or_404(TrainingSession, uuid=uuid)
     affiliation_suggestions = _build_affiliation_suggestions(session)
 
     if not session.is_active:
-        return render(request, 'signatures/closed.html', {'session': session})
+        response = render(request, 'signatures/closed.html', {'session': session})
+        return _apply_sensitive_cache_headers(response)
 
     if request.method == 'POST':
         form = SignatureForm(request.POST)
@@ -842,15 +860,17 @@ def sign(request, uuid):
                 ip_address=signature.ip_address,
                 user_agent=signature.user_agent,
             )
-            return render(request, 'signatures/sign_success.html', {'session': session})
+            response = render(request, 'signatures/sign_success.html', {'session': session})
+            return _apply_sensitive_cache_headers(response)
     else:
         form = SignatureForm()
 
-    return render(request, 'signatures/sign.html', {
+    response = render(request, 'signatures/sign.html', {
         'session': session,
         'form': form,
         'affiliation_suggestions': affiliation_suggestions,
     })
+    return _apply_sensitive_cache_headers(response)
 
 
 @login_required
@@ -953,7 +973,7 @@ def print_view(request, uuid):
             'left_padding': range(30), 'right_padding': range(30)
         })
 
-    return render(request, 'signatures/print_view.html', {
+    response = render(request, 'signatures/print_view.html', {
         'session': session,
         'pages': pages,
         'total_count': total_expected,
@@ -962,6 +982,7 @@ def print_view(request, uuid):
         'total_pages': len(pages),
         'signature_sort_mode': signature_sort_mode,
     })
+    return _apply_sensitive_cache_headers(response)
 
 
 @login_required

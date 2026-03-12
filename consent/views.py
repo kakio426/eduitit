@@ -22,6 +22,7 @@ from django.urls import reverse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django_ratelimit.decorators import ratelimit
+from django.views.decorators.http import require_POST
 
 from .forms import (
     ConsentDocumentForm,
@@ -59,6 +60,19 @@ SCHEMA_UNAVAILABLE_MESSAGE = (
 
 WORKFLOW_ACTION_SEED_SESSION_KEY = "workflow_action_seeds"
 SHEETBOOK_ACTION_SEED_SESSION_KEY = "sheetbook_action_seeds"
+
+
+def _apply_workspace_cache_headers(response):
+    response["Cache-Control"] = "private, no-cache, must-revalidate"
+    response["Pragma"] = "no-cache"
+    return response
+
+
+def _apply_sensitive_cache_headers(response):
+    response["Cache-Control"] = "no-store, private"
+    response["Pragma"] = "no-cache"
+    response["Expires"] = "0"
+    return response
 
 
 def _snapshot_file_metadata(file_obj):
@@ -401,8 +415,7 @@ def _build_file_response(file_field, *, inline=True, filename_hint=""):
                 return response
         if remote_urls:
             response = redirect(remote_urls[0])
-            response["Cache-Control"] = "no-store"
-            return response
+            return _apply_sensitive_cache_headers(response)
         raise
 
     response = FileResponse(
@@ -411,8 +424,7 @@ def _build_file_response(file_field, *, inline=True, filename_hint=""):
         as_attachment=not inline,
         filename=filename,
     )
-    response["Cache-Control"] = "no-store"
-    return response
+    return _apply_sensitive_cache_headers(response)
 
 
 def _strip_cloudinary_signature(url: str) -> str:
@@ -504,8 +516,7 @@ def _build_remote_proxy_response(url: str, *, filename: str, content_type: str, 
     content_length = remote.headers.get("Content-Length")
     if content_length:
         response["Content-Length"] = content_length
-    response["Cache-Control"] = "no-store"
-    return response
+    return _apply_sensitive_cache_headers(response)
 
 
 
@@ -596,6 +607,39 @@ def _issue_access_token():
             return token
 
 
+def _reset_recipient_link_state(recipient: SignatureRecipient, *, rotate_token: bool):
+    update_fields = [
+        "status",
+        "identity_assurance",
+        "verified_at",
+        "verified_ip_address",
+        "verified_user_agent",
+        "decision",
+        "decline_reason",
+        "signature_data",
+        "signed_at",
+        "ip_address",
+        "user_agent",
+        "signed_pdf",
+    ]
+    if rotate_token:
+        recipient.access_token = _issue_access_token()
+        update_fields.insert(0, "access_token")
+    recipient.status = SignatureRecipient.STATUS_PENDING
+    recipient.identity_assurance = SignatureRecipient.IDENTITY_TOKEN_ONLY
+    recipient.verified_at = None
+    recipient.verified_ip_address = None
+    recipient.verified_user_agent = ""
+    recipient.decision = ""
+    recipient.decline_reason = ""
+    recipient.signature_data = ""
+    recipient.signed_at = None
+    recipient.ip_address = None
+    recipient.user_agent = ""
+    recipient.signed_pdf = None
+    recipient.save(update_fields=update_fields)
+
+
 def _is_active_link_expired(recipient: SignatureRecipient) -> bool:
     if recipient.status in (SignatureRecipient.STATUS_SIGNED, SignatureRecipient.STATUS_DECLINED):
         return False
@@ -610,7 +654,7 @@ def _is_public_link_released(recipient: SignatureRecipient) -> bool:
 
 
 def _link_not_ready_response(request, recipient: SignatureRecipient):
-    return render(
+    response = render(
         request,
         "consent/link_not_ready.html",
         {
@@ -619,10 +663,11 @@ def _link_not_ready_response(request, recipient: SignatureRecipient):
         },
         status=403,
     )
+    return _apply_sensitive_cache_headers(response)
 
 
 def _expired_link_response(request, recipient: SignatureRecipient):
-    return render(
+    response = render(
         request,
         "consent/link_expired.html",
         {
@@ -632,6 +677,7 @@ def _expired_link_response(request, recipient: SignatureRecipient):
         },
         status=410,
     )
+    return _apply_sensitive_cache_headers(response)
 
 
 @login_required
@@ -649,7 +695,8 @@ def consent_dashboard(request):
         "requests": requests,
         **_policy_panel_context(),
     }
-    return render(request, "consent/dashboard.html", context)
+    response = render(request, "consent/dashboard.html", context)
+    return _apply_workspace_cache_headers(response)
 
 
 @login_required
@@ -954,7 +1001,7 @@ def consent_detail(request, request_id):
                 "download_url": reverse("consent:download_recipient_pdf", kwargs={"recipient_id": recipient.id}),
             }
         )
-    return render(
+    response = render(
         request,
         "consent/detail.html",
         {
@@ -983,6 +1030,7 @@ def consent_detail(request, request_id):
             },
         },
     )
+    return _apply_sensitive_cache_headers(response)
 
 
 @login_required
@@ -997,6 +1045,8 @@ def consent_preview_positions(request, request_id):
 
 
 @login_required
+@require_POST
+@transaction.atomic
 def consent_send(request, request_id):
     schema_block = _schema_guard_response(request)
     if schema_block:
@@ -1014,6 +1064,13 @@ def consent_send(request, request_id):
         SignatureRequest.STATUS_SENT,
         SignatureRequest.STATUS_COMPLETED,
     )
+    rotated_recipient_count = 0
+    if already_released:
+        for recipient in consent_request.recipients.exclude(
+            status__in=[SignatureRecipient.STATUS_SIGNED, SignatureRecipient.STATUS_DECLINED]
+        ):
+            _reset_recipient_link_state(recipient, rotate_token=True)
+            rotated_recipient_count += 1
     if consent_request.status != SignatureRequest.STATUS_COMPLETED:
         consent_request.status = SignatureRequest.STATUS_SENT
     consent_request.sent_at = timezone.now()
@@ -1027,6 +1084,7 @@ def consent_send(request, request_id):
         event_meta={
             "recipient_count": consent_request.recipients.count(),
             "resend": already_released,
+            "rotated_recipient_count": rotated_recipient_count,
             "link_expire_days": consent_request.link_expire_days,
             "expires_at": (
                 timezone.localtime(consent_request.link_expires_at).isoformat()
@@ -1036,7 +1094,10 @@ def consent_send(request, request_id):
         },
     )
     if already_released:
-        messages.success(request, "발송 시각을 갱신했습니다. 수신자별 링크를 다시 전달해 주세요.")
+        messages.success(
+            request,
+            f"발송 시각을 갱신하고 미완료 수신자 {rotated_recipient_count}명의 링크를 새로 만들었습니다. 이전 링크는 더 이상 열리지 않습니다.",
+        )
     else:
         messages.success(request, "학부모 링크 발송을 시작했습니다. 수신자별 링크를 복사해 전달해 주세요.")
     return redirect("consent:detail", request_id=consent_request.request_id)
@@ -1120,7 +1181,13 @@ def consent_download_csv(request, request_id):
                 sent_at_text,
             ]
         )
-    return response
+    logger.info(
+        "[consent] csv download request_id=%s user=%s recipient_count=%s",
+        consent_request.request_id,
+        request.user.username,
+        consent_request.recipients.count(),
+    )
+    return _apply_sensitive_cache_headers(response)
 
 
 @login_required
@@ -1150,8 +1217,12 @@ def consent_download_summary_pdf(request, request_id):
 
         response = HttpResponse(pdf_bytes, content_type="application/pdf")
         response["Content-Disposition"] = f"attachment; filename*=UTF-8''{quote(filename)}"
-        response["Cache-Control"] = "no-store"
-        return response
+        logger.info(
+            "[consent] summary pdf download request_id=%s user=%s",
+            consent_request.request_id,
+            request.user.username,
+        )
+        return _apply_sensitive_cache_headers(response)
     except PdfRuntimeUnavailable as exc:
         logger.error(
             "[consent] summary download blocked by missing pdf runtime request_id=%s err=%s",
@@ -1203,6 +1274,12 @@ def consent_download_recipient_pdf(request, recipient_id):
             messages.error(request, "개별 증빙 PDF 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.")
             return redirect("consent:detail", request_id=recipient.request.request_id)
 
+    logger.info(
+        "[consent] recipient pdf download request_id=%s recipient_id=%s user=%s",
+        recipient.request.request_id,
+        recipient.id,
+        request.user.username,
+    )
     return _build_file_response(
         recipient.signed_pdf,
         inline=False,
@@ -1225,6 +1302,11 @@ def consent_document_source(request, request_id):
     try:
         consent_request.preview_checked_at = timezone.now()
         consent_request.save(update_fields=["preview_checked_at"])
+        logger.info(
+            "[consent] source document preview request_id=%s user=%s",
+            consent_request.request_id,
+            request.user.username,
+        )
         return _build_file_response(file_field, inline=True, filename_hint=consent_request.document.title)
     except Exception:
         logger.exception("[consent] teacher document source open failed request_id=%s", consent_request.request_id)
@@ -1366,7 +1448,7 @@ def consent_sign(request, token):
     else:
         form = ConsentSignForm()
 
-    return render(
+    response = render(
         request,
         "consent/sign.html",
         {
@@ -1384,6 +1466,7 @@ def consent_sign(request, token):
             "requires_phone_last4": bool(recipient.phone_last4),
         },
     )
+    return _apply_sensitive_cache_headers(response)
 
 
 
@@ -1410,7 +1493,7 @@ def consent_public_document(request, token):
         return response
     except Exception:
         logger.exception("[consent] public document open failed token=%s", token)
-        return render(
+        response = render(
             request,
             "consent/document_unavailable.html",
             {
@@ -1419,6 +1502,7 @@ def consent_public_document(request, token):
             },
             status=404,
         )
+        return _apply_sensitive_cache_headers(response)
 
 
 @ratelimit(key=_consent_public_ratelimit_key, rate="30/m", method="GET", block=True, group="consent_public_document_inline")
@@ -1447,7 +1531,7 @@ def consent_public_document_inline(request, token):
         return response
     except Exception:
         logger.exception("[consent] public document inline open failed token=%s", token)
-        return render(
+        response = render(
             request,
             "consent/document_unavailable.html",
             {
@@ -1456,10 +1540,12 @@ def consent_public_document_inline(request, token):
             },
             status=404,
         )
+        return _apply_sensitive_cache_headers(response)
 
 
 @login_required
 @transaction.atomic
+@require_POST
 def consent_regenerate_link(request, recipient_id):
     schema_block = _schema_guard_response(request)
     if schema_block:
@@ -1474,34 +1560,7 @@ def consent_regenerate_link(request, recipient_id):
         messages.error(request, "이미 응답 완료된 수신자는 재발급할 수 없습니다.")
         return redirect("consent:detail", request_id=recipient.request.request_id)
 
-    recipient.access_token = _issue_access_token()
-    recipient.status = SignatureRecipient.STATUS_PENDING
-    recipient.identity_assurance = SignatureRecipient.IDENTITY_TOKEN_ONLY
-    recipient.verified_at = None
-    recipient.verified_ip_address = None
-    recipient.verified_user_agent = ""
-    recipient.decision = ""
-    recipient.decline_reason = ""
-    recipient.signature_data = ""
-    recipient.signed_at = None
-    recipient.ip_address = None
-    recipient.user_agent = ""
-    recipient.signed_pdf = None
-    recipient.save(update_fields=[
-        "access_token",
-        "status",
-        "identity_assurance",
-        "verified_at",
-        "verified_ip_address",
-        "verified_user_agent",
-        "decision",
-        "decline_reason",
-        "signature_data",
-        "signed_at",
-        "ip_address",
-        "user_agent",
-        "signed_pdf",
-    ])
+    _reset_recipient_link_state(recipient, rotate_token=True)
     ConsentAuditLog.objects.create(
         request=recipient.request,
         recipient=recipient,
@@ -1592,4 +1651,5 @@ def consent_complete(request, token):
         return schema_block
 
     recipient = get_object_or_404(SignatureRecipient.objects.select_related("request"), access_token=token)
-    return render(request, "consent/complete.html", {"recipient": recipient})
+    response = render(request, "consent/complete.html", {"recipient": recipient})
+    return _apply_sensitive_cache_headers(response)

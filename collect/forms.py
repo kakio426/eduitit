@@ -158,6 +158,12 @@ class CollectionRequestForm(forms.ModelForm):
             "%Y-%m-%d %H:%M:%S",
             "%Y-%m-%d %H:%M",
         ]
+        self.fields["bti_integration_source"].required = False
+        self.fields["bti_integration_source"].initial = (
+            self.initial.get("bti_integration_source")
+            or getattr(self.instance, "bti_integration_source", "")
+            or "none"
+        )
         self.fields["allow_choice"].widget.attrs.update({"x-model": "allowChoice"})
         self._parsed_choice_options = []
 
@@ -168,6 +174,9 @@ class CollectionRequestForm(forms.ModelForm):
         allow_link = bool(cleaned_data.get("allow_link"))
         allow_text = bool(cleaned_data.get("allow_text"))
         allow_choice = bool(cleaned_data.get("allow_choice"))
+        cleaned_data["bti_integration_source"] = (
+            cleaned_data.get("bti_integration_source") or "none"
+        )
 
         if not any([allow_file, allow_link, allow_text, allow_choice]):
             raise forms.ValidationError("제출 허용 방식은 최소 1개 이상 선택해주세요.")

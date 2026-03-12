@@ -140,6 +140,19 @@ def _feature_disabled_response(message):
     )
 
 
+def _apply_workspace_cache_headers(response):
+    response["Cache-Control"] = "private, no-cache, must-revalidate"
+    response["Pragma"] = "no-cache"
+    return response
+
+
+def _apply_sensitive_cache_headers(response):
+    response["Cache-Control"] = "no-store, private"
+    response["Pragma"] = "no-cache"
+    response["Expires"] = "0"
+    return response
+
+
 def _split_csv_setting(raw_value):
     if isinstance(raw_value, (list, tuple, set)):
         values = raw_value
@@ -1984,7 +1997,8 @@ def main_view(request):
         request,
         embedded_sheetbook_context=embedded_sheetbook_context,
     )
-    return render(request, "classcalendar/main.html", context)
+    response = render(request, "classcalendar/main.html", context)
+    return _apply_workspace_cache_headers(response)
 
 
 @login_required
@@ -2013,6 +2027,13 @@ def collaborator_add(request):
         collaborator=collaborator,
         defaults={"can_edit": can_edit},
     )
+    logger.info(
+        "[ClassCalendar] collaborator updated | owner_id=%s | collaborator_id=%s | can_edit=%s | created=%s",
+        request.user.id,
+        collaborator.id,
+        can_edit,
+        created,
+    )
     if created:
         messages.success(request, f"{_display_user_name(collaborator)} 님을 협업자로 추가했습니다.")
     else:
@@ -2034,6 +2055,11 @@ def collaborator_remove(request, collaborator_id):
         return redirect("classcalendar:main")
 
     collaborator_name = _display_user_name(relation.collaborator)
+    logger.info(
+        "[ClassCalendar] collaborator removed | owner_id=%s | collaborator_id=%s",
+        request.user.id,
+        collaborator_id,
+    )
     relation.delete()
     messages.info(request, f"{collaborator_name} 님의 협업 권한을 해제했습니다.")
     return redirect("classcalendar:main")
@@ -2046,6 +2072,7 @@ def share_enable(request):
     if not setting.share_enabled:
         setting.share_enabled = True
         setting.save(update_fields=["share_enabled", "updated_at"])
+    logger.info("[ClassCalendar] public share enabled | owner_id=%s | share_uuid=%s", request.user.id, setting.share_uuid)
     messages.success(request, "공유 링크를 활성화했습니다.")
     return redirect("classcalendar:main")
 
@@ -2057,6 +2084,7 @@ def share_disable(request):
     if setting.share_enabled:
         setting.share_enabled = False
         setting.save(update_fields=["share_enabled", "updated_at"])
+    logger.info("[ClassCalendar] public share disabled | owner_id=%s | share_uuid=%s", request.user.id, setting.share_uuid)
     messages.info(request, "공유 링크를 비활성화했습니다.")
     return redirect("classcalendar:main")
 
@@ -2068,6 +2096,7 @@ def share_rotate(request):
     setting.share_uuid = uuid.uuid4()
     setting.share_enabled = True
     setting.save(update_fields=["share_uuid", "share_enabled", "updated_at"])
+    logger.info("[ClassCalendar] public share rotated | owner_id=%s | share_uuid=%s", request.user.id, setting.share_uuid)
     messages.success(request, "공유 링크를 재발급했습니다.")
     return redirect("classcalendar:main")
 
@@ -2080,7 +2109,8 @@ def shared_view(request, share_uuid):
         .first()
     )
     if not setting:
-        return render(request, "classcalendar/shared_unavailable.html", status=404)
+        response = render(request, "classcalendar/shared_unavailable.html", status=404)
+        return _apply_sensitive_cache_headers(response)
 
     window_start = timezone.now() - timedelta(days=7)
     events = (
@@ -2096,7 +2126,8 @@ def shared_view(request, share_uuid):
         "event_count": sum(len(group["events"]) for group in grouped_events),
         "generated_at": timezone.localtime(),
     }
-    return render(request, "classcalendar/shared.html", context)
+    response = render(request, "classcalendar/shared.html", context)
+    return _apply_sensitive_cache_headers(response)
 
 
 @login_required
@@ -2117,7 +2148,8 @@ def api_events(request):
         _serialize_task(task, current_user_id=request.user.id)
         for task in _get_teacher_visible_tasks(request)
     ]
-    return JsonResponse({"status": "success", "events": events_data, "tasks": tasks_data})
+    response = JsonResponse({"status": "success", "events": events_data, "tasks": tasks_data})
+    return _apply_workspace_cache_headers(response)
 
 
 @login_required

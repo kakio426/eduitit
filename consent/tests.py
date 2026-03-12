@@ -61,7 +61,7 @@ class ConsentFlowTests(TestCase):
     def test_send_marks_request_as_sent(self):
         self.client.login(username="teacher", password="pw123456")
         url = reverse("consent:send", kwargs={"request_id": self.request_obj.request_id})
-        response = self.client.get(url, follow=True)
+        response = self.client.post(url, follow=True)
         self.assertEqual(response.status_code, 200)
         self.request_obj.refresh_from_db()
         self.assertEqual(self.request_obj.status, SignatureRequest.STATUS_SENT)
@@ -73,7 +73,7 @@ class ConsentFlowTests(TestCase):
 
         self.client.login(username="teacher", password="pw123456")
         url = reverse("consent:send", kwargs={"request_id": self.request_obj.request_id})
-        response = self.client.get(url, follow=True)
+        response = self.client.post(url, follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "안내문 파일을 찾을 수 없어 발송 링크를 생성할 수 없습니다.")
         self.request_obj.refresh_from_db()
@@ -368,7 +368,7 @@ class ConsentFlowTests(TestCase):
         url = reverse("consent:public_document", kwargs={"token": self.recipient.access_token})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response["Cache-Control"], "no-store")
+        self.assertEqual(response["Cache-Control"], "no-store, private")
         self.assertIn("attachment;", response.get("Content-Disposition", ""))
         log = ConsentAuditLog.objects.filter(
             request=self.request_obj,
@@ -409,7 +409,7 @@ class ConsentFlowTests(TestCase):
         url = reverse("consent:public_document", kwargs={"token": rec.access_token})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response["Cache-Control"], "no-store")
+        self.assertEqual(response["Cache-Control"], "no-store, private")
         self.assertIn("attachment;", response.get("Content-Disposition", ""))
 
     def test_public_document_inline_logs_document_view(self):
@@ -432,7 +432,7 @@ class ConsentFlowTests(TestCase):
         url = reverse("consent:document_source", kwargs={"request_id": self.request_obj.request_id})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response["Cache-Control"], "no-store")
+        self.assertEqual(response["Cache-Control"], "no-store, private")
         self.request_obj.refresh_from_db()
         self.assertIsNotNone(self.request_obj.preview_checked_at)
 
@@ -567,7 +567,7 @@ class ConsentFlowTests(TestCase):
 
         self.client.login(username="teacher", password="pw123456")
         url = reverse("consent:regenerate_link", kwargs={"recipient_id": self.recipient.id})
-        response = self.client.get(url, follow=True)
+        response = self.client.post(url, follow=True)
         self.assertEqual(response.status_code, 200)
         self.recipient.refresh_from_db()
         self.assertNotEqual(self.recipient.access_token, old_token)
@@ -580,6 +580,22 @@ class ConsentFlowTests(TestCase):
         self.assertIsNone(self.recipient.signed_at)
         self.assertIsNone(self.recipient.ip_address)
         self.assertEqual(self.recipient.user_agent, "")
+
+    def test_resend_rotates_pending_recipient_token_and_invalidates_old_link(self):
+        self.request_obj.status = SignatureRequest.STATUS_SENT
+        self.request_obj.sent_at = timezone.now() - timezone.timedelta(days=1)
+        self.request_obj.save(update_fields=["status", "sent_at"])
+        old_token = self.recipient.access_token
+
+        self.client.login(username="teacher", password="pw123456")
+        resend_url = reverse("consent:send", kwargs={"request_id": self.request_obj.request_id})
+        response = self.client.post(resend_url, follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.recipient.refresh_from_db()
+        self.assertNotEqual(self.recipient.access_token, old_token)
+        old_link_response = self.client.get(reverse("consent:sign", kwargs={"token": old_token}))
+        self.assertEqual(old_link_response.status_code, 404)
 
     def test_detail_shows_progress_dashboard_counts(self):
         self.recipient.status = SignatureRecipient.STATUS_SIGNED

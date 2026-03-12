@@ -245,6 +245,11 @@
                     <span class="text-3xl">🗓️</span>
                     <span>{{ school.name }} 특별실 예약</span>
                 </h1>
+                {% if reservation_access.mode != 'owner' %}
+                <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold {% if reservation_can_edit %}bg-emerald-100 text-emerald-700{% else %}bg-slate-200 text-slate-700{% endif %}">
+                    {{ reservation_access.mode_label }}
+                </span>
+                {% endif %}
 
                 <a href="{% url 'reservations:room_overview' school.slug %}"
                    class="bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-200 transition-colors flex items-center gap-1.5">
@@ -310,6 +315,11 @@
                 </form>
             </div>
         </div>
+        {% if not reservation_can_edit %}
+        <div class="rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-sm font-semibold text-slate-600">
+            이 예약판은 읽기 전용으로 공유되었습니다. 일정 확인은 가능하지만 새 예약을 만들거나 수정할 수는 없습니다.
+        </div>
+        {% endif %}
     </div>
 
     <!-- Main Content (Grid) - HTMX Polling -->
@@ -337,4 +347,3 @@
     });
 </script>
 {% endblock %}
-
