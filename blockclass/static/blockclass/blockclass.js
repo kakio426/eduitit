@@ -87,6 +87,68 @@ function safeStatus(message) {
   }
 }
 
+function clearToolboxSelection(workspace) {
+  if (!workspace || typeof workspace.getToolbox !== "function") {
+    return;
+  }
+
+  const toolbox = workspace.getToolbox();
+  if (toolbox && typeof toolbox.clearSelection === "function") {
+    toolbox.clearSelection();
+  }
+}
+
+function shouldPreserveFlyout(target) {
+  if (!(target instanceof Element)) {
+    return false;
+  }
+
+  return Boolean(
+    target.closest(".blocklyToolboxDiv, .blocklyFlyout, .blocklyDropDownDiv, .blocklyWidgetDiv"),
+  );
+}
+
+function isBlockCreateEvent(event, workspace) {
+  if (!event || !workspace || event.workspaceId !== workspace.id) {
+    return false;
+  }
+
+  const blockCreateType = typeof Blockly !== "undefined" && Blockly.Events && Blockly.Events.BLOCK_CREATE
+    ? Blockly.Events.BLOCK_CREATE
+    : "create";
+  return event.type === blockCreateType;
+}
+
+function revealWorkspaceContent(workspace, blockId) {
+  if (!workspace || typeof workspace.scrollBoundsIntoView !== "function") {
+    return;
+  }
+
+  if (blockId && typeof workspace.getBlockById === "function") {
+    const block = workspace.getBlockById(blockId);
+    if (block && typeof block.getBoundingRectangle === "function") {
+      workspace.scrollBoundsIntoView(block.getBoundingRectangle());
+      return;
+    }
+  }
+
+  if (typeof workspace.getBlocksBoundingBox === "function") {
+    const bounds = workspace.getBlocksBoundingBox();
+    if (bounds && (bounds.top !== bounds.bottom || bounds.left !== bounds.right)) {
+      workspace.scrollBoundsIntoView(bounds);
+    }
+  }
+}
+
+function syncWorkspaceViewport(workspace, blockId) {
+  window.requestAnimationFrame(() => {
+    clearToolboxSelection(workspace);
+    window.requestAnimationFrame(() => {
+      revealWorkspaceContent(workspace, blockId);
+    });
+  });
+}
+
 function resizeWorkspace(workspace) {
   const workspaceElement = document.getElementById("blockclass-workspace");
   if (!workspaceElement || !workspace || typeof Blockly === "undefined") {
@@ -182,6 +244,7 @@ function loadTemplate(workspace, key) {
   Blockly.Xml.domToWorkspace(xml, workspace);
   scheduleWorkspaceResize(workspace);
   updateSummary(workspace);
+  syncWorkspaceViewport(workspace);
   const labels = {
     sequence: "순서",
     if: "조건",
@@ -211,6 +274,7 @@ function restoreWorkspaceJson(workspace, rawText) {
   Blockly.serialization.workspaces.load(data, workspace);
   scheduleWorkspaceResize(workspace);
   updateSummary(workspace);
+  syncWorkspaceViewport(workspace);
   safeStatus("JSON 파일에서 워크스페이스를 불러왔습니다.");
 }
 
@@ -299,8 +363,20 @@ function initBlockclass() {
     });
   }
 
-  workspace.addChangeListener(() => {
+  workspace.addChangeListener((event) => {
     updateSummary(workspace);
+
+    if (isBlockCreateEvent(event, workspace)) {
+      syncWorkspaceViewport(workspace, event.blockId);
+    }
+  });
+
+  workspaceElement.addEventListener("pointerdown", (event) => {
+    if (shouldPreserveFlyout(event.target)) {
+      return;
+    }
+
+    clearToolboxSelection(workspace);
   });
 
   window.addEventListener("resize", () => {
