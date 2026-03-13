@@ -1437,10 +1437,11 @@ def _resolve_integration_source_meta(event):
     if source == SOURCE_RESERVATION:
         reservation_parts = key.split(":")
         if len(reservation_parts) >= 4:
+            reservation_id = reservation_parts[1]
             school_slug = reservation_parts[2]
             date_text = reservation_parts[3]
             base_url = reverse("reservations:reservation_index", kwargs={"school_slug": school_slug})
-            return f"{base_url}?{urlencode({'date': date_text})}", "예약 화면으로 이동"
+            return f"{base_url}?{urlencode({'date': date_text, 'reservation': reservation_id})}", "예약 화면으로 이동"
         if payload and payload.isdigit():
             try:
                 from reservations.models import Reservation
@@ -1455,7 +1456,10 @@ def _resolve_integration_source_meta(event):
                         "reservations:reservation_index",
                         kwargs={"school_slug": reservation.room.school.slug},
                     )
-                    return f"{base_url}?{urlencode({'date': reservation.date.strftime('%Y-%m-%d')})}", "예약 화면으로 이동"
+                    return (
+                        f"{base_url}?{urlencode({'date': reservation.date.strftime('%Y-%m-%d'), 'reservation': reservation.id})}",
+                        "예약 화면으로 이동",
+                    )
             except Exception:
                 logger.exception("[ClassCalendar] reservation source link resolve failed event_id=%s", event.id)
         return reverse("reservations:dashboard_landing"), "예약 대시보드로 이동"
@@ -1492,6 +1496,263 @@ def _resolve_integration_source_meta(event):
         return reverse("hwpxchat:main"), "원본 문서로 이동"
 
     return "", ""
+
+
+def _compact_hub_text(value, *, default=""):
+    text = " ".join(str(value or "").replace("\r", " ").replace("\n", " ").split())
+    return text or default
+
+
+def _pick_latest_message_capture(item):
+    captures = list(getattr(item, "message_captures", []).all())
+    if not captures:
+        return None
+    return max(captures, key=lambda capture: capture.created_at)
+
+
+def _build_collect_hub_meta(event, *, request_item, source_url):
+    status_text = "진행 중"
+    status_tone = "neutral"
+    detail_text = "수합 요청 확인"
+    title = _compact_hub_text(getattr(request_item, "title", "") or event.title, default="수합 요청")
+    if request_item and request_item.deadline:
+        deadline_date = timezone.localtime(request_item.deadline).date()
+        today = timezone.localdate()
+        if getattr(request_item, "status", "") == "closed":
+            status_text = "완료"
+            status_tone = "complete"
+        elif request_item.is_deadline_passed:
+            status_text = "마감 지남"
+            status_tone = "warning"
+        elif deadline_date == today:
+            status_text = "오늘 마감"
+            status_tone = "warning"
+        submission_count = int(getattr(request_item, "submission_count", 0) or 0)
+        detail_text = f"제출 {submission_count}건" if submission_count else "제출 대기"
+    return {
+        "service_key": "collect",
+        "service_label": "수합",
+        "title": title,
+        "status_text": status_text,
+        "status_tone": status_tone,
+        "detail_text": detail_text,
+        "action_type": "source_link",
+        "action_url": source_url,
+        "message_capture_id": "",
+    }
+
+
+def _build_consent_hub_meta(event, *, request_item, source_url):
+    status_text = "진행 중"
+    status_tone = "neutral"
+    detail_text = "서명 요청 확인"
+    title = _compact_hub_text(getattr(request_item, "title", "") or event.title, default="서명 요청")
+    if request_item:
+        pending_count = int(getattr(request_item, "pending_recipient_count", 0) or 0)
+        recipient_count = int(getattr(request_item, "recipient_count", 0) or 0)
+        expires_at = request_item.link_expires_at
+        expires_date = timezone.localtime(expires_at).date() if expires_at else None
+        today = timezone.localdate()
+        if getattr(request_item, "status", "") == request_item.STATUS_COMPLETED or pending_count == 0:
+            status_text = "완료"
+            status_tone = "complete"
+        elif request_item.is_link_expired:
+            status_text = "마감 지남"
+            status_tone = "warning"
+        elif expires_date == today:
+            status_text = "오늘 마감"
+            status_tone = "warning"
+        detail_text = f"미완료 {pending_count}명" if pending_count else (f"대상 {recipient_count}명" if recipient_count else "서명 확인")
+    return {
+        "service_key": "consent",
+        "service_label": "사인",
+        "title": title,
+        "status_text": status_text,
+        "status_tone": status_tone,
+        "detail_text": detail_text,
+        "action_type": "source_link",
+        "action_url": source_url,
+        "message_capture_id": "",
+    }
+
+
+def _build_reservation_hub_meta(event, *, reservation, source_url):
+    room_name = ""
+    if reservation and getattr(reservation, "room", None):
+        room_name = _compact_hub_text(reservation.room.name)
+    title = room_name or _compact_hub_text(event.title, default="예약")
+    detail_text = room_name if room_name and room_name != title else ""
+    return {
+        "service_key": "reservation",
+        "service_label": "예약",
+        "title": title,
+        "status_text": "예약됨",
+        "status_tone": "neutral",
+        "detail_text": detail_text,
+        "action_type": "source_link",
+        "action_url": source_url,
+        "message_capture_id": "",
+    }
+
+
+def _build_message_capture_hub_meta(item, *, capture):
+    title = _compact_hub_text(capture.extracted_title or getattr(item, "title", ""), default="저장한 메시지")
+    preview_text = _compact_hub_text(
+        capture.initial_extract_payload.get("summary_text") if isinstance(capture.initial_extract_payload, dict) else ""
+    )
+    if not preview_text:
+        preview_text = _compact_hub_text(
+            capture.parse_payload.get("summary_text") if isinstance(capture.parse_payload, dict) else ""
+        )
+    if not preview_text:
+        preview_text = _compact_hub_text(_build_message_capture_archive_preview(capture.raw_text))
+    attachment_count = len(list(capture.attachments.all()))
+    if capture.committed_event_id or capture.committed_task_id:
+        status_text = "완료"
+        status_tone = "complete"
+    elif capture.parse_status == CalendarMessageCapture.ParseStatus.NEEDS_REVIEW:
+        status_text = "확인 필요"
+        status_tone = "warning"
+    elif capture.parse_status == CalendarMessageCapture.ParseStatus.FAILED:
+        status_text = "확인 필요"
+        status_tone = "warning"
+    else:
+        status_text = "처리 예정"
+        status_tone = "neutral"
+    detail_bits = []
+    if preview_text and preview_text != title:
+        detail_bits.append(preview_text)
+    if attachment_count:
+        detail_bits.append("첨부 있음")
+    return {
+        "service_key": "message_capture",
+        "service_label": "메시지 저장",
+        "title": title,
+        "status_text": status_text,
+        "status_tone": status_tone,
+        "detail_text": " · ".join(detail_bits),
+        "action_type": "message_capture",
+        "action_url": "",
+        "message_capture_id": str(capture.id),
+    }
+
+
+def _build_default_event_hub_meta(event):
+    return {
+        "service_key": "event",
+        "service_label": "일정",
+        "title": _compact_hub_text(event.title, default="일정"),
+        "status_text": "",
+        "status_tone": "neutral",
+        "detail_text": "",
+        "action_type": "event_detail",
+        "action_url": "",
+        "message_capture_id": "",
+    }
+
+
+def _build_default_task_hub_meta(task):
+    status_text = "완료" if (task.status or CalendarTask.Status.OPEN) == CalendarTask.Status.DONE else "진행 중"
+    status_tone = "complete" if status_text == "완료" else "neutral"
+    return {
+        "service_key": "task",
+        "service_label": "할 일",
+        "title": _compact_hub_text(task.title, default="할 일"),
+        "status_text": status_text,
+        "status_tone": status_tone,
+        "detail_text": "",
+        "action_type": "task_detail",
+        "action_url": "",
+        "message_capture_id": "",
+    }
+
+
+def _build_event_source_record_lookup(events):
+    lookup = {}
+    if not events:
+        return lookup
+
+    collect_ids = set()
+    consent_ids = set()
+    reservation_ids = set()
+    for event in events:
+        source = str(event.integration_source or "").strip()
+        key = str(event.integration_key or "").strip()
+        _, payload = _split_integration_key(key)
+        if source == SOURCE_COLLECT_DEADLINE and payload:
+            collect_ids.add(payload)
+        elif source == SOURCE_CONSENT_EXPIRY and payload:
+            consent_ids.add(payload)
+        elif source == SOURCE_RESERVATION and payload.isdigit():
+            reservation_ids.add(int(payload))
+
+    if collect_ids:
+        try:
+            from collect.models import CollectionRequest
+
+            for request_item in CollectionRequest.objects.filter(id__in=collect_ids).annotate(submission_count=Count("submissions", distinct=True)):
+                lookup[f"collect:{request_item.id}"] = request_item
+        except Exception:
+            logger.exception("[ClassCalendar] failed to build collect lookup")
+
+    if consent_ids:
+        try:
+            from consent.models import SignatureRecipient, SignatureRequest
+
+            pending_statuses = [
+                SignatureRecipient.STATUS_PENDING,
+                SignatureRecipient.STATUS_VERIFIED,
+            ]
+            queryset = SignatureRequest.objects.filter(request_id__in=consent_ids).annotate(
+                recipient_count=Count("recipients", distinct=True),
+                pending_recipient_count=Count(
+                    "recipients",
+                    filter=Q(recipients__status__in=pending_statuses),
+                    distinct=True,
+                ),
+            )
+            for request_item in queryset:
+                lookup[f"consent:{request_item.request_id}"] = request_item
+        except Exception:
+            logger.exception("[ClassCalendar] failed to build consent lookup")
+
+    if reservation_ids:
+        try:
+            from reservations.models import Reservation
+
+            queryset = Reservation.objects.filter(id__in=reservation_ids).select_related("room", "room__school")
+            for reservation in queryset:
+                key = f"reservation:{reservation.id}:{reservation.room.school.slug}:{reservation.date.strftime('%Y-%m-%d')}"
+                lookup[key] = reservation
+                lookup[f"reservation:{reservation.id}"] = reservation
+        except Exception:
+            logger.exception("[ClassCalendar] failed to build reservation lookup")
+
+    return lookup
+
+
+def _build_event_hub_meta(event, *, source_url, source_record_lookup):
+    capture = _pick_latest_message_capture(event)
+    if capture:
+        return _build_message_capture_hub_meta(event, capture=capture)
+
+    source = str(event.integration_source or "").strip()
+    key = str(event.integration_key or "").strip()
+    source_record = source_record_lookup.get(key)
+    if source == SOURCE_COLLECT_DEADLINE:
+        return _build_collect_hub_meta(event, request_item=source_record, source_url=source_url)
+    if source == SOURCE_CONSENT_EXPIRY:
+        return _build_consent_hub_meta(event, request_item=source_record, source_url=source_url)
+    if source == SOURCE_RESERVATION:
+        return _build_reservation_hub_meta(event, reservation=source_record, source_url=source_url)
+    return _build_default_event_hub_meta(event)
+
+
+def _build_task_hub_meta(task):
+    capture = _pick_latest_message_capture(task)
+    if capture:
+        return _build_message_capture_hub_meta(task, capture=capture)
+    return _build_default_task_hub_meta(task)
 
 
 def _extract_primary_note(event):
@@ -1552,7 +1813,7 @@ def _persist_primary_note(event, note_value):
     )
 
 
-def _serialize_event(event, *, current_user_id, editable_owner_ids):
+def _serialize_event(event, *, current_user_id, editable_owner_ids, source_record_lookup=None):
     source_url, source_label = _resolve_integration_source_meta(event)
     sheetbook_source_meta = _resolve_sheetbook_source_meta(event, current_user_id=current_user_id) or {}
     if sheetbook_source_meta.get("source_url"):
@@ -1560,6 +1821,11 @@ def _serialize_event(event, *, current_user_id, editable_owner_ids):
         source_label = sheetbook_source_meta.get("source_label") or source_label
     attachments = list(event.attachments.all())
     attachments.sort(key=lambda attachment: (attachment.sort_order, attachment.id))
+    hub_meta = _build_event_hub_meta(
+        event,
+        source_url=source_url,
+        source_record_lookup=source_record_lookup or {},
+    )
     return {
         "item_type": CalendarMessageCapture.ItemType.EVENT,
         "id": str(event.id),
@@ -1589,6 +1855,7 @@ def _serialize_event(event, *, current_user_id, editable_owner_ids):
             _serialize_event_attachment(attachment)
             for attachment in attachments
         ],
+        "hub_meta": hub_meta,
     }
 
 
@@ -1613,7 +1880,28 @@ def _serialize_task(task, *, current_user_id):
         "is_shared_calendar": False,
         "can_edit": task.author_id == current_user_id,
         "attachments": [],
+        "hub_meta": _build_task_hub_meta(task),
     }
+
+
+def _serialize_event_list(events, *, current_user_id, editable_owner_ids):
+    source_record_lookup = _build_event_source_record_lookup(events)
+    return [
+        _serialize_event(
+            event,
+            current_user_id=current_user_id,
+            editable_owner_ids=editable_owner_ids,
+            source_record_lookup=source_record_lookup,
+        )
+        for event in events
+    ]
+
+
+def _serialize_task_list(tasks, *, current_user_id):
+    return [
+        _serialize_task(task, current_user_id=current_user_id)
+        for task in tasks
+    ]
 
 
 def _get_integration_setting_for_user(user):
@@ -2036,6 +2324,8 @@ def build_calendar_surface_context(
     service = Product.objects.filter(launch_route_name=SERVICE_ROUTE).first()
     message_capture_ui = build_message_capture_ui_context(request.user)
     active_classroom = _get_active_classroom_for_user(request)
+    visible_events = list(_get_teacher_visible_events(request, visible_owner_ids))
+    visible_tasks = list(_get_teacher_visible_tasks(request))
     calendar_page_url = _build_home_calendar_surface_url(request, include_request_state=False)
     calendar_api_base_url = reverse("classcalendar:main")
     main_url = calendar_page_url
@@ -2069,18 +2359,15 @@ def build_calendar_surface_context(
     return {
         "service": service,
         "title": service.title if service else "학급 캘린더",
-        "events_json": [
-            _serialize_event(
-                event,
-                current_user_id=request.user.id,
-                editable_owner_ids=editable_owner_ids,
-            )
-            for event in visible_events
-        ],
-        "tasks_json": [
-            _serialize_task(task, current_user_id=request.user.id)
-            for task in visible_tasks
-        ],
+        "events_json": _serialize_event_list(
+            visible_events,
+            current_user_id=request.user.id,
+            editable_owner_ids=editable_owner_ids,
+        ),
+        "tasks_json": _serialize_task_list(
+            visible_tasks,
+            current_user_id=request.user.id,
+        ),
         "integration_settings_json": serialize_integration_setting(integration_setting),
         "reservation_windows": _build_reservation_windows_for_user(request.user),
         "share_enabled": bool(integration_setting.share_enabled),
@@ -2273,18 +2560,17 @@ def api_events(request):
     force_sync = _parse_bool_value(request.GET.get("force_sync", "false"))
     _sync_integrations_if_needed(request, force=force_sync)
     visible_owner_ids, editable_owner_ids, _ = _get_calendar_access_for_user(request.user)
-    events_data = [
-        _serialize_event(
-            event,
-            current_user_id=request.user.id,
-            editable_owner_ids=editable_owner_ids,
-        )
-        for event in _get_teacher_visible_events(request, visible_owner_ids)
-    ]
-    tasks_data = [
-        _serialize_task(task, current_user_id=request.user.id)
-        for task in _get_teacher_visible_tasks(request)
-    ]
+    visible_events = list(_get_teacher_visible_events(request, visible_owner_ids))
+    visible_tasks = list(_get_teacher_visible_tasks(request))
+    events_data = _serialize_event_list(
+        visible_events,
+        current_user_id=request.user.id,
+        editable_owner_ids=editable_owner_ids,
+    )
+    tasks_data = _serialize_task_list(
+        visible_tasks,
+        current_user_id=request.user.id,
+    )
     response = JsonResponse({"status": "success", "events": events_data, "tasks": tasks_data})
     return _apply_workspace_cache_headers(response)
 

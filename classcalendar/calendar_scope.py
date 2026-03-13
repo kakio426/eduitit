@@ -46,7 +46,7 @@ def get_visible_events_queryset(user, *, active_classroom=None, visible_owner_id
     return (
         CalendarEvent.objects.filter(query)
         .select_related("author", "classroom")
-        .prefetch_related("blocks", "attachments")
+        .prefetch_related("blocks", "attachments", "message_captures__attachments")
         .distinct()
         .order_by("start_time", "id")
     )
@@ -59,6 +59,7 @@ def get_visible_tasks_queryset(user):
     return (
         CalendarTask.objects.filter(author=user)
         .select_related("author", "classroom")
+        .prefetch_related("message_captures__attachments")
         .order_by("due_at", "created_at", "id")
     )
 

@@ -63,6 +63,30 @@ class ReservationsViewTest(TestCase):
         self.assertContains(response, f'value="{self.target_date.strftime("%Y-%m-%d")}"', html=False)
         self.assertContains(response, '날짜 이동')
 
+    def test_reservation_index_can_open_specific_reservation_from_query(self):
+        reservation = Reservation.objects.create(
+            room=self.room,
+            created_by=self.user,
+            date=self.target_date,
+            period=3,
+            grade=5,
+            class_no=1,
+            name='열기 테스트',
+        )
+
+        response = self.client.get(
+            f"{reverse('reservations:reservation_index', args=[self.school.slug])}?date={self.target_date.strftime('%Y-%m-%d')}&reservation={reservation.id}"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['initial_open_reservation_payload']['id'], reservation.id)
+        self.assertEqual(response.context['initial_open_reservation_payload']['roomName'], self.room.name)
+        self.assertEqual(
+            response.context['initial_open_reservation_payload']['date'],
+            self.target_date.strftime('%Y-%m-%d'),
+        )
+        self.assertContains(response, 'reservation-initial-open-data')
+
     def test_reservation_index_date_jump_respects_teacher_limits(self):
         self.config.weekly_opening_mode = True
         self.config.save(update_fields=['weekly_opening_mode'])

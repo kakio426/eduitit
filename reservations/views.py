@@ -168,6 +168,23 @@ def _period_display_label(school, period):
     return f"{period}교시"
 
 
+def _build_reservation_modal_payload(reservation, *, period_label, lock_grade=None):
+    return {
+        'id': reservation.id,
+        'roomId': reservation.room_id,
+        'roomName': reservation.room.name,
+        'period': reservation.period,
+        'date': reservation.date.strftime('%Y-%m-%d'),
+        'periodLabel': period_label,
+        'grade': reservation.grade,
+        'classNo': reservation.class_no,
+        'targetLabel': reservation.target_label or '',
+        'name': reservation.name or '',
+        'memo': reservation.memo or '',
+        'lockGrade': lock_grade,
+    }
+
+
 def _build_reservation_origin(request, school, reservation):
     origin_path = f"{reverse('reservations:reservation_index', args=[school.slug])}?date={reservation.date.strftime('%Y-%m-%d')}"
     return {
@@ -665,6 +682,8 @@ def reservation_index(request, school_slug):
         return access_response
     config, _ = SchoolConfig.objects.get_or_create(school=school)
     
+    initial_open_reservation_id = request.GET.get('reservation')
+
     # 날짜 처리
     date_str = request.GET.get('date')
     if date_str:
@@ -718,6 +737,7 @@ def reservation_index(request, school_slug):
     grade_lock_map = {(g.room_id, g.period): g for g in grade_locks}
     
     rooms_data = []
+    initial_open_reservation_payload = None
     for room in rooms:
         slots = []
         for p in periods_data:
@@ -755,6 +775,19 @@ def reservation_index(request, school_slug):
                 'can_edit': can_edit,
                 'can_admin_override': bool(access["can_manage"]),
             })
+            if (
+                initial_open_reservation_payload is None
+                and res
+                and initial_open_reservation_id
+                and str(res.id) == str(initial_open_reservation_id)
+                and can_edit
+            ):
+                lock_grade = grade_lock.grade if grade_lock else None
+                initial_open_reservation_payload = _build_reservation_modal_payload(
+                    res,
+                    period_label=p['display_label'],
+                    lock_grade=lock_grade,
+                )
             
         rooms_data.append({
             'room': room,
@@ -779,6 +812,7 @@ def reservation_index(request, school_slug):
         'reservation_followup': reservation_followup,
         'reservation_access': access,
         'reservation_can_edit': bool(access["can_edit"]),
+        'initial_open_reservation_payload': initial_open_reservation_payload,
     }
     
     # HTMX 요청이면 부분 렌더링 (Polling 등)

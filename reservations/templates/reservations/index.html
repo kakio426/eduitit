@@ -21,6 +21,7 @@
         profileVersionKey: 'reservation_profile_version',
         profileVersion: '2026-03-role-reset-1',
         profileResetNotice: false,
+        initialOpenReservationPayload: null,
         getSubmitUrl() {
             if (this.submitMode === 'edit' && this.editReservationId) {
                 return this.reservationUpdateUrlTemplate.replace('999999', this.editReservationId);
@@ -32,6 +33,18 @@
         },
         init() {
             this.applyProfileVersionReset();
+            this.loadInitialOpenReservationPayload();
+            if (this.initialOpenReservationPayload && this.initialOpenReservationPayload.id) {
+                this.$nextTick(() => this.openEditBooking(this.initialOpenReservationPayload));
+            }
+        },
+        loadInitialOpenReservationPayload() {
+            try {
+                const raw = document.getElementById('reservation-initial-open-data');
+                this.initialOpenReservationPayload = raw ? JSON.parse(raw.textContent || 'null') : null;
+            } catch {
+                this.initialOpenReservationPayload = null;
+            }
         },
         applyProfileVersionReset() {
             const currentVersion = localStorage.getItem(this.profileVersionKey);
@@ -203,6 +216,7 @@
         }
     }"
     >
+    {{ initial_open_reservation_payload|json_script:"reservation-initial-open-data" }}
 
     {% if reservation_followup %}
     <div class="max-w-7xl mx-auto px-4 mb-4">

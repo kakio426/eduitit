@@ -13,6 +13,7 @@ from classcalendar.integrations import (
     SOURCE_SIGNATURES_TRAINING,
 )
 from classcalendar.models import CalendarEvent, CalendarIntegrationSetting
+from classcalendar.models import CalendarMessageCapture, CalendarTask
 from classcalendar.views import INTEGRATION_SYNC_SESSION_KEY
 
 
@@ -82,6 +83,94 @@ class IntegrationLinksAndSettingsTests(TestCase):
         self.assertTrue(source_map[SOURCE_CONSENT_EXPIRY]["source_url"])
         self.assertTrue(source_map[SOURCE_RESERVATION]["source_url"])
         self.assertTrue(source_map[SOURCE_SIGNATURES_TRAINING]["source_url"])
+
+    def test_api_events_includes_hub_meta_for_calendar_hub_integrations(self):
+        self._create_locked_event(
+            source=SOURCE_COLLECT_DEADLINE,
+            key=f"collect:{uuid.uuid4()}",
+            title="수합 마감",
+        )
+        self._create_locked_event(
+            source=SOURCE_CONSENT_EXPIRY,
+            key=f"consent:{uuid.uuid4()}",
+            title="동의서 만료",
+        )
+        self._create_locked_event(
+            source=SOURCE_RESERVATION,
+            key="reservation:1:test-school:2026-03-01",
+            title="특별실 예약",
+        )
+        session = self.client.session
+        session[INTEGRATION_SYNC_SESSION_KEY] = timezone.now().timestamp()
+        session.save()
+
+        response = self.client.get(reverse("classcalendar:api_events"))
+        self.assertEqual(response.status_code, 200)
+
+        source_map = {
+            item.get("integration_source"): item
+            for item in response.json().get("events", [])
+        }
+
+        self.assertEqual(source_map[SOURCE_COLLECT_DEADLINE]["hub_meta"]["service_label"], "수합")
+        self.assertEqual(source_map[SOURCE_COLLECT_DEADLINE]["hub_meta"]["action_type"], "source_link")
+        self.assertEqual(source_map[SOURCE_CONSENT_EXPIRY]["hub_meta"]["service_label"], "사인")
+        self.assertEqual(source_map[SOURCE_CONSENT_EXPIRY]["hub_meta"]["action_type"], "source_link")
+        self.assertEqual(source_map[SOURCE_RESERVATION]["hub_meta"]["service_label"], "예약")
+        self.assertEqual(source_map[SOURCE_RESERVATION]["hub_meta"]["action_type"], "source_link")
+        self.assertIn("reservation=1", source_map[SOURCE_RESERVATION]["source_url"])
+
+    def test_api_events_marks_message_capture_items_for_calendar_hub(self):
+        now = timezone.now()
+        event = CalendarEvent.objects.create(
+            title="저장한 메시지 일정",
+            author=self.user,
+            start_time=now,
+            end_time=now + timedelta(hours=1),
+            is_all_day=False,
+            source=CalendarEvent.SOURCE_LOCAL,
+            visibility=CalendarEvent.VISIBILITY_TEACHER,
+        )
+        task = CalendarTask.objects.create(
+            title="저장한 메시지 할 일",
+            author=self.user,
+            due_at=now + timedelta(days=1),
+            has_time=True,
+        )
+        capture_event = CalendarMessageCapture.objects.create(
+            author=self.user,
+            raw_text="행사 안내 메시지",
+            extracted_title="행사 안내 메시지",
+            parse_status=CalendarMessageCapture.ParseStatus.PARSED,
+            committed_event=event,
+        )
+        capture_task = CalendarMessageCapture.objects.create(
+            author=self.user,
+            raw_text="준비물 메시지",
+            extracted_title="준비물 메시지",
+            parse_status=CalendarMessageCapture.ParseStatus.PARSED,
+            committed_task=task,
+        )
+        session = self.client.session
+        session[INTEGRATION_SYNC_SESSION_KEY] = timezone.now().timestamp()
+        session.save()
+
+        response = self.client.get(reverse("classcalendar:api_events"))
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+
+        event_item = next(item for item in payload["events"] if item["id"] == str(event.id))
+        task_item = next(item for item in payload["tasks"] if item["id"] == str(task.id))
+
+        self.assertEqual(event_item["hub_meta"]["service_label"], "메시지 저장")
+        self.assertEqual(event_item["hub_meta"]["action_type"], "message_capture")
+        self.assertEqual(event_item["hub_meta"]["message_capture_id"], str(capture_event.id))
+        self.assertEqual(event_item["hub_meta"]["status_text"], "완료")
+
+        self.assertEqual(task_item["hub_meta"]["service_label"], "메시지 저장")
+        self.assertEqual(task_item["hub_meta"]["action_type"], "message_capture")
+        self.assertEqual(task_item["hub_meta"]["message_capture_id"], str(capture_task.id))
+        self.assertEqual(task_item["hub_meta"]["status_text"], "완료")
 
     def test_api_events_force_sync_removes_stale_integration_event(self):
         stale_event = self._create_locked_event(
