@@ -45,6 +45,7 @@ from .services.engine import (
     NoPrizeAvailableError,
     add_seeds,
     execute_bloom_draw,
+    grant_seeds_and_execute_draw,
     get_garden_data,
     grant_tickets,
     log_class_event,
@@ -76,6 +77,11 @@ def _api_err(request, code, message, status=400, details=None):
     )
 
 
+def _wants_json(request):
+    accept = (request.headers.get("Accept") or "").lower()
+    return "application/json" in accept
+
+
 def get_teacher_classroom(request, classroom_id):
     return get_object_or_404(
         HSClassroom,
@@ -83,6 +89,172 @@ def get_teacher_classroom(request, classroom_id):
         teacher=request.user,
         is_active=True,
     )
+
+
+def _build_group_infos(classroom):
+    groups = (
+        HSStudentGroup.objects.filter(classroom=classroom)
+        .prefetch_related("members__consent")
+        .order_by("name")
+    )
+    group_infos = []
+    for group in groups:
+        members = list(group.members.all())
+        eligible_count = sum(
+            1
+            for member in members
+            if member.is_active
+            and getattr(member, "consent", None)
+            and member.consent.status == "approved"
+        )
+        group_infos.append(
+            {
+                "group": group,
+                "eligible_count": eligible_count,
+                "member_count": len(members),
+            }
+        )
+    return group_infos
+
+
+def _build_classroom_workspace_context(classroom):
+    config, _ = HSClassroomConfig.objects.get_or_create(classroom=classroom)
+    students = list(
+        classroom.students.filter(is_active=True)
+        .select_related("consent")
+        .order_by("number", "name")
+    )
+    has_rewards = classroom.has_available_rewards
+    draw_ready_count = 0
+    approved_count = 0
+    pending_count = 0
+
+    for student in students:
+        consent = getattr(student, "consent", None)
+        consent_status = getattr(consent, "status", "pending")
+        is_approved = consent_status == "approved"
+        student.is_consent_approved = is_approved
+        if is_approved:
+            approved_count += 1
+        else:
+            pending_count += 1
+        if not has_rewards:
+            student.draw_disabled_reason = "보상 설정 후 사용할 수 있어요."
+        elif not is_approved:
+            student.draw_disabled_reason = "동의 완료 후 추첨할 수 있어요."
+        elif student.ticket_count < 1:
+            student.draw_disabled_reason = "티켓이 생기면 바로 추첨할 수 있어요."
+        else:
+            student.draw_disabled_reason = ""
+        student.can_draw = bool(has_rewards and is_approved and student.ticket_count > 0)
+        if not is_approved:
+            student.operation_status_label = "동의 대기"
+            student.operation_status_tone = "amber"
+        elif student.can_draw:
+            student.operation_status_label = "바로 뽑기 가능"
+            student.operation_status_tone = "violet"
+        else:
+            student.operation_status_label = "씨앗 모으는 중"
+            student.operation_status_tone = "emerald"
+        if student.can_draw:
+            draw_ready_count += 1
+
+    today_logs = HSClassEventLog.objects.filter(
+        class_ref=classroom,
+        type="SEED_GRANTED_MANUAL",
+        timestamp__date=timezone.localdate(),
+    )
+    today_seed_total = 0
+    for log in today_logs:
+        try:
+            today_seed_total += int((log.meta or {}).get("amount", 0) or 0)
+        except (TypeError, ValueError):
+            continue
+
+    last_draw = (
+        HSBloomDraw.objects.filter(student__classroom=classroom)
+        .select_related("student", "prize")
+        .order_by("-drawn_at")
+        .first()
+    )
+
+    alerts = []
+    if not has_rewards:
+        alerts.append("보상 재고가 없어 추첨을 바로 시작할 수 없습니다.")
+    if pending_count:
+        alerts.append(f"동의 대기 학생 {pending_count}명은 추첨에 참여할 수 없습니다.")
+    if students and draw_ready_count == 0:
+        alerts.append("지금 바로 뽑기 가능한 학생이 없습니다. 씨앗 또는 티켓 상태를 확인해 주세요.")
+    if not students:
+        alerts.append("학생이 아직 없어 학생 관리에서 먼저 등록해야 합니다.")
+
+    return {
+        "classroom": classroom,
+        "config": config,
+        "students": students,
+        "has_rewards": has_rewards,
+        "draw_ready_count": draw_ready_count,
+        "approved_count": approved_count,
+        "pending_count": pending_count,
+        "today_seed_total": today_seed_total,
+        "today_seed_actions": today_logs.count(),
+        "last_draw": last_draw,
+        "group_infos": _build_group_infos(classroom),
+        "default_group_draw_count": max(1, min(2, config.group_draw_count)),
+        "operation_alerts": alerts,
+        "quick_seed_amounts": (1, 3, 5),
+        "default_seed_amount": 1,
+        "action_mode_default": "grant",
+    }
+
+
+def _build_draw_presentation_payload(draw, student):
+    if draw.is_win:
+        headline = "축하합니다!"
+        body = f"{student.name} 학생이 오늘 꽃을 피웠어요."
+        accent = "win"
+    else:
+        headline = "씨앗이 자랐어요!"
+        body = f"{student.name} 학생에게 씨앗 +1이 적립되었어요."
+        accent = "grow"
+
+    return {
+        "mode": "result",
+        "result_kind": "WIN" if draw.is_win else "LOSE",
+        "student_name": student.name,
+        "headline": headline,
+        "body": body,
+        "reward_name": draw.prize.name if draw.prize else "",
+        "footer": "나의 작은 행동 하나하나가 나의 미래, 너의 미래, 우리 모두의 미래를 행복으로 바꿉니다.",
+        "accent": accent,
+    }
+
+
+def _build_student_state_payload(student):
+    return {
+        "student_id": str(student.id),
+        "tokens_available": student.ticket_count,
+        "seeds_balance": student.seed_count,
+    }
+
+
+def _build_draw_api_payload(draw, student):
+    return {
+        "event_id": str(draw.id),
+        "result": "WIN" if draw.is_win else "LOSE",
+        "reward": (
+            {"reward_id": str(draw.prize.id), "title_text": draw.prize.name}
+            if draw.prize
+            else None
+        ),
+        "student_state": _build_student_state_payload(student),
+        "display_overlay": {
+            "show": True,
+            "student_name": student.name,
+            "message_footer": "나의 작은 행동 하나하나가 나의 미래, 너의 미래, 우리 모두의 미래를 행복으로 바꿉니다.",
+        },
+        "presentation": _build_draw_presentation_payload(draw, student),
+    }
 
 
 def _apply_seed_quiz_retro_rewards_for_student(student) -> int:
@@ -396,15 +568,7 @@ def classroom_create(request):
 @login_required
 def classroom_detail(request, classroom_id):
     classroom = get_teacher_classroom(request, classroom_id)
-    config, _ = HSClassroomConfig.objects.get_or_create(classroom=classroom)
-    return render(
-        request,
-        "happy_seed/classroom_detail.html",
-        {
-            "classroom": classroom,
-            "config": config,
-        },
-    )
+    return render(request, "happy_seed/classroom_detail.html", _build_classroom_workspace_context(classroom))
 
 
 @login_required
@@ -1398,40 +1562,7 @@ def bloom_grant(request, classroom_id):
 @login_required
 def bloom_run(request, classroom_id):
     classroom = get_teacher_classroom(request, classroom_id)
-    has_rewards = classroom.has_available_rewards
-    config, _ = HSClassroomConfig.objects.get_or_create(classroom=classroom)
-    students_with_tickets = classroom.students.filter(
-        is_active=True,
-        ticket_count__gt=0,
-    ).select_related("consent").order_by("number", "name")
-    groups = HSStudentGroup.objects.filter(classroom=classroom).prefetch_related("members__consent").order_by("name")
-    group_infos = []
-    for g in groups:
-        eligible = [
-            m for m in g.members.all()
-            if m.is_active and getattr(m, "consent", None) and m.consent.status == "approved"
-        ]
-        group_infos.append({"group": g, "eligible_count": len(eligible), "member_count": g.members.count()})
-    draw = None
-    token = ""
-    draw_id = request.GET.get("draw", "")
-    if draw_id:
-        draw = HSBloomDraw.objects.filter(id=draw_id, student__classroom=classroom).select_related("student", "prize").first()
-        if draw:
-            token = str(draw.celebration_token)
-    return render(
-        request,
-        "happy_seed/bloom_run.html",
-        {
-            "classroom": classroom,
-            "students": students_with_tickets,
-            "has_rewards": has_rewards,
-            "group_infos": group_infos,
-            "default_group_draw_count": max(1, min(2, config.group_draw_count)),
-            "last_draw": draw,
-            "last_draw_token": token,
-        },
-    )
+    return redirect("happy_seed:classroom_detail", classroom_id=classroom.id)
 
 
 @login_required
@@ -1448,7 +1579,11 @@ def bloom_draw(request, student_id):
 
     try:
         draw = execute_bloom_draw(student, classroom, request.user, request_id)
-        return redirect(f"{reverse('happy_seed:bloom_run', kwargs={'classroom_id': classroom.id})}?draw={draw.id}")
+        messages.success(
+            request,
+            f"{student.name} 추첨이 완료되었습니다. 운영 화면에서 현재 상태를 확인해 주세요.",
+        )
+        return redirect("happy_seed:classroom_detail", classroom_id=classroom.id)
     except ConsentRequiredError:
         messages.error(request, f"{student.name}은(는) 보호자 동의가 필요합니다.")
     except InsufficientTicketsError:
@@ -1456,7 +1591,7 @@ def bloom_draw(request, student_id):
     except NoPrizeAvailableError:
         messages.error(request, "사용 가능한 보상이 없습니다. 보상을 먼저 등록하거나 재고를 확인해 주세요.")
 
-    return redirect("happy_seed:bloom_run", classroom_id=classroom.id)
+    return redirect("happy_seed:classroom_detail", classroom_id=classroom.id)
 
 
 @login_required
@@ -1465,13 +1600,55 @@ def seed_grant(request, student_id):
     student = get_object_or_404(HSStudent, id=student_id)
     classroom = get_teacher_classroom(request, student.classroom_id)
 
-    amount = int(request.POST.get("amount", 1))
+    try:
+        amount = int(request.POST.get("amount", 1))
+    except (TypeError, ValueError):
+        if _wants_json(request):
+            return _api_err(request, "ERR_INVALID_REQUEST", "지급 수량을 확인해 주세요.", status=400)
+        return render(
+            request,
+            "happy_seed/partials/student_grid.html",
+            {
+                "classroom": classroom,
+                "students": classroom.students.filter(is_active=True).select_related("consent").order_by("number", "name"),
+                "error": "지급 수량을 확인해 주세요.",
+            },
+        )
+
+    if amount not in {1, 3, 5}:
+        if _wants_json(request):
+            return _api_err(
+                request,
+                "ERR_INVALID_SEED_GRANT_AMOUNT",
+                "운영 화면에서는 씨앗을 1, 3, 5개만 빠르게 지급할 수 있습니다.",
+                status=400,
+            )
+        return render(
+            request,
+            "happy_seed/partials/student_grid.html",
+            {
+                "classroom": classroom,
+                "students": classroom.students.filter(is_active=True).select_related("consent").order_by("number", "name"),
+                "error": "씨앗은 1, 3, 5개만 빠르게 지급할 수 있습니다.",
+            },
+        )
+
     detail = request.POST.get("detail", "교사 부여")
 
     add_seeds(student, amount, "teacher_grant", detail)
     log_class_event(classroom, "SEED_GRANTED_MANUAL", student=student, meta={"amount": amount, "detail": detail})
 
     student.refresh_from_db()
+    if _wants_json(request):
+        return _api_ok(
+            request,
+            {
+                "student_state": _build_student_state_payload(student),
+                "granted_amount": amount,
+                "message": f"{student.name} 학생에게 씨앗 {amount}개를 지급했습니다.",
+            },
+        )
+
     students = classroom.students.filter(is_active=True).select_related("consent").order_by("number", "name")
     return render(
         request,
@@ -1518,7 +1695,7 @@ def close_celebration(request, draw_id):
     draw.celebration_closed = True
     draw.celebration_token = uuid.uuid4()
     draw.save()
-    return redirect(f"{reverse('happy_seed:bloom_run', kwargs={'classroom_id': classroom.id})}?draw={draw.id}")
+    return redirect("happy_seed:classroom_detail", classroom_id=classroom.id)
 
 
 def garden_public(request, slug):
@@ -1810,28 +1987,69 @@ def api_execute_draw(request, classroom_id):
         return _api_err(request, "ERR_REWARD_EMPTY", "사용 가능한 보상이 없습니다.", status=400)
 
     student.refresh_from_db()
-    return _api_ok(
-        request,
-        {
-            "event_id": str(draw.id),
-            "result": "WIN" if draw.is_win else "LOSE",
-            "reward": (
-                {"reward_id": str(draw.prize.id), "title_text": draw.prize.name}
-                if draw.prize
-                else None
-            ),
-            "student_state": {
-                "student_id": str(student.id),
-                "tokens_available": student.ticket_count,
-                "seeds_balance": student.seed_count,
-            },
-            "display_overlay": {
-                "show": True,
-                "student_name": student.name,
-                "message_footer": "나의 작은 행동 하나하나가 나의 미래, 너의 미래, 우리 모두의 미래를 행복으로 바꿉니다.",
-            },
-        },
-    )
+    return _api_ok(request, _build_draw_api_payload(draw, student))
+
+
+@login_required
+@require_POST
+def api_grant_and_execute_draw(request, classroom_id):
+    classroom = get_teacher_classroom(request, classroom_id)
+    try:
+        body = json.loads(request.body.decode("utf-8")) if request.body else {}
+    except json.JSONDecodeError:
+        return _api_err(request, "ERR_INVALID_REQUEST", "요청 본문(JSON)을 확인해 주세요.", status=400)
+
+    student_id = body.get("student_id")
+    if not student_id:
+        return _api_err(request, "ERR_INVALID_REQUEST", "student_id가 필요합니다.", status=400)
+    student = HSStudent.objects.filter(id=student_id, classroom=classroom).first()
+    if not student:
+        return _api_err(request, "ERR_NOT_FOUND", "학생을 찾을 수 없습니다.", status=404)
+
+    try:
+        seed_amount = int(body.get("seed_amount", 1))
+    except (TypeError, ValueError):
+        return _api_err(request, "ERR_INVALID_REQUEST", "지급 수량을 확인해 주세요.", status=400)
+
+    if seed_amount not in {1, 3, 5}:
+        return _api_err(
+            request,
+            "ERR_INVALID_SEED_GRANT_AMOUNT",
+            "운영 화면에서는 씨앗을 1, 3, 5개만 빠르게 지급할 수 있습니다.",
+            status=400,
+        )
+
+    raw_key = request.headers.get("Idempotency-Key") or body.get("idempotency_key") or str(uuid.uuid4())
+    try:
+        request_id = uuid.UUID(str(raw_key))
+    except ValueError:
+        request_id = uuid.uuid4()
+
+    try:
+        draw = grant_seeds_and_execute_draw(
+            student=student,
+            classroom=classroom,
+            created_by=request.user,
+            seed_amount=seed_amount,
+            detail="운영 화면 지급 후 바로 뽑기",
+            request_id=request_id,
+        )
+    except ConsentRequiredError:
+        return _api_err(request, "ERR_CONSENT_REQUIRED", "동의 완료 후 사용할 수 있습니다.", status=400)
+    except InsufficientTicketsError:
+        return _api_err(
+            request,
+            "ERR_TOKEN_INSUFFICIENT",
+            "이번 지급만으로는 바로 뽑기할 수 없습니다.",
+            status=400,
+        )
+    except NoPrizeAvailableError:
+        return _api_err(request, "ERR_REWARD_EMPTY", "사용 가능한 보상이 없습니다.", status=400)
+
+    student.refresh_from_db()
+    payload = _build_draw_api_payload(draw, student)
+    payload["granted_amount"] = seed_amount
+    return _api_ok(request, payload)
 
 
 @login_required
@@ -1900,6 +2118,16 @@ def api_consent_sync_sign_talk(request, classroom_id):
             "approved_after": after,
             "approved_delta": max(0, after - before),
         },
+    )
+
+
+@login_required
+def classroom_workspace_partial(request, classroom_id):
+    classroom = get_teacher_classroom(request, classroom_id)
+    return render(
+        request,
+        "happy_seed/partials/classroom_workspace.html",
+        _build_classroom_workspace_context(classroom),
     )
 
 

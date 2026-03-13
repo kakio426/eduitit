@@ -1,60 +1,117 @@
 {% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    .happy-seed-stage {
+        pointer-events: none;
+    }
+
+    #HAPPY_SEED_PRESENTATION[data-accent="win"] .happy-seed-stage {
+        background:
+            radial-gradient(circle at top, rgba(251, 207, 232, 0.28), transparent 34%),
+            radial-gradient(circle at bottom, rgba(253, 186, 116, 0.18), transparent 30%),
+            linear-gradient(180deg, #34113f 0%, #1f1235 45%, #12091d 100%);
+    }
+
+    #HAPPY_SEED_PRESENTATION[data-accent="grow"] .happy-seed-stage {
+        background:
+            radial-gradient(circle at top, rgba(74, 222, 128, 0.26), transparent 34%),
+            radial-gradient(circle at bottom, rgba(125, 211, 252, 0.16), transparent 30%),
+            linear-gradient(180deg, #0f2f2a 0%, #0d1f1d 45%, #091211 100%);
+    }
+
+    #HAPPY_SEED_PRESENTATION[data-accent="idle"] .happy-seed-stage,
+    #HAPPY_SEED_PRESENTATION[data-accent="loading"] .happy-seed-stage {
+        background:
+            radial-gradient(circle at top, rgba(192, 132, 252, 0.22), transparent 34%),
+            radial-gradient(circle at bottom, rgba(96, 165, 250, 0.16), transparent 30%),
+            linear-gradient(180deg, #1b2245 0%, #161a35 45%, #0e1020 100%);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<section class="pt-32 pb-20 px-4 min-h-screen">
-    <div class="max-w-6xl mx-auto">
-        <div class="flex items-center justify-between mb-6">
+<section class="min-h-screen px-4 pb-20 pt-32">
+    <div id="happy-seed-detail-root"
+         class="mx-auto max-w-7xl"
+         data-classroom-id="{{ classroom.id }}"
+         data-workspace-url="{% url 'happy_seed:classroom_workspace_partial' classroom_id=classroom.id %}"
+         data-draw-api-url="{% url 'happy_seed:api_execute_draw' classroom_id=classroom.id %}"
+         data-grant-draw-api-url="{% url 'happy_seed:api_grant_and_execute_draw' classroom_id=classroom.id %}"
+         data-group-mission-api-url="{% url 'happy_seed:api_group_mission_success' classroom_id=classroom.id %}">
+        <div class="mb-8 flex flex-wrap items-start justify-between gap-4">
             <div>
                 <a href="{% url 'happy_seed:dashboard' %}" class="text-sm text-gray-400 hover:text-gray-600">&larr; 교실 목록</a>
-                <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mt-1">🌱 {{ classroom.name }}</h1>
-                {% if classroom.school_name %}<p class="text-sm text-gray-400">{{ classroom.school_name }}</p>{% endif %}
-                <a href="{% url 'happy_seed:teacher_manual' %}" class="mt-2 inline-flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-green-700 transition-colors">처음이면 사용 안내 보기</a>
-            </div>
-            <div class="flex gap-2">
-                <a href="{% url 'happy_seed:classroom_settings' classroom_id=classroom.id %}" class="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors">설정</a>
-                <a href="{% url 'happy_seed:student_manage' classroom_id=classroom.id %}" class="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors">학생관리</a>
-                <a href="{% url 'happy_seed:prize_manage' classroom_id=classroom.id %}" class="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors">보상</a>
-                <a href="{% url 'happy_seed:group_manage' classroom_id=classroom.id %}" class="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors">모둠</a>
-                <a href="{% url 'happy_seed:consent_manage' classroom_id=classroom.id %}" class="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors">동의</a>
-            </div>
-        </div>
-        <!-- Quick Actions -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-            <a href="{% url 'happy_seed:bloom_run' classroom_id=classroom.id %}" class="clay-card p-4 rounded-xl text-center hover:bg-white transition-all">
-                <div class="text-2xl mb-1">🌸</div>
-                <div class="text-sm font-bold text-gray-700">꽃피움 추첨</div>
-            </a>
-            <a href="{% url 'happy_seed:activity_manage' classroom_id=classroom.id %}" class="clay-card p-4 rounded-xl text-center hover:bg-white transition-all">
-                <div class="text-2xl mb-1">📝</div>
-                <div class="text-sm font-bold text-gray-700">활동 운영</div>
-            </a>
-            <a href="{% url 'happy_seed:student_manage' classroom_id=classroom.id %}" class="clay-card p-4 rounded-xl text-center hover:bg-white transition-all">
-                <div class="text-2xl mb-1">👥</div>
-                <div class="text-sm font-bold text-gray-700">학생 관리</div>
-            </a>
-            <a href="{% url 'happy_seed:garden_public' slug=classroom.slug %}" target="_blank" rel="noopener noreferrer" class="clay-card p-4 rounded-xl text-center hover:bg-white transition-all">
-                <div class="text-2xl mb-1">🏡</div>
-                <div class="text-sm font-bold text-gray-700">꽃밭 보기</div>
-            </a>
-            <a href="{% url 'happy_seed:analysis_dashboard' classroom_id=classroom.id %}" class="clay-card p-4 rounded-xl text-center hover:bg-white transition-all">
-                <div class="text-2xl mb-1">📊</div>
-                <div class="text-sm font-bold text-gray-700">교사 분석</div>
-            </a>
-            <a href="{% url 'seed_quiz:teacher_dashboard' classroom_id=classroom.id %}" class="clay-card p-4 rounded-xl text-center hover:bg-white transition-all">
-                <div class="text-2xl mb-1">📝</div>
-                <div class="text-sm font-bold text-gray-700">씨앗 퀴즈</div>
-            </a>
-        </div>
-        <div class="clay-card p-5 rounded-2xl">
-            <div class="flex items-center justify-between gap-3 flex-wrap">
-                <div>
-                    <h2 class="font-bold text-gray-800">학생 관리는 학생 관리에서</h2>
-                    <p class="text-sm text-gray-500 mt-1">추가, 일괄 등록, 삭제는 학생 관리 화면에서 이어서 할 수 있습니다.</p>
-                </div>
-                <a href="{% url 'happy_seed:student_manage' classroom_id=classroom.id %}" class="px-4 py-2 bg-green-500 text-white rounded-xl text-sm font-bold hover:bg-green-600 transition-colors">
-                    학생 관리 열기
+                <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-900">행복의 씨앗 운영 화면</h1>
+                <p class="mt-2 text-base leading-7 text-slate-600">
+                    <span class="font-bold text-slate-800">{{ classroom.name }}</span>{% if classroom.school_name %} · {{ classroom.school_name }}{% endif %}
+                </p>
+                <a href="{% url 'happy_seed:teacher_manual' %}" class="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-green-700">
+                    처음이면 사용 안내 보기
                 </a>
             </div>
+            <div class="rounded-[1.75rem] border border-emerald-100 bg-emerald-50/80 px-4 py-3 text-sm font-semibold text-emerald-700 shadow-sm">
+                한 화면에서 지급하고, 같은 화면에서 바로 발표하세요.
+            </div>
+        </div>
+
+        <div id="happy-seed-workspace">
+            {% include 'happy_seed/partials/classroom_workspace.html' %}
         </div>
     </div>
 </section>
+
+<div id="HAPPY_SEED_PRESENTATION"
+     class="hidden fixed inset-0 z-[150] text-white"
+     data-accent="idle"
+     aria-hidden="true">
+    <div class="happy-seed-stage absolute inset-0"></div>
+    <div class="relative flex min-h-screen flex-col px-5 py-6 sm:px-8 sm:py-8">
+        <div class="flex justify-end">
+            <button type="button"
+                    data-presentation-close
+                    class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-bold text-white/90 backdrop-blur hover:bg-white/20">
+                운영으로 돌아가기
+            </button>
+        </div>
+
+        <div class="flex flex-1 items-center justify-center">
+            <div class="mx-auto flex w-full max-w-4xl flex-col items-center text-center">
+                <p id="PRESENTATION_KICKER" class="text-sm font-bold uppercase tracking-[0.35em] text-white/60">발표 모드</p>
+                <div id="PRESENTATION_ICON" class="mt-8 text-7xl sm:text-8xl">✨</div>
+                <h2 id="PRESENTATION_HEADLINE" class="mt-8 text-4xl font-black tracking-tight sm:text-6xl">발표 준비</h2>
+                <p id="PRESENTATION_BODY" class="mt-5 max-w-2xl text-lg leading-8 text-white/80 sm:text-2xl">
+                    학생 카드의 큰 버튼을 누르면 결과가 큰 화면으로 바로 전환됩니다.
+                </p>
+                <div id="PRESENTATION_REWARD"
+                     class="mt-8 hidden rounded-full border border-white/15 bg-white/10 px-6 py-3 text-lg font-bold text-white shadow-lg backdrop-blur">
+                </div>
+                <div id="PRESENTATION_SPINNER" class="mt-8 hidden">
+                    <div class="mx-auto h-16 w-16 animate-spin rounded-full border-4 border-white/20 border-t-white"></div>
+                </div>
+                <p id="PRESENTATION_FOOTER" class="mt-12 max-w-2xl text-sm leading-7 text-white/55 sm:text-base">
+                    나의 작은 행동 하나하나가 나의 미래, 너의 미래, 우리 모두의 미래를 행복으로 바꿉니다.
+                </p>
+                <div class="mt-10 flex flex-wrap justify-center gap-3">
+                    <button type="button"
+                            id="BTN_PRESENTATION_NEXT"
+                            data-presentation-next
+                            class="hidden rounded-full bg-white px-6 py-3 text-sm font-black text-slate-900 shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl">
+                        다음 학생 준비
+                    </button>
+                    <button type="button"
+                            data-presentation-close
+                            class="rounded-full border border-white/20 bg-white/10 px-6 py-3 text-sm font-black text-white backdrop-blur transition hover:bg-white/20">
+                        운영으로 복귀
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'happy_seed/js/classroom_detail.js' %}"></script>
 {% endblock %}

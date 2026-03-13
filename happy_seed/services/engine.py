@@ -61,83 +61,71 @@ def execute_bloom_draw(student, classroom, created_by, request_id=None):
 
     with transaction.atomic():
         student = HSStudent.objects.select_for_update().get(pk=student.pk)
+        return _execute_bloom_draw_locked(
+            student=student,
+            classroom=classroom,
+            created_by=created_by,
+            config=config,
+            request_id=request_id,
+        )
+
+
+def grant_seeds_and_execute_draw(student, classroom, created_by, seed_amount, detail="", request_id=None):
+    """
+    씨앗 지급 후 즉시 추첨 실행 (멱등성 + 단일 트랜잭션)
+    """
+    if request_id is None:
+        request_id = uuid.uuid4()
+
+    existing = HSBloomDraw.objects.filter(request_id=request_id).first()
+    if existing:
+        return existing
+
+    config, _ = HSClassroomConfig.objects.get_or_create(classroom=classroom)
+
+    with transaction.atomic():
+        student = HSStudent.objects.select_for_update().get(pk=student.pk)
 
         consent = getattr(student, "consent", None)
         if not consent or consent.status != "approved":
             raise ConsentRequiredError("보호자 동의가 필요합니다.")
-
-        if student.ticket_count < 1:
-            raise InsufficientTicketsError("티켓이 부족합니다.")
         if not classroom.has_available_rewards:
             raise NoPrizeAvailableError("사용 가능한 보상이 없습니다.")
-        student.ticket_count -= 1
 
-        is_forced = student.pending_forced_win
-        if is_forced:
-            student.pending_forced_win = False
-
-        base_rate = Decimal(config.base_win_rate)
-        balance_adj = Decimal("0")
-        if config.balance_mode_enabled and not is_forced:
-            balance_adj = _calculate_balance_adjustment(student, config)
-
-        effective_rate = base_rate + balance_adj
-        effective_rate = max(Decimal("0"), min(Decimal("100"), effective_rate))
-
-        if is_forced:
-            is_win = True
-        else:
-            roll = random.randint(1, 100)
-            is_win = roll <= int(effective_rate)
-
-        prize = None
-        if is_win:
-            prize = _select_prize(classroom)
-            if prize is None:
-                raise NoPrizeAvailableError("사용 가능한 보상이 없습니다.")
-        else:
-            _add_seeds_internal(student, 1, "no_win", "미당첨 보정", config)
-
-        if is_win:
-            student.total_wins += 1
-
-        student.save()
-
-        HSTicketLedger.objects.create(
+        projected_ticket_count = _project_ticket_count_after_seed_grant(
             student=student,
-            source="participation",
-            amount=-1,
-            detail="꽃피움 추첨 사용",
-            balance_after=student.ticket_count,
-            request_id=uuid.uuid4(),
+            seed_amount=seed_amount,
+            seeds_per_bloom=config.seeds_per_bloom,
+        )
+        if projected_ticket_count < 1:
+            raise InsufficientTicketsError("이번 지급만으로는 바로 추첨할 티켓이 부족합니다.")
+
+        grant_request_id = uuid.uuid5(
+            uuid.NAMESPACE_URL,
+            f"happy-seed:grant-before-draw:{request_id}",
+        )
+        _add_seeds_internal(
+            student=student,
+            amount=seed_amount,
+            reason="teacher_grant",
+            detail=detail or "운영 화면 지급 후 바로 뽑기",
+            config=config,
+            request_id=grant_request_id,
+        )
+        log_class_event(
+            classroom,
+            "SEED_GRANTED_MANUAL",
+            student=student,
+            meta={"amount": seed_amount, "detail": detail or "운영 화면 지급 후 바로 뽑기"},
         )
 
-        draw = HSBloomDraw.objects.create(
+        return _execute_bloom_draw_locked(
             student=student,
-            is_win=is_win,
-            prize=prize,
-            input_probability=base_rate,
-            balance_adjustment=balance_adj,
-            effective_probability=effective_rate,
-            is_forced=is_forced,
-            force_reason="교사 예약 개입" if is_forced else "",
-            request_id=request_id,
+            classroom=classroom,
             created_by=created_by,
+            config=config,
+            request_id=request_id,
         )
-        log_class_event(classroom, "DRAW_EXECUTED", student=student, meta={"request_id": str(request_id)})
-        if is_win:
-            log_class_event(
-                classroom,
-                "DRAW_WIN",
-                student=student,
-                meta={"prize_id": str(prize.id) if prize else None, "prize_name": prize.name if prize else None},
-            )
-        else:
-            log_class_event(classroom, "DRAW_LOSE", student=student)
-            log_class_event(classroom, "SEED_AUTO_FROM_LOSS", student=student, meta={"amount": 1})
-        if is_forced:
-            log_class_event(classroom, "TEACHER_OVERRIDE_USED", student=student)
-        return draw
 
 
 def add_seeds(student, amount, reason, detail="", request_id=None):
@@ -202,6 +190,92 @@ def _add_seeds_internal(student, amount, reason, detail, config, request_id=None
 
     student.save()
     return ledger
+
+
+def _project_ticket_count_after_seed_grant(student, seed_amount, seeds_per_bloom):
+    if seeds_per_bloom <= 0:
+        return student.ticket_count
+    gained_tickets = (student.seed_count + seed_amount) // seeds_per_bloom
+    return student.ticket_count + gained_tickets
+
+
+def _execute_bloom_draw_locked(student, classroom, created_by, config, request_id):
+    consent = getattr(student, "consent", None)
+    if not consent or consent.status != "approved":
+        raise ConsentRequiredError("보호자 동의가 필요합니다.")
+
+    if student.ticket_count < 1:
+        raise InsufficientTicketsError("티켓이 부족합니다.")
+    if not classroom.has_available_rewards:
+        raise NoPrizeAvailableError("사용 가능한 보상이 없습니다.")
+    student.ticket_count -= 1
+
+    is_forced = student.pending_forced_win
+    if is_forced:
+        student.pending_forced_win = False
+
+    base_rate = Decimal(config.base_win_rate)
+    balance_adj = Decimal("0")
+    if config.balance_mode_enabled and not is_forced:
+        balance_adj = _calculate_balance_adjustment(student, config)
+
+    effective_rate = base_rate + balance_adj
+    effective_rate = max(Decimal("0"), min(Decimal("100"), effective_rate))
+
+    if is_forced:
+        is_win = True
+    else:
+        roll = random.randint(1, 100)
+        is_win = roll <= int(effective_rate)
+
+    prize = None
+    if is_win:
+        prize = _select_prize(classroom)
+        if prize is None:
+            raise NoPrizeAvailableError("사용 가능한 보상이 없습니다.")
+    else:
+        _add_seeds_internal(student, 1, "no_win", "미당첨 보정", config)
+
+    if is_win:
+        student.total_wins += 1
+
+    student.save()
+
+    HSTicketLedger.objects.create(
+        student=student,
+        source="participation",
+        amount=-1,
+        detail="꽃피움 추첨 사용",
+        balance_after=student.ticket_count,
+        request_id=uuid.uuid5(uuid.NAMESPACE_URL, f"happy-seed:ticket-use:{request_id}"),
+    )
+
+    draw = HSBloomDraw.objects.create(
+        student=student,
+        is_win=is_win,
+        prize=prize,
+        input_probability=base_rate,
+        balance_adjustment=balance_adj,
+        effective_probability=effective_rate,
+        is_forced=is_forced,
+        force_reason="교사 예약 개입" if is_forced else "",
+        request_id=request_id,
+        created_by=created_by,
+    )
+    log_class_event(classroom, "DRAW_EXECUTED", student=student, meta={"request_id": str(request_id)})
+    if is_win:
+        log_class_event(
+            classroom,
+            "DRAW_WIN",
+            student=student,
+            meta={"prize_id": str(prize.id) if prize else None, "prize_name": prize.name if prize else None},
+        )
+    else:
+        log_class_event(classroom, "DRAW_LOSE", student=student)
+        log_class_event(classroom, "SEED_AUTO_FROM_LOSS", student=student, meta={"amount": 1})
+    if is_forced:
+        log_class_event(classroom, "TEACHER_OVERRIDE_USED", student=student)
+    return draw
 
 
 def grant_tickets(student, source, amount, detail="", request_id=None):

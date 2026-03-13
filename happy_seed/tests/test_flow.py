@@ -1,3 +1,4 @@
+import json
 import uuid
 
 from django.contrib.auth import get_user_model
@@ -56,8 +57,10 @@ class HappySeedFlowTests(TestCase):
         draw_url = reverse("happy_seed:bloom_draw", kwargs={"student_id": student.id})
         draw_res = self.client.post(draw_url, {"request_id": str(uuid.uuid4())})
         self.assertEqual(draw_res.status_code, 302)
-        self.assertIn("/bloom/run/", draw_res.url)
-        self.assertIn("draw=", draw_res.url)
+        self.assertEqual(
+            draw_res.url,
+            reverse("happy_seed:classroom_detail", kwargs={"classroom_id": self.classroom.id}),
+        )
 
         draw = HSBloomDraw.objects.get(student=student)
         celebrate_url = reverse("happy_seed:celebration", kwargs={"draw_id": draw.id})
@@ -75,3 +78,42 @@ class HappySeedFlowTests(TestCase):
         url = reverse("happy_seed:garden_public", kwargs={"slug": self.classroom.slug})
         res = self.client.get(url)
         self.assertEqual(res.status_code, 200)
+
+    def test_teacher_single_surface_grant_then_draw_flow(self):
+        self.client.login(username="teacher_flow", password="pw12345")
+
+        student = HSStudent.objects.create(
+            classroom=self.classroom,
+            name="다온",
+            number=3,
+            ticket_count=0,
+            seed_count=9,
+        )
+        HSGuardianConsent.objects.create(student=student, status="approved")
+        config = HSClassroomConfig.objects.get(classroom=self.classroom)
+        config.base_win_rate = 100
+        config.save(update_fields=["base_win_rate"])
+
+        url = reverse("happy_seed:api_grant_and_execute_draw", kwargs={"classroom_id": self.classroom.id})
+        request_id = str(uuid.uuid4())
+        res = self.client.post(
+            url,
+            data=json.dumps(
+                {
+                    "student_id": str(student.id),
+                    "seed_amount": 1,
+                    "idempotency_key": request_id,
+                }
+            ),
+            content_type="application/json",
+            **{"HTTP_X_REQUEST_ID": request_id, "HTTP_IDEMPOTENCY_KEY": request_id},
+        )
+
+        self.assertEqual(res.status_code, 200)
+        payload = res.json()
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["data"]["granted_amount"], 1)
+        student.refresh_from_db()
+        self.assertEqual(student.seed_count, 0)
+        self.assertEqual(student.ticket_count, 0)
+        self.assertTrue(HSBloomDraw.objects.filter(student=student).exists())

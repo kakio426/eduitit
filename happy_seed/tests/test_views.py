@@ -49,14 +49,30 @@ class HappySeedViewTests(TestCase):
         self.assertNotContains(res, "빠른 시작:")
         self.assertNotContains(res, "꽃밭 대시보드:")
 
-    def test_classroom_detail_demotes_manual_and_keeps_class_actions_first(self):
+    def test_classroom_detail_focuses_single_screen_operations(self):
         self.client.login(username="teacher2", password="pw12345")
         res = self.client.get(reverse("happy_seed:classroom_detail", kwargs={"classroom_id": self.classroom.id}))
         self.assertEqual(res.status_code, 200)
         self.assertContains(res, "처음이면 사용 안내 보기")
-        self.assertContains(res, "학생 관리 열기")
+        self.assertContains(res, "수업 도구")
+        self.assertContains(res, "학생 보드")
+        self.assertContains(res, 'data-seed-amount-select')
+        self.assertContains(res, 'data-action-mode-select')
+        self.assertContains(res, 'data-student-primary-action')
+        self.assertContains(res, "모둠 미션 성공 처리")
         self.assertContains(res, "꽃밭 보기")
-        self.assertNotContains(res, "교사용 설명서")
+        self.assertNotContains(res, 'data-draw-trigger')
+        self.assertNotContains(res, "빠른 지급")
+        self.assertNotContains(res, "꽃피움 추첨")
+
+    def test_bloom_run_redirects_to_canonical_classroom_detail(self):
+        self.client.login(username="teacher2", password="pw12345")
+        res = self.client.get(reverse("happy_seed:bloom_run", kwargs={"classroom_id": self.classroom.id}))
+        self.assertEqual(res.status_code, 302)
+        self.assertRedirects(
+            res,
+            reverse("happy_seed:classroom_detail", kwargs={"classroom_id": self.classroom.id}),
+        )
 
     def test_celebration_requires_valid_token(self):
         draw = HSBloomDraw.objects.create(
@@ -382,6 +398,34 @@ class HappySeedViewTests(TestCase):
         self.assertTrue(self.student.is_active)
         self.assertEqual(self.student.consent.status, "approved")
 
+    def test_seed_grant_json_rejects_amount_outside_quick_amounts(self):
+        self.client.login(username="teacher2", password="pw12345")
+        url = reverse("happy_seed:seed_grant", kwargs={"student_id": self.student.id})
+        res = self.client.post(
+            url,
+            {"amount": "2", "detail": "테스트"},
+            HTTP_ACCEPT="application/json",
+        )
+        self.assertEqual(res.status_code, 400)
+        payload = res.json()
+        self.assertFalse(payload["ok"])
+        self.assertEqual(payload["error"]["code"], "ERR_INVALID_SEED_GRANT_AMOUNT")
+
+    def test_seed_grant_json_returns_updated_student_state(self):
+        self.client.login(username="teacher2", password="pw12345")
+        url = reverse("happy_seed:seed_grant", kwargs={"student_id": self.student.id})
+        res = self.client.post(
+            url,
+            {"amount": "3", "detail": "테스트"},
+            HTTP_ACCEPT="application/json",
+        )
+        self.assertEqual(res.status_code, 200)
+        payload = res.json()
+        self.assertTrue(payload["ok"])
+        self.student.refresh_from_db()
+        self.assertEqual(payload["data"]["student_state"]["seeds_balance"], self.student.seed_count)
+        self.assertEqual(self.student.seed_count, 3)
+
     def test_consent_regenerate_link_updates_token_and_reactivates(self):
         self.client.login(username="teacher2", password="pw12345")
         self.student.consent.status = "pending"
@@ -444,6 +488,86 @@ class HappySeedViewTests(TestCase):
         payload = res.json()
         self.assertFalse(payload["ok"])
         self.assertEqual(payload["error"]["code"], "ERR_REWARD_EMPTY")
+
+    def test_api_execute_draw_returns_presentation_payload(self):
+        self.client.login(username="teacher2", password="pw12345")
+        HSPrize.objects.create(
+            classroom=self.classroom,
+            name="학급 스티커",
+            win_rate_percent=100,
+            total_quantity=None,
+            remaining_quantity=None,
+        )
+        url = reverse("happy_seed:api_execute_draw", kwargs={"classroom_id": self.classroom.id})
+        res = self.client.post(
+            url,
+            data='{"student_id":"%s"}' % self.student.id,
+            content_type="application/json",
+            **{"HTTP_X_REQUEST_ID": "req-test-ok", "HTTP_IDEMPOTENCY_KEY": "7d930dc6-c41b-4a22-82ac-1b5c24c01112"},
+        )
+        self.assertEqual(res.status_code, 200)
+        payload = res.json()
+        self.assertTrue(payload["ok"])
+        self.assertIn("presentation", payload["data"])
+        self.assertEqual(payload["data"]["presentation"]["student_name"], self.student.name)
+        self.assertIn(payload["data"]["presentation"]["result_kind"], {"WIN", "LOSE"})
+
+    def test_api_grant_and_execute_draw_rejects_invalid_amount(self):
+        self.client.login(username="teacher2", password="pw12345")
+        url = reverse("happy_seed:api_grant_and_execute_draw", kwargs={"classroom_id": self.classroom.id})
+        res = self.client.post(
+            url,
+            data=json.dumps({"student_id": str(self.student.id), "seed_amount": 2}),
+            content_type="application/json",
+            **{"HTTP_X_REQUEST_ID": "req-test-combo-invalid"},
+        )
+        self.assertEqual(res.status_code, 400)
+        payload = res.json()
+        self.assertFalse(payload["ok"])
+        self.assertEqual(payload["error"]["code"], "ERR_INVALID_SEED_GRANT_AMOUNT")
+
+    def test_api_grant_and_execute_draw_grants_seed_then_returns_presentation_payload(self):
+        self.client.login(username="teacher2", password="pw12345")
+        config = HSClassroomConfig.objects.get(classroom=self.classroom)
+        config.seeds_per_bloom = 10
+        config.base_win_rate = 100
+        config.save(update_fields=["seeds_per_bloom", "base_win_rate"])
+        self.student.ticket_count = 0
+        self.student.seed_count = 9
+        self.student.save(update_fields=["ticket_count", "seed_count"])
+        HSPrize.objects.create(
+            classroom=self.classroom,
+            name="즉시 보상",
+            win_rate_percent=100,
+            total_quantity=None,
+            remaining_quantity=None,
+        )
+
+        url = reverse("happy_seed:api_grant_and_execute_draw", kwargs={"classroom_id": self.classroom.id})
+        res = self.client.post(
+            url,
+            data=json.dumps(
+                {
+                    "student_id": str(self.student.id),
+                    "seed_amount": 1,
+                    "idempotency_key": "7d930dc6-c41b-4a22-82ac-1b5c24c09999",
+                }
+            ),
+            content_type="application/json",
+            **{
+                "HTTP_X_REQUEST_ID": "req-test-combo-ok",
+                "HTTP_IDEMPOTENCY_KEY": "7d930dc6-c41b-4a22-82ac-1b5c24c09999",
+            },
+        )
+        self.assertEqual(res.status_code, 200)
+        payload = res.json()
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["data"]["granted_amount"], 1)
+        self.assertIn("presentation", payload["data"])
+        self.assertTrue(HSBloomDraw.objects.filter(student=self.student).exists())
+        self.student.refresh_from_db()
+        self.assertEqual(self.student.ticket_count, 0)
+        self.assertEqual(self.student.seed_count, 0)
 
     def test_api_group_mission_success_returns_envelope_ok(self):
         self.client.login(username="teacher2", password="pw12345")

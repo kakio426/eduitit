@@ -1,0 +1,276 @@
+<div class="space-y-6"
+     data-classroom-workspace
+     data-seeds-per-bloom="{{ config.seeds_per_bloom }}"
+     data-has-rewards="{% if has_rewards %}true{% else %}false{% endif %}"
+     data-default-seed-amount="{{ default_seed_amount }}"
+     data-default-action-mode="{{ action_mode_default }}">
+    <section class="sticky top-28 z-20 rounded-[2rem] border border-white/70 bg-white/90 p-5 shadow-sm backdrop-blur">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <div>
+                <p class="text-xs font-black uppercase tracking-[0.25em] text-emerald-500">오늘 바로 하는 일</p>
+                <h2 class="mt-2 text-2xl font-black tracking-tight text-slate-900">같은 위치만 눌러도 지급과 뽑기가 이어지게 만들었습니다.</h2>
+                <p class="mt-2 text-sm leading-6 text-slate-500">먼저 이번 동작을 고르고, 학생 카드에서는 큰 버튼 하나만 누르면 됩니다.</p>
+            </div>
+            <button type="button"
+                    data-tools-toggle
+                    class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50">
+                <i class="fa-solid fa-toolbox text-emerald-500"></i>
+                수업 도구
+            </button>
+        </div>
+
+        <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="rounded-[1.5rem] border border-emerald-100 bg-emerald-50/80 px-4 py-4">
+                <div class="text-xs font-bold text-emerald-700">오늘 지급 씨앗</div>
+                <div class="mt-2 text-3xl font-black tracking-tight text-emerald-900">{{ today_seed_total }}</div>
+                <div class="mt-1 text-xs text-emerald-700">총 {{ today_seed_actions }}번 지급</div>
+            </div>
+            <div class="rounded-[1.5rem] border border-violet-100 bg-violet-50/80 px-4 py-4">
+                <div class="text-xs font-bold text-violet-700">뽑기 가능 학생</div>
+                <div class="mt-2 text-3xl font-black tracking-tight text-violet-900">{{ draw_ready_count }}</div>
+                <div class="mt-1 text-xs text-violet-700">지금 바로 발표할 수 있어요</div>
+            </div>
+            <div class="rounded-[1.5rem] border border-sky-100 bg-sky-50/80 px-4 py-4">
+                <div class="text-xs font-bold text-sky-700">동의 완료</div>
+                <div class="mt-2 text-3xl font-black tracking-tight text-sky-900">{{ approved_count }}</div>
+                <div class="mt-1 text-xs text-sky-700">총 {{ students|length }}명 중</div>
+            </div>
+            <div class="rounded-[1.5rem] border border-amber-100 bg-amber-50/80 px-4 py-4">
+                <div class="text-xs font-bold text-amber-700">보상 준비</div>
+                <div class="mt-2 text-xl font-black tracking-tight text-amber-900">{% if has_rewards %}준비 완료{% else %}설정 필요{% endif %}</div>
+                <div class="mt-1 text-xs text-amber-700">{% if has_rewards %}바로 추첨할 수 있어요{% else %}보상을 먼저 채워 주세요{% endif %}</div>
+            </div>
+        </div>
+
+        <div class="mt-5 rounded-[1.5rem] border border-slate-200 bg-slate-50/90 p-4">
+            <div class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+                <label class="block">
+                    <span class="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-slate-500">이번 씨앗</span>
+                    <select data-seed-amount-select
+                            class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 shadow-sm outline-none transition focus:border-emerald-400">
+                        {% for amount in quick_seed_amounts %}
+                        <option value="{{ amount }}" {% if amount == default_seed_amount %}selected{% endif %}>씨앗 +{{ amount }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="block">
+                    <span class="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-slate-500">동작 모드</span>
+                    <select data-action-mode-select
+                            class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 shadow-sm outline-none transition focus:border-emerald-400">
+                        <option value="grant" selected>지급</option>
+                        <option value="grant_and_draw">지급 후 바로 뽑기</option>
+                        <option value="draw">바로 뽑기</option>
+                    </select>
+                </label>
+                <div class="flex items-end">
+                    <div class="w-full rounded-[1.5rem] bg-white px-4 py-3 text-sm text-slate-500 shadow-sm xl:min-w-[240px]">
+                        <p class="text-xs font-black uppercase tracking-[0.2em] text-slate-400">사용 방법</p>
+                        <p class="mt-2 font-semibold leading-6 text-slate-600">학생 카드의 같은 버튼만 계속 누르면 됩니다. 부가 기능은 수업 도구에서 여세요.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="rounded-[2rem] border border-white/70 bg-white/90 p-5 shadow-sm">
+        <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h3 class="text-xl font-black text-slate-900">학생 보드</h3>
+                <p class="mt-1 text-sm text-slate-500">학생별 핵심 정보만 남기고, 실행 버튼은 한 자리로 고정했습니다.</p>
+            </div>
+            <div class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500">총 {{ students|length }}명</div>
+        </div>
+
+        {% if students %}
+        <div class="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
+            {% for student in students %}
+            <article class="rounded-[1.75rem] border border-slate-100 bg-slate-50/80 p-4 shadow-sm"
+                     data-student-card
+                     data-student-id="{{ student.id }}"
+                     data-student-name="{{ student.name }}"
+                     data-seeds-balance="{{ student.seed_count }}"
+                     data-tokens-available="{{ student.ticket_count }}"
+                     data-consent-approved="{% if student.is_consent_approved %}true{% else %}false{% endif %}"
+                     data-draw-disabled-reason="{{ student.draw_disabled_reason }}"
+                     data-seed-grant-url="{% url 'happy_seed:seed_grant' student_id=student.id %}">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="truncate text-lg font-black text-slate-900">{{ student.name }}</p>
+                        <p class="mt-1 text-sm font-semibold text-slate-400">{{ student.number }}번</p>
+                    </div>
+                    {% if student.operation_status_tone == "amber" %}
+                    <span class="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-black text-amber-700">{{ student.operation_status_label }}</span>
+                    {% elif student.operation_status_tone == "violet" %}
+                    <span class="rounded-full bg-violet-100 px-2.5 py-1 text-[11px] font-black text-violet-700">{{ student.operation_status_label }}</span>
+                    {% else %}
+                    <span class="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-black text-emerald-700">{{ student.operation_status_label }}</span>
+                    {% endif %}
+                </div>
+
+                <div class="mt-4 grid grid-cols-2 gap-3">
+                    <div class="rounded-2xl bg-white px-3 py-3 shadow-sm">
+                        <p class="text-xs font-bold text-slate-400">씨앗</p>
+                        <p class="mt-1 text-2xl font-black text-emerald-700">{{ student.seed_count }}</p>
+                    </div>
+                    <div class="rounded-2xl bg-white px-3 py-3 shadow-sm">
+                        <p class="text-xs font-bold text-slate-400">티켓</p>
+                        <p class="mt-1 text-2xl font-black text-fuchsia-700">{{ student.ticket_count }}</p>
+                    </div>
+                </div>
+
+                <div class="mt-4 rounded-[1.5rem] bg-white px-4 py-3 shadow-sm">
+                    <p class="text-xs font-black uppercase tracking-[0.2em] text-slate-400">현재 상태</p>
+                    <p class="mt-2 text-sm font-semibold leading-6 text-slate-600">
+                        {% if student.can_draw %}
+                        바로 뽑기가 가능한 준비 상태입니다.
+                        {% elif student.is_consent_approved %}
+                        씨앗을 더 모으면 바로 뽑기로 이어갈 수 있어요.
+                        {% else %}
+                        동의가 완료되면 추첨까지 이어서 진행할 수 있어요.
+                        {% endif %}
+                    </p>
+                </div>
+
+                <div class="mt-4">
+                    <button type="button"
+                            data-student-primary-action
+                            class="w-full rounded-[1.25rem] bg-slate-900 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800">
+                        +{{ default_seed_amount }} 지급
+                    </button>
+                    <p class="mt-2 min-h-[20px] text-xs text-slate-400" data-student-action-helper>같은 위치를 눌러 연속 지급할 수 있어요.</p>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="rounded-[1.75rem] border border-dashed border-slate-200 bg-slate-50/80 p-10 text-center">
+            <div class="text-5xl">🌱</div>
+            <p class="mt-4 text-lg font-black text-slate-900">학생이 아직 없습니다.</p>
+            <p class="mt-2 text-sm leading-6 text-slate-500">학생 관리에서 반 명단을 먼저 등록하면 이 화면에서 바로 지급과 발표를 시작할 수 있습니다.</p>
+            <a href="{% url 'happy_seed:student_manage' classroom_id=classroom.id %}"
+               class="mt-5 inline-flex items-center gap-2 rounded-full bg-emerald-500 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-emerald-600">
+                학생 관리 열기
+            </a>
+        </div>
+        {% endif %}
+    </section>
+
+    <div data-tools-backdrop class="hidden fixed inset-0 z-[80] bg-slate-900/45 backdrop-blur-sm"></div>
+    <aside data-tools-panel
+           class="pointer-events-none fixed right-0 top-0 z-[90] flex h-full w-full max-w-md translate-x-full flex-col border-l border-white/20 bg-white/95 shadow-2xl transition duration-200">
+        <div class="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-5">
+            <div>
+                <p class="text-xs font-black uppercase tracking-[0.25em] text-emerald-500">수업 도구</p>
+                <h3 class="mt-2 text-xl font-black text-slate-900">자주 쓰지 않는 기능은 여기로 모았습니다.</h3>
+            </div>
+            <button type="button"
+                    data-tools-close
+                    class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-700">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="flex-1 space-y-4 overflow-y-auto px-5 py-5">
+            <section class="rounded-[1.5rem] border border-slate-200 bg-slate-50/90 p-4">
+                <p class="text-xs font-black uppercase tracking-[0.2em] text-slate-400">빠른 도구</p>
+                <div class="mt-3 grid gap-2 sm:grid-cols-2">
+                    <button type="button"
+                            id="BTN_PRESENTATION_TOOL"
+                            data-presentation-open
+                            class="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800">
+                        <i class="fa-solid fa-expand"></i>
+                        발표 준비
+                    </button>
+                    <a href="{% url 'happy_seed:prize_manage' classroom_id=classroom.id %}"
+                       class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-black text-white transition hover:bg-emerald-600">
+                        <i class="fa-solid fa-gift"></i>
+                        보상 설정
+                    </a>
+                </div>
+            </section>
+
+            <section class="rounded-[1.5rem] border border-slate-200 bg-white p-4">
+                <p class="text-xs font-black uppercase tracking-[0.2em] text-slate-400">관리 화면</p>
+                <div class="mt-3 grid gap-2">
+                    <a href="{% url 'happy_seed:student_manage' classroom_id=classroom.id %}" class="rounded-2xl bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-100">학생 관리</a>
+                    <a href="{% url 'happy_seed:consent_manage' classroom_id=classroom.id %}" class="rounded-2xl bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-100">동의 관리</a>
+                    <a href="{% url 'happy_seed:group_manage' classroom_id=classroom.id %}" class="rounded-2xl bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-100">모둠 관리</a>
+                    <a href="{% url 'happy_seed:classroom_settings' classroom_id=classroom.id %}" class="rounded-2xl bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-100">교실 설정</a>
+                    <a href="{% url 'happy_seed:activity_manage' classroom_id=classroom.id %}" class="rounded-2xl bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-100">활동 운영</a>
+                    <a href="{% url 'happy_seed:analysis_dashboard' classroom_id=classroom.id %}" class="rounded-2xl bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-100">교사 분석</a>
+                    <a href="{% url 'happy_seed:garden_public' slug=classroom.slug %}" target="_blank" rel="noopener noreferrer" class="rounded-2xl bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-100">꽃밭 보기</a>
+                </div>
+            </section>
+
+            <details class="rounded-[1.5rem] border border-slate-200 bg-white p-4" open>
+                <summary class="cursor-pointer list-none text-sm font-black text-slate-900">최근 결과</summary>
+                {% if last_draw %}
+                <div class="mt-3 rounded-[1.25rem] bg-slate-50 p-4">
+                    <p class="text-sm font-bold text-slate-500">최근 실행 {{ last_draw.drawn_at|date:"H:i" }}</p>
+                    <p class="mt-2 text-xl font-black text-slate-900">{{ last_draw.student.name }}</p>
+                    {% if last_draw.is_win %}
+                    <p class="mt-3 inline-flex rounded-full bg-rose-100 px-3 py-1 text-xs font-black text-rose-700">당첨</p>
+                    <p class="mt-3 text-sm leading-6 text-slate-600">{% if last_draw.prize %}보상: {{ last_draw.prize.name }}{% else %}보상이 지급되었습니다.{% endif %}</p>
+                    {% else %}
+                    <p class="mt-3 inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700">미당첨</p>
+                    <p class="mt-3 text-sm leading-6 text-slate-600">씨앗 +1이 자동 적립되었습니다.</p>
+                    {% endif %}
+                </div>
+                {% else %}
+                <p class="mt-3 rounded-[1.25rem] bg-slate-50 p-4 text-sm leading-6 text-slate-500">아직 실행한 추첨이 없습니다.</p>
+                {% endif %}
+            </details>
+
+            <details class="rounded-[1.5rem] border border-slate-200 bg-white p-4">
+                <summary class="cursor-pointer list-none text-sm font-black text-slate-900">운영 알림</summary>
+                {% if operation_alerts %}
+                <ul class="mt-3 space-y-2 text-sm leading-6 text-slate-600">
+                    {% for alert in operation_alerts %}
+                    <li class="rounded-[1.25rem] bg-amber-50/80 px-4 py-3">{{ alert }}</li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="mt-3 rounded-[1.25rem] bg-emerald-50/80 p-4 text-sm leading-6 text-emerald-700">지금 바로 지급과 추첨을 이어갈 준비가 되어 있습니다.</p>
+                {% endif %}
+            </details>
+
+            <details class="rounded-[1.5rem] border border-slate-200 bg-white p-4">
+                <summary class="cursor-pointer list-none text-sm font-black text-slate-900">모둠 미션 성공 처리</summary>
+                {% if group_infos %}
+                <form method="post"
+                      action="{% url 'happy_seed:group_mission_success' classroom_id=classroom.id %}"
+                      data-group-mission-form
+                      class="mt-3 space-y-3">
+                    {% csrf_token %}
+                    <div>
+                        <label for="group_id_{{ classroom.id }}" class="mb-1 block text-xs font-bold text-slate-500">모둠</label>
+                        <select id="group_id_{{ classroom.id }}" name="group_id" class="w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-700">
+                            {% for item in group_infos %}
+                            <option value="{{ item.group.id }}">{{ item.group.name }} (가능 {{ item.eligible_count }} / 전체 {{ item.member_count }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label for="winners_count_{{ classroom.id }}" class="mb-1 block text-xs font-bold text-slate-500">지급 인원</label>
+                        <select id="winners_count_{{ classroom.id }}" name="draw_count" data-group-winners-count class="w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-700">
+                            <option value="1" {% if default_group_draw_count == 1 %}selected{% endif %}>1명</option>
+                            <option value="2" {% if default_group_draw_count == 2 %}selected{% endif %}>2명</option>
+                        </select>
+                    </div>
+                    <button type="submit"
+                            class="w-full rounded-[1.25rem] bg-indigo-500 px-4 py-3 text-sm font-black text-white transition hover:bg-indigo-600">
+                        모둠 미션 성공 적용
+                    </button>
+                </form>
+                {% else %}
+                <p class="mt-3 rounded-[1.25rem] bg-slate-50 p-4 text-sm leading-6 text-slate-500">등록된 모둠이 없습니다. 필요할 때만 모둠 관리에서 추가하면 됩니다.</p>
+                {% endif %}
+            </details>
+
+            <section class="rounded-[1.5rem] border border-dashed border-slate-200 bg-slate-50/80 p-4">
+                <h4 class="text-sm font-black text-slate-900">모바일에서는</h4>
+                <p class="mt-2 text-sm leading-6 text-slate-500">학생 확인, 지급, 뽑기까지는 이 화면에서 바로 하고, 무거운 관리 기능은 수업 도구 안에서 필요할 때만 여세요.</p>
+            </section>
+        </div>
+    </aside>
+</div>
