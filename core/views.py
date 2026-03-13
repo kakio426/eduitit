@@ -1222,10 +1222,10 @@ def _build_today_context(request):
                 {
                     "title": "오늘 학급 일정",
                     "count_text": f"{calendar_workspace['today_event_count']}건",
-                    "description": "오늘 실행판에서 일정과 메모를 한 화면으로 바로 확인하세요.",
+                    "description": "캘린더에서 오늘 일정과 메모를 같은 기준으로 확인하세요.",
                     "emoji": "📅",
-                    "href": calendar_workspace["today_url"] or reverse("classcalendar:today"),
-                    "cta_text": "오늘 실행판 열기",
+                    "href": calendar_workspace["today_all_url"] or reverse("classcalendar:today"),
+                    "cta_text": "캘린더 열기",
                 }
             )
     except Exception:
@@ -1482,6 +1482,7 @@ def _format_home_task_schedule(task):
 
 
 def _build_home_calendar_summary_context(request):
+    today = timezone.localdate()
     summary = {
         "enabled": False,
         "today_count": 0,
@@ -1493,17 +1494,27 @@ def _build_home_calendar_summary_context(request):
         "today_events": [],
         "today_memo_items": [],
         "today_event_memos": [],
+        "today_memos": [],
+        "review_memos": [],
+        "review_groups": [],
         "today_tasks": [],
         "today_task_memos": [],
+        "next_upcoming_events": [],
+        "recent_memo_items": [],
+        "has_supporting_items": False,
         "today_memo_empty_message": "오늘 확인할 일정, 메모, 할 일이 없습니다.",
         "empty_message": "오늘 확인할 일정, 메모, 할 일이 없습니다.",
         "main_url": "",
         "today_url": "",
+        "today_all_url": "",
+        "today_memo_url": "",
+        "today_review_url": "",
         "today_memo_panel_url": "",
         "today_create_url": "",
+        "main_create_url": "",
         "create_api_url": "",
-        "date_key": timezone.localdate().isoformat(),
-        "date_label": f"{timezone.localdate().month}월 {timezone.localdate().day}일",
+        "date_key": today.isoformat(),
+        "date_label": f"{today.month}월 {today.day}일",
         "has_items": False,
     }
     if not request.user.is_authenticated:
@@ -1534,13 +1545,14 @@ def _build_home_calendar_summary_context(request):
     workspace = build_today_execution_context(
         request.user,
         active_classroom=active_classroom,
-        target_date=timezone.localdate(),
+        target_date=today,
         main_url=summary["main_url"],
         today_url=summary["today_url"],
         create_api_url=summary["create_api_url"],
     )
     summary.update(workspace)
-    summary["today_memo_items"] = workspace.get("today_event_memos", [])
+    summary["today_memo_items"] = workspace.get("today_memos", [])
+    summary["today_memo_panel_url"] = workspace.get("today_memo_url") or summary["today_memo_panel_url"]
     summary["today_memo_empty_message"] = workspace.get("empty_message", summary["today_memo_empty_message"])
     summary["enabled"] = bool(summary["today_url"] and summary["main_url"] and summary["create_api_url"])
     return summary
@@ -1702,7 +1714,7 @@ def _build_home_calendar_hub_context(request):
     calendar_summary = _build_home_calendar_summary_context(request)
     return {
         "title": CALENDAR_HUB_PUBLIC_NAME,
-        "description": "홈에서 오늘 일정, 오늘 메모, 오늘 할 일을 바로 확인합니다.",
+        "description": "전체 캘린더와 같은 원본으로 오늘 일정, 메모, 할 일을 요약해서 보여줍니다.",
         "today_count": calendar_summary.get("today_count", 0),
         "week_count": calendar_summary.get("week_count", 0),
         "date_key": calendar_summary.get("date_key", ""),
@@ -1712,18 +1724,28 @@ def _build_home_calendar_hub_context(request):
         "today_task_count": calendar_summary.get("today_task_count", 0),
         "today_task_memo_count": calendar_summary.get("today_task_memo_count", 0),
         "today_events": calendar_summary.get("today_events", []),
+        "today_memos": calendar_summary.get("today_memos", []),
         "today_event_memos": calendar_summary.get("today_event_memos", []),
+        "review_memos": calendar_summary.get("review_memos", []),
+        "review_groups": calendar_summary.get("review_groups", []),
         "today_tasks": calendar_summary.get("today_tasks", []),
         "today_task_memos": calendar_summary.get("today_task_memos", []),
+        "next_upcoming_events": calendar_summary.get("next_upcoming_events", []),
+        "recent_memo_items": calendar_summary.get("recent_memo_items", []),
+        "has_supporting_items": calendar_summary.get("has_supporting_items", False),
         "has_items": calendar_summary.get("has_items", False),
         "empty_message": calendar_summary.get("empty_message", ""),
         "main_url": calendar_summary.get("main_url") or _safe_reverse("classcalendar:main"),
         "today_url": calendar_summary.get("today_url") or _safe_reverse("classcalendar:today"),
+        "today_all_url": calendar_summary.get("today_all_url") or _safe_reverse("classcalendar:today"),
+        "today_memo_url": calendar_summary.get("today_memo_url") or _safe_reverse("classcalendar:today"),
+        "today_review_url": calendar_summary.get("today_review_url") or _safe_reverse("classcalendar:today"),
         "today_memo_panel_url": calendar_summary.get("today_memo_panel_url") or _safe_reverse("classcalendar:today"),
         "today_create_url": calendar_summary.get("today_create_url") or "",
+        "main_create_url": calendar_summary.get("main_create_url") or "",
         "create_api_url": calendar_summary.get("create_api_url", ""),
-        "primary_cta_label": "오늘 실행판 열기",
-        "secondary_cta_label": "전체 캘린더",
+        "primary_cta_label": "전체 캘린더",
+        "secondary_cta_label": "오늘 보기",
     }
 
 
@@ -1999,9 +2021,6 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
         home_v2_frontend_config = {
             'toggleFavoriteUrl': reverse('toggle_product_favorite'),
             'trackUsageUrl': reverse('track_product_usage'),
-            'calendar': {
-                'createEventUrl': reverse('classcalendar:api_create_event'),
-            },
         }
 
         return render(request, 'core/home_authenticated_v2.html', {

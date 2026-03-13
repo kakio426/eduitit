@@ -322,7 +322,7 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('서비스 검색...', content)
 
     def test_v2_authenticated_uses_stacked_top_zone_and_real_calendar(self):
-        """V2 로그인 홈은 오늘 실행판 중심 캘린더를 사용"""
+        """V2 로그인 홈은 전체 캘린더 요약 표면을 사용"""
         self._login('qauser')
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
@@ -333,10 +333,10 @@ class HomeV2ViewTest(TestCase):
         self.assertLess(today_index, favorites_index)
         self.assertIn('data-home-v2-top-zone="true"', content)
         self.assertIn('학급 캘린더', content)
-        self.assertIn('오늘 실행판 열기', content)
         self.assertIn('전체 캘린더', content)
+        self.assertIn('오늘의 메모', content)
+        self.assertIn('다시 볼 메모', content)
         self.assertIn('오늘 일정', content)
-        self.assertIn('오늘 메모', content)
         self.assertIn('오늘 할 일', content)
         self.assertNotIn('homeCalendarWidget()', content)
         self.assertNotIn('openTodayMemoModal($event)', content)
@@ -369,41 +369,47 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('오늘 실행판 열기', content)
+        self.assertIn('전체 캘린더', content)
+        self.assertIn('오늘의 메모', content)
+        self.assertIn('다시 볼 메모', content)
         self.assertIn('빠른 추가', content)
-        self.assertIn(reverse('classcalendar:today'), content)
         self.assertIn(reverse('classcalendar:main'), content)
+        self.assertIn(f"{reverse('classcalendar:today')}?focus=memos", content)
+        self.assertIn(f"{reverse('classcalendar:today')}?focus=review", content)
         self.assertNotIn('openTodayMemoModal($event)', content)
         self.assertNotIn('data-home-v2-today-memo-modal="true"', content)
         self.assertNotIn('openMessageHub($event, \'capture\', { resetCapture: true })', content)
 
     def test_v2_authenticated_calendar_hub_shows_today_memo_preview(self):
         user = self._login('memouser')
-        now = timezone.make_aware(datetime.combine(timezone.localdate(), time(hour=9)))
+        now = timezone.now().replace(second=0, microsecond=0)
         self._create_calendar_event_with_note(
             user,
             title='체험학습 안내',
             note='1교시 전에 QR 띄우기\n준비물 다시 확인',
-            start_time=now,
-            end_time=now + timedelta(hours=1),
+            start_time=now - timedelta(minutes=15),
+            end_time=now + timedelta(minutes=45),
         )
         self._create_calendar_event_with_note(
             user,
             title='공개수업 준비',
             note='마이크 배터리 확인\n학부모 동선 안내',
-            start_time=now + timedelta(hours=2),
-            end_time=now + timedelta(hours=3),
+            start_time=now - timedelta(hours=2),
+            end_time=now - timedelta(hours=1),
         )
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
         self.assertIn('data-home-v2-calendar-today-memos="true"', content)
-        self.assertIn('오늘 메모', content)
-        self.assertIn('그날 다시 볼 메모', content)
-        self.assertIn(reverse('classcalendar:today'), content)
+        self.assertIn('오늘의 메모', content)
+        self.assertIn('다시 볼 메모', content)
+        self.assertIn(f"{reverse('classcalendar:today')}?focus=memos", content)
+        self.assertIn(f"{reverse('classcalendar:today')}?focus=review", content)
         self.assertIn('1교시 전에 QR 띄우기', content)
         self.assertIn('마이크 배터리 확인', content)
+        self.assertIn('지금 볼 메모', content)
+        self.assertIn('이미 지난 메모', content)
 
     def test_v2_authenticated_calendar_hub_uses_shared_calendar_source(self):
         viewer = self._login('sharedviewer')
@@ -428,7 +434,7 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('공유된 공개수업 준비', content)
         self.assertIn('공유 달력 준비물도 홈에서 바로 보여야 함', content)
 
-    def test_v2_authenticated_calendar_hub_shows_single_empty_state_when_today_has_no_items(self):
+    def test_v2_authenticated_calendar_hub_shows_supporting_hints_when_today_has_no_items(self):
         user = self._login('upcominguser')
         tomorrow = timezone.make_aware(datetime.combine(timezone.localdate() + timedelta(days=1), time(hour=9)))
         CalendarEvent.objects.create(
@@ -445,7 +451,26 @@ class HomeV2ViewTest(TestCase):
 
         self.assertIn('data-home-v2-calendar-empty="true"', content)
         self.assertIn('오늘 확인할 일정, 메모, 할 일이 없습니다.', content)
-        self.assertNotIn('내일 학부모총회', content)
+        self.assertIn('data-home-v2-calendar-supporting="true"', content)
+        self.assertIn('내일 학부모총회', content)
+
+    def test_v2_authenticated_calendar_hub_links_event_card_to_full_calendar_detail(self):
+        user = self._login('detailuser')
+        now = timezone.make_aware(datetime.combine(timezone.localdate(), time(hour=11)))
+        event = self._create_calendar_event_with_note(
+            user,
+            title='상세 확인 일정',
+            note='링크는 전체 캘린더 상세로 연결',
+            start_time=now,
+            end_time=now + timedelta(hours=1),
+        )
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn(reverse('classcalendar:main'), content)
+        self.assertIn(f"open_event={event.id}", content)
+        self.assertIn(f"date={timezone.localdate().isoformat()}", content)
 
     def test_v2_authenticated_calendar_hub_renders_today_task_section(self):
         user = self._login('taskslotuser')

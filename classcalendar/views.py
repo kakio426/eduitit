@@ -46,7 +46,7 @@ from .calendar_scope import (
     get_visible_events_queryset,
     get_visible_tasks_queryset,
 )
-from .today_memos import build_today_execution_context
+from .today_memos import build_today_execution_context, normalize_today_focus
 from .models import (
     CalendarCollaborator,
     CalendarEvent,
@@ -1925,6 +1925,7 @@ def _redirect_legacy_today_panel(request):
     params = request.GET.copy()
     if "panel" in params:
         del params["panel"]
+    params["focus"] = "memos"
     url = reverse("classcalendar:today")
     query_string = params.urlencode()
     if query_string:
@@ -1943,8 +1944,11 @@ def _build_calendar_page_context(request, *, embedded_sheetbook_context=None, pa
     main_url = reverse("classcalendar:main")
     today_url = reverse("classcalendar:today")
     create_api_url = reverse("classcalendar:api_create_event")
+    today_focus = normalize_today_focus(request.GET.get("focus"))
     initial_selected_date = str(request.GET.get("date") or timezone.localdate().isoformat()).strip()
     initial_open_create = str(request.GET.get("action") or "").strip().lower() == "create"
+    initial_open_event_id = str(request.GET.get("open_event") or "").strip()
+    initial_open_task_id = str(request.GET.get("open_task") or "").strip()
     today_workspace = build_today_execution_context(
         request.user,
         active_classroom=active_classroom,
@@ -1952,10 +1956,11 @@ def _build_calendar_page_context(request, *, embedded_sheetbook_context=None, pa
         main_url=main_url,
         today_url=today_url,
         create_api_url=create_api_url,
+        today_focus=today_focus,
     )
     return {
         "service": service,
-        "title": "오늘 실행판" if page_variant == "today" else (service.title if service else "학급 캘린더"),
+        "title": service.title if service else "학급 캘린더",
         "events_json": [
             _serialize_event(
                 event,
@@ -1983,9 +1988,15 @@ def _build_calendar_page_context(request, *, embedded_sheetbook_context=None, pa
         "calendar_page_variant": page_variant,
         "today_workspace": today_workspace,
         "today_url": today_url,
+        "today_focus": today_focus,
+        "today_all_url": today_workspace["today_all_url"],
+        "today_memo_url": today_workspace["today_memo_url"],
+        "today_review_url": today_workspace["today_review_url"],
         "main_url": main_url,
         "initial_selected_date": initial_selected_date or today_workspace["date_key"],
         "initial_open_create": initial_open_create,
+        "initial_open_event_id": initial_open_event_id,
+        "initial_open_task_id": initial_open_task_id,
         "embedded_sheetbook_context": embedded_sheetbook_context,
         "embedded_sheetbook_context_json": embedded_sheetbook_context or {},
         "is_embedded_in_sheetbook": bool(embedded_sheetbook_context),

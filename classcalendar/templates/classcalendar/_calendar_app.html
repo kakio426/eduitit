@@ -26,22 +26,31 @@
                     <span class="mr-1.5">{{ service.icon|default:'📅' }}</span>{{ title }}
                 </h1>
             </div>
-            <div class="flex items-center gap-2">
-                {% if calendar_page_variant == "today" %}
+            <div class="flex items-center gap-2 flex-wrap justify-end">
                 <a
                     href="{{ main_url }}"
-                    class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 transition"
+                    class="inline-flex items-center rounded-xl px-3 py-2 text-sm font-bold transition {% if calendar_page_variant == 'main' %}bg-slate-900 text-white hover:bg-slate-800{% else %}border border-slate-300 bg-white text-slate-700 hover:bg-slate-50{% endif %}"
                 >
                     월간 보기
                 </a>
-                {% else %}
                 <a
-                    href="{{ today_url }}"
-                    class="inline-flex items-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-800 hover:bg-amber-100 transition"
+                    href="{{ today_all_url }}"
+                    class="inline-flex items-center rounded-xl px-3 py-2 text-sm font-bold transition {% if calendar_page_variant == 'today' and today_focus == 'all' %}border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100{% else %}border border-slate-300 bg-white text-slate-700 hover:bg-slate-50{% endif %}"
                 >
-                    오늘 실행판
+                    오늘 보기
                 </a>
-                {% endif %}
+                <a
+                    href="{{ today_memo_url }}"
+                    class="inline-flex items-center rounded-xl px-3 py-2 text-sm font-bold transition {% if calendar_page_variant == 'today' and today_focus == 'memos' %}border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100{% else %}border border-slate-300 bg-white text-slate-700 hover:bg-slate-50{% endif %}"
+                >
+                    오늘 메모
+                </a>
+                <a
+                    href="{{ today_review_url }}"
+                    class="inline-flex items-center rounded-xl px-3 py-2 text-sm font-bold transition {% if calendar_page_variant == 'today' and today_focus == 'review' %}border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100{% else %}border border-slate-300 bg-white text-slate-700 hover:bg-slate-50{% endif %}"
+                >
+                    다시 볼 메모
+                </a>
                 {% if message_capture_enabled %}
                 <button
                     type="button"
@@ -64,23 +73,29 @@
 
         <div class="{% if is_embedded_in_sheetbook %}bg-white rounded-none border-0 shadow-none p-0{% else %}bg-white rounded-[1.5rem] sm:rounded-[2rem] border border-slate-200 shadow-xl p-2.5 sm:p-5{% endif %}">
             {% if calendar_page_variant == "today" %}
-            <div class="space-y-5" data-classcalendar-today-view="true">
+            <div class="space-y-5" data-classcalendar-today-view="true" data-classcalendar-today-focus="{{ today_focus }}">
                 <section class="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4 sm:p-5">
                     <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                         <div>
-                            <p class="text-xs font-black uppercase tracking-[0.18em] text-indigo-500">메인 캘린더</p>
-                            <h2 class="mt-2 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">{{ today_workspace.date_label }} 오늘 실행판</h2>
-                            <p class="mt-2 text-sm font-medium text-slate-500">오늘 일정, 오늘 메모, 오늘 할 일을 한 화면에서 바로 확인합니다.</p>
+                            <p class="text-xs font-black uppercase tracking-[0.18em] text-indigo-500">학급 캘린더</p>
+                            <h2 class="mt-2 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">{{ today_workspace.date_label }} {{ today_workspace.focus_heading }}</h2>
+                            <p class="mt-2 text-sm font-medium text-slate-500">{{ today_workspace.focus_description }}</p>
                         </div>
                         <div class="flex flex-wrap gap-2">
+                            {% if today_focus == "all" %}
                             <span class="inline-flex items-center rounded-full bg-white px-3 py-1 text-xs font-black text-slate-700">오늘 일정 {{ today_workspace.today_event_count }}건</span>
-                            <span class="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-700">오늘 메모 {{ today_workspace.today_event_memo_count }}건</span>
+                            <span class="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-700">오늘의 메모 {{ today_workspace.today_memos|length }}건</span>
                             <span class="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-xs font-black text-white">오늘 할 일 {{ today_workspace.today_task_count }}건</span>
+                            {% elif today_focus == "memos" %}
+                            <span class="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-700">오늘의 메모 {{ today_workspace.today_memos|length }}건</span>
+                            {% else %}
+                            <span class="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-xs font-black text-indigo-700">다시 볼 메모 {{ today_workspace.review_memos|length }}건</span>
+                            {% endif %}
                         </div>
                     </div>
                 </section>
 
-                {% if today_workspace.has_items %}
+                {% if today_focus == "all" and today_workspace.has_items %}
                     {% if today_workspace.today_events %}
                     <section class="rounded-[1.5rem] border border-slate-200 bg-white p-4 sm:p-5" data-classcalendar-today-events="true">
                         <div class="flex items-center justify-between gap-3">
@@ -120,14 +135,20 @@
                     </section>
                     {% endif %}
 
-                    {% if today_workspace.today_event_memos %}
+                    {% if today_workspace.today_memos %}
                     <section class="rounded-[1.5rem] border border-slate-200 bg-white p-4 sm:p-5" data-classcalendar-today-memos="true">
-                        <div>
-                            <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">오늘 메모</p>
-                            <h3 class="mt-1 text-lg font-extrabold text-slate-900">그날 다시 볼 메모</h3>
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">오늘의 메모</p>
+                                <h3 class="mt-1 text-lg font-extrabold text-slate-900">오늘 일정에 붙은 메모</h3>
+                            </div>
+                            <a href="{{ today_memo_url }}" class="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700 transition hover:bg-amber-100">
+                                오늘의 메모
+                                <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                            </a>
                         </div>
                         <div class="mt-4 space-y-3">
-                            {% for item in today_workspace.today_event_memos %}
+                            {% for item in today_workspace.today_memos %}
                             <button
                                 type="button"
                                 @click="openEventDetailById('{{ item.id }}')"
@@ -138,7 +159,7 @@
                                         <p class="text-base font-black text-slate-900">{{ item.title }}</p>
                                         <p class="mt-1 text-xs font-semibold text-slate-500">{{ item.schedule_text }}</p>
                                     </div>
-                                    <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-[10px] font-black text-amber-700">오늘 메모</span>
+                                    <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-[10px] font-black text-amber-700">오늘의 메모</span>
                                 </div>
                                 <p class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">{{ item.note_excerpt }}</p>
                             </button>
@@ -177,9 +198,69 @@
                         </div>
                     </section>
                     {% endif %}
+                {% elif today_focus == "memos" and today_workspace.today_memos %}
+                <section class="rounded-[1.5rem] border border-slate-200 bg-white p-4 sm:p-5" data-classcalendar-today-memos="true">
+                    <div>
+                        <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">오늘의 메모</p>
+                        <h3 class="mt-1 text-lg font-extrabold text-slate-900">오늘 일정에 붙은 메모</h3>
+                    </div>
+                    <div class="mt-4 space-y-3">
+                        {% for item in today_workspace.today_memos %}
+                        <button
+                            type="button"
+                            @click="openEventDetailById('{{ item.id }}')"
+                            class="block w-full rounded-[1.4rem] border border-amber-200 bg-amber-50/60 px-4 py-4 text-left transition hover:border-amber-300 hover:bg-white"
+                        >
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    <p class="text-base font-black text-slate-900">{{ item.title }}</p>
+                                    <p class="mt-1 text-xs font-semibold text-slate-500">{{ item.schedule_text }}</p>
+                                </div>
+                                <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-[10px] font-black text-amber-700">오늘의 메모</span>
+                            </div>
+                            <p class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">{{ item.note_excerpt }}</p>
+                        </button>
+                        {% endfor %}
+                    </div>
+                </section>
+                {% elif today_focus == "review" and today_workspace.review_groups %}
+                <div class="space-y-4" data-classcalendar-review-memos="true">
+                    {% for group in today_workspace.review_groups %}
+                    <section class="rounded-[1.5rem] border border-indigo-200 bg-white p-4 sm:p-5">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="text-[11px] font-black uppercase tracking-[0.18em] text-indigo-500">{{ group.label }}</p>
+                                <h3 class="mt-1 text-lg font-extrabold text-slate-900">{{ group.description }}</h3>
+                            </div>
+                            <span class="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-xs font-black text-indigo-700">{{ group.items|length }}건</span>
+                        </div>
+                        <div class="mt-4 space-y-3">
+                            {% for item in group.items %}
+                            <button
+                                type="button"
+                                @click="openEventDetailById('{{ item.id }}')"
+                                class="block w-full rounded-[1.4rem] border border-indigo-200 bg-indigo-50/40 px-4 py-4 text-left transition hover:border-indigo-300 hover:bg-white"
+                            >
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="min-w-0">
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <p class="text-base font-black text-slate-900">{{ item.title }}</p>
+                                            <span class="inline-flex items-center rounded-full bg-indigo-100 px-2 py-1 text-[10px] font-black text-indigo-700">{{ item.review_state_label }}</span>
+                                        </div>
+                                        <p class="mt-1 text-xs font-semibold text-slate-500">{{ item.schedule_text }}</p>
+                                    </div>
+                                </div>
+                                <p class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">{{ item.note_excerpt }}</p>
+                                <p class="mt-2 text-xs font-semibold text-indigo-600">{{ item.review_state_description }}</p>
+                            </button>
+                            {% endfor %}
+                        </div>
+                    </section>
+                    {% endfor %}
+                </div>
                 {% else %}
                 <section class="rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 px-5 py-12 text-center" data-classcalendar-today-empty="true">
-                    <p class="text-base font-black text-slate-700">{{ today_workspace.empty_message }}</p>
+                    <p class="text-base font-black text-slate-700">{{ today_workspace.focus_empty_message }}</p>
                 </section>
                 {% endif %}
             </div>
@@ -961,6 +1042,8 @@ function calendarApp() {
         pageVariant: '{{ calendar_page_variant|default:"main"|escapejs }}',
         initialSelectedDateKey: '{{ initial_selected_date|default:""|escapejs }}',
         initialOpenCreate: {{ initial_open_create|yesno:"true,false" }},
+        initialOpenEventId: '{{ initial_open_event_id|default:""|escapejs }}',
+        initialOpenTaskId: '{{ initial_open_task_id|default:""|escapejs }}',
         selectedDateKey: '',
         events: [],
         tasks: [],
@@ -1066,6 +1149,10 @@ function calendarApp() {
             this.registerEmbeddedActionBridge();
             if (this.initialOpenCreate) {
                 this.$nextTick(() => this.openCreateModalForSelectedDate());
+            } else if (this.initialOpenEventId) {
+                this.$nextTick(() => this.openEventDetailById(this.initialOpenEventId));
+            } else if (this.initialOpenTaskId) {
+                this.$nextTick(() => this.openTaskDetailById(this.initialOpenTaskId));
             }
             this.$nextTick(() => notifyEmbeddedCalendarHeight());
         },
