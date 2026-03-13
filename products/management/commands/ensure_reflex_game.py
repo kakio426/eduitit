@@ -30,7 +30,6 @@ class Command(BaseCommand):
             "lead_text",
             "description",
             "price",
-            "is_active",
             "is_guest_allowed",
             "icon",
             "color_theme",
@@ -147,4 +146,3 @@ class Command(BaseCommand):
                     section.save(update_fields=changed)
 
         self.stdout.write(self.style.SUCCESS("ensure_reflex_game completed"))
-

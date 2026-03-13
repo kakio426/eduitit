@@ -30,7 +30,6 @@ class Command(BaseCommand):
             "lead_text",
             "description",
             "price",
-            "is_active",
             "is_guest_allowed",
             "icon",
             "external_url",

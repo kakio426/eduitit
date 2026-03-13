@@ -62,9 +62,6 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS("[OK] Created hwpxchat service product."))
         else:
             changed_fields = []
-            if not product.is_active:
-                product.is_active = True
-                changed_fields.append("is_active")
             if not product.launch_route_name:
                 product.launch_route_name = "hwpxchat:main"
                 changed_fields.append("launch_route_name")

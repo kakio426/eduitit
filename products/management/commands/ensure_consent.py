@@ -29,7 +29,6 @@ class Command(BaseCommand):
         )
 
         updates = {
-            "is_active": True,
             "external_url": "",
             "service_type": "classroom",
         }

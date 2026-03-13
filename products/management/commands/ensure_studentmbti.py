@@ -22,9 +22,6 @@ class Command(BaseCommand):
             if product.title != '우리반BTI':
                 product.title = '우리반BTI'
                 needs_update = True
-            if not product.is_active:
-                product.is_active = True
-                needs_update = True
             if not (product.lead_text or '').strip():
                 product.lead_text = default_lead_text
                 needs_update = True

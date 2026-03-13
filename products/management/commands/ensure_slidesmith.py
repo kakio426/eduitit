@@ -35,9 +35,6 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS("[ensure_slidesmith] Product created"))
         else:
             changed_fields = []
-            if not product.is_active:
-                product.is_active = True
-                changed_fields.append("is_active")
             if not (product.launch_route_name or "").strip():
                 product.launch_route_name = defaults["launch_route_name"]
                 changed_fields.append("launch_route_name")

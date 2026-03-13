@@ -22,7 +22,7 @@ class Command(BaseCommand):
             'service_type': 'work',
             'external_url': '',
         }
-        mutable_fields = ['lead_text', 'description', 'price', 'is_active', 'is_guest_allowed', 'icon', 'external_url']
+        mutable_fields = ['lead_text', 'description', 'price', 'is_guest_allowed', 'icon', 'external_url']
 
         product, created = Product.objects.get_or_create(
             title=title,

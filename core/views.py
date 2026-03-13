@@ -590,7 +590,7 @@ def _is_calendar_hub_product(product):
 
 
 def _is_sheetbook_cross_surface_hidden(product):
-    return _product_route_name(product) == "sheetbook:index"
+    return not bool(getattr(product, "is_active", False))
 
 
 def _get_public_product_name(product):

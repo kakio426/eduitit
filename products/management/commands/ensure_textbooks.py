@@ -42,6 +42,8 @@ class Command(BaseCommand):
         else:
             changed_fields = []
             for field_name, value in defaults.items():
+                if field_name == "is_active":
+                    continue
                 if getattr(product, field_name) != value:
                     setattr(product, field_name, value)
                     changed_fields.append(field_name)

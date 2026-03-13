@@ -55,12 +55,12 @@ class HomeViewTest(TestCase):
             is_active=True, service_type='classroom',
         )
 
-    def _create_sheetbook_product(self, title='숨김 교무수첩'):
+    def _create_sheetbook_product(self, title='숨김 교무수첩', *, is_active=True):
         return Product.objects.create(
             title=title,
             description='표 작업',
             price=0,
-            is_active=True,
+            is_active=is_active,
             service_type='classroom',
             launch_route_name='sheetbook:index',
         )
@@ -96,9 +96,8 @@ class HomeViewTest(TestCase):
         response = self.client.get(reverse('home'))
         self.assertIn('service_launcher_json', response.context)
 
-    @override_settings(SHEETBOOK_DISCOVERY_VISIBLE=False)
-    def test_v1_home_hides_sheetbook_product_when_discovery_disabled(self):
-        self._create_sheetbook_product()
+    def test_v1_home_hides_inactive_sheetbook_product(self):
+        self._create_sheetbook_product(is_active=False)
 
         response = self.client.get(reverse('home'))
         product_titles = [product.title for product in response.context['products']]
@@ -106,15 +105,14 @@ class HomeViewTest(TestCase):
         self.assertNotIn('숨김 교무수첩', product_titles)
         self.assertNotContains(response, '숨김 교무수첩')
 
-    @override_settings(SHEETBOOK_DISCOVERY_VISIBLE=False)
-    def test_v1_service_launcher_json_hides_sheetbook_when_discovery_disabled(self):
-        self._create_sheetbook_product()
+    def test_v1_service_launcher_json_hides_inactive_sheetbook(self):
+        self._create_sheetbook_product(is_active=False)
 
         response = self.client.get(reverse('home'))
         payload = json.loads(response.context['service_launcher_json'])
         titles = [item['title'] for item in payload]
 
-        self.assertNotIn('숨김 교무수첩', titles)
+        self.assertNotIn('학급 기록 보드', titles)
 
     @override_settings(GLOBAL_SEARCH_ENABLED=False)
     def test_service_launcher_json_absent_when_global_search_disabled(self):
@@ -162,12 +160,12 @@ class HomeV2ViewTest(TestCase):
         self.client.login(username=username, password='pass1234')
         return user
 
-    def _create_sheetbook_product(self, title='숨김 교무수첩'):
+    def _create_sheetbook_product(self, title='숨김 교무수첩', *, is_active=True):
         return Product.objects.create(
             title=title,
             description='표 작업',
             price=0,
-            is_active=True,
+            is_active=is_active,
             service_type='classroom',
             launch_route_name='sheetbook:index',
         )
@@ -713,22 +711,18 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         self.assertIn('service_launcher_json', response.context)
 
-    @override_settings(SHEETBOOK_DISCOVERY_VISIBLE=False)
-    def test_v2_home_hides_sheetbook_from_discovery_surfaces(self):
-        hidden_product = self._create_sheetbook_product()
-        user = self._login('sheetbookhiddenv2')
-        ProductFavorite.objects.create(user=user, product=hidden_product, pin_order=1)
-        ProductUsageLog.objects.create(user=user, product=hidden_product, action='launch', source='home_quick')
+    def test_v2_home_includes_active_sheetbook_on_discovery_surfaces(self):
+        visible_product = self._create_sheetbook_product()
+        user = self._login('sheetbookvisiblev2')
+        ProductFavorite.objects.create(user=user, product=visible_product, pin_order=1)
+        ProductUsageLog.objects.create(user=user, product=visible_product, action='launch', source='home_quick')
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertNotIn('숨김 교무수첩', content)
-        self.assertNotIn(hidden_product.id, [item['product'].id for item in response.context.get('quick_actions', [])])
-        self.assertNotIn(hidden_product.id, [item['product'].id for item in response.context.get('favorite_items', [])])
-        self.assertNotIn(hidden_product.id, [item['product'].id for item in response.context.get('recent_items', [])])
-        self.assertNotIn(hidden_product.id, [item['product'].id for item in response.context.get('discovery_items', [])])
-        self.assertNotIn(hidden_product.id, [item['product'].id for item in response.context.get('companion_items', [])])
+        self.assertIn('숨김 교무수첩', content)
+        self.assertIn(visible_product.id, [item['product'].id for item in response.context.get('quick_actions', [])])
+        self.assertIn(visible_product.id, [item['product'].id for item in response.context.get('favorite_items', [])])
         section_product_ids = []
         for section in response.context.get('sections', []):
             section_product_ids.extend(product.id for product in section.get('products', []))
@@ -736,10 +730,10 @@ class HomeV2ViewTest(TestCase):
         for section in response.context.get('aux_sections', []):
             section_product_ids.extend(product.id for product in section.get('products', []))
             section_product_ids.extend(product.id for product in section.get('overflow_products', []))
-        self.assertNotIn(hidden_product.id, section_product_ids)
-        self.assertNotIn(hidden_product.id, [product.id for product in response.context.get('games', [])])
+        self.assertIn(visible_product.id, section_product_ids)
+        self.assertNotIn(visible_product.id, [product.id for product in response.context.get('games', [])])
         search_payload = json.loads(response.context['service_launcher_json'])
-        self.assertNotIn('숨김 교무수첩', [item['title'] for item in search_payload])
+        self.assertIn('학급 기록 보드', [item['title'] for item in search_payload])
 
     def test_v2_authenticated_top_favorites_use_compact_title_only_cards(self):
         user = self._login('favoritecompact')
@@ -1087,7 +1081,7 @@ class HomeSupplementaryViewTest(TestCase):
         self.assertContains(response, '실시간 소통')
         self.assertContains(response, '홈에서는 요약만 보고')
 
-    def test_home_search_payload_hides_sheetbook_and_uses_calendar_public_name(self):
+    def test_home_search_payload_uses_is_active_and_public_names(self):
         Product.objects.create(
             title="간편 수합",
             description="수합 설명",
@@ -1108,7 +1102,7 @@ class HomeSupplementaryViewTest(TestCase):
             title="교무수첩",
             description="기록 도구",
             price=0,
-            is_active=True,
+            is_active=False,
             service_type='classroom',
             launch_route_name='sheetbook:index',
         )
@@ -1118,8 +1112,7 @@ class HomeSupplementaryViewTest(TestCase):
         titles = [item['title'] for item in payload]
 
         self.assertIn('간편 수합', titles)
-        self.assertNotIn('학급 캘린더', titles)
-        self.assertNotIn('교무수첩', titles)
+        self.assertIn('학급 캘린더', titles)
         self.assertNotIn('학급 기록 보드', titles)
 
 

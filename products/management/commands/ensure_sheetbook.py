@@ -46,9 +46,6 @@ class Command(BaseCommand):
             if product.icon != "📒":
                 product.icon = "📒"
                 updated_fields.append("icon")
-            if not product.is_active:
-                product.is_active = True
-                updated_fields.append("is_active")
             if product.external_url:
                 product.external_url = ""
                 updated_fields.append("external_url")

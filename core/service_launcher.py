@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 CALENDAR_HUB_PUBLIC_NAME = "학급 캘린더"
 SHEETBOOK_PUBLIC_NAME = "학급 기록 보드"
 
-SERVICE_LAUNCHER_HIDDEN_ROUTE_NAMES = {"classcalendar:main", "sheetbook:index"}
 PUBLIC_SERVICE_TITLE_BY_ROUTE = {
     "classcalendar:main": CALENDAR_HUB_PUBLIC_NAME,
     "sheetbook:index": SHEETBOOK_PUBLIC_NAME,
@@ -218,7 +217,7 @@ def is_calendar_hub_product(product):
 
 
 def is_sheetbook_cross_surface_hidden(product):
-    return product_route_name(product) == "sheetbook:index"
+    return not bool(getattr(product, "is_active", False))
 
 
 def get_public_product_name(product):
@@ -262,10 +261,6 @@ def get_service_launcher_group_meta(product):
 def build_service_launcher_items(products):
     items = []
     for index, product in enumerate(products):
-        route_name = product_route_name(product)
-        if route_name in SERVICE_LAUNCHER_HIDDEN_ROUTE_NAMES:
-            continue
-
         href, is_external = resolve_product_launch_url(product)
         group_meta = get_service_launcher_group_meta(product)
         title = get_public_product_name(product)

@@ -49,7 +49,7 @@ class EnsureInsightsCommandTest(TestCase):
         self.assertTrue(manual.is_published)
         self.assertGreaterEqual(manual.sections.count(), 3)
 
-    def test_command_deactivates_legacy_insight_product(self):
+    def test_command_preserves_legacy_product_visibility(self):
         legacy = Product.objects.create(
             title="인사이트",
             description="legacy",
@@ -61,4 +61,4 @@ class EnsureInsightsCommandTest(TestCase):
         call_command("ensure_insights")
 
         legacy.refresh_from_db()
-        self.assertFalse(legacy.is_active)
+        self.assertTrue(legacy.is_active)

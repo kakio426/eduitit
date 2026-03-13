@@ -5,7 +5,7 @@ from products.models import Product, ProductFeature
 
 
 class EnsureEduMaterialsCommandTests(TestCase):
-    def test_command_creates_split_education_materials_product(self):
+    def test_command_repairs_existing_materials_product_without_reactivating_visibility(self):
         Product.objects.filter(launch_route_name="edu_materials:main").delete()
         Product.objects.filter(title="교육 자료실").delete()
 
@@ -26,7 +26,7 @@ class EnsureEduMaterialsCommandTests(TestCase):
 
         self.assertEqual(product.title, "교육 자료실")
         self.assertEqual(product.icon, "🧩")
-        self.assertTrue(product.is_active)
+        self.assertFalse(product.is_active)
         self.assertGreaterEqual(product.features.count(), 3)
         self.assertTrue(product.manual.is_published)
         self.assertGreaterEqual(product.manual.sections.count(), 3)

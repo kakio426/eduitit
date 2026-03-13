@@ -42,9 +42,6 @@ class Command(BaseCommand):
             if product.external_url:
                 product.external_url = ""
                 update_fields.append("external_url")
-            if not product.is_active:
-                product.is_active = True
-                update_fields.append("is_active")
             if (product.service_type or "").strip() != "classroom":
                 product.service_type = "classroom"
                 update_fields.append("service_type")
@@ -65,9 +62,6 @@ class Command(BaseCommand):
             if legacy.external_url:
                 legacy.external_url = ""
                 legacy_updates.append("external_url")
-            if not legacy.is_active:
-                legacy.is_active = True
-                legacy_updates.append("is_active")
             if legacy_updates:
                 legacy.save(update_fields=legacy_updates)
                 legacy_count += 1

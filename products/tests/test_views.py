@@ -146,31 +146,30 @@ class SheetbookDiscoveryVisibilityTests(TestCase):
             is_published=True,
         )
 
-    @override_settings(SHEETBOOK_DISCOVERY_VISIBLE=False)
-    def test_catalog_hides_sheetbook_when_discovery_disabled(self):
+    def test_catalog_shows_active_sheetbook_and_calendar_products(self):
         response = self.client.get(reverse('product_list'))
 
         product_titles = [product.title for product in response.context['products']]
-        expected_count = Product.objects.filter(is_active=True).exclude(
-            launch_route_name__in=['sheetbook:index', 'classcalendar:main']
-        ).count()
+        expected_count = Product.objects.filter(is_active=True).count()
 
         self.assertEqual(response.status_code, 200)
-        self.assertNotIn('교무수첩', product_titles)
-        self.assertNotIn('학급 캘린더', product_titles)
+        self.assertIn('교무수첩', product_titles)
+        self.assertIn('학급 캘린더', product_titles)
         self.assertIn('운영 도구', product_titles)
-        self.assertNotContains(response, '교무수첩')
+        self.assertContains(response, '학급 기록 보드')
         self.assertEqual(response.context['total_count'], expected_count)
         self.assertEqual(response.context['catalog_hub']['title'], '메인 캘린더는 홈에서 시작합니다')
 
-    @override_settings(SHEETBOOK_DISCOVERY_VISIBLE=True)
-    def test_catalog_still_hides_sheetbook_when_discovery_enabled(self):
+    def test_catalog_hides_sheetbook_and_calendar_when_inactive(self):
+        self.sheetbook_product.is_active = False
+        self.sheetbook_product.save(update_fields=['is_active'])
+        self.calendar_product.is_active = False
+        self.calendar_product.save(update_fields=['is_active'])
+
         response = self.client.get(reverse('product_list'))
 
         product_titles = [product.title for product in response.context['products']]
-        expected_count = Product.objects.filter(is_active=True).exclude(
-            launch_route_name__in=['sheetbook:index', 'classcalendar:main']
-        ).count()
+        expected_count = Product.objects.filter(is_active=True).count()
 
         self.assertEqual(response.status_code, 200)
         self.assertNotIn('교무수첩', product_titles)

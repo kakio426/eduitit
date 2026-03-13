@@ -23,7 +23,7 @@ class Command(BaseCommand):
             'external_url': '',
         }
 
-        mutable_fields = ['lead_text', 'description', 'price', 'is_active', 'is_guest_allowed', 'icon', 'external_url']
+        mutable_fields = ['lead_text', 'description', 'price', 'is_guest_allowed', 'icon', 'external_url']
 
         product, created = Product.objects.get_or_create(
             title=title,
@@ -115,4 +115,3 @@ class Command(BaseCommand):
                     section.save(update_fields=changed)
 
         self.stdout.write(self.style.SUCCESS('교실 장기 ensure 작업 완료'))
-

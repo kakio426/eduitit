@@ -63,7 +63,7 @@ class ServiceLauncherContextTests(TestCase):
         self.assertEqual(item["href"], reverse("collect:landing"))
         self.assertFalse(item["is_external"])
 
-    def test_service_launcher_json_hides_denylisted_routes_only(self):
+    def test_service_launcher_json_respects_product_is_active(self):
         Product.objects.create(
             title="교무수첩",
             description="표 작업",
@@ -76,7 +76,7 @@ class ServiceLauncherContextTests(TestCase):
             title="학급 캘린더",
             description="일정",
             price=0,
-            is_active=True,
+            is_active=False,
             service_type="classroom",
             launch_route_name="classcalendar:main",
         )
@@ -85,7 +85,7 @@ class ServiceLauncherContextTests(TestCase):
         payload = json.loads(context["service_launcher_json"])
         titles = [item["title"] for item in payload]
 
-        self.assertNotIn("교무수첩", titles)
+        self.assertIn("학급 기록 보드", titles)
         self.assertNotIn("학급 캘린더", titles)
 
     def test_service_launcher_json_supports_external_services(self):

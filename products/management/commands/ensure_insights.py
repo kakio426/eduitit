@@ -61,20 +61,6 @@ class Command(BaseCommand):
                 )
             )
 
-        # 기존 레거시 카드(인사이트)는 중복 노출 방지를 위해 비활성화한다.
-        deactivated_count = (
-            Product.objects.filter(title__in=legacy_titles)
-            .exclude(pk=product.pk)
-            .filter(is_active=True)
-            .update(is_active=False)
-        )
-        if deactivated_count:
-            self.stdout.write(
-                self.style.SUCCESS(
-                    f"[ensure_insights] Deactivated legacy product count: {deactivated_count}"
-                )
-            )
-
         # ProductFeature 최소 3개 (SIS Rule)
         features_data = [
             {

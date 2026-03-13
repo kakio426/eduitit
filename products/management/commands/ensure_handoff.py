@@ -34,9 +34,6 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(f"[OK] Created product: {product.title}"))
         else:
             changed = []
-            if not product.is_active:
-                product.is_active = True
-                changed.append("is_active")
             if (product.launch_route_name or "").strip() != "handoff:landing":
                 product.launch_route_name = "handoff:landing"
                 changed.append("launch_route_name")

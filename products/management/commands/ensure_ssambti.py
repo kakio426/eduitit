@@ -36,11 +36,6 @@ class Command(BaseCommand):
                 ssambti.external_url = ''
                 needs_update = True
 
-            if not ssambti.is_active:
-                self.stdout.write(self.style.ERROR('  [X] is_active is False!'))
-                ssambti.is_active = True
-                needs_update = True
-
             if needs_update:
                 ssambti.save()
                 self.stdout.write(self.style.SUCCESS('[OK] Updated Ssambti product with correct settings'))

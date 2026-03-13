@@ -11,7 +11,6 @@ class Command(BaseCommand):
             "lead_text",
             "description",
             "price",
-            "is_active",
             "is_guest_allowed",
             "icon",
             "external_url",
@@ -87,9 +86,6 @@ class Command(BaseCommand):
             "card_size": "small",
             "service_type": "game",
         }
-
-        # 기존 묶음 카드는 데이터 보존을 위해 삭제하지 않고 비활성 처리
-        Product.objects.filter(title="Fairy 전략 게임 5종").update(is_active=False)
 
         variants = [
             ("동물 장기", "🦁", "Dobutsu Shogi", "fairy_games:play_dobutsu", 17),

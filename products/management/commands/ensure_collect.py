@@ -16,9 +16,6 @@ class Command(BaseCommand):
         if product:
             self.stdout.write(f'[!] Found existing Collect product (ID: {product.id})')
             needs_update = False
-            if not product.is_active:
-                product.is_active = True
-                needs_update = True
             if needs_update:
                 product.save()
                 self.stdout.write('[OK] Updated existing product settings')

@@ -17,7 +17,7 @@ class EnsureSheetbookCommandTests(TestCase):
         self.assertTrue(manual.is_published)
         self.assertGreaterEqual(manual.sections.count(), 3)
 
-    def test_command_preserves_admin_managed_category_fields(self):
+    def test_command_preserves_admin_managed_category_fields_and_visibility(self):
         product = Product.objects.create(
             title="교무수첩",
             lead_text="legacy",
@@ -36,7 +36,7 @@ class EnsureSheetbookCommandTests(TestCase):
 
         product.refresh_from_db()
         self.assertEqual(product.launch_route_name, "sheetbook:index")
-        self.assertTrue(product.is_active)
+        self.assertFalse(product.is_active)
         self.assertEqual(product.service_type, "edutech")
         self.assertEqual(product.color_theme, "red")
         self.assertEqual(product.display_order, 777)

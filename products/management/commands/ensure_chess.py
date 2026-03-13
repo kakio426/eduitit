@@ -20,7 +20,6 @@ class Command(BaseCommand):
             chess.title = '두뇌 풀가동! 교실 체스'
             chess.external_url = ''
             chess.service_type = 'game'
-            chess.is_active = True
             chess.save()
             self.stdout.write('[OK] Updated existing product settings')
         else:
