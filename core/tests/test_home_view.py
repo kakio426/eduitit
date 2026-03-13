@@ -257,23 +257,20 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         self.assertIn('로그인하고 시작하기', content)
+        self.assertIn('서비스 둘러보기', content)
+        self.assertEqual(content.count('로그인하고 시작하기'), 1)
 
-    def test_v2_anonymous_surfaces_public_calendar_entry_near_top(self):
+    def test_v2_anonymous_prioritizes_hero_and_services_without_sns_preview(self):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        public_calendar_index = content.index('data-home-v2-public-calendar-entry="true"')
-        service_group_index = content.index('data-home-v2-service-groups="true"')
+        hero_index = content.index('data-home-v2-guest-hero="true"')
+        service_group_index = content.index('id="guest-home-services"')
 
-        self.assertLess(public_calendar_index, service_group_index)
-        self.assertIn('숫자 달력과 오늘 요약을 한 번에 보는 학급 캘린더', content)
-        self.assertIn('로그인 후 사용', content)
-        self.assertIn('로그인 후 내 일정과 메모를 이어서 봅니다', content)
-        self.assertIn('로그인하고 홈에서 캘린더 보기', content)
-        self.assertIn('홈 캘린더 바로가기', content)
-        self.assertIn('오늘 일정 정리', content)
-        self.assertIn('오늘 메모 확인', content)
-        self.assertIn(reverse('home'), content)
+        self.assertLess(hero_index, service_group_index)
+        self.assertNotIn('data-home-v2-public-calendar-entry="true"', content)
+        self.assertNotIn('sns-full-section-v2', content)
+        self.assertNotIn('실시간 소통', content)
 
     def test_v2_anonymous_does_not_render_today_try_now_section(self):
         self._create_try_now_products()
@@ -291,17 +288,6 @@ class HomeV2ViewTest(TestCase):
 
         self.assertNotIn('data-home-v2-mini-app-rail="true"', content)
         self.assertNotIn('data-home-mini-app-shell="true"', content)
-
-    def test_v2_anonymous_moves_sns_preview_above_services_and_login_cta(self):
-        response = self.client.get(reverse('home'))
-        content = response.content.decode('utf-8')
-
-        sns_index = content.index('sns-full-section-v2')
-        services_index = content.index('data-home-v2-service-groups="true"')
-        login_index = content.index('로그인하고 시작하기')
-
-        self.assertLess(sns_index, services_index)
-        self.assertLess(sns_index, login_index)
 
     def test_v2_anonymous_has_game_banner(self):
         """V2 비로그인 홈에 게임 배너 존재"""
@@ -326,6 +312,14 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
         self.assertNotIn('data-track="show_all_toggle"', content)
         self.assertNotIn('전체 서비스 보기', content)
+
+    def test_v2_anonymous_does_not_render_authenticated_calendar_hub(self):
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertNotIn('data-home-v2-top-calendar="true"', content)
+        self.assertNotIn('오늘 실행판 열기', content)
+        self.assertNotIn('학급 캘린더', content)
 
     def test_v2_authenticated_200(self):
         """V2 로그인 홈 200 응답"""
@@ -1043,11 +1037,12 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('data-home-v2-tablet-community-card="true"', content)
         self.assertIn('https://example.com/community.jpg', content)
 
-    def test_v2_uses_xl_breakpoint_for_sns_sidebar(self):
+    def test_v2_anonymous_does_not_render_sns_sidebar_or_mobile_preview(self):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('hidden xl:block', content)
-        self.assertIn('block xl:hidden', content)
+        self.assertNotIn('sns-full-section-v2', content)
+        self.assertNotIn('aria-label="소통 글 상세 보기"', content)
+        self.assertNotIn('data-home-sns-expand="true"', content)
 
     def test_v2_authenticated_uses_xl_breakpoint_for_sns_sidebar(self):
         self._login('breakpointuser')
@@ -1072,7 +1067,7 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('인사이트 노출', content)
         self.assertIn('data-home-v2-top-calendar="true"', content)
 
-    def test_v2_notice_scope_excludes_news_link_cards(self):
+    def test_v2_authenticated_notice_scope_excludes_news_link_cards(self):
         author = _create_onboarded_user('noticeauthor')
         Post.objects.create(author=author, content='공지 본문', post_type='notice')
         Post.objects.create(
@@ -1085,6 +1080,7 @@ class HomeV2ViewTest(TestCase):
             publisher='테스트 매체',
         )
 
+        self._login('noticeviewer')
         response = self.client.get(reverse('home'), {'feed_scope': 'notice'})
         content = response.content.decode('utf-8')
 
@@ -1092,7 +1088,7 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('뉴스 제목', content)
         self.assertNotIn('원문 보기 (새 탭)', content)
 
-    def test_v2_feed_renders_news_link_preview_image(self):
+    def test_v2_authenticated_feed_renders_news_link_preview_image(self):
         author = _create_onboarded_user('newsauthor')
         Post.objects.create(
             author=author,
@@ -1105,18 +1101,20 @@ class HomeV2ViewTest(TestCase):
             publisher='테스트 매체',
         )
 
+        self._login('newsviewer')
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
         self.assertIn('교실 뉴스', content)
         self.assertIn('https://example.com/article.jpg', content)
         self.assertIn('원문 보기 (새 탭)', content)
-    def test_v2_mobile_sns_more_uses_toggle_not_anchor(self):
+    def test_v2_anonymous_does_not_render_mobile_sns_toggle(self):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('@click="snsOpen = true"', content)
-        self.assertNotIn('hx-select="#mobile-post-list-container"', content)
-        self.assertNotIn('href="#sns-full-section-v2"', content)
+
+        self.assertNotIn('sns-full-section-v2', content)
+        self.assertNotIn('소통창 열기', content)
+        self.assertNotIn('aria-label="소통 글 상세 보기"', content)
 
     def test_v2_authenticated_mobile_sns_more_uses_toggle_not_anchor(self):
         self._login('v2authsns')
@@ -1126,8 +1124,9 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('hx-select="#mobile-post-list-container"', content)
         self.assertNotIn('href="#sns-full-section-auth-v2"', content)
 
-    def test_v2_home_sns_shows_expand_button_after_three_posts(self):
+    def test_v2_authenticated_home_sns_shows_expand_button_after_three_posts(self):
         _create_posts()
+        self._login('snsviewer')
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
