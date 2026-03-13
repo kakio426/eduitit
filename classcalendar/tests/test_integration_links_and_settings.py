@@ -15,6 +15,7 @@ from classcalendar.integrations import (
 from classcalendar.models import CalendarEvent, CalendarIntegrationSetting
 from classcalendar.models import CalendarMessageCapture, CalendarTask
 from classcalendar.views import INTEGRATION_SYNC_SESSION_KEY
+from collect.models import CollectionRequest, Submission
 
 
 User = get_user_model()
@@ -119,6 +120,39 @@ class IntegrationLinksAndSettingsTests(TestCase):
         self.assertEqual(source_map[SOURCE_RESERVATION]["hub_meta"]["service_label"], "예약")
         self.assertEqual(source_map[SOURCE_RESERVATION]["hub_meta"]["action_type"], "source_link")
         self.assertIn("reservation=1", source_map[SOURCE_RESERVATION]["source_url"])
+
+    def test_api_events_collect_hub_meta_uses_submission_total(self):
+        request_item = CollectionRequest.objects.create(
+            creator=self.user,
+            title="가정통신문 회신",
+            deadline=timezone.now() + timedelta(hours=4),
+        )
+        Submission.objects.create(
+            collection_request=request_item,
+            contributor_name="김교사",
+            submission_type="text",
+            text_content="회신 완료",
+        )
+        self._create_locked_event(
+            source=SOURCE_COLLECT_DEADLINE,
+            key=f"collect:{request_item.id}",
+            title="수합 마감",
+        )
+        session = self.client.session
+        session[INTEGRATION_SYNC_SESSION_KEY] = timezone.now().timestamp()
+        session.save()
+
+        response = self.client.get(reverse("classcalendar:api_events"))
+        self.assertEqual(response.status_code, 200)
+
+        collect_item = next(
+            item
+            for item in response.json().get("events", [])
+            if item.get("integration_source") == SOURCE_COLLECT_DEADLINE
+            and item.get("title") == "수합 마감"
+        )
+        self.assertEqual(collect_item["hub_meta"]["service_label"], "수합")
+        self.assertEqual(collect_item["hub_meta"]["detail_text"], "제출 1건")
 
     def test_api_events_marks_message_capture_items_for_calendar_hub(self):
         now = timezone.now()

@@ -1774,7 +1774,9 @@ def _build_collect_hub_meta(event, *, request_item, source_url):
         elif deadline_date == today:
             status_text = "오늘 마감"
             status_tone = "warning"
-        submission_count = int(getattr(request_item, "submission_count", 0) or 0)
+        submission_count = int(
+            getattr(request_item, "submission_total", getattr(request_item, "submission_count", 0)) or 0
+        )
         detail_text = f"제출 {submission_count}건" if submission_count else "제출 대기"
     return {
         "service_key": "collect",
@@ -1937,7 +1939,10 @@ def _build_event_source_record_lookup(events):
         try:
             from collect.models import CollectionRequest
 
-            for request_item in CollectionRequest.objects.filter(id__in=collect_ids).annotate(submission_count=Count("submissions", distinct=True)):
+            queryset = CollectionRequest.objects.filter(id__in=collect_ids).annotate(
+                submission_total=Count("submissions", distinct=True)
+            )
+            for request_item in queryset:
                 lookup[f"collect:{request_item.id}"] = request_item
         except Exception:
             logger.exception("[ClassCalendar] failed to build collect lookup")
