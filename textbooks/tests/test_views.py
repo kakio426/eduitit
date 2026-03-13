@@ -1,11 +1,15 @@
+import importlib
 import io
+from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 from django.urls import reverse
+from django.utils import timezone
 from reportlab.pdfgen import canvas
 
+from edu_materials.models import EduMaterial
 from happy_seed.models import HSClassroom
 from textbooks.models import TextbookLiveSession, TextbookMaterial
 from textbooks.services import ACCESS_COOKIE_NAME
@@ -58,7 +62,27 @@ class TextbookViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         return TextbookMaterial.objects.get(title="지층과 화석 PDF")
 
-    def _create_html_material(self):
+    def _create_legacy_material(self, *, title, source_type, content, subject="SCIENCE", grade="5학년 1학기", unit_title="태양계 탐험", original_filename=""):
+        return TextbookMaterial.objects.create(
+            teacher=self.user,
+            subject=subject,
+            grade=grade,
+            unit_title=unit_title,
+            title=title,
+            source_type=source_type,
+            content=content,
+            original_filename=original_filename,
+            page_count=0,
+        )
+
+    def test_create_pdf_material_stores_metadata(self):
+        material = self._create_pdf_material()
+        self.assertEqual(material.source_type, TextbookMaterial.SOURCE_PDF)
+        self.assertEqual(material.page_count, 2)
+        self.assertTrue(material.pdf_sha256)
+        self.assertEqual(material.original_filename, "science.pdf")
+
+    def test_create_html_payload_is_rejected(self):
         response = self.client.post(
             reverse("textbooks:create"),
             {
@@ -71,9 +95,9 @@ class TextbookViewTests(TestCase):
             },
         )
         self.assertEqual(response.status_code, 302)
-        return TextbookMaterial.objects.get(title="태양계 HTML 자료")
+        self.assertFalse(TextbookMaterial.objects.filter(title="태양계 HTML 자료").exists())
 
-    def _create_markdown_material(self):
+    def test_create_markdown_payload_is_rejected(self):
         response = self.client.post(
             reverse("textbooks:create"),
             {
@@ -86,40 +110,7 @@ class TextbookViewTests(TestCase):
             },
         )
         self.assertEqual(response.status_code, 302)
-        return TextbookMaterial.objects.get(title="국어 텍스트 자료")
-
-    def test_create_pdf_material_stores_metadata(self):
-        material = self._create_pdf_material()
-        self.assertEqual(material.source_type, TextbookMaterial.SOURCE_PDF)
-        self.assertEqual(material.page_count, 2)
-        self.assertTrue(material.pdf_sha256)
-        self.assertEqual(material.original_filename, "science.pdf")
-
-    def test_create_html_material_persists_source_type_and_content(self):
-        material = self._create_html_material()
-        self.assertEqual(material.source_type, TextbookMaterial.SOURCE_HTML)
-        self.assertIn("<button>시작</button>", material.content)
-        self.assertEqual(material.page_count, 0)
-
-    def test_create_html_material_requires_content(self):
-        response = self.client.post(
-            reverse("textbooks:create"),
-            {
-                "subject": "SCIENCE",
-                "grade": "5학년 1학기",
-                "unit_title": "태양계 탐험",
-                "title": "빈 HTML 자료",
-                "source_type": "html",
-                "content": "   ",
-            },
-        )
-        self.assertEqual(response.status_code, 302)
-        self.assertFalse(TextbookMaterial.objects.filter(title="빈 HTML 자료").exists())
-
-    def test_create_markdown_material_is_still_supported(self):
-        material = self._create_markdown_material()
-        self.assertEqual(material.source_type, TextbookMaterial.SOURCE_MARKDOWN)
-        self.assertEqual(material.page_count, 0)
+        self.assertFalse(TextbookMaterial.objects.filter(title="국어 텍스트 자료").exists())
 
     def test_non_pdf_upload_is_rejected(self):
         upload = SimpleUploadedFile("lesson.html", b"<html></html>", content_type="text/html")
@@ -137,47 +128,57 @@ class TextbookViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertFalse(TextbookMaterial.objects.filter(title="잘못된 업로드").exists())
 
-    def test_main_view_lists_html_pdf_and_markdown_materials(self):
-        html_material = self._create_html_material()
+    def test_main_view_lists_only_pdf_materials_and_pdf_copy(self):
+        html_material = self._create_legacy_material(
+            title="태양계 HTML 자료",
+            source_type=TextbookMaterial.SOURCE_HTML,
+            content="<html><body>legacy</body></html>",
+        )
+        markdown_material = self._create_legacy_material(
+            title="국어 텍스트 자료",
+            source_type=TextbookMaterial.SOURCE_MARKDOWN,
+            content="첫째 문단\n둘째 문단",
+            subject="KOREAN",
+            unit_title="이야기 읽기",
+        )
         pdf_material = self._create_pdf_material()
-        markdown_material = self._create_markdown_material()
 
         response = self.client.get(reverse("textbooks:main"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, html_material.title)
         self.assertContains(response, pdf_material.title)
-        self.assertContains(response, markdown_material.title)
-        self.assertContains(response, "Sandbox Preview")
+        self.assertNotContains(response, html_material.title)
+        self.assertNotContains(response, markdown_material.title)
+        self.assertContains(response, "교과서 라이브 수업")
+        self.assertContains(response, "새 PDF 올리기")
+        self.assertContains(response, "PDF 올리고 수업 준비")
+        self.assertContains(response, "교육자료실 바로 가기")
+        self.assertNotContains(response, "교육 자료실")
+        self.assertNotContains(response, "HTML 자료")
+        self.assertNotContains(response, "텍스트 자료")
+        self.assertNotContains(response, "Sandbox Preview")
 
-    def test_html_detail_view_uses_preview_shell(self):
-        material = self._create_html_material()
+    def test_detail_redirects_legacy_non_pdf_material_to_edu_materials(self):
+        material = self._create_legacy_material(
+            title="태양계 HTML 자료",
+            source_type=TextbookMaterial.SOURCE_HTML,
+            content="<html><body>legacy</body></html>",
+        )
 
         response = self.client.get(reverse("textbooks:detail", args=[material.id]))
 
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Sandbox Preview")
-        self.assertContains(response, "textbooks-preview-html-json")
-        self.assertContains(response, "allow-scripts allow-forms allow-downloads")
+        self.assertRedirects(response, reverse("edu_materials:main"))
 
-    def test_html_preview_window_is_teacher_only(self):
-        material = self._create_html_material()
-        other = User.objects.create_user(username="other", email="other@example.com", password="pw123456")
-        other_client = Client()
-        other_client.force_login(other)
-
-        response = other_client.get(reverse("textbooks:html_preview_window", args=[material.id]))
-
-        self.assertIn(response.status_code, [302, 404])
-
-    def test_html_preview_window_renders_saved_material(self):
-        material = self._create_html_material()
+    def test_html_preview_window_redirects_to_edu_materials(self):
+        material = self._create_legacy_material(
+            title="태양계 HTML 자료",
+            source_type=TextbookMaterial.SOURCE_HTML,
+            content="<html><body>legacy</body></html>",
+        )
 
         response = self.client.get(reverse("textbooks:html_preview_window", args=[material.id]))
 
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "새 창 미리보기")
-        self.assertContains(response, "textbooks-preview-window-json")
+        self.assertRedirects(response, reverse("edu_materials:main"))
 
     def test_start_live_session_uses_active_classroom_and_publishes_material(self):
         material = self._create_pdf_material()
@@ -243,7 +244,109 @@ class TextbookViewTests(TestCase):
             zoom_scale=1.0,
             viewport_json={},
         )
+
         response = self.client.get(reverse("textbooks:detail", args=[material.id]))
+
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "교과서 PDF 수업 허브")
         self.assertContains(response, "data:image/png;base64,")
         self.assertContains(response, str(session.id))
+
+
+class TextbookBackfillMigrationHelperTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="migration-teacher",
+            email="migration-teacher@example.com",
+            password="pw123456",
+        )
+        self.module = importlib.import_module("textbooks.migrations.0003_backfill_non_pdf_materials")
+
+    def _set_timestamps(self, instance, *, created_at, updated_at):
+        instance.__class__.objects.filter(pk=instance.pk).update(created_at=created_at, updated_at=updated_at)
+        instance.refresh_from_db()
+        return instance
+
+    def test_backfill_moves_non_pdf_rows_and_skips_pdf(self):
+        created_at = (timezone.now() - timedelta(days=2)).replace(microsecond=0)
+        updated_at = (timezone.now() - timedelta(days=1)).replace(microsecond=0)
+
+        html_material = TextbookMaterial.objects.create(
+            teacher=self.user,
+            subject="SCIENCE",
+            grade="4학년 1학기",
+            unit_title="화산과 지진",
+            title="레거시 HTML 자료",
+            source_type=TextbookMaterial.SOURCE_HTML,
+            content="<html><body>legacy</body></html>",
+            original_filename="legacy.html",
+        )
+        markdown_material = TextbookMaterial.objects.create(
+            teacher=self.user,
+            subject="KOREAN",
+            grade="4학년 2학기",
+            unit_title="이야기 읽기",
+            title="레거시 텍스트 자료",
+            source_type=TextbookMaterial.SOURCE_MARKDOWN,
+            content="첫째 문단",
+        )
+        TextbookMaterial.objects.create(
+            teacher=self.user,
+            subject="SCIENCE",
+            grade="4학년 1학기",
+            unit_title="화산과 지진",
+            title="PDF 자료",
+            source_type=TextbookMaterial.SOURCE_PDF,
+            content="교사용 메모",
+            page_count=4,
+            original_filename="science.pdf",
+            is_published=True,
+        )
+        self._set_timestamps(html_material, created_at=created_at, updated_at=updated_at)
+        self._set_timestamps(markdown_material, created_at=created_at, updated_at=updated_at)
+
+        created = self.module.backfill_non_pdf_textbook_rows(TextbookMaterial, EduMaterial)
+
+        self.assertEqual(created, 2)
+        titles = set(EduMaterial.objects.values_list("title", flat=True))
+        self.assertIn("레거시 HTML 자료", titles)
+        self.assertIn("레거시 텍스트 자료", titles)
+        self.assertNotIn("PDF 자료", titles)
+        html_copy = EduMaterial.objects.get(title="레거시 HTML 자료")
+        self.assertEqual(html_copy.input_mode, EduMaterial.INPUT_FILE)
+        self.assertEqual(html_copy.created_at, created_at)
+        self.assertEqual(html_copy.updated_at, updated_at)
+
+    def test_backfill_skips_existing_matching_edu_material(self):
+        created_at = (timezone.now() - timedelta(days=3)).replace(microsecond=0)
+        updated_at = (timezone.now() - timedelta(days=2)).replace(microsecond=0)
+        textbook_material = TextbookMaterial.objects.create(
+            teacher=self.user,
+            subject="SCIENCE",
+            grade="4학년 1학기",
+            unit_title="화산과 지진",
+            title="중복 후보 자료",
+            source_type=TextbookMaterial.SOURCE_HTML,
+            content="<html><body>legacy</body></html>",
+            original_filename="legacy.html",
+            is_published=True,
+        )
+        self._set_timestamps(textbook_material, created_at=created_at, updated_at=updated_at)
+
+        edu_material = EduMaterial.objects.create(
+            teacher=self.user,
+            subject="SCIENCE",
+            grade="4학년 1학기",
+            unit_title="화산과 지진",
+            title="중복 후보 자료",
+            html_content="<html><body>legacy</body></html>",
+            input_mode=EduMaterial.INPUT_FILE,
+            original_filename="legacy.html",
+            is_published=True,
+        )
+        self._set_timestamps(edu_material, created_at=created_at, updated_at=updated_at)
+
+        created = self.module.backfill_non_pdf_textbook_rows(TextbookMaterial, EduMaterial)
+
+        self.assertEqual(created, 0)
+        self.assertEqual(EduMaterial.objects.filter(title="중복 후보 자료").count(), 1)

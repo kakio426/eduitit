@@ -1,13 +1,16 @@
 {% extends 'base.html' %}
-{% load static %}
 
 {% block title %}{{ material.title }}{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'textbooks/html_preview.css' %}">
 <style>
+    .textbooks-detail-shell {
+        background:
+            radial-gradient(circle at top, rgba(37, 99, 235, 0.16), transparent 42%),
+            linear-gradient(180deg, #f8fbff 0%, #eef2ff 100%);
+    }
     .textbooks-panel {
-        background: rgba(255, 255, 255, 0.92);
+        background: rgba(255, 255, 255, 0.94);
         border: 1px solid rgba(148, 163, 184, 0.18);
         box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
         backdrop-filter: blur(14px);
@@ -16,17 +19,15 @@
 {% endblock %}
 
 {% block content %}
-<section class="min-h-screen pt-28 pb-20 px-4 bg-[radial-gradient(circle_at_top,#e0f2fe,transparent_42%),linear-gradient(180deg,#f8fbff,#eef2ff)]">
+<section class="textbooks-detail-shell min-h-screen pt-28 pb-20 px-4">
     <div class="max-w-7xl mx-auto space-y-6">
         <div class="flex items-center justify-between gap-4 flex-wrap">
             <div>
-                <a href="{% url 'textbooks:main' %}" class="text-sm font-bold text-slate-500 hover:text-slate-900 transition">&larr; 교육 자료실로 돌아가기</a>
-                <h1 class="text-4xl font-black text-slate-900 mt-3">{{ material.title }}</h1>
-                <p class="text-slate-600 mt-2">{{ material.get_subject_display }} · {{ material.unit_title }}{% if material.grade %} · {{ material.grade }}{% endif %}</p>
+                <a href="{% url 'textbooks:main' %}" class="text-sm font-bold text-slate-500 hover:text-slate-900 transition">&larr; 교과서 라이브 수업으로 돌아가기</a>
+                <h1 class="mt-3 text-4xl font-black text-slate-950">{{ material.title }}</h1>
+                <p class="mt-2 text-slate-600">{{ material.get_subject_display }} · {{ material.unit_title }}{% if material.grade %} · {{ material.grade }}{% endif %}</p>
             </div>
-            <div class="flex gap-3 flex-wrap items-center">
-                <span class="rounded-full px-4 py-2 text-sm font-black {% if material.source_type == 'pdf' %}bg-rose-100 text-rose-700{% elif material.source_type == 'html' %}bg-sky-100 text-sky-700{% else %}bg-emerald-100 text-emerald-700{% endif %}">{{ material.get_source_type_display }}</span>
-                {% if material.source_type == 'pdf' %}
+            <div class="flex gap-3 flex-wrap">
                 <form method="post" action="{% url 'textbooks:toggle_publish' material.id %}">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="{% if material.is_published %}unpublish{% else %}publish{% endif %}">
@@ -36,129 +37,88 @@
                 </form>
                 <form method="post" action="{% url 'textbooks:start_live' material.id %}">
                     {% csrf_token %}
-                    <button class="rounded-2xl px-5 py-3 font-black bg-slate-900 text-white">{% if active_session and active_session.status != 'ended' %}라이브 수업 재개{% else %}라이브 수업 시작{% endif %}</button>
+                    <button class="rounded-2xl bg-slate-950 px-5 py-3 font-black text-white">{% if active_session and active_session.status != 'ended' %}라이브 수업 재개{% else %}라이브 수업 시작{% endif %}</button>
                 </form>
-                {% endif %}
             </div>
         </div>
 
-        <div class="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_380px]">
+        <div class="grid gap-6 lg:grid-cols-[minmax(0,1.12fr)_380px]">
             <div class="space-y-6 min-w-0">
-                {% if material.source_type == 'html' %}
-                {% include 'textbooks/partials/html_preview_shell.html' with preview_initial_script_id='textbooks-preview-html-json' preview_title='저장된 HTML 화면' preview_subtitle='저장된 코드를 sandbox 안에서 다시 확인합니다.' preview_window_url=preview_window_url preview_footer_note='학생 배포 연결은 다음 단계에서 붙습니다.' %}
-                {% elif material.source_type == 'pdf' %}
-                <div class="textbooks-panel rounded-[32px] p-6 md:p-8">
-                    <div class="flex items-center justify-between gap-4 flex-wrap mb-6">
+                <section class="textbooks-panel rounded-[32px] p-6 md:p-8">
+                    <div class="flex items-center justify-between gap-4 flex-wrap">
                         <div>
-                            <div class="text-xs font-bold uppercase tracking-[0.32em] text-sky-600">자료 정보</div>
-                            <h2 class="text-2xl font-black text-slate-900 mt-2">PDF 교과서 자료</h2>
+                            <div class="text-xs font-black uppercase tracking-[0.32em] text-sky-700">자료 정보</div>
+                            <h2 class="mt-2 text-2xl font-black text-slate-950">교과서 PDF 수업 허브</h2>
                         </div>
-                        <div class="rounded-full px-4 py-2 text-sm font-bold bg-rose-100 text-rose-700">PDF</div>
+                        <span class="rounded-full bg-rose-100 px-4 py-2 text-sm font-bold text-rose-700">PDF</span>
                     </div>
-                    <div class="grid gap-4 md:grid-cols-3 mb-6">
-                        <div class="rounded-3xl bg-slate-50 border border-slate-200 p-5">
-                            <div class="text-sm text-slate-500">페이지 수</div>
-                            <div class="text-3xl font-black text-slate-900 mt-2">{{ material.page_count }}</div>
-                        </div>
-                        <div class="rounded-3xl bg-slate-50 border border-slate-200 p-5">
-                            <div class="text-sm text-slate-500">파일명</div>
-                            <div class="text-lg font-black text-slate-900 mt-2 break-all">{{ material.original_filename }}</div>
-                        </div>
-                        <div class="rounded-3xl bg-slate-50 border border-slate-200 p-5">
-                            <div class="text-sm text-slate-500">자료 상태</div>
-                            <div class="text-lg font-black text-slate-900 mt-2">{% if material.is_published %}학생 접속 허용{% else %}비공개{% endif %}</div>
-                        </div>
-                    </div>
-                    <div class="rounded-[28px] overflow-hidden border border-slate-200 bg-slate-950/95">
-                        <div class="flex items-center justify-between px-5 py-4 text-white border-b border-white/10">
-                            <div>
-                                <div class="text-xs uppercase tracking-[0.28em] text-sky-300">PDF Preview</div>
-                                <div class="font-black mt-1">라이브 화면 시작 전 정보 확인</div>
-                            </div>
-                            {% if active_session %}
-                            <a href="{% url 'textbooks:teacher_session' active_session.id %}" class="rounded-full bg-white text-slate-900 px-4 py-2 text-sm font-black">교사 화면 열기</a>
-                            {% endif %}
-                        </div>
-                        <div class="p-8 text-slate-200 text-sm leading-7">
-                            라이브 수업에서는 PDF.js로 현재 페이지를 렌더링하고, 그 위에 필기 오버레이가 동기화됩니다. 학생은 PDF 파일 직접 주소가 아니라 세션 검증을 통과한 뒤에만 같은 페이지를 볼 수 있습니다.
-                        </div>
-                    </div>
-                </div>
-                {% else %}
-                <div class="textbooks-panel rounded-[32px] p-6 md:p-8">
-                    <div class="text-xs font-bold uppercase tracking-[0.32em] text-sky-600">텍스트 자료</div>
-                    <h2 class="text-2xl font-black text-slate-900 mt-2">저장된 텍스트 내용</h2>
-                    <div class="mt-6 rounded-[28px] border border-slate-200 bg-white p-6 prose max-w-none">
-                        {{ material.content|linebreaks }}
-                    </div>
-                </div>
-                {% endif %}
 
-                {% if material.content and material.source_type == 'pdf' %}
-                <div class="textbooks-panel rounded-[32px] p-6">
-                    <h3 class="text-lg font-black text-slate-900 mb-3">교사용 메모</h3>
-                    <div class="text-slate-600 whitespace-pre-wrap leading-7">{{ material.content }}</div>
-                </div>
+                    <div class="mt-6 grid gap-4 md:grid-cols-3">
+                        <div class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                            <div class="text-sm text-slate-500">페이지 수</div>
+                            <div class="mt-2 text-3xl font-black text-slate-900">{{ material.page_count }}</div>
+                        </div>
+                        <div class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                            <div class="text-sm text-slate-500">파일명</div>
+                            <div class="mt-2 text-lg font-black text-slate-900 break-all">{{ material.original_filename }}</div>
+                        </div>
+                        <div class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                            <div class="text-sm text-slate-500">학생 공개 상태</div>
+                            <div class="mt-2 text-lg font-black text-slate-900">{% if material.is_published %}학생 접속 허용{% else %}비공개{% endif %}</div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 rounded-[28px] overflow-hidden border border-slate-200 bg-slate-950 text-white">
+                        <div class="border-b border-white/10 px-5 py-4">
+                            <div class="text-xs uppercase tracking-[0.28em] text-sky-300">PDF Preview</div>
+                            <div class="mt-1 font-black">라이브 수업 전 준비 상태 안내</div>
+                        </div>
+                        <div class="p-8 text-sm leading-7 text-slate-200">
+                            교사 화면에서 페이지를 넘기면 TV 화면과 학생 화면이 같은 흐름으로 따라옵니다. 학생은 PDF 파일 직접 주소가 아니라 세션 검증과 입장코드를 통과한 뒤에만 접속합니다.
+                        </div>
+                    </div>
+                </section>
+
+                {% if material.content %}
+                <section class="textbooks-panel rounded-[32px] p-6">
+                    <div class="text-xs font-black uppercase tracking-[0.32em] text-sky-700">교사용 메모</div>
+                    <h2 class="mt-2 text-2xl font-black text-slate-950">수업 준비 메모</h2>
+                    <div class="mt-4 whitespace-pre-wrap text-slate-600 leading-7">{{ material.content }}</div>
+                </section>
                 {% endif %}
             </div>
 
             <aside class="space-y-6">
-                <div class="textbooks-panel rounded-[32px] p-6">
-                    <div class="text-xs font-bold uppercase tracking-[0.32em] text-sky-600">자료 상태</div>
-                    <h2 class="text-2xl font-black text-slate-900 mt-2">다음 행동</h2>
+                <section class="textbooks-panel rounded-[32px] p-6">
+                    <div class="text-xs font-black uppercase tracking-[0.32em] text-sky-700">다음 행동</div>
+                    <h2 class="mt-2 text-2xl font-black text-slate-950">수업 시작과 배포</h2>
+
                     <div class="mt-5 space-y-4">
-                        <div class="rounded-3xl bg-slate-50 border border-slate-200 p-5">
-                            <div class="text-sm text-slate-500">자료 형식</div>
-                            <div class="mt-2 text-xl font-black text-slate-900">{{ material.get_source_type_display }}</div>
-                            <div class="mt-1 text-sm text-slate-500">{% if material.source_type == 'pdf' %}PDF 라이브 수업 가능{% elif material.source_type == 'html' %}교사용 sandbox 점검 완료 가능{% else %}읽기용 텍스트 자료{% endif %}</div>
+                        <div class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                            <div class="text-sm text-slate-500">라이브 세션</div>
+                            <div class="mt-2 text-xl font-black text-slate-900">{% if active_session %}{{ active_session.get_status_display }}{% else %}아직 없음{% endif %}</div>
+                            <div class="mt-1 text-sm text-slate-500">{% if active_session %}입장코드 {{ active_session.join_code }}{% else %}상단 버튼으로 세션을 시작하세요.{% endif %}</div>
                         </div>
-                        {% if material.source_type == 'pdf' %}
-                        <div class="rounded-3xl bg-slate-50 border border-slate-200 p-5">
-                            <div class="text-sm text-slate-500">학생 공개 상태</div>
-                            <div class="mt-2 text-lg font-black text-slate-900">{% if material.is_published %}학생 접속 허용{% else %}비공개{% endif %}</div>
-                        </div>
+
                         {% if active_session %}
                         <div class="grid gap-3 sm:grid-cols-2">
-                            <a href="{% url 'textbooks:teacher_session' active_session.id %}" class="rounded-2xl bg-slate-900 text-white text-center py-3 font-black">교사 화면</a>
-                            <a href="{% url 'textbooks:display_session' active_session.id %}" class="rounded-2xl bg-sky-100 text-sky-800 text-center py-3 font-black">TV 화면</a>
+                            <a href="{% url 'textbooks:teacher_session' active_session.id %}" class="rounded-2xl bg-slate-950 py-3 text-center font-black text-white">교사 화면</a>
+                            <a href="{% url 'textbooks:display_session' active_session.id %}" class="rounded-2xl bg-sky-100 py-3 text-center font-black text-sky-800">TV 화면</a>
                         </div>
                         <div class="rounded-[28px] border border-slate-200 bg-white p-5 text-center">
-                            <div class="text-sm text-slate-500 mb-4">학생 접속 QR</div>
+                            <div class="text-sm text-slate-500">학생 접속 QR</div>
                             {% if join_url %}
-                            <img src="{{ join_qr_data_url }}" alt="학생 접속 QR" class="w-48 h-48 mx-auto rounded-2xl border border-slate-200 bg-white p-2">
+                            <img src="{{ join_qr_data_url }}" alt="학생 접속 QR" class="mx-auto mt-4 h-48 w-48 rounded-2xl border border-slate-200 bg-white p-2">
                             <div class="mt-4 text-xs text-slate-500 break-all">{{ join_url }}</div>
                             {% endif %}
                         </div>
                         {% else %}
-                        <p class="text-sm text-slate-500 leading-7">아직 라이브 수업 세션이 없습니다. 상단 버튼으로 시작하면 교사 화면과 TV 화면을 같이 엽니다.</p>
-                        {% endif %}
-                        {% elif material.source_type == 'html' %}
-                        <div class="rounded-3xl bg-slate-50 border border-slate-200 p-5">
-                            <div class="text-sm text-slate-500">현재 단계</div>
-                            <div class="mt-2 text-lg font-black text-slate-900">교사 저장 · 미리보기</div>
-                            <div class="mt-1 text-sm text-slate-500">학생 공개용 실행 링크와 QR 배포는 다음 단계에서 붙일 예정입니다.</div>
-                        </div>
-                        {% if preview_window_url %}
-                        <a href="{{ preview_window_url }}" target="_blank" rel="noopener noreferrer" class="block rounded-2xl bg-slate-900 text-white text-center py-3 font-black">새 창에서 크게 보기</a>
-                        {% endif %}
-                        {% else %}
-                        <div class="rounded-3xl bg-slate-50 border border-slate-200 p-5 text-sm text-slate-500 leading-7">
-                            텍스트 자료는 읽기용 자료로 저장되었습니다. 필요하면 HTML 자료 탭에서 상호작용 화면으로 다시 만들 수 있습니다.
-                        </div>
+                        <p class="text-sm leading-7 text-slate-500">라이브 수업을 시작하면 교사 화면, TV 화면, 학생용 QR이 한 번에 준비됩니다.</p>
                         {% endif %}
                     </div>
-                </div>
+                </section>
             </aside>
         </div>
     </div>
 </section>
-{% if material.source_type == 'html' %}
-{{ material.content|json_script:'textbooks-preview-html-json' }}
-{% endif %}
-{% endblock %}
-
-{% block extra_js %}
-{% if material.source_type == 'html' %}
-<script src="{% static 'textbooks/html_preview.js' %}"></script>
-{% endif %}
 {% endblock %}
