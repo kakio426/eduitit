@@ -35,6 +35,9 @@ class OpenCloHiddenLoginViewTests(TestCase):
             "noindex, nofollow, noarchive, nosnippet",
         )
         self.assertIn("no-store", response.headers.get("Cache-Control", ""))
+        self.assertEqual(response.headers.get("Referrer-Policy"), "same-origin")
+        self.assertContains(response, 'content="same-origin"')
+        self.assertNotContains(response, 'content="no-referrer"')
 
     def test_hidden_login_page_authenticates_username_password(self):
         response = self.client.post(
