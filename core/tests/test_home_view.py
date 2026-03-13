@@ -236,6 +236,12 @@ class HomeV2ViewTest(TestCase):
         )
         return event
 
+    def _sorted_event_source(self, response):
+        return sorted(response.context['events_json'], key=lambda item: item['id'])
+
+    def _sorted_task_source(self, response):
+        return sorted(response.context['tasks_json'], key=lambda item: item['id'])
+
     def test_v2_anonymous_200(self):
         """V2 비로그인 홈 200 응답"""
         response = self.client.get(reverse('home'))
@@ -347,20 +353,19 @@ class HomeV2ViewTest(TestCase):
         favorites_index = content.index('data-home-v2-top-favorites="true"')
         calendar_index = content.index('data-home-v2-top-calendar="true"')
 
+        self.assertLess(calendar_index, today_index)
         self.assertLess(today_index, favorites_index)
-        self.assertLess(favorites_index, calendar_index)
         self.assertIn('data-home-v2-top-zone="true"', content)
-        self.assertIn('학급 캘린더', content)
-        self.assertIn('전체 캘린더', content)
-        self.assertIn('오늘의 메모', content)
-        self.assertIn('다시 볼 메모', content)
-        self.assertIn('오늘 일정', content)
-        self.assertIn('오늘 할 일', content)
-        self.assertIn('data-home-v2-calendar-month-grid="true"', content)
-        self.assertIn('data-home-v2-calendar-day="true"', content)
+        self.assertIn('data-home-v2-calendar-surface="true"', content)
+        self.assertIn('data-classcalendar-surface="true"', content)
+        self.assertIn('data-classcalendar-embed-mode="home"', content)
+        self.assertIn('data-classcalendar-main-view="true"', content)
+        self.assertIn('새 일정', content)
         self.assertNotIn('homeCalendarWidget()', content)
         self.assertNotIn('openTodayMemoModal($event)', content)
-        self.assertNotIn('data-home-v2-calendar-agenda="true"', content)
+        self.assertNotIn('data-home-v2-calendar-month-grid="true"', content)
+        self.assertNotIn('data-home-v2-calendar-day="true"', content)
+        self.assertNotIn('안내문에서 일정 찾기', content)
 
     def test_v2_authenticated_does_not_render_today_try_now_section(self):
         self._create_try_now_products()
@@ -388,18 +393,14 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('전체 캘린더', content)
-        self.assertIn('오늘의 메모', content)
-        self.assertIn('다시 볼 메모', content)
-        self.assertIn('빠른 추가', content)
-        self.assertIn(reverse('calendar_main'), content)
-        self.assertIn(f"{reverse('calendar_today')}?focus=memos", content)
-        self.assertIn(f"{reverse('calendar_today')}?focus=review", content)
+        self.assertIn('data-classcalendar-main-view="true"', content)
+        self.assertIn('data-classcalendar-embed-mode="home"', content)
         self.assertNotIn('openTodayMemoModal($event)', content)
         self.assertNotIn('data-home-v2-today-memo-modal="true"', content)
         self.assertNotIn('openMessageHub($event, \'capture\', { resetCapture: true })', content)
+        self.assertNotIn('안내문에서 일정 찾기', content)
 
-    def test_v2_authenticated_calendar_hub_shows_today_memo_preview(self):
+    def test_v2_authenticated_calendar_surface_keeps_note_source_in_shared_data(self):
         user = self._login('memouser')
         now = timezone.now().replace(second=0, microsecond=0)
         self._create_calendar_event_with_note(
@@ -419,18 +420,19 @@ class HomeV2ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
+        event_notes = {
+            (item['title'], item['note'])
+            for item in self._sorted_event_source(response)
+        }
 
-        self.assertIn('data-home-v2-calendar-today-memos="true"', content)
-        self.assertIn('오늘의 메모', content)
-        self.assertIn('다시 볼 메모', content)
-        self.assertIn(f"{reverse('calendar_today')}?focus=memos", content)
-        self.assertIn(f"{reverse('calendar_today')}?focus=review", content)
-        self.assertIn('1교시 전에 QR 띄우기', content)
-        self.assertIn('마이크 배터리 확인', content)
-        self.assertIn('지금 볼 메모', content)
-        self.assertIn('이미 지난 메모', content)
+        self.assertIn('data-classcalendar-main-view="true"', content)
+        self.assertIn(('체험학습 안내', '1교시 전에 QR 띄우기\n준비물 다시 확인'), event_notes)
+        self.assertIn(('공개수업 준비', '마이크 배터리 확인\n학부모 동선 안내'), event_notes)
+        self.assertNotIn('data-home-v2-calendar-today-memos="true"', content)
+        self.assertNotIn('오늘의 메모 열기', content)
+        self.assertNotIn('다시 볼 메모 열기', content)
 
-    def test_v2_authenticated_calendar_hub_uses_shared_calendar_source(self):
+    def test_v2_authenticated_calendar_surface_uses_shared_calendar_source(self):
         viewer = self._login('sharedviewer')
         owner = _create_onboarded_user('sharedowner')
         CalendarCollaborator.objects.create(
@@ -447,13 +449,22 @@ class HomeV2ViewTest(TestCase):
             end_time=now + timedelta(hours=1),
         )
 
-        response = self.client.get(reverse('home'))
-        content = response.content.decode('utf-8')
+        home_response = self.client.get(reverse('home'))
+        main_response = self.client.get(reverse('calendar_main'))
+        home_events = self._sorted_event_source(home_response)
+        main_events = self._sorted_event_source(main_response)
 
-        self.assertIn('공유된 공개수업 준비', content)
-        self.assertIn('공유 달력 준비물도 홈에서 바로 보여야 함', content)
+        self.assertIn(
+            ('공유된 공개수업 준비', '공유 달력 준비물도 홈에서 바로 보여야 함'),
+            {(item['title'], item['note']) for item in home_events},
+        )
+        self.assertEqual(home_events, main_events)
+        self.assertEqual(self._sorted_task_source(home_response), self._sorted_task_source(main_response))
+        self.assertEqual(home_response.context['initial_selected_date'], main_response.context['initial_selected_date'])
+        self.assertEqual(home_response.context['calendar_page_variant'], 'main')
+        self.assertEqual(main_response.context['calendar_page_variant'], 'main')
 
-    def test_v2_authenticated_calendar_hub_shows_supporting_hints_when_today_has_no_items(self):
+    def test_v2_authenticated_calendar_surface_does_not_render_supporting_sections(self):
         user = self._login('upcominguser')
         tomorrow = timezone.make_aware(datetime.combine(timezone.localdate() + timedelta(days=1), time(hour=9)))
         CalendarEvent.objects.create(
@@ -467,17 +478,18 @@ class HomeV2ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
+        event_titles = {item['title'] for item in self._sorted_event_source(response)}
 
-        self.assertIn('data-home-v2-calendar-empty="true"', content)
-        self.assertIn('오늘 확인할 일정, 메모, 할 일이 없습니다.', content)
-        self.assertIn('data-home-v2-calendar-supporting="true"', content)
-        self.assertIn('다음 일정', content)
-        self.assertIn('내일 학부모총회', content)
+        self.assertIn('data-classcalendar-main-view="true"', content)
+        self.assertIn('내일 학부모총회', event_titles)
+        self.assertNotIn('data-home-v2-calendar-empty="true"', content)
+        self.assertNotIn('data-home-v2-calendar-supporting="true"', content)
 
-    def test_v2_authenticated_calendar_hub_links_event_card_to_full_calendar_detail(self):
+    def test_v2_authenticated_calendar_surface_uses_selected_date_from_query(self):
         user = self._login('detailuser')
         now = timezone.make_aware(datetime.combine(timezone.localdate(), time(hour=11)))
-        event = self._create_calendar_event_with_note(
+        target_date = (timezone.localdate() + timedelta(days=2)).isoformat()
+        self._create_calendar_event_with_note(
             user,
             title='상세 확인 일정',
             note='링크는 전체 캘린더 상세로 연결',
@@ -485,14 +497,13 @@ class HomeV2ViewTest(TestCase):
             end_time=now + timedelta(hours=1),
         )
 
-        response = self.client.get(reverse('home'))
+        response = self.client.get(f"{reverse('home')}?date={target_date}")
         content = response.content.decode('utf-8')
 
-        self.assertIn(reverse('calendar_main'), content)
-        self.assertIn(f"open_event={event.id}", content)
-        self.assertIn(f"date={timezone.localdate().isoformat()}", content)
+        self.assertEqual(response.context['initial_selected_date'], target_date)
+        self.assertIn('data-classcalendar-embed-mode="home"', content)
 
-    def test_v2_authenticated_calendar_hub_renders_month_grid_from_same_source(self):
+    def test_v2_authenticated_calendar_surface_matches_main_calendar_source(self):
         user = self._login('monthgriduser')
         now = timezone.now().replace(second=0, microsecond=0)
         self._create_calendar_event_with_note(
@@ -511,29 +522,35 @@ class HomeV2ViewTest(TestCase):
             priority=CalendarTask.Priority.NORMAL,
         )
 
-        response = self.client.get(reverse('home'))
-        content = response.content.decode('utf-8')
-        calendar_hub = response.context['calendar_hub']
         today_key = timezone.localdate().isoformat()
-        today_cell = next(
-            day
-            for week in calendar_hub['month_grid']
-            for day in week
-            if day['date'] == today_key
+        home_response = self.client.get(f"{reverse('home')}?date={today_key}")
+        main_response = self.client.get(f"{reverse('calendar_main')}?date={today_key}")
+        content = home_response.content.decode('utf-8')
+
+        self.assertIn('data-classcalendar-main-view="true"', content)
+        self.assertIn('data-classcalendar-embed-mode="home"', content)
+        self.assertEqual(home_response.context['initial_selected_date'], today_key)
+        self.assertEqual(main_response.context['initial_selected_date'], today_key)
+        self.assertEqual(self._sorted_event_source(home_response), self._sorted_event_source(main_response))
+        self.assertEqual(self._sorted_task_source(home_response), self._sorted_task_source(main_response))
+        self.assertIn(
+            ('월간 그리드 확인 일정', '메인 숫자 달력에서도 표시되어야 함'),
+            {
+                (item['title'], item['note'])
+                for item in self._sorted_event_source(home_response)
+            },
         )
+        self.assertIn(
+            ('월간 그리드 할 일', '오늘 할 일도 그리드에 반영'),
+            {
+                (item['title'], item['note'])
+                for item in self._sorted_task_source(home_response)
+            },
+        )
+        self.assertNotIn('data-home-v2-calendar-month-grid="true"', content)
+        self.assertNotIn('data-home-v2-calendar-day="true"', content)
 
-        self.assertIn('data-home-v2-calendar-month-grid="true"', content)
-        self.assertIn('data-home-v2-calendar-day="true"', content)
-        self.assertTrue(today_cell['is_today'])
-        self.assertTrue(today_cell['has_events'])
-        self.assertTrue(today_cell['has_memos'])
-        self.assertTrue(today_cell['has_review_memos'])
-        self.assertTrue(today_cell['has_tasks'])
-        self.assertEqual(today_cell['detail_url'], f"{reverse('calendar_main')}?date={today_key}")
-        self.assertIn(f'data-date="{today_key}"', content)
-        self.assertIn(f'href="{reverse("calendar_main")}?date={today_key}"', content)
-
-    def test_v2_authenticated_calendar_hub_renders_today_task_section(self):
+    def test_v2_authenticated_calendar_surface_keeps_task_source_in_shared_data(self):
         user = self._login('taskslotuser')
         CalendarTask.objects.create(
             author=user,
@@ -546,12 +563,14 @@ class HomeV2ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
+        task_notes = {
+            (item['title'], item['note'])
+            for item in self._sorted_task_source(response)
+        }
 
-        self.assertIn('data-home-v2-calendar-today-tasks="true"', content)
-        self.assertIn('오늘 할 일', content)
-        self.assertIn('아침 조회 준비', content)
-        self.assertIn('출석부와 전달사항 확인', content)
-        self.assertNotIn('selectedDateTasks.length > 0', content)
+        self.assertIn('data-classcalendar-main-view="true"', content)
+        self.assertIn(('아침 조회 준비', '출석부와 전달사항 확인'), task_notes)
+        self.assertNotIn('data-home-v2-calendar-today-tasks="true"', content)
 
     def test_v2_authenticated_widens_content_shell_and_keeps_favorites_two_up(self):
         user = self._login('balanceuser')
@@ -730,8 +749,8 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
 
         favorites_index = content.index('data-home-v2-top-favorites="true"')
-        calendar_index = content.index('data-home-v2-top-calendar="true"')
-        favorites_block = content[favorites_index:calendar_index]
+        top_zone_end = content.index('data-home-v2-service-groups="true"', favorites_index)
+        favorites_block = content[favorites_index:top_zone_end]
 
         self.assertIn('data-home-v2-top-favorites-grid="true"', favorites_block)
         self.assertIn('data-home-v2-favorite-card="true"', favorites_block)
@@ -770,8 +789,8 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
 
         favorites_index = content.index('data-home-v2-top-favorites="true"')
-        calendar_index = content.index('data-home-v2-top-calendar="true"')
-        favorites_block = content[favorites_index:calendar_index]
+        top_zone_end = content.index('data-home-v2-service-groups="true"', favorites_index)
+        favorites_block = content[favorites_index:top_zone_end]
 
         self.assertIn('title="반짝반짝 우리반 알림판">알림판</p>', favorites_block)
         self.assertIn('aria-label="반짝반짝 우리반 알림판 즐겨찾기 토글"', favorites_block)

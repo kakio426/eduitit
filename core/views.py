@@ -2041,7 +2041,13 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
         workbench_slots = _build_workbench_slots(favorite_items)
         recent_items = _build_product_link_items(recent_products, include_section_meta=True)
         discovery_items = _build_product_link_items(discovery_products, include_section_meta=True)
-        calendar_hub = _build_home_calendar_hub_context(request)
+        from classcalendar.views import build_calendar_surface_context
+
+        home_calendar_surface = build_calendar_surface_context(
+            request,
+            page_variant='main',
+            embedded_surface='home',
+        )
         workbench_bundles = _get_user_workbench_bundles(request.user, product_list)
         weekly_bundle_items = _get_weekly_workbench_bundle_highlights(request.user, product_list)
         today_context = _build_today_context(request)
@@ -2069,7 +2075,7 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
             'discovery_items': discovery_items,
             'workbench_bundles': workbench_bundles,
             'weekly_bundle_items': weekly_bundle_items,
-            'calendar_hub': calendar_hub,
+            'home_calendar_surface': home_calendar_surface,
             'home_calendar_summary': home_calendar_summary,
             'today_try_cards': today_try_cards,
             'today_try_support_cards': today_try_support_cards,
@@ -2078,6 +2084,7 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
             'posts': posts,
             'page_obj': page_obj,
             'feed_scope': feed_scope,
+            **home_calendar_surface,
             **build_home_page_seo(request).as_context(),
             **today_context,
             **_build_sheetbook_workspace_context(request),

@@ -580,11 +580,11 @@ class MessageCaptureApiTests(TestCase):
         detail_response = self._archive_detail(foreign_capture.id)
         self.assertEqual(detail_response.status_code, 404)
 
-    def test_main_shows_message_capture_entry_for_allowlist_user(self):
+    def test_main_hides_message_capture_entry_even_for_allowlist_user(self):
         response = self.client.get(reverse("classcalendar:legacy_main"), follow=True)
         self.assertRedirects(response, reverse("calendar_main"))
-        self.assertContains(response, "openMessageHub($event, 'capture', { resetCapture: true })")
-        self.assertContains(response, "안내문에서 일정 찾기")
+        self.assertNotContains(response, "openMessageHub($event, 'capture', { resetCapture: true })")
+        self.assertNotContains(response, "안내문에서 일정 찾기")
         self.assertNotContains(response, '@click.prevent="openMessageCaptureModal($event)"')
 
     @override_settings(FEATURE_MESSAGE_CAPTURE_ENABLED=False)

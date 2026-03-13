@@ -1942,7 +1942,13 @@ def _redirect_legacy_today_panel(request):
     return redirect(url)
 
 
-def _build_calendar_page_context(request, *, embedded_sheetbook_context=None, page_variant="main"):
+def build_calendar_surface_context(
+    request,
+    *,
+    embedded_sheetbook_context=None,
+    page_variant="main",
+    embedded_surface="page",
+):
     _sync_integrations_if_needed(request)
     visible_owner_ids, editable_owner_ids, incoming_calendars = _get_calendar_access_for_user(request.user)
     integration_setting = _get_integration_setting_for_user(request.user)
@@ -1967,6 +1973,9 @@ def _build_calendar_page_context(request, *, embedded_sheetbook_context=None, pa
         create_api_url=create_api_url,
         today_focus=today_focus,
     )
+    normalized_surface = str(embedded_surface or "page").strip().lower()
+    if normalized_surface not in {"page", "sheetbook", "home"}:
+        normalized_surface = "page"
     return {
         "service": service,
         "title": service.title if service else "학급 캘린더",
@@ -2008,9 +2017,21 @@ def _build_calendar_page_context(request, *, embedded_sheetbook_context=None, pa
         "initial_open_task_id": initial_open_task_id,
         "embedded_sheetbook_context": embedded_sheetbook_context,
         "embedded_sheetbook_context_json": embedded_sheetbook_context or {},
-        "is_embedded_in_sheetbook": bool(embedded_sheetbook_context),
-        "hide_navbar": bool(embedded_sheetbook_context),
+        "calendar_embed_mode": normalized_surface,
+        "is_embedded_in_sheetbook": normalized_surface == "sheetbook",
+        "is_embedded_on_home": normalized_surface == "home",
+        "hide_navbar": normalized_surface == "sheetbook",
     }
+
+
+def _build_calendar_page_context(request, *, embedded_sheetbook_context=None, page_variant="main"):
+    embedded_surface = "sheetbook" if embedded_sheetbook_context else "page"
+    return build_calendar_surface_context(
+        request,
+        embedded_sheetbook_context=embedded_sheetbook_context,
+        page_variant=page_variant,
+        embedded_surface=embedded_surface,
+    )
 
 
 @login_required

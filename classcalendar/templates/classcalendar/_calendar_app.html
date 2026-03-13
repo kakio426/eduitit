@@ -1,65 +1,47 @@
 {% load static %}
-<style>
-    .calendar-grid-day {
-        min-height: 112px;
-    }
 
-    @media (max-width: 1023px) {
-        .calendar-grid-day {
-            min-height: 86px;
-        }
-    }
-
-    @media (max-width: 767px) {
-        .calendar-grid-day {
-            min-height: 74px;
-        }
-    }
-</style>
-
-<section class="{% if is_embedded_in_sheetbook %}pt-0 pb-0 px-0 min-h-0{% else %}pt-24 md:pt-28 pb-6 md:pb-12 px-3 sm:px-6 lg:px-8 min-h-screen{% endif %} ui-pilot-calendar-shell" x-data="calendarApp()">
-    <div class="{% if is_embedded_in_sheetbook %}max-w-none mx-0{% else %}max-w-7xl mx-auto{% endif %}">
-        {% if not is_embedded_in_sheetbook %}
-        <div class="mb-3 sm:mb-4 flex flex-wrap items-center justify-between gap-2.5">
+<section
+    class="{% if is_embedded_in_sheetbook or is_embedded_on_home %}pt-0 pb-0 px-0 min-h-0{% else %}pt-24 md:pt-28 pb-6 md:pb-12 px-3 sm:px-6 lg:px-8 min-h-screen{% endif %} ui-pilot-calendar-shell"
+    data-classcalendar-surface="true"
+    data-classcalendar-page-variant="{{ calendar_page_variant }}"
+    data-classcalendar-embed-mode="{{ calendar_embed_mode|default:'page' }}"
+    x-data="calendarApp()"
+>
+    <div class="{% if is_embedded_in_sheetbook or is_embedded_on_home %}max-w-none mx-0{% else %}max-w-7xl mx-auto{% endif %}">
+        {% if calendar_page_variant == "today" and not is_embedded_in_sheetbook and not is_embedded_on_home %}
+        <div class="mb-3 sm:mb-4 flex flex-col gap-2.5 md:flex-row md:items-center md:justify-between">
             <div class="min-w-0">
-                <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight truncate">
-                    <span class="mr-1.5">{{ service.icon|default:'📅' }}</span>{{ title }}
+                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">메인 캘린더</p>
+                <h1 class="mt-1 flex items-center gap-2 text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl">
+                    <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-sm text-slate-600">{{ service.icon|default:'📅' }}</span>
+                    <span class="truncate">{{ title }}</span>
                 </h1>
             </div>
-            <div class="flex items-center gap-2 flex-wrap justify-end">
+            <div class="flex flex-wrap items-center gap-2 md:justify-end">
                 <a
                     href="{{ main_url }}"
-                    class="inline-flex items-center rounded-xl px-3 py-2 text-sm font-bold transition {% if calendar_page_variant == 'main' %}bg-slate-900 text-white hover:bg-slate-800{% else %}border border-slate-300 bg-white text-slate-700 hover:bg-slate-50{% endif %}"
+                    class="inline-flex items-center rounded-xl px-3 py-2 text-sm font-semibold transition {% if calendar_page_variant == 'main' %}bg-slate-900 text-white hover:bg-slate-800{% else %}border border-slate-200 bg-white text-slate-700 hover:bg-slate-50{% endif %}"
                 >
                     월간 보기
                 </a>
                 <a
                     href="{{ today_all_url }}"
-                    class="inline-flex items-center rounded-xl px-3 py-2 text-sm font-bold transition {% if calendar_page_variant == 'today' and today_focus == 'all' %}border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100{% else %}border border-slate-300 bg-white text-slate-700 hover:bg-slate-50{% endif %}"
+                    class="inline-flex items-center rounded-xl px-3 py-2 text-sm font-semibold transition {% if calendar_page_variant == 'today' and today_focus == 'all' %}border border-slate-900 bg-slate-900 text-white hover:bg-slate-800{% else %}border border-slate-200 bg-white text-slate-700 hover:bg-slate-50{% endif %}"
                 >
                     오늘 보기
                 </a>
                 <a
                     href="{{ today_memo_url }}"
-                    class="inline-flex items-center rounded-xl px-3 py-2 text-sm font-bold transition {% if calendar_page_variant == 'today' and today_focus == 'memos' %}border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100{% else %}border border-slate-300 bg-white text-slate-700 hover:bg-slate-50{% endif %}"
+                    class="inline-flex items-center rounded-xl px-3 py-2 text-sm font-semibold transition {% if calendar_page_variant == 'today' and today_focus == 'memos' %}border border-slate-900 bg-slate-900 text-white hover:bg-slate-800{% else %}border border-slate-200 bg-white text-slate-700 hover:bg-slate-50{% endif %}"
                 >
                     오늘 메모
                 </a>
                 <a
                     href="{{ today_review_url }}"
-                    class="inline-flex items-center rounded-xl px-3 py-2 text-sm font-bold transition {% if calendar_page_variant == 'today' and today_focus == 'review' %}border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100{% else %}border border-slate-300 bg-white text-slate-700 hover:bg-slate-50{% endif %}"
+                    class="inline-flex items-center rounded-xl px-3 py-2 text-sm font-semibold transition {% if calendar_page_variant == 'today' and today_focus == 'review' %}border border-slate-900 bg-slate-900 text-white hover:bg-slate-800{% else %}border border-slate-200 bg-white text-slate-700 hover:bg-slate-50{% endif %}"
                 >
                     다시 볼 메모
                 </a>
-                {% if message_capture_enabled %}
-                <button
-                    type="button"
-                    @click="openMessageHub($event, 'capture', { resetCapture: true })"
-                    class="inline-flex items-center rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-bold text-indigo-700 hover:bg-indigo-100 transition"
-                >
-                    안내문에서 일정 찾기
-                </button>
-                {% endif %}
                 <button
                     type="button"
                     @click="openCreateModalForSelectedDate()"
@@ -71,7 +53,7 @@
         </div>
         {% endif %}
 
-        <div class="{% if is_embedded_in_sheetbook %}bg-white rounded-none border-0 shadow-none p-0{% else %}bg-white rounded-[1.5rem] sm:rounded-[2rem] border border-slate-200 shadow-xl p-2.5 sm:p-5{% endif %}">
+        <div class="{% if is_embedded_in_sheetbook %}bg-white rounded-none border-0 shadow-none p-0{% elif is_embedded_on_home %}bg-white rounded-[1.5rem] sm:rounded-[2rem] border border-slate-200 shadow-sm p-3 sm:p-5{% else %}bg-white rounded-[1.5rem] sm:rounded-[2rem] border border-slate-200 shadow-xl p-2.5 sm:p-5{% endif %}">
             {% if calendar_page_variant == "today" %}
             <div class="space-y-5" data-classcalendar-today-view="true" data-classcalendar-today-focus="{{ today_focus }}">
                 <section class="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4 sm:p-5">
@@ -265,117 +247,89 @@
                 {% endif %}
             </div>
             {% else %}
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2.5 sm:gap-3 mb-3 sm:mb-4">
-                <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight" x-text="currentMonthText"></h2>
-                <div class="flex items-center justify-between md:justify-end gap-2">
-                    <div class="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
-                        <button
-                            type="button"
-                            @click="view='month'"
-                            :class="view === 'month' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'"
-                            class="px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition"
-                        >
-                            월
+            <div class="mb-3 space-y-3 sm:mb-4" data-classcalendar-main-view="true">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">월간 캘린더</p>
+                        <h2 class="mt-1 text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl" x-text="currentMonthText"></h2>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2 sm:justify-end">
+                        <button type="button" @click="prevMonth()" class="rounded-xl border border-slate-200 bg-white p-2 text-slate-500 transition hover:bg-slate-50 sm:p-2.5" aria-label="이전 달">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                        </button>
+                        <button type="button" @click="nextMonth()" class="rounded-xl border border-slate-200 bg-white p-2 text-slate-500 transition hover:bg-slate-50 sm:p-2.5" aria-label="다음 달">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                         </button>
                         <button
                             type="button"
-                            @click="view='agenda'"
-                            :class="view === 'agenda' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'"
-                            class="px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition"
+                            @click="selectToday()"
+                            class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                         >
-                            아젠다
+                            오늘
+                        </button>
+                        <button
+                            type="button"
+                            @click="openCreateModalForSelectedDate()"
+                            class="inline-flex items-center rounded-xl bg-slate-900 px-3 py-2 text-sm font-bold text-white transition hover:bg-slate-800"
+                        >
+                            새 일정
                         </button>
                     </div>
-                    <button type="button" @click="prevMonth()" class="p-2 sm:p-2.5 rounded-xl text-slate-500 hover:bg-slate-100 transition" aria-label="이전 달">
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-                    </button>
-                    <button type="button" @click="nextMonth()" class="p-2 sm:p-2.5 rounded-xl text-slate-500 hover:bg-slate-100 transition" aria-label="다음 달">
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                    </button>
                 </div>
             </div>
 
-            <div x-show="view === 'month'" class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_21rem] gap-4 xl:items-start">
+            <div class="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_21rem] xl:items-start">
                 <div class="min-w-0">
                     <div class="grid grid-cols-7 gap-px bg-slate-200 rounded-xl overflow-hidden border border-slate-200">
                         <template x-for="day in ['일', '월', '화', '수', '목', '금', '토']">
                             <div class="bg-slate-100 py-2 sm:py-3 text-center text-xs sm:text-sm font-bold text-slate-600" x-text="day"></div>
                         </template>
                         <template x-for="date in calendarDates" :key="date.toISOString()">
-                            <div
-                                class="calendar-grid-day bg-white p-1.5 sm:p-2.5 hover:bg-slate-50 transition cursor-pointer"
+                            <button
+                                type="button"
+                                class="flex min-h-[68px] w-full flex-col justify-between p-2 text-left transition hover:bg-slate-50 md:min-h-[82px] xl:min-h-[98px] sm:p-2.5"
+                                :class="isSelectedDate(date) ? 'bg-slate-50' : 'bg-white'"
                                 @click="selectDate(date)"
-                                title="날짜를 눌러 일정 보기"
+                                :title="getDayTooltip(date)"
                             >
-                                <span
-                                    class="text-xs sm:text-sm font-semibold w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full"
-                                    :class="[
-                                        isToday(date) ? 'bg-indigo-600 text-white' : '',
-                                        isSelectedDate(date) && !isToday(date) ? 'bg-slate-900 text-white' : '',
-                                        !isToday(date) && !isSelectedDate(date) && !isCurrentMonth(date) ? 'text-slate-400' : '',
-                                        !isToday(date) && !isSelectedDate(date) && isCurrentMonth(date) ? 'text-slate-700' : '',
-                                        isSelectedDate(date) ? 'ring-2 ring-indigo-300 ring-offset-2' : ''
-                                    ]"
-                                    x-text="date.getDate()"
-                                ></span>
-                                <div class="mt-2 space-y-1.5">
-                                    <div class="hidden sm:block space-y-1">
-                                        <template x-for="rangeEvent in getRangeEventsForDate(date)" :key="`${rangeEvent.id}-${dateKey(date)}`">
-                                            <div
-                                                class="h-1.5 border transition"
-                                                :class="getRangeStrokeClass(rangeEvent, date)"
-                                            ></div>
-                                        </template>
-                                    </div>
-                                    <template x-for="event in getVisibleEventsForDate(date)" :key="event.id">
-                                        <button
-                                            type="button"
-                                            @click.stop="openEventDetail(event)"
-                                            class="hidden sm:block w-full text-left px-2.5 py-1.5 rounded-lg text-sm font-medium border transition"
-                                            :class="getEventChipClass(event)"
-                                        >
-                                            <div class="flex items-center gap-1 min-w-0">
-                                                <span class="text-[11px] font-semibold opacity-80 shrink-0" x-text="formatEventTimeShort(event.start_time, event.is_all_day)"></span>
-                                                <span class="inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-bold leading-none shrink-0" :class="getEventSourceBadgeClass(event)" x-text="getEventSourceLabel(event)"></span>
-                                                <span class="truncate" x-text="event.title"></span>
-                                            </div>
-                                        </button>
-                                    </template>
-                                    <p x-show="getOverflowCountForDate(date) > 0" class="hidden sm:block text-xs font-semibold text-slate-500 px-1" x-text="`+ ${getOverflowCountForDate(date)}개 더`"></p>
-                                    <div class="sm:hidden flex justify-end">
-                                        <button
-                                            type="button"
-                                            @click.stop="selectDate(date)"
-                                            x-show="getEventCountForDate(date) > 0"
-                                            class="inline-flex items-center justify-center min-w-[1.55rem] h-6 px-1.5 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-[11px] font-black shadow-[0_4px_12px_rgba(79,70,229,0.38)]"
-                                            x-text="formatDayEventCount(date)"
-                                            title="이 날짜 일정 보기"
-                                        ></button>
-                                    </div>
+                                <div class="flex items-start justify-between gap-2">
+                                    <span
+                                        class="flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold sm:h-8 sm:w-8 sm:text-sm"
+                                        :class="[
+                                            isToday(date) ? 'bg-indigo-600 text-white' : '',
+                                            isSelectedDate(date) && !isToday(date) ? 'bg-slate-100 text-slate-900 ring-1 ring-slate-300' : '',
+                                            !isToday(date) && !isSelectedDate(date) && !isCurrentMonth(date) ? 'text-slate-400' : '',
+                                            !isToday(date) && !isSelectedDate(date) && isCurrentMonth(date) ? 'text-slate-700' : ''
+                                        ]"
+                                        x-text="date.getDate()"
+                                    ></span>
+                                    <span
+                                        x-show="getDayItemCount(date) > 0"
+                                        class="inline-flex min-w-[1.7rem] items-center justify-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600"
+                                        x-text="formatDayItemCount(date)"
+                                    ></span>
                                 </div>
-                            </div>
+                                <div class="mt-3 flex items-center gap-1.5" x-show="getDayItemCount(date) > 0">
+                                    <span x-show="getEventCountForDate(date) > 0" class="h-2 w-2 rounded-full bg-slate-600"></span>
+                                    <span x-show="getMemoCountForDate(date) > 0" class="h-2 w-2 rounded-full bg-amber-400"></span>
+                                    <span x-show="getTaskCountForDate(date) > 0" class="h-2 w-2 rounded-full bg-slate-300 ring-1 ring-slate-400/40"></span>
+                                </div>
+                            </button>
                         </template>
                     </div>
                 </div>
 
-                <aside class="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5 xl:sticky xl:top-28">
-                    <div class="flex items-center justify-between gap-3">
+                <aside class="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5 {% if not is_embedded_on_home %}xl:sticky xl:top-28{% endif %}">
+                    <div>
                         <div>
                             <p class="text-xs font-semibold text-slate-500 uppercase tracking-[0.08em]">선택한 날짜</p>
                             <h3 class="mt-1 text-lg sm:text-xl font-extrabold text-slate-900" x-text="selectedDateKey ? formatAgendaDate(selectedDateKey) : ''"></h3>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <button
-                                type="button"
-                                @click="selectToday()"
-                                class="hidden xl:inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition"
-                            >
-                                오늘
-                            </button>
+                            <p class="mt-2 text-sm text-slate-500" x-text="selectedDateSummaryText()"></p>
                         </div>
                     </div>
 
-                    <div class="mt-3 space-y-2" x-show="getEventsForSelectedDate().length > 0">
+                    <div class="mt-4 space-y-2.5" x-show="getEventsForSelectedDate().length > 0">
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-[0.08em]">일정</p>
                         <template x-for="event in getEventsForSelectedDate()" :key="`selected-${event.id}-${selectedDateKey}`">
                             <button
                                 type="button"
@@ -383,18 +337,20 @@
                                 class="w-full text-left bg-white rounded-xl p-4 border border-slate-200 hover:border-slate-300 hover:shadow-sm transition"
                             >
                                 <div class="flex items-start gap-3">
-                                    <div class="w-1.5 h-12 rounded-full" :class="getEventBarClass(event)"></div>
+                                    <div class="mt-1 h-2.5 w-2.5 rounded-full" :class="getEventBarClass(event)"></div>
                                     <div class="flex-1 min-w-0">
                                         <div class="flex items-center gap-1.5 flex-wrap">
                                             <p class="text-base font-bold text-slate-900 truncate" x-text="event.title"></p>
+                                            <span x-show="event.note" class="text-[10px] font-semibold rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-amber-700">메모</span>
                                             <span class="text-[10px] font-bold border rounded-md px-1.5 py-0.5" :class="getEventSourceBadgeClass(event)" x-text="getEventSourceLabel(event)"></span>
                                             <span
                                                 x-show="event.is_shared_calendar"
-                                                class="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-md px-1.5 py-0.5"
+                                                class="text-[10px] font-bold text-slate-600 bg-slate-100 border border-slate-200 rounded-md px-1.5 py-0.5"
                                                 x-text="event.calendar_owner_name"
                                             ></span>
                                         </div>
                                         <p class="mt-1 text-sm font-medium text-slate-600" x-text="formatEventRange(event)"></p>
+                                        <p x-show="event.note" class="mt-2 whitespace-pre-line text-sm leading-6 text-slate-600" x-text="event.note"></p>
                                     </div>
                                 </div>
                             </button>
@@ -403,7 +359,7 @@
 
                     <div class="mt-4" x-show="getTasksForSelectedDate().length > 0">
                         <p class="mb-2 text-xs font-semibold text-slate-500 uppercase tracking-[0.08em]">할 일</p>
-                        <div class="space-y-2">
+                        <div class="space-y-2.5">
                             <template x-for="task in getTasksForSelectedDate()" :key="`selected-task-${task.id}-${selectedDateKey}`">
                                 <button
                                     type="button"
@@ -411,13 +367,15 @@
                                     class="w-full text-left bg-white rounded-xl p-4 border border-slate-200 hover:border-slate-300 hover:shadow-sm transition"
                                 >
                                     <div class="flex items-start gap-3">
-                                        <div class="w-1.5 h-12 rounded-full bg-slate-400"></div>
+                                        <div class="mt-1 h-2.5 w-2.5 rounded-full bg-slate-400"></div>
                                         <div class="flex-1 min-w-0">
                                             <div class="flex items-center gap-1.5 flex-wrap">
                                                 <p class="text-base font-bold text-slate-900 truncate" x-text="task.title"></p>
+                                                <span x-show="task.note" class="text-[10px] font-semibold rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-amber-700">메모</span>
                                                 <span class="text-[10px] font-bold border rounded-md px-1.5 py-0.5" :class="getTaskPriorityBadgeClass(task)" x-text="task.priority === 'high' ? '중요' : (task.priority === 'low' ? '낮음' : '보통')"></span>
                                             </div>
                                             <p class="mt-1 text-sm font-medium text-slate-600" x-text="formatTaskDue(task)"></p>
+                                            <p x-show="task.note" class="mt-2 whitespace-pre-line text-sm leading-6 text-slate-600" x-text="task.note"></p>
                                         </div>
                                     </div>
                                 </button>
@@ -426,366 +384,16 @@
                     </div>
 
                     <div
-                        class="mt-3 rounded-xl border border-dashed border-slate-300 bg-white/80 p-6 text-center"
+                        class="mt-4 rounded-xl border border-dashed border-slate-300 bg-white/80 p-6 text-center"
                         x-show="getEventsForSelectedDate().length === 0 && getTasksForSelectedDate().length === 0"
                     >
-                        <p class="text-sm font-semibold text-slate-600">일정과 할 일이 없습니다. 새 항목을 추가해 주세요.</p>
+                        <p class="text-sm font-semibold text-slate-600">선택한 날짜에 일정과 할 일이 없습니다.</p>
                     </div>
                 </aside>
             </div>
-
-            <div x-show="view === 'agenda'" x-cloak class="space-y-5">
-                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
-                    <div class="flex items-center justify-between gap-2">
-                        <button
-                            type="button"
-                            @click="moveSelectedDate(-1)"
-                            class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition"
-                            aria-label="선택 날짜 이전"
-                        >
-                            이전
-                        </button>
-                        <div class="text-center">
-                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-[0.08em]">선택한 날짜</p>
-                            <h3 class="mt-1 text-base sm:text-lg font-extrabold text-slate-900" x-text="selectedDateKey ? formatAgendaDate(selectedDateKey) : ''"></h3>
-                        </div>
-                        <button
-                            type="button"
-                            @click="moveSelectedDate(1)"
-                            class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition"
-                            aria-label="선택 날짜 다음"
-                        >
-                            다음
-                        </button>
-                    </div>
-
-                    <div class="mt-3 flex items-center justify-end gap-2">
-                        <button
-                            type="button"
-                            @click="selectToday()"
-                            class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition"
-                        >
-                            오늘
-                        </button>
-                    </div>
-
-                    <div class="mt-3 space-y-2" x-show="getEventsForSelectedDate().length > 0">
-                        <template x-for="event in getEventsForSelectedDate()" :key="`agenda-selected-${event.id}-${selectedDateKey}`">
-                            <button
-                                type="button"
-                                @click="openEventDetail(event)"
-                                class="w-full text-left bg-white rounded-xl p-4 border border-slate-200 hover:border-slate-300 hover:shadow-sm transition"
-                            >
-                                <div class="flex items-start gap-3">
-                                    <div class="w-1.5 h-12 rounded-full" :class="getEventBarClass(event)"></div>
-                                    <div class="flex-1 min-w-0">
-                                        <div class="flex items-center gap-1.5 flex-wrap">
-                                            <p class="text-base font-bold text-slate-900 truncate" x-text="event.title"></p>
-                                            <span class="text-[10px] font-bold border rounded-md px-1.5 py-0.5" :class="getEventSourceBadgeClass(event)" x-text="getEventSourceLabel(event)"></span>
-                                            <span
-                                                x-show="event.is_shared_calendar"
-                                                class="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-md px-1.5 py-0.5"
-                                                x-text="event.calendar_owner_name"
-                                            ></span>
-                                        </div>
-                                        <p class="mt-1 text-sm font-medium text-slate-600" x-text="formatEventRange(event)"></p>
-                                    </div>
-                                </div>
-                            </button>
-                        </template>
-                    </div>
-
-                    <div class="mt-4" x-show="getTasksForSelectedDate().length > 0">
-                        <p class="mb-2 text-xs font-semibold text-slate-500 uppercase tracking-[0.08em]">할 일</p>
-                        <div class="space-y-2">
-                            <template x-for="task in getTasksForSelectedDate()" :key="`agenda-selected-task-${task.id}-${selectedDateKey}`">
-                                <button
-                                    type="button"
-                                    @click="openTaskDetail(task)"
-                                    class="w-full text-left bg-white rounded-xl p-4 border border-slate-200 hover:border-slate-300 hover:shadow-sm transition"
-                                >
-                                    <div class="flex items-start gap-3">
-                                        <div class="w-1.5 h-12 rounded-full bg-slate-400"></div>
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex items-center gap-1.5 flex-wrap">
-                                                <p class="text-base font-bold text-slate-900 truncate" x-text="task.title"></p>
-                                                <span class="text-[10px] font-bold border rounded-md px-1.5 py-0.5" :class="getTaskPriorityBadgeClass(task)" x-text="task.priority === 'high' ? '중요' : (task.priority === 'low' ? '낮음' : '보통')"></span>
-                                            </div>
-                                            <p class="mt-1 text-sm font-medium text-slate-600" x-text="formatTaskDue(task)"></p>
-                                        </div>
-                                    </div>
-                                </button>
-                            </template>
-                        </div>
-                    </div>
-
-                    <div
-                        class="mt-3 rounded-xl border border-dashed border-slate-300 bg-white/80 p-6 text-center"
-                        x-show="getEventsForSelectedDate().length === 0 && getTasksForSelectedDate().length === 0"
-                    >
-                        <p class="text-sm font-semibold text-slate-600">일정과 할 일이 없습니다. 새 항목을 추가해 주세요.</p>
-                    </div>
-                </div>
-
-                <div class="px-1">
-                    <p class="text-xs font-semibold text-slate-500 uppercase tracking-[0.08em]">전체 일정</p>
-                </div>
-                <template x-for="date in getAgendaDates()" :key="date">
-                    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                        <h3 class="text-base sm:text-lg font-extrabold text-slate-900 mb-3" x-text="formatAgendaDate(date)"></h3>
-                        <div class="space-y-3">
-                            <template x-for="event in getEventsByDateString(date)" :key="event.id">
-                                <button
-                                    type="button"
-                                    @click="openEventDetail(event)"
-                                    class="w-full text-left bg-white rounded-xl p-4 border border-slate-200 hover:border-slate-300 hover:shadow-sm transition"
-                                >
-                                    <div class="flex items-start gap-3">
-                                        <div class="w-1.5 h-12 rounded-full" :class="getEventBarClass(event)"></div>
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex items-center gap-1.5 flex-wrap">
-                                                <p class="text-base sm:text-lg font-bold text-slate-900 truncate" x-text="event.title"></p>
-                                                <span class="text-[10px] font-bold border rounded-md px-1.5 py-0.5" :class="getEventSourceBadgeClass(event)" x-text="getEventSourceLabel(event)"></span>
-                                                <span
-                                                    x-show="event.is_shared_calendar"
-                                                    class="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-md px-1.5 py-0.5"
-                                                    x-text="event.calendar_owner_name"
-                                                ></span>
-                                            </div>
-                                            <p class="mt-1 text-sm font-medium text-slate-600" x-text="formatEventRange(event)"></p>
-                                        </div>
-                                    </div>
-                                </button>
-                            </template>
-                            <template x-for="task in getTasksByDateString(date)" :key="`agenda-task-${task.id}`">
-                                <button
-                                    type="button"
-                                    @click="openTaskDetail(task)"
-                                    class="w-full text-left bg-white rounded-xl p-4 border border-slate-200 hover:border-slate-300 hover:shadow-sm transition"
-                                >
-                                    <div class="flex items-start gap-3">
-                                        <div class="w-1.5 h-12 rounded-full bg-slate-400"></div>
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex items-center gap-1.5 flex-wrap">
-                                                <p class="text-base sm:text-lg font-bold text-slate-900 truncate" x-text="task.title"></p>
-                                                <span class="text-[10px] font-bold border rounded-md px-1.5 py-0.5" :class="getTaskPriorityBadgeClass(task)" x-text="task.priority === 'high' ? '중요' : (task.priority === 'low' ? '낮음' : '보통')"></span>
-                                            </div>
-                                            <p class="mt-1 text-sm font-medium text-slate-600" x-text="formatTaskDue(task)"></p>
-                                        </div>
-                                    </div>
-                                </button>
-                            </template>
-                        </div>
-                    </div>
-                </template>
-                <div x-show="getAgendaDates().length === 0" class="py-12 text-center text-slate-500 text-sm font-medium">
-                    등록된 일정이 없습니다. 새 일정을 추가해 시작해 보세요.
-                </div>
-            </div>
+            {% endif %}
         </div>
 
-        <details class="mt-4 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 shadow-sm" data-calendar-admin-tools="1">
-            <summary class="cursor-pointer list-none text-sm font-semibold text-slate-700 flex items-center justify-between gap-3">
-                <span>공유·협업·연동</span>
-                <span class="text-[11px] font-medium text-slate-500">필요할 때만 열기</span>
-            </summary>
-            <div class="mt-4 space-y-3">
-                <details class="rounded-xl border border-slate-200 bg-white px-4 py-3" data-calendar-admin-share="1">
-                    <summary class="cursor-pointer list-none text-sm font-semibold text-slate-700 flex items-center justify-between gap-3">
-                        <span>공유 링크</span>
-                        <span class="text-[11px] font-medium {% if share_enabled %}text-emerald-700{% else %}text-slate-500{% endif %}">{% if share_enabled %}활성화{% else %}비활성화{% endif %}</span>
-                    </summary>
-                    <div class="mt-3 space-y-3">
-                        {% if share_enabled %}
-                        <div class="flex flex-col gap-2.5 sm:flex-row">
-                            <input
-                                id="calendarShareUrl"
-                                type="text"
-                                readonly
-                                value="{{ share_url }}"
-                                class="flex-1 rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700"
-                            >
-                            <div class="flex flex-wrap gap-2">
-                                <button
-                                    type="button"
-                                    onclick="copyCalendarShareUrl()"
-                                    class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition"
-                                >
-                                    링크 복사
-                                </button>
-                                <form action="{% url 'classcalendar:share_rotate' %}" method="post">
-                                    {% csrf_token %}
-                                    <button
-                                        type="submit"
-                                        class="inline-flex items-center rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 transition"
-                                    >
-                                        재발급
-                                    </button>
-                                </form>
-                                <form action="{% url 'classcalendar:share_disable' %}" method="post">
-                                    {% csrf_token %}
-                                    <button
-                                        type="submit"
-                                        class="inline-flex items-center rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-100 transition"
-                                    >
-                                        비활성화
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                        {% else %}
-                        <form action="{% url 'classcalendar:share_enable' %}" method="post">
-                            {% csrf_token %}
-                            <button
-                                type="submit"
-                                class="inline-flex items-center rounded-xl bg-slate-900 px-3.5 py-2 text-sm font-bold text-white hover:bg-slate-800 transition"
-                            >
-                                공유 링크 켜기
-                            </button>
-                        </form>
-                        {% endif %}
-                    </div>
-                </details>
-
-                <details class="rounded-xl border border-slate-200 bg-white px-4 py-3" data-calendar-admin-collaboration="1">
-                    <summary class="cursor-pointer list-none text-sm font-semibold text-slate-700 flex items-center justify-between gap-3">
-                        <span>협업</span>
-                        <span class="text-[11px] font-medium text-slate-500">필요할 때만 열기</span>
-                    </summary>
-                    <div class="mt-3 space-y-3">
-                        <p class="text-[11px] text-slate-500">
-                            가입 이메일로 추가합니다.
-                            <a href="{% url 'update_email' %}?next={% url 'classcalendar:main' %}" class="font-semibold text-indigo-700 underline underline-offset-2 hover:text-indigo-800">이메일 등록</a>
-                        </p>
-                        <form action="{% url 'classcalendar:collaborator_add' %}" method="post" class="flex flex-col gap-2.5 lg:flex-row">
-                            {% csrf_token %}
-                            <input
-                                type="email"
-                                name="collaborator_query"
-                                placeholder="가입 이메일"
-                                class="flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700"
-                                required
-                            >
-                            <label class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
-                                <input type="checkbox" name="can_edit" checked class="rounded border-slate-300">
-                                편집 허용
-                            </label>
-                            <button
-                                type="submit"
-                                class="inline-flex items-center justify-center rounded-xl bg-slate-900 px-3.5 py-2 text-sm font-bold text-white hover:bg-slate-800 transition"
-                            >
-                                추가
-                            </button>
-                        </form>
-
-                        <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
-                            <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-                                <p class="text-xs font-extrabold text-slate-700 tracking-[0.08em] uppercase mb-2">내 협업자</p>
-                                {% if owner_collaborators %}
-                                <div class="space-y-2">
-                                    {% for collaborator in owner_collaborators %}
-                                    <div class="rounded-lg border border-slate-200 bg-white px-3 py-2 flex items-center justify-between gap-3">
-                                        <div class="min-w-0">
-                                            <p class="text-sm font-bold text-slate-900 truncate">{{ collaborator.name }}</p>
-                                            <p class="text-xs font-medium text-slate-500 truncate">@{{ collaborator.username }}{% if collaborator.email %} · {{ collaborator.email }}{% endif %}</p>
-                                            <p class="mt-1 text-[11px] font-semibold {% if collaborator.can_edit %}text-emerald-700{% else %}text-slate-600{% endif %}">
-                                                {% if collaborator.can_edit %}편집 가능{% else %}읽기 전용{% endif %}
-                                            </p>
-                                        </div>
-                                        <form action="{% url 'classcalendar:collaborator_remove' collaborator.id %}" method="post">
-                                            {% csrf_token %}
-                                            <button
-                                                type="submit"
-                                                class="inline-flex items-center rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-100 transition"
-                                            >
-                                                제거
-                                            </button>
-                                        </form>
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                                {% else %}
-                                <p class="text-sm font-medium text-slate-500">없음</p>
-                                {% endif %}
-                            </div>
-                            <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-                                <p class="text-xs font-extrabold text-slate-700 tracking-[0.08em] uppercase mb-2">공유받은 달력</p>
-                                {% if incoming_calendars %}
-                                <div class="space-y-2">
-                                    {% for incoming in incoming_calendars %}
-                                    <div class="rounded-lg border border-slate-200 bg-white px-3 py-2">
-                                        <p class="text-sm font-bold text-slate-900 truncate">{{ incoming.owner_name }}</p>
-                                        <p class="mt-1 text-[11px] font-semibold {% if incoming.can_edit %}text-emerald-700{% else %}text-slate-600{% endif %}">
-                                            {% if incoming.can_edit %}편집 가능{% else %}읽기 전용{% endif %}
-                                        </p>
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                                {% else %}
-                                <p class="text-sm font-medium text-slate-500">없음</p>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                </details>
-
-                <details class="rounded-xl border border-slate-200 bg-white px-4 py-3" data-calendar-admin-integrations="1">
-                    <summary class="cursor-pointer list-none text-sm font-semibold text-slate-700 flex items-center justify-between gap-3">
-                        <span>연동 설정</span>
-                        <span class="text-[11px] font-medium text-slate-500">서비스별 자동 반영</span>
-                    </summary>
-                    <div class="mt-3 space-y-3">
-                        <div class="flex items-center justify-end">
-                            <button
-                                type="button"
-                                @click="saveIntegrationSettings()"
-                                :disabled="isSavingIntegrationSettings"
-                                class="inline-flex items-center rounded-xl bg-slate-900 px-3.5 py-2 text-xs sm:text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-60 transition"
-                            >
-                                저장
-                            </button>
-                        </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5">
-                            <label class="inline-flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-700">
-                                수합 마감
-                                <input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" x-model="integrationSettings.collect_deadline_enabled">
-                            </label>
-                            <label class="inline-flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-700">
-                                동의서 만료
-                                <input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" x-model="integrationSettings.consent_expiry_enabled">
-                            </label>
-                            <label class="inline-flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-700">
-                                예약 일정
-                                <input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" x-model="integrationSettings.reservation_enabled">
-                            </label>
-                            <label class="inline-flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-700">
-                                서명 연수
-                                <input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" x-model="integrationSettings.signatures_training_enabled">
-                            </label>
-                        </div>
-                    </div>
-                </details>
-
-                {% if reservation_windows %}
-                <details class="rounded-xl border border-slate-200 bg-white px-4 py-3" data-calendar-admin-reservations="1">
-                    <summary class="cursor-pointer list-none text-sm font-semibold text-slate-700 flex items-center justify-between gap-3">
-                        <span>예약 가능 안내</span>
-                        <span class="text-[11px] font-medium text-slate-500">{{ reservation_windows|length }}건</span>
-                    </summary>
-                    <div class="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
-                        {% for window in reservation_windows %}
-                        <a href="{{ window.entry_url }}" class="block rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 hover:border-indigo-300 hover:bg-indigo-50/40 transition">
-                            <p class="text-sm font-bold text-slate-900">{{ window.school_name }}</p>
-                            <p class="mt-1 text-sm font-semibold text-indigo-700">{{ window.available_until }}</p>
-                            <p class="mt-1 text-xs font-medium text-slate-600">{{ window.opening_rule }}</p>
-                        </a>
-                        {% endfor %}
-                    </div>
-                </details>
-                {% endif %}
-            </div>
-        </details>
-            {% endif %}
     </div>
 
     <div x-show="createModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4" @click.self="createModalOpen = false">
@@ -849,12 +457,12 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-bold text-slate-700 mb-1.5">그날 다시 볼 메모</label>
+                    <label class="block text-sm font-bold text-slate-700 mb-1.5">메모</label>
                     <textarea
                         x-model="createForm.note"
                         rows="4"
                         class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                        placeholder="준비물, 확인할 사람, 꼭 말할 멘트를 적어두세요."
+                        placeholder="준비물이나 확인할 내용을 적어두세요."
                     ></textarea>
                 </div>
                 <div class="flex justify-end gap-2 pt-2">
@@ -865,7 +473,6 @@
         </div>
     </div>
 
-    {% include "classcalendar/_message_hub.html" %}
     <div x-show="detailModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4" @click.self="detailModalOpen = false">
         <div class="w-full max-w-lg bg-white rounded-2xl p-6 border border-slate-200 shadow-2xl">
             <h3 class="text-xl font-extrabold text-slate-900 mb-2" x-text="selectedEvent ? selectedEvent.title : (selectedTask ? selectedTask.title : '')"></h3>
@@ -2389,7 +1996,22 @@ function calendarApp() {
         get monthEventsCount() {
             const y = this.currentDate.getFullYear();
             const m = this.currentDate.getMonth();
-            return this.events.filter((e) => e.start_time.getFullYear() === y && e.start_time.getMonth() === m).length;
+            const start = new Date(y, m, 1, 0, 0, 0, 0);
+            const end = new Date(y, m + 1, 0, 23, 59, 59, 999);
+            return this.events.filter((event) => event.start_time <= end && event.end_time >= start).length;
+        },
+        get monthTasksCount() {
+            const y = this.currentDate.getFullYear();
+            const m = this.currentDate.getMonth();
+            return this.tasks.filter((task) => {
+                if (!task.due_at) return false;
+                return task.due_at.getFullYear() === y && task.due_at.getMonth() === m;
+            }).length;
+        },
+        get currentMonthSummaryText() {
+            const todayCount = this.getDayItemCount(new Date());
+            const monthCount = this.monthEventsCount + this.monthTasksCount;
+            return `오늘 ${todayCount}건 · 이번 달 ${monthCount}건`;
         },
 
         get calendarDates() {
@@ -2456,6 +2078,12 @@ function calendarApp() {
         getEventCountForDate(date) {
             return this.events.filter((event) => this.overlapsDate(event, date)).length;
         },
+        hasEventNote(event) {
+            return !!String((event && event.note) || '').trim();
+        },
+        hasTaskNote(task) {
+            return !!String((task && task.note) || '').trim();
+        },
         formatDayEventCount(date) {
             const count = this.getEventCountForDate(date);
             return count > 9 ? '9+' : String(count);
@@ -2469,15 +2097,57 @@ function calendarApp() {
             if (!task || !task.due_at) return '';
             return this.dateKey(task.due_at);
         },
-        getTasksForSelectedDate() {
-            if (!this.selectedDateKey) return [];
+        getTasksForDate(date) {
+            const dateKey = this.dateKey(date);
             return this.tasks
-                .filter((task) => this.getTaskDateKey(task) === this.selectedDateKey)
+                .filter((task) => this.getTaskDateKey(task) === dateKey)
                 .sort((a, b) => {
                     const left = a.due_at ? a.due_at.getTime() : 0;
                     const right = b.due_at ? b.due_at.getTime() : 0;
                     return left - right;
                 });
+        },
+        getTaskCountForDate(date) {
+            return this.getTasksForDate(date).length;
+        },
+        getMemoCountForDate(date) {
+            const eventMemoCount = this.events.filter((event) => this.overlapsDate(event, date) && this.hasEventNote(event)).length;
+            const taskMemoCount = this.getTasksForDate(date).filter((task) => this.hasTaskNote(task)).length;
+            return eventMemoCount + taskMemoCount;
+        },
+        getDayItemCount(date) {
+            return this.getEventCountForDate(date) + this.getTaskCountForDate(date);
+        },
+        formatDayItemCount(date) {
+            const count = this.getDayItemCount(date);
+            return count > 9 ? '9+' : String(count);
+        },
+        getDayTooltip(date) {
+            const base = this.formatAgendaDate(this.dateKey(date));
+            const parts = [];
+            const eventCount = this.getEventCountForDate(date);
+            const memoCount = this.getMemoCountForDate(date);
+            const taskCount = this.getTaskCountForDate(date);
+            if (eventCount) parts.push(`일정 ${eventCount}건`);
+            if (memoCount) parts.push(`메모 ${memoCount}건`);
+            if (taskCount) parts.push(`할 일 ${taskCount}건`);
+            return parts.length ? `${base} · ${parts.join(' · ')}` : `${base} · 비어 있음`;
+        },
+        selectedDateSummaryText() {
+            if (!this.selectedDateKey) return '';
+            const selectedDate = this.parseDateKey(this.selectedDateKey);
+            const parts = [];
+            const eventCount = this.getEventCountForDate(selectedDate);
+            const memoCount = this.getMemoCountForDate(selectedDate);
+            const taskCount = this.getTaskCountForDate(selectedDate);
+            if (eventCount) parts.push(`일정 ${eventCount}건`);
+            if (memoCount) parts.push(`메모 ${memoCount}건`);
+            if (taskCount) parts.push(`할 일 ${taskCount}건`);
+            return parts.length ? parts.join(' · ') : '등록된 일정이나 할 일이 없습니다.';
+        },
+        getTasksForSelectedDate() {
+            if (!this.selectedDateKey) return [];
+            return this.getTasksForDate(this.parseDateKey(this.selectedDateKey));
         },
         getVisibleEventsForDate(date) { return this.getEventsForDate(date).slice(0, 3); },
         getOverflowCountForDate(date) { const total = this.getEventsForDate(date).length; return total > 3 ? total - 3 : 0; },
@@ -2542,9 +2212,9 @@ function calendarApp() {
         getTaskPriorityBadgeClass(task) {
             const priority = task && task.priority ? task.priority : 'normal';
             const map = {
-                high: 'bg-rose-50 text-rose-700 border-rose-200',
+                high: 'bg-slate-900 text-white border-slate-900',
                 normal: 'bg-slate-100 text-slate-700 border-slate-200',
-                low: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                low: 'bg-white text-slate-600 border-slate-200',
             };
             return map[priority] || map.normal;
         },
@@ -2562,10 +2232,10 @@ function calendarApp() {
         },
         getEventSourceBadgeClass(event) {
             const map = {
-                collect_deadline: 'bg-amber-50 text-amber-700 border-amber-200',
-                consent_expiry: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-                reservation: 'bg-rose-50 text-rose-700 border-rose-200',
-                signatures_training: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                collect_deadline: 'bg-slate-100 text-slate-700 border-slate-200',
+                consent_expiry: 'bg-slate-100 text-slate-700 border-slate-200',
+                reservation: 'bg-slate-100 text-slate-700 border-slate-200',
+                signatures_training: 'bg-slate-100 text-slate-700 border-slate-200',
             };
             return map[event.integration_source || ''] || 'bg-slate-100 text-slate-700 border-slate-200';
         },
@@ -2580,7 +2250,7 @@ function calendarApp() {
             return map[event.color] || map.indigo;
         },
         getEventBarClass(event) {
-            const map = { indigo: 'bg-indigo-500', rose: 'bg-rose-500', amber: 'bg-amber-500', emerald: 'bg-emerald-500', sky: 'bg-sky-500' };
+            const map = { indigo: 'bg-slate-700', rose: 'bg-slate-600', amber: 'bg-slate-500', emerald: 'bg-slate-500', sky: 'bg-slate-400' };
             return map[event.color] || map.indigo;
         },
     };

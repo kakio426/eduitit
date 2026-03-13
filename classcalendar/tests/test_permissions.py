@@ -83,20 +83,18 @@ class PermissionTest(TestCase):
         FEATURE_MESSAGE_CAPTURE_ALLOWLIST_USERNAMES="teacher",
         FEATURE_MESSAGE_CAPTURE_ITEM_TYPES=True,
     )
-    def test_main_view_uses_today_memo_copy_for_message_hub(self):
+    def test_main_view_keeps_calendar_surface_minimal(self):
         response = self.client_teacher.get(reverse("calendar_main"))
         content = response.content.decode("utf-8")
 
-        self.assertContains(response, "안내문에서 일정 찾기")
         self.assertIn("학급 캘린더", content)
-        self.assertIn("오늘 보기", content)
-        self.assertIn("오늘 메모", content)
-        self.assertIn("다시 볼 메모", content)
-        self.assertIn("메시지 보관함", content)
-        self.assertIn("체험학습 전날 학부모 안내문", content)
-        self.assertIn("학부모 안내", content)
-        self.assertIn(reverse("calendar_today"), content)
-        self.assertNotIn("todayMemoPanelOpen", content)
+        self.assertIn('data-classcalendar-main-view="true"', content)
+        self.assertIn("새 일정", content)
+        self.assertIn("오늘", content)
+        self.assertNotIn("안내문에서 일정 찾기", content)
+        self.assertNotIn("오늘 메모", content)
+        self.assertNotIn("다시 볼 메모", content)
+        self.assertNotIn("openMessageHub($event, 'capture', { resetCapture: true })", content)
 
     def test_legacy_today_memo_panel_route_redirects_to_today_view(self):
         response = self.client_teacher.get(f"{reverse('classcalendar:main')}?panel=today-memos")
