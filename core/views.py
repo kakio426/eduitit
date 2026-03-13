@@ -1206,21 +1206,26 @@ def _build_today_context(request):
         )
 
     try:
-        from classcalendar.models import CalendarEvent
+        from classcalendar.today_memos import build_today_execution_context
 
-        calendar_event_count = CalendarEvent.objects.filter(
-            author=request.user,
-            start_time__date=today,
-        ).count()
-        if calendar_event_count > 0:
+        active_classroom = get_active_classroom_for_request(request) if hasattr(request, "session") else None
+        calendar_workspace = build_today_execution_context(
+            request.user,
+            active_classroom=active_classroom,
+            target_date=today,
+            today_url=_safe_reverse("classcalendar:today"),
+            main_url=_safe_reverse("classcalendar:main"),
+            create_api_url=_safe_reverse("classcalendar:api_create_event"),
+        )
+        if calendar_workspace["today_event_count"] > 0:
             today_items.append(
                 {
                     "title": "오늘 학급 일정",
-                    "count_text": f"{calendar_event_count}건",
-                    "description": "오늘 예정된 학급 일정이 있습니다. 캘린더를 확인해 보세요.",
+                    "count_text": f"{calendar_workspace['today_event_count']}건",
+                    "description": "오늘 실행판에서 일정과 메모를 한 화면으로 바로 확인하세요.",
                     "emoji": "📅",
-                    "href": reverse("classcalendar:main"),
-                    "cta_text": "캘린더 열기",
+                    "href": calendar_workspace["today_url"] or reverse("classcalendar:today"),
+                    "cta_text": "오늘 실행판 열기",
                 }
             )
     except Exception:
@@ -1481,19 +1486,31 @@ def _build_home_calendar_summary_context(request):
         "enabled": False,
         "today_count": 0,
         "week_count": 0,
-        "upcoming_items": [],
+        "today_event_count": 0,
+        "today_event_memo_count": 0,
+        "today_task_count": 0,
+        "today_task_memo_count": 0,
+        "today_events": [],
         "today_memo_items": [],
-        "today_memo_empty_message": "오늘 다시 볼 메모가 없으면 달력 일정만 확인하면 됩니다.",
+        "today_event_memos": [],
+        "today_tasks": [],
+        "today_task_memos": [],
+        "today_memo_empty_message": "오늘 확인할 일정, 메모, 할 일이 없습니다.",
+        "empty_message": "오늘 확인할 일정, 메모, 할 일이 없습니다.",
         "main_url": "",
+        "today_url": "",
         "today_memo_panel_url": "",
+        "today_create_url": "",
         "create_api_url": "",
+        "date_key": timezone.localdate().isoformat(),
+        "date_label": f"{timezone.localdate().month}월 {timezone.localdate().day}일",
+        "has_items": False,
     }
     if not request.user.is_authenticated:
         return summary
 
     try:
-        from classcalendar.calendar_scope import get_visible_events_queryset
-        from classcalendar.today_memos import build_today_memo_items
+        from classcalendar.today_memos import build_today_execution_context
     except Exception:
         logger.exception("[Home] classcalendar import failed")
         return summary
@@ -1502,50 +1519,30 @@ def _build_home_calendar_summary_context(request):
         summary["main_url"] = reverse("classcalendar:main")
     except NoReverseMatch:
         summary["main_url"] = ""
+    try:
+        summary["today_url"] = reverse("classcalendar:today")
+    except NoReverseMatch:
+        summary["today_url"] = ""
     if summary["main_url"]:
-        summary["today_memo_panel_url"] = f"{summary['main_url']}?panel=today-memos"
+        summary["today_memo_panel_url"] = summary["today_url"] or summary["main_url"]
 
     try:
         summary["create_api_url"] = reverse("classcalendar:api_create_event")
     except NoReverseMatch:
         summary["create_api_url"] = ""
-
-    today = timezone.localdate()
-    week_start = today - timedelta(days=today.weekday())
-    week_end = week_start + timedelta(days=7)
-    now = timezone.now()
     active_classroom = get_active_classroom_for_request(request)
-
-    events_qs = get_visible_events_queryset(request.user, active_classroom=active_classroom)
-    summary["today_count"] = events_qs.filter(start_time__date=today).count()
-    summary["week_count"] = events_qs.filter(
-        start_time__date__gte=week_start,
-        start_time__date__lt=week_end,
-    ).count()
-
-    upcoming_events = list(
-        events_qs.filter(
-            Q(end_time__gte=now) | Q(start_time__date__gte=today)
-        )
-        .prefetch_related("blocks")
-        .order_by("start_time")[:3]
-    )
-    summary["upcoming_items"] = [
-        {
-            "title": event.title,
-            "schedule_text": _format_home_calendar_schedule(event),
-            "note": _build_home_calendar_memo_excerpt(_extract_home_calendar_event_note(event), max_length=90),
-        }
-        for event in upcoming_events
-    ]
-
-    summary["today_memo_items"] = build_today_memo_items(
+    workspace = build_today_execution_context(
         request.user,
         active_classroom=active_classroom,
-        limit=2,
-        target_date=today,
+        target_date=timezone.localdate(),
+        main_url=summary["main_url"],
+        today_url=summary["today_url"],
+        create_api_url=summary["create_api_url"],
     )
-    summary["enabled"] = bool(summary["main_url"] and summary["create_api_url"])
+    summary.update(workspace)
+    summary["today_memo_items"] = workspace.get("today_event_memos", [])
+    summary["today_memo_empty_message"] = workspace.get("empty_message", summary["today_memo_empty_message"])
+    summary["enabled"] = bool(summary["today_url"] and summary["main_url"] and summary["create_api_url"])
     return summary
 
 
@@ -1703,45 +1700,30 @@ def _build_home_guest_start_cards(product_list):
 
 def _build_home_calendar_hub_context(request):
     calendar_summary = _build_home_calendar_summary_context(request)
-    sheetbook_workspace = _build_sheetbook_workspace_context(
-        request,
-        require_discovery_visible=False,
-    )["sheetbook_workspace"]
-
-    continue_items = []
-    for row in sheetbook_workspace.get("today_rows", [])[:2]:
-        continue_items.append(
-            {
-                "title": row.get("title", ""),
-                "description": "기록 작업을 바로 이어서 정리합니다.",
-                "href": row.get("href", ""),
-            }
-        )
-    if not continue_items:
-        for sheetbook in sheetbook_workspace.get("recent_sheetbooks", [])[:2]:
-            continue_items.append(
-                {
-                    "title": sheetbook.get("title", ""),
-                    "description": f"이전 작업 {sheetbook.get('tab_count', 0)}개 흐름을 이어서 엽니다.",
-                    "href": sheetbook.get("href", ""),
-                }
-            )
-
     return {
         "title": CALENDAR_HUB_PUBLIC_NAME,
-        "description": "오늘 일정과 이어할 업무를 한 축에서 정리합니다.",
+        "description": "홈에서 오늘 일정, 오늘 메모, 오늘 할 일을 바로 확인합니다.",
         "today_count": calendar_summary.get("today_count", 0),
         "week_count": calendar_summary.get("week_count", 0),
-        "upcoming_items": calendar_summary.get("upcoming_items", [])[:2],
-        "today_memo_items": calendar_summary.get("today_memo_items", [])[:2],
-        "today_memo_empty_message": calendar_summary.get("today_memo_empty_message", ""),
-        "continue_items": continue_items,
+        "date_key": calendar_summary.get("date_key", ""),
+        "date_label": calendar_summary.get("date_label", ""),
+        "today_event_count": calendar_summary.get("today_event_count", 0),
+        "today_event_memo_count": calendar_summary.get("today_event_memo_count", 0),
+        "today_task_count": calendar_summary.get("today_task_count", 0),
+        "today_task_memo_count": calendar_summary.get("today_task_memo_count", 0),
+        "today_events": calendar_summary.get("today_events", []),
+        "today_event_memos": calendar_summary.get("today_event_memos", []),
+        "today_tasks": calendar_summary.get("today_tasks", []),
+        "today_task_memos": calendar_summary.get("today_task_memos", []),
+        "has_items": calendar_summary.get("has_items", False),
+        "empty_message": calendar_summary.get("empty_message", ""),
         "main_url": calendar_summary.get("main_url") or _safe_reverse("classcalendar:main"),
-        "today_memo_panel_url": calendar_summary.get("today_memo_panel_url") or _safe_reverse("classcalendar:main"),
+        "today_url": calendar_summary.get("today_url") or _safe_reverse("classcalendar:today"),
+        "today_memo_panel_url": calendar_summary.get("today_memo_panel_url") or _safe_reverse("classcalendar:today"),
+        "today_create_url": calendar_summary.get("today_create_url") or "",
         "create_api_url": calendar_summary.get("create_api_url", ""),
-        "primary_cta_label": "오늘 메모 보기",
-        "secondary_cta_label": "캘린더 전체 열기",
-        "record_board_enabled": bool(sheetbook_workspace.get("enabled")),
+        "primary_cta_label": "오늘 실행판 열기",
+        "secondary_cta_label": "전체 캘린더",
     }
 
 
@@ -1777,7 +1759,6 @@ def _resolve_catalog_scenario_key(product):
 
 
 def _build_catalog_hub_context(product_list):
-    calendar_product = _find_product_by_routes(product_list, ["classcalendar:main"])
     guide_url = ""
     try:
         manual = (
@@ -1797,11 +1778,12 @@ def _build_catalog_hub_context(product_list):
         guide_url = reverse("service_guide_list")
 
     return {
-        "title": CALENDAR_HUB_PUBLIC_NAME,
-        "description": "오늘 일정과 이어할 업무를 한 축에서 정리합니다.",
-        "href": getattr(calendar_product, "launch_href", "") or _safe_reverse("classcalendar:main"),
-        "is_external": bool(getattr(calendar_product, "launch_is_external", False)) if calendar_product else False,
+        "title": "메인 캘린더는 홈에서 시작합니다",
+        "description": "홈의 오늘 실행판에서 오늘 일정과 메모를 먼저 보고, 필요할 때만 월간 확장 보기로 이동하세요.",
+        "href": reverse("home"),
+        "is_external": False,
         "guide_url": guide_url,
+        "primary_label": "홈에서 시작하기",
     }
 
 
@@ -1869,23 +1851,30 @@ def _build_guide_groups(manuals, products_without_manual):
             task_manuals.append(manual)
 
     calendar_href = _safe_reverse("classcalendar:main")
+    today_href = _safe_reverse("classcalendar:today")
     start_items = [
         {
             "title": "홈에서 어디를 먼저 보는지",
-            "description": "상단에서 오늘 해야 하는 것과 학급 캘린더를 먼저 보는 흐름입니다.",
+            "description": "홈에서 오늘 해야 하는 일과 메인 캘린더를 먼저 보는 흐름입니다.",
             "href": reverse("home"),
             "meta": "홈에서 바로 확인",
         },
         {
-            "title": f"{CALENDAR_HUB_PUBLIC_NAME} 처음 열기",
-            "description": "오늘 일정과 이번 주 흐름부터 확인하고 필요한 업무로 이어갑니다.",
+            "title": "오늘 실행판 열기",
+            "description": "오늘 일정, 오늘 메모, 오늘 할 일을 한 화면에서 바로 확인합니다.",
+            "href": today_href or reverse("home"),
+            "meta": "오늘 실행판",
+        },
+        {
+            "title": "월간 확장 보기 열기",
+            "description": "날짜를 넓게 보거나 상세 편집이 필요할 때만 월간 화면으로 이동합니다.",
             "href": calendar_href or reverse("home"),
-            "meta": CALENDAR_HUB_PUBLIC_NAME,
+            "meta": "확장 보기",
         },
         {
             "title": "첫 일정 만들기",
-            "description": "캘린더에서 오늘 일정 한 건만 먼저 추가해도 흐름이 잡힙니다.",
-            "href": calendar_href or reverse("home"),
+            "description": "오늘 실행판에서 일정 한 건만 먼저 추가해도 하루 흐름이 잡힙니다.",
+            "href": f"{today_href}?action=create" if today_href else reverse("home"),
             "meta": "일정 추가",
         },
         {
@@ -1908,7 +1897,7 @@ def _build_guide_groups(manuals, products_without_manual):
             "key": "start",
             "anchor": "guide-start",
             "title": "처음 시작",
-            "description": "홈과 첫 캘린더 흐름부터 짧게 확인합니다.",
+            "description": "홈과 오늘 실행판, 월간 확장 보기 순서만 짧게 확인합니다.",
             "items": start_items,
             "manuals": [],
             "pending_products": [],
@@ -1916,8 +1905,8 @@ def _build_guide_groups(manuals, products_without_manual):
         {
             "key": "calendar",
             "anchor": "guide-calendar",
-            "title": CALENDAR_HUB_PUBLIC_NAME,
-            "description": "오늘 일정 보기와 일정 추가처럼 캘린더에서 먼저 해야 할 흐름만 전면에서 안내합니다.",
+            "title": "메인 캘린더 흐름",
+            "description": "홈의 오늘 실행판과 월간 확장 보기로 이어지는 핵심 캘린더 흐름만 전면에서 안내합니다.",
             "items": [],
             "manuals": calendar_manuals,
             "pending_products": [],
@@ -2011,7 +2000,6 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
             'toggleFavoriteUrl': reverse('toggle_product_favorite'),
             'trackUsageUrl': reverse('track_product_usage'),
             'calendar': {
-                'eventsUrl': reverse('classcalendar:api_events'),
                 'createEventUrl': reverse('classcalendar:api_create_event'),
             },
         }

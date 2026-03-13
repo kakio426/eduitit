@@ -111,13 +111,20 @@ class SheetbookDiscoveryVisibilityTests(TestCase):
             service_type='classroom',
             launch_route_name='sheetbook:index',
         )
-        self.visible_product = Product.objects.create(
+        self.calendar_product = Product.objects.create(
             title="학급 캘린더",
             description="일정 관리",
             price=0,
             is_active=True,
             service_type='classroom',
             launch_route_name='classcalendar:main',
+        )
+        self.today_ops_product = Product.objects.create(
+            title="운영 도구",
+            description="오늘 운영 흐름",
+            price=0,
+            is_active=True,
+            service_type='classroom',
         )
         self.prep_product = Product.objects.create(
             title="문서 작성 도구",
@@ -126,10 +133,16 @@ class SheetbookDiscoveryVisibilityTests(TestCase):
             is_active=True,
             service_type='work',
         )
-        self.visible_manual = ServiceManual.objects.create(
-            product=self.visible_product,
+        self.calendar_manual = ServiceManual.objects.create(
+            product=self.calendar_product,
             title="학급 캘린더 시작하기",
             description="일정 흐름 안내",
+            is_published=True,
+        )
+        self.visible_manual = ServiceManual.objects.create(
+            product=self.prep_product,
+            title="문서 작성 도구 시작하기",
+            description="문서 작성 흐름 안내",
             is_published=True,
         )
 
@@ -138,32 +151,38 @@ class SheetbookDiscoveryVisibilityTests(TestCase):
         response = self.client.get(reverse('product_list'))
 
         product_titles = [product.title for product in response.context['products']]
-        expected_count = Product.objects.filter(is_active=True).exclude(launch_route_name='sheetbook:index').count()
+        expected_count = Product.objects.filter(is_active=True).exclude(
+            launch_route_name__in=['sheetbook:index', 'classcalendar:main']
+        ).count()
 
         self.assertEqual(response.status_code, 200)
         self.assertNotIn('교무수첩', product_titles)
-        self.assertIn('학급 캘린더', product_titles)
+        self.assertNotIn('학급 캘린더', product_titles)
+        self.assertIn('운영 도구', product_titles)
         self.assertNotContains(response, '교무수첩')
         self.assertEqual(response.context['total_count'], expected_count)
-        self.assertEqual(response.context['catalog_hub']['title'], '학급 캘린더')
+        self.assertEqual(response.context['catalog_hub']['title'], '메인 캘린더는 홈에서 시작합니다')
 
     @override_settings(SHEETBOOK_DISCOVERY_VISIBLE=True)
     def test_catalog_still_hides_sheetbook_when_discovery_enabled(self):
         response = self.client.get(reverse('product_list'))
 
         product_titles = [product.title for product in response.context['products']]
-        expected_count = Product.objects.filter(is_active=True).exclude(launch_route_name='sheetbook:index').count()
+        expected_count = Product.objects.filter(is_active=True).exclude(
+            launch_route_name__in=['sheetbook:index', 'classcalendar:main']
+        ).count()
 
         self.assertEqual(response.status_code, 200)
         self.assertNotIn('교무수첩', product_titles)
-        self.assertIn('학급 캘린더', product_titles)
+        self.assertNotIn('학급 캘린더', product_titles)
+        self.assertIn('운영 도구', product_titles)
         self.assertNotContains(response, '교무수첩')
         self.assertEqual(response.context['total_count'], expected_count)
 
     def test_catalog_cards_use_start_copy_and_public_meta_contract(self):
         response = self.client.get(reverse('product_list'))
         content = ''.join(response.content.decode('utf-8').split())
-        visible_product = next(product for product in response.context['products'] if product.id == self.visible_product.id)
+        visible_product = next(product for product in response.context['products'] if product.id == self.prep_product.id)
         card_cta_prefix = 'inline-flexitems-centergap-1.5rounded-xlbg-slate-900px-3py-2text-smfont-boldtext-whitetransitiongroup-hover:bg-indigo-600">'
 
         self.assertIn('로그인필요', content)

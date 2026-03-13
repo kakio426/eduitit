@@ -88,13 +88,20 @@ class PermissionTest(TestCase):
         content = response.content.decode("utf-8")
 
         self.assertContains(response, "안내문에서 일정 찾기")
-        self.assertIn("오늘 메모", content)
+        self.assertIn("오늘 실행판", content)
         self.assertIn("메시지 보관함", content)
         self.assertIn("체험학습 전날 학부모 안내문", content)
         self.assertIn("학부모 안내", content)
-        self.assertIn('data-classcalendar-today-memo-panel="true"', content)
+        self.assertIn(reverse("classcalendar:today"), content)
+        self.assertNotIn("todayMemoPanelOpen", content)
 
-    def test_main_view_today_memo_panel_uses_same_note_source(self):
+    def test_legacy_today_memo_panel_route_redirects_to_today_view(self):
+        response = self.client_teacher.get(f"{reverse('classcalendar:main')}?panel=today-memos")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("classcalendar:today"))
+
+    def test_today_view_uses_same_note_source(self):
         event = self._create_event(title="오늘 메모 일정")
         event.start_time = timezone.now()
         event.end_time = event.start_time + timedelta(hours=1)
@@ -106,11 +113,11 @@ class PermissionTest(TestCase):
             content={"text": "체육관 열쇠 챙기기\n방송 멘트 다시 확인"},
         )
 
-        response = self.client_teacher.get(f"{reverse('classcalendar:main')}?panel=today-memos")
+        response = self.client_teacher.get(reverse("classcalendar:today"))
         content = response.content.decode("utf-8")
 
         self.assertContains(response, "오늘 메모")
-        self.assertIn("todayMemoPanelOpen: true", content)
+        self.assertIn('data-classcalendar-today-view="true"', content)
         self.assertIn("체육관 열쇠 챙기기", content)
 
     def test_create_event_rejects_invalid_time_range(self):

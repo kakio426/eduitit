@@ -46,7 +46,7 @@ from .calendar_scope import (
     get_visible_events_queryset,
     get_visible_tasks_queryset,
 )
-from .today_memos import build_today_memo_items
+from .today_memos import build_today_execution_context
 from .models import (
     CalendarCollaborator,
     CalendarEvent,
@@ -1918,17 +1918,44 @@ def legacy_main_redirect(request):
     return redirect("classcalendar:main")
 
 
-def _build_main_view_context(request, *, embedded_sheetbook_context=None):
+def _redirect_legacy_today_panel(request):
+    if str(request.GET.get("panel") or "").strip().lower() != "today-memos":
+        return None
+
+    params = request.GET.copy()
+    if "panel" in params:
+        del params["panel"]
+    url = reverse("classcalendar:today")
+    query_string = params.urlencode()
+    if query_string:
+        url = f"{url}?{query_string}"
+    return redirect(url)
+
+
+def _build_calendar_page_context(request, *, embedded_sheetbook_context=None, page_variant="main"):
     _sync_integrations_if_needed(request)
     visible_owner_ids, editable_owner_ids, incoming_calendars = _get_calendar_access_for_user(request.user)
     integration_setting = _get_integration_setting_for_user(request.user)
     _ensure_retention_notice_event_for_user(request.user, integration_setting)
     service = Product.objects.filter(launch_route_name=SERVICE_ROUTE).first()
     message_capture_ui = build_message_capture_ui_context(request.user)
-    initial_panel = str(request.GET.get("panel") or "").strip().lower()
+    active_classroom = _get_active_classroom_for_user(request)
+    main_url = reverse("classcalendar:main")
+    today_url = reverse("classcalendar:today")
+    create_api_url = reverse("classcalendar:api_create_event")
+    initial_selected_date = str(request.GET.get("date") or timezone.localdate().isoformat()).strip()
+    initial_open_create = str(request.GET.get("action") or "").strip().lower() == "create"
+    today_workspace = build_today_execution_context(
+        request.user,
+        active_classroom=active_classroom,
+        target_date=timezone.localdate(),
+        main_url=main_url,
+        today_url=today_url,
+        create_api_url=create_api_url,
+    )
     return {
         "service": service,
-        "title": service.title if service else "달력 (Eduitit Calendar)",
+        "title": "오늘 실행판" if page_variant == "today" else (service.title if service else "학급 캘린더"),
         "events_json": [
             _serialize_event(
                 event,
@@ -1953,13 +1980,12 @@ def _build_main_view_context(request, *, embedded_sheetbook_context=None):
         "message_capture_item_types_enabled": message_capture_ui["item_types_enabled"],
         "message_capture_limits_json": message_capture_ui["limits"],
         "message_capture_urls_json": message_capture_ui["urls"],
-        "today_memo_items": build_today_memo_items(
-            request.user,
-            active_classroom=_get_active_classroom_for_user(request),
-            target_date=timezone.localdate(),
-        ),
-        "today_memo_empty_message": "오늘 다시 볼 메모가 없으면 오늘 일정만 확인하면 됩니다.",
-        "today_memo_panel_open": initial_panel == "today-memos",
+        "calendar_page_variant": page_variant,
+        "today_workspace": today_workspace,
+        "today_url": today_url,
+        "main_url": main_url,
+        "initial_selected_date": initial_selected_date or today_workspace["date_key"],
+        "initial_open_create": initial_open_create,
         "embedded_sheetbook_context": embedded_sheetbook_context,
         "embedded_sheetbook_context_json": embedded_sheetbook_context or {},
         "is_embedded_in_sheetbook": bool(embedded_sheetbook_context),
@@ -1970,6 +1996,10 @@ def _build_main_view_context(request, *, embedded_sheetbook_context=None):
 @login_required
 @xframe_options_sameorigin
 def main_view(request):
+    legacy_redirect = _redirect_legacy_today_panel(request)
+    if legacy_redirect is not None:
+        return legacy_redirect
+
     embedded_sheetbook_context = None
     if request.GET.get("embedded") == "sheetbook":
         embedded_sheetbook_context = _resolve_sheetbook_context(
@@ -1977,11 +2007,31 @@ def main_view(request):
             request.GET.get("sheetbook_id"),
             request.GET.get("tab_id"),
         )
-    context = _build_main_view_context(
+    context = _build_calendar_page_context(
         request,
         embedded_sheetbook_context=embedded_sheetbook_context,
+        page_variant="main",
     )
     response = render(request, "classcalendar/main.html", context)
+    return _apply_workspace_cache_headers(response)
+
+
+@login_required
+@xframe_options_sameorigin
+def today_view(request):
+    embedded_sheetbook_context = None
+    if request.GET.get("embedded") == "sheetbook":
+        embedded_sheetbook_context = _resolve_sheetbook_context(
+            request.user,
+            request.GET.get("sheetbook_id"),
+            request.GET.get("tab_id"),
+        )
+    context = _build_calendar_page_context(
+        request,
+        embedded_sheetbook_context=embedded_sheetbook_context,
+        page_variant="today",
+    )
+    response = render(request, "classcalendar/today.html", context)
     return _apply_workspace_cache_headers(response)
 
 

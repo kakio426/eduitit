@@ -196,14 +196,12 @@
         return {
             currentDate: new Date(),
             events: [],
-            tasks: [],
             createModalOpen: false,
             todayMemoModalOpen: false,
             todayMemoReturnFocusElement: null,
             selectedDateKey: '',
             selectedDateLabel: '',
             selectedDateEvents: [],
-            selectedDateTasks: [],
             selectedDateIsEmpty: true,
             isSubmitting: false,
             createContextDateText: '',
@@ -231,7 +229,6 @@
                 try {
                     var payload = await this.requestJson(calendarConfig.eventsUrl);
                     this.events = (payload.events || []).map((event) => this.normalizeEvent(event));
-                    this.tasks = (payload.tasks || []).map((task) => this.normalizeTask(task));
                     this.syncSelectedDate(this.selectedDateKey ? this.parseDateKey(this.selectedDateKey) : new Date());
                 } catch (error) {
                     showFeedback('홈 캘린더를 불러오지 못했습니다.', 'error');
@@ -246,18 +243,6 @@
                     is_all_day: !!event.is_all_day,
                     start_time: new Date(event.start_time),
                     end_time: new Date(event.end_time),
-                };
-            },
-
-            normalizeTask: function (task) {
-                return {
-                    ...task,
-                    title: task.title || '할 일',
-                    note: task.note || '',
-                    due_at: task.due_at ? new Date(task.due_at) : null,
-                    has_time: !!task.has_time,
-                    priority: task.priority || 'normal',
-                    status: task.status || 'open',
                 };
             },
 
@@ -351,55 +336,19 @@
                 return this.selectedDateKey === this.dateKey(date);
             },
 
-            overlapsDate: function (event, date) {
-                var startOfDate = new Date(date);
-                startOfDate.setHours(0, 0, 0, 0);
-                var endOfDate = new Date(date);
-                endOfDate.setHours(23, 59, 59, 999);
-                return event.start_time <= endOfDate && event.end_time >= startOfDate;
-            },
-
             getEventsForDate: function (date) {
-                return this.events
-                    .filter((event) => this.overlapsDate(event, date))
-                    .sort((left, right) => left.start_time - right.start_time);
-            },
-
-            getStartingEventsForDate: function (date) {
                 return this.events
                     .filter((event) => this.dateKey(event.start_time) === this.dateKey(date))
                     .sort((left, right) => left.start_time - right.start_time);
             },
 
             getVisibleEventsForDate: function (date) {
-                return this.getStartingEventsForDate(date).slice(0, 1);
+                return this.getEventsForDate(date).slice(0, 1);
             },
 
             getOverflowCountForDate: function (date) {
-                var total = this.getStartingEventsForDate(date).length;
+                var total = this.getEventsForDate(date).length;
                 return total > 1 ? total - 1 : 0;
-            },
-
-            getTaskDateKey: function (task) {
-                if (!task || !task.due_at) {
-                    return '';
-                }
-                return this.dateKey(task.due_at);
-            },
-
-            getTasksForDate: function (date) {
-                var dateKey = this.dateKey(date);
-                return this.tasks
-                    .filter((task) => this.getTaskDateKey(task) === dateKey)
-                    .sort((left, right) => {
-                        var leftValue = left.due_at ? left.due_at.getTime() : 0;
-                        var rightValue = right.due_at ? right.due_at.getTime() : 0;
-                        return leftValue - rightValue;
-                    });
-            },
-
-            getItemCountForDate: function (date) {
-                return this.getEventsForDate(date).length + this.getTasksForDate(date).length;
             },
 
             formatEventTimeShort: function (dateValue, isAllDay) {
@@ -417,18 +366,11 @@
 
             dayTooltip: function (date) {
                 var dateText = this.formatAgendaDate(this.dateKey(date));
-                var eventCount = this.getEventsForDate(date).length;
-                var taskCount = this.getTasksForDate(date).length;
-                if (!eventCount && !taskCount) {
+                var events = this.getEventsForDate(date);
+                if (!events.length) {
                     return dateText + ' 일정 추가';
                 }
-                if (eventCount && taskCount) {
-                    return dateText + ' 일정 ' + eventCount + '건, 할 일 ' + taskCount + '건 보기';
-                }
-                if (taskCount) {
-                    return dateText + ' 할 일 ' + taskCount + '건 보기';
-                }
-                return dateText + ' 일정 ' + eventCount + '건 보기';
+                return dateText + ' 일정 ' + events.length + '건 보기';
             },
 
             eventChipClass: function (event) {
@@ -468,37 +410,13 @@
                 return this.formatAgendaDate(this.dateKey(start)) + ' ' + this.formatClock(start) + ' ~ ' + this.formatAgendaDate(this.dateKey(end)) + ' ' + this.formatClock(end);
             },
 
-            formatTaskDue: function (task) {
-                if (!task || !task.due_at) {
-                    return '마감일 없음';
-                }
-                if (task.has_time) {
-                    return this.formatAgendaDate(this.dateKey(task.due_at)) + ' · ' + this.formatClock(task.due_at) + '까지';
-                }
-                return this.formatAgendaDate(this.dateKey(task.due_at)) + ' · 시간 미정';
-            },
-
-            getTaskPriorityLabel: function (task) {
-                if (!task) {
-                    return '보통';
-                }
-                if (task.priority === 'high') {
-                    return '중요';
-                }
-                if (task.priority === 'low') {
-                    return '낮음';
-                }
-                return '보통';
-            },
-
             syncSelectedDate: function (date) {
                 var selectedDate = new Date(date);
                 var key = this.dateKey(selectedDate);
                 this.selectedDateKey = key;
                 this.selectedDateLabel = this.formatAgendaDate(key);
                 this.selectedDateEvents = this.getEventsForDate(selectedDate);
-                this.selectedDateTasks = this.getTasksForDate(selectedDate);
-                this.selectedDateIsEmpty = this.selectedDateEvents.length === 0 && this.selectedDateTasks.length === 0;
+                this.selectedDateIsEmpty = this.selectedDateEvents.length === 0;
             },
 
             handleDateClick: function (date) {

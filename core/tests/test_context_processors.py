@@ -86,7 +86,7 @@ class ServiceLauncherContextTests(TestCase):
         titles = [item["title"] for item in payload]
 
         self.assertNotIn("교무수첩", titles)
-        self.assertIn("학급 캘린더", titles)
+        self.assertNotIn("학급 캘린더", titles)
 
     def test_service_launcher_json_supports_external_services(self):
         Product.objects.create(

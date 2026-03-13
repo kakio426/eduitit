@@ -9,7 +9,7 @@
             <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                 <div class="max-w-3xl">
                     <p class="text-sm font-black uppercase tracking-[0.24em] text-indigo-600">오늘 해야 할 일부터 찾는 서비스 카탈로그</p>
-                    <h1 class="mt-2 text-3xl font-black text-slate-900 md:text-4xl">먼저 학급 캘린더에서 시작하세요</h1>
+                    <h1 class="mt-2 text-3xl font-black text-slate-900 md:text-4xl">먼저 홈의 오늘 실행판에서 시작하세요</h1>
                     <p class="mt-3 text-sm leading-7 text-slate-600 md:text-base">앱 이름을 몰라도 길을 찾을 수 있도록, 교사의 하루 흐름과 상황 기준으로 서비스를 다시 묶었습니다.</p>
                 </div>
                 <div class="flex flex-wrap gap-2 lg:justify-end">
@@ -26,7 +26,7 @@
 
             <div class="mt-5 flex flex-wrap gap-2">
                 <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">현재 노출 서비스 {{ total_count }}개</span>
-                <span class="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">학급 캘린더를 기준으로 정렬</span>
+                <span class="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">홈 실행판 기준 정렬</span>
                 <span class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">업무 상황 중심 탐색</span>
                 {% if selected_scenario_section %}
                 <span class="inline-flex items-center rounded-full bg-violet-50 px-3 py-1 text-xs font-bold text-violet-700">선택된 보기 {{ selected_scenario_section.title }}</span>
@@ -47,8 +47,8 @@
                 </div>
                 <div class="flex flex-wrap gap-3">
                     <a href="{{ catalog_hub.href }}" {% if catalog_hub.is_external %}target="_blank" rel="noopener noreferrer"{% endif %} class="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white transition hover:bg-indigo-600">
-                        <i class="fa-solid fa-calendar-days"></i>
-                        학급 캘린더 열기
+                        <i class="fa-solid fa-house"></i>
+                        {{ catalog_hub.primary_label|default:"홈에서 시작하기" }}
                     </a>
                     <a href="{{ catalog_hub.guide_url }}" class="inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-black text-slate-700 transition hover:border-indigo-300 hover:text-indigo-600">
                         <i class="fa-solid fa-book-open-reader"></i>

@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.utils import timezone
 
 from .calendar_scope import get_visible_events_queryset, get_visible_tasks_queryset
@@ -66,58 +68,152 @@ def _format_task_schedule(task):
     return f"{due_dt.month}월 {due_dt.day}일 · 오늘 할 일"
 
 
+def _get_task_priority_label(priority):
+    if priority == CalendarTask.Priority.HIGH:
+        return "중요"
+    if priority == CalendarTask.Priority.LOW:
+        return "낮음"
+    return "보통"
+
+
+def _display_user_name(user):
+    full_name = user.get_full_name().strip()
+    if full_name:
+        return full_name
+    profile = getattr(user, "userprofile", None)
+    nickname = getattr(profile, "nickname", "")
+    if nickname:
+        return nickname
+    return user.username or "교사"
+
+
+def _serialize_today_event(event, *, current_user_id):
+    memo_text = _extract_event_note_text(event)
+    return {
+        "id": str(event.id),
+        "title": event.title,
+        "schedule_text": _format_event_schedule(event),
+        "note": memo_text,
+        "note_excerpt": _build_memo_excerpt(memo_text, max_length=90),
+        "calendar_owner_name": _display_user_name(event.author),
+        "is_shared_calendar": event.author_id != current_user_id,
+    }
+
+
+def _serialize_today_task(task):
+    note_text = str(getattr(task, "note", "") or "").strip()
+    return {
+        "id": str(task.id),
+        "title": task.title,
+        "schedule_text": _format_task_schedule(task),
+        "note": note_text,
+        "note_excerpt": _build_memo_excerpt(note_text, max_length=90),
+        "priority": task.priority or CalendarTask.Priority.NORMAL,
+        "priority_label": _get_task_priority_label(task.priority),
+    }
+
+
+def build_today_event_memo_items(user, *, active_classroom=None, limit=None, target_date=None):
+    workspace = build_today_execution_context(
+        user,
+        active_classroom=active_classroom,
+        target_date=target_date,
+    )
+    items = workspace["today_event_memos"]
+    return items[:limit] if limit else items
+
+
+def build_today_task_memo_items(user, *, limit=None, target_date=None):
+    workspace = build_today_execution_context(
+        user,
+        target_date=target_date,
+    )
+    items = workspace["today_task_memos"]
+    return items[:limit] if limit else items
+
+
 def build_today_memo_items(user, *, active_classroom=None, limit=None, target_date=None):
-    if not getattr(user, "is_authenticated", False):
-        return []
+    return build_today_event_memo_items(
+        user,
+        active_classroom=active_classroom,
+        limit=limit,
+        target_date=target_date,
+    )
 
+
+def build_today_execution_context(
+    user,
+    *,
+    active_classroom=None,
+    target_date=None,
+    main_url="",
+    today_url="",
+    create_api_url="",
+):
     today = target_date or timezone.localdate()
-    normalized_limit = int(limit or 0)
-    items = []
+    empty_message = "오늘 확인할 일정, 메모, 할 일이 없습니다."
+    context = {
+        "date_key": today.isoformat(),
+        "date_label": f"{today.month}월 {today.day}일",
+        "today_count": 0,
+        "week_count": 0,
+        "today_event_count": 0,
+        "today_event_memo_count": 0,
+        "today_task_count": 0,
+        "today_task_memo_count": 0,
+        "today_events": [],
+        "today_event_memos": [],
+        "today_tasks": [],
+        "today_task_memos": [],
+        "has_items": False,
+        "empty_message": empty_message,
+        "main_url": main_url,
+        "today_url": today_url,
+        "today_create_url": f"{today_url}?action=create" if today_url else "",
+        "create_api_url": create_api_url,
+    }
+    if not getattr(user, "is_authenticated", False):
+        return context
 
-    today_events = list(
-        get_visible_events_queryset(user, active_classroom=active_classroom)
-        .filter(start_time__date__lte=today, end_time__date__gte=today)
-        .order_by("start_time", "id")[:8]
-    )
-    for event in today_events:
-        memo_text = _extract_event_note_text(event)
-        if not memo_text:
-            continue
-        items.append(
-            {
-                "source_kind": "event",
-                "source_id": event.id,
-                "title": event.title,
-                "memo_text": memo_text,
-                "memo_excerpt": _build_memo_excerpt(memo_text),
-                "schedule_text": _format_event_schedule(event),
-                "date_key": today.isoformat(),
-            }
-        )
-        if normalized_limit and len(items) >= normalized_limit:
-            return items
+    visible_events_qs = get_visible_events_queryset(user, active_classroom=active_classroom)
+    today_events = [
+        _serialize_today_event(event, current_user_id=user.id)
+        for event in visible_events_qs.filter(
+            start_time__date__lte=today,
+            end_time__date__gte=today,
+        ).order_by("start_time", "id")
+    ]
 
-    today_tasks = list(
-        get_visible_tasks_queryset(user)
+    today_tasks = [
+        _serialize_today_task(task)
+        for task in get_visible_tasks_queryset(user)
         .filter(status=CalendarTask.Status.OPEN, due_at__date=today)
-        .order_by("due_at", "created_at")[:8]
-    )
-    for task in today_tasks:
-        memo_text = str(getattr(task, "note", "") or "").strip()
-        if not memo_text:
-            continue
-        items.append(
-            {
-                "source_kind": "task",
-                "source_id": task.id,
-                "title": task.title,
-                "memo_text": memo_text,
-                "memo_excerpt": _build_memo_excerpt(memo_text),
-                "schedule_text": _format_task_schedule(task),
-                "date_key": today.isoformat(),
-            }
-        )
-        if normalized_limit and len(items) >= normalized_limit:
-            return items
+        .order_by("due_at", "created_at", "id")
+    ]
 
-    return items
+    week_start = today - timedelta(days=today.weekday())
+    week_end = week_start + timedelta(days=7)
+    week_count = visible_events_qs.filter(
+        start_time__date__gte=week_start,
+        start_time__date__lt=week_end,
+    ).count()
+
+    today_event_memos = [item for item in today_events if item["note"]]
+    today_task_memos = [item for item in today_tasks if item["note"]]
+
+    context.update(
+        {
+            "today_count": len(today_events),
+            "week_count": week_count,
+            "today_event_count": len(today_events),
+            "today_event_memo_count": len(today_event_memos),
+            "today_task_count": len(today_tasks),
+            "today_task_memo_count": len(today_task_memos),
+            "today_events": today_events,
+            "today_event_memos": today_event_memos,
+            "today_tasks": today_tasks,
+            "today_task_memos": today_task_memos,
+            "has_items": bool(today_events or today_event_memos or today_tasks or today_task_memos),
+        }
+    )
+    return context
