@@ -498,6 +498,70 @@ class HomeV2ViewTest(TestCase):
         self.assertEqual(response.context['initial_selected_date'], target_date)
         self.assertIn('data-classcalendar-embed-mode="home"', content)
 
+    def test_v2_authenticated_calendar_surface_defaults_to_nearest_upcoming_item_date(self):
+        user = self._login('upcomingfocususer')
+        today = timezone.localdate()
+        future_event_date = today + timedelta(days=5)
+        nearest_task_date = today + timedelta(days=2)
+        event_start = timezone.make_aware(datetime.combine(future_event_date, time(hour=10)))
+        task_due = timezone.make_aware(datetime.combine(nearest_task_date, time(hour=8)))
+        self._create_calendar_event_with_note(
+            user,
+            title='다음 주 공개수업 준비',
+            note='홈 첫 진입은 실제 저장 일정 날짜로 열려야 함',
+            start_time=event_start,
+            end_time=event_start + timedelta(hours=1),
+        )
+        CalendarTask.objects.create(
+            author=user,
+            title='가장 가까운 준비 할 일',
+            note='오늘 공지 일정보다 먼저 보여야 함',
+            due_at=task_due,
+            has_time=True,
+            priority=CalendarTask.Priority.NORMAL,
+        )
+
+        expected_date = nearest_task_date.isoformat()
+        home_response = self.client.get(reverse('home'))
+        main_response = self.client.get(reverse('calendar_main'), follow=True)
+
+        self.assertEqual(home_response.context['initial_selected_date'], expected_date)
+        self.assertEqual(main_response.context['initial_selected_date'], expected_date)
+        self.assertEqual(self._sorted_event_source(home_response), self._sorted_event_source(main_response))
+        self.assertEqual(self._sorted_task_source(home_response), self._sorted_task_source(main_response))
+
+    def test_v2_authenticated_calendar_surface_defaults_to_latest_past_item_date(self):
+        user = self._login('pastfocususer')
+        today = timezone.localdate()
+        older_event_date = today - timedelta(days=7)
+        latest_task_date = today - timedelta(days=2)
+        event_start = timezone.make_aware(datetime.combine(older_event_date, time(hour=9)))
+        task_due = timezone.make_aware(datetime.combine(latest_task_date, time(hour=16)))
+        self._create_calendar_event_with_note(
+            user,
+            title='지난주 상담 기록',
+            note='과거 저장 일정도 홈 첫 진입에서 다시 보여야 함',
+            start_time=event_start,
+            end_time=event_start + timedelta(hours=1),
+        )
+        CalendarTask.objects.create(
+            author=user,
+            title='최근 완료한 후속 정리',
+            note='기본 선택 날짜는 가장 최근 저장 일정이어야 함',
+            due_at=task_due,
+            has_time=True,
+            priority=CalendarTask.Priority.HIGH,
+        )
+
+        expected_date = latest_task_date.isoformat()
+        home_response = self.client.get(reverse('home'))
+        main_response = self.client.get(reverse('calendar_main'), follow=True)
+
+        self.assertEqual(home_response.context['initial_selected_date'], expected_date)
+        self.assertEqual(main_response.context['initial_selected_date'], expected_date)
+        self.assertEqual(self._sorted_event_source(home_response), self._sorted_event_source(main_response))
+        self.assertEqual(self._sorted_task_source(home_response), self._sorted_task_source(main_response))
+
     def test_v2_authenticated_calendar_surface_matches_main_calendar_source(self):
         user = self._login('monthgriduser')
         now = timezone.now().replace(second=0, microsecond=0)

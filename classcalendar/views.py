@@ -328,6 +328,62 @@ def _serialize_temporal_value(value):
     return value
 
 
+def _to_local_date(value):
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        if timezone.is_aware(value):
+            return timezone.localtime(value).date()
+        return value.date()
+    return value
+
+
+def _is_default_selected_date_event_candidate(event):
+    return str(getattr(event, "title", "") or "").strip() != RETENTION_NOTICE_TITLE
+
+
+def _choose_default_selected_date_from_items(events, tasks, *, fallback_date):
+    future_dates = []
+    past_dates = []
+
+    for event in events:
+        start_date = _to_local_date(getattr(event, "start_time", None))
+        end_date = _to_local_date(getattr(event, "end_time", None)) or start_date
+        if start_date is None:
+            continue
+        if end_date is None or end_date < start_date:
+            end_date = start_date
+        if start_date <= fallback_date <= end_date:
+            return fallback_date.isoformat()
+        if start_date > fallback_date:
+            future_dates.append(start_date)
+        elif end_date < fallback_date:
+            past_dates.append(end_date)
+
+    for task in tasks:
+        due_date = _to_local_date(getattr(task, "due_at", None))
+        if due_date is None:
+            continue
+        if due_date == fallback_date:
+            return fallback_date.isoformat()
+        if due_date > fallback_date:
+            future_dates.append(due_date)
+        else:
+            past_dates.append(due_date)
+
+    if future_dates:
+        return min(future_dates).isoformat()
+    if past_dates:
+        return max(past_dates).isoformat()
+    return fallback_date.isoformat()
+
+
+def _choose_default_selected_date(events, tasks, *, fallback_date):
+    preferred_events = [event for event in events if _is_default_selected_date_event_candidate(event)]
+    if preferred_events or tasks:
+        return _choose_default_selected_date_from_items(preferred_events, tasks, fallback_date=fallback_date)
+    return _choose_default_selected_date_from_items(events, tasks, fallback_date=fallback_date)
+
 
 def _serialize_json_safe(value):
     if isinstance(value, dict):
@@ -1986,14 +2042,22 @@ def build_calendar_surface_context(
     today_url = calendar_page_url
     create_api_url = reverse("classcalendar:api_create_event")
     today_focus = normalize_today_focus(request.GET.get("focus"))
-    initial_selected_date = str(request.GET.get("date") or timezone.localdate().isoformat()).strip()
+    today_date = timezone.localdate()
+    visible_events = list(_get_teacher_visible_events(request, visible_owner_ids))
+    visible_tasks = list(_get_teacher_visible_tasks(request))
+    requested_date = str(request.GET.get("date") or "").strip()
+    initial_selected_date = requested_date or _choose_default_selected_date(
+        visible_events,
+        visible_tasks,
+        fallback_date=today_date,
+    )
     initial_open_create = str(request.GET.get("action") or "").strip().lower() == "create"
     initial_open_event_id = str(request.GET.get("open_event") or "").strip()
     initial_open_task_id = str(request.GET.get("open_task") or "").strip()
     today_workspace = build_today_execution_context(
         request.user,
         active_classroom=active_classroom,
-        target_date=timezone.localdate(),
+        target_date=today_date,
         main_url=main_url,
         today_url=today_url,
         create_api_url=create_api_url,
@@ -2011,11 +2075,11 @@ def build_calendar_surface_context(
                 current_user_id=request.user.id,
                 editable_owner_ids=editable_owner_ids,
             )
-            for event in _get_teacher_visible_events(request, visible_owner_ids)
+            for event in visible_events
         ],
         "tasks_json": [
             _serialize_task(task, current_user_id=request.user.id)
-            for task in _get_teacher_visible_tasks(request)
+            for task in visible_tasks
         ],
         "integration_settings_json": serialize_integration_setting(integration_setting),
         "reservation_windows": _build_reservation_windows_for_user(request.user),
