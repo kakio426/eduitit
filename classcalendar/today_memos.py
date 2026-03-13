@@ -270,6 +270,96 @@ def _pick_recent_memo_items(events, *, current_user_id, main_url, limit=1):
     return items
 
 
+def _build_month_grid(month_anchor, *, today, visible_events_qs, visible_tasks_qs, main_url):
+    first_of_month = month_anchor.replace(day=1)
+    next_month_start = (first_of_month.replace(day=28) + timedelta(days=4)).replace(day=1)
+    last_of_month = next_month_start - timedelta(days=1)
+
+    first_month_offset = (first_of_month.weekday() + 1) % 7
+    grid_start = first_of_month - timedelta(days=first_month_offset)
+    last_month_day = (last_of_month.weekday() + 1) % 7
+    grid_end = last_of_month + timedelta(days=(6 - last_month_day))
+
+    day_state = {}
+    cursor = grid_start
+    while cursor <= grid_end:
+        date_key = cursor.isoformat()
+        day_state[date_key] = {
+            "date": date_key,
+            "day_number": cursor.day,
+            "is_current_month": cursor.month == month_anchor.month and cursor.year == month_anchor.year,
+            "is_today": cursor == today,
+            "has_events": False,
+            "has_memos": False,
+            "has_review_memos": False,
+            "has_tasks": False,
+            "event_count": 0,
+            "memo_count": 0,
+            "review_memo_count": 0,
+            "task_count": 0,
+            "detail_url": _build_main_detail_url(main_url, date_key=date_key),
+        }
+        cursor += timedelta(days=1)
+
+    grid_events = (
+        visible_events_qs.filter(
+            start_time__date__lte=grid_end,
+            end_time__date__gte=grid_start,
+        )
+        .prefetch_related("blocks")
+        .order_by("start_time", "id")
+    )
+    for event in grid_events:
+        local_start = timezone.localtime(event.start_time)
+        local_end = timezone.localtime(event.end_time)
+        note_text = _extract_event_note_text(event)
+        overlap_start = max(local_start.date(), grid_start)
+        overlap_end = min(local_end.date(), grid_end)
+        cursor = overlap_start
+        while cursor <= overlap_end:
+            cell = day_state[cursor.isoformat()]
+            cell["has_events"] = True
+            cell["event_count"] += 1
+            if note_text:
+                cell["has_memos"] = True
+                cell["memo_count"] += 1
+                if cursor == today:
+                    cell["has_review_memos"] = True
+                    cell["review_memo_count"] += 1
+            cursor += timedelta(days=1)
+
+    grid_tasks = (
+        visible_tasks_qs.filter(
+            due_at__date__gte=grid_start,
+            due_at__date__lte=grid_end,
+        )
+        .order_by("due_at", "created_at", "id")
+    )
+    for task in grid_tasks:
+        if not getattr(task, "due_at", None):
+            continue
+        due_date = timezone.localtime(task.due_at).date()
+        cell = day_state.get(due_date.isoformat())
+        if cell is None:
+            continue
+        cell["has_tasks"] = True
+        cell["task_count"] += 1
+
+    weeks = []
+    cursor = grid_start
+    while cursor <= grid_end:
+        week = []
+        for _ in range(7):
+            week.append(day_state[cursor.isoformat()])
+            cursor += timedelta(days=1)
+        weeks.append(week)
+
+    return {
+        "month_label": f"{first_of_month.year}년 {first_of_month.month}월",
+        "month_grid": weeks,
+    }
+
+
 def build_today_event_memo_items(user, *, active_classroom=None, limit=None, target_date=None):
     workspace = build_today_execution_context(
         user,
@@ -318,6 +408,8 @@ def build_today_execution_context(
     context = {
         "date_key": today.isoformat(),
         "date_label": f"{today.month}월 {today.day}일",
+        "month_label": f"{today.year}년 {today.month}월",
+        "month_grid": [],
         "today_count": 0,
         "week_count": 0,
         "today_event_count": 0,
@@ -357,6 +449,14 @@ def build_today_execution_context(
 
     now_local = timezone.localtime()
     visible_events_qs = get_visible_events_queryset(user, active_classroom=active_classroom)
+    visible_tasks_qs = get_visible_tasks_queryset(user)
+    month_grid = _build_month_grid(
+        today,
+        today=today,
+        visible_events_qs=visible_events_qs,
+        visible_tasks_qs=visible_tasks_qs,
+        main_url=main_url,
+    )
     today_events = [
         _serialize_today_event(
             event,
@@ -373,7 +473,7 @@ def build_today_execution_context(
 
     today_tasks = [
         _serialize_today_task(task, main_url=main_url, target_date=today)
-        for task in get_visible_tasks_queryset(user)
+        for task in visible_tasks_qs
         .filter(status=CalendarTask.Status.OPEN, due_at__date=today)
         .order_by("due_at", "created_at", "id")
     ]
@@ -434,6 +534,8 @@ def build_today_execution_context(
             "today_memos": today_event_memos,
             "review_memos": review_memos,
             "review_groups": _build_review_groups(review_memos),
+            "month_label": month_grid["month_label"],
+            "month_grid": month_grid["month_grid"],
             "next_upcoming_events": next_upcoming_events,
             "recent_memo_items": recent_memo_items,
             "selected_date_events": today_events,

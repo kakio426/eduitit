@@ -29,7 +29,7 @@ class TodayWidgetTest(TestCase):
         )
 
         context = _build_today_context(self._build_request())
-        item = next((x for x in context["today_items"] if x["href"] == reverse("classcalendar:today")), None)
+        item = next((x for x in context["today_items"] if x["href"] == reverse("calendar_today")), None)
 
         self.assertIsNotNone(item)
         self.assertEqual(item["count_text"], "1건")

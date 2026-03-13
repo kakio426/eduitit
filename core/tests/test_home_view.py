@@ -254,6 +254,23 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
         self.assertIn('로그인하고 시작하기', content)
 
+    def test_v2_anonymous_surfaces_public_calendar_entry_near_top(self):
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        public_calendar_index = content.index('data-home-v2-public-calendar-entry="true"')
+        service_group_index = content.index('data-home-v2-service-groups="true"')
+
+        self.assertLess(public_calendar_index, service_group_index)
+        self.assertIn('숫자 달력과 오늘 요약을 한 번에 보는 학급 캘린더', content)
+        self.assertIn('로그인 후 사용', content)
+        self.assertIn('로그인 후 내 일정과 메모를 이어서 봅니다', content)
+        self.assertIn('로그인하고 캘린더 열기', content)
+        self.assertIn('캘린더 바로가기', content)
+        self.assertIn('오늘 일정 정리', content)
+        self.assertIn('오늘 메모 확인', content)
+        self.assertIn(reverse('calendar_main'), content)
+
     def test_v2_anonymous_does_not_render_today_try_now_section(self):
         self._create_try_now_products()
         self._create_try_now_support_products()
@@ -331,6 +348,7 @@ class HomeV2ViewTest(TestCase):
         calendar_index = content.index('data-home-v2-top-calendar="true"')
 
         self.assertLess(today_index, favorites_index)
+        self.assertLess(favorites_index, calendar_index)
         self.assertIn('data-home-v2-top-zone="true"', content)
         self.assertIn('학급 캘린더', content)
         self.assertIn('전체 캘린더', content)
@@ -338,9 +356,10 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('다시 볼 메모', content)
         self.assertIn('오늘 일정', content)
         self.assertIn('오늘 할 일', content)
+        self.assertIn('data-home-v2-calendar-month-grid="true"', content)
+        self.assertIn('data-home-v2-calendar-day="true"', content)
         self.assertNotIn('homeCalendarWidget()', content)
         self.assertNotIn('openTodayMemoModal($event)', content)
-        self.assertNotIn('home-calendar-day', content)
         self.assertNotIn('data-home-v2-calendar-agenda="true"', content)
 
     def test_v2_authenticated_does_not_render_today_try_now_section(self):
@@ -373,9 +392,9 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('오늘의 메모', content)
         self.assertIn('다시 볼 메모', content)
         self.assertIn('빠른 추가', content)
-        self.assertIn(reverse('classcalendar:main'), content)
-        self.assertIn(f"{reverse('classcalendar:today')}?focus=memos", content)
-        self.assertIn(f"{reverse('classcalendar:today')}?focus=review", content)
+        self.assertIn(reverse('calendar_main'), content)
+        self.assertIn(f"{reverse('calendar_today')}?focus=memos", content)
+        self.assertIn(f"{reverse('calendar_today')}?focus=review", content)
         self.assertNotIn('openTodayMemoModal($event)', content)
         self.assertNotIn('data-home-v2-today-memo-modal="true"', content)
         self.assertNotIn('openMessageHub($event, \'capture\', { resetCapture: true })', content)
@@ -404,8 +423,8 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('data-home-v2-calendar-today-memos="true"', content)
         self.assertIn('오늘의 메모', content)
         self.assertIn('다시 볼 메모', content)
-        self.assertIn(f"{reverse('classcalendar:today')}?focus=memos", content)
-        self.assertIn(f"{reverse('classcalendar:today')}?focus=review", content)
+        self.assertIn(f"{reverse('calendar_today')}?focus=memos", content)
+        self.assertIn(f"{reverse('calendar_today')}?focus=review", content)
         self.assertIn('1교시 전에 QR 띄우기', content)
         self.assertIn('마이크 배터리 확인', content)
         self.assertIn('지금 볼 메모', content)
@@ -452,6 +471,7 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('data-home-v2-calendar-empty="true"', content)
         self.assertIn('오늘 확인할 일정, 메모, 할 일이 없습니다.', content)
         self.assertIn('data-home-v2-calendar-supporting="true"', content)
+        self.assertIn('다음 일정', content)
         self.assertIn('내일 학부모총회', content)
 
     def test_v2_authenticated_calendar_hub_links_event_card_to_full_calendar_detail(self):
@@ -468,9 +488,50 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn(reverse('classcalendar:main'), content)
+        self.assertIn(reverse('calendar_main'), content)
         self.assertIn(f"open_event={event.id}", content)
         self.assertIn(f"date={timezone.localdate().isoformat()}", content)
+
+    def test_v2_authenticated_calendar_hub_renders_month_grid_from_same_source(self):
+        user = self._login('monthgriduser')
+        now = timezone.now().replace(second=0, microsecond=0)
+        self._create_calendar_event_with_note(
+            user,
+            title='월간 그리드 확인 일정',
+            note='메인 숫자 달력에서도 표시되어야 함',
+            start_time=now,
+            end_time=now + timedelta(hours=1),
+        )
+        CalendarTask.objects.create(
+            author=user,
+            title='월간 그리드 할 일',
+            note='오늘 할 일도 그리드에 반영',
+            due_at=now,
+            has_time=True,
+            priority=CalendarTask.Priority.NORMAL,
+        )
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        calendar_hub = response.context['calendar_hub']
+        today_key = timezone.localdate().isoformat()
+        today_cell = next(
+            day
+            for week in calendar_hub['month_grid']
+            for day in week
+            if day['date'] == today_key
+        )
+
+        self.assertIn('data-home-v2-calendar-month-grid="true"', content)
+        self.assertIn('data-home-v2-calendar-day="true"', content)
+        self.assertTrue(today_cell['is_today'])
+        self.assertTrue(today_cell['has_events'])
+        self.assertTrue(today_cell['has_memos'])
+        self.assertTrue(today_cell['has_review_memos'])
+        self.assertTrue(today_cell['has_tasks'])
+        self.assertEqual(today_cell['detail_url'], f"{reverse('calendar_main')}?date={today_key}")
+        self.assertIn(f'data-date="{today_key}"', content)
+        self.assertIn(f'href="{reverse("calendar_main")}?date={today_key}"', content)
 
     def test_v2_authenticated_calendar_hub_renders_today_task_section(self):
         user = self._login('taskslotuser')

@@ -16,7 +16,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 from django.views.decorators.clickjacking import xframe_options_sameorigin
@@ -114,6 +114,15 @@ MESSAGE_CAPTURE_CLASSIFIER_ASSIST_THRESHOLD = float(
     getattr(settings, "FEATURE_MESSAGE_CAPTURE_CLASSIFIER_ASSIST_THRESHOLD", DEFAULT_ASSIST_THRESHOLD)
 )
 MESSAGE_CAPTURE_ARCHIVE_PAGE_SIZE = 20
+
+
+def _reverse_calendar_surface(alias_name, fallback_name):
+    for route_name in (alias_name, fallback_name):
+        try:
+            return reverse(route_name)
+        except NoReverseMatch:
+            continue
+    return ""
 
 
 def _display_user_name(user):
@@ -1905,17 +1914,17 @@ def _resolve_sheetbook_calendar_entry_for_user(request, user):
 @login_required
 def main_entry(request):
     if not getattr(settings, "SHEETBOOK_ENABLED", False):
-        return redirect("classcalendar:main")
+        return redirect(_reverse_calendar_surface("calendar_main", "classcalendar:main"))
 
     bridge_context = _resolve_sheetbook_calendar_entry_for_user(request, request.user)
     if bridge_context.get("sheetbook_entry_url"):
         return redirect(bridge_context["sheetbook_entry_url"])
-    return redirect("classcalendar:main")
+    return redirect(_reverse_calendar_surface("calendar_main", "classcalendar:main"))
 
 
 @login_required
 def legacy_main_redirect(request):
-    return redirect("classcalendar:main")
+    return redirect(_reverse_calendar_surface("calendar_main", "classcalendar:main"))
 
 
 def _redirect_legacy_today_panel(request):
@@ -1926,7 +1935,7 @@ def _redirect_legacy_today_panel(request):
     if "panel" in params:
         del params["panel"]
     params["focus"] = "memos"
-    url = reverse("classcalendar:today")
+    url = _reverse_calendar_surface("calendar_today", "classcalendar:today")
     query_string = params.urlencode()
     if query_string:
         url = f"{url}?{query_string}"
@@ -1941,8 +1950,8 @@ def _build_calendar_page_context(request, *, embedded_sheetbook_context=None, pa
     service = Product.objects.filter(launch_route_name=SERVICE_ROUTE).first()
     message_capture_ui = build_message_capture_ui_context(request.user)
     active_classroom = _get_active_classroom_for_user(request)
-    main_url = reverse("classcalendar:main")
-    today_url = reverse("classcalendar:today")
+    main_url = _reverse_calendar_surface("calendar_main", "classcalendar:main")
+    today_url = _reverse_calendar_surface("calendar_today", "classcalendar:today")
     create_api_url = reverse("classcalendar:api_create_event")
     today_focus = normalize_today_focus(request.GET.get("focus"))
     initial_selected_date = str(request.GET.get("date") or timezone.localdate().isoformat()).strip()
