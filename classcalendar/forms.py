@@ -42,6 +42,8 @@ class MessageCaptureParseForm(forms.Form):
     raw_text = forms.CharField(required=False, max_length=20000)
     source_hint = forms.CharField(required=False, max_length=30)
     idempotency_key = forms.CharField(required=False, max_length=64)
+    manual_date = forms.DateField(required=False, input_formats=["%Y-%m-%d"])
+    manual_note = forms.CharField(required=False, max_length=200)
 
 
 class MessageCaptureCommitForm(forms.Form):

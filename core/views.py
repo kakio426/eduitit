@@ -1984,10 +1984,15 @@ def _build_guide_groups(manuals, products_without_manual):
 def _home_v2(request, products, posts, page_obj, feed_scope):
     """Feature flag on 시 호출되는 V2 홈."""
     product_list = _attach_product_launch_meta(list(products))
+    section_product_list = [
+        product
+        for product in product_list
+        if str(getattr(product, "launch_route_name", "") or "").strip().lower() != "messagebox:main"
+    ]
     today_try_cards = _build_home_try_now_cards(product_list)
     today_try_support_cards = _build_home_try_now_support_cards(product_list)
     sections, aux_sections, games = get_purpose_sections(
-        product_list,
+        section_product_list,
         preview_limit=2,
     )
     primary_display_sections, secondary_display_sections = _build_home_v2_display_groups(sections, aux_sections)

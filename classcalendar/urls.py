@@ -40,4 +40,9 @@ urlpatterns = [
         views.api_message_capture_commit,
         name="api_message_capture_commit",
     ),
+    path(
+        "api/message-captures/<uuid:capture_id>/complete/",
+        views.api_message_capture_complete,
+        name="api_message_capture_complete",
+    ),
 ]

@@ -63,6 +63,8 @@ function buildCalendarMessageHubState() {
             archive: '',
             archive_detail_template: '',
             commit_template: '',
+            complete_template: '',
+            messagebox_main: '',
         },
         messageArchiveItems: [],
         messageArchiveQuery: '',
@@ -119,6 +121,8 @@ function initCalendarMessageHub(host, options = {}) {
         archive: String(rawUrls.archive || ''),
         archive_detail_template: String(rawUrls.archive_detail_template || ''),
         commit_template: String(rawUrls.commit_template || ''),
+        complete_template: String(rawUrls.complete_template || ''),
+        messagebox_main: String(rawUrls.messagebox_main || ''),
     };
 
     if (typeof host.pad !== 'function') {
@@ -209,6 +213,10 @@ function initCalendarMessageHub(host, options = {}) {
 
         buildMessageCaptureCommitUrl: function(captureId) {
             return String(this.messageCaptureUrls.commit_template || '').replace('__capture_id__', String(captureId || ''));
+        },
+
+        buildMessageCaptureCompleteUrl: function(captureId) {
+            return String(this.messageCaptureUrls.complete_template || '').replace('__capture_id__', String(captureId || ''));
         },
 
         createMessageCaptureIdempotencyKey: function() {

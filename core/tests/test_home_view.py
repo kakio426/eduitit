@@ -395,6 +395,35 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('openMessageHub($event, \'capture\', { resetCapture: true })', content)
         self.assertNotIn('안내문에서 일정 찾기', content)
 
+    @override_settings(
+        FEATURE_MESSAGE_CAPTURE_ENABLED=True,
+        FEATURE_MESSAGE_CAPTURE_ALLOWLIST_USERNAMES='capturecard',
+        FEATURE_MESSAGE_CAPTURE_ITEM_TYPES=True,
+    )
+    def test_v2_home_shows_messagebox_card_without_service_grid_duplication(self):
+        Product.objects.create(
+            title="업무 메시지 보관함",
+            description="메시지 보관",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='messagebox:main',
+        )
+        self._login('capturecard')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('data-home-messagebox-card="true"', content)
+        self.assertIn('업무 메시지 보관함', content)
+
+        section_products = [
+            product.launch_route_name
+            for section in [*response.context['sections'], *response.context['aux_sections']]
+            for product in section.get('products', [])
+        ]
+        self.assertNotIn('messagebox:main', section_products)
+
     def test_v2_authenticated_calendar_surface_keeps_note_source_in_shared_data(self):
         user = self._login('memouser')
         now = timezone.now().replace(second=0, microsecond=0)

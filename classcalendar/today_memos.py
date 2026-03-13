@@ -1,6 +1,7 @@
 from datetime import timedelta
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
+from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
 
 from .calendar_scope import get_visible_events_queryset, get_visible_tasks_queryset
@@ -62,6 +63,33 @@ def _build_main_detail_url(main_url, *, date_key="", event_id="", task_id=""):
         open_event=event_id or None,
         open_task=task_id or None,
     )
+
+
+def _build_messagebox_capture_url(capture_id):
+    capture_value = str(capture_id or "").strip()
+    if not capture_value:
+        return ""
+    try:
+        return f"{reverse('messagebox:main')}?capture={capture_value}"
+    except NoReverseMatch:
+        return ""
+
+
+def _serialize_related_message_capture(owner):
+    related_manager = getattr(owner, "message_captures", None)
+    if related_manager is None:
+        return {"message_capture_id": "", "message_capture_url": ""}
+    try:
+        captures = list(related_manager.all())
+    except Exception:
+        captures = []
+    if not captures:
+        return {"message_capture_id": "", "message_capture_url": ""}
+    capture = captures[0]
+    return {
+        "message_capture_id": str(capture.id),
+        "message_capture_url": _build_messagebox_capture_url(capture.id),
+    }
 
 
 def _extract_event_note_text(event):
@@ -190,6 +218,7 @@ def _serialize_today_event(event, *, current_user_id, main_url="", target_date=N
             now_local=now_local or timezone.localtime(),
         )
     )
+    serialized.update(_serialize_related_message_capture(event))
     return serialized
 
 
@@ -201,7 +230,7 @@ def _serialize_today_task(task, *, main_url="", target_date=None):
         if due_at is not None
         else ((target_date or timezone.localdate()).isoformat() if target_date else "")
     )
-    return {
+    payload = {
         "id": str(task.id),
         "title": task.title,
         "date_key": date_key,
@@ -212,6 +241,8 @@ def _serialize_today_task(task, *, main_url="", target_date=None):
         "priority_label": _get_task_priority_label(task.priority),
         "detail_url": _build_main_detail_url(main_url, date_key=date_key, task_id=str(task.id)),
     }
+    payload.update(_serialize_related_message_capture(task))
+    return payload
 
 
 def _build_review_groups(items):

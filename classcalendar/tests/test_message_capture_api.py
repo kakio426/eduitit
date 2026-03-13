@@ -41,6 +41,10 @@ class MessageCaptureApiTests(TestCase):
         self.save_url = reverse("classcalendar:api_message_capture_save")
         self.parse_url = reverse("classcalendar:api_message_capture_parse")
         self.archive_url = reverse("classcalendar:api_message_capture_archive")
+        self.complete_url_template = reverse(
+            "classcalendar:api_message_capture_complete",
+            kwargs={"capture_id": "00000000-0000-0000-0000-000000000000"},
+        ).replace("00000000-0000-0000-0000-000000000000", "{capture_id}")
 
     def _commit(self, capture_id, payload):
         return self.client.post(
@@ -57,10 +61,28 @@ class MessageCaptureApiTests(TestCase):
             params["filter"] = filter_value
         return self.client.get(self.archive_url, data=params)
 
+    def _workflow_archive_list(self, workflow_status="all"):
+        params = {"page": 1}
+        if workflow_status and workflow_status != "all":
+            params["workflow_status"] = workflow_status
+        return self.client.get(self.archive_url, data=params)
+
     def _archive_detail(self, capture_id):
         return self.client.get(
             reverse("classcalendar:api_message_capture_archive_detail", kwargs={"capture_id": str(capture_id)})
         )
+
+    def _complete(self, capture_id, *, completed=None):
+        payload = {}
+        if completed is not None:
+            payload["completed"] = completed
+        return self.client.post(
+            self.complete_url_template.format(capture_id=str(capture_id)),
+            data=payload,
+        )
+
+    def _pdf_upload(self, name="notice.pdf", content=b"hello"):
+        return SimpleUploadedFile(name, content, content_type="application/pdf")
 
     def _build_selected_candidates(self, parse_payload):
         selected = []
@@ -89,12 +111,19 @@ class MessageCaptureApiTests(TestCase):
         saved=False,
         candidate_title="테스트 일정",
         archive_only=False,
+        manual_date="",
+        manual_note="",
+        completed=False,
     ):
         owner = user or self.user
         capture_index = CalendarMessageCapture.objects.count() + 1
         parse_payload = {"summary_text": summary_text} if summary_text else {}
         if archive_only:
             parse_payload["archive_only"] = True
+        if manual_date:
+            parse_payload["manual_date"] = manual_date
+        if manual_note:
+            parse_payload["manual_note"] = manual_note
         capture = CalendarMessageCapture.objects.create(
             author=owner,
             raw_text=raw_text,
@@ -103,6 +132,7 @@ class MessageCaptureApiTests(TestCase):
             idempotency_key=f"archive-capture-{capture_index}",
             content_cache_key=f"archive-cache-{capture_index}",
             parse_payload=parse_payload,
+            completed_at=timezone.now() if completed else None,
         )
         if with_candidate:
             start_time = timezone.now().replace(second=0, microsecond=0)
@@ -134,7 +164,7 @@ class MessageCaptureApiTests(TestCase):
         return capture
 
     def test_save_stores_message_in_archive_without_parsing(self):
-        upload = SimpleUploadedFile("notice.txt", b"hello", content_type="text/plain")
+        upload = self._pdf_upload()
         response = self.client.post(
             self.save_url,
             data={
@@ -156,7 +186,7 @@ class MessageCaptureApiTests(TestCase):
         self.assertEqual(capture.candidates.count(), 0)
 
     def test_parse_saved_reads_archive_message_and_preserves_attachments(self):
-        upload = SimpleUploadedFile("notice.txt", b"hello", content_type="text/plain")
+        upload = self._pdf_upload()
         save_response = self.client.post(
             self.save_url,
             data={
@@ -303,7 +333,7 @@ class MessageCaptureApiTests(TestCase):
         self.assertEqual(capture.decision_source, CalendarMessageCapture.DecisionSource.RULE)
 
     def test_commit_saves_multiple_candidates_and_copies_attachments(self):
-        upload = SimpleUploadedFile("memo.txt", b"memo file", content_type="text/plain")
+        upload = self._pdf_upload(name="memo.pdf", content=b"memo file")
         parse_response = self.client.post(
             self.parse_url,
             data={
@@ -398,7 +428,7 @@ class MessageCaptureApiTests(TestCase):
         self.assertTrue(all(item.get("source_tab_id") == calendar_tab.id for item in saved_events))
 
     def test_parse_rejects_too_large_file(self):
-        upload = SimpleUploadedFile("notice.txt", b"0123456789ABCDEF", content_type="text/plain")
+        upload = self._pdf_upload(content=b"0123456789ABCDEF")
         with patch("classcalendar.views.MESSAGE_CAPTURE_MAX_FILE_BYTES", 8):
             response = self.client.post(
                 self.parse_url,
@@ -555,6 +585,128 @@ class MessageCaptureApiTests(TestCase):
         self.assertEqual(pending_ids, {str(pending_capture.id)})
         self.assertEqual(review_ids, {str(review_capture.id)})
         self.assertEqual(failed_ids, {str(failed_capture.id)})
+
+    def test_archive_supports_workflow_status_filter_and_labels(self):
+        kept_capture = self._create_archive_capture(
+            raw_text="일단 보관만 합니다.",
+            parse_status=CalendarMessageCapture.ParseStatus.NEEDS_REVIEW,
+            summary_text="보관 메시지",
+            archive_only=True,
+        )
+        dated_capture = self._create_archive_capture(
+            raw_text="3월 14일에 다시 보기",
+            summary_text="날짜만 정한 메시지",
+            with_candidate=False,
+            manual_date="2026-03-14",
+            manual_note="오후에 확인",
+        )
+        linked_capture = self._create_archive_capture(
+            raw_text="3월 15일 연결된 일정",
+            summary_text="연결된 메시지",
+            with_candidate=True,
+            saved=True,
+            candidate_title="연결 완료 일정",
+        )
+        done_capture = self._create_archive_capture(
+            raw_text="이미 처리한 메시지",
+            summary_text="완료 메시지",
+            with_candidate=True,
+            saved=False,
+            completed=True,
+        )
+
+        all_response = self._workflow_archive_list()
+        self.assertEqual(all_response.status_code, 200)
+        counts = all_response.json().get("counts") or {}
+        self.assertEqual(counts.get("kept"), 1)
+        self.assertEqual(counts.get("dated"), 1)
+        self.assertEqual(counts.get("linked"), 1)
+        self.assertEqual(counts.get("done"), 1)
+
+        kept_ids = {item["capture_id"] for item in (self._workflow_archive_list("kept").json().get("items") or [])}
+        dated_items = self._workflow_archive_list("dated").json().get("items") or []
+        linked_items = self._workflow_archive_list("linked").json().get("items") or []
+        done_items = self._workflow_archive_list("done").json().get("items") or []
+
+        self.assertEqual(kept_ids, {str(kept_capture.id)})
+        self.assertEqual({item["capture_id"] for item in dated_items}, {str(dated_capture.id)})
+        self.assertEqual({item["capture_id"] for item in linked_items}, {str(linked_capture.id)})
+        self.assertEqual({item["capture_id"] for item in done_items}, {str(done_capture.id)})
+        self.assertEqual(dated_items[0]["workflow_status_label"], "날짜 정함")
+        self.assertTrue(dated_items[0]["messagebox_url"].endswith(f"?capture={dated_capture.id}"))
+
+    def test_complete_toggle_marks_capture_done_and_updates_detail(self):
+        capture = self._create_archive_capture(
+            raw_text="3월 18일 정리할 메시지",
+            summary_text="나중에 할 메시지",
+            with_candidate=True,
+            saved=False,
+            manual_date="2026-03-18",
+            manual_note="회의 뒤 처리",
+        )
+
+        response = self._complete(capture.id)
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload.get("workflow_status"), "done")
+        self.assertTrue(payload.get("completed_at"))
+        capture.refresh_from_db()
+        self.assertIsNotNone(capture.completed_at)
+
+        done_ids = {item["capture_id"] for item in (self._workflow_archive_list("done").json().get("items") or [])}
+        self.assertIn(str(capture.id), done_ids)
+
+        revert_response = self._complete(capture.id, completed="false")
+        self.assertEqual(revert_response.status_code, 200)
+        self.assertEqual(revert_response.json().get("workflow_status"), "dated")
+        capture.refresh_from_db()
+        self.assertIsNone(capture.completed_at)
+
+    def test_complete_endpoint_is_private_to_current_user(self):
+        other_user = User.objects.create_user(
+            username="capture_teacher_other",
+            password="pw12345",
+            email="capture_teacher_other@example.com",
+        )
+        capture = self._create_archive_capture(
+            user=other_user,
+            raw_text="다른 사람 메시지",
+            summary_text="다른 사람 메시지",
+            with_candidate=False,
+        )
+
+        response = self._complete(capture.id)
+        self.assertEqual(response.status_code, 404)
+
+    def test_parse_and_archive_preserve_manual_date_and_note(self):
+        save_response = self.client.post(
+            self.save_url,
+            data={
+                "raw_text": "일단 보관만 할 메시지",
+                "idempotency_key": "manual-archive-save",
+                "manual_date": "2026-03-20",
+                "manual_note": "금요일 오후에 확인",
+            },
+        )
+        self.assertEqual(save_response.status_code, 201)
+        save_payload = save_response.json()
+        self.assertEqual(save_payload.get("manual_date"), "2026-03-20")
+        self.assertEqual(save_payload.get("manual_note"), "금요일 오후에 확인")
+        self.assertEqual(save_payload.get("workflow_status"), "dated")
+
+        parse_response = self.client.post(
+            self.parse_url,
+            data={
+                "raw_text": "3월 21일 공개수업 안내",
+                "idempotency_key": "manual-parse-save",
+                "manual_date": "2026-03-21",
+                "manual_note": "공개수업 전에 다시 보기",
+            },
+        )
+        self.assertEqual(parse_response.status_code, 201)
+        parse_payload = parse_response.json()
+        self.assertEqual(parse_payload.get("manual_date"), "2026-03-21")
+        self.assertEqual(parse_payload.get("manual_note"), "공개수업 전에 다시 보기")
 
     def test_archive_is_private_to_current_user(self):
         other_user = User.objects.create_user(

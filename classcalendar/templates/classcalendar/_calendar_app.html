@@ -17,11 +17,19 @@
                     <span class="truncate">{{ title }}</span>
                 </h1>
             </div>
-            <div class="flex flex-wrap items-center gap-2 md:justify-end">
-                <a
-                    href="{{ main_url }}"
-                    class="inline-flex items-center rounded-xl px-3 py-2 text-sm font-semibold transition {% if calendar_page_variant == 'main' %}bg-slate-900 text-white hover:bg-slate-800{% else %}border border-slate-200 bg-white text-slate-700 hover:bg-slate-50{% endif %}"
-                >
+                <div class="flex flex-wrap items-center gap-2 md:justify-end">
+                    {% if messagebox_home_card.enabled and messagebox_home_card.url %}
+                    <a
+                        href="{{ messagebox_home_card.url }}"
+                        class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-amber-300 hover:bg-amber-50 hover:text-amber-800"
+                    >
+                        업무 메시지 보관함
+                    </a>
+                    {% endif %}
+                    <a
+                        href="{{ main_url }}"
+                        class="inline-flex items-center rounded-xl px-3 py-2 text-sm font-semibold transition {% if calendar_page_variant == 'main' %}bg-slate-900 text-white hover:bg-slate-800{% else %}border border-slate-200 bg-white text-slate-700 hover:bg-slate-50{% endif %}"
+                    >
                     월간 보기
                 </a>
                 <a
@@ -54,6 +62,27 @@
         {% endif %}
 
         <div class="{% if is_embedded_in_sheetbook %}bg-white rounded-none border-0 shadow-none p-0{% elif is_embedded_on_home %}bg-white rounded-[1.5rem] sm:rounded-[2rem] border border-slate-200 shadow-sm p-3 sm:p-5{% else %}bg-white rounded-[1.5rem] sm:rounded-[2rem] border border-slate-200 shadow-xl p-2.5 sm:p-5{% endif %}">
+            {% if is_embedded_on_home and messagebox_home_card.enabled and messagebox_home_card.url %}
+            <section class="mb-4 rounded-[1.5rem] border border-amber-200 bg-gradient-to-r from-amber-50 via-white to-slate-50 p-4 sm:p-5" data-home-messagebox-card="true">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="min-w-0">
+                        <p class="text-[11px] font-black uppercase tracking-[0.18em] text-amber-600">{{ messagebox_home_card.eyebrow }}</p>
+                        <h2 class="mt-2 text-lg font-extrabold text-slate-900 sm:text-xl">{{ messagebox_home_card.title }}</h2>
+                        <p class="mt-2 text-sm font-medium leading-6 text-slate-600">{{ messagebox_home_card.description }}</p>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <span class="inline-flex items-center rounded-full bg-white px-3 py-1 text-xs font-black text-slate-700">미처리 {{ messagebox_home_card.incomplete_count }}건</span>
+                            <span class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">캘린더 연결 {{ messagebox_home_card.linked_count }}건</span>
+                        </div>
+                    </div>
+                    <a
+                        href="{{ messagebox_home_card.url }}"
+                        class="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-4 py-3 text-sm font-extrabold text-white transition hover:bg-slate-800"
+                    >
+                        {{ messagebox_home_card.primary_action_label }}
+                    </a>
+                </div>
+            </section>
+            {% endif %}
             {% if calendar_page_variant == "today" %}
             <div class="space-y-5" data-classcalendar-today-view="true" data-classcalendar-today-focus="{{ today_focus }}">
                 <section class="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4 sm:p-5">
@@ -92,26 +121,31 @@
                         </div>
                         <div class="mt-4 space-y-3">
                             {% for item in today_workspace.today_events %}
-                            <button
-                                type="button"
-                                @click="openEventDetailById('{{ item.id }}')"
-                                class="block w-full rounded-[1.4rem] border border-slate-200 bg-slate-50 px-4 py-4 text-left transition hover:border-indigo-300 hover:bg-white"
-                            >
-                                <div class="flex items-start justify-between gap-3">
-                                    <div class="min-w-0">
-                                        <div class="flex flex-wrap items-center gap-2">
-                                            <p class="text-base font-black text-slate-900">{{ item.title }}</p>
-                                            {% if item.is_shared_calendar %}
-                                            <span class="inline-flex items-center rounded-full bg-indigo-50 px-2 py-1 text-[10px] font-black text-indigo-700">{{ item.calendar_owner_name }}</span>
-                                            {% endif %}
+                            <div class="space-y-2">
+                                <button
+                                    type="button"
+                                    @click="openEventDetailById('{{ item.id }}')"
+                                    class="block w-full rounded-[1.4rem] border border-slate-200 bg-slate-50 px-4 py-4 text-left transition hover:border-indigo-300 hover:bg-white"
+                                >
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="min-w-0">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <p class="text-base font-black text-slate-900">{{ item.title }}</p>
+                                                {% if item.is_shared_calendar %}
+                                                <span class="inline-flex items-center rounded-full bg-indigo-50 px-2 py-1 text-[10px] font-black text-indigo-700">{{ item.calendar_owner_name }}</span>
+                                                {% endif %}
+                                            </div>
+                                            <p class="mt-1 text-xs font-semibold text-slate-500">{{ item.schedule_text }}</p>
                                         </div>
-                                        <p class="mt-1 text-xs font-semibold text-slate-500">{{ item.schedule_text }}</p>
                                     </div>
-                                </div>
-                                {% if item.note_excerpt %}
-                                <p class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-600">{{ item.note_excerpt }}</p>
+                                    {% if item.note_excerpt %}
+                                    <p class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-600">{{ item.note_excerpt }}</p>
+                                    {% endif %}
+                                </button>
+                                {% if item.message_capture_url %}
+                                <a href="{{ item.message_capture_url }}" class="inline-flex items-center gap-1 text-xs font-bold text-amber-700 transition hover:text-amber-900">연결된 메시지 보기</a>
                                 {% endif %}
-                            </button>
+                            </div>
                             {% endfor %}
                         </div>
                     </section>
@@ -131,6 +165,74 @@
                         </div>
                         <div class="mt-4 space-y-3">
                             {% for item in today_workspace.today_memos %}
+                            <div class="space-y-2">
+                                <button
+                                    type="button"
+                                    @click="openEventDetailById('{{ item.id }}')"
+                                    class="block w-full rounded-[1.4rem] border border-amber-200 bg-amber-50/60 px-4 py-4 text-left transition hover:border-amber-300 hover:bg-white"
+                                >
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="min-w-0">
+                                            <p class="text-base font-black text-slate-900">{{ item.title }}</p>
+                                            <p class="mt-1 text-xs font-semibold text-slate-500">{{ item.schedule_text }}</p>
+                                        </div>
+                                        <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-[10px] font-black text-amber-700">오늘의 메모</span>
+                                    </div>
+                                    <p class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">{{ item.note_excerpt }}</p>
+                                </button>
+                                {% if item.message_capture_url %}
+                                <a href="{{ item.message_capture_url }}" class="inline-flex items-center gap-1 text-xs font-bold text-amber-700 transition hover:text-amber-900">연결된 메시지 보기</a>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </section>
+                    {% endif %}
+
+                    {% if today_workspace.today_tasks %}
+                    <section class="rounded-[1.5rem] border border-slate-200 bg-white p-4 sm:p-5" data-classcalendar-today-tasks="true">
+                        <div>
+                            <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">오늘 할 일</p>
+                            <h3 class="mt-1 text-lg font-extrabold text-slate-900">오늘 처리할 개인 할 일</h3>
+                        </div>
+                        <div class="mt-4 space-y-3">
+                            {% for item in today_workspace.today_tasks %}
+                            <div class="space-y-2">
+                                <button
+                                    type="button"
+                                    @click="openTaskDetailById('{{ item.id }}')"
+                                    class="block w-full rounded-[1.4rem] border border-slate-200 bg-slate-50 px-4 py-4 text-left transition hover:border-slate-300 hover:bg-white"
+                                >
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="min-w-0">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <p class="text-base font-black text-slate-900">{{ item.title }}</p>
+                                                <span class="inline-flex items-center rounded-full bg-white px-2 py-1 text-[10px] font-black text-slate-600">{{ item.priority_label }}</span>
+                                            </div>
+                                            <p class="mt-1 text-xs font-semibold text-slate-500">{{ item.schedule_text }}</p>
+                                        </div>
+                                    </div>
+                                    {% if item.note_excerpt %}
+                                    <p class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-600">{{ item.note_excerpt }}</p>
+                                    {% endif %}
+                                </button>
+                                {% if item.message_capture_url %}
+                                <a href="{{ item.message_capture_url }}" class="inline-flex items-center gap-1 text-xs font-bold text-amber-700 transition hover:text-amber-900">연결된 메시지 보기</a>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </section>
+                    {% endif %}
+                {% elif today_focus == "memos" and today_workspace.today_memos %}
+                <section class="rounded-[1.5rem] border border-slate-200 bg-white p-4 sm:p-5" data-classcalendar-today-memos="true">
+                    <div>
+                        <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">오늘의 메모</p>
+                        <h3 class="mt-1 text-lg font-extrabold text-slate-900">오늘 일정에 붙은 메모</h3>
+                    </div>
+                    <div class="mt-4 space-y-3">
+                        {% for item in today_workspace.today_memos %}
+                        <div class="space-y-2">
                             <button
                                 type="button"
                                 @click="openEventDetailById('{{ item.id }}')"
@@ -145,63 +247,10 @@
                                 </div>
                                 <p class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">{{ item.note_excerpt }}</p>
                             </button>
-                            {% endfor %}
+                            {% if item.message_capture_url %}
+                            <a href="{{ item.message_capture_url }}" class="inline-flex items-center gap-1 text-xs font-bold text-amber-700 transition hover:text-amber-900">연결된 메시지 보기</a>
+                            {% endif %}
                         </div>
-                    </section>
-                    {% endif %}
-
-                    {% if today_workspace.today_tasks %}
-                    <section class="rounded-[1.5rem] border border-slate-200 bg-white p-4 sm:p-5" data-classcalendar-today-tasks="true">
-                        <div>
-                            <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">오늘 할 일</p>
-                            <h3 class="mt-1 text-lg font-extrabold text-slate-900">오늘 처리할 개인 할 일</h3>
-                        </div>
-                        <div class="mt-4 space-y-3">
-                            {% for item in today_workspace.today_tasks %}
-                            <button
-                                type="button"
-                                @click="openTaskDetailById('{{ item.id }}')"
-                                class="block w-full rounded-[1.4rem] border border-slate-200 bg-slate-50 px-4 py-4 text-left transition hover:border-slate-300 hover:bg-white"
-                            >
-                                <div class="flex items-start justify-between gap-3">
-                                    <div class="min-w-0">
-                                        <div class="flex flex-wrap items-center gap-2">
-                                            <p class="text-base font-black text-slate-900">{{ item.title }}</p>
-                                            <span class="inline-flex items-center rounded-full bg-white px-2 py-1 text-[10px] font-black text-slate-600">{{ item.priority_label }}</span>
-                                        </div>
-                                        <p class="mt-1 text-xs font-semibold text-slate-500">{{ item.schedule_text }}</p>
-                                    </div>
-                                </div>
-                                {% if item.note_excerpt %}
-                                <p class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-600">{{ item.note_excerpt }}</p>
-                                {% endif %}
-                            </button>
-                            {% endfor %}
-                        </div>
-                    </section>
-                    {% endif %}
-                {% elif today_focus == "memos" and today_workspace.today_memos %}
-                <section class="rounded-[1.5rem] border border-slate-200 bg-white p-4 sm:p-5" data-classcalendar-today-memos="true">
-                    <div>
-                        <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">오늘의 메모</p>
-                        <h3 class="mt-1 text-lg font-extrabold text-slate-900">오늘 일정에 붙은 메모</h3>
-                    </div>
-                    <div class="mt-4 space-y-3">
-                        {% for item in today_workspace.today_memos %}
-                        <button
-                            type="button"
-                            @click="openEventDetailById('{{ item.id }}')"
-                            class="block w-full rounded-[1.4rem] border border-amber-200 bg-amber-50/60 px-4 py-4 text-left transition hover:border-amber-300 hover:bg-white"
-                        >
-                            <div class="flex items-start justify-between gap-3">
-                                <div class="min-w-0">
-                                    <p class="text-base font-black text-slate-900">{{ item.title }}</p>
-                                    <p class="mt-1 text-xs font-semibold text-slate-500">{{ item.schedule_text }}</p>
-                                </div>
-                                <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-[10px] font-black text-amber-700">오늘의 메모</span>
-                            </div>
-                            <p class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">{{ item.note_excerpt }}</p>
-                        </button>
                         {% endfor %}
                     </div>
                 </section>
@@ -218,23 +267,28 @@
                         </div>
                         <div class="mt-4 space-y-3">
                             {% for item in group.items %}
-                            <button
-                                type="button"
-                                @click="openEventDetailById('{{ item.id }}')"
-                                class="block w-full rounded-[1.4rem] border border-indigo-200 bg-indigo-50/40 px-4 py-4 text-left transition hover:border-indigo-300 hover:bg-white"
-                            >
-                                <div class="flex items-start justify-between gap-3">
-                                    <div class="min-w-0">
-                                        <div class="flex flex-wrap items-center gap-2">
-                                            <p class="text-base font-black text-slate-900">{{ item.title }}</p>
-                                            <span class="inline-flex items-center rounded-full bg-indigo-100 px-2 py-1 text-[10px] font-black text-indigo-700">{{ item.review_state_label }}</span>
+                            <div class="space-y-2">
+                                <button
+                                    type="button"
+                                    @click="openEventDetailById('{{ item.id }}')"
+                                    class="block w-full rounded-[1.4rem] border border-indigo-200 bg-indigo-50/40 px-4 py-4 text-left transition hover:border-indigo-300 hover:bg-white"
+                                >
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="min-w-0">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <p class="text-base font-black text-slate-900">{{ item.title }}</p>
+                                                <span class="inline-flex items-center rounded-full bg-indigo-100 px-2 py-1 text-[10px] font-black text-indigo-700">{{ item.review_state_label }}</span>
+                                            </div>
+                                            <p class="mt-1 text-xs font-semibold text-slate-500">{{ item.schedule_text }}</p>
                                         </div>
-                                        <p class="mt-1 text-xs font-semibold text-slate-500">{{ item.schedule_text }}</p>
                                     </div>
-                                </div>
-                                <p class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">{{ item.note_excerpt }}</p>
-                                <p class="mt-2 text-xs font-semibold text-indigo-600">{{ item.review_state_description }}</p>
-                            </button>
+                                    <p class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">{{ item.note_excerpt }}</p>
+                                    <p class="mt-2 text-xs font-semibold text-indigo-600">{{ item.review_state_description }}</p>
+                                </button>
+                                {% if item.message_capture_url %}
+                                <a href="{{ item.message_capture_url }}" class="inline-flex items-center gap-1 text-xs font-bold text-amber-700 transition hover:text-amber-900">연결된 메시지 보기</a>
+                                {% endif %}
+                            </div>
                             {% endfor %}
                         </div>
                     </section>
@@ -254,6 +308,14 @@
                         <h2 class="mt-1 text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl" x-text="currentMonthText"></h2>
                     </div>
                     <div class="flex flex-wrap items-center gap-2 sm:justify-end">
+                        {% if messagebox_home_card.enabled and messagebox_home_card.url %}
+                        <a
+                            href="{{ messagebox_home_card.url }}"
+                            class="inline-flex items-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800 transition hover:bg-amber-100"
+                        >
+                            업무 메시지 보관함
+                        </a>
+                        {% endif %}
                         <button type="button" @click="prevMonth()" class="rounded-xl border border-slate-200 bg-white p-2 text-slate-500 transition hover:bg-slate-50 sm:p-2.5" aria-label="이전 달">
                             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                         </button>
@@ -331,36 +393,42 @@
                     <div class="mt-4 space-y-2.5" x-show="getSelectedDateHubItems().length > 0">
                         <p class="text-xs font-semibold text-slate-500 uppercase tracking-[0.08em]">연결된 항목</p>
                         <template x-for="item in getSelectedDateHubItems()" :key="item.key">
-                            <button
-                                type="button"
-                                @click="openSelectedDateHubItem(item, $event)"
-                                class="w-full rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-slate-300 hover:shadow-sm"
-                            >
-                                <div class="flex items-start justify-between gap-3">
-                                    <div class="min-w-0 flex-1">
-                                        <div class="flex flex-wrap items-center gap-2">
-                                            <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-700" x-text="item.serviceLabel"></span>
-                                            <span
-                                                x-show="item.statusText"
-                                                class="inline-flex items-center rounded-full px-2 py-1 text-[10px] font-bold"
-                                                :class="getHubStatusBadgeClass(item.statusTone)"
-                                                x-text="item.statusText"
-                                            ></span>
+                                <button
+                                    type="button"
+                                    @click="openSelectedDateHubItem(item, $event)"
+                                    class="w-full rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-slate-300 hover:shadow-sm"
+                                >
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="min-w-0 flex-1">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-700" x-text="item.serviceLabel"></span>
+                                                <span
+                                                    x-show="item.statusText"
+                                                    class="inline-flex items-center rounded-full px-2 py-1 text-[10px] font-bold"
+                                                    :class="getHubStatusBadgeClass(item.statusTone)"
+                                                    x-text="item.statusText"
+                                                ></span>
+                                            </div>
+                                            <p class="mt-2 truncate text-base font-bold text-slate-900" x-text="item.title"></p>
+                                            <p class="mt-1 text-sm font-medium text-slate-600" x-text="item.scheduleText"></p>
+                                            <p
+                                                x-show="item.detailText"
+                                                class="mt-1 truncate text-xs font-medium text-slate-500"
+                                                x-text="item.detailText"
+                                            ></p>
                                         </div>
-                                        <p class="mt-2 truncate text-base font-bold text-slate-900" x-text="item.title"></p>
-                                        <p class="mt-1 text-sm font-medium text-slate-600" x-text="item.scheduleText"></p>
-                                        <p
-                                            x-show="item.detailText"
-                                            class="mt-1 truncate text-xs font-medium text-slate-500"
-                                            x-text="item.detailText"
-                                        ></p>
+                                        <span class="mt-1 shrink-0 text-xs font-bold text-slate-400">열기</span>
                                     </div>
-                                    <span class="mt-1 shrink-0 text-xs font-bold text-slate-400">열기</span>
-                                </div>
-                            </button>
+                                </button>
+                                <a
+                                    x-show="item.messageCaptureUrl"
+                                    :href="item.messageCaptureUrl || '#'"
+                                    class="inline-flex items-center gap-1 text-xs font-bold text-amber-700 transition hover:text-amber-900"
+                                >
+                                    연결된 메시지 보기
+                                </a>
                         </template>
                     </div>
-
                     <div
                         class="mt-4 rounded-xl border border-dashed border-slate-300 bg-white/80 p-6 text-center"
                         x-show="getSelectedDateHubItems().length === 0"
@@ -517,6 +585,20 @@
                 <i class="fa-solid fa-arrow-up-right-from-square mr-1.5"></i>
                 <span x-text="selectedEvent && selectedEvent.source_label ? selectedEvent.source_label : '원본 서비스로 이동'"></span>
                 <span x-show="!embeddedSheetbookContext" class="ml-1">(새 탭)</span>
+            </a>
+            <a
+                x-show="selectedEvent && selectedEvent.message_capture_url"
+                :href="selectedEvent ? selectedEvent.message_capture_url : '#'"
+                class="mb-4 inline-flex items-center rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2 text-sm font-bold text-amber-800 transition hover:bg-amber-100"
+            >
+                연결된 메시지 보기
+            </a>
+            <a
+                x-show="selectedTask && selectedTask.message_capture_url"
+                :href="selectedTask ? selectedTask.message_capture_url : '#'"
+                class="mb-4 inline-flex items-center rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2 text-sm font-bold text-amber-800 transition hover:bg-amber-100"
+            >
+                연결된 메시지 보기
             </a>
             <div class="flex flex-wrap justify-end gap-2">
                 <button
@@ -1893,6 +1975,10 @@ function calendarApp() {
                 window.location.href = item.actionUrl;
                 return;
             }
+            if (item.messageCaptureUrl) {
+                window.location.href = item.messageCaptureUrl;
+                return;
+            }
             if (item.actionType === 'message_capture' && item.messageCaptureId) {
                 await this.openMessageArchiveCapture(item.messageCaptureId, triggerEvent);
                 return;
@@ -2256,6 +2342,7 @@ function calendarApp() {
                 actionType: hubMeta.action_type || (kind === 'task' ? 'task_detail' : 'event_detail'),
                 actionUrl: hubMeta.action_url || '',
                 messageCaptureId: hubMeta.message_capture_id || '',
+                messageCaptureUrl: sourceItem.message_capture_url || '',
                 sortTime: kind === 'task'
                     ? (sourceItem.due_at ? sourceItem.due_at.getTime() : 0)
                     : sourceItem.start_time.getTime(),

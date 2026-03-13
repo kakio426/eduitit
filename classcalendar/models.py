@@ -287,6 +287,7 @@ class CalendarMessageCapture(models.Model):
         related_name="message_captures",
     )
     committed_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

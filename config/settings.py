@@ -89,6 +89,7 @@ INSTALLED_APPS = [
     'noticegen.apps.NoticegenConfig',
     'timetable.apps.TimetableConfig',
     'classcalendar.apps.ClasscalendarConfig',
+    'messagebox.apps.MessageboxConfig',
     'textbooks.apps.TextbooksConfig',
     'edu_materials.apps.EduMaterialsConfig',
     'channels',

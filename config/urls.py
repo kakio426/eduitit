@@ -65,6 +65,7 @@ urlpatterns = [
     path('noticegen/', include('noticegen.urls', namespace='noticegen')),
     path('timetable/', include('timetable.urls', namespace='timetable')),
     path('classcalendar/', include('classcalendar.urls', namespace='classcalendar')),
+    path('messagebox/', include('messagebox.urls', namespace='messagebox')),
     path('parentcomm/', include('parentcomm.urls', namespace='parentcomm')),
     path('docviewer/', include('docviewer.urls', namespace='docviewer')),
     path('slidesmith/', include('slidesmith.urls', namespace='slidesmith')),
