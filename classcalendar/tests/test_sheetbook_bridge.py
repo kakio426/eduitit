@@ -25,20 +25,21 @@ class CalendarSheetbookBridgeTests(TestCase):
     @override_settings(SHEETBOOK_ENABLED=False)
     def test_main_route_renders_calendar_when_sheetbook_disabled(self):
         response = self.client.get(reverse("classcalendar:main"))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "새 일정")
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("home"), response["Location"])
+        self.assertIn("#home-calendar", response["Location"])
 
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_main_route_renders_calendar_when_sheetbook_enabled(self):
         response = self.client.get(reverse("classcalendar:main"))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "새 일정")
-        self.assertNotContains(response, "교무수첩 만들기")
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("home"), response["Location"])
+        self.assertIn("#home-calendar", response["Location"])
 
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_sheetbook_entry_route_redirects_to_main_when_no_sheetbook_exists(self):
         response = self.client.get(reverse("classcalendar:sheetbook_entry"))
-        self.assertRedirects(response, reverse("classcalendar:main"))
+        self.assertRedirects(response, f"{reverse('home')}#home-calendar", fetch_redirect_response=False)
 
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_sheetbook_entry_shows_sheetbook_calendar_entry_when_sheetbook_exists(self):
@@ -107,4 +108,4 @@ class CalendarSheetbookBridgeTests(TestCase):
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_sheetbook_entry_with_legacy_query_redirects_to_main(self):
         response = self.client.get(f"{reverse('classcalendar:sheetbook_entry')}?legacy=1")
-        self.assertRedirects(response, reverse("classcalendar:main"))
+        self.assertRedirects(response, f"{reverse('home')}#home-calendar", fetch_redirect_response=False)

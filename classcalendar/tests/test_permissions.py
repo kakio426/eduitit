@@ -84,11 +84,12 @@ class PermissionTest(TestCase):
         FEATURE_MESSAGE_CAPTURE_ITEM_TYPES=True,
     )
     def test_main_view_keeps_calendar_surface_minimal(self):
-        response = self.client_teacher.get(reverse("calendar_main"))
+        response = self.client_teacher.get(reverse("calendar_main"), follow=True)
         content = response.content.decode("utf-8")
 
-        self.assertIn("학급 캘린더", content)
+        self.assertIn("월간 캘린더", content)
         self.assertIn('data-classcalendar-main-view="true"', content)
+        self.assertIn('data-classcalendar-embed-mode="home"', content)
         self.assertIn("새 일정", content)
         self.assertIn("오늘", content)
         self.assertNotIn("안내문에서 일정 찾기", content)
@@ -96,13 +97,15 @@ class PermissionTest(TestCase):
         self.assertNotIn("다시 볼 메모", content)
         self.assertNotIn("openMessageHub($event, 'capture', { resetCapture: true })", content)
 
-    def test_legacy_today_memo_panel_route_redirects_to_today_view(self):
+    def test_legacy_today_memo_panel_route_redirects_to_home_surface(self):
         response = self.client_teacher.get(f"{reverse('classcalendar:main')}?panel=today-memos")
 
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response["Location"], f"{reverse('calendar_today')}?focus=memos")
+        self.assertIn(reverse("home"), response["Location"])
+        self.assertIn("focus=memos", response["Location"])
+        self.assertIn("#home-calendar", response["Location"])
 
-    def test_today_view_uses_same_note_source(self):
+    def test_today_view_redirect_keeps_same_note_source_on_home_surface(self):
         event = self._create_event(title="오늘 메모 일정")
         event.start_time = timezone.now()
         event.end_time = event.start_time + timedelta(hours=1)
@@ -114,15 +117,17 @@ class PermissionTest(TestCase):
             content={"text": "체육관 열쇠 챙기기\n방송 멘트 다시 확인"},
         )
 
-        response = self.client_teacher.get(f"{reverse('calendar_today')}?focus=memos")
-        content = response.content.decode("utf-8")
+        response = self.client_teacher.get(f"{reverse('calendar_today')}?focus=memos", follow=True)
+        selected_date = timezone.localtime(event.start_time).date().isoformat()
 
-        self.assertContains(response, "오늘의 메모")
-        self.assertIn('data-classcalendar-today-view="true"', content)
-        self.assertIn('data-classcalendar-today-focus="memos"', content)
-        self.assertIn("체육관 열쇠 챙기기", content)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["initial_selected_date"], selected_date)
+        self.assertEqual(response.context["calendar_page_variant"], "main")
+        self.assertTrue(
+            any("체육관 열쇠 챙기기" in (item.get("note") or "") for item in response.context["events_json"])
+        )
 
-    def test_today_review_view_groups_same_note_source_with_context(self):
+    def test_today_review_route_redirects_to_home_surface_with_same_source(self):
         event = self._create_event(title="다시 볼 메모 일정")
         event.start_time = timezone.now() - timedelta(hours=2)
         event.end_time = event.start_time + timedelta(hours=1)
@@ -134,14 +139,14 @@ class PermissionTest(TestCase):
             content={"text": "수업 끝난 뒤 다시 볼 메모"},
         )
 
-        response = self.client_teacher.get(f"{reverse('calendar_today')}?focus=review")
-        content = response.content.decode("utf-8")
+        response = self.client_teacher.get(f"{reverse('calendar_today')}?focus=review", follow=True)
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn('data-classcalendar-today-focus="review"', content)
-        self.assertIn("다시 볼 메모", content)
-        self.assertIn("이미 지난 메모", content)
-        self.assertIn("수업 끝난 뒤 다시 볼 메모", content)
+        self.assertEqual(response.context["calendar_page_variant"], "main")
+        self.assertIn(
+            "수업 끝난 뒤 다시 볼 메모",
+            [item["note"] for item in response.context["events_json"]],
+        )
 
     def test_calendar_alias_routes_require_login_for_anonymous(self):
         response = Client().get(reverse("calendar_main"))
@@ -156,16 +161,16 @@ class PermissionTest(TestCase):
         main_response = self.client_teacher.get(reverse("calendar_main"))
         today_response = self.client_teacher.get(f"{reverse('calendar_today')}?focus=review")
 
-        self.assertEqual(main_response.status_code, 200)
-        self.assertEqual(today_response.status_code, 200)
-        self.assertContains(main_response, "학급 캘린더")
-        self.assertIn('data-classcalendar-today-focus="review"', today_response.content.decode("utf-8"))
+        self.assertEqual(main_response.status_code, 302)
+        self.assertEqual(today_response.status_code, 302)
+        self.assertIn(reverse("home"), main_response["Location"])
+        self.assertIn(reverse("home"), today_response["Location"])
 
     def test_main_view_includes_initial_open_event_deep_link(self):
         event = self._create_event(title="딥링크 일정")
         url = f"{reverse('classcalendar:main')}?date=2026-03-01&open_event={event.id}"
 
-        response = self.client_teacher.get(url)
+        response = self.client_teacher.get(url, follow=True)
         content = response.content.decode("utf-8")
 
         self.assertEqual(response.status_code, 200)

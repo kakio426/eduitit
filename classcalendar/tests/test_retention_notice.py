@@ -25,8 +25,9 @@ class RetentionNoticeTests(TestCase):
         profile.save(update_fields=["nickname", "role"])
 
     def test_legacy_main_seeds_notice_event_without_banner(self):
-        response = self.client.get(reverse("classcalendar:legacy_main"))
+        response = self.client.get(reverse("classcalendar:legacy_main"), follow=True)
         self.assertEqual(response.status_code, 200)
+        self.assertRedirects(response, f"{reverse('home')}#home-calendar")
         self.assertNotContains(response, "고용량 파일은 90일, 일반 데이터는 1년 기준으로 자동 정리됩니다.")
         self.assertNotContains(response, "캘린더에 같은 안내 일정이 1회 등록되며")
 
@@ -42,13 +43,13 @@ class RetentionNoticeTests(TestCase):
         self.assertIsNotNone(setting.retention_notice_event_seeded_at)
 
     def test_dismiss_notice_hides_banner(self):
-        self.client.get(reverse("classcalendar:legacy_main"))
+        self.client.get(reverse("classcalendar:legacy_main"), follow=True)
 
         dismiss_response = self.client.post(reverse("classcalendar:api_dismiss_retention_notice"))
         self.assertEqual(dismiss_response.status_code, 200)
         self.assertEqual(dismiss_response.json().get("status"), "success")
 
-        response = self.client.get(reverse("classcalendar:legacy_main"))
+        response = self.client.get(reverse("classcalendar:legacy_main"), follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "retentionNoticeVisible: false")
         self.assertFalse(response.context["show_retention_notice_banner"])
@@ -57,9 +58,9 @@ class RetentionNoticeTests(TestCase):
         self.assertIsNotNone(setting.retention_notice_banner_dismissed_at)
 
     def test_deleted_notice_event_is_not_recreated(self):
-        self.client.get(reverse("classcalendar:legacy_main"))
+        self.client.get(reverse("classcalendar:legacy_main"), follow=True)
         notice_event = CalendarEvent.objects.get(author=self.user, title=NOTICE_TITLE)
         notice_event.delete()
 
-        self.client.get(reverse("classcalendar:legacy_main"))
+        self.client.get(reverse("classcalendar:legacy_main"), follow=True)
         self.assertFalse(CalendarEvent.objects.filter(author=self.user, title=NOTICE_TITLE).exists())

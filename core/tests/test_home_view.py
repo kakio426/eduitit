@@ -269,11 +269,11 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('숫자 달력과 오늘 요약을 한 번에 보는 학급 캘린더', content)
         self.assertIn('로그인 후 사용', content)
         self.assertIn('로그인 후 내 일정과 메모를 이어서 봅니다', content)
-        self.assertIn('로그인하고 캘린더 열기', content)
-        self.assertIn('캘린더 바로가기', content)
+        self.assertIn('로그인하고 홈에서 캘린더 보기', content)
+        self.assertIn('홈 캘린더 바로가기', content)
         self.assertIn('오늘 일정 정리', content)
         self.assertIn('오늘 메모 확인', content)
-        self.assertIn(reverse('calendar_main'), content)
+        self.assertIn(reverse('home'), content)
 
     def test_v2_anonymous_does_not_render_today_try_now_section(self):
         self._create_try_now_products()
@@ -343,22 +343,19 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('서비스 검색...', content)
 
     def test_v2_authenticated_uses_stacked_top_zone_and_real_calendar(self):
-        """V2 로그인 홈은 전체 캘린더 요약 표면을 사용"""
+        """V2 로그인 홈은 캘린더 단일 표면을 상단 전체 폭으로 사용"""
         self._login('qauser')
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        today_index = content.index('data-home-v2-top-today="true"')
-        favorites_index = content.index('data-home-v2-top-favorites="true"')
-        calendar_index = content.index('data-home-v2-top-calendar="true"')
-
-        self.assertLess(calendar_index, today_index)
-        self.assertLess(today_index, favorites_index)
         self.assertIn('data-home-v2-top-zone="true"', content)
+        self.assertIn('data-home-calendar-root="true"', content)
         self.assertIn('data-home-v2-calendar-surface="true"', content)
         self.assertIn('data-classcalendar-surface="true"', content)
         self.assertIn('data-classcalendar-embed-mode="home"', content)
         self.assertIn('data-classcalendar-main-view="true"', content)
         self.assertIn('새 일정', content)
+        self.assertNotIn('data-home-v2-top-today="true"', content)
+        self.assertNotIn('data-home-v2-top-center="true"', content)
         self.assertNotIn('homeCalendarWidget()', content)
         self.assertNotIn('openTodayMemoModal($event)', content)
         self.assertNotIn('data-home-v2-calendar-month-grid="true"', content)
@@ -448,7 +445,7 @@ class HomeV2ViewTest(TestCase):
         )
 
         home_response = self.client.get(reverse('home'))
-        main_response = self.client.get(reverse('calendar_main'))
+        main_response = self.client.get(reverse('calendar_main'), follow=True)
         home_events = self._sorted_event_source(home_response)
         main_events = self._sorted_event_source(main_response)
 
@@ -490,7 +487,7 @@ class HomeV2ViewTest(TestCase):
         self._create_calendar_event_with_note(
             user,
             title='상세 확인 일정',
-            note='링크는 전체 캘린더 상세로 연결',
+            note='링크는 홈 캘린더 상세로 연결',
             start_time=now,
             end_time=now + timedelta(hours=1),
         )
@@ -522,7 +519,7 @@ class HomeV2ViewTest(TestCase):
 
         today_key = timezone.localdate().isoformat()
         home_response = self.client.get(f"{reverse('home')}?date={today_key}")
-        main_response = self.client.get(f"{reverse('calendar_main')}?date={today_key}")
+        main_response = self.client.get(f"{reverse('calendar_main')}?date={today_key}", follow=True)
         content = home_response.content.decode('utf-8')
 
         self.assertIn('data-classcalendar-main-view="true"', content)
@@ -570,14 +567,15 @@ class HomeV2ViewTest(TestCase):
         self.assertIn(('아침 조회 준비', '출석부와 전달사항 확인'), task_notes)
         self.assertNotIn('data-home-v2-calendar-today-tasks="true"', content)
 
-    def test_v2_authenticated_widens_content_shell_and_keeps_favorites_two_up(self):
+    def test_v2_authenticated_widens_content_shell_and_keeps_favorites_panel_below_calendar(self):
         user = self._login('balanceuser')
         ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
         self.assertIn("core/css/home_authenticated_v2.css", content)
-        self.assertIn('data-home-v2-top-favorites-grid="true"', content)
+        self.assertIn('data-home-v2-favorites-grid="true"', content)
+        self.assertIn('data-home-v2-favorites-panel="true"', content)
         self.assertIn('home-v2-content-shell', content)
         self.assertIn('home-v2-top-zone', content)
         self.assertNotIn('<style>', content)
@@ -742,11 +740,11 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        favorites_index = content.index('data-home-v2-top-favorites="true"')
-        top_zone_end = content.index('data-home-v2-service-groups="true"', favorites_index)
-        favorites_block = content[favorites_index:top_zone_end]
+        favorites_index = content.index('data-home-v2-favorites-panel="true"')
+        favorites_end = content.index('data-home-v2-tablet-community-summary="true"', favorites_index)
+        favorites_block = content[favorites_index:favorites_end]
 
-        self.assertIn('data-home-v2-top-favorites-grid="true"', favorites_block)
+        self.assertIn('data-home-v2-favorites-grid="true"', favorites_block)
         self.assertIn('data-home-v2-favorite-card="true"', favorites_block)
         self.assertNotIn('자주 쓰는 서비스만 가까이에 둡니다.', favorites_block)
         self.assertNotIn('data-home-v2-favorite-card-body="true"', favorites_block)
@@ -782,9 +780,9 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        favorites_index = content.index('data-home-v2-top-favorites="true"')
-        top_zone_end = content.index('data-home-v2-service-groups="true"', favorites_index)
-        favorites_block = content[favorites_index:top_zone_end]
+        favorites_index = content.index('data-home-v2-favorites-panel="true"')
+        favorites_end = content.index('data-home-v2-tablet-community-summary="true"', favorites_index)
+        favorites_block = content[favorites_index:favorites_end]
 
         self.assertIn('title="반짝반짝 우리반 알림판">알림판</p>', favorites_block)
         self.assertIn('aria-label="반짝반짝 우리반 알림판 즐겨찾기 토글"', favorites_block)

@@ -29,91 +29,6 @@
             <div class="home-v2-content-shell">
                 <section class="mb-6 home-v2-top-zone" data-home-v2-top-zone="true">
                     {% include 'core/partials/home_calendar_panel.html' %}
-
-                    <div class="home-v2-top-center" data-home-v2-top-center="true">
-                        <article class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm" data-home-v2-top-today="true">
-                            <div class="mb-4">
-                                <h2 class="text-lg md:text-xl font-black text-slate-900 flex items-center gap-2">
-                                    <i class="fa-solid fa-calendar-day text-indigo-500"></i>
-                                    오늘 할 일
-                                </h2>
-                                <p class="mt-1 text-xs font-semibold text-slate-400">{{ today_date_text }}</p>
-                            </div>
-                            {% if today_items %}
-                            <div class="space-y-3">
-                                {% for item in today_items|slice:":2" %}
-                                <a href="{{ item.href }}" class="block rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-4 transition hover:border-indigo-200 hover:bg-white">
-                                    <div class="flex items-start gap-3">
-                                        <span class="text-2xl leading-none">
-                                            {% if item.emoji %}{{ item.emoji }}{% else %}<i class="fa-solid fa-folder-open text-slate-400"></i>{% endif %}
-                                        </span>
-                                        <div class="min-w-0 flex-1">
-                                            <p class="text-base font-black leading-6 text-slate-900 line-clamp-2">{{ item.title }}</p>
-                                            <p class="mt-1.5 text-sm leading-6 text-slate-500 line-clamp-2">{{ item.description }}</p>
-                                        </div>
-                                    </div>
-                                </a>
-                                {% endfor %}
-                            </div>
-                            {% else %}
-                            <div class="rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center">
-                                <p class="text-sm font-bold text-slate-600">오늘 바로 처리할 항목이 없습니다.</p>
-                            </div>
-                            {% endif %}
-                        </article>
-
-                        <article class="rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm md:p-5" data-home-v2-top-favorites="true">
-                            <div class="mb-3">
-                                <h2 class="text-lg md:text-xl font-black text-slate-900 flex items-center gap-2">
-                                    <i class="fa-solid fa-star text-amber-500"></i>
-                                    즐겨찾기
-                                </h2>
-                            </div>
-                            {% if favorite_items %}
-                            <div class="grid grid-cols-2 gap-2.5" data-home-v2-top-favorites-grid="true">
-                                {% for item in favorite_items|slice:":4" %}
-                                {% with favorite_title=item.favorite_title|default:item.favorite_full_title %}
-                                <div class="min-h-[74px] rounded-[1.35rem] border border-slate-200 bg-slate-50 px-3 py-2.5 shadow-sm transition product-card hover:border-amber-300 hover:bg-white"
-                                    data-home-v2-favorite-card="true"
-                                    data-product-id="{{ item.product.id }}"
-                                    data-launch-href="{{ item.href }}"
-                                    data-launch-external="{{ item.is_external|yesno:'true,false' }}"
-                                    data-track="quick_action"
-                                    data-track-label="{{ item.product.title }}"
-                                    role="button"
-                                    tabindex="0">
-                                    <div class="flex items-center gap-2.5" data-home-v2-favorite-card-header="true">
-                                        <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white text-sm shadow-sm {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-violet-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-pink-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
-                                            {% if item.product.icon %}
-                                                {% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }}"></i>{% else %}{{ item.product.icon }}{% endif %}
-                                            {% else %}
-                                                <i class="fa-solid fa-sparkles"></i>
-                                            {% endif %}
-                                        </div>
-                                        <div class="min-w-0 flex-1">
-                                            <p class="truncate text-[0.95rem] font-black leading-5 text-slate-900" data-home-v2-favorite-card-title="true" title="{{ item.favorite_full_title }}">{{ favorite_title }}</p>
-                                        </div>
-                                        <button type="button"
-                                            class="favorite-toggle-btn inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-300 hover:border-amber-300 hover:text-amber-500 transition-colors"
-                                            data-product-id="{{ item.product.id }}"
-                                            data-favorite-toggle="true"
-                                            aria-pressed="false"
-                                            aria-label="{{ item.favorite_full_title }} 즐겨찾기 토글"
-                                            title="즐겨찾기">
-                                            <i class="fa-solid fa-star text-[10px]"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                {% endwith %}
-                                {% endfor %}
-                            </div>
-                            {% else %}
-                            <div class="rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center">
-                                <p class="text-sm font-bold text-slate-600">별표한 서비스가 여기에 모입니다.</p>
-                            </div>
-                            {% endif %}
-                        </article>
-                    </div>
                 </section>
 
                 <section class="mb-6" data-home-v2-service-groups="true">
@@ -127,6 +42,54 @@
                 {% if secondary_display_sections|default:aux_sections %}
                 <section class="mb-6" data-home-v2-service-groups="true">
                     {% include 'core/includes/purpose_sections.html' with sections=secondary_display_sections|default:aux_sections %}
+                </section>
+                {% endif %}
+
+                {% if favorite_items %}
+                <section class="mb-6" data-home-v2-favorites-panel="true">
+                    <article class="rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+                        <div class="mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-star text-amber-500"></i>
+                            <h2 class="text-lg md:text-xl font-black text-slate-900">즐겨찾기</h2>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2.5 md:grid-cols-4" data-home-v2-favorites-grid="true">
+                            {% for item in favorite_items|slice:":4" %}
+                            {% with favorite_title=item.favorite_title|default:item.favorite_full_title %}
+                            <div class="min-h-[74px] rounded-[1.35rem] border border-slate-200 bg-slate-50 px-3 py-2.5 shadow-sm transition product-card hover:border-amber-300 hover:bg-white"
+                                data-home-v2-favorite-card="true"
+                                data-product-id="{{ item.product.id }}"
+                                data-launch-href="{{ item.href }}"
+                                data-launch-external="{{ item.is_external|yesno:'true,false' }}"
+                                data-track="quick_action"
+                                data-track-label="{{ item.product.title }}"
+                                role="button"
+                                tabindex="0">
+                                <div class="flex items-center gap-2.5" data-home-v2-favorite-card-header="true">
+                                    <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white text-sm shadow-sm {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-violet-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-pink-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
+                                        {% if item.product.icon %}
+                                            {% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }}"></i>{% else %}{{ item.product.icon }}{% endif %}
+                                        {% else %}
+                                            <i class="fa-solid fa-sparkles"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="truncate text-[0.95rem] font-black leading-5 text-slate-900" data-home-v2-favorite-card-title="true" title="{{ item.favorite_full_title }}">{{ favorite_title }}</p>
+                                    </div>
+                                    <button type="button"
+                                        class="favorite-toggle-btn inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-300 hover:border-amber-300 hover:text-amber-500 transition-colors"
+                                        data-product-id="{{ item.product.id }}"
+                                        data-favorite-toggle="true"
+                                        aria-pressed="false"
+                                        aria-label="{{ item.favorite_full_title }} 즐겨찾기 토글"
+                                        title="즐겨찾기">
+                                        <i class="fa-solid fa-star text-[10px]"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            {% endwith %}
+                            {% endfor %}
+                        </div>
+                    </article>
                 </section>
                 {% endif %}
 

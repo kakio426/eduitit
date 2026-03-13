@@ -28,8 +28,8 @@ class ServiceGuideDetailLaunchTests(TestCase):
         response = self.client.get(reverse("service_guide_detail", kwargs={"pk": manual.pk}))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, f'href="{reverse("classcalendar:main")}"')
-        self.assertContains(response, "학급 캘린더 열기")
+        self.assertContains(response, f'href="{reverse("home")}#home-calendar"')
+        self.assertContains(response, "홈에서 캘린더 보기")
         self.assertContains(response, "학급 캘린더 사용법")
         self.assertContains(response, "다른 안내 보기")
         self.assertNotContains(response, "준비 중인 서비스입니다")

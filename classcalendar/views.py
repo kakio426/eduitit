@@ -65,6 +65,8 @@ INTEGRATION_SYNC_MIN_INTERVAL_SECONDS = 120
 RETENTION_NOTICE_TITLE = "[안내] 자동 정리 정책 안내"
 SHEETBOOK_RECENT_SHEETBOOK_ID_SESSION_KEY = "sheetbook_recent_sheetbook_id"
 SHEETBOOK_SOURCE_SOURCES = {"sheetbook_action_calendar", "sheetbook_schedule_sync", "sheetbook_calendar_embed", "sheetbook_message_capture"}
+HOME_CALENDAR_ANCHOR = "home-calendar"
+HOME_CALENDAR_QUERY_KEYS = ("date", "action", "open_event", "open_task", "focus")
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -123,6 +125,37 @@ def _reverse_calendar_surface(alias_name, fallback_name):
         except NoReverseMatch:
             continue
     return ""
+
+
+def _build_home_calendar_surface_url(request, *, include_request_state=True):
+    home_url = reverse("home")
+    preserved_pairs = []
+    if include_request_state:
+        for key in HOME_CALENDAR_QUERY_KEYS:
+            for value in request.GET.getlist(key):
+                if str(value or "").strip():
+                    preserved_pairs.append((key, value))
+        if str(request.GET.get("panel") or "").strip().lower() == "today-memos" and not any(
+            key == "focus" for key, _ in preserved_pairs
+        ):
+            preserved_pairs.append(("focus", "memos"))
+    query_string = urlencode(preserved_pairs, doseq=True)
+    if query_string:
+        return f"{home_url}?{query_string}#{HOME_CALENDAR_ANCHOR}"
+    return f"{home_url}#{HOME_CALENDAR_ANCHOR}"
+
+
+def _prime_calendar_surface_state(request):
+    _sync_integrations_if_needed(request)
+    _get_calendar_access_for_user(request.user)
+    integration_setting = _get_integration_setting_for_user(request.user)
+    _ensure_retention_notice_event_for_user(request.user, integration_setting)
+
+
+def _redirect_to_home_calendar_surface(request):
+    _prime_calendar_surface_state(request)
+    response = redirect(_build_home_calendar_surface_url(request))
+    return _apply_workspace_cache_headers(response)
 
 
 def _display_user_name(user):
@@ -1914,32 +1947,23 @@ def _resolve_sheetbook_calendar_entry_for_user(request, user):
 @login_required
 def main_entry(request):
     if not getattr(settings, "SHEETBOOK_ENABLED", False):
-        return redirect(_reverse_calendar_surface("calendar_main", "classcalendar:main"))
+        return redirect(_build_home_calendar_surface_url(request, include_request_state=False))
 
     bridge_context = _resolve_sheetbook_calendar_entry_for_user(request, request.user)
     if bridge_context.get("sheetbook_entry_url"):
         return redirect(bridge_context["sheetbook_entry_url"])
-    return redirect(_reverse_calendar_surface("calendar_main", "classcalendar:main"))
+    return redirect(_build_home_calendar_surface_url(request, include_request_state=False))
 
 
 @login_required
 def legacy_main_redirect(request):
-    return redirect(_reverse_calendar_surface("calendar_main", "classcalendar:main"))
+    return _redirect_to_home_calendar_surface(request)
 
 
 def _redirect_legacy_today_panel(request):
     if str(request.GET.get("panel") or "").strip().lower() != "today-memos":
         return None
-
-    params = request.GET.copy()
-    if "panel" in params:
-        del params["panel"]
-    params["focus"] = "memos"
-    url = _reverse_calendar_surface("calendar_today", "classcalendar:today")
-    query_string = params.urlencode()
-    if query_string:
-        url = f"{url}?{query_string}"
-    return redirect(url)
+    return _redirect_to_home_calendar_surface(request)
 
 
 def build_calendar_surface_context(
@@ -1956,8 +1980,10 @@ def build_calendar_surface_context(
     service = Product.objects.filter(launch_route_name=SERVICE_ROUTE).first()
     message_capture_ui = build_message_capture_ui_context(request.user)
     active_classroom = _get_active_classroom_for_user(request)
-    main_url = _reverse_calendar_surface("calendar_main", "classcalendar:main")
-    today_url = _reverse_calendar_surface("calendar_today", "classcalendar:today")
+    calendar_page_url = _build_home_calendar_surface_url(request, include_request_state=False)
+    calendar_api_base_url = reverse("classcalendar:main")
+    main_url = calendar_page_url
+    today_url = calendar_page_url
     create_api_url = reverse("classcalendar:api_create_event")
     today_focus = normalize_today_focus(request.GET.get("focus"))
     initial_selected_date = str(request.GET.get("date") or timezone.localdate().isoformat()).strip()
@@ -2011,6 +2037,8 @@ def build_calendar_surface_context(
         "today_memo_url": today_workspace["today_memo_url"],
         "today_review_url": today_workspace["today_review_url"],
         "main_url": main_url,
+        "calendar_page_url": calendar_page_url,
+        "calendar_api_base_url": calendar_api_base_url,
         "initial_selected_date": initial_selected_date or today_workspace["date_key"],
         "initial_open_create": initial_open_create,
         "initial_open_event_id": initial_open_event_id,
@@ -2037,43 +2065,13 @@ def _build_calendar_page_context(request, *, embedded_sheetbook_context=None, pa
 @login_required
 @xframe_options_sameorigin
 def main_view(request):
-    legacy_redirect = _redirect_legacy_today_panel(request)
-    if legacy_redirect is not None:
-        return legacy_redirect
-
-    embedded_sheetbook_context = None
-    if request.GET.get("embedded") == "sheetbook":
-        embedded_sheetbook_context = _resolve_sheetbook_context(
-            request.user,
-            request.GET.get("sheetbook_id"),
-            request.GET.get("tab_id"),
-        )
-    context = _build_calendar_page_context(
-        request,
-        embedded_sheetbook_context=embedded_sheetbook_context,
-        page_variant="main",
-    )
-    response = render(request, "classcalendar/main.html", context)
-    return _apply_workspace_cache_headers(response)
+    return _redirect_to_home_calendar_surface(request)
 
 
 @login_required
 @xframe_options_sameorigin
 def today_view(request):
-    embedded_sheetbook_context = None
-    if request.GET.get("embedded") == "sheetbook":
-        embedded_sheetbook_context = _resolve_sheetbook_context(
-            request.user,
-            request.GET.get("sheetbook_id"),
-            request.GET.get("tab_id"),
-        )
-    context = _build_calendar_page_context(
-        request,
-        embedded_sheetbook_context=embedded_sheetbook_context,
-        page_variant="today",
-    )
-    response = render(request, "classcalendar/today.html", context)
-    return _apply_workspace_cache_headers(response)
+    return _redirect_to_home_calendar_surface(request)
 
 
 @login_required
@@ -2082,7 +2080,7 @@ def collaborator_add(request):
     lookup = (request.POST.get("collaborator_query") or "").strip()
     if not lookup:
         messages.error(request, "협업자로 추가할 사용자의 가입시 적었던 이메일을 입력해 주세요.")
-        return redirect("classcalendar:main")
+        return redirect(_build_home_calendar_surface_url(request, include_request_state=False))
 
     collaborator = (
         User.objects.filter(email__iexact=lookup)
@@ -2091,10 +2089,10 @@ def collaborator_add(request):
     )
     if not collaborator:
         messages.error(request, "해당 이메일의 사용자를 찾지 못했습니다. 가입시 적었던 이메일인지 확인해 주세요.")
-        return redirect("classcalendar:main")
+        return redirect(_build_home_calendar_surface_url(request, include_request_state=False))
     if collaborator.id == request.user.id:
         messages.error(request, "본인은 협업자로 추가할 수 없습니다.")
-        return redirect("classcalendar:main")
+        return redirect(_build_home_calendar_surface_url(request, include_request_state=False))
 
     can_edit = _parse_bool_value(request.POST.get("can_edit", "true"))
     relation, created = CalendarCollaborator.objects.update_or_create(
@@ -2114,7 +2112,7 @@ def collaborator_add(request):
     else:
         mode_text = "편집 가능" if relation.can_edit else "읽기 전용"
         messages.info(request, f"{_display_user_name(collaborator)} 님 협업 권한을 {mode_text}으로 업데이트했습니다.")
-    return redirect("classcalendar:main")
+    return redirect(_build_home_calendar_surface_url(request, include_request_state=False))
 
 
 @login_required
@@ -2127,7 +2125,7 @@ def collaborator_remove(request, collaborator_id):
     )
     if not relation:
         messages.error(request, "협업자 정보를 찾지 못했습니다.")
-        return redirect("classcalendar:main")
+        return redirect(_build_home_calendar_surface_url(request, include_request_state=False))
 
     collaborator_name = _display_user_name(relation.collaborator)
     logger.info(
@@ -2137,7 +2135,7 @@ def collaborator_remove(request, collaborator_id):
     )
     relation.delete()
     messages.info(request, f"{collaborator_name} 님의 협업 권한을 해제했습니다.")
-    return redirect("classcalendar:main")
+    return redirect(_build_home_calendar_surface_url(request, include_request_state=False))
 
 
 @login_required
@@ -2149,7 +2147,7 @@ def share_enable(request):
         setting.save(update_fields=["share_enabled", "updated_at"])
     logger.info("[ClassCalendar] public share enabled | owner_id=%s | share_uuid=%s", request.user.id, setting.share_uuid)
     messages.success(request, "공유 링크를 활성화했습니다.")
-    return redirect("classcalendar:main")
+    return redirect(_build_home_calendar_surface_url(request, include_request_state=False))
 
 
 @login_required
@@ -2161,7 +2159,7 @@ def share_disable(request):
         setting.save(update_fields=["share_enabled", "updated_at"])
     logger.info("[ClassCalendar] public share disabled | owner_id=%s | share_uuid=%s", request.user.id, setting.share_uuid)
     messages.info(request, "공유 링크를 비활성화했습니다.")
-    return redirect("classcalendar:main")
+    return redirect(_build_home_calendar_surface_url(request, include_request_state=False))
 
 
 @login_required
@@ -2173,7 +2171,7 @@ def share_rotate(request):
     setting.save(update_fields=["share_uuid", "share_enabled", "updated_at"])
     logger.info("[ClassCalendar] public share rotated | owner_id=%s | share_uuid=%s", request.user.id, setting.share_uuid)
     messages.success(request, "공유 링크를 재발급했습니다.")
-    return redirect("classcalendar:main")
+    return redirect(_build_home_calendar_surface_url(request, include_request_state=False))
 
 
 @require_GET

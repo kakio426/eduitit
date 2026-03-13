@@ -1214,8 +1214,8 @@ def _build_today_context(request):
             request.user,
             active_classroom=active_classroom,
             target_date=today,
-            today_url=_safe_calendar_surface_reverse("calendar_today", "classcalendar:today"),
-            main_url=_safe_calendar_surface_reverse("calendar_main", "classcalendar:main"),
+            today_url=_home_calendar_surface_url(),
+            main_url=_home_calendar_surface_url(),
             create_api_url=_safe_reverse("classcalendar:api_create_event"),
         )
         if calendar_workspace["today_event_count"] > 0:
@@ -1225,7 +1225,7 @@ def _build_today_context(request):
                     "count_text": f"{calendar_workspace['today_event_count']}건",
                     "description": "캘린더에서 오늘 일정과 메모를 같은 기준으로 확인하세요.",
                     "emoji": "📅",
-                    "href": calendar_workspace["today_all_url"] or _safe_calendar_surface_reverse("calendar_today", "classcalendar:today"),
+                    "href": calendar_workspace["today_all_url"] or _home_calendar_surface_url(),
                     "cta_text": "캘린더 열기",
                 }
             )
@@ -1570,9 +1570,16 @@ def _safe_calendar_surface_reverse(alias_route_name, fallback_route_name):
     return _safe_reverse(alias_route_name) or _safe_reverse(fallback_route_name)
 
 
+def _home_calendar_surface_url():
+    home_url = _safe_reverse("home")
+    if home_url:
+        return f"{home_url}#home-calendar"
+    return _safe_calendar_surface_reverse("calendar_main", "classcalendar:main")
+
+
 def _build_public_calendar_entry_context():
-    main_url = _safe_calendar_surface_reverse("calendar_main", "classcalendar:main")
-    today_url = _safe_calendar_surface_reverse("calendar_today", "classcalendar:today")
+    main_url = _home_calendar_surface_url()
+    today_url = _home_calendar_surface_url()
     login_url = _safe_reverse("account_login")
     login_with_next = login_url
     if login_url and main_url:
@@ -1580,14 +1587,14 @@ def _build_public_calendar_entry_context():
     return {
         "title": CALENDAR_HUB_PUBLIC_NAME,
         "description": "로그인 후 내 일정과 메모를 이어서 봅니다.",
-        "supporting_copy": "메인에서 바로 숫자 달력과 오늘 요약을 보고, 필요하면 전체 캘린더로 이어집니다.",
+        "supporting_copy": "홈에서 숫자 달력과 날짜별 일정을 바로 보고, 같은 화면에서 이어서 확인합니다.",
         "main_url": main_url,
         "today_url": today_url,
         "login_url": login_with_next or login_url or main_url,
         "chips": [
             "오늘 일정 정리",
             "오늘 메모 확인",
-            "전체 캘린더 열기",
+            "홈에서 캘린더 보기",
         ],
     }
 
@@ -3206,6 +3213,10 @@ def service_guide_detail(request, pk):
         section.display_title = _replace_public_service_terms(section.title, manual.product)
         section.display_content = _replace_public_service_terms(section.content, manual.product)
     launch_href, launch_is_external = _resolve_product_launch_url(manual.product)
+    launch_label = f"{manual.public_service_name} 열기"
+    if _is_calendar_hub_product(manual.product):
+        launch_href = _home_calendar_surface_url()
+        launch_label = "홈에서 캘린더 보기"
 
     seo_meta = build_service_guide_detail_seo(request, manual)
     response = render(request, 'core/service_guide_detail.html', {
@@ -3213,7 +3224,7 @@ def service_guide_detail(request, pk):
         'sections': sections,
         'launch_href': launch_href,
         'launch_is_external': launch_is_external,
-        'launch_label': f"{manual.public_service_name} 열기",
+        'launch_label': launch_label,
         **seo_meta.as_context(),
     })
     if seo_meta.robots.startswith("noindex"):

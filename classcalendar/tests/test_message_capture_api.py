@@ -582,7 +582,7 @@ class MessageCaptureApiTests(TestCase):
 
     def test_main_hides_message_capture_entry_even_for_allowlist_user(self):
         response = self.client.get(reverse("classcalendar:legacy_main"), follow=True)
-        self.assertRedirects(response, reverse("calendar_main"))
+        self.assertRedirects(response, f"{reverse('home')}#home-calendar")
         self.assertNotContains(response, "openMessageHub($event, 'capture', { resetCapture: true })")
         self.assertNotContains(response, "안내문에서 일정 찾기")
         self.assertNotContains(response, '@click.prevent="openMessageCaptureModal($event)"')
@@ -590,5 +590,5 @@ class MessageCaptureApiTests(TestCase):
     @override_settings(FEATURE_MESSAGE_CAPTURE_ENABLED=False)
     def test_main_hides_message_capture_entry_when_feature_off(self):
         response = self.client.get(reverse("classcalendar:legacy_main"), follow=True)
-        self.assertRedirects(response, reverse("calendar_main"))
+        self.assertRedirects(response, f"{reverse('home')}#home-calendar")
         self.assertNotContains(response, "openMessageHub($event, 'capture', { resetCapture: true })")
