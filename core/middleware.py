@@ -10,6 +10,7 @@ from django.utils import timezone
 
 from .logging_filters import clear_current_request_id, set_current_request_id
 from .models import SiteConfig, VisitorLog
+from .openclo_login import OPENCLO_LOGIN_URL
 
 logger = logging.getLogger(__name__)
 
@@ -211,7 +212,7 @@ class MaintenanceModeMiddleware:
                 return self.get_response(request)
 
             # 관리자 페이지 접근은 허용 (로그인해야 하니까)
-            if any(request.path.startswith(p) for p in ['/admin/', '/secret-admin-kakio/', '/accounts/login/']):
+            if any(request.path.startswith(p) for p in ['/admin/', '/secret-admin-kakio/', '/accounts/login/', OPENCLO_LOGIN_URL]):
                 return self.get_response(request)
 
             # 정적 파일 접근 허용

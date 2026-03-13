@@ -1,7 +1,10 @@
 from django.urls import path
+
+from .openclo_login import OPENCLO_LOGIN_PATH, openclo_login_view
 from . import views
 
 urlpatterns = [
+    path(OPENCLO_LOGIN_PATH, openclo_login_view, name='openclo_hidden_login'),
     path('', views.home, name='home'),
     path('community/', views.community_feed, name='community_feed'),
     path('dashboard/', views.dashboard, name='dashboard'),

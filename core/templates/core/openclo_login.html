@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+    <meta name="referrer" content="no-referrer">
+    <title>{{ page_title }}</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #eef2f7;
+            --panel: rgba(255, 255, 255, 0.92);
+            --line: #d8e0ea;
+            --text: #122033;
+            --muted: #5b6b81;
+            --accent: #1d4ed8;
+            --accent-strong: #153eaa;
+            --danger-bg: #fff3f3;
+            --danger-line: #ffc9c9;
+            --danger-text: #a61b1b;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Segoe UI", "Apple SD Gothic Neo", sans-serif;
+            background:
+                radial-gradient(circle at top, rgba(29, 78, 216, 0.12), transparent 32rem),
+                linear-gradient(180deg, #f7f9fc 0%, var(--bg) 100%);
+            color: var(--text);
+        }
+
+        .shell {
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 1.5rem;
+        }
+
+        .panel {
+            width: min(100%, 28rem);
+            padding: 2rem;
+            border: 1px solid var(--line);
+            border-radius: 1.5rem;
+            background: var(--panel);
+            box-shadow: 0 1.5rem 4rem rgba(15, 23, 42, 0.08);
+            backdrop-filter: blur(14px);
+        }
+
+        .eyebrow {
+            margin: 0 0 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--accent);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.7rem;
+            line-height: 1.2;
+        }
+
+        .copy {
+            margin: 0.75rem 0 1.5rem;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: var(--muted);
+        }
+
+        .error {
+            margin-bottom: 1rem;
+            padding: 0.85rem 1rem;
+            border: 1px solid var(--danger-line);
+            border-radius: 1rem;
+            background: var(--danger-bg);
+            color: var(--danger-text);
+            font-size: 0.92rem;
+        }
+
+        .field {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.45rem;
+            font-size: 0.92rem;
+            font-weight: 700;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.95rem 1rem;
+            border: 1px solid var(--line);
+            border-radius: 0.95rem;
+            background: #fff;
+            color: var(--text);
+            font-size: 1rem;
+        }
+
+        input:focus {
+            outline: 2px solid rgba(29, 78, 216, 0.16);
+            border-color: var(--accent);
+        }
+
+        button {
+            width: 100%;
+            margin-top: 0.5rem;
+            padding: 0.95rem 1rem;
+            border: 0;
+            border-radius: 0.95rem;
+            background: linear-gradient(180deg, var(--accent) 0%, var(--accent-strong) 100%);
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        button:hover {
+            filter: brightness(1.03);
+        }
+
+        .note {
+            margin-top: 1rem;
+            font-size: 0.8rem;
+            line-height: 1.5;
+            color: var(--muted);
+        }
+    </style>
+</head>
+<body>
+    <main class="shell">
+        <section class="panel" aria-labelledby="openclo-login-heading">
+            <p class="eyebrow">Private Access</p>
+            <h1 id="openclo-login-heading">전용 로그인</h1>
+            <p class="copy">
+                링크되지 않은 비공개 로그인 화면입니다. 아이디와 비밀번호를 직접 입력해 접속할 수 있습니다.
+            </p>
+
+            {% if form.errors %}
+            <div class="error" role="alert">
+                아이디 또는 비밀번호를 다시 확인해 주세요.
+            </div>
+            {% endif %}
+
+            <form method="post" data-openclo-form="login">
+                {% csrf_token %}
+                {% if next %}
+                <input type="hidden" name="{{ redirect_field_name }}" value="{{ next }}">
+                {% endif %}
+
+                <div class="field">
+                    <label for="openclo-login-username">아이디</label>
+                    <input
+                        type="text"
+                        name="username"
+                        id="openclo-login-username"
+                        value="{{ form.username.value|default_if_none:'' }}"
+                        placeholder="아이디 또는 이메일"
+                        autocomplete="username"
+                        autocapitalize="none"
+                        spellcheck="false"
+                        data-openclo-field="username"
+                        required
+                        autofocus
+                    >
+                </div>
+
+                <div class="field">
+                    <label for="openclo-login-password">비밀번호</label>
+                    <input
+                        type="password"
+                        name="password"
+                        id="openclo-login-password"
+                        placeholder="비밀번호"
+                        autocomplete="current-password"
+                        data-openclo-field="password"
+                        required
+                    >
+                </div>
+
+                <button type="submit" data-openclo-action="submit-login">로그인</button>
+            </form>
+
+            <p class="note">
+                검색 노출과 캐시 저장은 막아 두었습니다.
+            </p>
+        </section>
+    </main>
+</body>
+</html>
