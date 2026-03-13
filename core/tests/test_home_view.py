@@ -343,36 +343,21 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('home-calendar-day', content)
         self.assertNotIn('data-home-v2-calendar-agenda="true"', content)
 
-    def test_v2_authenticated_places_single_today_try_now_section_between_top_zone_and_service_groups(self):
-        notice, collect = self._create_try_now_products()
-        qr, prompt = self._create_try_now_support_products()
+    def test_v2_authenticated_does_not_render_today_try_now_section(self):
+        self._create_try_now_products()
+        self._create_try_now_support_products()
         self._login('trynowuser')
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        top_zone_index = content.index('data-home-v2-top-zone="true"')
-        try_now_index = content.index('data-home-v2-try-now="true"')
-        services_index = content.index('data-home-v2-service-groups="true"')
-        try_now_markup = content[try_now_index:services_index]
-
-        self.assertLess(top_zone_index, try_now_index)
-        self.assertLess(try_now_index, services_index)
-        self.assertEqual(content.count('data-home-v2-try-now="true"'), 1)
-        self.assertIn(f'data-product-id="{notice.id}"', try_now_markup)
-        self.assertIn(f'data-product-id="{collect.id}"', try_now_markup)
-        self.assertIn(f'data-product-id="{qr.id}"', try_now_markup)
-        self.assertIn(f'data-product-id="{prompt.id}"', try_now_markup)
-        self.assertIn(f'data-launch-href="{reverse("noticegen:main")}"', try_now_markup)
-        self.assertIn(f'data-launch-href="{reverse("collect:landing")}"', try_now_markup)
-        self.assertIn(f'data-launch-href="{reverse("qrgen:landing")}"', try_now_markup)
-        self.assertIn(f'data-launch-href="{reverse("prompt_lab")}"', try_now_markup)
-        self.assertIn('data-home-v2-try-now-grid="true"', try_now_markup)
-        self.assertIn('data-home-v2-try-now-support-grid="true"', try_now_markup)
-        self.assertIn('md:grid-cols-2', try_now_markup)
-        self.assertNotIn('overflow-x-auto', try_now_markup)
-        self.assertNotIn('quick-scroll', try_now_markup)
-        self.assertNotIn('파일럿 3종', try_now_markup)
+        self.assertIn('data-home-v2-top-zone="true"', content)
+        self.assertIn('data-home-v2-service-groups="true"', content)
+        self.assertNotIn('data-home-v2-try-now="true"', content)
+        self.assertNotIn('data-home-v2-try-now-grid="true"', content)
+        self.assertNotIn('data-home-v2-try-now-support="true"', content)
+        self.assertNotIn('data-home-v2-try-now-support-grid="true"', content)
+        self.assertNotIn('오늘 바로 써보기', content)
 
     @override_settings(
         FEATURE_MESSAGE_CAPTURE_ENABLED=True,
