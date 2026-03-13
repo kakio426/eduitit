@@ -41,6 +41,11 @@ from .message_capture_classifier import (
     DEFAULT_ASSIST_THRESHOLD,
     predict_item_type as predict_message_capture_item_type,
 )
+from .calendar_scope import (
+    get_calendar_access_for_user as resolve_calendar_access_for_user,
+    get_visible_events_queryset,
+    get_visible_tasks_queryset,
+)
 from .today_memos import build_today_memo_items
 from .models import (
     CalendarCollaborator,
@@ -1522,28 +1527,7 @@ def _get_active_classroom_for_user(request):
 
 
 def _get_calendar_access_for_user(user):
-    incoming_relations = list(
-        CalendarCollaborator.objects.filter(collaborator=user)
-        .select_related("owner")
-        .order_by("owner__username")
-    )
-    visible_owner_ids = {user.id}
-    editable_owner_ids = {user.id}
-    incoming_calendars = []
-
-    for relation in incoming_relations:
-        visible_owner_ids.add(relation.owner_id)
-        if relation.can_edit:
-            editable_owner_ids.add(relation.owner_id)
-        incoming_calendars.append(
-            {
-                "owner_id": relation.owner_id,
-                "owner_name": _display_user_name(relation.owner),
-                "can_edit": bool(relation.can_edit),
-            }
-        )
-
-    return visible_owner_ids, editable_owner_ids, incoming_calendars
+    return resolve_calendar_access_for_user(user)
 
 
 def _build_owner_collaborator_rows(user):
@@ -1617,25 +1601,16 @@ def _resolve_event_owner_for_create(request_user, requested_owner_id, editable_o
 
 def _get_teacher_visible_events(request, visible_owner_ids):
     active_classroom = _get_active_classroom_for_user(request)
-    query = Q(author_id__in=visible_owner_ids)
-    if active_classroom:
-        query |= Q(classroom=active_classroom)
-    return (
-        CalendarEvent.objects.filter(query)
-        .select_related("author", "classroom")
-        .prefetch_related("blocks", "attachments")
-        .distinct()
-        .order_by("start_time", "id")
+    return get_visible_events_queryset(
+        request.user,
+        active_classroom=active_classroom,
+        visible_owner_ids=visible_owner_ids,
     )
 
 
 
 def _get_teacher_visible_tasks(request):
-    return (
-        CalendarTask.objects.filter(author=request.user)
-        .select_related("author", "classroom")
-        .order_by("due_at", "created_at", "id")
-    )
+    return get_visible_tasks_queryset(request.user)
 
 
 def _get_editable_event(request, event_id, editable_owner_ids):
@@ -1978,7 +1953,11 @@ def _build_main_view_context(request, *, embedded_sheetbook_context=None):
         "message_capture_item_types_enabled": message_capture_ui["item_types_enabled"],
         "message_capture_limits_json": message_capture_ui["limits"],
         "message_capture_urls_json": message_capture_ui["urls"],
-        "today_memo_items": build_today_memo_items(request.user, target_date=timezone.localdate()),
+        "today_memo_items": build_today_memo_items(
+            request.user,
+            active_classroom=_get_active_classroom_for_user(request),
+            target_date=timezone.localdate(),
+        ),
         "today_memo_empty_message": "오늘 다시 볼 메모가 없으면 오늘 일정만 확인하면 됩니다.",
         "today_memo_panel_open": initial_panel == "today-memos",
         "embedded_sheetbook_context": embedded_sheetbook_context,

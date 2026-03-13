@@ -1,6 +1,7 @@
 from django.utils import timezone
 
-from .models import CalendarEvent, CalendarTask
+from .calendar_scope import get_visible_events_queryset, get_visible_tasks_queryset
+from .models import CalendarTask
 
 
 def _extract_event_note_text(event):
@@ -65,7 +66,7 @@ def _format_task_schedule(task):
     return f"{due_dt.month}월 {due_dt.day}일 · 오늘 할 일"
 
 
-def build_today_memo_items(user, *, limit=None, target_date=None):
+def build_today_memo_items(user, *, active_classroom=None, limit=None, target_date=None):
     if not getattr(user, "is_authenticated", False):
         return []
 
@@ -74,8 +75,8 @@ def build_today_memo_items(user, *, limit=None, target_date=None):
     items = []
 
     today_events = list(
-        CalendarEvent.objects.filter(author=user, start_time__date=today)
-        .prefetch_related("blocks")
+        get_visible_events_queryset(user, active_classroom=active_classroom)
+        .filter(start_time__date__lte=today, end_time__date__gte=today)
         .order_by("start_time", "id")[:8]
     )
     for event in today_events:
@@ -97,11 +98,8 @@ def build_today_memo_items(user, *, limit=None, target_date=None):
             return items
 
     today_tasks = list(
-        CalendarTask.objects.filter(
-            author=user,
-            status=CalendarTask.Status.OPEN,
-            due_at__date=today,
-        )
+        get_visible_tasks_queryset(user)
+        .filter(status=CalendarTask.Status.OPEN, due_at__date=today)
         .order_by("due_at", "created_at")[:8]
     )
     for task in today_tasks:

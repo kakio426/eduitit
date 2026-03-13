@@ -6,7 +6,7 @@ from django.urls import reverse
 from django.contrib.auth.models import User
 from django.utils import timezone
 
-from classcalendar.models import CalendarEvent, EventPageBlock
+from classcalendar.models import CalendarCollaborator, CalendarEvent, EventPageBlock
 from core.teacher_first_cards import build_favorite_service_title
 from core.mini_apps import (
     HOME_LAYOUT_EXCLUDED,
@@ -417,6 +417,29 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('1교시 전에 QR 띄우기', content)
         self.assertIn('마이크 배터리 확인', content)
 
+    def test_v2_authenticated_calendar_hub_uses_shared_calendar_source(self):
+        viewer = self._login('sharedviewer')
+        owner = _create_onboarded_user('sharedowner')
+        CalendarCollaborator.objects.create(
+            owner=owner,
+            collaborator=viewer,
+            can_edit=False,
+        )
+        now = timezone.make_aware(datetime.combine(timezone.localdate(), time(hour=10)))
+        self._create_calendar_event_with_note(
+            owner,
+            title='공유된 공개수업 준비',
+            note='공유 달력 준비물도 홈에서 바로 보여야 함',
+            start_time=now,
+            end_time=now + timedelta(hours=1),
+        )
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('공유된 공개수업 준비', content)
+        self.assertIn('공유 달력 준비물도 홈에서 바로 보여야 함', content)
+
     def test_v2_authenticated_calendar_hub_falls_back_to_upcoming_when_no_today_memo(self):
         user = self._login('upcominguser')
         tomorrow = timezone.make_aware(datetime.combine(timezone.localdate() + timedelta(days=1), time(hour=9)))
@@ -436,6 +459,15 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('data-home-v2-calendar-upcoming="true"', content)
         self.assertIn('다가오는 일정', content)
         self.assertIn('내일 학부모총회', content)
+
+    def test_v2_authenticated_calendar_hub_renders_task_slot_in_selected_date_panel(self):
+        self._login('taskslotuser')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('selectedDateTasks.length > 0', content)
+        self.assertIn('formatTaskDue(task)', content)
 
     def test_v2_authenticated_widens_content_shell_and_keeps_favorites_two_up(self):
         user = self._login('balanceuser')

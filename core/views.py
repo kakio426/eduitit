@@ -22,6 +22,7 @@ from .models import (
 )
 from .product_visibility import filter_discoverable_products, is_sheetbook_discovery_visible
 from .active_classroom import (
+    get_active_classroom_for_request,
     set_active_classroom_session,
     clear_active_classroom_session,
     set_default_classroom_for_user,
@@ -1491,7 +1492,7 @@ def _build_home_calendar_summary_context(request):
         return summary
 
     try:
-        from classcalendar.models import CalendarEvent, CalendarTask
+        from classcalendar.calendar_scope import get_visible_events_queryset
         from classcalendar.today_memos import build_today_memo_items
     except Exception:
         logger.exception("[Home] classcalendar import failed")
@@ -1513,8 +1514,9 @@ def _build_home_calendar_summary_context(request):
     week_start = today - timedelta(days=today.weekday())
     week_end = week_start + timedelta(days=7)
     now = timezone.now()
+    active_classroom = get_active_classroom_for_request(request)
 
-    events_qs = CalendarEvent.objects.filter(author=request.user)
+    events_qs = get_visible_events_queryset(request.user, active_classroom=active_classroom)
     summary["today_count"] = events_qs.filter(start_time__date=today).count()
     summary["week_count"] = events_qs.filter(
         start_time__date__gte=week_start,
@@ -1537,7 +1539,12 @@ def _build_home_calendar_summary_context(request):
         for event in upcoming_events
     ]
 
-    summary["today_memo_items"] = build_today_memo_items(request.user, limit=2, target_date=today)
+    summary["today_memo_items"] = build_today_memo_items(
+        request.user,
+        active_classroom=active_classroom,
+        limit=2,
+        target_date=today,
+    )
     summary["enabled"] = bool(summary["main_url"] and summary["create_api_url"])
     return summary
 
