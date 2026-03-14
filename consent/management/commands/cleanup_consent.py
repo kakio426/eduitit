@@ -9,9 +9,8 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    HEAVY_FILE_RETENTION_DAYS = 90
-    STANDARD_RETENTION_DAYS = 365
-    help = "동의서 자동 정리: merged PDF 90일, signed/original 파일 1년 기준 삭제"
+    DOCUMENT_RETENTION_DAYS = 365
+    help = "동의서 자동 정리: 문서 관련 파일을 1년 기준으로 삭제"
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -25,8 +24,7 @@ class Command(BaseCommand):
 
         dry_run = options["dry_run"]
         now = timezone.now()
-        heavy_cutoff = now - timedelta(days=self.HEAVY_FILE_RETENTION_DAYS)
-        standard_cutoff = now - timedelta(days=self.STANDARD_RETENTION_DAYS)
+        document_cutoff = now - timedelta(days=self.DOCUMENT_RETENTION_DAYS)
 
         merged_deleted = 0
         signed_deleted = 0
@@ -40,7 +38,7 @@ class Command(BaseCommand):
 
         requests_with_merged = SignatureRequest.objects.exclude(merged_pdf="")
         for request_item in requests_with_merged:
-            if request_item.created_at > heavy_cutoff:
+            if request_item.created_at > document_cutoff:
                 continue
             if (
                 request_item.status == SignatureRequest.STATUS_SENT
@@ -56,7 +54,7 @@ class Command(BaseCommand):
                 try:
                     request_item.merged_pdf.delete(save=False)
                     request_item.merged_pdf = None
-                    request_item.save(update_fields=["merged_pdf", "updated_at"])
+                    request_item.save(update_fields=["merged_pdf"])
                     merged_deleted += 1
                 except Exception as exc:
                     logger.error("consent merged_pdf 삭제 실패 id=%s err=%s", request_item.id, exc)
@@ -64,7 +62,7 @@ class Command(BaseCommand):
         recipients_with_signed = SignatureRecipient.objects.exclude(signed_pdf="")
         for recipient in recipients_with_signed:
             base_time = recipient.signed_at or recipient.created_at
-            if base_time > standard_cutoff:
+            if base_time > document_cutoff:
                 continue
 
             self.stdout.write(
@@ -82,10 +80,10 @@ class Command(BaseCommand):
 
         documents_with_original = SignatureDocument.objects.exclude(original_file="")
         for document in documents_with_original:
-            if document.created_at > standard_cutoff:
+            if document.created_at > document_cutoff:
                 continue
             recent_or_active_exists = SignatureRequest.objects.filter(document=document).filter(
-                created_at__gt=standard_cutoff
+                created_at__gt=document_cutoff
             ).exists()
             if recent_or_active_exists:
                 continue

@@ -8,11 +8,11 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    HEAVY_FILE_RETENTION_DAYS = 90
+    FILE_RETENTION_DAYS = 365
     REQUEST_RETENTION_DAYS = 365
 
     help = (
-        '수합 자동 정리: 고용량 파일 90일, 요청 데이터 1년 기준 삭제'
+        '수합 자동 정리: 문서 파일과 요청 데이터를 1년 기준으로 삭제'
     )
 
     def add_arguments(self, parser):
@@ -38,7 +38,7 @@ class Command(BaseCommand):
             self.stdout.write('[DRY RUN] 실제 삭제 없이 대상만 표시합니다.')
         self.stdout.write('=' * 70)
 
-        # 1단계: 마감(closed) 후 90일 경과 → 파일 삭제 + archived 전환
+        # 1단계: 마감(closed) 후 1년 경과 → 파일 삭제 + archived 전환
         closed_requests = CollectionRequest.objects.filter(status='closed')
 
         archived_count = 0
@@ -46,7 +46,7 @@ class Command(BaseCommand):
         for req in closed_requests:
             # closed_at이 없던 기존 데이터는 updated_at을 fallback으로 사용
             closed_base = req.closed_at or req.updated_at
-            file_cleanup_due_at = closed_base + timedelta(days=self.HEAVY_FILE_RETENTION_DAYS)
+            file_cleanup_due_at = closed_base + timedelta(days=self.FILE_RETENTION_DAYS)
             if req.retention_until and req.retention_until > file_cleanup_due_at:
                 file_cleanup_due_at = req.retention_until
             if file_cleanup_due_at > now:
@@ -87,7 +87,7 @@ class Command(BaseCommand):
             self.stdout.write(f'  [보관 전환] {req.title}')
 
         self.stdout.write(
-            f"\n[1단계] 마감 후 {self.HEAVY_FILE_RETENTION_DAYS}일 경과: "
+            f"\n[1단계] 마감 후 {self.FILE_RETENTION_DAYS}일 경과: "
             f"{archived_count}개 보관 전환, {files_deleted}개 파일 삭제"
         )
 

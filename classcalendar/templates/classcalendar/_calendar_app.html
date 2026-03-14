@@ -779,7 +779,6 @@ function calendarApp() {
         isSavingIntegrationSettings: false,
         createContextDateText: '',
         lastForcedRefreshAt: 0,
-        retentionNoticeVisible: {{ show_retention_notice_banner|yesno:"true,false" }},
         calendarPageUrl: '{{ calendar_page_url|default:""|escapejs }}',
         calendarApiBaseUrl: '{{ calendar_api_base_url|default:""|escapejs }}',
         calendarEmbedMode: '{{ calendar_embed_mode|default:"page"|escapejs }}',
@@ -1906,19 +1905,6 @@ function calendarApp() {
                 window.showToast(err.message || '연동 설정 저장에 실패했습니다.', 'error');
             } finally {
                 this.isSavingIntegrationSettings = false;
-            }
-        },
-
-        async dismissRetentionNotice() {
-            try {
-                await this.requestJson('{% url "classcalendar:api_dismiss_retention_notice" %}', {
-                    method: 'POST',
-                    headers: { 'X-CSRFToken': this.getCsrfToken() },
-                });
-                this.retentionNoticeVisible = false;
-                window.showToast('안내를 닫았습니다. 필요하면 안내 일정에서 다시 확인할 수 있습니다.', 'success');
-            } catch (err) {
-                window.showToast(err.message || '안내 닫기에 실패했습니다.', 'error');
             }
         },
 

@@ -57,18 +57,41 @@ class CollectCleanupRetentionTests(TestCase):
 
         self.assertTrue(CollectionRequest.objects.filter(id=req.id).exists())
 
-    def test_closed_request_within_90_days_is_not_archived(self):
+    def test_closed_request_within_1year_is_not_archived(self):
         req = CollectionRequest.objects.create(
             creator=self.user,
-            title="closed-within-90-days",
+            title="closed-within-1year",
             status="closed",
-            closed_at=timezone.now() - timedelta(days=40),
+            closed_at=timezone.now() - timedelta(days=120),
         )
 
         call_command("cleanup_collect")
 
         req.refresh_from_db()
         self.assertEqual(req.status, "closed")
+
+    def test_closed_request_after_1year_is_archived_and_file_removed(self):
+        req = CollectionRequest.objects.create(
+            creator=self.user,
+            title="closed-after-1year",
+            status="closed",
+            closed_at=timezone.now() - timedelta(days=370),
+        )
+        sub = Submission.objects.create(
+            collection_request=req,
+            contributor_name="n",
+            contributor_affiliation="a",
+            submission_type="file",
+            file=SimpleUploadedFile("old.txt", b"old", content_type="text/plain"),
+            original_filename="old.txt",
+        )
+
+        call_command("cleanup_collect")
+
+        req.refresh_from_db()
+        sub.refresh_from_db()
+        self.assertEqual(req.status, "archived")
+        self.assertFalse(bool(sub.file))
 
     def test_request_within_1year_is_not_deleted(self):
         req = CollectionRequest.objects.create(
