@@ -3,7 +3,7 @@ import time
 import uuid
 from urllib.parse import quote
 
-from django.http import HttpResponseNotFound
+from django.http import HttpResponse, HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils import timezone
@@ -11,6 +11,7 @@ from django.utils import timezone
 from .logging_filters import clear_current_request_id, set_current_request_id
 from .models import SiteConfig, VisitorLog
 from .openclo_login import OPENCLO_LOGIN_URL
+from .policy_consent import has_current_policy_consent, user_requires_policy_consent
 
 logger = logging.getLogger(__name__)
 
@@ -124,6 +125,54 @@ class VisitorTrackingMiddleware:
 
         response = self.get_response(request)
         return response
+
+
+class PolicyConsentMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if not request.user.is_authenticated:
+            return self.get_response(request)
+
+        if not user_requires_policy_consent(request.user):
+            return self.get_response(request)
+
+        if has_current_policy_consent(request.user, request.session):
+            return self.get_response(request)
+
+        consent_path = reverse('policy_consent')
+        allowed_prefixes = [
+            consent_path,
+            reverse('policy'),
+            '/accounts/logout/',
+            '/delete-account/',
+            '/admin/',
+            '/secret-admin-kakio/',
+            '/static/',
+            '/media/',
+            '/favicon.ico',
+        ]
+        if any(request.path.startswith(prefix) for prefix in allowed_prefixes):
+            return self.get_response(request)
+
+        redirect_url = f"{consent_path}?next={quote(request.get_full_path())}"
+
+        if request.path.startswith('/api/') or '/api/' in request.path:
+            return JsonResponse(
+                {
+                    'error': 'policy_consent_required',
+                    'redirect_url': redirect_url,
+                },
+                status=403,
+            )
+
+        if request.headers.get('HX-Request'):
+            response = HttpResponse(status=204)
+            response['HX-Redirect'] = redirect_url
+            return response
+
+        return redirect(redirect_url)
 
 
 class OnboardingMiddleware:

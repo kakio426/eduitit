@@ -13,6 +13,7 @@ from django.utils import timezone
 
 from consent.models import ConsentAuditLog, SignatureDocument, SignatureRecipient, SignatureRequest
 from consent.services import PdfRuntimeUnavailable, generate_recipient_evidence_pdf, generate_summary_pdf
+from consent.views import DEFAULT_LEGAL_NOTICE
 from handoff.models import HandoffRosterGroup, HandoffRosterMember
 
 
@@ -98,6 +99,21 @@ class ConsentFlowTests(TestCase):
         self.assertEqual(self.recipient.status, SignatureRecipient.STATUS_SIGNED)
         self.assertEqual(self.recipient.decision, SignatureRecipient.DECISION_AGREE)
         self.assertTrue(bool(self.recipient.signature_data))
+
+    def test_sign_page_shows_policy_links_and_updated_legal_notice(self):
+        self.request_obj.status = SignatureRequest.STATUS_SENT
+        self.request_obj.sent_at = timezone.now()
+        self.request_obj.legal_notice = DEFAULT_LEGAL_NOTICE
+        self.request_obj.save(update_fields=["status", "sent_at", "legal_notice"])
+
+        response = self.client.get(
+            reverse("consent:sign", kwargs={"token": self.recipient.access_token})
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse("policy"))
+        self.assertContains(response, "개인정보처리방침")
+        self.assertContains(response, "접속 기록")
 
 
     def test_sign_submission_with_phone_requires_last4(self):

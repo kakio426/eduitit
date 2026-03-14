@@ -22,13 +22,13 @@ class OnboardingTests(TestCase):
         self.client.login(username='test_no_email', password='password123')
         response = self.client.get(reverse('home'))
         # Should redirect to update_email
-        self.assertRedirects(response, reverse('update_email'))
+        self.assertRedirects(response, f"{reverse('update_email')}?next=%2F")
 
     def test_middleware_redirects_user_with_default_nickname(self):
         self.client.login(username='test_default', password='password123')
         response = self.client.get(reverse('home'))
         # Should redirect to update_email
-        self.assertRedirects(response, reverse('update_email'))
+        self.assertRedirects(response, f"{reverse('update_email')}?next=%2F")
 
     def test_middleware_allows_complete_user(self):
         self.client.login(username='test_complete', password='password123')

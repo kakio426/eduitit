@@ -10,6 +10,7 @@ from products.models import Product, ServiceManual
 from .forms import APIKeyForm, UserProfileUpdateForm
 from .models import (
     UserProfile,
+    UserPolicyConsent,
     Post,
     Comment,
     CommentReport,
@@ -19,6 +20,21 @@ from .models import (
     ProductFavorite,
     ProductWorkbenchBundle,
     UserModeration,
+)
+from .forms import PolicyConsentForm
+from .policy_consent import (
+    get_agreement_source,
+    get_latest_social_provider,
+    has_current_policy_consent,
+    mark_current_policy_consent,
+    user_requires_policy_consent,
+)
+from .policy_meta import (
+    PRIVACY_VERSION,
+    TERMS_VERSION,
+    get_policy_meta,
+    get_provider_label,
+    get_safe_next_url,
 )
 from . import service_launcher as service_launcher_utils
 from .product_visibility import filter_discoverable_products, is_sheetbook_discovery_visible
@@ -85,6 +101,13 @@ WORKBENCH_BUNDLE_LIMIT = 6
 WORKBENCH_BUNDLE_PRODUCT_LIMIT = 8
 WORKBENCH_SLOT_COUNT = 4
 WORKBENCH_WEEKLY_BUNDLE_LIMIT = 2
+
+
+def _get_request_client_ip(request):
+    forwarded_for = (request.META.get('HTTP_X_FORWARDED_FOR') or '').strip()
+    if forwarded_for:
+        return forwarded_for.split(',')[0].strip()
+    return (request.META.get('REMOTE_ADDR') or '').strip()
 
 
 def _record_sheetbook_workspace_metric(request, event_name, *, metadata=None):
@@ -3183,9 +3206,55 @@ def sso_to_schoolit(request):
     redirect_url = f"{target_url}?sso_token={token}"
     return redirect(redirect_url)
 
+
+@login_required
+def policy_consent_view(request):
+    next_url = get_safe_next_url(request)
+    if not user_requires_policy_consent(request.user):
+        return redirect(next_url)
+
+    if has_current_policy_consent(request.user, request.session):
+        return redirect(next_url)
+
+    provider = get_latest_social_provider(request.user)
+    form = PolicyConsentForm(request.POST or None)
+
+    if request.method == 'POST' and form.is_valid():
+        UserPolicyConsent.objects.get_or_create(
+            user=request.user,
+            terms_version=TERMS_VERSION,
+            privacy_version=PRIVACY_VERSION,
+            defaults={
+                'provider': provider,
+                'agreed_at': timezone.now(),
+                'agreement_source': get_agreement_source(request.user, provider),
+                'ip_address': _get_request_client_ip(request) or None,
+                'user_agent': (request.META.get('HTTP_USER_AGENT') or '').strip(),
+            },
+        )
+        mark_current_policy_consent(request.session, request.user)
+        return redirect(next_url)
+
+    policy_meta = get_policy_meta()
+    return render(
+        request,
+        'core/policy_consent.html',
+        {
+            'form': form,
+            'policy_meta': policy_meta,
+            'provider': provider,
+            'provider_label': get_provider_label(provider),
+            'next_url': next_url,
+            'terms_url': f"{reverse('policy')}#terms",
+            'privacy_url': f"{reverse('policy')}#privacy",
+            'hide_navbar': True,
+        },
+    )
+
+
 def policy_view(request):
     """이용약관 및 개인정보처리방침 페이지"""
-    return render(request, 'core/policy.html')
+    return render(request, 'core/policy.html', {'policy_meta': get_policy_meta()})
 
 @login_required
 def update_email(request):

@@ -31,6 +31,7 @@ urlpatterns = [
     path('select-role/', views.select_role, name='select_role'),
     path('sso/schoolit/', views.sso_to_schoolit, name='sso_schoolit'),
     path('policy/', views.policy_view, name='policy'),
+    path('policy/consent/', views.policy_consent_view, name='policy_consent'),
     path('update-email/', views.update_email, name='update_email'),
     path('delete-account/', views.delete_account, name='delete_account'),
     path('feedback/', views.feedback_view, name='feedback'),

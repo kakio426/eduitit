@@ -126,6 +126,7 @@ MIDDLEWARE = [
     'django_htmx.middleware.HtmxMiddleware',
     # Custom Middleware
     'core.middleware.MaintenanceModeMiddleware',  # 점검 모드 (제일 위쪽 처리가 좋음)
+    'core.middleware.PolicyConsentMiddleware',  # 소셜 로그인 사용자 약관 동의 필수
     'core.middleware.OnboardingMiddleware',  # 모든 사용자 정보 입력 필수
     'core.middleware.BlockKnownProbePathsMiddleware',
     'core.middleware.VisitorTrackingMiddleware',

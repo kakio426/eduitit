@@ -32,6 +32,7 @@ class UIAuthTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "카카오톡으로 시작하기")
         self.assertContains(response, "네이버로 시작하기")
+        self.assertContains(response, "최초 1회 이용약관 및 개인정보처리방침 동의가 필요합니다")
         self.assertNotContains(response, "관리자 접속")
         self.assertNotContains(response, "bot_login_input")
         self.assertNotContains(response, "bot_password_input")

@@ -24,6 +24,13 @@
         {{ form.non_field_errors }}
         <button type="submit" class="w-full py-2.5 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700">확인 후 다음</button>
       </form>
+
+      <p class="mt-4 text-xs text-gray-500 leading-6">
+        이 동의서 절차와 관련된 운영기준은
+        <a href="{% url 'policy' %}#terms" target="_blank" rel="noopener noreferrer" class="font-semibold text-purple-700 hover:underline">이용약관</a>,
+        <a href="{% url 'policy' %}#privacy" target="_blank" rel="noopener noreferrer" class="font-semibold text-purple-700 hover:underline">개인정보처리방침</a>
+        에서 확인할 수 있습니다.
+      </p>
     </div>
   </div>
 </main>

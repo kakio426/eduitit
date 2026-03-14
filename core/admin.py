@@ -5,6 +5,7 @@ from django.db.models import Count
 from django.utils import timezone
 from .models import (
     UserProfile,
+    UserPolicyConsent,
     Post,
     Comment,
     CommentReport,
@@ -42,6 +43,25 @@ class UserProfileAdmin(admin.ModelAdmin):
     list_display = ['user', 'nickname', 'role']
     search_fields = ['user__username', 'nickname']
     list_filter = ['role']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('user')
+
+
+@admin.register(UserPolicyConsent)
+class UserPolicyConsentAdmin(admin.ModelAdmin):
+    list_display = [
+        'user',
+        'provider',
+        'terms_version',
+        'privacy_version',
+        'agreement_source',
+        'agreed_at',
+    ]
+    list_filter = ['provider', 'agreement_source', 'terms_version', 'privacy_version', 'agreed_at']
+    search_fields = ['user__username', 'user__email', 'ip_address', 'user_agent']
+    readonly_fields = ['created_at', 'updated_at']
+    raw_id_fields = ['user']
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('user')

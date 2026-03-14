@@ -3,7 +3,6 @@ from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
-import os
 
 class UserProfile(models.Model):
     ROLE_CHOICES = [
@@ -27,6 +26,49 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return self.user.username
+
+
+class UserPolicyConsent(models.Model):
+    AGREEMENT_SOURCE_CHOICES = [
+        ('social_first_login', '소셜 첫 로그인'),
+        ('social_reconsent', '소셜 재동의'),
+        ('required_gate', '필수 동의 게이트'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='policy_consents')
+    provider = models.CharField(max_length=32, default='direct', verbose_name='로그인 제공사')
+    terms_version = models.CharField(max_length=32, verbose_name='이용약관 버전')
+    privacy_version = models.CharField(max_length=32, verbose_name='개인정보처리방침 버전')
+    agreed_at = models.DateTimeField(verbose_name='동의 일시')
+    agreement_source = models.CharField(
+        max_length=32,
+        choices=AGREEMENT_SOURCE_CHOICES,
+        default='required_gate',
+        verbose_name='동의 경로',
+    )
+    ip_address = models.GenericIPAddressField(blank=True, null=True, verbose_name='IP 주소')
+    user_agent = models.TextField(blank=True, default='', verbose_name='User Agent')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-agreed_at', '-id']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'terms_version', 'privacy_version'],
+                name='core_policyconsent_user_terms_privacy_unique',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['user', '-agreed_at']),
+            models.Index(fields=['provider', '-agreed_at']),
+            models.Index(fields=['terms_version', 'privacy_version']),
+        ]
+        verbose_name = '정책 동의 기록'
+        verbose_name_plural = '정책 동의 기록'
+
+    def __str__(self):
+        return f'{self.user.username} ({self.terms_version}/{self.privacy_version})'
 
 
 class NewsSource(models.Model):
