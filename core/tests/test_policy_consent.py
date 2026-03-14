@@ -142,12 +142,74 @@ class PolicyConsentTestCase(TestCase):
         self.assertContains(response, 'Neon')
         self.assertContains(response, 'Cloudinary')
         self.assertContains(response, 'DeepSeek API')
+        self.assertContains(response, '운영정책')
+        self.assertContains(response, '외부 링크 및 외부 서비스')
+        self.assertContains(response, '고의 또는 중과실')
+        self.assertContains(response, '학부모 동의서(consent)')
+        self.assertNotContains(response, '아이디어 도용')
+
+
+class DirectPolicyConsentTestCase(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_superuser(
+            username='direct_admin',
+            email='direct-admin@example.com',
+            password='password123',
+        )
+        profile = self.user.userprofile
+        profile.nickname = '직접관리자'
+        profile.role = 'school'
+        profile.save(update_fields=['nickname', 'role'])
+        self.client.login(username='direct_admin', password='password123')
+
+    def test_direct_admin_without_consent_redirects_from_home(self):
+        response = self.client.get(reverse('home'))
+
+        self.assertRedirects(response, f"{reverse('policy_consent')}?next={reverse('home')}")
+
+    def test_direct_admin_consent_submission_saves_direct_provider_record(self):
+        response = self.client.post(
+            reverse('policy_consent'),
+            {
+                'agree_terms': 'on',
+                'agree_privacy': 'on',
+                'next': reverse('home'),
+            },
+            REMOTE_ADDR='198.51.100.12',
+            HTTP_USER_AGENT='direct-policy-consent-test-agent',
+        )
+
+        self.assertRedirects(response, reverse('home'))
+        consent = UserPolicyConsent.objects.get(user=self.user)
+        self.assertEqual(consent.provider, 'direct')
+        self.assertEqual(consent.terms_version, TERMS_VERSION)
+        self.assertEqual(consent.privacy_version, PRIVACY_VERSION)
+        self.assertEqual(consent.agreement_source, 'required_gate')
+        self.assertEqual(consent.ip_address, '198.51.100.12')
+        self.assertEqual(consent.user_agent, 'direct-policy-consent-test-agent')
+
+    def test_direct_non_admin_user_is_not_gated(self):
+        self.client.logout()
+        regular_user = User.objects.create_user(
+            username='direct_regular',
+            email='regular@example.com',
+            password='password123',
+        )
+        regular_profile = regular_user.userprofile
+        regular_profile.nickname = '직접일반사용자'
+        regular_profile.role = 'school'
+        regular_profile.save(update_fields=['nickname', 'role'])
+        self.client.login(username='direct_regular', password='password123')
+
+        response = self.client.get(reverse('home'))
+
+        self.assertEqual(response.status_code, 200)
 
 
 class PolicyConsentAdminExceptionTestCase(TestCase):
     def setUp(self):
         self.admin_user = User.objects.create_superuser(
-            username='social_admin',
+            username='direct_admin',
             email='admin@example.com',
             password='password123',
         )
@@ -155,13 +217,7 @@ class PolicyConsentAdminExceptionTestCase(TestCase):
         profile.nickname = '운영자'
         profile.role = 'school'
         profile.save(update_fields=['nickname', 'role'])
-        SocialAccount.objects.create(
-            user=self.admin_user,
-            provider='naver',
-            uid='naver-social-admin',
-            extra_data={},
-        )
-        self.client.login(username='social_admin', password='password123')
+        self.client.login(username='direct_admin', password='password123')
 
     def test_admin_site_is_exempt_but_service_screen_is_not(self):
         admin_response = self.client.get('/secret-admin-kakio/')

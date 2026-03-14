@@ -59,7 +59,7 @@
             <div class="mb-8 text-center">
                 <span class="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-700">
                     <i class="fa-solid fa-shield-halved"></i>
-                    {{ provider_label }} 로그인 확인
+                    {{ provider_label }} 계정 확인
                 </span>
                 <h1 class="mt-5 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
                     서비스 이용을 위한 약관 동의
@@ -124,6 +124,11 @@
                 <div class="rounded-[1.5rem] bg-slate-50 px-4 py-4 text-sm leading-6 text-slate-500">
                     <p class="font-bold text-slate-700">현재 문서 기준</p>
                     <p class="mt-1">최종 수정일 {{ policy_meta.last_updated_display }} 기준 문서에 동의하면 같은 버전에서는 다시 묻지 않습니다.</p>
+                    <p class="mt-2">
+                        커뮤니티, 외부 링크, 신고 및 이용 제한 기준은
+                        <a href="{{ operations_url }}" target="_blank" rel="noopener noreferrer" class="font-bold text-indigo-600 hover:text-indigo-700">운영정책</a>
+                        에서 확인할 수 있습니다.
+                    </p>
                 </div>
 
                 <div class="pt-2 sm:flex sm:items-center sm:gap-3">

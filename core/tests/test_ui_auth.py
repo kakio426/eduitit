@@ -1,8 +1,10 @@
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
-from core.models import UserProfile
+from core.models import UserPolicyConsent, UserProfile
+from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
 from happy_seed.models import HSClassroom
 
 
@@ -17,6 +19,14 @@ class UIAuthTestCase(TestCase):
         profile.nickname = "test-teacher"
         profile.role = ""
         profile.save()
+        UserPolicyConsent.objects.create(
+            user=self.user,
+            provider="direct",
+            terms_version=TERMS_VERSION,
+            privacy_version=PRIVACY_VERSION,
+            agreed_at=timezone.now(),
+            agreement_source="required_gate",
+        )
         self.client.login(username="ui_user", password="password123")
 
     def test_role_selection_page_content(self):
@@ -33,6 +43,7 @@ class UIAuthTestCase(TestCase):
         self.assertContains(response, "카카오톡으로 시작하기")
         self.assertContains(response, "네이버로 시작하기")
         self.assertContains(response, "최초 1회 이용약관 및 개인정보처리방침 동의가 필요합니다")
+        self.assertContains(response, "운영정책")
         self.assertNotContains(response, "관리자 접속")
         self.assertNotContains(response, "bot_login_input")
         self.assertNotContains(response, "bot_password_input")

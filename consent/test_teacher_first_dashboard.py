@@ -1,6 +1,10 @@
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
+
+from core.models import UserPolicyConsent
+from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
 
 
 class ConsentTeacherFirstDashboardTests(TestCase):
@@ -13,6 +17,14 @@ class ConsentTeacherFirstDashboardTests(TestCase):
         self.teacher.userprofile.nickname = "동의교사"
         self.teacher.userprofile.role = "school"
         self.teacher.userprofile.save(update_fields=["nickname", "role"])
+        UserPolicyConsent.objects.create(
+            user=self.teacher,
+            provider="direct",
+            terms_version=TERMS_VERSION,
+            privacy_version=PRIVACY_VERSION,
+            agreed_at=timezone.now(),
+            agreement_source="required_gate",
+        )
         self.client.force_login(self.teacher)
 
     def test_dashboard_demotes_policy_panel_and_keeps_primary_action_first(self):

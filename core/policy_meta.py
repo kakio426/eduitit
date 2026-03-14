@@ -1,8 +1,8 @@
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.urls import reverse
 
-TERMS_VERSION = "2026-03-14.1"
-PRIVACY_VERSION = "2026-03-14.1"
+TERMS_VERSION = "2026-03-14.2"
+PRIVACY_VERSION = "2026-03-14.2"
 LAST_UPDATED_DISPLAY = "2026년 3월 14일"
 POLICY_CONSENT_SESSION_KEY = "core.current_policy_consent"
 
@@ -19,7 +19,7 @@ def get_policy_meta():
         "privacy_version": PRIVACY_VERSION,
         "last_updated_display": LAST_UPDATED_DISPLAY,
         "summary": (
-            "Eduitit 이용을 위해 이용약관 및 개인정보처리방침 동의가 필요합니다. "
+            "Eduitit 이용을 위해 현재 이용약관 및 개인정보처리방침 동의가 필요합니다. "
             "내용을 확인한 뒤 동의해 주세요."
         ),
         "service_summary": (

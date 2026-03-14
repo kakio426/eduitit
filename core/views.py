@@ -3247,6 +3247,7 @@ def policy_consent_view(request):
             'next_url': next_url,
             'terms_url': f"{reverse('policy')}#terms",
             'privacy_url': f"{reverse('policy')}#privacy",
+            'operations_url': f"{reverse('policy')}#operations",
             'hide_navbar': True,
         },
     )

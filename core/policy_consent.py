@@ -21,7 +21,14 @@ def get_latest_social_provider(user):
 
 
 def user_requires_policy_consent(user):
-    return get_latest_social_provider(user) != "direct"
+    if not getattr(user, "is_authenticated", False):
+        return False
+
+    provider = get_latest_social_provider(user)
+    if provider != "direct":
+        return True
+
+    return bool(getattr(user, "is_staff", False) or getattr(user, "is_superuser", False))
 
 
 def get_current_policy_consent(user):

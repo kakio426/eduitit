@@ -1,7 +1,10 @@
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth.models import User
-from core.models import UserProfile
+from django.utils import timezone
+
+from core.models import UserPolicyConsent, UserProfile
+from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
 
 class OnboardingTests(TestCase):
     def setUp(self):
@@ -17,6 +20,15 @@ class OnboardingTests(TestCase):
         self.user_complete = User.objects.create_user(username='test_complete', email='complete@example.com', password='password123')
         self.user_complete.userprofile.nickname = 'CoolTeacher'
         self.user_complete.userprofile.save()
+        for user in [self.user_no_email, self.user_default_nickname, self.user_complete]:
+            UserPolicyConsent.objects.create(
+                user=user,
+                provider='direct',
+                terms_version=TERMS_VERSION,
+                privacy_version=PRIVACY_VERSION,
+                agreed_at=timezone.now(),
+                agreement_source='required_gate',
+            )
 
     def test_middleware_redirects_user_without_email(self):
         self.client.login(username='test_no_email', password='password123')

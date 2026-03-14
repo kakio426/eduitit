@@ -14,7 +14,20 @@ from django.utils import timezone
 from consent.models import ConsentAuditLog, SignatureDocument, SignatureRecipient, SignatureRequest
 from consent.services import PdfRuntimeUnavailable, generate_recipient_evidence_pdf, generate_summary_pdf
 from consent.views import DEFAULT_LEGAL_NOTICE
+from core.models import UserPolicyConsent
+from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
 from handoff.models import HandoffRosterGroup, HandoffRosterMember
+
+
+def seed_current_policy_consent(user):
+    return UserPolicyConsent.objects.create(
+        user=user,
+        provider="direct",
+        terms_version=TERMS_VERSION,
+        privacy_version=PRIVACY_VERSION,
+        agreed_at=timezone.now(),
+        agreement_source="required_gate",
+    )
 
 
 class ConsentFlowTests(TestCase):
@@ -25,6 +38,7 @@ class ConsentFlowTests(TestCase):
         self.teacher.userprofile.nickname = "교사"
         self.teacher.userprofile.role = "school"
         self.teacher.userprofile.save(update_fields=["nickname", "role"])
+        seed_current_policy_consent(self.teacher)
 
         file_obj = SimpleUploadedFile("sample.pdf", b"%PDF-1.4\n%%EOF", content_type="application/pdf")
         self.document = SignatureDocument.objects.create(
@@ -113,6 +127,7 @@ class ConsentFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, reverse("policy"))
         self.assertContains(response, "개인정보처리방침")
+        self.assertContains(response, "운영정책")
         self.assertContains(response, "접속 기록")
 
 
@@ -832,6 +847,7 @@ class ConsentRecipientManageTests(TestCase):
         self.teacher.userprofile.nickname = "교사"
         self.teacher.userprofile.role = "school"
         self.teacher.userprofile.save(update_fields=["nickname", "role"])
+        seed_current_policy_consent(self.teacher)
 
         file_obj = SimpleUploadedFile("sample.pdf", b"%PDF-1.4\n%%EOF", content_type="application/pdf")
         self.document = SignatureDocument.objects.create(
@@ -905,6 +921,7 @@ class ConsentEvidenceTests(TestCase):
         self.teacher.userprofile.nickname = "교사"
         self.teacher.userprofile.role = "school"
         self.teacher.userprofile.save(update_fields=["nickname", "role"])
+        seed_current_policy_consent(self.teacher)
 
         file_obj = SimpleUploadedFile("sample.pdf", b"%PDF-1.4\nproof\n%%EOF", content_type="application/pdf")
         self.document = SignatureDocument.objects.create(
@@ -1137,6 +1154,7 @@ class ConsentSharedRosterTests(TestCase):
         self.teacher.userprofile.nickname = "교사"
         self.teacher.userprofile.role = "school"
         self.teacher.userprofile.save(update_fields=["nickname", "role"])
+        seed_current_policy_consent(self.teacher)
 
         self.other_teacher = User.objects.create_user(username="roster_other_teacher", password="pw123456")
         self.other_teacher.email = "roster_other_teacher@example.com"
@@ -1144,6 +1162,7 @@ class ConsentSharedRosterTests(TestCase):
         self.other_teacher.userprofile.nickname = "외부교사"
         self.other_teacher.userprofile.role = "school"
         self.other_teacher.userprofile.save(update_fields=["nickname", "role"])
+        seed_current_policy_consent(self.other_teacher)
 
         file_obj = SimpleUploadedFile("sample.pdf", b"%PDF-1.4\n%%EOF", content_type="application/pdf")
         self.document = SignatureDocument.objects.create(
