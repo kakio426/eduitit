@@ -146,17 +146,6 @@
                             <h2 class="classcalendar-copy mt-2 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">{{ today_workspace.date_label }} {{ today_workspace.focus_heading }}</h2>
                             <p class="classcalendar-copy mt-2 text-sm font-medium text-slate-500">{{ today_workspace.focus_description }}</p>
                         </div>
-                        <div class="flex flex-wrap gap-2">
-                            {% if today_focus == "all" %}
-                            <span class="inline-flex items-center rounded-full bg-white px-3 py-1 text-xs font-black text-slate-700">오늘 일정 {{ today_workspace.today_event_count }}건</span>
-                            <span class="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-700">오늘의 메모 {{ today_workspace.today_memos|length }}건</span>
-                            <span class="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-xs font-black text-white">오늘 할 일 {{ today_workspace.today_task_count }}건</span>
-                            {% elif today_focus == "memos" %}
-                            <span class="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-700">오늘의 메모 {{ today_workspace.today_memos|length }}건</span>
-                            {% else %}
-                            <span class="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-xs font-black text-indigo-700">다시 볼 메모 {{ today_workspace.review_memos|length }}건</span>
-                            {% endif %}
-                        </div>
                     </div>
                 </section>
 
@@ -439,6 +428,7 @@
                     <div>
                         <div>
                             <h3 class="text-lg sm:text-xl font-extrabold text-slate-900" x-text="selectedDateKey ? formatAgendaDate(selectedDateKey) : ''"></h3>
+                            <p class="mt-2 text-sm text-slate-500" x-text="selectedDateSummaryText()"></p>
                         </div>
                     </div>
 
