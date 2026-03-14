@@ -71,11 +71,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             로그인 없이도 바로 둘러볼 수 있어요
                         </span>
                         <h1 class="mt-4 text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-tight break-keep">
-                            로그인 없이도
-                            <span class="block text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-sky-500 break-keep">바로 체험해볼 수 있게 모았습니다</span>
+                            선생님이 자주 쓰는 도구를
+                            <span class="block text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-sky-500 break-keep">헷갈리지 않게 바로 모았습니다</span>
                         </h1>
                         <p class="mt-3 text-sm sm:text-base md:text-lg text-slate-500 max-w-3xl mx-auto leading-relaxed break-keep font-bold">
-                            쌤BTI, 운세, 인사이트, AI 도구 가이드, 교실 활동처럼 개인정보 부담이 적고 바로 결과가 보이는 서비스부터 둘러보세요.
+                            가정통신문, 수합, 문서 작성처럼 자주 하는 일을 먼저 보고 바로 시작하세요.
                         </p>
 
                         <div class="mt-6 flex flex-col items-stretch justify-center gap-3 sm:flex-row">
@@ -91,16 +91,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         <div class="mt-6 flex flex-wrap items-center justify-center gap-2.5" data-home-v2-guest-benefits="true">
                             <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-black text-slate-700">
-                                <i class="fa-solid fa-user-check text-indigo-500"></i>
-                                쌤BTI 바로 체험
+                                <i class="fa-solid fa-file-signature text-indigo-500"></i>
+                                수합·서명 먼저 보기
                             </span>
                             <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-black text-slate-700">
-                                <i class="fa-solid fa-lightbulb text-emerald-500"></i>
-                                AI 도구·인사이트 둘러보기
+                                <i class="fa-solid fa-pen-to-square text-emerald-500"></i>
+                                문서·작성 바로 시작
                             </span>
                             <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-black text-slate-700">
-                                <i class="fa-solid fa-gamepad text-amber-500"></i>
-                                운세와 교실 활동 바로 시작
+                                <i class="fa-solid fa-star text-amber-500"></i>
+                                로그인하면 즐겨찾기 저장
                             </span>
                         </div>
                     </div>
@@ -111,15 +111,11 @@ document.addEventListener('DOMContentLoaded', () => {
             <section id="guest-home-services" class="mb-6" data-aos="fade-up" data-aos-delay="50" data-home-v2-service-groups="true">
                 <div class="mb-3 flex items-end justify-between gap-3">
                     <div>
-                        <h2 class="text-lg md:text-xl font-black text-slate-900">로그인 없이 바로 체험할 서비스</h2>
-                        <p class="mt-1 text-sm font-semibold text-slate-500">가볍게 써보고, 마음에 들면 로그인해서 본격적으로 이어갈 수 있습니다.</p>
+                        <h2 class="text-lg md:text-xl font-black text-slate-900">오늘 바로 시작할 서비스</h2>
+                        <p class="mt-1 text-sm font-semibold text-slate-500">선생님이 자주 찾는 일을 목적별로 묶어 두었습니다.</p>
                     </div>
                 </div>
-                {% if guest_experience_section %}
-                {% include 'core/includes/purpose_sections.html' with sections=guest_experience_sections %}
-                {% else %}
                 {% include 'core/includes/purpose_sections.html' with sections=primary_display_sections|default:sections %}
-                {% endif %}
             </section>
 
             <!-- 교실 활동 배너 -->
@@ -127,7 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 {% include 'core/includes/game_banner.html' with games=games %}
             </div>
 
-            {% if not guest_experience_section and secondary_display_sections|default:aux_sections %}
+            {% if secondary_display_sections|default:aux_sections %}
             <div class="mb-6" data-aos="fade-up" data-aos-delay="80" data-home-v2-service-groups="true">
                 {% include 'core/includes/purpose_sections.html' with sections=secondary_display_sections|default:aux_sections %}
             </div>

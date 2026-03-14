@@ -222,7 +222,7 @@ def build_qrgen_page_seo(request) -> PageSeoMeta:
 def build_fortune_saju_page_seo(request) -> PageSeoMeta:
     return _build_page_seo(
         title="사주 운세 - Eduitit",
-        description="개인정보를 남기지 않고 체험할 수 있는 비공개 사주 분석 화면입니다.",
+        description="로그인 후 이용하는 비공개 사주 분석 화면입니다.",
         canonical_url=_absolute_url(reverse("fortune:saju")),
         robots="noindex,nofollow",
     )

@@ -18,8 +18,7 @@ from core.mini_apps import (
     plan_home_action_surface,
 )
 from products.models import Product
-from core.models import Post, ProductFavorite, ProductUsageLog, UserPolicyConsent, UserProfile
-from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
+from core.models import Post, ProductFavorite, ProductUsageLog, UserProfile
 
 
 def _create_onboarded_user(username, email=None, nickname=None):
@@ -31,16 +30,6 @@ def _create_onboarded_user(username, email=None, nickname=None):
     profile.nickname = nickname
     profile.role = 'school'
     profile.save()
-    UserPolicyConsent.objects.get_or_create(
-        user=user,
-        provider='direct',
-        terms_version=TERMS_VERSION,
-        privacy_version=PRIVACY_VERSION,
-        defaults={
-            'agreed_at': timezone.now(),
-            'agreement_source': 'required_gate',
-        },
-    )
     return user
 
 
@@ -62,8 +51,8 @@ class HomeViewTest(TestCase):
     def setUp(self):
         self.client = Client()
         self.product = Product.objects.create(
-            title="AI 도구 가이드", description="설명", price=0,
-            is_active=True, service_type='edutech', launch_route_name='tool_guide',
+            title="테스트 서비스", description="설명", price=0,
+            is_active=True, service_type='classroom',
         )
 
     def _create_sheetbook_product(self, title='숨김 교무수첩', *, is_active=True):
@@ -85,7 +74,7 @@ class HomeViewTest(TestCase):
         """비로그인 홈에 서비스 카드가 표시됨"""
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('AI 도구 가이드', content)
+        self.assertIn('테스트 서비스', content)
         self.assertIn(f'data-product-id="{self.product.id}"', content)
 
     def test_home_nav_contains_single_help_hub_link(self):
@@ -148,7 +137,7 @@ class HomeViewTest(TestCase):
         self.assertNotIn('href="#sns-full-section-auth"', content)
 
 
-@override_settings(HOME_V2_ENABLED=True, HOME_LAYOUT_VERSION='v2')
+@override_settings(HOME_V2_ENABLED=True)
 class HomeV2ViewTest(TestCase):
     def setUp(self):
         self.client = Client()
@@ -164,54 +153,6 @@ class HomeV2ViewTest(TestCase):
         self.p3 = Product.objects.create(
             title="테스트 게임", description="게임", price=0,
             is_active=True, service_type='game',
-        )
-        self.public_ssambti = Product.objects.create(
-            title="쌤BTI",
-            description="성향 분석",
-            price=0,
-            is_active=True,
-            service_type='counsel',
-            launch_route_name='ssambti:main',
-        )
-        self.public_tool_guide = Product.objects.create(
-            title="AI 도구 가이드",
-            description="도구 안내",
-            price=0,
-            is_active=True,
-            service_type='edutech',
-            launch_route_name='tool_guide',
-        )
-        self.public_insights = Product.objects.create(
-            title="Insight Library",
-            description="인사이트",
-            price=0,
-            is_active=True,
-            service_type='edutech',
-            launch_route_name='insights:list',
-        )
-        self.public_youtube = Product.objects.create(
-            title="유튜브 탈알고리즘",
-            description="외부 탐색",
-            price=0,
-            is_active=True,
-            service_type='etc',
-            external_url='https://motube-woad.vercel.app/',
-        )
-        self.public_fortune = Product.objects.create(
-            title="토닥토닥 선생님 운세",
-            description="운세",
-            price=0,
-            is_active=True,
-            service_type='counsel',
-            launch_route_name='fortune:saju',
-        )
-        self.public_yut = Product.objects.create(
-            title="왁자지껄 교실 윷놀이",
-            description="교실 활동",
-            price=0,
-            is_active=True,
-            service_type='game',
-            launch_route_name='yut_game',
         )
 
     def _login(self, username='v2user', nickname=None):
@@ -304,19 +245,12 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         self.assertEqual(response.status_code, 200)
 
-    def test_v2_anonymous_has_curated_public_experiences(self):
-        """V2 비로그인 홈은 공개 체험 후보만 큐레이션해서 보여준다."""
+    def test_v2_anonymous_has_sections(self):
+        """V2 비로그인 홈에 목적별 섹션 존재"""
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('로그인 없이 바로 체험할 서비스', content)
-        self.assertIn('로그인 없이 바로 해보기', content)
-        self.assertIn('쌤BTI', content)
-        self.assertIn('AI 도구 가이드', content)
-        self.assertIn('Insight Library', content)
-        self.assertIn('유튜브 탈알고리즘', content)
-        self.assertIn('토닥토닥 선생님 운세', content)
-        self.assertNotIn('수업 도구', content)
-        self.assertNotIn('행정 도구', content)
+        self.assertIn('수합·서명', content)
+        self.assertIn('문서·작성', content)
 
     def test_v2_anonymous_has_login_cta(self):
         """V2 비로그인 홈에 로그인 CTA 존재"""
@@ -325,23 +259,6 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('로그인하고 시작하기', content)
         self.assertIn('서비스 둘러보기', content)
         self.assertEqual(content.count('로그인하고 시작하기'), 1)
-
-    def test_v2_anonymous_public_experiences_follow_curated_order(self):
-        response = self.client.get(reverse('home'))
-        content = response.content.decode('utf-8')
-
-        ssambti_index = content.index('쌤BTI')
-        tool_guide_index = content.index('AI 도구 가이드')
-        insights_index = content.index('Insight Library')
-        youtube_index = content.index('유튜브 탈알고리즘')
-        fortune_index = content.index('토닥토닥 선생님 운세')
-        game_index = content.index('왁자지껄 교실 윷놀이')
-
-        self.assertLess(ssambti_index, tool_guide_index)
-        self.assertLess(tool_guide_index, insights_index)
-        self.assertLess(insights_index, youtube_index)
-        self.assertLess(youtube_index, fortune_index)
-        self.assertLess(fortune_index, game_index)
 
     def test_v2_anonymous_prioritizes_hero_and_services_without_sns_preview(self):
         response = self.client.get(reverse('home'))
@@ -376,7 +293,7 @@ class HomeV2ViewTest(TestCase):
         """V2 비로그인 홈에 게임 배너 존재"""
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('왁자지껄 교실 윷놀이', content)
+        self.assertIn('테스트 게임', content)
         self.assertNotIn('학생용 QR', content)
 
     def test_v2_authenticated_has_student_games_qr_button(self):
@@ -491,8 +408,13 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertEqual(response.status_code, 200)
-        self.assertNotIn('<<<<<<<HEAD', content)
+        self.assertIn('data-home-messagebox-card="true"', content)
+        self.assertIn('업무 메시지 보관함', content)
+        self.assertIn('data-home-messagebox-actions="true"', content)
+        self.assertIn('새 메시지 보관', content)
+        self.assertIn('href="/messagebox/#messagebox-compose"', content)
+        self.assertIn('href="/messagebox/#messagebox-archive"', content)
+        self.assertNotIn('메신저에서 받은 중요한 내용을 붙여넣고, 나중에 다시 보거나 일정에 연결하세요.', content)
 
         section_products = [
             product.launch_route_name
@@ -748,6 +670,7 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('data-home-v2-favorites-panel="true"', content)
         self.assertIn('home-v2-content-shell', content)
         self.assertIn('home-v2-top-zone', content)
+        self.assertNotIn('<style>', content)
         self.assertNotIn('function initHomeV2Interactions()', content)
         self.assertNotIn('function buildCalendarMessageHubState()', content)
 
@@ -783,7 +706,6 @@ class HomeV2ViewTest(TestCase):
 
     def test_v2_mini_card_has_data_product_id(self):
         """V2 미니 카드에 data-product-id 속성 존재"""
-        self._login('minicarduser')
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         self.assertIn('data-home-v2-service-card="true"', content)
@@ -791,12 +713,12 @@ class HomeV2ViewTest(TestCase):
 
     def test_v2_mini_card_shows_normalized_home_summary(self):
         """V2 미니 카드는 홈 전용 요약 한 줄 계약을 사용"""
-        self._login('summarycarduser')
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         self.assertIn('수업을 준비해요', content)
         self.assertIn('data-home-v2-service-card-body="true"', content)
         self.assertIn('data-home-v2-service-card-header="true"', content)
+        self.assertIn('전체 보기', content)
 
     def test_v2_authenticated_favorite_cards_show_compact_body(self):
         user = self._login('favoritebodyuser')
@@ -851,7 +773,6 @@ class HomeV2ViewTest(TestCase):
             is_active=True,
             service_type='counsel',
         )
-        self._login('displaygroupuser')
 
         response = self.client.get(reverse('home'))
 
@@ -870,7 +791,6 @@ class HomeV2ViewTest(TestCase):
 
     def test_v2_context_sections_count(self):
         """V2 컨텍스트에 sections 존재"""
-        self._login('sectionsuser')
         response = self.client.get(reverse('home'))
         sections = response.context.get('sections', [])
         self.assertGreaterEqual(len(sections), 2)
@@ -909,7 +829,7 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn(f'data-product-id="{visible_product.id}"', content)
+        self.assertIn('숨김 교무수첩', content)
         self.assertIn(visible_product.id, [item['product'].id for item in response.context.get('quick_actions', [])])
         self.assertIn(visible_product.id, [item['product'].id for item in response.context.get('favorite_items', [])])
         section_product_ids = []
@@ -1044,9 +964,7 @@ class HomeV2ViewTest(TestCase):
         self.p2.launch_route_name = 'collect:landing'
         self.p2.save(update_fields=['launch_route_name'])
 
-        user = self._login('routeuser')
-        for _ in range(3):
-            ProductUsageLog.objects.create(user=user, product=self.p2, action='launch', source='home_quick')
+        self._login('routeuser')
         response = self.client.get(reverse('home'))
         quick_actions = response.context.get('quick_actions', [])
         p2_action = next((item for item in quick_actions if item['product'].id == self.p2.id), None)
@@ -1070,7 +988,6 @@ class HomeV2ViewTest(TestCase):
             is_active=True,
             service_type='classroom',
         )
-        self._login('previewcapuser')
 
         response = self.client.get(reverse('home'))
         sections = response.context.get('sections', [])
@@ -1096,7 +1013,6 @@ class HomeV2ViewTest(TestCase):
             is_active=True,
             service_type='classroom',
         )
-        self._login('sectiontoggleuser')
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
@@ -1119,7 +1035,6 @@ class HomeV2ViewTest(TestCase):
             is_active=True,
             service_type='classroom',
         )
-        self._login('sectionoverflowuser')
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
@@ -1281,7 +1196,7 @@ class HomeSupplementaryViewTest(TestCase):
         self.assertContains(response, '실시간 소통')
         self.assertContains(response, '홈에서는 요약만 보고')
 
-    def test_home_search_payload_keeps_full_active_launcher_for_authenticated_user(self):
+    def test_home_search_payload_uses_is_active_and_public_names(self):
         Product.objects.create(
             title="간편 수합",
             description="수합 설명",
@@ -1306,8 +1221,6 @@ class HomeSupplementaryViewTest(TestCase):
             service_type='classroom',
             launch_route_name='sheetbook:index',
         )
-        user = _create_onboarded_user('launcherfull')
-        self.client.force_login(user)
 
         response = self.client.get(reverse('home'))
         payload = json.loads(response.context['service_launcher_json'])

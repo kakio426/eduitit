@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, reverse, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.http import Http404, HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST, require_GET
 from django.conf import settings
 from django.core.paginator import Paginator
@@ -37,13 +37,7 @@ from .policy_meta import (
     get_safe_next_url,
 )
 from . import service_launcher as service_launcher_utils
-from .product_visibility import (
-    filter_discoverable_manuals,
-    filter_discoverable_products,
-    is_guest_public_game_product,
-    is_manual_discoverable,
-    is_sheetbook_discovery_visible,
-)
+from .product_visibility import filter_discoverable_products, is_sheetbook_discovery_visible
 from .active_classroom import (
     get_active_classroom_for_request,
     set_active_classroom_session,
@@ -380,28 +374,6 @@ def get_purpose_sections(products_qs, preview_limit=None):
 
     games = list(bucket.get("class_activity", []))
     return main_sections, aux_sections, games
-
-
-def _build_guest_experience_section(product_list):
-    guest_experience_products = [
-        product
-        for product in product_list
-        if not is_guest_public_game_product(product)
-    ]
-    if not guest_experience_products:
-        return None
-
-    return _build_section_payload(
-        {
-            "key": "guest_public",
-            "title": "로그인 없이 바로 해보기",
-            "subtitle": "가볍게 체험하고 바로 결과를 볼 수 있는 서비스만 모았습니다.",
-            "icon": "fa-solid fa-sparkles",
-            "color": "violet",
-        },
-        guest_experience_products,
-        preview_limit=None,
-    )
 
 
 CALENDAR_HUB_PUBLIC_NAME = "학급 캘린더"
@@ -2149,8 +2121,6 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
         section_product_list,
         preview_limit=2,
     )
-    guest_experience_section = _build_guest_experience_section(product_list)
-    guest_experience_sections = [guest_experience_section] if guest_experience_section else []
     primary_display_sections, secondary_display_sections = _build_home_v2_display_groups(sections, aux_sections)
     sns_summary_posts = _build_home_community_summary_posts(page_obj, limit=2)
     community_summary = {
@@ -2267,8 +2237,6 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
         'aux_sections': aux_sections,
         'primary_display_sections': primary_display_sections,
         'secondary_display_sections': secondary_display_sections,
-        'guest_experience_section': guest_experience_section,
-        'guest_experience_sections': guest_experience_sections,
         'games': games,
         'community_summary': community_summary,
         'public_calendar_entry': _build_public_calendar_entry_context(),
@@ -2398,8 +2366,7 @@ def _home_v4(request, products, posts, page_obj, feed_scope):
 def home(request):
     # Order by display_order first, then by creation date
     products = filter_discoverable_products(
-        Product.objects.filter(is_active=True).order_by('display_order', '-created_at'),
-        request=request,
+        Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
     )
     feed_scope = _get_post_feed_scope(request)
 
@@ -3488,9 +3455,7 @@ def service_guide_list(request):
         product__is_active=True
     ).select_related('product').order_by('product__display_order', 'product__title')
 
-    active_products = _attach_product_launch_meta(
-        list(filter_discoverable_products(active_products_qs, request=request))
-    )
+    active_products = _attach_product_launch_meta(list(active_products_qs))
     active_products_count = len(active_products)
     product_map = {product.id: product for product in active_products}
 
@@ -3498,8 +3463,6 @@ def service_guide_list(request):
     manuals = list(manuals_qs.exclude(id__in=featured_manual_ids))
     featured_manuals = list(featured_manuals_qs)
     all_manuals = featured_manuals + manuals
-    if not request.user.is_authenticated:
-        all_manuals = filter_discoverable_manuals(all_manuals, request=request)
     for manual in all_manuals:
         prepared_product = product_map.get(manual.product_id)
         if not prepared_product:
@@ -3516,11 +3479,8 @@ def service_guide_list(request):
             'home_context_chips',
         ):
             setattr(manual.product, attr_name, getattr(prepared_product, attr_name, ''))
-    manual_count = len(all_manuals) if not request.user.is_authenticated else manuals_qs.count()
-    if request.user.is_authenticated:
-        product_ids_with_any_manual = set(manuals_all_qs.values_list('product_id', flat=True))
-    else:
-        product_ids_with_any_manual = {manual.product_id for manual in all_manuals}
+    manual_count = manuals_qs.count()
+    product_ids_with_any_manual = set(manuals_all_qs.values_list('product_id', flat=True))
     products_without_manual = [
         product for product in active_products
         if product.id not in product_ids_with_any_manual and not _is_sheetbook_cross_surface_hidden(product)
@@ -3545,8 +3505,6 @@ def service_guide_detail(request, pk):
         is_published=True,
         product__is_active=True
     )
-    if not request.user.is_authenticated and not is_manual_discoverable(manual, request=request):
-        raise Http404("Manual not available for anonymous discovery.")
     prepared_product = _attach_product_launch_meta([manual.product])[0]
     manual.product = prepared_product
     manual = _prepare_manual_display(manual)
@@ -3699,8 +3657,7 @@ def list_workbench_bundles(request):
         _attach_product_launch_meta(
             list(
                 filter_discoverable_products(
-                    Product.objects.filter(is_active=True).order_by('display_order', '-created_at'),
-                    request=request,
+                    Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
                 )
             )
         ),

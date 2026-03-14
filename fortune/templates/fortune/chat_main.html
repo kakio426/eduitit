@@ -128,7 +128,7 @@
                 <div class="chat-input-wrap p-3 md:p-4 glass-card rounded-t-none border-t border-white/10 shrink-0 bg-black/30 backdrop-blur-xl">
                     <div class="flex justify-between items-center mb-2 px-1">
                         <span class="text-xs text-gray-400" id="chatContextLabel">상담 중</span>
-                        <span class="text-xs text-gray-400">남은 질문: <span class="text-yellow-400 font-bold" id="turnCounter">{{ chat_turn_limit }}</span></span>
+                        <span class="text-xs text-gray-400">남은 질문: <span class="text-yellow-400 font-bold" id="turnCounter">10</span></span>
                     </div>
 
                     <form id="chatSendForm"
@@ -265,8 +265,7 @@
 
     window.FortuneChat = (function () {
         const STORAGE_KEY = 'saju_working_context';
-        const MAX_CHAT_TURNS = {{ chat_turn_limit|default:1 }};
-        const CAN_SAVE_CHAT = "{{ can_save_chat|yesno:'true,false' }}" === "true";
+        const MAX_CHAT_TURNS = 10;
 
         function parseContext() {
             try {
@@ -338,11 +337,7 @@
 
             noContext.classList.add('hidden');
             room.classList.remove('hidden');
-            if (CAN_SAVE_CHAT) {
-                saveBtn.classList.remove('hidden');
-            } else {
-                saveBtn.classList.add('hidden');
-            }
+            saveBtn.classList.remove('hidden');
             resetBtn.classList.remove('hidden');
 
             const displayName = '선생님';
@@ -461,10 +456,6 @@
         }
 
         async function saveConversation() {
-            if (!CAN_SAVE_CHAT) {
-                alert('채팅 보관은 로그인 후 이용할 수 있습니다.');
-                return;
-            }
             const context = parseContext();
             if (!context || !context.chat_history || !context.chat_history.length) {
                 alert('저장할 상담 내용이 없습니다.');

@@ -1,7 +1,5 @@
 import json
 
-from django.contrib.auth import get_user_model
-from django.contrib.auth.models import AnonymousUser
 from django.core.management import call_command
 from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
@@ -38,16 +36,9 @@ class ContextProcessorTestCase(TestCase):
 class ServiceLauncherContextTests(TestCase):
     def setUp(self):
         self.factory = RequestFactory()
-        self.user = get_user_model().objects.create_user(
-            username="launcher-user",
-            password="password",
-            email="launcher@example.com",
-        )
 
-    def _request(self, *, authenticated=False):
-        request = self.factory.get("/")
-        request.user = self.user if authenticated else AnonymousUser()
-        return request
+    def _request(self):
+        return self.factory.get("/")
 
     def test_service_launcher_json_contains_direct_launch_fields(self):
         Product.objects.create(
@@ -61,7 +52,7 @@ class ServiceLauncherContextTests(TestCase):
             launch_route_name="collect:landing",
         )
 
-        context = search_products(self._request(authenticated=True))
+        context = search_products(self._request())
         payload = json.loads(context["service_launcher_json"])
 
         item = next(item for item in payload if item["title"] == "간편 수합")
@@ -90,33 +81,33 @@ class ServiceLauncherContextTests(TestCase):
             launch_route_name="classcalendar:main",
         )
 
-        context = search_products(self._request(authenticated=True))
+        context = search_products(self._request())
         payload = json.loads(context["service_launcher_json"])
         titles = [item["title"] for item in payload]
 
         self.assertIn("학급 기록 보드", titles)
         self.assertNotIn("학급 캘린더", titles)
 
-    def test_service_launcher_json_supports_public_external_services_for_guest(self):
+    def test_service_launcher_json_supports_external_services(self):
         Product.objects.create(
-            title="유튜브 탈알고리즘",
+            title="외부 도구",
             description="외부 페이지",
             price=0,
             is_active=True,
             service_type="etc",
-            external_url="https://motube-woad.vercel.app/",
+            external_url="https://example.com/tool",
         )
 
         context = search_products(self._request())
         payload = json.loads(context["service_launcher_json"])
 
-        item = next(item for item in payload if item["title"] == "유튜브 탈알고리즘")
-        self.assertEqual(item["href"], "https://motube-woad.vercel.app/")
+        item = next(item for item in payload if item["title"] == "외부 도구")
+        self.assertEqual(item["href"], "https://example.com/tool")
         self.assertTrue(item["is_external"])
         self.assertEqual(item["group_title"], "외부 서비스")
 
     def test_service_launcher_json_keeps_all_discoverable_items(self):
-        baseline_payload = json.loads(search_products(self._request(authenticated=True))["service_launcher_json"])
+        baseline_payload = json.loads(search_products(self._request())["service_launcher_json"])
         baseline_count = len(baseline_payload)
         for index in range(9):
             Product.objects.create(
@@ -128,7 +119,7 @@ class ServiceLauncherContextTests(TestCase):
                 launch_route_name="collect:landing",
             )
 
-        context = search_products(self._request(authenticated=True))
+        context = search_products(self._request())
         payload = json.loads(context["service_launcher_json"])
 
         self.assertEqual(len(payload), baseline_count + 9)
@@ -139,85 +130,11 @@ class ServiceLauncherContextTests(TestCase):
     def test_new_service_is_auto_included_after_ensure_command(self):
         call_command("ensure_docviewer")
 
-        context = search_products(self._request(authenticated=True))
+        context = search_products(self._request())
         payload = json.loads(context["service_launcher_json"])
 
         titles = [item["title"] for item in payload]
         self.assertIn("문서 미리보기실", titles)
-
-    def test_guest_service_launcher_only_shows_public_candidates_in_curated_order(self):
-        Product.objects.create(
-            title="쌤BTI",
-            description="성향 분석",
-            price=0,
-            is_active=True,
-            service_type="counsel",
-            launch_route_name="ssambti:main",
-        )
-        Product.objects.create(
-            title="AI 도구 가이드",
-            description="도구 안내",
-            price=0,
-            is_active=True,
-            service_type="edutech",
-            launch_route_name="tool_guide",
-        )
-        Product.objects.create(
-            title="Insight Library",
-            description="인사이트",
-            price=0,
-            is_active=True,
-            service_type="edutech",
-            launch_route_name="insights:list",
-        )
-        Product.objects.create(
-            title="유튜브 탈알고리즘",
-            description="외부 탐색",
-            price=0,
-            is_active=True,
-            service_type="etc",
-            external_url="https://motube-woad.vercel.app/",
-        )
-        Product.objects.create(
-            title="토닥토닥 선생님 운세",
-            description="운세",
-            price=0,
-            is_active=True,
-            service_type="counsel",
-            launch_route_name="fortune:saju",
-        )
-        Product.objects.create(
-            title="왁자지껄 교실 윷놀이",
-            description="교실 활동",
-            price=0,
-            is_active=True,
-            service_type="game",
-            launch_route_name="yut_game",
-        )
-        Product.objects.create(
-            title="간편 수합",
-            description="숨겨질 운영 도구",
-            price=0,
-            is_active=True,
-            service_type="collect_sign",
-            launch_route_name="collect:landing",
-        )
-
-        payload = json.loads(search_products(self._request())["service_launcher_json"])
-        titles = [item["title"] for item in payload]
-
-        self.assertIn("쌤BTI", titles)
-        self.assertIn("AI 도구 가이드", titles)
-        self.assertIn("Insight Library", titles)
-        self.assertIn("유튜브 탈알고리즘", titles)
-        self.assertIn("토닥토닥 선생님 운세", titles)
-        self.assertIn("왁자지껄 교실 윷놀이", titles)
-        self.assertLess(titles.index("쌤BTI"), titles.index("AI 도구 가이드"))
-        self.assertLess(titles.index("AI 도구 가이드"), titles.index("Insight Library"))
-        self.assertLess(titles.index("Insight Library"), titles.index("유튜브 탈알고리즘"))
-        self.assertLess(titles.index("유튜브 탈알고리즘"), titles.index("토닥토닥 선생님 운세"))
-        self.assertLess(titles.index("토닥토닥 선생님 운세"), titles.index("왁자지껄 교실 윷놀이"))
-        self.assertNotIn("간편 수합", titles)
 
     @override_settings(GLOBAL_SEARCH_ENABLED=False)
     def test_service_launcher_json_absent_when_disabled(self):

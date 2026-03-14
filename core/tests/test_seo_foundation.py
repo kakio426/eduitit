@@ -11,18 +11,18 @@ from products.models import Product, ServiceManual
 class SeoFoundationTests(TestCase):
     def setUp(self):
         self.product = Product.objects.create(
-            title="AI 도구 가이드",
-            description="교사가 바로 써볼 수 있는 AI 도구를 쉽게 정리합니다.",
+            title="미술 수업 도우미",
+            description="유튜브 기반 수업 흐름을 빠르게 정리합니다.",
             price=0,
             is_active=True,
-            service_type="edutech",
-            launch_route_name="tool_guide",
-            solve_text="필요한 AI 도구를 바로 찾고 비교합니다.",
+            service_type="classroom",
+            launch_route_name="artclass:setup",
+            solve_text="수업 흐름과 단계 안내를 한 번에 정리합니다.",
         )
         self.manual = ServiceManual.objects.create(
             product=self.product,
-            title="AI 도구 가이드 시작하기",
-            description="바로 열고 필요한 AI 도구를 찾는 흐름을 안내합니다.",
+            title="미술 수업 도우미 시작하기",
+            description="바로 열고 바로 단계 준비하는 흐름을 안내합니다.",
             is_published=True,
         )
         self.sensitive_product = Product.objects.create(
@@ -60,7 +60,7 @@ class SeoFoundationTests(TestCase):
         self.assertNotIn("*/create/", content)
         self.assertNotIn("*/edit/", content)
 
-    def test_sitemap_xml_lists_curated_public_home_manual_product_and_insight_pages(self):
+    def test_sitemap_xml_lists_public_home_manual_product_insight_and_tools(self):
         response = self.client.get("/sitemap.xml")
         content = response.content.decode("utf-8")
 
@@ -71,9 +71,8 @@ class SeoFoundationTests(TestCase):
         self.assertIn(reverse("service_guide_detail", kwargs={"pk": self.manual.pk}), content)
         self.assertIn(reverse("product_detail", kwargs={"pk": self.product.pk}), content)
         self.assertIn(reverse("insights:detail", kwargs={"pk": self.insight.pk}), content)
-        self.assertNotIn(reverse("prompt_lab"), content)
-        self.assertNotIn(reverse("noticegen:main"), content)
-        self.assertNotIn(reverse("qrgen:landing"), content)
+        self.assertIn(reverse("noticegen:main"), content)
+        self.assertIn(reverse("qrgen:landing"), content)
         self.assertNotIn(reverse("service_guide_detail", kwargs={"pk": self.sensitive_manual.pk}), content)
         self.assertNotIn(reverse("product_detail", kwargs={"pk": self.sensitive_product.pk}), content)
         self.assertNotIn("/secret-admin-kakio/", content)
@@ -110,8 +109,11 @@ class SeoFoundationTests(TestCase):
 
     def test_public_tool_and_reference_pages_get_page_specific_meta(self):
         cases = (
+            ("prompt_lab", "AI 프롬프트 레시피 - Eduitit", "https://eduitit.site/prompts/"),
             ("tool_guide", "도구 가이드 - Eduitit", "https://eduitit.site/tools/"),
             ("service_guide_list", "서비스 가이드 - Eduitit", "https://eduitit.site/manuals/"),
+            ("noticegen:main", "알림장 & 주간학습 멘트 생성기 - Eduitit", "https://eduitit.site/noticegen/"),
+            ("qrgen:landing", "수업 QR 생성기 - Eduitit", "https://eduitit.site/qrgen/"),
         )
 
         for route_name, title, canonical in cases:
@@ -130,20 +132,20 @@ class SeoFoundationTests(TestCase):
         product_content = product_response.content.decode("utf-8")
 
         self.assertEqual(manual_response.status_code, 200)
-        self.assertIn("<title>AI 도구 가이드 시작하기 - 서비스 가이드 - Eduitit</title>", manual_content)
+        self.assertIn("<title>미술 수업 도우미 시작하기 - 서비스 가이드 - Eduitit</title>", manual_content)
         self.assertIn(
             f'<link rel="canonical" href="https://eduitit.site{reverse("service_guide_detail", kwargs={"pk": self.manual.pk})}">',
             manual_content,
         )
-        self.assertIn("바로 열고 필요한 AI 도구를 찾는 흐름", manual_content)
+        self.assertIn("바로 열고 바로 단계 준비하는 흐름", manual_content)
 
         self.assertEqual(product_response.status_code, 200)
-        self.assertIn("<title>AI 도구 가이드 - Eduitit</title>", product_content)
+        self.assertIn("<title>미술 수업 도우미 - Eduitit</title>", product_content)
         self.assertIn(
             f'<link rel="canonical" href="https://eduitit.site{reverse("product_detail", kwargs={"pk": self.product.pk})}">',
             product_content,
         )
-        self.assertIn("필요한 AI 도구를 바로 찾고 비교합니다.", product_content)
+        self.assertIn("수업 흐름과 단계 안내를 한 번에 정리합니다.", product_content)
 
     def test_sensitive_service_guides_and_products_use_noindex_headers(self):
         manual_response = self.client.get(reverse("service_guide_detail", kwargs={"pk": self.sensitive_manual.pk}))
@@ -151,7 +153,9 @@ class SeoFoundationTests(TestCase):
         product_response = self.client.get(reverse("product_detail", kwargs={"pk": self.sensitive_product.pk}))
         product_content = product_response.content.decode("utf-8")
 
-        self.assertEqual(manual_response.status_code, 404)
+        self.assertEqual(manual_response.status_code, 200)
+        self.assertIn('<meta name="robots" content="noindex,nofollow">', manual_content)
+        self.assertEqual(manual_response["X-Robots-Tag"], "noindex, nofollow")
 
         self.assertEqual(product_response.status_code, 200)
         self.assertIn('<meta name="robots" content="noindex,nofollow">', product_content)

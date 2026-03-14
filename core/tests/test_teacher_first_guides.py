@@ -1,27 +1,12 @@
 from django.test import TestCase
-from django.contrib.auth import get_user_model
 from django.urls import reverse
 
-from core.models import SiteConfig, UserProfile
+from core.models import SiteConfig
 from products.models import Product, ServiceManual
-
-
-def _create_onboarded_user(username, *, password='password', email=None):
-    user = get_user_model().objects.create_user(
-        username=username,
-        password=password,
-        email=email or f'{username}@example.com',
-    )
-    profile, _ = UserProfile.objects.get_or_create(user=user)
-    profile.nickname = username
-    profile.role = 'school'
-    profile.save(update_fields=['nickname', 'role'])
-    return user
 
 
 class TeacherFirstGuidePagesTests(TestCase):
     def setUp(self):
-        self.user = _create_onboarded_user("guide-user")
         self.classroom_product = Product.objects.create(
             title='학급 캘린더',
             description='학급 운영',
@@ -66,7 +51,6 @@ class TeacherFirstGuidePagesTests(TestCase):
 
     def test_service_guide_list_uses_teacher_first_entry_points_and_grouped_sections(self):
         SiteConfig.load().featured_manuals.add(self.classroom_manual)
-        self.client.force_login(self.user)
 
         response = self.client.get(reverse('service_guide_list'))
         self.assertEqual(response.status_code, 200)
@@ -81,7 +65,6 @@ class TeacherFirstGuidePagesTests(TestCase):
         self.assertNotIn('교무수첩', content)
 
     def test_service_guide_list_uses_short_reference_copy(self):
-        self.client.force_login(self.user)
         response = self.client.get(reverse('service_guide_list'))
         content = response.content.decode('utf-8')
 
@@ -104,7 +87,6 @@ class TeacherFirstGuidePagesTests(TestCase):
 
     def test_service_guide_cards_put_task_title_before_service_name(self):
         SiteConfig.load().featured_manuals.add(self.classroom_manual)
-        self.client.force_login(self.user)
 
         response = self.client.get(reverse('service_guide_list'))
         content = response.content.decode('utf-8')
@@ -113,7 +95,6 @@ class TeacherFirstGuidePagesTests(TestCase):
         self.assertRegex(content, r'(?s)가정통신문 빠르게 만들기.*가정통신문')
 
     def test_service_guide_list_does_not_promote_record_board_as_calendar_peer(self):
-        self.client.force_login(self.user)
         sheetbook_product = Product.objects.create(
             title='학급 기록 보드',
             description='기록 작업',
@@ -137,30 +118,3 @@ class TeacherFirstGuidePagesTests(TestCase):
         self.assertIn('학급 캘린더', content)
         self.assertNotIn('기록 보드 이어쓰기', content)
         self.assertNotIn('학급 기록 보드 이어쓰기', content)
-
-    def test_guest_service_guide_list_only_shows_public_manuals(self):
-        public_product = Product.objects.create(
-            title='AI 도구 가이드',
-            description='공개 도구 안내',
-            price=0,
-            is_active=True,
-            service_type='edutech',
-            launch_route_name='tool_guide',
-            icon='✨',
-            color_theme='sky',
-        )
-        ServiceManual.objects.create(
-            product=public_product,
-            title='AI 도구 가이드 빠르게 보기',
-            description='공개 안내',
-            is_published=True,
-        )
-
-        response = self.client.get(reverse('service_guide_list'))
-        content = response.content.decode('utf-8')
-
-        self.assertEqual(response.status_code, 200)
-        self.assertIn('AI 도구 가이드 빠르게 보기', content)
-        self.assertNotIn('학급 캘린더 시작하기', content)
-        self.assertNotIn('가정통신문 빠르게 만들기', content)
-        self.assertNotIn('상담 예약', content)

@@ -8,10 +8,11 @@ from django.http import JsonResponse, StreamingHttpResponse
 from django.shortcuts import render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+from django_ratelimit.core import is_ratelimited
 
 from core.seo import build_fortune_chat_page_seo
+from core.utils import ratelimit_key_for_master_only
 
-from .limits import check_chat_limit, chat_turn_limit_for_request, request_actor_label
 from .models import FortuneResult
 from .privacy import apply_private_fortune_headers, scrub_personal_fortune_text
 from .utils.chat_ai import get_ai_response_stream
@@ -19,10 +20,10 @@ from .utils.chat_logic import build_system_prompt
 
 logger = logging.getLogger(__name__)
 
+MAX_CHAT_TURNS = 10
+
 
 def _select_prior_general_results(user, limit=2):
-    if not user or not getattr(user, "is_authenticated", False):
-        return []
     return list(
         FortuneResult.objects.filter(user=user, mode='general')
         .order_by('-created_at')
@@ -73,15 +74,12 @@ def _render_inline_message(content):
     return SimpleNamespace(role='assistant', content=content, created_at=timezone.now())
 
 
+@login_required
 def chat_main_page(request):
     response = render(
         request,
         'fortune/chat_main.html',
-        {
-            'chat_turn_limit': chat_turn_limit_for_request(request),
-            'can_save_chat': bool(getattr(request.user, 'is_authenticated', False)),
-            **build_fortune_chat_page_seo(request).as_context(),
-        },
+        build_fortune_chat_page_seo(request).as_context(),
     )
     return apply_private_fortune_headers(response)
 
@@ -95,11 +93,20 @@ def create_chat_session(request):
     )
 
 
+@login_required
 async def send_chat_message(request):
     if request.method != 'POST':
         return JsonResponse({'error': 'POST method required'}, status=405)
 
-    if await check_chat_limit(request):
+    ratelimited = await sync_to_async(is_ratelimited)(
+        request,
+        group='fortune_chat',
+        key=ratelimit_key_for_master_only,
+        rate='20/d',
+        method='POST',
+        increment=True,
+    )
+    if ratelimited:
         return JsonResponse({'error': 'DAILY_LIMIT_EXCEEDED', 'message': '오늘 채팅 한도를 모두 사용했습니다.'}, status=429)
 
     content = request.POST.get('message', '').strip()
@@ -112,8 +119,7 @@ async def send_chat_message(request):
 
     history = _normalize_history(_parse_json_payload(request.POST.get('history_json'), []))
     used_turns = sum(1 for item in history if item.get('role') == 'user')
-    chat_turn_limit = chat_turn_limit_for_request(request)
-    if used_turns >= chat_turn_limit:
+    if used_turns >= MAX_CHAT_TURNS:
         return await sync_to_async(render)(
             request,
             'fortune/partials/chat_message.html',
@@ -122,7 +128,7 @@ async def send_chat_message(request):
 
     prior_general_results = await sync_to_async(_select_prior_general_results)(request.user, 2)
     system_prompt = build_system_prompt(working_context, working_context['natal_chart'], prior_general_results)
-    remaining_turns = max(0, chat_turn_limit - (used_turns + 1))
+    remaining_turns = max(0, MAX_CHAT_TURNS - (used_turns + 1))
 
     async def stream_response():
         full_response_parts = []
@@ -158,7 +164,7 @@ async def send_chat_message(request):
 
     logger.info(
         "[Fortune] Action: CHAT_STREAM, Status: STARTED, User: %s, UsedTurns: %s",
-        request_actor_label(request),
+        request.user.username,
         used_turns,
     )
     return StreamingHttpResponse(stream_response(), content_type='text/html')

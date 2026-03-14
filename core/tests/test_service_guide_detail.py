@@ -1,27 +1,11 @@
 from django.test import TestCase
-from django.contrib.auth import get_user_model
 from django.urls import reverse
 
-from core.models import UserProfile
 from products.models import Product, ServiceManual
-
-
-def _create_onboarded_user(username, *, password='password', email=None):
-    user = get_user_model().objects.create_user(
-        username=username,
-        password=password,
-        email=email or f'{username}@example.com',
-    )
-    profile, _ = UserProfile.objects.get_or_create(user=user)
-    profile.nickname = username
-    profile.role = 'school'
-    profile.save(update_fields=['nickname', 'role'])
-    return user
 
 
 class ServiceGuideDetailLaunchTests(TestCase):
     def test_internal_launch_route_renders_start_link(self):
-        user = _create_onboarded_user("manual-user")
         product = Product.objects.create(
             title="교무수첩",
             description="학급 운영 캘린더",
@@ -41,7 +25,6 @@ class ServiceGuideDetailLaunchTests(TestCase):
             is_published=True,
         )
 
-        self.client.force_login(user)
         response = self.client.get(reverse("service_guide_detail", kwargs={"pk": manual.pk}))
 
         self.assertEqual(response.status_code, 200)
@@ -52,27 +35,3 @@ class ServiceGuideDetailLaunchTests(TestCase):
         self.assertNotContains(response, "준비 중인 서비스입니다")
         self.assertNotContains(response, "이제 직접 사용해보세요!")
         self.assertNotContains(response, "교무수첩")
-
-    def test_guest_cannot_open_hidden_manual_detail(self):
-        product = Product.objects.create(
-            title="교무수첩",
-            description="학급 운영 캘린더",
-            price=0,
-            is_active=True,
-            launch_route_name="classcalendar:main",
-            external_url="",
-            service_type="classroom",
-            icon="📅",
-            color_theme="blue",
-            card_size="small",
-        )
-        manual = ServiceManual.objects.create(
-            product=product,
-            title="교무수첩 사용법",
-            description="설명",
-            is_published=True,
-        )
-
-        response = self.client.get(reverse("service_guide_detail", kwargs={"pk": manual.pk}))
-
-        self.assertEqual(response.status_code, 404)
