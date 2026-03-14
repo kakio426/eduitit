@@ -5,7 +5,20 @@ from core.models import UserProfile
 from products.models import DTSettings, Product, ServiceManual
 
 
-@override_settings(HOME_V2_ENABLED=False)
+def _create_onboarded_user(username, *, password='password', email=None):
+    user = get_user_model().objects.create_user(
+        username=username,
+        password=password,
+        email=email or f'{username}@example.com',
+    )
+    profile, _ = UserProfile.objects.get_or_create(user=user)
+    profile.nickname = username
+    profile.role = 'school'
+    profile.save(update_fields=['nickname', 'role'])
+    return user
+
+
+@override_settings(HOME_V2_ENABLED=False, HOME_LAYOUT_VERSION='v1')
 class ProductViewTests(TestCase):
     """Test suite for product views following TDD approach"""
     
@@ -19,7 +32,10 @@ class ProductViewTests(TestCase):
             description="This is featured",
             price=0,
             is_active=True,
-            is_featured=True
+            is_featured=True,
+            service_type='edutech',
+            launch_route_name='tool_guide',
+            display_order=-1000,
         )
         
         # Create active but not featured products
@@ -28,7 +44,9 @@ class ProductViewTests(TestCase):
             description="This is active but not featured",
             price=0,
             is_active=True,
-            is_featured=False
+            is_featured=False,
+            service_type='edutech',
+            launch_route_name='insights:list',
         )
         
         self.active_product2 = Product.objects.create(
@@ -36,7 +54,9 @@ class ProductViewTests(TestCase):
             description="Another active tool",
             price=0,
             is_active=True,
-            is_featured=False
+            is_featured=False,
+            service_type='game',
+            launch_route_name='yut_game',
         )
         
         # Create inactive product
@@ -45,27 +65,20 @@ class ProductViewTests(TestCase):
             description="This should not appear",
             price=0,
             is_active=False,
-            is_featured=False
+            is_featured=False,
+            service_type='counsel',
+            launch_route_name='fortune:saju',
         )
     
     def test_all_active_products_display_on_homepage(self):
-        """All active products should appear on homepage regardless of featured status"""
+        """비로그인 홈에는 공개 후보 중 활성 서비스만 노출된다."""
         response = self.client.get(reverse('home'))
-        
-        # Check that all active products are in context
+
         products = response.context['products']
-        
-        # Count active products in database
-        active_count = Product.objects.filter(is_active=True).count()
-        self.assertEqual(len(products), active_count)
-        
-        # Verify our test products are included
         product_titles = [p.title for p in products]
         self.assertIn("Featured Tool", product_titles)
         self.assertIn("Active Tool 1", product_titles)
         self.assertIn("Active Tool 2", product_titles)
-        
-        # Verify inactive product is NOT included
         self.assertNotIn("Inactive Tool", product_titles)
     
     def test_featured_product_appears_in_hero_card(self):
@@ -103,6 +116,7 @@ class ProductViewTests(TestCase):
 class SheetbookDiscoveryVisibilityTests(TestCase):
     def setUp(self):
         self.client = Client()
+        self.user = _create_onboarded_user("catalog-user")
         self.sheetbook_product = Product.objects.create(
             title="교무수첩",
             description="표 작업",
@@ -147,6 +161,7 @@ class SheetbookDiscoveryVisibilityTests(TestCase):
         )
 
     def test_catalog_shows_active_sheetbook_and_calendar_products(self):
+        self.client.force_login(self.user)
         response = self.client.get(reverse('product_list'))
 
         product_titles = [product.title for product in response.context['products']]
@@ -161,6 +176,7 @@ class SheetbookDiscoveryVisibilityTests(TestCase):
         self.assertEqual(response.context['catalog_hub']['title'], '메인 캘린더는 홈에서 시작합니다')
 
     def test_catalog_hides_sheetbook_and_calendar_when_inactive(self):
+        self.client.force_login(self.user)
         self.sheetbook_product.is_active = False
         self.sheetbook_product.save(update_fields=['is_active'])
         self.calendar_product.is_active = False
@@ -179,6 +195,7 @@ class SheetbookDiscoveryVisibilityTests(TestCase):
         self.assertEqual(response.context['total_count'], expected_count)
 
     def test_catalog_cards_use_start_copy_and_public_meta_contract(self):
+        self.client.force_login(self.user)
         response = self.client.get(reverse('product_list'))
         content = ''.join(response.content.decode('utf-8').split())
         visible_product = next(product for product in response.context['products'] if product.id == self.prep_product.id)
@@ -191,6 +208,7 @@ class SheetbookDiscoveryVisibilityTests(TestCase):
         self.assertTrue(visible_product.guide_url.endswith(reverse('service_guide_detail', kwargs={'pk': self.visible_manual.pk})))
 
     def test_catalog_section_filter_shows_selected_scenario_only(self):
+        self.client.force_login(self.user)
         response = self.client.get(f"{reverse('product_list')}?section=today_ops")
         section_titles = [section['title'] for section in response.context['scenario_sections']]
 
@@ -201,6 +219,7 @@ class SheetbookDiscoveryVisibilityTests(TestCase):
         self.assertNotContains(response, '수업 준비')
 
     def test_catalog_invalid_section_filter_falls_back_to_full_catalog(self):
+        self.client.force_login(self.user)
         response = self.client.get(f"{reverse('product_list')}?section=unknown")
         section_titles = [section['title'] for section in response.context['scenario_sections']]
 
@@ -208,6 +227,26 @@ class SheetbookDiscoveryVisibilityTests(TestCase):
         self.assertIsNone(response.context['selected_scenario_section'])
         self.assertIn('오늘 운영', section_titles)
         self.assertIn('수업 준비', section_titles)
+
+    def test_guest_catalog_only_shows_public_candidates(self):
+        public_product = Product.objects.create(
+            title="쌤BTI",
+            description="성향 분석",
+            price=0,
+            is_active=True,
+            service_type='counsel',
+            launch_route_name='ssambti:main',
+        )
+
+        response = self.client.get(reverse('product_list'))
+        product_titles = [product.title for product in response.context['products']]
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(public_product.title, product_titles)
+        self.assertNotIn('교무수첩', product_titles)
+        self.assertNotIn('학급 캘린더', product_titles)
+        self.assertNotIn('운영 도구', product_titles)
+        self.assertNotIn('문서 작성 도구', product_titles)
 
 
 class ProductDevicePolicyTests(TestCase):

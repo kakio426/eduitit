@@ -9,7 +9,7 @@ from insights.models import Insight
 from products.models import Product, ServiceManual
 
 from .discovery_policy import is_sensitive_discovery_target
-from .product_visibility import filter_discoverable_products
+from .product_visibility import filter_discoverable_manuals, filter_discoverable_products
 
 
 @dataclass(frozen=True)
@@ -31,12 +31,6 @@ def build_public_sitemap_entries() -> tuple[PublicSitemapEntry, ...]:
             priority=1.0,
         ),
         PublicSitemapEntry(
-            key="tools:prompt_lab",
-            location=reverse("prompt_lab"),
-            changefreq="weekly",
-            priority=0.8,
-        ),
-        PublicSitemapEntry(
             key="tools:tool_guide",
             location=reverse("tool_guide"),
             changefreq="weekly",
@@ -54,24 +48,12 @@ def build_public_sitemap_entries() -> tuple[PublicSitemapEntry, ...]:
             changefreq="daily",
             priority=0.9,
         ),
-        PublicSitemapEntry(
-            key="tools:noticegen",
-            location=reverse("noticegen:main"),
-            changefreq="weekly",
-            priority=0.8,
-        ),
-        PublicSitemapEntry(
-            key="tools:qrgen",
-            location=reverse("qrgen:landing"),
-            changefreq="weekly",
-            priority=0.8,
-        ),
     ]
 
-    published_manuals = ServiceManual.objects.filter(
+    published_manuals = filter_discoverable_manuals(ServiceManual.objects.filter(
         is_published=True,
         product__is_active=True,
-    ).select_related("product")
+    ).select_related("product"))
     for manual in published_manuals:
         if is_sensitive_discovery_target(manual):
             continue

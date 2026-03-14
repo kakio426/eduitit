@@ -122,7 +122,7 @@ class FortunePrivacyBalancedTests(TestCase):
     def test_daily_api_accepts_payload_without_name(self):
         ai_mock = AsyncMock(return_value="오늘의 운세 요약입니다.")
 
-        with patch("fortune.views._check_saju_ratelimit", new=AsyncMock(return_value=False)), patch(
+        with patch("fortune.views.check_daily_fortune_limit", new=AsyncMock(return_value=False)), patch(
             "fortune.views.calculator.get_pillars", return_value=self.chart_context
         ), patch("fortune.prompts.get_daily_fortune_prompt", return_value="PROMPT") as prompt_mock, patch(
             "fortune.views._collect_ai_response_async", new=ai_mock
@@ -150,3 +150,14 @@ class FortunePrivacyBalancedTests(TestCase):
         prompt_mock.assert_called_once()
         self.assertEqual(prompt_mock.call_args.args[0], "female")
         self.assertEqual(DailyFortuneLog.objects.filter(user=self.user).count(), 1)
+
+    def test_guest_saju_page_hides_library_save_but_keeps_chat_entry(self):
+        self.client.logout()
+
+        response = self.client.get(reverse("fortune:saju"))
+        content = response.content.decode("utf-8")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("사주 선생님에게 더 물어보기", content)
+        self.assertNotIn('id="saveResultButton"', content)
+        self.assertNotIn('id="saveSection"', content)

@@ -241,7 +241,8 @@ def product_list(request):
     )
 
     products = filter_discoverable_products(
-        Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
+        Product.objects.filter(is_active=True).order_by('display_order', '-created_at'),
+        request=request,
     )
     product_list = _attach_product_launch_meta(list(products))
     surface_products = [product for product in product_list if not _is_sheetbook_cross_surface_hidden(product)]

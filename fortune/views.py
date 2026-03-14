@@ -17,6 +17,7 @@ from core.seo import (
     build_fortune_saju_page_seo,
 )
 from .forms import SajuForm
+from .limits import check_daily_fortune_limit, request_actor_label
 from .prompts import get_prompt
 from .libs import calculator
 from .privacy import (
@@ -382,7 +383,6 @@ async def _collect_ai_response_async(prompt, request):
     return await _collect_ai_response(prompt, request)
 
 
-@login_required
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_h, method='POST', block=True, group='saju_service')
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_d, method='POST', block=True, group='saju_service')
 def saju_view(request):
@@ -405,6 +405,7 @@ def saju_view(request):
         if form.is_valid():
             data = form.cleaned_data
             mode = data['mode']
+            actor_label = request_actor_label(request)
 
             # Logic Engine: Calculate Pillars
             chart_context = get_chart_context(data)
@@ -413,14 +414,14 @@ def saju_view(request):
 
             try:
                 if cached_result:
-                    logger.info("[Fortune] Action: SAJU_ANALYZE, Cache: HIT, User: %s, Mode: %s", request.user.username, mode)
+                    logger.info("[Fortune] Action: SAJU_ANALYZE, Cache: HIT, User: %s, Mode: %s", actor_label, mode)
                     generated_text = cached_result.result_text
                 else:
                     generated_text = "".join(generate_ai_response(prompt, request))
                     generated_text = scrub_personal_fortune_text(generated_text)
                     if cache_fingerprint and generated_text:
                         store_cached_pseudonymous_result(request.user, 'full', cache_fingerprint, generated_text)
-                    logger.info("[Fortune] Action: SAJU_ANALYZE, Cache: MISS, User: %s, Mode: %s", request.user.username, mode)
+                    logger.info("[Fortune] Action: SAJU_ANALYZE, Cache: MISS, User: %s, Mode: %s", actor_label, mode)
                 
                 # Validation: If result is empty/whitespace, treat as None/Error
                 if generated_text and generated_text.strip():
@@ -486,7 +487,6 @@ def saju_view(request):
     })
 
 
-@login_required
 async def saju_streaming_api(request):
     """실시간 스트리밍 사주 분석 API (async)"""
     if request.method != 'POST':
@@ -516,7 +516,6 @@ async def saju_streaming_api(request):
     response['X-Accel-Buffering'] = 'no'
     return response
 
-@login_required
 async def saju_api_view(request):
     """사주 분석 API (async)"""
     try:
@@ -588,11 +587,10 @@ async def daily_fortune_api(request):
         if request.method != 'POST':
             return JsonResponse({'error': 'POST 요청만 허용됩니다.'}, status=405)
 
-        # Manual ratelimit check
-        if await _check_saju_ratelimit(request):
+        if await check_daily_fortune_limit(request):
             return JsonResponse({
                 'error': 'LIMIT_EXCEEDED',
-                'message': '선생님, 본 서비스는 개인 사비로 운영되어 공용 한도가 제한적입니다. [내 설정]에서 개인 Gemini API 키를 등록하시면 계속해서 이용 가능합니다!'
+                'message': '오늘 날짜별 운세 한도를 모두 사용했습니다. 내일 다시 확인해주세요.'
             }, status=429)
 
         try:
@@ -644,9 +642,7 @@ async def daily_fortune_api(request):
             }
 
         natal_context = await build_natal_context(natal_data)
-
-        if not request.user.is_authenticated:
-            return JsonResponse({'error': 'LOGIN_REQUIRED', 'message': '로그인이 필요합니다.'}, status=401)
+        actor_label = request_actor_label(request)
 
         # Prompt
         from .prompts import get_daily_fortune_prompt
@@ -656,14 +652,14 @@ async def daily_fortune_api(request):
         )(request.user, mode, target_date_str, natal_data)
 
         if cached_response:
-            logger.info("[Fortune] Action: DAILY_ANALYZE, Cache: HIT, User: %s, Date: %s", request.user.username, target_date_str)
+            logger.info("[Fortune] Action: DAILY_ANALYZE, Cache: HIT, User: %s, Date: %s", actor_label, target_date_str)
             response_text = cached_response.result_text
         else:
             response_text = await _collect_ai_response_async(prompt, request)
             response_text = scrub_personal_fortune_text(response_text)
             if cache_fingerprint and response_text:
                 await sync_to_async(store_cached_pseudonymous_result)(request.user, 'daily', cache_fingerprint, response_text)
-            logger.info("[Fortune] Action: DAILY_ANALYZE, Cache: MISS, User: %s, Date: %s", request.user.username, target_date_str)
+            logger.info("[Fortune] Action: DAILY_ANALYZE, Cache: MISS, User: %s, Date: %s", actor_label, target_date_str)
 
         # 통계용 로그 저장
         if request.user.is_authenticated:

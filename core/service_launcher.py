@@ -299,7 +299,7 @@ def get_service_launcher_group_meta(product):
     return SERVICE_LAUNCHER_GROUP_META_BY_SECTION.get(section_key, DEFAULT_SERVICE_LAUNCHER_GROUP_META)
 
 
-def build_service_launcher_items(products):
+def build_service_launcher_items(products, *, preserve_input_order=False):
     items = []
     for index, product in enumerate(products):
         href, is_external = resolve_product_launch_url(product)
@@ -332,7 +332,10 @@ def build_service_launcher_items(products):
             }
         )
 
-    items.sort(key=lambda item: (item["group_order"], item["_sort_order"], item["title"]))
+    if preserve_input_order:
+        items.sort(key=lambda item: (item["_sort_order"], item["title"]))
+    else:
+        items.sort(key=lambda item: (item["group_order"], item["_sort_order"], item["title"]))
     for item in items:
         item.pop("_sort_order", None)
     return items
