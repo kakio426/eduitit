@@ -2474,22 +2474,17 @@ def home(request):
 
 def community_feed(request):
     feed_scope = _get_post_feed_scope(request)
+    if not request.headers.get('HX-Request'):
+        home_url = reverse('home')
+        if feed_scope == POST_FEED_SCOPE_NOTICE:
+            home_url = f"{home_url}?feed_scope={POST_FEED_SCOPE_NOTICE}"
+        return redirect(f"{home_url}#home-community-section")
+
     posts = _build_post_feed_queryset(feed_scope=feed_scope)
     paginator = Paginator(posts, 10)
     page_obj = paginator.get_page(request.GET.get('page'))
 
-    if request.headers.get('HX-Request'):
-        return _render_post_list_partial(request, page_obj, feed_scope)
-
-    return render(
-        request,
-        'core/community_feed.html',
-        {
-            'posts': posts,
-            'page_obj': page_obj,
-            'feed_scope': feed_scope,
-        },
-    )
+    return _render_post_list_partial(request, page_obj, feed_scope)
 
 
 @login_required

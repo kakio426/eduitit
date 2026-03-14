@@ -17,8 +17,9 @@ from core.mini_apps import (
     HOME_SURFACE_CONTENT,
     plan_home_action_surface,
 )
+from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
 from products.models import Product
-from core.models import Post, ProductFavorite, ProductUsageLog, UserProfile
+from core.models import Post, ProductFavorite, ProductUsageLog, UserPolicyConsent, UserProfile
 
 
 def _create_onboarded_user(username, email=None, nickname=None):
@@ -671,7 +672,8 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('data-home-v2-favorites-panel="true"', content)
         self.assertIn('home-v2-content-shell', content)
         self.assertIn('home-v2-top-zone', content)
-        self.assertNotIn('<style>', content)
+        self.assertIn('data-classcalendar-day-modal="true"', content)
+        self.assertIn('.classcalendar-day-cell', content)
         self.assertNotIn('function initHomeV2Interactions()', content)
         self.assertNotIn('function buildCalendarMessageHubState()', content)
 
@@ -689,7 +691,7 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
 
         top_zone_index = content.index('data-home-v2-top-zone="true"')
-        summary_index = content.index('data-home-v2-tablet-community-summary="true"')
+        summary_index = content.index('data-home-v2-community-section="true"')
         service_index = content.index('data-home-v2-service-groups="true"')
         game_index = content.index('data-home-v2-game-section="true"')
 
@@ -830,7 +832,8 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('숨김 교무수첩', content)
+        self.assertIn('학급 기록 보드', content)
+        self.assertNotIn('숨김 교무수첩', content)
         self.assertIn(visible_product.id, [item['product'].id for item in response.context.get('quick_actions', [])])
         self.assertIn(visible_product.id, [item['product'].id for item in response.context.get('favorite_items', [])])
         section_product_ids = []
@@ -853,7 +856,7 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
 
         favorites_index = content.index('data-home-v2-favorites-panel="true"')
-        favorites_end = content.index('data-home-v2-tablet-community-summary="true"', favorites_index)
+        favorites_end = content.index('data-home-v2-community-section="true"', favorites_index)
         favorites_block = content[favorites_index:favorites_end]
 
         self.assertIn('data-home-v2-favorites-grid="true"', favorites_block)
@@ -893,7 +896,7 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
 
         favorites_index = content.index('data-home-v2-favorites-panel="true"')
-        favorites_end = content.index('data-home-v2-tablet-community-summary="true"', favorites_index)
+        favorites_end = content.index('data-home-v2-community-section="true"', favorites_index)
         favorites_block = content[favorites_index:favorites_end]
 
         self.assertIn('title="반짝반짝 우리반 알림판">알림판</p>', favorites_block)
@@ -1059,9 +1062,9 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('data-home-v2-tablet-community-summary="true"', content)
-        self.assertIn('data-home-v2-tablet-community-card="true"', content)
+        self.assertIn('data-home-v2-community-section="true"', content)
         self.assertIn('https://example.com/community.jpg', content)
+        self.assertIn('원문 보기', content)
 
     def test_v2_anonymous_does_not_render_sns_sidebar_or_mobile_preview(self):
         response = self.client.get(reverse('home'))
@@ -1074,14 +1077,26 @@ class HomeV2ViewTest(TestCase):
         self._login('breakpointuser')
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('hidden xl:block', content)
-        self.assertIn('block xl:hidden', content)
+        self.assertIn('data-home-v2-community-section="true"', content)
+        self.assertNotIn('hidden xl:block', content)
+        self.assertNotIn('block xl:hidden', content)
+        self.assertNotIn('data-home-v2-tablet-community-summary="true"', content)
         self.assertIn('data-home-v2-top-zone="true"', content)
 
     def test_v2_staff_home_restores_sns_controls(self):
         staff = _create_onboarded_user('staffsns', nickname='운영자')
         staff.is_staff = True
         staff.save(update_fields=['is_staff'])
+        UserPolicyConsent.objects.create(
+            user=staff,
+            provider='direct',
+            terms_version=TERMS_VERSION,
+            privacy_version=PRIVACY_VERSION,
+            agreed_at=timezone.now(),
+            agreement_source='required_gate',
+            ip_address='127.0.0.1',
+            user_agent='test-agent',
+        )
         self.client.login(username='staffsns', password='pass1234')
 
         response = self.client.get(reverse('home'))
@@ -1112,7 +1127,7 @@ class HomeV2ViewTest(TestCase):
 
         self.assertIn('공지 본문', content)
         self.assertNotIn('뉴스 제목', content)
-        self.assertNotIn('원문 보기 (새 탭)', content)
+        self.assertNotIn('원문 보기', content)
 
     def test_v2_authenticated_feed_renders_news_link_preview_image(self):
         author = _create_onboarded_user('newsauthor')
@@ -1133,7 +1148,8 @@ class HomeV2ViewTest(TestCase):
 
         self.assertIn('교실 뉴스', content)
         self.assertIn('https://example.com/article.jpg', content)
-        self.assertIn('원문 보기 (새 탭)', content)
+        self.assertIn('원문 보기', content)
+        self.assertNotIn('원문 보기 (새 탭)', content)
     def test_v2_anonymous_does_not_render_mobile_sns_toggle(self):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
@@ -1146,7 +1162,8 @@ class HomeV2ViewTest(TestCase):
         self._login('v2authsns')
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('@click="snsOpen = true"', content)
+        self.assertIn('data-home-v2-community-section="true"', content)
+        self.assertNotIn('@click="snsOpen = true"', content)
         self.assertNotIn('hx-select="#mobile-post-list-container"', content)
         self.assertNotIn('href="#sns-full-section-auth-v2"', content)
 
@@ -1157,8 +1174,8 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
+        self.assertIn('data-home-v2-community-section="true"', content)
         self.assertIn('data-home-sns-expand="true"', content)
-        self.assertEqual(content.count('aria-label="소통 글 상세 보기"'), 3)
         self.assertIn('compact_posts=1', content)
 
     def test_v2_home_htmx_post_feed_keeps_compact_expand_button(self):
@@ -1179,11 +1196,9 @@ class HomeV2ViewTest(TestCase):
         _create_posts(username='snscommunityauthor')
 
         response = self.client.get(reverse('community_feed'))
-        content = response.content.decode('utf-8')
 
-        self.assertEqual(response.status_code, 200)
-        self.assertNotIn('data-home-sns-expand="true"', content)
-        self.assertNotIn('compact_posts=1', content)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], f"{reverse('home')}#home-community-section")
 
 
 class HomeSupplementaryViewTest(TestCase):
@@ -1193,9 +1208,8 @@ class HomeSupplementaryViewTest(TestCase):
     def test_community_feed_uses_separate_full_screen_surface(self):
         response = self.client.get(reverse('community_feed'))
 
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, '실시간 소통')
-        self.assertContains(response, '홈에서는 요약만 보고')
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], f"{reverse('home')}#home-community-section")
 
     def test_home_search_payload_uses_is_active_and_public_names(self):
         Product.objects.create(

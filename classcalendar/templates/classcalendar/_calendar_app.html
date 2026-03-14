@@ -383,92 +383,45 @@
                 </div>
             </div>
 
-            <div class="{% if is_embedded_on_home %}grid grid-cols-1 gap-4{% else %}grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_21rem] xl:items-start{% endif %}">
-                <div class="min-w-0">
-                    <div class="grid grid-cols-7 gap-px bg-slate-200 rounded-xl overflow-hidden border border-slate-200">
-                        <template x-for="day in ['일', '월', '화', '수', '목', '금', '토']">
-                            <div class="bg-slate-100 py-2 sm:py-3 text-center text-xs sm:text-sm font-bold text-slate-600" x-text="day"></div>
-                        </template>
-                        <template x-for="date in calendarDates" :key="date.toISOString()">
-                            <button
-                                type="button"
-                                class="classcalendar-day-cell flex w-full flex-col justify-between p-2 text-left transition hover:bg-slate-50 sm:p-2.5"
-                                :class="isSelectedDate(date) ? 'bg-slate-50 ring-1 ring-inset ring-slate-300' : 'bg-white'"
-                                @click="selectDate(date)"
-                                :title="getDayTooltip(date)"
-                            >
-                                <div class="flex items-start justify-between gap-2">
-                                    <span
-                                        class="flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold sm:h-8 sm:w-8 sm:text-sm"
-                                        :class="[
-                                            isToday(date) ? 'bg-indigo-600 text-white' : '',
-                                            isSelectedDate(date) && !isToday(date) ? 'bg-slate-100 text-slate-900 ring-1 ring-slate-300' : '',
-                                            !isToday(date) && !isSelectedDate(date) && !isCurrentMonth(date) ? 'text-slate-400' : '',
-                                            !isToday(date) && !isSelectedDate(date) && isCurrentMonth(date) ? 'text-slate-700' : ''
-                                        ]"
-                                        x-text="date.getDate()"
-                                    ></span>
-                                    <span
-                                        x-show="getDayItemCount(date) > 0"
-                                        class="inline-flex min-w-[1.7rem] items-center justify-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600"
-                                        x-text="formatDayItemCount(date)"
-                                    ></span>
-                                </div>
-                                <div class="mt-3 flex items-center gap-1.5" x-show="getDayItemCount(date) > 0">
-                                    <span class="h-2 w-2 rounded-full" :class="getDayMarkerDotClass(date)"></span>
-                                    <span x-show="getDayItemCount(date) > 1" class="h-2 w-2 rounded-full bg-slate-300"></span>
-                                    <span x-show="getDayItemCount(date) > 2" class="h-2 w-2 rounded-full bg-slate-200"></span>
-                                </div>
-                            </button>
-                        </template>
-                    </div>
+            <div class="min-w-0">
+                <div class="grid grid-cols-7 gap-px bg-slate-200 rounded-xl overflow-hidden border border-slate-200">
+                    <template x-for="day in ['일', '월', '화', '수', '목', '금', '토']">
+                        <div class="bg-slate-100 py-2 sm:py-3 text-center text-xs sm:text-sm font-bold text-slate-600" x-text="day"></div>
+                    </template>
+                    <template x-for="date in calendarDates" :key="date.toISOString()">
+                        <button
+                            type="button"
+                            class="classcalendar-day-cell flex w-full flex-col justify-between p-2 text-left transition hover:bg-slate-50 sm:p-2.5"
+                            :class="isSelectedDate(date) ? 'bg-slate-50 ring-1 ring-inset ring-slate-300' : 'bg-white'"
+                            @click="openDayOverview(date, $event)"
+                            :title="getDayTooltip(date)"
+                        >
+                            <div class="flex items-start justify-between gap-2">
+                                <span
+                                    class="flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold sm:h-8 sm:w-8 sm:text-sm"
+                                    :class="[
+                                        isToday(date) ? 'bg-indigo-600 text-white' : '',
+                                        isSelectedDate(date) && !isToday(date) ? 'bg-slate-100 text-slate-900 ring-1 ring-slate-300' : '',
+                                        !isToday(date) && !isSelectedDate(date) && !isCurrentMonth(date) ? 'text-slate-400' : '',
+                                        !isToday(date) && !isSelectedDate(date) && isCurrentMonth(date) ? 'text-slate-700' : ''
+                                    ]"
+                                    x-text="date.getDate()"
+                                ></span>
+                                <span
+                                    x-show="getDayItemCount(date) > 0"
+                                    class="inline-flex min-w-[1.7rem] items-center justify-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600"
+                                    x-text="formatDayItemCount(date)"
+                                ></span>
+                            </div>
+                            <div class="mt-3 flex items-center gap-1.5" x-show="getDayItemCount(date) > 0">
+                                <span class="h-2 w-2 rounded-full" :class="getDayMarkerDotClass(date)"></span>
+                                <span x-show="getDayItemCount(date) > 1" class="h-2 w-2 rounded-full bg-slate-300"></span>
+                                <span x-show="getDayItemCount(date) > 2" class="h-2 w-2 rounded-full bg-slate-200"></span>
+                            </div>
+                        </button>
+                    </template>
                 </div>
-
-                <aside class="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5 {% if not is_embedded_on_home %}xl:sticky xl:top-28{% endif %}">
-                    <div>
-                        <div>
-                            <h3 class="text-lg sm:text-xl font-extrabold text-slate-900" x-text="selectedDateKey ? formatAgendaDate(selectedDateKey) : ''"></h3>
-                            <p class="mt-2 text-sm text-slate-500" x-text="selectedDateSummaryText()"></p>
-                        </div>
-                    </div>
-
-                    <div class="mt-4 space-y-2.5" x-show="getSelectedDateHubItems().length > 0">
-                        <template x-for="item in getSelectedDateHubItems()" :key="item.key">
-                                <button
-                                    type="button"
-                                    @click="openSelectedDateHubItem(item, $event)"
-                                    class="w-full rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-slate-300 hover:shadow-sm"
-                                >
-                                    <div class="flex items-start justify-between gap-3">
-                                        <div class="min-w-0 flex-1">
-                                            <div class="flex flex-wrap items-center gap-2">
-                                                <span class="classcalendar-chip inline-flex items-center rounded-full bg-slate-100 px-2 py-1 font-bold text-slate-700" x-text="item.serviceLabel"></span>
-                                                <span
-                                                    x-show="item.status_label"
-                                                    class="classcalendar-chip inline-flex items-center rounded-full px-2 py-1 font-bold"
-                                                    :class="getHubStatusBadgeClass(item.tone)"
-                                                    x-text="item.status_label"
-                                                ></span>
-                                            </div>
-                                            <p class="classcalendar-copy classcalendar-clamp-2 mt-2 text-base font-bold text-slate-900" x-text="item.title"></p>
-                                            <p
-                                                x-show="item.meta_text"
-                                                class="classcalendar-copy classcalendar-clamp-2 mt-1 text-sm font-medium text-slate-500"
-                                                x-text="item.meta_text"
-                                            ></p>
-                                        </div>
-                                        <span class="mt-1 hidden shrink-0 text-xs font-bold text-slate-400 sm:inline">열기</span>
-                                    </div>
-                                </button>
-                        </template>
-                    </div>
-                    <div
-                        class="mt-4 rounded-xl border border-dashed border-slate-300 bg-white/80 p-6 text-center"
-                        x-show="getSelectedDateHubItems().length === 0"
-                    >
-                        <p class="text-sm font-semibold text-slate-600">연결된 일정이 없습니다.</p>
-                    </div>
-                </aside>
+                <p class="mt-3 text-sm font-medium text-slate-500">날짜를 누르면 그날 일정과 할 일을 한 화면에서 바로 확인할 수 있습니다.</p>
             </div>
             {% endif %}
         </div>
@@ -665,6 +618,311 @@
             </div>
         </div>
     </div>
+
+    <div
+        x-show="dayModalOpen"
+        x-cloak
+        data-classcalendar-day-modal="true"
+        class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/55 px-3 py-4 sm:px-4"
+        @click.self="closeDayModal()"
+        @keydown.escape.window="if (dayModalOpen) closeDayModal()"
+    >
+        <div class="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl">
+            <div class="border-b border-slate-200 bg-slate-50 px-5 py-4 sm:px-6">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="text-[11px] font-black uppercase tracking-[0.18em] text-indigo-500" x-text="dayModalEyebrow()"></p>
+                        <h3 class="classcalendar-copy mt-1 text-2xl font-black text-slate-900" x-text="dayModalTitle()"></h3>
+                        <p class="mt-1 text-sm font-medium text-slate-500" x-text="dayModalSubtitle()"></p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button
+                            type="button"
+                            x-show="dayModalMode !== 'overview'"
+                            @click="goBackWithinDayModal()"
+                            class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                            aria-label="이전 화면으로"
+                        >
+                            <i class="fa-solid fa-arrow-left"></i>
+                        </button>
+                        <button
+                            type="button"
+                            @click="closeDayModal()"
+                            class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                            aria-label="닫기"
+                        >
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-4 flex flex-wrap items-center gap-2">
+                    <span class="inline-flex items-center rounded-full bg-indigo-100 px-3 py-1.5 text-xs font-bold text-indigo-700">일정 <span class="ml-1.5" x-text="getSelectedDateEventCount()"></span></span>
+                    <span class="inline-flex items-center rounded-full bg-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700">할 일 <span class="ml-1.5" x-text="getSelectedDateTaskCount()"></span></span>
+                    <button
+                        type="button"
+                        @click="openCreateModalForSelectedDate($event)"
+                        class="inline-flex items-center rounded-full bg-slate-900 px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-slate-700"
+                    >
+                        <i class="fa-solid fa-plus mr-1.5 text-[11px]"></i>
+                        새 일정
+                    </button>
+                </div>
+            </div>
+
+            <div class="overflow-y-auto px-5 py-5 sm:px-6">
+                <div x-show="dayModalMode === 'overview'" class="space-y-6">
+                    <div x-show="getSelectedDateEventCount() === 0 && getSelectedDateTaskCount() === 0" class="rounded-[1.6rem] border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center">
+                        <p class="text-base font-black text-slate-900">일정과 할 일이 없습니다.</p>
+                        <p class="mt-2 text-sm text-slate-500">이 날짜에 필요한 일은 새 일정으로 바로 남길 수 있어요.</p>
+                        <button type="button" @click="openCreateModalForSelectedDate($event)" class="mt-4 inline-flex items-center rounded-2xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-indigo-700">새 일정 추가</button>
+                    </div>
+
+                    <div class="grid gap-6 lg:grid-cols-2">
+                        <section class="space-y-3">
+                            <div class="flex items-center justify-between gap-2">
+                                <div>
+                                    <h4 class="text-base font-black text-slate-900">일정</h4>
+                                    <p class="text-sm text-slate-500">열면 바로 수정과 삭제까지 이어집니다.</p>
+                                </div>
+                                <span class="text-xs font-bold text-slate-400" x-text="`${getSelectedDateEventCount()}건`"></span>
+                            </div>
+                            <div class="space-y-3">
+                                <template x-for="event in getEventsForSelectedDate()" :key="`day-event-${event.id}`">
+                                    <button type="button" @click="openEventDetail(event, $event)" class="block w-full rounded-[1.4rem] border border-slate-200 bg-white px-4 py-4 text-left shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50/30">
+                                        <div class="flex items-start justify-between gap-3">
+                                            <div class="min-w-0">
+                                                <div class="flex flex-wrap items-center gap-2">
+                                                    <p class="classcalendar-copy text-base font-black text-slate-900" x-text="event.title"></p>
+                                                    <span x-show="event.is_locked" class="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-700">자동 연동</span>
+                                                    <span x-show="event.is_shared_calendar" class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600">공유</span>
+                                                </div>
+                                                <p class="mt-1 text-sm font-semibold text-slate-500" x-text="formatEventRange(event)"></p>
+                                            </div>
+                                            <span class="shrink-0 text-xs font-bold text-indigo-600">열기</span>
+                                        </div>
+                                    </button>
+                                </template>
+                                <div x-show="getSelectedDateEventCount() === 0" class="rounded-[1.3rem] border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold text-slate-500">등록된 일정이 없습니다.</div>
+                            </div>
+                        </section>
+
+                        <section class="space-y-3">
+                            <div class="flex items-center justify-between gap-2">
+                                <div>
+                                    <h4 class="text-base font-black text-slate-900">할 일</h4>
+                                    <p class="text-sm text-slate-500">이번 범위에서는 조회만 지원합니다.</p>
+                                </div>
+                                <span class="text-xs font-bold text-slate-400" x-text="`${getSelectedDateTaskCount()}건`"></span>
+                            </div>
+                            <div class="space-y-3">
+                                <template x-for="task in getTasksForSelectedDate()" :key="`day-task-${task.id}`">
+                                    <button type="button" @click="openTaskDetail(task, $event)" class="block w-full rounded-[1.4rem] border border-slate-200 bg-white px-4 py-4 text-left shadow-sm transition hover:border-slate-300 hover:bg-slate-50">
+                                        <div class="flex items-start justify-between gap-3">
+                                            <div class="min-w-0">
+                                                <div class="flex flex-wrap items-center gap-2">
+                                                    <p class="classcalendar-copy text-base font-black text-slate-900" x-text="task.title"></p>
+                                                    <span class="rounded-full border px-2 py-0.5 text-[11px] font-bold" :class="getTaskPriorityBadgeClass(task)" x-text="task.priority === 'high' ? '중요' : (task.priority === 'low' ? '낮음' : '보통')"></span>
+                                                </div>
+                                                <p class="mt-1 text-sm font-semibold text-slate-500" x-text="formatTaskDue(task)"></p>
+                                            </div>
+                                            <span class="shrink-0 text-xs font-bold text-slate-600">열기</span>
+                                        </div>
+                                    </button>
+                                </template>
+                                <div x-show="getSelectedDateTaskCount() === 0" class="rounded-[1.3rem] border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold text-slate-500">등록된 할 일이 없습니다.</div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+
+                <div x-show="dayModalMode === 'create'" class="space-y-4">
+                    <form @submit.prevent="submitCreateEvent" class="space-y-4">
+                        <div>
+                            <label class="mb-1.5 block text-sm font-bold text-slate-700">제목</label>
+                            <input x-model="createForm.title" type="text" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" required maxlength="200">
+                        </div>
+                        <div x-show="calendarOwnerOptions.length > 1">
+                            <label class="mb-1.5 block text-sm font-bold text-slate-700">저장 달력</label>
+                            <select x-model="createForm.calendar_owner_id" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                                <template x-for="option in calendarOwnerOptions" :key="`owner-option-${option.id}`">
+                                    <option :value="option.id" x-text="option.label"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <div>
+                                <label class="mb-1.5 block text-sm font-bold text-slate-700">시작일</label>
+                                <input x-model="createForm.start_date" type="date" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" required>
+                            </div>
+                            <div>
+                                <label class="mb-1.5 block text-sm font-bold text-slate-700">종료일</label>
+                                <input x-model="createForm.end_date" type="date" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" required>
+                            </div>
+                        </div>
+                        <div class="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-sm font-bold text-slate-700">시간 설정</span>
+                                <button type="button" @click="createForm.has_time = !createForm.has_time" class="inline-flex items-center rounded-full px-3 py-1.5 text-xs font-bold transition" :class="createForm.has_time ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'">
+                                    <span x-text="createForm.has_time ? '설정됨' : '시간 없음'"></span>
+                                </button>
+                            </div>
+                            <div x-show="createForm.has_time" x-transition class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <div>
+                                    <label class="mb-1.5 block text-sm font-bold text-slate-700">시작 시간</label>
+                                    <input x-model="createForm.start_clock" type="time" :required="createForm.has_time" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                                </div>
+                                <div>
+                                    <label class="mb-1.5 block text-sm font-bold text-slate-700">종료 시간</label>
+                                    <input x-model="createForm.end_clock" type="time" :required="createForm.has_time" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="mb-1.5 block text-sm font-bold text-slate-700">색상</label>
+                            <select x-model="createForm.color" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                                <option value="indigo">인디고</option>
+                                <option value="rose">로즈</option>
+                                <option value="amber">앰버</option>
+                                <option value="emerald">에메랄드</option>
+                                <option value="sky">스카이</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="mb-1.5 block text-sm font-bold text-slate-700">메모</label>
+                            <textarea x-model="createForm.note" rows="4" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" placeholder="준비물이나 확인할 내용을 적어두세요."></textarea>
+                        </div>
+                        <div class="flex flex-wrap justify-end gap-2 pt-2">
+                            <button type="button" @click="showDayOverview()" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">목록으로</button>
+                            <button type="submit" :disabled="isSubmitting" class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">저장</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div x-show="dayModalMode === 'detail' && selectedEvent" class="space-y-4">
+                    <p class="text-sm font-medium text-slate-600" x-text="selectedEvent ? formatEventRange(selectedEvent) : ''"></p>
+                    <p x-show="selectedEvent && selectedEvent.note" class="classcalendar-copy rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 whitespace-pre-line" x-text="selectedEvent ? selectedEvent.note : ''"></p>
+                    <div x-show="selectedEvent && selectedEvent.attachments && selectedEvent.attachments.length > 0" class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+                        <p class="mb-2 text-xs font-bold text-slate-700">첨부파일</p>
+                        <div class="space-y-2">
+                            <template x-for="attachment in (selectedEvent ? selectedEvent.attachments : [])" :key="`event-attachment-${attachment.id}`">
+                                <a :href="attachment.url || '#'" target="_blank" rel="noopener noreferrer" class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition hover:border-indigo-300 hover:bg-indigo-50/40">
+                                    <div class="min-w-0">
+                                        <p class="classcalendar-copy classcalendar-clamp-2 font-semibold text-slate-800" x-text="attachment.original_name"></p>
+                                        <p class="text-xs text-slate-500" x-text="formatBytes(attachment.size_bytes || 0)"></p>
+                                    </div>
+                                    <span class="shrink-0 text-xs font-bold text-indigo-700">열기</span>
+                                </a>
+                            </template>
+                        </div>
+                    </div>
+                    <div x-show="selectedEvent && selectedEvent.source_sheetbook_title" class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+                        <p class="text-xs font-bold text-slate-700">연결된 수첩</p>
+                        <p class="mt-1 text-sm text-slate-700">
+                            <span x-text="selectedEvent ? selectedEvent.source_sheetbook_title : ''"></span>
+                            <span class="mx-1 text-slate-400">/</span>
+                            <span x-text="selectedEvent ? selectedEvent.source_tab_name : ''"></span>
+                        </p>
+                    </div>
+                    <p x-show="getReadonlyEventHint()" class="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm font-semibold text-amber-900" x-text="getReadonlyEventHint()"></p>
+                    <div class="flex flex-wrap gap-2">
+                        <a x-show="selectedEvent && selectedEvent.source_url" :href="selectedEvent ? selectedEvent.source_url : '#'" :target="embeddedSheetbookContext ? '_top' : '_blank'" :rel="embeddedSheetbookContext ? null : 'noopener noreferrer'" class="inline-flex items-center rounded-xl border border-indigo-200 bg-indigo-50 px-3.5 py-2 text-sm font-bold text-indigo-800 transition hover:bg-indigo-100">
+                            <i class="fa-solid fa-arrow-up-right-from-square mr-1.5"></i>
+                            <span x-text="selectedEvent && selectedEvent.source_label ? selectedEvent.source_label : '원본 서비스로 이동'"></span>
+                            <span x-show="!embeddedSheetbookContext" class="ml-1">(새 탭)</span>
+                        </a>
+                        <a x-show="selectedEvent && selectedEvent.message_capture_url" :href="selectedEvent ? selectedEvent.message_capture_url : '#'" class="inline-flex items-center rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2 text-sm font-bold text-amber-800 transition hover:bg-amber-100">연결된 메시지 보기</a>
+                    </div>
+                    <div class="flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-4">
+                        <button type="button" x-show="surfaceAllowsManage && selectedEvent && !selectedEvent.is_locked && selectedEvent.can_edit" @click="openEditModal()" class="rounded-xl border border-slate-300 px-3.5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">수정</button>
+                        <button type="button" x-show="surfaceAllowsManage && selectedEvent && !selectedEvent.is_locked && selectedEvent.can_edit" @click="openDeleteConfirm()" class="rounded-xl border border-red-200 px-3.5 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50">삭제</button>
+                        <button type="button" @click="showDayOverview()" class="rounded-xl bg-indigo-600 px-3.5 py-2 text-sm font-bold text-white">목록으로</button>
+                    </div>
+                </div>
+
+                <div x-show="dayModalMode === 'task-detail' && selectedTask" class="space-y-4">
+                    <p class="text-sm font-medium text-slate-600" x-text="selectedTask ? formatTaskDue(selectedTask) : ''"></p>
+                    <div x-show="selectedTask" class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="text-xs font-bold border rounded-md px-1.5 py-0.5" :class="getTaskPriorityBadgeClass(selectedTask)" x-text="selectedTask && selectedTask.priority === 'high' ? '중요' : (selectedTask && selectedTask.priority === 'low' ? '낮음' : '보통')"></span>
+                            <span class="text-xs font-bold border rounded-md bg-slate-100 px-1.5 py-0.5 text-slate-700 border-slate-200" x-text="getTaskStatusText(selectedTask)"></span>
+                        </div>
+                    </div>
+                    <p x-show="selectedTask && selectedTask.note" class="classcalendar-copy rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 whitespace-pre-line" x-text="selectedTask ? selectedTask.note : ''"></p>
+                    <a x-show="selectedTask && selectedTask.message_capture_url" :href="selectedTask ? selectedTask.message_capture_url : '#'" class="inline-flex items-center rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2 text-sm font-bold text-amber-800 transition hover:bg-amber-100">연결된 메시지 보기</a>
+                    <div class="flex justify-end border-t border-slate-100 pt-4">
+                        <button type="button" @click="showDayOverview()" class="rounded-xl bg-slate-900 px-3.5 py-2 text-sm font-bold text-white">목록으로</button>
+                    </div>
+                </div>
+
+                <div x-show="dayModalMode === 'edit' && selectedEvent" class="space-y-4">
+                    <form @submit.prevent="submitEditEvent" class="space-y-4">
+                        <div>
+                            <label class="mb-1.5 block text-sm font-bold text-slate-700">제목</label>
+                            <input x-model="editForm.title" type="text" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" required maxlength="200">
+                        </div>
+                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <div>
+                                <label class="mb-1.5 block text-sm font-bold text-slate-700">시작일</label>
+                                <input x-model="editForm.start_date" type="date" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" required>
+                            </div>
+                            <div>
+                                <label class="mb-1.5 block text-sm font-bold text-slate-700">종료일</label>
+                                <input x-model="editForm.end_date" type="date" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" required>
+                            </div>
+                        </div>
+                        <div class="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-sm font-bold text-slate-700">시간 설정</span>
+                                <button type="button" @click="editForm.has_time = !editForm.has_time" class="inline-flex items-center rounded-full px-3 py-1.5 text-xs font-bold transition" :class="editForm.has_time ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'">
+                                    <span x-text="editForm.has_time ? '설정됨' : '시간 없음'"></span>
+                                </button>
+                            </div>
+                            <div x-show="editForm.has_time" x-transition class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <div>
+                                    <label class="mb-1.5 block text-sm font-bold text-slate-700">시작 시간</label>
+                                    <input x-model="editForm.start_clock" type="time" :required="editForm.has_time" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                                </div>
+                                <div>
+                                    <label class="mb-1.5 block text-sm font-bold text-slate-700">종료 시간</label>
+                                    <input x-model="editForm.end_clock" type="time" :required="editForm.has_time" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="mb-1.5 block text-sm font-bold text-slate-700">색상</label>
+                            <select x-model="editForm.color" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                                <option value="indigo">인디고</option>
+                                <option value="rose">로즈</option>
+                                <option value="amber">앰버</option>
+                                <option value="emerald">에메랄드</option>
+                                <option value="sky">스카이</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="mb-1.5 block text-sm font-bold text-slate-700">메모</label>
+                            <textarea x-model="editForm.note" rows="4" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" placeholder="준비물이나 확인할 내용을 적어두세요."></textarea>
+                        </div>
+                        <div class="flex flex-wrap justify-end gap-2 pt-2">
+                            <button type="button" @click="dayModalMode = 'detail'; syncPageState();" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">취소</button>
+                            <button type="submit" :disabled="isEditing" class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">저장</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div x-show="dayModalMode === 'confirm-delete' && selectedEvent" class="space-y-4">
+                    <div class="rounded-[1.5rem] border border-red-200 bg-red-50 px-5 py-5">
+                        <p class="text-sm font-black text-red-700">정말 이 일정을 삭제할까요?</p>
+                        <p class="classcalendar-copy mt-2 text-lg font-black text-slate-900" x-text="selectedEvent ? selectedEvent.title : ''"></p>
+                        <p class="mt-2 text-sm text-slate-600">삭제하면 같은 날짜 목록에서 바로 사라지고 되돌릴 수 없습니다.</p>
+                    </div>
+                    <div class="flex flex-wrap justify-end gap-2">
+                        <button type="button" @click="closeDeleteConfirm()" class="rounded-xl border border-slate-300 px-3.5 py-2 text-sm font-semibold text-slate-700">취소</button>
+                        <button type="button" @click="deleteSelectedEvent()" :disabled="isDeleting" class="rounded-xl bg-red-600 px-3.5 py-2 text-sm font-bold text-white disabled:opacity-60">삭제</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </section>
 
 <div id="calendar-toast-root" class="pointer-events-none fixed bottom-4 right-4 z-[80] flex max-w-sm flex-col gap-2"></div>
@@ -753,6 +1011,9 @@ function calendarApp() {
         dayMarkers: {},
         selectedEvent: null,
         selectedTask: null,
+        dayModalOpen: false,
+        dayModalMode: 'overview',
+        dayModalReturnFocusElement: null,
         createModalOpen: false,
         editModalOpen: false,
         detailModalOpen: false,
@@ -1193,9 +1454,9 @@ function calendarApp() {
             }
             const nextUrl = this.buildPageStateUrl({
                 date: this.selectedDateKey,
-                action: this.createModalOpen ? 'create' : '',
-                open_event: this.detailModalOpen && this.selectedEvent ? String(this.selectedEvent.id || '') : '',
-                open_task: this.detailModalOpen && this.selectedTask ? String(this.selectedTask.id || '') : '',
+                action: this.dayModalOpen && this.dayModalMode === 'create' ? 'create' : '',
+                open_event: this.dayModalOpen && this.selectedEvent ? String(this.selectedEvent.id || '') : '',
+                open_task: this.dayModalOpen && this.selectedTask ? String(this.selectedTask.id || '') : '',
                 ...overrides,
             });
             window.history.replaceState(window.history.state, '', nextUrl);
@@ -1892,11 +2153,132 @@ function calendarApp() {
             }
         },
 
-        openCreateModal(selectedDate = null) {
+        rememberDayModalTrigger(triggerEvent = null) {
+            const nextTarget = triggerEvent && triggerEvent.currentTarget ? triggerEvent.currentTarget : null;
+            if (nextTarget && typeof nextTarget.focus === 'function') {
+                this.dayModalReturnFocusElement = nextTarget;
+            }
+        },
+
+        setSelectedDateContext(date) {
+            const selected = date ? new Date(date) : new Date();
+            this.selectedDateKey = this.dateKey(selected);
+            this.currentDate = new Date(selected.getFullYear(), selected.getMonth(), 1);
+        },
+
+        openDayOverview(date, triggerEvent = null) {
+            this.rememberDayModalTrigger(triggerEvent);
+            this.setSelectedDateContext(date);
+            this.selectedEvent = null;
+            this.selectedTask = null;
+            this.dayModalMode = 'overview';
+            this.dayModalOpen = true;
+            this.syncPageState({
+                date: this.selectedDateKey,
+                action: '',
+                open_event: '',
+                open_task: '',
+            });
+        },
+
+        showDayOverview() {
+            if (!this.selectedDateKey) {
+                this.setSelectedDateContext(new Date());
+            }
+            this.selectedEvent = null;
+            this.selectedTask = null;
+            this.dayModalMode = 'overview';
+            this.dayModalOpen = true;
+            this.syncPageState({
+                date: this.selectedDateKey,
+                action: '',
+                open_event: '',
+                open_task: '',
+            });
+        },
+
+        closeDayModal({ restoreFocus = true } = {}) {
+            const focusTarget = restoreFocus ? this.dayModalReturnFocusElement : null;
+            this.dayModalOpen = false;
+            this.dayModalMode = 'overview';
+            this.selectedEvent = null;
+            this.selectedTask = null;
+            this.createModalOpen = false;
+            this.editModalOpen = false;
+            this.detailModalOpen = false;
+            this.deleteConfirmOpen = false;
+            this.syncPageState({
+                action: '',
+                open_event: '',
+                open_task: '',
+            });
+            if (focusTarget && typeof focusTarget.focus === 'function') {
+                this.$nextTick(() => focusTarget.focus());
+            }
+            if (restoreFocus) {
+                this.dayModalReturnFocusElement = null;
+            }
+        },
+
+        goBackWithinDayModal() {
+            if (this.dayModalMode === 'edit' || this.dayModalMode === 'confirm-delete') {
+                this.dayModalMode = 'detail';
+                this.syncPageState();
+                return;
+            }
+            this.showDayOverview();
+        },
+
+        getSelectedDateEventCount() {
+            return this.getEventsForSelectedDate().length;
+        },
+
+        getSelectedDateTaskCount() {
+            return this.getTasksForSelectedDate().length;
+        },
+
+        dayModalEyebrow() {
+            const map = {
+                overview: '선택한 날짜',
+                create: '새 일정',
+                detail: '일정 상세',
+                'task-detail': '할 일 상세',
+                edit: '일정 수정',
+                'confirm-delete': '삭제 확인',
+            };
+            return map[this.dayModalMode] || '일정';
+        },
+
+        dayModalTitle() {
+            if (this.dayModalMode === 'detail' && this.selectedEvent) return this.selectedEvent.title || '일정';
+            if (this.dayModalMode === 'task-detail' && this.selectedTask) return this.selectedTask.title || '할 일';
+            if (this.dayModalMode === 'edit') return '일정 수정';
+            if (this.dayModalMode === 'create') return '새 일정 만들기';
+            if (this.dayModalMode === 'confirm-delete') return '일정 삭제';
+            return this.selectedDateKey ? this.formatAgendaDate(this.selectedDateKey) : this.formatAgendaDate(this.dateKey(new Date()));
+        },
+
+        dayModalSubtitle() {
+            if (this.dayModalMode === 'detail' && this.selectedEvent) return this.formatEventRange(this.selectedEvent);
+            if (this.dayModalMode === 'task-detail' && this.selectedTask) return this.formatTaskDue(this.selectedTask);
+            if (this.dayModalMode === 'edit' && this.selectedEvent) return this.selectedEvent.title || '';
+            if (this.dayModalMode === 'confirm-delete' && this.selectedEvent) return this.selectedEvent.title || '';
+            return `일정 ${this.getSelectedDateEventCount()}건 · 할 일 ${this.getSelectedDateTaskCount()}건`;
+        },
+
+        getReadonlyEventHint() {
+            if (!this.selectedEvent) return '';
+            if (!this.surfaceAllowsManage) return '이 화면에서는 일정을 읽기 전용으로 보여줍니다.';
+            if (this.selectedEvent.is_locked) return '자동 연동 일정은 원본 서비스에서 수정하거나 삭제합니다.';
+            if (!this.selectedEvent.can_edit) return '읽기 전용으로 공유된 일정이라 수정하거나 삭제할 수 없습니다.';
+            return '';
+        },
+
+        openCreateModal(selectedDate = null, triggerEvent = null) {
+            this.rememberDayModalTrigger(triggerEvent);
             const baseDate = selectedDate ? new Date(selectedDate) : new Date();
             const dateKey = this.dateKey(baseDate);
-            this.selectedDateKey = dateKey;
-            this.currentDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
+            this.setSelectedDateContext(baseDate);
             this.createContextDateText = this.formatAgendaDate(dateKey);
             this.createForm = {
                 title: '',
@@ -1909,7 +2291,11 @@ function calendarApp() {
                 end_clock: '10:00',
                 color: 'indigo',
             };
-            this.createModalOpen = true;
+            this.selectedEvent = null;
+            this.selectedTask = null;
+            this.dayModalOpen = true;
+            this.dayModalMode = 'create';
+            this.createModalOpen = false;
             this.syncPageState({
                 date: dateKey,
                 action: 'create',
@@ -1919,9 +2305,7 @@ function calendarApp() {
         },
 
         selectDate(date) {
-            const selected = new Date(date);
-            this.selectedDateKey = this.dateKey(selected);
-            this.currentDate = new Date(selected.getFullYear(), selected.getMonth(), 1);
+            this.setSelectedDateContext(date);
             this.syncPageState({
                 action: '',
                 open_event: '',
@@ -1936,14 +2320,14 @@ function calendarApp() {
         selectToday() {
             this.selectDate(new Date());
         },
-        openCreateModalForSelectedDate() {
+        openCreateModalForSelectedDate(triggerEvent = null) {
             const selectedDate = this.selectedDateKey ? this.parseDateKey(this.selectedDateKey) : new Date();
-            this.openCreateModal(selectedDate);
+            this.openCreateModal(selectedDate, triggerEvent);
         },
 
         closeCreateModal() {
             this.createModalOpen = false;
-            this.syncPageState({ action: '' });
+            this.showDayOverview();
         },
 
         async submitCreateEvent() {
@@ -1966,13 +2350,21 @@ function calendarApp() {
             body.set('color', this.createForm.color);
             if (eventTimes.is_all_day) body.set('is_all_day', 'on');
             try {
-                await this.requestJson('{% url "classcalendar:api_create_event" %}', {
+                const payload = await this.requestJson('{% url "classcalendar:api_create_event" %}', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8', 'X-CSRFToken': this.getCsrfToken() },
                     body: body.toString(),
                 });
-                this.closeCreateModal();
+                const createdEventId = payload && payload.event ? String(payload.event.id || '') : '';
                 await this.refreshEvents();
+                this.createModalOpen = false;
+                this.showDayOverview();
+                if (createdEventId) {
+                    const createdEvent = this.findEventById(createdEventId);
+                    if (createdEvent) {
+                        this.selectedEvent = { ...createdEvent };
+                    }
+                }
                 this.notifyEmbeddedHost('classcalendar:event-saved', { source: 'create-event' });
                 window.showToast('일정을 저장했습니다.', 'success');
             } catch (err) {
@@ -1988,7 +2380,9 @@ function calendarApp() {
             }
         },
 
-        async openEventDetail(event) {
+        async openEventDetail(event, triggerEvent = null) {
+            if (!event) return;
+            this.rememberDayModalTrigger(triggerEvent);
             this.selectedTask = null;
             if (event && event.is_locked) {
                 await this.refreshEvents({ forceSync: true }).catch(() => {});
@@ -1997,8 +2391,13 @@ function calendarApp() {
                     window.showToast('원본 서비스에서 삭제된 일정이라 목록에서 제거했습니다.', 'info');
                     return;
                 }
+                if (!this.selectedDateKey || !this.overlapsDate(refreshedEvent, this.parseDateKey(this.selectedDateKey))) {
+                    this.setSelectedDateContext(refreshedEvent.start_time);
+                }
                 this.selectedEvent = { ...refreshedEvent };
-                this.detailModalOpen = true;
+                this.dayModalOpen = true;
+                this.dayModalMode = 'detail';
+                this.detailModalOpen = false;
                 this.syncPageState({
                     action: '',
                     open_event: String(refreshedEvent.id || ''),
@@ -2006,8 +2405,13 @@ function calendarApp() {
                 });
                 return;
             }
+            if (!this.selectedDateKey || !this.overlapsDate(event, this.parseDateKey(this.selectedDateKey))) {
+                this.setSelectedDateContext(event.start_time);
+            }
             this.selectedEvent = { ...event };
-            this.detailModalOpen = true;
+            this.dayModalOpen = true;
+            this.dayModalMode = 'detail';
+            this.detailModalOpen = false;
             this.syncPageState({
                 action: '',
                 open_event: String(event.id || ''),
@@ -2015,11 +2419,17 @@ function calendarApp() {
             });
         },
 
-        openTaskDetail(task) {
+        openTaskDetail(task, triggerEvent = null) {
             if (!task) return;
+            this.rememberDayModalTrigger(triggerEvent);
             this.selectedEvent = null;
+            if (task.due_at) {
+                this.setSelectedDateContext(task.due_at);
+            }
             this.selectedTask = { ...task };
-            this.detailModalOpen = true;
+            this.dayModalOpen = true;
+            this.dayModalMode = 'task-detail';
+            this.detailModalOpen = false;
             this.syncPageState({
                 action: '',
                 open_event: '',
@@ -2063,13 +2473,7 @@ function calendarApp() {
 
         closeDetailModal() {
             this.detailModalOpen = false;
-            this.selectedEvent = null;
-            this.selectedTask = null;
-            this.syncPageState({
-                action: '',
-                open_event: '',
-                open_task: '',
-            });
+            this.closeDayModal();
         },
 
         openEditModal() {
@@ -2098,7 +2502,10 @@ function calendarApp() {
                 end_clock: hasTime ? this.toTimeInput(this.selectedEvent.end_time) : '10:00',
                 color: this.selectedEvent.color || 'indigo',
             };
-            this.editModalOpen = true;
+            this.dayModalOpen = true;
+            this.dayModalMode = 'edit';
+            this.editModalOpen = false;
+            this.syncPageState();
         },
 
         async submitEditEvent() {
@@ -2117,14 +2524,23 @@ function calendarApp() {
             body.set('color', this.editForm.color);
             if (eventTimes.is_all_day) body.set('is_all_day', 'on');
             try {
-                await this.requestJson(this.buildUpdateUrl(this.selectedEvent.id), {
+                const currentEventId = String(this.selectedEvent.id || '');
+                const payload = await this.requestJson(this.buildUpdateUrl(this.selectedEvent.id), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8', 'X-CSRFToken': this.getCsrfToken() },
                     body: body.toString(),
                 });
                 this.editModalOpen = false;
-                this.selectedEvent = null;
                 await this.refreshEvents();
+                const updatedEventId = payload && payload.event ? String(payload.event.id || currentEventId) : currentEventId;
+                const updatedEvent = this.findEventById(updatedEventId);
+                if (updatedEvent) {
+                    this.selectedEvent = { ...updatedEvent };
+                    this.setSelectedDateContext(updatedEvent.start_time);
+                }
+                this.dayModalOpen = true;
+                this.dayModalMode = 'detail';
+                this.syncPageState();
                 window.showToast('일정을 수정했습니다.', 'success');
             } catch (err) {
                 const isValidationError = err.payload && err.payload.code === 'validation_error';
@@ -2154,11 +2570,19 @@ function calendarApp() {
                 return;
             }
             this.detailModalOpen = false;
-            this.deleteConfirmOpen = true;
+            this.dayModalOpen = true;
+            this.dayModalMode = 'confirm-delete';
+            this.deleteConfirmOpen = false;
+            this.syncPageState();
         },
 
         closeDeleteConfirm() {
             this.deleteConfirmOpen = false;
+            if (this.selectedEvent) {
+                this.dayModalMode = 'detail';
+                this.dayModalOpen = true;
+                this.syncPageState();
+            }
         },
 
         async deleteSelectedEvent() {
@@ -2169,13 +2593,10 @@ function calendarApp() {
                     method: 'POST',
                     headers: { 'X-CSRFToken': this.getCsrfToken() },
                 });
-                this.closeDeleteConfirm();
+                this.deleteConfirmOpen = false;
                 this.selectedEvent = null;
                 await this.refreshEvents();
-                this.syncPageState({
-                    open_event: '',
-                    open_task: '',
-                });
+                this.showDayOverview();
                 window.showToast('일정을 삭제했습니다.', 'success');
             } catch (err) {
                 window.showToast(err.message || '일정 삭제에 실패했습니다.', 'error');
