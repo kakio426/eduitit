@@ -1,11 +1,12 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import F
+from django.db.models import F, Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
+from .classification import apply_auto_metadata, apply_manual_metadata, collect_popular_tags, parse_tags_input
 from .models import EduMaterial
 from .services import build_material_qr_data_url, get_service, validate_html_upload
 
@@ -47,13 +48,84 @@ def _build_preview_context():
     }
 
 
+def _apply_metadata_filter(queryset, *, query="", subject="", material_type="", grade="", tag=""):
+    if query:
+        queryset = queryset.filter(
+            Q(title__icontains=query)
+            | Q(summary__icontains=query)
+            | Q(unit_title__icontains=query)
+            | Q(search_text__icontains=query)
+        )
+    if subject:
+        queryset = queryset.filter(subject=subject)
+    if material_type:
+        queryset = queryset.filter(material_type=material_type)
+    if grade:
+        queryset = queryset.filter(grade=grade)
+    if tag:
+        queryset = queryset.filter(search_text__icontains=tag)
+    return queryset
+
+
+def _build_filter_context(request):
+    query = (request.GET.get("q") or "").strip()
+    subject = (request.GET.get("subject") or "").strip().upper()
+    material_type = (request.GET.get("material_type") or "").strip().lower()
+    grade = (request.GET.get("grade") or "").strip()
+    tag = (request.GET.get("tag") or "").strip()
+
+    accessible = EduMaterial.objects.filter(Q(teacher=request.user) | Q(is_published=True)).distinct()
+    grade_options = list(
+        accessible.exclude(grade="")
+        .values_list("grade", flat=True)
+        .order_by("grade")
+        .distinct()
+    )
+    popular_tags = collect_popular_tags(accessible)
+
+    return {
+        "query": query,
+        "current_subject": subject if subject in {choice for choice, _ in EduMaterial.SUBJECT_CHOICES} else "",
+        "current_material_type": material_type if material_type in {choice for choice, _ in EduMaterial.MaterialType.choices} else "",
+        "current_grade": grade,
+        "current_tag": tag,
+        "subject_choices": EduMaterial.SUBJECT_CHOICES,
+        "material_type_choices": EduMaterial.MaterialType.choices,
+        "grade_options": grade_options,
+        "popular_tags": popular_tags,
+    }
+
+
+def _apply_auto_metadata_with_feedback(request, material):
+    metadata = apply_auto_metadata(material, save=True)
+    if metadata is None:
+        messages.warning(request, "자료는 저장했지만 자동 분류는 잠시 실패했습니다. 직접 메타데이터를 수정할 수 있습니다.")
+    return metadata
+
+
 @login_required
 def main_view(request):
+    filter_context = _build_filter_context(request)
     my_materials = EduMaterial.objects.filter(teacher=request.user).order_by("-updated_at")
+    my_materials = _apply_metadata_filter(
+        my_materials,
+        query=filter_context["query"],
+        subject=filter_context["current_subject"],
+        material_type=filter_context["current_material_type"],
+        grade=filter_context["current_grade"],
+        tag=filter_context["current_tag"],
+    )
     shared_materials = list(
-        EduMaterial.objects.select_related("teacher")
+        _apply_metadata_filter(
+            EduMaterial.objects.select_related("teacher")
         .filter(is_published=True)
-        .order_by("-updated_at")
+        .order_by("-updated_at"),
+            query=filter_context["query"],
+            subject=filter_context["current_subject"],
+            material_type=filter_context["current_material_type"],
+            grade=filter_context["current_grade"],
+            tag=filter_context["current_tag"],
+        )
     )
     for material in shared_materials:
         material.teacher_display_name = _resolve_teacher_display_name(material.teacher)
@@ -66,6 +138,7 @@ def main_view(request):
             "my_materials": my_materials,
             "shared_materials": shared_materials,
             "input_mode_choices": EduMaterial.INPUT_MODE_CHOICES,
+            **filter_context,
         },
     )
 
@@ -107,8 +180,10 @@ def create_material(request):
         html_content=html_content,
         input_mode=input_mode,
         original_filename=original_filename,
+        material_type=EduMaterial.MaterialType.OTHER,
         is_published=True,
     )
+    _apply_auto_metadata_with_feedback(request, material)
     messages.success(request, f'"{material.title}" 자료를 저장했고 바로 공개했습니다.')
     return redirect("edu_materials:detail", pk=material.id)
 
@@ -144,6 +219,7 @@ def update_material(request, material_id):
 
     material.title = title
     material.save()
+    _apply_auto_metadata_with_feedback(request, material)
     messages.success(request, f'"{material.title}" 자료를 수정했습니다.')
     return redirect("edu_materials:detail", pk=material.id)
 
@@ -162,9 +238,40 @@ def material_detail(request, pk):
             "material_render_url": material_render_url,
             "public_url": public_url,
             "public_qr_data_url": build_material_qr_data_url(public_url) if material.is_published else "",
+            "metadata_tags_text": ", ".join(material.tags or []),
+            "subject_choices": EduMaterial.SUBJECT_CHOICES,
+            "material_type_choices": EduMaterial.MaterialType.choices,
             **_build_preview_context(),
         },
     )
+
+
+@login_required
+@require_POST
+def update_material_metadata(request, material_id):
+    material = get_object_or_404(EduMaterial, id=material_id, teacher=request.user)
+    apply_manual_metadata(
+        material,
+        subject=request.POST.get("subject"),
+        grade=request.POST.get("grade"),
+        unit_title=request.POST.get("unit_title"),
+        material_type=request.POST.get("material_type"),
+        tags=parse_tags_input(request.POST.get("tags")),
+        summary=request.POST.get("summary"),
+        save=True,
+    )
+    messages.success(request, "메타데이터를 저장했습니다.")
+    return redirect("edu_materials:detail", pk=material.id)
+
+
+@login_required
+@require_POST
+def reclassify_material(request, material_id):
+    material = get_object_or_404(EduMaterial, id=material_id, teacher=request.user)
+    metadata = _apply_auto_metadata_with_feedback(request, material)
+    if metadata is not None:
+        messages.success(request, "현재 자료 내용으로 자동 분류를 다시 계산했습니다.")
+    return redirect("edu_materials:detail", pk=material.id)
 
 
 @login_required

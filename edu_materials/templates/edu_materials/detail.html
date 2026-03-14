@@ -31,9 +31,26 @@
                 <a href="{% url 'edu_materials:main' %}" class="text-sm font-bold text-slate-500 hover:text-slate-900 transition">&larr; 교육 자료실로 돌아가기</a>
                 <h1 class="text-4xl font-black text-slate-900 mt-3">{{ material.title }}</h1>
                 <p class="text-slate-600 mt-2">최근 수정 {{ material.updated_at|date:"Y년 n월 j일 H:i" }}</p>
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">{{ material.get_subject_display }}</span>
+                    {% if material.grade %}
+                    <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">{{ material.grade }}</span>
+                    {% endif %}
+                    <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">{{ material.get_material_type_display }}</span>
+                    {% if material.metadata_source == 'manual' %}
+                    <span class="rounded-full bg-sky-100 px-3 py-1 text-xs font-bold text-sky-700">직접 수정됨</span>
+                    {% elif material.metadata_status == 'done' %}
+                    <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">자동 분류 완료</span>
+                    {% elif material.metadata_status == 'failed' %}
+                    <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">자동 분류 실패</span>
+                    {% else %}
+                    <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">분류 대기</span>
+                    {% endif %}
+                </div>
             </div>
             <div class="flex gap-3 flex-wrap">
-                <a href="#edit-form" class="rounded-2xl px-5 py-3 font-black border border-slate-200 text-slate-700 bg-white">수정하기</a>
+                <a href="#metadata-form" class="rounded-2xl px-5 py-3 font-black border border-slate-200 text-slate-700 bg-white">메타 수정</a>
+                <a href="#edit-form" class="rounded-2xl px-5 py-3 font-black border border-slate-200 text-slate-700 bg-white">HTML 수정</a>
                 <form method="post" action="{% url 'edu_materials:toggle_publish' material.id %}">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="{% if material.is_published %}unpublish{% else %}publish{% endif %}">
@@ -47,7 +64,7 @@
             </div>
         </div>
 
-        <div class="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,400px)] xl:items-start">
+        <div class="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,420px)] xl:items-start">
             <div class="min-w-0 space-y-6">
                 <div class="edu-materials-panel min-w-0 rounded-[32px] p-6 md:p-8">
                     <div class="grid gap-4 md:grid-cols-4 mb-6">
@@ -69,7 +86,43 @@
                         </div>
                     </div>
 
+                    {% if material.summary %}
+                    <div class="mb-6 rounded-[28px] border border-emerald-100 bg-emerald-50/70 p-5">
+                        <div class="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600">한줄 요약</div>
+                        <p class="mt-3 text-sm leading-7 text-slate-700">{{ material.summary }}</p>
+                        {% if material.tags %}
+                        <div class="mt-4 flex flex-wrap gap-2">
+                            {% for tag in material.tags %}
+                            <span class="rounded-full bg-white border border-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">#{{ tag }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
                     {% include 'edu_materials/includes/material_iframe.html' with material=material material_render_url=material_render_url frame_mode='preview' frame_title='교사용 미리보기' preview_viewports=preview_viewports preview_default_viewport=preview_default_viewport %}
+                </div>
+
+                <div id="edit-form" class="edu-materials-panel rounded-[32px] p-6">
+                    <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">자료 수정</div>
+                    <h2 class="text-2xl font-black text-slate-900 mt-2">제목과 HTML 바꾸기</h2>
+                    <form method="post" action="{% url 'edu_materials:update' material.id %}" enctype="multipart/form-data" class="mt-5 space-y-4">
+                        {% csrf_token %}
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">자료 제목</label>
+                            <input name="title" class="edu-materials-input" value="{{ material.title }}" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">HTML 코드</label>
+                            <textarea name="html_content" class="edu-materials-input min-h-[220px]">{{ material.html_content }}</textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">새 HTML 파일로 교체</label>
+                            <input type="file" name="html_file" accept=".html,.htm,text/html" class="edu-materials-input">
+                            <p class="text-xs text-slate-500 mt-2">파일을 올리면 위 코드를 대신 사용하고 자동 분류를 다시 계산합니다.</p>
+                        </div>
+                        <button type="submit" class="w-full rounded-2xl bg-emerald-600 py-3 text-white text-base font-black">수정 저장하기</button>
+                    </form>
                 </div>
             </div>
 
@@ -93,25 +146,73 @@
                     {% endif %}
                 </div>
 
-                <div id="edit-form" class="edu-materials-panel rounded-[32px] p-6">
-                    <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">자료 수정</div>
-                    <h2 class="text-2xl font-black text-slate-900 mt-2">제목과 HTML 바꾸기</h2>
-                    <form method="post" action="{% url 'edu_materials:update' material.id %}" enctype="multipart/form-data" class="mt-5 space-y-4">
+                <div class="edu-materials-panel rounded-[32px] p-6">
+                    <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">자동 분류 상태</div>
+                    <h2 class="text-2xl font-black text-slate-900 mt-2">현재 메타데이터</h2>
+                    <div class="mt-5 space-y-3 text-sm text-slate-600">
+                        <div class="rounded-[24px] border border-slate-200 bg-white p-4">
+                            <div class="font-bold text-slate-900">분류 상태</div>
+                            <div class="mt-1">{{ material.get_metadata_status_display }}</div>
+                        </div>
+                        <div class="rounded-[24px] border border-slate-200 bg-white p-4">
+                            <div class="font-bold text-slate-900">분류 출처</div>
+                            <div class="mt-1">{{ material.get_metadata_source_display }}</div>
+                        </div>
+                        <div class="rounded-[24px] border border-slate-200 bg-white p-4">
+                            <div class="font-bold text-slate-900">자동 분류 신뢰도</div>
+                            <div class="mt-1">
+                                {% if material.metadata_source == 'manual' %}
+                                직접 수정된 값입니다.
+                                {% else %}
+                                {{ material.metadata_confidence|floatformat:2 }}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="metadata-form" class="edu-materials-panel rounded-[32px] p-6">
+                    <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">메타데이터 수정</div>
+                    <h2 class="text-2xl font-black text-slate-900 mt-2">과목, 태그, 요약을 직접 다듬기</h2>
+                    <form method="post" action="{% url 'edu_materials:update_metadata' material.id %}" class="mt-5 space-y-4">
                         {% csrf_token %}
                         <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-2">자료 제목</label>
-                            <input name="title" class="edu-materials-input" value="{{ material.title }}" required>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">과목</label>
+                            <select name="subject" class="edu-materials-input">
+                                {% for value, label in subject_choices %}
+                                <option value="{{ value }}" {% if material.subject == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-2">HTML 코드</label>
-                            <textarea name="html_content" class="edu-materials-input min-h-[220px]">{{ material.html_content }}</textarea>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">학년/학기</label>
+                            <input name="grade" class="edu-materials-input" value="{{ material.grade }}" placeholder="예: 4학년 1학기">
                         </div>
                         <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-2">새 HTML 파일로 교체</label>
-                            <input type="file" name="html_file" accept=".html,.htm,text/html" class="edu-materials-input">
-                            <p class="text-xs text-slate-500 mt-2">파일을 올리면 위 코드를 대신 사용합니다.</p>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">단원명</label>
+                            <input name="unit_title" class="edu-materials-input" value="{{ material.unit_title }}" placeholder="예: 화산과 지진">
                         </div>
-                        <button type="submit" class="w-full rounded-2xl bg-emerald-600 py-3 text-white text-base font-black">수정 저장하기</button>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">자료 유형</label>
+                            <select name="material_type" class="edu-materials-input">
+                                {% for value, label in material_type_choices %}
+                                <option value="{{ value }}" {% if material.material_type == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">태그</label>
+                            <input name="tags" class="edu-materials-input" value="{{ metadata_tags_text }}" placeholder="쉼표로 구분해 입력">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">한줄 요약</label>
+                            <textarea name="summary" class="edu-materials-input min-h-[120px]" placeholder="나중에 다시 찾기 쉬운 요약">{{ material.summary }}</textarea>
+                        </div>
+                        <button type="submit" class="w-full rounded-2xl bg-emerald-600 py-3 text-white text-base font-black">메타데이터 저장</button>
+                    </form>
+                    <form method="post" action="{% url 'edu_materials:reclassify' material.id %}" class="mt-3">
+                        {% csrf_token %}
+                        <button type="submit" class="w-full rounded-2xl border border-slate-200 py-3 text-slate-700 text-base font-black bg-white">현재 내용으로 다시 자동 분류</button>
                     </form>
                 </div>
 

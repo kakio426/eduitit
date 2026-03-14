@@ -20,6 +20,26 @@ class EduMaterial(models.Model):
         ("OTHER", "기타"),
     ]
 
+    class MaterialType(models.TextChoices):
+        INTRO = "intro", "도입"
+        EXPLORATION = "exploration", "탐구"
+        PRACTICE = "practice", "연습"
+        QUIZ = "quiz", "퀴즈"
+        GAME = "game", "게임"
+        REFERENCE = "reference", "참고자료"
+        PRESENTATION = "presentation", "발표"
+        TOOL = "tool", "도구"
+        OTHER = "other", "기타"
+
+    class MetadataStatus(models.TextChoices):
+        PENDING = "pending", "분류 대기"
+        DONE = "done", "분류 완료"
+        FAILED = "failed", "분류 실패"
+
+    class MetadataSource(models.TextChoices):
+        AUTO = "auto", "자동 분류"
+        MANUAL = "manual", "직접 수정"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     teacher = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -44,6 +64,28 @@ class EduMaterial(models.Model):
         verbose_name="입력 방식",
     )
     original_filename = models.CharField(max_length=255, blank=True)
+    material_type = models.CharField(
+        max_length=20,
+        choices=MaterialType.choices,
+        default=MaterialType.OTHER,
+        verbose_name="자료 유형",
+    )
+    tags = models.JSONField(default=list, blank=True, verbose_name="태그")
+    summary = models.CharField(max_length=120, blank=True, default="", verbose_name="한줄 요약")
+    search_text = models.TextField(blank=True, default="", verbose_name="검색 텍스트")
+    metadata_status = models.CharField(
+        max_length=20,
+        choices=MetadataStatus.choices,
+        default=MetadataStatus.PENDING,
+        verbose_name="분류 상태",
+    )
+    metadata_source = models.CharField(
+        max_length=20,
+        choices=MetadataSource.choices,
+        default=MetadataSource.AUTO,
+        verbose_name="분류 출처",
+    )
+    metadata_confidence = models.FloatField(default=0.0, verbose_name="자동 분류 신뢰도")
     is_published = models.BooleanField(default=True, verbose_name="공개 여부")
     view_count = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)

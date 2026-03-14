@@ -29,13 +29,81 @@
         <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
                 <p class="text-sm font-bold uppercase tracking-[0.32em] text-emerald-600">Interactive Lesson Materials</p>
-                <h1 class="text-4xl md:text-5xl font-black text-slate-900 mt-2">HTML 교육 자료를 바로 열어 수업에 씁니다</h1>
-                <p class="text-slate-600 mt-4 max-w-3xl text-lg">자료 제목만 적고 HTML을 붙여넣거나 파일로 올리면, 저장 직후 학생에게 바로 열어줄 수 있습니다.</p>
+                <h1 class="text-4xl md:text-5xl font-black text-slate-900 mt-2">HTML 교육 자료를 저장하고 다시 쉽게 찾습니다</h1>
+                <p class="text-slate-600 mt-4 max-w-3xl text-lg">저장 직후 자동 태그와 요약을 붙이고, 과목·학년·자료 유형으로 다시 찾아볼 수 있게 정리합니다.</p>
             </div>
             <div class="rounded-3xl bg-white/70 border border-emerald-100 px-5 py-4 text-sm text-slate-600">
                 <div>새 자료는 저장 즉시 학생 공개 상태로 들어갑니다.</div>
-                <div>필요하면 나중에 공개를 끄거나 다시 수정할 수 있습니다.</div>
+                <div>자동 분류가 어긋나면 상세 화면에서 직접 수정할 수 있습니다.</div>
             </div>
+        </div>
+
+        <div class="edu-materials-panel rounded-[32px] p-6 md:p-8">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                    <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">검색과 필터</div>
+                    <h2 class="text-2xl font-black text-slate-900 mt-2">오늘 다시 써야 할 자료부터 찾습니다</h2>
+                    <p class="text-sm text-slate-500 mt-1">제목, 요약, 단원명, 태그로 찾고 과목·학년·자료 유형으로 좁혀보세요.</p>
+                </div>
+                <div class="rounded-full bg-emerald-50 border border-emerald-100 px-4 py-2 text-sm font-bold text-emerald-700">
+                    내 자료 {{ my_materials|length }}개 / 공개 자료 {{ shared_materials|length }}개
+                </div>
+            </div>
+
+            <form method="get" action="{% url 'edu_materials:main' %}" class="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_repeat(3,minmax(0,0.8fr))_auto]">
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">검색어</label>
+                    <input type="text" name="q" value="{{ query }}" class="edu-materials-input" placeholder="자료 제목, 단원명, 태그, 요약으로 찾기">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">과목</label>
+                    <select name="subject" class="edu-materials-input">
+                        <option value="">전체</option>
+                        {% for value, label in subject_choices %}
+                        <option value="{{ value }}" {% if current_subject == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">자료 유형</label>
+                    <select name="material_type" class="edu-materials-input">
+                        <option value="">전체</option>
+                        {% for value, label in material_type_choices %}
+                        <option value="{{ value }}" {% if current_material_type == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">학년/학기</label>
+                    <select name="grade" class="edu-materials-input">
+                        <option value="">전체</option>
+                        {% for option in grade_options %}
+                        <option value="{{ option }}" {% if current_grade == option %}selected{% endif %}>{{ option }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="flex gap-2 lg:justify-end lg:items-end">
+                    <button type="submit" class="flex-1 lg:flex-none rounded-2xl bg-emerald-600 px-5 py-4 text-white text-sm font-black shadow-lg shadow-emerald-600/15">적용</button>
+                    <a href="{% url 'edu_materials:main' %}" class="flex-1 lg:flex-none rounded-2xl border border-slate-200 px-5 py-4 text-center text-sm font-black text-slate-700 bg-white">초기화</a>
+                </div>
+            </form>
+
+            {% if popular_tags %}
+            <div class="mt-5 flex flex-wrap gap-2">
+                {% for tag in popular_tags %}
+                <a href="?{% if query %}q={{ query|urlencode }}&amp;{% endif %}{% if current_subject %}subject={{ current_subject|urlencode }}&amp;{% endif %}{% if current_material_type %}material_type={{ current_material_type|urlencode }}&amp;{% endif %}{% if current_grade %}grade={{ current_grade|urlencode }}&amp;{% endif %}tag={{ tag|urlencode }}"
+                    class="rounded-full px-3 py-1.5 text-xs font-black border {% if current_tag == tag %}bg-emerald-600 text-white border-emerald-600{% else %}bg-white text-emerald-700 border-emerald-100 hover:border-emerald-300{% endif %}">
+                    #{{ tag }}
+                </a>
+                {% endfor %}
+                {% if current_tag %}
+                <a href="?{% if query %}q={{ query|urlencode }}&amp;{% endif %}{% if current_subject %}subject={{ current_subject|urlencode }}&amp;{% endif %}{% if current_material_type %}material_type={{ current_material_type|urlencode }}&amp;{% endif %}{% if current_grade %}grade={{ current_grade|urlencode }}{% endif %}"
+                    class="rounded-full px-3 py-1.5 text-xs font-black border border-slate-200 bg-slate-100 text-slate-600">
+                    태그 해제
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
         </div>
 
         <div class="grid gap-8 lg:grid-cols-[400px_1fr]">
@@ -69,7 +137,7 @@
                     <div>
                         <label class="block text-sm font-bold text-slate-700 mb-2">또는 HTML 파일 업로드</label>
                         <input type="file" name="html_file" accept=".html,.htm,text/html" class="edu-materials-input">
-                        <p class="text-xs text-slate-500 mt-2">저장하면 바로 학생 공개 상태로 등록됩니다.</p>
+                        <p class="text-xs text-slate-500 mt-2">저장하면 자동 분류를 시도하고 바로 학생 공개 상태로 등록됩니다.</p>
                     </div>
                     <button type="submit" class="w-full rounded-2xl bg-emerald-600 py-4 text-white text-lg font-black shadow-lg shadow-emerald-600/15 hover:-translate-y-0.5 transition">자료 저장하기</button>
                 </form>
@@ -80,7 +148,7 @@
                     <div class="flex items-center justify-between">
                         <div>
                             <h2 class="text-2xl font-black text-slate-900">내가 만든 자료</h2>
-                            <p class="text-sm text-slate-500 mt-1">수정, 삭제, 공개 상태 관리는 여기서 바로 합니다.</p>
+                            <p class="text-sm text-slate-500 mt-1">자동 분류 결과와 공개 상태를 함께 관리합니다.</p>
                         </div>
                         <div class="rounded-full bg-white/70 border border-slate-200 px-4 py-2 text-sm text-slate-600">
                             총 {{ my_materials|length }}개
@@ -93,13 +161,37 @@
                         <article class="edu-materials-panel rounded-[28px] p-5 group hover:-translate-y-1 transition flex flex-col">
                             <div class="flex items-start justify-between gap-3">
                                 <div>
-                                    <div class="text-xs font-bold uppercase tracking-[0.28em] {% if material.is_published %}text-emerald-600{% else %}text-amber-600{% endif %}">
-                                        {% if material.is_published %}공개 중{% else %}비공개{% endif %}
+                                    <div class="flex flex-wrap gap-2">
+                                        <span class="text-xs font-bold uppercase tracking-[0.28em] {% if material.is_published %}text-emerald-600{% else %}text-amber-600{% endif %}">
+                                            {% if material.is_published %}공개 중{% else %}비공개{% endif %}
+                                        </span>
+                                        {% if material.metadata_status == 'failed' %}
+                                        <span class="rounded-full bg-amber-100 px-3 py-1 text-[11px] font-black text-amber-700">자동 분류 확인 필요</span>
+                                        {% elif material.metadata_source == 'manual' %}
+                                        <span class="rounded-full bg-sky-100 px-3 py-1 text-[11px] font-black text-sky-700">직접 수정됨</span>
+                                        {% endif %}
                                     </div>
                                     <a href="{% url 'edu_materials:detail' material.id %}" class="text-xl font-black text-slate-900 mt-2 group-hover:text-emerald-700 transition block">{{ material.title }}</a>
                                 </div>
                                 <span class="rounded-full bg-emerald-100 text-emerald-700 px-3 py-1 text-xs font-bold">{{ material.get_input_mode_display }}</span>
                             </div>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">{{ material.get_subject_display }}</span>
+                                {% if material.grade %}
+                                <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">{{ material.grade }}</span>
+                                {% endif %}
+                                <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">{{ material.get_material_type_display }}</span>
+                            </div>
+                            {% if material.summary %}
+                            <p class="mt-3 text-sm leading-6 text-slate-600">{{ material.summary }}</p>
+                            {% endif %}
+                            {% if material.tags %}
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                {% for tag in material.tags|slice:":4" %}
+                                <span class="rounded-full bg-white border border-slate-200 px-3 py-1 text-xs font-bold text-slate-600">#{{ tag }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
                             <p class="text-slate-500 mt-3 text-sm">최근 수정 {{ material.updated_at|date:"n월 j일 H:i" }}</p>
                             <div class="mt-4 flex items-center justify-between text-sm text-slate-500">
                                 <span>{% if material.original_filename %}파일 업로드{% else %}코드 붙여넣기{% endif %}</span>
@@ -115,7 +207,7 @@
                                     <button type="submit" class="w-full rounded-2xl bg-emerald-600 px-3 py-3 text-center text-sm font-bold text-white">공개 켜기</button>
                                 </form>
                                 {% endif %}
-                                <a href="{% url 'edu_materials:detail' material.id %}#edit-form" class="rounded-2xl border border-slate-200 px-3 py-3 text-center text-sm font-bold text-slate-700">수정</a>
+                                <a href="{% url 'edu_materials:detail' material.id %}#metadata-form" class="rounded-2xl border border-slate-200 px-3 py-3 text-center text-sm font-bold text-slate-700">메타 수정</a>
                                 <form method="post" action="{% url 'edu_materials:delete' material.id %}">
                                     {% csrf_token %}
                                     <button type="submit" class="w-full rounded-2xl border border-rose-200 px-3 py-3 text-center text-sm font-bold text-rose-600">삭제</button>
@@ -136,7 +228,7 @@
                     <div class="flex items-center justify-between">
                         <div>
                             <h2 class="text-2xl font-black text-slate-900">함께 보는 공개 자료</h2>
-                            <p class="text-sm text-slate-500 mt-1">다른 선생님 자료와 내 공개 자료가 함께 보입니다.</p>
+                            <p class="text-sm text-slate-500 mt-1">다른 선생님 자료와 내 공개 자료를 같은 필터로 다시 찾습니다.</p>
                         </div>
                         <div class="rounded-full bg-white/70 border border-slate-200 px-4 py-2 text-sm text-slate-600">
                             총 {{ shared_materials|length }}개
@@ -156,6 +248,23 @@
                                 </div>
                                 <span class="rounded-full bg-emerald-100 text-emerald-700 px-3 py-1 text-xs font-bold">{{ material.get_input_mode_display }}</span>
                             </div>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">{{ material.get_subject_display }}</span>
+                                {% if material.grade %}
+                                <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">{{ material.grade }}</span>
+                                {% endif %}
+                                <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">{{ material.get_material_type_display }}</span>
+                            </div>
+                            {% if material.summary %}
+                            <p class="mt-3 text-sm leading-6 text-slate-600">{{ material.summary }}</p>
+                            {% endif %}
+                            {% if material.tags %}
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                {% for tag in material.tags|slice:":4" %}
+                                <span class="rounded-full bg-white border border-slate-200 px-3 py-1 text-xs font-bold text-slate-600">#{{ tag }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
                             <p class="text-slate-500 mt-3 text-sm">최근 수정 {{ material.updated_at|date:"n월 j일 H:i" }}</p>
                             <div class="mt-4 flex items-center justify-between text-sm text-slate-500">
                                 <span>공개 자료</span>
@@ -172,8 +281,8 @@
                     </div>
                     {% else %}
                     <div class="edu-materials-panel rounded-[28px] p-10 text-center text-slate-500">
-                        <p class="text-lg font-bold text-slate-700">아직 공개된 교육 자료가 없습니다.</p>
-                        <p class="mt-2">첫 자료를 올리면 이 공간에도 바로 나타납니다.</p>
+                        <p class="text-lg font-bold text-slate-700">조건에 맞는 공개 자료가 없습니다.</p>
+                        <p class="mt-2">검색어나 필터를 조금 넓혀서 다시 찾아보세요.</p>
                     </div>
                     {% endif %}
                 </div>

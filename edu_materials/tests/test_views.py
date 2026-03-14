@@ -1,13 +1,17 @@
 import importlib
 import uuid
+from io import StringIO
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.management import call_command
 from django.db import connection
 from django.test import Client, TestCase
 from django.urls import reverse
 
+from edu_materials.classification import EduMaterialClassificationError, apply_auto_metadata, extract_visible_text
 from edu_materials.models import EduMaterial
 
 
@@ -26,24 +30,64 @@ class EduMaterialViewTests(TestCase):
         self.client = Client()
         self.client.force_login(self.user)
 
-    def test_create_material_from_paste(self):
+    def _mock_classification_payload(self, **overrides):
+        payload = {
+            "subject": "SCIENCE",
+            "grade": "4학년 1학기",
+            "unit_title": "화산과 지진",
+            "material_type": "practice",
+            "tags": ["화산", "실험", "시뮬레이션"],
+            "summary": "화산 원리를 실험형으로 익히는 HTML 자료",
+            "confidence": 0.88,
+        }
+        payload.update(overrides)
+        return payload
+
+    def _create_other_user(self):
+        other_user = User.objects.create_user(
+            username="another-teacher",
+            email="another@example.com",
+            password="pw123456",
+        )
+        other_user.userprofile.nickname = "옆반선생님"
+        other_user.userprofile.save(update_fields=["nickname"])
+        return other_user
+
+    @patch("edu_materials.classification._call_json_response")
+    def test_create_material_from_paste(self, mock_call_json_response):
+        mock_call_json_response.return_value = self._mock_classification_payload()
+
         response = self.client.post(
             reverse("edu_materials:create"),
             {
                 "title": "화산 시뮬레이션",
                 "input_mode": "paste",
-                "html_content": "<html><body><h1>lesson</h1></body></html>",
+                "html_content": "<html><body><h1>lesson</h1><p>화산 실험</p></body></html>",
             },
         )
+
         self.assertEqual(response.status_code, 302)
         material = EduMaterial.objects.get(title="화산 시뮬레이션")
         self.assertEqual(material.input_mode, EduMaterial.INPUT_PASTE)
         self.assertIn("lesson", material.html_content)
         self.assertTrue(material.is_published)
-        self.assertEqual(material.subject, "OTHER")
+        self.assertEqual(material.subject, "SCIENCE")
+        self.assertEqual(material.grade, "4학년 1학기")
+        self.assertEqual(material.unit_title, "화산과 지진")
+        self.assertEqual(material.material_type, EduMaterial.MaterialType.PRACTICE)
+        self.assertEqual(material.tags, ["화산", "실험", "시뮬레이션"])
+        self.assertEqual(material.summary, "화산 원리를 실험형으로 익히는 HTML 자료")
+        self.assertEqual(material.metadata_status, EduMaterial.MetadataStatus.DONE)
+        self.assertIn("시뮬레이션", material.search_text)
 
-    def test_create_material_from_html_file(self):
+    @patch("edu_materials.classification._call_json_response")
+    def test_create_material_from_html_file(self, mock_call_json_response):
+        mock_call_json_response.return_value = self._mock_classification_payload(
+            material_type="reference",
+            tags=["자료", "도표", "정리"],
+        )
         upload = SimpleUploadedFile("volcano.html", b"<html><body>volcano</body></html>", content_type="text/html")
+
         response = self.client.post(
             reverse("edu_materials:create"),
             {
@@ -52,11 +96,30 @@ class EduMaterialViewTests(TestCase):
                 "html_file": upload,
             },
         )
+
         self.assertEqual(response.status_code, 302)
         material = EduMaterial.objects.get(title="파일형 자료")
         self.assertEqual(material.input_mode, EduMaterial.INPUT_FILE)
         self.assertEqual(material.original_filename, "volcano.html")
+        self.assertEqual(material.material_type, EduMaterial.MaterialType.REFERENCE)
         self.assertIn("volcano", material.html_content)
+
+    @patch("edu_materials.classification._call_json_response", side_effect=EduMaterialClassificationError("boom"))
+    def test_create_material_keeps_saved_material_when_classification_fails(self, _mock_call_json_response):
+        response = self.client.post(
+            reverse("edu_materials:create"),
+            {
+                "title": "분류 실패 자료",
+                "input_mode": "paste",
+                "html_content": "<html><body><p>lesson</p></body></html>",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        material = EduMaterial.objects.get(title="분류 실패 자료")
+        self.assertEqual(material.metadata_status, EduMaterial.MetadataStatus.FAILED)
+        self.assertEqual(material.subject, "OTHER")
+        self.assertIn("lesson", material.search_text)
 
     def test_non_html_file_is_rejected(self):
         upload = SimpleUploadedFile("volcano.txt", b"plain text", content_type="text/plain")
@@ -83,7 +146,13 @@ class EduMaterialViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(EduMaterial.objects.count(), 0)
 
-    def test_update_material_from_paste(self):
+    @patch("edu_materials.classification._call_json_response")
+    def test_update_material_from_paste(self, mock_call_json_response):
+        mock_call_json_response.return_value = self._mock_classification_payload(
+            material_type="quiz",
+            tags=["퀴즈", "복습", "확인"],
+            summary="화산 단원 핵심 개념을 복습하는 퀴즈 자료",
+        )
         material = EduMaterial.objects.create(
             teacher=self.user,
             title="이전 제목",
@@ -94,7 +163,7 @@ class EduMaterialViewTests(TestCase):
             reverse("edu_materials:update", args=[material.id]),
             {
                 "title": "수정된 제목",
-                "html_content": "<html><body>after</body></html>",
+                "html_content": "<html><body>after quiz</body></html>",
             },
         )
 
@@ -103,6 +172,9 @@ class EduMaterialViewTests(TestCase):
         self.assertEqual(material.title, "수정된 제목")
         self.assertEqual(material.input_mode, EduMaterial.INPUT_PASTE)
         self.assertIn("after", material.html_content)
+        self.assertEqual(material.material_type, EduMaterial.MaterialType.QUIZ)
+        self.assertEqual(material.metadata_status, EduMaterial.MetadataStatus.DONE)
+        self.assertIn("복습", material.search_text)
 
     def test_delete_material(self):
         material = EduMaterial.objects.create(
@@ -117,13 +189,7 @@ class EduMaterialViewTests(TestCase):
         self.assertFalse(EduMaterial.objects.filter(id=material.id).exists())
 
     def test_main_view_separates_my_materials_and_shared_materials(self):
-        other_user = User.objects.create_user(
-            username="another-teacher",
-            email="another@example.com",
-            password="pw123456",
-        )
-        other_user.userprofile.nickname = "옆반선생님"
-        other_user.userprofile.save(update_fields=["nickname"])
+        other_user = self._create_other_user()
 
         my_private = EduMaterial.objects.create(
             teacher=self.user,
@@ -151,6 +217,109 @@ class EduMaterialViewTests(TestCase):
         shared_titles = {item.title for item in response.context["shared_materials"]}
         self.assertEqual(my_titles, {my_private.title, my_public.title})
         self.assertEqual(shared_titles, {my_public.title, other_public.title})
+
+    def test_main_view_filters_by_subject(self):
+        other_user = self._create_other_user()
+        EduMaterial.objects.create(
+            teacher=self.user,
+            title="과학 자료",
+            html_content="<html><body>science</body></html>",
+            is_published=True,
+            subject="SCIENCE",
+            material_type=EduMaterial.MaterialType.PRACTICE,
+            grade="4학년 1학기",
+            tags=["화산"],
+            summary="과학 요약",
+            search_text="과학 화산 요약",
+            metadata_status=EduMaterial.MetadataStatus.DONE,
+        )
+        EduMaterial.objects.create(
+            teacher=other_user,
+            title="사회 자료",
+            html_content="<html><body>social</body></html>",
+            is_published=True,
+            subject="SOCIAL",
+            material_type=EduMaterial.MaterialType.REFERENCE,
+            grade="4학년 1학기",
+            tags=["정책"],
+            summary="사회 요약",
+            search_text="사회 정책 요약",
+            metadata_status=EduMaterial.MetadataStatus.DONE,
+        )
+
+        response = self.client.get(reverse("edu_materials:main"), data={"subject": "SCIENCE"})
+
+        self.assertEqual(response.status_code, 200)
+        my_titles = {item.title for item in response.context["my_materials"]}
+        shared_titles = {item.title for item in response.context["shared_materials"]}
+        self.assertEqual(my_titles, {"과학 자료"})
+        self.assertEqual(shared_titles, {"과학 자료"})
+
+    def test_main_view_filters_by_query_material_type_grade_and_tag(self):
+        other_user = self._create_other_user()
+        matching = EduMaterial.objects.create(
+            teacher=other_user,
+            title="화산 실험 퀴즈",
+            html_content="<html><body>volcano</body></html>",
+            is_published=True,
+            subject="SCIENCE",
+            material_type=EduMaterial.MaterialType.QUIZ,
+            grade="4학년 1학기",
+            unit_title="화산과 지진",
+            tags=["화산", "퀴즈"],
+            summary="핵심 개념을 바로 확인하는 퀴즈",
+            search_text="화산과 지진 화산 퀴즈 핵심 개념",
+            metadata_status=EduMaterial.MetadataStatus.DONE,
+        )
+        EduMaterial.objects.create(
+            teacher=other_user,
+            title="정책 안내",
+            html_content="<html><body>policy</body></html>",
+            is_published=True,
+            subject="SOCIAL",
+            material_type=EduMaterial.MaterialType.REFERENCE,
+            grade="5학년 1학기",
+            unit_title="정책과 제도",
+            tags=["정책"],
+            summary="정책 자료",
+            search_text="정책 제도",
+            metadata_status=EduMaterial.MetadataStatus.DONE,
+        )
+
+        response = self.client.get(
+            reverse("edu_materials:main"),
+            data={
+                "q": "핵심 개념",
+                "material_type": EduMaterial.MaterialType.QUIZ,
+                "grade": "4학년 1학기",
+                "tag": "화산",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        shared_titles = {item.title for item in response.context["shared_materials"]}
+        self.assertEqual(shared_titles, {matching.title})
+
+    def test_main_view_renders_summary_and_tags(self):
+        EduMaterial.objects.create(
+            teacher=self.user,
+            title="태그 보이는 자료",
+            html_content="<html><body>tag</body></html>",
+            is_published=True,
+            subject="SCIENCE",
+            material_type=EduMaterial.MaterialType.GAME,
+            tags=["게임", "협동"],
+            summary="팀별 활동으로 개념을 익히는 게임형 자료",
+            search_text="게임 협동",
+            metadata_status=EduMaterial.MetadataStatus.DONE,
+        )
+
+        response = self.client.get(reverse("edu_materials:main"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "팀별 활동으로 개념을 익히는 게임형 자료")
+        self.assertContains(response, "#게임")
+        self.assertContains(response, "자료 유형")
 
     def test_run_view_requires_published_material(self):
         material = EduMaterial.objects.create(
@@ -180,11 +349,16 @@ class EduMaterialViewTests(TestCase):
         material.refresh_from_db()
         self.assertEqual(material.view_count, 1)
 
-    def test_detail_view_renders_preview_toggle_and_metadata(self):
+    def test_detail_view_renders_preview_toggle_and_metadata_form(self):
         material = EduMaterial.objects.create(
             teacher=self.user,
             title="미리보기 자료",
             html_content="<html><body>preview</body></html>",
+            subject="SCIENCE",
+            material_type=EduMaterial.MaterialType.PRACTICE,
+            tags=["태그1", "태그2"],
+            summary="요약 텍스트",
+            metadata_status=EduMaterial.MetadataStatus.DONE,
         )
 
         response = self.client.get(reverse("edu_materials:detail", args=[material.id]))
@@ -195,11 +369,67 @@ class EduMaterialViewTests(TestCase):
         self.assertContains(response, "data-frame-mode=\"preview\"")
         self.assertContains(response, "Desktop")
         self.assertContains(response, "Mobile")
-        self.assertContains(response, "data-preview-width=\"1280\"")
-        self.assertContains(response, "data-preview-height=\"844\"")
-        self.assertContains(response, "xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,400px)]")
-        self.assertContains(response, "min-w-0 space-y-6")
+        self.assertContains(response, "메타데이터 수정")
+        self.assertContains(response, "현재 내용으로 다시 자동 분류")
         self.assertEqual(response.context["preview_default_viewport"]["id"], "desktop")
+
+    def test_update_material_metadata_marks_manual_source(self):
+        material = EduMaterial.objects.create(
+            teacher=self.user,
+            title="수정 전",
+            html_content="<html><body>manual</body></html>",
+            metadata_status=EduMaterial.MetadataStatus.FAILED,
+        )
+
+        response = self.client.post(
+            reverse("edu_materials:update_metadata", args=[material.id]),
+            {
+                "subject": "MATH",
+                "grade": "3학년 2학기",
+                "unit_title": "분수와 소수",
+                "material_type": EduMaterial.MaterialType.PRACTICE,
+                "tags": "분수, 연습, 계산",
+                "summary": "분수 계산을 반복해보는 자료",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        material.refresh_from_db()
+        self.assertEqual(material.subject, "MATH")
+        self.assertEqual(material.metadata_source, EduMaterial.MetadataSource.MANUAL)
+        self.assertEqual(material.metadata_status, EduMaterial.MetadataStatus.DONE)
+        self.assertEqual(material.tags, ["분수", "연습", "계산"])
+        self.assertIn("분수 계산", material.search_text)
+
+    @patch("edu_materials.classification._call_json_response")
+    def test_reclassify_material_overwrites_manual_metadata(self, mock_call_json_response):
+        mock_call_json_response.return_value = self._mock_classification_payload(
+            subject="SOCIAL",
+            material_type="reference",
+            tags=["정책", "제도", "안내"],
+            summary="정책과 제도를 빠르게 확인하는 참고 자료",
+        )
+        material = EduMaterial.objects.create(
+            teacher=self.user,
+            title="재분류 전",
+            html_content="<html><body>policy text</body></html>",
+            subject="MATH",
+            material_type=EduMaterial.MaterialType.PRACTICE,
+            tags=["수동"],
+            summary="직접 수정한 요약",
+            metadata_source=EduMaterial.MetadataSource.MANUAL,
+            metadata_status=EduMaterial.MetadataStatus.DONE,
+        )
+
+        response = self.client.post(reverse("edu_materials:reclassify", args=[material.id]))
+
+        self.assertEqual(response.status_code, 302)
+        material.refresh_from_db()
+        self.assertEqual(material.subject, "SOCIAL")
+        self.assertEqual(material.material_type, EduMaterial.MaterialType.REFERENCE)
+        self.assertEqual(material.tags, ["정책", "제도", "안내"])
+        self.assertEqual(material.metadata_source, EduMaterial.MetadataSource.AUTO)
+        self.assertEqual(material.metadata_status, EduMaterial.MetadataStatus.DONE)
 
     def test_render_view_allows_teacher_preview_before_publish(self):
         material = EduMaterial.objects.create(
@@ -216,11 +446,7 @@ class EduMaterialViewTests(TestCase):
         self.assertIn("sandbox allow-downloads", response["Content-Security-Policy"])
 
     def test_render_view_requires_publish_for_public_access(self):
-        other_user = User.objects.create_user(
-            username="another-teacher",
-            email="another@example.com",
-            password="pw123456",
-        )
+        other_user = self._create_other_user()
         material = EduMaterial.objects.create(
             teacher=other_user,
             title="비공개 렌더",
@@ -232,6 +458,106 @@ class EduMaterialViewTests(TestCase):
         response = self.client.get(reverse("edu_materials:render", args=[material.id]))
 
         self.assertEqual(response.status_code, 404)
+
+
+class EduMaterialClassificationTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="classification-teacher",
+            email="classification@example.com",
+            password="pw123456",
+        )
+
+    @patch("edu_materials.classification._call_json_response")
+    def test_apply_auto_metadata_extracts_visible_text_and_updates_search_text(self, mock_call_json_response):
+        mock_call_json_response.return_value = {
+            "subject": "SCIENCE",
+            "grade": "4학년 1학기",
+            "unit_title": "화산과 지진",
+            "material_type": "practice",
+            "tags": ["화산", "시뮬레이션", "실험"],
+            "summary": "화산 실험을 단계별로 연습하는 자료",
+            "confidence": 0.7,
+        }
+        material = EduMaterial.objects.create(
+            teacher=self.user,
+            title="화산 자료",
+            html_content="<html><head><style>.x{color:red;}</style></head><body><script>alert(1)</script><h1>화산 실험</h1><p>단계별 학습</p></body></html>",
+        )
+
+        metadata = apply_auto_metadata(material, save=True)
+        material.refresh_from_db()
+
+        self.assertIsNotNone(metadata)
+        self.assertEqual(extract_visible_text(material.html_content), "화산 실험 단계별 학습")
+        self.assertEqual(material.metadata_status, EduMaterial.MetadataStatus.DONE)
+        self.assertIn("화산 실험 단계별 학습", material.search_text)
+
+    @patch("edu_materials.classification._call_json_response", side_effect=EduMaterialClassificationError("bad json"))
+    def test_apply_auto_metadata_marks_failed_when_llm_fails(self, _mock_call_json_response):
+        material = EduMaterial.objects.create(
+            teacher=self.user,
+            title="실패 자료",
+            html_content="<html><body><p>실패 테스트</p></body></html>",
+        )
+
+        metadata = apply_auto_metadata(material, save=True)
+        material.refresh_from_db()
+
+        self.assertIsNone(metadata)
+        self.assertEqual(material.metadata_status, EduMaterial.MetadataStatus.FAILED)
+        self.assertIn("실패 테스트", material.search_text)
+
+
+class EduMaterialBackfillCommandTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="command-teacher",
+            email="command@example.com",
+            password="pw123456",
+        )
+
+    @patch("edu_materials.management.commands.backfill_edu_material_metadata.apply_auto_metadata")
+    def test_backfill_only_processes_non_done_without_force(self, mock_apply_auto_metadata):
+        pending_material = EduMaterial.objects.create(
+            teacher=self.user,
+            title="대기 자료",
+            html_content="<html><body>pending</body></html>",
+            metadata_status=EduMaterial.MetadataStatus.PENDING,
+        )
+        EduMaterial.objects.create(
+            teacher=self.user,
+            title="완료 자료",
+            html_content="<html><body>done</body></html>",
+            metadata_status=EduMaterial.MetadataStatus.DONE,
+        )
+
+        out = StringIO()
+        call_command("backfill_edu_material_metadata", stdout=out)
+
+        self.assertEqual(mock_apply_auto_metadata.call_count, 1)
+        self.assertEqual(mock_apply_auto_metadata.call_args.args[0].id, pending_material.id)
+
+    @patch("edu_materials.management.commands.backfill_edu_material_metadata.apply_auto_metadata")
+    def test_backfill_force_reprocesses_done_rows(self, mock_apply_auto_metadata):
+        first = EduMaterial.objects.create(
+            teacher=self.user,
+            title="첫 자료",
+            html_content="<html><body>first</body></html>",
+            metadata_status=EduMaterial.MetadataStatus.DONE,
+        )
+        second = EduMaterial.objects.create(
+            teacher=self.user,
+            title="둘째 자료",
+            html_content="<html><body>second</body></html>",
+            metadata_status=EduMaterial.MetadataStatus.PENDING,
+        )
+
+        out = StringIO()
+        call_command("backfill_edu_material_metadata", "--force", stdout=out)
+
+        processed_ids = {call.args[0].id for call in mock_apply_auto_metadata.call_args_list}
+        self.assertEqual(processed_ids, {first.id, second.id})
 
 
 class EduMaterialMigrationHelperTests(TestCase):
