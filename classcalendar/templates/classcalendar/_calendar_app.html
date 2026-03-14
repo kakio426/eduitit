@@ -804,13 +804,17 @@ function calendarApp() {
             this.loadEmbeddedSheetbookContext();
             this.loadIntegrationSettingsFromScript();
             this.loadMessageCaptureLimitsFromScript();
-            initCalendarMessageHub(this, {
-                enabled: this.messageCaptureEnabled,
-                itemTypesEnabled: this.messageCaptureItemTypesEnabled,
-                messageLimitsScriptId: 'message-capture-limits-data',
-                messageUrlsScriptId: 'message-capture-urls-data',
-                onLayoutChange: () => this.$nextTick(() => notifyEmbeddedCalendarHeight()),
-            });
+            try {
+                initCalendarMessageHub(this, {
+                    enabled: this.messageCaptureEnabled,
+                    itemTypesEnabled: this.messageCaptureItemTypesEnabled,
+                    messageLimitsScriptId: 'message-capture-limits-data',
+                    messageUrlsScriptId: 'message-capture-urls-data',
+                    onLayoutChange: () => this.$nextTick(() => notifyEmbeddedCalendarHeight()),
+                });
+            } catch (error) {
+                console.warn('calendar message hub init failed', error);
+            }
             this.loadEventsFromScript();
             this.loadTasksFromScript();
             this.selectedDateKey = this.initialSelectedDateKey || this.dateKey(new Date());

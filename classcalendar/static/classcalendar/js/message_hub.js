@@ -172,7 +172,7 @@ function initCalendarMessageHub(host, options = {}) {
     const layoutSync = typeof options.onLayoutChange === 'function' ? options.onLayoutChange : function() {};
     const notifyHost = typeof host.notifyEmbeddedHost === 'function' ? host.notifyEmbeddedHost.bind(host) : function() {};
 
-    Object.assign(host, {
+    const hostExtensions = {
         syncMessageHubLayout: function() {
             try {
                 layoutSync();
@@ -1053,5 +1053,16 @@ function initCalendarMessageHub(host, options = {}) {
                 ? '아직 이 메모는 읽지 않았어요. 필요할 때 일정찾기를 누르면 됩니다.'
                 : '이 메모에서는 저장할 날짜를 찾지 못했어요.';
         },
+    };
+
+    Object.entries(hostExtensions).forEach(([key, value]) => {
+        if (Reflect.has(host, key)) {
+            return;
+        }
+        try {
+            host[key] = value;
+        } catch (error) {
+            console.warn(`message hub host extension skipped: ${key}`, error);
+        }
     });
 }
