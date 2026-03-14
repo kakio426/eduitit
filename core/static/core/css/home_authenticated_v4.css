@@ -1,0 +1,110 @@
+.home-v4-shell {
+    width: 100%;
+    max-width: 1420px;
+    margin: 0 auto;
+}
+
+.home-v4-top-grid {
+    display: grid;
+    gap: 1rem;
+    align-items: start;
+}
+
+.home-v4-side-stack {
+    display: grid;
+    gap: 1rem;
+    align-content: start;
+}
+
+.home-v4-card {
+    border: 1px solid #d9e2ec;
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: 2rem;
+    padding: 1.25rem;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.home-v4-favorites-grid {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.home-v4-favorite-card {
+    min-height: 74px;
+    border-radius: 1.35rem;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    padding: 0.75rem;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+}
+
+.home-v4-favorite-card:hover {
+    border-color: #fbbf24;
+    background: #ffffff;
+    transform: translateY(-1px);
+}
+
+.home-v4-sns-item {
+    display: block;
+    border-radius: 1.4rem;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    padding: 0.95rem;
+    transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+}
+
+.home-v4-sns-item:hover {
+    border-color: #c7d2fe;
+    background: #ffffff;
+    transform: translateY(-1px);
+}
+
+.home-v4-service-grid {
+    display: grid;
+    gap: 0.9rem;
+}
+
+.home-v4-recommend-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+}
+
+.home-v4-recommend-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    max-width: 100%;
+    border-radius: 999px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    padding: 0.7rem 0.95rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #334155;
+    transition: border-color 0.2s ease, color 0.2s ease, background-color 0.2s ease;
+}
+
+.home-v4-recommend-pill:hover {
+    border-color: #93c5fd;
+    color: #0f172a;
+    background: #f8fbff;
+}
+
+@media (min-width: 768px) {
+    .home-v4-card {
+        padding: 1.5rem;
+    }
+
+    .home-v4-service-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1280px) {
+    .home-v4-top-grid {
+        grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.62fr);
+    }
+}

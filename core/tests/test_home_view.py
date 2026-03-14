@@ -1389,6 +1389,87 @@ class HomePlacementPlannerTest(TestCase):
         self.assertEqual(plan_home_action_surface(entries), [])
 
 
+@override_settings(HOME_LAYOUT_VERSION='v4', HOME_V2_ENABLED=True)
+class HomeV4ViewTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.p1 = Product.objects.create(
+            title="수업 도구",
+            description="수업용",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            is_featured=True,
+            solve_text='수업을 준비해요',
+        )
+        self.p2 = Product.objects.create(
+            title="행정 도구",
+            description="행정용",
+            price=0,
+            is_active=True,
+            service_type='work',
+        )
+        self.p3 = Product.objects.create(
+            title="상담 도구",
+            description="상담용",
+            price=0,
+            is_active=True,
+            service_type='counsel',
+        )
+        self.p4 = Product.objects.create(
+            title="테스트 게임",
+            description="게임",
+            price=0,
+            is_active=True,
+            service_type='game',
+        )
+        _create_posts(count=2)
+
+    def _login(self, username='v4user', nickname=None):
+        user = _create_onboarded_user(username, nickname=nickname)
+        self.client.login(username=username, password='pass1234')
+        return user
+
+    def test_v4_authenticated_home_uses_new_template_and_compact_surfaces(self):
+        user = self._login('v4layout')
+        ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
+        ProductUsageLog.objects.create(user=user, product=self.p2, action='launch', source='home_quick')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('core/css/home_authenticated_v4.css', content)
+        self.assertIn('data-home-v4-shell="true"', content)
+        self.assertIn('data-home-v4-representative-services="true"', content)
+        self.assertIn('data-home-v4-more-toggle="true"', content)
+        self.assertIn('data-home-v4-sns-panel="true"', content)
+        self.assertNotIn('data-home-v2-favorites-panel="true"', content)
+        self.assertNotIn('선생님들과 나누고 싶은 이야기가 있나요?', content)
+        self.assertNotIn('data-home-v2-tablet-community-summary="true"', content)
+
+    def test_v4_anonymous_home_falls_back_to_public_v2(self):
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertNotIn('core/css/home_authenticated_v4.css', content)
+        self.assertNotIn('data-home-v4-shell="true"', content)
+        self.assertIn('로그인하고 시작하기', content)
+        self.assertIn('서비스 둘러보기', content)
+
+    @override_settings(HOME_LAYOUT_VERSION='v2', HOME_V2_ENABLED=True)
+    def test_setting_home_layout_version_to_v2_rolls_back_to_existing_authenticated_home(self):
+        user = self._login('rollbackuser')
+        ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('core/css/home_authenticated_v2.css', content)
+        self.assertIn('data-home-v2-top-zone="true"', content)
+        self.assertNotIn('core/css/home_authenticated_v4.css', content)
+        self.assertNotIn('data-home-v4-shell="true"', content)
+
+
 @override_settings(HOME_V2_ENABLED=True)
 class TrackUsageAPITest(TestCase):
     def setUp(self):

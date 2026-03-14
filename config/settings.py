@@ -473,7 +473,7 @@ LOGGING = {
 # 배포 환경 변수에 MAINTENANCE_MODE=True 로 설정하면 작동합니다. 기본값은 False입니다.
 MAINTENANCE_MODE = os.getenv('MAINTENANCE_MODE', 'False') == 'True'
 AUTOARTICLE_EXPORT_LAYOUT = os.getenv('AUTOARTICLE_EXPORT_LAYOUT', 'v1')
-# Home layout rollout: set HOME_LAYOUT_VERSION to v1 or v2 to lock a version.
+# Home layout rollout: set HOME_LAYOUT_VERSION to v1, v2, or v4 to lock a version.
 # If unset, legacy HOME_V2_ENABLED fallback decides between v1 and v2.
 HOME_LAYOUT_VERSION = os.environ.get('HOME_LAYOUT_VERSION', '').strip().lower()
 # UX-04 rollout rule: V2 is default-on. Set HOME_V2_ENABLED=False for immediate rollback.

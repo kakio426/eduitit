@@ -212,7 +212,7 @@ def _build_post_feed_queryset(feed_scope=POST_FEED_SCOPE_ALL):
 
 def _get_home_layout_version():
     raw_version = str(getattr(settings, 'HOME_LAYOUT_VERSION', '') or '').strip().lower()
-    if raw_version in {'v1', 'v2'}:
+    if raw_version in {'v1', 'v2', 'v4'}:
         return raw_version
     return 'v2' if getattr(settings, 'HOME_V2_ENABLED', False) else 'v1'
 
@@ -923,6 +923,114 @@ def _build_product_link_items(products, include_section_meta=False):
             item['section_subtitle'] = section_meta.get('subtitle', '')
         items.append(item)
     return items
+
+
+def _dedupe_products(products, *, exclude_ids=None, limit=None):
+    exclude_ids = set(exclude_ids or [])
+    unique_products = []
+    seen_ids = set(exclude_ids)
+    for product in products:
+        if product is None:
+            continue
+        product_id = getattr(product, 'id', None)
+        if not product_id or product_id in seen_ids:
+            continue
+        unique_products.append(product)
+        seen_ids.add(product_id)
+        if limit and len(unique_products) >= limit:
+            break
+    return unique_products
+
+
+def _rotate_items(items, seed):
+    if not items:
+        return []
+    offset = seed % len(items)
+    return items[offset:] + items[:offset]
+
+
+def _build_home_v4_representative_slots(
+    user,
+    *,
+    favorite_products,
+    recent_products,
+    quick_actions,
+    discovery_products,
+    sections,
+    aux_sections,
+    games,
+    limit=4,
+):
+    favorite_ids = {product.id for product in favorite_products}
+    fixed_products = _dedupe_products(
+        [*recent_products, *[product for product in quick_actions if product.id not in favorite_ids]],
+        exclude_ids=favorite_ids,
+        limit=2,
+    )
+
+    used_ids = favorite_ids | {product.id for product in fixed_products}
+    rotating_candidates = _dedupe_products(discovery_products, exclude_ids=used_ids)
+    rotation_seed = timezone.localdate().toordinal() + int(getattr(user, 'id', 0) or 0)
+    rotating_products = _rotate_items(rotating_candidates, rotation_seed)[:2]
+    used_ids.update(product.id for product in rotating_products)
+
+    fallback_products = []
+    for section in [*sections, *aux_sections]:
+        fallback_products.extend(section.get('products', []))
+        fallback_products.extend(section.get('overflow_products', []))
+    fallback_products.extend(games or [])
+    fallback_products = _dedupe_products(fallback_products, exclude_ids=used_ids | favorite_ids)
+
+    slots = (
+        [{'product': product, 'slot_kind': 'fixed'} for product in fixed_products]
+        + [{'product': product, 'slot_kind': 'rotating'} for product in rotating_products]
+    )
+    for product in fallback_products:
+        if len(slots) >= limit:
+            break
+        slots.append({'product': product, 'slot_kind': 'fallback'})
+    return slots[:limit]
+
+
+def _build_home_v4_recommendations(companion_items, discovery_items, *, exclude_ids=None, limit=3):
+    exclude_ids = set(exclude_ids or [])
+    recommendations = []
+    seen_ids = set(exclude_ids)
+
+    for item in companion_items:
+        product = item.get('product')
+        product_id = getattr(product, 'id', None)
+        if not product_id or product_id in seen_ids:
+            continue
+        recommendations.append({
+            'title': getattr(product, 'public_service_name', '') or getattr(product, 'title', '') or '도구',
+            'href': item.get('href', ''),
+            'is_external': item.get('is_external', False),
+            'reason_label': item.get('reason_label') or item.get('section_title') or '추천 도구',
+        })
+        seen_ids.add(product_id)
+        if len(recommendations) >= limit:
+            return recommendations
+
+    for item in discovery_items:
+        product = item.get('product')
+        product_id = getattr(product, 'id', None)
+        if not product_id or product_id in seen_ids:
+            continue
+        recommendations.append({
+            'title': item.get('favorite_title')
+            or getattr(product, 'public_service_name', '')
+            or getattr(product, 'title', '')
+            or '도구',
+            'href': item.get('href', ''),
+            'is_external': item.get('is_external', False),
+            'reason_label': item.get('section_title') or '추천 도구',
+        })
+        seen_ids.add(product_id)
+        if len(recommendations) >= limit:
+            break
+
+    return recommendations
 
 
 def _get_usage_based_quick_actions(user, product_list, limit=5):
@@ -2115,6 +2223,123 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
         **build_home_page_seo(request).as_context(),
     })
 
+
+def _home_v4(request, products, posts, page_obj, feed_scope):
+    """환경변수로 안전하게 롤아웃하는 인증 홈 V4."""
+    product_list = _attach_product_launch_meta(list(products))
+    section_product_list = [
+        product
+        for product in product_list
+        if str(getattr(product, "launch_route_name", "") or "").strip().lower() != "messagebox:main"
+    ]
+    sections, aux_sections, games = get_purpose_sections(
+        section_product_list,
+        preview_limit=2,
+    )
+    primary_display_sections, secondary_display_sections = _build_home_v2_display_groups(sections, aux_sections)
+    sns_summary_posts = _build_home_community_summary_posts(page_obj, limit=2)
+    community_summary = {
+        'title': '실시간 소통',
+        'description': '최근 소통만 조용하게 보고, 자세한 소통은 전체 화면에서 이어서 확인합니다.',
+        'posts': sns_summary_posts,
+        'full_url': reverse('community_feed'),
+    }
+
+    UserProfile.objects.get_or_create(user=request.user)
+    favorite_products = _get_user_favorite_products(request.user, product_list, limit=12)
+    recent_products = _get_recently_used_products(
+        request.user,
+        product_list,
+        exclude_ids={product.id for product in favorite_products},
+        limit=4,
+    )
+    quick_actions = _get_usage_based_quick_actions(request.user, product_list)
+
+    workflow_seed_products = []
+    seen_seed_ids = set()
+    for seed_product in [*favorite_products, *recent_products, *quick_actions]:
+        if seed_product.id in seen_seed_ids:
+            continue
+        workflow_seed_products.append(seed_product)
+        seen_seed_ids.add(seed_product.id)
+
+    companion_items = _get_home_companion_items(
+        workflow_seed_products,
+        product_list,
+        exclude_ids={product.id for product in [*favorite_products, *recent_products]},
+        limit=3,
+    )
+    discovery_products = _get_home_discovery_products(
+        request.user,
+        product_list,
+        exclude_ids={
+            product.id for product in [*favorite_products, *recent_products, *quick_actions]
+        } | {item['product'].id for item in companion_items},
+        limit=4,
+    )
+    if not discovery_products:
+        discovery_products = _get_home_discovery_products(
+            request.user,
+            product_list,
+            exclude_ids={product.id for product in [*favorite_products, *recent_products]},
+            limit=4,
+        )
+
+    favorite_items = _build_product_link_items(favorite_products, include_section_meta=True)
+    discovery_items = _build_product_link_items(discovery_products, include_section_meta=True)
+    representative_slots = _build_home_v4_representative_slots(
+        request.user,
+        favorite_products=favorite_products,
+        recent_products=recent_products,
+        quick_actions=quick_actions,
+        discovery_products=discovery_products,
+        sections=sections,
+        aux_sections=aux_sections,
+        games=games,
+    )
+    representative_recommendations = _build_home_v4_recommendations(
+        companion_items,
+        discovery_items,
+        exclude_ids=(
+            {product.id for product in favorite_products}
+            | {slot['product'].id for slot in representative_slots}
+        ),
+        limit=3,
+    )
+
+    from classcalendar.views import build_calendar_surface_context
+
+    home_calendar_surface = build_calendar_surface_context(
+        request,
+        page_variant='main',
+        embedded_surface='home',
+    )
+    home_v2_frontend_config = {
+        'toggleFavoriteUrl': reverse('toggle_product_favorite'),
+        'trackUsageUrl': reverse('track_product_usage'),
+    }
+
+    return render(request, 'core/home_authenticated_v4.html', {
+        'products': products,
+        'sections': sections,
+        'aux_sections': aux_sections,
+        'primary_display_sections': primary_display_sections,
+        'secondary_display_sections': secondary_display_sections,
+        'games': games,
+        'favorite_items': favorite_items,
+        'favorite_product_ids': [product.id for product in favorite_products],
+        'representative_slots': representative_slots,
+        'representative_recommendations': representative_recommendations,
+        'home_calendar_surface': home_calendar_surface,
+        'home_v2_frontend_config': home_v2_frontend_config,
+        'community_summary': community_summary,
+        'posts': posts,
+        'page_obj': page_obj,
+        'feed_scope': feed_scope,
+        **home_calendar_surface,
+        **build_home_page_seo(request).as_context(),
+    })
+
 def home(request):
     # Order by display_order first, then by creation date
     products = filter_discoverable_products(
@@ -2135,6 +2360,11 @@ def home(request):
         return _render_post_list_partial(request, page_obj, feed_scope)
 
     home_layout_version = _get_home_layout_version()
+
+    if home_layout_version == 'v4':
+        if request.user.is_authenticated:
+            return _home_v4(request, products, posts, page_obj, feed_scope)
+        return _home_v2(request, products, posts, page_obj, feed_scope)
 
     # V2 홈: Feature flag on 시 분기
     if home_layout_version == 'v2':
