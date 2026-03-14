@@ -1394,6 +1394,13 @@ class HomePlacementPlannerTest(TestCase):
 class HomeV4ViewTest(TestCase):
     def setUp(self):
         self.client = Client()
+        self.collect_product = Product.objects.create(
+            title="수합 링크",
+            description="서명과 수합",
+            price=0,
+            is_active=True,
+            service_type='collect_sign',
+        )
         self.p1 = Product.objects.create(
             title="수업 도구",
             description="수업용",
@@ -1441,15 +1448,28 @@ class HomeV4ViewTest(TestCase):
 
         self.assertIn('core/css/home_authenticated_v4.css', content)
         self.assertIn('data-home-v4-shell="true"', content)
+        self.assertIn('data-home-v4-nav="true"', content)
+        self.assertIn('data-home-v4-active-panel="home"', content)
+        self.assertIn('data-home-v4-home-panel="true"', content)
         self.assertIn('data-home-v4-representative-services="true"', content)
-        self.assertIn('data-home-v4-more-toggle="true"', content)
         self.assertIn('data-home-v4-sns-panel="true"', content)
+        self.assertNotIn('data-home-v4-more-toggle="true"', content)
         self.assertNotIn('data-home-v2-favorites-panel="true"', content)
         self.assertNotIn('선생님들과 나누고 싶은 이야기가 있나요?', content)
         self.assertNotIn('data-home-v2-tablet-community-summary="true"', content)
-        self.assertNotIn('최근 소통만 먼저 보고 전체 화면으로 이어집니다.', content)
-        self.assertNotIn('자주 이어지는 도구만 4칸 안에서 또렷하게 보여줍니다.', content)
-        self.assertNotIn('게임, 가이드, 보조 섹션은 필요할 때만 펼칩니다.', content)
+        self.assertNotIn('더 많은 도구 보기', content)
+
+    def test_v4_section_menu_renders_selected_panel_on_right(self):
+        self._login('v4section')
+
+        response = self.client.get(f"{reverse('home')}?panel=collect_sign")
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(response.context['home_v4_active_panel']['key'], 'collect_sign')
+        self.assertIn('data-home-v4-active-panel="collect_sign"', content)
+        self.assertIn('data-home-v4-section-panel="collect_sign"', content)
+        self.assertIn('수합 링크', content)
+        self.assertNotIn('data-home-v4-home-panel="true"', content)
 
     def test_v4_anonymous_home_falls_back_to_public_v2(self):
         response = self.client.get(reverse('home'))
