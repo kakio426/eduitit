@@ -731,6 +731,25 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('data-home-v2-favorite-card-title="true"', content)
         self.assertIn('수업을 준비해요', content)
 
+    def test_v2_authenticated_favorite_cards_strip_conflict_markers_from_messagebox_title(self):
+        user = self._login('messageboxfavorite')
+        messagebox = Product.objects.create(
+            title='<<<<<<<HEAD 업무 메시지 보관함',
+            description='보관 메시지 확인',
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='messagebox:main',
+        )
+        ProductFavorite.objects.create(user=user, product=messagebox, pin_order=1)
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('업무 메시지 보관함', content)
+        self.assertNotIn('&lt;&lt;&lt;&lt;&lt;&lt;&lt;HEAD', content)
+        self.assertNotIn('<<<<<<<HEAD', content)
+
     def test_v2_service_board_uses_balanced_two_column_shell(self):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
@@ -889,6 +908,7 @@ class HomeV2ViewTest(TestCase):
         self.assertEqual(build_favorite_service_title("왁자지껄 교실 윷놀이"), "윷놀이")
         self.assertEqual(build_favorite_service_title("글솜씨 뚝딱! 소식지"), "소식지")
         self.assertEqual(build_favorite_service_title("학교 예약 시스템"), "학교 예약")
+        self.assertEqual(build_favorite_service_title("<<<<<<<HEAD 업무 메시지 보관함"), "업무 메시지 보관함")
 
     @override_settings(SHEETBOOK_ENABLED=True, SHEETBOOK_DISCOVERY_VISIBLE=False)
     def test_v2_workspace_context_disabled_when_sheetbook_discovery_hidden(self):

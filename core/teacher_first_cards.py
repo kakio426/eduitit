@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from .service_launcher import sanitize_public_display_text
+
 
 WORKBENCH_TITLE_ALIASES = (
     ("씨앗 퀴즈", "씨앗 퀴즈"),
@@ -44,7 +46,7 @@ class WorkbenchCardMeta:
 
 
 def _clean_text(value: str | None) -> str:
-    return " ".join(str(value or "").strip().split())
+    return sanitize_public_display_text(value)
 
 
 def _build_compact_service_title(service_label: str, aliases: tuple[tuple[str, str], ...]) -> str:

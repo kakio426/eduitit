@@ -56,14 +56,14 @@
                             {% for item in favorite_items|slice:":4" %}
                             {% with favorite_title=item.favorite_title|default:item.favorite_full_title %}
                             <div class="min-h-[74px] rounded-[1.35rem] border border-slate-200 bg-slate-50 px-3 py-2.5 shadow-sm transition product-card hover:border-amber-300 hover:bg-white"
-                                data-home-v2-favorite-card="true"
-                                data-product-id="{{ item.product.id }}"
-                                data-launch-href="{{ item.href }}"
-                                data-launch-external="{{ item.is_external|yesno:'true,false' }}"
-                                data-track="quick_action"
-                                data-track-label="{{ item.product.title }}"
-                                role="button"
-                                tabindex="0">
+                                    data-home-v2-favorite-card="true"
+                                    data-product-id="{{ item.product.id }}"
+                                    data-launch-href="{{ item.href }}"
+                                    data-launch-external="{{ item.is_external|yesno:'true,false' }}"
+                                    data-track="quick_action"
+                                    data-track-label="{{ item.favorite_full_title }}"
+                                    role="button"
+                                    tabindex="0">
                                 <div class="flex items-center gap-2.5" data-home-v2-favorite-card-header="true">
                                     <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white text-sm shadow-sm {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-violet-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-pink-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
                                         {% if item.product.icon %}

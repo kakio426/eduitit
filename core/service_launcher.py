@@ -1,6 +1,7 @@
-from django.urls import NoReverseMatch, reverse
-
 import logging
+import re
+
+from django.urls import NoReverseMatch, reverse
 
 
 logger = logging.getLogger(__name__)
@@ -163,13 +164,50 @@ SERVICE_LAUNCHER_GROUP_META_BY_SECTION = {
 
 DEFAULT_SERVICE_LAUNCHER_GROUP_META = {"key": "guide", "title": "가이드·인사이트", "order": 6}
 
+_INLINE_CONFLICT_MARKER_RE = re.compile(r"(?:<{7}|>{7})\s*[^ \t\r\n]*")
+
+
+def sanitize_public_display_text(value):
+    text = str(value or "")
+    if not text:
+        return ""
+
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+    resolved_lines = []
+    in_conflict = False
+    keep_head_side = True
+
+    for line in normalized.split("\n"):
+        stripped = line.strip()
+        if stripped.startswith("<<<<<<<"):
+            inline_text = _INLINE_CONFLICT_MARKER_RE.sub(" ", stripped).strip()
+            if inline_text:
+                resolved_lines.append(inline_text)
+                continue
+            in_conflict = True
+            keep_head_side = True
+            continue
+        if in_conflict and stripped == "=======":
+            keep_head_side = False
+            continue
+        if in_conflict and stripped.startswith(">>>>>>>"):
+            in_conflict = False
+            keep_head_side = True
+            continue
+        if not in_conflict or keep_head_side:
+            resolved_lines.append(line)
+
+    collapsed = " ".join(" ".join(resolved_lines).split())
+    cleaned = _INLINE_CONFLICT_MARKER_RE.sub(" ", collapsed).replace("=======", " ")
+    return " ".join(cleaned.split())
+
 
 def product_route_name(product):
     return str(getattr(product, "launch_route_name", "") or "").strip().lower()
 
 
 def product_title_text(product):
-    return str(getattr(product, "title", "") or "").strip()
+    return sanitize_public_display_text(getattr(product, "title", ""))
 
 
 def resolve_home_section_key(product):
@@ -231,11 +269,12 @@ def get_public_product_name(product):
 
 
 def replace_public_service_terms(text, product=None):
-    cleaned = str(text or "").strip()
+    cleaned = sanitize_public_display_text(text)
     if not cleaned:
         return ""
     replacement = get_public_product_name(product) if product is not None else SHEETBOOK_PUBLIC_NAME
-    return cleaned.replace("교무수첩", replacement).replace("교무 수첩", replacement)
+    swapped = cleaned.replace("교무수첩", replacement).replace("교무 수첩", replacement)
+    return sanitize_public_display_text(swapped)
 
 
 def build_service_launcher_summary(product):

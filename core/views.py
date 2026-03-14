@@ -20,6 +20,7 @@ from .models import (
     ProductWorkbenchBundle,
     UserModeration,
 )
+from . import service_launcher as service_launcher_utils
 from .product_visibility import filter_discoverable_products, is_sheetbook_discovery_visible
 from .active_classroom import (
     get_active_classroom_for_request,
@@ -576,7 +577,7 @@ def _product_route_name(product):
 
 
 def _product_title_text(product):
-    return str(getattr(product, "title", "") or "").strip()
+    return service_launcher_utils.product_title_text(product)
 
 
 def _is_sheetbook_product(product):
@@ -594,19 +595,11 @@ def _is_sheetbook_cross_surface_hidden(product):
 
 
 def _get_public_product_name(product):
-    if _is_calendar_hub_product(product):
-        return CALENDAR_HUB_PUBLIC_NAME
-    if _is_sheetbook_product(product):
-        return SHEETBOOK_PUBLIC_NAME
-    return _product_title_text(product)
+    return service_launcher_utils.get_public_product_name(product)
 
 
 def _replace_public_service_terms(text, product=None):
-    cleaned = str(text or "").strip()
-    if not cleaned:
-        return ""
-    replacement = _get_public_product_name(product) if product is not None else SHEETBOOK_PUBLIC_NAME
-    return cleaned.replace("교무수첩", replacement).replace("교무 수첩", replacement)
+    return service_launcher_utils.replace_public_service_terms(text, product)
 
 
 def _build_product_context_chips(product, *, limit=None):
@@ -655,8 +648,8 @@ def _build_product_state_labels(
 
 
 def _build_teacher_first_product_labels(product):
-    task_label = str(getattr(product, 'solve_text', '') or '').strip()
-    service_label = str(getattr(product, 'title', '') or '').strip()
+    task_label = service_launcher_utils.sanitize_public_display_text(getattr(product, 'solve_text', ''))
+    service_label = _product_title_text(product)
     support_label = ''
 
     if task_label and task_label != service_label:
@@ -669,7 +662,7 @@ def _build_teacher_first_product_labels(product):
             getattr(product, 'lead_text', ''),
             getattr(product, 'description', ''),
         ):
-            support_label = str(candidate or '').strip()
+            support_label = service_launcher_utils.sanitize_public_display_text(candidate)
             if support_label and support_label != task_label:
                 break
         else:
@@ -908,7 +901,9 @@ def _build_product_link_items(products, include_section_meta=False):
         href, is_external = _resolve_product_launch_url(product)
         workbench_meta = build_workbench_card_meta(product)
         favorite_full_title = (
-            str(getattr(product, "public_service_name", "") or getattr(product, "title", "") or "").strip()
+            service_launcher_utils.sanitize_public_display_text(
+                getattr(product, "public_service_name", "") or getattr(product, "title", "")
+            )
             or "도구"
         )
         item = {
