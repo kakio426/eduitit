@@ -348,6 +348,7 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('data-classcalendar-surface="true"', content)
         self.assertIn('data-classcalendar-embed-mode="home"', content)
         self.assertIn('data-classcalendar-main-view="true"', content)
+        self.assertIn('surfaceAllowsManage: true', content)
         self.assertIn('새 일정', content)
         self.assertNotIn('data-home-v2-top-today="true"', content)
         self.assertNotIn('data-home-v2-top-center="true"', content)

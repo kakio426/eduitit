@@ -421,7 +421,9 @@
                         </button>
                     </template>
                 </div>
+                {% if not is_embedded_on_home %}
                 <p class="mt-3 text-sm font-medium text-slate-500">날짜를 누르면 그날 일정과 할 일을 한 화면에서 바로 확인할 수 있습니다.</p>
+                {% endif %}
             </div>
             {% endif %}
         </div>
@@ -1027,7 +1029,7 @@ function calendarApp() {
         calendarPageUrl: '{{ calendar_page_url|default:""|escapejs }}',
         calendarApiBaseUrl: '{{ calendar_api_base_url|default:""|escapejs }}',
         calendarEmbedMode: '{{ calendar_embed_mode|default:"page"|escapejs }}',
-        surfaceAllowsManage: {{ is_embedded_on_home|yesno:"false,true" }},
+        surfaceAllowsManage: true,
         integrationSettings: {
             collect_deadline_enabled: true,
             consent_expiry_enabled: true,
