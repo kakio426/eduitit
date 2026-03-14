@@ -99,6 +99,26 @@ MESSAGE_CAPTURE_CLASSIFIER_ASSIST_THRESHOLD = float(
 )
 MESSAGE_CAPTURE_ARCHIVE_PAGE_SIZE = 20
 MESSAGE_CAPTURE_WORKFLOW_FILTER_KEYS = {"kept", "dated", "linked", "done"}
+DIRECT_HUB_INTEGRATION_SOURCES = {
+    SOURCE_COLLECT_DEADLINE,
+    SOURCE_CONSENT_EXPIRY,
+    SOURCE_RESERVATION,
+    SOURCE_SIGNATURES_TRAINING,
+}
+HUB_TONE_PRIORITY = {
+    "warning": 3,
+    "neutral": 2,
+    "done": 1,
+}
+HUB_SERVICE_LABELS = {
+    "event": "일정",
+    "task": "할 일",
+    "collect": "수합",
+    "signature": "사인",
+    "consent": "동의서",
+    "reservation": "예약",
+    "message": "메시지",
+}
 
 
 def _reverse_calendar_surface(alias_name, fallback_name):
@@ -286,6 +306,10 @@ def _build_message_capture_urls_payload():
             "classcalendar:api_message_capture_archive_detail",
             kwargs={"capture_id": capture_placeholder},
         ).replace(capture_placeholder, "__capture_id__"),
+        "link_template": reverse(
+            "classcalendar:api_message_capture_link",
+            kwargs={"capture_id": capture_placeholder},
+        ).replace(capture_placeholder, "__capture_id__"),
         "commit_template": reverse(
             "classcalendar:api_message_capture_commit",
             kwargs={"capture_id": capture_placeholder},
@@ -448,6 +472,53 @@ def _to_local_date(value):
             return timezone.localtime(value).date()
         return value.date()
     return value
+
+
+def _parse_local_date_value(raw_value):
+    value = str(raw_value or "").strip()
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        try:
+            parsed_date = datetime.strptime(value, "%Y-%m-%d").date()
+        except ValueError:
+            return None
+        return timezone.make_aware(
+            datetime.combine(parsed_date, time.min),
+            timezone.get_current_timezone(),
+        )
+
+
+def _normalize_hub_datetime(value):
+    if value is None:
+        return None
+    if timezone.is_naive(value):
+        return timezone.make_aware(value, timezone.get_current_timezone())
+    return timezone.localtime(value)
+
+
+def _serialize_hub_datetime(value):
+    safe_value = _normalize_hub_datetime(value)
+    return safe_value.isoformat() if safe_value else ""
+
+
+def _build_hub_date_key(*values):
+    for value in values:
+        local_value = _normalize_hub_datetime(value) if isinstance(value, datetime) else None
+        if local_value:
+            return local_value.date().isoformat()
+    return ""
+
+
+def _manual_date_to_linked_for_at(manual_date):
+    if isinstance(manual_date, datetime):
+        return _normalize_hub_datetime(manual_date)
+    parsed = _parse_local_date_value(manual_date)
+    if parsed is None:
+        return None
+    return _normalize_hub_datetime(parsed)
 
 
 def _is_default_selected_date_event_candidate(event):
@@ -842,6 +913,8 @@ def _serialize_message_capture_attachment(attachment):
 
 
 def _get_message_capture_manual_date(capture):
+    if capture.linked_for_at:
+        return timezone.localtime(capture.linked_for_at).date().isoformat()
     parse_payload = capture.parse_payload if isinstance(capture.parse_payload, dict) else {}
     return str(parse_payload.get("manual_date") or "").strip()
 
@@ -852,12 +925,46 @@ def _get_message_capture_manual_note(capture):
 
 
 def _message_capture_has_linked_item(capture):
+    if capture.linked_for_at:
+        return True
     if capture.committed_event_id or capture.committed_task_id:
         return True
     saved_count = getattr(capture, "saved_count", None)
     if saved_count is not None:
         return int(saved_count or 0) > 0
     return capture.candidates.exclude(committed_event__isnull=True).exists()
+
+
+def _default_follow_up_state_for_capture(capture):
+    parse_status = str(getattr(capture, "parse_status", "") or "").strip()
+    if parse_status in {
+        CalendarMessageCapture.ParseStatus.NEEDS_REVIEW,
+        CalendarMessageCapture.ParseStatus.FAILED,
+    }:
+        return CalendarMessageCapture.FollowUpState.NEEDS_CHECK
+    return CalendarMessageCapture.FollowUpState.PENDING
+
+
+def _normalize_follow_up_state_value(capture):
+    follow_up_state = str(getattr(capture, "follow_up_state", "") or "").strip()
+    if follow_up_state in {
+        CalendarMessageCapture.FollowUpState.PENDING,
+        CalendarMessageCapture.FollowUpState.NEEDS_CHECK,
+        CalendarMessageCapture.FollowUpState.DONE,
+    }:
+        return follow_up_state
+    if capture.completed_at:
+        return CalendarMessageCapture.FollowUpState.DONE
+    return _default_follow_up_state_for_capture(capture)
+
+
+def _follow_up_state_label(follow_up_state):
+    labels = {
+        CalendarMessageCapture.FollowUpState.PENDING: "처리 예정",
+        CalendarMessageCapture.FollowUpState.NEEDS_CHECK: "확인 필요",
+        CalendarMessageCapture.FollowUpState.DONE: "처리 완료",
+    }
+    return labels.get(str(follow_up_state or "").strip(), "처리 예정")
 
 
 def _message_capture_has_dated_candidate(capture):
@@ -883,7 +990,8 @@ def _message_capture_has_dated_candidate(capture):
 
 
 def _message_capture_workflow_status_code(capture):
-    if capture.completed_at:
+    follow_up_state = _normalize_follow_up_state_value(capture)
+    if follow_up_state == CalendarMessageCapture.FollowUpState.DONE or capture.completed_at:
         return "done"
     if _message_capture_has_linked_item(capture):
         return "linked"
@@ -957,6 +1065,7 @@ def _serialize_message_capture(capture, *, warnings=None, reused=False):
         else:
             summary_text = f"찾은 일정 {len(candidates)}개"
     workflow_status = _message_capture_workflow_status_code(capture)
+    follow_up_state = _normalize_follow_up_state_value(capture)
     return {
         "status": "success",
         "capture_id": str(capture.id),
@@ -978,6 +1087,9 @@ def _serialize_message_capture(capture, *, warnings=None, reused=False):
         "candidates": candidates,
         "manual_date": _get_message_capture_manual_date(capture),
         "manual_note": _get_message_capture_manual_note(capture),
+        "linked_for_at": _serialize_hub_datetime(capture.linked_for_at),
+        "follow_up_state": follow_up_state,
+        "follow_up_state_label": _follow_up_state_label(follow_up_state),
         "completed_at": capture.completed_at.isoformat() if capture.completed_at else "",
         "workflow_status": workflow_status,
         "workflow_status_label": _message_capture_workflow_status_label(workflow_status),
@@ -1002,19 +1114,19 @@ def _message_capture_archive_status_code(capture):
     saved_count = getattr(capture, "saved_count", None)
     if saved_count is None:
         saved_count = capture.candidates.exclude(committed_event__isnull=True).count()
-    if capture.committed_event_id or capture.committed_task_id:
+    if capture.linked_for_at or capture.committed_event_id or capture.committed_task_id:
         saved_count = max(int(saved_count or 0), 1)
     candidate_count = int(candidate_count or 0)
     saved_count = int(saved_count or 0)
     parse_status = str(getattr(capture, "parse_status", "") or "")
-    if _is_message_capture_archive_only(capture):
+    if _is_message_capture_archive_only(capture) and saved_count == 0:
         return "unparsed"
+    if saved_count > 0:
+        return "saved"
     if parse_status == CalendarMessageCapture.ParseStatus.FAILED or candidate_count == 0:
         return "failed"
     if parse_status == CalendarMessageCapture.ParseStatus.NEEDS_REVIEW:
         return "needs_review"
-    if candidate_count > 0 and saved_count > 0:
-        return "saved"
     return "pending"
 
 
@@ -1052,24 +1164,25 @@ def _apply_message_capture_archive_query(queryset, query_text):
 
 def _apply_message_capture_archive_filter(queryset, filter_value):
     normalized_filter = str(filter_value or "all").strip().lower()
-    non_archive_only = Q(parse_payload__archive_only=False) | Q(parse_payload__archive_only__isnull=True)
-    if normalized_filter == "unparsed":
-        return queryset.filter(parse_payload__archive_only=True).distinct()
+    if normalized_filter not in {"unparsed", "saved", "pending", "needs_review", "failed"}:
+        return queryset
+    matched_ids = [
+        capture.id
+        for capture in queryset
+        if _message_capture_archive_status_code(capture) == normalized_filter
+    ]
+    if not matched_ids:
+        return queryset.none()
     if normalized_filter == "saved":
-        return queryset.filter(saved_count__gt=0).distinct()
+        return queryset.filter(id__in=matched_ids).distinct()
     if normalized_filter == "pending":
-        return queryset.filter(
-            parse_status=CalendarMessageCapture.ParseStatus.PARSED,
-            candidate_count__gt=0,
-            saved_count=0,
-        ).filter(non_archive_only).distinct()
+        return queryset.filter(id__in=matched_ids).distinct()
     if normalized_filter == "needs_review":
-        return queryset.filter(parse_status=CalendarMessageCapture.ParseStatus.NEEDS_REVIEW).filter(non_archive_only).distinct()
+        return queryset.filter(id__in=matched_ids).distinct()
     if normalized_filter == "failed":
-        return queryset.filter(
-            Q(parse_status=CalendarMessageCapture.ParseStatus.FAILED)
-            | (Q(candidate_count=0) & non_archive_only)
-        ).distinct()
+        return queryset.filter(id__in=matched_ids).distinct()
+    if normalized_filter == "unparsed":
+        return queryset.filter(id__in=matched_ids).distinct()
     return queryset
 
 
@@ -1089,34 +1202,27 @@ def _apply_message_capture_workflow_filter(queryset, workflow_status):
 
 
 def _build_message_capture_archive_counts(queryset):
-    non_archive_only = Q(parse_payload__archive_only=False) | Q(parse_payload__archive_only__isnull=True)
-    unparsed_ids = set(queryset.filter(parse_payload__archive_only=True).values_list("id", flat=True))
-    saved_ids = set(queryset.filter(saved_count__gt=0).values_list("id", flat=True))
-    pending_ids = set(
-        queryset.filter(
-            parse_status=CalendarMessageCapture.ParseStatus.PARSED,
-            candidate_count__gt=0,
-            saved_count=0,
-        )
-        .filter(non_archive_only)
-        .values_list("id", flat=True)
-    )
-    needs_review_ids = set(
-        queryset.filter(parse_status=CalendarMessageCapture.ParseStatus.NEEDS_REVIEW)
-        .filter(non_archive_only)
-        .values_list("id", flat=True)
-    )
-    failed_ids = set(
-        queryset.filter(
-            Q(parse_status=CalendarMessageCapture.ParseStatus.FAILED)
-            | (Q(candidate_count=0) & non_archive_only)
-        ).values_list("id", flat=True)
-    )
+    unparsed_ids = set()
+    saved_ids = set()
+    pending_ids = set()
+    needs_review_ids = set()
+    failed_ids = set()
     kept_ids = set()
     dated_ids = set()
     linked_ids = set()
     done_ids = set()
     for capture in queryset:
+        archive_status = _message_capture_archive_status_code(capture)
+        if archive_status == "unparsed":
+            unparsed_ids.add(capture.id)
+        elif archive_status == "saved":
+            saved_ids.add(capture.id)
+        elif archive_status == "pending":
+            pending_ids.add(capture.id)
+        elif archive_status == "needs_review":
+            needs_review_ids.add(capture.id)
+        elif archive_status == "failed":
+            failed_ids.add(capture.id)
         workflow_status = _message_capture_workflow_status_code(capture)
         if workflow_status == "done":
             done_ids.add(capture.id)
@@ -1147,6 +1253,7 @@ def _serialize_message_capture_archive_item(capture):
     initial_payload = capture.initial_extract_payload if isinstance(capture.initial_extract_payload, dict) else {}
     summary_text = initial_payload.get("summary_text") or parse_payload.get("summary_text") or f"찾은 일정 {int(getattr(capture, 'candidate_count', 0) or 0)}개"
     workflow_status = _message_capture_workflow_status_code(capture)
+    follow_up_state = _normalize_follow_up_state_value(capture)
     return {
         "capture_id": str(capture.id),
         "created_at": capture.created_at.isoformat() if capture.created_at else "",
@@ -1157,6 +1264,11 @@ def _serialize_message_capture_archive_item(capture):
         "workflow_status": workflow_status,
         "workflow_status_label": _message_capture_workflow_status_label(workflow_status),
         "completed_at": capture.completed_at.isoformat() if capture.completed_at else "",
+        "manual_date": _get_message_capture_manual_date(capture),
+        "manual_note": _get_message_capture_manual_note(capture),
+        "linked_for_at": _serialize_hub_datetime(capture.linked_for_at),
+        "follow_up_state": follow_up_state,
+        "follow_up_state_label": _follow_up_state_label(follow_up_state),
         "candidate_count": int(getattr(capture, "candidate_count", 0) or 0),
         "saved_count": int(getattr(capture, "saved_count", 0) or 0),
         "attachment_count": int(getattr(capture, "attachment_count", 0) or 0),
@@ -2160,6 +2272,613 @@ def _serialize_task_list(tasks, *, current_user_id):
     ]
 
 
+def _format_hub_clock(value):
+    local_value = _normalize_hub_datetime(value)
+    if local_value is None:
+        return ""
+    hour = local_value.hour
+    minute = local_value.minute
+    meridiem = "오후" if hour >= 12 else "오전"
+    display_hour = hour % 12 or 12
+    return f"{meridiem} {display_hour}:{minute:02d}"
+
+
+def _format_hub_range_text(*, start_at=None, end_at=None, is_all_day=False):
+    start_value = _normalize_hub_datetime(start_at)
+    end_value = _normalize_hub_datetime(end_at) or start_value
+    if start_value is None:
+        return ""
+    if is_all_day:
+        if end_value and end_value.date() != start_value.date():
+            return f"{start_value.strftime('%m/%d')} - {end_value.strftime('%m/%d')} 종일"
+        return "하루 종일"
+    if end_value and end_value.date() == start_value.date():
+        if end_value.time() != start_value.time():
+            return f"{_format_hub_clock(start_value)} - {_format_hub_clock(end_value)}"
+        return _format_hub_clock(start_value)
+    if end_value:
+        return f"{start_value.strftime('%m/%d')} {_format_hub_clock(start_value)} - {end_value.strftime('%m/%d')} {_format_hub_clock(end_value)}"
+    return _format_hub_clock(start_value)
+
+
+def _build_hub_item(
+    *,
+    hub_id,
+    item_kind,
+    title,
+    start_at=None,
+    end_at=None,
+    sort_at=None,
+    is_all_day=False,
+    meta_text="",
+    status_label="",
+    tone="neutral",
+    source_url="",
+    source_label="",
+    has_attachment=False,
+    is_readonly=True,
+    source_item_kind="",
+    source_item_id="",
+):
+    safe_start = _normalize_hub_datetime(start_at)
+    safe_end = _normalize_hub_datetime(end_at) or safe_start
+    safe_sort = _normalize_hub_datetime(sort_at) or safe_start or safe_end
+    normalized_tone = str(tone or "neutral").strip().lower()
+    if normalized_tone == "complete":
+        normalized_tone = "done"
+    if normalized_tone not in HUB_TONE_PRIORITY:
+        normalized_tone = "neutral"
+    return {
+        "id": str(hub_id),
+        "item_kind": str(item_kind or "").strip(),
+        "date_key": _build_hub_date_key(safe_sort, safe_start, safe_end),
+        "sort_at": _serialize_hub_datetime(safe_sort),
+        "start_at": _serialize_hub_datetime(safe_start),
+        "end_at": _serialize_hub_datetime(safe_end),
+        "is_all_day": bool(is_all_day),
+        "title": _compact_hub_text(title, default=HUB_SERVICE_LABELS.get(item_kind, "항목")),
+        "meta_text": _compact_hub_text(meta_text),
+        "status_label": _compact_hub_text(status_label),
+        "tone": normalized_tone,
+        "source_url": str(source_url or "").strip(),
+        "source_label": _compact_hub_text(source_label),
+        "has_attachment": bool(has_attachment),
+        "is_readonly": bool(is_readonly),
+        "source_item_kind": str(source_item_kind or "").strip(),
+        "source_item_id": str(source_item_id or "").strip(),
+    }
+
+
+def _build_native_event_hub_item(event, *, current_user_id, editable_owner_ids):
+    meta_text = _format_hub_range_text(
+        start_at=event.start_time,
+        end_at=event.end_time,
+        is_all_day=event.is_all_day,
+    )
+    return _build_hub_item(
+        hub_id=f"event:{event.id}",
+        item_kind="event",
+        title=event.title,
+        start_at=event.start_time,
+        end_at=event.end_time,
+        sort_at=event.start_time,
+        is_all_day=event.is_all_day,
+        meta_text=meta_text,
+        status_label="",
+        tone="neutral",
+        source_url="",
+        source_label="",
+        has_attachment=event.attachments.exists(),
+        is_readonly=event.is_locked or event.author_id not in editable_owner_ids,
+        source_item_kind="event",
+        source_item_id=event.id,
+    )
+
+
+def _build_native_task_hub_item(task, *, current_user_id):
+    due_at = task.due_at
+    status_value = task.status or CalendarTask.Status.OPEN
+    status_label = "완료" if status_value == CalendarTask.Status.DONE else "진행 중"
+    tone = "done" if status_value == CalendarTask.Status.DONE else "neutral"
+    meta_text = ""
+    if due_at:
+        meta_text = (
+            f"{_format_hub_clock(due_at)}까지"
+            if task.has_time
+            else "시간 미정"
+        )
+    return _build_hub_item(
+        hub_id=f"task:{task.id}",
+        item_kind="task",
+        title=task.title,
+        start_at=due_at,
+        end_at=due_at,
+        sort_at=due_at,
+        is_all_day=not bool(task.has_time),
+        meta_text=meta_text,
+        status_label=status_label,
+        tone=tone,
+        source_url="",
+        source_label="",
+        has_attachment=False,
+        is_readonly=task.author_id != current_user_id,
+        source_item_kind="task",
+        source_item_id=task.id,
+    )
+
+
+def _build_owner_setting_lookup(owner_ids):
+    return {
+        setting.user_id: setting
+        for setting in CalendarIntegrationSetting.objects.filter(user_id__in=owner_ids)
+    }
+
+
+def _is_owner_integration_enabled(setting_lookup, *, owner_id, field_name):
+    setting = setting_lookup.get(owner_id)
+    if setting is None:
+        return True
+    return bool(getattr(setting, field_name, True))
+
+
+def _reservation_period_times(reservation):
+    school_config = getattr(getattr(reservation.room, "school", None), "config", None)
+    slot_time = ""
+    slot_label = f"{reservation.period}교시"
+    if school_config:
+        for slot in school_config.get_period_slots():
+            if int(slot.get("id") or 0) != int(reservation.period or 0):
+                continue
+            slot_label = slot.get("label") or slot_label
+            slot_time = slot.get("time") or ""
+            break
+    if slot_time and "-" in slot_time:
+        start_text, end_text = [segment.strip() for segment in slot_time.split("-", 1)]
+        try:
+            start_clock = datetime.strptime(start_text, "%H:%M").time()
+            end_clock = datetime.strptime(end_text, "%H:%M").time()
+        except ValueError:
+            start_clock = None
+            end_clock = None
+    else:
+        start_clock = None
+        end_clock = None
+    if not start_clock or not end_clock:
+        start_hour = min(22, 8 + max(1, int(reservation.period or 1)))
+        start_clock = time(hour=start_hour, minute=0)
+        end_clock = (datetime.combine(timezone.localdate(), start_clock) + timedelta(minutes=40)).time()
+    start_at = timezone.make_aware(
+        datetime.combine(reservation.date, start_clock),
+        timezone.get_current_timezone(),
+    )
+    end_at = timezone.make_aware(
+        datetime.combine(reservation.date, end_clock),
+        timezone.get_current_timezone(),
+    )
+    if end_at <= start_at:
+        end_at = start_at + timedelta(minutes=40)
+    return slot_label, start_at, end_at
+
+
+def _build_collect_direct_hub_items(owner_ids, setting_lookup):
+    enabled_owner_ids = [
+        owner_id
+        for owner_id in owner_ids
+        if _is_owner_integration_enabled(
+            setting_lookup,
+            owner_id=owner_id,
+            field_name="collect_deadline_enabled",
+        )
+    ]
+    if not enabled_owner_ids:
+        return []
+    try:
+        from collect.models import CollectionRequest
+    except Exception:
+        logger.exception("[ClassCalendar] collect direct hub import failed")
+        return []
+
+    today = timezone.localdate()
+    queryset = (
+        CollectionRequest.objects.filter(creator_id__in=enabled_owner_ids, deadline__isnull=False)
+        .exclude(status="archived")
+        .annotate(submission_total=Count("submissions", distinct=True))
+        .order_by("deadline", "id")
+    )
+    items = []
+    for request_item in queryset:
+        deadline = _normalize_hub_datetime(request_item.deadline)
+        if deadline is None:
+            continue
+        if request_item.status == "closed":
+            status_label = "완료"
+            tone = "done"
+        elif request_item.is_deadline_passed:
+            status_label = "마감 지남"
+            tone = "warning"
+        elif deadline.date() == today:
+            status_label = "오늘 마감"
+            tone = "warning"
+        else:
+            status_label = "진행 중"
+            tone = "neutral"
+        submission_total = int(getattr(request_item, "submission_total", 0) or 0)
+        meta_bits = [_format_hub_clock(deadline)]
+        meta_bits.append(f"제출 {submission_total}건" if submission_total else "제출 대기")
+        items.append(
+            _build_hub_item(
+                hub_id=f"collect:{request_item.id}",
+                item_kind="collect",
+                title=request_item.title,
+                start_at=deadline,
+                end_at=deadline,
+                sort_at=deadline,
+                is_all_day=False,
+                meta_text=" · ".join(bit for bit in meta_bits if bit),
+                status_label=status_label,
+                tone=tone,
+                source_url=reverse("collect:request_detail", kwargs={"request_id": request_item.id}),
+                source_label="수합 상세로 이동",
+                has_attachment=False,
+                is_readonly=True,
+            )
+        )
+    return items
+
+
+def _build_signature_direct_hub_items(owner_ids, setting_lookup):
+    enabled_owner_ids = [
+        owner_id
+        for owner_id in owner_ids
+        if _is_owner_integration_enabled(
+            setting_lookup,
+            owner_id=owner_id,
+            field_name="signatures_training_enabled",
+        )
+    ]
+    if not enabled_owner_ids:
+        return []
+    try:
+        from signatures.models import TrainingSession
+    except Exception:
+        logger.exception("[ClassCalendar] signatures direct hub import failed")
+        return []
+
+    today = timezone.localdate()
+    queryset = (
+        TrainingSession.objects.filter(created_by_id__in=enabled_owner_ids)
+        .annotate(signature_total=Count("signatures", distinct=True))
+        .order_by("datetime", "id")
+    )
+    items = []
+    for session in queryset:
+        session_datetime = _normalize_hub_datetime(session.datetime)
+        if session_datetime is None:
+            continue
+        if not session.is_active:
+            status_label = "완료"
+            tone = "done"
+        elif session_datetime.date() < today:
+            status_label = "지난 일정"
+            tone = "warning"
+        elif session_datetime.date() == today:
+            status_label = "오늘"
+            tone = "warning"
+        else:
+            status_label = "예정"
+            tone = "neutral"
+        meta_bits = [_format_hub_clock(session_datetime)]
+        if session.location:
+            meta_bits.append(_compact_hub_text(session.location))
+        items.append(
+            _build_hub_item(
+                hub_id=f"signature:{session.uuid}",
+                item_kind="signature",
+                title=session.title,
+                start_at=session_datetime,
+                end_at=session_datetime + timedelta(minutes=60),
+                sort_at=session_datetime,
+                is_all_day=False,
+                meta_text=" · ".join(bit for bit in meta_bits if bit),
+                status_label=status_label,
+                tone=tone,
+                source_url=reverse("signatures:detail", kwargs={"uuid": session.uuid}),
+                source_label="사인 상세로 이동",
+                has_attachment=False,
+                is_readonly=True,
+            )
+        )
+    return items
+
+
+def _build_consent_direct_hub_items(owner_ids, setting_lookup):
+    enabled_owner_ids = [
+        owner_id
+        for owner_id in owner_ids
+        if _is_owner_integration_enabled(
+            setting_lookup,
+            owner_id=owner_id,
+            field_name="consent_expiry_enabled",
+        )
+    ]
+    if not enabled_owner_ids:
+        return []
+    try:
+        from consent.models import SignatureRecipient, SignatureRequest
+    except Exception:
+        logger.exception("[ClassCalendar] consent direct hub import failed")
+        return []
+
+    pending_statuses = [
+        SignatureRecipient.STATUS_PENDING,
+        SignatureRecipient.STATUS_VERIFIED,
+    ]
+    today = timezone.localdate()
+    queryset = (
+        SignatureRequest.objects.filter(created_by_id__in=enabled_owner_ids, sent_at__isnull=False)
+        .annotate(
+            recipient_count=Count("recipients", distinct=True),
+            pending_recipient_count=Count(
+                "recipients",
+                filter=Q(recipients__status__in=pending_statuses),
+                distinct=True,
+            ),
+        )
+        .order_by("sent_at", "id")
+    )
+    items = []
+    for request_item in queryset:
+        expires_at = _normalize_hub_datetime(request_item.link_expires_at)
+        if expires_at is None:
+            continue
+        pending_count = int(getattr(request_item, "pending_recipient_count", 0) or 0)
+        recipient_count = int(getattr(request_item, "recipient_count", 0) or 0)
+        if request_item.status == request_item.STATUS_COMPLETED or pending_count == 0:
+            status_label = "완료"
+            tone = "done"
+        elif request_item.is_link_expired:
+            status_label = "만료"
+            tone = "warning"
+        elif expires_at.date() == today:
+            status_label = "오늘 만료"
+            tone = "warning"
+        else:
+            status_label = "응답 대기"
+            tone = "neutral"
+        meta_bits = [_format_hub_clock(expires_at)]
+        meta_bits.append(f"미완료 {pending_count}명" if pending_count else (f"대상 {recipient_count}명" if recipient_count else "응답 확인"))
+        items.append(
+            _build_hub_item(
+                hub_id=f"consent:{request_item.request_id}",
+                item_kind="consent",
+                title=request_item.title,
+                start_at=expires_at,
+                end_at=expires_at,
+                sort_at=expires_at,
+                is_all_day=False,
+                meta_text=" · ".join(bit for bit in meta_bits if bit),
+                status_label=status_label,
+                tone=tone,
+                source_url=reverse("consent:detail", kwargs={"request_id": request_item.request_id}),
+                source_label="동의서 상세로 이동",
+                has_attachment=False,
+                is_readonly=True,
+            )
+        )
+    return items
+
+
+def _build_reservation_direct_hub_items(owner_ids, setting_lookup):
+    enabled_owner_ids = [
+        owner_id
+        for owner_id in owner_ids
+        if _is_owner_integration_enabled(
+            setting_lookup,
+            owner_id=owner_id,
+            field_name="reservation_enabled",
+        )
+    ]
+    if not enabled_owner_ids:
+        return []
+    try:
+        from reservations.models import Reservation
+    except Exception:
+        logger.exception("[ClassCalendar] reservation direct hub import failed")
+        return []
+
+    reservations = list(
+        Reservation.objects.filter(created_by_id__in=enabled_owner_ids)
+        .select_related("room", "room__school", "room__school__config")
+        .order_by("date", "period", "id")
+    )
+    slot_counts = {}
+    for reservation in reservations:
+        slot_key = (reservation.created_by_id, reservation.date.isoformat(), int(reservation.period or 0))
+        slot_counts[slot_key] = slot_counts.get(slot_key, 0) + 1
+
+    items = []
+    for reservation in reservations:
+        slot_label, start_at, end_at = _reservation_period_times(reservation)
+        slot_key = (reservation.created_by_id, reservation.date.isoformat(), int(reservation.period or 0))
+        has_conflict = slot_counts.get(slot_key, 0) > 1
+        meta_bits = [slot_label, _compact_hub_text(reservation.room.name)]
+        items.append(
+            _build_hub_item(
+                hub_id=f"reservation:{reservation.id}",
+                item_kind="reservation",
+                title=reservation.room.name,
+                start_at=start_at,
+                end_at=end_at,
+                sort_at=start_at,
+                is_all_day=False,
+                meta_text=" · ".join(bit for bit in meta_bits if bit),
+                status_label="확인 필요" if has_conflict else "예약됨",
+                tone="warning" if has_conflict else "neutral",
+                source_url=f"{reverse('reservations:reservation_index', kwargs={'school_slug': reservation.room.school.slug})}?{urlencode({'date': reservation.date.strftime('%Y-%m-%d'), 'reservation': reservation.id})}",
+                source_label="예약 상세로 이동",
+                has_attachment=False,
+                is_readonly=True,
+            )
+        )
+    return items
+
+
+def _build_message_direct_hub_items(user):
+    if not getattr(user, "is_authenticated", False) or not _is_message_capture_enabled_for_user(user):
+        return []
+
+    captures = (
+        CalendarMessageCapture.objects.filter(author=user, linked_for_at__isnull=False)
+        .exclude(follow_up_state=CalendarMessageCapture.FollowUpState.DONE)
+        .prefetch_related("attachments")
+        .order_by("linked_for_at", "created_at", "id")
+    )
+    items = []
+    for capture in captures:
+        linked_for_at = _normalize_hub_datetime(capture.linked_for_at)
+        if linked_for_at is None:
+            continue
+        follow_up_state = _normalize_follow_up_state_value(capture)
+        if follow_up_state == CalendarMessageCapture.FollowUpState.DONE:
+            continue
+        status_label = _follow_up_state_label(follow_up_state)
+        tone = "warning" if follow_up_state == CalendarMessageCapture.FollowUpState.NEEDS_CHECK else "neutral"
+        preview_text = _compact_hub_text(_get_message_capture_manual_note(capture))
+        if not preview_text:
+            preview_text = _compact_hub_text(
+                capture.initial_extract_payload.get("summary_text") if isinstance(capture.initial_extract_payload, dict) else ""
+            )
+        if not preview_text:
+            preview_text = _compact_hub_text(
+                capture.parse_payload.get("summary_text") if isinstance(capture.parse_payload, dict) else ""
+            )
+        if not preview_text:
+            preview_text = _compact_hub_text(_build_message_capture_archive_preview(capture.raw_text))
+        meta_bits = []
+        if preview_text:
+            meta_bits.append(preview_text)
+        if capture.attachments.exists():
+            meta_bits.append("첨부 있음")
+        items.append(
+            _build_hub_item(
+                hub_id=f"message:{capture.id}",
+                item_kind="message",
+                title=capture.extracted_title or preview_text or "저장한 메시지",
+                start_at=linked_for_at,
+                end_at=linked_for_at,
+                sort_at=linked_for_at,
+                is_all_day=True,
+                meta_text=" · ".join(bit for bit in meta_bits if bit),
+                status_label=status_label,
+                tone=tone,
+                source_url=_build_message_capture_deep_link(capture.id),
+                source_label="메시지 보관함으로 이동",
+                has_attachment=capture.attachments.exists(),
+                is_readonly=True,
+            )
+        )
+    return items
+
+
+def _iter_hub_item_date_keys(item):
+    start_at = _parse_local_date_value(item.get("start_at") or item.get("sort_at"))
+    end_at = _parse_local_date_value(item.get("end_at") or item.get("start_at") or item.get("sort_at"))
+    start_date = _to_local_date(start_at)
+    end_date = _to_local_date(end_at) or start_date
+    if start_date is None:
+        return []
+    if end_date is None or end_date < start_date:
+        end_date = start_date
+    date_keys = []
+    cursor = start_date
+    while cursor <= end_date:
+        date_keys.append(cursor.isoformat())
+        cursor += timedelta(days=1)
+    return date_keys
+
+
+def _build_day_markers(hub_items):
+    markers = {}
+    for item in hub_items:
+        item_kind = str(item.get("item_kind") or "").strip()
+        tone = str(item.get("tone") or "neutral").strip().lower()
+        if tone not in HUB_TONE_PRIORITY:
+            tone = "neutral"
+        for date_key in _iter_hub_item_date_keys(item):
+            marker = markers.setdefault(
+                date_key,
+                {
+                    "count": 0,
+                    "top_tone": "neutral",
+                    "kinds": [],
+                },
+            )
+            marker["count"] += 1
+            if HUB_TONE_PRIORITY[tone] > HUB_TONE_PRIORITY.get(marker["top_tone"], 0):
+                marker["top_tone"] = tone
+            if item_kind and item_kind not in marker["kinds"]:
+                marker["kinds"].append(item_kind)
+    return markers
+
+
+def _sort_hub_items(hub_items):
+    tone_sort = {
+        "warning": 0,
+        "neutral": 1,
+        "done": 2,
+    }
+
+    def item_key(item):
+        sort_value = str(item.get("sort_at") or item.get("date_key") or "")
+        timed_rank = 0 if item.get("start_at") and not item.get("is_all_day") else 1
+        return (
+            str(item.get("date_key") or ""),
+            timed_rank,
+            tone_sort.get(str(item.get("tone") or "neutral"), 1),
+            sort_value,
+            str(item.get("title") or ""),
+        )
+
+    return sorted(hub_items, key=item_key)
+
+
+def _build_calendar_hub_payload(*, request_user, visible_owner_ids, editable_owner_ids, visible_events, visible_tasks):
+    setting_lookup = _build_owner_setting_lookup(visible_owner_ids)
+    hub_items = [
+        _build_native_event_hub_item(
+            event,
+            current_user_id=request_user.id,
+            editable_owner_ids=editable_owner_ids,
+        )
+        for event in visible_events
+    ]
+    hub_items.extend(
+        _build_native_task_hub_item(task, current_user_id=request_user.id)
+        for task in visible_tasks
+    )
+    hub_items.extend(_build_collect_direct_hub_items(visible_owner_ids, setting_lookup))
+    hub_items.extend(_build_signature_direct_hub_items(visible_owner_ids, setting_lookup))
+    hub_items.extend(_build_consent_direct_hub_items(visible_owner_ids, setting_lookup))
+    hub_items.extend(_build_reservation_direct_hub_items(visible_owner_ids, setting_lookup))
+    hub_items.extend(_build_message_direct_hub_items(request_user))
+    sorted_items = _sort_hub_items(hub_items)
+    return sorted_items, _build_day_markers(sorted_items)
+
+
+def _choose_default_selected_date_from_day_markers(day_markers, *, fallback_date):
+    fallback_key = fallback_date.isoformat()
+    keys = sorted(str(key) for key in (day_markers or {}).keys())
+    if fallback_key in day_markers:
+        return fallback_key
+    future_keys = [key for key in keys if key > fallback_key]
+    past_keys = [key for key in keys if key < fallback_key]
+    if future_keys:
+        return future_keys[0]
+    if past_keys:
+        return past_keys[-1]
+    return fallback_key
+
+
 def _get_integration_setting_for_user(user):
     return get_or_create_integration_setting(user)
 
@@ -2247,6 +2966,9 @@ def _get_teacher_visible_events(request, visible_owner_ids):
         request.user,
         active_classroom=active_classroom,
         visible_owner_ids=visible_owner_ids,
+    ).exclude(
+        is_locked=True,
+        integration_source__in=DIRECT_HUB_INTEGRATION_SOURCES,
     )
 
 
@@ -2264,21 +2986,7 @@ def _get_editable_event(request, event_id, editable_owner_ids):
 
 
 def _sync_integrations_if_needed(request, force=False):
-    if not request.user.is_authenticated:
-        return
-    now_epoch = timezone.now().timestamp()
-    last_synced = float(request.session.get(INTEGRATION_SYNC_SESSION_KEY) or 0.0)
-    if not force and (now_epoch - last_synced) < INTEGRATION_SYNC_MIN_INTERVAL_SECONDS:
-        return
-    try:
-        sync_user_calendar_integrations(request.user)
-        request.session[INTEGRATION_SYNC_SESSION_KEY] = now_epoch
-        request.session.modified = True
-    except Exception:
-        logger.exception(
-            "[ClassCalendar] integration sync failed user_id=%s",
-            getattr(request.user, "id", None),
-        )
+    return
 
 
 def _build_reservation_windows_for_user(user):
@@ -2573,7 +3281,6 @@ def build_calendar_surface_context(
     page_variant="main",
     embedded_surface="page",
 ):
-    _sync_integrations_if_needed(request)
     visible_owner_ids, editable_owner_ids, incoming_calendars = _get_calendar_access_for_user(request.user)
     integration_setting = _get_integration_setting_for_user(request.user)
     _ensure_retention_notice_event_for_user(request.user, integration_setting)
@@ -2583,6 +3290,13 @@ def build_calendar_surface_context(
     active_classroom = _get_active_classroom_for_user(request)
     visible_events = list(_get_teacher_visible_events(request, visible_owner_ids))
     visible_tasks = list(_get_teacher_visible_tasks(request))
+    hub_items, day_markers = _build_calendar_hub_payload(
+        request_user=request.user,
+        visible_owner_ids=visible_owner_ids,
+        editable_owner_ids=editable_owner_ids,
+        visible_events=visible_events,
+        visible_tasks=visible_tasks,
+    )
     calendar_page_url = _build_home_calendar_surface_url(request, include_request_state=False)
     calendar_api_base_url = reverse("classcalendar:main")
     main_url = calendar_page_url
@@ -2590,12 +3304,9 @@ def build_calendar_surface_context(
     create_api_url = reverse("classcalendar:api_create_event")
     today_focus = normalize_today_focus(request.GET.get("focus"))
     today_date = timezone.localdate()
-    visible_events = list(_get_teacher_visible_events(request, visible_owner_ids))
-    visible_tasks = list(_get_teacher_visible_tasks(request))
     requested_date = str(request.GET.get("date") or "").strip()
-    initial_selected_date = requested_date or _choose_default_selected_date(
-        visible_events,
-        visible_tasks,
+    initial_selected_date = requested_date or _choose_default_selected_date_from_day_markers(
+        day_markers,
         fallback_date=today_date,
     )
     initial_open_create = str(request.GET.get("action") or "").strip().lower() == "create"
@@ -2625,6 +3336,8 @@ def build_calendar_surface_context(
             visible_tasks,
             current_user_id=request.user.id,
         ),
+        "hub_items_json": hub_items,
+        "day_markers_json": day_markers,
         "integration_settings_json": serialize_integration_setting(integration_setting),
         "reservation_windows": _build_reservation_windows_for_user(request.user),
         "share_enabled": bool(integration_setting.share_enabled),
@@ -2815,11 +3528,16 @@ def shared_view(request, share_uuid):
 @login_required
 @require_GET
 def api_events(request):
-    force_sync = _parse_bool_value(request.GET.get("force_sync", "false"))
-    _sync_integrations_if_needed(request, force=force_sync)
     visible_owner_ids, editable_owner_ids, _ = _get_calendar_access_for_user(request.user)
     visible_events = list(_get_teacher_visible_events(request, visible_owner_ids))
     visible_tasks = list(_get_teacher_visible_tasks(request))
+    hub_items, day_markers = _build_calendar_hub_payload(
+        request_user=request.user,
+        visible_owner_ids=visible_owner_ids,
+        editable_owner_ids=editable_owner_ids,
+        visible_events=visible_events,
+        visible_tasks=visible_tasks,
+    )
     events_data = _serialize_event_list(
         visible_events,
         current_user_id=request.user.id,
@@ -2829,7 +3547,15 @@ def api_events(request):
         visible_tasks,
         current_user_id=request.user.id,
     )
-    response = JsonResponse({"status": "success", "events": events_data, "tasks": tasks_data})
+    response = JsonResponse(
+        {
+            "status": "success",
+            "events": events_data,
+            "tasks": tasks_data,
+            "hub_items": hub_items,
+            "day_markers": day_markers,
+        }
+    )
     return _apply_workspace_cache_headers(response)
 
 
@@ -2868,7 +3594,6 @@ def api_integration_settings(request):
             is_locked=True,
         ).delete()
 
-    _sync_integrations_if_needed(request, force=True)
     refreshed = _get_integration_setting_for_user(request.user)
     return JsonResponse(
         {
@@ -3473,6 +4198,73 @@ def api_message_capture_archive_detail(request, capture_id):
 
 @login_required
 @require_POST
+def api_message_capture_link(request, capture_id):
+    if not _is_message_capture_enabled_for_user(request.user):
+        return _feature_disabled_response("업무 메시지 보관함이 아직 활성화되지 않았습니다.")
+
+    payload = _extract_request_payload(request)
+    capture = get_object_or_404(
+        CalendarMessageCapture.objects.filter(author=request.user)
+        .prefetch_related("attachments", "candidates", "candidates__committed_event")
+        .select_related("committed_event", "committed_task"),
+        id=capture_id,
+    )
+
+    manual_date = str(payload.get("manual_date") or _get_message_capture_manual_date(capture) or "").strip()
+    manual_note = str(payload.get("manual_note") or _get_message_capture_manual_note(capture) or "").strip()
+    linked_for_at = _manual_date_to_linked_for_at(manual_date)
+    if linked_for_at is None:
+        return JsonResponse(
+            {
+                "status": "error",
+                "code": "validation_error",
+                "message": "메시지를 다시 볼 날짜를 선택해 주세요.",
+            },
+            status=400,
+        )
+
+    requested_follow_up_state = str(payload.get("follow_up_state") or "").strip()
+    allowed_states = {
+        CalendarMessageCapture.FollowUpState.PENDING,
+        CalendarMessageCapture.FollowUpState.NEEDS_CHECK,
+        CalendarMessageCapture.FollowUpState.DONE,
+    }
+    follow_up_state = (
+        requested_follow_up_state
+        if requested_follow_up_state in allowed_states
+        else _default_follow_up_state_for_capture(capture)
+    )
+    completed_at = timezone.now() if follow_up_state == CalendarMessageCapture.FollowUpState.DONE else None
+
+    capture.parse_payload = _merge_message_capture_manual_inputs(
+        capture.parse_payload,
+        manual_date=manual_date,
+        manual_note=manual_note,
+    )
+    capture.linked_for_at = linked_for_at
+    capture.follow_up_state = follow_up_state
+    capture.completed_at = completed_at
+    capture.save(
+        update_fields=[
+            "parse_payload",
+            "linked_for_at",
+            "follow_up_state",
+            "completed_at",
+            "updated_at",
+        ]
+    )
+
+    response_payload = _serialize_message_capture_archive_detail(capture)
+    response_payload["message"] = (
+        "캘린더에 메시지 항목으로 연결했어요."
+        if follow_up_state != CalendarMessageCapture.FollowUpState.DONE
+        else "메시지를 처리 완료로 저장했어요."
+    )
+    return JsonResponse(response_payload)
+
+
+@login_required
+@require_POST
 def api_message_capture_complete(request, capture_id):
     if not _is_message_capture_enabled_for_user(request.user):
         return _feature_disabled_response("업무 메시지 보관함이 아직 활성화되지 않았습니다.")
@@ -3492,7 +4284,12 @@ def api_message_capture_complete(request, capture_id):
         should_complete = _parse_bool_value(completed_value)
 
     capture.completed_at = timezone.now() if should_complete else None
-    capture.save(update_fields=["completed_at", "updated_at"])
+    capture.follow_up_state = (
+        CalendarMessageCapture.FollowUpState.DONE
+        if should_complete
+        else _default_follow_up_state_for_capture(capture)
+    )
+    capture.save(update_fields=["completed_at", "follow_up_state", "updated_at"])
 
     response_payload = _serialize_message_capture_archive_detail(capture)
     response_payload["message"] = "처리 완료로 표시했어요." if should_complete else "다시 확인할 메시지로 되돌렸어요."

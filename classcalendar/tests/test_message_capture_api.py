@@ -1,5 +1,5 @@
 import json
-from datetime import timedelta
+from datetime import datetime, timedelta
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -13,6 +13,7 @@ from classcalendar.models import (
     CalendarEventAttachment,
     CalendarMessageCapture,
     CalendarMessageCaptureCandidate,
+    CalendarTask,
 )
 from core.models import UserProfile
 from sheetbook.models import SheetTab, Sheetbook
@@ -41,6 +42,10 @@ class MessageCaptureApiTests(TestCase):
         self.save_url = reverse("classcalendar:api_message_capture_save")
         self.parse_url = reverse("classcalendar:api_message_capture_parse")
         self.archive_url = reverse("classcalendar:api_message_capture_archive")
+        self.link_url_template = reverse(
+            "classcalendar:api_message_capture_link",
+            kwargs={"capture_id": "00000000-0000-0000-0000-000000000000"},
+        ).replace("00000000-0000-0000-0000-000000000000", "{capture_id}")
         self.complete_url_template = reverse(
             "classcalendar:api_message_capture_complete",
             kwargs={"capture_id": "00000000-0000-0000-0000-000000000000"},
@@ -70,6 +75,13 @@ class MessageCaptureApiTests(TestCase):
     def _archive_detail(self, capture_id):
         return self.client.get(
             reverse("classcalendar:api_message_capture_archive_detail", kwargs={"capture_id": str(capture_id)})
+        )
+
+    def _link(self, capture_id, payload):
+        return self.client.post(
+            self.link_url_template.format(capture_id=str(capture_id)),
+            data=json.dumps(payload),
+            content_type="application/json",
         )
 
     def _complete(self, capture_id, *, completed=None):
@@ -707,6 +719,71 @@ class MessageCaptureApiTests(TestCase):
         parse_payload = parse_response.json()
         self.assertEqual(parse_payload.get("manual_date"), "2026-03-21")
         self.assertEqual(parse_payload.get("manual_note"), "공개수업 전에 다시 보기")
+
+    def test_link_saves_message_item_without_creating_calendar_rows(self):
+        save_response = self.client.post(
+            self.save_url,
+            data={
+                "raw_text": "금요일에 다시 볼 메시지",
+                "idempotency_key": "message-link-save",
+            },
+        )
+        self.assertEqual(save_response.status_code, 201)
+        capture_id = save_response.json()["capture_id"]
+
+        link_response = self._link(
+            capture_id,
+            {
+                "manual_date": "2026-03-27",
+                "manual_note": "퇴근 전에 확인",
+            },
+        )
+        self.assertEqual(link_response.status_code, 200)
+        payload = link_response.json()
+        self.assertEqual(payload.get("workflow_status"), "linked")
+        self.assertEqual(payload.get("follow_up_state"), CalendarMessageCapture.FollowUpState.NEEDS_CHECK)
+        self.assertEqual(CalendarEvent.objects.count(), 0)
+        self.assertEqual(CalendarTask.objects.count(), 0)
+
+        capture = CalendarMessageCapture.objects.get(id=capture_id)
+        self.assertIsNotNone(capture.linked_for_at)
+        self.assertEqual(capture.parse_payload.get("manual_date"), "2026-03-27")
+        self.assertEqual(capture.parse_payload.get("manual_note"), "퇴근 전에 확인")
+
+    def test_api_events_returns_linked_message_hub_item_and_hides_done_item(self):
+        pending_capture = CalendarMessageCapture.objects.create(
+            author=self.user,
+            raw_text="다음 주 확인 메시지",
+            extracted_title="다음 주 확인 메시지",
+            linked_for_at=timezone.make_aware(
+                datetime(2026, 3, 24, 0, 0),
+                timezone.get_current_timezone(),
+            ),
+            follow_up_state=CalendarMessageCapture.FollowUpState.PENDING,
+        )
+        CalendarMessageCapture.objects.create(
+            author=self.user,
+            raw_text="완료한 메시지",
+            extracted_title="완료한 메시지",
+            linked_for_at=timezone.make_aware(
+                datetime(2026, 3, 25, 0, 0),
+                timezone.get_current_timezone(),
+            ),
+            follow_up_state=CalendarMessageCapture.FollowUpState.DONE,
+            completed_at=timezone.now(),
+        )
+
+        response = self.client.get(reverse("classcalendar:api_events"))
+        self.assertEqual(response.status_code, 200)
+        hub_items = response.json().get("hub_items") or []
+        message_ids = {item["id"] for item in hub_items if item.get("item_kind") == "message"}
+
+        self.assertIn(f"message:{pending_capture.id}", message_ids)
+        self.assertEqual(
+            {item["status_label"] for item in hub_items if item.get("id") == f"message:{pending_capture.id}"},
+            {"처리 예정"},
+        )
+        self.assertTrue(all("완료한 메시지" != item.get("title") for item in hub_items))
 
     def test_archive_is_private_to_current_user(self):
         other_user = User.objects.create_user(

@@ -1,9 +1,8 @@
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import Client, TestCase
+from django.urls import reverse
 from django.utils import timezone
 
-from classcalendar.integrations import SOURCE_RESERVATION, sync_user_calendar_integrations
-from classcalendar.models import CalendarEvent
 from reservations.models import Reservation, School, SpecialRoom
 
 
@@ -32,8 +31,15 @@ class ReservationIntegrationScopeTests(TestCase):
             name="과학실",
             icon="🔬",
         )
+        self.client = Client()
 
-    def test_sync_includes_only_reservations_created_by_author(self):
+    def _hub_items_for(self, user):
+        self.client.force_login(user)
+        response = self.client.get(reverse("classcalendar:api_events"))
+        self.assertEqual(response.status_code, 200)
+        return response.json().get("hub_items") or []
+
+    def test_hub_includes_only_reservations_created_by_author(self):
         today = timezone.localdate()
         mine = Reservation.objects.create(
             room=self.room,
@@ -63,16 +69,11 @@ class ReservationIntegrationScopeTests(TestCase):
             name="익명예약",
         )
 
-        sync_user_calendar_integrations(self.owner)
+        items = [item for item in self._hub_items_for(self.owner) if item.get("item_kind") == "reservation"]
+        self.assertEqual(len(items), 1)
+        self.assertIn(f"reservation={mine.id}", items[0]["source_url"])
 
-        events = CalendarEvent.objects.filter(
-            author=self.owner,
-            integration_source=SOURCE_RESERVATION,
-        )
-        self.assertEqual(events.count(), 1)
-        self.assertEqual(events.first().integration_key.split(":")[1], str(mine.id))
-
-    def test_sync_uses_creator_even_when_school_owner_differs(self):
+    def test_hub_uses_creator_even_when_school_owner_differs(self):
         today = timezone.localdate()
         reservation = Reservation.objects.create(
             room=self.room,
@@ -84,11 +85,6 @@ class ReservationIntegrationScopeTests(TestCase):
             name="다른사용자",
         )
 
-        sync_user_calendar_integrations(self.other)
-
-        events = CalendarEvent.objects.filter(
-            author=self.other,
-            integration_source=SOURCE_RESERVATION,
-        )
-        self.assertEqual(events.count(), 1)
-        self.assertEqual(events.first().integration_key.split(":")[1], str(reservation.id))
+        items = [item for item in self._hub_items_for(self.other) if item.get("item_kind") == "reservation"]
+        self.assertEqual(len(items), 1)
+        self.assertIn(f"reservation={reservation.id}", items[0]["source_url"])

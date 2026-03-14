@@ -256,46 +256,4 @@ def _sync_reservation_events(author, seen_keys):
 
 
 def sync_user_calendar_integrations(author):
-    setting = get_or_create_integration_setting(author)
-    seen_keys = defaultdict(set)
-
-    if setting.collect_deadline_enabled:
-        _sync_collect_deadline_events(author, seen_keys)
-    else:
-        _cleanup_missing_integration_events(
-            author=author,
-            source=SOURCE_COLLECT_DEADLINE,
-            keep_keys=set(),
-        )
-
-    if setting.consent_expiry_enabled:
-        _sync_consent_expiry_events(author, seen_keys)
-    else:
-        _cleanup_missing_integration_events(
-            author=author,
-            source=SOURCE_CONSENT_EXPIRY,
-            keep_keys=set(),
-        )
-
-    if setting.reservation_enabled:
-        _sync_reservation_events(author, seen_keys)
-    else:
-        _cleanup_missing_integration_events(
-            author=author,
-            source=SOURCE_RESERVATION,
-            keep_keys=set(),
-        )
-
-    for source in INTEGRATION_SOURCES:
-        _cleanup_missing_integration_events(
-            author=author,
-            source=source,
-            keep_keys=seen_keys[source],
-        )
-
-    if not setting.signatures_training_enabled:
-        _cleanup_missing_integration_events(
-            author=author,
-            source=SOURCE_SIGNATURES_TRAINING,
-            keep_keys=set(),
-        )
+    return

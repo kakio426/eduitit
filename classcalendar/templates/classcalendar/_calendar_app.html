@@ -424,9 +424,9 @@
                                     ></span>
                                 </div>
                                 <div class="mt-3 flex items-center gap-1.5" x-show="getDayItemCount(date) > 0">
-                                    <span x-show="getEventCountForDate(date) > 0" class="h-2 w-2 rounded-full bg-slate-600"></span>
-                                    <span x-show="getMemoCountForDate(date) > 0" class="h-2 w-2 rounded-full bg-amber-400"></span>
-                                    <span x-show="getTaskCountForDate(date) > 0" class="h-2 w-2 rounded-full bg-slate-300 ring-1 ring-slate-400/40"></span>
+                                    <span class="h-2 w-2 rounded-full" :class="getDayMarkerDotClass(date)"></span>
+                                    <span x-show="getDayItemCount(date) > 1" class="h-2 w-2 rounded-full bg-slate-300"></span>
+                                    <span x-show="getDayItemCount(date) > 2" class="h-2 w-2 rounded-full bg-slate-200"></span>
                                 </div>
                             </button>
                         </template>
@@ -444,7 +444,7 @@
 
                     <div class="mt-4 space-y-2.5" x-show="getSelectedDateHubItems().length > 0">
                         <p class="text-xs font-semibold text-slate-500 uppercase tracking-[0.08em]">이날의 항목</p>
-                        <template x-for="item in getSelectedDateHubItems()" :key="item.key">
+                        <template x-for="item in getSelectedDateHubItems()" :key="`${item.id}-${selectedDateKey}`">
                                 <button
                                     type="button"
                                     @click="openSelectedDateHubItem(item, $event)"
@@ -455,30 +455,22 @@
                                             <div class="flex flex-wrap items-center gap-2">
                                                 <span class="classcalendar-chip inline-flex items-center rounded-full bg-slate-100 px-2 py-1 font-bold text-slate-700" x-text="item.serviceLabel"></span>
                                                 <span
-                                                    x-show="item.statusText"
+                                                    x-show="item.status_label"
                                                     class="classcalendar-chip inline-flex items-center rounded-full px-2 py-1 font-bold"
-                                                    :class="getHubStatusBadgeClass(item.statusTone)"
-                                                    x-text="item.statusText"
+                                                    :class="getHubStatusBadgeClass(item.tone)"
+                                                    x-text="item.status_label"
                                                 ></span>
                                             </div>
                                             <p class="classcalendar-copy classcalendar-clamp-2 mt-2 text-base font-bold text-slate-900" x-text="item.title"></p>
-                                            <p class="mt-1 text-sm font-medium text-slate-600" x-text="item.scheduleText"></p>
                                             <p
-                                                x-show="item.detailText"
+                                                x-show="item.meta_text"
                                                 class="classcalendar-copy classcalendar-clamp-2 mt-1 text-sm font-medium text-slate-500"
-                                                x-text="item.detailText"
+                                                x-text="item.meta_text"
                                             ></p>
                                         </div>
                                         <span class="mt-1 shrink-0 text-xs font-bold text-slate-400">열기</span>
                                     </div>
                                 </button>
-                                <a
-                                    x-show="item.messageCaptureUrl"
-                                    :href="item.messageCaptureUrl || '#'"
-                                    class="inline-flex items-center gap-1 text-xs font-bold text-amber-700 transition hover:text-amber-900"
-                                >
-                                    연결된 메시지 보기
-                                </a>
                         </template>
                     </div>
                     <div
@@ -691,6 +683,8 @@
 {{ integration_settings_json|json_script:"integration-settings-data" }}
 {{ events_json|json_script:"events-data" }}
 {{ tasks_json|json_script:"tasks-data" }}
+{{ hub_items_json|json_script:"hub-items-data" }}
+{{ day_markers_json|json_script:"day-markers-data" }}
 {{ calendar_owner_options_json|json_script:"calendar-owner-options-data" }}
 {{ message_capture_limits_json|json_script:"message-capture-limits-data" }}
 {{ message_capture_urls_json|json_script:"message-capture-urls-data" }}
@@ -766,6 +760,8 @@ function calendarApp() {
         selectedDateKey: '',
         events: [],
         tasks: [],
+        hubItems: [],
+        dayMarkers: {},
         selectedEvent: null,
         selectedTask: null,
         createModalOpen: false,
@@ -869,6 +865,8 @@ function calendarApp() {
             }
             this.loadEventsFromScript();
             this.loadTasksFromScript();
+            this.loadHubItemsFromScript();
+            this.loadDayMarkersFromScript();
             this.selectedDateKey = this.initialSelectedDateKey || this.dateKey(new Date());
             this.currentDate = new Date(this.parseDateKey(this.selectedDateKey).getFullYear(), this.parseDateKey(this.selectedDateKey).getMonth(), 1);
             this.registerReturnSync();
@@ -966,6 +964,28 @@ function calendarApp() {
             };
         },
 
+        normalizeHubItem(item) {
+            const serviceLabelMap = {
+                event: '일정',
+                task: '할 일',
+                collect: '수합',
+                signature: '사인',
+                consent: '동의서',
+                reservation: '예약',
+                message: '메시지',
+            };
+            return {
+                ...item,
+                serviceLabel: serviceLabelMap[item.item_kind] || '항목',
+                start_at: item.start_at ? new Date(item.start_at) : null,
+                end_at: item.end_at ? new Date(item.end_at) : null,
+                sort_at: item.sort_at ? new Date(item.sort_at) : null,
+                is_all_day: !!item.is_all_day,
+                has_attachment: !!item.has_attachment,
+                is_readonly: !!item.is_readonly,
+            };
+        },
+
         loadEventsFromScript() {
             try {
                 const raw = JSON.parse(document.getElementById('events-data').textContent || '[]');
@@ -981,6 +1001,26 @@ function calendarApp() {
                 this.tasks = raw.map((task) => this.normalizeTask(task));
             } catch (e) {
                 window.showToast('할 일 데이터를 읽는 중 오류가 발생했습니다.', 'error');
+            }
+        },
+
+        loadHubItemsFromScript() {
+            try {
+                const raw = JSON.parse(document.getElementById('hub-items-data').textContent || '[]');
+                this.hubItems = Array.isArray(raw) ? raw.map((item) => this.normalizeHubItem(item)) : [];
+            } catch (e) {
+                this.hubItems = [];
+                window.showToast('캘린더 허브 데이터를 읽는 중 오류가 발생했습니다.', 'error');
+            }
+        },
+
+        loadDayMarkersFromScript() {
+            try {
+                const raw = JSON.parse(document.getElementById('day-markers-data').textContent || '{}');
+                this.dayMarkers = raw && typeof raw === 'object' ? raw : {};
+            } catch (e) {
+                this.dayMarkers = {};
+                window.showToast('날짜 표시 데이터를 읽는 중 오류가 발생했습니다.', 'error');
             }
         },
 
@@ -1812,6 +1852,8 @@ function calendarApp() {
             const payload = await this.requestJson(this.buildEventsUrl(forceSync));
             this.events = (payload.events || []).map((event) => this.normalizeEvent(event));
             this.tasks = (payload.tasks || []).map((task) => this.normalizeTask(task));
+            this.hubItems = (payload.hub_items || []).map((item) => this.normalizeHubItem(item));
+            this.dayMarkers = payload.day_markers || {};
             this.$nextTick(() => notifyEmbeddedCalendarHeight());
         },
 
@@ -2027,23 +2069,21 @@ function calendarApp() {
 
         async openSelectedDateHubItem(item, triggerEvent = null) {
             if (!item) return;
-            if (item.actionType === 'source_link' && item.actionUrl) {
-                window.location.href = item.actionUrl;
+            if (item.source_item_kind === 'task' && item.source_item_id) {
+                this.openTaskDetailById(item.source_item_id);
                 return;
             }
-            if (item.messageCaptureUrl) {
-                window.location.href = item.messageCaptureUrl;
+            if (item.source_item_kind === 'event' && item.source_item_id) {
+                await this.openEventDetailById(item.source_item_id);
                 return;
             }
-            if (item.actionType === 'message_capture' && item.messageCaptureId) {
+            if (item.source_url) {
+                window.location.href = item.source_url;
+                return;
+            }
+            if (item.messageCaptureId) {
                 await this.openMessageArchiveCapture(item.messageCaptureId, triggerEvent);
-                return;
             }
-            if (item.kind === 'task') {
-                this.openTaskDetail(item.sourceItem);
-                return;
-            }
-            await this.openEventDetail(item.sourceItem);
         },
 
         closeDetailModal() {
@@ -2255,9 +2295,19 @@ function calendarApp() {
                 return task.due_at.getFullYear() === y && task.due_at.getMonth() === m;
             }).length;
         },
+        get monthHubItemCount() {
+            const start = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth(), 1, 0, 0, 0, 0);
+            const end = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + 1, 0, 23, 59, 59, 999);
+            return this.hubItems.filter((item) => {
+                const itemStart = item.start_at || item.sort_at;
+                const itemEnd = item.end_at || item.start_at || item.sort_at;
+                if (!itemStart) return false;
+                return itemStart <= end && itemEnd >= start;
+            }).length;
+        },
         get currentMonthSummaryText() {
             const todayCount = this.getDayItemCount(new Date());
-            const monthCount = this.monthEventsCount + this.monthTasksCount;
+            const monthCount = this.monthHubItemCount;
             return `오늘 ${todayCount}건 · 이번 달 ${monthCount}건`;
         },
 
@@ -2357,13 +2407,27 @@ function calendarApp() {
         getTaskCountForDate(date) {
             return this.getTasksForDate(date).length;
         },
+        getDayMarker(date) {
+            return this.dayMarkers[this.dateKey(date)] || null;
+        },
+        getDayMarkerDotClass(date) {
+            const marker = this.getDayMarker(date);
+            const tone = marker && marker.top_tone ? marker.top_tone : 'neutral';
+            const map = {
+                neutral: 'bg-slate-400',
+                warning: 'bg-amber-500',
+                done: 'bg-emerald-500',
+            };
+            return map[tone] || map.neutral;
+        },
         getMemoCountForDate(date) {
             const eventMemoCount = this.events.filter((event) => this.overlapsDate(event, date) && this.hasEventNote(event)).length;
             const taskMemoCount = this.getTasksForDate(date).filter((task) => this.hasTaskNote(task)).length;
             return eventMemoCount + taskMemoCount;
         },
         getDayItemCount(date) {
-            return this.getEventCountForDate(date) + this.getTaskCountForDate(date);
+            const marker = this.getDayMarker(date);
+            return Number(marker && marker.count ? marker.count : 0);
         },
         formatDayItemCount(date) {
             const count = this.getDayItemCount(date);
@@ -2371,62 +2435,54 @@ function calendarApp() {
         },
         getDayTooltip(date) {
             const base = this.formatAgendaDate(this.dateKey(date));
-            const parts = [];
-            const eventCount = this.getEventCountForDate(date);
-            const memoCount = this.getMemoCountForDate(date);
-            const taskCount = this.getTaskCountForDate(date);
-            if (eventCount) parts.push(`일정 ${eventCount}건`);
-            if (memoCount) parts.push(`메모 ${memoCount}건`);
-            if (taskCount) parts.push(`할 일 ${taskCount}건`);
-            return parts.length ? `${base} · ${parts.join(' · ')}` : `${base} · 비어 있음`;
-        },
-        buildSelectedDateHubItem(kind, sourceItem) {
-            const hubMeta = sourceItem && sourceItem.hub_meta ? sourceItem.hub_meta : {};
-            const scheduleText = kind === 'task'
-                ? this.formatTaskDue(sourceItem)
-                : this.formatEventRange(sourceItem);
-            return {
-                key: `${kind}-${sourceItem.id}-${this.selectedDateKey}`,
-                kind,
-                sourceItem,
-                title: hubMeta.title || sourceItem.title || '',
-                serviceLabel: hubMeta.service_label || (kind === 'task' ? '할 일' : '일정'),
-                statusText: hubMeta.status_text || '',
-                statusTone: hubMeta.status_tone || 'neutral',
-                detailText: hubMeta.detail_text || '',
-                scheduleText,
-                actionType: hubMeta.action_type || (kind === 'task' ? 'task_detail' : 'event_detail'),
-                actionUrl: hubMeta.action_url || '',
-                messageCaptureId: hubMeta.message_capture_id || '',
-                messageCaptureUrl: sourceItem.message_capture_url || '',
-                sortTime: kind === 'task'
-                    ? (sourceItem.due_at ? sourceItem.due_at.getTime() : 0)
-                    : sourceItem.start_time.getTime(),
+            const count = this.getDayItemCount(date);
+            if (!count) return `${base} · 비어 있음`;
+            const marker = this.getDayMarker(date);
+            const toneLabelMap = {
+                neutral: '진행 항목',
+                warning: '확인 필요',
+                done: '완료 포함',
             };
+            const toneLabel = toneLabelMap[marker && marker.top_tone ? marker.top_tone : 'neutral'] || toneLabelMap.neutral;
+            return `${base} · ${count}건 · ${toneLabel}`;
+        },
+        hubItemOverlapsDate(item, date) {
+            if (!item) return false;
+            const start = item.start_at || item.sort_at;
+            const end = item.end_at || item.start_at || item.sort_at;
+            if (!start) return item.date_key === this.dateKey(date);
+            const startOfDate = new Date(date);
+            startOfDate.setHours(0, 0, 0, 0);
+            const endOfDate = new Date(date);
+            endOfDate.setHours(23, 59, 59, 999);
+            const startTime = new Date(start);
+            const endTime = end ? new Date(end) : startTime;
+            return startTime <= endOfDate && endTime >= startOfDate;
+        },
+        sortHubItems(left, right) {
+            const leftTimed = left.start_at && !left.is_all_day ? 0 : 1;
+            const rightTimed = right.start_at && !right.is_all_day ? 0 : 1;
+            if (leftTimed !== rightTimed) return leftTimed - rightTimed;
+            const toneRank = { warning: 0, neutral: 1, done: 2 };
+            const leftTone = toneRank[left.tone || 'neutral'] ?? 1;
+            const rightTone = toneRank[right.tone || 'neutral'] ?? 1;
+            if (leftTone !== rightTone) return leftTone - rightTone;
+            const leftSort = left.sort_at ? new Date(left.sort_at).getTime() : 0;
+            const rightSort = right.sort_at ? new Date(right.sort_at).getTime() : 0;
+            if (leftSort !== rightSort) return leftSort - rightSort;
+            return String(left.title || '').localeCompare(String(right.title || ''), 'ko');
         },
         getSelectedDateHubItems() {
-            const items = [];
-            this.getEventsForSelectedDate().forEach((event) => {
-                items.push(this.buildSelectedDateHubItem('event', event));
-            });
-            this.getTasksForSelectedDate().forEach((task) => {
-                items.push(this.buildSelectedDateHubItem('task', task));
-            });
-            return items.sort((left, right) => {
-                if (left.sortTime !== right.sortTime) return left.sortTime - right.sortTime;
-                return left.title.localeCompare(right.title, 'ko');
-            });
+            if (!this.selectedDateKey) return [];
+            const selectedDate = this.parseDateKey(this.selectedDateKey);
+            return this.hubItems
+                .filter((item) => this.hubItemOverlapsDate(item, selectedDate))
+                .sort((left, right) => this.sortHubItems(left, right));
         },
         selectedDateSummaryText() {
-            const eventCount = this.getEventsForSelectedDate().length;
-            const memoCount = this.getMemoCountForSelectedDate();
-            const taskCount = this.getTasksForSelectedDate().length;
-            const parts = [];
-            if (eventCount) parts.push(`일정 ${eventCount}건`);
-            if (memoCount) parts.push(`메모 ${memoCount}건`);
-            if (taskCount) parts.push(`할 일 ${taskCount}건`);
-            if (!parts.length) return '이 날짜에는 일정과 할 일이 없습니다.';
-            return parts.join(' · ');
+            const itemCount = this.getSelectedDateHubItems().length;
+            if (!itemCount) return '이 날짜에는 연결된 항목이 없습니다.';
+            return `연결된 항목 ${itemCount}건`;
         },
         getTasksForSelectedDate() {
             if (!this.selectedDateKey) return [];
@@ -2440,9 +2496,8 @@ function calendarApp() {
         getOverflowCountForDate(date) { const total = this.getEventsForDate(date).length; return total > 3 ? total - 3 : 0; },
         getAgendaDates() {
             const set = new Set();
-            this.events.forEach((e) => set.add(this.dateKey(e.start_time)));
-            this.tasks.forEach((task) => {
-                const key = this.getTaskDateKey(task);
+            this.hubItems.forEach((item) => {
+                const key = String(item.date_key || '').trim();
                 if (key) set.add(key);
             });
             return Array.from(set).sort();
@@ -2512,7 +2567,7 @@ function calendarApp() {
             const map = {
                 neutral: 'bg-slate-100 text-slate-700',
                 warning: 'bg-amber-100 text-amber-800',
-                complete: 'bg-emerald-100 text-emerald-700',
+                done: 'bg-emerald-100 text-emerald-700',
             };
             return map[statusTone || 'neutral'] || map.neutral;
         },

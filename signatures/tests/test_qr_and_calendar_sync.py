@@ -1,15 +1,13 @@
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from classcalendar.models import CalendarEvent
 from classcalendar.models import CalendarIntegrationSetting
 from core.models import UserProfile
 from signatures.models import TrainingSession
-from signatures.views import CALENDAR_INTEGRATION_SOURCE
 
 
 User = get_user_model()
@@ -46,7 +44,7 @@ class SignatureShareQrTests(TestCase):
         self.assertContains(response, "프로젝터용 참여 QR")
 
 
-class SignatureCalendarSyncTests(TestCase):
+class SignatureCalendarHubTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
             username="sign_t2",
@@ -57,13 +55,21 @@ class SignatureCalendarSyncTests(TestCase):
             user=self.user,
             defaults={"nickname": "sign_t2", "role": "school"},
         )
+        self.client = Client()
         self.client.force_login(self.user)
 
-    def test_create_session_creates_calendar_event(self):
+    def _signature_items(self):
+        response = self.client.get(reverse("classcalendar:api_events"))
+        self.assertEqual(response.status_code, 200)
+        return [
+            item for item in response.json().get("hub_items") or []
+            if item.get("item_kind") == "signature"
+        ]
+
+    def test_create_session_shows_signature_hub_item(self):
         session_dt = timezone.localtime(timezone.now() + timedelta(days=2)).replace(minute=0, second=0, microsecond=0)
-        create_url = reverse("signatures:create")
         response = self.client.post(
-            create_url,
+            reverse("signatures:create"),
             {
                 "title": "서명 연동 테스트",
                 "print_title": "",
@@ -78,16 +84,12 @@ class SignatureCalendarSyncTests(TestCase):
         self.assertEqual(response.status_code, 302)
 
         session = TrainingSession.objects.get(title="서명 연동 테스트", created_by=self.user)
-        calendar_event = CalendarEvent.objects.get(
-            author=self.user,
-            integration_source=CALENDAR_INTEGRATION_SOURCE,
-            integration_key=f"signatures:{session.uuid}",
-        )
-        self.assertIn("[서명 연수]", calendar_event.title)
-        self.assertIn("서명 연동 테스트", calendar_event.title)
-        self.assertTrue(calendar_event.is_locked)
+        items = self._signature_items()
+        item = next(item for item in items if item["id"] == f"signature:{session.uuid}")
+        self.assertEqual(item["title"], "서명 연동 테스트")
+        self.assertEqual(item["status_label"], "예정")
 
-    def test_edit_and_delete_session_sync_calendar_event(self):
+    def test_edit_and_delete_session_updates_signature_hub_item(self):
         original_dt = timezone.now() + timedelta(days=3)
         session = TrainingSession.objects.create(
             title="초기 연수",
@@ -98,23 +100,9 @@ class SignatureCalendarSyncTests(TestCase):
             is_active=True,
         )
 
-        CalendarEvent.objects.create(
-            title="[서명 연수] 초기 연수",
-            author=self.user,
-            start_time=timezone.localtime(original_dt),
-            end_time=timezone.localtime(original_dt) + timedelta(minutes=60),
-            is_all_day=False,
-            visibility=CalendarEvent.VISIBILITY_TEACHER,
-            source=CalendarEvent.SOURCE_LOCAL,
-            integration_source=CALENDAR_INTEGRATION_SOURCE,
-            integration_key=f"signatures:{session.uuid}",
-            is_locked=True,
-        )
-
         updated_dt = timezone.localtime(timezone.now() + timedelta(days=5)).replace(minute=30, second=0, microsecond=0)
-        edit_url = reverse("signatures:edit", kwargs={"uuid": session.uuid})
         edit_response = self.client.post(
-            edit_url,
+            reverse("signatures:edit", kwargs={"uuid": session.uuid}),
             {
                 "title": "수정 연수",
                 "print_title": "",
@@ -128,25 +116,14 @@ class SignatureCalendarSyncTests(TestCase):
         )
         self.assertEqual(edit_response.status_code, 302)
 
-        calendar_event = CalendarEvent.objects.get(
-            author=self.user,
-            integration_source=CALENDAR_INTEGRATION_SOURCE,
-            integration_key=f"signatures:{session.uuid}",
-        )
-        self.assertIn("수정 연수", calendar_event.title)
+        edited_item = next(item for item in self._signature_items() if item["id"] == f"signature:{session.uuid}")
+        self.assertEqual(edited_item["title"], "수정 연수")
 
-        delete_url = reverse("signatures:delete", kwargs={"uuid": session.uuid})
-        delete_response = self.client.post(delete_url)
+        delete_response = self.client.post(reverse("signatures:delete", kwargs={"uuid": session.uuid}))
         self.assertEqual(delete_response.status_code, 302)
-        self.assertFalse(
-            CalendarEvent.objects.filter(
-                author=self.user,
-                integration_source=CALENDAR_INTEGRATION_SOURCE,
-                integration_key=f"signatures:{session.uuid}",
-            ).exists()
-        )
+        self.assertFalse(any(item["id"] == f"signature:{session.uuid}" for item in self._signature_items()))
 
-    def test_create_session_skips_calendar_sync_when_signatures_integration_disabled(self):
+    def test_create_session_hides_hub_item_when_signature_integration_disabled(self):
         CalendarIntegrationSetting.objects.update_or_create(
             user=self.user,
             defaults={"signatures_training_enabled": False},
@@ -167,10 +144,4 @@ class SignatureCalendarSyncTests(TestCase):
         )
         self.assertEqual(response.status_code, 302)
         session = TrainingSession.objects.get(title="연동 OFF 테스트", created_by=self.user)
-        self.assertFalse(
-            CalendarEvent.objects.filter(
-                author=self.user,
-                integration_source=CALENDAR_INTEGRATION_SOURCE,
-                integration_key=f"signatures:{session.uuid}",
-            ).exists()
-        )
+        self.assertFalse(any(item["id"] == f"signature:{session.uuid}" for item in self._signature_items()))

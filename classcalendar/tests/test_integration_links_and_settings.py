@@ -1,26 +1,30 @@
-import uuid
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from django.contrib.auth import get_user_model
-from django.test import Client, TestCase
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
 from classcalendar.integrations import (
     SOURCE_COLLECT_DEADLINE,
     SOURCE_CONSENT_EXPIRY,
-    SOURCE_RESERVATION,
     SOURCE_SIGNATURES_TRAINING,
 )
-from classcalendar.models import CalendarEvent, CalendarIntegrationSetting
-from classcalendar.models import CalendarMessageCapture, CalendarTask
-from classcalendar.views import INTEGRATION_SYNC_SESSION_KEY
+from classcalendar.models import CalendarEvent, CalendarIntegrationSetting, CalendarMessageCapture
 from collect.models import CollectionRequest, Submission
+from consent.models import SignatureDocument, SignatureRecipient, SignatureRequest
+from reservations.models import Reservation, School, SpecialRoom
+from signatures.models import TrainingSession
 
 
 User = get_user_model()
 
 
+@override_settings(
+    FEATURE_MESSAGE_CAPTURE_ENABLED=True,
+    FEATURE_MESSAGE_CAPTURE_ALLOWLIST_USERNAMES="cc_link_user",
+)
 class IntegrationLinksAndSettingsTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
@@ -30,6 +34,16 @@ class IntegrationLinksAndSettingsTests(TestCase):
         )
         self.client = Client()
         self.client.force_login(self.user)
+        self.school = School.objects.create(
+            name="테스트학교",
+            slug="calendar-hub-school",
+            owner=self.user,
+        )
+        self.room = SpecialRoom.objects.create(
+            school=self.school,
+            name="과학실",
+            icon="🔬",
+        )
 
     def _create_locked_event(self, *, source, key, title):
         now = timezone.now()
@@ -46,80 +60,104 @@ class IntegrationLinksAndSettingsTests(TestCase):
             is_locked=True,
         )
 
-    def test_api_events_includes_source_links_for_all_integrations(self):
-        self._create_locked_event(
-            source=SOURCE_COLLECT_DEADLINE,
-            key=f"collect:{uuid.uuid4()}",
-            title="수합 마감",
+    def _create_consent_request(self, *, title="동의서 요청", sent_at=None):
+        document = SignatureDocument.objects.create(
+            created_by=self.user,
+            title="학부모 동의서",
+            original_file=SimpleUploadedFile("consent.pdf", b"pdf", content_type="application/pdf"),
+            file_type=SignatureDocument.FILE_TYPE_PDF,
         )
-        self._create_locked_event(
-            source=SOURCE_CONSENT_EXPIRY,
-            key=f"consent:{uuid.uuid4()}",
-            title="동의서 만료",
+        return SignatureRequest.objects.create(
+            document_name_snapshot="consent.pdf",
+            created_by=self.user,
+            document=document,
+            title=title,
+            status=SignatureRequest.STATUS_SENT,
+            sent_at=sent_at or timezone.now(),
         )
-        self._create_locked_event(
-            source=SOURCE_RESERVATION,
-            key="reservation:1:test-school:2026-03-01",
-            title="특별실 예약",
-        )
-        self._create_locked_event(
-            source=SOURCE_SIGNATURES_TRAINING,
-            key=f"signatures:{uuid.uuid4()}",
-            title="서명 연수",
-        )
-        session = self.client.session
-        session[INTEGRATION_SYNC_SESSION_KEY] = timezone.now().timestamp()
-        session.save()
 
-        response = self.client.get(reverse("classcalendar:api_events"))
+    def _hub_items(self, response):
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertEqual(payload.get("status"), "success")
+        return payload.get("hub_items") or []
 
-        source_map = {}
-        for item in payload.get("events", []):
-            source_map[item.get("integration_source")] = item
-
-        self.assertTrue(source_map[SOURCE_COLLECT_DEADLINE]["source_url"])
-        self.assertTrue(source_map[SOURCE_CONSENT_EXPIRY]["source_url"])
-        self.assertTrue(source_map[SOURCE_RESERVATION]["source_url"])
-        self.assertTrue(source_map[SOURCE_SIGNATURES_TRAINING]["source_url"])
-
-    def test_api_events_includes_hub_meta_for_calendar_hub_integrations(self):
-        self._create_locked_event(
-            source=SOURCE_COLLECT_DEADLINE,
-            key=f"collect:{uuid.uuid4()}",
+    def test_api_events_includes_direct_hub_links_for_all_integrations(self):
+        deadline = timezone.now() + timedelta(hours=4)
+        collect_request = CollectionRequest.objects.create(
+            creator=self.user,
             title="수합 마감",
+            deadline=deadline,
         )
-        self._create_locked_event(
-            source=SOURCE_CONSENT_EXPIRY,
-            key=f"consent:{uuid.uuid4()}",
-            title="동의서 만료",
+        consent_request = self._create_consent_request(sent_at=timezone.now() - timedelta(days=1))
+        reservation = Reservation.objects.create(
+            room=self.room,
+            created_by=self.user,
+            date=timezone.localdate(),
+            period=2,
+            grade=5,
+            class_no=1,
+            name="담임",
         )
-        self._create_locked_event(
-            source=SOURCE_RESERVATION,
-            key="reservation:1:test-school:2026-03-01",
-            title="특별실 예약",
+        session = TrainingSession.objects.create(
+            title="서명 연수",
+            instructor="강사A",
+            datetime=timezone.now() + timedelta(days=1),
+            location="시청각실",
+            created_by=self.user,
         )
-        session = self.client.session
-        session[INTEGRATION_SYNC_SESSION_KEY] = timezone.now().timestamp()
-        session.save()
 
         response = self.client.get(reverse("classcalendar:api_events"))
-        self.assertEqual(response.status_code, 200)
-
-        source_map = {
-            item.get("integration_source"): item
-            for item in response.json().get("events", [])
+        hub_map = {
+            item["item_kind"]: item
+            for item in self._hub_items(response)
+            if item.get("item_kind") in {"collect", "consent", "reservation", "signature"}
         }
 
-        self.assertEqual(source_map[SOURCE_COLLECT_DEADLINE]["hub_meta"]["service_label"], "수합")
-        self.assertEqual(source_map[SOURCE_COLLECT_DEADLINE]["hub_meta"]["action_type"], "source_link")
-        self.assertEqual(source_map[SOURCE_CONSENT_EXPIRY]["hub_meta"]["service_label"], "사인")
-        self.assertEqual(source_map[SOURCE_CONSENT_EXPIRY]["hub_meta"]["action_type"], "source_link")
-        self.assertEqual(source_map[SOURCE_RESERVATION]["hub_meta"]["service_label"], "예약")
-        self.assertEqual(source_map[SOURCE_RESERVATION]["hub_meta"]["action_type"], "source_link")
-        self.assertIn("reservation=1", source_map[SOURCE_RESERVATION]["source_url"])
+        self.assertIn(str(collect_request.id), hub_map["collect"]["source_url"])
+        self.assertTrue(hub_map["consent"]["source_url"].endswith(f"/consent/{consent_request.request_id}/"))
+        self.assertIn(f"reservation={reservation.id}", hub_map["reservation"]["source_url"])
+        self.assertTrue(hub_map["signature"]["source_url"].endswith(f"/signatures/{session.uuid}/"))
+
+    def test_api_events_includes_direct_hub_status_and_day_markers(self):
+        deadline = timezone.now() + timedelta(hours=2)
+        collect_request = CollectionRequest.objects.create(
+            creator=self.user,
+            title="가정통신문 회신",
+            deadline=deadline,
+        )
+        consent_request = self._create_consent_request(
+            title="체험학습 동의서",
+            sent_at=timezone.now() - timedelta(days=14),
+        )
+        SignatureRecipient.objects.create(
+            request=consent_request,
+            student_name="학생1",
+            parent_name="학부모1",
+            phone_number="01012341234",
+            status=SignatureRecipient.STATUS_PENDING,
+        )
+        Reservation.objects.create(
+            room=self.room,
+            created_by=self.user,
+            date=timezone.localdate(),
+            period=3,
+            grade=5,
+            class_no=2,
+            name="교사",
+        )
+
+        response = self.client.get(reverse("classcalendar:api_events"))
+        payload = response.json()
+        hub_map = {item["item_kind"]: item for item in payload.get("hub_items") or []}
+        day_markers = payload.get("day_markers") or {}
+
+        self.assertEqual(hub_map["collect"]["status_label"], "오늘 마감")
+        self.assertEqual(hub_map["collect"]["tone"], "warning")
+        self.assertEqual(hub_map["consent"]["status_label"], "만료")
+        self.assertIn("reservation", day_markers[timezone.localdate().isoformat()]["kinds"])
+        self.assertIn("collect", day_markers[timezone.localtime(deadline).date().isoformat()]["kinds"])
+        self.assertTrue(hub_map["reservation"]["source_label"])
 
     def test_api_events_collect_hub_meta_uses_submission_total(self):
         request_item = CollectionRequest.objects.create(
@@ -133,134 +171,97 @@ class IntegrationLinksAndSettingsTests(TestCase):
             submission_type="text",
             text_content="회신 완료",
         )
-        self._create_locked_event(
-            source=SOURCE_COLLECT_DEADLINE,
-            key=f"collect:{request_item.id}",
-            title="수합 마감",
-        )
-        session = self.client.session
-        session[INTEGRATION_SYNC_SESSION_KEY] = timezone.now().timestamp()
-        session.save()
 
         response = self.client.get(reverse("classcalendar:api_events"))
-        self.assertEqual(response.status_code, 200)
-
         collect_item = next(
-            item
-            for item in response.json().get("events", [])
-            if item.get("integration_source") == SOURCE_COLLECT_DEADLINE
-            and item.get("title") == "수합 마감"
+            item for item in self._hub_items(response)
+            if item.get("item_kind") == "collect" and item.get("title") == "가정통신문 회신"
         )
-        self.assertEqual(collect_item["hub_meta"]["service_label"], "수합")
-        self.assertEqual(collect_item["hub_meta"]["detail_text"], "제출 1건")
+        self.assertIn("제출 1건", collect_item["meta_text"])
 
-    def test_api_events_marks_message_capture_items_for_calendar_hub(self):
-        now = timezone.now()
-        event = CalendarEvent.objects.create(
-            title="저장한 메시지 일정",
-            author=self.user,
-            start_time=now,
-            end_time=now + timedelta(hours=1),
-            is_all_day=False,
-            source=CalendarEvent.SOURCE_LOCAL,
-            visibility=CalendarEvent.VISIBILITY_TEACHER,
-        )
-        task = CalendarTask.objects.create(
-            title="저장한 메시지 할 일",
-            author=self.user,
-            due_at=now + timedelta(days=1),
-            has_time=True,
-        )
-        capture_event = CalendarMessageCapture.objects.create(
-            author=self.user,
-            raw_text="행사 안내 메시지",
-            extracted_title="행사 안내 메시지",
-            parse_status=CalendarMessageCapture.ParseStatus.PARSED,
-            committed_event=event,
-        )
-        capture_task = CalendarMessageCapture.objects.create(
-            author=self.user,
-            raw_text="준비물 메시지",
-            extracted_title="준비물 메시지",
-            parse_status=CalendarMessageCapture.ParseStatus.PARSED,
-            committed_task=task,
-        )
-        session = self.client.session
-        session[INTEGRATION_SYNC_SESSION_KEY] = timezone.now().timestamp()
-        session.save()
-
-        response = self.client.get(reverse("classcalendar:api_events"))
-        self.assertEqual(response.status_code, 200)
-        payload = response.json()
-
-        event_item = next(item for item in payload["events"] if item["id"] == str(event.id))
-        task_item = next(item for item in payload["tasks"] if item["id"] == str(task.id))
-
-        self.assertEqual(event_item["hub_meta"]["service_label"], "메시지 저장")
-        self.assertEqual(event_item["hub_meta"]["action_type"], "message_capture")
-        self.assertEqual(event_item["hub_meta"]["message_capture_id"], str(capture_event.id))
-        self.assertEqual(event_item["hub_meta"]["status_text"], "완료")
-
-        self.assertEqual(task_item["hub_meta"]["service_label"], "메시지 저장")
-        self.assertEqual(task_item["hub_meta"]["action_type"], "message_capture")
-        self.assertEqual(task_item["hub_meta"]["message_capture_id"], str(capture_task.id))
-        self.assertEqual(task_item["hub_meta"]["status_text"], "완료")
-
-    def test_api_events_force_sync_removes_stale_integration_event(self):
+    def test_api_events_excludes_legacy_locked_integration_events_from_native_events(self):
         stale_event = self._create_locked_event(
             source=SOURCE_COLLECT_DEADLINE,
-            key=f"collect:{uuid.uuid4()}",
+            key="collect:stale",
             title="만료된 연동 일정",
         )
-        session = self.client.session
-        session[INTEGRATION_SYNC_SESSION_KEY] = timezone.now().timestamp()
-        session.save()
+        CollectionRequest.objects.create(
+            creator=self.user,
+            title="실제 수합",
+            deadline=timezone.now() + timedelta(days=1),
+        )
 
-        response = self.client.get(f"{reverse('classcalendar:api_events')}?force_sync=true")
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json().get("status"), "success")
-        self.assertFalse(CalendarEvent.objects.filter(id=stale_event.id).exists())
+        response = self.client.get(reverse("classcalendar:api_events"))
+        payload = response.json()
+
+        self.assertFalse(any(item["id"] == str(stale_event.id) for item in payload.get("events") or []))
+        self.assertTrue(any(item["item_kind"] == "collect" for item in payload.get("hub_items") or []))
+
+    def test_api_events_marks_linked_message_capture_as_hub_item(self):
+        linked_for_at = timezone.make_aware(
+            datetime.combine(timezone.localdate() + timedelta(days=1), datetime.min.time()),
+            timezone.get_current_timezone(),
+        )
+        capture = CalendarMessageCapture.objects.create(
+            author=self.user,
+            raw_text="내일 확인할 메시지",
+            extracted_title="내일 확인할 메시지",
+            linked_for_at=linked_for_at,
+            follow_up_state=CalendarMessageCapture.FollowUpState.PENDING,
+        )
+
+        response = self.client.get(reverse("classcalendar:api_events"))
+        message_item = next(
+            item for item in self._hub_items(response)
+            if item.get("item_kind") == "message" and item.get("id") == f"message:{capture.id}"
+        )
+
+        self.assertEqual(message_item["status_label"], "처리 예정")
+        self.assertIn(f"capture={capture.id}", message_item["source_url"])
 
     def test_api_integration_settings_disables_and_cleans_up_sources(self):
         self._create_locked_event(
             source=SOURCE_COLLECT_DEADLINE,
-            key=f"collect:{uuid.uuid4()}",
+            key="collect:legacy-cleanup",
             title="수합 마감",
         )
         self._create_locked_event(
             source=SOURCE_SIGNATURES_TRAINING,
-            key=f"signatures:{uuid.uuid4()}",
+            key="signatures:legacy-cleanup",
             title="서명 연수",
+        )
+        self._create_locked_event(
+            source=SOURCE_CONSENT_EXPIRY,
+            key="consent:legacy-cleanup",
+            title="동의서 만료",
         )
 
         response = self.client.post(
             reverse("classcalendar:api_integration_settings"),
             {
                 "collect_deadline_enabled": "false",
-                "consent_expiry_enabled": "true",
+                "consent_expiry_enabled": "false",
                 "reservation_enabled": "true",
                 "signatures_training_enabled": "false",
             },
         )
         self.assertEqual(response.status_code, 200)
         payload = response.json()
-        self.assertEqual(payload.get("status"), "success")
         self.assertFalse(payload["settings"]["collect_deadline_enabled"])
+        self.assertFalse(payload["settings"]["consent_expiry_enabled"])
         self.assertFalse(payload["settings"]["signatures_training_enabled"])
 
         self.assertFalse(
-            CalendarEvent.objects.filter(
-                author=self.user,
-                integration_source=SOURCE_COLLECT_DEADLINE,
-            ).exists()
+            CalendarEvent.objects.filter(author=self.user, integration_source=SOURCE_COLLECT_DEADLINE).exists()
         )
         self.assertFalse(
-            CalendarEvent.objects.filter(
-                author=self.user,
-                integration_source=SOURCE_SIGNATURES_TRAINING,
-            ).exists()
+            CalendarEvent.objects.filter(author=self.user, integration_source=SOURCE_CONSENT_EXPIRY).exists()
+        )
+        self.assertFalse(
+            CalendarEvent.objects.filter(author=self.user, integration_source=SOURCE_SIGNATURES_TRAINING).exists()
         )
 
         setting = CalendarIntegrationSetting.objects.get(user=self.user)
         self.assertFalse(setting.collect_deadline_enabled)
+        self.assertFalse(setting.consent_expiry_enabled)
         self.assertFalse(setting.signatures_training_enabled)

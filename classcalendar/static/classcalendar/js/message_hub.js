@@ -9,6 +9,8 @@ function buildCalendarMessageHubState() {
         messageCaptureStep: 'input',
         messageCaptureInputText: '',
         messageCaptureSourceHint: 'unknown',
+        messageCaptureLinkedDate: '',
+        messageCaptureManualNote: '',
         messageCaptureDropActive: false,
         messageCaptureTemplates: [
             {
@@ -62,6 +64,7 @@ function buildCalendarMessageHubState() {
             parse_saved_template: '',
             archive: '',
             archive_detail_template: '',
+            link_template: '',
             commit_template: '',
             complete_template: '',
             messagebox_main: '',
@@ -120,6 +123,7 @@ function initCalendarMessageHub(host, options = {}) {
         parse_saved_template: String(rawUrls.parse_saved_template || ''),
         archive: String(rawUrls.archive || ''),
         archive_detail_template: String(rawUrls.archive_detail_template || ''),
+        link_template: String(rawUrls.link_template || ''),
         commit_template: String(rawUrls.commit_template || ''),
         complete_template: String(rawUrls.complete_template || ''),
         messagebox_main: String(rawUrls.messagebox_main || ''),
@@ -209,6 +213,10 @@ function initCalendarMessageHub(host, options = {}) {
 
         buildMessageCaptureArchiveDetailUrl: function(captureId) {
             return String(this.messageCaptureUrls.archive_detail_template || '').replace('__capture_id__', String(captureId || ''));
+        },
+
+        buildMessageCaptureLinkUrl: function(captureId) {
+            return String(this.messageCaptureUrls.link_template || '').replace('__capture_id__', String(captureId || ''));
         },
 
         buildMessageCaptureCommitUrl: function(captureId) {
@@ -552,6 +560,8 @@ function initCalendarMessageHub(host, options = {}) {
             this.messageCaptureStep = 'input';
             this.messageCaptureInputText = '';
             this.messageCaptureSourceHint = 'unknown';
+            this.messageCaptureLinkedDate = '';
+            this.messageCaptureManualNote = '';
             this.messageCaptureDropActive = false;
             this.messageCaptureFiles = [];
             this.messageCaptureFileErrors = [];
@@ -672,6 +682,8 @@ function initCalendarMessageHub(host, options = {}) {
             this.messageCaptureConfidenceLabel = String(payload.confidence_label || 'low');
             this.messageCapturePredictedItemType = String(payload.predicted_item_type || 'event');
             this.messageCaptureSummaryText = String(payload.summary_text || '').trim();
+            this.messageCaptureLinkedDate = String(payload.manual_date || '').trim();
+            this.messageCaptureManualNote = String(payload.manual_note || '').trim();
             this.messageCaptureWarnings = Array.isArray(payload.warnings) ? payload.warnings : [];
             this.messageCaptureServerAttachments = Array.isArray(payload.attachments)
                 ? payload.attachments.map((attachment) => ({
@@ -694,6 +706,8 @@ function initCalendarMessageHub(host, options = {}) {
             this.messageCaptureCaptureId = String(payload.capture_id || '');
             this.messageCaptureParseStatus = String(payload.parse_status || '');
             this.messageCaptureSummaryText = String(payload.summary_text || '').trim();
+            this.messageCaptureLinkedDate = String(payload.manual_date || '').trim();
+            this.messageCaptureManualNote = String(payload.manual_note || '').trim();
             this.messageCaptureWarnings = [];
             this.messageCaptureServerAttachments = Array.isArray(payload.attachments)
                 ? payload.attachments.map((attachment) => ({
@@ -826,6 +840,12 @@ function initCalendarMessageHub(host, options = {}) {
             formData.append('raw_text', this.messageCaptureInputText);
             formData.append('source_hint', this.messageCaptureSourceHint || 'unknown');
             formData.append('idempotency_key', this.messageCaptureIdempotencyKey);
+            if (this.messageCaptureLinkedDate) {
+                formData.append('manual_date', this.messageCaptureLinkedDate);
+            }
+            if (this.messageCaptureManualNote) {
+                formData.append('manual_note', this.messageCaptureManualNote);
+            }
             this.messageCaptureFiles.forEach((fileItem) => {
                 formData.append('files', fileItem.file);
             });
@@ -895,6 +915,12 @@ function initCalendarMessageHub(host, options = {}) {
             formData.append('raw_text', this.messageCaptureInputText);
             formData.append('source_hint', this.messageCaptureSourceHint || 'unknown');
             formData.append('idempotency_key', this.messageCaptureIdempotencyKey);
+            if (this.messageCaptureLinkedDate) {
+                formData.append('manual_date', this.messageCaptureLinkedDate);
+            }
+            if (this.messageCaptureManualNote) {
+                formData.append('manual_note', this.messageCaptureManualNote);
+            }
             this.messageCaptureFiles.forEach((fileItem) => {
                 formData.append('files', fileItem.file);
             });
@@ -918,6 +944,56 @@ function initCalendarMessageHub(host, options = {}) {
             this.messageCaptureStep = 'input';
             this.messageCaptureErrorText = '';
             this.messageCaptureIdempotencyKey = this.createMessageCaptureIdempotencyKey();
+        },
+
+        submitMessageCaptureLink: async function() {
+            if (!this.messageCaptureCaptureId) {
+                this.messageCaptureErrorText = '저장할 메시지를 먼저 읽어 주세요.';
+                window.showToast(this.messageCaptureErrorText, 'error');
+                return;
+            }
+            if (!this.messageCaptureLinkedDate) {
+                this.messageCaptureErrorText = '다시 볼 날짜를 선택해 주세요.';
+                window.showToast(this.messageCaptureErrorText, 'error');
+                return;
+            }
+            const linkUrl = this.buildMessageCaptureLinkUrl(this.messageCaptureCaptureId);
+            if (!linkUrl) {
+                this.messageCaptureErrorText = '메시지 저장 경로를 찾지 못했습니다.';
+                window.showToast(this.messageCaptureErrorText, 'error');
+                return;
+            }
+            this.isCommittingMessageCapture = true;
+            this.messageCaptureErrorText = '';
+            try {
+                const payload = await this.requestJson(linkUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCsrfToken(),
+                    },
+                    body: JSON.stringify({
+                        manual_date: this.messageCaptureLinkedDate,
+                        manual_note: this.messageCaptureManualNote || '',
+                    }),
+                });
+                this.messageCaptureSuccessMode = 'link';
+                this.messageCaptureSavedMessage = payload.message || '캘린더에 메시지 항목으로 연결했어요.';
+                this.messageCaptureSavedEvents = [];
+                this.messageCaptureStep = 'done';
+                if (typeof this.refreshEvents === 'function') {
+                    await this.refreshEvents().catch(() => {});
+                }
+                if (typeof this.loadMessageArchive === 'function') {
+                    this.loadMessageArchive({ reset: true, preferredCaptureId: payload.capture_id }).catch(() => {});
+                }
+                window.showToast(this.messageCaptureSavedMessage, 'success');
+            } catch (error) {
+                this.messageCaptureErrorText = error.message || '메시지 항목 저장에 실패했습니다.';
+                window.showToast(this.messageCaptureErrorText, 'error');
+            } finally {
+                this.isCommittingMessageCapture = false;
+            }
         },
 
         submitMessageCaptureCommit: async function() {
@@ -1044,7 +1120,13 @@ function initCalendarMessageHub(host, options = {}) {
         },
 
         messageCaptureDoneTitle: function() {
-            return this.messageCaptureSuccessMode === 'archive' ? '메모를 보관했어요.' : '메모에서 일정을 저장했어요.';
+            if (this.messageCaptureSuccessMode === 'archive') {
+                return '메시지를 보관했어요.';
+            }
+            if (this.messageCaptureSuccessMode === 'link') {
+                return '메시지 항목을 저장했어요.';
+            }
+            return '메모에서 일정을 저장했어요.';
         },
 
         messageArchiveCandidateEmptyText: function() {

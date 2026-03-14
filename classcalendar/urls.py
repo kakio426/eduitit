@@ -36,6 +36,11 @@ urlpatterns = [
         name="api_message_capture_archive_detail",
     ),
     path(
+        "api/message-captures/<uuid:capture_id>/link/",
+        views.api_message_capture_link,
+        name="api_message_capture_link",
+    ),
+    path(
         "api/message-captures/<uuid:capture_id>/commit/",
         views.api_message_capture_commit,
         name="api_message_capture_commit",

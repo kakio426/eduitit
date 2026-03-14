@@ -419,53 +419,11 @@ def _to_aware_datetime(value):
 
 
 def _sync_calendar_event_for_training(session):
-    """
-    Keep signatures training schedule in classcalendar in sync.
-    Fails safely if classcalendar app/model is unavailable.
-    """
-    try:
-        from classcalendar.models import CalendarEvent
-        from classcalendar.integrations import is_integration_enabled
-    except Exception:
-        logger.exception("[signatures] classcalendar import failed")
-        return
-
-    if not is_integration_enabled(session.created_by, CALENDAR_INTEGRATION_SOURCE):
-        return
-
-    start_at = _to_aware_datetime(session.datetime)
-    end_at = start_at + timedelta(minutes=60)
-    integration_key = f"signatures:{session.uuid}"
-    CalendarEvent.objects.update_or_create(
-        author=session.created_by,
-        integration_source=CALENDAR_INTEGRATION_SOURCE,
-        integration_key=integration_key,
-        defaults={
-            "title": f"[서명 연수] {session.title}"[:200],
-            "start_time": start_at,
-            "end_time": end_at,
-            "is_all_day": False,
-            "color": "indigo",
-            "visibility": CalendarEvent.VISIBILITY_TEACHER,
-            "source": CalendarEvent.SOURCE_LOCAL,
-            "classroom": None,
-            "is_locked": True,
-        },
-    )
+    return
 
 
 def _delete_calendar_event_for_training(session):
-    try:
-        from classcalendar.models import CalendarEvent
-    except Exception:
-        logger.exception("[signatures] classcalendar import failed")
-        return
-
-    CalendarEvent.objects.filter(
-        author=session.created_by,
-        integration_source=CALENDAR_INTEGRATION_SOURCE,
-        integration_key=f"signatures:{session.uuid}",
-    ).delete()
+    return
 
 
 def _sync_expected_participants_from_shared_roster(session):

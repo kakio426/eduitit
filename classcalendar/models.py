@@ -221,6 +221,11 @@ class CalendarMessageCapture(models.Model):
         RULE_ML = "rule_ml", "Rule + ML"
         MANUAL = "manual", "Manual"
 
+    class FollowUpState(models.TextChoices):
+        PENDING = "pending", "Pending"
+        NEEDS_CHECK = "needs_check", "Needs Check"
+        DONE = "done", "Done"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -286,6 +291,12 @@ class CalendarMessageCapture(models.Model):
         on_delete=models.SET_NULL,
         related_name="message_captures",
     )
+    linked_for_at = models.DateTimeField(null=True, blank=True)
+    follow_up_state = models.CharField(
+        max_length=20,
+        choices=FollowUpState.choices,
+        default=FollowUpState.PENDING,
+    )
     committed_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -298,6 +309,8 @@ class CalendarMessageCapture(models.Model):
             models.Index(fields=["author", "parse_status", "created_at"]),
             models.Index(fields=["author", "predicted_item_type", "created_at"]),
             models.Index(fields=["author", "content_cache_key"]),
+            models.Index(fields=["author", "linked_for_at"]),
+            models.Index(fields=["author", "follow_up_state", "linked_for_at"]),
         ]
         constraints = [
             models.UniqueConstraint(
