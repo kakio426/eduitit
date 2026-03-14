@@ -1,0 +1,77 @@
+<nav class="home-v4-nav-list" data-home-v4-nav="{{ panel_name|default:'desktop' }}">
+    <a
+        href="{% url 'home' %}"
+        class="home-v4-nav-item home-v4-nav-item--home is-active"
+        data-home-v4-nav-home="true"
+        {% if close_action %}@click="{{ close_action }}"{% endif %}
+    >
+        <span class="home-v4-nav-item-main">
+            <span class="home-v4-nav-icon home-v4-nav-icon--home">
+                <i class="fa-solid fa-house"></i>
+            </span>
+            <span class="min-w-0 flex-1">
+                <span class="block truncate home-v4-nav-title">홈</span>
+            </span>
+        </span>
+    </a>
+
+    {% for section in home_v4_nav_sections %}
+    <div class="home-v4-nav-group" data-home-v4-nav-section="{{ section.key }}">
+        <button
+            type="button"
+            class="home-v4-nav-item home-v4-nav-item--section"
+            @click="openSection = openSection === '{{ section.key }}' ? '' : '{{ section.key }}'"
+            :class="{ 'is-open': openSection === '{{ section.key }}' }"
+            :aria-expanded="openSection === '{{ section.key }}' ? 'true' : 'false'"
+        >
+            <span class="home-v4-nav-item-main">
+                <span class="home-v4-nav-icon home-v4-nav-icon--{{ section.color }}">
+                    <i class="{{ section.icon }}"></i>
+                </span>
+                <span class="min-w-0 flex-1">
+                    <span class="block truncate home-v4-nav-title">{{ section.title }}</span>
+                </span>
+            </span>
+            <span class="home-v4-nav-item-side">
+                <span class="home-v4-nav-chevron" :class="{ 'is-open': openSection === '{{ section.key }}' }">
+                    <i class="fa-solid fa-chevron-down"></i>
+                </span>
+            </span>
+        </button>
+
+        <div
+            class="home-v4-tool-list"
+            x-show="openSection === '{{ section.key }}'"
+            x-cloak
+            data-home-v4-tool-list="{{ section.key }}"
+        >
+            {% for product in section.products %}
+            <a
+                href="{{ product.launch_href }}"
+                class="home-v4-tool-link"
+                data-home-v4-tool-link="{{ section.key }}"
+                {% if product.launch_is_external %}target="_blank" rel="noopener"{% endif %}
+                {% if close_action %}@click="{{ close_action }}"{% endif %}
+            >
+                <span class="home-v4-tool-icon">
+                    {% if product.icon %}
+                        {% if "fa-" in product.icon %}<i class="{{ product.icon }}"></i>{% else %}{{ product.icon }}{% endif %}
+                    {% else %}
+                        <i class="fa-solid fa-sparkles"></i>
+                    {% endif %}
+                </span>
+                <span class="min-w-0 flex-1">
+                    <span class="block truncate text-sm font-black text-slate-900">{{ product.public_service_name|default:product.title }}</span>
+                    <span class="mt-1 block text-xs leading-5 text-slate-500 line-clamp-2">{{ product.home_card_summary|default:product.description }}</span>
+                </span>
+                {% if product.launch_is_external %}
+                <span class="home-v4-tool-link-arrow" aria-hidden="true">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                </span>
+                {% endif %}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</nav>

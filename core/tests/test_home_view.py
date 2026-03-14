@@ -1395,11 +1395,40 @@ class HomeV4ViewTest(TestCase):
     def setUp(self):
         self.client = Client()
         self.collect_product = Product.objects.create(
-            title="수합 링크",
+            title="간편 수합",
             description="서명과 수합",
             price=0,
             is_active=True,
             service_type='collect_sign',
+            launch_route_name='collect:landing',
+            icon='fa-solid fa-inbox',
+        )
+        self.consent_product = Product.objects.create(
+            title="동의서는 나에게 맡겨",
+            description="동의서 회수",
+            price=0,
+            is_active=True,
+            service_type='collect_sign',
+            launch_route_name='consent:dashboard',
+            icon='fa-solid fa-file-signature',
+        )
+        self.signature_product = Product.objects.create(
+            title="가뿐하게 서명 톡",
+            description="링크 서명",
+            price=0,
+            is_active=True,
+            service_type='collect_sign',
+            launch_route_name='signatures:list',
+            icon='fa-solid fa-signature',
+        )
+        self.handoff_product = Product.objects.create(
+            title="배부 체크",
+            description="배부 확인",
+            price=0,
+            is_active=True,
+            service_type='collect_sign',
+            launch_route_name='handoff:landing',
+            icon='fa-solid fa-box-open',
         )
         self.p1 = Product.objects.create(
             title="수업 도구",
@@ -1408,6 +1437,7 @@ class HomeV4ViewTest(TestCase):
             is_active=True,
             service_type='classroom',
             is_featured=True,
+            launch_route_name='qrgen:landing',
             solve_text='수업을 준비해요',
         )
         self.p2 = Product.objects.create(
@@ -1416,6 +1446,7 @@ class HomeV4ViewTest(TestCase):
             price=0,
             is_active=True,
             service_type='work',
+            launch_route_name='noticegen:main',
         )
         self.p3 = Product.objects.create(
             title="상담 도구",
@@ -1431,6 +1462,15 @@ class HomeV4ViewTest(TestCase):
             is_active=True,
             service_type='game',
         )
+        self.external_product = Product.objects.create(
+            title="외부 가이드",
+            description="외부 참고 자료",
+            price=0,
+            is_active=True,
+            service_type='edutech',
+            external_url='https://example.com/tool',
+            icon='fa-solid fa-arrow-up-right-from-square',
+        )
         _create_posts(count=2)
 
     def _login(self, username='v4user', nickname=None):
@@ -1438,7 +1478,7 @@ class HomeV4ViewTest(TestCase):
         self.client.login(username=username, password='pass1234')
         return user
 
-    def test_v4_authenticated_home_uses_new_template_and_compact_surfaces(self):
+    def test_v4_authenticated_home_uses_new_template_and_accordion_menu(self):
         user = self._login('v4layout')
         ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
         ProductUsageLog.objects.create(user=user, product=self.p2, action='launch', source='home_quick')
@@ -1448,28 +1488,49 @@ class HomeV4ViewTest(TestCase):
 
         self.assertIn('core/css/home_authenticated_v4.css', content)
         self.assertIn('data-home-v4-shell="true"', content)
-        self.assertIn('data-home-v4-nav="true"', content)
-        self.assertIn('data-home-v4-active-panel="home"', content)
+        self.assertIn('data-home-v4-nav="desktop"', content)
+        self.assertIn('data-home-v4-nav="mobile"', content)
+        self.assertIn('data-home-v4-nav-section="collect_sign"', content)
+        self.assertIn('data-home-v4-tool-list="collect_sign"', content)
         self.assertIn('data-home-v4-home-panel="true"', content)
         self.assertIn('data-home-v4-representative-services="true"', content)
         self.assertIn('data-home-v4-sns-panel="true"', content)
+        self.assertIn('data-home-v4-mobile-menu-trigger="true"', content)
+        self.assertIn('data-home-v4-mobile-sheet="true"', content)
+        self.assertIn('간편 수합', content)
+        self.assertIn('동의서는 나에게 맡겨', content)
+        self.assertIn('가뿐하게 서명 톡', content)
+        self.assertIn('배부 체크', content)
         self.assertNotIn('data-home-v4-more-toggle="true"', content)
+        self.assertNotIn('data-home-v4-active-panel=', content)
+        self.assertNotIn('data-home-v4-section-panel=', content)
         self.assertNotIn('data-home-v2-favorites-panel="true"', content)
         self.assertNotIn('선생님들과 나누고 싶은 이야기가 있나요?', content)
         self.assertNotIn('data-home-v2-tablet-community-summary="true"', content)
         self.assertNotIn('더 많은 도구 보기', content)
 
-    def test_v4_section_menu_renders_selected_panel_on_right(self):
+    def test_v4_section_menu_lists_full_tool_links_without_switching_home_summary(self):
         self._login('v4section')
 
-        response = self.client.get(f"{reverse('home')}?panel=collect_sign")
+        response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
+        nav_sections = response.context['home_v4_nav_sections']
+        collect_section = next(section for section in nav_sections if section['key'] == 'collect_sign')
 
-        self.assertEqual(response.context['home_v4_active_panel']['key'], 'collect_sign')
-        self.assertIn('data-home-v4-active-panel="collect_sign"', content)
-        self.assertIn('data-home-v4-section-panel="collect_sign"', content)
-        self.assertIn('수합 링크', content)
-        self.assertNotIn('data-home-v4-home-panel="true"', content)
+        self.assertGreaterEqual(collect_section['count'], 4)
+        self.assertTrue(
+            {'간편 수합', '동의서는 나에게 맡겨', '가뿐하게 서명 톡', '배부 체크'}.issubset(
+                {product.title for product in collect_section['products']}
+            )
+        )
+        self.assertIn(f'href="{reverse("collect:landing")}"', content)
+        self.assertIn(f'href="{reverse("consent:dashboard")}"', content)
+        self.assertIn(f'href="{reverse("signatures:list")}"', content)
+        self.assertIn(f'href="{reverse("handoff:landing")}"', content)
+        self.assertIn('href="https://example.com/tool"', content)
+        self.assertIn('target="_blank" rel="noopener"', content)
+        self.assertIn('data-home-v4-home-panel="true"', content)
+        self.assertNotIn('data-home-v4-section-panel=', content)
 
     def test_v4_anonymous_home_falls_back_to_public_v2(self):
         response = self.client.get(reverse('home'))

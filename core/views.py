@@ -1056,31 +1056,29 @@ def _build_home_v4_recommendations(companion_items, discovery_items, *, exclude_
     return recommendations
 
 
-def _build_home_v4_menu_items(primary_display_sections, secondary_display_sections, games):
-    menu_items = []
+def _build_home_v4_nav_sections(primary_display_sections, secondary_display_sections, games):
+    nav_sections = []
 
     for section in [*primary_display_sections, *secondary_display_sections]:
-        panel_products = [
+        nav_products = [
             *section.get('products', []),
             *section.get('overflow_products', []),
         ]
-        if not panel_products:
+        if not nav_products:
             continue
-        menu_items.append({
+        nav_sections.append({
             'key': section['key'],
-            'kind': 'section',
             'title': section['title'],
             'subtitle': section['subtitle'],
             'icon': section['icon'],
             'color': section.get('color', 'slate'),
-            'count': len(panel_products),
-            'products': panel_products,
+            'count': len(nav_products),
+            'products': nav_products,
         })
 
     if games:
-        menu_items.append({
+        nav_sections.append({
             'key': 'games',
-            'kind': 'games',
             'title': '게임·활동',
             'subtitle': '쉬는 시간에 바로 여는 활동',
             'icon': 'fa-solid fa-gamepad',
@@ -1089,25 +1087,7 @@ def _build_home_v4_menu_items(primary_display_sections, secondary_display_sectio
             'products': games,
         })
 
-    return menu_items
-
-
-def _resolve_home_v4_active_panel(request, menu_items):
-    fallback_panel = {
-        'key': 'home',
-        'kind': 'home',
-        'title': '홈',
-        'subtitle': '오늘 해야 할 일과 자주 쓰는 도구를 한곳에서 봅니다.',
-        'icon': 'fa-solid fa-house',
-        'color': 'slate',
-        'count': 0,
-        'products': [],
-    }
-    panel_map = {item['key']: item for item in menu_items}
-    requested_key = str(request.GET.get('panel', '') or '').strip().lower()
-    if not requested_key or requested_key == 'home':
-        return fallback_panel
-    return panel_map.get(requested_key, fallback_panel)
+    return nav_sections
 
 
 def _get_usage_based_quick_actions(user, product_list, limit=5):
@@ -2313,8 +2293,11 @@ def _home_v4(request, products, posts, page_obj, feed_scope):
         preview_limit=2,
     )
     primary_display_sections, secondary_display_sections = _build_home_v2_display_groups(sections, aux_sections)
-    home_v4_menu_items = _build_home_v4_menu_items(primary_display_sections, secondary_display_sections, games)
-    home_v4_active_panel = _resolve_home_v4_active_panel(request, home_v4_menu_items)
+    home_v4_nav_sections = _build_home_v4_nav_sections(
+        primary_display_sections,
+        secondary_display_sections,
+        games,
+    )
     sns_summary_posts = _build_home_community_summary_posts(page_obj, limit=2)
     community_summary = {
         'title': '실시간 소통',
@@ -2407,8 +2390,7 @@ def _home_v4(request, products, posts, page_obj, feed_scope):
         'favorite_product_ids': [product.id for product in favorite_products],
         'representative_slots': representative_slots,
         'representative_recommendations': representative_recommendations,
-        'home_v4_menu_items': home_v4_menu_items,
-        'home_v4_active_panel': home_v4_active_panel,
+        'home_v4_nav_sections': home_v4_nav_sections,
         'home_calendar_surface': home_calendar_surface,
         'home_v2_frontend_config': home_v2_frontend_config,
         'community_summary': community_summary,
