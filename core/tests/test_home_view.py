@@ -411,9 +411,10 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('data-home-messagebox-card="true"', content)
         self.assertIn('업무 메시지 보관함', content)
         self.assertIn('data-home-messagebox-actions="true"', content)
-        self.assertIn('새 메시지 보관', content)
+        self.assertIn('메시지 보관', content)
         self.assertIn('href="/messagebox/#messagebox-compose"', content)
         self.assertIn('href="/messagebox/#messagebox-archive"', content)
+        self.assertNotIn('놓치지 않을 메시지', content)
         self.assertNotIn('메신저에서 받은 중요한 내용을 붙여넣고, 나중에 다시 보거나 일정에 연결하세요.', content)
 
         section_products = [
@@ -1446,6 +1447,9 @@ class HomeV4ViewTest(TestCase):
         self.assertNotIn('data-home-v2-favorites-panel="true"', content)
         self.assertNotIn('선생님들과 나누고 싶은 이야기가 있나요?', content)
         self.assertNotIn('data-home-v2-tablet-community-summary="true"', content)
+        self.assertNotIn('최근 소통만 먼저 보고 전체 화면으로 이어집니다.', content)
+        self.assertNotIn('자주 이어지는 도구만 4칸 안에서 또렷하게 보여줍니다.', content)
+        self.assertNotIn('게임, 가이드, 보조 섹션은 필요할 때만 펼칩니다.', content)
 
     def test_v4_anonymous_home_falls_back_to_public_v2(self):
         response = self.client.get(reverse('home'))

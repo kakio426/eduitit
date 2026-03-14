@@ -334,8 +334,6 @@ def build_messagebox_home_card_context(user):
     card = {
         "enabled": enabled,
         "title": "업무 메시지 보관함",
-        "eyebrow": "놓치지 않을 메시지",
-        "description": "메신저에서 받은 중요한 내용을 붙여넣고, 나중에 다시 보거나 일정에 연결하세요.",
         "primary_action_label": "새 메시지 보관",
         "url": build_messagebox_main_url(),
         "incomplete_count": 0,

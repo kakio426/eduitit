@@ -95,6 +95,11 @@ class PermissionTest(TestCase):
         self.assertNotIn("안내문에서 일정 찾기", content)
         self.assertNotIn("오늘 메모", content)
         self.assertNotIn("다시 볼 메모", content)
+        self.assertNotIn("놓치지 않을 메시지", content)
+        self.assertNotIn('x-text="currentMonthSummaryText"', content)
+        self.assertNotIn("선택한 날짜", content)
+        self.assertNotIn("이날의 항목", content)
+        self.assertNotIn('selectedDateSummaryText()', content)
         self.assertNotIn("openMessageHub($event, 'capture', { resetCapture: true })", content)
 
     def test_legacy_today_memo_panel_route_redirects_to_home_surface(self):

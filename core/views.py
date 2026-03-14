@@ -2263,7 +2263,6 @@ def _home_v4(request, products, posts, page_obj, feed_scope):
     sns_summary_posts = _build_home_community_summary_posts(page_obj, limit=2)
     community_summary = {
         'title': '실시간 소통',
-        'description': '최근 소통만 조용하게 보고, 자세한 소통은 전체 화면에서 이어서 확인합니다.',
         'posts': sns_summary_posts,
         'full_url': reverse('community_feed'),
     }
