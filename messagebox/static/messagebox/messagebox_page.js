@@ -46,6 +46,7 @@ function messageboxPage(options = {}) {
                 linked: 0,
                 done: 0,
             };
+            this.messageArchiveSelectionShouldReveal = false;
             this.wrapMessageboxMethods();
 
             if (!this.messageCaptureEnabled) {
@@ -53,7 +54,10 @@ function messageboxPage(options = {}) {
             }
 
             this.resetMessageCaptureFlow();
-            this.loadMessageArchive({ reset: true, preferredCaptureId: this.initialCaptureId });
+            Promise.resolve(this.loadMessageArchive({ reset: true, preferredCaptureId: this.initialCaptureId }))
+                .finally(() => {
+                    this.applyInitialLocationIntent();
+                });
         },
 
         wrapMessageboxMethods() {
@@ -86,13 +90,34 @@ function messageboxPage(options = {}) {
             };
 
             this.selectMessageArchiveItem = async (captureId) => {
-                await baseSelectArchiveItem(captureId);
-                this.syncCaptureQuery(captureId);
+                const nextCaptureId = String(captureId || "");
+                if (!nextCaptureId) return;
+                const shouldReveal = !!this.messageArchiveSelectionShouldReveal;
+                this.messageArchiveSelectionShouldReveal = false;
+                if (shouldReveal) {
+                    if (this.isCompactArchiveLayout()) {
+                        this.scrollMessageArchiveDetailIntoView({ behavior: "smooth", focus: false });
+                    } else {
+                        this.scrollMessageArchiveItemIntoView(nextCaptureId, { behavior: "smooth" });
+                    }
+                }
+                await baseSelectArchiveItem(nextCaptureId);
+                this.syncCaptureQuery(nextCaptureId);
+                if (shouldReveal) {
+                    this.updateMessageboxHash("messagebox-archive");
+                    this.afterMessageboxDomUpdate(() => {
+                        this.scrollMessageArchiveItemIntoView(nextCaptureId, { behavior: "smooth" });
+                        if (this.isCompactArchiveLayout()) {
+                            this.scrollMessageArchiveDetailIntoView({ behavior: "smooth", focus: true });
+                        }
+                    });
+                }
             };
 
             this.openMessageArchiveFromSuccess = async () => {
                 const preferredCaptureId = this.messageCaptureCaptureId || this.selectedCaptureId();
                 await this.loadMessageArchive({ reset: true, preferredCaptureId });
+                this.focusMessageArchive({ captureId: preferredCaptureId, preferDetail: true });
             };
 
             this.startAnotherMessageCapture = () => {
@@ -101,14 +126,136 @@ function messageboxPage(options = {}) {
             };
         },
 
-        focusMessageInput() {
+        focusMessageInput(options = {}) {
             this.messageCaptureStep = "input";
+            if (options.updateHash !== false) {
+                this.updateMessageboxHash("messagebox-compose");
+            }
+            this.afterMessageboxDomUpdate(() => {
+                const input = this.$refs && this.$refs.messageCaptureInput ? this.$refs.messageCaptureInput : null;
+                const composeSection = input && typeof input.closest === "function"
+                    ? input.closest("[data-messagebox-compose='true']")
+                    : null;
+                if (composeSection && typeof composeSection.scrollIntoView === "function") {
+                    composeSection.scrollIntoView({
+                        behavior: options.behavior || "smooth",
+                        block: "start",
+                    });
+                }
+                if (input && typeof input.focus === "function") {
+                    input.focus();
+                }
+            });
+        },
+
+        focusMessageArchive(options = {}) {
+            const captureId = String(options.captureId || this.selectedCaptureId() || "");
+            if (options.updateHash !== false) {
+                this.updateMessageboxHash("messagebox-archive");
+            }
+            this.afterMessageboxDomUpdate(() => {
+                const section = this.$refs && this.$refs.messageArchiveSection ? this.$refs.messageArchiveSection : null;
+                if (section && typeof section.scrollIntoView === "function") {
+                    section.scrollIntoView({
+                        behavior: options.behavior || "smooth",
+                        block: "start",
+                    });
+                }
+                if (captureId) {
+                    window.setTimeout(() => {
+                        this.scrollMessageArchiveItemIntoView(captureId, { behavior: options.behavior || "smooth" });
+                    }, 80);
+                }
+                if (captureId && options.preferDetail && this.isCompactArchiveLayout()) {
+                    window.setTimeout(() => {
+                        this.scrollMessageArchiveDetailIntoView({ behavior: options.behavior || "smooth", focus: true });
+                    }, 180);
+                }
+            });
+        },
+
+        applyInitialLocationIntent() {
+            if (typeof window === "undefined" || !window.location) return;
+            const hash = String(window.location.hash || "").trim();
+            if (hash === "#messagebox-archive") {
+                this.focusMessageArchive({
+                    behavior: "auto",
+                    captureId: this.initialCaptureId || this.selectedCaptureId(),
+                    preferDetail: !!(this.initialCaptureId || this.selectedCaptureId()),
+                    updateHash: false,
+                });
+                return;
+            }
+            if (hash === "#messagebox-compose") {
+                this.focusMessageInput({ behavior: "auto", updateHash: false });
+            }
+        },
+
+        openMessageArchiveCapture(captureId) {
+            this.messageArchiveSelectionShouldReveal = true;
+            return this.selectMessageArchiveItem(captureId);
+        },
+
+        afterMessageboxDomUpdate(callback) {
+            if (typeof callback !== "function") return;
             if (typeof this.$nextTick === "function") {
                 this.$nextTick(() => {
-                    if (this.$refs && this.$refs.messageCaptureInput) {
-                        this.$refs.messageCaptureInput.focus();
-                    }
+                    window.requestAnimationFrame(() => callback());
                 });
+                return;
+            }
+            window.requestAnimationFrame(() => callback());
+        },
+
+        updateMessageboxHash(fragment) {
+            if (!window.history || typeof window.history.replaceState !== "function") return;
+            const url = new URL(window.location.href);
+            url.hash = fragment ? `#${fragment}` : "";
+            window.history.replaceState({}, "", url.toString());
+        },
+
+        isCompactArchiveLayout() {
+            if (!window.matchMedia) return false;
+            return window.matchMedia("(max-width: 1023px)").matches;
+        },
+
+        findMessageArchiveItemElement(captureId) {
+            const captureIdText = String(captureId || "");
+            if (!captureIdText || typeof document === "undefined") return null;
+            const root = this.$root || document.querySelector("[data-messagebox-root='true']");
+            if (!root || typeof root.querySelectorAll !== "function") return null;
+            const items = root.querySelectorAll("[data-messagebox-archive-item='true']");
+            for (const item of items) {
+                if (String(item.getAttribute("data-capture-id") || "") === captureIdText) {
+                    return item;
+                }
+            }
+            return null;
+        },
+
+        scrollMessageArchiveItemIntoView(captureId, options = {}) {
+            const item = this.findMessageArchiveItemElement(captureId);
+            if (!item || typeof item.scrollIntoView !== "function") return;
+            item.scrollIntoView({
+                behavior: options.behavior || "smooth",
+                block: "nearest",
+                inline: "nearest",
+            });
+        },
+
+        scrollMessageArchiveDetailIntoView(options = {}) {
+            const detail = this.$refs && this.$refs.messageArchiveDetail ? this.$refs.messageArchiveDetail : null;
+            if (!detail) return;
+            if (typeof detail.scrollIntoView === "function") {
+                detail.scrollIntoView({
+                    behavior: options.behavior || "smooth",
+                    block: "start",
+                });
+            }
+            if (options.focus && typeof detail.focus === "function") {
+                window.setTimeout(() => {
+                    detail.focus({ preventScroll: true });
+                }, 40);
             }
         },
 

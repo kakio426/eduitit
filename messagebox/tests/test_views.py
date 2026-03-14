@@ -32,6 +32,9 @@ class MessageboxViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'data-messagebox-root="true"')
         self.assertContains(response, 'data-messagebox-archive="true"')
+        self.assertContains(response, 'id="messagebox-compose"')
+        self.assertContains(response, 'id="messagebox-archive"')
+        self.assertContains(response, '@click="focusMessageArchive()"')
         self.assertContains(response, "보관만 함")
         self.assertContains(response, "캘린더 연결됨")
 

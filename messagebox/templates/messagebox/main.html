@@ -20,18 +20,23 @@
     })"
 >
     <div class="mx-auto max-w-7xl">
-        <header class="mb-6 rounded-[2rem] border border-amber-200 bg-white/90 p-5 shadow-sm backdrop-blur sm:p-6" data-messagebox-header="true">
+        <header class="mb-6 rounded-[2rem] border border-amber-200 bg-white/90 p-4 shadow-sm backdrop-blur sm:p-6" data-messagebox-header="true">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div class="min-w-0">
                     <p class="text-[11px] font-black uppercase tracking-[0.18em] text-amber-600">놓치지 않을 메시지</p>
                     <h1 class="mt-2 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">{{ title }}</h1>
-                    <p class="mt-3 max-w-3xl text-sm font-medium leading-6 text-slate-600">{{ page_subtitle }}</p>
+                    <p class="mt-3 hidden max-w-3xl text-sm font-medium leading-6 text-slate-600 sm:block">{{ page_subtitle }}</p>
                 </div>
-                <div class="flex flex-wrap gap-2">
-                    <a href="{{ calendar_main_url }}" class="inline-flex items-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">학급 캘린더</a>
-                    <button type="button" @click="focusMessageInput()" class="inline-flex items-center rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800" x-show="messageCaptureEnabled">
-                        새 메시지 보관
-                    </button>
+                <div class="flex flex-col gap-2 sm:items-end">
+                    <a href="{{ calendar_main_url }}" class="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">학급 캘린더</a>
+                    <div class="flex w-full gap-2 sm:w-auto" x-show="messageCaptureEnabled">
+                        <button type="button" @click="focusMessageInput()" class="inline-flex min-w-0 flex-1 items-center justify-center rounded-2xl bg-slate-900 px-3 py-2.5 text-sm font-black text-white transition hover:bg-slate-800 sm:flex-none sm:px-4 sm:py-3">
+                            새 메시지 보관
+                        </button>
+                        <button type="button" @click="focusMessageArchive()" class="inline-flex min-w-0 flex-1 items-center justify-center rounded-2xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-black text-slate-700 transition hover:bg-slate-50 sm:flex-none sm:px-4 sm:py-3">
+                            보관함
+                        </button>
+                    </div>
                 </div>
             </div>
         </header>
@@ -46,7 +51,7 @@
         {% else %}
         <div class="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(24rem,1.05fr)] xl:items-start" data-messagebox-layout="true">
             <div class="space-y-5">
-                <section class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6" data-messagebox-compose="true">
+                <section id="messagebox-compose" class="scroll-mt-24 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6" data-messagebox-compose="true">
                     <div class="flex items-center justify-between gap-3">
                         <div>
                             <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">빠르게 보관</p>
@@ -262,7 +267,7 @@
             </div>
 
             <div class="space-y-5">
-                <section class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6" data-messagebox-archive="true">
+                <section id="messagebox-archive" x-ref="messageArchiveSection" class="scroll-mt-24 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6" data-messagebox-archive="true">
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                         <div>
                             <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">보관함</p>
@@ -291,11 +296,11 @@
                     </div>
 
                     <div class="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-[22rem_minmax(0,1fr)]">
-                        <div class="space-y-3">
+                        <div class="space-y-3" data-messagebox-archive-list="true">
                             <p x-show="messageArchiveErrorText" class="rounded-[1.6rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700" x-text="messageArchiveErrorText"></p>
                             <div x-show="isLoadingMessageArchive && messageArchiveItems.length === 0" class="rounded-[1.6rem] border border-slate-200 bg-slate-50 px-4 py-5 text-sm font-semibold text-slate-500">보관 메시지를 불러오는 중이에요.</div>
                             <template x-for="item in messageArchiveItems" :key="item.capture_id">
-                                <button type="button" @click="selectMessageArchiveItem(item.capture_id)" class="w-full rounded-[1.6rem] border bg-white px-4 py-4 text-left shadow-sm transition" :class="messageArchiveSelectedCapture && messageArchiveSelectedCapture.capture_id === item.capture_id ? 'border-amber-300 ring-2 ring-amber-200' : 'border-slate-200 hover:border-slate-300'">
+                                <button type="button" @click="openMessageArchiveCapture(item.capture_id)" class="w-full rounded-[1.6rem] border bg-white px-4 py-4 text-left shadow-sm transition" :class="messageArchiveSelectedCapture && messageArchiveSelectedCapture.capture_id === item.capture_id ? 'border-amber-300 ring-2 ring-amber-200' : 'border-slate-200 hover:border-slate-300'" data-messagebox-archive-item="true" :data-capture-id="item.capture_id">
                                     <div class="flex items-start justify-between gap-3">
                                         <div class="min-w-0">
                                             <p class="text-xs font-black text-slate-400" x-text="formatMessageArchiveCreatedAt(item.created_at)"></p>
@@ -310,7 +315,7 @@
                             <button type="button" x-show="messageArchiveHasNext" @click="loadMoreMessageArchive()" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50">더 보기</button>
                         </div>
 
-                        <div class="rounded-[1.6rem] border border-slate-200 bg-slate-50">
+                        <div x-ref="messageArchiveDetail" tabindex="-1" class="scroll-mt-24 rounded-[1.6rem] border border-slate-200 bg-slate-50 focus:outline-none">
                             <div x-show="isLoadingMessageArchiveDetail" class="px-5 py-12 text-center text-sm font-semibold text-slate-500">메시지를 불러오는 중이에요.</div>
                             <div x-show="!isLoadingMessageArchiveDetail && !messageArchiveSelectedCapture" class="px-5 py-12 text-center text-sm font-semibold text-slate-500">왼쪽에서 메시지를 선택하면 원문과 연결 상태를 볼 수 있어요.</div>
 

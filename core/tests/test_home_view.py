@@ -410,6 +410,11 @@ class HomeV2ViewTest(TestCase):
 
         self.assertIn('data-home-messagebox-card="true"', content)
         self.assertIn('업무 메시지 보관함', content)
+        self.assertIn('data-home-messagebox-actions="true"', content)
+        self.assertIn('새 메시지 보관', content)
+        self.assertIn('href="/messagebox/#messagebox-compose"', content)
+        self.assertIn('href="/messagebox/#messagebox-archive"', content)
+        self.assertNotIn('메신저에서 받은 중요한 내용을 붙여넣고, 나중에 다시 보거나 일정에 연결하세요.', content)
 
         section_products = [
             product.launch_route_name
