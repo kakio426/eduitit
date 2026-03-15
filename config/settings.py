@@ -16,6 +16,7 @@ import sys
 from importlib.util import find_spec
 from urllib.parse import urlparse
 from dotenv import load_dotenv
+from config.database import apply_database_network_overrides, normalize_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -186,14 +187,21 @@ if DATABASE_URL:
     # 프로덕션 환경: PostgreSQL 사용
     try:
         import dj_database_url
+        DATABASE_URL = normalize_database_url(DATABASE_URL)
+        default_db = dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,  # 연결 풀링: 10분
+            conn_health_checks=True,  # 연결 상태 체크
+        )
+        default_db = apply_database_network_overrides(default_db, DATABASE_URL)
         DATABASES = {
-            'default': dj_database_url.parse(
-                DATABASE_URL,
-                conn_max_age=600,  # 연결 풀링: 10분
-                conn_health_checks=True,  # 연결 상태 체크
-            )
+            'default': default_db
         }
-        print(f"[DATABASE] Using PostgreSQL with conn_max_age=600")
+        hostaddr = (default_db.get('OPTIONS') or {}).get('hostaddr')
+        if hostaddr:
+            print(f"[DATABASE] Using PostgreSQL with IPv4 hostaddr={hostaddr}")
+        else:
+            print(f"[DATABASE] Using PostgreSQL with conn_max_age=600")
     except ImportError:
         print("[WARNING] dj-database-url not installed. Falling back to SQLite.")
         DATABASES = {

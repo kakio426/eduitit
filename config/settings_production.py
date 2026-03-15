@@ -12,6 +12,7 @@ import sys
 import dj_database_url
 from pathlib import Path
 from importlib.util import find_spec
+from config.database import apply_database_network_overrides, normalize_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -191,32 +192,22 @@ DATABASE_URL = os.environ.get('DATABASE_URL')
 
 if DATABASE_URL:
     import re
+    DATABASE_URL = normalize_database_url(DATABASE_URL)
     safe_db_url = re.sub(r':([^:@]+)@', ':****@', DATABASE_URL)
 
-    # Clean up DATABASE_URL if it contains 'psql' command or extra quotes
-    # Example issue: psql 'postgresql://...'
-    DATABASE_URL = DATABASE_URL.strip()
-    if DATABASE_URL.startswith("psql"):
-        DATABASE_URL = DATABASE_URL.replace("psql", "", 1).strip()
-    
-    # Remove surrounding quotes if present
-    if (DATABASE_URL.startswith("'") and DATABASE_URL.endswith("'")) or \
-       (DATABASE_URL.startswith('"') and DATABASE_URL.endswith('"')):
-        DATABASE_URL = DATABASE_URL[1:-1]
-
-    # Fix: Ensure scheme is valid for dj-database-url if it starts with postgres:// 
-    # (newer versions favor postgresql:// but handle postgres://, older might be strict)
-    if DATABASE_URL.startswith("postgres://"):
-        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-
     try:
+        default_db = dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
+        default_db = apply_database_network_overrides(default_db, DATABASE_URL)
         DATABASES = {
-            'default': dj_database_url.parse(
-                DATABASE_URL,
-                conn_max_age=600,
-                conn_health_checks=True,
-            )
+            'default': default_db
         }
+        hostaddr = (default_db.get('OPTIONS') or {}).get('hostaddr')
+        if hostaddr:
+            print(f"[DATABASE] Using PostgreSQL with IPv4 hostaddr={hostaddr}")
     except ValueError as e:
         raise ValueError(f"DATABASE_URL 파싱 실패: {safe_db_url} (원인: {e})")
 else:
