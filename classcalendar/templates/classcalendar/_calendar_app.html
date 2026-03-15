@@ -607,18 +607,14 @@
                                     x-text="formatDayItemCount(date)"
                                 ></span>
                             </div>
-                            <div class="mt-3 flex items-center gap-1.5" x-show="getDayItemCount(date) > 0">
-                                <span class="h-2 w-2 rounded-full" :class="getDayMarkerDotClass(date)"></span>
-                                <span x-show="getDayItemCount(date) > 1" class="h-2 w-2 rounded-full bg-slate-300"></span>
-                                <span x-show="getDayItemCount(date) > 2" class="h-2 w-2 rounded-full bg-slate-200"></span>
-                            </div>
                         </button>
                     </template>
                 </div>
                 <section
                     x-show="hasSelectedDateInCurrentMonth()"
                     x-cloak
-                    class="classcalendar-mobile-agenda mt-3 p-4 sm:hidden"
+                    x-ref="selectedDateAgenda"
+                    class="classcalendar-mobile-agenda mt-3 scroll-mt-24 p-4 sm:hidden"
                 >
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
@@ -2441,9 +2437,21 @@ function calendarApp() {
         handleDayCellClick(date, triggerEvent = null) {
             if (this.isCompactMobileViewport()) {
                 this.selectDate(date);
+                this.scrollSelectedDateAgendaIntoView();
                 return;
             }
             this.openDayOverview(date, triggerEvent);
+        },
+
+        scrollSelectedDateAgendaIntoView() {
+            this.$nextTick(() => {
+                const agenda = this.$refs && this.$refs.selectedDateAgenda ? this.$refs.selectedDateAgenda : null;
+                if (!agenda || typeof agenda.scrollIntoView !== 'function') return;
+                agenda.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start',
+                });
+            });
         },
 
         hasSelectedDateInCurrentMonth() {
@@ -3086,16 +3094,6 @@ function calendarApp() {
         },
         getDayMarker(date) {
             return this.dayMarkers[this.dateKey(date)] || null;
-        },
-        getDayMarkerDotClass(date) {
-            const marker = this.getDayMarker(date);
-            const tone = marker && marker.top_tone ? marker.top_tone : 'neutral';
-            const map = {
-                neutral: 'bg-slate-400',
-                warning: 'bg-amber-500',
-                done: 'bg-emerald-500',
-            };
-            return map[tone] || map.neutral;
         },
         getHubItemToneDotClass(item) {
             const tone = item && item.tone ? item.tone : 'neutral';
