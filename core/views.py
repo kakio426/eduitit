@@ -1090,6 +1090,44 @@ def _build_home_v4_nav_sections(primary_display_sections, secondary_display_sect
     return nav_sections
 
 
+def _build_home_v4_mobile_quick_items(favorite_products, nav_sections, *, limit=4):
+    candidate_products = list(favorite_products or [])
+
+    for section in nav_sections:
+        products = list(section.get('products') or [])
+        if products:
+            candidate_products.append(products[0])
+
+    for section in nav_sections:
+        products = list(section.get('products') or [])
+        if len(products) > 1:
+            candidate_products.extend(products[1:])
+
+    quick_products = _dedupe_products(candidate_products, limit=limit * 2)
+    quick_items = []
+
+    for product in quick_products:
+        href = getattr(product, 'launch_href', '') or ''
+        if not href:
+            continue
+        raw_title = (
+            getattr(product, 'public_service_name', '')
+            or getattr(product, 'title', '')
+            or '도구'
+        )
+        quick_items.append({
+            'product': product,
+            'title': build_favorite_service_title(raw_title) or raw_title,
+            'href': href,
+            'is_external': bool(getattr(product, 'launch_is_external', False)),
+            'icon': getattr(product, 'icon', '') or '',
+        })
+        if len(quick_items) >= limit:
+            break
+
+    return quick_items
+
+
 def _get_usage_based_quick_actions(user, product_list, limit=5):
     """즐겨찾기 우선 + 사용 빈도 기반 퀵 액션 목록 생성."""
     from django.utils import timezone
@@ -2366,6 +2404,14 @@ def _home_v4(request, products, posts, page_obj, feed_scope):
         ),
         limit=3,
     )
+    home_v4_mobile_calendar_first_enabled = bool(
+        getattr(settings, 'HOME_V4_MOBILE_CALENDAR_FIRST_ENABLED', False)
+    )
+    home_v4_mobile_quick_items = _build_home_v4_mobile_quick_items(
+        favorite_products,
+        home_v4_nav_sections,
+        limit=4,
+    )
 
     from classcalendar.views import build_calendar_surface_context
 
@@ -2391,6 +2437,8 @@ def _home_v4(request, products, posts, page_obj, feed_scope):
         'representative_slots': representative_slots,
         'representative_recommendations': representative_recommendations,
         'home_v4_nav_sections': home_v4_nav_sections,
+        'home_v4_mobile_calendar_first_enabled': home_v4_mobile_calendar_first_enabled,
+        'home_v4_mobile_quick_items': home_v4_mobile_quick_items,
         'home_calendar_surface': home_calendar_surface,
         'home_v2_frontend_config': home_v2_frontend_config,
         'community_summary': community_summary,

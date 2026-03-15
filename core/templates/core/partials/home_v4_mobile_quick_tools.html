@@ -1,0 +1,36 @@
+<article class="home-v4-card home-v4-mobile-quick-tools" data-home-v4-mobile-quick-tools="true">
+    <div class="home-v4-mobile-quick-tools-header">
+        <div>
+            <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Quick Tools</p>
+            <h2 class="mt-1 text-lg font-black text-slate-900">자주 쓰는 도구</h2>
+        </div>
+        <button
+            type="button"
+            class="home-v4-mobile-all-tools-trigger"
+            data-home-v4-mobile-all-tools-button="true"
+            @click="menuSheetOpen = true"
+        >
+            전체 도구
+        </button>
+    </div>
+
+    <div class="home-v4-mobile-quick-grid">
+        {% for item in home_v4_mobile_quick_items %}
+        <a
+            href="{{ item.href }}"
+            class="home-v4-mobile-quick-item"
+            data-home-v4-mobile-quick-item="true"
+            {% if item.is_external %}target="_blank" rel="noopener"{% endif %}
+        >
+            <span class="home-v4-mobile-quick-icon">
+                {% if item.icon %}
+                    {% if "fa-" in item.icon %}<i class="{{ item.icon }}"></i>{% else %}{{ item.icon }}{% endif %}
+                {% else %}
+                    <i class="fa-solid fa-sparkles"></i>
+                {% endif %}
+            </span>
+            <span class="home-v4-mobile-quick-title">{{ item.title }}</span>
+        </a>
+        {% endfor %}
+    </div>
+</article>

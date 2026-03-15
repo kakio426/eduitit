@@ -25,6 +25,23 @@
                 x-data="{ openSection: '', menuSheetOpen: false }"
                 @keydown.escape.window="menuSheetOpen = false"
             >
+                {% if home_v4_mobile_calendar_first_enabled %}
+                <div class="home-v4-mobile-calendar-first-bar" data-home-v4-mobile-calendar-first="true">
+                    <div class="min-w-0">
+                        <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Calendar</p>
+                        <h2 class="mt-1 text-lg font-black text-slate-900">오늘 학급 캘린더</h2>
+                    </div>
+                    <button
+                        type="button"
+                        class="home-v4-mobile-all-tools-trigger"
+                        data-home-v4-mobile-calendar-first-trigger="true"
+                        @click="menuSheetOpen = true"
+                    >
+                        <i class="fa-solid fa-grip"></i>
+                        전체 도구
+                    </button>
+                </div>
+                {% else %}
                 <div class="home-v4-mobile-toolbar" data-home-v4-mobile-toolbar="true">
                     <div class="min-w-0">
                         <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Menu</p>
@@ -40,6 +57,7 @@
                         메뉴 열기
                     </button>
                 </div>
+                {% endif %}
 
                 <div
                     class="home-v4-mobile-overlay"
@@ -51,6 +69,7 @@
                 ></div>
 
                 <div
+                    id="home-v4-mobile-sheet"
                     class="home-v4-mobile-sheet"
                     data-home-v4-mobile-sheet="true"
                     x-cloak
@@ -64,8 +83,8 @@
                 >
                     <div class="home-v4-mobile-sheet-header">
                         <div>
-                            <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Quick Menu</p>
-                            <h2 class="mt-1 text-lg font-black text-slate-900">필요한 도구만 펼쳐서 보기</h2>
+                            <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">{% if home_v4_mobile_calendar_first_enabled %}All Tools{% else %}Quick Menu{% endif %}</p>
+                            <h2 class="mt-1 text-lg font-black text-slate-900">{% if home_v4_mobile_calendar_first_enabled %}전체 도구{% else %}필요한 도구만 펼쳐서 보기{% endif %}</h2>
                         </div>
                         <button
                             type="button"
@@ -100,7 +119,11 @@
                             </div>
 
                             <div class="home-v4-side-stack">
-                                <article class="home-v4-card" data-home-v4-favorites-panel="true">
+                                {% if home_v4_mobile_calendar_first_enabled %}
+                                {% include 'core/partials/home_v4_mobile_quick_tools.html' %}
+                                {% endif %}
+
+                                <article class="home-v4-card{% if home_v4_mobile_calendar_first_enabled %} home-v4-desktop-favorites{% endif %}" data-home-v4-favorites-panel="true">
                                     <div class="mb-4 flex items-center gap-2">
                                         <i class="fa-solid fa-star text-amber-500"></i>
                                         <h2 class="text-lg font-black text-slate-900">즐겨찾기 빠른 실행</h2>

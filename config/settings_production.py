@@ -598,6 +598,12 @@ AUTOARTICLE_EXPORT_LAYOUT = os.getenv('AUTOARTICLE_EXPORT_LAYOUT', 'v1')
 HOME_LAYOUT_VERSION = os.environ.get('HOME_LAYOUT_VERSION', '').strip().lower()
 # UX-04 rollout rule: V2 is default-on. Set HOME_V2_ENABLED=False for immediate rollback.
 HOME_V2_ENABLED = os.environ.get('HOME_V2_ENABLED', 'True').lower() == 'true'
+# Mobile home V4 rollout: keep the current hamburger menu by default.
+# Set HOME_V4_MOBILE_CALENDAR_FIRST_ENABLED=True to switch mobile V4 to calendar-first quick tools.
+HOME_V4_MOBILE_CALENDAR_FIRST_ENABLED = os.environ.get(
+    'HOME_V4_MOBILE_CALENDAR_FIRST_ENABLED',
+    'False',
+).lower() == 'true'
 ALLOW_TABLET_ACCESS = os.environ.get('ALLOW_TABLET_ACCESS', 'True').lower() in ('true', '1', 'yes')
 GLOBAL_SEARCH_ENABLED = os.environ.get('GLOBAL_SEARCH_ENABLED', 'True').lower() in ('true', '1', 'yes')
 

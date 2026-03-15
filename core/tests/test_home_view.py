@@ -1536,6 +1536,29 @@ class HomeV4ViewTest(TestCase):
         self.assertLess(favorites_index, sns_index)
         self.assertLess(representative_index, sns_index)
 
+    @override_settings(HOME_V4_MOBILE_CALENDAR_FIRST_ENABLED=True)
+    def test_v4_mobile_calendar_first_flag_swaps_hamburger_for_quick_tools(self):
+        user = self._login('v4mobileflag')
+        ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('data-home-v4-mobile-calendar-first="true"', content)
+        self.assertIn('data-home-v4-mobile-calendar-first-trigger="true"', content)
+        self.assertIn('data-home-v4-mobile-quick-tools="true"', content)
+        self.assertIn('data-home-v4-mobile-quick-item="true"', content)
+        self.assertIn('data-home-v4-mobile-all-tools-button="true"', content)
+        self.assertIn('오늘 학급 캘린더', content)
+        self.assertIn('자주 쓰는 도구', content)
+        self.assertNotIn('data-home-v4-mobile-menu-trigger="true"', content)
+
+        home_panel_index = content.index('data-home-v4-home-panel="true"')
+        mobile_quick_index = content.index('data-home-v4-mobile-quick-tools="true"')
+        representative_index = content.index('data-home-v4-representative-services="true"')
+        self.assertLess(home_panel_index, mobile_quick_index)
+        self.assertLess(mobile_quick_index, representative_index)
+
     def test_v4_section_menu_lists_full_tool_links_without_switching_home_summary(self):
         self._login('v4section')
 
