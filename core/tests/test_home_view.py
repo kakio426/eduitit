@@ -669,15 +669,19 @@ class HomeV2ViewTest(TestCase):
         self.assertIn(('아침 조회 준비', '출석부와 전달사항 확인'), task_notes)
         self.assertNotIn('data-home-v2-calendar-today-tasks="true"', content)
 
-    def test_v2_authenticated_widens_content_shell_and_keeps_favorites_panel_below_calendar(self):
+    def test_v2_authenticated_exposes_desktop_side_stack_for_favorites_and_community(self):
         user = self._login('balanceuser')
         ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
         self.assertIn("core/css/home_authenticated_v2.css", content)
+        self.assertIn('data-home-v2-content-shell="true"', content)
+        self.assertIn('data-home-v2-has-favorites="true"', content)
+        self.assertIn('data-home-v2-side-stack="true"', content)
         self.assertIn('data-home-v2-favorites-grid="true"', content)
         self.assertIn('data-home-v2-favorites-panel="true"', content)
+        self.assertIn('home-v2-community-zone', content)
         self.assertIn('home-v2-content-shell', content)
         self.assertIn('home-v2-top-zone', content)
         self.assertIn('data-classcalendar-day-modal="true"', content)
@@ -693,19 +697,21 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('수합·서명', content)
         self.assertIn('문서·작성', content)
 
-    def test_v2_authenticated_orders_tablet_summary_after_services_and_game(self):
-        self._login('tabletorder')
+    def test_v2_authenticated_places_favorites_and_community_in_same_side_stack(self):
+        user = self._login('tabletorder')
+        ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
         top_zone_index = content.index('data-home-v2-top-zone="true"')
+        side_stack_index = content.index('data-home-v2-side-stack="true"')
+        favorites_index = content.index('data-home-v2-favorites-panel="true"')
         summary_index = content.index('data-home-v2-community-section="true"')
         service_index = content.index('data-home-v2-service-groups="true"')
-        game_index = content.index('data-home-v2-game-section="true"')
 
-        self.assertLess(top_zone_index, summary_index)
-        self.assertLess(service_index, game_index)
-        self.assertLess(game_index, summary_index)
+        self.assertLess(top_zone_index, side_stack_index)
+        self.assertLess(side_stack_index, service_index)
+        self.assertLess(favorites_index, summary_index)
 
     def test_v2_authenticated_does_not_render_show_all_toggle(self):
         """V2 로그인 홈에서도 전체 서비스 보기 토글 미노출"""
