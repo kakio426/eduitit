@@ -94,7 +94,7 @@
                     </aside>
 
                     <div class="home-v4-main">
-                        <section class="home-v4-top-grid mb-6" data-home-v4-home-panel="true">
+                        <section class="home-v4-top-grid home-v4-home-panel-section mb-6" data-home-v4-home-panel="true">
                             <div class="home-v4-calendar-wrap">
                                 {% include 'core/partials/home_calendar_panel.html' %}
                             </div>
@@ -151,9 +151,6 @@
                                     {% endif %}
                                 </article>
 
-                                <section data-home-v4-sns-panel="true">
-                                    {% include 'core/partials/sns_widget.html' with embed_mode='full' compact_posts=True %}
-                                </section>
                             </div>
                         </section>
 
@@ -197,6 +194,10 @@
                                 </div>
                                 {% endif %}
                             </div>
+                        </section>
+
+                        <section class="home-v4-community-section mb-6" data-home-v4-sns-panel="true">
+                            {% include 'core/partials/sns_widget.html' with embed_mode='full' compact_posts=True %}
                         </section>
                     </div>
                 </div>

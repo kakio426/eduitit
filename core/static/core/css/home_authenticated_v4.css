@@ -20,6 +20,7 @@
 .home-v4-nav-group,
 .home-v4-main {
     min-width: 0;
+    display: grid;
 }
 
 .home-v4-main {
@@ -432,6 +433,21 @@
 }
 
 @media (min-width: 1280px) {
+    .home-v4-main {
+        grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.68fr);
+        column-gap: 1rem;
+        align-items: start;
+    }
+
+    .home-v4-home-panel-section {
+        grid-column: 1 / -1;
+    }
+
+    .home-v4-community-section {
+        grid-column: 2;
+        margin-top: 0;
+    }
+
     .home-v4-top-grid {
         grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.68fr);
     }

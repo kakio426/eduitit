@@ -1510,6 +1510,7 @@ class HomeV4ViewTest(TestCase):
         self.assertIn('data-home-v4-home-panel="true"', content)
         self.assertIn('data-home-v4-representative-services="true"', content)
         self.assertIn('data-home-v4-sns-panel="true"', content)
+        self.assertIn('home-v4-community-section', content)
         self.assertIn('data-home-v4-mobile-menu-trigger="true"', content)
         self.assertIn('data-home-v4-mobile-sheet="true"', content)
         self.assertIn('간편 수합', content)
@@ -1530,8 +1531,10 @@ class HomeV4ViewTest(TestCase):
         self.assertNotIn('자주 여는 도구를 홈에서 먼저 보여주고, 자세한 목록은 왼쪽 메뉴에서 바로 엽니다.', content)
 
         favorites_index = content.index('data-home-v4-favorites-panel="true"')
+        representative_index = content.index('data-home-v4-representative-services="true"')
         sns_index = content.index('data-home-v4-sns-panel="true"')
         self.assertLess(favorites_index, sns_index)
+        self.assertLess(representative_index, sns_index)
 
     def test_v4_section_menu_lists_full_tool_links_without_switching_home_summary(self):
         self._login('v4section')
