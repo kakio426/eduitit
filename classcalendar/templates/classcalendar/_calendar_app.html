@@ -33,9 +33,174 @@
         min-height: 76px;
     }
 
+    .classcalendar-main-toolbar-scroll {
+        overflow-x: auto;
+        padding-bottom: 0.12rem;
+    }
+
+    .classcalendar-main-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.6rem;
+        width: 100%;
+        min-width: max-content;
+        padding: 0.48rem 0.62rem;
+        border: 1px solid #e5ddd0;
+        border-radius: 1.75rem;
+        background: linear-gradient(90deg, #fff5df 0%, #ffffff 54%, #eef5ff 100%);
+    }
+
+    .classcalendar-main-month-group {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        flex: 0 0 auto;
+        padding: 0.34rem 0.42rem;
+        border: 1px solid #dbe3ec;
+        border-radius: 1.3rem;
+        background: rgba(255, 255, 255, 0.96);
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    }
+
+    .classcalendar-main-nav-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        width: 2rem;
+        height: 2rem;
+        border: 1px solid #dbe3ec;
+        border-radius: 9999px;
+        background: #f8fafc;
+        color: #64748b;
+        transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    }
+
+    .classcalendar-main-nav-btn:hover {
+        background: #ffffff;
+        color: #0f172a;
+        border-color: #cbd5e1;
+    }
+
+    .classcalendar-main-nav-icon {
+        width: 0.95rem;
+        height: 0.95rem;
+        flex: 0 0 auto;
+    }
+
+    .classcalendar-main-month-label {
+        margin: 0;
+        padding: 0 0.16rem;
+        white-space: nowrap;
+        font-size: 1.02rem;
+        line-height: 1;
+        letter-spacing: -0.03em;
+        font-weight: 900;
+        color: #0f172a;
+    }
+
+    .classcalendar-main-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        flex: 0 0 auto;
+    }
+
+    .classcalendar-main-action-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        height: 2.25rem;
+        padding: 0 0.88rem;
+        border-radius: 1rem;
+        white-space: nowrap;
+        font-size: 0.92rem;
+        line-height: 1;
+        font-weight: 800;
+        transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    }
+
+    .classcalendar-main-action-btn--ghost {
+        border: 1px solid #dbe3ec;
+        background: rgba(255, 255, 255, 0.94);
+        color: #334155;
+    }
+
+    .classcalendar-main-action-btn--ghost:hover {
+        background: #ffffff;
+        border-color: #cbd5e1;
+        color: #0f172a;
+    }
+
+    .classcalendar-main-action-btn--primary {
+        border: 1px solid #0f172a;
+        background: #0f172a;
+        color: #ffffff;
+        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.14);
+    }
+
+    .classcalendar-main-action-btn--primary:hover {
+        background: #1e293b;
+        border-color: #1e293b;
+    }
+
+    .classcalendar-main-secondary-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        max-width: 100%;
+        min-height: 2rem;
+        padding: 0.45rem 0.82rem;
+        border: 1px solid #f0d8ac;
+        border-radius: 9999px;
+        background: #fff7e6;
+        color: #b45309;
+        white-space: nowrap;
+        font-size: 0.78rem;
+        line-height: 1.1;
+        font-weight: 800;
+    }
+
     @media (min-width: 640px) {
         .classcalendar-day-cell {
             min-height: 92px;
+        }
+
+        .classcalendar-main-toolbar {
+            gap: 0.75rem;
+            padding: 0.6rem 0.78rem;
+        }
+
+        .classcalendar-main-month-group {
+            gap: 0.42rem;
+            padding: 0.4rem 0.5rem;
+        }
+
+        .classcalendar-main-nav-btn {
+            width: 2.15rem;
+            height: 2.15rem;
+        }
+
+        .classcalendar-main-month-label {
+            font-size: 1.2rem;
+        }
+
+        .classcalendar-main-actions {
+            gap: 0.55rem;
+        }
+
+        .classcalendar-main-action-btn {
+            height: 2.45rem;
+            padding: 0 1rem;
+            font-size: 0.95rem;
+        }
+
+        .classcalendar-main-secondary-link {
+            min-height: 2.15rem;
+            padding: 0.5rem 0.95rem;
+            font-size: 0.82rem;
         }
     }
 
@@ -317,43 +482,50 @@
                 {% endif %}
             </div>
             {% else %}
-            <div class="mb-3 space-y-3 sm:mb-4" data-classcalendar-main-view="true">
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                        <p class="classcalendar-eyebrow font-semibold text-slate-400">월간 캘린더</p>
-                        <h2 class="mt-1 text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl" x-text="currentMonthText"></h2>
-                    </div>
-                    <div class="flex flex-wrap items-center gap-2 sm:justify-end">
-                        {% if messagebox_home_card.enabled and messagebox_home_card.url and not is_embedded_on_home %}
-                        <a
-                            href="{{ messagebox_home_card.url }}"
-                            class="inline-flex items-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800 transition hover:bg-amber-100"
-                        >
-                            업무 메시지 보관함
-                        </a>
-                        {% endif %}
-                        <button type="button" @click="prevMonth()" class="rounded-xl border border-slate-200 bg-white p-2 text-slate-500 transition hover:bg-slate-50 sm:p-2.5" aria-label="이전 달">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-                        </button>
-                        <button type="button" @click="nextMonth()" class="rounded-xl border border-slate-200 bg-white p-2 text-slate-500 transition hover:bg-slate-50 sm:p-2.5" aria-label="다음 달">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                        </button>
-                        <button
-                            type="button"
-                            @click="selectToday()"
-                            class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                        >
-                            오늘
-                        </button>
-                        <button
-                            type="button"
-                            @click="openCreateModalForSelectedDate()"
-                            class="inline-flex items-center rounded-xl bg-slate-900 px-3 py-2 text-sm font-bold text-white transition hover:bg-slate-800"
-                        >
-                            새 일정
-                        </button>
+            <div class="mb-2.5 sm:mb-3" data-classcalendar-main-view="true">
+                <div class="classcalendar-main-toolbar-scroll">
+                    <div class="classcalendar-main-toolbar">
+                        <div class="classcalendar-main-month-group">
+                            <button type="button" @click="prevMonth()" class="classcalendar-main-nav-btn" aria-label="이전 달">
+                                <svg class="classcalendar-main-nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25" d="M15 19l-7-7 7-7"/>
+                                </svg>
+                            </button>
+                            <h2 class="classcalendar-main-month-label" x-text="currentMonthText"></h2>
+                            <button type="button" @click="nextMonth()" class="classcalendar-main-nav-btn" aria-label="다음 달">
+                                <svg class="classcalendar-main-nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25" d="M9 5l7 7-7 7"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="classcalendar-main-actions">
+                            <button
+                                type="button"
+                                @click="selectToday()"
+                                class="classcalendar-main-action-btn classcalendar-main-action-btn--ghost"
+                            >
+                                오늘
+                            </button>
+                            <button
+                                type="button"
+                                @click="openCreateModalForSelectedDate()"
+                                class="classcalendar-main-action-btn classcalendar-main-action-btn--primary"
+                            >
+                                새 일정
+                            </button>
+                        </div>
                     </div>
                 </div>
+                {% if messagebox_home_card.enabled and messagebox_home_card.url and not is_embedded_on_home %}
+                <div class="mt-2 flex justify-end">
+                    <a
+                        href="{{ messagebox_home_card.url }}"
+                        class="classcalendar-main-secondary-link transition hover:bg-amber-100"
+                    >
+                        업무 메시지 보관함
+                    </a>
+                </div>
+                {% endif %}
             </div>
 
             <div class="min-w-0">
