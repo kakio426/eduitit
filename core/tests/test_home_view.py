@@ -1520,9 +1520,15 @@ class HomeV4ViewTest(TestCase):
         self.assertNotIn('data-home-v4-active-panel=', content)
         self.assertNotIn('data-home-v4-section-panel=', content)
         self.assertNotIn('data-home-v2-favorites-panel="true"', content)
-        self.assertNotIn('선생님들과 나누고 싶은 이야기가 있나요?', content)
+        self.assertIn('선생님들과 나누고 싶은 이야기가 있나요?', content)
+        self.assertIn(f'hx-post="{reverse("post_create")}"', content)
         self.assertNotIn('data-home-v2-tablet-community-summary="true"', content)
         self.assertNotIn('더 많은 도구 보기', content)
+        self.assertNotIn('data-home-v4-sns-preview-list="true"', content)
+
+        favorites_index = content.index('data-home-v4-favorites-panel="true"')
+        sns_index = content.index('data-home-v4-sns-panel="true"')
+        self.assertLess(favorites_index, sns_index)
 
     def test_v4_section_menu_lists_full_tool_links_without_switching_home_summary(self):
         self._login('v4section')
