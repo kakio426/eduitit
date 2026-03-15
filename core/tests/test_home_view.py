@@ -1525,6 +1525,9 @@ class HomeV4ViewTest(TestCase):
         self.assertNotIn('data-home-v2-tablet-community-summary="true"', content)
         self.assertNotIn('더 많은 도구 보기', content)
         self.assertNotIn('data-home-v4-sns-preview-list="true"', content)
+        self.assertNotIn('홈 요약은 그대로 두고, 필요한 도구만 펼쳐서 바로 찾습니다.', content)
+        self.assertNotIn('최근 올라온 이야기만 간단히 확인하고 전체 소통으로 이어갑니다.', content)
+        self.assertNotIn('자주 여는 도구를 홈에서 먼저 보여주고, 자세한 목록은 왼쪽 메뉴에서 바로 엽니다.', content)
 
         favorites_index = content.index('data-home-v4-favorites-panel="true"')
         sns_index = content.index('data-home-v4-sns-panel="true"')
