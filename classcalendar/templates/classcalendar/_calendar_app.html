@@ -799,7 +799,6 @@
                 </div>
 
                 <div x-show="dayModalMode === 'detail' && selectedEvent" class="space-y-4">
-                    <p class="text-sm font-medium text-slate-600" x-text="selectedEvent ? formatEventRange(selectedEvent) : ''"></p>
                     <p x-show="selectedEvent && selectedEvent.note" class="classcalendar-copy rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 whitespace-pre-line" x-text="selectedEvent ? selectedEvent.note : ''"></p>
                     <div x-show="selectedEvent && selectedEvent.attachments && selectedEvent.attachments.length > 0" class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
                         <p class="mb-2 text-xs font-bold text-slate-700">첨부파일</p>
@@ -824,7 +823,7 @@
                         </p>
                     </div>
                     <p x-show="getReadonlyEventHint()" class="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm font-semibold text-amber-900" x-text="getReadonlyEventHint()"></p>
-                    <div class="flex flex-wrap gap-2">
+                    <div x-show="selectedEvent && (selectedEvent.source_url || selectedEvent.message_capture_url)" class="flex flex-wrap gap-2">
                         <a x-show="selectedEvent && selectedEvent.source_url" :href="selectedEvent ? selectedEvent.source_url : '#'" :target="embeddedSheetbookContext ? '_top' : '_blank'" :rel="embeddedSheetbookContext ? null : 'noopener noreferrer'" class="inline-flex items-center rounded-xl border border-indigo-200 bg-indigo-50 px-3.5 py-2 text-sm font-bold text-indigo-800 transition hover:bg-indigo-100">
                             <i class="fa-solid fa-arrow-up-right-from-square mr-1.5"></i>
                             <span x-text="selectedEvent && selectedEvent.source_label ? selectedEvent.source_label : '원본 서비스로 이동'"></span>
