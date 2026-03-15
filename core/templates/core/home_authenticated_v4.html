@@ -27,14 +27,37 @@
             >
                 {% if home_v4_mobile_calendar_first_enabled %}
                 <div class="home-v4-mobile-calendar-first-bar" data-home-v4-mobile-calendar-first="true">
-                    <div class="min-w-0">
-                        <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Calendar</p>
-                        <h2 class="mt-1 text-lg font-black text-slate-900">오늘 학급 캘린더</h2>
+                    <div
+                        class="home-v4-mobile-calendar-first-status"
+                        data-home-v4-mobile-calendar-status="true"
+                    >
+                        <span
+                            class="home-v4-mobile-calendar-first-chip home-v4-mobile-calendar-first-chip--date"
+                            data-home-v4-mobile-calendar-chip="date"
+                        >
+                            <i class="fa-regular fa-calendar"></i>
+                            {{ today_workspace.date_label|default:'오늘' }}
+                        </span>
+                        <span
+                            class="home-v4-mobile-calendar-first-chip"
+                            data-home-v4-mobile-calendar-chip="events"
+                        >
+                            <i class="fa-regular fa-clock"></i>
+                            일정 {{ today_workspace.today_event_count|default_if_none:0 }}건
+                        </span>
+                        <span
+                            class="home-v4-mobile-calendar-first-chip"
+                            data-home-v4-mobile-calendar-chip="tasks"
+                        >
+                            <i class="fa-solid fa-list-check"></i>
+                            할 일 {{ today_workspace.today_task_count|default_if_none:0 }}건
+                        </span>
                     </div>
                     <button
                         type="button"
                         class="home-v4-mobile-all-tools-trigger"
                         data-home-v4-mobile-calendar-first-trigger="true"
+                        data-home-v4-mobile-all-tools-button="true"
                         @click="menuSheetOpen = true"
                     >
                         <i class="fa-solid fa-grip"></i>

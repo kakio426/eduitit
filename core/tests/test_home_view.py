@@ -416,8 +416,13 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('메시지 보관', content)
         self.assertIn('href="/messagebox/#messagebox-compose"', content)
         self.assertIn('href="/messagebox/#messagebox-archive"', content)
+        self.assertIn('data-classcalendar-main-view="true"', content)
         self.assertNotIn('놓치지 않을 메시지', content)
         self.assertNotIn('메신저에서 받은 중요한 내용을 붙여넣고, 나중에 다시 보거나 일정에 연결하세요.', content)
+        self.assertLess(
+            content.index('data-classcalendar-main-view="true"'),
+            content.index('data-home-messagebox-card="true"'),
+        )
 
         section_products = [
             product.launch_route_name
@@ -1540,17 +1545,43 @@ class HomeV4ViewTest(TestCase):
     def test_v4_mobile_calendar_first_flag_swaps_hamburger_for_quick_tools(self):
         user = self._login('v4mobileflag')
         ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
+        today = timezone.localdate()
+        start_time = timezone.make_aware(datetime.combine(today, time(hour=9)))
+        CalendarEvent.objects.create(
+            title='아침 조회',
+            author=user,
+            start_time=start_time,
+            end_time=start_time + timedelta(minutes=40),
+            color='indigo',
+            visibility=CalendarEvent.VISIBILITY_TEACHER,
+        )
+        CalendarTask.objects.create(
+            author=user,
+            title='가정통신문 확인',
+            due_at=start_time,
+            has_time=True,
+            priority=CalendarTask.Priority.NORMAL,
+        )
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
+        expected_date_label = f'{today.month}월 {today.day}일'
 
         self.assertIn('data-home-v4-mobile-calendar-first="true"', content)
+        self.assertIn('data-home-v4-mobile-calendar-status="true"', content)
+        self.assertIn('data-home-v4-mobile-calendar-chip="date"', content)
+        self.assertIn('data-home-v4-mobile-calendar-chip="events"', content)
+        self.assertIn('data-home-v4-mobile-calendar-chip="tasks"', content)
         self.assertIn('data-home-v4-mobile-calendar-first-trigger="true"', content)
         self.assertIn('data-home-v4-mobile-quick-tools="true"', content)
         self.assertIn('data-home-v4-mobile-quick-item="true"', content)
         self.assertIn('data-home-v4-mobile-all-tools-button="true"', content)
-        self.assertIn('오늘 학급 캘린더', content)
+        self.assertEqual(content.count('data-home-v4-mobile-all-tools-button="true"'), 1)
+        self.assertIn(expected_date_label, content)
+        self.assertIn('일정 1건', content)
+        self.assertIn('할 일 1건', content)
         self.assertIn('자주 쓰는 도구', content)
+        self.assertNotIn('오늘 학급 캘린더', content)
         self.assertNotIn('data-home-v4-mobile-menu-trigger="true"', content)
 
         home_panel_index = content.index('data-home-v4-home-panel="true"')
