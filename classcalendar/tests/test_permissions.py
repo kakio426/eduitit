@@ -95,6 +95,8 @@ class PermissionTest(TestCase):
         self.assertIn("새 일정", content)
         self.assertIn("오늘", content)
         self.assertNotIn("날짜를 누르면 그날 일정과 할 일을 한 화면에서 바로 확인할 수 있습니다.", content)
+        self.assertNotIn("열면 바로 수정과 삭제까지 이어집니다.", content)
+        self.assertNotIn("이번 범위에서는 조회만 지원합니다.", content)
         self.assertNotIn("안내문에서 일정 찾기", content)
         self.assertNotIn("오늘 메모", content)
         self.assertNotIn("다시 볼 메모", content)
