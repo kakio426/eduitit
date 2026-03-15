@@ -1605,6 +1605,8 @@ class HomeV4ViewTest(TestCase):
         self.assertIn('data-home-v4-representative-services="true"', content)
         self.assertIn('data-home-v4-sns-panel="true"', content)
         self.assertIn('home-v4-community-section', content)
+        self.assertIn('home-v4-top-favorites', content)
+        self.assertIn('home-v4-top-sns', content)
         self.assertIn('data-home-v4-mobile-menu-trigger="true"', content)
         self.assertIn('data-home-v4-mobile-sheet="true"', content)
         self.assertIn('간편 수합', content)
@@ -1628,7 +1630,7 @@ class HomeV4ViewTest(TestCase):
         representative_index = content.index('data-home-v4-representative-services="true"')
         sns_index = content.index('data-home-v4-sns-panel="true"')
         self.assertLess(favorites_index, sns_index)
-        self.assertLess(representative_index, sns_index)
+        self.assertLess(sns_index, representative_index)
 
     @override_settings(HOME_V4_MOBILE_CALENDAR_FIRST_ENABLED=True)
     def test_v4_mobile_calendar_first_flag_swaps_hamburger_for_quick_tools(self):

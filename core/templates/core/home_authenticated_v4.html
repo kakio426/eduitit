@@ -153,7 +153,7 @@
                                 {% include 'core/partials/home_v4_mobile_quick_tools.html' %}
                                 {% endif %}
 
-                                <article class="home-v4-card{% if home_v4_mobile_calendar_first_enabled %} home-v4-desktop-favorites{% endif %}" data-home-v4-favorites-panel="true">
+                                <article class="home-v4-card home-v4-top-favorites{% if home_v4_mobile_calendar_first_enabled %} home-v4-desktop-favorites{% endif %}" data-home-v4-favorites-panel="true">
                                     <div class="mb-4 flex items-center gap-2">
                                         <i class="fa-solid fa-star text-amber-500"></i>
                                         <h2 class="text-lg font-black text-slate-900">즐겨찾기 빠른 실행</h2>
@@ -204,6 +204,10 @@
                                     {% endif %}
                                 </article>
 
+                                <section class="home-v4-community-section home-v4-top-sns" data-home-v4-sns-panel="true">
+                                    {% include 'core/partials/sns_widget.html' with embed_mode='full' compact_posts=True %}
+                                </section>
+
                             </div>
                         </section>
 
@@ -249,9 +253,6 @@
                             </div>
                         </section>
 
-                        <section class="home-v4-community-section mb-6" data-home-v4-sns-panel="true">
-                            {% include 'core/partials/sns_widget.html' with embed_mode='full' compact_posts=True %}
-                        </section>
                     </div>
                 </div>
             </div>

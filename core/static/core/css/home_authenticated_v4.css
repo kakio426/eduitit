@@ -419,10 +419,10 @@
     align-items: start;
 }
 
-.home-v4-side-stack {
-    display: grid;
-    gap: 1rem;
-    align-content: start;
+.home-v4-top-favorites,
+.home-v4-top-sns {
+    min-width: 0;
+    align-self: start;
 }
 
 .home-v4-mobile-quick-tools {
@@ -488,6 +488,12 @@
 
 .home-v4-desktop-favorites {
     display: none;
+}
+
+.home-v4-top-favorites,
+.home-v4-top-sns {
+    min-width: 0;
+    align-self: start;
 }
 
 .home-v4-favorites-grid {
@@ -636,11 +642,26 @@
     }
 
     .home-v4-community-section {
-        grid-column: 2;
+        grid-column: auto;
         margin-top: 0;
     }
 
     .home-v4-top-grid {
         grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.68fr);
+    }
+
+    .home-v4-calendar-wrap {
+        grid-column: 1;
+        grid-row: 1 / span 2;
+    }
+
+    .home-v4-top-favorites {
+        grid-column: 2;
+        grid-row: 1;
+    }
+
+    .home-v4-top-sns {
+        grid-column: 2;
+        grid-row: 2;
     }
 }
