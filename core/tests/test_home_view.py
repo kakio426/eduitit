@@ -1651,6 +1651,7 @@ class HomeV4ViewTest(TestCase):
         expected_date_label = f'{today.month}월 {today.day}일'
 
         self.assertIn('data-home-v4-mobile-calendar-first="true"', content)
+        self.assertIn('data-home-v4-mobile-calendar-status-scroll="true"', content)
         self.assertIn('data-home-v4-mobile-calendar-status="true"', content)
         self.assertIn('data-home-v4-mobile-calendar-chip="date"', content)
         self.assertIn('data-home-v4-mobile-calendar-chip="events"', content)
@@ -1659,6 +1660,8 @@ class HomeV4ViewTest(TestCase):
         self.assertIn('data-home-v4-mobile-quick-tools="true"', content)
         self.assertIn('data-home-v4-mobile-quick-item="true"', content)
         self.assertIn('data-home-v4-mobile-all-tools-button="true"', content)
+        self.assertIn('home-v4-mobile-all-tools-trigger--icon', content)
+        self.assertIn('aria-label="전체 도구 열기"', content)
         self.assertEqual(content.count('data-home-v4-mobile-all-tools-button="true"'), 1)
         self.assertIn(expected_date_label, content)
         self.assertIn('일정 1건', content)

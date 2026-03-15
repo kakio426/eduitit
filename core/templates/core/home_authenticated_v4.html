@@ -28,40 +28,47 @@
                 {% if home_v4_mobile_calendar_first_enabled %}
                 <div class="home-v4-mobile-calendar-first-bar" data-home-v4-mobile-calendar-first="true">
                     <div
-                        class="home-v4-mobile-calendar-first-status"
-                        data-home-v4-mobile-calendar-status="true"
+                        class="home-v4-mobile-calendar-first-status-scroll"
+                        data-home-v4-mobile-calendar-status-scroll="true"
                     >
-                        <span
-                            class="home-v4-mobile-calendar-first-chip home-v4-mobile-calendar-first-chip--date"
-                            data-home-v4-mobile-calendar-chip="date"
+                        <div
+                            class="home-v4-mobile-calendar-first-status"
+                            data-home-v4-mobile-calendar-status="true"
                         >
-                            <i class="fa-regular fa-calendar"></i>
-                            {{ today_workspace.date_label|default:'오늘' }}
-                        </span>
-                        <span
-                            class="home-v4-mobile-calendar-first-chip"
-                            data-home-v4-mobile-calendar-chip="events"
-                        >
-                            <i class="fa-regular fa-clock"></i>
-                            일정 {{ today_workspace.today_event_count|default_if_none:0 }}건
-                        </span>
-                        <span
-                            class="home-v4-mobile-calendar-first-chip"
-                            data-home-v4-mobile-calendar-chip="tasks"
-                        >
-                            <i class="fa-solid fa-list-check"></i>
-                            할 일 {{ today_workspace.today_task_count|default_if_none:0 }}건
-                        </span>
+                            <span
+                                class="home-v4-mobile-calendar-first-chip home-v4-mobile-calendar-first-chip--date"
+                                data-home-v4-mobile-calendar-chip="date"
+                            >
+                                <i class="fa-regular fa-calendar"></i>
+                                {{ today_workspace.date_label|default:'오늘' }}
+                            </span>
+                            <span
+                                class="home-v4-mobile-calendar-first-chip"
+                                data-home-v4-mobile-calendar-chip="events"
+                            >
+                                <i class="fa-regular fa-clock"></i>
+                                일정 {{ today_workspace.today_event_count|default_if_none:0 }}건
+                            </span>
+                            <span
+                                class="home-v4-mobile-calendar-first-chip"
+                                data-home-v4-mobile-calendar-chip="tasks"
+                            >
+                                <i class="fa-solid fa-list-check"></i>
+                                할 일 {{ today_workspace.today_task_count|default_if_none:0 }}건
+                            </span>
+                        </div>
                     </div>
                     <button
                         type="button"
-                        class="home-v4-mobile-all-tools-trigger"
+                        class="home-v4-mobile-all-tools-trigger home-v4-mobile-all-tools-trigger--icon"
                         data-home-v4-mobile-calendar-first-trigger="true"
                         data-home-v4-mobile-all-tools-button="true"
                         @click="menuSheetOpen = true"
+                        aria-label="전체 도구 열기"
+                        title="전체 도구"
                     >
                         <i class="fa-solid fa-grip"></i>
-                        전체 도구
+                        <span class="sr-only">전체 도구</span>
                     </button>
                 </div>
                 {% else %}
