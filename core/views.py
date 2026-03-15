@@ -972,6 +972,35 @@ def _rotate_items(items, seed):
     return items[offset:] + items[:offset]
 
 
+def _get_product_usage_stats(user, products, *, since=None):
+    if not getattr(user, 'is_authenticated', False):
+        return {}
+
+    product_ids = [getattr(product, 'id', None) for product in products if getattr(product, 'id', None)]
+    if not product_ids:
+        return {}
+
+    usage_qs = ProductUsageLog.objects.filter(
+        user=user,
+        product__is_active=True,
+        product_id__in=product_ids,
+    )
+    if since is not None:
+        usage_qs = usage_qs.filter(created_at__gte=since)
+
+    usage_rows = usage_qs.values('product_id').annotate(
+        count=Count('id'),
+        last_used=Max('created_at'),
+    )
+    return {
+        row['product_id']: {
+            'count': row['count'],
+            'last_used': row['last_used'],
+        }
+        for row in usage_rows
+    }
+
+
 def _build_home_v4_representative_slots(
     user,
     *,
@@ -984,25 +1013,84 @@ def _build_home_v4_representative_slots(
     games,
     limit=4,
 ):
-    favorite_ids = {product.id for product in favorite_products}
+    candidate_products = []
+    for section in [*sections, *aux_sections]:
+        candidate_products.extend(section.get('products', []))
+        candidate_products.extend(section.get('overflow_products', []))
+    candidate_products.extend(games or [])
+    candidate_products.extend(favorite_products)
+    candidate_products.extend(recent_products)
+    candidate_products.extend(quick_actions)
+    candidate_products.extend(discovery_products)
+    candidate_products = _dedupe_products(
+        [
+            product
+            for product in candidate_products
+            if _resolve_home_section_key(product) != 'external'
+        ]
+    )
+
+    recent_usage_stats = _get_product_usage_stats(
+        user,
+        candidate_products,
+        since=timezone.now() - timedelta(days=14),
+    )
+    product_map = {product.id: product for product in candidate_products}
+    top_used_products = [
+        product_map[product_id]
+        for product_id, _ in sorted(
+            recent_usage_stats.items(),
+            key=lambda item: (
+                -item[1]['count'],
+                -(item[1]['last_used'].timestamp() if item[1]['last_used'] else 0),
+                product_map[item[0]].display_order,
+                item[0],
+            ),
+        )[:2]
+    ]
     fixed_products = _dedupe_products(
-        [*recent_products, *[product for product in quick_actions if product.id not in favorite_ids]],
-        exclude_ids=favorite_ids,
+        [*top_used_products, *recent_products, *quick_actions],
         limit=2,
     )
 
-    used_ids = favorite_ids | {product.id for product in fixed_products}
-    rotating_candidates = _dedupe_products(discovery_products, exclude_ids=used_ids)
+    used_ids = {product.id for product in fixed_products}
+    all_usage_stats = _get_product_usage_stats(user, candidate_products)
+    unused_products = [
+        product
+        for product in candidate_products
+        if product.id not in all_usage_stats and product.id not in used_ids
+    ]
+    rotating_candidates = _get_home_discovery_products(
+        user,
+        unused_products,
+        limit=None,
+    )
     rotation_seed = timezone.localdate().toordinal() + int(getattr(user, 'id', 0) or 0)
     rotating_products = _rotate_items(rotating_candidates, rotation_seed)[:2]
     used_ids.update(product.id for product in rotating_products)
 
-    fallback_products = []
-    for section in [*sections, *aux_sections]:
-        fallback_products.extend(section.get('products', []))
-        fallback_products.extend(section.get('overflow_products', []))
-    fallback_products.extend(games or [])
-    fallback_products = _dedupe_products(fallback_products, exclude_ids=used_ids | favorite_ids)
+    if len(rotating_products) < 2:
+        low_usage_products = sorted(
+            [
+                product
+                for product in candidate_products
+                if product.id not in used_ids and product.id in all_usage_stats
+            ],
+            key=lambda product: (
+                all_usage_stats[product.id]['count'],
+                all_usage_stats[product.id]['last_used'],
+                0 if product.is_featured else 1,
+                product.display_order,
+                product.id,
+            ),
+        )
+        for product in low_usage_products:
+            if len(rotating_products) >= 2:
+                break
+            rotating_products.append(product)
+            used_ids.add(product.id)
+
+    fallback_products = _dedupe_products(candidate_products, exclude_ids=used_ids)
 
     slots = (
         [{'product': product, 'slot_kind': 'fixed'} for product in fixed_products]
@@ -1237,10 +1325,12 @@ def _get_home_discovery_products(user, product_list, *, exclude_ids=None, limit=
             continue
         selected.append(product)
         seen_ids.add(product.id)
-        if len(selected) >= limit:
+        if limit and len(selected) >= limit:
             break
 
-    return selected[:limit]
+    if limit:
+        return selected[:limit]
+    return selected
 
 
 

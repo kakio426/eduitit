@@ -1,5 +1,6 @@
 import json
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
+from unittest.mock import patch
 
 from django.test import TestCase, Client, override_settings
 from django.urls import reverse
@@ -18,6 +19,7 @@ from core.mini_apps import (
     plan_home_action_surface,
 )
 from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
+from core.views import _build_home_v4_representative_slots, _rotate_items
 from products.models import Product
 from core.models import Post, ProductFavorite, ProductUsageLog, UserPolicyConsent, UserProfile
 
@@ -1408,6 +1410,87 @@ class HomePlacementPlannerTest(TestCase):
         ]
 
         self.assertEqual(plan_home_action_surface(entries), [])
+
+
+class RepresentativeSlotSelectionTest(TestCase):
+    def _build_sections(self, products):
+        return [{'products': products, 'overflow_products': []}]
+
+    def _create_product(self, title, *, display_order, service_type='classroom'):
+        return Product.objects.create(
+            title=title,
+            description=f'{title} 설명',
+            price=0,
+            is_active=True,
+            service_type=service_type,
+            display_order=display_order,
+        )
+
+    def test_representative_slots_pin_top_used_products_and_rotate_unused_products(self):
+        user = _create_onboarded_user('rep-fixed-user')
+        p1 = self._create_product('많이 쓴 수업 도구', display_order=1)
+        p2 = self._create_product('많이 쓴 행정 도구', display_order=2, service_type='work')
+        p3 = self._create_product('가끔 쓴 상담 도구', display_order=3, service_type='counsel')
+        p4 = self._create_product('안 써본 수업 도구 A', display_order=4)
+        p5 = self._create_product('안 써본 수업 도구 B', display_order=5, service_type='work')
+        p6 = self._create_product('안 써본 수업 도구 C', display_order=6, service_type='counsel')
+
+        for _ in range(3):
+            ProductUsageLog.objects.create(user=user, product=p1, action='launch', source='home_quick')
+        for _ in range(2):
+            ProductUsageLog.objects.create(user=user, product=p2, action='launch', source='home_quick')
+        ProductUsageLog.objects.create(user=user, product=p3, action='launch', source='home_quick')
+
+        frozen_day = date(2026, 3, 15)
+        with patch('core.views.timezone.localdate', return_value=frozen_day):
+            slots = _build_home_v4_representative_slots(
+                user,
+                favorite_products=[],
+                recent_products=[p3, p2, p1],
+                quick_actions=[p1, p2, p3],
+                discovery_products=[p4, p5, p6],
+                sections=self._build_sections([p1, p2, p3, p4, p5, p6]),
+                aux_sections=[],
+                games=[],
+            )
+
+        expected_rotating = _rotate_items(
+            [p4, p5, p6],
+            frozen_day.toordinal() + user.id,
+        )[:2]
+
+        self.assertEqual([slot['slot_kind'] for slot in slots], ['fixed', 'fixed', 'rotating', 'rotating'])
+        self.assertEqual([slot['product'] for slot in slots[:2]], [p1, p2])
+        self.assertEqual([slot['product'] for slot in slots[2:]], expected_rotating)
+
+    def test_representative_slots_fill_rotation_with_low_usage_when_unused_pool_is_short(self):
+        user = _create_onboarded_user('rep-fallback-user')
+        p1 = self._create_product('상위 사용 도구 A', display_order=1)
+        p2 = self._create_product('상위 사용 도구 B', display_order=2, service_type='work')
+        p3 = self._create_product('가끔 쓰는 도구', display_order=3, service_type='counsel')
+        p4 = self._create_product('아직 안 쓴 도구', display_order=4)
+
+        for _ in range(4):
+            ProductUsageLog.objects.create(user=user, product=p1, action='launch', source='home_quick')
+        for _ in range(3):
+            ProductUsageLog.objects.create(user=user, product=p2, action='launch', source='home_quick')
+        ProductUsageLog.objects.create(user=user, product=p3, action='launch', source='home_quick')
+
+        with patch('core.views.timezone.localdate', return_value=date(2026, 3, 15)):
+            slots = _build_home_v4_representative_slots(
+                user,
+                favorite_products=[],
+                recent_products=[p3, p2, p1],
+                quick_actions=[p1, p2, p3],
+                discovery_products=[p4],
+                sections=self._build_sections([p1, p2, p3, p4]),
+                aux_sections=[],
+                games=[],
+            )
+
+        self.assertEqual([slot['product'] for slot in slots[:2]], [p1, p2])
+        self.assertEqual([slot['slot_kind'] for slot in slots[:4]], ['fixed', 'fixed', 'rotating', 'rotating'])
+        self.assertEqual([slot['product'] for slot in slots[2:4]], [p4, p3])
 
 
 @override_settings(HOME_LAYOUT_VERSION='v4', HOME_V2_ENABLED=True)
