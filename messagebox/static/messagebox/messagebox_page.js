@@ -117,7 +117,7 @@ function messageboxPage(options = {}) {
             this.openMessageArchiveFromSuccess = async () => {
                 const preferredCaptureId = this.messageCaptureCaptureId || this.selectedCaptureId();
                 await this.loadMessageArchive({ reset: true, preferredCaptureId });
-                this.focusMessageArchive({ captureId: preferredCaptureId, preferDetail: true });
+                this.focusMessageArchive({ captureId: preferredCaptureId });
             };
 
             this.startAnotherMessageCapture = () => {
@@ -150,6 +150,7 @@ function messageboxPage(options = {}) {
 
         focusMessageArchive(options = {}) {
             const captureId = String(options.captureId || this.selectedCaptureId() || "");
+            const shouldRevealSelection = !!options.revealSelection;
             if (options.updateHash !== false) {
                 this.updateMessageboxHash("messagebox-archive");
             }
@@ -161,12 +162,12 @@ function messageboxPage(options = {}) {
                         block: "start",
                     });
                 }
-                if (captureId) {
+                if (captureId && shouldRevealSelection) {
                     window.setTimeout(() => {
                         this.scrollMessageArchiveItemIntoView(captureId, { behavior: options.behavior || "smooth" });
                     }, 80);
                 }
-                if (captureId && options.preferDetail && this.isCompactArchiveLayout()) {
+                if (captureId && shouldRevealSelection && options.preferDetail && this.isCompactArchiveLayout()) {
                     window.setTimeout(() => {
                         this.scrollMessageArchiveDetailIntoView({ behavior: options.behavior || "smooth", focus: true });
                     }, 180);
