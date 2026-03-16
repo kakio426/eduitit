@@ -78,10 +78,10 @@
             </div>
         </div>
         {% if post.content and post.content != post.og_title %}
-        <p class="text-slate-700 text-sm leading-relaxed mb-3 whitespace-pre-wrap break-words">{{ post.content }}</p>
+        <p class="text-slate-700 text-sm leading-relaxed mb-3 whitespace-pre-wrap break-words [&_a]:break-all [&_a]:font-semibold [&_a]:text-indigo-600 [&_a]:underline [&_a]:underline-offset-2">{{ post.content|urlize }}</p>
         {% endif %}
         {% else %}
-        <p class="text-slate-700 text-sm leading-relaxed mb-3 whitespace-pre-wrap break-words">{{ post.content }}</p>
+        <p class="text-slate-700 text-sm leading-relaxed mb-3 whitespace-pre-wrap break-words [&_a]:break-all [&_a]:font-semibold [&_a]:text-indigo-600 [&_a]:underline [&_a]:underline-offset-2">{{ post.content|urlize }}</p>
         {% endif %}
 
         {% if post.image %}

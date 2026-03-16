@@ -50,6 +50,6 @@
                 {% endif %}
             </div>
         </div>
-        <p class="text-slate-600 leading-snug mt-0.5 text-xs whitespace-pre-wrap break-words">{{ comment.content }}</p>
+        <p class="text-slate-600 leading-snug mt-0.5 text-xs whitespace-pre-wrap break-words [&_a]:break-all [&_a]:font-semibold [&_a]:text-indigo-600 [&_a]:underline [&_a]:underline-offset-2">{{ comment.content|urlize }}</p>
     </div>
 </div>
