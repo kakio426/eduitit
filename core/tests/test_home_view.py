@@ -1604,6 +1604,7 @@ class HomeV4ViewTest(TestCase):
         self.assertIn('data-home-v4-home-panel="true"', content)
         self.assertIn('data-home-v4-representative-services="true"', content)
         self.assertIn('data-home-v4-sns-panel="true"', content)
+        self.assertIn('home-v4-primary-stack', content)
         self.assertIn('home-v4-home-panel-section', content)
         self.assertIn('home-v4-side-stack', content)
         self.assertIn('home-v4-community-section', content)
@@ -1629,11 +1630,13 @@ class HomeV4ViewTest(TestCase):
         self.assertNotIn('최근 올라온 이야기만 간단히 확인하고 전체 소통으로 이어갑니다.', content)
         self.assertNotIn('자주 여는 도구를 홈에서 먼저 보여주고, 자세한 목록은 왼쪽 메뉴에서 바로 엽니다.', content)
 
-        favorites_index = content.index('data-home-v4-favorites-panel="true"')
+        home_panel_index = content.index('data-home-v4-home-panel="true"')
         representative_index = content.index('data-home-v4-representative-services="true"')
+        favorites_index = content.index('data-home-v4-favorites-panel="true"')
         sns_index = content.index('data-home-v4-sns-panel="true"')
+        self.assertLess(home_panel_index, representative_index)
+        self.assertLess(representative_index, favorites_index)
         self.assertLess(favorites_index, sns_index)
-        self.assertLess(sns_index, representative_index)
 
     @override_settings(HOME_V4_MOBILE_CALENDAR_FIRST_ENABLED=True)
     def test_v4_mobile_calendar_first_flag_swaps_hamburger_for_quick_tools(self):

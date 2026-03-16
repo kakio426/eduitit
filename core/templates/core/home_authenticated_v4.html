@@ -143,17 +143,61 @@
                     </aside>
 
                     <div class="home-v4-main">
-                        <section class="home-v4-home-panel-section" data-home-v4-home-panel="true">
-                            <div class="home-v4-calendar-wrap">
-                                {% include 'core/partials/home_calendar_panel.html' %}
-                            </div>
-                        </section>
+                        <div class="home-v4-primary-stack">
+                            <section class="home-v4-home-panel-section" data-home-v4-home-panel="true">
+                                <div class="home-v4-calendar-wrap">
+                                    {% include 'core/partials/home_calendar_panel.html' %}
+                                </div>
+                            </section>
 
-                        <div class="home-v4-side-stack">
                             {% if home_v4_mobile_calendar_first_enabled %}
                             {% include 'core/partials/home_v4_mobile_quick_tools.html' %}
                             {% endif %}
 
+                            <section class="home-v4-representative-section" data-home-v4-representative-services="true">
+                                <div class="home-v4-card">
+                                    <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                                        <div>
+                                            <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Representative</p>
+                                            <h2 class="mt-1 text-xl font-black text-slate-900">대표 서비스</h2>
+                                        </div>
+                                    </div>
+
+                                    {% if representative_slots %}
+                                    <div class="home-v4-service-grid" data-home-v4-service-grid="true">
+                                        {% for slot in representative_slots %}
+                                        <div data-home-v4-slot-kind="{{ slot.slot_kind }}">
+                                            {% include 'core/includes/mini_card.html' with product=slot.product %}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% else %}
+                                    <div class="rounded-[1.6rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center">
+                                        <p class="text-sm font-bold text-slate-600">대표 서비스가 준비되면 여기에 먼저 보여줍니다.</p>
+                                    </div>
+                                    {% endif %}
+
+                                    {% if representative_recommendations %}
+                                    <div class="mt-4 border-t border-slate-100 pt-4">
+                                        <div class="mb-2 flex items-center gap-2 text-sm font-black text-slate-700">
+                                            <i class="fa-solid fa-compass text-sky-500"></i>
+                                            이어서 쓰면 좋은 도구
+                                        </div>
+                                        <div class="home-v4-recommend-row" data-home-v4-recommendations="true">
+                                            {% for item in representative_recommendations %}
+                                            <a href="{{ item.href }}" class="home-v4-recommend-pill" {% if item.is_external %}target="_blank" rel="noopener"{% endif %}>
+                                                <span class="truncate">{{ item.title }}</span>
+                                                <span class="text-slate-400">{{ item.reason_label }}</span>
+                                            </a>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </section>
+                        </div>
+
+                        <div class="home-v4-side-stack">
                             <article class="home-v4-card home-v4-top-favorites{% if home_v4_mobile_calendar_first_enabled %} home-v4-desktop-favorites{% endif %}" data-home-v4-favorites-panel="true">
                                 <div class="mb-4 flex items-center gap-2">
                                     <i class="fa-solid fa-star text-amber-500"></i>
@@ -209,49 +253,6 @@
                                 {% include 'core/partials/sns_widget.html' with embed_mode='full' compact_posts=True %}
                             </section>
                         </div>
-
-                        <section class="home-v4-representative-section" data-home-v4-representative-services="true">
-                            <div class="home-v4-card">
-                                <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-                                    <div>
-                                        <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Representative</p>
-                                        <h2 class="mt-1 text-xl font-black text-slate-900">대표 서비스</h2>
-                                    </div>
-                                </div>
-
-                                {% if representative_slots %}
-                                <div class="home-v4-service-grid" data-home-v4-service-grid="true">
-                                    {% for slot in representative_slots %}
-                                    <div data-home-v4-slot-kind="{{ slot.slot_kind }}">
-                                        {% include 'core/includes/mini_card.html' with product=slot.product %}
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                                {% else %}
-                                <div class="rounded-[1.6rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center">
-                                    <p class="text-sm font-bold text-slate-600">대표 서비스가 준비되면 여기에 먼저 보여줍니다.</p>
-                                </div>
-                                {% endif %}
-
-                                {% if representative_recommendations %}
-                                <div class="mt-4 border-t border-slate-100 pt-4">
-                                    <div class="mb-2 flex items-center gap-2 text-sm font-black text-slate-700">
-                                        <i class="fa-solid fa-compass text-sky-500"></i>
-                                        이어서 쓰면 좋은 도구
-                                    </div>
-                                    <div class="home-v4-recommend-row" data-home-v4-recommendations="true">
-                                        {% for item in representative_recommendations %}
-                                        <a href="{{ item.href }}" class="home-v4-recommend-pill" {% if item.is_external %}target="_blank" rel="noopener"{% endif %}>
-                                            <span class="truncate">{{ item.title }}</span>
-                                            <span class="text-slate-400">{{ item.reason_label }}</span>
-                                        </a>
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                                {% endif %}
-                            </div>
-                        </section>
-
                     </div>
                 </div>
             </div>
