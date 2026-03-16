@@ -96,12 +96,12 @@
     <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
       <p class="font-semibold mb-1">증빙 주의 사항</p>
       {% if evidence_warning_counts.missing_phone %}
-      <p>연락처가 없는 수신자 {{ evidence_warning_counts.missing_phone }}명은 링크 기반 제출만 기록됩니다.</p>
+      <p>연락처 뒤 4자리가 없는 수신자 {{ evidence_warning_counts.missing_phone }}명은 학부모 전체 링크로 찾을 수 없습니다.</p>
       {% endif %}
       {% if evidence_warning_counts.low_assurance_submitted %}
       <p>링크 기반으로 제출이 완료된 수신자 {{ evidence_warning_counts.low_assurance_submitted }}명이 있습니다.</p>
       {% endif %}
-      <a href="{% url 'consent:recipients' request_id=consent_request.request_id %}" class="inline-flex mt-2 px-3 py-1.5 rounded-lg bg-amber-600 text-white text-xs font-semibold hover:bg-amber-700">연락처 보강하기</a>
+      <a href="{% url 'consent:recipients' request_id=consent_request.request_id %}" class="inline-flex mt-2 px-3 py-1.5 rounded-lg bg-amber-600 text-white text-xs font-semibold hover:bg-amber-700">연락처 뒤 4자리 보강하기</a>
     </div>
     {% endif %}
 
@@ -184,8 +184,8 @@
           <div>
             <p class="text-base font-bold text-gray-800">{{ r.student_name }}</p>
             <p class="text-sm text-gray-600">{{ r.parent_name }}</p>
-            {% if r.phone_number %}
-            <p class="text-xs text-gray-500 mt-1">연락처: {{ r.phone_number }}</p>
+            {% if r.phone_last4 %}
+            <p class="text-xs text-gray-500 mt-1">연락처 뒤 4자리: {{ r.phone_last4 }}</p>
             {% endif %}
           </div>
           <div class="text-right space-y-1">
@@ -260,8 +260,8 @@
         <form id="edit-form-{{ r.id }}" method="post" action="{% url 'consent:update_recipient' recipient_id=r.id %}" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-2">
           {% csrf_token %}
           <input type="text" name="student_name" value="{{ r.student_name }}" required maxlength="100" class="w-full px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm" placeholder="학생명">
-          <input type="text" name="parent_name" value="{{ r.parent_name }}" required maxlength="100" class="w-full px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm" placeholder="학부모명">
-          <input type="text" name="phone_number" value="{{ r.phone_number }}" maxlength="20" class="w-full px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm" placeholder="연락처(선택)">
+          <input type="text" name="parent_name" value="{{ r.parent_name }}" maxlength="100" class="w-full px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm" placeholder="학부모명(비워두면 학생명 보호자)">
+          <input type="text" name="phone_number" value="{{ r.phone_last4 }}" required maxlength="4" inputmode="numeric" pattern="[0-9]{4}" class="w-full px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm" placeholder="연락처 뒤 4자리">
           <div class="sm:col-span-3 flex flex-wrap gap-2 pt-1">
             <button type="submit" class="px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700">수정 저장</button>
           </div>

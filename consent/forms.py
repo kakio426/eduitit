@@ -93,7 +93,7 @@ class RecipientBulkForm(forms.Form):
             attrs={
                 "class": f"{CLAY_INPUT} font-mono text-sm resize-none",
                 "rows": 8,
-                "placeholder": "학생명,학부모명,연락처\n김하늘,김하늘 보호자,01012345678",
+                "placeholder": "학생명,학부모명(선택),연락처 뒤 4자리\n김하늘,,5678\n박나래,박나래 보호자,1234",
             }
         )
     )

@@ -259,23 +259,76 @@ def _log_document_view(recipient: SignatureRecipient, request, *, mode: str):
     )
 
 
-def _parse_recipients(text):
+def _default_parent_name(student_name: str) -> str:
+    return f"{student_name} 보호자"
+
+
+def _normalize_phone_last4(value: str) -> str:
+    digits = "".join(ch for ch in str(value or "") if ch.isdigit())
+    if len(digits) < 4:
+        return ""
+    return digits[-4:]
+
+
+def _build_recipient_payload(student_name: str, parent_name: str, phone_value: str):
+    student_name = (student_name or "").strip()
+    if not student_name:
+        return None
+
+    phone_last4 = _normalize_phone_last4(phone_value)
+    if not phone_last4:
+        return None
+
+    normalized_parent_name = (parent_name or "").strip() or _default_parent_name(student_name)
+    return {
+        "student_name": student_name,
+        "parent_name": normalized_parent_name,
+        "phone_number": phone_last4,
+    }
+
+
+def _parse_recipients_with_meta(text):
     recipients = []
-    for raw in (text or "").splitlines():
+    invalid_rows = []
+    for idx, raw in enumerate((text or "").splitlines(), start=1):
         line = raw.strip()
         if not line:
             continue
-        parts = [p.strip() for p in line.split(",")]
+
+        parts = [p.strip() for p in line.split(",", 2)]
         if len(parts) < 2:
+            invalid_rows.append(idx)
             continue
-        recipients.append(
-            {
-                "student_name": parts[0],
-                "parent_name": parts[1],
-                "phone_number": parts[2] if len(parts) >= 3 else "",
-            }
-        )
+
+        if len(parts) == 2:
+            student_name, phone_value = parts
+            parent_name = ""
+        else:
+            student_name, parent_name, phone_value = parts[0], parts[1], parts[2]
+
+        payload = _build_recipient_payload(student_name, parent_name, phone_value)
+        if payload is None:
+            invalid_rows.append(idx)
+            continue
+        recipients.append(payload)
+    return recipients, invalid_rows
+
+
+def _parse_recipients(text):
+    recipients, _ = _parse_recipients_with_meta(text)
     return recipients
+
+
+def _recipient_csv_has_header(cols):
+    normalized = "".join((cell or "").strip().lower().replace(" ", "") for cell in cols)
+    return ("학생" in normalized or "student" in normalized) and (
+        "연락처" in normalized
+        or "전화" in normalized
+        or "phone" in normalized
+        or "last4" in normalized
+        or "뒤4" in normalized
+        or "끝4" in normalized
+    )
 
 
 def _parse_recipients_csv(file_obj):
@@ -307,49 +360,26 @@ def _parse_recipients_csv(file_obj):
         if not any(cols):
             continue
 
-        first = cols[0].lower() if cols else ""
-        second = cols[1].lower() if len(cols) > 1 else ""
-        if idx == 1 and (
-            "학생" in first
-            or "student" in first
-            or "학부모" in second
-            or "parent" in second
-        ):
+        if idx == 1 and _recipient_csv_has_header(cols):
             continue
 
-        if len(cols) < 2 or not cols[0] or not cols[1]:
+        if len(cols) < 2:
             invalid_rows.append(idx)
             continue
 
-        recipients.append(
-            {
-                "student_name": cols[0],
-                "parent_name": cols[1],
-                "phone_number": cols[2] if len(cols) >= 3 else "",
-            }
-        )
+        if len(cols) == 2:
+            student_name, phone_value = cols[0], cols[1]
+            parent_name = ""
+        else:
+            student_name, parent_name, phone_value = cols[0], cols[1], cols[2]
+
+        payload = _build_recipient_payload(student_name, parent_name, phone_value)
+        if payload is None:
+            invalid_rows.append(idx)
+            continue
+        recipients.append(payload)
 
     return recipients, invalid_rows
-
-
-def _build_recipients_from_shared_roster(group):
-    if not group:
-        return []
-
-    recipients = []
-    members = group.members.filter(is_active=True).order_by("sort_order", "id")
-    for member in members:
-        student_name = (member.display_name or "").strip()
-        if not student_name:
-            continue
-        recipients.append(
-            {
-                "student_name": student_name,
-                "parent_name": f"{student_name} 보호자",
-                "phone_number": "",
-            }
-        )
-    return recipients
 
 
 def _generate_qr_base64(url: str) -> str:
@@ -802,13 +832,17 @@ def consent_create_step1(request):
         expected_action="consent",
     )
     seed_data = sheetbook_seed.get("data", {}) if isinstance(sheetbook_seed, dict) else {}
-    seed_recipients = _parse_recipients(seed_data.get("recipients_text", "")) if seed_data else []
+    seed_recipients, seed_invalid_rows = (
+        _parse_recipients_with_meta(seed_data.get("recipients_text", ""))
+        if seed_data
+        else ([], [])
+    )
     prefill_source_label = (str(seed_data.get("source_label") or "").strip() if seed_data else "") or "교무수첩에서 가져온 내용으로 먼저 채워두었어요."
     prefill_origin_label = str(seed_data.get("origin_label") or "").strip() if seed_data else ""
     prefill_origin_url = str(seed_data.get("origin_url") or "").strip() if seed_data else ""
     prefill_recipients_count = len(seed_recipients)
     prefill_recipients_preview = [
-        f"{recipient['student_name']} - {recipient['parent_name']}"
+        f"{recipient['student_name']} - {recipient['parent_name']} ({recipient['phone_number']})"
         for recipient in seed_recipients[:5]
     ]
 
@@ -861,7 +895,7 @@ def consent_create_step1(request):
                     "on",
                 )
                 if recipients_text and apply_seed_recipients:
-                    recipients = _parse_recipients(recipients_text)
+                    recipients, invalid_seed_rows = _parse_recipients_with_meta(recipients_text)
                     created = 0
                     try:
                         for rec in recipients:
@@ -892,6 +926,11 @@ def consent_create_step1(request):
                             messages.info(
                                 request,
                                 f"교무수첩에서 가져온 수신자 {created}명을 미리 넣어두었어요.",
+                            )
+                        if invalid_seed_rows:
+                            messages.warning(
+                                request,
+                                f"교무수첩 수신자 후보 {len(invalid_seed_rows)}줄은 연락처 뒤 4자리가 없어 자동으로 넣지 않았어요. 다음 단계에서 확인해 주세요.",
                             )
                         return redirect("consent:recipients", request_id=consent_request.request_id)
                 else:
@@ -934,6 +973,7 @@ def consent_create_step1(request):
             "prefill_origin_url": prefill_origin_url,
             "prefill_recipients_count": prefill_recipients_count,
             "prefill_recipients_preview": prefill_recipients_preview,
+            "prefill_invalid_recipients_count": len(seed_invalid_rows),
             **_policy_panel_context(),
         },
     )
@@ -969,6 +1009,9 @@ def consent_recipients(request, request_id):
 
     if request.method == "POST" and form.is_valid():
         selected_roster_group = form.cleaned_data.get("shared_roster_group")
+        recipients_text_raw = (form.cleaned_data.get("recipients_text") or "").strip()
+        recipients_csv_file = form.cleaned_data.get("recipients_csv")
+        has_manual_input = bool(recipients_text_raw or recipients_csv_file)
         if selected_roster_group and selected_roster_group.owner_id != request.user.id:
             form.add_error("shared_roster_group", "내 명단만 선택할 수 있습니다.")
         else:
@@ -976,14 +1019,37 @@ def consent_recipients(request, request_id):
                 consent_request.shared_roster_group = selected_roster_group
                 consent_request.save(update_fields=["shared_roster_group"])
 
-        if not form.errors:
-            text_recipients = _parse_recipients(form.cleaned_data.get("recipients_text", ""))
-            csv_recipients, invalid_rows = _parse_recipients_csv(form.cleaned_data.get("recipients_csv"))
-            roster_recipients = _build_recipients_from_shared_roster(selected_roster_group)
-            all_recipients = text_recipients + csv_recipients + roster_recipients
+            if selected_roster_group and not has_manual_input:
+                form.add_error(
+                    "shared_roster_group",
+                    "공유 명단은 연결만 됩니다. 학생명과 연락처 뒤 4자리는 직접 입력하거나 CSV로 올려 주세요.",
+                )
 
-            if not all_recipients:
-                form.add_error(None, "등록 가능한 수신자가 없습니다. 공유 명단, 입력값 또는 CSV 파일을 확인해 주세요.")
+        if not form.errors:
+            text_recipients, invalid_text_rows = _parse_recipients_with_meta(recipients_text_raw)
+            csv_recipients, invalid_csv_rows = _parse_recipients_csv(recipients_csv_file)
+
+            if invalid_text_rows:
+                row_text = ", ".join(map(str, invalid_text_rows[:10]))
+                form.add_error(
+                    "recipients_text",
+                    f"학생명, 학부모명(선택), 연락처 뒤 4자리 형식으로 입력해 주세요. 형식 오류 행: {row_text}",
+                )
+            if invalid_csv_rows == [0]:
+                form.add_error("recipients_csv", "CSV 인코딩을 읽지 못했습니다. UTF-8 또는 CP949 형식으로 다시 저장해 주세요.")
+            elif invalid_csv_rows:
+                row_text = ", ".join(map(str, invalid_csv_rows[:10]))
+                form.add_error(
+                    "recipients_csv",
+                    f"CSV는 학생명, 학부모명(선택), 연락처 뒤 4자리 열이 필요합니다. 형식 오류 행: {row_text}",
+                )
+
+            all_recipients = text_recipients + csv_recipients
+
+            if form.errors:
+                pass
+            elif not all_recipients:
+                form.add_error(None, "등록 가능한 수신자가 없습니다. 학생명과 연락처 뒤 4자리를 확인해 주세요.")
             else:
                 created = 0
                 try:
@@ -1001,14 +1067,6 @@ def consent_recipients(request, request_id):
                     )
                     form.add_error(None, "수신자 저장 중 오류가 발생했습니다. 입력값을 확인한 뒤 다시 시도해 주세요.")
                 else:
-                    if invalid_rows and invalid_rows != [0]:
-                        messages.warning(
-                            request,
-                            f"CSV {len(invalid_rows)}개 행은 형식 오류로 제외되었습니다. (행 번호: {', '.join(map(str, invalid_rows[:10]))})",
-                        )
-                    elif invalid_rows == [0]:
-                        messages.error(request, "CSV 인코딩을 읽지 못했습니다. UTF-8 또는 CP949 형식으로 다시 저장해 주세요.")
-
                     skipped = max(len(all_recipients) - created, 0)
                     if selected_roster_group:
                         messages.success(
@@ -1037,9 +1095,9 @@ def consent_recipients_csv_template(request):
     response["Content-Disposition"] = 'attachment; filename="consent_recipients_template.csv"'
     response.write("\ufeff")
     writer = csv.writer(response)
-    writer.writerow(["학생명", "학부모명"])
-    writer.writerow(["김하늘", "김하늘 보호자"])
-    writer.writerow(["박나래", "박나래 보호자"])
+    writer.writerow(["학생명", "학부모명", "연락처(뒤4자리)"])
+    writer.writerow(["김하늘", "김하늘 보호자", "5678"])
+    writer.writerow(["박나래", "", "1234"])
     return response
 
 
@@ -1763,19 +1821,21 @@ def consent_update_recipient(request, recipient_id):
 
     student_name = (request.POST.get("student_name") or "").strip()
     parent_name = (request.POST.get("parent_name") or "").strip()
-    phone_number = (request.POST.get("phone_number") or "").strip()
+    phone_number = _normalize_phone_last4(request.POST.get("phone_number") or "")
 
-    if not student_name or not parent_name:
-        messages.error(request, "학생명과 학부모명은 필수입니다.")
+    if not student_name:
+        messages.error(request, "학생명은 필수입니다.")
         return redirect("consent:detail", request_id=recipient.request.request_id)
-    if len(phone_number) > 20:
-        messages.error(request, "전화번호는 20자 이내로 입력해 주세요.")
+    if not phone_number:
+        messages.error(request, "연락처 뒤 4자리는 필수입니다.")
         return redirect("consent:detail", request_id=recipient.request.request_id)
+
+    normalized_parent_name = parent_name or _default_parent_name(student_name)
 
     duplicate_exists = SignatureRecipient.objects.filter(
         request=recipient.request,
         student_name=student_name,
-        parent_name=parent_name,
+        parent_name=normalized_parent_name,
         phone_number=phone_number,
     ).exclude(id=recipient.id).exists()
     if duplicate_exists:
@@ -1783,7 +1843,7 @@ def consent_update_recipient(request, recipient_id):
         return redirect("consent:detail", request_id=recipient.request.request_id)
 
     recipient.student_name = student_name
-    recipient.parent_name = parent_name
+    recipient.parent_name = normalized_parent_name
     recipient.phone_number = phone_number
     recipient.save(update_fields=["student_name", "parent_name", "phone_number"])
     messages.success(request, f"{recipient.student_name} 수신자 정보를 수정했습니다.")

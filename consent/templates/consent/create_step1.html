@@ -26,6 +26,9 @@
         {% if prefill_recipients_count %}
         <div class="mt-1 text-xs text-blue-600">수신자 후보 {{ prefill_recipients_count }}명도 같이 준비했습니다.</div>
         {% endif %}
+        {% if prefill_invalid_recipients_count %}
+        <div class="mt-1 text-xs text-amber-700">연락처 뒤 4자리가 없는 후보 {{ prefill_invalid_recipients_count }}명은 자동 등록에서 제외됩니다.</div>
+        {% endif %}
         {% if prefill_origin_url %}
         <div class="mt-2">
           <a href="{{ prefill_origin_url }}" class="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-white/80 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-white">

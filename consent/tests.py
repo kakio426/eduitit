@@ -635,11 +635,12 @@ class ConsentFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("text/csv", response["Content-Type"])
         self.assertIn("학생명", response.content.decode("utf-8-sig"))
+        self.assertIn("연락처(뒤4자리)", response.content.decode("utf-8-sig"))
 
     def test_recipients_csv_upload(self):
         self.client.login(username="teacher", password="pw123456")
         url = reverse("consent:recipients", kwargs={"request_id": self.request_obj.request_id})
-        csv_content = "학생명,학부모명\n김하늘,김하늘 보호자\n박나래,박나래 보호자\n"
+        csv_content = "학생명,학부모명,연락처(뒤4자리)\n김하늘,김하늘 보호자,5678\n박나래,,1234\n"
         csv_file = SimpleUploadedFile(
             "recipients.csv",
             csv_content.encode("utf-8-sig"),
@@ -659,6 +660,15 @@ class ConsentFlowTests(TestCase):
                 request=self.request_obj,
                 student_name="김하늘",
                 parent_name="김하늘 보호자",
+                phone_number="5678",
+            ).exists()
+        )
+        self.assertTrue(
+            SignatureRecipient.objects.filter(
+                request=self.request_obj,
+                student_name="박나래",
+                parent_name="박나래 보호자",
+                phone_number="1234",
             ).exists()
         )
 
@@ -879,7 +889,7 @@ class ConsentFlowTests(TestCase):
             "seed-token-2": {
                 "action": "consent",
                 "data": {
-                    "recipients_text": "김하늘,김하늘 보호자,\n박나래,박나래 보호자,",
+                    "recipients_text": "김하늘,김하늘 보호자,01012345678\n박나래,박나래 보호자,01099887766",
                 },
             }
         }
@@ -906,6 +916,7 @@ class ConsentFlowTests(TestCase):
             title="교무수첩 연동 동의서",
         ).latest("created_at")
         self.assertEqual(created_request.recipients.count(), 2)
+        self.assertTrue(created_request.recipients.filter(student_name="김하늘", phone_number="5678").exists())
 
     @patch("consent.views.SignatureRecipient.objects.get_or_create", side_effect=RuntimeError("db failure"))
     def test_create_step1_seed_auto_add_handles_exception_without_500(self, mocked_get_or_create):
@@ -915,7 +926,7 @@ class ConsentFlowTests(TestCase):
             "seed-token-2b": {
                 "action": "consent",
                 "data": {
-                    "recipients_text": "김하늘,김하늘 보호자,\n박나래,박나래 보호자,",
+                    "recipients_text": "김하늘,김하늘 보호자,01012345678\n박나래,박나래 보호자,01099887766",
                 },
             }
         }
@@ -950,7 +961,7 @@ class ConsentFlowTests(TestCase):
                 "action": "consent",
                 "data": {
                     "title": "교무수첩 수신자 선택 테스트",
-                    "recipients_text": "한지민,한지민 보호자,\n윤서준,윤서준 보호자,",
+                    "recipients_text": "한지민,한지민 보호자,1111\n윤서준,윤서준 보호자,2222",
                 },
             }
         }
@@ -1009,7 +1020,7 @@ class ConsentFlowTests(TestCase):
         response = self.client.post(
             url,
             {
-                "recipients_text": "김하늘,김하늘 보호자",
+                "recipients_text": "김하늘,김하늘 보호자,5678",
                 "recipients_csv": "",
             },
         )
@@ -1081,7 +1092,24 @@ class ConsentRecipientManageTests(TestCase):
         self.recipient.refresh_from_db()
         self.assertEqual(self.recipient.student_name, "수정학생")
         self.assertEqual(self.recipient.parent_name, "수정학부모")
-        self.assertEqual(self.recipient.phone_number, "010-1234-5678")
+        self.assertEqual(self.recipient.phone_number, "5678")
+
+    def test_update_recipient_defaults_blank_parent_name(self):
+        self.client.login(username="manage_teacher", password="pw123456")
+        url = reverse("consent:update_recipient", kwargs={"recipient_id": self.recipient.id})
+        response = self.client.post(
+            url,
+            {
+                "student_name": "수정학생",
+                "parent_name": "",
+                "phone_number": "1234",
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.recipient.refresh_from_db()
+        self.assertEqual(self.recipient.parent_name, "수정학생 보호자")
+        self.assertEqual(self.recipient.phone_number, "1234")
 
     def test_update_recipient_blocks_when_signed(self):
         self.recipient.status = SignatureRecipient.STATUS_SIGNED
@@ -1408,14 +1436,14 @@ class ConsentSharedRosterTests(TestCase):
             is_active=True,
         )
 
-    def test_recipients_imports_from_shared_roster_and_links_request(self):
+    def test_recipients_links_shared_roster_when_manual_recipients_are_provided(self):
         self.client.login(username="roster_teacher", password="pw123456")
         url = reverse("consent:recipients", kwargs={"request_id": self.request_obj.request_id})
         response = self.client.post(
             url,
             {
                 "shared_roster_group": str(self.group.id),
-                "recipients_text": "",
+                "recipients_text": "김하늘,,5678\n박나래,박나래 보호자,1234",
             },
             follow=True,
         )
@@ -1428,6 +1456,7 @@ class ConsentSharedRosterTests(TestCase):
                 request=self.request_obj,
                 student_name="김하늘",
                 parent_name="김하늘 보호자",
+                phone_number="5678",
             ).exists()
         )
         self.assertTrue(
@@ -1435,14 +1464,26 @@ class ConsentSharedRosterTests(TestCase):
                 request=self.request_obj,
                 student_name="박나래",
                 parent_name="박나래 보호자",
+                phone_number="1234",
             ).exists()
         )
-        self.assertFalse(
-            SignatureRecipient.objects.filter(
-                request=self.request_obj,
-                student_name="비활성",
-            ).exists()
+
+    def test_recipients_rejects_shared_roster_without_contact_last4_input(self):
+        self.client.login(username="roster_teacher", password="pw123456")
+        url = reverse("consent:recipients", kwargs={"request_id": self.request_obj.request_id})
+        response = self.client.post(
+            url,
+            {
+                "shared_roster_group": str(self.group.id),
+                "recipients_text": "",
+            },
         )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("shared_roster_group", response.context["form"].errors)
+        self.request_obj.refresh_from_db()
+        self.assertEqual(self.request_obj.shared_roster_group_id, self.group.id)
+        self.assertEqual(self.request_obj.recipients.count(), 0)
 
     def test_recipients_rejects_other_users_shared_roster_group(self):
         self.client.login(username="roster_teacher", password="pw123456")
