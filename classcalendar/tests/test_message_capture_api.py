@@ -1,9 +1,11 @@
 import json
+import uuid
 from datetime import datetime, timedelta
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import connection
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -401,6 +403,47 @@ class MessageCaptureApiTests(TestCase):
         self.assertEqual(CalendarEvent.objects.count(), event_count_after_first)
         self.assertEqual(len(second_commit.json().get("created_events") or []), 0)
         self.assertEqual(len(second_commit.json().get("reused_events") or []), 2)
+
+    def test_commit_recovers_when_candidate_points_to_missing_event(self):
+        parse_response = self.client.post(
+            self.parse_url,
+            data={
+                "raw_text": "3월 19일 학부모총회 실시\n12일(목)까지 연수물 수정 부탁드립니다.",
+                "idempotency_key": "capture-multi-broken-event-ref",
+            },
+        )
+        self.assertEqual(parse_response.status_code, 201)
+        parse_payload = parse_response.json()
+        capture_id = parse_payload["capture_id"]
+        commit_payload = {"selected_candidates": self._build_selected_candidates(parse_payload)}
+
+        first_commit = self._commit(capture_id, commit_payload)
+        self.assertEqual(first_commit.status_code, 201)
+
+        capture = CalendarMessageCapture.objects.get(id=capture_id)
+        broken_candidate = capture.candidates.order_by("sort_order", "id").first()
+        self.assertIsNotNone(broken_candidate)
+        missing_event_uuid = uuid.uuid4()
+        candidate_db_id = broken_candidate.id.hex if hasattr(broken_candidate.id, "hex") else str(broken_candidate.id).replace("-", "")
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f"UPDATE {CalendarMessageCaptureCandidate._meta.db_table} SET committed_event_id = %s WHERE id = %s",
+                [missing_event_uuid.hex, candidate_db_id],
+            )
+            self.assertEqual(cursor.rowcount, 1)
+        fresh_candidate = CalendarMessageCaptureCandidate.objects.select_related("committed_event").get(id=broken_candidate.id)
+        self.assertEqual(str(fresh_candidate.committed_event_id), str(missing_event_uuid))
+        self.assertIsNone(getattr(fresh_candidate, "committed_event", None))
+
+        second_commit = self._commit(capture_id, commit_payload)
+        self.assertEqual(second_commit.status_code, 201)
+        payload = second_commit.json()
+        self.assertEqual(len(payload.get("created_events") or []), 1)
+        self.assertEqual(len(payload.get("reused_events") or []), 1)
+
+        broken_candidate.refresh_from_db()
+        self.assertNotEqual(str(broken_candidate.committed_event_id), str(missing_event_uuid))
+        self.assertEqual(broken_candidate.commit_status, CalendarMessageCaptureCandidate.CommitStatus.SAVED)
 
     def test_commit_can_link_saved_events_back_to_sheetbook_context(self):
         sheetbook = Sheetbook.objects.create(owner=self.user, title="2026 3-1 교무수첩")

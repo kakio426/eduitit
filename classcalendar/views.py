@@ -462,6 +462,24 @@ def _build_related_message_capture_meta(capture_owner):
     }
 
 
+def _safe_related_event(source):
+    if source is None or not getattr(source, "committed_event_id", None):
+        return None
+    try:
+        return getattr(source, "committed_event", None)
+    except CalendarEvent.DoesNotExist:
+        return None
+
+
+def _safe_related_task(source):
+    if source is None or not getattr(source, "committed_task_id", None):
+        return None
+    try:
+        return getattr(source, "committed_task", None)
+    except CalendarTask.DoesNotExist:
+        return None
+
+
 def _serialize_temporal_value(value):
     if value is None:
         return ""
@@ -1278,12 +1296,14 @@ def _serialize_message_capture_archive_item(capture):
 
 def _serialize_message_capture_saved_events(capture):
     event_map = {}
-    if capture.committed_event_id and capture.committed_event is not None:
-        event_map[str(capture.committed_event_id)] = capture.committed_event
+    capture_event = _safe_related_event(capture)
+    if capture.committed_event_id and capture_event is not None:
+        event_map[str(capture.committed_event_id)] = capture_event
     for candidate in capture.candidates.all().order_by("sort_order", "id"):
-        if not candidate.committed_event_id:
+        candidate_event = _safe_related_event(candidate)
+        if not candidate.committed_event_id or candidate_event is None:
             continue
-        event_map[str(candidate.committed_event_id)] = candidate.committed_event
+        event_map[str(candidate.committed_event_id)] = candidate_event
     return [_serialize_compact_event(event) for event in event_map.values()]
 
 
@@ -1304,8 +1324,9 @@ def _serialize_compact_task(task):
 
 def _serialize_message_capture_saved_tasks(capture):
     task_map = {}
-    if capture.committed_task_id and capture.committed_task_id not in task_map:
-        task_map[str(capture.committed_task_id)] = capture.committed_task
+    capture_task = _safe_related_task(capture)
+    if capture.committed_task_id and capture.committed_task_id not in task_map and capture_task is not None:
+        task_map[str(capture.committed_task_id)] = capture_task
     return [_serialize_compact_task(task) for task in task_map.values() if task is not None]
 
 
@@ -4414,8 +4435,13 @@ def api_message_capture_commit(request, capture_id):
                     }
                 )
 
-                if candidate.committed_event_id:
-                    reused_events.append(_serialize_compact_event(candidate.committed_event))
+                candidate_committed_event = _safe_related_event(candidate)
+                if candidate.committed_event_id and candidate_committed_event is None:
+                    candidate.committed_event = None
+                    candidate.commit_status = CalendarMessageCaptureCandidate.CommitStatus.PENDING
+                    candidate.save(update_fields=["committed_event", "commit_status", "updated_at"])
+                elif candidate.committed_event_id and candidate_committed_event is not None:
+                    reused_events.append(_serialize_compact_event(candidate_committed_event))
                     if candidate.commit_status != CalendarMessageCaptureCandidate.CommitStatus.SAVED:
                         candidate.commit_status = CalendarMessageCaptureCandidate.CommitStatus.SAVED
                         candidate.save(update_fields=["commit_status", "updated_at"])
