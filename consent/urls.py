@@ -23,6 +23,7 @@ urlpatterns = [
     path("recipient/<int:recipient_id>/regenerate-link/", views.consent_regenerate_link, name="regenerate_link"),
     path("recipient/<int:recipient_id>/update/", views.consent_update_recipient, name="update_recipient"),
     path("recipient/<int:recipient_id>/delete/", views.consent_delete_recipient, name="delete_recipient"),
+    path("public/request/<str:shared_lookup_token>/lookup/", views.consent_shared_lookup, name="shared_lookup"),
     path("public/<str:token>/verify/", views.consent_verify, name="verify"),
     path("public/<str:token>/document/", views.consent_public_document, name="public_document"),
     path("public/<str:token>/document/inline/", views.consent_public_document_inline, name="public_document_inline"),

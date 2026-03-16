@@ -132,10 +132,15 @@ class RecipientBulkForm(forms.Form):
         return cleaned_data
 
 
-class VerifyIdentityForm(forms.Form):
-    parent_name = forms.CharField(
+class SharedLookupForm(forms.Form):
+    student_name = forms.CharField(
         max_length=100,
-        widget=forms.TextInput(attrs={"class": CLAY_INPUT}),
+        widget=forms.TextInput(
+            attrs={
+                "class": CLAY_INPUT,
+                "placeholder": "학생 이름",
+            }
+        ),
     )
     phone_last4 = forms.CharField(
         min_length=4,
@@ -144,12 +149,17 @@ class VerifyIdentityForm(forms.Form):
             attrs={
                 "class": CLAY_INPUT,
                 "inputmode": "numeric",
+                "maxlength": "4",
+                "placeholder": "전화번호 끝 4자리",
             }
         ),
     )
 
+    def clean_student_name(self):
+        return (self.cleaned_data.get("student_name") or "").strip()
+
     def clean_phone_last4(self):
-        value = self.cleaned_data["phone_last4"]
+        value = (self.cleaned_data.get("phone_last4") or "").strip()
         if not value.isdigit():
             raise forms.ValidationError("숫자 4자리를 입력해 주세요.")
         return value

@@ -29,6 +29,7 @@ from .forms import (
     ConsentRequestForm,
     ConsentSignForm,
     RecipientBulkForm,
+    SharedLookupForm,
 )
 from .models import ConsentAuditLog, SignatureRecipient, SignatureRequest
 from .policy_content import (
@@ -210,6 +211,14 @@ def _consent_public_ratelimit_key(group, request):
     return f"{_request_client_ip(request) or 'unknown'}:{token or 'unknown'}"
 
 
+def _consent_shared_lookup_ratelimit_key(group, request):
+    shared_lookup_token = ""
+    resolver_match = getattr(request, "resolver_match", None)
+    if resolver_match is not None:
+        shared_lookup_token = resolver_match.kwargs.get("shared_lookup_token", "")
+    return f"{_request_client_ip(request) or 'unknown'}:{shared_lookup_token or 'unknown'}"
+
+
 def _build_recipient_download_filename(recipient: SignatureRecipient) -> str:
     consent_request = recipient.request
     title_seed = (consent_request.title or consent_request.document.title or recipient.student_name).strip()
@@ -360,6 +369,17 @@ def _compose_parent_message(consent_request: SignatureRequest, recipient: Signat
         f"안녕하세요. {recipient.student_name} 학생 보호자님.\n"
         f"{body}\n"
         f"동의서 링크: {sign_url}"
+    )
+
+
+def _compose_shared_lookup_message(consent_request: SignatureRequest, lookup_url: str) -> str:
+    custom = (consent_request.message or "").strip()
+    body = custom or f"{consent_request.title} 동의서 확인 부탁드립니다."
+    return (
+        "안녕하세요. 학부모 동의서 제출 안내입니다.\n"
+        f"{body}\n"
+        "학생 이름과 보호자 전화번호 뒤 4자리를 입력해 제출해 주세요.\n"
+        f"동의서 링크: {lookup_url}"
     )
 
 
@@ -607,6 +627,13 @@ def _issue_access_token():
             return token
 
 
+def _issue_shared_lookup_token():
+    while True:
+        token = secrets.token_urlsafe(24)
+        if not SignatureRequest.objects.filter(shared_lookup_token=token).exists():
+            return token
+
+
 def _reset_recipient_link_state(recipient: SignatureRecipient, *, rotate_token: bool):
     update_fields = [
         "status",
@@ -640,44 +667,73 @@ def _reset_recipient_link_state(recipient: SignatureRecipient, *, rotate_token: 
     recipient.save(update_fields=update_fields)
 
 
+def _cleanup_partial_step1_objects(consent_request, document):
+    try:
+        if consent_request and getattr(consent_request, "pk", None):
+            consent_request.delete()
+    except Exception:
+        logger.exception(
+            "[consent] failed to cleanup partial request request_id=%s",
+            getattr(consent_request, "request_id", None),
+        )
+    try:
+        if document and getattr(document, "pk", None):
+            document.delete()
+    except Exception:
+        logger.exception(
+            "[consent] failed to cleanup partial document document_id=%s",
+            getattr(document, "id", None),
+        )
+
+
 def _is_active_link_expired(recipient: SignatureRecipient) -> bool:
     if recipient.status in (SignatureRecipient.STATUS_SIGNED, SignatureRecipient.STATUS_DECLINED):
         return False
     return recipient.request.is_link_expired
 
 
-def _is_public_link_released(recipient: SignatureRecipient) -> bool:
-    return recipient.request.status in (
+def _is_request_public_link_released(consent_request: SignatureRequest) -> bool:
+    return consent_request.status in (
         SignatureRequest.STATUS_SENT,
         SignatureRequest.STATUS_COMPLETED,
     )
 
 
-def _link_not_ready_response(request, recipient: SignatureRecipient):
+def _is_public_link_released(recipient: SignatureRecipient) -> bool:
+    return _is_request_public_link_released(recipient.request)
+
+
+def _request_link_not_ready_response(request, consent_request: SignatureRequest):
     response = render(
         request,
         "consent/link_not_ready.html",
         {
-            "recipient": recipient,
-            "consent_request": recipient.request,
+            "consent_request": consent_request,
         },
         status=403,
     )
     return _apply_sensitive_cache_headers(response)
 
 
-def _expired_link_response(request, recipient: SignatureRecipient):
+def _link_not_ready_response(request, recipient: SignatureRecipient):
+    return _request_link_not_ready_response(request, recipient.request)
+
+
+def _request_expired_response(request, consent_request: SignatureRequest):
     response = render(
         request,
         "consent/link_expired.html",
         {
-            "recipient": recipient,
-            "consent_request": recipient.request,
-            "expires_at": recipient.request.link_expires_at,
+            "consent_request": consent_request,
+            "expires_at": consent_request.link_expires_at,
         },
         status=410,
     )
     return _apply_sensitive_cache_headers(response)
+
+
+def _expired_link_response(request, recipient: SignatureRecipient):
+    return _request_expired_response(request, recipient.request)
 
 
 @login_required
@@ -760,6 +816,8 @@ def consent_create_step1(request):
         document_form = ConsentDocumentForm(request.POST, request.FILES)
         request_form = ConsentRequestForm(request.POST)
         if document_form.is_valid() and request_form.is_valid():
+            document = None
+            consent_request = None
             document = document_form.save(commit=False)
             document.created_by = request.user
             document.file_type = guess_file_type(document.original_file.name)
@@ -794,12 +852,7 @@ def consent_create_step1(request):
                 logger.exception("[consent] step1 create failed user_id=%s", request.user.id)
                 document_form.add_error("original_file", "문서 업로드 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.")
             else:
-                consumed_seed = _pop_sheetbook_seed(
-                    request,
-                    sheetbook_seed_token,
-                    expected_action="consent",
-                )
-                consumed_seed_data = consumed_seed.get("data", {}) if isinstance(consumed_seed, dict) else {}
+                consumed_seed_data = seed_data if seed_data else {}
                 recipients_text = str(consumed_seed_data.get("recipients_text") or "").strip()
                 apply_seed_recipients = str(request.POST.get("apply_seed_recipients", "1")).strip().lower() in (
                     "1",
@@ -810,24 +863,49 @@ def consent_create_step1(request):
                 if recipients_text and apply_seed_recipients:
                     recipients = _parse_recipients(recipients_text)
                     created = 0
-                    for rec in recipients:
-                        _, was_created = SignatureRecipient.objects.get_or_create(
-                            request=consent_request,
-                            **rec,
+                    try:
+                        for rec in recipients:
+                            _, was_created = SignatureRecipient.objects.get_or_create(
+                                request=consent_request,
+                                **rec,
+                            )
+                            if was_created:
+                                created += 1
+                    except Exception as exc:
+                        logger.exception(
+                            "[consent] step1 seed recipient auto-add failed request_id=%s user_id=%s",
+                            getattr(consent_request, "request_id", None),
+                            request.user.id,
                         )
-                        if was_created:
-                            created += 1
-                    if created:
+                        _cleanup_partial_step1_objects(consent_request, document)
+                        request_form.add_error(
+                            None,
+                            "수신자 자동 넣기 중 오류가 발생했습니다. 안내문을 다시 확인하고 한 번 더 시도해 주세요.",
+                        )
+                    else:
+                        _pop_sheetbook_seed(
+                            request,
+                            sheetbook_seed_token,
+                            expected_action="consent",
+                        )
+                        if created:
+                            messages.info(
+                                request,
+                                f"교무수첩에서 가져온 수신자 {created}명을 미리 넣어두었어요.",
+                            )
+                        return redirect("consent:recipients", request_id=consent_request.request_id)
+                else:
+                    if recipients_text:
                         messages.info(
                             request,
-                            f"교무수첩에서 가져온 수신자 {created}명을 미리 넣어두었어요.",
+                            "교무수첩 수신자 자동 넣기는 꺼두었어요. 다음 단계에서 직접 추가해 주세요.",
                         )
-                elif recipients_text:
-                    messages.info(
+                    _pop_sheetbook_seed(
                         request,
-                        "교무수첩 수신자 자동 넣기는 꺼두었어요. 다음 단계에서 직접 추가해 주세요.",
+                        sheetbook_seed_token,
+                        expected_action="consent",
                     )
-                return redirect("consent:recipients", request_id=consent_request.request_id)
+                    return redirect("consent:recipients", request_id=consent_request.request_id)
     else:
         document_form = ConsentDocumentForm(
             initial={
@@ -1001,12 +1079,18 @@ def consent_detail(request, request_id):
                 "download_url": reverse("consent:download_recipient_pdf", kwargs={"recipient_id": recipient.id}),
             }
         )
+    shared_lookup_url = request.build_absolute_uri(
+        reverse("consent:shared_lookup", kwargs={"shared_lookup_token": consent_request.shared_lookup_token})
+    )
     response = render(
         request,
         "consent/detail.html",
         {
             "consent_request": consent_request,
             "recipient_rows": recipient_rows,
+            "shared_lookup_url": shared_lookup_url,
+            "shared_lookup_qr_code_base64": _generate_qr_base64(shared_lookup_url),
+            "shared_lookup_copy_message": _compose_shared_lookup_message(consent_request, shared_lookup_url),
             "host_base": request.build_absolute_uri("/")[:-1],
             "link_expires_at": consent_request.link_expires_at,
             "source_file_available": source_file_available,
@@ -1065,18 +1149,23 @@ def consent_send(request, request_id):
         SignatureRequest.STATUS_COMPLETED,
     )
     rotated_recipient_count = 0
+    rotated_shared_lookup = False
     if already_released:
         for recipient in consent_request.recipients.exclude(
             status__in=[SignatureRecipient.STATUS_SIGNED, SignatureRecipient.STATUS_DECLINED]
         ):
             _reset_recipient_link_state(recipient, rotate_token=True)
             rotated_recipient_count += 1
+        consent_request.shared_lookup_token = _issue_shared_lookup_token()
+        rotated_shared_lookup = True
     if consent_request.status != SignatureRequest.STATUS_COMPLETED:
         consent_request.status = SignatureRequest.STATUS_SENT
     consent_request.sent_at = timezone.now()
     update_fields = ["sent_at"]
     if consent_request.status != SignatureRequest.STATUS_COMPLETED:
         update_fields.append("status")
+    if rotated_shared_lookup:
+        update_fields.append("shared_lookup_token")
     consent_request.save(update_fields=update_fields)
     ConsentAuditLog.objects.create(
         request=consent_request,
@@ -1085,6 +1174,7 @@ def consent_send(request, request_id):
             "recipient_count": consent_request.recipients.count(),
             "resend": already_released,
             "rotated_recipient_count": rotated_recipient_count,
+            "rotated_shared_lookup": rotated_shared_lookup,
             "link_expire_days": consent_request.link_expire_days,
             "expires_at": (
                 timezone.localtime(consent_request.link_expires_at).isoformat()
@@ -1096,10 +1186,10 @@ def consent_send(request, request_id):
     if already_released:
         messages.success(
             request,
-            f"발송 시각을 갱신하고 미완료 수신자 {rotated_recipient_count}명의 링크를 새로 만들었습니다. 이전 링크는 더 이상 열리지 않습니다.",
+            f"발송 시각을 갱신하고 미완료 수신자 {rotated_recipient_count}명의 링크와 학부모 전체 링크를 새로 만들었습니다. 이전 링크는 더 이상 열리지 않습니다.",
         )
     else:
-        messages.success(request, "학부모 링크 발송을 시작했습니다. 수신자별 링크를 복사해 전달해 주세요.")
+        messages.success(request, "학부모 링크 발송을 시작했습니다. 상단의 학부모 전체 링크 또는 수신자별 링크를 복사해 전달해 주세요.")
     return redirect("consent:detail", request_id=consent_request.request_id)
 
 
@@ -1311,6 +1401,87 @@ def consent_document_source(request, request_id):
     except Exception:
         logger.exception("[consent] teacher document source open failed request_id=%s", consent_request.request_id)
         raise Http404("문서 파일을 찾을 수 없습니다.")
+
+
+def _find_shared_lookup_matches(consent_request: SignatureRequest, student_name: str, phone_last4: str):
+    matches = []
+    for recipient in consent_request.recipients.all().order_by("id"):
+        if not recipient.phone_last4:
+            continue
+        if (recipient.student_name or "").strip() != student_name:
+            continue
+        if recipient.phone_last4 != phone_last4:
+            continue
+        matches.append(recipient)
+    return matches
+
+
+@ratelimit(
+    key=_consent_shared_lookup_ratelimit_key,
+    rate="10/10m",
+    method="POST",
+    block=True,
+    group="consent_public_shared_lookup",
+)
+def consent_shared_lookup(request, shared_lookup_token):
+    schema_block = _schema_guard_response(request)
+    if schema_block:
+        return schema_block
+
+    consent_request = get_object_or_404(
+        SignatureRequest.objects.select_related("document"),
+        shared_lookup_token=shared_lookup_token,
+    )
+    if not _is_request_public_link_released(consent_request):
+        return _request_link_not_ready_response(request, consent_request)
+    if consent_request.is_link_expired:
+        return _request_expired_response(request, consent_request)
+
+    lookup_failure_message = "입력한 정보로 제출 대상을 확인하지 못했습니다. 다시 확인해 주세요."
+
+    if request.method == "POST":
+        form = SharedLookupForm(request.POST)
+        if form.is_valid():
+            student_name = form.cleaned_data["student_name"]
+            phone_last4 = form.cleaned_data["phone_last4"]
+            matches = _find_shared_lookup_matches(consent_request, student_name, phone_last4)
+            ip_address = _request_client_ip(request)
+            user_agent = _request_user_agent(request)
+            if len(matches) == 1:
+                recipient = matches[0]
+                ConsentAuditLog.objects.create(
+                    request=consent_request,
+                    recipient=recipient,
+                    event_type=ConsentAuditLog.EVENT_LOOKUP_SUCCESS,
+                    event_meta={"method": "student_name_phone_last4"},
+                    ip_address=ip_address,
+                    user_agent=user_agent,
+                )
+                return redirect("consent:sign", token=recipient.access_token)
+
+            ConsentAuditLog.objects.create(
+                request=consent_request,
+                event_type=ConsentAuditLog.EVENT_LOOKUP_FAIL,
+                event_meta={
+                    "reason": "multiple_match" if len(matches) > 1 else "no_match",
+                },
+                ip_address=ip_address,
+                user_agent=user_agent,
+            )
+            form.add_error(None, lookup_failure_message)
+    else:
+        form = SharedLookupForm()
+
+    response = render(
+        request,
+        "consent/shared_lookup.html",
+        {
+            "consent_request": consent_request,
+            "form": form,
+            "expires_at": consent_request.link_expires_at,
+        },
+    )
+    return _apply_sensitive_cache_headers(response)
 
 
 def consent_verify(request, token):

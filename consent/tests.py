@@ -94,6 +94,36 @@ class ConsentFlowTests(TestCase):
         self.request_obj.refresh_from_db()
         self.assertEqual(self.request_obj.status, SignatureRequest.STATUS_DRAFT)
 
+    def test_detail_shows_locked_shared_lookup_banner_before_send(self):
+        self.client.login(username="teacher", password="pw123456")
+
+        response = self.client.get(
+            reverse("consent:detail", kwargs={"request_id": self.request_obj.request_id})
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "학부모 전체 링크")
+        self.assertContains(response, "발송 시작 후 공개")
+
+    def test_detail_shows_shared_lookup_banner_after_send(self):
+        self.request_obj.status = SignatureRequest.STATUS_SENT
+        self.request_obj.sent_at = timezone.now()
+        self.request_obj.save(update_fields=["status", "sent_at"])
+        self.client.login(username="teacher", password="pw123456")
+
+        response = self.client.get(
+            reverse("consent:detail", kwargs={"request_id": self.request_obj.request_id})
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "학부모 전체 링크")
+        self.assertContains(
+            response,
+            reverse("consent:shared_lookup", kwargs={"shared_lookup_token": self.request_obj.shared_lookup_token}),
+        )
+        self.assertContains(response, "전체 링크 복사")
+        self.assertContains(response, "안내문+전체 링크 복사")
+
     def test_sign_submission_updates_status(self):
         self.request_obj.status = SignatureRequest.STATUS_SENT
         self.request_obj.sent_at = timezone.now()
@@ -224,6 +254,108 @@ class ConsentFlowTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
         self.assertContains(response, "아직 발송이 시작되지 않았습니다.", status_code=403)
+
+    def test_shared_lookup_blocked_before_send_start(self):
+        url = reverse(
+            "consent:shared_lookup",
+            kwargs={"shared_lookup_token": self.request_obj.shared_lookup_token},
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, "아직 발송이 시작되지 않았습니다.", status_code=403)
+
+    def test_shared_lookup_redirects_to_recipient_sign_page(self):
+        self.recipient.phone_number = "010-1234-5678"
+        self.recipient.save(update_fields=["phone_number"])
+        self.request_obj.status = SignatureRequest.STATUS_SENT
+        self.request_obj.sent_at = timezone.now()
+        self.request_obj.save(update_fields=["status", "sent_at"])
+
+        url = reverse(
+            "consent:shared_lookup",
+            kwargs={"shared_lookup_token": self.request_obj.shared_lookup_token},
+        )
+        response = self.client.post(
+            url,
+            {
+                "student_name": "가나다",
+                "phone_last4": "5678",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("consent:sign", kwargs={"token": self.recipient.access_token}),
+            fetch_redirect_response=False,
+        )
+        self.assertTrue(
+            ConsentAuditLog.objects.filter(
+                request=self.request_obj,
+                recipient=self.recipient,
+                event_type=ConsentAuditLog.EVENT_LOOKUP_SUCCESS,
+            ).exists()
+        )
+
+    def test_shared_lookup_shows_generic_error_on_no_match(self):
+        self.recipient.phone_number = "010-1234-5678"
+        self.recipient.save(update_fields=["phone_number"])
+        self.request_obj.status = SignatureRequest.STATUS_SENT
+        self.request_obj.sent_at = timezone.now()
+        self.request_obj.save(update_fields=["status", "sent_at"])
+
+        url = reverse(
+            "consent:shared_lookup",
+            kwargs={"shared_lookup_token": self.request_obj.shared_lookup_token},
+        )
+        response = self.client.post(
+            url,
+            {
+                "student_name": "가나다",
+                "phone_last4": "0000",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "입력한 정보로 제출 대상을 확인하지 못했습니다. 다시 확인해 주세요.")
+        self.assertNotContains(response, "전화번호 끝 4자리를 확인해 주세요.")
+        log = ConsentAuditLog.objects.filter(
+            request=self.request_obj,
+            event_type=ConsentAuditLog.EVENT_LOOKUP_FAIL,
+        ).latest("created_at")
+        self.assertEqual(log.event_meta.get("reason"), "no_match")
+
+    def test_shared_lookup_fails_when_multiple_candidates_match(self):
+        self.recipient.phone_number = "010-1234-5678"
+        self.recipient.save(update_fields=["phone_number"])
+        SignatureRecipient.objects.create(
+            request=self.request_obj,
+            student_name="가나다",
+            parent_name="다른 보호자",
+            phone_number="010-9999-5678",
+        )
+        self.request_obj.status = SignatureRequest.STATUS_SENT
+        self.request_obj.sent_at = timezone.now()
+        self.request_obj.save(update_fields=["status", "sent_at"])
+
+        url = reverse(
+            "consent:shared_lookup",
+            kwargs={"shared_lookup_token": self.request_obj.shared_lookup_token},
+        )
+        response = self.client.post(
+            url,
+            {
+                "student_name": "가나다",
+                "phone_last4": "5678",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "입력한 정보로 제출 대상을 확인하지 못했습니다. 다시 확인해 주세요.")
+        log = ConsentAuditLog.objects.filter(
+            request=self.request_obj,
+            event_type=ConsentAuditLog.EVENT_LOOKUP_FAIL,
+        ).latest("created_at")
+        self.assertEqual(log.event_meta.get("reason"), "multiple_match")
 
     def test_csv_download(self):
         self.client.login(username="teacher", password="pw123456")
@@ -414,6 +546,35 @@ class ConsentFlowTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
         self.assertContains(response, "아직 발송이 시작되지 않았습니다.", status_code=403)
+
+    def test_send_rotates_shared_lookup_token_on_resend(self):
+        self.recipient.phone_number = "010-1234-5678"
+        self.recipient.save(update_fields=["phone_number"])
+        self.client.login(username="teacher", password="pw123456")
+
+        first_response = self.client.post(
+            reverse("consent:send", kwargs={"request_id": self.request_obj.request_id})
+        )
+        self.assertEqual(first_response.status_code, 302)
+        self.request_obj.refresh_from_db()
+        first_token = self.request_obj.shared_lookup_token
+
+        second_response = self.client.post(
+            reverse("consent:send", kwargs={"request_id": self.request_obj.request_id})
+        )
+        self.assertEqual(second_response.status_code, 302)
+        self.request_obj.refresh_from_db()
+        self.assertNotEqual(self.request_obj.shared_lookup_token, first_token)
+
+        old_lookup_response = self.client.get(
+            reverse("consent:shared_lookup", kwargs={"shared_lookup_token": first_token})
+        )
+        self.assertEqual(old_lookup_response.status_code, 404)
+
+        new_lookup_response = self.client.get(
+            reverse("consent:shared_lookup", kwargs={"shared_lookup_token": self.request_obj.shared_lookup_token})
+        )
+        self.assertEqual(new_lookup_response.status_code, 200)
 
     def test_public_document_korean_filename_returns_file(self):
         file_obj = SimpleUploadedFile("안내문.pdf", b"%PDF-1.4\n%%EOF", content_type="application/pdf")
@@ -745,6 +906,41 @@ class ConsentFlowTests(TestCase):
             title="교무수첩 연동 동의서",
         ).latest("created_at")
         self.assertEqual(created_request.recipients.count(), 2)
+
+    @patch("consent.views.SignatureRecipient.objects.get_or_create", side_effect=RuntimeError("db failure"))
+    def test_create_step1_seed_auto_add_handles_exception_without_500(self, mocked_get_or_create):
+        self.client.login(username="teacher", password="pw123456")
+        session = self.client.session
+        session["sheetbook_action_seeds"] = {
+            "seed-token-2b": {
+                "action": "consent",
+                "data": {
+                    "recipients_text": "김하늘,김하늘 보호자,\n박나래,박나래 보호자,",
+                },
+            }
+        }
+        session.save()
+        before_request_count = SignatureRequest.objects.filter(created_by=self.teacher).count()
+        before_document_count = SignatureDocument.objects.filter(created_by=self.teacher).count()
+
+        url = reverse("consent:create_step1")
+        file_obj = SimpleUploadedFile("seed-error.pdf", b"%PDF-1.4\n%%EOF", content_type="application/pdf")
+        response = self.client.post(
+            url,
+            {
+                "sheetbook_seed_token": "seed-token-2b",
+                "title": "교무수첩 연동 동의서 실패",
+                "message": "안내",
+                "legal_notice": "",
+                "link_expire_days": 14,
+                "original_file": file_obj,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "수신자 자동 넣기 중 오류가 발생했습니다.")
+        self.assertEqual(SignatureRequest.objects.filter(created_by=self.teacher).count(), before_request_count)
+        self.assertEqual(SignatureDocument.objects.filter(created_by=self.teacher).count(), before_document_count)
 
     def test_create_step1_seed_can_skip_auto_add_recipients(self):
         self.client.login(username="teacher", password="pw123456")

@@ -12,6 +12,10 @@ def _generate_access_token():
     return secrets.token_urlsafe(24)
 
 
+def _generate_shared_lookup_token():
+    return secrets.token_urlsafe(24)
+
+
 def get_raw_storage():
     """Raw 파일은 Cloudinary 사용 시 Raw 스토리지를, 아니면 기본 스토리지를 사용."""
     if getattr(settings, "USE_CLOUDINARY", False):
@@ -97,6 +101,7 @@ class SignatureRequest(models.Model):
     consent_text_version = models.CharField(max_length=32, default="v1")
     link_expire_days = models.PositiveSmallIntegerField(choices=LINK_EXPIRE_CHOICES, default=LINK_EXPIRE_14)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_DRAFT)
+    shared_lookup_token = models.CharField(max_length=64, unique=True, default=_generate_shared_lookup_token)
     merged_pdf = models.FileField(
         upload_to="signatures/consent/merged/%Y/%m/%d",
         storage=get_raw_storage,
@@ -232,6 +237,8 @@ class SignatureRecipient(models.Model):
 
 
 class ConsentAuditLog(models.Model):
+    EVENT_LOOKUP_SUCCESS = "lookup_success"
+    EVENT_LOOKUP_FAIL = "lookup_fail"
     EVENT_VERIFY_SUCCESS = "verify_success"
     EVENT_VERIFY_FAIL = "verify_fail"
     EVENT_SIGN_SUBMITTED = "sign_submitted"
@@ -239,6 +246,8 @@ class ConsentAuditLog(models.Model):
     EVENT_REQUEST_SENT = "request_sent"
     EVENT_DOCUMENT_VIEWED = "document_viewed"
     EVENT_CHOICES = [
+        (EVENT_LOOKUP_SUCCESS, "Lookup Success"),
+        (EVENT_LOOKUP_FAIL, "Lookup Fail"),
         (EVENT_VERIFY_SUCCESS, "Verify Success"),
         (EVENT_VERIFY_FAIL, "Verify Fail"),
         (EVENT_SIGN_SUBMITTED, "Sign Submitted"),
