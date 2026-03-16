@@ -64,6 +64,10 @@ def _compact_member_header_value(value: str) -> str:
     )
 
 
+def _is_member_comment_row(name: str) -> bool:
+    return str(name or "").strip().startswith("#")
+
+
 def _is_member_header_row(name: str, note: str) -> bool:
     normalized_name = _compact_member_header_value(name)
     normalized_note = _compact_member_header_value(note)
@@ -91,6 +95,8 @@ def _normalize_member_pairs(raw_pairs: Iterable[tuple[str, str]]) -> list[tuple[
         name = str(raw_name or "").strip()
         note = str(raw_note or "").strip()[:120]
         if not name:
+            continue
+        if _is_member_comment_row(name):
             continue
         if _is_member_header_row(name, note):
             continue
@@ -469,6 +475,21 @@ def group_members_upload(request, group_id):
         reverse("handoff:group_detail", kwargs={"group_id": group.id}),
         return_to,
     )
+
+
+@login_required
+def group_members_template_download(request, group_id):
+    group = get_object_or_404(HandoffRosterGroup, id=group_id, owner=request.user)
+    response = HttpResponse(content_type="text/csv; charset=utf-8-sig")
+    response["Content-Disposition"] = f'attachment; filename="{group.name}_명단_양식.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(["이름", "직위/학년반"])
+    writer.writerow(["# 아래 예시를 참고해서 실제 명단으로 바꿔 쓰세요", ""])
+    writer.writerow(["# 예시 김민수", "3-1"])
+    writer.writerow(["# 예시 이서연", "교감"])
+    writer.writerow(["# 예시 박지훈", "교장"])
+    return response
 
 
 @login_required
