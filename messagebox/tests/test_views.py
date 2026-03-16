@@ -44,9 +44,18 @@ class MessageboxViewTests(TestCase):
         self.assertContains(response, "선택한 후보 편집")
         self.assertContains(response, "일정 수정")
         self.assertContains(response, "일정 수정하기")
+        self.assertContains(response, "deleteSavedEventFromDone(savedEvent)")
+        self.assertContains(response, "deleteLinkedItem(linked, { refreshArchive: true, captureId: selectedCaptureId() })")
         self.assertContains(response, "editSelectedArchiveCandidate(candidate.candidate_id)")
         self.assertContains(response, "addManualCandidateFromSelectedArchive()")
         self.assertNotContains(response, "선택 후 오른쪽 달력 날짜를 누르세요.")
+        self.assertNotContains(response, "카드의 일정 수정을 누른 뒤 달력 날짜를 정하면 됩니다.")
+        self.assertNotContains(response, "일정 수정을 누르면 달력과 편집칸으로 바로 이어집니다.")
+        self.assertNotContains(response, "일정 수정 후 달력 날짜를 정하세요.")
+        self.assertNotContains(response, "일정 수정으로 고른 후보 날짜가 여기서 바로 바뀝니다.")
+        self.assertNotContains(response, "내용을 접었다 펼 수 있어요.")
+        self.assertNotContains(response, "달력으로 날짜를 옮긴 뒤 필요한 정보만 아래에서 다듬으세요.")
+        self.assertNotContains(response, "직접 일정 추가를 눌러 제목과 날짜만 바로 넣을 수 있어요.")
 
     def test_main_keeps_requested_capture_id_in_context(self):
         response = self.client.get(f"{reverse('messagebox:main')}?capture=test-capture-id")

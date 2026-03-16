@@ -555,8 +555,40 @@ class MessageCaptureApiTests(TestCase):
         detail_payload = detail_response.json()
         self.assertEqual(len(detail_payload.get("candidates") or []), 2)
         self.assertEqual(len(detail_payload.get("saved_events") or []), 2)
+        self.assertTrue(all(item.get("delete_url") for item in detail_payload.get("saved_events") or []))
         self.assertTrue(all(candidate.get("already_saved") for candidate in detail_payload.get("candidates") or []))
         self.assertTrue(detail_payload.get("created_at"))
+
+    def test_archive_detail_shows_saved_task_delete_url(self):
+        due_at = timezone.now().replace(second=0, microsecond=0)
+        task = CalendarTask.objects.create(
+            author=self.user,
+            title="총회 자료 정리",
+            due_at=due_at,
+            has_time=True,
+        )
+        capture = CalendarMessageCapture.objects.create(
+            author=self.user,
+            raw_text="총회 자료 정리 부탁드립니다.",
+            normalized_text="총회 자료 정리 부탁드립니다.",
+            parse_status=CalendarMessageCapture.ParseStatus.PARSED,
+            confirmed_item_type=CalendarMessageCapture.ConfirmedItemType.TASK,
+            committed_task=task,
+            committed_at=timezone.now(),
+            idempotency_key="archive-detail-task-delete",
+            content_cache_key="archive-detail-task-delete",
+            parse_payload={"summary_text": "할 일 1개"},
+        )
+
+        detail_response = self._archive_detail(capture.id)
+        self.assertEqual(detail_response.status_code, 200)
+        detail_payload = detail_response.json()
+        saved_tasks = detail_payload.get("saved_tasks") or []
+        self.assertEqual(len(saved_tasks), 1)
+        self.assertEqual(
+            saved_tasks[0].get("delete_url"),
+            reverse("classcalendar:api_delete_task", kwargs={"task_id": str(task.id)}),
+        )
 
     def test_archive_list_and_detail_show_failed_message_without_candidates(self):
         capture = self._create_archive_capture(

@@ -21,6 +21,7 @@ urlpatterns = [
     path("api/events/create/", views.api_create_event, name="api_create_event"),
     path("api/events/<uuid:event_id>/update/", views.api_update_event, name="api_update_event"),
     path("api/events/<uuid:event_id>/delete/", views.api_delete_event, name="api_delete_event"),
+    path("api/tasks/<uuid:task_id>/delete/", views.api_delete_task, name="api_delete_task"),
     path("api/message-captures/save/", views.api_message_capture_save, name="api_message_capture_save"),
     path("api/message-captures/parse/", views.api_message_capture_parse, name="api_message_capture_parse"),
     path(

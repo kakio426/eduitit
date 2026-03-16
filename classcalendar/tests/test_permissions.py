@@ -4,7 +4,7 @@ from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta
 
-from classcalendar.models import CalendarEvent, EventPageBlock
+from classcalendar.models import CalendarEvent, CalendarTask, EventPageBlock
 from core.models import UserProfile
 from happy_seed.models import HSClassroom
 
@@ -41,6 +41,16 @@ class PermissionTest(TestCase):
             end_time="2026-03-01T11:00:00Z",
             color="indigo",
             visibility=CalendarEvent.VISIBILITY_TEACHER,
+        )
+
+    def _create_task(self, title="기존 할 일", author=None):
+        owner = author or self.teacher
+        return CalendarTask.objects.create(
+            title=title,
+            classroom=self.classroom,
+            author=owner,
+            due_at="2026-03-01T10:00:00Z",
+            has_time=True,
         )
 
     def test_teacher_can_create_event(self):
@@ -277,6 +287,14 @@ class PermissionTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(CalendarEvent.objects.filter(id=event.id).exists())
 
+    def test_teacher_can_delete_own_task(self):
+        task = self._create_task()
+        response = self.client_teacher.post(
+            reverse("classcalendar:api_delete_task", kwargs={"task_id": str(task.id)})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(CalendarTask.objects.filter(id=task.id).exists())
+
     def test_teacher_cannot_update_other_teacher_event(self):
         event = self._create_event(author=self.other_teacher)
         response = self.client_teacher.post(
@@ -287,6 +305,13 @@ class PermissionTest(TestCase):
                 "end_time": "2026-03-01T14:30",
                 "color": "rose",
             },
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_teacher_cannot_delete_other_teacher_task(self):
+        task = self._create_task(author=self.other_teacher)
+        response = self.client_teacher.post(
+            reverse("classcalendar:api_delete_task", kwargs={"task_id": str(task.id)})
         )
         self.assertEqual(response.status_code, 404)
 

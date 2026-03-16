@@ -394,6 +394,17 @@ def _build_calendar_item_link(*, event=None, task=None):
     return f"{base_url}?{query_string}" if query_string else base_url
 
 
+def _build_calendar_delete_link(*, event=None, task=None):
+    try:
+        if event is not None:
+            return reverse("classcalendar:api_delete_event", kwargs={"event_id": event.id})
+        if task is not None:
+            return reverse("classcalendar:api_delete_task", kwargs={"task_id": task.id})
+    except NoReverseMatch:
+        return ""
+    return ""
+
+
 def _serialize_message_capture_manual_date_value(value):
     if not value:
         return ""
@@ -1285,6 +1296,7 @@ def _serialize_compact_task(task):
         "priority": task.priority or CalendarTask.Priority.NORMAL,
         "status": task.status or CalendarTask.Status.OPEN,
         "calendar_url": _build_calendar_item_link(task=task),
+        "delete_url": _build_calendar_delete_link(task=task),
         "message_capture_id": "",
         "message_capture_url": "",
     }
@@ -1620,6 +1632,7 @@ def _serialize_compact_event(event):
         "is_all_day": bool(event.is_all_day),
         "color": event.color or "indigo",
         "calendar_url": _build_calendar_item_link(event=event),
+        "delete_url": _build_calendar_delete_link(event=event),
     }
     payload.update(_build_related_message_capture_meta(event))
     return payload
@@ -2984,6 +2997,14 @@ def _get_editable_event(request, event_id, editable_owner_ids):
     )
 
 
+def _get_editable_task(request, task_id):
+    return get_object_or_404(
+        CalendarTask.objects.select_related("author"),
+        id=task_id,
+        author=request.user,
+    )
+
+
 def _sync_integrations_if_needed(request, force=False):
     return
 
@@ -3668,6 +3689,15 @@ def api_delete_event(request, event_id):
     event_id_str = str(event.id)
     event.delete()
     return JsonResponse({"status": "success", "deleted_id": event_id_str})
+
+
+@login_required
+@require_POST
+def api_delete_task(request, task_id):
+    task = _get_editable_task(request, task_id)
+    task_id_str = str(task.id)
+    task.delete()
+    return JsonResponse({"status": "success", "deleted_id": task_id_str})
 
 
 @login_required

@@ -34,6 +34,7 @@ function messageboxPage(options = {}) {
         messageCaptureCalendarMonthKey: "",
         messageCaptureDragCandidateId: "",
         messageCaptureSourcePreviewOpen: true,
+        messageboxDeletingLinkedItemKeys: [],
 
         init() {
             ensureMessageboxToastBridge();
@@ -960,6 +961,89 @@ function messageboxPage(options = {}) {
                 return `${parsed.getMonth() + 1}월 ${parsed.getDate()}일 ${this.pad(parsed.getHours())}:${this.pad(parsed.getMinutes())}`;
             }
             return `${parsed.getMonth() + 1}월 ${parsed.getDate()}일`;
+        },
+
+        linkedItemDeleteKey(linked) {
+            const itemType = String((linked && linked.item_type) || "event");
+            const itemId = String((linked && linked.id) || "");
+            return itemId ? `${itemType}:${itemId}` : "";
+        },
+
+        isDeletingLinkedItem(linked) {
+            const targetKey = this.linkedItemDeleteKey(linked);
+            if (!targetKey) return false;
+            return this.messageboxDeletingLinkedItemKeys.includes(targetKey);
+        },
+
+        setDeletingLinkedItem(linked, isDeleting) {
+            const targetKey = this.linkedItemDeleteKey(linked);
+            if (!targetKey) return;
+            if (isDeleting) {
+                if (!this.messageboxDeletingLinkedItemKeys.includes(targetKey)) {
+                    this.messageboxDeletingLinkedItemKeys = this.messageboxDeletingLinkedItemKeys.concat(targetKey);
+                }
+                return;
+            }
+            this.messageboxDeletingLinkedItemKeys = this.messageboxDeletingLinkedItemKeys.filter((item) => item !== targetKey);
+        },
+
+        linkedItemDeleteLabel(linked) {
+            return String((linked && linked.item_type) || "") === "task" ? "할 일" : "일정";
+        },
+
+        async deleteLinkedItem(linked, options = {}) {
+            const deleteUrl = String((linked && linked.delete_url) || "").trim();
+            const itemLabel = this.linkedItemDeleteLabel(linked);
+            if (!deleteUrl) {
+                window.showToast(`${itemLabel} 삭제 경로를 찾지 못했습니다.`, "error");
+                return;
+            }
+            if (this.isDeletingLinkedItem(linked)) {
+                return;
+            }
+            const title = String((linked && linked.title) || itemLabel).trim() || itemLabel;
+            if (!window.confirm(`${title} ${itemLabel === "할 일" ? "항목을" : "일정을"} 삭제할까요? 캘린더에서도 바로 사라집니다.`)) {
+                return;
+            }
+
+            this.setDeletingLinkedItem(linked, true);
+            try {
+                await this.requestJson(deleteUrl, {
+                    method: "POST",
+                    headers: { "X-CSRFToken": this.getCsrfToken() },
+                });
+
+                const deletedId = String((linked && linked.id) || "");
+                if (deletedId) {
+                    this.messageCaptureSavedEvents = this.messageCaptureSavedEvents.filter(
+                        (item) => String(item.id || "") !== deletedId,
+                    );
+                }
+
+                const captureId = String(options.captureId || this.selectedCaptureId() || "");
+                if (options.refreshArchive !== false && captureId) {
+                    await this.loadMessageArchive({ reset: true, preferredCaptureId: captureId });
+                }
+
+                window.showToast(`${itemLabel}을 삭제했어요.`, "success");
+            } catch (error) {
+                window.showToast(error.message || `${itemLabel} 삭제에 실패했습니다.`, "error");
+            } finally {
+                this.setDeletingLinkedItem(linked, false);
+            }
+        },
+
+        deleteSavedEventFromDone(savedEvent) {
+            return this.deleteLinkedItem(
+                {
+                    ...savedEvent,
+                    item_type: "event",
+                },
+                {
+                    captureId: this.messageCaptureCaptureId,
+                    refreshArchive: this.messageArchiveLoadedOnce && !!this.messageCaptureCaptureId,
+                },
+            );
         },
     };
 }
