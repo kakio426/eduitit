@@ -1227,7 +1227,7 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('hx-select="#mobile-post-list-container"', content)
         self.assertNotIn('href="#sns-full-section-auth-v2"', content)
 
-    def test_v2_authenticated_home_sns_shows_expand_button_after_three_posts(self):
+    def test_v2_authenticated_home_sns_shows_expand_button_after_two_posts(self):
         _create_posts()
         self._login('snsviewer')
 

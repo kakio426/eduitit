@@ -1,7 +1,7 @@
 {% for post in posts %}
 {% if compact_posts %}
 {% include 'core/partials/post_item.html' with is_first=forloop.first %}
-{% if forloop.counter == 3 and not forloop.last %}
+{% if forloop.counter == 2 and not forloop.last %}
 <div class="text-center my-3 relative group" data-compact-posts-group>
     <div class="absolute inset-0 flex items-center" aria-hidden="true">
         <div class="w-full border-t border-indigo-100"></div>
@@ -19,7 +19,7 @@
 </div>
 <div data-compact-posts-container class="hidden space-y-3">
 {% endif %}
-{% if forloop.last and forloop.counter > 3 %}
+{% if forloop.last and forloop.counter > 2 %}
 </div>
 {% endif %}
 {% else %}
