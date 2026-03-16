@@ -6,20 +6,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="no-referrer-when-downgrade">
-    <meta name="description" content="{{ meta_description|default:og_description|default:default_og_description|default:'AI 프롬프트 레시피, 도구 가이드, 교육용 게임까지. 교실에서의 혁신을 지금 시작하세요.' }}">
+    {% block seo_meta %}
+    <meta name="description" content="{{ meta_description|default:og_description|default:default_og_description|default:'알림장, 수업 QR, 서비스 가이드, 교실 운영 도구까지. 교사가 오늘 바로 쓰는 AI·디지털 도구를 Eduitit에서 한 번에 찾으세요.' }}">
     <meta name="robots" content="{{ robots|default:'index,follow' }}">
     <link rel="canonical" href="{{ canonical_url|default:og_url|default:'https://eduitit.site/' }}">
-    <meta property="og:title" content="{{ og_title|default:page_title|default:default_og_title|default:'Eduitit - 선생님의 스마트한 하루' }}">
-    <meta property="og:description" content="{{ og_description|default:meta_description|default:default_og_description|default:'AI 프롬프트 레시피, 도구 가이드, 교육용 게임까지. 교실에서의 혁신을 지금 시작하세요.' }}">
+    <meta property="og:title" content="{{ og_title|default:page_title|default:default_og_title|default:'교사를 위한 AI·학급 운영 도구 | Eduitit' }}">
+    <meta property="og:description" content="{{ og_description|default:meta_description|default:default_og_description|default:'알림장, 수업 QR, 서비스 가이드, 교실 운영 도구까지. 교사가 오늘 바로 쓰는 AI·디지털 도구를 Eduitit에서 한 번에 찾으세요.' }}">
     <meta property="og:type" content="{{ og_type|default:'website' }}">
     <meta property="og:url" content="{{ og_url|default:canonical_url|default:'https://eduitit.site/' }}">
     <meta property="og:image" content="{{ og_image|default:default_og_image|default:'https://eduitit.site/static/images/eduitit_og.png' }}">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="{{ og_title|default:page_title|default:default_og_title|default:'Eduitit - 선생님의 스마트한 하루' }}">
-    <meta name="twitter:description" content="{{ og_description|default:meta_description|default:default_og_description|default:'AI 프롬프트 레시피, 도구 가이드, 교육용 게임까지. 교실에서의 혁신을 지금 시작하세요.' }}">
+    <meta name="twitter:title" content="{{ og_title|default:page_title|default:default_og_title|default:'교사를 위한 AI·학급 운영 도구 | Eduitit' }}">
+    <meta name="twitter:description" content="{{ og_description|default:meta_description|default:default_og_description|default:'알림장, 수업 QR, 서비스 가이드, 교실 운영 도구까지. 교사가 오늘 바로 쓰는 AI·디지털 도구를 Eduitit에서 한 번에 찾으세요.' }}">
     <meta name="twitter:image" content="{{ og_image|default:default_og_image|default:'https://eduitit.site/static/images/eduitit_og.png' }}">
+    {% endblock %}
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='100%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%236366F1'/%3E%3Cstop offset='100%25' stop-color='%232DD4BF'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='22' fill='url(%23grad)'/%3E%3Cpath d='M50 20 C50 20 60 40 80 50 C60 60 50 80 50 80 C50 80 40 60 20 50 C40 40 50 20 50 20 Z' fill='white'/%3E%3C/svg%3E">
-    <title>{% block title %}{{ page_title|default:'Eduitit - 선생님의 스마트한 하루' }}{% endblock %}</title>
+    <title>{% block title %}{{ page_title|default:'교사를 위한 AI·학급 운영 도구 | Eduitit' }}{% endblock %}</title>
     <link href="{% static 'css/dist.css' %}" rel="stylesheet">
     <link href="{% static 'core/css/base.css' %}" rel="stylesheet">
     <link href="https://hangeul.pstatic.net/hangeul_static/css/nanum-square-round.css" rel="stylesheet">

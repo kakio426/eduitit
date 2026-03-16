@@ -3,6 +3,7 @@ import html
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from core.seo import DEFAULT_HOME_DESCRIPTION
 from insights.models import Insight
 from products.models import Product, ServiceManual
 
@@ -86,7 +87,7 @@ class SeoFoundationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn('<link rel="canonical" href="https://eduitit.site/">', content)
         self.assertIn('<meta property="og:url" content="https://eduitit.site/">', content)
-        self.assertIn("<title>Eduitit - 선생님의 스마트한 하루</title>", content)
+        self.assertIn("<title>교사를 위한 AI·학급 운영 도구 | Eduitit</title>", content)
 
     def test_insight_list_filtered_query_uses_canonical_root_and_noindex(self):
         response = self.client.get(f"{reverse('insights:list')}?tag=AI")
@@ -109,11 +110,11 @@ class SeoFoundationTests(TestCase):
 
     def test_public_tool_and_reference_pages_get_page_specific_meta(self):
         cases = (
-            ("prompt_lab", "AI 프롬프트 레시피 - Eduitit", "https://eduitit.site/prompts/"),
-            ("tool_guide", "도구 가이드 - Eduitit", "https://eduitit.site/tools/"),
-            ("service_guide_list", "서비스 가이드 - Eduitit", "https://eduitit.site/manuals/"),
-            ("noticegen:main", "알림장 & 주간학습 멘트 생성기 - Eduitit", "https://eduitit.site/noticegen/"),
-            ("qrgen:landing", "수업 QR 생성기 - Eduitit", "https://eduitit.site/qrgen/"),
+            ("prompt_lab", "AI 프롬프트 레시피 | Eduitit", "https://eduitit.site/prompts/"),
+            ("tool_guide", "교사용 AI·디지털 도구 가이드 | Eduitit", "https://eduitit.site/tools/"),
+            ("service_guide_list", "서비스 시작 가이드 | Eduitit", "https://eduitit.site/manuals/"),
+            ("noticegen:main", "알림장·주간학습 멘트 생성기 | Eduitit", "https://eduitit.site/noticegen/"),
+            ("qrgen:landing", "수업 QR 생성기 | Eduitit", "https://eduitit.site/qrgen/"),
         )
 
         for route_name, title, canonical in cases:
@@ -124,6 +125,43 @@ class SeoFoundationTests(TestCase):
                 self.assertIn(f"<title>{html.escape(title)}</title>", content)
                 self.assertIn(f'<link rel="canonical" href="{canonical}">', content)
                 self.assertIn(f'<meta property="og:url" content="{canonical}">', content)
+
+    def test_public_landing_pages_get_unique_meta(self):
+        cases = (
+            ("product_list", "교사용 서비스 카탈로그 | Eduitit", "https://eduitit.site/products/", "수업 준비, 학급 운영, 문서 작성, 활동 도구를 상황별로 정리한 Eduitit 서비스 카탈로그입니다."),
+            ("portfolio:list", "AI 연수·협업 포트폴리오 | Eduitit", "https://eduitit.site/portfolio/", "AI 활용 연수, 에듀테크 설계, 교실 적용 사례와 협업 제안을 한 곳에서 확인하는 포트폴리오입니다."),
+            ("insights:list", "교실 AI 인사이트 | Eduitit", "https://eduitit.site/insights/", "수업, 학급 운영, AI 활용에 도움이 되는 실전 인사이트를 교사 관점으로 정리했습니다."),
+            ("about", "Eduitit 소개 | 교사의 스마트한 하루", "https://eduitit.site/about/", "교사의 시간을 아껴 주는 도구를 왜, 어떻게 만들고 있는지 Eduitit의 방향과 철학을 소개합니다."),
+        )
+
+        for route_name, title, canonical, description in cases:
+            with self.subTest(route_name=route_name):
+                response = self.client.get(reverse(route_name))
+                content = response.content.decode("utf-8")
+                self.assertEqual(response.status_code, 200)
+                self.assertIn(f"<title>{html.escape(title)}</title>", content)
+                self.assertIn(f'<link rel="canonical" href="{canonical}">', content)
+                self.assertIn(f'<meta property="og:url" content="{canonical}">', content)
+                self.assertIn(html.escape(description), content)
+                self.assertNotIn(DEFAULT_HOME_DESCRIPTION, content)
+
+    def test_auth_pages_use_noindex_and_specific_meta(self):
+        cases = (
+            ("account_login", "로그인 | Eduitit", "https://eduitit.site/accounts/login/", "에듀이티잇에 로그인하고 교실 운영, 알림장 작성, 서비스 가이드를 이어서 사용하세요."),
+            ("account_signup", "회원가입 | Eduitit", "https://eduitit.site/accounts/signup/", "에듀이티잇 계정으로 교사를 위한 AI·학급 운영 도구를 바로 시작하세요."),
+        )
+
+        for route_name, title, canonical, description in cases:
+            with self.subTest(route_name=route_name):
+                response = self.client.get(reverse(route_name))
+                content = response.content.decode("utf-8")
+                self.assertEqual(response.status_code, 200)
+                self.assertIn(f"<title>{html.escape(title)}</title>", content)
+                self.assertIn(f'<meta name="robots" content="noindex,nofollow">', content)
+                self.assertIn(f'<link rel="canonical" href="{canonical}">', content)
+                self.assertIn(f'<meta property="og:url" content="{canonical}">', content)
+                self.assertIn(html.escape(description), content)
+                self.assertNotIn(DEFAULT_HOME_DESCRIPTION, content)
 
     def test_service_guide_and_product_detail_use_specific_meta(self):
         manual_response = self.client.get(reverse("service_guide_detail", kwargs={"pk": self.manual.pk}))

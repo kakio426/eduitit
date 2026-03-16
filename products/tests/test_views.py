@@ -196,9 +196,9 @@ class SheetbookDiscoveryVisibilityTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(section_titles, ['오늘 운영'])
+        self.assertEqual(len(response.context['scenario_sections']), 1)
         self.assertEqual(response.context['selected_scenario_section']['key'], 'today_ops')
         self.assertContains(response, '선택된 보기 오늘 운영')
-        self.assertNotContains(response, '수업 준비')
 
     def test_catalog_invalid_section_filter_falls_back_to_full_catalog(self):
         response = self.client.get(f"{reverse('product_list')}?section=unknown")

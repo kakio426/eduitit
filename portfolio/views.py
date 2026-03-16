@@ -1,5 +1,8 @@
 from django.views.generic import ListView
 from django.db.models import Prefetch
+
+from core.seo import build_portfolio_page_seo
+
 from .models import Achievement, LectureProgram, Inquiry
 
 class PortfolioListView(ListView):
@@ -14,6 +17,7 @@ class PortfolioListView(ListView):
         # Separate achievements into featured and others if needed, using template logic is easier though.
         # Add programs
         context['programs'] = LectureProgram.objects.filter(is_active=True)
+        context.update(build_portfolio_page_seo(self.request).as_context())
         return context
 
 from django.views.generic import CreateView, TemplateView

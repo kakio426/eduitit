@@ -61,6 +61,7 @@ from .service_launcher import (
 )
 from .prompt_lab_data import get_prompt_lab_catalog
 from .seo import (
+    build_about_page_seo,
     build_home_page_seo,
     build_prompt_lab_page_seo,
     build_service_guide_detail_seo,
@@ -3305,7 +3306,14 @@ def about(request):
         'tools_built': Product.objects.count() + 5, # Approx
         'students': 500, # Placeholder
     }
-    return render(request, 'core/about.html', {'stats': stats})
+    return render(
+        request,
+        'core/about.html',
+        {
+            'stats': stats,
+            **build_about_page_seo(request).as_context(),
+        },
+    )
 
 @login_required
 def settings_view(request):

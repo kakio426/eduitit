@@ -2,7 +2,22 @@
 {% load i18n %}
 {% load account socialaccount %}
 
-{% block title %}에듀이티잇 - 로그인{% endblock %}
+{% block seo_meta %}
+<meta name="description" content="에듀이티잇에 로그인하고 교실 운영, 알림장 작성, 서비스 가이드를 이어서 사용하세요.">
+<meta name="robots" content="noindex,nofollow">
+<link rel="canonical" href="https://eduitit.site/accounts/login/">
+<meta property="og:title" content="로그인 | Eduitit">
+<meta property="og:description" content="에듀이티잇에 로그인하고 교실 운영, 알림장 작성, 서비스 가이드를 이어서 사용하세요.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://eduitit.site/accounts/login/">
+<meta property="og:image" content="https://eduitit.site/static/images/eduitit_og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="로그인 | Eduitit">
+<meta name="twitter:description" content="에듀이티잇에 로그인하고 교실 운영, 알림장 작성, 서비스 가이드를 이어서 사용하세요.">
+<meta name="twitter:image" content="https://eduitit.site/static/images/eduitit_og.png">
+{% endblock %}
+
+{% block title %}로그인 | Eduitit{% endblock %}
 
 {% block content %}
 <main class="pt-32 pb-20 px-4 md:px-8 min-h-screen flex items-center justify-center">

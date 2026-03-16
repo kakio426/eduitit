@@ -15,7 +15,7 @@ from django.urls import reverse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
 
-from core.seo import build_product_detail_seo
+from core.seo import build_product_detail_seo, build_product_list_page_seo
 from core.product_visibility import filter_discoverable_products
 
 from .dutyticker_scope import get_active_classroom_for_request, get_or_create_settings_for_scope
@@ -266,6 +266,7 @@ def product_list(request):
             'scenario_sections': scenario_sections,
             'selected_scenario_section': selected_scenario_section,
             'total_count': len(surface_products),
+            **build_product_list_page_seo(request).as_context(),
         },
     )
 

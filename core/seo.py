@@ -12,8 +12,8 @@ from .discovery_policy import is_sensitive_discovery_target
 
 SITE_CANONICAL_BASE_URL = "https://eduitit.site"
 DEFAULT_OG_IMAGE_URL = f"{SITE_CANONICAL_BASE_URL}/static/images/eduitit_og.png"
-DEFAULT_HOME_TITLE = "Eduitit - 선생님의 스마트한 하루"
-DEFAULT_HOME_DESCRIPTION = "AI 프롬프트 레시피, 도구 가이드, 교육용 게임까지. 교실에서의 혁신을 지금 시작하세요."
+DEFAULT_HOME_TITLE = "교사를 위한 AI·학급 운영 도구 | Eduitit"
+DEFAULT_HOME_DESCRIPTION = "알림장, 수업 QR, 서비스 가이드, 교실 운영 도구까지. 교사가 오늘 바로 쓰는 AI·디지털 도구를 Eduitit에서 한 번에 찾으세요."
 
 
 @dataclass(frozen=True)
@@ -102,25 +102,49 @@ def build_home_page_seo(request) -> PageSeoMeta:
 
 def build_prompt_lab_page_seo(request) -> PageSeoMeta:
     return _build_page_seo(
-        title="AI 프롬프트 레시피 - Eduitit",
-        description="교실과 행정에서 바로 복사해 쓸 AI 프롬프트 레시피를 카테고리별로 모았습니다.",
+        title="AI 프롬프트 레시피 | Eduitit",
+        description="교실과 행정에서 바로 복사해 쓰는 프롬프트 예시를 목적별로 모았습니다.",
         canonical_url=_absolute_url(reverse("prompt_lab")),
     )
 
 
 def build_tool_guide_page_seo(request) -> PageSeoMeta:
     return _build_page_seo(
-        title="도구 가이드 - Eduitit",
-        description="교사가 바로 써볼 수 있는 AI·디지털 도구를 쉬운 설명과 함께 정리했습니다.",
+        title="교사용 AI·디지털 도구 가이드 | Eduitit",
+        description="교사가 바로 써볼 수 있는 AI·디지털 도구를 쉬운 설명과 활용 맥락으로 정리했습니다.",
         canonical_url=_absolute_url(reverse("tool_guide")),
     )
 
 
 def build_service_guide_list_seo(request) -> PageSeoMeta:
     return _build_page_seo(
-        title="서비스 가이드 - Eduitit",
-        description="Eduitit 주요 서비스를 설명 없이도 바로 따라갈 수 있도록 빠른 사용 안내로 모았습니다.",
+        title="서비스 시작 가이드 | Eduitit",
+        description="Eduitit 주요 서비스를 설명 없이도 따라갈 수 있도록 첫 사용 흐름만 빠르게 정리한 안내 모음입니다.",
         canonical_url=_absolute_url(reverse("service_guide_list")),
+    )
+
+
+def build_product_list_page_seo(request) -> PageSeoMeta:
+    return _build_page_seo(
+        title="교사용 서비스 카탈로그 | Eduitit",
+        description="수업 준비, 학급 운영, 문서 작성, 활동 도구를 상황별로 정리한 Eduitit 서비스 카탈로그입니다.",
+        canonical_url=_absolute_url(reverse("product_list")),
+    )
+
+
+def build_portfolio_page_seo(request) -> PageSeoMeta:
+    return _build_page_seo(
+        title="AI 연수·협업 포트폴리오 | Eduitit",
+        description="AI 활용 연수, 에듀테크 설계, 교실 적용 사례와 협업 제안을 한 곳에서 확인하는 포트폴리오입니다.",
+        canonical_url=_absolute_url(reverse("portfolio:list")),
+    )
+
+
+def build_about_page_seo(request) -> PageSeoMeta:
+    return _build_page_seo(
+        title="Eduitit 소개 | 교사의 스마트한 하루",
+        description="교사의 시간을 아껴 주는 도구를 왜, 어떻게 만들고 있는지 Eduitit의 방향과 철학을 소개합니다.",
+        canonical_url=_absolute_url(reverse("about")),
     )
 
 
@@ -153,13 +177,13 @@ def build_insight_list_seo(request, *, current_category: str = "", current_tag: 
     base_canonical = _absolute_url(reverse("insights:list"))
     filtered = bool(current_category or current_tag or (current_sort and current_sort != "recent"))
     if filtered and current_tag:
-        description = f"#{current_tag} 관련 인사이트를 모아봤습니다. 상세 글은 Eduitit Insight Library에서 확인하세요."
+        description = f"#{current_tag} 관련 교실 AI 인사이트를 모아봤습니다. 상세 글은 Eduitit에서 이어서 확인하세요."
     elif filtered and current_category:
-        description = f"{current_category} 분류 인사이트를 모아봤습니다. Eduitit Insight Library에서 전체 글을 확인하세요."
+        description = f"{current_category} 주제의 교실 AI 인사이트를 모아봤습니다. Eduitit에서 전체 글을 확인하세요."
     else:
-        description = "수업, 교실 운영, AI 활용에 도움이 되는 인사이트를 Eduitit Insight Library에서 모아봅니다."
+        description = "수업, 학급 운영, AI 활용에 도움이 되는 실전 인사이트를 교사 관점으로 정리했습니다."
     return _build_page_seo(
-        title="Insight Library - Eduitit",
+        title="교실 AI 인사이트 | Eduitit",
         description=description,
         canonical_url=base_canonical,
         robots="noindex,follow" if filtered else "index,follow",
@@ -205,16 +229,16 @@ def build_product_detail_seo(request, product) -> PageSeoMeta:
 
 def build_noticegen_page_seo(request) -> PageSeoMeta:
     return _build_page_seo(
-        title="알림장 & 주간학습 멘트 생성기 - Eduitit",
-        description="대상과 전달 사항만 적으면 학부모 알림장과 주간학습 멘트를 빠르게 만듭니다.",
+        title="알림장·주간학습 멘트 생성기 | Eduitit",
+        description="전달할 내용만 넣으면 학부모 알림장과 주간학습 멘트를 빠르게 작성할 수 있습니다.",
         canonical_url=_absolute_url(reverse("noticegen:main")),
     )
 
 
 def build_qrgen_page_seo(request) -> PageSeoMeta:
     return _build_page_seo(
-        title="수업 QR 생성기 - Eduitit",
-        description="수업 링크 하나만 넣으면 바로 보여줄 QR 코드를 빠르게 만듭니다.",
+        title="수업 QR 생성기 | Eduitit",
+        description="수업 자료 링크를 바로 QR 코드로 바꿔 교실에서 빠르게 공유할 수 있습니다.",
         canonical_url=_absolute_url(reverse("qrgen:landing")),
     )
 
