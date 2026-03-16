@@ -1189,7 +1189,70 @@
         }
     }
 
-.dt-timer-card {
+    #mainAppContainer {
+        --dt-timer-font-scale: 1;
+        --dt-mission-kicker-scale: 1;
+        --dt-mission-title-scale: 1;
+        --dt-mission-desc-scale: 1;
+    }
+
+    #mainAppContainer[data-mission-size="xxxs"] {
+        --dt-timer-font-scale: 0.7;
+        --dt-mission-kicker-scale: 0.82;
+        --dt-mission-title-scale: 0.6;
+        --dt-mission-desc-scale: 0.7;
+    }
+
+    #mainAppContainer[data-mission-size="xxs"] {
+        --dt-timer-font-scale: 0.8;
+        --dt-mission-kicker-scale: 0.9;
+        --dt-mission-title-scale: 0.72;
+        --dt-mission-desc-scale: 0.82;
+    }
+
+    #mainAppContainer[data-mission-size="xs"] {
+        --dt-timer-font-scale: 0.88;
+        --dt-mission-kicker-scale: 0.95;
+        --dt-mission-title-scale: 0.84;
+        --dt-mission-desc-scale: 0.9;
+    }
+
+    #mainAppContainer[data-mission-size="sm"] {
+        --dt-timer-font-scale: 0.95;
+        --dt-mission-kicker-scale: 0.98;
+        --dt-mission-title-scale: 0.92;
+        --dt-mission-desc-scale: 0.96;
+    }
+
+    #mainAppContainer[data-mission-size="lg"] {
+        --dt-timer-font-scale: 1.04;
+        --dt-mission-kicker-scale: 1.02;
+        --dt-mission-title-scale: 1.1;
+        --dt-mission-desc-scale: 1.12;
+    }
+
+    #mainAppContainer[data-mission-size="xl"] {
+        --dt-timer-font-scale: 1.08;
+        --dt-mission-kicker-scale: 1.05;
+        --dt-mission-title-scale: 1.2;
+        --dt-mission-desc-scale: 1.24;
+    }
+
+    #mainAppContainer[data-mission-size="xxl"] {
+        --dt-timer-font-scale: 1.12;
+        --dt-mission-kicker-scale: 1.08;
+        --dt-mission-title-scale: 1.3;
+        --dt-mission-desc-scale: 1.36;
+    }
+
+    #mainAppContainer[data-mission-size="xxxl"] {
+        --dt-timer-font-scale: 1.16;
+        --dt-mission-kicker-scale: 1.12;
+        --dt-mission-title-scale: 1.4;
+        --dt-mission-desc-scale: 1.48;
+    }
+
+    .dt-timer-card {
         padding: clamp(1.25rem, 2.2vw, 2rem);
         min-height: clamp(19.2rem, 51vh, 34rem);
     }
@@ -1260,7 +1323,11 @@
         background: rgba(255, 255, 255, 0.08);
         border: 1px solid rgba(255, 255, 255, 0.12);
         color: rgba(224, 231, 255, 0.88);
-        font-size: clamp(0.76rem, 0.82rem + 0.18vw, 0.92rem);
+        font-size: clamp(
+            calc(0.76rem * var(--dt-mission-kicker-scale)),
+            calc((0.82rem * var(--dt-mission-kicker-scale)) + (0.18vw * var(--dt-mission-kicker-scale))),
+            calc(0.92rem * var(--dt-mission-kicker-scale))
+        );
         font-weight: 900;
         letter-spacing: 0.12em;
         text-transform: uppercase;
@@ -1278,7 +1345,14 @@
 
     #mainTimerDisplay {
         font-family: var(--dt-font-code);
-        font-size: clamp(5rem, min(21.5vw, 27.5vh), 15.25rem);
+        font-size: clamp(
+            calc(5rem * var(--dt-timer-font-scale)),
+            min(
+                calc(21.5vw * var(--dt-timer-font-scale)),
+                calc(27.5vh * var(--dt-timer-font-scale))
+            ),
+            calc(15.25rem * var(--dt-timer-font-scale))
+        );
         line-height: 0.9;
         letter-spacing: -0.05em;
         margin-bottom: 0;
@@ -1297,63 +1371,23 @@
     }
 
     #mainMissionTitle {
-        font-size: clamp(2.46rem, 6.1vw, 5.15rem);
+        font-size: clamp(
+            calc(2.46rem * var(--dt-mission-title-scale)),
+            calc(6.1vw * var(--dt-mission-title-scale)),
+            calc(5.15rem * var(--dt-mission-title-scale))
+        );
         line-height: 1.08;
         margin: 0;
     }
 
     #mainMissionDesc {
-        font-size: clamp(1.12rem, 2.95vw, 2rem);
+        font-size: clamp(
+            calc(1.12rem * var(--dt-mission-desc-scale)),
+            calc(2.95vw * var(--dt-mission-desc-scale)),
+            calc(2rem * var(--dt-mission-desc-scale))
+        );
         line-height: 1.24;
         margin: 0;
-    }
-
-    #mainAppContainer[data-mission-size="xxs"] #mainMissionTitle {
-        font-size: clamp(1.52rem, 4.45vw, 3.32rem);
-    }
-
-    #mainAppContainer[data-mission-size="xxs"] #mainMissionDesc {
-        font-size: clamp(0.9rem, 2.3vw, 1.4rem);
-    }
-
-    #mainAppContainer[data-mission-size="xs"] #mainMissionTitle {
-        font-size: clamp(1.72rem, 4.95vw, 3.68rem);
-    }
-
-    #mainAppContainer[data-mission-size="xs"] #mainMissionDesc {
-        font-size: clamp(0.98rem, 2.45vw, 1.54rem);
-    }
-
-    #mainAppContainer[data-mission-size="sm"] #mainMissionTitle {
-        font-size: clamp(1.98rem, 5.6vw, 4.2rem);
-    }
-
-    #mainAppContainer[data-mission-size="sm"] #mainMissionDesc {
-        font-size: clamp(1.08rem, 2.72vw, 1.78rem);
-    }
-
-    #mainAppContainer[data-mission-size="lg"] #mainMissionTitle {
-        font-size: clamp(2.88rem, 7.45vw, 6.02rem);
-    }
-
-    #mainAppContainer[data-mission-size="lg"] #mainMissionDesc {
-        font-size: clamp(1.48rem, 3.8vw, 2.56rem);
-    }
-
-    #mainAppContainer[data-mission-size="xl"] #mainMissionTitle {
-        font-size: clamp(3.22rem, 8.2vw, 6.8rem);
-    }
-
-    #mainAppContainer[data-mission-size="xl"] #mainMissionDesc {
-        font-size: clamp(1.66rem, 4.3vw, 2.98rem);
-    }
-
-    #mainAppContainer[data-mission-size="xxl"] #mainMissionTitle {
-        font-size: clamp(3.58rem, 9.1vw, 7.58rem);
-    }
-
-    #mainAppContainer[data-mission-size="xxl"] #mainMissionDesc {
-        font-size: clamp(1.84rem, 4.85vw, 3.42rem);
     }
 
     #mainAppContainer[data-mission-panel="collapsed"] .dt-timer-main {
@@ -1365,7 +1399,14 @@
     }
 
     #mainAppContainer[data-mission-panel="collapsed"] #mainTimerDisplay {
-        font-size: clamp(4.7rem, min(20.5vw, 22.4vh), 13.2rem);
+        font-size: clamp(
+            calc(4.7rem * var(--dt-timer-font-scale)),
+            min(
+                calc(20.5vw * var(--dt-timer-font-scale)),
+                calc(22.4vh * var(--dt-timer-font-scale))
+            ),
+            calc(13.2rem * var(--dt-timer-font-scale))
+        );
         line-height: 0.92;
     }
 
@@ -1375,59 +1416,19 @@
     }
 
     #mainAppContainer[data-mission-panel="collapsed"] #mainMissionTitle {
-        font-size: clamp(2.36rem, 6.36vw, 5.18rem);
+        font-size: clamp(
+            calc(2.36rem * var(--dt-mission-title-scale)),
+            calc(6.36vw * var(--dt-mission-title-scale)),
+            calc(5.18rem * var(--dt-mission-title-scale))
+        );
     }
 
     #mainAppContainer[data-mission-panel="collapsed"] #mainMissionDesc {
-        font-size: clamp(1.18rem, 3.18vw, 2.18rem);
-    }
-
-    #mainAppContainer[data-mission-panel="collapsed"][data-mission-size="xxs"] #mainMissionTitle {
-        font-size: clamp(2.12rem, 5.9vw, 4.62rem);
-    }
-
-    #mainAppContainer[data-mission-panel="collapsed"][data-mission-size="xxs"] #mainMissionDesc {
-        font-size: clamp(1.02rem, 2.8vw, 1.8rem);
-    }
-
-    #mainAppContainer[data-mission-panel="collapsed"][data-mission-size="xs"] #mainMissionTitle {
-        font-size: clamp(2.26rem, 6.2vw, 4.9rem);
-    }
-
-    #mainAppContainer[data-mission-panel="collapsed"][data-mission-size="xs"] #mainMissionDesc {
-        font-size: clamp(1.1rem, 3vw, 1.92rem);
-    }
-
-    #mainAppContainer[data-mission-panel="collapsed"][data-mission-size="sm"] #mainMissionTitle {
-        font-size: clamp(2.38rem, 6.6vw, 5.1rem);
-    }
-
-    #mainAppContainer[data-mission-panel="collapsed"][data-mission-size="sm"] #mainMissionDesc {
-        font-size: clamp(1.18rem, 3.2vw, 2.04rem);
-    }
-
-    #mainAppContainer[data-mission-panel="collapsed"][data-mission-size="lg"] #mainMissionTitle {
-        font-size: clamp(3.18rem, 8.35vw, 6.84rem);
-    }
-
-    #mainAppContainer[data-mission-panel="collapsed"][data-mission-size="lg"] #mainMissionDesc {
-        font-size: clamp(1.62rem, 4.4vw, 2.96rem);
-    }
-
-    #mainAppContainer[data-mission-panel="collapsed"][data-mission-size="xl"] #mainMissionTitle {
-        font-size: clamp(3.44rem, 8.9vw, 7.38rem);
-    }
-
-    #mainAppContainer[data-mission-panel="collapsed"][data-mission-size="xl"] #mainMissionDesc {
-        font-size: clamp(1.78rem, 4.8vw, 3.36rem);
-    }
-
-    #mainAppContainer[data-mission-panel="collapsed"][data-mission-size="xxl"] #mainMissionTitle {
-        font-size: clamp(3.7rem, 9.45vw, 7.92rem);
-    }
-
-    #mainAppContainer[data-mission-panel="collapsed"][data-mission-size="xxl"] #mainMissionDesc {
-        font-size: clamp(1.92rem, 5.2vw, 3.74rem);
+        font-size: clamp(
+            calc(1.18rem * var(--dt-mission-desc-scale)),
+            calc(3.18vw * var(--dt-mission-desc-scale)),
+            calc(2.18rem * var(--dt-mission-desc-scale))
+        );
     }
 
     #mainMissionTitle[contenteditable="true"],
@@ -1803,15 +1804,36 @@
     }
 
     #mainAppContainer[data-layout-density="presentation"] #mainTimerDisplay {
-        font-size: clamp(4.86rem, min(19vw, 21vh), 12.9rem);
+        font-size: clamp(
+            calc(4.86rem * var(--dt-timer-font-scale)),
+            min(
+                calc(19vw * var(--dt-timer-font-scale)),
+                calc(21vh * var(--dt-timer-font-scale))
+            ),
+            calc(12.9rem * var(--dt-timer-font-scale))
+        );
     }
 
     #mainAppContainer[data-layout-density="balanced"] #mainTimerDisplay {
-        font-size: clamp(4.2rem, min(17.8vw, 20vh), 11.8rem);
+        font-size: clamp(
+            calc(4.2rem * var(--dt-timer-font-scale)),
+            min(
+                calc(17.8vw * var(--dt-timer-font-scale)),
+                calc(20vh * var(--dt-timer-font-scale))
+            ),
+            calc(11.8rem * var(--dt-timer-font-scale))
+        );
     }
 
     #mainAppContainer[data-layout-density="compact"] #mainTimerDisplay {
-        font-size: clamp(3.18rem, min(13.9vw, 14.8vh), 7.9rem);
+        font-size: clamp(
+            calc(3.18rem * var(--dt-timer-font-scale)),
+            min(
+                calc(13.9vw * var(--dt-timer-font-scale)),
+                calc(14.8vh * var(--dt-timer-font-scale))
+            ),
+            calc(7.9rem * var(--dt-timer-font-scale))
+        );
     }
 
     #mainAppContainer[data-layout-density="presentation"] .dt-mission-stage {
@@ -1831,41 +1853,77 @@
 
     #mainAppContainer[data-layout-density="presentation"] .dt-mission-kicker {
         padding: 0.36rem 0.72rem;
-        font-size: clamp(0.68rem, 0.72rem + 0.12vw, 0.82rem);
+        font-size: clamp(
+            calc(0.68rem * var(--dt-mission-kicker-scale)),
+            calc((0.72rem * var(--dt-mission-kicker-scale)) + (0.12vw * var(--dt-mission-kicker-scale))),
+            calc(0.82rem * var(--dt-mission-kicker-scale))
+        );
     }
 
     #mainAppContainer[data-layout-density="balanced"] .dt-mission-kicker {
         padding: 0.34rem 0.68rem;
-        font-size: clamp(0.66rem, 0.7rem + 0.12vw, 0.8rem);
+        font-size: clamp(
+            calc(0.66rem * var(--dt-mission-kicker-scale)),
+            calc((0.7rem * var(--dt-mission-kicker-scale)) + (0.12vw * var(--dt-mission-kicker-scale))),
+            calc(0.8rem * var(--dt-mission-kicker-scale))
+        );
     }
 
     #mainAppContainer[data-layout-density="compact"] .dt-mission-kicker {
         padding: 0.28rem 0.58rem;
-        font-size: clamp(0.58rem, 0.62rem + 0.08vw, 0.72rem);
+        font-size: clamp(
+            calc(0.58rem * var(--dt-mission-kicker-scale)),
+            calc((0.62rem * var(--dt-mission-kicker-scale)) + (0.08vw * var(--dt-mission-kicker-scale))),
+            calc(0.72rem * var(--dt-mission-kicker-scale))
+        );
     }
 
     #mainAppContainer[data-layout-density="presentation"] #mainMissionTitle {
-        font-size: clamp(2.18rem, 5vw, 4.08rem);
+        font-size: clamp(
+            calc(2.18rem * var(--dt-mission-title-scale)),
+            calc(5vw * var(--dt-mission-title-scale)),
+            calc(4.08rem * var(--dt-mission-title-scale))
+        );
     }
 
     #mainAppContainer[data-layout-density="balanced"] #mainMissionTitle {
-        font-size: clamp(1.92rem, 4.6vw, 3.72rem);
+        font-size: clamp(
+            calc(1.92rem * var(--dt-mission-title-scale)),
+            calc(4.6vw * var(--dt-mission-title-scale)),
+            calc(3.72rem * var(--dt-mission-title-scale))
+        );
     }
 
     #mainAppContainer[data-layout-density="compact"] #mainMissionTitle {
-        font-size: clamp(1.5rem, 3.55vw, 2.68rem);
+        font-size: clamp(
+            calc(1.5rem * var(--dt-mission-title-scale)),
+            calc(3.55vw * var(--dt-mission-title-scale)),
+            calc(2.68rem * var(--dt-mission-title-scale))
+        );
     }
 
     #mainAppContainer[data-layout-density="presentation"] #mainMissionDesc {
-        font-size: clamp(1.08rem, 2.46vw, 1.72rem);
+        font-size: clamp(
+            calc(1.08rem * var(--dt-mission-desc-scale)),
+            calc(2.46vw * var(--dt-mission-desc-scale)),
+            calc(1.72rem * var(--dt-mission-desc-scale))
+        );
     }
 
     #mainAppContainer[data-layout-density="balanced"] #mainMissionDesc {
-        font-size: clamp(0.98rem, 2.2vw, 1.52rem);
+        font-size: clamp(
+            calc(0.98rem * var(--dt-mission-desc-scale)),
+            calc(2.2vw * var(--dt-mission-desc-scale)),
+            calc(1.52rem * var(--dt-mission-desc-scale))
+        );
     }
 
     #mainAppContainer[data-layout-density="compact"] #mainMissionDesc {
-        font-size: clamp(0.88rem, 1.8vw, 1.14rem);
+        font-size: clamp(
+            calc(0.88rem * var(--dt-mission-desc-scale)),
+            calc(1.8vw * var(--dt-mission-desc-scale)),
+            calc(1.14rem * var(--dt-mission-desc-scale))
+        );
     }
 
     #mainAppContainer[data-layout-density="compact"][data-mission-panel="expanded"] #mainMissionDesc {
@@ -1939,56 +1997,113 @@
     }
 
     #mainAppContainer[data-display-mode="windowed"][data-layout-density="presentation"] #mainTimerDisplay {
-        font-size: clamp(4.26rem, min(16.2vw, 15.6vh), 9.8rem);
+        font-size: clamp(
+            calc(4.26rem * var(--dt-timer-font-scale)),
+            min(
+                calc(16.2vw * var(--dt-timer-font-scale)),
+                calc(15.6vh * var(--dt-timer-font-scale))
+            ),
+            calc(9.8rem * var(--dt-timer-font-scale))
+        );
     }
 
     #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"] #mainTimerDisplay {
-        font-size: clamp(3.36rem, min(14.2vw, 13.4vh), 7.8rem);
+        font-size: clamp(
+            calc(3.36rem * var(--dt-timer-font-scale)),
+            min(
+                calc(14.2vw * var(--dt-timer-font-scale)),
+                calc(13.4vh * var(--dt-timer-font-scale))
+            ),
+            calc(7.8rem * var(--dt-timer-font-scale))
+        );
     }
 
     #mainAppContainer[data-display-mode="windowed"][data-layout-density="compact"] #mainTimerDisplay {
-        font-size: clamp(2.72rem, min(11.2vw, 10.8vh), 5.92rem);
+        font-size: clamp(
+            calc(2.72rem * var(--dt-timer-font-scale)),
+            min(
+                calc(11.2vw * var(--dt-timer-font-scale)),
+                calc(10.8vh * var(--dt-timer-font-scale))
+            ),
+            calc(5.92rem * var(--dt-timer-font-scale))
+        );
     }
 
     #mainAppContainer[data-display-mode="windowed"][data-layout-density="presentation"] .dt-mission-kicker {
         padding: 0.32rem 0.66rem;
-        font-size: clamp(0.64rem, 0.64rem + 0.1vw, 0.76rem);
+        font-size: clamp(
+            calc(0.64rem * var(--dt-mission-kicker-scale)),
+            calc((0.64rem * var(--dt-mission-kicker-scale)) + (0.1vw * var(--dt-mission-kicker-scale))),
+            calc(0.76rem * var(--dt-mission-kicker-scale))
+        );
     }
 
     #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"] .dt-mission-kicker {
         padding: 0.3rem 0.62rem;
-        font-size: clamp(0.62rem, 0.62rem + 0.1vw, 0.74rem);
+        font-size: clamp(
+            calc(0.62rem * var(--dt-mission-kicker-scale)),
+            calc((0.62rem * var(--dt-mission-kicker-scale)) + (0.1vw * var(--dt-mission-kicker-scale))),
+            calc(0.74rem * var(--dt-mission-kicker-scale))
+        );
     }
 
     #mainAppContainer[data-display-mode="windowed"][data-layout-density="compact"] .dt-mission-kicker {
         padding: 0.24rem 0.52rem;
-        font-size: clamp(0.54rem, 0.56rem + 0.06vw, 0.66rem);
+        font-size: clamp(
+            calc(0.54rem * var(--dt-mission-kicker-scale)),
+            calc((0.56rem * var(--dt-mission-kicker-scale)) + (0.06vw * var(--dt-mission-kicker-scale))),
+            calc(0.66rem * var(--dt-mission-kicker-scale))
+        );
     }
 
     #mainAppContainer[data-display-mode="windowed"][data-layout-density="presentation"] #mainMissionTitle {
-        font-size: clamp(1.86rem, 3.86vw, 3.08rem);
+        font-size: clamp(
+            calc(1.86rem * var(--dt-mission-title-scale)),
+            calc(3.86vw * var(--dt-mission-title-scale)),
+            calc(3.08rem * var(--dt-mission-title-scale))
+        );
     }
 
     #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"] #mainMissionTitle {
-        font-size: clamp(1.58rem, 3.12vw, 2.6rem);
+        font-size: clamp(
+            calc(1.58rem * var(--dt-mission-title-scale)),
+            calc(3.12vw * var(--dt-mission-title-scale)),
+            calc(2.6rem * var(--dt-mission-title-scale))
+        );
     }
 
     #mainAppContainer[data-display-mode="windowed"][data-layout-density="compact"] #mainMissionTitle {
-        font-size: clamp(1.24rem, 2.42vw, 1.92rem);
+        font-size: clamp(
+            calc(1.24rem * var(--dt-mission-title-scale)),
+            calc(2.42vw * var(--dt-mission-title-scale)),
+            calc(1.92rem * var(--dt-mission-title-scale))
+        );
     }
 
     #mainAppContainer[data-display-mode="windowed"][data-layout-density="presentation"] #mainMissionDesc {
-        font-size: clamp(1rem, 1.72vw, 1.34rem);
+        font-size: clamp(
+            calc(1rem * var(--dt-mission-desc-scale)),
+            calc(1.72vw * var(--dt-mission-desc-scale)),
+            calc(1.34rem * var(--dt-mission-desc-scale))
+        );
         line-height: 1.24;
     }
 
     #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"] #mainMissionDesc {
-        font-size: clamp(0.92rem, 1.45vw, 1.18rem);
+        font-size: clamp(
+            calc(0.92rem * var(--dt-mission-desc-scale)),
+            calc(1.45vw * var(--dt-mission-desc-scale)),
+            calc(1.18rem * var(--dt-mission-desc-scale))
+        );
         line-height: 1.22;
     }
 
     #mainAppContainer[data-display-mode="windowed"][data-layout-density="compact"] #mainMissionDesc {
-        font-size: clamp(0.8rem, 1.08vw, 0.98rem);
+        font-size: clamp(
+            calc(0.8rem * var(--dt-mission-desc-scale)),
+            calc(1.08vw * var(--dt-mission-desc-scale)),
+            calc(0.98rem * var(--dt-mission-desc-scale))
+        );
         line-height: 1.18;
     }
 
@@ -2033,40 +2148,74 @@
     #mainAppContainer[data-display-mode="windowed"][data-layout-density="presentation"][data-mission-panel="expanded"] .dt-mission-kicker,
     #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"][data-mission-panel="expanded"] .dt-mission-kicker {
         padding: 0.22rem 0.5rem;
-        font-size: clamp(0.5rem, 0.5rem + 0.05vw, 0.6rem);
+        font-size: clamp(
+            calc(0.5rem * var(--dt-mission-kicker-scale)),
+            calc((0.5rem * var(--dt-mission-kicker-scale)) + (0.05vw * var(--dt-mission-kicker-scale))),
+            calc(0.6rem * var(--dt-mission-kicker-scale))
+        );
     }
 
     #mainAppContainer[data-display-mode="windowed"][data-layout-density="presentation"][data-mission-panel="expanded"] #mainTimerDisplay {
-        font-size: clamp(3.44rem, min(13.2vw, 12.6vh), 7.6rem);
+        font-size: clamp(
+            calc(3.44rem * var(--dt-timer-font-scale)),
+            min(
+                calc(13.2vw * var(--dt-timer-font-scale)),
+                calc(12.6vh * var(--dt-timer-font-scale))
+            ),
+            calc(7.6rem * var(--dt-timer-font-scale))
+        );
         line-height: 0.86;
     }
 
     #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"][data-mission-panel="expanded"] #mainTimerDisplay {
-        font-size: clamp(2.88rem, min(11vw, 10.8vh), 6.1rem);
+        font-size: clamp(
+            calc(2.88rem * var(--dt-timer-font-scale)),
+            min(
+                calc(11vw * var(--dt-timer-font-scale)),
+                calc(10.8vh * var(--dt-timer-font-scale))
+            ),
+            calc(6.1rem * var(--dt-timer-font-scale))
+        );
         line-height: 0.86;
     }
 
     #mainAppContainer[data-display-mode="windowed"][data-layout-density="presentation"][data-mission-panel="expanded"] #mainMissionTitle {
-        font-size: clamp(1.3rem, 2.36vw, 1.96rem);
+        font-size: clamp(
+            calc(1.3rem * var(--dt-mission-title-scale)),
+            calc(2.36vw * var(--dt-mission-title-scale)),
+            calc(1.96rem * var(--dt-mission-title-scale))
+        );
         line-height: 1.02;
         max-width: min(100%, 24rem);
     }
 
     #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"][data-mission-panel="expanded"] #mainMissionTitle {
-        font-size: clamp(1.12rem, 2.04vw, 1.7rem);
+        font-size: clamp(
+            calc(1.12rem * var(--dt-mission-title-scale)),
+            calc(2.04vw * var(--dt-mission-title-scale)),
+            calc(1.7rem * var(--dt-mission-title-scale))
+        );
         line-height: 1.02;
         max-width: min(100%, 22rem);
     }
 
     #mainAppContainer[data-display-mode="windowed"][data-layout-density="presentation"][data-mission-panel="expanded"] #mainMissionDesc {
-        font-size: clamp(0.8rem, 1vw, 0.96rem);
+        font-size: clamp(
+            calc(0.8rem * var(--dt-mission-desc-scale)),
+            calc(1vw * var(--dt-mission-desc-scale)),
+            calc(0.96rem * var(--dt-mission-desc-scale))
+        );
         max-width: min(100%, 32rem);
         line-height: 1.12;
         word-break: keep-all;
     }
 
     #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"][data-mission-panel="expanded"] #mainMissionDesc {
-        font-size: clamp(0.74rem, 0.92vw, 0.88rem);
+        font-size: clamp(
+            calc(0.74rem * var(--dt-mission-desc-scale)),
+            calc(0.92vw * var(--dt-mission-desc-scale)),
+            calc(0.88rem * var(--dt-mission-desc-scale))
+        );
         max-width: min(100%, 30rem);
         line-height: 1.1;
         word-break: keep-all;
@@ -2719,15 +2868,30 @@
         }
 
         #mainAppContainer:not([data-layout-density="presentation"])[data-mission-panel="collapsed"] #mainTimerDisplay {
-            font-size: clamp(3.92rem, min(16.8vw, 16.9vh), 8.9rem);
+            font-size: clamp(
+                calc(3.92rem * var(--dt-timer-font-scale)),
+                min(
+                    calc(16.8vw * var(--dt-timer-font-scale)),
+                    calc(16.9vh * var(--dt-timer-font-scale))
+                ),
+                calc(8.9rem * var(--dt-timer-font-scale))
+            );
         }
 
         #mainAppContainer:not([data-layout-density="presentation"])[data-mission-panel="collapsed"] #mainMissionTitle {
-            font-size: clamp(1.94rem, 4.55vh, 3.58rem);
+            font-size: clamp(
+                calc(1.94rem * var(--dt-mission-title-scale)),
+                calc(4.55vh * var(--dt-mission-title-scale)),
+                calc(3.58rem * var(--dt-mission-title-scale))
+            );
         }
 
         #mainAppContainer:not([data-layout-density="presentation"])[data-mission-panel="collapsed"] #mainMissionDesc {
-            font-size: clamp(1rem, 2.35vh, 1.56rem);
+            font-size: clamp(
+                calc(1rem * var(--dt-mission-desc-scale)),
+                calc(2.35vh * var(--dt-mission-desc-scale)),
+                calc(1.56rem * var(--dt-mission-desc-scale))
+            );
         }
     }
 
@@ -2766,15 +2930,30 @@
 
     @media (max-height: 760px) {
         #mainTimerDisplay {
-            font-size: clamp(3.24rem, min(14.8vw, 15.6vh), 7.5rem);
+            font-size: clamp(
+                calc(3.24rem * var(--dt-timer-font-scale)),
+                min(
+                    calc(14.8vw * var(--dt-timer-font-scale)),
+                    calc(15.6vh * var(--dt-timer-font-scale))
+                ),
+                calc(7.5rem * var(--dt-timer-font-scale))
+            );
         }
 
         #mainMissionTitle {
-            font-size: clamp(1.8rem, 5.8vh, 3.4rem);
+            font-size: clamp(
+                calc(1.8rem * var(--dt-mission-title-scale)),
+                calc(5.8vh * var(--dt-mission-title-scale)),
+                calc(3.4rem * var(--dt-mission-title-scale))
+            );
         }
 
         #mainMissionDesc {
-            font-size: clamp(1rem, 3vh, 1.4rem);
+            font-size: clamp(
+                calc(1rem * var(--dt-mission-desc-scale)),
+                calc(3vh * var(--dt-mission-desc-scale)),
+                calc(1.4rem * var(--dt-mission-desc-scale))
+            );
         }
 
     }

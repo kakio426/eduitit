@@ -126,7 +126,7 @@ class DutyTickerTimerUiTests(TestCase):
         self.assertIn('saveInlineMissionEdit()', script)
         self.assertIn('event.shiftKey', script)
         self.assertIn('changeMissionFontSize(', script)
-        self.assertIn("this.missionFontSizeOrder = ['xxs', 'xs', 'sm', 'md', 'lg', 'xl', 'xxl'];", script)
+        self.assertIn("this.missionFontSizeOrder = ['xxxs', 'xxs', 'xs', 'sm', 'md', 'lg', 'xl', 'xxl', 'xxxl'];", script)
         self.assertIn('dt-mission-quick-phrase-v1', script)
         self.assertIn('restoreMissionQuickPhrase()', script)
         self.assertIn('applyMissionQuickPhrase()', script)

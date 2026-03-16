@@ -52,7 +52,7 @@ class DutyTickerManager {
         this.bgmTrackPanelOpen = false;
         this.boundBgmPanelOutsideClick = null;
         this.boundBgmPanelEscape = null;
-        this.missionFontSizeOrder = ['xxs', 'xs', 'sm', 'md', 'lg', 'xl', 'xxl'];
+        this.missionFontSizeOrder = ['xxxs', 'xxs', 'xs', 'sm', 'md', 'lg', 'xl', 'xxl', 'xxxl'];
         this.missionFontSize = 'md';
         this.missionFontStorageKey = 'dt-mission-font-size-v1';
         this.missionSaveRequestId = 0;
@@ -237,8 +237,8 @@ class DutyTickerManager {
             ? availableHeight
             : Math.max(viewportHeight, leftHeight, 0);
         const isStudentPanelExpanded = !this.missionPanelCollapsed;
-        const isMissionFontLarge = ['lg', 'xl', 'xxl'].includes(this.missionFontSize);
-        const isMissionFontHuge = this.missionFontSize === 'xl' || this.missionFontSize === 'xxl';
+        const isMissionFontLarge = ['lg', 'xl', 'xxl', 'xxxl'].includes(this.missionFontSize);
+        const isMissionFontHuge = ['xl', 'xxl', 'xxxl'].includes(this.missionFontSize);
         const isDisplayFullscreen = !!document.fullscreenElement;
         const displayMode = isDisplayFullscreen ? 'fullscreen' : 'windowed';
 
@@ -2362,6 +2362,7 @@ class DutyTickerManager {
         const label = document.getElementById('missionFontSizeLabel');
         if (label) {
             const sizeLabelMap = {
+                xxxs: '가장작게',
                 xxs: '최소',
                 xs: '아주작게',
                 sm: '작게',
@@ -2369,9 +2370,12 @@ class DutyTickerManager {
                 lg: '크게',
                 xl: '아주크게',
                 xxl: '최대',
+                xxxl: '가장크게',
             };
             label.textContent = sizeLabelMap[this.missionFontSize] || '보통';
         }
+
+        this.requestAdaptiveLayoutRefresh();
     }
 
     changeMissionFontSize(direction = 0) {
