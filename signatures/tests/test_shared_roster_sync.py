@@ -188,3 +188,50 @@ class SignatureSharedRosterSyncTests(TestCase):
         response = self.client.post(reverse("signatures:sync_roster", kwargs={"uuid": session.uuid}), follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(session.expected_participants.count(), 2)
+
+    def test_create_session_imports_same_name_with_different_affiliations(self):
+        HandoffRosterMember.objects.create(
+            group=self.group,
+            display_name="중복교사",
+            note="3-1",
+            sort_order=5,
+            is_active=True,
+        )
+        HandoffRosterMember.objects.create(
+            group=self.group,
+            display_name="중복교사",
+            note="3-2",
+            sort_order=6,
+            is_active=True,
+        )
+
+        session_dt = timezone.localtime(timezone.now() + timedelta(days=1)).replace(
+            minute=0,
+            second=0,
+            microsecond=0,
+        )
+        response = self.client.post(
+            reverse("signatures:create"),
+            data={
+                "title": "동명이인 직위 연동 연수",
+                "print_title": "",
+                "instructor": "강사",
+                "datetime": session_dt.strftime("%Y-%m-%dT%H:%M"),
+                "location": "시청각실",
+                "description": "",
+                "shared_roster_group": str(self.group.id),
+                "expected_count": "",
+                "is_active": "on",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        session = TrainingSession.objects.get(title="동명이인 직위 연동 연수", created_by=self.user)
+        duplicate_entries = list(
+            session.expected_participants.filter(name="중복교사").values_list("name", "affiliation").order_by("affiliation")
+        )
+        self.assertEqual(
+            duplicate_entries,
+            [("중복교사", "3-1"), ("중복교사", "3-2")],
+        )

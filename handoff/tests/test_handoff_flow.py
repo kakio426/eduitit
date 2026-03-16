@@ -55,10 +55,12 @@ class HandoffFlowTest(TestCase):
 
         add_response = self.client.post(
             reverse("handoff:group_members_add", args=[group.id]),
-            data={"names_text": "김민수\n이서연\n이서연\n"},
+            data={"names_text": "김민수, 3-1\n이서연, 교감\n이서연, 교감\n"},
         )
         self.assertRedirects(add_response, reverse("handoff:group_detail", args=[group.id]))
         self.assertEqual(group.members.count(), 2)
+        self.assertEqual(group.members.get(display_name="김민수").note, "3-1")
+        self.assertEqual(group.members.get(display_name="이서연").note, "교감")
 
         member = group.members.first()
         update_response = self.client.post(
@@ -76,6 +78,23 @@ class HandoffFlowTest(TestCase):
         delete_response = self.client.post(reverse("handoff:group_member_delete", args=[group.id, member.id]))
         self.assertRedirects(delete_response, reverse("handoff:group_detail", args=[group.id]))
         self.assertEqual(group.members.count(), 1)
+
+    def test_bulk_add_allows_same_name_when_affiliation_differs(self):
+        group = HandoffRosterGroup.objects.create(owner=self.user, name="중복 이름 명단")
+
+        response = self.client.post(
+            reverse("handoff:group_members_add", args=[group.id]),
+            data={
+                "names_text": "김민수, 1-1\n김민수, 1-2\n김민수, 1-1\n",
+            },
+        )
+
+        self.assertRedirects(response, reverse("handoff:group_detail", args=[group.id]))
+        members = list(group.members.order_by("sort_order").values_list("display_name", "note"))
+        self.assertEqual(
+            members,
+            [("김민수", "1-1"), ("김민수", "1-2")],
+        )
 
     def test_return_to_is_preserved_for_group_creation_and_member_updates(self):
         return_to = "/signatures/create/?draft_token=testdraft"

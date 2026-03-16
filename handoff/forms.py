@@ -32,12 +32,12 @@ class HandoffRosterGroupForm(forms.ModelForm):
 
 class HandoffMemberBulkAddForm(forms.Form):
     names_text = forms.CharField(
-        label="이름 붙여넣기",
+        label="이름/직위 붙여넣기",
         widget=forms.Textarea(
             attrs={
                 "class": "w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none",
                 "rows": 6,
-                "placeholder": "한 줄에 한 명씩 입력\n예)\n김민수\n이서연\n박지훈",
+                "placeholder": "한 줄에 한 명씩 입력\n이름만: 김민수\n이름, 직위/학년반: 이서연, 3-1\n엑셀 두 칸 붙여넣기도 됩니다",
             }
         ),
     )

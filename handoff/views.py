@@ -37,18 +37,33 @@ def _wants_json(request):
     return requested_with == "XMLHttpRequest" or "application/json" in accept
 
 
-def _normalize_bulk_names(raw_text: str) -> list[str]:
-    names = []
+def _split_bulk_member_line(raw_line: str) -> tuple[str, str]:
+    line = (raw_line or "").strip()
+    if not line:
+        return "", ""
+
+    if "\t" in line:
+        name, note = line.split("\t", 1)
+        return name.strip(), note.strip()[:120]
+    if "," in line:
+        name, note = line.split(",", 1)
+        return name.strip(), note.strip()[:120]
+    return line, ""
+
+
+def _normalize_bulk_members(raw_text: str) -> list[tuple[str, str]]:
+    members = []
     seen = set()
     for raw in (raw_text or "").splitlines():
-        name = raw.strip()
+        name, note = _split_bulk_member_line(raw)
         if not name:
             continue
-        if name in seen:
+        key = (name, note)
+        if key in seen:
             continue
-        seen.add(name)
-        names.append(name)
-    return names
+        seen.add(key)
+        members.append(key)
+    return members
 
 
 def _session_counts(session: HandoffSession):
@@ -275,8 +290,8 @@ def group_members_add(request, group_id):
             return_to,
         )
 
-    names = _normalize_bulk_names(form.cleaned_data["names_text"])
-    if not names:
+    members = _normalize_bulk_members(form.cleaned_data["names_text"])
+    if not members:
         messages.error(request, "추가할 이름이 없습니다.")
         return _redirect_with_return(
             reverse("handoff:group_detail", kwargs={"group_id": group.id}),
@@ -288,9 +303,10 @@ def group_members_add(request, group_id):
         HandoffRosterMember(
             group=group,
             display_name=name,
+            note=note,
             sort_order=last_order + idx,
         )
-        for idx, name in enumerate(names, start=1)
+        for idx, (name, note) in enumerate(members, start=1)
     ]
     HandoffRosterMember.objects.bulk_create(payload)
     messages.success(request, f"{len(payload)}명을 추가했습니다.")

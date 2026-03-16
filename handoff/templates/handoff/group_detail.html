@@ -86,6 +86,7 @@
                     <div>
                         <label class="block text-sm font-black text-gray-600 mb-1">{{ bulk_form.names_text.label }}</label>
                         {{ bulk_form.names_text }}
+                        <p class="mt-2 text-xs font-bold text-gray-500">한 줄에 한 명씩 넣거나 <code>이름, 직위/학년반</code> 형식으로 붙여넣으세요. 엑셀에서 두 칸을 복사해 붙여넣어도 됩니다.</p>
                     </div>
                     <button type="submit" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black transition">
                         <i class="fa-solid fa-user-plus mr-1"></i>멤버 추가
@@ -108,7 +109,7 @@
                             <input type="hidden" name="return_to" value="{{ return_to }}">
                             {% endif %}
                             <input type="text" name="display_name" value="{{ member.display_name }}" class="md:col-span-4 w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300" required>
-                            <input type="text" name="note" value="{{ member.note }}" placeholder="메모 (선택)" class="md:col-span-5 w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                            <input type="text" name="note" value="{{ member.note }}" placeholder="직위/학년반 또는 메모 (선택)" class="md:col-span-5 w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
                             <label class="md:col-span-2 inline-flex items-center gap-2 text-sm font-bold text-gray-600">
                                 <input type="checkbox" name="is_active" value="1" {% if member.is_active %}checked{% endif %} class="rounded border-gray-300 text-blue-600">
                                 <span>활성</span>
