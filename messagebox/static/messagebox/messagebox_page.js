@@ -29,6 +29,11 @@ function messageboxPage(options = {}) {
         initialCaptureId: String(options.initialCaptureId || ""),
         messageCaptureManualDate: "",
         messageCaptureManualNote: "",
+        messageCaptureActiveCandidateId: "",
+        messageCaptureActiveCandidateRef: null,
+        messageCaptureCalendarMonthKey: "",
+        messageCaptureDragCandidateId: "",
+        messageCaptureSourcePreviewOpen: true,
 
         init() {
             ensureMessageboxToastBridge();
@@ -71,21 +76,25 @@ function messageboxPage(options = {}) {
                 baseResetFlow();
                 this.messageCaptureManualDate = "";
                 this.messageCaptureManualNote = "";
+                this.resetMessageCapturePlannerState();
             };
 
             this.applyMessageCaptureResult = (payload) => {
                 baseApplyResult(payload);
                 this.syncManualInputsFromPayload(payload);
+                this.syncMessageCapturePlannerState();
             };
 
             this.applyMessageCaptureArchiveSaveResult = (payload) => {
                 baseApplyArchiveResult(payload);
                 this.syncManualInputsFromPayload(payload);
+                this.resetMessageCapturePlannerState();
             };
 
             this.applyArchiveDetailToMessageCapture = (detailPayload) => {
                 baseApplyArchiveDetail(detailPayload);
                 this.syncManualInputsFromPayload(detailPayload);
+                this.syncMessageCapturePlannerState();
                 this.focusMessageInput({ preserveStep: true, focusInput: false });
             };
 
@@ -200,6 +209,301 @@ function messageboxPage(options = {}) {
         openMessageArchiveCapture(captureId) {
             this.messageArchiveSelectionShouldReveal = true;
             return this.selectMessageArchiveItem(captureId);
+        },
+
+        resetMessageCapturePlannerState() {
+            this.messageCaptureActiveCandidateId = "";
+            this.messageCaptureActiveCandidateRef = this.emptyMessageCaptureCandidate();
+            this.messageCaptureCalendarMonthKey = this.normalizeMessageCaptureMonthKey(this.defaultManualCandidateDate());
+            this.messageCaptureDragCandidateId = "";
+            this.messageCaptureSourcePreviewOpen = true;
+        },
+
+        emptyMessageCaptureCandidate() {
+            const defaultDate = this.defaultManualCandidateDate();
+            return {
+                candidate_id: "",
+                kind: "event",
+                badge_text: "",
+                badge_class: "border-slate-200 bg-slate-50 text-slate-700",
+                title: "",
+                summary: "",
+                selected: false,
+                already_saved: false,
+                needs_check: false,
+                is_all_day: true,
+                has_time: false,
+                start_date: defaultDate,
+                end_date: defaultDate,
+                start_clock: "09:00",
+                end_clock: "10:00",
+                edit_open: false,
+                is_manual: false,
+            };
+        },
+
+        hasActiveMessageCaptureCandidate() {
+            return !!String(this.messageCaptureActiveCandidateId || "").trim();
+        },
+
+        normalizeMessageCaptureMonthKey(dateKey) {
+            const fallbackDate = this.defaultManualCandidateDate();
+            const normalizedValue = String(dateKey || fallbackDate).trim() || fallbackDate;
+            const parsed = this.parseDateKey(normalizedValue);
+            parsed.setDate(1);
+            return this.dateKey(parsed);
+        },
+
+        messageCaptureDragEnabled() {
+            if (typeof window === "undefined" || !window.matchMedia) return false;
+            return window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+        },
+
+        messageCapturePlannerCandidates() {
+            return Array.isArray(this.messageCaptureCandidates) ? this.messageCaptureCandidates : [];
+        },
+
+        messageCaptureEditableCandidates() {
+            return this.messageCapturePlannerCandidates().filter((candidate) => !candidate.already_saved);
+        },
+
+        messageCaptureActiveCandidate() {
+            const targetId = String(this.messageCaptureActiveCandidateId || "");
+            if (!targetId) return null;
+            if (
+                this.messageCaptureActiveCandidateRef
+                && String(this.messageCaptureActiveCandidateRef.candidate_id || "") === targetId
+            ) {
+                return this.messageCaptureActiveCandidateRef;
+            }
+            return this.messageCapturePlannerCandidates().find(
+                (candidate) => String(candidate.candidate_id || "") === targetId,
+            ) || null;
+        },
+
+        syncMessageCapturePlannerState(options = {}) {
+            const editableCandidates = this.messageCaptureEditableCandidates();
+            const allCandidates = this.messageCapturePlannerCandidates();
+            const preferredCandidateId = String(options.preferredCandidateId || "").trim();
+            let nextActiveCandidate = null;
+
+            if (preferredCandidateId) {
+                nextActiveCandidate = allCandidates.find(
+                    (candidate) => String(candidate.candidate_id || "") === preferredCandidateId,
+                ) || null;
+            }
+            if (!nextActiveCandidate && this.messageCaptureActiveCandidateId) {
+                nextActiveCandidate = editableCandidates.find(
+                    (candidate) => String(candidate.candidate_id || "") === String(this.messageCaptureActiveCandidateId),
+                ) || null;
+            }
+            if (!nextActiveCandidate) {
+                nextActiveCandidate = editableCandidates[0] || null;
+            }
+
+            this.messageCaptureActiveCandidateId = nextActiveCandidate
+                ? String(nextActiveCandidate.candidate_id || "")
+                : "";
+            this.messageCaptureActiveCandidateRef = nextActiveCandidate || this.emptyMessageCaptureCandidate();
+
+            const monthAnchorDate = options.monthDate
+                || (nextActiveCandidate ? (nextActiveCandidate.start_date || nextActiveCandidate.end_date) : "")
+                || this.defaultManualCandidateDate();
+            this.messageCaptureCalendarMonthKey = this.normalizeMessageCaptureMonthKey(monthAnchorDate);
+
+            if (this.messageCaptureStep !== "confirm") {
+                this.messageCaptureDragCandidateId = "";
+            }
+        },
+
+        selectMessageCaptureCandidate(candidateId, options = {}) {
+            const targetId = String(candidateId || "");
+            if (!targetId) return;
+            this.syncMessageCapturePlannerState({
+                preferredCandidateId: targetId,
+                monthDate: options.keepMonth ? this.messageCaptureCalendarMonthKey : "",
+            });
+        },
+
+        messageCaptureActiveCandidateBadgeText() {
+            const candidate = this.messageCaptureActiveCandidate();
+            if (!candidate) return "";
+            return candidate.badge_text || "";
+        },
+
+        messageCaptureActiveCandidateDateLabel() {
+            const candidate = this.messageCaptureActiveCandidate();
+            if (!candidate) return "후보를 먼저 선택해 주세요.";
+            return this.formatMessageCaptureCandidateDate(candidate);
+        },
+
+        moveMessageCaptureCalendarMonth(offset) {
+            const baseDate = this.parseDateKey(this.messageCaptureCalendarMonthKey || this.defaultManualCandidateDate());
+            baseDate.setMonth(baseDate.getMonth() + Number(offset || 0), 1);
+            this.messageCaptureCalendarMonthKey = this.normalizeMessageCaptureMonthKey(this.dateKey(baseDate));
+        },
+
+        messageCaptureCalendarMonthLabel() {
+            const parsed = this.parseDateKey(this.messageCaptureCalendarMonthKey || this.defaultManualCandidateDate());
+            return `${parsed.getFullYear()}년 ${parsed.getMonth() + 1}월`;
+        },
+
+        messageCaptureCalendarDays() {
+            const monthStart = this.parseDateKey(this.messageCaptureCalendarMonthKey || this.defaultManualCandidateDate());
+            monthStart.setDate(1);
+            const visibleStart = new Date(monthStart);
+            visibleStart.setDate(monthStart.getDate() - monthStart.getDay());
+            const activeCandidate = this.messageCaptureActiveCandidate();
+            const activeStart = activeCandidate ? String(activeCandidate.start_date || "") : "";
+            const activeEnd = activeCandidate ? String(activeCandidate.end_date || activeStart || "") : "";
+            const monthKey = this.dateKey(monthStart);
+            const todayKey = this.dateKey(new Date());
+            const candidateCounts = {};
+
+            for (const candidate of this.messageCapturePlannerCandidates()) {
+                const startKey = String(candidate.start_date || "").trim();
+                const endKey = String(candidate.end_date || startKey).trim();
+                if (!startKey) continue;
+                const startDate = this.parseDateKey(startKey);
+                const endDate = this.parseDateKey(endKey);
+                for (
+                    let cursor = new Date(startDate);
+                    cursor.getTime() <= endDate.getTime();
+                    cursor.setDate(cursor.getDate() + 1)
+                ) {
+                    const cursorKey = this.dateKey(cursor);
+                    candidateCounts[cursorKey] = Number(candidateCounts[cursorKey] || 0) + 1;
+                }
+            }
+
+            return Array.from({ length: 42 }, (_, index) => {
+                const dayDate = new Date(visibleStart);
+                dayDate.setDate(visibleStart.getDate() + index);
+                const dayKey = this.dateKey(dayDate);
+                const isInCurrentMonth = dayKey.slice(0, 7) === monthKey.slice(0, 7);
+                const isInActiveRange = !!activeStart && dayKey >= activeStart && dayKey <= activeEnd;
+                return {
+                    key: dayKey,
+                    day_number: dayDate.getDate(),
+                    in_current_month: isInCurrentMonth,
+                    is_today: dayKey === todayKey,
+                    is_active_range: isInActiveRange,
+                    has_candidates: Number(candidateCounts[dayKey] || 0) > 0,
+                    candidate_count: Number(candidateCounts[dayKey] || 0),
+                };
+            });
+        },
+
+        messageCaptureCalendarDayButtonClass(day) {
+            const classes = [];
+            if (!day.in_current_month) {
+                classes.push("border-slate-100", "bg-slate-50", "text-slate-300");
+            } else if (day.is_active_range) {
+                classes.push("border-sky-300", "bg-sky-50", "text-slate-900", "shadow-sm");
+            } else {
+                classes.push("border-slate-200", "bg-white", "text-slate-700", "hover:border-slate-300", "hover:bg-slate-50");
+            }
+            if (day.is_today) {
+                classes.push("ring-2", "ring-amber-200");
+            }
+            if (this.messageCaptureDragCandidateId) {
+                classes.push("cursor-copy");
+            }
+            return classes.join(" ");
+        },
+
+        beginMessageCaptureCandidateDrag(candidateId, dragEvent) {
+            const targetId = String(candidateId || "");
+            if (!targetId) return;
+            this.messageCaptureDragCandidateId = targetId;
+            this.selectMessageCaptureCandidate(targetId, { keepMonth: true });
+            const dataTransfer = dragEvent && dragEvent.dataTransfer ? dragEvent.dataTransfer : null;
+            if (dataTransfer) {
+                dataTransfer.effectAllowed = "move";
+                dataTransfer.setData("text/plain", targetId);
+            }
+        },
+
+        clearMessageCaptureCandidateDrag() {
+            this.messageCaptureDragCandidateId = "";
+        },
+
+        messageCaptureRangeLength(candidate) {
+            if (!candidate || !candidate.start_date) return 0;
+            const startDate = this.parseDateKey(candidate.start_date);
+            const endDate = this.parseDateKey(candidate.end_date || candidate.start_date);
+            const diffMs = endDate.getTime() - startDate.getTime();
+            return Math.max(0, Math.round(diffMs / (24 * 60 * 60 * 1000)));
+        },
+
+        applyMessageCaptureCandidateToDate(candidate, targetDateKey) {
+            if (!candidate) {
+                this.messageCaptureErrorText = "먼저 날짜를 바꿀 후보를 선택해 주세요.";
+                window.showToast(this.messageCaptureErrorText, "info");
+                return;
+            }
+            const normalizedTargetDate = String(targetDateKey || "").trim();
+            if (!normalizedTargetDate) return;
+
+            const spanDays = this.messageCaptureRangeLength(candidate);
+            const nextStartDate = this.parseDateKey(normalizedTargetDate);
+            const nextEndDate = new Date(nextStartDate);
+            nextEndDate.setDate(nextEndDate.getDate() + spanDays);
+
+            candidate.start_date = normalizedTargetDate;
+            candidate.end_date = this.dateKey(nextEndDate);
+            candidate.selected = !candidate.already_saved;
+            candidate.edit_open = true;
+            this.messageCaptureErrorText = "";
+            this.messageCaptureCalendarMonthKey = this.normalizeMessageCaptureMonthKey(normalizedTargetDate);
+        },
+
+        handleMessageCaptureCalendarDrop(targetDateKey, dropEvent) {
+            const activeCandidate = this.messageCaptureActiveCandidate();
+            const dropTransfer = dropEvent && dropEvent.dataTransfer ? dropEvent.dataTransfer : null;
+            const draggedCandidateId = String(
+                this.messageCaptureDragCandidateId
+                || (dropTransfer ? dropTransfer.getData("text/plain") : "")
+                || "",
+            );
+            const dropCandidate = draggedCandidateId
+                ? this.messageCapturePlannerCandidates().find(
+                    (candidate) => String(candidate.candidate_id || "") === draggedCandidateId,
+                )
+                : activeCandidate;
+            this.applyMessageCaptureCandidateToDate(dropCandidate || activeCandidate, targetDateKey);
+            this.clearMessageCaptureCandidateDrag();
+        },
+
+        applyActiveMessageCaptureDate(targetDateKey) {
+            this.applyMessageCaptureCandidateToDate(this.messageCaptureActiveCandidate(), targetDateKey);
+        },
+
+        prepareSelectedArchiveCaptureForEditing(options = {}) {
+            const detail = this.messageArchiveSelectedCapture;
+            if (!detail) return false;
+            this.applyArchiveDetailToMessageCapture(detail);
+
+            const targetCandidateId = String(options.candidateId || "");
+            if (targetCandidateId) {
+                this.selectMessageCaptureCandidate(targetCandidateId);
+            }
+
+            if (options.addManualCandidate) {
+                this.addManualMessageCaptureCandidate();
+            }
+
+            this.focusMessageInput({ preserveStep: true, focusInput: false });
+            return true;
+        },
+
+        editSelectedArchiveCandidate(candidateId) {
+            if (!this.prepareSelectedArchiveCaptureForEditing({ candidateId })) return;
+            window.showToast("위쪽 날짜 정하기 화면에서 달력으로 바로 옮길 수 있어요.", "info");
+        },
+
+        addManualCandidateFromSelectedArchive() {
+            this.prepareSelectedArchiveCaptureForEditing({ addManualCandidate: true });
         },
 
         afterMessageboxDomUpdate(callback) {
@@ -433,6 +737,10 @@ function messageboxPage(options = {}) {
             this.messageCaptureCandidates = this.messageCaptureCandidates.concat(candidate);
             this.messageCaptureStep = "confirm";
             this.messageCaptureErrorText = "";
+            this.syncMessageCapturePlannerState({
+                preferredCandidateId: candidate.candidate_id,
+                monthDate: defaultDate,
+            });
             window.showToast("직접 수정할 일정 칸을 추가했어요.", "info");
         },
 
@@ -442,6 +750,7 @@ function messageboxPage(options = {}) {
             this.messageCaptureCandidates = this.messageCaptureCandidates.filter(
                 (candidate) => String(candidate.candidate_id || "") !== targetId,
             );
+            this.syncMessageCapturePlannerState();
         },
 
         buildSelectedMessageCaptureCandidatesPayload() {

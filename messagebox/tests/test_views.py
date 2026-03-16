@@ -40,7 +40,11 @@ class MessageboxViewTests(TestCase):
         self.assertContains(response, "날짜 후보 불러오는 중...")
         self.assertContains(response, ':disabled="isParsingMessageCapture || isLoadingMessageArchiveDetail"')
         self.assertContains(response, "직접 일정 추가")
-        self.assertContains(response, "제목, 종류, 날짜, 시간을 직접 수정")
+        self.assertContains(response, "날짜 놓는 달력")
+        self.assertContains(response, "선택한 후보 편집")
+        self.assertContains(response, "날짜 정하기")
+        self.assertContains(response, "editSelectedArchiveCandidate(candidate.candidate_id)")
+        self.assertContains(response, "addManualCandidateFromSelectedArchive()")
 
     def test_main_keeps_requested_capture_id_in_context(self):
         response = self.client.get(f"{reverse('messagebox:main')}?capture=test-capture-id")
