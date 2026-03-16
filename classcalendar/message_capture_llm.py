@@ -21,6 +21,7 @@ def refine_message_capture_candidates(*, normalized_text, lines, candidates, tim
     prompt = (
         "당신은 학교 메시지에서 교사가 달력에 바로 저장할 일정 후보를 다듬는 도우미입니다. "
         "반드시 JSON 객체만 반환하세요. candidates 배열만 반환해야 하며, 각 항목에는 title, summary, kind, is_recommended, evidence_text를 포함하세요. "
+        "입력된 candidates의 개수와 의미를 유지하고, candidate_id를 그대로 돌려주세요. 순서를 바꾸거나 서로 다른 후보를 섞지 마세요. "
         "kind는 event, deadline, prep 중 하나만 사용하세요. "
         "제목은 교사가 바로 이해할 수 있게 짧고 실용적으로 쓰고, summary는 1~2문장으로만 정리하세요. "
         "선생님 안녕하세요 같은 인사말은 제목에 넣지 마세요. "
@@ -31,6 +32,7 @@ def refine_message_capture_candidates(*, normalized_text, lines, candidates, tim
         "lines": list(lines or []),
         "candidates": [
             {
+                "candidate_id": str(candidate.get("refinement_id") or index),
                 "kind": str(candidate.get("kind") or "event"),
                 "title": str(candidate.get("title") or "").strip(),
                 "summary": str(candidate.get("summary") or "").strip(),
@@ -38,7 +40,7 @@ def refine_message_capture_candidates(*, normalized_text, lines, candidates, tim
                 "needs_check": bool(candidate.get("needs_check")),
                 "is_recommended": bool(candidate.get("is_recommended", True)),
             }
-            for candidate in candidates
+            for index, candidate in enumerate(candidates)
         ],
     }
     response = _call_json_response(
@@ -51,7 +53,15 @@ def refine_message_capture_candidates(*, normalized_text, lines, candidates, tim
     refined = response.get("candidates") or []
     if not isinstance(refined, list):
         return []
-    return refined[: len(candidates)]
+    normalized_refined = []
+    for index, original_candidate in enumerate(payload["candidates"]):
+        item = refined[index] if index < len(refined) and isinstance(refined[index], dict) else {}
+        normalized_item = dict(item)
+        normalized_item["candidate_id"] = str(
+            normalized_item.get("candidate_id") or original_candidate["candidate_id"]
+        )
+        normalized_refined.append(normalized_item)
+    return normalized_refined
 
 
 def _call_json_response(*, messages, timeout_seconds=25, attempts=2):

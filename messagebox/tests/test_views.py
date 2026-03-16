@@ -37,6 +37,10 @@ class MessageboxViewTests(TestCase):
         self.assertContains(response, '@click="focusMessageArchive()"')
         self.assertContains(response, "보관만 함")
         self.assertContains(response, "캘린더 연결됨")
+        self.assertContains(response, "날짜 후보 불러오는 중...")
+        self.assertContains(response, ':disabled="isParsingMessageCapture || isLoadingMessageArchiveDetail"')
+        self.assertContains(response, "직접 일정 추가")
+        self.assertContains(response, "제목, 종류, 날짜, 시간을 직접 수정")
 
     def test_main_keeps_requested_capture_id_in_context(self):
         response = self.client.get(f"{reverse('messagebox:main')}?capture=test-capture-id")

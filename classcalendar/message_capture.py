@@ -328,6 +328,42 @@ def _extract_time(text):
 
 
 
+def _line_has_schedule_context(text):
+    normalized = str(text or "").strip()
+    if not normalized:
+        return False
+    if _extract_time(normalized):
+        return True
+    return any(
+        keyword in normalized
+        for keyword in (
+            EVENT_HINT_KEYWORDS
+            + PREP_HINT_KEYWORDS
+            + DEADLINE_HINT_KEYWORDS
+            + TASK_ACTION_KEYWORDS
+            + TASK_OBJECT_KEYWORDS
+        )
+    )
+
+
+
+def _should_accept_relative_date_mention(line, keyword, position):
+    normalized = str(line or "")
+    if position > 0:
+        previous_char = normalized[position - 1]
+        if re.match(r"[가-힣A-Za-z0-9]", previous_char):
+            return False
+
+    next_position = position + len(keyword)
+    if next_position < len(normalized):
+        next_char = normalized[next_position]
+        if re.match(r"[가-힣A-Za-z0-9]", next_char):
+            return _line_has_schedule_context(normalized)
+
+    return True
+
+
+
 def _extract_priority(text):
     lowered = text.lower()
     for keyword in HIGH_PRIORITY_KEYWORDS:
@@ -565,6 +601,8 @@ def _infer_line_date_mentions(lines, now_date):
             position = line.find(keyword)
             if position < 0:
                 continue
+            if not _should_accept_relative_date_mention(line, keyword, position):
+                continue
             line_mentions.append(
                 {
                     "line_index": line_index,
@@ -581,6 +619,11 @@ def _infer_line_date_mentions(lines, now_date):
         date_mentions.extend(line_mentions)
 
     return date_mentions
+
+
+
+def _build_candidate_refinement_id(mention):
+    return f"{mention['line_index']}:{mention['position']}:{mention['evidence']}"
 
 
 
@@ -782,6 +825,7 @@ def _build_raw_candidates(lines, date_mentions, *, now, has_files=False):
         )
         candidates.append(
             {
+                "refinement_id": _build_candidate_refinement_id(mention),
                 "kind": kind,
                 "badge_text": _candidate_badge_text(kind),
                 "title": title,
@@ -845,8 +889,22 @@ def _apply_llm_refinements(candidates, refined_candidates):
         return candidates, False
     applied = False
     updated = []
+    refined_by_id = {}
+    for item in refined_candidates:
+        if not isinstance(item, dict):
+            continue
+        candidate_id = str(item.get("candidate_id") or "").strip()
+        if candidate_id:
+            refined_by_id[candidate_id] = item
     for index, candidate in enumerate(candidates):
-        refined = refined_candidates[index] if index < len(refined_candidates) and isinstance(refined_candidates[index], dict) else {}
+        candidate_id = str(candidate.get("refinement_id") or "").strip()
+        refined = (
+            refined_by_id.get(candidate_id)
+            if candidate_id
+            else None
+        )
+        if refined is None:
+            refined = refined_candidates[index] if index < len(refined_candidates) and isinstance(refined_candidates[index], dict) else {}
         merged = dict(candidate)
         refined_kind = str(refined.get("kind") or "").strip().lower()
         if refined_kind in {KIND_EVENT, KIND_DEADLINE, KIND_PREP}:

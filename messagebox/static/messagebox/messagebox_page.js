@@ -86,7 +86,7 @@ function messageboxPage(options = {}) {
             this.applyArchiveDetailToMessageCapture = (detailPayload) => {
                 baseApplyArchiveDetail(detailPayload);
                 this.syncManualInputsFromPayload(detailPayload);
-                this.focusMessageInput();
+                this.focusMessageInput({ preserveStep: true, focusInput: false });
             };
 
             this.selectMessageArchiveItem = async (captureId) => {
@@ -127,7 +127,9 @@ function messageboxPage(options = {}) {
         },
 
         focusMessageInput(options = {}) {
-            this.messageCaptureStep = "input";
+            if (!options.preserveStep) {
+                this.messageCaptureStep = String(options.step || "input");
+            }
             if (options.updateHash !== false) {
                 this.updateMessageboxHash("messagebox-compose");
             }
@@ -141,6 +143,9 @@ function messageboxPage(options = {}) {
                         behavior: options.behavior || "smooth",
                         block: "start",
                     });
+                }
+                if (options.focusInput === false) {
+                    return;
                 }
                 if (input && typeof input.focus === "function") {
                     input.focus();
@@ -346,6 +351,130 @@ function messageboxPage(options = {}) {
                 url.searchParams.delete("capture");
             }
             window.history.replaceState({}, "", url.toString());
+        },
+
+        messageCaptureCandidateBadgeMeta(kind) {
+            const normalizedKind = String(kind || "event").trim().toLowerCase();
+            const map = {
+                event: {
+                    kind: "event",
+                    badge_text: "행사",
+                    badge_class: "border-indigo-200 bg-indigo-50 text-indigo-700",
+                },
+                deadline: {
+                    kind: "deadline",
+                    badge_text: "마감",
+                    badge_class: "border-rose-200 bg-rose-50 text-rose-700",
+                },
+                prep: {
+                    kind: "prep",
+                    badge_text: "준비",
+                    badge_class: "border-amber-200 bg-amber-50 text-amber-700",
+                },
+            };
+            return map[normalizedKind] || map.event;
+        },
+
+        normalizeMessageCaptureCandidate(raw) {
+            const start = raw.start_time ? new Date(raw.start_time) : null;
+            const end = raw.end_time ? new Date(raw.end_time) : (start ? new Date(raw.start_time) : null);
+            const fallbackDate = this.messageCaptureManualDate || this.dateKey(new Date());
+            const badgeMeta = this.messageCaptureCandidateBadgeMeta(raw.kind || "event");
+            return {
+                candidate_id: String(raw.candidate_id || ""),
+                kind: badgeMeta.kind,
+                badge_text: raw.badge_text || badgeMeta.badge_text,
+                badge_class: badgeMeta.badge_class,
+                title: String(raw.title || "").trim(),
+                summary: String(raw.summary || "").trim(),
+                evidence_text: String(raw.evidence_text || "").trim(),
+                selected: raw.already_saved ? false : raw.is_recommended !== false,
+                already_saved: !!raw.already_saved,
+                needs_check: !!raw.needs_check,
+                is_all_day: !!raw.is_all_day,
+                has_time: !!start && !!end && !raw.is_all_day,
+                start_date: start ? this.dateKey(start) : fallbackDate,
+                end_date: end ? this.dateKey(end) : (start ? this.dateKey(start) : fallbackDate),
+                start_clock: start ? this.toTimeInput(start) : "09:00",
+                end_clock: end ? this.toTimeInput(end) : "10:00",
+                edit_open: !!raw.is_manual,
+                is_manual: !!raw.is_manual,
+            };
+        },
+
+        applyMessageCaptureCandidateKind(candidate, nextKind) {
+            if (!candidate) return;
+            const badgeMeta = this.messageCaptureCandidateBadgeMeta(nextKind);
+            candidate.kind = badgeMeta.kind;
+            candidate.badge_text = badgeMeta.badge_text;
+            candidate.badge_class = badgeMeta.badge_class;
+        },
+
+        defaultManualCandidateDate() {
+            return this.messageCaptureManualDate || this.dateKey(new Date());
+        },
+
+        addManualMessageCaptureCandidate() {
+            const defaultDate = this.defaultManualCandidateDate();
+            const candidate = this.normalizeMessageCaptureCandidate({
+                candidate_id: `manual:${this.createMessageCaptureIdempotencyKey()}`,
+                kind: "event",
+                title: "",
+                summary: "",
+                start_time: `${defaultDate}T09:00`,
+                end_time: `${defaultDate}T10:00`,
+                is_all_day: false,
+                is_recommended: true,
+                is_manual: true,
+            });
+            candidate.selected = true;
+            candidate.edit_open = true;
+            candidate.has_time = true;
+            this.messageCaptureCandidates = this.messageCaptureCandidates.concat(candidate);
+            this.messageCaptureStep = "confirm";
+            this.messageCaptureErrorText = "";
+            window.showToast("직접 수정할 일정 칸을 추가했어요.", "info");
+        },
+
+        removeMessageCaptureCandidate(candidateId) {
+            const targetId = String(candidateId || "");
+            if (!targetId) return;
+            this.messageCaptureCandidates = this.messageCaptureCandidates.filter(
+                (candidate) => String(candidate.candidate_id || "") !== targetId,
+            );
+        },
+
+        buildSelectedMessageCaptureCandidatesPayload() {
+            const normalized = [];
+            for (const candidate of this.messageCaptureCandidates) {
+                const isSelected = !!candidate.selected && !candidate.already_saved;
+                const title = String(candidate.title || "").trim();
+                if (!isSelected) {
+                    normalized.push({
+                        candidate_id: candidate.candidate_id,
+                        selected: false,
+                        kind: candidate.kind,
+                    });
+                    continue;
+                }
+                if (!title) {
+                    this.messageCaptureErrorText = "일정 제목을 입력해 주세요.";
+                    return null;
+                }
+                const times = this.buildMessageCaptureCandidateTimes(candidate);
+                if (!times) return null;
+                normalized.push({
+                    candidate_id: candidate.candidate_id,
+                    selected: true,
+                    kind: candidate.kind,
+                    title,
+                    start_time: times.start_time,
+                    end_time: times.end_time,
+                    is_all_day: times.is_all_day,
+                    summary: String(candidate.summary || "").trim(),
+                });
+            }
+            return normalized;
         },
 
         async submitMessageCaptureParse() {

@@ -81,3 +81,76 @@ class MessageCaptureParserTests(SimpleTestCase):
         self.assertEqual(result["parse_status"], "failed")
         self.assertEqual(result["confidence_label"], "low")
         self.assertEqual(result["candidates"], [])
+
+    def test_parse_ignores_farewell_today_phrase_and_keeps_explicit_dates(self):
+        now = timezone.make_aware(datetime(2026, 3, 16, 9, 0))
+        result = parse_message_capture_draft(
+            "선생님 안녕하세요.\n"
+            "학부모총회와 관련하여 계획서를 다시한번 보내드립니다.\n"
+            "\n"
+            "1) 의자배치는 18일(수) 15시 45분\n"
+            ": 담임교사, 주무관님 협조\n"
+            "2) 의자 뒷정리는 19일(목) 15시 10분\n"
+            ": 전담, 비교과, 주무관님 협조\n"
+            "3) 내빈석 셋팅 및 청소담당 확인\n"
+            "\n"
+            "4) 등록부 출력하여 배치\n"
+            "5) 총회 전 교실정리\n"
+            "-------------------\n"
+            "\n"
+            "그리고 또 하나,\n"
+            "4월 2일(목)에 보정동에 벚꽃이 핀다는 정보를\n"
+            "친목 회장님께 들었습니다.\n"
+            "직원연수를 계획하고 있으니 오후 시간을 비워두셔요. (함께 움직이지 않습니다. 학년별로 자유롭게...)\n"
+            "\n"
+            "이번주 총회 끝나고 조금 여유로워지기를 바라며\n"
+            "오늘도 즐퇴하세요.",
+            now=now,
+            has_files=False,
+        )
+
+        self.assertEqual(
+            [candidate["start_time"].date().isoformat() for candidate in result["candidates"]],
+            ["2026-03-18", "2026-03-19", "2026-04-02"],
+        )
+
+    def test_parse_llm_refinement_matches_candidate_ids_even_when_response_is_reordered(self):
+        now = timezone.make_aware(datetime(2026, 3, 10, 9, 0))
+
+        def reordered_refiner(*, candidates, **kwargs):
+            return [
+                {
+                    "candidate_id": candidates[1]["refinement_id"],
+                    "kind": "event",
+                    "title": "학부모총회",
+                    "summary": "학부모총회가 실시됩니다.",
+                    "is_recommended": True,
+                    "evidence_text": "3월 19일 학부모총회 실시",
+                },
+                {
+                    "candidate_id": candidates[0]["refinement_id"],
+                    "kind": "deadline",
+                    "title": "연수물 수정 마감",
+                    "summary": "12일까지 연수물을 수정해 주세요.",
+                    "is_recommended": True,
+                    "evidence_text": "12일(목)까지 연수물 수정 부탁드립니다.",
+                },
+            ]
+
+        result = parse_message_capture_draft(
+            "3월 19일 학부모총회 실시\n12일(목)까지 연수물 수정 부탁드립니다.",
+            now=now,
+            has_files=False,
+            llm_refiner=reordered_refiner,
+        )
+
+        self.assertEqual(
+            {
+                candidate["start_time"].date().isoformat(): candidate["title"]
+                for candidate in result["candidates"]
+            },
+            {
+                "2026-03-12": "연수물 수정 마감",
+                "2026-03-19": "학부모총회",
+            },
+        )

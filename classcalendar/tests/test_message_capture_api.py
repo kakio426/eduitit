@@ -439,6 +439,47 @@ class MessageCaptureApiTests(TestCase):
         self.assertTrue(all(item.get("source_sheetbook_id") == sheetbook.id for item in saved_events))
         self.assertTrue(all(item.get("source_tab_id") == calendar_tab.id for item in saved_events))
 
+    def test_commit_can_create_manual_candidate_when_user_corrects_parser(self):
+        save_response = self.client.post(
+            self.save_url,
+            data={
+                "raw_text": "자동 후보가 없어서 직접 입력합니다.",
+                "idempotency_key": "capture-manual-candidate",
+            },
+        )
+        self.assertEqual(save_response.status_code, 201)
+        capture_id = save_response.json()["capture_id"]
+
+        commit_response = self._commit(
+            capture_id,
+            {
+                "selected_candidates": [
+                    {
+                        "candidate_id": "manual:chair-layout",
+                        "selected": True,
+                        "kind": "prep",
+                        "title": "의자 배치",
+                        "start_time": "2026-03-18T15:45",
+                        "end_time": "2026-03-18T16:45",
+                        "is_all_day": False,
+                        "summary": "담임교사, 주무관님 협조",
+                    }
+                ]
+            },
+        )
+        self.assertEqual(commit_response.status_code, 201)
+        payload = commit_response.json()
+        self.assertEqual(len(payload.get("created_events") or []), 1)
+
+        capture = CalendarMessageCapture.objects.get(id=capture_id)
+        candidates = list(capture.candidates.order_by("sort_order"))
+        self.assertEqual(len(candidates), 1)
+        self.assertEqual(candidates[0].candidate_kind, CalendarMessageCaptureCandidate.CandidateKind.PREP)
+        self.assertEqual(candidates[0].title, "의자 배치")
+        self.assertEqual(candidates[0].summary, "담임교사, 주무관님 협조")
+        self.assertIsNotNone(candidates[0].committed_event_id)
+        self.assertEqual(candidates[0].committed_event.title, "[준비] 의자 배치")
+
     def test_parse_rejects_too_large_file(self):
         upload = self._pdf_upload(content=b"0123456789ABCDEF")
         with patch("classcalendar.views.MESSAGE_CAPTURE_MAX_FILE_BYTES", 8):

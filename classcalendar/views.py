@@ -92,7 +92,7 @@ MESSAGE_CAPTURE_ALLOWED_MIME_TYPES = {
     "application/octet-stream",
 }
 MESSAGE_CAPTURE_ALLOWED_MIME_PREFIXES = ()
-MESSAGE_CAPTURE_RULE_VERSION = "mvp-v2"
+MESSAGE_CAPTURE_RULE_VERSION = "mvp-v3"
 MESSAGE_CAPTURE_CLASSIFIER_ASSIST_THRESHOLD = float(
     getattr(settings, "FEATURE_MESSAGE_CAPTURE_CLASSIFIER_ASSIST_THRESHOLD", DEFAULT_ASSIST_THRESHOLD)
 )
@@ -1578,6 +1578,7 @@ def _extract_selected_candidates(payload):
                 "candidate_id": candidate_id,
                 "selected": bool(item.get("selected", True)),
                 "title": str(item.get("title") or "").strip()[:200],
+                "kind": str(item.get("kind") or "").strip().lower(),
                 "start_time": str(item.get("start_time") or "").strip(),
                 "end_time": str(item.get("end_time") or "").strip(),
                 "is_all_day": bool(item.get("is_all_day")),
@@ -1585,6 +1586,16 @@ def _extract_selected_candidates(payload):
             }
         )
     return normalized
+
+
+def _normalize_selected_candidate_kind(raw_kind):
+    normalized = str(raw_kind or "").strip().lower()
+    allowed = {
+        CalendarMessageCaptureCandidate.CandidateKind.EVENT,
+        CalendarMessageCaptureCandidate.CandidateKind.DEADLINE,
+        CalendarMessageCaptureCandidate.CandidateKind.PREP,
+    }
+    return normalized if normalized in allowed else CalendarMessageCaptureCandidate.CandidateKind.EVENT
 
 
 def _parse_candidate_datetime(raw_value):
@@ -4286,26 +4297,42 @@ def api_message_capture_commit(request, capture_id):
                 str(candidate.id): candidate
                 for candidate in CalendarMessageCaptureCandidate.objects.select_for_update().select_related("committed_event").filter(capture=capture_for_update)
             }
+            next_sort_order = (
+                max((candidate.sort_order for candidate in candidate_map.values()), default=-1) + 1
+            )
             for item in selected_candidates:
                 candidate_id = item.get("candidate_id")
                 candidate = candidate_map.get(candidate_id)
-                if not candidate:
+                is_manual_candidate = str(candidate_id or "").startswith("manual:")
+                if not candidate and not is_manual_candidate:
                     skipped_count += 1
                     continue
 
                 if not item.get("selected", True):
-                    if candidate.commit_status != CalendarMessageCaptureCandidate.CommitStatus.SAVED:
+                    if candidate and candidate.commit_status != CalendarMessageCaptureCandidate.CommitStatus.SAVED:
                         candidate.commit_status = CalendarMessageCaptureCandidate.CommitStatus.SKIPPED
                         candidate.save(update_fields=["commit_status", "updated_at"])
                     skipped_count += 1
                     continue
 
-                title = item.get("title") or candidate.title or "메시지에서 만든 일정"
-                summary = item.get("summary") or candidate.summary or ""
-                start_time = _parse_candidate_datetime(item.get("start_time")) or candidate.start_time
-                end_time = _parse_candidate_datetime(item.get("end_time")) or candidate.end_time
+                candidate_kind = _normalize_selected_candidate_kind(
+                    item.get("kind") or (candidate.candidate_kind if candidate else "")
+                )
+                title = (item.get("title") or (candidate.title if candidate else "") or "메시지에서 만든 일정").strip()
+                summary = item.get("summary") or (candidate.summary if candidate else "") or ""
+                start_time = _parse_candidate_datetime(item.get("start_time")) or (candidate.start_time if candidate else None)
+                end_time = _parse_candidate_datetime(item.get("end_time")) or (candidate.end_time if candidate else None)
                 is_all_day = bool(item.get("is_all_day"))
 
+                if not title:
+                    return JsonResponse(
+                        {
+                            "status": "error",
+                            "code": "validation_error",
+                            "message": "일정 제목을 입력해 주세요.",
+                        },
+                        status=400,
+                    )
                 if not start_time or not end_time:
                     return JsonResponse(
                         {
@@ -4325,9 +4352,30 @@ def api_message_capture_commit(request, capture_id):
                         status=400,
                     )
 
+                if not candidate and is_manual_candidate:
+                    candidate = CalendarMessageCaptureCandidate.objects.create(
+                        capture=capture_for_update,
+                        sort_order=next_sort_order,
+                        candidate_kind=candidate_kind,
+                        title=title[:200],
+                        summary=summary,
+                        start_time=start_time,
+                        end_time=end_time,
+                        is_all_day=is_all_day,
+                        confidence_score=0,
+                        is_recommended=True,
+                        needs_check=False,
+                        evidence_text="직접 추가한 일정",
+                        evidence_payload={"manual_created": True},
+                        commit_status=CalendarMessageCaptureCandidate.CommitStatus.PENDING,
+                    )
+                    next_sort_order += 1
+                    candidate_map[candidate_id] = candidate
+
                 selected_snapshot.append(
                     {
                         "candidate_id": candidate_id,
+                        "kind": candidate_kind,
                         "title": title,
                         "start_time": start_time.isoformat(),
                         "end_time": end_time.isoformat(),
@@ -4343,14 +4391,14 @@ def api_message_capture_commit(request, capture_id):
                         candidate.save(update_fields=["commit_status", "updated_at"])
                     continue
 
-                badge = _candidate_kind_badge_text(candidate.candidate_kind)
+                badge = _candidate_kind_badge_text(candidate_kind)
                 prefixed_title = title if title.startswith(f"[{badge}]") else f"[{badge}] {title}"
                 create_kwargs = {
                     "title": prefixed_title,
                     "start_time": start_time,
                     "end_time": end_time,
                     "is_all_day": is_all_day,
-                    "color": _candidate_kind_color(candidate.candidate_kind),
+                    "color": _candidate_kind_color(candidate_kind),
                     "visibility": CalendarEvent.VISIBILITY_TEACHER,
                     "author": request.user,
                     "classroom": classroom,
@@ -4372,6 +4420,7 @@ def api_message_capture_commit(request, capture_id):
                 created_events.append(_serialize_compact_event(event))
                 saved_count += 1
 
+                candidate.candidate_kind = candidate_kind
                 candidate.title = title[:200]
                 candidate.summary = summary
                 candidate.start_time = start_time
@@ -4381,6 +4430,7 @@ def api_message_capture_commit(request, capture_id):
                 candidate.commit_status = CalendarMessageCaptureCandidate.CommitStatus.SAVED
                 candidate.save(
                     update_fields=[
+                        "candidate_kind",
                         "title",
                         "summary",
                         "start_time",
