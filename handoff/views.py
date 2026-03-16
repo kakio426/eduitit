@@ -484,11 +484,11 @@ def group_members_template_download(request, group_id):
     response["Content-Disposition"] = f'attachment; filename="{group.name}_명단_양식.csv"'
 
     writer = csv.writer(response)
-    writer.writerow(["이름", "직위/학년반"])
-    writer.writerow(["# 아래 예시를 참고해서 실제 명단으로 바꿔 쓰세요", ""])
-    writer.writerow(["# 예시 김민수", "3-1"])
-    writer.writerow(["# 예시 이서연", "교감"])
-    writer.writerow(["# 예시 박지훈", "교장"])
+    writer.writerow(["이름", "직위/학년반", "작성 예시"])
+    writer.writerow(["", "", "왼쪽 두 칸만 채우세요. 오른쪽 예시는 지우지 않아도 됩니다."])
+    writer.writerow(["", "", "예: 김민수 / 3-1"])
+    writer.writerow(["", "", "예: 이서연 / 교감"])
+    writer.writerow(["", "", "예: 박지훈 / 교장"])
     return response
 
 

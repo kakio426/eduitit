@@ -99,7 +99,15 @@ class HandoffFlowTest(TestCase):
 
     def test_group_members_upload_csv_supports_header_and_cp949(self):
         group = HandoffRosterGroup.objects.create(owner=self.user, name="CSV 명단")
-        csv_content = "이름,직위/학년반\n# 아래 예시를 참고해서 실제 명단으로 바꿔 쓰세요,\n# 예시 김민수,3-1\n김민수,3-1\n이서연,교감\n김민수,3-1\n김민수,3-2\n"
+        csv_content = (
+            "이름,직위/학년반,작성 예시\n"
+            ",,왼쪽 두 칸만 채우세요\n"
+            ",,예: 김민수 / 3-1\n"
+            "김민수,3-1,\n"
+            "이서연,교감,\n"
+            "김민수,3-1,\n"
+            "김민수,3-2,\n"
+        )
         upload = SimpleUploadedFile(
             "members.csv",
             csv_content.encode("cp949"),
@@ -138,9 +146,9 @@ class HandoffFlowTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("text/csv", response["Content-Type"])
         content = response.content.decode("utf-8-sig")
-        self.assertIn("이름,직위/학년반", content)
-        self.assertIn("# 예시 김민수,3-1", content)
-        self.assertIn("# 예시 이서연,교감", content)
+        self.assertIn("이름,직위/학년반,작성 예시", content)
+        self.assertIn("왼쪽 두 칸만 채우세요. 오른쪽 예시는 지우지 않아도 됩니다.", content)
+        self.assertIn(",,예: 김민수 / 3-1", content)
 
     def test_return_to_is_preserved_for_group_creation_and_member_updates(self):
         return_to = "/signatures/create/?draft_token=testdraft"
