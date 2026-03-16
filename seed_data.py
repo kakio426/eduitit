@@ -222,7 +222,7 @@ def run():
     Product.objects.create(
         title="AI 도구 가이드",
         lead_text="상황별로 딱 맞는 AI 도구를 추천해드려요.",
-        description="수업 준비부터 생활 지도까지! 복잡한 AI 툴들 사이에서 선생님께 꼭 필요한 것만 골라 사용법과 함께 안내합니다.",
+        description="수업 준비부터 생활 지도까지, 선생님께 꼭 필요한 AI 도구만 골라 바로 써볼 수 있습니다.",
         price=0,
         is_active=True,
         icon="fa-solid fa-robot",

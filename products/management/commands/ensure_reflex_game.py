@@ -95,7 +95,7 @@ class Command(BaseCommand):
             product=product,
             defaults={
                 "title": "탭 순발력 챌린지 사용 가이드",
-                "description": "시작, 반칙 규칙, 전체화면 활용 방법을 안내합니다.",
+                "description": "시작, 반칙 규칙, 전체화면 활용을 바로 확인할 수 있습니다.",
                 "is_published": True,
             },
         )
@@ -104,7 +104,7 @@ class Command(BaseCommand):
         if not manual.is_published:
             manual.is_published = True
             manual_changed.append("is_published")
-        target_desc = "시작, 반칙 규칙, 전체화면 활용 방법을 안내합니다."
+        target_desc = "시작, 반칙 규칙, 전체화면 활용을 바로 확인할 수 있습니다."
         if manual.description != target_desc:
             manual.description = target_desc
             manual_changed.append("description")

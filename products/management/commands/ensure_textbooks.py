@@ -91,7 +91,7 @@ class Command(BaseCommand):
             product=product,
             defaults={
                 "title": "교과서 라이브 수업 사용 가이드",
-                "description": "PDF 업로드부터 라이브 수업 시작, 학생 참여까지의 흐름을 안내합니다.",
+                "description": "PDF 업로드부터 라이브 수업 시작, 학생 참여까지 바로 따라갈 수 있습니다.",
                 "is_published": True,
             },
         )
@@ -99,8 +99,8 @@ class Command(BaseCommand):
         if manual.title != "교과서 라이브 수업 사용 가이드":
             manual.title = "교과서 라이브 수업 사용 가이드"
             manual_changed.append("title")
-        if manual.description != "PDF 업로드부터 라이브 수업 시작, 학생 참여까지의 흐름을 안내합니다.":
-            manual.description = "PDF 업로드부터 라이브 수업 시작, 학생 참여까지의 흐름을 안내합니다."
+        if manual.description != "PDF 업로드부터 라이브 수업 시작, 학생 참여까지 바로 따라갈 수 있습니다.":
+            manual.description = "PDF 업로드부터 라이브 수업 시작, 학생 참여까지 바로 따라갈 수 있습니다."
             manual_changed.append("description")
         if not manual.is_published:
             manual.is_published = True

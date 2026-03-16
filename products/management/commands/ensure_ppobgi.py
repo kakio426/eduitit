@@ -91,7 +91,7 @@ class Command(BaseCommand):
             product=product,
             defaults={
                 "title": "별빛 추첨기 사용 가이드",
-                "description": "명단 입력부터 추첨, 결과 발표까지 기본 사용 흐름을 안내합니다.",
+                "description": "명단 입력부터 추첨, 결과 발표까지 바로 따라갈 수 있습니다.",
                 "is_published": True,
             },
         )
@@ -100,7 +100,7 @@ class Command(BaseCommand):
         if not manual.is_published:
             manual.is_published = True
             manual_changed.append("is_published")
-        target_desc = "명단 입력부터 추첨, 결과 발표까지 기본 사용 흐름을 안내합니다."
+        target_desc = "명단 입력부터 추첨, 결과 발표까지 바로 따라갈 수 있습니다."
         if manual.description != target_desc:
             manual.description = target_desc
             manual_changed.append("description")

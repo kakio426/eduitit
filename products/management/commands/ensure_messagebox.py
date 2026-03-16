@@ -91,7 +91,7 @@ class Command(BaseCommand):
             product=product,
             defaults={
                 "title": "업무 메시지 보관함 시작 가이드",
-                "description": "메시지 붙여넣기부터 보관, 날짜 연결, 처리 완료까지 기본 흐름을 안내합니다.",
+                "description": "메시지 붙여넣기부터 보관, 날짜 연결, 처리 완료까지 바로 따라갈 수 있습니다.",
                 "is_published": True,
             },
         )
@@ -99,8 +99,8 @@ class Command(BaseCommand):
         if manual.title != "업무 메시지 보관함 시작 가이드":
             manual.title = "업무 메시지 보관함 시작 가이드"
             manual_changed.append("title")
-        if manual.description != "메시지 붙여넣기부터 보관, 날짜 연결, 처리 완료까지 기본 흐름을 안내합니다.":
-            manual.description = "메시지 붙여넣기부터 보관, 날짜 연결, 처리 완료까지 기본 흐름을 안내합니다."
+        if manual.description != "메시지 붙여넣기부터 보관, 날짜 연결, 처리 완료까지 바로 따라갈 수 있습니다.":
+            manual.description = "메시지 붙여넣기부터 보관, 날짜 연결, 처리 완료까지 바로 따라갈 수 있습니다."
             manual_changed.append("description")
         if not manual.is_published:
             manual.is_published = True

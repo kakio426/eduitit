@@ -113,7 +113,7 @@ class Command(BaseCommand):
                     ("📘", "규칙 설명", "핵심 규칙을 쉽게 확인"),
                 ],
                 manual_title=f"{title} 사용 가이드",
-                manual_desc=f"{title}의 시작 방법, 대결 모드, AI 난이도 선택 방법을 안내합니다.",
+                manual_desc=f"{title} 시작, 대결 모드, AI 난이도 선택을 바로 확인할 수 있습니다.",
             )
 
         self.stdout.write(self.style.SUCCESS("ensure_fairy_games completed"))

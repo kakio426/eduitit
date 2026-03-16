@@ -95,7 +95,7 @@ class Command(BaseCommand):
             product=product,
             defaults={
                 "title": "전담 시간표·특별실 배치 도우미 사용 가이드",
-                "description": "입력 양식 준비부터 점검, 특별실 운영 연결까지 단계별로 안내합니다.",
+                "description": "입력 양식 준비부터 점검, 특별실 운영 연결까지 바로 따라갈 수 있습니다.",
                 "is_published": True,
             },
         )
@@ -104,7 +104,7 @@ class Command(BaseCommand):
         if not manual.is_published:
             manual.is_published = True
             manual_changed.append("is_published")
-        manual_desc = "입력 양식 준비부터 점검, 특별실 운영 연결까지 단계별로 안내합니다."
+        manual_desc = "입력 양식 준비부터 점검, 특별실 운영 연결까지 바로 따라갈 수 있습니다."
         if manual.description != manual_desc:
             manual.description = manual_desc
             manual_changed.append("description")

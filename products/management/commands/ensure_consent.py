@@ -65,7 +65,7 @@ class Command(BaseCommand):
             product=product,
             defaults={
                 "title": "동의서는 나에게 맡겨 사용 가이드",
-                "description": "문서 업로드부터 제출 결과 다운로드까지 실사용 흐름을 안내합니다.",
+                "description": "문서 업로드부터 제출 결과 다운로드까지 바로 따라갈 수 있습니다.",
                 "is_published": True,
             },
         )
@@ -74,8 +74,8 @@ class Command(BaseCommand):
         if not manual.is_published:
             manual.is_published = True
             manual_changed.append("is_published")
-        if manual.description != "문서 업로드부터 제출 결과 다운로드까지 실사용 흐름을 안내합니다.":
-            manual.description = "문서 업로드부터 제출 결과 다운로드까지 실사용 흐름을 안내합니다."
+        if manual.description != "문서 업로드부터 제출 결과 다운로드까지 바로 따라갈 수 있습니다.":
+            manual.description = "문서 업로드부터 제출 결과 다운로드까지 바로 따라갈 수 있습니다."
             manual_changed.append("description")
         if manual_changed:
             manual.save(update_fields=manual_changed)

@@ -134,7 +134,7 @@ class Command(BaseCommand):
             product=product,
             defaults={
                 "title": "씨앗 퀴즈 시작 가이드",
-                "description": "퀴즈 선택부터 배포, 학생 풀이, 씨앗 보상까지 전체 흐름을 안내합니다.",
+                "description": "퀴즈 선택부터 배포, 학생 풀이, 씨앗 보상까지 바로 따라갈 수 있습니다.",
                 "is_published": True,
             },
         )
@@ -147,7 +147,7 @@ class Command(BaseCommand):
         if not manual.is_published:
             manual.is_published = True
             manual_changed.append("is_published")
-        target_desc = "퀴즈 선택부터 배포, 학생 풀이, 씨앗 보상까지 전체 흐름을 안내합니다."
+        target_desc = "퀴즈 선택부터 배포, 학생 풀이, 씨앗 보상까지 바로 따라갈 수 있습니다."
         if manual.description != target_desc:
             manual.description = target_desc
             manual_changed.append("description")

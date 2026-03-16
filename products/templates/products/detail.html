@@ -4,285 +4,225 @@
 
 {% block extra_css %}
 <style>
-    .product-detail-container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 8rem 2rem 4rem;
-    }
-
-    .product-header {
-        text-align: center;
-        margin-bottom: 4rem;
-    }
-
-    .service-badge {
-        display: inline-block;
-        padding: 0.5rem 1.5rem;
-        border-radius: 50px;
-        font-weight: bold;
-        font-size: 1rem;
-        margin-bottom: 1.5rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-
-    .service-badge.game {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        color: white;
-    }
-
-    .service-badge.tool {
-        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-        color: white;
-    }
-
-    .service-badge.platform {
-        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-        color: white;
-    }
-
-    .product-icon {
-        font-size: 5rem;
-        margin-bottom: 1rem;
-    }
-
-    .product-title {
-        font-size: 3.5rem;
-        font-weight: 800;
-        color: #1e293b;
-        margin-bottom: 1rem;
-        font-family: 'Dongle', sans-serif;
-    }
-
-    .product-description {
-        font-size: 1.5rem;
-        color: #64748b;
-        max-width: 800px;
-        margin: 0 auto 3rem;
-        line-height: 1.8;
-    }
-
-    .action-buttons {
-        display: flex;
-        gap: 1rem;
-        justify-content: center;
-        margin-top: 2rem;
-    }
-
-    .btn-launch {
-        padding: 1.25rem 3rem;
-        font-size: 1.25rem;
-        border-radius: 50px;
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        color: white;
-        text-decoration: none;
-        font-weight: bold;
-        transition: all 0.3s;
-        box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
-    }
-
-    .btn-launch:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 15px 35px rgba(16, 185, 129, 0.4);
-    }
-
-    .btn-back {
-        padding: 1.25rem 3rem;
-        font-size: 1.25rem;
-        border-radius: 50px;
-        background: #E0E5EC;
-        color: #64748b;
-        text-decoration: none;
-        font-weight: bold;
-        transition: all 0.3s;
-        box-shadow: 9px 9px 16px rgb(163, 177, 198, 0.6), -9px -9px 16px rgba(255, 255, 255, 0.5);
-    }
-
-    .btn-back:hover {
-        transform: translateY(-2px);
-    }
-
-    .features-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 2rem;
-        margin-top: 4rem;
-    }
-
-    .feature-card {
-        background: #E0E5EC;
-        border-radius: 30px;
-        padding: 2rem;
-        box-shadow: 9px 9px 16px rgb(163, 177, 198, 0.6), -9px -9px 16px rgba(255, 255, 255, 0.5);
-        transition: all 0.3s;
-    }
-
-    .feature-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 12px 12px 20px rgb(163, 177, 198, 0.7), -12px -12px 20px rgba(255, 255, 255, 0.6);
-    }
-
-    .feature-icon {
-        font-size: 2.5rem;
-        margin-bottom: 1rem;
-    }
-
-    .feature-title {
-        font-size: 1.5rem;
-        font-weight: bold;
-        color: #1e293b;
-        margin-bottom: 0.5rem;
-    }
-
-    .feature-description {
-        color: #64748b;
-        line-height: 1.6;
-    }
-
-    .price-tag {
-        font-size: 2.5rem;
-        font-weight: 800;
-        color: #1e293b;
-        margin: 2rem 0;
-    }
-
-    .price-tag.free {
-        color: #10b981;
+    .product-demo-embed iframe {
+        width: 100%;
+        height: 100%;
+        border: 0;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="product-detail-container">
-    <!-- Header Section -->
-    <div class="product-header">
-        <span class="service-badge {{ product.service_type }}">{{ product.service_type }}</span>
-
-        <div class="product-icon">
-            {% if "fa-" in product.icon %}
-            <i class="{{ product.icon }}"></i>
-            {% else %}
-            {{ product.icon }}
-            {% endif %}
-        </div>
-
-        <h1 class="product-title">{{ product.title }}</h1>
-
-        <p class="product-description">{{ product.description }}</p>
-
-        {% if product.price == 0 %}
-        <div class="price-tag free">무료</div>
-        {% else %}
-        <div class="price-tag">₩{{ product.price|floatformat:0 }}</div>
-        {% endif %}
-
-        <!-- Action Buttons -->
-        <div class="action-buttons">
-            {% if is_owned or product.price == 0 %}
-            {% if can_launch %}
-            <a href="{{ launch_href }}" {% if launch_is_external %}target="_blank" rel="noopener noreferrer"{% endif %} class="btn-launch">
-                <i class="fa-solid fa-rocket"></i> 서비스 시작하기
+<section class="bg-slate-50 px-4 pb-20 pt-28 md:pt-32">
+    <div class="mx-auto max-w-6xl">
+        <div class="mb-6 flex flex-wrap items-center gap-3 text-sm font-bold text-slate-500">
+            <a href="{% url 'product_list' %}" class="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:text-slate-900">
+                <i class="fa-solid fa-arrow-left"></i> 카탈로그로 돌아가기
             </a>
-            {% else %}
-            <button class="btn-launch opacity-60 cursor-not-allowed" disabled title="준비 중입니다">
-                <i class="fa-solid fa-clock"></i> 준비 중
-            </button>
-            {% endif %}
-            {% else %}
-            <button class="btn-launch opacity-60 cursor-not-allowed" disabled title="준비 중입니다">
-                <i class="fa-solid fa-clock"></i> 준비 중
-            </button>
-            {% endif %}
-
-            <a href="/" class="btn-back">
-                <i class="fa-solid fa-arrow-left"></i> 홈으로
+            <a href="/" class="inline-flex items-center gap-2 rounded-full px-3 py-2 text-slate-500 transition hover:text-slate-800">
+                홈으로
             </a>
         </div>
-    </div>
 
-    <!-- Features Section -->
-    <div class="features-grid">
-        {% if product.service_type == "game" %}
-        <div class="feature-card">
-            <div class="feature-icon">🎮</div>
-            <div class="feature-title">즉시 플레이</div>
-            <div class="feature-description">설치 없이 브라우저에서 바로 즐기세요</div>
+        <div class="overflow-hidden rounded-[2rem] border border-white/70 bg-white shadow-xl shadow-slate-200/70 ring-1 ring-slate-900/5">
+            <div class="grid gap-0 lg:grid-cols-[minmax(0,1.08fr)_minmax(320px,0.92fr)]">
+                <div class="p-7 md:p-10">
+                    <div class="flex flex-wrap items-center gap-2 text-xs font-bold">
+                        <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-700">
+                            {{ product.get_service_type_display|default:product.service_type }}
+                        </span>
+                        <span class="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-indigo-700">
+                            {{ product_access_label }}
+                        </span>
+                        {% if product.price == 0 %}
+                        <span class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-700">무료 시작</span>
+                        {% else %}
+                        <span class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-amber-700">권한 확인 후 이용</span>
+                        {% endif %}
+                        {% for badge in product.home_state_badges %}
+                        <span class="rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-500">{{ badge }}</span>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mt-6 flex items-start gap-4">
+                        <div class="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-3xl text-white shadow-lg shadow-slate-300/50">
+                            {% if "fa-" in product.icon %}
+                            <i class="{{ product.icon }}"></i>
+                            {% else %}
+                            {{ product.icon }}
+                            {% endif %}
+                        </div>
+                        <div>
+                            <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-900 md:text-5xl">
+                                {{ product.public_service_name|default:product.title }}
+                            </h1>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 space-y-4">
+                        <div>
+                            <p class="text-sm font-black text-slate-500">한 줄 가치 제안</p>
+                            <p class="mt-2 text-xl font-black leading-8 text-slate-900 md:text-2xl">{{ product_value_proposition }}</p>
+                        </div>
+
+                        <div>
+                            <p class="text-sm font-black text-slate-500">누구를 위한가</p>
+                            <p class="mt-2 text-base leading-7 text-slate-600">{{ product_audience }}</p>
+                        </div>
+
+                        {% if product.description and product.description != product_value_proposition %}
+                        <p class="max-w-3xl text-base leading-7 text-slate-600">{{ product.description }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="mt-8 grid gap-4 md:grid-cols-2">
+                        <div class="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5">
+                            <p class="text-sm font-black text-slate-900">언제 쓰면 좋은가</p>
+                            <p class="mt-2 text-sm leading-6 text-slate-600">이 서비스가 필요한 상황을 먼저 확인하고 바로 시작하세요.</p>
+                            {% if product.detail_context_chips %}
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                {% for chip in product.detail_context_chips %}
+                                <span class="inline-flex items-center rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200">{{ chip }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5">
+                            <p class="text-sm font-black text-slate-900">로그인 필요 여부</p>
+                            <p class="mt-2 text-base font-black text-slate-900">{{ product_access_label }}</p>
+                            <p class="mt-2 text-sm leading-6 text-slate-600">{{ product_access_copy }}</p>
+                            {% if product_manual %}
+                            <p class="mt-4 text-xs font-bold text-slate-500">처음이라면 가이드부터 열어보세요.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mt-8 flex flex-wrap gap-3">
+                        {% if can_start %}
+                        <a href="{{ start_href }}" {% if start_is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+                           class="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-6 py-3 text-sm font-black text-white shadow-lg shadow-slate-300/50 transition hover:-translate-y-0.5 hover:bg-indigo-600">
+                            <i class="fa-solid fa-rocket"></i> {{ start_label }}
+                        </a>
+                        {% else %}
+                        <button class="inline-flex items-center gap-2 rounded-2xl bg-slate-300 px-6 py-3 text-sm font-black text-slate-600" disabled>
+                            <i class="fa-solid fa-clock"></i> 준비 중
+                        </button>
+                        {% endif %}
+
+                        <a href="{{ guide_href }}" class="inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-6 py-3 text-sm font-black text-slate-800 transition hover:-translate-y-0.5 hover:border-slate-400 hover:bg-slate-50">
+                            <i class="fa-solid fa-book-open"></i> {{ guide_label }}
+                        </a>
+                    </div>
+                </div>
+
+                <aside class="border-t border-slate-200 bg-slate-950 p-6 text-white lg:border-l lg:border-t-0 md:p-8">
+                    <p class="text-sm font-black uppercase tracking-[0.18em] text-cyan-300">1분 데모/스크린샷</p>
+                    <h2 class="mt-3 text-2xl font-black tracking-tight">{{ product_demo_block.title }}</h2>
+                    <p class="mt-3 text-sm leading-6 text-slate-300">{{ product_demo_block.caption }}</p>
+
+                    {% if product_demo_block.kind == "video" %}
+                    <div class="product-demo-embed mt-5 aspect-video overflow-hidden rounded-[1.5rem] bg-black ring-1 ring-white/10">
+                        <iframe src="{{ product_demo_block.media_url }}" allowfullscreen loading="lazy"></iframe>
+                    </div>
+                    {% elif product_demo_block.kind == "image" %}
+                    <div class="mt-5 overflow-hidden rounded-[1.5rem] bg-slate-900 ring-1 ring-white/10">
+                        <img src="{{ product_demo_block.media_url }}" alt="{{ product.public_service_name|default:product.title }} 미리보기" class="h-auto w-full object-cover">
+                    </div>
+                    {% else %}
+                    <div class="mt-5 rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
+                        <div class="grid gap-3 sm:grid-cols-3">
+                            {% for step in quick_preview_steps %}
+                            <div class="rounded-2xl bg-white/5 p-4">
+                                <span class="text-xs font-black text-cyan-300">STEP {{ forloop.counter }}</span>
+                                <p class="mt-2 text-sm font-black text-white">{{ step.title }}</p>
+                                <p class="mt-2 text-xs leading-5 text-slate-300">{{ step.description }}</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="mt-6">
+                        <p class="text-sm font-black text-white">빠르게 보기</p>
+                        <ol class="mt-3 space-y-3">
+                            {% for step in quick_preview_steps %}
+                            <li class="flex gap-3 rounded-2xl bg-white/5 px-4 py-3">
+                                <span class="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-cyan-300 text-xs font-black text-slate-950">{{ forloop.counter }}</span>
+                                <div>
+                                    <p class="text-sm font-black text-white">{{ step.title }}</p>
+                                    <p class="mt-1 text-xs leading-5 text-slate-300">{{ step.description }}</p>
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ol>
+                    </div>
+                </aside>
+            </div>
         </div>
-        <div class="feature-card">
-            <div class="feature-icon">👥</div>
-            <div class="feature-title">멀티플레이어</div>
-            <div class="feature-description">친구들과 함께 즐기는 재미</div>
+
+        <div class="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(280px,0.9fr)]">
+            <section class="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/60">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <p class="text-sm font-black uppercase tracking-[0.18em] text-slate-400">핵심 기능</p>
+                        <h2 class="mt-2 text-2xl font-black tracking-tight text-slate-900">설명 없이도 이해되는 포인트</h2>
+                    </div>
+                </div>
+
+                <div class="mt-6 grid gap-4 md:grid-cols-3">
+                    {% for feature in product_features %}
+                    <article class="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5">
+                        <div class="text-2xl">
+                            {% if "fa-" in feature.icon %}
+                            <i class="{{ feature.icon }}"></i>
+                            {% else %}
+                            {{ feature.icon }}
+                            {% endif %}
+                        </div>
+                        <h3 class="mt-4 text-lg font-black text-slate-900">{{ feature.title }}</h3>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">{{ feature.description }}</p>
+                    </article>
+                    {% empty %}
+                    {% for step in quick_preview_steps %}
+                    <article class="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5">
+                        <p class="text-xs font-black uppercase tracking-[0.18em] text-slate-400">STEP {{ forloop.counter }}</p>
+                        <h3 class="mt-3 text-lg font-black text-slate-900">{{ step.title }}</h3>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">{{ step.description }}</p>
+                    </article>
+                    {% endfor %}
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/60">
+                <p class="text-sm font-black uppercase tracking-[0.18em] text-slate-400">시작 전 체크</p>
+                <h2 class="mt-2 text-2xl font-black tracking-tight text-slate-900">짧게 보고 바로 시작하세요</h2>
+
+                <div class="mt-5 space-y-4 text-sm leading-6 text-slate-600">
+                    <div class="rounded-2xl bg-slate-50 p-4">
+                        <p class="font-black text-slate-900">바로 시작 CTA</p>
+                        <p class="mt-1">{% if can_start %}상단의 <span class="font-black text-slate-900">{{ start_label }}</span> 버튼으로 곧바로 이어집니다.{% else %}현재는 준비 중이라 가이드와 설명을 먼저 확인할 수 있습니다.{% endif %}</p>
+                    </div>
+
+                    <div class="rounded-2xl bg-slate-50 p-4">
+                        <p class="font-black text-slate-900">가이드 CTA</p>
+                        <p class="mt-1">{% if product_manual %}제품 전용 가이드가 연결되어 있어 첫 사용 흐름을 바로 따라갈 수 있습니다.{% else %}관련 가이드를 한곳에서 찾을 수 있도록 안내 목록으로 연결합니다.{% endif %}</p>
+                    </div>
+
+                    {% if product.result_text or product.time_text %}
+                    <div class="rounded-2xl bg-slate-50 p-4">
+                        <p class="font-black text-slate-900">기대 결과</p>
+                        <p class="mt-1">
+                            {% if product.result_text %}결과물: {{ product.result_text }}{% endif %}
+                            {% if product.result_text and product.time_text %}<br>{% endif %}
+                            {% if product.time_text %}예상 소요: {{ product.time_text }}{% endif %}
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
+            </section>
         </div>
-        <div class="feature-card">
-            <div class="feature-icon">🏆</div>
-            <div class="feature-title">학급 대항전</div>
-            <div class="feature-description">교육 현장에 최적화된 게임</div>
-        </div>
-        {% elif product.service_type == "classroom" %}
-        <div class="feature-card">
-            <div class="feature-icon">🌱</div>
-            <div class="feature-title">긍정 행동 기록</div>
-            <div class="feature-description">학생의 작은 실천을 씨앗으로 쌓아, 참여 습관 형성을 돕습니다.</div>
-        </div>
-        <div class="feature-card">
-            <div class="feature-icon">🌸</div>
-            <div class="feature-title">꽃피움 추첨 보상</div>
-            <div class="feature-description">성실 참여와 우수 성취를 바탕으로 공평한 추첨 보상을 운영합니다.</div>
-        </div>
-        <div class="feature-card">
-            <div class="feature-icon">🏡</div>
-            <div class="feature-title">학급 꽃밭 대시보드</div>
-            <div class="feature-description">교실 화면에서 아이들과 함께 성장 흐름을 시각적으로 확인할 수 있습니다.</div>
-        </div>
-        {% elif product.service_type == "tool" %}
-        <div class="feature-card">
-            <div class="feature-icon">⚡</div>
-            <div class="feature-title">빠른 처리</div>
-            <div class="feature-description">Enterprise급 처리 속도</div>
-        </div>
-        <div class="feature-card">
-            <div class="feature-icon">🔒</div>
-            <div class="feature-title">안전한 보안</div>
-            <div class="feature-description">SOC2 인증 데이터 암호화</div>
-        </div>
-        <div class="feature-card">
-            <div class="feature-icon">📊</div>
-            <div class="feature-title">99.9% 가동률</div>
-            <div class="feature-description">안정적인 서비스 제공</div>
-        </div>
-        {% elif product.service_type == "platform" %}
-        <div class="feature-card">
-            <div class="feature-icon">🌐</div>
-            <div class="feature-title">클라우드 기반</div>
-            <div class="feature-description">언제 어디서나 접속 가능</div>
-        </div>
-        <div class="feature-card">
-            <div class="feature-icon">👨‍🏫</div>
-            <div class="feature-title">교육 특화</div>
-            <div class="feature-description">선생님과 학생을 위한 플랫폼</div>
-        </div>
-        <div class="feature-card">
-            <div class="feature-icon">💬</div>
-            <div class="feature-title">실시간 소통</div>
-            <div class="feature-description">교육 공동체 네트워킹</div>
-        </div>
-        {% else %}
-        <div class="feature-card">
-            <div class="feature-icon">✨</div>
-            <div class="feature-title">간편한 사용</div>
-            <div class="feature-description">직관적인 인터페이스</div>
-        </div>
-        <div class="feature-card">
-            <div class="feature-icon">🎯</div>
-            <div class="feature-title">높은 효율</div>
-            <div class="feature-description">업무 시간 단축</div>
-        </div>
-        <div class="feature-card">
-            <div class="feature-icon">💡</div>
-            <div class="feature-title">스마트 기능</div>
-            <div class="feature-description">AI 기반 자동화</div>
-        </div>
-        {% endif %}
     </div>
-</div>
+</section>
 {% endblock %}

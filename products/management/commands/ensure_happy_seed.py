@@ -108,7 +108,7 @@ class Command(BaseCommand):
             product=product,
             defaults={
                 "title": "행복의 씨앗 시작 가이드",
-                "description": "교실 생성부터 동의 관리, 씨앗·꽃피움 운영까지 핵심 흐름을 빠르게 안내합니다.",
+                "description": "교실 생성부터 동의 관리, 씨앗·꽃피움 운영까지 바로 따라갈 수 있습니다.",
                 "is_published": True,
             },
         )
@@ -117,7 +117,7 @@ class Command(BaseCommand):
         if not manual.is_published:
             manual.is_published = True
             manual_changed.append("is_published")
-        target_manual_description = "교실 생성부터 동의 관리, 씨앗·꽃피움 운영까지 핵심 흐름을 빠르게 안내합니다."
+        target_manual_description = "교실 생성부터 동의 관리, 씨앗·꽃피움 운영까지 바로 따라갈 수 있습니다."
         if manual.description != target_manual_description:
             manual.description = target_manual_description
             manual_changed.append("description")

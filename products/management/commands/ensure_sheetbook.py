@@ -99,7 +99,7 @@ class Command(BaseCommand):
             product=product,
             defaults={
                 "title": "교무수첩 사용 가이드",
-                "description": "첫 수첩 만들기부터 연동 기능 활용까지 순서대로 안내합니다.",
+                "description": "첫 수첩 만들기부터 연동 기능 활용까지 바로 따라갈 수 있습니다.",
                 "is_published": True,
             },
         )
@@ -107,8 +107,8 @@ class Command(BaseCommand):
         if manual.title != "교무수첩 사용 가이드":
             manual.title = "교무수첩 사용 가이드"
             manual_updates.append("title")
-        if manual.description != "첫 수첩 만들기부터 연동 기능 활용까지 순서대로 안내합니다.":
-            manual.description = "첫 수첩 만들기부터 연동 기능 활용까지 순서대로 안내합니다."
+        if manual.description != "첫 수첩 만들기부터 연동 기능 활용까지 바로 따라갈 수 있습니다.":
+            manual.description = "첫 수첩 만들기부터 연동 기능 활용까지 바로 따라갈 수 있습니다."
             manual_updates.append("description")
         if not manual.is_published:
             manual.is_published = True

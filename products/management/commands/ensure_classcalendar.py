@@ -96,7 +96,7 @@ class Command(BaseCommand):
             product=product,
             defaults={
                 'title': f'{product.title} 사용법',
-                'description': '학급 일정 관리 방법을 단계별로 안내합니다.',
+                'description': '학급 일정 등록부터 확인까지 바로 따라갈 수 있습니다.',
                 'is_published': True
             }
         )
@@ -108,7 +108,7 @@ class Command(BaseCommand):
         if not manual.is_published:
             manual.is_published = True
             manual_update_fields.append('is_published')
-        expected_manual_description = '학급 일정 관리 방법을 단계별로 안내합니다.'
+        expected_manual_description = '학급 일정 등록부터 확인까지 바로 따라갈 수 있습니다.'
         if manual.description != expected_manual_description:
             manual.description = expected_manual_description
             manual_update_fields.append('description')

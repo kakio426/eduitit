@@ -75,7 +75,7 @@ class Command(BaseCommand):
             product=product,
             defaults={
                 'title': '최종최최종은 이제그만 사용법',
-                'description': '문서 생성부터 최신본/배포본 다운로드까지의 핵심 흐름을 안내합니다.',
+                'description': '문서 생성부터 최신본·배포본 다운로드까지 바로 따라갈 수 있습니다.',
                 'is_published': True,
             },
         )
@@ -85,7 +85,7 @@ class Command(BaseCommand):
             manual.is_published = True
             manual_changed.append('is_published')
         if not manual.description:
-            manual.description = '문서 생성부터 최신본/배포본 다운로드까지의 핵심 흐름을 안내합니다.'
+            manual.description = '문서 생성부터 최신본·배포본 다운로드까지 바로 따라갈 수 있습니다.'
             manual_changed.append('description')
         if manual_changed:
             manual.save(update_fields=manual_changed)

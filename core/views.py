@@ -2350,7 +2350,7 @@ def _build_guide_groups(manuals, products_without_manual):
             "key": "calendar",
             "anchor": "guide-calendar",
             "title": "메인 캘린더 흐름",
-            "description": "홈의 캘린더 요약과 월간 확장 보기로 이어지는 핵심 캘린더 흐름만 전면에서 안내합니다.",
+            "description": "홈 캘린더에서 자주 이어지는 흐름을 한곳에서 빠르게 찾을 수 있습니다.",
             "items": [],
             "manuals": calendar_manuals,
             "pending_products": [],

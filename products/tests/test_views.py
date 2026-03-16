@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 from core.models import UserProfile
-from products.models import DTSettings, Product, ServiceManual
+from products.models import DTSettings, ManualSection, Product, ProductFeature, ServiceManual
 
 
 @override_settings(HOME_V2_ENABLED=False)
@@ -98,6 +98,88 @@ class ProductViewTests(TestCase):
         
         # Check title appears in rendered HTML
         self.assertContains(response, "Active Tool 1")
+
+
+class ProductDetailHeroTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_product_detail_shows_value_prop_access_and_manual_cta(self):
+        product = Product.objects.create(
+            title="알림장 도우미",
+            lead_text="대상과 주제를 고르면 바로 보낼 문구를 빠르게 만듭니다.",
+            description="알림장과 가정 안내 문구를 짧은 시간 안에 정리할 수 있습니다.",
+            solve_text="알림장 문구를 빠르게 정리하고 싶어요",
+            result_text="복사할 수 있는 안내 문구",
+            time_text="1분",
+            price=0,
+            is_active=True,
+            is_guest_allowed=False,
+            service_type="work",
+            launch_route_name="noticegen:main",
+        )
+        manual = ServiceManual.objects.create(
+            product=product,
+            title="알림장 도우미 사용 가이드",
+            description="대상 선택부터 복사까지 빠르게 안내합니다.",
+            is_published=True,
+        )
+        ManualSection.objects.create(
+            manual=manual,
+            title="대상 고르기",
+            content="저학년, 고학년, 학부모 중 대상을 먼저 선택합니다.",
+            display_order=1,
+        )
+        ManualSection.objects.create(
+            manual=manual,
+            title="문구 만들기",
+            content="주제와 전달사항을 적고 생성 버튼을 누릅니다.",
+            display_order=2,
+        )
+        ProductFeature.objects.create(
+            product=product,
+            icon="🎯",
+            title="대상별 문구 분기",
+            description="대상에 맞는 톤으로 안내 문구를 바로 정리합니다.",
+        )
+
+        response = self.client.get(reverse("product_detail", kwargs={"pk": product.pk}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "한 줄 가치 제안")
+        self.assertContains(response, "누구를 위한가")
+        self.assertContains(response, "로그인 필요 여부")
+        self.assertContains(response, "1분 데모/스크린샷")
+        self.assertContains(response, "대상 고르기")
+        self.assertContains(response, "문구 만들기")
+        self.assertContains(response, reverse("service_guide_detail", kwargs={"pk": manual.pk}))
+        self.assertContains(response, reverse("account_login"))
+        self.assertEqual(response.context["product_access_label"], "로그인 필요")
+        self.assertEqual(response.context["start_label"], "로그인하고 시작")
+
+    def test_product_detail_falls_back_to_guide_list_and_public_preview(self):
+        product = Product.objects.create(
+            title="공개 체험 도구",
+            lead_text="로그인 없이도 핵심 흐름을 먼저 볼 수 있습니다.",
+            description="외부 링크로 바로 이어지는 공개 체험형 서비스입니다.",
+            solve_text="바로 체험해보고 싶어요",
+            price=0,
+            is_active=True,
+            is_guest_allowed=True,
+            service_type="etc",
+            external_url="https://example.com/start",
+        )
+
+        response = self.client.get(reverse("product_detail", kwargs={"pk": product.pk}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "공개 체험")
+        self.assertContains(response, "가이드 찾기")
+        self.assertContains(response, reverse("service_guide_list"))
+        self.assertContains(response, "https://example.com/start")
+        self.assertEqual(response.context["guide_href"], reverse("service_guide_list"))
+        self.assertEqual(response.context["product_demo_block"]["kind"], "steps")
+        self.assertGreaterEqual(len(response.context["quick_preview_steps"]), 1)
 
 
 class SheetbookDiscoveryVisibilityTests(TestCase):

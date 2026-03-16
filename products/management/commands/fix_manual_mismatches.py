@@ -126,7 +126,7 @@ MANUAL_UPDATES: dict[str, ManualPayload] = {
     ),
     "몽글몽글 미술 수업": ManualPayload(
         title="몽글몽글 미술 수업 이용방법",
-        description="Gemini 수동 복붙으로 단계를 만들고 편집하는 실제 사용 순서로 안내합니다.",
+        description="Gemini 수동 복붙으로 단계를 만들고 편집하는 순서를 바로 따라갈 수 있습니다.",
         sections=[
             SectionPayload(
                 title="Gemini 프롬프트 준비",
@@ -345,7 +345,7 @@ MANUAL_UPDATES: dict[str, ManualPayload] = {
     "HWP to PDF 변환기": ManualPayload(
         title="HWP to PDF 변환기 이용방법",
         description=(
-            "프로그램 다운로드부터 변환 실행까지 실제 운영 환경에 맞는 최소 절차를 안내합니다."
+            "프로그램 다운로드부터 변환 실행까지 바로 따라갈 수 있습니다."
         ),
         sections=[
             SectionPayload(

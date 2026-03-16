@@ -68,7 +68,7 @@ class TeacherFirstGuidePagesTests(TestCase):
         response = self.client.get(reverse('service_guide_list'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('무엇을 설명하는지보다 언제 열면 되는지 먼저 보이도록', content)
+        self.assertIn('처음 시작, 캘린더, 자주 하는 일 순서로 필요한 가이드를 빠르게 찾을 수 있습니다.', content)
         self.assertNotIn('홈에서 바로 시작하고, 막히는 순간에만 짧게 확인하는 안내만 남겼습니다.', content)
 
     def test_tool_guide_is_secondary_reference_not_showroom_modal(self):

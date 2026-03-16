@@ -76,7 +76,7 @@ class Command(BaseCommand):
             product=product,
             defaults={
                 'title': '교실 장기 사용법',
-                'description': '로컬 대전 시작부터 AI 모드 연결까지 교실 적용 흐름을 안내합니다.',
+                'description': '로컬 대전 시작부터 AI 모드 연결까지 바로 따라갈 수 있습니다.',
                 'is_published': True,
             },
         )
@@ -86,7 +86,7 @@ class Command(BaseCommand):
             manual.is_published = True
             manual_changed.append('is_published')
         if not manual.description:
-            manual.description = '로컬 대전 시작부터 AI 모드 연결까지 교실 적용 흐름을 안내합니다.'
+            manual.description = '로컬 대전 시작부터 AI 모드 연결까지 바로 따라갈 수 있습니다.'
             manual_changed.append('description')
         if manual_changed:
             manual.save(update_fields=manual_changed)

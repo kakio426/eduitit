@@ -388,7 +388,7 @@ async def _collect_ai_response_async(prompt, request):
 def saju_view(request):
     """사주 분석 메인 뷰"""
     if getattr(request, 'limited', False):
-        error_message = '선생님, 이 서비스는 개인 개발자의 사비로 운영되다 보니 공용 AI 무료 한도를 넉넉히 드리기 어렵습니다. 😭 [내 설정]에서 개인 Gemini API 키를 등록하시면 중단 없이 본격적으로 이용하실 수 있습니다! 😊'
+        error_message = '선생님, 현재 공용 AI 한도가 모두 사용 중입니다. [내 설정]에서 개인 Gemini API 키를 등록하시면 중단 없이 계속 이용하실 수 있습니다.'
 
         return _render_private_fortune_page(request, 'fortune/saju_form.html', {
             'form': SajuForm(request.POST),

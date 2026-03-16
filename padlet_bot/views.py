@@ -124,7 +124,7 @@ def send_message(request):
     if getattr(request, 'limited', False):
         return JsonResponse({
             'error': 'LIMIT_EXCEEDED',
-            'message': '선생님, 이 서비스는 개인 개발자의 사비로 운영되다 보니 공용 AI 한도가 제한적입니다. 😭 [내 설정]에서 개인 Gemini API 키를 등록하시면 계속 이용하실 수 있습니다! 😊'
+            'message': '선생님, 현재 공용 AI 한도가 모두 사용 중입니다. [내 설정]에서 개인 Gemini API 키를 등록하시면 계속 이용하실 수 있습니다.'
         }, status=429)
     user_message = request.POST.get('message', '').strip()
 

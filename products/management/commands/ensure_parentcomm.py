@@ -95,7 +95,7 @@ class Command(BaseCommand):
             product=product,
             defaults={
                 "title": "학부모 소통 허브 사용 가이드",
-                "description": "쪽지형 소통, 상담 조율, 긴급 안내 흐름을 단계별로 안내합니다.",
+                "description": "쪽지형 소통, 상담 조율, 긴급 안내 흐름을 바로 확인할 수 있습니다.",
                 "is_published": True,
             },
         )
@@ -104,7 +104,7 @@ class Command(BaseCommand):
         if not manual.is_published:
             manual.is_published = True
             manual_changed.append("is_published")
-        expected_description = "쪽지형 소통, 상담 조율, 긴급 안내 흐름을 단계별로 안내합니다."
+        expected_description = "쪽지형 소통, 상담 조율, 긴급 안내 흐름을 바로 확인할 수 있습니다."
         if manual.description != expected_description:
             manual.description = expected_description
             manual_changed.append("description")
