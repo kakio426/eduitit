@@ -92,6 +92,21 @@
                         <i class="fa-solid fa-user-plus mr-1"></i>멤버 추가
                     </button>
                 </form>
+                <div class="my-5 border-t border-gray-200"></div>
+                <form action="{% url 'handoff:group_members_upload' group.id %}" method="post" enctype="multipart/form-data" class="space-y-4">
+                    {% csrf_token %}
+                    {% if return_to %}
+                    <input type="hidden" name="return_to" value="{{ return_to }}">
+                    {% endif %}
+                    <div>
+                        <label class="block text-sm font-black text-gray-600 mb-1">CSV 파일 업로드</label>
+                        <input type="file" name="csv_file" accept=".csv" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white focus:border-blue-500 focus:outline-none">
+                        <p class="mt-2 text-xs font-bold text-gray-500">첫 줄에 <code>이름, 직위/학년반</code> 헤더가 있어도 되고 없어도 됩니다. 예: <code>김민수, 3-1</code></p>
+                    </div>
+                    <button type="submit" class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black transition">
+                        <i class="fa-solid fa-file-csv mr-1"></i>CSV로 멤버 가져오기
+                    </button>
+                </form>
             </div>
         </div>
 

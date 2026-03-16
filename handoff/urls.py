@@ -12,6 +12,7 @@ urlpatterns = [
     path("groups/<uuid:group_id>/update/", views.group_update, name="group_update"),
     path("groups/<uuid:group_id>/delete/", views.group_delete, name="group_delete"),
     path("groups/<uuid:group_id>/members/add/", views.group_members_add, name="group_members_add"),
+    path("groups/<uuid:group_id>/members/upload/", views.group_members_upload, name="group_members_upload"),
     path("groups/<uuid:group_id>/members/<int:member_id>/update/", views.group_member_update, name="group_member_update"),
     path("groups/<uuid:group_id>/members/<int:member_id>/delete/", views.group_member_delete, name="group_member_delete"),
     path("sessions/create/", views.session_create, name="session_create"),

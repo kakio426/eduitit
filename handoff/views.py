@@ -1,4 +1,5 @@
 import csv
+import io
 from typing import Iterable
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
@@ -51,12 +52,35 @@ def _split_bulk_member_line(raw_line: str) -> tuple[str, str]:
     return line, ""
 
 
-def _normalize_bulk_members(raw_text: str) -> list[tuple[str, str]]:
+def _compact_member_header_value(value: str) -> str:
+    return (
+        str(value or "")
+        .strip()
+        .lower()
+        .replace(" ", "")
+        .replace("_", "")
+        .replace("-", "")
+        .replace("/", "")
+    )
+
+
+def _is_member_header_row(name: str, note: str) -> bool:
+    normalized_name = _compact_member_header_value(name)
+    normalized_note = _compact_member_header_value(note)
+    name_headers = {"이름", "성명", "name", "teachername", "membername"}
+    note_headers = {"직위", "직책", "학년반", "직위학년반", "소속", "반", "비고", "메모", "note", "affiliation"}
+    return normalized_name in name_headers and (not normalized_note or normalized_note in note_headers)
+
+
+def _normalize_member_pairs(raw_pairs: Iterable[tuple[str, str]]) -> list[tuple[str, str]]:
     members = []
     seen = set()
-    for raw in (raw_text or "").splitlines():
-        name, note = _split_bulk_member_line(raw)
+    for raw_name, raw_note in raw_pairs:
+        name = str(raw_name or "").strip()
+        note = str(raw_note or "").strip()[:120]
         if not name:
+            continue
+        if _is_member_header_row(name, note):
             continue
         key = (name, note)
         if key in seen:
@@ -64,6 +88,58 @@ def _normalize_bulk_members(raw_text: str) -> list[tuple[str, str]]:
         seen.add(key)
         members.append(key)
     return members
+
+
+def _normalize_bulk_members(raw_text: str) -> list[tuple[str, str]]:
+    parsed_pairs = []
+    for raw in (raw_text or "").splitlines():
+        parsed_pairs.append(_split_bulk_member_line(raw))
+    return _normalize_member_pairs(parsed_pairs)
+
+
+def _decode_uploaded_csv(file_obj) -> str:
+    raw_bytes = file_obj.read()
+    for encoding in ("utf-8-sig", "cp949", "euc-kr", "utf-8"):
+        try:
+            return raw_bytes.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    raise UnicodeDecodeError("csv", raw_bytes, 0, len(raw_bytes), "지원하지 않는 CSV 인코딩입니다.")
+
+
+def _normalize_csv_members(file_obj) -> list[tuple[str, str]]:
+    decoded_text = _decode_uploaded_csv(file_obj)
+    reader = csv.reader(io.StringIO(decoded_text))
+    return _normalize_member_pairs(
+        (
+            row[0] if len(row) > 0 else "",
+            row[1] if len(row) > 1 else "",
+        )
+        for row in reader
+        if any(str(cell or "").strip() for cell in row)
+    )
+
+
+def _build_member_payload(group: HandoffRosterGroup, members: list[tuple[str, str]]) -> tuple[list[HandoffRosterMember], int]:
+    existing_keys = set(group.members.values_list("display_name", "note"))
+    last_order = group.members.aggregate(max_order=Max("sort_order")).get("max_order") or 0
+    payload = []
+    skipped_existing = 0
+    for name, note in members:
+        key = (name, note)
+        if key in existing_keys:
+            skipped_existing += 1
+            continue
+        existing_keys.add(key)
+        payload.append(
+            HandoffRosterMember(
+                group=group,
+                display_name=name,
+                note=note,
+                sort_order=last_order + len(payload) + 1,
+            )
+        )
+    return payload, skipped_existing
 
 
 def _session_counts(session: HandoffSession):
@@ -298,18 +374,85 @@ def group_members_add(request, group_id):
             return_to,
         )
 
-    last_order = group.members.aggregate(max_order=Max("sort_order")).get("max_order") or 0
-    payload = [
-        HandoffRosterMember(
-            group=group,
-            display_name=name,
-            note=note,
-            sort_order=last_order + idx,
+    payload, skipped_existing = _build_member_payload(group, members)
+    if not payload:
+        messages.info(request, "이미 들어 있는 이름/직위라서 새로 추가할 멤버가 없었습니다.")
+        return _redirect_with_return(
+            reverse("handoff:group_detail", kwargs={"group_id": group.id}),
+            return_to,
         )
-        for idx, (name, note) in enumerate(members, start=1)
-    ]
+
     HandoffRosterMember.objects.bulk_create(payload)
-    messages.success(request, f"{len(payload)}명을 추가했습니다.")
+    if skipped_existing:
+        messages.success(
+            request,
+            f"{len(payload)}명을 추가했습니다. 같은 이름/직위 {skipped_existing}명은 건너뛰었습니다.",
+        )
+    else:
+        messages.success(request, f"{len(payload)}명을 추가했습니다.")
+    return _redirect_with_return(
+        reverse("handoff:group_detail", kwargs={"group_id": group.id}),
+        return_to,
+    )
+
+
+@login_required
+@require_POST
+def group_members_upload(request, group_id):
+    return_to = _get_safe_return_to(request)
+    group = get_object_or_404(HandoffRosterGroup, id=group_id, owner=request.user)
+    file_obj = request.FILES.get("csv_file")
+    if not file_obj:
+        messages.error(request, "CSV 파일을 선택해 주세요.")
+        return _redirect_with_return(
+            reverse("handoff:group_detail", kwargs={"group_id": group.id}),
+            return_to,
+        )
+    if not str(file_obj.name or "").lower().endswith(".csv"):
+        messages.error(request, "CSV 파일(.csv)만 업로드할 수 있습니다.")
+        return _redirect_with_return(
+            reverse("handoff:group_detail", kwargs={"group_id": group.id}),
+            return_to,
+        )
+
+    try:
+        members = _normalize_csv_members(file_obj)
+    except UnicodeDecodeError:
+        messages.error(request, "CSV 인코딩을 읽지 못했습니다. UTF-8 또는 엑셀 CSV로 다시 저장해 주세요.")
+        return _redirect_with_return(
+            reverse("handoff:group_detail", kwargs={"group_id": group.id}),
+            return_to,
+        )
+    except csv.Error:
+        messages.error(request, "CSV 형식을 읽지 못했습니다. 첫 번째 열은 이름, 두 번째 열은 직위/학년반으로 맞춰 주세요.")
+        return _redirect_with_return(
+            reverse("handoff:group_detail", kwargs={"group_id": group.id}),
+            return_to,
+        )
+
+    if not members:
+        messages.error(request, "CSV에서 추가할 이름을 찾지 못했습니다.")
+        return _redirect_with_return(
+            reverse("handoff:group_detail", kwargs={"group_id": group.id}),
+            return_to,
+        )
+
+    payload, skipped_existing = _build_member_payload(group, members)
+    if not payload:
+        messages.info(request, "CSV 내용이 이미 모두 들어 있어 새로 추가할 멤버가 없었습니다.")
+        return _redirect_with_return(
+            reverse("handoff:group_detail", kwargs={"group_id": group.id}),
+            return_to,
+        )
+
+    HandoffRosterMember.objects.bulk_create(payload)
+    if skipped_existing:
+        messages.success(
+            request,
+            f"CSV에서 {len(payload)}명을 추가했습니다. 같은 이름/직위 {skipped_existing}명은 건너뛰었습니다.",
+        )
+    else:
+        messages.success(request, f"CSV에서 {len(payload)}명을 추가했습니다.")
     return _redirect_with_return(
         reverse("handoff:group_detail", kwargs={"group_id": group.id}),
         return_to,
