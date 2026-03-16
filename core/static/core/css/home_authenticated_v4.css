@@ -2,6 +2,7 @@
     width: 100%;
     max-width: 1420px;
     margin: 0 auto;
+    --home-v4-panel-gap: 1rem;
 }
 
 .home-v4-shell [x-cloak] {
@@ -10,7 +11,7 @@
 
 .home-v4-layout {
     display: grid;
-    gap: 1rem;
+    gap: var(--home-v4-panel-gap);
     align-items: start;
 }
 
@@ -25,6 +26,8 @@
 
 .home-v4-main {
     min-width: 0;
+    gap: var(--home-v4-panel-gap);
+    align-items: start;
 }
 
 .home-v4-card,
@@ -413,21 +416,23 @@
     flex-shrink: 0;
 }
 
-.home-v4-top-grid {
-    display: grid;
-    gap: 1rem;
-    align-items: start;
-}
-
+.home-v4-home-panel-section,
 .home-v4-top-favorites,
 .home-v4-top-sns {
     min-width: 0;
     align-self: start;
 }
 
+.home-v4-side-stack {
+    display: grid;
+    gap: var(--home-v4-panel-gap);
+    min-width: 0;
+    align-content: start;
+}
+
 .home-v4-mobile-quick-tools {
     display: grid;
-    gap: 1rem;
+    gap: var(--home-v4-panel-gap);
 }
 
 .home-v4-mobile-quick-tools-header {
@@ -490,6 +495,7 @@
     display: none;
 }
 
+.home-v4-representative-section,
 .home-v4-top-favorites,
 .home-v4-top-sns {
     min-width: 0;
@@ -633,35 +639,27 @@
 @media (min-width: 1280px) {
     .home-v4-main {
         grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.68fr);
-        column-gap: 1rem;
+        column-gap: var(--home-v4-panel-gap);
+        row-gap: var(--home-v4-panel-gap);
         align-items: start;
     }
 
     .home-v4-home-panel-section {
-        grid-column: 1 / -1;
-    }
-
-    .home-v4-community-section {
-        grid-column: auto;
-        margin-top: 0;
-    }
-
-    .home-v4-top-grid {
-        grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.68fr);
-    }
-
-    .home-v4-calendar-wrap {
         grid-column: 1;
+        grid-row: 1;
+    }
+
+    .home-v4-side-stack {
+        grid-column: 2;
         grid-row: 1 / span 2;
     }
 
     .home-v4-top-favorites {
-        grid-column: 2;
-        grid-row: 1;
+        margin-top: 0;
     }
 
-    .home-v4-top-sns {
-        grid-column: 2;
+    .home-v4-representative-section {
+        grid-column: 1;
         grid-row: 2;
     }
 }

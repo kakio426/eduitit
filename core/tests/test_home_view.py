@@ -1204,7 +1204,7 @@ class HomeV2ViewTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn('data-home-sns-expand="true"', content)
-        self.assertIn('이전 글 더 보기', content)
+        self.assertIn('더보기', content)
 
     def test_v2_community_feed_keeps_full_sns_list_without_home_expand_button(self):
         _create_posts(username='snscommunityauthor')
@@ -1604,7 +1604,10 @@ class HomeV4ViewTest(TestCase):
         self.assertIn('data-home-v4-home-panel="true"', content)
         self.assertIn('data-home-v4-representative-services="true"', content)
         self.assertIn('data-home-v4-sns-panel="true"', content)
+        self.assertIn('home-v4-home-panel-section', content)
+        self.assertIn('home-v4-side-stack', content)
         self.assertIn('home-v4-community-section', content)
+        self.assertIn('home-v4-representative-section', content)
         self.assertIn('home-v4-top-favorites', content)
         self.assertIn('home-v4-top-sns', content)
         self.assertIn('data-home-v4-mobile-menu-trigger="true"', content)
