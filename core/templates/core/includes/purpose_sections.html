@@ -40,7 +40,7 @@
 
         <div class="space-y-2.5 md:space-y-3" data-home-v2-service-grid="true">
             {% for product in section.products %}
-            {% include 'core/includes/mini_card.html' with product=product %}
+            {% include 'core/includes/mini_card.html' with product=product show_access_state=show_access_state %}
             {% endfor %}
 
             {% if section.has_more %}
@@ -56,7 +56,7 @@
                 class="space-y-2.5 md:space-y-3"
             >
                 {% for product in section.overflow_products %}
-                {% include 'core/includes/mini_card.html' with product=product %}
+                {% include 'core/includes/mini_card.html' with product=product show_access_state=show_access_state %}
                 {% endfor %}
             </div>
             {% endif %}

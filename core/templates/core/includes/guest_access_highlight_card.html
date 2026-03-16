@@ -1,0 +1,49 @@
+<a href="{{ card.href }}"
+    {% if card.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+    class="group flex h-full flex-col justify-between rounded-[1.65rem] border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:border-emerald-200 hover:shadow-md"
+    data-home-v2-guest-access-card="true"
+    data-home-v2-guest-access-status="{{ card.access_status_label }}">
+    <div>
+        <div class="flex items-start justify-between gap-3">
+            <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-50 text-base shadow-sm {% if card.service_type == 'collect_sign' %}text-blue-500{% elif card.service_type == 'classroom' %}text-violet-500{% elif card.service_type == 'work' %}text-emerald-500{% elif card.service_type == 'game' %}text-red-500{% elif card.service_type == 'counsel' %}text-pink-500{% elif card.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
+                {% if card.icon %}
+                    {% if "fa-" in card.icon %}
+                    <i class="{{ card.icon }}"></i>
+                    {% else %}
+                    {{ card.icon }}
+                    {% endif %}
+                {% else %}
+                <i class="fa-solid fa-sparkles"></i>
+                {% endif %}
+            </div>
+            <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-black {% if card.access_status_label == '로그인 필요' %}bg-amber-50 text-amber-700{% else %}bg-emerald-50 text-emerald-700{% endif %}">
+                <i class="fa-solid {% if card.access_status_label == '로그인 필요' %}fa-lock{% else %}fa-circle-play{% endif %} text-[10px]"></i>
+                {{ card.access_status_label }}
+            </span>
+        </div>
+        <div class="mt-4">
+            {% if card.service_name and card.service_name != card.title %}
+            <p class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">{{ card.service_name|truncatechars:22 }}</p>
+            {% endif %}
+            <h3 class="mt-1 text-lg font-black leading-tight text-slate-900">{{ card.title }}</h3>
+            <p class="mt-2 text-sm leading-6 text-slate-500">{{ card.description|truncatechars:58 }}</p>
+        </div>
+        {% if card.state_badges or card.guide_url %}
+        <div class="mt-4 flex flex-wrap gap-2">
+            {% for badge in card.state_badges %}
+            <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600">{{ badge }}</span>
+            {% endfor %}
+            {% if card.guide_url %}
+            <span class="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-bold text-indigo-700">가이드 있음</span>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    <div class="mt-5 flex items-center justify-between gap-3">
+        <span class="text-xs font-bold text-slate-400">{% if card.access_status_label == '로그인 필요' %}로그인 후 이어짐{% else %}먼저 둘러보기{% endif %}</span>
+        <span class="inline-flex items-center gap-1.5 rounded-xl {% if card.access_status_label == '로그인 필요' %}bg-amber-100 text-amber-800{% else %}bg-emerald-600 text-white{% endif %} px-3 py-2 text-sm font-bold">
+            {% if card.access_status_label == '로그인 필요' %}열어보기{% else %}바로 보기{% endif %}
+            <i class="fa-solid fa-{% if card.is_external %}arrow-up-right-from-square{% else %}arrow-right{% endif %} text-xs"></i>
+        </span>
+    </div>
+</a>

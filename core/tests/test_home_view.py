@@ -259,9 +259,55 @@ class HomeV2ViewTest(TestCase):
         """V2 비로그인 홈에 로그인 CTA 존재"""
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('로그인하고 시작하기', content)
-        self.assertIn('서비스 둘러보기', content)
-        self.assertEqual(content.count('로그인하고 시작하기'), 1)
+        self.assertIn('공개 도구 먼저 보기', content)
+        self.assertIn('로그인 후 전체 열기', content)
+        self.assertIn('가이드 보기', content)
+        self.assertEqual(content.count('로그인 후 전체 열기'), 1)
+
+    def test_v2_anonymous_surfaces_public_cards_before_locked_sections(self):
+        public_collect = Product.objects.create(
+            title="공개 수합",
+            description="제출 흐름을 바로 볼 수 있어요",
+            price=0,
+            is_active=True,
+            is_guest_allowed=True,
+            service_type='collect_sign',
+            icon='fa-solid fa-inbox',
+        )
+        public_qr = Product.objects.create(
+            title="공개 QR",
+            description="QR 미리보기",
+            price=0,
+            is_active=True,
+            is_guest_allowed=True,
+            service_type='classroom',
+            icon='fa-solid fa-qrcode',
+        )
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('data-home-v2-public-section="true"', content)
+        self.assertIn('로그인 후 이어지는 도구', content)
+        self.assertIn('미리보기 가능', content)
+        self.assertIn('로그인 필요', content)
+
+        public_ids = [card['id'] for card in response.context.get('guest_public_cards', [])]
+        self.assertIn(public_collect.id, public_ids)
+        self.assertIn(public_qr.id, public_ids)
+
+        locked_section_ids = []
+        for section in response.context.get('guest_primary_display_sections', []):
+            locked_section_ids.extend(product.id for product in section.get('products', []))
+            locked_section_ids.extend(product.id for product in section.get('overflow_products', []))
+        for section in response.context.get('guest_secondary_display_sections', []):
+            locked_section_ids.extend(product.id for product in section.get('products', []))
+            locked_section_ids.extend(product.id for product in section.get('overflow_products', []))
+
+        self.assertIn(self.p1.id, locked_section_ids)
+        self.assertIn(self.p2.id, locked_section_ids)
+        self.assertNotIn(public_collect.id, locked_section_ids)
+        self.assertNotIn(public_qr.id, locked_section_ids)
 
     def test_v2_anonymous_prioritizes_hero_and_services_without_sns_preview(self):
         response = self.client.get(reverse('home'))
@@ -735,7 +781,7 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('수업을 준비해요', content)
         self.assertIn('data-home-v2-service-card-body="true"', content)
         self.assertIn('data-home-v2-service-card-header="true"', content)
-        self.assertIn('전체 보기', content)
+        self.assertIn('data-home-v2-service-card-access="true"', content)
 
     def test_v2_authenticated_favorite_cards_show_compact_body(self):
         user = self._login('favoritebodyuser')
@@ -1719,8 +1765,8 @@ class HomeV4ViewTest(TestCase):
 
         self.assertNotIn('core/css/home_authenticated_v4.css', content)
         self.assertNotIn('data-home-v4-shell="true"', content)
-        self.assertIn('로그인하고 시작하기', content)
-        self.assertIn('서비스 둘러보기', content)
+        self.assertIn('공개 도구 먼저 보기', content)
+        self.assertIn('로그인 후 전체 열기', content)
 
     @override_settings(HOME_LAYOUT_VERSION='v2', HOME_V2_ENABLED=True)
     def test_setting_home_layout_version_to_v2_rolls_back_to_existing_authenticated_home(self):

@@ -2033,6 +2033,103 @@ def _build_home_guest_start_cards(product_list):
     return cards[:4]
 
 
+GUEST_PUBLIC_SECTION_ORDER = {
+    "collect_sign": 0,
+    "class_ops": 1,
+    "doc_write": 2,
+    "refresh": 3,
+    "guide": 4,
+    "external": 5,
+    "class_activity": 6,
+}
+
+GUEST_LOCKED_SECTION_ORDER = {
+    "class_ops": 0,
+    "doc_write": 1,
+    "collect_sign": 2,
+    "guide": 3,
+    "refresh": 4,
+    "external": 5,
+    "class_activity": 6,
+}
+
+
+def _product_requires_guest_login(product):
+    return getattr(product, "home_access_status_label", "") == "로그인 필요"
+
+
+def _guest_access_status_copy(product):
+    return "로그인 필요" if _product_requires_guest_login(product) else "미리보기 가능"
+
+
+def _build_home_guest_highlight_card(product):
+    return {
+        "id": getattr(product, "id", ""),
+        "title": getattr(product, "public_service_name", "") or getattr(product, "title", "") or "도구",
+        "description": getattr(product, "home_card_summary", "") or getattr(product, "teacher_first_support_label", "") or getattr(product, "description", ""),
+        "service_name": getattr(product, "teacher_first_task_label", "") or "",
+        "icon": getattr(product, "icon", ""),
+        "service_type": getattr(product, "service_type", ""),
+        "href": getattr(product, "launch_href", "") or "",
+        "is_external": bool(getattr(product, "launch_is_external", False)),
+        "guide_url": getattr(product, "guide_url", "") or "",
+        "access_status_label": _guest_access_status_copy(product),
+        "state_badges": list(getattr(product, "home_state_badges", []) or []),
+    }
+
+
+def _build_home_guest_highlight_cards(product_list, *, requires_login, limit=4, include_games=False):
+    section_order = GUEST_LOCKED_SECTION_ORDER if requires_login else GUEST_PUBLIC_SECTION_ORDER
+    cards = []
+    seen_ids = set()
+
+    def _sort_key(product):
+        section_key = _resolve_home_section_key(product)
+        is_game = getattr(product, "service_type", "") == "game"
+        return (
+            section_order.get(section_key, 99),
+            1 if is_game else 0,
+            getattr(product, "display_order", 9999),
+            getattr(product, "title", ""),
+        )
+
+    for product in sorted(product_list, key=_sort_key):
+        if getattr(product, "id", None) in seen_ids:
+            continue
+        if _product_requires_guest_login(product) != requires_login:
+            continue
+        if not include_games and getattr(product, "service_type", "") == "game":
+            continue
+        card = _build_home_guest_highlight_card(product)
+        if not card["href"]:
+            continue
+        cards.append(card)
+        seen_ids.add(getattr(product, "id", None))
+        if len(cards) >= limit:
+            break
+    return cards
+
+
+def _filter_home_sections_by_access(sections, *, requires_login):
+    filtered_sections = []
+    for section in sections:
+        all_items = [*section.get("products", []), *section.get("overflow_products", [])]
+        matching_items = [
+            product for product in all_items
+            if _product_requires_guest_login(product) == requires_login
+        ]
+        if not matching_items:
+            continue
+        filtered_sections.append(
+            _build_section_payload(
+                section,
+                matching_items,
+                preview_limit=len(section.get("products", [])) or 2,
+            )
+        )
+    return filtered_sections
+
+
 def _build_home_calendar_hub_context(request):
     calendar_summary = _build_home_calendar_summary_context(request)
     return {
@@ -2285,6 +2382,22 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
         preview_limit=2,
     )
     primary_display_sections, secondary_display_sections = _build_home_v2_display_groups(sections, aux_sections)
+    guest_public_cards = _build_home_guest_highlight_cards(product_list, requires_login=False, limit=4)
+    if not guest_public_cards:
+        guest_public_cards = _build_home_guest_highlight_cards(
+            product_list,
+            requires_login=False,
+            limit=4,
+            include_games=True,
+        )
+    guest_primary_display_sections = _filter_home_sections_by_access(
+        primary_display_sections,
+        requires_login=True,
+    )
+    guest_secondary_display_sections = _filter_home_sections_by_access(
+        secondary_display_sections,
+        requires_login=True,
+    )
     sns_summary_posts = _build_home_community_summary_posts(page_obj, limit=2)
     community_summary = {
         'title': '실시간 소통',
@@ -2399,6 +2512,9 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
         'aux_sections': aux_sections,
         'primary_display_sections': primary_display_sections,
         'secondary_display_sections': secondary_display_sections,
+        'guest_public_cards': guest_public_cards,
+        'guest_primary_display_sections': guest_primary_display_sections,
+        'guest_secondary_display_sections': guest_secondary_display_sections,
         'games': games,
         'community_summary': community_summary,
         'public_calendar_entry': _build_public_calendar_entry_context(),

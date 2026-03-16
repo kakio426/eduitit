@@ -20,25 +20,72 @@
 {% block title %}로그인 | Eduitit{% endblock %}
 
 {% block content %}
+{% url 'home' as home_url %}
+{% url 'service_guide_list' as service_guide_url %}
 <main class="pt-32 pb-20 px-4 md:px-8 min-h-screen flex items-center justify-center">
-    <div class="w-full max-w-lg" data-aos="zoom-in">
-        <div class="clay-card p-10 md:p-12 bg-[#E0E5EC]">
+    <div class="w-full max-w-2xl" data-aos="zoom-in">
+        <div class="clay-card p-8 md:p-10 bg-[#E0E5EC]">
             <!-- Header -->
-            <div class="text-center mb-10">
+            <div class="text-center mb-8">
                 <div
-                    class="w-20 h-20 rounded-full bg-white mx-auto flex items-center justify-center shadow-clay text-purple-500 text-4xl mb-6">
+                    class="w-20 h-20 rounded-full bg-white mx-auto flex items-center justify-center shadow-clay text-amber-500 text-4xl mb-6">
                     <i class="fa-solid fa-lock"></i>
                 </div>
-                <h1 class="text-5xl md:text-6xl font-bold text-gray-700 mb-2 break-keep">반가워요 선생님!</h1>
-                <p class="text-2xl text-gray-400 font-hand break-keep">오늘도 선생님의 퇴근을 응원합니다.</p>
+                <p class="inline-flex items-center gap-2 rounded-full bg-amber-50 px-4 py-1.5 text-[11px] font-black uppercase tracking-[0.22em] text-amber-700">로그인 안내</p>
+                <h1 class="mt-4 text-4xl md:text-5xl font-bold text-gray-700 mb-2 break-keep">이 도구는 로그인 후 이어집니다</h1>
+                <p class="text-lg md:text-xl text-gray-500 font-bold break-keep">막는 이유를 먼저 설명하고, 데모와 가이드로 우회 진입도 함께 드립니다.</p>
             </div>
 
             <!-- Social Login Only -->
-            <div class="space-y-8 animate-fade-in-up">
-                <p class="text-center text-xl text-gray-500 mb-8 font-hand text-balance">
-                    복잡한 아이디/비밀번호 기억할 필요 없이<br>
-                    사용하시던 계정으로 간편하게 시작하세요.
-                </p>
+            <div class="space-y-6 animate-fade-in-up">
+                <div class="grid gap-4 rounded-[2rem] border border-slate-200 bg-white/80 p-5 shadow-sm md:grid-cols-3">
+                    <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+                        <div class="flex items-center gap-3">
+                            <span class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                                <i class="fa-solid fa-check"></i>
+                            </span>
+                            <div>
+                                <p class="text-sm font-black text-slate-900">내 일정과 학급 설정 저장</p>
+                                <p class="mt-1 text-xs font-semibold leading-5 text-slate-500">다음 방문에도 바로 이어서 씁니다.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+                        <div class="flex items-center gap-3">
+                            <span class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+                                <i class="fa-solid fa-shield-halved"></i>
+                            </span>
+                            <div>
+                                <p class="text-sm font-black text-slate-900">제출 결과와 기록 보호</p>
+                                <p class="mt-1 text-xs font-semibold leading-5 text-slate-500">학급별 데이터가 섞이지 않게 유지합니다.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+                        <div class="flex items-center gap-3">
+                            <span class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-amber-50 text-amber-600">
+                                <i class="fa-solid fa-star"></i>
+                            </span>
+                            <div>
+                                <p class="text-sm font-black text-slate-900">즐겨찾기와 최근 사용 유지</p>
+                                <p class="mt-1 text-xs font-semibold leading-5 text-slate-500">교사별 맞춤 흐름이 그대로 이어집니다.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <a href="{{ home_url }}#guest-home-public"
+                        class="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 transition hover:border-indigo-300 hover:text-indigo-600">
+                        <i class="fa-solid fa-circle-play"></i>
+                        데모 둘러보기
+                    </a>
+                    <a href="{{ service_guide_url }}"
+                        class="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 transition hover:border-indigo-300 hover:text-indigo-600">
+                        <i class="fa-solid fa-book-open"></i>
+                        가이드 보기
+                    </a>
+                </div>
 
                 <div class="space-y-4">
                     <!-- Kakao -->
@@ -62,8 +109,8 @@
                 </div>
 
                 <div
-                    class="mt-12 p-6 rounded-[2rem] bg-purple-50 border border-purple-100 shadow-sm relative overflow-hidden text-center">
-                    <p class="text-lg text-purple-700 font-hand">
+                    class="mt-2 p-6 rounded-[2rem] bg-purple-50 border border-purple-100 shadow-sm relative overflow-hidden text-center">
+                    <p class="text-lg text-purple-700 font-bold">
                         <i class="fa-solid fa-shield-halved mr-2"></i>
                         선생님의 개인정보는 안전하게 보호됩니다.
                     </p>
