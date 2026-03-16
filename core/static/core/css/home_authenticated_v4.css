@@ -364,6 +364,10 @@
     min-width: 0;
 }
 
+.home-v4-tool-item {
+    position: relative;
+}
+
 .home-v4-tool-link {
     display: flex;
     align-items: flex-start;
@@ -377,6 +381,12 @@
     padding: 0.75rem 0.85rem;
     overflow: hidden;
     transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.home-v4-tool-leading {
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
 }
 
 .home-v4-tool-link:hover,
@@ -407,6 +417,24 @@
 .home-v4-tool-summary {
     overflow-wrap: anywhere;
     word-break: keep-all;
+}
+
+.home-v4-tool-favorite-badge {
+    position: absolute;
+    top: 0.48rem;
+    left: 2.35rem;
+    z-index: 2;
+    width: 1.4rem;
+    height: 1.4rem;
+    min-width: 1.4rem;
+    min-height: 1.4rem;
+    padding: 0;
+    box-shadow: 0 10px 18px rgba(148, 163, 184, 0.18);
+}
+
+.home-v4-tool-item:hover .home-v4-tool-favorite-badge,
+.home-v4-tool-favorite-badge:focus-visible {
+    transform: translateY(-1px);
 }
 
 .home-v4-tool-link-arrow {

@@ -1759,6 +1759,17 @@ class HomeV4ViewTest(TestCase):
         self.assertIn('data-home-v4-home-panel="true"', content)
         self.assertNotIn('data-home-v4-section-panel=', content)
 
+    def test_v4_section_menu_renders_icon_corner_favorite_badges(self):
+        self._login('v4favoritebadge')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('data-home-v4-tool-item="collect_sign"', content)
+        self.assertIn('data-home-v4-tool-favorite-badge="true"', content)
+        self.assertIn('aria-label="간편 수합 즐겨찾기 토글"', content)
+        self.assertIn('class="home-v4-tool-favorite-badge favorite-toggle-btn', content)
+
     def test_v4_anonymous_home_falls_back_to_public_v2(self):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
