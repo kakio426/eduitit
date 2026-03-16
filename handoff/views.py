@@ -68,7 +68,19 @@ def _is_member_header_row(name: str, note: str) -> bool:
     normalized_name = _compact_member_header_value(name)
     normalized_note = _compact_member_header_value(note)
     name_headers = {"이름", "성명", "name", "teachername", "membername"}
-    note_headers = {"직위", "직책", "학년반", "직위학년반", "소속", "반", "비고", "메모", "note", "affiliation"}
+    note_headers = {
+        "직위",
+        "직책",
+        "학년반",
+        "직위학년반",
+        "소속",
+        "소속학년반",
+        "반",
+        "비고",
+        "메모",
+        "note",
+        "affiliation",
+    }
     return normalized_name in name_headers and (not normalized_note or normalized_note in note_headers)
 
 
