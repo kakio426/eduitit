@@ -42,9 +42,11 @@ class MessageboxViewTests(TestCase):
         self.assertContains(response, "직접 일정 추가")
         self.assertContains(response, "날짜 놓는 달력")
         self.assertContains(response, "선택한 후보 편집")
-        self.assertContains(response, "날짜 정하기")
+        self.assertContains(response, "일정 수정")
+        self.assertContains(response, "일정 수정하기")
         self.assertContains(response, "editSelectedArchiveCandidate(candidate.candidate_id)")
         self.assertContains(response, "addManualCandidateFromSelectedArchive()")
+        self.assertNotContains(response, "선택 후 오른쪽 달력 날짜를 누르세요.")
 
     def test_main_keeps_requested_capture_id_in_context(self):
         response = self.client.get(f"{reverse('messagebox:main')}?capture=test-capture-id")

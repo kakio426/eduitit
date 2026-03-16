@@ -82,6 +82,7 @@ function messageboxPage(options = {}) {
             this.applyMessageCaptureResult = (payload) => {
                 baseApplyResult(payload);
                 this.syncManualInputsFromPayload(payload);
+                this.messageCaptureSourcePreviewOpen = false;
                 this.syncMessageCapturePlannerState();
             };
 
@@ -94,6 +95,7 @@ function messageboxPage(options = {}) {
             this.applyArchiveDetailToMessageCapture = (detailPayload) => {
                 baseApplyArchiveDetail(detailPayload);
                 this.syncManualInputsFromPayload(detailPayload);
+                this.messageCaptureSourcePreviewOpen = false;
                 this.syncMessageCapturePlannerState();
                 this.focusMessageInput({ preserveStep: true, focusInput: false });
             };
@@ -259,6 +261,11 @@ function messageboxPage(options = {}) {
             return window.matchMedia("(hover: hover) and (pointer: fine)").matches;
         },
 
+        messageCapturePlannerIsDesktop() {
+            if (typeof window === "undefined" || !window.matchMedia) return false;
+            return window.matchMedia("(min-width: 1200px)").matches;
+        },
+
         messageCapturePlannerCandidates() {
             return Array.isArray(this.messageCaptureCandidates) ? this.messageCaptureCandidates : [];
         },
@@ -322,6 +329,29 @@ function messageboxPage(options = {}) {
             this.syncMessageCapturePlannerState({
                 preferredCandidateId: targetId,
                 monthDate: options.keepMonth ? this.messageCaptureCalendarMonthKey : "",
+            });
+        },
+
+        openMessageCaptureCandidateEditor(candidateId, options = {}) {
+            const targetId = String(candidateId || "");
+            if (!targetId) return;
+            this.selectMessageCaptureCandidate(targetId, options);
+            this.afterMessageboxDomUpdate(() => {
+                const calendarPanel = this.$refs && this.$refs.messageCaptureCalendarPanel
+                    ? this.$refs.messageCaptureCalendarPanel
+                    : null;
+                if (!this.messageCapturePlannerIsDesktop() && calendarPanel && typeof calendarPanel.scrollIntoView === "function") {
+                    calendarPanel.scrollIntoView({
+                        behavior: "smooth",
+                        block: "start",
+                    });
+                }
+                const titleInput = this.$refs && this.$refs.messageCaptureActiveTitleInput
+                    ? this.$refs.messageCaptureActiveTitleInput
+                    : null;
+                if (options.focusTitle && titleInput && typeof titleInput.focus === "function") {
+                    titleInput.focus({ preventScroll: true });
+                }
             });
         },
 
@@ -499,7 +529,7 @@ function messageboxPage(options = {}) {
 
         editSelectedArchiveCandidate(candidateId) {
             if (!this.prepareSelectedArchiveCaptureForEditing({ candidateId })) return;
-            window.showToast("위쪽 날짜 정하기 화면에서 달력으로 바로 옮길 수 있어요.", "info");
+            this.openMessageCaptureCandidateEditor(candidateId);
         },
 
         addManualCandidateFromSelectedArchive() {
