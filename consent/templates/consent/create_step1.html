@@ -1,24 +1,54 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}동의서 생성 1단계{% endblock %}
+{% block title %}동의/서명 생성 1단계{% endblock %}
 
 {% block content %}
 <main class="pt-32 pb-16 px-4 min-h-screen bg-[#E0E5EC]">
   <div class="max-w-5xl mx-auto">
     <div class="mb-6">
-      <a href="{% url 'consent:dashboard' %}" class="text-sm text-gray-500 hover:text-purple-600">목록으로</a>
+      <a href="{% url 'consent:create' %}?audience_type={{ audience_type }}" class="text-sm text-gray-500 hover:text-purple-600">이전으로</a>
       <h1 class="text-3xl font-bold text-gray-800 mt-2">1단계. 안내문 올리기</h1>
-      <p class="text-sm text-gray-500 mt-1">학부모에게 보낼 문서와 기본 정보를 간단히 적어주세요.</p>
+      <p class="text-sm text-gray-500 mt-1">
+        {% if is_guardian_audience %}
+        학부모에게 보낼 문서와 기본 정보를 간단히 적어주세요.
+        {% else %}
+        서명 대상자에게 보여줄 문서와 기본 정보를 간단히 적어주세요.
+        {% endif %}
+      </p>
     </div>
 
     {% include "consent/_policy_panel.html" with policy_compact=True %}
 
     <form method="post" enctype="multipart/form-data" class="space-y-6">
       {% csrf_token %}
+      {{ request_form.audience_type }}
       {% if sheetbook_seed_token %}
       <input type="hidden" name="sheetbook_seed_token" value="{{ sheetbook_seed_token }}">
       {% endif %}
+
+      <section class="clay-card p-5">
+        <p class="text-xs font-bold uppercase tracking-[0.24em] {% if is_guardian_audience %}text-indigo-600{% else %}text-emerald-600{% endif %}">{{ audience_type_label }}</p>
+        <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between mt-2">
+          <div>
+            <h2 class="text-lg font-bold text-gray-800">
+              {% if is_guardian_audience %}
+              학생 기준으로 학부모에게 받는 요청입니다
+              {% else %}
+              이름 기준으로 개별 링크를 보내는 요청입니다
+              {% endif %}
+            </h2>
+            <p class="text-sm text-gray-500 mt-1">
+              {% if is_guardian_audience %}
+              다음 단계에서 학생명, 학부모명(선택), 연락처 뒤 4자리를 등록합니다.
+              {% else %}
+              다음 단계에서 이름만으로 서명 대상자를 등록합니다.
+              {% endif %}
+            </p>
+          </div>
+          <a href="{% url 'consent:create' %}?audience_type={{ audience_type }}" class="inline-flex min-h-11 items-center px-4 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-gray-700 font-semibold">방식 바꾸기</a>
+        </div>
+      </section>
 
       {% if sheetbook_prefill_active %}
       <div class="rounded-xl border border-blue-200 bg-blue-50 text-blue-700 px-4 py-3 text-sm">
@@ -80,7 +110,9 @@
               {{ document_form.title.errors }}
             </div>
             <div>
-              <label class="block text-sm font-semibold mb-1">학부모에게 보여줄 안내문(PDF/이미지)</label>
+              <label class="block text-sm font-semibold mb-1">
+                {% if is_guardian_audience %}학부모에게 보여줄 안내문(PDF/이미지){% else %}서명 대상자에게 보여줄 문서(PDF/이미지){% endif %}
+              </label>
               {{ document_form.original_file }}
               {{ document_form.original_file.errors }}
               <p class="text-xs text-gray-500 mt-2">PDF는 페이지 이동으로, 이미지는 원본 비율로 오른쪽 패널에서 바로 확인합니다.</p>
@@ -121,12 +153,16 @@
         <h2 class="text-lg font-bold mb-3">요청 정보</h2>
         <div class="space-y-3">
           <div>
-            <label class="block text-sm font-semibold mb-1">학부모에게 보이는 제목</label>
+            <label class="block text-sm font-semibold mb-1">
+              {% if is_guardian_audience %}학부모에게 보이는 제목{% else %}서명 대상자에게 보이는 제목{% endif %}
+            </label>
             {{ request_form.title }}
             {{ request_form.title.errors }}
           </div>
           <div>
-            <label class="block text-sm font-semibold mb-1">학부모 안내 메시지</label>
+            <label class="block text-sm font-semibold mb-1">
+              {% if is_guardian_audience %}학부모 안내 메시지{% else %}서명 안내 메시지{% endif %}
+            </label>
             {{ request_form.message }}
             {{ request_form.message.errors }}
           </div>

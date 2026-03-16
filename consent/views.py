@@ -9,7 +9,7 @@ import re
 import qrcode
 import base64
 import requests
-from urllib.parse import quote
+from urllib.parse import parse_qsl, quote, urlencode, urlsplit, urlunsplit
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -21,17 +21,25 @@ from django.http import FileResponse, Http404, HttpResponse, StreamingHttpRespon
 from django.urls import reverse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django_ratelimit.decorators import ratelimit
 from django.views.decorators.http import require_POST
 
 from .forms import (
     ConsentDocumentForm,
     ConsentRequestForm,
+    ConsentRosterManageForm,
     ConsentSignForm,
     RecipientBulkForm,
     SharedLookupForm,
 )
-from .models import ConsentAuditLog, SignatureRecipient, SignatureRequest
+from .models import (
+    ConsentAuditLog,
+    ConsentRoster,
+    ConsentRosterEntry,
+    SignatureRecipient,
+    SignatureRequest,
+)
 from .policy_content import (
     CONSENT_POLICY_REFERENCES,
     CONSENT_POLICY_TERMS,
@@ -63,6 +71,24 @@ WORKFLOW_ACTION_SEED_SESSION_KEY = "workflow_action_seeds"
 SHEETBOOK_ACTION_SEED_SESSION_KEY = "sheetbook_action_seeds"
 
 
+def _normalize_audience_type(value):
+    value = (value or "").strip()
+    valid_values = {choice[0] for choice in SignatureRequest.AUDIENCE_CHOICES}
+    if value in valid_values:
+        return value
+    return SignatureRequest.AUDIENCE_GUARDIAN
+
+
+def _audience_type_label(audience_type):
+    return dict(SignatureRequest.AUDIENCE_CHOICES).get(audience_type, audience_type)
+
+
+def _audience_recipient_label(audience_type):
+    if audience_type == SignatureRequest.AUDIENCE_GENERAL:
+        return "서명 대상자"
+    return "학부모"
+
+
 def _apply_workspace_cache_headers(response):
     response["Cache-Control"] = "private, no-cache, must-revalidate"
     response["Pragma"] = "no-cache"
@@ -74,6 +100,39 @@ def _apply_sensitive_cache_headers(response):
     response["Pragma"] = "no-cache"
     response["Expires"] = "0"
     return response
+
+
+def _append_query_params(url, **params):
+    split_result = urlsplit(url)
+    query = dict(parse_qsl(split_result.query, keep_blank_values=True))
+    for key, value in params.items():
+        if value in (None, ""):
+            query.pop(key, None)
+            continue
+        query[str(key)] = str(value)
+    return urlunsplit(
+        (
+            split_result.scheme,
+            split_result.netloc,
+            split_result.path,
+            urlencode(query),
+            split_result.fragment,
+        )
+    )
+
+
+def _get_safe_return_to(request):
+    raw_value = (request.POST.get("return_to") or request.GET.get("return_to") or "").strip()
+    if not raw_value:
+        return ""
+    if not url_has_allowed_host_and_scheme(
+        raw_value,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return ""
+    split_result = urlsplit(raw_value)
+    return urlunsplit(("", "", split_result.path or "/", split_result.query, ""))
 
 
 def _snapshot_file_metadata(file_obj):
@@ -270,10 +329,17 @@ def _normalize_phone_last4(value: str) -> str:
     return digits[-4:]
 
 
-def _build_recipient_payload(student_name: str, parent_name: str, phone_value: str):
+def _build_recipient_payload(student_name: str, parent_name: str, phone_value: str, *, audience_type: str):
     student_name = (student_name or "").strip()
     if not student_name:
         return None
+
+    if audience_type == SignatureRequest.AUDIENCE_GENERAL:
+        return {
+            "student_name": student_name,
+            "parent_name": "",
+            "phone_number": "",
+        }
 
     phone_last4 = _normalize_phone_last4(phone_value)
     if not phone_last4:
@@ -287,7 +353,7 @@ def _build_recipient_payload(student_name: str, parent_name: str, phone_value: s
     }
 
 
-def _parse_recipients_with_meta(text):
+def _parse_recipients_with_meta(text, *, audience_type=SignatureRequest.AUDIENCE_GUARDIAN):
     recipients = []
     invalid_rows = []
     for idx, raw in enumerate((text or "").splitlines(), start=1):
@@ -295,18 +361,28 @@ def _parse_recipients_with_meta(text):
         if not line:
             continue
 
-        parts = [p.strip() for p in line.split(",", 2)]
-        if len(parts) < 2:
-            invalid_rows.append(idx)
-            continue
-
-        if len(parts) == 2:
-            student_name, phone_value = parts
+        if audience_type == SignatureRequest.AUDIENCE_GENERAL:
+            student_name = line.split(",", 1)[0].strip()
             parent_name = ""
+            phone_value = ""
         else:
-            student_name, parent_name, phone_value = parts[0], parts[1], parts[2]
+            parts = [p.strip() for p in line.split(",", 2)]
+            if len(parts) < 2:
+                invalid_rows.append(idx)
+                continue
 
-        payload = _build_recipient_payload(student_name, parent_name, phone_value)
+            if len(parts) == 2:
+                student_name, phone_value = parts
+                parent_name = ""
+            else:
+                student_name, parent_name, phone_value = parts[0], parts[1], parts[2]
+
+        payload = _build_recipient_payload(
+            student_name,
+            parent_name,
+            phone_value,
+            audience_type=audience_type,
+        )
         if payload is None:
             invalid_rows.append(idx)
             continue
@@ -314,13 +390,15 @@ def _parse_recipients_with_meta(text):
     return recipients, invalid_rows
 
 
-def _parse_recipients(text):
-    recipients, _ = _parse_recipients_with_meta(text)
+def _parse_recipients(text, *, audience_type=SignatureRequest.AUDIENCE_GUARDIAN):
+    recipients, _ = _parse_recipients_with_meta(text, audience_type=audience_type)
     return recipients
 
 
-def _recipient_csv_has_header(cols):
+def _recipient_csv_has_header(cols, *, audience_type=SignatureRequest.AUDIENCE_GUARDIAN):
     normalized = "".join((cell or "").strip().lower().replace(" ", "") for cell in cols)
+    if audience_type == SignatureRequest.AUDIENCE_GENERAL:
+        return ("이름" in normalized or "성함" in normalized or "name" in normalized)
     return ("학생" in normalized or "student" in normalized) and (
         "연락처" in normalized
         or "전화" in normalized
@@ -331,7 +409,7 @@ def _recipient_csv_has_header(cols):
     )
 
 
-def _parse_recipients_csv(file_obj):
+def _parse_recipients_csv(file_obj, *, audience_type=SignatureRequest.AUDIENCE_GUARDIAN):
     if not file_obj:
         return [], []
 
@@ -360,20 +438,30 @@ def _parse_recipients_csv(file_obj):
         if not any(cols):
             continue
 
-        if idx == 1 and _recipient_csv_has_header(cols):
+        if idx == 1 and _recipient_csv_has_header(cols, audience_type=audience_type):
             continue
 
-        if len(cols) < 2:
-            invalid_rows.append(idx)
-            continue
-
-        if len(cols) == 2:
-            student_name, phone_value = cols[0], cols[1]
+        if audience_type == SignatureRequest.AUDIENCE_GENERAL:
+            student_name = cols[0] if cols else ""
             parent_name = ""
+            phone_value = ""
         else:
-            student_name, parent_name, phone_value = cols[0], cols[1], cols[2]
+            if len(cols) < 2:
+                invalid_rows.append(idx)
+                continue
 
-        payload = _build_recipient_payload(student_name, parent_name, phone_value)
+            if len(cols) == 2:
+                student_name, phone_value = cols[0], cols[1]
+                parent_name = ""
+            else:
+                student_name, parent_name, phone_value = cols[0], cols[1], cols[2]
+
+        payload = _build_recipient_payload(
+            student_name,
+            parent_name,
+            phone_value,
+            audience_type=audience_type,
+        )
         if payload is None:
             invalid_rows.append(idx)
             continue
@@ -392,13 +480,20 @@ def _generate_qr_base64(url: str) -> str:
     return base64.b64encode(buffer.getvalue()).decode()
 
 
-def _compose_parent_message(consent_request: SignatureRequest, recipient: SignatureRecipient, sign_url: str) -> str:
+def _compose_recipient_message(consent_request: SignatureRequest, recipient: SignatureRecipient, sign_url: str) -> str:
     custom = (consent_request.message or "").strip()
-    body = custom or f"{consent_request.title} 동의서 확인 부탁드립니다."
+    if consent_request.is_guardian_audience:
+        body = custom or f"{consent_request.title} 동의서 확인 부탁드립니다."
+        return (
+            f"안녕하세요. {recipient.student_name} 학생 보호자님.\n"
+            f"{body}\n"
+            f"동의서 링크: {sign_url}"
+        )
+    body = custom or f"{consent_request.title} 서명 확인 부탁드립니다."
     return (
-        f"안녕하세요. {recipient.student_name} 학생 보호자님.\n"
+        f"안녕하세요. {recipient.display_name}님.\n"
         f"{body}\n"
-        f"동의서 링크: {sign_url}"
+        f"서명 링크: {sign_url}"
     )
 
 
@@ -410,6 +505,38 @@ def _compose_shared_lookup_message(consent_request: SignatureRequest, lookup_url
         f"{body}\n"
         "학생 이름과 보호자 전화번호 뒤 4자리를 입력해 제출해 주세요.\n"
         f"동의서 링크: {lookup_url}"
+    )
+
+
+def _recipients_from_roster(roster: ConsentRoster):
+    if not roster:
+        return []
+    return [entry.to_recipient_payload() for entry in roster.entries.all().order_by("sort_order", "id")]
+
+
+def _serialize_roster_entries_text(roster: ConsentRoster):
+    lines = []
+    for entry in roster.entries.all().order_by("sort_order", "id"):
+        if roster.is_guardian_audience:
+            lines.append(f"{entry.student_name},{entry.parent_name},{entry.phone_last4}")
+        else:
+            lines.append(entry.student_name)
+    return "\n".join(lines)
+
+
+def _replace_roster_entries(roster: ConsentRoster, recipients):
+    roster.entries.all().delete()
+    ConsentRosterEntry.objects.bulk_create(
+        [
+            ConsentRosterEntry(
+                roster=roster,
+                student_name=recipient["student_name"],
+                parent_name=recipient.get("parent_name", ""),
+                phone_number=recipient.get("phone_number", ""),
+                sort_order=index,
+            )
+            for index, recipient in enumerate(recipients)
+        ]
     )
 
 
@@ -811,7 +938,168 @@ def consent_create(request):
     schema_block = _schema_guard_response(request)
     if schema_block:
         return schema_block
-    return redirect("consent:create_step1")
+    selected_audience = _normalize_audience_type(request.GET.get("audience_type"))
+    response = render(
+        request,
+        "consent/create.html",
+        {
+            "selected_audience": selected_audience,
+            "guardian_audience": SignatureRequest.AUDIENCE_GUARDIAN,
+            "general_audience": SignatureRequest.AUDIENCE_GENERAL,
+        },
+    )
+    return _apply_workspace_cache_headers(response)
+
+
+@login_required
+@transaction.atomic
+def consent_rosters(request):
+    schema_block = _schema_guard_response(request)
+    if schema_block:
+        return schema_block
+
+    return_to = _get_safe_return_to(request)
+    audience_type = _normalize_audience_type(
+        request.POST.get("audience_type") or request.GET.get("audience_type")
+    )
+    selected_roster = None
+    edit_roster_id = request.GET.get("edit") or request.POST.get("roster_id")
+    if edit_roster_id:
+        selected_roster = get_object_or_404(
+            ConsentRoster.objects.prefetch_related("entries"),
+            id=edit_roster_id,
+            owner=request.user,
+        )
+        if selected_roster.audience_type != audience_type:
+            selected_roster = None
+
+    if request.method == "POST":
+        form = ConsentRosterManageForm(
+            request.POST,
+            request.FILES,
+            audience_type=audience_type,
+        )
+        if form.is_valid():
+            roster = selected_roster
+            name = (form.cleaned_data.get("name") or "").strip()
+            description = (form.cleaned_data.get("description") or "").strip()
+            text_entries = (form.cleaned_data.get("entries_text") or "").strip()
+            csv_entries = form.cleaned_data.get("entries_csv")
+            parsed_text, invalid_text_rows = _parse_recipients_with_meta(
+                text_entries,
+                audience_type=audience_type,
+            )
+            parsed_csv, invalid_csv_rows = _parse_recipients_csv(
+                csv_entries,
+                audience_type=audience_type,
+            )
+
+            if invalid_text_rows:
+                row_text = ", ".join(map(str, invalid_text_rows[:10]))
+                if audience_type == SignatureRequest.AUDIENCE_GENERAL:
+                    form.add_error("entries_text", f"한 줄에 이름 하나씩 입력해 주세요. 형식 오류 행: {row_text}")
+                else:
+                    form.add_error(
+                        "entries_text",
+                        f"학생명, 학부모명(선택), 연락처 뒤 4자리 형식으로 입력해 주세요. 형식 오류 행: {row_text}",
+                    )
+            if invalid_csv_rows == [0]:
+                form.add_error("entries_csv", "CSV 인코딩을 읽지 못했습니다. UTF-8 또는 CP949 형식으로 다시 저장해 주세요.")
+            elif invalid_csv_rows:
+                row_text = ", ".join(map(str, invalid_csv_rows[:10]))
+                if audience_type == SignatureRequest.AUDIENCE_GENERAL:
+                    form.add_error("entries_csv", f"CSV는 이름 열이 필요합니다. 형식 오류 행: {row_text}")
+                else:
+                    form.add_error(
+                        "entries_csv",
+                        f"CSV는 학생명, 학부모명(선택), 연락처 뒤 4자리 열이 필요합니다. 형식 오류 행: {row_text}",
+                    )
+
+            entries = parsed_text + parsed_csv
+            if not form.errors and not entries:
+                form.add_error(None, "저장할 명단이 없습니다. 직접 입력이나 CSV를 확인해 주세요.")
+
+            if not form.errors:
+                if roster is None:
+                    roster = ConsentRoster.objects.create(
+                        owner=request.user,
+                        audience_type=audience_type,
+                        name=name,
+                        description=description,
+                    )
+                    created_label = "만들었습니다"
+                else:
+                    roster.name = name
+                    roster.description = description
+                    roster.audience_type = audience_type
+                    roster.save(update_fields=["name", "description", "audience_type", "updated_at"])
+                    created_label = "저장했습니다"
+                _replace_roster_entries(roster, entries)
+                messages.success(request, f"'{roster.name}' 명단을 {created_label}.")
+                if return_to:
+                    return redirect(_append_query_params(return_to, saved_roster=roster.id))
+                return redirect(
+                    _append_query_params(
+                        reverse("consent:rosters"),
+                        audience_type=audience_type,
+                        edit=roster.id,
+                    )
+                )
+    else:
+        initial = {"audience_type": audience_type}
+        if selected_roster:
+            initial.update(
+                {
+                    "roster_id": selected_roster.id,
+                    "name": selected_roster.name,
+                    "description": selected_roster.description,
+                    "entries_text": _serialize_roster_entries_text(selected_roster),
+                }
+            )
+        form = ConsentRosterManageForm(audience_type=audience_type, initial=initial)
+
+    rosters = (
+        ConsentRoster.objects.filter(owner=request.user, audience_type=audience_type)
+        .annotate(entry_count=Count("entries"))
+        .order_by("-is_favorite", "name", "created_at")
+    )
+    response = render(
+        request,
+        "consent/rosters.html",
+        {
+            "form": form,
+            "rosters": rosters,
+            "selected_roster": selected_roster,
+            "selected_audience": audience_type,
+            "guardian_audience": SignatureRequest.AUDIENCE_GUARDIAN,
+            "general_audience": SignatureRequest.AUDIENCE_GENERAL,
+            "return_to": return_to,
+        },
+    )
+    return _apply_workspace_cache_headers(response)
+
+
+@login_required
+@require_POST
+@transaction.atomic
+def consent_delete_roster(request, roster_id):
+    schema_block = _schema_guard_response(request)
+    if schema_block:
+        return schema_block
+
+    return_to = _get_safe_return_to(request)
+    roster = get_object_or_404(ConsentRoster, id=roster_id, owner=request.user)
+    audience_type = roster.audience_type
+    roster_name = roster.name
+    roster.delete()
+    messages.success(request, f"'{roster_name}' 명단을 삭제했습니다.")
+    return redirect(
+        _append_query_params(
+            reverse("consent:rosters"),
+            audience_type=audience_type,
+            return_to=return_to,
+        )
+    )
 
 
 @login_required
@@ -821,6 +1109,9 @@ def consent_create_step1(request):
     if schema_block:
         return schema_block
 
+    audience_type = _normalize_audience_type(
+        request.POST.get("audience_type") or request.GET.get("audience_type")
+    )
     sheetbook_seed_token = (
         request.POST.get("sheetbook_seed_token")
         or request.GET.get("sb_seed")
@@ -832,8 +1123,13 @@ def consent_create_step1(request):
         expected_action="consent",
     )
     seed_data = sheetbook_seed.get("data", {}) if isinstance(sheetbook_seed, dict) else {}
+    if audience_type != SignatureRequest.AUDIENCE_GUARDIAN:
+        seed_data = {}
     seed_recipients, seed_invalid_rows = (
-        _parse_recipients_with_meta(seed_data.get("recipients_text", ""))
+        _parse_recipients_with_meta(
+            seed_data.get("recipients_text", ""),
+            audience_type=SignatureRequest.AUDIENCE_GUARDIAN,
+        )
         if seed_data
         else ([], [])
     )
@@ -847,8 +1143,11 @@ def consent_create_step1(request):
     ]
 
     if request.method == "POST":
-        document_form = ConsentDocumentForm(request.POST, request.FILES)
-        request_form = ConsentRequestForm(request.POST)
+        post_data = request.POST.copy()
+        if not (post_data.get("audience_type") or "").strip():
+            post_data["audience_type"] = audience_type
+        document_form = ConsentDocumentForm(post_data, request.FILES)
+        request_form = ConsentRequestForm(post_data)
         if document_form.is_valid() and request_form.is_valid():
             document = None
             consent_request = None
@@ -860,6 +1159,7 @@ def consent_create_step1(request):
             consent_request.created_by = request.user
             consent_request.status = SignatureRequest.STATUS_DRAFT
             consent_request.consent_text_version = "v1"
+            consent_request.audience_type = audience_type
             consent_request.document_name_snapshot = doc_name
             consent_request.document_size_snapshot = doc_size
             consent_request.document_sha256_snapshot = doc_sha256
@@ -895,7 +1195,10 @@ def consent_create_step1(request):
                     "on",
                 )
                 if recipients_text and apply_seed_recipients:
-                    recipients, invalid_seed_rows = _parse_recipients_with_meta(recipients_text)
+                    recipients, invalid_seed_rows = _parse_recipients_with_meta(
+                        recipients_text,
+                        audience_type=SignatureRequest.AUDIENCE_GUARDIAN,
+                    )
                     created = 0
                     try:
                         for rec in recipients:
@@ -952,6 +1255,7 @@ def consent_create_step1(request):
             }
         )
         initial_request = {
+            "audience_type": audience_type,
             "title": (seed_data.get("title") or "").strip(),
             "message": (seed_data.get("message") or "").strip(),
             "legal_notice": DEFAULT_LEGAL_NOTICE,
@@ -974,6 +1278,9 @@ def consent_create_step1(request):
             "prefill_recipients_count": prefill_recipients_count,
             "prefill_recipients_preview": prefill_recipients_preview,
             "prefill_invalid_recipients_count": len(seed_invalid_rows),
+            "audience_type": audience_type,
+            "audience_type_label": _audience_type_label(audience_type),
+            "is_guardian_audience": audience_type == SignatureRequest.AUDIENCE_GUARDIAN,
             **_policy_panel_context(),
         },
     )
@@ -1002,54 +1309,85 @@ def consent_recipients(request, request_id):
         consent_request = get_object_or_404(SignatureRequest, request_id=request_id, created_by=request.user)
     except (OperationalError, ProgrammingError) as exc:
         return _schema_guard_response(request, force_refresh=True, detail_override=str(exc))
-    form_kwargs = {"owner": request.user}
-    if request.method != "POST" and consent_request.shared_roster_group_id:
-        form_kwargs["initial"] = {"shared_roster_group": consent_request.shared_roster_group_id}
+    form_kwargs = {"owner": request.user, "audience_type": consent_request.audience_type}
+    if request.method != "POST":
+        initial_saved_roster_id = consent_request.roster_id
+        selected_saved_roster_id = (request.GET.get("saved_roster") or "").strip()
+        if selected_saved_roster_id:
+            selected_saved_roster = ConsentRoster.objects.filter(
+                owner=request.user,
+                audience_type=consent_request.audience_type,
+                id=selected_saved_roster_id,
+            ).first()
+            if selected_saved_roster:
+                initial_saved_roster_id = selected_saved_roster.id
+        if initial_saved_roster_id:
+            form_kwargs["initial"] = {"saved_roster": initial_saved_roster_id}
     form = RecipientBulkForm(request.POST or None, request.FILES or None, **form_kwargs)
+    manage_rosters_url = _append_query_params(
+        reverse("consent:rosters"),
+        audience_type=consent_request.audience_type,
+        return_to=request.get_full_path(),
+    )
 
     if request.method == "POST" and form.is_valid():
-        selected_roster_group = form.cleaned_data.get("shared_roster_group")
+        selected_roster = form.cleaned_data.get("saved_roster")
         recipients_text_raw = (form.cleaned_data.get("recipients_text") or "").strip()
         recipients_csv_file = form.cleaned_data.get("recipients_csv")
-        has_manual_input = bool(recipients_text_raw or recipients_csv_file)
-        if selected_roster_group and selected_roster_group.owner_id != request.user.id:
-            form.add_error("shared_roster_group", "내 명단만 선택할 수 있습니다.")
+        if selected_roster and selected_roster.owner_id != request.user.id:
+            form.add_error("saved_roster", "내 명단만 선택할 수 있습니다.")
         else:
-            if consent_request.shared_roster_group_id != (selected_roster_group.id if selected_roster_group else None):
-                consent_request.shared_roster_group = selected_roster_group
-                consent_request.save(update_fields=["shared_roster_group"])
-
-            if selected_roster_group and not has_manual_input:
-                form.add_error(
-                    "shared_roster_group",
-                    "공유 명단은 연결만 됩니다. 학생명과 연락처 뒤 4자리는 직접 입력하거나 CSV로 올려 주세요.",
-                )
+            if consent_request.roster_id != (selected_roster.id if selected_roster else None):
+                consent_request.roster = selected_roster
+                consent_request.save(update_fields=["roster"])
 
         if not form.errors:
-            text_recipients, invalid_text_rows = _parse_recipients_with_meta(recipients_text_raw)
-            csv_recipients, invalid_csv_rows = _parse_recipients_csv(recipients_csv_file)
+            roster_recipients = _recipients_from_roster(selected_roster)
+            text_recipients, invalid_text_rows = _parse_recipients_with_meta(
+                recipients_text_raw,
+                audience_type=consent_request.audience_type,
+            )
+            csv_recipients, invalid_csv_rows = _parse_recipients_csv(
+                recipients_csv_file,
+                audience_type=consent_request.audience_type,
+            )
 
             if invalid_text_rows:
                 row_text = ", ".join(map(str, invalid_text_rows[:10]))
-                form.add_error(
-                    "recipients_text",
-                    f"학생명, 학부모명(선택), 연락처 뒤 4자리 형식으로 입력해 주세요. 형식 오류 행: {row_text}",
-                )
+                if consent_request.is_guardian_audience:
+                    form.add_error(
+                        "recipients_text",
+                        f"학생명, 학부모명(선택), 연락처 뒤 4자리 형식으로 입력해 주세요. 형식 오류 행: {row_text}",
+                    )
+                else:
+                    form.add_error(
+                        "recipients_text",
+                        f"한 줄에 이름 하나씩 입력해 주세요. 형식 오류 행: {row_text}",
+                    )
             if invalid_csv_rows == [0]:
                 form.add_error("recipients_csv", "CSV 인코딩을 읽지 못했습니다. UTF-8 또는 CP949 형식으로 다시 저장해 주세요.")
             elif invalid_csv_rows:
                 row_text = ", ".join(map(str, invalid_csv_rows[:10]))
-                form.add_error(
-                    "recipients_csv",
-                    f"CSV는 학생명, 학부모명(선택), 연락처 뒤 4자리 열이 필요합니다. 형식 오류 행: {row_text}",
-                )
+                if consent_request.is_guardian_audience:
+                    form.add_error(
+                        "recipients_csv",
+                        f"CSV는 학생명, 학부모명(선택), 연락처 뒤 4자리 열이 필요합니다. 형식 오류 행: {row_text}",
+                    )
+                else:
+                    form.add_error(
+                        "recipients_csv",
+                        f"CSV는 이름 열이 필요합니다. 형식 오류 행: {row_text}",
+                    )
 
-            all_recipients = text_recipients + csv_recipients
+            all_recipients = roster_recipients + text_recipients + csv_recipients
 
             if form.errors:
                 pass
             elif not all_recipients:
-                form.add_error(None, "등록 가능한 수신자가 없습니다. 학생명과 연락처 뒤 4자리를 확인해 주세요.")
+                if consent_request.is_guardian_audience:
+                    form.add_error(None, "등록 가능한 수신자가 없습니다. 학생명과 연락처 뒤 4자리를 확인해 주세요.")
+                else:
+                    form.add_error(None, "등록 가능한 수신자가 없습니다. 이름을 확인해 주세요.")
             else:
                 created = 0
                 try:
@@ -1068,10 +1406,10 @@ def consent_recipients(request, request_id):
                     form.add_error(None, "수신자 저장 중 오류가 발생했습니다. 입력값을 확인한 뒤 다시 시도해 주세요.")
                 else:
                     skipped = max(len(all_recipients) - created, 0)
-                    if selected_roster_group:
+                    if selected_roster:
                         messages.success(
                             request,
-                            f"{created}명 등록 완료 (중복/제외 {skipped}명). 공유 명단 '{selected_roster_group.name}' 연동됨",
+                            f"{created}명 등록 완료 (중복/제외 {skipped}명). 저장 명단 '{selected_roster.name}' 불러옴",
                         )
                     else:
                         messages.success(request, f"{created}명 등록 완료 (중복 {skipped}명 제외)")
@@ -1081,23 +1419,46 @@ def consent_recipients(request, request_id):
     return render(
         request,
         "consent/create_step3_recipients.html",
-        {"consent_request": consent_request, "form": form, "recipients": recipients},
+        {
+            "consent_request": consent_request,
+            "form": form,
+            "recipients": recipients,
+            "is_guardian_audience": consent_request.is_guardian_audience,
+            "audience_type_label": consent_request.audience_type_label,
+            "manage_rosters_url": manage_rosters_url,
+            "saved_roster_count": form.fields["saved_roster"].queryset.count(),
+        },
     )
 
 
 @login_required
-def consent_recipients_csv_template(request):
+def consent_recipients_csv_template(request, request_id=None):
     schema_block = _schema_guard_response(request)
     if schema_block:
         return schema_block
+
+    if request_id:
+        consent_request = get_object_or_404(
+            SignatureRequest,
+            request_id=request_id,
+            created_by=request.user,
+        )
+        audience_type = consent_request.audience_type
+    else:
+        audience_type = _normalize_audience_type(request.GET.get("audience_type"))
 
     response = HttpResponse(content_type="text/csv; charset=utf-8")
     response["Content-Disposition"] = 'attachment; filename="consent_recipients_template.csv"'
     response.write("\ufeff")
     writer = csv.writer(response)
-    writer.writerow(["학생명", "학부모명", "연락처(뒤4자리)"])
-    writer.writerow(["김하늘", "김하늘 보호자", "5678"])
-    writer.writerow(["박나래", "", "1234"])
+    if audience_type == SignatureRequest.AUDIENCE_GENERAL:
+        writer.writerow(["이름"])
+        writer.writerow(["김민수"])
+        writer.writerow(["박교사"])
+    else:
+        writer.writerow(["학생명", "학부모명", "연락처(뒤4자리)"])
+        writer.writerow(["김하늘", "김하늘 보호자", "5678"])
+        writer.writerow(["박나래", "", "1234"])
     return response
 
 
@@ -1119,11 +1480,19 @@ def consent_detail(request, request_id):
         SignatureRequest.STATUS_COMPLETED,
     )
     source_file_available = _is_file_accessible(consent_request.document.original_file)
-    missing_phone_count = sum(1 for recipient in recipients if not recipient.phone_last4)
-    token_only_submitted_count = sum(
-        1
-        for recipient in recipients
-        if recipient.signed_at and recipient.identity_assurance == SignatureRecipient.IDENTITY_TOKEN_ONLY
+    missing_phone_count = (
+        sum(1 for recipient in recipients if not recipient.phone_last4)
+        if consent_request.is_guardian_audience
+        else 0
+    )
+    token_only_submitted_count = (
+        sum(
+            1
+            for recipient in recipients
+            if recipient.signed_at and recipient.identity_assurance == SignatureRecipient.IDENTITY_TOKEN_ONLY
+        )
+        if consent_request.is_guardian_audience
+        else 0
     )
     recipient_rows = []
     for recipient in recipients:
@@ -1133,13 +1502,19 @@ def consent_detail(request, request_id):
                 "recipient": recipient,
                 "sign_url": sign_url,
                 "qr_code_base64": _generate_qr_base64(sign_url),
-                "copy_message": _compose_parent_message(consent_request, recipient, sign_url),
+                "copy_message": _compose_recipient_message(consent_request, recipient, sign_url),
                 "download_url": reverse("consent:download_recipient_pdf", kwargs={"recipient_id": recipient.id}),
             }
         )
-    shared_lookup_url = request.build_absolute_uri(
-        reverse("consent:shared_lookup", kwargs={"shared_lookup_token": consent_request.shared_lookup_token})
-    )
+    shared_lookup_url = ""
+    shared_lookup_qr_code_base64 = ""
+    shared_lookup_copy_message = ""
+    if consent_request.allows_shared_lookup:
+        shared_lookup_url = request.build_absolute_uri(
+            reverse("consent:shared_lookup", kwargs={"shared_lookup_token": consent_request.shared_lookup_token})
+        )
+        shared_lookup_qr_code_base64 = _generate_qr_base64(shared_lookup_url)
+        shared_lookup_copy_message = _compose_shared_lookup_message(consent_request, shared_lookup_url)
     response = render(
         request,
         "consent/detail.html",
@@ -1147,8 +1522,8 @@ def consent_detail(request, request_id):
             "consent_request": consent_request,
             "recipient_rows": recipient_rows,
             "shared_lookup_url": shared_lookup_url,
-            "shared_lookup_qr_code_base64": _generate_qr_base64(shared_lookup_url),
-            "shared_lookup_copy_message": _compose_shared_lookup_message(consent_request, shared_lookup_url),
+            "shared_lookup_qr_code_base64": shared_lookup_qr_code_base64,
+            "shared_lookup_copy_message": shared_lookup_copy_message,
             "host_base": request.build_absolute_uri("/")[:-1],
             "link_expires_at": consent_request.link_expires_at,
             "source_file_available": source_file_available,
@@ -1165,6 +1540,7 @@ def consent_detail(request, request_id):
             "document_file_size": consent_request.document_size_snapshot or "",
             "recipient_stats": recipient_stats,
             "links_released": links_released,
+            "is_guardian_audience": consent_request.is_guardian_audience,
             "evidence_warning_counts": {
                 "missing_phone": missing_phone_count,
                 "token_only_submitted": token_only_submitted_count,
@@ -1214,8 +1590,9 @@ def consent_send(request, request_id):
         ):
             _reset_recipient_link_state(recipient, rotate_token=True)
             rotated_recipient_count += 1
-        consent_request.shared_lookup_token = _issue_shared_lookup_token()
-        rotated_shared_lookup = True
+        if consent_request.allows_shared_lookup:
+            consent_request.shared_lookup_token = _issue_shared_lookup_token()
+            rotated_shared_lookup = True
     if consent_request.status != SignatureRequest.STATUS_COMPLETED:
         consent_request.status = SignatureRequest.STATUS_SENT
     consent_request.sent_at = timezone.now()
@@ -1242,12 +1619,21 @@ def consent_send(request, request_id):
         },
     )
     if already_released:
-        messages.success(
-            request,
-            f"발송 시각을 갱신하고 미완료 수신자 {rotated_recipient_count}명의 링크와 학부모 전체 링크를 새로 만들었습니다. 이전 링크는 더 이상 열리지 않습니다.",
-        )
+        if rotated_shared_lookup:
+            messages.success(
+                request,
+                f"발송 시각을 갱신하고 미완료 수신자 {rotated_recipient_count}명의 링크와 학부모 전체 링크를 새로 만들었습니다. 이전 링크는 더 이상 열리지 않습니다.",
+            )
+        else:
+            messages.success(
+                request,
+                f"발송 시각을 갱신하고 미완료 수신자 {rotated_recipient_count}명의 개별 서명 링크를 새로 만들었습니다. 이전 링크는 더 이상 열리지 않습니다.",
+            )
     else:
-        messages.success(request, "학부모 링크 발송을 시작했습니다. 상단의 학부모 전체 링크 또는 수신자별 링크를 복사해 전달해 주세요.")
+        if consent_request.allows_shared_lookup:
+            messages.success(request, "학부모 링크 발송을 시작했습니다. 상단의 학부모 전체 링크 또는 수신자별 링크를 복사해 전달해 주세요.")
+        else:
+            messages.success(request, "서명 링크 발송을 시작했습니다. 수신자별 링크를 복사해 전달해 주세요.")
     return redirect("consent:detail", request_id=consent_request.request_id)
 
 
@@ -1278,10 +1664,10 @@ def consent_download_csv(request, request_id):
     )
 
     writer = csv.writer(response)
+    leading_headers = ["학생명", "학부모명"] if consent_request.is_guardian_audience else ["이름"]
     writer.writerow(
-        [
-            "학생명",
-            "학부모명",
+        leading_headers
+        + [
             "상태",
             "동의결과",
             "증빙수준",
@@ -1302,10 +1688,14 @@ def consent_download_csv(request, request_id):
         ]
     )
     for recipient in consent_request.recipients.order_by("student_name", "id"):
+        leading_values = (
+            [recipient.student_name, recipient.parent_name]
+            if consent_request.is_guardian_audience
+            else [recipient.display_name]
+        )
         writer.writerow(
-            [
-                recipient.student_name,
-                recipient.parent_name,
+            leading_values
+            + [
                 recipient.get_status_display(),
                 recipient.get_decision_display() if recipient.decision else "",
                 recipient.get_identity_assurance_display() if recipient.identity_assurance else "",
@@ -1490,6 +1880,8 @@ def consent_shared_lookup(request, shared_lookup_token):
         SignatureRequest.objects.select_related("document"),
         shared_lookup_token=shared_lookup_token,
     )
+    if not consent_request.allows_shared_lookup:
+        raise Http404("이 요청은 전체 찾기 링크를 사용하지 않습니다.")
     if not _is_request_public_link_released(consent_request):
         return _request_link_not_ready_response(request, consent_request)
     if consent_request.is_link_expired:
@@ -1570,7 +1962,7 @@ def consent_sign(request, token):
             ip_address = _request_client_ip(request)
             user_agent = _request_user_agent(request)
             phone_last4 = (form.cleaned_data.get("phone_last4") or "").strip()
-            requires_phone_last4 = bool(recipient.phone_last4)
+            requires_phone_last4 = recipient.request.is_guardian_audience and bool(recipient.phone_last4)
             verified_at = None
             identity_assurance = SignatureRecipient.IDENTITY_TOKEN_ONLY
 
@@ -1692,7 +2084,8 @@ def consent_sign(request, token):
             "document_download_url": reverse("consent:public_document", kwargs={"token": recipient.access_token}),
             "document_file_name": evidence.get("document_name") or recipient.request.document.title,
             "document_file_size": evidence.get("document_size") or "",
-            "requires_phone_last4": bool(recipient.phone_last4),
+            "requires_phone_last4": recipient.request.is_guardian_audience and bool(recipient.phone_last4),
+            "is_guardian_audience": recipient.request.is_guardian_audience,
         },
     )
     return _apply_sensitive_cache_headers(response)
@@ -1824,13 +2217,17 @@ def consent_update_recipient(request, recipient_id):
     phone_number = _normalize_phone_last4(request.POST.get("phone_number") or "")
 
     if not student_name:
-        messages.error(request, "학생명은 필수입니다.")
-        return redirect("consent:detail", request_id=recipient.request.request_id)
-    if not phone_number:
-        messages.error(request, "연락처 뒤 4자리는 필수입니다.")
+        messages.error(request, "이름은 필수입니다." if not recipient.request.is_guardian_audience else "학생명은 필수입니다.")
         return redirect("consent:detail", request_id=recipient.request.request_id)
 
-    normalized_parent_name = parent_name or _default_parent_name(student_name)
+    if recipient.request.is_guardian_audience:
+        if not phone_number:
+            messages.error(request, "연락처 뒤 4자리는 필수입니다.")
+            return redirect("consent:detail", request_id=recipient.request.request_id)
+        normalized_parent_name = parent_name or _default_parent_name(student_name)
+    else:
+        normalized_parent_name = ""
+        phone_number = ""
 
     duplicate_exists = SignatureRecipient.objects.filter(
         request=recipient.request,

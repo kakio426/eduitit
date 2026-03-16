@@ -64,6 +64,12 @@ class SignatureDocument(models.Model):
 
 
 class SignatureRequest(models.Model):
+    AUDIENCE_GUARDIAN = "guardian"
+    AUDIENCE_GENERAL = "general"
+    AUDIENCE_CHOICES = [
+        (AUDIENCE_GUARDIAN, "학부모 확인형"),
+        (AUDIENCE_GENERAL, "일반 서명형"),
+    ]
     STATUS_DRAFT = "draft"
     STATUS_SENT = "sent"
     STATUS_COMPLETED = "completed"
@@ -99,6 +105,11 @@ class SignatureRequest(models.Model):
     message = models.TextField(blank=True)
     legal_notice = models.TextField(blank=True)
     consent_text_version = models.CharField(max_length=32, default="v1")
+    audience_type = models.CharField(
+        max_length=20,
+        choices=AUDIENCE_CHOICES,
+        default=AUDIENCE_GUARDIAN,
+    )
     link_expire_days = models.PositiveSmallIntegerField(choices=LINK_EXPIRE_CHOICES, default=LINK_EXPIRE_14)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_DRAFT)
     shared_lookup_token = models.CharField(max_length=64, unique=True, default=_generate_shared_lookup_token)
@@ -116,6 +127,13 @@ class SignatureRequest(models.Model):
         blank=True,
         related_name="consent_requests",
         help_text="배부 체크 공유 명단과 연동 (선택)",
+    )
+    roster = models.ForeignKey(
+        "ConsentRoster",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="requests",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     sent_at = models.DateTimeField(blank=True, null=True)
@@ -140,6 +158,93 @@ class SignatureRequest(models.Model):
         if not expires_at:
             return False
         return timezone.now() > expires_at
+
+    @property
+    def is_guardian_audience(self):
+        return self.audience_type == self.AUDIENCE_GUARDIAN
+
+    @property
+    def audience_type_label(self):
+        return dict(self.AUDIENCE_CHOICES).get(self.audience_type, self.audience_type)
+
+    @property
+    def allows_shared_lookup(self):
+        return self.is_guardian_audience
+
+
+class ConsentRoster(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="consent_rosters",
+    )
+    audience_type = models.CharField(
+        max_length=20,
+        choices=SignatureRequest.AUDIENCE_CHOICES,
+        default=SignatureRequest.AUDIENCE_GUARDIAN,
+    )
+    name = models.CharField(max_length=120)
+    description = models.CharField(max_length=200, blank=True)
+    is_favorite = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-is_favorite", "name", "created_at"]
+        db_table = "signatures_consentroster"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["owner", "audience_type", "name"],
+                name="consent_roster_owner_audience_name_unique",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.owner} - {self.name}"
+
+    @property
+    def is_guardian_audience(self):
+        return self.audience_type == SignatureRequest.AUDIENCE_GUARDIAN
+
+
+class ConsentRosterEntry(models.Model):
+    roster = models.ForeignKey(
+        ConsentRoster,
+        on_delete=models.CASCADE,
+        related_name="entries",
+    )
+    student_name = models.CharField(max_length=100)
+    parent_name = models.CharField(max_length=100, blank=True)
+    phone_number = models.CharField(max_length=20, blank=True)
+    sort_order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["sort_order", "id"]
+        db_table = "signatures_consentrosterentry"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["roster", "student_name", "parent_name", "phone_number"],
+                name="consent_roster_entry_unique",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.roster.name} - {self.student_name}"
+
+    @property
+    def phone_last4(self):
+        digits = "".join(ch for ch in self.phone_number if ch.isdigit())
+        return digits[-4:]
+
+    def to_recipient_payload(self):
+        return {
+            "student_name": self.student_name,
+            "parent_name": self.parent_name,
+            "phone_number": self.phone_number,
+        }
 
 
 class SignaturePosition(models.Model):
@@ -234,6 +339,18 @@ class SignatureRecipient(models.Model):
     def phone_last4(self):
         digits = "".join(ch for ch in self.phone_number if ch.isdigit())
         return digits[-4:]
+
+    @property
+    def is_guardian_recipient(self):
+        return self.request.is_guardian_audience
+
+    @property
+    def display_name(self):
+        return self.student_name
+
+    @property
+    def secondary_name(self):
+        return self.parent_name if self.is_guardian_recipient else ""
 
 
 class ConsentAuditLog(models.Model):

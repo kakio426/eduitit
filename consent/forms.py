@@ -1,7 +1,6 @@
 from django import forms
-from handoff.models import HandoffRosterGroup
 
-from .models import SignatureDocument, SignatureRequest
+from .models import ConsentRoster, SignatureDocument, SignatureRequest
 
 
 CLAY_INPUT = (
@@ -41,8 +40,9 @@ class ConsentDocumentForm(forms.ModelForm):
 class ConsentRequestForm(forms.ModelForm):
     class Meta:
         model = SignatureRequest
-        fields = ["title", "message", "link_expire_days", "legal_notice"]
+        fields = ["audience_type", "title", "message", "link_expire_days", "legal_notice"]
         widgets = {
+            "audience_type": forms.HiddenInput(),
             "title": forms.TextInput(
                 attrs={
                     "class": CLAY_INPUT,
@@ -76,11 +76,11 @@ class PositionPayloadForm(forms.Form):
 
 
 class RecipientBulkForm(forms.Form):
-    shared_roster_group = forms.ModelChoiceField(
+    saved_roster = forms.ModelChoiceField(
         required=False,
-        queryset=HandoffRosterGroup.objects.none(),
+        queryset=ConsentRoster.objects.none(),
         empty_label="선택 안 함",
-        label="공유 명단 가져오기",
+        label="저장 명단 불러오기",
         widget=forms.Select(
             attrs={
                 "class": CLAY_INPUT,
@@ -93,7 +93,7 @@ class RecipientBulkForm(forms.Form):
             attrs={
                 "class": f"{CLAY_INPUT} font-mono text-sm resize-none",
                 "rows": 8,
-                "placeholder": "학생명,학부모명(선택),연락처 뒤 4자리\n김하늘,,5678\n박나래,박나래 보호자,1234",
+                "placeholder": "",
             }
         )
     )
@@ -109,26 +109,105 @@ class RecipientBulkForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         owner = kwargs.pop("owner", None)
+        audience_type = kwargs.pop("audience_type", SignatureRequest.AUDIENCE_GUARDIAN)
         super().__init__(*args, **kwargs)
+        self.audience_type = audience_type
         if owner is not None:
-            self.fields["shared_roster_group"].queryset = HandoffRosterGroup.objects.filter(owner=owner).order_by(
+            self.fields["saved_roster"].queryset = ConsentRoster.objects.filter(
+                owner=owner,
+                audience_type=audience_type,
+            ).order_by(
                 "-is_favorite",
                 "name",
             )
-        self.fields["shared_roster_group"].label_from_instance = lambda group: group.name
+        self.fields["saved_roster"].label_from_instance = lambda roster: roster.name
+        if audience_type == SignatureRequest.AUDIENCE_GENERAL:
+            self.fields["recipients_text"].widget.attrs["placeholder"] = "이름\n김민수\n박교사"
+        else:
+            self.fields["recipients_text"].widget.attrs["placeholder"] = (
+                "학생명,학부모명(선택),연락처 뒤 4자리\n김하늘,,5678\n박나래,박나래 보호자,1234"
+            )
 
     def clean(self):
         cleaned_data = super().clean()
         text = (cleaned_data.get("recipients_text") or "").strip()
         csv_file = cleaned_data.get("recipients_csv")
-        shared_roster_group = cleaned_data.get("shared_roster_group")
+        saved_roster = cleaned_data.get("saved_roster")
 
-        if not text and not csv_file and not shared_roster_group:
-            raise forms.ValidationError("공유 명단 선택, 직접 입력, CSV 업로드 중 하나를 선택해 주세요.")
+        if not text and not csv_file and not saved_roster:
+            raise forms.ValidationError("저장 명단 선택, 직접 입력, CSV 업로드 중 하나를 선택해 주세요.")
 
         if csv_file and not (csv_file.name or "").lower().endswith(".csv"):
             raise forms.ValidationError("CSV 파일(.csv)만 업로드할 수 있습니다.")
 
+        return cleaned_data
+
+
+class ConsentRosterManageForm(forms.Form):
+    roster_id = forms.UUIDField(required=False, widget=forms.HiddenInput)
+    audience_type = forms.ChoiceField(
+        choices=SignatureRequest.AUDIENCE_CHOICES,
+        widget=forms.HiddenInput(),
+    )
+    name = forms.CharField(
+        max_length=120,
+        widget=forms.TextInput(
+            attrs={
+                "class": CLAY_INPUT,
+                "placeholder": "예: 3학년 2반 학부모 명단",
+            }
+        ),
+    )
+    description = forms.CharField(
+        required=False,
+        max_length=200,
+        widget=forms.TextInput(
+            attrs={
+                "class": CLAY_INPUT,
+                "placeholder": "필요할 때만 적는 짧은 메모",
+            }
+        ),
+    )
+    entries_text = forms.CharField(
+        required=False,
+        widget=forms.Textarea(
+            attrs={
+                "class": f"{CLAY_INPUT} font-mono text-sm resize-none",
+                "rows": 10,
+                "placeholder": "",
+            }
+        ),
+    )
+    entries_csv = forms.FileField(
+        required=False,
+        widget=forms.FileInput(
+            attrs={
+                "class": CLAY_INPUT,
+                "accept": ".csv,text/csv",
+            }
+        ),
+    )
+
+    def __init__(self, *args, **kwargs):
+        audience_type = kwargs.pop("audience_type", SignatureRequest.AUDIENCE_GUARDIAN)
+        super().__init__(*args, **kwargs)
+        self.fields["audience_type"].initial = audience_type
+        if audience_type == SignatureRequest.AUDIENCE_GENERAL:
+            self.fields["name"].widget.attrs["placeholder"] = "예: 2026 교직원 사인 명단"
+            self.fields["entries_text"].widget.attrs["placeholder"] = "이름\n김민수\n박교사"
+        else:
+            self.fields["entries_text"].widget.attrs["placeholder"] = (
+                "학생명,학부모명(선택),연락처 뒤 4자리\n김하늘,,5678\n박나래,박나래 보호자,1234"
+            )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        text = (cleaned_data.get("entries_text") or "").strip()
+        csv_file = cleaned_data.get("entries_csv")
+        if not text and not csv_file:
+            raise forms.ValidationError("직접 입력이나 CSV 업로드 중 하나는 꼭 넣어 주세요.")
+        if csv_file and not (csv_file.name or "").lower().endswith(".csv"):
+            raise forms.ValidationError("CSV 파일(.csv)만 업로드할 수 있습니다.")
         return cleaned_data
 
 

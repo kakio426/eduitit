@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}동의서 서명{% endblock %}
+{% block title %}동의/서명 제출{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -22,7 +22,13 @@
       <div class="flex items-start justify-between gap-2">
         <div>
           <h1 class="text-2xl font-bold text-gray-800">{{ consent_request.title }}</h1>
-          <p class="text-sm text-gray-500 mt-1">{{ recipient.student_name }} 학생 / {{ recipient.parent_name }} 학부모</p>
+          <p class="text-sm text-gray-500 mt-1">
+            {% if is_guardian_audience %}
+            {{ recipient.student_name }} 학생 / {{ recipient.parent_name }} 학부모
+            {% else %}
+            {{ recipient.display_name }}
+            {% endif %}
+          </p>
           {% if expires_at %}
           <p class="text-xs text-gray-500 mt-1">링크 만료: {{ expires_at|date:"Y-m-d H:i" }}</p>
           {% endif %}
@@ -41,9 +47,13 @@
       <div class="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
         제출할 때 보호자 연락처 끝 4자리를 한 번 더 확인합니다.
       </div>
-      {% else %}
+      {% elif is_guardian_audience %}
       <div class="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
         등록된 연락처가 없어 이번 제출은 링크 기반 제출로 기록됩니다.
+      </div>
+      {% else %}
+      <div class="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+        일반 서명형은 개별 링크로만 제출합니다.
       </div>
       {% endif %}
     </div>
@@ -122,8 +132,8 @@
 
       {% if requires_phone_last4 %}
       <div>
-        <label class="block text-sm font-semibold mb-1">보호자 연락처 끝 4자리</label>
-        {{ form.phone_last4 }}
+            <label class="block text-sm font-semibold mb-1">보호자 연락처 끝 4자리</label>
+            {{ form.phone_last4 }}
         {% if form.phone_last4.errors %}
         <p class="text-red-600 text-xs mt-1">{{ form.phone_last4.errors|join:", " }}</p>
         {% endif %}
@@ -132,7 +142,7 @@
       {% endif %}
 
       <div>
-        <label class="block text-sm font-semibold mb-1">학부모 서명</label>
+        <label class="block text-sm font-semibold mb-1">{% if is_guardian_audience %}학부모 서명{% else %}서명{% endif %}</label>
         <canvas id="signaturePad" class="shadow-clay-inner"></canvas>
         <div class="flex gap-2 mt-2">
           <button type="button" id="clearBtn" class="px-4 py-2 rounded-xl shadow-clay-inner bg-bg-soft">지우기</button>
