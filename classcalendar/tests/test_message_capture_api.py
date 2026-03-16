@@ -17,6 +17,7 @@ from classcalendar.models import (
     CalendarMessageCaptureCandidate,
     CalendarTask,
 )
+from classcalendar.views import _locked_message_capture_candidates_queryset
 from core.models import UserProfile
 from sheetbook.models import SheetTab, Sheetbook
 
@@ -444,6 +445,25 @@ class MessageCaptureApiTests(TestCase):
         broken_candidate.refresh_from_db()
         self.assertNotEqual(str(broken_candidate.committed_event_id), str(missing_event_uuid))
         self.assertEqual(broken_candidate.commit_status, CalendarMessageCaptureCandidate.CommitStatus.SAVED)
+
+    def test_commit_candidate_lock_queryset_avoids_outer_join_on_nullable_event(self):
+        capture = CalendarMessageCapture.objects.create(
+            author=self.user,
+            raw_text="3월 19일 학부모총회 실시",
+            parse_status=CalendarMessageCapture.ParseStatus.PARSED,
+        )
+        CalendarMessageCaptureCandidate.objects.create(
+            capture=capture,
+            sort_order=0,
+            candidate_kind=CalendarMessageCaptureCandidate.CandidateKind.EVENT,
+            title="학부모총회",
+        )
+
+        queryset = _locked_message_capture_candidates_queryset(capture)
+        sql = str(queryset.query).upper()
+
+        self.assertNotIn("JOIN", sql)
+        self.assertTrue(queryset.query.select_for_update)
 
     def test_commit_can_link_saved_events_back_to_sheetbook_context(self):
         sheetbook = Sheetbook.objects.create(owner=self.user, title="2026 3-1 교무수첩")

@@ -480,6 +480,12 @@ def _safe_related_task(source):
         return None
 
 
+def _locked_message_capture_candidates_queryset(capture):
+    # Postgres rejects FOR UPDATE on nullable-side outer joins, so lock the
+    # candidate rows first and let committed_event resolve lazily per row.
+    return CalendarMessageCaptureCandidate.objects.select_for_update().filter(capture=capture)
+
+
 def _serialize_temporal_value(value):
     if value is None:
         return ""
@@ -4346,7 +4352,7 @@ def api_message_capture_commit(request, capture_id):
             capture_for_update = CalendarMessageCapture.objects.select_for_update().get(id=capture.id, author=request.user)
             candidate_map = {
                 str(candidate.id): candidate
-                for candidate in CalendarMessageCaptureCandidate.objects.select_for_update().select_related("committed_event").filter(capture=capture_for_update)
+                for candidate in _locked_message_capture_candidates_queryset(capture_for_update)
             }
             next_sort_order = (
                 max((candidate.sort_order for candidate in candidate_map.values()), default=-1) + 1
