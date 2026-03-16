@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}동의서 상세{% endblock %}
+{% block title %}동의/서명 상세{% endblock %}
 
 {% block content %}
 <main class="pt-32 pb-16 px-4 min-h-screen bg-[#E0E5EC]">
@@ -10,10 +10,9 @@
       <a href="{% url 'consent:dashboard' %}" class="text-sm text-gray-500 hover:text-purple-600">목록으로</a>
       <h1 class="text-3xl font-bold text-gray-800 mt-2">{{ consent_request.title }}</h1>
       <p class="text-sm text-gray-500">안내문: {{ consent_request.document.title }}</p>
-      {% if consent_request.shared_roster_group %}
-      <p class="text-xs text-indigo-600 mt-1">
-        <i class="fa-solid fa-share-nodes mr-1"></i>연결된 공유 명단: {{ consent_request.shared_roster_group.name }}
-      </p>
+      <p class="text-xs mt-1 {% if is_guardian_audience %}text-indigo-600{% else %}text-emerald-600{% endif %}">{{ consent_request.audience_type_label }}</p>
+      {% if consent_request.roster %}
+      <p class="text-xs text-gray-500 mt-1">연결된 저장 명단: {{ consent_request.roster.name }}</p>
       {% endif %}
       {% if link_expires_at %}
       <p class="text-xs text-gray-500 mt-1">현재 링크 만료 시각: {{ link_expires_at|date:"Y-m-d H:i" }}</p>
@@ -24,15 +23,21 @@
       <form method="post" action="{% url 'consent:send' request_id=consent_request.request_id %}">
         {% csrf_token %}
         <button type="submit" class="min-h-11 px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700">
-          {% if links_released %}학부모 링크 재발송(이전 링크 교체){% else %}학부모 링크 발송 시작{% endif %}
+          {% if links_released %}
+          {% if is_guardian_audience %}학부모 링크 재발송(이전 링크 교체){% else %}개별 링크 재발송(이전 링크 교체){% endif %}
+          {% else %}
+          {% if is_guardian_audience %}학부모 링크 발송 시작{% else %}서명 링크 발송 시작{% endif %}
+          {% endif %}
         </button>
       </form>
       <a href="{% url 'consent:recipients' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-gray-700 font-semibold">수신자 등록/수정</a>
+      <a href="{% url 'consent:rosters' %}?audience_type={{ consent_request.audience_type }}" class="min-h-11 px-4 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-gray-700 font-semibold">저장 명단 관리</a>
       <a href="{% url 'consent:document_source' request_id=consent_request.request_id %}" target="_blank" rel="noopener noreferrer" class="min-h-11 px-4 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-gray-700 font-semibold">원본 안내문 열기</a>
       <a href="{% url 'consent:download_csv' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700">제출 현황 CSV 다운로드</a>
       <a href="{% url 'consent:download_summary_pdf' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700">제출 결과 PDF 다운로드</a>
     </div>
 
+    {% if is_guardian_audience %}
     <section class="mb-4 rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-4">
       <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
@@ -68,6 +73,11 @@
       </div>
       {% endif %}
     </section>
+    {% else %}
+    <section class="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-900">
+      일반 서명형은 수신자별 개별 링크만 사용합니다. 아래 카드에서 각 링크를 바로 복사할 수 있습니다.
+    </section>
+    {% endif %}
 
     {% if consent_request.preview_checked_at %}
     <div class="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
@@ -89,9 +99,16 @@
 
     {% if not links_released %}
     <div class="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-      아직 발송이 시작되지 않아 제출 링크가 숨김 상태입니다. <strong>학부모 링크 발송 시작</strong> 버튼을 누르면 전체 링크가 공개됩니다.
+      아직 발송이 시작되지 않아 제출 링크가 숨김 상태입니다.
+      {% if is_guardian_audience %}
+      <strong>학부모 링크 발송 시작</strong> 버튼을 누르면 전체 링크와 개별 링크가 공개됩니다.
+      {% else %}
+      <strong>서명 링크 발송 시작</strong> 버튼을 누르면 수신자별 링크가 공개됩니다.
+      {% endif %}
     </div>
     {% endif %}
+
+    {% if is_guardian_audience %}
     {% if evidence_warning_counts.missing_phone or evidence_warning_counts.low_assurance_submitted %}
     <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
       <p class="font-semibold mb-1">증빙 주의 사항</p>
@@ -104,9 +121,10 @@
       <a href="{% url 'consent:recipients' request_id=consent_request.request_id %}" class="inline-flex mt-2 px-3 py-1.5 rounded-lg bg-amber-600 text-white text-xs font-semibold hover:bg-amber-700">연락처 뒤 4자리 보강하기</a>
     </div>
     {% endif %}
+    {% endif %}
 
-    <div class="mb-4 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
-      <p class="font-semibold mb-1">학부모 안내문 복사 지원</p>
+    <div class="mb-4 rounded-xl {% if is_guardian_audience %}border border-indigo-200 bg-indigo-50 text-indigo-900{% else %}border border-emerald-200 bg-emerald-50 text-emerald-900{% endif %} px-4 py-3 text-sm">
+      <p class="font-semibold mb-1">{% if is_guardian_audience %}학부모 안내문 복사 지원{% else %}서명 요청 복사 지원{% endif %}</p>
       <p>각 수신자 카드의 <code>안내문+링크 복사</code> 버튼으로 메시지와 제출 링크를 함께 복사할 수 있습니다.</p>
     </div>
 
@@ -161,7 +179,7 @@
         <p class="text-xl font-bold text-amber-800 mt-1">{{ recipient_stats.pending }}명</p>
       </article>
       <article class="rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-3">
-        <p class="text-xs text-indigo-700">동의</p>
+        <p class="text-xs text-indigo-700">동의/서명 완료</p>
         <p class="text-xl font-bold text-indigo-800 mt-1">{{ recipient_stats.agree }}명</p>
       </article>
       <article class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-3">
@@ -182,10 +200,12 @@
       <article class="rounded-2xl border border-gray-200 bg-white/90 p-4 shadow-sm space-y-3">
         <div class="flex items-start justify-between gap-3">
           <div>
-            <p class="text-base font-bold text-gray-800">{{ r.student_name }}</p>
+            <p class="text-base font-bold text-gray-800">{{ r.display_name }}</p>
+            {% if is_guardian_audience %}
             <p class="text-sm text-gray-600">{{ r.parent_name }}</p>
             {% if r.phone_last4 %}
             <p class="text-xs text-gray-500 mt-1">연락처 뒤 4자리: {{ r.phone_last4 }}</p>
+            {% endif %}
             {% endif %}
           </div>
           <div class="text-right space-y-1">
@@ -193,11 +213,11 @@
             {% if r.signed_at %}
             {% if r.identity_assurance == "phone_last4" %}
             <p><span class="inline-flex items-center px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">확인됨</span></p>
-            {% else %}
+            {% elif is_guardian_audience %}
             <p><span class="inline-flex items-center px-2 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">링크 기반 제출</span></p>
             {% endif %}
             <p class="text-xs text-gray-500">처리시각: {{ r.signed_at|date:"Y-m-d H:i" }}</p>
-            {% elif not r.phone_last4 %}
+            {% elif is_guardian_audience and not r.phone_last4 %}
             <p><span class="inline-flex items-center px-2 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">연락처 없음</span></p>
             {% endif %}
           </div>
@@ -206,7 +226,7 @@
         <div class="rounded-xl bg-gray-50 border border-gray-200 p-3 space-y-3">
           {% if links_released %}
           <div class="flex items-start gap-3">
-            <img src="data:image/png;base64,{{ row.qr_code_base64 }}" alt="학부모 제출 링크 QR 코드" class="w-16 h-16 rounded border border-gray-200 bg-white p-1 shrink-0">
+            <img src="data:image/png;base64,{{ row.qr_code_base64 }}" alt="제출 링크 QR 코드" class="w-16 h-16 rounded border border-gray-200 bg-white p-1 shrink-0">
             <div class="min-w-0 w-full space-y-2">
               <input id="sign-link-{{ r.id }}" type="text" readonly value="{{ row.sign_url }}" class="w-full px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-xs">
               <textarea id="sign-message-{{ r.id }}" class="hidden">{{ row.copy_message }}</textarea>
@@ -257,12 +277,16 @@
           </form>
         </div>
 
-        <form id="edit-form-{{ r.id }}" method="post" action="{% url 'consent:update_recipient' recipient_id=r.id %}" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <form id="edit-form-{{ r.id }}" method="post" action="{% url 'consent:update_recipient' recipient_id=r.id %}" class="hidden grid grid-cols-1 {% if is_guardian_audience %}sm:grid-cols-3{% endif %} gap-2">
           {% csrf_token %}
-          <input type="text" name="student_name" value="{{ r.student_name }}" required maxlength="100" class="w-full px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm" placeholder="학생명">
+          <input type="text" name="student_name" value="{{ r.student_name }}" required maxlength="100" class="w-full px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm" placeholder="{% if is_guardian_audience %}학생명{% else %}이름{% endif %}">
+          {% if is_guardian_audience %}
           <input type="text" name="parent_name" value="{{ r.parent_name }}" maxlength="100" class="w-full px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm" placeholder="학부모명(비워두면 학생명 보호자)">
           <input type="text" name="phone_number" value="{{ r.phone_last4 }}" required maxlength="4" inputmode="numeric" pattern="[0-9]{4}" class="w-full px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-sm" placeholder="연락처 뒤 4자리">
           <div class="sm:col-span-3 flex flex-wrap gap-2 pt-1">
+          {% else %}
+          <div class="flex flex-wrap gap-2 pt-1">
+          {% endif %}
             <button type="submit" class="px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700">수정 저장</button>
           </div>
         </form>

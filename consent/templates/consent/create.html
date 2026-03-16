@@ -1,14 +1,48 @@
 {% extends "base.html" %}
 
-{% block title %}동의서 생성{% endblock %}
+{% block title %}동의/서명 만들기{% endblock %}
 
 {% block content %}
 <main class="pt-32 pb-16 px-4 min-h-screen bg-[#E0E5EC]">
-  <div class="max-w-3xl mx-auto">
-    <div class="clay-card p-6 text-center">
-      <h1 class="text-2xl font-bold text-gray-800 mb-2">동의서 생성</h1>
-      <p class="text-gray-600">2단계 입력으로 동의서를 생성합니다.</p>
-      <a href="{% url 'consent:create_step1' %}" class="inline-block mt-4 px-5 py-2.5 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700">1단계 시작</a>
+  <div class="max-w-5xl mx-auto">
+    <div class="mb-6">
+      <a href="{% url 'consent:dashboard' %}" class="text-sm text-gray-500 hover:text-purple-600">목록으로</a>
+      <h1 class="text-3xl font-bold text-gray-800 mt-2">누가 서명하나요?</h1>
+      <p class="text-sm text-gray-500 mt-1">대상에 맞는 방식만 먼저 고르면 이후 화면이 그에 맞게 바뀝니다.</p>
+    </div>
+
+    <div class="grid gap-4 lg:grid-cols-2">
+      <section class="clay-card p-6 border-2 {% if selected_audience == guardian_audience %}border-indigo-300{% else %}border-transparent{% endif %}">
+        <p class="text-xs font-bold uppercase tracking-[0.24em] text-indigo-600">학부모 확인형</p>
+        <h2 class="text-2xl font-bold text-gray-800 mt-2">학생 기준으로 학부모에게 받기</h2>
+        <p class="text-sm text-gray-600 mt-3 leading-6">학생 이름과 연락처 뒤 4자리로 찾는 방식입니다. 가정통신문, 참여 동의, 이름 사용 동의처럼 학급 단위 수합에 맞습니다.</p>
+        <ul class="mt-4 space-y-2 text-sm text-gray-600">
+          <li>학생명 필수</li>
+          <li>학부모명 선택</li>
+          <li>연락처 뒤 4자리 필수</li>
+          <li>학부모 전체 링크 사용 가능</li>
+        </ul>
+        <div class="mt-6 flex flex-wrap gap-2">
+          <a href="{% url 'consent:create_step1' %}?audience_type={{ guardian_audience }}" class="min-h-11 px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700">이 방식으로 시작</a>
+          <a href="{% url 'consent:rosters' %}?audience_type={{ guardian_audience }}" class="min-h-11 px-4 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-gray-700 font-semibold">학부모 명단 관리</a>
+        </div>
+      </section>
+
+      <section class="clay-card p-6 border-2 {% if selected_audience == general_audience %}border-emerald-300{% else %}border-transparent{% endif %}">
+        <p class="text-xs font-bold uppercase tracking-[0.24em] text-emerald-600">일반 서명형</p>
+        <h2 class="text-2xl font-bold text-gray-800 mt-2">개별 링크로 서명받기</h2>
+        <p class="text-sm text-gray-600 mt-3 leading-6">교사, 직원, 외부 강사, 개별 학부모처럼 이름만으로 구분해 개별 링크를 보내는 방식입니다.</p>
+        <ul class="mt-4 space-y-2 text-sm text-gray-600">
+          <li>이름만 필수</li>
+          <li>개별 링크 발송</li>
+          <li>학부모 전체 링크 없음</li>
+          <li>직원 사인, 확인 서명에 적합</li>
+        </ul>
+        <div class="mt-6 flex flex-wrap gap-2">
+          <a href="{% url 'consent:create_step1' %}?audience_type={{ general_audience }}" class="min-h-11 px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700">이 방식으로 시작</a>
+          <a href="{% url 'consent:rosters' %}?audience_type={{ general_audience }}" class="min-h-11 px-4 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-gray-700 font-semibold">일반 명단 관리</a>
+        </div>
+      </section>
     </div>
   </div>
 </main>
