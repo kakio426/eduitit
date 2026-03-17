@@ -136,6 +136,7 @@ def _get_launcher_download_url():
 VIDEO_ADVICE_STATUS_BROWSER_READY = "browser_ready"
 VIDEO_ADVICE_STATUS_LAUNCHER_RECOMMENDED = "launcher_recommended"
 VIDEO_ADVICE_STATUS_UNKNOWN = "unknown"
+ARTCLASS_PRIMARY_PLAYBACK_MODE = ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW
 
 ARTCLASS_GEMINI_EXAMPLE_RESULT = json.dumps(
     {
@@ -167,24 +168,24 @@ def _build_video_advice_payload(status, *, title=""):
     if status == VIDEO_ADVICE_STATUS_BROWSER_READY:
         return {
             "status": VIDEO_ADVICE_STATUS_BROWSER_READY,
-            "recommendedMode": ArtClass.PLAYBACK_MODE_EMBED,
-            "headline": "브라우저에서 바로 시작 가능",
-            "reason": "이 영상은 브라우저에서 바로 재생할 수 있는 경우가 많아요. 먼저 브라우저로 시작하고, 필요할 때만 런처로 전환해도 됩니다.",
+            "recommendedMode": ARTCLASS_PRIMARY_PLAYBACK_MODE,
+            "headline": "브라우저 재생은 예외 상황에서만 사용합니다",
+            "reason": "ArtClass는 런처 기준으로 시작합니다. 브라우저 재생은 별도 대응이 필요할 때만 보조적으로 사용해 주세요.",
             "title": resolved_title,
         }
     if status == VIDEO_ADVICE_STATUS_LAUNCHER_RECOMMENDED:
         return {
             "status": VIDEO_ADVICE_STATUS_LAUNCHER_RECOMMENDED,
-            "recommendedMode": ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW,
-            "headline": "임베드 제한 가능성이 있어 런처 권장",
-            "reason": "일부 유튜브 영상은 정책상 사이트 안에서 바로 재생되지 않습니다. 이 영상은 런처로 시작하면 수업 흐름을 더 안정적으로 이어갈 수 있어요.",
+            "recommendedMode": ARTCLASS_PRIMARY_PLAYBACK_MODE,
+            "headline": "런처로 바로 시작하면 됩니다",
+            "reason": "ArtClass는 이제 런처로 수업을 시작합니다. 저장 후 다음 화면의 초록 버튼을 누르면 영상과 수업 안내가 나뉘어 열립니다.",
             "title": resolved_title,
         }
     return {
         "status": VIDEO_ADVICE_STATUS_UNKNOWN,
-        "recommendedMode": ArtClass.PLAYBACK_MODE_EMBED,
-        "headline": "먼저 브라우저로 시도하고, 막히면 런처로 이어갈 수 있어요",
-        "reason": "유효한 유튜브 주소를 넣으면 어떤 시작 방식이 더 편한지 바로 안내해 드릴게요. 확실하지 않을 때는 브라우저로 시작한 뒤 필요하면 런처로 전환하면 됩니다.",
+        "recommendedMode": ARTCLASS_PRIMARY_PLAYBACK_MODE,
+        "headline": "유튜브 주소를 넣으면 런처로 바로 시작할 수 있어요",
+        "reason": "유효한 유튜브 주소를 확인한 뒤 저장하면 다음 화면에서 런처를 바로 실행할 수 있습니다.",
         "title": resolved_title,
     }
 
@@ -197,22 +198,9 @@ def _build_video_advice(video_url, *, playback_mode="", title_hint=""):
     if not normalized_url or not video_id:
         return _build_video_advice_payload(VIDEO_ADVICE_STATUS_UNKNOWN, title=title)
 
-    if playback_mode == ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW:
-        return _build_video_advice_payload(VIDEO_ADVICE_STATUS_LAUNCHER_RECOMMENDED, title=title)
-
-    if playback_mode == ArtClass.PLAYBACK_MODE_EMBED:
-        return _build_video_advice_payload(VIDEO_ADVICE_STATUS_BROWSER_READY, title=title)
-
-    if re.search(r"/(?:shorts|live)/", normalized_url, flags=re.IGNORECASE):
-        if not title:
-            title = _fetch_youtube_title(normalized_url)
-        return _build_video_advice_payload(VIDEO_ADVICE_STATUS_LAUNCHER_RECOMMENDED, title=title)
-
     if not title:
         title = _fetch_youtube_title(normalized_url)
 
-    if title:
-        return _build_video_advice_payload(VIDEO_ADVICE_STATUS_BROWSER_READY, title=title)
     return _build_video_advice_payload(VIDEO_ADVICE_STATUS_LAUNCHER_RECOMMENDED, title=title)
 
 
@@ -357,15 +345,13 @@ def _validate_step_image(uploaded_image):
 
 def _build_setup_context(art_class=None, *, initial_steps=None, initial_playback_mode=None, setup_video_url=""):
     initial_steps = initial_steps if initial_steps is not None else _build_initial_steps(art_class)
-    selected_mode = initial_playback_mode or (art_class.playback_mode if art_class else "")
+    selected_mode = ARTCLASS_PRIMARY_PLAYBACK_MODE
     video_url = setup_video_url if setup_video_url is not None else (art_class.youtube_url if art_class else "")
     video_advice = _build_video_advice(
         video_url,
         playback_mode=selected_mode,
         title_hint=art_class.title if art_class else "",
     )
-    if not selected_mode:
-        selected_mode = video_advice["recommendedMode"]
 
     return {
         'art_class': art_class,
@@ -411,9 +397,7 @@ def setup_view(request, pk=None):
         )
         posted_title = request.POST.get('title')
         title = _resolve_setup_title(posted_title, art_class)
-        selected_mode = (request.POST.get('playbackMode') or ArtClass.PLAYBACK_MODE_EMBED).strip()
-        valid_modes = {choice[0] for choice in ArtClass.PLAYBACK_MODE_CHOICES}
-        playback_mode = selected_mode if selected_mode in valid_modes else ArtClass.PLAYBACK_MODE_EMBED
+        playback_mode = ARTCLASS_PRIMARY_PLAYBACK_MODE
         auto_corrected = interval_corrected
 
         if not _is_allowed_youtube_url(video_url):
@@ -505,9 +489,7 @@ def setup_view(request, pk=None):
         if auto_corrected:
             messages.info(request, "입력 일부를 자동 보정했습니다. 그대로 시작 가능합니다.")
          
-        classroom_url = reverse("artclass:classroom", kwargs={"pk": art_class.pk})
-        if playback_mode == ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW:
-            classroom_url = f"{classroom_url}?{urlencode({'autostart_launcher': '1'})}"
+        classroom_url = f"{reverse('artclass:classroom', kwargs={'pk': art_class.pk})}?{urlencode({'autostart_launcher': '1'})}"
         return redirect(classroom_url)
     
     return _render_setup_page(request, art_class)
@@ -519,10 +501,15 @@ def classroom_view(request, pk):
     display_mode = "dashboard" if request.GET.get("display") == "dashboard" else "classroom"
     runtime_mode = "launcher" if request.GET.get("runtime") == "launcher" else "web"
     can_manage_classroom = _can_manage_art_class(request.user, art_class)
+    effective_playback_mode = ARTCLASS_PRIMARY_PLAYBACK_MODE
     
     # 조회수 증가
     art_class.view_count += 1
-    art_class.save(update_fields=['view_count'])
+    update_fields = ['view_count']
+    if art_class.playback_mode != effective_playback_mode:
+        art_class.playback_mode = effective_playback_mode
+        update_fields.append('playback_mode')
+    art_class.save(update_fields=update_fields)
     
     steps = art_class.steps.all()
     
@@ -539,13 +526,13 @@ def classroom_view(request, pk):
     
     video_advice = _build_video_advice(
         art_class.youtube_url,
-        playback_mode=art_class.playback_mode,
+        playback_mode=effective_playback_mode,
         title_hint=art_class.title,
     )
     data = {
         'videoUrl': art_class.youtube_url,
         'stepInterval': art_class.default_interval,
-        'playbackMode': art_class.playback_mode,
+        'playbackMode': effective_playback_mode,
         'steps': steps_data,
         'videoAdvice': video_advice,
     }
@@ -613,8 +600,7 @@ def update_playback_mode_api(request, pk):
         return JsonResponse({"error": "INVALID_JSON", "message": "요청 형식이 올바르지 않습니다."}, status=400)
 
     mode = (payload.get("mode") or "").strip()
-    valid_modes = {choice[0] for choice in ArtClass.PLAYBACK_MODE_CHOICES}
-    if mode not in valid_modes:
+    if mode != ARTCLASS_PRIMARY_PLAYBACK_MODE:
         return JsonResponse({"error": "INVALID_MODE", "message": "지원하지 않는 재생 모드입니다."}, status=400)
 
     if art_class.playback_mode != mode:
@@ -652,8 +638,8 @@ def start_launcher_session_api(request, pk):
     encoded_payload = _encode_launcher_payload(payload)
     launcher_url = f"eduitit-launcher://launch?{urlencode({'payload': encoded_payload})}"
 
-    if art_class.playback_mode != ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW:
-        art_class.playback_mode = ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW
+    if art_class.playback_mode != ARTCLASS_PRIMARY_PLAYBACK_MODE:
+        art_class.playback_mode = ARTCLASS_PRIMARY_PLAYBACK_MODE
         art_class.save(update_fields=["playback_mode"])
 
     return JsonResponse(
@@ -741,14 +727,9 @@ def library_view(request):
         )
         for item in my_classes:
             item.creator_display_name = _resolve_creator_display_name(item.created_by)
-            if item.playback_mode == ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW:
-                item.start_mode_badge = "런처 권장"
-                item.start_mode_reason = "이 수업은 런처로 시작하면 영상 재생이 더 안정적입니다."
-                item.primary_action_label = "런처로 수업 시작하기"
-            else:
-                item.start_mode_badge = "브라우저 바로 가능"
-                item.start_mode_reason = "이 수업은 브라우저에서 바로 시작하기 좋습니다."
-                item.primary_action_label = "브라우저로 수업 시작하기"
+            item.start_mode_badge = "런처 시작"
+            item.start_mode_reason = "이 수업은 런처로 시작합니다."
+            item.primary_action_label = "런처로 수업 시작하기"
 
     shared_classes = ArtClass.objects.select_related('created_by', 'created_by__userprofile').annotate(
         steps_count=Count('steps')
@@ -773,14 +754,9 @@ def library_view(request):
     shared_classes = list(shared_classes.distinct())
     for item in shared_classes:
         item.creator_display_name = _resolve_creator_display_name(item.created_by)
-        if item.playback_mode == ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW:
-            item.start_mode_badge = "런처 권장"
-            item.start_mode_reason = "이 수업은 런처로 시작하면 영상 재생이 더 안정적입니다."
-            item.primary_action_label = "런처로 수업 시작하기"
-        else:
-            item.start_mode_badge = "브라우저 바로 가능"
-            item.start_mode_reason = "이 수업은 브라우저에서 바로 시작하기 좋습니다."
-            item.primary_action_label = "브라우저로 수업 시작하기"
+        item.start_mode_badge = "런처 시작"
+        item.start_mode_reason = "이 수업은 런처로 시작합니다."
+        item.primary_action_label = "런처로 수업 시작하기"
 
     shared_only = ArtClass.objects.filter(is_shared=True)
     category_options = list(
@@ -826,7 +802,7 @@ def clone_for_edit_view(request, pk):
         title=source.title,
         youtube_url=source.youtube_url,
         default_interval=source.default_interval,
-        playback_mode=source.playback_mode,
+        playback_mode=ARTCLASS_PRIMARY_PLAYBACK_MODE,
         created_by=request.user,
         is_shared=source.is_shared,
     )

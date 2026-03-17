@@ -7,8 +7,8 @@ class ArtClass(models.Model):
     PLAYBACK_MODE_EMBED = "embed"
     PLAYBACK_MODE_EXTERNAL_WINDOW = "external_window"
     PLAYBACK_MODE_CHOICES = [
-        (PLAYBACK_MODE_EMBED, "내장 플레이어 (기본)"),
-        (PLAYBACK_MODE_EXTERNAL_WINDOW, "새 창 재생 (임베드 차단 대응)"),
+        (PLAYBACK_MODE_EMBED, "브라우저 임베드 (레거시)"),
+        (PLAYBACK_MODE_EXTERNAL_WINDOW, "런처 시작 (기본)"),
     ]
 
     title = models.CharField(max_length=200, blank=True, verbose_name="수업 제목")
@@ -17,9 +17,9 @@ class ArtClass(models.Model):
     playback_mode = models.CharField(
         max_length=24,
         choices=PLAYBACK_MODE_CHOICES,
-        default=PLAYBACK_MODE_EMBED,
+        default=PLAYBACK_MODE_EXTERNAL_WINDOW,
         verbose_name="영상 재생 모드",
-        help_text="임베드 불가 영상일 경우 새 창 재생 모드를 사용할 수 있습니다.",
+        help_text="기본 시작은 런처입니다. 브라우저 임베드는 레거시 호환용으로만 유지됩니다.",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(

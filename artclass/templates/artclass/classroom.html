@@ -277,26 +277,8 @@
         <div class="flex items-center gap-2">
             <button id="btnLaunchRuntime"
                 class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-bold transition-all flex items-center gap-2">
-                <i class="fa-solid fa-rocket"></i> 런처로 수업 시작
+                <i class="fa-solid fa-rocket"></i> 런처 실행
             </button>
-            <span id="externalWindowStatusBadge"
-                class="hidden px-2.5 py-1 rounded-full text-[11px] font-black tracking-wide bg-gray-700/70 text-gray-200 border border-white/10">
-                영상 창 닫힘
-            </span>
-            <button id="btnStartSplitMode"
-                class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-sm font-bold transition-all flex items-center gap-2">
-                <i class="fa-solid fa-table-columns"></i> 화면 분할 시작
-            </button>
-            <div id="externalModeHeaderActions" class="hidden items-center gap-2">
-                <button id="btnOpenExternalVideoHeader"
-                    class="px-3 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-sm font-bold transition-all">
-                    영상 새 창 열기
-                </button>
-                <button id="btnFocusExternalVideoHeader"
-                    class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-sm font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed">
-                    영상 창 앞으로
-                </button>
-            </div>
             <button id="btnFullscreen" class="p-3 hover:bg-white/10 rounded-full transition-all">
                 <i class="fa-solid fa-expand text-xl"></i>
             </button>
@@ -305,55 +287,22 @@
 
     {% if display_mode != 'dashboard' %}
     <div class="shrink-0 px-4 pt-4 pb-2 md:px-6">
-        <div class="mx-auto max-w-6xl rounded-[1.5rem] border px-5 py-4 shadow-lg
-            {% if video_advice.status == 'launcher_recommended' %}
-                border-emerald-300/70 bg-gradient-to-r from-emerald-50 via-white to-lime-50
-            {% elif video_advice.status == 'browser_ready' %}
-                border-blue-200/80 bg-gradient-to-r from-blue-50 via-white to-sky-50
-            {% else %}
-                border-slate-200 bg-white
-            {% endif %}">
+        <div class="mx-auto max-w-6xl rounded-[1.5rem] border border-emerald-300/70 bg-gradient-to-r from-emerald-50 via-white to-lime-50 px-5 py-4 shadow-lg">
             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div class="min-w-0">
                     <div class="flex flex-wrap items-center gap-2">
-                        <span class="px-3 py-1 rounded-full text-[11px] font-black tracking-wide
-                            {% if video_advice.status == 'launcher_recommended' %}
-                                bg-emerald-100 text-emerald-700
-                            {% elif video_advice.status == 'browser_ready' %}
-                                bg-blue-100 text-blue-700
-                            {% else %}
-                                bg-slate-100 text-slate-700
-                            {% endif %}">
-                            {% if video_advice.status == 'launcher_recommended' %}
-                                런처 권장 영상
-                            {% elif video_advice.status == 'browser_ready' %}
-                                브라우저로 진행 중
-                            {% else %}
-                                시작 방식 안내
-                            {% endif %}
+                        <span class="px-3 py-1 rounded-full text-[11px] font-black tracking-wide bg-emerald-100 text-emerald-700">
+                            런처 시작
                         </span>
                         {% if video_advice.title %}
                         <span class="text-xs font-bold text-gray-500 truncate">{{ video_advice.title }}</span>
                         {% endif %}
                     </div>
                     <p class="mt-2 text-sm md:text-base font-semibold text-gray-800 leading-relaxed">
-                        {% if video_advice.status == 'launcher_recommended' %}
-                            이 영상은 임베드 제한 가능성이 있어 런처 사용을 권장해요.
-                        {% elif video_advice.status == 'browser_ready' %}
-                            이 영상은 브라우저에서 바로 재생할 수 있어요. 브라우저로 먼저 시작했고, 필요하면 언제든 런처로 전환할 수 있어요.
-                        {% else %}
-                            먼저 브라우저로 시작하고, 필요한 경우 런처로 이어서 진행할 수 있어요.
-                        {% endif %}
+                        이 수업은 런처로 시작합니다. 초록 버튼을 누르면 영상과 수업 안내가 나뉘어 열립니다.
                     </p>
                 </div>
-                <div class="text-xs font-bold
-                    {% if video_advice.status == 'launcher_recommended' %}
-                        text-emerald-700
-                    {% elif video_advice.status == 'browser_ready' %}
-                        text-blue-700
-                    {% else %}
-                        text-slate-500
-                    {% endif %}">
+                <div class="text-xs font-bold text-emerald-700">
                     {{ video_advice.reason }}
                 </div>
             </div>
@@ -371,25 +320,21 @@
                             <i class="fa-solid fa-rocket"></i>
                         </div>
                         <div>
-                            <p class="text-xs font-black tracking-[0.2em] text-emerald-700 uppercase">Launcher Required</p>
-                            <h2 class="text-xl md:text-2xl font-heavy text-emerald-950">런처로 시작하면 수업 흐름이 더 안정적입니다</h2>
+                            <p class="text-xs font-black tracking-[0.2em] text-emerald-700 uppercase">Step 1</p>
+                            <h2 class="text-xl md:text-2xl font-heavy text-emerald-950">초록 버튼 한 번으로 수업을 시작합니다</h2>
                         </div>
                     </div>
                     <p class="mt-3 text-sm md:text-base font-semibold text-emerald-900/85 leading-relaxed">
-                        일부 유튜브 영상은 브라우저 안에서 바로 재생되지 않을 수 있어요. 자동 실행이 안 되면 아래 초록 버튼만 한 번 더 눌러 주세요.
+                        런처가 열리면 영상과 수업 안내가 나뉘어 수업을 바로 진행할 수 있어요. 자동 실행이 안 되면 초록 버튼을 한 번 더 눌러 주세요.
                     </p>
                     <p id="launcherPromptStatus" class="mt-2 text-sm font-bold text-emerald-800">
-                        자동 실행이 안 되면 아래 초록 버튼을 눌러 주세요.
+                        자동 실행이 안 되면 초록 버튼을 한 번 더 눌러 주세요.
                     </p>
                 </div>
                 <div class="flex flex-wrap gap-2 lg:justify-end">
                     <button id="btnLauncherPromptLaunch"
                         class="px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-heavy shadow-lg transition-all">
-                        런처로 수업 시작
-                    </button>
-                    <button id="btnLauncherPromptSplit"
-                        class="px-5 py-3 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 text-sm font-heavy border border-slate-300 transition-all">
-                        브라우저만으로 계속
+                        런처 실행
                     </button>
                     {% if launcher_download_url %}
                     <details class="rounded-2xl bg-white/80 border border-emerald-200 px-4 py-3 text-left">
@@ -399,6 +344,7 @@
                         <div class="mt-3 space-y-2 text-xs font-semibold text-emerald-900/85 leading-relaxed">
                             <p>1. 설치파일을 실행한 뒤 브라우저를 다시 열어 주세요.</p>
                             <p>2. 같은 화면에서 초록 버튼을 누르면 런처가 실행됩니다.</p>
+                            <p>3. 자동 실행이 안 되면 같은 초록 버튼을 한 번 더 눌러 주세요.</p>
                             <a href="{{ launcher_download_url }}" target="_blank" rel="noopener noreferrer"
                                 class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-sm font-heavy transition-all">
                                 <i class="fa-solid fa-download"></i> 런처 설치파일 받기
@@ -675,7 +621,7 @@
     const VIDEO_URL = "{{ data.videoUrl|escapejs }}";
     const VIDEO_ID = extractYouTubeVideoId(VIDEO_URL);
     const PLAYBACK_MODE_STORAGE_KEY = `artclass_playback_mode_${CLASSROOM_ID}`;
-    const defaultPlaybackMode = isValidPlaybackMode(stepsData.playbackMode) ? stepsData.playbackMode : 'embed';
+    const defaultPlaybackMode = isValidPlaybackMode(stepsData.playbackMode) ? stepsData.playbackMode : 'external_window';
     let playbackMode = defaultPlaybackMode;
     let INTERVAL_MS = parseInt("{{ data.stepInterval }}", 10) * 1000;
 
@@ -712,16 +658,10 @@
     const playerEl = document.getElementById('player');
     const btnOpenExternalVideoEl = document.getElementById('btnOpenExternalVideo');
     const btnFocusExternalVideoEl = document.getElementById('btnFocusExternalVideo');
-    const externalModeHeaderActionsEl = document.getElementById('externalModeHeaderActions');
-    const btnOpenExternalVideoHeaderEl = document.getElementById('btnOpenExternalVideoHeader');
-    const btnFocusExternalVideoHeaderEl = document.getElementById('btnFocusExternalVideoHeader');
-    const btnStartSplitModeEl = document.getElementById('btnStartSplitMode');
-    const externalWindowStatusBadgeEl = document.getElementById('externalWindowStatusBadge');
     const btnLaunchRuntimeEl = document.getElementById('btnLaunchRuntime');
     const launcherPromptBannerEl = document.getElementById('launcherPromptBanner');
     const launcherPromptStatusEl = document.getElementById('launcherPromptStatus');
     const btnLauncherPromptLaunchEl = document.getElementById('btnLauncherPromptLaunch');
-    const btnLauncherPromptSplitEl = document.getElementById('btnLauncherPromptSplit');
     const tvTeacherGuideEl = document.getElementById('tvTeacherGuide');
     const btnToggleTvGuideEl = document.getElementById('btnToggleTvGuide');
     const tvTeacherGuideBodyEl = document.getElementById('tvTeacherGuideBody');
@@ -767,27 +707,11 @@
     let launcherPromptDismissed = false;
 
     function setExternalWindowStatus(status) {
-        if (!externalWindowStatusBadgeEl) return;
-        externalWindowStatusBadgeEl.classList.remove(
-            'hidden',
-            'bg-emerald-500/20',
-            'text-emerald-200',
-            'border-emerald-300/30',
-            'bg-gray-700/70',
-            'text-gray-200',
-            'border-white/10'
-        );
         if (status === 'connected') {
-            externalWindowStatusBadgeEl.textContent = '영상 창 연결됨';
-            externalWindowStatusBadgeEl.classList.add('bg-emerald-500/20', 'text-emerald-200', 'border-emerald-300/30');
             if (btnFocusExternalVideoEl) btnFocusExternalVideoEl.disabled = false;
-            if (btnFocusExternalVideoHeaderEl) btnFocusExternalVideoHeaderEl.disabled = false;
             return;
         }
-        externalWindowStatusBadgeEl.textContent = '영상 창 닫힘';
-        externalWindowStatusBadgeEl.classList.add('bg-gray-700/70', 'text-gray-200', 'border-white/10');
         if (btnFocusExternalVideoEl) btnFocusExternalVideoEl.disabled = true;
-        if (btnFocusExternalVideoHeaderEl) btnFocusExternalVideoHeaderEl.disabled = true;
     }
 
     function setTvTeacherGuideExpanded(expanded) {
@@ -940,13 +864,7 @@
         if (!IS_DASHBOARD_ONLY) return;
         document.body.classList.add('dashboard-reading-mode');
         if (btnLaunchRuntimeEl) btnLaunchRuntimeEl.classList.add('hidden');
-        if (btnStartSplitModeEl) btnStartSplitModeEl.classList.add('hidden');
         if (launcherPromptBannerEl) launcherPromptBannerEl.classList.add('hidden');
-        if (externalModeHeaderActionsEl) {
-            externalModeHeaderActionsEl.classList.add('hidden');
-            externalModeHeaderActionsEl.classList.remove('flex');
-        }
-        if (externalWindowStatusBadgeEl) externalWindowStatusBadgeEl.classList.add('hidden');
         if (btnBackToEditEl) btnBackToEditEl.classList.add('hidden');
         if (headerDividerEl) headerDividerEl.classList.add('hidden');
         if (classroomHeaderEl) classroomHeaderEl.classList.add('hidden');
@@ -994,17 +912,6 @@
         }
         if (classroomWorkspaceEl) {
             classroomWorkspaceEl.classList.toggle('lg:flex-row', !isExternalWindowMode);
-        }
-        if (btnStartSplitModeEl) {
-            btnStartSplitModeEl.classList.toggle('hidden', isExternalWindowMode || IS_DASHBOARD_ONLY);
-        }
-        if (externalModeHeaderActionsEl) {
-            const showExternalHeaderActions = isExternalWindowMode && !IS_DASHBOARD_ONLY && !showLauncherPrompt;
-            externalModeHeaderActionsEl.classList.toggle('hidden', !showExternalHeaderActions);
-            externalModeHeaderActionsEl.classList.toggle('flex', showExternalHeaderActions);
-        }
-        if (externalWindowStatusBadgeEl) {
-            externalWindowStatusBadgeEl.classList.toggle('hidden', !isExternalWindowMode || IS_DASHBOARD_ONLY || showLauncherPrompt);
         }
         if (videoStepMetaDockEl && (isExternalWindowMode || IS_DASHBOARD_ONLY)) {
             videoStepMetaDockEl.classList.add('hidden');
@@ -1165,6 +1072,8 @@
                 throw new Error('missing_launcher_url');
             }
 
+            launcherPromptDismissed = true;
+            syncLauncherPrompt('external_window');
             window.location.href = data.launcherUrl;
             setTimeout(() => {
                 notifyLauncherStatus('런처 실행을 시도했습니다. 창이 바로 안 열리면 초록 버튼을 한 번 더 눌러 주세요.', 'success');
@@ -1173,7 +1082,7 @@
             console.error('Launcher start failed:', err);
             const fallbackMessage = LAUNCHER_DOWNLOAD_URL
                 ? '런처 실행에 실패했습니다. 설치되지 않았다면 런처 설치 후 다시 눌러 주세요.'
-                : '런처 실행이 막혔습니다. 아래 버튼으로 다시 시도하거나 브라우저만으로 계속할 수 있습니다.';
+                : '런처 실행이 막혔습니다. 초록 버튼을 다시 누르거나 설치 안내를 확인해 주세요.';
             notifyLauncherStatus(fallbackMessage, 'error');
         } finally {
             setLaunchButtonBusy(false);
@@ -1876,25 +1785,7 @@
     };
 
     async function openExternalVideoAndPersist(options = {}) {
-        const opened = openExternalVideoWindow(options);
-        if (!opened) return false;
-        await persistPlaybackMode('external_window');
-        applyPlaybackLayout('external_window');
-        return true;
-    }
-
-    async function startBrowserSplitFallback() {
-        const opened = openExternalVideoWindow({ split: true });
-        if (!opened) {
-            notifyLauncherStatus('팝업이 차단되어 브라우저 분할을 시작하지 못했습니다. 팝업 허용 후 다시 눌러 주세요.', 'error');
-            return false;
-        }
-        launcherPromptDismissed = true;
-        tryMoveCurrentWindowToRightHalf();
-        switchToExternalMode('브라우저 분할 모드로 전환했습니다. 왼쪽은 유튜브, 오른쪽은 수업 안내로 사용하세요.', false);
-        await persistPlaybackMode('external_window');
-        syncLauncherPrompt('external_window');
-        return true;
+        return openExternalVideoWindow(options);
     }
 
     if (btnLaunchRuntimeEl) {
@@ -1906,12 +1797,6 @@
     if (btnLauncherPromptLaunchEl) {
         btnLauncherPromptLaunchEl.onclick = async () => {
             await startTeacherLauncher();
-        };
-    }
-
-    if (btnLauncherPromptSplitEl) {
-        btnLauncherPromptSplitEl.onclick = async () => {
-            await startBrowserSplitFallback();
         };
     }
 
@@ -1930,12 +1815,6 @@
         await openExternalVideoAndPersist();
     };
 
-    if (btnOpenExternalVideoHeaderEl) {
-        btnOpenExternalVideoHeaderEl.onclick = async () => {
-            await openExternalVideoAndPersist();
-        };
-    }
-
     if (btnFocusExternalVideoEl) {
         btnFocusExternalVideoEl.onclick = async () => {
             if (focusExternalVideoWindow()) {
@@ -1946,15 +1825,6 @@
          };
     }
 
-    if (btnFocusExternalVideoHeaderEl) {
-        btnFocusExternalVideoHeaderEl.onclick = async () => {
-            if (focusExternalVideoWindow()) {
-                return;
-            }
-            await openExternalVideoAndPersist();
-        };
-    }
-
     setInterval(() => {
         if (!externalVideoPopup) return;
         if (externalVideoPopup.closed) {
@@ -1962,12 +1832,6 @@
             setExternalWindowStatus('closed');
         }
     }, 1500);
-
-    if (btnStartSplitModeEl) {
-        btnStartSplitModeEl.onclick = async () => {
-            await startBrowserSplitFallback();
-        };
-    }
 
     function syncStepRepeatUi() {
         const btn = document.getElementById('btnStepRepeat');
