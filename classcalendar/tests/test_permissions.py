@@ -119,6 +119,15 @@ class PermissionTest(TestCase):
         self.assertNotIn("안내문이나 메모를 넣으면 날짜 후보를 찾아 저장하고, 나중에 다시 꺼내 볼 수 있습니다.", content)
         self.assertNotIn('<p class="classcalendar-meta-label font-semibold text-slate-500">선택한 날짜</p>', content)
 
+    def test_main_view_day_modal_can_show_connected_items(self):
+        response = self.client_teacher.get(reverse("calendar_main"), follow=True)
+        content = response.content.decode("utf-8")
+
+        self.assertIn("연결 항목", content)
+        self.assertIn("getSelectedDateDirectHubCount()", content)
+        self.assertIn("getSelectedDateDirectHubItems()", content)
+        self.assertIn("openSelectedDateHubItem(item, $event)", content)
+
     def test_legacy_today_memo_panel_route_redirects_to_home_surface(self):
         response = self.client_teacher.get(f"{reverse('classcalendar:main')}?panel=today-memos")
 

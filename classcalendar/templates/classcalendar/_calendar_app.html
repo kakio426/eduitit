@@ -924,6 +924,7 @@
                 <div class="mt-4 flex flex-wrap items-center gap-2">
                     <span class="inline-flex items-center rounded-full bg-indigo-100 px-3 py-1.5 text-xs font-bold text-indigo-700">일정 <span class="ml-1.5" x-text="getSelectedDateEventCount()"></span></span>
                     <span class="inline-flex items-center rounded-full bg-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700">할 일 <span class="ml-1.5" x-text="getSelectedDateTaskCount()"></span></span>
+                    <span x-show="getSelectedDateDirectHubCount() > 0" class="inline-flex items-center rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-800">연결 항목 <span class="ml-1.5" x-text="getSelectedDateDirectHubCount()"></span></span>
                     <button
                         type="button"
                         @click="openCreateModalForSelectedDate($event)"
@@ -937,11 +938,41 @@
 
             <div class="overflow-y-auto px-5 py-5 sm:px-6">
                 <div x-show="dayModalMode === 'overview'" class="space-y-6">
-                    <div x-show="getSelectedDateEventCount() === 0 && getSelectedDateTaskCount() === 0" class="rounded-[1.6rem] border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center">
-                        <p class="text-base font-black text-slate-900">일정과 할 일이 없습니다.</p>
+                    <div x-show="getSelectedDateEventCount() === 0 && getSelectedDateTaskCount() === 0 && getSelectedDateDirectHubCount() === 0" class="rounded-[1.6rem] border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center">
+                        <p class="text-base font-black text-slate-900">등록된 내용이 없습니다.</p>
                         <p class="mt-2 text-sm text-slate-500">이 날짜에 필요한 일은 새 일정으로 바로 남길 수 있어요.</p>
                         <button type="button" @click="openCreateModalForSelectedDate($event)" class="mt-4 inline-flex items-center rounded-2xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-indigo-700">새 일정 추가</button>
                     </div>
+
+                    <section x-show="getSelectedDateDirectHubCount() > 0" class="space-y-3">
+                        <div class="flex items-center justify-between gap-2">
+                            <div>
+                                <h4 class="text-base font-black text-slate-900">연결 항목</h4>
+                            </div>
+                            <span class="text-xs font-bold text-slate-400" x-text="`${getSelectedDateDirectHubCount()}건`"></span>
+                        </div>
+                        <div class="space-y-3">
+                            <template x-for="item in getSelectedDateDirectHubItems()" :key="`day-hub-${item.id}`">
+                                <button
+                                    type="button"
+                                    @click="openSelectedDateHubItem(item, $event)"
+                                    class="block w-full rounded-[1.4rem] border border-slate-200 bg-white px-4 py-4 text-left shadow-sm transition hover:border-amber-300 hover:bg-amber-50/40"
+                                >
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="min-w-0">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800" x-text="item.serviceLabel"></span>
+                                                <span x-show="item.status_label" class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600" x-text="item.status_label"></span>
+                                            </div>
+                                            <p class="classcalendar-copy mt-2 text-base font-black text-slate-900" x-text="item.title"></p>
+                                            <p x-show="item.meta_text" class="mt-1 text-sm font-semibold text-slate-500" x-text="item.meta_text"></p>
+                                        </div>
+                                        <span class="shrink-0 text-xs font-bold text-amber-700">열기</span>
+                                    </div>
+                                </button>
+                            </template>
+                        </div>
+                    </section>
 
                     <div class="grid gap-6 lg:grid-cols-2">
                         <section class="space-y-3">
@@ -2531,6 +2562,14 @@ function calendarApp() {
             return this.getTasksForSelectedDate().length;
         },
 
+        getSelectedDateDirectHubItems() {
+            return this.getSelectedDateHubItems().filter((item) => !['event', 'task'].includes(item.item_kind));
+        },
+
+        getSelectedDateDirectHubCount() {
+            return this.getSelectedDateDirectHubItems().length;
+        },
+
         dayModalEyebrow() {
             const map = {
                 overview: '선택한 날짜',
@@ -2557,7 +2596,14 @@ function calendarApp() {
             if (this.dayModalMode === 'task-detail' && this.selectedTask) return this.formatTaskDue(this.selectedTask);
             if (this.dayModalMode === 'edit' && this.selectedEvent) return this.selectedEvent.title || '';
             if (this.dayModalMode === 'confirm-delete' && this.selectedEvent) return this.selectedEvent.title || '';
-            return `일정 ${this.getSelectedDateEventCount()}건 · 할 일 ${this.getSelectedDateTaskCount()}건`;
+            const parts = [
+                `일정 ${this.getSelectedDateEventCount()}건`,
+                `할 일 ${this.getSelectedDateTaskCount()}건`,
+            ];
+            if (this.getSelectedDateDirectHubCount() > 0) {
+                parts.push(`연결 항목 ${this.getSelectedDateDirectHubCount()}건`);
+            }
+            return parts.join(' · ');
         },
 
         getReadonlyEventHint() {
