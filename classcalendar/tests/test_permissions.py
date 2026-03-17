@@ -4,7 +4,7 @@ from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta
 
-from classcalendar.models import CalendarEvent, CalendarTask, EventPageBlock
+from classcalendar.models import CalendarEvent, CalendarMessageCapture, CalendarTask, EventPageBlock
 from core.models import UserProfile
 from happy_seed.models import HSClassroom
 
@@ -189,6 +189,48 @@ class PermissionTest(TestCase):
             "수업 끝난 뒤 다시 볼 메모",
             [item["note"] for item in response.context["events_json"]],
         )
+
+    def test_events_json_includes_linked_message_capture_completion_state(self):
+        event = self._create_event(title="연결 메모 일정")
+        completed_at = timezone.now()
+        capture = CalendarMessageCapture.objects.create(
+            author=self.teacher,
+            raw_text="연결된 메모",
+            parse_status=CalendarMessageCapture.ParseStatus.PARSED,
+            committed_event=event,
+            follow_up_state=CalendarMessageCapture.FollowUpState.DONE,
+            completed_at=completed_at,
+        )
+
+        response = self.client_teacher.get(reverse("calendar_main"), follow=True)
+        serialized = next(
+            item for item in response.context["events_json"] if item["id"] == str(event.id)
+        )
+
+        self.assertEqual(serialized["message_capture_id"], str(capture.id))
+        self.assertEqual(serialized["message_capture_follow_up_state"], CalendarMessageCapture.FollowUpState.DONE)
+        self.assertEqual(serialized["message_capture_follow_up_state_label"], "처리 완료")
+        self.assertEqual(serialized["message_capture_completed_at"], completed_at.isoformat())
+
+    def test_tasks_json_includes_linked_message_capture_completion_state(self):
+        task = self._create_task(title="연결 메모 할 일")
+        capture = CalendarMessageCapture.objects.create(
+            author=self.teacher,
+            raw_text="할 일 메모",
+            parse_status=CalendarMessageCapture.ParseStatus.PARSED,
+            committed_task=task,
+            follow_up_state=CalendarMessageCapture.FollowUpState.PENDING,
+        )
+
+        response = self.client_teacher.get(reverse("calendar_main"), follow=True)
+        serialized = next(
+            item for item in response.context["tasks_json"] if item["id"] == str(task.id)
+        )
+
+        self.assertEqual(serialized["message_capture_id"], str(capture.id))
+        self.assertEqual(serialized["message_capture_follow_up_state"], CalendarMessageCapture.FollowUpState.PENDING)
+        self.assertEqual(serialized["message_capture_follow_up_state_label"], "처리 예정")
+        self.assertEqual(serialized["message_capture_completed_at"], "")
 
     def test_calendar_alias_routes_require_login_for_anonymous(self):
         response = Client().get(reverse("calendar_main"))

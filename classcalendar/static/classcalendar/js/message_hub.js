@@ -551,6 +551,80 @@ function initCalendarMessageHub(host, options = {}) {
             }
         },
 
+        selectedCaptureId: function() {
+            return this.messageArchiveSelectedCapture ? String(this.messageArchiveSelectedCapture.capture_id || '') : '';
+        },
+
+        selectedCaptureLinkedItems: function() {
+            if (!this.messageArchiveSelectedCapture) return [];
+            const events = Array.isArray(this.messageArchiveSelectedCapture.saved_events)
+                ? this.messageArchiveSelectedCapture.saved_events.map((item) => ({
+                    ...item,
+                    item_type: 'event',
+                    detail_text: this.formatArchiveSavedEventDate(item),
+                }))
+                : [];
+            const tasks = Array.isArray(this.messageArchiveSelectedCapture.saved_tasks)
+                ? this.messageArchiveSelectedCapture.saved_tasks.map((item) => ({
+                    ...item,
+                    item_type: 'task',
+                    detail_text: this.formatTaskLinkedDate(item),
+                }))
+                : [];
+            return events.concat(tasks);
+        },
+
+        hasSelectedCaptureLinkedItems: function() {
+            return this.selectedCaptureLinkedItems().length > 0;
+        },
+
+        formatTaskLinkedDate: function(task) {
+            if (!task || !task.due_at) {
+                return '기한 미지정';
+            }
+            const parsed = this.parseArchiveDateTime(task.due_at);
+            if (!parsed) return String(task.due_at);
+            if (task.has_time) {
+                return `${parsed.getMonth() + 1}월 ${parsed.getDate()}일 ${this.pad(parsed.getHours())}:${this.pad(parsed.getMinutes())}`;
+            }
+            return `${parsed.getMonth() + 1}월 ${parsed.getDate()}일`;
+        },
+
+        messageArchiveVisibleCandidates: function() {
+            if (!this.messageArchiveSelectedCapture || !Array.isArray(this.messageArchiveSelectedCapture.candidates)) {
+                return [];
+            }
+            return this.messageArchiveSelectedCapture.candidates.filter((candidate) => !candidate.already_saved);
+        },
+
+        selectedCaptureCompleteButtonText: function() {
+            if (!this.messageArchiveSelectedCapture) {
+                return '처리 완료';
+            }
+            return this.messageArchiveSelectedCapture.completed_at ? '다시 볼 메시지로 되돌리기' : '처리 완료';
+        },
+
+        toggleSelectedCaptureComplete: async function() {
+            const captureId = this.selectedCaptureId();
+            if (!captureId) return;
+            const completeUrl = this.buildMessageCaptureCompleteUrl(captureId);
+            if (!completeUrl) {
+                window.showToast('완료 처리 경로를 찾지 못했습니다.', 'error');
+                return;
+            }
+            try {
+                const payload = await this.requestJson(completeUrl, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': this.getCsrfToken() },
+                });
+                this.messageArchiveSelectedCapture = payload;
+                await this.loadMessageArchive({ reset: true, preferredCaptureId: captureId });
+                window.showToast(payload.message || '상태를 바꿨어요.', 'success');
+            } catch (error) {
+                window.showToast(error.message || '완료 처리에 실패했습니다.', 'error');
+            }
+        },
+
         applyArchiveDetailToMessageCapture: function(detailPayload) {
             this.resetMessageCaptureFlow();
             this.messageHubOpen = true;
@@ -753,12 +827,32 @@ function initCalendarMessageHub(host, options = {}) {
             this.messageHubActiveTab = 'capture';
         },
 
+        messageCaptureEditableCandidates: function() {
+            return Array.isArray(this.messageCaptureCandidates)
+                ? this.messageCaptureCandidates.filter((candidate) => !candidate.already_saved)
+                : [];
+        },
+
         messageCaptureVisibleCandidates: function() {
-            return this.messageCaptureCandidates.slice(0, 5);
+            return this.messageCaptureEditableCandidates().slice(0, 5);
         },
 
         messageCaptureHiddenCandidates: function() {
-            return this.messageCaptureCandidates.slice(5);
+            return this.messageCaptureEditableCandidates().slice(5);
+        },
+
+        messageCaptureCandidateSummaryText: function() {
+            if (this.messageCaptureSummaryText) {
+                return this.messageCaptureSummaryText;
+            }
+            const editableCount = this.messageCaptureEditableCandidates().length;
+            if (editableCount > 0) {
+                return `찾은 일정 ${editableCount}개`;
+            }
+            if (Array.isArray(this.messageCaptureCandidates) && this.messageCaptureCandidates.length > 0) {
+                return '이미 연결된 일정이나 할 일만 있어요.';
+            }
+            return '찾은 일정이 없어요.';
         },
 
         messageCaptureSelectedCount: function() {
@@ -1163,7 +1257,9 @@ function initCalendarMessageHub(host, options = {}) {
             if (!this.messageArchiveSelectedCapture) return '';
             return this.messageArchiveSelectedCapture.archive_status === 'unparsed'
                 ? '아직 이 메모는 읽지 않았어요. 필요할 때 일정찾기를 누르면 됩니다.'
-                : '이 메모에서는 저장할 날짜를 찾지 못했어요.';
+                : (this.hasSelectedCaptureLinkedItems()
+                    ? '이미 연결된 일정이나 할 일은 아래에서 확인할 수 있어요.'
+                    : '이 메모에서는 저장할 날짜를 찾지 못했어요.');
         },
     };
 

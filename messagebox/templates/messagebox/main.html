@@ -543,17 +543,15 @@
                                     <div class="mb-2 flex items-center justify-between gap-3">
                                         <p class="text-sm font-black text-slate-900">날짜 후보</p>
                                     </div>
-                                    <div class="space-y-2" x-show="messageArchiveSelectedCapture && messageArchiveSelectedCapture.candidates && messageArchiveSelectedCapture.candidates.length > 0">
-                                        <template x-for="candidate in (messageArchiveSelectedCapture ? messageArchiveSelectedCapture.candidates : [])" :key="candidate.candidate_id">
+                                    <div class="space-y-2" x-show="messageArchiveVisibleCandidates().length > 0">
+                                        <template x-for="candidate in messageArchiveVisibleCandidates()" :key="candidate.candidate_id">
                                             <div class="rounded-2xl border border-slate-200 bg-white px-4 py-3">
                                                 <div class="flex flex-wrap items-center justify-between gap-2">
                                                     <div class="flex flex-wrap items-center gap-2">
                                                         <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-black" :class="archiveCandidateBadgeClass(candidate.kind)" x-text="candidate.badge_text"></span>
-                                                        <span x-show="candidate.already_saved" class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-black text-emerald-700">이미 연결됨</span>
                                                     </div>
                                                     <button
                                                         type="button"
-                                                        x-show="!candidate.already_saved"
                                                         @click="editSelectedArchiveCandidate(candidate.candidate_id)"
                                                         class="text-xs font-black text-amber-700"
                                                     >
@@ -565,7 +563,7 @@
                                             </div>
                                         </template>
                                     </div>
-                                    <div x-show="messageArchiveSelectedCapture && (!messageArchiveSelectedCapture.candidates || messageArchiveSelectedCapture.candidates.length === 0)" class="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm font-semibold text-slate-500">
+                                    <div x-show="messageArchiveSelectedCapture && messageArchiveVisibleCandidates().length === 0" class="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm font-semibold text-slate-500">
                                         <p x-text="messageArchiveCandidateEmptyText()"></p>
                                         <button type="button" @click="addManualCandidateFromSelectedArchive()" class="mt-3 text-xs font-black text-amber-700">직접 일정 추가</button>
                                     </div>

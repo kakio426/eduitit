@@ -62,6 +62,8 @@ class MessageboxViewTests(TestCase):
         self.assertContains(response, "deleteSavedEventFromDone(savedEvent)")
         self.assertContains(response, "deleteLinkedItem(linked, { refreshArchive: true, captureId: selectedCaptureId() })")
         self.assertContains(response, "editSelectedArchiveCandidate(candidate.candidate_id)")
+        self.assertContains(response, "messageArchiveVisibleCandidates().length > 0")
+        self.assertContains(response, "selectedCaptureLinkedItems()")
         self.assertContains(response, "addManualCandidateFromSelectedArchive()")
         self.assertContains(response, "applyMessageCaptureCandidateStartDate(messageCaptureActiveCandidateRef, messageCaptureActiveCandidateRef.start_date)")
         self.assertContains(response, "applyMessageCaptureCandidateEndDate(messageCaptureActiveCandidateRef, messageCaptureActiveCandidateRef.end_date)")

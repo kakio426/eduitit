@@ -488,10 +488,20 @@ def _resolve_related_message_capture(capture_owner):
 def _build_related_message_capture_meta(capture_owner):
     capture = _resolve_related_message_capture(capture_owner)
     if capture is None:
-        return {"message_capture_id": "", "message_capture_url": ""}
+        return {
+            "message_capture_id": "",
+            "message_capture_url": "",
+            "message_capture_completed_at": "",
+            "message_capture_follow_up_state": "",
+            "message_capture_follow_up_state_label": "",
+        }
+    follow_up_state = _normalize_follow_up_state_value(capture)
     return {
         "message_capture_id": str(capture.id),
         "message_capture_url": _build_message_capture_deep_link(capture.id),
+        "message_capture_completed_at": capture.completed_at.isoformat() if capture.completed_at else "",
+        "message_capture_follow_up_state": follow_up_state,
+        "message_capture_follow_up_state_label": _follow_up_state_label(follow_up_state),
     }
 
 
