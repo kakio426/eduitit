@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 import datetime
 
@@ -14,6 +15,15 @@ from .dutyticker_scope import (
 )
 from .dutyticker_slots import PERIOD_NUMBERS, SLOT_BY_CODE, SLOT_LAYOUT, WEEKDAY_LABELS
 from .dutyticker_sync import sync_dt_students_from_hs
+
+CONSENT_STATUS_LABELS = {
+    "approved": "동의 완료",
+    "pending": "대기",
+    "rejected": "거부",
+    "expired": "만료",
+    "withdrawn": "철회",
+}
+CONSENT_PREVIEW_LIMIT = 6
 
 
 def _ensure_time_slots_for_scope(user, classroom):
@@ -74,6 +84,61 @@ def _parse_time_value(raw_value):
     except ValueError:
         return None
 
+
+def _build_consent_summary(classroom):
+    if classroom is None or not hasattr(classroom, "students"):
+        return {
+            "enabled": False,
+            "manage_url": "",
+            "classroom_name": "",
+            "total_count": 0,
+            "approved_count": 0,
+            "pending_count": 0,
+            "rejected_count": 0,
+            "expired_count": 0,
+            "withdrawn_count": 0,
+            "needs_attention_count": 0,
+            "preview_students": [],
+            "remaining_preview_count": 0,
+        }
+
+    students = list(classroom.students.select_related("consent").order_by("number", "name"))
+    status_counts = {status: 0 for status in CONSENT_STATUS_LABELS}
+    preview_students = []
+
+    for student in students:
+        consent = getattr(student, "consent", None)
+        status = getattr(consent, "status", "pending")
+        if status not in status_counts:
+            status = "pending"
+        status_counts[status] += 1
+
+        if status != "approved":
+            preview_students.append(
+                {
+                    "number": student.number,
+                    "name": student.name,
+                    "status": status,
+                    "status_label": CONSENT_STATUS_LABELS[status],
+                }
+            )
+
+    needs_attention_count = len(preview_students)
+    return {
+        "enabled": True,
+        "manage_url": reverse("happy_seed:consent_manage", kwargs={"classroom_id": classroom.id}),
+        "classroom_name": classroom.name,
+        "total_count": len(students),
+        "approved_count": status_counts["approved"],
+        "pending_count": status_counts["pending"],
+        "rejected_count": status_counts["rejected"],
+        "expired_count": status_counts["expired"],
+        "withdrawn_count": status_counts["withdrawn"],
+        "needs_attention_count": needs_attention_count,
+        "preview_students": preview_students[:CONSENT_PREVIEW_LIMIT],
+        "remaining_preview_count": max(needs_attention_count - CONSENT_PREVIEW_LIMIT, 0),
+    }
+
 @login_required
 def admin_dashboard(request):
     user = request.user
@@ -83,12 +148,14 @@ def admin_dashboard(request):
     settings, _ = get_or_create_settings_for_scope(user, classroom)
     time_slots = _ensure_time_slots_for_scope(user, classroom)
     period_rows = _build_period_subject_rows(user, classroom)
+    consent_summary = _build_consent_summary(classroom)
     
     return render(request, 'products/dutyticker/admin_dashboard.html', {
         'students': students,
         'roles': roles,
         'settings': settings,
         'active_classroom': classroom,
+        'consent_summary': consent_summary,
         'time_slots': time_slots,
         'period_rows': period_rows,
         'period_numbers': PERIOD_NUMBERS,

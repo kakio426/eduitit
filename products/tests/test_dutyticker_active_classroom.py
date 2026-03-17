@@ -3,7 +3,7 @@ from django.test import Client, TestCase
 from django.urls import reverse
 
 from core.models import UserProfile
-from happy_seed.models import HSClassroom
+from happy_seed.models import HSClassroom, HSGuardianConsent, HSStudent
 from products.models import DTRole, DTRoleAssignment, DTStudent
 
 User = get_user_model()
@@ -42,6 +42,16 @@ class DutyTickerActiveClassroomTests(TestCase):
             session["active_classroom_source"] = "hs"
             session["active_classroom_id"] = str(classroom.id)
         session.save()
+
+    def _create_hs_student(self, classroom, number, name, consent_status=None):
+        student = HSStudent.objects.create(
+            classroom=classroom,
+            number=number,
+            name=name,
+        )
+        if consent_status is not None:
+            HSGuardianConsent.objects.create(student=student, status=consent_status)
+        return student
 
     def test_api_data_uses_selected_classroom_scope(self):
         student_a = DTStudent.objects.create(user=self.user, classroom=self.classroom_a, name="가반 학생", number=1)
@@ -103,3 +113,47 @@ class DutyTickerActiveClassroomTests(TestCase):
         session = self.client.session
         self.assertEqual(session["active_classroom_source"], "hs")
         self.assertEqual(session["active_classroom_id"], str(self.classroom_b.id))
+
+    def test_admin_dashboard_shows_consent_summary_for_selected_classroom(self):
+        self._create_hs_student(self.classroom_a, 1, "김동의", "approved")
+        self._create_hs_student(self.classroom_a, 2, "박대기")
+        self._create_hs_student(self.classroom_a, 3, "최거부", "rejected")
+        self._create_hs_student(self.classroom_b, 1, "다른반 만료", "expired")
+
+        self._set_active_classroom(self.classroom_a)
+        response = self.client.get(reverse("dt_admin_dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        summary = response.context["consent_summary"]
+        self.assertTrue(summary["enabled"])
+        self.assertEqual(summary["classroom_name"], self.classroom_a.name)
+        self.assertEqual(summary["total_count"], 3)
+        self.assertEqual(summary["approved_count"], 1)
+        self.assertEqual(summary["pending_count"], 1)
+        self.assertEqual(summary["rejected_count"], 1)
+        self.assertEqual(summary["expired_count"], 0)
+        self.assertEqual(summary["needs_attention_count"], 2)
+        self.assertEqual(
+            [item["name"] for item in summary["preview_students"]],
+            ["박대기", "최거부"],
+        )
+        self.assertContains(
+            response,
+            reverse("happy_seed:consent_manage", kwargs={"classroom_id": self.classroom_a.id}),
+        )
+        self.assertContains(response, "확인 필요 학생 2명")
+        self.assertContains(response, "박대기")
+        self.assertContains(response, "최거부")
+        self.assertNotContains(response, "다른반 만료")
+
+    def test_admin_dashboard_shows_disabled_consent_cta_without_selected_classroom(self):
+        self._set_active_classroom(None)
+
+        response = self.client.get(reverse("dt_admin_dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        summary = response.context["consent_summary"]
+        self.assertFalse(summary["enabled"])
+        self.assertEqual(summary["preview_students"], [])
+        self.assertContains(response, "학급 선택 후 사용")
+        self.assertContains(response, "상단바에서 반을 고르면")
