@@ -13,6 +13,7 @@
 - In dirty workspace, commit only request-scoped files after `git diff --cached` review
 - Do not change global settings/flags unless explicitly requested
 - Teacher workflow UIs must define "next action visibility" and "processing feedback" before visual polish
+- PostgreSQL 운영 장애는 Railway 라이브 로그 기준으로 먼저 보고, `select_for_update()` 잠금 쿼리에는 nullable relation join을 섞지 않는다
 
 ---
 
@@ -57,6 +58,22 @@
 - **브라우저 리다이렉트(302) 방식은 CORS 문제로 PDF.js에서 실패한다.**
   - Django 서버가 파일을 가져와 `StreamingHttpResponse`로 same-origin 응답해야 한다.
 - 구현 위치: `consent/views.py` → `_iter_remote_file_urls()`
+
+### 2-3) Railway/PostgreSQL 전용 500 디버깅 규칙 (2026-03-17)
+- 로컬 SQLite에서 재현되지 않는 500이라도 Railway PostgreSQL 로그에 DB 에러가 보이면, 먼저 **운영 DB 문법 차이**를 의심한다.
+- 특히 `select_for_update()`가 들어간 QuerySet에는 nullable FK의 `select_related()`를 같이 붙이지 않는다.
+  - PostgreSQL에서는 LEFT OUTER JOIN이 섞인 잠금 쿼리에 대해 `FOR UPDATE cannot be applied to the nullable side of an outer join`로 실패할 수 있다.
+  - 원칙: **잠금용 QuerySet**과 **관련 객체 로딩 QuerySet**을 분리한다.
+- `manage.py test`와 SQLite 통과만으로 잠금/조인 쿼리 안전성을 판단하지 않는다.
+  - nullable relation + `select_for_update()` 조합은 SQL 문자열 또는 PostgreSQL 환경에서 별도 확인한다.
+- Railway 운영 장애 대응 순서:
+  1. 실패 시각 기준 Railway 라이브 로그에서 예외 원문 확인
+  2. 쿼리 문제면 로컬 추측보다 PostgreSQL 규칙 기준으로 수정
+  3. 운영 데이터 확인이 필요하면 **바깥 트랜잭션에서 롤백하는 dry-run**으로 검증
+  4. "로컬에서는 됨"을 완료 기준으로 쓰지 말고, Railway 최신 배포 성공 + 실제 문제 요청 재검증까지 확인
+- 메시지 보관 `commit` 류 API처럼 다건 저장/재사용 로직이 있는 엔드포인트는:
+  - 깨진 참조(`committed_*`는 남아 있는데 실제 객체 없음) 복구 경로를 서버에서 방어하고
+  - 잠금 대상 조회와 직렬화용 조회를 분리해 PostgreSQL 호환성을 유지한다
 
 ### 3) 서비스 진화 시 점검 체크리스트
 - 대시보드 진입 / 모달 열기·닫기(배경 클릭, ESC) / 서비스 라우팅 회귀 점검
