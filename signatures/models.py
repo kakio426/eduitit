@@ -2,6 +2,7 @@ import uuid
 from django.db import models
 from django.contrib.auth.models import User
 from django.db.models import Max
+from django.utils import timezone
 
 
 class TrainingSession(models.Model):
@@ -9,10 +10,18 @@ class TrainingSession(models.Model):
     SIGNATURE_SORT_SUBMITTED = "submitted"
     SIGNATURE_SORT_AFFILIATION = "affiliation"
     SIGNATURE_SORT_MANUAL = "manual"
+    ACCESS_CODE_DISABLED = 0
+    ACCESS_CODE_5_MINUTES = 5
+    ACCESS_CODE_10_MINUTES = 10
     SIGNATURE_SORT_CHOICES = [
         (SIGNATURE_SORT_SUBMITTED, "사인한 순서"),
         (SIGNATURE_SORT_AFFILIATION, "학년반/이름 정렬"),
         (SIGNATURE_SORT_MANUAL, "직접 순서 정하기"),
+    ]
+    ACCESS_CODE_DURATION_CHOICES = [
+        (ACCESS_CODE_DISABLED, "사용 안 함"),
+        (ACCESS_CODE_5_MINUTES, "5분"),
+        (ACCESS_CODE_10_MINUTES, "10분"),
     ]
 
     title = models.CharField('연수 제목', max_length=200)
@@ -73,6 +82,22 @@ class TrainingSession(models.Model):
         default=SIGNATURE_SORT_SUBMITTED,
         help_text="명단이 있는 경우 출석부에 어떤 순서로 보여줄지 정합니다.",
     )
+    access_code_duration_minutes = models.PositiveSmallIntegerField(
+        "현장 코드 유효 시간",
+        choices=ACCESS_CODE_DURATION_CHOICES,
+        default=ACCESS_CODE_DISABLED,
+        help_text="필요할 때만 5분 또는 10분짜리 현장 코드를 걸 수 있습니다.",
+    )
+    active_access_code = models.CharField(
+        "현재 현장 코드",
+        max_length=6,
+        blank=True,
+    )
+    active_access_code_expires_at = models.DateTimeField(
+        "현재 현장 코드 만료 시각",
+        null=True,
+        blank=True,
+    )
 
     class Meta:
         verbose_name = '연수'
@@ -85,6 +110,31 @@ class TrainingSession(models.Model):
     @property
     def signature_count(self):
         return self.signatures.count()
+
+    @property
+    def access_code_required(self):
+        return int(self.access_code_duration_minutes or 0) in {
+            self.ACCESS_CODE_5_MINUTES,
+            self.ACCESS_CODE_10_MINUTES,
+        }
+
+    def has_active_access_code(self, *, now=None):
+        if not self.access_code_required:
+            return False
+        if not self.active_access_code or not self.active_access_code_expires_at:
+            return False
+        current_time = now or timezone.now()
+        return self.active_access_code_expires_at > current_time
+
+    def access_code_status(self, *, now=None):
+        current_time = now or timezone.now()
+        if not self.access_code_required:
+            return "disabled"
+        if self.has_active_access_code(now=current_time):
+            return "active"
+        if self.active_access_code:
+            return "expired"
+        return "pending"
 
 
 class Signature(models.Model):
@@ -367,4 +417,3 @@ class SignatureAuditLog(models.Model):
         ordering = ["-created_at"]
         verbose_name = "서명 감사 로그"
         verbose_name_plural = "서명 감사 로그"
-

@@ -74,14 +74,30 @@ class SignatureForm(forms.ModelForm):
     """서명 입력 폼"""
 
     expected_participant_id = forms.IntegerField(required=False, widget=forms.HiddenInput())
+    access_code = forms.CharField(
+        required=False,
+        max_length=6,
+        widget=forms.TextInput(
+            attrs={
+                "class": "w-full px-4 py-4 text-xl tracking-[0.35em] rounded-2xl shadow-clay-inner bg-bg-soft focus:outline-none focus:ring-2 focus:ring-amber-300 text-center",
+                "placeholder": "예: 4721",
+                "autocomplete": "one-time-code",
+                "inputmode": "numeric",
+                "maxlength": "6",
+            }
+        ),
+    )
 
     def __init__(self, *args, **kwargs):
         use_roster_selection = kwargs.pop("use_roster_selection", False)
+        use_access_code = kwargs.pop("use_access_code", False)
         super().__init__(*args, **kwargs)
         if use_roster_selection:
             self.fields["participant_name"].required = False
             self.fields["participant_name"].widget.attrs["placeholder"] = "명단에 없으면 직접 입력하세요"
             self.fields["participant_affiliation"].widget.attrs["placeholder"] = "이름을 고르면 자동으로 채워집니다"
+        if use_access_code:
+            self.fields["access_code"].required = True
 
     def clean(self):
         cleaned_data = super().clean()
@@ -89,6 +105,8 @@ class SignatureForm(forms.ModelForm):
         participant_name = str(cleaned_data.get("participant_name") or "").strip()
         if not expected_participant_id and not participant_name:
             self.add_error("participant_name", "이름을 선택하거나 직접 입력해 주세요.")
+        if "access_code" in self.fields:
+            cleaned_data["access_code"] = str(cleaned_data.get("access_code") or "").strip()
         return cleaned_data
 
     class Meta:

@@ -1,3 +1,4 @@
+import json
 from datetime import timedelta
 from urllib.parse import parse_qs, urlparse
 
@@ -203,6 +204,32 @@ class SignatureTeacherFirstPagesTests(TestCase):
         self.assertContains(response, "QR 보기")
         self.assertContains(response, "참여 현황 보기")
         self.assertContains(response, "남은 인원 수 확인 가능")
+        self.assertContains(response, "현장 코드")
+        self.assertContains(response, "사용 안 함")
+        self.assertContains(response, "5분")
+        self.assertContains(response, "10분")
+
+    def test_teacher_can_apply_access_code_from_detail_page(self):
+        session = TrainingSession.objects.create(
+            title="현장 코드 테스트",
+            instructor="강사",
+            datetime=timezone.now() + timedelta(days=1),
+            location="강당",
+            created_by=self.user,
+            is_active=True,
+        )
+
+        response = self.client.post(
+            reverse("signatures:update_access_code", kwargs={"uuid": session.uuid}),
+            data=json.dumps({"duration_minutes": 10, "access_code": "5831"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        session.refresh_from_db()
+        self.assertEqual(session.access_code_duration_minutes, 10)
+        self.assertEqual(session.active_access_code, "5831")
+        self.assertIsNotNone(session.active_access_code_expires_at)
 
     def test_detail_collecting_stage_shows_absentees(self):
         session = TrainingSession.objects.create(

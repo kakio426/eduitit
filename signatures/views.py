@@ -285,6 +285,48 @@ def _request_user_agent(request):
     return (request.META.get("HTTP_USER_AGENT", "") or "")[:1000]
 
 
+def _normalize_access_code(value):
+    normalized = re.sub(r"\s+", "", str(value or "").strip())
+    return normalized[:6]
+
+
+def _build_access_code_state(session, *, now=None):
+    current_time = now or timezone.now()
+    status = session.access_code_status(now=current_time)
+    expires_at = session.active_access_code_expires_at
+    return {
+        "enabled": session.access_code_required,
+        "duration_minutes": int(session.access_code_duration_minutes or 0),
+        "status": status,
+        "is_active": status == "active",
+        "is_pending": status == "pending",
+        "is_expired": status == "expired",
+        "expires_at": expires_at,
+        "current_code": session.active_access_code or "",
+    }
+
+
+def _validate_session_access_code(session, submitted_code, *, now=None):
+    current_time = now or timezone.now()
+    if not session.access_code_required:
+        return None
+
+    status = session.access_code_status(now=current_time)
+    if status == "pending":
+        return "담당 교사가 아직 현장 코드를 열지 않았습니다. 잠시 후 다시 시도해 주세요."
+    if status == "expired":
+        return "현장 코드 시간이 끝났습니다. 담당 교사에게 새 코드를 요청해 주세요."
+    if status != "active":
+        return "현장 코드를 확인할 수 없습니다. 담당 교사에게 다시 받아 주세요."
+
+    normalized_code = _normalize_access_code(submitted_code)
+    if not re.fullmatch(r"\d{4,6}", normalized_code):
+        return "현장 코드는 4~6자리 숫자로 입력해 주세요."
+    if normalized_code != (session.active_access_code or ""):
+        return "현장 코드를 다시 확인해 주세요."
+    return None
+
+
 def _build_affiliation_suggestions(session, max_items=40):
     counter = Counter()
     for raw in session.expected_participants.values_list("affiliation", flat=True):
@@ -1102,6 +1144,7 @@ def session_detail(request, uuid):
             "signature",
             "expected_participant",
         )[:20]
+        access_code_state = _build_access_code_state(session)
         unmatched_expected_participants = (
             _sort_expected_participants_for_display(
                 expected.filter(matched_signature__isnull=True),
@@ -1144,6 +1187,7 @@ def session_detail(request, uuid):
             'has_duplicates': len(duplicates) > 0,
             'share_link': share_link,
             'share_qr_data_url': share_qr_data_url,
+            'access_code_state': access_code_state,
             'affiliation_suggestions': _build_affiliation_suggestions(session),
             'affiliation_correction_logs': correction_logs,
             'pending_participants_preview': unmatched_expected_participants[:5],
@@ -1214,11 +1258,13 @@ def sign(request, uuid):
     """서명 페이지 (공개 - 로그인 불필요)"""
     session = get_object_or_404(TrainingSession, uuid=uuid)
     affiliation_suggestions = _build_affiliation_suggestions(session)
+    request_time = timezone.now()
     roster_participant_options = _sort_expected_participants_for_display(
         session.expected_participants.all(),
         _get_participant_sort_mode(session),
     )
     show_roster_selection = bool(roster_participant_options)
+    access_code_state = _build_access_code_state(session, now=request_time)
     walk_in_mode = (
         _is_truthy_flag(request.POST.get("walk_in_mode"), default=False)
         if request.method == "POST" and show_roster_selection
@@ -1235,12 +1281,26 @@ def sign(request, uuid):
         return _apply_sensitive_cache_headers(response)
 
     if request.method == 'POST':
-        form = SignatureForm(request.POST, use_roster_selection=show_roster_selection)
+        form = SignatureForm(
+            request.POST,
+            use_roster_selection=show_roster_selection,
+            use_access_code=access_code_state["is_active"],
+        )
         if form.is_valid():
             selected_participant = None
             selected_participant_id = form.cleaned_data.get("expected_participant_id")
+            access_code_error = _validate_session_access_code(
+                session,
+                form.cleaned_data.get("access_code"),
+                now=request_time,
+            )
+            if access_code_error:
+                if access_code_state["is_active"]:
+                    form.add_error("access_code", access_code_error)
+                else:
+                    form.add_error(None, access_code_error)
 
-            if show_roster_selection and selected_participant_id and not walk_in_mode:
+            if not form.errors and show_roster_selection and selected_participant_id and not walk_in_mode:
                 selected_participant = (
                     ExpectedParticipant.objects
                     .filter(training_session=session, id=selected_participant_id)
@@ -1285,6 +1345,7 @@ def sign(request, uuid):
                         SignatureAuditLog.objects.create(
                             training_session=session,
                             signature=signature,
+                            expected_participant=selected_participant,
                             event_type=SignatureAuditLog.EVENT_SIGN_SUBMITTED,
                             event_meta={
                                 'participant_name': signature.participant_name,
@@ -1292,6 +1353,9 @@ def sign(request, uuid):
                                 'submission_mode': signature.submission_mode,
                                 'expected_participant_id': selected_participant.id if selected_participant else None,
                                 'walk_in_mode': bool(selected_participant is None),
+                                'access_code_required': access_code_state["enabled"],
+                                'access_code_verified': access_code_state["enabled"],
+                                'access_code_duration_minutes': access_code_state["duration_minutes"] or None,
                             },
                             ip_address=signature.ip_address,
                             user_agent=signature.user_agent,
@@ -1299,12 +1363,16 @@ def sign(request, uuid):
                         response = render(request, 'signatures/sign_success.html', {'session': session})
                         return _apply_sensitive_cache_headers(response)
     else:
-        form = SignatureForm(use_roster_selection=show_roster_selection)
+        form = SignatureForm(
+            use_roster_selection=show_roster_selection,
+            use_access_code=access_code_state["is_active"],
+        )
 
     response = render(request, 'signatures/sign.html', {
         'session': session,
         'form': form,
         'affiliation_suggestions': affiliation_suggestions,
+        'access_code_state': access_code_state,
         'show_roster_selection': show_roster_selection,
         'roster_participant_options': roster_participant_options,
         'walk_in_mode': walk_in_mode,
@@ -1556,6 +1624,68 @@ def toggle_active(request, uuid):
     return JsonResponse({
         'success': True,
         'is_active': session.is_active,
+    })
+
+
+@login_required
+@require_POST
+def update_access_code(request, uuid):
+    """현장 코드 사용 여부와 현재 코드를 업데이트."""
+    session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
+
+    try:
+        payload = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': '요청 형식이 올바르지 않습니다.'}, status=400)
+
+    raw_duration = payload.get("duration_minutes", TrainingSession.ACCESS_CODE_DISABLED)
+    try:
+        duration_minutes = int(raw_duration or 0)
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': '코드 시간을 다시 선택해 주세요.'}, status=400)
+
+    if duration_minutes not in {
+        TrainingSession.ACCESS_CODE_DISABLED,
+        TrainingSession.ACCESS_CODE_5_MINUTES,
+        TrainingSession.ACCESS_CODE_10_MINUTES,
+    }:
+        return JsonResponse({'success': False, 'error': '코드 시간은 5분 또는 10분만 사용할 수 있습니다.'}, status=400)
+
+    if duration_minutes == TrainingSession.ACCESS_CODE_DISABLED:
+        session.access_code_duration_minutes = TrainingSession.ACCESS_CODE_DISABLED
+        session.active_access_code = ""
+        session.active_access_code_expires_at = None
+        session.save(
+            update_fields=[
+                "access_code_duration_minutes",
+                "active_access_code",
+                "active_access_code_expires_at",
+            ]
+        )
+        return JsonResponse({
+            'success': True,
+            'message': '현장 코드를 사용하지 않도록 변경했습니다.',
+            'access_code_state': _build_access_code_state(session),
+        })
+
+    access_code = _normalize_access_code(payload.get("access_code"))
+    if not re.fullmatch(r"\d{4,6}", access_code):
+        return JsonResponse({'success': False, 'error': '현장 코드는 4~6자리 숫자로 입력해 주세요.'}, status=400)
+
+    session.access_code_duration_minutes = duration_minutes
+    session.active_access_code = access_code
+    session.active_access_code_expires_at = timezone.now() + timedelta(minutes=duration_minutes)
+    session.save(
+        update_fields=[
+            "access_code_duration_minutes",
+            "active_access_code",
+            "active_access_code_expires_at",
+        ]
+    )
+    return JsonResponse({
+        'success': True,
+        'message': f'현장 코드를 {duration_minutes}분 동안 적용했습니다.',
+        'access_code_state': _build_access_code_state(session),
     })
 
 

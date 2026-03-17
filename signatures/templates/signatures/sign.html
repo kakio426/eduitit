@@ -47,11 +47,14 @@
 
         <form method="post" id="signForm" class="clay-card rounded-[1.75rem] p-6 md:p-7">
             {% csrf_token %}
-            {% if form.non_field_errors or form.participant_name.errors or form.participant_affiliation.errors or form.signature_data.errors or form.expected_participant_id.errors %}
+            {% if form.non_field_errors or form.access_code.errors or form.participant_name.errors or form.participant_affiliation.errors or form.signature_data.errors or form.expected_participant_id.errors %}
             <div class="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-700">
                 <p class="font-black">입력 내용을 다시 확인해 주세요.</p>
                 <ul class="mt-2 space-y-1">
                     {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                    {% endfor %}
+                    {% for error in form.access_code.errors %}
                     <li>{{ error }}</li>
                     {% endfor %}
                     {% for error in form.participant_name.errors %}
@@ -67,6 +70,33 @@
                     <li>{{ error }}</li>
                     {% endfor %}
                 </ul>
+            </div>
+            {% endif %}
+
+            {% if access_code_state.enabled %}
+            <div class="mb-6 rounded-[1.5rem] border {% if access_code_state.is_active %}border-amber-200 bg-amber-50{% else %}border-red-200 bg-red-50{% endif %} px-4 py-4 md:px-5 md:py-5">
+                <div class="flex items-start gap-3">
+                    <div class="mt-1 flex h-10 w-10 items-center justify-center rounded-full {% if access_code_state.is_active %}bg-amber-100 text-amber-700{% else %}bg-red-100 text-red-700{% endif %}">
+                        <i class="fa-solid fa-key"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-base font-black text-slate-800">현장 코드 확인</p>
+                        {% if access_code_state.is_active %}
+                        <p class="mt-1 text-sm text-slate-600">담당 교사가 지금 안내한 코드를 입력해 주세요. {{ access_code_state.duration_minutes }}분 동안만 사용할 수 있습니다.</p>
+                        <div class="mt-4">
+                            <label class="mb-2 block text-sm font-black text-slate-700">
+                                <i class="fa-solid fa-shield-halved mr-1"></i> 현장 코드
+                            </label>
+                            {{ form.access_code }}
+                            <p class="mt-2 text-xs text-slate-500">현재 코드는 {{ access_code_state.expires_at|date:"H:i" }}까지 유효합니다.</p>
+                        </div>
+                        {% elif access_code_state.is_expired %}
+                        <p class="mt-1 text-sm text-red-700">현장 코드 시간이 끝났습니다. 담당 교사에게 새 코드를 받아 다시 입력해 주세요.</p>
+                        {% else %}
+                        <p class="mt-1 text-sm text-red-700">담당 교사가 아직 현장 코드를 열지 않았습니다. 잠시 후 다시 시도해 주세요.</p>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
             {% endif %}
 
@@ -183,7 +213,8 @@
             </div>
 
             <button type="submit" id="submitBtn"
-                class="w-full rounded-2xl bg-indigo-600 py-4 text-xl font-black text-white hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                class="w-full rounded-2xl bg-indigo-600 py-4 text-xl font-black text-white hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                {% if access_code_state.enabled and not access_code_state.is_active %}disabled{% endif %}>
                 <i class="fa-solid fa-paper-plane mr-2"></i>서명 제출하기
             </button>
         </form>
@@ -228,7 +259,10 @@
     const participantNameSection = document.getElementById('participantNameSection');
     const participantNameInput = document.querySelector('input[name="participant_name"]');
     const participantAffiliationInput = document.querySelector('input[name="participant_affiliation"]');
+    const accessCodeInput = document.querySelector('input[name="access_code"]');
     const walkInToggleBtn = document.getElementById('walkInToggleBtn');
+    const accessCodeEnabled = {% if access_code_state.enabled %}true{% else %}false{% endif %};
+    const accessCodeActive = {% if access_code_state.is_active %}true{% else %}false{% endif %};
 
     function applySelectedParticipantAffiliation() {
         if (!rosterSelect || !participantAffiliationInput) return;
@@ -295,6 +329,19 @@
     document.getElementById('signForm').addEventListener('submit', function (e) {
         const signatureInput = document.getElementById('id_signature_data');
         const isWalkInMode = walkInModeInput ? walkInModeInput.value === '1' : true;
+
+        if (accessCodeEnabled && !accessCodeActive) {
+            e.preventDefault();
+            alert('담당 교사에게 현재 사용할 현장 코드를 다시 받아 주세요.');
+            return;
+        }
+
+        if (accessCodeActive && accessCodeInput && !accessCodeInput.value.trim()) {
+            e.preventDefault();
+            alert('현장 코드를 입력해 주세요.');
+            accessCodeInput.focus();
+            return;
+        }
 
         if (rosterSelect && !isWalkInMode) {
             if (!rosterSelect.value) {

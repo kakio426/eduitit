@@ -15,6 +15,7 @@ urlpatterns = [
     path("<uuid:uuid>/print/", views.print_view, name="print"),
     path("<uuid:uuid>/signature-sort-mode/", views.update_signature_sort_mode, name="update_signature_sort_mode"),
     path("<uuid:uuid>/toggle/", views.toggle_active, name="toggle"),
+    path("<uuid:uuid>/access-code/", views.update_access_code, name="update_access_code"),
     path("sign/<uuid:uuid>/", views.sign, name="sign"),
     path("signature/<int:pk>/delete/", views.delete_signature, name="delete_signature"),
     path("styles/", views.style_list, name="style_list"),

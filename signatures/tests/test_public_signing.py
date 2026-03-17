@@ -60,6 +60,73 @@ class SignaturePublicSigningTests(TestCase):
         self.assertEqual(log.event_meta.get("participant_name"), "홍길동")
         self.assertEqual(log.event_meta.get("submission_mode"), Signature.SUBMISSION_MODE_OPEN)
 
+    def test_public_sign_submission_accepts_active_access_code(self):
+        self.session.access_code_duration_minutes = TrainingSession.ACCESS_CODE_5_MINUTES
+        self.session.active_access_code = "4721"
+        self.session.active_access_code_expires_at = timezone.now() + timedelta(minutes=5)
+        self.session.save(
+            update_fields=[
+                "access_code_duration_minutes",
+                "active_access_code",
+                "active_access_code_expires_at",
+            ]
+        )
+
+        response = self.client.post(
+            reverse("signatures:sign", kwargs={"uuid": self.session.uuid}),
+            data={
+                "access_code": "4721",
+                "participant_affiliation": "교사",
+                "participant_name": "홍길동",
+                "signature_data": "data:image/png;base64,SIG",
+            },
+            HTTP_X_FORWARDED_FOR="198.51.100.12",
+            HTTP_USER_AGENT="SignatureAgent/3.0",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        signature = Signature.objects.get(training_session=self.session, participant_name="홍길동")
+        log = SignatureAuditLog.objects.get(training_session=self.session, signature=signature)
+        self.assertTrue(log.event_meta.get("access_code_required"))
+        self.assertTrue(log.event_meta.get("access_code_verified"))
+        self.assertEqual(log.event_meta.get("access_code_duration_minutes"), 5)
+
+    def test_public_sign_page_blocks_when_access_code_not_ready(self):
+        self.session.access_code_duration_minutes = TrainingSession.ACCESS_CODE_5_MINUTES
+        self.session.save(update_fields=["access_code_duration_minutes"])
+
+        response = self.client.get(reverse("signatures:sign", kwargs={"uuid": self.session.uuid}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "담당 교사가 아직 현장 코드를 열지 않았습니다.")
+        self.assertContains(response, "disabled")
+
+    def test_public_sign_submission_rejects_expired_access_code(self):
+        self.session.access_code_duration_minutes = TrainingSession.ACCESS_CODE_10_MINUTES
+        self.session.active_access_code = "5820"
+        self.session.active_access_code_expires_at = timezone.now() - timedelta(minutes=1)
+        self.session.save(
+            update_fields=[
+                "access_code_duration_minutes",
+                "active_access_code",
+                "active_access_code_expires_at",
+            ]
+        )
+
+        response = self.client.post(
+            reverse("signatures:sign", kwargs={"uuid": self.session.uuid}),
+            data={
+                "access_code": "5820",
+                "participant_affiliation": "교사",
+                "participant_name": "홍길동",
+                "signature_data": "data:image/png;base64,SIG",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "현장 코드 시간이 끝났습니다.")
+        self.assertFalse(Signature.objects.filter(training_session=self.session, participant_name="홍길동").exists())
+
     def test_public_sign_page_uses_roster_selection_when_expected_participants_exist(self):
         matched_signature = Signature.objects.create(
             training_session=self.session,
