@@ -9,7 +9,6 @@
   var pendingIssue = null;
   var overlayId = "__edu_materials_runtime_guard__";
   var READY_CHECK_INTERVAL_MS = 400;
-  var OVERLAY_TIMEOUT_MS = 8000;
 
   function text(value) {
     if (value === null || value === undefined) {
@@ -248,8 +247,6 @@
       return;
     }
 
-    var startedAt = Date.now();
-
     function checkRuntimeState() {
       if (readyReported || issueReported) {
         return;
@@ -258,14 +255,6 @@
       if (!findBlockingOverlay()) {
         readyReported = true;
         post("edu-materials:runtime-ready", {});
-        return;
-      }
-
-      if (Date.now() - startedAt >= OVERLAY_TIMEOUT_MS) {
-        reportIssue({
-          kind: "timeout",
-          message: "로딩 화면이 계속 남아 있습니다.",
-        });
         return;
       }
 
