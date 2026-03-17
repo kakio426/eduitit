@@ -8,7 +8,7 @@ from django.views.decorators.http import require_POST
 
 from .classification import apply_auto_metadata, apply_manual_metadata, collect_popular_tags, parse_tags_input
 from .models import EduMaterial
-from .runtime import build_runtime_html
+from .runtime import build_runtime_data_url, build_runtime_html
 from .services import build_material_qr_data_url, get_service, validate_html_upload
 
 
@@ -236,6 +236,7 @@ def material_detail(request, pk):
         {
             "service": get_service(),
             "material": material,
+            "material_frame_src": build_runtime_data_url(material.html_content),
             "material_render_url": material_render_url,
             "public_url": public_url,
             "public_qr_data_url": build_material_qr_data_url(public_url) if material.is_published else "",
@@ -313,6 +314,7 @@ def run_material(request, pk):
         {
             "material": material,
             "hide_navbar": True,
+            "material_frame_src": build_runtime_data_url(material.html_content),
             "material_render_url": reverse("edu_materials:render", args=[material.id]),
             **_build_preview_context(),
         },

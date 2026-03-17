@@ -1,3 +1,4 @@
+import base64
 from functools import lru_cache
 from pathlib import Path
 import re
@@ -43,3 +44,9 @@ def build_runtime_html(html_content: str) -> str:
         return html[: doctype_match.end()] + bundle + html[doctype_match.end() :]
 
     return bundle + html
+
+
+def build_runtime_data_url(html_content: str) -> str:
+    runtime_html = build_runtime_html(html_content)
+    encoded = base64.b64encode(runtime_html.encode("utf-8")).decode("ascii")
+    return f"data:text/html;charset=utf-8;base64,{encoded}"

@@ -100,7 +100,7 @@
                     </div>
                     {% endif %}
 
-                    {% include 'edu_materials/includes/material_iframe.html' with material=material material_render_url=material_render_url frame_mode='preview' frame_title='교사용 미리보기' preview_viewports=preview_viewports preview_default_viewport=preview_default_viewport %}
+                    {% include 'edu_materials/includes/material_iframe.html' with material=material material_render_url=material_render_url frame_src=material_frame_src frame_mode='preview' frame_title='교사용 미리보기' preview_viewports=preview_viewports preview_default_viewport=preview_default_viewport %}
                 </div>
 
                 <div id="edit-form" class="edu-materials-panel rounded-[32px] p-6">

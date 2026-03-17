@@ -332,7 +332,7 @@ class EduMaterialViewTests(TestCase):
         response = self.client.get(reverse("edu_materials:run", args=[material.id]))
         self.assertEqual(response.status_code, 404)
 
-    def test_run_view_renders_sandboxed_iframe_and_tracks_views(self):
+    def test_run_view_renders_runtime_data_iframe_and_tracks_views(self):
         material = EduMaterial.objects.create(
             teacher=self.user,
             title="공개 자료",
@@ -341,11 +341,12 @@ class EduMaterialViewTests(TestCase):
         )
         response = self.client.get(reverse("edu_materials:run", args=[material.id]))
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'src="data:text/html;charset=utf-8;base64,')
+        self.assertNotContains(response, 'sandbox="')
         self.assertContains(
             response,
-            "sandbox=\"allow-downloads allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-scripts\"",
+            f'data-material-render-url="{reverse("edu_materials:render", args=[material.id])}"',
         )
-        self.assertContains(response, reverse("edu_materials:render", args=[material.id]))
         self.assertContains(response, "data-frame-mode=\"runtime\"")
         self.assertContains(response, "data-material-frame-shell")
         self.assertContains(response, "data-frame-status")

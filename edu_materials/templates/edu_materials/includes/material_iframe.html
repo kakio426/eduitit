@@ -3,6 +3,7 @@
     class="relative {{ frame_shell_classes|default:'overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950/95 shadow-xl shadow-slate-900/10' }}"
     data-frame-mode="{{ frame_mode|default:'runtime' }}"
     data-material-frame-shell
+    data-material-render-url="{{ material_render_url }}"
 >
     <style>
         [data-frame-status][data-tone="error"] [data-frame-status-card] {
@@ -82,10 +83,10 @@
                 <iframe
                     title="{{ frame_title|default:material.title }}"
                     class="block border-0 bg-white shadow-2xl"
-                    sandbox="{{ iframe_sandbox|default:'allow-downloads allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-scripts' }}"
+                    {% if iframe_sandbox %}sandbox="{{ iframe_sandbox }}"{% endif %}
                     loading="eager"
                     referrerpolicy="no-referrer"
-                    src="{{ material_render_url }}"
+                    src="{{ frame_src|default:material_render_url }}"
                     width="{{ preview_default_viewport.width }}"
                     height="{{ preview_default_viewport.height }}"
                     data-preview-iframe
@@ -100,10 +101,10 @@
         <iframe
             title="{{ frame_title|default:material.title }}"
             class="{{ iframe_classes|default:'block h-full w-full bg-white' }}"
-            sandbox="{{ iframe_sandbox|default:'allow-downloads allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-scripts' }}"
+            {% if iframe_sandbox %}sandbox="{{ iframe_sandbox }}"{% endif %}
             loading="eager"
             referrerpolicy="no-referrer"
-            src="{{ material_render_url }}"
+            src="{{ frame_src|default:material_render_url }}"
             data-material-iframe
             allowfullscreen
         ></iframe>
