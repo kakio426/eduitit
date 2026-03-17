@@ -1,7 +1,39 @@
+{% load static %}
 <div
-    class="{{ frame_shell_classes|default:'overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950/95 shadow-xl shadow-slate-900/10' }}"
+    class="relative {{ frame_shell_classes|default:'overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950/95 shadow-xl shadow-slate-900/10' }}"
     data-frame-mode="{{ frame_mode|default:'runtime' }}"
+    data-material-frame-shell
 >
+    <style>
+        [data-frame-status][data-tone="error"] [data-frame-status-card] {
+            border-color: rgba(248, 113, 113, 0.5);
+            background: rgba(69, 10, 10, 0.92);
+        }
+    </style>
+    <div
+        class="pointer-events-none absolute inset-x-4 bottom-4 z-20 flex justify-end"
+        data-frame-status
+        data-tone="notice"
+        hidden
+    >
+        <div
+            class="pointer-events-auto w-full max-w-md rounded-[24px] border border-emerald-300/30 bg-slate-950/92 p-4 text-white shadow-2xl shadow-slate-950/40 backdrop-blur"
+            data-frame-status-card
+        >
+            <div class="text-sm font-black" data-frame-status-title>자료 실행 확인 중</div>
+            <p class="mt-2 text-sm leading-6 text-slate-200" data-frame-status-body></p>
+            <div class="mt-3 flex justify-end">
+                <button
+                    type="button"
+                    class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-bold text-white transition hover:bg-white/20"
+                    data-frame-status-reload
+                >
+                    다시 열기
+                </button>
+            </div>
+        </div>
+    </div>
+
     {% if not hide_frame_header %}
     <div class="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 px-5 py-4 text-white">
         <div>
@@ -57,6 +89,7 @@
                     width="{{ preview_default_viewport.width }}"
                     height="{{ preview_default_viewport.height }}"
                     data-preview-iframe
+                    data-material-iframe
                     allowfullscreen
                 ></iframe>
             </div>
@@ -71,8 +104,10 @@
             loading="eager"
             referrerpolicy="no-referrer"
             src="{{ material_render_url }}"
+            data-material-iframe
             allowfullscreen
         ></iframe>
     </div>
     {% endif %}
 </div>
+<script src="{% static 'edu_materials/material_frame_host.js' %}"></script>

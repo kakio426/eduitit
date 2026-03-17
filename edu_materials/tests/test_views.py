@@ -13,6 +13,7 @@ from django.urls import reverse
 
 from edu_materials.classification import EduMaterialClassificationError, apply_auto_metadata, extract_visible_text
 from edu_materials.models import EduMaterial
+from edu_materials.runtime import build_runtime_html
 
 
 User = get_user_model()
@@ -346,6 +347,8 @@ class EduMaterialViewTests(TestCase):
         )
         self.assertContains(response, reverse("edu_materials:render", args=[material.id]))
         self.assertContains(response, "data-frame-mode=\"runtime\"")
+        self.assertContains(response, "data-material-frame-shell")
+        self.assertContains(response, "data-frame-status")
         material.refresh_from_db()
         self.assertEqual(material.view_count, 1)
 
@@ -443,6 +446,7 @@ class EduMaterialViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "<button>play</button>", html=True)
+        self.assertContains(response, "edu-materials-runtime-guard")
         self.assertIn("sandbox allow-downloads", response["Content-Security-Policy"])
 
     def test_render_view_requires_publish_for_public_access(self):
@@ -507,6 +511,24 @@ class EduMaterialClassificationTests(TestCase):
         self.assertIsNone(metadata)
         self.assertEqual(material.metadata_status, EduMaterial.MetadataStatus.FAILED)
         self.assertIn("실패 테스트", material.search_text)
+
+
+class EduMaterialRuntimeTests(TestCase):
+    def test_build_runtime_html_injects_guard_after_head(self):
+        html = "<!DOCTYPE html><html><head><title>demo</title></head><body><h1>ok</h1></body></html>"
+
+        rendered = build_runtime_html(html)
+
+        self.assertIn("edu-materials-runtime-guard", rendered)
+        self.assertIn("<title>demo</title>", rendered)
+        self.assertIn("<script>", rendered)
+        self.assertIn("<body><h1>ok</h1></body>", rendered)
+
+    def test_build_runtime_html_injects_guard_for_fragment(self):
+        rendered = build_runtime_html("<div>fragment</div>")
+
+        self.assertIn("edu-materials-runtime-guard", rendered)
+        self.assertTrue(rendered.endswith("<div>fragment</div>"))
 
 
 class EduMaterialBackfillCommandTests(TestCase):

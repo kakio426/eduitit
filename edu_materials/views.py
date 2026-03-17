@@ -8,6 +8,7 @@ from django.views.decorators.http import require_POST
 
 from .classification import apply_auto_metadata, apply_manual_metadata, collect_popular_tags, parse_tags_input
 from .models import EduMaterial
+from .runtime import build_runtime_html
 from .services import build_material_qr_data_url, get_service, validate_html_upload
 
 
@@ -324,7 +325,7 @@ def render_material(request, pk):
     if not material.is_published and not is_teacher_preview:
         raise Http404()
 
-    response = HttpResponse(material.html_content, content_type="text/html; charset=utf-8")
+    response = HttpResponse(build_runtime_html(material.html_content), content_type="text/html; charset=utf-8")
     # Keep raw HTML sandboxed even if the render URL is opened directly.
     response["Content-Security-Policy"] = (
         "sandbox allow-downloads allow-forms allow-modals allow-pointer-lock "
