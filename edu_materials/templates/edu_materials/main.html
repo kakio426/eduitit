@@ -28,13 +28,13 @@
     <div class="max-w-7xl mx-auto space-y-8">
         <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-                <p class="text-sm font-bold uppercase tracking-[0.32em] text-emerald-600">Interactive Lesson Materials</p>
-                <h1 class="text-4xl md:text-5xl font-black text-slate-900 mt-2">HTML 교육 자료를 저장하고 다시 쉽게 찾습니다</h1>
-                <p class="text-slate-600 mt-4 max-w-3xl text-lg">저장 직후 자동 태그와 요약을 붙이고, 과목·학년·자료 유형으로 다시 찾아볼 수 있게 정리합니다.</p>
+                <p class="text-sm font-bold uppercase tracking-[0.32em] text-emerald-600">교사 제작 놀이터</p>
+                <h1 class="text-4xl md:text-5xl font-black text-slate-900 mt-2">학습 주제로 학생 수업 활동을 직접 만들기</h1>
+                <p class="text-slate-600 mt-4 max-w-3xl text-lg">선생님이 짜는 수업처럼, 핵심 개념을 드러내는 인터랙티브 HTML을 바로 저장하고 수업에서 반복 사용할 수 있게 정리합니다.</p>
             </div>
             <div class="rounded-3xl bg-white/70 border border-emerald-100 px-5 py-4 text-sm text-slate-600">
-                <div>새 자료는 저장 즉시 학생 공개 상태로 들어갑니다.</div>
-                <div>자동 분류가 어긋나면 상세 화면에서 직접 수정할 수 있습니다.</div>
+                <div>제목·요약·태그를 먼저 적고, 핵심 조작 포인트를 한 화면에 넣어보세요.</div>
+                <div>분류(과목/학년/자료유형)가 어긋나면 상세 화면에서 즉시 수정해도 됩니다.</div>
             </div>
         </div>
 
@@ -42,8 +42,8 @@
             <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
                     <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">검색과 필터</div>
-                    <h2 class="text-2xl font-black text-slate-900 mt-2">오늘 다시 써야 할 자료부터 찾습니다</h2>
-                    <p class="text-sm text-slate-500 mt-1">제목, 요약, 단원명, 태그로 찾고 과목·학년·자료 유형으로 좁혀보세요.</p>
+                    <h2 class="text-2xl font-black text-slate-900 mt-2">수업 전에 필요한 자료를 바로 꺼내보세요</h2>
+                    <p class="text-sm text-slate-500 mt-1">제목, 요약, 단원명, 태그로 찾고 과목·학년·자료유형으로 빠르게 좁혀보세요.</p>
                 </div>
                 <div class="rounded-full bg-emerald-50 border border-emerald-100 px-4 py-2 text-sm font-bold text-emerald-700">
                     내 자료 {{ my_materials|length }}개 / 공개 자료 {{ shared_materials|length }}개
@@ -109,8 +109,17 @@
         <div class="grid gap-8 lg:grid-cols-[400px_1fr]">
             <div class="edu-materials-panel rounded-[32px] p-6 md:p-8">
                 <div class="mb-6">
-                    <h2 class="text-2xl font-black text-slate-900">새 자료 올리기</h2>
-                    <p class="text-sm text-slate-500 mt-1">자료 제목과 HTML만 넣으면 바로 실행 가능한 수업 자료로 저장됩니다.</p>
+                    <h2 class="text-2xl font-black text-slate-900">자료 만들기 놀이터</h2>
+                    <p class="text-sm text-slate-500 mt-1">학습 주제만 잡고, 학생이 직접 조작할 수 있도록 장면-조작-설명을 한 번에 구성해보세요.</p>
+                </div>
+
+                <div class="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 mb-4 text-sm text-emerald-800 space-y-2">
+                    <p class="font-bold">교사용 제작 체크리스트</p>
+                    <ul class="list-disc ml-5 space-y-1">
+                        <li>핵심 학습 목표를 한 줄로 먼저 정리했나요?</li>
+                        <li>학생이 직접 클릭/확대/회전/드래그하는 상호작용이 있나요?</li>
+                        <li>교사가 설명할 포인트(텍스트 힌트)를 1~2개 넣었나요?</li>
+                    </ul>
                 </div>
 
                 <form action="{% url 'edu_materials:create' %}" method="post" enctype="multipart/form-data" class="space-y-4">
@@ -137,7 +146,7 @@
                     <div>
                         <label class="block text-sm font-bold text-slate-700 mb-2">또는 HTML 파일 업로드</label>
                         <input type="file" name="html_file" accept=".html,.htm,text/html" class="edu-materials-input">
-                        <p class="text-xs text-slate-500 mt-2">저장하면 자동 분류를 시도하고 바로 학생 공개 상태로 등록됩니다.</p>
+                        <p class="text-xs text-slate-500 mt-2">저장하면 바로 미리보기와 학생 화면 링크를 생성해 바로 수업에서 사용할 수 있습니다.</p>
                     </div>
                     <button type="submit" class="w-full rounded-2xl bg-emerald-600 py-4 text-white text-lg font-black shadow-lg shadow-emerald-600/15 hover:-translate-y-0.5 transition">자료 저장하기</button>
                 </form>
@@ -148,7 +157,7 @@
                     <div class="flex items-center justify-between">
                         <div>
                             <h2 class="text-2xl font-black text-slate-900">내가 만든 자료</h2>
-                            <p class="text-sm text-slate-500 mt-1">자동 분류 결과와 공개 상태를 함께 관리합니다.</p>
+                            <p class="text-sm text-slate-500 mt-1">학년·단원·수업 유형별로 정리하고, 공개 범위를 교사가 직접 관리합니다.</p>
                         </div>
                         <div class="rounded-full bg-white/70 border border-slate-200 px-4 py-2 text-sm text-slate-600">
                             총 {{ my_materials|length }}개
