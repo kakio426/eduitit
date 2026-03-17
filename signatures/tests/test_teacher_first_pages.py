@@ -254,7 +254,7 @@ class SignatureTeacherFirstPagesTests(TestCase):
         self.assertContains(response, "다시 열기")
         self.assertContains(response, "복제해서 새로 만들기")
 
-    def test_public_sign_page_clarifies_internal_recording_use(self):
+    def test_public_sign_page_shows_quick_participation_prompts(self):
         session = TrainingSession.objects.create(
             title="공개 참여 요청",
             instructor="강사",
@@ -270,4 +270,3 @@ class SignatureTeacherFirstPagesTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "로그인 없이 참여")
         self.assertContains(response, "휴대폰으로 서명 가능")
-        self.assertContains(response, "학교 내부 참석 확인과 기록용입니다. 법적 전자서명 용도는 아닙니다.")
