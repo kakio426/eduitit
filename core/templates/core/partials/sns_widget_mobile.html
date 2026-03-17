@@ -43,7 +43,7 @@
 
         <form hx-post="{% url 'post_create' %}" hx-target="#{{ list_target_id }}" hx-swap="outerHTML"
             hx-vals='js:{"feed_scope": (document.getElementById("{{ list_target_id }}") ? document.getElementById("{{ list_target_id }}").dataset.feedScope : "all"), "post_list_target_id": "{{ list_target_id }}", "compact_posts": {{ compact_posts|yesno:"true,false" }}}'
-            hx-on::after-request="this.reset(); var previewEl = document.getElementById('mobile-image-preview-container'); if(previewEl) previewEl.classList.add('hidden'); var inputEl = document.getElementById('mobile-post-image-input'); if(inputEl) inputEl.value = '';"
+            hx-on::after-request="this.reset(); var previewEl = document.getElementById('mobile-image-preview-container'); if(previewEl) previewEl.classList.add('hidden'); var inputEl = document.getElementById('mobile-post-image-input'); if(inputEl) inputEl.value = ''; if (window.syncPinnedNoticeComposerState) { window.syncPinnedNoticeComposerState(this); }"
             hx-indicator="find .js-mobile-post-create-loading" hx-disabled-elt="find button[type='submit']"
             hx-on::response-error="alert('게시글 등록 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
             hx-encoding="multipart/form-data"
@@ -64,6 +64,25 @@
             </div>
 
             <input type="file" name="image" id="mobile-post-image-input" class="hidden" accept="image/*">
+
+            {% if user.is_staff %}
+            <div class="mt-3 rounded-2xl border border-amber-100 bg-amber-50/70 px-3 py-2.5">
+                <p class="text-[11px] font-bold text-amber-700">공지 옵션</p>
+                <div class="mt-2 flex flex-wrap gap-3">
+                    <label class="inline-flex items-center gap-2 text-xs font-medium text-slate-600">
+                        <input type="checkbox" name="pin_notice_to_top" value="1" data-pin-notice-input
+                            class="h-4 w-4 rounded border-slate-300 text-amber-500 focus:ring-amber-400">
+                        <span>상단 고정</span>
+                    </label>
+                    <label class="inline-flex items-center gap-2 text-xs font-medium text-slate-600">
+                        <input type="checkbox" name="allow_notice_dismiss" value="1" data-allow-dismiss-input
+                            class="h-4 w-4 rounded border-slate-300 text-amber-500 focus:ring-amber-400" disabled>
+                        <span>닫기 허용</span>
+                    </label>
+                </div>
+                <p class="mt-2 text-[11px] text-amber-700/80">공지 작성으로 등록할 때만 적용됩니다.</p>
+            </div>
+            {% endif %}
 
             <div class="flex justify-between items-center mt-3 pt-3 border-t border-slate-50">
                 <button type="button" onclick="document.getElementById('mobile-post-image-input').click()"
@@ -110,6 +129,7 @@
 </div>
 {% endwith %}
 
+<script src="{% static 'core/js/sns_pinned_notice.js' %}"></script>
 {% if user.is_authenticated %}
 <script>
     (function() {

@@ -68,8 +68,18 @@ class UserPolicyConsentAdmin(admin.ModelAdmin):
 
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
-    list_display = ['author', 'post_type', 'approval_status', 'publisher', 'content_summary', 'created_at', 'like_count_display']
-    list_filter = ['post_type', 'approval_status', 'created_at', 'author']
+    list_display = [
+        'author',
+        'post_type',
+        'is_notice_pinned',
+        'allow_notice_dismiss',
+        'approval_status',
+        'publisher',
+        'content_summary',
+        'created_at',
+        'like_count_display',
+    ]
+    list_filter = ['post_type', 'is_notice_pinned', 'allow_notice_dismiss', 'approval_status', 'created_at', 'author']
     search_fields = ['content', 'og_title', 'source_url', 'author__username']
     readonly_fields = ['created_at']
     actions = ['mark_news_approved', 'mark_news_rejected']

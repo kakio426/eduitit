@@ -1248,6 +1248,84 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('뉴스 제목', content)
         self.assertNotIn('원문 보기', content)
 
+    def test_v2_htmx_feed_renders_pinned_notice_once_in_dedicated_section(self):
+        author = _create_onboarded_user('pinnednoticeauthor')
+        pinned_notice = Post.objects.create(
+            author=author,
+            content='꼭 확인할 공지',
+            post_type='notice',
+            is_notice_pinned=True,
+            allow_notice_dismiss=True,
+        )
+        Post.objects.create(author=author, content='일반 소통 글')
+
+        self._login('pinnednoticeviewer')
+        response = self.client.get(reverse('home'), HTTP_HX_REQUEST='true')
+        content = response.content.decode('utf-8')
+
+        self.assertIn('상단 고정 공지', content)
+        self.assertEqual(content.count('꼭 확인할 공지'), 1)
+        self.assertIn(f'data-pinned-notice-key="{pinned_notice.pinned_notice_dismiss_key}"', content)
+
+    def test_v2_htmx_feed_shows_close_button_only_for_dismissible_pinned_notice(self):
+        author = _create_onboarded_user('dismissiblenoticeauthor')
+        Post.objects.create(
+            author=author,
+            content='닫을 수 있는 공지',
+            post_type='notice',
+            is_notice_pinned=True,
+            allow_notice_dismiss=True,
+        )
+        Post.objects.create(
+            author=author,
+            content='항상 보여야 하는 공지',
+            post_type='notice',
+            is_notice_pinned=True,
+            allow_notice_dismiss=False,
+        )
+
+        self._login('dismissiblenoticeviewer')
+        response = self.client.get(reverse('home'), HTTP_HX_REQUEST='true')
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(content.count('data-pinned-notice-close'), 1)
+        self.assertIn('닫을 수 있는 공지', content)
+        self.assertIn('항상 보여야 하는 공지', content)
+
+    def test_v2_staff_notice_create_saves_pin_and_dismiss_options(self):
+        staff = _create_onboarded_user('staffnoticewriter')
+        staff.is_staff = True
+        staff.save(update_fields=['is_staff'])
+        UserPolicyConsent.objects.create(
+            user=staff,
+            provider='direct',
+            terms_version=TERMS_VERSION,
+            privacy_version=PRIVACY_VERSION,
+            agreed_at=timezone.now(),
+            agreement_source='required_gate',
+            ip_address='127.0.0.1',
+            user_agent='test-agent',
+        )
+        self.client.login(username='staffnoticewriter', password='pass1234')
+
+        response = self.client.post(
+            reverse('post_create'),
+            {
+                'content': '상단 고정 새 공지',
+                'submit_kind': 'notice',
+                'pin_notice_to_top': '1',
+                'allow_notice_dismiss': '1',
+            },
+            HTTP_HX_REQUEST='true',
+        )
+
+        created_post = Post.objects.get(content='상단 고정 새 공지')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(created_post.post_type, 'notice')
+        self.assertTrue(created_post.is_notice_pinned)
+        self.assertTrue(created_post.allow_notice_dismiss)
+
     def test_v2_authenticated_feed_renders_news_link_preview_image(self):
         author = _create_onboarded_user('newsauthor')
         Post.objects.create(
@@ -1269,6 +1347,7 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('https://example.com/article.jpg', content)
         self.assertIn('원문 보기', content)
         self.assertNotIn('원문 보기 (새 탭)', content)
+
     def test_v2_anonymous_does_not_render_mobile_sns_toggle(self):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')

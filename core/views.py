@@ -161,19 +161,25 @@ def _get_post_feed_scope(request):
     return POST_FEED_SCOPE_ALL
 
 
+def _is_truthy(raw_value):
+    return str(raw_value or '').strip().lower() in {'1', 'true', 'yes', 'on'}
+
+
 def _get_compact_posts(request):
     raw_value = request.GET.get('compact_posts') or request.POST.get('compact_posts')
     if raw_value is None:
         return False
-    return str(raw_value).strip().lower() in {'1', 'true', 'yes', 'on'}
+    return _is_truthy(raw_value)
 
 
-def _render_post_list_partial(request, page_obj, feed_scope):
+def _render_post_list_partial(request, page_obj, feed_scope, *, pinned_notice_posts=None):
     empty_title = None
     empty_subtitle = None
     if feed_scope == POST_FEED_SCOPE_NOTICE:
         empty_title = "등록된 공지사항이 없습니다."
         empty_subtitle = "새 공지가 올라오면 여기서 바로 확인할 수 있어요."
+    if pinned_notice_posts is None:
+        pinned_notice_posts = _build_pinned_notice_queryset(feed_scope=feed_scope)
 
     return render(
         request,
@@ -181,6 +187,7 @@ def _render_post_list_partial(request, page_obj, feed_scope):
         {
             'posts': page_obj,
             'page_obj': page_obj,
+            'pinned_notice_posts': pinned_notice_posts,
             'post_list_target_id': _get_post_list_target_id(request),
             'feed_scope': feed_scope,
             'compact_posts': _get_compact_posts(request),
@@ -190,14 +197,14 @@ def _render_post_list_partial(request, page_obj, feed_scope):
     )
 
 
-def _build_post_feed_queryset(feed_scope=POST_FEED_SCOPE_ALL):
+def _build_post_feed_base_queryset():
     now = timezone.now()
     active_feature_window = (
         Q(featured_from__isnull=False, featured_from__lte=now)
         & (Q(featured_until__isnull=True) | Q(featured_until__gte=now))
     )
 
-    queryset = (
+    return (
         Post.objects
         .filter(approval_status='approved')
         .select_related(
@@ -225,6 +232,21 @@ def _build_post_feed_queryset(feed_scope=POST_FEED_SCOPE_ALL):
             ),
         )
     )
+
+
+def _build_pinned_notice_queryset(feed_scope=POST_FEED_SCOPE_ALL):
+    if feed_scope not in {POST_FEED_SCOPE_ALL, POST_FEED_SCOPE_NOTICE}:
+        return Post.objects.none()
+
+    return (
+        _build_post_feed_base_queryset()
+        .filter(post_type='notice', is_notice_pinned=True)
+        .order_by('-updated_at', '-created_at')
+    )
+
+
+def _build_post_feed_queryset(feed_scope=POST_FEED_SCOPE_ALL):
+    queryset = _build_post_feed_base_queryset().exclude(post_type='notice', is_notice_pinned=True)
 
     if feed_scope == POST_FEED_SCOPE_NOTICE:
         queryset = queryset.filter(post_type__in=POST_FEED_NOTICE_TYPES)
@@ -1664,8 +1686,14 @@ def _build_sheetbook_workspace_context(request, *, require_discovery_visible=Tru
     return {"sheetbook_workspace": workspace}
 
 
-def _build_home_community_summary_posts(page_obj, *, limit=2):
-    object_list = list(getattr(page_obj, "object_list", []) or [])
+def _build_home_community_summary_posts(page_obj, *, pinned_notice_posts=None, limit=2):
+    pinned_items = list(pinned_notice_posts or [])
+    pinned_ids = {post.id for post in pinned_items}
+    object_list = pinned_items + [
+        post
+        for post in list(getattr(page_obj, "object_list", []) or [])
+        if post.id not in pinned_ids
+    ]
     prioritized = sorted(
         enumerate(object_list),
         key=lambda row: (
@@ -2350,7 +2378,7 @@ def _build_guide_groups(manuals, products_without_manual):
     ]
 
 
-def _home_v2(request, products, posts, page_obj, feed_scope):
+def _home_v2(request, products, posts, page_obj, feed_scope, pinned_notice_posts):
     """Feature flag on 시 호출되는 V2 홈."""
     product_list = _attach_product_launch_meta(list(products))
     section_product_list = [
@@ -2381,7 +2409,11 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
         secondary_display_sections,
         requires_login=True,
     )
-    sns_summary_posts = _build_home_community_summary_posts(page_obj, limit=2)
+    sns_summary_posts = _build_home_community_summary_posts(
+        page_obj,
+        pinned_notice_posts=pinned_notice_posts,
+        limit=2,
+    )
     community_summary = {
         'title': '실시간 소통',
         'posts': sns_summary_posts,
@@ -2479,6 +2511,7 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
             'community_summary': community_summary,
             'posts': posts,
             'page_obj': page_obj,
+            'pinned_notice_posts': pinned_notice_posts,
             'feed_scope': feed_scope,
             **home_calendar_surface,
             **build_home_page_seo(request).as_context(),
@@ -2503,12 +2536,13 @@ def _home_v2(request, products, posts, page_obj, feed_scope):
         'public_calendar_entry': _build_public_calendar_entry_context(),
         'posts': posts,
         'page_obj': page_obj,
+        'pinned_notice_posts': pinned_notice_posts,
         'feed_scope': feed_scope,
         **build_home_page_seo(request).as_context(),
     })
 
 
-def _home_v4(request, products, posts, page_obj, feed_scope):
+def _home_v4(request, products, posts, page_obj, feed_scope, pinned_notice_posts):
     """환경변수로 안전하게 롤아웃하는 인증 홈 V4."""
     product_list = _attach_product_launch_meta(list(products))
     section_product_list = [
@@ -2526,7 +2560,11 @@ def _home_v4(request, products, posts, page_obj, feed_scope):
         secondary_display_sections,
         games,
     )
-    sns_summary_posts = _build_home_community_summary_posts(page_obj, limit=2)
+    sns_summary_posts = _build_home_community_summary_posts(
+        page_obj,
+        pinned_notice_posts=pinned_notice_posts,
+        limit=2,
+    )
     community_summary = {
         'title': '실시간 소통',
         'posts': sns_summary_posts,
@@ -2634,6 +2672,7 @@ def _home_v4(request, products, posts, page_obj, feed_scope):
         'community_summary': community_summary,
         'posts': posts,
         'page_obj': page_obj,
+        'pinned_notice_posts': pinned_notice_posts,
         'feed_scope': feed_scope,
         **home_calendar_surface,
         **build_home_page_seo(request).as_context(),
@@ -2648,26 +2687,32 @@ def home(request):
 
     # SNS Posts - 모든 사용자에게 제공 (최신순 정렬)
     posts = _build_post_feed_queryset(feed_scope=feed_scope)
+    pinned_notice_posts = _build_pinned_notice_queryset(feed_scope=feed_scope)
 
     # 페이징 처리 (PC 우측 및 모바일 하단 SNS 위젯용)
     paginator = Paginator(posts, 5) # 한 페이지에 5개씩
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    
+
     # HTMX 요청이면 post_list 영역만 반환
     if request.headers.get('HX-Request'):
-        return _render_post_list_partial(request, page_obj, feed_scope)
+        return _render_post_list_partial(
+            request,
+            page_obj,
+            feed_scope,
+            pinned_notice_posts=pinned_notice_posts,
+        )
 
     home_layout_version = _get_home_layout_version()
 
     if home_layout_version == 'v4':
         if request.user.is_authenticated:
-            return _home_v4(request, products, posts, page_obj, feed_scope)
-        return _home_v2(request, products, posts, page_obj, feed_scope)
+            return _home_v4(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
+        return _home_v2(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
 
     # V2 홈: Feature flag on 시 분기
     if home_layout_version == 'v2':
-        return _home_v2(request, products, posts, page_obj, feed_scope)
+        return _home_v2(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
 
     # If user is logged in, show the "dashboard-style" authenticated home
     if request.user.is_authenticated:
@@ -2689,6 +2734,7 @@ def home(request):
             'products': available_products,
             'posts': page_obj,
             'page_obj': page_obj,
+            'pinned_notice_posts': pinned_notice_posts,
             'feed_scope': feed_scope,
             **build_home_page_seo(request).as_context(),
         })
@@ -2705,6 +2751,7 @@ def home(request):
         'featured_product': featured_product,
         'posts': page_obj,
         'page_obj': page_obj,
+        'pinned_notice_posts': pinned_notice_posts,
         'feed_scope': feed_scope,
         **build_home_page_seo(request).as_context(),
     })
@@ -2736,6 +2783,12 @@ def post_create(request):
         image = request.FILES.get('image')
         submit_kind = (request.POST.get('submit_kind') or 'general').strip().lower()
         post_type = 'notice' if request.user.is_staff and submit_kind == 'notice' else 'general'
+        is_notice_pinned = (
+            request.user.is_staff
+            and post_type == 'notice'
+            and _is_truthy(request.POST.get('pin_notice_to_top'))
+        )
+        allow_notice_dismiss = is_notice_pinned and _is_truthy(request.POST.get('allow_notice_dismiss'))
 
         # 이미지 검증
         if image:
@@ -2766,6 +2819,8 @@ def post_create(request):
                 content=content,
                 image=image,
                 post_type=post_type,
+                is_notice_pinned=is_notice_pinned,
+                allow_notice_dismiss=allow_notice_dismiss,
             )
 
     # HTMX 응답

@@ -134,6 +134,8 @@ class Post(models.Model):
     reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_posts')
     featured_from = models.DateTimeField(null=True, blank=True, verbose_name="상단 노출 시작")
     featured_until = models.DateTimeField(null=True, blank=True, verbose_name="상단 노출 종료")
+    is_notice_pinned = models.BooleanField(default=False, verbose_name="공지 상단 고정")
+    allow_notice_dismiss = models.BooleanField(default=False, verbose_name="공지 닫기 허용")
     news_source = models.ForeignKey('NewsSource', on_delete=models.SET_NULL, null=True, blank=True, related_name='posts')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -175,6 +177,17 @@ class Post(models.Model):
         if self.featured_until and self.featured_until < now:
             return False
         return True
+
+    @property
+    def is_active_pinned_notice(self):
+        return self.post_type == 'notice' and self.is_notice_pinned
+
+    @property
+    def pinned_notice_dismiss_key(self):
+        if not self.pk:
+            return ""
+        updated_at = self.updated_at or timezone.now()
+        return f"notice-{self.pk}-{timezone.localtime(updated_at).strftime('%Y%m%d%H%M%S')}"
 
 @receiver(post_save, sender=User)
 def save_user_profile(sender, instance, **kwargs):
