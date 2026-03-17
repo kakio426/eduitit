@@ -137,50 +137,29 @@ VIDEO_ADVICE_STATUS_BROWSER_READY = "browser_ready"
 VIDEO_ADVICE_STATUS_LAUNCHER_RECOMMENDED = "launcher_recommended"
 VIDEO_ADVICE_STATUS_UNKNOWN = "unknown"
 
-ARTCLASS_SAMPLE_LESSON = {
-    "title": "봄 꽃병 꾸미기",
-    "videoUrl": "https://www.youtube.com/watch?v=2bBhnfh4StU",
-    "recommendedMode": ArtClass.PLAYBACK_MODE_EMBED,
-    "advice": {
-        "status": VIDEO_ADVICE_STATUS_BROWSER_READY,
-        "recommendedMode": ArtClass.PLAYBACK_MODE_EMBED,
-        "headline": "브라우저에서 바로 시작 가능",
-        "reason": "이 영상은 브라우저에서 바로 재생할 수 있는 경우가 많아요. 먼저 브라우저로 시작하고, 필요할 때만 런처로 전환해도 됩니다.",
-        "title": "봄 꽃병 꾸미기",
+ARTCLASS_GEMINI_EXAMPLE_RESULT = json.dumps(
+    {
+        "video_title": "봄 꽃병 꾸미기",
+        "steps": [
+            {
+                "summary": "꽃병 바탕색을 먼저 정하고 큰 면부터 채운다.",
+                "materials": ["도화지", "사인펜"],
+                "teacher_tip": "큰 색면을 먼저 정하면 아이들이 이후 장식 구성을 더 쉽게 따라온다.",
+            },
+            {
+                "summary": "꽃과 잎 장식을 더해 화면을 채운다.",
+                "materials": ["색종이", "풀"],
+                "teacher_tip": "장식은 세 종류 안에서 반복하게 하면 결과물이 훨씬 정돈돼 보인다.",
+            },
+            {
+                "summary": "작품 제목을 붙이고 서로 감상한다.",
+                "teacher_tip": "마무리 때 제목을 먼저 말하게 하면 작품 설명이 자연스럽게 이어진다.",
+            },
+        ],
     },
-    "steps": [
-        {"text": "[00:18-00:42] 꽃병의 큰 모양을 연필로 가볍게 잡는다.", "imagePreview": None, "existingStepId": None},
-        {"text": "준비물: 도화지, 연필, 색연필\n교사 팁: 꽃병 중심선을 먼저 잡아 주면 아이들이 훨씬 편해져요.", "imagePreview": None, "existingStepId": None},
-        {"text": "[01:10-01:45] 꽃과 잎을 크게 배치하고 색을 나눠 칠한다.", "imagePreview": None, "existingStepId": None},
-    ],
-    "geminiResult": json.dumps(
-        {
-            "video_title": "봄 꽃병 꾸미기",
-            "steps": [
-                {
-                    "start": "00:18",
-                    "end": "00:42",
-                    "summary": "꽃병의 큰 모양을 연필로 가볍게 잡는다.",
-                    "materials": ["도화지", "연필"],
-                    "teacher_tip": "꽃병 중심선을 먼저 잡아 주면 아이들이 편하다.",
-                },
-                {
-                    "start": "01:10",
-                    "end": "01:45",
-                    "summary": "꽃과 잎을 크게 배치하고 색을 나눠 칠한다.",
-                    "materials": ["색연필"],
-                    "teacher_tip": "색은 세 가지 안에서 고르게 하면 정리가 쉽다.",
-                },
-                {
-                    "summary": "완성한 작품을 서로 보여 주고 잘 된 점을 한 가지씩 말한다.",
-                    "teacher_tip": "마무리 질문을 한 문장씩 준비하면 발표가 부드럽다.",
-                },
-            ],
-        },
-        ensure_ascii=False,
-        indent=2,
-    ),
-}
+    ensure_ascii=False,
+    indent=2,
+)
 
 
 def _build_video_advice_payload(status, *, title=""):
@@ -395,7 +374,7 @@ def _build_setup_context(art_class=None, *, initial_steps=None, initial_playback
         'video_advice': video_advice,
         'manual_prompt_template': build_manual_pipeline_prompt(video_url),
         'launcher_download_url': _get_launcher_download_url(),
-        'sample_lesson': ARTCLASS_SAMPLE_LESSON,
+        'gemini_example_result': ARTCLASS_GEMINI_EXAMPLE_RESULT,
         'setup_video_url': video_url,
     }
 

@@ -667,10 +667,19 @@ class ArtClassSetupEditTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "오늘 바로 시작하는 미술 수업")
-        self.assertContains(response, "샘플 영상으로 체험하기")
         self.assertContains(response, "브라우저로 시작")
         self.assertContains(response, "런처로 안정 진행")
         self.assertContains(response, "응답 예시 보기")
+        self.assertContains(response, "유튜브 주소를 먼저 넣고 시작 방식을 확인해 보세요.")
+        self.assertNotContains(response, "샘플 영상으로 체험하기")
+
+    def test_setup_page_uses_gemini_example_without_sample_shortcut(self):
+        response = self.client.get(reverse("artclass:setup"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("gemini_example_result", response.context)
+        self.assertIn('"video_title": "봄 꽃병 꾸미기"', response.context["gemini_example_result"])
+        self.assertNotContains(response, 'artclassSampleLesson')
 
     def test_setup_edit_preserves_existing_image_if_not_reuploaded(self):
         self.client.force_login(self.owner)

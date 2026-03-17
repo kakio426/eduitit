@@ -675,9 +675,8 @@
     const VIDEO_URL = "{{ data.videoUrl|escapejs }}";
     const VIDEO_ID = extractYouTubeVideoId(VIDEO_URL);
     const PLAYBACK_MODE_STORAGE_KEY = `artclass_playback_mode_${CLASSROOM_ID}`;
-    const savedPlaybackMode = localStorage.getItem(PLAYBACK_MODE_STORAGE_KEY);
-    const defaultPlaybackMode = stepsData.playbackMode || 'embed';
-    let playbackMode = isValidPlaybackMode(savedPlaybackMode) ? savedPlaybackMode : defaultPlaybackMode;
+    const defaultPlaybackMode = isValidPlaybackMode(stepsData.playbackMode) ? stepsData.playbackMode : 'embed';
+    let playbackMode = defaultPlaybackMode;
     let INTERVAL_MS = parseInt("{{ data.stepInterval }}", 10) * 1000;
 
     let currentStep = 0;
@@ -1320,6 +1319,16 @@
         startTimer();
     }
 
+    function showEmbeddedPlaybackFallback(message) {
+        destroyPlayerSafely();
+        applyPlaybackLayout('embed');
+        setLoopControlEnabled(false);
+        setExternalWindowStatus('closed');
+        setExternalOverlay(true, message);
+        syncLauncherPrompt('embed');
+        startTimer();
+    }
+
     function loadYouTubeApi() {
         if (youtubeApiRequested) return;
         youtubeApiRequested = true;
@@ -1327,7 +1336,7 @@
         tag.src = 'https://www.youtube.com/iframe_api';
         tag.onerror = () => {
             console.error('YouTube Iframe API load failed');
-            switchToExternalMode('유튜브 플레이어를 불러오지 못해 새 창 재생 모드로 전환했습니다.', false);
+            showEmbeddedPlaybackFallback('유튜브 플레이어를 불러오지 못했습니다. 왼쪽 영상 자리에서 새 창 열기를 눌러 계속해 주세요.');
         };
         document.head.appendChild(tag);
     }
@@ -1339,15 +1348,15 @@
             return;
         }
         if (errorCode === 101 || errorCode === 150) {
-            switchToExternalMode('이 영상은 유튜브 정책으로 내장 재생이 제한되어 새 창 재생 모드로 전환했습니다.');
+            showEmbeddedPlaybackFallback('이 영상은 유튜브 정책으로 화면 안 재생이 제한될 수 있습니다. 왼쪽 영상 자리에서 새 창 열기를 눌러 계속해 주세요.');
             return;
         }
-        switchToExternalMode('영상을 재생하지 못해 새 창 재생 모드로 전환했습니다.', false);
+        showEmbeddedPlaybackFallback('영상을 바로 재생하지 못했습니다. 왼쪽 영상 자리에서 새 창 열기를 눌러 계속할 수 있어요.');
     }
 
     function createYouTubePlayer(host) {
         if (!VIDEO_ID) {
-            switchToExternalMode('유효한 유튜브 영상 주소를 확인해 주세요.', false);
+            showEmbeddedPlaybackFallback('유효한 유튜브 영상 주소를 확인해 주세요.');
             return;
         }
         if (!(window.YT && window.YT.Player)) {

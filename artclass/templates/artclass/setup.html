@@ -101,10 +101,6 @@
             </p>
 
             <div class="flex flex-wrap justify-center gap-4">
-                <button type="button" id="btnTrySampleLesson"
-                    class="px-6 py-3 rounded-2xl bg-emerald-600 text-white font-heavy shadow-lg hover:bg-emerald-700 transition-all flex items-center gap-2">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i> 샘플 영상으로 체험하기
-                </button>
                 <a href="{% url 'artclass:library' %}"
                     class="px-6 py-3 rounded-2xl bg-white text-indigo-700 font-heavy shadow-sm border border-indigo-100 hover:border-indigo-200 hover:bg-indigo-50 transition-all flex items-center gap-2">
                     <i class="fa-solid fa-book-open"></i> 다른 선생님 수업 둘러보기
@@ -332,7 +328,7 @@
                                     <summary class="cursor-pointer text-sm font-bold text-gray-700">응답 예시 보기</summary>
                                     <p class="mt-2 text-[11px] text-gray-500">이 형식처럼 오면 가장 안정적으로 읽을 수 있어요.</p>
                                     <pre id="geminiExampleBox"
-                                        class="mt-3 whitespace-pre-wrap break-words rounded-xl bg-gray-900 text-gray-100 text-[11px] leading-relaxed p-3 overflow-auto">{{ sample_lesson.geminiResult }}</pre>
+                                        class="mt-3 whitespace-pre-wrap break-words rounded-xl bg-gray-900 text-gray-100 text-[11px] leading-relaxed p-3 overflow-auto">{{ gemini_example_result }}</pre>
                                 </details>
                             </div>
                         </div>
@@ -343,7 +339,7 @@
                             <i class="fa-solid fa-lightbulb"></i> 처음이라면 이렇게 시작해 보세요
                         </h3>
                         <ul class="text-sm text-purple-900/70 space-y-2 leading-relaxed">
-                            <li>• 샘플 영상으로 먼저 한 번 눌러 보세요.</li>
+                            <li>• 유튜브 주소를 먼저 넣고 시작 방식을 확인해 보세요.</li>
                             <li>• 영상을 보다가 필요한 장면은 <code class="bg-purple-100 px-1 rounded">Win + Shift + S</code>로 캡처해 단계별 이미지에 붙여넣을 수 있어요.</li>
                             <li>• 브라우저로 먼저 시작해도, 수업 화면에서 언제든 런처로 전환할 수 있어요.</li>
                         </ul>
@@ -408,10 +404,8 @@
 
 {{ initial_steps|json_script:"artclassInitialSteps" }}
 {{ video_advice|json_script:"artclassInitialVideoAdvice" }}
-{{ sample_lesson|json_script:"artclassSampleLesson" }}
 <script>
     const initialVideoAdvice = JSON.parse(document.getElementById('artclassInitialVideoAdvice').textContent);
-    const sampleLesson = JSON.parse(document.getElementById('artclassSampleLesson').textContent);
     let steps = JSON.parse(document.getElementById('artclassInitialSteps').textContent).map(step => ({
         text: step.text || '',
         imagePreview: step.imagePreview || null,
@@ -429,7 +423,6 @@
     const btnLaunchGeminiFlowEl = document.getElementById('btnLaunchGeminiFlow');
     const btnCopyGeminiPromptEl = document.getElementById('btnCopyGeminiPrompt');
     const btnApplyGeminiResultEl = document.getElementById('btnApplyGeminiResult');
-    const btnTrySampleLessonEl = document.getElementById('btnTrySampleLesson');
     const playbackModeInputEl = document.getElementById('playbackModeInput');
     const videoAdvicePanelEl = document.getElementById('videoAdvicePanel');
     const videoAdviceIconEl = document.getElementById('videoAdviceIcon');
@@ -892,31 +885,6 @@ JSON 스키마 예시:
         });
     }
 
-    function applySampleLesson() {
-        if (videoUrlEl) {
-            videoUrlEl.value = sampleLesson.videoUrl || '';
-        }
-        steps = Array.isArray(sampleLesson.steps)
-            ? sampleLesson.steps.map((step) => ({
-                text: step.text || '',
-                imagePreview: step.imagePreview || null,
-                existingStepId: null,
-            }))
-            : [];
-        if (geminiResultInputEl) {
-            geminiResultInputEl.value = sampleLesson.geminiResult || '';
-        }
-        playbackModeTouched = false;
-        renderSteps();
-        renderGeminiWarnings([]);
-        updateGeminiPrompt();
-        applyVideoAdvice(sampleLesson.advice || buildLocalUnknownAdvice(sampleLesson.videoUrl || ''), { forceRecommendedMode: true });
-        setGeminiStatus('샘플 단계와 예시 답변을 채웠어요. 바로 수정하거나 시작해 보세요.', 'success');
-        if (videoAdviceFeedbackEl) {
-            videoAdviceFeedbackEl.textContent = '샘플 흐름을 채웠어요. 원하는 방식으로 바로 시작해 보세요.';
-        }
-    }
-
     modeCardEls.forEach((card) => {
         card.addEventListener('click', () => {
             setPlaybackMode(card.dataset.modeCard);
@@ -932,10 +900,6 @@ JSON 스키마 예시:
             updateGeminiPrompt();
             queueVideoAdviceFetch();
         });
-    }
-
-    if (btnTrySampleLessonEl) {
-        btnTrySampleLessonEl.addEventListener('click', applySampleLesson);
     }
 
     if (btnCopyGeminiPromptEl) {
