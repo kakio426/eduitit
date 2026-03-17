@@ -55,7 +55,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 {% block content %}
 {% url 'account_login' as login_url %}
-{% url 'service_guide_list' as service_guide_url %}
 {% url 'home' as home_url %}
 
 <div class="min-h-screen bg-[#E0E5EC]">
@@ -68,104 +67,78 @@ document.addEventListener('DOMContentLoaded', () => {
             <section class="mb-6 md:mb-8 lg:mb-10" data-aos="fade-up" data-home-v2-guest-hero="true">
                 <div class="rounded-[2.25rem] border border-slate-200 bg-white/90 px-5 py-6 shadow-sm sm:px-6 md:px-8 md:py-8">
                     <div class="mx-auto max-w-4xl text-center">
-                        <span class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-1.5 text-xs font-black text-emerald-700">
-                            <i class="fa-solid fa-seedling text-[11px]"></i>
-                            로그인 없이 먼저 볼 수 있는 도구부터 보여드려요
+                        <span class="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-4 py-1.5 text-xs font-black text-indigo-700">
+                            <i class="fa-solid fa-sparkles text-[11px]"></i>
+                            오늘 바로 쓰는 도구부터 시작합니다
                         </span>
                         <h1 class="mt-4 text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-tight break-keep">
-                            선생님이 자주 쓰는 도구를
-                            <span class="block text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-sky-500 break-keep">헷갈리지 않게 바로 모았습니다</span>
+                            처음 와도 막히지 않게
+                            <span class="block text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-sky-500 break-keep">지금 되는 도구부터 위에 모았습니다</span>
                         </h1>
+                        <p class="mx-auto mt-4 max-w-2xl text-sm font-bold leading-6 text-slate-500 sm:text-base">
+                            바로 열리는 도구는 먼저 써보고, 더 깊은 업무 도구는 아래에서 이어가면 됩니다.
+                        </p>
 
                         <div class="mt-6 flex flex-col items-stretch justify-center gap-3 sm:flex-row">
-                            <a href="{% if guest_public_cards %}#guest-home-public{% else %}#guest-home-services{% endif %}" class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 py-3 text-sm font-black text-white shadow-lg shadow-emerald-200 transition hover:bg-emerald-700">
+                            <a href="{% if guest_public_cards or games %}#guest-home-try-now{% else %}#guest-home-services{% endif %}" class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 py-3 text-sm font-black text-white shadow-lg shadow-emerald-200 transition hover:bg-emerald-700">
                                 <i class="fa-solid fa-circle-play"></i>
-                                공개 도구 먼저 보기
+                                지금 바로 써보기
                             </a>
                             <a href="{{ login_url }}" class="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-3 text-sm font-black text-slate-700 transition hover:border-indigo-300 hover:text-indigo-600">
                                 <i class="fa-solid fa-right-to-bracket"></i>
                                 로그인 후 전체 열기
                             </a>
-                            <a href="{{ service_guide_url }}" class="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-3 text-sm font-black text-slate-700 transition hover:border-indigo-300 hover:text-indigo-600">
-                                <i class="fa-solid fa-book-open"></i>
-                                가이드 보기
-                            </a>
-                        </div>
-
-                        <div class="mt-6 flex flex-wrap items-center justify-center gap-2.5" data-home-v2-guest-benefits="true">
-                            <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-black text-slate-700">
-                                <i class="fa-solid fa-circle-play text-emerald-500"></i>
-                                바로 둘러보기 가능
-                            </span>
-                            <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-black text-slate-700">
-                                <i class="fa-solid fa-lock text-amber-500"></i>
-                                로그인 필요 서비스 구분
-                            </span>
-                            <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-black text-slate-700">
-                                <i class="fa-solid fa-book-open text-indigo-500"></i>
-                                가이드 먼저 보기
-                            </span>
-                        </div>
-
-                        <div class="mx-auto mt-6 max-w-2xl rounded-[1.75rem] border border-slate-200 bg-slate-50/90 p-4 text-left shadow-sm">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-black text-emerald-700">
-                                    <i class="fa-solid fa-circle-play text-[10px]"></i>
-                                    미리보기 가능
-                                </span>
-                                <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-[11px] font-black text-amber-700">
-                                    <i class="fa-solid fa-lock text-[10px]"></i>
-                                    로그인 필요
-                                </span>
-                            </div>
                         </div>
                     </div>
                 </div>
             </section>
 
-            {% if guest_public_cards %}
-            <section id="guest-home-public" class="mb-6" data-aos="fade-up" data-aos-delay="40" data-home-v2-public-section="true">
+            {% if guest_public_cards or games %}
+            <section id="guest-home-try-now" class="mb-6" data-aos="fade-up" data-aos-delay="40" data-home-v2-public-section="true">
                 <div class="rounded-[1.9rem] border border-slate-200 bg-white/90 p-4 shadow-sm md:p-5">
-                    <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                    <div class="mb-4 flex flex-col gap-2">
                         <div>
-                            <p class="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">Open First</p>
-                            <h2 class="mt-1 text-lg md:text-xl font-black text-slate-900">로그인 없이 먼저 볼 수 있어요</h2>
+                            <p class="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">Try Now</p>
+                            <h2 class="mt-1 text-lg md:text-xl font-black text-slate-900">지금 바로 써보기</h2>
+                            <p class="mt-1 text-sm font-bold text-slate-500">첫 화면에서는 바로 열리는 도구만 먼저 보여드립니다.</p>
                         </div>
-                        <a href="{{ service_guide_url }}" class="inline-flex items-center gap-2 self-start rounded-xl border border-slate-200 bg-white px-3 py-2 text-[12px] font-black text-slate-600 transition hover:border-indigo-300 hover:text-indigo-600">
-                            <i class="fa-solid fa-book-open"></i>
-                            전체 가이드 보기
-                        </a>
                     </div>
+                    {% if guest_public_cards %}
                     <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4" data-home-v2-public-grid="true">
                         {% for card in guest_public_cards %}
                         {% include 'core/includes/guest_access_highlight_card.html' with card=card %}
                         {% endfor %}
                     </div>
-                </div>
-            </section>
-            {% endif %}
-
-            <!-- 로그인 후 이어지는 섹션 -->
-            {% if guest_primary_display_sections %}
-            <section id="guest-home-services" class="mb-6" data-aos="fade-up" data-aos-delay="50" data-home-v2-service-groups="true">
-                <div class="mb-3 flex items-end justify-between gap-3">
-                    <div>
-                        <h2 class="text-lg md:text-xl font-black text-slate-900">로그인 후 이어지는 도구</h2>
+                    {% endif %}
+                    {% if games %}
+                    <div class="{% if guest_public_cards %}mt-5 border-t border-slate-200 pt-5{% endif %}" data-home-v2-game-section="true">
+                        {% include 'core/includes/game_banner.html' with games=games %}
                     </div>
+                    {% endif %}
                 </div>
-                {% include 'core/includes/purpose_sections.html' with sections=guest_primary_display_sections show_access_state=True %}
             </section>
             {% endif %}
 
-            <!-- 교실 활동 배너 -->
-            <div class="mb-6" data-aos="fade-up" data-aos-delay="100" data-home-v2-game-section="true">
-                {% include 'core/includes/game_banner.html' with games=games %}
-            </div>
-
-            {% if guest_secondary_display_sections %}
-            <div class="mb-6" data-aos="fade-up" data-aos-delay="80" data-home-v2-service-groups="true">
-                {% include 'core/includes/purpose_sections.html' with sections=guest_secondary_display_sections show_access_state=True %}
-            </div>
+            {% if guest_primary_display_sections or guest_secondary_display_sections %}
+            <section id="guest-home-services" class="mb-6" data-aos="fade-up" data-aos-delay="50" data-home-v2-service-groups="true">
+                <div class="rounded-[1.9rem] border border-slate-200 bg-white/90 p-4 shadow-sm md:p-5">
+                    <div class="mb-4 flex flex-col gap-2">
+                        <div>
+                            <p class="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">Unlock More</p>
+                            <h2 class="mt-1 text-lg md:text-xl font-black text-slate-900">로그인 후 더 강력한 도구</h2>
+                            <p class="mt-1 text-sm font-bold text-slate-500">수합, 문서, 학급 운영 흐름을 로그인 후 한 번에 이어갈 수 있습니다.</p>
+                        </div>
+                    </div>
+                    {% if guest_primary_display_sections %}
+                    {% include 'core/includes/purpose_sections.html' with sections=guest_primary_display_sections show_access_state=True %}
+                    {% endif %}
+                    {% if guest_secondary_display_sections %}
+                    <div class="{% if guest_primary_display_sections %}mt-5 border-t border-slate-200 pt-5{% endif %}">
+                        {% include 'core/includes/purpose_sections.html' with sections=guest_secondary_display_sections show_access_state=True %}
+                    </div>
+                    {% endif %}
+                </div>
+            </section>
             {% endif %}
 
         </main>

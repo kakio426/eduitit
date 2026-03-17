@@ -1,11 +1,12 @@
 from django.test import TestCase
 from django.urls import reverse
 
+from core.guide_links import SERVICE_GUIDE_PADLET_URL
 from products.models import Product, ServiceManual
 
 
 class ServiceGuideDetailLaunchTests(TestCase):
-    def test_internal_launch_route_renders_start_link(self):
+    def test_service_guide_detail_redirects_to_padlet(self):
         product = Product.objects.create(
             title="교무수첩",
             description="학급 운영 캘린더",
@@ -27,11 +28,5 @@ class ServiceGuideDetailLaunchTests(TestCase):
 
         response = self.client.get(reverse("service_guide_detail", kwargs={"pk": manual.pk}))
 
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, f'href="{reverse("home")}#home-calendar"')
-        self.assertContains(response, "홈에서 캘린더 보기")
-        self.assertContains(response, "학급 캘린더 사용법")
-        self.assertContains(response, "다른 안내 보기")
-        self.assertNotContains(response, "준비 중인 서비스입니다")
-        self.assertNotContains(response, "이제 직접 사용해보세요!")
-        self.assertNotContains(response, "교무수첩")
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], SERVICE_GUIDE_PADLET_URL)

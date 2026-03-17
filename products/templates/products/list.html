@@ -17,7 +17,9 @@
                         <i class="fa-solid fa-house"></i>
                         홈으로
                     </a>
-                    <a href="{% url 'service_guide_list' %}" class="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-700 transition hover:bg-indigo-100">
+                    <a href="https://padlet.com/kakio1q2w/eduitit-wrjbzmk8oufxdzcv"
+                        target="_blank" rel="noopener noreferrer"
+                        class="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-700 transition hover:bg-indigo-100">
                         <i class="fa-solid fa-book-open"></i>
                         가이드 보기
                     </a>
@@ -50,7 +52,9 @@
                         <i class="fa-solid fa-house"></i>
                         {{ catalog_hub.primary_label|default:"홈에서 시작하기" }}
                     </a>
-                    <a href="{{ catalog_hub.guide_url }}" class="inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-black text-slate-700 transition hover:border-indigo-300 hover:text-indigo-600">
+                    <a href="{{ catalog_hub.guide_url }}"
+                        {% if catalog_hub.guide_is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+                        class="inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-black text-slate-700 transition hover:border-indigo-300 hover:text-indigo-600">
                         <i class="fa-solid fa-book-open-reader"></i>
                         처음 시작 안내
                     </a>

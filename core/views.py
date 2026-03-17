@@ -8,6 +8,7 @@ from django.urls import NoReverseMatch
 from django.core.cache import cache
 from products.models import Product, ServiceManual
 from .forms import APIKeyForm, UserProfileUpdateForm
+from .guide_links import SERVICE_GUIDE_PADLET_URL
 from .models import (
     UserProfile,
     UserPolicyConsent,
@@ -64,9 +65,6 @@ from .seo import (
     build_about_page_seo,
     build_home_page_seo,
     build_prompt_lab_page_seo,
-    build_service_guide_detail_seo,
-    build_service_guide_list_seo,
-    build_tool_guide_page_seo,
 )
 from .teacher_first_cards import build_favorite_service_title, build_workbench_card_meta
 from django.contrib import messages
@@ -652,16 +650,21 @@ def _build_product_state_labels(
         launch_is_external = bool(getattr(product, "launch_is_external", False))
         is_guest_allowed = bool(getattr(product, "is_guest_allowed", False))
 
-    access_status_label = "공개 체험" if (is_guest_allowed or service_type == "game" or route_name in PUBLIC_EXPERIENCE_ROUTE_NAMES) else "로그인 필요"
+    can_preview_without_login = (
+        is_guest_allowed
+        or service_type == "game"
+        or route_name in PUBLIC_EXPERIENCE_ROUTE_NAMES
+    )
+    if can_preview_without_login:
+        access_status_label = "외부 이동" if launch_is_external else "미리보기 가능"
+    else:
+        access_status_label = "로그인 필요"
 
     state_badges = []
     if service_type == "game" or route_name in STUDENT_PARTICIPATION_ROUTE_NAMES:
         state_badges.append("학생 참여")
     if route_name in FILE_REQUIRED_ROUTE_NAMES:
         state_badges.append("파일 필요")
-    if launch_is_external:
-        state_badges.append("외부 이동")
-
     if limit is not None:
         state_badges = state_badges[:limit]
 
@@ -766,10 +769,7 @@ def _build_product_guide_url_map(products):
     for manual in manuals:
         if manual.product_id in guide_url_map:
             continue
-        try:
-            guide_url_map[manual.product_id] = reverse("service_guide_detail", kwargs={"pk": manual.pk})
-        except NoReverseMatch:
-            continue
+        guide_url_map[manual.product_id] = SERVICE_GUIDE_PADLET_URL
     return guide_url_map
 
 
@@ -2059,7 +2059,7 @@ def _product_requires_guest_login(product):
 
 
 def _guest_access_status_copy(product):
-    return "로그인 필요" if _product_requires_guest_login(product) else "미리보기 가능"
+    return getattr(product, "home_access_status_label", "") or "미리보기 가능"
 
 
 def _build_home_guest_highlight_card(product):
@@ -2203,30 +2203,13 @@ def _resolve_catalog_scenario_key(product):
 
 
 def _build_catalog_hub_context(product_list):
-    guide_url = ""
-    try:
-        manual = (
-            ServiceManual.objects.filter(
-                is_published=True,
-                product__is_active=True,
-                product__launch_route_name="classcalendar:main",
-            )
-            .order_by("product__display_order", "product__title")
-            .first()
-        )
-    except Exception:
-        manual = None
-    if manual is not None:
-        guide_url = reverse("service_guide_detail", kwargs={"pk": manual.pk})
-    if not guide_url:
-        guide_url = reverse("service_guide_list")
-
     return {
         "title": "메인 캘린더는 홈에서 시작합니다",
         "description": "홈의 캘린더 요약에서 오늘 일정과 메모를 먼저 보고, 필요할 때만 월간 확장 보기로 이동하세요.",
         "href": reverse("home"),
         "is_external": False,
-        "guide_url": guide_url,
+        "guide_url": SERVICE_GUIDE_PADLET_URL,
+        "guide_is_external": True,
         "primary_label": "홈에서 시작하기",
     }
 
@@ -3389,30 +3372,7 @@ def _build_tool_guide_sections(tools):
 
 
 def tool_guide(request):
-    from core.data import TOOLS_DATA
-    from datetime import datetime, timedelta
-
-    today = datetime.now().date()
-    threshold = today - timedelta(days=30)
-
-    tools = []
-    for tool in TOOLS_DATA:
-        tool_copy = tool.copy()
-        try:
-            updated_date = datetime.strptime(tool['last_updated'], '%Y-%m-%d').date()
-            tool_copy['is_new'] = updated_date >= threshold
-        except (KeyError, ValueError):
-            tool_copy['is_new'] = False
-        tools.append(tool_copy)
-
-    return render(request, 'core/tool_guide.html', {
-        'entry_points': _build_teacher_first_entry_points('tools'),
-        'tool_sections': _build_tool_guide_sections(tools),
-        'all_tools_count': len(tools),
-        'new_tools_count': sum(1 for tool in tools if tool['is_new']),
-        'teacher_first_contract_path': TEACHER_FIRST_PRODUCT_CONTRACT_PATH,
-        **build_tool_guide_page_seo(request).as_context(),
-    })
+    return redirect(SERVICE_GUIDE_PADLET_URL)
 
 
 def about(request):
@@ -3736,95 +3696,10 @@ def feedback_view(request):
     return redirect('home')
 
 def service_guide_list(request):
-    """Teacher-first list of available service manuals."""
-    active_products_qs = Product.objects.filter(is_active=True).order_by('display_order')
-    manuals_all_qs = ServiceManual.objects.filter(product__is_active=True).select_related('product')
-    manuals_qs = ServiceManual.objects.filter(
-        is_published=True,
-        product__is_active=True
-    ).select_related('product').order_by('product__display_order', 'product__title')
-
-    site_config = SiteConfig.load()
-    featured_manuals_qs = site_config.featured_manuals.filter(
-        is_published=True,
-        product__is_active=True
-    ).select_related('product').order_by('product__display_order', 'product__title')
-
-    active_products = _attach_product_launch_meta(list(active_products_qs))
-    active_products_count = len(active_products)
-    product_map = {product.id: product for product in active_products}
-
-    featured_manual_ids = featured_manuals_qs.values_list('id', flat=True)
-    manuals = list(manuals_qs.exclude(id__in=featured_manual_ids))
-    featured_manuals = list(featured_manuals_qs)
-    all_manuals = featured_manuals + manuals
-    for manual in all_manuals:
-        prepared_product = product_map.get(manual.product_id)
-        if not prepared_product:
-            continue
-        for attr_name in (
-            'launch_href',
-            'launch_is_external',
-            'teacher_first_task_label',
-            'teacher_first_service_label',
-            'teacher_first_support_label',
-            'home_card_summary',
-            'public_service_name',
-            'detail_context_chips',
-            'home_context_chips',
-        ):
-            setattr(manual.product, attr_name, getattr(prepared_product, attr_name, ''))
-    manual_count = manuals_qs.count()
-    product_ids_with_any_manual = set(manuals_all_qs.values_list('product_id', flat=True))
-    products_without_manual = [
-        product for product in active_products
-        if product.id not in product_ids_with_any_manual and not _is_sheetbook_cross_surface_hidden(product)
-    ]
-    missing_manual_count = len(products_without_manual)
-
-    return render(request, 'core/service_guide_list.html', {
-        'guide_entry_points': _build_guide_entry_points(),
-        'guide_groups': _build_guide_groups(all_manuals, products_without_manual),
-        'active_products_count': active_products_count,
-        'manual_count': manual_count,
-        'missing_manual_count': missing_manual_count,
-        'teacher_first_contract_path': TEACHER_FIRST_PRODUCT_CONTRACT_PATH,
-        **build_service_guide_list_seo(request).as_context(),
-    })
+    return redirect(SERVICE_GUIDE_PADLET_URL)
 
 def service_guide_detail(request, pk):
-    """Detailed view of a specific manual"""
-    manual = get_object_or_404(
-        ServiceManual.objects.select_related('product'), 
-        pk=pk,
-        is_published=True,
-        product__is_active=True
-    )
-    prepared_product = _attach_product_launch_meta([manual.product])[0]
-    manual.product = prepared_product
-    manual = _prepare_manual_display(manual)
-    sections = list(manual.sections.all())
-    for section in sections:
-        section.display_title = _replace_public_service_terms(section.title, manual.product)
-        section.display_content = _replace_public_service_terms(section.content, manual.product)
-    launch_href, launch_is_external = _resolve_product_launch_url(manual.product)
-    launch_label = f"{manual.public_service_name} 열기"
-    if _is_calendar_hub_product(manual.product):
-        launch_href = _home_calendar_surface_url()
-        launch_label = "홈에서 캘린더 보기"
-
-    seo_meta = build_service_guide_detail_seo(request, manual)
-    response = render(request, 'core/service_guide_detail.html', {
-        'manual': manual,
-        'sections': sections,
-        'launch_href': launch_href,
-        'launch_is_external': launch_is_external,
-        'launch_label': launch_label,
-        **seo_meta.as_context(),
-    })
-    if seo_meta.robots.startswith("noindex"):
-        response["X-Robots-Tag"] = seo_meta.robots.replace(",", ", ")
-    return response
+    return redirect(SERVICE_GUIDE_PADLET_URL)
 
 
 @require_POST

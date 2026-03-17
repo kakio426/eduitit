@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase, Client, override_settings
 from django.urls import reverse
+from core.guide_links import SERVICE_GUIDE_PADLET_URL
 from core.models import UserProfile
 from products.models import DTSettings, ManualSection, Product, ProductFeature, ServiceManual
 
@@ -270,7 +271,9 @@ class SheetbookDiscoveryVisibilityTests(TestCase):
         self.assertIn('시작하기', content)
         self.assertIn(f'{card_cta_prefix}시작하기', content)
         self.assertNotIn(f'{card_cta_prefix}열기', content)
-        self.assertTrue(visible_product.guide_url.endswith(reverse('service_guide_detail', kwargs={'pk': self.visible_manual.pk})))
+        self.assertEqual(visible_product.guide_url, SERVICE_GUIDE_PADLET_URL)
+        self.assertEqual(response.context['catalog_hub']['guide_url'], SERVICE_GUIDE_PADLET_URL)
+        self.assertContains(response, SERVICE_GUIDE_PADLET_URL)
 
     def test_catalog_section_filter_shows_selected_scenario_only(self):
         response = self.client.get(f"{reverse('product_list')}?section=today_ops")

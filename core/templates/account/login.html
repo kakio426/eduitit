@@ -21,7 +21,6 @@
 
 {% block content %}
 {% url 'home' as home_url %}
-{% url 'service_guide_list' as service_guide_url %}
 <main class="pt-32 pb-20 px-4 md:px-8 min-h-screen flex items-center justify-center">
     <div class="w-full max-w-2xl" data-aos="zoom-in">
         <div class="clay-card p-8 md:p-10 bg-[#E0E5EC]">
@@ -74,12 +73,13 @@
                 </div>
 
                 <div class="grid gap-3 sm:grid-cols-2">
-                    <a href="{{ home_url }}#guest-home-public"
+                    <a href="{{ home_url }}#guest-home-try-now"
                         class="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 transition hover:border-indigo-300 hover:text-indigo-600">
                         <i class="fa-solid fa-circle-play"></i>
                         데모 둘러보기
                     </a>
-                    <a href="{{ service_guide_url }}"
+                    <a href="https://padlet.com/kakio1q2w/eduitit-wrjbzmk8oufxdzcv"
+                        target="_blank" rel="noopener noreferrer"
                         class="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 transition hover:border-indigo-300 hover:text-indigo-600">
                         <i class="fa-solid fa-book-open"></i>
                         가이드 보기

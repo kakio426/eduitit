@@ -6,7 +6,7 @@ from django.contrib.sitemaps import Sitemap
 from django.urls import reverse
 
 from insights.models import Insight
-from products.models import Product, ServiceManual
+from products.models import Product
 
 from .discovery_policy import is_sensitive_discovery_target
 from .product_visibility import filter_discoverable_products
@@ -37,18 +37,6 @@ def build_public_sitemap_entries() -> tuple[PublicSitemapEntry, ...]:
             priority=0.8,
         ),
         PublicSitemapEntry(
-            key="tools:tool_guide",
-            location=reverse("tool_guide"),
-            changefreq="weekly",
-            priority=0.8,
-        ),
-        PublicSitemapEntry(
-            key="manuals:list",
-            location=reverse("service_guide_list"),
-            changefreq="weekly",
-            priority=0.8,
-        ),
-        PublicSitemapEntry(
             key="insights:list",
             location=reverse("insights:list"),
             changefreq="daily",
@@ -67,23 +55,6 @@ def build_public_sitemap_entries() -> tuple[PublicSitemapEntry, ...]:
             priority=0.8,
         ),
     ]
-
-    published_manuals = ServiceManual.objects.filter(
-        is_published=True,
-        product__is_active=True,
-    ).select_related("product")
-    for manual in published_manuals:
-        if is_sensitive_discovery_target(manual):
-            continue
-        entries.append(
-            PublicSitemapEntry(
-                key=f"manuals:{manual.pk}",
-                location=reverse("service_guide_detail", kwargs={"pk": manual.pk}),
-                changefreq="weekly",
-                priority=0.7,
-                lastmod_source=manual.updated_at,
-            )
-        )
 
     discoverable_products = filter_discoverable_products(
         Product.objects.filter(is_active=True).order_by("display_order", "-created_at")

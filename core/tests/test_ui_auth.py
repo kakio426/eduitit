@@ -3,6 +3,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from core.guide_links import SERVICE_GUIDE_PADLET_URL
 from core.models import UserPolicyConsent, UserProfile
 from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
 from happy_seed.models import HSClassroom
@@ -49,8 +50,8 @@ class UIAuthTestCase(TestCase):
         self.assertContains(response, "네이버로 시작하기")
         self.assertContains(response, "최초 1회 이용약관 및 개인정보처리방침 동의가 필요합니다")
         self.assertContains(response, "운영정책")
-        self.assertContains(response, reverse("service_guide_list"))
-        self.assertContains(response, f'{reverse("home")}#guest-home-public')
+        self.assertContains(response, SERVICE_GUIDE_PADLET_URL)
+        self.assertContains(response, f'{reverse("home")}#guest-home-try-now')
         self.assertNotContains(response, "관리자 접속")
         self.assertNotContains(response, "bot_login_input")
         self.assertNotContains(response, "bot_password_input")

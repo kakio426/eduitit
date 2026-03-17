@@ -206,7 +206,6 @@
 <!-- URL Definitions -->
 {% url 'yut_game' as yut_url %}
 {% url 'prompt_lab' as prompt_lab_url %}
-{% url 'tool_guide' as tool_guide_url %}
 
 <div x-data="{ activeCategory: 'all' }" 
      x-init="$watch('activeCategory', value => { setTimeout(() => { AOS.refresh(); }, 100); })"

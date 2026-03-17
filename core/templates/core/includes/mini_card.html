@@ -43,16 +43,10 @@
         {% endif %}
         {% if show_access_state %}
         <div class="flex flex-wrap items-center gap-1.5 pl-[3.25rem]" data-home-v2-service-card-access="true">
-            <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-black {% if product.home_access_status_label == '로그인 필요' %}bg-amber-50 text-amber-700{% else %}bg-emerald-50 text-emerald-700{% endif %}">
-                <i class="fa-solid {% if product.home_access_status_label == '로그인 필요' %}fa-lock{% else %}fa-circle-play{% endif %} text-[10px]"></i>
-                {% if product.home_access_status_label == '로그인 필요' %}로그인 필요{% else %}미리보기 가능{% endif %}
+            <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-black {% if product.home_access_status_label == '로그인 필요' %}bg-amber-50 text-amber-700{% elif product.home_access_status_label == '외부 이동' %}bg-sky-50 text-sky-700{% else %}bg-emerald-50 text-emerald-700{% endif %}">
+                <i class="fa-solid {% if product.home_access_status_label == '로그인 필요' %}fa-lock{% elif product.home_access_status_label == '외부 이동' %}fa-arrow-up-right-from-square{% else %}fa-circle-play{% endif %} text-[10px]"></i>
+                {{ product.home_access_status_label }}
             </span>
-            {% for badge in product.home_state_badges %}
-            <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-1 text-[11px] font-bold text-slate-600">{{ badge }}</span>
-            {% endfor %}
-            {% if product.guide_url %}
-            <span class="inline-flex items-center rounded-full bg-indigo-50 px-2 py-1 text-[11px] font-bold text-indigo-700">가이드 있음</span>
-            {% endif %}
         </div>
         {% endif %}
     </div>

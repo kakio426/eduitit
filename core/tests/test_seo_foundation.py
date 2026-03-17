@@ -3,6 +3,7 @@ import html
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from core.guide_links import SERVICE_GUIDE_PADLET_URL
 from core.seo import DEFAULT_HOME_DESCRIPTION
 from insights.models import Insight
 from products.models import Product, ServiceManual
@@ -61,19 +62,20 @@ class SeoFoundationTests(TestCase):
         self.assertNotIn("*/create/", content)
         self.assertNotIn("*/edit/", content)
 
-    def test_sitemap_xml_lists_public_home_manual_product_insight_and_tools(self):
+    def test_sitemap_xml_excludes_guide_redirect_routes_and_lists_public_product_pages(self):
         response = self.client.get("/sitemap.xml")
         content = response.content.decode("utf-8")
 
         self.assertEqual(response.status_code, 200)
         self.assertIn(reverse("home"), content)
         self.assertIn(reverse("insights:list"), content)
-        self.assertIn(reverse("service_guide_list"), content)
-        self.assertIn(reverse("service_guide_detail", kwargs={"pk": self.manual.pk}), content)
         self.assertIn(reverse("product_detail", kwargs={"pk": self.product.pk}), content)
         self.assertIn(reverse("insights:detail", kwargs={"pk": self.insight.pk}), content)
         self.assertIn(reverse("noticegen:main"), content)
         self.assertIn(reverse("qrgen:landing"), content)
+        self.assertNotIn(reverse("tool_guide"), content)
+        self.assertNotIn(reverse("service_guide_list"), content)
+        self.assertNotIn(reverse("service_guide_detail", kwargs={"pk": self.manual.pk}), content)
         self.assertNotIn(reverse("service_guide_detail", kwargs={"pk": self.sensitive_manual.pk}), content)
         self.assertNotIn(reverse("product_detail", kwargs={"pk": self.sensitive_product.pk}), content)
         self.assertNotIn("/secret-admin-kakio/", content)
@@ -120,11 +122,9 @@ class SeoFoundationTests(TestCase):
         self.assertIn('"@type":"Article"', content)
         self.assertIn('"@type":"BreadcrumbList"', content)
 
-    def test_public_tool_and_reference_pages_get_page_specific_meta(self):
+    def test_public_tool_and_app_pages_get_page_specific_meta(self):
         cases = (
             ("prompt_lab", "AI 프롬프트 레시피 | Eduitit", "https://eduitit.site/prompts/"),
-            ("tool_guide", "교사용 AI·디지털 도구 가이드 | Eduitit", "https://eduitit.site/tools/"),
-            ("service_guide_list", "서비스 시작 가이드 | Eduitit", "https://eduitit.site/manuals/"),
             ("noticegen:main", "알림장·주간학습 멘트 생성기 | Eduitit", "https://eduitit.site/noticegen/"),
             ("qrgen:landing", "수업 QR 생성기 | Eduitit", "https://eduitit.site/qrgen/"),
         )
@@ -137,6 +137,20 @@ class SeoFoundationTests(TestCase):
                 self.assertIn(f"<title>{html.escape(title)}</title>", content)
                 self.assertIn(f'<link rel="canonical" href="{canonical}">', content)
                 self.assertIn(f'<meta property="og:url" content="{canonical}">', content)
+
+    def test_guide_routes_redirect_to_padlet(self):
+        cases = (
+            reverse("tool_guide"),
+            reverse("service_guide_list"),
+            reverse("service_guide_detail", kwargs={"pk": self.manual.pk}),
+            reverse("service_guide_detail", kwargs={"pk": self.sensitive_manual.pk}),
+        )
+
+        for path in cases:
+            with self.subTest(path=path):
+                response = self.client.get(path)
+                self.assertEqual(response.status_code, 302)
+                self.assertEqual(response["Location"], SERVICE_GUIDE_PADLET_URL)
 
     def test_public_landing_pages_get_unique_meta(self):
         cases = (
@@ -175,27 +189,9 @@ class SeoFoundationTests(TestCase):
                 self.assertIn(html.escape(description), content)
                 self.assertNotIn(DEFAULT_HOME_DESCRIPTION, content)
 
-    def test_service_guide_and_product_detail_use_specific_meta(self):
-        manual_response = self.client.get(reverse("service_guide_detail", kwargs={"pk": self.manual.pk}))
-        manual_content = manual_response.content.decode("utf-8")
-        guide_list_response = self.client.get(reverse("service_guide_list"))
-        guide_list_content = guide_list_response.content.decode("utf-8")
+    def test_product_detail_uses_specific_meta(self):
         product_response = self.client.get(reverse("product_detail", kwargs={"pk": self.product.pk}))
         product_content = product_response.content.decode("utf-8")
-
-        self.assertEqual(guide_list_response.status_code, 200)
-        self.assertIn('"@type":"CollectionPage"', guide_list_content)
-        self.assertIn('"@type":"BreadcrumbList"', guide_list_content)
-
-        self.assertEqual(manual_response.status_code, 200)
-        self.assertIn("<title>미술 수업 도우미 시작하기 - 서비스 가이드 - Eduitit</title>", manual_content)
-        self.assertIn(
-            f'<link rel="canonical" href="https://eduitit.site{reverse("service_guide_detail", kwargs={"pk": self.manual.pk})}">',
-            manual_content,
-        )
-        self.assertIn("바로 열고 바로 단계 준비하는 흐름", manual_content)
-        self.assertIn('"@type":"Article"', manual_content)
-        self.assertIn('"@type":"BreadcrumbList"', manual_content)
 
         self.assertEqual(product_response.status_code, 200)
         self.assertIn("<title>미술 수업 도우미 - Eduitit</title>", product_content)
@@ -207,15 +203,9 @@ class SeoFoundationTests(TestCase):
         self.assertIn('"@type":"Article"', product_content)
         self.assertIn('"@type":"BreadcrumbList"', product_content)
 
-    def test_sensitive_service_guides_and_products_use_noindex_headers(self):
-        manual_response = self.client.get(reverse("service_guide_detail", kwargs={"pk": self.sensitive_manual.pk}))
-        manual_content = manual_response.content.decode("utf-8")
+    def test_sensitive_product_uses_noindex_headers(self):
         product_response = self.client.get(reverse("product_detail", kwargs={"pk": self.sensitive_product.pk}))
         product_content = product_response.content.decode("utf-8")
-
-        self.assertEqual(manual_response.status_code, 200)
-        self.assertIn('<meta name="robots" content="noindex,nofollow">', manual_content)
-        self.assertEqual(manual_response["X-Robots-Tag"], "noindex, nofollow")
 
         self.assertEqual(product_response.status_code, 200)
         self.assertIn('<meta name="robots" content="noindex,nofollow">', product_content)

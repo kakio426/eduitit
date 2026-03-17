@@ -259,9 +259,9 @@ class HomeV2ViewTest(TestCase):
         """V2 비로그인 홈에 로그인 CTA 존재"""
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('공개 도구 먼저 보기', content)
+        self.assertIn('지금 바로 써보기', content)
         self.assertIn('로그인 후 전체 열기', content)
-        self.assertIn('가이드 보기', content)
+        self.assertNotIn('공개 도구 먼저 보기', content)
         self.assertEqual(content.count('로그인 후 전체 열기'), 1)
 
     def test_v2_anonymous_surfaces_public_cards_before_locked_sections(self):
@@ -288,7 +288,8 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
 
         self.assertIn('data-home-v2-public-section="true"', content)
-        self.assertIn('로그인 후 이어지는 도구', content)
+        self.assertIn('지금 바로 써보기', content)
+        self.assertIn('로그인 후 더 강력한 도구', content)
         self.assertIn('미리보기 가능', content)
         self.assertIn('로그인 필요', content)
 
@@ -308,6 +309,47 @@ class HomeV2ViewTest(TestCase):
         self.assertIn(self.p2.id, locked_section_ids)
         self.assertNotIn(public_collect.id, locked_section_ids)
         self.assertNotIn(public_qr.id, locked_section_ids)
+
+    def test_v2_anonymous_removes_hero_access_legend(self):
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertNotIn('미리보기 가능 먼저 표시', content)
+        self.assertNotIn('로그인 필요 미리 안내', content)
+        self.assertNotIn('데모·가이드로 우회 가능', content)
+
+    def test_v2_anonymous_cards_use_single_priority_badge(self):
+        external_public = Product.objects.create(
+            title="외부 공개 도구",
+            description="새 창으로 바로 이동",
+            price=0,
+            is_active=True,
+            is_guest_allowed=True,
+            service_type='edutech',
+            external_url='https://example.com/demo',
+            icon='fa-solid fa-arrow-up-right-from-square',
+        )
+        Product.objects.create(
+            title="파일 필요한 로그인 도구",
+            description="로그인 후 파일 업로드",
+            price=0,
+            is_active=True,
+            service_type='work',
+            launch_route_name='noticegen:main',
+            icon='fa-solid fa-file-arrow-up',
+        )
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        external_card = next(
+            card for card in response.context.get('guest_public_cards', [])
+            if card['id'] == external_public.id
+        )
+        self.assertEqual(external_card['access_status_label'], '외부 이동')
+        self.assertIn('외부 이동', content)
+        self.assertNotIn('text-slate-600">파일 필요</span>', content)
+        self.assertNotIn('text-indigo-700">가이드 있음</span>', content)
 
     def test_v2_anonymous_prioritizes_hero_and_services_without_sns_preview(self):
         response = self.client.get(reverse('home'))
@@ -1776,7 +1818,7 @@ class HomeV4ViewTest(TestCase):
 
         self.assertNotIn('core/css/home_authenticated_v4.css', content)
         self.assertNotIn('data-home-v4-shell="true"', content)
-        self.assertIn('공개 도구 먼저 보기', content)
+        self.assertIn('지금 바로 써보기', content)
         self.assertIn('로그인 후 전체 열기', content)
 
     @override_settings(HOME_LAYOUT_VERSION='v2', HOME_V2_ENABLED=True)
