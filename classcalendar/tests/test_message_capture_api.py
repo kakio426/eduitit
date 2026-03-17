@@ -53,6 +53,10 @@ class MessageCaptureApiTests(TestCase):
             "classcalendar:api_message_capture_complete",
             kwargs={"capture_id": "00000000-0000-0000-0000-000000000000"},
         ).replace("00000000-0000-0000-0000-000000000000", "{capture_id}")
+        self.delete_url_template = reverse(
+            "classcalendar:api_message_capture_delete",
+            kwargs={"capture_id": "00000000-0000-0000-0000-000000000000"},
+        ).replace("00000000-0000-0000-0000-000000000000", "{capture_id}")
 
     def _commit(self, capture_id, payload):
         return self.client.post(
@@ -95,6 +99,9 @@ class MessageCaptureApiTests(TestCase):
             self.complete_url_template.format(capture_id=str(capture_id)),
             data=payload,
         )
+
+    def _delete_capture(self, capture_id):
+        return self.client.post(self.delete_url_template.format(capture_id=str(capture_id)))
 
     def _pdf_upload(self, name="notice.pdf", content=b"hello"):
         return SimpleUploadedFile(name, content, content_type="application/pdf")
@@ -295,27 +302,20 @@ class MessageCaptureApiTests(TestCase):
         self.assertEqual(capture.candidates.count(), 2)
 
     @patch("classcalendar.views.refine_message_capture_candidates")
-    def test_parse_can_apply_deepseek_refinement_when_candidates_are_multiple(self, mock_refine):
+    def test_parse_can_apply_deepseek_refinement_for_ambiguous_candidate(self, mock_refine):
         mock_refine.return_value = [
             {
                 "kind": "deadline",
                 "title": "연수물 수정 마감",
                 "summary": "학부모총회 전에 연수물을 수정해 주세요.",
                 "is_recommended": True,
-                "evidence_text": "12일(목)까지 연수물 수정 부탁드립니다.",
-            },
-            {
-                "kind": "event",
-                "title": "학부모총회",
-                "summary": "학부모총회가 실시됩니다.",
-                "is_recommended": True,
-                "evidence_text": "3월 19일 학부모총회 실시",
+                "evidence_text": "3월 19일 예정입니다.",
             },
         ]
         response = self.client.post(
             self.parse_url,
             data={
-                "raw_text": "3월 19일 학부모총회 실시\n12일(목)까지 연수물 수정 부탁드립니다.",
+                "raw_text": "3월 19일 예정입니다.",
                 "idempotency_key": "capture-multi-llm",
             },
         )
@@ -543,6 +543,40 @@ class MessageCaptureApiTests(TestCase):
         self.assertIsNotNone(candidates[0].committed_event_id)
         self.assertEqual(candidates[0].committed_event.title, "[준비] 의자 배치")
 
+    def test_commit_accepts_school_specific_candidate_kinds(self):
+        save_response = self.client.post(
+            self.save_url,
+            data={
+                "raw_text": "회의 일정 직접 입력",
+                "idempotency_key": "capture-school-kind",
+            },
+        )
+        self.assertEqual(save_response.status_code, 201)
+        capture_id = save_response.json()["capture_id"]
+
+        commit_response = self._commit(
+            capture_id,
+            {
+                "selected_candidates": [
+                    {
+                        "candidate_id": "manual:grade-meeting",
+                        "selected": True,
+                        "kind": "meeting",
+                        "title": "학년 협의회",
+                        "start_time": "2026-03-20T15:00",
+                        "end_time": "2026-03-20T16:00",
+                        "is_all_day": False,
+                        "summary": "3학년 담임 협의",
+                    }
+                ]
+            },
+        )
+        self.assertEqual(commit_response.status_code, 201)
+
+        candidate = CalendarMessageCaptureCandidate.objects.get(capture_id=capture_id)
+        self.assertEqual(candidate.candidate_kind, CalendarMessageCaptureCandidate.CandidateKind.MEETING)
+        self.assertEqual(candidate.committed_event.title, "[회의] 학년 협의회")
+
     def test_parse_rejects_too_large_file(self):
         upload = self._pdf_upload(content=b"0123456789ABCDEF")
         with patch("classcalendar.views.MESSAGE_CAPTURE_MAX_FILE_BYTES", 8):
@@ -618,9 +652,44 @@ class MessageCaptureApiTests(TestCase):
         detail_payload = detail_response.json()
         self.assertEqual(len(detail_payload.get("candidates") or []), 2)
         self.assertEqual(len(detail_payload.get("saved_events") or []), 2)
+        self.assertEqual(
+            detail_payload.get("delete_url"),
+            reverse("classcalendar:api_message_capture_delete", kwargs={"capture_id": parse_payload["capture_id"]}),
+        )
         self.assertTrue(all(item.get("delete_url") for item in detail_payload.get("saved_events") or []))
         self.assertTrue(all(candidate.get("already_saved") for candidate in detail_payload.get("candidates") or []))
         self.assertTrue(detail_payload.get("created_at"))
+
+    def test_archive_detail_hides_candidates_marked_skipped_on_commit(self):
+        parse_response = self.client.post(
+            self.parse_url,
+            data={
+                "raw_text": "3월 19일 학부모총회 실시\n12일(목)까지 연수물 수정 부탁드립니다.",
+                "idempotency_key": "archive-detail-skip-candidate",
+            },
+        )
+        self.assertEqual(parse_response.status_code, 201)
+        parse_payload = parse_response.json()
+        selected_candidates = self._build_selected_candidates(parse_payload)
+        self.assertEqual(len(selected_candidates), 2)
+        selected_candidates[1]["selected"] = False
+
+        commit_response = self._commit(
+            parse_payload["capture_id"],
+            {"selected_candidates": selected_candidates},
+        )
+        self.assertEqual(commit_response.status_code, 201)
+
+        capture = CalendarMessageCapture.objects.get(id=parse_payload["capture_id"])
+        skipped_candidate = capture.candidates.order_by("sort_order", "id")[1]
+        self.assertEqual(skipped_candidate.commit_status, CalendarMessageCaptureCandidate.CommitStatus.SKIPPED)
+
+        detail_response = self._archive_detail(parse_payload["capture_id"])
+        self.assertEqual(detail_response.status_code, 200)
+        detail_payload = detail_response.json()
+        self.assertEqual(len(detail_payload.get("candidates") or []), 1)
+        self.assertEqual(detail_payload["candidates"][0]["title"], parse_payload["candidates"][0]["title"])
+        self.assertEqual(len(detail_payload.get("saved_events") or []), 1)
 
     def test_archive_detail_shows_saved_task_delete_url(self):
         due_at = timezone.now().replace(second=0, microsecond=0)
@@ -674,6 +743,31 @@ class MessageCaptureApiTests(TestCase):
         self.assertEqual(detail_payload.get("parse_status"), CalendarMessageCapture.ParseStatus.FAILED)
         self.assertEqual(detail_payload.get("candidates"), [])
         self.assertEqual(detail_payload.get("saved_events"), [])
+
+    def test_delete_archive_capture_keeps_linked_events(self):
+        parse_response = self.client.post(
+            self.parse_url,
+            data={
+                "raw_text": "3월 19일 학부모총회 실시",
+                "idempotency_key": "archive-delete-linked",
+            },
+        )
+        self.assertEqual(parse_response.status_code, 201)
+        parse_payload = parse_response.json()
+
+        commit_response = self._commit(
+            parse_payload["capture_id"],
+            {"selected_candidates": self._build_selected_candidates(parse_payload)},
+        )
+        self.assertEqual(commit_response.status_code, 201)
+        created_event_id = commit_response.json()["created_events"][0]["id"]
+
+        delete_response = self._delete_capture(parse_payload["capture_id"])
+        self.assertEqual(delete_response.status_code, 200)
+        self.assertIn("그대로 남겨두었습니다", delete_response.json().get("message") or "")
+        self.assertFalse(CalendarMessageCapture.objects.filter(id=parse_payload["capture_id"]).exists())
+        self.assertFalse(CalendarMessageCaptureCandidate.objects.filter(capture_id=parse_payload["capture_id"]).exists())
+        self.assertTrue(CalendarEvent.objects.filter(id=created_event_id).exists())
 
     def test_archive_filters_saved_pending_review_and_failed(self):
         unparsed_capture = self._create_archive_capture(

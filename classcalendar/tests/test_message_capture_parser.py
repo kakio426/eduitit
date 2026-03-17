@@ -1,4 +1,5 @@
 from datetime import datetime
+from unittest.mock import patch
 
 from django.test import SimpleTestCase
 from django.utils import timezone
@@ -70,7 +71,7 @@ class MessageCaptureParserTests(SimpleTestCase):
         self.assertEqual(result["location"], "과학실")
         self.assertEqual(result["materials"], "실험 노트")
         candidate = result["candidates"][0]
-        self.assertEqual(candidate["kind"], "event")
+        self.assertEqual(candidate["kind"], "class")
         self.assertEqual(candidate["start_time"].hour, 14)
         self.assertEqual(candidate["end_time"].hour, 15)
         self.assertFalse(candidate["is_all_day"])
@@ -91,7 +92,7 @@ class MessageCaptureParserTests(SimpleTestCase):
         self.assertEqual(candidate["start_time"].hour, 15)
         self.assertEqual(candidate["start_time"].minute, 45)
 
-    def test_parse_prefers_event_for_meeting_request_with_relative_date(self):
+    def test_parse_prefers_meeting_for_meeting_request_with_relative_date(self):
         now = timezone.make_aware(datetime(2026, 3, 16, 9, 0))
         result = parse_message_capture_draft(
             "내일 회의 부탁드립니다.",
@@ -101,9 +102,31 @@ class MessageCaptureParserTests(SimpleTestCase):
 
         self.assertEqual(len(result["candidates"]), 1)
         candidate = result["candidates"][0]
-        self.assertEqual(candidate["kind"], "event")
+        self.assertEqual(candidate["kind"], "meeting")
         self.assertEqual(candidate["title"], "회의")
         self.assertEqual(candidate["start_time"].date().isoformat(), "2026-03-17")
+
+    def test_parse_extracts_school_specific_event_kinds(self):
+        now = timezone.make_aware(datetime(2026, 3, 16, 9, 0))
+        cases = [
+            ("3월 20일 교직원 회의가 있습니다.", "meeting", "회의"),
+            ("3월 21일 학부모 상담을 진행합니다.", "consulting", "상담"),
+            ("3월 22일 공개 수업을 진행합니다.", "class", "수업"),
+            ("3월 23일 전 교사 연수가 있습니다.", "training", "연수"),
+            ("3월 24일 진단평가를 실시합니다.", "exam", "평가"),
+        ]
+
+        for message, expected_kind, expected_title_keyword in cases:
+            with self.subTest(message=message):
+                result = parse_message_capture_draft(
+                    message,
+                    now=now,
+                    has_files=False,
+                )
+                self.assertEqual(len(result["candidates"]), 1)
+                candidate = result["candidates"][0]
+                self.assertEqual(candidate["kind"], expected_kind)
+                self.assertIn(expected_title_keyword, candidate["badge_text"])
 
     def test_parse_failed_when_no_date_is_present(self):
         result = parse_message_capture_draft("학급 안내\n추후 다시 알려드리겠습니다.", has_files=False)
@@ -185,6 +208,51 @@ class MessageCaptureParserTests(SimpleTestCase):
         )
 
         self.assertEqual(len(result["candidates"]), 1)
+        self.assertTrue(llm_called)
+
+    def test_parse_calls_llm_when_multiple_dates_are_detected_but_candidate_coverage_is_short(self):
+        now = timezone.make_aware(datetime(2026, 3, 16, 9, 0))
+        llm_called = False
+        single_candidate = {
+            "refinement_id": "0:0:3월 19일",
+            "kind": "event",
+            "badge_text": "행사",
+            "title": "학부모총회",
+            "summary": "학부모총회를 진행합니다.",
+            "start_time": timezone.make_aware(datetime(2026, 3, 19, 0, 0)),
+            "end_time": timezone.make_aware(datetime(2026, 3, 19, 23, 59)),
+            "is_all_day": True,
+            "confidence_score": 86,
+            "confidence_label": "high",
+            "is_recommended": True,
+            "needs_check": False,
+            "already_saved": False,
+            "evidence_text": "3월 19일 학부모총회 실시",
+            "evidence_payload": {
+                "date": "3월 19일",
+                "time": "",
+                "support_lines": ["3월 19일 학부모총회 실시"],
+                "relative_date": False,
+                "year_inferred": False,
+                "month_inferred": False,
+                "line_index": 0,
+            },
+            "color": "indigo",
+        }
+
+        def tracking_refiner(**kwargs):
+            nonlocal llm_called
+            llm_called = True
+            return []
+
+        with patch("classcalendar.message_capture._build_raw_candidates", return_value=[single_candidate]):
+            parse_message_capture_draft(
+                "3월 19일 학부모총회 실시\n4월 2일 직원연수 실시",
+                now=now,
+                has_files=False,
+                llm_refiner=tracking_refiner,
+            )
+
         self.assertTrue(llm_called)
 
     def test_parse_ignores_farewell_today_phrase_and_keeps_explicit_dates(self):

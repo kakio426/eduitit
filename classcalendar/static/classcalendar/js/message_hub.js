@@ -67,6 +67,7 @@ function buildCalendarMessageHubState() {
             link_template: '',
             commit_template: '',
             complete_template: '',
+            delete_template: '',
             messagebox_main: '',
         },
         messageArchiveItems: [],
@@ -126,6 +127,7 @@ function initCalendarMessageHub(host, options = {}) {
         link_template: String(rawUrls.link_template || ''),
         commit_template: String(rawUrls.commit_template || ''),
         complete_template: String(rawUrls.complete_template || ''),
+        delete_template: String(rawUrls.delete_template || ''),
         messagebox_main: String(rawUrls.messagebox_main || ''),
     };
 
@@ -227,6 +229,10 @@ function initCalendarMessageHub(host, options = {}) {
             return String(this.messageCaptureUrls.complete_template || '').replace('__capture_id__', String(captureId || ''));
         },
 
+        buildMessageCaptureDeleteUrl: function(captureId) {
+            return String(this.messageCaptureUrls.delete_template || '').replace('__capture_id__', String(captureId || ''));
+        },
+
         createMessageCaptureIdempotencyKey: function() {
             if (window.crypto && typeof window.crypto.randomUUID === 'function') {
                 return window.crypto.randomUUID().replace(/-/g, '');
@@ -295,6 +301,11 @@ function initCalendarMessageHub(host, options = {}) {
         archiveCandidateBadgeClass: function(kind) {
             const map = {
                 event: 'border-indigo-200 bg-indigo-50 text-indigo-700',
+                meeting: 'border-sky-200 bg-sky-50 text-sky-700',
+                class: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+                consulting: 'border-slate-200 bg-slate-100 text-slate-700',
+                training: 'border-amber-200 bg-amber-50 text-amber-700',
+                exam: 'border-rose-200 bg-rose-50 text-rose-700',
                 deadline: 'border-rose-200 bg-rose-50 text-rose-700',
                 prep: 'border-amber-200 bg-amber-50 text-amber-700',
             };
@@ -509,6 +520,18 @@ function initCalendarMessageHub(host, options = {}) {
             await this.loadMessageArchive({ page: (this.messageArchivePage || 1) + 1 });
         },
 
+        refreshMessageArchiveAfterMutation: async function(preferredCaptureId = '') {
+            const targetId = String(preferredCaptureId || '');
+            for (let attempt = 0; attempt < 8; attempt += 1) {
+                if (!this.isLoadingMessageArchive) {
+                    await this.loadMessageArchive({ reset: true, preferredCaptureId: targetId });
+                    return true;
+                }
+                await new Promise((resolve) => window.setTimeout(resolve, 120));
+            }
+            return false;
+        },
+
         selectMessageArchiveItem: async function(captureId) {
             if (!captureId) return;
             const url = this.buildMessageCaptureArchiveDetailUrl(captureId);
@@ -651,6 +674,11 @@ function initCalendarMessageHub(host, options = {}) {
             const kind = String(raw.kind || 'event');
             const badgeClassMap = {
                 event: 'border-indigo-200 bg-indigo-50 text-indigo-700',
+                meeting: 'border-sky-200 bg-sky-50 text-sky-700',
+                class: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+                consulting: 'border-slate-200 bg-slate-100 text-slate-700',
+                training: 'border-amber-200 bg-amber-50 text-amber-700',
+                exam: 'border-rose-200 bg-rose-50 text-rose-700',
                 deadline: 'border-rose-200 bg-rose-50 text-rose-700',
                 prep: 'border-amber-200 bg-amber-50 text-amber-700',
             };
@@ -856,6 +884,7 @@ function initCalendarMessageHub(host, options = {}) {
                     body: formData,
                 });
                 this.applyMessageCaptureResult(payload);
+                await this.refreshMessageArchiveAfterMutation(payload.capture_id || '');
                 window.showToast('다시 볼 날짜를 확인해 주세요.', 'success');
             } catch (error) {
                 this.messageCaptureErrorText = error.message || '메모 읽기에 실패했습니다.';
@@ -884,7 +913,7 @@ function initCalendarMessageHub(host, options = {}) {
                 });
                 this.messageArchiveSelectedCapture = payload;
                 this.applyArchiveDetailToMessageCapture(payload);
-                this.loadMessageArchive({ reset: true, preferredCaptureId: payload.capture_id });
+                await this.refreshMessageArchiveAfterMutation(payload.capture_id || '');
                 window.showToast(payload.message || '보관한 메모에서 날짜를 찾았어요.', 'success');
             } catch (error) {
                 this.messageCaptureErrorText = error.message || '보관한 메모를 읽지 못했습니다.';
@@ -931,6 +960,7 @@ function initCalendarMessageHub(host, options = {}) {
                     body: formData,
                 });
                 this.applyMessageCaptureArchiveSaveResult(payload);
+                await this.refreshMessageArchiveAfterMutation(payload.capture_id || '');
                 window.showToast(payload.message || '메모를 보관함에 저장했어요.', 'success');
             } catch (error) {
                 this.messageCaptureErrorText = error.message || '보관함 저장에 실패했습니다.';

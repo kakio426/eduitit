@@ -36,6 +36,7 @@ function messageboxPage(options = {}) {
         messageCaptureDragCandidateId: "",
         messageCaptureSourcePreviewOpen: true,
         messageboxDeletingLinkedItemKeys: [],
+        isDeletingMessageArchiveCapture: false,
 
         init() {
             ensureMessageboxToastBridge();
@@ -282,6 +283,18 @@ function messageboxPage(options = {}) {
             return this.selectMessageArchiveItem(captureId);
         },
 
+        async refreshMessageArchiveAfterMutation(preferredCaptureId = "") {
+            const targetId = String(preferredCaptureId || "");
+            for (let attempt = 0; attempt < 8; attempt += 1) {
+                if (!this.isLoadingMessageArchive) {
+                    await this.loadMessageArchive({ reset: true, preferredCaptureId: targetId });
+                    return true;
+                }
+                await new Promise((resolve) => window.setTimeout(resolve, 120));
+            }
+            return false;
+        },
+
         resetMessageCapturePlannerState() {
             this.messageCaptureActiveCandidateId = "";
             this.messageCaptureActiveCandidateRef = this.emptyMessageCaptureCandidate();
@@ -310,6 +323,7 @@ function messageboxPage(options = {}) {
                 end_clock: "10:00",
                 edit_open: false,
                 is_manual: false,
+                is_removed: false,
             };
         },
 
@@ -336,7 +350,9 @@ function messageboxPage(options = {}) {
         },
 
         messageCapturePlannerCandidates() {
-            return Array.isArray(this.messageCaptureCandidates) ? this.messageCaptureCandidates : [];
+            return Array.isArray(this.messageCaptureCandidates)
+                ? this.messageCaptureCandidates.filter((candidate) => !candidate.is_removed)
+                : [];
         },
 
         messageCaptureEditableCandidates() {
@@ -754,7 +770,7 @@ function messageboxPage(options = {}) {
                 this.applyMessageCaptureArchiveSaveResult(payload);
                 if (options.loadArchive !== false) {
                     try {
-                        await this.loadMessageArchive({ reset: true, preferredCaptureId: payload.capture_id || "" });
+                        await this.refreshMessageArchiveAfterMutation(payload.capture_id || "");
                     } catch (archiveError) {
                         if (typeof console !== "undefined" && typeof console.warn === "function") {
                             console.warn("[messagebox] archive refresh skipped after save", archiveError);
@@ -890,13 +906,14 @@ function messageboxPage(options = {}) {
 
         messageCaptureWorkflowPreviewText() {
             const editableCandidates = this.messageCaptureEditableCandidates();
+            const visibleCandidateCount = this.messageCapturePlannerCandidates().length;
             if (editableCandidates.length > 0 && editableCandidates.every((candidate) => candidate.is_manual)) {
                 return `직접 일정 ${editableCandidates.length}개`;
             }
             if (this.messageCaptureManualDate) {
                 return `${this.formatMessageCaptureDay(this.messageCaptureManualDate)}에 다시 보기`;
             }
-            return `후보 ${this.messageCaptureCandidates.length}개 확인`;
+            return `후보 ${visibleCandidateCount}개 확인`;
         },
 
         messageCaptureDoneTitle() {
@@ -919,6 +936,21 @@ function messageboxPage(options = {}) {
             return this.messageArchiveSelectedCapture ? String(this.messageArchiveSelectedCapture.capture_id || "") : "";
         },
 
+        nextMessageArchiveCaptureId(excludingCaptureId) {
+            const targetId = String(excludingCaptureId || "");
+            if (!targetId || !Array.isArray(this.messageArchiveItems) || this.messageArchiveItems.length === 0) {
+                return "";
+            }
+            const currentIndex = this.messageArchiveItems.findIndex(
+                (item) => String(item.capture_id || "") === targetId,
+            );
+            if (currentIndex < 0) {
+                return "";
+            }
+            const nextItem = this.messageArchiveItems[currentIndex + 1] || this.messageArchiveItems[currentIndex - 1] || null;
+            return nextItem ? String(nextItem.capture_id || "") : "";
+        },
+
         syncCaptureQuery(captureId) {
             if (!window.history || typeof window.history.replaceState !== "function") return;
             const url = new URL(window.location.href);
@@ -937,6 +969,31 @@ function messageboxPage(options = {}) {
                     kind: "event",
                     badge_text: "행사",
                     badge_class: "border-indigo-200 bg-indigo-50 text-indigo-700",
+                },
+                meeting: {
+                    kind: "meeting",
+                    badge_text: "회의",
+                    badge_class: "border-sky-200 bg-sky-50 text-sky-700",
+                },
+                class: {
+                    kind: "class",
+                    badge_text: "수업",
+                    badge_class: "border-emerald-200 bg-emerald-50 text-emerald-700",
+                },
+                consulting: {
+                    kind: "consulting",
+                    badge_text: "상담",
+                    badge_class: "border-slate-200 bg-slate-100 text-slate-700",
+                },
+                training: {
+                    kind: "training",
+                    badge_text: "연수",
+                    badge_class: "border-amber-200 bg-amber-50 text-amber-700",
+                },
+                exam: {
+                    kind: "exam",
+                    badge_text: "평가",
+                    badge_class: "border-rose-200 bg-rose-50 text-rose-700",
                 },
                 deadline: {
                     kind: "deadline",
@@ -976,6 +1033,7 @@ function messageboxPage(options = {}) {
                 end_clock: end ? this.toTimeInput(end) : "10:00",
                 edit_open: !!raw.is_manual,
                 is_manual: !!raw.is_manual,
+                is_removed: !!raw.is_removed,
             };
         },
 
@@ -1029,9 +1087,32 @@ function messageboxPage(options = {}) {
         removeMessageCaptureCandidate(candidateId) {
             const targetId = String(candidateId || "");
             if (!targetId) return;
-            this.messageCaptureCandidates = this.messageCaptureCandidates.filter(
-                (candidate) => String(candidate.candidate_id || "") !== targetId,
-            );
+            const targetCandidate = Array.isArray(this.messageCaptureCandidates)
+                ? this.messageCaptureCandidates.find(
+                    (candidate) => String(candidate.candidate_id || "") === targetId,
+                ) || null
+                : null;
+            if (!targetCandidate || targetCandidate.already_saved) {
+                return;
+            }
+            const shouldRemoveLocally = targetCandidate.is_manual || targetId.startsWith("manual:") || !this.messageCaptureCaptureId;
+            if (shouldRemoveLocally) {
+                this.messageCaptureCandidates = this.messageCaptureCandidates.filter(
+                    (candidate) => String(candidate.candidate_id || "") !== targetId,
+                );
+            } else {
+                this.messageCaptureCandidates = this.messageCaptureCandidates.map((candidate) => {
+                    if (String(candidate.candidate_id || "") !== targetId) {
+                        return candidate;
+                    }
+                    return {
+                        ...candidate,
+                        selected: false,
+                        edit_open: false,
+                        is_removed: true,
+                    };
+                });
+            }
             this.syncMessageCapturePlannerState();
             const editableCandidates = this.messageCaptureEditableCandidates();
             if (editableCandidates.length > 0 && editableCandidates.every((candidate) => candidate.is_manual)) {
@@ -1106,6 +1187,13 @@ function messageboxPage(options = {}) {
                     body: this.buildMessageCaptureSourceFormData(),
                 });
                 this.applyMessageCaptureResult(payload);
+                try {
+                    await this.refreshMessageArchiveAfterMutation(payload.capture_id || this.selectedCaptureId());
+                } catch (archiveError) {
+                    if (typeof console !== "undefined" && typeof console.warn === "function") {
+                        console.warn("[messagebox] archive refresh skipped after parse", archiveError);
+                    }
+                }
                 window.showToast("날짜 후보를 찾았어요. 확인 후 연결하세요.", "success");
             } catch (error) {
                 if (this.shouldAutoSwitchParseFailureToManual(error)) {
@@ -1152,10 +1240,50 @@ function messageboxPage(options = {}) {
                     headers: { "X-CSRFToken": this.getCsrfToken() },
                 });
                 this.messageArchiveSelectedCapture = payload;
-                await this.loadMessageArchive({ reset: true, preferredCaptureId: captureId });
+                await this.refreshMessageArchiveAfterMutation(captureId);
                 window.showToast(payload.message || "상태를 바꿨어요.", "success");
             } catch (error) {
                 window.showToast(error.message || "완료 처리에 실패했습니다.", "error");
+            }
+        },
+
+        async deleteSelectedMessageArchiveCapture() {
+            const capture = this.messageArchiveSelectedCapture;
+            const captureId = this.selectedCaptureId();
+            const deleteUrl = String((capture && capture.delete_url) || this.buildMessageCaptureDeleteUrl(captureId) || "").trim();
+            if (!captureId || !deleteUrl) {
+                window.showToast("메시지 삭제 경로를 찾지 못했습니다.", "error");
+                return;
+            }
+            if (this.isDeletingMessageArchiveCapture) {
+                return;
+            }
+            const captureLabel = String((capture && (capture.summary_text || capture.preview_text)) || "이 메시지").trim() || "이 메시지";
+            const linkedCount = this.selectedCaptureLinkedItems().length;
+            const confirmText = linkedCount > 0
+                ? `${captureLabel} 보관 기록을 지울까요? 캘린더에 연결된 ${linkedCount}개 항목은 그대로 남습니다.`
+                : `${captureLabel} 보관 기록을 지울까요?`;
+            if (!window.confirm(confirmText)) {
+                return;
+            }
+
+            this.isDeletingMessageArchiveCapture = true;
+            try {
+                const payload = await this.requestJson(deleteUrl, {
+                    method: "POST",
+                    headers: { "X-CSRFToken": this.getCsrfToken() },
+                });
+                const nextCaptureId = this.nextMessageArchiveCaptureId(captureId);
+                if (this.messageCaptureCaptureId === captureId) {
+                    this.messageCaptureCaptureId = "";
+                    this.messageCaptureServerAttachments = [];
+                }
+                await this.refreshMessageArchiveAfterMutation(nextCaptureId);
+                window.showToast(payload.message || "보관 메시지를 지웠어요.", "success");
+            } catch (error) {
+                window.showToast(error.message || "보관 메시지 삭제에 실패했습니다.", "error");
+            } finally {
+                this.isDeletingMessageArchiveCapture = false;
             }
         },
 
@@ -1253,7 +1381,7 @@ function messageboxPage(options = {}) {
 
                 const captureId = String(options.captureId || this.selectedCaptureId() || "");
                 if (options.refreshArchive !== false && captureId) {
-                    await this.loadMessageArchive({ reset: true, preferredCaptureId: captureId });
+                    await this.refreshMessageArchiveAfterMutation(captureId);
                 }
 
                 window.showToast(`${itemLabel}을 삭제했어요.`, "success");

@@ -99,6 +99,8 @@ EVENT_HINT_KEYWORDS = (
     "수업",
     "설명회",
     "연수",
+    "평가",
+    "시험",
     "행사",
     "체험학습",
     "모임",
@@ -133,6 +135,7 @@ CATEGORY_KEYWORDS = {
     "consulting": ("상담",),
     "class": ("수업", "강의"),
     "training": ("연수",),
+    "exam": ("평가", "시험", "퀴즈", "수행평가"),
     "event": ("행사", "체험학습", "설명회", "발표", "총회"),
     "submission": ("제출", "마감", "신청", "회신"),
 }
@@ -189,6 +192,8 @@ TITLE_CONTEXT_KEYWORDS = (
     "연수",
     "회의",
     "상담",
+    "평가",
+    "시험",
     "행사",
     "발표",
     "수업",
@@ -219,8 +224,31 @@ KNOWN_LOCATIONS = (
 )
 
 KIND_EVENT = "event"
+KIND_MEETING = "meeting"
+KIND_CLASS = "class"
+KIND_CONSULTING = "consulting"
+KIND_TRAINING = "training"
+KIND_EXAM = "exam"
 KIND_DEADLINE = "deadline"
 KIND_PREP = "prep"
+EVENT_LIKE_KINDS = {
+    KIND_EVENT,
+    KIND_MEETING,
+    KIND_CLASS,
+    KIND_CONSULTING,
+    KIND_TRAINING,
+    KIND_EXAM,
+}
+EVENT_SUBKIND_KEYWORDS = {
+    KIND_MEETING: ("회의", "협의", "모임"),
+    KIND_CLASS: ("수업", "강의", "보강"),
+    KIND_CONSULTING: ("상담", "면담"),
+    KIND_TRAINING: ("연수",),
+    KIND_EXAM: ("평가", "시험", "퀴즈", "수행평가"),
+}
+EVENT_SUBKIND_EXCLUDED_KEYWORDS = {
+    KIND_TRAINING: ("연수물",),
+}
 GENERIC_TITLE_PREFIX = "메시지에서 찾은"
 GENERIC_TITLE_WORDS = {
     "예정",
@@ -640,17 +668,39 @@ def _infer_candidate_kind(base_text, support_text):
     if event_score and "까지" not in combined_text:
         event_score += 1
 
+    event_like_kind = _infer_event_like_kind(primary_text, combined_text)
     if event_score >= max(deadline_score, prep_score) and event_score > 0:
-        return KIND_EVENT
+        return event_like_kind
     if weak_prep_hits and not strong_prep_hits and event_score == 0 and deadline_score == 0:
-        return KIND_EVENT
+        return event_like_kind
     if prep_score > max(deadline_score, event_score):
         return KIND_PREP
     if deadline_score > 0:
         return KIND_DEADLINE
     if prep_score > 0:
         return KIND_PREP
-    return KIND_EVENT
+    return event_like_kind
+
+
+def _infer_event_like_kind(primary_text, combined_text):
+    best_kind = KIND_EVENT
+    best_score = 0
+    for kind, keywords in EVENT_SUBKIND_KEYWORDS.items():
+        excluded_keywords = EVENT_SUBKIND_EXCLUDED_KEYWORDS.get(kind, ())
+        score = (
+            _count_keyword_hits(primary_text, keywords) * 4
+            + _count_keyword_hits(combined_text, keywords) * 2
+        )
+        if excluded_keywords:
+            excluded_hits = (
+                _count_keyword_hits(primary_text, excluded_keywords) * 4
+                + _count_keyword_hits(combined_text, excluded_keywords) * 2
+            )
+            score = max(0, score - excluded_hits)
+        if score > best_score:
+            best_kind = kind
+            best_score = score
+    return best_kind
 
 
 
@@ -915,20 +965,32 @@ def _build_candidate_summary(kind, support_lines, title):
 
 
 def _candidate_badge_text(kind):
-    if kind == KIND_DEADLINE:
-        return "마감"
-    if kind == KIND_PREP:
-        return "준비"
-    return "행사"
+    labels = {
+        KIND_EVENT: "행사",
+        KIND_MEETING: "회의",
+        KIND_CLASS: "수업",
+        KIND_CONSULTING: "상담",
+        KIND_TRAINING: "연수",
+        KIND_EXAM: "평가",
+        KIND_DEADLINE: "마감",
+        KIND_PREP: "준비",
+    }
+    return labels.get(kind, labels[KIND_EVENT])
 
 
 
 def _candidate_color(kind):
-    if kind == KIND_DEADLINE:
-        return "rose"
-    if kind == KIND_PREP:
-        return "amber"
-    return "indigo"
+    colors = {
+        KIND_EVENT: "indigo",
+        KIND_MEETING: "sky",
+        KIND_CLASS: "emerald",
+        KIND_CONSULTING: "sky",
+        KIND_TRAINING: "amber",
+        KIND_EXAM: "rose",
+        KIND_DEADLINE: "rose",
+        KIND_PREP: "amber",
+    }
+    return colors.get(kind, colors[KIND_EVENT])
 
 
 
@@ -1098,10 +1160,41 @@ def _dedupe_candidates(candidates):
 
 
 
-def _should_refine_candidates_with_llm(candidates):
+def _has_candidate_coverage_gap(candidates, date_mentions):
+    if len(date_mentions or []) < 2 or not candidates:
+        return False
+    mention_dates = {
+        item["value"].isoformat()
+        for item in date_mentions
+        if isinstance(item, dict) and item.get("value")
+    }
+    candidate_dates = {
+        candidate.get("start_time").date().isoformat()
+        for candidate in candidates
+        if candidate.get("start_time")
+    }
+    if len(mention_dates) > len(candidate_dates):
+        return True
+    mention_lines = {
+        item["line_index"]
+        for item in date_mentions
+        if isinstance(item, dict) and "line_index" in item
+    }
+    candidate_lines = {
+        (candidate.get("evidence_payload") or {}).get("line_index")
+        for candidate in candidates
+        if isinstance(candidate.get("evidence_payload"), dict)
+    }
+    candidate_lines.discard(None)
+    return len(mention_lines) > len(candidate_lines) and len(mention_dates) > len(candidate_dates)
+
+
+def _should_refine_candidates_with_llm(candidates, date_mentions=None):
     if not candidates:
         return False
     if any(_candidate_needs_llm_review(candidate) for candidate in candidates):
+        return True
+    if _has_candidate_coverage_gap(candidates, date_mentions or []):
         return True
     if len(candidates) <= 1:
         return False
@@ -1134,7 +1227,7 @@ def _apply_llm_refinements(candidates, refined_candidates):
             refined = refined_candidates[index] if index < len(refined_candidates) and isinstance(refined_candidates[index], dict) else {}
         merged = dict(candidate)
         refined_kind = str(refined.get("kind") or "").strip().lower()
-        if refined_kind in {KIND_EVENT, KIND_DEADLINE, KIND_PREP}:
+        if refined_kind in EVENT_LIKE_KINDS | {KIND_DEADLINE, KIND_PREP}:
             merged["kind"] = refined_kind
             merged["badge_text"] = _candidate_badge_text(refined_kind)
             merged["color"] = _candidate_color(refined_kind)
@@ -1156,7 +1249,7 @@ def _legacy_predicted_item_type_from_candidates(candidates):
     if not candidates:
         return "ignore"
     first_kind = candidates[0].get("kind")
-    if first_kind == KIND_EVENT:
+    if first_kind in EVENT_LIKE_KINDS:
         return "event"
     return "task"
 
@@ -1187,7 +1280,7 @@ def parse_message_capture_draft(raw_text, *, now=None, has_files=False, llm_refi
 
     candidates = _build_raw_candidates(lines, date_mentions, now=now, has_files=has_files)
 
-    if candidates and llm_refiner and _should_refine_candidates_with_llm(candidates):
+    if candidates and llm_refiner and _should_refine_candidates_with_llm(candidates, date_mentions=date_mentions):
         try:
             refined_candidates = llm_refiner(
                 normalized_text=normalized_text,

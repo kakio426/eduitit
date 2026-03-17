@@ -356,6 +356,11 @@ class CalendarMessageCaptureAttachment(models.Model):
 class CalendarMessageCaptureCandidate(models.Model):
     class CandidateKind(models.TextChoices):
         EVENT = "event", "Event"
+        MEETING = "meeting", "Meeting"
+        CLASS = "class", "Class"
+        CONSULTING = "consulting", "Consulting"
+        TRAINING = "training", "Training"
+        EXAM = "exam", "Exam"
         DEADLINE = "deadline", "Deadline"
         PREP = "prep", "Prep"
 

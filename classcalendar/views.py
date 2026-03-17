@@ -315,6 +315,10 @@ def _build_message_capture_urls_payload():
             "classcalendar:api_message_capture_complete",
             kwargs={"capture_id": capture_placeholder},
         ).replace(capture_placeholder, "__capture_id__"),
+        "delete_template": reverse(
+            "classcalendar:api_message_capture_delete",
+            kwargs={"capture_id": capture_placeholder},
+        ).replace(capture_placeholder, "__capture_id__"),
         "messagebox_main": build_messagebox_main_url(),
     }
 
@@ -370,6 +374,16 @@ def _build_message_capture_deep_link(capture_id):
     if not capture_value:
         return ""
     return build_messagebox_main_url(capture_id=capture_value)
+
+
+def _build_message_capture_delete_link(capture_id):
+    capture_value = str(capture_id or "").strip()
+    if not capture_value:
+        return ""
+    try:
+        return reverse("classcalendar:api_message_capture_delete", kwargs={"capture_id": capture_value})
+    except NoReverseMatch:
+        return ""
 
 
 def _build_calendar_item_link(*, event=None, task=None):
@@ -602,20 +616,45 @@ def _serialize_json_safe(value):
 
 def _candidate_kind_badge_text(kind):
     normalized_kind = str(kind or "event").strip().lower()
-    if normalized_kind == "deadline":
-        return "마감"
-    if normalized_kind == "prep":
-        return "준비"
-    return "행사"
+    labels = {
+        "event": "행사",
+        "meeting": "회의",
+        "class": "수업",
+        "consulting": "상담",
+        "training": "연수",
+        "exam": "평가",
+        "deadline": "마감",
+        "prep": "준비",
+    }
+    return labels.get(normalized_kind, labels["event"])
 
 
 def _candidate_kind_color(kind):
     normalized_kind = str(kind or "event").strip().lower()
-    if normalized_kind == "deadline":
-        return "rose"
-    if normalized_kind == "prep":
-        return "amber"
-    return "indigo"
+    colors = {
+        "event": "indigo",
+        "meeting": "sky",
+        "class": "emerald",
+        "consulting": "sky",
+        "training": "amber",
+        "exam": "rose",
+        "deadline": "rose",
+        "prep": "amber",
+    }
+    return colors.get(normalized_kind, colors["event"])
+
+
+def _allowed_message_capture_candidate_kinds():
+    return {
+        CalendarMessageCaptureCandidate.CandidateKind.EVENT,
+        CalendarMessageCaptureCandidate.CandidateKind.MEETING,
+        CalendarMessageCaptureCandidate.CandidateKind.CLASS,
+        CalendarMessageCaptureCandidate.CandidateKind.CONSULTING,
+        CalendarMessageCaptureCandidate.CandidateKind.TRAINING,
+        CalendarMessageCaptureCandidate.CandidateKind.EXAM,
+        CalendarMessageCaptureCandidate.CandidateKind.DEADLINE,
+        CalendarMessageCaptureCandidate.CandidateKind.PREP,
+    }
 
 
 def _build_message_capture_content_cache_key(normalized_text, attachment_checksums):
@@ -1039,15 +1078,22 @@ def _serialize_message_capture(capture, *, warnings=None, reused=False):
     warning_list = warnings if warnings is not None else extract_payload.get("warnings") or parse_payload.get("warnings") or []
     confidence_label = extract_payload.get("confidence_label") or parse_payload.get("confidence_label") or "low"
 
-    candidate_objects = []
+    all_candidate_objects = []
     try:
-        candidate_objects = list(capture.candidates.all().order_by("sort_order", "id"))
+        all_candidate_objects = list(capture.candidates.all().order_by("sort_order", "id"))
     except Exception:
-        candidate_objects = []
+        all_candidate_objects = []
+    candidate_objects = [
+        candidate
+        for candidate in all_candidate_objects
+        if candidate.commit_status != CalendarMessageCaptureCandidate.CommitStatus.SKIPPED
+    ]
     candidates = [
         _serialize_message_capture_candidate(candidate)
         for candidate in candidate_objects
-    ] or _build_fallback_message_capture_candidates(capture)
+    ]
+    if not candidates and not all_candidate_objects:
+        candidates = _build_fallback_message_capture_candidates(capture)
 
     primary_candidate = None
     if candidates:
@@ -1117,6 +1163,7 @@ def _serialize_message_capture(capture, *, warnings=None, reused=False):
         "workflow_status": workflow_status,
         "workflow_status_label": _message_capture_workflow_status_label(workflow_status),
         "messagebox_url": _build_message_capture_deep_link(capture.id),
+        "delete_url": _build_message_capture_delete_link(capture.id),
     }
 
 
@@ -1297,6 +1344,7 @@ def _serialize_message_capture_archive_item(capture):
         "attachment_count": int(getattr(capture, "attachment_count", 0) or 0),
         "summary_text": summary_text,
         "messagebox_url": _build_message_capture_deep_link(capture.id),
+        "delete_url": _build_message_capture_delete_link(capture.id),
     }
 
 
@@ -1447,11 +1495,7 @@ def _create_message_capture_attachments(capture, uploaded_files, attachment_chec
 def _create_message_capture_candidates(capture, parsed_candidates):
     for index, candidate in enumerate(parsed_candidates or []):
         candidate_kind = str(candidate.get("kind") or CalendarMessageCaptureCandidate.CandidateKind.EVENT).strip().lower()
-        if candidate_kind not in {
-            CalendarMessageCaptureCandidate.CandidateKind.EVENT,
-            CalendarMessageCaptureCandidate.CandidateKind.DEADLINE,
-            CalendarMessageCaptureCandidate.CandidateKind.PREP,
-        }:
+        if candidate_kind not in _allowed_message_capture_candidate_kinds():
             candidate_kind = CalendarMessageCaptureCandidate.CandidateKind.EVENT
         CalendarMessageCaptureCandidate.objects.create(
             capture=capture,
@@ -1629,11 +1673,7 @@ def _extract_selected_candidates(payload):
 
 def _normalize_selected_candidate_kind(raw_kind):
     normalized = str(raw_kind or "").strip().lower()
-    allowed = {
-        CalendarMessageCaptureCandidate.CandidateKind.EVENT,
-        CalendarMessageCaptureCandidate.CandidateKind.DEADLINE,
-        CalendarMessageCaptureCandidate.CandidateKind.PREP,
-    }
+    allowed = _allowed_message_capture_candidate_kinds()
     return normalized if normalized in allowed else CalendarMessageCaptureCandidate.CandidateKind.EVENT
 
 
@@ -4185,6 +4225,33 @@ def api_message_capture_archive_detail(request, capture_id):
         id=capture_id,
     )
     return JsonResponse(_serialize_message_capture_archive_detail(capture))
+
+
+@login_required
+@require_POST
+def api_message_capture_delete(request, capture_id):
+    if not _is_message_capture_enabled_for_user(request.user):
+        return _feature_disabled_response("메시지 바로 등록 기능이 아직 활성화되지 않았습니다.")
+
+    capture = get_object_or_404(
+        CalendarMessageCapture.objects.filter(author=request.user)
+        .prefetch_related("attachments", "candidates")
+        .select_related("committed_event", "committed_task"),
+        id=capture_id,
+    )
+    had_linked_items = bool(capture.committed_event_id or capture.committed_task_id)
+    capture.delete()
+    return JsonResponse(
+        {
+            "status": "success",
+            "capture_id": str(capture_id),
+            "message": (
+                "보관 메시지를 지웠어요. 연결된 일정과 할 일은 그대로 남겨두었습니다."
+                if had_linked_items
+                else "보관 메시지를 지웠어요."
+            ),
+        }
+    )
 
 
 @login_required
