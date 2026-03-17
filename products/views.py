@@ -11,6 +11,7 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.utils.html import strip_tags
 from django.urls import reverse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
@@ -19,7 +20,7 @@ from core.seo import build_product_detail_seo, build_product_list_page_seo
 from core.product_visibility import filter_discoverable_products
 
 from .dutyticker_scope import get_active_classroom_for_request, get_or_create_settings_for_scope
-from .models import DTStudentGamesLaunchTicket, Product
+from .models import DTStudentGamesLaunchTicket, Product, ServiceManual
 
 logger = logging.getLogger(__name__)
 
@@ -27,9 +28,165 @@ STUDENT_GAMES_SESSION_MAX_AGE_SECONDS = 60 * 60 * 8
 STUDENT_GAMES_LAUNCH_TICKET_TTL_SECONDS = 60 * 15
 STUDENT_GAMES_SESSION_KEY = "dutyticker_student_games_mode"
 
+PRODUCT_DETAIL_AUDIENCE_BY_ROUTE = {
+    "collect:landing": "가정통신문 뒤 응답, 파일, 링크를 한 번에 모아야 하는 교사에게 맞는 도구입니다.",
+    "consent:landing": "학부모 동의서를 링크로 회수하고 보관까지 정리해야 하는 교사에게 맞는 도구입니다.",
+    "handoff:landing": "배부 누락 없이 수령 현황을 빠르게 끝내고 싶은 교사에게 맞는 도구입니다.",
+    "noticegen:main": "알림장과 가정 안내 문구를 짧은 시간 안에 정리해야 하는 교사에게 맞는 도구입니다.",
+    "happy_seed:landing": "긍정 행동 기록과 보상을 학급 루틴으로 운영하고 싶은 교사에게 맞는 도구입니다.",
+    "reservations:landing": "특별실 예약이 겹치지 않도록 시간표를 조정해야 하는 교사에게 맞는 도구입니다.",
+    "reservations:dashboard_landing": "특별실 예약이 겹치지 않도록 시간표를 조정해야 하는 교사에게 맞는 도구입니다.",
+}
+
+PRODUCT_DETAIL_AUDIENCE_BY_TYPE = {
+    "collect_sign": "안내 뒤 회수와 확인을 한 번에 끝내고 싶은 교사에게 맞는 도구입니다.",
+    "classroom": "오늘 수업과 학급 운영을 더 매끄럽게 돌리고 싶은 교사에게 맞는 도구입니다.",
+    "work": "문서 준비와 정리를 짧은 시간 안에 끝내고 싶은 교사에게 맞는 도구입니다.",
+    "game": "교실 분위기를 빠르게 살릴 활동이 필요한 교사에게 맞는 도구입니다.",
+    "counsel": "상담과 학생 이해를 부드럽게 이어가고 싶은 교사에게 맞는 도구입니다.",
+    "edutech": "막힐 때 참고할 가이드와 인사이트가 필요한 교사에게 맞는 도구입니다.",
+    "etc": "필요한 기능을 찾자마자 바로 써보고 싶은 교사에게 맞는 도구입니다.",
+}
+
 
 def _student_games_mode_enabled(request):
     return bool(request.session.get(STUDENT_GAMES_SESSION_KEY))
+
+
+def _clean_detail_text(value):
+    return " ".join(strip_tags(str(value or "")).split()).strip()
+
+
+def _summarize_detail_text(value, *, limit=100):
+    text = _clean_detail_text(value)
+    if len(text) <= limit:
+        return text
+    return f"{text[: limit - 1].rstrip()}…"
+
+
+def _safe_media_url(file_field):
+    if not file_field:
+        return ""
+    try:
+        return file_field.url or ""
+    except ValueError:
+        return ""
+
+
+def _build_product_value_proposition(product):
+    public_name = getattr(product, "public_service_name", "") or getattr(product, "title", "") or "이 서비스"
+    for candidate in (
+        getattr(product, "lead_text", ""),
+        getattr(product, "teacher_first_support_label", ""),
+        getattr(product, "home_card_summary", ""),
+        getattr(product, "solve_text", ""),
+        getattr(product, "description", ""),
+    ):
+        summary = _clean_detail_text(candidate)
+        if summary and summary != public_name:
+            return summary
+    return f"{public_name} 사용 흐름을 빠르게 시작할 수 있습니다."
+
+
+def _build_product_audience_copy(product):
+    route_name = str(getattr(product, "launch_route_name", "") or "").strip().lower()
+    service_type = str(getattr(product, "service_type", "") or "").strip()
+    return (
+        PRODUCT_DETAIL_AUDIENCE_BY_ROUTE.get(route_name)
+        or PRODUCT_DETAIL_AUDIENCE_BY_TYPE.get(service_type)
+        or PRODUCT_DETAIL_AUDIENCE_BY_TYPE["etc"]
+    )
+
+
+def _build_product_access_copy(product):
+    access_label = str(getattr(product, "home_access_status_label", "") or "").strip()
+    if access_label == "공개 체험":
+        return "로그인 없이도 핵심 흐름을 먼저 확인할 수 있습니다."
+    return "교사 계정으로 로그인한 뒤 바로 이어서 시작합니다."
+
+
+def _build_product_detail_steps(product, manual, features):
+    steps = []
+    if manual is not None:
+        for section in manual.sections.all():
+            title = _clean_detail_text(section.title)
+            if not title:
+                continue
+            description = _summarize_detail_text(section.content, limit=88) or "핵심 흐름을 순서대로 확인합니다."
+            steps.append({"title": title, "description": description})
+            if len(steps) >= 3:
+                return steps
+
+    for feature in features:
+        title = _clean_detail_text(feature.title)
+        if not title:
+            continue
+        description = _summarize_detail_text(feature.description, limit=88) or "핵심 기능을 바로 확인합니다."
+        steps.append({"title": title, "description": description})
+        if len(steps) >= 3:
+            return steps
+
+    fallback_specs = [
+        (
+            "무엇을 해결하나요",
+            getattr(product, "solve_text", "") or getattr(product, "description", ""),
+        ),
+        (
+            "어떻게 시작하나요",
+            getattr(product, "lead_text", "") or getattr(product, "teacher_first_support_label", ""),
+        ),
+        (
+            "어떤 결과가 남나요",
+            getattr(product, "result_text", "") or "핵심 결과를 바로 확인하고 이어서 정리할 수 있습니다.",
+        ),
+    ]
+    for title, raw_text in fallback_specs:
+        description = _summarize_detail_text(raw_text, limit=88)
+        if description:
+            steps.append({"title": title, "description": description})
+        if len(steps) >= 3:
+            break
+    return steps
+
+
+def _build_product_demo_block(product, manual, steps):
+    if manual is not None:
+        for section in manual.sections.all():
+            title = _clean_detail_text(section.title) or "1분 데모"
+            caption = _summarize_detail_text(section.content, limit=120) or _build_product_value_proposition(product)
+            video_url = _clean_detail_text(section.video_url)
+            if video_url:
+                return {
+                    "kind": "video",
+                    "title": title,
+                    "caption": caption,
+                    "media_url": video_url,
+                }
+            image_url = _safe_media_url(getattr(section, "image", None))
+            if image_url:
+                return {
+                    "kind": "image",
+                    "title": title,
+                    "caption": caption,
+                    "media_url": image_url,
+                }
+
+    product_image_url = _safe_media_url(getattr(product, "image", None))
+    if product_image_url:
+        return {
+            "kind": "image",
+            "title": "대표 화면 미리보기",
+            "caption": _build_product_value_proposition(product),
+            "media_url": product_image_url,
+        }
+
+    return {
+        "kind": "steps",
+        "title": "1분 안에 보는 사용 흐름",
+        "caption": _build_product_value_proposition(product),
+        "media_url": "",
+        "step_count": len(steps),
+    }
 
 
 def _student_games_session_max_age_seconds():
@@ -275,18 +432,66 @@ def product_detail(request, pk):
     is_owned = False
     if request.user.is_authenticated:
         is_owned = request.user.owned_products.filter(product=product).exists() or product.price == 0
-    from core.views import _resolve_product_launch_url
+    from core.views import _attach_product_launch_meta, _resolve_product_launch_url
+
+    product = _attach_product_launch_meta([product])[0]
+    manual = (
+        ServiceManual.objects.filter(product=product, is_published=True)
+        .prefetch_related("sections")
+        .first()
+    )
+    features = list(product.features.all())
     launch_href, launch_is_external = _resolve_product_launch_url(product)
     can_launch = bool(launch_href) and launch_href != request.path
+    can_start = can_launch and (product.price == 0 or is_owned)
+    access_label = getattr(product, "home_access_status_label", "") or "로그인 필요"
+
+    start_href = launch_href if can_start else ""
+    start_label = "바로 시작"
+    start_is_external = can_start and launch_is_external
+    if can_start and access_label == "로그인 필요" and not request.user.is_authenticated and not launch_is_external:
+        start_href = f"{reverse('account_login')}?{urlencode({'next': launch_href})}"
+        start_label = "로그인하고 시작"
+        start_is_external = False
+    elif can_start and launch_is_external and access_label == "공개 체험":
+        start_label = "바로 체험하기"
+    elif can_start and launch_is_external:
+        start_label = "새 창에서 시작"
+    elif can_start and access_label == "공개 체험":
+        start_label = "바로 체험하기"
+
+    guide_href = getattr(product, "guide_url", "") or reverse("service_guide_list")
+    guide_label = "1분 가이드 보기" if getattr(product, "guide_url", "") else "가이드 찾기"
+    quick_preview_steps = _build_product_detail_steps(product, manual, features)
+    demo_block = _build_product_demo_block(product, manual, quick_preview_steps)
+
     seo_meta = build_product_detail_seo(request, product)
-    response = render(request, 'products/detail.html', {
-        'product': product,
-        'is_owned': is_owned,
-        'launch_href': launch_href,
-        'launch_is_external': launch_is_external,
-        'can_launch': can_launch,
-        **seo_meta.as_context(),
-    })
+    response = render(
+        request,
+        'products/detail.html',
+        {
+            'product': product,
+            'product_manual': manual,
+            'product_features': features[:3],
+            'product_value_proposition': _build_product_value_proposition(product),
+            'product_audience': _build_product_audience_copy(product),
+            'product_access_label': access_label,
+            'product_access_copy': _build_product_access_copy(product),
+            'product_demo_block': demo_block,
+            'quick_preview_steps': quick_preview_steps,
+            'is_owned': is_owned,
+            'launch_href': launch_href,
+            'launch_is_external': launch_is_external,
+            'can_launch': can_launch,
+            'can_start': can_start,
+            'start_href': start_href,
+            'start_label': start_label,
+            'start_is_external': start_is_external,
+            'guide_href': guide_href,
+            'guide_label': guide_label,
+            **seo_meta.as_context(),
+        },
+    )
     if seo_meta.robots.startswith("noindex"):
         response["X-Robots-Tag"] = seo_meta.robots.replace(",", ", ")
     return response
