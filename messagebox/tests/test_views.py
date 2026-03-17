@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from classcalendar.views import build_messagebox_home_card_context
 from core.models import UserProfile
 
 
@@ -10,7 +11,6 @@ User = get_user_model()
 
 @override_settings(
     FEATURE_MESSAGE_CAPTURE_ENABLED=True,
-    FEATURE_MESSAGE_CAPTURE_ALLOWLIST_USERNAMES="messagebox_teacher",
     FEATURE_MESSAGE_CAPTURE_ITEM_TYPES=True,
 )
 class MessageboxViewTests(TestCase):
@@ -77,8 +77,26 @@ class MessageboxViewTests(TestCase):
         self.assertNotContains(response, "직접 일정 추가를 눌러 제목과 날짜만 바로 넣을 수 있어요.")
         self.assertNotContains(response, "이 일정 삭제")
 
+    def test_home_card_is_enabled_for_any_authenticated_teacher_when_feature_is_on(self):
+        card = build_messagebox_home_card_context(self.user)
+
+        self.assertTrue(card["enabled"])
+        self.assertEqual(card["title"], "업무 메시지 보관함")
+
     def test_main_keeps_requested_capture_id_in_context(self):
         response = self.client.get(f"{reverse('messagebox:main')}?capture=test-capture-id")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["initial_capture_id"], "test-capture-id")
+
+    @override_settings(
+        FEATURE_MESSAGE_CAPTURE_ENABLED=True,
+        FEATURE_MESSAGE_CAPTURE_ITEM_TYPES=True,
+        FEATURE_MESSAGE_CAPTURE_ROLLOUT_MODE="allowlist",
+        FEATURE_MESSAGE_CAPTURE_ALLOWLIST_USERNAMES="listed_teacher",
+    )
+    def test_allowlist_mode_can_still_hide_messagebox_for_unlisted_teacher(self):
+        response = self.client.get(reverse("messagebox:main"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "업무 메시지 보관함이 아직 열리지 않았습니다.")

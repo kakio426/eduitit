@@ -215,10 +215,29 @@ def _get_message_capture_rollout_value(setting_name, env_name):
     return os.environ.get(env_name, "")
 
 
+def _get_message_capture_rollout_mode():
+    raw_mode = str(
+        _get_message_capture_rollout_value(
+            "FEATURE_MESSAGE_CAPTURE_ROLLOUT_MODE",
+            "FEATURE_MESSAGE_CAPTURE_ROLLOUT_MODE",
+        )
+        or ""
+    ).strip().lower()
+    if raw_mode in {"allowlist", "limited", "beta"}:
+        return "allowlist"
+    return "all"
+
+
 def _is_message_capture_enabled_for_user(user):
+    if not getattr(user, "is_authenticated", False):
+        return False
+
     feature_enabled = bool(getattr(settings, "FEATURE_MESSAGE_CAPTURE_ENABLED", False))
     if not feature_enabled:
         return False
+
+    if _get_message_capture_rollout_mode() != "allowlist":
+        return True
 
     usernames = {
         value.lower()
