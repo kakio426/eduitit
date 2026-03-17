@@ -173,13 +173,32 @@
 
                         <p x-show="messageCaptureErrorText" class="rounded-[1.6rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700" x-text="messageCaptureErrorText"></p>
 
-                        <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                            <button type="button" @click="submitMessageCaptureArchiveSave()" :disabled="isSavingMessageCaptureArchive || isParsingMessageCapture" class="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:opacity-60">
-                                보관하기
-                            </button>
-                            <button type="button" @click="submitMessageCaptureParse()" :disabled="isSavingMessageCaptureArchive || isParsingMessageCapture" class="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800 disabled:opacity-60">
-                                날짜 연결하기
-                            </button>
+                        <div class="space-y-2">
+                            <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                <button
+                                    type="button"
+                                    @click="submitMessageCaptureParse()"
+                                    :disabled="isSavingMessageCaptureArchive || isParsingMessageCapture"
+                                    class="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800 disabled:opacity-60"
+                                    x-text="isParsingMessageCapture ? '날짜 찾는 중...' : '자동으로 날짜 찾기'"
+                                ></button>
+                                <button
+                                    type="button"
+                                    @click="startManualMessageCaptureFromInput()"
+                                    :disabled="isSavingMessageCaptureArchive || isParsingMessageCapture"
+                                    class="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-black text-amber-900 transition hover:bg-amber-100 disabled:opacity-60"
+                                    x-text="isSavingMessageCaptureArchive && messageCaptureSaveMode === 'manual' ? '일정칸 준비 중...' : '바로 일정 넣기'"
+                                ></button>
+                            </div>
+                            <div class="flex justify-end">
+                                <button
+                                    type="button"
+                                    @click="submitMessageCaptureArchiveSave()"
+                                    :disabled="isSavingMessageCaptureArchive || isParsingMessageCapture"
+                                    class="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+                                    x-text="isSavingMessageCaptureArchive && messageCaptureSaveMode !== 'manual' ? '보관 중...' : '보관만 하기'"
+                                ></button>
+                            </div>
                         </div>
                     </div>
 
