@@ -8,6 +8,8 @@
   var issueReported = false;
   var pendingIssue = null;
   var overlayId = "__edu_materials_runtime_guard__";
+  var READY_CHECK_INTERVAL_MS = 400;
+  var OVERLAY_TIMEOUT_MS = 8000;
 
   function text(value) {
     if (value === null || value === undefined) {
@@ -38,7 +40,7 @@
     if (!style || style.display === "none" || style.visibility === "hidden") {
       return false;
     }
-    if (parseFloat(style.opacity || "1") === 0) {
+    if (parseFloat(style.opacity || "1") <= 0.05) {
       return false;
     }
     var rect = element.getBoundingClientRect();
@@ -246,12 +248,20 @@
       return;
     }
 
-    window.setTimeout(function () {
+    var startedAt = Date.now();
+
+    function checkRuntimeState() {
       if (readyReported || issueReported) {
         return;
       }
 
-      if (findBlockingOverlay()) {
+      if (!findBlockingOverlay()) {
+        readyReported = true;
+        post("edu-materials:runtime-ready", {});
+        return;
+      }
+
+      if (Date.now() - startedAt >= OVERLAY_TIMEOUT_MS) {
         reportIssue({
           kind: "timeout",
           message: "로딩 화면이 계속 남아 있습니다.",
@@ -259,9 +269,10 @@
         return;
       }
 
-      readyReported = true;
-      post("edu-materials:runtime-ready", {});
-    }, 1200);
+      window.setTimeout(checkRuntimeState, READY_CHECK_INTERVAL_MS);
+    }
+
+    window.setTimeout(checkRuntimeState, READY_CHECK_INTERVAL_MS);
   }
 
   if (document.readyState === "complete") {
