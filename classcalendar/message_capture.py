@@ -27,6 +27,7 @@ TIME_SINGLE_COLON_PATTERN = re.compile(
 TIME_SINGLE_HOUR_PATTERN = re.compile(
     r"(?P<meridiem>오전|오후)?\s*(?P<hour>\d{1,2})\s*시(?:\s*(?P<minute>\d{1,2})\s*분?)?"
 )
+LIST_PREFIX_PATTERN = re.compile(r"^\s*(?:\d{1,2}[).:]|[가-힣A-Za-z][).:]|[-•*])\s*")
 LEADING_DATE_PREFIX_PATTERN = re.compile(
     r"^\s*(?:(?:20\d{2}\s*[./-]\s*)?\d{1,2}\s*(?:[./-]|월)\s*\d{1,2}\s*일?(?:\([월화수목금토일]\))?|\d{1,2}\s*일(?:\([월화수목금토일]\))?)\s*(?:에|까지|부터)?\s*"
 )
@@ -112,6 +113,18 @@ PREP_HINT_KEYWORDS = (
     "배부",
     "탑재",
     "공유",
+    "정리",
+)
+
+STRONG_PREP_HINT_KEYWORDS = (
+    "준비",
+    "사전",
+    "배부",
+    "탑재",
+    "공유",
+)
+
+WEAK_PREP_HINT_KEYWORDS = (
     "정리",
 )
 
@@ -208,6 +221,48 @@ KNOWN_LOCATIONS = (
 KIND_EVENT = "event"
 KIND_DEADLINE = "deadline"
 KIND_PREP = "prep"
+GENERIC_TITLE_PREFIX = "메시지에서 찾은"
+GENERIC_TITLE_WORDS = {
+    "예정",
+    "안내",
+    "협조",
+    "부탁",
+    "확인",
+    "진행",
+    "일정",
+}
+TITLE_ENDING_SUFFIXES = (
+    "부탁드립니다",
+    "부탁드려요",
+    "부탁드릴게요",
+    "협조부탁드립니다",
+    "협조바랍니다",
+    "확인부탁드립니다",
+    "확인해주세요",
+    "예정입니다",
+    "진행합니다",
+    "실시됩니다",
+    "실시예정",
+    "실시",
+    "예정",
+    "입니다",
+    "있습니다",
+)
+TITLE_TRAILING_PARTICLES = (
+    "까지",
+    "부터",
+    "에서",
+    "으로",
+    "은",
+    "는",
+    "이",
+    "가",
+    "을",
+    "를",
+    "도",
+    "에",
+    "로",
+)
 
 
 
@@ -436,6 +491,66 @@ def _strip_date_prefix(line):
 
 
 
+def _strip_list_prefix(line):
+    return LIST_PREFIX_PATTERN.sub("", line or "").strip()
+
+
+
+def _strip_schedule_markers(text):
+    cleaned = str(text or "")
+    cleaned = DATE_ABSOLUTE_PATTERN.sub(" ", cleaned)
+    cleaned = DATE_KOREAN_PATTERN.sub(" ", cleaned)
+    cleaned = DAY_ONLY_KOREAN_PATTERN.sub(" ", cleaned)
+    for pattern in (
+        TIME_RANGE_COLON_PATTERN,
+        TIME_RANGE_HOUR_PATTERN,
+        TIME_SINGLE_COLON_PATTERN,
+        TIME_SINGLE_HOUR_PATTERN,
+    ):
+        cleaned = pattern.sub(" ", cleaned)
+    for keyword in ALL_DAY_KEYWORDS:
+        cleaned = cleaned.replace(keyword, " ")
+    for keyword in RELATIVE_DATE_OFFSETS:
+        cleaned = re.sub(
+            rf"(^|[^가-힣A-Za-z0-9]){re.escape(keyword)}(?=$|[^가-힣A-Za-z0-9])",
+            " ",
+            cleaned,
+        )
+    cleaned = re.sub(r"\([월화수목금토일]\)", " ", cleaned)
+    return cleaned
+
+
+
+def _trim_title_endings(text):
+    cleaned = str(text or "").strip()
+    changed = True
+    while changed and cleaned:
+        changed = False
+        for suffix in TITLE_ENDING_SUFFIXES:
+            if cleaned.endswith(suffix) and len(cleaned) > len(suffix):
+                cleaned = cleaned[: -len(suffix)].strip()
+                changed = True
+        for particle in TITLE_TRAILING_PARTICLES:
+            if cleaned.endswith(particle) and len(cleaned) > len(particle) + 1:
+                cleaned = cleaned[: -len(particle)].strip()
+                changed = True
+    return cleaned
+
+
+
+def _clean_title_fragment(text):
+    cleaned = _strip_list_prefix(text)
+    cleaned = _strip_schedule_markers(cleaned)
+    cleaned = cleaned.replace(":", " ")
+    cleaned = cleaned.replace("/", " ")
+    cleaned = re.sub(r"[~\-]+", " ", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" ,.;:-")
+    cleaned = _trim_title_endings(cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" ,.;:-")
+    return cleaned[:200]
+
+
+
 def _extract_context_keyword(text):
     for keyword in TITLE_CONTEXT_KEYWORDS:
         if keyword in text:
@@ -499,15 +614,41 @@ def _confidence_label(score):
 def _infer_candidate_kind(base_text, support_text):
     primary_text = str(base_text or "")
     combined_text = "\n".join([primary_text, str(support_text or "")]).strip()
-    if any(keyword in primary_text for keyword in DEADLINE_HINT_KEYWORDS):
-        return KIND_DEADLINE
-    if any(keyword in primary_text for keyword in PREP_HINT_KEYWORDS):
-        return KIND_PREP
-    if any(keyword in primary_text for keyword in EVENT_HINT_KEYWORDS):
+    event_score = (
+        _count_keyword_hits(primary_text, EVENT_HINT_KEYWORDS) * 4
+        + _count_keyword_hits(combined_text, EVENT_HINT_KEYWORDS) * 2
+    )
+    deadline_score = (
+        _count_keyword_hits(primary_text, DEADLINE_HINT_KEYWORDS) * 3
+        + _count_keyword_hits(combined_text, DEADLINE_HINT_KEYWORDS)
+    )
+    prep_score = (
+        _count_keyword_hits(primary_text, STRONG_PREP_HINT_KEYWORDS) * 3
+        + _count_keyword_hits(combined_text, STRONG_PREP_HINT_KEYWORDS)
+        + _count_keyword_hits(primary_text, WEAK_PREP_HINT_KEYWORDS)
+        + _count_keyword_hits(combined_text, WEAK_PREP_HINT_KEYWORDS)
+    )
+    strong_prep_hits = _count_keyword_hits(combined_text, STRONG_PREP_HINT_KEYWORDS)
+    weak_prep_hits = _count_keyword_hits(combined_text, WEAK_PREP_HINT_KEYWORDS)
+    task_object_hits = _count_keyword_hits(combined_text, TASK_OBJECT_KEYWORDS)
+    task_action_hits = _count_keyword_hits(combined_text, TASK_ACTION_KEYWORDS)
+
+    if "까지" in combined_text:
+        deadline_score += 4
+    if task_object_hits and task_action_hits:
+        deadline_score += 2
+    if event_score and "까지" not in combined_text:
+        event_score += 1
+
+    if event_score >= max(deadline_score, prep_score) and event_score > 0:
         return KIND_EVENT
-    if any(keyword in combined_text for keyword in DEADLINE_HINT_KEYWORDS):
+    if weak_prep_hits and not strong_prep_hits and event_score == 0 and deadline_score == 0:
+        return KIND_EVENT
+    if prep_score > max(deadline_score, event_score):
+        return KIND_PREP
+    if deadline_score > 0:
         return KIND_DEADLINE
-    if any(keyword in combined_text for keyword in PREP_HINT_KEYWORDS):
+    if prep_score > 0:
         return KIND_PREP
     return KIND_EVENT
 
@@ -680,7 +821,10 @@ def _build_event_title(base_line, support_text):
     context_keyword = _extract_context_keyword(support_text)
     if context_keyword:
         return context_keyword[:200]
-    cleaned = _strip_date_prefix(base_line)
+    cleaned = _clean_title_fragment(base_line)
+    if cleaned:
+        return cleaned[:200]
+    cleaned = _clean_title_fragment(support_text)
     if cleaned:
         return cleaned[:200]
     return "메시지에서 찾은 일정"
@@ -691,6 +835,8 @@ def _build_deadline_title(support_text):
     context_keyword = _extract_context_keyword(support_text)
     object_keyword = _extract_object_keyword(support_text)
     action_keyword = _extract_action_keyword(support_text)
+    if context_keyword and object_keyword and context_keyword in object_keyword:
+        context_keyword = ""
     parts = []
     if context_keyword:
         parts.append(context_keyword)
@@ -700,20 +846,26 @@ def _build_deadline_title(support_text):
         parts.append(action_keyword)
     parts.append("마감")
     title = " ".join(dict.fromkeys([part for part in parts if part]))
-    return (title or "메시지에서 찾은 마감")[:200]
+    if title:
+        return title[:200]
+    cleaned = _clean_title_fragment(support_text)
+    return (cleaned or "메시지에서 찾은 마감")[:200]
 
 
 
 def _build_prep_title(support_text):
     context_keyword = _extract_context_keyword(support_text)
     object_keyword = _extract_object_keyword(support_text)
+    if context_keyword and object_keyword and context_keyword in object_keyword:
+        context_keyword = ""
     if context_keyword and object_keyword:
         return f"{context_keyword} {object_keyword} 준비"[:200]
     if context_keyword:
         return f"{context_keyword} 준비"[:200]
     if object_keyword:
         return f"{object_keyword} 준비"[:200]
-    return "메시지에서 찾은 준비 일정"
+    cleaned = _clean_title_fragment(support_text)
+    return (cleaned or "메시지에서 찾은 준비 일정")[:200]
 
 
 
@@ -777,6 +929,77 @@ def _candidate_color(kind):
     if kind == KIND_PREP:
         return "amber"
     return "indigo"
+
+
+
+def _candidate_title_looks_generic(title):
+    normalized = str(title or "").strip()
+    if not normalized:
+        return True
+    if normalized.startswith(GENERIC_TITLE_PREFIX):
+        return True
+    compact = re.sub(r"\s+", "", normalized)
+    if compact in GENERIC_TITLE_WORDS:
+        return True
+    return False
+
+
+
+def _candidate_title_has_schedule_noise(title):
+    normalized = str(title or "").strip()
+    if not normalized:
+        return False
+    if LIST_PREFIX_PATTERN.match(normalized):
+        return True
+    for pattern in (
+        DATE_ABSOLUTE_PATTERN,
+        DATE_KOREAN_PATTERN,
+        DAY_ONLY_KOREAN_PATTERN,
+        TIME_RANGE_COLON_PATTERN,
+        TIME_RANGE_HOUR_PATTERN,
+        TIME_SINGLE_COLON_PATTERN,
+        TIME_SINGLE_HOUR_PATTERN,
+    ):
+        if pattern.search(normalized):
+            return True
+    return any(keyword in normalized for keyword in RELATIVE_DATE_OFFSETS)
+
+
+
+def _normalize_candidate_title_key(title):
+    cleaned = _clean_title_fragment(title)
+    return re.sub(r"\s+", "", cleaned).lower()
+
+
+
+def _candidate_needs_llm_review(candidate):
+    title = str(candidate.get("title") or "").strip()
+    summary = str(candidate.get("summary") or "").strip()
+    evidence_payload = candidate.get("evidence_payload") or {}
+    if _candidate_title_looks_generic(title):
+        return True
+    if _candidate_title_has_schedule_noise(title):
+        return True
+    if candidate.get("needs_check") and not summary:
+        return True
+    if evidence_payload.get("relative_date") and len(title) <= 2:
+        return True
+    if evidence_payload.get("year_inferred") or evidence_payload.get("month_inferred"):
+        return True
+    return False
+
+
+
+def _candidate_titles_overlap(candidates):
+    seen = set()
+    for candidate in candidates:
+        key = _normalize_candidate_title_key(candidate.get("title"))
+        if not key:
+            continue
+        if key in seen:
+            return True
+        seen.add(key)
+    return False
 
 
 
@@ -876,9 +1099,15 @@ def _dedupe_candidates(candidates):
 
 
 def _should_refine_candidates_with_llm(candidates):
-    if len(candidates) >= 2:
+    if not candidates:
+        return False
+    if any(_candidate_needs_llm_review(candidate) for candidate in candidates):
         return True
-    return any(candidate.get("needs_check") for candidate in candidates)
+    if len(candidates) <= 1:
+        return False
+    if _candidate_titles_overlap(candidates):
+        return True
+    return sum(1 for candidate in candidates if candidate.get("needs_check")) >= 2
 
 
 

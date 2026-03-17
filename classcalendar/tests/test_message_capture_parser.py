@@ -75,6 +75,36 @@ class MessageCaptureParserTests(SimpleTestCase):
         self.assertEqual(candidate["end_time"].hour, 15)
         self.assertFalse(candidate["is_all_day"])
 
+    def test_parse_extracts_inline_subject_before_date(self):
+        now = timezone.make_aware(datetime(2026, 3, 16, 9, 0))
+        result = parse_message_capture_draft(
+            "1) 의자배치는 18일(수) 15시 45분\n: 담임교사, 주무관님 협조",
+            now=now,
+            has_files=False,
+        )
+
+        self.assertEqual(len(result["candidates"]), 1)
+        candidate = result["candidates"][0]
+        self.assertEqual(candidate["kind"], "event")
+        self.assertEqual(candidate["title"], "의자배치")
+        self.assertEqual(candidate["start_time"].date().isoformat(), "2026-03-18")
+        self.assertEqual(candidate["start_time"].hour, 15)
+        self.assertEqual(candidate["start_time"].minute, 45)
+
+    def test_parse_prefers_event_for_meeting_request_with_relative_date(self):
+        now = timezone.make_aware(datetime(2026, 3, 16, 9, 0))
+        result = parse_message_capture_draft(
+            "내일 회의 부탁드립니다.",
+            now=now,
+            has_files=False,
+        )
+
+        self.assertEqual(len(result["candidates"]), 1)
+        candidate = result["candidates"][0]
+        self.assertEqual(candidate["kind"], "event")
+        self.assertEqual(candidate["title"], "회의")
+        self.assertEqual(candidate["start_time"].date().isoformat(), "2026-03-17")
+
     def test_parse_failed_when_no_date_is_present(self):
         result = parse_message_capture_draft("학급 안내\n추후 다시 알려드리겠습니다.", has_files=False)
 
@@ -118,6 +148,44 @@ class MessageCaptureParserTests(SimpleTestCase):
         self.assertEqual(result["parse_status"], "parsed")
         self.assertEqual(len(result["candidates"]), 1)
         self.assertFalse(llm_called)
+
+    def test_parse_does_not_call_llm_for_multiple_clear_candidates(self):
+        now = timezone.make_aware(datetime(2026, 3, 16, 9, 0))
+        llm_called = False
+
+        def tracking_refiner(**kwargs):
+            nonlocal llm_called
+            llm_called = True
+            return []
+
+        result = parse_message_capture_draft(
+            "3월 19일 학부모총회 실시\n12일(목)까지 자료 제출 부탁드립니다.",
+            now=now,
+            has_files=False,
+            llm_refiner=tracking_refiner,
+        )
+
+        self.assertEqual(len(result["candidates"]), 2)
+        self.assertFalse(llm_called)
+
+    def test_parse_calls_llm_for_generic_candidate_title(self):
+        now = timezone.make_aware(datetime(2026, 3, 16, 9, 0))
+        llm_called = False
+
+        def tracking_refiner(**kwargs):
+            nonlocal llm_called
+            llm_called = True
+            return []
+
+        result = parse_message_capture_draft(
+            "3월 19일 예정입니다.",
+            now=now,
+            has_files=False,
+            llm_refiner=tracking_refiner,
+        )
+
+        self.assertEqual(len(result["candidates"]), 1)
+        self.assertTrue(llm_called)
 
     def test_parse_ignores_farewell_today_phrase_and_keeps_explicit_dates(self):
         now = timezone.make_aware(datetime(2026, 3, 16, 9, 0))
