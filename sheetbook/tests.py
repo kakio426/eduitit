@@ -213,17 +213,16 @@ class SheetbookFlagTests(TestCase):
         self.assertEqual(response.status_code, 302)
 
     @override_settings(SHEETBOOK_ENABLED=False, SHEETBOOK_BETA_USERNAMES=["sheetbook_t1"])
-    def test_sheetbook_allows_beta_user_when_flag_disabled(self):
+    def test_sheetbook_keeps_beta_user_blocked_when_flag_disabled(self):
         self.client.force_login(self.user)
         response = self.client.get(reverse("sheetbook:index"))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "교무수첩")
+        self.assertEqual(response.status_code, 404)
 
     @override_settings(SHEETBOOK_ENABLED=False, SHEETBOOK_BETA_EMAILS="sheetbook_t1@example.com")
-    def test_sheetbook_allows_beta_user_by_email_when_flag_disabled(self):
+    def test_sheetbook_keeps_beta_user_by_email_blocked_when_flag_disabled(self):
         self.client.force_login(self.user)
         response = self.client.get(reverse("sheetbook:index"))
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 404)
 
     @override_settings(SHEETBOOK_ENABLED=False, SHEETBOOK_BETA_USER_IDS="9999")
     def test_sheetbook_keeps_non_allowlisted_user_blocked_when_flag_disabled(self):
@@ -232,14 +231,14 @@ class SheetbookFlagTests(TestCase):
         self.assertEqual(response.status_code, 404)
 
     @override_settings(SHEETBOOK_ENABLED=False, SHEETBOOK_BETA_USERNAMES=["sheetbook_t1"])
-    def test_sheetbook_beta_user_can_create_when_flag_disabled(self):
+    def test_sheetbook_beta_user_cannot_create_when_flag_disabled(self):
         self.client.force_login(self.user)
         response = self.client.post(
             reverse("sheetbook:create"),
             data={"title": "베타 수첩", "academic_year": 2026},
         )
-        self.assertEqual(response.status_code, 302)
-        self.assertTrue(Sheetbook.objects.filter(owner=self.user, title="베타 수첩").exists())
+        self.assertEqual(response.status_code, 404)
+        self.assertFalse(Sheetbook.objects.filter(owner=self.user, title="베타 수첩").exists())
 
 
 class SheetbookModelTests(TestCase):

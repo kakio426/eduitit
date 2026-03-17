@@ -1,15 +1,39 @@
 from django.conf import settings
 
 
+SHEETBOOK_LEGACY_TITLES = {"교무수첩", "학급 기록 보드"}
+
+
+def is_sheetbook_runtime_available():
+    return bool(getattr(settings, "SHEETBOOK_ENABLED", False))
+
+
 def is_sheetbook_discovery_visible():
-    return bool(getattr(settings, "SHEETBOOK_DISCOVERY_VISIBLE", False))
+    return is_sheetbook_runtime_available() and bool(
+        getattr(settings, "SHEETBOOK_DISCOVERY_VISIBLE", False)
+    )
+
+
+def is_sheetbook_product(product):
+    route_name = str(getattr(product, "launch_route_name", "") or "").strip().lower()
+    title = str(getattr(product, "title", "") or "").strip()
+    return route_name.startswith("sheetbook:") or title in SHEETBOOK_LEGACY_TITLES
 
 
 def is_product_discoverable(product):
-    return bool(getattr(product, "is_active", False))
+    if not bool(getattr(product, "is_active", False)):
+        return False
+    if is_sheetbook_product(product) and not is_sheetbook_discovery_visible():
+        return False
+    return True
 
 
 def filter_discoverable_products(products):
     if hasattr(products, "filter"):
-        return products.filter(is_active=True)
+        queryset = products.filter(is_active=True)
+        if not is_sheetbook_discovery_visible():
+            queryset = queryset.exclude(launch_route_name__istartswith="sheetbook:").exclude(
+                title__in=SHEETBOOK_LEGACY_TITLES
+            )
+        return queryset
     return [product for product in products if is_product_discoverable(product)]

@@ -102,53 +102,8 @@ def _log_sheetbook_metric(event_name, **fields):
         logger.exception("[sheetbook_metric] failed to persist metric event: %s", event_name)
 
 
-def _normalize_allowlist_values(raw):
-    if raw is None:
-        return []
-    if isinstance(raw, (list, tuple, set)):
-        source = raw
-    else:
-        source = str(raw).split(",")
-    values = []
-    for item in source:
-        value = str(item or "").strip()
-        if value:
-            values.append(value)
-    return values
-
-
-def _is_sheetbook_beta_user(user):
-    if not user or not getattr(user, "is_authenticated", False):
-        return False
-
-    username_allowlist = {
-        item.lower()
-        for item in _normalize_allowlist_values(getattr(settings, "SHEETBOOK_BETA_USERNAMES", ()))
-    }
-    email_allowlist = {
-        item.lower()
-        for item in _normalize_allowlist_values(getattr(settings, "SHEETBOOK_BETA_EMAILS", ()))
-    }
-    id_allowlist = set()
-    for item in _normalize_allowlist_values(getattr(settings, "SHEETBOOK_BETA_USER_IDS", ())):
-        try:
-            id_allowlist.add(int(item))
-        except (TypeError, ValueError):
-            continue
-
-    username = str(getattr(user, "username", "") or "").strip().lower()
-    email = str(getattr(user, "email", "") or "").strip().lower()
-    if username and username in username_allowlist:
-        return True
-    if email and email in email_allowlist:
-        return True
-    return bool(user.id in id_allowlist if user.id else False)
-
-
 def _ensure_sheetbook_enabled(user=None):
     if settings.SHEETBOOK_ENABLED:
-        return
-    if _is_sheetbook_beta_user(user):
         return
     raise Http404("Sheetbook is disabled.")
 

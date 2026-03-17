@@ -925,6 +925,7 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         self.assertIn('service_launcher_json', response.context)
 
+    @override_settings(SHEETBOOK_ENABLED=True, SHEETBOOK_DISCOVERY_VISIBLE=True)
     def test_v2_home_includes_active_sheetbook_on_discovery_surfaces(self):
         visible_product = self._create_sheetbook_product()
         user = self._login('sheetbookvisiblev2')
@@ -949,6 +950,22 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn(visible_product.id, [product.id for product in response.context.get('games', [])])
         search_payload = json.loads(response.context['service_launcher_json'])
         self.assertIn('학급 기록 보드', [item['title'] for item in search_payload])
+
+    def test_v2_home_hides_sheetbook_when_runtime_disabled(self):
+        visible_product = self._create_sheetbook_product()
+        user = self._login('sheetbookhiddenv2')
+        ProductFavorite.objects.create(user=user, product=visible_product, pin_order=1)
+        ProductUsageLog.objects.create(user=user, product=visible_product, action='launch', source='home_quick')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertNotIn('학급 기록 보드', content)
+        self.assertNotIn(visible_product.id, [item['product'].id for item in response.context.get('quick_actions', [])])
+        self.assertNotIn(visible_product.id, [item['product'].id for item in response.context.get('favorite_items', [])])
+        self.assertFalse(response.context['sheetbook_workspace']['enabled'])
+        search_payload = json.loads(response.context['service_launcher_json'])
+        self.assertNotIn('학급 기록 보드', [item['title'] for item in search_payload])
 
     def test_v2_authenticated_top_favorites_use_compact_title_only_cards(self):
         user = self._login('favoritecompact')

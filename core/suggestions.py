@@ -1,6 +1,7 @@
 from django.urls import NoReverseMatch, reverse
 
 from products.models import Product
+from core.product_visibility import filter_discoverable_products
 
 
 # 완료 화면에서 다음으로 자연스럽게 이어갈 서비스 매핑
@@ -110,7 +111,9 @@ def _shorten_text(text, limit=70):
 
 
 def _candidate_products(meta):
-    qs = Product.objects.filter(is_active=True).order_by("display_order", "title")
+    qs = filter_discoverable_products(
+        Product.objects.filter(is_active=True).order_by("display_order", "title")
+    )
     for route_name in meta.get("route_names", []):
         product = qs.filter(launch_route_name=route_name).first()
         if product:

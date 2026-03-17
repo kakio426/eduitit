@@ -230,6 +230,7 @@ class SheetbookDiscoveryVisibilityTests(TestCase):
             is_published=True,
         )
 
+    @override_settings(SHEETBOOK_ENABLED=True, SHEETBOOK_DISCOVERY_VISIBLE=True)
     def test_catalog_shows_active_sheetbook_and_calendar_products(self):
         response = self.client.get(reverse('product_list'))
 
@@ -243,6 +244,16 @@ class SheetbookDiscoveryVisibilityTests(TestCase):
         self.assertContains(response, '학급 기록 보드')
         self.assertEqual(response.context['total_count'], expected_count)
         self.assertEqual(response.context['catalog_hub']['title'], '메인 캘린더는 홈에서 시작합니다')
+
+    def test_catalog_hides_sheetbook_when_runtime_disabled(self):
+        response = self.client.get(reverse('product_list'))
+
+        product_titles = [product.title for product in response.context['products']]
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn('교무수첩', product_titles)
+        self.assertIn('학급 캘린더', product_titles)
+        self.assertNotContains(response, '학급 기록 보드')
 
     def test_catalog_hides_sheetbook_and_calendar_when_inactive(self):
         self.sheetbook_product.is_active = False
