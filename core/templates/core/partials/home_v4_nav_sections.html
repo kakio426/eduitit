@@ -45,6 +45,28 @@
             x-cloak
             data-home-v4-tool-list="{{ section.key }}"
         >
+            {% if section.key == 'games' and request.user.is_authenticated and student_games_issue_url %}
+            <div class="home-v4-tool-item" data-home-v4-tool-item="games-student-link">
+                <button
+                    type="button"
+                    class="home-v4-tool-link w-full text-left"
+                    data-home-v4-tool-link="games-student-link"
+                    data-home-v4-student-games-link="true"
+                    data-student-games-open="studentGamesQrModal"
+                    {% if close_action %}@click="{{ close_action }}"{% endif %}
+                >
+                    <span class="home-v4-tool-leading">
+                        <span class="home-v4-tool-icon">
+                            <i class="fa-solid fa-link"></i>
+                        </span>
+                    </span>
+                    <span class="home-v4-tool-copy min-w-0 flex-1">
+                        <span class="home-v4-tool-title block truncate text-sm font-black text-slate-900">학생 링크</span>
+                        <span class="home-v4-tool-summary mt-1 block text-xs leading-5 text-slate-500 line-clamp-2">학생이 게임 목록으로 바로 들어가는 링크와 QR을 엽니다.</span>
+                    </span>
+                </button>
+            </div>
+            {% endif %}
             {% for product in section.products %}
             <div class="home-v4-tool-item" data-home-v4-tool-item="{{ section.key }}">
                 <a

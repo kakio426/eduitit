@@ -1897,6 +1897,19 @@ class HomeV4ViewTest(TestCase):
         self.assertIn('data-home-v4-home-panel="true"', content)
         self.assertNotIn('data-home-v4-section-panel=', content)
 
+    def test_v4_games_menu_restores_student_link_launcher(self):
+        self._login('v4gameslink')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('data-home-v4-nav-section="games"', content)
+        self.assertIn('data-home-v4-student-games-link="true"', content)
+        self.assertIn('학생 링크', content)
+        self.assertIn('studentGamesQrModal', content)
+        self.assertIn('data-student-games-issue-url="/products/dutyticker/student-games/issue/"', content)
+        self.assertNotIn('launch/?token=', content)
+
     def test_v4_section_menu_renders_icon_corner_favorite_badges(self):
         self._login('v4favoritebadge')
 

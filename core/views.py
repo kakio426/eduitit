@@ -2674,6 +2674,7 @@ def _home_v4(request, products, posts, page_obj, feed_scope, pinned_notice_posts
         'page_obj': page_obj,
         'pinned_notice_posts': pinned_notice_posts,
         'feed_scope': feed_scope,
+        **_build_home_student_games_qr_context(request),
         **home_calendar_surface,
         **build_home_page_seo(request).as_context(),
     })
