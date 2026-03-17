@@ -153,8 +153,9 @@ class ProductDetailHeroTests(TestCase):
         self.assertContains(response, "1분 데모/스크린샷")
         self.assertContains(response, "대상 고르기")
         self.assertContains(response, "문구 만들기")
-        self.assertContains(response, reverse("service_guide_detail", kwargs={"pk": manual.pk}))
+        self.assertContains(response, SERVICE_GUIDE_PADLET_URL)
         self.assertContains(response, reverse("account_login"))
+        self.assertEqual(response.context["guide_href"], SERVICE_GUIDE_PADLET_URL)
         self.assertEqual(response.context["product_access_label"], "로그인 필요")
         self.assertEqual(response.context["start_label"], "로그인하고 시작")
 
@@ -176,9 +177,9 @@ class ProductDetailHeroTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "공개 체험")
         self.assertContains(response, "가이드 찾기")
-        self.assertContains(response, reverse("service_guide_list"))
+        self.assertContains(response, SERVICE_GUIDE_PADLET_URL)
         self.assertContains(response, "https://example.com/start")
-        self.assertEqual(response.context["guide_href"], reverse("service_guide_list"))
+        self.assertEqual(response.context["guide_href"], SERVICE_GUIDE_PADLET_URL)
         self.assertEqual(response.context["product_demo_block"]["kind"], "steps")
         self.assertGreaterEqual(len(response.context["quick_preview_steps"]), 1)
 

@@ -16,6 +16,7 @@ from django.urls import reverse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
 
+from core.guide_links import SERVICE_GUIDE_PADLET_URL
 from core.seo import build_product_detail_seo, build_product_list_page_seo
 from core.product_visibility import filter_discoverable_products
 
@@ -460,7 +461,7 @@ def product_detail(request, pk):
     elif can_start and access_label == "공개 체험":
         start_label = "바로 체험하기"
 
-    guide_href = getattr(product, "guide_url", "") or reverse("service_guide_list")
+    guide_href = getattr(product, "guide_url", "") or SERVICE_GUIDE_PADLET_URL
     guide_label = "1분 가이드 보기" if getattr(product, "guide_url", "") else "가이드 찾기"
     quick_preview_steps = _build_product_detail_steps(product, manual, features)
     demo_block = _build_product_demo_block(product, manual, quick_preview_steps)
