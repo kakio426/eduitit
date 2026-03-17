@@ -15,7 +15,7 @@ from .discovery_policy import is_sensitive_discovery_target
 SITE_CANONICAL_BASE_URL = "https://eduitit.site"
 SITE_NAME = "Eduitit"
 SITE_LANGUAGE = "ko-KR"
-DEFAULT_OG_IMAGE_URL = f"{SITE_CANONICAL_BASE_URL}/static/images/eduitit_og.png"
+DEFAULT_OG_IMAGE_URL = f"{SITE_CANONICAL_BASE_URL}/static/images/eduitit_og_teacher_first.png"
 DEFAULT_FAVICON_URL = f"{SITE_CANONICAL_BASE_URL}/favicon.ico"
 DEFAULT_HOME_TITLE = "교사를 위한 AI·학급 운영 도구 | Eduitit"
 DEFAULT_HOME_DESCRIPTION = "알림장, 수업 QR, 서비스 가이드, 교실 운영 도구까지. 교사가 오늘 바로 쓰는 AI·디지털 도구를 Eduitit에서 한 번에 찾으세요."
