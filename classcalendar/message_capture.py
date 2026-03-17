@@ -875,10 +875,8 @@ def _dedupe_candidates(candidates):
 
 
 
-def _should_refine_candidates_with_llm(lines, candidates):
+def _should_refine_candidates_with_llm(candidates):
     if len(candidates) >= 2:
-        return True
-    if lines and _is_greeting_line(lines[0]):
         return True
     return any(candidate.get("needs_check") for candidate in candidates)
 
@@ -960,7 +958,7 @@ def parse_message_capture_draft(raw_text, *, now=None, has_files=False, llm_refi
 
     candidates = _build_raw_candidates(lines, date_mentions, now=now, has_files=has_files)
 
-    if candidates and llm_refiner and _should_refine_candidates_with_llm(lines, candidates):
+    if candidates and llm_refiner and _should_refine_candidates_with_llm(candidates):
         try:
             refined_candidates = llm_refiner(
                 normalized_text=normalized_text,

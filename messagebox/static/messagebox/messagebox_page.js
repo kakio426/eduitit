@@ -686,6 +686,28 @@ function messageboxPage(options = {}) {
             return !!String(this.messageCaptureInputText || "").trim() || this.messageCaptureFiles.length > 0;
         },
 
+        messageCaptureTextHasDateSignal() {
+            const rawText = String(this.messageCaptureInputText || "").trim();
+            if (!rawText) {
+                return false;
+            }
+            const dateSignalPatterns = [
+                /20\d{2}\s*[./-]\s*\d{1,2}\s*[./-]\s*\d{1,2}/,
+                /(?:^|[^0-9])\d{1,2}\s*[./-]\s*\d{1,2}(?=$|[^0-9])/,
+                /\d{1,2}\s*월\s*\d{1,2}\s*일(?:\s*\([월화수목금토일]\))?/,
+                /(?:^|[^0-9])\d{1,2}\s*일(?:\s*\([월화수목금토일]\))?/,
+                /(^|[^가-힣A-Za-z0-9])(오늘|내일|모레|글피)(?=$|[^가-힣A-Za-z0-9])/,
+            ];
+            return dateSignalPatterns.some((pattern) => pattern.test(rawText));
+        },
+
+        shouldSkipMessageCaptureParseRequest() {
+            if (this.messageCaptureFiles.length > 0) {
+                return false;
+            }
+            return !this.messageCaptureTextHasDateSignal();
+        },
+
         ensureMessageCaptureSourceInput() {
             if (this.hasMessageCaptureSourceInput()) {
                 return true;
@@ -758,6 +780,8 @@ function messageboxPage(options = {}) {
         prepareManualPlannerFromSavedCapture(payload, options = {}) {
             if (payload && !this.messageCaptureCaptureId) {
                 this.messageCaptureCaptureId = String(payload.capture_id || "");
+            } else if (!payload && options.clearCaptureId) {
+                this.messageCaptureCaptureId = "";
             }
             this.messageCaptureSuccessMode = "";
             this.messageCaptureSavedMessage = "";
@@ -766,6 +790,8 @@ function messageboxPage(options = {}) {
             this.messageCaptureErrorText = "";
             this.messageCaptureStep = "confirm";
             this.messageCaptureSourcePreviewOpen = false;
+            this.messageCaptureSummaryText = "";
+            this.messageCaptureCandidates = [];
             this.addManualMessageCaptureCandidate({
                 toast: false,
                 focusTitle: options.focusTitle !== false,
@@ -775,6 +801,16 @@ function messageboxPage(options = {}) {
         async startManualMessageCaptureFromInput(options = {}) {
             if (!this.ensureMessageCaptureSourceInput()) {
                 return false;
+            }
+            if (options.skipSave) {
+                this.prepareManualPlannerFromSavedCapture(null, {
+                    clearCaptureId: true,
+                    focusTitle: options.focusTitle !== false,
+                });
+                if (options.toast !== false) {
+                    window.showToast(options.toastMessage || "바로 일정 넣기로 열었어요.", "info");
+                }
+                return true;
             }
             const payload = this.messageCaptureCaptureId
                 ? { capture_id: this.messageCaptureCaptureId }
@@ -1050,6 +1086,16 @@ function messageboxPage(options = {}) {
             }
             if (!this.ensureMessageCaptureSourceInput()) {
                 return;
+            }
+            if (this.shouldSkipMessageCaptureParseRequest()) {
+                const switchedToManual = await this.startManualMessageCaptureFromInput({
+                    skipSave: true,
+                    toastMessage: "날짜가 보여야 자동으로 읽을 수 있어요. 바로 일정 넣기로 열었어요.",
+                    errorToast: false,
+                });
+                if (switchedToManual) {
+                    return;
+                }
             }
             this.isParsingMessageCapture = true;
             this.messageCaptureErrorText = "";

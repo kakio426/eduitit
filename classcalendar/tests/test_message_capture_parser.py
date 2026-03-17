@@ -82,6 +82,43 @@ class MessageCaptureParserTests(SimpleTestCase):
         self.assertEqual(result["confidence_label"], "low")
         self.assertEqual(result["candidates"], [])
 
+    def test_parse_does_not_call_llm_when_no_date_is_present(self):
+        llm_called = False
+
+        def tracking_refiner(**kwargs):
+            nonlocal llm_called
+            llm_called = True
+            return []
+
+        result = parse_message_capture_draft(
+            "학급 안내\n추후 다시 알려드리겠습니다.",
+            has_files=False,
+            llm_refiner=tracking_refiner,
+        )
+
+        self.assertEqual(result["parse_status"], "failed")
+        self.assertFalse(llm_called)
+
+    def test_parse_does_not_call_llm_for_single_clear_candidate_even_with_greeting(self):
+        now = timezone.make_aware(datetime(2026, 3, 10, 9, 0))
+        llm_called = False
+
+        def tracking_refiner(**kwargs):
+            nonlocal llm_called
+            llm_called = True
+            return []
+
+        result = parse_message_capture_draft(
+            "선생님 안녕하세요.\n3월 19일 학부모총회 실시",
+            now=now,
+            has_files=False,
+            llm_refiner=tracking_refiner,
+        )
+
+        self.assertEqual(result["parse_status"], "parsed")
+        self.assertEqual(len(result["candidates"]), 1)
+        self.assertFalse(llm_called)
+
     def test_parse_ignores_farewell_today_phrase_and_keeps_explicit_dates(self):
         now = timezone.make_aware(datetime(2026, 3, 16, 9, 0))
         result = parse_message_capture_draft(
