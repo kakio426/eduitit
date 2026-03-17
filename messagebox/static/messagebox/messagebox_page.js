@@ -545,10 +545,35 @@ function messageboxPage(options = {}) {
 
         messageCaptureRangeLength(candidate) {
             if (!candidate || !candidate.start_date) return 0;
+            if (Number.isInteger(candidate.range_days) && candidate.range_days >= 0) {
+                return candidate.range_days;
+            }
             const startDate = this.parseDateKey(candidate.start_date);
             const endDate = this.parseDateKey(candidate.end_date || candidate.start_date);
             const diffMs = endDate.getTime() - startDate.getTime();
             return Math.max(0, Math.round(diffMs / (24 * 60 * 60 * 1000)));
+        },
+
+        normalizeMessageCaptureCandidateDates(candidate) {
+            if (!candidate) return 0;
+            const startDate = String(candidate.start_date || "").trim();
+            if (!startDate) {
+                candidate.start_date = "";
+                candidate.end_date = "";
+                candidate.range_days = 0;
+                return 0;
+            }
+            let endDate = String(candidate.end_date || startDate).trim() || startDate;
+            if (endDate < startDate) {
+                endDate = startDate;
+            }
+            candidate.start_date = startDate;
+            candidate.end_date = endDate;
+            candidate.range_days = this.messageCaptureRangeLength({
+                start_date: startDate,
+                end_date: endDate,
+            });
+            return candidate.range_days;
         },
 
         applyMessageCaptureCandidateToDate(candidate, targetDateKey) {
@@ -567,10 +592,47 @@ function messageboxPage(options = {}) {
 
             candidate.start_date = normalizedTargetDate;
             candidate.end_date = this.dateKey(nextEndDate);
+            candidate.range_days = spanDays;
             candidate.selected = !candidate.already_saved;
             candidate.edit_open = true;
             this.messageCaptureErrorText = "";
             this.messageCaptureCalendarMonthKey = this.normalizeMessageCaptureMonthKey(normalizedTargetDate);
+        },
+
+        applyMessageCaptureCandidateStartDate(candidate, nextDateKey) {
+            if (!candidate) return;
+            const normalizedTargetDate = String(nextDateKey || "").trim();
+            if (!normalizedTargetDate) {
+                candidate.start_date = "";
+                candidate.end_date = "";
+                candidate.range_days = 0;
+                return;
+            }
+            const spanDays = this.messageCaptureRangeLength(candidate);
+            const nextStartDate = this.parseDateKey(normalizedTargetDate);
+            const nextEndDate = new Date(nextStartDate);
+            nextEndDate.setDate(nextEndDate.getDate() + spanDays);
+            candidate.start_date = normalizedTargetDate;
+            candidate.end_date = this.dateKey(nextEndDate);
+            candidate.range_days = spanDays;
+            this.messageCaptureCalendarMonthKey = this.normalizeMessageCaptureMonthKey(normalizedTargetDate);
+        },
+
+        applyMessageCaptureCandidateEndDate(candidate, nextDateKey) {
+            if (!candidate) return;
+            if (!candidate.start_date) {
+                candidate.start_date = String(nextDateKey || "").trim();
+            }
+            candidate.end_date = String(nextDateKey || "").trim();
+            this.normalizeMessageCaptureCandidateDates(candidate);
+            this.messageCaptureCalendarMonthKey = this.normalizeMessageCaptureMonthKey(
+                candidate.start_date || candidate.end_date || this.messageCaptureCalendarMonthKey,
+            );
+        },
+
+        applyMessageCaptureCandidateTimeToggle(candidate, hasTime) {
+            if (!candidate) return;
+            candidate.has_time = !!hasTime;
         },
 
         handleMessageCaptureCalendarDrop(targetDateKey, dropEvent) {
@@ -1014,7 +1076,7 @@ function messageboxPage(options = {}) {
             const end = raw.end_time ? new Date(raw.end_time) : (start ? new Date(raw.start_time) : null);
             const fallbackDate = this.messageCaptureManualDate || this.dateKey(new Date());
             const badgeMeta = this.messageCaptureCandidateBadgeMeta(raw.kind || "event");
-            return {
+            const normalizedCandidate = {
                 candidate_id: String(raw.candidate_id || ""),
                 kind: badgeMeta.kind,
                 badge_text: raw.badge_text || badgeMeta.badge_text,
@@ -1026,7 +1088,7 @@ function messageboxPage(options = {}) {
                 already_saved: !!raw.already_saved,
                 needs_check: !!raw.needs_check,
                 is_all_day: !!raw.is_all_day,
-                has_time: !!start && !!end && !raw.is_all_day,
+                has_time: false,
                 start_date: start ? this.dateKey(start) : fallbackDate,
                 end_date: end ? this.dateKey(end) : (start ? this.dateKey(start) : fallbackDate),
                 start_clock: start ? this.toTimeInput(start) : "09:00",
@@ -1035,6 +1097,8 @@ function messageboxPage(options = {}) {
                 is_manual: !!raw.is_manual,
                 is_removed: !!raw.is_removed,
             };
+            this.normalizeMessageCaptureCandidateDates(normalizedCandidate);
+            return normalizedCandidate;
         },
 
         applyMessageCaptureCandidateKind(candidate, nextKind) {
@@ -1064,7 +1128,7 @@ function messageboxPage(options = {}) {
             });
             candidate.selected = true;
             candidate.edit_open = true;
-            candidate.has_time = true;
+            candidate.has_time = false;
             this.messageCaptureCandidates = this.messageCaptureCandidates.concat(candidate);
             this.messageCaptureStep = "confirm";
             this.messageCaptureErrorText = "";
