@@ -671,7 +671,7 @@ class ArtClassSetupEditTest(TestCase):
         self.assertContains(response, "응답 예시 보기")
         self.assertContains(response, "ArtClass는 이제 런처 한 가지 방식으로 시작합니다.")
         self.assertNotContains(response, "브라우저로 시작")
-        self.assertContains(response, "유튜브 주소를 먼저 넣고 시작 방식을 확인해 보세요.")
+        self.assertContains(response, "유튜브 주소를 먼저 넣고 저장하면 다음 화면에서 바로 런처를 실행할 수 있어요.")
         self.assertContains(response, "프롬프트 복사하고 제미나이 열기")
         self.assertContains(response, "추천: 아래 파란 버튼 한 번이면 프롬프트를 복사하고 제미나이를 바로 엽니다.")
         self.assertContains(response, "프롬프트만 복사")
