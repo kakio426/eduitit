@@ -128,6 +128,17 @@ class PermissionTest(TestCase):
         self.assertIn("getSelectedDateDirectHubItems()", content)
         self.assertIn("openSelectedDateHubItem(item, $event)", content)
 
+    def test_main_view_day_modal_shows_item_level_status_signals(self):
+        response = self.client_teacher.get(reverse("calendar_main"), follow=True)
+        content = response.content.decode("utf-8")
+
+        self.assertIn("getEventStatusText(event)", content)
+        self.assertIn("getEventStatusBadgeClass(event)", content)
+        self.assertIn("getTaskStatusBadgeClass(task)", content)
+        self.assertIn("getTaskTitleClass(task)", content)
+        self.assertIn("지난 일정", content)
+        self.assertIn("기한 지남", content)
+
     def test_legacy_today_memo_panel_route_redirects_to_home_surface(self):
         response = self.client_teacher.get(f"{reverse('classcalendar:main')}?panel=today-memos")
 

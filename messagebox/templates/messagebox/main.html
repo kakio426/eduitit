@@ -42,7 +42,8 @@
 
 {% block content %}
 <section
-    class="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(251,191,36,0.18),_transparent_32%),linear-gradient(180deg,#fffaf0_0%,#ffffff_28%,#f8fafc_100%)] px-4 pb-10 pt-24 sm:px-6 lg:px-8"
+    class="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(251,191,36,0.18),_transparent_32%),linear-gradient(180deg,#fffaf0_0%,#ffffff_28%,#f8fafc_100%)] px-4 pb-10 pt-0 sm:px-6 lg:px-8"
+    style="padding-top: calc(var(--main-nav-height, 88px) + 0.75rem);"
     data-messagebox-root="true"
     x-data="messageboxPage({
         enabled: {{ message_capture_enabled|yesno:'true,false' }},
@@ -82,7 +83,7 @@
         {% else %}
         <div class="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(24rem,1.05fr)] xl:items-start" data-messagebox-layout="true">
             <div class="space-y-5">
-                <section id="messagebox-compose" class="scroll-mt-24 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6" data-messagebox-compose="true">
+                <section id="messagebox-compose" class="scroll-mt-24 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6" style="scroll-margin-top: calc(var(--main-nav-height, 88px) + 1rem);" data-messagebox-compose="true">
                     <div class="flex items-center justify-between gap-3">
                         <div>
                             <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">빠르게 보관</p>
@@ -430,7 +431,7 @@
             </div>
 
             <div class="space-y-5">
-                <section id="messagebox-archive" x-ref="messageArchiveSection" class="scroll-mt-24 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6" data-messagebox-archive="true">
+                <section id="messagebox-archive" x-ref="messageArchiveSection" class="scroll-mt-24 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6" style="scroll-margin-top: calc(var(--main-nav-height, 88px) + 1rem);" data-messagebox-archive="true">
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                         <div>
                             <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">보관함</p>
