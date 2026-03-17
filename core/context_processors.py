@@ -131,6 +131,7 @@ def seo_meta(request):
         'og_image': default_meta.og_image,
         'og_type': default_meta.og_type,
         'robots': default_meta.robots,
+        'structured_data_json_scripts': default_meta.as_context().get('structured_data_json_scripts', []),
     }
 
 

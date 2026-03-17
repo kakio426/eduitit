@@ -20,7 +20,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from core.views import health_check
-from core.seo_views import robots_txt
+from core.seo_views import favicon_ico, robots_txt
 from core.sitemaps import PublicUrlSitemap
 from classcalendar import views as classcalendar_views
 
@@ -30,6 +30,7 @@ SITEMAPS = {
 }
 
 urlpatterns = [
+    path('favicon.ico', favicon_ico, name='favicon_ico'),
     path('robots.txt', robots_txt, name='robots_txt'),
     path('sitemap.xml', sitemap, {'sitemaps': SITEMAPS}, name='sitemap'),
     path('health/', health_check, name='health_check'),

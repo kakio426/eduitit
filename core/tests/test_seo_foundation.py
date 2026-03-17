@@ -88,6 +88,16 @@ class SeoFoundationTests(TestCase):
         self.assertIn('<link rel="canonical" href="https://eduitit.site/">', content)
         self.assertIn('<meta property="og:url" content="https://eduitit.site/">', content)
         self.assertIn("<title>교사를 위한 AI·학급 운영 도구 | Eduitit</title>", content)
+        self.assertIn('<link rel="icon" href="/favicon.ico" sizes="any">', content)
+        self.assertIn('"@type":"WebSite"', content)
+        self.assertIn('"@type":"CollectionPage"', content)
+
+    def test_favicon_ico_route_returns_icon_response(self):
+        response = self.client.get("/favicon.ico")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response["Content-Type"].startswith("image/"))
+        self.assertIn("public, max-age=604800, immutable", response["Cache-Control"])
 
     def test_insight_list_filtered_query_uses_canonical_root_and_noindex(self):
         response = self.client.get(f"{reverse('insights:list')}?tag=AI")
@@ -107,6 +117,8 @@ class SeoFoundationTests(TestCase):
         self.assertIn('https://eduitit.site/insights/', content)
         self.assertIn("test-thumb.png", content)
         self.assertIn("prism-tomorrow.min.css", content)
+        self.assertIn('"@type":"Article"', content)
+        self.assertIn('"@type":"BreadcrumbList"', content)
 
     def test_public_tool_and_reference_pages_get_page_specific_meta(self):
         cases = (
@@ -166,8 +178,14 @@ class SeoFoundationTests(TestCase):
     def test_service_guide_and_product_detail_use_specific_meta(self):
         manual_response = self.client.get(reverse("service_guide_detail", kwargs={"pk": self.manual.pk}))
         manual_content = manual_response.content.decode("utf-8")
+        guide_list_response = self.client.get(reverse("service_guide_list"))
+        guide_list_content = guide_list_response.content.decode("utf-8")
         product_response = self.client.get(reverse("product_detail", kwargs={"pk": self.product.pk}))
         product_content = product_response.content.decode("utf-8")
+
+        self.assertEqual(guide_list_response.status_code, 200)
+        self.assertIn('"@type":"CollectionPage"', guide_list_content)
+        self.assertIn('"@type":"BreadcrumbList"', guide_list_content)
 
         self.assertEqual(manual_response.status_code, 200)
         self.assertIn("<title>미술 수업 도우미 시작하기 - 서비스 가이드 - Eduitit</title>", manual_content)
@@ -176,6 +194,8 @@ class SeoFoundationTests(TestCase):
             manual_content,
         )
         self.assertIn("바로 열고 바로 단계 준비하는 흐름", manual_content)
+        self.assertIn('"@type":"Article"', manual_content)
+        self.assertIn('"@type":"BreadcrumbList"', manual_content)
 
         self.assertEqual(product_response.status_code, 200)
         self.assertIn("<title>미술 수업 도우미 - Eduitit</title>", product_content)
@@ -184,6 +204,8 @@ class SeoFoundationTests(TestCase):
             product_content,
         )
         self.assertIn("수업 흐름과 단계 안내를 한 번에 정리합니다.", product_content)
+        self.assertIn('"@type":"Article"', product_content)
+        self.assertIn('"@type":"BreadcrumbList"', product_content)
 
     def test_sensitive_service_guides_and_products_use_noindex_headers(self):
         manual_response = self.client.get(reverse("service_guide_detail", kwargs={"pk": self.sensitive_manual.pk}))

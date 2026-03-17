@@ -20,7 +20,9 @@
     <meta name="twitter:description" content="{{ og_description|default:meta_description|default:default_og_description|default:'알림장, 수업 QR, 서비스 가이드, 교실 운영 도구까지. 교사가 오늘 바로 쓰는 AI·디지털 도구를 Eduitit에서 한 번에 찾으세요.' }}">
     <meta name="twitter:image" content="{{ og_image|default:default_og_image|default:'https://eduitit.site/static/images/eduitit_og.png' }}">
     {% endblock %}
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='100%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%236366F1'/%3E%3Cstop offset='100%25' stop-color='%232DD4BF'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='22' fill='url(%23grad)'/%3E%3Cpath d='M50 20 C50 20 60 40 80 50 C60 60 50 80 50 80 C50 80 40 60 20 50 C40 40 50 20 50 20 Z' fill='white'/%3E%3C/svg%3E">
+    <link rel="icon" href="{% url 'favicon_ico' %}" sizes="any">
+    <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
+    <link rel="apple-touch-icon" href="{% static 'images/favicon.png' %}">
     <title>{% block title %}{{ page_title|default:'교사를 위한 AI·학급 운영 도구 | Eduitit' }}{% endblock %}</title>
     <link href="{% static 'css/dist.css' %}" rel="stylesheet">
     <link href="{% static 'core/css/base.css' %}" rel="stylesheet">
@@ -35,6 +37,9 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
     <script defer src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <script defer src="{% static 'core/js/base.js' %}"></script>
+    {% for structured_data_json in structured_data_json_scripts %}
+    <script type="application/ld+json">{{ structured_data_json|safe }}</script>
+    {% endfor %}
     {% block extra_head %}{% endblock %}
     {% block extra_css %}{% endblock %}
 </head>
