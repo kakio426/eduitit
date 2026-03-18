@@ -12,11 +12,23 @@ function ibOpenSearch() {
 
 function ibCloseSearch() {
     const overlay = document.getElementById('ibSearchOverlay');
+    const input = document.getElementById('ibSearchInput');
     if (overlay) overlay.classList.add('hidden');
+    if (input) input.blur();
+}
+
+function ibStopPropagation(event) {
+    if (event) event.stopPropagation();
+}
+
+function ibHandleSearchOverlayClick(event) {
+    if (event && event.target === event.currentTarget) {
+        ibCloseSearch();
+    }
 }
 
 // Ctrl+K shortcut for InfoBoard search
-document.addEventListener('keydown', function(e) {
+window.addEventListener('keydown', function(e) {
     if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         const overlay = document.getElementById('ibSearchOverlay');
         if (overlay) {
@@ -29,6 +41,7 @@ document.addEventListener('keydown', function(e) {
         }
     }
     if (e.key === 'Escape') {
+        e.preventDefault();
         ibCloseSearch();
         const modal = document.getElementById('ibModalOverlay');
         if (modal && !modal.classList.contains('hidden')) {
@@ -243,4 +256,3 @@ function ibFetchOgMeta(url) {
 document.addEventListener('htmx:afterSettle', function() {
     ibSetupOgFetch();
 });
-

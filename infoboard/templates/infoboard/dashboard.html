@@ -112,8 +112,8 @@
 </div>
 
 <!-- Search Overlay -->
-<div id="ibSearchOverlay" class="ib-search-overlay hidden" onclick="if(event.target===this) ibCloseSearch()">
-    <div class="ib-search-box" onclick="event.stopPropagation()">
+<div id="ibSearchOverlay" class="ib-search-overlay hidden" onclick="ibHandleSearchOverlayClick(event)">
+    <div class="ib-search-box" onclick="ibStopPropagation(event)">
         <div class="px-5 py-4 border-b border-slate-100">
             <div class="flex items-center gap-3">
                 <i class="fa-solid fa-magnifying-glass text-slate-400"></i>
@@ -125,7 +125,11 @@
                     hx-swap="innerHTML"
                     name="q"
                     class="flex-1 bg-transparent text-base font-semibold text-slate-800 outline-none placeholder:text-slate-400">
-                <button onclick="ibCloseSearch()" class="text-xs font-bold text-slate-500 border border-slate-200 bg-slate-100 px-2 py-1 rounded hover:bg-slate-200 transition">ESC</button>
+                <button type="button" onclick="ibCloseSearch()" class="text-xs font-bold text-slate-500 border border-slate-200 bg-slate-100 px-2 py-1 rounded hover:bg-slate-200 transition">ESC</button>
+                <button type="button" onclick="ibCloseSearch()" aria-label="검색 닫기"
+                    class="h-8 w-8 inline-flex items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
             </div>
         </div>
         <div id="ibSearchResults" class="flex-1 overflow-y-auto px-3 py-3">
