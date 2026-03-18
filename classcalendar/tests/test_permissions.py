@@ -152,6 +152,7 @@ class PermissionTest(TestCase):
         self.assertNotIn("메시지 상태", content)
         self.assertNotIn("연결된 메시지 보기", content)
         self.assertNotIn("다시 볼 메시지로 되돌리기", content)
+        self.assertIn("if (event && event.message_capture_id && event.message_capture_completed_at) return 'done';", content)
 
     def test_legacy_today_memo_panel_route_redirects_to_home_surface(self):
         response = self.client_teacher.get(f"{reverse('classcalendar:main')}?panel=today-memos")

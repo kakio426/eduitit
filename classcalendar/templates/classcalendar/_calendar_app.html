@@ -824,7 +824,6 @@
                 <span x-show="!embeddedSheetbookContext" class="ml-1">(새 탭)</span>
             </a>
             <div x-show="selectedEvent && hasSelectedItemMessageCapture()" class="mb-4 flex flex-wrap items-center gap-2">
-                <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-bold" :class="selectedItemMessageCaptureStatusBadgeClass()" x-text="selectedItemMessageCaptureStatusText()"></span>
                 <button
                     type="button"
                     x-show="selectedEvent && canToggleSelectedItemMessageCapture()"
@@ -1125,7 +1124,6 @@
                         </a>
                     </div>
                     <div x-show="selectedEvent && hasSelectedItemMessageCapture()" class="flex flex-wrap items-center gap-2">
-                        <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-bold" :class="selectedItemMessageCaptureStatusBadgeClass()" x-text="selectedItemMessageCaptureStatusText()"></span>
                         <button type="button" x-show="selectedEvent && canToggleSelectedItemMessageCapture()" @click="toggleSelectedItemMessageCapture()" class="inline-flex items-center rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-sm font-bold text-emerald-800 transition hover:bg-emerald-100" x-text="selectedItemMessageCaptureActionText()"></button>
                     </div>
                     <div class="flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-4">
@@ -2818,17 +2816,6 @@ function calendarApp() {
             return !!this.buildMessageCaptureCompleteUrl(item.message_capture_id);
         },
 
-        selectedItemMessageCaptureStatusText() {
-            return this.isSelectedItemMessageCaptureCompleted() ? '완료' : '진행 중';
-        },
-
-        selectedItemMessageCaptureStatusBadgeClass() {
-            if (this.isSelectedItemMessageCaptureCompleted()) {
-                return 'border-emerald-200 bg-emerald-50 text-emerald-800';
-            }
-            return 'border-slate-200 bg-slate-100 text-slate-700';
-        },
-
         selectedItemMessageCaptureActionText() {
             return this.isSelectedItemMessageCaptureCompleted() ? '진행 중으로 되돌리기' : '처리 완료';
         },
@@ -3397,6 +3384,7 @@ function calendarApp() {
             return map[priority] || map.normal;
         },
         getEventStatusCode(event) {
+            if (event && event.message_capture_id && event.message_capture_completed_at) return 'done';
             if (!event || !event.start_time || !event.end_time) return 'scheduled';
             const now = new Date();
             const start = new Date(event.start_time);
@@ -3408,6 +3396,7 @@ function calendarApp() {
         },
         getEventStatusText(event) {
             const map = {
+                done: '완료',
                 past: '지난 일정',
                 live: '진행 중',
                 today: '오늘 예정',
@@ -3417,6 +3406,7 @@ function calendarApp() {
         },
         getEventStatusBadgeClass(event) {
             const map = {
+                done: 'bg-emerald-100 text-emerald-700 border-emerald-200',
                 past: 'bg-slate-100 text-slate-600 border-slate-200',
                 live: 'bg-emerald-100 text-emerald-700 border-emerald-200',
                 today: 'bg-amber-100 text-amber-800 border-amber-200',
@@ -3426,6 +3416,7 @@ function calendarApp() {
         },
         getEventCardClass(event) {
             const map = {
+                done: 'border-emerald-200 bg-emerald-50/50 hover:border-emerald-300 hover:bg-emerald-50',
                 past: 'border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-slate-100/70',
                 live: 'border-emerald-200 bg-emerald-50/50 hover:border-emerald-300 hover:bg-emerald-50',
                 today: 'border-amber-200 bg-amber-50/40 hover:border-amber-300 hover:bg-amber-50/60',
