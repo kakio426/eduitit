@@ -597,16 +597,28 @@ function initCalendarMessageHub(host, options = {}) {
             return this.messageArchiveSelectedCapture.candidates.filter((candidate) => !candidate.already_saved);
         },
 
-        selectedCaptureCompleteButtonText: function() {
-            if (!this.messageArchiveSelectedCapture) {
-                return '처리 완료';
-            }
-            return this.messageArchiveSelectedCapture.completed_at ? '다시 볼 메시지로 되돌리기' : '처리 완료';
+        isSelectedCaptureCompleted: function() {
+            return Boolean(this.messageArchiveSelectedCapture && this.messageArchiveSelectedCapture.completed_at);
         },
 
-        toggleSelectedCaptureComplete: async function() {
+        canCompleteSelectedCapture: function() {
+            return Boolean(this.messageArchiveSelectedCapture) && !this.isSelectedCaptureCompleted();
+        },
+
+        selectedCaptureStatusText: function() {
+            return this.isSelectedCaptureCompleted() ? '완료' : '진행중';
+        },
+
+        selectedCaptureStatusClass: function() {
+            return this.isSelectedCaptureCompleted()
+                ? 'bg-emerald-100 text-emerald-700'
+                : 'bg-amber-100 text-amber-700';
+        },
+
+        completeSelectedCapture: async function() {
             const captureId = this.selectedCaptureId();
             if (!captureId) return;
+            if (this.isSelectedCaptureCompleted()) return;
             const completeUrl = this.buildMessageCaptureCompleteUrl(captureId);
             if (!completeUrl) {
                 window.showToast('완료 처리 경로를 찾지 못했습니다.', 'error');
@@ -615,11 +627,15 @@ function initCalendarMessageHub(host, options = {}) {
             try {
                 const payload = await this.requestJson(completeUrl, {
                     method: 'POST',
-                    headers: { 'X-CSRFToken': this.getCsrfToken() },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCsrfToken(),
+                    },
+                    body: JSON.stringify({ completed: true }),
                 });
                 this.messageArchiveSelectedCapture = payload;
                 await this.loadMessageArchive({ reset: true, preferredCaptureId: captureId });
-                window.showToast(payload.message || '상태를 바꿨어요.', 'success');
+                window.showToast(payload.message || '완료로 표시했습니다.', 'success');
             } catch (error) {
                 window.showToast(error.message || '완료 처리에 실패했습니다.', 'error');
             }

@@ -330,9 +330,15 @@
                             </div>
                             <div x-show="messageArchiveSelectedCapture && !hasSelectedCaptureLinkedItems()" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold text-slate-500">아직 연결된 일정이나 할 일이 없어요.</div>
                         </div>
-                        <div x-show="messageArchiveSelectedCapture" class="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                            <button type="button" @click="toggleSelectedCaptureComplete()" :disabled="isLoadingMessageArchiveDetail" class="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-extrabold text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60" x-text="selectedCaptureCompleteButtonText()"></button>
-                            <button type="button" @click="replayMessageArchiveCapture()" :disabled="isLoadingMessageArchiveDetail || isParsingMessageCapture" class="rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-60">일정찾기</button>
+                        <div x-show="messageArchiveSelectedCapture" class="flex flex-col gap-3">
+                            <div class="flex min-w-0 items-center gap-2">
+                                <span class="text-xs font-bold text-slate-500">메시지 상태</span>
+                                <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold" :class="selectedCaptureStatusClass()" x-text="selectedCaptureStatusText()"></span>
+                            </div>
+                            <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                                <button type="button" x-show="canCompleteSelectedCapture()" @click="completeSelectedCapture()" :disabled="isLoadingMessageArchiveDetail" class="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-extrabold text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60">처리 완료</button>
+                                <button type="button" @click="replayMessageArchiveCapture()" :disabled="isLoadingMessageArchiveDetail || isParsingMessageCapture" class="rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-60">일정찾기</button>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -139,6 +139,20 @@ class PermissionTest(TestCase):
         self.assertIn("지난 일정", content)
         self.assertIn("기한 지남", content)
 
+    @override_settings(
+        FEATURE_MESSAGE_CAPTURE_ENABLED=True,
+        FEATURE_MESSAGE_CAPTURE_ALLOWLIST_USERNAMES="teacher",
+        FEATURE_MESSAGE_CAPTURE_ITEM_TYPES=True,
+    )
+    def test_main_view_message_capture_actions_use_simple_complete_wireframe(self):
+        response = self.client_teacher.get(reverse("calendar_main"), follow=True)
+        content = response.content.decode("utf-8")
+
+        self.assertIn("메시지 상태", content)
+        self.assertIn("처리 완료", content)
+        self.assertNotIn("연결된 메시지 보기", content)
+        self.assertNotIn("다시 볼 메시지로 되돌리기", content)
+
     def test_legacy_today_memo_panel_route_redirects_to_home_surface(self):
         response = self.client_teacher.get(f"{reverse('classcalendar:main')}?panel=today-memos")
 

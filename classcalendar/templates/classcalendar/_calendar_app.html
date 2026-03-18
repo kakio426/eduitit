@@ -372,9 +372,6 @@
                                     <p class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-600">{{ item.note_excerpt }}</p>
                                     {% endif %}
                                 </button>
-                                {% if item.message_capture_url %}
-                                <a href="{{ item.message_capture_url }}" class="inline-flex items-center gap-1 text-xs font-bold text-amber-700 transition hover:text-amber-900">연결된 메시지 보기</a>
-                                {% endif %}
                             </div>
                             {% endfor %}
                         </div>
@@ -410,9 +407,6 @@
                                     </div>
                                     <p class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">{{ item.note_excerpt }}</p>
                                 </button>
-                                {% if item.message_capture_url %}
-                                <a href="{{ item.message_capture_url }}" class="inline-flex items-center gap-1 text-xs font-bold text-amber-700 transition hover:text-amber-900">연결된 메시지 보기</a>
-                                {% endif %}
                             </div>
                             {% endfor %}
                         </div>
@@ -446,9 +440,6 @@
                                     <p class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-600">{{ item.note_excerpt }}</p>
                                     {% endif %}
                                 </button>
-                                {% if item.message_capture_url %}
-                                <a href="{{ item.message_capture_url }}" class="inline-flex items-center gap-1 text-xs font-bold text-amber-700 transition hover:text-amber-900">연결된 메시지 보기</a>
-                                {% endif %}
                             </div>
                             {% endfor %}
                         </div>
@@ -477,9 +468,6 @@
                                 </div>
                                 <p class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">{{ item.note_excerpt }}</p>
                             </button>
-                            {% if item.message_capture_url %}
-                            <a href="{{ item.message_capture_url }}" class="inline-flex items-center gap-1 text-xs font-bold text-amber-700 transition hover:text-amber-900">연결된 메시지 보기</a>
-                            {% endif %}
                         </div>
                         {% endfor %}
                     </div>
@@ -515,9 +503,6 @@
                                     <p class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">{{ item.note_excerpt }}</p>
                                     <p class="mt-2 text-xs font-semibold text-indigo-600">{{ item.review_state_description }}</p>
                                 </button>
-                                {% if item.message_capture_url %}
-                                <a href="{{ item.message_capture_url }}" class="inline-flex items-center gap-1 text-xs font-bold text-amber-700 transition hover:text-amber-900">연결된 메시지 보기</a>
-                                {% endif %}
                             </div>
                             {% endfor %}
                         </div>
@@ -838,39 +823,33 @@
                 <span x-text="selectedEvent && selectedEvent.source_label ? selectedEvent.source_label : '원본 서비스로 이동'"></span>
                 <span x-show="!embeddedSheetbookContext" class="ml-1">(새 탭)</span>
             </a>
-            <div x-show="selectedEvent && (selectedEvent.message_capture_url || canToggleSelectedItemMessageCapture())" class="mb-4 flex flex-wrap gap-2">
-                <a
-                    x-show="selectedEvent && selectedEvent.message_capture_url"
-                    :href="selectedEvent ? selectedEvent.message_capture_url : '#'"
-                    class="inline-flex items-center rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2 text-sm font-bold text-amber-800 transition hover:bg-amber-100"
-                >
-                    연결된 메시지 보기
-                </a>
-                <button
-                    type="button"
-                    x-show="selectedEvent && canToggleSelectedItemMessageCapture()"
-                    @click="toggleSelectedItemMessageCaptureComplete()"
-                    :class="selectedItemMessageCaptureCompleteButtonClass()"
-                    class="inline-flex items-center rounded-xl border px-3.5 py-2 text-sm font-bold transition"
-                    x-text="selectedItemMessageCaptureCompleteButtonText()"
-                ></button>
+            <div x-show="selectedEvent && hasSelectedItemMessageCapture()" class="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex min-w-0 items-center gap-2">
+                        <span class="text-xs font-bold text-slate-500">메시지 상태</span>
+                        <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold" :class="selectedItemMessageCaptureStatusClass()" x-text="selectedItemMessageCaptureStatusText()"></span>
+                    </div>
+                    <button
+                        type="button"
+                        x-show="selectedEvent && canCompleteSelectedItemMessageCapture()"
+                        @click="completeSelectedItemMessageCapture()"
+                        class="inline-flex items-center rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-sm font-bold text-emerald-800 transition hover:bg-emerald-100"
+                    >처리 완료</button>
+                </div>
             </div>
-            <div x-show="selectedTask && (selectedTask.message_capture_url || canToggleSelectedItemMessageCapture())" class="mb-4 flex flex-wrap gap-2">
-                <a
-                    x-show="selectedTask && selectedTask.message_capture_url"
-                    :href="selectedTask ? selectedTask.message_capture_url : '#'"
-                    class="inline-flex items-center rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2 text-sm font-bold text-amber-800 transition hover:bg-amber-100"
-                >
-                    연결된 메시지 보기
-                </a>
-                <button
-                    type="button"
-                    x-show="selectedTask && canToggleSelectedItemMessageCapture()"
-                    @click="toggleSelectedItemMessageCaptureComplete()"
-                    :class="selectedItemMessageCaptureCompleteButtonClass()"
-                    class="inline-flex items-center rounded-xl border px-3.5 py-2 text-sm font-bold transition"
-                    x-text="selectedItemMessageCaptureCompleteButtonText()"
-                ></button>
+            <div x-show="selectedTask && hasSelectedItemMessageCapture()" class="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex min-w-0 items-center gap-2">
+                        <span class="text-xs font-bold text-slate-500">메시지 상태</span>
+                        <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold" :class="selectedItemMessageCaptureStatusClass()" x-text="selectedItemMessageCaptureStatusText()"></span>
+                    </div>
+                    <button
+                        type="button"
+                        x-show="selectedTask && canCompleteSelectedItemMessageCapture()"
+                        @click="completeSelectedItemMessageCapture()"
+                        class="inline-flex items-center rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-sm font-bold text-emerald-800 transition hover:bg-emerald-100"
+                    >처리 완료</button>
+                </div>
             </div>
             <div class="flex flex-wrap justify-end gap-2">
                 <button
@@ -1147,14 +1126,21 @@
                         </p>
                     </div>
                     <p x-show="getReadonlyEventHint()" class="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm font-semibold text-amber-900" x-text="getReadonlyEventHint()"></p>
-                    <div x-show="selectedEvent && (selectedEvent.source_url || selectedEvent.message_capture_url || canToggleSelectedItemMessageCapture())" class="flex flex-wrap gap-2">
+                    <div x-show="selectedEvent && selectedEvent.source_url" class="flex flex-wrap gap-2">
                         <a x-show="selectedEvent && selectedEvent.source_url" :href="selectedEvent ? selectedEvent.source_url : '#'" :target="embeddedSheetbookContext ? '_top' : '_blank'" :rel="embeddedSheetbookContext ? null : 'noopener noreferrer'" class="inline-flex items-center rounded-xl border border-indigo-200 bg-indigo-50 px-3.5 py-2 text-sm font-bold text-indigo-800 transition hover:bg-indigo-100">
                             <i class="fa-solid fa-arrow-up-right-from-square mr-1.5"></i>
                             <span x-text="selectedEvent && selectedEvent.source_label ? selectedEvent.source_label : '원본 서비스로 이동'"></span>
                             <span x-show="!embeddedSheetbookContext" class="ml-1">(새 탭)</span>
                         </a>
-                        <a x-show="selectedEvent && selectedEvent.message_capture_url" :href="selectedEvent ? selectedEvent.message_capture_url : '#'" class="inline-flex items-center rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2 text-sm font-bold text-amber-800 transition hover:bg-amber-100">연결된 메시지 보기</a>
-                        <button type="button" x-show="selectedEvent && canToggleSelectedItemMessageCapture()" @click="toggleSelectedItemMessageCaptureComplete()" :class="selectedItemMessageCaptureCompleteButtonClass()" class="inline-flex items-center rounded-xl border px-3.5 py-2 text-sm font-bold transition" x-text="selectedItemMessageCaptureCompleteButtonText()"></button>
+                    </div>
+                    <div x-show="selectedEvent && hasSelectedItemMessageCapture()" class="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            <div class="flex min-w-0 items-center gap-2">
+                                <span class="text-xs font-bold text-slate-500">메시지 상태</span>
+                                <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold" :class="selectedItemMessageCaptureStatusClass()" x-text="selectedItemMessageCaptureStatusText()"></span>
+                            </div>
+                            <button type="button" x-show="selectedEvent && canCompleteSelectedItemMessageCapture()" @click="completeSelectedItemMessageCapture()" class="inline-flex items-center rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-sm font-bold text-emerald-800 transition hover:bg-emerald-100">처리 완료</button>
+                        </div>
                     </div>
                     <div class="flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-4">
                         <button type="button" x-show="surfaceAllowsManage && selectedEvent && !selectedEvent.is_locked && selectedEvent.can_edit" @click="openEditModal()" class="rounded-xl border border-slate-300 px-3.5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">수정</button>
@@ -1172,9 +1158,14 @@
                         </div>
                     </div>
                     <p x-show="selectedTask && selectedTask.note" class="classcalendar-copy rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 whitespace-pre-line" x-text="selectedTask ? selectedTask.note : ''"></p>
-                    <div x-show="selectedTask && (selectedTask.message_capture_url || canToggleSelectedItemMessageCapture())" class="flex flex-wrap gap-2">
-                        <a x-show="selectedTask && selectedTask.message_capture_url" :href="selectedTask ? selectedTask.message_capture_url : '#'" class="inline-flex items-center rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2 text-sm font-bold text-amber-800 transition hover:bg-amber-100">연결된 메시지 보기</a>
-                        <button type="button" x-show="selectedTask && canToggleSelectedItemMessageCapture()" @click="toggleSelectedItemMessageCaptureComplete()" :class="selectedItemMessageCaptureCompleteButtonClass()" class="inline-flex items-center rounded-xl border px-3.5 py-2 text-sm font-bold transition" x-text="selectedItemMessageCaptureCompleteButtonText()"></button>
+                    <div x-show="selectedTask && hasSelectedItemMessageCapture()" class="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            <div class="flex min-w-0 items-center gap-2">
+                                <span class="text-xs font-bold text-slate-500">메시지 상태</span>
+                                <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold" :class="selectedItemMessageCaptureStatusClass()" x-text="selectedItemMessageCaptureStatusText()"></span>
+                            </div>
+                            <button type="button" x-show="selectedTask && canCompleteSelectedItemMessageCapture()" @click="completeSelectedItemMessageCapture()" class="inline-flex items-center rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-sm font-bold text-emerald-800 transition hover:bg-emerald-100">처리 완료</button>
+                        </div>
                     </div>
                     <div class="flex justify-end border-t border-slate-100 pt-4">
                         <button type="button" @click="showDayOverview()" class="rounded-xl bg-slate-900 px-3.5 py-2 text-sm font-bold text-white">목록으로</button>
@@ -2829,28 +2820,36 @@ function calendarApp() {
             return this.selectedEvent || this.selectedTask || null;
         },
 
-        canToggleSelectedItemMessageCapture() {
+        hasSelectedItemMessageCapture() {
+            const item = this.selectedCalendarItem();
+            return !!(item && item.message_capture_id);
+        },
+
+        isSelectedItemMessageCaptureCompleted() {
+            const item = this.selectedCalendarItem();
+            return !!(item && item.message_capture_completed_at);
+        },
+
+        canCompleteSelectedItemMessageCapture() {
             const item = this.selectedCalendarItem();
             if (!item || !item.message_capture_id || typeof this.buildMessageCaptureCompleteUrl !== 'function') {
+                return false;
+            }
+            if (item.message_capture_completed_at) {
                 return false;
             }
             return !!this.buildMessageCaptureCompleteUrl(item.message_capture_id);
         },
 
-        selectedItemMessageCaptureCompleteButtonText() {
-            const item = this.selectedCalendarItem();
-            if (!item) {
-                return '처리 완료';
-            }
-            return item.message_capture_completed_at ? '다시 볼 메시지로 되돌리기' : '처리 완료';
+        selectedItemMessageCaptureStatusText() {
+            return this.isSelectedItemMessageCaptureCompleted() ? '완료' : '진행중';
         },
 
-        selectedItemMessageCaptureCompleteButtonClass() {
-            const item = this.selectedCalendarItem();
-            if (item && item.message_capture_completed_at) {
-                return 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50';
+        selectedItemMessageCaptureStatusClass() {
+            if (this.isSelectedItemMessageCaptureCompleted()) {
+                return 'bg-emerald-100 text-emerald-800';
             }
-            return 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100';
+            return 'bg-slate-100 text-slate-700';
         },
 
         applyMessageCaptureCompletionToItem(item, payload) {
@@ -2889,7 +2888,7 @@ function calendarApp() {
             }
         },
 
-        async toggleSelectedItemMessageCaptureComplete() {
+        async completeSelectedItemMessageCapture() {
             const item = this.selectedCalendarItem();
             if (!item || !item.message_capture_id) {
                 window.showToast('연결된 메시지를 찾지 못했습니다.', 'error');
@@ -2905,10 +2904,14 @@ function calendarApp() {
             try {
                 const payload = await this.requestJson(completeUrl, {
                     method: 'POST',
-                    headers: { 'X-CSRFToken': this.getCsrfToken() },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCsrfToken(),
+                    },
+                    body: JSON.stringify({ completed: true }),
                 });
                 this.syncMessageCaptureCompletionState(payload);
-                window.showToast(payload.message || '상태를 바꿨어요.', 'success');
+                window.showToast(payload.message || '완료로 표시했습니다.', 'success');
             } catch (error) {
                 window.showToast(error.message || '완료 처리에 실패했습니다.', 'error');
             }
