@@ -7,8 +7,10 @@
   var readyReported = false;
   var issueReported = false;
   var pendingIssue = null;
+  var pendingIssueTimer = 0;
   var overlayId = "__edu_materials_runtime_guard__";
   var READY_CHECK_INTERVAL_MS = 400;
+  var ISSUE_CONFIRM_DELAY_MS = 1400;
 
   function text(value) {
     if (value === null || value === undefined) {
@@ -29,6 +31,18 @@
         window.parent.postMessage(message, "*");
       }
     } catch (error) {}
+  }
+
+  function toLowerText(value) {
+    return text(value).trim().toLowerCase();
+  }
+
+  function clearPendingIssueTimer() {
+    if (!pendingIssueTimer) {
+      return;
+    }
+    window.clearTimeout(pendingIssueTimer);
+    pendingIssueTimer = 0;
   }
 
   function isVisible(element) {
@@ -80,6 +94,67 @@
       }
     }
     return null;
+  }
+
+  function isNoiseIssue(payload) {
+    var message = toLowerText(payload && payload.message);
+    var url = toLowerText(payload && payload.url);
+
+    if (message === "script error." || message === "script error") {
+      return true;
+    }
+
+    if (message.indexOf("resizeobserver loop") !== -1) {
+      return true;
+    }
+
+    if (message.indexOf("non-error promise rejection captured") !== -1) {
+      return true;
+    }
+
+    if ((payload && payload.kind) === "resource") {
+      if (url.indexOf(".map") !== -1 || url.indexOf("favicon.ico") !== -1) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  function shouldDisplayIssue(payload) {
+    if (!payload) {
+      return false;
+    }
+
+    if (payload.kind === "timeout") {
+      return true;
+    }
+
+    if (findBlockingOverlay()) {
+      return true;
+    }
+
+    if (document.readyState !== "complete") {
+      return true;
+    }
+
+    if (payload.kind === "resource") {
+      // 리소스 에러는 로딩 완료 후에도 발생할 수 있어 기본값은 경고 처리.
+      return false;
+    }
+
+    // 화면이 정상적으로 떠 있으면 즉시 에러 패널을 띄우지 않는다.
+    return false;
+  }
+
+  function postRuntimeWarning(payload) {
+    var description = describeIssue(payload || {});
+    post("edu-materials:runtime-warning", {
+      kind: (payload && payload.kind) || "runtime",
+      message: text(payload && payload.message),
+      url: text(payload && payload.url),
+      detail: description.body,
+    });
   }
 
   function describeIssue(payload) {
@@ -186,11 +261,30 @@
   }
 
   function reportIssue(payload) {
-    if (issueReported) {
+    var issue = payload || { kind: "runtime", message: "" };
+
+    if (issueReported || readyReported) {
       return;
     }
-    issueReported = true;
-    mountPanel(payload || { kind: "runtime", message: "" });
+
+    if (isNoiseIssue(issue)) {
+      return;
+    }
+
+    clearPendingIssueTimer();
+    pendingIssueTimer = window.setTimeout(function () {
+      if (issueReported || readyReported) {
+        return;
+      }
+
+      if (!shouldDisplayIssue(issue)) {
+        postRuntimeWarning(issue);
+        return;
+      }
+
+      issueReported = true;
+      mountPanel(issue);
+    }, ISSUE_CONFIRM_DELAY_MS);
   }
 
   window.addEventListener(
@@ -254,6 +348,7 @@
 
       if (!findBlockingOverlay()) {
         readyReported = true;
+        clearPendingIssueTimer();
         post("edu-materials:runtime-ready", {});
         return;
       }
