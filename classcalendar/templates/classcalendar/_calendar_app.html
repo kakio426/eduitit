@@ -3406,9 +3406,9 @@ function calendarApp() {
         },
         getEventStatusBadgeClass(event) {
             const map = {
-                done: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+                done: 'bg-emerald-100 text-emerald-800 border-emerald-300',
                 past: 'bg-slate-100 text-slate-600 border-slate-200',
-                live: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+                live: 'bg-rose-100 text-rose-800 border-rose-300',
                 today: 'bg-amber-100 text-amber-800 border-amber-200',
                 scheduled: 'bg-indigo-100 text-indigo-700 border-indigo-200',
             };
@@ -3418,7 +3418,7 @@ function calendarApp() {
             const map = {
                 done: 'border-emerald-200 bg-emerald-50/50 hover:border-emerald-300 hover:bg-emerald-50',
                 past: 'border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-slate-100/70',
-                live: 'border-emerald-200 bg-emerald-50/50 hover:border-emerald-300 hover:bg-emerald-50',
+                live: 'border-rose-200 bg-rose-50/50 hover:border-rose-300 hover:bg-rose-50',
                 today: 'border-amber-200 bg-amber-50/40 hover:border-amber-300 hover:bg-amber-50/60',
                 scheduled: 'border-slate-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/30',
             };
@@ -3448,10 +3448,10 @@ function calendarApp() {
         },
         getTaskStatusBadgeClass(task) {
             const map = {
-                done: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+                done: 'bg-emerald-100 text-emerald-800 border-emerald-300',
                 overdue: 'bg-rose-100 text-rose-700 border-rose-200',
                 today: 'bg-amber-100 text-amber-800 border-amber-200',
-                open: 'bg-slate-100 text-slate-700 border-slate-200',
+                open: 'bg-rose-100 text-rose-800 border-rose-300',
             };
             return map[this.getTaskStatusCode(task)] || map.open;
         },
@@ -3460,7 +3460,7 @@ function calendarApp() {
                 done: 'border-emerald-200 bg-emerald-50/50 hover:border-emerald-300 hover:bg-emerald-50',
                 overdue: 'border-rose-200 bg-rose-50/50 hover:border-rose-300 hover:bg-rose-50',
                 today: 'border-amber-200 bg-amber-50/40 hover:border-amber-300 hover:bg-amber-50/60',
-                open: 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50',
+                open: 'border-rose-200 bg-rose-50/50 hover:border-rose-300 hover:bg-rose-50',
             };
             return map[this.getTaskStatusCode(task)] || map.open;
         },
