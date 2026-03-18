@@ -535,6 +535,10 @@ def landing(request):
     return render(request, "happy_seed/landing.html")
 
 
+def dashboard_legacy_redirect(request):
+    return redirect("happy_seed:dashboard")
+
+
 @login_required
 def teacher_manual(request):
     return render(request, "happy_seed/teacher_manual.html")

@@ -34,6 +34,7 @@ PRODUCT_DETAIL_AUDIENCE_BY_ROUTE = {
     "consent:landing": "학부모 동의서를 링크로 회수하고 보관까지 정리해야 하는 교사에게 맞는 도구입니다.",
     "handoff:landing": "배부 누락 없이 수령 현황을 빠르게 끝내고 싶은 교사에게 맞는 도구입니다.",
     "noticegen:main": "알림장과 가정 안내 문구를 짧은 시간 안에 정리해야 하는 교사에게 맞는 도구입니다.",
+    "happy_seed:dashboard": "긍정 행동 기록과 보상을 학급 루틴으로 운영하고 싶은 교사에게 맞는 도구입니다.",
     "happy_seed:landing": "긍정 행동 기록과 보상을 학급 루틴으로 운영하고 싶은 교사에게 맞는 도구입니다.",
     "reservations:landing": "특별실 예약이 겹치지 않도록 시간표를 조정해야 하는 교사에게 맞는 도구입니다.",
     "reservations:dashboard_landing": "특별실 예약이 겹치지 않도록 시간표를 조정해야 하는 교사에게 맞는 도구입니다.",

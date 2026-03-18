@@ -34,6 +34,15 @@ class HappySeedViewTests(TestCase):
         res = self.client.get(reverse("happy_seed:landing"))
         self.assertEqual(res.status_code, 200)
 
+    def test_dashboard_legacy_url_redirects_to_canonical_root(self):
+        res = self.client.get("/happy-seed/dashboard/")
+        self.assertEqual(res.status_code, 302)
+        self.assertRedirects(
+            res,
+            reverse("happy_seed:dashboard"),
+            fetch_redirect_response=False,
+        )
+
     def test_dashboard_requires_login(self):
         res = self.client.get(reverse("happy_seed:dashboard"))
         self.assertEqual(res.status_code, 302)

@@ -69,7 +69,7 @@ SERVICE_META = {
         "fallback_summary": "상담 전에 참고할 대화 소재를 가볍게 살펴보세요.",
     },
     "happy_seed": {
-        "route_names": ["happy_seed:landing"],
+        "route_names": ["happy_seed:dashboard", "happy_seed:landing"],
         "title_keywords": ["행복의 씨앗"],
         "default_icon": "🌱",
         "fallback_summary": "학급 참여 루틴을 이어서 운영해보세요.",

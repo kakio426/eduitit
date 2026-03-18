@@ -25,7 +25,7 @@ class Command(BaseCommand):
             "display_order": 27,
             "service_type": "classroom",
             "external_url": "",
-            "launch_route_name": "happy_seed:landing",
+            "launch_route_name": "happy_seed:dashboard",
         }
         mutable_fields = [
             "lead_text",

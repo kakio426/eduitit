@@ -83,6 +83,7 @@ HOME_SECTION_BY_ROUTE = {
     "hwp_converter:landing": "doc_write",
     "classcalendar:main": "class_ops",
     "messagebox:main": "class_ops",
+    "happy_seed:dashboard": "class_ops",
     "happy_seed:landing": "class_ops",
     "reservations:dashboard_landing": "class_ops",
     "reservations:landing": "class_ops",

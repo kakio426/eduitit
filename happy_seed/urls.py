@@ -5,12 +5,13 @@ from . import views
 app_name = 'happy_seed'
 
 urlpatterns = [
-    # Landing (public)
-    path('', views.landing, name='landing'),
-    path('manual/teacher/', views.teacher_manual, name='teacher_manual'),
-
     # Dashboard
-    path('dashboard/', views.dashboard, name='dashboard'),
+    path('', views.dashboard, name='dashboard'),
+    path('dashboard/', views.dashboard_legacy_redirect, name='dashboard_legacy'),
+
+    # Landing (public)
+    path('landing/', views.landing, name='landing'),
+    path('manual/teacher/', views.teacher_manual, name='teacher_manual'),
 
     # Classroom CRUD
     path('classroom/create/', views.classroom_create, name='classroom_create'),
