@@ -148,8 +148,8 @@ class PermissionTest(TestCase):
         response = self.client_teacher.get(reverse("calendar_main"), follow=True)
         content = response.content.decode("utf-8")
 
-        self.assertIn("메시지 상태", content)
         self.assertIn("처리 완료", content)
+        self.assertNotIn("메시지 상태", content)
         self.assertNotIn("연결된 메시지 보기", content)
         self.assertNotIn("다시 볼 메시지로 되돌리기", content)
 
