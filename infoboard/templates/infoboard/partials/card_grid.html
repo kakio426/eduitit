@@ -1,0 +1,8 @@
+{% for card in cards %}
+{% include 'infoboard/partials/card_item.html' %}
+{% empty %}
+<div class="col-span-full ib-empty">
+    <div class="ib-empty-icon">📋</div>
+    <p class="text-lg font-bold text-gray-500">카드가 없어요</p>
+</div>
+{% endfor %}

@@ -1,0 +1,70 @@
+<div class="p-6">
+    <h2 class="text-xl font-black text-gray-800 mb-6">✏️ 자료 제출</h2>
+
+    <form method="post" enctype="multipart/form-data"
+        action="{% url 'infoboard:student_submit' link_id=shared.id %}"
+        hx-post="{% url 'infoboard:student_submit' link_id=shared.id %}"
+        hx-target="closest .ib-info-card"
+        hx-swap="innerHTML"
+        hx-encoding="multipart/form-data">
+        {% csrf_token %}
+
+        <!-- Author Name -->
+        <div class="mb-4">
+            <label class="text-xs font-bold text-gray-500 mb-1 block">이름 *</label>
+            <input type="text" name="author_name" required placeholder="이름을 입력하세요"
+                class="w-full px-4 py-3 rounded-2xl shadow-clay-inner bg-white/80 text-gray-700 font-bold focus:outline-none focus:ring-2 focus:ring-purple-300">
+        </div>
+
+        <!-- Type selector -->
+        <div class="flex gap-2 mb-5">
+            <button type="button" onclick="ibSelectCardType(this, 'text')" class="ib-type-tab flex-1 active">
+                <span class="ib-type-icon">📝</span> 메모
+            </button>
+            <button type="button" onclick="ibSelectCardType(this, 'link')" class="ib-type-tab flex-1">
+                <span class="ib-type-icon">🔗</span> 링크
+            </button>
+            <button type="button" onclick="ibSelectCardType(this, 'file')" class="ib-type-tab flex-1">
+                <span class="ib-type-icon">📄</span> 파일
+            </button>
+            <button type="button" onclick="ibSelectCardType(this, 'image')" class="ib-type-tab flex-1">
+                <span class="ib-type-icon">🖼</span> 이미지
+            </button>
+        </div>
+        {{ form.card_type }}
+
+        <!-- Title -->
+        <div class="mb-4">
+            <label class="text-xs font-bold text-gray-500 mb-1 block">제목 *</label>
+            {{ form.title }}
+        </div>
+
+        <!-- URL -->
+        <div class="mb-4" id="ibFieldUrl" style="display:none">
+            <label class="text-xs font-bold text-gray-500 mb-1 block">URL</label>
+            {{ form.url }}
+        </div>
+
+        <!-- File -->
+        <div class="mb-4" id="ibFieldFile" style="display:none">
+            <label class="text-xs font-bold text-gray-500 mb-1 block">파일</label>
+            <input type="file" name="file" class="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-purple-100 file:text-purple-600">
+        </div>
+
+        <!-- Image -->
+        <div class="mb-4" id="ibFieldImage" style="display:none">
+            <label class="text-xs font-bold text-gray-500 mb-1 block">이미지</label>
+            <input type="file" name="image" accept="image/*" class="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-green-100 file:text-green-600">
+        </div>
+
+        <!-- Content -->
+        <div class="mb-4" id="ibFieldContent">
+            <label class="text-xs font-bold text-gray-500 mb-1 block">내용</label>
+            {{ form.content }}
+        </div>
+
+        <button type="submit" hx-disabled-elt="this" class="w-full py-3 rounded-full bg-purple-600 text-white font-bold shadow-lg hover:bg-purple-700 transition mt-2">
+            제출하기
+        </button>
+    </form>
+</div>

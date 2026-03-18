@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ board.icon }} {{ board.title }} — 인포보드{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'infoboard/css/infoboard.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-4 md:px-6 min-h-screen bg-[#E0E5EC]/30">
+    <div class="max-w-6xl mx-auto">
+
+        <!-- Header -->
+        <div class="mb-8">
+            <a href="{% url 'infoboard:dashboard' %}" class="inline-flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-purple-600 transition mb-4">
+                <i class="fa-solid fa-arrow-left"></i> 대시보드로
+            </a>
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-black text-gray-800 flex items-center gap-2">
+                        <span class="text-3xl">{{ board.icon }}</span>
+                        {{ board.title }}
+                    </h1>
+                    <p class="text-gray-500 font-medium mt-1">
+                        {{ board.card_count }}개 항목
+                        {% for tag in board_tags %}
+                        <span class="ib-tag ml-1">#{{ tag.name }}</span>
+                        {% endfor %}
+                    </p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <!-- Board search -->
+                    <div class="relative" x-data="{ open: false }">
+                        <button @click="open = !open" class="h-10 px-4 rounded-full shadow-clay-inner bg-white/80 text-gray-500 hover:text-purple-600 transition text-sm font-bold flex items-center gap-2">
+                            <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                            <span class="hidden sm:inline">검색</span>
+                        </button>
+                        <div x-show="open" @click.away="open = false" x-cloak
+                            class="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-xl p-3 z-30">
+                            <form method="get" class="flex gap-2">
+                                <input type="text" name="q" value="{{ search_q }}" placeholder="카드 검색..."
+                                    class="flex-1 px-3 py-2 rounded-lg bg-slate-50 text-sm font-medium outline-none focus:ring-2 focus:ring-purple-300">
+                                <button type="submit" class="px-3 py-2 rounded-lg bg-purple-600 text-white text-sm font-bold">
+                                    <i class="fa-solid fa-magnifying-glass"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Layout Switcher -->
+                    <div class="hidden sm:flex items-center bg-white/80 rounded-full shadow-clay-inner overflow-hidden">
+                        <a href="?layout=grid" class="h-10 w-10 flex items-center justify-center text-sm transition {% if board.layout == 'grid' %}text-purple-600 bg-purple-100{% else %}text-gray-400 hover:text-purple-600{% endif %}" title="격자형">
+                            <i class="fa-solid fa-grip"></i>
+                        </a>
+                        <a href="?layout=list" class="h-10 w-10 flex items-center justify-center text-sm transition {% if board.layout == 'list' %}text-purple-600 bg-purple-100{% else %}text-gray-400 hover:text-purple-600{% endif %}" title="목록형">
+                            <i class="fa-solid fa-list"></i>
+                        </a>
+                        <a href="?layout=timeline" class="h-10 w-10 flex items-center justify-center text-sm transition {% if board.layout == 'timeline' %}text-purple-600 bg-purple-100{% else %}text-gray-400 hover:text-purple-600{% endif %}" title="타임라인">
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                        </a>
+                    </div>
+
+                    <!-- Share -->
+                    <button type="button"
+                        hx-get="{% url 'infoboard:share_panel' board_id=board.id %}"
+                        hx-target="#ibModal"
+                        hx-swap="innerHTML"
+                        onclick="document.getElementById('ibModalOverlay').classList.remove('hidden')"
+                        class="h-10 px-4 rounded-full shadow-clay-inner bg-white/80 text-gray-500 hover:text-purple-600 transition text-sm font-bold flex items-center gap-2">
+                        <i class="fa-solid fa-share-from-square"></i>
+                        <span class="hidden sm:inline">공유</span>
+                    </button>
+
+                    <!-- More menu -->
+                    <div class="relative" x-data="{ open: false }">
+                        <button @click="open = !open" class="h-10 w-10 rounded-full shadow-clay-inner bg-white/80 text-gray-500 hover:text-purple-600 transition flex items-center justify-center">
+                            <i class="fa-solid fa-ellipsis"></i>
+                        </button>
+                        <div x-show="open" @click.away="open = false" x-cloak
+                            class="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl p-2 z-30">
+                            <button type="button"
+                                hx-get="{% url 'infoboard:board_edit' board_id=board.id %}"
+                                hx-target="#ibModal"
+                                hx-swap="innerHTML"
+                                @click="open = false; document.getElementById('ibModalOverlay').classList.remove('hidden')"
+                                class="ib-dropdown-item w-full text-left">
+                                <i class="fa-solid fa-pen text-xs"></i> 수정
+                            </button>
+                            <a href="{% url 'infoboard:board_export_csv' board_id=board.id %}" class="ib-dropdown-item">
+                                <i class="fa-solid fa-file-csv text-xs"></i> CSV 내보내기
+                            </a>
+                            <form method="post" action="{% url 'infoboard:board_delete' board_id=board.id %}"
+                                onsubmit="return confirm('이 보드와 모든 카드를 삭제할까요?')">
+                                {% csrf_token %}
+                                <button type="submit" class="ib-dropdown-item danger w-full text-left">
+                                    <i class="fa-solid fa-trash text-xs"></i> 삭제
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if board.description %}
+            <p class="text-gray-500 text-sm mt-3 max-w-2xl">{{ board.description }}</p>
+            {% endif %}
+        </div>
+
+        <!-- Card Grid / List / Timeline -->
+        <div id="ibCardGrid" class="{% if board.layout == 'list' %}ib-card-list{% elif board.layout == 'timeline' %}ib-card-timeline{% else %}ib-card-grid{% endif %}">
+            {% for card in cards %}
+            {% include 'infoboard/partials/card_item.html' %}
+            {% endfor %}
+
+            <!-- Add Card -->
+            <button type="button"
+                hx-get="{% url 'infoboard:card_add' board_id=board.id %}"
+                hx-target="#ibModal"
+                hx-swap="innerHTML"
+                onclick="document.getElementById('ibModalOverlay').classList.remove('hidden')"
+                class="ib-add-card">
+                <i class="fa-solid fa-plus text-2xl"></i>
+                <span>카드 추가</span>
+            </button>
+        </div>
+
+        {% if not cards and not search_q %}
+        <div class="ib-empty mt-8">
+            <div class="ib-empty-icon">📋</div>
+            <p class="text-lg font-bold text-gray-500">아직 카드가 없어요</p>
+            <p class="text-sm text-gray-400 mt-1">위의 "카드 추가" 버튼으로 첫 번째 자료를 추가해보세요</p>
+        </div>
+        {% endif %}
+
+        {% if search_q and not cards %}
+        <div class="ib-empty mt-8">
+            <div class="ib-empty-icon">🔍</div>
+            <p class="text-lg font-bold text-gray-500">"{{ search_q }}" 검색 결과가 없어요</p>
+        </div>
+        {% endif %}
+
+    </div>
+</section>
+
+<!-- Modal Container -->
+<div id="ibModalOverlay" class="ib-modal-overlay hidden" onclick="if(event.target===this){this.classList.add('hidden')}">
+    <div id="ibModal" class="ib-modal" onclick="event.stopPropagation()">
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'infoboard/js/infoboard.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,54 @@
+<div class="p-6">
+    <div class="flex items-center justify-between mb-6">
+        <h2 class="text-xl font-black text-gray-800">{% if is_edit %}컬렉션 수정{% else %}새 컬렉션{% endif %}</h2>
+        <button onclick="document.getElementById('ibModalOverlay').classList.add('hidden')" class="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-600 transition">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+
+    <form method="post" action="{% if is_edit %}{% url 'infoboard:collection_edit' collection_id=collection.id %}{% else %}{% url 'infoboard:collection_create' %}{% endif %}"
+        hx-post="{% if is_edit %}{% url 'infoboard:collection_edit' collection_id=collection.id %}{% else %}{% url 'infoboard:collection_create' %}{% endif %}"
+        hx-target="{% if is_edit %}#collection-{{ collection.id }}{% else %}#ibCollectionGrid{% endif %}"
+        hx-swap="{% if is_edit %}outerHTML{% else %}afterbegin{% endif %}"
+        @htmx:after-swap.window="document.getElementById('ibModalOverlay').classList.add('hidden')">
+        {% csrf_token %}
+
+        <div class="mb-4">
+            <label class="text-xs font-bold text-gray-500 mb-1 block">컬렉션 이름 *</label>
+            {{ form.title }}
+        </div>
+
+        <div class="mb-4">
+            <label class="text-xs font-bold text-gray-500 mb-1 block">설명 (선택)</label>
+            {{ form.description }}
+        </div>
+
+        <!-- Board selection -->
+        <div class="mb-5">
+            <label class="text-xs font-bold text-gray-500 mb-2 block">포함할 보드 선택</label>
+            <div class="max-h-48 overflow-y-auto space-y-1 bg-slate-50 rounded-xl p-2">
+                {% for board in boards %}
+                <label class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white transition cursor-pointer">
+                    <input type="checkbox" name="board_ids" value="{{ board.id }}"
+                        {% if selected_ids and board.id|stringformat:'s' in selected_ids %}checked{% endif %}
+                        class="accent-purple-600">
+                    <span class="text-sm">{{ board.icon }}</span>
+                    <span class="text-sm font-bold text-gray-700 truncate">{{ board.title }}</span>
+                </label>
+                {% empty %}
+                <p class="text-sm text-gray-400 text-center py-4">아직 보드가 없어요</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="flex gap-3 pt-3 border-t border-gray-100">
+            <button type="button" onclick="document.getElementById('ibModalOverlay').classList.add('hidden')"
+                class="flex-1 py-3 rounded-full bg-gray-100 text-gray-600 font-bold hover:bg-gray-200 transition">
+                취소
+            </button>
+            <button type="submit" hx-disabled-elt="this" class="flex-1 py-3 rounded-full bg-purple-600 text-white font-bold shadow-lg hover:bg-purple-700 transition">
+                {% if is_edit %}저장{% else %}만들기{% endif %}
+            </button>
+        </div>
+    </form>
+</div>

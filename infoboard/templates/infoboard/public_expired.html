@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block title %}공유 만료{% endblock %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-6 min-h-screen flex items-center justify-center bg-[#E0E5EC]/30">
+    <div class="text-center">
+        <div class="text-6xl mb-6">⏰</div>
+        <h1 class="text-2xl font-black text-gray-800 mb-3">공유 링크가 만료되었어요</h1>
+        <p class="text-gray-500 font-medium">"{{ board_title }}" 보드의 공유 링크가 더 이상 유효하지 않아요.</p>
+        <a href="/" class="inline-block mt-8 px-8 py-3 rounded-full bg-purple-600 text-white font-bold shadow-lg hover:bg-purple-700 transition">
+            홈으로
+        </a>
+    </div>
+</section>
+{% endblock %}

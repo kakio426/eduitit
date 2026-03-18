@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if is_edit %}보드 수정{% else %}새 보드{% endif %} — 인포보드{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'infoboard/css/infoboard.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-4 md:px-6 min-h-screen bg-[#E0E5EC]/30">
+    <div class="max-w-xl mx-auto">
+        <a href="{% url 'infoboard:dashboard' %}" class="inline-flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-purple-600 transition mb-6">
+            <i class="fa-solid fa-arrow-left"></i> 대시보드로
+        </a>
+        <div class="ib-info-card">
+            {% include 'infoboard/partials/board_form_modal.html' %}
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'infoboard/js/infoboard.js' %}"></script>
+{% endblock %}

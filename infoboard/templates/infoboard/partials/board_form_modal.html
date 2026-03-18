@@ -1,0 +1,106 @@
+<div class="p-6">
+    <div class="flex items-center justify-between mb-6">
+        <h2 class="text-xl font-black text-gray-800">{% if is_edit %}보드 수정{% else %}새 보드 만들기{% endif %}</h2>
+        <button onclick="document.getElementById('ibModalOverlay').classList.add('hidden')" class="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-600 transition">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+
+    <form method="post" action="{% if is_edit %}{% url 'infoboard:board_edit' board_id=board.id %}{% else %}{% url 'infoboard:board_create' %}{% endif %}"
+        hx-post="{% if is_edit %}{% url 'infoboard:board_edit' board_id=board.id %}{% else %}{% url 'infoboard:board_create' %}{% endif %}"
+        hx-target="{% if is_edit %}#board-{{ board.id }}{% else %}#ibBoardGrid{% endif %}"
+        hx-swap="{% if is_edit %}outerHTML{% else %}afterbegin{% endif %}"
+        @htmx:after-swap.window="document.getElementById('ibModalOverlay').classList.add('hidden')">
+        {% csrf_token %}
+
+        <!-- Icon + Color -->
+        <div class="flex items-center gap-4 mb-5">
+            <div>
+                <label class="text-xs font-bold text-gray-500 mb-1 block">아이콘</label>
+                <div class="ib-icon-pick" onclick="ibCycleIcon(this)" id="ibIconPicker">
+                    {{ form.icon.value|default:'📌' }}
+                </div>
+                {{ form.icon }}
+            </div>
+            <div class="flex-1">
+                <label class="text-xs font-bold text-gray-500 mb-1 block">색상</label>
+                <div class="flex gap-2">
+                    <button type="button" onclick="ibPickColor(this, 'blue')" class="ib-color-pick {% if form.color_theme.value == 'blue' %}active{% endif %}" style="background: #3b82f6"></button>
+                    <button type="button" onclick="ibPickColor(this, 'green')" class="ib-color-pick {% if form.color_theme.value == 'green' %}active{% endif %}" style="background: #22c55e"></button>
+                    <button type="button" onclick="ibPickColor(this, 'purple')" class="ib-color-pick {% if form.color_theme.value|default:'purple' == 'purple' %}active{% endif %}" style="background: #8b5cf6"></button>
+                    <button type="button" onclick="ibPickColor(this, 'orange')" class="ib-color-pick {% if form.color_theme.value == 'orange' %}active{% endif %}" style="background: #f97316"></button>
+                    <button type="button" onclick="ibPickColor(this, 'red')" class="ib-color-pick {% if form.color_theme.value == 'red' %}active{% endif %}" style="background: #ef4444"></button>
+                    <button type="button" onclick="ibPickColor(this, 'dark')" class="ib-color-pick {% if form.color_theme.value == 'dark' %}active{% endif %}" style="background: #374151"></button>
+                </div>
+                {{ form.color_theme }}
+            </div>
+        </div>
+
+        <!-- Title -->
+        <div class="mb-4">
+            <label class="text-xs font-bold text-gray-500 mb-1 block">보드 이름 *</label>
+            {{ form.title }}
+        </div>
+
+        <!-- Description -->
+        <div class="mb-4">
+            <label class="text-xs font-bold text-gray-500 mb-1 block">설명 (선택)</label>
+            {{ form.description }}
+        </div>
+
+        <!-- Layout -->
+        <div class="mb-4">
+            <label class="text-xs font-bold text-gray-500 mb-2 block">보기 방식</label>
+            <div class="flex gap-3">
+                <label class="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-50 cursor-pointer hover:bg-slate-100 transition text-sm font-bold text-gray-600">
+                    <input type="radio" name="layout" value="grid" {% if form.layout.value == 'grid' or not form.layout.value %}checked{% endif %} class="accent-purple-600"> 격자형
+                </label>
+                <label class="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-50 cursor-pointer hover:bg-slate-100 transition text-sm font-bold text-gray-600">
+                    <input type="radio" name="layout" value="list" {% if form.layout.value == 'list' %}checked{% endif %} class="accent-purple-600"> 목록형
+                </label>
+                <label class="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-50 cursor-pointer hover:bg-slate-100 transition text-sm font-bold text-gray-600">
+                    <input type="radio" name="layout" value="timeline" {% if form.layout.value == 'timeline' %}checked{% endif %} class="accent-purple-600"> 타임라인
+                </label>
+            </div>
+        </div>
+
+        <!-- Tags -->
+        <div class="mb-5">
+            <label class="text-xs font-bold text-gray-500 mb-1 block">태그</label>
+            <div class="flex flex-wrap gap-1.5 mb-2" id="ibTagContainer">
+                <!-- 기존 태그는 JS로 렌더 -->
+            </div>
+            <div class="flex gap-2">
+                <input type="text" id="ibNewTagInput" placeholder="태그 입력 후 Enter"
+                    class="flex-1 px-3 py-2 rounded-lg bg-slate-50 text-sm font-medium outline-none focus:ring-2 focus:ring-purple-300"
+                    onkeydown="if(event.key==='Enter'){event.preventDefault();ibAddTag(this.value);this.value=''}">
+                <button type="button" onclick="ibAddTag(document.getElementById('ibNewTagInput').value);document.getElementById('ibNewTagInput').value=''"
+                    class="px-3 py-2 rounded-lg bg-purple-100 text-purple-600 text-sm font-bold hover:bg-purple-200 transition">
+                    + 태그
+                </button>
+            </div>
+            {{ form.tag_names }}
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex gap-3 pt-3 border-t border-gray-100">
+            <button type="button" onclick="document.getElementById('ibModalOverlay').classList.add('hidden')"
+                class="flex-1 py-3 rounded-full bg-gray-100 text-gray-600 font-bold hover:bg-gray-200 transition">
+                취소
+            </button>
+            <button type="submit" hx-disabled-elt="this" class="flex-1 py-3 rounded-full bg-purple-600 text-white font-bold shadow-lg hover:bg-purple-700 transition">
+                {% if is_edit %}저장{% else %}만들기{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+// 기존 태그 초기화
+(function() {
+    const raw = document.getElementById('id_tag_names');
+    if (raw && raw.value) {
+        raw.value.split(',').forEach(n => { if (n.trim()) ibAddTagUI(n.trim()); });
+    }
+})();
+</script>

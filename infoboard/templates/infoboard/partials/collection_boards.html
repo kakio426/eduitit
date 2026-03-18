@@ -1,0 +1,8 @@
+{% for board in boards %}
+{% include 'infoboard/partials/board_card.html' %}
+{% empty %}
+<div class="col-span-full ib-empty">
+    <div class="ib-empty-icon">📋</div>
+    <p class="font-bold text-gray-500">이 컬렉션에 보드가 없어요</p>
+</div>
+{% endfor %}

@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}검색 — 인포보드{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'infoboard/css/infoboard.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-4 md:px-6 min-h-screen bg-[#E0E5EC]/30">
+    <div class="max-w-3xl mx-auto">
+        <a href="{% url 'infoboard:dashboard' %}" class="inline-flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-purple-600 transition mb-6">
+            <i class="fa-solid fa-arrow-left"></i> 대시보드로
+        </a>
+
+        <div class="mb-6">
+            <form method="get" class="flex gap-3">
+                <input type="text" name="q" value="{{ q }}" placeholder="보드, 카드, 태그를 검색하세요..."
+                    autofocus
+                    class="flex-1 h-12 px-5 rounded-full shadow-clay-inner bg-white/80 text-gray-700 font-bold focus:outline-none focus:ring-2 focus:ring-purple-300">
+                <button type="submit" class="h-12 px-6 rounded-full bg-purple-600 text-white font-bold shadow-lg hover:bg-purple-700 transition">
+                    검색
+                </button>
+            </form>
+        </div>
+
+        <div id="ibSearchResults">
+            {% include 'infoboard/partials/search_results.html' %}
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'infoboard/js/infoboard.js' %}"></script>
+{% endblock %}

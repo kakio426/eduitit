@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}컬렉션 — 인포보드{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'infoboard/css/infoboard.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-4 md:px-6 min-h-screen bg-[#E0E5EC]/30">
+    <div class="max-w-6xl mx-auto">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+            <div>
+                <h1 class="text-3xl font-black text-gray-800 flex items-center gap-3">📂 컬렉션</h1>
+                <p class="text-gray-500 font-medium mt-1">보드를 묶어 관리하세요</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <a href="{% url 'infoboard:dashboard' %}" class="h-10 px-4 rounded-full shadow-clay-inner bg-white/80 text-gray-500 hover:text-purple-600 transition text-sm font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-arrow-left"></i> 대시보드
+                </a>
+                <button type="button"
+                    hx-get="{% url 'infoboard:collection_create' %}"
+                    hx-target="#ibModal"
+                    hx-swap="innerHTML"
+                    onclick="document.getElementById('ibModalOverlay').classList.remove('hidden')"
+                    class="h-10 px-5 rounded-full bg-indigo-600 text-white font-bold shadow-lg hover:bg-indigo-700 transition flex items-center gap-2 text-sm">
+                    <i class="fa-solid fa-plus"></i> 새 컬렉션
+                </button>
+            </div>
+        </div>
+
+        <div id="ibCollectionGrid" class="ib-card-grid">
+            {% include 'infoboard/partials/collection_grid.html' %}
+        </div>
+    </div>
+</section>
+
+<!-- Modal Container -->
+<div id="ibModalOverlay" class="ib-modal-overlay hidden" onclick="if(event.target===this){this.classList.add('hidden')}">
+    <div id="ibModal" class="ib-modal" onclick="event.stopPropagation()"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'infoboard/js/infoboard.js' %}"></script>
+{% endblock %}

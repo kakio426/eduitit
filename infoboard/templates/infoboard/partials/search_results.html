@@ -1,0 +1,61 @@
+{% if boards or cards or tags %}
+
+{% if boards %}
+<div class="mb-4">
+    <p class="text-xs font-bold text-gray-400 px-2 mb-2">보드</p>
+    {% for board in boards %}
+    <a href="{% url 'infoboard:board_detail' board_id=board.id %}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-purple-50 transition group">
+        <span class="text-xl">{{ board.icon }}</span>
+        <div class="flex-1 min-w-0">
+            <p class="font-bold text-gray-800 truncate group-hover:text-purple-600 transition">{{ board.title }}</p>
+            <p class="text-xs text-gray-400">{{ board.num_cards }}개 항목</p>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if cards %}
+<div class="mb-4">
+    <p class="text-xs font-bold text-gray-400 px-2 mb-2">카드</p>
+    {% for card in cards %}
+    <a href="{% url 'infoboard:board_detail' board_id=card.board_id %}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-purple-50 transition group">
+        <span class="ib-badge ib-badge-{{ card.card_type }} text-xs">
+            {% if card.card_type == 'link' %}🔗{% elif card.card_type == 'file' %}📄{% elif card.card_type == 'image' %}🖼{% else %}📝{% endif %}
+        </span>
+        <div class="flex-1 min-w-0">
+            <p class="font-bold text-gray-800 truncate group-hover:text-purple-600 transition">{{ card.title }}</p>
+            <p class="text-xs text-gray-400">in {{ card.board.icon }} {{ card.board.title }}</p>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if tags %}
+<div class="mb-4">
+    <p class="text-xs font-bold text-gray-400 px-2 mb-2">태그</p>
+    {% for tag in tags %}
+    <a href="{% url 'infoboard:dashboard' %}?tag={{ tag.name }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-purple-50 transition group">
+        <span class="ib-tag">#{{ tag.name }}</span>
+        <p class="text-xs text-gray-400">{{ tag.board_count }}개 보드, {{ tag.card_count }}개 카드</p>
+    </a>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% else %}
+
+{% if q %}
+<div class="ib-empty py-8">
+    <div class="ib-empty-icon">🔍</div>
+    <p class="font-bold text-gray-500">"{{ q }}" 검색 결과가 없어요</p>
+</div>
+{% else %}
+<div class="ib-empty py-8">
+    <div class="ib-empty-icon">🔍</div>
+    <p class="font-bold text-gray-500">검색어를 입력하세요</p>
+</div>
+{% endif %}
+
+{% endif %}

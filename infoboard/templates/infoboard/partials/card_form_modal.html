@@ -1,0 +1,115 @@
+<div class="p-6">
+    <div class="flex items-center justify-between mb-6">
+        <h2 class="text-xl font-black text-gray-800">{% if is_edit %}카드 수정{% else %}카드 추가{% endif %}</h2>
+        <button onclick="document.getElementById('ibModalOverlay').classList.add('hidden')" class="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-600 transition">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+
+    <form method="post" enctype="multipart/form-data"
+        action="{% if is_edit %}{% url 'infoboard:card_edit' card_id=card.id %}{% else %}{% url 'infoboard:card_add' board_id=board.id %}{% endif %}"
+        hx-post="{% if is_edit %}{% url 'infoboard:card_edit' card_id=card.id %}{% else %}{% url 'infoboard:card_add' board_id=board.id %}{% endif %}"
+        hx-target="{% if is_edit %}#card-{{ card.id }}{% else %}#ibCardGrid{% endif %}"
+        hx-swap="{% if is_edit %}outerHTML{% else %}afterbegin{% endif %}"
+        hx-encoding="multipart/form-data"
+        @htmx:after-swap.window="document.getElementById('ibModalOverlay').classList.add('hidden')">
+        {% csrf_token %}
+
+        <!-- Type selector -->
+        <div class="flex gap-2 mb-5">
+            <button type="button" onclick="ibSelectCardType(this, 'link')" class="ib-type-tab flex-1 {% if form.card_type.value == 'link' %}active{% endif %}">
+                <span class="ib-type-icon">🔗</span> 링크
+            </button>
+            <button type="button" onclick="ibSelectCardType(this, 'file')" class="ib-type-tab flex-1 {% if form.card_type.value == 'file' %}active{% endif %}">
+                <span class="ib-type-icon">📄</span> 파일
+            </button>
+            <button type="button" onclick="ibSelectCardType(this, 'image')" class="ib-type-tab flex-1 {% if form.card_type.value == 'image' %}active{% endif %}">
+                <span class="ib-type-icon">🖼</span> 이미지
+            </button>
+            <button type="button" onclick="ibSelectCardType(this, 'text')" class="ib-type-tab flex-1 {% if form.card_type.value|default:'text' == 'text' %}active{% endif %}">
+                <span class="ib-type-icon">📝</span> 메모
+            </button>
+        </div>
+        {{ form.card_type }}
+
+        <!-- Title -->
+        <div class="mb-4">
+            <label class="text-xs font-bold text-gray-500 mb-1 block">제목</label>
+            {{ form.title }}
+        </div>
+
+        <!-- URL (link type) -->
+        <div class="mb-4" id="ibFieldUrl" style="{% if form.card_type.value != 'link' %}display:none{% endif %}">
+            <label class="text-xs font-bold text-gray-500 mb-1 block">URL</label>
+            {{ form.url }}
+        </div>
+
+        <!-- File (file type) -->
+        <div class="mb-4" id="ibFieldFile" style="{% if form.card_type.value != 'file' %}display:none{% endif %}">
+            <label class="text-xs font-bold text-gray-500 mb-1 block">파일 업로드</label>
+            <input type="file" name="file" class="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-purple-100 file:text-purple-600 hover:file:bg-purple-200">
+        </div>
+
+        <!-- Image (image type) -->
+        <div class="mb-4" id="ibFieldImage" style="{% if form.card_type.value != 'image' %}display:none{% endif %}">
+            <label class="text-xs font-bold text-gray-500 mb-1 block">이미지 업로드</label>
+            <input type="file" name="image" accept="image/*" class="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-green-100 file:text-green-600 hover:file:bg-green-200">
+        </div>
+
+        <!-- Content (text/memo type) -->
+        <div class="mb-4" id="ibFieldContent">
+            <label class="text-xs font-bold text-gray-500 mb-1 block">메모 / 내용</label>
+            {{ form.content }}
+        </div>
+
+        <!-- Tags -->
+        <div class="mb-5">
+            <label class="text-xs font-bold text-gray-500 mb-1 block">태그</label>
+            <div class="flex flex-wrap gap-1.5 mb-2" id="ibTagContainer"></div>
+            <div class="flex gap-2">
+                <input type="text" id="ibNewTagInput" placeholder="태그 입력 후 Enter"
+                    class="flex-1 px-3 py-2 rounded-lg bg-slate-50 text-sm font-medium outline-none focus:ring-2 focus:ring-purple-300"
+                    onkeydown="if(event.key==='Enter'){event.preventDefault();ibAddTag(this.value);this.value=''}">
+                <button type="button" onclick="ibAddTag(document.getElementById('ibNewTagInput').value);document.getElementById('ibNewTagInput').value=''"
+                    class="px-3 py-2 rounded-lg bg-purple-100 text-purple-600 text-sm font-bold hover:bg-purple-200 transition">
+                    + 태그
+                </button>
+            </div>
+            {{ form.tag_names }}
+        </div>
+
+        <!-- Color -->
+        <div class="mb-5">
+            <label class="text-xs font-bold text-gray-500 mb-1 block">카드 색상 (선택)</label>
+            <div class="flex gap-2">
+                <button type="button" onclick="ibPickCardColor(this, '')" class="ib-color-pick active" style="background: #f1f5f9"></button>
+                <button type="button" onclick="ibPickCardColor(this, '#FFE0B2')" class="ib-color-pick" style="background: #FFE0B2"></button>
+                <button type="button" onclick="ibPickCardColor(this, '#C8E6C9')" class="ib-color-pick" style="background: #C8E6C9"></button>
+                <button type="button" onclick="ibPickCardColor(this, '#BBDEFB')" class="ib-color-pick" style="background: #BBDEFB"></button>
+                <button type="button" onclick="ibPickCardColor(this, '#E1BEE7')" class="ib-color-pick" style="background: #E1BEE7"></button>
+                <button type="button" onclick="ibPickCardColor(this, '#FFCDD2')" class="ib-color-pick" style="background: #FFCDD2"></button>
+            </div>
+            {{ form.color }}
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex gap-3 pt-3 border-t border-gray-100">
+            <button type="button" onclick="document.getElementById('ibModalOverlay').classList.add('hidden')"
+                class="flex-1 py-3 rounded-full bg-gray-100 text-gray-600 font-bold hover:bg-gray-200 transition">
+                취소
+            </button>
+            <button type="submit" hx-disabled-elt="this" class="flex-1 py-3 rounded-full bg-purple-600 text-white font-bold shadow-lg hover:bg-purple-700 transition">
+                {% if is_edit %}저장{% else %}추가{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+(function() {
+    const raw = document.getElementById('id_tag_names');
+    if (raw && raw.value) {
+        raw.value.split(',').forEach(n => { if (n.trim()) ibAddTagUI(n.trim()); });
+    }
+})();
+</script>

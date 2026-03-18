@@ -1,0 +1,41 @@
+<div class="ib-info-card ib-board-card" id="collection-{{ collection.id }}" style="border-left: 4px solid #6366f1">
+    <a href="{% url 'infoboard:collection_detail' collection_id=collection.id %}" class="block">
+        <div class="flex items-start justify-between mb-3">
+            <span class="text-3xl">📂</span>
+            <div class="relative" x-data="{ open: false }" @click.stop>
+                <button @click.prevent="open = !open" class="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition">
+                    <i class="fa-solid fa-ellipsis text-sm"></i>
+                </button>
+                <div x-show="open" @click.away="open = false" x-cloak
+                    class="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl shadow-xl p-2 z-30">
+                    <button type="button"
+                        hx-get="{% url 'infoboard:collection_edit' collection_id=collection.id %}"
+                        hx-target="#ibModal"
+                        hx-swap="innerHTML"
+                        @click="open = false; document.getElementById('ibModalOverlay').classList.remove('hidden')"
+                        class="ib-dropdown-item w-full text-left">
+                        <i class="fa-solid fa-pen text-xs"></i> 수정
+                    </button>
+                    <form method="post" action="{% url 'infoboard:collection_delete' collection_id=collection.id %}"
+                        hx-post="{% url 'infoboard:collection_delete' collection_id=collection.id %}"
+                        hx-target="#collection-{{ collection.id }}"
+                        hx-swap="outerHTML"
+                        hx-confirm="이 컬렉션을 삭제할까요? (보드는 유지됩니다)">
+                        {% csrf_token %}
+                        <button type="submit" class="ib-dropdown-item danger w-full text-left">
+                            <i class="fa-solid fa-trash text-xs"></i> 삭제
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <h3 class="text-lg font-black text-gray-800 mb-1 line-clamp-2">{{ collection.title }}</h3>
+        {% if collection.description %}
+        <p class="text-sm text-gray-500 line-clamp-2 mb-3">{{ collection.description }}</p>
+        {% endif %}
+        <div class="flex items-center gap-2 mt-auto pt-3 border-t border-gray-100">
+            <span class="text-xs text-gray-400 font-bold">{{ collection.boards.count }}개 보드</span>
+            <span class="text-xs text-gray-400 ml-auto">{{ collection.updated_at|timesince }} 전</span>
+        </div>
+    </a>
+</div>

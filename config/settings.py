@@ -101,6 +101,7 @@ INSTALLED_APPS = [
     'docviewer.apps.DocviewerConfig',
     'slidesmith.apps.SlidesmithConfig',
     'blockclass.apps.BlockclassConfig',
+    'infoboard.apps.InfoboardConfig',
 
     # Auth & Allauth
     'django.contrib.sites',

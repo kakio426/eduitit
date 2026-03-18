@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}인포보드 — 내 정보 모음{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'infoboard/css/infoboard.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-4 md:px-6 min-h-screen bg-[#E0E5EC]/30">
+    <div class="max-w-6xl mx-auto">
+
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+            <div>
+                <h1 class="text-3xl md:text-4xl font-black text-gray-800 flex items-center gap-3">
+                    📌 인포보드
+                </h1>
+                <p class="text-gray-500 font-medium mt-1">자료를 모으고, 정리하고, 공유하세요</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <button type="button" onclick="ibOpenSearch()"
+                    class="h-11 px-4 rounded-full shadow-clay-inner bg-white/80 text-gray-500 hover:text-purple-600 transition font-bold text-sm flex items-center gap-2"
+                    title="Ctrl+K">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <span class="hidden sm:inline">검색</span>
+                    <kbd class="hidden sm:inline rounded border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-400 ml-1">Ctrl+K</kbd>
+                </button>
+                <button type="button"
+                    hx-get="{% url 'infoboard:board_create' %}"
+                    hx-target="#ibModal"
+                    hx-swap="innerHTML"
+                    onclick="document.getElementById('ibModalOverlay').classList.remove('hidden')"
+                    class="h-11 px-5 rounded-full bg-purple-600 text-white font-bold shadow-lg hover:bg-purple-700 transition flex items-center gap-2 text-sm">
+                    <i class="fa-solid fa-plus"></i>
+                    새 보드
+                </button>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="flex gap-2 mb-6">
+            <a href="?tab=boards" class="px-4 py-2 rounded-full text-sm font-bold transition {% if current_tab == 'boards' %}bg-purple-600 text-white shadow-lg{% else %}bg-white/70 text-gray-500 hover:bg-white shadow-clay-inner{% endif %}">
+                내 보드
+            </a>
+            <a href="?tab=collections" class="px-4 py-2 rounded-full text-sm font-bold transition {% if current_tab == 'collections' %}bg-purple-600 text-white shadow-lg{% else %}bg-white/70 text-gray-500 hover:bg-white shadow-clay-inner{% endif %}">
+                컬렉션
+            </a>
+        </div>
+
+        {% if current_tab == 'boards' %}
+        <!-- Filters (boards only) -->
+        <div class="flex flex-wrap items-center gap-3 mb-6">
+            <div class="relative" x-data="{ open: false }">
+                <button @click="open = !open" class="h-9 px-4 rounded-full bg-white/80 shadow-clay-inner text-sm font-bold text-gray-600 flex items-center gap-2">
+                    정렬: {% if current_sort == 'recent' %}최신순{% elif current_sort == 'oldest' %}오래된순{% elif current_sort == 'name' %}이름순{% elif current_sort == 'cards' %}항목수순{% endif %}
+                    <i class="fa-solid fa-chevron-down text-xs"></i>
+                </button>
+                <div x-show="open" @click.away="open = false" x-cloak
+                    class="absolute left-0 top-full mt-2 w-40 bg-white rounded-xl shadow-xl p-2 z-30">
+                    <a href="?tab={{ current_tab }}&sort=recent&tag={{ current_tag }}" class="block px-3 py-2 text-sm font-bold rounded-lg hover:bg-purple-50 {% if current_sort == 'recent' %}text-purple-600{% else %}text-gray-600{% endif %}">최신순</a>
+                    <a href="?tab={{ current_tab }}&sort=oldest&tag={{ current_tag }}" class="block px-3 py-2 text-sm font-bold rounded-lg hover:bg-purple-50 {% if current_sort == 'oldest' %}text-purple-600{% else %}text-gray-600{% endif %}">오래된순</a>
+                    <a href="?tab={{ current_tab }}&sort=name&tag={{ current_tag }}" class="block px-3 py-2 text-sm font-bold rounded-lg hover:bg-purple-50 {% if current_sort == 'name' %}text-purple-600{% else %}text-gray-600{% endif %}">이름순</a>
+                    <a href="?tab={{ current_tab }}&sort=cards&tag={{ current_tag }}" class="block px-3 py-2 text-sm font-bold rounded-lg hover:bg-purple-50 {% if current_sort == 'cards' %}text-purple-600{% else %}text-gray-600{% endif %}">항목수순</a>
+                </div>
+            </div>
+
+            <!-- Tag filters -->
+            {% if user_tags %}
+            <div class="flex flex-wrap gap-1.5">
+                <a href="?tab={{ current_tab }}&sort={{ current_sort }}" class="ib-tag {% if not current_tag %}ib-tag-active{% endif %}">전체</a>
+                {% for tag in user_tags %}
+                <a href="?tab={{ current_tab }}&sort={{ current_sort }}&tag={{ tag.name }}" class="ib-tag {% if current_tag == tag.name %}ib-tag-active{% endif %}">#{{ tag.name }}</a>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Board Grid -->
+        <div id="ibBoardGrid" class="ib-card-grid">
+            {% include 'infoboard/partials/board_grid.html' %}
+        </div>
+
+        {% elif current_tab == 'collections' %}
+        <!-- Collection Header -->
+        <div class="flex justify-end mb-6">
+            <button type="button"
+                hx-get="{% url 'infoboard:collection_create' %}"
+                hx-target="#ibModal"
+                hx-swap="innerHTML"
+                onclick="document.getElementById('ibModalOverlay').classList.remove('hidden')"
+                class="h-10 px-5 rounded-full bg-indigo-600 text-white font-bold shadow-lg hover:bg-indigo-700 transition flex items-center gap-2 text-sm">
+                <i class="fa-solid fa-plus"></i> 새 컬렉션
+            </button>
+        </div>
+
+        <!-- Collection Grid -->
+        <div id="ibCollectionGrid" class="ib-card-grid">
+            {% include 'infoboard/partials/collection_grid.html' %}
+        </div>
+        {% endif %}
+
+    </div>
+</section>
+
+<!-- Modal Container -->
+<div id="ibModalOverlay" class="ib-modal-overlay hidden" onclick="if(event.target===this){this.classList.add('hidden')}">
+    <div id="ibModal" class="ib-modal" onclick="event.stopPropagation()">
+        <!-- 모달 내용은 HTMX로 로드 -->
+    </div>
+</div>
+
+<!-- Search Overlay -->
+<div id="ibSearchOverlay" class="ib-search-overlay hidden" onclick="if(event.target===this) ibCloseSearch()">
+    <div class="ib-search-box" onclick="event.stopPropagation()">
+        <div class="px-5 py-4 border-b border-slate-100">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-magnifying-glass text-slate-400"></i>
+                <input id="ibSearchInput" type="text" placeholder="보드, 카드, 태그를 검색하세요..."
+                    autocomplete="off"
+                    hx-get="{% url 'infoboard:search' %}"
+                    hx-trigger="keyup changed delay:300ms"
+                    hx-target="#ibSearchResults"
+                    hx-swap="innerHTML"
+                    name="q"
+                    class="flex-1 bg-transparent text-base font-semibold text-slate-800 outline-none placeholder:text-slate-400">
+                <button onclick="ibCloseSearch()" class="text-xs font-bold text-slate-500 border border-slate-200 bg-slate-100 px-2 py-1 rounded hover:bg-slate-200 transition">ESC</button>
+            </div>
+        </div>
+        <div id="ibSearchResults" class="flex-1 overflow-y-auto px-3 py-3">
+            <div class="ib-empty">
+                <div class="ib-empty-icon">🔍</div>
+                <p class="font-bold">검색어를 입력하세요</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'infoboard/js/infoboard.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ board.icon }} {{ board.title }}{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'infoboard/css/infoboard.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-4 md:px-6 min-h-screen bg-[#E0E5EC]/30">
+    <div class="max-w-5xl mx-auto">
+
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <span class="text-5xl mb-3 block">{{ board.icon }}</span>
+            <h1 class="text-2xl md:text-3xl font-black text-gray-800">{{ board.title }}</h1>
+            {% if board.description %}
+            <p class="text-gray-500 font-medium mt-2 max-w-xl mx-auto">{{ board.description }}</p>
+            {% endif %}
+        </div>
+
+        <!-- Search -->
+        <div class="max-w-md mx-auto mb-8">
+            <form method="get" class="flex gap-2">
+                <input type="text" name="q" value="{{ search_q }}" placeholder="검색..."
+                    class="flex-1 px-4 py-3 rounded-full bg-white shadow-clay-inner text-sm font-medium outline-none focus:ring-2 focus:ring-purple-300">
+                <button type="submit" class="px-5 py-3 rounded-full bg-purple-600 text-white text-sm font-bold shadow-lg">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </button>
+            </form>
+        </div>
+
+        <!-- Cards -->
+        <div class="ib-card-grid">
+            {% for card in cards %}
+            <div class="ib-info-card {% if card.is_pinned %}ib-pinned{% endif %}" {% if card.color %}style="background: {{ card.color }}20; border-left: 3px solid {{ card.color }}"{% endif %}>
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="ib-badge ib-badge-{{ card.card_type }}">
+                        {% if card.card_type == 'link' %}🔗 링크{% elif card.card_type == 'file' %}📄 파일{% elif card.card_type == 'image' %}🖼 이미지{% else %}📝 메모{% endif %}
+                    </span>
+                    {% if card.display_author %}
+                    <span class="text-xs text-gray-400 font-medium">{{ card.display_author }}</span>
+                    {% endif %}
+                </div>
+                <h3 class="font-bold text-gray-800 mb-2">{{ card.title }}</h3>
+
+                {% if card.card_type == 'text' and card.content %}
+                <p class="text-sm text-gray-600 line-clamp-3">{{ card.content }}</p>
+                {% endif %}
+
+                {% if card.card_type == 'link' and card.url %}
+                <a href="{{ card.url }}" target="_blank" rel="noopener noreferrer"
+                    class="inline-flex items-center gap-1 text-sm text-blue-600 font-bold hover:underline mt-2">
+                    열기 <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                </a>
+                {% endif %}
+
+                {% if card.card_type == 'file' and card.file %}
+                <a href="{% url 'infoboard:card_download' card_id=card.id %}"
+                    class="inline-flex items-center gap-1 text-sm text-amber-600 font-bold hover:underline mt-2">
+                    <i class="fa-solid fa-download text-xs"></i> 다운로드
+                </a>
+                {% endif %}
+
+                {% if card.card_type == 'image' and card.image %}
+                <img src="{{ card.image.url }}" alt="{{ card.title }}" class="mt-2 rounded-lg max-h-40 w-full object-cover cursor-pointer"
+                    onclick="window.open('{{ card.image.url }}', '_blank')">
+                {% endif %}
+
+                {% if card.tags.all %}
+                <div class="flex flex-wrap gap-1 mt-3">
+                    {% for tag in card.tags.all %}
+                    <span class="ib-tag">#{{ tag.name }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% empty %}
+            <div class="col-span-full ib-empty">
+                <div class="ib-empty-icon">📋</div>
+                <p class="font-bold text-gray-500">카드가 없습니다</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Student Submit -->
+        {% if can_submit %}
+        <div class="mt-12 clay-card p-6 text-center">
+            <h3 class="text-lg font-bold text-gray-700 mb-3">✏️ 카드 제출하기</h3>
+            <form method="post" action="{% url 'infoboard:student_submit' link_id=shared.id %}" enctype="multipart/form-data" class="max-w-md mx-auto space-y-3">
+                {% csrf_token %}
+                <input type="hidden" name="card_type" value="text">
+                <input type="text" name="author_name" required placeholder="이름"
+                    class="w-full px-4 py-3 rounded-xl bg-white shadow-clay-inner text-sm font-bold outline-none focus:ring-2 focus:ring-purple-300">
+                <input type="text" name="title" required placeholder="제목"
+                    class="w-full px-4 py-3 rounded-xl bg-white shadow-clay-inner text-sm font-bold outline-none focus:ring-2 focus:ring-purple-300">
+                <textarea name="content" rows="3" placeholder="내용"
+                    class="w-full px-4 py-3 rounded-xl bg-white shadow-clay-inner text-sm outline-none focus:ring-2 focus:ring-purple-300"></textarea>
+                <button type="submit" class="w-full py-3 rounded-full bg-purple-600 text-white font-bold shadow-lg hover:bg-purple-700 transition">
+                    제출하기
+                </button>
+            </form>
+        </div>
+        {% endif %}
+
+        <!-- Footer -->
+        <div class="text-center mt-12 text-sm text-gray-400">
+            Powered by <a href="/" class="text-purple-500 hover:underline font-bold">EduItIt</a>
+        </div>
+    </div>
+</section>
+{% endblock %}
