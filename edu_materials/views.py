@@ -1,6 +1,5 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from csp.decorators import csp_update
 from django.db.models import F, Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -103,6 +102,18 @@ def _apply_auto_metadata_with_feedback(request, material):
     if metadata is None:
         messages.warning(request, "자료는 저장했지만 자동 분류는 잠시 실패했습니다. 직접 메타데이터를 수정할 수 있습니다.")
     return metadata
+
+
+def _append_csp_update(response, updates):
+    current = dict(getattr(response, "_csp_update", {}) or {})
+    for directive, sources in updates.items():
+        merged_sources = list(current.get(directive, ()) or ())
+        for source in sources:
+            if source not in merged_sources:
+                merged_sources.append(source)
+        current[directive] = tuple(merged_sources)
+    response._csp_update = current
+    return response
 
 
 @login_required
@@ -227,12 +238,11 @@ def update_material(request, material_id):
 
 
 @login_required
-@csp_update({"frame-src": ("data:",)})
 def material_detail(request, pk):
     material = get_object_or_404(EduMaterial, id=pk, teacher=request.user)
     public_url = request.build_absolute_uri(reverse("edu_materials:run", args=[material.id]))
     material_render_url = reverse("edu_materials:render", args=[material.id])
-    return render(
+    response = render(
         request,
         "edu_materials/detail.html",
         {
@@ -248,6 +258,7 @@ def material_detail(request, pk):
             **_build_preview_context(),
         },
     )
+    return _append_csp_update(response, {"frame-src": ("data:",)})
 
 
 @login_required
@@ -304,14 +315,13 @@ def toggle_material_publish(request, material_id):
     return redirect("edu_materials:detail", pk=material.id)
 
 
-@csp_update({"frame-src": ("data:",)})
 def run_material(request, pk):
     material = get_object_or_404(EduMaterial, id=pk)
     if not material.is_published:
         raise Http404()
     EduMaterial.objects.filter(id=material.id).update(view_count=F("view_count") + 1)
     material.refresh_from_db(fields=["view_count"])
-    return render(
+    response = render(
         request,
         "edu_materials/run.html",
         {
@@ -322,6 +332,7 @@ def run_material(request, pk):
             **_build_preview_context(),
         },
     )
+    return _append_csp_update(response, {"frame-src": ("data:",)})
 
 
 def render_material(request, pk):
