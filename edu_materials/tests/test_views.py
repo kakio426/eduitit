@@ -347,6 +347,8 @@ class EduMaterialViewTests(TestCase):
             response,
             f'data-material-render-url="{reverse("edu_materials:render", args=[material.id])}"',
         )
+        self.assertIn("frame-src", response._csp_update)
+        self.assertIn("data:", response._csp_update["frame-src"])
         self.assertContains(response, "data-frame-mode=\"runtime\"")
         self.assertContains(response, "data-material-frame-shell")
         self.assertContains(response, "data-frame-status")
@@ -368,6 +370,8 @@ class EduMaterialViewTests(TestCase):
         response = self.client.get(reverse("edu_materials:detail", args=[material.id]))
 
         self.assertEqual(response.status_code, 200)
+        self.assertIn("frame-src", response._csp_update)
+        self.assertIn("data:", response._csp_update["frame-src"])
         self.assertContains(response, reverse("edu_materials:render", args=[material.id]))
         self.assertNotContains(response, "srcdoc=")
         self.assertContains(response, "data-frame-mode=\"preview\"")

@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from csp.decorators import csp_update
 from django.db.models import F, Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -226,6 +227,7 @@ def update_material(request, material_id):
 
 
 @login_required
+@csp_update({"frame-src": ("data:",)})
 def material_detail(request, pk):
     material = get_object_or_404(EduMaterial, id=pk, teacher=request.user)
     public_url = request.build_absolute_uri(reverse("edu_materials:run", args=[material.id]))
@@ -302,6 +304,7 @@ def toggle_material_publish(request, material_id):
     return redirect("edu_materials:detail", pk=material.id)
 
 
+@csp_update({"frame-src": ("data:",)})
 def run_material(request, pk):
     material = get_object_or_404(EduMaterial, id=pk)
     if not material.is_published:
