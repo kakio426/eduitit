@@ -156,6 +156,19 @@ class PermissionTest(TestCase):
         self.assertIn("bg-rose-100 text-rose-800 border-rose-300", content)
         self.assertIn("bg-emerald-100 text-emerald-800 border-emerald-300", content)
 
+    @override_settings(
+        FEATURE_MESSAGE_CAPTURE_ENABLED=True,
+        FEATURE_MESSAGE_CAPTURE_ALLOWLIST_USERNAMES="teacher",
+        FEATURE_MESSAGE_CAPTURE_ITEM_TYPES=True,
+    )
+    def test_main_view_message_archive_edit_action_uses_manual_edit_flow(self):
+        response = self.client_teacher.get(reverse("calendar_main"), follow=True)
+        content = response.content.decode("utf-8")
+
+        self.assertIn("보관한 메시지를 바로 일정 수정 화면으로 열었어요.", content)
+        self.assertIn("보관한 메시지를 날짜 바로 입력 화면으로 열었어요.", content)
+        self.assertNotIn("await this.submitSavedMessageCaptureParse(detail.capture_id);", content)
+
     def test_legacy_today_memo_panel_route_redirects_to_home_surface(self):
         response = self.client_teacher.get(f"{reverse('classcalendar:main')}?panel=today-memos")
 

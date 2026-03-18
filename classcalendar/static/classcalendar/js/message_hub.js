@@ -657,20 +657,15 @@ function initCalendarMessageHub(host, options = {}) {
         replayMessageArchiveCapture: async function() {
             const detail = this.messageArchiveSelectedCapture;
             if (!detail) return;
-            this.messageHubActiveTab = 'capture';
-            if (Array.isArray(detail.candidates) && detail.candidates.length > 0) {
-                this.applyArchiveDetailToMessageCapture(detail);
-                window.showToast('저장된 메모 후보를 다시 불러왔어요.', 'success');
+            this.applyArchiveDetailToMessageCapture(detail);
+            const editableCandidateCount = Array.isArray(detail.candidates)
+                ? detail.candidates.filter((candidate) => !candidate.already_saved).length
+                : 0;
+            if (editableCandidateCount > 0) {
+                window.showToast('보관한 메시지를 바로 일정 수정 화면으로 열었어요.', 'success');
                 return;
             }
-            if (detail.archive_status === 'unparsed' && detail.capture_id) {
-                await this.submitSavedMessageCaptureParse(detail.capture_id);
-                return;
-            }
-            this.resetMessageCaptureFlow();
-            this.messageCaptureInputText = String(detail.raw_text || '');
-            window.showToast('보관한 메모를 다시 불러왔어요.', 'info');
-            this.syncMessageHubLayout();
+            window.showToast('보관한 메시지를 날짜 바로 입력 화면으로 열었어요.', 'info');
         },
 
         resetMessageCaptureFlow: function() {

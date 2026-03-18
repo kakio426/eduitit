@@ -2029,20 +2029,15 @@ function calendarApp() {
             if (!detail) {
                 return;
             }
-            this.messageHubActiveTab = 'capture';
-            if (Array.isArray(detail.candidates) && detail.candidates.length > 0) {
-                this.applyArchiveDetailToMessageCapture(detail);
-                window.showToast('저장된 일정 후보를 다시 불러왔어요.', 'success');
+            this.applyArchiveDetailToMessageCapture(detail);
+            const editableCandidateCount = Array.isArray(detail.candidates)
+                ? detail.candidates.filter((candidate) => !candidate.already_saved).length
+                : 0;
+            if (editableCandidateCount > 0) {
+                window.showToast('보관한 메시지를 바로 일정 수정 화면으로 열었어요.', 'success');
                 return;
             }
-            if (detail.archive_status === 'unparsed' && detail.capture_id) {
-                await this.submitSavedMessageCaptureParse(detail.capture_id);
-                return;
-            }
-            this.resetMessageCaptureFlow();
-            this.messageCaptureInputText = String(detail.raw_text || '');
-            window.showToast('원문을 다시 읽을 준비를 했어요.', 'info');
-            this.$nextTick(() => notifyEmbeddedCalendarHeight());
+            window.showToast('보관한 메시지를 날짜 바로 입력 화면으로 열었어요.', 'info');
         },
 
         resetMessageCaptureFlow() {

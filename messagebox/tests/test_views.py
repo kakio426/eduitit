@@ -39,8 +39,8 @@ class MessageboxViewTests(TestCase):
         self.assertContains(response, '@click="focusMessageArchive()"')
         self.assertContains(response, "보관만 함")
         self.assertContains(response, "캘린더 연결됨")
-        self.assertContains(response, "날짜 후보 불러오는 중...")
-        self.assertContains(response, ':disabled="isParsingMessageCapture || isLoadingMessageArchiveDetail"')
+        self.assertContains(response, "x-text=\"'일정 수정하기'\"")
+        self.assertContains(response, ':disabled="isLoadingMessageArchiveDetail"')
         self.assertContains(response, "자동으로 날짜 찾기")
         self.assertContains(response, "바로 일정 넣기")
         self.assertContains(response, "보관만 하기")
@@ -77,6 +77,7 @@ class MessageboxViewTests(TestCase):
         self.assertNotContains(response, "내용을 접었다 펼 수 있어요.")
         self.assertNotContains(response, "달력으로 날짜를 옮긴 뒤 필요한 정보만 아래에서 다듬으세요.")
         self.assertNotContains(response, "직접 일정 추가를 눌러 제목과 날짜만 바로 넣을 수 있어요.")
+        self.assertNotContains(response, "날짜 후보 불러오는 중...")
         self.assertNotContains(response, "이 일정 삭제")
 
     def test_home_card_is_enabled_for_any_authenticated_teacher_when_feature_is_on(self):

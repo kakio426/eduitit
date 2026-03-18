@@ -497,9 +497,9 @@
                                         <button
                                             type="button"
                                             @click="replayMessageArchiveCapture()"
-                                            :disabled="isParsingMessageCapture || isLoadingMessageArchiveDetail"
-                                            class="rounded-xl bg-slate-900 px-3 py-2 text-xs font-black text-white transition hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
-                                            x-text="isParsingMessageCapture ? '날짜 후보 불러오는 중...' : '일정 수정하기'"
+                                            :disabled="isLoadingMessageArchiveDetail"
+                                            class="rounded-xl bg-slate-900 px-3 py-2 text-xs font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                                            x-text="'일정 수정하기'"
                                         ></button>
                                         <button
                                             type="button"

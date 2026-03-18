@@ -73,6 +73,7 @@ function messageboxPage(options = {}) {
             const baseApplyResult = this.applyMessageCaptureResult.bind(this);
             const baseApplyArchiveResult = this.applyMessageCaptureArchiveSaveResult.bind(this);
             const baseApplyArchiveDetail = this.applyArchiveDetailToMessageCapture.bind(this);
+            const baseReplayArchiveCapture = this.replayMessageArchiveCapture.bind(this);
             const baseSelectArchiveItem = this.selectMessageArchiveItem.bind(this);
             const baseSubmitCommit = this.submitMessageCaptureCommit.bind(this);
 
@@ -169,6 +170,36 @@ function messageboxPage(options = {}) {
                 const preferredCaptureId = this.messageCaptureCaptureId || this.selectedCaptureId();
                 await this.loadMessageArchive({ reset: true, preferredCaptureId });
                 this.focusMessageArchive({ captureId: preferredCaptureId });
+            };
+
+            this.replayMessageArchiveCapture = async () => {
+                const detail = this.messageArchiveSelectedCapture;
+                if (!detail) return;
+
+                const visibleCandidates = Array.isArray(detail.candidates)
+                    ? detail.candidates.filter((candidate) => !candidate.already_saved)
+                    : [];
+                const firstEditableCandidateId = visibleCandidates.length > 0
+                    ? String(visibleCandidates[0].candidate_id || "")
+                    : "";
+
+                if (firstEditableCandidateId) {
+                    const prepared = this.prepareSelectedArchiveCaptureForEditing({
+                        candidateId: firstEditableCandidateId,
+                    });
+                    if (prepared) {
+                        this.openMessageCaptureCandidateEditor(firstEditableCandidateId);
+                        window.showToast("보관한 메시지를 바로 일정 수정 화면으로 열었어요.", "success");
+                        return;
+                    }
+                }
+
+                if (this.prepareSelectedArchiveCaptureForEditing({ addManualCandidate: true })) {
+                    window.showToast("보관한 메시지를 바로 일정 추가 화면으로 열었어요.", "info");
+                    return;
+                }
+
+                await baseReplayArchiveCapture();
             };
 
             this.startAnotherMessageCapture = () => {

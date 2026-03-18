@@ -333,7 +333,7 @@
                         <div x-show="messageArchiveSelectedCapture" class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
                             <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-bold" :class="selectedCaptureStatusBadgeClass()" x-text="selectedCaptureStatusText()"></span>
                             <button type="button" x-show="canToggleSelectedCapture()" @click="toggleSelectedCapture()" :disabled="isLoadingMessageArchiveDetail" class="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-extrabold text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60" x-text="selectedCaptureActionText()"></button>
-                            <button type="button" @click="replayMessageArchiveCapture()" :disabled="isLoadingMessageArchiveDetail || isParsingMessageCapture" class="rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-60">일정찾기</button>
+                            <button type="button" @click="replayMessageArchiveCapture()" :disabled="isLoadingMessageArchiveDetail" class="rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-60">일정 수정하기</button>
                         </div>
                     </div>
                 </div>
