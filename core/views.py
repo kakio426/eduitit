@@ -2837,6 +2837,26 @@ def post_create(request):
 
     return redirect('home')
 
+
+@login_required
+@require_POST
+def toggle_pinned_notice_expanded(request):
+    if not request.user.is_staff:
+        messages.error(request, '공지 펼침 상태는 관리자만 변경할 수 있습니다.')
+        return redirect(get_safe_next_url(request, fallback=reverse('home')))
+
+    config = SiteConfig.load()
+    config.pinned_notice_expanded = _is_truthy(request.POST.get('expanded'))
+    config.save(update_fields=['pinned_notice_expanded'])
+
+    if config.pinned_notice_expanded:
+        messages.success(request, '상단 고정 공지를 모두 펼쳤어요.')
+    else:
+        messages.success(request, '상단 고정 공지를 모두 접었어요.')
+
+    return redirect(get_safe_next_url(request, fallback=reverse('home')))
+
+
 @login_required
 def post_like(request, pk):
     post = _resolve_post_for_action(pk, request.user)

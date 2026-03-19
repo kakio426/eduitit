@@ -295,6 +295,7 @@ class SiteConfig(models.Model):
     banner_active = models.BooleanField(default=False, verbose_name="배너 활성화")
     banner_color = models.CharField(max_length=7, default='#7c3aed', verbose_name="배너 색상 (HEX)")
     banner_link = models.URLField(blank=True, default='', verbose_name="배너 링크 URL")
+    pinned_notice_expanded = models.BooleanField(default=False, verbose_name="상단 고정 공지 펼침 상태")
 
     featured_manuals = models.ManyToManyField(
         'products.ServiceManual', 

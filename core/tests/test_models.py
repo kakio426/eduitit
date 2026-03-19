@@ -20,3 +20,12 @@ class SiteConfigTestCase(TestCase):
         # Reload and verify
         config_reloaded = SiteConfig.load()
         self.assertEqual(config_reloaded.notebook_manual_url, test_url)
+
+    def test_pinned_notice_expanded_can_be_set(self):
+        """Test that pinned notice expansion state can be updated"""
+        config = SiteConfig.load()
+        config.pinned_notice_expanded = True
+        config.save()
+
+        config_reloaded = SiteConfig.load()
+        self.assertTrue(config_reloaded.pinned_notice_expanded)

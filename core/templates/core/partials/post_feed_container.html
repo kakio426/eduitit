@@ -1,18 +1,35 @@
 {% with list_target_id=post_list_target_id|default:'post-list-container' %}
 <div id="{{ list_target_id }}" class="space-y-4 {% if list_target_id == 'mobile-post-list-container' %}pb-4{% else %}pb-10{% endif %}" data-feed-scope="{{ feed_scope|default:'all' }}">
     {% if pinned_notice_posts %}
-    <section data-pinned-notice-section="true" class="space-y-3">
+    <section data-pinned-notice-section="true" class="space-y-2">
         <div class="flex items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
-            <div class="flex items-center gap-2">
+            <div class="flex min-w-0 items-center gap-2">
                 <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-amber-700">
                     <i class="ph-fill ph-push-pin-simple text-base"></i>
                 </span>
-                <div>
-                    <p class="text-sm font-bold text-amber-900">상단 고정 공지</p>
-                    <p class="text-[11px] text-amber-700">중요한 안내를 먼저 확인할 수 있어요.</p>
+                <div class="min-w-0">
+                    <p class="truncate text-sm font-bold text-amber-900">상단 고정 공지</p>
+                    <p class="text-[11px] text-amber-700">
+                        {% if pinned_notice_expanded %}모든 공지 내용이 펼쳐진 상태예요.{% else %}제목만 보이게 접어둔 상태예요.{% endif %}
+                    </p>
                 </div>
             </div>
-            <span class="text-[11px] font-semibold text-amber-700">공지 우선 표시</span>
+            {% if user.is_staff %}
+            <form method="post" action="{% url 'toggle_pinned_notice_expanded' %}" class="shrink-0">
+                {% csrf_token %}
+                <input type="hidden" name="expanded" value="{% if pinned_notice_expanded %}0{% else %}1{% endif %}">
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit"
+                    class="inline-flex items-center gap-1 rounded-full bg-white/90 px-3 py-1.5 text-[11px] font-bold text-amber-700 shadow-sm transition hover:bg-white">
+                    <i class="fa-solid {% if pinned_notice_expanded %}fa-angle-up{% else %}fa-angle-down{% endif %} text-[10px]"></i>
+                    <span>{% if pinned_notice_expanded %}전체 접기{% else %}전체 펼치기{% endif %}</span>
+                </button>
+            </form>
+            {% else %}
+            <span class="text-[11px] font-semibold text-amber-700 whitespace-nowrap">
+                {% if pinned_notice_expanded %}전체 펼침{% else %}제목만 보기{% endif %}
+            </span>
+            {% endif %}
         </div>
         <div class="space-y-3">
             {% for post in pinned_notice_posts %}

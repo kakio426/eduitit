@@ -83,6 +83,7 @@ def site_config(request):
             'banner_active': config.banner_active,
             'banner_color': config.banner_color,
             'banner_link': config.banner_link,
+            'pinned_notice_expanded': config.pinned_notice_expanded,
             'notebook_manual_url': getattr(config, 'notebook_manual_url', ''),
         }
     except Exception:
@@ -91,6 +92,7 @@ def site_config(request):
             'banner_active': False,
             'banner_color': '#7c3aed',
             'banner_link': '',
+            'pinned_notice_expanded': False,
             'notebook_manual_url': '',
         }
 

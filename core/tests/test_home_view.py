@@ -21,7 +21,7 @@ from core.mini_apps import (
 from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
 from core.views import _build_home_v4_representative_slots, _rotate_items
 from products.models import Product
-from core.models import Post, ProductFavorite, ProductUsageLog, UserPolicyConsent, UserProfile
+from core.models import Post, ProductFavorite, ProductUsageLog, SiteConfig, UserPolicyConsent, UserProfile
 
 
 def _create_onboarded_user(username, email=None, nickname=None):
@@ -1289,6 +1289,59 @@ class HomeV2ViewTest(TestCase):
         self.assertEqual(content.count('data-pinned-notice-close'), 1)
         self.assertIn('닫을 수 있는 공지', content)
         self.assertIn('항상 보여야 하는 공지', content)
+
+    def test_v2_pinned_notice_display_state_is_global(self):
+        staff = _create_onboarded_user('globalnoticestaff')
+        staff.is_staff = True
+        staff.save(update_fields=['is_staff'])
+        UserPolicyConsent.objects.create(
+            user=staff,
+            provider='direct',
+            terms_version=TERMS_VERSION,
+            privacy_version=PRIVACY_VERSION,
+            agreed_at=timezone.now(),
+            agreement_source='required_gate',
+            ip_address='127.0.0.1',
+            user_agent='test-agent',
+        )
+        Post.objects.create(
+            author=staff,
+            content='공지 본문 상세 설명',
+            og_title='공지 제목',
+            post_type='notice',
+            is_notice_pinned=True,
+        )
+
+        self.client.login(username='globalnoticestaff', password='pass1234')
+
+        response = self.client.get(reverse('home'), HTTP_HX_REQUEST='true')
+        content = response.content.decode('utf-8')
+        self.assertIn('전체 펼치기', content)
+        self.assertNotIn('공지 본문 상세 설명', content)
+
+        self.client.post(
+            reverse('toggle_pinned_notice_expanded'),
+            {'expanded': '1', 'next': reverse('home')},
+        )
+
+        config = SiteConfig.load()
+        self.assertTrue(config.pinned_notice_expanded)
+
+        response = self.client.get(reverse('home'), HTTP_HX_REQUEST='true')
+        content = response.content.decode('utf-8')
+        self.assertIn('전체 접기', content)
+        self.assertIn('공지 본문 상세 설명', content)
+
+        self.client.post(
+            reverse('toggle_pinned_notice_expanded'),
+            {'expanded': '0', 'next': reverse('home')},
+        )
+        self.assertFalse(SiteConfig.load().pinned_notice_expanded)
+
+        response = self.client.get(reverse('home'), HTTP_HX_REQUEST='true')
+        content = response.content.decode('utf-8')
+        self.assertIn('전체 펼치기', content)
+        self.assertNotIn('공지 본문 상세 설명', content)
 
     def test_v2_staff_notice_create_saves_pin_and_dismiss_options(self):
         staff = _create_onboarded_user('staffnoticewriter')

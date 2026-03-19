@@ -20,6 +20,7 @@ class ContextProcessorTestCase(TestCase):
         config.banner_active = True
         config.banner_color = "#111111"
         config.banner_link = "https://example.com/banner"
+        config.pinned_notice_expanded = True
         config.save()
 
         request = self.factory.get("/")
@@ -29,6 +30,7 @@ class ContextProcessorTestCase(TestCase):
         self.assertTrue(context["banner_active"])
         self.assertEqual(context["banner_color"], "#111111")
         self.assertEqual(context["banner_link"], "https://example.com/banner")
+        self.assertTrue(context["pinned_notice_expanded"])
         self.assertIn("notebook_manual_url", context)
         self.assertEqual(context["notebook_manual_url"], "")
 
