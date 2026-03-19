@@ -34,6 +34,17 @@ class FairyGamesRoutingTests(TestCase):
         response = self.client.get(reverse("fairy_games:play", kwargs={"variant": "invalid-variant"}))
         self.assertEqual(response.status_code, 404)
 
+    def test_reversi_play_page_contains_accessibility_landmarks(self):
+        response = self.client.get(reverse("fairy_games:play", kwargs={"variant": "reversi"}))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'role="grid"')
+        self.assertContains(response, 'aria-live="polite"')
+        self.assertContains(response, 'aria-atomic="true"')
+        self.assertContains(response, 'role="dialog"')
+        self.assertContains(response, 'aria-modal="true"')
+        self.assertContains(response, 'id="fg-rules-title"')
+        self.assertContains(response, 'id="fg-result-title"')
+
 
 class FairyGamesEnsureCommandTests(TestCase):
     def test_ensure_fairy_games_sets_launch_routes_and_published_manuals(self):

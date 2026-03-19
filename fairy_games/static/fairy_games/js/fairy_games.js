@@ -25,6 +25,9 @@
   const resultCloseBtn = document.getElementById('fg-result-close');
   const rulesModalEl = document.getElementById('fg-rules-modal');
   const rulesCloseBtn = document.getElementById('fg-rules-close');
+  const resultDialogEl = resultModalEl ? resultModalEl.querySelector('.fg-modal') : null;
+  const rulesDialogEl = rulesModalEl ? rulesModalEl.querySelector('.fg-modal') : null;
+  const FOCUSABLE_SELECTOR = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
   const MODE = 'local';
   const VARIANT = (window.FAIRY_VARIANT || 'cfour').toLowerCase();
@@ -36,6 +39,8 @@
   let handPick = null;
   let boardFlipped = false;
   let resultShown = false;
+  let activeModalEl = null;
+  let modalRestoreFocusEl = null;
 
   const copy = (o) => JSON.parse(JSON.stringify(o));
   const other = (s) => (s === 1 ? 2 : 1);
@@ -68,6 +73,50 @@
     boardEl.classList.toggle('flipped', boardFlipped);
   }
 
+  function boardCellLabel(r, c, detail) {
+    return `${r + 1}행 ${c + 1}열${detail ? `, ${detail}` : ''}`;
+  }
+
+  function focusableElements(container) {
+    if (!container) return [];
+    return Array.from(container.querySelectorAll(FOCUSABLE_SELECTOR)).filter((el) => {
+      if (!(el instanceof HTMLElement)) return false;
+      if (el.hidden) return false;
+      if (el.getAttribute('aria-hidden') === 'true') return false;
+      return true;
+    });
+  }
+
+  function setModalState(modalEl, dialogEl, open, options = {}) {
+    if (!modalEl || !dialogEl) return;
+    modalEl.classList.toggle('show', !!open);
+    modalEl.setAttribute('aria-hidden', open ? 'false' : 'true');
+    document.body.classList.toggle('overflow-hidden', !!open);
+
+    if (open) {
+      activeModalEl = modalEl;
+      modalRestoreFocusEl = options.restoreFocusEl || document.activeElement;
+      window.requestAnimationFrame(() => {
+        const focusTarget = focusableElements(dialogEl)[0] || dialogEl;
+        focusTarget.focus();
+      });
+      return;
+    }
+
+    const wasActive = activeModalEl === modalEl;
+    const shouldRestoreFocus = options.restoreFocus !== false;
+    const restoreFocusEl = options.restoreFocusEl || modalRestoreFocusEl;
+    if (wasActive) {
+      activeModalEl = null;
+      modalRestoreFocusEl = null;
+    }
+    if (wasActive && shouldRestoreFocus && restoreFocusEl instanceof HTMLElement && document.contains(restoreFocusEl)) {
+      window.requestAnimationFrame(() => {
+        restoreFocusEl.focus();
+      });
+    }
+  }
+
   function applyPlayerLabels() {
     if (turnTopNameEl) turnTopNameEl.textContent = playerCopy[2].seat;
     if (turnBottomNameEl) turnBottomNameEl.textContent = playerCopy[1].seat;
@@ -75,16 +124,12 @@
     if (turnBottomDotEl) turnBottomDotEl.className = `fg-turn-dot ${playerCopy[1].dotClass}`;
   }
 
-  function setRulesModal(open) {
-    if (!rulesModalEl) return;
-    rulesModalEl.classList.toggle('show', !!open);
-    rulesModalEl.setAttribute('aria-hidden', open ? 'false' : 'true');
+  function setRulesModal(open, options = {}) {
+    setModalState(rulesModalEl, rulesDialogEl, open, options);
   }
 
-  function setResultModal(open) {
-    if (!resultModalEl) return;
-    resultModalEl.classList.toggle('show', !!open);
-    resultModalEl.setAttribute('aria-hidden', open ? 'false' : 'true');
+  function setResultModal(open, options = {}) {
+    setModalState(resultModalEl, resultDialogEl, open, options);
   }
 
   function maybeShowResult() {
@@ -130,21 +175,38 @@
   function posToken(r, c) { return String.fromCharCode(97 + c) + String(r); }
   function moveToken(fr, fc, tr, tc) { return posToken(fr, fc) + posToken(tr, tc); }
 
-  function cell(cls, html, onClick) {
+  function cell(cls, html, onClick, options = {}) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'fg-cell ' + cls;
     btn.innerHTML = html;
+    btn.setAttribute('role', options.role || 'button');
+    btn.tabIndex = options.tabIndex ?? 0;
+    if (options.label) btn.setAttribute('aria-label', options.label);
+    if (options.disabled) btn.setAttribute('aria-disabled', 'true');
+    else btn.setAttribute('aria-disabled', 'false');
+    if (options.hint || cls.split(/\s+/).includes('hint')) btn.setAttribute('data-fg-hint', 'true');
     btn.addEventListener('click', onClick);
     return btn;
   }
 
   function drawGrid(rows, cols, make, cellWidth = 52) {
     boardEl.innerHTML = '';
+    boardEl.setAttribute('aria-rowcount', String(rows));
+    boardEl.setAttribute('aria-colcount', String(cols));
     boardEl.style.setProperty('--fg-cols', String(cols));
     boardEl.style.setProperty('--fg-cell-max', `${cellWidth}px`);
     boardEl.style.gridTemplateColumns = `repeat(${cols}, minmax(0, var(--fg-cell-size)))`;
-    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) boardEl.appendChild(make(r, c));
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      const btn = make(r, c);
+      if (btn instanceof HTMLElement && btn.classList.contains('fg-cell')) {
+        btn.dataset.row = String(r);
+        btn.dataset.col = String(c);
+        if (!btn.hasAttribute('aria-label')) btn.setAttribute('aria-label', boardCellLabel(r, c, '보드 칸'));
+        if (!btn.hasAttribute('role')) btn.setAttribute('role', 'button');
+      }
+      boardEl.appendChild(btn);
+    }
   }
 
   function variantUiMeta(variant) {
@@ -693,12 +755,23 @@
         if (value === 1) html = "<div class='fg-disc-wrap'><div class='fg-disc fg-black'></div></div>";
         else if (value === 2) html = "<div class='fg-disc-wrap'><div class='fg-disc fg-white'></div></div>";
         else if (legal) html = "<div class='fg-disc-wrap'><div class='fg-disc fg-ghost'></div></div>";
+        const label = value === 1
+          ? boardCellLabel(r, c, '검정 돌')
+          : value === 2
+            ? boardCellLabel(r, c, '하양 돌')
+            : legal
+              ? boardCellLabel(r, c, `${sideName(s.turn)}가 둘 수 있는 칸`)
+              : boardCellLabel(r, c, '빈칸');
         return cell(cls, html, () => {
           if (aiActive() || s.gameOver || !legal) return;
           pushUndo();
           this.apply(s, legal);
           render();
           aiTurn();
+        }, {
+          label,
+          disabled: !legal,
+          hint: !!legal
         });
       }, 64);
       if (s.gameOver) {
@@ -743,7 +816,8 @@
     undoStack = [];
     handPick = null;
     resultShown = false;
-    setResultModal(false);
+    setResultModal(false, { restoreFocus: false });
+    setRulesModal(false, { restoreFocus: false });
 
     render();
     aiTurn();
@@ -754,7 +828,7 @@
       setBoardFlip(!boardFlipped);
     });
   }
-  if (openRulesBtn) openRulesBtn.addEventListener('click', function () { setRulesModal(true); });
+  if (openRulesBtn) openRulesBtn.addEventListener('click', function () { setRulesModal(true, { restoreFocusEl: openRulesBtn }); });
   if (rulesCloseBtn) rulesCloseBtn.addEventListener('click', function () { setRulesModal(false); });
   if (resultCloseBtn) resultCloseBtn.addEventListener('click', function () { setResultModal(false); });
   if (resultRestartBtn) resultRestartBtn.addEventListener('click', function () { init(); });
@@ -769,6 +843,33 @@
       if (e.target === rulesModalEl) setRulesModal(false);
     });
   }
+
+  document.addEventListener('keydown', function (e) {
+    if (!activeModalEl) return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      if (activeModalEl === rulesModalEl) setRulesModal(false);
+      else if (activeModalEl === resultModalEl) setResultModal(false);
+      return;
+    }
+    if (e.key !== 'Tab') return;
+    const dialogEl = activeModalEl.querySelector('.fg-modal');
+    const focusables = focusableElements(dialogEl);
+    if (!focusables.length) {
+      e.preventDefault();
+      dialogEl.focus();
+      return;
+    }
+    const firstEl = focusables[0];
+    const lastEl = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === firstEl) {
+      e.preventDefault();
+      lastEl.focus();
+    } else if (!e.shiftKey && document.activeElement === lastEl) {
+      e.preventDefault();
+      firstEl.focus();
+    }
+  });
 
   resetBtn.addEventListener('click', init);
   undoBtn.addEventListener('click', popUndo);
