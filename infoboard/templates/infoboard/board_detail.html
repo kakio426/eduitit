@@ -23,7 +23,7 @@
                         {{ board.title }}
                     </h1>
                     <p class="text-gray-500 font-medium mt-1">
-                        {{ board.card_count }}개 항목
+                        <span id="ibBoardCardCount">{{ card_count }}</span>개 항목
                         {% for tag in board_tags %}
                         <span class="ib-tag ml-1">#{{ tag.name }}</span>
                         {% endfor %}
@@ -49,24 +49,26 @@
                     </div>
 
                     <!-- Layout Switcher -->
-                    <div class="hidden sm:flex items-center bg-white/80 rounded-full shadow-clay-inner overflow-hidden">
-                        <a href="?layout=grid" class="h-10 w-10 flex items-center justify-center text-sm transition {% if board.layout == 'grid' %}text-purple-600 bg-purple-100{% else %}text-gray-400 hover:text-purple-600{% endif %}" title="격자형">
+                    <form method="post" action="{% url 'infoboard:board_layout' board_id=board.id %}" class="hidden sm:flex items-center bg-white/80 rounded-full shadow-clay-inner overflow-hidden">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ current_path }}">
+                        <button type="submit" name="layout" value="grid" class="h-10 w-10 flex items-center justify-center text-sm transition {% if board.layout == 'grid' %}text-purple-600 bg-purple-100{% else %}text-gray-400 hover:text-purple-600{% endif %}" title="격자형">
                             <i class="fa-solid fa-grip"></i>
-                        </a>
-                        <a href="?layout=list" class="h-10 w-10 flex items-center justify-center text-sm transition {% if board.layout == 'list' %}text-purple-600 bg-purple-100{% else %}text-gray-400 hover:text-purple-600{% endif %}" title="목록형">
+                        </button>
+                        <button type="submit" name="layout" value="list" class="h-10 w-10 flex items-center justify-center text-sm transition {% if board.layout == 'list' %}text-purple-600 bg-purple-100{% else %}text-gray-400 hover:text-purple-600{% endif %}" title="목록형">
                             <i class="fa-solid fa-list"></i>
-                        </a>
-                        <a href="?layout=timeline" class="h-10 w-10 flex items-center justify-center text-sm transition {% if board.layout == 'timeline' %}text-purple-600 bg-purple-100{% else %}text-gray-400 hover:text-purple-600{% endif %}" title="타임라인">
+                        </button>
+                        <button type="submit" name="layout" value="timeline" class="h-10 w-10 flex items-center justify-center text-sm transition {% if board.layout == 'timeline' %}text-purple-600 bg-purple-100{% else %}text-gray-400 hover:text-purple-600{% endif %}" title="타임라인">
                             <i class="fa-solid fa-clock-rotate-left"></i>
-                        </a>
-                    </div>
+                        </button>
+                    </form>
 
                     <!-- Share -->
                     <button type="button"
                         hx-get="{% url 'infoboard:share_panel' board_id=board.id %}"
                         hx-target="#ibModal"
                         hx-swap="innerHTML"
-                        onclick="document.getElementById('ibModalOverlay').classList.remove('hidden')"
+                        onclick="ibOpenModal()"
                         class="h-10 px-4 rounded-full shadow-clay-inner bg-white/80 text-gray-500 hover:text-purple-600 transition text-sm font-bold flex items-center gap-2">
                         <i class="fa-solid fa-share-from-square"></i>
                         <span class="hidden sm:inline">공유</span>
@@ -79,14 +81,14 @@
                         </button>
                         <div x-show="open" @click.away="open = false" x-cloak
                             class="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl p-2 z-30">
-                            <button type="button"
-                                hx-get="{% url 'infoboard:board_edit' board_id=board.id %}"
-                                hx-target="#ibModal"
-                                hx-swap="innerHTML"
-                                @click="open = false; document.getElementById('ibModalOverlay').classList.remove('hidden')"
-                                class="ib-dropdown-item w-full text-left">
-                                <i class="fa-solid fa-pen text-xs"></i> 수정
-                            </button>
+                        <button type="button"
+                            hx-get="{% url 'infoboard:board_edit' board_id=board.id %}"
+                            hx-target="#ibModal"
+                            hx-swap="innerHTML"
+                            @click="open = false; ibOpenModal()"
+                            class="ib-dropdown-item w-full text-left">
+                            <i class="fa-solid fa-pen text-xs"></i> 수정
+                        </button>
                             <a href="{% url 'infoboard:board_export_csv' board_id=board.id %}" class="ib-dropdown-item">
                                 <i class="fa-solid fa-file-csv text-xs"></i> CSV 내보내기
                             </a>
@@ -108,43 +110,27 @@
         </div>
 
         <!-- Card Grid / List / Timeline -->
-        <div id="ibCardGrid" class="{% if board.layout == 'list' %}ib-card-list{% elif board.layout == 'timeline' %}ib-card-timeline{% else %}ib-card-grid{% endif %}">
-            {% for card in cards %}
-            {% include 'infoboard/partials/card_item.html' %}
-            {% endfor %}
+        <div class="{% if board.layout == 'list' %}ib-card-list{% elif board.layout == 'timeline' %}ib-card-timeline{% else %}space-y-6{% endif %}">
+            <div id="ibCardGrid" class="{% if board.layout == 'grid' %}ib-card-grid{% endif %}">
+                {% include 'infoboard/partials/card_grid.html' %}
+            </div>
 
-            <!-- Add Card -->
             <button type="button"
                 hx-get="{% url 'infoboard:card_add' board_id=board.id %}"
                 hx-target="#ibModal"
                 hx-swap="innerHTML"
-                onclick="document.getElementById('ibModalOverlay').classList.remove('hidden')"
+                onclick="ibOpenModal()"
                 class="ib-add-card">
                 <i class="fa-solid fa-plus text-2xl"></i>
                 <span>카드 추가</span>
             </button>
         </div>
 
-        {% if not cards and not search_q %}
-        <div class="ib-empty mt-8">
-            <div class="ib-empty-icon">📋</div>
-            <p class="text-lg font-bold text-gray-500">아직 카드가 없어요</p>
-            <p class="text-sm text-gray-400 mt-1">위의 "카드 추가" 버튼으로 첫 번째 자료를 추가해보세요</p>
-        </div>
-        {% endif %}
-
-        {% if search_q and not cards %}
-        <div class="ib-empty mt-8">
-            <div class="ib-empty-icon">🔍</div>
-            <p class="text-lg font-bold text-gray-500">"{{ search_q }}" 검색 결과가 없어요</p>
-        </div>
-        {% endif %}
-
     </div>
 </section>
 
 <!-- Modal Container -->
-<div id="ibModalOverlay" class="ib-modal-overlay hidden" onclick="if(event.target===this){this.classList.add('hidden')}">
+<div id="ibModalOverlay" class="ib-modal-overlay hidden" onclick="if(event.target===this){ibCloseModal()}">
     <div id="ibModal" class="ib-modal" onclick="event.stopPropagation()">
     </div>
 </div>

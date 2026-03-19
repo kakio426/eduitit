@@ -24,14 +24,14 @@
                     {% if collection.description %}
                     <p class="text-gray-500 font-medium mt-1">{{ collection.description }}</p>
                     {% endif %}
-                    <p class="text-sm text-gray-400 mt-1">{{ collection.boards.count }}개 보드</p>
+                    <p class="text-sm text-gray-400 mt-1"><span id="ibCollectionBoardCount">{{ board_count }}</span>개 보드</p>
                 </div>
                 <div class="flex items-center gap-2">
                     <button type="button"
                         hx-get="{% url 'infoboard:collection_edit' collection_id=collection.id %}"
                         hx-target="#ibModal"
                         hx-swap="innerHTML"
-                        onclick="document.getElementById('ibModalOverlay').classList.remove('hidden')"
+                        onclick="ibOpenModal()"
                         class="h-10 px-4 rounded-full shadow-clay-inner bg-white/80 text-gray-500 hover:text-purple-600 transition text-sm font-bold flex items-center gap-2">
                         <i class="fa-solid fa-pen text-xs"></i> 수정
                     </button>
@@ -54,7 +54,7 @@
 </section>
 
 <!-- Modal Container -->
-<div id="ibModalOverlay" class="ib-modal-overlay hidden" onclick="if(event.target===this){this.classList.add('hidden')}">
+<div id="ibModalOverlay" class="ib-modal-overlay hidden" onclick="if(event.target===this){ibCloseModal()}">
     <div id="ibModal" class="ib-modal" onclick="event.stopPropagation()"></div>
 </div>
 {% endblock %}

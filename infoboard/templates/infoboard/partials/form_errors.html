@@ -1,0 +1,15 @@
+{% if form and form.errors %}
+<div class="mb-4 rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-sm text-rose-700">
+    <p class="font-bold mb-2">입력값을 다시 확인해주세요.</p>
+    <div class="space-y-1">
+        {% for error in form.non_field_errors %}
+        <p>{{ error }}</p>
+        {% endfor %}
+        {% for field in form.visible_fields %}
+        {% for error in field.errors %}
+        <p><span class="font-bold">{{ field.label }}:</span> {{ error }}</p>
+        {% endfor %}
+        {% endfor %}
+    </div>
+</div>
+{% endif %}

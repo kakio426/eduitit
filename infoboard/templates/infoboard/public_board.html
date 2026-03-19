@@ -57,7 +57,7 @@
                 {% endif %}
 
                 {% if card.card_type == 'file' and card.file %}
-                <a href="{% url 'infoboard:card_download' card_id=card.id %}"
+                <a href="{% url 'infoboard:card_download' card_id=card.id %}?link_id={{ shared.id }}"
                     class="inline-flex items-center gap-1 text-sm text-amber-600 font-bold hover:underline mt-2">
                     <i class="fa-solid fa-download text-xs"></i> 다운로드
                 </a>
@@ -86,21 +86,8 @@
 
         <!-- Student Submit -->
         {% if can_submit %}
-        <div class="mt-12 clay-card p-6 text-center">
-            <h3 class="text-lg font-bold text-gray-700 mb-3">✏️ 카드 제출하기</h3>
-            <form method="post" action="{% url 'infoboard:student_submit' link_id=shared.id %}" enctype="multipart/form-data" class="max-w-md mx-auto space-y-3">
-                {% csrf_token %}
-                <input type="hidden" name="card_type" value="text">
-                <input type="text" name="author_name" required placeholder="이름"
-                    class="w-full px-4 py-3 rounded-xl bg-white shadow-clay-inner text-sm font-bold outline-none focus:ring-2 focus:ring-purple-300">
-                <input type="text" name="title" required placeholder="제목"
-                    class="w-full px-4 py-3 rounded-xl bg-white shadow-clay-inner text-sm font-bold outline-none focus:ring-2 focus:ring-purple-300">
-                <textarea name="content" rows="3" placeholder="내용"
-                    class="w-full px-4 py-3 rounded-xl bg-white shadow-clay-inner text-sm outline-none focus:ring-2 focus:ring-purple-300"></textarea>
-                <button type="submit" class="w-full py-3 rounded-full bg-purple-600 text-white font-bold shadow-lg hover:bg-purple-700 transition">
-                    제출하기
-                </button>
-            </form>
+        <div class="mt-12 ib-info-card">
+            {% include 'infoboard/partials/student_submit_form.html' %}
         </div>
         {% endif %}
 

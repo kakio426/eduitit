@@ -1,16 +1,24 @@
 <div class="p-6">
+    {% if modal_mode %}
     <div class="flex items-center justify-between mb-6">
         <h2 class="text-xl font-black text-gray-800">{% if is_edit %}보드 수정{% else %}새 보드 만들기{% endif %}</h2>
-        <button onclick="document.getElementById('ibModalOverlay').classList.add('hidden')" class="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-600 transition">
+        <button type="button" onclick="ibCloseModal()" class="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-600 transition">
             <i class="fa-solid fa-xmark"></i>
         </button>
     </div>
+    {% else %}
+    <div class="mb-6">
+        <h2 class="text-xl font-black text-gray-800">{% if is_edit %}보드 수정{% else %}새 보드 만들기{% endif %}</h2>
+        <p class="text-sm text-gray-400 mt-1">보드 설정과 공유 기준을 함께 정리해요.</p>
+    </div>
+    {% endif %}
 
-    <form method="post" action="{% if is_edit %}{% url 'infoboard:board_edit' board_id=board.id %}{% else %}{% url 'infoboard:board_create' %}{% endif %}"
-        hx-post="{% if is_edit %}{% url 'infoboard:board_edit' board_id=board.id %}{% else %}{% url 'infoboard:board_create' %}{% endif %}"
-        hx-target="{% if is_edit %}#board-{{ board.id }}{% else %}#ibBoardGrid{% endif %}"
-        hx-swap="{% if is_edit %}outerHTML{% else %}afterbegin{% endif %}"
-        @htmx:after-swap.window="document.getElementById('ibModalOverlay').classList.add('hidden')">
+    {% include 'infoboard/partials/form_errors.html' with form=form %}
+
+    <form method="post" action="{% if is_edit and board %}{% url 'infoboard:board_edit' board_id=board.id %}{% else %}{% url 'infoboard:board_create' %}{% endif %}"
+        {% if modal_mode %}hx-post="{% if is_edit and board %}{% url 'infoboard:board_edit' board_id=board.id %}{% else %}{% url 'infoboard:board_create' %}{% endif %}"
+        hx-target="#ibModal"
+        hx-swap="innerHTML"{% endif %}>
         {% csrf_token %}
 
         <!-- Icon + Color -->
@@ -40,12 +48,14 @@
         <div class="mb-4">
             <label class="text-xs font-bold text-gray-500 mb-1 block">보드 이름 *</label>
             {{ form.title }}
+            {% include 'infoboard/partials/field_errors.html' with errors=form.title.errors %}
         </div>
 
         <!-- Description -->
         <div class="mb-4">
             <label class="text-xs font-bold text-gray-500 mb-1 block">설명 (선택)</label>
             {{ form.description }}
+            {% include 'infoboard/partials/field_errors.html' with errors=form.description.errors %}
         </div>
 
         <!-- Layout -->
@@ -62,14 +72,52 @@
                     <input type="radio" name="layout" value="timeline" {% if form.layout.value == 'timeline' %}checked{% endif %} class="accent-purple-600"> 타임라인
                 </label>
             </div>
+            {% include 'infoboard/partials/field_errors.html' with errors=form.layout.errors %}
         </div>
+
+        <!-- Access toggles -->
+        <div class="mb-5 grid gap-3 sm:grid-cols-2">
+            <label class="flex items-start gap-3 rounded-2xl bg-slate-50 px-4 py-3 cursor-pointer hover:bg-slate-100 transition">
+                {{ form.is_public }}
+                <span>
+                    <span class="block text-sm font-bold text-gray-700">공개 열람 허용</span>
+                    <span class="block text-xs text-gray-400">비로그인 사용자도 이 보드를 볼 수 있어요.</span>
+                </span>
+            </label>
+            <label class="flex items-start gap-3 rounded-2xl bg-slate-50 px-4 py-3 cursor-pointer hover:bg-slate-100 transition">
+                {{ form.allow_student_submit }}
+                <span>
+                    <span class="block text-sm font-bold text-gray-700">학생 제출 허용</span>
+                    <span class="block text-xs text-gray-400">공유 링크에서 학생이 카드를 제출할 수 있어요.</span>
+                </span>
+            </label>
+        </div>
+        {% include 'infoboard/partials/field_errors.html' with errors=form.is_public.errors %}
+        {% include 'infoboard/partials/field_errors.html' with errors=form.allow_student_submit.errors %}
+
+        {% if board and board.access_code %}
+        <div class="mb-5 rounded-2xl bg-slate-50 p-4">
+            <label class="text-xs font-bold text-gray-500 mb-2 block">입장 코드</label>
+            <div class="flex items-center gap-2">
+                <input type="text" readonly value="{{ board.access_code }}"
+                    class="flex-1 px-3 py-2.5 rounded-xl bg-white text-sm font-bold tracking-widest text-gray-700 outline-none">
+                <button type="button" onclick="ibCopyText('{{ board.access_code }}')"
+                    class="px-4 py-2.5 rounded-xl bg-gray-100 text-sm font-bold text-gray-600 hover:bg-gray-200 transition">
+                    복사
+                </button>
+            </div>
+            <p class="mt-2 text-xs text-gray-400">학생에게 공유할 입장 코드예요.</p>
+        </div>
+        {% elif is_edit %}
+        <div class="mb-5 rounded-2xl bg-slate-50 p-4 text-xs text-gray-400">
+            저장 후 자동으로 입장 코드가 생성됩니다.
+        </div>
+        {% endif %}
 
         <!-- Tags -->
         <div class="mb-5">
             <label class="text-xs font-bold text-gray-500 mb-1 block">태그</label>
-            <div class="flex flex-wrap gap-1.5 mb-2" id="ibTagContainer">
-                <!-- 기존 태그는 JS로 렌더 -->
-            </div>
+            <div class="flex flex-wrap gap-1.5 mb-2" id="ibTagContainer"></div>
             <div class="flex gap-2">
                 <input type="text" id="ibNewTagInput" placeholder="태그 입력 후 Enter"
                     class="flex-1 px-3 py-2 rounded-lg bg-slate-50 text-sm font-medium outline-none focus:ring-2 focus:ring-purple-300"
@@ -84,23 +132,15 @@
 
         <!-- Buttons -->
         <div class="flex gap-3 pt-3 border-t border-gray-100">
-            <button type="button" onclick="document.getElementById('ibModalOverlay').classList.add('hidden')"
+            {% if modal_mode %}
+            <button type="button" onclick="ibCloseModal()"
                 class="flex-1 py-3 rounded-full bg-gray-100 text-gray-600 font-bold hover:bg-gray-200 transition">
                 취소
             </button>
-            <button type="submit" hx-disabled-elt="this" class="flex-1 py-3 rounded-full bg-purple-600 text-white font-bold shadow-lg hover:bg-purple-700 transition">
+            {% endif %}
+            <button type="submit" hx-disabled-elt="this" class="{% if modal_mode %}flex-1{% else %}w-full{% endif %} py-3 rounded-full bg-purple-600 text-white font-bold shadow-lg hover:bg-purple-700 transition">
                 {% if is_edit %}저장{% else %}만들기{% endif %}
             </button>
         </div>
     </form>
 </div>
-
-<script>
-// 기존 태그 초기화
-(function() {
-    const raw = document.getElementById('id_tag_names');
-    if (raw && raw.value) {
-        raw.value.split(',').forEach(n => { if (n.trim()) ibAddTagUI(n.trim()); });
-    }
-})();
-</script>

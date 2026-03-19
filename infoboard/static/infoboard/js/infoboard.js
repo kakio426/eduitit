@@ -27,6 +27,24 @@ function ibHandleSearchOverlayClick(event) {
     }
 }
 
+function ibOpenModal() {
+    const overlay = document.getElementById('ibModalOverlay');
+    if (overlay) {
+        overlay.classList.remove('hidden');
+    }
+}
+
+function ibCloseModal() {
+    const overlay = document.getElementById('ibModalOverlay');
+    const modal = document.getElementById('ibModal');
+    if (modal) {
+        modal.innerHTML = '';
+    }
+    if (overlay) {
+        overlay.classList.add('hidden');
+    }
+}
+
 // Ctrl+K shortcut for InfoBoard search
 window.addEventListener('keydown', function(e) {
     if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -45,7 +63,7 @@ window.addEventListener('keydown', function(e) {
         ibCloseSearch();
         const modal = document.getElementById('ibModalOverlay');
         if (modal && !modal.classList.contains('hidden')) {
-            modal.classList.add('hidden');
+            ibCloseModal();
         }
     }
 });
@@ -87,15 +105,32 @@ function ibSyncTags() {
     hidden.value = tags.join(',');
 }
 
+function ibInitTagFields() {
+    const container = document.getElementById('ibTagContainer');
+    const hidden = document.getElementById('id_tag_names');
+    if (!container || !hidden || container.dataset.ibTagsBound === '1') return;
+
+    container.dataset.ibTagsBound = '1';
+    if (hidden.value) {
+        hidden.value.split(',').forEach(function(name) {
+            if (name.trim()) {
+                ibAddTagUI(name.trim());
+            }
+        });
+    }
+}
+
 // ── Board Form Helpers ──
 const IB_ICONS = ['📌', '📚', '📗', '📘', '📙', '📕', '🎓', '🔬', '🎨', '🎵', '⚽', '🌍', '💡', '🔧', '📋', '🗂️', '🏫', '✏️'];
-let ibIconIndex = 0;
 
 function ibCycleIcon(el) {
-    ibIconIndex = (ibIconIndex + 1) % IB_ICONS.length;
-    el.textContent = IB_ICONS[ibIconIndex];
     const hidden = document.getElementById('id_icon');
-    if (hidden) hidden.value = IB_ICONS[ibIconIndex];
+    const current = (hidden && hidden.value) || el.textContent.trim() || IB_ICONS[0];
+    const currentIndex = IB_ICONS.indexOf(current);
+    const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % IB_ICONS.length : 0;
+    const nextIcon = IB_ICONS[nextIndex];
+    el.textContent = nextIcon;
+    if (hidden) hidden.value = nextIcon;
 }
 
 function ibPickColor(btn, color) {
@@ -107,16 +142,35 @@ function ibPickColor(btn, color) {
 
 // ── Card Form Helpers ──
 function ibSelectCardType(btn, type) {
+    const currentTypeField = document.getElementById('id_card_type');
+    const currentType = currentTypeField ? currentTypeField.value : '';
     btn.closest('.flex').querySelectorAll('.ib-type-tab').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     const hidden = document.getElementById('id_card_type');
     if (hidden) hidden.value = type;
 
     // Toggle fields
-    const fields = { url: 'ibFieldUrl', file: 'ibFieldFile', image: 'ibFieldImage', content: 'ibFieldContent' };
-    document.getElementById('ibFieldUrl').style.display = type === 'link' ? '' : 'none';
-    document.getElementById('ibFieldFile').style.display = type === 'file' ? '' : 'none';
-    document.getElementById('ibFieldImage').style.display = type === 'image' ? '' : 'none';
+    const urlField = document.getElementById('ibFieldUrl');
+    const fileField = document.getElementById('ibFieldFile');
+    const imageField = document.getElementById('ibFieldImage');
+    if (urlField) urlField.style.display = type === 'link' ? '' : 'none';
+    if (fileField) fileField.style.display = type === 'file' ? '' : 'none';
+    if (imageField) imageField.style.display = type === 'image' ? '' : 'none';
+
+    if (type !== 'link') {
+        const urlInput = document.getElementById('id_url');
+        if (urlInput && currentType !== type) urlInput.value = '';
+        const previewEl = document.getElementById('ibOgPreview');
+        if (previewEl) previewEl.remove();
+    }
+    if (type !== 'file') {
+        const fileInput = document.getElementById('id_file');
+        if (fileInput && currentType !== type) fileInput.value = '';
+    }
+    if (type !== 'image') {
+        const imageInput = document.getElementById('id_image');
+        if (imageInput && currentType !== type) imageInput.value = '';
+    }
 }
 
 function ibPickCardColor(btn, color) {
@@ -180,45 +234,34 @@ function ibToast(message, tag) {
 // ── OG Meta Auto-Fetch ──
 let ibOgTimeout = null;
 
-function ibSetupOgFetch() {
-    const urlInput = document.getElementById('id_url');
-    if (!urlInput) return;
-
-    urlInput.addEventListener('input', function() {
-        clearTimeout(ibOgTimeout);
-        const url = this.value.trim();
-        if (!url || !url.startsWith('http')) return;
-
-        ibOgTimeout = setTimeout(() => ibFetchOgMeta(url), 800);
-    });
-
-    // On paste, fetch immediately
-    urlInput.addEventListener('paste', function() {
-        setTimeout(() => {
-            const url = this.value.trim();
-            if (url && url.startsWith('http')) ibFetchOgMeta(url);
-        }, 100);
-    });
-}
-
 function ibFetchOgMeta(url) {
-    const previewEl = document.getElementById('ibOgPreview');
-    if (previewEl) previewEl.innerHTML = '<p class="text-xs text-gray-400 animate-pulse">🔍 메타 정보 가져오는 중...</p>';
-    else {
-        // Create preview container if not exists
-        const urlField = document.getElementById('ibFieldUrl');
-        if (urlField) {
-            const div = document.createElement('div');
-            div.id = 'ibOgPreview';
-            div.className = 'mt-2';
-            div.innerHTML = '<p class="text-xs text-gray-400 animate-pulse">🔍 메타 정보 가져오는 중...</p>';
-            urlField.appendChild(div);
+    const setPreviewMessage = function(message, tone) {
+        let container = document.getElementById('ibOgPreview');
+        if (!container) {
+            const urlField = document.getElementById('ibFieldUrl');
+            if (!urlField) return;
+            container = document.createElement('div');
+            container.id = 'ibOgPreview';
+            container.className = 'mt-2';
+            urlField.appendChild(container);
         }
-    }
+        const colorClass = tone === 'error' ? 'text-rose-500' : 'text-gray-400';
+        container.innerHTML = `<p class="text-xs ${colorClass}">${message}</p>`;
+    };
+
+    setPreviewMessage('🔍 메타 정보 가져오는 중...', 'info');
 
     fetch(`/infoboard/api/og-meta/?url=${encodeURIComponent(url)}`)
-        .then(r => {
-            if (!r.ok) throw new Error('Failed');
+        .then(async r => {
+            if (!r.ok) {
+                let payload = {};
+                try {
+                    payload = await r.json();
+                } catch (error) {
+                    payload = {};
+                }
+                throw new Error(payload.error || '미리보기 정보를 가져오지 못했어요.');
+            }
             return r.json();
         })
         .then(meta => {
@@ -246,13 +289,58 @@ function ibFetchOgMeta(url) {
             html += '</div></div>';
             container.innerHTML = html;
         })
-        .catch(() => {
-            const container = document.getElementById('ibOgPreview');
-            if (container) container.innerHTML = '';
+        .catch(error => {
+            setPreviewMessage(error.message || '미리보기 정보를 가져오지 못했어요.', 'error');
         });
 }
 
-// Setup OG fetch when card form is loaded via HTMX
-document.addEventListener('htmx:afterSettle', function() {
+function ibSetupOgFetch() {
+    const urlInput = document.getElementById('id_url');
+    if (!urlInput || urlInput.dataset.ibOgBound === '1') return;
+
+    urlInput.dataset.ibOgBound = '1';
+
+    urlInput.addEventListener('input', function() {
+        clearTimeout(ibOgTimeout);
+        const url = this.value.trim();
+        if (!url) {
+            const previewEl = document.getElementById('ibOgPreview');
+            if (previewEl) previewEl.remove();
+            return;
+        }
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            const previewEl = document.getElementById('ibOgPreview');
+            if (previewEl) previewEl.remove();
+            return;
+        }
+
+        ibOgTimeout = setTimeout(() => ibFetchOgMeta(url), 800);
+    });
+
+    // On paste, fetch immediately
+    urlInput.addEventListener('paste', function() {
+        setTimeout(() => {
+            const url = this.value.trim();
+            if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+                ibFetchOgMeta(url);
+            }
+        }, 100);
+    });
+}
+
+function ibInitInfoboardForms() {
+    ibInitTagFields();
     ibSetupOgFetch();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    ibInitInfoboardForms();
+});
+
+document.addEventListener('htmx:afterSettle', function() {
+    ibInitInfoboardForms();
+});
+
+document.addEventListener('infoboard:close-modal', function() {
+    ibCloseModal();
 });

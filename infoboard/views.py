@@ -1,11 +1,13 @@
 import csv
 import json
 import logging
+from urllib.parse import urlsplit
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Count
-from django.http import JsonResponse, HttpResponse, Http404
+from django.http import JsonResponse, HttpResponse, Http404, QueryDict
 from django.shortcuts import render, get_object_or_404, redirect
+from django.urls import reverse, resolve, Resolver404
 from django.views.decorators.http import require_POST
 
 from products.models import Product
@@ -25,17 +27,47 @@ def _get_service(request):
     )
 
 
-# ── 교사 대시보드 ────────────────────────────────────────
+def _current_request_url(request):
+    htmx = getattr(request, 'htmx', None)
+    current_url = getattr(htmx, 'current_url_abs_path', None) if htmx else None
+    return current_url or request.get_full_path()
 
-@login_required
-def dashboard(request):
-    """교사용 메인 대시보드 — 내 보드 목록."""
-    service = _get_service(request)
-    tab = request.GET.get('tab', 'boards')
-    sort = request.GET.get('sort', 'recent')
-    tag_filter = request.GET.get('tag', '')
 
-    boards = Board.objects.filter(owner=request.user).annotate(num_cards=Count('cards'))
+def _current_request_path(request):
+    return urlsplit(_current_request_url(request)).path
+
+
+def _current_request_query(request):
+    return QueryDict(urlsplit(_current_request_url(request)).query, mutable=False)
+
+
+def _resolve_current_route(request):
+    try:
+        return resolve(_current_request_path(request))
+    except Resolver404:
+        return None
+
+
+def _set_htmx_headers(response, *, retarget=None, reswap=None, trigger_after_swap=None, redirect_to=None):
+    if retarget:
+        response['HX-Retarget'] = retarget
+    if reswap:
+        response['HX-Reswap'] = reswap
+    if trigger_after_swap:
+        if isinstance(trigger_after_swap, str):
+            trigger_after_swap = {trigger_after_swap: True}
+        response['HX-Trigger-After-Swap'] = json.dumps(trigger_after_swap)
+    if redirect_to:
+        response['HX-Redirect'] = redirect_to
+    return response
+
+
+def _dashboard_context(owner, query):
+    tab = query.get('tab', 'boards')
+    sort = query.get('sort', 'recent')
+    tag_filter = query.get('tag', '')
+
+    boards = Board.objects.filter(owner=owner).annotate(num_cards=Count('cards'))
 
     if tag_filter:
         boards = boards.filter(tags__name=tag_filter)
@@ -48,18 +80,122 @@ def dashboard(request):
     }
     boards = boards.order_by(sort_map.get(sort, '-updated_at'))
 
-    user_tags = Tag.objects.filter(owner=request.user).order_by('name')
-    collections = Collection.objects.filter(owner=request.user) if tab == 'collections' else None
+    user_tags = Tag.objects.filter(owner=owner).order_by('name')
+    collections = None
+    if tab == 'collections':
+        collections = Collection.objects.filter(owner=owner).annotate(board_count=Count('boards'))
 
-    context = {
-        'service': service,
+    return {
         'boards': boards,
         'collections': collections,
         'user_tags': user_tags,
         'current_tab': tab,
         'current_sort': sort,
         'current_tag': tag_filter,
+        'board_delete_target': 'ibBoardGrid',
     }
+
+
+def _board_cards_context(board, search_q=''):
+    cards = board.cards.all()
+    if search_q:
+        cards = cards.filter(
+            Q(title__icontains=search_q) | Q(content__icontains=search_q) | Q(tags__name__icontains=search_q)
+        ).distinct()
+
+    return {
+        'board': board,
+        'cards': cards,
+        'search_q': search_q,
+        'card_count': board.cards.count(),
+    }
+
+
+def _collection_boards_context(collection):
+    boards = collection.boards.annotate(num_cards=Count('cards')).order_by('-updated_at')
+    return {
+        'collection': collection,
+        'boards': boards,
+        'board_count': boards.count(),
+        'board_delete_target': 'ibCollectionBoards',
+    }
+
+
+def _render_board_grid_response(request, *, close_modal=False):
+    context = _dashboard_context(request.user, _current_request_query(request))
+    response = render(request, 'infoboard/partials/board_grid.html', context)
+    return _set_htmx_headers(
+        response,
+        retarget='#ibBoardGrid',
+        reswap='innerHTML',
+        trigger_after_swap='infoboard:close-modal' if close_modal else None,
+    )
+
+
+def _render_collection_grid_response(request, *, close_modal=False):
+    collections = Collection.objects.filter(owner=request.user).annotate(board_count=Count('boards'))
+    response = render(request, 'infoboard/partials/collection_grid.html', {'collections': collections})
+    return _set_htmx_headers(
+        response,
+        retarget='#ibCollectionGrid',
+        reswap='innerHTML',
+        trigger_after_swap='infoboard:close-modal' if close_modal else None,
+    )
+
+
+def _render_card_grid_response(request, board, *, close_modal=False):
+    search_q = _current_request_query(request).get('q', '').strip()
+    response = render(request, 'infoboard/partials/card_grid.html', _board_cards_context(board, search_q))
+    return _set_htmx_headers(
+        response,
+        retarget='#ibCardGrid',
+        reswap='innerHTML',
+        trigger_after_swap='infoboard:close-modal' if close_modal else None,
+    )
+
+
+def _refresh_link_card_metadata(card, previous_url=None):
+    if card.card_type != 'link' or not card.url:
+        return
+
+    url_changed = previous_url is not None and card.url != previous_url
+    has_existing_meta = any([card.og_title, card.og_description, card.og_image, card.og_site_name])
+    if not url_changed and has_existing_meta:
+        return
+
+    if url_changed:
+        card.og_title = ''
+        card.og_description = ''
+        card.og_image = ''
+        card.og_site_name = ''
+        card.save(update_fields=['og_title', 'og_description', 'og_image', 'og_site_name'])
+
+    from .utils import fetch_url_meta
+
+    meta = fetch_url_meta(card.url)
+    if not meta:
+        return
+
+    changed_fields = []
+    for key, value in meta.items():
+        if getattr(card, key) != value:
+            setattr(card, key, value)
+            changed_fields.append(key)
+
+    if changed_fields:
+        card.save(update_fields=changed_fields)
+
+
+# ── 교사 대시보드 ────────────────────────────────────────
+
+@login_required
+def dashboard(request):
+    """교사용 메인 대시보드 — 내 보드 목록."""
+    service = _get_service(request)
+    context = {
+        'service': service,
+    }
+    context.update(_dashboard_context(request.user, request.GET))
 
     if request.htmx:
         return render(request, 'infoboard/partials/board_grid.html', context)
@@ -77,13 +213,13 @@ def board_create(request):
             board = form.save_with_tags(request.user)
             logger.info(f'[InfoBoard] Board created: {board.title} (id={board.id})')
             if request.htmx:
-                return render(request, 'infoboard/partials/board_card.html', {'board': board})
+                return _render_board_grid_response(request, close_modal=True)
             return redirect('infoboard:board_detail', board_id=board.id)
     else:
-        form = BoardForm()
+        form = BoardForm(initial={'icon': '📌', 'color_theme': 'purple', 'layout': 'grid'})
 
     user_tags = Tag.objects.filter(owner=request.user).order_by('name')
-    context = {'form': form, 'user_tags': user_tags, 'is_edit': False}
+    context = {'form': form, 'user_tags': user_tags, 'is_edit': False, 'modal_mode': bool(request.htmx)}
 
     if request.htmx:
         return render(request, 'infoboard/partials/board_form_modal.html', context)
@@ -95,19 +231,8 @@ def board_detail(request, board_id):
     """보드 상세 — 카드 그리드."""
     board = get_object_or_404(Board, id=board_id, owner=request.user)
     service = _get_service(request)
-
-    # 레이아웃 변경 처리
-    layout_param = request.GET.get('layout', '')
-    if layout_param in ('grid', 'list', 'timeline') and layout_param != board.layout:
-        board.layout = layout_param
-        board.save(update_fields=['layout'])
-
     search_q = request.GET.get('q', '')
-    cards = board.cards.all()
-    if search_q:
-        cards = cards.filter(
-            Q(title__icontains=search_q) | Q(content__icontains=search_q) | Q(tags__name__icontains=search_q)
-        ).distinct()
+    cards_context = _board_cards_context(board, search_q)
 
     board_tags = Tag.objects.filter(
         Q(boards=board) | Q(cards__board=board)
@@ -118,10 +243,13 @@ def board_detail(request, board_id):
     context = {
         'service': service,
         'board': board,
-        'cards': cards,
+        'cards': cards_context['cards'],
         'board_tags': board_tags,
         'shared_link': shared_link,
         'search_q': search_q,
+        'card_count': cards_context['card_count'],
+        'current_path': request.get_full_path(),
+        'modal_mode': False,
     }
 
     if request.htmx:
@@ -130,9 +258,26 @@ def board_detail(request, board_id):
 
 
 @login_required
+@require_POST
+def board_layout(request, board_id):
+    """보드 레이아웃 변경."""
+    board = get_object_or_404(Board, id=board_id, owner=request.user)
+    layout = request.POST.get('layout', '').strip()
+    if layout in dict(Board.LAYOUT_CHOICES) and layout != board.layout:
+        board.layout = layout
+        board.save(update_fields=['layout'])
+
+    next_url = request.POST.get('next', '').strip() or reverse('infoboard:board_detail', args=[board.id])
+    if request.htmx:
+        return _set_htmx_headers(HttpResponse(status=204), redirect_to=next_url)
+    return redirect(next_url)
+
+
+@login_required
 def board_edit(request, board_id):
     """보드 수정."""
     board = get_object_or_404(Board, id=board_id, owner=request.user)
+    current_route = _resolve_current_route(request)
 
     if request.method == 'POST':
         form = BoardForm(request.POST, instance=board)
@@ -140,14 +285,24 @@ def board_edit(request, board_id):
             board = form.save_with_tags(request.user)
             logger.info(f'[InfoBoard] Board updated: {board.title} (id={board.id})')
             if request.htmx:
-                return render(request, 'infoboard/partials/board_card.html', {'board': board})
+                if current_route and current_route.url_name == 'dashboard':
+                    return _render_board_grid_response(request, close_modal=True)
+                if current_route and current_route.url_name == 'board_detail':
+                    return _set_htmx_headers(
+                        HttpResponse(status=204),
+                        redirect_to=_current_request_url(request),
+                    )
+                return _set_htmx_headers(
+                    HttpResponse(status=204),
+                    redirect_to=reverse('infoboard:board_detail', args=[board.id]),
+                )
             return redirect('infoboard:board_detail', board_id=board.id)
     else:
         tag_names = ','.join(board.tags.values_list('name', flat=True))
         form = BoardForm(instance=board, initial={'tag_names': tag_names})
 
     user_tags = Tag.objects.filter(owner=request.user).order_by('name')
-    context = {'form': form, 'board': board, 'user_tags': user_tags, 'is_edit': True}
+    context = {'form': form, 'board': board, 'user_tags': user_tags, 'is_edit': True, 'modal_mode': bool(request.htmx)}
 
     if request.htmx:
         return render(request, 'infoboard/partials/board_form_modal.html', context)
@@ -159,11 +314,28 @@ def board_edit(request, board_id):
 def board_delete(request, board_id):
     """보드 삭제."""
     board = get_object_or_404(Board, id=board_id, owner=request.user)
+    current_route = _resolve_current_route(request)
+    collection = None
+    if current_route and current_route.url_name == 'collection_detail':
+        collection_id = current_route.kwargs.get('collection_id')
+        if collection_id:
+            collection = get_object_or_404(Collection, id=collection_id, owner=request.user)
     title = board.title
     board.delete()
     logger.info(f'[InfoBoard] Board deleted: {title}')
     if request.htmx:
-        return HttpResponse('')
+        if current_route and current_route.url_name == 'collection_detail' and collection is not None:
+            return render(
+                request,
+                'infoboard/partials/collection_boards.html',
+                _collection_boards_context(collection),
+            )
+        if current_route and current_route.url_name == 'board_detail':
+            return _set_htmx_headers(
+                HttpResponse(status=204),
+                redirect_to=reverse('infoboard:dashboard'),
+            )
+        return _render_board_grid_response(request)
     return redirect('infoboard:dashboard')
 
 
@@ -178,23 +350,16 @@ def card_add(request, board_id):
         form = CardForm(request.POST, request.FILES)
         if form.is_valid():
             card = form.save_with_tags(board, author_user=request.user)
-            # OG 메타 자동 추출 (링크 카드)
-            if card.card_type == 'link' and card.url and not card.og_title:
-                from .utils import fetch_url_meta
-                meta = fetch_url_meta(card.url)
-                if meta:
-                    for k, v in meta.items():
-                        setattr(card, k, v)
-                    card.save(update_fields=list(meta.keys()))
+            _refresh_link_card_metadata(card)
             logger.info(f'[InfoBoard] Card added: {card.title} to {board.title}')
             if request.htmx:
-                return render(request, 'infoboard/partials/card_item.html', {'card': card, 'board': board})
+                return _render_card_grid_response(request, board, close_modal=True)
             return redirect('infoboard:board_detail', board_id=board.id)
     else:
         form = CardForm(initial={'card_type': request.GET.get('type', 'text')})
 
     user_tags = Tag.objects.filter(owner=request.user).order_by('name')
-    context = {'form': form, 'board': board, 'user_tags': user_tags, 'is_edit': False}
+    context = {'form': form, 'board': board, 'user_tags': user_tags, 'is_edit': False, 'modal_mode': bool(request.htmx)}
 
     if request.htmx:
         return render(request, 'infoboard/partials/card_form_modal.html', context)
@@ -206,29 +371,23 @@ def card_edit(request, card_id):
     """카드 수정."""
     card = get_object_or_404(Card, id=card_id, board__owner=request.user)
     board = card.board
+    previous_url = card.url
 
     if request.method == 'POST':
         form = CardForm(request.POST, request.FILES, instance=card)
         if form.is_valid():
             card = form.save_with_tags(board, author_user=request.user)
-            # OG 메타 자동 추출 (링크 카드 - URL이 변경된 경우)
-            if card.card_type == 'link' and card.url and not card.og_title:
-                from .utils import fetch_url_meta
-                meta = fetch_url_meta(card.url)
-                if meta:
-                    for k, v in meta.items():
-                        setattr(card, k, v)
-                    card.save(update_fields=list(meta.keys()))
+            _refresh_link_card_metadata(card, previous_url=previous_url)
             logger.info(f'[InfoBoard] Card updated: {card.title}')
             if request.htmx:
-                return render(request, 'infoboard/partials/card_item.html', {'card': card, 'board': board})
+                return _render_card_grid_response(request, board, close_modal=True)
             return redirect('infoboard:board_detail', board_id=board.id)
     else:
         tag_names = ','.join(card.tags.values_list('name', flat=True))
         form = CardForm(instance=card, initial={'tag_names': tag_names})
 
     user_tags = Tag.objects.filter(owner=request.user).order_by('name')
-    context = {'form': form, 'board': board, 'card': card, 'user_tags': user_tags, 'is_edit': True}
+    context = {'form': form, 'board': board, 'card': card, 'user_tags': user_tags, 'is_edit': True, 'modal_mode': bool(request.htmx)}
 
     if request.htmx:
         return render(request, 'infoboard/partials/card_form_modal.html', context)
@@ -240,11 +399,11 @@ def card_edit(request, card_id):
 def card_delete(request, card_id):
     """카드 삭제."""
     card = get_object_or_404(Card, id=card_id, board__owner=request.user)
-    board_id = card.board_id
+    board = card.board
     card.delete()
     if request.htmx:
-        return HttpResponse('')
-    return redirect('infoboard:board_detail', board_id=board_id)
+        return _render_card_grid_response(request, board)
+    return redirect('infoboard:board_detail', board_id=board.id)
 
 
 @login_required
@@ -252,11 +411,12 @@ def card_delete(request, card_id):
 def card_toggle_pin(request, card_id):
     """카드 고정/해제 토글."""
     card = get_object_or_404(Card, id=card_id, board__owner=request.user)
+    board = card.board
     card.is_pinned = not card.is_pinned
     card.save(update_fields=['is_pinned'])
     if request.htmx:
-        return render(request, 'infoboard/partials/card_item.html', {'card': card, 'board': card.board})
-    return redirect('infoboard:board_detail', board_id=card.board_id)
+        return _render_card_grid_response(request, board)
+    return redirect('infoboard:board_detail', board_id=board.id)
 
 
 # ── 태그 ─────────────────────────────────────────────────
@@ -280,20 +440,15 @@ def public_board(request, link_id):
     shared.save(update_fields=['access_count'])
 
     board = shared.board
-    cards = board.cards.all()
-
     search_q = request.GET.get('q', '')
-    if search_q:
-        cards = cards.filter(
-            Q(title__icontains=search_q) | Q(content__icontains=search_q) | Q(tags__name__icontains=search_q)
-        ).distinct()
+    cards_context = _board_cards_context(board, search_q)
 
     context = {
         'board': board,
-        'cards': cards,
+        'cards': cards_context['cards'],
         'shared': shared,
         'search_q': search_q,
-        'can_submit': shared.access_level in ('submit', 'edit'),
+        'can_submit': board.allow_student_submit and shared.access_level in ('submit', 'edit'),
     }
     return render(request, 'infoboard/public_board.html', context)
 
@@ -301,20 +456,15 @@ def public_board(request, link_id):
 def student_submit(request, link_id):
     """학생 카드 제출 (비로그인)."""
     shared = get_object_or_404(SharedLink, id=link_id, is_active=True)
-    if shared.is_expired or shared.access_level not in ('submit', 'edit'):
+    if shared.is_expired or not shared.board.allow_student_submit or shared.access_level not in ('submit', 'edit'):
         raise Http404
 
     board = shared.board
     if request.method == 'POST':
         form = StudentCardForm(request.POST, request.FILES)
         if form.is_valid():
-            card = form.save(commit=False)
-            card.board = board
-            card.author_name = form.cleaned_data['author_name']
-            if card.file:
-                card.original_filename = card.file.name
-                card.file_size = card.file.size
-            card.save()
+            card = form.save_for_board(board)
+            _refresh_link_card_metadata(card)
             logger.info(f'[InfoBoard] Student submitted card: {card.title} by {card.author_name}')
             if request.htmx:
                 return render(request, 'infoboard/partials/submit_success.html', {'card': card})
@@ -345,6 +495,8 @@ def share_create(request, board_id):
     """공유 링크 생성/갱신."""
     board = get_object_or_404(Board, id=board_id, owner=request.user)
     access_level = request.POST.get('access_level', 'view')
+    if access_level not in {'view', 'submit'}:
+        access_level = 'view'
 
     # 기존 활성 링크 비활성화
     board.shared_links.filter(is_active=True).update(is_active=False)
@@ -401,14 +553,16 @@ def search(request):
 def card_download(request, card_id):
     """카드 파일 다운로드."""
     card = get_object_or_404(Card, id=card_id)
+    link_id = request.GET.get('link_id', '').strip()
 
-    # 소유자이거나 공개 보드인 경우만 허용
-    if not card.board.is_public and (not request.user.is_authenticated or card.board.owner != request.user):
-        # 공유 링크를 통한 접근인지 확인
-        referer = request.META.get('HTTP_REFERER', '')
-        if '/s/' not in referer:
-            raise Http404
-
+    # 소유자, 공개 보드, 또는 활성 공유 링크 문맥에서만 허용
+    if not request.user.is_authenticated or card.board.owner != request.user:
+        if not card.board.is_public:
+            if not link_id:
+                raise Http404
+            shared = get_object_or_404(SharedLink, id=link_id, board=card.board, is_active=True)
+            if shared.is_expired:
+                raise Http404
     if not card.file:
         raise Http404
 
@@ -448,13 +602,13 @@ def collection_create(request):
                 collection.boards.set(boards)
             logger.info(f'[InfoBoard] Collection created: {collection.title}')
             if request.htmx:
-                return render(request, 'infoboard/partials/collection_card.html', {'collection': collection})
+                return _render_collection_grid_response(request, close_modal=True)
             return redirect('infoboard:collection_detail', collection_id=collection.id)
     else:
         form = CollectionForm()
 
     boards = Board.objects.filter(owner=request.user).order_by('title')
-    context = {'form': form, 'boards': boards, 'is_edit': False}
+    context = {'form': form, 'boards': boards, 'is_edit': False, 'modal_mode': bool(request.htmx)}
     if request.htmx:
         return render(request, 'infoboard/partials/collection_form_modal.html', context)
     return render(request, 'infoboard/collection_form.html', context)
@@ -464,8 +618,8 @@ def collection_create(request):
 def collection_detail(request, collection_id):
     """컬렉션 상세 — 포함된 보드 목록."""
     collection = get_object_or_404(Collection, id=collection_id, owner=request.user)
-    boards = collection.boards.annotate(num_cards=Count('cards')).order_by('-updated_at')
-    context = {'collection': collection, 'boards': boards}
+    context = _collection_boards_context(collection)
+    context['collection'] = collection
     return render(request, 'infoboard/collection_detail.html', context)
 
 
@@ -473,6 +627,7 @@ def collection_detail(request, collection_id):
 def collection_edit(request, collection_id):
     """컬렉션 수정."""
     collection = get_object_or_404(Collection, id=collection_id, owner=request.user)
+    current_route = _resolve_current_route(request)
     if request.method == 'POST':
         form = CollectionForm(request.POST, instance=collection)
         if form.is_valid():
@@ -482,14 +637,26 @@ def collection_edit(request, collection_id):
             collection.boards.set(boards)
             logger.info(f'[InfoBoard] Collection updated: {collection.title}')
             if request.htmx:
-                return render(request, 'infoboard/partials/collection_card.html', {'collection': collection})
+                if current_route and current_route.url_name == 'collection_detail':
+                    return _set_htmx_headers(
+                        HttpResponse(status=204),
+                        redirect_to=_current_request_url(request),
+                    )
+                return _render_collection_grid_response(request, close_modal=True)
             return redirect('infoboard:collection_detail', collection_id=collection.id)
     else:
         form = CollectionForm(instance=collection)
 
     boards = Board.objects.filter(owner=request.user).order_by('title')
     selected_ids = set(str(b.id) for b in collection.boards.all())
-    context = {'form': form, 'collection': collection, 'boards': boards, 'selected_ids': selected_ids, 'is_edit': True}
+    context = {
+        'form': form,
+        'collection': collection,
+        'boards': boards,
+        'selected_ids': selected_ids,
+        'is_edit': True,
+        'modal_mode': bool(request.htmx),
+    }
     if request.htmx:
         return render(request, 'infoboard/partials/collection_form_modal.html', context)
     return render(request, 'infoboard/collection_form.html', context)
@@ -500,10 +667,16 @@ def collection_edit(request, collection_id):
 def collection_delete(request, collection_id):
     """컬렉션 삭제 (보드 자체는 유지)."""
     collection = get_object_or_404(Collection, id=collection_id, owner=request.user)
+    current_route = _resolve_current_route(request)
     collection.delete()
     if request.htmx:
-        return HttpResponse('')
-    return redirect('infoboard:dashboard', **{'tab': 'collections'})
+        if current_route and current_route.url_name == 'collection_detail':
+            return _set_htmx_headers(
+                HttpResponse(status=204),
+                redirect_to=f"{reverse('infoboard:dashboard')}?tab=collections",
+            )
+        return _render_collection_grid_response(request)
+    return redirect(f"{reverse('infoboard:dashboard')}?tab=collections")
 
 
 @login_required
@@ -518,8 +691,7 @@ def collection_toggle_board(request, collection_id):
             collection.boards.remove(board)
         else:
             collection.boards.add(board)
-    boards = collection.boards.annotate(num_cards=Count('cards')).order_by('-updated_at')
-    context = {'collection': collection, 'boards': boards}
+    context = _collection_boards_context(collection)
     if request.htmx:
         return render(request, 'infoboard/partials/collection_boards.html', context)
     return redirect('infoboard:collection_detail', collection_id=collection.id)
@@ -534,7 +706,14 @@ def fetch_og_meta(request):
     if not url:
         return JsonResponse({'error': 'URL이 필요합니다.'}, status=400)
 
+    from core.news_ingest import UnsafeNewsUrlError, assert_safe_public_url
     from .utils import fetch_url_meta
+
+    try:
+        assert_safe_public_url(url)
+    except UnsafeNewsUrlError as exc:
+        return JsonResponse({'error': str(exc)}, status=400)
+
     meta = fetch_url_meta(url)
     return JsonResponse(meta)
 
@@ -569,4 +748,3 @@ def board_export_csv(request, board_id):
         ])
 
     return response
-

@@ -23,7 +23,7 @@
                     hx-get="{% url 'infoboard:collection_create' %}"
                     hx-target="#ibModal"
                     hx-swap="innerHTML"
-                    onclick="document.getElementById('ibModalOverlay').classList.remove('hidden')"
+                    onclick="ibOpenModal()"
                     class="h-10 px-5 rounded-full bg-indigo-600 text-white font-bold shadow-lg hover:bg-indigo-700 transition flex items-center gap-2 text-sm">
                     <i class="fa-solid fa-plus"></i> 새 컬렉션
                 </button>
@@ -37,7 +37,7 @@
 </section>
 
 <!-- Modal Container -->
-<div id="ibModalOverlay" class="ib-modal-overlay hidden" onclick="if(event.target===this){this.classList.add('hidden')}">
+<div id="ibModalOverlay" class="ib-modal-overlay hidden" onclick="if(event.target===this){ibCloseModal()}">
     <div id="ibModal" class="ib-modal" onclick="event.stopPropagation()"></div>
 </div>
 {% endblock %}

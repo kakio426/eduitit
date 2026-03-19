@@ -11,6 +11,7 @@ urlpatterns = [
     # ── 보드 CRUD ──
     path('board/create/', views.board_create, name='board_create'),
     path('board/<uuid:board_id>/', views.board_detail, name='board_detail'),
+    path('board/<uuid:board_id>/layout/', views.board_layout, name='board_layout'),
     path('board/<uuid:board_id>/edit/', views.board_edit, name='board_edit'),
     path('board/<uuid:board_id>/delete/', views.board_delete, name='board_delete'),
 

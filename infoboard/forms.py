@@ -30,7 +30,16 @@ class BoardForm(forms.ModelForm):
 
     class Meta:
         model = Board
-        fields = ['title', 'description', 'icon', 'color_theme', 'layout']
+        fields = ['title', 'description', 'icon', 'color_theme', 'layout', 'is_public', 'allow_student_submit']
+        labels = {
+            'title': '보드 이름',
+            'description': '설명',
+            'icon': '아이콘',
+            'color_theme': '색상',
+            'layout': '보기 방식',
+            'is_public': '공개 열람 허용',
+            'allow_student_submit': '학생 제출 허용',
+        }
         widgets = {
             'title': forms.TextInput(attrs={
                 'placeholder': '보드 이름을 입력하세요',
@@ -44,6 +53,12 @@ class BoardForm(forms.ModelForm):
             'icon': forms.HiddenInput(),
             'color_theme': forms.HiddenInput(),
             'layout': forms.RadioSelect(choices=Board.LAYOUT_CHOICES),
+            'is_public': forms.CheckboxInput(attrs={
+                'class': 'mt-1 h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500',
+            }),
+            'allow_student_submit': forms.CheckboxInput(attrs={
+                'class': 'mt-1 h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500',
+            }),
         }
 
     def save_with_tags(self, owner):
@@ -76,6 +91,13 @@ class CardForm(forms.ModelForm):
     class Meta:
         model = Card
         fields = ['card_type', 'title', 'content', 'url', 'file', 'image', 'color']
+        labels = {
+            'title': '제목',
+            'content': '메모 / 내용',
+            'url': 'URL',
+            'file': '파일',
+            'image': '이미지',
+        }
         widgets = {
             'card_type': forms.HiddenInput(),
             'title': forms.TextInput(attrs={
@@ -90,6 +112,13 @@ class CardForm(forms.ModelForm):
             'url': forms.URLInput(attrs={
                 'placeholder': 'https://example.com',
                 'class': 'w-full px-4 py-3 rounded-2xl shadow-clay-inner bg-white/80 text-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-300',
+            }),
+            'file': forms.FileInput(attrs={
+                'class': 'w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-purple-100 file:text-purple-600 hover:file:bg-purple-200',
+            }),
+            'image': forms.FileInput(attrs={
+                'accept': 'image/*',
+                'class': 'w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-green-100 file:text-green-600 hover:file:bg-green-200',
             }),
             'color': forms.HiddenInput(),
         }
@@ -110,7 +139,19 @@ class CardForm(forms.ModelForm):
         card.board = board
         card.author_user = author_user
         card.author_name = author_name
-        if card.file:
+        if card.card_type != 'link':
+            card.url = ''
+            card.og_title = ''
+            card.og_description = ''
+            card.og_image = ''
+            card.og_site_name = ''
+        if card.card_type != 'file':
+            card.file = None
+            card.original_filename = ''
+            card.file_size = 0
+        if card.card_type != 'image':
+            card.image = None
+        if self.files.get('file'):
             card.original_filename = card.file.name
             card.file_size = card.file.size
         card.save()
@@ -133,6 +174,7 @@ class StudentCardForm(forms.ModelForm):
     """학생 카드 제출 폼 (비로그인)."""
     author_name = forms.CharField(
         max_length=100,
+        label='이름',
         widget=forms.TextInput(attrs={
             'placeholder': '이름을 입력하세요',
             'class': 'w-full px-4 py-3 rounded-2xl shadow-clay-inner bg-white/80 text-gray-700 font-bold focus:outline-none focus:ring-2 focus:ring-purple-300',
@@ -142,6 +184,14 @@ class StudentCardForm(forms.ModelForm):
     class Meta:
         model = Card
         fields = ['card_type', 'title', 'content', 'url', 'file', 'image']
+        labels = {
+            'author_name': '이름',
+            'title': '제목',
+            'content': '내용',
+            'url': 'URL',
+            'file': '파일',
+            'image': '이미지',
+        }
         widgets = {
             'card_type': forms.HiddenInput(),
             'title': forms.TextInput(attrs={
@@ -157,4 +207,45 @@ class StudentCardForm(forms.ModelForm):
                 'placeholder': 'https://...',
                 'class': 'w-full px-4 py-3 rounded-2xl shadow-clay-inner bg-white/80 text-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-300',
             }),
+            'file': forms.FileInput(attrs={
+                'class': 'w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-purple-100 file:text-purple-600 hover:file:bg-purple-200',
+            }),
+            'image': forms.FileInput(attrs={
+                'accept': 'image/*',
+                'class': 'w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-green-100 file:text-green-600 hover:file:bg-green-200',
+            }),
         }
+
+    def clean(self):
+        cleaned = super().clean()
+        card_type = cleaned.get('card_type', 'text')
+        if card_type == 'link' and not cleaned.get('url'):
+            self.add_error('url', '링크 URL을 입력해주세요.')
+        if card_type == 'file' and not cleaned.get('file'):
+            self.add_error('file', '파일을 업로드해주세요.')
+        if card_type == 'image' and not cleaned.get('image'):
+            self.add_error('image', '이미지를 업로드해주세요.')
+        return cleaned
+
+    def save_for_board(self, board):
+        card = self.save(commit=False)
+        card.board = board
+        card.author_name = self.cleaned_data['author_name']
+        if card.card_type != 'link':
+            card.url = ''
+            card.og_title = ''
+            card.og_description = ''
+            card.og_image = ''
+            card.og_site_name = ''
+        if card.card_type != 'file':
+            card.file = None
+            card.original_filename = ''
+            card.file_size = 0
+        if card.card_type != 'image':
+            card.image = None
+        if self.files.get('file'):
+            card.original_filename = card.file.name
+            card.file_size = card.file.size
+        card.save()
+        self.save_m2m()
+        return card

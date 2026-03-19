@@ -1,18 +1,26 @@
 <div class="p-6">
+    {% if modal_mode %}
     <div class="flex items-center justify-between mb-6">
         <h2 class="text-xl font-black text-gray-800">{% if is_edit %}카드 수정{% else %}카드 추가{% endif %}</h2>
-        <button onclick="document.getElementById('ibModalOverlay').classList.add('hidden')" class="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-600 transition">
+        <button type="button" onclick="ibCloseModal()" class="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-600 transition">
             <i class="fa-solid fa-xmark"></i>
         </button>
     </div>
+    {% else %}
+    <div class="mb-6">
+        <h2 class="text-xl font-black text-gray-800">{% if is_edit %}카드 수정{% else %}카드 추가{% endif %}</h2>
+        <p class="text-sm text-gray-400 mt-1">링크, 파일, 이미지, 메모를 한곳에서 다뤄요.</p>
+    </div>
+    {% endif %}
+
+    {% include 'infoboard/partials/form_errors.html' with form=form %}
 
     <form method="post" enctype="multipart/form-data"
-        action="{% if is_edit %}{% url 'infoboard:card_edit' card_id=card.id %}{% else %}{% url 'infoboard:card_add' board_id=board.id %}{% endif %}"
-        hx-post="{% if is_edit %}{% url 'infoboard:card_edit' card_id=card.id %}{% else %}{% url 'infoboard:card_add' board_id=board.id %}{% endif %}"
-        hx-target="{% if is_edit %}#card-{{ card.id }}{% else %}#ibCardGrid{% endif %}"
-        hx-swap="{% if is_edit %}outerHTML{% else %}afterbegin{% endif %}"
-        hx-encoding="multipart/form-data"
-        @htmx:after-swap.window="document.getElementById('ibModalOverlay').classList.add('hidden')">
+        action="{% if is_edit and card %}{% url 'infoboard:card_edit' card_id=card.id %}{% else %}{% url 'infoboard:card_add' board_id=board.id %}{% endif %}"
+        {% if modal_mode %}hx-post="{% if is_edit and card %}{% url 'infoboard:card_edit' card_id=card.id %}{% else %}{% url 'infoboard:card_add' board_id=board.id %}{% endif %}"
+        hx-target="#ibModal"
+        hx-swap="innerHTML"
+        hx-encoding="multipart/form-data"{% endif %}>
         {% csrf_token %}
 
         <!-- Type selector -->
@@ -36,30 +44,35 @@
         <div class="mb-4">
             <label class="text-xs font-bold text-gray-500 mb-1 block">제목</label>
             {{ form.title }}
+            {% include 'infoboard/partials/field_errors.html' with errors=form.title.errors %}
         </div>
 
         <!-- URL (link type) -->
         <div class="mb-4" id="ibFieldUrl" style="{% if form.card_type.value != 'link' %}display:none{% endif %}">
             <label class="text-xs font-bold text-gray-500 mb-1 block">URL</label>
             {{ form.url }}
+            {% include 'infoboard/partials/field_errors.html' with errors=form.url.errors %}
         </div>
 
         <!-- File (file type) -->
         <div class="mb-4" id="ibFieldFile" style="{% if form.card_type.value != 'file' %}display:none{% endif %}">
             <label class="text-xs font-bold text-gray-500 mb-1 block">파일 업로드</label>
-            <input type="file" name="file" class="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-purple-100 file:text-purple-600 hover:file:bg-purple-200">
+            {{ form.file }}
+            {% include 'infoboard/partials/field_errors.html' with errors=form.file.errors %}
         </div>
 
         <!-- Image (image type) -->
         <div class="mb-4" id="ibFieldImage" style="{% if form.card_type.value != 'image' %}display:none{% endif %}">
             <label class="text-xs font-bold text-gray-500 mb-1 block">이미지 업로드</label>
-            <input type="file" name="image" accept="image/*" class="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-green-100 file:text-green-600 hover:file:bg-green-200">
+            {{ form.image }}
+            {% include 'infoboard/partials/field_errors.html' with errors=form.image.errors %}
         </div>
 
         <!-- Content (text/memo type) -->
         <div class="mb-4" id="ibFieldContent">
             <label class="text-xs font-bold text-gray-500 mb-1 block">메모 / 내용</label>
             {{ form.content }}
+            {% include 'infoboard/partials/field_errors.html' with errors=form.content.errors %}
         </div>
 
         <!-- Tags -->
@@ -94,22 +107,15 @@
 
         <!-- Buttons -->
         <div class="flex gap-3 pt-3 border-t border-gray-100">
-            <button type="button" onclick="document.getElementById('ibModalOverlay').classList.add('hidden')"
+            {% if modal_mode %}
+            <button type="button" onclick="ibCloseModal()"
                 class="flex-1 py-3 rounded-full bg-gray-100 text-gray-600 font-bold hover:bg-gray-200 transition">
                 취소
             </button>
-            <button type="submit" hx-disabled-elt="this" class="flex-1 py-3 rounded-full bg-purple-600 text-white font-bold shadow-lg hover:bg-purple-700 transition">
+            {% endif %}
+            <button type="submit" hx-disabled-elt="this" class="{% if modal_mode %}flex-1{% else %}w-full{% endif %} py-3 rounded-full bg-purple-600 text-white font-bold shadow-lg hover:bg-purple-700 transition">
                 {% if is_edit %}저장{% else %}추가{% endif %}
             </button>
         </div>
     </form>
 </div>
-
-<script>
-(function() {
-    const raw = document.getElementById('id_tag_names');
-    if (raw && raw.value) {
-        raw.value.split(',').forEach(n => { if (n.trim()) ibAddTagUI(n.trim()); });
-    }
-})();
-</script>

@@ -16,14 +16,14 @@
                     hx-get="{% url 'infoboard:card_edit' card_id=card.id %}"
                     hx-target="#ibModal"
                     hx-swap="innerHTML"
-                    @click="open = false; document.getElementById('ibModalOverlay').classList.remove('hidden')"
+                    @click="open = false; ibOpenModal()"
                     class="ib-dropdown-item w-full text-left text-sm">
                     <i class="fa-solid fa-pen text-xs"></i> 수정
                 </button>
                 <button type="button"
                     hx-post="{% url 'infoboard:card_toggle_pin' card_id=card.id %}"
-                    hx-target="#card-{{ card.id }}"
-                    hx-swap="outerHTML"
+                    hx-target="#ibCardGrid"
+                    hx-swap="innerHTML"
                     @click="open = false"
                     class="ib-dropdown-item w-full text-left text-sm">
                     {% csrf_token %}
@@ -31,8 +31,8 @@
                 </button>
                 <button type="button"
                     hx-post="{% url 'infoboard:card_delete' card_id=card.id %}"
-                    hx-target="#card-{{ card.id }}"
-                    hx-swap="outerHTML"
+                    hx-target="#ibCardGrid"
+                    hx-swap="innerHTML"
                     hx-confirm="이 카드를 삭제할까요?"
                     @click="open = false"
                     class="ib-dropdown-item danger w-full text-left text-sm">

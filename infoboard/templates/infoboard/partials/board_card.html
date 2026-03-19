@@ -12,7 +12,7 @@
                         hx-get="{% url 'infoboard:board_edit' board_id=board.id %}"
                         hx-target="#ibModal"
                         hx-swap="innerHTML"
-                        @click="open = false; document.getElementById('ibModalOverlay').classList.remove('hidden')"
+                        @click="open = false; ibOpenModal()"
                         class="ib-dropdown-item w-full text-left">
                         <i class="fa-solid fa-pen text-xs"></i> 수정
                     </button>
@@ -20,15 +20,15 @@
                         hx-get="{% url 'infoboard:share_panel' board_id=board.id %}"
                         hx-target="#ibModal"
                         hx-swap="innerHTML"
-                        @click="open = false; document.getElementById('ibModalOverlay').classList.remove('hidden')"
+                        @click="open = false; ibOpenModal()"
                         class="ib-dropdown-item w-full text-left">
                         <i class="fa-solid fa-share-from-square text-xs"></i> 공유
                     </button>
                     <form method="post" action="{% url 'infoboard:board_delete' board_id=board.id %}"
                         onsubmit="return confirm('이 보드를 삭제할까요?')"
                         hx-post="{% url 'infoboard:board_delete' board_id=board.id %}"
-                        hx-target="#board-{{ board.id }}"
-                        hx-swap="outerHTML"
+                        hx-target="#{{ board_delete_target|default:'ibBoardGrid' }}"
+                        hx-swap="innerHTML"
                         hx-confirm="이 보드와 모든 카드를 삭제할까요?">
                         {% csrf_token %}
                         <button type="submit" class="ib-dropdown-item danger w-full text-left">
@@ -43,7 +43,7 @@
         <p class="text-sm text-gray-500 line-clamp-2 mb-3">{{ board.description }}</p>
         {% endif %}
         <div class="flex items-center justify-between mt-auto pt-3 border-t border-gray-100">
-            <span class="text-xs text-gray-400 font-bold">{{ board.card_count }}개 항목</span>
+            <span class="text-xs text-gray-400 font-bold">{{ board.num_cards }}개 항목</span>
             <span class="text-xs text-gray-400">{{ board.updated_at|timesince }} 전</span>
         </div>
         {% if board.tags.all %}

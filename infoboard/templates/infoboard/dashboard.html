@@ -31,7 +31,7 @@
                     hx-get="{% url 'infoboard:board_create' %}"
                     hx-target="#ibModal"
                     hx-swap="innerHTML"
-                    onclick="document.getElementById('ibModalOverlay').classList.remove('hidden')"
+                    onclick="ibOpenModal()"
                     class="h-11 px-5 rounded-full bg-purple-600 text-white font-bold shadow-lg hover:bg-purple-700 transition flex items-center gap-2 text-sm">
                     <i class="fa-solid fa-plus"></i>
                     새 보드
@@ -85,12 +85,12 @@
         {% elif current_tab == 'collections' %}
         <!-- Collection Header -->
         <div class="flex justify-end mb-6">
-            <button type="button"
-                hx-get="{% url 'infoboard:collection_create' %}"
-                hx-target="#ibModal"
-                hx-swap="innerHTML"
-                onclick="document.getElementById('ibModalOverlay').classList.remove('hidden')"
-                class="h-10 px-5 rounded-full bg-indigo-600 text-white font-bold shadow-lg hover:bg-indigo-700 transition flex items-center gap-2 text-sm">
+                <button type="button"
+                    hx-get="{% url 'infoboard:collection_create' %}"
+                    hx-target="#ibModal"
+                    hx-swap="innerHTML"
+                    onclick="ibOpenModal()"
+                    class="h-10 px-5 rounded-full bg-indigo-600 text-white font-bold shadow-lg hover:bg-indigo-700 transition flex items-center gap-2 text-sm">
                 <i class="fa-solid fa-plus"></i> 새 컬렉션
             </button>
         </div>
@@ -105,7 +105,7 @@
 </section>
 
 <!-- Modal Container -->
-<div id="ibModalOverlay" class="ib-modal-overlay hidden" onclick="if(event.target===this){this.classList.add('hidden')}">
+<div id="ibModalOverlay" class="ib-modal-overlay hidden" onclick="if(event.target===this){ibCloseModal()}">
     <div id="ibModal" class="ib-modal" onclick="event.stopPropagation()">
         <!-- 모달 내용은 HTMX로 로드 -->
     </div>

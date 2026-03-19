@@ -1,26 +1,36 @@
 <div class="p-6">
+    {% if modal_mode %}
     <div class="flex items-center justify-between mb-6">
         <h2 class="text-xl font-black text-gray-800">{% if is_edit %}컬렉션 수정{% else %}새 컬렉션{% endif %}</h2>
-        <button onclick="document.getElementById('ibModalOverlay').classList.add('hidden')" class="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-600 transition">
+        <button type="button" onclick="ibCloseModal()" class="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-600 transition">
             <i class="fa-solid fa-xmark"></i>
         </button>
     </div>
+    {% else %}
+    <div class="mb-6">
+        <h2 class="text-xl font-black text-gray-800">{% if is_edit %}컬렉션 수정{% else %}새 컬렉션{% endif %}</h2>
+        <p class="text-sm text-gray-400 mt-1">보드를 묶어서 관리하는 기준을 정해요.</p>
+    </div>
+    {% endif %}
 
-    <form method="post" action="{% if is_edit %}{% url 'infoboard:collection_edit' collection_id=collection.id %}{% else %}{% url 'infoboard:collection_create' %}{% endif %}"
-        hx-post="{% if is_edit %}{% url 'infoboard:collection_edit' collection_id=collection.id %}{% else %}{% url 'infoboard:collection_create' %}{% endif %}"
-        hx-target="{% if is_edit %}#collection-{{ collection.id }}{% else %}#ibCollectionGrid{% endif %}"
-        hx-swap="{% if is_edit %}outerHTML{% else %}afterbegin{% endif %}"
-        @htmx:after-swap.window="document.getElementById('ibModalOverlay').classList.add('hidden')">
+    {% include 'infoboard/partials/form_errors.html' with form=form %}
+
+    <form method="post" action="{% if is_edit and collection %}{% url 'infoboard:collection_edit' collection_id=collection.id %}{% else %}{% url 'infoboard:collection_create' %}{% endif %}"
+        {% if modal_mode %}hx-post="{% if is_edit and collection %}{% url 'infoboard:collection_edit' collection_id=collection.id %}{% else %}{% url 'infoboard:collection_create' %}{% endif %}"
+        hx-target="#ibModal"
+        hx-swap="innerHTML"{% endif %}>
         {% csrf_token %}
 
         <div class="mb-4">
             <label class="text-xs font-bold text-gray-500 mb-1 block">컬렉션 이름 *</label>
             {{ form.title }}
+            {% include 'infoboard/partials/field_errors.html' with errors=form.title.errors %}
         </div>
 
         <div class="mb-4">
             <label class="text-xs font-bold text-gray-500 mb-1 block">설명 (선택)</label>
             {{ form.description }}
+            {% include 'infoboard/partials/field_errors.html' with errors=form.description.errors %}
         </div>
 
         <!-- Board selection -->
@@ -42,11 +52,13 @@
         </div>
 
         <div class="flex gap-3 pt-3 border-t border-gray-100">
-            <button type="button" onclick="document.getElementById('ibModalOverlay').classList.add('hidden')"
+            {% if modal_mode %}
+            <button type="button" onclick="ibCloseModal()"
                 class="flex-1 py-3 rounded-full bg-gray-100 text-gray-600 font-bold hover:bg-gray-200 transition">
                 취소
             </button>
-            <button type="submit" hx-disabled-elt="this" class="flex-1 py-3 rounded-full bg-purple-600 text-white font-bold shadow-lg hover:bg-purple-700 transition">
+            {% endif %}
+            <button type="submit" hx-disabled-elt="this" class="{% if modal_mode %}flex-1{% else %}w-full{% endif %} py-3 rounded-full bg-purple-600 text-white font-bold shadow-lg hover:bg-purple-700 transition">
                 {% if is_edit %}저장{% else %}만들기{% endif %}
             </button>
         </div>

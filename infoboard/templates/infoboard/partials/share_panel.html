@@ -1,9 +1,14 @@
 <div class="p-6">
     <div class="flex items-center justify-between mb-6">
         <h2 class="text-xl font-black text-gray-800">📤 보드 공유</h2>
-        <button onclick="document.getElementById('ibModalOverlay').classList.add('hidden')" class="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-600 transition">
+        <button type="button" onclick="ibCloseModal()" class="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-600 transition">
             <i class="fa-solid fa-xmark"></i>
         </button>
+    </div>
+
+    <div class="flex flex-wrap gap-2 mb-5 text-xs font-bold">
+        <span class="ib-tag {% if board.is_public %}ib-tag-active{% endif %}">공개 열람</span>
+        <span class="ib-tag {% if board.allow_student_submit %}ib-tag-active{% endif %}">학생 제출</span>
     </div>
 
     {% if shared_link %}
@@ -53,7 +58,7 @@
         <div class="bg-slate-50 rounded-xl p-3 text-sm">
             <span class="font-bold text-gray-600">접근 권한:</span>
             <span class="font-bold text-purple-600">
-                {% if shared_link.access_level == 'view' %}보기만 가능{% elif shared_link.access_level == 'submit' %}카드 제출 가능{% elif shared_link.access_level == 'edit' %}편집 가능{% endif %}
+                {% if shared_link.access_level == 'view' %}보기만 가능{% elif shared_link.access_level == 'submit' %}카드 제출 가능{% elif shared_link.access_level == 'edit' %}편집 가능 (기존 링크){% endif %}
             </span>
         </div>
     </div>
@@ -79,6 +84,9 @@
                     <div><span class="font-bold text-sm">카드 제출 가능</span><br><span class="text-xs text-gray-400">학생이 카드를 제출할 수 있어요</span></div>
                 </label>
             </div>
+            {% if not board.allow_student_submit %}
+            <p class="text-xs text-amber-500 mb-4">학생 제출은 보드 설정에서 먼저 켜야 실제로 열려요.</p>
+            {% endif %}
             <button type="submit" class="w-full py-3 rounded-full bg-purple-600 text-white font-bold shadow-lg hover:bg-purple-700 transition">
                 공유 링크 만들기
             </button>
