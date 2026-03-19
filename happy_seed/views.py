@@ -18,6 +18,7 @@ from django.views.decorators.http import require_POST
 
 from consent.forms import RecipientBulkForm
 from consent.models import ConsentAuditLog, SignatureDocument, SignatureRecipient, SignatureRequest
+from handoff.shared_roster import happy_seed_students as build_shared_roster_students
 
 from .forms import (
     HSActivityForm,
@@ -89,6 +90,75 @@ def get_teacher_classroom(request, classroom_id):
         teacher=request.user,
         is_active=True,
     )
+
+
+def _sync_students_from_shared_roster(classroom):
+    group = classroom.shared_roster_group
+    if not group:
+        return {"created": 0, "updated": 0, "deactivated": 0, "warnings": []}
+
+    roster_students, warnings = build_shared_roster_students(group)
+    active_member_ids = {item["member_id"] for item in roster_students}
+    created = 0
+    updated = 0
+
+    for item in roster_students:
+        student = classroom.students.filter(shared_roster_member_id=item["member_id"]).first()
+        if student is None:
+            student = classroom.students.filter(
+                shared_roster_member__isnull=True,
+                number=item["number"],
+            ).first()
+        if student is None:
+            student = classroom.students.filter(
+                shared_roster_member__isnull=True,
+                name=item["name"],
+            ).first()
+
+        if student is None:
+            student = HSStudent.objects.create(
+                classroom=classroom,
+                shared_roster_member_id=item["member_id"],
+                name=item["name"],
+                number=item["number"],
+                is_active=True,
+            )
+            HSGuardianConsent.objects.create(student=student)
+            created += 1
+            continue
+
+        changed_fields = []
+        if student.shared_roster_member_id != item["member_id"]:
+            student.shared_roster_member_id = item["member_id"]
+            changed_fields.append("shared_roster_member")
+        if student.name != item["name"]:
+            student.name = item["name"]
+            changed_fields.append("name")
+        if student.number != item["number"]:
+            student.number = item["number"]
+            changed_fields.append("number")
+        if not student.is_active:
+            student.is_active = True
+            changed_fields.append("is_active")
+        if changed_fields:
+            changed_fields.append("updated_at")
+            student.save(update_fields=changed_fields)
+            updated += 1
+
+    deactivated = 0
+    synced_students = classroom.students.filter(shared_roster_member__isnull=False)
+    for student in synced_students.exclude(shared_roster_member_id__in=active_member_ids):
+        if student.is_active:
+            student.is_active = False
+            student.save(update_fields=["is_active", "updated_at"])
+            deactivated += 1
+
+    return {
+        "created": created,
+        "updated": updated,
+        "deactivated": deactivated,
+        "warnings": warnings,
+    }
 
 
 def _build_group_infos(classroom):
@@ -556,16 +626,23 @@ def dashboard(request):
 @login_required
 def classroom_create(request):
     if request.method == "POST":
-        form = HSClassroomForm(request.POST)
+        form = HSClassroomForm(request.POST, owner=request.user)
         if form.is_valid():
             classroom = form.save(commit=False)
             classroom.teacher = request.user
             classroom.save()
             HSClassroomConfig.objects.create(classroom=classroom)
+            if classroom.shared_roster_group_id:
+                sync_result = _sync_students_from_shared_roster(classroom)
+                if sync_result["created"] or sync_result["updated"]:
+                    messages.success(
+                        request,
+                        f'공용 명부에서 학생 {sync_result["created"]}명 추가, {sync_result["updated"]}명 갱신했습니다.',
+                    )
             messages.success(request, f'"{classroom.name}" 교실이 생성되었습니다.')
             return redirect("happy_seed:classroom_detail", classroom_id=classroom.id)
     else:
-        form = HSClassroomForm()
+        form = HSClassroomForm(owner=request.user)
     return render(request, "happy_seed/classroom_form.html", {"form": form, "is_create": True})
 
 
@@ -583,10 +660,13 @@ def classroom_settings(request, classroom_id):
     if request.method == "POST":
         prev_balance_enabled = config.balance_mode_enabled
         form = HSClassroomConfigForm(request.POST, instance=config)
-        classroom_form = HSClassroomForm(request.POST, instance=classroom)
+        classroom_form = HSClassroomForm(request.POST, instance=classroom, owner=request.user)
         if form.is_valid() and classroom_form.is_valid():
             form.save()
-            classroom_form.save()
+            classroom = classroom_form.save()
+            sync_result = None
+            if classroom.shared_roster_group_id:
+                sync_result = _sync_students_from_shared_roster(classroom)
             if prev_balance_enabled != config.balance_mode_enabled:
                 log_class_event(
                     classroom,
@@ -594,10 +674,15 @@ def classroom_settings(request, classroom_id):
                     meta={"enabled": config.balance_mode_enabled},
                 )
             messages.success(request, "설정이 저장되었습니다.")
+            if sync_result and (sync_result["created"] or sync_result["updated"] or sync_result["deactivated"]):
+                messages.info(
+                    request,
+                    f'공용 명부 동기화: 추가 {sync_result["created"]}명, 갱신 {sync_result["updated"]}명, 비활성화 {sync_result["deactivated"]}명',
+                )
             return redirect("happy_seed:classroom_settings", classroom_id=classroom.id)
     else:
         form = HSClassroomConfigForm(instance=config)
-        classroom_form = HSClassroomForm(instance=classroom)
+        classroom_form = HSClassroomForm(instance=classroom, owner=request.user)
 
     return render(
         request,
@@ -649,6 +734,7 @@ def _build_student_manage_context(classroom, student_form=None, bulk_form=None):
     inactive_students = classroom.students.filter(is_active=False).select_related("consent").order_by("number", "name")
     active_count = active_students.count()
     inactive_count = inactive_students.count()
+    shared_roster_group = classroom.shared_roster_group
     return {
         "classroom": classroom,
         "active_students": active_students,
@@ -658,6 +744,17 @@ def _build_student_manage_context(classroom, student_form=None, bulk_form=None):
         "total_students": active_count + inactive_count,
         "student_form": student_form or HSStudentForm(),
         "bulk_form": bulk_form or StudentBulkAddForm(),
+        "shared_roster_group": shared_roster_group,
+        "shared_roster_url": (
+            reverse("handoff:group_detail", kwargs={"group_id": shared_roster_group.id})
+            if shared_roster_group
+            else reverse("handoff:dashboard")
+        ),
+        "shared_roster_member_count": (
+            shared_roster_group.members.filter(is_active=True).count()
+            if shared_roster_group
+            else 0
+        ),
     }
 
 
@@ -667,6 +764,35 @@ def student_manage(request, classroom_id):
 
     if request.method == "POST":
         action = (request.POST.get("action") or "").strip()
+        locked_actions = {
+            "add_single",
+            "bulk_add",
+            "bulk_edit_students",
+            "bulk_action",
+            "deactivate_student",
+            "restore_student",
+            "hard_delete_student",
+        }
+
+        if action == "sync_shared_roster":
+            if not classroom.shared_roster_group_id:
+                messages.info(request, "먼저 교실 설정에서 공용 명부를 연결해 주세요.")
+            else:
+                sync_result = _sync_students_from_shared_roster(classroom)
+                messages.success(
+                    request,
+                    f'공용 명부 동기화 완료: 추가 {sync_result["created"]}명, 갱신 {sync_result["updated"]}명, 비활성화 {sync_result["deactivated"]}명',
+                )
+                if sync_result["warnings"]:
+                    preview = ", ".join(sync_result["warnings"][:3])
+                    if len(sync_result["warnings"]) > 3:
+                        preview = f"{preview} 외 {len(sync_result['warnings']) - 3}건"
+                    messages.warning(request, f"번호가 없는 멤버는 순서대로 번호를 붙였습니다: {preview}")
+            return redirect("happy_seed:student_manage", classroom_id=classroom.id)
+
+        if classroom.shared_roster_group_id and action in locked_actions:
+            messages.info(request, "이 교실의 학생 이름과 번호는 공용 명부에서 관리합니다.")
+            return redirect("handoff:group_detail", group_id=classroom.shared_roster_group_id)
 
         if action == "add_single":
             student_form = HSStudentForm(request.POST)

@@ -60,8 +60,8 @@ class HandoffFlowTest(TestCase):
         )
         self.assertRedirects(add_response, reverse("handoff:group_detail", args=[group.id]))
         self.assertEqual(group.members.count(), 2)
-        self.assertEqual(group.members.get(display_name="김민수").note, "3-1")
-        self.assertEqual(group.members.get(display_name="이서연").note, "교감")
+        self.assertEqual(group.members.get(display_name="김민수").affiliation, "3-1")
+        self.assertEqual(group.members.get(display_name="이서연").affiliation, "교감")
 
         member = group.members.first()
         update_response = self.client.post(
@@ -74,6 +74,7 @@ class HandoffFlowTest(TestCase):
         self.assertRedirects(update_response, reverse("handoff:group_detail", args=[group.id]))
         member.refresh_from_db()
         self.assertEqual(member.display_name, "김민수A")
+        self.assertEqual(member.note, "대리 수령 잦음")
         self.assertFalse(member.is_active)
 
         delete_response = self.client.post(reverse("handoff:group_member_delete", args=[group.id, member.id]))
@@ -91,7 +92,7 @@ class HandoffFlowTest(TestCase):
         )
 
         self.assertRedirects(response, reverse("handoff:group_detail", args=[group.id]))
-        members = list(group.members.order_by("sort_order").values_list("display_name", "note"))
+        members = list(group.members.order_by("sort_order").values_list("display_name", "affiliation"))
         self.assertEqual(
             members,
             [("김민수", "1-1"), ("김민수", "1-2")],
@@ -120,7 +121,7 @@ class HandoffFlowTest(TestCase):
         )
 
         self.assertRedirects(response, reverse("handoff:group_detail", args=[group.id]))
-        members = list(group.members.order_by("sort_order").values_list("display_name", "note"))
+        members = list(group.members.order_by("sort_order").values_list("display_name", "affiliation"))
         self.assertEqual(
             members,
             [("김민수", "3-1"), ("이서연", "교감"), ("김민수", "3-2")],
@@ -146,9 +147,9 @@ class HandoffFlowTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("text/csv", response["Content-Type"])
         content = response.content.decode("utf-8-sig")
-        self.assertIn("이름,직위/학년반,작성 예시", content)
-        self.assertIn("왼쪽 두 칸만 채우세요. 오른쪽 예시는 지우지 않아도 됩니다.", content)
-        self.assertIn(",,예: 김민수 / 3-1", content)
+        self.assertIn("이름,소속/학년반,보호자명,연락처 뒤 4자리,번호,메모", content)
+        self.assertIn("김민수,3-1,김민수 보호자,5678,1,동의서/행복씨앗 같이 사용", content)
+        self.assertIn("박지훈,교감,,,,사인/배부 체크용", content)
 
     def test_return_to_is_preserved_for_group_creation_and_member_updates(self):
         return_to = "/signatures/create/?draft_token=testdraft"
@@ -171,7 +172,7 @@ class HandoffFlowTest(TestCase):
             reverse("handoff:group_detail", args=[group.id]),
             data={"return_to": return_to},
         )
-        self.assertContains(detail_response, "멤버를 먼저 추가해야 서명 요청에 연결할 수 있습니다")
+        self.assertContains(detail_response, "활성 멤버를 먼저 넣어야 연결할 수 있습니다")
         self.assertNotContains(
             detail_response,
             f"{return_to}&amp;shared_roster_group={group.id}",

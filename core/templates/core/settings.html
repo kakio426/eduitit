@@ -1,32 +1,13 @@
 {% extends 'base.html' %}
 
-{% block title %}내 프로필 및 설정 - Eduitit{% endblock %}
+{% block title %}내 정보와 공용 명부 - Eduitit{% endblock %}
 
 {% block content %}
 <section class="pt-32 pb-20 px-6 min-h-screen">
-    <div class="max-w-4xl mx-auto">
-        <h1 class="text-5xl font-bold text-gray-700 mb-2 font-round" data-aos="fade-right">내 프로필 설정</h1>
-        <p class="text-2xl text-gray-400 mb-10" data-aos="fade-right" data-aos-delay="100">선생님만의 스마트한 작업 환경을
-            구성해보세요.</p>
-
-        <!-- Service Guide / Intro Section -->
-        <div class="clay-card p-10 mb-12 bg-white/40 border-2 border-dashed border-purple-200" data-aos="fade-up">
-            <h2 class="text-4xl font-bold text-gray-700 mb-6 font-round flex items-center gap-3">
-                <i class="fa-solid fa-circle-info text-purple-500"></i>
-                Eduitit 서비스 이용 가이드
-            </h2>
-            <div class="space-y-4 text-2xl text-gray-600 leading-relaxed">
-                <p>안녕하세요, 선생님! <b>Eduitit</b>은 고가의 유료 AI를 매번 결제하기 부담스러운 선생님들을 위해,
-                    구글이 제공하는 <span class="bg-purple-100 px-2 rounded-lg text-purple-700 font-bold">무료 혜택(API 키)</span>을
-                    직접 연결해 사용하는
-                    <b>선생님만의 스마트 작업 공간</b>입니다.
-                </p>
-
-                <p>복잡해 보일 수 있지만, 한 번만 설정해두면 모든 AI 도구를 <span class="underline decoration-purple-300">비용 걱정 없이</span> 가장
-                    쾌적한 속도로 이용하실 수 있습니다.
-                    (API 설정 없이도 체험해 보실 수 있지만, 사용량에 제한이 있을 수 있어요!)<br>
-                    아래 가이드에 따라 선생님만의 열쇠를 등록해보세요!</p>
-            </div>
+    <div class="max-w-5xl mx-auto">
+        <div class="max-w-3xl mb-10" data-aos="fade-right">
+            <h1 class="text-5xl font-bold text-gray-700 mb-3 font-round">내 정보와 공용 명부</h1>
+            <p class="text-2xl text-gray-400 leading-relaxed">프로필은 여기서 바꾸고, 학생과 보호자 명부는 한 곳에서 관리해 여러 서비스에 같이 쓰세요.</p>
         </div>
 
         {% if messages %}
@@ -42,9 +23,8 @@
         </div>
         {% endif %}
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Profile Info Form -->
-            <div class="lg:col-span-2 space-y-8" data-aos="fade-up" data-aos-delay="200">
+        <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.15fr)_380px] gap-8">
+            <div class="space-y-8" data-aos="fade-up" data-aos-delay="200">
                 <form method="post" class="clay-card p-10 space-y-8 bg-white/60">
                     {% csrf_token %}
 
@@ -54,8 +34,11 @@
                                 class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-500">
                                 <i class="fa-solid fa-user-tag text-xl"></i>
                             </div>
-                            <h2 class="text-3xl font-bold text-gray-700 font-round">기본 정보</h2>
+                            <h2 class="text-3xl font-bold text-gray-700 font-round">내 정보</h2>
                         </div>
+                        <p class="rounded-3xl border border-slate-100 bg-slate-50 px-5 py-4 text-lg text-slate-500">
+                            홈과 각 서비스에서 선생님 정보를 자연스럽게 보여주기 위한 기본값입니다.
+                        </p>
 
                         {% for field in form %}
                         <div class="space-y-3">
@@ -92,42 +75,6 @@
                     </div>
                 </form>
 
-                <!-- My Saved Content Quick Links -->
-                <div class="clay-card p-10 space-y-8 bg-white/60" data-aos="fade-up">
-                    <div class="flex items-center gap-4 mb-2">
-                        <div
-                            class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500">
-                            <i class="fa-solid fa-folder-open text-xl"></i>
-                        </div>
-                        <h2 class="text-3xl font-bold text-gray-700 font-round">내 보관함 관리</h2>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <a href="{% url 'fortune:history' %}"
-                            class="group p-6 bg-white rounded-3xl border-2 border-slate-100 hover:border-indigo-200 transition-all flex items-center gap-5">
-                            <div
-                                class="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
-                                🔮</div>
-                            <div class="text-left">
-                                <h4 class="text-xl font-black text-slate-700">사주 보관함</h4>
-                                <p class="text-slate-400 font-medium font-hand text-lg">상담 기록 다시보기</p>
-                            </div>
-                        </a>
-
-                        <a href="{% url 'signatures:style_list' %}"
-                            class="group p-6 bg-white rounded-3xl border-2 border-slate-100 hover:border-purple-200 transition-all flex items-center gap-5">
-                            <div
-                                class="w-16 h-16 bg-purple-50 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
-                                ⭐</div>
-                            <div class="text-left">
-                                <h4 class="text-xl font-black text-slate-700">서명 즐겨찾기</h4>
-                                <p class="text-slate-400 font-medium font-hand text-lg">나만의 서명 스타일</p>
-                            </div>
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Danger Zone -->
                 <div class="clay-card p-10 space-y-6 bg-red-50/30 border-2 border-dashed border-red-100"
                     data-aos="fade-up">
                     <div class="flex items-center gap-4 mb-2 text-red-500">
@@ -149,49 +96,52 @@
                 </div>
             </div>
 
-            <!-- API Key Guide Sidebar -->
             <div class="space-y-8" data-aos="fade-left" data-aos-delay="400">
-                <div class="clay-card p-8 bg-gradient-to-br from-blue-500 to-indigo-600 text-white border-0 shadow-lg">
-                    <div class="flex items-center gap-3 mb-6">
-                        <i class="fa-solid fa-lightbulb text-3xl text-yellow-300"></i>
-                        <h3 class="text-2xl font-bold font-round">Gemini API Key가 무엇인가요?</h3>
-                    </div>
-                    <div class="space-y-4 text-xl leading-relaxed opacity-95">
-                        <p class="font-bold text-yellow-200">👨‍🏫 현직 선생님이 직접 만들고 운영하는 서비스입니다.</p>
-                        <p>AI API 비용을 개인이 전액 감당하기가 쉽지 않아, 각자 구글에서 발급받은 열쇠(API Key)를 꽂아 사용하는 방식을 선택했습니다.</p>
-
-                        <div class="bg-white/10 p-4 rounded-2xl border border-white/20 space-y-3">
-                            <p class="text-yellow-300 font-bold underline">잠깐! 비용이 발생하나요?</p>
-                            <p class="text-lg leading-normal">구글의 Gemini API는 개인이 사용하기에 <span class="font-bold">충분히 많은
-                                    양을 매월 무료</span>로 제공합니다.</p>
-                            <p class="text-lg leading-normal">무엇보다 구글에 <span class="font-bold text-red-300">따로 카드 정보를
-                                    등록하지 않는 한</span>, 사용량이 초과되어도 유료로 자동 전환되거나 결제될 일이 절대 없으니 안심하고 사용하세요!</p>
-                        </div>
-
-                        <p class="bg-white/10 p-3 rounded-2xl border border-white/20">
-                            개인 API 키를 등록하시면 <strong>더 빠르고 쾌적하게</strong> AI 기능을 즐기실 수 있습니다.
-                        </p>
-                        <p class="text-sm opacity-80 italic">* 공용 키 사용 시에는 이용량에 따라 응답이 늦어지거나 일시적으로 제한될 수 있습니다.</p>
-                    </div>
-                </div>
-
                 <div class="clay-card p-8 bg-white/80">
-                    <h3 class="text-2xl font-bold text-gray-700 mb-6 font-round flex items-center gap-2">
-                        <i class="fa-solid fa-key text-purple-400"></i> Gemini API Key 가이드
-                    </h3>
-                    <ul class="space-y-6">
-                        <li class="flex gap-4">
-                            <span
-                                class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500 text-white flex items-center justify-center font-bold text-lg">1</span>
-                            <p class="text-xl text-gray-500 font-hand">
-                                <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer"
-                                    class="text-purple-600 font-bold underline decoration-purple-200">Google AI
-                                    Studio</a>에 로그인합니다.
-                            </p>
-                        </li>
-                    </ul>
-                </div>
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                            <i class="fa-solid fa-users-rectangle text-xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-700 font-round">공용 명부 허브</h2>
+                            <p class="text-sm text-gray-400 mt-1">사인, 동의서, 알림판, 행복씨앗이 같은 명부에서 필요한 항목만 가져갑니다.</p>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <a href="{% url 'handoff:dashboard' %}"
+                            class="group flex items-start justify-between gap-4 rounded-3xl border border-indigo-100 bg-gradient-to-br from-white to-indigo-50/70 px-5 py-5 transition hover:border-indigo-200 hover:bg-indigo-50/60">
+                            <div>
+                                <h3 class="text-lg font-black text-slate-800">공용 명부 열기</h3>
+                                <p class="mt-2 text-sm leading-6 text-slate-500">학생 이름, 소속/학년반, 보호자명, 연락처 뒤 4자리, 번호를 한 번만 관리하면 됩니다.</p>
+                            </div>
+                            <span class="shrink-0 rounded-2xl bg-indigo-100 px-3 py-2 text-sm font-bold text-indigo-700 group-hover:bg-indigo-200">열기</span>
+                        </a>
 
+                        <div class="rounded-3xl border border-slate-100 bg-white px-5 py-5">
+                            <h3 class="text-lg font-black text-slate-800">연결 서비스</h3>
+                            <p class="mt-2 text-sm leading-6 text-slate-500">서비스마다 필요한 필드만 자동으로 씁니다. 따로 명단을 다시 만들 필요가 없습니다.</p>
+                            <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div class="rounded-2xl bg-slate-50 px-4 py-3">
+                                    <p class="text-sm font-black text-slate-700">사인 / 배부 체크</p>
+                                    <p class="mt-1 text-xs leading-5 text-slate-500">이름, 소속/학년반</p>
+                                </div>
+                                <div class="rounded-2xl bg-slate-50 px-4 py-3">
+                                    <p class="text-sm font-black text-slate-700">동의서</p>
+                                    <p class="mt-1 text-xs leading-5 text-slate-500">학생명, 보호자명, 연락처 뒤 4자리</p>
+                                </div>
+                                <div class="rounded-2xl bg-slate-50 px-4 py-3">
+                                    <p class="text-sm font-black text-slate-700">알림판</p>
+                                    <p class="mt-1 text-xs leading-5 text-slate-500">이름</p>
+                                </div>
+                                <div class="rounded-2xl bg-slate-50 px-4 py-3">
+                                    <p class="text-sm font-black text-slate-700">행복씨앗</p>
+                                    <p class="mt-1 text-xs leading-5 text-slate-500">번호, 이름</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="mt-5 text-sm leading-6 text-slate-400">명부 구조를 하나로 통일해 두면 서비스마다 받는 항목만 달라도 같은 사람 목록을 그대로 이어서 쓸 수 있습니다.</p>
+                </div>
             </div>
         </div>
     </div>

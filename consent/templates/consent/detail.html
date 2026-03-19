@@ -11,8 +11,8 @@
       <h1 class="text-3xl font-bold text-gray-800 mt-2">{{ consent_request.title }}</h1>
       <p class="text-sm text-gray-500">안내문: {{ consent_request.document.title }}</p>
       <p class="text-xs mt-1 {% if is_guardian_audience %}text-indigo-600{% else %}text-emerald-600{% endif %}">{{ consent_request.audience_type_label }}</p>
-      {% if consent_request.roster %}
-      <p class="text-xs text-gray-500 mt-1">연결된 저장 명단: {{ consent_request.roster.name }}</p>
+      {% if consent_request.shared_roster_group %}
+      <p class="text-xs text-gray-500 mt-1">연결된 공용 명부: {{ consent_request.shared_roster_group.name }}</p>
       {% endif %}
       {% if link_expires_at %}
       <p class="text-xs text-gray-500 mt-1">현재 링크 만료 시각: {{ link_expires_at|date:"Y-m-d H:i" }}</p>
@@ -31,7 +31,7 @@
         </button>
       </form>
       <a href="{% url 'consent:recipients' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-gray-700 font-semibold">수신자 등록/수정</a>
-      <a href="{% url 'consent:rosters' %}?audience_type={{ consent_request.audience_type }}" class="min-h-11 px-4 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-gray-700 font-semibold">저장 명단 관리</a>
+      <a href="{% url 'handoff:dashboard' %}?return_to={{ request.get_full_path|urlencode }}" class="min-h-11 px-4 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-gray-700 font-semibold">공용 명부 관리</a>
       <a href="{% url 'consent:document_source' request_id=consent_request.request_id %}" target="_blank" rel="noopener noreferrer" class="min-h-11 px-4 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-gray-700 font-semibold">원본 안내문 열기</a>
       <a href="{% url 'consent:download_csv' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700">제출 현황 CSV 다운로드</a>
       <a href="{% url 'consent:download_summary_pdf' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700">제출 결과 PDF 다운로드</a>

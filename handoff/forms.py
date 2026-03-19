@@ -12,19 +12,19 @@ class HandoffRosterGroupForm(forms.ModelForm):
             "name": forms.TextInput(
                 attrs={
                     "class": "w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none",
-                    "placeholder": "예: 2학년 담임",
+                    "placeholder": "예: 3학년 2반 공용 명부",
                 }
             ),
             "description": forms.TextInput(
                 attrs={
                     "class": "w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none",
-                    "placeholder": "예: 교무실 자료 배부 명단",
+                    "placeholder": "예: 동의서, 알림판, 행복씨앗에서 함께 쓸 반 명부",
                 }
             ),
             "is_favorite": forms.CheckboxInput(attrs={"class": "rounded border-gray-300 text-blue-600"}),
         }
         labels = {
-            "name": "명단 이름",
+            "name": "공용 명부 이름",
             "description": "설명 (선택)",
             "is_favorite": "즐겨찾기",
         }
@@ -37,7 +37,7 @@ class HandoffMemberBulkAddForm(forms.Form):
             attrs={
                 "class": "w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none",
                 "rows": 6,
-                "placeholder": "한 줄에 한 명씩 입력\n이름만: 김민수\n이름, 직위/학년반: 이서연, 3-1\n엑셀 두 칸 붙여넣기도 됩니다",
+                "placeholder": "한 줄에 한 명씩 입력\n이름만: 김민수\n이름, 소속/학년반: 이서연, 3-1\n자세한 항목은 CSV 양식으로 가져오세요",
             }
         ),
     )

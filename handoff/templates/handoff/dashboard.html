@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}배부 체크 - 대시보드{% endblock %}
+{% block title %}공용 명부 허브{% endblock %}
 
 {% block content %}
 <section class="pt-32 pb-20 px-4 md:px-6 min-h-screen bg-[#E0E5EC]">
     <div class="max-w-6xl mx-auto">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8" data-aos="fade-down">
             <div>
-                <h1 class="text-4xl md:text-5xl font-black text-gray-700 mb-2">배부 체크</h1>
-                <p class="text-lg text-gray-500 font-bold">명단 저장부터 배부 확인, 미수령 정리까지 한 번에 관리하세요.</p>
+                <h1 class="text-4xl md:text-5xl font-black text-gray-700 mb-2">공용 명부 허브</h1>
+                <p class="text-lg text-gray-500 font-bold">하나의 명부를 만들고, 사인·동의서·알림판·행복씨앗은 필요한 항목만 자동으로 가져가게 두세요.</p>
             </div>
             <a href="/" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-gray-600 font-bold shadow-clay hover:text-blue-600 transition-colors">
                 <i class="fa-solid fa-house"></i>
@@ -37,7 +37,7 @@
 
         {% if return_to %}
         <div class="mb-6 rounded-2xl border border-indigo-200 bg-indigo-50 px-5 py-4 text-sm text-indigo-800" data-aos="fade-down" data-aos-delay="60">
-            서명 요청에서 명단을 만들러 오셨습니다. 명단을 만든 뒤 아래 버튼으로 바로 돌아갈 수 있어요.
+            이전 작업에서 공용 명부를 만들러 오셨습니다. 명부를 만든 뒤 아래 버튼으로 바로 돌아갈 수 있어요.
         </div>
         {% endif %}
 
@@ -47,8 +47,9 @@
                     <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl shadow-sm">
                         <i class="fa-solid fa-users"></i>
                     </div>
-                    <h2 class="text-2xl font-black text-gray-700">명단 만들기</h2>
+                    <h2 class="text-2xl font-black text-gray-700">공용 명부 만들기</h2>
                 </div>
+                <p class="mb-4 text-sm font-bold text-gray-500">학생명, 소속/학년반, 보호자명, 연락처 뒤 4자리, 번호를 한 번만 정리하면 됩니다.</p>
 
                 <form action="{% url 'handoff:group_create' %}" method="post" class="space-y-4">
                     {% csrf_token %}
@@ -65,10 +66,10 @@
                     </div>
                     <label class="inline-flex items-center gap-2 text-sm font-bold text-gray-600 cursor-pointer">
                         {{ group_form.is_favorite }}
-                        <span>즐겨찾기 명단으로 등록</span>
+                        <span>즐겨찾기 명부로 등록</span>
                     </label>
                     <button type="submit" class="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black transition">
-                        <i class="fa-solid fa-plus mr-1"></i>명단 생성
+                        <i class="fa-solid fa-plus mr-1"></i>공용 명부 생성
                     </button>
                 </form>
             </div>
@@ -113,7 +114,7 @@
         <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <div class="clay-card p-6 md:p-7" data-aos="fade-up">
                 <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-2xl font-black text-gray-700">명단 목록</h2>
+                    <h2 class="text-2xl font-black text-gray-700">공용 명부 목록</h2>
                     <span class="text-sm text-gray-500 font-bold">{{ groups|length }}개</span>
                 </div>
 
@@ -148,12 +149,12 @@
                         </div>
                         <a href="{{ group.manage_url }}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 font-bold text-sm">
                             <i class="fa-solid fa-pen"></i>
-                            <span>명단 관리</span>
+                            <span>명부 관리</span>
                         </a>
                         {% if group.continue_url %}
                         <a href="{{ group.continue_url }}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-bold text-sm">
                             <i class="fa-solid fa-arrow-right"></i>
-                            <span>이 명단으로 서명 요청 계속하기</span>
+                            <span>이 명부로 이전 작업 계속하기</span>
                         </a>
                         {% endif %}
                     </div>
@@ -162,8 +163,8 @@
                 {% else %}
                 <div class="py-10 text-center text-gray-400">
                     <i class="fa-solid fa-users-slash text-4xl mb-3"></i>
-                    <p class="font-bold">아직 명단이 없습니다.</p>
-                    <p class="text-sm">왼쪽 폼에서 첫 명단을 만들어주세요.</p>
+                    <p class="font-bold">아직 공용 명부가 없습니다.</p>
+                    <p class="text-sm">왼쪽 폼에서 첫 명부를 만들어주세요.</p>
                 </div>
                 {% endif %}
             </div>

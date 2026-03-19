@@ -18,6 +18,14 @@ class HSClassroom(models.Model):
     )
     name = models.CharField('학급 이름', max_length=100)
     school_name = models.CharField('학교명', max_length=100, blank=True)
+    shared_roster_group = models.ForeignKey(
+        "handoff.HandoffRosterGroup",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="hs_classrooms",
+        verbose_name="공용 명부",
+    )
     slug = models.SlugField('공개 정원 슬러그', unique=True, max_length=50)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -71,6 +79,13 @@ class HSStudent(models.Model):
         HSClassroom,
         on_delete=models.CASCADE,
         related_name='students',
+    )
+    shared_roster_member = models.ForeignKey(
+        "handoff.HandoffRosterMember",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="happy_seed_students",
     )
     name = models.CharField('이름', max_length=50)
     number = models.IntegerField('번호', default=0)

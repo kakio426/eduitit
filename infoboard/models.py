@@ -64,6 +64,14 @@ class Board(models.Model):
     layout = models.CharField(max_length=20, choices=LAYOUT_CHOICES, default='grid')
     is_public = models.BooleanField(default=False, help_text='비로그인 열람 허용')
     allow_student_submit = models.BooleanField(default=False, help_text='학생 카드 제출 허용')
+    shared_roster_group = models.ForeignKey(
+        "handoff.HandoffRosterGroup",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="infoboard_boards",
+        help_text="학생 제출 이름을 공용 명부와 연결",
+    )
     access_code = models.CharField(max_length=6, unique=True, null=True, blank=True, help_text='6자리 입장코드')
     tags = models.ManyToManyField(Tag, blank=True, related_name='boards')
     created_at = models.DateTimeField(auto_now_add=True)

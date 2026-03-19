@@ -1,5 +1,8 @@
 from django import forms
 
+from handoff.models import HandoffRosterGroup
+from handoff.shared_roster import infoboard_submitter_choices
+
 from .models import Board, Card, Collection, Tag
 
 
@@ -27,10 +30,31 @@ class BoardForm(forms.ModelForm):
         widget=forms.HiddenInput(),
         help_text='쉼표로 구분된 태그 이름',
     )
+    shared_roster_group = forms.ModelChoiceField(
+        required=False,
+        queryset=HandoffRosterGroup.objects.none(),
+        empty_label="연결 안 함",
+        label="공용 명부",
+        widget=forms.Select(
+            attrs={
+                'class': 'w-full px-4 py-3 rounded-2xl shadow-clay-inner bg-white/80 text-gray-700 font-bold focus:outline-none focus:ring-2 focus:ring-purple-300',
+            }
+        ),
+    )
+
+    def __init__(self, *args, owner=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if owner is None and self.instance and self.instance.pk:
+            owner = self.instance.owner
+        if owner is not None:
+            self.fields['shared_roster_group'].queryset = HandoffRosterGroup.objects.filter(
+                owner=owner
+            ).order_by('-is_favorite', 'name')
+        self.fields['shared_roster_group'].label_from_instance = lambda group: group.name
 
     class Meta:
         model = Board
-        fields = ['title', 'description', 'icon', 'color_theme', 'layout', 'is_public', 'allow_student_submit']
+        fields = ['title', 'description', 'icon', 'color_theme', 'layout', 'is_public', 'allow_student_submit', 'shared_roster_group']
         labels = {
             'title': '보드 이름',
             'description': '설명',
@@ -180,6 +204,22 @@ class StudentCardForm(forms.ModelForm):
             'class': 'w-full px-4 py-3 rounded-2xl shadow-clay-inner bg-white/80 text-gray-700 font-bold focus:outline-none focus:ring-2 focus:ring-purple-300',
         }),
     )
+
+    def __init__(self, *args, board=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.board = board
+        if board and board.shared_roster_group_id:
+            choices = infoboard_submitter_choices(board.shared_roster_group)
+            if choices:
+                self.fields['author_name'] = forms.ChoiceField(
+                    choices=[('', '제출자 선택')] + choices,
+                    label='제출자',
+                    widget=forms.Select(
+                        attrs={
+                            'class': 'w-full px-4 py-3 rounded-2xl shadow-clay-inner bg-white/80 text-gray-700 font-bold focus:outline-none focus:ring-2 focus:ring-purple-300',
+                        }
+                    ),
+                )
 
     class Meta:
         model = Card

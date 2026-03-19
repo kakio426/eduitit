@@ -11,6 +11,12 @@
         <span class="ib-tag {% if board.allow_student_submit %}ib-tag-active{% endif %}">학생 제출</span>
     </div>
 
+    {% if board.shared_roster_group %}
+    <div class="mb-5 rounded-2xl bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
+        학생 제출 이름은 공용 명부 <strong>{{ board.shared_roster_group.name }}</strong>에서 선택합니다.
+    </div>
+    {% endif %}
+
     {% if shared_link %}
     <!-- 공유 링크가 있는 경우 -->
     <div class="space-y-5">

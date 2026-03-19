@@ -208,7 +208,7 @@ def dashboard(request):
 def board_create(request):
     """보드 생성."""
     if request.method == 'POST':
-        form = BoardForm(request.POST)
+        form = BoardForm(request.POST, owner=request.user)
         if form.is_valid():
             board = form.save_with_tags(request.user)
             logger.info(f'[InfoBoard] Board created: {board.title} (id={board.id})')
@@ -216,7 +216,10 @@ def board_create(request):
                 return _render_board_grid_response(request, close_modal=True)
             return redirect('infoboard:board_detail', board_id=board.id)
     else:
-        form = BoardForm(initial={'icon': '📌', 'color_theme': 'purple', 'layout': 'grid'})
+        form = BoardForm(
+            initial={'icon': '📌', 'color_theme': 'purple', 'layout': 'grid'},
+            owner=request.user,
+        )
 
     user_tags = Tag.objects.filter(owner=request.user).order_by('name')
     context = {'form': form, 'user_tags': user_tags, 'is_edit': False, 'modal_mode': bool(request.htmx)}
@@ -280,7 +283,7 @@ def board_edit(request, board_id):
     current_route = _resolve_current_route(request)
 
     if request.method == 'POST':
-        form = BoardForm(request.POST, instance=board)
+        form = BoardForm(request.POST, instance=board, owner=request.user)
         if form.is_valid():
             board = form.save_with_tags(request.user)
             logger.info(f'[InfoBoard] Board updated: {board.title} (id={board.id})')
@@ -299,7 +302,7 @@ def board_edit(request, board_id):
             return redirect('infoboard:board_detail', board_id=board.id)
     else:
         tag_names = ','.join(board.tags.values_list('name', flat=True))
-        form = BoardForm(instance=board, initial={'tag_names': tag_names})
+        form = BoardForm(instance=board, initial={'tag_names': tag_names}, owner=request.user)
 
     user_tags = Tag.objects.filter(owner=request.user).order_by('name')
     context = {'form': form, 'board': board, 'user_tags': user_tags, 'is_edit': True, 'modal_mode': bool(request.htmx)}
@@ -461,7 +464,7 @@ def student_submit(request, link_id):
 
     board = shared.board
     if request.method == 'POST':
-        form = StudentCardForm(request.POST, request.FILES)
+        form = StudentCardForm(request.POST, request.FILES, board=board)
         if form.is_valid():
             card = form.save_for_board(board)
             _refresh_link_card_metadata(card)
@@ -470,7 +473,7 @@ def student_submit(request, link_id):
                 return render(request, 'infoboard/partials/submit_success.html', {'card': card})
             return redirect('infoboard:public_board', link_id=link_id)
     else:
-        form = StudentCardForm(initial={'card_type': 'text'})
+        form = StudentCardForm(initial={'card_type': 'text'}, board=board)
 
     context = {'form': form, 'board': board, 'shared': shared}
     if request.htmx:

@@ -7,7 +7,13 @@
             <div>
                 <a href="{% url 'happy_seed:classroom_detail' classroom_id=classroom.id %}" class="text-sm text-gray-400 hover:text-gray-600">&larr; {{ classroom.name }}</a>
                 <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mt-1">👥 학생 관리</h1>
-                <p class="text-sm text-gray-500 mt-1">학생 등록, 수정, 비활성화/복구, 완전 삭제를 이 화면에서만 처리합니다.</p>
+                <p class="text-sm text-gray-500 mt-1">
+                    {% if shared_roster_group %}
+                    연결된 공용 명부를 기준으로 학생 이름과 번호를 동기화합니다.
+                    {% else %}
+                    학생 등록, 수정, 비활성화/복구, 완전 삭제를 이 화면에서 처리합니다.
+                    {% endif %}
+                </p>
             </div>
             <div class="flex gap-2">
                 <a href="{% url 'happy_seed:classroom_detail' classroom_id=classroom.id %}" class="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors">운영 화면</a>
@@ -30,6 +36,58 @@
             </div>
         </div>
 
+        {% if shared_roster_group %}
+        <div class="clay-card p-5 rounded-2xl mb-6">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-[0.24em] text-indigo-600">공용 명부 기준</p>
+                    <h2 class="text-xl font-bold text-gray-800 mt-2">{{ shared_roster_group.name }}</h2>
+                    <p class="text-sm text-gray-500 mt-2">활성 멤버 {{ shared_roster_member_count }}명을 기준으로 행복씨앗 학생 목록을 맞춥니다. 이름/번호 변경은 공용 명부에서만 합니다.</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <a href="{{ shared_roster_url }}" class="px-4 py-2 bg-white text-gray-700 rounded-xl text-sm font-bold border border-gray-200 hover:border-indigo-200 hover:text-indigo-600 transition-colors">공용 명부 열기</a>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="sync_shared_roster">
+                        <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors">공용 명부 다시 불러오기</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+            <div class="clay-card p-5 rounded-2xl">
+                <h2 class="font-bold text-gray-800 mb-4">활성 학생</h2>
+                {% if active_students %}
+                <div class="space-y-3">
+                    {% for student in active_students %}
+                    <div class="rounded-xl border border-gray-100 p-3 bg-white/80">
+                        <div class="font-bold text-gray-800">{{ student.number }}번 {{ student.name }}</div>
+                        <p class="text-xs text-gray-500 mt-1">동의: {{ student.consent.get_status_display }} | 씨앗 {{ student.seed_count }} | 티켓 {{ student.ticket_count }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-sm text-gray-500">활성 학생이 없습니다.</p>
+                {% endif %}
+            </div>
+            <div class="clay-card p-5 rounded-2xl">
+                <h2 class="font-bold text-gray-800 mb-4">비활성 학생</h2>
+                {% if inactive_students %}
+                <div class="space-y-3">
+                    {% for student in inactive_students %}
+                    <div class="rounded-xl border border-gray-100 p-3 bg-gray-50">
+                        <div class="font-bold text-gray-700">{{ student.number }}번 {{ student.name }}</div>
+                        <p class="text-xs text-gray-500 mt-1">동의: {{ student.consent.get_status_display }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-sm text-gray-500">비활성 학생이 없습니다.</p>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div class="clay-card p-5 rounded-2xl">
                 <h2 class="font-bold text-gray-800 mb-4">+ 학생 추가</h2>
@@ -230,6 +288,7 @@
                 <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700 transition-colors">전체 완전삭제</button>
             </form>
         </div>
+        {% endif %}
     </div>
 </section>
 <script>

@@ -1,5 +1,7 @@
 from django import forms
 
+from handoff.models import HandoffRosterGroup
+
 from .models import ConsentRoster, SignatureDocument, SignatureRequest
 
 
@@ -76,11 +78,11 @@ class PositionPayloadForm(forms.Form):
 
 
 class RecipientBulkForm(forms.Form):
-    saved_roster = forms.ModelChoiceField(
+    shared_roster_group = forms.ModelChoiceField(
         required=False,
-        queryset=ConsentRoster.objects.none(),
+        queryset=HandoffRosterGroup.objects.none(),
         empty_label="선택 안 함",
-        label="저장 명단 불러오기",
+        label="공용 명부 불러오기",
         widget=forms.Select(
             attrs={
                 "class": CLAY_INPUT,
@@ -113,14 +115,11 @@ class RecipientBulkForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.audience_type = audience_type
         if owner is not None:
-            self.fields["saved_roster"].queryset = ConsentRoster.objects.filter(
-                owner=owner,
-                audience_type=audience_type,
-            ).order_by(
+            self.fields["shared_roster_group"].queryset = HandoffRosterGroup.objects.filter(owner=owner).order_by(
                 "-is_favorite",
                 "name",
             )
-        self.fields["saved_roster"].label_from_instance = lambda roster: roster.name
+        self.fields["shared_roster_group"].label_from_instance = lambda roster: roster.name
         if audience_type == SignatureRequest.AUDIENCE_GENERAL:
             self.fields["recipients_text"].widget.attrs["placeholder"] = "이름\n김민수\n박교사"
         else:
@@ -132,10 +131,10 @@ class RecipientBulkForm(forms.Form):
         cleaned_data = super().clean()
         text = (cleaned_data.get("recipients_text") or "").strip()
         csv_file = cleaned_data.get("recipients_csv")
-        saved_roster = cleaned_data.get("saved_roster")
+        shared_roster_group = cleaned_data.get("shared_roster_group")
 
-        if not text and not csv_file and not saved_roster:
-            raise forms.ValidationError("저장 명단 선택, 직접 입력, CSV 업로드 중 하나를 선택해 주세요.")
+        if not text and not csv_file and not shared_roster_group:
+            raise forms.ValidationError("공용 명부 선택, 직접 입력, CSV 업로드 중 하나를 선택해 주세요.")
 
         if csv_file and not (csv_file.name or "").lower().endswith(".csv"):
             raise forms.ValidationError("CSV 파일(.csv)만 업로드할 수 있습니다.")

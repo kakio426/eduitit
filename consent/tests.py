@@ -14,8 +14,6 @@ from django.utils import timezone
 
 from consent.models import (
     ConsentAuditLog,
-    ConsentRoster,
-    ConsentRosterEntry,
     SignatureDocument,
     SignatureRecipient,
     SignatureRequest,
@@ -24,6 +22,7 @@ from consent.services import PdfRuntimeUnavailable, generate_recipient_evidence_
 from consent.views import DEFAULT_LEGAL_NOTICE
 from core.models import UserPolicyConsent
 from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
+from handoff.models import HandoffRosterGroup, HandoffRosterMember
 
 
 def seed_current_policy_consent(user):
@@ -703,7 +702,7 @@ class ConsentFlowTests(TestCase):
             {
                 "recipients_text": "김교사\n박강사",
                 "recipients_csv": "",
-                "saved_roster": "",
+                "shared_roster_group": "",
             },
             follow=True,
         )
@@ -1449,7 +1448,7 @@ class ConsentEvidenceTests(TestCase):
         self.assertNotIn("evidence-source-page-2", combined_text)
 
 
-class ConsentRosterTests(TestCase):
+class ConsentSharedRosterTests(TestCase):
     def setUp(self):
         self.teacher = User.objects.create_user(username="roster_teacher", password="pw123456")
         self.teacher.email = "roster_teacher@example.com"
@@ -1481,46 +1480,44 @@ class ConsentRosterTests(TestCase):
             consent_text_version="v1",
         )
 
-        self.roster = ConsentRoster.objects.create(
+        self.shared_roster = HandoffRosterGroup.objects.create(
             owner=self.teacher,
-            audience_type=SignatureRequest.AUDIENCE_GUARDIAN,
             name="2학년 학부모 명단",
         )
-        ConsentRosterEntry.objects.create(
-            roster=self.roster,
-            student_name="김하늘",
-            parent_name="김하늘 보호자",
-            phone_number="5678",
+        HandoffRosterMember.objects.create(
+            group=self.shared_roster,
+            display_name="김하늘",
+            guardian_name="김하늘 보호자",
+            phone_last4="5678",
             sort_order=1,
         )
-        ConsentRosterEntry.objects.create(
-            roster=self.roster,
-            student_name="박나래",
-            parent_name="박나래 보호자",
-            phone_number="1234",
+        HandoffRosterMember.objects.create(
+            group=self.shared_roster,
+            display_name="박나래",
+            guardian_name="박나래 보호자",
+            phone_last4="1234",
             sort_order=2,
         )
 
-        self.other_roster = ConsentRoster.objects.create(
+        self.other_shared_roster = HandoffRosterGroup.objects.create(
             owner=self.other_teacher,
-            audience_type=SignatureRequest.AUDIENCE_GUARDIAN,
             name="외부 명단",
         )
-        ConsentRosterEntry.objects.create(
-            roster=self.other_roster,
-            student_name="외부학생",
-            parent_name="외부학생 보호자",
-            phone_number="9999",
+        HandoffRosterMember.objects.create(
+            group=self.other_shared_roster,
+            display_name="외부학생",
+            guardian_name="외부학생 보호자",
+            phone_last4="9999",
             sort_order=1,
         )
 
-    def test_recipients_loads_saved_roster_and_manual_entries_together(self):
+    def test_recipients_loads_shared_roster_and_manual_entries_together(self):
         self.client.login(username="roster_teacher", password="pw123456")
         url = reverse("consent:recipients", kwargs={"request_id": self.request_obj.request_id})
         response = self.client.post(
             url,
             {
-                "saved_roster": str(self.roster.id),
+                "shared_roster_group": str(self.shared_roster.id),
                 "recipients_text": "최민서,,4321",
             },
             follow=True,
@@ -1528,7 +1525,8 @@ class ConsentRosterTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.request_obj.refresh_from_db()
-        self.assertEqual(self.request_obj.roster_id, self.roster.id)
+        self.assertEqual(self.request_obj.shared_roster_group_id, self.shared_roster.id)
+        self.assertIsNone(self.request_obj.roster_id)
         self.assertTrue(
             SignatureRecipient.objects.filter(
                 request=self.request_obj,
@@ -1546,13 +1544,13 @@ class ConsentRosterTests(TestCase):
             ).exists()
         )
 
-    def test_recipients_allows_saved_roster_without_manual_input(self):
+    def test_recipients_allows_shared_roster_without_manual_input(self):
         self.client.login(username="roster_teacher", password="pw123456")
         url = reverse("consent:recipients", kwargs={"request_id": self.request_obj.request_id})
         response = self.client.post(
             url,
             {
-                "saved_roster": str(self.roster.id),
+                "shared_roster_group": str(self.shared_roster.id),
                 "recipients_text": "",
             },
             follow=True,
@@ -1560,38 +1558,38 @@ class ConsentRosterTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.request_obj.refresh_from_db()
-        self.assertEqual(self.request_obj.roster_id, self.roster.id)
+        self.assertEqual(self.request_obj.shared_roster_group_id, self.shared_roster.id)
         self.assertEqual(self.request_obj.recipients.count(), 2)
 
-    def test_recipients_rejects_other_users_saved_roster(self):
+    def test_recipients_rejects_other_users_shared_roster(self):
         self.client.login(username="roster_teacher", password="pw123456")
         url = reverse("consent:recipients", kwargs={"request_id": self.request_obj.request_id})
         response = self.client.post(
             url,
             {
-                "saved_roster": str(self.other_roster.id),
+                "shared_roster_group": str(self.other_shared_roster.id),
                 "recipients_text": "",
             },
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn("saved_roster", response.context["form"].errors)
+        self.assertIn("shared_roster_group", response.context["form"].errors)
         self.request_obj.refresh_from_db()
-        self.assertIsNone(self.request_obj.roster_id)
+        self.assertIsNone(self.request_obj.shared_roster_group_id)
         self.assertEqual(self.request_obj.recipients.count(), 0)
 
-    def test_recipients_get_prefills_linked_roster(self):
-        self.request_obj.roster = self.roster
-        self.request_obj.save(update_fields=["roster"])
+    def test_recipients_get_prefills_linked_shared_roster(self):
+        self.request_obj.shared_roster_group = self.shared_roster
+        self.request_obj.save(update_fields=["shared_roster_group"])
 
         self.client.login(username="roster_teacher", password="pw123456")
         url = reverse("consent:recipients", kwargs={"request_id": self.request_obj.request_id})
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context["form"].initial.get("saved_roster"), self.roster.id)
+        self.assertEqual(response.context["form"].initial.get("shared_roster_group"), self.shared_roster.id)
 
-    def test_recipients_page_exposes_roster_manage_link_with_return_to(self):
+    def test_recipients_page_exposes_shared_roster_manage_link_with_return_to(self):
         self.client.login(username="roster_teacher", password="pw123456")
         url = reverse("consent:recipients", kwargs={"request_id": self.request_obj.request_id})
         response = self.client.get(url)
@@ -1600,39 +1598,26 @@ class ConsentRosterTests(TestCase):
         manage_rosters_url = response.context["manage_rosters_url"]
         split_result = urlsplit(manage_rosters_url)
         query = parse_qs(split_result.query)
-        self.assertEqual(split_result.path, reverse("consent:rosters"))
-        self.assertEqual(query.get("audience_type"), [SignatureRequest.AUDIENCE_GUARDIAN])
+        self.assertEqual(split_result.path, reverse("handoff:dashboard"))
         self.assertEqual(query.get("return_to"), [url])
 
-    def test_roster_create_returns_to_recipients_with_saved_roster_prefilled(self):
+    def test_recipients_query_prefills_selected_shared_roster(self):
         self.client.login(username="roster_teacher", password="pw123456")
-        return_to = reverse("consent:recipients", kwargs={"request_id": self.request_obj.request_id})
-        response = self.client.post(
-            reverse("consent:rosters"),
-            {
-                "audience_type": SignatureRequest.AUDIENCE_GUARDIAN,
-                "return_to": return_to,
-                "name": "새 학부모 명단",
-                "description": "복귀 테스트",
-                "entries_text": "최민서,,4321",
-            },
-            follow=True,
-        )
+        url = reverse("consent:recipients", kwargs={"request_id": self.request_obj.request_id})
+        response = self.client.get(f"{url}?shared_roster_group={self.shared_roster.id}")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.request["PATH_INFO"], return_to)
-        created_roster = ConsentRoster.objects.get(owner=self.teacher, name="새 학부모 명단")
-        self.assertEqual(response.context["form"].initial.get("saved_roster"), created_roster.id)
-        self.assertEqual(response.context["saved_roster_count"], 2)
+        self.assertEqual(response.context["form"].initial.get("shared_roster_group"), self.shared_roster.id)
+        self.assertEqual(response.context["shared_roster_count"], 1)
 
-    def test_detail_shows_linked_saved_roster_name(self):
-        self.request_obj.roster = self.roster
-        self.request_obj.save(update_fields=["roster"])
+    def test_detail_shows_linked_shared_roster_name(self):
+        self.request_obj.shared_roster_group = self.shared_roster
+        self.request_obj.save(update_fields=["shared_roster_group"])
 
         self.client.login(username="roster_teacher", password="pw123456")
         url = reverse("consent:detail", kwargs={"request_id": self.request_obj.request_id})
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "연결된 저장 명단")
-        self.assertContains(response, self.roster.name)
+        self.assertContains(response, "연결된 공용 명부")
+        self.assertContains(response, self.shared_roster.name)

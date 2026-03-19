@@ -1,33 +1,33 @@
 {% extends "base.html" %}
 
-{% block title %}명단 관리 - 배부 체크{% endblock %}
+{% block title %}공용 명부 관리 - 배부 체크{% endblock %}
 
 {% block content %}
 <section class="pt-32 pb-20 px-4 md:px-6 min-h-screen bg-[#E0E5EC]">
     <div class="max-w-6xl mx-auto">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8" data-aos="fade-down">
             <div>
-                <p class="text-sm text-blue-600 font-black mb-1">명단 관리</p>
+                <p class="text-sm text-blue-600 font-black mb-1">공용 명부</p>
                 <h1 class="text-4xl font-black text-gray-700">{{ group.name }}</h1>
-                <p class="text-gray-500 font-bold mt-1">활성 멤버 {{ active_member_count }}명 · 전체 {{ members|length }}명 · 연결된 세션 {{ sessions_count }}건</p>
+                <p class="text-gray-500 font-bold mt-1">활성 {{ active_member_count }}명 · 전체 {{ members|length }}명 · 배부 체크 {{ linked_service_counts.handoff }}건 · 서명 {{ linked_service_counts.signatures }}건 · 동의서 {{ linked_service_counts.consent }}건</p>
             </div>
             <div class="flex flex-wrap gap-2">
                 {% if return_to %}
                     {% if continue_to_signatures_url %}
                     <a href="{{ continue_to_signatures_url }}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-black shadow-clay hover:bg-indigo-500 transition-colors">
                         <i class="fa-solid fa-arrow-right"></i>
-                        <span>이 명단으로 서명 요청 계속하기</span>
+                        <span>이 명부로 이전 작업 계속하기</span>
                     </a>
                     {% else %}
                     <span class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-100 text-slate-500 font-bold shadow-sm">
                         <i class="fa-solid fa-circle-info"></i>
-                        <span>멤버를 먼저 추가해야 서명 요청에 연결할 수 있습니다</span>
+                        <span>활성 멤버를 먼저 넣어야 연결할 수 있습니다</span>
                     </span>
                     {% endif %}
                 {% endif %}
                 <a href="{% if return_to %}{% url 'handoff:dashboard' %}?return_to={{ return_to|urlencode }}{% else %}{% url 'handoff:dashboard' %}{% endif %}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-gray-600 font-bold shadow-clay hover:text-blue-600 transition-colors">
                     <i class="fa-solid fa-arrow-left"></i>
-                    <span>대시보드로</span>
+                    <span>공용 명부 목록</span>
                 </a>
             </div>
         </div>
@@ -50,9 +50,17 @@
         </div>
         {% endif %}
 
-        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+        <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.1fr)_360px] gap-6 mb-8">
             <div class="clay-card p-6 md:p-7" data-aos="fade-up">
-                <h2 class="text-2xl font-black text-gray-700 mb-4">명단 정보</h2>
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl shadow-sm">
+                        <i class="fa-solid fa-table-cells-large"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-black text-gray-700">명부 정보</h2>
+                        <p class="text-sm text-gray-500 font-bold mt-1">사인, 동의서, 알림판, 행복씨앗이 이 명부에서 필요한 항목만 읽어갑니다.</p>
+                    </div>
+                </div>
                 <form action="{% url 'handoff:group_update' group.id %}" method="post" class="space-y-4">
                     {% csrf_token %}
                     {% if return_to %}
@@ -68,16 +76,39 @@
                     </div>
                     <label class="inline-flex items-center gap-2 text-sm font-bold text-gray-600 cursor-pointer">
                         {{ group_form.is_favorite }}
-                        <span>즐겨찾기 명단으로 고정</span>
+                        <span>즐겨찾기 명부로 고정</span>
                     </label>
                     <button type="submit" class="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black transition">
-                        명단 정보 저장
+                        공용 명부 저장
                     </button>
                 </form>
             </div>
 
-            <div class="clay-card p-6 md:p-7" data-aos="fade-up" data-aos-delay="80">
-                <h2 class="text-2xl font-black text-gray-700 mb-4">멤버 일괄 추가</h2>
+            <div class="clay-card p-6 md:p-7" data-aos="fade-up" data-aos-delay="60">
+                <h2 class="text-2xl font-black text-gray-700 mb-4">채워진 항목</h2>
+                <div class="space-y-3 text-sm font-bold text-gray-600">
+                    <div class="rounded-2xl border border-slate-100 bg-white/80 px-4 py-3 flex items-center justify-between gap-3">
+                        <span>소속/학년반</span>
+                        <span class="text-indigo-600">{{ service_summary.with_affiliation }}/{{ service_summary.total }}</span>
+                    </div>
+                    <div class="rounded-2xl border border-slate-100 bg-white/80 px-4 py-3 flex items-center justify-between gap-3">
+                        <span>보호자+전화 뒤 4자리</span>
+                        <span class="text-emerald-600">{{ service_summary.with_guardian_phone }}/{{ service_summary.total }}</span>
+                    </div>
+                    <div class="rounded-2xl border border-slate-100 bg-white/80 px-4 py-3 flex items-center justify-between gap-3">
+                        <span>학생 번호</span>
+                        <span class="text-rose-600">{{ service_summary.with_student_number }}/{{ service_summary.total }}</span>
+                    </div>
+                </div>
+                <div class="mt-5 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm text-slate-500">
+                    사인은 <strong>이름+소속</strong>, 동의서는 <strong>이름+보호자+전화 뒤 4자리</strong>, 행복씨앗은 <strong>번호+이름</strong>, 알림판은 <strong>이름</strong>만 사용합니다.
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+            <div class="clay-card p-6 md:p-7" data-aos="fade-up">
+                <h2 class="text-2xl font-black text-gray-700 mb-4">빠른 추가</h2>
                 <form action="{% url 'handoff:group_members_add' group.id %}" method="post" class="space-y-4">
                     {% csrf_token %}
                     {% if return_to %}
@@ -86,13 +117,16 @@
                     <div>
                         <label class="block text-sm font-black text-gray-600 mb-1">{{ bulk_form.names_text.label }}</label>
                         {{ bulk_form.names_text }}
-                        <p class="mt-2 text-xs font-bold text-gray-500">한 줄에 한 명씩 넣거나 <code>이름, 직위/학년반</code> 형식으로 붙여넣으세요. 엑셀에서 두 칸을 복사해 붙여넣어도 됩니다.</p>
+                        <p class="mt-2 text-xs font-bold text-gray-500">붙여넣기는 이름과 소속까지 빠르게 받고, 보호자/전화/번호까지 한 번에 넣으려면 오른쪽 CSV를 사용하세요.</p>
                     </div>
                     <button type="submit" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black transition">
-                        <i class="fa-solid fa-user-plus mr-1"></i>멤버 추가
+                        <i class="fa-solid fa-user-plus mr-1"></i>빠르게 추가
                     </button>
                 </form>
-                <div class="my-5 border-t border-gray-200"></div>
+            </div>
+
+            <div class="clay-card p-6 md:p-7" data-aos="fade-up" data-aos-delay="80">
+                <h2 class="text-2xl font-black text-gray-700 mb-4">CSV 가져오기</h2>
                 <form action="{% url 'handoff:group_members_upload' group.id %}" method="post" enctype="multipart/form-data" class="space-y-4">
                     {% csrf_token %}
                     {% if return_to %}
@@ -100,56 +134,90 @@
                     {% endif %}
                     <div>
                         <div class="flex items-center justify-between gap-3 mb-1">
-                            <label class="block text-sm font-black text-gray-600">CSV 파일 업로드</label>
+                            <label class="block text-sm font-black text-gray-600">공용 명부 CSV</label>
                             <a href="{% url 'handoff:group_members_template_download' group.id %}" class="inline-flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 hover:bg-emerald-100 transition">
                                 <i class="fa-solid fa-download"></i>
                                 <span>양식 다운로드</span>
                             </a>
                         </div>
                         <input type="file" name="csv_file" accept=".csv" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white focus:border-blue-500 focus:outline-none">
-                        <p class="mt-2 text-xs font-bold text-gray-500">양식 파일은 왼쪽 두 칸만 채우면 됩니다. 오른쪽 <code>작성 예시</code> 열은 참고용이라 그대로 둬도 업로드에 포함되지 않습니다.</p>
-                        <p class="mt-1 text-xs font-bold text-gray-500">첫 줄은 <code>이름, 직위/학년반</code> 헤더를 쓰면 되고, 예: <code>김민수, 3-1</code>처럼 작성하면 됩니다.</p>
+                        <p class="mt-2 text-xs font-bold text-gray-500">열 순서는 <code>이름, 소속/학년반, 보호자명, 연락처 뒤 4자리, 번호, 메모</code> 입니다. 헤더를 그대로 써도 됩니다.</p>
                     </div>
                     <button type="submit" class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black transition">
-                        <i class="fa-solid fa-file-csv mr-1"></i>CSV로 멤버 가져오기
+                        <i class="fa-solid fa-file-csv mr-1"></i>CSV로 가져오기
                     </button>
                 </form>
             </div>
         </div>
 
         <div class="clay-card p-6 md:p-7" data-aos="fade-up" data-aos-delay="120">
-            <h2 class="text-2xl font-black text-gray-700 mb-4">멤버 수정/삭제</h2>
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+                <div>
+                    <h2 class="text-2xl font-black text-gray-700">멤버 수정</h2>
+                    <p class="text-sm text-gray-500 font-bold mt-1">이 화면에서 수정한 값이 연결된 서비스에 그대로 반영됩니다.</p>
+                </div>
+                <div class="text-xs font-bold text-gray-500">
+                    알림판 {{ linked_service_counts.infoboard }}건 · 행복씨앗 {{ linked_service_counts.happy_seed }}건 연결
+                </div>
+            </div>
 
             {% if members %}
-            <div class="space-y-3">
+            <div class="space-y-4">
                 {% for member in members %}
                 <div class="rounded-2xl bg-white/70 border border-gray-200 p-4">
-                    <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-                        <form action="{% url 'handoff:group_member_update' group.id member.id %}" method="post" class="md:col-span-11 grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-                            {% csrf_token %}
-                            {% if return_to %}
-                            <input type="hidden" name="return_to" value="{{ return_to }}">
-                            {% endif %}
-                            <input type="text" name="display_name" value="{{ member.display_name }}" class="md:col-span-4 w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300" required>
-                            <input type="text" name="note" value="{{ member.note }}" placeholder="직위/학년반 또는 메모 (선택)" class="md:col-span-5 w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
-                            <label class="md:col-span-2 inline-flex items-center gap-2 text-sm font-bold text-gray-600">
-                                <input type="checkbox" name="is_active" value="1" {% if member.is_active %}checked{% endif %} class="rounded border-gray-300 text-blue-600">
-                                <span>활성</span>
-                            </label>
-                            <button type="submit" class="md:col-span-1 w-full px-3 py-2 rounded-lg bg-blue-50 text-blue-700 font-black text-sm border border-blue-100">
-                                저장
-                            </button>
-                        </form>
-                        <form action="{% url 'handoff:group_member_delete' group.id member.id %}" method="post" class="md:col-span-1" onsubmit="return confirm('멤버를 삭제할까요?');">
-                            {% csrf_token %}
-                            {% if return_to %}
-                            <input type="hidden" name="return_to" value="{{ return_to }}">
-                            {% endif %}
-                            <button type="submit" class="w-full px-3 py-2 rounded-lg bg-red-50 text-red-700 font-black text-sm border border-red-100">
-                                삭제
-                            </button>
-                        </form>
-                    </div>
+                    <form action="{% url 'handoff:group_member_update' group.id member.id %}" method="post" class="space-y-3">
+                        {% csrf_token %}
+                        {% if return_to %}
+                        <input type="hidden" name="return_to" value="{{ return_to }}">
+                        {% endif %}
+                        <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+                            <div class="lg:col-span-4">
+                                <label class="block text-xs font-black text-gray-500 mb-1">이름</label>
+                                <input type="text" name="display_name" value="{{ member.display_name }}" class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300" required>
+                            </div>
+                            <div class="lg:col-span-4">
+                                <label class="block text-xs font-black text-gray-500 mb-1">소속/학년반</label>
+                                <input type="text" name="affiliation" value="{{ member.affiliation }}" placeholder="예: 3-1, 교감" class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                            </div>
+                            <div class="lg:col-span-2">
+                                <label class="block text-xs font-black text-gray-500 mb-1">번호</label>
+                                <input type="number" min="0" name="student_number" value="{{ member.student_number|default_if_none:'' }}" class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                            </div>
+                            <div class="lg:col-span-2">
+                                <label class="block text-xs font-black text-gray-500 mb-1">활성</label>
+                                <label class="inline-flex h-[42px] w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white text-sm font-bold text-gray-600">
+                                    <input type="checkbox" name="is_active" value="1" {% if member.is_active %}checked{% endif %} class="rounded border-gray-300 text-blue-600">
+                                    <span>사용</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+                            <div class="lg:col-span-4">
+                                <label class="block text-xs font-black text-gray-500 mb-1">보호자명</label>
+                                <input type="text" name="guardian_name" value="{{ member.guardian_name }}" placeholder="예: 김민수 보호자" class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                            </div>
+                            <div class="lg:col-span-3">
+                                <label class="block text-xs font-black text-gray-500 mb-1">전화 뒤 4자리</label>
+                                <input type="text" name="phone_last4" value="{{ member.phone_last4 }}" maxlength="4" inputmode="numeric" placeholder="예: 5678" class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                            </div>
+                            <div class="lg:col-span-3">
+                                <label class="block text-xs font-black text-gray-500 mb-1">메모</label>
+                                <input type="text" name="note" value="{{ member.note }}" placeholder="서비스와 무관한 메모" class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                            </div>
+                            <div class="lg:col-span-1">
+                                <label class="block text-xs font-black text-gray-500 mb-1 opacity-0">저장</label>
+                                <button type="submit" class="w-full px-3 py-2 rounded-lg bg-blue-50 text-blue-700 font-black text-sm border border-blue-100">
+                                    저장
+                                </button>
+                            </div>
+                            <div class="lg:col-span-1">
+                                <label class="block text-xs font-black text-gray-500 mb-1 opacity-0">삭제</label>
+                                <button type="submit" formaction="{% url 'handoff:group_member_delete' group.id member.id %}" formmethod="post" onclick="return confirm('멤버를 삭제할까요?');" class="w-full px-3 py-2 rounded-lg bg-red-50 text-red-700 font-black text-sm border border-red-100">
+                                    삭제
+                                </button>
+                            </div>
+                        </div>
+                    </form>
                 </div>
                 {% endfor %}
             </div>

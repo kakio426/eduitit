@@ -29,6 +29,10 @@ class HandoffRosterGroup(models.Model):
 class HandoffRosterMember(models.Model):
     group = models.ForeignKey(HandoffRosterGroup, on_delete=models.CASCADE, related_name="members")
     display_name = models.CharField(max_length=100)
+    affiliation = models.CharField(max_length=120, blank=True)
+    guardian_name = models.CharField(max_length=100, blank=True)
+    phone_last4 = models.CharField(max_length=4, blank=True)
+    student_number = models.PositiveIntegerField(null=True, blank=True)
     sort_order = models.PositiveIntegerField(default=0)
     note = models.CharField(max_length=120, blank=True)
     is_active = models.BooleanField(default=True)

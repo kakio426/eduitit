@@ -4,13 +4,35 @@ import re
 
 from django import forms
 
+from handoff.models import HandoffRosterGroup
+
 from .models import HSActivity, HSClassroom, HSClassroomConfig, HSPrize, HSStudent
 
 
 class HSClassroomForm(forms.ModelForm):
+    shared_roster_group = forms.ModelChoiceField(
+        required=False,
+        queryset=HandoffRosterGroup.objects.none(),
+        empty_label="연결 안 함",
+        label="공용 명부",
+        widget=forms.Select(
+            attrs={
+                "class": "w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-purple-300 focus:border-purple-400",
+            }
+        ),
+    )
+
+    def __init__(self, *args, owner=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if owner is not None:
+            self.fields["shared_roster_group"].queryset = HandoffRosterGroup.objects.filter(
+                owner=owner
+            ).order_by("-is_favorite", "name")
+        self.fields["shared_roster_group"].label_from_instance = lambda group: group.name
+
     class Meta:
         model = HSClassroom
-        fields = ["name", "school_name"]
+        fields = ["name", "school_name", "shared_roster_group"]
         widgets = {
             "name": forms.TextInput(
                 attrs={

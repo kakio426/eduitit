@@ -24,6 +24,12 @@
                 {{ form.school_name }}
             </div>
 
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-2">공용 명부</label>
+                {{ form.shared_roster_group }}
+                <p class="text-xs text-gray-400 mt-1">연결하면 학생 이름과 번호를 공용 명부에서 함께 관리할 수 있습니다.</p>
+            </div>
+
             <button type="submit"
                     class="w-full py-3 bg-green-500 text-white rounded-xl font-bold text-base hover:bg-green-600 transition-colors">
                 {% if is_create %}교실 생성{% else %}저장{% endif %}

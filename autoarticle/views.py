@@ -280,15 +280,6 @@ class ArticleCreateView(View):
         API 키와 마스터 키 사용 여부를 반환.
         Returns: (api_key, is_master_key)
         """
-        user_key = None
-        if request.user.is_authenticated:
-            try:
-                user_key = request.user.userprofile.gemini_api_key
-            except Exception:
-                pass
-
-        if user_key:
-            return user_key, False  # 사용자 키 사용
         return os.environ.get("MASTER_DEEPSEEK_API_KEY") or os.environ.get("DEEPSEEK_API_KEY"), True
 
     def _is_master_deepseek_daily_limit_exceeded(self, request):

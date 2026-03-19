@@ -58,6 +58,13 @@
             {% include 'infoboard/partials/field_errors.html' with errors=form.description.errors %}
         </div>
 
+        <div class="mb-4">
+            <label class="text-xs font-bold text-gray-500 mb-1 block">공용 명부 (선택)</label>
+            {{ form.shared_roster_group }}
+            <p class="mt-2 text-xs text-gray-400">학생 제출 보드라면 공용 명부를 연결해 제출자 이름을 선택식으로 받을 수 있어요.</p>
+            {% include 'infoboard/partials/field_errors.html' with errors=form.shared_roster_group.errors %}
+        </div>
+
         <!-- Layout -->
         <div class="mb-4">
             <label class="text-xs font-bold text-gray-500 mb-2 block">보기 방식</label>

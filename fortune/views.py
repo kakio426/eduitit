@@ -1,7 +1,6 @@
 import os
 import time
 import asyncio
-from google import genai
 from openai import OpenAI, AsyncOpenAI
 from django.shortcuts import render, get_object_or_404
 from django.conf import settings
@@ -10,7 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django_ratelimit.decorators import ratelimit
 from django_ratelimit.core import is_ratelimited
 from asgiref.sync import sync_to_async
-from core.utils import ratelimit_key_for_master_only, has_personal_api_key
+from core.utils import ratelimit_key_for_master_only
 from core.seo import (
     build_fortune_detail_page_seo,
     build_fortune_history_page_seo,
@@ -38,7 +37,6 @@ from django.views.decorators.http import require_POST
 logger = logging.getLogger(__name__)
 
 # 모델 설정
-GEMINI_MODEL_NAME = "gemini-2.5-flash-lite"
 DEEPSEEK_MODEL_NAME = "deepseek-chat"
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 
@@ -55,90 +53,29 @@ def _should_use_async_ai_stream():
 def _should_use_async_ai_api():
     return getattr(settings, 'FORTUNE_ASYNC_API_ENABLED', False)
 
-def get_user_gemini_key(request):
-    """사용자의 개인 Gemini API 키 반환"""
-    if request.user.is_authenticated:
-        try:
-            return request.user.userprofile.gemini_api_key
-        except Exception:
-            pass
-    return None
-
 def fortune_rate_h(group, request):
-    """1시간당 5회 제한 (관리자 및 개인 키 소지자 무제한)"""
+    """1시간당 5회 제한 (관리자 무제한)"""
     if request.user and request.user.is_authenticated:
-        if request.user.is_superuser or has_personal_api_key(request.user):
+        if request.user.is_superuser:
             return None
     return '5/h'
 
 def fortune_rate_d(group, request):
-    """1일당 5회 제한 (관리자 및 개인 키 소지자 무제한)"""
+    """1일당 5회 제한 (관리자 무제한)"""
     if request.user and request.user.is_authenticated:
-        if request.user.is_superuser or has_personal_api_key(request.user):
+        if request.user.is_superuser:
             return None
     return '5/d'
 
 def generate_ai_response(prompt, request):
     """
-    하이브리드 AI 응답 생성 함수 (Streaming 지원)
-    1순위: 사용자 개인 Gemini 키 (존재하는 경우)
-    2순위: 마스터 DeepSeek 키 (환경변수)
+    DeepSeek 기반 AI 응답 생성 함수 (Streaming 지원)
     """
     from .utils.circuit_breaker import ai_circuit_breaker
 
     if not ai_circuit_breaker.can_execute():
         raise Exception("AI 서비스가 일시적으로 불안정합니다. 잠시 후 다시 시도해주세요.")
 
-    user_gemini_key = get_user_gemini_key(request)
-    
-    # 1. 사용자 개인 Gemini API 키 사용
-    if user_gemini_key:
-        try:
-            client = genai.Client(api_key=user_gemini_key)
-            
-            # Gemini Retry Logic
-            max_retries = 2
-            for i in range(max_retries + 1):
-                try:
-                    # Google GenAI SDK streaming
-                    # Use generate_content_stream for proper streaming behavior
-                    if hasattr(client.models, 'generate_content_stream'):
-                        response = client.models.generate_content_stream(
-                            model=GEMINI_MODEL_NAME,
-                            contents=prompt,
-                        )
-                    else:
-                        # Fallback for older versions or strict interface
-                        response = client.models.generate_content(
-                            model=GEMINI_MODEL_NAME,
-                            contents=prompt,
-                            config={'stream': True}
-                        )
-
-                    chunk_count = 0
-                    for chunk in response:
-                        try:
-                            # Verify if text is available (handles safety blocks gracefully)
-                            if chunk.text:
-                                chunk_count += 1
-                                yield chunk.text
-                        except Exception:
-                            # Ignored blocked/safety-filtered chunks
-                            continue
-                    
-                    if chunk_count == 0:
-                        logger.warning("Gemini stream yielded 0 chunks.")
-                    return
-                except Exception as e:
-                    if '503' in str(e) and i < max_retries:
-                        time.sleep(1.5)
-                        continue
-                    raise e
-        except Exception as e:
-            logger.exception(f"Gemini API Error (User Key): {e}")
-            raise e
-
-    # 2. 마스터 DeepSeek API 사용 (Fallback)
     master_deepseek_key = os.environ.get('MASTER_DEEPSEEK_API_KEY')
     if master_deepseek_key:
         try:
@@ -283,10 +220,7 @@ def _check_saju_ratelimit(request):
 
 async def _async_stream_ai(prompt, request):
     """스트리밍 응답을 async로 제공. 플래그 OFF 시 기존 threadpool 경로 유지."""
-    user_gemini_key = get_user_gemini_key(request)
-
-    # Async 경로는 현재 DeepSeek(master key) 호출에서 우선 적용한다.
-    if _should_use_async_ai_stream() and not user_gemini_key:
+    if _should_use_async_ai_stream():
         async for chunk in _async_stream_deepseek(prompt):
             yield chunk
         return
@@ -372,8 +306,7 @@ async def _collect_ai_response_async(prompt, request):
     플래그 ON + DeepSeek 경로에서는 AsyncOpenAI를 사용하고,
     그 외는 기존 sync collector를 재사용한다.
     """
-    user_gemini_key = get_user_gemini_key(request)
-    if _should_use_async_ai_api() and not user_gemini_key:
+    if _should_use_async_ai_api():
         chunks = []
         async for chunk in _async_stream_deepseek(prompt):
             chunks.append(chunk)
@@ -388,7 +321,7 @@ async def _collect_ai_response_async(prompt, request):
 def saju_view(request):
     """사주 분석 메인 뷰"""
     if getattr(request, 'limited', False):
-        error_message = '선생님, 현재 공용 AI 한도가 모두 사용 중입니다. [내 설정]에서 개인 Gemini API 키를 등록하시면 중단 없이 계속 이용하실 수 있습니다.'
+        error_message = '선생님, 현재 공용 AI 한도가 모두 사용 중입니다. 잠시 후 다시 시도해주세요.'
 
         return _render_private_fortune_page(request, 'fortune/saju_form.html', {
             'form': SajuForm(request.POST),
@@ -436,18 +369,12 @@ def saju_view(request):
                      error_message = "API 키가 설정되지 않았습니다. 관리자에게 문의해주세요."
                 elif "matching query does not exist" in error_str:
                     error_message = "기본 데이터가 데이터베이스에 존재하지 않습니다. 관리자에게 문의하여 'python manage.py seed_saju_data'를 실행해주세요."
-                elif "429" in error_str or "RESOURCE_EXHAUSTED" in error_str: # Gemini specific
-                    if request.user.is_authenticated:
-                        error_message = "선생님, 공용 AI 한도가 모두 소진되었습니다! [설정] 페이지에서 개인 Gemini API 키를 등록하시면 중단 없이 계속 이용하실 수 있습니다. 😊"
-                    else:
-                        error_message = "선생님, 현재 많은 분들이 이용 중이라 공용 AI 한도가 초과되었습니다! 가입 후 [설정]에서 개인 API 키를 등록하시면 기다림 없이 이용 가능합니다. (무료)"
+                elif "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
+                    error_message = "선생님, 현재 많은 분들이 이용 중이라 공용 AI 한도가 초과되었습니다. 잠시 후 다시 시도해주세요."
                 elif "503" in error_str:
                     error_message = "지금 AI 모델이 너무 바쁘네요! 30초 정도 뒤에 다시 시도해주시면 감사하겠습니다. 😊"
                 elif "Insufficient Balance" in error_str: # DeepSeek specific
-                     if request.user.is_authenticated:
-                        error_message = "선생님, 공용 AI 사용량이 초과되었습니다. [설정]에서 '개인 Gemini API 키'를 등록하시면 무료로 계속 이용하실 수 있습니다! 😊"
-                     else:
-                        error_message = "선생님, 공용 AI 사용량이 초과되었습니다. 로그인 후 [설정]에서 '개인 API 키'를 등록하시면 무료로 계속 이용하실 수 있습니다!"
+                     error_message = "선생님, 공용 AI 사용량이 초과되었습니다. 잠시 후 다시 시도해주세요."
                 else:
                     error_message = f"사주 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요. ({error_str})"
     else:
@@ -527,7 +454,7 @@ async def saju_api_view(request):
         if await _check_saju_ratelimit(request):
             return JsonResponse({
                 'error': 'LIMIT_EXCEEDED',
-                'message': '선생님, 본 서비스는 개인 사비로 운영되어 공용 한도가 제한적입니다. [내 설정]에서 개인 Gemini API 키를 등록하시면 계속해서 이용 가능합니다!'
+                'message': '선생님, 오늘 사주 분석 이용 한도를 모두 사용했습니다. 내일 다시 시도해주세요.'
             }, status=429)
 
         form = SajuForm(request.POST)
@@ -578,7 +505,7 @@ async def saju_api_view(request):
         if "503" in error_str:
              return JsonResponse({'error': 'AI_OVERLOADED', 'message': '지금 AI 모델이 너무 바쁘네요! 30초 정도 뒤에 다시 시도해주시면 감사하겠습니다.'}, status=503)
         if "Insufficient Balance" in error_str:
-             return JsonResponse({'error': 'AI_LIMIT', 'message': '선생님, 공용 AI 사용량이 초과되었습니다. [설정]에서 개인 API 키를 등록해주세요!'}, status=429)
+             return JsonResponse({'error': 'AI_LIMIT', 'message': '선생님, 공용 AI 사용량이 초과되었습니다. 잠시 후 다시 시도해주세요.'}, status=429)
         return JsonResponse({'error': 'AI_ERROR', 'message': '분석 중 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'}, status=500)
 
 
@@ -592,7 +519,7 @@ async def daily_fortune_api(request):
         if await _check_saju_ratelimit(request):
             return JsonResponse({
                 'error': 'LIMIT_EXCEEDED',
-                'message': '선생님, 본 서비스는 개인 사비로 운영되어 공용 한도가 제한적입니다. [내 설정]에서 개인 Gemini API 키를 등록하시면 계속해서 이용 가능합니다!'
+                'message': '선생님, 오늘 사주 분석 이용 한도를 모두 사용했습니다. 내일 다시 시도해주세요.'
             }, status=429)
 
         try:

@@ -13,7 +13,6 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, blank=True, null=True, verbose_name="역할")
     nickname = models.CharField(max_length=50, blank=True, null=True, verbose_name="별명")
-    gemini_api_key = models.CharField(max_length=255, blank=True, null=True, verbose_name="Gemini API Key")
     padlet_api_key = models.CharField(max_length=255, blank=True, null=True, verbose_name="Padlet API Key")
     default_classroom = models.ForeignKey(
         "happy_seed.HSClassroom",

@@ -484,7 +484,7 @@ def _sync_expected_participants_from_shared_roster(session):
         if not name:
             skipped += 1
             continue
-        affiliation = _normalize_affiliation_text(member.note)
+        affiliation = _normalize_affiliation_text(member.affiliation or member.note)
         _, was_created = ExpectedParticipant.objects.get_or_create(
             training_session=session,
             name=name,

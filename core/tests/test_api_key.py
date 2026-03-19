@@ -3,58 +3,63 @@ from django.urls import reverse
 from django.contrib.auth.models import User
 from core.models import UserProfile
 from autoarticle.views import ArticleCreateView
-from unittest.mock import patch, MagicMock
-import os
+from unittest.mock import patch
 
 class APIKeyTest(TestCase):
     def setUp(self):
         self.client = Client()
-        self.user = User.objects.create_user(username='testuser', password='password')
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='testuser@example.com',
+            password='password',
+        )
         self.client.login(username='testuser', password='password')
-        # Ensure profile exists (handled by signal, but good to double check or create if signal failed in test env?)
-        # Signals usually run in TestCase.
+        profile, _ = UserProfile.objects.get_or_create(user=self.user)
+        profile.nickname = '기존쌤'
+        profile.role = 'school'
+        profile.save()
 
     def test_user_profile_creation(self):
         """Test that UserProfile is created automatically"""
         profile = UserProfile.objects.get(user=self.user)
         self.assertIsNotNone(profile)
 
-    def test_settings_view_saves_key(self):
-        """Test the settings form submission"""
-        response = self.client.post(reverse('settings'), {
-            'gemini_api_key': 'new_user_key'
-        })
+    def test_settings_view_saves_profile_info(self):
+        """Settings saves basic profile info without exposing API key editing."""
+        response = self.client.post(
+            reverse('settings'),
+            {
+                'nickname': '테스트쌤',
+                'role': 'school',
+            },
+            follow=True,
+        )
         self.assertEqual(response.status_code, 200)
-        
-        # Refresh from DB
+
         self.user.userprofile.refresh_from_db()
-        self.assertEqual(self.user.userprofile.gemini_api_key, 'new_user_key')
+        self.assertEqual(self.user.userprofile.nickname, '테스트쌤')
+        self.assertEqual(self.user.userprofile.role, 'school')
+
+    def test_settings_view_hides_personal_ai_key_and_shows_roster_hub(self):
+        response = self.client.get(reverse('settings'))
+
+        self.assertContains(response, "내 정보와 공용 명부")
+        self.assertContains(response, "공용 명부 허브")
+        self.assertContains(response, "공용 명부 열기")
+        self.assertContains(response, "사인 / 배부 체크")
+        self.assertContains(response, "행복씨앗")
+        self.assertNotContains(response, "Gemini API Key")
+        self.assertNotContains(response, "사주 보관함")
 
     @patch('os.environ.get')
-    def test_api_key_priority(self, mock_env_get):
-        """Test that user key takes precedence over environment variable"""
+    def test_article_create_uses_server_key_only(self, mock_env_get):
+        """Article creation now uses only the configured server key."""
         mock_env_get.return_value = 'system_key'
-        
+
         view = ArticleCreateView()
         request = RequestFactory().post('/autoarticle/')
         request.user = self.user
-        
-        # Case 1: No user key set (should use system key)
-        # Ensure profile exists and key is empty
-        profile, created = UserProfile.objects.get_or_create(user=self.user)
-        profile.gemini_api_key = ''
-        profile.save()
-        
-        key = view.get_api_key(request)
+
+        key, is_master_key = view.get_api_key(request)
         self.assertEqual(key, 'system_key')
-        
-        # Case 2: User key set (should use user key)
-        profile.gemini_api_key = 'user_key'
-        profile.save()
-        
-        # Refresh user to pick up profile changes
-        self.user.refresh_from_db()
-        request.user = self.user
-        
-        key = view.get_api_key(request)
-        self.assertEqual(key, 'user_key')
+        self.assertTrue(is_master_key)

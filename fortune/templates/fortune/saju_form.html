@@ -1868,19 +1868,14 @@
         const displayName = getCurrentDisplayName();
         formData.delete('name');
 
-        // [하루 5회 제한 검사] - 개인 API 키 사용자는 무제한
-        // Django template에서 변수 주입 (False면 문자열 "False")
-        const hasPersonalApiKey = "{{ has_personal_api_key|default:'False' }}" === "True";
+        // [하루 5회 제한 검사] - 서버 한도 전에 같은 브라우저 안에서 먼저 안내
+        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        const usageKey = `saju_usage_${today}`;
+        let usageCount = parseInt(localStorage.getItem(usageKey) || '0');
 
-        if (!hasPersonalApiKey) {
-            const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-            const usageKey = `saju_usage_${today}`;
-            let usageCount = parseInt(localStorage.getItem(usageKey) || '0');
-
-            if (usageCount >= 5) {
-                alert("오늘의 사주 분석 횟수(5회)를 모두 사용하셨습니다.\n내일 다시 이용해주세요! 🍀\n\n(개인 API Key를 등록하면 무제한 이용 가능합니다)");
-                return;
-            }
+        if (usageCount >= 5) {
+            alert("오늘의 사주 분석 횟수(5회)를 모두 사용하셨습니다.\n내일 다시 이용해주세요! 🍀");
+            return;
         }
 
         // UI 전환 및 모달 표시
@@ -1954,8 +1949,8 @@
                 }
             }
 
-            // 성공 시 카운트 증가 (개인 API 키 없을 때만)
-            if (response.ok && data.success && !hasPersonalApiKey) {
+            // 성공 시 카운트 증가
+            if (response.ok && data.success) {
                 const today = new Date().toISOString().split('T')[0];
                 const usageKey = `saju_usage_${today}`;
                 let currentCount = parseInt(localStorage.getItem(usageKey) || '0');

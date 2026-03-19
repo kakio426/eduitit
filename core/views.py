@@ -7,7 +7,7 @@ from django.core.paginator import Paginator
 from django.urls import NoReverseMatch
 from django.core.cache import cache
 from products.models import Product, ServiceManual
-from .forms import APIKeyForm, UserProfileUpdateForm
+from .forms import UserProfileUpdateForm
 from .guide_links import SERVICE_GUIDE_PADLET_URL
 from .models import (
     UserProfile,
@@ -3492,7 +3492,14 @@ def settings_view(request):
     else:
         form = UserProfileUpdateForm(instance=profile)
     
-    return render(request, 'core/settings.html', {'form': form})
+    return render(
+        request,
+        'core/settings.html',
+        {
+            'form': form,
+            'profile': profile,
+        },
+    )
 
 @login_required
 def select_role(request):

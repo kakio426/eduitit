@@ -35,20 +35,9 @@ DEFAULT_SYSTEM_PROMPT = """당신은 패들릿(Padlet)에 올라온 게시물을
 4. 불확실한 내용은 "패들릿을 직접 확인해보세요"라고 안내"""
 
 
-def get_gemini_client(request):
+def get_gemini_client():
     """Gemini 클라이언트 생성"""
-    api_key = None
-
-    if request.user.is_authenticated:
-        try:
-            user_key = request.user.userprofile.gemini_api_key
-            if user_key:
-                api_key = user_key
-        except Exception:
-            pass
-
-    if not api_key:
-        api_key = os.environ.get('GEMINI_API_KEY', '')
+    api_key = os.environ.get('GEMINI_API_KEY', '')
 
     if not api_key:
         return None
@@ -124,7 +113,7 @@ def send_message(request):
     if getattr(request, 'limited', False):
         return JsonResponse({
             'error': 'LIMIT_EXCEEDED',
-            'message': '선생님, 현재 공용 AI 한도가 모두 사용 중입니다. [내 설정]에서 개인 Gemini API 키를 등록하시면 계속 이용하실 수 있습니다.'
+            'message': '선생님, 현재 공용 AI 한도가 모두 사용 중입니다. 잠시 후 다시 시도해주세요.'
         }, status=429)
     user_message = request.POST.get('message', '').strip()
 
@@ -132,10 +121,10 @@ def send_message(request):
         return JsonResponse({'error': '메시지를 입력해주세요.'}, status=400)
 
     # Gemini 클라이언트 가져오기
-    client = get_gemini_client(request)
+    client = get_gemini_client()
     if not client:
         return JsonResponse({
-            'error': 'API 키가 설정되지 않았습니다. 설정 페이지에서 Gemini API 키를 등록해주세요.'
+            'error': '공용 AI 연결이 아직 준비되지 않았습니다. 관리자에게 문의해주세요.'
         }, status=400)
 
     # RAG 컨텍스트 가져오기

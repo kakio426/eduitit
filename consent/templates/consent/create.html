@@ -24,7 +24,7 @@
         </ul>
         <div class="mt-6 flex flex-wrap gap-2">
           <a href="{% url 'consent:create_step1' %}?audience_type={{ guardian_audience }}" class="min-h-11 px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700">이 방식으로 시작</a>
-          <a href="{% url 'consent:rosters' %}?audience_type={{ guardian_audience }}" class="min-h-11 px-4 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-gray-700 font-semibold">학부모 명단 관리</a>
+          <a href="{% url 'handoff:dashboard' %}" class="min-h-11 px-4 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-gray-700 font-semibold">공용 명부 관리</a>
         </div>
       </section>
 
@@ -40,7 +40,7 @@
         </ul>
         <div class="mt-6 flex flex-wrap gap-2">
           <a href="{% url 'consent:create_step1' %}?audience_type={{ general_audience }}" class="min-h-11 px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700">이 방식으로 시작</a>
-          <a href="{% url 'consent:rosters' %}?audience_type={{ general_audience }}" class="min-h-11 px-4 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-gray-700 font-semibold">일반 명단 관리</a>
+          <a href="{% url 'handoff:dashboard' %}" class="min-h-11 px-4 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-gray-700 font-semibold">공용 명부 관리</a>
         </div>
       </section>
     </div>

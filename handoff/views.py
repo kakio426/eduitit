@@ -23,6 +23,7 @@ from .forms import (
     HandoffSessionEditForm,
 )
 from .models import HandoffReceipt, HandoffRosterGroup, HandoffRosterMember, HandoffSession
+from .shared_roster import normalize_phone_last4, roster_service_summary
 
 
 def _get_service():
@@ -64,15 +65,9 @@ def _compact_member_header_value(value: str) -> str:
     )
 
 
-def _is_member_comment_row(name: str) -> bool:
-    return str(name or "").strip().startswith("#")
-
-
-def _is_member_header_row(name: str, note: str) -> bool:
-    normalized_name = _compact_member_header_value(name)
-    normalized_note = _compact_member_header_value(note)
-    name_headers = {"이름", "성명", "name", "teachername", "membername"}
-    note_headers = {
+def _member_header_field(token: str) -> str | None:
+    name_headers = {"이름", "성명", "name", "teachername", "membername", "studentname", "student"}
+    affiliation_headers = {
         "직위",
         "직책",
         "학년반",
@@ -80,12 +75,61 @@ def _is_member_header_row(name: str, note: str) -> bool:
         "소속",
         "소속학년반",
         "반",
-        "비고",
-        "메모",
         "note",
         "affiliation",
     }
-    return normalized_name in name_headers and (not normalized_note or normalized_note in note_headers)
+    guardian_headers = {"학부모", "보호자", "guardian", "guardianname", "parent", "parentname"}
+    phone_headers = {
+        "연락처",
+        "전화",
+        "전화번호",
+        "연락처뒤4자리",
+        "전화뒤4자리",
+        "연락처끝4자리",
+        "last4",
+        "phone",
+        "phone4",
+        "phonelast4",
+        "phonenumber",
+    }
+    number_headers = {"번호", "학번", "number", "no", "studentnumber", "studentno"}
+    note_headers = {"비고", "메모", "memo"}
+
+    if token in name_headers:
+        return "display_name"
+    if token in affiliation_headers:
+        return "affiliation"
+    if token in guardian_headers:
+        return "guardian_name"
+    if token in phone_headers:
+        return "phone_last4"
+    if token in number_headers:
+        return "student_number"
+    if token in note_headers:
+        return "note"
+    return None
+
+
+def _is_member_comment_row(name: str) -> bool:
+    return str(name or "").strip().startswith("#")
+
+
+def _is_member_header_row(name: str, note: str) -> bool:
+    normalized_name = _compact_member_header_value(name)
+    normalized_note = _compact_member_header_value(note)
+    return bool(_member_header_field(normalized_name)) and (
+        not normalized_note or bool(_member_header_field(normalized_note))
+    )
+
+
+def _parse_student_number(value):
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    digits = "".join(ch for ch in raw if ch.isdigit())
+    if not digits:
+        return None
+    return int(digits)
 
 
 def _normalize_member_pairs(raw_pairs: Iterable[tuple[str, str]]) -> list[tuple[str, str]]:
@@ -128,23 +172,80 @@ def _decode_uploaded_csv(file_obj) -> str:
 def _normalize_csv_members(file_obj) -> list[tuple[str, str]]:
     decoded_text = _decode_uploaded_csv(file_obj)
     reader = csv.reader(io.StringIO(decoded_text))
-    return _normalize_member_pairs(
-        (
-            row[0] if len(row) > 0 else "",
-            row[1] if len(row) > 1 else "",
+    header_map = None
+    members = []
+
+    for row in reader:
+        cols = [str(cell or "").strip() for cell in row]
+        if not any(cols):
+            continue
+        if header_map is None:
+            detected_map = {}
+            for idx, cell in enumerate(cols):
+                field_name = _member_header_field(_compact_member_header_value(cell))
+                if field_name and field_name not in detected_map:
+                    detected_map[field_name] = idx
+            if "display_name" in detected_map:
+                header_map = detected_map
+                continue
+            header_map = {}
+
+        if header_map:
+            member = {
+                field_name: cols[idx] if idx < len(cols) else ""
+                for field_name, idx in header_map.items()
+            }
+        else:
+            member = {
+                "display_name": cols[0] if len(cols) > 0 else "",
+                "affiliation": cols[1] if len(cols) > 1 else "",
+                "guardian_name": cols[2] if len(cols) > 2 else "",
+                "phone_last4": cols[3] if len(cols) > 3 else "",
+                "student_number": cols[4] if len(cols) > 4 else "",
+                "note": cols[5] if len(cols) > 5 else "",
+            }
+
+        if _is_member_comment_row(member.get("display_name", "")):
+            continue
+        if _is_member_header_row(member.get("display_name", ""), member.get("affiliation", "")):
+            continue
+        if not str(member.get("display_name") or "").strip():
+            continue
+        members.append(member)
+    return members
+
+
+def _build_member_payload(group: HandoffRosterGroup, members) -> tuple[list[HandoffRosterMember], int]:
+    existing_keys = set(
+        group.members.values_list(
+            "display_name",
+            "affiliation",
+            "guardian_name",
+            "phone_last4",
+            "student_number",
+            "note",
         )
-        for row in reader
-        if any(str(cell or "").strip() for cell in row)
     )
-
-
-def _build_member_payload(group: HandoffRosterGroup, members: list[tuple[str, str]]) -> tuple[list[HandoffRosterMember], int]:
-    existing_keys = set(group.members.values_list("display_name", "note"))
     last_order = group.members.aggregate(max_order=Max("sort_order")).get("max_order") or 0
     payload = []
     skipped_existing = 0
-    for name, note in members:
-        key = (name, note)
+    for member in members:
+        if isinstance(member, dict):
+            name = str(member.get("display_name") or "").strip()
+            affiliation = str(member.get("affiliation") or "").strip()[:120]
+            guardian_name = str(member.get("guardian_name") or "").strip()[:100]
+            phone_last4 = normalize_phone_last4(member.get("phone_last4"))
+            student_number = _parse_student_number(member.get("student_number"))
+            note = str(member.get("note") or "").strip()[:120]
+        else:
+            name = str(member[0] or "").strip()
+            affiliation = str(member[1] or "").strip()[:120]
+            guardian_name = ""
+            phone_last4 = ""
+            student_number = None
+            note = ""
+
+        key = (name, affiliation, guardian_name, phone_last4, student_number, note)
         if key in existing_keys:
             skipped_existing += 1
             continue
@@ -153,6 +254,10 @@ def _build_member_payload(group: HandoffRosterGroup, members: list[tuple[str, st
             HandoffRosterMember(
                 group=group,
                 display_name=name,
+                affiliation=affiliation,
+                guardian_name=guardian_name,
+                phone_last4=phone_last4,
+                student_number=student_number,
                 note=note,
                 sort_order=last_order + len(payload) + 1,
             )
@@ -295,7 +400,7 @@ def group_create(request):
         messages.error(request, "같은 이름의 명단이 이미 있습니다.")
         return _redirect_with_return(reverse("handoff:dashboard"), return_to)
 
-    messages.success(request, f"명단 '{group.name}'을 만들었습니다.")
+    messages.success(request, f"공용 명부 '{group.name}'을 만들었습니다.")
     return _redirect_with_return(
         reverse("handoff:group_detail", kwargs={"group_id": group.id}),
         return_to,
@@ -319,6 +424,14 @@ def group_detail(request, group_id):
             "group_form": HandoffRosterGroupForm(instance=group),
             "bulk_form": HandoffMemberBulkAddForm(),
             "sessions_count": group.sessions.count(),
+            "service_summary": roster_service_summary(group),
+            "linked_service_counts": {
+                "handoff": group.sessions.count(),
+                "signatures": group.signature_sessions.count(),
+                "consent": group.consent_requests.count(),
+                "infoboard": group.infoboard_boards.count(),
+                "happy_seed": group.hs_classrooms.count(),
+            },
             "return_to": return_to,
             "continue_to_signatures_url": (
                 _append_query_params(return_to, shared_roster_group=group.id)
@@ -353,7 +466,7 @@ def group_update(request, group_id):
             return_to,
         )
 
-    messages.success(request, "명단 정보를 수정했습니다.")
+    messages.success(request, "공용 명부 정보를 수정했습니다.")
     return _redirect_with_return(
         reverse("handoff:group_detail", kwargs={"group_id": group.id}),
         return_to,
@@ -367,7 +480,7 @@ def group_delete(request, group_id):
     group = get_object_or_404(HandoffRosterGroup, id=group_id, owner=request.user)
     name = group.name
     group.delete()
-    messages.success(request, f"명단 '{name}'을 삭제했습니다.")
+    messages.success(request, f"공용 명부 '{name}'을 삭제했습니다.")
     return _redirect_with_return(reverse("handoff:dashboard"), return_to)
 
 
@@ -394,7 +507,7 @@ def group_members_add(request, group_id):
 
     payload, skipped_existing = _build_member_payload(group, members)
     if not payload:
-        messages.info(request, "이미 들어 있는 이름/직위라서 새로 추가할 멤버가 없었습니다.")
+        messages.info(request, "이미 들어 있는 이름/소속 조합이라서 새로 추가할 멤버가 없었습니다.")
         return _redirect_with_return(
             reverse("handoff:group_detail", kwargs={"group_id": group.id}),
             return_to,
@@ -404,7 +517,7 @@ def group_members_add(request, group_id):
     if skipped_existing:
         messages.success(
             request,
-            f"{len(payload)}명을 추가했습니다. 같은 이름/직위 {skipped_existing}명은 건너뛰었습니다.",
+            f"{len(payload)}명을 추가했습니다. 같은 이름/소속 조합 {skipped_existing}명은 건너뛰었습니다.",
         )
     else:
         messages.success(request, f"{len(payload)}명을 추가했습니다.")
@@ -442,7 +555,7 @@ def group_members_upload(request, group_id):
             return_to,
         )
     except csv.Error:
-        messages.error(request, "CSV 형식을 읽지 못했습니다. 첫 번째 열은 이름, 두 번째 열은 직위/학년반으로 맞춰 주세요.")
+        messages.error(request, "CSV 형식을 읽지 못했습니다. 이름 열은 꼭 넣고, 나머지 열은 소속/보호자/전화 뒤 4자리/번호/메모를 맞춰 주세요.")
         return _redirect_with_return(
             reverse("handoff:group_detail", kwargs={"group_id": group.id}),
             return_to,
@@ -467,7 +580,7 @@ def group_members_upload(request, group_id):
     if skipped_existing:
         messages.success(
             request,
-            f"CSV에서 {len(payload)}명을 추가했습니다. 같은 이름/직위 {skipped_existing}명은 건너뛰었습니다.",
+            f"CSV에서 {len(payload)}명을 추가했습니다. 같은 이름/소속 조합 {skipped_existing}명은 건너뛰었습니다.",
         )
     else:
         messages.success(request, f"CSV에서 {len(payload)}명을 추가했습니다.")
@@ -484,11 +597,10 @@ def group_members_template_download(request, group_id):
     response["Content-Disposition"] = f'attachment; filename="{group.name}_명단_양식.csv"'
 
     writer = csv.writer(response)
-    writer.writerow(["이름", "직위/학년반", "작성 예시"])
-    writer.writerow(["", "", "왼쪽 두 칸만 채우세요. 오른쪽 예시는 지우지 않아도 됩니다."])
-    writer.writerow(["", "", "예: 김민수 / 3-1"])
-    writer.writerow(["", "", "예: 이서연 / 교감"])
-    writer.writerow(["", "", "예: 박지훈 / 교장"])
+    writer.writerow(["이름", "소속/학년반", "보호자명", "연락처 뒤 4자리", "번호", "메모"])
+    writer.writerow(["김민수", "3-1", "김민수 보호자", "5678", "1", "동의서/행복씨앗 같이 사용"])
+    writer.writerow(["이서연", "3-2", "이서연 보호자", "1234", "2", ""])
+    writer.writerow(["박지훈", "교감", "", "", "", "사인/배부 체크용"])
     return response
 
 
@@ -508,9 +620,24 @@ def group_member_update(request, group_id, member_id):
         )
 
     member.display_name = display_name
+    member.affiliation = (request.POST.get("affiliation") or "").strip()[:120]
+    member.guardian_name = (request.POST.get("guardian_name") or "").strip()[:100]
+    member.phone_last4 = normalize_phone_last4(request.POST.get("phone_last4"))
+    member.student_number = _parse_student_number(request.POST.get("student_number"))
     member.note = (request.POST.get("note") or "").strip()[:120]
     member.is_active = bool(request.POST.get("is_active"))
-    member.save(update_fields=["display_name", "note", "is_active", "updated_at"])
+    member.save(
+        update_fields=[
+            "display_name",
+            "affiliation",
+            "guardian_name",
+            "phone_last4",
+            "student_number",
+            "note",
+            "is_active",
+            "updated_at",
+        ]
+    )
     messages.success(request, f"{member.display_name} 정보가 저장되었습니다.")
     return _redirect_with_return(
         reverse("handoff:group_detail", kwargs={"group_id": group.id}),

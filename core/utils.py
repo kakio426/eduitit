@@ -6,29 +6,10 @@ from django.db.models import Count
 from django.db.models.functions import TruncDate, TruncWeek
 
 
-# =============================================================================
-# Rate Limit 유틸리티
-# =============================================================================
-
-def has_personal_api_key(user):
-    """사용자가 개인 Gemini API 키를 가지고 있는지 확인"""
-    if not user or not user.is_authenticated:
-        return False
-    try:
-        # UserProfile이 없을 수도 있으므로 safe check
-        profile = getattr(user, 'userprofile', None)
-        if not profile:
-            return False
-        api_key = profile.gemini_api_key
-        return bool(api_key and api_key.strip())
-    except Exception:
-        return False
-
-
 def ratelimit_key_for_master_only(group, request):
     """
-    마스터 키 사용자 및 비회원에게 Rate Limit 적용
-    - 개인 키 사용자: 고유 UUID 반환 → Rate Limit 미적용 (무제한)
+    서버 마스터 키 사용자 및 비회원에게 Rate Limit 적용
+    - 관리자: 고유 UUID 반환 → Rate Limit 미적용
     - 회원 (마스터 키): user_id 반환 → 회원용 제한 적용
     - 비회원 (게스트): client_ip 반환 → IP 기반의 엄격한 제한 적용
 
@@ -37,9 +18,9 @@ def ratelimit_key_for_master_only(group, request):
     """
     user = request.user
     
-    if has_personal_api_key(user) or (user and user.is_authenticated and user.is_superuser):
+    if user and user.is_authenticated and user.is_superuser:
         import uuid
-        return f'personal:{uuid.uuid4()}'
+        return f'staff:{uuid.uuid4()}'
     
     if user.is_authenticated:
         return f'user:{user.id}'

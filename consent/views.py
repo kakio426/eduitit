@@ -52,6 +52,7 @@ from .services import (
     generate_summary_pdf,
     guess_file_type,
 )
+from handoff.shared_roster import consent_recipients as build_shared_roster_recipients
 
 logger = logging.getLogger(__name__)
 
@@ -959,124 +960,11 @@ def consent_rosters(request):
         return schema_block
 
     return_to = _get_safe_return_to(request)
-    audience_type = _normalize_audience_type(
-        request.POST.get("audience_type") or request.GET.get("audience_type")
-    )
-    selected_roster = None
-    edit_roster_id = request.GET.get("edit") or request.POST.get("roster_id")
-    if edit_roster_id:
-        selected_roster = get_object_or_404(
-            ConsentRoster.objects.prefetch_related("entries"),
-            id=edit_roster_id,
-            owner=request.user,
-        )
-        if selected_roster.audience_type != audience_type:
-            selected_roster = None
-
-    if request.method == "POST":
-        form = ConsentRosterManageForm(
-            request.POST,
-            request.FILES,
-            audience_type=audience_type,
-        )
-        if form.is_valid():
-            roster = selected_roster
-            name = (form.cleaned_data.get("name") or "").strip()
-            description = (form.cleaned_data.get("description") or "").strip()
-            text_entries = (form.cleaned_data.get("entries_text") or "").strip()
-            csv_entries = form.cleaned_data.get("entries_csv")
-            parsed_text, invalid_text_rows = _parse_recipients_with_meta(
-                text_entries,
-                audience_type=audience_type,
-            )
-            parsed_csv, invalid_csv_rows = _parse_recipients_csv(
-                csv_entries,
-                audience_type=audience_type,
-            )
-
-            if invalid_text_rows:
-                row_text = ", ".join(map(str, invalid_text_rows[:10]))
-                if audience_type == SignatureRequest.AUDIENCE_GENERAL:
-                    form.add_error("entries_text", f"한 줄에 이름 하나씩 입력해 주세요. 형식 오류 행: {row_text}")
-                else:
-                    form.add_error(
-                        "entries_text",
-                        f"학생명, 학부모명(선택), 연락처 뒤 4자리 형식으로 입력해 주세요. 형식 오류 행: {row_text}",
-                    )
-            if invalid_csv_rows == [0]:
-                form.add_error("entries_csv", "CSV 인코딩을 읽지 못했습니다. UTF-8 또는 CP949 형식으로 다시 저장해 주세요.")
-            elif invalid_csv_rows:
-                row_text = ", ".join(map(str, invalid_csv_rows[:10]))
-                if audience_type == SignatureRequest.AUDIENCE_GENERAL:
-                    form.add_error("entries_csv", f"CSV는 이름 열이 필요합니다. 형식 오류 행: {row_text}")
-                else:
-                    form.add_error(
-                        "entries_csv",
-                        f"CSV는 학생명, 학부모명(선택), 연락처 뒤 4자리 열이 필요합니다. 형식 오류 행: {row_text}",
-                    )
-
-            entries = parsed_text + parsed_csv
-            if not form.errors and not entries:
-                form.add_error(None, "저장할 명단이 없습니다. 직접 입력이나 CSV를 확인해 주세요.")
-
-            if not form.errors:
-                if roster is None:
-                    roster = ConsentRoster.objects.create(
-                        owner=request.user,
-                        audience_type=audience_type,
-                        name=name,
-                        description=description,
-                    )
-                    created_label = "만들었습니다"
-                else:
-                    roster.name = name
-                    roster.description = description
-                    roster.audience_type = audience_type
-                    roster.save(update_fields=["name", "description", "audience_type", "updated_at"])
-                    created_label = "저장했습니다"
-                _replace_roster_entries(roster, entries)
-                messages.success(request, f"'{roster.name}' 명단을 {created_label}.")
-                if return_to:
-                    return redirect(_append_query_params(return_to, saved_roster=roster.id))
-                return redirect(
-                    _append_query_params(
-                        reverse("consent:rosters"),
-                        audience_type=audience_type,
-                        edit=roster.id,
-                    )
-                )
-    else:
-        initial = {"audience_type": audience_type}
-        if selected_roster:
-            initial.update(
-                {
-                    "roster_id": selected_roster.id,
-                    "name": selected_roster.name,
-                    "description": selected_roster.description,
-                    "entries_text": _serialize_roster_entries_text(selected_roster),
-                }
-            )
-        form = ConsentRosterManageForm(audience_type=audience_type, initial=initial)
-
-    rosters = (
-        ConsentRoster.objects.filter(owner=request.user, audience_type=audience_type)
-        .annotate(entry_count=Count("entries"))
-        .order_by("-is_favorite", "name", "created_at")
-    )
-    response = render(
-        request,
-        "consent/rosters.html",
-        {
-            "form": form,
-            "rosters": rosters,
-            "selected_roster": selected_roster,
-            "selected_audience": audience_type,
-            "guardian_audience": SignatureRequest.AUDIENCE_GUARDIAN,
-            "general_audience": SignatureRequest.AUDIENCE_GENERAL,
-            "return_to": return_to,
-        },
-    )
-    return _apply_workspace_cache_headers(response)
+    messages.info(request, "동의서 명단 관리는 이제 공용 명부에서 함께 합니다.")
+    target = reverse("handoff:dashboard")
+    if return_to:
+        target = _append_query_params(target, return_to=return_to)
+    return redirect(target)
 
 
 @login_required
@@ -1087,19 +975,12 @@ def consent_delete_roster(request, roster_id):
     if schema_block:
         return schema_block
 
+    messages.info(request, "동의서 전용 명단 삭제는 더 이상 사용하지 않습니다. 공용 명부에서 관리해 주세요.")
+    target = reverse("handoff:dashboard")
     return_to = _get_safe_return_to(request)
-    roster = get_object_or_404(ConsentRoster, id=roster_id, owner=request.user)
-    audience_type = roster.audience_type
-    roster_name = roster.name
-    roster.delete()
-    messages.success(request, f"'{roster_name}' 명단을 삭제했습니다.")
-    return redirect(
-        _append_query_params(
-            reverse("consent:rosters"),
-            audience_type=audience_type,
-            return_to=return_to,
-        )
-    )
+    if return_to:
+        target = _append_query_params(target, return_to=return_to)
+    return redirect(target)
 
 
 @login_required
@@ -1309,40 +1190,50 @@ def consent_recipients(request, request_id):
         consent_request = get_object_or_404(SignatureRequest, request_id=request_id, created_by=request.user)
     except (OperationalError, ProgrammingError) as exc:
         return _schema_guard_response(request, force_refresh=True, detail_override=str(exc))
+    form_data = request.POST
+    if request.method == "POST":
+        form_data = request.POST.copy()
+        if (not form_data.get("shared_roster_group")) and form_data.get("saved_roster"):
+            form_data["shared_roster_group"] = form_data.get("saved_roster")
     form_kwargs = {"owner": request.user, "audience_type": consent_request.audience_type}
     if request.method != "POST":
-        initial_saved_roster_id = consent_request.roster_id
-        selected_saved_roster_id = (request.GET.get("saved_roster") or "").strip()
-        if selected_saved_roster_id:
-            selected_saved_roster = ConsentRoster.objects.filter(
-                owner=request.user,
-                audience_type=consent_request.audience_type,
-                id=selected_saved_roster_id,
+        initial_shared_roster_group_id = consent_request.shared_roster_group_id
+        selected_shared_roster_group_id = (
+            request.GET.get("shared_roster_group")
+            or request.GET.get("saved_roster")
+            or ""
+        ).strip()
+        if selected_shared_roster_group_id:
+            selected_shared_roster_group = form_kwargs["owner"].handoff_roster_groups.filter(
+                id=selected_shared_roster_group_id,
             ).first()
-            if selected_saved_roster:
-                initial_saved_roster_id = selected_saved_roster.id
-        if initial_saved_roster_id:
-            form_kwargs["initial"] = {"saved_roster": initial_saved_roster_id}
-    form = RecipientBulkForm(request.POST or None, request.FILES or None, **form_kwargs)
+            if selected_shared_roster_group:
+                initial_shared_roster_group_id = selected_shared_roster_group.id
+        if initial_shared_roster_group_id:
+            form_kwargs["initial"] = {"shared_roster_group": initial_shared_roster_group_id}
+    form = RecipientBulkForm(form_data or None, request.FILES or None, **form_kwargs)
     manage_rosters_url = _append_query_params(
-        reverse("consent:rosters"),
-        audience_type=consent_request.audience_type,
+        reverse("handoff:dashboard"),
         return_to=request.get_full_path(),
     )
 
     if request.method == "POST" and form.is_valid():
-        selected_roster = form.cleaned_data.get("saved_roster")
+        selected_roster = form.cleaned_data.get("shared_roster_group")
         recipients_text_raw = (form.cleaned_data.get("recipients_text") or "").strip()
         recipients_csv_file = form.cleaned_data.get("recipients_csv")
         if selected_roster and selected_roster.owner_id != request.user.id:
-            form.add_error("saved_roster", "내 명단만 선택할 수 있습니다.")
+            form.add_error("shared_roster_group", "내 공용 명부만 선택할 수 있습니다.")
         else:
-            if consent_request.roster_id != (selected_roster.id if selected_roster else None):
-                consent_request.roster = selected_roster
-                consent_request.save(update_fields=["roster"])
+            if consent_request.shared_roster_group_id != (selected_roster.id if selected_roster else None):
+                consent_request.shared_roster_group = selected_roster
+                consent_request.roster = None
+                consent_request.save(update_fields=["shared_roster_group", "roster"])
 
         if not form.errors:
-            roster_recipients = _recipients_from_roster(selected_roster)
+            roster_recipients, roster_warnings = build_shared_roster_recipients(
+                selected_roster,
+                audience_type=consent_request.audience_type,
+            )
             text_recipients, invalid_text_rows = _parse_recipients_with_meta(
                 recipients_text_raw,
                 audience_type=consent_request.audience_type,
@@ -1409,10 +1300,15 @@ def consent_recipients(request, request_id):
                     if selected_roster:
                         messages.success(
                             request,
-                            f"{created}명 등록 완료 (중복/제외 {skipped}명). 저장 명단 '{selected_roster.name}' 불러옴",
+                            f"{created}명 등록 완료 (중복/제외 {skipped}명). 공용 명부 '{selected_roster.name}' 불러옴",
                         )
                     else:
                         messages.success(request, f"{created}명 등록 완료 (중복 {skipped}명 제외)")
+                    if roster_warnings:
+                        preview = ", ".join(roster_warnings[:3])
+                        if len(roster_warnings) > 3:
+                            preview = f"{preview} 외 {len(roster_warnings) - 3}건"
+                        messages.warning(request, f"공용 명부에서 일부 멤버는 건너뛰었습니다: {preview}")
                     return redirect("consent:detail", request_id=consent_request.request_id)
 
     recipients = consent_request.recipients.all().order_by("student_name")
@@ -1426,7 +1322,7 @@ def consent_recipients(request, request_id):
             "is_guardian_audience": consent_request.is_guardian_audience,
             "audience_type_label": consent_request.audience_type_label,
             "manage_rosters_url": manage_rosters_url,
-            "saved_roster_count": form.fields["saved_roster"].queryset.count(),
+            "shared_roster_count": form.fields["shared_roster_group"].queryset.count(),
         },
     )
 
