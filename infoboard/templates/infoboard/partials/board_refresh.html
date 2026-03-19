@@ -1,0 +1,13 @@
+{% if main_panel == 'queue' %}
+{% include 'infoboard/partials/moderation_queue.html' %}
+{% else %}
+{% include 'infoboard/partials/card_grid.html' %}
+{% endif %}
+
+<div id="ibBoardSummary" hx-swap-oob="true">
+    {% include 'infoboard/partials/board_summary.html' %}
+</div>
+
+<div id="ibModerationQueue" class="hidden lg:block" hx-swap-oob="true">
+    {% include 'infoboard/partials/moderation_queue.html' %}
+</div>

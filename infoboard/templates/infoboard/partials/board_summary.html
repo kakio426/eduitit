@@ -1,0 +1,57 @@
+<div class="ib-summary-panel">
+    <div class="grid gap-3 sm:grid-cols-2">
+        <div class="ib-summary-card">
+            <span class="ib-summary-label">게시 카드</span>
+            <strong>{{ summary.card_counts.published }}</strong>
+        </div>
+        <div class="ib-summary-card">
+            <span class="ib-summary-label">승인 대기</span>
+            <strong class="text-amber-600">{{ summary.card_counts.pending }}</strong>
+        </div>
+        <div class="ib-summary-card">
+            <span class="ib-summary-label">댓글</span>
+            <strong>{{ summary.comment_counts.published }}</strong>
+        </div>
+        <div class="ib-summary-card">
+            <span class="ib-summary-label">반응</span>
+            <strong>{{ summary.reaction_total }}</strong>
+        </div>
+    </div>
+
+    <div class="mt-5">
+        <p class="text-xs font-black uppercase tracking-[0.18em] text-slate-400 mb-2">자주 쓰는 태그</p>
+        {% if summary.top_tags %}
+        <div class="flex flex-wrap gap-2">
+            {% for tag in summary.top_tags %}
+            <span class="ib-tag">#{{ tag.name }} {{ tag.card_refs }}</span>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-sm font-medium text-slate-400">아직 태그가 없습니다.</p>
+        {% endif %}
+    </div>
+
+    <div class="mt-5">
+        <p class="text-xs font-black uppercase tracking-[0.18em] text-slate-400 mb-2">최근 활동</p>
+        {% if summary.recent_activity %}
+        <div class="space-y-2">
+            {% for item in summary.recent_activity %}
+            <div class="rounded-2xl bg-slate-50 px-3 py-3">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <p class="text-sm font-black text-slate-800">
+                            {% if item.kind == 'card' %}새 카드{% else %}새 댓글{% endif %}
+                            · {{ item.title }}
+                        </p>
+                        <p class="text-xs font-medium text-slate-500">{{ item.actor }} · {{ item.status }}</p>
+                    </div>
+                    <span class="text-xs font-bold text-slate-400">{{ item.timestamp|timesince }} 전</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-sm font-medium text-slate-400">아직 최근 활동이 없습니다.</p>
+        {% endif %}
+    </div>
+</div>

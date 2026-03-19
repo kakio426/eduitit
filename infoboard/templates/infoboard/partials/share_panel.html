@@ -1,38 +1,88 @@
 <div class="p-6">
     <div class="flex items-center justify-between mb-6">
-        <h2 class="text-xl font-black text-gray-800">📤 보드 공유</h2>
+        <div>
+            <h2 class="text-xl font-black text-gray-800">학생 참여 열기</h2>
+            <p class="text-sm text-gray-400 mt-1">코드, 링크, QR을 한 번에 관리합니다.</p>
+        </div>
         <button type="button" onclick="ibCloseModal()" class="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-600 transition">
             <i class="fa-solid fa-xmark"></i>
         </button>
     </div>
 
-    <div class="flex flex-wrap gap-2 mb-5 text-xs font-bold">
-        <span class="ib-tag {% if board.is_public %}ib-tag-active{% endif %}">공개 열람</span>
-        <span class="ib-tag {% if board.allow_student_submit %}ib-tag-active{% endif %}">학생 제출</span>
+    <div class="rounded-2xl bg-slate-50 p-4 mb-5">
+        <p class="text-xs font-black uppercase tracking-[0.18em] text-slate-400">입장 코드</p>
+        <div class="mt-3 flex items-center gap-3">
+            <span class="text-2xl font-black tracking-[0.3em] text-slate-900">{{ board.access_code }}</span>
+            <button type="button" onclick="ibCopyText('{{ board.access_code }}')"
+                class="px-3 py-2 rounded-xl bg-white text-sm font-bold text-gray-600 hover:bg-slate-100 transition">
+                코드 복사
+            </button>
+        </div>
+        <p class="mt-2 text-xs text-slate-400">학생은 이 코드로 입장해 현재 활성화된 링크 권한을 따라갑니다.</p>
     </div>
 
-    {% if shared_link %}
-    <!-- 공유 링크가 있는 경우 -->
-    <div class="space-y-5">
-        <!-- Link -->
+    <form method="post" action="{% url 'infoboard:share_create' board_id=board.id %}"
+        hx-post="{% url 'infoboard:share_create' board_id=board.id %}"
+        hx-target="#ibModal"
+        hx-swap="innerHTML"
+        class="space-y-5">
+        {% csrf_token %}
+
         <div>
-            <label class="text-xs font-bold text-gray-500 mb-1 block">🔗 공유 링크</label>
+            <p class="text-xs font-black uppercase tracking-[0.18em] text-slate-400 mb-2">공유 방식</p>
+            <div class="grid gap-2">
+                {% for option in share_mode_options %}
+                {% if option.value != 'private' %}
+                <label class="ib-choice-card">
+                    <input type="radio" name="access_level" value="{{ option.value }}" class="sr-only" {% if shared_link and shared_link.access_level == option.value %}checked{% elif not shared_link and option.value == 'view' %}checked{% endif %}>
+                    <span class="block text-sm font-black text-slate-900">{{ option.label }}</span>
+                    <span class="block mt-1 text-xs font-medium text-slate-500">{{ option.description }}</span>
+                </label>
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% if not board.allow_student_submit %}
+            <p class="mt-2 text-xs text-amber-500">학생 제출 링크를 쓰려면 보드 설정에서 "학생 제출 허용"이 켜져 있어야 합니다.</p>
+            {% endif %}
+        </div>
+
+        <button type="submit" class="w-full py-3 rounded-full bg-slate-900 text-white font-bold shadow-lg hover:bg-slate-800 transition">
+            {% if shared_link %}공유 방식 저장{% else %}공유 열기{% endif %}
+        </button>
+    </form>
+
+    <div class="space-y-5 mt-6">
+        <div>
+            <label class="text-xs font-bold text-gray-500 mb-1 block">학생 입장 주소</label>
             <div class="flex gap-2">
-                <input type="text" id="ibShareUrl" readonly value="{{ request.scheme }}://{{ request.get_host }}{% url 'infoboard:public_board' link_id=shared_link.id %}"
+                <input type="text" id="ibJoinUrl" readonly value="{{ join_url }}"
                     class="flex-1 px-3 py-2.5 rounded-xl bg-slate-50 text-sm font-medium text-gray-600 outline-none">
-                <button type="button" onclick="ibCopyToClipboard('ibShareUrl')"
-                    class="px-4 py-2.5 rounded-xl bg-purple-600 text-white text-sm font-bold hover:bg-purple-700 transition">
+                <button type="button" onclick="ibCopyToClipboard('ibJoinUrl')"
+                    class="px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-bold hover:bg-slate-800 transition">
                     복사
                 </button>
             </div>
         </div>
 
-        <!-- QR -->
+        {% if shared_link %}
         <div>
-            <label class="text-xs font-bold text-gray-500 mb-2 block">📱 QR 코드</label>
+            <label class="text-xs font-bold text-gray-500 mb-1 block">직접 링크</label>
+            <div class="flex gap-2">
+                <input type="text" id="ibShareUrl" readonly value="{{ share_url }}"
+                    class="flex-1 px-3 py-2.5 rounded-xl bg-slate-50 text-sm font-medium text-gray-600 outline-none">
+                <button type="button" onclick="ibCopyToClipboard('ibShareUrl')"
+                    class="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition">
+                    복사
+                </button>
+            </div>
+            <p class="mt-2 text-xs text-slate-400">현재 권한: <strong class="text-slate-700">{{ shared_link.public_label }}</strong></p>
+        </div>
+        {% endif %}
+
+        <div>
+            <label class="text-xs font-bold text-gray-500 mb-2 block">QR 코드</label>
             <div class="flex items-center gap-4">
                 <div id="ibQrCode" class="bg-white p-3 rounded-xl shadow-clay-inner inline-block">
-                    <!-- QR은 JS로 생성 -->
                     <div class="w-32 h-32 flex items-center justify-center text-gray-300 text-sm">QR 생성 중...</div>
                 </div>
                 <button type="button" onclick="ibFullscreenQR()"
@@ -41,77 +91,26 @@
                 </button>
             </div>
         </div>
-
-        <!-- Access Code -->
-        <div>
-            <label class="text-xs font-bold text-gray-500 mb-1 block">🔢 입장 코드</label>
-            <div class="flex items-center gap-3">
-                <span class="text-2xl font-black tracking-widest text-gray-800">{{ board.access_code }}</span>
-                <button type="button" onclick="ibCopyText('{{ board.access_code }}')"
-                    class="px-3 py-1.5 rounded-lg bg-gray-100 text-sm font-bold text-gray-600 hover:bg-gray-200 transition">
-                    코드 복사
-                </button>
-            </div>
-        </div>
-
-        <!-- Access level info -->
-        <div class="bg-slate-50 rounded-xl p-3 text-sm">
-            <span class="font-bold text-gray-600">접근 권한:</span>
-            <span class="font-bold text-purple-600">
-                {% if shared_link.access_level == 'view' %}보기만 가능{% elif shared_link.access_level == 'submit' %}카드 제출 가능{% elif shared_link.access_level == 'edit' %}편집 가능 (기존 링크){% endif %}
-            </span>
-        </div>
     </div>
-    {% else %}
-    <!-- 공유 링크가 없는 경우 -->
-    <div class="text-center py-6">
-        <div class="text-4xl mb-3">🔗</div>
-        <p class="text-gray-600 font-bold mb-2">아직 공유 링크가 없어요</p>
-        <p class="text-sm text-gray-400 mb-6">링크를 만들면 누구나 이 보드를 볼 수 있어요</p>
-
-        <form method="post" action="{% url 'infoboard:share_create' board_id=board.id %}"
-            hx-post="{% url 'infoboard:share_create' board_id=board.id %}"
-            hx-target="#ibModal"
-            hx-swap="innerHTML">
-            {% csrf_token %}
-            <div class="space-y-3 mb-6">
-                <label class="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-50 cursor-pointer hover:bg-slate-100 transition">
-                    <input type="radio" name="access_level" value="view" checked class="accent-purple-600">
-                    <div><span class="font-bold text-sm">보기만 가능</span><br><span class="text-xs text-gray-400">카드를 볼 수만 있어요</span></div>
-                </label>
-                <label class="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-50 cursor-pointer hover:bg-slate-100 transition">
-                    <input type="radio" name="access_level" value="submit" class="accent-purple-600">
-                    <div><span class="font-bold text-sm">카드 제출 가능</span><br><span class="text-xs text-gray-400">학생이 카드를 제출할 수 있어요</span></div>
-                </label>
-            </div>
-            {% if not board.allow_student_submit %}
-            <p class="text-xs text-amber-500 mb-4">학생 제출은 보드 설정에서 먼저 켜야 실제로 열려요.</p>
-            {% endif %}
-            <button type="submit" class="w-full py-3 rounded-full bg-purple-600 text-white font-bold shadow-lg hover:bg-purple-700 transition">
-                공유 링크 만들기
-            </button>
-        </form>
-    </div>
-    {% endif %}
 </div>
 
-{% if shared_link %}
 <script>
 (function() {
-    const url = document.getElementById('ibShareUrl').value;
+    const input = document.getElementById('ibJoinUrl');
     const container = document.getElementById('ibQrCode');
+    if (!input || !container) return;
+    const url = input.value;
     if (typeof QRCode !== 'undefined') {
         container.innerHTML = '';
         new QRCode(container, { text: url, width: 128, height: 128 });
-    } else {
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
-        script.onload = function() {
-            container.innerHTML = '';
-            new QRCode(container, { text: url, width: 128, height: 128 });
-        };
-        document.head.appendChild(script);
+        return;
     }
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
+    script.onload = function() {
+        container.innerHTML = '';
+        new QRCode(container, { text: url, width: 128, height: 128 });
+    };
+    document.head.appendChild(script);
 })();
 </script>
-{% endif %}

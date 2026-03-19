@@ -7,6 +7,7 @@ app_name = 'infoboard'
 urlpatterns = [
     # ── 교사 대시보드 ──
     path('', views.dashboard, name='dashboard'),
+    path('join/', views.join, name='join'),
 
     # ── 보드 CRUD ──
     path('board/create/', views.board_create, name='board_create'),
@@ -20,6 +21,10 @@ urlpatterns = [
     path('card/<uuid:card_id>/edit/', views.card_edit, name='card_edit'),
     path('card/<uuid:card_id>/delete/', views.card_delete, name='card_delete'),
     path('card/<uuid:card_id>/pin/', views.card_toggle_pin, name='card_toggle_pin'),
+    path('card/<uuid:card_id>/comment/', views.card_comment, name='card_comment'),
+    path('card/<uuid:card_id>/reaction/', views.card_reaction, name='card_reaction'),
+    path('card/<uuid:card_id>/moderate/', views.card_moderate, name='card_moderate'),
+    path('comment/<int:comment_id>/moderate/', views.comment_moderate, name='comment_moderate'),
 
     # ── 태그 ──
     path('tags/json/', views.tags_json, name='tags_json'),

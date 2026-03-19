@@ -1,5 +1,14 @@
 <div class="p-6">
-    <h2 class="text-xl font-black text-gray-800 mb-6">✏️ 자료 제출</h2>
+    <div class="mb-6">
+        <h2 class="text-xl font-black text-gray-800">✏️ 새 카드 제출</h2>
+        <p class="text-sm text-gray-400 mt-1">
+            {% if board.moderation_mode == 'manual' %}
+            제출 후 교사 확인을 거쳐 공개됩니다.
+            {% else %}
+            제출하면 바로 보드에 공개됩니다.
+            {% endif %}
+        </p>
+    </div>
 
     {% include 'infoboard/partials/form_errors.html' with form=form %}
 
@@ -20,16 +29,16 @@
 
         <!-- Type selector -->
         <div class="flex gap-2 mb-5">
-            <button type="button" onclick="ibSelectCardType(this, 'text')" class="ib-type-tab flex-1 {% if form.card_type.value|default:'text' == 'text' %}active{% endif %}">
+            <button type="button" data-card-type="text" onclick="ibSelectCardType(this, 'text')" class="ib-type-tab flex-1 {% if form.card_type.value|default:'text' == 'text' %}active{% endif %}">
                 <span class="ib-type-icon">📝</span> 메모
             </button>
-            <button type="button" onclick="ibSelectCardType(this, 'link')" class="ib-type-tab flex-1 {% if form.card_type.value == 'link' %}active{% endif %}">
+            <button type="button" data-card-type="link" onclick="ibSelectCardType(this, 'link')" class="ib-type-tab flex-1 {% if form.card_type.value == 'link' %}active{% endif %}">
                 <span class="ib-type-icon">🔗</span> 링크
             </button>
-            <button type="button" onclick="ibSelectCardType(this, 'file')" class="ib-type-tab flex-1 {% if form.card_type.value == 'file' %}active{% endif %}">
+            <button type="button" data-card-type="file" onclick="ibSelectCardType(this, 'file')" class="ib-type-tab flex-1 {% if form.card_type.value == 'file' %}active{% endif %}">
                 <span class="ib-type-icon">📄</span> 파일
             </button>
-            <button type="button" onclick="ibSelectCardType(this, 'image')" class="ib-type-tab flex-1 {% if form.card_type.value == 'image' %}active{% endif %}">
+            <button type="button" data-card-type="image" onclick="ibSelectCardType(this, 'image')" class="ib-type-tab flex-1 {% if form.card_type.value == 'image' %}active{% endif %}">
                 <span class="ib-type-icon">🖼</span> 이미지
             </button>
         </div>

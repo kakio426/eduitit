@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}인포보드 입장{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'infoboard/css/infoboard.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<section class="pt-24 pb-20 px-4 md:px-6 min-h-screen bg-[#E0E5EC]/30">
+    <div class="max-w-lg mx-auto">
+        <div class="ib-hero text-center">
+            <div class="space-y-3 w-full">
+                <p class="ib-eyebrow">학생 입장</p>
+                <h1 class="text-3xl md:text-4xl font-black text-slate-900">입장 코드 6자리를 입력하세요.</h1>
+                <p class="text-sm md:text-base font-medium text-slate-500">교사가 알려준 숫자 코드를 입력하면 현재 열려 있는 보드로 바로 이동합니다.</p>
+            </div>
+        </div>
+
+        <div class="ib-info-card mt-6">
+            {% include 'infoboard/partials/form_errors.html' with form=form %}
+            <form method="post" class="space-y-5">
+                {% csrf_token %}
+                <div>
+                    <label class="text-xs font-bold text-gray-500 mb-2 block">{{ form.code.label }}</label>
+                    {{ form.code }}
+                    {% include 'infoboard/partials/field_errors.html' with errors=form.code.errors %}
+                </div>
+                <button type="submit" class="w-full py-3 rounded-full bg-slate-900 text-white font-bold shadow-lg hover:bg-slate-800 transition">
+                    보드로 입장
+                </button>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'infoboard/js/infoboard.js' %}"></script>
+{% endblock %}
