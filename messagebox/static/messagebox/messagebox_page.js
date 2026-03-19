@@ -189,13 +189,13 @@ function messageboxPage(options = {}) {
                     });
                     if (prepared) {
                         this.openMessageCaptureCandidateEditor(firstEditableCandidateId);
-                        window.showToast("보관한 메시지를 바로 일정 수정 화면으로 열었어요.", "success");
+                        window.showToast("보관한 메시지를 바로 일정 확인 화면으로 열었어요.", "success");
                         return;
                     }
                 }
 
                 if (this.prepareSelectedArchiveCaptureForEditing({ addManualCandidate: true })) {
-                    window.showToast("보관한 메시지를 바로 일정 추가 화면으로 열었어요.", "info");
+                    window.showToast("보관한 메시지를 바로 일정 날짜 정하기 화면으로 열었어요.", "info");
                     return;
                 }
 
@@ -985,7 +985,7 @@ function messageboxPage(options = {}) {
                     focusTitle: options.focusTitle !== false,
                 });
                 if (options.toast !== false) {
-                    window.showToast(options.toastMessage || "원문을 보면서 일정 칸을 열었어요.", "info");
+                    window.showToast(options.toastMessage || "실제 일정 날짜를 정하는 화면으로 열었어요.", "info");
                 }
                 return true;
             }
@@ -1004,7 +1004,7 @@ function messageboxPage(options = {}) {
                 focusTitle: options.focusTitle !== false,
             });
             if (options.toast !== false) {
-                window.showToast(options.toastMessage || "원문을 보면서 일정 칸을 열었어요.", "info");
+                window.showToast(options.toastMessage || "실제 일정 날짜를 정하는 화면으로 열었어요.", "info");
             }
             return true;
         },
@@ -1069,10 +1069,10 @@ function messageboxPage(options = {}) {
             const editableCandidates = this.messageCaptureEditableCandidates();
             const visibleCandidateCount = this.messageCapturePlannerCandidates().length;
             if (editableCandidates.length > 0 && editableCandidates.every((candidate) => candidate.is_manual)) {
-                return `직접 일정 ${editableCandidates.length}개`;
+                return `직접 정한 일정 후보 ${editableCandidates.length}개`;
             }
             if (this.messageCaptureManualDate) {
-                return `${this.formatMessageCaptureDay(this.messageCaptureManualDate)}에 다시 보기`;
+                return `${this.formatMessageCaptureDay(this.messageCaptureManualDate)} 다시 보기`;
             }
             return `후보 ${visibleCandidateCount}개 확인`;
         },
@@ -1080,7 +1080,30 @@ function messageboxPage(options = {}) {
         messageCaptureDoneTitle() {
             return this.messageCaptureSuccessMode === "archive"
                 ? "메시지를 보관했어요."
-                : "캘린더에 연결했어요.";
+                : "캘린더에 저장했어요.";
+        },
+
+        messageCaptureSavedDateSummary() {
+            if (!Array.isArray(this.messageCaptureSavedEvents) || this.messageCaptureSavedEvents.length === 0) {
+                return "";
+            }
+            const uniqueDateLabels = [];
+            const seenDateKeys = new Set();
+            for (const event of this.messageCaptureSavedEvents) {
+                const parsed = this.parseArchiveDateTime(event && event.start_time ? event.start_time : "");
+                if (!parsed) continue;
+                const dateKey = `${parsed.getFullYear()}-${parsed.getMonth() + 1}-${parsed.getDate()}`;
+                if (seenDateKeys.has(dateKey)) continue;
+                seenDateKeys.add(dateKey);
+                uniqueDateLabels.push(`${parsed.getMonth() + 1}월 ${parsed.getDate()}일`);
+            }
+            if (uniqueDateLabels.length === 0) {
+                return "";
+            }
+            if (uniqueDateLabels.length === 1) {
+                return `${uniqueDateLabels[0]} 일정으로 저장됐어요.`;
+            }
+            return `${uniqueDateLabels[0]} 외 ${uniqueDateLabels.length - 1}개 날짜에 저장됐어요.`;
         },
 
         formatManualDateLabel(value) {
@@ -1238,13 +1261,13 @@ function messageboxPage(options = {}) {
             });
             const editableCandidates = this.messageCaptureEditableCandidates();
             if (editableCandidates.length > 0 && editableCandidates.every((item) => item.is_manual)) {
-                this.messageCaptureSummaryText = `직접 넣을 일정 ${editableCandidates.length}개`;
+                this.messageCaptureSummaryText = `직접 정한 일정 후보 ${editableCandidates.length}개`;
             }
             this.openMessageCaptureCandidateEditor(candidate.candidate_id, {
                 focusTitle: options.focusTitle !== false,
             });
             if (options.toast !== false) {
-                window.showToast("직접 수정할 일정 칸을 추가했어요.", "info");
+                window.showToast("직접 수정할 일정 후보 칸을 추가했어요.", "info");
             }
         },
 
@@ -1280,8 +1303,8 @@ function messageboxPage(options = {}) {
             this.syncMessageCapturePlannerState();
             const editableCandidates = this.messageCaptureEditableCandidates();
             if (editableCandidates.length > 0 && editableCandidates.every((candidate) => candidate.is_manual)) {
-                this.messageCaptureSummaryText = `직접 넣을 일정 ${editableCandidates.length}개`;
-            } else if (editableCandidates.length === 0 && String(this.messageCaptureSummaryText || "").startsWith("직접 넣을 일정")) {
+                this.messageCaptureSummaryText = `직접 정한 일정 후보 ${editableCandidates.length}개`;
+            } else if (editableCandidates.length === 0 && String(this.messageCaptureSummaryText || "").startsWith("직접 정한 일정 후보")) {
                 this.messageCaptureSummaryText = "";
             }
         },
@@ -1335,7 +1358,7 @@ function messageboxPage(options = {}) {
             if (this.shouldSkipMessageCaptureParseRequest()) {
                 const switchedToManual = await this.startManualMessageCaptureFromInput({
                     skipSave: true,
-                    toastMessage: "날짜가 보여야 자동으로 읽을 수 있어요. 원문을 보면서 일정 칸을 열었어요.",
+                    toastMessage: "날짜가 보여야 자동으로 읽을 수 있어요. 실제 일정 날짜를 정하는 화면으로 열었어요.",
                     errorToast: false,
                 });
                 if (switchedToManual) {
@@ -1358,11 +1381,11 @@ function messageboxPage(options = {}) {
                         console.warn("[messagebox] archive refresh skipped after parse", archiveError);
                     }
                 }
-                window.showToast("날짜 후보를 찾았어요. 확인 후 연결하세요.", "success");
+                window.showToast("실제 일정 후보를 찾았어요. 날짜를 확인한 뒤 저장하세요.", "success");
             } catch (error) {
                 if (this.shouldAutoSwitchParseFailureToManual(error)) {
                     const switchedToManual = await this.startManualMessageCaptureFromInput({
-                        toastMessage: "원문을 보면서 일정 칸을 이어서 열었어요.",
+                        toastMessage: "실제 일정 날짜를 바로 정하는 화면으로 이어서 열었어요.",
                         errorToast: false,
                     });
                     if (switchedToManual) {

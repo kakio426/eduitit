@@ -162,8 +162,8 @@ class PermissionTest(TestCase):
         response = self.client_teacher.get(reverse("calendar_main"), follow=True)
         content = response.content.decode("utf-8")
 
-        self.assertIn("보관한 메시지를 바로 일정 수정 화면으로 열었어요.", content)
-        self.assertIn("보관한 메시지를 날짜 바로 입력 화면으로 열었어요.", content)
+        self.assertIn("보관한 메시지를 바로 일정 확인 화면으로 열었어요.", content)
+        self.assertIn("보관한 메시지를 바로 날짜 확인 화면으로 열었어요.", content)
         self.assertNotIn("await this.submitSavedMessageCaptureParse(detail.capture_id);", content)
 
     def test_legacy_today_memo_panel_route_redirects_to_home_surface(self):

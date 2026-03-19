@@ -507,10 +507,10 @@ function initCalendarMessageHub(host, options = {}) {
                 ? detail.candidates.filter((candidate) => !candidate.already_saved).length
                 : 0;
             if (editableCandidateCount > 0) {
-                window.showToast('보관한 메시지를 바로 일정 수정 화면으로 열었어요.', 'success');
+                window.showToast('보관한 메시지를 바로 일정 확인 화면으로 열었어요.', 'success');
                 return;
             }
-            window.showToast('보관한 메시지를 날짜 바로 입력 화면으로 열었어요.', 'info');
+            window.showToast('보관한 메시지를 바로 날짜 확인 화면으로 열었어요.', 'info');
         },
 
         resetMessageCaptureFlow: function() {

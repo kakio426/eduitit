@@ -662,10 +662,10 @@ function initCalendarMessageHub(host, options = {}) {
                 ? detail.candidates.filter((candidate) => !candidate.already_saved).length
                 : 0;
             if (editableCandidateCount > 0) {
-                window.showToast('보관한 메시지를 바로 일정 수정 화면으로 열었어요.', 'success');
+                window.showToast('보관한 메시지를 바로 일정 확인 화면으로 열었어요.', 'success');
                 return;
             }
-            window.showToast('보관한 메시지를 날짜 바로 입력 화면으로 열었어요.', 'info');
+            window.showToast('보관한 메시지를 바로 날짜 확인 화면으로 열었어요.', 'info');
         },
 
         resetMessageCaptureFlow: function() {
@@ -994,7 +994,7 @@ function initCalendarMessageHub(host, options = {}) {
                 });
                 this.applyMessageCaptureResult(payload);
                 await this.refreshMessageArchiveAfterMutation(payload.capture_id || '');
-                window.showToast('다시 볼 날짜를 확인해 주세요.', 'success');
+                window.showToast('캘린더에 다시 띄울 날짜를 확인해 주세요.', 'success');
             } catch (error) {
                 this.messageCaptureErrorText = error.message || '메모 읽기에 실패했습니다.';
                 window.showToast(this.messageCaptureErrorText, 'error');
@@ -1023,7 +1023,7 @@ function initCalendarMessageHub(host, options = {}) {
                 this.messageArchiveSelectedCapture = payload;
                 this.applyArchiveDetailToMessageCapture(payload);
                 await this.refreshMessageArchiveAfterMutation(payload.capture_id || '');
-                window.showToast(payload.message || '보관한 메모에서 날짜를 찾았어요.', 'success');
+                window.showToast(payload.message || '보관한 메모에서 날짜 후보를 찾았어요.', 'success');
             } catch (error) {
                 this.messageCaptureErrorText = error.message || '보관한 메모를 읽지 못했습니다.';
                 window.showToast(this.messageCaptureErrorText, 'error');
