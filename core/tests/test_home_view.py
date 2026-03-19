@@ -466,7 +466,6 @@ class HomeV2ViewTest(TestCase):
 
     @override_settings(
         FEATURE_MESSAGE_CAPTURE_ENABLED=True,
-        FEATURE_MESSAGE_CAPTURE_ALLOWLIST_USERNAMES='capturehome',
         FEATURE_MESSAGE_CAPTURE_ITEM_TYPES=True,
     )
     def test_v2_authenticated_calendar_hub_shows_single_message_entry(self):
@@ -483,7 +482,6 @@ class HomeV2ViewTest(TestCase):
 
     @override_settings(
         FEATURE_MESSAGE_CAPTURE_ENABLED=True,
-        FEATURE_MESSAGE_CAPTURE_ALLOWLIST_USERNAMES='capturecard',
         FEATURE_MESSAGE_CAPTURE_ITEM_TYPES=True,
     )
     def test_v2_home_shows_messagebox_card_without_service_grid_duplication(self):

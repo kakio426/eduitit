@@ -90,7 +90,6 @@ class PermissionTest(TestCase):
 
     @override_settings(
         FEATURE_MESSAGE_CAPTURE_ENABLED=True,
-        FEATURE_MESSAGE_CAPTURE_ALLOWLIST_USERNAMES="teacher",
         FEATURE_MESSAGE_CAPTURE_ITEM_TYPES=True,
     )
     def test_main_view_keeps_calendar_surface_minimal(self):
@@ -141,7 +140,6 @@ class PermissionTest(TestCase):
 
     @override_settings(
         FEATURE_MESSAGE_CAPTURE_ENABLED=True,
-        FEATURE_MESSAGE_CAPTURE_ALLOWLIST_USERNAMES="teacher",
         FEATURE_MESSAGE_CAPTURE_ITEM_TYPES=True,
     )
     def test_main_view_message_capture_actions_use_simple_complete_wireframe(self):
@@ -158,7 +156,6 @@ class PermissionTest(TestCase):
 
     @override_settings(
         FEATURE_MESSAGE_CAPTURE_ENABLED=True,
-        FEATURE_MESSAGE_CAPTURE_ALLOWLIST_USERNAMES="teacher",
         FEATURE_MESSAGE_CAPTURE_ITEM_TYPES=True,
     )
     def test_main_view_message_archive_edit_action_uses_manual_edit_flow(self):

@@ -98,8 +98,11 @@ class MessageboxViewTests(TestCase):
         FEATURE_MESSAGE_CAPTURE_ROLLOUT_MODE="allowlist",
         FEATURE_MESSAGE_CAPTURE_ALLOWLIST_USERNAMES="listed_teacher",
     )
-    def test_allowlist_mode_can_still_hide_messagebox_for_unlisted_teacher(self):
+    def test_allowlist_mode_still_shows_messagebox_for_authenticated_teacher(self):
+        card = build_messagebox_home_card_context(self.user)
         response = self.client.get(reverse("messagebox:main"))
 
+        self.assertTrue(card["enabled"])
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "업무 메시지 보관함이 아직 열리지 않았습니다.")
+        self.assertContains(response, 'data-messagebox-layout="true"')
+        self.assertNotContains(response, "업무 메시지 보관함이 아직 열리지 않았습니다.")

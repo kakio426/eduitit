@@ -201,82 +201,11 @@ def _apply_sensitive_cache_headers(response):
     return response
 
 
-def _split_csv_setting(raw_value):
-    if isinstance(raw_value, (list, tuple, set)):
-        values = raw_value
-    else:
-        values = str(raw_value or "").split(",")
-    return [str(item).strip() for item in values if str(item).strip()]
-
-
-def _get_message_capture_rollout_value(setting_name, env_name):
-    if hasattr(settings, setting_name):
-        return getattr(settings, setting_name)
-    return os.environ.get(env_name, "")
-
-
-def _get_message_capture_rollout_mode():
-    raw_mode = str(
-        _get_message_capture_rollout_value(
-            "FEATURE_MESSAGE_CAPTURE_ROLLOUT_MODE",
-            "FEATURE_MESSAGE_CAPTURE_ROLLOUT_MODE",
-        )
-        or ""
-    ).strip().lower()
-    if raw_mode in {"allowlist", "limited", "beta"}:
-        return "allowlist"
-    return "all"
-
-
 def _is_message_capture_enabled_for_user(user):
     if not getattr(user, "is_authenticated", False):
         return False
 
-    feature_enabled = bool(getattr(settings, "FEATURE_MESSAGE_CAPTURE_ENABLED", False))
-    if not feature_enabled:
-        return False
-
-    if _get_message_capture_rollout_mode() != "allowlist":
-        return True
-
-    usernames = {
-        value.lower()
-        for value in _split_csv_setting(
-            _get_message_capture_rollout_value(
-                "FEATURE_MESSAGE_CAPTURE_ALLOWLIST_USERNAMES",
-                "FEATURE_MESSAGE_CAPTURE_ALLOWLIST_USERNAMES",
-            )
-        )
-    }
-    emails = {
-        value.lower()
-        for value in _split_csv_setting(
-            _get_message_capture_rollout_value(
-                "FEATURE_MESSAGE_CAPTURE_ALLOWLIST_EMAILS",
-                "FEATURE_MESSAGE_CAPTURE_ALLOWLIST_EMAILS",
-            )
-        )
-    }
-    user_ids = set(
-        _split_csv_setting(
-            _get_message_capture_rollout_value(
-                "FEATURE_MESSAGE_CAPTURE_ALLOWLIST_USER_IDS",
-                "FEATURE_MESSAGE_CAPTURE_ALLOWLIST_USER_IDS",
-            )
-        )
-    )
-
-    # Allowlist가 비어 있으면 기본 비활성 상태를 유지한다.
-    if not usernames and not emails and not user_ids:
-        return False
-
-    if str(user.id) in user_ids:
-        return True
-    if user.username and user.username.lower() in usernames:
-        return True
-    if user.email and user.email.lower() in emails:
-        return True
-    return False
+    return bool(getattr(settings, "FEATURE_MESSAGE_CAPTURE_ENABLED", False))
 
 
 def _is_message_capture_item_types_enabled_for_user(user):

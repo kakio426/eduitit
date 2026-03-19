@@ -23,7 +23,6 @@ User = get_user_model()
 
 @override_settings(
     FEATURE_MESSAGE_CAPTURE_ENABLED=True,
-    FEATURE_MESSAGE_CAPTURE_ALLOWLIST_USERNAMES="cc_link_user",
 )
 class IntegrationLinksAndSettingsTests(TestCase):
     def setUp(self):

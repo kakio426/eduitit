@@ -26,7 +26,6 @@ User = get_user_model()
 
 @override_settings(
     FEATURE_MESSAGE_CAPTURE_ENABLED=True,
-    FEATURE_MESSAGE_CAPTURE_ALLOWLIST_USERNAMES="capture_teacher",
     FEATURE_MESSAGE_CAPTURE_ITEM_TYPES=True,
 )
 class MessageCaptureApiTests(TestCase):
@@ -1039,7 +1038,7 @@ class MessageCaptureApiTests(TestCase):
         detail_response = self._archive_detail(foreign_capture.id)
         self.assertEqual(detail_response.status_code, 404)
 
-    def test_main_hides_message_capture_entry_even_for_allowlist_user(self):
+    def test_main_hides_message_capture_entry_on_legacy_redirect(self):
         response = self.client.get(reverse("classcalendar:legacy_main"), follow=True)
         self.assertRedirects(response, f"{reverse('home')}#home-calendar")
         self.assertNotContains(response, "openMessageHub($event, 'capture', { resetCapture: true })")
