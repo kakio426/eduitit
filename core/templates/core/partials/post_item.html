@@ -8,18 +8,18 @@
                 {% if post.author.userprofile.nickname %}{{ post.author.userprofile.nickname|slice:":1" }}{% else %}{{post.author.username|slice:":1" }}{% endif %}
             </div>
             <div class="min-w-0 flex-1">
-                <p class="font-bold text-slate-700 text-sm flex items-center gap-1">
+                <p class="flex flex-wrap items-center gap-1.5 text-sm font-bold text-slate-700">
                     {% if post.author.userprofile.nickname %}{{ post.author.userprofile.nickname }}{% else %}{{post.author.username }}{% endif %}
                     {% if post.author.is_staff %}
                     <span class="text-xs text-indigo-500" title="관리자"><i class="ph-fill ph-shield-check"></i></span>
                     {% endif %}
                     {% if post.is_active_pinned_notice %}
-                    <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                    <span class="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
                         <i class="ph-fill ph-push-pin-simple text-xs"></i>
-                        상단 고정
+                        고정 공지
                     </span>
                     {% elif post.post_type == 'notice' %}
-                    <span class="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-600">
+                    <span class="inline-flex shrink-0 items-center whitespace-nowrap rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-600">
                         공지
                     </span>
                     {% endif %}
@@ -41,7 +41,7 @@
             <button type="button" data-pinned-notice-close
                 onclick="if (window.dismissPinnedNotice) { window.dismissPinnedNotice('{{ post.pinned_notice_dismiss_key }}', this); }"
                 class="text-slate-300 hover:text-amber-600 transition-colors p-2 rounded-lg hover:bg-amber-100"
-                aria-label="상단 고정 공지 닫기">
+                aria-label="고정 공지 닫기">
                 <i class="ph ph-x text-lg"></i>
             </button>
             {% endif %}

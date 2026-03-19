@@ -1,6 +1,7 @@
 import json
 
 from django.core.management import call_command
+from django.contrib.auth.models import AnonymousUser, User
 from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 
@@ -20,10 +21,15 @@ class ContextProcessorTestCase(TestCase):
         config.banner_active = True
         config.banner_color = "#111111"
         config.banner_link = "https://example.com/banner"
-        config.pinned_notice_expanded = True
         config.save()
 
+        user = User.objects.create_user(username="contextuser", password="pass1234")
+        profile = user.userprofile
+        profile.pinned_notice_expanded = True
+        profile.save(update_fields=["pinned_notice_expanded"])
+
         request = self.factory.get("/")
+        request.user = user
         context = site_config(request)
 
         self.assertEqual(context["banner_text"], "안내 배너")
@@ -33,6 +39,14 @@ class ContextProcessorTestCase(TestCase):
         self.assertTrue(context["pinned_notice_expanded"])
         self.assertIn("notebook_manual_url", context)
         self.assertEqual(context["notebook_manual_url"], "")
+
+    def test_site_config_defaults_notice_toggle_to_collapsed_for_anonymous(self):
+        request = self.factory.get("/")
+        request.user = AnonymousUser()
+
+        context = site_config(request)
+
+        self.assertFalse(context["pinned_notice_expanded"])
 
 
 class ServiceLauncherContextTests(TestCase):

@@ -16,7 +16,6 @@ from .models import (
     Comment,
     CommentReport,
     Feedback,
-    SiteConfig,
     ProductUsageLog,
     ProductFavorite,
     ProductWorkbenchBundle,
@@ -1168,14 +1167,27 @@ def _build_home_v4_recommendations(companion_items, discovery_items, *, exclude_
     return recommendations
 
 
+def _filter_home_v4_nav_products(section_key, products):
+    nav_products = list(products or [])
+    if section_key != 'class_ops':
+        return nav_products
+
+    # The home calendar panel already covers the calendar hub, so keep the menu
+    # focused on the remaining classroom-operation tools.
+    return [
+        product for product in nav_products
+        if not _is_calendar_hub_product(product)
+    ]
+
+
 def _build_home_v4_nav_sections(primary_display_sections, secondary_display_sections, games):
     nav_sections = []
 
     for section in [*primary_display_sections, *secondary_display_sections]:
-        nav_products = [
+        nav_products = _filter_home_v4_nav_products(section['key'], [
             *section.get('products', []),
             *section.get('overflow_products', []),
-        ]
+        ])
         if not nav_products:
             continue
         nav_sections.append({
@@ -2842,18 +2854,14 @@ def post_create(request):
 @login_required
 @require_POST
 def toggle_pinned_notice_expanded(request):
-    if not request.user.is_staff:
-        messages.error(request, '공지 펼침 상태는 관리자만 변경할 수 있습니다.')
-        return redirect(get_safe_next_url(request, fallback=reverse('home')))
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    profile.pinned_notice_expanded = _is_truthy(request.POST.get('expanded'))
+    profile.save(update_fields=['pinned_notice_expanded'])
 
-    config = SiteConfig.load()
-    config.pinned_notice_expanded = _is_truthy(request.POST.get('expanded'))
-    config.save(update_fields=['pinned_notice_expanded'])
-
-    if config.pinned_notice_expanded:
-        messages.success(request, '상단 고정 공지를 모두 펼쳤어요.')
+    if profile.pinned_notice_expanded:
+        messages.success(request, '고정 공지를 펼쳐서 볼게요.')
     else:
-        messages.success(request, '상단 고정 공지를 모두 접었어요.')
+        messages.success(request, '고정 공지를 제목만 보이게 접어둘게요.')
 
     return redirect(get_safe_next_url(request, fallback=reverse('home')))
 

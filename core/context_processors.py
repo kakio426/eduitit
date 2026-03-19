@@ -76,6 +76,13 @@ def toast_messages(request):
 
 def site_config(request):
     """SiteConfig 싱글톤에서 배너 데이터를 전역 제공."""
+    pinned_notice_expanded = False
+    if getattr(request, 'user', None) and request.user.is_authenticated:
+        try:
+            pinned_notice_expanded = bool(request.user.userprofile.pinned_notice_expanded)
+        except Exception:
+            pinned_notice_expanded = False
+
     try:
         config = SiteConfig.load()
         return {
@@ -83,7 +90,7 @@ def site_config(request):
             'banner_active': config.banner_active,
             'banner_color': config.banner_color,
             'banner_link': config.banner_link,
-            'pinned_notice_expanded': config.pinned_notice_expanded,
+            'pinned_notice_expanded': pinned_notice_expanded,
             'notebook_manual_url': getattr(config, 'notebook_manual_url', ''),
         }
     except Exception:
@@ -92,7 +99,7 @@ def site_config(request):
             'banner_active': False,
             'banner_color': '#7c3aed',
             'banner_link': '',
-            'pinned_notice_expanded': False,
+            'pinned_notice_expanded': pinned_notice_expanded,
             'notebook_manual_url': '',
         }
 
