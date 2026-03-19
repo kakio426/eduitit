@@ -12,6 +12,7 @@ urlpatterns = [
     path("isolation/play/", views.play, {"variant": "isolation"}, name="play_isolation"),
     path("ataxx/play/", views.play, {"variant": "ataxx"}, name="play_ataxx"),
     path("breakthrough/play/", views.play, {"variant": "breakthrough"}, name="play_breakthrough"),
+    path("reversi/play/", views.play, {"variant": "reversi"}, name="play_reversi"),
     path("<slug:variant>/rules/", views.rules, name="rules"),
     path("<slug:variant>/play/", views.play, name="play"),
 ]

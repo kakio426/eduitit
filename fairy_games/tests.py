@@ -9,16 +9,17 @@ class FairyGamesRoutingTests(TestCase):
     def test_index_page(self):
         response = self.client.get(reverse("fairy_games:index"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "전략 게임 5종")
+        self.assertContains(response, "전략 게임 6종")
+        self.assertContains(response, "리버시")
         self.assertContains(response, "규칙 보기")
 
     def test_rules_pages(self):
-        for variant in ["dobutsu", "cfour", "isolation", "ataxx", "breakthrough"]:
+        for variant in ["dobutsu", "cfour", "isolation", "ataxx", "breakthrough", "reversi"]:
             response = self.client.get(reverse("fairy_games:rules", kwargs={"variant": variant}))
             self.assertEqual(response.status_code, 200, msg=f"rules failed: {variant}")
 
     def test_play_pages_local_only(self):
-        for variant in ["dobutsu", "cfour", "isolation", "ataxx", "breakthrough"]:
+        for variant in ["dobutsu", "cfour", "isolation", "ataxx", "breakthrough", "reversi"]:
             response_default = self.client.get(reverse("fairy_games:play", kwargs={"variant": variant}))
             response_ai_query = self.client.get(
                 reverse("fairy_games:play", kwargs={"variant": variant}) + "?mode=ai&difficulty=medium"
@@ -43,10 +44,11 @@ class FairyGamesEnsureCommandTests(TestCase):
             "이솔레이션": "fairy_games:play_isolation",
             "아택스": "fairy_games:play_ataxx",
             "브레이크스루": "fairy_games:play_breakthrough",
+            "리버시": "fairy_games:play_reversi",
         }
 
         products = Product.objects.filter(title__in=expected_routes.keys(), is_active=True)
-        self.assertEqual(products.count(), 5, msg="expected 5 fairy products")
+        self.assertEqual(products.count(), 6, msg="expected 6 fairy products")
 
         for product in products:
             expected_route = expected_routes[product.title]
@@ -57,4 +59,7 @@ class FairyGamesEnsureCommandTests(TestCase):
             self.assertTrue(product.manual.is_published, msg=f"manual unpublished: {product.title}")
             section_titles = list(product.manual.sections.values_list("title", flat=True))
             self.assertIn("시작하기", section_titles)
-            self.assertIn("대결 모드", section_titles)
+            self.assertIn("로컬 대결", section_titles)
+            self.assertIn("수업 활용 팁", section_titles)
+            feature_titles = list(product.features.values_list("title", flat=True))
+            self.assertNotIn("AI 대결", feature_titles)

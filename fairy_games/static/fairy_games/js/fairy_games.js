@@ -14,6 +14,10 @@
   const tipEl = document.getElementById('fg-tip');
   const turnTopEl = document.getElementById('fg-turn-top');
   const turnBottomEl = document.getElementById('fg-turn-bottom');
+  const turnTopNameEl = document.getElementById('fg-turn-name-top');
+  const turnBottomNameEl = document.getElementById('fg-turn-name-bottom');
+  const turnTopDotEl = document.getElementById('fg-turn-dot-top');
+  const turnBottomDotEl = document.getElementById('fg-turn-dot-bottom');
   const resultModalEl = document.getElementById('fg-result-modal');
   const resultTitleEl = document.getElementById('fg-result-title');
   const resultDescEl = document.getElementById('fg-result-desc');
@@ -34,13 +38,22 @@
   let resultShown = false;
 
   const copy = (o) => JSON.parse(JSON.stringify(o));
-  const sideName = (s) => (s === 1 ? '초(빨강)' : '한(파랑)');
   const other = (s) => (s === 1 ? 2 : 1);
   const aiActive = () => false;
   const rand = (arr) => arr[Math.floor(Math.random() * arr.length)];
   const setStatus = (text) => { statusEl.textContent = text; };
   const setHistory = (arr) => { historyEl.textContent = arr.length ? arr.join('\n') : '-'; };
   const pushUndo = () => { undoStack.push(copy(state)); if (undoStack.length > 150) undoStack.shift(); };
+  const playerCopy = VARIANT === 'reversi'
+    ? {
+      1: { name: '검정', seat: '아래쪽 플레이어 (검정)', dotClass: 'black' },
+      2: { name: '하양', seat: '위쪽 플레이어 (하양)', dotClass: 'white' }
+    }
+    : {
+      1: { name: '빨강', seat: '아래쪽 플레이어 (빨강)', dotClass: 'red' },
+      2: { name: '파랑', seat: '위쪽 플레이어 (파랑)', dotClass: 'blue' }
+    };
+  const sideName = (s) => (playerCopy[s] ? playerCopy[s].name : '플레이어');
 
   function popUndo() {
     if (!undoStack.length) return;
@@ -53,6 +66,13 @@
     boardFlipped = !!active;
     if (!boardEl) return;
     boardEl.classList.toggle('flipped', boardFlipped);
+  }
+
+  function applyPlayerLabels() {
+    if (turnTopNameEl) turnTopNameEl.textContent = playerCopy[2].seat;
+    if (turnBottomNameEl) turnBottomNameEl.textContent = playerCopy[1].seat;
+    if (turnTopDotEl) turnTopDotEl.className = `fg-turn-dot ${playerCopy[2].dotClass}`;
+    if (turnBottomDotEl) turnBottomDotEl.className = `fg-turn-dot ${playerCopy[1].dotClass}`;
   }
 
   function setRulesModal(open) {
@@ -153,6 +173,11 @@
       mission: '한 말만 끝줄에 도착시켜도 승리입니다.',
       tip: '팁: 양쪽 날개로 동시에 전진하면 막기 어려워집니다.'
     };
+    if (variant === 'reversi') return {
+      cls: 'fg-variant-reversi',
+      mission: '상대 돌을 사이에 끼워 뒤집으며 더 많은 칸을 차지해 보세요.',
+      tip: '팁: 모서리를 먼저 차지하면 후반 운영이 훨씬 유리해집니다.'
+    };
     return { cls: '', mission: '상대보다 한 수 앞서 생각해 보세요.', tip: '' };
   }
 
@@ -164,7 +189,8 @@
         'fg-variant-cfour',
         'fg-variant-isolation',
         'fg-variant-ataxx',
-        'fg-variant-breakthrough'
+        'fg-variant-breakthrough',
+        'fg-variant-reversi'
       );
       if (meta.cls) stageEl.classList.add(meta.cls);
     }
@@ -566,7 +592,127 @@
     }
   };
 
-  const games = { cfour, isolation, ataxx, breakthrough, dobutsu };
+  const reversi = {
+    init() {
+      const b = Array.from({ length: 8 }, () => Array(8).fill(0));
+      b[3][3] = 2; b[3][4] = 1; b[4][3] = 1; b[4][4] = 2;
+      return { b, turn: 1, gameOver: false, winner: 0, h: [], tokens: [], lastPass: 0 };
+    },
+    inb(r, c) { return r >= 0 && c >= 0 && r < 8 && c < 8; },
+    flips(s, side, r, c) {
+      if (s.b[r][c]) return [];
+      const out = [];
+      const dirs = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]];
+      for (const [dr, dc] of dirs) {
+        let nr = r + dr;
+        let nc = c + dc;
+        const captured = [];
+        while (this.inb(nr, nc) && s.b[nr][nc] === other(side)) {
+          captured.push([nr, nc]);
+          nr += dr;
+          nc += dc;
+        }
+        if (captured.length && this.inb(nr, nc) && s.b[nr][nc] === side) {
+          out.push(...captured);
+        }
+      }
+      return out;
+    },
+    moves(s, side) {
+      const out = [];
+      for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+        const flips = this.flips(s, side, r, c);
+        if (flips.length) out.push({ r, c, flips });
+      }
+      return out;
+    },
+    count(s) {
+      let black = 0;
+      let white = 0;
+      for (const row of s.b) for (const v of row) {
+        if (v === 1) black++;
+        if (v === 2) white++;
+      }
+      return [black, white];
+    },
+    finishByCount(s) {
+      const [black, white] = this.count(s);
+      s.gameOver = true;
+      s.winner = black === white ? 0 : (black > white ? 1 : 2);
+    },
+    onNoMove(s) {
+      if (s.gameOver) return;
+      const nextMoves = this.moves(s, s.turn);
+      if (nextMoves.length) return;
+      const passedSide = s.turn;
+      s.turn = other(s.turn);
+      const currentMoves = this.moves(s, s.turn);
+      if (currentMoves.length) {
+        s.lastPass = passedSide;
+        s.h.push(`${s.h.length + 1}. ${sideName(passedSide)} 패스`);
+        return;
+      }
+      this.finishByCount(s);
+    },
+    apply(s, move) {
+      if (s.gameOver) return;
+      const flips = move.flips || this.flips(s, s.turn, move.r, move.c);
+      if (!flips.length) return;
+      s.b[move.r][move.c] = s.turn;
+      flips.forEach(([r, c]) => { s.b[r][c] = s.turn; });
+      s.tokens.push(posToken(move.r, move.c));
+      s.h.push(`${s.h.length + 1}. ${sideName(s.turn)} ${String.fromCharCode(65 + move.c)}${move.r + 1} (${flips.length}개 뒤집기)`);
+      s.turn = other(s.turn);
+      s.lastPass = 0;
+      const nextMoves = this.moves(s, s.turn);
+      if (nextMoves.length) return;
+
+      const passedSide = s.turn;
+      s.turn = other(s.turn);
+      const returnMoves = this.moves(s, s.turn);
+      if (returnMoves.length) {
+        s.lastPass = passedSide;
+        s.h.push(`${s.h.length + 1}. ${sideName(passedSide)} 패스`);
+        return;
+      }
+      this.finishByCount(s);
+    },
+    ai() { return null; },
+    parseEngineMove() { return null; },
+    render(s) {
+      const [black, white] = this.count(s);
+      const legalMoves = this.moves(s, s.turn);
+      topEl.innerHTML = `<div class="fg-panel p-3 text-sm font-bold text-gray-700">하양 ${white}개</div>`;
+      bottomEl.innerHTML = `<div class="fg-panel p-3 text-sm font-bold text-gray-700">검정 ${black}개</div>`;
+      drawGrid(8, 8, (r, c) => {
+        const value = s.b[r][c];
+        const legal = legalMoves.find((item) => item.r === r && item.c === c);
+        let cls = (r + c) % 2 ? 'dark' : '';
+        if (legal) cls += ' hint';
+        let html = '';
+        if (value === 1) html = "<div class='fg-disc-wrap'><div class='fg-disc fg-black'></div></div>";
+        else if (value === 2) html = "<div class='fg-disc-wrap'><div class='fg-disc fg-white'></div></div>";
+        else if (legal) html = "<div class='fg-disc-wrap'><div class='fg-disc fg-ghost'></div></div>";
+        return cell(cls, html, () => {
+          if (aiActive() || s.gameOver || !legal) return;
+          pushUndo();
+          this.apply(s, legal);
+          render();
+          aiTurn();
+        });
+      }, 64);
+      if (s.gameOver) {
+        setStatus(s.winner ? `${sideName(s.winner)} 승리 · ${black}:${white}` : `무승부 · ${black}:${white}`);
+      } else if (s.lastPass) {
+        setStatus(`${sideName(s.lastPass)} 패스 · ${sideName(s.turn)} 계속 (${black}:${white})`);
+      } else {
+        setStatus(`차례: ${sideName(s.turn)} · 점수 ${black}:${white}`);
+      }
+      setHistory(s.h);
+    }
+  };
+
+  const games = { cfour, isolation, ataxx, breakthrough, dobutsu, reversi };
 
   function render() {
     game.render(state);
@@ -592,6 +738,7 @@
   function init() {
     game = games[VARIANT] || cfour;
     applyVariantUi();
+    applyPlayerLabels();
     state = game.init();
     undoStack = [];
     handPick = null;

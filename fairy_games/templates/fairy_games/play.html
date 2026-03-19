@@ -68,6 +68,11 @@
     }
     .fg-turn-dot.red { background: #ef4444; }
     .fg-turn-dot.blue { background: #3b82f6; }
+    .fg-turn-dot.black { background: #111827; }
+    .fg-turn-dot.white {
+        background: #ffffff;
+        border: 1px solid rgba(15, 23, 42, 0.25);
+    }
     .fg-piece {
         display: inline-block;
         line-height: 1;
@@ -123,6 +128,18 @@
     .fg-disc { width: clamp(28px, calc(var(--fg-cell-size) - 16px), 54px); height: clamp(28px, calc(var(--fg-cell-size) - 16px), 54px); border-radius: 999px; box-shadow: inset 0 2px 6px rgba(255, 255, 255, 0.35), 0 3px 8px rgba(15, 23, 42, 0.25); }
     .fg-red { background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%); color: #fff; }
     .fg-blue { background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%); color: #fff; }
+    .fg-black { background: linear-gradient(180deg, #374151 0%, #111827 100%); }
+    .fg-white {
+        background: linear-gradient(180deg, #ffffff 0%, #e2e8f0 100%);
+        box-shadow: inset 0 2px 6px rgba(255, 255, 255, 0.75), 0 3px 8px rgba(15, 23, 42, 0.25);
+        border: 1px solid rgba(148, 163, 184, 0.45);
+    }
+    .fg-ghost {
+        width: 12px;
+        height: 12px;
+        background: rgba(15, 23, 42, 0.18);
+        box-shadow: none;
+    }
     .fg-hand { display: flex; flex-wrap: wrap; gap: 8px; }
     .fg-hand button {
         border: 1px solid rgba(148, 163, 184, 0.3);
@@ -174,6 +191,9 @@
     .fg-stage.fg-variant-isolation .fg-board-grid { background: linear-gradient(180deg, #334155 0%, #1f2937 100%); }
     .fg-stage.fg-variant-ataxx .fg-board-grid { background: linear-gradient(180deg, #b91c1c 0%, #7f1d1d 100%); }
     .fg-stage.fg-variant-breakthrough .fg-board-grid { background: linear-gradient(180deg, #166534 0%, #14532d 100%); }
+    .fg-stage.fg-variant-reversi .fg-board-grid { background: linear-gradient(180deg, #166534 0%, #14532d 100%); }
+    .fg-stage.fg-variant-reversi .fg-cell { background: #4ade80; }
+    .fg-stage.fg-variant-reversi .fg-cell.dark { background: #22c55e; }
 
     @media (min-width: 1024px) { .fg-layout { grid-template-columns: 2fr 1fr; } }
 </style>
@@ -192,11 +212,11 @@
             <div class="fg-board-wrap">
                 <div class="fg-turn-rail">
                     <div id="fg-turn-top" class="fg-turn-seat">
-                        <span class="flex items-center"><span class="fg-turn-dot blue"></span>위쪽 플레이어 (한/파랑)</span>
+                        <span class="flex items-center"><span id="fg-turn-dot-top" class="fg-turn-dot blue"></span><span id="fg-turn-name-top">위쪽 플레이어 (파랑)</span></span>
                         <small>대기</small>
                     </div>
                     <div id="fg-turn-bottom" class="fg-turn-seat">
-                        <span class="flex items-center"><span class="fg-turn-dot red"></span>아래쪽 플레이어 (초/빨강)</span>
+                        <span class="flex items-center"><span id="fg-turn-dot-bottom" class="fg-turn-dot red"></span><span id="fg-turn-name-bottom">아래쪽 플레이어 (빨강)</span></span>
                         <small>대기</small>
                     </div>
                 </div>

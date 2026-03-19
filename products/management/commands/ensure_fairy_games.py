@@ -6,13 +6,19 @@ from products.models import ManualSection, Product, ProductFeature, ServiceManua
 class Command(BaseCommand):
     help = "Ensure Fairy games products exist in database"
 
-    def upsert_product(self, *, title, defaults, features, manual_title, manual_desc):
+    def upsert_product(self, *, title, defaults, features, manual_title, manual_desc, sections):
         mutable_fields = [
             "lead_text",
             "description",
             "price",
+            "is_active",
+            "is_featured",
             "is_guest_allowed",
             "icon",
+            "color_theme",
+            "card_size",
+            "display_order",
+            "service_type",
             "external_url",
             "launch_route_name",
         ]
@@ -30,12 +36,46 @@ class Command(BaseCommand):
                 product.save(update_fields=changed)
                 self.stdout.write(self.style.SUCCESS(f"Updated product fields: {title} ({', '.join(changed)})"))
 
-        for icon, feature_title, desc in features:
-            ProductFeature.objects.get_or_create(
-                product=product,
-                title=feature_title,
-                defaults={"icon": icon, "description": desc},
+        used_feature_ids = set()
+        for item in features:
+            feature = (
+                ProductFeature.objects.filter(product=product, title=item["title"])
+                .exclude(id__in=used_feature_ids)
+                .order_by("id")
+                .first()
             )
+            if feature is None:
+                feature = (
+                    ProductFeature.objects.filter(product=product)
+                    .exclude(id__in=used_feature_ids)
+                    .order_by("id")
+                    .first()
+                )
+            if feature is None:
+                feature = ProductFeature.objects.create(
+                    product=product,
+                    icon=item["icon"],
+                    title=item["title"],
+                    description=item["description"],
+                )
+            else:
+                changed = []
+                if feature.icon != item["icon"]:
+                    feature.icon = item["icon"]
+                    changed.append("icon")
+                if feature.title != item["title"]:
+                    feature.title = item["title"]
+                    changed.append("title")
+                if feature.description != item["description"]:
+                    feature.description = item["description"]
+                    changed.append("description")
+                if changed:
+                    feature.save(update_fields=changed)
+            used_feature_ids.add(feature.id)
+
+        stale_features = ProductFeature.objects.filter(product=product).exclude(id__in=used_feature_ids)
+        if stale_features.exists():
+            stale_features.delete()
 
         manual, _ = ServiceManual.objects.get_or_create(
             product=product,
@@ -46,36 +86,58 @@ class Command(BaseCommand):
             },
         )
         changed_manual = []
+        if manual.title != manual_title:
+            manual.title = manual_title
+            changed_manual.append("title")
         if not manual.is_published:
             manual.is_published = True
             changed_manual.append("is_published")
-        if not manual.description:
+        if manual.description != manual_desc:
             manual.description = manual_desc
             changed_manual.append("description")
         if changed_manual:
             manual.save(update_fields=changed_manual)
 
-        sections = [
-            ("시작하기", "대시보드에서 해당 게임 카드를 눌러 바로 시작합니다.", 1),
-            ("대결 모드", "로컬 대결 또는 AI 대결을 선택해 진행합니다.", 2),
-            ("AI 난이도", "easy -> medium -> hard -> expert 순서로 학습합니다.", 3),
-        ]
-        for section_title, content, order in sections:
-            section, created = ManualSection.objects.get_or_create(
-                manual=manual,
-                title=section_title,
-                defaults={"content": content, "display_order": order},
+        used_section_ids = set()
+        for item in sections:
+            section = (
+                ManualSection.objects.filter(manual=manual, title=item["title"])
+                .exclude(id__in=used_section_ids)
+                .order_by("display_order", "id")
+                .first()
             )
-            if not created:
+            if section is None:
+                section = (
+                    ManualSection.objects.filter(manual=manual, display_order=item["display_order"])
+                    .exclude(id__in=used_section_ids)
+                    .order_by("id")
+                    .first()
+                )
+            if section is None:
+                section = ManualSection.objects.create(
+                    manual=manual,
+                    title=item["title"],
+                    content=item["content"],
+                    display_order=item["display_order"],
+                )
+            else:
                 changed = []
-                if section.display_order != order:
-                    section.display_order = order
-                    changed.append("display_order")
-                if section.content != content:
-                    section.content = content
+                if section.title != item["title"]:
+                    section.title = item["title"]
+                    changed.append("title")
+                if section.content != item["content"]:
+                    section.content = item["content"]
                     changed.append("content")
+                if section.display_order != item["display_order"]:
+                    section.display_order = item["display_order"]
+                    changed.append("display_order")
                 if changed:
                     section.save(update_fields=changed)
+            used_section_ids.add(section.id)
+
+        stale_sections = ManualSection.objects.filter(manual=manual).exclude(id__in=used_section_ids)
+        if stale_sections.exists():
+            stale_sections.delete()
 
     def handle(self, *args, **options):
         common_defaults = {
@@ -88,19 +150,20 @@ class Command(BaseCommand):
         }
 
         variants = [
-            ("동물 장기", "🦁", "Dobutsu Shogi", "fairy_games:play_dobutsu", 17),
-            ("커넥트 포", "🟡", "Connect Four", "fairy_games:play_cfour", 18),
-            ("이솔레이션", "🧱", "Isolation", "fairy_games:play_isolation", 19),
-            ("아택스", "⚔", "Ataxx", "fairy_games:play_ataxx", 20),
-            ("브레이크스루", "🏁", "Breakthrough", "fairy_games:play_breakthrough", 21),
+            ("동물 장기", "🦁", "작은 판에서 사자를 지키며 빠르게 수 읽기를 익히는", "fairy_games:play_dobutsu", 17),
+            ("커넥트 포", "🟡", "칩 4개를 먼저 한 줄로 연결하는", "fairy_games:play_cfour", 18),
+            ("이솔레이션", "🧱", "이동 후 칸을 막아 상대를 가두는", "fairy_games:play_isolation", 19),
+            ("아택스", "⚔", "복제와 점프로 세력을 넓히는", "fairy_games:play_ataxx", 20),
+            ("브레이크스루", "🏁", "말 하나를 끝줄까지 먼저 돌파시키는", "fairy_games:play_breakthrough", 21),
+            ("리버시", "⚫", "검은 돌과 흰 돌을 뒤집어 더 많은 칸을 차지하는", "fairy_games:play_reversi", 23),
         ]
-        for title, icon, subtitle, route_name, order in variants:
+        for title, icon, summary, route_name, order in variants:
             self.upsert_product(
                 title=title,
                 defaults={
                     **common_defaults,
-                    "lead_text": f"{title} 게임을 로컬/AI 모드로 바로 시작",
-                    "description": f"{subtitle} 규칙 기반 전략 게임입니다. 초등학생도 쉽게 시작할 수 있도록 구성했습니다.",
+                    "lead_text": f"{title} 로컬 대결을 바로 시작",
+                    "description": f"{summary} 로컬 전략 게임입니다. 같은 화면에서 번갈아 두며 전략을 익힐 수 있습니다.",
                     "icon": icon,
                     "color_theme": "green",
                     "display_order": order,
@@ -108,12 +171,17 @@ class Command(BaseCommand):
                     "launch_route_name": route_name,
                 },
                 features=[
-                    ("👥", "로컬 대결", "같은 화면에서 번갈아 두는 2인 모드"),
-                    ("🤖", "AI 대결", "난이도 단계별 연습 모드"),
-                    ("📘", "규칙 설명", "핵심 규칙을 쉽게 확인"),
+                    {"icon": "👥", "title": "로컬 대결", "description": "같은 화면에서 번갈아 두는 2인 모드"},
+                    {"icon": "📘", "title": "규칙 요약", "description": "핵심 규칙과 승리 조건을 바로 확인"},
+                    {"icon": "🏫", "title": "수업 활용", "description": "쉬는 시간과 전략 활동 도입에 바로 쓰기 좋음"},
                 ],
                 manual_title=f"{title} 사용 가이드",
-                manual_desc=f"{title} 시작, 대결 모드, AI 난이도 선택을 바로 확인할 수 있습니다.",
+                manual_desc=f"{title} 시작, 규칙 확인, 로컬 대결 흐름을 바로 확인할 수 있습니다.",
+                sections=[
+                    {"title": "시작하기", "content": "학생 게임 포털이나 서비스 카드에서 해당 게임을 열고 바로 시작합니다.", "display_order": 1},
+                    {"title": "로컬 대결", "content": "같은 화면에서 두 플레이어가 번갈아 두는 로컬 전용 게임입니다.", "display_order": 2},
+                    {"title": "수업 활용 팁", "content": "한 판이 짧아 쉬는 시간, 전략 활동, 두뇌 워밍업 용도로 활용하기 좋습니다.", "display_order": 3},
+                ],
             )
 
         self.stdout.write(self.style.SUCCESS("ensure_fairy_games completed"))

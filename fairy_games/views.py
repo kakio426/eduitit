@@ -37,7 +37,7 @@ def play(request, variant):
     if not game:
         raise Http404("Unknown game variant")
 
-    # 전략 게임 5종은 현재 로컬 대결만 지원
+    # 전략 게임 6종은 현재 로컬 대결만 지원
     mode = "local"
     difficulty = "none"
 

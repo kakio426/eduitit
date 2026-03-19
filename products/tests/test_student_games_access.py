@@ -104,6 +104,29 @@ class StudentGamesAccessTests(TestCase):
         portal_response = self.student_client.get(reverse("dt_student_games_portal"))
         self.assertEqual(portal_response.status_code, 200)
 
+    def test_student_games_portal_lists_supported_games_and_links_open(self):
+        session = self.student_client.session
+        session[product_views.STUDENT_GAMES_SESSION_KEY] = {"issuer_id": self.user.id}
+        session.save()
+
+        response = self.student_client.get(reverse("dt_student_games_portal"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "지금 바로 되는 게임만 모았습니다.")
+        self.assertContains(response, "리버시")
+        self.assertContains(response, "교실 윷놀이")
+
+        games = response.context["games"]
+        titles = {game["title"] for game in games}
+        self.assertIn("체스", titles)
+        self.assertIn("장기", titles)
+        self.assertIn("리버시", titles)
+        self.assertIn("탭 순발력 챌린지", titles)
+        self.assertIn("교실 윷놀이", titles)
+
+        for game in games:
+            route_response = self.student_client.get(game["href"])
+            self.assertNotEqual(route_response.status_code, 404, msg=f"broken portal link: {game['title']}")
+
     def test_student_mode_does_not_block_home(self):
         session = self.client.session
         session[product_views.STUDENT_GAMES_SESSION_KEY] = {"issuer_id": self.user.id}

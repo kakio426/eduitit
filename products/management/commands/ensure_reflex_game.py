@@ -30,6 +30,8 @@ class Command(BaseCommand):
             "lead_text",
             "description",
             "price",
+            "is_active",
+            "is_featured",
             "is_guest_allowed",
             "icon",
             "color_theme",
@@ -74,22 +76,46 @@ class Command(BaseCommand):
             },
         ]
 
+        used_feature_ids = set()
         for item in feature_specs:
-            feature, feature_created = ProductFeature.objects.get_or_create(
-                product=product,
-                title=item["title"],
-                defaults={"icon": item["icon"], "description": item["description"]},
+            feature = (
+                ProductFeature.objects.filter(product=product, title=item["title"])
+                .exclude(id__in=used_feature_ids)
+                .order_by("id")
+                .first()
             )
-            if not feature_created:
+            if feature is None:
+                feature = (
+                    ProductFeature.objects.filter(product=product)
+                    .exclude(id__in=used_feature_ids)
+                    .order_by("id")
+                    .first()
+                )
+            if feature is None:
+                feature = ProductFeature.objects.create(
+                    product=product,
+                    icon=item["icon"],
+                    title=item["title"],
+                    description=item["description"],
+                )
+            else:
                 changed = []
                 if feature.icon != item["icon"]:
                     feature.icon = item["icon"]
                     changed.append("icon")
+                if feature.title != item["title"]:
+                    feature.title = item["title"]
+                    changed.append("title")
                 if feature.description != item["description"]:
                     feature.description = item["description"]
                     changed.append("description")
                 if changed:
                     feature.save(update_fields=changed)
+            used_feature_ids.add(feature.id)
+
+        stale_features = ProductFeature.objects.filter(product=product).exclude(id__in=used_feature_ids)
+        if stale_features.exists():
+            stale_features.delete()
 
         manual, _ = ServiceManual.objects.get_or_create(
             product=product,
@@ -101,6 +127,9 @@ class Command(BaseCommand):
         )
 
         manual_changed = []
+        if manual.title != "탭 순발력 챌린지 사용 가이드":
+            manual.title = "탭 순발력 챌린지 사용 가이드"
+            manual_changed.append("title")
         if not manual.is_published:
             manual.is_published = True
             manual_changed.append("is_published")
@@ -128,14 +157,33 @@ class Command(BaseCommand):
                 3,
             ),
         ]
+        used_section_ids = set()
         for section_title, content, order in sections:
-            section, created_section = ManualSection.objects.get_or_create(
-                manual=manual,
-                title=section_title,
-                defaults={"content": content, "display_order": order},
+            section = (
+                ManualSection.objects.filter(manual=manual, title=section_title)
+                .exclude(id__in=used_section_ids)
+                .order_by("display_order", "id")
+                .first()
             )
-            if not created_section:
+            if section is None:
+                section = (
+                    ManualSection.objects.filter(manual=manual, display_order=order)
+                    .exclude(id__in=used_section_ids)
+                    .order_by("id")
+                    .first()
+                )
+            if section is None:
+                section = ManualSection.objects.create(
+                    manual=manual,
+                    title=section_title,
+                    content=content,
+                    display_order=order,
+                )
+            else:
                 changed = []
+                if section.title != section_title:
+                    section.title = section_title
+                    changed.append("title")
                 if section.content != content:
                     section.content = content
                     changed.append("content")
@@ -144,5 +192,10 @@ class Command(BaseCommand):
                     changed.append("display_order")
                 if changed:
                     section.save(update_fields=changed)
+            used_section_ids.add(section.id)
+
+        stale_sections = ManualSection.objects.filter(manual=manual).exclude(id__in=used_section_ids)
+        if stale_sections.exists():
+            stale_sections.delete()
 
         self.stdout.write(self.style.SUCCESS("ensure_reflex_game completed"))
