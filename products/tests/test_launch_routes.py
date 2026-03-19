@@ -69,6 +69,19 @@ class ProductLaunchRouteTests(TestCase):
         self.assertEqual(href, reverse("collect:landing"))
         self.assertFalse(is_external)
 
+    def test_resolver_uses_tts_announce_route(self):
+        product = Product.objects.create(
+            title="교시 안내 TTS",
+            description="desc",
+            price=0,
+            is_active=True,
+            launch_route_name="tts_announce",
+        )
+
+        href, is_external = _resolve_product_launch_url(product)
+        self.assertEqual(href, reverse("tts_announce"))
+        self.assertFalse(is_external)
+
     def test_service_launcher_uses_same_launch_ssot(self):
         product = Product.objects.create(
             title="Launcher Route Product",

@@ -420,6 +420,7 @@ PRODUCT_CONTEXT_CHIP_OVERRIDES = {
     "reservations:dashboard_landing": ["일정 잡을 때", "PC·모바일", "개별·소그룹", "5분 안팎"],
     "reservations:landing": ["일정 잡을 때", "PC·모바일", "개별·소그룹", "5분 안팎"],
     "hwpxchat:main": ["수업 준비", "PC 권장", "교사 1인", "10분 안팎"],
+    "tts_announce": ["교시 방송", "PC·모바일", "학급 전체", "5분 전"],
 }
 
 PUBLIC_EXPERIENCE_ROUTE_NAMES = {

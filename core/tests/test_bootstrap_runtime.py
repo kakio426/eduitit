@@ -70,3 +70,4 @@ class BootstrapRuntimeCommandTests(SimpleTestCase):
         command.handle()
 
         self.assertIn(call("ensure_edu_materials"), mocked_call_command.call_args_list)
+        self.assertIn(call("ensure_tts_announce"), mocked_call_command.call_args_list)
