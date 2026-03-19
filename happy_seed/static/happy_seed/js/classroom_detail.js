@@ -51,14 +51,6 @@
         return workspace.querySelector("[data-classroom-workspace]");
     }
 
-    function getToolsPanel() {
-        return workspace.querySelector("[data-tools-panel]");
-    }
-
-    function getToolsBackdrop() {
-        return workspace.querySelector("[data-tools-backdrop]");
-    }
-
     function getSeedAmountSelect() {
         var workspaceState = getWorkspaceState();
         return workspaceState ? workspaceState.querySelector("[data-seed-amount-select]") : null;
@@ -120,50 +112,15 @@
         return !overlay.classList.contains("hidden");
     }
 
-    function isToolsPanelOpen() {
-        var panel = getToolsPanel();
-        return !!panel && panel.dataset.open === "true";
-    }
-
     function syncBodyScrollLock() {
-        if (isPresentationOpen() || isToolsPanelOpen()) {
+        if (isPresentationOpen()) {
             document.body.classList.add("overflow-hidden");
         } else {
             document.body.classList.remove("overflow-hidden");
         }
     }
 
-    function openToolsPanel(trigger) {
-        var panel = getToolsPanel();
-        var backdrop = getToolsBackdrop();
-        if (!panel || !backdrop) {
-            return;
-        }
-
-        restoreFocusEl = trigger || restoreFocusEl;
-        panel.dataset.open = "true";
-        panel.classList.remove("translate-x-full", "pointer-events-none");
-        panel.classList.add("translate-x-0", "pointer-events-auto");
-        backdrop.classList.remove("hidden");
-        syncBodyScrollLock();
-    }
-
-    function closeToolsPanel() {
-        var panel = getToolsPanel();
-        var backdrop = getToolsBackdrop();
-        if (!panel || !backdrop) {
-            return;
-        }
-
-        panel.dataset.open = "false";
-        panel.classList.add("translate-x-full", "pointer-events-none");
-        panel.classList.remove("translate-x-0", "pointer-events-auto");
-        backdrop.classList.add("hidden");
-        syncBodyScrollLock();
-    }
-
     async function refreshWorkspace() {
-        closeToolsPanel();
         var response = await fetch(root.dataset.workspaceUrl, {
             headers: {
                 "X-Requested-With": "fetch",
@@ -245,7 +202,6 @@
     }
 
     async function openPresentation(trigger, state, payload) {
-        closeToolsPanel();
         restoreFocusEl = trigger || restoreFocusEl || document.getElementById("BTN_PRESENTATION_TOOL");
         overlay.classList.remove("hidden");
         overlay.setAttribute("aria-hidden", "false");
@@ -608,20 +564,6 @@
     });
 
     document.addEventListener("click", function (event) {
-        var toolsToggle = event.target.closest("[data-tools-toggle]");
-        if (toolsToggle) {
-            event.preventDefault();
-            openToolsPanel(toolsToggle);
-            return;
-        }
-
-        var toolsClose = event.target.closest("[data-tools-close]");
-        if (toolsClose) {
-            event.preventDefault();
-            closeToolsPanel();
-            return;
-        }
-
         var presentationButton = event.target.closest("[data-presentation-open]");
         if (presentationButton) {
             event.preventDefault();
@@ -670,23 +612,12 @@
         }
     });
 
-    document.addEventListener("click", function (event) {
-        var backdrop = getToolsBackdrop();
-        if (backdrop && event.target === backdrop) {
-            closeToolsPanel();
-        }
-    });
-
     document.addEventListener("keydown", function (event) {
         if (event.key !== "Escape") {
             return;
         }
         if (isPresentationOpen()) {
             closePresentation();
-            return;
-        }
-        if (isToolsPanelOpen()) {
-            closeToolsPanel();
         }
     });
 
