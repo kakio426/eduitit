@@ -47,7 +47,12 @@ class DutyTickerManager {
         this.bgmAudioEl = null;
         this.bgmFadeRaf = null;
         this.bgmStorageKey = 'dt-bgm-state-v1';
-        this.bgmVolumePercent = 100;
+        this.bgmDefaultVolumePercent = 140;
+        this.bgmGainBoost = 2.2;
+        this.bgmTrackVolumeCap = 0.72;
+        this.soundEffectGainBoost = 2.2;
+        this.soundEffectVolumeCap = 0.34;
+        this.bgmVolumePercent = this.bgmDefaultVolumePercent;
         this.boundBgmUnlock = null;
         this.bgmTrackPanelOpen = false;
         this.boundBgmPanelOutsideClick = null;
@@ -2621,7 +2626,7 @@ class DutyTickerManager {
                 this.bgmEnabledTrackKeys = new Set(this.bgmTrackOrder);
                 this.bgmLoopMode = 'all';
                 this.bgmTrackKey = this.bgmTrackOrder[0];
-                this.bgmVolumePercent = 100;
+                this.bgmVolumePercent = this.bgmDefaultVolumePercent;
                 this.renderBgmTrackRail();
                 this.updateBgmUI();
                 this.saveBgmState();
@@ -2637,7 +2642,7 @@ class DutyTickerManager {
 
             this.bgmEnabledTrackKeys = new Set(restoredTrackKeys);
             this.bgmLoopMode = parsed.loopMode === 'one' ? 'one' : 'all';
-            this.bgmVolumePercent = this.normalizeBgmVolumePercent(parsed.volumePercent, 100);
+            this.bgmVolumePercent = this.normalizeBgmVolumePercent(parsed.volumePercent, this.bgmDefaultVolumePercent);
 
             const requestedTrack = String(parsed.trackKey || '');
             if (validTrackSet.has(requestedTrack)) this.bgmTrackKey = requestedTrack;
@@ -2660,7 +2665,7 @@ class DutyTickerManager {
         return this.bgmTrackOrder.filter((key) => this.bgmEnabledTrackKeys.has(key));
     }
 
-    normalizeBgmVolumePercent(value, fallback = 100) {
+    normalizeBgmVolumePercent(value, fallback = this.bgmDefaultVolumePercent) {
         const numeric = Number(value);
         if (!Number.isFinite(numeric)) return fallback;
         const rounded = Math.round(numeric);
@@ -2668,13 +2673,22 @@ class DutyTickerManager {
     }
 
     getBgmMasterVolumeGain() {
-        return this.normalizeBgmVolumePercent(this.bgmVolumePercent, 100) / 100;
+        return this.normalizeBgmVolumePercent(this.bgmVolumePercent, this.bgmDefaultVolumePercent) / 100;
     }
 
     getBgmTrackTargetVolume(track) {
-        const baseVolume = Math.max(0.06, Math.min(0.28, Number(track?.volume) || 0.16));
+        const trackVolume = Number(track?.volume);
+        const baseVolume = Math.max(0.08, Math.min(0.32, Number.isFinite(trackVolume) ? trackVolume : 0.16));
         const gain = this.getBgmMasterVolumeGain();
-        return Math.max(0, Math.min(1, baseVolume * gain));
+        // Keep classroom TV output comfortably audible even on quieter speakers.
+        return Math.max(0, Math.min(this.bgmTrackVolumeCap, baseVolume * this.bgmGainBoost * gain));
+    }
+
+    getSoundEffectVolume(volume) {
+        const numeric = Number(volume);
+        const baseVolume = Number.isFinite(numeric) ? numeric : 0.2;
+        const masterGain = this.getBgmMasterVolumeGain();
+        return Math.max(0, Math.min(this.soundEffectVolumeCap, baseVolume * this.soundEffectGainBoost * masterGain));
     }
 
     setBgmVolumePercent(value, { persist = true, applyNow = true } = {}) {
@@ -2955,11 +2969,12 @@ class DutyTickerManager {
         if (!ctx) return;
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
+        const targetVolume = this.getSoundEffectVolume(vol);
         osc.connect(gain); gain.connect(ctx.destination);
         osc.type = waveType;
         osc.frequency.setValueAtTime(freq, start);
         gain.gain.setValueAtTime(0, start);
-        gain.gain.linearRampToValueAtTime(vol, start + 0.05);
+        gain.gain.linearRampToValueAtTime(targetVolume, start + 0.05);
         gain.gain.exponentialRampToValueAtTime(0.01, start + dur);
         osc.start(start); osc.stop(start + dur + 0.1);
     }
