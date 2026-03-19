@@ -42,7 +42,7 @@ class MessageboxViewTests(TestCase):
         self.assertContains(response, "x-text=\"'일정 수정하기'\"")
         self.assertContains(response, ':disabled="isLoadingMessageArchiveDetail"')
         self.assertContains(response, "자동으로 날짜 찾기")
-        self.assertContains(response, "바로 일정 넣기")
+        self.assertContains(response, "원문으로 일정 만들기")
         self.assertContains(response, "보관만 하기")
         self.assertContains(response, "직접 일정 추가")
         self.assertContains(response, "날짜 놓는 달력")
@@ -79,6 +79,7 @@ class MessageboxViewTests(TestCase):
         self.assertNotContains(response, "직접 일정 추가를 눌러 제목과 날짜만 바로 넣을 수 있어요.")
         self.assertNotContains(response, "날짜 후보 불러오는 중...")
         self.assertNotContains(response, "이 일정 삭제")
+        self.assertNotContains(response, "바로 일정 넣기")
 
     def test_home_card_is_enabled_for_any_authenticated_teacher_when_feature_is_on(self):
         card = build_messagebox_home_card_context(self.user)

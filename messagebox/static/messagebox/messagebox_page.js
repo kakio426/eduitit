@@ -136,7 +136,7 @@ function messageboxPage(options = {}) {
             this.applyArchiveDetailToMessageCapture = (detailPayload) => {
                 baseApplyArchiveDetail(detailPayload);
                 this.syncManualInputsFromPayload(detailPayload);
-                this.messageCaptureSourcePreviewOpen = false;
+                this.messageCaptureSourcePreviewOpen = true;
                 this.syncMessageCapturePlannerState();
                 this.focusMessageInput({ preserveStep: true, focusInput: false });
             };
@@ -698,7 +698,7 @@ function messageboxPage(options = {}) {
             }
 
             if (options.addManualCandidate) {
-                this.addManualMessageCaptureCandidate();
+                this.addManualMessageCaptureCandidate({ prefillFromSource: true });
             }
 
             this.focusMessageInput({ preserveStep: true, focusInput: false });
@@ -780,6 +780,73 @@ function messageboxPage(options = {}) {
         syncManualInputsFromPayload(payload) {
             this.messageCaptureManualDate = String((payload && payload.manual_date) || "").trim();
             this.messageCaptureManualNote = String((payload && payload.manual_note) || "").trim();
+        },
+
+        truncateMessageCaptureText(value, maxLength) {
+            const normalized = String(value || "").replace(/\s+/g, " ").trim();
+            const limit = Number(maxLength || 0);
+            if (!normalized || limit <= 0 || normalized.length <= limit) {
+                return normalized;
+            }
+            const trimmed = normalized.slice(0, Math.max(0, limit - 3)).trim();
+            return trimmed ? `${trimmed}...` : normalized.slice(0, limit);
+        },
+
+        messageCaptureSourceLines() {
+            return String(this.messageCaptureInputText || "")
+                .split(/\r?\n/)
+                .map((line) => line.replace(/\s+/g, " ").trim())
+                .filter(Boolean);
+        },
+
+        buildManualMessageCaptureDraftTitle() {
+            const sourceLine = this.messageCaptureSourceLines()[0] || "";
+            const cleanedSourceLine = sourceLine
+                .replace(/^[\-*]+?\s*/, "")
+                .replace(/^\[[^\]]+\]\s*/, "")
+                .replace(
+                    /^(?:20\d{2}[./-]\d{1,2}[./-]\d{1,2}|\d{1,2}[./-]\d{1,2}|\d{1,2}\s*월\s*\d{1,2}\s*일(?:\s*\([월화수목금토일]\))?)\s*/,
+                    "",
+                )
+                .trim();
+            const titleCandidates = [
+                cleanedSourceLine,
+                this.messageCaptureManualNote,
+                sourceLine,
+                this.messageCaptureSummaryText,
+            ];
+            for (const candidate of titleCandidates) {
+                const normalized = this.truncateMessageCaptureText(candidate, 80);
+                if (normalized) {
+                    return normalized;
+                }
+            }
+            return "메시지 확인";
+        },
+
+        buildManualMessageCaptureDraftSummary() {
+            const rawText = String(this.messageCaptureInputText || "").trim();
+            const manualNote = String(this.messageCaptureManualNote || "").trim();
+            const parts = [];
+            if (manualNote) {
+                parts.push(`메모: ${manualNote}`);
+            }
+            if (rawText) {
+                parts.push(rawText);
+            }
+            const combined = parts.join("\n\n").trim();
+            if (!combined || combined.length <= 5000) {
+                return combined;
+            }
+            const trimmed = combined.slice(0, 4997).trim();
+            return trimmed ? `${trimmed}...` : combined.slice(0, 5000);
+        },
+
+        buildManualMessageCaptureCandidateSeed() {
+            return {
+                title: this.buildManualMessageCaptureDraftTitle(),
+                summary: this.buildManualMessageCaptureDraftSummary(),
+            };
         },
 
         appendManualInputs(formData) {
@@ -898,12 +965,13 @@ function messageboxPage(options = {}) {
             this.messageCaptureWarnings = [];
             this.messageCaptureErrorText = "";
             this.messageCaptureStep = "confirm";
-            this.messageCaptureSourcePreviewOpen = false;
+            this.messageCaptureSourcePreviewOpen = true;
             this.messageCaptureSummaryText = "";
             this.messageCaptureCandidates = [];
             this.addManualMessageCaptureCandidate({
                 toast: false,
                 focusTitle: options.focusTitle !== false,
+                prefillFromSource: true,
             });
         },
 
@@ -917,7 +985,7 @@ function messageboxPage(options = {}) {
                     focusTitle: options.focusTitle !== false,
                 });
                 if (options.toast !== false) {
-                    window.showToast(options.toastMessage || "바로 일정 넣기로 열었어요.", "info");
+                    window.showToast(options.toastMessage || "원문을 보면서 일정 칸을 열었어요.", "info");
                 }
                 return true;
             }
@@ -936,7 +1004,7 @@ function messageboxPage(options = {}) {
                 focusTitle: options.focusTitle !== false,
             });
             if (options.toast !== false) {
-                window.showToast(options.toastMessage || "바로 일정 넣기로 열었어요.", "info");
+                window.showToast(options.toastMessage || "원문을 보면서 일정 칸을 열었어요.", "info");
             }
             return true;
         },
@@ -1146,11 +1214,12 @@ function messageboxPage(options = {}) {
 
         addManualMessageCaptureCandidate(options = {}) {
             const defaultDate = this.defaultManualCandidateDate();
+            const candidateSeed = options.prefillFromSource ? this.buildManualMessageCaptureCandidateSeed() : { title: "", summary: "" };
             const candidate = this.normalizeMessageCaptureCandidate({
                 candidate_id: `manual:${this.createMessageCaptureIdempotencyKey()}`,
                 kind: "event",
-                title: "",
-                summary: "",
+                title: candidateSeed.title || "",
+                summary: candidateSeed.summary || "",
                 start_time: `${defaultDate}T09:00`,
                 end_time: `${defaultDate}T10:00`,
                 is_all_day: false,
@@ -1266,7 +1335,7 @@ function messageboxPage(options = {}) {
             if (this.shouldSkipMessageCaptureParseRequest()) {
                 const switchedToManual = await this.startManualMessageCaptureFromInput({
                     skipSave: true,
-                    toastMessage: "날짜가 보여야 자동으로 읽을 수 있어요. 바로 일정 넣기로 열었어요.",
+                    toastMessage: "날짜가 보여야 자동으로 읽을 수 있어요. 원문을 보면서 일정 칸을 열었어요.",
                     errorToast: false,
                 });
                 if (switchedToManual) {
@@ -1293,7 +1362,7 @@ function messageboxPage(options = {}) {
             } catch (error) {
                 if (this.shouldAutoSwitchParseFailureToManual(error)) {
                     const switchedToManual = await this.startManualMessageCaptureFromInput({
-                        toastMessage: "바로 일정 넣기로 이어서 열었어요.",
+                        toastMessage: "원문을 보면서 일정 칸을 이어서 열었어요.",
                         errorToast: false,
                     });
                     if (switchedToManual) {
