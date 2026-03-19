@@ -302,7 +302,7 @@ class EduMaterialViewTests(TestCase):
         self.assertEqual(shared_titles, {matching.title})
 
     def test_main_view_renders_summary_and_tags(self):
-        EduMaterial.objects.create(
+        material = EduMaterial.objects.create(
             teacher=self.user,
             title="태그 보이는 자료",
             html_content="<html><body>tag</body></html>",
@@ -321,6 +321,8 @@ class EduMaterialViewTests(TestCase):
         self.assertContains(response, "팀별 활동으로 개념을 익히는 게임형 자료")
         self.assertContains(response, "#게임")
         self.assertContains(response, "자료 유형")
+        self.assertContains(response, 'data-board-preview-root')
+        self.assertContains(response, reverse("edu_materials:render", args=[material.id]))
 
     def test_run_view_requires_published_material(self):
         material = EduMaterial.objects.create(
