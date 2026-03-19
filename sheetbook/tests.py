@@ -1894,9 +1894,8 @@ class SheetbookGridApiTests(TestCase):
     @override_settings(
         SHEETBOOK_ENABLED=True,
         FEATURE_MESSAGE_CAPTURE_ENABLED=True,
-        FEATURE_MESSAGE_CAPTURE_ALLOWLIST_USERNAMES="sheetbook_api_owner",
     )
-    def test_calendar_tab_surfaces_message_capture_button_for_allowlisted_teacher(self):
+    def test_calendar_tab_surfaces_message_capture_button_when_message_capture_enabled(self):
         self.client.force_login(self.user)
         response = self.client.get(
             reverse("sheetbook:detail", kwargs={"pk": self.sheetbook.pk}),
@@ -1909,8 +1908,8 @@ class SheetbookGridApiTests(TestCase):
         self.assertContains(response, "메시지 붙여넣기")
         self.assertContains(response, "돌아오면 이 탭 열기")
 
-    @override_settings(SHEETBOOK_ENABLED=True)
-    def test_calendar_tab_hides_message_capture_button_for_non_allowlisted_teacher(self):
+    @override_settings(SHEETBOOK_ENABLED=True, FEATURE_MESSAGE_CAPTURE_ENABLED=False)
+    def test_calendar_tab_hides_message_capture_button_when_message_capture_disabled(self):
         self.client.force_login(self.user)
         response = self.client.get(
             reverse("sheetbook:detail", kwargs={"pk": self.sheetbook.pk}),

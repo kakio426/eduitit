@@ -3384,7 +3384,7 @@ def detail(request, pk):
         schedule_source_tab = _resolve_schedule_source_tab(sheetbook, tabs)
         try:
             from classcalendar.views import (
-                _build_main_view_context,
+                _build_calendar_page_context as _build_main_view_context,
                 _is_message_capture_enabled_for_user,
                 _resolve_sheetbook_context,
             )
