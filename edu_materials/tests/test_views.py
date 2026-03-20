@@ -323,6 +323,8 @@ class EduMaterialViewTests(TestCase):
         self.assertContains(response, "자료 유형")
         self.assertContains(response, 'data-board-preview-root')
         self.assertContains(response, reverse("edu_materials:render", args=[material.id]))
+        self.assertNotContains(response, "미리보기 확인 중")
+        self.assertNotContains(response, "다시 보기")
 
     def test_run_view_requires_published_material(self):
         material = EduMaterial.objects.create(

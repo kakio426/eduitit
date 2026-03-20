@@ -1,5 +1,4 @@
 {% extends 'base.html' %}
-{% load static %}
 
 {% block title %}교육 자료실{% endblock %}
 
@@ -68,7 +67,7 @@
     }
     .edu-materials-board-card {
         content-visibility: auto;
-        contain-intrinsic-size: 460px;
+        contain-intrinsic-size: 560px;
         background:
             linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.94)),
             rgba(255, 255, 255, 0.95);
@@ -126,25 +125,32 @@
     }
     .edu-materials-preview-root {
         --board-preview-scale: 0.28;
-        --board-preview-height: 202px;
-        min-height: var(--board-preview-height);
+        --board-preview-frame-width: calc(1280px * var(--board-preview-scale));
+        --board-preview-frame-height: calc(720px * var(--board-preview-scale));
         padding: 0.75rem 0.75rem 1rem;
     }
     .edu-materials-preview-root-inner {
         display: flex;
         align-items: flex-start;
         justify-content: center;
-        height: var(--board-preview-height);
     }
-    .edu-materials-preview-frame {
-        width: 1280px;
-        height: 720px;
+    .edu-materials-preview-frame-shell {
+        position: relative;
+        width: var(--board-preview-frame-width);
+        height: var(--board-preview-frame-height);
+        max-width: 100%;
         overflow: hidden;
         border-radius: 20px;
-        transform: translateZ(0) scale(var(--board-preview-scale));
-        transform-origin: top center;
         box-shadow: 0 22px 60px rgba(15, 23, 42, 0.42);
         background: #fff;
+    }
+    .edu-materials-preview-frame {
+        position: absolute;
+        inset: 0 auto auto 0;
+        width: 1280px;
+        height: 720px;
+        transform: translateZ(0) scale(var(--board-preview-scale));
+        transform-origin: top left;
     }
     .edu-materials-preview-frame iframe {
         display: block;
@@ -163,12 +169,6 @@
         align-items: center;
         justify-content: space-between;
         gap: 0.5rem;
-    }
-    @media (max-width: 767px) {
-        .edu-materials-preview-root {
-            --board-preview-scale: 0.22;
-            --board-preview-height: 158px;
-        }
     }
 </style>
 {% endblock %}
@@ -260,7 +260,7 @@
             </details>
         </div>
 
-        <div class="grid gap-8 lg:grid-cols-[minmax(0,460px)_1fr]">
+        <div class="grid gap-8 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
             <div class="edu-materials-panel rounded-[32px] p-6 md:p-8">
                 <div class="mb-6">
                     <h2 class="text-2xl font-black text-slate-900">자료 만들기 놀이터</h2>
@@ -343,7 +343,7 @@
 
                     {% if my_materials %}
                     <div class="edu-materials-board-wrap rounded-[32px] p-3 md:p-4">
-                        <div class="grid gap-4 xl:grid-cols-2">
+                        <div class="grid gap-5 2xl:grid-cols-2">
                         {% for material in my_materials %}
                         {% include 'edu_materials/includes/material_board_card.html' with material=material owner_controls=True %}
                         {% endfor %}
@@ -370,7 +370,7 @@
 
                     {% if shared_materials %}
                     <div class="edu-materials-board-wrap rounded-[32px] p-3 md:p-4">
-                        <div class="grid gap-4 xl:grid-cols-2">
+                        <div class="grid gap-5 2xl:grid-cols-2">
                         {% for material in shared_materials %}
                         {% include 'edu_materials/includes/material_board_card.html' with material=material owner_controls=False %}
                         {% endfor %}
@@ -429,7 +429,6 @@
     </div>
 </div>
 
-<script src="{% static 'edu_materials/material_frame_host.js' %}"></script>
 <script>
     (function () {
         const details = document.getElementById('material-search-filter');
@@ -456,11 +455,13 @@
 
         const syncBoardPreviewScale = (root) => {
             if (!root) return;
-            const width = root.clientWidth;
+            const styles = window.getComputedStyle(root);
+            const paddingLeft = parseFloat(styles.paddingLeft || '0');
+            const paddingRight = parseFloat(styles.paddingRight || '0');
+            const width = root.clientWidth - paddingLeft - paddingRight;
             if (!width) return;
             const scale = Math.min(1, width / 1280);
             root.style.setProperty('--board-preview-scale', scale.toFixed(4));
-            root.style.setProperty('--board-preview-height', `${(720 * scale).toFixed(2)}px`);
         };
 
         const syncAllBoardPreviewScales = () => {

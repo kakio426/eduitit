@@ -37,31 +37,7 @@
         </span>
     </div>
 
-    <div class="relative" data-material-frame-shell data-material-render-url="{{ render_url }}">
-        <div
-            class="pointer-events-none absolute inset-x-3 bottom-3 z-20 flex justify-end"
-            data-frame-status
-            data-tone="notice"
-            hidden
-        >
-            <div
-                class="pointer-events-auto w-full max-w-xs rounded-[22px] border border-white/15 bg-slate-950/90 p-3 text-white shadow-2xl shadow-slate-950/40 backdrop-blur"
-                data-frame-status-card
-            >
-                <div class="text-xs font-black" data-frame-status-title>미리보기 확인 중</div>
-                <p class="mt-1 text-xs leading-5 text-slate-200" data-frame-status-body></p>
-                <div class="mt-2 flex justify-end">
-                    <button
-                        type="button"
-                        class="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-white/20"
-                        data-frame-status-reload
-                    >
-                        다시 보기
-                    </button>
-                </div>
-            </div>
-        </div>
-
+    <div class="relative">
         <a href="{% if owner_controls %}{{ detail_url }}{% else %}{{ run_url }}{% endif %}" class="edu-materials-preview-card block">
             <div class="flex items-center justify-between gap-3 px-4 pt-4 text-[11px] font-semibold uppercase tracking-[0.24em] text-white/72">
                 <span>Live Preview</span>
@@ -78,16 +54,17 @@
 
             <div class="edu-materials-preview-root" data-board-preview-root>
                 <div class="edu-materials-preview-root-inner">
-                    <div class="edu-materials-preview-frame">
-                        <iframe
-                            title="{{ material.title }} 미리보기"
-                            src="{{ render_url }}"
-                            loading="lazy"
-                            referrerpolicy="no-referrer"
-                            tabindex="-1"
-                            aria-hidden="true"
-                            data-material-iframe
-                        ></iframe>
+                    <div class="edu-materials-preview-frame-shell">
+                        <div class="edu-materials-preview-frame">
+                            <iframe
+                                title="{{ material.title }} 미리보기"
+                                src="{{ render_url }}"
+                                loading="lazy"
+                                referrerpolicy="no-referrer"
+                                tabindex="-1"
+                                aria-hidden="true"
+                            ></iframe>
+                        </div>
                     </div>
                 </div>
             </div>
