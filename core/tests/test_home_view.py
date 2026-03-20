@@ -1,4 +1,5 @@
 import json
+from django.core.management import call_command
 from datetime import date, datetime, time, timedelta
 from unittest.mock import patch
 
@@ -2012,6 +2013,18 @@ class HomeV4ViewTest(TestCase):
         self.assertIn('studentGamesQrModal', content)
         self.assertIn('data-student-games-issue-url="/products/dutyticker/student-games/issue/"', content)
         self.assertNotIn('launch/?token=', content)
+
+    def test_v4_games_menu_includes_reversi_service_link(self):
+        call_command("ensure_fairy_games")
+        self._login('v4gamesreversi')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        nav_sections = response.context['home_v4_nav_sections']
+        games_section = next(section for section in nav_sections if section['key'] == 'games')
+
+        self.assertIn('리버시', {product.title for product in games_section['products']})
+        self.assertIn(f'href="{reverse("fairy_games:play_reversi")}"', content)
 
     def test_v4_section_menu_renders_icon_corner_favorite_badges(self):
         self._login('v4favoritebadge')

@@ -16,6 +16,21 @@ PUBLIC_SERVICE_TITLE_BY_ROUTE = {
     "sheetbook:index": SHEETBOOK_PUBLIC_NAME,
 }
 
+CLASS_ACTIVITY_ROUTE_NAMES = {
+    "chess:index",
+    "chess:play",
+    "janggi:index",
+    "janggi:play",
+    "fairy_games:play_dobutsu",
+    "fairy_games:play_cfour",
+    "fairy_games:play_isolation",
+    "fairy_games:play_ataxx",
+    "fairy_games:play_breakthrough",
+    "fairy_games:play_reversi",
+    "reflex_game:main",
+    "yut_game",
+}
+
 HOME_MAIN_SECTIONS = [
     {
         "key": "collect_sign",
@@ -94,6 +109,18 @@ HOME_SECTION_BY_ROUTE = {
     "seed_quiz:landing": "class_ops",
     "ppobgi:main": "class_ops",
     "artclass:main": "class_ops",
+    "chess:index": "class_activity",
+    "chess:play": "class_activity",
+    "janggi:index": "class_activity",
+    "janggi:play": "class_activity",
+    "fairy_games:play_dobutsu": "class_activity",
+    "fairy_games:play_cfour": "class_activity",
+    "fairy_games:play_isolation": "class_activity",
+    "fairy_games:play_ataxx": "class_activity",
+    "fairy_games:play_breakthrough": "class_activity",
+    "fairy_games:play_reversi": "class_activity",
+    "reflex_game:main": "class_activity",
+    "yut_game": "class_activity",
     "studentmbti:start": "refresh",
     "ssambti:main": "refresh",
     "fortune:landing": "refresh",
@@ -126,10 +153,12 @@ HOME_SECTION_KEYWORDS = [
     ("윷놀이", "class_activity"),
     ("체스", "class_activity"),
     ("장기", "class_activity"),
+    ("리버시", "class_activity"),
     ("커넥트 포", "class_activity"),
     ("이솔레이션", "class_activity"),
     ("아택스", "class_activity"),
     ("브레이크스루", "class_activity"),
+    ("순발력", "class_activity"),
     ("bti", "refresh"),
     ("운세", "refresh"),
     ("사주", "refresh"),

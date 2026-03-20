@@ -169,6 +169,18 @@ class ServiceLauncherContextTests(TestCase):
         titles = [item["title"] for item in payload]
         self.assertIn("문서 미리보기실", titles)
 
+    def test_reversi_is_auto_included_in_service_launcher_payload(self):
+        call_command("ensure_fairy_games")
+
+        context = search_products(self._request())
+        payload = json.loads(context["service_launcher_json"])
+
+        item = next(item for item in payload if item["title"] == "리버시")
+        self.assertEqual(item["group_key"], "class_activity")
+        self.assertEqual(item["group_title"], "수업·학급 운영")
+        self.assertEqual(item["href"], reverse("fairy_games:play_reversi"))
+        self.assertFalse(item["is_external"])
+
     @override_settings(GLOBAL_SEARCH_ENABLED=False)
     def test_service_launcher_json_absent_when_disabled(self):
         context = search_products(self._request())

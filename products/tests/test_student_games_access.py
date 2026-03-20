@@ -122,6 +122,9 @@ class StudentGamesAccessTests(TestCase):
         self.assertIn("리버시", titles)
         self.assertIn("탭 순발력 챌린지", titles)
         self.assertIn("교실 윷놀이", titles)
+        href_map = {game["title"]: game["href"] for game in games}
+        self.assertEqual(href_map["리버시"], reverse("fairy_games:play_reversi"))
+        self.assertEqual(href_map["동물 장기"], reverse("fairy_games:play_dobutsu"))
 
         for game in games:
             route_response = self.student_client.get(game["href"])

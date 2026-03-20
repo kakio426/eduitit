@@ -46,6 +46,7 @@ from .active_classroom import (
 )
 from .service_launcher import (
     CALENDAR_HUB_PUBLIC_NAME,
+    CLASS_ACTIVITY_ROUTE_NAMES,
     HOME_AUXILIARY_SECTIONS,
     HOME_MAIN_SECTIONS,
     HOME_SECTION_FALLBACK_BY_TYPE,
@@ -420,6 +421,18 @@ PRODUCT_CONTEXT_CHIP_OVERRIDES = {
     "reservations:landing": ["일정 잡을 때", "PC·모바일", "개별·소그룹", "5분 안팎"],
     "hwpxchat:main": ["수업 준비", "PC 권장", "교사 1인", "10분 안팎"],
     "tts_announce": ["교시 방송", "PC·모바일", "학급 전체", "5분 전"],
+    "chess:index": ["수업 중 활동", "모둠·전체", "교실 화면", "5분 안팎"],
+    "chess:play": ["수업 중 활동", "모둠·전체", "교실 화면", "5분 안팎"],
+    "janggi:index": ["수업 중 활동", "모둠·전체", "교실 화면", "5분 안팎"],
+    "janggi:play": ["수업 중 활동", "모둠·전체", "교실 화면", "5분 안팎"],
+    "fairy_games:play_dobutsu": ["수업 중 활동", "모둠·전체", "교실 화면", "5분 안팎"],
+    "fairy_games:play_cfour": ["수업 중 활동", "모둠·전체", "교실 화면", "5분 안팎"],
+    "fairy_games:play_isolation": ["수업 중 활동", "모둠·전체", "교실 화면", "5분 안팎"],
+    "fairy_games:play_ataxx": ["수업 중 활동", "모둠·전체", "교실 화면", "5분 안팎"],
+    "fairy_games:play_breakthrough": ["수업 중 활동", "모둠·전체", "교실 화면", "5분 안팎"],
+    "fairy_games:play_reversi": ["수업 중 활동", "모둠·전체", "교실 화면", "5분 안팎"],
+    "reflex_game:main": ["수업 중 활동", "모둠·전체", "교실 화면", "5분 안팎"],
+    "yut_game": ["수업 중 활동", "모둠·전체", "교실 화면", "5분 안팎"],
 }
 
 PUBLIC_EXPERIENCE_ROUTE_NAMES = {
@@ -427,7 +440,7 @@ PUBLIC_EXPERIENCE_ROUTE_NAMES = {
     "janggi:play",
     "reflex_game:main",
     "yut_game",
-}
+} | CLASS_ACTIVITY_ROUTE_NAMES
 
 FILE_REQUIRED_ROUTE_NAMES = {
     "noticegen:main",
@@ -440,7 +453,7 @@ STUDENT_PARTICIPATION_ROUTE_NAMES = {
     "janggi:play",
     "reflex_game:main",
     "yut_game",
-}
+} | CLASS_ACTIVITY_ROUTE_NAMES
 
 HOME_SHORTCUT_SPECS = [
     {
@@ -2230,7 +2243,7 @@ def _resolve_catalog_scenario_key(product):
         return "today_ops"
     if route_name in {"collect:landing", "consent:landing", "signatures:landing", "handoff:landing"} or service_type == "collect_sign":
         return "collect"
-    if service_type == "game":
+    if service_type == "game" or route_name in CLASS_ACTIVITY_ROUTE_NAMES:
         return "activity"
     if service_type == "counsel":
         return "counsel"
