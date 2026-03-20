@@ -521,6 +521,41 @@ class HappySeedViewTests(TestCase):
         self.assertEqual(payload["data"]["presentation"]["student_name"], self.student.name)
         self.assertIn(payload["data"]["presentation"]["result_kind"], {"WIN", "LOSE"})
 
+    def test_bloom_draw_redirect_primes_pending_presentation_overlay(self):
+        self.client.login(username="teacher2", password="pw12345")
+        self.student.ticket_count = 1
+        self.student.save(update_fields=["ticket_count"])
+        HSPrize.objects.create(
+            classroom=self.classroom,
+            name="깜짝 선물",
+            win_rate_percent=100,
+            total_quantity=None,
+            remaining_quantity=None,
+        )
+
+        draw_url = reverse("happy_seed:bloom_draw", kwargs={"student_id": self.student.id})
+        request_id = "b73c0d7f-f31c-4ece-aaaf-810592bfc8fe"
+        res = self.client.post(draw_url, {"request_id": request_id})
+
+        self.assertEqual(res.status_code, 302)
+        self.assertRedirects(
+            res,
+            reverse("happy_seed:classroom_detail", kwargs={"classroom_id": self.classroom.id}),
+            fetch_redirect_response=False,
+        )
+
+        session = self.client.session
+        pending = session.get("happy_seed.pending_presentation")
+        self.assertIsNotNone(pending)
+        self.assertEqual(pending["classroom_id"], str(self.classroom.id))
+        self.assertEqual(pending["presentation"]["student_name"], self.student.name)
+
+        detail_res = self.client.get(reverse("happy_seed:classroom_detail", kwargs={"classroom_id": self.classroom.id}))
+        self.assertEqual(detail_res.status_code, 200)
+        self.assertContains(detail_res, "HAPPY_SEED_PENDING_PRESENTATION")
+        self.assertContains(detail_res, self.student.name)
+        self.assertNotIn("happy_seed.pending_presentation", self.client.session)
+
     def test_api_grant_and_execute_draw_rejects_invalid_amount(self):
         self.client.login(username="teacher2", password="pw12345")
         url = reverse("happy_seed:api_grant_and_execute_draw", kwargs={"classroom_id": self.classroom.id})

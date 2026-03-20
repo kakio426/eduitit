@@ -14,8 +14,11 @@
     var rewardEl = document.getElementById("PRESENTATION_REWARD");
     var spinnerEl = document.getElementById("PRESENTATION_SPINNER");
     var footerEl = document.getElementById("PRESENTATION_FOOTER");
+    var resultBadgeEl = document.getElementById("PRESENTATION_RESULT_BADGE");
     var nextButton = document.getElementById("BTN_PRESENTATION_NEXT");
     var restoreFocusEl = null;
+    var lastResultSoundPayload = null;
+    var audioContext = null;
     var storagePrefix = "happy-seed:" + (root.dataset.classroomId || "default");
     var seedAmountStorageKey = storagePrefix + ":seed-amount";
     var actionModeStorageKey = storagePrefix + ":action-mode";
@@ -45,6 +48,126 @@
             return true;
         }
         return false;
+    }
+
+    function getPendingPresentationPayload() {
+        var script = document.getElementById("HAPPY_SEED_PENDING_PRESENTATION");
+        if (!script) {
+            return null;
+        }
+        try {
+            return JSON.parse(script.textContent || "null");
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function normalizePresentationPayload(payload, fallbackResultKind) {
+        var data = payload || {};
+        var resultKind = data.resultKind || data.result_kind || fallbackResultKind || "";
+        var accent =
+            data.accent || (resultKind === "WIN" ? "win" : resultKind === "LOSE" ? "grow" : "idle");
+
+        return {
+            accent: accent,
+            resultKind: resultKind,
+            kicker:
+                data.kicker ||
+                (resultKind === "WIN"
+                    ? "당첨 발표"
+                    : resultKind === "LOSE"
+                      ? "다음 꽃 준비"
+                      : "발표 모드"),
+            resultLabel:
+                data.resultLabel ||
+                data.result_label ||
+                (resultKind === "WIN" ? "당첨" : resultKind === "LOSE" ? "씨앗 성장" : ""),
+            icon:
+                data.icon ||
+                (resultKind === "WIN" ? "🌸" : resultKind === "LOSE" ? "🌱" : accent === "loading" ? "🎯" : "✨"),
+            headline: data.headline || "발표 준비",
+            body: data.body || "학생 카드의 큰 버튼을 누르면 결과가 큰 화면으로 바로 전환됩니다.",
+            rewardName: data.rewardName || data.reward_name || "",
+            footer:
+                data.footer ||
+                "나의 작은 행동 하나하나가 나의 미래, 너의 미래, 우리 모두의 미래를 행복으로 바꿉니다.",
+            studentName: data.studentName || data.student_name || "",
+        };
+    }
+
+    function getAudioContext() {
+        var AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextCtor) {
+            return null;
+        }
+        if (!audioContext) {
+            audioContext = new AudioContextCtor();
+        }
+        return audioContext;
+    }
+
+    async function playToneSequence(sequence) {
+        var context = getAudioContext();
+        if (!context || !sequence || !sequence.length) {
+            return false;
+        }
+
+        if (context.state === "suspended") {
+            await context.resume();
+        }
+
+        var startAt = context.currentTime + 0.02;
+        sequence.forEach(function (item, index) {
+            var oscillator = context.createOscillator();
+            var gain = context.createGain();
+            var offset = item.offset || index * 0.16;
+            var duration = item.duration || 0.14;
+            var volume = item.volume || 0.05;
+
+            oscillator.type = item.type || "triangle";
+            oscillator.frequency.setValueAtTime(item.frequency, startAt + offset);
+
+            gain.gain.setValueAtTime(0.0001, startAt + offset);
+            gain.gain.exponentialRampToValueAtTime(volume, startAt + offset + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, startAt + offset + duration);
+
+            oscillator.connect(gain);
+            gain.connect(context.destination);
+            oscillator.start(startAt + offset);
+            oscillator.stop(startAt + offset + duration + 0.02);
+        });
+
+        return true;
+    }
+
+    async function playPresentationSound(payload) {
+        var data = normalizePresentationPayload(payload, payload && payload.resultKind);
+        var sequence;
+
+        if (data.accent === "win") {
+            sequence = [
+                { frequency: 659.25, duration: 0.16, volume: 0.05 },
+                { frequency: 783.99, offset: 0.14, duration: 0.18, volume: 0.06 },
+                { frequency: 987.77, offset: 0.3, duration: 0.28, volume: 0.07, type: "sine" },
+            ];
+        } else if (data.accent === "grow") {
+            sequence = [
+                { frequency: 392.0, duration: 0.18, volume: 0.045 },
+                { frequency: 493.88, offset: 0.16, duration: 0.18, volume: 0.05 },
+                { frequency: 587.33, offset: 0.32, duration: 0.24, volume: 0.055, type: "sine" },
+            ];
+        } else {
+            sequence = [
+                { frequency: 523.25, duration: 0.14, volume: 0.04 },
+                { frequency: 659.25, offset: 0.16, duration: 0.18, volume: 0.045 },
+            ];
+        }
+
+        try {
+            return await playToneSequence(sequence);
+        } catch (error) {
+            return false;
+        }
     }
 
     function getWorkspaceState() {
@@ -153,14 +276,16 @@
     }
 
     function setPresentationState(state, payload) {
-        var data = payload || {};
+        var data =
+            state === "loading" ? normalizePresentationPayload(payload || {}, "") : normalizePresentationPayload(payload || {}, "");
         var isLoading = state === "loading";
         var isResult = state === "result";
         var accent = data.accent || state || "idle";
 
         overlay.dataset.accent = accent;
+        overlay.dataset.state = state || "idle";
 
-        kickerEl.textContent = isLoading ? "추첨 중" : isResult ? "추첨 결과" : "발표 모드";
+        kickerEl.textContent = isLoading ? "추첨 중" : data.kicker || "발표 모드";
         iconEl.textContent = data.icon || (accent === "win" ? "🌸" : accent === "grow" ? "🌱" : "✨");
         headlineEl.textContent = data.headline || "발표 준비";
         bodyEl.textContent = data.body || "학생 카드의 큰 버튼을 누르면 결과가 큰 화면으로 바로 전환됩니다.";
@@ -175,8 +300,17 @@
             rewardEl.classList.add("hidden");
         }
 
+        if (resultBadgeEl && isResult && data.resultLabel) {
+            resultBadgeEl.textContent = data.resultLabel;
+            resultBadgeEl.classList.remove("hidden");
+        } else if (resultBadgeEl) {
+            resultBadgeEl.textContent = "";
+            resultBadgeEl.classList.add("hidden");
+        }
+
         spinnerEl.classList.toggle("hidden", !isLoading);
         nextButton.classList.toggle("hidden", !isResult);
+        lastResultSoundPayload = isResult ? data : null;
     }
 
     async function enterFullscreen() {
@@ -394,15 +528,9 @@
                 }),
             });
 
-            var presentation = data.presentation || {};
-            setPresentationState("result", {
-                accent: presentation.accent || (data.result === "WIN" ? "win" : "grow"),
-                icon: data.result === "WIN" ? "🌸" : "🌱",
-                headline: presentation.headline,
-                body: presentation.body,
-                rewardName: presentation.reward_name,
-                footer: presentation.footer,
-            });
+            var normalizedPresentation = normalizePresentationPayload(data.presentation || {}, data.result);
+            setPresentationState("result", normalizedPresentation);
+            playPresentationSound(normalizedPresentation);
             showToast(studentName + " 학생 추첨 결과를 발표 모드로 전환했습니다.", "success");
             refreshWorkspace().catch(function (error) {
                 showToast(error.message || "운영 화면 새로고침에 실패했습니다.", "error");
@@ -451,15 +579,9 @@
                 }),
             });
 
-            var presentation = data.presentation || {};
-            setPresentationState("result", {
-                accent: presentation.accent || (data.result === "WIN" ? "win" : "grow"),
-                icon: data.result === "WIN" ? "🌸" : "🌱",
-                headline: presentation.headline,
-                body: presentation.body,
-                rewardName: presentation.reward_name,
-                footer: presentation.footer,
-            });
+            var normalizedPresentation = normalizePresentationPayload(data.presentation || {}, data.result);
+            setPresentationState("result", normalizedPresentation);
+            playPresentationSound(normalizedPresentation);
             showToast(
                 studentName + " 학생에게 씨앗 " + seedAmount + "개 지급 후 바로 추첨했습니다.",
                 "success"
@@ -567,12 +689,23 @@
         var presentationButton = event.target.closest("[data-presentation-open]");
         if (presentationButton) {
             event.preventDefault();
-            openPresentation(presentationButton, "idle", {
-                accent: "idle",
-                icon: "✨",
-                headline: "발표 준비",
-                body: "학생 카드의 큰 버튼을 누르면 결과가 큰 화면으로 바로 전환됩니다.",
-            });
+            var previewPresentation = normalizePresentationPayload(
+                {
+                    accent: "idle",
+                    icon: "✨",
+                    headline: "발표 준비",
+                    body: "학생 카드의 큰 버튼을 누르면 결과가 큰 화면으로 바로 전환됩니다.",
+                },
+                ""
+            );
+            openPresentation(presentationButton, "idle", previewPresentation);
+            return;
+        }
+
+        var replaySoundButton = event.target.closest("[data-presentation-replay-sound]");
+        if (replaySoundButton) {
+            event.preventDefault();
+            playPresentationSound(lastResultSoundPayload || { accent: overlay.dataset.accent || "idle" });
             return;
         }
 
@@ -622,4 +755,16 @@
     });
 
     syncWorkspaceControls();
+
+    var pendingPresentation = getPendingPresentationPayload();
+    if (pendingPresentation) {
+        var normalizedPendingPresentation = normalizePresentationPayload(pendingPresentation, pendingPresentation.resultKind);
+        openPresentation(null, "result", normalizedPendingPresentation)
+            .then(function () {
+                playPresentationSound(normalizedPendingPresentation);
+            })
+            .catch(function () {
+                playPresentationSound(normalizedPendingPresentation);
+            });
+    }
 })();

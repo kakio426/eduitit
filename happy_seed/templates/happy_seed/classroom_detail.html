@@ -7,11 +7,43 @@
         pointer-events: none;
     }
 
+    .happy-seed-orb {
+        position: absolute;
+        border-radius: 9999px;
+        filter: blur(18px);
+        opacity: 0.55;
+        animation: happy-seed-orb-float 9s ease-in-out infinite;
+    }
+
+    .happy-seed-result-card {
+        box-shadow: 0 24px 80px rgba(15, 23, 42, 0.36);
+    }
+
+    #HAPPY_SEED_PRESENTATION[data-state="result"] .happy-seed-result-card {
+        animation: happy-seed-card-pop 420ms ease-out;
+    }
+
+    #HAPPY_SEED_PRESENTATION[data-state="result"] [data-presentation-badge] {
+        animation: happy-seed-badge-pulse 1.4s ease-in-out infinite;
+    }
+
     #HAPPY_SEED_PRESENTATION[data-accent="win"] .happy-seed-stage {
         background:
             radial-gradient(circle at top, rgba(251, 207, 232, 0.28), transparent 34%),
             radial-gradient(circle at bottom, rgba(253, 186, 116, 0.18), transparent 30%),
             linear-gradient(180deg, #34113f 0%, #1f1235 45%, #12091d 100%);
+    }
+
+    #HAPPY_SEED_PRESENTATION[data-accent="win"] .happy-seed-orb--a {
+        background: rgba(251, 113, 133, 0.55);
+    }
+
+    #HAPPY_SEED_PRESENTATION[data-accent="win"] .happy-seed-orb--b {
+        background: rgba(244, 114, 182, 0.4);
+    }
+
+    #HAPPY_SEED_PRESENTATION[data-accent="win"] .happy-seed-orb--c {
+        background: rgba(251, 191, 36, 0.35);
     }
 
     #HAPPY_SEED_PRESENTATION[data-accent="grow"] .happy-seed-stage {
@@ -21,12 +53,76 @@
             linear-gradient(180deg, #0f2f2a 0%, #0d1f1d 45%, #091211 100%);
     }
 
+    #HAPPY_SEED_PRESENTATION[data-accent="grow"] .happy-seed-orb--a {
+        background: rgba(74, 222, 128, 0.45);
+    }
+
+    #HAPPY_SEED_PRESENTATION[data-accent="grow"] .happy-seed-orb--b {
+        background: rgba(45, 212, 191, 0.35);
+    }
+
+    #HAPPY_SEED_PRESENTATION[data-accent="grow"] .happy-seed-orb--c {
+        background: rgba(56, 189, 248, 0.3);
+    }
+
     #HAPPY_SEED_PRESENTATION[data-accent="idle"] .happy-seed-stage,
     #HAPPY_SEED_PRESENTATION[data-accent="loading"] .happy-seed-stage {
         background:
             radial-gradient(circle at top, rgba(192, 132, 252, 0.22), transparent 34%),
             radial-gradient(circle at bottom, rgba(96, 165, 250, 0.16), transparent 30%),
             linear-gradient(180deg, #1b2245 0%, #161a35 45%, #0e1020 100%);
+    }
+
+    #HAPPY_SEED_PRESENTATION[data-accent="idle"] .happy-seed-orb--a,
+    #HAPPY_SEED_PRESENTATION[data-accent="loading"] .happy-seed-orb--a {
+        background: rgba(168, 85, 247, 0.45);
+    }
+
+    #HAPPY_SEED_PRESENTATION[data-accent="idle"] .happy-seed-orb--b,
+    #HAPPY_SEED_PRESENTATION[data-accent="loading"] .happy-seed-orb--b {
+        background: rgba(59, 130, 246, 0.34);
+    }
+
+    #HAPPY_SEED_PRESENTATION[data-accent="idle"] .happy-seed-orb--c,
+    #HAPPY_SEED_PRESENTATION[data-accent="loading"] .happy-seed-orb--c {
+        background: rgba(34, 211, 238, 0.24);
+    }
+
+    @keyframes happy-seed-card-pop {
+        0% {
+            opacity: 0;
+            transform: translateY(18px) scale(0.97);
+        }
+        100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    @keyframes happy-seed-badge-pulse {
+        0%, 100% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.06);
+        }
+    }
+
+    @keyframes happy-seed-orb-float {
+        0%, 100% {
+            transform: translate3d(0, 0, 0);
+        }
+        50% {
+            transform: translate3d(0, -18px, 0);
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .happy-seed-orb,
+        .happy-seed-result-card,
+        #HAPPY_SEED_PRESENTATION[data-state="result"] [data-presentation-badge] {
+            animation: none !important;
+        }
     }
 </style>
 {% endblock %}
@@ -59,16 +155,32 @@
         <div id="happy-seed-workspace">
             {% include 'happy_seed/partials/classroom_workspace.html' %}
         </div>
+        {% if pending_presentation %}
+        {{ pending_presentation|json_script:"HAPPY_SEED_PENDING_PRESENTATION" }}
+        {% endif %}
     </div>
 </section>
 
 <div id="HAPPY_SEED_PRESENTATION"
      class="hidden fixed inset-0 z-[150] text-white"
      data-accent="idle"
+     data-state="idle"
      aria-hidden="true">
     <div class="happy-seed-stage absolute inset-0"></div>
+    <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+        <div class="happy-seed-orb happy-seed-orb--a left-[10%] top-[14%] h-40 w-40 sm:h-52 sm:w-52"></div>
+        <div class="happy-seed-orb happy-seed-orb--b bottom-[18%] right-[12%] h-48 w-48 sm:h-60 sm:w-60"></div>
+        <div class="happy-seed-orb happy-seed-orb--c left-1/2 top-[58%] h-36 w-36 -translate-x-1/2 sm:h-44 sm:w-44"></div>
+    </div>
     <div class="relative flex min-h-screen flex-col px-5 py-6 sm:px-8 sm:py-8">
-        <div class="flex justify-end">
+        <div class="flex flex-wrap justify-end gap-2">
+            <button type="button"
+                    id="BTN_PRESENTATION_SOUND"
+                    data-presentation-replay-sound
+                    class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-bold text-white/90 backdrop-blur hover:bg-white/20">
+                <i class="fa-solid fa-volume-high"></i>
+                소리 다시 듣기
+            </button>
             <button type="button"
                     data-presentation-close
                     class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-bold text-white/90 backdrop-blur hover:bg-white/20">
@@ -79,30 +191,36 @@
         <div class="flex flex-1 items-center justify-center">
             <div class="mx-auto flex w-full max-w-4xl flex-col items-center text-center">
                 <p id="PRESENTATION_KICKER" class="text-sm font-bold uppercase tracking-[0.35em] text-white/60">발표 모드</p>
-                <div id="PRESENTATION_ICON" class="mt-8 text-7xl sm:text-8xl">✨</div>
-                <h2 id="PRESENTATION_HEADLINE" class="mt-8 text-4xl font-black tracking-tight sm:text-6xl">발표 준비</h2>
-                <p id="PRESENTATION_BODY" class="mt-5 max-w-2xl text-lg leading-8 text-white/80 sm:text-2xl">
-                    학생 카드의 큰 버튼을 누르면 결과가 큰 화면으로 바로 전환됩니다.
-                </p>
-                <div id="PRESENTATION_REWARD"
-                     class="mt-8 hidden rounded-full border border-white/15 bg-white/10 px-6 py-3 text-lg font-bold text-white shadow-lg backdrop-blur">
+                <div class="happy-seed-result-card mt-8 w-full rounded-[2.5rem] border border-white/10 bg-white/10 px-6 py-8 backdrop-blur-xl sm:px-10 sm:py-12">
+                    <div id="PRESENTATION_RESULT_BADGE"
+                         data-presentation-badge
+                         class="mx-auto hidden w-fit rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.3em] text-white/85">
+                    </div>
+                    <div id="PRESENTATION_ICON" class="mt-6 text-7xl sm:text-8xl">✨</div>
+                    <h2 id="PRESENTATION_HEADLINE" class="mt-8 text-4xl font-black tracking-tight sm:text-6xl">발표 준비</h2>
+                    <p id="PRESENTATION_BODY" class="mx-auto mt-5 max-w-2xl text-lg leading-8 text-white/80 sm:text-2xl">
+                        학생 카드의 큰 버튼을 누르면 결과가 큰 화면으로 바로 전환됩니다.
+                    </p>
+                    <div id="PRESENTATION_REWARD"
+                         class="mx-auto mt-8 hidden w-fit rounded-full border border-white/15 bg-white/10 px-6 py-3 text-lg font-bold text-white shadow-lg backdrop-blur">
+                    </div>
+                    <div id="PRESENTATION_SPINNER" class="mt-8 hidden">
+                        <div class="mx-auto h-16 w-16 animate-spin rounded-full border-4 border-white/20 border-t-white"></div>
+                    </div>
+                    <p id="PRESENTATION_FOOTER" class="mx-auto mt-12 max-w-2xl text-sm leading-7 text-white/55 sm:text-base">
+                        나의 작은 행동 하나하나가 나의 미래, 너의 미래, 우리 모두의 미래를 행복으로 바꿉니다.
+                    </p>
                 </div>
-                <div id="PRESENTATION_SPINNER" class="mt-8 hidden">
-                    <div class="mx-auto h-16 w-16 animate-spin rounded-full border-4 border-white/20 border-t-white"></div>
-                </div>
-                <p id="PRESENTATION_FOOTER" class="mt-12 max-w-2xl text-sm leading-7 text-white/55 sm:text-base">
-                    나의 작은 행동 하나하나가 나의 미래, 너의 미래, 우리 모두의 미래를 행복으로 바꿉니다.
-                </p>
                 <div class="mt-10 flex flex-wrap justify-center gap-3">
                     <button type="button"
                             id="BTN_PRESENTATION_NEXT"
                             data-presentation-next
-                            class="hidden rounded-full bg-white px-6 py-3 text-sm font-black text-slate-900 shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl">
+                            class="hidden w-full rounded-full bg-white px-6 py-3 text-sm font-black text-slate-900 shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl sm:w-auto">
                         다음 학생 준비
                     </button>
                     <button type="button"
                             data-presentation-close
-                            class="rounded-full border border-white/20 bg-white/10 px-6 py-3 text-sm font-black text-white backdrop-blur transition hover:bg-white/20">
+                            class="w-full rounded-full border border-white/20 bg-white/10 px-6 py-3 text-sm font-black text-white backdrop-blur transition hover:bg-white/20 sm:w-auto">
                         운영으로 복귀
                     </button>
                 </div>

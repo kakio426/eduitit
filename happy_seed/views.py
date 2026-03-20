@@ -53,6 +53,7 @@ from .services.engine import (
 )
 
 logger = logging.getLogger("happy_seed.views")
+PENDING_PRESENTATION_SESSION_KEY = "happy_seed.pending_presentation"
 
 
 def _request_id(request):
@@ -283,15 +284,21 @@ def _build_draw_presentation_payload(draw, student):
         headline = "축하합니다!"
         body = f"{student.name} 학생이 오늘 꽃을 피웠어요."
         accent = "win"
+        kicker = "당첨 발표"
+        result_label = "당첨"
     else:
         headline = "씨앗이 자랐어요!"
         body = f"{student.name} 학생에게 씨앗 +1이 적립되었어요."
         accent = "grow"
+        kicker = "다음 꽃 준비"
+        result_label = "씨앗 성장"
 
     return {
         "mode": "result",
         "result_kind": "WIN" if draw.is_win else "LOSE",
         "student_name": student.name,
+        "kicker": kicker,
+        "result_label": result_label,
         "headline": headline,
         "body": body,
         "reward_name": draw.prize.name if draw.prize else "",
@@ -325,6 +332,27 @@ def _build_draw_api_payload(draw, student):
         },
         "presentation": _build_draw_presentation_payload(draw, student),
     }
+
+
+def _store_pending_presentation(request, classroom, draw, student):
+    request.session[PENDING_PRESENTATION_SESSION_KEY] = {
+        "classroom_id": str(classroom.id),
+        "presentation": _build_draw_presentation_payload(draw, student),
+    }
+    request.session.modified = True
+
+
+def _pop_pending_presentation(request, classroom):
+    pending = request.session.get(PENDING_PRESENTATION_SESSION_KEY)
+    if not isinstance(pending, dict):
+        return None
+
+    if pending.get("classroom_id") != str(classroom.id):
+        return None
+
+    request.session.pop(PENDING_PRESENTATION_SESSION_KEY, None)
+    request.session.modified = True
+    return pending.get("presentation")
 
 
 def _apply_seed_quiz_retro_rewards_for_student(student) -> int:
@@ -649,7 +677,9 @@ def classroom_create(request):
 @login_required
 def classroom_detail(request, classroom_id):
     classroom = get_teacher_classroom(request, classroom_id)
-    return render(request, "happy_seed/classroom_detail.html", _build_classroom_workspace_context(classroom))
+    context = _build_classroom_workspace_context(classroom)
+    context["pending_presentation"] = _pop_pending_presentation(request, classroom)
+    return render(request, "happy_seed/classroom_detail.html", context)
 
 
 @login_required
@@ -1709,9 +1739,10 @@ def bloom_draw(request, student_id):
 
     try:
         draw = execute_bloom_draw(student, classroom, request.user, request_id)
+        _store_pending_presentation(request, classroom, draw, student)
         messages.success(
             request,
-            f"{student.name} 추첨이 완료되었습니다. 운영 화면에서 현재 상태를 확인해 주세요.",
+            f"{student.name} 추첨 결과를 큰 화면으로 바로 다시 보여줍니다.",
         )
         return redirect("happy_seed:classroom_detail", classroom_id=classroom.id)
     except ConsentRequiredError:

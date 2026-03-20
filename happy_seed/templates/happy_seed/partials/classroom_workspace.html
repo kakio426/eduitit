@@ -4,23 +4,23 @@
      data-has-rewards="{% if has_rewards %}true{% else %}false{% endif %}"
      data-default-seed-amount="{{ default_seed_amount }}"
      data-default-action-mode="{{ action_mode_default }}">
-    <section class="sticky top-28 z-20 rounded-[2rem] border border-white/70 bg-white/90 p-5 shadow-sm backdrop-blur">
+    <section class="rounded-[2rem] border border-white/70 bg-white/90 p-5 shadow-sm backdrop-blur lg:sticky lg:top-28 lg:z-20">
         <div class="flex flex-wrap items-start justify-between gap-4">
-            <div>
+            <div class="min-w-0 flex-1">
                 <p class="text-xs font-black uppercase tracking-[0.25em] text-emerald-500">오늘 바로 하는 일</p>
                 <h2 class="mt-2 text-2xl font-black tracking-tight text-slate-900">이번 동작을 고르고 학생 카드의 큰 버튼만 누르세요.</h2>
-                <p class="mt-2 text-sm leading-6 text-slate-500">지급, 지급 후 바로 뽑기, 바로 뽑기 중에서 먼저 고르면 아래 학생 카드에서 같은 자리를 계속 눌러 진행할 수 있습니다.</p>
+                <p class="mt-2 break-keep text-sm leading-6 text-slate-500">지급, 지급 후 바로 뽑기, 바로 뽑기 중에서 먼저 고르면 아래 학생 카드에서 같은 자리를 계속 눌러 진행할 수 있습니다.</p>
             </div>
-            <div class="flex flex-wrap gap-2">
+            <div class="flex w-full flex-wrap gap-2 sm:w-auto">
                 <button type="button"
                         id="BTN_PRESENTATION_TOOL"
                         data-presentation-open
-                        class="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800">
+                        class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800 sm:w-auto">
                     <i class="fa-solid fa-expand"></i>
                     발표 준비
                 </button>
                 <a href="{% url 'happy_seed:prize_manage' classroom_id=classroom.id %}"
-                   class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-black text-white transition hover:bg-emerald-600">
+                   class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-black text-white transition hover:bg-emerald-600 sm:w-auto">
                     <i class="fa-solid fa-gift"></i>
                     보상 설정
                 </a>
@@ -92,7 +92,7 @@
         {% if students %}
         <div class="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
             {% for student in students %}
-            <article class="rounded-[1.75rem] border border-slate-100 bg-slate-50/80 p-4 shadow-sm"
+            <article class="min-w-0 rounded-[1.75rem] border border-slate-100 bg-slate-50/80 p-4 shadow-sm"
                      data-student-card
                      data-student-id="{{ student.id }}"
                      data-student-name="{{ student.name }}"
@@ -107,11 +107,11 @@
                         <p class="mt-1 text-sm font-semibold text-slate-400">{{ student.number }}번</p>
                     </div>
                     {% if student.operation_status_tone == "amber" %}
-                    <span class="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-black text-amber-700">{{ student.operation_status_label }}</span>
+                    <span class="shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-black text-amber-700">{{ student.operation_status_label }}</span>
                     {% elif student.operation_status_tone == "violet" %}
-                    <span class="rounded-full bg-violet-100 px-2.5 py-1 text-[11px] font-black text-violet-700">{{ student.operation_status_label }}</span>
+                    <span class="shrink-0 rounded-full bg-violet-100 px-2.5 py-1 text-[11px] font-black text-violet-700">{{ student.operation_status_label }}</span>
                     {% else %}
-                    <span class="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-black text-emerald-700">{{ student.operation_status_label }}</span>
+                    <span class="shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-black text-emerald-700">{{ student.operation_status_label }}</span>
                     {% endif %}
                 </div>
 
@@ -128,7 +128,7 @@
 
                 <div class="mt-4 rounded-[1.5rem] bg-white px-4 py-3 shadow-sm">
                     <p class="text-xs font-black uppercase tracking-[0.2em] text-slate-400">현재 상태</p>
-                    <p class="mt-2 text-sm font-semibold leading-6 text-slate-600">
+                    <p class="mt-2 break-keep text-sm font-semibold leading-6 text-slate-600">
                         {% if student.can_draw %}
                         바로 뽑기가 가능한 준비 상태입니다.
                         {% elif student.is_consent_approved %}
