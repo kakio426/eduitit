@@ -211,6 +211,10 @@
     justify-content: center;
     padding: 1rem;
 }
+.ib-modal-overlay.hidden,
+.ib-modal-overlay[hidden] {
+    display: none !important;
+}
 .ib-modal {
     background: white;
     border-radius: 1.5rem;
@@ -236,6 +240,10 @@
     display: flex;
     justify-content: center;
     padding-top: 12vh;
+}
+.ib-search-overlay.hidden,
+.ib-search-overlay[hidden] {
+    display: none !important;
 }
 .ib-search-box {
     width: 100%;
@@ -363,4 +371,3 @@
     color: #94a3b8;
     margin-top: 2px;
 }
-

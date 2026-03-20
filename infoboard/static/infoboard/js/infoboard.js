@@ -1,10 +1,16 @@
 /* ── InfoBoard JS ────────────────────────────────────── */
 
 // ── Search Overlay ──
+function ibSetOverlayHidden(overlay, hidden) {
+    if (!overlay) return;
+    overlay.hidden = hidden;
+    overlay.classList.toggle('hidden', hidden);
+}
+
 function ibOpenSearch() {
     const overlay = document.getElementById('ibSearchOverlay');
     if (overlay) {
-        overlay.classList.remove('hidden');
+        ibSetOverlayHidden(overlay, false);
         const input = document.getElementById('ibSearchInput');
         if (input) setTimeout(() => input.focus(), 100);
     }
@@ -13,7 +19,7 @@ function ibOpenSearch() {
 function ibCloseSearch() {
     const overlay = document.getElementById('ibSearchOverlay');
     const input = document.getElementById('ibSearchInput');
-    if (overlay) overlay.classList.add('hidden');
+    ibSetOverlayHidden(overlay, true);
     if (input) input.blur();
 }
 
@@ -29,9 +35,7 @@ function ibHandleSearchOverlayClick(event) {
 
 function ibOpenModal() {
     const overlay = document.getElementById('ibModalOverlay');
-    if (overlay) {
-        overlay.classList.remove('hidden');
-    }
+    ibSetOverlayHidden(overlay, false);
 }
 
 function ibCloseModal() {
@@ -40,9 +44,7 @@ function ibCloseModal() {
     if (modal) {
         modal.innerHTML = '';
     }
-    if (overlay) {
-        overlay.classList.add('hidden');
-    }
+    ibSetOverlayHidden(overlay, true);
 }
 
 // Ctrl+K shortcut for InfoBoard search
@@ -51,7 +53,7 @@ window.addEventListener('keydown', function(e) {
         const overlay = document.getElementById('ibSearchOverlay');
         if (overlay) {
             e.preventDefault();
-            if (overlay.classList.contains('hidden')) {
+            if (overlay.hidden || overlay.classList.contains('hidden')) {
                 ibOpenSearch();
             } else {
                 ibCloseSearch();
@@ -62,10 +64,17 @@ window.addEventListener('keydown', function(e) {
         e.preventDefault();
         ibCloseSearch();
         const modal = document.getElementById('ibModalOverlay');
-        if (modal && !modal.classList.contains('hidden')) {
+        if (modal && !(modal.hidden || modal.classList.contains('hidden'))) {
             ibCloseModal();
         }
     }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const searchOverlay = document.getElementById('ibSearchOverlay');
+    const modalOverlay = document.getElementById('ibModalOverlay');
+    if (searchOverlay) ibSetOverlayHidden(searchOverlay, true);
+    if (modalOverlay) ibSetOverlayHidden(modalOverlay, true);
 });
 
 // ── Tag System ──
