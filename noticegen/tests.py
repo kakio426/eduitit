@@ -110,7 +110,8 @@ class NoticeGenViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "저장된 멘트를 불러왔습니다.")
+        self.assertContains(response, "준비물을 꼭 챙겨주세요.")
+        self.assertNotContains(response, "저장된 멘트를 불러왔습니다.")
         self.assertEqual(NoticeGenerationAttempt.objects.filter(charged=True).count(), 0)
 
     @patch("noticegen.views._call_deepseek", side_effect=TimeoutError("timeout"))
@@ -139,10 +140,88 @@ class NoticeGenViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "멘트를 생성했습니다.")
+        self.assertContains(response, "이번 주에는 날씨가 많이 더워요.")
+        self.assertNotContains(response, "멘트를 생성했습니다.")
         attempt = NoticeGenerationAttempt.objects.filter(charged=True).latest("id")
         self.assertEqual(attempt.status, NoticeGenerationAttempt.STATUS_LLM_SUCCESS)
         self.assertEqual(NoticeGenerationCache.objects.count(), 1)
+
+    @patch("noticegen.views._call_deepseek")
+    def test_similar_cache_does_not_reuse_different_safety_instruction(self, mock_call):
+        payload = self._payload(
+            target="student_high",
+            topic="safety",
+            keywords="전동 퀵보드 탑승 금지",
+        )
+        tone = get_tone_for_target(payload["target"])
+        cached_key = _build_cache_key_data(
+            payload["target"],
+            payload["topic"],
+            tone,
+            "전동퀵보드 이용 시 안전모 착용",
+            [],
+        )
+        NoticeGenerationCache.objects.create(
+            key_hash=cached_key["key_hash"],
+            prompt_version=PROMPT_VERSION,
+            target=payload["target"],
+            topic=payload["topic"],
+            tone=tone,
+            keywords_norm=cached_key["keywords_norm"],
+            context_norm=cached_key["context_norm"],
+            signature=cached_key["signature"],
+            result_text="전동퀵보드를 이용할 때는 안전모를 착용해야 합니다.",
+        )
+        mock_call.return_value = "전동 퀵보드는 안전을 위해 탑승하지 않습니다. 발견하면 바로 내려 주세요."
+
+        response = self.client.post(
+            reverse("noticegen:generate"),
+            payload,
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "전동 퀵보드는 안전을 위해 탑승하지 않습니다.")
+        self.assertNotContains(response, "안전모를 착용해야 합니다.")
+        attempt = NoticeGenerationAttempt.objects.filter(charged=True).latest("id")
+        self.assertEqual(attempt.status, NoticeGenerationAttempt.STATUS_LLM_SUCCESS)
+
+    def test_near_duplicate_keywords_reuse_cache_without_reuse_banner(self):
+        payload = self._payload(
+            target="parent",
+            topic="notice",
+            keywords="체험학습 준비물 안내.",
+        )
+        tone = get_tone_for_target(payload["target"])
+        cached_key = _build_cache_key_data(
+            payload["target"],
+            payload["topic"],
+            tone,
+            "체험학습 준비물 안내",
+            [],
+        )
+        NoticeGenerationCache.objects.create(
+            key_hash=cached_key["key_hash"],
+            prompt_version=PROMPT_VERSION,
+            target=payload["target"],
+            topic=payload["topic"],
+            tone=tone,
+            keywords_norm=cached_key["keywords_norm"],
+            context_norm=cached_key["context_norm"],
+            signature=cached_key["signature"],
+            result_text="체험학습 준비물을 전날 다시 확인해 주시고, 물통과 필기도구를 챙겨 보내 주세요.",
+        )
+
+        response = self.client.post(
+            reverse("noticegen:generate"),
+            payload,
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "체험학습 준비물을 전날 다시 확인해 주시고")
+        self.assertNotContains(response, "재사용했습니다")
+        self.assertEqual(NoticeGenerationAttempt.objects.filter(charged=True).count(), 0)
 
     @patch("noticegen.views._call_deepseek")
     def test_generate_mini_success_renders_compact_success_panel(self, mock_call):

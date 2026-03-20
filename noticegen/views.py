@@ -48,8 +48,8 @@ CONTEXT_CHOICES = [
 ]
 CONTEXT_LABELS = dict(CONTEXT_CHOICES)
 
-CACHE_REUSE_THRESHOLD = 0.88
-CACHE_SIMILAR_HINT_THRESHOLD = 0.55
+CACHE_REUSE_THRESHOLD = 0.93
+CACHE_SIMILAR_HINT_THRESHOLD = 0.7
 SIMILAR_CANDIDATE_LIMIT = 60
 FALLBACK_ERROR_MESSAGE = "멘트 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
 WORKFLOW_ACTION_SEED_SESSION_KEY = "workflow_action_seeds"
@@ -318,6 +318,27 @@ def _build_cache_key_data(target, topic, tone, keywords, context_values, length_
     }
 
 
+def _compact_text(value):
+    return re.sub(r"[^0-9A-Za-z가-힣]+", "", (value or "").lower())
+
+
+def _keyword_similarity_score(left_keywords, right_keywords):
+    left_compact = _compact_text(left_keywords)
+    right_compact = _compact_text(right_keywords)
+    if not left_compact or not right_compact:
+        return 0.0
+    if left_compact == right_compact:
+        return 1.0
+
+    compact_score = SequenceMatcher(None, left_compact, right_compact).ratio()
+    surface_score = SequenceMatcher(None, left_keywords, right_keywords).ratio()
+    if len(left_compact) >= 6 and len(right_compact) >= 6 and (
+        left_compact in right_compact or right_compact in left_compact
+    ):
+        compact_score = min(1.0, compact_score + 0.05)
+    return max(compact_score, surface_score)
+
+
 def _serialize_context_values(context_values):
     labels = [CONTEXT_LABELS[value] for value in context_values if value in CONTEXT_LABELS]
     return ", ".join(labels)
@@ -334,7 +355,7 @@ def _find_exact_cache(key_hash):
     return NoticeGenerationCache.objects.filter(key_hash=key_hash).first()
 
 
-def _collect_similar_caches(target, topic, tone, length_style, signature):
+def _collect_similar_caches(target, topic, tone, length_style, keywords_norm, context_norm):
     prefix = f"{PROMPT_VERSION}|{target}|{topic}|{tone}|{length_style}|"
     candidates = NoticeGenerationCache.objects.filter(
         target=target,
@@ -346,7 +367,9 @@ def _collect_similar_caches(target, topic, tone, length_style, signature):
 
     scored = []
     for item in candidates:
-        score = SequenceMatcher(None, signature, item.signature).ratio()
+        if (item.context_norm or "") != context_norm:
+            continue
+        score = _keyword_similarity_score(keywords_norm, item.keywords_norm)
         if score >= CACHE_SIMILAR_HINT_THRESHOLD:
             scored.append((score, item))
     scored.sort(key=lambda x: x[0], reverse=True)
@@ -414,13 +437,15 @@ def _render_result(request, payload, *, status=200):
 
 
 def _render_mini_result(request, payload, *, status=200):
-    message = (
-        payload.get("error_message")
-        or payload.get("limit_message")
-        or payload.get("info_message")
-        or "대상과 전달 사항을 적으면 바로 복사할 문장이 나옵니다."
-    )
     state_status = "success" if payload.get("result_text") else "error" if status >= 400 or payload.get("error_message") or payload.get("limit_message") else "idle"
+    if state_status == "success":
+        message = ""
+    else:
+        message = (
+            payload.get("error_message")
+            or payload.get("limit_message")
+            or "대상과 전달 사항을 적으면 바로 복사할 문장이 나옵니다."
+        )
     response = render(
         request,
         "noticegen/partials/mini_result_panel.html",
@@ -519,7 +544,6 @@ def _generate_notice_payload(request):
             key_hash=key_hash,
         )
         return 200, {
-            "info_message": "저장된 멘트를 불러왔습니다.",
             "result_text": exact_cache.result_text,
             "remaining_count": _remaining_count(request),
             "daily_limit": _daily_limit(request),
@@ -543,7 +567,14 @@ def _generate_notice_payload(request):
             "daily_limit": _daily_limit(request),
         }
 
-    similar_scored = _collect_similar_caches(target, topic, tone, key_data["length_style"], key_data["signature"])
+    similar_scored = _collect_similar_caches(
+        target,
+        topic,
+        tone,
+        key_data["length_style"],
+        key_data["keywords_norm"],
+        key_data["context_norm"],
+    )
     best_reuse = similar_scored[0] if similar_scored else None
     similar_items = [
         {
@@ -566,7 +597,6 @@ def _generate_notice_payload(request):
             key_hash=key_hash,
         )
         return 200, {
-            "info_message": "유사한 행사 멘트를 재사용했습니다. 필요하면 전달사항을 조금 바꿔 다시 생성해 보세요.",
             "result_text": reused_cache.result_text,
             "remaining_count": _remaining_count(request),
             "daily_limit": _daily_limit(request),
@@ -637,7 +667,6 @@ def _generate_notice_payload(request):
         topic,
     )
     return 200, {
-        "info_message": "멘트를 생성했습니다.",
         "result_text": result_text,
         "remaining_count": _remaining_count(request),
         "daily_limit": _daily_limit(request),
