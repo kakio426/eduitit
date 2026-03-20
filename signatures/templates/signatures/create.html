@@ -27,6 +27,17 @@
                 <span class="rounded-full bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm">서명은 휴대폰에서도 가능합니다.</span>
                 <span class="rounded-full bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm">이 서비스는 학교 내부 참석 확인과 기록용입니다.</span>
             </div>
+            <div class="mt-4 flex flex-wrap items-center gap-2 text-sm text-slate-500">
+                <span class="font-bold text-slate-400">보조 도구</span>
+                <a href="{% url 'signatures:maker' %}"
+                    class="rounded-full bg-white px-3 py-1 font-bold text-slate-600 shadow-sm hover:text-indigo-700 transition">
+                    서명 메이커
+                </a>
+                <a href="{% url 'signatures:style_list' %}"
+                    class="rounded-full bg-white px-3 py-1 font-bold text-slate-600 shadow-sm hover:text-indigo-700 transition">
+                    저장한 스타일
+                </a>
+            </div>
         </section>
 
         {% if sheetbook_prefill_active or copy_source_session %}
@@ -118,25 +129,16 @@
                         <label class="mb-2 block text-sm font-black text-slate-700">담당자</label>
                         {{ form.instructor }}
                     </div>
-                    <div>
-                        <label class="mb-2 block text-sm font-black text-slate-700">인쇄 상단 제목 (선택)</label>
-                        {{ form.print_title }}
-                    </div>
-                </div>
-
-                <div>
-                    <label class="mb-2 block text-sm font-black text-slate-700">간단 설명 (선택)</label>
-                    {{ form.description }}
                 </div>
             </section>
 
-            <details class="rounded-[1.5rem] border border-slate-200 bg-slate-50/70 p-4 md:p-5" open>
+            <details class="rounded-[1.5rem] border border-slate-200 bg-slate-50/70 p-4 md:p-5" {% if form.errors or restored_roster_group or form.shared_roster_group.value or form.expected_count.value or form.print_title.value or form.description.value %}open{% endif %}>
                 <summary class="flex cursor-pointer list-none items-center justify-between gap-3">
                     <div>
                         <p class="text-base font-black text-slate-800">선택 설정</p>
                         <p class="mt-1 text-xs text-slate-500">누가 안 했는지까지 보려면 여기만 추가로 설정하면 됩니다.</p>
                     </div>
-                    <span class="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-500">보기</span>
+                    <span class="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-500">펼치기</span>
                 </summary>
 
                 <div class="mt-5 space-y-5">
@@ -165,7 +167,6 @@
                         {% else %}
                         <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4">
                             <p class="text-sm font-black text-slate-800">아직 연결할 명단이 없습니다.</p>
-                            <p class="mt-2 text-xs text-slate-500">누가 안 했는지 이름으로 보려면 명단을 연결하세요.</p>
                             <p class="mt-2 text-xs text-slate-500">누가 안 했는지 이름으로 보려면 먼저 명단을 만들어 주세요.</p>
                             <div class="mt-4 flex flex-wrap gap-2">
                                 <button
@@ -192,6 +193,19 @@
                         <label class="mb-2 block text-sm font-black text-slate-700">예상 참여 인원 (선택)</label>
                         {{ form.expected_count }}
                         <p class="mt-2 text-xs text-slate-500">명단을 연결하면 누가 안 했는지 이름으로 보고, 명단 없이 시작하면 남은 인원 수만 확인할 수 있습니다.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="rounded-2xl bg-white p-4">
+                            <label class="mb-2 block text-sm font-black text-slate-700">인쇄 상단 제목 (선택)</label>
+                            {{ form.print_title }}
+                            <p class="mt-2 text-xs text-slate-500">출력/PDF 상단 제목을 따로 쓰고 싶을 때만 적으면 됩니다.</p>
+                        </div>
+                        <div class="rounded-2xl bg-white p-4">
+                            <label class="mb-2 block text-sm font-black text-slate-700">간단 설명 (선택)</label>
+                            {{ form.description }}
+                            <p class="mt-2 text-xs text-slate-500">참여자에게 꼭 보여 줄 메모가 있을 때만 남겨도 충분합니다.</p>
+                        </div>
                     </div>
 
                     <div class="rounded-2xl bg-white p-4">

@@ -34,5 +34,26 @@ class SignatureMakerTeacherFirstTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "이 스타일 저장")
+        self.assertContains(response, "저장한 스타일 보기")
         self.assertContains(response, "서명 스타일을 저장했습니다.", html=False)
         self.assertContains(response, "response.ok", html=False)
+
+    def test_authenticated_view_applies_saved_style_query_params(self):
+        user = User.objects.create_user(
+            username="sign_teacher_with_style",
+            password="pw123456",
+            email="sign_teacher_with_style@example.com",
+        )
+        user.userprofile.nickname = "서명교사"
+        user.userprofile.role = "school"
+        user.userprofile.save(update_fields=["nickname", "role"])
+        self.client.force_login(user)
+
+        response = self.client.get(
+            reverse("signatures:maker"),
+            data={"font": "Gowun Batang", "color": "#1e40af"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "font-family: 'Gowun Batang'")
+        self.assertContains(response, 'value="#1e40af"', html=False)

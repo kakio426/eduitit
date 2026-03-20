@@ -4,15 +4,22 @@
 
 {% block content %}
 <main class="pt-32 pb-20 px-4 max-w-6xl mx-auto min-h-screen">
-    <div class="flex justify-between items-center mb-12">
+    <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between mb-12">
         <div>
-            <h1 class="text-4xl font-black text-gray-800 mb-2">⭐ 즐겨찾는 스타일</h1>
-            <p class="text-lg text-gray-500 font-medium">선생님이 저장하신 전자 서명 스타일 목록입니다.</p>
+            <p class="text-sm font-black uppercase tracking-[0.24em] text-indigo-600">저장한 스타일</p>
+            <h1 class="text-4xl font-black text-gray-800 mb-2">다음 요청에도 바로 꺼내 쓰는 서명입니다</h1>
+            <p class="text-lg text-gray-500 font-medium">자주 쓰는 글꼴과 색을 저장해 두고, 필요할 때 메이커에서 다시 불러오세요.</p>
         </div>
-        <a href="{% url 'signatures:maker' %}"
-            class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-2xl font-bold transition shadow-lg">
-            새 스타일 만들기
-        </a>
+        <div class="flex flex-wrap gap-2">
+            <a href="{% url 'signatures:list' %}"
+                class="inline-flex items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white px-6 py-3 font-bold text-gray-700 transition hover:border-indigo-200 hover:text-indigo-700">
+                <i class="fa-solid fa-arrow-left"></i> 서명 목록으로
+            </a>
+            <a href="{% url 'signatures:maker' %}"
+                class="inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-6 py-3 font-bold text-white transition shadow-lg hover:bg-indigo-700">
+                <i class="fa-solid fa-plus"></i> 새 스타일 만들기
+            </a>
+        </div>
     </div>
 
     {% if styles %}
@@ -43,7 +50,7 @@
     <div class="text-center py-20 bg-slate-50 rounded-[3rem] border-4 border-dashed border-slate-200">
         <div class="text-6xl mb-6">🖋️</div>
         <h3 class="text-2xl font-black text-slate-400">아직 저장된 스타일이 없습니다.</h3>
-        <p class="text-slate-400 mt-2 mb-8 font-bold">Pick your favorite fonts in the maker!</p>
+        <p class="text-slate-400 mt-2 mb-8 font-bold">메이커에서 마음에 드는 서명을 하나 저장해 두면 다음부터 더 빨라집니다.</p>
         <a href="{% url 'signatures:maker' %}"
             class="inline-block py-4 px-10 bg-indigo-600 text-white rounded-2xl font-black hover:-translate-y-1 transition shadow-xl">
             서명 메이커 가기

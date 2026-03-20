@@ -63,11 +63,11 @@
                 <div class="flex-1">
                     <div class="flex items-center flex-wrap gap-2 mb-3">
                         <h2 class="text-xl md:text-3xl font-bold text-gray-700">{{ session.title }}</h2>
-                        <button onclick="toggleActive()" id="statusBadge"
-                            class="px-3 py-0.5 text-sm md:text-base rounded-full font-bold transition cursor-pointer {% if session.is_active %}bg-green-100 text-green-600 hover:bg-green-200{% else %}bg-gray-100 text-gray-500 hover:bg-gray-200{% endif %}">
+                        <span id="statusBadge"
+                            class="px-3 py-0.5 text-sm md:text-base rounded-full font-bold {% if session.is_active %}bg-green-100 text-green-600{% else %}bg-gray-100 text-gray-500{% endif %}">
                             <i class="fa-solid fa-circle text-xs mr-1"></i>
                             <span id="statusText">{% if session.is_active %}활성{% else %}비활성{% endif %}</span>
-                        </button>
+                        </span>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3 text-sm md:text-base text-gray-600">
                         <p class="flex items-center"><i class="fa-solid fa-user-tie mr-2 text-purple-400 flex-shrink-0"></i><span class="truncate">{{ session.instructor }}</span></p>
@@ -177,115 +177,136 @@
         {% endif %}
 
         <section class="clay-card p-4 md:p-6">
-            <h2 class="text-base md:text-lg font-bold text-gray-700 mb-2 md:mb-3">
-                <i class="fa-solid fa-share-nodes text-purple-500 mr-1"></i>참여 링크
-            </h2>
-            <p class="text-xs md:text-sm text-gray-600 mb-3">참여자는 로그인 없이 링크나 QR로 바로 서명합니다. 이 서명은 학교 내부 확인과 기록용입니다.</p>
-            <div class="flex gap-2">
-                <input type="text" id="shareLink" readonly
-                    value="{{ share_link }}"
-                    class="flex-1 px-3 py-2 md:px-4 md:py-3 text-xs md:text-base rounded-xl shadow-clay-inner bg-bg-soft text-gray-600 truncate">
-                <button onclick="copyLink()"
-                    class="px-4 py-2 md:px-6 md:py-3 clay-card text-sm md:text-base font-bold text-purple-600 hover:shadow-clay-hover transition whitespace-nowrap">
-                    <i class="fa-solid fa-copy mr-1"></i><span class="hidden sm:inline">링크 복사</span>
-                </button>
-            </div>
-            {% if share_qr_data_url %}
-            <div class="mt-4 md:mt-5 rounded-2xl border border-purple-100 bg-gradient-to-br from-purple-50 to-indigo-50 p-4 md:p-5">
-                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-3">
-                    <p class="text-sm md:text-base font-bold text-gray-700">
-                        <i class="fa-solid fa-qrcode text-purple-500 mr-1"></i>프로젝터용 참여 QR
-                    </p>
-                    <button type="button" onclick="openQrModal()"
-                        class="px-3 py-1.5 bg-white text-purple-700 rounded-lg text-xs md:text-sm font-bold hover:bg-purple-100 transition w-fit">
-                        <i class="fa-solid fa-up-right-and-down-left-from-center mr-1"></i>QR 보기
-                    </button>
-                </div>
-                <div class="flex flex-col md:flex-row items-center gap-4">
-                    <img src="{{ share_qr_data_url }}" alt="서명 요청 참여 QR 코드"
-                        class="w-40 h-40 md:w-52 md:h-52 rounded-xl border border-purple-200 bg-white p-2">
-                    <p class="text-xs md:text-sm text-gray-600 leading-relaxed">
-                        연수 화면이나 회의 프로젝터에 QR을 띄우면 참석자가 휴대폰으로 바로 서명 페이지에 들어올 수 있습니다.
-                    </p>
-                </div>
-            </div>
-            {% endif %}
-            <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 md:p-5">
-                <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div class="lg:max-w-sm">
-                        <p class="text-sm md:text-base font-black text-slate-800">
-                            <i class="fa-solid fa-key text-amber-600 mr-1"></i>현장 코드
+            <details {% if stage != 'closed' %}open{% endif %}>
+                <summary class="cursor-pointer list-none flex items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-base md:text-lg font-bold text-gray-700">
+                            <i class="fa-solid fa-share-nodes text-purple-500 mr-1"></i>참여 링크
+                        </h2>
+                        <p class="mt-1 text-xs md:text-sm text-gray-600">
+                            {% if stage == 'closed' %}
+                            지금은 마감 상태지만, 링크와 QR은 여기에서 다시 확인할 수 있습니다.
+                            {% else %}
+                            참여자는 로그인 없이 링크나 QR로 바로 서명합니다. 이 서명은 학교 내부 확인과 기록용입니다.
+                            {% endif %}
                         </p>
-                        <p class="mt-2 text-xs md:text-sm leading-relaxed text-slate-600">
-                            필요할 때만 켜서 사용하세요. 링크가 퍼져도 교사가 현장에서 알려준 숫자 코드를 알아야 서명할 수 있습니다.
-                        </p>
-                        {% if access_code_state.is_active %}
-                        <div class="mt-4 rounded-2xl bg-white px-4 py-4 shadow-sm">
-                            <p class="text-[11px] font-bold tracking-[0.18em] text-slate-400">현재 사용 중인 코드</p>
-                            <p class="mt-2 font-mono text-3xl font-black tracking-[0.35em] text-amber-700">{{ access_code_state.current_code }}</p>
-                            <p class="mt-2 text-xs text-slate-500">{{ access_code_state.expires_at|date:"H:i" }}까지 {{ access_code_state.duration_minutes }}분 사용</p>
-                        </div>
-                        {% elif access_code_state.is_expired %}
-                        <div class="mt-4 rounded-2xl border border-red-200 bg-white px-4 py-4 text-sm text-red-700">
-                            마지막 코드 <span class="font-mono font-black tracking-[0.25em]">{{ access_code_state.current_code }}</span>는 만료되었습니다. 같은 코드로 다시 열거나 새 숫자로 바꿀 수 있습니다.
-                        </div>
-                        {% elif access_code_state.is_pending %}
-                        <div class="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-600">
-                            아직 활성 코드가 없습니다. 아래에서 숫자를 넣고 적용하면 그때부터 서명 페이지에서 코드 입력을 요구합니다.
-                        </div>
-                        {% else %}
-                        <div class="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-600">
-                            기본값은 사용 안 함입니다. 중요한 연수만 잠깐 켜 두는 식으로 쓰면 부담이 적습니다.
-                        </div>
-                        {% endif %}
                     </div>
-                    <div class="flex-1 rounded-2xl bg-white p-4 shadow-sm">
-                        <p class="text-[11px] font-bold tracking-[0.18em] text-slate-400">설정</p>
-                        <div class="mt-3 grid gap-3 md:grid-cols-[150px_minmax(0,1fr)]">
-                            <div>
-                                <label for="accessCodeDurationSelect" class="mb-2 block text-sm font-black text-slate-700">사용 시간</label>
-                                <select
-                                    id="accessCodeDurationSelect"
-                                    class="w-full rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-300"
-                                >
-                                    <option value="0" {% if not access_code_state.enabled %}selected{% endif %}>사용 안 함</option>
-                                    <option value="5" {% if access_code_state.duration_minutes == 5 %}selected{% endif %}>5분</option>
-                                    <option value="10" {% if access_code_state.duration_minutes == 10 %}selected{% endif %}>10분</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="accessCodeInput" class="mb-2 block text-sm font-black text-slate-700">숫자 코드</label>
-                                <input
-                                    type="text"
-                                    id="accessCodeInput"
-                                    value="{{ access_code_state.current_code }}"
-                                    inputmode="numeric"
-                                    maxlength="6"
-                                    placeholder="예: 4721"
-                                    class="w-full rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-center text-xl font-black tracking-[0.35em] text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-300"
-                                >
-                                <p class="mt-2 text-xs text-slate-500">4~6자리 숫자만 사용할 수 있습니다.</p>
-                            </div>
-                        </div>
-                        <div class="mt-4 flex flex-col gap-2 sm:flex-row">
-                            <button
-                                type="button"
-                                onclick="saveAccessCode()"
-                                class="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 text-sm font-black text-white hover:bg-amber-600 transition"
-                            >
-                                <i class="fa-solid fa-bolt"></i>코드 적용
+                    <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500">{% if stage == 'closed' %}펼치기{% else %}접기{% endif %}</span>
+                </summary>
+                <div class="mt-5">
+                    <div class="flex flex-col gap-2 md:flex-row">
+                        <input type="text" id="shareLink" readonly
+                            value="{{ share_link }}"
+                            class="flex-1 px-3 py-2 md:px-4 md:py-3 text-xs md:text-base rounded-xl shadow-clay-inner bg-bg-soft text-gray-600 truncate">
+                        <div class="flex flex-col gap-2 sm:flex-row">
+                            <button onclick="copyLink()"
+                                class="px-4 py-2 md:px-6 md:py-3 clay-card text-sm md:text-base font-bold text-purple-600 hover:shadow-clay-hover transition whitespace-nowrap">
+                                <i class="fa-solid fa-copy mr-1"></i><span class="hidden sm:inline">링크 복사</span>
                             </button>
-                            <button
-                                type="button"
-                                onclick="disableAccessCode()"
-                                class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-600 hover:text-slate-800 transition"
-                            >
-                                <i class="fa-solid fa-ban"></i>사용 안 함으로 돌리기
-                            </button>
+                            <a href="{{ share_link }}" target="_blank" rel="noopener noreferrer"
+                                class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 md:px-6 md:py-3 text-sm md:text-base font-bold text-slate-600 hover:border-indigo-200 hover:text-indigo-700 transition whitespace-nowrap">
+                                참여 화면 열기
+                            </a>
                         </div>
                     </div>
+                    {% if share_qr_data_url %}
+                    <div class="mt-4 md:mt-5 rounded-2xl border border-purple-100 bg-gradient-to-br from-purple-50 to-indigo-50 p-4 md:p-5">
+                        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-3">
+                            <p class="text-sm md:text-base font-bold text-gray-700">
+                                <i class="fa-solid fa-qrcode text-purple-500 mr-1"></i>프로젝터용 참여 QR
+                            </p>
+                            <button type="button" onclick="openQrModal()"
+                                class="px-3 py-1.5 bg-white text-purple-700 rounded-lg text-xs md:text-sm font-bold hover:bg-purple-100 transition w-fit">
+                                <i class="fa-solid fa-up-right-and-down-left-from-center mr-1"></i>QR 보기
+                            </button>
+                        </div>
+                        <div class="flex flex-col md:flex-row items-center gap-4">
+                            <img src="{{ share_qr_data_url }}" alt="서명 요청 참여 QR 코드"
+                                class="w-40 h-40 md:w-52 md:h-52 rounded-xl border border-purple-200 bg-white p-2">
+                            <p class="text-xs md:text-sm text-gray-600 leading-relaxed">
+                                연수 화면이나 회의 프로젝터에 QR을 띄우면 참석자가 휴대폰으로 바로 서명 페이지에 들어올 수 있습니다.
+                            </p>
+                        </div>
+                    </div>
+                    {% endif %}
+                    <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 md:p-5">
+                        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                            <div class="lg:max-w-sm">
+                                <p class="text-sm md:text-base font-black text-slate-800">
+                                    <i class="fa-solid fa-key text-amber-600 mr-1"></i>현장 코드
+                                </p>
+                                <p class="mt-2 text-xs md:text-sm leading-relaxed text-slate-600">
+                                    필요할 때만 켜서 사용하세요. 링크가 퍼져도 교사가 현장에서 알려준 숫자 코드를 알아야 서명할 수 있습니다.
+                                </p>
+                                {% if access_code_state.is_active %}
+                                <div class="mt-4 rounded-2xl bg-white px-4 py-4 shadow-sm">
+                                    <p class="text-[11px] font-bold tracking-[0.18em] text-slate-400">현재 사용 중인 코드</p>
+                                    <p class="mt-2 font-mono text-3xl font-black tracking-[0.35em] text-amber-700">{{ access_code_state.current_code }}</p>
+                                    <p class="mt-2 text-xs text-slate-500">{{ access_code_state.expires_at|date:"H:i" }}까지 {{ access_code_state.duration_minutes }}분 사용</p>
+                                </div>
+                                {% elif access_code_state.is_expired %}
+                                <div class="mt-4 rounded-2xl border border-red-200 bg-white px-4 py-4 text-sm text-red-700">
+                                    마지막 코드 <span class="font-mono font-black tracking-[0.25em]">{{ access_code_state.current_code }}</span>는 만료되었습니다. 같은 코드로 다시 열거나 새 숫자로 바꿀 수 있습니다.
+                                </div>
+                                {% elif access_code_state.is_pending %}
+                                <div class="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-600">
+                                    아직 활성 코드가 없습니다. 아래에서 숫자를 넣고 적용하면 그때부터 서명 페이지에서 코드 입력을 요구합니다.
+                                </div>
+                                {% else %}
+                                <div class="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-600">
+                                    기본값은 사용 안 함입니다. 중요한 연수만 잠깐 켜 두는 식으로 쓰면 부담이 적습니다.
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="flex-1 rounded-2xl bg-white p-4 shadow-sm">
+                                <p class="text-[11px] font-bold tracking-[0.18em] text-slate-400">설정</p>
+                                <div class="mt-3 grid gap-3 md:grid-cols-[150px_minmax(0,1fr)]">
+                                    <div>
+                                        <label for="accessCodeDurationSelect" class="mb-2 block text-sm font-black text-slate-700">사용 시간</label>
+                                        <select
+                                            id="accessCodeDurationSelect"
+                                            class="w-full rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                                        >
+                                            <option value="0" {% if not access_code_state.enabled %}selected{% endif %}>사용 안 함</option>
+                                            <option value="5" {% if access_code_state.duration_minutes == 5 %}selected{% endif %}>5분</option>
+                                            <option value="10" {% if access_code_state.duration_minutes == 10 %}selected{% endif %}>10분</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label for="accessCodeInput" class="mb-2 block text-sm font-black text-slate-700">숫자 코드</label>
+                                        <input
+                                            type="text"
+                                            id="accessCodeInput"
+                                            value="{{ access_code_state.current_code }}"
+                                            inputmode="numeric"
+                                            maxlength="6"
+                                            placeholder="예: 4721"
+                                            class="w-full rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-center text-xl font-black tracking-[0.35em] text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                                        >
+                                        <p class="mt-2 text-xs text-slate-500">4~6자리 숫자만 사용할 수 있습니다.</p>
+                                    </div>
+                                </div>
+                                <div class="mt-4 flex flex-col gap-2 sm:flex-row">
+                                    <button
+                                        type="button"
+                                        onclick="saveAccessCode()"
+                                        class="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 text-sm font-black text-white hover:bg-amber-600 transition"
+                                    >
+                                        <i class="fa-solid fa-bolt"></i>코드 적용
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onclick="disableAccessCode()"
+                                        class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-600 hover:text-slate-800 transition"
+                                    >
+                                        <i class="fa-solid fa-ban"></i>사용 안 함으로 돌리기
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            </details>
         </section>
 
         <section id="attendanceSummary" class="clay-card p-4 md:p-6">

@@ -30,6 +30,17 @@
                             <i class="fa-solid fa-lightbulb mr-2"></i>예시 보기
                         </a>
                     </div>
+                    <div class="mt-4 flex flex-wrap items-center gap-2 text-sm text-slate-500">
+                        <span class="font-bold text-slate-400">보조 도구</span>
+                        <a href="{% url 'signatures:maker' %}"
+                            class="rounded-full bg-white/90 px-3 py-1 font-bold text-slate-600 shadow-sm hover:text-indigo-700 transition">
+                            서명 메이커
+                        </a>
+                        <a href="{% url 'signatures:style_list' %}"
+                            class="rounded-full bg-white/90 px-3 py-1 font-bold text-slate-600 shadow-sm hover:text-indigo-700 transition">
+                            저장한 스타일
+                        </a>
+                    </div>
                 </div>
                 <div class="rounded-[1.75rem] border border-white/70 bg-white/80 p-5 md:p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_20px_45px_-35px_rgba(15,23,42,0.35)] backdrop-blur">
                     <p class="text-xs font-black uppercase tracking-[0.22em] text-slate-400">이 화면에서 바로 하는 일</p>
@@ -129,14 +140,12 @@
                                 {{ card.list_primary_action.label }}
                             </a>
                             <div class="flex flex-wrap gap-2 text-sm">
-                                <a href="{% url 'signatures:detail' uuid=card.session.uuid %}"
+                                {% for action in card.list_secondary_actions %}
+                                <a href="{{ action.href }}"
                                     class="rounded-2xl border border-slate-200 bg-white px-4 py-2 font-bold text-slate-600 hover:border-indigo-200 hover:text-indigo-700 transition">
-                                    참여 링크
+                                    {{ action.label }}
                                 </a>
-                                <a href="{% url 'signatures:print' uuid=card.session.uuid %}"
-                                    class="rounded-2xl border border-slate-200 bg-white px-4 py-2 font-bold text-slate-600 hover:border-indigo-200 hover:text-indigo-700 transition">
-                                    출력/PDF
-                                </a>
+                                {% endfor %}
                             </div>
                         </div>
                     </div>

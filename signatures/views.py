@@ -710,6 +710,8 @@ def _build_session_stage_payload(session, *, signature_count, pending_count=None
 
     detail_href = reverse("signatures:detail", kwargs={"uuid": session.uuid})
     copy_href = f"{reverse('signatures:create')}?copy_from={session.uuid}"
+    share_href = reverse("signatures:sign", kwargs={"uuid": session.uuid})
+    print_href = reverse("signatures:print", kwargs={"uuid": session.uuid})
 
     if not session.is_active:
         stage = "closed"
@@ -725,6 +727,16 @@ def _build_session_stage_payload(session, *, signature_count, pending_count=None
             "label": "결과 보기",
             "href": detail_href,
         }
+        list_secondary_actions = [
+            {
+                "label": "출력/PDF",
+                "href": print_href,
+            },
+            {
+                "label": "복제하기",
+                "href": copy_href,
+            },
+        ]
         primary_actions = [
             {
                 "label": "결과 보기",
@@ -735,7 +747,7 @@ def _build_session_stage_payload(session, *, signature_count, pending_count=None
             {
                 "label": "출력/PDF 저장",
                 "kind": "link",
-                "href": reverse("signatures:print", kwargs={"uuid": session.uuid}),
+                "href": print_href,
                 "variant": "secondary",
             },
             {
@@ -760,6 +772,16 @@ def _build_session_stage_payload(session, *, signature_count, pending_count=None
             "label": "공유 시작",
             "href": detail_href,
         }
+        list_secondary_actions = [
+            {
+                "label": "참여 링크 열기",
+                "href": share_href,
+            },
+            {
+                "label": "출력/PDF",
+                "href": print_href,
+            },
+        ]
         primary_actions = [
             {
                 "label": "링크 복사",
@@ -794,6 +816,16 @@ def _build_session_stage_payload(session, *, signature_count, pending_count=None
             "label": "참여 현황",
             "href": detail_href,
         }
+        list_secondary_actions = [
+            {
+                "label": "참여 링크 열기",
+                "href": share_href,
+            },
+            {
+                "label": "출력/PDF",
+                "href": print_href,
+            },
+        ]
         pending_action_label = "미참여 보기" if can_show_absentees else "남은 인원 보기"
         primary_actions = [
             {
@@ -824,6 +856,7 @@ def _build_session_stage_payload(session, *, signature_count, pending_count=None
         "pending_count": pending_count,
         "can_show_absentees": can_show_absentees,
         "list_primary_action": list_primary_action,
+        "list_secondary_actions": list_secondary_actions,
         "primary_actions": primary_actions,
     }
 
@@ -1780,9 +1813,25 @@ def signature_maker(request):
         'Nanum Brush Script', 'Nanum Pen Script', 'Cafe24 Ssurround Air', 
         'Gowun Batang', 'Gamja Flower', 'Poor Story'
     ]
+    selected_font = request.GET.get("font", "").strip()
+    if selected_font not in fonts:
+        selected_font = fonts[0]
+
+    selected_color = request.GET.get("color", "").strip()
+    if not re.fullmatch(r"#[0-9a-fA-F]{6}", selected_color):
+        selected_color = "#000000"
+
+    initial_name = (
+        request.user.first_name.strip()
+        if request.user.is_authenticated and request.user.first_name
+        else "스쿨잇"
+    )
     return render(request, 'signatures/maker.html', {
         'fonts': fonts,
-        'is_guest': not request.user.is_authenticated
+        'is_guest': not request.user.is_authenticated,
+        'selected_font': selected_font,
+        'selected_color': selected_color,
+        'initial_name': initial_name,
     })
 
 
