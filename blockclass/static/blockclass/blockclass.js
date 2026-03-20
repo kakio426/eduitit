@@ -69,6 +69,8 @@ const BLOCKCLASS_TEMPLATES = {
   `,
 };
 
+let workspaceSettleTimerId = 0;
+
 function downloadFile(filename, blob) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -85,6 +87,15 @@ function safeStatus(message) {
   if (status) {
     status.textContent = message;
   }
+}
+
+function setActiveTemplateButton(activeKey) {
+  const buttons = document.querySelectorAll(".blockclass-template-button");
+  buttons.forEach((button) => {
+    const isActive = button.dataset.templateKey === activeKey;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
+  });
 }
 
 function clearToolboxSelection(workspace) {
@@ -104,7 +115,9 @@ function shouldPreserveFlyout(target) {
   }
 
   return Boolean(
-    target.closest(".blocklyToolboxDiv, .blocklyFlyout, .blocklyDropDownDiv, .blocklyWidgetDiv"),
+    target.closest(
+      ".blocklyToolbox, .blocklyToolboxDiv, .blocklyToolboxCategoryContainer, .blocklyToolboxCategory, .blocklyFlyout, .blocklyDropDownDiv, .blocklyWidgetDiv",
+    ),
   );
 }
 
@@ -143,9 +156,7 @@ function revealWorkspaceContent(workspace, blockId) {
 function syncWorkspaceViewport(workspace, blockId) {
   window.requestAnimationFrame(() => {
     clearToolboxSelection(workspace);
-    window.requestAnimationFrame(() => {
-      revealWorkspaceContent(workspace, blockId);
-    });
+    stabilizeWorkspace(workspace, { blockId });
   });
 }
 
@@ -176,6 +187,44 @@ function scheduleWorkspaceResize(workspace) {
       resizeWorkspace(workspace);
     });
   });
+}
+
+function stabilizeWorkspace(workspace, options = {}) {
+  const blockId = options.blockId || null;
+  const reveal = options.reveal !== false;
+
+  window.requestAnimationFrame(() => {
+    resizeWorkspace(workspace);
+    window.requestAnimationFrame(() => {
+      resizeWorkspace(workspace);
+      if (reveal) {
+        revealWorkspaceContent(workspace, blockId);
+      }
+    });
+  });
+
+  window.clearTimeout(workspaceSettleTimerId);
+  workspaceSettleTimerId = window.setTimeout(() => {
+    resizeWorkspace(workspace);
+    if (reveal) {
+      revealWorkspaceContent(workspace, blockId);
+    }
+  }, 120);
+}
+
+function observeWorkspaceShell(workspace) {
+  const workspaceElement = document.getElementById("blockclass-workspace");
+  if (!workspaceElement || typeof ResizeObserver === "undefined") {
+    return;
+  }
+
+  const observer = new ResizeObserver(() => {
+    resizeWorkspace(workspace);
+  });
+  observer.observe(workspaceElement);
+  if (workspaceElement.parentElement) {
+    observer.observe(workspaceElement.parentElement);
+  }
 }
 
 function renderCode(workspace) {
@@ -239,6 +288,7 @@ function loadTemplate(workspace, key) {
     return;
   }
 
+  setActiveTemplateButton(key);
   workspace.clear();
   const xml = Blockly.utils.xml.textToDom(xmlText);
   Blockly.Xml.domToWorkspace(xml, workspace);
@@ -304,7 +354,7 @@ function initBlockclass() {
     media: window.BLOCKCLASS_MEDIA_URL,
     trashcan: false,
     sounds: false,
-    scrollbars: true,
+    scrollbars: false,
     renderer: "zelos",
     zoom: {
       controls: false,
@@ -315,7 +365,7 @@ function initBlockclass() {
       scaleSpeed: 1.1,
     },
     move: {
-      scrollbars: true,
+      scrollbars: false,
       drag: true,
       wheel: true,
     },
@@ -379,10 +429,19 @@ function initBlockclass() {
     clearToolboxSelection(workspace);
   });
 
+  document.addEventListener("pointerup", (event) => {
+    if (!shouldPreserveFlyout(event.target)) {
+      return;
+    }
+
+    stabilizeWorkspace(workspace, { reveal: false });
+  });
+
   window.addEventListener("resize", () => {
     resizeWorkspace(workspace);
   });
 
+  observeWorkspaceShell(workspace);
   scheduleWorkspaceResize(workspace);
   loadTemplate(workspace, "sequence");
 }
