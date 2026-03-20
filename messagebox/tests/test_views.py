@@ -72,6 +72,8 @@ class MessageboxViewTests(TestCase):
         self.assertContains(response, "applyMessageCaptureCandidateStartDate(messageCaptureActiveCandidateRef, messageCaptureActiveCandidateRef.start_date)")
         self.assertContains(response, "applyMessageCaptureCandidateEndDate(messageCaptureActiveCandidateRef, messageCaptureActiveCandidateRef.end_date)")
         self.assertContains(response, "applyMessageCaptureCandidateTimeToggle(messageCaptureActiveCandidateRef, messageCaptureActiveCandidateRef.has_time)")
+        self.assertContains(response, "handleMessageCaptureCandidateStartTimeChange(messageCaptureActiveCandidateRef)")
+        self.assertContains(response, "markMessageCaptureCandidateEndManual(messageCaptureActiveCandidateRef)")
         self.assertNotContains(response, "날짜 연결하기")
         self.assertNotContains(response, "선택 후 오른쪽 달력 날짜를 누르세요.")
         self.assertNotContains(response, "카드의 일정 수정을 누른 뒤 달력 날짜를 정하면 됩니다.")

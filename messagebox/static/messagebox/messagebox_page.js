@@ -352,6 +352,7 @@ function messageboxPage(options = {}) {
                 end_date: defaultDate,
                 start_clock: "09:00",
                 end_clock: "10:00",
+                end_time_auto: true,
                 edit_open: false,
                 is_manual: false,
                 is_removed: false,
@@ -607,6 +608,56 @@ function messageboxPage(options = {}) {
             return candidate.range_days;
         },
 
+        buildMessageCaptureAutoEnd(candidate) {
+            if (!candidate || !candidate.start_date || !candidate.start_clock) return null;
+            const start = new Date(`${candidate.start_date}T${candidate.start_clock}`);
+            if (Number.isNaN(start.getTime())) {
+                return null;
+            }
+            const end = new Date(start.getTime() + (60 * 60 * 1000));
+            return {
+                end_date: `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, "0")}-${String(end.getDate()).padStart(2, "0")}`,
+                end_clock: `${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}`,
+            };
+        },
+
+        syncMessageCaptureCandidateAutoEnd(candidate, options = {}) {
+            if (!candidate || !candidate.has_time || !candidate.start_date || !candidate.start_clock) return;
+            const start = new Date(`${candidate.start_date}T${candidate.start_clock}`);
+            if (Number.isNaN(start.getTime())) {
+                return;
+            }
+            const currentEndDate = String(candidate.end_date || candidate.start_date || "").trim();
+            const currentEndClock = String(candidate.end_clock || "").trim();
+            const currentEnd = new Date(`${currentEndDate || candidate.start_date}T${currentEndClock || "00:00"}`);
+            const shouldUpdate = !!options.force
+                || !!candidate.end_time_auto
+                || !currentEndDate
+                || !currentEndClock
+                || Number.isNaN(currentEnd.getTime())
+                || currentEnd <= start;
+            if (!shouldUpdate) {
+                return;
+            }
+            const autoEnd = this.buildMessageCaptureAutoEnd(candidate);
+            if (!autoEnd) {
+                return;
+            }
+            candidate.end_date = autoEnd.end_date;
+            candidate.end_clock = autoEnd.end_clock;
+            candidate.end_time_auto = true;
+            this.normalizeMessageCaptureCandidateDates(candidate);
+        },
+
+        handleMessageCaptureCandidateStartTimeChange(candidate) {
+            this.syncMessageCaptureCandidateAutoEnd(candidate);
+        },
+
+        markMessageCaptureCandidateEndManual(candidate) {
+            if (!candidate) return;
+            candidate.end_time_auto = false;
+        },
+
         applyMessageCaptureCandidateToDate(candidate, targetDateKey) {
             if (!candidate) {
                 this.messageCaptureErrorText = "먼저 날짜를 바꿀 후보를 선택해 주세요.";
@@ -628,6 +679,9 @@ function messageboxPage(options = {}) {
             candidate.edit_open = true;
             this.messageCaptureErrorText = "";
             this.messageCaptureCalendarMonthKey = this.normalizeMessageCaptureMonthKey(normalizedTargetDate);
+            if (candidate.has_time && candidate.end_time_auto) {
+                this.syncMessageCaptureCandidateAutoEnd(candidate, { force: true });
+            }
         },
 
         applyMessageCaptureCandidateStartDate(candidate, nextDateKey) {
@@ -647,6 +701,9 @@ function messageboxPage(options = {}) {
             candidate.end_date = this.dateKey(nextEndDate);
             candidate.range_days = spanDays;
             this.messageCaptureCalendarMonthKey = this.normalizeMessageCaptureMonthKey(normalizedTargetDate);
+            if (candidate.has_time && candidate.end_time_auto) {
+                this.syncMessageCaptureCandidateAutoEnd(candidate, { force: true });
+            }
         },
 
         applyMessageCaptureCandidateEndDate(candidate, nextDateKey) {
@@ -664,6 +721,11 @@ function messageboxPage(options = {}) {
         applyMessageCaptureCandidateTimeToggle(candidate, hasTime) {
             if (!candidate) return;
             candidate.has_time = !!hasTime;
+            if (candidate.has_time) {
+                this.syncMessageCaptureCandidateAutoEnd(candidate, {
+                    force: candidate.end_time_auto !== false,
+                });
+            }
         },
 
         handleMessageCaptureCalendarDrop(targetDateKey, dropEvent) {
@@ -1198,6 +1260,7 @@ function messageboxPage(options = {}) {
             const end = raw.end_time ? new Date(raw.end_time) : (start ? new Date(raw.start_time) : null);
             const fallbackDate = this.messageCaptureManualDate || this.dateKey(new Date());
             const badgeMeta = this.messageCaptureCandidateBadgeMeta(raw.kind || "event");
+            const hasExplicitTimedRange = !!start && !!raw.end_time && !raw.is_all_day;
             const normalizedCandidate = {
                 candidate_id: String(raw.candidate_id || ""),
                 kind: badgeMeta.kind,
@@ -1215,6 +1278,7 @@ function messageboxPage(options = {}) {
                 end_date: end ? this.dateKey(end) : (start ? this.dateKey(start) : fallbackDate),
                 start_clock: start ? this.toTimeInput(start) : "09:00",
                 end_clock: end ? this.toTimeInput(end) : "10:00",
+                end_time_auto: !hasExplicitTimedRange || ((end.getTime() - start.getTime()) === (60 * 60 * 1000)),
                 edit_open: !!raw.is_manual,
                 is_manual: !!raw.is_manual,
                 is_removed: !!raw.is_removed,

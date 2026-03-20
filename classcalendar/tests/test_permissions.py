@@ -166,6 +166,19 @@ class PermissionTest(TestCase):
         self.assertIn("보관한 메시지를 바로 날짜 확인 화면으로 열었어요.", content)
         self.assertNotIn("await this.submitSavedMessageCaptureParse(detail.capture_id);", content)
 
+    def test_main_view_event_forms_auto_fill_end_time_from_start_time(self):
+        response = self.client_teacher.get(reverse("calendar_main"), follow=True)
+        content = response.content.decode("utf-8")
+
+        self.assertIn("toggleEventFormHasTime('create')", content)
+        self.assertIn("toggleEventFormHasTime('edit')", content)
+        self.assertIn("handleEventFormStartDateChange('create')", content)
+        self.assertIn("handleEventFormStartDateChange('edit')", content)
+        self.assertIn("handleEventFormStartClockChange('create')", content)
+        self.assertIn("handleEventFormStartClockChange('edit')", content)
+        self.assertIn("markEventFormEndManual('create')", content)
+        self.assertIn("markEventFormEndManual('edit')", content)
+
     def test_legacy_today_memo_panel_route_redirects_to_home_surface(self):
         response = self.client_teacher.get(f"{reverse('classcalendar:main')}?panel=today-memos")
 

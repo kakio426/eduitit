@@ -358,7 +358,7 @@
                                             </div>
                                             <div>
                                                 <label class="mb-1 block text-xs font-black text-slate-700">종료일</label>
-                                                <input x-model="messageCaptureActiveCandidateRef.end_date" @change="applyMessageCaptureCandidateEndDate(messageCaptureActiveCandidateRef, messageCaptureActiveCandidateRef.end_date)" type="date" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                                <input x-model="messageCaptureActiveCandidateRef.end_date" @change="applyMessageCaptureCandidateEndDate(messageCaptureActiveCandidateRef, messageCaptureActiveCandidateRef.end_date); markMessageCaptureCandidateEndManual(messageCaptureActiveCandidateRef)" type="date" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
                                             </div>
                                             <label class="inline-flex items-center gap-2 text-xs font-black text-slate-700 sm:col-span-2">
                                                 <input x-model="messageCaptureActiveCandidateRef.has_time" @change="applyMessageCaptureCandidateTimeToggle(messageCaptureActiveCandidateRef, messageCaptureActiveCandidateRef.has_time)" type="checkbox" class="rounded border-slate-300">
@@ -366,11 +366,11 @@
                                             </label>
                                             <div x-show="messageCaptureActiveCandidateRef.has_time">
                                                 <label class="mb-1 block text-xs font-black text-slate-700">시작 시간</label>
-                                                <input x-model="messageCaptureActiveCandidateRef.start_clock" type="time" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                                <input x-model="messageCaptureActiveCandidateRef.start_clock" @change="handleMessageCaptureCandidateStartTimeChange(messageCaptureActiveCandidateRef)" type="time" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
                                             </div>
                                             <div x-show="messageCaptureActiveCandidateRef.has_time">
                                                 <label class="mb-1 block text-xs font-black text-slate-700">종료 시간</label>
-                                                <input x-model="messageCaptureActiveCandidateRef.end_clock" type="time" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                                <input x-model="messageCaptureActiveCandidateRef.end_clock" @change="markMessageCaptureCandidateEndManual(messageCaptureActiveCandidateRef)" type="time" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
                                             </div>
                                             <div class="sm:col-span-2">
                                                 <label class="mb-1 block text-xs font-black text-slate-700">메모</label>
