@@ -11,7 +11,6 @@ from .services import (
     ParserExecutionError,
     ParserUnavailableError,
     get_service,
-    get_parser_readiness,
     inspect_pdf_upload,
     mark_parse_failure,
     parse_document,
@@ -28,7 +27,6 @@ def _build_main_context(request, *, form=None):
     queryset = TextbookDocument.objects.filter(owner=request.user)
     return {
         "service": get_service(),
-        "parser_readiness": get_parser_readiness(),
         "upload_form": form or TextbookDocumentUploadForm(),
         "documents": documents,
         "document_count": queryset.count(),
@@ -44,7 +42,6 @@ def _render_detail(request, document, *, active_tab="structure", search_query=""
     preview_chunks = list(document.chunks.order_by("sort_order")[:12])
     context = {
         "service": get_service(),
-        "parser_readiness": get_parser_readiness(),
         "document": document,
         "artifact": artifact,
         "active_tab": active_tab,
@@ -126,7 +123,7 @@ def reparse_document_view(request, document_id):
         parse_document(document, force=True)
     except (ParserUnavailableError, ParserExecutionError) as exc:
         mark_parse_failure(document, exc)
-        messages.error(request, "다시 읽기 중 문제가 생겼습니다. Java 또는 OpenDataLoader 설치 상태를 확인해 주세요.")
+        messages.error(request, "다시 읽기 중 문제가 생겼습니다. 잠시 후 다시 시도해 주세요.")
     else:
         if document.parse_status == TextbookDocument.ParseStatus.NEEDS_REVIEW:
             messages.warning(request, "다시 읽기를 마쳤지만 텍스트 추출량이 낮습니다. 결과를 직접 확인해 주세요.")

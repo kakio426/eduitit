@@ -109,6 +109,9 @@ class TextbookAiViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "PDF 분석 도우미")
         self.assertContains(response, "PDF 읽기 시작")
+        self.assertNotContains(response, "로컬 파서 준비 필요")
+        self.assertNotContains(response, "v1은")
+        self.assertNotContains(response, "외부 LLM")
 
     @patch("textbook_ai.views.parse_document")
     def test_upload_requires_license_checkbox(self, mock_parse_document):
@@ -184,6 +187,9 @@ class TextbookAiViewTests(TestCase):
 
         detail = self.client.get(reverse("textbook_ai:detail", args=[document.id]))
         self.assertContains(detail, "실패")
+        self.assertContains(detail, "잠시 후 다시 시도해 주세요.")
+        self.assertNotContains(detail, "OpenDataLoader")
+        self.assertNotContains(detail, "Java")
 
     @patch("textbook_ai.services.convert_pdf_with_opendataloader", return_value=build_parser_payload())
     def test_search_view_shows_page_source_and_pdf_link(self, mock_parser):

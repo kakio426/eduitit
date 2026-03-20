@@ -130,6 +130,12 @@ def get_parser_readiness():
     }
 
 
+def build_user_facing_parse_error_message(error_message):
+    if isinstance(error_message, ParserUnavailableError):
+        return "지금은 PDF를 읽지 못했습니다. 잠시 후 다시 시도해 주세요."
+    return "PDF를 읽는 중 문제가 생겼습니다. 잠시 후 다시 시도해 주세요."
+
+
 def inspect_pdf_upload(uploaded_file):
     if uploaded_file is None:
         raise ValidationError("PDF 파일을 올려 주세요.")
@@ -349,7 +355,8 @@ def parse_document(document, *, force=False, parser_fn=None):
 
 def mark_parse_failure(document, error_message):
     document.parse_status = TextbookDocument.ParseStatus.FAILED
-    document.error_message = str(error_message or "").strip() or "PDF 읽기에 실패했습니다."
+    logger.warning("textbook_ai parse failure document=%s error=%s", getattr(document, "id", None), error_message)
+    document.error_message = build_user_facing_parse_error_message(error_message)
     document.save(update_fields=["parse_status", "error_message", "updated_at"])
     return document
 
