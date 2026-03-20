@@ -892,26 +892,11 @@ def session_list(request):
             }
         )
 
-    example_scenarios = [
-        {
-            "title": "교내 연수 참석 확인",
-            "description": "연수 시작 전에 QR을 띄우고, 끝나면 참여 현황만 바로 확인합니다.",
-        },
-        {
-            "title": "회의 참석 서명",
-            "description": "회의 링크를 단톡방에 보내고 참석 서명을 종이 없이 정리합니다.",
-        },
-        {
-            "title": "전달 연수 수강 확인",
-            "description": "전달 자료와 함께 링크를 보내고 미참여자만 나중에 다시 확인합니다.",
-        },
-    ]
     return render(
         request,
         'signatures/list.html',
         {
             'session_cards': session_cards,
-            'example_scenarios': example_scenarios,
         },
     )
 

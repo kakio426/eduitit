@@ -25,10 +25,6 @@
                             class="inline-flex items-center justify-center rounded-2xl bg-indigo-600 px-6 py-4 text-base font-black text-white hover:bg-indigo-700 transition">
                             <i class="fa-solid fa-plus mr-2"></i>서명 요청 만들기
                         </a>
-                        <a href="#signatureExamples"
-                            class="inline-flex items-center justify-center rounded-2xl border border-indigo-200 bg-white px-6 py-4 text-base font-bold text-indigo-700 hover:bg-indigo-50 transition">
-                            <i class="fa-solid fa-lightbulb mr-2"></i>예시 보기
-                        </a>
                     </div>
                     <div class="mt-4 flex flex-wrap items-center gap-2 text-sm text-slate-500">
                         <span class="font-bold text-slate-400">보조 도구</span>
@@ -60,16 +56,6 @@
                     </div>
                 </div>
             </div>
-        </section>
-
-        <section id="signatureExamples" class="grid gap-4 md:grid-cols-3">
-            {% for example in example_scenarios %}
-            <article class="clay-card rounded-[1.75rem] p-5 md:p-6">
-                <p class="text-xs font-black uppercase tracking-[0.2em] text-indigo-500">예시 {{ forloop.counter }}</p>
-                <h2 class="mt-3 text-xl font-black text-slate-800">{{ example.title }}</h2>
-                <p class="mt-2 text-sm leading-relaxed text-slate-500">{{ example.description }}</p>
-            </article>
-            {% endfor %}
         </section>
 
         <section class="space-y-4">
@@ -161,14 +147,10 @@
                 <p class="mt-3 text-base leading-relaxed text-slate-500">
                     교내 연수, 회의 참석, 전달 연수 확인처럼 오늘 바로 필요한 장면부터 시작하면 됩니다.
                 </p>
-                <div class="mt-6 flex flex-col sm:flex-row justify-center gap-3">
+                <div class="mt-6 flex justify-center">
                     <a href="{% url 'signatures:create' %}"
                         class="inline-flex items-center justify-center rounded-2xl bg-indigo-600 px-6 py-4 text-base font-black text-white hover:bg-indigo-700 transition">
                         <i class="fa-solid fa-plus mr-2"></i>서명 요청 만들기
-                    </a>
-                    <a href="#signatureExamples"
-                        class="inline-flex items-center justify-center rounded-2xl border border-indigo-200 bg-white px-6 py-4 text-base font-bold text-indigo-700 hover:bg-indigo-50 transition">
-                        <i class="fa-solid fa-eye mr-2"></i>예시 보기
                     </a>
                 </div>
             </div>
