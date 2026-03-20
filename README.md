@@ -1,7 +1,5 @@
 # My Claude Code Configuration
 
-김재현 님의 클로드 코드 configuration 설정 값입니다. 어디서나 이식해서 사용하세요.
-
 ## 빠른 설치
 
 다른 컴퓨터에서 Claude Code에게 이렇게 말하세요:
