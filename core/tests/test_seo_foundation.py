@@ -91,7 +91,7 @@ class SeoFoundationTests(TestCase):
         self.assertIn('<meta property="og:url" content="https://eduitit.site/">', content)
         self.assertIn("<title>교사를 위한 AI·학급 운영 도구 | Eduitit</title>", content)
         self.assertIn('<link rel="icon" href="/favicon.ico" sizes="any">', content)
-        self.assertIn("eduitit_og_teacher_first.png", content)
+        self.assertIn("eduitit_og.png", content)
         self.assertIn('"@type":"WebSite"', content)
         self.assertIn('"@type":"CollectionPage"', content)
 
@@ -187,7 +187,7 @@ class SeoFoundationTests(TestCase):
                 self.assertIn(f'<meta name="robots" content="noindex,nofollow">', content)
                 self.assertIn(f'<link rel="canonical" href="{canonical}">', content)
                 self.assertIn(f'<meta property="og:url" content="{canonical}">', content)
-                self.assertIn("eduitit_og_teacher_first.png", content)
+                self.assertIn("eduitit_og.png", content)
                 self.assertIn(html.escape(description), content)
                 self.assertNotIn(DEFAULT_HOME_DESCRIPTION, content)
 
