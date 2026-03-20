@@ -45,6 +45,12 @@ class FairyGamesRoutingTests(TestCase):
         self.assertContains(response, 'id="fg-rules-title"')
         self.assertContains(response, 'id="fg-result-title"')
 
+    def test_reversi_play_page_body_avoids_false_error_strings(self):
+        response = self.client.get(reverse("fairy_games:play", kwargs={"variant": "reversi"}))
+        content = response.content.decode("utf-8")
+
+        self.assertNotRegex(content, r'(?i)Error|Service Unavailable|504|502')
+
 
 class FairyGamesEnsureCommandTests(TestCase):
     def test_ensure_fairy_games_sets_launch_routes_and_published_manuals(self):

@@ -64,10 +64,10 @@
             this.toasts = this.toasts.filter(t => t.id !== id);
         },
         tagIcon(tag) {
-            return { success: 'fa-circle-check', error: 'fa-circle-xmark', warning: 'fa-triangle-exclamation', info: 'fa-circle-info' }[tag] || 'fa-circle-info';
+            return { success: 'fa-circle-check', danger: 'fa-circle-xmark', warning: 'fa-triangle-exclamation', info: 'fa-circle-info' }[tag] || 'fa-circle-info';
         },
         tagColor(tag) {
-            return { success: 'text-green-500', error: 'text-red-500', warning: 'text-orange-500', info: 'text-blue-500' }[tag] || 'text-blue-500';
+            return { success: 'text-green-500', danger: 'text-red-500', warning: 'text-orange-500', info: 'text-blue-500' }[tag] || 'text-blue-500';
         }
     }" @eduitit:toast.window="addToast($event.detail.message, $event.detail.tag)" class="fixed top-28 md:top-24 right-4 md:right-6 z-[200] flex flex-col gap-3 pointer-events-none" style="max-width: 380px;">
             <template x-for="toast in toasts" :key="toast.id">

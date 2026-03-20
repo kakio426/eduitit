@@ -1,11 +1,13 @@
 import json
 
+from django.contrib import messages as django_messages
 from django.core.management import call_command
 from django.contrib.auth.models import AnonymousUser, User
+from django.contrib.messages.storage.fallback import FallbackStorage
 from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 
-from core.context_processors import search_products, site_config
+from core.context_processors import search_products, site_config, toast_messages
 from core.models import SiteConfig
 from products.models import Product
 
@@ -47,6 +49,17 @@ class ContextProcessorTestCase(TestCase):
         context = site_config(request)
 
         self.assertFalse(context["pinned_notice_expanded"])
+
+    def test_toast_messages_maps_error_level_to_danger_tag(self):
+        request = self.factory.get("/")
+        request.user = AnonymousUser()
+        request.session = self.client.session
+        request._messages = FallbackStorage(request)
+
+        django_messages.error(request, "알림 테스트")
+        context = toast_messages(request)
+
+        self.assertEqual(context["toast_messages"][0]["tag"], "danger")
 
 
 class ServiceLauncherContextTests(TestCase):

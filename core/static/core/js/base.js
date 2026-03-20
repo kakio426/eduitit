@@ -20,6 +20,20 @@
         }
     }
 
+    function normalizeToastTag(tag) {
+        var normalized = typeof tag === 'string' ? tag.trim().toLowerCase() : '';
+        if (!normalized) {
+            return 'info';
+        }
+        if (normalized === 'error') {
+            return 'danger';
+        }
+        if (normalized === 'danger' || normalized === 'success' || normalized === 'warning' || normalized === 'info') {
+            return normalized;
+        }
+        return 'info';
+    }
+
     function parseInlineJson(value, fallback) {
         if (typeof value !== 'string' || !value.trim()) {
             return fallback;
@@ -38,11 +52,12 @@
         }
     });
 
+    window.normalizeToastTag = normalizeToastTag;
     window.showToast = function (message, tag) {
         window.dispatchEvent(new CustomEvent('eduitit:toast', {
             detail: {
                 message: message || '',
-                tag: tag || 'info',
+                tag: normalizeToastTag(tag),
             },
         }));
     };

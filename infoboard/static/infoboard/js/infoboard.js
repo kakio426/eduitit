@@ -236,7 +236,12 @@ function ibFullscreenQR() {
 // ── Toast ──
 function ibToast(message, tag) {
     if (window.dispatchEvent) {
-        window.dispatchEvent(new CustomEvent('eduitit:toast', { detail: { message, tag } }));
+        window.dispatchEvent(new CustomEvent('eduitit:toast', {
+            detail: {
+                message,
+                tag: window.normalizeToastTag ? window.normalizeToastTag(tag) : (tag || 'info'),
+            },
+        }));
     }
 }
 

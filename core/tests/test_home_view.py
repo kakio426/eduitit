@@ -74,6 +74,12 @@ class HomeViewTest(TestCase):
         response = self.client.get(reverse('home'))
         self.assertEqual(response.status_code, 200)
 
+    def test_home_anonymous_body_avoids_false_error_strings(self):
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertNotRegex(content, r'(?i)Error|Service Unavailable|504|502')
+
     def test_home_anonymous_contains_product(self):
         """비로그인 홈에 서비스 카드가 표시됨"""
         response = self.client.get(reverse('home'))

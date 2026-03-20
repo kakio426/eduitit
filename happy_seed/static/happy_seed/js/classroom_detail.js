@@ -38,7 +38,7 @@
                 new CustomEvent("eduitit:toast", {
                     detail: {
                         message: message,
-                        tag: tag || "info",
+                        tag: window.normalizeToastTag ? window.normalizeToastTag(tag) : (tag || "info"),
                     },
                 })
             );

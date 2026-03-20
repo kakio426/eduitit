@@ -14,6 +14,14 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+TOAST_TAG_MAP = {
+    'debug': 'info',
+    'info': 'info',
+    'success': 'success',
+    'warning': 'warning',
+    'error': 'danger',
+}
+
 def visitor_counts(request):
     """
     Returns visitor count context variables.
@@ -56,20 +64,13 @@ def visitor_counts(request):
 def toast_messages(request):
     """
     Django messages framework를 활용한 toast 데이터 제공.
-    각 메시지를 tag(success/error/info/warning)와 함께 직렬화하여 Alpine.js에서 사용.
+    각 메시지를 tag(success/danger/info/warning)와 함께 직렬화하여 Alpine.js에서 사용.
     """
-    TAG_MAP = {
-        'debug': 'info',
-        'info': 'info',
-        'success': 'success',
-        'warning': 'warning',
-        'error': 'error',
-    }
     toast_list = []
     for message in django_messages.get_messages(request):
         toast_list.append({
             'message': str(message),
-            'tag': TAG_MAP.get(message.tags.split()[-1] if message.tags else 'info', 'info'),
+            'tag': TOAST_TAG_MAP.get(message.tags.split()[-1] if message.tags else 'info', 'info'),
         })
     return {'toast_messages': toast_list}
 
