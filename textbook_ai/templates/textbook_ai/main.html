@@ -1,0 +1,204 @@
+{% extends 'base.html' %}
+
+{% block title %}PDF 분석 도우미{% endblock %}
+
+{% block extra_css %}
+<style>
+    .textbook-ai-shell {
+        background:
+            radial-gradient(circle at top left, rgba(34, 197, 94, 0.14), transparent 26rem),
+            radial-gradient(circle at right bottom, rgba(59, 130, 246, 0.15), transparent 30rem),
+            linear-gradient(180deg, #f8fbff 0%, #f9fff9 46%, #eef4ff 100%);
+    }
+    .textbook-ai-panel {
+        background: rgba(255, 255, 255, 0.94);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+        backdrop-filter: blur(14px);
+    }
+    .textbook-ai-input {
+        width: 100%;
+        border-radius: 18px;
+        border: 1px solid #cbd5e1;
+        background: white;
+        padding: 0.9rem 1rem;
+    }
+    .textbook-ai-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        border-radius: 999px;
+        background: rgba(16, 185, 129, 0.12);
+        color: #047857;
+        padding: 0.45rem 0.9rem;
+        font-size: 0.8rem;
+        font-weight: 800;
+    }
+    .textbook-ai-status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        border-radius: 999px;
+        padding: 0.38rem 0.8rem;
+        font-size: 0.78rem;
+        font-weight: 800;
+    }
+    .textbook-ai-status-pill::before {
+        content: "";
+        width: 0.45rem;
+        height: 0.45rem;
+        border-radius: 999px;
+        background: currentColor;
+    }
+    .textbook-ai-ready { background: rgba(16, 185, 129, 0.12); color: #047857; }
+    .textbook-ai-review { background: rgba(245, 158, 11, 0.14); color: #b45309; }
+    .textbook-ai-processing { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; }
+    .textbook-ai-failed { background: rgba(239, 68, 68, 0.12); color: #b91c1c; }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="textbook-ai-shell min-h-screen pt-28 pb-20 px-4">
+    <div class="max-w-[1460px] mx-auto space-y-8">
+        {% if not parser_readiness.is_ready %}
+        <div class="rounded-[28px] border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
+            <div class="font-black text-amber-900">로컬 파서 준비 필요</div>
+            <div class="mt-1">{{ parser_readiness.message }}</div>
+        </div>
+        {% endif %}
+
+        <header class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+            <div class="max-w-4xl">
+                <p class="text-sm font-black uppercase tracking-[0.32em] text-emerald-700">PDF 분석 도우미</p>
+                <h1 class="mt-3 text-4xl md:text-5xl font-black text-slate-950">PDF를 AI가 읽기 좋은 형태로 정리합니다</h1>
+                <p class="mt-4 max-w-3xl text-lg text-slate-600">올린 PDF를 구조화해서 목차, 본문, 표, 페이지 근거를 바로 확인하고 검색할 수 있게 준비해 드립니다. 생성 기능은 붙이지 않고, 먼저 읽기 품질과 출처 확인에 집중합니다.</p>
+            </div>
+            <div class="textbook-ai-panel rounded-[28px] px-5 py-4 text-sm text-slate-600 min-w-[280px]">
+                <div class="font-bold text-slate-900">지금 상태</div>
+                <div class="mt-3 grid grid-cols-2 gap-3">
+                    <div class="rounded-2xl bg-emerald-50 px-4 py-3">
+                        <div class="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700">준비 완료</div>
+                        <div class="mt-1 text-2xl font-black text-slate-900">{{ ready_count }}</div>
+                    </div>
+                    <div class="rounded-2xl bg-amber-50 px-4 py-3">
+                        <div class="text-xs font-bold uppercase tracking-[0.2em] text-amber-700">검토 필요</div>
+                        <div class="mt-1 text-2xl font-black text-slate-900">{{ needs_review_count }}</div>
+                    </div>
+                </div>
+                <div class="mt-3 text-xs text-slate-500">읽는 중 {{ processing_count }}개 · 전체 {{ document_count }}개</div>
+            </div>
+        </header>
+
+        <div class="grid gap-8 xl:grid-cols-[430px_minmax(0,1fr)]">
+            <section class="textbook-ai-panel rounded-[34px] p-6 md:p-8">
+                <div class="mb-6">
+                    <div class="textbook-ai-badge">1. PDF 올리기</div>
+                    <h2 class="mt-4 text-2xl font-black text-slate-950">먼저 PDF를 읽을 수 있게 준비합니다</h2>
+                    <p class="mt-2 text-sm leading-6 text-slate-500">디지털 PDF를 올리면 로컬 파서로 구조를 정리합니다. 스캔본처럼 텍스트가 적으면 자동으로 검토 필요 상태로 표시합니다.</p>
+                </div>
+
+                <form action="{% url 'textbook_ai:upload' %}" method="post" enctype="multipart/form-data" class="space-y-4">
+                    {% csrf_token %}
+                    {% if upload_form.non_field_errors %}
+                    <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                        {{ upload_form.non_field_errors }}
+                    </div>
+                    {% endif %}
+
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2" for="{{ upload_form.title.id_for_label }}">자료 제목</label>
+                        {{ upload_form.title }}
+                        {% if upload_form.title.errors %}<p class="mt-2 text-sm text-rose-600">{{ upload_form.title.errors|join:", " }}</p>{% endif %}
+                    </div>
+
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2" for="{{ upload_form.subject.id_for_label }}">과목</label>
+                            {{ upload_form.subject }}
+                            {% if upload_form.subject.errors %}<p class="mt-2 text-sm text-rose-600">{{ upload_form.subject.errors|join:", " }}</p>{% endif %}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2" for="{{ upload_form.grade.id_for_label }}">학년/학기</label>
+                            {{ upload_form.grade }}
+                            {% if upload_form.grade.errors %}<p class="mt-2 text-sm text-rose-600">{{ upload_form.grade.errors|join:", " }}</p>{% endif %}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2" for="{{ upload_form.unit_title.id_for_label }}">단원</label>
+                        {{ upload_form.unit_title }}
+                        {% if upload_form.unit_title.errors %}<p class="mt-2 text-sm text-rose-600">{{ upload_form.unit_title.errors|join:", " }}</p>{% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2" for="{{ upload_form.source_pdf.id_for_label }}">PDF 파일</label>
+                        {{ upload_form.source_pdf }}
+                        <p class="mt-2 text-xs text-slate-500">PDF만 지원합니다. 최대 150MB, 600쪽, 비밀번호 없는 파일만 읽습니다.</p>
+                        {% if upload_form.source_pdf.errors %}<p class="mt-2 text-sm text-rose-600">{{ upload_form.source_pdf.errors|join:", " }}</p>{% endif %}
+                    </div>
+
+                    <label class="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                        {{ upload_form.license_confirmed }}
+                        <span class="text-sm leading-6 text-slate-600">이 PDF의 사용 허가 여부를 확인했고, 외부 배포가 아니라 내부 검토/활용 범위에서 사용합니다.</span>
+                    </label>
+                    {% if upload_form.license_confirmed.errors %}<p class="mt-2 text-sm text-rose-600">{{ upload_form.license_confirmed.errors|join:", " }}</p>{% endif %}
+
+                    <button type="submit" class="w-full rounded-2xl bg-slate-950 py-4 text-lg font-black text-white shadow-lg shadow-slate-950/20 transition hover:-translate-y-0.5">PDF 읽기 시작</button>
+                </form>
+            </section>
+
+            <div class="space-y-6 min-w-0">
+                <section class="textbook-ai-panel rounded-[34px] p-6 md:p-8">
+                    <div class="flex items-center justify-between gap-3 flex-wrap">
+                        <div>
+                            <div class="textbook-ai-badge">2. 최근 문서</div>
+                            <h2 class="mt-4 text-2xl font-black text-slate-950">최근 올린 PDF를 다시 확인합니다</h2>
+                        </div>
+                        <div class="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm text-slate-600">총 {{ document_count }}개</div>
+                    </div>
+
+                    {% if documents %}
+                    <div class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {% for document in documents %}
+                        <a href="{% url 'textbook_ai:detail' document.id %}" class="block rounded-[28px] border border-slate-200 bg-white p-5 transition hover:-translate-y-1">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <div class="text-xs font-black uppercase tracking-[0.28em] text-emerald-700">{{ document.get_subject_display }}</div>
+                                    <h3 class="mt-2 text-xl font-black text-slate-900">{{ document.title }}</h3>
+                                </div>
+                                {% if document.parse_status == document.ParseStatus.READY %}
+                                <span class="textbook-ai-status-pill textbook-ai-ready">준비 완료</span>
+                                {% elif document.parse_status == document.ParseStatus.NEEDS_REVIEW %}
+                                <span class="textbook-ai-status-pill textbook-ai-review">검토 필요</span>
+                                {% elif document.parse_status == document.ParseStatus.PROCESSING %}
+                                <span class="textbook-ai-status-pill textbook-ai-processing">읽는 중</span>
+                                {% else %}
+                                <span class="textbook-ai-status-pill textbook-ai-failed">실패</span>
+                                {% endif %}
+                            </div>
+                            <p class="mt-3 min-h-[3rem] text-sm text-slate-500">{% if document.unit_title %}{{ document.unit_title }}{% if document.grade %} · {{ document.grade }}{% endif %}{% else %}단원 정보 없음{% endif %}</p>
+                            <div class="mt-4 flex items-center justify-between text-sm text-slate-500">
+                                <span>{{ document.page_count }}쪽</span>
+                                <span>{{ document.updated_at|date:"m.d H:i" }}</span>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="mt-6 rounded-[28px] border border-dashed border-slate-300 bg-white/80 p-10 text-center text-slate-500">
+                        <p class="text-lg font-black text-slate-800">아직 읽은 PDF가 없습니다.</p>
+                        <p class="mt-2">왼쪽에서 PDF를 올리면 목차와 표, 검색 가능한 본문 구조를 바로 확인할 수 있습니다.</p>
+                    </div>
+                    {% endif %}
+                </section>
+
+                <section class="textbook-ai-panel rounded-[34px] p-6 md:p-8 bg-[linear-gradient(135deg,rgba(15,23,42,0.96),rgba(22,101,52,0.94))] text-white">
+                    <div class="textbook-ai-badge !bg-white/10 !text-emerald-200">3. 이 도구의 역할</div>
+                    <h2 class="mt-4 text-2xl font-black">먼저 잘 읽게 만들고, 그다음 활용합니다</h2>
+                    <p class="mt-3 max-w-3xl text-sm leading-7 text-slate-200">v1은 요약이나 퀴즈를 바로 만들지 않습니다. PDF를 믿고 읽을 수 있게 구조화하고, 출처와 페이지 근거를 확인하는 데 집중합니다. 외부 LLM 연결은 나중에 선택형으로만 붙일 계획입니다.</p>
+                </section>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

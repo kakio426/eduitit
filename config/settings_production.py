@@ -96,6 +96,7 @@ INSTALLED_APPS = [
     'classcalendar.apps.ClasscalendarConfig',
     'messagebox.apps.MessageboxConfig',
     'textbooks.apps.TextbooksConfig',
+    'textbook_ai.apps.TextbookAiConfig',
     'edu_materials.apps.EduMaterialsConfig',
     'channels',
     'django_htmx',

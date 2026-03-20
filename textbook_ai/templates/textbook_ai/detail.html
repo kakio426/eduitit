@@ -1,0 +1,236 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ document.title }} | PDF 분석 도우미{% endblock %}
+
+{% block extra_css %}
+<style>
+    .textbook-ai-detail-shell {
+        background:
+            radial-gradient(circle at top, rgba(16, 185, 129, 0.12), transparent 30rem),
+            linear-gradient(180deg, #f8fbff 0%, #f4fbff 40%, #f8fff9 100%);
+    }
+    .textbook-ai-panel {
+        background: rgba(255, 255, 255, 0.95);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+        backdrop-filter: blur(14px);
+    }
+    .textbook-ai-tab {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        border: 1px solid rgba(203, 213, 225, 0.95);
+        background: white;
+        padding: 0.8rem 1rem;
+        font-weight: 800;
+        color: #475569;
+    }
+    .textbook-ai-tab-active {
+        border-color: rgba(5, 150, 105, 0.28);
+        background: rgba(16, 185, 129, 0.12);
+        color: #047857;
+    }
+    .textbook-ai-snippet {
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="textbook-ai-detail-shell min-h-screen pt-28 pb-20 px-4">
+    <div class="max-w-[1460px] mx-auto space-y-6">
+        {% if not parser_readiness.is_ready %}
+        <div class="rounded-[28px] border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
+            <div class="font-black text-amber-900">로컬 파서 준비 필요</div>
+            <div class="mt-1">{{ parser_readiness.message }}</div>
+        </div>
+        {% endif %}
+
+        <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+            <div class="max-w-4xl">
+                <a href="{% url 'textbook_ai:main' %}" class="text-sm font-black uppercase tracking-[0.28em] text-emerald-700">PDF 분석 도우미</a>
+                <h1 class="mt-3 text-4xl font-black text-slate-950">{{ document.title }}</h1>
+                <p class="mt-3 text-lg text-slate-600">
+                    {% if document.unit_title %}{{ document.unit_title }}{% else %}단원 정보 없음{% endif %}
+                    {% if document.grade %} · {{ document.grade }}{% endif %}
+                    · {{ document.get_subject_display }}
+                </p>
+            </div>
+            <div class="flex flex-wrap gap-3">
+                <a href="{% url 'textbook_ai:pdf' document.id %}#page=1" class="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700">원본 PDF 열기</a>
+                <form action="{% url 'textbook_ai:reparse' document.id %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white">다시 읽기</button>
+                </form>
+            </div>
+        </div>
+
+        <section class="textbook-ai-panel rounded-[34px] p-6 md:p-8">
+            <div class="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_repeat(4,minmax(0,0.6fr))]">
+                <div class="rounded-[28px] bg-slate-950 px-5 py-5 text-white">
+                    <div class="text-xs font-black uppercase tracking-[0.28em] text-emerald-200">처리 상태</div>
+                    <div class="mt-3 text-2xl font-black">{{ document.get_parse_status_display }}</div>
+                    {% if document.error_message %}
+                    <p class="mt-3 text-sm leading-6 text-slate-200">{{ document.error_message }}</p>
+                    {% elif document.parse_status == document.ParseStatus.NEEDS_REVIEW and scan_review_reason %}
+                    <p class="mt-3 text-sm leading-6 text-slate-200">{{ scan_review_reason }}</p>
+                    {% else %}
+                    <p class="mt-3 text-sm leading-6 text-slate-200">OpenDataLoader 로컬 파서로 구조를 정리했습니다.</p>
+                    {% endif %}
+                </div>
+                <div class="rounded-[28px] bg-emerald-50 px-5 py-5">
+                    <div class="text-xs font-black uppercase tracking-[0.28em] text-emerald-700">페이지</div>
+                    <div class="mt-3 text-3xl font-black text-slate-950">{{ artifact.page_count|default:document.page_count }}</div>
+                </div>
+                <div class="rounded-[28px] bg-sky-50 px-5 py-5">
+                    <div class="text-xs font-black uppercase tracking-[0.28em] text-sky-700">목차</div>
+                    <div class="mt-3 text-3xl font-black text-slate-950">{{ artifact.heading_count|default:0 }}</div>
+                </div>
+                <div class="rounded-[28px] bg-amber-50 px-5 py-5">
+                    <div class="text-xs font-black uppercase tracking-[0.28em] text-amber-700">표</div>
+                    <div class="mt-3 text-3xl font-black text-slate-950">{{ artifact.table_count|default:0 }}</div>
+                </div>
+                <div class="rounded-[28px] bg-slate-50 px-5 py-5">
+                    <div class="text-xs font-black uppercase tracking-[0.28em] text-slate-700">본문 문자</div>
+                    <div class="mt-3 text-3xl font-black text-slate-950">{{ artifact.text_char_count|default:0 }}</div>
+                </div>
+            </div>
+        </section>
+
+        <div class="flex flex-wrap gap-3">
+            <a href="{% url 'textbook_ai:detail' document.id %}" class="textbook-ai-tab {% if active_tab == 'structure' %}textbook-ai-tab-active{% endif %}">구조 보기</a>
+            <a href="{% url 'textbook_ai:search' document.id %}" class="textbook-ai-tab {% if active_tab == 'search' %}textbook-ai-tab-active{% endif %}">검색</a>
+            <a href="{% url 'textbook_ai:detail' document.id %}?tab=future" class="textbook-ai-tab {% if active_tab == 'future' %}textbook-ai-tab-active{% endif %}">AI 생성</a>
+        </div>
+
+        {% if active_tab == 'search' %}
+        <section class="textbook-ai-panel rounded-[34px] p-6 md:p-8">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                    <div class="text-sm font-black uppercase tracking-[0.28em] text-emerald-700">검색</div>
+                    <h2 class="mt-2 text-2xl font-black text-slate-950">필요한 내용을 페이지 근거와 함께 찾습니다</h2>
+                </div>
+                <form action="{% url 'textbook_ai:search' document.id %}" method="get" class="flex w-full max-w-xl gap-3">
+                    <input type="text" name="q" value="{{ search_query }}" class="min-w-0 flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3" placeholder="예: 광합성, 표, 핵심 개념">
+                    <button type="submit" class="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white">검색</button>
+                </form>
+            </div>
+
+            {% if search_query and search_results %}
+            <div class="mt-6 space-y-4">
+                {% for result in search_results %}
+                <article class="rounded-[28px] border border-slate-200 bg-white p-5">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <div class="text-xs font-black uppercase tracking-[0.28em] text-emerald-700">{{ result.source_label }}</div>
+                            <h3 class="mt-2 text-lg font-black text-slate-900">{{ result.chunk.heading_path|default:"제목 없음" }}</h3>
+                        </div>
+                        <a href="{% url 'textbook_ai:pdf' document.id %}#page={{ result.chunk.page_from }}" class="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-700">원본 보기</a>
+                    </div>
+                    <p class="textbook-ai-snippet mt-4 text-sm leading-7 text-slate-600">{{ result.snippet }}</p>
+                </article>
+                {% endfor %}
+            </div>
+            {% elif search_query %}
+            <div class="mt-6 rounded-[28px] border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-slate-500">
+                검색 결과가 없습니다. 다른 키워드나 더 짧은 표현으로 다시 찾아보세요.
+            </div>
+            {% else %}
+            <div class="mt-6 rounded-[28px] border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-slate-500">
+                검색어를 입력하면 페이지 근거와 함께 결과를 보여드립니다.
+            </div>
+            {% endif %}
+        </section>
+        {% elif active_tab == 'future' %}
+        <section class="textbook-ai-panel rounded-[34px] p-6 md:p-8">
+            <div class="rounded-[30px] bg-[linear-gradient(135deg,rgba(15,23,42,0.96),rgba(5,150,105,0.92))] p-8 text-white">
+                <div class="text-sm font-black uppercase tracking-[0.28em] text-emerald-200">AI 생성</div>
+                <h2 class="mt-3 text-3xl font-black">지금은 꺼 둔 기능입니다</h2>
+                {% if ai_generation_enabled %}
+                <p class="mt-3 max-w-3xl text-sm leading-7 text-slate-200">관리자 설정에서 외부 생성 기능을 켠 상태입니다. 후속 단계에서 요약, 퀴즈, 강의안 생성을 선택형으로 붙일 예정입니다.</p>
+                {% else %}
+                <p class="mt-3 max-w-3xl text-sm leading-7 text-slate-200">v1은 외부 LLM 비용 없이 PDF를 정확히 읽고 찾는 데 집중합니다. 요약이나 퀴즈 생성은 나중에 교사 클릭 시에만 선택적으로 붙일 계획입니다.</p>
+                {% endif %}
+            </div>
+        </section>
+        {% else %}
+        <section class="grid gap-6 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+            <div class="textbook-ai-panel rounded-[34px] p-6 md:p-8">
+                <div class="text-sm font-black uppercase tracking-[0.28em] text-emerald-700">목차 구조</div>
+                <h2 class="mt-2 text-2xl font-black text-slate-950">문서가 이렇게 정리되었습니다</h2>
+                {% if heading_outline %}
+                <div class="mt-6 space-y-3">
+                    {% for item in heading_outline %}
+                    <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <div class="text-sm font-black text-slate-900">{{ item.title }}</div>
+                                <div class="mt-1 text-xs text-slate-500">레벨 {{ item.heading_level }}</div>
+                            </div>
+                            <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">{{ item.page }}쪽</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="mt-6 rounded-[28px] border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-slate-500">
+                    추출된 목차가 없습니다. 제목 대신 본문 중심으로 검색해 보세요.
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="space-y-6">
+                <section class="textbook-ai-panel rounded-[34px] p-6 md:p-8">
+                    <div class="text-sm font-black uppercase tracking-[0.28em] text-emerald-700">본문 미리보기</div>
+                    <h2 class="mt-2 text-2xl font-black text-slate-950">페이지별 핵심 블록</h2>
+                    {% if preview_chunks %}
+                    <div class="mt-6 space-y-4">
+                        {% for chunk in preview_chunks %}
+                        <article class="rounded-[28px] border border-slate-200 bg-white p-5">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <div class="text-xs font-black uppercase tracking-[0.28em] text-emerald-700">{{ chunk.get_chunk_type_display }}</div>
+                                    <h3 class="mt-2 text-lg font-black text-slate-900">{{ chunk.heading_path|default:"제목 없음" }}</h3>
+                                </div>
+                                <span class="rounded-full bg-slate-50 px-3 py-1 text-xs font-black text-slate-700">{% if chunk.page_from == chunk.page_to %}{{ chunk.page_from }}쪽{% else %}{{ chunk.page_from }}-{{ chunk.page_to }}쪽{% endif %}</span>
+                            </div>
+                            <p class="mt-4 text-sm leading-7 text-slate-600">{{ chunk.text|truncatechars:280 }}</p>
+                        </article>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="mt-6 rounded-[28px] border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-slate-500">
+                        아직 미리 볼 구조가 없습니다.
+                    </div>
+                    {% endif %}
+                </section>
+
+                <section class="textbook-ai-panel rounded-[34px] p-6 md:p-8">
+                    <div class="text-sm font-black uppercase tracking-[0.28em] text-emerald-700">표 미리보기</div>
+                    <h2 class="mt-2 text-2xl font-black text-slate-950">표는 따로 모아 봅니다</h2>
+                    {% if table_previews %}
+                    <div class="mt-6 space-y-4">
+                        {% for table in table_previews %}
+                        <article class="rounded-[28px] border border-slate-200 bg-white p-5">
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="text-sm font-black text-slate-900">표 미리보기</div>
+                                <span class="rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-700">{{ table.page }}쪽</span>
+                            </div>
+                            <p class="mt-4 text-sm leading-7 text-slate-600">{{ table.text }}</p>
+                        </article>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="mt-6 rounded-[28px] border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-slate-500">
+                        추출된 표가 없습니다.
+                    </div>
+                    {% endif %}
+                </section>
+            </div>
+        </section>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
