@@ -52,6 +52,8 @@ PRODUCT_DETAIL_AUDIENCE_BY_TYPE = {
     "etc": "필요한 기능을 찾자마자 바로 써보고 싶은 교사에게 맞는 도구입니다.",
 }
 
+PUBLIC_PREVIEW_ACCESS_LABELS = {"공개 체험", "미리보기 가능", "외부 이동"}
+
 
 def _student_games_mode_enabled(request):
     return bool(request.session.get(STUDENT_GAMES_SESSION_KEY))
@@ -104,7 +106,7 @@ def _build_product_audience_copy(product):
 
 def _build_product_access_copy(product):
     access_label = str(getattr(product, "home_access_status_label", "") or "").strip()
-    if access_label == "공개 체험":
+    if access_label in PUBLIC_PREVIEW_ACCESS_LABELS:
         return "로그인 없이도 핵심 흐름을 먼저 확인할 수 있습니다."
     return "교사 계정으로 로그인한 뒤 바로 이어서 시작합니다."
 
@@ -410,7 +412,7 @@ def product_list(request):
     products = filter_discoverable_products(
         Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
     )
-    product_list = _attach_product_launch_meta(list(products))
+    product_list = _attach_product_launch_meta(list(products), user=request.user)
     surface_products = [product for product in product_list if not _is_sheetbook_cross_surface_hidden(product)]
     selected_section_key = _normalize_catalog_section_key(request.GET.get('section'))
     scenario_sections = _build_catalog_scenario_sections(
@@ -444,14 +446,14 @@ def product_detail(request, pk):
         is_owned = request.user.owned_products.filter(product=product).exists() or product.price == 0
     from core.views import _attach_product_launch_meta, _resolve_product_launch_url
 
-    product = _attach_product_launch_meta([product])[0]
+    product = _attach_product_launch_meta([product], user=request.user)[0]
     manual = (
         ServiceManual.objects.filter(product=product, is_published=True)
         .prefetch_related("sections")
         .first()
     )
     features = list(product.features.all())
-    launch_href, launch_is_external = _resolve_product_launch_url(product)
+    launch_href, launch_is_external = _resolve_product_launch_url(product, user=request.user)
     can_launch = bool(launch_href) and launch_href != request.path
     can_start = can_launch and (product.price == 0 or is_owned)
     access_label = getattr(product, "home_access_status_label", "") or "로그인 필요"
@@ -463,11 +465,11 @@ def product_detail(request, pk):
         start_href = f"{reverse('account_login')}?{urlencode({'next': launch_href})}"
         start_label = "로그인하고 시작"
         start_is_external = False
-    elif can_start and launch_is_external and access_label == "공개 체험":
+    elif can_start and launch_is_external and access_label in PUBLIC_PREVIEW_ACCESS_LABELS:
         start_label = "바로 체험하기"
     elif can_start and launch_is_external:
         start_label = "새 창에서 시작"
-    elif can_start and access_label == "공개 체험":
+    elif can_start and access_label in PUBLIC_PREVIEW_ACCESS_LABELS:
         start_label = "바로 체험하기"
 
     guide_href = getattr(product, "guide_url", "") or SERVICE_GUIDE_PADLET_URL
@@ -510,8 +512,8 @@ def product_preview(request, pk):
     product = get_object_or_404(Product, pk=pk, is_active=True)
     features = product.features.all()
     from core.views import _attach_product_launch_meta, _resolve_product_launch_url
-    product = _attach_product_launch_meta([product])[0]
-    launch_href, launch_is_external = _resolve_product_launch_url(product)
+    product = _attach_product_launch_meta([product], user=request.user)[0]
+    launch_href, launch_is_external = _resolve_product_launch_url(product, user=request.user)
     return render(request, 'products/partials/preview_modal.html', {
         'product': product,
         'features': features,

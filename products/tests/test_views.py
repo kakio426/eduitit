@@ -1,3 +1,5 @@
+from urllib.parse import urlencode
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase, Client, override_settings
 from django.urls import reverse
@@ -182,6 +184,67 @@ class ProductDetailHeroTests(TestCase):
         self.assertEqual(response.context["guide_href"], SERVICE_GUIDE_PADLET_URL)
         self.assertEqual(response.context["product_demo_block"]["kind"], "steps")
         self.assertGreaterEqual(len(response.context["quick_preview_steps"]), 1)
+
+    def test_product_detail_marks_login_only_route_as_login_required_even_when_guest_flag_is_on(self):
+        product = Product.objects.create(
+            title="인포보드",
+            lead_text="자료를 모으고 정리합니다.",
+            description="교사용 대시보드에서 보드를 관리합니다.",
+            solve_text="교실 자료를 모아 관리하고 싶어요",
+            price=0,
+            is_active=True,
+            is_guest_allowed=True,
+            service_type="work",
+            launch_route_name="infoboard:dashboard",
+        )
+
+        response = self.client.get(reverse("product_detail", kwargs={"pk": product.pk}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["product_access_label"], "로그인 필요")
+        self.assertEqual(response.context["launch_href"], reverse("infoboard:dashboard"))
+        self.assertEqual(
+            response.context["start_href"],
+            f"{reverse('account_login')}?{urlencode({'next': reverse('infoboard:dashboard')})}",
+        )
+        self.assertEqual(response.context["start_label"], "로그인하고 시작")
+
+    def test_product_detail_uses_public_happy_seed_landing_for_guest_and_dashboard_for_teacher(self):
+        product = Product.objects.create(
+            title="행복의 씨앗",
+            lead_text="학급 루틴을 차근차근 키웁니다.",
+            description="긍정 행동 기록과 보상 흐름을 운영합니다.",
+            solve_text="공개 소개부터 보고 싶어요",
+            price=0,
+            is_active=True,
+            is_guest_allowed=True,
+            service_type="classroom",
+            launch_route_name="happy_seed:dashboard",
+        )
+
+        guest_response = self.client.get(reverse("product_detail", kwargs={"pk": product.pk}))
+
+        self.assertEqual(guest_response.status_code, 200)
+        self.assertEqual(guest_response.context["product_access_label"], "미리보기 가능")
+        self.assertEqual(guest_response.context["launch_href"], reverse("happy_seed:landing"))
+        self.assertEqual(guest_response.context["start_href"], reverse("happy_seed:landing"))
+        self.assertEqual(guest_response.context["start_label"], "바로 체험하기")
+
+        teacher = get_user_model().objects.create_user(
+            username="happy-seed-teacher",
+            email="happy-seed-teacher@example.com",
+            password="pw-12345",
+        )
+        teacher_profile, _ = UserProfile.objects.get_or_create(user=teacher)
+        teacher_profile.nickname = "행복교사"
+        teacher_profile.role = "school"
+        teacher_profile.save(update_fields=["nickname", "role"])
+        self.client.force_login(teacher)
+        teacher_response = self.client.get(reverse("product_detail", kwargs={"pk": product.pk}))
+
+        self.assertEqual(teacher_response.status_code, 200)
+        self.assertEqual(teacher_response.context["launch_href"], reverse("happy_seed:dashboard"))
+        self.assertEqual(teacher_response.context["start_href"], reverse("happy_seed:dashboard"))
 
 
 class SheetbookDiscoveryVisibilityTests(TestCase):

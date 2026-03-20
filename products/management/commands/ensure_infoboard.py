@@ -17,10 +17,16 @@ class Command(BaseCommand):
 
         if product:
             self.stdout.write(f'[!] Found existing InfoBoard product (ID: {product.id})')
-            if not product.launch_route_name:
+            changed_fields = []
+            if product.launch_route_name != 'infoboard:dashboard':
                 product.launch_route_name = 'infoboard:dashboard'
-                product.save(update_fields=['launch_route_name'])
-                self.stdout.write('[OK] Updated launch_route_name')
+                changed_fields.append('launch_route_name')
+            if product.is_guest_allowed:
+                product.is_guest_allowed = False
+                changed_fields.append('is_guest_allowed')
+            if changed_fields:
+                product.save(update_fields=changed_fields)
+                self.stdout.write(f"[OK] Updated {', '.join(changed_fields)}")
         else:
             self.stdout.write('[!] InfoBoard product not found, creating...')
             product = Product.objects.create(
@@ -32,7 +38,7 @@ class Command(BaseCommand):
                 price=0.00,
                 is_active=True,
                 is_featured=False,
-                is_guest_allowed=True,
+                is_guest_allowed=False,
                 icon='📌',
                 color_theme='blue',
                 card_size='small',

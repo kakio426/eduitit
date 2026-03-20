@@ -4,6 +4,8 @@ from products.models import Product, ProductFeature
 class Command(BaseCommand):
     help = 'Ensure Reservations product exists in database'
 
+    LAUNCH_ROUTE = 'reservations:dashboard_landing'
+
     def handle(self, *args, **options):
         self.stdout.write('=' * 70)
         self.stdout.write(self.style.WARNING('[Reservations Product Setup]'))
@@ -23,7 +25,8 @@ class Command(BaseCommand):
             product.icon = '🏫'
             product.color_theme = 'purple'
             product.card_size = 'small'
-            product.is_guest_allowed = True # Students/Guests use it
+            product.is_guest_allowed = False
+            product.launch_route_name = self.LAUNCH_ROUTE
             
             # CRITICAL: Do NOT overwrite Admin-managed fields
             # - service_type
@@ -48,13 +51,14 @@ class Command(BaseCommand):
                 price=0.00,
                 is_active=True,
                 is_featured=False,
-                is_guest_allowed=True,
+                is_guest_allowed=False,
                 icon='🏫',
                 color_theme='purple',
                 card_size='small',
                 display_order=99, # Default order
                 service_type='classroom', # Default service type
                 external_url='',
+                launch_route_name=self.LAUNCH_ROUTE,
             )
             self.stdout.write(self.style.SUCCESS(f'[OK] Created Reservations product (ID: {product.id})'))
 

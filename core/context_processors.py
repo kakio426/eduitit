@@ -118,7 +118,7 @@ def search_products(request):
         products = filter_discoverable_products(
             Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
         )
-        items = build_service_launcher_items(products)
+        items = build_service_launcher_items(products, user=getattr(request, "user", None))
         return {'service_launcher_json': json.dumps(items, ensure_ascii=False)}
     except Exception:
         logger.exception("[ServiceLauncher] payload build failed")

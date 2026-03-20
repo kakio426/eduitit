@@ -685,8 +685,13 @@ def _build_product_state_labels(
         launch_is_external = bool(getattr(product, "launch_is_external", False))
         is_guest_allowed = bool(getattr(product, "is_guest_allowed", False))
 
+    supports_guest_preview = service_launcher_utils.product_supports_guest_preview(
+        product,
+        route_name=route_name,
+        is_guest_allowed=is_guest_allowed,
+    )
     can_preview_without_login = (
-        is_guest_allowed
+        supports_guest_preview
         or service_type == "game"
         or route_name in PUBLIC_EXPERIENCE_ROUTE_NAMES
     )
@@ -808,12 +813,12 @@ def _build_product_guide_url_map(products):
     return guide_url_map
 
 
-def _attach_product_launch_meta(products):
+def _attach_product_launch_meta(products, user=None):
     """Attach launch target metadata so templates can navigate directly without modal."""
     guide_url_map = _build_product_guide_url_map(products)
     prepared = []
     for product in products:
-        launch_href, launch_is_external = _resolve_product_launch_url(product)
+        launch_href, launch_is_external = _resolve_product_launch_url(product, user=user)
         product.launch_href = launch_href
         product.launch_is_external = launch_is_external
         product.guide_url = guide_url_map.get(product.id, "")
@@ -953,11 +958,11 @@ def _normalize_workbench_product_ids(raw_ids, *, require_non_empty=True, limit=W
     return normalized_ids
 
 
-def _build_product_link_items(products, include_section_meta=False):
+def _build_product_link_items(products, include_section_meta=False, user=None):
     """템플릿에서 공통으로 쓰는 서비스 링크 아이템 구성."""
     items = []
     for product in products:
-        href, is_external = _resolve_product_launch_url(product)
+        href, is_external = _resolve_product_launch_url(product, user=user)
         workbench_meta = build_workbench_card_meta(product)
         favorite_full_title = (
             service_launcher_utils.sanitize_public_display_text(
@@ -1383,7 +1388,7 @@ def _get_home_discovery_products(user, product_list, *, exclude_ids=None, limit=
 
 
 
-def _get_home_companion_items(seed_products, product_list, *, exclude_ids=None, limit=3):
+def _get_home_companion_items(seed_products, product_list, *, exclude_ids=None, limit=3, user=None):
     """현재 흐름과 자주 이어지는 도구를 홈에 짧게 추천한다."""
     exclude_ids = set(exclude_ids or [])
     seed_section_keys = []
@@ -1426,7 +1431,7 @@ def _get_home_companion_items(seed_products, product_list, *, exclude_ids=None, 
                 continue
             source_meta = HOME_SECTION_META_BY_KEY.get(source_section, {})
             target_meta = HOME_SECTION_META_BY_KEY.get(target_section, {})
-            href, is_external = _resolve_product_launch_url(product)
+            href, is_external = _resolve_product_launch_url(product, user=user)
             items.append({
                 'product': product,
                 'href': href,
@@ -2406,7 +2411,7 @@ def _build_guide_groups(manuals, products_without_manual):
 
 def _home_v2(request, products, posts, page_obj, feed_scope, pinned_notice_posts):
     """Feature flag on 시 호출되는 V2 홈."""
-    product_list = _attach_product_launch_meta(list(products))
+    product_list = _attach_product_launch_meta(list(products), user=request.user)
     section_product_list = [
         product
         for product in product_list
@@ -2471,6 +2476,7 @@ def _home_v2(request, products, posts, page_obj, feed_scope, pinned_notice_posts
             product_list,
             exclude_ids={p.id for p in [*favorite_products, *recent_products]},
             limit=3,
+            user=request.user,
         )
         discovery_products = _get_home_discovery_products(
             request.user,
@@ -2490,11 +2496,27 @@ def _home_v2(request, products, posts, page_obj, feed_scope, pinned_notice_posts
                 limit=4,
             )
 
-        quick_action_items = _build_product_link_items(quick_actions, include_section_meta=True)
-        favorite_items = _build_product_link_items(favorite_products, include_section_meta=True)
+        quick_action_items = _build_product_link_items(
+            quick_actions,
+            include_section_meta=True,
+            user=request.user,
+        )
+        favorite_items = _build_product_link_items(
+            favorite_products,
+            include_section_meta=True,
+            user=request.user,
+        )
         workbench_slots = _build_workbench_slots(favorite_items)
-        recent_items = _build_product_link_items(recent_products, include_section_meta=True)
-        discovery_items = _build_product_link_items(discovery_products, include_section_meta=True)
+        recent_items = _build_product_link_items(
+            recent_products,
+            include_section_meta=True,
+            user=request.user,
+        )
+        discovery_items = _build_product_link_items(
+            discovery_products,
+            include_section_meta=True,
+            user=request.user,
+        )
         from classcalendar.views import build_calendar_surface_context
 
         home_calendar_surface = build_calendar_surface_context(
@@ -2570,7 +2592,7 @@ def _home_v2(request, products, posts, page_obj, feed_scope, pinned_notice_posts
 
 def _home_v4(request, products, posts, page_obj, feed_scope, pinned_notice_posts):
     """환경변수로 안전하게 롤아웃하는 인증 홈 V4."""
-    product_list = _attach_product_launch_meta(list(products))
+    product_list = _attach_product_launch_meta(list(products), user=request.user)
     section_product_list = [
         product
         for product in product_list
@@ -2620,6 +2642,7 @@ def _home_v4(request, products, posts, page_obj, feed_scope, pinned_notice_posts
         product_list,
         exclude_ids={product.id for product in [*favorite_products, *recent_products]},
         limit=3,
+        user=request.user,
     )
     discovery_products = _get_home_discovery_products(
         request.user,
@@ -2637,8 +2660,16 @@ def _home_v4(request, products, posts, page_obj, feed_scope, pinned_notice_posts
             limit=4,
         )
 
-    favorite_items = _build_product_link_items(favorite_products, include_section_meta=True)
-    discovery_items = _build_product_link_items(discovery_products, include_section_meta=True)
+    favorite_items = _build_product_link_items(
+        favorite_products,
+        include_section_meta=True,
+        user=request.user,
+    )
+    discovery_items = _build_product_link_items(
+        discovery_products,
+        include_section_meta=True,
+        user=request.user,
+    )
     representative_slots = _build_home_v4_representative_slots(
         request.user,
         favorite_products=favorite_products,
@@ -2755,7 +2786,7 @@ def home(request):
         ).exclude(
             Q(title__icontains="인사이트") | Q(title__icontains="사주")
         ).distinct()
-        available_products = _attach_product_launch_meta(list(available_products))
+        available_products = _attach_product_launch_meta(list(available_products), user=request.user)
 
         return render(request, 'core/home_authenticated.html', {
             'products': available_products,
@@ -2767,7 +2798,7 @@ def home(request):
         })
 
     # Else show the public home
-    products = _attach_product_launch_meta(list(products))
+    products = _attach_product_launch_meta(list(products), user=request.user)
     featured_product = next((product for product in products if product.is_featured), None)
     # Fallback if no featured product
     if not featured_product:
@@ -3908,7 +3939,7 @@ def list_product_favorites(request):
     favorites = []
     for favorite in favorites_qs:
         product = favorite.product
-        href, is_external = _resolve_product_launch_url(product)
+        href, is_external = _resolve_product_launch_url(product, user=request.user)
         favorites.append({
             'product_id': product.id,
             'title': product.title,
@@ -3934,7 +3965,8 @@ def list_workbench_bundles(request):
                 filter_discoverable_products(
                     Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
                 )
-            )
+            ),
+            user=request.user,
         ),
     )
     return JsonResponse({'status': 'ok', 'bundles': bundles})

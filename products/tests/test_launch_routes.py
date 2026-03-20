@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
@@ -82,6 +83,39 @@ class ProductLaunchRouteTests(TestCase):
         self.assertEqual(href, reverse("tts_announce"))
         self.assertFalse(is_external)
 
+    def test_resolver_redirects_happy_seed_guest_users_to_public_landing(self):
+        product = Product.objects.create(
+            title="행복의 씨앗",
+            description="desc",
+            price=0,
+            is_active=True,
+            is_guest_allowed=True,
+            launch_route_name="happy_seed:dashboard",
+        )
+
+        href, is_external = _resolve_product_launch_url(product)
+        self.assertEqual(href, reverse("happy_seed:landing"))
+        self.assertFalse(is_external)
+
+    def test_resolver_keeps_happy_seed_dashboard_for_authenticated_user(self):
+        user = get_user_model().objects.create_user(
+            username="teacher",
+            email="teacher@example.com",
+            password="pw-12345",
+        )
+        product = Product.objects.create(
+            title="행복의 씨앗",
+            description="desc",
+            price=0,
+            is_active=True,
+            is_guest_allowed=True,
+            launch_route_name="happy_seed:dashboard",
+        )
+
+        href, is_external = _resolve_product_launch_url(product, user=user)
+        self.assertEqual(href, reverse("happy_seed:dashboard"))
+        self.assertFalse(is_external)
+
     def test_service_launcher_uses_same_launch_ssot(self):
         product = Product.objects.create(
             title="Launcher Route Product",
@@ -98,3 +132,28 @@ class ProductLaunchRouteTests(TestCase):
 
         self.assertEqual(launcher_item["href"], href)
         self.assertEqual(launcher_item["is_external"], is_external)
+
+    def test_service_launcher_uses_user_aware_launch_ssot(self):
+        user = get_user_model().objects.create_user(
+            username="launcher-teacher",
+            email="launcher-teacher@example.com",
+            password="pw-12345",
+        )
+        product = Product.objects.create(
+            title="행복의 씨앗",
+            description="desc",
+            solve_text="학급 운영 흐름을 살펴봅니다",
+            price=0,
+            is_active=True,
+            is_guest_allowed=True,
+            launch_route_name="happy_seed:dashboard",
+            service_type="classroom",
+        )
+
+        guest_item = build_service_launcher_items([product])[0]
+        teacher_item = build_service_launcher_items([product], user=user)[0]
+
+        self.assertEqual(guest_item["href"], reverse("happy_seed:landing"))
+        self.assertEqual(teacher_item["href"], reverse("happy_seed:dashboard"))
+        self.assertFalse(guest_item["is_external"])
+        self.assertFalse(teacher_item["is_external"])

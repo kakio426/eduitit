@@ -185,6 +185,17 @@ HOME_SECTION_META_BY_KEY = {
     for section in [*HOME_MAIN_SECTIONS, *HOME_AUXILIARY_SECTIONS]
 }
 
+FORCE_LOGIN_ROUTE_NAMES = {
+    "infoboard:dashboard",
+    "edu_materials:main",
+    "textbooks:main",
+    "reservations:dashboard_landing",
+}
+
+ANONYMOUS_ROUTE_OVERRIDES = {
+    "happy_seed:dashboard": "happy_seed:landing",
+}
+
 SERVICE_LAUNCHER_GROUP_META_BY_SECTION = {
     "class_ops": {"key": "class_ops", "title": "오늘/운영", "order": 1},
     "collect_sign": {"key": "collect_sign", "title": "수합·서명", "order": 2},
@@ -260,8 +271,30 @@ def resolve_home_section_key(product):
     return HOME_SECTION_FALLBACK_BY_TYPE.get(getattr(product, "service_type", ""), "guide")
 
 
-def resolve_product_launch_url(product):
+def resolve_product_launch_route_name(product, user=None):
     route_name = str(getattr(product, "launch_route_name", "") or "").strip()
+    if not route_name:
+        return ""
+    if getattr(user, "is_authenticated", False):
+        return route_name
+    return ANONYMOUS_ROUTE_OVERRIDES.get(route_name.lower(), route_name)
+
+
+def product_supports_guest_preview(product=None, *, route_name="", is_guest_allowed=False):
+    if product is not None:
+        route_name = getattr(product, "launch_route_name", "")
+        is_guest_allowed = bool(getattr(product, "is_guest_allowed", False))
+
+    normalized_route_name = str(route_name or "").strip().lower()
+    if normalized_route_name in FORCE_LOGIN_ROUTE_NAMES:
+        return False
+    if normalized_route_name in ANONYMOUS_ROUTE_OVERRIDES:
+        return True
+    return bool(is_guest_allowed)
+
+
+def resolve_product_launch_url(product, user=None):
+    route_name = resolve_product_launch_route_name(product, user=user)
     external_url = str(getattr(product, "external_url", "") or "").strip()
 
     if external_url.startswith("http://") or external_url.startswith("https://"):
@@ -332,10 +365,10 @@ def get_service_launcher_group_meta(product):
     return SERVICE_LAUNCHER_GROUP_META_BY_SECTION.get(section_key, DEFAULT_SERVICE_LAUNCHER_GROUP_META)
 
 
-def build_service_launcher_items(products):
+def build_service_launcher_items(products, user=None):
     items = []
     for index, product in enumerate(products):
-        href, is_external = resolve_product_launch_url(product)
+        href, is_external = resolve_product_launch_url(product, user=user)
         group_meta = get_service_launcher_group_meta(product)
         title = get_public_product_name(product)
         summary = build_service_launcher_summary(product)
