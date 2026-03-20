@@ -4,6 +4,9 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 
+MARKETING_EMAIL_CONSENT_VERSION = "2026-03-20.1"
+
+
 class UserProfile(models.Model):
     ROLE_CHOICES = [
         ('school', '학교 (관리자 및 정교사)'),
@@ -26,6 +29,53 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return self.user.username
+
+
+class UserMarketingEmailConsent(models.Model):
+    CONSENT_SOURCE_CHOICES = [
+        ('social_signup', '소셜 가입'),
+        ('admin_update', '관리자 수정'),
+    ]
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='marketing_email_consent',
+        verbose_name='사용자',
+    )
+    consent_version = models.CharField(
+        max_length=32,
+        default=MARKETING_EMAIL_CONSENT_VERSION,
+        verbose_name='동의 문구 버전',
+    )
+    consented_at = models.DateTimeField(verbose_name='동의 시각')
+    consent_source = models.CharField(
+        max_length=32,
+        choices=CONSENT_SOURCE_CHOICES,
+        default='social_signup',
+        verbose_name='동의 경로',
+    )
+    ip_address = models.GenericIPAddressField(blank=True, null=True, verbose_name='IP 주소')
+    user_agent = models.TextField(blank=True, default='', verbose_name='User Agent')
+    revoked_at = models.DateTimeField(blank=True, null=True, verbose_name='철회 시각')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-consented_at', '-id']
+        indexes = [
+            models.Index(fields=['revoked_at', '-consented_at']),
+            models.Index(fields=['consent_source', '-consented_at']),
+        ]
+        verbose_name = '이메일 안내 수신 동의'
+        verbose_name_plural = '이메일 안내 수신 동의'
+
+    def __str__(self):
+        return f'{self.user.username} ({self.consented_at:%Y-%m-%d %H:%M})'
+
+    @property
+    def is_active(self):
+        return self.revoked_at is None
 
 
 class UserPolicyConsent(models.Model):

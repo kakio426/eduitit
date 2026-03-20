@@ -56,6 +56,24 @@
             {% endif %}
 
             {% for field in form %}
+            {% if field.is_hidden %}
+            {{ field }}
+            {% elif field.field.widget.input_type == 'checkbox' %}
+            <div class="rounded-2xl border border-slate-200 bg-white/70 px-4 py-4 shadow-sm">
+                <label for="{{ field.id_for_label }}" class="flex cursor-pointer items-start gap-3">
+                    {{ field }}
+                    <span class="min-w-0 flex-1">
+                        <span class="block text-sm font-bold text-gray-700">{{ field.label }}</span>
+                        {% if field.help_text %}
+                        <span class="mt-1 block text-xs leading-5 text-gray-500">{{ field.help_text }}</span>
+                        {% endif %}
+                    </span>
+                </label>
+                {% if field.errors %}
+                <p class="mt-2 text-xs font-bold text-red-500">{{ field.errors.0 }}</p>
+                {% endif %}
+            </div>
+            {% else %}
             <div class="space-y-2 group">
                 <label for="{{ field.id_for_label }}"
                     class="block text-sm font-bold text-gray-700 ml-1 group-focus-within:text-purple-600 transition-colors">
@@ -79,6 +97,7 @@
                 <p class="text-xs text-red-500 mt-1 ml-1 font-bold">{{ field.errors.0 }}</p>
                 {% endif %}
             </div>
+            {% endif %}
             {% endfor %}
 
             {% if redirect_field_value %}
@@ -127,6 +146,14 @@
 
     form.signup input::placeholder {
         color: #94a3b8;
+    }
+
+    form.signup input[type="checkbox"] {
+        width: 1.15rem;
+        height: 1.15rem;
+        margin-top: 0.15rem;
+        accent-color: #7c3aed;
+        flex-shrink: 0;
     }
 
     /* Blob Animation */

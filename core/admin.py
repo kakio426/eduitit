@@ -5,6 +5,7 @@ from django.db.models import Count
 from django.utils import timezone
 from .models import (
     UserProfile,
+    UserMarketingEmailConsent,
     UserPolicyConsent,
     Post,
     Comment,
@@ -25,14 +26,19 @@ class UserProfileInline(admin.StackedInline):
 
 class UserAdmin(BaseUserAdmin):
     inlines = (UserProfileInline,)
-    list_display = ('username', 'email', 'get_nickname', 'is_staff')
+    list_display = ('username', 'email', 'get_nickname', 'get_marketing_email_status', 'is_staff')
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related('userprofile')
+        return super().get_queryset(request).select_related('userprofile', 'marketing_email_consent')
 
     def get_nickname(self, instance):
         return instance.userprofile.nickname
     get_nickname.short_description = '별명'
+
+    @admin.display(boolean=True, description='이메일 안내 동의')
+    def get_marketing_email_status(self, instance):
+        consent = getattr(instance, 'marketing_email_consent', None)
+        return bool(consent and consent.is_active)
 
 # Re-register UserAdmin
 admin.site.unregister(User)
@@ -46,6 +52,29 @@ class UserProfileAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('user')
+
+
+@admin.register(UserMarketingEmailConsent)
+class UserMarketingEmailConsentAdmin(admin.ModelAdmin):
+    list_display = [
+        'user',
+        'consent_source',
+        'consent_version',
+        'consented_at',
+        'revoked_at',
+        'is_active_display',
+    ]
+    list_filter = ['consent_source', 'consent_version', 'revoked_at', 'consented_at']
+    search_fields = ['user__username', 'user__email', 'ip_address', 'user_agent']
+    readonly_fields = ['created_at', 'updated_at']
+    raw_id_fields = ['user']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('user')
+
+    @admin.display(boolean=True, description='수신 가능')
+    def is_active_display(self, obj):
+        return obj.is_active
 
 
 @admin.register(UserPolicyConsent)

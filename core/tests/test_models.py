@@ -1,7 +1,8 @@
 from django.test import TestCase
 from django.contrib.auth.models import User
+from django.utils import timezone
 
-from core.models import SiteConfig
+from core.models import SiteConfig, UserMarketingEmailConsent
 
 
 class SiteConfigTestCase(TestCase):
@@ -25,3 +26,26 @@ class UserProfileTestCase(TestCase):
         profile.save(update_fields=['pinned_notice_expanded'])
 
         self.assertTrue(User.objects.get(pk=user.pk).userprofile.pinned_notice_expanded)
+
+
+class UserMarketingEmailConsentTestCase(TestCase):
+    def test_is_active_is_true_without_revoked_at(self):
+        user = User.objects.create_user(username='marketinguser', password='pass1234')
+        consent = UserMarketingEmailConsent.objects.create(
+            user=user,
+            consented_at=timezone.now(),
+            consent_source='social_signup',
+        )
+
+        self.assertTrue(consent.is_active)
+
+    def test_is_active_is_false_after_revocation(self):
+        user = User.objects.create_user(username='marketingrevoked', password='pass1234')
+        consent = UserMarketingEmailConsent.objects.create(
+            user=user,
+            consented_at=timezone.now(),
+            consent_source='social_signup',
+            revoked_at=timezone.now(),
+        )
+
+        self.assertFalse(consent.is_active)

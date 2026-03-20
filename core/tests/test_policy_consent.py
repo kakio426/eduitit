@@ -134,6 +134,8 @@ class PolicyConsentTestCase(TestCase):
         self.assertContains(response, PRIVACY_VERSION)
         self.assertContains(response, '메시지 저장')
         self.assertContains(response, '정책 동의 기록')
+        self.assertContains(response, '선택 수신 동의 정보')
+        self.assertContains(response, '신규 기능·이벤트·혜택 안내 이메일')
         self.assertContains(response, '교사·교직원 내부 업무용 기능')
         self.assertContains(response, '보호자명')
         self.assertContains(response, '공개 링크')
