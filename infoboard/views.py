@@ -522,6 +522,9 @@ def share_create(request, board_id):
 @login_required
 def search(request):
     """전체 검색 (보드 + 카드 + 태그)."""
+    if not request.htmx:
+        return redirect('infoboard:dashboard')
+
     q = request.GET.get('q', '').strip()
     results = {'boards': [], 'cards': [], 'tags': []}
 
@@ -546,9 +549,7 @@ def search(request):
         )[:10]
 
     context = {'q': q, **results}
-    if request.htmx:
-        return render(request, 'infoboard/partials/search_results.html', context)
-    return render(request, 'infoboard/search.html', context)
+    return render(request, 'infoboard/partials/search_results.html', context)
 
 
 # ── 파일 다운로드 ────────────────────────────────────────
