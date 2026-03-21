@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="min-h-screen bg-[#eef3fb] px-4 py-8" style="padding-top: calc(var(--main-nav-height, 88px) + 1rem);">
+    <div class="mx-auto max-w-5xl space-y-6">
+        <div class="rounded-[28px] bg-white p-6 shadow-[0_24px_80px_rgba(41,72,152,0.12)]">
+            <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                <div>
+                    <p class="text-sm font-bold uppercase tracking-[0.28em] text-[#5c73b8]">바로전송</p>
+                    <h1 class="mt-2 text-3xl font-black text-[#14213d]">{{ channel.title }}</h1>
+                    <p class="mt-2 text-sm text-slate-600">처음 한 번만 로그인해 두면, 이 기기와 연결한 기기에서 바로 들어오는 개인 전용 통로입니다.</p>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                    <a href="{{ open_url }}" class="rounded-full bg-[#1f4fd1] px-5 py-3 text-sm font-black text-white">지금 바로 열기</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-3">
+            <div class="rounded-[24px] bg-white p-5 shadow-[0_18px_50px_rgba(41,72,152,0.1)]">
+                <p class="text-xs font-black uppercase tracking-[0.24em] text-[#5c73b8]">1</p>
+                <h2 class="mt-2 text-lg font-black text-[#14213d]">교사 PC에서 통로 열기</h2>
+                <p class="mt-2 text-sm text-slate-500">처음 한 번 로그인해 통로를 만들면, 이 기기는 다음부터 로그인 없이 바로 들어옵니다.</p>
+            </div>
+            <div class="rounded-[24px] bg-white p-5 shadow-[0_18px_50px_rgba(41,72,152,0.1)]">
+                <p class="text-xs font-black uppercase tracking-[0.24em] text-[#5c73b8]">2</p>
+                <h2 class="mt-2 text-lg font-black text-[#14213d]">휴대폰이나 다른 PC 연결</h2>
+                <p class="mt-2 text-sm text-slate-500">QR을 한 번 찍거나 링크를 한 번 열면 그다음부터는 같은 링크만 열어도 됩니다.</p>
+            </div>
+            <div class="rounded-[24px] bg-white p-5 shadow-[0_18px_50px_rgba(41,72,152,0.1)]">
+                <p class="text-xs font-black uppercase tracking-[0.24em] text-[#5c73b8]">3</p>
+                <h2 class="mt-2 text-lg font-black text-[#14213d]">붙여넣기나 사진 선택</h2>
+                <p class="mt-2 text-sm text-slate-500">한쪽 기기에서 붙여넣거나 사진을 고르면 다른 기기에서 바로 복사하거나 저장할 수 있습니다.</p>
+            </div>
+        </div>
+
+        <div class="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+            <div class="rounded-[28px] bg-white p-6 shadow-[0_24px_80px_rgba(41,72,152,0.12)]">
+                <p class="text-sm font-black text-[#1f4fd1]">새 기기 연결</p>
+                <h2 class="mt-2 text-2xl font-black text-[#14213d]">QR 한 번만 찍으면 이후엔 바로 들어옵니다.</h2>
+                <div class="mt-6 flex flex-col gap-6 md:flex-row md:items-center">
+                    <div class="flex h-[220px] w-[220px] items-center justify-center rounded-[28px] bg-[#f4f7ff] p-4">
+                        {% if pair_qr_data_url %}
+                        <img src="{{ pair_qr_data_url }}" alt="바로전송 연결 QR" class="h-full w-full rounded-[18px] object-contain">
+                        {% endif %}
+                    </div>
+                    <div class="min-w-0 flex-1 space-y-4">
+                        <label class="block text-sm font-bold text-slate-600">연결 링크</label>
+                        <div class="flex flex-col gap-3 sm:flex-row">
+                            <input id="pair-url-input" type="text" readonly value="{{ pair_url }}" class="min-w-0 flex-1 rounded-2xl border border-[#d6def5] bg-[#f8faff] px-4 py-3 text-sm text-slate-700">
+                            <button type="button" id="copy-pair-url-btn" class="rounded-2xl bg-[#14213d] px-4 py-3 text-sm font-black text-white">링크 복사</button>
+                        </div>
+                        <p class="text-sm text-slate-500">새 기기는 이 링크로 한 번만 등록하면 되고, 기억된 기기는 다음부터 같은 링크만 열면 바로 통로에 들어옵니다.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rounded-[28px] bg-white p-6 shadow-[0_24px_80px_rgba(41,72,152,0.12)]">
+                <p class="text-sm font-black text-[#1f4fd1]">지금 열려 있는 전송</p>
+                {% if current_session %}
+                <div class="mt-4 rounded-[24px] bg-[#f6f8fe] p-5">
+                    <p class="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">최근 상태</p>
+                    <p class="mt-2 text-lg font-black text-[#14213d]">
+                        {% if current_session.current_kind == "text" %}
+                        텍스트 1건이 열려 있습니다.
+                        {% elif current_session.current_kind == "image" %}
+                        이미지 1건이 열려 있습니다.
+                        {% else %}
+                        지금은 비어 있습니다.
+                        {% endif %}
+                    </p>
+                    <p class="mt-2 text-sm text-slate-500">마지막 활동 {{ current_session.last_activity_at|date:"Y.m.d H:i" }}</p>
+                </div>
+                {% else %}
+                <div class="mt-4 rounded-[24px] bg-[#f6f8fe] p-5 text-sm text-slate-500">아직 열려 있는 내용이 없습니다. 통로를 열면 새 전송이 바로 시작됩니다.</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="rounded-[28px] bg-white p-6 shadow-[0_24px_80px_rgba(41,72,152,0.12)]">
+            <div class="flex items-center justify-between gap-3">
+                <div>
+                    <p class="text-sm font-black text-[#1f4fd1]">연결된 기기</p>
+                    <h2 class="mt-1 text-2xl font-black text-[#14213d]">등록은 남기고, 옮긴 내용만 전송이 끝나면 지웁니다.</h2>
+                </div>
+            </div>
+            <div class="mt-6 space-y-4">
+                {% for device in active_devices %}
+                <div class="rounded-[24px] border border-[#dbe3fb] bg-[#f8faff] p-4">
+                    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                            <p class="text-lg font-black text-[#14213d]">{{ device.label }}</p>
+                            <p class="mt-1 text-sm text-slate-500">등록 {{ device.paired_at|date:"Y.m.d H:i" }} · 마지막 확인 {{ device.last_seen_at|date:"Y.m.d H:i" }}</p>
+                        </div>
+                        <div class="flex flex-col gap-3 sm:flex-row">
+                            <form method="post" action="{% url 'quickdrop:rename_device' channel.slug device.device_id %}" class="flex gap-2">
+                                {% csrf_token %}
+                                <input type="text" name="label" value="{{ device.label }}" class="w-40 rounded-2xl border border-[#cad6f6] bg-white px-3 py-2 text-sm">
+                                <button type="submit" class="rounded-2xl border border-[#cad6f6] px-4 py-2 text-sm font-black text-[#1f4fd1]">이름 저장</button>
+                            </form>
+                            <form method="post" action="{% url 'quickdrop:revoke_device' channel.slug device.device_id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="rounded-2xl bg-[#e85d75] px-4 py-2 text-sm font-black text-white">연결 해제</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="rounded-[24px] border border-dashed border-[#cad6f6] p-5 text-sm text-slate-500">아직 등록된 추가 기기가 없습니다.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</section>
+<script>
+    (function () {
+        const button = document.getElementById('copy-pair-url-btn');
+        const input = document.getElementById('pair-url-input');
+        if (!button || !input) {
+            return;
+        }
+        button.addEventListener('click', async function () {
+            try {
+                await navigator.clipboard.writeText(input.value);
+                button.textContent = '복사됨';
+                window.setTimeout(function () {
+                    button.textContent = '링크 복사';
+                }, 1200);
+            } catch (_error) {
+                input.select();
+            }
+        });
+    })();
+</script>
+{% endblock %}

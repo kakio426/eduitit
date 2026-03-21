@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_head %}
+<link rel="manifest" href="{{ manifest_url }}">
+<meta name="theme-color" content="#1f4fd1">
+<style>
+    #text-input {
+        resize: none;
+        min-height: 48px;
+        max-height: 160px;
+    }
+
+    #empty-state[data-density="compact"] {
+        padding: 1.25rem;
+    }
+
+    #empty-state[data-density="compact"] #empty-icon {
+        width: 2.75rem;
+        height: 2.75rem;
+        border-radius: 0.9rem;
+        font-size: 1.3rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_#dbe8ff_0%,_#edf4ff_32%,_#f7f9fc_72%)] px-4 py-8" style="padding-top: calc(var(--main-nav-height, 88px) + 1rem);">
+    <div
+        id="quickdrop-root"
+        data-quickdrop-root="true"
+        data-send-text-url="{{ send_text_url }}"
+        data-send-image-url="{{ send_image_url }}"
+        data-end-session-url="{{ end_session_url }}"
+        data-ws-url="{{ ws_url }}"
+        data-landing-url="{{ landing_url }}"
+        data-service-worker-url="{{ service_worker_url }}"
+        class="mx-auto max-w-4xl"
+    >
+        <div class="relative overflow-hidden rounded-[36px] border border-white/70 bg-white/70 shadow-[0_32px_110px_rgba(34,68,148,0.18)] backdrop-blur-xl">
+            <div class="pointer-events-none absolute inset-x-0 top-0 h-44 bg-[radial-gradient(circle_at_top,_rgba(31,79,209,0.18),transparent_68%)]"></div>
+            <div class="pointer-events-none absolute -right-16 top-24 h-56 w-56 rounded-full bg-[#9cc2ff]/25 blur-3xl"></div>
+            <div class="pointer-events-none absolute -left-16 bottom-16 h-48 w-48 rounded-full bg-[#ffd7b8]/25 blur-3xl"></div>
+
+            <div class="relative border-b border-white/70 px-4 py-4 sm:px-6">
+                <div class="flex items-center justify-between gap-3">
+                    <div class="min-w-0 flex items-center gap-3">
+                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,_#1f4fd1,_#4f8bff)] text-xl font-black text-white shadow-[0_18px_40px_rgba(31,79,209,0.28)]">
+                            ↔
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-[11px] font-black uppercase tracking-[0.28em] text-[#5c73b8]">내 기기끼리 바로</p>
+                            <h1 class="truncate text-2xl font-black text-[#14213d] sm:text-3xl">바로전송</h1>
+                            <p class="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-600 sm:text-sm">
+                                <span id="connection-badge" class="rounded-full bg-[#e7efff] px-2.5 py-1 font-black text-[#1f4fd1]">연결 준비 중</span>
+                                <span id="viewer-label" class="font-bold text-slate-700">{{ device_label }}</span>
+                                <span class="text-slate-300">•</span>
+                                <span id="session-status" class="font-bold text-slate-500">빈 전송</span>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex shrink-0 items-center gap-2">
+                        {% if is_owner %}
+                        <a href="{{ landing_url }}" class="rounded-full border border-[#d9e4ff] bg-white/80 px-4 py-2 text-sm font-black text-[#1f4fd1] shadow-sm">연결 기기</a>
+                        {% endif %}
+                        <button type="button" id="end-session-btn" class="rounded-full border border-slate-200 bg-white/75 px-4 py-2 text-sm font-black text-slate-500 shadow-sm transition hover:border-slate-300 hover:text-slate-700">내용 지우기</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="helper-strip" class="relative border-b border-[#e9efff] bg-white/55 px-4 py-3 sm:px-6">
+                <div class="flex flex-wrap gap-2">
+                    <span id="helper-chip-paste" class="rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-slate-600 shadow-sm sm:text-xs">데스크톱은 그냥 붙여넣기</span>
+                    <span id="helper-chip-photo" class="rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-slate-600 shadow-sm sm:text-xs">사진은 선택 즉시 전송</span>
+                    <span id="helper-chip-share" class="rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-slate-600 shadow-sm sm:text-xs">휴대폰 공유하기도 가능</span>
+                    <span id="helper-chip-repeat" class="hidden rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-slate-600 shadow-sm sm:text-xs">이제는 붙여넣기나 사진 선택만 하면 됩니다</span>
+                    <span id="session-expiry" class="rounded-full bg-[#edf3ff] px-3 py-1.5 text-[11px] font-bold text-[#1f4fd1] shadow-sm sm:text-xs">유휴 10분 후 자동 삭제</span>
+                </div>
+            </div>
+
+            <div class="relative flex min-h-[68vh] flex-col">
+                <div class="relative flex-1 px-4 py-6 sm:px-6 sm:py-8">
+                    <div class="mx-auto flex max-w-3xl flex-col gap-5">
+                        <div id="empty-state" data-density="full" class="rounded-[30px] border border-dashed border-[#d4e0ff] bg-[linear-gradient(180deg,_rgba(255,255,255,0.95),rgba(241,246,255,0.92))] p-6 text-center shadow-[0_24px_60px_rgba(44,86,170,0.08)] sm:p-10">
+                            <div id="empty-icon" class="mx-auto flex h-12 w-12 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,_#1f4fd1,_#7ba9ff)] text-xl text-white shadow-[0_18px_40px_rgba(31,79,209,0.22)] sm:h-14 sm:w-14 sm:rounded-[20px] sm:text-2xl">↔</div>
+                            <p id="empty-badge" class="mt-5 text-[11px] font-black uppercase tracking-[0.28em] text-[#5c73b8]">전송 준비</p>
+                            <h2 id="empty-title" class="mt-3 text-xl font-black leading-tight text-[#14213d] sm:text-3xl">두 기기에서 같은 통로만 열어 두세요.</h2>
+                            <p id="empty-body" class="mx-auto mt-3 max-w-xl text-sm leading-7 text-slate-500 sm:text-base">데스크톱은 그냥 붙여넣기, 휴대폰은 아래 입력창이나 공유하기에서 바로 보내면 됩니다.</p>
+                            <div id="empty-pill-row" class="mt-5 flex flex-wrap justify-center gap-2">
+                                <span class="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-600 shadow-sm">Ctrl+V 바로 전송</span>
+                                <span class="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-600 shadow-sm">사진 선택 즉시 전송</span>
+                                <span class="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-600 shadow-sm">복사/저장은 한 번</span>
+                            </div>
+                        </div>
+
+                        <div id="text-panel" class="hidden">
+                            <div class="flex items-end gap-3">
+                                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#dce8ff] text-sm font-black text-[#1f4fd1] shadow-sm">T</div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="mb-2 flex items-center justify-between gap-3 pl-1">
+                                        <div class="min-w-0">
+                                            <p class="text-xs font-black uppercase tracking-[0.22em] text-[#5c73b8]">최근 텍스트</p>
+                                            <p id="message-time" class="mt-1 text-xs text-slate-400"></p>
+                                        </div>
+                                        <button type="button" id="copy-text-btn" class="rounded-full bg-[#14213d] px-4 py-2 text-sm font-black text-white shadow-sm">복사</button>
+                                    </div>
+                                    <div class="relative overflow-visible rounded-[30px] bg-[linear-gradient(180deg,_#1f4fd1,_#315fdc)] px-5 py-4 text-white shadow-[0_24px_60px_rgba(31,79,209,0.26)] sm:px-6 sm:py-5">
+                                        <div class="absolute bottom-4 left-[-5px] h-4 w-4 rotate-45 rounded-[4px] bg-[#2858d8]"></div>
+                                        <pre id="text-output" class="whitespace-pre-wrap break-words bg-transparent text-sm leading-7 text-white sm:text-[15px]"></pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="image-panel" class="hidden">
+                            <div class="flex items-end gap-3">
+                                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#dce8ff] text-lg text-[#1f4fd1] shadow-sm">🖼</div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="mb-2 flex items-center justify-between gap-3 pl-1">
+                                        <div class="min-w-0">
+                                            <p class="text-xs font-black uppercase tracking-[0.22em] text-[#5c73b8]">최근 사진</p>
+                                            <p id="image-filename" class="mt-1 truncate text-xs text-slate-400"></p>
+                                        </div>
+                                        <button type="button" id="save-image-btn" class="rounded-full bg-[#14213d] px-4 py-2 text-sm font-black text-white shadow-sm">저장</button>
+                                    </div>
+                                    <div class="relative overflow-visible rounded-[30px] border border-[#dce5ff] bg-white p-3 shadow-[0_24px_60px_rgba(44,86,170,0.12)]">
+                                        <div class="absolute left-[-5px] top-7 h-4 w-4 rotate-45 rounded-[4px] border-l border-t border-[#dce5ff] bg-white"></div>
+                                        <div class="overflow-hidden rounded-[24px] bg-[#f4f7ff] p-2">
+                                            <img id="image-output" alt="현재 전송된 이미지" class="mx-auto max-h-[480px] w-auto rounded-[18px] object-contain">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="relative border-t border-white/80 bg-[linear-gradient(180deg,_rgba(251,253,255,0.45),rgba(255,255,255,0.92))] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 sm:px-6">
+                    <div class="mx-auto max-w-3xl">
+                        <div class="rounded-[30px] border border-white/80 bg-white/90 p-3 shadow-[0_24px_60px_rgba(44,86,170,0.12)]">
+                            <div class="flex items-end gap-3">
+                                <button type="button" id="photo-trigger" class="flex h-12 shrink-0 items-center gap-2 rounded-[18px] bg-[#eff4ff] px-4 text-sm font-black text-[#1f4fd1] shadow-sm" aria-label="사진 보내기">
+                                    <span aria-hidden="true">🖼</span>
+                                    <span>사진</span>
+                                </button>
+                                <form id="text-form" method="post" action="{{ send_text_url }}" class="flex min-w-0 flex-1 items-end gap-3">
+                                    {% csrf_token %}
+                                    <textarea id="text-input" name="text" rows="1" placeholder="직접 쓰거나 붙여넣으세요." class="min-w-0 flex-1 border-0 bg-transparent px-1 py-3 text-sm leading-6 text-slate-700 outline-none placeholder:text-slate-400 sm:text-[15px]"></textarea>
+                                    <button type="submit" id="send-text-btn" class="shrink-0 rounded-[18px] bg-[linear-gradient(135deg,_#1f4fd1,_#4f8bff)] px-5 py-3 text-sm font-black text-white shadow-[0_16px_34px_rgba(31,79,209,0.24)]">보내기</button>
+                                </form>
+                                <form id="image-form" method="post" action="{{ send_image_url }}" enctype="multipart/form-data" class="hidden">
+                                    {% csrf_token %}
+                                    <input id="image-input" type="file" name="image" accept="image/png,image/jpeg,image/webp,image/gif" class="sr-only">
+                                </form>
+                            </div>
+                        </div>
+                        <div id="composer-tip-row" class="mt-3 flex items-center justify-between gap-3 px-1 text-[11px] text-slate-500 sm:text-xs">
+                            <p id="composer-tip-desktop">데스크톱은 화면 어디서든 <strong>Ctrl+V</strong></p>
+                            <p id="composer-tip-mobile">휴대폰은 입력창 또는 사진 버튼</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="toast-root" class="pointer-events-none fixed bottom-5 right-5 z-50 flex w-[min(92vw,360px)] flex-col gap-3"></div>
+</section>
+
+{{ bootstrap|json_script:"quickdrop-bootstrap" }}
+<script src="{% static 'quickdrop/quickdrop.js' %}"></script>
+{% endblock %}

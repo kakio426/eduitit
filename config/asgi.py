@@ -26,7 +26,7 @@ warnings.filterwarnings(
 
 django_asgi_app = get_asgi_application()
 
-from textbooks.routing import websocket_urlpatterns  # noqa: E402
+from config.websocket_urls import websocket_urlpatterns  # noqa: E402
 
 application = ProtocolTypeRouter(
     {
