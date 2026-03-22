@@ -1,17 +1,15 @@
 <div class="p-6">
-    {% if modal_mode %}
-    <div class="flex items-center justify-between mb-6">
-        <h2 class="text-xl font-black text-gray-800">{% if is_edit %}보드 수정{% else %}새 보드 만들기{% endif %}</h2>
-        <button type="button" onclick="ibCloseModal()" class="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-600 transition">
+    <div class="flex items-center justify-between mb-5">
+        <div>
+            <p class="ib-eyebrow">{% if preset == 'submit' %}빠른 제출보드{% else %}일반 보드{% endif %}</p>
+            <h2 class="text-xl font-black text-gray-900">{% if is_edit %}보드 설정{% else %}{% if preset == 'submit' %}학생 제출이 바로 시작되는 보드{% else %}자료를 정리하는 일반 보드{% endif %}{% endif %}</h2>
+        </div>
+        {% if modal_mode %}
+        <button type="button" onclick="ibCloseModal()" class="ib-icon-button" aria-label="닫기">
             <i class="fa-solid fa-xmark"></i>
         </button>
+        {% endif %}
     </div>
-    {% else %}
-    <div class="mb-6">
-        <h2 class="text-xl font-black text-gray-800">{% if is_edit %}보드 수정{% else %}새 보드 만들기{% endif %}</h2>
-        <p class="text-sm text-gray-400 mt-1">보드 설정과 공유 기준을 함께 정리해요.</p>
-    </div>
-    {% endif %}
 
     {% include 'infoboard/partials/form_errors.html' with form=form %}
 
@@ -20,133 +18,106 @@
         hx-target="#ibModal"
         hx-swap="innerHTML"{% endif %}>
         {% csrf_token %}
+        <input type="hidden" name="preset" value="{{ preset|default:'submit' }}">
 
-        <!-- Icon + Color -->
-        <div class="flex items-center gap-4 mb-5">
-            <div>
-                <label class="text-xs font-bold text-gray-500 mb-1 block">아이콘</label>
-                <div class="ib-icon-pick" onclick="ibCycleIcon(this)" id="ibIconPicker">
-                    {{ form.icon.value|default:'📌' }}
-                </div>
-                {{ form.icon }}
-            </div>
-            <div class="flex-1">
-                <label class="text-xs font-bold text-gray-500 mb-1 block">색상</label>
-                <div class="flex gap-2">
-                    <button type="button" onclick="ibPickColor(this, 'blue')" class="ib-color-pick {% if form.color_theme.value == 'blue' %}active{% endif %}" style="background: #3b82f6"></button>
-                    <button type="button" onclick="ibPickColor(this, 'green')" class="ib-color-pick {% if form.color_theme.value == 'green' %}active{% endif %}" style="background: #22c55e"></button>
-                    <button type="button" onclick="ibPickColor(this, 'purple')" class="ib-color-pick {% if form.color_theme.value|default:'purple' == 'purple' %}active{% endif %}" style="background: #8b5cf6"></button>
-                    <button type="button" onclick="ibPickColor(this, 'orange')" class="ib-color-pick {% if form.color_theme.value == 'orange' %}active{% endif %}" style="background: #f97316"></button>
-                    <button type="button" onclick="ibPickColor(this, 'red')" class="ib-color-pick {% if form.color_theme.value == 'red' %}active{% endif %}" style="background: #ef4444"></button>
-                    <button type="button" onclick="ibPickColor(this, 'dark')" class="ib-color-pick {% if form.color_theme.value == 'dark' %}active{% endif %}" style="background: #374151"></button>
-                </div>
-                {{ form.color_theme }}
-            </div>
+        <div class="ib-preset-banner {% if preset == 'submit' %}submit{% else %}general{% endif %}">
+            <strong>{% if preset == 'submit' %}제출용으로 바로 시작{% else %}일반 보드로 시작{% endif %}</strong>
+            <span>{% if preset == 'submit' %}저장하면 제출 링크도 자동으로 준비됩니다.{% else %}공유 없이 개인 정리용으로 먼저 시작합니다.{% endif %}</span>
         </div>
 
-        <!-- Title -->
         <div class="mb-4">
-            <label class="text-xs font-bold text-gray-500 mb-1 block">보드 이름 *</label>
+            <label class="ib-field-label">보드 이름 *</label>
             {{ form.title }}
             {% include 'infoboard/partials/field_errors.html' with errors=form.title.errors %}
         </div>
 
-        <!-- Description -->
         <div class="mb-4">
-            <label class="text-xs font-bold text-gray-500 mb-1 block">설명 (선택)</label>
+            <label class="ib-field-label">한 줄 설명</label>
             {{ form.description }}
             {% include 'infoboard/partials/field_errors.html' with errors=form.description.errors %}
         </div>
 
-        <div class="mb-4">
-            <label class="text-xs font-bold text-gray-500 mb-1 block">공용 명부 (선택)</label>
-            {{ form.shared_roster_group }}
-            <p class="mt-2 text-xs text-gray-400">학생 제출 보드라면 공용 명부를 연결해 제출자 이름을 선택식으로 받을 수 있어요.</p>
-            {% include 'infoboard/partials/field_errors.html' with errors=form.shared_roster_group.errors %}
-        </div>
+        <details class="ib-advanced-panel" {% if is_edit %}open{% endif %}>
+            <summary>세부 설정</summary>
 
-        <!-- Layout -->
-        <div class="mb-4">
-            <label class="text-xs font-bold text-gray-500 mb-2 block">보기 방식</label>
-            <div class="flex gap-3">
-                <label class="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-50 cursor-pointer hover:bg-slate-100 transition text-sm font-bold text-gray-600">
-                    <input type="radio" name="layout" value="grid" {% if form.layout.value == 'grid' or not form.layout.value %}checked{% endif %} class="accent-purple-600"> 격자형
+            <div class="flex items-center gap-4 mb-5 mt-4">
+                <div>
+                    <label class="ib-field-label">아이콘</label>
+                    <div class="ib-icon-pick" onclick="ibCycleIcon(this)" id="ibIconPicker">
+                        {{ form.icon.value|default:'📌' }}
+                    </div>
+                    {{ form.icon }}
+                </div>
+                <div class="flex-1">
+                    <label class="ib-field-label">톤</label>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="ibPickColor(this, 'blue')" class="ib-color-pick {% if form.color_theme.value == 'blue' %}active{% endif %}" style="background: #5fa8ff"></button>
+                        <button type="button" onclick="ibPickColor(this, 'green')" class="ib-color-pick {% if form.color_theme.value == 'green' %}active{% elif not form.color_theme.value and preset == 'submit' %}active{% endif %}" style="background: #66c8a2"></button>
+                        <button type="button" onclick="ibPickColor(this, 'purple')" class="ib-color-pick {% if form.color_theme.value == 'purple' %}active{% endif %}" style="background: #b59cff"></button>
+                        <button type="button" onclick="ibPickColor(this, 'orange')" class="ib-color-pick {% if form.color_theme.value == 'orange' %}active{% endif %}" style="background: #ffb067"></button>
+                        <button type="button" onclick="ibPickColor(this, 'red')" class="ib-color-pick {% if form.color_theme.value == 'red' %}active{% endif %}" style="background: #ff8a8a"></button>
+                        <button type="button" onclick="ibPickColor(this, 'dark')" class="ib-color-pick {% if form.color_theme.value == 'dark' %}active{% endif %}" style="background: #364153"></button>
+                    </div>
+                    {{ form.color_theme }}
+                </div>
+            </div>
+
+            <div class="grid gap-3 sm:grid-cols-2 mb-5">
+                {% if is_edit or preset != 'submit' %}
+                <label class="ib-toggle-card">
+                    {{ form.allow_student_submit }}
+                    <span>
+                        <strong>학생 제출 허용</strong>
+                        <small>공유 링크에서 바로 자료를 올릴 수 있어요.</small>
+                    </span>
                 </label>
-                <label class="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-50 cursor-pointer hover:bg-slate-100 transition text-sm font-bold text-gray-600">
-                    <input type="radio" name="layout" value="list" {% if form.layout.value == 'list' %}checked{% endif %} class="accent-purple-600"> 목록형
-                </label>
-                <label class="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-50 cursor-pointer hover:bg-slate-100 transition text-sm font-bold text-gray-600">
-                    <input type="radio" name="layout" value="timeline" {% if form.layout.value == 'timeline' %}checked{% endif %} class="accent-purple-600"> 타임라인
+                {% else %}
+                <div class="ib-toggle-card">
+                    <span>
+                        <strong>학생 제출 허용</strong>
+                        <small>빠른 제출보드는 기본으로 학생 제출이 켜진 상태로 시작해요.</small>
+                    </span>
+                </div>
+                {% endif %}
+                <label class="ib-toggle-card">
+                    {{ form.is_public }}
+                    <span>
+                        <strong>공개 열람 허용</strong>
+                        <small>비로그인 사용자도 보드를 볼 수 있어요.</small>
+                    </span>
                 </label>
             </div>
-            {% include 'infoboard/partials/field_errors.html' with errors=form.layout.errors %}
-        </div>
 
-        <!-- Access toggles -->
-        <div class="mb-5 grid gap-3 sm:grid-cols-2">
-            <label class="flex items-start gap-3 rounded-2xl bg-slate-50 px-4 py-3 cursor-pointer hover:bg-slate-100 transition">
-                {{ form.is_public }}
-                <span>
-                    <span class="block text-sm font-bold text-gray-700">공개 열람 허용</span>
-                    <span class="block text-xs text-gray-400">비로그인 사용자도 이 보드를 볼 수 있어요.</span>
-                </span>
-            </label>
-            <label class="flex items-start gap-3 rounded-2xl bg-slate-50 px-4 py-3 cursor-pointer hover:bg-slate-100 transition">
-                {{ form.allow_student_submit }}
-                <span>
-                    <span class="block text-sm font-bold text-gray-700">학생 제출 허용</span>
-                    <span class="block text-xs text-gray-400">공유 링크에서 학생이 카드를 제출할 수 있어요.</span>
-                </span>
-            </label>
-        </div>
-        {% include 'infoboard/partials/field_errors.html' with errors=form.is_public.errors %}
-        {% include 'infoboard/partials/field_errors.html' with errors=form.allow_student_submit.errors %}
-
-        {% if board and board.access_code %}
-        <div class="mb-5 rounded-2xl bg-slate-50 p-4">
-            <label class="text-xs font-bold text-gray-500 mb-2 block">입장 코드</label>
-            <div class="flex items-center gap-2">
-                <input type="text" readonly value="{{ board.access_code }}"
-                    class="flex-1 px-3 py-2.5 rounded-xl bg-white text-sm font-bold tracking-widest text-gray-700 outline-none">
-                <button type="button" onclick="ibCopyText('{{ board.access_code }}')"
-                    class="px-4 py-2.5 rounded-xl bg-gray-100 text-sm font-bold text-gray-600 hover:bg-gray-200 transition">
-                    복사
-                </button>
+            <div class="mb-4">
+                <label class="ib-field-label">공용 명부</label>
+                {{ form.shared_roster_group }}
+                <p class="ib-helper-copy">학생 제출 이름을 공용 명부에서 선택식으로 받을 때만 연결하세요.</p>
+                {% include 'infoboard/partials/field_errors.html' with errors=form.shared_roster_group.errors %}
             </div>
-            <p class="mt-2 text-xs text-gray-400">학생에게 공유할 입장 코드예요.</p>
-        </div>
-        {% elif is_edit %}
-        <div class="mb-5 rounded-2xl bg-slate-50 p-4 text-xs text-gray-400">
-            저장 후 자동으로 입장 코드가 생성됩니다.
-        </div>
-        {% endif %}
 
-        <!-- Tags -->
-        <div class="mb-5">
-            <label class="text-xs font-bold text-gray-500 mb-1 block">태그</label>
-            <div class="flex flex-wrap gap-1.5 mb-2" id="ibTagContainer"></div>
-            <div class="flex gap-2">
-                <input type="text" id="ibNewTagInput" placeholder="태그 입력 후 Enter"
-                    class="flex-1 px-3 py-2 rounded-lg bg-slate-50 text-sm font-medium outline-none focus:ring-2 focus:ring-purple-300"
-                    onkeydown="if(event.key==='Enter'){event.preventDefault();ibAddTag(this.value);this.value=''}">
-                <button type="button" onclick="ibAddTag(document.getElementById('ibNewTagInput').value);document.getElementById('ibNewTagInput').value=''"
-                    class="px-3 py-2 rounded-lg bg-purple-100 text-purple-600 text-sm font-bold hover:bg-purple-200 transition">
-                    + 태그
-                </button>
+            <div class="mb-4">
+                <label class="ib-field-label">레이아웃</label>
+                <div class="ib-radio-row">
+                    <label class="ib-radio-chip"><input type="radio" name="layout" value="grid" {% if form.layout.value == 'grid' or not form.layout.value %}checked{% endif %}> 월형</label>
+                    <label class="ib-radio-chip"><input type="radio" name="layout" value="list" {% if form.layout.value == 'list' %}checked{% endif %}> 목록형</label>
+                    <label class="ib-radio-chip"><input type="radio" name="layout" value="timeline" {% if form.layout.value == 'timeline' %}checked{% endif %}> 타임라인</label>
+                </div>
             </div>
-            {{ form.tag_names }}
-        </div>
 
-        <!-- Buttons -->
-        <div class="flex gap-3 pt-3 border-t border-gray-100">
-            {% if modal_mode %}
-            <button type="button" onclick="ibCloseModal()"
-                class="flex-1 py-3 rounded-full bg-gray-100 text-gray-600 font-bold hover:bg-gray-200 transition">
-                취소
-            </button>
+            {% if board and board.access_code %}
+            <div class="ib-code-box">
+                <span>입장 코드</span>
+                <strong>{{ board.access_code }}</strong>
+            </div>
             {% endif %}
-            <button type="submit" hx-disabled-elt="this" class="{% if modal_mode %}flex-1{% else %}w-full{% endif %} py-3 rounded-full bg-purple-600 text-white font-bold shadow-lg hover:bg-purple-700 transition">
-                {% if is_edit %}저장{% else %}만들기{% endif %}
+        </details>
+
+        <div class="flex gap-3 pt-4">
+            {% if modal_mode %}
+            <button type="button" onclick="ibCloseModal()" class="ib-secondary-button w-full">취소</button>
+            {% endif %}
+            <button type="submit" hx-disabled-elt="this" class="ib-primary-button w-full">
+                {% if is_edit %}저장하기{% else %}{% if preset == 'submit' %}보드 만들고 링크 준비하기{% else %}보드 만들기{% endif %}{% endif %}
             </button>
         </div>
     </form>

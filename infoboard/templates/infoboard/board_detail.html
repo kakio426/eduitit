@@ -4,138 +4,120 @@
 {% block title %}{{ board.icon }} {{ board.title }} — 인포보드{% endblock %}
 
 {% block extra_css %}
-<link href="{% static 'infoboard/css/infoboard.css' %}?v=20260320-overlayfix" rel="stylesheet">
+<link href="{% static 'infoboard/css/infoboard.css' %}?v=20260322-wall" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
-<section class="pt-32 pb-20 px-4 md:px-6 min-h-screen bg-[#E0E5EC]/30">
-    <div class="max-w-6xl mx-auto">
+<section class="ib-page">
+    <div class="ib-shell">
+        <a href="{% url 'infoboard:dashboard' %}" class="ib-back-link">
+            <i class="fa-solid fa-arrow-left"></i> 대시보드로
+        </a>
 
-        <!-- Header -->
-        <div class="mb-8">
-            <a href="{% url 'infoboard:dashboard' %}" class="inline-flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-purple-600 transition mb-4">
-                <i class="fa-solid fa-arrow-left"></i> 대시보드로
-            </a>
-            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                    <h1 class="text-2xl md:text-3xl font-black text-gray-800 flex items-center gap-2">
-                        <span class="text-3xl">{{ board.icon }}</span>
-                        {{ board.title }}
-                    </h1>
-                    <p class="text-gray-500 font-medium mt-1">
-                        <span id="ibBoardCardCount">{{ card_count }}</span>개 항목
-                        {% for tag in board_tags %}
-                        <span class="ib-tag ml-1">#{{ tag.name }}</span>
-                        {% endfor %}
-                    </p>
-                </div>
-                <div class="flex items-center gap-2">
-                    <!-- Board search -->
-                    <div class="relative" x-data="{ open: false }">
-                        <button @click="open = !open" class="h-10 px-4 rounded-full shadow-clay-inner bg-white/80 text-gray-500 hover:text-purple-600 transition text-sm font-bold flex items-center gap-2">
-                            <i class="fa-solid fa-magnifying-glass text-xs"></i>
-                            <span class="hidden sm:inline">검색</span>
-                        </button>
-                        <div x-show="open" @click.away="open = false" x-cloak
-                            class="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-xl p-3 z-30">
-                            <form method="get" class="flex gap-2">
-                                <input type="text" name="q" value="{{ search_q }}" placeholder="카드 검색..."
-                                    class="flex-1 px-3 py-2 rounded-lg bg-slate-50 text-sm font-medium outline-none focus:ring-2 focus:ring-purple-300">
-                                <button type="submit" class="px-3 py-2 rounded-lg bg-purple-600 text-white text-sm font-bold">
-                                    <i class="fa-solid fa-magnifying-glass"></i>
-                                </button>
-                            </form>
-                        </div>
-                    </div>
+        <header class="ib-board-hero">
+            <div>
+                <p class="ib-eyebrow">교사용 운영 화면</p>
+                <h1>{{ board.icon }} {{ board.title }}</h1>
+                <p class="ib-hero-text">
+                    {% if board.description %}
+                    {{ board.description }}
+                    {% else %}
+                    학생이 자료를 올리고 서로 바로 볼 수 있는 협업 월이에요.
+                    {% endif %}
+                </p>
+            </div>
+        </header>
 
-                    <!-- Layout Switcher -->
-                    <form method="post" action="{% url 'infoboard:board_layout' board_id=board.id %}" class="hidden sm:flex items-center bg-white/80 rounded-full shadow-clay-inner overflow-hidden">
-                        {% csrf_token %}
-                        <input type="hidden" name="next" value="{{ current_path }}">
-                        <button type="submit" name="layout" value="grid" class="h-10 w-10 flex items-center justify-center text-sm transition {% if board.layout == 'grid' %}text-purple-600 bg-purple-100{% else %}text-gray-400 hover:text-purple-600{% endif %}" title="격자형">
-                            <i class="fa-solid fa-grip"></i>
-                        </button>
-                        <button type="submit" name="layout" value="list" class="h-10 w-10 flex items-center justify-center text-sm transition {% if board.layout == 'list' %}text-purple-600 bg-purple-100{% else %}text-gray-400 hover:text-purple-600{% endif %}" title="목록형">
-                            <i class="fa-solid fa-list"></i>
-                        </button>
-                        <button type="submit" name="layout" value="timeline" class="h-10 w-10 flex items-center justify-center text-sm transition {% if board.layout == 'timeline' %}text-purple-600 bg-purple-100{% else %}text-gray-400 hover:text-purple-600{% endif %}" title="타임라인">
-                            <i class="fa-solid fa-clock-rotate-left"></i>
-                        </button>
-                    </form>
-
-                    <!-- Share -->
-                    <button type="button"
-                        hx-get="{% url 'infoboard:share_panel' board_id=board.id %}"
-                        hx-target="#ibModal"
-                        hx-swap="innerHTML"
-                        onclick="ibOpenModal()"
-                        class="h-10 px-4 rounded-full shadow-clay-inner bg-white/80 text-gray-500 hover:text-purple-600 transition text-sm font-bold flex items-center gap-2">
-                        <i class="fa-solid fa-share-from-square"></i>
-                        <span class="hidden sm:inline">공유</span>
+        <section class="ib-op-bar">
+            <div class="ib-op-primary">
+                {% if board.share_ready and board.share_url %}
+                <button type="button" onclick="ibCopyText('{{ board.share_url|escapejs }}')" class="ib-primary-button">
+                    <i class="fa-regular fa-copy"></i> {{ board.primary_action_label }}
+                </button>
+                {% else %}
+                <form method="post" action="{% url 'infoboard:share_create' board_id=board.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="access_level" value="{{ board.primary_share_access }}">
+                    <button type="submit" class="ib-primary-button">
+                        <i class="fa-solid fa-link"></i> {{ board.primary_create_label }}
                     </button>
-
-                    <!-- More menu -->
-                    <div class="relative" x-data="{ open: false }">
-                        <button @click="open = !open" class="h-10 w-10 rounded-full shadow-clay-inner bg-white/80 text-gray-500 hover:text-purple-600 transition flex items-center justify-center">
-                            <i class="fa-solid fa-ellipsis"></i>
-                        </button>
-                        <div x-show="open" @click.away="open = false" x-cloak
-                            class="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl p-2 z-30">
-                        <button type="button"
-                            hx-get="{% url 'infoboard:board_edit' board_id=board.id %}"
-                            hx-target="#ibModal"
-                            hx-swap="innerHTML"
-                            @click="open = false; ibOpenModal()"
-                            class="ib-dropdown-item w-full text-left">
-                            <i class="fa-solid fa-pen text-xs"></i> 수정
-                        </button>
-                            <a href="{% url 'infoboard:board_export_csv' board_id=board.id %}" class="ib-dropdown-item">
-                                <i class="fa-solid fa-file-csv text-xs"></i> CSV 내보내기
-                            </a>
-                            <form method="post" action="{% url 'infoboard:board_delete' board_id=board.id %}"
-                                onsubmit="return confirm('이 보드와 모든 카드를 삭제할까요?')">
-                                {% csrf_token %}
-                                <button type="submit" class="ib-dropdown-item danger w-full text-left">
-                                    <i class="fa-solid fa-trash text-xs"></i> 삭제
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
+                </form>
+                {% endif %}
             </div>
-
-            {% if board.description %}
-            <p class="text-gray-500 text-sm mt-3 max-w-2xl">{{ board.description }}</p>
-            {% endif %}
-        </div>
-
-        <!-- Card Grid / List / Timeline -->
-        <div class="{% if board.layout == 'list' %}ib-card-list{% elif board.layout == 'timeline' %}ib-card-timeline{% else %}space-y-6{% endif %}">
-            <div id="ibCardGrid" class="{% if board.layout == 'grid' %}ib-card-grid{% endif %}">
-                {% include 'infoboard/partials/card_grid.html' %}
+            <button type="button"
+                hx-get="{% url 'infoboard:share_panel' board_id=board.id %}"
+                hx-target="#ibModal"
+                hx-swap="innerHTML"
+                onclick="ibOpenModal()"
+                class="ib-inline-button">
+                <i class="fa-solid fa-qrcode"></i> QR / 공유 설정
+            </button>
+            <div class="ib-op-pill">
+                <span>입장 코드</span>
+                <strong>{{ board.access_code }}</strong>
             </div>
+            <div class="ib-op-pill">
+                <span>제출 상태</span>
+                <strong>{% if board.allow_student_submit %}켜짐{% else %}꺼짐{% endif %}</strong>
+            </div>
+            <div class="ib-op-pill">
+                <span>학생 제출</span>
+                <strong>{{ board.submission_count|default:0 }}건</strong>
+            </div>
+            <div class="ib-op-pill">
+                <span>최근 제출</span>
+                <strong>{% if board.last_submission_at %}{{ board.last_submission_at|timesince }} 전{% else %}아직 없음{% endif %}</strong>
+            </div>
+        </section>
 
+        <div class="ib-subaction-row">
             <button type="button"
                 hx-get="{% url 'infoboard:card_add' board_id=board.id %}"
                 hx-target="#ibModal"
                 hx-swap="innerHTML"
                 onclick="ibOpenModal()"
-                class="ib-add-card">
-                <i class="fa-solid fa-plus text-2xl"></i>
-                <span>카드 추가</span>
+                class="ib-secondary-button">
+                <i class="fa-solid fa-thumbtack"></i> 직접 자료 추가
             </button>
+            <button type="button"
+                hx-get="{% url 'infoboard:board_edit' board_id=board.id %}"
+                hx-target="#ibModal"
+                hx-swap="innerHTML"
+                onclick="ibOpenModal()"
+                class="ib-inline-button">
+                <i class="fa-solid fa-sliders"></i> 보드 설정
+            </button>
+            <a href="{% url 'infoboard:board_export_csv' board_id=board.id %}" class="ib-inline-button">
+                <i class="fa-solid fa-file-csv"></i> CSV
+            </a>
+            <form method="post" action="{% url 'infoboard:board_delete' board_id=board.id %}" onsubmit="return confirm('이 보드와 모든 카드를 삭제할까요?')">
+                {% csrf_token %}
+                <button type="submit" class="ib-inline-button danger">
+                    <i class="fa-solid fa-trash"></i> 삭제
+                </button>
+            </form>
         </div>
 
+        <section class="ib-wall-section">
+            <div class="ib-section-heading">
+                <div>
+                    <p class="ib-section-kicker">협업 월</p>
+                    <h2>벽에 붙은 자료 <span id="ibBoardCardCount">{{ card_count }}</span></h2>
+                </div>
+                <p class="ib-section-note">학생 제출과 교사용 자료를 한 화면에서 같이 보고 정리합니다.</p>
+            </div>
+            <div id="ibCardGrid" class="ib-wall-grid">
+                {% include 'infoboard/partials/card_grid.html' %}
+            </div>
+        </section>
     </div>
 </section>
 
-<!-- Modal Container -->
 <div id="ibModalOverlay" class="ib-modal-overlay hidden" hidden onclick="if(event.target===this){ibCloseModal()}">
-    <div id="ibModal" class="ib-modal" onclick="event.stopPropagation()">
-    </div>
+    <div id="ibModal" class="ib-modal" onclick="event.stopPropagation()"></div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'infoboard/js/infoboard.js' %}?v=20260320-overlayfix"></script>
+<script src="{% static 'infoboard/js/infoboard.js' %}?v=20260322-wall"></script>
 {% endblock %}

@@ -6,7 +6,6 @@ from django.test import TestCase
 from django.urls import reverse
 
 from core.models import UserProfile
-from core.news_ingest import UnsafeNewsUrlError
 from infoboard.models import Board, Card, Collection, SharedLink
 
 
@@ -82,12 +81,9 @@ class InfoBoardFlowHardeningTests(TestCase):
         response = self.client.post(
             reverse('infoboard:board_create'),
             data={
+                'preset': 'submit',
                 'title': '새 보드',
                 'description': '대시보드에서 만든 보드',
-                'icon': '📌',
-                'color_theme': 'purple',
-                'layout': 'grid',
-                'tag_names': '',
             },
             **self._hx_headers('/infoboard/'),
         )
@@ -97,7 +93,41 @@ class InfoBoardFlowHardeningTests(TestCase):
         self.assertEqual(response.headers['HX-Reswap'], 'innerHTML')
         self.assertIn('infoboard:close-modal', response.headers['HX-Trigger-After-Swap'])
         self.assertContains(response, '새 보드')
-        self.assertEqual(Board.objects.filter(owner=self.user, title='새 보드').count(), 1)
+        board = Board.objects.get(owner=self.user, title='새 보드')
+        self.assertTrue(board.allow_student_submit)
+        self.assertEqual(board.shared_links.filter(is_active=True, access_level='submit').count(), 1)
+
+    def test_dashboard_prioritizes_collecting_recent_and_draft_sections(self):
+        collecting = self._board(title='수집 중 보드', allow_student_submit=True)
+        recent = self._board(title='최근 제출 보드')
+        draft = self._board(title='초안 보드')
+        SharedLink.objects.create(board=collecting, created_by=self.user, access_level='submit')
+        Card.objects.create(
+            board=collecting,
+            title='학생 제출 1',
+            card_type='text',
+            content='제출 내용',
+            author_name='학생A',
+        )
+        Card.objects.create(
+            board=recent,
+            title='학생 제출 2',
+            card_type='text',
+            content='최근 제출',
+            author_name='학생B',
+        )
+
+        response = self.client.get(reverse('infoboard:dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '새 제출보드')
+        self.assertContains(response, '제출받는 중')
+        self.assertContains(response, '최근 제출 있음')
+        self.assertContains(response, '초안')
+        self.assertContains(response, '수집 중 보드')
+        self.assertContains(response, '최근 제출 보드')
+        self.assertContains(response, '초안 보드')
+        self.assertNotContains(response, '내 보드')
 
     def test_board_edit_from_detail_redirects_back_to_current_detail(self):
         board = self._board(title='원래 제목')
@@ -254,7 +284,7 @@ class InfoBoardFlowHardeningTests(TestCase):
         )
         self.assertEqual(board_response.status_code, 200)
         self.assertEqual(board_response.headers['HX-Retarget'], '#ibBoardGrid')
-        self.assertContains(board_response, '아직 보드가 없어요')
+        self.assertContains(board_response, '첫 제출보드를 만들면 바로 링크까지 준비돼요')
         self.assertFalse(Board.objects.filter(id=board.id).exists())
 
         board = self._board(title='컬렉션 보드')
@@ -341,6 +371,41 @@ class InfoBoardFlowHardeningTests(TestCase):
         )
         self.assertEqual(invalid_post.status_code, 200)
         self.assertContains(invalid_post, '링크 URL을 입력해주세요.')
+
+    def test_student_submit_htmx_refreshes_public_wall_and_closes_sheet(self):
+        board = self._board(title='협업 월', allow_student_submit=True)
+        shared_link = SharedLink.objects.create(board=board, created_by=self.user, access_level='submit')
+        submit_url = reverse('infoboard:student_submit', args=[shared_link.id])
+
+        self.client.logout()
+        response = self.client.post(
+            submit_url,
+            data={
+                'author_name': '학생',
+                'card_type': 'text',
+                'title': '새 제출 카드',
+                'content': '안녕하세요',
+            },
+            **self._hx_headers(reverse('infoboard:public_board', args=[shared_link.id])),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers['HX-Retarget'], '#ibPublicWall')
+        self.assertEqual(response.headers['HX-Reswap'], 'innerHTML')
+        self.assertIn('infoboard:close-submit-sheet', response.headers['HX-Trigger-After-Swap'])
+        self.assertContains(response, '새 제출 카드')
+        self.assertEqual(board.cards.filter(title='새 제출 카드', author_name='학생').count(), 1)
+
+    def test_board_detail_prefers_single_primary_share_action(self):
+        board = self._board(title='운영 보드', allow_student_submit=True)
+        shared_link = SharedLink.objects.create(board=board, created_by=self.user, access_level='submit')
+
+        response = self.client.get(reverse('infoboard:board_detail', args=[board.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '제출 링크 복사')
+        self.assertContains(response, str(shared_link.board.access_code))
+        self.assertContains(response, '학생 제출')
 
     def test_fetch_og_meta_rejects_unsafe_urls_and_returns_safe_payload(self):
         unsafe_response = self.client.get(

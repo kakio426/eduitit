@@ -1,15 +1,10 @@
-<span id="ibBoardCardCount" hx-swap-oob="true" class="hidden">{{ card_count }}</span>
+<span id="ibBoardCardCount" hx-swap-oob="true">{{ card_count }}</span>
 {% for card in cards %}
 {% include 'infoboard/partials/card_item.html' %}
 {% empty %}
-<div class="col-span-full ib-empty">
-    <div class="ib-empty-icon">📋</div>
-    {% if search_q %}
-    <p class="text-lg font-bold text-gray-500">"{{ search_q }}" 검색 결과가 없어요</p>
-    <p class="text-sm text-gray-400 mt-1">검색어를 바꾸거나 카드 추가 버튼으로 새 자료를 만들어보세요.</p>
-    {% else %}
-    <p class="text-lg font-bold text-gray-500">아직 카드가 없어요</p>
-    <p class="text-sm text-gray-400 mt-1">위의 "카드 추가" 버튼으로 첫 번째 자료를 추가해보세요</p>
-    {% endif %}
+<div class="ib-empty-card">
+    <div class="ib-empty-emoji">🧷</div>
+    <h3>아직 벽에 붙은 자료가 없어요</h3>
+    <p>학생이 올리기 전이라면 제출 링크를 먼저 복사하고, 직접 시작하려면 위의 자료 추가 버튼을 눌러보세요.</p>
 </div>
 {% endfor %}

@@ -1,17 +1,15 @@
 <div class="p-6">
-    {% if modal_mode %}
-    <div class="flex items-center justify-between mb-6">
-        <h2 class="text-xl font-black text-gray-800">{% if is_edit %}카드 수정{% else %}카드 추가{% endif %}</h2>
-        <button type="button" onclick="ibCloseModal()" class="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-600 transition">
+    <div class="flex items-center justify-between mb-5">
+        <div>
+            <p class="ib-eyebrow">{% if is_edit %}자료 다듬기{% else %}직접 자료 붙이기{% endif %}</p>
+            <h2 class="text-xl font-black text-gray-900">{% if is_edit %}카드 수정{% else %}교사용 자료 추가{% endif %}</h2>
+        </div>
+        {% if modal_mode %}
+        <button type="button" onclick="ibCloseModal()" class="ib-icon-button" aria-label="닫기">
             <i class="fa-solid fa-xmark"></i>
         </button>
+        {% endif %}
     </div>
-    {% else %}
-    <div class="mb-6">
-        <h2 class="text-xl font-black text-gray-800">{% if is_edit %}카드 수정{% else %}카드 추가{% endif %}</h2>
-        <p class="text-sm text-gray-400 mt-1">링크, 파일, 이미지, 메모를 한곳에서 다뤄요.</p>
-    </div>
-    {% endif %}
 
     {% include 'infoboard/partials/form_errors.html' with form=form %}
 
@@ -23,8 +21,10 @@
         hx-encoding="multipart/form-data"{% endif %}>
         {% csrf_token %}
 
-        <!-- Type selector -->
         <div class="flex gap-2 mb-5">
+            <button type="button" onclick="ibSelectCardType(this, 'text')" class="ib-type-tab flex-1 {% if form.card_type.value|default:'text' == 'text' %}active{% endif %}">
+                <span class="ib-type-icon">📝</span> 메모
+            </button>
             <button type="button" onclick="ibSelectCardType(this, 'link')" class="ib-type-tab flex-1 {% if form.card_type.value == 'link' %}active{% endif %}">
                 <span class="ib-type-icon">🔗</span> 링크
             </button>
@@ -34,87 +34,72 @@
             <button type="button" onclick="ibSelectCardType(this, 'image')" class="ib-type-tab flex-1 {% if form.card_type.value == 'image' %}active{% endif %}">
                 <span class="ib-type-icon">🖼</span> 이미지
             </button>
-            <button type="button" onclick="ibSelectCardType(this, 'text')" class="ib-type-tab flex-1 {% if form.card_type.value|default:'text' == 'text' %}active{% endif %}">
-                <span class="ib-type-icon">📝</span> 메모
-            </button>
         </div>
         {{ form.card_type }}
 
-        <!-- Title -->
         <div class="mb-4">
-            <label class="text-xs font-bold text-gray-500 mb-1 block">제목</label>
+            <label class="ib-field-label">제목</label>
             {{ form.title }}
             {% include 'infoboard/partials/field_errors.html' with errors=form.title.errors %}
         </div>
 
-        <!-- URL (link type) -->
         <div class="mb-4" id="ibFieldUrl" style="{% if form.card_type.value != 'link' %}display:none{% endif %}">
-            <label class="text-xs font-bold text-gray-500 mb-1 block">URL</label>
+            <label class="ib-field-label">URL</label>
             {{ form.url }}
             {% include 'infoboard/partials/field_errors.html' with errors=form.url.errors %}
         </div>
 
-        <!-- File (file type) -->
         <div class="mb-4" id="ibFieldFile" style="{% if form.card_type.value != 'file' %}display:none{% endif %}">
-            <label class="text-xs font-bold text-gray-500 mb-1 block">파일 업로드</label>
+            <label class="ib-field-label">파일 업로드</label>
             {{ form.file }}
             {% include 'infoboard/partials/field_errors.html' with errors=form.file.errors %}
         </div>
 
-        <!-- Image (image type) -->
         <div class="mb-4" id="ibFieldImage" style="{% if form.card_type.value != 'image' %}display:none{% endif %}">
-            <label class="text-xs font-bold text-gray-500 mb-1 block">이미지 업로드</label>
+            <label class="ib-field-label">이미지 업로드</label>
             {{ form.image }}
             {% include 'infoboard/partials/field_errors.html' with errors=form.image.errors %}
         </div>
 
-        <!-- Content (text/memo type) -->
         <div class="mb-4" id="ibFieldContent">
-            <label class="text-xs font-bold text-gray-500 mb-1 block">메모 / 내용</label>
+            <label class="ib-field-label">내용</label>
             {{ form.content }}
             {% include 'infoboard/partials/field_errors.html' with errors=form.content.errors %}
         </div>
 
-        <!-- Tags -->
-        <div class="mb-5">
-            <label class="text-xs font-bold text-gray-500 mb-1 block">태그</label>
-            <div class="flex flex-wrap gap-1.5 mb-2" id="ibTagContainer"></div>
-            <div class="flex gap-2">
-                <input type="text" id="ibNewTagInput" placeholder="태그 입력 후 Enter"
-                    class="flex-1 px-3 py-2 rounded-lg bg-slate-50 text-sm font-medium outline-none focus:ring-2 focus:ring-purple-300"
-                    onkeydown="if(event.key==='Enter'){event.preventDefault();ibAddTag(this.value);this.value=''}">
-                <button type="button" onclick="ibAddTag(document.getElementById('ibNewTagInput').value);document.getElementById('ibNewTagInput').value=''"
-                    class="px-3 py-2 rounded-lg bg-purple-100 text-purple-600 text-sm font-bold hover:bg-purple-200 transition">
-                    + 태그
-                </button>
+        <details class="ib-advanced-panel">
+            <summary>세부 설정</summary>
+            <div class="mt-4">
+                <label class="ib-field-label">태그</label>
+                <div class="flex flex-wrap gap-1.5 mb-2" id="ibTagContainer"></div>
+                <div class="flex gap-2">
+                    <input type="text" id="ibNewTagInput" placeholder="태그 입력 후 Enter"
+                        class="w-full px-4 py-3 rounded-2xl border border-[#d8cfbf] bg-white text-sm text-gray-700 outline-none focus:border-[#0f766e]"
+                        onkeydown="if(event.key==='Enter'){event.preventDefault();ibAddTag(this.value);this.value=''}">
+                </div>
+                {{ form.tag_names }}
             </div>
-            {{ form.tag_names }}
-        </div>
 
-        <!-- Color -->
-        <div class="mb-5">
-            <label class="text-xs font-bold text-gray-500 mb-1 block">카드 색상 (선택)</label>
-            <div class="flex gap-2">
-                <button type="button" onclick="ibPickCardColor(this, '')" class="ib-color-pick active" style="background: #f1f5f9"></button>
-                <button type="button" onclick="ibPickCardColor(this, '#FFE0B2')" class="ib-color-pick" style="background: #FFE0B2"></button>
-                <button type="button" onclick="ibPickCardColor(this, '#C8E6C9')" class="ib-color-pick" style="background: #C8E6C9"></button>
-                <button type="button" onclick="ibPickCardColor(this, '#BBDEFB')" class="ib-color-pick" style="background: #BBDEFB"></button>
-                <button type="button" onclick="ibPickCardColor(this, '#E1BEE7')" class="ib-color-pick" style="background: #E1BEE7"></button>
-                <button type="button" onclick="ibPickCardColor(this, '#FFCDD2')" class="ib-color-pick" style="background: #FFCDD2"></button>
+            <div class="mt-4">
+                <label class="ib-field-label">카드 톤</label>
+                <div class="flex gap-2">
+                    <button type="button" onclick="ibPickCardColor(this, '')" class="ib-color-pick {% if not form.color.value %}active{% endif %}" style="background: #f5ede0"></button>
+                    <button type="button" onclick="ibPickCardColor(this, '#FFE5BF')" class="ib-color-pick {% if form.color.value == '#FFE5BF' %}active{% endif %}" style="background: #FFE5BF"></button>
+                    <button type="button" onclick="ibPickCardColor(this, '#D8F0E4')" class="ib-color-pick {% if form.color.value == '#D8F0E4' %}active{% endif %}" style="background: #D8F0E4"></button>
+                    <button type="button" onclick="ibPickCardColor(this, '#DBEAFE')" class="ib-color-pick {% if form.color.value == '#DBEAFE' %}active{% endif %}" style="background: #DBEAFE"></button>
+                    <button type="button" onclick="ibPickCardColor(this, '#F6D8FF')" class="ib-color-pick {% if form.color.value == '#F6D8FF' %}active{% endif %}" style="background: #F6D8FF"></button>
+                    <button type="button" onclick="ibPickCardColor(this, '#FFD7D7')" class="ib-color-pick {% if form.color.value == '#FFD7D7' %}active{% endif %}" style="background: #FFD7D7"></button>
+                </div>
+                {{ form.color }}
             </div>
-            {{ form.color }}
-        </div>
+        </details>
 
-        <!-- Buttons -->
-        <div class="flex gap-3 pt-3 border-t border-gray-100">
+        <div class="flex gap-3 pt-4">
             {% if modal_mode %}
-            <button type="button" onclick="ibCloseModal()"
-                class="flex-1 py-3 rounded-full bg-gray-100 text-gray-600 font-bold hover:bg-gray-200 transition">
-                취소
-            </button>
+            <button type="button" onclick="ibCloseModal()" class="ib-secondary-button w-full">취소</button>
             {% endif %}
-            <button type="submit" hx-disabled-elt="this" class="{% if modal_mode %}flex-1{% else %}w-full{% endif %} py-3 rounded-full bg-purple-600 text-white font-bold shadow-lg hover:bg-purple-700 transition">
-                {% if is_edit %}저장{% else %}추가{% endif %}
+            <button type="submit" hx-disabled-elt="this" class="ib-primary-button w-full">
+                {% if is_edit %}저장하기{% else %}벽에 붙이기{% endif %}
             </button>
         </div>
     </form>

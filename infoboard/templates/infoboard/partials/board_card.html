@@ -1,57 +1,93 @@
-<div class="ib-info-card ib-board-card ib-theme-{{ board.color_theme }}" id="board-{{ board.id }}">
-    <a href="{% url 'infoboard:board_detail' board_id=board.id %}" class="block">
-        <div class="flex items-start justify-between mb-3">
-            <span class="text-3xl">{{ board.icon }}</span>
-            <div class="relative" x-data="{ open: false }" @click.stop>
-                <button @click.prevent="open = !open" class="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition">
-                    <i class="fa-solid fa-ellipsis text-sm"></i>
+<article class="ib-board-card ib-board-state-{{ board.state_tone|default:'draft' }}" id="board-{{ board.id }}">
+    <div class="ib-board-card-top">
+        <div class="ib-board-badges">
+            <span class="ib-status-pill ib-status-{{ board.state_tone|default:'draft' }}">{{ board.state_label|default:'초안' }}</span>
+            {% if board.share_ready %}
+            <span class="ib-mini-pill">링크 준비 완료</span>
+            {% elif board.allow_student_submit %}
+            <span class="ib-mini-pill muted">링크 준비 필요</span>
+            {% endif %}
+        </div>
+        <div class="relative" x-data="{ open: false }">
+            <button @click="open = !open" type="button" class="ib-icon-button" aria-label="보드 메뉴">
+                <i class="fa-solid fa-ellipsis"></i>
+            </button>
+            <div x-show="open" @click.away="open = false" x-cloak class="ib-dropdown-panel">
+                <a href="{% url 'infoboard:board_detail' board_id=board.id %}" class="ib-dropdown-item">
+                    <i class="fa-solid fa-up-right-from-square text-xs"></i> 보드 열기
+                </a>
+                <button type="button"
+                    hx-get="{% url 'infoboard:board_edit' board_id=board.id %}"
+                    hx-target="#ibModal"
+                    hx-swap="innerHTML"
+                    @click="open = false; ibOpenModal()"
+                    class="ib-dropdown-item w-full text-left">
+                    <i class="fa-solid fa-pen text-xs"></i> 보드 설정
                 </button>
-                <div x-show="open" @click.away="open = false" x-cloak
-                    class="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl shadow-xl p-2 z-30">
-                    <button type="button"
-                        hx-get="{% url 'infoboard:board_edit' board_id=board.id %}"
-                        hx-target="#ibModal"
-                        hx-swap="innerHTML"
-                        @click="open = false; ibOpenModal()"
-                        class="ib-dropdown-item w-full text-left">
-                        <i class="fa-solid fa-pen text-xs"></i> 수정
+                <button type="button"
+                    hx-get="{% url 'infoboard:share_panel' board_id=board.id %}"
+                    hx-target="#ibModal"
+                    hx-swap="innerHTML"
+                    @click="open = false; ibOpenModal()"
+                    class="ib-dropdown-item w-full text-left">
+                    <i class="fa-solid fa-share-nodes text-xs"></i> 공유 패널
+                </button>
+                <form method="post" action="{% url 'infoboard:board_delete' board_id=board.id %}"
+                    onsubmit="return confirm('이 보드와 모든 카드를 삭제할까요?')"
+                    hx-post="{% url 'infoboard:board_delete' board_id=board.id %}"
+                    hx-target="#{{ board_delete_target|default:'ibBoardGrid' }}"
+                    hx-swap="innerHTML"
+                    hx-confirm="이 보드와 모든 카드를 삭제할까요?">
+                    {% csrf_token %}
+                    <button type="submit" class="ib-dropdown-item danger w-full text-left">
+                        <i class="fa-solid fa-trash text-xs"></i> 삭제
                     </button>
-                    <button type="button"
-                        hx-get="{% url 'infoboard:share_panel' board_id=board.id %}"
-                        hx-target="#ibModal"
-                        hx-swap="innerHTML"
-                        @click="open = false; ibOpenModal()"
-                        class="ib-dropdown-item w-full text-left">
-                        <i class="fa-solid fa-share-from-square text-xs"></i> 공유
-                    </button>
-                    <form method="post" action="{% url 'infoboard:board_delete' board_id=board.id %}"
-                        onsubmit="return confirm('이 보드를 삭제할까요?')"
-                        hx-post="{% url 'infoboard:board_delete' board_id=board.id %}"
-                        hx-target="#{{ board_delete_target|default:'ibBoardGrid' }}"
-                        hx-swap="innerHTML"
-                        hx-confirm="이 보드와 모든 카드를 삭제할까요?">
-                        {% csrf_token %}
-                        <button type="submit" class="ib-dropdown-item danger w-full text-left">
-                            <i class="fa-solid fa-trash text-xs"></i> 삭제
-                        </button>
-                    </form>
-                </div>
+                </form>
             </div>
         </div>
-        <h3 class="text-lg font-black text-gray-800 mb-1 line-clamp-2">{{ board.title }}</h3>
-        {% if board.description %}
-        <p class="text-sm text-gray-500 line-clamp-2 mb-3">{{ board.description }}</p>
-        {% endif %}
-        <div class="flex items-center justify-between mt-auto pt-3 border-t border-gray-100">
-            <span class="text-xs text-gray-400 font-bold">{{ board.num_cards }}개 항목</span>
-            <span class="text-xs text-gray-400">{{ board.updated_at|timesince }} 전</span>
+    </div>
+
+    <a href="{% url 'infoboard:board_detail' board_id=board.id %}" class="ib-board-card-main">
+        <div class="ib-board-icon">{{ board.icon }}</div>
+        <div>
+            <h3>{{ board.title }}</h3>
+            <p class="ib-board-description">
+                {% if board.description %}
+                {{ board.description }}
+                {% elif board.allow_student_submit %}
+                학생이 링크, 파일, 이미지, 메모를 바로 올리는 제출용 협업 월
+                {% else %}
+                교사용 자료를 모아두는 일반 보드
+                {% endif %}
+            </p>
         </div>
-        {% if board.tags.all %}
-        <div class="flex flex-wrap gap-1 mt-2">
-            {% for tag in board.tags.all %}
-            <span class="ib-tag">#{{ tag.name }}</span>
-            {% endfor %}
-        </div>
-        {% endif %}
     </a>
-</div>
+
+    <div class="ib-board-stats">
+        <div class="ib-stat-box">
+            <span>학생 제출</span>
+            <strong>{{ board.submission_count|default:0 }}</strong>
+        </div>
+        <div class="ib-stat-box">
+            <span>전체 자료</span>
+            <strong>{{ board.num_cards|default:0 }}</strong>
+        </div>
+        <div class="ib-stat-box">
+            <span>마지막 움직임</span>
+            <strong>{% if board.last_submission_at %}{{ board.last_submission_at|timesince }} 전{% else %}대기 중{% endif %}</strong>
+        </div>
+    </div>
+
+    <div class="ib-board-actions">
+        {% if board.share_ready and board.share_url %}
+        <button type="button" onclick="ibCopyText('{{ board.share_url|escapejs }}')" class="ib-inline-button">
+            <i class="fa-regular fa-copy"></i> 링크 복사
+        </button>
+        {% else %}
+        <a href="{% url 'infoboard:board_detail' board_id=board.id %}" class="ib-inline-button">
+            <i class="fa-solid fa-arrow-right"></i> 보드 열기
+        </a>
+        {% endif %}
+        <span class="ib-board-updated">{{ board.updated_at|timesince }} 전 업데이트</span>
+    </div>
+</article>

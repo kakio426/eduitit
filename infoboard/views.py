@@ -4,7 +4,7 @@ import logging
 from urllib.parse import urlsplit
 
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q, Count
+from django.db.models import Max, Q, Count, Prefetch
 from django.http import JsonResponse, HttpResponse, Http404, QueryDict
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse, resolve, Resolver404
@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 SERVICE_ROUTE = 'infoboard:dashboard'
 SERVICE_TITLE = '인포보드'
+SUBMIT_ACCESS_LEVELS = ('submit', 'edit')
 
 
 def _get_service(request):
@@ -62,42 +63,134 @@ def _set_htmx_headers(response, *, retarget=None, reswap=None, trigger_after_swa
     return response
 
 
-def _dashboard_context(owner, query):
-    tab = query.get('tab', 'boards')
-    sort = query.get('sort', 'recent')
-    tag_filter = query.get('tag', '')
+def _student_submission_query():
+    return Q(cards__author_user__isnull=True) & ~Q(cards__author_name='')
 
-    boards = Board.objects.filter(owner=owner).annotate(num_cards=Count('cards'))
 
-    if tag_filter:
-        boards = boards.filter(tags__name=tag_filter)
+def _annotated_board_queryset(owner):
+    return (
+        Board.objects.filter(owner=owner)
+        .annotate(
+            num_cards=Count('cards', distinct=True),
+            submission_count=Count('cards', filter=_student_submission_query(), distinct=True),
+            last_submission_at=Max('cards__created_at', filter=_student_submission_query()),
+        )
+        .prefetch_related(
+            Prefetch(
+                'shared_links',
+                queryset=SharedLink.objects.filter(is_active=True).order_by('-created_at'),
+                to_attr='active_shared_links',
+            )
+        )
+    )
 
-    sort_map = {
-        'recent': '-updated_at',
-        'oldest': 'updated_at',
-        'name': 'title',
-        'cards': '-num_cards',
-    }
-    boards = boards.order_by(sort_map.get(sort, '-updated_at'))
 
-    user_tags = Tag.objects.filter(owner=owner).order_by('name')
-    collections = None
-    if tab == 'collections':
-        collections = Collection.objects.filter(owner=owner).annotate(board_count=Count('boards'))
+def _build_share_url(request, shared_link):
+    if not request or not shared_link:
+        return ''
+    return request.build_absolute_uri(reverse('infoboard:public_board', args=[shared_link.id]))
 
+
+def _decorate_board(board, request=None):
+    active_links = getattr(board, 'active_shared_links', None)
+    if active_links is None:
+        active_links = list(board.shared_links.filter(is_active=True).order_by('-created_at'))
+    active_share = active_links[0] if active_links else None
+
+    if not hasattr(board, 'num_cards'):
+        board.num_cards = board.cards.count()
+    if not hasattr(board, 'submission_count'):
+        board.submission_count = board.cards.filter(author_user__isnull=True).exclude(author_name='').count()
+    if not hasattr(board, 'last_submission_at'):
+        board.last_submission_at = (
+            board.cards.filter(author_user__isnull=True).exclude(author_name='').order_by('-created_at')
+            .values_list('created_at', flat=True)
+            .first()
+        )
+
+    board.active_share = active_share
+    board.primary_share_access = 'submit' if board.allow_student_submit else 'view'
+    board.primary_share_ready = bool(
+        active_share
+        and (
+            active_share.access_level in SUBMIT_ACCESS_LEVELS
+            if board.primary_share_access == 'submit'
+            else True
+        )
+    )
+    board.share_ready = board.primary_share_ready
+    board.share_url = _build_share_url(request, active_share) if board.primary_share_ready else ''
+    board.any_share_url = _build_share_url(request, active_share) if active_share else ''
+    board.is_collecting = bool(board.allow_student_submit and board.primary_share_ready)
+    board.has_recent_submission = bool(board.last_submission_at)
+    board.primary_action_label = '제출 링크 복사' if board.allow_student_submit else '열람 링크 복사'
+    board.primary_create_label = '제출 링크 만들기' if board.allow_student_submit else '열람 링크 만들기'
+    board.state_tone = 'draft'
+    board.state_label = '초안'
+    if board.is_collecting:
+        board.state_tone = 'collecting'
+        board.state_label = '제출받는 중'
+    elif board.has_recent_submission:
+        board.state_tone = 'recent'
+        board.state_label = '최근 제출 있음'
+    return board
+
+
+def _decorate_board_list(boards, request=None):
+    return [_decorate_board(board, request=request) for board in boards]
+
+
+def _dashboard_sections(boards):
+    collecting = [board for board in boards if board.is_collecting]
+    recent = [board for board in boards if not board.is_collecting and board.has_recent_submission]
+    draft = [board for board in boards if not board.is_collecting and not board.has_recent_submission]
+
+    collecting.sort(key=lambda board: (board.last_submission_at or board.updated_at, board.updated_at), reverse=True)
+    recent.sort(key=lambda board: (board.last_submission_at or board.updated_at, board.updated_at), reverse=True)
+    draft.sort(key=lambda board: board.updated_at, reverse=True)
+
+    return [
+        {
+            'key': 'collecting',
+            'title': '제출받는 중',
+            'description': '링크를 뿌리고 바로 수집 중인 보드예요.',
+            'boards': collecting,
+            'empty_message': '아직 제출을 받고 있는 보드가 없어요.',
+        },
+        {
+            'key': 'recent',
+            'title': '최근 제출 있음',
+            'description': '조금 전까지 자료가 올라온 보드예요.',
+            'boards': recent,
+            'empty_message': '최근 제출이 잡힌 보드가 아직 없어요.',
+        },
+        {
+            'key': 'draft',
+            'title': '초안',
+            'description': '아직 링크를 뿌리기 전, 준비 중인 보드예요.',
+            'boards': draft,
+            'empty_message': '준비 중인 보드가 없어요.',
+        },
+    ]
+
+
+def _dashboard_context(request):
+    boards = list(_annotated_board_queryset(request.user))
+    boards = _decorate_board_list(boards, request=request)
+    sections = _dashboard_sections(boards)
     return {
         'boards': boards,
-        'collections': collections,
-        'user_tags': user_tags,
-        'current_tab': tab,
-        'current_sort': sort,
-        'current_tag': tag_filter,
+        'board_sections': sections,
+        'all_board_count': len(boards),
+        'collecting_count': len(sections[0]['boards']),
+        'recent_count': len(sections[1]['boards']),
+        'draft_count': len(sections[2]['boards']),
         'board_delete_target': 'ibBoardGrid',
     }
 
 
 def _board_cards_context(board, search_q=''):
-    cards = board.cards.all()
+    cards = board.cards.select_related('author_user').prefetch_related('tags')
     if search_q:
         cards = cards.filter(
             Q(title__icontains=search_q) | Q(content__icontains=search_q) | Q(tags__name__icontains=search_q)
@@ -112,17 +205,19 @@ def _board_cards_context(board, search_q=''):
 
 
 def _collection_boards_context(collection):
-    boards = collection.boards.annotate(num_cards=Count('cards')).order_by('-updated_at')
+    boards = list(
+        collection.boards.annotate(num_cards=Count('cards', distinct=True)).order_by('-updated_at')
+    )
     return {
         'collection': collection,
         'boards': boards,
-        'board_count': boards.count(),
+        'board_count': len(boards),
         'board_delete_target': 'ibCollectionBoards',
     }
 
 
 def _render_board_grid_response(request, *, close_modal=False):
-    context = _dashboard_context(request.user, _current_request_query(request))
+    context = _dashboard_context(request)
     response = render(request, 'infoboard/partials/board_grid.html', context)
     return _set_htmx_headers(
         response,
@@ -145,13 +240,43 @@ def _render_collection_grid_response(request, *, close_modal=False):
 
 def _render_card_grid_response(request, board, *, close_modal=False):
     search_q = _current_request_query(request).get('q', '').strip()
-    response = render(request, 'infoboard/partials/card_grid.html', _board_cards_context(board, search_q))
+    context = _board_cards_context(board, search_q)
+    context['public_mode'] = False
+    response = render(request, 'infoboard/partials/card_grid.html', context)
     return _set_htmx_headers(
         response,
         retarget='#ibCardGrid',
         reswap='innerHTML',
         trigger_after_swap='infoboard:close-modal' if close_modal else None,
     )
+
+
+def _render_public_wall_response(request, board, shared, *, close_sheet=False):
+    context = _board_cards_context(board)
+    context.update({'shared': shared, 'public_mode': True})
+    response = render(request, 'infoboard/partials/public_wall.html', context)
+    return _set_htmx_headers(
+        response,
+        retarget='#ibPublicWall',
+        reswap='innerHTML',
+        trigger_after_swap='infoboard:close-submit-sheet' if close_sheet else None,
+    )
+
+
+def _prepare_board_form_data(request):
+    data = request.POST.copy()
+    preset = data.get('preset', request.GET.get('preset', 'submit')).strip() or 'submit'
+    if preset == 'submit':
+        data['icon'] = data.get('icon') or '📥'
+        data['color_theme'] = data.get('color_theme') or 'green'
+        data['layout'] = data.get('layout') or 'grid'
+        data['allow_student_submit'] = 'on'
+        data.pop('is_public', None)
+    else:
+        data['icon'] = data.get('icon') or '📌'
+        data['color_theme'] = data.get('color_theme') or 'blue'
+        data['layout'] = data.get('layout') or 'grid'
+    return data, preset
 
 
 def _refresh_link_card_metadata(card, previous_url=None):
@@ -195,7 +320,7 @@ def dashboard(request):
     context = {
         'service': service,
     }
-    context.update(_dashboard_context(request.user, request.GET))
+    context.update(_dashboard_context(request))
 
     if request.htmx:
         return render(request, 'infoboard/partials/board_grid.html', context)
@@ -207,22 +332,40 @@ def dashboard(request):
 @login_required
 def board_create(request):
     """보드 생성."""
+    preset = (request.POST.get('preset') or request.GET.get('preset') or 'submit').strip() or 'submit'
     if request.method == 'POST':
-        form = BoardForm(request.POST, owner=request.user)
+        form_data, preset = _prepare_board_form_data(request)
+        form = BoardForm(form_data, owner=request.user)
         if form.is_valid():
             board = form.save_with_tags(request.user)
+            if preset == 'submit':
+                board.shared_links.filter(is_active=True).update(is_active=False)
+                SharedLink.objects.create(
+                    board=board,
+                    created_by=request.user,
+                    access_level='submit',
+                )
             logger.info(f'[InfoBoard] Board created: {board.title} (id={board.id})')
             if request.htmx:
                 return _render_board_grid_response(request, close_modal=True)
             return redirect('infoboard:board_detail', board_id=board.id)
     else:
         form = BoardForm(
-            initial={'icon': '📌', 'color_theme': 'purple', 'layout': 'grid'},
+            initial={
+                'icon': '📥' if preset == 'submit' else '📌',
+                'color_theme': 'green' if preset == 'submit' else 'blue',
+                'layout': 'grid',
+                'allow_student_submit': preset == 'submit',
+            },
             owner=request.user,
         )
 
-    user_tags = Tag.objects.filter(owner=request.user).order_by('name')
-    context = {'form': form, 'user_tags': user_tags, 'is_edit': False, 'modal_mode': bool(request.htmx)}
+    context = {
+        'form': form,
+        'is_edit': False,
+        'modal_mode': bool(request.htmx),
+        'preset': preset,
+    }
 
     if request.htmx:
         return render(request, 'infoboard/partials/board_form_modal.html', context)
@@ -232,27 +375,21 @@ def board_create(request):
 @login_required
 def board_detail(request, board_id):
     """보드 상세 — 카드 그리드."""
-    board = get_object_or_404(Board, id=board_id, owner=request.user)
+    board = get_object_or_404(_annotated_board_queryset(request.user), id=board_id)
+    board = _decorate_board(board, request=request)
     service = _get_service(request)
     search_q = request.GET.get('q', '')
     cards_context = _board_cards_context(board, search_q)
-
-    board_tags = Tag.objects.filter(
-        Q(boards=board) | Q(cards__board=board)
-    ).distinct().order_by('name')
-
-    shared_link = board.shared_links.filter(is_active=True).first()
 
     context = {
         'service': service,
         'board': board,
         'cards': cards_context['cards'],
-        'board_tags': board_tags,
-        'shared_link': shared_link,
         'search_q': search_q,
         'card_count': cards_context['card_count'],
         'current_path': request.get_full_path(),
         'modal_mode': False,
+        'public_mode': False,
     }
 
     if request.htmx:
@@ -281,6 +418,7 @@ def board_edit(request, board_id):
     """보드 수정."""
     board = get_object_or_404(Board, id=board_id, owner=request.user)
     current_route = _resolve_current_route(request)
+    preset = 'submit' if board.allow_student_submit else 'general'
 
     if request.method == 'POST':
         form = BoardForm(request.POST, instance=board, owner=request.user)
@@ -304,8 +442,13 @@ def board_edit(request, board_id):
         tag_names = ','.join(board.tags.values_list('name', flat=True))
         form = BoardForm(instance=board, initial={'tag_names': tag_names}, owner=request.user)
 
-    user_tags = Tag.objects.filter(owner=request.user).order_by('name')
-    context = {'form': form, 'board': board, 'user_tags': user_tags, 'is_edit': True, 'modal_mode': bool(request.htmx)}
+    context = {
+        'form': form,
+        'board': board,
+        'is_edit': True,
+        'modal_mode': bool(request.htmx),
+        'preset': preset,
+    }
 
     if request.htmx:
         return render(request, 'infoboard/partials/board_form_modal.html', context)
@@ -361,8 +504,7 @@ def card_add(request, board_id):
     else:
         form = CardForm(initial={'card_type': request.GET.get('type', 'text')})
 
-    user_tags = Tag.objects.filter(owner=request.user).order_by('name')
-    context = {'form': form, 'board': board, 'user_tags': user_tags, 'is_edit': False, 'modal_mode': bool(request.htmx)}
+    context = {'form': form, 'board': board, 'is_edit': False, 'modal_mode': bool(request.htmx)}
 
     if request.htmx:
         return render(request, 'infoboard/partials/card_form_modal.html', context)
@@ -389,8 +531,7 @@ def card_edit(request, card_id):
         tag_names = ','.join(card.tags.values_list('name', flat=True))
         form = CardForm(instance=card, initial={'tag_names': tag_names})
 
-    user_tags = Tag.objects.filter(owner=request.user).order_by('name')
-    context = {'form': form, 'board': board, 'card': card, 'user_tags': user_tags, 'is_edit': True, 'modal_mode': bool(request.htmx)}
+    context = {'form': form, 'board': board, 'card': card, 'is_edit': True, 'modal_mode': bool(request.htmx)}
 
     if request.htmx:
         return render(request, 'infoboard/partials/card_form_modal.html', context)
@@ -443,15 +584,15 @@ def public_board(request, link_id):
     shared.save(update_fields=['access_count'])
 
     board = shared.board
-    search_q = request.GET.get('q', '')
-    cards_context = _board_cards_context(board, search_q)
+    cards_context = _board_cards_context(board)
 
     context = {
         'board': board,
         'cards': cards_context['cards'],
         'shared': shared,
-        'search_q': search_q,
         'can_submit': board.allow_student_submit and shared.access_level in ('submit', 'edit'),
+        'card_count': cards_context['card_count'],
+        'public_mode': True,
     }
     return render(request, 'infoboard/public_board.html', context)
 
@@ -470,7 +611,7 @@ def student_submit(request, link_id):
             _refresh_link_card_metadata(card)
             logger.info(f'[InfoBoard] Student submitted card: {card.title} by {card.author_name}')
             if request.htmx:
-                return render(request, 'infoboard/partials/submit_success.html', {'card': card})
+                return _render_public_wall_response(request, board, shared, close_sheet=True)
             return redirect('infoboard:public_board', link_id=link_id)
     else:
         form = StudentCardForm(initial={'card_type': 'text'}, board=board)
@@ -486,8 +627,9 @@ def student_submit(request, link_id):
 @login_required
 def share_panel(request, board_id):
     """공유 패널 (HTMX partial)."""
-    board = get_object_or_404(Board, id=board_id, owner=request.user)
-    shared_link = board.shared_links.filter(is_active=True).first()
+    board = get_object_or_404(_annotated_board_queryset(request.user), id=board_id)
+    board = _decorate_board(board, request=request)
+    shared_link = board.active_share
     context = {'board': board, 'shared_link': shared_link}
     return render(request, 'infoboard/partials/share_panel.html', context)
 
@@ -497,9 +639,10 @@ def share_panel(request, board_id):
 def share_create(request, board_id):
     """공유 링크 생성/갱신."""
     board = get_object_or_404(Board, id=board_id, owner=request.user)
-    access_level = request.POST.get('access_level', 'view')
+    default_access = 'submit' if board.allow_student_submit else 'view'
+    access_level = request.POST.get('access_level', default_access)
     if access_level not in {'view', 'submit'}:
-        access_level = 'view'
+        access_level = default_access
 
     # 기존 활성 링크 비활성화
     board.shared_links.filter(is_active=True).update(is_active=False)
@@ -511,6 +654,12 @@ def share_create(request, board_id):
     )
     logger.info(f'[InfoBoard] Share link created: {shared_link.id} for {board.title}')
 
+    board = _decorate_board(board, request=request)
+    board.active_share = shared_link
+    board.primary_share_ready = True if access_level == board.primary_share_access or board.primary_share_access == 'view' else False
+    board.share_ready = board.primary_share_ready
+    board.share_url = _build_share_url(request, shared_link) if board.primary_share_ready else ''
+    board.any_share_url = _build_share_url(request, shared_link)
     context = {'board': board, 'shared_link': shared_link}
     if request.htmx:
         return render(request, 'infoboard/partials/share_panel.html', context)

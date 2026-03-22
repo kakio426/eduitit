@@ -1,0 +1,10 @@
+<span id="ibPublicCardCount" hx-swap-oob="true">{{ card_count }}</span>
+{% for card in cards %}
+{% include 'infoboard/partials/card_item.html' %}
+{% empty %}
+<div class="ib-empty-card">
+    <div class="ib-empty-emoji">🗒️</div>
+    <h3>아직 올라온 자료가 없어요</h3>
+    <p>첫 번째 자료를 올리면 이 벽에 바로 붙어요.</p>
+</div>
+{% endfor %}

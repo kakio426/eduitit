@@ -4,19 +4,20 @@
 {% block title %}자료 제출 — {{ board.icon }} {{ board.title }}{% endblock %}
 
 {% block extra_css %}
-<link href="{% static 'infoboard/css/infoboard.css' %}?v=20260320-overlayfix" rel="stylesheet">
+<link href="{% static 'infoboard/css/infoboard.css' %}?v=20260322-wall" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
-<section class="pt-32 pb-20 px-4 md:px-6 min-h-screen bg-[#E0E5EC]/30">
-    <div class="max-w-xl mx-auto">
-        <div class="text-center mb-8">
-            <span class="text-4xl">{{ board.icon }}</span>
-            <h1 class="text-2xl font-black text-gray-800 mt-3">{{ board.title }}</h1>
-            <p class="text-gray-500 font-medium mt-1">자료를 제출해주세요</p>
+<section class="ib-page">
+    <div class="ib-shell" style="max-width: 760px;">
+        <div class="ib-public-hero mb-6">
+            <span class="ib-public-icon">{{ board.icon }}</span>
+            <p class="ib-eyebrow">빠른 제출</p>
+            <h1>{{ board.title }}</h1>
+            <p class="ib-hero-text">자료를 올리면 공개 월에 바로 붙습니다.</p>
         </div>
 
-        <div class="ib-info-card">
+        <div class="ib-info-card" style="padding: 1.5rem;">
             {% include 'infoboard/partials/student_submit_form.html' %}
         </div>
     </div>
@@ -24,5 +25,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'infoboard/js/infoboard.js' %}?v=20260320-overlayfix"></script>
+<script src="{% static 'infoboard/js/infoboard.js' %}?v=20260322-wall"></script>
 {% endblock %}

@@ -1,17 +1,22 @@
-<div class="ib-info-card {% if card.is_pinned %}ib-pinned{% endif %}" id="card-{{ card.id }}"
-    {% if card.color %}style="background: {{ card.color }}15; border-left: 3px solid {{ card.color }}"{% endif %}>
+<article class="ib-wall-card {% if card.is_pinned and not public_mode %}ib-pinned{% endif %}" id="card-{{ card.id }}"
+    data-type="{{ card.card_type }}"
+    {% if card.color %}style="--ib-card-accent: {{ card.color }}; --ib-card-bg: {{ card.color }}20;"{% endif %}>
 
-    <!-- Card type badge + more menu -->
-    <div class="flex items-center justify-between mb-2">
-        <span class="ib-badge ib-badge-{{ card.card_type }}">
-            {% if card.card_type == 'link' %}🔗 링크{% elif card.card_type == 'file' %}📄 파일{% elif card.card_type == 'image' %}🖼 이미지{% else %}📝 메모{% endif %}
-        </span>
+    <div class="ib-card-top">
+        <div class="ib-card-top-meta">
+            <span class="ib-badge ib-badge-{{ card.card_type }}">
+                {% if card.card_type == 'link' %}🔗 링크{% elif card.card_type == 'file' %}📄 파일{% elif card.card_type == 'image' %}🖼 이미지{% else %}📝 메모{% endif %}
+            </span>
+            {% if not card.author_user %}
+            <span class="ib-mini-pill accent">학생 제출</span>
+            {% endif %}
+        </div>
+        {% if not public_mode %}
         <div class="relative" x-data="{ open: false }">
-            <button @click="open = !open" class="w-7 h-7 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition">
-                <i class="fa-solid fa-ellipsis text-xs"></i>
+            <button @click="open = !open" type="button" class="ib-icon-button" aria-label="카드 메뉴">
+                <i class="fa-solid fa-ellipsis"></i>
             </button>
-            <div x-show="open" @click.away="open = false" x-cloak
-                class="absolute right-0 top-full mt-1 w-40 bg-white rounded-xl shadow-xl p-1.5 z-30">
+            <div x-show="open" @click.away="open = false" x-cloak class="ib-dropdown-panel">
                 <button type="button"
                     hx-get="{% url 'infoboard:card_edit' card_id=card.id %}"
                     hx-target="#ibModal"
@@ -41,14 +46,13 @@
                 </button>
             </div>
         </div>
+        {% endif %}
     </div>
 
-    <!-- Title -->
-    <h3 class="font-bold text-gray-800 mb-1 line-clamp-2">{{ card.title }}</h3>
+    <h3 class="ib-card-title">{{ card.title }}</h3>
 
-    <!-- Content by type -->
     {% if card.card_type == 'text' and card.content %}
-    <p class="text-sm text-gray-600 line-clamp-3 mb-2">{{ card.content }}</p>
+    <p class="ib-card-copy">{{ card.content }}</p>
     {% endif %}
 
     {% if card.card_type == 'link' and card.url %}
@@ -64,39 +68,39 @@
         </div>
     </a>
     {% else %}
-    <p class="text-xs text-gray-400 truncate mb-2">{{ card.url }}</p>
-    <a href="{{ card.url }}" target="_blank" rel="noopener noreferrer"
-        class="inline-flex items-center gap-1 text-sm text-blue-600 font-bold hover:underline">
+    <p class="ib-card-subcopy">{{ card.url }}</p>
+    <a href="{{ card.url }}" target="_blank" rel="noopener noreferrer" class="ib-inline-link">
         열기 <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
     </a>
     {% endif %}
     {% endif %}
 
     {% if card.card_type == 'file' and card.file %}
-    <p class="text-xs text-gray-400 mb-2">{{ card.original_filename }}</p>
-    <a href="{% url 'infoboard:card_download' card_id=card.id %}"
-        class="inline-flex items-center gap-1 text-sm text-amber-600 font-bold hover:underline">
-        <i class="fa-solid fa-download text-xs"></i> 다운로드
-    </a>
+    <div class="ib-file-chip">
+        <span>{{ card.original_filename }}</span>
+        <a href="{% if public_mode %}{% url 'infoboard:card_download' card_id=card.id %}?link_id={{ shared.id }}{% else %}{% url 'infoboard:card_download' card_id=card.id %}{% endif %}"
+            class="ib-inline-link">
+            다운로드
+        </a>
+    </div>
     {% endif %}
 
     {% if card.card_type == 'image' and card.image %}
-    <img src="{{ card.image.url }}" alt="{{ card.title }}" class="mt-1 rounded-lg max-h-32 w-full object-cover cursor-pointer"
-        onclick="window.open('{{ card.image.url }}', '_blank')">
+    <img src="{{ card.image.url }}" alt="{{ card.title }}" class="ib-card-image" onclick="window.open('{{ card.image.url }}', '_blank')">
     {% endif %}
 
-    <!-- Tags -->
-    {% if card.tags.all %}
-    <div class="flex flex-wrap gap-1 mt-2">
-        {% for tag in card.tags.all %}
+    {% with tags=card.tags.all %}
+    {% if tags %}
+    <div class="ib-tag-row">
+        {% for tag in tags %}
         <span class="ib-tag">#{{ tag.name }}</span>
         {% endfor %}
     </div>
     {% endif %}
+    {% endwith %}
 
-    <!-- Author + date -->
-    <div class="flex items-center justify-between mt-3 pt-2 border-t border-gray-100 text-xs text-gray-400">
+    <div class="ib-card-footer">
         <span>{{ card.display_author }}</span>
         <span>{{ card.created_at|timesince }} 전</span>
     </div>
-</div>
+</article>

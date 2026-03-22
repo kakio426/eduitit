@@ -1,9 +1,39 @@
-{% for board in boards %}
-{% include 'infoboard/partials/board_card.html' %}
-{% empty %}
-<div class="col-span-full ib-empty">
-    <div class="ib-empty-icon">📌</div>
-    <p class="text-lg font-bold text-gray-500">아직 보드가 없어요</p>
-    <p class="text-sm text-gray-400 mt-1">"새 보드" 버튼을 눌러 첫 번째 보드를 만들어보세요</p>
+{% if not all_board_count %}
+<section class="ib-empty-state">
+    <div class="ib-empty-emoji">📥</div>
+    <h2>첫 제출보드를 만들면 바로 링크까지 준비돼요</h2>
+    <p>수업 자료, 수행평가 결과물, 링크 모음처럼 학생이 바로 올려야 하는 일을 가장 먼저 시작해보세요.</p>
+    <button type="button"
+        hx-get="{% url 'infoboard:board_create' %}?preset=submit"
+        hx-target="#ibModal"
+        hx-swap="innerHTML"
+        onclick="ibOpenModal()"
+        class="ib-primary-button">
+        첫 제출보드 만들기
+    </button>
+</section>
+{% else %}
+<div class="ib-dashboard-sections">
+    {% for section in board_sections %}
+    <section class="ib-dashboard-section">
+        <div class="ib-section-heading">
+            <div>
+                <p class="ib-section-kicker">{{ section.title }}</p>
+                <h2>{{ section.description }}</h2>
+            </div>
+            <span class="ib-section-count">{{ section.boards|length }}</span>
+        </div>
+
+        {% if section.boards %}
+        <div class="ib-board-grid">
+            {% for board in section.boards %}
+            {% include 'infoboard/partials/board_card.html' %}
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="ib-section-empty">{{ section.empty_message }}</div>
+        {% endif %}
+    </section>
+    {% endfor %}
 </div>
-{% endfor %}
+{% endif %}

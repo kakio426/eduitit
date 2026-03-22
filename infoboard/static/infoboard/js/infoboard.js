@@ -47,6 +47,30 @@ function ibCloseModal() {
     ibSetOverlayHidden(overlay, true);
 }
 
+function ibOpenSubmitSheet() {
+    const overlay = document.getElementById('ibSubmitSheetOverlay');
+    const body = document.getElementById('ibSubmitSheetBody');
+    if (body && !body.innerHTML.trim()) {
+        body.innerHTML = '<div class="p-6 text-sm text-gray-500">제출 폼을 불러오는 중...</div>';
+    }
+    ibSetOverlayHidden(overlay, false);
+}
+
+function ibCloseSubmitSheet() {
+    const overlay = document.getElementById('ibSubmitSheetOverlay');
+    const body = document.getElementById('ibSubmitSheetBody');
+    if (body) {
+        body.innerHTML = '';
+    }
+    ibSetOverlayHidden(overlay, true);
+}
+
+function ibHandleSubmitSheetOverlayClick(event) {
+    if (event && event.target === event.currentTarget) {
+        ibCloseSubmitSheet();
+    }
+}
+
 // Ctrl+K shortcut for InfoBoard search
 window.addEventListener('keydown', function(e) {
     if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -67,14 +91,20 @@ window.addEventListener('keydown', function(e) {
         if (modal && !(modal.hidden || modal.classList.contains('hidden'))) {
             ibCloseModal();
         }
+        const submitSheet = document.getElementById('ibSubmitSheetOverlay');
+        if (submitSheet && !(submitSheet.hidden || submitSheet.classList.contains('hidden'))) {
+            ibCloseSubmitSheet();
+        }
     }
 });
 
 document.addEventListener('DOMContentLoaded', function() {
     const searchOverlay = document.getElementById('ibSearchOverlay');
     const modalOverlay = document.getElementById('ibModalOverlay');
+    const submitSheetOverlay = document.getElementById('ibSubmitSheetOverlay');
     if (searchOverlay) ibSetOverlayHidden(searchOverlay, true);
     if (modalOverlay) ibSetOverlayHidden(modalOverlay, true);
+    if (submitSheetOverlay) ibSetOverlayHidden(submitSheetOverlay, true);
 });
 
 // ── Tag System ──
@@ -357,4 +387,9 @@ document.addEventListener('htmx:afterSettle', function() {
 
 document.addEventListener('infoboard:close-modal', function() {
     ibCloseModal();
+});
+
+document.addEventListener('infoboard:close-submit-sheet', function() {
+    ibCloseSubmitSheet();
+    ibToast('자료가 벽에 올라갔어요!', 'success');
 });
