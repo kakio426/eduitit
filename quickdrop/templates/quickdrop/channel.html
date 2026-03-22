@@ -292,8 +292,7 @@
 
         #quickdrop-root #empty-state,
         #quickdrop-root #history-panel,
-        #quickdrop-root #image-panel .relative.overflow-visible,
-        #quickdrop-root #text-panel .relative.overflow-visible {
+        #quickdrop-root #image-panel .relative.overflow-visible {
             border-radius: 1.25rem;
             box-shadow: none;
         }
@@ -304,16 +303,10 @@
             background: #ffffff;
         }
 
-        #quickdrop-root #text-panel .relative.overflow-visible {
-            background: #edf4ff;
-            border: 1px solid #cfe0ff;
-        }
-
         #quickdrop-root #image-panel .relative.overflow-visible {
             border-color: #dbe5fb;
         }
 
-        #quickdrop-root #text-panel .absolute,
         #quickdrop-root #image-panel .absolute {
             display: none;
         }
@@ -396,7 +389,7 @@
                 </div>
             </div>
 
-            <div class="relative flex min-h-[18rem] flex-col sm:min-h-[20rem] lg:min-h-[22rem]">
+            <div class="relative flex flex-col">
                 <div class="relative flex-1 px-4 py-6 sm:px-6 sm:py-8">
                     <div class="mx-auto flex max-w-3xl flex-col gap-5">
                         <div id="empty-state" class="rounded-[26px] border border-dashed border-[#d4e0ff] bg-[linear-gradient(180deg,_rgba(255,255,255,0.95),rgba(241,246,255,0.92))] p-5 text-center shadow-[0_24px_60px_rgba(44,86,170,0.08)] sm:rounded-[30px] sm:p-10">
@@ -408,23 +401,6 @@
                                 <span class="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-600 shadow-sm">Ctrl+V 바로 전송</span>
                                 <span class="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-600 shadow-sm">사진 선택 즉시 전송</span>
                                 <span class="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-600 shadow-sm">오늘 기록 유지</span>
-                            </div>
-                        </div>
-
-                        <div id="text-panel" class="hidden">
-                            <div class="flex items-end gap-3">
-                                <div class="min-w-0 flex-1">
-                                    <div class="mb-2 flex items-center justify-between gap-3 pl-1">
-                                        <div class="min-w-0">
-                                            <p id="message-time" class="mt-1 text-xs text-slate-400"></p>
-                                        </div>
-                                        <button type="button" id="copy-text-btn" class="rounded-full bg-[#14213d] px-4 py-2 text-sm font-black text-white shadow-sm">복사</button>
-                                    </div>
-                                    <div class="relative overflow-visible rounded-[30px] bg-[linear-gradient(180deg,_#1f4fd1,_#315fdc)] px-5 py-4 text-white shadow-[0_24px_60px_rgba(31,79,209,0.26)] sm:px-6 sm:py-5">
-                                        <div class="absolute bottom-4 left-[-5px] h-4 w-4 rotate-45 rounded-[4px] bg-[#2858d8]"></div>
-                                        <pre id="text-output" class="whitespace-pre-wrap break-words bg-transparent text-sm leading-7 text-white sm:text-[15px]"></pre>
-                                    </div>
-                                </div>
                             </div>
                         </div>
 

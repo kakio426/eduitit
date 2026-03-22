@@ -62,10 +62,6 @@
                 this.emptyTitle = byId('empty-title');
                 this.emptyBody = byId('empty-body');
                 this.emptyPillRow = byId('empty-pill-row');
-                this.textPanel = byId('text-panel');
-                this.textOutput = byId('text-output');
-                this.messageTime = byId('message-time');
-                this.copyTextBtn = byId('copy-text-btn');
                 this.imagePanel = byId('image-panel');
                 this.imageOutput = byId('image-output');
                 this.imageFilename = byId('image-filename');
@@ -159,17 +155,6 @@
             },
 
             bindActions() {
-                if (this.copyTextBtn) {
-                    this.copyTextBtn.addEventListener('click', async () => {
-                        try {
-                            await navigator.clipboard.writeText(this.session.current_text || '');
-                            this.toast('텍스트를 복사했습니다.', 'success');
-                        } catch (_error) {
-                            this.toast('텍스트 복사에 실패했습니다.', 'error');
-                        }
-                    });
-                }
-
                 if (this.saveImageBtn) {
                     this.saveImageBtn.addEventListener('click', async () => {
                         if (!this.session.current_image_url) {
@@ -338,9 +323,6 @@
                 if (this.emptyState) {
                     this.emptyState.classList.toggle('hidden', isText || isImage);
                 }
-                if (this.textPanel) {
-                    this.textPanel.classList.toggle('hidden', !isText);
-                }
                 if (this.imagePanel) {
                     this.imagePanel.classList.toggle('hidden', !isImage);
                 }
@@ -378,16 +360,10 @@
                             : 'PC끼리도, 휴대폰끼리도 바로 옮기세요.';
                         this.emptyBody.textContent = isCompactMobile
                             ? '같은 통로만 열어 두면 텍스트와 사진이 바로 넘어갑니다.'
-                            : '붙여넣기나 사진 선택만 하면 방금 보낸 내용은 위에, 오늘 기록은 아래에 남습니다.';
+                            : '붙여넣기나 사진 선택만 하면 오늘 기록에 바로 쌓입니다.';
                     }
                 }
 
-                if (this.textOutput) {
-                    this.textOutput.textContent = normalizeTextContent(this.session.current_text);
-                }
-                if (this.messageTime) {
-                    this.messageTime.textContent = this.session.updated_at ? formatTime(this.session.updated_at) : '';
-                }
                 if (this.imageOutput) {
                     this.imageOutput.src = this.session.current_image_url || '';
                 }
