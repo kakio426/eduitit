@@ -1,0 +1,58 @@
+<section id="ocrdesk-result-panel" class="rounded-[30px] bg-white p-5 shadow-[0_24px_80px_rgba(15,23,42,0.08)] sm:p-6">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+            <p class="text-sm font-black text-sky-700">읽은 글자</p>
+            <h2 class="mt-1 text-2xl font-black text-slate-900">바로 고치고 복사하면 됩니다.</h2>
+            <p class="mt-2 text-sm leading-6 text-slate-500">결과는 자동으로 다듬지 않았습니다. 필요한 부분만 직접 손보면 됩니다.</p>
+        </div>
+        <span class="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-500">원문 그대로</span>
+    </div>
+
+    {% if result_error %}
+    <div class="mt-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+        {{ result_error }}
+    </div>
+    {% elif result_notice %}
+    <div class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">
+        {{ result_notice }}
+    </div>
+    {% endif %}
+
+    {% if result_text %}
+    <div class="mt-5 space-y-4">
+        <textarea
+            id="ocrdesk-result-text"
+            rows="18"
+            class="w-full rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm leading-6 text-slate-800 outline-none focus:border-sky-400 focus:bg-white"
+        >{{ result_text }}</textarea>
+
+        <div class="flex flex-col gap-3 sm:flex-row">
+            <button type="button" data-ocrdesk-copy-btn="true" data-target="#ocrdesk-result-text" class="flex min-h-[48px] items-center justify-center rounded-2xl bg-slate-900 px-5 text-sm font-black text-white transition hover:bg-slate-700">
+                결과 복사
+            </button>
+            <button type="button" data-ocrdesk-picker-btn="true" class="flex min-h-[48px] items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 text-sm font-black text-slate-700 transition hover:border-sky-400 hover:text-sky-700">
+                다른 사진 고르기
+            </button>
+        </div>
+        <p id="ocrdesk-copy-status" class="text-sm font-medium text-slate-500"></p>
+    </div>
+    {% else %}
+    <div class="mt-5 rounded-[28px] border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
+        <p class="text-lg font-black text-slate-800">
+            {% if ocr_attempted %}
+            사진을 다시 골라서 한 번 더 읽어 보세요.
+            {% else %}
+            사진을 올리면 여기에 편집 가능한 글자가 바로 채워집니다.
+            {% endif %}
+        </p>
+        <p class="mt-2 text-sm leading-6 text-slate-500">
+            {% if ocr_attempted %}
+            글씨가 번지거나 멀리 찍힌 사진은 잘 읽히지 않을 수 있습니다.
+            {% else %}
+            결과는 저장하지 않으니, 필요한 글자만 복사해 바로 쓰면 됩니다.
+            {% endif %}
+        </p>
+    </div>
+    {% endif %}
+</section>
+

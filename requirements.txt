@@ -17,6 +17,8 @@ whitenoise==6.8.2
 
 # Image Processing
 Pillow>=10.0.0
+paddleocr==3.4.0
+paddlepaddle==3.3.0
 
 # Environment Variables
 python-dotenv==1.0.1

@@ -92,6 +92,7 @@ INSTALLED_APPS = [
     'classcalendar.apps.ClasscalendarConfig',
     'messagebox.apps.MessageboxConfig',
     'quickdrop.apps.QuickdropConfig',
+    'ocrdesk.apps.OcrdeskConfig',
     'textbooks.apps.TextbooksConfig',
     'textbook_ai.apps.TextbookAiConfig',
     'edu_materials.apps.EduMaterialsConfig',

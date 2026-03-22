@@ -1,0 +1,11 @@
+{% if form.image.errors or form.non_field_errors %}
+<div class="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+    {% for error in form.image.errors %}
+    <p class="font-semibold">{{ error }}</p>
+    {% endfor %}
+    {% for error in form.non_field_errors %}
+    <p class="font-semibold">{{ error }}</p>
+    {% endfor %}
+</div>
+{% endif %}
+

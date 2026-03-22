@@ -39,6 +39,7 @@ class Command(BaseCommand):
             ("ensure_timetable", lambda: call_command("ensure_timetable")),
             ("ensure_classcalendar", lambda: call_command("ensure_classcalendar")),
             ("ensure_quickdrop", lambda: call_command("ensure_quickdrop")),
+            ("ensure_ocrdesk", lambda: call_command("ensure_ocrdesk")),
             ("ensure_sheetbook", lambda: self._run_optional_command("ensure_sheetbook")),
             ("ensure_parentcomm", lambda: call_command("ensure_parentcomm")),
             ("ensure_insights", lambda: call_command("ensure_insights")),

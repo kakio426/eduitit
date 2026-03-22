@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<style>
+    #ocrdesk-loading {
+        display: none;
+    }
+
+    #ocrdesk-loading.htmx-request {
+        display: flex;
+    }
+</style>
+
+<section class="min-h-screen bg-slate-50 px-4 pb-28 pt-32 sm:pb-20">
+    <div class="mx-auto max-w-6xl space-y-6">
+        <header class="rounded-[30px] bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div class="flex items-start gap-4">
+                    <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-[22px] bg-[#e8f3ff] text-3xl shadow-inner">
+                        {{ service.icon|default:"📷" }}
+                    </div>
+                    <div>
+                        <p class="text-sm font-black uppercase tracking-[0.28em] text-sky-700">사진 올리기 → 글자 읽기 → 바로 복사</p>
+                        <h1 class="mt-2 text-3xl font-black text-slate-900 sm:text-4xl">사진 글자 읽기</h1>
+                        <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">칠판이나 안내문 사진 한 장만 올리면, 읽은 글자를 바로 고치고 복사할 수 있습니다.</p>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-2 text-xs font-bold text-slate-500">
+                    <span class="rounded-full bg-slate-100 px-3 py-1.5">로그인 교사용</span>
+                    <span class="rounded-full bg-slate-100 px-3 py-1.5">사진 1장</span>
+                    <span class="rounded-full bg-slate-100 px-3 py-1.5">읽은 뒤 바로 지움</span>
+                </div>
+            </div>
+        </header>
+
+        <div id="ocrdesk-shell" class="grid gap-6 lg:grid-cols-[1.04fr_0.96fr]">
+            <section class="rounded-[30px] bg-white p-5 shadow-[0_24px_80px_rgba(15,23,42,0.08)] sm:p-6">
+                <div class="mb-5">
+                    <p class="text-sm font-black text-sky-700">지금 할 일</p>
+                    <h2 class="mt-1 text-2xl font-black text-slate-900">사진 한 장 고르고 바로 읽기</h2>
+                    <p class="mt-2 text-sm leading-6 text-slate-500">JPG, PNG, WEBP 사진만 읽습니다. 원본 사진과 결과는 저장하지 않습니다.</p>
+                </div>
+
+                <div id="ocrdesk-form-errors">
+                    {% include "ocrdesk/partials/form_errors.html" %}
+                </div>
+
+                <form
+                    id="ocrdesk-form"
+                    method="post"
+                    enctype="multipart/form-data"
+                    action="{% url 'ocrdesk:main' %}"
+                    hx-post="{% url 'ocrdesk:main' %}"
+                    hx-encoding="multipart/form-data"
+                    hx-target="#ocrdesk-result-panel"
+                    hx-swap="outerHTML"
+                    hx-indicator="#ocrdesk-loading"
+                    hx-disabled-elt="#ocrdesk-submit-button"
+                    class="space-y-5 pb-24 sm:pb-0"
+                >
+                    {% csrf_token %}
+                    <input
+                        id="ocrdesk-image-input"
+                        type="file"
+                        name="{{ form.image.html_name }}"
+                        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                        class="sr-only"
+                    >
+
+                    <div class="rounded-[28px] border border-dashed border-slate-300 bg-slate-50 p-4">
+                        <div class="aspect-[4/3] overflow-hidden rounded-[22px] bg-white shadow-inner">
+                            <img id="ocrdesk-preview-image" src="" alt="선택한 사진 미리보기" class="hidden h-full w-full object-contain">
+                            <div id="ocrdesk-preview-empty" class="flex h-full flex-col items-center justify-center px-6 text-center">
+                                <p class="text-base font-black text-slate-800">사진을 고르면 여기서 바로 미리 볼 수 있습니다.</p>
+                                <p class="mt-2 text-sm leading-6 text-slate-500">칠판 전체보다 글씨가 또렷하게 보이도록 찍으면 더 잘 읽습니다.</p>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <p id="ocrdesk-file-name" class="truncate text-sm font-bold text-slate-800">아직 고른 사진이 없습니다.</p>
+                                <p id="ocrdesk-preview-alert" class="mt-1 text-xs font-medium text-rose-600"></p>
+                            </div>
+                            <span class="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-500 shadow-sm">최대 10MB</span>
+                        </div>
+                    </div>
+
+                    <div class="grid gap-3 text-sm text-slate-600 sm:grid-cols-3">
+                        <div class="rounded-2xl bg-slate-50 px-4 py-3">
+                            <p class="font-black text-slate-800">1. 사진 고르기</p>
+                            <p class="mt-1 leading-5">칠판, 프린트, 안내문 사진 1장을 고릅니다.</p>
+                        </div>
+                        <div class="rounded-2xl bg-slate-50 px-4 py-3">
+                            <p class="font-black text-slate-800">2. 글자 읽기</p>
+                            <p class="mt-1 leading-5">읽은 결과가 오른쪽에 바로 채워집니다.</p>
+                        </div>
+                        <div class="rounded-2xl bg-slate-50 px-4 py-3">
+                            <p class="font-black text-slate-800">3. 바로 복사</p>
+                            <p class="mt-1 leading-5">필요한 부분만 고친 뒤 다른 곳에 붙여넣으면 됩니다.</p>
+                        </div>
+                    </div>
+
+                    <div class="fixed inset-x-4 bottom-4 z-20 rounded-[24px] border border-slate-200 bg-white/95 p-3 shadow-[0_20px_60px_rgba(15,23,42,0.18)] backdrop-blur sm:static sm:inset-auto sm:z-auto sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
+                        <div class="grid grid-cols-2 gap-3">
+                            <label for="ocrdesk-image-input" class="flex min-h-[52px] cursor-pointer items-center justify-center rounded-2xl border border-slate-300 bg-white px-4 text-sm font-black text-slate-800 transition hover:border-sky-400 hover:text-sky-700">
+                                사진 선택
+                            </label>
+                            <button id="ocrdesk-submit-button" type="submit" class="flex min-h-[52px] items-center justify-center rounded-2xl bg-sky-600 px-4 text-sm font-black text-white shadow-[0_18px_40px_rgba(2,132,199,0.25)] transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-300">
+                                글자 읽기
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </section>
+
+            <div>
+                {% include "ocrdesk/partials/result_panel.html" %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<div id="ocrdesk-loading" class="htmx-indicator fixed inset-0 z-[120] items-center justify-center bg-slate-950/20 backdrop-blur-sm">
+    <div class="rounded-[26px] bg-white px-6 py-5 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
+        <p class="text-sm font-black text-sky-700">글자를 읽고 있습니다.</p>
+        <p class="mt-2 text-sm text-slate-600">잠시만 기다리면 바로 편집할 수 있는 글자가 나옵니다.</p>
+    </div>
+</div>
+
+<script src="{% static 'ocrdesk/main.js' %}?v=20260322a"></script>
+{% endblock %}
