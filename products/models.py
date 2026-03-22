@@ -187,6 +187,11 @@ class DTSettings(models.Model):
         default="compact",
         help_text="오늘의 역할 표시 모드",
     )
+    tts_enabled = models.BooleanField(default=False, help_text="교시 시작 전 안내 TTS 자동 읽기 사용")
+    tts_minutes_before = models.PositiveSmallIntegerField(default=5, help_text="교시 시작 몇 분 전에 읽을지")
+    tts_voice_uri = models.CharField(max_length=255, blank=True, default="", help_text="브라우저 음성 voiceURI")
+    tts_rate = models.FloatField(default=0.95, help_text="브라우저 음성 속도")
+    tts_pitch = models.FloatField(default=1.0, help_text="브라우저 음성 높낮이")
 
     class Meta:
         constraints = [

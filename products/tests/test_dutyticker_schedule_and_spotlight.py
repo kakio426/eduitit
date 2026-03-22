@@ -7,7 +7,7 @@ from django.urls import reverse
 
 from core.models import UserProfile
 from happy_seed.models import HSClassroom
-from products.models import DTRole, DTRoleAssignment, DTSchedule, DTStudent, DTTimeSlot
+from products.models import DTRole, DTRoleAssignment, DTSchedule, DTSettings, DTStudent, DTTimeSlot
 
 User = get_user_model()
 
@@ -43,6 +43,11 @@ class DutyTickerScheduleAndSpotlightTests(TestCase):
             "subject_1_1": "국어",
             "subject_1_2": "수학",
             "subject_2_1": "과학",
+            "tts_enabled": "on",
+            "tts_minutes_before": "5",
+            "tts_voice_uri": "ko-KR-TestVoice",
+            "tts_rate": "1.10",
+            "tts_pitch": "0.95",
         }
         response = self.client.post(reverse("dt_admin_update_schedule_settings"), data=payload)
         self.assertEqual(response.status_code, 302)
@@ -56,6 +61,13 @@ class DutyTickerScheduleAndSpotlightTests(TestCase):
         self.assertEqual(monday_first.start_time, time(8, 55))
         self.assertEqual(monday_first.end_time, time(9, 35))
 
+        settings = DTSettings.objects.get(user=self.user, classroom=self.classroom)
+        self.assertTrue(settings.tts_enabled)
+        self.assertEqual(settings.tts_minutes_before, 5)
+        self.assertEqual(settings.tts_voice_uri, "ko-KR-TestVoice")
+        self.assertAlmostEqual(settings.tts_rate, 1.10)
+        self.assertAlmostEqual(settings.tts_pitch, 0.95)
+
         DTStudent.objects.create(user=self.user, classroom=self.classroom, name="학생A", number=1)
         DTRole.objects.create(user=self.user, classroom=self.classroom, name="칠판 지우기", time_slot="쉬는시간")
         api_response = self.client.get(reverse("dt_api_data"))
@@ -63,6 +75,10 @@ class DutyTickerScheduleAndSpotlightTests(TestCase):
         weekly = api_response.json()["schedule"]
         monday_rows = weekly.get("1", [])
         self.assertTrue(any(row.get("slot_type") == "lunch" for row in monday_rows))
+        api_settings = api_response.json()["settings"]
+        self.assertTrue(api_settings["tts_enabled"])
+        self.assertEqual(api_settings["tts_minutes_before"], 5)
+        self.assertEqual(api_settings["tts_voice_uri"], "ko-KR-TestVoice")
 
     def test_spotlight_student_api_persists_setting(self):
         student = DTStudent.objects.create(user=self.user, classroom=self.classroom, name="김학생", number=1)
@@ -90,3 +106,10 @@ class DutyTickerScheduleAndSpotlightTests(TestCase):
         self.assertEqual(clear_response.status_code, 200)
         self.assertIsNone(clear_response.json()["spotlight_student_id"])
 
+    def test_dutyticker_main_renders_broadcast_tts_controls(self):
+        response = self.client.get(reverse("dutyticker"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="openBroadcastModalBtn"', html=False)
+        self.assertContains(response, 'id="broadcastUseScheduleBtn"', html=False)
+        self.assertContains(response, 'id="broadcastSpeakNowBtn"', html=False)

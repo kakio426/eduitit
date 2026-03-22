@@ -17,6 +17,13 @@ class DutyTickerManager {
         this.isBroadcasting = false;
         this.broadcastMessage = '';
         this.isSoundEnabled = localStorage.getItem('dt-broadcast-sound') !== 'false';
+        this.ttsEnabled = false;
+        this.ttsMinutesBefore = 5;
+        this.ttsVoiceUri = '';
+        this.ttsRate = 0.95;
+        this.ttsPitch = 1.0;
+        this.ttsAutoAnnouncementStorageKey = 'dt-auto-tts-history-v1';
+        this.ttsAutoAnnouncementHistory = { date: '', tokens: [] };
         this.selectedRoleId = null;
         this.pendingConflict = null;
         this.spotlightStudentId = null;
@@ -102,6 +109,7 @@ class DutyTickerManager {
         this.updateRoleTickerUI();
         this.restoreTimerState();
         this.updateTimerDisplay();
+        this.restoreTtsAutoAnnouncementHistory();
         this.updateSoundUI();
         this.setupBgm();
         this.restoreBgmState();
@@ -118,6 +126,12 @@ class DutyTickerManager {
 
         const broadcastCancel = document.getElementById('broadcastCancelBtn');
         if (broadcastCancel) broadcastCancel.onclick = () => this.closeBroadcastModal();
+
+        const broadcastUseSchedule = document.getElementById('broadcastUseScheduleBtn');
+        if (broadcastUseSchedule) broadcastUseSchedule.onclick = () => this.fillBroadcastWithNextAnnouncement();
+
+        const broadcastSpeakNow = document.getElementById('broadcastSpeakNowBtn');
+        if (broadcastSpeakNow) broadcastSpeakNow.onclick = () => this.speakBroadcastInput();
 
         const customTimerInput = document.getElementById('customTimerMinutesInput');
         if (customTimerInput) {
@@ -417,6 +431,288 @@ class DutyTickerManager {
         return (hours * 60) + minutes;
     }
 
+    minutesToTimeString(totalMinutes) {
+        if (!Number.isFinite(totalMinutes)) return '';
+        const safeTotal = Math.max(0, Math.min(1439, Math.floor(totalMinutes)));
+        const hours = Math.floor(safeTotal / 60);
+        const minutes = safeTotal % 60;
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    }
+
+    getLocalDateKey(date = new Date()) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    restoreTtsAutoAnnouncementHistory() {
+        try {
+            const raw = sessionStorage.getItem(this.ttsAutoAnnouncementStorageKey);
+            if (!raw) {
+                this.ensureTtsAutoAnnouncementHistory();
+                return;
+            }
+            const parsed = JSON.parse(raw);
+            const tokens = Array.isArray(parsed?.tokens) ? parsed.tokens.map((token) => String(token)) : [];
+            this.ttsAutoAnnouncementHistory = {
+                date: String(parsed?.date || ''),
+                tokens,
+            };
+        } catch (_error) {
+            this.ttsAutoAnnouncementHistory = { date: '', tokens: [] };
+        }
+        this.ensureTtsAutoAnnouncementHistory();
+    }
+
+    saveTtsAutoAnnouncementHistory() {
+        try {
+            sessionStorage.setItem(this.ttsAutoAnnouncementStorageKey, JSON.stringify(this.ttsAutoAnnouncementHistory));
+        } catch (_error) {
+            // sessionStorage unavailable: keep in-memory state only
+        }
+    }
+
+    ensureTtsAutoAnnouncementHistory(date = new Date()) {
+        const todayKey = this.getLocalDateKey(date);
+        if (this.ttsAutoAnnouncementHistory.date !== todayKey) {
+            this.ttsAutoAnnouncementHistory = {
+                date: todayKey,
+                tokens: [],
+            };
+            this.saveTtsAutoAnnouncementHistory();
+        }
+    }
+
+    hasAutoAnnouncementToken(token, date = new Date()) {
+        this.ensureTtsAutoAnnouncementHistory(date);
+        return this.ttsAutoAnnouncementHistory.tokens.includes(String(token));
+    }
+
+    markAutoAnnouncementToken(token, date = new Date()) {
+        this.ensureTtsAutoAnnouncementHistory(date);
+        const normalizedToken = String(token);
+        if (this.ttsAutoAnnouncementHistory.tokens.includes(normalizedToken)) return;
+        this.ttsAutoAnnouncementHistory.tokens.push(normalizedToken);
+        this.saveTtsAutoAnnouncementHistory();
+    }
+
+    normalizeTtsMinutesBefore(value) {
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed)) return 5;
+        return Math.max(0, Math.min(10, Math.round(parsed)));
+    }
+
+    normalizeTtsRate(value) {
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed)) return 0.95;
+        return Math.max(0.7, Math.min(1.3, parsed));
+    }
+
+    normalizeTtsPitch(value) {
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed)) return 1.0;
+        return Math.max(0.8, Math.min(1.2, parsed));
+    }
+
+    buildScheduleAnnouncementText(periodLabel, subjectName) {
+        const safePeriodLabel = String(periodLabel || '교시').trim() || '교시';
+        const safeSubjectName = String(subjectName || '수업').trim() || '수업';
+        if (this.ttsMinutesBefore > 0) {
+            return `${safePeriodLabel} ${this.ttsMinutesBefore}분 전입니다. ${safePeriodLabel}는 ${safeSubjectName}입니다!`;
+        }
+        return `${safePeriodLabel}는 ${safeSubjectName}입니다!`;
+    }
+
+    getTodayScheduleAnnouncementRows() {
+        const dateKey = this.getLocalDateKey();
+        return this.todaySchedule
+            .filter((slot) => slot && slot.slot_type === 'period')
+            .map((slot) => {
+                const periodNumber = Number(slot.period);
+                const periodLabel = Number.isFinite(periodNumber) && periodNumber > 0
+                    ? `${periodNumber}교시`
+                    : String(slot.slot_label || '').trim() || '교시';
+                const rawSubject = String(slot.name || '').trim();
+                const subjectName = rawSubject && rawSubject !== periodLabel ? rawSubject : '미정';
+                const spokenSubject = rawSubject && rawSubject !== periodLabel ? rawSubject : '수업';
+                const startTime = String(slot.startTime || '').trim();
+                const startMinutes = this.timeStringToMinutes(startTime);
+                if (!Number.isFinite(startMinutes)) return null;
+
+                const announceMinutes = Math.max(0, startMinutes - this.ttsMinutesBefore);
+                const rowId = String(slot.id || slot.slot_code || `${periodLabel}-${startTime}`);
+                return {
+                    id: rowId,
+                    periodLabel,
+                    subjectName,
+                    spokenSubject,
+                    startTime,
+                    startMinutes,
+                    announceMinutes,
+                    announceTime: this.minutesToTimeString(announceMinutes),
+                    announcementText: this.buildScheduleAnnouncementText(periodLabel, spokenSubject),
+                    autoToken: `${dateKey}-${rowId}-${announceMinutes}`,
+                };
+            })
+            .filter(Boolean)
+            .sort((a, b) => a.startMinutes - b.startMinutes);
+    }
+
+    getNextScheduleAnnouncement(now = new Date()) {
+        const rows = this.getTodayScheduleAnnouncementRows();
+        if (!rows.length) return null;
+
+        const nowMinutes = (now.getHours() * 60) + now.getMinutes();
+        const futureRow = rows.find((row) => nowMinutes <= row.announceMinutes);
+        if (futureRow) {
+            return { ...futureRow, status: 'future' };
+        }
+
+        const readyRow = rows.find((row) => nowMinutes < row.startMinutes);
+        if (readyRow) {
+            return { ...readyRow, status: 'ready' };
+        }
+
+        return { ...rows[rows.length - 1], status: 'past' };
+    }
+
+    updateBroadcastModalTtsInfo() {
+        const summaryEl = document.getElementById('broadcastScheduleSummary');
+        const statusEl = document.getElementById('broadcastScheduleStatus');
+        if (!summaryEl || !statusEl) return;
+
+        const nextRow = this.getNextScheduleAnnouncement();
+        const autoState = this.ttsEnabled ? `${this.ttsMinutesBefore}분 전 자동 안내 켜짐` : '자동 안내 꺼짐';
+        const soundState = this.isSoundEnabled ? '소리 켜짐' : '소리 꺼짐';
+
+        if (!nextRow) {
+            summaryEl.textContent = '오늘 시간표가 없습니다.';
+            statusEl.textContent = `${autoState} · ${soundState}`;
+            return;
+        }
+
+        if (nextRow.status === 'past') {
+            summaryEl.textContent = '오늘 자동 안내가 모두 끝났습니다.';
+            statusEl.textContent = `${autoState} · ${soundState}`;
+            return;
+        }
+
+        summaryEl.textContent = `${nextRow.periodLabel} · ${nextRow.subjectName} · ${nextRow.announceTime}`;
+        if (nextRow.status === 'ready') {
+            statusEl.textContent = `지금 읽기 가능한 시간입니다. ${autoState} · ${soundState}`;
+            return;
+        }
+        statusEl.textContent = `${autoState} · ${soundState}`;
+    }
+
+    getAvailableSpeechVoices() {
+        const synth = window.speechSynthesis || null;
+        if (!synth) return [];
+
+        const voices = synth.getVoices() || [];
+        if (!voices.length) return [];
+
+        const koreanVoices = voices.filter((voice) => String(voice.lang || '').toLowerCase().startsWith('ko'));
+        if (koreanVoices.length) {
+            return koreanVoices.concat(
+                voices.filter((voice) => !String(voice.lang || '').toLowerCase().startsWith('ko'))
+            );
+        }
+        return voices;
+    }
+
+    resolveTtsVoice() {
+        const voices = this.getAvailableSpeechVoices();
+        if (!voices.length) return null;
+
+        return voices.find((voice) => (voice.voiceURI || voice.name) === this.ttsVoiceUri)
+            || voices.find((voice) => voice.default)
+            || voices[0];
+    }
+
+    createTtsUtterance(text) {
+        const utterance = new SpeechSynthesisUtterance(String(text || '').trim());
+        utterance.lang = 'ko-KR';
+        utterance.rate = this.ttsRate;
+        utterance.pitch = this.ttsPitch;
+        const selectedVoice = this.resolveTtsVoice();
+        if (selectedVoice) {
+            utterance.voice = selectedVoice;
+        }
+        return utterance;
+    }
+
+    speakTtsText(text, { label = '안내', useToast = true } = {}) {
+        const content = String(text || '').trim();
+        if (!content) {
+            if (useToast) this.showToast('읽을 문구가 없습니다.', 'error');
+            return false;
+        }
+
+        const synth = window.speechSynthesis || null;
+        if (!synth || typeof SpeechSynthesisUtterance === 'undefined') {
+            if (useToast) this.showToast('이 브라우저는 음성 읽기를 지원하지 않습니다.', 'error');
+            return false;
+        }
+
+        if (!this.isSoundEnabled) {
+            if (useToast) this.showToast('소리가 꺼져 있습니다. 상단 스피커 버튼을 켜 주세요.', 'error');
+            return false;
+        }
+
+        try {
+            const utterance = this.createTtsUtterance(content);
+            synth.cancel();
+            synth.speak(utterance);
+            if (useToast) this.showToast(`${label}를 읽는 중입니다.`, 'success');
+            return true;
+        } catch (error) {
+            console.error(error);
+            if (useToast) this.showToast('음성 읽기를 시작하지 못했습니다.', 'error');
+            return false;
+        }
+    }
+
+    fillBroadcastWithNextAnnouncement() {
+        const input = document.getElementById('broadcastInput');
+        if (!input) return;
+
+        const nextRow = this.getNextScheduleAnnouncement();
+        if (!nextRow || nextRow.status === 'past') {
+            this.showToast('오늘 남은 교시 안내가 없습니다.', 'error');
+            return;
+        }
+
+        input.value = nextRow.announcementText;
+        input.focus();
+        this.showToast(`${nextRow.periodLabel} 안내 문구를 불러왔습니다.`, 'success');
+    }
+
+    speakBroadcastInput() {
+        const input = document.getElementById('broadcastInput');
+        const text = input ? input.value : '';
+        this.speakTtsText(text, { label: '안내 문구' });
+    }
+
+    checkAndTriggerScheduledAnnouncement(now = new Date()) {
+        if (!this.hasLoadedData || !this.ttsEnabled) return;
+
+        const nowMinutes = (now.getHours() * 60) + now.getMinutes();
+        const targetRow = this.getTodayScheduleAnnouncementRows().find((row) => row.announceMinutes === nowMinutes);
+        if (!targetRow) return;
+        if (this.hasAutoAnnouncementToken(targetRow.autoToken, now)) return;
+
+        const spoke = this.speakTtsText(targetRow.announcementText, {
+            label: `${targetRow.periodLabel} 안내`,
+            useToast: false,
+        });
+        if (!spoke) return;
+
+        this.markAutoAnnouncementToken(targetRow.autoToken, now);
+        this.showToast(`${targetRow.periodLabel} ${targetRow.subjectName} 안내를 읽었습니다.`, 'success');
+    }
+
     normalizeTimerSeconds(value, fallback = 300) {
         const numeric = Number(value);
         if (!Number.isFinite(numeric)) return fallback;
@@ -555,6 +851,11 @@ class DutyTickerManager {
             this.roleViewMode = data.settings.role_view_mode || 'compact';
             this.spotlightStudentId = Number(data.settings.spotlight_student_id) || null;
             this.theme = data.settings.theme || 'deep_space';
+            this.ttsEnabled = data.settings.tts_enabled === true;
+            this.ttsMinutesBefore = this.normalizeTtsMinutesBefore(data.settings.tts_minutes_before);
+            this.ttsVoiceUri = String(data.settings.tts_voice_uri || '').trim();
+            this.ttsRate = this.normalizeTtsRate(data.settings.tts_rate);
+            this.ttsPitch = this.normalizeTtsPitch(data.settings.tts_pitch);
 
             // Apply Theme to DOM
             this.applyThemeToDom(this.theme);
@@ -565,6 +866,7 @@ class DutyTickerManager {
             this.hasLoadedData = true;
 
             this.renderAll();
+            this.checkAndTriggerScheduledAnnouncement(new Date());
         } catch (error) {
             this.hasLoadedData = false;
             console.error("Fetch Error:", error);
@@ -618,6 +920,9 @@ class DutyTickerManager {
         const periodSchedule = this.todaySchedule
             .filter((slot) => slot && slot.slot_type === 'period')
             .sort((a, b) => Number(a?.period || 0) - Number(b?.period || 0));
+
+        this.updateBroadcastModalTtsInfo();
+        this.checkAndTriggerScheduledAnnouncement(new Date());
 
         if (periodSchedule.length === 0) {
             container.innerHTML = '<span class="dt-header-schedule-empty">오늘 시간표 없음</span>';
@@ -1823,6 +2128,7 @@ class DutyTickerManager {
     openBroadcastModal() {
         const input = document.getElementById('broadcastInput');
         if (input) input.value = this.broadcastMessage || '';
+        this.updateBroadcastModalTtsInfo();
         this.openModal('broadcastModal');
         if (input) input.focus();
     }
@@ -1848,11 +2154,13 @@ class DutyTickerManager {
                 body: JSON.stringify({ message: msg })
             });
             await this.parseJsonResponse(response, '알림사항을 저장하지 못했습니다.');
+            this.showToast(msg ? '알림사항을 저장했습니다.' : '알림사항을 비웠습니다.', 'success');
         } catch (error) {
             console.error(error);
             this.broadcastMessage = prevMessage;
             this.isBroadcasting = prevState;
             this.renderNotices();
+            this.showToast(error?.message || '알림사항을 저장하지 못했습니다.', 'error');
         }
     }
 
@@ -3033,7 +3341,11 @@ class DutyTickerManager {
     toggleBroadcastSound() {
         this.isSoundEnabled = !this.isSoundEnabled;
         localStorage.setItem('dt-broadcast-sound', this.isSoundEnabled);
+        if (!this.isSoundEnabled && window.speechSynthesis) {
+            window.speechSynthesis.cancel();
+        }
         this.updateSoundUI();
+        this.showToast(this.isSoundEnabled ? '방송 소리를 켰습니다.' : '방송 소리를 껐습니다.', 'success');
     }
 
     updateSoundUI() {
@@ -3041,6 +3353,8 @@ class DutyTickerManager {
         if (!btn) return;
         btn.innerHTML = this.isSoundEnabled ? '<i class="fa-solid fa-volume-high"></i>' : '<i class="fa-solid fa-volume-xmark"></i>';
         btn.classList.toggle('text-indigo-400', this.isSoundEnabled);
+        btn.setAttribute('title', this.isSoundEnabled ? '방송 소리 켜짐' : '방송 소리 꺼짐');
+        this.updateBroadcastModalTtsInfo();
     }
 
     toggleFullscreen() {

@@ -3052,6 +3052,11 @@
                     title="별빛 추첨기">
                     <i class="fa-solid fa-shuffle"></i>
                 </a>
+                <button id="openBroadcastModalBtn" type="button" onclick="window.dtApp.openBroadcastModal()"
+                    class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
+                    title="알림 / 교시 안내">
+                    <i class="fa-solid fa-bullhorn"></i>
+                </button>
                 <button id="toggleSoundBtn" onclick="window.dtApp.toggleBroadcastSound()"
                     class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
                     title="소리 설정">
@@ -3540,15 +3545,42 @@
         class="fixed inset-0 z-[200] hidden items-center justify-center bg-black/80 backdrop-blur-sm transition-opacity duration-300 opacity-0">
         <div
             class="bg-slate-800 p-8 rounded-3xl shadow-2xl w-full max-w-lg border border-slate-700 transform scale-95 transition-transform">
-            <h3 class="text-2xl font-bold text-white mb-6">📢 알림사항 등록</h3>
+            <h3 class="text-2xl font-bold text-white">📢 알림 / 교시 안내</h3>
+            <p class="mt-2 text-sm leading-relaxed text-slate-300">
+                직접 알림 문구를 적거나, 다음 교시 안내 문구를 바로 불러와 지금 읽을 수 있습니다.
+            </p>
+            <div class="mt-5 rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <p class="text-xs font-black uppercase tracking-[0.16em] text-indigo-300">다음 교시 안내</p>
+                        <p id="broadcastScheduleSummary" class="mt-2 text-base font-black text-white">시간표를 불러오는 중입니다.</p>
+                        <p id="broadcastScheduleStatus" class="mt-1 text-sm text-slate-400">자동 안내 상태를 확인하는 중입니다.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button id="broadcastUseScheduleBtn" type="button"
+                            class="inline-flex items-center gap-2 rounded-xl border border-indigo-400/30 bg-indigo-500/15 px-3.5 py-2 text-sm font-black text-indigo-100 transition hover:bg-indigo-500/25">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            다음 교시 문구 넣기
+                        </button>
+                        <button id="broadcastSpeakNowBtn" type="button"
+                            class="inline-flex items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/15 px-3.5 py-2 text-sm font-black text-emerald-100 transition hover:bg-emerald-500/25">
+                            <i class="fa-solid fa-volume-high"></i>
+                            지금 읽기
+                        </button>
+                    </div>
+                </div>
+            </div>
             <textarea id="broadcastInput" rows="4"
-                class="w-full bg-slate-900 border border-slate-600 rounded-xl p-4 text-white text-lg focus:outline-none focus:border-indigo-500 transition-colors resize-none mb-6"
+                class="mt-5 w-full bg-slate-900 border border-slate-600 rounded-xl p-4 text-white text-lg focus:outline-none focus:border-indigo-500 transition-colors resize-none"
                 placeholder="학생들에게 전달할 내용을 입력하세요..."></textarea>
-            <div class="flex gap-4">
+            <p class="mt-3 text-sm text-slate-400">
+                교시 자동 안내는 메인 알림판이 열려 있을 때만 읽습니다.
+            </p>
+            <div class="mt-6 flex gap-4">
                 <button id="broadcastCancelBtn"
                     class="flex-1 py-3 bg-slate-700 text-slate-300 rounded-xl font-bold hover:bg-slate-600 transition">취소</button>
                 <button id="broadcastSubmitBtn"
-                    class="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-500 transition">등록하기</button>
+                    class="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-500 transition">알림 저장</button>
             </div>
         </div>
     </div>

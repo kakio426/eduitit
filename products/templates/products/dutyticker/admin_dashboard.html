@@ -455,12 +455,153 @@
                     </div>
                 </section>
 
+                <section class="rounded-2xl border border-indigo-100 bg-white/70 p-5">
+                    <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+                        <div class="xl:max-w-md">
+                            <h3 class="text-lg font-black text-gray-700">교시 안내 방송</h3>
+                            <p class="mt-2 text-sm font-bold text-gray-500">
+                                알림판 메인 화면이 켜져 있으면, 설정한 시각에 교시 안내를 자동으로 읽습니다.
+                            </p>
+
+                            <div class="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
+                                <p class="text-xs font-black uppercase tracking-[0.16em] text-emerald-600">미리보기</p>
+                                <p class="mt-2 text-sm font-bold text-gray-600">{{ tts_preview_source_label }}</p>
+                                <textarea
+                                    id="dtTtsPreviewText"
+                                    rows="3"
+                                    readonly
+                                    class="mt-3 w-full rounded-xl border border-emerald-200 bg-white px-4 py-3 text-base font-bold leading-7 text-gray-700 focus:outline-none"
+                                >{{ tts_preview_row.announcement_text|default:"1교시 5분 전입니다. 1교시는 과학입니다!" }}</textarea>
+                                <div class="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm">
+                                    <p class="font-bold text-emerald-700">
+                                        {% if tts_preview_row %}
+                                        다음 방송 {{ tts_preview_row.announce_time_label }} · {{ tts_preview_row.period_label }} {{ tts_preview_row.subject }}
+                                        {% else %}
+                                        시간표를 저장하면 자동으로 미리보기가 바뀝니다.
+                                        {% endif %}
+                                    </p>
+                                    <p id="dtTtsPreviewStatus" class="text-gray-500">미리 듣기 준비 완료</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid flex-1 grid-cols-1 gap-4 md:grid-cols-2">
+                            <label class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+                                <span class="flex items-center gap-3">
+                                    <input
+                                        type="checkbox"
+                                        name="tts_enabled"
+                                        class="h-5 w-5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-400"
+                                        {% if settings.tts_enabled %}checked{% endif %}
+                                    >
+                                    <span>
+                                        <span class="block text-sm font-black text-gray-700">교시 시작 전에 자동으로 읽기</span>
+                                        <span class="mt-1 block text-xs font-bold text-gray-500">수업 직전 안내 방송을 자동으로 시작합니다.</span>
+                                    </span>
+                                </span>
+                            </label>
+
+                            <label class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+                                <span class="block text-sm font-black text-gray-700">언제 읽을까요?</span>
+                                <span class="mt-1 block text-xs font-bold text-gray-500">보통은 5분 전이 가장 편합니다.</span>
+                                <select
+                                    name="tts_minutes_before"
+                                    class="mt-3 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                                >
+                                    {% for choice in tts_minutes_choices %}
+                                    <option value="{{ choice }}" {% if settings.tts_minutes_before == choice %}selected{% endif %}>
+                                        {% if choice == 0 %}시작 시각에 읽기{% else %}{{ choice }}분 전{% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+
+                            <label class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+                                <span class="block text-sm font-black text-gray-700">목소리</span>
+                                <span class="mt-1 block text-xs font-bold text-gray-500">브라우저에 있는 한국어 목소리를 우선 보여 줍니다.</span>
+                                <select
+                                    id="dtTtsVoiceSelect"
+                                    name="tts_voice_uri"
+                                    data-saved-voice="{{ settings.tts_voice_uri }}"
+                                    class="mt-3 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                                >
+                                    <option value="">기본 목소리</option>
+                                    {% if settings.tts_voice_uri %}
+                                    <option value="{{ settings.tts_voice_uri }}" selected>{{ settings.tts_voice_uri }}</option>
+                                    {% endif %}
+                                </select>
+                            </label>
+
+                            <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+                                <div>
+                                    <label for="dtTtsRateInput" class="block text-sm font-black text-gray-700">속도</label>
+                                    <div class="mt-2 flex items-center gap-3">
+                                        <input
+                                            id="dtTtsRateInput"
+                                            type="range"
+                                            min="0.7"
+                                            max="1.3"
+                                            step="0.05"
+                                            name="tts_rate"
+                                            value="{{ settings.tts_rate|floatformat:2 }}"
+                                            data-dt-tts-rate
+                                            class="w-full accent-emerald-500"
+                                        >
+                                        <span data-dt-tts-rate-output class="min-w-[3.5rem] text-right text-sm font-black text-emerald-700">
+                                            {{ settings.tts_rate|floatformat:2 }}배
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="mt-4">
+                                    <label for="dtTtsPitchInput" class="block text-sm font-black text-gray-700">높낮이</label>
+                                    <div class="mt-2 flex items-center gap-3">
+                                        <input
+                                            id="dtTtsPitchInput"
+                                            type="range"
+                                            min="0.8"
+                                            max="1.2"
+                                            step="0.05"
+                                            name="tts_pitch"
+                                            value="{{ settings.tts_pitch|floatformat:2 }}"
+                                            data-dt-tts-pitch
+                                            class="w-full accent-emerald-500"
+                                        >
+                                        <span data-dt-tts-pitch-output class="min-w-[3.5rem] text-right text-sm font-black text-emerald-700">
+                                            {{ settings.tts_pitch|floatformat:2 }}배
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="mt-4 flex flex-wrap gap-2">
+                                    <button
+                                        type="button"
+                                        id="dtTtsPreviewBtn"
+                                        class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-emerald-500"
+                                    >
+                                        <i class="fa-solid fa-volume-high"></i>
+                                        미리 듣기
+                                    </button>
+                                    <button
+                                        type="button"
+                                        id="dtTtsStopBtn"
+                                        class="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-black text-gray-700 transition hover:bg-gray-50"
+                                    >
+                                        <i class="fa-solid fa-stop"></i>
+                                        중지
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 <div class="flex justify-end">
                     <button
                         type="submit"
                         class="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black transition shadow-clay hover:shadow-clay-hover"
                     >
-                        시간표 저장
+                        시간표와 방송 저장
                     </button>
                 </div>
             </form>
@@ -535,10 +676,123 @@
         });
     }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initScheduleSettingsCollapse);
-    } else {
+    function initTtsSettingsPreview() {
+        const preview = document.getElementById('dtTtsPreviewText');
+        const previewBtn = document.getElementById('dtTtsPreviewBtn');
+        const stopBtn = document.getElementById('dtTtsStopBtn');
+        const voiceSelect = document.getElementById('dtTtsVoiceSelect');
+        const status = document.getElementById('dtTtsPreviewStatus');
+        const rateInput = document.querySelector('[data-dt-tts-rate]');
+        const pitchInput = document.querySelector('[data-dt-tts-pitch]');
+        const rateOutput = document.querySelector('[data-dt-tts-rate-output]');
+        const pitchOutput = document.querySelector('[data-dt-tts-pitch-output]');
+        const synth = window.speechSynthesis || null;
+
+        if (!preview || !previewBtn || !stopBtn || !rateInput || !pitchInput) return;
+
+        const setStatus = (message, tone) => {
+            if (!status) return;
+            status.textContent = message;
+            status.classList.remove('text-gray-500', 'text-emerald-600', 'text-red-500');
+            if (tone === 'success') status.classList.add('text-emerald-600');
+            else if (tone === 'error') status.classList.add('text-red-500');
+            else status.classList.add('text-gray-500');
+        };
+
+        const updateRangeOutputs = () => {
+            if (rateOutput) rateOutput.textContent = `${Number(rateInput.value || 0.95).toFixed(2)}배`;
+            if (pitchOutput) pitchOutput.textContent = `${Number(pitchInput.value || 1).toFixed(2)}배`;
+        };
+
+        const renderVoiceOptions = () => {
+            if (!voiceSelect || !synth) return;
+
+            const savedVoice = voiceSelect.dataset.savedVoice || voiceSelect.value || '';
+            const voices = synth.getVoices() || [];
+            if (!voices.length) {
+                voiceSelect.disabled = true;
+                return;
+            }
+
+            const preferred = voices.filter((voice) => String(voice.lang || '').toLowerCase().startsWith('ko'));
+            const orderedVoices = preferred.length
+                ? preferred.concat(voices.filter((voice) => !String(voice.lang || '').toLowerCase().startsWith('ko')))
+                : voices;
+
+            voiceSelect.innerHTML = '<option value="">기본 목소리</option>';
+            orderedVoices.forEach((voice) => {
+                const option = document.createElement('option');
+                option.value = voice.voiceURI || voice.name;
+                option.textContent = `${voice.name} (${voice.lang || 'unknown'})${voice.default ? ' · 기본' : ''}`;
+                voiceSelect.appendChild(option);
+            });
+            voiceSelect.value = orderedVoices.some((voice) => (voice.voiceURI || voice.name) === savedVoice)
+                ? savedVoice
+                : '';
+            voiceSelect.disabled = false;
+        };
+
+        const stopSpeaking = () => {
+            if (!synth) {
+                setStatus('이 브라우저는 음성 미리듣기를 지원하지 않습니다.', 'error');
+                return;
+            }
+            synth.cancel();
+            setStatus('미리듣기를 멈췄습니다.', 'success');
+        };
+
+        previewBtn.addEventListener('click', () => {
+            const text = String(preview.value || '').trim();
+            if (!text) {
+                setStatus('미리 들을 문구가 없습니다.', 'error');
+                return;
+            }
+            if (!synth) {
+                setStatus('이 브라우저는 음성 미리듣기를 지원하지 않습니다.', 'error');
+                return;
+            }
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'ko-KR';
+            utterance.rate = Number(rateInput.value || 0.95);
+            utterance.pitch = Number(pitchInput.value || 1);
+
+            const voices = synth.getVoices() || [];
+            const selectedVoice = voices.find((voice) => (voice.voiceURI || voice.name) === voiceSelect.value);
+            if (selectedVoice) utterance.voice = selectedVoice;
+
+            utterance.onstart = () => setStatus('미리듣는 중입니다.', 'success');
+            utterance.onend = () => setStatus('미리듣기 완료', 'success');
+            utterance.onerror = () => setStatus('미리듣기 중 문제가 생겼습니다.', 'error');
+
+            synth.cancel();
+            synth.speak(utterance);
+        });
+
+        stopBtn.addEventListener('click', stopSpeaking);
+        rateInput.addEventListener('input', updateRangeOutputs);
+        pitchInput.addEventListener('input', updateRangeOutputs);
+        updateRangeOutputs();
+        renderVoiceOptions();
+
+        if (synth) {
+            if (typeof synth.addEventListener === 'function') {
+                synth.addEventListener('voiceschanged', renderVoiceOptions);
+            } else {
+                synth.onvoiceschanged = renderVoiceOptions;
+            }
+        }
+    }
+
+    function bootAdminDashboardHelpers() {
         initScheduleSettingsCollapse();
+        initTtsSettingsPreview();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bootAdminDashboardHelpers);
+    } else {
+        bootAdminDashboardHelpers();
     }
 </script>
 {% endblock %}

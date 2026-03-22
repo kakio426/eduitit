@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 import datetime
 
@@ -15,6 +16,7 @@ from .dutyticker_scope import (
 )
 from .dutyticker_slots import PERIOD_NUMBERS, SLOT_BY_CODE, SLOT_LAYOUT, WEEKDAY_LABELS
 from .dutyticker_sync import sync_dt_students_from_hs
+from .tts_announcement import annotate_tts_rows, build_demo_tts_rows, build_tts_announcement_rows
 
 CONSENT_STATUS_LABELS = {
     "approved": "동의 완료",
@@ -73,6 +75,45 @@ def _build_period_subject_rows(user, classroom):
             }
         )
     return rows
+
+
+def _build_tts_preview_context(user, classroom, minutes_before):
+    today = timezone.localdate()
+    today_js_day = (today.weekday() + 1) % 7
+    schedule_queryset = apply_classroom_scope(
+        DTSchedule.objects.filter(user=user, day=today_js_day),
+        classroom,
+    ).order_by("period", "id")
+
+    if schedule_queryset.exists():
+        rows = build_tts_announcement_rows(schedule_queryset, date=today, minutes_before=minutes_before)
+        source_label = "오늘 시간표 기준"
+    else:
+        rows = build_demo_tts_rows(date=today, minutes_before=minutes_before)
+        source_label = "샘플 문구"
+
+    rows = annotate_tts_rows(rows)
+    next_row = next((row for row in rows if row.get("is_next")), rows[0] if rows else None)
+    return {
+        "tts_preview_source_label": source_label,
+        "tts_preview_row": next_row,
+    }
+
+
+def _parse_int_in_range(raw_value, *, default, min_value, max_value):
+    try:
+        parsed = int(str(raw_value).strip())
+    except (TypeError, ValueError, AttributeError):
+        return default
+    return max(min_value, min(max_value, parsed))
+
+
+def _parse_float_in_range(raw_value, *, default, min_value, max_value):
+    try:
+        parsed = float(str(raw_value).strip())
+    except (TypeError, ValueError, AttributeError):
+        return default
+    return max(min_value, min(max_value, parsed))
 
 
 def _parse_time_value(raw_value):
@@ -160,6 +201,8 @@ def admin_dashboard(request):
         'period_rows': period_rows,
         'period_numbers': PERIOD_NUMBERS,
         'weekday_labels': WEEKDAY_LABELS,
+        'tts_minutes_choices': [0, 3, 5, 10],
+        **_build_tts_preview_context(user, classroom, settings.tts_minutes_before),
     })
 
 
@@ -207,6 +250,7 @@ def update_rotation_settings(request):
 @require_http_methods(["POST"])
 def update_schedule_settings(request):
     classroom = get_active_classroom_for_request(request)
+    settings, _ = get_or_create_settings_for_scope(request.user, classroom)
     time_slots = _ensure_time_slots_for_scope(request.user, classroom)
     slot_map = {slot.slot_code: slot for slot in time_slots}
 
@@ -271,9 +315,35 @@ def update_schedule_settings(request):
         invalid_text = ", ".join(invalid_slots)
         messages.error(request, f"시간 설정 오류: {invalid_text}의 시작 시간은 종료 시간보다 빨라야 합니다.")
 
+    settings.tts_enabled = request.POST.get("tts_enabled") == "on"
+    settings.tts_minutes_before = _parse_int_in_range(
+        request.POST.get("tts_minutes_before"),
+        default=settings.tts_minutes_before or 5,
+        min_value=0,
+        max_value=10,
+    )
+    settings.tts_voice_uri = (request.POST.get("tts_voice_uri") or "").strip()[:255]
+    settings.tts_rate = _parse_float_in_range(
+        request.POST.get("tts_rate"),
+        default=settings.tts_rate or 0.95,
+        min_value=0.7,
+        max_value=1.3,
+    )
+    settings.tts_pitch = _parse_float_in_range(
+        request.POST.get("tts_pitch"),
+        default=settings.tts_pitch or 1.0,
+        min_value=0.8,
+        max_value=1.2,
+    )
+    settings.save(update_fields=["tts_enabled", "tts_minutes_before", "tts_voice_uri", "tts_rate", "tts_pitch"])
+
+    tts_state_text = "교시 안내 방송 꺼짐"
+    if settings.tts_enabled:
+        tts_state_text = f"교시 안내 방송 켜짐 ({settings.tts_minutes_before}분 전)"
+
     messages.success(
         request,
-        f"시간표 저장 완료: 과목 {saved_subject_count}개 저장, 비운 칸 {deleted_subject_count}개 반영, 시간 슬롯 {len(updated_slots)}개 수정",
+        f"시간표 저장 완료: 과목 {saved_subject_count}개 저장, 비운 칸 {deleted_subject_count}개 반영, 시간 슬롯 {len(updated_slots)}개 수정 / {tts_state_text}",
     )
 
     return redirect("dt_admin_dashboard")

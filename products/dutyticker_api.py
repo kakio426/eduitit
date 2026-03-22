@@ -188,6 +188,11 @@ def get_guest_default_data():
             'mission_desc': "선생님 말씀에 집중해 주세요.",
             'spotlight_student_id': None,
             'theme': 'deep_space',
+            'tts_enabled': False,
+            'tts_minutes_before': 5,
+            'tts_voice_uri': '',
+            'tts_rate': 0.95,
+            'tts_pitch': 1.0,
         }
     }
 
@@ -505,6 +510,11 @@ def get_dutyticker_data(request):
             'mission_desc': settings.mission_desc,
             'spotlight_student_id': spotlight_student_id,
             'theme': settings.theme,
+            'tts_enabled': settings.tts_enabled,
+            'tts_minutes_before': settings.tts_minutes_before,
+            'tts_voice_uri': settings.tts_voice_uri,
+            'tts_rate': settings.tts_rate,
+            'tts_pitch': settings.tts_pitch,
         }
     })
 
