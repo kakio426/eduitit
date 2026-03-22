@@ -2,6 +2,7 @@
 {% url 'edu_materials:render' material.id as render_url %}
 {% url 'edu_materials:run' material.id as run_url %}
 {% url 'edu_materials:delete' material.id as delete_url %}
+{% url 'edu_materials:clone' material.id as clone_url %}
 
 <article class="edu-materials-board-card edu-materials-panel rounded-[30px] p-4 md:p-5 flex flex-col gap-4">
     <div class="flex items-start justify-between gap-3">
@@ -37,6 +38,7 @@
         </span>
     </div>
 
+    {% if show_live_preview %}
     <div class="relative">
         <a href="{% if owner_controls %}{{ detail_url }}{% else %}{{ run_url }}{% endif %}" class="edu-materials-preview-card block">
             <div class="flex items-center justify-between gap-3 px-4 pt-4 text-[11px] font-semibold uppercase tracking-[0.24em] text-white/72">
@@ -75,6 +77,7 @@
             </div>
         </a>
     </div>
+    {% endif %}
 
     <div class="space-y-3">
         <div>
@@ -91,7 +94,7 @@
         {% if material.summary %}
         <p class="text-sm leading-6 text-slate-600">{{ material.summary }}</p>
         {% else %}
-        <p class="text-sm leading-6 text-slate-500">미리보기로 화면을 먼저 훑고, 필요할 때만 상세 관리로 들어가도록 정리된 자료입니다.</p>
+        <p class="text-sm leading-6 text-slate-500">{% if show_live_preview %}움직이는 화면으로 먼저 확인하고, 필요할 때만 상세 관리나 공개 설정으로 이어갈 수 있는 자료입니다.{% else %}수업 흐름을 빠르게 비교해보고, 마음에 들면 바로 열거나 내 자료로 가져올 수 있는 공개 자료입니다.{% endif %}</p>
         {% endif %}
 
         {% if material.tags %}
@@ -107,9 +110,12 @@
 
         <div class="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-500">
             <span>최근 수정 {{ material.updated_at|date:"n월 j일 H:i" }}</span>
-            {% if not owner_controls and material.teacher_id != request.user.id %}
-            <span>{{ material.teacher_display_name }}</span>
-            {% endif %}
+            <div class="flex flex-wrap items-center gap-2">
+                <span>열람 {{ material.view_count }}회</span>
+                {% if not owner_controls and material.teacher_id != request.user.id %}
+                <span>{{ material.teacher_display_name }}</span>
+                {% endif %}
+            </div>
         </div>
     </div>
 
@@ -124,7 +130,7 @@
                 <button type="submit" class="rounded-full bg-emerald-600 px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-emerald-600/15">공개 켜기</button>
             </form>
             {% endif %}
-            <a href="{{ detail_url }}" class="rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700">상세 관리</a>
+            <a href="{{ detail_url }}#metadata-form" class="rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700">분류 수정</a>
             <form method="post" action="{{ delete_url }}" class="ml-auto">
                 {% csrf_token %}
                 <button type="submit" class="rounded-full px-3 py-2 text-sm font-bold text-rose-500 transition hover:bg-rose-50">삭제</button>
@@ -132,7 +138,12 @@
         {% else %}
             <a href="{{ run_url }}" target="_blank" rel="noopener" class="rounded-full bg-slate-900 px-4 py-2.5 text-sm font-black text-white">자료 열기</a>
             {% if material.teacher_id == request.user.id %}
-            <a href="{{ detail_url }}" class="rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700">내 자료 관리</a>
+            <a href="{{ detail_url }}#metadata-form" class="rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700">분류 수정</a>
+            {% elif request.user.is_authenticated %}
+            <form method="post" action="{{ clone_url }}">
+                {% csrf_token %}
+                <button type="submit" class="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-black text-emerald-700">내 자료로 가져오기</button>
+            </form>
             {% endif %}
         {% endif %}
     </div>

@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.db.models import F, Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -17,6 +18,19 @@ PREVIEW_VIEWPORTS = (
     {"id": "mobile", "label": "Mobile", "width": 390, "height": 844},
 )
 DEFAULT_PREVIEW_VIEWPORT_ID = "desktop"
+TAB_SHARED = "shared"
+TAB_MY = "my"
+TAB_CREATE = "create"
+SORT_LATEST = "latest"
+SORT_POPULAR = "popular"
+SORT_TITLE = "title"
+SORT_CHOICES = (
+    (SORT_LATEST, "최신순"),
+    (SORT_POPULAR, "인기순"),
+    (SORT_TITLE, "제목순"),
+)
+MY_PAGE_SIZE = 8
+SHARED_PAGE_SIZE = 10
 
 
 def _resolve_teacher_display_name(user):
@@ -49,6 +63,80 @@ def _build_preview_context():
     }
 
 
+def _get_filter_accessible_queryset(user, active_tab):
+    queryset = EduMaterial.objects.all()
+    if not user.is_authenticated:
+        return queryset.filter(is_published=True)
+    if active_tab in {TAB_MY, TAB_CREATE}:
+        return queryset.filter(teacher=user)
+    return queryset.filter(is_published=True)
+
+
+def _resolve_active_tab(request):
+    if not request.user.is_authenticated:
+        return TAB_SHARED
+    requested_tab = (request.GET.get("tab") or "").strip().lower()
+    if requested_tab in {TAB_SHARED, TAB_MY, TAB_CREATE}:
+        return requested_tab
+    return TAB_SHARED
+
+
+def _resolve_current_sort(request):
+    requested_sort = (request.GET.get("sort") or "").strip().lower()
+    if requested_sort in {choice for choice, _ in SORT_CHOICES}:
+        return requested_sort
+    return SORT_LATEST
+
+
+def _build_query_string(request, *, exclude=()):
+    params = request.GET.copy()
+    for key in exclude:
+        params.pop(key, None)
+    return params.urlencode()
+
+
+def _main_url(*, tab=None):
+    url = reverse("edu_materials:main")
+    if tab:
+        return f"{url}?tab={tab}"
+    return url
+
+
+def _apply_sort(queryset, *, current_sort):
+    if current_sort == SORT_POPULAR:
+        return queryset.order_by("-view_count", "-updated_at", "-created_at")
+    if current_sort == SORT_TITLE:
+        return queryset.order_by("title", "-updated_at", "-created_at")
+    return queryset.order_by("-updated_at", "-created_at")
+
+
+def _pick_featured_material(queryset):
+    featured = queryset.exclude(summary="").exclude(metadata_status=EduMaterial.MetadataStatus.FAILED).order_by(
+        "-view_count",
+        "-updated_at",
+        "-created_at",
+    ).first()
+    if featured:
+        return featured
+    return queryset.order_by("-view_count", "-updated_at", "-created_at").first()
+
+
+def _build_clone_title(user, source_title):
+    base_title = f"{source_title} (내 자료)"
+    title = base_title
+    suffix = 2
+    while EduMaterial.objects.filter(teacher=user, title=title).exists():
+        title = f"{base_title} {suffix}"
+        suffix += 1
+    return title
+
+
+def _decorate_teacher_display_name(materials):
+    for material in materials:
+        material.teacher_display_name = _resolve_teacher_display_name(material.teacher)
+    return materials
+
+
 def _apply_metadata_filter(queryset, *, query="", subject="", material_type="", grade="", tag=""):
     if query:
         queryset = queryset.filter(
@@ -68,14 +156,15 @@ def _apply_metadata_filter(queryset, *, query="", subject="", material_type="", 
     return queryset
 
 
-def _build_filter_context(request):
+def _build_filter_context(request, *, active_tab):
     query = (request.GET.get("q") or "").strip()
     subject = (request.GET.get("subject") or "").strip().upper()
     material_type = (request.GET.get("material_type") or "").strip().lower()
     grade = (request.GET.get("grade") or "").strip()
     tag = (request.GET.get("tag") or "").strip()
+    current_sort = _resolve_current_sort(request)
 
-    accessible = EduMaterial.objects.filter(Q(teacher=request.user) | Q(is_published=True)).distinct()
+    accessible = _get_filter_accessible_queryset(request.user, active_tab)
     grade_options = list(
         accessible.exclude(grade="")
         .values_list("grade", flat=True)
@@ -90,6 +179,8 @@ def _build_filter_context(request):
         "current_material_type": material_type if material_type in {choice for choice, _ in EduMaterial.MaterialType.choices} else "",
         "current_grade": grade,
         "current_tag": tag,
+        "current_sort": current_sort,
+        "sort_choices": SORT_CHOICES,
         "subject_choices": EduMaterial.SUBJECT_CHOICES,
         "material_type_choices": EduMaterial.MaterialType.choices,
         "grade_options": grade_options,
@@ -100,7 +191,7 @@ def _build_filter_context(request):
 def _apply_auto_metadata_with_feedback(request, material):
     metadata = apply_auto_metadata(material, save=True)
     if metadata is None:
-        messages.warning(request, "자료는 저장했지만 자동 분류는 잠시 실패했습니다. 직접 메타데이터를 수정할 수 있습니다.")
+        messages.warning(request, "자료는 저장했지만 자동 분류는 잠시 실패했습니다. 직접 분류를 수정할 수 있습니다.")
     return metadata
 
 
@@ -116,41 +207,68 @@ def _append_csp_update(response, updates):
     return response
 
 
-@login_required
 def main_view(request):
-    filter_context = _build_filter_context(request)
-    my_materials = EduMaterial.objects.filter(teacher=request.user).order_by("-updated_at")
-    my_materials = _apply_metadata_filter(
-        my_materials,
-        query=filter_context["query"],
-        subject=filter_context["current_subject"],
-        material_type=filter_context["current_material_type"],
-        grade=filter_context["current_grade"],
-        tag=filter_context["current_tag"],
-    )
-    shared_materials = list(
+    active_tab = _resolve_active_tab(request)
+    filter_context = _build_filter_context(request, active_tab=active_tab)
+    page_number = request.GET.get("page")
+
+    my_queryset = EduMaterial.objects.none()
+    if request.user.is_authenticated:
+        my_queryset = _apply_sort(
+            _apply_metadata_filter(
+                EduMaterial.objects.filter(teacher=request.user),
+                query=filter_context["query"],
+                subject=filter_context["current_subject"],
+                material_type=filter_context["current_material_type"],
+                grade=filter_context["current_grade"],
+                tag=filter_context["current_tag"],
+            ),
+            current_sort=filter_context["current_sort"],
+        )
+
+    shared_queryset = _apply_sort(
         _apply_metadata_filter(
-            EduMaterial.objects.select_related("teacher")
-        .filter(is_published=True)
-        .order_by("-updated_at"),
+            EduMaterial.objects.select_related("teacher").filter(is_published=True),
             query=filter_context["query"],
             subject=filter_context["current_subject"],
             material_type=filter_context["current_material_type"],
             grade=filter_context["current_grade"],
             tag=filter_context["current_tag"],
-        )
+        ),
+        current_sort=filter_context["current_sort"],
     )
-    for material in shared_materials:
-        material.teacher_display_name = _resolve_teacher_display_name(material.teacher)
+
+    featured_public_material = None
+    browse_queryset = shared_queryset
+    if active_tab == TAB_SHARED:
+        featured_public_material = _pick_featured_material(shared_queryset)
+        if featured_public_material:
+            featured_public_material.teacher_display_name = _resolve_teacher_display_name(featured_public_material.teacher)
+            browse_queryset = shared_queryset.exclude(id=featured_public_material.id)
+
+    my_page_obj = Paginator(my_queryset, MY_PAGE_SIZE).get_page(page_number) if request.user.is_authenticated else None
+    if my_page_obj is not None:
+        my_page_obj.object_list = list(my_page_obj.object_list)
+
+    shared_page_obj = Paginator(browse_queryset, SHARED_PAGE_SIZE).get_page(page_number)
+    shared_page_obj.object_list = _decorate_teacher_display_name(list(shared_page_obj.object_list))
 
     return render(
         request,
         "edu_materials/main.html",
         {
             "service": get_service(),
-            "my_materials": my_materials,
-            "shared_materials": shared_materials,
+            "my_page_obj": my_page_obj,
+            "shared_page_obj": shared_page_obj,
+            "my_material_count": my_queryset.count() if request.user.is_authenticated else 0,
+            "shared_material_count": shared_queryset.count(),
             "input_mode_choices": EduMaterial.INPUT_MODE_CHOICES,
+            "active_tab": active_tab,
+            "tab_query_string": _build_query_string(request, exclude=("tab", "page")),
+            "page_query_string": _build_query_string(request, exclude=("page",)),
+            "featured_public_material": featured_public_material,
+            "show_filter_panel": active_tab != TAB_CREATE,
+            "show_create_panel": request.user.is_authenticated and active_tab == TAB_CREATE,
             **filter_context,
         },
     )
@@ -163,26 +281,27 @@ def create_material(request):
     input_mode = (request.POST.get("input_mode") or EduMaterial.INPUT_PASTE).strip()
     html_content = request.POST.get("html_content", "")
     original_filename = ""
+    publish_now = request.POST.get("publish_now") == "1"
 
     if input_mode not in {EduMaterial.INPUT_PASTE, EduMaterial.INPUT_FILE}:
         messages.error(request, "입력 방식을 다시 선택해 주세요.")
-        return redirect("edu_materials:main")
+        return redirect(_main_url(tab=TAB_CREATE))
 
     if not title:
         messages.error(request, "자료 제목을 입력해 주세요.")
-        return redirect("edu_materials:main")
+        return redirect(_main_url(tab=TAB_CREATE))
 
     if input_mode == EduMaterial.INPUT_FILE:
         try:
             metadata = validate_html_upload(request.FILES.get("html_file"))
         except Exception as exc:
             messages.error(request, " ".join(getattr(exc, "messages", [str(exc)])))
-            return redirect("edu_materials:main")
+            return redirect(_main_url(tab=TAB_CREATE))
         html_content = metadata["html_content"]
         original_filename = metadata["original_filename"]
     elif not html_content.strip():
         messages.error(request, "붙여넣을 HTML 코드를 입력해 주세요.")
-        return redirect("edu_materials:main")
+        return redirect(_main_url(tab=TAB_CREATE))
 
     material = EduMaterial.objects.create(
         teacher=request.user,
@@ -194,11 +313,44 @@ def create_material(request):
         input_mode=input_mode,
         original_filename=original_filename,
         material_type=EduMaterial.MaterialType.OTHER,
-        is_published=True,
+        is_published=publish_now,
     )
     _apply_auto_metadata_with_feedback(request, material)
-    messages.success(request, f'"{material.title}" 자료를 저장했고 바로 공개했습니다.')
+    if publish_now:
+        messages.success(request, f'"{material.title}" 자료를 저장했고 바로 공개했습니다.')
+    else:
+        messages.success(request, f'"{material.title}" 자료를 저장했습니다. 공개 전이라 내 자료에서 먼저 확인할 수 있습니다.')
     return redirect("edu_materials:detail", pk=material.id)
+
+
+@login_required
+@require_POST
+def clone_material(request, material_id):
+    source = get_object_or_404(EduMaterial.objects.select_related("teacher"), id=material_id, is_published=True)
+    if source.teacher_id == request.user.id:
+        messages.info(request, "이미 내 자료에 있는 자료입니다.")
+        return redirect("edu_materials:detail", pk=source.id)
+
+    clone = EduMaterial.objects.create(
+        teacher=request.user,
+        title=_build_clone_title(request.user, source.title),
+        html_content=source.html_content,
+        input_mode=source.input_mode,
+        original_filename=source.original_filename,
+        is_published=False,
+    )
+    apply_manual_metadata(
+        clone,
+        subject=source.subject,
+        grade=source.grade,
+        unit_title=source.unit_title,
+        material_type=source.material_type,
+        tags=list(source.tags or []),
+        summary=source.summary,
+        save=True,
+    )
+    messages.success(request, f'"{source.title}" 자료를 내 자료로 가져왔습니다. 먼저 확인한 뒤 공개할 수 있습니다.')
+    return redirect("edu_materials:detail", pk=clone.id)
 
 
 @login_required
@@ -275,7 +427,7 @@ def update_material_metadata(request, material_id):
         summary=request.POST.get("summary"),
         save=True,
     )
-    messages.success(request, "메타데이터를 저장했습니다.")
+    messages.success(request, "분류를 저장했습니다.")
     return redirect("edu_materials:detail", pk=material.id)
 
 

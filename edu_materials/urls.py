@@ -8,6 +8,7 @@ app_name = "edu_materials"
 urlpatterns = [
     path("", views.main_view, name="main"),
     path("create/", views.create_material, name="create"),
+    path("<uuid:material_id>/clone/", views.clone_material, name="clone"),
     path("<uuid:pk>/", views.material_detail, name="detail"),
     path("<uuid:material_id>/update/", views.update_material, name="update"),
     path("<uuid:material_id>/metadata/", views.update_material_metadata, name="update_metadata"),

@@ -71,7 +71,7 @@ class EduMaterialViewTests(TestCase):
         material = EduMaterial.objects.get(title="화산 시뮬레이션")
         self.assertEqual(material.input_mode, EduMaterial.INPUT_PASTE)
         self.assertIn("lesson", material.html_content)
-        self.assertTrue(material.is_published)
+        self.assertFalse(material.is_published)
         self.assertEqual(material.subject, "SCIENCE")
         self.assertEqual(material.grade, "4학년 1학기")
         self.assertEqual(material.unit_title, "화산과 지진")
@@ -104,6 +104,25 @@ class EduMaterialViewTests(TestCase):
         self.assertEqual(material.original_filename, "volcano.html")
         self.assertEqual(material.material_type, EduMaterial.MaterialType.REFERENCE)
         self.assertIn("volcano", material.html_content)
+        self.assertFalse(material.is_published)
+
+    @patch("edu_materials.classification._call_json_response")
+    def test_create_material_can_publish_immediately_when_requested(self, mock_call_json_response):
+        mock_call_json_response.return_value = self._mock_classification_payload()
+
+        response = self.client.post(
+            reverse("edu_materials:create"),
+            {
+                "title": "바로 공개 자료",
+                "input_mode": "paste",
+                "html_content": "<html><body>publish</body></html>",
+                "publish_now": "1",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        material = EduMaterial.objects.get(title="바로 공개 자료")
+        self.assertTrue(material.is_published)
 
     @patch("edu_materials.classification._call_json_response", side_effect=EduMaterialClassificationError("boom"))
     def test_create_material_keeps_saved_material_when_classification_fails(self, _mock_call_json_response):
@@ -211,13 +230,45 @@ class EduMaterialViewTests(TestCase):
             is_published=True,
         )
 
-        response = self.client.get(reverse("edu_materials:main"))
+        response = self.client.get(reverse("edu_materials:main"), data={"tab": "my"})
 
         self.assertEqual(response.status_code, 200)
-        my_titles = {item.title for item in response.context["my_materials"]}
-        shared_titles = {item.title for item in response.context["shared_materials"]}
+        my_titles = {item.title for item in response.context["my_page_obj"].object_list}
         self.assertEqual(my_titles, {my_private.title, my_public.title})
-        self.assertEqual(shared_titles, {my_public.title, other_public.title})
+        self.assertEqual(response.context["shared_material_count"], 2)
+        self.assertEqual(response.context["active_tab"], "my")
+
+    def test_main_view_allows_anonymous_public_browse_only(self):
+        other_user = self._create_other_user()
+        EduMaterial.objects.create(
+            teacher=self.user,
+            title="내 비공개 자료",
+            html_content="<html><body>mine</body></html>",
+            is_published=False,
+        )
+        public_material = EduMaterial.objects.create(
+            teacher=other_user,
+            title="공개 둘러보기 자료",
+            html_content="<html><body>shared</body></html>",
+            is_published=True,
+            subject="SCIENCE",
+            material_type=EduMaterial.MaterialType.PRACTICE,
+            tags=["화산"],
+            summary="로그인 없이 볼 수 있는 공개 자료",
+            search_text="화산 공개 자료",
+            metadata_status=EduMaterial.MetadataStatus.DONE,
+        )
+
+        response = Client().get(reverse("edu_materials:main"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["active_tab"], "shared")
+        self.assertIsNone(response.context["my_page_obj"])
+        self.assertEqual(response.context["shared_material_count"], 1)
+        self.assertEqual(response.context["featured_public_material"].title, public_material.title)
+        self.assertContains(response, "공개 자료 둘러보기")
+        self.assertNotContains(response, reverse("edu_materials:create"))
+        self.assertNotContains(response, "새 자료 만들기")
 
     def test_main_view_filters_by_subject(self):
         other_user = self._create_other_user()
@@ -248,13 +299,12 @@ class EduMaterialViewTests(TestCase):
             metadata_status=EduMaterial.MetadataStatus.DONE,
         )
 
-        response = self.client.get(reverse("edu_materials:main"), data={"subject": "SCIENCE"})
+        response = self.client.get(reverse("edu_materials:main"), data={"subject": "SCIENCE", "tab": "my"})
 
         self.assertEqual(response.status_code, 200)
-        my_titles = {item.title for item in response.context["my_materials"]}
-        shared_titles = {item.title for item in response.context["shared_materials"]}
+        my_titles = {item.title for item in response.context["my_page_obj"].object_list}
         self.assertEqual(my_titles, {"과학 자료"})
-        self.assertEqual(shared_titles, {"과학 자료"})
+        self.assertEqual(response.context["shared_material_count"], 1)
 
     def test_main_view_filters_by_query_material_type_grade_and_tag(self):
         other_user = self._create_other_user()
@@ -294,12 +344,50 @@ class EduMaterialViewTests(TestCase):
                 "material_type": EduMaterial.MaterialType.QUIZ,
                 "grade": "4학년 1학기",
                 "tag": "화산",
+                "tab": "shared",
             },
         )
 
         self.assertEqual(response.status_code, 200)
-        shared_titles = {item.title for item in response.context["shared_materials"]}
-        self.assertEqual(shared_titles, {matching.title})
+        self.assertEqual(response.context["featured_public_material"].title, matching.title)
+        self.assertEqual(list(response.context["shared_page_obj"].object_list), [])
+        self.assertNotContains(response, "조건에 맞는 공개 자료가 없습니다.")
+
+    def test_main_view_shared_tab_uses_lightweight_cards_without_live_preview(self):
+        other_user = self._create_other_user()
+        featured = EduMaterial.objects.create(
+            teacher=other_user,
+            title="대표 공개 자료",
+            html_content="<html><body>featured</body></html>",
+            is_published=True,
+            subject="SCIENCE",
+            material_type=EduMaterial.MaterialType.REFERENCE,
+            summary="대표로 보여줄 공개 자료",
+            search_text="대표 공개 자료",
+            metadata_status=EduMaterial.MetadataStatus.DONE,
+            view_count=10,
+        )
+        browse = EduMaterial.objects.create(
+            teacher=other_user,
+            title="공개 자료 카드",
+            html_content="<html><body>shared</body></html>",
+            is_published=True,
+            subject="SCIENCE",
+            material_type=EduMaterial.MaterialType.REFERENCE,
+            summary="가벼운 카드로 보여줄 공개 자료",
+            search_text="공개 자료 카드",
+            metadata_status=EduMaterial.MetadataStatus.DONE,
+        )
+
+        response = self.client.get(reverse("edu_materials:main"), data={"tab": "shared"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["active_tab"], "shared")
+        self.assertEqual(response.context["featured_public_material"].id, featured.id)
+        self.assertContains(response, browse.title)
+        self.assertContains(response, "Live Preview")
+        self.assertContains(response, reverse("edu_materials:render", args=[featured.id]))
+        self.assertNotContains(response, reverse("edu_materials:render", args=[browse.id]))
 
     def test_main_view_renders_summary_and_tags(self):
         material = EduMaterial.objects.create(
@@ -325,6 +413,32 @@ class EduMaterialViewTests(TestCase):
         self.assertContains(response, reverse("edu_materials:render", args=[material.id]))
         self.assertNotContains(response, "미리보기 확인 중")
         self.assertNotContains(response, "다시 보기")
+
+    def test_clone_material_creates_private_copy_for_teacher(self):
+        other_user = self._create_other_user()
+        source = EduMaterial.objects.create(
+            teacher=other_user,
+            title="공개 원본 자료",
+            html_content="<html><body>clone me</body></html>",
+            is_published=True,
+            subject="SCIENCE",
+            grade="4학년 1학기",
+            unit_title="화산과 지진",
+            material_type=EduMaterial.MaterialType.PRACTICE,
+            tags=["화산", "실험"],
+            summary="복제 테스트용 자료",
+            metadata_status=EduMaterial.MetadataStatus.DONE,
+        )
+
+        response = self.client.post(reverse("edu_materials:clone", args=[source.id]))
+
+        self.assertEqual(response.status_code, 302)
+        clone = EduMaterial.objects.exclude(id=source.id).get(teacher=self.user)
+        self.assertEqual(clone.title, "공개 원본 자료 (내 자료)")
+        self.assertFalse(clone.is_published)
+        self.assertEqual(clone.subject, source.subject)
+        self.assertEqual(clone.material_type, source.material_type)
+        self.assertEqual(clone.metadata_source, EduMaterial.MetadataSource.MANUAL)
 
     def test_run_view_requires_published_material(self):
         material = EduMaterial.objects.create(
@@ -381,7 +495,7 @@ class EduMaterialViewTests(TestCase):
         self.assertContains(response, "data-frame-mode=\"preview\"")
         self.assertContains(response, "Desktop")
         self.assertContains(response, "Mobile")
-        self.assertContains(response, "메타데이터 수정")
+        self.assertContains(response, "분류 수정")
         self.assertContains(response, "현재 내용으로 다시 자동 분류")
         self.assertEqual(response.context["preview_default_viewport"]["id"], "desktop")
 
