@@ -11,6 +11,36 @@
         max-height: 160px;
     }
 
+    #quickdrop-root [data-quickdrop-brand="true"] {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    #quickdrop-root [data-quickdrop-brand-icon="true"] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 3rem;
+        height: 3rem;
+        flex-shrink: 0;
+        border-radius: 1rem;
+        border: 1px solid #c7d8ff;
+        background: linear-gradient(180deg, #f5f9ff, #e2ecff);
+        color: #1f4fd1;
+        font-size: 1.25rem;
+        font-weight: 900;
+        line-height: 1;
+        box-shadow: 0 14px 30px rgba(31, 79, 209, 0.12);
+    }
+
+    #quickdrop-root [data-quickdrop-empty-icon="true"] {
+        background: linear-gradient(180deg, #f5f9ff, #e2ecff);
+        color: #1f4fd1;
+        border: 1px solid #c7d8ff;
+        box-shadow: 0 18px 40px rgba(31, 79, 209, 0.14);
+    }
+
     #quickdrop-root [data-quickdrop-composer-shell="true"] {
         border-color: #d5e3ff;
         background: linear-gradient(180deg, rgba(233, 242, 255, 0.96), rgba(247, 250, 255, 0.98));
@@ -58,6 +88,13 @@
     @media (max-width: 639px) {
         #quickdrop-root [data-quickdrop-shell="true"] {
             border-radius: 28px;
+        }
+
+        #quickdrop-root [data-quickdrop-brand-icon="true"] {
+            width: 2.75rem;
+            height: 2.75rem;
+            border-radius: 0.9rem;
+            font-size: 1.15rem;
         }
 
         #quickdrop-root [data-quickdrop-composer-shell="true"] {
@@ -128,8 +165,8 @@
 
             <div class="relative border-b border-white/70 px-4 py-4 sm:px-6">
                 <div data-quickdrop-header-row="true" class="flex items-start justify-between gap-3">
-                    <div class="min-w-0 flex items-center gap-3">
-                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,_#1f4fd1,_#4f8bff)] text-xl font-black text-white shadow-[0_18px_40px_rgba(31,79,209,0.28)]">
+                    <div data-quickdrop-brand="true" class="min-w-0 flex items-center gap-3">
+                        <div data-quickdrop-brand-icon="true">
                             ↔
                         </div>
                         <div class="min-w-0">
@@ -165,7 +202,7 @@
                 <div class="relative flex-1 px-4 py-6 sm:px-6 sm:py-8">
                     <div class="mx-auto flex max-w-3xl flex-col gap-5">
                         <div id="empty-state" class="rounded-[26px] border border-dashed border-[#d4e0ff] bg-[linear-gradient(180deg,_rgba(255,255,255,0.95),rgba(241,246,255,0.92))] p-5 text-center shadow-[0_24px_60px_rgba(44,86,170,0.08)] sm:rounded-[30px] sm:p-10">
-                            <div id="empty-icon" class="mx-auto flex h-12 w-12 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,_#1f4fd1,_#7ba9ff)] text-xl text-white shadow-[0_18px_40px_rgba(31,79,209,0.22)] sm:h-14 sm:w-14 sm:rounded-[20px] sm:text-2xl">↔</div>
+                            <div id="empty-icon" data-quickdrop-empty-icon="true" class="mx-auto flex h-12 w-12 items-center justify-center rounded-[18px] text-xl font-black sm:h-14 sm:w-14 sm:rounded-[20px] sm:text-2xl">↔</div>
                             <p id="empty-badge" class="mt-5 text-[11px] font-black uppercase tracking-[0.28em] text-[#5c73b8]">전송 준비</p>
                             <h2 id="empty-title" class="mt-3 text-lg font-black leading-tight text-[#14213d] sm:text-3xl">PC끼리도, 휴대폰끼리도 바로 옮기세요.</h2>
                             <p id="empty-body" class="mx-auto mt-3 max-w-xl text-[13px] leading-6 text-slate-500 sm:text-base sm:leading-7">붙여넣기나 사진 선택만 하면 방금 보낸 내용은 위에, 오늘 기록은 아래에 남습니다.</p>

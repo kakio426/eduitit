@@ -575,11 +575,13 @@
     height: 2.75rem;
     flex-shrink: 0;
     border-radius: 1rem;
-    background: linear-gradient(135deg, #1f4fd1 0%, #4f8bff 100%);
-    color: #ffffff;
+    border: 1px solid #c7d8ff;
+    background: linear-gradient(180deg, #f5f9ff 0%, #e2ecff 100%);
+    color: #1f4fd1;
     font-size: 1.15rem;
     font-weight: 900;
-    box-shadow: 0 16px 34px rgba(31, 79, 209, 0.22);
+    line-height: 1;
+    box-shadow: 0 14px 30px rgba(31, 79, 209, 0.12);
 }
 
 .home-v4-quickdrop-summary {
