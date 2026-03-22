@@ -13,6 +13,8 @@
 - In dirty workspace, commit only request-scoped files after `git diff --cached` review
 - Do not change global settings/flags unless explicitly requested
 - Teacher workflow UIs must define "next action visibility" and "processing feedback" before visual polish
+- Mobile input/share/composer UIs are blocked from completion unless the primary CTA stays fully visible at 360px width and the input target is obvious without explanation
+- For teacher-facing input/share/composer UIs, lock the mobile wireframe after checking real reference patterns first
 - Home UI keeps a role-based 3-zone shell by default: left navigation, center primary work, right personal utilities/favorites/SNS
 - PostgreSQL 운영 장애는 Railway 라이브 로그 기준으로 먼저 보고, `select_for_update()` 잠금 쿼리에는 nullable relation join을 섞지 않는다
 
@@ -29,6 +31,23 @@
 - 운영 판단, 설계 의도, 접근 제한 사유 설명은 서비스 화면이 아니라 `claude.md`, handoff 문서, 관리자용 가이드에만 남긴다.
 - UI 문구가 "사용자에게 필요한 다음 행동"이 아니라 "운영자가 왜 이렇게 만들었는지 설명"하고 있으면 삭제 또는 구조 수정이 우선이다.
 - 홈 화면은 기본적으로 `왼쪽 탐색 / 가운데 오늘 작업 / 오른쪽 개인 유틸` 3영역 셸을 유지하고, 새 UI는 먼저 어느 역할에 속하는지 분류한 뒤 넣는다.
+
+### 1-1) 모바일 입력/전송 UI 가드레일
+- 이 규칙은 `텍스트 입력 + 사진 업로드 + 전송`처럼 교사가 바로 써야 하는 입력/composer 화면에 우선 적용한다.
+- 기능이 작동해도 아래 기준을 통과하지 못하면 완료로 간주하지 않는다.
+  - 360px 폭 기준에서 `주 버튼`이 끝까지 보여야 한다.
+  - 사용자가 첫눈에 `어디에 입력하는지`, `어디를 눌러 보내는지` 알 수 있어야 한다.
+  - 사진/업로드 버튼은 `업로드 CTA`처럼 보여야 하며, 남는 공간을 채운 네모 박스처럼 보여서는 안 된다.
+  - 모바일에서는 입력부를 데스크톱 축소판처럼 한 줄에 우겨 넣지 않는다. 필요하면 `사진 -> 입력 -> 보내기` 순의 세로 흐름을 기본으로 한다.
+- 작업 시작 전에 반드시 한다.
+  1. 실제 레퍼런스 5개 이상 확인
+  2. 모바일 와이어프레임 먼저 확정
+  3. `주 CTA 가시성 / 입력 위치 인지 / 비활성 버튼 대비 / 첫 화면 설명 과다 여부`를 체크리스트로 고정
+- 머지 전 차단 조건:
+  - 주 CTA가 잘리거나 화면 밖으로 밀림
+  - 입력창과 버튼이 같은 색/톤으로 섞여 입력 위치가 흐림
+  - 장식 박스가 입력/전송보다 더 먼저 보임
+  - "설명을 읽어야만" 어디에 입력하고 무엇을 누를지 이해됨
 
 ### 2) 한국어 인코딩 사고 방지
 - 한글 이상 징후 발견 시: 기능 수정 중단 → 텍스트 복구 → 기능 재적용 순서 고정

@@ -79,22 +79,88 @@
     }
 
     #quickdrop-root #photo-trigger {
-        border: 1px solid #b9ceff;
-        background: linear-gradient(135deg, #eef4ff, #dce8ff);
-        color: #1842aa;
-        box-shadow: 0 12px 24px rgba(31, 79, 209, 0.12);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.8rem;
+        min-width: 10.5rem;
+        min-height: 4rem;
+        padding: 0.85rem 1rem 0.85rem 0.9rem;
+        border: 1px solid #c8d8fb;
+        border-radius: 1.3rem;
+        background: linear-gradient(180deg, #ffffff, #f1f6ff);
+        color: #173f9f;
+        box-shadow: 0 12px 24px rgba(31, 79, 209, 0.08);
+        transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease;
+    }
+
+    #quickdrop-root #photo-trigger:hover,
+    #quickdrop-root #photo-trigger:focus-visible {
+        border-color: #9db9fa;
+        background: linear-gradient(180deg, #ffffff, #eaf2ff);
+        box-shadow: 0 16px 30px rgba(31, 79, 209, 0.14);
+        transform: translateY(-1px);
+    }
+
+    #quickdrop-root [data-quickdrop-photo-icon="true"] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.5rem;
+        height: 2.5rem;
+        flex-shrink: 0;
+        border-radius: 0.95rem;
+        background: linear-gradient(135deg, #1f4fd1, #6a9cff);
+        color: #ffffff;
+        font-size: 1.1rem;
+        font-weight: 900;
+        line-height: 1;
+        box-shadow: 0 12px 22px rgba(31, 79, 209, 0.22);
+    }
+
+    #quickdrop-root [data-quickdrop-photo-copy="true"] {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.18rem;
+        text-align: left;
+        line-height: 1.1;
+    }
+
+    #quickdrop-root [data-quickdrop-photo-title="true"] {
+        font-size: 0.96rem;
+        font-weight: 900;
+        color: #173f9f;
+    }
+
+    #quickdrop-root [data-quickdrop-photo-meta="true"] {
+        font-size: 0.73rem;
+        font-weight: 700;
+        color: #6c7fa8;
     }
 
     #quickdrop-root #send-text-btn {
-        min-width: 5.5rem;
-        transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease, color 180ms ease;
+        min-width: 6.25rem;
+        min-height: 4rem;
+        border: 1px solid transparent;
+        background: linear-gradient(135deg, #1f4fd1, #4f8bff);
+        color: #ffffff;
+        box-shadow: 0 16px 30px rgba(31, 79, 209, 0.22);
+        transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease, color 180ms ease, border-color 180ms ease;
+    }
+
+    #quickdrop-root #send-text-btn:hover,
+    #quickdrop-root #send-text-btn:focus-visible {
+        transform: translateY(-1px);
+        box-shadow: 0 18px 32px rgba(31, 79, 209, 0.28);
     }
 
     #quickdrop-root #send-text-btn:disabled {
         opacity: 1;
-        background: linear-gradient(180deg, #c8d6f7, #b6c8f3);
+        border-color: #c4d4f8;
+        background: linear-gradient(180deg, #b3c7f3, #9eb7ec);
         color: #f8fbff;
-        box-shadow: none;
+        box-shadow: 0 8px 18px rgba(112, 142, 211, 0.16);
     }
 
     @media (max-width: 639px) {
@@ -151,13 +217,30 @@
         }
 
         #quickdrop-root #photo-trigger {
+            min-width: 0;
             border: 1px solid #cad8f7;
             background: #ffffff;
             color: #1842aa;
             box-shadow: none;
-            justify-content: center;
             width: 100%;
             min-height: 3.25rem;
+            padding: 0.8rem 0.95rem;
+        }
+
+        #quickdrop-root [data-quickdrop-photo-icon="true"] {
+            width: 2.2rem;
+            height: 2.2rem;
+            border-radius: 0.85rem;
+            font-size: 1rem;
+            box-shadow: none;
+        }
+
+        #quickdrop-root [data-quickdrop-photo-title="true"] {
+            font-size: 0.95rem;
+        }
+
+        #quickdrop-root [data-quickdrop-photo-meta="true"] {
+            font-size: 0.7rem;
         }
 
         #quickdrop-root #send-text-btn {
@@ -376,9 +459,12 @@
                     <div class="mx-auto max-w-3xl">
                         <div data-quickdrop-composer-shell="true" class="rounded-[30px] border border-white/80 bg-white/90 p-3 shadow-[0_24px_60px_rgba(44,86,170,0.12)]">
                             <div data-quickdrop-composer-row="true" class="flex items-stretch gap-3">
-                                <button type="button" id="photo-trigger" class="flex h-12 shrink-0 items-center gap-2 rounded-[18px] border border-[#d8e4ff] bg-[linear-gradient(135deg,_#f3f7ff,_#e4edff)] px-4 text-sm font-black text-[#1f4fd1] shadow-sm" aria-label="사진 보내기">
-                                    <span aria-hidden="true">🖼</span>
-                                    <span>사진</span>
+                                <button type="button" id="photo-trigger" class="shrink-0" aria-label="사진 보내기">
+                                    <span data-quickdrop-photo-icon="true" aria-hidden="true">+</span>
+                                    <span data-quickdrop-photo-copy="true">
+                                        <span data-quickdrop-photo-title="true">사진 추가</span>
+                                        <span data-quickdrop-photo-meta="true">앨범에서 선택</span>
+                                    </span>
                                 </button>
                                 <form id="text-form" method="post" action="{{ send_text_url }}" class="flex min-w-0 flex-1 items-stretch gap-3">
                                     {% csrf_token %}
