@@ -24,6 +24,10 @@
         }).format(value);
     }
 
+    function normalizeTextContent(value) {
+        return String(value || '').trim();
+    }
+
     function createApp(root, bootstrap) {
         return {
             root: root,
@@ -379,7 +383,7 @@
                 }
 
                 if (this.textOutput) {
-                    this.textOutput.textContent = this.session.current_text || '';
+                    this.textOutput.textContent = normalizeTextContent(this.session.current_text);
                 }
                 if (this.messageTime) {
                     this.messageTime.textContent = this.session.updated_at ? formatTime(this.session.updated_at) : '';
@@ -471,7 +475,7 @@
                 if (item.kind === 'image') {
                     body.textContent = item.filename || '사진을 보냈습니다.';
                 } else {
-                    body.textContent = item.text || '';
+                    body.textContent = normalizeTextContent(item.text);
                 }
 
                 card.appendChild(header);

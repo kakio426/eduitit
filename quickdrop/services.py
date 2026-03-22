@@ -417,7 +417,7 @@ def ensure_live_session(channel):
 
 
 def validate_text_payload(raw_text):
-    text = str(raw_text or "")
+    text = str(raw_text or "").replace("\r\n", "\n").strip()
     if not text.strip():
         raise ValidationError("옮길 텍스트가 비어 있습니다.")
     if len(text.encode("utf-8")) > TEXT_MAX_BYTES:

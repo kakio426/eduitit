@@ -211,6 +211,24 @@ class QuickdropViewTests(TestCase):
         self.assertEqual(QuickdropItem.objects.filter(channel=self.channel).count(), 1)
         self.assertEqual(len(response.json()["session"]["today_items"]), 1)
 
+    def test_send_text_trims_outer_blank_lines(self):
+        self.client.logout()
+        cookie_value, _device = self._pair_device_cookie()
+        self.client.cookies[DEVICE_COOKIE_NAME] = cookie_value
+
+        response = self.client.post(
+            reverse("quickdrop:send_text", kwargs={"slug": self.channel.slug}),
+            {"text": "\n\n  이거이거  \n\n"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        session = self.channel.sessions.get(status=QuickdropSession.STATUS_LIVE)
+        item = QuickdropItem.objects.get(channel=self.channel)
+        self.assertEqual(session.current_text, "이거이거")
+        self.assertEqual(item.text, "이거이거")
+        self.assertEqual(response.json()["session"]["current_text"], "이거이거")
+
     def test_second_device_can_replace_same_live_payload(self):
         self.client.logout()
         first_cookie, _first_device = self._pair_device_cookie("교실 PC")
