@@ -431,22 +431,21 @@
             },
 
             buildHistoryItem(item, isLatest) {
+                const isCompactMobile = this.isCompactMobile();
                 const card = document.createElement('article');
-                card.className = 'rounded-[22px] border px-4 py-3 shadow-sm ' + (
-                    isLatest
-                        ? 'border-[#cfe0ff] bg-[#f4f8ff]'
-                        : 'border-[#e6ecff] bg-white'
-                );
+                card.className = isCompactMobile
+                    ? 'rounded-[18px] border border-[#dbe5fb] bg-white px-4 py-3'
+                    : 'rounded-[22px] border px-4 py-3 shadow-sm ' + (
+                        isLatest
+                            ? 'border-[#cfe0ff] bg-[#f4f8ff]'
+                            : 'border-[#e6ecff] bg-white'
+                    );
 
                 const header = document.createElement('div');
                 header.className = 'flex items-center justify-between gap-3';
 
                 const left = document.createElement('div');
-                left.className = 'min-w-0 flex items-center gap-2';
-
-                const badge = document.createElement('span');
-                badge.className = 'flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-[#e8efff] text-sm font-black text-[#1f4fd1]';
-                badge.textContent = item.kind === 'image' ? '🖼' : 'T';
+                left.className = 'min-w-0';
 
                 const meta = document.createElement('div');
                 meta.className = 'min-w-0';
@@ -461,22 +460,14 @@
 
                 meta.appendChild(label);
                 meta.appendChild(time);
-                left.appendChild(badge);
                 left.appendChild(meta);
 
-                const right = document.createElement('span');
-                right.className = 'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black ' + (
-                    item.kind === 'image'
-                        ? 'bg-[#fff1dd] text-[#9a5e00]'
-                        : 'bg-[#edf3ff] text-[#1f4fd1]'
-                );
-                right.textContent = isLatest ? '방금' : (item.kind === 'image' ? '사진' : '텍스트');
-
                 header.appendChild(left);
-                header.appendChild(right);
 
                 const body = document.createElement('div');
-                body.className = 'mt-3 rounded-[18px] bg-[#f8faff] px-4 py-3 text-sm leading-6 text-slate-600';
+                body.className = isCompactMobile
+                    ? 'mt-2 text-sm leading-6 text-slate-600'
+                    : 'mt-3 rounded-[18px] bg-[#f8faff] px-4 py-3 text-sm leading-6 text-slate-600';
                 if (item.kind === 'image') {
                     body.textContent = item.filename || '사진을 보냈습니다.';
                 } else {
@@ -565,7 +556,6 @@
                 }
                 const hasValue = Boolean((this.textInput.value || '').trim());
                 this.sendTextBtn.disabled = !hasValue;
-                this.sendTextBtn.classList.toggle('opacity-50', !hasValue);
                 this.sendTextBtn.classList.toggle('cursor-not-allowed', !hasValue);
             },
 

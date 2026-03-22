@@ -85,9 +85,50 @@
         box-shadow: 0 12px 24px rgba(31, 79, 209, 0.12);
     }
 
+    #quickdrop-root #send-text-btn {
+        min-width: 5.5rem;
+        transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease, color 180ms ease;
+    }
+
+    #quickdrop-root #send-text-btn:disabled {
+        opacity: 1;
+        background: linear-gradient(180deg, #c8d6f7, #b6c8f3);
+        color: #f8fbff;
+        box-shadow: none;
+    }
+
     @media (max-width: 639px) {
+        section {
+            background: #f3f6fb;
+            padding-left: 0.85rem;
+            padding-right: 0.85rem;
+        }
+
+        #quickdrop-root {
+            max-width: 100%;
+        }
+
         #quickdrop-root [data-quickdrop-shell="true"] {
-            border-radius: 28px;
+            border-radius: 1.5rem;
+            border-color: #dbe5fb;
+            background: #ffffff;
+            box-shadow: 0 16px 40px rgba(31, 79, 209, 0.08);
+            backdrop-filter: none;
+        }
+
+        #quickdrop-root [data-quickdrop-shell="true"] > .pointer-events-none {
+            display: none;
+        }
+
+        #quickdrop-root [data-quickdrop-mobile-sticky="true"] {
+            position: sticky;
+            bottom: 0;
+            z-index: 10;
+            margin-left: -0.25rem;
+            margin-right: -0.25rem;
+            padding-left: 0.25rem;
+            padding-right: 0.25rem;
+            background: linear-gradient(180deg, rgba(243, 246, 251, 0), rgba(243, 246, 251, 0.96) 22%, rgba(243, 246, 251, 1) 100%);
         }
 
         #quickdrop-root [data-quickdrop-brand-icon="true"] {
@@ -98,31 +139,105 @@
         }
 
         #quickdrop-root [data-quickdrop-composer-shell="true"] {
-            border-color: #ccdcff;
-            background: linear-gradient(180deg, rgba(232, 241, 255, 0.99), rgba(247, 250, 255, 0.99));
-            box-shadow: 0 20px 44px rgba(44, 86, 170, 0.14);
+            border-color: #dbe5fb;
+            background: #f7faff;
+            box-shadow: none;
         }
 
         #quickdrop-root [data-quickdrop-textbox="true"] {
-            border: 1px solid #bdd0ff;
-            background: linear-gradient(180deg, #ffffff, #f9fbff);
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.94), 0 10px 24px rgba(31, 79, 209, 0.08);
+            border: 1px solid #cad8f7;
+            background: #ffffff;
+            box-shadow: none;
         }
 
         #quickdrop-root #photo-trigger {
-            border: 1px solid #b5cbff;
-            background: linear-gradient(135deg, #e9f1ff, #d3e3ff);
+            border: 1px solid #cad8f7;
+            background: #ffffff;
             color: #1842aa;
-            box-shadow: 0 14px 28px rgba(31, 79, 209, 0.14);
+            box-shadow: none;
+            justify-content: center;
+            width: 100%;
+            min-height: 3.25rem;
         }
 
         #quickdrop-root #send-text-btn {
+            width: 100%;
+            min-height: 3.25rem;
+            border-radius: 1rem;
             padding-left: 1rem;
             padding-right: 1rem;
         }
 
         #quickdrop-root #text-input {
             min-height: 54px;
+        }
+
+        #quickdrop-root [data-quickdrop-composer-shell="true"] {
+            padding: 0.9rem;
+        }
+
+        #quickdrop-root [data-quickdrop-composer-row="true"] {
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        #quickdrop-root #text-form {
+            width: 100%;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        #quickdrop-root [data-quickdrop-textbox="true"] {
+            width: 100%;
+            border-radius: 1.15rem;
+            padding: 0.9rem 0.95rem;
+        }
+
+        #quickdrop-root [data-quickdrop-textbox-label="true"] {
+            font-size: 12px;
+            padding: 0.4rem 0.7rem;
+        }
+
+        #quickdrop-root #composer-tip-row {
+            margin-top: 0.65rem;
+        }
+
+        #quickdrop-root #composer-tip-mobile {
+            text-align: left;
+            line-height: 1.5;
+        }
+
+        #quickdrop-root #empty-state,
+        #quickdrop-root #history-panel,
+        #quickdrop-root #image-panel .relative.overflow-visible,
+        #quickdrop-root #text-panel .relative.overflow-visible {
+            border-radius: 1.25rem;
+            box-shadow: none;
+        }
+
+        #quickdrop-root #empty-state,
+        #quickdrop-root #history-panel {
+            border-color: #dbe5fb;
+            background: #ffffff;
+        }
+
+        #quickdrop-root #text-panel .relative.overflow-visible {
+            background: #edf4ff;
+            border: 1px solid #cfe0ff;
+        }
+
+        #quickdrop-root #image-panel .relative.overflow-visible {
+            border-color: #dbe5fb;
+        }
+
+        #quickdrop-root #text-panel .absolute,
+        #quickdrop-root #image-panel .absolute {
+            display: none;
+        }
+
+        #quickdrop-root #helper-summary-mobile {
+            font-size: 11px;
+            line-height: 1.45;
         }
     }
 
@@ -257,10 +372,10 @@
                     </div>
                 </div>
 
-                <div class="relative border-t border-white/80 bg-[linear-gradient(180deg,_rgba(251,253,255,0.45),rgba(255,255,255,0.92))] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 sm:px-6">
+                <div data-quickdrop-mobile-sticky="true" class="relative border-t border-white/80 bg-[linear-gradient(180deg,_rgba(251,253,255,0.45),rgba(255,255,255,0.92))] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 sm:px-6">
                     <div class="mx-auto max-w-3xl">
                         <div data-quickdrop-composer-shell="true" class="rounded-[30px] border border-white/80 bg-white/90 p-3 shadow-[0_24px_60px_rgba(44,86,170,0.12)]">
-                            <div class="flex items-stretch gap-3">
+                            <div data-quickdrop-composer-row="true" class="flex items-stretch gap-3">
                                 <button type="button" id="photo-trigger" class="flex h-12 shrink-0 items-center gap-2 rounded-[18px] border border-[#d8e4ff] bg-[linear-gradient(135deg,_#f3f7ff,_#e4edff)] px-4 text-sm font-black text-[#1f4fd1] shadow-sm" aria-label="사진 보내기">
                                     <span aria-hidden="true">🖼</span>
                                     <span>사진</span>
