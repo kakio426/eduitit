@@ -14,7 +14,7 @@ from .services import (
     build_channel_bootstrap,
     build_pair_token,
     build_qr_data_url,
-    cleanup_expired_sessions,
+    cleanup_stale_activity,
     consume_pair_token,
     end_session,
     ensure_live_session,
@@ -22,6 +22,7 @@ from .services import (
     get_or_create_personal_channel,
     get_service,
     issue_device_cookie,
+    latest_today_item,
     load_pair_token,
     pair_token_matches,
     pair_device_for_request,
@@ -31,6 +32,7 @@ from .services import (
     resolve_channel_access,
     resolve_default_access,
     session_payload,
+    today_item_count,
     broadcast_item_replace,
     broadcast_session_ended,
 )
@@ -77,18 +79,19 @@ def _json_or_redirect(request, channel, payload=None):
 
 @login_required
 def landing_view(request):
-    cleanup_expired_sessions()
+    cleanup_stale_activity()
     channel = get_or_create_personal_channel(request.user)
     owner_device, _created = remember_owner_device_for_request(request, channel)
     token = build_pair_token(channel)
     pair_url = request.build_absolute_uri(reverse("quickdrop:pair", args=[token]))
-    current_session = get_live_session(channel)
+    latest_item = latest_today_item(channel)
     context = {
         "service": get_service(),
         "channel": channel,
         "pair_url": pair_url,
         "pair_qr_data_url": build_qr_data_url(pair_url),
-        "current_session": current_session,
+        "latest_item": latest_item,
+        "today_count": today_item_count(channel),
         "active_devices": channel.devices.filter(revoked_at__isnull=True).order_by("paired_at"),
         "open_url": reverse("quickdrop:channel", kwargs={"slug": channel.slug}),
     }
@@ -99,7 +102,7 @@ def landing_view(request):
 
 @require_GET
 def open_view(request):
-    cleanup_expired_sessions()
+    cleanup_stale_activity()
     access = resolve_default_access(request)
     if access is None:
         return _apply_private_response_headers(redirect(f"{reverse('account_login')}?next={reverse('quickdrop:landing')}"))
@@ -108,7 +111,7 @@ def open_view(request):
 
 @require_GET
 def channel_view(request, slug):
-    cleanup_expired_sessions()
+    cleanup_stale_activity()
     access = resolve_channel_access(request, slug)
     if access is None:
         return _forbidden_pairing()
@@ -174,7 +177,7 @@ def send_text_view(request, slug):
 
     session, _ = ensure_live_session(access["channel"])
     try:
-        session = replace_with_text(session, request.POST.get("text"))
+        session = replace_with_text(session, request.POST.get("text"), sender_label=access["device_label"])
     except ValidationError as exc:
         return _error_response(request, " ".join(exc.messages))
 
@@ -190,7 +193,7 @@ def send_image_view(request, slug):
 
     session, _ = ensure_live_session(access["channel"])
     try:
-        session = replace_with_image(session, request.FILES.get("image"))
+        session = replace_with_image(session, request.FILES.get("image"), sender_label=access["device_label"])
     except ValidationError as exc:
         return _error_response(request, " ".join(exc.messages))
 
@@ -215,23 +218,23 @@ def end_session_view(request, slug):
 
 
 @require_GET
-def session_image_view(request, slug, session_id):
+def item_image_view(request, slug, item_id):
     access = resolve_channel_access(request, slug)
     if access is None:
         return _forbidden_pairing()
 
-    session = access["channel"].sessions.filter(id=session_id).first()
-    if session is None or session.current_kind != session.KIND_IMAGE or not session.current_image:
+    item = access["channel"].items.filter(id=item_id, kind="image").first()
+    if item is None or not item.image:
         raise Http404()
 
-    image_file = session.current_image.open("rb")
+    image_file = item.image.open("rb")
     response = FileResponse(
         image_file,
-        content_type=session.current_mime_type or "application/octet-stream",
+        content_type=item.mime_type or "application/octet-stream",
     )
     response["Content-Disposition"] = content_disposition_header(
         False,
-        session.current_filename or "quickdrop-image",
+        item.filename or "quickdrop-image",
     )
     response["X-Content-Type-Options"] = "nosniff"
     return _apply_private_response_headers(response)
@@ -277,7 +280,7 @@ def revoke_device_view(request, slug, device_id):
 @require_POST
 @ratelimit(key=_quickdrop_public_ratelimit_key, rate="60/10m", method="POST", block=True, group="quickdrop_share_target")
 def share_target_view(request):
-    cleanup_expired_sessions()
+    cleanup_stale_activity()
     access = resolve_default_access(request)
     if access is None:
         return _forbidden_pairing()
@@ -296,9 +299,9 @@ def share_target_view(request):
 
     try:
         if shared_file is not None:
-            session = replace_with_image(session, shared_file)
+            session = replace_with_image(session, shared_file, sender_label=access["device_label"])
         else:
-            session = replace_with_text(session, shared_text)
+            session = replace_with_text(session, shared_text, sender_label=access["device_label"])
     except ValidationError as exc:
         return _apply_private_response_headers(HttpResponse(" ".join(exc.messages), status=400))
 

@@ -1,7 +1,7 @@
 {# 미니 서비스 카드 - teacher-first 공통 카드 #}
 {# 사용: {% include 'core/includes/mini_card.html' with product=product %} #}
-{% with card_title=product.public_service_name|default:product.title card_body=product.home_card_summary|default:product.teacher_first_support_label|default:product.solve_text|default:product.description %}
-<div class="relative rounded-[1.45rem] border border-slate-200 bg-white px-4 py-3.5 shadow-sm transition-all cursor-pointer group product-card hover:border-indigo-200 hover:shadow-md"
+{% with card_title=product.home_compact_title|default:product.public_service_name|default:product.title card_body=product.home_card_summary|default:product.teacher_first_support_label|default:product.solve_text|default:product.description %}
+<div class="relative rounded-[1.45rem] border border-slate-200 bg-white px-4 {% if product.launch_route_name == 'messagebox:main' %}py-3{% else %}py-3.5{% endif %} shadow-sm transition-all cursor-pointer group product-card hover:border-indigo-200 hover:shadow-md"
     data-home-v2-service-card="true"
     data-teacher-first-card="true"
     {% if show_access_state %}data-home-v2-access-status="{{ product.home_access_status_label }}"{% endif %}
@@ -20,7 +20,7 @@
                 {% endif %}
             </div>
             <div class="min-w-0 flex-1 pt-0.5">
-                <h4 class="text-[1.15rem] md:text-[1.28rem] font-black leading-6 text-slate-900 group-hover:text-indigo-600 transition-colors line-clamp-2">
+                <h4 class="{% if product.launch_route_name == 'messagebox:main' %}text-[1.05rem] md:text-[1.15rem] line-clamp-1{% else %}text-[1.15rem] md:text-[1.28rem] line-clamp-2{% endif %} font-black leading-6 text-slate-900 group-hover:text-indigo-600 transition-colors">
                     {{ card_title }}
                 </h4>
             </div>

@@ -554,6 +554,120 @@
     transform: translateY(-1px);
 }
 
+.home-v4-quickdrop-panel {
+    display: grid;
+    gap: 0.85rem;
+    border-color: #d8e5ff;
+    background: linear-gradient(180deg, rgba(248, 251, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 100%);
+}
+
+.home-v4-quickdrop-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+}
+
+.home-v4-quickdrop-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    flex-shrink: 0;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #1f4fd1 0%, #4f8bff 100%);
+    color: #ffffff;
+    font-size: 1.15rem;
+    font-weight: 900;
+    box-shadow: 0 16px 34px rgba(31, 79, 209, 0.22);
+}
+
+.home-v4-quickdrop-summary {
+    margin: 0;
+    color: #475569;
+    font-size: 0.93rem;
+    line-height: 1.6;
+}
+
+.home-v4-quickdrop-status-row {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.home-v4-quickdrop-status-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: fit-content;
+    max-width: 100%;
+    border-radius: 999px;
+    padding: 0.45rem 0.8rem;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.78rem;
+    font-weight: 900;
+    line-height: 1;
+    border: 1px solid #e2e8f0;
+}
+
+.home-v4-quickdrop-status-pill--filled {
+    background: #edf4ff;
+    border-color: #cfe0ff;
+    color: #1f4fd1;
+}
+
+.home-v4-quickdrop-meta {
+    color: #64748b;
+    font-size: 0.82rem;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.home-v4-quickdrop-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+}
+
+.home-v4-quickdrop-primary,
+.home-v4-quickdrop-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.7rem;
+    border-radius: 999px;
+    padding: 0 1rem;
+    font-size: 0.88rem;
+    font-weight: 900;
+    transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.home-v4-quickdrop-primary {
+    background: linear-gradient(135deg, #1f4fd1 0%, #4f8bff 100%);
+    color: #ffffff;
+    box-shadow: 0 16px 34px rgba(31, 79, 209, 0.2);
+}
+
+.home-v4-quickdrop-primary:hover,
+.home-v4-quickdrop-primary:focus-visible {
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+.home-v4-quickdrop-secondary {
+    border: 1px solid #d6e0f5;
+    background: #ffffff;
+    color: #1f4fd1;
+}
+
+.home-v4-quickdrop-secondary:hover,
+.home-v4-quickdrop-secondary:focus-visible {
+    border-color: #bfd3ff;
+    background: #f8fbff;
+    color: #143da7;
+    transform: translateY(-1px);
+}
+
 .home-v4-sns-item {
     display: block;
     border-radius: 1.4rem;

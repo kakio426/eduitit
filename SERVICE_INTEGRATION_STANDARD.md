@@ -8,6 +8,7 @@
 - New services MUST appear in the global service launcher by default
 - Lock classroom core journey first: `teacher create -> publish -> student QR join`
 - Keep one clear path per goal: merge duplicated cards/buttons/sections
+- Keep home surfaces on a stable 3-zone shell: left navigation, center primary work, right personal utilities/favorites/SNS
 - Classroom distribution screen MUST support immediate QR fullscreen
 - Assume scale early: if list can exceed 100, include search + pagination
 - Replace developer jargon with teacher-friendly copy and concrete examples
@@ -86,6 +87,15 @@
 - 목록 데이터가 100개 이상이 될 가능성이 있으면 초기 설계에 검색/페이지네이션 또는 동등한 탐색 장치를 포함한다.
 - 교사 대상 안내 문구는 개발자 용어(예: 헤더 줄, raw schema) 대신 작업 중심 문장으로 작성한다.
 - 배포 전 수업 시작 기준 30초 시나리오를 점검한다: `교사 배포 -> QR 전체화면 -> 학생 입장 확인`.
+
+### 8-1) 홈 3영역 셸 계약 (MUST for authenticated home surfaces)
+- 홈은 기본적으로 `왼쪽 메뉴 / 가운데 메인 작업 / 오른쪽 즐겨찾기·개인 유틸·SNS` 3영역 셸을 유지한다.
+- 왼쪽은 탐색 전용이다. 섹션 이동, 전체 도구 찾기, 범주 전환 외의 큰 실행 UI를 두지 않는다.
+- 가운데는 `오늘 실제로 하는 일`만 둔다. 캘린더, 대표 작업, 현재 집중 과업을 우선하고 설명형 카드가 주 작업을 덮지 않게 한다.
+- 오른쪽은 `자주 여는 작은 도구`만 둔다. 즐겨찾기, 바로 실행 카드, 개인 유틸, SNS처럼 짧고 반복적인 사용 흐름만 허용한다.
+- 홈에 새 UI를 넣을 때는 먼저 `탐색 / 메인 작업 / 개인 유틸` 중 어느 역할인지 분류하고, 그 결과에 따라 위치를 결정한다.
+- 홈 구조 변경의 기본 대응은 레이아웃 재발명보다 `기존 3영역 안에서 위계·밀도·카드 크기 조정`을 먼저 검토하는 것이다.
+- 오른쪽에는 긴 설명, 큰 설정 화면, 다단계 흐름을 직접 두지 않는다. 그런 기능은 서비스 내부 화면으로 보내고 홈에는 압축 진입점만 둔다.
 
 ### 9) 공개 표면 보안 체크 (MUST)
 - 공개 로그인 화면에는 관리자 진입 링크, 숨은 테스트 로그인 폼, 내부 전용 CTA를 두지 않는다.

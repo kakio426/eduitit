@@ -34,15 +34,11 @@ class QuickdropConsumer(AsyncJsonWebsocketConsumer):
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
         session = await self._ensure_live_session()
+        snapshot = await self._build_session_snapshot(session)
         await self.send_json(
             {
                 "type": "session.snapshot",
-                "payload": build_channel_bootstrap(
-                    self.channel_obj,
-                    session=session,
-                    is_owner=self.is_owner,
-                    device_label=self.device_label,
-                )["session"],
+                "payload": snapshot,
             }
         )
 
@@ -108,6 +104,15 @@ class QuickdropConsumer(AsyncJsonWebsocketConsumer):
     def _ensure_live_session(self):
         session, _ = ensure_live_session(self.channel_obj)
         return session
+
+    @database_sync_to_async
+    def _build_session_snapshot(self, session):
+        return build_channel_bootstrap(
+            self.channel_obj,
+            session=session,
+            is_owner=self.is_owner,
+            device_label=self.device_label,
+        )["session"]
 
     @database_sync_to_async
     def _touch_access(self):

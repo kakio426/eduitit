@@ -50,6 +50,34 @@ class QuickdropDevice(models.Model):
         return self.revoked_at is None
 
 
+class QuickdropItem(models.Model):
+    KIND_TEXT = "text"
+    KIND_IMAGE = "image"
+    KIND_CHOICES = [
+        (KIND_TEXT, "텍스트"),
+        (KIND_IMAGE, "이미지"),
+    ]
+
+    channel = models.ForeignKey(
+        QuickdropChannel,
+        on_delete=models.CASCADE,
+        related_name="items",
+    )
+    sender_label = models.CharField(max_length=80, blank=True)
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES)
+    text = models.TextField(blank=True)
+    image = models.ImageField(upload_to="quickdrop/items/%Y/%m/", blank=True, null=True)
+    mime_type = models.CharField(max_length=100, blank=True)
+    filename = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+
+    def __str__(self):
+        return f"{self.channel.slug}:{self.kind}:{self.id}"
+
+
 class QuickdropSession(models.Model):
     STATUS_LIVE = "live"
     STATUS_ENDED = "ended"

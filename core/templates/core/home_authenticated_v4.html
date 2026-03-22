@@ -249,6 +249,27 @@
                                 {% endif %}
                             </article>
 
+                            {% if quickdrop_home_card %}
+                            <section class="home-v4-card home-v4-quickdrop-panel" data-home-v4-quickdrop-panel="true">
+                                <div class="home-v4-quickdrop-head">
+                                    <div class="home-v4-quickdrop-icon" aria-hidden="true">↔</div>
+                                    <div class="min-w-0">
+                                        <p class="text-[11px] font-black uppercase tracking-[0.18em] text-[#5c73b8]">빠른 전송</p>
+                                        <h2 class="mt-1 text-lg font-black text-slate-900">{{ quickdrop_home_card.title }}</h2>
+                                    </div>
+                                </div>
+                                <p class="home-v4-quickdrop-summary">{{ quickdrop_home_card.summary }}</p>
+                                <div class="home-v4-quickdrop-status-row">
+                                    <span class="home-v4-quickdrop-status-pill{% if quickdrop_home_card.status_tone == 'filled' %} home-v4-quickdrop-status-pill--filled{% endif %}">{{ quickdrop_home_card.status }}</span>
+                                    <span class="home-v4-quickdrop-meta">{{ quickdrop_home_card.meta_text }}</span>
+                                </div>
+                                <div class="home-v4-quickdrop-actions" data-home-v4-quickdrop-actions="true">
+                                    <a href="{{ quickdrop_home_card.open_url }}" class="home-v4-quickdrop-primary">바로 열기</a>
+                                    <a href="{{ quickdrop_home_card.manage_url }}" class="home-v4-quickdrop-secondary">새 기기 연결</a>
+                                </div>
+                            </section>
+                            {% endif %}
+
                             <section class="home-v4-community-section home-v4-top-sns" data-home-v4-sns-panel="true">
                                 {% include 'core/partials/sns_widget.html' with embed_mode='full' compact_posts=True %}
                             </section>

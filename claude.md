@@ -13,6 +13,7 @@
 - In dirty workspace, commit only request-scoped files after `git diff --cached` review
 - Do not change global settings/flags unless explicitly requested
 - Teacher workflow UIs must define "next action visibility" and "processing feedback" before visual polish
+- Home UI keeps a role-based 3-zone shell by default: left navigation, center primary work, right personal utilities/favorites/SNS
 - PostgreSQL 운영 장애는 Railway 라이브 로그 기준으로 먼저 보고, `select_for_update()` 잠금 쿼리에는 nullable relation join을 섞지 않는다
 
 ---
@@ -27,6 +28,7 @@
 - 관리자나 개발자에게 설명하는 메타 문장(예: "보여드립니다", "안내합니다", "우회 진입", "막는 이유")을 서비스 UI 본문에 넣지 않는다.
 - 운영 판단, 설계 의도, 접근 제한 사유 설명은 서비스 화면이 아니라 `claude.md`, handoff 문서, 관리자용 가이드에만 남긴다.
 - UI 문구가 "사용자에게 필요한 다음 행동"이 아니라 "운영자가 왜 이렇게 만들었는지 설명"하고 있으면 삭제 또는 구조 수정이 우선이다.
+- 홈 화면은 기본적으로 `왼쪽 탐색 / 가운데 오늘 작업 / 오른쪽 개인 유틸` 3영역 셸을 유지하고, 새 UI는 먼저 어느 역할에 속하는지 분류한 뒤 넣는다.
 
 ### 2) 한국어 인코딩 사고 방지
 - 한글 이상 징후 발견 시: 기능 수정 중단 → 텍스트 복구 → 기능 재적용 순서 고정

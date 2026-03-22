@@ -30,11 +30,9 @@
             session: bootstrap.session || {},
             ws: null,
             pingTimer: null,
-            experiencedMode: false,
 
             init() {
                 this.cacheDom();
-                this.restoreExperience();
                 this.render();
                 this.bindForms();
                 this.bindClipboard();
@@ -48,8 +46,6 @@
                 this.sessionStatus = byId('session-status');
                 this.sessionExpiry = byId('session-expiry');
                 this.helperChipPaste = byId('helper-chip-paste');
-                this.helperChipPhoto = byId('helper-chip-photo');
-                this.helperChipShare = byId('helper-chip-share');
                 this.helperChipRepeat = byId('helper-chip-repeat');
                 this.emptyState = byId('empty-state');
                 this.emptyBadge = byId('empty-badge');
@@ -64,13 +60,15 @@
                 this.imageOutput = byId('image-output');
                 this.imageFilename = byId('image-filename');
                 this.saveImageBtn = byId('save-image-btn');
+                this.historySummary = byId('history-summary');
+                this.historyEmpty = byId('history-empty');
+                this.historyList = byId('history-list');
                 this.textForm = byId('text-form');
                 this.textInput = byId('text-input');
                 this.sendTextBtn = byId('send-text-btn');
                 this.imageForm = byId('image-form');
                 this.imageInput = byId('image-input');
                 this.photoTrigger = byId('photo-trigger');
-                this.composerTipRow = byId('composer-tip-row');
                 this.composerTipDesktop = byId('composer-tip-desktop');
                 this.composerTipMobile = byId('composer-tip-mobile');
                 this.endSessionBtn = byId('end-session-btn');
@@ -78,34 +76,42 @@
             },
 
             bindForms() {
-                this.textForm.addEventListener('submit', (event) => {
-                    event.preventDefault();
-                    this.sendText(this.textInput.value);
-                });
-                this.imageForm.addEventListener('submit', (event) => {
-                    event.preventDefault();
-                    this.sendImage(this.imageInput.files[0]);
-                });
-                this.textInput.addEventListener('input', () => {
-                    this.resizeComposer();
-                    this.syncComposerState();
-                });
-                this.textInput.addEventListener('keydown', (event) => {
-                    if (event.key !== 'Enter' || event.shiftKey || event.isComposing) {
-                        return;
-                    }
-                    const value = (this.textInput.value || '').trim();
-                    if (!value) {
-                        return;
-                    }
-                    event.preventDefault();
-                    this.sendText(this.textInput.value);
-                });
-                this.imageInput.addEventListener('change', () => {
-                    if (this.imageInput.files[0]) {
+                if (this.textForm) {
+                    this.textForm.addEventListener('submit', (event) => {
+                        event.preventDefault();
+                        this.sendText(this.textInput.value);
+                    });
+                }
+                if (this.imageForm) {
+                    this.imageForm.addEventListener('submit', (event) => {
+                        event.preventDefault();
                         this.sendImage(this.imageInput.files[0]);
-                    }
-                });
+                    });
+                }
+                if (this.textInput) {
+                    this.textInput.addEventListener('input', () => {
+                        this.resizeComposer();
+                        this.syncComposerState();
+                    });
+                    this.textInput.addEventListener('keydown', (event) => {
+                        if (event.key !== 'Enter' || event.shiftKey || event.isComposing) {
+                            return;
+                        }
+                        const value = (this.textInput.value || '').trim();
+                        if (!value) {
+                            return;
+                        }
+                        event.preventDefault();
+                        this.sendText(this.textInput.value);
+                    });
+                }
+                if (this.imageInput) {
+                    this.imageInput.addEventListener('change', () => {
+                        if (this.imageInput.files[0]) {
+                            this.sendImage(this.imageInput.files[0]);
+                        }
+                    });
+                }
             },
 
             bindClipboard() {
@@ -134,52 +140,60 @@
             },
 
             bindActions() {
-                this.copyTextBtn.addEventListener('click', async () => {
-                    try {
-                        await navigator.clipboard.writeText(this.session.current_text || '');
-                        this.toast('텍스트를 복사했습니다.', 'success');
-                    } catch (_error) {
-                        this.toast('텍스트 복사에 실패했습니다.', 'error');
-                    }
-                });
-
-                this.saveImageBtn.addEventListener('click', async () => {
-                    if (!this.session.current_image_url) {
-                        return;
-                    }
-                    try {
-                        const response = await fetch(this.session.current_image_url, { credentials: 'same-origin' });
-                        if (!response.ok) {
-                            throw new Error('image fetch failed');
+                if (this.copyTextBtn) {
+                    this.copyTextBtn.addEventListener('click', async () => {
+                        try {
+                            await navigator.clipboard.writeText(this.session.current_text || '');
+                            this.toast('텍스트를 복사했습니다.', 'success');
+                        } catch (_error) {
+                            this.toast('텍스트 복사에 실패했습니다.', 'error');
                         }
-                        const blob = await response.blob();
-                        const filename = this.session.current_filename || 'shared-image';
-                        const file = new File([blob], filename, { type: blob.type || 'image/png' });
+                    });
+                }
 
-                        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-                            await navigator.share({ files: [file], title: filename });
+                if (this.saveImageBtn) {
+                    this.saveImageBtn.addEventListener('click', async () => {
+                        if (!this.session.current_image_url) {
                             return;
                         }
+                        try {
+                            const response = await fetch(this.session.current_image_url, { credentials: 'same-origin' });
+                            if (!response.ok) {
+                                throw new Error('image fetch failed');
+                            }
+                            const blob = await response.blob();
+                            const filename = this.session.current_filename || 'shared-image';
+                            const file = new File([blob], filename, { type: blob.type || 'image/png' });
 
-                        const link = document.createElement('a');
-                        link.href = URL.createObjectURL(blob);
-                        link.download = filename;
-                        link.click();
-                        window.setTimeout(function () {
-                            URL.revokeObjectURL(link.href);
-                        }, 300);
-                    } catch (_error) {
-                        this.toast('이미지를 저장할 수 없습니다.', 'error');
-                    }
-                });
+                            if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                                await navigator.share({ files: [file], title: filename });
+                                return;
+                            }
 
-                this.endSessionBtn.addEventListener('click', () => {
-                    this.post(this.root.dataset.endSessionUrl, new FormData(), null, '내용을 지우고 마쳤습니다.');
-                });
+                            const link = document.createElement('a');
+                            link.href = URL.createObjectURL(blob);
+                            link.download = filename;
+                            link.click();
+                            window.setTimeout(function () {
+                                URL.revokeObjectURL(link.href);
+                            }, 300);
+                        } catch (_error) {
+                            this.toast('이미지를 저장할 수 없습니다.', 'error');
+                        }
+                    });
+                }
 
-                this.photoTrigger.addEventListener('click', () => {
-                    this.imageInput.click();
-                });
+                if (this.endSessionBtn) {
+                    this.endSessionBtn.addEventListener('click', () => {
+                        this.post(this.root.dataset.endSessionUrl, new FormData(), null, '오늘 내용을 비웠습니다.');
+                    });
+                }
+
+                if (this.photoTrigger) {
+                    this.photoTrigger.addEventListener('click', () => {
+                        this.imageInput.click();
+                    });
+                }
             },
 
             async sendText(text) {
@@ -226,7 +240,6 @@
                     if (data.session && Object.keys(data.session).length) {
                         this.session = data.session;
                     }
-                    this.markExperienced();
                     this.render();
                     if (onSuccess) {
                         onSuccess();
@@ -243,18 +256,21 @@
                 const kind = this.session.current_kind || 'empty';
                 const isText = kind === 'text';
                 const isImage = kind === 'image';
-                if (isText || isImage || this.session.status === 'ended') {
-                    this.markExperienced();
+                const todayItems = Array.isArray(this.session.today_items) ? this.session.today_items : [];
+
+                if (this.emptyState) {
+                    this.emptyState.classList.toggle('hidden', isText || isImage);
                 }
-                this.emptyState.classList.toggle('hidden', isText || isImage);
-                this.textPanel.classList.toggle('hidden', !isText);
-                this.imagePanel.classList.toggle('hidden', !isImage);
+                if (this.textPanel) {
+                    this.textPanel.classList.toggle('hidden', !isText);
+                }
+                if (this.imagePanel) {
+                    this.imagePanel.classList.toggle('hidden', !isImage);
+                }
 
                 if (this.sessionStatus) {
-                    if (kind === 'text') {
-                        this.sessionStatus.textContent = '텍스트 도착';
-                    } else if (kind === 'image') {
-                        this.sessionStatus.textContent = '사진 도착';
+                    if (todayItems.length) {
+                        this.sessionStatus.textContent = '오늘 ' + String(todayItems.length) + '개';
                     } else if (this.session.status === 'ended') {
                         this.sessionStatus.textContent = '지금은 비어 있음';
                     } else {
@@ -262,46 +278,27 @@
                     }
                 }
                 if (this.sessionExpiry) {
-                    this.sessionExpiry.textContent = this.session.status === 'ended'
-                        ? '내용은 삭제되었고 통로만 남아 있습니다.'
-                        : '마지막 활동 후 10분 유휴면 자동 삭제됩니다.';
+                    this.sessionExpiry.textContent = '오늘 기록은 내일 정리됩니다';
                 }
-                if (this.helperChipPaste && this.helperChipPhoto && this.helperChipShare && this.helperChipRepeat) {
-                    this.helperChipPaste.classList.toggle('hidden', this.experiencedMode);
-                    this.helperChipPhoto.classList.toggle('hidden', this.experiencedMode);
-                    this.helperChipShare.classList.toggle('hidden', this.experiencedMode);
-                    this.helperChipRepeat.classList.toggle('hidden', !this.experiencedMode);
+                if (this.helperChipPaste) {
+                    this.helperChipPaste.textContent = 'PC끼리 · 휴대폰끼리 · PC와 휴대폰 모두 가능';
                 }
-                if (this.composerTipRow && this.composerTipDesktop && this.composerTipMobile) {
-                    this.composerTipRow.classList.toggle('opacity-70', this.experiencedMode);
-                    this.composerTipDesktop.textContent = this.experiencedMode
-                        ? '붙여넣기 또는 Enter로 바로 전송'
-                        : '데스크톱은 화면 어디서든 Ctrl+V';
-                    this.composerTipMobile.textContent = this.experiencedMode
-                        ? '사진은 버튼 한 번이면 충분합니다'
-                        : '휴대폰은 입력창 또는 사진 버튼';
+                if (this.helperChipRepeat) {
+                    this.helperChipRepeat.textContent = '이 기기는 기억되어 다시 로그인하지 않아도 열 수 있습니다';
                 }
-                if (this.emptyState) {
-                    this.emptyState.dataset.density = this.experiencedMode ? 'compact' : 'full';
-                }
+
                 if (this.emptyBadge && this.emptyTitle && this.emptyBody) {
                     if (this.session.status === 'ended') {
-                        this.emptyBadge.textContent = '내용 정리됨';
-                        this.emptyTitle.textContent = '방금 보낸 내용은 바로 지워졌습니다.';
-                        this.emptyBody.textContent = '통로는 그대로 남아 있으니, 다시 붙여넣거나 사진을 고르면 새 전송이 바로 시작됩니다.';
-                    } else if (this.experiencedMode) {
-                        this.emptyBadge.textContent = '바로 보내기';
-                        this.emptyTitle.textContent = '이제 바로 붙여넣거나 사진만 고르세요.';
-                        this.emptyBody.textContent = '처음 연결은 끝났습니다. 여기서는 바로 보내고, 다른 기기에서는 바로 복사하거나 저장하면 됩니다.';
+                        this.emptyBadge.textContent = '오늘 내용 비움';
+                        this.emptyTitle.textContent = '오늘 기록을 비웠습니다.';
+                        this.emptyBody.textContent = '다시 붙여넣거나 사진을 고르면 새 기록이 바로 쌓입니다.';
                     } else {
                         this.emptyBadge.textContent = '전송 준비';
-                        this.emptyTitle.textContent = '두 기기에서 같은 통로만 열어 두세요.';
-                        this.emptyBody.textContent = '데스크톱은 그냥 붙여넣기, 휴대폰은 아래 입력창이나 공유하기에서 바로 보내면 됩니다.';
+                        this.emptyTitle.textContent = 'PC끼리도, 휴대폰끼리도 바로 옮기세요.';
+                        this.emptyBody.textContent = '붙여넣기나 사진 선택만 하면 방금 보낸 내용은 위에, 오늘 기록은 아래에 남습니다.';
                     }
                 }
-                if (this.emptyPillRow) {
-                    this.emptyPillRow.classList.toggle('hidden', this.experiencedMode);
-                }
+
                 if (this.textOutput) {
                     this.textOutput.textContent = this.session.current_text || '';
                 }
@@ -321,15 +318,100 @@
                     }
                     this.imageFilename.textContent = imageMeta.join(' · ') || '사진 파일';
                 }
+                if (this.historySummary) {
+                    this.historySummary.textContent = '오늘 ' + String(todayItems.length) + '개';
+                }
+                if (this.endSessionBtn) {
+                    this.endSessionBtn.classList.toggle('hidden', todayItems.length === 0);
+                }
+                this.renderHistory(todayItems);
                 this.resizeComposer();
                 this.syncComposerState();
+            },
+
+            renderHistory(items) {
+                if (!this.historyList || !this.historyEmpty) {
+                    return;
+                }
+
+                this.historyList.innerHTML = '';
+                this.historyEmpty.classList.toggle('hidden', items.length > 0);
+                if (!items.length) {
+                    return;
+                }
+
+                const fragment = document.createDocumentFragment();
+                items.forEach((item, index) => {
+                    fragment.appendChild(this.buildHistoryItem(item, index === items.length - 1));
+                });
+                this.historyList.appendChild(fragment);
+            },
+
+            buildHistoryItem(item, isLatest) {
+                const card = document.createElement('article');
+                card.className = 'rounded-[22px] border px-4 py-3 shadow-sm ' + (
+                    isLatest
+                        ? 'border-[#cfe0ff] bg-[#f4f8ff]'
+                        : 'border-[#e6ecff] bg-white'
+                );
+
+                const header = document.createElement('div');
+                header.className = 'flex items-center justify-between gap-3';
+
+                const left = document.createElement('div');
+                left.className = 'min-w-0 flex items-center gap-2';
+
+                const badge = document.createElement('span');
+                badge.className = 'flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-[#e8efff] text-sm font-black text-[#1f4fd1]';
+                badge.textContent = item.kind === 'image' ? '🖼' : 'T';
+
+                const meta = document.createElement('div');
+                meta.className = 'min-w-0';
+
+                const label = document.createElement('p');
+                label.className = 'truncate text-sm font-black text-[#14213d]';
+                label.textContent = item.sender_label || '연결된 기기';
+
+                const time = document.createElement('p');
+                time.className = 'text-xs text-slate-400';
+                time.textContent = formatTime(item.created_at);
+
+                meta.appendChild(label);
+                meta.appendChild(time);
+                left.appendChild(badge);
+                left.appendChild(meta);
+
+                const right = document.createElement('span');
+                right.className = 'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black ' + (
+                    item.kind === 'image'
+                        ? 'bg-[#fff1dd] text-[#9a5e00]'
+                        : 'bg-[#edf3ff] text-[#1f4fd1]'
+                );
+                right.textContent = isLatest ? '방금' : (item.kind === 'image' ? '사진' : '텍스트');
+
+                header.appendChild(left);
+                header.appendChild(right);
+
+                const body = document.createElement('div');
+                body.className = 'mt-3 rounded-[18px] bg-[#f8faff] px-4 py-3 text-sm leading-6 text-slate-600';
+                if (item.kind === 'image') {
+                    body.textContent = item.filename || '사진을 보냈습니다.';
+                } else {
+                    body.textContent = item.text || '';
+                }
+
+                card.appendChild(header);
+                card.appendChild(body);
+                return card;
             },
 
             connectSocket() {
                 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
                 this.ws = new WebSocket(protocol + '//' + window.location.host + this.root.dataset.wsUrl);
                 this.ws.addEventListener('open', () => {
-                    this.connectionBadge.textContent = '실시간 연결됨';
+                    if (this.connectionBadge) {
+                        this.connectionBadge.textContent = '실시간 연결됨';
+                    }
                     this.startPing();
                 });
                 this.ws.addEventListener('message', (event) => {
@@ -340,7 +422,9 @@
                     }
                 });
                 this.ws.addEventListener('close', () => {
-                    this.connectionBadge.textContent = '다시 연결 중';
+                    if (this.connectionBadge) {
+                        this.connectionBadge.textContent = '다시 연결 중';
+                    }
                     window.clearInterval(this.pingTimer);
                     window.setTimeout(() => this.connectSocket(), 1500);
                 });
@@ -392,23 +476,10 @@
                 this.sendTextBtn.classList.toggle('cursor-not-allowed', !hasValue);
             },
 
-            restoreExperience() {
-                this.experiencedMode = window.localStorage.getItem('quickdrop-experienced') === '1';
-            },
-
-            markExperienced() {
-                if (this.experiencedMode) {
-                    return;
-                }
-                this.experiencedMode = true;
-                try {
-                    window.localStorage.setItem('quickdrop-experienced', '1');
-                } catch (_error) {
-                    return;
-                }
-            },
-
             toast(message, tone) {
+                if (!this.toastRoot) {
+                    return;
+                }
                 const item = document.createElement('div');
                 item.className = 'rounded-2xl px-4 py-3 text-sm font-black text-white shadow-xl ' + (
                     tone === 'error' ? 'bg-[#d64564]' : 'bg-[#14213d]'

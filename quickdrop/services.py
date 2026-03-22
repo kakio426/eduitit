@@ -15,7 +15,7 @@ import qrcode
 
 from products.models import Product
 
-from .models import QuickdropChannel, QuickdropDevice, QuickdropSession
+from .models import QuickdropChannel, QuickdropDevice, QuickdropItem, QuickdropSession
 
 
 SERVICE_ROUTE = "quickdrop:landing"
@@ -24,9 +24,9 @@ DEVICE_COOKIE_NAME = "quickdrop_device"
 DEVICE_COOKIE_PATH = "/quickdrop/"
 DEVICE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365
 PAIR_TOKEN_MAX_AGE = 60 * 10
-SESSION_IDLE_SECONDS = 60 * 10
 TEXT_MAX_BYTES = 50 * 1024
 IMAGE_MAX_BYTES = 10 * 1024 * 1024
+TODAY_ITEM_LIMIT = 30
 ALLOWED_IMAGE_TYPES = {
     "image/png",
     "image/jpeg",
@@ -41,8 +41,9 @@ def get_service():
     return Product.objects.filter(launch_route_name=SERVICE_ROUTE).first() or Product.objects.filter(title=SERVICE_TITLE).first()
 
 
-def session_idle_cutoff(now=None):
-    return (now or timezone.now()) - timedelta(seconds=SESSION_IDLE_SECONDS)
+def history_day_start(now=None):
+    current = timezone.localtime(now or timezone.now())
+    return current.replace(hour=0, minute=0, second=0, microsecond=0)
 
 
 def build_qr_data_url(raw_text):
@@ -249,8 +250,42 @@ def get_live_session(channel):
     return channel.sessions.filter(status=QuickdropSession.STATUS_LIVE).order_by("-created_at").first()
 
 
-def session_is_expired(session, now=None):
-    return bool(session and session.is_live and session.last_activity_at <= session_idle_cutoff(now))
+def today_items_qs(channel, now=None):
+    return channel.items.filter(created_at__gte=history_day_start(now)).order_by("-created_at", "-id")
+
+
+def latest_today_item(channel, now=None):
+    return today_items_qs(channel, now).first()
+
+
+def list_today_items(channel, now=None, limit=TODAY_ITEM_LIMIT):
+    items = list(today_items_qs(channel, now)[:limit])
+    items.reverse()
+    return items
+
+
+def today_item_count(channel, now=None):
+    return channel.items.filter(created_at__gte=history_day_start(now)).count()
+
+
+def delete_item_image(item):
+    if not item.image:
+        return
+    item.image.delete(save=False)
+
+
+def delete_item_record(item):
+    delete_item_image(item)
+    item.delete()
+
+
+def clear_today_items(channel, now=None):
+    items = list(today_items_qs(channel, now))
+    cleared = 0
+    for item in items:
+        delete_item_record(item)
+        cleared += 1
+    return cleared
 
 
 def delete_session_image(session):
@@ -259,19 +294,15 @@ def delete_session_image(session):
     session.current_image.delete(save=False)
 
 
-@transaction.atomic
-def end_session(session, *, ended_at=None):
-    ended_at = ended_at or timezone.now()
-    if session.status == QuickdropSession.STATUS_ENDED and session.current_kind == QuickdropSession.KIND_EMPTY:
-        return session
-
+def set_session_empty(session, *, status=QuickdropSession.STATUS_LIVE, ended_at=None, last_activity_at=None):
     delete_session_image(session)
-    session.status = QuickdropSession.STATUS_ENDED
+    session.status = status
     session.current_kind = QuickdropSession.KIND_EMPTY
     session.current_text = ""
+    session.current_image = None
     session.current_mime_type = ""
     session.current_filename = ""
-    session.last_activity_at = ended_at
+    session.last_activity_at = last_activity_at or timezone.now()
     session.ended_at = ended_at
     session.save(
         update_fields=[
@@ -289,26 +320,65 @@ def end_session(session, *, ended_at=None):
     return session
 
 
+def sync_session_from_item(session, item):
+    session.status = QuickdropSession.STATUS_LIVE
+    session.current_kind = QuickdropSession.KIND_TEXT if item.kind == QuickdropItem.KIND_TEXT else QuickdropSession.KIND_IMAGE
+    session.current_text = item.text if item.kind == QuickdropItem.KIND_TEXT else ""
+    session.current_image = None
+    session.current_mime_type = item.mime_type or ("text/plain" if item.kind == QuickdropItem.KIND_TEXT else "")
+    session.current_filename = item.filename
+    session.last_activity_at = item.created_at
+    session.ended_at = None
+    session.save(
+        update_fields=[
+            "status",
+            "current_kind",
+            "current_text",
+            "current_image",
+            "current_mime_type",
+            "current_filename",
+            "last_activity_at",
+            "ended_at",
+            "updated_at",
+        ]
+    )
+    return session
+
+
+@transaction.atomic
+def end_session(session, *, ended_at=None, clear_today=True):
+    ended_at = ended_at or timezone.now()
+    if clear_today:
+        clear_today_items(session.channel, now=ended_at)
+    return set_session_empty(
+        session,
+        status=QuickdropSession.STATUS_ENDED,
+        ended_at=ended_at,
+        last_activity_at=ended_at,
+    )
+
+
 @transaction.atomic
 def ensure_live_session(channel):
     live_session = get_live_session(channel)
-    if session_is_expired(live_session):
-        ended_session = end_session(live_session)
-        broadcast_session_ended(ended_session)
-        live_session = None
+    latest_item = latest_today_item(channel)
 
     if live_session:
+        if latest_item:
+            sync_session_from_item(live_session, latest_item)
+        elif live_session.current_kind != QuickdropSession.KIND_EMPTY:
+            set_session_empty(live_session, status=QuickdropSession.STATUS_LIVE, ended_at=None, last_activity_at=timezone.now())
         return live_session, False
 
-    return (
-        QuickdropSession.objects.create(
-            channel=channel,
-            status=QuickdropSession.STATUS_LIVE,
-            current_kind=QuickdropSession.KIND_EMPTY,
-            last_activity_at=timezone.now(),
-        ),
-        True,
+    live_session = QuickdropSession.objects.create(
+        channel=channel,
+        status=QuickdropSession.STATUS_LIVE,
+        current_kind=QuickdropSession.KIND_EMPTY,
+        last_activity_at=timezone.now(),
     )
+    if latest_item:
+        sync_session_from_item(live_session, latest_item)
+    return live_session, True
 
 
 def validate_text_payload(raw_text):
@@ -331,83 +401,89 @@ def validate_image_upload(uploaded_file):
     return uploaded_file
 
 
+def normalize_sender_label(sender_label):
+    return str(sender_label or "").strip()[:80]
+
+
 @transaction.atomic
-def replace_with_text(session, raw_text):
+def replace_with_text(session, raw_text, *, sender_label=""):
     text = validate_text_payload(raw_text)
-    delete_session_image(session)
-    session.status = QuickdropSession.STATUS_LIVE
-    session.current_kind = QuickdropSession.KIND_TEXT
-    session.current_text = text
-    session.current_image = None
-    session.current_mime_type = "text/plain"
-    session.current_filename = ""
-    session.last_activity_at = timezone.now()
-    session.ended_at = None
-    session.save(
-        update_fields=[
-            "status",
-            "current_kind",
-            "current_text",
-            "current_image",
-            "current_mime_type",
-            "current_filename",
-            "last_activity_at",
-            "ended_at",
-            "updated_at",
-        ]
+    item = QuickdropItem.objects.create(
+        channel=session.channel,
+        sender_label=normalize_sender_label(sender_label),
+        kind=QuickdropItem.KIND_TEXT,
+        text=text,
+        mime_type="text/plain",
     )
+    sync_session_from_item(session, item)
     return session
 
 
 @transaction.atomic
-def replace_with_image(session, uploaded_file):
+def replace_with_image(session, uploaded_file, *, sender_label=""):
     image = validate_image_upload(uploaded_file)
-    delete_session_image(session)
-    session.status = QuickdropSession.STATUS_LIVE
-    session.current_kind = QuickdropSession.KIND_IMAGE
-    session.current_text = ""
-    session.current_image = image
-    session.current_mime_type = str(getattr(image, "content_type", "") or "")
-    session.current_filename = str(getattr(image, "name", "") or "")
-    session.last_activity_at = timezone.now()
-    session.ended_at = None
-    session.save(
-        update_fields=[
-            "status",
-            "current_kind",
-            "current_text",
-            "current_image",
-            "current_mime_type",
-            "current_filename",
-            "last_activity_at",
-            "ended_at",
-            "updated_at",
-        ]
+    item = QuickdropItem.objects.create(
+        channel=session.channel,
+        sender_label=normalize_sender_label(sender_label),
+        kind=QuickdropItem.KIND_IMAGE,
+        image=image,
+        mime_type=str(getattr(image, "content_type", "") or ""),
+        filename=str(getattr(image, "name", "") or ""),
     )
+    sync_session_from_item(session, item)
     return session
+
+
+def item_payload(item):
+    return {
+        "id": item.id,
+        "kind": item.kind,
+        "sender_label": item.sender_label,
+        "text": item.text,
+        "image_url": reverse("quickdrop:item_image", kwargs={"slug": item.channel.slug, "item_id": item.id}) if item.image else "",
+        "filename": item.filename,
+        "mime_type": item.mime_type,
+        "created_at": item.created_at.isoformat() if item.created_at else None,
+    }
 
 
 def session_payload(session):
-    expires_at = session.last_activity_at + timedelta(seconds=SESSION_IDLE_SECONDS)
+    latest_item = latest_today_item(session.channel)
+    today_items = [item_payload(item) for item in list_today_items(session.channel)]
+    if latest_item:
+        current_kind = QuickdropSession.KIND_TEXT if latest_item.kind == QuickdropItem.KIND_TEXT else QuickdropSession.KIND_IMAGE
+        current_text = latest_item.text if latest_item.kind == QuickdropItem.KIND_TEXT else ""
+        current_image_url = (
+            reverse("quickdrop:item_image", kwargs={"slug": session.channel.slug, "item_id": latest_item.id})
+            if latest_item.image
+            else ""
+        )
+        current_filename = latest_item.filename
+        current_mime_type = latest_item.mime_type or ("text/plain" if latest_item.kind == QuickdropItem.KIND_TEXT else "")
+        updated_at = latest_item.created_at.isoformat() if latest_item.created_at else None
+        status = QuickdropSession.STATUS_LIVE
+    else:
+        current_kind = QuickdropSession.KIND_EMPTY
+        current_text = ""
+        current_image_url = ""
+        current_filename = ""
+        current_mime_type = ""
+        updated_at = session.updated_at.isoformat() if session.updated_at else None
+        status = session.status
+
     return {
         "id": str(session.id),
-        "status": session.status,
-        "current_kind": session.current_kind,
-        "current_text": session.current_text,
-        "current_image_url": (
-            reverse(
-                "quickdrop:session_image",
-                kwargs={"slug": session.channel.slug, "session_id": session.id},
-            )
-            if session.current_image
-            else ""
-        ),
-        "current_filename": session.current_filename,
-        "current_mime_type": session.current_mime_type,
+        "status": status,
+        "current_kind": current_kind,
+        "current_text": current_text,
+        "current_image_url": current_image_url,
+        "current_filename": current_filename,
+        "current_mime_type": current_mime_type,
         "last_activity_at": session.last_activity_at.isoformat() if session.last_activity_at else None,
-        "expires_at": expires_at.isoformat(),
         "ended_at": session.ended_at.isoformat() if session.ended_at else None,
-        "updated_at": session.updated_at.isoformat() if session.updated_at else None,
+        "updated_at": updated_at,
+        "today_items": today_items,
+        "today_count": len(today_items),
     }
 
 
@@ -508,16 +584,33 @@ def broadcast_session_ended(session):
     )
 
 
-def cleanup_expired_sessions(now=None):
+def cleanup_stale_activity(now=None):
     now = now or timezone.now()
-    expired_sessions = list(
+    cutoff = history_day_start(now)
+    stale_items = list(
+        QuickdropItem.objects.select_related("channel")
+        .filter(created_at__lt=cutoff)
+        .order_by("created_at", "id")
+    )
+    cleared = 0
+    for item in stale_items:
+        delete_item_record(item)
+        cleared += 1
+
+    stale_sessions = list(
         QuickdropSession.objects.select_related("channel")
-        .filter(status=QuickdropSession.STATUS_LIVE, last_activity_at__lte=session_idle_cutoff(now))
+        .filter(status=QuickdropSession.STATUS_LIVE, last_activity_at__lt=cutoff)
         .order_by("last_activity_at")
     )
-    cleaned = 0
-    for session in expired_sessions:
-        end_session(session, ended_at=now)
-        broadcast_session_ended(session)
-        cleaned += 1
-    return cleaned
+    for session in stale_sessions:
+        set_session_empty(
+            session,
+            status=QuickdropSession.STATUS_ENDED,
+            ended_at=now,
+            last_activity_at=now,
+        )
+    return cleared
+
+
+def cleanup_expired_sessions(now=None):
+    return cleanup_stale_activity(now=now)

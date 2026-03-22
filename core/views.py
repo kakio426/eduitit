@@ -787,6 +787,46 @@ def _build_home_card_summary(product):
     return _replace_public_service_terms(fallback, product)
 
 
+def _is_home_utility_product(product):
+    return _product_route_name(product) == "quickdrop:landing"
+
+
+def _build_home_quickdrop_card(user, favorite_products, product_list):
+    quickdrop_product = next(
+        (product for product in product_list if _product_route_name(product) == "quickdrop:landing"),
+        None,
+    )
+    if quickdrop_product is None:
+        return None
+
+    today_count = 0
+    meta_text = "처음 한 번만 연결하면 다음부터는 바로 열 수 있어요."
+    try:
+        from quickdrop.models import QuickdropChannel
+
+        channel = QuickdropChannel.objects.filter(owner=user).first()
+        if channel is not None:
+            day_start = timezone.localtime(timezone.now()).replace(hour=0, minute=0, second=0, microsecond=0)
+            today_items = channel.items.filter(created_at__gte=day_start).order_by("-created_at", "-id")
+            today_count = today_items.count()
+            latest_item = today_items.first()
+            if latest_item is not None:
+                latest_kind = "사진" if getattr(latest_item, "kind", "") == "image" else "텍스트"
+                meta_text = f"최근 전송은 {latest_kind}입니다."
+    except Exception:
+        logger.exception("[home quickdrop] failed to build quickdrop card context")
+
+    return {
+        "title": getattr(quickdrop_product, "public_service_name", "") or getattr(quickdrop_product, "title", "") or "바로전송",
+        "summary": "PC끼리, 휴대폰끼리, PC와 휴대폰 모두 텍스트와 사진을 빠르게 옮깁니다.",
+        "status": f"오늘 {today_count}개가 남아 있습니다." if today_count else "지금 비어 있습니다.",
+        "status_tone": "filled" if today_count else "empty",
+        "meta_text": meta_text,
+        "open_url": reverse("quickdrop:open"),
+        "manage_url": reverse("quickdrop:landing"),
+    }
+
+
 def _build_product_guide_url_map(products):
     product_ids = [product.id for product in products if getattr(product, "id", None)]
     if not product_ids:
@@ -826,6 +866,9 @@ def _attach_product_launch_meta(products, user=None):
         for attr_name, attr_value in _build_teacher_first_product_labels(product).items():
             setattr(product, attr_name, attr_value)
         product.home_card_summary = _build_home_card_summary(product)
+        product.home_compact_title = ""
+        if _product_route_name(product) == "messagebox:main":
+            product.home_compact_title = "메시지 보관"
         prepared.append(product)
     return prepared
 
@@ -1068,6 +1111,7 @@ def _build_home_v4_representative_slots(
             product
             for product in candidate_products
             if _resolve_home_section_key(product) != 'external'
+            and not _is_home_utility_product(product)
         ]
     )
 
@@ -1090,7 +1134,11 @@ def _build_home_v4_representative_slots(
         )[:2]
     ]
     fixed_products = _dedupe_products(
-        [*top_used_products, *recent_products, *quick_actions],
+        [
+            product
+            for product in [*top_used_products, *recent_products, *quick_actions]
+            if not _is_home_utility_product(product)
+        ],
         limit=2,
     )
 
@@ -2665,6 +2713,11 @@ def _home_v4(request, products, posts, page_obj, feed_scope, pinned_notice_posts
         include_section_meta=True,
         user=request.user,
     )
+    quickdrop_home_card = _build_home_quickdrop_card(
+        request.user,
+        favorite_products=favorite_products,
+        product_list=product_list,
+    )
     discovery_items = _build_product_link_items(
         discovery_products,
         include_section_meta=True,
@@ -2719,6 +2772,7 @@ def _home_v4(request, products, posts, page_obj, feed_scope, pinned_notice_posts
         'games': games,
         'favorite_items': favorite_items,
         'favorite_product_ids': [product.id for product in favorite_products],
+        'quickdrop_home_card': quickdrop_home_card,
         'representative_slots': representative_slots,
         'representative_recommendations': representative_recommendations,
         'home_v4_nav_sections': home_v4_nav_sections,

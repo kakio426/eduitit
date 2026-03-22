@@ -9,7 +9,7 @@ from django.utils import timezone
 from core.context_processors import search_products
 from core.models import UserProfile
 from products.models import Product
-from quickdrop.models import QuickdropDevice, QuickdropSession
+from quickdrop.models import QuickdropDevice, QuickdropItem, QuickdropSession
 from quickdrop.services import (
     DEVICE_COOKIE_NAME,
     DEVICE_COOKIE_PATH,
@@ -57,7 +57,8 @@ class QuickdropViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.channel.slug)
-        self.assertContains(response, "QR 한 번만 찍으면")
+        self.assertContains(response, "PC끼리, 휴대폰끼리, PC와 휴대폰 모두")
+        self.assertContains(response, "로그아웃돼도 바로전송은 다시 열 수 있습니다")
         self.assertContains(response, "연결된 기기")
         self.assertEqual(response.headers["Cache-Control"], "no-store, private")
         self.assertEqual(response.headers["X-Robots-Tag"], "noindex, nofollow, noarchive")
@@ -138,7 +139,7 @@ class QuickdropViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'data-quickdrop-root="true"')
-        self.assertContains(response, "두 기기에서 같은 통로만 열어 두세요")
+        self.assertContains(response, "PC끼리도, 휴대폰끼리도 바로 옮기세요")
         self.assertEqual(self.channel.sessions.filter(status=QuickdropSession.STATUS_LIVE).count(), 1)
 
     def test_owner_channel_uses_teacher_nickname_instead_of_username(self):
@@ -163,6 +164,8 @@ class QuickdropViewTests(TestCase):
         session = self.channel.sessions.get(status=QuickdropSession.STATUS_LIVE)
         self.assertEqual(session.current_kind, QuickdropSession.KIND_TEXT)
         self.assertEqual(session.current_text, "첫 번째 텍스트")
+        self.assertEqual(QuickdropItem.objects.filter(channel=self.channel).count(), 1)
+        self.assertEqual(len(response.json()["session"]["today_items"]), 1)
 
     def test_second_device_can_replace_same_live_payload(self):
         self.client.logout()
@@ -188,8 +191,9 @@ class QuickdropViewTests(TestCase):
         live_sessions = self.channel.sessions.filter(status=QuickdropSession.STATUS_LIVE)
         self.assertEqual(live_sessions.count(), 1)
         self.assertEqual(live_sessions.first().current_text, "휴대폰 텍스트")
+        self.assertEqual(QuickdropItem.objects.filter(channel=self.channel).count(), 2)
 
-    def test_send_image_and_end_session_delete_payload(self):
+    def test_send_image_and_end_session_clear_today_history(self):
         self.client.logout()
         cookie_value, _device = self._pair_device_cookie()
         self.client.cookies[DEVICE_COOKIE_NAME] = cookie_value
@@ -203,8 +207,7 @@ class QuickdropViewTests(TestCase):
         self.assertEqual(image_response.status_code, 200)
 
         session = self.channel.sessions.get(status=QuickdropSession.STATUS_LIVE)
-        stored_name = session.current_image.name
-        self.assertTrue(bool(stored_name))
+        self.assertEqual(QuickdropItem.objects.filter(channel=self.channel).count(), 1)
 
         end_response = self.client.post(
             reverse("quickdrop:end_session", kwargs={"slug": self.channel.slug}),
@@ -214,8 +217,8 @@ class QuickdropViewTests(TestCase):
         session.refresh_from_db()
         self.assertEqual(session.status, QuickdropSession.STATUS_ENDED)
         self.assertEqual(session.current_kind, QuickdropSession.KIND_EMPTY)
-        self.assertFalse(bool(session.current_image))
         self.assertFalse(session.current_text)
+        self.assertEqual(QuickdropItem.objects.filter(channel=self.channel).count(), 0)
 
     def test_session_image_url_requires_channel_access(self):
         self.client.logout()
@@ -290,6 +293,7 @@ class QuickdropViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         session = self.channel.sessions.get(status=QuickdropSession.STATUS_LIVE)
         self.assertEqual(session.current_text, "공유시트 텍스트")
+        self.assertEqual(QuickdropItem.objects.filter(channel=self.channel).count(), 1)
 
     def test_share_target_can_replace_with_image(self):
         self.client.logout()
@@ -304,16 +308,26 @@ class QuickdropViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         session = self.channel.sessions.get(status=QuickdropSession.STATUS_LIVE)
         self.assertEqual(session.current_kind, QuickdropSession.KIND_IMAGE)
-        self.assertTrue(bool(session.current_image))
+        self.assertEqual(QuickdropItem.objects.filter(channel=self.channel).count(), 1)
 
-    def test_cleanup_command_ends_idle_live_session(self):
+    def test_cleanup_command_clears_previous_day_history(self):
         session = QuickdropSession.objects.create(
             channel=self.channel,
             status=QuickdropSession.STATUS_LIVE,
             current_kind=QuickdropSession.KIND_TEXT,
             current_text="남은 내용",
-            last_activity_at=timezone.now() - timedelta(minutes=11),
+            last_activity_at=timezone.now() - timedelta(days=1, minutes=5),
         )
+        item = QuickdropItem.objects.create(
+            channel=self.channel,
+            sender_label="교실 PC",
+            kind=QuickdropItem.KIND_TEXT,
+            text="어제 기록",
+            mime_type="text/plain",
+        )
+        stale_at = timezone.now() - timedelta(days=1, minutes=5)
+        QuickdropItem.objects.filter(pk=item.pk).update(created_at=stale_at)
+        QuickdropSession.objects.filter(pk=session.pk).update(last_activity_at=stale_at)
 
         from django.core.management import call_command
 
@@ -322,6 +336,7 @@ class QuickdropViewTests(TestCase):
         session.refresh_from_db()
         self.assertEqual(session.status, QuickdropSession.STATUS_ENDED)
         self.assertFalse(session.current_text)
+        self.assertEqual(QuickdropItem.objects.filter(channel=self.channel).count(), 0)
 
     def test_service_launcher_payload_includes_quickdrop_in_today_operations(self):
         Product.objects.create(

@@ -1770,6 +1770,46 @@ class RepresentativeSlotSelectionTest(TestCase):
         self.assertEqual([slot['slot_kind'] for slot in slots[:4]], ['fixed', 'fixed', 'rotating', 'rotating'])
         self.assertEqual([slot['product'] for slot in slots[2:4]], [p4, p3])
 
+    def test_representative_slots_exclude_quickdrop_utility_without_filtering_other_tools(self):
+        user = _create_onboarded_user('rep-utility-filter-user')
+        p1 = self._create_product('운영 도구 A', display_order=1)
+        p2 = self._create_product('운영 도구 B', display_order=2, service_type='work')
+        p3 = self._create_product('운영 도구 C', display_order=3, service_type='counsel')
+        p4 = self._create_product('운영 도구 D', display_order=4)
+        messagebox = Product.objects.create(
+            title='업무 메시지 보관함',
+            description='메시지 정리',
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            display_order=5,
+            launch_route_name='messagebox:main',
+        )
+        quickdrop = Product.objects.create(
+            title='바로전송',
+            description='빠른 전송',
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            display_order=6,
+            launch_route_name='quickdrop:landing',
+        )
+
+        slots = _build_home_v4_representative_slots(
+            user,
+            favorite_products=[messagebox],
+            recent_products=[quickdrop, p1],
+            quick_actions=[p2, quickdrop],
+            discovery_products=[p3, p4, messagebox],
+            sections=self._build_sections([p1, p2, p3, p4, messagebox, quickdrop]),
+            aux_sections=[],
+            games=[],
+        )
+
+        slot_products = [slot['product'] for slot in slots]
+        self.assertNotIn(quickdrop, slot_products)
+        self.assertTrue(any(product in slot_products for product in [messagebox, p1, p2, p3, p4]))
+
 
 @override_settings(HOME_LAYOUT_VERSION='v4', HOME_V2_ENABLED=True)
 class HomeV4ViewTest(TestCase):
@@ -1909,6 +1949,53 @@ class HomeV4ViewTest(TestCase):
         self.assertLess(home_panel_index, representative_index)
         self.assertLess(representative_index, favorites_index)
         self.assertLess(favorites_index, sns_index)
+
+    def test_v4_home_places_quickdrop_card_between_favorites_and_sns(self):
+        user = self._login('v4quickdropcard')
+        ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
+        Product.objects.create(
+            title='바로전송',
+            description='빠른 전송',
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='quickdrop:landing',
+            icon='fa-solid fa-bolt',
+        )
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('data-home-v4-quickdrop-panel="true"', content)
+        self.assertIn('data-home-v4-quickdrop-actions="true"', content)
+        self.assertIn('PC끼리, 휴대폰끼리, PC와 휴대폰 모두', content)
+        self.assertIn(f'href="{reverse("quickdrop:open")}"', content)
+        self.assertIn(f'href="{reverse("quickdrop:landing")}"', content)
+
+        favorites_index = content.index('data-home-v4-favorites-panel="true"')
+        quickdrop_index = content.index('data-home-v4-quickdrop-panel="true"')
+        sns_index = content.index('data-home-v4-sns-panel="true"')
+        self.assertLess(favorites_index, quickdrop_index)
+        self.assertLess(quickdrop_index, sns_index)
+
+    def test_v4_messagebox_card_uses_compact_title_inside_representative_grid(self):
+        user = self._login('v4messageboxcompact')
+        messagebox = Product.objects.create(
+            title='업무 메시지 보관함',
+            description='메시지를 붙여넣고 다시 찾습니다.',
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='messagebox:main',
+        )
+        for _ in range(3):
+            ProductUsageLog.objects.create(user=user, product=messagebox, action='launch', source='home_quick')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('메시지 보관', content)
+        self.assertIn('data-track-label="메시지 보관"', content)
 
     @override_settings(HOME_V4_MOBILE_CALENDAR_FIRST_ENABLED=True)
     def test_v4_mobile_calendar_first_flag_swaps_hamburger_for_quick_tools(self):
