@@ -139,8 +139,52 @@ class QuickdropViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'data-quickdrop-root="true"')
-        self.assertContains(response, "PC끼리도, 휴대폰끼리도 바로 옮기세요")
+        self.assertContains(response, "붙여넣기나 사진 선택만 하면 됩니다")
+        self.assertContains(response, "여기에 붙여넣거나 직접 입력하세요.")
+        self.assertContains(response, 'data-quickdrop-history-panel="true"')
+        self.assertContains(response, reverse("quickdrop:snapshot", kwargs={"slug": self.channel.slug}))
         self.assertEqual(self.channel.sessions.filter(status=QuickdropSession.STATUS_LIVE).count(), 1)
+
+    def test_snapshot_view_returns_json_for_connected_device(self):
+        self.client.logout()
+        cookie_value, device = self._pair_device_cookie()
+        self.client.cookies[DEVICE_COOKIE_NAME] = cookie_value
+        self.client.post(
+            reverse("quickdrop:send_text", kwargs={"slug": self.channel.slug}),
+            {"text": "실시간 테스트"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        session = self.channel.sessions.get(status=QuickdropSession.STATUS_LIVE)
+        device.refresh_from_db()
+        previous_seen_at = device.last_seen_at
+        previous_updated_at = session.updated_at
+
+        response = self.client.get(
+            reverse("quickdrop:snapshot", kwargs={"slug": self.channel.slug}),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["session"]["current_text"], "실시간 테스트")
+        device.refresh_from_db()
+        session.refresh_from_db()
+        self.assertEqual(device.last_seen_at, previous_seen_at)
+        self.assertEqual(session.updated_at, previous_updated_at)
+
+    def test_channel_open_does_not_touch_device_again_within_five_minutes(self):
+        self.client.logout()
+        cookie_value, device = self._pair_device_cookie()
+        recent_seen_at = timezone.now() - timedelta(minutes=1)
+        QuickdropDevice.objects.filter(pk=device.pk).update(last_seen_at=recent_seen_at)
+        self.client.cookies[DEVICE_COOKIE_NAME] = cookie_value
+
+        response = self.client.get(reverse("quickdrop:channel", kwargs={"slug": self.channel.slug}))
+
+        self.assertEqual(response.status_code, 200)
+        device.refresh_from_db()
+        self.assertEqual(device.last_seen_at, recent_seen_at)
 
     def test_owner_channel_uses_teacher_nickname_instead_of_username(self):
         response = self.client.get(reverse("quickdrop:channel", kwargs={"slug": self.channel.slug}))
@@ -337,6 +381,22 @@ class QuickdropViewTests(TestCase):
         self.assertEqual(session.status, QuickdropSession.STATUS_ENDED)
         self.assertFalse(session.current_text)
         self.assertEqual(QuickdropItem.objects.filter(channel=self.channel).count(), 0)
+
+    def test_landing_does_not_cleanup_previous_day_history_inline(self):
+        stale_item = QuickdropItem.objects.create(
+            channel=self.channel,
+            sender_label="교실 PC",
+            kind=QuickdropItem.KIND_TEXT,
+            text="어제 기록",
+            mime_type="text/plain",
+        )
+        stale_at = timezone.now() - timedelta(days=1, minutes=5)
+        QuickdropItem.objects.filter(pk=stale_item.pk).update(created_at=stale_at)
+
+        response = self.client.get(reverse("quickdrop:landing"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(QuickdropItem.objects.filter(channel=self.channel).count(), 1)
 
     def test_service_launcher_payload_includes_quickdrop_in_today_operations(self):
         Product.objects.create(

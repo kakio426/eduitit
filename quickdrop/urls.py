@@ -10,6 +10,7 @@ urlpatterns = [
     path("", views.landing_view, name="landing"),
     path("open/", views.open_view, name="open"),
     path("c/<slug:slug>/", views.channel_view, name="channel"),
+    path("c/<slug:slug>/snapshot/", views.snapshot_view, name="snapshot"),
     path("pair/<path:token>/", views.pair_view, name="pair"),
     path("c/<slug:slug>/send-text/", views.send_text_view, name="send_text"),
     path("c/<slug:slug>/send-image/", views.send_image_view, name="send_image"),

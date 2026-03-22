@@ -1968,15 +1968,46 @@ class HomeV4ViewTest(TestCase):
 
         self.assertIn('data-home-v4-quickdrop-panel="true"', content)
         self.assertIn('data-home-v4-quickdrop-actions="true"', content)
-        self.assertIn('PC끼리, 휴대폰끼리, PC와 휴대폰 모두', content)
         self.assertIn(f'href="{reverse("quickdrop:open")}"', content)
         self.assertIn(f'href="{reverse("quickdrop:landing")}"', content)
+        self.assertIn('<h2 class="text-lg font-black text-slate-900">바로전송</h2>', content)
 
         favorites_index = content.index('data-home-v4-favorites-panel="true"')
         quickdrop_index = content.index('data-home-v4-quickdrop-panel="true"')
         sns_index = content.index('data-home-v4-sns-panel="true"')
         self.assertLess(favorites_index, quickdrop_index)
         self.assertLess(quickdrop_index, sns_index)
+
+    def test_v4_home_quickdrop_card_shows_latest_text_summary_without_status_copy(self):
+        user = self._login('v4quickdropsummary')
+        product = Product.objects.create(
+            title='바로전송',
+            description='빠른 전송',
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='quickdrop:landing',
+            icon='fa-solid fa-bolt',
+        )
+
+        from quickdrop.models import QuickdropChannel, QuickdropItem
+
+        channel = QuickdropChannel.objects.create(owner=user, slug='quickdropsummaryslug', title='바로전송')
+        QuickdropItem.objects.create(
+            channel=channel,
+            sender_label='내 휴대폰',
+            kind='text',
+            text='회의 안내 문자를 정리해서 다시 보내야 합니다',
+            mime_type='text/plain',
+        )
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(product.launch_route_name, 'quickdrop:landing')
+        self.assertIn('회의 안내 문자를 정리해서 다시 보내야 합니다', content)
+        self.assertNotIn('최근 전송은', content)
+        self.assertNotIn('오늘 1개가 남아 있습니다.', content)
 
     def test_v4_messagebox_card_uses_compact_title_inside_representative_grid(self):
         user = self._login('v4messageboxcompact')

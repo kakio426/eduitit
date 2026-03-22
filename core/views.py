@@ -799,8 +799,7 @@ def _build_home_quickdrop_card(user, favorite_products, product_list):
     if quickdrop_product is None:
         return None
 
-    today_count = 0
-    meta_text = "처음 한 번만 연결하면 다음부터는 바로 열 수 있어요."
+    summary = "PC와 휴대폰 사이에서 텍스트와 사진을 바로 옮길 수 있습니다."
     try:
         from quickdrop.models import QuickdropChannel
 
@@ -808,20 +807,21 @@ def _build_home_quickdrop_card(user, favorite_products, product_list):
         if channel is not None:
             day_start = timezone.localtime(timezone.now()).replace(hour=0, minute=0, second=0, microsecond=0)
             today_items = channel.items.filter(created_at__gte=day_start).order_by("-created_at", "-id")
-            today_count = today_items.count()
             latest_item = today_items.first()
             if latest_item is not None:
-                latest_kind = "사진" if getattr(latest_item, "kind", "") == "image" else "텍스트"
-                meta_text = f"최근 전송은 {latest_kind}입니다."
+                if getattr(latest_item, "kind", "") == "image":
+                    filename = str(getattr(latest_item, "filename", "") or "").strip()
+                    summary = filename[:50] if filename else "최근 사진 1장이 도착해 있습니다."
+                else:
+                    latest_text = " ".join(str(getattr(latest_item, "text", "") or "").split())
+                    if latest_text:
+                        summary = latest_text[:72] + ("..." if len(latest_text) > 72 else "")
     except Exception:
         logger.exception("[home quickdrop] failed to build quickdrop card context")
 
     return {
         "title": getattr(quickdrop_product, "public_service_name", "") or getattr(quickdrop_product, "title", "") or "바로전송",
-        "summary": "PC끼리, 휴대폰끼리, PC와 휴대폰 모두 텍스트와 사진을 빠르게 옮깁니다.",
-        "status": f"오늘 {today_count}개가 남아 있습니다." if today_count else "지금 비어 있습니다.",
-        "status_tone": "filled" if today_count else "empty",
-        "meta_text": meta_text,
+        "summary": summary,
         "open_url": reverse("quickdrop:open"),
         "manage_url": reverse("quickdrop:landing"),
     }

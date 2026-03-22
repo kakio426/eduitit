@@ -14,7 +14,7 @@ from .services import (
     build_channel_bootstrap,
     build_pair_token,
     build_qr_data_url,
-    cleanup_stale_activity,
+    channel_snapshot_payload,
     consume_pair_token,
     end_session,
     ensure_live_session,
@@ -79,7 +79,6 @@ def _json_or_redirect(request, channel, payload=None):
 
 @login_required
 def landing_view(request):
-    cleanup_stale_activity()
     channel = get_or_create_personal_channel(request.user)
     owner_device, _created = remember_owner_device_for_request(request, channel)
     token = build_pair_token(channel)
@@ -102,7 +101,6 @@ def landing_view(request):
 
 @require_GET
 def open_view(request):
-    cleanup_stale_activity()
     access = resolve_default_access(request)
     if access is None:
         return _apply_private_response_headers(redirect(f"{reverse('account_login')}?next={reverse('quickdrop:landing')}"))
@@ -111,7 +109,6 @@ def open_view(request):
 
 @require_GET
 def channel_view(request, slug):
-    cleanup_stale_activity()
     access = resolve_channel_access(request, slug)
     if access is None:
         return _forbidden_pairing()
@@ -130,6 +127,7 @@ def channel_view(request, slug):
         "device_label": access["device_label"],
         "bootstrap": bootstrap,
         "ws_url": f"/quickdrop/ws/{access['channel'].slug}/",
+        "snapshot_url": reverse("quickdrop:snapshot", kwargs={"slug": access["channel"].slug}),
         "send_text_url": reverse("quickdrop:send_text", kwargs={"slug": access["channel"].slug}),
         "send_image_url": reverse("quickdrop:send_image", kwargs={"slug": access["channel"].slug}),
         "end_session_url": reverse("quickdrop:end_session", kwargs={"slug": access["channel"].slug}),
@@ -142,6 +140,17 @@ def channel_view(request, slug):
         owner_device, _created = remember_owner_device_for_request(request, access["channel"])
         issue_device_cookie(response, access["channel"], owner_device)
     return response
+
+
+@require_GET
+def snapshot_view(request, slug):
+    access = resolve_channel_access(request, slug, touch=False)
+    if access is None:
+        return _error_response(request, "이 기기는 연결이 필요합니다.", status=403)
+
+    return _apply_private_response_headers(
+        JsonResponse({"ok": True, "session": channel_snapshot_payload(access["channel"])}, status=200)
+    )
 
 
 @ratelimit(key=_quickdrop_public_ratelimit_key, rate="60/10m", method=("GET", "POST"), block=True, group="quickdrop_pair")
@@ -280,7 +289,6 @@ def revoke_device_view(request, slug, device_id):
 @require_POST
 @ratelimit(key=_quickdrop_public_ratelimit_key, rate="60/10m", method="POST", block=True, group="quickdrop_share_target")
 def share_target_view(request):
-    cleanup_stale_activity()
     access = resolve_default_access(request)
     if access is None:
         return _forbidden_pairing()

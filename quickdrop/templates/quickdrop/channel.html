@@ -10,6 +10,100 @@
         min-height: 48px;
         max-height: 160px;
     }
+
+    #quickdrop-root [data-quickdrop-composer-shell="true"] {
+        border-color: #d5e3ff;
+        background: linear-gradient(180deg, rgba(233, 242, 255, 0.96), rgba(247, 250, 255, 0.98));
+        box-shadow: 0 22px 56px rgba(44, 86, 170, 0.14);
+    }
+
+    #quickdrop-root [data-quickdrop-textbox="true"] {
+        border: 1px solid #bad0ff;
+        background: linear-gradient(180deg, #ffffff, #f9fbff);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.96), 0 10px 24px rgba(31, 79, 209, 0.08);
+    }
+
+    #quickdrop-root [data-quickdrop-textbox="true"]:focus-within {
+        border-color: #6f9bff;
+        box-shadow: 0 0 0 4px rgba(111, 155, 255, 0.18), 0 14px 30px rgba(31, 79, 209, 0.12);
+    }
+
+    #quickdrop-root [data-quickdrop-textbox-label="true"] {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        align-self: flex-start;
+        border-radius: 9999px;
+        background: #e8f0ff;
+        color: #1f4fd1;
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: 0.01em;
+        padding: 0.35rem 0.65rem;
+    }
+
+    #quickdrop-root [data-quickdrop-textbox-hint="true"] {
+        font-size: 11px;
+        font-weight: 700;
+        color: #7a8aaf;
+    }
+
+    #quickdrop-root #photo-trigger {
+        border: 1px solid #b9ceff;
+        background: linear-gradient(135deg, #eef4ff, #dce8ff);
+        color: #1842aa;
+        box-shadow: 0 12px 24px rgba(31, 79, 209, 0.12);
+    }
+
+    @media (max-width: 639px) {
+        #quickdrop-root [data-quickdrop-shell="true"] {
+            border-radius: 28px;
+        }
+
+        #quickdrop-root [data-quickdrop-composer-shell="true"] {
+            border-color: #ccdcff;
+            background: linear-gradient(180deg, rgba(232, 241, 255, 0.99), rgba(247, 250, 255, 0.99));
+            box-shadow: 0 20px 44px rgba(44, 86, 170, 0.14);
+        }
+
+        #quickdrop-root [data-quickdrop-textbox="true"] {
+            border: 1px solid #bdd0ff;
+            background: linear-gradient(180deg, #ffffff, #f9fbff);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.94), 0 10px 24px rgba(31, 79, 209, 0.08);
+        }
+
+        #quickdrop-root #photo-trigger {
+            border: 1px solid #b5cbff;
+            background: linear-gradient(135deg, #e9f1ff, #d3e3ff);
+            color: #1842aa;
+            box-shadow: 0 14px 28px rgba(31, 79, 209, 0.14);
+        }
+
+        #quickdrop-root #send-text-btn {
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+
+        #quickdrop-root #text-input {
+            min-height: 54px;
+        }
+    }
+
+    @media (max-width: 1023px) {
+        #quickdrop-root [data-quickdrop-header-row="true"] {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        #quickdrop-root [data-quickdrop-header-actions="true"] {
+            width: 100%;
+            justify-content: flex-start;
+        }
+
+        #quickdrop-root [data-quickdrop-eyebrow="true"] {
+            display: none;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -21,44 +115,46 @@
         data-send-text-url="{{ send_text_url }}"
         data-send-image-url="{{ send_image_url }}"
         data-end-session-url="{{ end_session_url }}"
+        data-snapshot-url="{{ snapshot_url }}"
         data-ws-url="{{ ws_url }}"
         data-landing-url="{{ landing_url }}"
         data-service-worker-url="{{ service_worker_url }}"
         class="mx-auto max-w-4xl"
     >
-        <div class="relative overflow-hidden rounded-[36px] border border-white/70 bg-white/75 shadow-[0_32px_110px_rgba(34,68,148,0.18)] backdrop-blur-xl">
+        <div data-quickdrop-shell="true" class="relative overflow-hidden rounded-[36px] border border-white/70 bg-white/75 shadow-[0_32px_110px_rgba(34,68,148,0.18)] backdrop-blur-xl">
             <div class="pointer-events-none absolute inset-x-0 top-0 h-44 bg-[radial-gradient(circle_at_top,_rgba(31,79,209,0.18),transparent_68%)]"></div>
             <div class="pointer-events-none absolute -right-16 top-24 h-56 w-56 rounded-full bg-[#9cc2ff]/25 blur-3xl"></div>
             <div class="pointer-events-none absolute -left-16 bottom-16 h-48 w-48 rounded-full bg-[#ffd7b8]/25 blur-3xl"></div>
 
             <div class="relative border-b border-white/70 px-4 py-4 sm:px-6">
-                <div class="flex items-center justify-between gap-3">
+                <div data-quickdrop-header-row="true" class="flex items-start justify-between gap-3">
                     <div class="min-w-0 flex items-center gap-3">
                         <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,_#1f4fd1,_#4f8bff)] text-xl font-black text-white shadow-[0_18px_40px_rgba(31,79,209,0.28)]">
                             ↔
                         </div>
                         <div class="min-w-0">
-                            <p class="text-[11px] font-black uppercase tracking-[0.28em] text-[#5c73b8]">빠르게 옮기기</p>
-                            <h1 class="truncate text-2xl font-black text-[#14213d] sm:text-3xl">바로전송</h1>
+                            <p data-quickdrop-eyebrow="true" class="text-[11px] font-black uppercase tracking-[0.28em] text-[#5c73b8]">빠르게 옮기기</p>
+                            <h1 class="text-2xl font-black text-[#14213d] sm:text-3xl">바로전송</h1>
                             <p class="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-600 sm:text-sm">
                                 <span id="connection-badge" class="rounded-full bg-[#e7efff] px-2.5 py-1 font-black text-[#1f4fd1]">연결 준비 중</span>
-                                <span id="viewer-label" class="font-bold text-slate-700">{{ device_label }}</span>
-                                <span class="text-slate-300">•</span>
+                                <span id="viewer-label" class="hidden font-bold text-slate-700 lg:inline">{{ device_label }}</span>
+                                <span class="hidden text-slate-300 lg:inline">•</span>
                                 <span id="session-status" class="font-bold text-slate-500">전송 준비</span>
                             </p>
                         </div>
                     </div>
-                    <div class="flex shrink-0 items-center gap-2">
+                    <div data-quickdrop-header-actions="true" class="flex shrink-0 flex-wrap items-center justify-end gap-2">
                         {% if is_owner %}
-                        <a href="{{ landing_url }}" class="rounded-full border border-[#d9e4ff] bg-white/80 px-4 py-2 text-sm font-black text-[#1f4fd1] shadow-sm">연결 기기</a>
+                        <a href="{{ landing_url }}" class="whitespace-nowrap rounded-full border border-[#d9e4ff] bg-white/80 px-3.5 py-2 text-[13px] font-black text-[#1f4fd1] shadow-sm sm:px-4 sm:text-sm">연결 기기</a>
                         {% endif %}
-                        <button type="button" id="end-session-btn" class="hidden rounded-full border border-slate-200 bg-white/75 px-4 py-2 text-sm font-black text-slate-500 shadow-sm transition hover:border-slate-300 hover:text-slate-700">오늘 내용 지우기</button>
+                        <button type="button" id="end-session-btn" class="hidden whitespace-nowrap rounded-full border border-slate-200 bg-white/75 px-3.5 py-2 text-[13px] font-black text-slate-500 shadow-sm transition hover:border-slate-300 hover:text-slate-700 sm:px-4 sm:text-sm">오늘 내용 지우기</button>
                     </div>
                 </div>
             </div>
 
             <div class="relative border-b border-[#e9efff] bg-white/55 px-4 py-3 sm:px-6">
-                <div class="flex flex-wrap gap-2">
+                <p id="helper-summary-mobile" class="text-[12px] font-bold leading-5 text-slate-600 lg:hidden">PC와 휴대폰 아무 조합으로 바로 옮기고, 이 기기도 기억됩니다.</p>
+                <div class="hidden flex-wrap gap-2 lg:flex">
                     <span id="helper-chip-paste" class="rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-slate-600 shadow-sm sm:text-xs">PC끼리 · 휴대폰끼리 · PC와 휴대폰 모두 가능</span>
                     <span id="helper-chip-repeat" class="rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-slate-600 shadow-sm sm:text-xs">이 기기는 기억되어 다시 로그인하지 않아도 열 수 있습니다</span>
                     <span id="session-expiry" class="rounded-full bg-[#edf3ff] px-3 py-1.5 text-[11px] font-bold text-[#1f4fd1] shadow-sm sm:text-xs">오늘 기록은 내일 정리됩니다</span>
@@ -68,12 +164,12 @@
             <div class="relative flex min-h-[70vh] flex-col">
                 <div class="relative flex-1 px-4 py-6 sm:px-6 sm:py-8">
                     <div class="mx-auto flex max-w-3xl flex-col gap-5">
-                        <div id="empty-state" class="rounded-[30px] border border-dashed border-[#d4e0ff] bg-[linear-gradient(180deg,_rgba(255,255,255,0.95),rgba(241,246,255,0.92))] p-6 text-center shadow-[0_24px_60px_rgba(44,86,170,0.08)] sm:p-10">
+                        <div id="empty-state" class="rounded-[26px] border border-dashed border-[#d4e0ff] bg-[linear-gradient(180deg,_rgba(255,255,255,0.95),rgba(241,246,255,0.92))] p-5 text-center shadow-[0_24px_60px_rgba(44,86,170,0.08)] sm:rounded-[30px] sm:p-10">
                             <div id="empty-icon" class="mx-auto flex h-12 w-12 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,_#1f4fd1,_#7ba9ff)] text-xl text-white shadow-[0_18px_40px_rgba(31,79,209,0.22)] sm:h-14 sm:w-14 sm:rounded-[20px] sm:text-2xl">↔</div>
                             <p id="empty-badge" class="mt-5 text-[11px] font-black uppercase tracking-[0.28em] text-[#5c73b8]">전송 준비</p>
-                            <h2 id="empty-title" class="mt-3 text-xl font-black leading-tight text-[#14213d] sm:text-3xl">PC끼리도, 휴대폰끼리도 바로 옮기세요.</h2>
-                            <p id="empty-body" class="mx-auto mt-3 max-w-xl text-sm leading-7 text-slate-500 sm:text-base">붙여넣기나 사진 선택만 하면 방금 보낸 내용은 위에, 오늘 기록은 아래에 남습니다.</p>
-                            <div id="empty-pill-row" class="mt-5 flex flex-wrap justify-center gap-2">
+                            <h2 id="empty-title" class="mt-3 text-lg font-black leading-tight text-[#14213d] sm:text-3xl">PC끼리도, 휴대폰끼리도 바로 옮기세요.</h2>
+                            <p id="empty-body" class="mx-auto mt-3 max-w-xl text-[13px] leading-6 text-slate-500 sm:text-base sm:leading-7">붙여넣기나 사진 선택만 하면 방금 보낸 내용은 위에, 오늘 기록은 아래에 남습니다.</p>
+                            <div id="empty-pill-row" class="mt-5 hidden flex-wrap justify-center gap-2 lg:flex">
                                 <span class="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-600 shadow-sm">Ctrl+V 바로 전송</span>
                                 <span class="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-600 shadow-sm">사진 선택 즉시 전송</span>
                                 <span class="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-600 shadow-sm">오늘 기록 유지</span>
@@ -82,11 +178,9 @@
 
                         <div id="text-panel" class="hidden">
                             <div class="flex items-end gap-3">
-                                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#dce8ff] text-sm font-black text-[#1f4fd1] shadow-sm">T</div>
                                 <div class="min-w-0 flex-1">
                                     <div class="mb-2 flex items-center justify-between gap-3 pl-1">
                                         <div class="min-w-0">
-                                            <p class="text-xs font-black uppercase tracking-[0.22em] text-[#5c73b8]">방금 전송됨</p>
                                             <p id="message-time" class="mt-1 text-xs text-slate-400"></p>
                                         </div>
                                         <button type="button" id="copy-text-btn" class="rounded-full bg-[#14213d] px-4 py-2 text-sm font-black text-white shadow-sm">복사</button>
@@ -105,7 +199,6 @@
                                 <div class="min-w-0 flex-1">
                                     <div class="mb-2 flex items-center justify-between gap-3 pl-1">
                                         <div class="min-w-0">
-                                            <p class="text-xs font-black uppercase tracking-[0.22em] text-[#5c73b8]">방금 전송됨</p>
                                             <p id="image-filename" class="mt-1 truncate text-xs text-slate-400"></p>
                                         </div>
                                         <button type="button" id="save-image-btn" class="rounded-full bg-[#14213d] px-4 py-2 text-sm font-black text-white shadow-sm">저장</button>
@@ -120,31 +213,30 @@
                             </div>
                         </div>
 
-                        <div id="history-panel" class="rounded-[30px] border border-[#dde6ff] bg-white/90 p-5 shadow-[0_18px_50px_rgba(41,72,152,0.08)]">
-                            <div class="flex items-center justify-between gap-3">
-                                <div>
-                                    <p class="text-xs font-black uppercase tracking-[0.22em] text-[#5c73b8]">오늘 기록</p>
-                                    <p id="history-summary" class="mt-1 text-sm font-bold text-slate-500">오늘 0개</p>
-                                </div>
-                                <p class="text-xs font-bold text-slate-400">최근 30개까지</p>
-                            </div>
-                            <div id="history-empty" class="mt-4 rounded-[22px] bg-[#f6f8fe] px-4 py-5 text-sm leading-6 text-slate-500">아직 오늘 기록이 없습니다.</div>
-                            <div id="history-list" class="mt-4 max-h-[300px] space-y-3 overflow-y-auto pr-1"></div>
+                        <div id="history-panel" data-quickdrop-history-panel="true" class="hidden rounded-[24px] border border-[#dde6ff] bg-white/90 p-4 shadow-[0_18px_50px_rgba(41,72,152,0.08)] sm:block sm:rounded-[30px] sm:p-5">
+                            <div id="history-empty" class="rounded-[22px] bg-[#f6f8fe] px-4 py-5 text-sm leading-6 text-slate-500">아직 보낸 내용이 없습니다.</div>
+                            <div id="history-list" class="max-h-[220px] space-y-3 overflow-y-auto pr-1 sm:max-h-[300px]"></div>
                         </div>
                     </div>
                 </div>
 
                 <div class="relative border-t border-white/80 bg-[linear-gradient(180deg,_rgba(251,253,255,0.45),rgba(255,255,255,0.92))] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 sm:px-6">
                     <div class="mx-auto max-w-3xl">
-                        <div class="rounded-[30px] border border-white/80 bg-white/90 p-3 shadow-[0_24px_60px_rgba(44,86,170,0.12)]">
-                            <div class="flex items-end gap-3">
-                                <button type="button" id="photo-trigger" class="flex h-12 shrink-0 items-center gap-2 rounded-[18px] bg-[#eff4ff] px-4 text-sm font-black text-[#1f4fd1] shadow-sm" aria-label="사진 보내기">
+                        <div data-quickdrop-composer-shell="true" class="rounded-[30px] border border-white/80 bg-white/90 p-3 shadow-[0_24px_60px_rgba(44,86,170,0.12)]">
+                            <div class="flex items-stretch gap-3">
+                                <button type="button" id="photo-trigger" class="flex h-12 shrink-0 items-center gap-2 rounded-[18px] border border-[#d8e4ff] bg-[linear-gradient(135deg,_#f3f7ff,_#e4edff)] px-4 text-sm font-black text-[#1f4fd1] shadow-sm" aria-label="사진 보내기">
                                     <span aria-hidden="true">🖼</span>
                                     <span>사진</span>
                                 </button>
-                                <form id="text-form" method="post" action="{{ send_text_url }}" class="flex min-w-0 flex-1 items-end gap-3">
+                                <form id="text-form" method="post" action="{{ send_text_url }}" class="flex min-w-0 flex-1 items-stretch gap-3">
                                     {% csrf_token %}
-                                    <textarea id="text-input" name="text" rows="1" placeholder="직접 쓰거나 붙여넣으세요." class="min-w-0 flex-1 border-0 bg-transparent px-1 py-3 text-sm leading-6 text-slate-700 outline-none placeholder:text-slate-400 sm:text-[15px]"></textarea>
+                                    <div data-quickdrop-textbox="true" class="min-w-0 flex flex-1 flex-col justify-center rounded-[20px] border border-[#d9e4ff] bg-[#f8fbff] px-3 py-2.5">
+                                        <div class="mb-1.5 flex flex-wrap items-center gap-2">
+                                            <span data-quickdrop-textbox-label="true">텍스트 입력</span>
+                                            <span data-quickdrop-textbox-hint="true" class="hidden sm:inline">붙여넣거나 직접 입력하세요</span>
+                                        </div>
+                                        <textarea id="text-input" name="text" rows="1" placeholder="여기에 붙여넣거나 직접 입력하세요." class="min-w-0 w-full flex-1 border-0 bg-transparent px-0 py-1.5 text-sm leading-6 text-slate-700 outline-none placeholder:text-slate-400 sm:text-[15px]"></textarea>
+                                    </div>
                                     <button type="submit" id="send-text-btn" class="shrink-0 rounded-[18px] bg-[linear-gradient(135deg,_#1f4fd1,_#4f8bff)] px-5 py-3 text-sm font-black text-white shadow-[0_16px_34px_rgba(31,79,209,0.24)]">보내기</button>
                                 </form>
                                 <form id="image-form" method="post" action="{{ send_image_url }}" enctype="multipart/form-data" class="hidden">
@@ -153,9 +245,9 @@
                                 </form>
                             </div>
                         </div>
-                        <div id="composer-tip-row" class="mt-3 flex items-center justify-between gap-3 px-1 text-[11px] text-slate-500 sm:text-xs">
-                            <p id="composer-tip-desktop">PC는 화면 어디서든 <strong>Ctrl+V</strong></p>
-                            <p id="composer-tip-mobile">휴대폰도 같은 통로만 열면 됩니다</p>
+                        <div id="composer-tip-row" class="mt-3 px-1 text-[11px] text-slate-500 lg:flex lg:items-center lg:justify-between lg:gap-3 lg:text-xs">
+                            <p id="composer-tip-desktop" class="hidden lg:block">PC는 화면 어디서든 <strong>Ctrl+V</strong></p>
+                            <p id="composer-tip-mobile" class="text-center sm:text-left">붙여넣기나 사진 선택만 하면 됩니다</p>
                         </div>
                     </div>
                 </div>

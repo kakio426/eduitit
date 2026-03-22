@@ -23,6 +23,7 @@ SERVICE_TITLE = "바로전송"
 DEVICE_COOKIE_NAME = "quickdrop_device"
 DEVICE_COOKIE_PATH = "/quickdrop/"
 DEVICE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365
+DEVICE_TOUCH_INTERVAL = timedelta(minutes=5)
 PAIR_TOKEN_MAX_AGE = 60 * 10
 TEXT_MAX_BYTES = 50 * 1024
 IMAGE_MAX_BYTES = 10 * 1024 * 1024
@@ -207,8 +208,16 @@ def get_active_device_from_cookie(channel, raw_cookie):
     ).first()
 
 
-def touch_device(device):
-    device.last_seen_at = timezone.now()
+def touch_device(device, *, now=None, force=False):
+    current_time = now or timezone.now()
+    if (
+        not force
+        and device.last_seen_at
+        and current_time - device.last_seen_at < DEVICE_TOUCH_INTERVAL
+    ):
+        return device
+
+    device.last_seen_at = current_time
     device.save(update_fields=["last_seen_at"])
     return device
 
@@ -345,6 +354,31 @@ def sync_session_from_item(session, item):
     return session
 
 
+def session_matches_item(session, item):
+    if item is None:
+        return (
+            session.status == QuickdropSession.STATUS_LIVE
+            and session.current_kind == QuickdropSession.KIND_EMPTY
+            and not session.current_text
+            and not session.current_filename
+            and not session.current_mime_type
+            and session.ended_at is None
+        )
+
+    expected_kind = QuickdropSession.KIND_TEXT if item.kind == QuickdropItem.KIND_TEXT else QuickdropSession.KIND_IMAGE
+    expected_text = item.text if item.kind == QuickdropItem.KIND_TEXT else ""
+    expected_mime_type = item.mime_type or ("text/plain" if item.kind == QuickdropItem.KIND_TEXT else "")
+    return (
+        session.status == QuickdropSession.STATUS_LIVE
+        and session.current_kind == expected_kind
+        and session.current_text == expected_text
+        and session.current_filename == item.filename
+        and session.current_mime_type == expected_mime_type
+        and session.last_activity_at == item.created_at
+        and session.ended_at is None
+    )
+
+
 @transaction.atomic
 def end_session(session, *, ended_at=None, clear_today=True):
     ended_at = ended_at or timezone.now()
@@ -365,8 +399,9 @@ def ensure_live_session(channel):
 
     if live_session:
         if latest_item:
-            sync_session_from_item(live_session, latest_item)
-        elif live_session.current_kind != QuickdropSession.KIND_EMPTY:
+            if not session_matches_item(live_session, latest_item):
+                sync_session_from_item(live_session, latest_item)
+        elif not session_matches_item(live_session, None):
             set_session_empty(live_session, status=QuickdropSession.STATUS_LIVE, ended_at=None, last_activity_at=timezone.now())
         return live_session, False
 
@@ -487,6 +522,27 @@ def session_payload(session):
     }
 
 
+def snapshot_session_for_channel(channel):
+    session = get_live_session(channel)
+    if session is not None:
+        return session
+
+    latest_session = channel.sessions.order_by("-created_at").first()
+    if latest_session is not None:
+        return latest_session
+
+    return QuickdropSession(
+        channel=channel,
+        status=QuickdropSession.STATUS_LIVE,
+        current_kind=QuickdropSession.KIND_EMPTY,
+        last_activity_at=timezone.now(),
+    )
+
+
+def channel_snapshot_payload(channel):
+    return session_payload(snapshot_session_for_channel(channel))
+
+
 def build_channel_bootstrap(channel, *, session, is_owner, device_label):
     return {
         "channel": {
@@ -501,7 +557,7 @@ def build_channel_bootstrap(channel, *, session, is_owner, device_label):
     }
 
 
-def resolve_channel_access(request, slug):
+def resolve_channel_access(request, slug, *, touch=True):
     channel = QuickdropChannel.objects.filter(slug=slug).first()
     if channel is None:
         return None
@@ -519,7 +575,8 @@ def resolve_channel_access(request, slug):
     if device is None:
         return None
 
-    touch_device(device)
+    if touch:
+        touch_device(device)
     return {
         "channel": channel,
         "is_owner": False,
@@ -528,7 +585,7 @@ def resolve_channel_access(request, slug):
     }
 
 
-def resolve_default_access(request):
+def resolve_default_access(request, *, touch=True):
     user = getattr(request, "user", None)
     if getattr(user, "is_authenticated", False):
         channel = get_or_create_personal_channel(user)
@@ -543,7 +600,7 @@ def resolve_default_access(request):
     if not payload:
         return None
 
-    return resolve_channel_access(request, payload.get("channel_slug"))
+    return resolve_channel_access(request, payload.get("channel_slug"), touch=touch)
 
 
 def group_name_for_channel(channel_or_slug):

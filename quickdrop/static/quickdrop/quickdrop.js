@@ -30,6 +30,12 @@
             session: bootstrap.session || {},
             ws: null,
             pingTimer: null,
+            pollTimer: null,
+            reconnectTimer: null,
+            isPosting: false,
+            isPulling: false,
+            wsConnected: false,
+            snapshotPollDelay: 15000,
 
             init() {
                 this.cacheDom();
@@ -60,6 +66,7 @@
                 this.imageOutput = byId('image-output');
                 this.imageFilename = byId('image-filename');
                 this.saveImageBtn = byId('save-image-btn');
+                this.historyPanel = byId('history-panel');
                 this.historySummary = byId('history-summary');
                 this.historyEmpty = byId('history-empty');
                 this.historyList = byId('history-list');
@@ -73,6 +80,14 @@
                 this.composerTipMobile = byId('composer-tip-mobile');
                 this.endSessionBtn = byId('end-session-btn');
                 this.toastRoot = byId('toast-root');
+            },
+
+            isCompactMobile() {
+                return window.matchMedia('(max-width: 639px)').matches;
+            },
+
+            sessionFingerprint(payload) {
+                return JSON.stringify(payload || {});
             },
 
             bindForms() {
@@ -223,6 +238,7 @@
             },
 
             async post(url, body, onSuccess, successMessage) {
+                this.isPosting = true;
                 try {
                     const response = await fetch(url, {
                         method: 'POST',
@@ -249,6 +265,62 @@
                     }
                 } catch (error) {
                     this.toast(error.message || '전송에 실패했습니다.', 'error');
+                } finally {
+                    this.isPosting = false;
+                }
+            },
+
+            startSnapshotPolling(immediate) {
+                if (!this.root.dataset.snapshotUrl) {
+                    return;
+                }
+                if (this.pollTimer) {
+                    return;
+                }
+                if (immediate) {
+                    this.pullSnapshot();
+                }
+                this.pollTimer = window.setInterval(() => {
+                    if (document.visibilityState === 'hidden' || this.isPosting || this.isPulling || this.wsConnected) {
+                        return;
+                    }
+                    this.pullSnapshot();
+                }, this.snapshotPollDelay);
+            },
+
+            stopSnapshotPolling() {
+                window.clearInterval(this.pollTimer);
+                this.pollTimer = null;
+            },
+
+            async pullSnapshot() {
+                if (!this.root.dataset.snapshotUrl || this.isPulling) {
+                    return;
+                }
+                this.isPulling = true;
+                try {
+                    const response = await fetch(this.root.dataset.snapshotUrl, {
+                        credentials: 'same-origin',
+                        cache: 'no-store',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    });
+                    if (!response.ok) {
+                        throw new Error('snapshot failed');
+                    }
+                    const data = await response.json();
+                    if (!data.ok || !data.session) {
+                        throw new Error('snapshot payload missing');
+                    }
+                    if (this.sessionFingerprint(data.session) !== this.sessionFingerprint(this.session)) {
+                        this.session = data.session;
+                        this.render();
+                    }
+                } catch (_error) {
+                    return;
+                } finally {
+                    this.isPulling = false;
                 }
             },
 
@@ -257,6 +329,7 @@
                 const isText = kind === 'text';
                 const isImage = kind === 'image';
                 const todayItems = Array.isArray(this.session.today_items) ? this.session.today_items : [];
+                const isCompactMobile = this.isCompactMobile();
 
                 if (this.emptyState) {
                     this.emptyState.classList.toggle('hidden', isText || isImage);
@@ -278,7 +351,7 @@
                     }
                 }
                 if (this.sessionExpiry) {
-                    this.sessionExpiry.textContent = '오늘 기록은 내일 정리됩니다';
+                    this.sessionExpiry.textContent = isCompactMobile ? '오늘 기록 유지' : '오늘 기록은 내일 정리됩니다';
                 }
                 if (this.helperChipPaste) {
                     this.helperChipPaste.textContent = 'PC끼리 · 휴대폰끼리 · PC와 휴대폰 모두 가능';
@@ -291,11 +364,17 @@
                     if (this.session.status === 'ended') {
                         this.emptyBadge.textContent = '오늘 내용 비움';
                         this.emptyTitle.textContent = '오늘 기록을 비웠습니다.';
-                        this.emptyBody.textContent = '다시 붙여넣거나 사진을 고르면 새 기록이 바로 쌓입니다.';
+                        this.emptyBody.textContent = isCompactMobile
+                            ? '다시 붙여넣거나 사진을 고르면 됩니다.'
+                            : '다시 붙여넣거나 사진을 고르면 새 기록이 바로 쌓입니다.';
                     } else {
                         this.emptyBadge.textContent = '전송 준비';
-                        this.emptyTitle.textContent = 'PC끼리도, 휴대폰끼리도 바로 옮기세요.';
-                        this.emptyBody.textContent = '붙여넣기나 사진 선택만 하면 방금 보낸 내용은 위에, 오늘 기록은 아래에 남습니다.';
+                        this.emptyTitle.textContent = isCompactMobile
+                            ? '붙여넣기나 사진 선택만 하면 됩니다.'
+                            : 'PC끼리도, 휴대폰끼리도 바로 옮기세요.';
+                        this.emptyBody.textContent = isCompactMobile
+                            ? '같은 통로만 열어 두면 텍스트와 사진이 바로 넘어갑니다.'
+                            : '붙여넣기나 사진 선택만 하면 방금 보낸 내용은 위에, 오늘 기록은 아래에 남습니다.';
                     }
                 }
 
@@ -321,6 +400,9 @@
                 if (this.historySummary) {
                     this.historySummary.textContent = '오늘 ' + String(todayItems.length) + '개';
                 }
+                if (this.historyPanel) {
+                    this.historyPanel.classList.toggle('hidden', isCompactMobile && todayItems.length === 0);
+                }
                 if (this.endSessionBtn) {
                     this.endSessionBtn.classList.toggle('hidden', todayItems.length === 0);
                 }
@@ -340,9 +422,10 @@
                     return;
                 }
 
+                const visibleItems = this.isCompactMobile() ? items.slice(0, 6) : items;
                 const fragment = document.createDocumentFragment();
-                items.forEach((item, index) => {
-                    fragment.appendChild(this.buildHistoryItem(item, index === items.length - 1));
+                visibleItems.forEach((item, index) => {
+                    fragment.appendChild(this.buildHistoryItem(item, index === visibleItems.length - 1));
                 });
                 this.historyList.appendChild(fragment);
             },
@@ -407,26 +490,36 @@
 
             connectSocket() {
                 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                this.ws = new WebSocket(protocol + '//' + window.location.host + this.root.dataset.wsUrl);
-                this.ws.addEventListener('open', () => {
+                const socket = new WebSocket(protocol + '//' + window.location.host + this.root.dataset.wsUrl);
+                this.ws = socket;
+                socket.addEventListener('open', () => {
+                    this.wsConnected = true;
+                    this.stopSnapshotPolling();
                     if (this.connectionBadge) {
-                        this.connectionBadge.textContent = '실시간 연결됨';
+                        this.connectionBadge.textContent = '실시간 연결';
                     }
                     this.startPing();
+                    this.pullSnapshot();
                 });
-                this.ws.addEventListener('message', (event) => {
+                socket.addEventListener('message', (event) => {
                     try {
                         this.handleMessage(JSON.parse(event.data));
                     } catch (_error) {
                         this.toast('실시간 업데이트를 읽지 못했습니다.', 'error');
                     }
                 });
-                this.ws.addEventListener('close', () => {
+                socket.addEventListener('close', () => {
+                    if (this.ws !== socket) {
+                        return;
+                    }
+                    this.wsConnected = false;
                     if (this.connectionBadge) {
-                        this.connectionBadge.textContent = '다시 연결 중';
+                        this.connectionBadge.textContent = '자동 갱신 중';
                     }
                     window.clearInterval(this.pingTimer);
-                    window.setTimeout(() => this.connectSocket(), 1500);
+                    this.startSnapshotPolling(true);
+                    window.clearTimeout(this.reconnectTimer);
+                    this.reconnectTimer = window.setTimeout(() => this.connectSocket(), 4000);
                 });
             },
 

@@ -4,12 +4,7 @@ from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 
 from .models import QuickdropChannel
-from .services import (
-    build_channel_bootstrap,
-    ensure_live_session,
-    load_device_cookie_value,
-    touch_device,
-)
+from .services import channel_snapshot_payload, load_device_cookie_value, owner_display_label, touch_device
 
 
 class QuickdropConsumer(AsyncJsonWebsocketConsumer):
@@ -33,8 +28,7 @@ class QuickdropConsumer(AsyncJsonWebsocketConsumer):
 
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
-        session = await self._ensure_live_session()
-        snapshot = await self._build_session_snapshot(session)
+        snapshot = await self._build_session_snapshot()
         await self.send_json(
             {
                 "type": "session.snapshot",
@@ -65,7 +59,7 @@ class QuickdropConsumer(AsyncJsonWebsocketConsumer):
             return {
                 "is_owner": True,
                 "device_id": None,
-                "device_label": user.get_username(),
+                "device_label": owner_display_label(user),
             }
 
         raw_cookie = self._read_cookie("quickdrop_device")
@@ -101,18 +95,8 @@ class QuickdropConsumer(AsyncJsonWebsocketConsumer):
         return morsel.value if morsel else None
 
     @database_sync_to_async
-    def _ensure_live_session(self):
-        session, _ = ensure_live_session(self.channel_obj)
-        return session
-
-    @database_sync_to_async
-    def _build_session_snapshot(self, session):
-        return build_channel_bootstrap(
-            self.channel_obj,
-            session=session,
-            is_owner=self.is_owner,
-            device_label=self.device_label,
-        )["session"]
+    def _build_session_snapshot(self):
+        return channel_snapshot_payload(self.channel_obj)
 
     @database_sync_to_async
     def _touch_access(self):
