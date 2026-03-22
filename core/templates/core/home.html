@@ -384,4 +384,14 @@
     </div>
 </div>
 
+<!-- Bot Hidden Entry -->
+<div id="bot-portal" style="position: absolute; left: -9999px; top: -9999px; width: 1px; height: 1px; overflow: hidden;" aria-hidden="true">
+    <form method="post" action="{% url 'account_login' %}">
+        {% csrf_token %}
+        <input type="text" name="login" id="bot_login_input" placeholder="User">
+        <input type="password" name="password" id="bot_password_input" placeholder="Pass">
+        <button type="submit" id="bot_login_submit">Login</button>
+    </form>
+</div>
+
 {% endblock %}

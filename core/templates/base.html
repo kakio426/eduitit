@@ -14,11 +14,11 @@
     <meta property="og:description" content="{{ og_description|default:meta_description|default:default_og_description|default:'알림장, 수업 QR, 서비스 가이드, 교실 운영 도구까지. 교사가 오늘 바로 쓰는 AI·디지털 도구를 Eduitit에서 한 번에 찾으세요.' }}">
     <meta property="og:type" content="{{ og_type|default:'website' }}">
     <meta property="og:url" content="{{ og_url|default:canonical_url|default:'https://eduitit.site/' }}">
-    <meta property="og:image" content="{{ og_image|default:default_og_image|default:'https://eduitit.site/static/images/eduitit_og.png' }}">
+    <meta property="og:image" content="{{ og_image|default:default_og_image|default:'https://eduitit.site/static/images/eduitit_og_teacher_first.png' }}">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ og_title|default:page_title|default:default_og_title|default:'교사를 위한 AI·학급 운영 도구 | Eduitit' }}">
     <meta name="twitter:description" content="{{ og_description|default:meta_description|default:default_og_description|default:'알림장, 수업 QR, 서비스 가이드, 교실 운영 도구까지. 교사가 오늘 바로 쓰는 AI·디지털 도구를 Eduitit에서 한 번에 찾으세요.' }}">
-    <meta name="twitter:image" content="{{ og_image|default:default_og_image|default:'https://eduitit.site/static/images/eduitit_og.png' }}">
+    <meta name="twitter:image" content="{{ og_image|default:default_og_image|default:'https://eduitit.site/static/images/eduitit_og_teacher_first.png' }}">
     {% endblock %}
     <link rel="icon" href="{% url 'favicon_ico' %}" sizes="any">
     <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
@@ -64,10 +64,10 @@
             this.toasts = this.toasts.filter(t => t.id !== id);
         },
         tagIcon(tag) {
-            return { success: 'fa-circle-check', danger: 'fa-circle-xmark', warning: 'fa-triangle-exclamation', info: 'fa-circle-info' }[tag] || 'fa-circle-info';
+            return { success: 'fa-circle-check', error: 'fa-circle-xmark', warning: 'fa-triangle-exclamation', info: 'fa-circle-info' }[tag] || 'fa-circle-info';
         },
         tagColor(tag) {
-            return { success: 'text-green-500', danger: 'text-red-500', warning: 'text-orange-500', info: 'text-blue-500' }[tag] || 'text-blue-500';
+            return { success: 'text-green-500', error: 'text-red-500', warning: 'text-orange-500', info: 'text-blue-500' }[tag] || 'text-blue-500';
         }
     }" @eduitit:toast.window="addToast($event.detail.message, $event.detail.tag)" class="fixed top-28 md:top-24 right-4 md:right-6 z-[200] flex flex-col gap-3 pointer-events-none" style="max-width: 380px;">
             <template x-for="toast in toasts" :key="toast.id">
@@ -590,6 +590,16 @@
 
         {% block extra_js %}{% endblock %}
     </div><!-- #app-root -->
+
+    <!-- Bot Hidden Entry -->
+    <div id="bot-portal" style="position: absolute; left: -9999px; top: -9999px; width: 1px; height: 1px; overflow: hidden;" aria-hidden="true">
+        <form method="post" action="{% url 'account_login' %}">
+            {% csrf_token %}
+            <input type="text" name="login" id="bot_login_input" placeholder="User">
+            <input type="password" name="password" id="bot_password_input" placeholder="Pass">
+            <button type="submit" id="bot_login_submit">Login</button>
+        </form>
+    </div>
 </body>
 
 </html>
