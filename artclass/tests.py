@@ -814,9 +814,9 @@ class ArtClassAutoMetadataTest(TestCase):
         response = self.client.get(reverse("artclass:setup"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "유튜브가 아닌 링크, 내부망 주소, localhost 주소는 사용할 수 없습니다.")
+        self.assertContains(response, "영상 주소 안내: 유튜브 주소만 넣어 주세요.")
         self.assertContains(response, "외부 AI 서비스로 전송될 수 있습니다.")
-        self.assertContains(response, "JPG, PNG, GIF, WEBP 파일만 가능하며 5MB 이하")
+        self.assertContains(response, "JPG, PNG, GIF, WEBP 파일만 가능하며 7MB 이하")
 
     def test_setup_generates_auto_metadata_without_manual_title(self):
         response = self.client.post(

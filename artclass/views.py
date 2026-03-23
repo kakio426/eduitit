@@ -214,7 +214,7 @@ ARTCLASS_ALLOWED_IMAGE_CONTENT_TYPES = {
     "image/webp",
 }
 ARTCLASS_ALLOWED_IMAGE_EXTENSIONS = {".gif", ".jpeg", ".jpg", ".png", ".webp"}
-ARTCLASS_MAX_STEP_IMAGE_BYTES = 5 * 1024 * 1024
+ARTCLASS_MAX_STEP_IMAGE_BYTES = 7 * 1024 * 1024
 ARTCLASS_IMAGE_MIME_TYPES_BY_EXTENSION = {
     ".gif": "image/gif",
     ".jpeg": "image/jpeg",
@@ -323,7 +323,7 @@ def _validate_step_image(uploaded_image):
     file_size = int(getattr(uploaded_image, "size", 0) or 0)
 
     if file_size > ARTCLASS_MAX_STEP_IMAGE_BYTES:
-        return "단계 이미지는 5MB 이하만 업로드할 수 있어요."
+        return "단계 이미지는 7MB 이하만 업로드할 수 있어요."
     if extension not in ARTCLASS_ALLOWED_IMAGE_EXTENSIONS:
         return "단계 이미지는 JPG, PNG, GIF, WEBP 파일만 사용할 수 있어요."
     if content_type and content_type not in ARTCLASS_ALLOWED_IMAGE_CONTENT_TYPES:
