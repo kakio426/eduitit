@@ -271,6 +271,13 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('공개 도구 먼저 보기', content)
         self.assertEqual(content.count('로그인 후 전체 열기'), 1)
 
+    def test_v2_anonymous_renders_hero_preview_and_proof_panels(self):
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('data-home-v2-hero-proof="true"', content)
+        self.assertIn('data-home-v2-hero-preview="true"', content)
+
     def test_v2_anonymous_surfaces_public_cards_before_locked_sections(self):
         public_collect = Product.objects.create(
             title="공개 수합",

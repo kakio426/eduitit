@@ -15,6 +15,120 @@
 
     .sns-preview-card { background: white; border-radius: 1.5rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.06); transition: all 0.3s ease; }
     .sns-preview-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-2px); }
+
+    .home-v2-shell {
+        background:
+            radial-gradient(circle at top, rgba(56, 189, 248, 0.14), transparent 24%),
+            radial-gradient(circle at 85% 18%, rgba(129, 140, 248, 0.18), transparent 20%),
+            linear-gradient(180deg, #edf3fb 0%, #e7edf5 36%, #f8fafc 100%);
+    }
+
+    .home-v2-hero {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        background:
+            radial-gradient(circle at 10% 18%, rgba(45, 212, 191, 0.22), transparent 22%),
+            radial-gradient(circle at 90% 14%, rgba(56, 189, 248, 0.18), transparent 22%),
+            linear-gradient(135deg, #0f172a 0%, #111827 42%, #1e293b 100%);
+        box-shadow: 0 28px 72px rgba(15, 23, 42, 0.16);
+    }
+
+    .home-v2-hero::before {
+        content: "";
+        position: absolute;
+        inset: 1.1rem;
+        border-radius: 2rem;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        pointer-events: none;
+    }
+
+    .home-v2-hero-grid {
+        background-image:
+            linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+        background-size: 56px 56px;
+    }
+
+    .home-v2-kicker {
+        background: rgba(255, 255, 255, 0.08);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+        backdrop-filter: blur(14px);
+    }
+
+    .home-v2-display-word {
+        background-image: linear-gradient(92deg, #ffffff 0%, #bfdbfe 24%, #5eead4 68%, #f0fdfa 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    .home-v2-cta-primary {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        box-shadow: 0 18px 40px rgba(16, 185, 129, 0.24);
+    }
+
+    .home-v2-cta-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 22px 44px rgba(16, 185, 129, 0.3);
+    }
+
+    .home-v2-cta-secondary {
+        background: rgba(255, 255, 255, 0.88);
+        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+    }
+
+    .home-v2-proof-grid {
+        display: grid;
+        gap: 0.85rem;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+
+    .home-v2-proof-card {
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03));
+        backdrop-filter: blur(12px);
+    }
+
+    .home-v2-preview-card,
+    .home-v2-flow-card {
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.04));
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(16px);
+    }
+
+    .home-v2-preview-item {
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(15, 23, 42, 0.22);
+    }
+
+    .home-v2-preview-section {
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.04);
+    }
+
+    .home-v2-flow-card {
+        background:
+            radial-gradient(circle at top right, rgba(94, 234, 212, 0.16), transparent 32%),
+            linear-gradient(135deg, rgba(15, 23, 42, 0.5), rgba(30, 41, 59, 0.78));
+    }
+
+    .home-v2-flow-step {
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.06);
+    }
+
+    @media (max-width: 767px) {
+        .home-v2-hero::before {
+            inset: 0.8rem;
+            border-radius: 1.6rem;
+        }
+
+        .home-v2-hero-grid {
+            background-size: 42px 42px;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -56,8 +170,13 @@ document.addEventListener('DOMContentLoaded', () => {
 {% block content %}
 {% url 'account_login' as login_url %}
 {% url 'home' as home_url %}
-
-<div class="min-h-screen bg-[#E0E5EC]">
+{% with public_count=guest_public_cards|length %}
+{% with game_count=games|length %}
+{% with preview_count=public_count|add:game_count %}
+{% with primary_locked_count=guest_primary_display_sections|length %}
+{% with secondary_locked_count=guest_secondary_display_sections|length %}
+{% with locked_count=primary_locked_count|add:secondary_locked_count %}
+<div class="min-h-screen home-v2-shell">
     <div class="max-w-[1440px] mx-auto" style="padding-top: calc(var(--main-nav-height, 88px) + 0.75rem);">
 
         <!-- 메인 콘텐츠 -->
@@ -65,29 +184,154 @@ document.addEventListener('DOMContentLoaded', () => {
 
             <!-- Hero 섹션 -->
             <section class="mb-6 md:mb-8 lg:mb-10" data-aos="fade-up" data-home-v2-guest-hero="true">
-                <div class="rounded-[2.25rem] border border-slate-200 bg-white/90 px-5 py-6 shadow-sm sm:px-6 md:px-8 md:py-8">
-                    <div class="mx-auto max-w-4xl text-center">
-                        <span class="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-4 py-1.5 text-xs font-black text-indigo-700">
-                            <i class="fa-solid fa-sparkles text-[11px]"></i>
-                            오늘 바로 쓰는 도구부터 시작합니다
-                        </span>
-                        <h1 class="mt-4 text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-tight break-keep">
-                            처음 와도 막히지 않게
-                            <span class="block text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-sky-500 break-keep">지금 되는 도구부터 위에 모았습니다</span>
-                        </h1>
-                        <p class="mx-auto mt-4 max-w-2xl text-sm font-bold leading-6 text-slate-500 sm:text-base">
-                            바로 열리는 도구는 먼저 써보고, 더 깊은 업무 도구는 아래에서 이어가면 됩니다.
-                        </p>
+                <div class="home-v2-hero rounded-[2.5rem]">
+                    <div class="home-v2-hero-grid relative grid gap-7 px-5 py-6 sm:px-6 md:px-8 md:py-9 xl:grid-cols-[minmax(0,1.08fr)_420px] xl:gap-10">
+                        <div class="relative z-10">
+                            <span class="home-v2-kicker inline-flex items-center gap-2 rounded-full px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-cyan-50/90">
+                                <span class="h-2.5 w-2.5 rounded-full bg-emerald-300 shadow-[0_0_14px_rgba(110,231,183,0.85)]"></span>
+                                Teacher-First Launchpad
+                            </span>
+                            <h1 class="mt-5 max-w-3xl text-4xl font-black tracking-[-0.04em] leading-[0.98] text-white break-keep sm:text-5xl md:text-6xl lg:text-[4.25rem]">
+                                교실 일을 시작하는
+                                <span class="home-v2-display-word mt-2 block">가장 빠른 첫 화면</span>
+                            </h1>
+                            <p class="mt-5 max-w-2xl text-sm font-semibold leading-7 text-slate-300 sm:text-base">
+                                설명보다 버튼이 먼저 보이게 만들었습니다. 공개 도구는 위에서 바로 열고, 더 깊은 업무 흐름은 로그인 뒤 같은 화면 감각으로 자연스럽게 이어집니다.
+                            </p>
 
-                        <div class="mt-6 flex flex-col items-stretch justify-center gap-3 sm:flex-row">
-                            <a href="{% if guest_public_cards or games %}#guest-home-try-now{% else %}#guest-home-services{% endif %}" class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 py-3 text-sm font-black text-white shadow-lg shadow-emerald-200 transition hover:bg-emerald-700">
-                                <i class="fa-solid fa-circle-play"></i>
-                                지금 바로 써보기
-                            </a>
-                            <a href="{{ login_url }}" class="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-3 text-sm font-black text-slate-700 transition hover:border-indigo-300 hover:text-indigo-600">
-                                <i class="fa-solid fa-right-to-bracket"></i>
-                                로그인 후 전체 열기
-                            </a>
+                            <div class="mt-7 flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap">
+                                <a href="{% if guest_public_cards or games %}#guest-home-try-now{% else %}#guest-home-services{% endif %}" class="home-v2-cta-primary inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3.5 text-sm font-black text-white transition">
+                                    <i class="fa-solid fa-circle-play"></i>
+                                    지금 바로 써보기
+                                </a>
+                                <a href="{{ login_url }}" class="home-v2-cta-secondary inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3.5 text-sm font-black text-slate-800 transition hover:-translate-y-0.5 hover:text-indigo-700">
+                                    <i class="fa-solid fa-right-to-bracket"></i>
+                                    로그인 후 전체 열기
+                                </a>
+                            </div>
+
+                            <div class="mt-7 home-v2-proof-grid" data-home-v2-hero-proof="true">
+                                <div class="home-v2-proof-card rounded-[1.5rem] p-4">
+                                    <p class="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-100/75">Open Now</p>
+                                    <p class="mt-2 text-3xl font-black text-white">{{ preview_count }}</p>
+                                    <p class="mt-1 text-sm font-semibold leading-6 text-slate-300">비로그인으로 바로 열리는 도구와 게임</p>
+                                </div>
+                                <div class="home-v2-proof-card rounded-[1.5rem] p-4">
+                                    <p class="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-100/75">Expand</p>
+                                    <p class="mt-2 text-3xl font-black text-white">{{ locked_count }}</p>
+                                    <p class="mt-1 text-sm font-semibold leading-6 text-slate-300">로그인 후 이어지는 작업 보드</p>
+                                </div>
+                                <div class="home-v2-proof-card rounded-[1.5rem] p-4">
+                                    <p class="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-100/75">Flow</p>
+                                    <p class="mt-2 text-3xl font-black text-white">ONE</p>
+                                    <p class="mt-1 text-sm font-semibold leading-6 text-slate-300">공개 도구에서 학급 운영 흐름까지 한 화면에서 시작</p>
+                                </div>
+                            </div>
+
+                            <div class="mt-5 flex flex-wrap gap-2">
+                                <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3.5 py-2 text-xs font-black text-slate-200">
+                                    <i class="fa-solid fa-bolt text-[10px] text-emerald-300"></i>
+                                    바로 열리는 도구 먼저
+                                </span>
+                                <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3.5 py-2 text-xs font-black text-slate-200">
+                                    <i class="fa-solid fa-layer-group text-[10px] text-sky-300"></i>
+                                    필요한 흐름만 위로
+                                </span>
+                                <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3.5 py-2 text-xs font-black text-slate-200">
+                                    <i class="fa-solid fa-check text-[10px] text-cyan-200"></i>
+                                    설명 읽기 전에 구조가 보이게
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="relative z-10 grid gap-4" data-home-v2-hero-preview="true">
+                            <div class="home-v2-preview-card rounded-[1.85rem] p-5">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div>
+                                        <p class="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-100/75">Open Tools</p>
+                                        <h2 class="mt-2 text-xl font-black text-white">지금 바로 열리는 작업</h2>
+                                    </div>
+                                    <span class="inline-flex items-center rounded-full border border-white/10 bg-white/10 px-3 py-1 text-[11px] font-black text-cyan-50">{{ preview_count }} items</span>
+                                </div>
+                                <div class="mt-4 space-y-3">
+                                    {% if guest_public_cards %}
+                                        {% for card in guest_public_cards|slice:":3" %}
+                                        <div class="home-v2-preview-item flex items-center justify-between gap-3 rounded-[1.3rem] p-3">
+                                            <div class="min-w-0">
+                                                <p class="truncate text-sm font-black text-white">{{ card.title }}</p>
+                                                <p class="mt-1 text-xs font-medium text-slate-300">{{ card.description|truncatechars:40 }}</p>
+                                            </div>
+                                            <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black {% if card.access_status_label == '로그인 필요' %}bg-amber-400/10 text-amber-100{% elif card.access_status_label == '외부 이동' %}bg-sky-400/10 text-sky-100{% else %}bg-emerald-400/10 text-emerald-100{% endif %}">
+                                                {{ card.access_status_label }}
+                                            </span>
+                                        </div>
+                                        {% endfor %}
+                                    {% elif games %}
+                                        {% for game in games|slice:":3" %}
+                                        <div class="home-v2-preview-item flex items-center justify-between gap-3 rounded-[1.3rem] p-3">
+                                            <div class="min-w-0">
+                                                <p class="truncate text-sm font-black text-white">{{ game.title }}</p>
+                                                <p class="mt-1 text-xs font-medium text-slate-300">학생도 바로 참여할 수 있는 공개 게임 흐름</p>
+                                            </div>
+                                            <span class="shrink-0 rounded-full bg-rose-400/10 px-2.5 py-1 text-[10px] font-black text-rose-100">바로 입장</span>
+                                        </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <div class="home-v2-preview-item rounded-[1.3rem] p-4">
+                                            <p class="text-sm font-black text-white">도구 배치를 새로 정리했습니다</p>
+                                            <p class="mt-2 text-xs font-medium leading-6 text-slate-300">첫 클릭이 막히지 않도록, 공개 도구와 로그인 이후 흐름을 위아래로 나눠 보여줍니다.</p>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
+                                <div class="home-v2-preview-card rounded-[1.75rem] p-5">
+                                    <p class="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-100/75">Unlock Next</p>
+                                    <h3 class="mt-2 text-lg font-black text-white">로그인 후 확장되는 보드</h3>
+                                    <div class="mt-4 space-y-3">
+                                        {% if guest_primary_display_sections %}
+                                            {% for section in guest_primary_display_sections|slice:":2" %}
+                                            <div class="home-v2-preview-section rounded-[1.15rem] p-3.5">
+                                                <p class="text-sm font-black text-white">{{ section.title }}</p>
+                                                <p class="mt-1 text-xs font-medium leading-5 text-slate-300">{{ section.subtitle|truncatechars:44 }}</p>
+                                            </div>
+                                            {% endfor %}
+                                        {% elif guest_secondary_display_sections %}
+                                            {% for section in guest_secondary_display_sections|slice:":2" %}
+                                            <div class="home-v2-preview-section rounded-[1.15rem] p-3.5">
+                                                <p class="text-sm font-black text-white">{{ section.title }}</p>
+                                                <p class="mt-1 text-xs font-medium leading-5 text-slate-300">{{ section.subtitle|truncatechars:44 }}</p>
+                                            </div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <div class="home-v2-preview-section rounded-[1.15rem] p-3.5">
+                                                <p class="text-sm font-black text-white">로그인 후 전체 흐름이 열립니다</p>
+                                                <p class="mt-1 text-xs font-medium leading-5 text-slate-300">수합, 문서, 학급 운영을 한 흐름으로 이어가게 준비해 두었습니다.</p>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="home-v2-flow-card rounded-[1.75rem] p-5">
+                                    <p class="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-100/75">Start Flow</p>
+                                    <h3 class="mt-2 text-lg font-black text-white">막히지 않는 시작 순서</h3>
+                                    <div class="mt-4 space-y-3">
+                                        <div class="home-v2-flow-step flex items-center gap-3 rounded-[1.15rem] p-3">
+                                            <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-xs font-black text-slate-900">1</span>
+                                            <p class="text-sm font-semibold leading-6 text-slate-100">공개 도구를 먼저 눌러 바로 감을 잡습니다.</p>
+                                        </div>
+                                        <div class="home-v2-flow-step flex items-center gap-3 rounded-[1.15rem] p-3">
+                                            <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs font-black text-white">2</span>
+                                            <p class="text-sm font-semibold leading-6 text-slate-100">더 깊은 작업은 로그인 후 같은 자리에서 이어갑니다.</p>
+                                        </div>
+                                        <div class="home-v2-flow-step flex items-center gap-3 rounded-[1.15rem] p-3">
+                                            <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs font-black text-white">3</span>
+                                            <p class="text-sm font-semibold leading-6 text-slate-100">학급 운영 흐름을 화면 아래 보드에서 정리합니다.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -95,7 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             {% if guest_public_cards or games %}
             <section id="guest-home-try-now" class="mb-6" data-aos="fade-up" data-aos-delay="40" data-home-v2-public-section="true">
-                <div class="rounded-[1.9rem] border border-slate-200 bg-white/90 p-4 shadow-sm md:p-5">
+                <div class="rounded-[1.9rem] border border-white/60 bg-white/80 p-4 shadow-[0_18px_40px_rgba(148,163,184,0.12)] backdrop-blur-sm md:p-5">
                     <div class="mb-4 flex flex-col gap-2">
                         <div>
                             <p class="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">Try Now</p>
@@ -121,7 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             {% if guest_primary_display_sections or guest_secondary_display_sections %}
             <section id="guest-home-services" class="mb-6" data-aos="fade-up" data-aos-delay="50" data-home-v2-service-groups="true">
-                <div class="rounded-[1.9rem] border border-slate-200 bg-white/90 p-4 shadow-sm md:p-5">
+                <div class="rounded-[1.9rem] border border-white/60 bg-white/80 p-4 shadow-[0_18px_40px_rgba(148,163,184,0.12)] backdrop-blur-sm md:p-5">
                     <div class="mb-4 flex flex-col gap-2">
                         <div>
                             <p class="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">Unlock More</p>
@@ -144,4 +388,10 @@ document.addEventListener('DOMContentLoaded', () => {
         </main>
     </div>
 </div>
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
 {% endblock %}
