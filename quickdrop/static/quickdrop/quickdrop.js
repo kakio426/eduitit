@@ -512,11 +512,11 @@
                 const isCompactMobile = this.isCompactMobile();
                 const card = document.createElement('article');
                 card.className = isCompactMobile
-                    ? 'rounded-[18px] border border-[#dbe5fb] bg-white px-4 py-3'
-                    : 'rounded-[22px] border px-4 py-3 shadow-sm ' + (
+                    ? 'rounded-[18px] border border-[#dbe4ee] bg-white px-4 py-3'
+                    : 'rounded-[20px] border px-4 py-3 ' + (
                         isLatest
-                            ? 'border-[#cfe0ff] bg-[#f4f8ff]'
-                            : 'border-[#e6ecff] bg-white'
+                            ? 'border-[#bfdbfe] bg-[#eff6ff]'
+                            : 'border-[#dbe4ee] bg-white'
                     );
 
                 const header = document.createElement('div');
@@ -545,7 +545,7 @@
                 if (item.delete_url) {
                     const deleteButton = document.createElement('button');
                     deleteButton.type = 'button';
-                    deleteButton.className = 'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#dbe5fb] bg-white text-slate-400 transition hover:border-[#c4d6ff] hover:text-[#d64564]';
+                    deleteButton.className = 'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#dbe4ee] bg-white text-slate-400 transition hover:border-[#cbd5e1] hover:text-[#d64564]';
                     deleteButton.setAttribute('aria-label', '이 기록 지우기');
                     deleteButton.appendChild(createTrashIcon());
                     deleteButton.addEventListener('click', () => {
@@ -555,14 +555,26 @@
                 }
 
                 const body = document.createElement('div');
-                body.className = isCompactMobile
-                    ? 'mt-2 text-sm leading-6 text-slate-600'
-                    : 'mt-3 rounded-[18px] bg-[#f8faff] px-4 py-3 text-sm leading-6 text-slate-600';
-                if (item.kind === 'image') {
-                    body.textContent = item.filename || '사진을 보냈습니다.';
-                } else if (item.kind === 'file') {
-                    body.textContent = item.filename || '파일을 보냈습니다.';
+                if (item.kind === 'image' || item.kind === 'file') {
+                    body.className = 'mt-3 rounded-[16px] border border-[#dbe4ee] bg-[#f8fafc] px-4 py-3';
+                    const badge = document.createElement('span');
+                    badge.className = 'inline-flex items-center rounded-full px-3 py-1 text-[11px] font-black tracking-[0.08em] ' + (
+                        item.kind === 'image'
+                            ? 'bg-[#dbeafe] text-[#2563eb]'
+                            : 'bg-[#e2e8f0] text-[#334155]'
+                    );
+                    badge.textContent = item.kind === 'image' ? '사진' : fileExtensionLabel(item.filename);
+
+                    const fileName = document.createElement('p');
+                    fileName.className = 'mt-3 break-all text-sm font-bold leading-6 text-[#0f172a]';
+                    fileName.textContent = item.filename || (item.kind === 'image' ? '사진을 보냈습니다.' : '파일을 보냈습니다.');
+
+                    body.appendChild(badge);
+                    body.appendChild(fileName);
                 } else {
+                    body.className = isCompactMobile
+                        ? 'mt-2 text-sm leading-6 text-slate-600'
+                        : 'mt-3 rounded-[16px] bg-[#f8fafc] px-4 py-3 text-sm leading-6 text-slate-600';
                     body.textContent = normalizeTextContent(item.text);
                 }
 
