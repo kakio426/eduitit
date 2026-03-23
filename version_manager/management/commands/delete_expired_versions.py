@@ -3,6 +3,7 @@ import logging
 
 from django.core.management.base import BaseCommand
 from django.db import connection
+from django.db.models import F, OuterRef, Subquery
 from django.db.utils import OperationalError, ProgrammingError
 from django.utils import timezone
 
@@ -12,14 +13,14 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = 'Delete document versions older than retention days (default: 30).'
+    help = 'Delete document versions older than retention days (default: 60), except the latest version of each document.'
     required_tables = {
         'version_manager_document',
         'version_manager_documentversion',
     }
 
     def add_arguments(self, parser):
-        parser.add_argument('--days', type=int, default=30, help='Retention days. Default is 30.')
+        parser.add_argument('--days', type=int, default=60, help='Retention days. Default is 60.')
         parser.add_argument('--dry-run', action='store_true', help='Show targets without deleting.')
 
     def _schema_ready(self):
@@ -50,10 +51,18 @@ class Command(BaseCommand):
         if not self._schema_ready():
             return
 
+        latest_version_subquery = (
+            DocumentVersion.objects
+            .filter(document_id=OuterRef('document_id'))
+            .order_by('-version')
+            .values('version')[:1]
+        )
         targets = (
             DocumentVersion.objects
             .select_related('document')
+            .annotate(latest_version_number=Subquery(latest_version_subquery))
             .filter(created_at__lt=cutoff)
+            .exclude(version=F('latest_version_number'))
             .order_by('created_at')
         )
         try:
