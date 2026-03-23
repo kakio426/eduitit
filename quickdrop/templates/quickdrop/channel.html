@@ -412,10 +412,12 @@
                                         <div class="min-w-0">
                                             <p id="image-filename" class="mt-1 truncate text-xs text-slate-400"></p>
                                         </div>
-                                        <button type="button" id="download-current-btn" class="rounded-full bg-[#14213d] px-4 py-2 text-sm font-black text-white shadow-sm">받기</button>
+                                        <div id="current-image-actions" class="flex items-center gap-2">
+                                            <button type="button" id="copy-current-btn" class="hidden rounded-full border border-[#d6e1ff] bg-white px-3.5 py-2 text-sm font-black text-[#3c4c72] shadow-sm transition hover:border-[#b9cbff] hover:bg-[#f6f9ff]">복사</button>
+                                            <button type="button" id="download-current-btn" class="rounded-full bg-[#14213d] px-4 py-2 text-sm font-black text-white shadow-sm transition hover:bg-[#0f1a33]">저장</button>
+                                        </div>
                                     </div>
                                     <div class="relative overflow-visible rounded-[30px] border border-[#dce5ff] bg-white p-3 shadow-[0_24px_60px_rgba(44,86,170,0.12)]">
-                                        <div class="absolute left-[-5px] top-7 h-4 w-4 rotate-45 rounded-[4px] border-l border-t border-[#dce5ff] bg-white"></div>
                                         <div id="image-preview-shell" class="overflow-hidden rounded-[24px] bg-[#f4f7ff] p-2">
                                             <img id="image-output" alt="현재 전송된 이미지" class="mx-auto max-h-[480px] w-auto rounded-[18px] object-contain">
                                         </div>

@@ -100,6 +100,7 @@
                 this.filePreviewShell = byId('file-preview-shell');
                 this.fileOutputName = byId('file-output-name');
                 this.imageFilename = byId('image-filename');
+                this.copyCurrentBtn = byId('copy-current-btn');
                 this.downloadCurrentBtn = byId('download-current-btn');
                 this.historyPanel = byId('history-panel');
                 this.historySummary = byId('history-summary');
@@ -173,34 +174,57 @@
             },
 
             bindActions() {
+                if (this.copyCurrentBtn) {
+                    this.copyCurrentBtn.addEventListener('click', async () => {
+                        if ((this.session.current_kind || '') !== 'image' || !this.session.current_download_url) {
+                            return;
+                        }
+                        if (!navigator.clipboard || typeof window.ClipboardItem === 'undefined') {
+                            this.toast('이 브라우저에서는 이미지 복사를 지원하지 않습니다.', 'error');
+                            return;
+                        }
+                        try {
+                            const asset = await this.fetchCurrentAsset();
+                            await navigator.clipboard.write([
+                                new window.ClipboardItem({
+                                    [asset.blob.type || 'image/png']: asset.blob,
+                                }),
+                            ]);
+                            this.toast('이미지를 복사했습니다.', 'success');
+                        } catch (_error) {
+                            this.toast('이미지를 복사할 수 없습니다.', 'error');
+                        }
+                    });
+                }
+
                 if (this.downloadCurrentBtn) {
                     this.downloadCurrentBtn.addEventListener('click', async () => {
                         if (!this.session.current_download_url) {
                             return;
                         }
                         try {
-                            const response = await fetch(this.session.current_download_url, { credentials: 'same-origin' });
-                            if (!response.ok) {
-                                throw new Error('download failed');
-                            }
-                            const blob = await response.blob();
-                            const filename = this.session.current_filename || 'shared-file';
-                            const file = new File([blob], filename, { type: blob.type || 'application/octet-stream' });
+                            const asset = await this.fetchCurrentAsset();
+                            const file = new File([asset.blob], asset.filename, {
+                                type: asset.blob.type || 'application/octet-stream',
+                            });
 
                             if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-                                await navigator.share({ files: [file], title: filename });
+                                await navigator.share({ files: [file], title: asset.filename });
                                 return;
                             }
 
                             const link = document.createElement('a');
-                            link.href = URL.createObjectURL(blob);
-                            link.download = filename;
+                            link.href = URL.createObjectURL(asset.blob);
+                            link.download = asset.filename;
                             link.click();
                             window.setTimeout(function () {
                                 URL.revokeObjectURL(link.href);
                             }, 300);
                         } catch (_error) {
-                            this.toast('파일을 받을 수 없습니다.', 'error');
+                            const message = (this.session.current_kind || '') === 'image'
+                                ? '이미지를 저장할 수 없습니다.'
+                                : '파일을 받을 수 없습니다.';
+                            this.toast(message, 'error');
                         }
                     });
                 }
@@ -281,6 +305,17 @@
                 } finally {
                     this.isPosting = false;
                 }
+            },
+
+            async fetchCurrentAsset() {
+                const response = await fetch(this.session.current_download_url, { credentials: 'same-origin' });
+                if (!response.ok) {
+                    throw new Error('download failed');
+                }
+                return {
+                    blob: await response.blob(),
+                    filename: this.session.current_filename || 'shared-file',
+                };
             },
 
             startSnapshotPolling(immediate) {
@@ -413,6 +448,9 @@
                 }
                 if (this.downloadCurrentBtn) {
                     this.downloadCurrentBtn.textContent = isImage ? '저장' : '받기';
+                }
+                if (this.copyCurrentBtn) {
+                    this.copyCurrentBtn.classList.toggle('hidden', !isImage);
                 }
                 if (this.historySummary) {
                     this.historySummary.textContent = '오늘 ' + String(todayItems.length) + '개';
