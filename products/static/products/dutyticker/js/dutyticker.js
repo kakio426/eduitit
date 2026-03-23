@@ -77,6 +77,11 @@ class DutyTickerManager {
         this.missionQuickPhraseLimit = 20;
         this.missionQuickPhrase = null;
         this.missionQuickSelectedId = null;
+        this.breakAutoConfigStorageKey = 'dt-break-auto-config-v1';
+        this.breakAutoRuntimeStorageKey = 'dt-break-auto-runtime-v1';
+        this.breakAutoConfig = this.getDefaultBreakAutoConfig();
+        this.breakAutoRuntime = this.getDefaultBreakAutoRuntime();
+        this.breakAutoActiveSlotCode = '';
 
         this.timerSeconds = 300;
         this.timerMaxSeconds = 300;
@@ -100,6 +105,8 @@ class DutyTickerManager {
         this.restoreMissionFontSize();
         this.applyMissionFontSize();
         this.restoreMissionQuickPhrase();
+        this.restoreBreakAutoConfig();
+        this.restoreBreakAutoRuntime();
         this.updateMissionQuickPhraseUI();
         this.restoreMissionPanelState();
         this.applyMissionPanelState();
@@ -160,6 +167,8 @@ class DutyTickerManager {
         this.bindButtonAction('missionQuickApplySelectedBtn', () => this.applyMissionQuickPhrase());
         this.bindButtonAction('missionQuickDeleteBtn', () => this.deleteSelectedMissionQuickPhrase());
         this.bindButtonAction('missionQuickDeleteAllBtn', () => this.clearMissionQuickPhrases());
+        this.bindButtonAction('missionQuickAssignBreakAutoBtn', () => this.assignSelectedMissionQuickPhraseToBreakAuto());
+        this.setupBreakAutoConfigControls();
 
         this.setupInlineMissionEditor();
 
@@ -295,6 +304,28 @@ class DutyTickerManager {
             handler();
         });
         button.dataset.dtBound = '1';
+    }
+
+    bindInputAction(id, eventName, handler) {
+        const input = document.getElementById(id);
+        if (!input) return;
+        const boundKey = `dtBound${eventName}`;
+        if (input.dataset[boundKey] === '1') return;
+        input.addEventListener(eventName, handler);
+        input.dataset[boundKey] = '1';
+    }
+
+    setupBreakAutoConfigControls() {
+        this.bindInputAction('breakAutoEnabledInput', 'change', (event) => {
+            this.handleBreakAutoEnabledToggle(event.target.checked);
+        });
+        this.bindInputAction('breakAutoMinutesInput', 'change', () => this.handleBreakAutoMinutesCommit());
+        this.bindInputAction('breakAutoMinutesInput', 'blur', () => this.handleBreakAutoMinutesCommit());
+        this.bindInputAction('breakAutoMinutesInput', 'keydown', (event) => {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            this.handleBreakAutoMinutesCommit();
+        });
     }
 
     bindGlobalShortcuts() {
@@ -444,6 +475,422 @@ class DutyTickerManager {
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
+    }
+
+    getDefaultBreakAutoConfig() {
+        return {
+            enabled: false,
+            timerMinutes: 10,
+            phraseId: '',
+            phraseSnapshot: null,
+        };
+    }
+
+    getDefaultBreakAutoRuntime() {
+        return {
+            date: '',
+            runs: {},
+        };
+    }
+
+    normalizeBreakAutoTimerMinutes(value) {
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed)) return 10;
+        return Math.max(1, Math.min(60, Math.round(parsed)));
+    }
+
+    sanitizeBreakAutoPhraseSnapshot(rawSnapshot = null) {
+        if (!rawSnapshot || typeof rawSnapshot !== 'object') return null;
+
+        const title = this.sanitizeMissionText(rawSnapshot.title || '', 'title');
+        const desc = this.sanitizeMissionText(rawSnapshot.desc || '', 'desc');
+        const label = this.buildMissionQuickPhraseLabel(title, desc, String(rawSnapshot.label || ''));
+        if (!title && !desc && !label) return null;
+
+        return {
+            label,
+            title,
+            desc,
+        };
+    }
+
+    restoreBreakAutoConfig() {
+        try {
+            const raw = localStorage.getItem(this.breakAutoConfigStorageKey);
+            if (!raw) {
+                this.breakAutoConfig = this.getDefaultBreakAutoConfig();
+                return;
+            }
+
+            const parsed = JSON.parse(raw);
+            const nextConfig = this.getDefaultBreakAutoConfig();
+            nextConfig.enabled = parsed?.enabled === true;
+            nextConfig.timerMinutes = this.normalizeBreakAutoTimerMinutes(parsed?.timerMinutes);
+            nextConfig.phraseId = String(parsed?.phraseId || '').trim();
+            nextConfig.phraseSnapshot = this.sanitizeBreakAutoPhraseSnapshot(parsed?.phraseSnapshot);
+            if (!nextConfig.phraseSnapshot) nextConfig.enabled = false;
+            this.breakAutoConfig = nextConfig;
+        } catch (error) {
+            console.warn('DutyTicker: failed to restore break auto config', error);
+            this.breakAutoConfig = this.getDefaultBreakAutoConfig();
+        }
+    }
+
+    saveBreakAutoConfig() {
+        const nextConfig = {
+            enabled: this.breakAutoConfig.enabled === true && !!this.breakAutoConfig.phraseSnapshot,
+            timerMinutes: this.normalizeBreakAutoTimerMinutes(this.breakAutoConfig.timerMinutes),
+            phraseId: String(this.breakAutoConfig.phraseId || '').trim(),
+            phraseSnapshot: this.sanitizeBreakAutoPhraseSnapshot(this.breakAutoConfig.phraseSnapshot),
+        };
+        if (!nextConfig.phraseSnapshot) {
+            nextConfig.enabled = false;
+            nextConfig.phraseId = '';
+        }
+        this.breakAutoConfig = nextConfig;
+
+        try {
+            localStorage.setItem(this.breakAutoConfigStorageKey, JSON.stringify(nextConfig));
+        } catch (error) {
+            console.warn('DutyTicker: failed to save break auto config', error);
+        }
+    }
+
+    restoreBreakAutoRuntime() {
+        try {
+            const raw = localStorage.getItem(this.breakAutoRuntimeStorageKey);
+            if (!raw) {
+                this.breakAutoRuntime = this.getDefaultBreakAutoRuntime();
+                return;
+            }
+
+            const parsed = JSON.parse(raw);
+            const runs = parsed?.runs && typeof parsed.runs === 'object' ? parsed.runs : {};
+            const normalizedRuns = {};
+            Object.entries(runs).forEach(([slotCode, row]) => {
+                if (!slotCode || !row || typeof row !== 'object') return;
+                normalizedRuns[String(slotCode)] = {
+                    appliedAt: Number(row.appliedAt) || Date.now(),
+                    appliedTitle: this.sanitizeMissionText(row.appliedTitle || '', 'title'),
+                    appliedDesc: this.sanitizeMissionText(row.appliedDesc || '', 'desc'),
+                    prevTitle: this.sanitizeMissionText(row.prevTitle || '', 'title'),
+                    prevDesc: this.sanitizeMissionText(row.prevDesc || '', 'desc'),
+                };
+            });
+
+            this.breakAutoRuntime = {
+                date: String(parsed?.date || ''),
+                runs: normalizedRuns,
+            };
+        } catch (error) {
+            console.warn('DutyTicker: failed to restore break auto runtime', error);
+            this.breakAutoRuntime = this.getDefaultBreakAutoRuntime();
+        }
+    }
+
+    saveBreakAutoRuntime() {
+        try {
+            localStorage.setItem(this.breakAutoRuntimeStorageKey, JSON.stringify(this.breakAutoRuntime));
+        } catch (error) {
+            console.warn('DutyTicker: failed to save break auto runtime', error);
+        }
+    }
+
+    ensureBreakAutoRuntime(date = new Date()) {
+        const todayKey = this.getLocalDateKey(date);
+        if (this.breakAutoRuntime.date === todayKey) return;
+        this.breakAutoRuntime = {
+            date: todayKey,
+            runs: {},
+        };
+        this.breakAutoActiveSlotCode = '';
+        this.saveBreakAutoRuntime();
+    }
+
+    getBreakAutoRun(slotCode, date = new Date()) {
+        this.ensureBreakAutoRuntime(date);
+        return this.breakAutoRuntime.runs[String(slotCode)] || null;
+    }
+
+    setBreakAutoRun(slotCode, runData, date = new Date()) {
+        if (!slotCode || !runData || typeof runData !== 'object') return;
+        this.ensureBreakAutoRuntime(date);
+        this.breakAutoRuntime.runs[String(slotCode)] = {
+            appliedAt: Number(runData.appliedAt) || Date.now(),
+            appliedTitle: this.sanitizeMissionText(runData.appliedTitle || '', 'title'),
+            appliedDesc: this.sanitizeMissionText(runData.appliedDesc || '', 'desc'),
+            prevTitle: this.sanitizeMissionText(runData.prevTitle || '', 'title'),
+            prevDesc: this.sanitizeMissionText(runData.prevDesc || '', 'desc'),
+        };
+        this.saveBreakAutoRuntime();
+    }
+
+    clearBreakAutoRun(slotCode, date = new Date()) {
+        this.ensureBreakAutoRuntime(date);
+        if (!Object.prototype.hasOwnProperty.call(this.breakAutoRuntime.runs, String(slotCode))) return;
+        delete this.breakAutoRuntime.runs[String(slotCode)];
+        this.saveBreakAutoRuntime();
+    }
+
+    getBreakAutoPhraseSnapshot() {
+        return this.sanitizeBreakAutoPhraseSnapshot(this.breakAutoConfig.phraseSnapshot);
+    }
+
+    isBreakAutoEnabled() {
+        return this.breakAutoConfig.enabled === true && !!this.getBreakAutoPhraseSnapshot();
+    }
+
+    getBreakSlots() {
+        return this.todaySchedule
+            .filter((slot) => slot && slot.slot_type === 'break')
+            .sort((a, b) => {
+                const aStart = this.timeStringToMinutes(a?.startTime);
+                const bStart = this.timeStringToMinutes(b?.startTime);
+                return aStart - bStart;
+            });
+    }
+
+    getBreakSlotDate(slot, timeKey, now = new Date()) {
+        const target = String(slot?.[timeKey] || '').trim();
+        const match = target.match(/^(\d{1,2}):(\d{2})$/);
+        if (!match) return null;
+        const date = new Date(now);
+        date.setHours(Number(match[1]), Number(match[2]), 0, 0);
+        return date;
+    }
+
+    getCurrentBreakSlot(now = new Date()) {
+        const currentTime = now.getTime();
+        return this.getBreakSlots().find((slot) => {
+            const startAt = this.getBreakSlotDate(slot, 'startTime', now);
+            const endAt = this.getBreakSlotDate(slot, 'endTime', now);
+            if (!startAt || !endAt || endAt <= startAt) return false;
+            return currentTime >= startAt.getTime() && currentTime < endAt.getTime();
+        }) || null;
+    }
+
+    getBreakSlotRemainingSeconds(slot, now = new Date()) {
+        const endAt = this.getBreakSlotDate(slot, 'endTime', now);
+        if (!endAt) return 0;
+        return Math.max(0, Math.ceil((endAt.getTime() - now.getTime()) / 1000));
+    }
+
+    isMissionMatchingSnapshot(snapshot) {
+        if (!snapshot) return false;
+        const currentTitle = this.sanitizeMissionText(this.missionTitle, 'title');
+        const currentDesc = this.sanitizeMissionText(this.missionDesc, 'desc');
+        return currentTitle === this.sanitizeMissionText(snapshot.title || '', 'title')
+            && currentDesc === this.sanitizeMissionText(snapshot.desc || '', 'desc');
+    }
+
+    applyMissionLocally({ title, desc } = {}) {
+        this.missionTitle = this.sanitizeMissionText(title ?? this.missionTitle, 'title');
+        this.missionDesc = this.sanitizeMissionText(desc ?? this.missionDesc, 'desc');
+        this.renderMission();
+    }
+
+    restoreBreakAutoMissionFromRun(slotCode, run) {
+        if (!slotCode || !run) return;
+        this.applyMissionLocally({
+            title: run.appliedTitle,
+            desc: run.appliedDesc,
+        });
+        this.breakAutoActiveSlotCode = String(slotCode);
+    }
+
+    cleanupBreakAutoRuntime(now = new Date(), activeSlotCode = '') {
+        this.ensureBreakAutoRuntime(now);
+        const activeCode = String(activeSlotCode || '');
+        const slotMap = new Map(this.getBreakSlots().map((slot) => [String(slot.slot_code || ''), slot]));
+        let didChange = false;
+
+        Object.entries(this.breakAutoRuntime.runs).forEach(([slotCode, run]) => {
+            const normalizedSlotCode = String(slotCode || '');
+            if (!normalizedSlotCode || normalizedSlotCode === activeCode) return;
+
+            const slot = slotMap.get(normalizedSlotCode);
+            const endAt = slot ? this.getBreakSlotDate(slot, 'endTime', now) : null;
+            const hasEnded = !slot || !endAt || now.getTime() >= endAt.getTime();
+            if (!hasEnded) return;
+
+            const appliedSnapshot = {
+                title: run?.appliedTitle || '',
+                desc: run?.appliedDesc || '',
+            };
+            if (
+                this.breakAutoActiveSlotCode === normalizedSlotCode
+                && this.isMissionMatchingSnapshot(appliedSnapshot)
+            ) {
+                this.applyMissionLocally({
+                    title: run?.prevTitle || '',
+                    desc: run?.prevDesc || '',
+                });
+            }
+
+            delete this.breakAutoRuntime.runs[normalizedSlotCode];
+            if (this.breakAutoActiveSlotCode === normalizedSlotCode) {
+                this.breakAutoActiveSlotCode = '';
+            }
+            didChange = true;
+        });
+
+        if (didChange) this.saveBreakAutoRuntime();
+    }
+
+    applyBreakAutoToSlot(slot, now = new Date()) {
+        const slotCode = String(slot?.slot_code || '').trim();
+        const phraseSnapshot = this.getBreakAutoPhraseSnapshot();
+        if (!slotCode || !phraseSnapshot) return;
+
+        const runData = {
+            appliedAt: now.getTime(),
+            appliedTitle: phraseSnapshot.title,
+            appliedDesc: phraseSnapshot.desc,
+            prevTitle: this.sanitizeMissionText(this.missionTitle, 'title'),
+            prevDesc: this.sanitizeMissionText(this.missionDesc, 'desc'),
+        };
+
+        this.setBreakAutoRun(slotCode, runData, now);
+        this.restoreBreakAutoMissionFromRun(slotCode, runData);
+
+        const configuredSeconds = this.normalizeBreakAutoTimerMinutes(this.breakAutoConfig.timerMinutes) * 60;
+        const remainingSeconds = this.getBreakSlotRemainingSeconds(slot, now);
+        const timerSeconds = remainingSeconds > 0
+            ? Math.min(configuredSeconds, remainingSeconds)
+            : configuredSeconds;
+
+        this.setTimerMode(timerSeconds, true);
+        this.showToast(`${String(slot.slot_label || '쉬는시간').trim() || '쉬는시간'} 자동 시작`, 'success');
+    }
+
+    syncBreakAutoState(now = new Date()) {
+        if (!this.hasLoadedData) return;
+
+        const activeSlot = this.getCurrentBreakSlot(now);
+        const activeSlotCode = String(activeSlot?.slot_code || '');
+        this.cleanupBreakAutoRuntime(now, activeSlotCode);
+
+        if (!activeSlotCode) {
+            this.breakAutoActiveSlotCode = '';
+            return;
+        }
+
+        const existingRun = this.getBreakAutoRun(activeSlotCode, now);
+        if (existingRun) {
+            if (
+                this.breakAutoActiveSlotCode !== activeSlotCode
+                || this.isMissionMatchingSnapshot({
+                    title: existingRun.appliedTitle,
+                    desc: existingRun.appliedDesc,
+                })
+            ) {
+                this.restoreBreakAutoMissionFromRun(activeSlotCode, existingRun);
+            }
+            return;
+        }
+
+        if (!this.isBreakAutoEnabled()) return;
+        this.applyBreakAutoToSlot(activeSlot, now);
+    }
+
+    handleBreakAutoEnabledToggle(checked) {
+        if (checked && !this.getBreakAutoPhraseSnapshot()) {
+            this.breakAutoConfig.enabled = false;
+            this.saveBreakAutoConfig();
+            this.renderBreakAutoConfigCard();
+            this.updateMissionQuickPhraseUI();
+            this.showToast('먼저 자동으로 쓸 문구를 지정해 주세요.', 'error');
+            return;
+        }
+
+        this.breakAutoConfig.enabled = checked === true;
+        this.saveBreakAutoConfig();
+        this.renderBreakAutoConfigCard();
+        this.updateMissionQuickPhraseUI();
+        if (this.breakAutoConfig.enabled) this.syncBreakAutoState(new Date());
+    }
+
+    handleBreakAutoMinutesCommit() {
+        const input = document.getElementById('breakAutoMinutesInput');
+        if (!input) return;
+        const nextMinutes = this.normalizeBreakAutoTimerMinutes(input.value);
+        input.value = String(nextMinutes);
+        this.breakAutoConfig.timerMinutes = nextMinutes;
+        this.saveBreakAutoConfig();
+        this.renderBreakAutoConfigCard();
+    }
+
+    assignSelectedMissionQuickPhraseToBreakAuto() {
+        const selected = this.syncMissionQuickPhraseSelection(this.missionQuickSelectedId);
+        if (!selected) {
+            this.showToast('자동 문구로 지정할 항목을 먼저 선택해 주세요.', 'error');
+            return;
+        }
+
+        this.breakAutoConfig.phraseId = selected.id;
+        this.breakAutoConfig.phraseSnapshot = {
+            label: selected.label,
+            title: selected.title,
+            desc: selected.desc,
+        };
+        this.breakAutoConfig.enabled = true;
+        this.saveBreakAutoConfig();
+        this.renderBreakAutoConfigCard();
+        this.updateMissionQuickPhraseUI();
+        this.syncBreakAutoState(new Date());
+        this.showToast(`'${selected.label}' 문구를 쉬는시간 자동 문구로 지정했습니다.`, 'success');
+    }
+
+    getBreakAutoSummaryText() {
+        const snapshot = this.getBreakAutoPhraseSnapshot();
+        if (!snapshot) return '자동 문구 없음';
+        return snapshot.desc || snapshot.title || snapshot.label || '자동 문구';
+    }
+
+    renderBreakAutoConfigCard() {
+        const statusEl = document.getElementById('breakAutoStatusText');
+        const hintEl = document.getElementById('breakAutoHintText');
+        const enabledInput = document.getElementById('breakAutoEnabledInput');
+        const minutesInput = document.getElementById('breakAutoMinutesInput');
+        const labelEl = document.getElementById('breakAutoPhraseLabel');
+        const previewEl = document.getElementById('breakAutoPhrasePreview');
+        const assignBtn = document.getElementById('missionQuickAssignBreakAutoBtn');
+        const selected = this.syncMissionQuickPhraseSelection(this.missionQuickSelectedId);
+        const snapshot = this.getBreakAutoPhraseSnapshot();
+        const isEnabled = this.isBreakAutoEnabled();
+
+        if (statusEl) {
+            statusEl.textContent = isEnabled ? '자동ON' : '자동OFF';
+            statusEl.classList.toggle('bg-emerald-500/20', isEnabled);
+            statusEl.classList.toggle('text-emerald-200', isEnabled);
+            statusEl.classList.toggle('border-emerald-300/25', isEnabled);
+            statusEl.classList.toggle('bg-slate-800/80', !isEnabled);
+            statusEl.classList.toggle('text-slate-300', !isEnabled);
+            statusEl.classList.toggle('border-slate-600/70', !isEnabled);
+        }
+
+        if (hintEl) {
+            if (!snapshot) {
+                hintEl.textContent = '저장 문구에서 하나를 선택해 자동 문구로 지정하면 쉬는시간마다 한 번만 자동 시작합니다.';
+            } else if (!this.missionQuickPhrases.length) {
+                hintEl.textContent = '저장 목록이 비어도 마지막 자동 문구는 이 브라우저에서 계속 유지됩니다.';
+            } else {
+                hintEl.textContent = '쉬는시간마다 문구와 타이머를 한 번만 자동으로 적용합니다.';
+            }
+        }
+
+        if (enabledInput) {
+            enabledInput.checked = isEnabled;
+            enabledInput.disabled = !snapshot;
+        }
+
+        if (minutesInput) minutesInput.value = String(this.normalizeBreakAutoTimerMinutes(this.breakAutoConfig.timerMinutes));
+        if (labelEl) labelEl.textContent = snapshot?.label || '자동 문구 없음';
+        if (previewEl) previewEl.textContent = snapshot ? this.getBreakAutoSummaryText() : '문구관리에서 저장 문구를 선택해 자동 문구로 지정하세요.';
+        if (assignBtn) {
+            assignBtn.disabled = !selected;
+            assignBtn.textContent = selected ? '선택 문구를 자동 문구로 지정' : '선택 문구를 먼저 고르세요';
+        }
     }
 
     restoreTtsAutoAnnouncementHistory() {
@@ -923,6 +1370,7 @@ class DutyTickerManager {
 
         this.updateBroadcastModalTtsInfo();
         this.checkAndTriggerScheduledAnnouncement(new Date());
+        this.syncBreakAutoState(new Date());
 
         if (periodSchedule.length === 0) {
             container.innerHTML = '<span class="dt-header-schedule-empty">오늘 시간표 없음</span>';
@@ -2367,6 +2815,20 @@ class DutyTickerManager {
         return this.missionQuickPhrases.find((item) => item.id === String(phraseId)) || null;
     }
 
+    syncBreakAutoSnapshotFromSavedPhrase() {
+        const phraseId = String(this.breakAutoConfig.phraseId || '').trim();
+        if (!phraseId) return;
+        const matchedPhrase = this.getMissionQuickPhraseById(phraseId);
+        if (!matchedPhrase) return;
+
+        this.breakAutoConfig.phraseSnapshot = {
+            label: matchedPhrase.label,
+            title: matchedPhrase.title,
+            desc: matchedPhrase.desc,
+        };
+        this.saveBreakAutoConfig();
+    }
+
     syncMissionQuickPhraseSelection(selectedId = null) {
         const targetId = String(selectedId || this.missionQuickSelectedId || '').trim();
         const selected = this.getMissionQuickPhraseById(targetId) || this.missionQuickPhrases[0] || null;
@@ -2397,15 +2859,23 @@ class DutyTickerManager {
 
     updateMissionQuickPhraseUI() {
         const applyBtn = document.getElementById('missionQuickApplyBtn');
+        const applyLabel = document.getElementById('missionQuickApplyLabel');
+        const autoBadge = document.getElementById('missionQuickAutoBadge');
         const saveBtn = document.getElementById('missionQuickSaveBtn');
         if (!applyBtn) return;
 
         const count = this.missionQuickPhrases.length;
         applyBtn.disabled = false;
         applyBtn.classList.remove('opacity-60', 'cursor-not-allowed');
-        applyBtn.textContent = count > 0 ? `문구관리(${count})` : '문구관리';
+        if (applyLabel) {
+            applyLabel.textContent = count > 0 ? `문구관리(${count})` : '문구관리';
+        } else {
+            applyBtn.textContent = count > 0 ? `문구관리(${count})` : '문구관리';
+        }
         applyBtn.setAttribute('title', count > 0 ? '저장한 문구를 불러오고 수정하거나 삭제합니다.' : '저장한 문구를 관리합니다.');
         if (saveBtn) saveBtn.setAttribute('title', count > 0 ? `현재 문구를 새 항목으로 저장 (저장 ${count}개)` : '현재 문구를 새 항목으로 저장');
+        if (autoBadge) autoBadge.classList.toggle('hidden', !this.isBreakAutoEnabled());
+        this.renderBreakAutoConfigCard();
     }
 
     renderMissionQuickPhraseModal() {
@@ -2419,6 +2889,8 @@ class DutyTickerManager {
         const deleteAllBtn = document.getElementById('missionQuickDeleteAllBtn');
         const count = this.missionQuickPhrases.length;
         const selected = this.syncMissionQuickPhraseSelection(this.missionQuickSelectedId);
+
+        this.renderBreakAutoConfigCard();
 
         if (countEl) countEl.textContent = `저장 ${count}개`;
         if (updateBtn) updateBtn.disabled = !selected;
@@ -2503,6 +2975,7 @@ class DutyTickerManager {
         this.missionQuickPhrase = this.missionQuickPhrases[0] || null;
         this.missionQuickSelectedId = entry.id;
         this.saveMissionQuickPhraseToStorage();
+        this.syncBreakAutoSnapshotFromSavedPhrase();
         this.updateMissionQuickPhraseUI();
         this.setMissionQuickPhraseFormValues(entry);
         this.renderMissionQuickPhraseModal();
@@ -2525,6 +2998,7 @@ class DutyTickerManager {
         this.missionQuickPhrase = this.missionQuickPhrases[0] || null;
         this.missionQuickSelectedId = entry.id;
         this.saveMissionQuickPhraseToStorage();
+        this.syncBreakAutoSnapshotFromSavedPhrase();
         this.updateMissionQuickPhraseUI();
         this.setMissionQuickPhraseFormValues(entry);
         this.renderMissionQuickPhraseModal();
@@ -2564,6 +3038,7 @@ class DutyTickerManager {
         this.missionQuickPhrase = updated;
         this.missionQuickSelectedId = updated.id;
         this.saveMissionQuickPhraseToStorage();
+        this.syncBreakAutoSnapshotFromSavedPhrase();
         this.updateMissionQuickPhraseUI();
         this.setMissionQuickPhraseFormValues(updated);
         this.renderMissionQuickPhraseModal();
@@ -2588,6 +3063,7 @@ class DutyTickerManager {
             this.missionQuickPhrases.splice(selectedIndex, 1);
             this.missionQuickPhrases.unshift(selected);
             this.saveMissionQuickPhraseToStorage();
+            this.syncBreakAutoSnapshotFromSavedPhrase();
             this.updateMissionQuickPhraseUI();
         }
 

@@ -590,7 +590,8 @@
     #mainAppContainer #timerControls .timer-btn,
     #mainAppContainer #timerControls .timer-reset-btn,
     #mainAppContainer #timerControls .timer-custom-wrap,
-    #mainAppContainer #timerControls .mission-font-wrap {
+    #mainAppContainer #timerControls .mission-font-wrap,
+    #mainAppContainer #timerControls .mission-quick-wrap {
         background: var(--dt-timer-control-bg) !important;
         border-color: var(--dt-timer-control-border) !important;
         color: var(--dt-timer-control-text) !important;
@@ -601,7 +602,8 @@
     #mainAppContainer #timerControls .timer-btn:hover,
     #mainAppContainer #timerControls .timer-reset-btn:hover,
     #mainAppContainer #timerControls .timer-custom-wrap button:hover,
-    #mainAppContainer #timerControls .mission-font-wrap button:hover {
+    #mainAppContainer #timerControls .mission-font-wrap button:hover,
+    #mainAppContainer #timerControls .mission-quick-wrap button:hover {
         background: var(--dt-timer-control-bg-hover) !important;
     }
 
@@ -1455,9 +1457,45 @@
         line-height: 1;
     }
 
+    .mission-quick-wrap {
+        min-width: 0;
+    }
+
     .mission-quick-wrap button {
         min-width: 4.8rem;
         line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.38rem;
+        position: relative;
+    }
+
+    #missionQuickAutoBadge {
+        width: 0.48rem;
+        height: 0.48rem;
+        border-radius: 9999px;
+        background: #86efac;
+        box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.35);
+        flex-shrink: 0;
+    }
+
+    .dt-break-auto-card-label {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        word-break: keep-all;
+        overflow-wrap: normal;
+    }
+
+    .dt-break-auto-card-preview {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        overflow: hidden;
+        white-space: normal;
+        word-break: keep-all;
+        overflow-wrap: normal;
     }
 
     #mainStudentCard .dt-mission-progress-wrap {
@@ -3224,7 +3262,10 @@
                             title="현재 문구 저장">문구저장</button>
                         <button id="missionQuickApplyBtn" type="button"
                             class="px-2.5 py-1 bg-white/15 rounded-md text-white text-xs font-black hover:bg-white/25 transition"
-                            title="저장 문구 관리">문구관리</button>
+                            title="저장 문구 관리">
+                            <span id="missionQuickApplyLabel">문구관리</span>
+                            <span id="missionQuickAutoBadge" class="hidden" aria-hidden="true"></span>
+                        </button>
                     </div>
                     <div class="timer-divider w-px h-auto bg-white/10 mx-1"></div>
                     <button id="timerResetBtn" type="button"
@@ -3476,6 +3517,58 @@
                     <i class="fa-solid fa-xmark text-xl"></i>
                 </button>
             </div>
+
+            <section class="mb-5 rounded-[1.6rem] border border-slate-700/70 bg-slate-950/35 p-4 md:p-5">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2">
+                            <p class="text-sm font-black text-white">쉬는시간 자동</p>
+                            <span id="breakAutoStatusText"
+                                class="inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-black tracking-[0.08em]">
+                                자동OFF
+                            </span>
+                        </div>
+                        <p id="breakAutoHintText" class="mt-1 text-xs font-bold text-slate-400 break-keep">
+                            저장 문구에서 하나를 선택해 자동 문구로 지정하면 쉬는시간마다 한 번만 자동 시작합니다.
+                        </p>
+                    </div>
+                    <label class="inline-flex items-center gap-3 rounded-2xl border border-slate-700 bg-slate-900/70 px-4 py-3">
+                        <span class="text-xs font-black uppercase tracking-[0.14em] text-slate-300">사용</span>
+                        <input id="breakAutoEnabledInput" type="checkbox"
+                            class="h-5 w-5 rounded border-slate-500 bg-slate-950 text-emerald-400 focus:ring-emerald-400">
+                    </label>
+                </div>
+
+                <div class="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
+                    <div class="rounded-[1.2rem] border border-slate-700/70 bg-slate-900/70 p-4">
+                        <p class="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">현재 자동 문구</p>
+                        <p id="breakAutoPhraseLabel"
+                            class="dt-break-auto-card-label mt-2 text-sm font-black text-white">
+                            자동 문구 없음
+                        </p>
+                        <p id="breakAutoPhrasePreview"
+                            class="dt-break-auto-card-preview mt-1 text-sm font-bold leading-6 text-slate-300">
+                            문구관리에서 저장 문구를 선택해 자동 문구로 지정하세요.
+                        </p>
+                    </div>
+
+                    <div class="grid gap-3 sm:grid-cols-[minmax(0,8rem)_minmax(0,1fr)] sm:items-end">
+                        <label class="grid gap-1.5">
+                            <span class="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">타이머</span>
+                            <div class="flex items-center gap-2 rounded-2xl border border-slate-700 bg-slate-900/75 px-3 py-2.5">
+                                <input id="breakAutoMinutesInput" type="number" min="1" max="60" step="1" value="10"
+                                    inputmode="numeric"
+                                    class="w-full bg-transparent text-right text-base font-black text-white focus:outline-none">
+                                <span class="text-sm font-black text-slate-300">분</span>
+                            </div>
+                        </label>
+                        <button id="missionQuickAssignBreakAutoBtn" type="button"
+                            class="rounded-2xl bg-emerald-500/90 px-4 py-3 text-sm font-black text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50">
+                            선택 문구를 자동 문구로 지정
+                        </button>
+                    </div>
+                </div>
+            </section>
 
             <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)] gap-5">
                 <section class="rounded-[1.6rem] border border-slate-700/70 bg-slate-950/35 p-4 md:p-5 min-h-[20rem] flex flex-col">
