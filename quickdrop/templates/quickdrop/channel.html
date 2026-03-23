@@ -163,6 +163,46 @@
         box-shadow: 0 8px 18px rgba(112, 142, 211, 0.16);
     }
 
+    #quickdrop-root #download-current-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 5.5rem;
+        border: 1px solid #14213d;
+        background: #14213d;
+        color: #ffffff;
+        box-shadow: 0 12px 26px rgba(20, 33, 61, 0.18);
+    }
+
+    #quickdrop-root #download-current-btn:hover,
+    #quickdrop-root #download-current-btn:focus-visible {
+        background: #0f1a33;
+        border-color: #0f1a33;
+        color: #ffffff;
+    }
+
+    #quickdrop-root [data-quickdrop-file-shell="true"] {
+        border: 1px solid #d8e3ff;
+        background: linear-gradient(180deg, #ffffff, #f7faff);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.96);
+    }
+
+    #quickdrop-root [data-quickdrop-file-badge="true"] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 4.5rem;
+        height: 2.5rem;
+        padding: 0 0.9rem;
+        border-radius: 9999px;
+        background: #e8f0ff;
+        color: #1f4fd1;
+        font-size: 0.8rem;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
     @media (max-width: 639px) {
         section {
             background: #f3f6fb;
@@ -405,30 +445,27 @@
                         </div>
 
                         <div id="image-panel" class="hidden">
-                            <div class="flex items-end gap-3">
-                                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#dce8ff] text-lg text-[#1f4fd1] shadow-sm">🖼</div>
-                                <div class="min-w-0 flex-1">
-                                    <div class="mb-2 flex items-center justify-between gap-3 pl-1">
-                                        <div class="min-w-0">
-                                            <p id="image-filename" class="mt-1 truncate text-xs text-slate-400"></p>
-                                        </div>
-                                        <div id="current-image-actions" class="flex items-center gap-2">
-                                            <button type="button" id="copy-current-btn" class="hidden rounded-full border border-[#d6e1ff] bg-white px-3.5 py-2 text-sm font-black text-[#3c4c72] shadow-sm transition hover:border-[#b9cbff] hover:bg-[#f6f9ff]">복사</button>
-                                            <button type="button" id="download-current-btn" class="rounded-full bg-[#14213d] px-4 py-2 text-sm font-black text-white shadow-sm transition hover:bg-[#0f1a33]">저장</button>
-                                        </div>
+                            <div class="min-w-0">
+                                <div class="mb-2 flex items-center justify-between gap-3 pl-1">
+                                    <div class="min-w-0">
+                                        <p id="image-filename" class="mt-1 truncate text-xs text-slate-400"></p>
                                     </div>
-                                    <div class="relative overflow-visible rounded-[30px] border border-[#dce5ff] bg-white p-3 shadow-[0_24px_60px_rgba(44,86,170,0.12)]">
-                                        <div id="image-preview-shell" class="overflow-hidden rounded-[24px] bg-[#f4f7ff] p-2">
-                                            <img id="image-output" alt="현재 전송된 이미지" class="mx-auto max-h-[480px] w-auto rounded-[18px] object-contain">
-                                        </div>
-                                        <div id="file-preview-shell" class="hidden rounded-[24px] bg-[#f6f8fe] px-5 py-6">
-                                            <div class="flex items-center gap-3">
-                                                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#e7efff] text-xl font-black text-[#1f4fd1]">F</div>
-                                                <div class="min-w-0">
-                                                    <p class="text-xs font-black uppercase tracking-[0.18em] text-[#5c73b8]">파일</p>
-                                                    <p id="file-output-name" class="mt-1 truncate text-sm font-bold text-[#14213d]"></p>
-                                                    <p class="mt-1 text-xs text-slate-500">받기 버튼으로 바로 내려받을 수 있습니다.</p>
-                                                </div>
+                                    <div id="current-image-actions" class="flex items-center gap-2">
+                                        <button type="button" id="copy-current-btn" class="hidden rounded-full border border-[#d6e1ff] bg-white px-3.5 py-2 text-sm font-black text-[#3c4c72] shadow-sm transition hover:border-[#b9cbff] hover:bg-[#f6f9ff]">복사</button>
+                                        <button type="button" id="download-current-btn" class="rounded-full px-4 py-2 text-sm font-black transition">저장</button>
+                                    </div>
+                                </div>
+                                <div class="relative overflow-visible rounded-[30px] border border-[#dce5ff] bg-white p-3 shadow-[0_24px_60px_rgba(44,86,170,0.12)]">
+                                    <div id="image-preview-shell" class="overflow-hidden rounded-[24px] bg-[#f4f7ff] p-2">
+                                        <img id="image-output" alt="현재 전송된 이미지" class="mx-auto max-h-[480px] w-auto rounded-[18px] object-contain">
+                                    </div>
+                                    <div id="file-preview-shell" data-quickdrop-file-shell="true" class="hidden rounded-[24px] px-5 py-6">
+                                        <div class="flex items-center gap-4">
+                                            <div id="file-output-badge" data-quickdrop-file-badge="true">FILE</div>
+                                            <div class="min-w-0">
+                                                <p class="text-xs font-black uppercase tracking-[0.18em] text-[#5c73b8]">파일</p>
+                                                <p id="file-output-name" class="mt-1 truncate text-base font-black text-[#14213d]"></p>
+                                                <p class="mt-1 text-xs text-slate-500">받기 버튼으로 바로 내려받을 수 있습니다.</p>
                                             </div>
                                         </div>
                                     </div>

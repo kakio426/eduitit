@@ -28,6 +28,18 @@
         return String(value || '').trim();
     }
 
+    function fileExtensionLabel(filename) {
+        const name = String(filename || '').trim();
+        const parts = name.split('.');
+        if (parts.length > 1) {
+            const extension = String(parts[parts.length - 1] || '').trim();
+            if (extension) {
+                return extension.slice(0, 6).toUpperCase();
+            }
+        }
+        return 'FILE';
+    }
+
     function createTrashIcon() {
         const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         icon.setAttribute('viewBox', '0 0 24 24');
@@ -99,6 +111,7 @@
                 this.imagePreviewShell = byId('image-preview-shell');
                 this.filePreviewShell = byId('file-preview-shell');
                 this.fileOutputName = byId('file-output-name');
+                this.fileOutputBadge = byId('file-output-badge');
                 this.imageFilename = byId('image-filename');
                 this.copyCurrentBtn = byId('copy-current-btn');
                 this.downloadCurrentBtn = byId('download-current-btn');
@@ -442,6 +455,9 @@
                 if (this.fileOutputName) {
                     this.fileOutputName.textContent = this.session.current_filename || '선택한 파일';
                 }
+                if (this.fileOutputBadge) {
+                    this.fileOutputBadge.textContent = fileExtensionLabel(this.session.current_filename);
+                }
                 if (this.imageFilename) {
                     const imageMeta = [];
                     if (this.session.current_filename) {
@@ -453,7 +469,7 @@
                     this.imageFilename.textContent = imageMeta.join(' · ') || '파일';
                 }
                 if (this.downloadCurrentBtn) {
-                    this.downloadCurrentBtn.textContent = isImage ? '저장' : '받기';
+                    this.downloadCurrentBtn.textContent = isImage ? '저장' : '파일 받기';
                 }
                 if (this.copyCurrentBtn) {
                     this.copyCurrentBtn.classList.toggle('hidden', !isImage);
