@@ -37,6 +37,20 @@
     .edu-materials-helper-card .edu-materials-input {
         color: #0f172a;
     }
+    .edu-create-mode-button {
+        border: 1px solid rgba(203, 213, 225, 0.9);
+        background: rgba(255, 255, 255, 0.96);
+        transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+    }
+    .edu-create-mode-button[data-active="true"] {
+        border-color: rgba(16, 185, 129, 0.45);
+        background: linear-gradient(180deg, rgba(236, 253, 245, 0.98), rgba(255, 255, 255, 0.98));
+        box-shadow: 0 18px 36px rgba(16, 185, 129, 0.12);
+        transform: translateY(-1px);
+    }
+    .edu-create-panel[hidden] {
+        display: none;
+    }
     .edu-materials-gemini-button {
         background: linear-gradient(135deg, #dcfce7 0%, #86efac 100%);
         color: #14532d;
@@ -320,97 +334,117 @@
             <div class="edu-materials-panel rounded-[32px] p-6 md:p-8">
                 <div class="mb-6">
                     <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">새 자료 만들기</div>
-                    <h2 class="text-3xl font-black text-slate-900 mt-2">내 수업용 자료를 차분히 만들고, 확인한 뒤 공개하기</h2>
-                    <p class="text-sm text-slate-500 mt-2">새 자료 만들기는 공개 자료실과 분리했습니다. 초안을 먼저 저장하고, 분류와 미리보기를 확인한 뒤 공개하는 흐름으로 바꿨습니다.</p>
+                    <h2 class="text-3xl font-black text-slate-900 mt-2">초안을 먼저 저장하고, 다음 화면에서 확인한 뒤 학생 공유 켜기</h2>
+                    <p class="text-sm text-slate-500 mt-2">새 자료 만들기에서는 공개를 바로 하지 않습니다. 먼저 초안으로 저장하고 수업 시작판에서 미리보기와 학생 공유를 점검하세요.</p>
                 </div>
 
-                <div class="edu-materials-helper-card rounded-[28px] p-5 mb-6 text-white space-y-4">
-                    <div class="flex items-start justify-between gap-3">
-                        <div>
-                            <p class="text-xs font-bold uppercase tracking-[0.28em] text-emerald-200">AI 초안 만들기</p>
-                            <h3 class="text-2xl font-black mt-2">학습 주제만 쓰면 프롬프트가 바로 완성됩니다</h3>
-                        </div>
-                        <span class="rounded-full bg-white/10 px-3 py-1 text-xs font-black text-emerald-100 border border-white/15">Gemini 연동 흐름</span>
-                    </div>
-
-                    <div>
-                        <label for="lesson-topic-input" class="block text-sm font-bold text-emerald-50 mb-2">만들고 싶은 학습 주제</label>
-                        <input id="lesson-topic-input" type="text" class="edu-materials-input" placeholder="예: 태양계 행성의 자전과 공전, 분수의 크기 비교, 화산 활동 시뮬레이션">
-                    </div>
-
-                    <div>
-                        <div class="flex items-center justify-between gap-3">
-                            <label for="lesson-prompt-preview" class="block text-sm font-bold text-emerald-50">AI 제작 프롬프트</label>
-                            <span class="text-xs text-emerald-100/90">학습 주제만 바꾸면 자동 갱신</span>
-                        </div>
-                        <textarea id="lesson-prompt-preview" class="edu-materials-input edu-prompt-preview mt-2" readonly></textarea>
-                    </div>
-
-                    <div class="grid gap-2 sm:grid-cols-2">
-                        <button type="button" id="copy-prompt-button" class="rounded-2xl bg-white px-4 py-3 text-sm font-black text-slate-900">프롬프트 복사</button>
-                        <button type="button" id="open-gemini-guide-button" class="edu-materials-gemini-button rounded-2xl px-4 py-3 text-sm font-black">복사 후 제미나이로 이동</button>
-                    </div>
-
-                    <p id="prompt-copy-status" class="min-h-[20px] text-xs text-emerald-100/90">학습 주제만 적고 복사하면 바로 붙여 넣어 제작을 시작할 수 있습니다.</p>
-                    <p class="text-xs text-emerald-100/90">완성되면 제미나이의 <span class="font-black text-white">코드</span> 영역 전체를 복사해 아래 HTML 칸에 그대로 붙여넣으면 됩니다.</p>
+                <div class="grid gap-3 md:grid-cols-2">
+                    <button type="button" class="edu-create-mode-button rounded-[28px] p-5 text-left" data-create-mode-button data-mode="paste" data-active="true">
+                        <div class="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600">AI로 만들기</div>
+                        <div class="mt-2 text-2xl font-black text-slate-900">프롬프트 복사 후 HTML 붙여넣기</div>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">학습 주제를 적고 프롬프트를 만든 뒤, 완성된 HTML 전체를 붙여넣어 저장합니다.</p>
+                    </button>
+                    <button type="button" class="edu-create-mode-button rounded-[28px] p-5 text-left" data-create-mode-button data-mode="file" data-active="false">
+                        <div class="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600">완성된 HTML 올리기</div>
+                        <div class="mt-2 text-2xl font-black text-slate-900">파일 하나만 바로 업로드</div>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">이미 완성된 `.html` 파일이 있으면 제목만 적고 업로드해 바로 초안으로 저장합니다.</p>
+                    </button>
                 </div>
 
-                <form action="{% url 'edu_materials:create' %}" method="post" enctype="multipart/form-data" class="space-y-5">
-                    {% csrf_token %}
-                    <div>
-                        <label class="block text-sm font-bold text-slate-700 mb-2">자료 제목</label>
-                        <input name="title" class="edu-materials-input" placeholder="학생에게 보일 제목" required>
+                <div class="mt-6 space-y-6">
+                    <div class="edu-create-panel" data-create-panel data-mode="paste">
+                        <form action="{% url 'edu_materials:create' %}" method="post" class="space-y-5">
+                            {% csrf_token %}
+                            <input type="hidden" name="input_mode" value="paste">
+
+                            <div class="edu-materials-helper-card rounded-[28px] p-5 text-white space-y-4">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div>
+                                        <p class="text-xs font-bold uppercase tracking-[0.28em] text-emerald-200">AI 초안 만들기</p>
+                                        <h3 class="text-2xl font-black mt-2">학습 주제만 쓰면 프롬프트가 바로 완성됩니다</h3>
+                                    </div>
+                                    <span class="rounded-full bg-white/10 px-3 py-1 text-xs font-black text-emerald-100 border border-white/15">Gemini 연동 흐름</span>
+                                </div>
+
+                                <div>
+                                    <label for="lesson-topic-input" class="block text-sm font-bold text-emerald-50 mb-2">만들고 싶은 학습 주제</label>
+                                    <input id="lesson-topic-input" type="text" class="edu-materials-input" placeholder="예: 태양계 행성의 자전과 공전, 분수의 크기 비교, 화산 활동 시뮬레이션">
+                                </div>
+
+                                <div>
+                                    <div class="flex items-center justify-between gap-3">
+                                        <label for="lesson-prompt-preview" class="block text-sm font-bold text-emerald-50">AI 제작 프롬프트</label>
+                                        <span class="text-xs text-emerald-100/90">학습 주제만 바꾸면 자동 갱신</span>
+                                    </div>
+                                    <textarea id="lesson-prompt-preview" class="edu-materials-input edu-prompt-preview mt-2" readonly></textarea>
+                                </div>
+
+                                <div class="grid gap-2 sm:grid-cols-2">
+                                    <button type="button" id="copy-prompt-button" class="rounded-2xl bg-white px-4 py-3 text-sm font-black text-slate-900">프롬프트 복사</button>
+                                    <button type="button" id="open-gemini-guide-button" class="edu-materials-gemini-button rounded-2xl px-4 py-3 text-sm font-black">복사 후 제미나이로 이동</button>
+                                </div>
+
+                                <p id="prompt-copy-status" class="min-h-[20px] text-xs text-emerald-100/90">학습 주제만 적고 복사하면 바로 붙여 넣어 제작을 시작할 수 있습니다.</p>
+                                <p class="text-xs text-emerald-100/90">완성되면 제미나이의 <span class="font-black text-white">코드</span> 영역 전체를 복사해 아래 HTML 칸에 그대로 붙여넣으면 됩니다.</p>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-bold text-slate-700 mb-2">자료 제목</label>
+                                <input name="title" class="edu-materials-input" placeholder="학생에게 보일 제목" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-slate-700 mb-2">완성된 HTML 코드 붙여넣기</label>
+                                <textarea name="html_content" class="edu-materials-input min-h-[220px]" placeholder="제미나이에서 복사한 `<!DOCTYPE html>`부터 마지막 `</html>`까지 전체 코드를 붙여넣으세요." required></textarea>
+                                <p class="text-xs text-slate-500 mt-2">여기서는 초안만 저장합니다. 다음 화면에서 미리보기와 학생 공유를 확인한 뒤 공개하세요.</p>
+                            </div>
+                            <button type="submit" class="w-full rounded-2xl bg-emerald-600 py-4 text-white text-lg font-black shadow-lg shadow-emerald-600/15 hover:-translate-y-0.5 transition">초안 저장하고 시작판으로 가기</button>
+                        </form>
                     </div>
-                    <fieldset class="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
-                        <legend class="px-2 text-sm font-bold text-slate-700">입력 방식</legend>
-                        <div class="grid gap-3 md:grid-cols-2">
-                            {% for value, label in input_mode_choices %}
-                            <label class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                                <input type="radio" name="input_mode" value="{{ value }}" {% if forloop.first %}checked{% endif %}>
-                                <span class="font-semibold text-slate-800">{{ label }}</span>
-                            </label>
-                            {% endfor %}
-                        </div>
-                    </fieldset>
-                    <div>
-                        <label class="block text-sm font-bold text-slate-700 mb-2">완성된 HTML 코드 붙여넣기</label>
-                        <textarea name="html_content" class="edu-materials-input min-h-[220px]" placeholder="제미나이에서 복사한 `<!DOCTYPE html>`부터 마지막 `</html>`까지 전체 코드를 붙여넣으세요."></textarea>
-                        <p class="text-xs text-slate-500 mt-2">AI가 만든 결과라면 코드 영역 전체를 한 번에 복사해 그대로 붙여넣는 것이 가장 안전합니다.</p>
+
+                    <div class="edu-create-panel" data-create-panel data-mode="file" hidden>
+                        <form action="{% url 'edu_materials:create' %}" method="post" enctype="multipart/form-data" class="space-y-5">
+                            {% csrf_token %}
+                            <input type="hidden" name="input_mode" value="file">
+
+                            <div class="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
+                                <div class="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600">파일 업로드</div>
+                                <h3 class="mt-2 text-2xl font-black text-slate-900">완성된 HTML 파일을 바로 초안으로 저장</h3>
+                                <p class="mt-2 text-sm leading-6 text-slate-600">업로드 후에는 자동 분류와 미리보기를 확인하고, 준비가 끝났을 때만 학생 공유를 켜면 됩니다.</p>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-bold text-slate-700 mb-2">자료 제목</label>
+                                <input name="title" class="edu-materials-input" placeholder="학생에게 보일 제목" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-slate-700 mb-2">HTML 파일 업로드</label>
+                                <input type="file" name="html_file" accept=".html,.htm,text/html" class="edu-materials-input" required>
+                                <p class="text-xs text-slate-500 mt-2">`.html` 파일 하나만 올리면 됩니다. 저장 후 학생 공유는 아직 열리지 않습니다.</p>
+                            </div>
+                            <button type="submit" class="w-full rounded-2xl bg-emerald-600 py-4 text-white text-lg font-black shadow-lg shadow-emerald-600/15 hover:-translate-y-0.5 transition">초안 저장하고 시작판으로 가기</button>
+                        </form>
                     </div>
-                    <div>
-                        <label class="block text-sm font-bold text-slate-700 mb-2">또는 HTML 파일 업로드</label>
-                        <input type="file" name="html_file" accept=".html,.htm,text/html" class="edu-materials-input">
-                    </div>
-                    <label class="flex items-start gap-3 rounded-[24px] border border-emerald-100 bg-emerald-50/80 px-4 py-4">
-                        <input type="checkbox" name="publish_now" value="1" class="mt-1">
-                        <span>
-                            <span class="block text-sm font-black text-slate-900">저장 후 바로 공개</span>
-                            <span class="block mt-1 text-sm text-slate-600">체크하지 않으면 내 보관함에만 먼저 저장되고, 확인 후 직접 공개할 수 있습니다.</span>
-                        </span>
-                    </label>
-                    <button type="submit" class="w-full rounded-2xl bg-emerald-600 py-4 text-white text-lg font-black shadow-lg shadow-emerald-600/15 hover:-translate-y-0.5 transition">내 자료로 저장하기</button>
-                </form>
+                </div>
             </div>
 
             <aside class="space-y-6">
                 <div class="edu-materials-panel rounded-[32px] p-6">
-                    <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">공개 전 체크</div>
-                    <h2 class="text-2xl font-black text-slate-900 mt-2">이 순서로 확인하면 실수가 줄어듭니다</h2>
+                    <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">저장 후 다음 단계</div>
+                    <h2 class="text-2xl font-black text-slate-900 mt-2">여기서는 초안만 저장하고, 다음 화면에서 이 순서로 진행합니다</h2>
                     <div class="mt-5 space-y-3 text-sm text-slate-600">
-                        <div class="rounded-[24px] border border-slate-200 bg-white p-4">1. 제목과 한줄 요약을 먼저 알아보기 쉽게 적습니다.</div>
-                        <div class="rounded-[24px] border border-slate-200 bg-white p-4">2. 저장 후 미리보기에서 실제로 움직이는지 확인합니다.</div>
-                        <div class="rounded-[24px] border border-slate-200 bg-white p-4">3. 과목, 학년, 자료 유형, 태그를 분류 수정에서 다듬습니다.</div>
-                        <div class="rounded-[24px] border border-slate-200 bg-white p-4">4. 준비가 끝난 자료만 학생 공개를 켭니다.</div>
+                        <div class="rounded-[24px] border border-slate-200 bg-white p-4">1. 수업 시작판에서 미리보기가 실제로 움직이는지 확인합니다.</div>
+                        <div class="rounded-[24px] border border-slate-200 bg-white p-4">2. 과목, 학년, 유형, 요약을 분류 수정에서 다듬습니다.</div>
+                        <div class="rounded-[24px] border border-slate-200 bg-white p-4">3. 준비가 끝난 뒤 학생 공유를 켜고 전체화면 공유판을 엽니다.</div>
                     </div>
                 </div>
 
                 <div class="edu-materials-panel rounded-[32px] p-6">
-                    <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">좋은 자료실 기준</div>
-                    <h2 class="text-2xl font-black text-slate-900 mt-2">다른 교사가 바로 쓸 수 있게 남기기</h2>
+                    <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">좋은 초안 기준</div>
+                    <h2 class="text-2xl font-black text-slate-900 mt-2">저장 직후에도 이 세 가지만 바로 보이면 좋습니다</h2>
                     <div class="mt-5 space-y-3 text-sm text-slate-600">
-                        <div class="rounded-[24px] border border-slate-200 bg-white p-4">과목과 학년이 비어 있지 않은 자료</div>
-                        <div class="rounded-[24px] border border-slate-200 bg-white p-4">단원명과 요약만 읽어도 어떤 수업인지 알 수 있는 자료</div>
-                        <div class="rounded-[24px] border border-slate-200 bg-white p-4">태그가 2~4개 정도로 정리된 자료</div>
+                        <div class="rounded-[24px] border border-slate-200 bg-white p-4">제목만 읽어도 학생이 어떤 활동인지 알 수 있는 자료</div>
+                        <div class="rounded-[24px] border border-slate-200 bg-white p-4">미리보기에서 멈춤 없이 실행되는 자료</div>
+                        <div class="rounded-[24px] border border-slate-200 bg-white p-4">교사가 다음 단계로 넘어갈 때 설명이 거의 필요 없는 자료</div>
                     </div>
                 </div>
             </aside>
@@ -576,6 +610,8 @@
         const copyPromptButton = document.getElementById('copy-prompt-button');
         const openGeminiGuideButton = document.getElementById('open-gemini-guide-button');
         const copyStatus = document.getElementById('prompt-copy-status');
+        const createModeButtons = Array.from(document.querySelectorAll('[data-create-mode-button]'));
+        const createPanels = Array.from(document.querySelectorAll('[data-create-panel]'));
         const modal = document.getElementById('gemini-guide-modal');
         const closeModalButtons = document.querySelectorAll('[data-close-gemini-guide]');
         const geminiLinkButton = document.getElementById('gemini-link-button');
@@ -595,6 +631,15 @@
 
         const syncAllBoardPreviewScales = () => {
             previewRoots.forEach((root) => syncBoardPreviewScale(root));
+        };
+
+        const setCreateMode = (mode) => {
+            createModeButtons.forEach((button) => {
+                button.dataset.active = button.dataset.mode === mode ? 'true' : 'false';
+            });
+            createPanels.forEach((panel) => {
+                panel.hidden = panel.dataset.mode !== mode;
+            });
         };
 
         const buildPrompt = (topic) => {
@@ -697,6 +742,13 @@
 
         if (topicInput) {
             topicInput.addEventListener('input', updatePromptPreview);
+        }
+
+        if (createModeButtons.length) {
+            createModeButtons.forEach((button) => {
+                button.addEventListener('click', () => setCreateMode(button.dataset.mode));
+            });
+            setCreateMode(createModeButtons.find((button) => button.dataset.active === 'true')?.dataset.mode || 'paste');
         }
 
         if (copyPromptButton) {

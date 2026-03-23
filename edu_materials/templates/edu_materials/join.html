@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block title %}학생 자료 입장{% endblock %}
+
+{% block extra_css %}
+<style>
+    .edu-materials-join-shell {
+        background:
+            radial-gradient(circle at top, rgba(16, 185, 129, 0.16), transparent 30%),
+            linear-gradient(180deg, #f8fbff 0%, #eefbf4 100%);
+    }
+    .edu-materials-join-card {
+        background: rgba(255, 255, 255, 0.94);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+        backdrop-filter: blur(14px);
+    }
+    .edu-materials-join-input {
+        width: 100%;
+        border: 1px solid #cbd5e1;
+        border-radius: 24px;
+        padding: 1rem 1.25rem;
+        text-align: center;
+        font-size: 2rem;
+        font-weight: 900;
+        letter-spacing: 0.3em;
+        color: #0f172a;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="edu-materials-join-shell min-h-screen px-4 pb-20 pt-28">
+    <div class="mx-auto max-w-3xl">
+        <div class="edu-materials-join-card rounded-[36px] p-6 md:p-8">
+            <div class="text-center">
+                <p class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">학생 자료 입장</p>
+                <h1 class="mt-3 text-4xl font-black text-slate-900 md:text-5xl">선생님이 알려 준 공유 코드를 입력하세요</h1>
+                <p class="mx-auto mt-4 max-w-2xl text-base leading-7 text-slate-600">QR을 받았다면 바로 스캔하면 되고, 숫자 코드만 받았다면 여기서 6자리 숫자를 입력하면 됩니다.</p>
+            </div>
+
+            {% if error_message %}
+            <div class="mt-6 rounded-[28px] border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-bold leading-6 text-rose-700">
+                {{ error_message }}
+            </div>
+            {% endif %}
+
+            <form method="get" action="{% url 'edu_materials:join' %}" class="mt-8 space-y-5">
+                <div>
+                    <label for="share-code" class="mb-3 block text-center text-sm font-bold text-slate-700">공유 코드 6자리</label>
+                    <input
+                        id="share-code"
+                        name="code"
+                        inputmode="numeric"
+                        pattern="[0-9]*"
+                        maxlength="6"
+                        value="{{ submitted_code }}"
+                        class="edu-materials-join-input"
+                        placeholder="123456"
+                        autofocus
+                        required
+                    >
+                </div>
+                <button type="submit" class="w-full rounded-[28px] bg-emerald-600 px-5 py-4 text-lg font-black text-white shadow-lg shadow-emerald-600/15">자료 열기</button>
+            </form>
+
+            <div class="mt-8 grid gap-4 md:grid-cols-2">
+                <div class="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
+                    <div class="text-sm font-black text-slate-900">코드가 있으면</div>
+                    <p class="mt-2 text-sm leading-6 text-slate-600">이 화면에서 6자리 숫자를 입력하고 바로 자료를 열 수 있습니다.</p>
+                </div>
+                <div class="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
+                    <div class="text-sm font-black text-slate-900">QR이 있으면</div>
+                    <p class="mt-2 text-sm leading-6 text-slate-600">선생님이 보여 준 QR을 스캔하면 같은 자료가 바로 열립니다.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

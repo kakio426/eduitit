@@ -4,6 +4,11 @@
 
 {% block extra_css %}
 <style>
+    .edu-materials-shell {
+        background:
+            radial-gradient(circle at top left, rgba(16, 185, 129, 0.18), transparent 34%),
+            linear-gradient(180deg, #f8fbff 0%, #eefbf4 100%);
+    }
     .edu-materials-panel {
         background: rgba(255, 255, 255, 0.94);
         border: 1px solid rgba(148, 163, 184, 0.18);
@@ -11,222 +16,287 @@
         backdrop-filter: blur(14px);
     }
     .edu-materials-input {
+        width: 100%;
+        padding: 0.85rem 1rem;
         border: 1px solid #cbd5e1;
         border-radius: 16px;
-        padding: 0.85rem 1rem;
-        width: 100%;
         background: #fff;
     }
     .edu-materials-preview-stage {
         touch-action: pan-y;
     }
+    .edu-materials-share-card {
+        background:
+            radial-gradient(circle at top, rgba(16, 185, 129, 0.18), transparent 35%),
+            linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.94));
+        color: #fff;
+    }
+    .edu-materials-share-card .edu-materials-input {
+        color: #0f172a;
+    }
+    .edu-materials-step-card {
+        border-radius: 28px;
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.92));
+    }
+    .edu-copy-feedback {
+        opacity: 0;
+        transform: translateY(4px);
+        transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+    .edu-copy-feedback[data-visible="true"] {
+        opacity: 1;
+        transform: translateY(0);
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<section class="min-h-screen pt-28 pb-20 px-4 bg-[radial-gradient(circle_at_top,#dcfce7,transparent_38%),linear-gradient(180deg,#f8fbff,#effcf4)]">
-    <div class="max-w-7xl mx-auto space-y-6">
-        <div class="flex items-center justify-between gap-4 flex-wrap">
-            <div>
-                <a href="{% url 'edu_materials:main' %}" class="text-sm font-bold text-slate-500 hover:text-slate-900 transition">&larr; 교육 자료실로 돌아가기</a>
-                <h1 class="text-4xl font-black text-slate-900 mt-3">{{ material.title }}</h1>
-                <p class="text-slate-600 mt-2">최근 수정 {{ material.updated_at|date:"Y년 n월 j일 H:i" }}</p>
-                <div class="mt-4 flex flex-wrap gap-2">
-                    <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">{{ material.get_subject_display }}</span>
-                    {% if material.grade %}
-                    <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">{{ material.grade }}</span>
-                    {% endif %}
-                    <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">{{ material.get_material_type_display }}</span>
-                    {% if material.metadata_source == 'manual' %}
-                    <span class="rounded-full bg-sky-100 px-3 py-1 text-xs font-bold text-sky-700">직접 수정됨</span>
-                    {% elif material.metadata_status == 'done' %}
-                    <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">자동 분류 완료</span>
-                    {% elif material.metadata_status == 'failed' %}
-                    <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">자동 분류 실패</span>
-                    {% else %}
-                    <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">분류 대기</span>
+<section class="edu-materials-shell min-h-screen px-4 pb-20 pt-28">
+    <div class="mx-auto max-w-7xl space-y-6">
+        <div class="edu-materials-panel rounded-[36px] p-6 md:p-8">
+            <div class="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+                <div class="min-w-0">
+                    <a href="{% url 'edu_materials:main' %}{% if is_owner %}?tab=my{% else %}?tab=shared{% endif %}" class="text-sm font-bold text-slate-500 transition hover:text-slate-900">&larr; 자료실로 돌아가기</a>
+                    <p class="mt-4 text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">수업 시작판</p>
+                    <h1 class="mt-2 text-4xl font-black text-slate-900 md:text-5xl">{{ material.title }}</h1>
+                    <p class="mt-3 max-w-4xl text-base leading-7 text-slate-600">
+                        {% if can_manage %}
+                        미리보기 확인, 학생에게 보여 줄 공유판 열기, 학생 화면 실행, 자료 수정까지 교실 흐름대로 정리했습니다.
+                        {% else %}
+                        {{ teacher_display_name }} 선생님이 공개한 자료입니다. 먼저 흐름을 확인하고, 필요하면 내 자료로 가져와 수정한 뒤 수업에 사용하세요.
+                        {% endif %}
+                    </p>
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">{{ material.get_subject_display }}</span>
+                        {% if material.grade %}<span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">{{ material.grade }}</span>{% endif %}
+                        <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">{{ material.get_material_type_display }}</span>
+                        <span class="rounded-full {% if material.is_published %}bg-emerald-100 text-emerald-700{% else %}bg-amber-100 text-amber-700{% endif %} px-3 py-1 text-xs font-bold">
+                            {% if material.is_published %}학생 공유 켜짐{% else %}아직 학생에게 안 보임{% endif %}
+                        </span>
+                        {% if not is_owner %}<span class="rounded-full bg-sky-100 px-3 py-1 text-xs font-bold text-sky-700">{{ teacher_display_name }}</span>{% endif %}
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-3 xl:justify-end">
+                    {% if can_manage %}
+                    <a href="#edit-form" class="rounded-2xl border border-slate-200 bg-white px-5 py-3 font-black text-slate-700">HTML 수정</a>
+                    <a href="#metadata-form" class="rounded-2xl border border-slate-200 bg-white px-5 py-3 font-black text-slate-700">분류 수정</a>
+                    {% elif can_clone %}
+                    <form method="post" action="{% url 'edu_materials:clone' material.id %}">
+                        {% csrf_token %}
+                        <button class="rounded-2xl bg-emerald-600 px-5 py-3 font-black text-white">내 자료로 가져오기</button>
+                    </form>
                     {% endif %}
                 </div>
             </div>
-            <div class="flex gap-3 flex-wrap">
-                <a href="#metadata-form" class="rounded-2xl px-5 py-3 font-black border border-slate-200 text-slate-700 bg-white">분류 수정</a>
-                <a href="#edit-form" class="rounded-2xl px-5 py-3 font-black border border-slate-200 text-slate-700 bg-white">HTML 수정</a>
-                <form method="post" action="{% url 'edu_materials:toggle_publish' material.id %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="{% if material.is_published %}unpublish{% else %}publish{% endif %}">
-                    <button class="rounded-2xl px-5 py-3 font-black {% if material.is_published %}bg-amber-100 text-amber-800{% else %}bg-emerald-600 text-white{% endif %}">
-                        {% if material.is_published %}학생 공개 끄기{% else %}학생 공개 켜기{% endif %}
-                    </button>
-                </form>
-                {% if material.is_published %}
-                <a href="{% url 'edu_materials:run' material.id %}" target="_blank" rel="noopener" class="rounded-2xl px-5 py-3 font-black bg-slate-900 text-white">학생 화면 열기</a>
-                {% endif %}
-            </div>
         </div>
 
-        <div class="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,420px)] xl:items-start">
+        <div class="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(340px,420px)] xl:items-start">
             <div class="min-w-0 space-y-6">
-                <div class="edu-materials-panel min-w-0 rounded-[32px] p-6 md:p-8">
-                    <div class="grid gap-4 md:grid-cols-4 mb-6">
-                        <div class="rounded-3xl bg-slate-50 border border-slate-200 p-5">
-                            <div class="text-sm text-slate-500">입력 방식</div>
-                            <div class="text-xl font-black text-slate-900 mt-2">{{ material.get_input_mode_display }}</div>
+                <div class="edu-materials-panel rounded-[32px] p-6 md:p-8">
+                    <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                        <div>
+                            <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">수업 전 확인</div>
+                            <h2 class="mt-2 text-3xl font-black text-slate-900">자료 미리보기</h2>
+                            <p class="mt-2 text-sm leading-6 text-slate-500">먼저 실제로 움직이는지 확인하고, 공개 후에는 학생 화면도 바로 열 수 있습니다.</p>
                         </div>
-                        <div class="rounded-3xl bg-slate-50 border border-slate-200 p-5">
-                            <div class="text-sm text-slate-500">공개 상태</div>
-                            <div class="text-xl font-black text-slate-900 mt-2">{% if material.is_published %}학생 접속 허용{% else %}비공개{% endif %}</div>
-                        </div>
-                        <div class="rounded-3xl bg-slate-50 border border-slate-200 p-5">
-                            <div class="text-sm text-slate-500">열람 수</div>
-                            <div class="text-xl font-black text-slate-900 mt-2">{{ material.view_count }}</div>
-                        </div>
-                        <div class="rounded-3xl bg-slate-50 border border-slate-200 p-5">
-                            <div class="text-sm text-slate-500">원본 파일</div>
-                            <div class="text-base font-black text-slate-900 mt-2 break-all">{% if material.original_filename %}{{ material.original_filename }}{% else %}직접 붙여넣기{% endif %}</div>
-                        </div>
+                        {% if material.is_published %}
+                        <a href="{% url 'edu_materials:run' material.id %}" target="_blank" rel="noopener" class="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white">학생 화면 열기</a>
+                        {% else %}
+                        <span class="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3 text-sm font-black text-amber-800">공개 후 학생 화면을 열 수 있습니다</span>
+                        {% endif %}
                     </div>
 
                     {% if material.summary %}
-                    <div class="mb-6 rounded-[28px] border border-emerald-100 bg-emerald-50/70 p-5">
+                    <div class="mt-6 rounded-[28px] border border-emerald-100 bg-emerald-50/70 p-5">
                         <div class="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600">한줄 요약</div>
                         <p class="mt-3 text-sm leading-7 text-slate-700">{{ material.summary }}</p>
                         {% if material.tags %}
                         <div class="mt-4 flex flex-wrap gap-2">
                             {% for tag in material.tags %}
-                            <span class="rounded-full bg-white border border-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">#{{ tag }}</span>
+                            <span class="rounded-full border border-emerald-100 bg-white px-3 py-1 text-xs font-bold text-emerald-700">#{{ tag }}</span>
                             {% endfor %}
                         </div>
                         {% endif %}
                     </div>
                     {% endif %}
 
-                    {% include 'edu_materials/includes/material_iframe.html' with material=material material_render_url=material_render_url frame_src=material_frame_src frame_mode='preview' frame_title='교사용 미리보기' preview_viewports=preview_viewports preview_default_viewport=preview_default_viewport %}
+                    <div class="mt-6">
+                        {% include 'edu_materials/includes/material_iframe.html' with material=material material_render_url=material_render_url frame_src=material_frame_src frame_mode='preview' frame_title='교사용 미리보기' preview_viewports=preview_viewports preview_default_viewport=preview_default_viewport %}
+                    </div>
                 </div>
 
-                <div id="edit-form" class="edu-materials-panel rounded-[32px] p-6">
-                    <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">자료 수정</div>
-                    <h2 class="text-2xl font-black text-slate-900 mt-2">제목과 HTML 바꾸기</h2>
-                    <form method="post" action="{% url 'edu_materials:update' material.id %}" enctype="multipart/form-data" class="mt-5 space-y-4">
-                        {% csrf_token %}
-                        <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-2">자료 제목</label>
-                            <input name="title" class="edu-materials-input" value="{{ material.title }}" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-2">HTML 코드</label>
-                            <textarea name="html_content" class="edu-materials-input min-h-[220px]">{{ material.html_content }}</textarea>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-2">새 HTML 파일로 교체</label>
-                            <input type="file" name="html_file" accept=".html,.htm,text/html" class="edu-materials-input">
-                            <p class="text-xs text-slate-500 mt-2">파일을 올리면 위 코드를 대신 사용하고 자동 분류를 다시 계산합니다.</p>
-                        </div>
-                        <button type="submit" class="w-full rounded-2xl bg-emerald-600 py-3 text-white text-base font-black">수정 저장하기</button>
-                    </form>
+                <div class="grid gap-4 md:grid-cols-3">
+                    <div class="edu-materials-step-card p-5">
+                        <div class="text-xs font-bold uppercase tracking-[0.28em] text-slate-400">1. 상태 확인</div>
+                        <div class="mt-3 text-lg font-black text-slate-900">{% if material.is_published %}학생 공유 준비 완료{% else %}아직 초안 상태{% endif %}</div>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">{% if material.is_published %}이제 학생에게 보여 줄 판과 학생 화면을 열 수 있습니다.{% else %}미리보기와 분류를 확인한 뒤 학생 공유를 켜면 됩니다.{% endif %}</p>
+                    </div>
+                    <div class="edu-materials-step-card p-5">
+                        <div class="text-xs font-bold uppercase tracking-[0.28em] text-slate-400">2. 학생에게 보여주기</div>
+                        <div class="mt-3 text-lg font-black text-slate-900">{% if material.is_published %}공유판으로 QR과 코드를 크게 표시{% else %}공개 후 QR·코드·짧은 주소가 열림{% endif %}</div>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">프로젝터용 공유판은 관리 화면과 분리해 학생이 봐야 할 정보만 크게 보여 줍니다.</p>
+                    </div>
+                    <div class="edu-materials-step-card p-5">
+                        <div class="text-xs font-bold uppercase tracking-[0.28em] text-slate-400">3. 학생 화면 실행</div>
+                        <div class="mt-3 text-lg font-black text-slate-900">{% if material.is_published %}학생용 전체화면 바로 열기 가능{% else %}공개 전에는 교사용 미리보기만 확인{% endif %}</div>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">학생 화면은 기존 실행 화면을 그대로 사용하고, 시작판은 준비와 공유 역할만 맡습니다.</p>
+                    </div>
                 </div>
             </div>
 
             <aside class="space-y-6">
-                <div class="edu-materials-panel rounded-[32px] p-6">
-                    <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">학생 배포</div>
-                    <h2 class="text-2xl font-black text-slate-900 mt-2">발행 링크</h2>
+                {% if can_manage %}
                     {% if material.is_published %}
-                    <div class="mt-5 space-y-4">
-                        <div class="rounded-[28px] border border-slate-200 bg-white p-5">
-                            <label class="block text-sm font-bold text-slate-700 mb-2">학생 접속 주소</label>
-                            <input class="edu-materials-input text-sm text-slate-600" value="{{ public_url }}" readonly>
+                    <div class="edu-materials-panel edu-materials-share-card rounded-[32px] p-6">
+                        <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-300">학생에게 보여주기</div>
+                        <h2 class="mt-2 text-3xl font-black">전체화면 공유판</h2>
+                        <p class="mt-2 text-sm leading-6 text-slate-200">교실 화면에서는 관리 정보 대신 QR, 6자리 코드, 짧은 입력 주소만 크게 보여 주세요.</p>
+                        <textarea id="share-message-source" class="hidden">{{ share_message }}</textarea>
+
+                        <a href="{{ share_board_url }}" target="_blank" rel="noopener" class="mt-5 block rounded-[28px] bg-emerald-400 px-5 py-4 text-center text-lg font-black text-slate-950 shadow-lg shadow-emerald-950/20">전체화면 공유판 열기</a>
+
+                        <div class="mt-5 grid gap-3 sm:grid-cols-2">
+                            <div class="rounded-[24px] border border-white/10 bg-white/8 p-4">
+                                <div class="text-xs font-bold uppercase tracking-[0.24em] text-slate-300">공유 코드</div>
+                                <div class="mt-2 text-3xl font-black tracking-[0.28em] text-white">{{ material.access_code }}</div>
+                            </div>
+                            <div class="rounded-[24px] border border-white/10 bg-white/8 p-4">
+                                <div class="text-xs font-bold uppercase tracking-[0.24em] text-slate-300">짧은 학생 주소</div>
+                                <div class="mt-2 text-sm font-black text-white">{{ student_join_display }}</div>
+                            </div>
                         </div>
-                        <div class="rounded-[28px] border border-slate-200 bg-white p-5 text-center">
-                            <div class="text-sm text-slate-500 mb-4">학생 접속 QR</div>
-                            <img src="{{ public_qr_data_url }}" alt="학생 접속 QR" class="w-48 h-48 mx-auto rounded-2xl border border-slate-200 bg-white p-2">
+
+                        <div class="mt-5 grid gap-3 sm:grid-cols-[120px_minmax(0,1fr)] sm:items-center">
+                            <img src="{{ public_qr_data_url }}" alt="학생 접속 QR" class="mx-auto h-28 w-28 rounded-2xl border border-white/10 bg-white p-2">
+                            <div class="space-y-3">
+                                <div class="rounded-[24px] border border-white/10 bg-white/8 p-4">
+                                    <div class="text-xs font-bold uppercase tracking-[0.24em] text-slate-300">보조 동작</div>
+                                    <div class="mt-2 flex flex-wrap gap-2">
+                                        <button type="button" class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white" data-copy-target="share-message-source">초대문구 복사</button>
+                                        <a href="{% url 'edu_materials:run' material.id %}" target="_blank" rel="noopener" class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white">학생 화면 열기</a>
+                                        <form method="post" action="{% url 'edu_materials:toggle_publish' material.id %}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="unpublish">
+                                            <button class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white">학생 공유 끄기</button>
+                                        </form>
+                                    </div>
+                                </div>
+                                <p id="share-copy-feedback" class="edu-copy-feedback text-sm font-bold text-emerald-300">복사했습니다.</p>
+                            </div>
                         </div>
                     </div>
                     {% else %}
-                    <p class="mt-4 text-slate-500 leading-7">학생에게 열어주려면 먼저 공개를 켜세요. 공개 전에는 링크로 직접 들어와도 열리지 않습니다.</p>
+                    <div class="edu-materials-panel rounded-[32px] border border-amber-200 bg-amber-50/90 p-6">
+                        <div class="text-xs font-bold uppercase tracking-[0.32em] text-amber-700">학생에게 보여주기 전</div>
+                        <h2 class="mt-2 text-3xl font-black text-slate-900">아직 학생에게 안 보입니다</h2>
+                        <p class="mt-3 text-sm leading-7 text-slate-700">지금은 교사용 시작판에서만 확인할 수 있습니다. 학생 공유를 켜면 전체화면 공유판, QR, 6자리 코드, 학생 화면 열기가 함께 열립니다.</p>
+                        <form method="post" action="{% url 'edu_materials:toggle_publish' material.id %}" class="mt-5">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="publish">
+                            <button class="w-full rounded-[28px] bg-emerald-600 px-5 py-4 text-lg font-black text-white shadow-lg shadow-emerald-600/15">학생 공유 켜기</button>
+                        </form>
+                        <div class="mt-5 space-y-3 text-sm text-slate-700">
+                            <div class="rounded-[24px] border border-amber-200 bg-white px-4 py-4">공개 후에는 프로젝터용 전체화면 공유판이 열립니다.</div>
+                            <div class="rounded-[24px] border border-amber-200 bg-white px-4 py-4">학생은 짧은 입력 주소와 6자리 코드로도 들어올 수 있습니다.</div>
+                            <div class="rounded-[24px] border border-amber-200 bg-white px-4 py-4">QR은 학생 실행 화면으로 바로 연결됩니다.</div>
+                        </div>
+                    </div>
                     {% endif %}
+                {% else %}
+                <div class="edu-materials-panel rounded-[32px] p-6">
+                    <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">공개 자료 활용</div>
+                    <h2 class="mt-2 text-3xl font-black text-slate-900">내 수업에 쓰려면 내 자료로 가져오기</h2>
+                    <p class="mt-3 text-sm leading-7 text-slate-600">공유판과 학생 코드 운영은 원본 소유 교사 기준으로 열립니다. 내 수업에서 직접 쓰려면 먼저 내 자료실로 가져와 조정하세요.</p>
+                    <div class="mt-5 flex flex-wrap gap-3">
+                        <form method="post" action="{% url 'edu_materials:clone' material.id %}">
+                            {% csrf_token %}
+                            <button class="rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white">내 자료로 가져오기</button>
+                        </form>
+                        <a href="{% url 'edu_materials:run' material.id %}" target="_blank" rel="noopener" class="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700">학생 화면 보기</a>
+                    </div>
                 </div>
+                {% endif %}
 
                 <div class="edu-materials-panel rounded-[32px] p-6">
+                    <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">수업 운영 정보</div>
+                    <h2 class="mt-2 text-2xl font-black text-slate-900">필수 정보만 요약</h2>
+                    <div class="mt-5 grid gap-3 text-sm text-slate-600">
+                        <div class="rounded-[24px] border border-slate-200 bg-white p-4"><div class="font-bold text-slate-900">입력 방식</div><div class="mt-1">{{ material.get_input_mode_display }}</div></div>
+                        <div class="rounded-[24px] border border-slate-200 bg-white p-4"><div class="font-bold text-slate-900">열람 수</div><div class="mt-1">{{ material.view_count }}회</div></div>
+                        <div class="rounded-[24px] border border-slate-200 bg-white p-4"><div class="font-bold text-slate-900">원본 파일</div><div class="mt-1 break-all">{% if material.original_filename %}{{ material.original_filename }}{% else %}직접 붙여넣기{% endif %}</div></div>
+                        <div class="rounded-[24px] border border-slate-200 bg-white p-4"><div class="font-bold text-slate-900">최근 수정</div><div class="mt-1">{{ material.updated_at|date:"Y년 n월 j일 H:i" }}</div></div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+
+        {% if can_manage %}
+        <div class="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(340px,420px)]">
+            <div id="edit-form" class="edu-materials-panel rounded-[32px] p-6">
+                <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">자료 수정</div>
+                <h2 class="mt-2 text-2xl font-black text-slate-900">제목과 HTML 바꾸기</h2>
+                <form method="post" action="{% url 'edu_materials:update' material.id %}" enctype="multipart/form-data" class="mt-5 space-y-4">
+                    {% csrf_token %}
+                    <div>
+                        <label class="mb-2 block text-sm font-bold text-slate-700">자료 제목</label>
+                        <input name="title" class="edu-materials-input" value="{{ material.title }}" required>
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-sm font-bold text-slate-700">HTML 코드</label>
+                        <textarea name="html_content" class="edu-materials-input min-h-[220px]">{{ material.html_content }}</textarea>
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-sm font-bold text-slate-700">새 HTML 파일로 교체</label>
+                        <input type="file" name="html_file" accept=".html,.htm,text/html" class="edu-materials-input">
+                        <p class="mt-2 text-xs text-slate-500">파일을 올리면 위 코드를 대신 사용하고 자동 분류를 다시 계산합니다.</p>
+                    </div>
+                    <button type="submit" class="w-full rounded-2xl bg-emerald-600 py-3 text-base font-black text-white">수정 저장하기</button>
+                </form>
+            </div>
+
+            <aside class="space-y-6">
+                <div class="edu-materials-panel rounded-[32px] p-6">
                     <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">자동 분류 상태</div>
-                    <h2 class="text-2xl font-black text-slate-900 mt-2">현재 분류 정보</h2>
+                    <h2 class="mt-2 text-2xl font-black text-slate-900">현재 분류 정보</h2>
                     <div class="mt-5 space-y-3 text-sm text-slate-600">
-                        <div class="rounded-[24px] border border-slate-200 bg-white p-4">
-                            <div class="font-bold text-slate-900">분류 상태</div>
-                            <div class="mt-1">{{ material.get_metadata_status_display }}</div>
-                        </div>
-                        <div class="rounded-[24px] border border-slate-200 bg-white p-4">
-                            <div class="font-bold text-slate-900">분류 출처</div>
-                            <div class="mt-1">{{ material.get_metadata_source_display }}</div>
-                        </div>
-                        <div class="rounded-[24px] border border-slate-200 bg-white p-4">
-                            <div class="font-bold text-slate-900">자동 분류 신뢰도</div>
-                            <div class="mt-1">
-                                {% if material.metadata_source == 'manual' %}
-                                직접 수정된 값입니다.
-                                {% else %}
-                                {{ material.metadata_confidence|floatformat:2 }}
-                                {% endif %}
-                            </div>
-                        </div>
+                        <div class="rounded-[24px] border border-slate-200 bg-white p-4"><div class="font-bold text-slate-900">분류 상태</div><div class="mt-1">{{ material.get_metadata_status_display }}</div></div>
+                        <div class="rounded-[24px] border border-slate-200 bg-white p-4"><div class="font-bold text-slate-900">분류 출처</div><div class="mt-1">{{ material.get_metadata_source_display }}</div></div>
+                        <div class="rounded-[24px] border border-slate-200 bg-white p-4"><div class="font-bold text-slate-900">자동 분류 신뢰도</div><div class="mt-1">{% if material.metadata_source == 'manual' %}직접 수정된 값입니다.{% else %}{{ material.metadata_confidence|floatformat:2 }}{% endif %}</div></div>
                     </div>
                 </div>
 
                 <div id="metadata-form" class="edu-materials-panel rounded-[32px] p-6">
                     <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">분류 수정</div>
-                    <h2 class="text-2xl font-black text-slate-900 mt-2">과목, 학년, 유형을 직접 고치기</h2>
+                    <h2 class="mt-2 text-2xl font-black text-slate-900">과목, 학년, 유형을 직접 고치기</h2>
                     <form method="post" action="{% url 'edu_materials:update_metadata' material.id %}" class="mt-5 space-y-4">
                         {% csrf_token %}
-                        <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-2">과목</label>
-                            <select name="subject" class="edu-materials-input">
-                                {% for value, label in subject_choices %}
-                                <option value="{{ value }}" {% if material.subject == value %}selected{% endif %}>{{ label }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-2">학년/학기</label>
-                            <input name="grade" class="edu-materials-input" value="{{ material.grade }}" placeholder="예: 4학년 1학기">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-2">단원명</label>
-                            <input name="unit_title" class="edu-materials-input" value="{{ material.unit_title }}" placeholder="예: 화산과 지진">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-2">자료 유형</label>
-                            <select name="material_type" class="edu-materials-input">
-                                {% for value, label in material_type_choices %}
-                                <option value="{{ value }}" {% if material.material_type == value %}selected{% endif %}>{{ label }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-2">태그</label>
-                            <input name="tags" class="edu-materials-input" value="{{ metadata_tags_text }}" placeholder="쉼표로 구분해 입력">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-2">한줄 요약</label>
-                            <textarea name="summary" class="edu-materials-input min-h-[120px]" placeholder="나중에 다시 찾기 쉬운 요약">{{ material.summary }}</textarea>
-                        </div>
-                        <button type="submit" class="w-full rounded-2xl bg-emerald-600 py-3 text-white text-base font-black">분류 저장</button>
+                        <div><label class="mb-2 block text-sm font-bold text-slate-700">과목</label><select name="subject" class="edu-materials-input">{% for value, label in subject_choices %}<option value="{{ value }}" {% if material.subject == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+                        <div><label class="mb-2 block text-sm font-bold text-slate-700">학년/학기</label><input name="grade" class="edu-materials-input" value="{{ material.grade }}" placeholder="예: 4학년 1학기"></div>
+                        <div><label class="mb-2 block text-sm font-bold text-slate-700">단원명</label><input name="unit_title" class="edu-materials-input" value="{{ material.unit_title }}" placeholder="예: 화산과 지진"></div>
+                        <div><label class="mb-2 block text-sm font-bold text-slate-700">자료 유형</label><select name="material_type" class="edu-materials-input">{% for value, label in material_type_choices %}<option value="{{ value }}" {% if material.material_type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+                        <div><label class="mb-2 block text-sm font-bold text-slate-700">태그</label><input name="tags" class="edu-materials-input" value="{{ metadata_tags_text }}" placeholder="쉼표로 구분해 입력"></div>
+                        <div><label class="mb-2 block text-sm font-bold text-slate-700">한줄 요약</label><textarea name="summary" class="edu-materials-input min-h-[120px]" placeholder="나중에 다시 찾기 쉬운 요약">{{ material.summary }}</textarea></div>
+                        <button type="submit" class="w-full rounded-2xl bg-emerald-600 py-3 text-base font-black text-white">분류 저장</button>
                     </form>
                     <form method="post" action="{% url 'edu_materials:reclassify' material.id %}" class="mt-3">
                         {% csrf_token %}
-                        <button type="submit" class="w-full rounded-2xl border border-slate-200 py-3 text-slate-700 text-base font-black bg-white">현재 내용으로 다시 자동 분류</button>
+                        <button type="submit" class="w-full rounded-2xl border border-slate-200 bg-white py-3 text-base font-black text-slate-700">현재 내용으로 다시 자동 분류</button>
                     </form>
                 </div>
 
-                <div class="edu-materials-panel rounded-[32px] p-6 border border-rose-100">
+                <div class="edu-materials-panel rounded-[32px] border border-rose-100 p-6">
                     <div class="text-xs font-bold uppercase tracking-[0.32em] text-rose-500">자료 삭제</div>
-                    <h2 class="text-2xl font-black text-slate-900 mt-2">이 자료 지우기</h2>
+                    <h2 class="mt-2 text-2xl font-black text-slate-900">이 자료 지우기</h2>
                     <p class="mt-3 text-sm text-slate-500">삭제하면 목록과 학생 링크에서 모두 사라집니다.</p>
                     <form method="post" action="{% url 'edu_materials:delete' material.id %}" class="mt-4">
                         {% csrf_token %}
-                        <button type="submit" class="w-full rounded-2xl border border-rose-200 py-3 text-rose-600 text-base font-black">자료 삭제하기</button>
+                        <button type="submit" class="w-full rounded-2xl border border-rose-200 py-3 text-base font-black text-rose-600">자료 삭제하기</button>
                     </form>
                 </div>
             </aside>
         </div>
+        {% endif %}
     </div>
 </section>
 {% endblock %}
@@ -235,12 +305,51 @@
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const previewRoots = document.querySelectorAll('[data-preview-root]');
-        if (!previewRoots.length) {
-            return;
-        }
+        const copyButtons = document.querySelectorAll('[data-copy-text], [data-copy-target]');
+        const copyFeedback = document.getElementById('share-copy-feedback');
+        let copyFeedbackTimer = 0;
+
+        const showCopyFeedback = (message, isError) => {
+            if (!copyFeedback) return;
+            window.clearTimeout(copyFeedbackTimer);
+            copyFeedback.textContent = message;
+            copyFeedback.dataset.visible = 'true';
+            copyFeedback.classList.toggle('text-emerald-300', !isError);
+            copyFeedback.classList.toggle('text-rose-300', !!isError);
+            copyFeedbackTimer = window.setTimeout(() => { copyFeedback.dataset.visible = 'false'; }, 1800);
+        };
+
+        const fallbackCopy = (value) => {
+            const helper = document.createElement('textarea');
+            helper.value = value;
+            helper.style.position = 'fixed';
+            helper.style.opacity = '0';
+            document.body.appendChild(helper);
+            helper.focus();
+            helper.select();
+            const copied = document.execCommand('copy');
+            document.body.removeChild(helper);
+            return copied;
+        };
+
+        copyButtons.forEach((button) => {
+            button.addEventListener('click', async () => {
+                const targetId = button.dataset.copyTarget;
+                const value = targetId ? (document.getElementById(targetId)?.value || '') : (button.dataset.copyText || '');
+                if (!value) return showCopyFeedback('복사할 내용을 찾지 못했습니다.', true);
+                try {
+                    if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(value);
+                    else if (!fallbackCopy(value)) throw new Error('copy-failed');
+                    showCopyFeedback('복사했습니다.', false);
+                } catch (error) {
+                    showCopyFeedback('자동 복사가 막혀 있어 직접 복사해 주세요.', true);
+                }
+            });
+        });
+
+        if (!previewRoots.length) return;
 
         const getPreviewButtons = (root) => root.parentElement.querySelectorAll('[data-preview-button]');
-
         const updatePreviewButtonState = (root, activeButton) => {
             getPreviewButtons(root).forEach((button) => {
                 const isActive = button === activeButton;
@@ -258,20 +367,12 @@
             const viewport = root.querySelector('[data-preview-viewport]');
             const iframe = root.querySelector('[data-preview-iframe]');
             const sizeLabel = root.parentElement.querySelector('[data-preview-dimensions]');
-            const activeButton = root.parentElement.querySelector('[data-preview-button][aria-pressed="true"]')
-                || root.parentElement.querySelector('[data-preview-button]');
-
-            if (!stage || !viewport || !iframe || !activeButton) {
-                return;
-            }
-
+            const activeButton = root.parentElement.querySelector('[data-preview-button][aria-pressed="true"]') || root.parentElement.querySelector('[data-preview-button]');
+            if (!stage || !viewport || !iframe || !activeButton) return;
             const viewportWidth = Number(activeButton.dataset.previewWidth);
             const viewportHeight = Number(activeButton.dataset.previewHeight);
-            const stageWidth = stage.clientWidth;
-            const stageHeight = stage.clientHeight;
-            const scale = Math.min(stageWidth / viewportWidth, stageHeight / viewportHeight);
+            const scale = Math.min(stage.clientWidth / viewportWidth, stage.clientHeight / viewportHeight);
             const fitScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
-
             viewport.style.width = `${viewportWidth}px`;
             viewport.style.height = `${viewportHeight}px`;
             viewport.style.transform = `scale(${fitScale})`;
@@ -279,26 +380,17 @@
             iframe.height = viewportHeight;
             iframe.style.width = `${viewportWidth}px`;
             iframe.style.height = `${viewportHeight}px`;
-            root.dataset.activeViewport = activeButton.dataset.previewMode;
-            root.dataset.fitScale = fitScale.toFixed(4);
-
-            if (sizeLabel) {
-                sizeLabel.textContent = `${activeButton.dataset.previewLabel} ${viewportWidth}x${viewportHeight}`;
-            }
+            if (sizeLabel) sizeLabel.textContent = `${activeButton.dataset.previewLabel} ${viewportWidth}x${viewportHeight}`;
         };
 
         previewRoots.forEach((root) => {
             const buttons = getPreviewButtons(root);
-            buttons.forEach((button) => {
-                button.addEventListener('click', () => {
-                    updatePreviewButtonState(root, button);
-                    syncPreviewViewport(root);
-                });
-            });
-
+            buttons.forEach((button) => button.addEventListener('click', () => {
+                updatePreviewButtonState(root, button);
+                syncPreviewViewport(root);
+            }));
             updatePreviewButtonState(root, root.parentElement.querySelector('[data-preview-button][aria-pressed="true"]') || buttons[0]);
             syncPreviewViewport(root);
-
             if ('ResizeObserver' in window) {
                 const observer = new ResizeObserver(() => syncPreviewViewport(root));
                 observer.observe(root.querySelector('[data-preview-stage]'));

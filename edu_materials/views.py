@@ -207,6 +207,17 @@ def _append_csp_update(response, updates):
     return response
 
 
+def _build_share_message(*, material, join_url):
+    return "\n".join(
+        [
+            f"[{material.title}]",
+            f"학생 입력 주소: {join_url}",
+            f"공유 코드: {material.access_code}",
+            "QR을 스캔하거나 숫자 코드를 입력해 자료를 여세요.",
+        ]
+    )
+
+
 def main_view(request):
     active_tab = _resolve_active_tab(request)
     filter_context = _build_filter_context(request, active_tab=active_tab)
@@ -281,7 +292,6 @@ def create_material(request):
     input_mode = (request.POST.get("input_mode") or EduMaterial.INPUT_PASTE).strip()
     html_content = request.POST.get("html_content", "")
     original_filename = ""
-    publish_now = request.POST.get("publish_now") == "1"
 
     if input_mode not in {EduMaterial.INPUT_PASTE, EduMaterial.INPUT_FILE}:
         messages.error(request, "입력 방식을 다시 선택해 주세요.")
@@ -313,13 +323,10 @@ def create_material(request):
         input_mode=input_mode,
         original_filename=original_filename,
         material_type=EduMaterial.MaterialType.OTHER,
-        is_published=publish_now,
+        is_published=False,
     )
     _apply_auto_metadata_with_feedback(request, material)
-    if publish_now:
-        messages.success(request, f'"{material.title}" 자료를 저장했고 바로 공개했습니다.')
-    else:
-        messages.success(request, f'"{material.title}" 자료를 저장했습니다. 공개 전이라 내 자료에서 먼저 확인할 수 있습니다.')
+    messages.success(request, f'"{material.title}" 초안을 저장했습니다. 다음 화면에서 미리보기와 학생 공유를 확인해 주세요.')
     return redirect("edu_materials:detail", pk=material.id)
 
 
@@ -391,8 +398,14 @@ def update_material(request, material_id):
 
 @login_required
 def material_detail(request, pk):
-    material = get_object_or_404(EduMaterial, id=pk, teacher=request.user)
+    material = get_object_or_404(EduMaterial.objects.select_related("teacher"), id=pk)
+    is_owner = material.teacher_id == request.user.id
+    if not is_owner and not material.is_published:
+        raise Http404()
+
     public_url = request.build_absolute_uri(reverse("edu_materials:run", args=[material.id]))
+    student_join_url = request.build_absolute_uri(reverse("edu_materials:join_short"))
+    student_join_display = f"{request.get_host()}{reverse('edu_materials:join_short')}"
     material_render_url = reverse("edu_materials:render", args=[material.id])
     response = render(
         request,
@@ -400,10 +413,17 @@ def material_detail(request, pk):
         {
             "service": get_service(),
             "material": material,
+            "is_owner": is_owner,
+            "can_manage": is_owner,
+            "can_clone": not is_owner and material.is_published,
+            "teacher_display_name": _resolve_teacher_display_name(material.teacher),
             "material_frame_src": build_runtime_data_url(material.html_content),
             "material_render_url": material_render_url,
-            "public_url": public_url,
+            "student_join_url": student_join_url,
+            "student_join_display": student_join_display,
+            "share_board_url": reverse("edu_materials:share_board", args=[material.id]),
             "public_qr_data_url": build_material_qr_data_url(public_url) if material.is_published else "",
+            "share_message": _build_share_message(material=material, join_url=student_join_url),
             "metadata_tags_text": ", ".join(material.tags or []),
             "subject_choices": EduMaterial.SUBJECT_CHOICES,
             "material_type_choices": EduMaterial.MaterialType.choices,
@@ -411,6 +431,53 @@ def material_detail(request, pk):
         },
     )
     return _append_csp_update(response, {"frame-src": ("data:",)})
+
+
+def join_material(request):
+    submitted_code = (request.GET.get("code") or "").strip()
+    normalized_code = "".join(character for character in submitted_code if character.isdigit())
+    error_message = ""
+
+    if submitted_code:
+        if len(normalized_code) != 6:
+            error_message = "공유 코드는 숫자 6자리로 입력해 주세요."
+        else:
+            material = EduMaterial.objects.filter(access_code=normalized_code, is_published=True).first()
+            if material:
+                return redirect("edu_materials:run", pk=material.id)
+
+            hidden_material = EduMaterial.objects.filter(access_code=normalized_code).first()
+            if hidden_material:
+                error_message = "이 자료는 아직 학생 공유가 열리지 않았습니다. 선생님께 공개 여부를 확인해 주세요."
+            else:
+                error_message = "입력한 공유 코드를 찾지 못했습니다. 선생님이 보여준 6자리 숫자를 다시 확인해 주세요."
+
+    return render(
+        request,
+        "edu_materials/join.html",
+        {
+            "service": get_service(),
+            "submitted_code": normalized_code,
+            "error_message": error_message,
+        },
+    )
+
+
+@login_required
+def share_board(request, pk):
+    material = get_object_or_404(EduMaterial, id=pk, teacher=request.user)
+    student_join_display = f"{request.get_host()}{reverse('edu_materials:join_short')}"
+    public_url = request.build_absolute_uri(reverse("edu_materials:run", args=[material.id]))
+    return render(
+        request,
+        "edu_materials/share_board.html",
+        {
+            "material": material,
+            "hide_navbar": True,
+            "student_join_display": student_join_display,
+            "public_qr_data_url": build_material_qr_data_url(public_url) if material.is_published else "",
+        },
+    )
 
 
 @login_required

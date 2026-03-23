@@ -1,3 +1,5 @@
+import random
+import string
 import uuid
 
 from django.conf import settings
@@ -73,6 +75,7 @@ class EduMaterial(models.Model):
     tags = models.JSONField(default=list, blank=True, verbose_name="태그")
     summary = models.CharField(max_length=120, blank=True, default="", verbose_name="한줄 요약")
     search_text = models.TextField(blank=True, default="", verbose_name="검색 텍스트")
+    access_code = models.CharField(max_length=6, unique=True, null=True, blank=True, help_text="학생 공유 코드")
     metadata_status = models.CharField(
         max_length=20,
         choices=MetadataStatus.choices,
@@ -93,6 +96,19 @@ class EduMaterial(models.Model):
 
     class Meta:
         ordering = ["-updated_at", "-created_at"]
+
+    def save(self, *args, **kwargs):
+        if not self.access_code:
+            self.access_code = self.generate_unique_access_code()
+        super().save(*args, **kwargs)
+
+    @staticmethod
+    def generate_unique_access_code():
+        for _ in range(100):
+            code = "".join(random.choices(string.digits, k=6))
+            if not EduMaterial.objects.filter(access_code=code).exists():
+                return code
+        raise RuntimeError("학생 공유 코드를 생성하지 못했습니다.")
 
     def __str__(self):
         return self.title
