@@ -323,6 +323,22 @@ class QuickdropViewTests(TestCase):
         self.assertEqual(response.json()["session"]["current_filename"], "guide.pdf")
         self.assertIn("/download/", response.json()["session"]["current_download_url"])
 
+    def test_send_file_without_ajax_redirects_back_to_channel(self):
+        self.client.logout()
+        cookie_value, _device = self._pair_device_cookie()
+        self.client.cookies[DEVICE_COOKIE_NAME] = cookie_value
+
+        response = self.client.post(
+            reverse("quickdrop:send_file", kwargs={"slug": self.channel.slug}),
+            {"file": SimpleUploadedFile("guide.pdf", b"%PDF-1.4\nquickdrop", content_type="application/pdf")},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("quickdrop:channel", kwargs={"slug": self.channel.slug}))
+        session = self.channel.sessions.get(status=QuickdropSession.STATUS_LIVE)
+        self.assertEqual(session.current_kind, QuickdropSession.KIND_FILE)
+        self.assertEqual(QuickdropItem.objects.filter(channel=self.channel).count(), 1)
+
     def test_delete_item_promotes_previous_record(self):
         self.client.logout()
         cookie_value, _device = self._pair_device_cookie()

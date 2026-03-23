@@ -447,14 +447,14 @@
                     <div class="mx-auto max-w-3xl">
                         <div data-quickdrop-composer-shell="true" class="rounded-[30px] border border-white/80 bg-white/90 p-3 shadow-[0_24px_60px_rgba(44,86,170,0.12)]">
                             <div data-quickdrop-composer-row="true" class="flex items-stretch gap-3">
-                                <button type="button" id="photo-trigger" class="shrink-0" aria-label="파일 보내기">
+                                <label id="photo-trigger" for="file-input" class="shrink-0 cursor-pointer" aria-label="파일 보내기">
                                     <span data-quickdrop-photo-icon="true" aria-hidden="true">+</span>
                                     <span data-quickdrop-photo-copy="true">
                                         <span data-quickdrop-photo-title="true">파일 추가</span>
                                         <span data-quickdrop-photo-meta="true">사진, PDF, 문서</span>
                                     </span>
-                                </button>
-                                <form id="text-form" method="post" action="{{ send_text_url }}" class="flex min-w-0 flex-1 items-stretch gap-3">
+                                </label>
+                                <form id="text-form" method="post" action="{{ send_text_url }}" enctype="multipart/form-data" class="flex min-w-0 flex-1 items-stretch gap-3">
                                     {% csrf_token %}
                                     <div data-quickdrop-textbox="true" class="min-w-0 flex flex-1 flex-col justify-center rounded-[20px] border border-[#d9e4ff] bg-[#f8fbff] px-3 py-2.5">
                                         <div class="mb-1.5 flex flex-wrap items-center gap-2">

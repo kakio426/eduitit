@@ -131,7 +131,12 @@
             bindForms() {
                 if (this.textForm) {
                     this.textForm.addEventListener('submit', (event) => {
+                        if (this.hasNativeSelectedFile()) {
+                            this.prepareNativeFileSubmit();
+                            return;
+                        }
                         event.preventDefault();
+                        this.restoreTextSubmitMode();
                         const queuedFile = this.getQueuedFile();
                         if (queuedFile) {
                             this.sendFile(queuedFile);
@@ -159,6 +164,11 @@
                             return;
                         }
                         event.preventDefault();
+                        if (this.hasNativeSelectedFile()) {
+                            this.prepareNativeFileSubmit();
+                            this.textForm.submit();
+                            return;
+                        }
                         if (queuedFile) {
                             this.sendFile(queuedFile);
                             return;
@@ -168,6 +178,7 @@
                 }
                 if (this.fileInput) {
                     this.fileInput.addEventListener('change', () => {
+                        this.restoreTextSubmitMode();
                         this.setQueuedFile(this.fileInput.files[0] || null);
                     });
                 }
@@ -235,12 +246,6 @@
                     });
                 }
 
-                if (this.photoTrigger) {
-                    this.photoTrigger.addEventListener('click', () => {
-                        this.fileInput.click();
-                    });
-                }
-
                 if (this.clearFileBtn) {
                     this.clearFileBtn.addEventListener('click', () => {
                         this.clearSelectedFile();
@@ -252,6 +257,7 @@
                 const payload = new FormData();
                 payload.append('text', text);
                 await this.post(this.root.dataset.sendTextUrl, payload, () => {
+                    this.restoreTextSubmitMode();
                     this.textInput.value = '';
                     this.resizeComposer();
                     this.syncComposerState();
@@ -478,9 +484,10 @@
                 }
 
                 const visibleItems = this.isCompactMobile() ? items.slice(-6) : items;
+                const orderedItems = visibleItems.slice().reverse();
                 const fragment = document.createDocumentFragment();
-                visibleItems.forEach((item, index) => {
-                    fragment.appendChild(this.buildHistoryItem(item, index === visibleItems.length - 1));
+                orderedItems.forEach((item, index) => {
+                    fragment.appendChild(this.buildHistoryItem(item, index === 0));
                 });
                 this.historyList.appendChild(fragment);
             },
@@ -649,6 +656,30 @@
                 return this.queuedFile || null;
             },
 
+            hasNativeSelectedFile() {
+                return Boolean(this.fileInput && this.fileInput.files && this.fileInput.files[0]);
+            },
+
+            prepareNativeFileSubmit() {
+                if (!this.textForm) {
+                    return;
+                }
+                this.textForm.action = this.root.dataset.sendFileUrl;
+                this.textForm.enctype = 'multipart/form-data';
+                if (this.sendTextBtn) {
+                    this.sendTextBtn.disabled = true;
+                    this.sendTextBtn.textContent = '올리는 중...';
+                }
+            },
+
+            restoreTextSubmitMode() {
+                if (!this.textForm) {
+                    return;
+                }
+                this.textForm.action = this.root.dataset.sendTextUrl;
+                this.textForm.enctype = 'multipart/form-data';
+            },
+
             setQueuedFile(file, options) {
                 const settings = options || {};
                 this.queuedFile = file || null;
@@ -677,6 +708,7 @@
                 if (!this.fileInput) {
                     return;
                 }
+                this.restoreTextSubmitMode();
                 this.fileInput.value = '';
                 this.queuedFile = null;
                 this.syncSelectedFile();
