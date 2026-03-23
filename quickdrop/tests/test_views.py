@@ -1,15 +1,16 @@
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import RequestFactory, TestCase, override_settings
+from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
 from core.context_processors import search_products
 from core.models import UserProfile
 from products.models import Product
-from quickdrop.models import QuickdropDevice, QuickdropItem, QuickdropSession
+from quickdrop.models import QuickdropDevice, QuickdropItem, QuickdropSession, _get_raw_storage
 from quickdrop.services import (
     DEVICE_COOKIE_NAME,
     DEVICE_COOKIE_PATH,
@@ -26,6 +27,14 @@ PNG_BYTES = (
     b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\rIDATx\x9cc````\x00"
     b"\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
 )
+
+
+class QuickdropStorageTests(SimpleTestCase):
+    @patch("quickdrop.models.settings.USE_CLOUDINARY", True)
+    def test_get_raw_storage_uses_cloudinary_raw_storage_when_enabled(self):
+        storage = _get_raw_storage()
+
+        self.assertEqual(storage.__class__.__name__, "RawMediaCloudinaryStorage")
 
 
 class QuickdropViewTests(TestCase):

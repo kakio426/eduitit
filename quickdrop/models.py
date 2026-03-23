@@ -1,8 +1,20 @@
 import uuid
 
 from django.conf import settings
+from django.core.files.storage import default_storage
 from django.db import models
 from django.utils import timezone
+
+
+def _get_raw_storage():
+    if getattr(settings, "USE_CLOUDINARY", False):
+        try:
+            from cloudinary_storage.storage import RawMediaCloudinaryStorage
+
+            return RawMediaCloudinaryStorage()
+        except (ImportError, Exception):
+            return default_storage
+    return default_storage
 
 
 class QuickdropChannel(models.Model):
@@ -69,7 +81,12 @@ class QuickdropItem(models.Model):
     kind = models.CharField(max_length=20, choices=KIND_CHOICES)
     text = models.TextField(blank=True)
     image = models.ImageField(upload_to="quickdrop/items/%Y/%m/", blank=True, null=True)
-    file = models.FileField(upload_to="quickdrop/items/%Y/%m/", blank=True, null=True)
+    file = models.FileField(
+        upload_to="quickdrop/items/%Y/%m/",
+        blank=True,
+        null=True,
+        storage=_get_raw_storage,
+    )
     mime_type = models.CharField(max_length=100, blank=True)
     filename = models.CharField(max_length=255, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
