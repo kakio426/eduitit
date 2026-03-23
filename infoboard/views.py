@@ -253,7 +253,7 @@ def _render_card_grid_response(request, board, *, close_modal=False):
 
 def _render_public_wall_response(request, board, shared, *, close_sheet=False):
     context = _board_cards_context(board)
-    context.update({'shared': shared, 'public_mode': True})
+    context.update({'shared': shared, 'public_mode': True, 'card_count_oob_target': 'ibPublicCardCount'})
     response = render(request, 'infoboard/partials/public_wall.html', context)
     return _set_htmx_headers(
         response,

@@ -1,4 +1,6 @@
-<span id="ibPublicCardCount" hx-swap-oob="true">{{ card_count }}</span>
+{% if card_count_oob_target %}
+<span id="{{ card_count_oob_target }}" hx-swap-oob="true">{{ card_count }}</span>
+{% endif %}
 {% for card in cards %}
 {% include 'infoboard/partials/card_item.html' %}
 {% empty %}

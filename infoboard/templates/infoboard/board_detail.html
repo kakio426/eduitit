@@ -22,7 +22,7 @@
                     {% if board.description %}
                     {{ board.description }}
                     {% else %}
-                    학생이 자료를 올리고 서로 바로 볼 수 있는 협업 월이에요.
+                    학생이 자료를 올리고 서로 바로 볼 수 있는 보드예요.
                     {% endif %}
                 </p>
             </div>
@@ -101,10 +101,8 @@
         <section class="ib-wall-section">
             <div class="ib-section-heading">
                 <div>
-                    <p class="ib-section-kicker">협업 월</p>
-                    <h2>벽에 붙은 자료 <span id="ibBoardCardCount">{{ card_count }}</span></h2>
+                    <h2>벽에 붙은 자료</h2>
                 </div>
-                <p class="ib-section-note">학생 제출과 교사용 자료를 한 화면에서 같이 보고 정리합니다.</p>
             </div>
             <div id="ibCardGrid" class="ib-wall-grid">
                 {% include 'infoboard/partials/card_grid.html' %}

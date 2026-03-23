@@ -393,6 +393,7 @@ class InfoBoardFlowHardeningTests(TestCase):
         self.assertEqual(response.headers['HX-Retarget'], '#ibPublicWall')
         self.assertEqual(response.headers['HX-Reswap'], 'innerHTML')
         self.assertIn('infoboard:close-submit-sheet', response.headers['HX-Trigger-After-Swap'])
+        self.assertContains(response, 'id="ibPublicCardCount" hx-swap-oob="true"')
         self.assertContains(response, '새 제출 카드')
         self.assertEqual(board.cards.filter(title='새 제출 카드', author_name='학생').count(), 1)
 
@@ -406,6 +407,36 @@ class InfoBoardFlowHardeningTests(TestCase):
         self.assertContains(response, '제출 링크 복사')
         self.assertContains(response, str(shared_link.board.access_code))
         self.assertContains(response, '학생 제출')
+
+    def test_board_detail_does_not_render_count_tile_or_helper_copy(self):
+        board = self._board(title='운영 보드')
+        for index in range(4):
+            Card.objects.create(
+                board=board,
+                title=f'카드 {index + 1}',
+                card_type='text',
+                content='본문',
+            )
+
+        response = self.client.get(reverse('infoboard:board_detail', args=[board.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '벽에 붙은 자료')
+        self.assertNotContains(response, 'id="ibBoardCardCount"')
+        self.assertNotContains(response, '협업 월')
+        self.assertNotContains(response, '학생 제출과 교사용 자료를 한 화면에서 같이 보고 정리합니다.')
+
+    def test_public_board_initial_render_excludes_oob_count_marker(self):
+        board = self._board(title='공유 보드', allow_student_submit=True)
+        shared_link = SharedLink.objects.create(board=board, created_by=self.user, access_level='submit')
+        Card.objects.create(board=board, title='첫 카드', card_type='text', content='내용')
+
+        self.client.logout()
+        response = self.client.get(reverse('infoboard:public_board', args=[shared_link.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="ibPublicCardCount"')
+        self.assertNotContains(response, 'id="ibPublicCardCount" hx-swap-oob="true"')
 
     def test_fetch_og_meta_rejects_unsafe_urls_and_returns_safe_payload(self):
         unsafe_response = self.client.get(
