@@ -32,6 +32,60 @@ services:
       - key: PYTHON_VERSION
         value: "3.12.0"
 
+  - type: cron
+    name: eduitit-quickdrop-cleanup
+    runtime: python
+    region: oregon
+    plan: starter
+    buildCommand: |
+      pip install -r requirements.txt
+    startCommand: python manage.py cleanup_quickdrop
+    # Asia/Seoul 02:00 = UTC 17:00 (previous day)
+    schedule: "0 17 * * *"
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings_production
+      - key: SECRET_KEY
+        fromService:
+          type: web
+          name: eduitit
+          envVarKey: SECRET_KEY
+      - key: DATABASE_URL
+        fromDatabase:
+          name: eduitit-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: eduitit-redis
+          type: keyvalue
+          property: connectionString
+      - key: CLOUDINARY_URL
+        fromService:
+          type: web
+          name: eduitit
+          envVarKey: CLOUDINARY_URL
+      - key: CLOUDINARY_CLOUD_NAME
+        fromService:
+          type: web
+          name: eduitit
+          envVarKey: CLOUDINARY_CLOUD_NAME
+      - key: CLOUDINARY_API_KEY
+        fromService:
+          type: web
+          name: eduitit
+          envVarKey: CLOUDINARY_API_KEY
+      - key: CLOUDINARY_API_SECRET
+        fromService:
+          type: web
+          name: eduitit
+          envVarKey: CLOUDINARY_API_SECRET
+      - key: ALLOWED_HOSTS
+        value: .onrender.com
+      - key: DEBUG
+        value: "false"
+      - key: PYTHON_VERSION
+        value: "3.12.0"
+
   - type: keyvalue
     name: eduitit-redis
     plan: free
