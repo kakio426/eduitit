@@ -53,6 +53,13 @@
         return icon;
     }
 
+    function inferClipboardFilename(file) {
+        const mimeType = String(file && file.type ? file.type : '');
+        const rawExtension = mimeType.indexOf('/') >= 0 ? mimeType.split('/')[1] : 'bin';
+        const extension = rawExtension.replace(/[^a-zA-Z0-9]/g, '') || 'bin';
+        return 'clipboard-' + Date.now() + '.' + extension;
+    }
+
     function createApp(root, bootstrap) {
         return {
             root: root,
@@ -65,6 +72,7 @@
             isPulling: false,
             wsConnected: false,
             snapshotPollDelay: 15000,
+            queuedFile: null,
 
             init() {
                 this.cacheDom();
@@ -123,8 +131,9 @@
                 if (this.textForm) {
                     this.textForm.addEventListener('submit', (event) => {
                         event.preventDefault();
-                        if (this.fileInput && this.fileInput.files[0]) {
-                            this.sendFile(this.fileInput.files[0]);
+                        const queuedFile = this.getQueuedFile();
+                        if (queuedFile) {
+                            this.sendFile(queuedFile);
                             return;
                         }
                         this.sendText(this.textInput.value);
@@ -135,18 +144,22 @@
                         this.resizeComposer();
                         this.syncComposerState();
                     });
+                    this.textInput.addEventListener('paste', (event) => {
+                        this.capturePastedFile(event);
+                    });
                     this.textInput.addEventListener('keydown', (event) => {
                         if (event.key !== 'Enter' || event.shiftKey || event.isComposing) {
                             return;
                         }
-                        const hasFile = Boolean(this.fileInput && this.fileInput.files[0]);
+                        const queuedFile = this.getQueuedFile();
+                        const hasFile = Boolean(queuedFile);
                         const value = (this.textInput.value || '').trim();
                         if (!value && !hasFile) {
                             return;
                         }
                         event.preventDefault();
-                        if (hasFile) {
-                            this.sendFile(this.fileInput.files[0]);
+                        if (queuedFile) {
+                            this.sendFile(queuedFile);
                             return;
                         }
                         this.sendText(this.textInput.value);
@@ -154,8 +167,7 @@
                 }
                 if (this.fileInput) {
                     this.fileInput.addEventListener('change', () => {
-                        this.syncSelectedFile();
-                        this.syncComposerState();
+                        this.setQueuedFile(this.fileInput.files[0] || null);
                     });
                 }
             },
@@ -569,11 +581,54 @@
                 this.textInput.style.height = String(this.textInput.scrollHeight) + 'px';
             },
 
+            capturePastedFile(event) {
+                const clipboard = event.clipboardData;
+                if (!clipboard || !clipboard.items || !clipboard.items.length) {
+                    return false;
+                }
+                const fileItem = Array.from(clipboard.items).find((item) => item.kind === 'file');
+                if (!fileItem) {
+                    return false;
+                }
+                const file = fileItem.getAsFile();
+                if (!file) {
+                    return false;
+                }
+                event.preventDefault();
+                const filename = file.name && file.name.trim() ? file.name : inferClipboardFilename(file);
+                const queuedFile = new File([file], filename, {
+                    type: file.type || 'application/octet-stream',
+                    lastModified: Date.now(),
+                });
+                this.setQueuedFile(queuedFile, { keepFocus: true });
+                this.toast((queuedFile.type || '').startsWith('image/')
+                    ? '붙여넣은 이미지를 담았습니다. 보내기를 누르세요.'
+                    : '붙여넣은 파일을 담았습니다. 보내기를 누르세요.');
+                return true;
+            },
+
+            getQueuedFile() {
+                return this.queuedFile || null;
+            },
+
+            setQueuedFile(file, options) {
+                const settings = options || {};
+                this.queuedFile = file || null;
+                if (!file && this.fileInput) {
+                    this.fileInput.value = '';
+                }
+                this.syncSelectedFile();
+                this.syncComposerState();
+                if (settings.keepFocus && window.matchMedia('(pointer: fine)').matches && this.textInput) {
+                    this.textInput.focus();
+                }
+            },
+
             syncSelectedFile() {
-                if (!this.selectedFileRow || !this.selectedFileName || !this.fileInput) {
+                if (!this.selectedFileRow || !this.selectedFileName) {
                     return;
                 }
-                const file = this.fileInput.files[0];
+                const file = this.getQueuedFile();
                 this.selectedFileRow.classList.toggle('hidden', !file);
                 this.selectedFileRow.classList.toggle('flex', Boolean(file));
                 this.selectedFileName.textContent = file ? file.name : '';
@@ -585,6 +640,7 @@
                     return;
                 }
                 this.fileInput.value = '';
+                this.queuedFile = null;
                 this.syncSelectedFile();
                 this.syncComposerState();
                 if (!settings.silent && window.matchMedia('(pointer: fine)').matches && this.textInput) {
@@ -597,7 +653,7 @@
                     return;
                 }
                 const hasText = Boolean((this.textInput.value || '').trim());
-                const hasFile = Boolean(this.fileInput && this.fileInput.files[0]);
+                const hasFile = Boolean(this.getQueuedFile());
                 const enabled = hasText || hasFile;
                 this.sendTextBtn.disabled = !enabled;
                 this.sendTextBtn.classList.toggle('cursor-not-allowed', !enabled);
