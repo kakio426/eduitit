@@ -28,6 +28,31 @@
         return String(value || '').trim();
     }
 
+    function createTrashIcon() {
+        const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        icon.setAttribute('viewBox', '0 0 24 24');
+        icon.setAttribute('fill', 'none');
+        icon.setAttribute('stroke', 'currentColor');
+        icon.setAttribute('stroke-width', '1.9');
+        icon.setAttribute('stroke-linecap', 'round');
+        icon.setAttribute('stroke-linejoin', 'round');
+        icon.classList.add('h-4', 'w-4');
+
+        [
+            'M3 6h18',
+            'M8 6V4h8v2',
+            'M19 6l-1 13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6',
+            'M10 11v6',
+            'M14 11v6',
+        ].forEach((pathValue) => {
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('d', pathValue);
+            icon.appendChild(path);
+        });
+
+        return icon;
+    }
+
     function createApp(root, bootstrap) {
         return {
             root: root,
@@ -45,7 +70,6 @@
                 this.cacheDom();
                 this.render();
                 this.bindForms();
-                this.bindClipboard();
                 this.bindActions();
                 this.registerServiceWorker();
                 this.connectSocket();
@@ -64,8 +88,11 @@
                 this.emptyPillRow = byId('empty-pill-row');
                 this.imagePanel = byId('image-panel');
                 this.imageOutput = byId('image-output');
+                this.imagePreviewShell = byId('image-preview-shell');
+                this.filePreviewShell = byId('file-preview-shell');
+                this.fileOutputName = byId('file-output-name');
                 this.imageFilename = byId('image-filename');
-                this.saveImageBtn = byId('save-image-btn');
+                this.downloadCurrentBtn = byId('download-current-btn');
                 this.historyPanel = byId('history-panel');
                 this.historySummary = byId('history-summary');
                 this.historyEmpty = byId('history-empty');
@@ -73,8 +100,10 @@
                 this.textForm = byId('text-form');
                 this.textInput = byId('text-input');
                 this.sendTextBtn = byId('send-text-btn');
-                this.imageForm = byId('image-form');
-                this.imageInput = byId('image-input');
+                this.fileInput = byId('file-input');
+                this.selectedFileRow = byId('selected-file-row');
+                this.selectedFileName = byId('selected-file-name');
+                this.clearFileBtn = byId('clear-file-btn');
                 this.photoTrigger = byId('photo-trigger');
                 this.composerTipDesktop = byId('composer-tip-desktop');
                 this.composerTipMobile = byId('composer-tip-mobile');
@@ -94,13 +123,11 @@
                 if (this.textForm) {
                     this.textForm.addEventListener('submit', (event) => {
                         event.preventDefault();
+                        if (this.fileInput && this.fileInput.files[0]) {
+                            this.sendFile(this.fileInput.files[0]);
+                            return;
+                        }
                         this.sendText(this.textInput.value);
-                    });
-                }
-                if (this.imageForm) {
-                    this.imageForm.addEventListener('submit', (event) => {
-                        event.preventDefault();
-                        this.sendImage(this.imageInput.files[0]);
                     });
                 }
                 if (this.textInput) {
@@ -112,62 +139,41 @@
                         if (event.key !== 'Enter' || event.shiftKey || event.isComposing) {
                             return;
                         }
+                        const hasFile = Boolean(this.fileInput && this.fileInput.files[0]);
                         const value = (this.textInput.value || '').trim();
-                        if (!value) {
+                        if (!value && !hasFile) {
                             return;
                         }
                         event.preventDefault();
+                        if (hasFile) {
+                            this.sendFile(this.fileInput.files[0]);
+                            return;
+                        }
                         this.sendText(this.textInput.value);
                     });
                 }
-                if (this.imageInput) {
-                    this.imageInput.addEventListener('change', () => {
-                        if (this.imageInput.files[0]) {
-                            this.sendImage(this.imageInput.files[0]);
-                        }
+                if (this.fileInput) {
+                    this.fileInput.addEventListener('change', () => {
+                        this.syncSelectedFile();
+                        this.syncComposerState();
                     });
                 }
             },
 
-            bindClipboard() {
-                document.addEventListener('paste', (event) => {
-                    const clipboard = event.clipboardData;
-                    if (!clipboard) {
-                        return;
-                    }
-
-                    const imageItem = Array.from(clipboard.items || []).find((item) => item.type && item.type.indexOf('image/') === 0);
-                    if (imageItem) {
-                        const file = imageItem.getAsFile();
-                        if (file) {
-                            event.preventDefault();
-                            this.sendImage(file);
-                            return;
-                        }
-                    }
-
-                    const text = clipboard.getData('text');
-                    if (text && text.trim()) {
-                        event.preventDefault();
-                        this.sendText(text);
-                    }
-                });
-            },
-
             bindActions() {
-                if (this.saveImageBtn) {
-                    this.saveImageBtn.addEventListener('click', async () => {
-                        if (!this.session.current_image_url) {
+                if (this.downloadCurrentBtn) {
+                    this.downloadCurrentBtn.addEventListener('click', async () => {
+                        if (!this.session.current_download_url) {
                             return;
                         }
                         try {
-                            const response = await fetch(this.session.current_image_url, { credentials: 'same-origin' });
+                            const response = await fetch(this.session.current_download_url, { credentials: 'same-origin' });
                             if (!response.ok) {
-                                throw new Error('image fetch failed');
+                                throw new Error('download failed');
                             }
                             const blob = await response.blob();
-                            const filename = this.session.current_filename || 'shared-image';
-                            const file = new File([blob], filename, { type: blob.type || 'image/png' });
+                            const filename = this.session.current_filename || 'shared-file';
+                            const file = new File([blob], filename, { type: blob.type || 'application/octet-stream' });
 
                             if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
                                 await navigator.share({ files: [file], title: filename });
@@ -182,7 +188,7 @@
                                 URL.revokeObjectURL(link.href);
                             }, 300);
                         } catch (_error) {
-                            this.toast('이미지를 저장할 수 없습니다.', 'error');
+                            this.toast('파일을 받을 수 없습니다.', 'error');
                         }
                     });
                 }
@@ -195,7 +201,13 @@
 
                 if (this.photoTrigger) {
                     this.photoTrigger.addEventListener('click', () => {
-                        this.imageInput.click();
+                        this.fileInput.click();
+                    });
+                }
+
+                if (this.clearFileBtn) {
+                    this.clearFileBtn.addEventListener('click', () => {
+                        this.clearSelectedFile();
                     });
                 }
             },
@@ -215,15 +227,15 @@
                 }, '텍스트를 보냈습니다.');
             },
 
-            async sendImage(file) {
+            async sendFile(file) {
                 if (!file) {
                     return;
                 }
                 const payload = new FormData();
-                payload.append('image', file, file.name || 'shared-image.png');
-                await this.post(this.root.dataset.sendImageUrl, payload, () => {
-                    this.imageInput.value = '';
-                }, '이미지를 보냈습니다.');
+                payload.append('file', file, file.name || 'shared-file');
+                await this.post(this.root.dataset.sendFileUrl, payload, () => {
+                    this.clearSelectedFile({ keepFocus: true, silent: true });
+                }, '파일을 보냈습니다.');
             },
 
             async post(url, body, onSuccess, successMessage) {
@@ -317,14 +329,15 @@
                 const kind = this.session.current_kind || 'empty';
                 const isText = kind === 'text';
                 const isImage = kind === 'image';
+                const isFile = kind === 'file';
                 const todayItems = Array.isArray(this.session.today_items) ? this.session.today_items : [];
                 const isCompactMobile = this.isCompactMobile();
 
                 if (this.emptyState) {
-                    this.emptyState.classList.toggle('hidden', isText || isImage);
+                    this.emptyState.classList.toggle('hidden', isText || isImage || isFile);
                 }
                 if (this.imagePanel) {
-                    this.imagePanel.classList.toggle('hidden', !isImage);
+                    this.imagePanel.classList.toggle('hidden', !(isImage || isFile));
                 }
 
                 if (this.sessionStatus) {
@@ -351,21 +364,30 @@
                         this.emptyBadge.textContent = '오늘 내용 비움';
                         this.emptyTitle.textContent = '오늘 기록을 비웠습니다.';
                         this.emptyBody.textContent = isCompactMobile
-                            ? '다시 붙여넣거나 사진을 고르면 됩니다.'
-                            : '다시 붙여넣거나 사진을 고르면 새 기록이 바로 쌓입니다.';
+                            ? '다시 붙여넣거나 파일을 고른 뒤 보내면 됩니다.'
+                            : '다시 붙여넣거나 파일을 고른 뒤 보내면 새 기록이 바로 쌓입니다.';
                     } else {
                         this.emptyBadge.textContent = '전송 준비';
                         this.emptyTitle.textContent = isCompactMobile
-                            ? '붙여넣기나 사진 선택만 하면 됩니다.'
+                            ? '붙여넣거나 파일을 고른 뒤 보내면 됩니다.'
                             : 'PC끼리도, 휴대폰끼리도 바로 옮기세요.';
                         this.emptyBody.textContent = isCompactMobile
-                            ? '같은 통로만 열어 두면 텍스트와 사진이 바로 넘어갑니다.'
-                            : '붙여넣기나 사진 선택만 하면 오늘 기록에 바로 쌓입니다.';
+                            ? '같은 통로만 열어 두고 보내기만 누르면 됩니다.'
+                            : '붙여넣거나 파일을 고른 뒤 보내면 오늘 기록에 바로 쌓입니다.';
                     }
                 }
 
                 if (this.imageOutput) {
-                    this.imageOutput.src = this.session.current_image_url || '';
+                    this.imageOutput.src = this.session.current_preview_url || '';
+                }
+                if (this.imagePreviewShell) {
+                    this.imagePreviewShell.classList.toggle('hidden', !isImage);
+                }
+                if (this.filePreviewShell) {
+                    this.filePreviewShell.classList.toggle('hidden', !isFile);
+                }
+                if (this.fileOutputName) {
+                    this.fileOutputName.textContent = this.session.current_filename || '선택한 파일';
                 }
                 if (this.imageFilename) {
                     const imageMeta = [];
@@ -375,7 +397,10 @@
                     if (this.session.updated_at) {
                         imageMeta.push(formatTime(this.session.updated_at));
                     }
-                    this.imageFilename.textContent = imageMeta.join(' · ') || '사진 파일';
+                    this.imageFilename.textContent = imageMeta.join(' · ') || '파일';
+                }
+                if (this.downloadCurrentBtn) {
+                    this.downloadCurrentBtn.textContent = isImage ? '저장' : '받기';
                 }
                 if (this.historySummary) {
                     this.historySummary.textContent = '오늘 ' + String(todayItems.length) + '개';
@@ -402,7 +427,7 @@
                     return;
                 }
 
-                const visibleItems = this.isCompactMobile() ? items.slice(0, 6) : items;
+                const visibleItems = this.isCompactMobile() ? items.slice(-6) : items;
                 const fragment = document.createDocumentFragment();
                 visibleItems.forEach((item, index) => {
                     fragment.appendChild(this.buildHistoryItem(item, index === visibleItems.length - 1));
@@ -444,12 +469,26 @@
 
                 header.appendChild(left);
 
+                if (item.delete_url) {
+                    const deleteButton = document.createElement('button');
+                    deleteButton.type = 'button';
+                    deleteButton.className = 'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#dbe5fb] bg-white text-slate-400 transition hover:border-[#c4d6ff] hover:text-[#d64564]';
+                    deleteButton.setAttribute('aria-label', '이 기록 지우기');
+                    deleteButton.appendChild(createTrashIcon());
+                    deleteButton.addEventListener('click', () => {
+                        this.deleteItem(item.delete_url);
+                    });
+                    header.appendChild(deleteButton);
+                }
+
                 const body = document.createElement('div');
                 body.className = isCompactMobile
                     ? 'mt-2 text-sm leading-6 text-slate-600'
                     : 'mt-3 rounded-[18px] bg-[#f8faff] px-4 py-3 text-sm leading-6 text-slate-600';
                 if (item.kind === 'image') {
                     body.textContent = item.filename || '사진을 보냈습니다.';
+                } else if (item.kind === 'file') {
+                    body.textContent = item.filename || '파일을 보냈습니다.';
                 } else {
                     body.textContent = normalizeTextContent(item.text);
                 }
@@ -530,13 +569,46 @@
                 this.textInput.style.height = String(this.textInput.scrollHeight) + 'px';
             },
 
+            syncSelectedFile() {
+                if (!this.selectedFileRow || !this.selectedFileName || !this.fileInput) {
+                    return;
+                }
+                const file = this.fileInput.files[0];
+                this.selectedFileRow.classList.toggle('hidden', !file);
+                this.selectedFileRow.classList.toggle('flex', Boolean(file));
+                this.selectedFileName.textContent = file ? file.name : '';
+            },
+
+            clearSelectedFile(options) {
+                const settings = options || {};
+                if (!this.fileInput) {
+                    return;
+                }
+                this.fileInput.value = '';
+                this.syncSelectedFile();
+                this.syncComposerState();
+                if (!settings.silent && window.matchMedia('(pointer: fine)').matches && this.textInput) {
+                    this.textInput.focus();
+                }
+            },
+
             syncComposerState() {
                 if (!this.sendTextBtn || !this.textInput) {
                     return;
                 }
-                const hasValue = Boolean((this.textInput.value || '').trim());
-                this.sendTextBtn.disabled = !hasValue;
-                this.sendTextBtn.classList.toggle('cursor-not-allowed', !hasValue);
+                const hasText = Boolean((this.textInput.value || '').trim());
+                const hasFile = Boolean(this.fileInput && this.fileInput.files[0]);
+                const enabled = hasText || hasFile;
+                this.sendTextBtn.disabled = !enabled;
+                this.sendTextBtn.classList.toggle('cursor-not-allowed', !enabled);
+                this.sendTextBtn.textContent = hasFile ? '파일 보내기' : '보내기';
+            },
+
+            async deleteItem(url) {
+                if (!url) {
+                    return;
+                }
+                await this.post(url, new FormData(), null, '기록을 지웠습니다.');
             },
 
             toast(message, tone) {

@@ -1,5 +1,6 @@
 import base64
 import io
+import os
 import uuid
 from datetime import timedelta
 
@@ -26,13 +27,42 @@ DEVICE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365
 DEVICE_TOUCH_INTERVAL = timedelta(minutes=5)
 PAIR_TOKEN_MAX_AGE = 60 * 10
 TEXT_MAX_BYTES = 50 * 1024
-IMAGE_MAX_BYTES = 10 * 1024 * 1024
+UPLOAD_MAX_BYTES = 10 * 1024 * 1024
 TODAY_ITEM_LIMIT = 30
 ALLOWED_IMAGE_TYPES = {
     "image/png",
     "image/jpeg",
     "image/webp",
     "image/gif",
+}
+ALLOWED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
+ALLOWED_FILE_TYPES = {
+    "application/pdf",
+    "text/plain",
+    "text/csv",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-powerpoint",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "application/zip",
+    "application/x-zip-compressed",
+    "application/octet-stream",
+}
+ALLOWED_FILE_EXTENSIONS = {
+    ".pdf",
+    ".txt",
+    ".csv",
+    ".doc",
+    ".docx",
+    ".xls",
+    ".xlsx",
+    ".ppt",
+    ".pptx",
+    ".hwp",
+    ".hwpx",
+    ".zip",
 }
 DEVICE_COOKIE_SALT = "quickdrop-device"
 PAIR_TOKEN_SALT = "quickdrop-pair"
@@ -278,9 +308,10 @@ def today_item_count(channel, now=None):
 
 
 def delete_item_image(item):
-    if not item.image:
-        return
-    item.image.delete(save=False)
+    if item.image:
+        item.image.delete(save=False)
+    if item.file:
+        item.file.delete(save=False)
 
 
 def delete_item_record(item):
@@ -295,6 +326,17 @@ def clear_today_items(channel, now=None):
         delete_item_record(item)
         cleared += 1
     return cleared
+
+
+@transaction.atomic
+def delete_today_item(channel, item_id, *, now=None):
+    item = channel.items.filter(id=item_id, created_at__gte=history_day_start(now)).first()
+    if item is None:
+        raise ValidationError("이미 지워졌거나 오늘 기록이 아닙니다.")
+
+    delete_item_record(item)
+    session, _created = ensure_live_session(channel)
+    return session
 
 
 def delete_session_image(session):
@@ -331,7 +373,12 @@ def set_session_empty(session, *, status=QuickdropSession.STATUS_LIVE, ended_at=
 
 def sync_session_from_item(session, item):
     session.status = QuickdropSession.STATUS_LIVE
-    session.current_kind = QuickdropSession.KIND_TEXT if item.kind == QuickdropItem.KIND_TEXT else QuickdropSession.KIND_IMAGE
+    if item.kind == QuickdropItem.KIND_TEXT:
+        session.current_kind = QuickdropSession.KIND_TEXT
+    elif item.kind == QuickdropItem.KIND_IMAGE:
+        session.current_kind = QuickdropSession.KIND_IMAGE
+    else:
+        session.current_kind = QuickdropSession.KIND_FILE
     session.current_text = item.text if item.kind == QuickdropItem.KIND_TEXT else ""
     session.current_image = None
     session.current_mime_type = item.mime_type or ("text/plain" if item.kind == QuickdropItem.KIND_TEXT else "")
@@ -365,7 +412,12 @@ def session_matches_item(session, item):
             and session.ended_at is None
         )
 
-    expected_kind = QuickdropSession.KIND_TEXT if item.kind == QuickdropItem.KIND_TEXT else QuickdropSession.KIND_IMAGE
+    if item.kind == QuickdropItem.KIND_TEXT:
+        expected_kind = QuickdropSession.KIND_TEXT
+    elif item.kind == QuickdropItem.KIND_IMAGE:
+        expected_kind = QuickdropSession.KIND_IMAGE
+    else:
+        expected_kind = QuickdropSession.KIND_FILE
     expected_text = item.text if item.kind == QuickdropItem.KIND_TEXT else ""
     expected_mime_type = item.mime_type or ("text/plain" if item.kind == QuickdropItem.KIND_TEXT else "")
     return (
@@ -425,15 +477,24 @@ def validate_text_payload(raw_text):
     return text
 
 
-def validate_image_upload(uploaded_file):
+def _upload_extension(uploaded_file):
+    return os.path.splitext(str(getattr(uploaded_file, "name", "") or "").lower())[1]
+
+
+def classify_upload(uploaded_file):
     if uploaded_file is None:
-        raise ValidationError("이미지 파일을 선택해 주세요.")
-    if uploaded_file.size > IMAGE_MAX_BYTES:
-        raise ValidationError("이미지는 최대 10MB까지 전송할 수 있습니다.")
+        raise ValidationError("파일을 선택해 주세요.")
+    if uploaded_file.size > UPLOAD_MAX_BYTES:
+        raise ValidationError("파일은 최대 10MB까지 전송할 수 있습니다.")
     content_type = str(getattr(uploaded_file, "content_type", "") or "").lower()
-    if content_type not in ALLOWED_IMAGE_TYPES:
-        raise ValidationError("PNG, JPG, WEBP, GIF 이미지 파일만 전송할 수 있습니다.")
-    return uploaded_file
+    extension = _upload_extension(uploaded_file)
+    if content_type in ALLOWED_IMAGE_TYPES or extension in ALLOWED_IMAGE_EXTENSIONS:
+        return QuickdropItem.KIND_IMAGE
+    if extension in ALLOWED_FILE_EXTENSIONS:
+        return QuickdropItem.KIND_FILE
+    if content_type in ALLOWED_FILE_TYPES and content_type != "application/octet-stream":
+        return QuickdropItem.KIND_FILE
+    raise ValidationError("이미지, PDF, 한글, 오피스 문서 파일만 전송할 수 있습니다.")
 
 
 def normalize_sender_label(sender_label):
@@ -455,16 +516,20 @@ def replace_with_text(session, raw_text, *, sender_label=""):
 
 
 @transaction.atomic
-def replace_with_image(session, uploaded_file, *, sender_label=""):
-    image = validate_image_upload(uploaded_file)
-    item = QuickdropItem.objects.create(
-        channel=session.channel,
-        sender_label=normalize_sender_label(sender_label),
-        kind=QuickdropItem.KIND_IMAGE,
-        image=image,
-        mime_type=str(getattr(image, "content_type", "") or ""),
-        filename=str(getattr(image, "name", "") or ""),
-    )
+def replace_with_file(session, uploaded_file, *, sender_label=""):
+    upload_kind = classify_upload(uploaded_file)
+    item_kwargs = {
+        "channel": session.channel,
+        "sender_label": normalize_sender_label(sender_label),
+        "kind": upload_kind,
+        "mime_type": str(getattr(uploaded_file, "content_type", "") or ""),
+        "filename": str(getattr(uploaded_file, "name", "") or ""),
+    }
+    if upload_kind == QuickdropItem.KIND_IMAGE:
+        item_kwargs["image"] = uploaded_file
+    else:
+        item_kwargs["file"] = uploaded_file
+    item = QuickdropItem.objects.create(**item_kwargs)
     sync_session_from_item(session, item)
     return session
 
@@ -475,7 +540,9 @@ def item_payload(item):
         "kind": item.kind,
         "sender_label": item.sender_label,
         "text": item.text,
-        "image_url": reverse("quickdrop:item_image", kwargs={"slug": item.channel.slug, "item_id": item.id}) if item.image else "",
+        "download_url": reverse("quickdrop:item_download", kwargs={"slug": item.channel.slug, "item_id": item.id}) if (item.image or item.file) else "",
+        "preview_url": reverse("quickdrop:item_download", kwargs={"slug": item.channel.slug, "item_id": item.id}) if item.image else "",
+        "delete_url": reverse("quickdrop:delete_item", kwargs={"slug": item.channel.slug, "item_id": item.id}),
         "filename": item.filename,
         "mime_type": item.mime_type,
         "created_at": item.created_at.isoformat() if item.created_at else None,
@@ -486,11 +553,21 @@ def session_payload(session):
     latest_item = latest_today_item(session.channel)
     today_items = [item_payload(item) for item in list_today_items(session.channel)]
     if latest_item:
-        current_kind = QuickdropSession.KIND_TEXT if latest_item.kind == QuickdropItem.KIND_TEXT else QuickdropSession.KIND_IMAGE
+        if latest_item.kind == QuickdropItem.KIND_TEXT:
+            current_kind = QuickdropSession.KIND_TEXT
+        elif latest_item.kind == QuickdropItem.KIND_IMAGE:
+            current_kind = QuickdropSession.KIND_IMAGE
+        else:
+            current_kind = QuickdropSession.KIND_FILE
         current_text = latest_item.text if latest_item.kind == QuickdropItem.KIND_TEXT else ""
-        current_image_url = (
-            reverse("quickdrop:item_image", kwargs={"slug": session.channel.slug, "item_id": latest_item.id})
+        current_preview_url = (
+            reverse("quickdrop:item_download", kwargs={"slug": session.channel.slug, "item_id": latest_item.id})
             if latest_item.image
+            else ""
+        )
+        current_download_url = (
+            reverse("quickdrop:item_download", kwargs={"slug": session.channel.slug, "item_id": latest_item.id})
+            if latest_item.image or latest_item.file
             else ""
         )
         current_filename = latest_item.filename
@@ -500,7 +577,8 @@ def session_payload(session):
     else:
         current_kind = QuickdropSession.KIND_EMPTY
         current_text = ""
-        current_image_url = ""
+        current_preview_url = ""
+        current_download_url = ""
         current_filename = ""
         current_mime_type = ""
         updated_at = session.updated_at.isoformat() if session.updated_at else None
@@ -511,7 +589,8 @@ def session_payload(session):
         "status": status,
         "current_kind": current_kind,
         "current_text": current_text,
-        "current_image_url": current_image_url,
+        "current_preview_url": current_preview_url,
+        "current_download_url": current_download_url,
         "current_filename": current_filename,
         "current_mime_type": current_mime_type,
         "last_activity_at": session.last_activity_at.isoformat() if session.last_activity_at else None,

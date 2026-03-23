@@ -139,7 +139,8 @@ class QuickdropViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'data-quickdrop-root="true"')
-        self.assertContains(response, "붙여넣기나 사진 선택만 하면 됩니다")
+        self.assertContains(response, "붙여넣거나 파일을 고른 뒤 보내면 됩니다")
+        self.assertContains(response, "파일 추가")
         self.assertContains(response, "여기에 붙여넣거나 직접 입력하세요.")
         self.assertContains(response, 'data-quickdrop-history-panel="true"')
         self.assertContains(response, reverse("quickdrop:snapshot", kwargs={"slug": self.channel.slug}))
@@ -282,7 +283,7 @@ class QuickdropViewTests(TestCase):
         self.assertFalse(session.current_text)
         self.assertEqual(QuickdropItem.objects.filter(channel=self.channel).count(), 0)
 
-    def test_session_image_url_requires_channel_access(self):
+    def test_session_download_url_requires_channel_access(self):
         self.client.logout()
         cookie_value, _device = self._pair_device_cookie()
         self.client.cookies[DEVICE_COOKIE_NAME] = cookie_value
@@ -293,7 +294,7 @@ class QuickdropViewTests(TestCase):
             {"image": upload},
             HTTP_X_REQUESTED_WITH="XMLHttpRequest",
         )
-        image_url = image_response.json()["session"]["current_image_url"]
+        image_url = image_response.json()["session"]["current_download_url"]
 
         blocked_client = self.client_class()
         blocked_response = blocked_client.get(image_url)
@@ -302,6 +303,53 @@ class QuickdropViewTests(TestCase):
         self.assertEqual(blocked_response.status_code, 403)
         self.assertEqual(allowed_response.status_code, 200)
         self.assertEqual(allowed_response.headers["Content-Type"], "image/png")
+
+    def test_send_file_keeps_current_file_payload(self):
+        self.client.logout()
+        cookie_value, _device = self._pair_device_cookie()
+        self.client.cookies[DEVICE_COOKIE_NAME] = cookie_value
+
+        response = self.client.post(
+            reverse("quickdrop:send_file", kwargs={"slug": self.channel.slug}),
+            {"file": SimpleUploadedFile("guide.pdf", b"%PDF-1.4\nquickdrop", content_type="application/pdf")},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        session = self.channel.sessions.get(status=QuickdropSession.STATUS_LIVE)
+        item = QuickdropItem.objects.get(channel=self.channel)
+        self.assertEqual(session.current_kind, QuickdropSession.KIND_FILE)
+        self.assertEqual(item.kind, QuickdropItem.KIND_FILE)
+        self.assertEqual(response.json()["session"]["current_filename"], "guide.pdf")
+        self.assertIn("/download/", response.json()["session"]["current_download_url"])
+
+    def test_delete_item_promotes_previous_record(self):
+        self.client.logout()
+        cookie_value, _device = self._pair_device_cookie()
+        self.client.cookies[DEVICE_COOKIE_NAME] = cookie_value
+
+        self.client.post(
+            reverse("quickdrop:send_text", kwargs={"slug": self.channel.slug}),
+            {"text": "첫 기록"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        second_response = self.client.post(
+            reverse("quickdrop:send_text", kwargs={"slug": self.channel.slug}),
+            {"text": "둘째 기록"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        latest_item_id = second_response.json()["session"]["today_items"][-1]["id"]
+
+        delete_response = self.client.post(
+            reverse("quickdrop:delete_item", kwargs={"slug": self.channel.slug, "item_id": latest_item_id}),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(delete_response.status_code, 200)
+        session = self.channel.sessions.get(status=QuickdropSession.STATUS_LIVE)
+        self.assertEqual(session.current_text, "첫 기록")
+        self.assertEqual(QuickdropItem.objects.filter(channel=self.channel).count(), 1)
+        self.assertEqual(delete_response.json()["session"]["today_items"][-1]["text"], "첫 기록")
 
     def test_opening_channel_after_end_creates_new_live_session(self):
         self.client.logout()

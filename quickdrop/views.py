@@ -14,8 +14,11 @@ from .services import (
     build_channel_bootstrap,
     build_pair_token,
     build_qr_data_url,
+    broadcast_item_replace,
+    broadcast_session_ended,
     channel_snapshot_payload,
     consume_pair_token,
+    delete_today_item,
     end_session,
     ensure_live_session,
     get_live_session,
@@ -27,14 +30,12 @@ from .services import (
     pair_token_matches,
     pair_device_for_request,
     remember_owner_device_for_request,
-    replace_with_image,
+    replace_with_file,
     replace_with_text,
     resolve_channel_access,
     resolve_default_access,
     session_payload,
     today_item_count,
-    broadcast_item_replace,
-    broadcast_session_ended,
 )
 
 
@@ -129,7 +130,7 @@ def channel_view(request, slug):
         "ws_url": f"/quickdrop/ws/{access['channel'].slug}/",
         "snapshot_url": reverse("quickdrop:snapshot", kwargs={"slug": access["channel"].slug}),
         "send_text_url": reverse("quickdrop:send_text", kwargs={"slug": access["channel"].slug}),
-        "send_image_url": reverse("quickdrop:send_image", kwargs={"slug": access["channel"].slug}),
+        "send_file_url": reverse("quickdrop:send_file", kwargs={"slug": access["channel"].slug}),
         "end_session_url": reverse("quickdrop:end_session", kwargs={"slug": access["channel"].slug}),
         "landing_url": reverse("quickdrop:landing") if access["is_owner"] else "",
         "manifest_url": reverse("quickdrop:manifest"),
@@ -195,19 +196,26 @@ def send_text_view(request, slug):
 
 
 @require_POST
-def send_image_view(request, slug):
+def send_file_view(request, slug):
     access = resolve_channel_access(request, slug)
     if access is None:
         return _error_response(request, "이 기기는 연결이 필요합니다.", status=403)
 
     session, _ = ensure_live_session(access["channel"])
     try:
-        session = replace_with_image(session, request.FILES.get("image"), sender_label=access["device_label"])
+        session = replace_with_file(
+            session,
+            request.FILES.get("file") or request.FILES.get("image"),
+            sender_label=access["device_label"],
+        )
     except ValidationError as exc:
         return _error_response(request, " ".join(exc.messages))
 
     broadcast_item_replace(session)
     return _json_or_redirect(request, access["channel"], session_payload(session))
+
+
+send_image_view = send_file_view
 
 
 @require_POST
@@ -226,17 +234,33 @@ def end_session_view(request, slug):
     return _json_or_redirect(request, access["channel"], payload)
 
 
+@require_POST
+def delete_item_view(request, slug, item_id):
+    access = resolve_channel_access(request, slug)
+    if access is None:
+        return _error_response(request, "이 기기는 연결이 필요합니다.", status=403)
+
+    try:
+        session = delete_today_item(access["channel"], item_id)
+    except ValidationError as exc:
+        return _error_response(request, " ".join(exc.messages), status=404)
+
+    broadcast_item_replace(session)
+    return _json_or_redirect(request, access["channel"], session_payload(session))
+
+
 @require_GET
-def item_image_view(request, slug, item_id):
+def item_download_view(request, slug, item_id):
     access = resolve_channel_access(request, slug)
     if access is None:
         return _forbidden_pairing()
 
-    item = access["channel"].items.filter(id=item_id, kind="image").first()
-    if item is None or not item.image:
+    item = access["channel"].items.filter(id=item_id).first()
+    asset = None if item is None else (item.image or item.file)
+    if item is None or not asset:
         raise Http404()
 
-    image_file = item.image.open("rb")
+    image_file = asset.open("rb")
     response = FileResponse(
         image_file,
         content_type=item.mime_type or "application/octet-stream",
@@ -247,6 +271,9 @@ def item_image_view(request, slug, item_id):
     )
     response["X-Content-Type-Options"] = "nosniff"
     return _apply_private_response_headers(response)
+
+
+item_image_view = item_download_view
 
 
 @login_required
@@ -307,7 +334,7 @@ def share_target_view(request):
 
     try:
         if shared_file is not None:
-            session = replace_with_image(session, shared_file, sender_label=access["device_label"])
+            session = replace_with_file(session, shared_file, sender_label=access["device_label"])
         else:
             session = replace_with_text(session, shared_text, sender_label=access["device_label"])
     except ValidationError as exc:

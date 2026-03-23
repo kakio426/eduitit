@@ -53,9 +53,11 @@ class QuickdropDevice(models.Model):
 class QuickdropItem(models.Model):
     KIND_TEXT = "text"
     KIND_IMAGE = "image"
+    KIND_FILE = "file"
     KIND_CHOICES = [
         (KIND_TEXT, "텍스트"),
         (KIND_IMAGE, "이미지"),
+        (KIND_FILE, "파일"),
     ]
 
     channel = models.ForeignKey(
@@ -67,6 +69,7 @@ class QuickdropItem(models.Model):
     kind = models.CharField(max_length=20, choices=KIND_CHOICES)
     text = models.TextField(blank=True)
     image = models.ImageField(upload_to="quickdrop/items/%Y/%m/", blank=True, null=True)
+    file = models.FileField(upload_to="quickdrop/items/%Y/%m/", blank=True, null=True)
     mime_type = models.CharField(max_length=100, blank=True)
     filename = models.CharField(max_length=255, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -89,10 +92,12 @@ class QuickdropSession(models.Model):
     KIND_EMPTY = "empty"
     KIND_TEXT = "text"
     KIND_IMAGE = "image"
+    KIND_FILE = "file"
     KIND_CHOICES = [
         (KIND_EMPTY, "비어 있음"),
         (KIND_TEXT, "텍스트"),
         (KIND_IMAGE, "이미지"),
+        (KIND_FILE, "파일"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

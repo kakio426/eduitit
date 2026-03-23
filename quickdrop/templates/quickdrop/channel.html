@@ -341,7 +341,7 @@
         id="quickdrop-root"
         data-quickdrop-root="true"
         data-send-text-url="{{ send_text_url }}"
-        data-send-image-url="{{ send_image_url }}"
+        data-send-file-url="{{ send_file_url }}"
         data-end-session-url="{{ end_session_url }}"
         data-snapshot-url="{{ snapshot_url }}"
         data-ws-url="{{ ws_url }}"
@@ -396,10 +396,10 @@
                             <div id="empty-icon" data-quickdrop-empty-icon="true" class="mx-auto flex h-12 w-12 items-center justify-center rounded-[18px] text-xl font-black sm:h-14 sm:w-14 sm:rounded-[20px] sm:text-2xl">↔</div>
                             <p id="empty-badge" class="mt-5 text-[11px] font-black uppercase tracking-[0.28em] text-[#5c73b8]">전송 준비</p>
                             <h2 id="empty-title" class="mt-3 text-lg font-black leading-tight text-[#14213d] sm:text-3xl">PC끼리도, 휴대폰끼리도 바로 옮기세요.</h2>
-                            <p id="empty-body" class="mx-auto mt-3 max-w-xl text-[13px] leading-6 text-slate-500 sm:text-base sm:leading-7">붙여넣기나 사진 선택만 하면 방금 보낸 내용은 위에, 오늘 기록은 아래에 남습니다.</p>
+                            <p id="empty-body" class="mx-auto mt-3 max-w-xl text-[13px] leading-6 text-slate-500 sm:text-base sm:leading-7">붙여넣거나 파일을 고른 뒤 보내면 됩니다.</p>
                             <div id="empty-pill-row" class="mt-5 hidden flex-wrap justify-center gap-2 lg:flex">
-                                <span class="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-600 shadow-sm">Ctrl+V 바로 전송</span>
-                                <span class="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-600 shadow-sm">사진 선택 즉시 전송</span>
+                                <span class="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-600 shadow-sm">붙여넣고 보내기</span>
+                                <span class="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-600 shadow-sm">파일 선택 후 보내기</span>
                                 <span class="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-600 shadow-sm">오늘 기록 유지</span>
                             </div>
                         </div>
@@ -412,12 +412,22 @@
                                         <div class="min-w-0">
                                             <p id="image-filename" class="mt-1 truncate text-xs text-slate-400"></p>
                                         </div>
-                                        <button type="button" id="save-image-btn" class="rounded-full bg-[#14213d] px-4 py-2 text-sm font-black text-white shadow-sm">저장</button>
+                                        <button type="button" id="download-current-btn" class="rounded-full bg-[#14213d] px-4 py-2 text-sm font-black text-white shadow-sm">받기</button>
                                     </div>
                                     <div class="relative overflow-visible rounded-[30px] border border-[#dce5ff] bg-white p-3 shadow-[0_24px_60px_rgba(44,86,170,0.12)]">
                                         <div class="absolute left-[-5px] top-7 h-4 w-4 rotate-45 rounded-[4px] border-l border-t border-[#dce5ff] bg-white"></div>
-                                        <div class="overflow-hidden rounded-[24px] bg-[#f4f7ff] p-2">
+                                        <div id="image-preview-shell" class="overflow-hidden rounded-[24px] bg-[#f4f7ff] p-2">
                                             <img id="image-output" alt="현재 전송된 이미지" class="mx-auto max-h-[480px] w-auto rounded-[18px] object-contain">
+                                        </div>
+                                        <div id="file-preview-shell" class="hidden rounded-[24px] bg-[#f6f8fe] px-5 py-6">
+                                            <div class="flex items-center gap-3">
+                                                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#e7efff] text-xl font-black text-[#1f4fd1]">F</div>
+                                                <div class="min-w-0">
+                                                    <p class="text-xs font-black uppercase tracking-[0.18em] text-[#5c73b8]">파일</p>
+                                                    <p id="file-output-name" class="mt-1 truncate text-sm font-bold text-[#14213d]"></p>
+                                                    <p class="mt-1 text-xs text-slate-500">받기 버튼으로 바로 내려받을 수 있습니다.</p>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -435,11 +445,11 @@
                     <div class="mx-auto max-w-3xl">
                         <div data-quickdrop-composer-shell="true" class="rounded-[30px] border border-white/80 bg-white/90 p-3 shadow-[0_24px_60px_rgba(44,86,170,0.12)]">
                             <div data-quickdrop-composer-row="true" class="flex items-stretch gap-3">
-                                <button type="button" id="photo-trigger" class="shrink-0" aria-label="사진 보내기">
+                                <button type="button" id="photo-trigger" class="shrink-0" aria-label="파일 보내기">
                                     <span data-quickdrop-photo-icon="true" aria-hidden="true">+</span>
                                     <span data-quickdrop-photo-copy="true">
-                                        <span data-quickdrop-photo-title="true">사진 추가</span>
-                                        <span data-quickdrop-photo-meta="true">앨범에서 선택</span>
+                                        <span data-quickdrop-photo-title="true">파일 추가</span>
+                                        <span data-quickdrop-photo-meta="true">사진, PDF, 문서</span>
                                     </span>
                                 </button>
                                 <form id="text-form" method="post" action="{{ send_text_url }}" class="flex min-w-0 flex-1 items-stretch gap-3">
@@ -447,21 +457,25 @@
                                     <div data-quickdrop-textbox="true" class="min-w-0 flex flex-1 flex-col justify-center rounded-[20px] border border-[#d9e4ff] bg-[#f8fbff] px-3 py-2.5">
                                         <div class="mb-1.5 flex flex-wrap items-center gap-2">
                                             <span data-quickdrop-textbox-label="true">텍스트 입력</span>
-                                            <span data-quickdrop-textbox-hint="true" class="hidden sm:inline">붙여넣거나 직접 입력하세요</span>
+                                            <span data-quickdrop-textbox-hint="true" class="hidden sm:inline">붙여넣거나 직접 입력한 뒤 보내세요</span>
                                         </div>
                                         <textarea id="text-input" name="text" rows="1" placeholder="여기에 붙여넣거나 직접 입력하세요." class="min-w-0 w-full flex-1 border-0 bg-transparent px-0 py-1.5 text-sm leading-6 text-slate-700 outline-none placeholder:text-slate-400 sm:text-[15px]"></textarea>
+                                        <div id="selected-file-row" class="mt-2 hidden items-center justify-between gap-3 rounded-[16px] bg-[#eef4ff] px-3 py-2">
+                                            <div class="min-w-0">
+                                                <p class="text-[11px] font-black text-[#5c73b8]">선택한 파일</p>
+                                                <p id="selected-file-name" class="truncate text-sm font-bold text-[#14213d]"></p>
+                                            </div>
+                                            <button type="button" id="clear-file-btn" class="shrink-0 rounded-full border border-[#c9d8fb] bg-white px-3 py-1.5 text-xs font-black text-slate-500">지우기</button>
+                                        </div>
+                                        <input id="file-input" type="file" name="file" accept="image/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.hwp,.hwpx,.zip" class="sr-only">
                                     </div>
                                     <button type="submit" id="send-text-btn" class="shrink-0 rounded-[18px] bg-[linear-gradient(135deg,_#1f4fd1,_#4f8bff)] px-5 py-3 text-sm font-black text-white shadow-[0_16px_34px_rgba(31,79,209,0.24)]">보내기</button>
-                                </form>
-                                <form id="image-form" method="post" action="{{ send_image_url }}" enctype="multipart/form-data" class="hidden">
-                                    {% csrf_token %}
-                                    <input id="image-input" type="file" name="image" accept="image/png,image/jpeg,image/webp,image/gif" class="sr-only">
                                 </form>
                             </div>
                         </div>
                         <div id="composer-tip-row" class="mt-3 px-1 text-[11px] text-slate-500 lg:flex lg:items-center lg:justify-between lg:gap-3 lg:text-xs">
-                            <p id="composer-tip-desktop" class="hidden lg:block">PC는 화면 어디서든 <strong>Ctrl+V</strong></p>
-                            <p id="composer-tip-mobile" class="text-center sm:text-left">붙여넣기나 사진 선택만 하면 됩니다</p>
+                            <p id="composer-tip-desktop" class="hidden lg:block">붙여넣거나 파일을 고른 뒤 <strong>보내기</strong></p>
+                            <p id="composer-tip-mobile" class="text-center sm:text-left">붙여넣기나 파일 선택 후 보내면 됩니다</p>
                         </div>
                     </div>
                 </div>
