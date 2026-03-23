@@ -675,6 +675,8 @@ class ArtClassSetupEditTest(TestCase):
         self.assertContains(response, "프롬프트 복사하고 제미나이 열기")
         self.assertContains(response, "추천: 아래 파란 버튼 한 번이면 프롬프트를 복사하고 제미나이를 바로 엽니다.")
         self.assertContains(response, "프롬프트만 복사")
+        self.assertContains(response, "수업 준비를 저장하고 있어요")
+        self.assertContains(response, "이미지가 있으면 업로드 때문에 조금 더 걸릴 수 있어요.")
         self.assertNotContains(response, "샘플 영상으로 체험하기")
 
     def test_setup_page_uses_gemini_example_without_sample_shortcut(self):
@@ -1068,7 +1070,7 @@ class ArtClassAutoMetadataTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, art_class.display_title)
         self.assertContains(response, "런처 시작")
-        self.assertContains(response, "이 수업은 런처로 시작합니다.")
+        self.assertContains(response, "초록 버튼을 누르면 영상과 수업 안내가 나뉘어 열립니다.")
 
 
 class ArtClassPresentationUxTest(TestCase):
@@ -1085,7 +1087,7 @@ class ArtClassPresentationUxTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "런처 시작")
-        self.assertContains(response, "이 수업은 런처로 시작합니다.")
+        self.assertContains(response, "초록 버튼을 누르면 영상과 수업 안내가 나뉘어 열립니다.")
 
     def test_classroom_normalizes_legacy_embed_mode_to_launcher_flow(self):
         art_class = ArtClass.objects.create(

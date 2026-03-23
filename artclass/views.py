@@ -768,7 +768,7 @@ def library_view(request):
         for item in my_classes:
             item.creator_display_name = _resolve_creator_display_name(item.created_by)
             item.start_mode_badge = "런처 시작"
-            item.start_mode_reason = "이 수업은 런처로 시작합니다."
+            item.start_mode_reason = "초록 버튼을 누르면 영상과 수업 안내가 나뉘어 열립니다."
             item.primary_action_label = "런처로 수업 시작하기"
 
     shared_classes = ArtClass.objects.select_related('created_by', 'created_by__userprofile').annotate(
@@ -795,7 +795,7 @@ def library_view(request):
     for item in shared_classes:
         item.creator_display_name = _resolve_creator_display_name(item.created_by)
         item.start_mode_badge = "런처 시작"
-        item.start_mode_reason = "이 수업은 런처로 시작합니다."
+        item.start_mode_reason = "초록 버튼을 누르면 영상과 수업 안내가 나뉘어 열립니다."
         item.primary_action_label = "런처로 수업 시작하기"
 
     shared_only = ArtClass.objects.filter(is_shared=True)
