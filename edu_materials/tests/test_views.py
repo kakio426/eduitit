@@ -289,6 +289,8 @@ class EduMaterialViewTests(TestCase):
         self.assertContains(response, "공개 자료 둘러보기")
         self.assertNotContains(response, reverse("edu_materials:create"))
         self.assertNotContains(response, "새 자료 만들기")
+        self.assertContains(response, reverse("edu_materials:detail", args=[public_material.id]))
+        self.assertContains(response, "수업 시작판")
 
     def test_main_view_filters_by_subject(self):
         other_user = self._create_other_user()
@@ -542,6 +544,26 @@ class EduMaterialViewTests(TestCase):
         self.assertContains(response, material.access_code)
         self.assertContains(response, reverse("edu_materials:join_short"))
 
+    def test_detail_view_allows_anonymous_public_startboard(self):
+        other_user = self._create_other_user()
+        material = EduMaterial.objects.create(
+            teacher=other_user,
+            title="비회원 공개 시작판 자료",
+            html_content="<html><body>public anon</body></html>",
+            is_published=True,
+            subject="SCIENCE",
+            material_type=EduMaterial.MaterialType.PRACTICE,
+        )
+
+        response = Client().get(reverse("edu_materials:detail", args=[material.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "로그인 없이도 바로 수업에 쓰기")
+        self.assertContains(response, "전체화면 공유판 열기")
+        self.assertContains(response, reverse("edu_materials:share_board", args=[material.id]))
+        self.assertContains(response, reverse("edu_materials:run", args=[material.id]))
+        self.assertContains(response, material.access_code)
+
     def test_detail_view_allows_logged_in_teacher_to_open_other_published_material(self):
         other_user = self._create_other_user()
         material = EduMaterial.objects.create(
@@ -557,8 +579,21 @@ class EduMaterialViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "내 자료로 가져오기")
-        self.assertNotContains(response, "전체화면 공유판 열기")
+        self.assertContains(response, "전체화면 공유판 열기")
+        self.assertContains(response, reverse("edu_materials:share_board", args=[material.id]))
         self.assertNotContains(response, "자료 삭제하기")
+
+    def test_detail_view_keeps_private_material_hidden_from_anonymous_users(self):
+        material = EduMaterial.objects.create(
+            teacher=self.user,
+            title="비회원 비공개 자료",
+            html_content="<html><body>private anon</body></html>",
+            is_published=False,
+        )
+
+        response = Client().get(reverse("edu_materials:detail", args=[material.id]))
+
+        self.assertEqual(response.status_code, 404)
 
     def test_join_views_redirect_to_run_for_valid_code(self):
         material = EduMaterial.objects.create(
@@ -594,7 +629,7 @@ class EduMaterialViewTests(TestCase):
         self.assertEqual(missing_response.status_code, 200)
         self.assertContains(missing_response, "입력한 공유 코드를 찾지 못했습니다")
 
-    def test_share_board_is_owner_only_and_renders_core_share_info(self):
+    def test_share_board_allows_public_access_and_blocks_private_non_owners(self):
         material = EduMaterial.objects.create(
             teacher=self.user,
             title="공유판 자료",
@@ -607,12 +642,31 @@ class EduMaterialViewTests(TestCase):
         other_client = Client()
         other_client.force_login(other_user)
         other_response = other_client.get(reverse("edu_materials:share_board", args=[material.id]))
+        anonymous_response = Client().get(reverse("edu_materials:share_board", args=[material.id]))
 
         self.assertEqual(owner_response.status_code, 200)
+        self.assertEqual(other_response.status_code, 200)
+        self.assertEqual(anonymous_response.status_code, 200)
         self.assertContains(owner_response, material.access_code)
         self.assertContains(owner_response, reverse("edu_materials:join_short"))
         self.assertContains(owner_response, "학생 자료 입장")
-        self.assertEqual(other_response.status_code, 404)
+        self.assertContains(other_response, material.access_code)
+        self.assertContains(anonymous_response, material.access_code)
+
+        private_material = EduMaterial.objects.create(
+            teacher=self.user,
+            title="비공개 공유판 자료",
+            html_content="<html><body>private share board</body></html>",
+            is_published=False,
+        )
+
+        private_anonymous_response = Client().get(reverse("edu_materials:share_board", args=[private_material.id]))
+        private_other_response = other_client.get(reverse("edu_materials:share_board", args=[private_material.id]))
+        private_owner_response = self.client.get(reverse("edu_materials:share_board", args=[private_material.id]))
+
+        self.assertEqual(private_anonymous_response.status_code, 404)
+        self.assertEqual(private_other_response.status_code, 404)
+        self.assertEqual(private_owner_response.status_code, 200)
 
     def test_update_material_metadata_marks_manual_source(self):
         material = EduMaterial.objects.create(

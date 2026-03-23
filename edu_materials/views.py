@@ -396,10 +396,9 @@ def update_material(request, material_id):
     return redirect("edu_materials:detail", pk=material.id)
 
 
-@login_required
 def material_detail(request, pk):
     material = get_object_or_404(EduMaterial.objects.select_related("teacher"), id=pk)
-    is_owner = material.teacher_id == request.user.id
+    is_owner = request.user.is_authenticated and material.teacher_id == request.user.id
     if not is_owner and not material.is_published:
         raise Http404()
 
@@ -415,7 +414,7 @@ def material_detail(request, pk):
             "material": material,
             "is_owner": is_owner,
             "can_manage": is_owner,
-            "can_clone": not is_owner and material.is_published,
+            "can_clone": request.user.is_authenticated and not is_owner and material.is_published,
             "teacher_display_name": _resolve_teacher_display_name(material.teacher),
             "material_frame_src": build_runtime_data_url(material.html_content),
             "material_render_url": material_render_url,
@@ -463,9 +462,12 @@ def join_material(request):
     )
 
 
-@login_required
 def share_board(request, pk):
-    material = get_object_or_404(EduMaterial, id=pk, teacher=request.user)
+    material = get_object_or_404(EduMaterial.objects.select_related("teacher"), id=pk)
+    is_owner = request.user.is_authenticated and material.teacher_id == request.user.id
+    if not material.is_published and not is_owner:
+        raise Http404()
+
     student_join_display = f"{request.get_host()}{reverse('edu_materials:join_short')}"
     public_url = request.build_absolute_uri(reverse("edu_materials:run", args=[material.id]))
     return render(
@@ -474,6 +476,8 @@ def share_board(request, pk):
         {
             "material": material,
             "hide_navbar": True,
+            "is_owner": is_owner,
+            "teacher_display_name": _resolve_teacher_display_name(material.teacher),
             "student_join_display": student_join_display,
             "public_qr_data_url": build_material_qr_data_url(public_url) if material.is_published else "",
         },
