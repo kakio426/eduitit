@@ -277,6 +277,30 @@ class HomeV2ViewTest(TestCase):
 
         self.assertIn('data-home-v2-hero-proof="true"', content)
         self.assertIn('data-home-v2-hero-preview="true"', content)
+        self.assertNotIn('Teacher-First Launchpad', content)
+        self.assertNotIn('Open Tools', content)
+
+    def test_v2_anonymous_hero_quick_links_use_real_anchor_targets(self):
+        public_collect = Product.objects.create(
+            title="공개 수합 바로가기",
+            description="제출 흐름 시작",
+            price=0,
+            is_active=True,
+            is_guest_allowed=True,
+            service_type='collect_sign',
+            icon='fa-solid fa-inbox',
+            launch_route_name='collect:landing',
+        )
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        hero_card = next(
+            card for card in response.context.get('guest_public_cards', [])
+            if card['id'] == public_collect.id
+        )
+
+        self.assertIn('class="home-v2-quick-link', content)
+        self.assertIn(f'href="{hero_card["href"]}"', content)
 
     def test_v2_anonymous_surfaces_public_cards_before_locked_sections(self):
         public_collect = Product.objects.create(
@@ -303,7 +327,8 @@ class HomeV2ViewTest(TestCase):
 
         self.assertIn('data-home-v2-public-section="true"', content)
         self.assertIn('지금 바로 써보기', content)
-        self.assertIn('로그인 후 더 강력한 도구', content)
+        self.assertIn('바로 열리는 공개 도구', content)
+        self.assertIn('로그인 후 이어지는 업무', content)
         self.assertIn('미리보기 가능', content)
         self.assertIn('로그인 필요', content)
 
