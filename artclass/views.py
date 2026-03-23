@@ -215,6 +215,13 @@ ARTCLASS_ALLOWED_IMAGE_CONTENT_TYPES = {
 }
 ARTCLASS_ALLOWED_IMAGE_EXTENSIONS = {".gif", ".jpeg", ".jpg", ".png", ".webp"}
 ARTCLASS_MAX_STEP_IMAGE_BYTES = 5 * 1024 * 1024
+ARTCLASS_IMAGE_MIME_TYPES_BY_EXTENSION = {
+    ".gif": "image/gif",
+    ".jpeg": "image/jpeg",
+    ".jpg": "image/jpeg",
+    ".png": "image/png",
+    ".webp": "image/webp",
+}
 
 
 def _normalize_int_input(value, *, default, min_value=None, max_value=None):
@@ -341,6 +348,34 @@ def _validate_step_image(uploaded_image):
             pass
 
     return ""
+
+
+def _guess_step_image_mime_type(image_name):
+    extension = os.path.splitext(str(image_name or "").strip())[1].lower()
+    return ARTCLASS_IMAGE_MIME_TYPES_BY_EXTENSION.get(extension, "image/png")
+
+
+def _build_launcher_safe_step_image_url(step):
+    if not step.image:
+        return None
+
+    try:
+        step.image.open("rb")
+        image_bytes = step.image.read()
+    except Exception:
+        return None
+    finally:
+        try:
+            step.image.close()
+        except Exception:
+            pass
+
+    if not image_bytes:
+        return None
+
+    encoded_image = base64.b64encode(image_bytes).decode("ascii")
+    mime_type = _guess_step_image_mime_type(step.image.name)
+    return f"data:{mime_type};base64,{encoded_image}"
 
 
 def _build_setup_context(art_class=None, *, initial_steps=None, initial_playback_mode=None, setup_video_url=""):
@@ -502,6 +537,7 @@ def classroom_view(request, pk):
     runtime_mode = "launcher" if request.GET.get("runtime") == "launcher" else "web"
     can_manage_classroom = _can_manage_art_class(request.user, art_class)
     effective_playback_mode = ARTCLASS_PRIMARY_PLAYBACK_MODE
+    should_inline_step_images = runtime_mode == "launcher" and display_mode == "dashboard"
     
     # 조회수 증가
     art_class.view_count += 1
@@ -519,7 +555,11 @@ def classroom_view(request, pk):
             'id': step.pk,
             'step_number': step.step_number,
             'text': step.description,
-            'image_url': step.image.url if step.image else None
+            'image_url': (
+                _build_launcher_safe_step_image_url(step)
+                if should_inline_step_images
+                else (step.image.url if step.image else None)
+            ),
         }
         for step in steps
     ]

@@ -1104,6 +1104,37 @@ class ArtClassPresentationUxTest(TestCase):
         self.assertContains(response, "런처 시작")
         self.assertContains(response, "초록 버튼을 누르면 영상과 수업 안내가 나뉘어 열립니다.")
 
+    def test_launcher_runtime_inlines_step_images_as_data_urls(self):
+        art_class = ArtClass.objects.create(
+            title="런처 이미지 수업",
+            youtube_url="https://www.youtube.com/watch?v=UFQT5Wtamw0",
+            default_interval=10,
+            playback_mode=ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW,
+        )
+        image_file = SimpleUploadedFile(
+            "step.gif",
+            (
+                b"GIF89a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff"
+                b"!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00"
+                b"\x00\x02\x02L\x01\x00;"
+            ),
+            content_type="image/gif",
+        )
+        ArtStep.objects.create(
+            art_class=art_class,
+            step_number=1,
+            description="이미지 있는 단계",
+            image=image_file,
+        )
+
+        response = self.client.get(
+            reverse("artclass:classroom", kwargs={"pk": art_class.pk}),
+            data={"display": "dashboard", "runtime": "launcher"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["data"]["steps"][0]["image_url"].startswith("data:image/gif;base64,"))
+
 
 class ArtClassYoutubeTitleBackfillCommandTest(TestCase):
     @patch("artclass.management.commands.backfill_artclass_youtube_titles._fetch_youtube_title")
