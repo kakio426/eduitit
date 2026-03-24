@@ -194,7 +194,48 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </section>
 
-            {% if featured_product %}
+            {% if representative_products %}
+            <section class="mt-4" data-home-v4-public-featured="true">
+                <div class="home-public-v4-surface rounded-[1.85rem] p-5 sm:p-6">
+                    <p class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">대표 서비스</p>
+                    <div class="mt-3 grid gap-3 md:grid-cols-2" data-home-v4-public-representatives="true">
+                        {% for product in representative_products %}
+                        <article class="home-public-v4-card rounded-[1.5rem] p-4 sm:p-5">
+                            <div class="flex h-full flex-col gap-5">
+                                <div class="flex items-start gap-4">
+                                    <div class="home-public-v4-icon flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl shadow-sm {% if product.service_type == 'collect_sign' %}text-blue-500{% elif product.service_type == 'classroom' %}text-violet-500{% elif product.service_type == 'work' %}text-emerald-500{% elif product.service_type == 'game' %}text-red-500{% elif product.service_type == 'counsel' %}text-pink-500{% elif product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
+                                        {% if product.icon %}
+                                            {% if "fa-" in product.icon %}
+                                            <i class="{{ product.icon }}"></i>
+                                            {% else %}
+                                            {{ product.icon }}
+                                            {% endif %}
+                                        {% else %}
+                                        <i class="fa-solid fa-sparkles"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="min-w-0">
+                                        <h2 class="text-2xl font-black text-slate-900 break-keep">
+                                            {{ product.public_service_name|default:product.title }}
+                                        </h2>
+                                        <p class="mt-2 text-sm font-semibold leading-6 text-slate-600 break-keep">
+                                            {{ product.home_landing_summary|truncatechars:96 }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <a href="{{ product.home_landing_cta_href }}"
+                                    {% if product.home_landing_cta_is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+                                    class="home-public-v4-primary-link inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-black text-white whitespace-nowrap transition">
+                                    {{ product.home_landing_cta_label }}
+                                    <i class="fa-solid fa-{% if product.home_landing_cta_is_external %}arrow-up-right-from-square{% else %}arrow-right{% endif %} text-xs"></i>
+                                </a>
+                            </div>
+                        </article>
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+            {% elif featured_product %}
             <section class="mt-4" data-home-v4-public-featured="true">
                 <div class="home-public-v4-surface rounded-[1.85rem] p-5 sm:p-6">
                     <p class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">대표 서비스</p>
@@ -240,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <h2 class="mt-2 text-2xl font-black text-slate-900 break-keep">지금 써볼 수 있는 서비스</h2>
                     <div class="mt-4">
                         {% for card in guest_rotation_cards %}
-                        <article class="home-public-v4-card home-public-v4-rotation-slide rounded-[1.5rem] p-4 sm:p-5{% if not forloop.first %} hidden{% endif %}"
+                        <article class="home-public-v4-card home-public-v4-rotation-slide rounded-[1.5rem] p-4 sm:p-5"
                             data-guest-rotation-slide="{{ forloop.counter0 }}"
                             data-guest-rotation-active="{% if forloop.first %}true{% else %}false{% endif %}"
                             aria-hidden="{% if forloop.first %}false{% else %}true{% endif %}"

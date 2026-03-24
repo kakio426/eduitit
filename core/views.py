@@ -2280,6 +2280,54 @@ def _attach_home_guest_landing_meta(product, *, login_url):
     return product
 
 
+def _build_home_public_representative_products(product_list, *, login_url):
+    priority_specs = [
+        {
+            "route_names": {"artclass:setup"},
+            "titles": {"미술 수업 도우미", "몽글몽글 미술 수업"},
+        },
+        {
+            "route_names": {"reservations:dashboard_landing", "reservations:landing"},
+            "titles": {"학교 예약 시스템"},
+        },
+        {
+            "route_names": {"collect:landing", "collect:dashboard"},
+            "titles": {"간편 수합"},
+        },
+        {
+            "route_names": {"signatures:list"},
+            "titles": {"가뿐하게 서명 톡"},
+        },
+    ]
+    seen_ids = set()
+    representative_products = []
+
+    for spec in priority_specs:
+        matched_product = next(
+            (
+                product
+                for product in product_list
+                if getattr(product, "id", None) not in seen_ids
+                and (
+                    _product_route_name(product) in spec["route_names"]
+                    or str(getattr(product, "title", "") or "").strip() in spec["titles"]
+                )
+            ),
+            None,
+        )
+        if not matched_product:
+            continue
+        representative_products.append(
+            _attach_home_guest_landing_meta(
+                matched_product,
+                login_url=login_url,
+            )
+        )
+        seen_ids.add(getattr(matched_product, "id", None))
+
+    return representative_products
+
+
 def _filter_home_sections_by_access(sections, *, requires_login):
     filtered_sections = []
     for section in sections:
@@ -2703,15 +2751,24 @@ def _home_v2(request, products, posts, page_obj, feed_scope, pinned_notice_posts
 
 def _build_home_public_landing_context(request, products):
     product_list = _attach_product_launch_meta(list(products), user=request.user)
+    login_url = reverse('account_login')
     guest_rotation_cards = _build_home_guest_rotation_cards(product_list)
-    featured_product = next((p for p in product_list if p.is_featured), product_list[0] if product_list else None)
+    representative_products = _build_home_public_representative_products(
+        product_list,
+        login_url=login_url,
+    )
+    featured_product = representative_products[0] if representative_products else next(
+        (p for p in product_list if p.is_featured),
+        product_list[0] if product_list else None,
+    )
     featured_product = _attach_home_guest_landing_meta(
         featured_product,
-        login_url=reverse('account_login'),
+        login_url=login_url,
     )
     return {
         'products': products,
         'featured_product': featured_product,
+        'representative_products': representative_products,
         'guest_rotation_cards': guest_rotation_cards,
         **build_home_page_seo(request).as_context(),
     }

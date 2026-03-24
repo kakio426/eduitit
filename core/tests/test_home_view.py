@@ -1847,6 +1847,24 @@ class RepresentativeSlotSelectionTest(TestCase):
 class HomeV4ViewTest(TestCase):
     def setUp(self):
         self.client = Client()
+        self.artclass_product = Product.objects.create(
+            title="미술 수업 도우미",
+            description="미술 수업 준비",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='artclass:setup',
+            icon='fa-solid fa-palette',
+        )
+        self.reservations_product = Product.objects.create(
+            title="학교 예약 시스템",
+            description="특별실 예약",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='reservations:dashboard_landing',
+            icon='fa-solid fa-calendar-check',
+        )
         self.collect_product = Product.objects.create(
             title="간편 수합",
             description="서명과 수합",
@@ -2196,6 +2214,9 @@ class HomeV4ViewTest(TestCase):
     def test_v4_anonymous_home_uses_public_v4_template(self):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
+        representative_titles = [
+            product.title for product in response.context.get('representative_products', [])
+        ]
 
         self.assertTemplateUsed(response, 'core/home_public_v4.html')
         self.assertTemplateNotUsed(response, 'core/home_v2.html')
@@ -2205,16 +2226,23 @@ class HomeV4ViewTest(TestCase):
         self.assertIn('교실 일은,', content)
         self.assertIn('대표 서비스', content)
         self.assertIn('로그인 후 전체 서비스 보기', content)
+        self.assertEqual(
+            representative_titles,
+            ['미술 수업 도우미', '학교 예약 시스템', '간편 수합', '가뿐하게 서명 톡'],
+        )
+        self.assertIn('data-home-v4-public-representatives="true"', content)
 
     def test_v4_anonymous_featured_service_uses_access_matched_cta(self):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         login_url = reverse('account_login')
-        featured_product = response.context['featured_product']
+        representative_products = response.context['representative_products']
+        artclass_product = representative_products[0]
 
-        self.assertEqual(featured_product.home_access_status_label, '로그인 필요')
-        self.assertEqual(featured_product.home_landing_cta_label, '로그인 후 시작')
-        self.assertEqual(featured_product.home_landing_cta_href, login_url)
+        self.assertEqual(artclass_product.title, '미술 수업 도우미')
+        self.assertEqual(artclass_product.home_access_status_label, '로그인 필요')
+        self.assertEqual(artclass_product.home_landing_cta_label, '로그인 후 시작')
+        self.assertEqual(artclass_product.home_landing_cta_href, login_url)
         self.assertIn('data-home-v4-public-featured="true"', content)
         self.assertIn(f'href="{login_url}"', content)
 
@@ -2255,6 +2283,10 @@ class HomeV4ViewTest(TestCase):
         self.assertEqual(
             content.count('data-guest-rotation-dot='),
             len(response.context.get('guest_rotation_cards', [])),
+        )
+        self.assertNotIn(
+            'home-public-v4-rotation-slide rounded-[1.5rem] p-4 sm:p-5 hidden',
+            content,
         )
 
     @patch('core.views._build_home_guest_rotation_cards', return_value=[])
