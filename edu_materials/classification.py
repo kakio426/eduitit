@@ -191,7 +191,7 @@ def classify_material(material: EduMaterial, *, visible_text: str = "", timeout_
         "visible_text_excerpt": text[:TEXT_LIMIT],
     }
     prompt = (
-        "당신은 교사용 HTML 교육자료실의 자동 분류기입니다. "
+        "당신은 교사용 HTML AI 수업자료 메이커의 자동 분류기입니다. "
         "반드시 JSON 객체만 반환하세요. "
         "subject는 KOREAN, MATH, SOCIAL, SCIENCE, OTHER 중 하나여야 합니다. "
         "material_type은 intro, exploration, practice, quiz, game, reference, presentation, tool, other 중 하나여야 합니다. "

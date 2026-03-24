@@ -6,14 +6,15 @@ from products.models import ManualSection, Product, ProductFeature, ServiceManua
 class Command(BaseCommand):
     help = "Ensure edu_materials product and manual exist in database"
 
-    PRODUCT_TITLE = "교육 자료실"
+    PRODUCT_TITLE = "AI 수업자료 메이커"
+    LEGACY_PRODUCT_TITLES = ("교육 자료실",)
     LAUNCH_ROUTE = "edu_materials:main"
 
     def handle(self, *args, **options):
         defaults = {
             "lead_text": "바이브코딩으로 만든 HTML 수업 자료를 붙여넣거나 파일로 올려 바로 실행합니다.",
             "description": (
-                "교육 자료실은 바이브코딩 툴에서 만든 HTML 수업 자료를 보관하고, 학생에게 QR과 링크로 바로 열어줄 수 있는 서비스입니다. "
+                "AI 수업자료 메이커는 바이브코딩 툴에서 만든 HTML 수업 자료를 보관하고, 학생에게 QR과 링크로 바로 열어줄 수 있는 서비스입니다. "
                 "교사용 미리보기와 학생 실행 화면을 분리하고, 실행 화면은 sandbox iframe으로 안전하게 분리해 수업 화면을 오염시키지 않습니다."
             ),
             "price": 0.00,
@@ -34,7 +35,7 @@ class Command(BaseCommand):
 
         product = Product.objects.filter(launch_route_name=self.LAUNCH_ROUTE).order_by("id").first()
         if not product:
-            product = Product.objects.filter(title=self.PRODUCT_TITLE).order_by("id").first()
+            product = Product.objects.filter(title__in=(self.PRODUCT_TITLE, *self.LEGACY_PRODUCT_TITLES)).order_by("id").first()
 
         if product is None:
             product = Product.objects.create(title=self.PRODUCT_TITLE, **defaults)
@@ -72,7 +73,7 @@ class Command(BaseCommand):
             {
                 "icon": "📎",
                 "title": "QR 즉시 배포",
-                "description": "공개를 켜면 학생 접속 주소와 QR을 바로 보여줘 수업에 즉시 붙일 수 있습니다.",
+                "description": "저장하면 학생 접속 주소와 QR을 바로 보여줘 수업에 즉시 붙일 수 있습니다.",
             },
         ]
         for feature in features:
@@ -88,14 +89,14 @@ class Command(BaseCommand):
         manual, _ = ServiceManual.objects.get_or_create(
             product=product,
             defaults={
-                "title": "교육 자료실 사용 가이드",
+                "title": "AI 수업자료 메이커 사용 가이드",
                 "description": "HTML 자료 올리기부터 학생 공개, 수업 적용까지 빠르게 익히는 안내입니다.",
                 "is_published": True,
             },
         )
         manual_changed = []
-        if manual.title != "교육 자료실 사용 가이드":
-            manual.title = "교육 자료실 사용 가이드"
+        if manual.title != "AI 수업자료 메이커 사용 가이드":
+            manual.title = "AI 수업자료 메이커 사용 가이드"
             manual_changed.append("title")
         if manual.description != "HTML 자료 올리기부터 학생 공개, 수업 적용까지 빠르게 익히는 안내입니다.":
             manual.description = "HTML 자료 올리기부터 학생 공개, 수업 적용까지 빠르게 익히는 안내입니다."
@@ -121,7 +122,7 @@ class Command(BaseCommand):
             },
             {
                 "title": "학생 공개",
-                "content": "공개를 켜면 학생용 실행 링크와 QR이 생성되고, 비공개 상태에서는 학생이 직접 접근할 수 없습니다.",
+                "content": "자료를 저장하면 학생용 실행 링크와 QR이 바로 준비되어 수업에 곧바로 띄울 수 있습니다.",
                 "display_order": 3,
                 "badge_text": "Step 3",
             },

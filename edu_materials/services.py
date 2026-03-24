@@ -7,13 +7,16 @@ from django.core.exceptions import ValidationError
 from products.models import Product
 
 SERVICE_ROUTE = "edu_materials:main"
-SERVICE_TITLE = "교육 자료실"
+SERVICE_TITLE = "AI 수업자료 메이커"
+LEGACY_SERVICE_TITLES = ("교육 자료실",)
 HTML_MAX_BYTES = 5 * 1024 * 1024
 HTML_EXTENSIONS = (".html", ".htm")
 
 
 def get_service():
-    return Product.objects.filter(launch_route_name=SERVICE_ROUTE).first() or Product.objects.filter(title=SERVICE_TITLE).first()
+    return Product.objects.filter(launch_route_name=SERVICE_ROUTE).first() or Product.objects.filter(
+        title__in=(SERVICE_TITLE, *LEGACY_SERVICE_TITLES)
+    ).first()
 
 
 def build_material_qr_data_url(raw_text):

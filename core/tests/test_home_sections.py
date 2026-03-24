@@ -14,7 +14,7 @@ class HomeSectionRoutingTests(SimpleTestCase):
             launch_route_name="textbooks:main",
         )
         material_product = Product(
-            title="교육 자료실",
+            title="AI 수업자료 메이커",
             description="desc",
             price=0,
             service_type="classroom",

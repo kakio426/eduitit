@@ -566,9 +566,9 @@ def toggle_material_publish(request, material_id):
     if not material.is_published:
         material.is_published = True
         material.save(update_fields=["is_published", "updated_at"])
-        messages.success(request, "교육자료실 자료는 항상 공개됩니다. 기존 비공개 자료도 공개로 바꿨습니다.")
+        messages.success(request, "AI 수업자료 메이커 자료는 항상 공개됩니다. 기존 비공개 자료도 공개로 바꿨습니다.")
     else:
-        messages.info(request, "교육자료실 자료는 항상 공개됩니다.")
+        messages.info(request, "AI 수업자료 메이커 자료는 항상 공개됩니다.")
     return redirect("edu_materials:detail", pk=material.id)
 
 

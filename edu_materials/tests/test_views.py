@@ -286,7 +286,7 @@ class EduMaterialViewTests(TestCase):
         self.assertIsNone(response.context["my_page_obj"])
         self.assertEqual(response.context["shared_material_count"], 1)
         self.assertEqual(response.context["featured_public_material"].title, public_material.title)
-        self.assertContains(response, "공개 자료 둘러보기")
+        self.assertContains(response, "AI 수업자료 메이커")
         self.assertNotContains(response, reverse("edu_materials:create"))
         self.assertNotContains(response, "새 자료 만들기")
         self.assertContains(response, reverse("edu_materials:detail", args=[public_material.id]))

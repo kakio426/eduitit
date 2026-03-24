@@ -213,7 +213,7 @@
       panel.innerHTML =
         '<div style="font-size:20px;font-weight:800;line-height:1.4;" data-edu-runtime-title></div>' +
         '<p style="margin:12px 0 0;font-size:14px;line-height:1.7;color:#cbd5e1;" data-edu-runtime-body></p>' +
-        '<p style="margin:12px 0 0;font-size:12px;line-height:1.6;color:#94a3b8;">교육자료실은 저장된 HTML 자체는 유지하고, 실행 오류만 화면에 드러나게 합니다.</p>';
+                '<p style="margin:12px 0 0;font-size:12px;line-height:1.6;color:#94a3b8;">AI 수업자료 메이커는 저장된 HTML 자체는 유지하고, 실행 오류만 화면에 드러나게 합니다.</p>';
     }
 
     panel.querySelector("[data-edu-runtime-title]").textContent = description.title;

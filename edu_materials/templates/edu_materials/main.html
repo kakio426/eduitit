@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}교육 자료실{% endblock %}
+{% block title %}AI 수업자료 메이커{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -207,11 +207,11 @@
             <div class="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
                 <div>
                     {% if request.user.is_authenticated %}
-                    <p class="text-sm font-bold uppercase tracking-[0.32em] text-emerald-600">교사들의 교육자료실</p>
+                    <p class="text-sm font-bold uppercase tracking-[0.32em] text-emerald-600">AI 수업자료 메이커</p>
                     <h1 class="text-4xl md:text-5xl font-black text-slate-900 mt-2">수업에 바로 쓰는 자료를 찾고, 내 자료를 정리하고, 필요하면 직접 만들기</h1>
                     <p class="text-slate-600 mt-4 max-w-4xl text-lg">공개 자료실에서 좋은 수업 예시를 먼저 훑고, 내 보관함에서 다시 쓰는 자료를 정리하고, 새 자료 만들기는 따로 분리해 교실 업무 흐름이 섞이지 않게 했습니다.</p>
                     {% else %}
-                    <p class="text-sm font-bold uppercase tracking-[0.32em] text-emerald-600">공개 자료 둘러보기</p>
+                    <p class="text-sm font-bold uppercase tracking-[0.32em] text-emerald-600">AI 수업자료 메이커</p>
                     <h1 class="text-4xl md:text-5xl font-black text-slate-900 mt-2">로그인 없이도 교사들이 만든 수업 자료를 먼저 체험해보세요</h1>
                     <p class="text-slate-600 mt-4 max-w-4xl text-lg">대표 자료는 움직이는 화면으로 바로 체험하고, 아래 공개 자료실에서는 가벼운 카드로 빠르게 훑을 수 있습니다. 마음에 드는 흐름이 보이면 로그인 후 내 자료로 가져와 다듬을 수 있습니다.</p>
                     {% endif %}
