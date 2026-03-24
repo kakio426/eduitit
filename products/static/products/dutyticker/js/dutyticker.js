@@ -82,6 +82,7 @@ class DutyTickerManager {
         this.breakAutoConfig = this.getDefaultBreakAutoConfig();
         this.breakAutoRuntime = this.getDefaultBreakAutoRuntime();
         this.breakAutoActiveSlotCode = '';
+        this.breakAutoEligibleMaxSeconds = 15 * 60;
 
         this.timerSeconds = 300;
         this.timerMaxSeconds = 300;
@@ -640,9 +641,26 @@ class DutyTickerManager {
         return this.breakAutoConfig.enabled === true && !!this.getBreakAutoPhraseSnapshot();
     }
 
-    getBreakSlots() {
+    getBreakAutoSlotDurationSeconds(slot, now = new Date()) {
+        const startAt = this.getBreakSlotDate(slot, 'startTime', now);
+        const endAt = this.getBreakSlotDate(slot, 'endTime', now);
+        if (!startAt || !endAt || endAt <= startAt) return 0;
+        return Math.max(0, Math.ceil((endAt.getTime() - startAt.getTime()) / 1000));
+    }
+
+    isBreakAutoEligibleSlot(slot, now = new Date()) {
+        const slotType = String(slot?.slot_type || '').trim();
+        if (!slotType || slotType === 'period') return false;
+        if (slotType === 'break') return true;
+
+        // Some schools use the 4-5 transition as a short recess even if the slot is still labeled lunch.
+        const durationSeconds = this.getBreakAutoSlotDurationSeconds(slot, now);
+        return durationSeconds > 0 && durationSeconds <= this.breakAutoEligibleMaxSeconds;
+    }
+
+    getBreakSlots(now = new Date()) {
         return this.todaySchedule
-            .filter((slot) => slot && slot.slot_type === 'break')
+            .filter((slot) => this.isBreakAutoEligibleSlot(slot, now))
             .sort((a, b) => {
                 const aStart = this.timeStringToMinutes(a?.startTime);
                 const bStart = this.timeStringToMinutes(b?.startTime);
@@ -661,7 +679,7 @@ class DutyTickerManager {
 
     getCurrentBreakSlot(now = new Date()) {
         const currentTime = now.getTime();
-        return this.getBreakSlots().find((slot) => {
+        return this.getBreakSlots(now).find((slot) => {
             const startAt = this.getBreakSlotDate(slot, 'startTime', now);
             const endAt = this.getBreakSlotDate(slot, 'endTime', now);
             if (!startAt || !endAt || endAt <= startAt) return false;
@@ -701,7 +719,7 @@ class DutyTickerManager {
     cleanupBreakAutoRuntime(now = new Date(), activeSlotCode = '') {
         this.ensureBreakAutoRuntime(now);
         const activeCode = String(activeSlotCode || '');
-        const slotMap = new Map(this.getBreakSlots().map((slot) => [String(slot.slot_code || ''), slot]));
+        const slotMap = new Map(this.getBreakSlots(now).map((slot) => [String(slot.slot_code || ''), slot]));
         let didChange = false;
 
         Object.entries(this.breakAutoRuntime.runs).forEach(([slotCode, run]) => {
@@ -758,9 +776,13 @@ class DutyTickerManager {
         const timerSeconds = remainingSeconds > 0
             ? Math.min(configuredSeconds, remainingSeconds)
             : configuredSeconds;
+        const slotType = String(slot?.slot_type || '').trim();
+        const slotLabel = slotType === 'break'
+            ? (String(slot?.slot_label || '').trim() || '쉬는시간')
+            : '쉬는시간';
 
         this.setTimerMode(timerSeconds, true);
-        this.showToast(`${String(slot.slot_label || '쉬는시간').trim() || '쉬는시간'} 자동 시작`, 'success');
+        this.showToast(`${slotLabel} 자동 시작`, 'success');
     }
 
     syncBreakAutoState(now = new Date()) {
