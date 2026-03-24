@@ -705,6 +705,10 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
           return extractVideoId(window.location.href);
         }
 
+        function getPageVideoId() {
+          return extractVideoId(window.location.href);
+        }
+
         function getPlayerState() {
           const playerApi = getPlayerApi();
           try {
@@ -813,30 +817,61 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
         }
 
         if (!window.__eduititRepeatEnforcer) {
-          const repeatState = window.__eduititRepeatState || { lastReplayAt: 0, lastRecoveryAt: 0 };
+          const repeatState = window.__eduititRepeatState || {
+            lastReplayAt: 0,
+            lastRecoveryAt: 0,
+            lastAdSeenAt: 0,
+            sawTargetPlayback: false,
+          };
           window.__eduititRepeatState = repeatState;
           window.__eduititRepeatEnforcer = window.setInterval(() => {
+            const now = Date.now();
             const video = document.querySelector("video");
             if (video) {
               video.loop = false;
               video.removeAttribute("loop");
             }
 
-            if (isAdShowing()) return;
+            if (isAdShowing()) {
+              repeatState.lastAdSeenAt = now;
+              return;
+            }
 
-            const now = Date.now();
+            if (repeatState.lastAdSeenAt && now - repeatState.lastAdSeenAt < 4000) {
+              return;
+            }
+
+            const pageVideoId = getPageVideoId();
             const activeVideoId = getActiveVideoId();
-            if (targetVideoId && activeVideoId && activeVideoId !== targetVideoId) {
+
+            // Recover only when the watch page itself drifts away. Ads can expose
+            // a temporary internal video id that should not trigger a reload.
+            if (targetVideoId && pageVideoId && pageVideoId !== targetVideoId) {
               if (replayUrl && now - repeatState.lastRecoveryAt >= replayCooldownMs) {
                 repeatState.lastRecoveryAt = now;
+                repeatState.sawTargetPlayback = false;
                 window.location.replace(replayUrl);
               }
               return;
             }
 
             const playerState = getPlayerState();
+            const targetPlaybackInProgress =
+              !targetVideoId ||
+              activeVideoId === targetVideoId ||
+              ((!activeVideoId || activeVideoId === pageVideoId) &&
+                pageVideoId === targetVideoId &&
+                Boolean(video && !video.ended && video.currentTime > 0));
+
+            if (targetPlaybackInProgress) {
+              repeatState.sawTargetPlayback = true;
+            } else if (targetVideoId && activeVideoId && activeVideoId !== targetVideoId) {
+              return;
+            }
+
             const hasEnded = playerState === 0 || Boolean(video && video.ended);
             if (!hasEnded) return;
+            if (targetVideoId && !repeatState.sawTargetPlayback) return;
             if (now - repeatState.lastReplayAt < replayCooldownMs) return;
 
             repeatState.lastReplayAt = now;
