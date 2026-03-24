@@ -173,10 +173,8 @@ def _get_launcher_release_config(request=None):
     update_base_url = _normalize_launcher_update_base_url(os.getenv("ARTCLASS_LAUNCHER_UPDATE_BASE_URL"))
 
     if current_release and request:
-        if not download_url:
-            download_url = _build_launcher_public_asset_url(request, current_release["installer_filename"])
-        if not update_base_url:
-            update_base_url = _build_launcher_public_base_url(request)
+        download_url = _build_launcher_public_asset_url(request, current_release["installer_filename"])
+        update_base_url = _build_launcher_public_base_url(request)
 
     return {
         "downloadUrl": download_url,
@@ -194,11 +192,6 @@ def _build_launcher_template_context(request=None):
         "launcher_download_url": download_url,
         "launcher_bridge_notice": release_config["bridgeNotice"] if download_url else "",
         "launcher_bridge_version": release_config["bridgeVersion"] if download_url else "",
-        "launcher_release_manager_url": (
-            reverse("artclass:launcher_release_manager")
-            if request and getattr(request.user, "is_staff", False)
-            else ""
-        ),
     }
 
 

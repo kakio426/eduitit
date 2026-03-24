@@ -452,6 +452,33 @@ class ManualPipelineApiTest(TestCase):
         self.assertEqual(payload["bridgeVersion"], "0.2.0")
         self.assertEqual(payload["bridgeNotice"], "이미 설치했다면 이번 한 번만 다시 설치해 주세요.")
 
+    def test_launcher_release_config_api_prefers_bucket_release_urls_over_env_values(self):
+        current_release = {
+            "version": "0.2.0",
+            "installer_filename": "Eduitit Teacher Launcher Setup 0.2.0.exe",
+            "blockmap_filename": "Eduitit Teacher Launcher Setup 0.2.0.exe.blockmap",
+            "latest_filename": "latest.yml",
+        }
+
+        with patch.dict(
+            os.environ,
+            {
+                "ARTCLASS_LAUNCHER_DOWNLOAD_URL": "https://drive.google.com/file/d/example/view?usp=sharing",
+                "ARTCLASS_LAUNCHER_UPDATE_BASE_URL": "https://downloads.eduitit.com/launcher/windows",
+                "ARTCLASS_LAUNCHER_BRIDGE_VERSION": "0.2.0",
+            },
+            clear=False,
+        ), patch("artclass.views.get_current_launcher_release", return_value=current_release):
+            response = self.client.get(reverse("artclass:launcher_release_config_api"))
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(
+            payload["downloadUrl"],
+            "http://testserver/artclass/launcher-updates/windows/Eduitit%20Teacher%20Launcher%20Setup%200.2.0.exe",
+        )
+        self.assertEqual(payload["updateBaseUrl"], "http://testserver/artclass/launcher-updates/windows/")
+
     def test_launcher_release_config_api_uses_bucket_release_urls_when_env_missing(self):
         current_release = {
             "version": "0.2.0",
@@ -522,6 +549,17 @@ class ManualPipelineApiTest(TestCase):
 
         self.assertEqual(response.status_code, 403)
 
+    def test_launcher_release_manager_page_uses_operator_only_copy(self):
+        self.client.force_login(self.staff)
+
+        response = self.client.get(reverse("artclass:launcher_release_manager"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "운영자 전용 런처 배포")
+        self.assertContains(response, "교사는 이 화면을 사용할 필요가 없습니다.")
+        self.assertContains(response, "교사용 설치 링크")
+        self.assertNotContains(response, "desktop/teacher-launcher/dist")
+
     def test_launcher_release_manager_uploads_release_bundle_for_staff(self):
         self.client.force_login(self.staff)
         latest_yml, installer_file, blockmap_file = make_test_launcher_release_uploads(version="0.2.0")
@@ -547,6 +585,25 @@ class ManualPipelineApiTest(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response["Location"], reverse("artclass:launcher_release_manager"))
         mock_upload.assert_called_once()
+
+    def test_teacher_facing_pages_hide_release_manager_link_even_for_staff(self):
+        art_class = ArtClass.objects.create(
+            title="운영자 링크 숨김 확인",
+            youtube_url="https://www.youtube.com/watch?v=2bBhnfh4StU",
+            default_interval=10,
+            playback_mode=ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW,
+            created_by=self.staff,
+        )
+        ArtStep.objects.create(art_class=art_class, step_number=1, description="기본 단계")
+        self.client.force_login(self.staff)
+
+        setup_response = self.client.get(reverse("artclass:setup"))
+        library_response = self.client.get(reverse("artclass:library"))
+        classroom_response = self.client.get(reverse("artclass:classroom", kwargs={"pk": art_class.pk}))
+
+        self.assertNotContains(setup_response, "운영자용 런처 버전 올리기")
+        self.assertNotContains(library_response, "운영자용 런처 버전 올리기")
+        self.assertNotContains(classroom_response, "운영자용 런처 버전 올리기")
 
     def test_start_launcher_session_api_success(self):
         art_class = ArtClass.objects.create(
@@ -925,9 +982,15 @@ class ArtClassSetupEditTest(TestCase):
         self.assertContains(response, "오늘 바로 시작하는 미술 수업")
         self.assertContains(response, "런처로 수업 시작")
         self.assertContains(response, "응답 예시 보기")
-        self.assertContains(response, "ArtClass는 이제 런처 한 가지 방식으로 시작합니다.")
+        self.assertContains(response, "저장하면 다음 화면에서 초록 버튼으로 바로 시작할 수 있어요.")
+        self.assertContains(response, "저장 후 런처로 수업 시작")
+        self.assertContains(response, "실행이 안 되면 다음 화면에서 설치파일을 받을 수 있어요.")
+        self.assertContains(response, "수업 준비 팁")
         self.assertNotContains(response, "브라우저로 시작")
-        self.assertContains(response, "유튜브 주소를 먼저 넣고 저장하면 다음 화면에서 바로 런처를 실행할 수 있어요.")
+        self.assertNotContains(response, "ArtClass는 이제 런처 한 가지 방식으로 시작합니다.")
+        self.assertNotContains(response, "저장 후 이렇게 시작됩니다")
+        self.assertNotContains(response, "처음이라면 이렇게 시작해 보세요")
+        self.assertNotContains(response, "설치가 필요한 경우 보기")
         self.assertContains(response, "프롬프트 복사하고 제미나이 열기")
         self.assertContains(response, "추천: 아래 파란 버튼 한 번이면 프롬프트를 복사하고 제미나이를 바로 엽니다.")
         self.assertContains(response, "프롬프트만 복사")
@@ -936,7 +999,7 @@ class ArtClassSetupEditTest(TestCase):
         self.assertNotContains(response, "샘플 영상으로 체험하기")
         self.assertNotContains(response, "이번 한 번은 새 설치파일로 다시 설치해 주세요")
 
-    def test_setup_page_shows_launcher_bridge_notice_when_download_available(self):
+    def test_setup_page_keeps_install_notice_off_main_flow_even_when_download_available(self):
         with patch.dict(
             os.environ,
             {
@@ -948,8 +1011,10 @@ class ArtClassSetupEditTest(TestCase):
             response = self.client.get(reverse("artclass:setup"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Bridge 0.2.0")
-        self.assertContains(response, "이미 런처를 설치했다면 이번 한 번은 새 설치파일로 다시 설치해 주세요. 이후부터는 자동 업데이트됩니다.")
+        self.assertContains(response, "실행이 안 되면 다음 화면에서 설치파일을 받을 수 있어요.")
+        self.assertNotContains(response, "Bridge 0.2.0")
+        self.assertNotContains(response, "이미 런처를 설치했다면 이번 한 번은 새 설치파일로 다시 설치해 주세요. 이후부터는 자동 업데이트됩니다.")
+        self.assertNotContains(response, "런처 설치파일 다운로드")
 
     def test_setup_page_uses_gemini_example_without_sample_shortcut(self):
         response = self.client.get(reverse("artclass:setup"))
@@ -1500,8 +1565,11 @@ class ArtClassAutoMetadataTest(TestCase):
             response = self.client.get(reverse("artclass:library"))
 
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "실행이 안 되면 보기")
+        self.assertContains(response, "설치파일 받기")
         self.assertContains(response, "Bridge 0.2.0")
         self.assertContains(response, "이미 런처를 설치했다면 이번 한 번은 새 설치파일로 다시 설치해 주세요. 이후부터는 자동 업데이트됩니다.")
+        self.assertNotContains(response, "운영자용 런처 버전 올리기")
 
 
 class ArtClassPresentationUxTest(TestCase):
@@ -1541,8 +1609,11 @@ class ArtClassPresentationUxTest(TestCase):
             response = self.client.get(reverse("artclass:classroom", kwargs={"pk": art_class.pk}))
 
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "실행이 안 되면 보기")
+        self.assertContains(response, "설치파일 받기")
         self.assertContains(response, "Bridge 0.2.0")
         self.assertContains(response, "이미 런처를 설치했다면 이번 한 번은 새 설치파일로 다시 설치해 주세요. 이후부터는 자동 업데이트됩니다.")
+        self.assertNotContains(response, "운영자용 런처 버전 올리기")
 
     def test_classroom_normalizes_legacy_embed_mode_to_launcher_flow(self):
         art_class = ArtClass.objects.create(
