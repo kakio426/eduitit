@@ -555,9 +555,9 @@
     <div class="edu-modal-panel w-full max-w-2xl rounded-[32px] bg-white border border-slate-200 p-6 md:p-8">
         <div class="flex items-start justify-between gap-4">
             <div>
-                <p class="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600">제미나이 사용 안내</p>
+                <p class="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600">AI 사용 안내</p>
                 <h3 class="text-3xl font-black text-slate-900 mt-2">이 순서대로 하면 가장 덜 헷갈립니다</h3>
-                <p class="text-sm text-slate-500 mt-2">프롬프트는 이미 복사되어 있으니 새 탭에서 바로 붙여넣어 시작하시면 됩니다.</p>
+                <p class="text-sm text-slate-500 mt-2">안내문은 이미 복사되어 있으니, 새 탭에서 바로 붙여넣어 시작하시면 됩니다.</p>
             </div>
             <button type="button" data-close-gemini-guide class="rounded-full border border-slate-200 px-3 py-2 text-sm font-bold text-slate-600">닫기</button>
         </div>
@@ -565,29 +565,29 @@
         <div class="mt-6 grid gap-3 md:grid-cols-2">
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <p class="text-xs font-bold uppercase tracking-[0.24em] text-emerald-600">1단계</p>
-                <p class="mt-2 text-base font-bold text-slate-900">Gemini에서 <span class="text-emerald-700">Canvas</span>를 먼저 선택하세요.</p>
+                <p class="mt-2 text-base font-bold text-slate-900">AI 도구를 열고 방금 복사한 안내문을 먼저 붙여넣으세요.</p>
             </div>
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <p class="text-xs font-bold uppercase tracking-[0.24em] text-emerald-600">2단계</p>
-                <p class="mt-2 text-base font-bold text-slate-900">가능하면 <span class="text-emerald-700">사고모델 이상</span>으로 실행하도록 권장합니다.</p>
+                <p class="mt-2 text-base font-bold text-slate-900">교실 화면에서도 글자와 버튼이 잘 보이게 만들어 달라고 함께 요청하세요.</p>
             </div>
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <p class="text-xs font-bold uppercase tracking-[0.24em] text-emerald-600">3단계</p>
-                <p class="mt-2 text-base font-bold text-slate-900">완성되면 결과 화면의 <span class="text-emerald-700">코드</span> 부분을 눌러 전체 HTML을 복사하세요.</p>
+                <p class="mt-2 text-base font-bold text-slate-900">완성되면 결과 전체를 복사해 오세요.</p>
             </div>
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <p class="text-xs font-bold uppercase tracking-[0.24em] text-emerald-600">4단계</p>
-                <p class="mt-2 text-base font-bold text-slate-900">이 화면으로 돌아와 <span class="text-emerald-700">완성된 HTML 코드 붙여넣기</span> 칸에 그대로 넣고 저장하세요.</p>
+                <p class="mt-2 text-base font-bold text-slate-900">이 화면으로 돌아와 <span class="text-emerald-700">완성된 자료 붙여넣기</span> 칸에 그대로 넣고 저장하세요.</p>
             </div>
         </div>
 
         <div class="mt-6 rounded-2xl bg-emerald-50 border border-emerald-100 p-4 text-sm text-emerald-900">
-            한 단계 더 줄이기는 외부 AI 서비스 보안 정책 때문에 한계가 있지만, 지금은 <span class="font-black">학습 주제 입력 → 복사 → 제미나이 열기 → 코드 전체 복사 → 붙여넣기</span>로 가장 짧게 줄여 둔 상태입니다.
+            지금은 <span class="font-black">학습 주제 입력 → 안내문 복사 → AI 열기 → 결과 전체 복사 → 붙여넣기</span> 순서가 가장 덜 헷갈립니다.
         </div>
 
         <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <button type="button" data-close-gemini-guide class="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-black text-slate-700 bg-white">이 화면으로 돌아가기</button>
-            <a id="gemini-link-button" href="https://gemini.google.com/app" target="_blank" rel="noopener" class="rounded-2xl bg-emerald-600 px-5 py-3 text-center text-sm font-black text-white shadow-lg shadow-emerald-600/20">제미나이 열기</a>
+            <a id="gemini-link-button" href="https://gemini.google.com/app" target="_blank" rel="noopener" class="rounded-2xl bg-emerald-600 px-5 py-3 text-center text-sm font-black text-white shadow-lg shadow-emerald-600/20">AI 도구 열기</a>
         </div>
     </div>
 </div>
@@ -645,31 +645,21 @@
         const buildPrompt = (topic) => {
             const lessonTopic = topic && topic.trim() ? topic.trim() : '[여기에 학습 주제를 입력하세요]';
             return [
-                '[페르소나: 엘리트 에듀테크 교사 & 풀스택 개발자]',
-                '당신은 교육 공학 전문가이자 숙련된 웹 개발자입니다. 복잡한 과학적·수학적 원리를 학생들이 직관적으로 이해할 수 있도록 Interactive Web Simulation을 제작하는 것이 당신의 임무입니다.',
+                '아래 주제로 학생들이 바로 참여할 수 있는 웹자료를 만들어 주세요.',
                 '',
-                '학습 주제 : ' + lessonTopic,
+                '학습 주제: ' + lessonTopic,
                 '',
-                '[핵심 제작 원칙]',
+                '꼭 반영해 주세요.',
+                '- 교실 화면에서도 잘 보이도록 글자와 버튼을 크게 만들어 주세요.',
+                '- 학생이 직접 눌러 보고 결과가 달라지는 활동형 자료로 만들어 주세요.',
+                '- 시작하기, 멈추기, 다시하기처럼 바로 이해되는 조작을 넣어 주세요.',
+                '- 태블릿과 노트북에서도 화면이 깨지지 않게 만들어 주세요.',
+                '- 저장해서 바로 쓸 수 있도록 한 파일로 정리해 주세요.',
                 '',
-                '단일 파일 완결성: 별도의 이미지나 라이브러리 설치 없이, 하나의 HTML 파일(내부에 CSS, JS 포함)만으로 작동해야 합니다. (CDN 활용 가능: 예: Three.js, p5.js, Tailwind CSS)',
-                '',
-                '수업 최적화 UI:',
-                '- 교실 TV에서도 잘 보이도록 큼직한 폰트와 고대비 디자인을 적용합니다.',
-                '- 현재 상태(속도, 각도, 데이터 등)를 실시간으로 보여주는 대시보드 영역을 포함합니다.',
-                '- 재생/일시정지, 배속 조절, 리셋, 특정 이벤트 트리거 버튼을 반드시 만듭니다.',
-                '',
-                '교육적 디테일:',
-                '- 단순한 애니메이션이 아니라, 수치적 근거(실제 공전 주기 비율 등)를 코드에 반영하여 과학적 사실 왜곡을 최소화합니다.',
-                "- 학생들이 직접 수치를 입력하거나 조작하여 결과가 변하는 '실험적 요소'를 넣습니다.",
-                '',
-                '반응형 디자인: 태블릿, 노트북, 전자칠판(TV) 등 다양한 환경에서 깨지지 않게 제작합니다.',
-                '',
-                '[출력 구조]',
-                '',
-                '1. 수업 설계 의도: 이 자료를 어떻게 활용하면 좋을지 교사를 위한 짧은 가이드를 먼저 제공합니다.',
-                '2. HTML 코드: 주석을 상세히 달아 코드를 설명하고, 가독성 높은 단일 HTML 파일 전체를 제공합니다.',
-                '3. 학습 질문: 자료를 활용해 학생들에게 던질 수 있는 핵심 질문 3가지를 제안합니다.'
+                '답변은 아래 순서로 주세요.',
+                '1. 이 자료를 수업에서 어떻게 쓰면 좋은지 짧게 설명',
+                '2. 바로 저장해서 쓸 수 있는 자료 전체',
+                '3. 학생에게 던질 질문 3가지'
             ].join('\n');
         };
 
