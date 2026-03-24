@@ -247,7 +247,7 @@ function fetchJson(rawUrl) {
         method: "GET",
         headers: {
           Accept: "application/json",
-          "User-Agent": `EduititTeacherLauncher/${app.getVersion() || "0.2.2"}`,
+          "User-Agent": `EduititTeacherLauncher/${app.getVersion() || "0.2.3"}`,
         },
       },
       (response) => {
@@ -1050,16 +1050,29 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
           return null;
         }
 
+        function isEndscreenVisible() {
+          return Boolean(
+            document.querySelector(
+              ".html5-endscreen, .ytp-endscreen-content, .ytp-autonav-endscreen-upnext-play-button, .ytp-replay-button"
+            )
+          );
+        }
+
         function replayMainVideo() {
           const playerApi = getPlayerApi();
 
           try {
-            if (playerApi && typeof playerApi.seekTo === "function") {
-              playerApi.seekTo(0, true);
-            }
-            if (playerApi && typeof playerApi.playVideo === "function") {
-              playerApi.playVideo();
-              return true;
+            if (targetVideoId && playerApi && typeof playerApi.loadVideoById === "function") {
+              playerApi.loadVideoById(targetVideoId, 0);
+              if (typeof playerApi.playVideo === "function") {
+                playerApi.playVideo();
+              }
+
+              const resumedState =
+                playerApi && typeof playerApi.getPlayerState === "function" ? playerApi.getPlayerState() : null;
+              if (resumedState === 1 || resumedState === 2 || resumedState === 3) {
+                return true;
+              }
             }
           } catch (_) {}
 
@@ -1068,6 +1081,20 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
             replayButton.click();
             return true;
           }
+
+          try {
+            if (playerApi && typeof playerApi.seekTo === "function") {
+              playerApi.seekTo(0, true);
+            }
+            if (playerApi && typeof playerApi.playVideo === "function") {
+              playerApi.playVideo();
+              const resumedState =
+                playerApi && typeof playerApi.getPlayerState === "function" ? playerApi.getPlayerState() : null;
+              if (resumedState === 1 || resumedState === 2 || resumedState === 3) {
+                return true;
+              }
+            }
+          } catch (_) {}
 
           const video = document.querySelector("video");
           if (video) {
@@ -1264,7 +1291,7 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
               return;
             }
 
-            const hasEnded = playerState === 0 || Boolean(video && video.ended);
+            const hasEnded = playerState === 0 || Boolean(video && video.ended) || isEndscreenVisible();
             if (!hasEnded) return;
             if (targetVideoId && !repeatState.sawTargetPlayback) return;
             if (now - repeatState.lastReplayAt < replayCooldownMs) return;
