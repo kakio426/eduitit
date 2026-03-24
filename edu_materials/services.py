@@ -35,21 +35,21 @@ def decode_uploaded_html(uploaded_file):
             return raw_bytes.decode(encoding)
         except UnicodeDecodeError:
             continue
-    raise ValidationError("HTML 파일 인코딩을 읽을 수 없습니다. UTF-8로 저장해 다시 올려주세요.")
+    raise ValidationError("자료 파일 글자를 읽지 못했습니다. UTF-8 형식으로 저장한 뒤 다시 올려 주세요.")
 
 
 def validate_html_upload(uploaded_file):
     if uploaded_file is None:
-        raise ValidationError("HTML 파일을 선택해 주세요.")
+        raise ValidationError("자료 파일을 선택해 주세요.")
     if uploaded_file.size > HTML_MAX_BYTES:
-        raise ValidationError("HTML 파일은 최대 5MB까지 업로드할 수 있습니다.")
+        raise ValidationError("자료 파일은 최대 5MB까지 올릴 수 있습니다.")
     name = (uploaded_file.name or "").lower()
     if not name.endswith(HTML_EXTENSIONS):
-        raise ValidationError("`.html` 파일만 업로드할 수 있습니다.")
+        raise ValidationError("웹자료 파일(.html)만 올릴 수 있습니다.")
 
     html_content = decode_uploaded_html(uploaded_file)
     if not html_content.strip():
-        raise ValidationError("비어 있는 HTML 파일은 저장할 수 없습니다.")
+        raise ValidationError("비어 있는 자료 파일은 저장할 수 없습니다.")
 
     return {
         "html_content": html_content,

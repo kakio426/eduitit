@@ -310,7 +310,7 @@ def create_material(request):
         html_content = metadata["html_content"]
         original_filename = metadata["original_filename"]
     elif not html_content.strip():
-        messages.error(request, "붙여넣을 HTML 코드를 입력해 주세요.")
+        messages.error(request, "붙여넣을 자료 내용을 입력해 주세요.")
         return redirect(_main_url(tab=TAB_CREATE))
 
     material = EduMaterial.objects.create(
@@ -323,10 +323,10 @@ def create_material(request):
         input_mode=input_mode,
         original_filename=original_filename,
         material_type=EduMaterial.MaterialType.OTHER,
-        is_published=False,
+        is_published=True,
     )
     _apply_auto_metadata_with_feedback(request, material)
-    messages.success(request, f'"{material.title}" 초안을 저장했습니다. 다음 화면에서 미리보기와 학생 공유를 확인해 주세요.')
+    messages.success(request, f'"{material.title}" 자료를 저장했고 학생 공유도 바로 켰습니다. 시작판에서 미리보기와 공유판만 확인해 주세요.')
     return redirect("edu_materials:detail", pk=material.id)
 
 
@@ -344,7 +344,7 @@ def clone_material(request, material_id):
         html_content=source.html_content,
         input_mode=source.input_mode,
         original_filename=source.original_filename,
-        is_published=False,
+        is_published=True,
     )
     apply_manual_metadata(
         clone,
@@ -356,7 +356,7 @@ def clone_material(request, material_id):
         summary=source.summary,
         save=True,
     )
-    messages.success(request, f'"{source.title}" 자료를 내 자료로 가져왔습니다. 먼저 확인한 뒤 공개할 수 있습니다.')
+    messages.success(request, f'"{source.title}" 자료를 내 자료로 가져왔고 학생 공유도 바로 켰습니다. 시작판에서 바로 확인해 주세요.')
     return redirect("edu_materials:detail", pk=clone.id)
 
 
@@ -386,7 +386,7 @@ def update_material(request, material_id):
         material.original_filename = ""
         material.input_mode = EduMaterial.INPUT_PASTE
     else:
-        messages.error(request, "HTML 코드를 입력하거나 새 HTML 파일을 올려 주세요.")
+        messages.error(request, "자료 내용을 붙여넣거나 새 자료 파일을 올려 주세요.")
         return redirect("edu_materials:detail", pk=material.id)
 
     material.title = title
@@ -414,14 +414,14 @@ def material_detail(request, pk):
             "material": material,
             "is_owner": is_owner,
             "can_manage": is_owner,
-            "can_clone": request.user.is_authenticated and not is_owner and material.is_published,
+            "can_clone": request.user.is_authenticated and not is_owner,
             "teacher_display_name": _resolve_teacher_display_name(material.teacher),
             "material_frame_src": build_runtime_data_url(material.html_content),
             "material_render_url": material_render_url,
             "student_join_url": student_join_url,
             "student_join_display": student_join_display,
             "share_board_url": reverse("edu_materials:share_board", args=[material.id]),
-            "public_qr_data_url": build_material_qr_data_url(public_url) if material.is_published else "",
+            "public_qr_data_url": build_material_qr_data_url(public_url),
             "share_message": _build_share_message(material=material, join_url=student_join_url),
             "metadata_tags_text": ", ".join(material.tags or []),
             "subject_choices": EduMaterial.SUBJECT_CHOICES,
@@ -479,7 +479,7 @@ def share_board(request, pk):
             "is_owner": is_owner,
             "teacher_display_name": _resolve_teacher_display_name(material.teacher),
             "student_join_display": student_join_display,
-            "public_qr_data_url": build_material_qr_data_url(public_url) if material.is_published else "",
+            "public_qr_data_url": build_material_qr_data_url(public_url),
         },
     )
 
@@ -526,15 +526,12 @@ def delete_material(request, material_id):
 @require_POST
 def toggle_material_publish(request, material_id):
     material = get_object_or_404(EduMaterial, id=material_id, teacher=request.user)
-    action = request.POST.get("action", "toggle")
-    if action == "publish":
+    if not material.is_published:
         material.is_published = True
-    elif action == "unpublish":
-        material.is_published = False
+        material.save(update_fields=["is_published", "updated_at"])
+        messages.success(request, "교육자료실 자료는 항상 공개됩니다. 기존 비공개 자료도 공개로 바꿨습니다.")
     else:
-        material.is_published = not material.is_published
-    material.save(update_fields=["is_published", "updated_at"])
-    messages.success(request, "자료 공개 상태를 변경했습니다.")
+        messages.info(request, "교육자료실 자료는 항상 공개됩니다.")
     return redirect("edu_materials:detail", pk=material.id)
 
 

@@ -38,7 +38,7 @@ class EduMaterialViewTests(TestCase):
             "unit_title": "화산과 지진",
             "material_type": "practice",
             "tags": ["화산", "실험", "시뮬레이션"],
-            "summary": "화산 원리를 실험형으로 익히는 HTML 자료",
+            "summary": "화산 원리를 실험형으로 익히는 웹자료",
             "confidence": 0.88,
         }
         payload.update(overrides)
@@ -71,14 +71,14 @@ class EduMaterialViewTests(TestCase):
         material = EduMaterial.objects.get(title="화산 시뮬레이션")
         self.assertEqual(material.input_mode, EduMaterial.INPUT_PASTE)
         self.assertIn("lesson", material.html_content)
-        self.assertFalse(material.is_published)
+        self.assertTrue(material.is_published)
         self.assertRegex(material.access_code or "", r"^\d{6}$")
         self.assertEqual(material.subject, "SCIENCE")
         self.assertEqual(material.grade, "4학년 1학기")
         self.assertEqual(material.unit_title, "화산과 지진")
         self.assertEqual(material.material_type, EduMaterial.MaterialType.PRACTICE)
         self.assertEqual(material.tags, ["화산", "실험", "시뮬레이션"])
-        self.assertEqual(material.summary, "화산 원리를 실험형으로 익히는 HTML 자료")
+        self.assertEqual(material.summary, "화산 원리를 실험형으로 익히는 웹자료")
         self.assertEqual(material.metadata_status, EduMaterial.MetadataStatus.DONE)
         self.assertIn("시뮬레이션", material.search_text)
 
@@ -97,8 +97,8 @@ class EduMaterialViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "초안을 저장했습니다")
-        self.assertContains(response, "미리보기와 학생 공유를 확인해 주세요")
+        self.assertContains(response, "자료를 저장했고 학생 공유도 바로 켰습니다")
+        self.assertContains(response, "미리보기와 공유판만 확인해 주세요")
 
     @patch("edu_materials.classification._call_json_response")
     def test_create_material_from_html_file(self, mock_call_json_response):
@@ -124,10 +124,10 @@ class EduMaterialViewTests(TestCase):
         self.assertRegex(material.access_code or "", r"^\d{6}$")
         self.assertEqual(material.material_type, EduMaterial.MaterialType.REFERENCE)
         self.assertIn("volcano", material.html_content)
-        self.assertFalse(material.is_published)
+        self.assertTrue(material.is_published)
 
     @patch("edu_materials.classification._call_json_response")
-    def test_create_material_always_stays_draft_even_if_publish_requested(self, mock_call_json_response):
+    def test_create_material_is_published_even_without_publish_requested(self, mock_call_json_response):
         mock_call_json_response.return_value = self._mock_classification_payload()
 
         response = self.client.post(
@@ -142,7 +142,7 @@ class EduMaterialViewTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         material = EduMaterial.objects.get(title="바로 공개 자료")
-        self.assertFalse(material.is_published)
+        self.assertTrue(material.is_published)
 
     @patch("edu_materials.classification._call_json_response", side_effect=EduMaterialClassificationError("boom"))
     def test_create_material_keeps_saved_material_when_classification_fails(self, _mock_call_json_response):
@@ -407,7 +407,7 @@ class EduMaterialViewTests(TestCase):
         self.assertEqual(response.context["active_tab"], "shared")
         self.assertEqual(response.context["featured_public_material"].id, featured.id)
         self.assertContains(response, browse.title)
-        self.assertContains(response, "Live Preview")
+        self.assertContains(response, "움직이는 화면")
         self.assertContains(response, reverse("edu_materials:render", args=[featured.id]))
         self.assertContains(response, reverse("edu_materials:detail", args=[featured.id]))
         self.assertContains(response, reverse("edu_materials:detail", args=[browse.id]))
@@ -438,7 +438,7 @@ class EduMaterialViewTests(TestCase):
         self.assertNotContains(response, "미리보기 확인 중")
         self.assertNotContains(response, "다시 보기")
 
-    def test_clone_material_creates_private_copy_for_teacher(self):
+    def test_clone_material_creates_published_copy_for_teacher(self):
         other_user = self._create_other_user()
         source = EduMaterial.objects.create(
             teacher=other_user,
@@ -459,7 +459,7 @@ class EduMaterialViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         clone = EduMaterial.objects.exclude(id=source.id).get(teacher=self.user)
         self.assertEqual(clone.title, "공개 원본 자료 (내 자료)")
-        self.assertFalse(clone.is_published)
+        self.assertTrue(clone.is_published)
         self.assertEqual(clone.subject, source.subject)
         self.assertEqual(clone.material_type, source.material_type)
         self.assertEqual(clone.metadata_source, EduMaterial.MetadataSource.MANUAL)
@@ -519,10 +519,10 @@ class EduMaterialViewTests(TestCase):
         self.assertContains(response, "data-frame-mode=\"preview\"")
         self.assertContains(response, "Desktop")
         self.assertContains(response, "Mobile")
-        self.assertContains(response, "학생 공유 켜기")
-        self.assertNotContains(response, material.access_code)
-        self.assertNotContains(response, "전체화면 공유판 열기")
-        self.assertContains(response, "분류 수정")
+        self.assertContains(response, material.access_code)
+        self.assertContains(response, "전체화면 공유판 열기")
+        self.assertContains(response, "학생 화면 열기")
+        self.assertContains(response, "자료 정보 바꾸기")
         self.assertContains(response, "현재 내용으로 다시 자동 분류")
         self.assertEqual(response.context["preview_default_viewport"]["id"], "desktop")
 
@@ -540,6 +540,7 @@ class EduMaterialViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "전체화면 공유판 열기")
+        self.assertContains(response, "edu-materials-primary-action")
         self.assertContains(response, reverse("edu_materials:share_board", args=[material.id]))
         self.assertContains(response, material.access_code)
         self.assertContains(response, reverse("edu_materials:join_short"))
@@ -560,6 +561,7 @@ class EduMaterialViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "로그인 없이도 바로 수업에 쓰기")
         self.assertContains(response, "전체화면 공유판 열기")
+        self.assertContains(response, "edu-materials-primary-action")
         self.assertContains(response, reverse("edu_materials:share_board", args=[material.id]))
         self.assertContains(response, reverse("edu_materials:run", args=[material.id]))
         self.assertContains(response, material.access_code)

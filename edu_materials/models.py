@@ -10,8 +10,8 @@ class EduMaterial(models.Model):
     INPUT_PASTE = "paste"
     INPUT_FILE = "file"
     INPUT_MODE_CHOICES = [
-        (INPUT_PASTE, "코드 붙여넣기"),
-        (INPUT_FILE, "HTML 파일 업로드"),
+        (INPUT_PASTE, "자료 붙여넣기"),
+        (INPUT_FILE, "파일 올리기"),
     ]
 
     SUBJECT_CHOICES = [
@@ -89,7 +89,7 @@ class EduMaterial(models.Model):
         verbose_name="분류 출처",
     )
     metadata_confidence = models.FloatField(default=0.0, verbose_name="자동 분류 신뢰도")
-    is_published = models.BooleanField(default=False, verbose_name="공개 여부")
+    is_published = models.BooleanField(default=True, verbose_name="공개 여부")
     view_count = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

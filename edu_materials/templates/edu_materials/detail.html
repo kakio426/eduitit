@@ -34,6 +34,28 @@
     .edu-materials-share-card .edu-materials-input {
         color: #0f172a;
     }
+    .edu-materials-primary-action {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 4rem;
+        padding: 1rem 1.5rem;
+        border: 1px solid rgba(52, 211, 153, 0.18);
+        border-radius: 28px;
+        background: linear-gradient(180deg, #6ee7b7 0%, #34d399 100%);
+        color: #052e16;
+        box-shadow: 0 18px 36px rgba(16, 185, 129, 0.24);
+        transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+    }
+    .edu-materials-primary-action:hover {
+        filter: brightness(1.02);
+        transform: translateY(-1px);
+        box-shadow: 0 22px 42px rgba(16, 185, 129, 0.28);
+    }
+    .edu-materials-primary-action:focus-visible {
+        outline: 3px solid rgba(255, 255, 255, 0.5);
+        outline-offset: 3px;
+    }
     .edu-materials-step-card {
         border-radius: 28px;
         border: 1px solid rgba(226, 232, 240, 0.9);
@@ -73,16 +95,14 @@
                         <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">{{ material.get_subject_display }}</span>
                         {% if material.grade %}<span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">{{ material.grade }}</span>{% endif %}
                         <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">{{ material.get_material_type_display }}</span>
-                        <span class="rounded-full {% if material.is_published %}bg-emerald-100 text-emerald-700{% else %}bg-amber-100 text-amber-700{% endif %} px-3 py-1 text-xs font-bold">
-                            {% if material.is_published %}학생 공유 켜짐{% else %}아직 학생에게 안 보임{% endif %}
-                        </span>
+                        <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">학생 공유 중</span>
                         {% if not is_owner %}<span class="rounded-full bg-sky-100 px-3 py-1 text-xs font-bold text-sky-700">{{ teacher_display_name }}</span>{% endif %}
                     </div>
                 </div>
                 <div class="flex flex-wrap gap-3 xl:justify-end">
                     {% if can_manage %}
-                    <a href="#edit-form" class="rounded-2xl border border-slate-200 bg-white px-5 py-3 font-black text-slate-700">HTML 수정</a>
-                    <a href="#metadata-form" class="rounded-2xl border border-slate-200 bg-white px-5 py-3 font-black text-slate-700">분류 수정</a>
+                    <a href="#edit-form" class="rounded-2xl border border-slate-200 bg-white px-5 py-3 font-black text-slate-700">자료 내용 바꾸기</a>
+                    <a href="#metadata-form" class="rounded-2xl border border-slate-200 bg-white px-5 py-3 font-black text-slate-700">자료 정보 바꾸기</a>
                     {% elif can_clone %}
                     <form method="post" action="{% url 'edu_materials:clone' material.id %}">
                         {% csrf_token %}
@@ -100,13 +120,9 @@
                         <div>
                             <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">수업 전 확인</div>
                             <h2 class="mt-2 text-3xl font-black text-slate-900">자료 미리보기</h2>
-                            <p class="mt-2 text-sm leading-6 text-slate-500">먼저 실제로 움직이는지 확인하고, 공개 후에는 학생 화면도 바로 열 수 있습니다.</p>
+                            <p class="mt-2 text-sm leading-6 text-slate-500">먼저 실제로 움직이는지만 확인하고, 바로 공유판과 학생 화면으로 이어가면 됩니다.</p>
                         </div>
-                        {% if material.is_published %}
                         <a href="{% url 'edu_materials:run' material.id %}" target="_blank" rel="noopener" class="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white">학생 화면 열기</a>
-                        {% else %}
-                        <span class="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3 text-sm font-black text-amber-800">공개 후 학생 화면을 열 수 있습니다</span>
-                        {% endif %}
                     </div>
 
                     {% if material.summary %}
@@ -131,17 +147,17 @@
                 <div class="grid gap-4 md:grid-cols-3">
                     <div class="edu-materials-step-card p-5">
                         <div class="text-xs font-bold uppercase tracking-[0.28em] text-slate-400">1. 상태 확인</div>
-                        <div class="mt-3 text-lg font-black text-slate-900">{% if material.is_published %}학생 공유 준비 완료{% else %}아직 초안 상태{% endif %}</div>
-                        <p class="mt-2 text-sm leading-6 text-slate-600">{% if material.is_published %}이제 학생에게 보여 줄 판과 학생 화면을 열 수 있습니다.{% else %}미리보기와 분류를 확인한 뒤 학생 공유를 켜면 됩니다.{% endif %}</p>
+                        <div class="mt-3 text-lg font-black text-slate-900">학생 공유 준비 완료</div>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">이제 학생에게 보여 줄 판과 학생 화면을 바로 열 수 있습니다.</p>
                     </div>
                     <div class="edu-materials-step-card p-5">
                         <div class="text-xs font-bold uppercase tracking-[0.28em] text-slate-400">2. 학생에게 보여주기</div>
-                        <div class="mt-3 text-lg font-black text-slate-900">{% if material.is_published %}공유판으로 QR과 코드를 크게 표시{% else %}공개 후 QR·코드·짧은 주소가 열림{% endif %}</div>
+                        <div class="mt-3 text-lg font-black text-slate-900">공유판으로 QR과 코드를 크게 표시</div>
                         <p class="mt-2 text-sm leading-6 text-slate-600">프로젝터용 공유판은 관리 화면과 분리해 학생이 봐야 할 정보만 크게 보여 줍니다.</p>
                     </div>
                     <div class="edu-materials-step-card p-5">
                         <div class="text-xs font-bold uppercase tracking-[0.28em] text-slate-400">3. 학생 화면 실행</div>
-                        <div class="mt-3 text-lg font-black text-slate-900">{% if material.is_published %}학생용 전체화면 바로 열기 가능{% else %}공개 전에는 교사용 미리보기만 확인{% endif %}</div>
+                        <div class="mt-3 text-lg font-black text-slate-900">학생용 전체화면 바로 열기 가능</div>
                         <p class="mt-2 text-sm leading-6 text-slate-600">학생 화면은 기존 실행 화면을 그대로 사용하고, 시작판은 준비와 공유 역할만 맡습니다.</p>
                     </div>
                 </div>
@@ -149,14 +165,13 @@
 
             <aside class="space-y-6">
                 {% if can_manage %}
-                    {% if material.is_published %}
                     <div class="edu-materials-panel edu-materials-share-card rounded-[32px] p-6">
                         <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-300">학생에게 보여주기</div>
                         <h2 class="mt-2 text-3xl font-black">전체화면 공유판</h2>
                         <p class="mt-2 text-sm leading-6 text-slate-200">교실 화면에서는 관리 정보 대신 QR, 6자리 코드, 짧은 입력 주소만 크게 보여 주세요.</p>
                         <textarea id="share-message-source" class="hidden">{{ share_message }}</textarea>
 
-                        <a href="{{ share_board_url }}" target="_blank" rel="noopener" class="mt-5 block rounded-[28px] bg-emerald-400 px-5 py-4 text-center text-lg font-black text-slate-950 shadow-lg shadow-emerald-950/20">전체화면 공유판 열기</a>
+                        <a href="{{ share_board_url }}" target="_blank" rel="noopener" class="edu-materials-primary-action mt-5 text-lg font-black">전체화면 공유판 열기</a>
 
                         <div class="mt-5 grid gap-3 sm:grid-cols-2">
                             <div class="rounded-[24px] border border-white/10 bg-white/8 p-4">
@@ -177,34 +192,12 @@
                                     <div class="mt-2 flex flex-wrap gap-2">
                                         <button type="button" class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white" data-copy-target="share-message-source">초대문구 복사</button>
                                         <a href="{% url 'edu_materials:run' material.id %}" target="_blank" rel="noopener" class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white">학생 화면 열기</a>
-                                        <form method="post" action="{% url 'edu_materials:toggle_publish' material.id %}">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="action" value="unpublish">
-                                            <button class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white">학생 공유 끄기</button>
-                                        </form>
                                     </div>
                                 </div>
                                 <p id="share-copy-feedback" class="edu-copy-feedback text-sm font-bold text-emerald-300">복사했습니다.</p>
                             </div>
                         </div>
                     </div>
-                    {% else %}
-                    <div class="edu-materials-panel rounded-[32px] border border-amber-200 bg-amber-50/90 p-6">
-                        <div class="text-xs font-bold uppercase tracking-[0.32em] text-amber-700">학생에게 보여주기 전</div>
-                        <h2 class="mt-2 text-3xl font-black text-slate-900">아직 학생에게 안 보입니다</h2>
-                        <p class="mt-3 text-sm leading-7 text-slate-700">지금은 교사용 시작판에서만 확인할 수 있습니다. 학생 공유를 켜면 전체화면 공유판, QR, 6자리 코드, 학생 화면 열기가 함께 열립니다.</p>
-                        <form method="post" action="{% url 'edu_materials:toggle_publish' material.id %}" class="mt-5">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="publish">
-                            <button class="w-full rounded-[28px] bg-emerald-600 px-5 py-4 text-lg font-black text-white shadow-lg shadow-emerald-600/15">학생 공유 켜기</button>
-                        </form>
-                        <div class="mt-5 space-y-3 text-sm text-slate-700">
-                            <div class="rounded-[24px] border border-amber-200 bg-white px-4 py-4">공개 후에는 프로젝터용 전체화면 공유판이 열립니다.</div>
-                            <div class="rounded-[24px] border border-amber-200 bg-white px-4 py-4">학생은 짧은 입력 주소와 6자리 코드로도 들어올 수 있습니다.</div>
-                            <div class="rounded-[24px] border border-amber-200 bg-white px-4 py-4">QR은 학생 실행 화면으로 바로 연결됩니다.</div>
-                        </div>
-                    </div>
-                    {% endif %}
                 {% else %}
                 <div class="edu-materials-panel edu-materials-share-card rounded-[32px] p-6">
                     <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-300">공개 자료 바로 활용</div>
@@ -213,7 +206,7 @@
                     <textarea id="share-message-source" class="hidden">{{ share_message }}</textarea>
 
                     <div class="mt-5 flex flex-wrap gap-3">
-                        <a href="{{ share_board_url }}" target="_blank" rel="noopener" class="rounded-[28px] bg-emerald-400 px-5 py-4 text-center text-lg font-black text-slate-950 shadow-lg shadow-emerald-950/20">전체화면 공유판 열기</a>
+                        <a href="{{ share_board_url }}" target="_blank" rel="noopener" class="edu-materials-primary-action text-lg font-black">전체화면 공유판 열기</a>
                         <a href="{% url 'edu_materials:run' material.id %}" target="_blank" rel="noopener" class="rounded-[28px] border border-white/15 bg-white/10 px-5 py-4 text-center text-lg font-black text-white">학생 화면 열기</a>
                     </div>
 
