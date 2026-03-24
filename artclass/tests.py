@@ -583,6 +583,9 @@ class ManualPipelineApiTest(TestCase):
         self.assertContains(response, "설치 후 이 수업 시작")
         self.assertContains(response, "Bridge 0.2.0")
         self.assertContains(response, "이미 런처를 설치했다면 이번 한 번은 새 설치파일로 다시 설치해 주세요. 이후부터는 자동 업데이트됩니다.")
+        self.assertContains(response, "Windows 보호 화면이 나오면")
+        self.assertContains(response, "추가 정보")
+        self.assertContains(response, "학교 PC 정책으로 실행이 막히면 관리자에게 런처 설치 허용을 요청하면 됩니다.")
         self.assertContains(response, "/artclass/classroom/14/?autostart_launcher=1")
 
     def test_launcher_release_manager_uploads_release_bundle_for_staff(self):
