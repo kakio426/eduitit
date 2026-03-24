@@ -77,9 +77,9 @@ def run():
     ProductFeature.objects.create(product=p_yut, icon="fa-solid fa-hand-back-fist", title="리얼한 윷 던지기", description="터치 한 번으로 윷을 던지는 쫄깃한 긴장감을 그대로 구현했습니다.")
     ProductFeature.objects.create(product=p_yut, icon="fa-solid fa-robot", title="자동 말 이동 시스템", description="복잡한 윷판 규칙을 몰라도 AI가 알아서 말을 놓아줍니다.")
 
-    # 3. 토닥토닥 선생님 운세 (구 Teacher Saju)
+    # 3. 선생님 사주 (구 Teacher Saju)
     p_fortune = Product.objects.create(
-        title="토닥토닥 선생님 운세",
+        title="선생님 사주",
         lead_text="지친 선생님의 교직 생활에 작은 위로와 비책을 드려요.",
         description="타고난 나의 기질과 학생들과의 케미, 그리고 2026년 운세까지! 명리학 전문가가 분석하는 선생님만을 위한 일대일 맞춤 운세 서비스를 만나보세요.",
         price=0,

@@ -24,6 +24,40 @@ class ManualPayload:
     sections: List[SectionPayload]
 
 
+FORTUNE_MANUAL_UPDATE = ManualPayload(
+    title="선생님 사주 이용방법",
+    description="입력, 해석, 보관까지 실제 사주 서비스 흐름에 맞춰 구성했습니다.",
+    sections=[
+        SectionPayload(
+            title="분석 시작",
+            badge_text="Step 1",
+            content=(
+                "1. /fortune/ 에 로그인 후 접속합니다.\n"
+                "2. 일반 사주 또는 교직 사주 모드를 선택합니다.\n"
+                "3. 이름, 성별, 생년월일(필수)과 출생 시간(선택)을 입력해 분석을 시작합니다."
+            ),
+        ),
+        SectionPayload(
+            title="결과 해석",
+            badge_text="Step 2",
+            content=(
+                "1. 결과 화면에서 핵심 요약과 해석 항목을 확인합니다.\n"
+                "2. 필요한 문장은 수업/상담 메모용으로 복사해 활용합니다.\n"
+                "3. 같은 입력값으로 재분석해 표현을 비교할 수 있습니다."
+            ),
+        ),
+        SectionPayload(
+            title="기록 관리",
+            badge_text="Step 3",
+            content=(
+                "1. 저장 기능을 사용하면 보관함에서 다시 열람할 수 있습니다.\n"
+                "2. /fortune/history/ 에서 이전 결과를 확인하고 정리합니다."
+            ),
+        ),
+    ],
+)
+
+
 MANUAL_UPDATES: dict[str, ManualPayload] = {
     "가뿐하게 서명 톡": ManualPayload(
         title="연수 서명 톡 사용 가이드",
@@ -92,38 +126,9 @@ MANUAL_UPDATES: dict[str, ManualPayload] = {
             ),
         ],
     ),
-    "토닥토닥 선생님 운세": ManualPayload(
-        title="토닥토닥 선생님 운세 이용방법",
-        description="입력, 해석, 보관까지 실제 사주 서비스 흐름에 맞춰 구성했습니다.",
-        sections=[
-            SectionPayload(
-                title="분석 시작",
-                badge_text="Step 1",
-                content=(
-                    "1. /fortune/ 에 로그인 후 접속합니다.\n"
-                    "2. 일반 사주 또는 교직 사주 모드를 선택합니다.\n"
-                    "3. 이름, 성별, 생년월일(필수)과 출생 시간(선택)을 입력해 분석을 시작합니다."
-                ),
-            ),
-            SectionPayload(
-                title="결과 해석",
-                badge_text="Step 2",
-                content=(
-                    "1. 결과 화면에서 핵심 요약과 해석 항목을 확인합니다.\n"
-                    "2. 필요한 문장은 수업/상담 메모용으로 복사해 활용합니다.\n"
-                    "3. 같은 입력값으로 재분석해 표현을 비교할 수 있습니다."
-                ),
-            ),
-            SectionPayload(
-                title="기록 관리",
-                badge_text="Step 3",
-                content=(
-                    "1. 저장 기능을 사용하면 보관함에서 다시 열람할 수 있습니다.\n"
-                    "2. /fortune/history/ 에서 이전 결과를 확인하고 정리합니다."
-                ),
-            ),
-        ],
-    ),
+    "교사 사주": FORTUNE_MANUAL_UPDATE,
+    "선생님 사주": FORTUNE_MANUAL_UPDATE,
+    "토닥토닥 선생님 운세": FORTUNE_MANUAL_UPDATE,
     "몽글몽글 미술 수업": ManualPayload(
         title="몽글몽글 미술 수업 이용방법",
         description="Gemini 수동 복붙으로 단계를 만들고 편집하는 순서를 바로 따라갈 수 있습니다.",
