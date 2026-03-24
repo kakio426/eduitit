@@ -2193,14 +2193,78 @@ class HomeV4ViewTest(TestCase):
         self.assertIn('aria-label="간편 수합 즐겨찾기 토글"', content)
         self.assertIn('class="home-v4-tool-favorite-badge favorite-toggle-btn', content)
 
-    def test_v4_anonymous_home_falls_back_to_public_v2(self):
+    def test_v4_anonymous_home_uses_public_v4_template(self):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
+        self.assertTemplateUsed(response, 'core/home_public_v4.html')
+        self.assertTemplateNotUsed(response, 'core/home_v2.html')
         self.assertNotIn('core/css/home_authenticated_v4.css', content)
         self.assertNotIn('data-home-v4-shell="true"', content)
-        self.assertIn('지금 바로 써보기', content)
-        self.assertIn('로그인 후 전체 열기', content)
+        self.assertIn('data-home-v4-public-shell="true"', content)
+        self.assertIn('교실 일은,', content)
+        self.assertIn('대표 서비스', content)
+        self.assertIn('로그인 후 전체 서비스 보기', content)
+
+    def test_v4_anonymous_featured_service_uses_access_matched_cta(self):
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        login_url = reverse('account_login')
+        featured_product = response.context['featured_product']
+
+        self.assertEqual(featured_product.home_access_status_label, '로그인 필요')
+        self.assertEqual(featured_product.home_landing_cta_label, '로그인 후 시작')
+        self.assertEqual(featured_product.home_landing_cta_href, login_url)
+        self.assertIn('data-home-v4-public-featured="true"', content)
+        self.assertIn(f'href="{login_url}"', content)
+
+    def test_v4_anonymous_rotation_surfaces_guest_services_with_single_active_card(self):
+        public_collect = Product.objects.create(
+            title="공개 수합",
+            description="제출 흐름을 바로 볼 수 있어요",
+            price=0,
+            is_active=True,
+            is_guest_allowed=True,
+            service_type='collect_sign',
+            icon='fa-solid fa-inbox',
+            launch_route_name='collect:landing',
+        )
+        external_public = Product.objects.create(
+            title="외부 공개 도구",
+            description="새 창으로 바로 이동",
+            price=0,
+            is_active=True,
+            is_guest_allowed=True,
+            service_type='edutech',
+            external_url='https://example.com/demo',
+            icon='fa-solid fa-arrow-up-right-from-square',
+        )
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('data-home-v4-public-rotation="true"', content)
+        self.assertIn('data-home-v4-public-login-cta="true"', content)
+        self.assertIn('data-guest-rotation-active="true"', content)
+        self.assertIn('지금 시작', content)
+        self.assertIn('새 창에서 시작', content)
+
+        public_ids = [card['id'] for card in response.context.get('guest_rotation_cards', [])]
+        self.assertIn(public_collect.id, public_ids)
+        self.assertIn(external_public.id, public_ids)
+        self.assertEqual(
+            content.count('data-guest-rotation-dot='),
+            len(response.context.get('guest_rotation_cards', [])),
+        )
+
+    @patch('core.views._build_home_guest_rotation_cards', return_value=[])
+    def test_v4_anonymous_hides_rotation_when_no_guest_launchable_services(self, _mock_rotation_cards):
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertNotIn('data-home-v4-public-rotation="true"', content)
+        self.assertIn('data-home-v4-public-featured="true"', content)
+        self.assertIn('로그인 후 전체 서비스 보기', content)
 
     @override_settings(HOME_LAYOUT_VERSION='v2', HOME_V2_ENABLED=True)
     def test_setting_home_layout_version_to_v2_rolls_back_to_existing_authenticated_home(self):

@@ -2217,6 +2217,69 @@ def _build_home_guest_highlight_cards(product_list, *, requires_login, limit=4, 
     return cards
 
 
+def _build_home_guest_rotation_cards(product_list):
+    rotation_limit = max(len(product_list), 1)
+    cards = _build_home_guest_highlight_cards(
+        product_list,
+        requires_login=False,
+        limit=rotation_limit,
+        include_games=True,
+    )
+    return [
+        {
+            "id": card["id"],
+            "title": card["title"],
+            "description": card["description"],
+            "icon": card["icon"],
+            "href": card["href"],
+            "is_external": card["is_external"],
+            "cta_label": "새 창에서 시작" if card["is_external"] else "지금 시작",
+        }
+        for card in cards
+        if card.get("href")
+    ]
+
+
+def _build_home_featured_summary(product):
+    title = str(
+        getattr(product, "public_service_name", "") or getattr(product, "title", "") or ""
+    ).strip()
+    for candidate in (
+        getattr(product, "solve_text", ""),
+        getattr(product, "lead_text", ""),
+        getattr(product, "description", ""),
+    ):
+        summary = _replace_public_service_terms(str(candidate or "").strip(), product)
+        if summary and summary != title:
+            return summary
+    return getattr(product, "home_card_summary", "") or title
+
+
+def _attach_home_guest_landing_meta(product, *, login_url):
+    if not product:
+        return None
+
+    access_status = _guest_access_status_copy(product)
+    launch_href = getattr(product, "launch_href", "") or ""
+    launch_is_external = bool(getattr(product, "launch_is_external", False))
+
+    if launch_is_external:
+        cta_href = launch_href
+        cta_label = "새 창에서 시작"
+    elif access_status == "로그인 필요":
+        cta_href = login_url
+        cta_label = "로그인 후 시작"
+    else:
+        cta_href = launch_href or login_url
+        cta_label = "지금 시작"
+
+    product.home_landing_summary = _build_home_featured_summary(product)
+    product.home_landing_cta_href = cta_href
+    product.home_landing_cta_label = cta_label
+    product.home_landing_cta_is_external = launch_is_external
+    return product
+
+
 def _filter_home_sections_by_access(sections, *, requires_login):
     filtered_sections = []
     for section in sections:
@@ -2638,6 +2701,31 @@ def _home_v2(request, products, posts, page_obj, feed_scope, pinned_notice_posts
     })
 
 
+def _build_home_public_landing_context(request, products):
+    product_list = _attach_product_launch_meta(list(products), user=request.user)
+    guest_rotation_cards = _build_home_guest_rotation_cards(product_list)
+    featured_product = next((p for p in product_list if p.is_featured), product_list[0] if product_list else None)
+    featured_product = _attach_home_guest_landing_meta(
+        featured_product,
+        login_url=reverse('account_login'),
+    )
+    return {
+        'products': products,
+        'featured_product': featured_product,
+        'guest_rotation_cards': guest_rotation_cards,
+        **build_home_page_seo(request).as_context(),
+    }
+
+
+def _home_public_v4(request, products, posts, page_obj, feed_scope, pinned_notice_posts):
+    """비로그인 사용자를 위한 공개 홈 V4."""
+    return render(
+        request,
+        'core/home_public_v4.html',
+        _build_home_public_landing_context(request, products),
+    )
+
+
 def _home_v4(request, products, posts, page_obj, feed_scope, pinned_notice_posts):
     """환경변수로 안전하게 롤아웃하는 인증 홈 V4."""
     product_list = _attach_product_launch_meta(list(products), user=request.user)
@@ -2820,7 +2908,7 @@ def home(request):
     if home_layout_version == 'v4':
         if request.user.is_authenticated:
             return _home_v4(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
-        return _home_v2(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
+        return _home_public_v4(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
 
     # V2 홈: Feature flag on 시 분기
     if home_layout_version == 'v2':
