@@ -48,6 +48,13 @@ class EduMaterial(models.Model):
         on_delete=models.CASCADE,
         related_name="edu_materials",
     )
+    source_material = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        related_name="cloned_materials",
+        null=True,
+        blank=True,
+    )
     subject = models.CharField(
         max_length=20,
         choices=SUBJECT_CHOICES,
@@ -96,6 +103,13 @@ class EduMaterial(models.Model):
 
     class Meta:
         ordering = ["-updated_at", "-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["teacher", "source_material"],
+                condition=models.Q(source_material__isnull=False),
+                name="edu_materials_unique_clone_per_teacher_source",
+            ),
+        ]
 
     def save(self, *args, **kwargs):
         if not self.access_code:

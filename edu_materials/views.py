@@ -131,9 +131,31 @@ def _build_clone_title(user, source_title):
     return title
 
 
-def _decorate_teacher_display_name(materials):
+def _get_existing_clone(user, source):
+    if not user or not user.is_authenticated:
+        return None
+    return (
+        EduMaterial.objects.filter(teacher=user, source_material=source)
+        .only("id", "title")
+        .order_by("-updated_at", "-created_at")
+        .first()
+    )
+
+
+def _decorate_material_cards(materials, user=None):
+    existing_clone_map = {}
+    if user and user.is_authenticated:
+        source_ids = [material.id for material in materials if material.teacher_id != user.id]
+        if source_ids:
+            existing_clone_map = dict(
+                EduMaterial.objects.filter(teacher=user, source_material_id__in=source_ids).values_list(
+                    "source_material_id",
+                    "id",
+                )
+            )
     for material in materials:
         material.teacher_display_name = _resolve_teacher_display_name(material.teacher)
+        material.existing_clone_id = existing_clone_map.get(material.id)
     return materials
 
 
@@ -254,7 +276,7 @@ def main_view(request):
     if active_tab == TAB_SHARED:
         featured_public_material = _pick_featured_material(shared_queryset)
         if featured_public_material:
-            featured_public_material.teacher_display_name = _resolve_teacher_display_name(featured_public_material.teacher)
+            _decorate_material_cards([featured_public_material], request.user)
             browse_queryset = shared_queryset.exclude(id=featured_public_material.id)
 
     my_page_obj = Paginator(my_queryset, MY_PAGE_SIZE).get_page(page_number) if request.user.is_authenticated else None
@@ -262,7 +284,7 @@ def main_view(request):
         my_page_obj.object_list = list(my_page_obj.object_list)
 
     shared_page_obj = Paginator(browse_queryset, SHARED_PAGE_SIZE).get_page(page_number)
-    shared_page_obj.object_list = _decorate_teacher_display_name(list(shared_page_obj.object_list))
+    shared_page_obj.object_list = _decorate_material_cards(list(shared_page_obj.object_list), request.user)
 
     return render(
         request,
@@ -338,8 +360,14 @@ def clone_material(request, material_id):
         messages.info(request, "이미 내 자료에 있는 자료입니다.")
         return redirect("edu_materials:detail", pk=source.id)
 
+    existing_clone = _get_existing_clone(request.user, source)
+    if existing_clone:
+        messages.info(request, f'"{source.title}" 자료는 이미 내 자료실에 있어 그 자료를 바로 열었습니다.')
+        return redirect("edu_materials:detail", pk=existing_clone.id)
+
     clone = EduMaterial.objects.create(
         teacher=request.user,
+        source_material=source,
         title=_build_clone_title(request.user, source.title),
         html_content=source.html_content,
         input_mode=source.input_mode,
@@ -401,6 +429,9 @@ def material_detail(request, pk):
     is_owner = request.user.is_authenticated and material.teacher_id == request.user.id
     if not is_owner and not material.is_published:
         raise Http404()
+    existing_clone = None
+    if request.user.is_authenticated and not is_owner:
+        existing_clone = _get_existing_clone(request.user, material)
 
     public_url = request.build_absolute_uri(reverse("edu_materials:run", args=[material.id]))
     student_join_url = request.build_absolute_uri(reverse("edu_materials:join_short"))
@@ -414,7 +445,8 @@ def material_detail(request, pk):
             "material": material,
             "is_owner": is_owner,
             "can_manage": is_owner,
-            "can_clone": request.user.is_authenticated and not is_owner,
+            "can_clone": request.user.is_authenticated and not is_owner and existing_clone is None,
+            "existing_clone": existing_clone,
             "teacher_display_name": _resolve_teacher_display_name(material.teacher),
             "material_frame_src": build_runtime_data_url(material.html_content),
             "material_render_url": material_render_url,

@@ -103,10 +103,12 @@
                     {% if can_manage %}
                     <a href="#edit-form" class="rounded-2xl border border-slate-200 bg-white px-5 py-3 font-black text-slate-700">자료 내용 바꾸기</a>
                     <a href="#metadata-form" class="rounded-2xl border border-slate-200 bg-white px-5 py-3 font-black text-slate-700">자료 정보 바꾸기</a>
+                    {% elif existing_clone %}
+                    <a href="{% url 'edu_materials:detail' existing_clone.id %}" class="rounded-2xl bg-emerald-600 px-5 py-3 font-black text-white">내 자료 열기</a>
                     {% elif can_clone %}
                     <form method="post" action="{% url 'edu_materials:clone' material.id %}">
                         {% csrf_token %}
-                        <button class="rounded-2xl bg-emerald-600 px-5 py-3 font-black text-white">내 자료로 가져오기</button>
+                        <button class="rounded-2xl bg-emerald-600 px-5 py-3 font-black text-white">내 자료로 복사해 수정하기</button>
                     </form>
                     {% endif %}
                 </div>
@@ -228,16 +230,20 @@
                                 <div class="text-xs font-bold uppercase tracking-[0.24em] text-slate-300">보조 동작</div>
                                 <div class="mt-2 flex flex-wrap gap-2">
                                     <button type="button" class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white" data-copy-target="share-message-source">초대문구 복사</button>
-                                    {% if can_clone %}
+                                    {% if existing_clone %}
+                                    <a href="{% url 'edu_materials:detail' existing_clone.id %}" class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white">내 자료 열기</a>
+                                    {% elif can_clone %}
                                     <form method="post" action="{% url 'edu_materials:clone' material.id %}">
                                         {% csrf_token %}
-                                        <button class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white">내 자료로 가져오기</button>
+                                        <button class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white">내 자료로 복사해 수정하기</button>
                                     </form>
                                     {% endif %}
                                 </div>
                             </div>
-                            {% if can_clone %}
-                            <p class="text-sm leading-6 text-slate-200">마음에 들면 내 자료실로 가져와 제목과 설명을 손본 뒤 바로 수업에 쓸 수 있습니다.</p>
+                            {% if existing_clone %}
+                            <p class="text-sm leading-6 text-slate-200">이 자료는 이미 내 자료실로 가져왔습니다. 새로 만들지 말고 그 자료를 열어 바로 수정하세요.</p>
+                            {% elif can_clone %}
+                            <p class="text-sm leading-6 text-slate-200">마음에 들면 내 자료실로 복사해 제목과 설명을 손본 뒤 바로 수업에 쓸 수 있습니다.</p>
                             {% else %}
                             <p class="text-sm leading-6 text-slate-200">로그인 없이도 그대로 수업에 활용할 수 있고, 수정이나 저장은 로그인 후 진행하면 됩니다.</p>
                             {% endif %}

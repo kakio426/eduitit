@@ -460,9 +460,33 @@ class EduMaterialViewTests(TestCase):
         clone = EduMaterial.objects.exclude(id=source.id).get(teacher=self.user)
         self.assertEqual(clone.title, "공개 원본 자료 (내 자료)")
         self.assertTrue(clone.is_published)
+        self.assertEqual(clone.source_material, source)
         self.assertEqual(clone.subject, source.subject)
         self.assertEqual(clone.material_type, source.material_type)
         self.assertEqual(clone.metadata_source, EduMaterial.MetadataSource.MANUAL)
+
+    def test_clone_material_redirects_to_existing_copy_for_same_source(self):
+        other_user = self._create_other_user()
+        source = EduMaterial.objects.create(
+            teacher=other_user,
+            title="이미 가져온 공개 자료",
+            html_content="<html><body>same source</body></html>",
+            is_published=True,
+        )
+        existing_clone = EduMaterial.objects.create(
+            teacher=self.user,
+            source_material=source,
+            title="이미 가져온 공개 자료 (내 자료)",
+            html_content=source.html_content,
+            is_published=True,
+        )
+
+        response = self.client.post(reverse("edu_materials:clone", args=[source.id]), follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(EduMaterial.objects.filter(teacher=self.user, source_material=source).count(), 1)
+        self.assertContains(response, "이미 내 자료실에 있어 그 자료를 바로 열었습니다")
+        self.assertEqual(response.request["PATH_INFO"], reverse("edu_materials:detail", args=[existing_clone.id]))
 
     def test_run_view_requires_published_material(self):
         material = EduMaterial.objects.create(
@@ -580,10 +604,61 @@ class EduMaterialViewTests(TestCase):
         response = self.client.get(reverse("edu_materials:detail", args=[material.id]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "내 자료로 가져오기")
+        self.assertContains(response, "내 자료로 복사해 수정하기")
         self.assertContains(response, "전체화면 공유판 열기")
         self.assertContains(response, reverse("edu_materials:share_board", args=[material.id]))
         self.assertNotContains(response, "자료 삭제하기")
+
+    def test_detail_view_links_existing_copy_for_logged_in_teacher(self):
+        other_user = self._create_other_user()
+        material = EduMaterial.objects.create(
+            teacher=other_user,
+            title="이미 가져온 자료 원본",
+            html_content="<html><body>public other</body></html>",
+            is_published=True,
+            subject="SCIENCE",
+            material_type=EduMaterial.MaterialType.PRACTICE,
+        )
+        existing_clone = EduMaterial.objects.create(
+            teacher=self.user,
+            source_material=material,
+            title="이미 가져온 자료 원본 (내 자료)",
+            html_content=material.html_content,
+            is_published=True,
+        )
+
+        response = self.client.get(reverse("edu_materials:detail", args=[material.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "내 자료 열기")
+        self.assertContains(response, reverse("edu_materials:detail", args=[existing_clone.id]))
+        self.assertNotContains(response, "내 자료로 복사해 수정하기")
+        self.assertContains(response, "이미 내 자료실로 가져왔습니다")
+
+    def test_main_view_shows_open_existing_copy_for_already_cloned_material(self):
+        other_user = self._create_other_user()
+        material = EduMaterial.objects.create(
+            teacher=other_user,
+            title="공개 참고 자료",
+            html_content="<html><body>public reference</body></html>",
+            is_published=True,
+            subject="SCIENCE",
+            material_type=EduMaterial.MaterialType.PRACTICE,
+        )
+        existing_clone = EduMaterial.objects.create(
+            teacher=self.user,
+            source_material=material,
+            title="공개 참고 자료 (내 자료)",
+            html_content=material.html_content,
+            is_published=True,
+        )
+
+        response = self.client.get(reverse("edu_materials:main"), data={"tab": "shared", "q": "공개 참고"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "내 자료 열기")
+        self.assertContains(response, reverse("edu_materials:detail", args=[existing_clone.id]))
+        self.assertNotContains(response, "내 자료로 복사해 수정하기")
 
     def test_detail_view_keeps_private_material_hidden_from_anonymous_users(self):
         material = EduMaterial.objects.create(

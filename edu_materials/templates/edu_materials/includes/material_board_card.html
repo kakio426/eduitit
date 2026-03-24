@@ -86,7 +86,7 @@
         {% if material.summary %}
         <p class="text-sm leading-6 text-slate-600">{{ material.summary }}</p>
         {% else %}
-        <p class="text-sm leading-6 text-slate-500">{% if show_live_preview %}수업 시작판에서 먼저 움직이는지만 보고, 바로 공유판과 학생 화면으로 이어갈 수 있는 자료입니다.{% else %}수업 흐름을 빠르게 비교해보고, 마음에 들면 바로 열거나 내 자료로 가져올 수 있는 공개 자료입니다.{% endif %}</p>
+        <p class="text-sm leading-6 text-slate-500">{% if show_live_preview %}수업 시작판에서 먼저 움직이는지만 보고, 바로 공유판과 학생 화면으로 이어갈 수 있는 자료입니다.{% else %}수업 흐름을 빠르게 비교해보고, 마음에 들면 바로 열거나 내 자료로 복사해 수정할 수 있는 공개 자료입니다.{% endif %}</p>
         {% endif %}
 
         {% if material.tags %}
@@ -124,10 +124,12 @@
             <a href="{{ detail_url }}" class="rounded-full bg-slate-900 px-4 py-2.5 text-sm font-black text-white">수업 시작판</a>
             {% if material.teacher_id == request.user.id %}
             <a href="{{ detail_url }}#metadata-form" class="rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700">분류 수정</a>
+            {% elif material.existing_clone_id %}
+            <a href="{% url 'edu_materials:detail' material.existing_clone_id %}" class="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-black text-emerald-700">내 자료 열기</a>
             {% elif request.user.is_authenticated %}
             <form method="post" action="{{ clone_url }}">
                 {% csrf_token %}
-                <button type="submit" class="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-black text-emerald-700">내 자료로 가져오기</button>
+                <button type="submit" class="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-black text-emerald-700">내 자료로 복사해 수정하기</button>
             </form>
             {% endif %}
         {% endif %}
