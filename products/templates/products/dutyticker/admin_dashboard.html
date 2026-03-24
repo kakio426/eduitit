@@ -149,7 +149,7 @@
                     <section class="rounded-2xl border border-indigo-100 bg-white/70 p-5">
                         <div class="flex items-center justify-between gap-3 mb-4">
                             <h4 class="text-lg font-black text-gray-700">시간 슬롯</h4>
-                            <p class="text-xs font-black text-gray-500">4-5 구간은 학교 운영에 맞게 쉬는시간 또는 점심시간으로 바꿀 수 있습니다.</p>
+                            <p class="text-xs font-black text-gray-500">3-4, 4-5, 5-6 구간은 학교 운영에 맞게 쉬는시간 또는 점심시간으로 바꿀 수 있습니다.</p>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                             {% for slot in time_slots %}
@@ -157,12 +157,12 @@
                                 <div class="flex items-start justify-between gap-3 mb-3">
                                     <div>
                                         <p class="text-sm font-black text-gray-700">{{ slot.slot_label }}</p>
-                                        {% if slot.slot_code == 'lunch' %}
-                                        <p class="text-xs font-bold text-gray-500 mt-1">4-5 구간 종류를 바꾸면 메인 자동 동작도 함께 바뀝니다.</p>
+                                        {% if slot.slot_code in editable_transition_slot_codes %}
+                                        <p class="text-xs font-bold text-gray-500 mt-1">이 구간 종류를 바꾸면 메인 자동 동작도 함께 바뀝니다.</p>
                                         {% endif %}
                                     </div>
-                                    {% if slot.slot_code == 'lunch' %}
-                                    <select id="slotLunchKind" name="slot_lunch_kind"
+                                    {% if slot.slot_code in editable_transition_slot_codes %}
+                                    <select id="slotKind_{{ slot.slot_code }}" name="slot_{{ slot.slot_code }}_kind"
                                         class="min-w-[9rem] px-3 py-2 rounded-lg border border-indigo-200 bg-indigo-50 text-sm font-black text-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-300">
                                         <option value="break" {% if slot.slot_kind == 'break' %}selected{% endif %}>쉬는시간</option>
                                         <option value="lunch" {% if slot.slot_kind == 'lunch' %}selected{% endif %}>점심시간</option>

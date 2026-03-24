@@ -37,18 +37,36 @@ class DutyTickerScheduleAndSpotlightTests(TestCase):
         session.save()
 
     def test_admin_schedule_settings_updates_slots_and_subjects(self):
-        role = DTRole.objects.create(
+        role_34 = DTRole.objects.create(
+            user=self.user,
+            classroom=self.classroom,
+            name="우리반 정리왕",
+            time_slot="쉬는시간 (3-4)",
+        )
+        role_45 = DTRole.objects.create(
             user=self.user,
             classroom=self.classroom,
             name="우리반 정리왕",
             time_slot="점심시간 (4-5)",
         )
+        role_56 = DTRole.objects.create(
+            user=self.user,
+            classroom=self.classroom,
+            name="우리반 정리왕",
+            time_slot="쉬는시간 (5-6)",
+        )
         payload = {
             "slot_p1_start": "08:55",
             "slot_p1_end": "09:35",
+            "slot_b3_start": "11:20",
+            "slot_b3_end": "11:30",
+            "slot_b3_kind": "lunch",
             "slot_lunch_start": "12:10",
             "slot_lunch_end": "13:00",
             "slot_lunch_kind": "break",
+            "slot_b5_start": "13:40",
+            "slot_b5_end": "13:50",
+            "slot_b5_kind": "lunch",
             "subject_1_1": "국어",
             "subject_1_2": "수학",
             "subject_2_1": "과학",
@@ -65,20 +83,38 @@ class DutyTickerScheduleAndSpotlightTests(TestCase):
         self.assertEqual(monday_first.start_time, time(8, 55))
         self.assertEqual(monday_first.end_time, time(9, 35))
 
+        slot_34 = DTTimeSlot.objects.get(user=self.user, classroom=self.classroom, slot_code="b3")
+        self.assertEqual(slot_34.slot_kind, "lunch")
+        self.assertEqual(slot_34.slot_label, "점심시간 (3-4)")
+
         lunch_slot = DTTimeSlot.objects.get(user=self.user, classroom=self.classroom, slot_code="lunch")
         self.assertEqual(lunch_slot.slot_kind, "break")
         self.assertEqual(lunch_slot.slot_label, "쉬는시간 (4-5)")
 
-        role.refresh_from_db()
-        self.assertEqual(role.time_slot, "쉬는시간 (4-5)")
+        slot_56 = DTTimeSlot.objects.get(user=self.user, classroom=self.classroom, slot_code="b5")
+        self.assertEqual(slot_56.slot_kind, "lunch")
+        self.assertEqual(slot_56.slot_label, "점심시간 (5-6)")
+
+        role_34.refresh_from_db()
+        role_45.refresh_from_db()
+        role_56.refresh_from_db()
+        self.assertEqual(role_34.time_slot, "점심시간 (3-4)")
+        self.assertEqual(role_45.time_slot, "쉬는시간 (4-5)")
+        self.assertEqual(role_56.time_slot, "점심시간 (5-6)")
 
         api_response = self.client.get(reverse("dt_api_data"))
         self.assertEqual(api_response.status_code, 200)
         weekly = api_response.json()["schedule"]
         monday_rows = weekly.get("1", [])
+        slot_34_row = next(row for row in monday_rows if row.get("slot_code") == "b3")
         lunch_row = next(row for row in monday_rows if row.get("slot_code") == "lunch")
+        slot_56_row = next(row for row in monday_rows if row.get("slot_code") == "b5")
+        self.assertEqual(slot_34_row["slot_type"], "lunch")
+        self.assertEqual(slot_34_row["slot_label"], "점심시간 (3-4)")
         self.assertEqual(lunch_row["slot_type"], "break")
         self.assertEqual(lunch_row["slot_label"], "쉬는시간 (4-5)")
+        self.assertEqual(slot_56_row["slot_type"], "lunch")
+        self.assertEqual(slot_56_row["slot_label"], "점심시간 (5-6)")
 
     def test_admin_tts_settings_updates_broadcast_preferences(self):
         payload = {

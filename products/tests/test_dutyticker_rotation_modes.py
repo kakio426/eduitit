@@ -157,7 +157,12 @@ class DutyTickerRotationModeTests(TestCase):
         self.assertContains(response, 'id="rotationMode"')
         self.assertContains(response, "지금 1칸 순환")
         self.assertContains(response, "방송 저장")
-        self.assertContains(response, 'id="slotLunchKind"')
+        self.assertContains(response, 'id="slotKind_b3"')
+        self.assertContains(response, 'name="slot_b3_kind"')
+        self.assertContains(response, 'id="slotKind_lunch"')
+        self.assertContains(response, 'name="slot_lunch_kind"')
+        self.assertContains(response, 'id="slotKind_b5"')
+        self.assertContains(response, 'name="slot_b5_kind"')
         self.assertNotContains(response, "시간표와 방송 저장")
 
 

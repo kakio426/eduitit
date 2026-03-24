@@ -26,7 +26,7 @@ CONSENT_STATUS_LABELS = {
     "withdrawn": "철회",
 }
 CONSENT_PREVIEW_LIMIT = 6
-EDITABLE_TRANSITION_SLOT_CODES = {"lunch"}
+EDITABLE_TRANSITION_SLOT_CODES = {"b3", "lunch", "b5"}
 TRANSITION_SLOT_KIND_LABELS = {
     "break": "쉬는시간",
     "lunch": "점심시간",
@@ -259,6 +259,7 @@ def admin_dashboard(request):
         'active_classroom': classroom,
         'consent_summary': consent_summary,
         'time_slots': time_slots,
+        'editable_transition_slot_codes': sorted(EDITABLE_TRANSITION_SLOT_CODES),
         'period_rows': period_rows,
         'period_numbers': PERIOD_NUMBERS,
         'weekday_labels': WEEKDAY_LABELS,
