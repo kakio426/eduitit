@@ -247,7 +247,7 @@ function fetchJson(rawUrl) {
         method: "GET",
         headers: {
           Accept: "application/json",
-          "User-Agent": `EduititTeacherLauncher/${app.getVersion() || "0.2.1"}`,
+          "User-Agent": `EduititTeacherLauncher/${app.getVersion() || "0.2.2"}`,
         },
       },
       (response) => {
@@ -502,10 +502,34 @@ function isAllowedVideoHost(hostname) {
   );
 }
 
+function isUnexpectedVideoNavigation(targetUrl, payload) {
+  const expectedVideoId = extractYouTubeVideoId(payload && payload.youtubeUrl);
+  if (!expectedVideoId) return false;
+
+  const navigatedVideoId = extractYouTubeVideoId(targetUrl);
+  return Boolean(navigatedVideoId && navigatedVideoId !== expectedVideoId);
+}
+
+function restoreOriginalVideoWindowUrl(win, payload) {
+  if (!isSplitWindowAlive(win)) return;
+  const expectedUrl = normalizeHttpUrl(payload && payload.youtubeUrl);
+  if (!expectedUrl) return;
+
+  const currentUrl = normalizeHttpUrl(win.webContents.getURL());
+  if (currentUrl === expectedUrl) return;
+
+  win.webContents.loadURL(expectedUrl).catch((err) => {
+    console.error("[launcher-video] failed to restore original video url:", err);
+  });
+}
+
 function isAllowedNavigation(targetUrl, payload, role) {
   try {
     const parsed = new URL(targetUrl);
     if (role === "video") {
+      if (isUnexpectedVideoNavigation(targetUrl, payload)) {
+        return false;
+      }
       return isAllowedVideoHost(parsed.hostname);
     }
     const dashboardOrigin = new URL(payload.dashboardUrl).origin;
@@ -607,9 +631,22 @@ function installWindowGuards(win, payload, role) {
       handleLaunchUrl(targetUrl);
       return;
     }
+    if (role === "video" && isUnexpectedVideoNavigation(targetUrl, payload)) {
+      event.preventDefault();
+      restoreOriginalVideoWindowUrl(win, payload);
+      return;
+    }
     if (isAllowedNavigation(targetUrl, payload, role)) return;
     event.preventDefault();
   });
+  if (role === "video") {
+    const syncVideoNavigation = (_, targetUrl) => {
+      if (!isUnexpectedVideoNavigation(targetUrl, payload)) return;
+      restoreOriginalVideoWindowUrl(win, payload);
+    };
+    win.webContents.on("did-navigate", syncVideoNavigation);
+    win.webContents.on("did-navigate-in-page", syncVideoNavigation);
+  }
   win.webContents.on("context-menu", (event) => {
     event.preventDefault();
   });
@@ -1144,6 +1181,8 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
             lastRecoveryAt: 0,
             lastAdSeenAt: 0,
             sawTargetPlayback: false,
+            activeMismatchSince: 0,
+            activeMismatchVideoId: "",
           };
           window.__eduititRepeatState = repeatState;
           window.__eduititRepeatEnforcer = window.setInterval(() => {
@@ -1181,6 +1220,10 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
             if (confirmedTargetPlayback) {
               repeatState.sawTargetPlayback = true;
             }
+            if (!activeVideoId || activeVideoId === targetVideoId) {
+              repeatState.activeMismatchSince = 0;
+              repeatState.activeMismatchVideoId = "";
+            }
 
             // Ads do not change the watch URL, so a page-level video id mismatch
             // means YouTube already drifted to a different video and should be restored.
@@ -1194,6 +1237,30 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
             }
 
             if (!confirmedTargetPlayback && targetVideoId && activeVideoId && activeVideoId !== targetVideoId) {
+              if (repeatState.activeMismatchVideoId !== activeVideoId) {
+                repeatState.activeMismatchVideoId = activeVideoId;
+                repeatState.activeMismatchSince = now;
+              }
+
+              const mismatchDurationMs = repeatState.activeMismatchSince ? now - repeatState.activeMismatchSince : 0;
+              const isPlayingAnotherVideo =
+                repeatState.sawTargetPlayback &&
+                Boolean(
+                  video &&
+                    video.currentTime >= 1 &&
+                    (playerState === null || playerState === 1 || playerState === 2 || playerState === 3)
+                );
+
+              if (
+                isPlayingAnotherVideo &&
+                mismatchDurationMs >= 1500 &&
+                replayUrl &&
+                now - repeatState.lastRecoveryAt >= replayCooldownMs
+              ) {
+                repeatState.lastRecoveryAt = now;
+                repeatState.sawTargetPlayback = false;
+                window.location.replace(replayUrl);
+              }
               return;
             }
 
