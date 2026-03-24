@@ -101,14 +101,16 @@ def _build_weekly_schedule_payload(user, classroom):
             slot = slot_by_code.get(spec["code"])
             start_time = slot.start_time if slot else spec["start"]
             end_time = slot.end_time if slot else spec["end"]
-            is_period = spec["kind"] == "period"
-            period_number = spec["period"]
+            slot_kind = str(getattr(slot, "slot_kind", "") or spec["kind"]).strip() or spec["kind"]
+            slot_label = str(getattr(slot, "slot_label", "") or spec["label"]).strip() or spec["label"]
+            is_period = slot_kind == "period"
+            period_number = getattr(slot, "period_number", None) if slot else spec["period"]
             schedule_row = subject_by_day_period.get((day, period_number)) if is_period else None
 
             if is_period:
                 title = schedule_row.subject if schedule_row else f"{period_number}교시"
             else:
-                title = spec["label"]
+                title = slot_label
 
             day_rows.append(
                 {
@@ -118,8 +120,8 @@ def _build_weekly_schedule_payload(user, classroom):
                     "endTime": end_time.strftime("%H:%M"),
                     "period": period_number,
                     "slot_code": spec["code"],
-                    "slot_type": spec["kind"],
-                    "slot_label": spec["label"],
+                    "slot_type": slot_kind,
+                    "slot_label": slot_label,
                 }
             )
         weekly_schedule[str(day)] = day_rows

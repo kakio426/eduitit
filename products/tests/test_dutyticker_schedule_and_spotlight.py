@@ -37,17 +37,21 @@ class DutyTickerScheduleAndSpotlightTests(TestCase):
         session.save()
 
     def test_admin_schedule_settings_updates_slots_and_subjects(self):
+        role = DTRole.objects.create(
+            user=self.user,
+            classroom=self.classroom,
+            name="우리반 정리왕",
+            time_slot="점심시간 (4-5)",
+        )
         payload = {
             "slot_p1_start": "08:55",
             "slot_p1_end": "09:35",
+            "slot_lunch_start": "12:10",
+            "slot_lunch_end": "13:00",
+            "slot_lunch_kind": "break",
             "subject_1_1": "국어",
             "subject_1_2": "수학",
             "subject_2_1": "과학",
-            "tts_enabled": "on",
-            "tts_minutes_before": "5",
-            "tts_voice_uri": "ko-KR-TestVoice",
-            "tts_rate": "1.10",
-            "tts_pitch": "0.95",
         }
         response = self.client.post(reverse("dt_admin_update_schedule_settings"), data=payload)
         self.assertEqual(response.status_code, 302)
@@ -61,6 +65,32 @@ class DutyTickerScheduleAndSpotlightTests(TestCase):
         self.assertEqual(monday_first.start_time, time(8, 55))
         self.assertEqual(monday_first.end_time, time(9, 35))
 
+        lunch_slot = DTTimeSlot.objects.get(user=self.user, classroom=self.classroom, slot_code="lunch")
+        self.assertEqual(lunch_slot.slot_kind, "break")
+        self.assertEqual(lunch_slot.slot_label, "쉬는시간 (4-5)")
+
+        role.refresh_from_db()
+        self.assertEqual(role.time_slot, "쉬는시간 (4-5)")
+
+        api_response = self.client.get(reverse("dt_api_data"))
+        self.assertEqual(api_response.status_code, 200)
+        weekly = api_response.json()["schedule"]
+        monday_rows = weekly.get("1", [])
+        lunch_row = next(row for row in monday_rows if row.get("slot_code") == "lunch")
+        self.assertEqual(lunch_row["slot_type"], "break")
+        self.assertEqual(lunch_row["slot_label"], "쉬는시간 (4-5)")
+
+    def test_admin_tts_settings_updates_broadcast_preferences(self):
+        payload = {
+            "tts_enabled": "on",
+            "tts_minutes_before": "5",
+            "tts_voice_uri": "ko-KR-TestVoice",
+            "tts_rate": "1.10",
+            "tts_pitch": "0.95",
+        }
+        response = self.client.post(reverse("dt_admin_update_tts_settings"), data=payload)
+        self.assertEqual(response.status_code, 302)
+
         settings = DTSettings.objects.get(user=self.user, classroom=self.classroom)
         self.assertTrue(settings.tts_enabled)
         self.assertEqual(settings.tts_minutes_before, 5)
@@ -68,13 +98,8 @@ class DutyTickerScheduleAndSpotlightTests(TestCase):
         self.assertAlmostEqual(settings.tts_rate, 1.10)
         self.assertAlmostEqual(settings.tts_pitch, 0.95)
 
-        DTStudent.objects.create(user=self.user, classroom=self.classroom, name="학생A", number=1)
-        DTRole.objects.create(user=self.user, classroom=self.classroom, name="칠판 지우기", time_slot="쉬는시간")
         api_response = self.client.get(reverse("dt_api_data"))
         self.assertEqual(api_response.status_code, 200)
-        weekly = api_response.json()["schedule"]
-        monday_rows = weekly.get("1", [])
-        self.assertTrue(any(row.get("slot_type") == "lunch" for row in monday_rows))
         api_settings = api_response.json()["settings"]
         self.assertTrue(api_settings["tts_enabled"])
         self.assertEqual(api_settings["tts_minutes_before"], 5)

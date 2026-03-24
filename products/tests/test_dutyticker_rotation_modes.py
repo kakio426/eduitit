@@ -29,27 +29,36 @@ class DutyTickerRotationModeTests(TestCase):
 
         response = self.client.post(
             reverse("dt_admin_update_rotation_settings"),
-            data={"rotation_mode": "auto_random", "role_view_mode": "compact"},
+            data={"rotation_mode": "auto_random"},
         )
         self.assertEqual(response.status_code, 302)
 
         settings.refresh_from_db()
         self.assertEqual(settings.rotation_mode, "auto_random")
-        self.assertEqual(settings.role_view_mode, "compact")
         self.assertTrue(settings.auto_rotation)
         self.assertEqual(settings.rotation_frequency, "daily")
 
         response = self.client.post(
             reverse("dt_admin_update_rotation_settings"),
-            data={"rotation_mode": "manual_random", "role_view_mode": "readable"},
+            data={"rotation_mode": "manual_random"},
         )
         self.assertEqual(response.status_code, 302)
 
         settings.refresh_from_db()
         self.assertEqual(settings.rotation_mode, "manual_random")
-        self.assertEqual(settings.role_view_mode, "readable")
         self.assertFalse(settings.auto_rotation)
         self.assertIsNone(settings.last_rotation_date)
+
+    def test_update_display_settings_persists_theme_and_role_view_mode(self):
+        response = self.client.post(
+            reverse("dt_admin_update_display_settings"),
+            data={"theme": "sunny", "role_view_mode": "readable"},
+        )
+        self.assertEqual(response.status_code, 302)
+
+        settings = DTSettings.objects.get(user=self.user)
+        self.assertEqual(settings.theme, "sunny")
+        self.assertEqual(settings.role_view_mode, "readable")
 
     def test_get_data_applies_auto_rotation_once_per_day(self):
         s1 = DTStudent.objects.create(user=self.user, name="학생1", number=1)
@@ -139,12 +148,17 @@ class DutyTickerRotationModeTests(TestCase):
         assignment.refresh_from_db()
         self.assertEqual(assignment.student_id, s2.id)
 
-    def test_admin_dashboard_shows_compact_rotation_controls(self):
+    def test_admin_dashboard_groups_settings_before_data_management(self):
         response = self.client.get(reverse("dt_admin_dashboard"))
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "알림판 설정")
+        self.assertContains(response, "학급 데이터 관리")
+        self.assertContains(response, "화면 표시 저장")
         self.assertContains(response, 'id="rotationMode"')
         self.assertContains(response, "지금 1칸 순환")
-        self.assertNotContains(response, "지금 순환하기")
+        self.assertContains(response, "방송 저장")
+        self.assertContains(response, 'id="slotLunchKind"')
+        self.assertNotContains(response, "시간표와 방송 저장")
 
 
 class DutyTickerRotationCsrfTests(TestCase):

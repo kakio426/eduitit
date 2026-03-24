@@ -34,8 +34,10 @@ urlpatterns = [
     # DutyTicker Admin (Dashboard)
     path('dutyticker/admin/', dutyticker_admin_views.admin_dashboard, name='dt_admin_dashboard'),
     path('dutyticker/admin/print/', dutyticker_admin_views.print_sheet, name='dt_admin_print_sheet'),
+    path('dutyticker/admin/display-settings/', dutyticker_admin_views.update_display_settings, name='dt_admin_update_display_settings'),
     path('dutyticker/admin/rotation-settings/', dutyticker_admin_views.update_rotation_settings, name='dt_admin_update_rotation_settings'),
     path('dutyticker/admin/schedule-settings/', dutyticker_admin_views.update_schedule_settings, name='dt_admin_update_schedule_settings'),
+    path('dutyticker/admin/tts-settings/', dutyticker_admin_views.update_tts_settings, name='dt_admin_update_tts_settings'),
     path('dutyticker/admin/students/add/', dutyticker_admin_views.add_student, name='dt_admin_add_student'),
     path('dutyticker/admin/students/sync-hs/', dutyticker_admin_views.sync_students_from_hs, name='dt_admin_sync_students_from_hs'),
     path('dutyticker/admin/students/<int:pk>/delete/', dutyticker_admin_views.delete_student, name='dt_admin_delete_student'),

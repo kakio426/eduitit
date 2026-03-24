@@ -8,7 +8,7 @@
     <div class="flex justify-between items-center mb-10" data-aos="fade-down">
         <div>
             <h1 class="text-4xl md:text-5xl font-black text-gray-700 tracking-tight mb-2">설정 및 관리</h1>
-            <p class="text-xl text-gray-400 font-bold">학생 명단과 역할, 순환 규칙을 관리하세요.</p>
+            <p class="text-xl text-gray-400 font-bold">알림판 설정과 학급 데이터를 한곳에서 관리하세요.</p>
             {% if active_classroom %}
             <p class="text-sm text-indigo-500 font-bold mt-2">현재 학급: {{ active_classroom.name }}</p>
             {% endif %}
@@ -44,6 +44,319 @@
         {% endfor %}
     </div>
     {% endif %}
+
+    <section class="mb-10" data-aos="fade-up" data-aos-delay="80">
+        <div class="flex items-center gap-4 mb-6">
+            <div class="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500 text-2xl shadow-sm">
+                <i class="fa-solid fa-sliders"></i>
+            </div>
+            <div>
+                <h2 class="text-3xl font-black text-gray-700">알림판 설정</h2>
+                <p class="text-sm text-gray-500 font-bold mt-1">메인 화면은 그대로 두고, 운영에 필요한 설정만 한곳에서 정리합니다.</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+            <section class="clay-card p-8 bg-[#E0E5EC]">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="w-12 h-12 rounded-full bg-cyan-100 flex items-center justify-center text-cyan-600 text-2xl shadow-sm">
+                        <i class="fa-solid fa-display"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-black text-gray-700">화면 표시</h3>
+                        <p class="text-sm text-gray-500 font-bold mt-1">테마와 역할 표시 밀도만 따로 저장합니다.</p>
+                    </div>
+                </div>
+                <form action="{% url 'dt_admin_update_display_settings' %}" method="POST" class="space-y-5">
+                    {% csrf_token %}
+                    <div>
+                        <label class="block text-sm font-bold text-gray-600 mb-2">디자인 테마</label>
+                        <select name="theme"
+                            class="w-full px-4 py-3 rounded-xl border border-cyan-200 bg-white text-gray-700 font-bold focus:outline-none focus:ring-2 focus:ring-cyan-300">
+                            <option value="deep_space" {% if settings.theme == "deep_space" %}selected{% endif %}>딥 스페이스 (기본 다크)</option>
+                            <option value="sunny" {% if settings.theme == "sunny" %}selected{% endif %}>햇살 가득 교실 (라이트)</option>
+                            <option value="pastel" {% if settings.theme == "pastel" %}selected{% endif %}>차분한 파스텔</option>
+                            <option value="vivid" {% if settings.theme == "vivid" %}selected{% endif %}>비비드 팝 (캐주얼)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-600 mb-2">오늘의 역할 보기 모드</label>
+                        <select name="role_view_mode"
+                            class="w-full px-4 py-3 rounded-xl border border-cyan-200 bg-white text-gray-700 font-bold focus:outline-none focus:ring-2 focus:ring-cyan-300">
+                            <option value="compact" {% if settings.role_view_mode == "compact" %}selected{% endif %}>밀도형 (기본)</option>
+                            <option value="readable" {% if settings.role_view_mode == "readable" %}selected{% endif %}>가독성형 (큰 글씨)</option>
+                        </select>
+                        <p class="text-xs text-gray-500 mt-2">저장 후 메인화면을 새로고침하면 적용됩니다.</p>
+                    </div>
+                    <div class="flex justify-end">
+                        <button type="submit"
+                            class="px-5 py-3 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl font-black transition shadow-clay hover:shadow-clay-hover">
+                            화면 표시 저장
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="clay-card p-8 bg-[#E0E5EC]">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-500 text-2xl shadow-sm">
+                        <i class="fa-solid fa-rotate"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-black text-gray-700">역할 운영</h3>
+                        <p class="text-sm text-gray-500 font-bold mt-1">순환 방식과 즉시 순환을 여기서 관리합니다.</p>
+                    </div>
+                </div>
+                <form action="{% url 'dt_admin_update_rotation_settings' %}" method="POST" class="space-y-5">
+                    {% csrf_token %}
+                    <div>
+                        <label class="block text-sm font-bold text-gray-600 mb-2">역할 순환 방식</label>
+                        <select id="rotationMode" name="rotation_mode"
+                            class="w-full px-4 py-3 rounded-xl border border-purple-200 bg-white text-gray-700 font-bold focus:outline-none focus:ring-2 focus:ring-purple-300">
+                            <option value="manual_sequential" {% if settings.rotation_mode == "manual_sequential" %}selected{% endif %}>수동 순차 순환</option>
+                            <option value="manual_random" {% if settings.rotation_mode == "manual_random" %}selected{% endif %}>수동 랜덤 순환</option>
+                            <option value="auto_sequential" {% if settings.rotation_mode == "auto_sequential" %}selected{% endif %}>자동 순차 순환 (하루 1칸)</option>
+                            <option value="auto_random" {% if settings.rotation_mode == "auto_random" %}selected{% endif %}>자동 랜덤 순환 (하루 1회)</option>
+                        </select>
+                        <p class="text-xs text-gray-500 mt-2">자동 모드는 데이터를 불러올 때 하루 1회 적용됩니다.</p>
+                    </div>
+                    <div class="flex flex-wrap justify-end gap-3">
+                        <button type="button" onclick="rotateRolesNow()"
+                            class="px-4 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-black transition whitespace-nowrap flex items-center gap-2">
+                            <i class="fa-solid fa-rotate"></i>
+                            지금 1칸 순환
+                        </button>
+                        <button type="submit"
+                            class="px-5 py-3 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-xl font-black transition whitespace-nowrap">
+                            역할 운영 저장
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="clay-card p-8 bg-[#E0E5EC] xl:col-span-2">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500 text-2xl shadow-sm">
+                        <i class="fa-solid fa-calendar-days"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-black text-gray-700">시간표 설정</h3>
+                        <p class="text-sm text-gray-500 font-bold mt-1">시간 슬롯과 1~6교시 과목을 따로 저장합니다.</p>
+                    </div>
+                </div>
+                <form action="{% url 'dt_admin_update_schedule_settings' %}" method="POST" class="space-y-8">
+                    {% csrf_token %}
+                    <section class="rounded-2xl border border-indigo-100 bg-white/70 p-5">
+                        <div class="flex items-center justify-between gap-3 mb-4">
+                            <h4 class="text-lg font-black text-gray-700">시간 슬롯</h4>
+                            <p class="text-xs font-black text-gray-500">4-5 구간은 학교 운영에 맞게 쉬는시간 또는 점심시간으로 바꿀 수 있습니다.</p>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                            {% for slot in time_slots %}
+                            <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                                <div class="flex items-start justify-between gap-3 mb-3">
+                                    <div>
+                                        <p class="text-sm font-black text-gray-700">{{ slot.slot_label }}</p>
+                                        {% if slot.slot_code == 'lunch' %}
+                                        <p class="text-xs font-bold text-gray-500 mt-1">4-5 구간 종류를 바꾸면 메인 자동 동작도 함께 바뀝니다.</p>
+                                        {% endif %}
+                                    </div>
+                                    {% if slot.slot_code == 'lunch' %}
+                                    <select id="slotLunchKind" name="slot_lunch_kind"
+                                        class="min-w-[9rem] px-3 py-2 rounded-lg border border-indigo-200 bg-indigo-50 text-sm font-black text-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                                        <option value="break" {% if slot.slot_kind == 'break' %}selected{% endif %}>쉬는시간</option>
+                                        <option value="lunch" {% if slot.slot_kind == 'lunch' %}selected{% endif %}>점심시간</option>
+                                    </select>
+                                    {% endif %}
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <input
+                                        type="time"
+                                        name="slot_{{ slot.slot_code }}_start"
+                                        value="{{ slot.start_time|time:'H:i' }}"
+                                        class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                                        required
+                                    >
+                                    <span class="text-xs font-bold text-gray-400">~</span>
+                                    <input
+                                        type="time"
+                                        name="slot_{{ slot.slot_code }}_end"
+                                        value="{{ slot.end_time|time:'H:i' }}"
+                                        class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                                        required
+                                    >
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </section>
+
+                    <section class="rounded-2xl border border-indigo-100 bg-white/70 p-5">
+                        <div class="flex items-center justify-between gap-3 mb-4">
+                            <h4 class="text-lg font-black text-gray-700">시간표</h4>
+                            <p class="text-xs font-black text-gray-500">비워 두면 해당 칸은 저장하지 않습니다.</p>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full border-separate border-spacing-0 text-sm">
+                                <thead>
+                                    <tr>
+                                        <th class="px-3 py-2 text-left text-xs font-black text-gray-500">교시</th>
+                                        {% for day, label in weekday_labels %}
+                                        <th class="px-3 py-2 text-left text-xs font-black text-gray-500">{{ label }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in period_rows %}
+                                    <tr>
+                                        <td class="px-3 py-2 text-sm font-black text-gray-700">{{ row.period }}교시</td>
+                                        {% for day_cell in row.days %}
+                                        <td class="px-3 py-2">
+                                            <input
+                                                type="text"
+                                                name="subject_{{ day_cell.day }}_{{ row.period }}"
+                                                value="{{ day_cell.subject }}"
+                                                placeholder="과목 입력"
+                                                class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-bold text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                                            >
+                                        </td>
+                                        {% endfor %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                    <div class="flex justify-end">
+                        <button type="submit"
+                            class="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black transition shadow-clay hover:shadow-clay-hover">
+                            시간표 저장
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="clay-card p-8 bg-[#E0E5EC] xl:col-span-2">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 text-2xl shadow-sm">
+                        <i class="fa-solid fa-volume-high"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-black text-gray-700">교시 안내 방송</h3>
+                        <p class="text-sm text-gray-500 font-bold mt-1">방송 설정은 시간표와 분리해서 따로 저장합니다.</p>
+                    </div>
+                </div>
+                <form action="{% url 'dt_admin_update_tts_settings' %}" method="POST" class="space-y-6">
+                    {% csrf_token %}
+                    <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+                        <div class="xl:max-w-md">
+                            <div class="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
+                                <p class="text-xs font-black uppercase tracking-[0.16em] text-emerald-600">미리보기</p>
+                                <p class="mt-2 text-sm font-bold text-gray-600">{{ tts_preview_source_label }}</p>
+                                <textarea id="dtTtsPreviewText" rows="3" readonly
+                                    class="mt-3 w-full rounded-xl border border-emerald-200 bg-white px-4 py-3 text-base font-bold leading-7 text-gray-700 focus:outline-none"
+                                >{{ tts_preview_row.announcement_text|default:"1교시 5분 전입니다. 1교시는 과학입니다!" }}</textarea>
+                                <div class="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm">
+                                    <p class="font-bold text-emerald-700">
+                                        {% if tts_preview_row %}
+                                        다음 방송 {{ tts_preview_row.announce_time_label }} · {{ tts_preview_row.period_label }} {{ tts_preview_row.subject }}
+                                        {% else %}
+                                        시간표를 저장하면 자동으로 미리보기가 바뀝니다.
+                                        {% endif %}
+                                    </p>
+                                    <p id="dtTtsPreviewStatus" class="text-gray-500">미리 듣기 준비 완료</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="grid flex-1 grid-cols-1 gap-4 md:grid-cols-2">
+                            <label class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+                                <span class="flex items-center gap-3">
+                                    <input type="checkbox" name="tts_enabled"
+                                        class="h-5 w-5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-400"
+                                        {% if settings.tts_enabled %}checked{% endif %}>
+                                    <span>
+                                        <span class="block text-sm font-black text-gray-700">교시 시작 전에 자동으로 읽기</span>
+                                        <span class="mt-1 block text-xs font-bold text-gray-500">수업 직전 안내 방송을 자동으로 시작합니다.</span>
+                                    </span>
+                                </span>
+                            </label>
+                            <label class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+                                <span class="block text-sm font-black text-gray-700">언제 읽을까요?</span>
+                                <span class="mt-1 block text-xs font-bold text-gray-500">보통은 5분 전이 가장 편합니다.</span>
+                                <select name="tts_minutes_before"
+                                    class="mt-3 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-300">
+                                    {% for choice in tts_minutes_choices %}
+                                    <option value="{{ choice }}" {% if settings.tts_minutes_before == choice %}selected{% endif %}>
+                                        {% if choice == 0 %}시작 시각에 읽기{% else %}{{ choice }}분 전{% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <label class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+                                <span class="block text-sm font-black text-gray-700">목소리</span>
+                                <span class="mt-1 block text-xs font-bold text-gray-500">브라우저에 있는 한국어 목소리를 우선 보여 줍니다.</span>
+                                <select id="dtTtsVoiceSelect" name="tts_voice_uri" data-saved-voice="{{ settings.tts_voice_uri }}"
+                                    class="mt-3 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-300">
+                                    <option value="">기본 목소리</option>
+                                    {% if settings.tts_voice_uri %}
+                                    <option value="{{ settings.tts_voice_uri }}" selected>{{ settings.tts_voice_uri }}</option>
+                                    {% endif %}
+                                </select>
+                            </label>
+                            <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+                                <div>
+                                    <label for="dtTtsRateInput" class="block text-sm font-black text-gray-700">속도</label>
+                                    <div class="mt-2 flex items-center gap-3">
+                                        <input id="dtTtsRateInput" type="range" min="0.7" max="1.3" step="0.05"
+                                            name="tts_rate" value="{{ settings.tts_rate|floatformat:2 }}" data-dt-tts-rate class="w-full accent-emerald-500">
+                                        <span data-dt-tts-rate-output class="min-w-[3.5rem] text-right text-sm font-black text-emerald-700">{{ settings.tts_rate|floatformat:2 }}배</span>
+                                    </div>
+                                </div>
+                                <div class="mt-4">
+                                    <label for="dtTtsPitchInput" class="block text-sm font-black text-gray-700">높낮이</label>
+                                    <div class="mt-2 flex items-center gap-3">
+                                        <input id="dtTtsPitchInput" type="range" min="0.8" max="1.2" step="0.05"
+                                            name="tts_pitch" value="{{ settings.tts_pitch|floatformat:2 }}" data-dt-tts-pitch class="w-full accent-emerald-500">
+                                        <span data-dt-tts-pitch-output class="min-w-[3.5rem] text-right text-sm font-black text-emerald-700">{{ settings.tts_pitch|floatformat:2 }}배</span>
+                                    </div>
+                                </div>
+                                <div class="mt-4 flex flex-wrap gap-2">
+                                    <button type="button" id="dtTtsPreviewBtn"
+                                        class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-emerald-500">
+                                        <i class="fa-solid fa-volume-high"></i>
+                                        미리 듣기
+                                    </button>
+                                    <button type="button" id="dtTtsStopBtn"
+                                        class="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-black text-gray-700 transition hover:bg-gray-50">
+                                        <i class="fa-solid fa-stop"></i>
+                                        중지
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex justify-end">
+                        <button type="submit"
+                            class="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black transition shadow-clay hover:shadow-clay-hover">
+                            방송 저장
+                        </button>
+                    </div>
+                </form>
+            </section>
+        </div>
+    </section>
+
+    <section data-aos="fade-up" data-aos-delay="120">
+        <div class="flex items-center gap-4 mb-6">
+            <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 text-2xl shadow-sm">
+                <i class="fa-solid fa-users-gear"></i>
+            </div>
+            <div>
+                <h2 class="text-3xl font-black text-gray-700">학급 데이터 관리</h2>
+                <p class="text-sm text-gray-500 font-bold mt-1">학생 명단과 역할 목록은 아래에서 그대로 관리합니다.</p>
+            </div>
+        </div>
+    </section>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
         <!-- Student Management -->
@@ -239,66 +552,13 @@
             </div>
 
             <div class="mb-8 p-4 rounded-2xl bg-white/70 border border-purple-100 shadow-sm">
-                <form action="{% url 'dt_admin_update_rotation_settings' %}" method="POST" class="space-y-4">
-                    {% csrf_token %}
-                    <div>
-                        <label class="block text-sm font-bold text-gray-600 mb-2">역할 순환 방식</label>
-                        <div class="flex flex-col md:flex-row gap-3">
-                            <select id="rotationMode" name="rotation_mode"
-                                class="flex-1 px-4 py-3 rounded-xl border border-purple-200 bg-white text-gray-700 font-bold focus:outline-none focus:ring-2 focus:ring-purple-300">
-                                <option value="manual_sequential" {% if settings.rotation_mode == "manual_sequential" %}selected{% endif %}>수동 순차 순환</option>
-                                <option value="manual_random" {% if settings.rotation_mode == "manual_random" %}selected{% endif %}>수동 랜덤 순환</option>
-                                <option value="auto_sequential" {% if settings.rotation_mode == "auto_sequential" %}selected{% endif %}>자동 순차 순환 (하루 1칸)</option>
-                                <option value="auto_random" {% if settings.rotation_mode == "auto_random" %}selected{% endif %}>자동 랜덤 순환 (하루 1회)</option>
-                            </select>
-                            <div class="flex gap-2">
-                                <button type="button" onclick="rotateRolesNow()"
-                                    class="px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold transition whitespace-nowrap flex items-center gap-2">
-                                    <i class="fa-solid fa-rotate"></i>
-                                    지금 1칸 순환
-                                </button>
-                            </div>
-                        </div>
-                        <p class="text-xs text-gray-500 mt-2">
-                            자동 모드는 데이터를 불러올 때 하루 1회 적용됩니다. 수동 모드에서는 버튼을 눌렀을 때만 순환됩니다.
-                        </p>
-                    </div>
-
-                    <div class="border-t border-purple-100 pt-4">
-                        <label class="block text-sm font-bold text-gray-600 mb-2">디자인 테마</label>
-                        <div class="flex flex-col md:flex-row gap-3">
-                            <select name="theme"
-                                class="flex-1 px-4 py-3 rounded-xl border border-purple-200 bg-white text-gray-700 font-bold focus:outline-none focus:ring-2 focus:ring-purple-300">
-                                <option value="deep_space" {% if settings.theme == "deep_space" %}selected{% endif %}>딥 스페이스 (기본 다크)</option>
-                                <option value="sunny" {% if settings.theme == "sunny" %}selected{% endif %}>햇살 가득 교실 (라이트)</option>
-                                <option value="pastel" {% if settings.theme == "pastel" %}selected{% endif %}>차분한 파스텔</option>
-                                <option value="vivid" {% if settings.theme == "vivid" %}selected{% endif %}>비비드 팝 (캐주얼)</option>
-                            </select>
-                            <div class="flex gap-2">
-                                <button type="submit"
-                                    class="px-4 py-2.5 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-xl font-bold transition whitespace-nowrap">
-                                    설정 저장
-                                </button>
-                            </div>
-                        </div>
-                        <div class="mt-3">
-                            <label class="block text-sm font-bold text-gray-600 mb-2">오늘의 역할 보기 모드</label>
-                            <select name="role_view_mode"
-                                class="w-full px-4 py-3 rounded-xl border border-purple-200 bg-white text-gray-700 font-bold focus:outline-none focus:ring-2 focus:ring-purple-300">
-                                <option value="compact" {% if settings.role_view_mode == "compact" %}selected{% endif %}>밀도형 (기본)</option>
-                                <option value="readable" {% if settings.role_view_mode == "readable" %}selected{% endif %}>가독성형 (큰 글씨)</option>
-                            </select>
-                        </div>
-                        <p class="text-xs text-gray-500 mt-2">
-                            저장 후 메인화면을 새로고침하면 적용됩니다.
-                        </p>
-                    </div>
-                </form>
+                <p class="text-sm font-bold text-gray-600">역할의 순환 방식과 화면 표시는 위 알림판 설정에서 저장합니다.</p>
+                <p class="text-xs text-gray-500 mt-2">이곳에서는 역할 목록 자체만 간단하게 추가하고 정리합니다.</p>
             </div>
 
             <form action="{% url 'dt_admin_add_role' %}" method="POST" class="mb-8 space-y-4">
                 {% csrf_token %}
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-bold text-gray-500 mb-2 ml-2">역할 이름</label>
                         <input type="text" name="name"
@@ -366,247 +626,6 @@
         </div>
     </div>
 
-    <div class="mt-10 clay-card p-8 bg-[#E0E5EC]" data-aos="fade-up" data-aos-delay="260">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-            <div class="flex items-center gap-4">
-                <div class="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500 text-2xl shadow-sm">
-                    <i class="fa-solid fa-calendar-days"></i>
-                </div>
-                <div>
-                    <h2 class="text-3xl font-bold text-gray-700">시간표 설정</h2>
-                    <p class="text-sm text-gray-500 font-bold mt-1">시간 슬롯(쉬는시간·점심시간 포함)과 1~6교시 과목을 설정하세요.</p>
-                </div>
-            </div>
-            <button
-                type="button"
-                id="scheduleSettingsToggleBtn"
-                class="self-start md:self-auto inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white text-indigo-600 border border-indigo-200 font-black hover:bg-indigo-50 transition"
-                aria-expanded="true"
-                aria-controls="scheduleSettingsPanel"
-            >
-                <span id="scheduleSettingsToggleLabel">접기</span>
-                <i id="scheduleSettingsToggleIcon" class="fa-solid fa-chevron-up text-xs"></i>
-            </button>
-        </div>
-
-        <div id="scheduleSettingsPanel">
-            <form action="{% url 'dt_admin_update_schedule_settings' %}" method="POST" class="space-y-8">
-                {% csrf_token %}
-
-                <section class="rounded-2xl border border-indigo-100 bg-white/70 p-5">
-                    <h3 class="text-lg font-black text-gray-700 mb-4">시간 슬롯</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                        {% for slot in time_slots %}
-                        <div class="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
-                            <p class="text-sm font-black text-gray-700 mb-2">{{ slot.slot_label }}</p>
-                            <div class="flex items-center gap-2">
-                                <input
-                                    type="time"
-                                    name="slot_{{ slot.slot_code }}_start"
-                                    value="{{ slot.start_time|time:'H:i' }}"
-                                    class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                                    required
-                                >
-                                <span class="text-xs font-bold text-gray-400">~</span>
-                                <input
-                                    type="time"
-                                    name="slot_{{ slot.slot_code }}_end"
-                                    value="{{ slot.end_time|time:'H:i' }}"
-                                    class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                                    required
-                                >
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </section>
-
-                <section class="rounded-2xl border border-indigo-100 bg-white/70 p-5">
-                    <h3 class="text-lg font-black text-gray-700 mb-4">시간표</h3>
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full border-separate border-spacing-0 text-sm">
-                            <thead>
-                                <tr>
-                                    <th class="px-3 py-2 text-left text-xs font-black text-gray-500">교시</th>
-                                    {% for day, label in weekday_labels %}
-                                    <th class="px-3 py-2 text-left text-xs font-black text-gray-500">{{ label }}</th>
-                                    {% endfor %}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for row in period_rows %}
-                                <tr>
-                                    <td class="px-3 py-2 text-sm font-black text-gray-700">{{ row.period }}교시</td>
-                                    {% for day_cell in row.days %}
-                                    <td class="px-3 py-2">
-                                        <input
-                                            type="text"
-                                            name="subject_{{ day_cell.day }}_{{ row.period }}"
-                                            value="{{ day_cell.subject }}"
-                                            placeholder="과목 입력"
-                                            class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-bold text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                                        >
-                                    </td>
-                                    {% endfor %}
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
-
-                <section class="rounded-2xl border border-indigo-100 bg-white/70 p-5">
-                    <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-                        <div class="xl:max-w-md">
-                            <h3 class="text-lg font-black text-gray-700">교시 안내 방송</h3>
-                            <p class="mt-2 text-sm font-bold text-gray-500">
-                                알림판 메인 화면이 켜져 있으면, 설정한 시각에 교시 안내를 자동으로 읽습니다.
-                            </p>
-
-                            <div class="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
-                                <p class="text-xs font-black uppercase tracking-[0.16em] text-emerald-600">미리보기</p>
-                                <p class="mt-2 text-sm font-bold text-gray-600">{{ tts_preview_source_label }}</p>
-                                <textarea
-                                    id="dtTtsPreviewText"
-                                    rows="3"
-                                    readonly
-                                    class="mt-3 w-full rounded-xl border border-emerald-200 bg-white px-4 py-3 text-base font-bold leading-7 text-gray-700 focus:outline-none"
-                                >{{ tts_preview_row.announcement_text|default:"1교시 5분 전입니다. 1교시는 과학입니다!" }}</textarea>
-                                <div class="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm">
-                                    <p class="font-bold text-emerald-700">
-                                        {% if tts_preview_row %}
-                                        다음 방송 {{ tts_preview_row.announce_time_label }} · {{ tts_preview_row.period_label }} {{ tts_preview_row.subject }}
-                                        {% else %}
-                                        시간표를 저장하면 자동으로 미리보기가 바뀝니다.
-                                        {% endif %}
-                                    </p>
-                                    <p id="dtTtsPreviewStatus" class="text-gray-500">미리 듣기 준비 완료</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="grid flex-1 grid-cols-1 gap-4 md:grid-cols-2">
-                            <label class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-                                <span class="flex items-center gap-3">
-                                    <input
-                                        type="checkbox"
-                                        name="tts_enabled"
-                                        class="h-5 w-5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-400"
-                                        {% if settings.tts_enabled %}checked{% endif %}
-                                    >
-                                    <span>
-                                        <span class="block text-sm font-black text-gray-700">교시 시작 전에 자동으로 읽기</span>
-                                        <span class="mt-1 block text-xs font-bold text-gray-500">수업 직전 안내 방송을 자동으로 시작합니다.</span>
-                                    </span>
-                                </span>
-                            </label>
-
-                            <label class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-                                <span class="block text-sm font-black text-gray-700">언제 읽을까요?</span>
-                                <span class="mt-1 block text-xs font-bold text-gray-500">보통은 5분 전이 가장 편합니다.</span>
-                                <select
-                                    name="tts_minutes_before"
-                                    class="mt-3 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-300"
-                                >
-                                    {% for choice in tts_minutes_choices %}
-                                    <option value="{{ choice }}" {% if settings.tts_minutes_before == choice %}selected{% endif %}>
-                                        {% if choice == 0 %}시작 시각에 읽기{% else %}{{ choice }}분 전{% endif %}
-                                    </option>
-                                    {% endfor %}
-                                </select>
-                            </label>
-
-                            <label class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-                                <span class="block text-sm font-black text-gray-700">목소리</span>
-                                <span class="mt-1 block text-xs font-bold text-gray-500">브라우저에 있는 한국어 목소리를 우선 보여 줍니다.</span>
-                                <select
-                                    id="dtTtsVoiceSelect"
-                                    name="tts_voice_uri"
-                                    data-saved-voice="{{ settings.tts_voice_uri }}"
-                                    class="mt-3 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-300"
-                                >
-                                    <option value="">기본 목소리</option>
-                                    {% if settings.tts_voice_uri %}
-                                    <option value="{{ settings.tts_voice_uri }}" selected>{{ settings.tts_voice_uri }}</option>
-                                    {% endif %}
-                                </select>
-                            </label>
-
-                            <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-                                <div>
-                                    <label for="dtTtsRateInput" class="block text-sm font-black text-gray-700">속도</label>
-                                    <div class="mt-2 flex items-center gap-3">
-                                        <input
-                                            id="dtTtsRateInput"
-                                            type="range"
-                                            min="0.7"
-                                            max="1.3"
-                                            step="0.05"
-                                            name="tts_rate"
-                                            value="{{ settings.tts_rate|floatformat:2 }}"
-                                            data-dt-tts-rate
-                                            class="w-full accent-emerald-500"
-                                        >
-                                        <span data-dt-tts-rate-output class="min-w-[3.5rem] text-right text-sm font-black text-emerald-700">
-                                            {{ settings.tts_rate|floatformat:2 }}배
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div class="mt-4">
-                                    <label for="dtTtsPitchInput" class="block text-sm font-black text-gray-700">높낮이</label>
-                                    <div class="mt-2 flex items-center gap-3">
-                                        <input
-                                            id="dtTtsPitchInput"
-                                            type="range"
-                                            min="0.8"
-                                            max="1.2"
-                                            step="0.05"
-                                            name="tts_pitch"
-                                            value="{{ settings.tts_pitch|floatformat:2 }}"
-                                            data-dt-tts-pitch
-                                            class="w-full accent-emerald-500"
-                                        >
-                                        <span data-dt-tts-pitch-output class="min-w-[3.5rem] text-right text-sm font-black text-emerald-700">
-                                            {{ settings.tts_pitch|floatformat:2 }}배
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div class="mt-4 flex flex-wrap gap-2">
-                                    <button
-                                        type="button"
-                                        id="dtTtsPreviewBtn"
-                                        class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-emerald-500"
-                                    >
-                                        <i class="fa-solid fa-volume-high"></i>
-                                        미리 듣기
-                                    </button>
-                                    <button
-                                        type="button"
-                                        id="dtTtsStopBtn"
-                                        class="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-black text-gray-700 transition hover:bg-gray-50"
-                                    >
-                                        <i class="fa-solid fa-stop"></i>
-                                        중지
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <div class="flex justify-end">
-                    <button
-                        type="submit"
-                        class="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black transition shadow-clay hover:shadow-clay-hover"
-                    >
-                        시간표와 방송 저장
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
 </div>
 
 <script>
@@ -638,42 +657,6 @@
             console.error(e);
             alert('서버 통신 오류');
         }
-    }
-
-    function initScheduleSettingsCollapse() {
-        const panel = document.getElementById('scheduleSettingsPanel');
-        const button = document.getElementById('scheduleSettingsToggleBtn');
-        const label = document.getElementById('scheduleSettingsToggleLabel');
-        const icon = document.getElementById('scheduleSettingsToggleIcon');
-        if (!panel || !button || !label || !icon) return;
-
-        const storageKey = 'dt-admin-schedule-settings-collapsed';
-
-        const applyState = (collapsed) => {
-            panel.classList.toggle('hidden', collapsed);
-            label.textContent = collapsed ? '펼치기' : '접기';
-            icon.classList.toggle('fa-chevron-down', collapsed);
-            icon.classList.toggle('fa-chevron-up', !collapsed);
-            button.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-        };
-
-        let collapsed = false;
-        try {
-            collapsed = localStorage.getItem(storageKey) === '1';
-        } catch (_error) {
-            collapsed = false;
-        }
-        applyState(collapsed);
-
-        button.addEventListener('click', () => {
-            const nextCollapsed = !panel.classList.contains('hidden');
-            try {
-                localStorage.setItem(storageKey, nextCollapsed ? '1' : '0');
-            } catch (_error) {
-                // localStorage unavailable: keep UI toggle only
-            }
-            applyState(nextCollapsed);
-        });
     }
 
     function initTtsSettingsPreview() {
@@ -785,7 +768,6 @@
     }
 
     function bootAdminDashboardHelpers() {
-        initScheduleSettingsCollapse();
         initTtsSettingsPreview();
     }
 

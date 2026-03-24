@@ -26,6 +26,11 @@ CONSENT_STATUS_LABELS = {
     "withdrawn": "철회",
 }
 CONSENT_PREVIEW_LIMIT = 6
+EDITABLE_TRANSITION_SLOT_CODES = {"lunch"}
+TRANSITION_SLOT_KIND_LABELS = {
+    "break": "쉬는시간",
+    "lunch": "점심시간",
+}
 
 
 def _ensure_time_slots_for_scope(user, classroom):
@@ -50,6 +55,62 @@ def _ensure_time_slots_for_scope(user, classroom):
         )
 
     return list(apply_classroom_scope(DTTimeSlot.objects.filter(user=user), classroom).order_by("slot_order", "id"))
+
+
+def _build_slot_label(spec, slot_kind=None):
+    resolved_kind = str(slot_kind or spec["kind"]).strip() or spec["kind"]
+    if resolved_kind == "period":
+        return spec["label"]
+
+    base_label = TRANSITION_SLOT_KIND_LABELS.get(resolved_kind)
+    if not base_label:
+        return spec["label"]
+
+    source_label = str(spec.get("label") or "").strip()
+    transition_suffix = ""
+    if "(" in source_label:
+        start = source_label.find("(")
+        end = source_label.find(")", start)
+        if end != -1:
+            transition_suffix = f" {source_label[start:end + 1]}"
+    return f"{base_label}{transition_suffix}".strip()
+
+
+def _get_transition_slot_kind(spec, slot, raw_value):
+    current_kind = str(getattr(slot, "slot_kind", "") or spec["kind"]).strip() or spec["kind"]
+    if spec["code"] not in EDITABLE_TRANSITION_SLOT_CODES:
+        return current_kind
+
+    selected_kind = str(raw_value or "").strip() or current_kind
+    if selected_kind not in TRANSITION_SLOT_KIND_LABELS:
+        return current_kind if current_kind in TRANSITION_SLOT_KIND_LABELS else spec["kind"]
+    return selected_kind
+
+
+def _sync_role_time_slot_labels(user, classroom, renamed_labels):
+    normalized_map = {
+        str(old_label or "").strip(): str(new_label or "").strip()
+        for old_label, new_label in renamed_labels.items()
+        if str(old_label or "").strip() and str(old_label or "").strip() != str(new_label or "").strip()
+    }
+    if not normalized_map:
+        return 0
+
+    roles = apply_classroom_scope(
+        DTRole.objects.filter(user=user, time_slot__in=list(normalized_map.keys())),
+        classroom,
+    )
+    updated_roles = []
+    for role in roles:
+        next_label = normalized_map.get(str(role.time_slot or "").strip())
+        if not next_label or role.time_slot == next_label:
+            continue
+        role.time_slot = next_label
+        updated_roles.append(role)
+
+    if updated_roles:
+        DTRole.objects.bulk_update(updated_roles, ["time_slot"])
+    return len(updated_roles)
 
 
 def _build_period_subject_rows(user, classroom):
@@ -222,40 +283,55 @@ def update_rotation_settings(request):
         else:
             settings.last_rotation_date = None
             
-    selected_theme = (request.POST.get("theme") or "").strip()
-    valid_themes = {choice[0] for choice in DTSettings.THEME_CHOICES}
-    if selected_theme in valid_themes:
-        settings.theme = selected_theme
-
-    selected_role_view_mode = (request.POST.get("role_view_mode") or "").strip()
-    valid_role_view_modes = {choice[0] for choice in DTSettings.ROLE_VIEW_MODE_CHOICES}
-    if selected_role_view_mode in valid_role_view_modes:
-        settings.role_view_mode = selected_role_view_mode
-
     settings.save(
         update_fields=[
             "rotation_mode",
             "auto_rotation",
             "rotation_frequency",
             "last_rotation_date",
-            "theme",
-            "role_view_mode",
         ]
     )
+    messages.success(request, "역할 운영 저장 완료")
 
     return redirect('dt_admin_dashboard')
 
 
 @login_required
 @require_http_methods(["POST"])
-def update_schedule_settings(request):
+def update_display_settings(request):
     classroom = get_active_classroom_for_request(request)
     settings, _ = get_or_create_settings_for_scope(request.user, classroom)
+    updated_fields = []
+
+    selected_theme = (request.POST.get("theme") or "").strip()
+    valid_themes = {choice[0] for choice in DTSettings.THEME_CHOICES}
+    if selected_theme in valid_themes and settings.theme != selected_theme:
+        settings.theme = selected_theme
+        updated_fields.append("theme")
+
+    selected_role_view_mode = (request.POST.get("role_view_mode") or "").strip()
+    valid_role_view_modes = {choice[0] for choice in DTSettings.ROLE_VIEW_MODE_CHOICES}
+    if selected_role_view_mode in valid_role_view_modes and settings.role_view_mode != selected_role_view_mode:
+        settings.role_view_mode = selected_role_view_mode
+        updated_fields.append("role_view_mode")
+
+    if updated_fields:
+        settings.save(update_fields=updated_fields)
+
+    messages.success(request, "화면 표시 저장 완료")
+    return redirect("dt_admin_dashboard")
+
+
+@login_required
+@require_http_methods(["POST"])
+def update_schedule_settings(request):
+    classroom = get_active_classroom_for_request(request)
     time_slots = _ensure_time_slots_for_scope(request.user, classroom)
     slot_map = {slot.slot_code: slot for slot in time_slots}
 
     updated_slots = []
     invalid_slots = []
+    renamed_labels = {}
     for spec in SLOT_LAYOUT:
         slot = slot_map.get(spec["code"])
         if not slot:
@@ -264,16 +340,34 @@ def update_schedule_settings(request):
         start_time = _parse_time_value(request.POST.get(f"slot_{spec['code']}_start"))
         end_time = _parse_time_value(request.POST.get(f"slot_{spec['code']}_end"))
         if not start_time or not end_time or start_time >= end_time:
-            invalid_slots.append(spec["label"])
+            invalid_slots.append(slot.slot_label or spec["label"])
             continue
 
-        if slot.start_time != start_time or slot.end_time != end_time:
+        next_slot_kind = _get_transition_slot_kind(spec, slot, request.POST.get(f"slot_{spec['code']}_kind"))
+        next_slot_label = _build_slot_label(spec, next_slot_kind)
+        did_change = False
+
+        if slot.start_time != start_time:
             slot.start_time = start_time
+            did_change = True
+        if slot.end_time != end_time:
             slot.end_time = end_time
+            did_change = True
+        if slot.slot_kind != next_slot_kind:
+            slot.slot_kind = next_slot_kind
+            did_change = True
+        if slot.slot_label != next_slot_label:
+            renamed_labels[slot.slot_label] = next_slot_label
+            slot.slot_label = next_slot_label
+            did_change = True
+
+        if did_change:
             updated_slots.append(slot)
 
     if updated_slots:
-        DTTimeSlot.objects.bulk_update(updated_slots, ["start_time", "end_time"])
+        DTTimeSlot.objects.bulk_update(updated_slots, ["start_time", "end_time", "slot_kind", "slot_label"])
+
+    synced_role_count = _sync_role_time_slot_labels(request.user, classroom, renamed_labels)
 
     slot_map = {
         slot.slot_code: slot
@@ -315,6 +409,28 @@ def update_schedule_settings(request):
         invalid_text = ", ".join(invalid_slots)
         messages.error(request, f"시간 설정 오류: {invalid_text}의 시작 시간은 종료 시간보다 빨라야 합니다.")
 
+    summary_bits = [
+        f"과목 {saved_subject_count}개 저장",
+        f"비운 칸 {deleted_subject_count}개 반영",
+        f"시간 슬롯 {len(updated_slots)}개 수정",
+    ]
+    if synced_role_count:
+        summary_bits.append(f"역할 시간 {synced_role_count}개 동기화")
+
+    messages.success(
+        request,
+        f"시간표 저장 완료: {', '.join(summary_bits)}",
+    )
+
+    return redirect("dt_admin_dashboard")
+
+
+@login_required
+@require_http_methods(["POST"])
+def update_tts_settings(request):
+    classroom = get_active_classroom_for_request(request)
+    settings, _ = get_or_create_settings_for_scope(request.user, classroom)
+
     settings.tts_enabled = request.POST.get("tts_enabled") == "on"
     settings.tts_minutes_before = _parse_int_in_range(
         request.POST.get("tts_minutes_before"),
@@ -341,11 +457,7 @@ def update_schedule_settings(request):
     if settings.tts_enabled:
         tts_state_text = f"교시 안내 방송 켜짐 ({settings.tts_minutes_before}분 전)"
 
-    messages.success(
-        request,
-        f"시간표 저장 완료: 과목 {saved_subject_count}개 저장, 비운 칸 {deleted_subject_count}개 반영, 시간 슬롯 {len(updated_slots)}개 수정 / {tts_state_text}",
-    )
-
+    messages.success(request, f"교시 안내 방송 저장 완료: {tts_state_text}")
     return redirect("dt_admin_dashboard")
 
 @login_required
