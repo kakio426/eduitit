@@ -436,6 +436,7 @@ class ManualPipelineApiTest(TestCase):
                 "ARTCLASS_LAUNCHER_DOWNLOAD_URL": "https://downloads.eduitit.com/launcher/Eduitit-Teacher-Launcher-Setup-0.2.0.exe",
                 "ARTCLASS_LAUNCHER_UPDATE_BASE_URL": "https://downloads.eduitit.com/launcher/windows",
                 "ARTCLASS_LAUNCHER_BRIDGE_VERSION": "0.2.0",
+                "ARTCLASS_LAUNCHER_MINIMUM_REQUIRED_VERSION": "",
                 "ARTCLASS_LAUNCHER_BRIDGE_NOTICE": "이미 설치했다면 이번 한 번만 다시 설치해 주세요.",
             },
             clear=False,
@@ -450,7 +451,27 @@ class ManualPipelineApiTest(TestCase):
         )
         self.assertEqual(payload["updateBaseUrl"], "https://downloads.eduitit.com/launcher/windows/")
         self.assertEqual(payload["bridgeVersion"], "0.2.0")
+        self.assertEqual(payload["latestVersion"], "0.2.0")
+        self.assertEqual(payload["minimumRequiredVersion"], "0.2.0")
         self.assertEqual(payload["bridgeNotice"], "이미 설치했다면 이번 한 번만 다시 설치해 주세요.")
+
+    def test_launcher_release_config_api_allows_minimum_required_version_override(self):
+        with patch.dict(
+            os.environ,
+            {
+                "ARTCLASS_LAUNCHER_DOWNLOAD_URL": "https://downloads.eduitit.com/launcher/Eduitit-Teacher-Launcher-Setup-0.2.0.exe",
+                "ARTCLASS_LAUNCHER_UPDATE_BASE_URL": "https://downloads.eduitit.com/launcher/windows",
+                "ARTCLASS_LAUNCHER_BRIDGE_VERSION": "0.2.0",
+                "ARTCLASS_LAUNCHER_MINIMUM_REQUIRED_VERSION": "0.2.4",
+            },
+            clear=False,
+        ):
+            response = self.client.get(reverse("artclass:launcher_release_config_api"))
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["latestVersion"], "0.2.0")
+        self.assertEqual(payload["minimumRequiredVersion"], "0.2.4")
 
     def test_launcher_release_config_api_prefers_bucket_release_urls_over_env_values(self):
         current_release = {
@@ -478,6 +499,8 @@ class ManualPipelineApiTest(TestCase):
             "http://testserver/artclass/launcher-updates/windows/Eduitit%20Teacher%20Launcher%20Setup%200.2.0.exe",
         )
         self.assertEqual(payload["updateBaseUrl"], "http://testserver/artclass/launcher-updates/windows/")
+        self.assertEqual(payload["latestVersion"], "0.2.0")
+        self.assertEqual(payload["minimumRequiredVersion"], "0.2.0")
 
     def test_launcher_release_config_api_uses_bucket_release_urls_when_env_missing(self):
         current_release = {
@@ -509,6 +532,8 @@ class ManualPipelineApiTest(TestCase):
             "http://testserver/artclass/launcher-updates/windows/",
         )
         self.assertEqual(payload["bridgeVersion"], "0.2.0")
+        self.assertEqual(payload["latestVersion"], "0.2.0")
+        self.assertEqual(payload["minimumRequiredVersion"], "0.2.0")
 
     def test_launcher_update_index_view_returns_current_release_urls(self):
         current_release = {
@@ -525,6 +550,8 @@ class ManualPipelineApiTest(TestCase):
         payload = response.json()
         self.assertTrue(payload["available"])
         self.assertEqual(payload["version"], "0.2.0")
+        self.assertEqual(payload["latestVersion"], "0.2.0")
+        self.assertEqual(payload["minimumRequiredVersion"], "0.2.0")
         self.assertEqual(
             payload["latestYmlUrl"],
             "http://testserver/artclass/launcher-updates/windows/latest.yml",
@@ -583,6 +610,7 @@ class ManualPipelineApiTest(TestCase):
         self.assertContains(response, "설치 후 이 수업 시작")
         self.assertContains(response, "Bridge 0.2.0")
         self.assertContains(response, "이미 런처를 설치했다면 이번 한 번은 새 설치파일로 다시 설치해 주세요. 이후부터는 자동 업데이트됩니다.")
+        self.assertContains(response, "수업 시작 전에 런처가 자동으로 업데이트를 마치고 같은 수업으로 다시 이어집니다.")
         self.assertContains(response, "Windows 보호 화면이 나오면")
         self.assertContains(response, "추가 정보")
         self.assertContains(response, "학교 PC 정책으로 실행이 막히면 관리자에게 런처 설치 허용을 요청하면 됩니다.")

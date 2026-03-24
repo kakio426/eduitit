@@ -115,13 +115,15 @@
      - `latest.yml`
      - `Eduitit Teacher Launcher Setup <version>.exe`
      - `Eduitit Teacher Launcher Setup <version>.exe.blockmap`
-- 중요한 운영 판단:
-  - `main` push만으로는 기존 교사 PC의 설치형 런처가 바뀌지 않는다.
-  - `0.2.0+` 브릿지 설치자는 새 릴리스 업로드 후 자동 업데이트 대상이다.
-  - 브릿지 이전 설치자는 이번 한 번 재설치가 필요할 수 있다.
+  - 중요한 운영 판단:
+    - `main` push만으로는 기존 교사 PC의 설치형 런처가 바뀌지 않는다.
+    - `0.2.0+` 브릿지 설치자는 새 릴리스 업로드 후 자동 업데이트 대상이다.
+    - 브릿지 이전 설치자는 이번 한 번 재설치가 필요할 수 있다.
+    - `0.2.4+`부터는 수업 실행 전에 `minimumRequiredVersion`을 먼저 확인하고, 부족하면 자동 업데이트 후 같은 수업을 다시 연다.
+    - 따라서 새 버전 업로드 시 `minimumRequiredVersion` 기본값은 최신 업로드 버전과 같다고 보고 운영한다.
 - 런처 다운로드/업데이트 경로 SSOT:
   - 교사용 설치 링크와 auto-update base는 항상 `eduitit.site/artclass/launcher-updates/windows/...`
-  - 구글드라이브 링크는 fallback이나 임시 공유에만 쓰고, 정식 설치 경로로 되돌리지 않는다.
+    - 구글드라이브 링크는 fallback이나 임시 공유에만 쓰고, 정식 설치 경로로 되돌리지 않는다.
 
 ### 3) 서비스 진화 시 점검 체크리스트
 - 대시보드 진입 / 모달 열기·닫기(배경 클릭, ESC) / 서비스 라우팅 회귀 점검

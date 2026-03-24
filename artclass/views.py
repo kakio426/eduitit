@@ -204,8 +204,11 @@ def _get_launcher_release_config(request=None):
     default_bridge_version = "0.2.0"
     bridge_notice = (os.getenv("ARTCLASS_LAUNCHER_BRIDGE_NOTICE") or default_bridge_notice).strip() or default_bridge_notice
     env_bridge_version = (os.getenv("ARTCLASS_LAUNCHER_BRIDGE_VERSION") or "").strip()
+    env_minimum_required_version = (os.getenv("ARTCLASS_LAUNCHER_MINIMUM_REQUIRED_VERSION") or "").strip()
     current_release = get_current_launcher_release()
     bridge_version = env_bridge_version or (current_release or {}).get("version") or default_bridge_version
+    latest_version = (current_release or {}).get("version") or bridge_version
+    minimum_required_version = env_minimum_required_version or latest_version or bridge_version
     download_url = _normalize_http_url(os.getenv("ARTCLASS_LAUNCHER_DOWNLOAD_URL"))
     update_base_url = _normalize_launcher_update_base_url(os.getenv("ARTCLASS_LAUNCHER_UPDATE_BASE_URL"))
 
@@ -218,6 +221,8 @@ def _get_launcher_release_config(request=None):
         "updateBaseUrl": update_base_url,
         "bridgeNotice": bridge_notice,
         "bridgeVersion": bridge_version,
+        "latestVersion": latest_version,
+        "minimumRequiredVersion": minimum_required_version,
         "currentRelease": current_release,
     }
 
@@ -896,12 +901,15 @@ def launcher_release_manager_view(request):
 def launcher_update_index_view(request):
     context = _build_launcher_release_manager_context(request)
     current_release = context["current_release"]
+    release_config = _get_launcher_release_config(request)
     if not current_release:
         return JsonResponse(
             {
                 "available": False,
                 "message": "아직 업로드된 런처 설치본이 없습니다.",
                 "updateBaseUrl": context["public_update_base_url"],
+                "latestVersion": "",
+                "minimumRequiredVersion": release_config["minimumRequiredVersion"],
             },
             status=404,
         )
@@ -913,6 +921,8 @@ def launcher_update_index_view(request):
             "downloadUrl": context["public_download_url"],
             "latestYmlUrl": context["public_latest_yml_url"],
             "updateBaseUrl": context["public_update_base_url"],
+            "latestVersion": current_release["version"],
+            "minimumRequiredVersion": release_config["minimumRequiredVersion"],
         }
     )
 

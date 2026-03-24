@@ -107,6 +107,8 @@
   - 교사용 설치 링크와 auto-update 경로는 `eduitit.site/artclass/launcher-updates/windows/...`를 단일 원본으로 사용
   - 구글드라이브는 정식 설치 경로가 아니라 임시 수동 전달용으로만 취급
   - 브릿지 버전(`0.2.0+`) 설치자는 이후부터 자동 업데이트 대상
+  - `0.2.4+` 런처는 수업 실행 전에 `minimumRequiredVersion`을 확인하고, 부족하면 자동 업데이트 후 pending session으로 같은 수업을 자동 재개
+  - 기본 운영값은 `minimumRequiredVersion == 현재 업로드된 최신 버전`; 긴급 완화가 필요할 때만 env override 사용
 
 ### 8-1) 홈 3영역 셸 계약 (MUST for authenticated home surfaces)
 - 홈은 기본적으로 `왼쪽 메뉴 / 가운데 메인 작업 / 오른쪽 즐겨찾기·개인 유틸·SNS` 3영역 셸을 유지한다.

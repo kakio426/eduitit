@@ -78,10 +78,13 @@ description: Core guardrails for Eduitit service development and maintenance, in
   4. run at least `python manage.py test artclass.tests.ManualPipelineApiTest.test_start_launcher_session_api_success`
   5. build `desktop/teacher-launcher` with `npm run dist:win`
   6. upload `latest.yml`, `Eduitit Teacher Launcher Setup <version>.exe`, and `.blockmap` through `/artclass/launcher-release-manager/`
-- Teacher-facing copy should keep one path:
-  - start with the green button
-  - if it fails, route to the install hub
+  - Teacher-facing copy should keep one path:
+    - start with the green button
+    - if it fails, route to the install hub
   - never expose bucket/dist/latest.yml vocabulary in teacher UI
+  - `0.2.4+` launcher releases must preserve the pre-launch version gate:
+    - compare current version against `minimumRequiredVersion`
+    - if outdated, save pending session -> update -> restart -> reopen same class
 
 ## New Service SSOT
 - Create a separate Django app for major new services.

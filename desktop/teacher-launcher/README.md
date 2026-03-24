@@ -49,6 +49,8 @@ npm run dist:win
 - 서버는 `latest.yml`, 설치파일(`.exe`), `.blockmap`을 같은 고정 디렉터리에 올려 두어야 합니다.
 - 웹 앱은 `ARTCLASS_LAUNCHER_DOWNLOAD_URL`로 브릿지 설치파일 링크를 노출합니다.
 - 런처 앱은 `updateConfigUrl`이 가리키는 JSON에서 `updateBaseUrl`을 받아 업데이트를 확인합니다.
+- `launcher-release-config`는 `latestVersion`과 `minimumRequiredVersion`도 내려주며, 런처는 수업 실행 전에 최소 요구 버전을 먼저 확인합니다.
+- 현재 버전이 부족하면 pending session을 저장한 뒤 자동 업데이트를 진행하고, 재시작 후 같은 수업을 다시 엽니다.
 
 ## Notes
 - 웹 브라우저 팝업 제약을 우회하기 위해 창 배치는 런처가 담당합니다.

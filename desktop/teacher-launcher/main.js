@@ -2,7 +2,7 @@ const fs = require("fs");
 const http = require("http");
 const https = require("https");
 const path = require("path");
-const { app, BrowserWindow, dialog, screen } = require("electron");
+const { app, BrowserWindow, dialog, screen, shell } = require("electron");
 const { NsisUpdater } = require("electron-updater");
 
 const PROTOCOL = "eduitit-launcher";
@@ -19,7 +19,9 @@ const SPLIT_RATIO_MIN = 0.45;
 const SPLIT_RATIO_MAX = 0.72;
 const SPLIT_RATIO_STEP = 0.03;
 const AUTO_UPDATE_CACHE_FILENAME = "launcher-release-config.json";
+const PENDING_LAUNCH_FILENAME = "launcher-pending-session.json";
 const AUTO_UPDATE_CHECK_MIN_INTERVAL_MS = 30 * 60 * 1000;
+const PENDING_LAUNCH_MAX_AGE_MS = 30 * 60 * 1000;
 
 let videoWindow = null;
 let dashboardWindow = null;
@@ -40,12 +42,15 @@ let autoUpdater = null;
 let updateCheckPromise = null;
 let downloadedUpdateInfo = null;
 let downloadedUpdatePromptOpen = false;
+let requiredUpdateContext = null;
 let cachedLauncherReleaseConfig = {
   configUrl: "",
   updateBaseUrl: "",
   downloadUrl: "",
   bridgeNotice: "",
   bridgeVersion: "",
+  latestVersion: "",
+  minimumRequiredVersion: "",
   lastCheckedAt: 0,
 };
 
@@ -173,6 +178,63 @@ function normalizeShortText(value, maxLength = 500) {
   return value.trim().slice(0, maxLength);
 }
 
+function normalizeVersionString(value) {
+  if (typeof value !== "string") return "";
+  const cleaned = value.trim();
+  return /^\d+(?:\.\d+){0,3}$/.test(cleaned) ? cleaned : "";
+}
+
+function compareVersionStrings(left, right) {
+  const leftParts = normalizeVersionString(left)
+    .split(".")
+    .filter(Boolean)
+    .map((part) => Number.parseInt(part, 10));
+  const rightParts = normalizeVersionString(right)
+    .split(".")
+    .filter(Boolean)
+    .map((part) => Number.parseInt(part, 10));
+  const maxLength = Math.max(leftParts.length, rightParts.length);
+
+  for (let index = 0; index < maxLength; index += 1) {
+    const leftValue = Number.isFinite(leftParts[index]) ? leftParts[index] : 0;
+    const rightValue = Number.isFinite(rightParts[index]) ? rightParts[index] : 0;
+    if (leftValue > rightValue) return 1;
+    if (leftValue < rightValue) return -1;
+  }
+
+  return 0;
+}
+
+function isVersionAtLeast(currentVersion, minimumVersion) {
+  const normalizedMinimum = normalizeVersionString(minimumVersion);
+  if (!normalizedMinimum) return true;
+  const normalizedCurrent = normalizeVersionString(currentVersion);
+  if (!normalizedCurrent) return false;
+  return compareVersionStrings(normalizedCurrent, normalizedMinimum) >= 0;
+}
+
+function getCurrentLauncherVersion() {
+  return normalizeVersionString(app.getVersion() || "") || "0.0.0";
+}
+
+function normalizeLaunchPayload(rawPayload) {
+  const source = rawPayload && typeof rawPayload === "object" ? rawPayload : {};
+  const youtubeUrl = normalizeHttpUrl(source.youtubeUrl);
+  const dashboardUrl = normalizeHttpUrl(source.dashboardUrl);
+
+  if (!youtubeUrl || !dashboardUrl) {
+    return null;
+  }
+
+  return {
+    classId: source.classId,
+    title: normalizeShortText(source.title || "Eduitit ArtClass", 120) || "Eduitit ArtClass",
+    youtubeUrl,
+    dashboardUrl,
+    updateConfigUrl: normalizeHttpUrl(source.updateConfigUrl) || "",
+  };
+}
+
 function normalizeLauncherReleaseConfig(raw, fallback = {}) {
   const source = raw && typeof raw === "object" ? raw : {};
   const previous = fallback && typeof fallback === "object" ? fallback : {};
@@ -182,6 +244,11 @@ function normalizeLauncherReleaseConfig(raw, fallback = {}) {
     downloadUrl: normalizeHttpUrl(source.downloadUrl) || normalizeHttpUrl(previous.downloadUrl) || "",
     bridgeNotice: normalizeShortText(source.bridgeNotice || previous.bridgeNotice, 500),
     bridgeVersion: normalizeShortText(source.bridgeVersion || previous.bridgeVersion, 50),
+    latestVersion: normalizeVersionString(source.latestVersion) || normalizeVersionString(previous.latestVersion) || "",
+    minimumRequiredVersion:
+      normalizeVersionString(source.minimumRequiredVersion) ||
+      normalizeVersionString(previous.minimumRequiredVersion) ||
+      "",
     lastCheckedAt: normalizeTimestamp(source.lastCheckedAt || previous.lastCheckedAt),
   };
 }
@@ -231,6 +298,79 @@ function saveLauncherReleaseConfigState(patch = {}) {
   return cachedLauncherReleaseConfig;
 }
 
+function getPendingLaunchStatePath() {
+  try {
+    return path.join(app.getPath("userData"), PENDING_LAUNCH_FILENAME);
+  } catch (_) {
+    return "";
+  }
+}
+
+function loadPendingLaunchState() {
+  const statePath = getPendingLaunchStatePath();
+  if (!statePath || !fs.existsSync(statePath)) {
+    return null;
+  }
+
+  try {
+    const raw = JSON.parse(fs.readFileSync(statePath, "utf8"));
+    const savedAt = normalizeTimestamp(raw.savedAt);
+    if (!savedAt || Date.now() - savedAt > PENDING_LAUNCH_MAX_AGE_MS) {
+      fs.unlinkSync(statePath);
+      return null;
+    }
+
+    const payload = normalizeLaunchPayload(raw.payload);
+    if (!payload) {
+      fs.unlinkSync(statePath);
+      return null;
+    }
+
+    return {
+      payload,
+      requiredVersion: normalizeVersionString(raw.requiredVersion),
+      savedAt,
+    };
+  } catch (err) {
+    console.error("[launcher-update] failed to read pending launch state:", err);
+    return null;
+  }
+}
+
+function savePendingLaunchState(payload, { requiredVersion = "" } = {}) {
+  const normalizedPayload = normalizeLaunchPayload(payload);
+  if (!normalizedPayload) return null;
+
+  const statePath = getPendingLaunchStatePath();
+  if (!statePath) return null;
+
+  const nextState = {
+    payload: normalizedPayload,
+    requiredVersion: normalizeVersionString(requiredVersion),
+    savedAt: Date.now(),
+  };
+
+  try {
+    fs.mkdirSync(path.dirname(statePath), { recursive: true });
+    fs.writeFileSync(statePath, JSON.stringify(nextState, null, 2), "utf8");
+    return nextState;
+  } catch (err) {
+    console.error("[launcher-update] failed to persist pending launch state:", err);
+    return null;
+  }
+}
+
+function clearPendingLaunchState() {
+  const statePath = getPendingLaunchStatePath();
+  if (!statePath || !fs.existsSync(statePath)) return;
+
+  try {
+    fs.unlinkSync(statePath);
+  } catch (err) {
+    console.error("[launcher-update] failed to clear pending launch state:", err);
+  }
+}
+
 function fetchJson(rawUrl) {
   return new Promise((resolve, reject) => {
     const normalizedUrl = normalizeHttpUrl(rawUrl);
@@ -247,7 +387,7 @@ function fetchJson(rawUrl) {
         method: "GET",
         headers: {
           Accept: "application/json",
-          "User-Agent": `EduititTeacherLauncher/${app.getVersion() || "0.2.3"}`,
+          "User-Agent": `EduititTeacherLauncher/${app.getVersion() || "0.2.4"}`,
         },
       },
       (response) => {
@@ -332,6 +472,30 @@ function maybePromptForDownloadedUpdate() {
   void promptForDownloadedUpdate(downloadedUpdateInfo);
 }
 
+function installRequiredUpdateNow() {
+  if (!requiredUpdateContext) return false;
+
+  const updater = ensureAutoUpdater();
+  if (!updater) return false;
+
+  const pendingState = savePendingLaunchState(requiredUpdateContext.payload, {
+    requiredVersion: requiredUpdateContext.requiredVersion,
+  });
+  if (!pendingState) {
+    showErrorBox("업데이트 후 다시 열 수업 정보를 저장하지 못했습니다. 다시 시도해 주세요.");
+    return false;
+  }
+
+  try {
+    updater.quitAndInstall();
+    return true;
+  } catch (err) {
+    console.error("[launcher-update] forced install failed:", err);
+    showErrorBox("런처 업데이트를 자동으로 설치하지 못했습니다. 설치 파일을 다시 열어 주세요.");
+    return false;
+  }
+}
+
 function ensureAutoUpdater() {
   if (!app.isPackaged) return null;
   if (autoUpdater) return autoUpdater;
@@ -345,6 +509,13 @@ function ensureAutoUpdater() {
   });
   autoUpdater.on("update-downloaded", (info) => {
     downloadedUpdateInfo = info || { version: "" };
+    if (
+      requiredUpdateContext &&
+      isVersionAtLeast(downloadedUpdateInfo.version, requiredUpdateContext.requiredVersion)
+    ) {
+      installRequiredUpdateNow();
+      return;
+    }
     if (hasActiveSplitSession()) return;
     maybePromptForDownloadedUpdate();
   });
@@ -405,6 +576,8 @@ async function syncLauncherReleaseConfig(rawConfigUrl, { checkImmediately = fals
       updateBaseUrl: payload.updateBaseUrl,
       bridgeNotice: payload.bridgeNotice,
       bridgeVersion: payload.bridgeVersion,
+      latestVersion: payload.latestVersion,
+      minimumRequiredVersion: payload.minimumRequiredVersion,
     });
     if (nextState.updateBaseUrl && (checkImmediately || force)) {
       await checkForLauncherUpdates({ force });
@@ -425,6 +598,78 @@ function bootstrapLauncherAutoUpdate() {
   if (state.updateBaseUrl) {
     void checkForLauncherUpdates();
   }
+}
+
+async function ensureLauncherVersionReadyForLaunch(payload) {
+  if (!app.isPackaged) {
+    return true;
+  }
+
+  const state = payload.updateConfigUrl
+    ? await syncLauncherReleaseConfig(payload.updateConfigUrl, { force: true })
+    : loadLauncherReleaseConfigState();
+  const requiredVersion = normalizeVersionString(
+    state.minimumRequiredVersion || state.latestVersion || state.bridgeVersion
+  );
+
+  if (!requiredVersion || isVersionAtLeast(getCurrentLauncherVersion(), requiredVersion)) {
+    requiredUpdateContext = null;
+    return true;
+  }
+
+  requiredUpdateContext = {
+    payload,
+    requiredVersion,
+    downloadUrl: state.downloadUrl,
+  };
+  savePendingLaunchState(payload, { requiredVersion });
+
+  if (
+    downloadedUpdateInfo &&
+    isVersionAtLeast(downloadedUpdateInfo.version, requiredVersion) &&
+    installRequiredUpdateNow()
+  ) {
+    return false;
+  }
+
+  try {
+    const updateResult = await checkForLauncherUpdates({ force: true });
+    if (updateResult && updateResult.downloadPromise) {
+      await updateResult.downloadPromise.catch((err) => {
+        console.error("[launcher-update] forced download failed:", err);
+        return null;
+      });
+    }
+  } catch (err) {
+    console.error("[launcher-update] forced update check failed:", err);
+  }
+
+  if (
+    downloadedUpdateInfo &&
+    isVersionAtLeast(downloadedUpdateInfo.version, requiredVersion) &&
+    installRequiredUpdateNow()
+  ) {
+    return false;
+  }
+
+  const fallbackDownloadUrl = normalizeHttpUrl(state.downloadUrl);
+  if (fallbackDownloadUrl) {
+    shell.openExternal(fallbackDownloadUrl).catch((err) => {
+      console.error("[launcher-update] failed to open fallback download url:", err);
+    });
+  }
+  showErrorBox("런처를 최신 버전으로 업데이트한 뒤 자동으로 이 수업을 다시 엽니다. 설치 화면이 열리면 업데이트를 진행해 주세요.");
+  return false;
+}
+
+async function resumePendingLaunchIfNeeded() {
+  const pendingState = loadPendingLaunchState();
+  if (!pendingState) {
+    return false;
+  }
+
+  await launchSplitSession(pendingState.payload);
+  return true;
 }
 
 function closeSplitWindows() {
@@ -1394,6 +1639,30 @@ function createSplitWindows(payload) {
   }
 }
 
+async function launchSplitSession(payload) {
+  const normalizedPayload = normalizeLaunchPayload(payload);
+  if (!normalizedPayload) {
+    showErrorBox("런처 수업 정보를 다시 확인해 주세요.");
+    return;
+  }
+
+  const versionReady = await ensureLauncherVersionReadyForLaunch(normalizedPayload);
+  if (!versionReady) {
+    return;
+  }
+
+  watchdogCircuitOpen = false;
+  recoveryAttemptTimestamps = [];
+  lastRecoveryAt = 0;
+  clearPendingLaunchState();
+  lockDisplayToCurrentPointer();
+  lastLaunchPayload = normalizedPayload;
+  if (normalizedPayload.updateConfigUrl) {
+    void syncLauncherReleaseConfig(normalizedPayload.updateConfigUrl, { checkImmediately: true });
+  }
+  createSplitWindows(normalizedPayload);
+}
+
 function handleLaunchUrl(rawUrl) {
   const launcherAction = parseLauncherAction(rawUrl);
   if (launcherAction && executeLauncherAction(launcherAction)) {
@@ -1405,15 +1674,7 @@ function handleLaunchUrl(rawUrl) {
     showErrorBox(`런처 payload를 읽지 못했습니다: ${parsed.error}`);
     return;
   }
-  watchdogCircuitOpen = false;
-  recoveryAttemptTimestamps = [];
-  lastRecoveryAt = 0;
-  lockDisplayToCurrentPointer();
-  lastLaunchPayload = parsed;
-  if (parsed.updateConfigUrl) {
-    void syncLauncherReleaseConfig(parsed.updateConfigUrl, { checkImmediately: true });
-  }
-  createSplitWindows(parsed);
+  void launchSplitSession(parsed);
 }
 
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
@@ -1444,12 +1705,15 @@ if (!gotSingleInstanceLock) {
     app.setAsDefaultProtocolClient(PROTOCOL);
   }
 
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
     bindDisplayEventHandlers();
     bootstrapLauncherAutoUpdate();
     const launchUrl = extractLaunchUrlFromArgv(process.argv);
     if (launchUrl) {
       handleLaunchUrl(launchUrl);
+      return;
+    }
+    if (await resumePendingLaunchIfNeeded()) {
       return;
     }
     createInfoWindow();
