@@ -1304,6 +1304,36 @@ class HomeV2ViewTest(TestCase):
         self.assertEqual(content.count('꼭 확인할 공지'), 1)
         self.assertIn(f'data-pinned-notice-key="{pinned_notice.pinned_notice_dismiss_key}"', content)
 
+    def test_v2_htmx_feed_does_not_duplicate_notice_content_when_body_is_visible(self):
+        author = _create_onboarded_user('noticededupeauthor')
+        Post.objects.create(
+            author=author,
+            content='중복 없이 한 번만 보여야 하는 공지 문장',
+            post_type='notice',
+        )
+
+        self._login('noticededupeviewer')
+        response = self.client.get(reverse('home'), HTTP_HX_REQUEST='true')
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(content.count('중복 없이 한 번만 보여야 하는 공지 문장'), 1)
+
+    def test_v2_htmx_feed_keeps_distinct_notice_title_once(self):
+        author = _create_onboarded_user('noticetitleauthor')
+        Post.objects.create(
+            author=author,
+            content='제목 아래에 보여야 하는 공지 본문',
+            og_title='분리된 공지 제목',
+            post_type='notice',
+        )
+
+        self._login('noticetitleviewer')
+        response = self.client.get(reverse('home'), HTTP_HX_REQUEST='true')
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(content.count('분리된 공지 제목'), 1)
+        self.assertIn('제목 아래에 보여야 하는 공지 본문', content)
+
     def test_v2_htmx_feed_shows_close_button_only_for_dismissible_pinned_notice(self):
         author = _create_onboarded_user('dismissiblenoticeauthor')
         Post.objects.create(

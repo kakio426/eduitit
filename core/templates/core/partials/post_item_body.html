@@ -39,6 +39,9 @@
     <p class="text-slate-700 text-sm leading-relaxed mb-3 whitespace-pre-wrap break-words [&_a]:break-all [&_a]:font-semibold [&_a]:text-indigo-600 [&_a]:underline [&_a]:underline-offset-2">{{ post.content|urlize }}</p>
     {% endif %}
     {% else %}
+    {% if post.og_title and post.og_title != post.content %}
+    <h4 class="mb-2 text-sm font-bold leading-snug text-slate-800">{{ post.og_title }}</h4>
+    {% endif %}
     <p class="text-slate-700 text-sm leading-relaxed mb-3 whitespace-pre-wrap break-words [&_a]:break-all [&_a]:font-semibold [&_a]:text-indigo-600 [&_a]:underline [&_a]:underline-offset-2">{{ post.content|urlize }}</p>
     {% endif %}
 

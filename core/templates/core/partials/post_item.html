@@ -30,7 +30,9 @@
                     <span class="text-slate-400/80">(수정됨)</span>
                     {% endif %}
                 </p>
+                {% if post.is_active_pinned_notice and not pinned_notice_expanded %}
                 <p class="mt-1 truncate text-sm font-semibold text-slate-800">{{ post.og_title|default:post.content|truncatechars:40 }}</p>
+                {% endif %}
             </div>
         </div>
 
