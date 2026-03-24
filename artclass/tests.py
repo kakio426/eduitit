@@ -11,9 +11,29 @@ from django.urls import reverse
 from core.models import UserProfile
 from .classification import apply_auto_metadata
 from .manual_pipeline import ManualPipelineError, parse_manual_pipeline_result
-from .models import ArtClass, ArtStep
+from .models import ArtClass, ArtClassAttachment, ArtStep
 
 User = get_user_model()
+
+
+def make_test_gif_upload(name="step.gif"):
+    return SimpleUploadedFile(
+        name,
+        (
+            b"GIF89a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff"
+            b"!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00"
+            b"\x00\x02\x02L\x01\x00;"
+        ),
+        content_type="image/gif",
+    )
+
+
+def make_test_material_upload(name="activity.pdf", content_type="application/pdf", size_bytes=None):
+    if size_bytes is None:
+        payload = b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF"
+    else:
+        payload = b"a" * size_bytes
+    return SimpleUploadedFile(name, payload, content_type=content_type)
 
 
 class ManualPipelineParserTest(TestCase):
@@ -323,7 +343,10 @@ class ManualPipelineApiTest(TestCase):
         self.assertIn("eduitit-launcher://launch?payload=", payload["launcherUrl"])
         self.assertIn("display=dashboard", payload["fallback"]["dashboardUrl"])
         self.assertIn("runtime=launcher", payload["fallback"]["dashboardUrl"])
-        self.assertIn("playlist=2bBhnfh4StU", payload["fallback"]["youtubeUrl"])
+        self.assertIn("watch?v=2bBhnfh4StU", payload["fallback"]["youtubeUrl"])
+        self.assertIn("autoplay=1", payload["fallback"]["youtubeUrl"])
+        self.assertNotIn("playlist=", payload["fallback"]["youtubeUrl"])
+        self.assertNotIn("loop=1", payload["fallback"]["youtubeUrl"])
         art_class.refresh_from_db()
         self.assertEqual(art_class.playback_mode, ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW)
 
@@ -676,7 +699,7 @@ class ArtClassSetupEditTest(TestCase):
         self.assertContains(response, "추천: 아래 파란 버튼 한 번이면 프롬프트를 복사하고 제미나이를 바로 엽니다.")
         self.assertContains(response, "프롬프트만 복사")
         self.assertContains(response, "수업 준비를 저장하고 있어요")
-        self.assertContains(response, "이미지가 있으면 업로드 때문에 조금 더 걸릴 수 있어요.")
+        self.assertContains(response, "이미지나 자료 파일이 있으면 업로드 때문에 조금 더 걸릴 수 있어요.")
         self.assertNotContains(response, "샘플 영상으로 체험하기")
 
     def test_setup_page_uses_gemini_example_without_sample_shortcut(self):
@@ -729,6 +752,58 @@ class ArtClassSetupEditTest(TestCase):
         expected_url = f"{reverse('artclass:classroom', kwargs={'pk': self.art_class.pk})}?autostart_launcher=1"
         self.assertRedirects(response, expected_url)
 
+    def test_setup_edit_shows_existing_materials_and_note(self):
+        self.art_class.teacher_material_note = "자료를 먼저 나눠 준 뒤 색칠 단계에서 다시 보여 주세요."
+        self.art_class.save(update_fields=["teacher_material_note"])
+        attachment = ArtClassAttachment.objects.create(
+            art_class=self.art_class,
+            file=make_test_material_upload("guide.pdf"),
+            original_name="guide.pdf",
+            sort_order=1,
+        )
+        self.client.force_login(self.owner)
+
+        response = self.client.get(reverse("artclass:setup_edit", kwargs={"pk": self.art_class.pk}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, attachment.original_name)
+        self.assertContains(response, "자료를 먼저 나눠 준 뒤 색칠 단계에서 다시 보여 주세요.")
+        self.assertContains(response, "PDF, HWP, HWPX / 최대 5개 / 파일당 20MB")
+
+    def test_setup_edit_can_replace_material_attachments(self):
+        old_attachment = ArtClassAttachment.objects.create(
+            art_class=self.art_class,
+            file=make_test_material_upload("old.pdf"),
+            original_name="old.pdf",
+            sort_order=1,
+        )
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            reverse("artclass:setup_edit", kwargs={"pk": self.art_class.pk}),
+            data={
+                "title": "자료 수정 수업",
+                "videoUrl": "https://www.youtube.com/watch?v=2bBhnfh4StU",
+                "stepInterval": "15",
+                "playbackMode": ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW,
+                "teacherMaterialNote": "새 활동지는 색칠 전에 먼저 배부합니다.",
+                "delete_attachment_ids": str(old_attachment.pk),
+                "class_material_files": make_test_material_upload("new.hwpx", content_type="application/octet-stream"),
+                "step_count": "1",
+                "step_text_0": "외부 모드 단계 설명",
+                "step_existing_id_0": str(self.existing_step.pk),
+            },
+        )
+
+        expected_url = f"{reverse('artclass:classroom', kwargs={'pk': self.art_class.pk})}?autostart_launcher=1"
+        self.assertRedirects(response, expected_url)
+        self.art_class.refresh_from_db()
+        self.assertEqual(self.art_class.teacher_material_note, "새 활동지는 색칠 전에 먼저 배부합니다.")
+        attachments = list(self.art_class.attachments.all())
+        self.assertEqual(len(attachments), 1)
+        self.assertEqual(attachments[0].original_name, "new.hwpx")
+        self.assertFalse(ArtClassAttachment.objects.filter(pk=old_attachment.pk).exists())
+
     def test_setup_clone_creates_copy_for_non_owner(self):
         self.client.force_login(self.other)
         original_count = ArtClass.objects.count()
@@ -744,6 +819,25 @@ class ArtClassSetupEditTest(TestCase):
         self.assertEqual(cloned.default_interval, self.art_class.default_interval)
         self.assertEqual(cloned.steps.count(), original_step_count)
         self.assertEqual(cloned.steps.get(step_number=1).description, self.existing_step.description)
+
+    def test_setup_clone_copies_materials_and_note(self):
+        self.art_class.teacher_material_note = "도입에서 먼저 질문을 던진 뒤 활동지를 나눠 주세요."
+        self.art_class.save(update_fields=["teacher_material_note"])
+        ArtClassAttachment.objects.create(
+            art_class=self.art_class,
+            file=make_test_material_upload("worksheet.hwp", content_type="application/octet-stream"),
+            original_name="worksheet.hwp",
+            sort_order=1,
+        )
+        self.client.force_login(self.other)
+
+        response = self.client.get(reverse("artclass:setup_clone", kwargs={"pk": self.art_class.pk}))
+
+        cloned = ArtClass.objects.exclude(pk=self.art_class.pk).latest("id")
+        self.assertRedirects(response, reverse("artclass:setup_edit", kwargs={"pk": cloned.pk}))
+        self.assertEqual(cloned.teacher_material_note, self.art_class.teacher_material_note)
+        self.assertEqual(cloned.attachments.count(), 1)
+        self.assertEqual(cloned.attachments.first().original_name, "worksheet.hwp")
 
     def test_setup_clone_redirects_owner_to_existing_edit(self):
         self.client.force_login(self.owner)
@@ -812,6 +906,71 @@ class ArtClassAutoMetadataTest(TestCase):
         self.assertEqual(ArtClass.objects.count(), 0)
         self.assertContains(response, "단계 이미지는 JPG, PNG, GIF, WEBP 파일만 사용할 수 있어요.")
 
+    def test_setup_rejects_invalid_material_attachment_type(self):
+        upload = make_test_material_upload("guide.txt", content_type="text/plain")
+
+        response = self.client.post(
+            reverse("artclass:setup"),
+            data={
+                "videoUrl": "https://www.youtube.com/watch?v=2bBhnfh4StU",
+                "stepInterval": "12",
+                "playbackMode": ArtClass.PLAYBACK_MODE_EMBED,
+                "teacherMaterialNote": "자료 설명",
+                "class_material_files": upload,
+                "step_count": "1",
+                "step_text_0": "도화지에 연필로 큰 원을 그린다.",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(ArtClass.objects.count(), 0)
+        self.assertContains(response, "수업 자료는 PDF, HWP, HWPX 파일만 사용할 수 있어요.")
+
+    def test_setup_rejects_too_many_material_attachments(self):
+        uploads = [make_test_material_upload(f"sheet{index}.pdf") for index in range(6)]
+
+        response = self.client.post(
+            reverse("artclass:setup"),
+            data={
+                "videoUrl": "https://www.youtube.com/watch?v=2bBhnfh4StU",
+                "stepInterval": "12",
+                "teacherMaterialNote": "자료 설명",
+                "class_material_files": uploads,
+                "step_count": "1",
+                "step_text_0": "도화지에 연필로 큰 원을 그린다.",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(ArtClass.objects.count(), 0)
+        self.assertContains(response, "수업 자료는 한 수업에 최대 5개까지 올릴 수 있어요.")
+
+    def test_setup_saves_material_attachments_and_note(self):
+        response = self.client.post(
+            reverse("artclass:setup"),
+            data={
+                "videoUrl": "https://www.youtube.com/watch?v=2bBhnfh4StU",
+                "stepInterval": "12",
+                "teacherMaterialNote": "첫 번째 멈춤 화면에서 활동지를 함께 보며 색을 고르게 합니다.",
+                "class_material_files": [
+                    make_test_material_upload("worksheet.pdf"),
+                    make_test_material_upload("source.hwpx", content_type="application/octet-stream"),
+                ],
+                "step_count": "1",
+                "step_text_0": "도화지에 연필로 큰 원을 그린다.",
+            },
+        )
+
+        created = ArtClass.objects.latest("id")
+        expected_url = f"{reverse('artclass:classroom', kwargs={'pk': created.pk})}?autostart_launcher=1"
+        self.assertRedirects(response, expected_url)
+        self.assertEqual(created.teacher_material_note, "첫 번째 멈춤 화면에서 활동지를 함께 보며 색을 고르게 합니다.")
+        self.assertEqual(created.attachments.count(), 2)
+        self.assertEqual(
+            list(created.attachments.values_list("original_name", flat=True)),
+            ["worksheet.pdf", "source.hwpx"],
+        )
+
     def test_setup_page_shows_input_guardrails(self):
         response = self.client.get(reverse("artclass:setup"))
 
@@ -819,6 +978,7 @@ class ArtClassAutoMetadataTest(TestCase):
         self.assertContains(response, "영상 주소 안내: 유튜브 주소만 넣어 주세요.")
         self.assertContains(response, "외부 AI 서비스로 전송될 수 있습니다.")
         self.assertContains(response, "JPG, PNG, GIF, WEBP 파일만 가능하며 7MB 이하")
+        self.assertContains(response, "PDF, HWP, HWPX / 최대 5개 / 파일당 20MB")
 
     def test_setup_generates_auto_metadata_without_manual_title(self):
         response = self.client.post(
@@ -1064,6 +1224,12 @@ class ArtClassAutoMetadataTest(TestCase):
             created_by=self.owner,
             is_shared=True,
         )
+        ArtClassAttachment.objects.create(
+            art_class=art_class,
+            file=make_test_material_upload("guide.pdf"),
+            original_name="guide.pdf",
+            sort_order=1,
+        )
 
         response = self.client.get(reverse("artclass:library"))
 
@@ -1071,6 +1237,7 @@ class ArtClassAutoMetadataTest(TestCase):
         self.assertContains(response, art_class.display_title)
         self.assertContains(response, "런처 시작")
         self.assertContains(response, "초록 버튼을 누르면 영상과 수업 안내가 나뉘어 열립니다.")
+        self.assertContains(response, "자료 1개")
 
 
 class ArtClassPresentationUxTest(TestCase):
@@ -1136,6 +1303,54 @@ class ArtClassPresentationUxTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["data"]["steps"][0]["image_url"].startswith("data:image/gif;base64,"))
+
+    def test_classroom_web_shows_teacher_materials_but_hides_loop_button(self):
+        art_class = ArtClass.objects.create(
+            title="자료 있는 수업",
+            youtube_url="https://www.youtube.com/watch?v=UFQT5Wtamw0",
+            default_interval=10,
+            playback_mode=ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW,
+            teacher_material_note="도입 3분 전쯤 활동지를 먼저 보여 주세요.",
+        )
+        ArtStep.objects.create(art_class=art_class, step_number=1, description="기본 단계")
+        ArtClassAttachment.objects.create(
+            art_class=art_class,
+            file=make_test_material_upload("worksheet.pdf"),
+            original_name="worksheet.pdf",
+            sort_order=1,
+        )
+
+        response = self.client.get(reverse("artclass:classroom", kwargs={"pk": art_class.pk}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "수업 자료 보기")
+        self.assertContains(response, "worksheet.pdf")
+        self.assertContains(response, "도입 3분 전쯤 활동지를 먼저 보여 주세요.")
+        self.assertNotContains(response, 'id="btnLoop"')
+
+    def test_launcher_dashboard_hides_teacher_materials_card(self):
+        art_class = ArtClass.objects.create(
+            title="자료 숨김 수업",
+            youtube_url="https://www.youtube.com/watch?v=UFQT5Wtamw0",
+            default_interval=10,
+            playback_mode=ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW,
+            teacher_material_note="교사용 메모",
+        )
+        ArtStep.objects.create(art_class=art_class, step_number=1, description="기본 단계")
+        ArtClassAttachment.objects.create(
+            art_class=art_class,
+            file=make_test_material_upload("worksheet.pdf"),
+            original_name="worksheet.pdf",
+            sort_order=1,
+        )
+
+        response = self.client.get(
+            reverse("artclass:classroom", kwargs={"pk": art_class.pk}),
+            data={"display": "dashboard", "runtime": "launcher"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "수업 자료 보기")
 
 
 class ArtClassYoutubeTitleBackfillCommandTest(TestCase):

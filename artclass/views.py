@@ -16,8 +16,8 @@ from django_ratelimit.decorators import ratelimit
 from django.views.decorators.http import require_POST
 from django.urls import reverse
 from core.utils import ratelimit_key_for_master_only
-from django.db.models import Count, Q
-from .models import ArtClass, ArtStep
+from django.db.models import Count, Max, Q
+from .models import ArtClass, ArtClassAttachment, ArtStep
 from .classification import apply_auto_metadata, collect_popular_tags
 from .manual_pipeline import (
     ManualPipelineError,
@@ -77,7 +77,7 @@ def _extract_youtube_video_id(url):
     return matched.group(1) if matched else ""
 
 
-def _build_external_video_loop_url(video_url):
+def _build_launcher_video_url(video_url):
     video_id = _extract_youtube_video_id(video_url)
     if not video_id:
         return video_url
@@ -87,8 +87,6 @@ def _build_external_video_loop_url(video_url):
         + urlencode(
             {
                 "v": video_id,
-                "loop": "1",
-                "playlist": video_id,
                 "autoplay": "1",
             }
         )
@@ -215,6 +213,10 @@ ARTCLASS_ALLOWED_IMAGE_CONTENT_TYPES = {
 }
 ARTCLASS_ALLOWED_IMAGE_EXTENSIONS = {".gif", ".jpeg", ".jpg", ".png", ".webp"}
 ARTCLASS_MAX_STEP_IMAGE_BYTES = 7 * 1024 * 1024
+ARTCLASS_ALLOWED_ATTACHMENT_EXTENSIONS = {".pdf", ".hwp", ".hwpx"}
+ARTCLASS_MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024
+ARTCLASS_MAX_ATTACHMENTS = 5
+ARTCLASS_MAX_MATERIAL_NOTE_LENGTH = 4000
 ARTCLASS_IMAGE_MIME_TYPES_BY_EXTENSION = {
     ".gif": "image/gif",
     ".jpeg": "image/jpeg",
@@ -316,6 +318,47 @@ def _build_posted_initial_steps(request, art_class=None):
     return initial_steps
 
 
+def _normalize_material_note(value):
+    return str(value or "").replace("\r\n", "\n").replace("\r", "\n").strip()
+
+
+def _normalize_attachment_name(file_name):
+    normalized = os.path.basename(str(file_name or "").strip())
+    return normalized[:255]
+
+
+def _build_attachment_display_name(attachment):
+    preferred_name = _normalize_attachment_name(getattr(attachment, "original_name", ""))
+    if preferred_name:
+        return preferred_name
+    file_field = getattr(attachment, "file", None)
+    stored_name = getattr(file_field, "name", "") if file_field else ""
+    return _normalize_attachment_name(stored_name) or f"자료 #{attachment.pk}"
+
+
+def _build_material_attachment_payloads(art_class):
+    if not art_class:
+        return []
+
+    payloads = []
+    for attachment in art_class.attachments.all():
+        file_field = getattr(attachment, "file", None)
+        if not file_field:
+            continue
+        try:
+            file_url = file_field.url
+        except Exception:
+            continue
+        payloads.append(
+            {
+                "id": attachment.pk,
+                "name": _build_attachment_display_name(attachment),
+                "url": file_url,
+            }
+        )
+    return payloads
+
+
 def _validate_step_image(uploaded_image):
     file_name = str(getattr(uploaded_image, "name", "") or "").strip()
     extension = os.path.splitext(file_name)[1].lower()
@@ -350,6 +393,18 @@ def _validate_step_image(uploaded_image):
     return ""
 
 
+def _validate_material_attachment(uploaded_file):
+    file_name = _normalize_attachment_name(getattr(uploaded_file, "name", ""))
+    extension = os.path.splitext(file_name)[1].lower()
+    file_size = int(getattr(uploaded_file, "size", 0) or 0)
+
+    if extension not in ARTCLASS_ALLOWED_ATTACHMENT_EXTENSIONS:
+        return "수업 자료는 PDF, HWP, HWPX 파일만 사용할 수 있어요."
+    if file_size > ARTCLASS_MAX_ATTACHMENT_BYTES:
+        return "수업 자료는 파일 하나당 20MB 이하만 올릴 수 있어요."
+    return ""
+
+
 def _guess_step_image_mime_type(image_name):
     extension = os.path.splitext(str(image_name or "").strip())[1].lower()
     return ARTCLASS_IMAGE_MIME_TYPES_BY_EXTENSION.get(extension, "image/png")
@@ -378,10 +433,22 @@ def _build_launcher_safe_step_image_url(step):
     return f"data:{mime_type};base64,{encoded_image}"
 
 
-def _build_setup_context(art_class=None, *, initial_steps=None, initial_playback_mode=None, setup_video_url=""):
+def _build_setup_context(
+    art_class=None,
+    *,
+    initial_steps=None,
+    initial_playback_mode=None,
+    setup_video_url="",
+    setup_material_note=None,
+):
     initial_steps = initial_steps if initial_steps is not None else _build_initial_steps(art_class)
     selected_mode = ARTCLASS_PRIMARY_PLAYBACK_MODE
     video_url = setup_video_url if setup_video_url is not None else (art_class.youtube_url if art_class else "")
+    material_note = (
+        _normalize_material_note(setup_material_note)
+        if setup_material_note is not None
+        else _normalize_material_note(art_class.teacher_material_note if art_class else "")
+    )
     video_advice = _build_video_advice(
         video_url,
         playback_mode=selected_mode,
@@ -397,6 +464,8 @@ def _build_setup_context(art_class=None, *, initial_steps=None, initial_playback
         'launcher_download_url': _get_launcher_download_url(),
         'gemini_example_result': ARTCLASS_GEMINI_EXAMPLE_RESULT,
         'setup_video_url': video_url,
+        'existing_material_attachments': _build_material_attachment_payloads(art_class),
+        'setup_material_note': material_note,
     }
 
 
@@ -434,16 +503,42 @@ def setup_view(request, pk=None):
         title = _resolve_setup_title(posted_title, art_class)
         playback_mode = ARTCLASS_PRIMARY_PLAYBACK_MODE
         auto_corrected = interval_corrected
+        material_note = _normalize_material_note(request.POST.get("teacherMaterialNote"))
+        existing_attachments = list(art_class.attachments.all()) if art_class else []
+        existing_attachment_ids = {attachment.pk for attachment in existing_attachments}
+        deleted_attachment_ids = {
+            int(raw_id)
+            for raw_id in request.POST.getlist("delete_attachment_ids")
+            if str(raw_id).isdigit() and int(raw_id) in existing_attachment_ids
+        }
+        uploaded_attachments = [
+            uploaded
+            for uploaded in request.FILES.getlist("class_material_files")
+            if _normalize_attachment_name(getattr(uploaded, "name", ""))
+        ]
 
-        if not _is_allowed_youtube_url(video_url):
-            messages.error(request, "유효한 유튜브 주소만 사용할 수 있어요. 유튜브 영상 링크를 다시 확인해 주세요.")
+        def render_postback():
             return _render_setup_page(
                 request,
                 art_class,
                 initial_steps=_build_posted_initial_steps(request, art_class),
                 initial_playback_mode=playback_mode,
                 setup_video_url=video_url,
+                setup_material_note=material_note,
             )
+
+        if not _is_allowed_youtube_url(video_url):
+            messages.error(request, "유효한 유튜브 주소만 사용할 수 있어요. 유튜브 영상 링크를 다시 확인해 주세요.")
+            return render_postback()
+
+        if len(material_note) > ARTCLASS_MAX_MATERIAL_NOTE_LENGTH:
+            messages.error(request, "교사용 자료 활용 메모는 4000자 이하로 적어 주세요.")
+            return render_postback()
+
+        kept_attachment_count = len(existing_attachments) - len(deleted_attachment_ids)
+        if kept_attachment_count + len(uploaded_attachments) > ARTCLASS_MAX_ATTACHMENTS:
+            messages.error(request, "수업 자료는 한 수업에 최대 5개까지 올릴 수 있어요.")
+            return render_postback()
 
         for key, uploaded_image in request.FILES.items():
             if not STEP_FORM_INDEX_RE.match(key):
@@ -451,13 +546,13 @@ def setup_view(request, pk=None):
             image_error = _validate_step_image(uploaded_image)
             if image_error:
                 messages.error(request, image_error)
-                return _render_setup_page(
-                    request,
-                    art_class,
-                    initial_steps=_build_posted_initial_steps(request, art_class),
-                    initial_playback_mode=playback_mode,
-                    setup_video_url=video_url,
-                )
+                return render_postback()
+
+        for uploaded_attachment in uploaded_attachments:
+            attachment_error = _validate_material_attachment(uploaded_attachment)
+            if attachment_error:
+                messages.error(request, attachment_error)
+                return render_postback()
         
         if art_class:
             # 기존 수업 수정
@@ -465,6 +560,7 @@ def setup_view(request, pk=None):
             art_class.youtube_url = video_url
             art_class.default_interval = interval
             art_class.playback_mode = playback_mode
+            art_class.teacher_material_note = material_note
             art_class.save()
         else:
             # 새 수업 생성
@@ -473,7 +569,8 @@ def setup_view(request, pk=None):
                 youtube_url=video_url,
                 default_interval=interval,
                 playback_mode=playback_mode,
-                created_by=request.user if request.user.is_authenticated else None
+                created_by=request.user if request.user.is_authenticated else None,
+                teacher_material_note=material_note,
             )
 
         existing_step_image_names = {}
@@ -519,6 +616,18 @@ def setup_view(request, pk=None):
                 image=payload['image'],
             )
 
+        if deleted_attachment_ids:
+            art_class.attachments.filter(pk__in=deleted_attachment_ids).delete()
+
+        next_sort_order = art_class.attachments.aggregate(max_sort=Max("sort_order")).get("max_sort") or 0
+        for offset, uploaded_attachment in enumerate(uploaded_attachments, start=1):
+            ArtClassAttachment.objects.create(
+                art_class=art_class,
+                file=uploaded_attachment,
+                original_name=_normalize_attachment_name(uploaded_attachment.name),
+                sort_order=next_sort_order + offset,
+            )
+
         apply_auto_metadata(art_class)
 
         if auto_corrected:
@@ -532,7 +641,7 @@ def setup_view(request, pk=None):
 
 def classroom_view(request, pk):
     """Classroom Page - 수업 진행 페이지"""
-    art_class = get_object_or_404(ArtClass, pk=pk)
+    art_class = get_object_or_404(ArtClass.objects.prefetch_related("steps", "attachments"), pk=pk)
     display_mode = "dashboard" if request.GET.get("display") == "dashboard" else "classroom"
     runtime_mode = "launcher" if request.GET.get("runtime") == "launcher" else "web"
     can_manage_classroom = _can_manage_art_class(request.user, art_class)
@@ -548,6 +657,8 @@ def classroom_view(request, pk):
     art_class.save(update_fields=update_fields)
     
     steps = art_class.steps.all()
+    teacher_material_attachments = _build_material_attachment_payloads(art_class)
+    teacher_material_note = _normalize_material_note(art_class.teacher_material_note)
     
     # JSON 형태로 전달 (JS에서 사용)
     steps_data = [
@@ -587,6 +698,10 @@ def classroom_view(request, pk):
         'runtime_mode': runtime_mode,
         'video_advice': video_advice,
         'launcher_download_url': _get_launcher_download_url(),
+        'teacher_material_attachments': teacher_material_attachments,
+        'teacher_material_note': teacher_material_note,
+        'has_teacher_materials': bool(teacher_material_attachments or teacher_material_note),
+        'attachment_count': len(teacher_material_attachments),
     })
 
 
@@ -662,7 +777,7 @@ def start_launcher_session_api(request, pk):
     classroom_url = request.build_absolute_uri(reverse("artclass:classroom", kwargs={"pk": art_class.pk}))
     dashboard_query = urlencode({"display": "dashboard", "runtime": "launcher"})
     dashboard_url = f"{classroom_url}?{dashboard_query}"
-    youtube_url = _build_external_video_loop_url(art_class.youtube_url)
+    youtube_url = _build_launcher_video_url(art_class.youtube_url)
 
     issued_at = int(time.time())
     expires_at = issued_at + 120
@@ -761,7 +876,8 @@ def library_view(request):
     if request.user.is_authenticated:
         my_classes = list(
             ArtClass.objects.select_related('created_by', 'created_by__userprofile')
-            .annotate(steps_count=Count('steps'))
+            .prefetch_related("attachments")
+            .annotate(steps_count=Count('steps', distinct=True), attachment_count=Count('attachments', distinct=True))
             .filter(created_by=request.user)
             .distinct()
         )
@@ -770,9 +886,15 @@ def library_view(request):
             item.start_mode_badge = "런처 시작"
             item.start_mode_reason = "초록 버튼을 누르면 영상과 수업 안내가 나뉘어 열립니다."
             item.primary_action_label = "런처로 수업 시작하기"
+            item.material_attachments = _build_material_attachment_payloads(item)
+            item.teacher_material_note_text = _normalize_material_note(item.teacher_material_note)
+            item.attachment_count = len(item.material_attachments)
+            item.has_teacher_materials = bool(item.material_attachments or item.teacher_material_note_text)
+            item.material_attachments_json = json.dumps(item.material_attachments, ensure_ascii=False)
 
-    shared_classes = ArtClass.objects.select_related('created_by', 'created_by__userprofile').annotate(
-        steps_count=Count('steps')
+    shared_classes = ArtClass.objects.select_related('created_by', 'created_by__userprofile').prefetch_related("attachments").annotate(
+        steps_count=Count('steps', distinct=True),
+        attachment_count=Count('attachments', distinct=True),
     ).filter(is_shared=True)
 
     if query:
@@ -797,6 +919,11 @@ def library_view(request):
         item.start_mode_badge = "런처 시작"
         item.start_mode_reason = "초록 버튼을 누르면 영상과 수업 안내가 나뉘어 열립니다."
         item.primary_action_label = "런처로 수업 시작하기"
+        item.material_attachments = _build_material_attachment_payloads(item)
+        item.teacher_material_note_text = _normalize_material_note(item.teacher_material_note)
+        item.attachment_count = len(item.material_attachments)
+        item.has_teacher_materials = bool(item.material_attachments or item.teacher_material_note_text)
+        item.material_attachments_json = json.dumps(item.material_attachments, ensure_ascii=False)
 
     shared_only = ArtClass.objects.filter(is_shared=True)
     category_options = list(
@@ -830,7 +957,7 @@ def library_view(request):
 @login_required
 def clone_for_edit_view(request, pk):
     """공유 수업을 내 수업으로 복사한 뒤 수정 화면으로 이동한다."""
-    source = get_object_or_404(ArtClass.objects.prefetch_related("steps"), pk=pk)
+    source = get_object_or_404(ArtClass.objects.prefetch_related("steps", "attachments"), pk=pk)
 
     if _can_manage_art_class(request.user, source):
         return redirect("artclass:setup_edit", pk=source.pk)
@@ -845,6 +972,7 @@ def clone_for_edit_view(request, pk):
         playback_mode=ARTCLASS_PRIMARY_PLAYBACK_MODE,
         created_by=request.user,
         is_shared=source.is_shared,
+        teacher_material_note=source.teacher_material_note,
     )
 
     for step in source.steps.all():
@@ -853,6 +981,16 @@ def clone_for_edit_view(request, pk):
             step_number=step.step_number,
             description=step.description,
             image=step.image.name if step.image else None,
+        )
+
+    for attachment in source.attachments.all():
+        if not attachment.file:
+            continue
+        ArtClassAttachment.objects.create(
+            art_class=cloned,
+            file=attachment.file.name,
+            original_name=attachment.original_name,
+            sort_order=attachment.sort_order,
         )
 
     apply_auto_metadata(cloned)

@@ -1,5 +1,13 @@
+import os
+
 from django.db import models
 from django.contrib.auth.models import User
+
+
+def artclass_material_upload_to(instance, filename):
+    safe_name = os.path.basename(str(filename or "").strip()) or "material"
+    art_class_id = instance.art_class_id or "unassigned"
+    return f"artclass/materials/{art_class_id}/{safe_name}"
 
 
 class ArtClass(models.Model):
@@ -36,6 +44,7 @@ class ArtClass(models.Model):
     auto_confidence = models.FloatField(default=0.0, verbose_name="자동 분류 신뢰도")
     search_text = models.TextField(blank=True, default="", verbose_name="검색 텍스트")
     is_auto_classified = models.BooleanField(default=False, verbose_name="자동 분류 완료")
+    teacher_material_note = models.TextField(blank=True, default="", verbose_name="교사용 자료 활용 메모")
 
     class Meta:
         verbose_name = "미술 수업"
@@ -72,3 +81,25 @@ class ArtStep(models.Model):
 
     def __str__(self):
         return f"Step {self.step_number}: {self.description[:30]}..." if self.description else f"Step {self.step_number}"
+
+
+class ArtClassAttachment(models.Model):
+    """교사용 수업 자료 첨부 파일"""
+    art_class = models.ForeignKey(
+        ArtClass,
+        on_delete=models.CASCADE,
+        related_name="attachments",
+        verbose_name="수업",
+    )
+    file = models.FileField(upload_to=artclass_material_upload_to, verbose_name="첨부 파일")
+    original_name = models.CharField(max_length=255, blank=True, default="", verbose_name="원본 파일명")
+    sort_order = models.PositiveIntegerField(default=0, verbose_name="정렬 순서")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "수업 자료 첨부"
+        verbose_name_plural = "수업 자료 첨부"
+        ordering = ["sort_order", "id"]
+
+    def __str__(self):
+        return self.original_name or os.path.basename(self.file.name) or f"자료 #{self.pk}"
