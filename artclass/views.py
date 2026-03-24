@@ -15,6 +15,7 @@ from django.contrib.auth.decorators import login_required
 from django_ratelimit.decorators import ratelimit
 from django.views.decorators.http import require_GET, require_POST
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from core.utils import ratelimit_key_for_master_only
 from django.db.models import Count, Max, Q
 from .models import ArtClass, ArtClassAttachment, ArtStep
@@ -162,6 +163,42 @@ def _build_launcher_public_asset_url(request, filename):
     )
 
 
+def _build_launcher_autostart_url(art_class):
+    return f"{reverse('artclass:classroom', kwargs={'pk': art_class.pk})}?{urlencode({'autostart_launcher': '1'})}"
+
+
+def _normalize_launcher_next_url(request, raw_url):
+    candidate = str(raw_url or "").strip()
+    if not candidate:
+        return ""
+    if candidate.startswith("/") and not candidate.startswith("//"):
+        return candidate
+    if url_has_allowed_host_and_scheme(
+        candidate,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        parsed = urlparse(candidate)
+        normalized = parsed.path or "/"
+        if parsed.query:
+            normalized = f"{normalized}?{parsed.query}"
+        if parsed.fragment:
+            normalized = f"{normalized}#{parsed.fragment}"
+        return normalized
+    return ""
+
+
+def _build_launcher_install_url(next_url="", next_label=""):
+    base_url = reverse("artclass:launcher_install_guide")
+    params = {}
+    if next_url:
+        params["next"] = next_url
+    cleaned_label = str(next_label or "").strip()
+    if cleaned_label:
+        params["label"] = cleaned_label[:80]
+    return f"{base_url}?{urlencode(params)}" if params else base_url
+
+
 def _get_launcher_release_config(request=None):
     default_bridge_notice = "이미 런처를 설치했다면 이번 한 번은 새 설치파일로 다시 설치해 주세요. 이후부터는 자동 업데이트됩니다."
     default_bridge_version = "0.2.0"
@@ -185,13 +222,36 @@ def _get_launcher_release_config(request=None):
     }
 
 
-def _build_launcher_template_context(request=None):
+def _build_launcher_template_context(request=None, *, next_url="", next_label=""):
     release_config = _get_launcher_release_config(request)
     download_url = release_config["downloadUrl"]
     return {
         "launcher_download_url": download_url,
         "launcher_bridge_notice": release_config["bridgeNotice"] if download_url else "",
         "launcher_bridge_version": release_config["bridgeVersion"] if download_url else "",
+        "launcher_install_url": _build_launcher_install_url(next_url=next_url, next_label=next_label),
+    }
+
+
+def _build_launcher_install_guide_context(request):
+    release_config = _get_launcher_release_config(request)
+    next_url = _normalize_launcher_next_url(request, request.GET.get("next"))
+    next_label = (request.GET.get("label") or "").strip()
+
+    if next_url:
+        return_url = next_url
+        return_label = next_label or "설치 후 이 수업 시작"
+    else:
+        return_url = reverse("artclass:setup")
+        return_label = "ArtClass로 돌아가기"
+
+    return {
+        "launcher_download_url": release_config["downloadUrl"],
+        "launcher_bridge_notice": release_config["bridgeNotice"] if release_config["downloadUrl"] else "",
+        "launcher_bridge_version": release_config["bridgeVersion"] if release_config["downloadUrl"] else "",
+        "launcher_return_url": return_url,
+        "launcher_return_label": return_label,
+        "launcher_has_download": bool(release_config["downloadUrl"]),
     }
 
 
@@ -721,7 +781,7 @@ def setup_view(request, pk=None):
         if auto_corrected:
             messages.info(request, "입력 일부를 자동 보정했습니다. 그대로 시작 가능합니다.")
          
-        classroom_url = f"{reverse('artclass:classroom', kwargs={'pk': art_class.pk})}?{urlencode({'autostart_launcher': '1'})}"
+        classroom_url = _build_launcher_autostart_url(art_class)
         return redirect(classroom_url)
     
     return _render_setup_page(request, art_class)
@@ -790,8 +850,19 @@ def classroom_view(request, pk):
         'has_teacher_materials': bool(teacher_material_attachments or teacher_material_note),
         'attachment_count': len(teacher_material_attachments),
     }
-    context.update(_build_launcher_template_context(request))
+    context.update(
+        _build_launcher_template_context(
+            request,
+            next_url=_build_launcher_autostart_url(art_class),
+            next_label="설치 후 이 수업 시작",
+        )
+    )
     return render(request, 'artclass/classroom.html', context)
+
+
+def launcher_install_guide_view(request):
+    context = _build_launcher_install_guide_context(request)
+    return render(request, "artclass/launcher_install_guide.html", context)
 
 
 @login_required
@@ -1046,6 +1117,11 @@ def library_view(request):
             item.start_mode_badge = "런처 시작"
             item.start_mode_reason = "초록 버튼을 누르면 영상과 수업 안내가 나뉘어 열립니다."
             item.primary_action_label = "런처로 수업 시작하기"
+            item.launcher_start_url = _build_launcher_autostart_url(item)
+            item.launcher_install_url = _build_launcher_install_url(
+                next_url=item.launcher_start_url,
+                next_label="설치 후 이 수업 시작",
+            )
             item.material_attachments = _build_material_attachment_payloads(item)
             item.teacher_material_note_text = _normalize_material_note(item.teacher_material_note)
             item.attachment_count = len(item.material_attachments)
@@ -1079,6 +1155,11 @@ def library_view(request):
         item.start_mode_badge = "런처 시작"
         item.start_mode_reason = "초록 버튼을 누르면 영상과 수업 안내가 나뉘어 열립니다."
         item.primary_action_label = "런처로 수업 시작하기"
+        item.launcher_start_url = _build_launcher_autostart_url(item)
+        item.launcher_install_url = _build_launcher_install_url(
+            next_url=item.launcher_start_url,
+            next_label="설치 후 이 수업 시작",
+        )
         item.material_attachments = _build_material_attachment_payloads(item)
         item.teacher_material_note_text = _normalize_material_note(item.teacher_material_note)
         item.attachment_count = len(item.material_attachments)

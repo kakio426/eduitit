@@ -7,6 +7,7 @@ urlpatterns = [
     path('', views.setup_view, name='setup'),
     path('setup/<int:pk>/', views.setup_view, name='setup_edit'),
     path('setup/from-library/<int:pk>/', views.clone_for_edit_view, name='setup_clone'),
+    path('launcher-install/', views.launcher_install_guide_view, name='launcher_install_guide'),
     path('launcher-release-manager/', views.launcher_release_manager_view, name='launcher_release_manager'),
     path('launcher-updates/windows/', views.launcher_update_index_view, name='launcher_update_index'),
     path('launcher-updates/windows/<str:filename>', views.launcher_update_asset_view, name='launcher_update_asset'),

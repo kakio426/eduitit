@@ -380,29 +380,19 @@
                         class="px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-heavy shadow-lg transition-all">
                         런처 실행
                     </button>
-                    {% if launcher_download_url %}
                     <details class="rounded-2xl bg-white/80 border border-emerald-200 px-4 py-3 text-left">
                         <summary class="cursor-pointer list-none text-sm font-heavy text-emerald-800">
                             실행이 안 되면 보기
                         </summary>
                         <div class="mt-3 space-y-2 text-xs font-semibold text-emerald-900/85 leading-relaxed">
-                            <p>설치가 안 되어 있다면 설치파일을 먼저 받아 주세요.</p>
-                            {% if launcher_bridge_notice %}
-                            <div class="rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-left text-emerald-950">
-                                {% if launcher_bridge_version %}
-                                <p class="text-[11px] font-black tracking-[0.16em] uppercase text-emerald-700">Bridge {{ launcher_bridge_version }}</p>
-                                {% endif %}
-                                <p class="mt-1 font-bold">{{ launcher_bridge_notice }}</p>
-                            </div>
-                            {% endif %}
-                            <a href="{{ launcher_download_url }}" target="_blank" rel="noopener noreferrer"
+                            <p>처음 설치와 기존 런처 재설치는 같은 안내 화면에서 바로 해결할 수 있어요.</p>
+                            <a href="{{ launcher_install_url }}"
                                 class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-sm font-heavy transition-all">
-                                <i class="fa-solid fa-download"></i> 설치파일 받기
+                                <i class="fa-solid fa-circle-info"></i> 설치 / 다시 설치 안내 열기
                             </a>
-                            <p>자동 실행이 안 되면 같은 버튼을 한 번 더 눌러 주세요.</p>
+                            <p>안내 화면에서 설치를 마친 뒤 초록 버튼으로 다시 돌아오면 됩니다.</p>
                         </div>
                     </details>
-                    {% endif %}
                 </div>
             </div>
         </div>
@@ -661,7 +651,7 @@
     const PLAYBACK_MODE_UPDATE_URL = '{% url "artclass:update_playback_mode_api" art_class.pk %}';
     const LAUNCHER_START_URL = '{% url "artclass:start_launcher_session_api" art_class.pk %}';
     const STEP_UPDATE_URL_TEMPLATE = '{% url "artclass:update_step_text_api" art_class.pk 0 %}';
-    const LAUNCHER_DOWNLOAD_URL = "{{ launcher_download_url|default:''|escapejs }}";
+    const LAUNCHER_INSTALL_URL = "{{ launcher_install_url|default:''|escapejs }}";
     const CAN_SAVE_STEP = {{ can_manage_classroom|yesno:"true,false" }};
     const VIDEO_URL = "{{ data.videoUrl|escapejs }}";
     const VIDEO_ID = extractYouTubeVideoId(VIDEO_URL);
@@ -1125,12 +1115,12 @@
             syncLauncherPrompt('external_window');
             window.location.href = data.launcherUrl;
             setTimeout(() => {
-                notifyLauncherStatus('런처 실행을 시도했습니다. 창이 안 열리면 같은 버튼을 한 번 더 눌러 주세요.', 'success');
+                notifyLauncherStatus('런처 실행을 시도했습니다. 창이 안 열리면 아래 도움말에서 설치 안내를 열어 주세요.', 'success');
             }, 1200);
         } catch (err) {
             console.error('Launcher start failed:', err);
-            const fallbackMessage = LAUNCHER_DOWNLOAD_URL
-                ? '설치가 안 되어 있다면 설치파일을 받은 뒤 다시 눌러 주세요.'
+            const fallbackMessage = LAUNCHER_INSTALL_URL
+                ? '실행이 안 되면 아래 도움말에서 설치 / 다시 설치 안내를 열어 주세요.'
                 : '런처 실행이 막혔습니다. 같은 버튼을 한 번 더 눌러 주세요.';
             notifyLauncherStatus(fallbackMessage, 'error');
         } finally {

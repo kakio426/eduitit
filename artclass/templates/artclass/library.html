@@ -118,7 +118,7 @@
                     </div>
 
                         <div class="grid grid-cols-3 gap-2 pt-2">
-                            <a href="{% url 'artclass:classroom' item.pk %}{% if item.playback_mode == 'external_window' %}?autostart_launcher=1{% endif %}"
+                            <a href="{{ item.launcher_start_url }}"
                                 class="flex items-center justify-center rounded-2xl bg-green-500 px-3 py-3 text-sm font-black text-white hover:bg-green-600 transition-all">
                                 {{ item.primary_action_label }}
                             </a>
@@ -183,6 +183,7 @@
                 data-title="{{ item.display_title }}" data-url="{{ item.youtube_url }}" data-steps="{{ item.steps_count }}"
                 data-playback-mode="{{ item.playback_mode }}"
                 data-creator="{{ item.creator_display_name }}"
+                data-launcher-install-url="{{ item.launcher_install_url }}"
                 data-attachment-count="{{ item.attachment_count }}"
                 data-material-note="{{ item.teacher_material_note_text|default:''|escape }}"
                 data-attachments="{{ item.material_attachments_json|escape }}"
@@ -300,28 +301,18 @@
                     class="flex items-center justify-center gap-3 py-5 bg-green-500 text-white rounded-[2rem] text-xl font-black shadow-lg hover:bg-green-600 hover:scale-[1.02] active:scale-95 transition-all">
                     <i class="fa-solid fa-rocket"></i> 런처로 수업 시작하기
                 </a>
-                {% if launcher_download_url %}
                 <details id="modalInstallBlock" class="hidden rounded-[2rem] bg-emerald-50 text-left border-2 border-emerald-200 px-5 py-4 shadow-sm">
                     <summary class="cursor-pointer list-none text-base font-black text-emerald-700">
                         실행이 안 되면 보기
                     </summary>
                     <div class="mt-3 space-y-2 text-sm font-bold text-emerald-900/85">
-                        <p>설치가 안 되어 있다면 설치파일을 받은 뒤 다시 눌러 주세요.</p>
-                        {% if launcher_bridge_notice %}
-                        <div class="rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm leading-relaxed text-emerald-950">
-                            {% if launcher_bridge_version %}
-                            <p class="text-[11px] font-black tracking-[0.16em] uppercase text-emerald-700">Bridge {{ launcher_bridge_version }}</p>
-                            {% endif %}
-                            <p class="mt-1 font-bold">{{ launcher_bridge_notice }}</p>
-                        </div>
-                        {% endif %}
-                        <a href="{{ launcher_download_url }}" target="_blank" rel="noopener noreferrer"
+                        <p>처음 설치와 기존 런처 재설치는 같은 안내 화면에서 바로 해결할 수 있어요.</p>
+                        <a id="modalInstallGuideLink" href="{{ launcher_install_url }}"
                             class="inline-flex items-center justify-center gap-3 py-3 px-4 bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-2xl text-sm font-black hover:bg-emerald-200 transition-all">
-                                <i class="fa-solid fa-download"></i> 설치파일 받기
+                                <i class="fa-solid fa-circle-info"></i> 설치 / 다시 설치 안내 열기
                         </a>
                     </div>
                 </details>
-                {% endif %}
                 <a id="editLink" href="#"
                     class="flex items-center justify-center gap-3 py-5 bg-white text-purple-600 border-2 border-purple-100 rounded-[2rem] text-xl font-black shadow-sm hover:border-purple-300 hover:bg-purple-50 hover:scale-[1.02] active:scale-95 transition-all">
                     <i class="fa-solid fa-wand-magic-sparkles"></i> 수정하여 사용하기
@@ -356,12 +347,14 @@
         const stepCount = el.getAttribute('data-steps');
         const playbackMode = el.getAttribute('data-playback-mode') || 'embed';
         const creator = el.getAttribute('data-creator');
+        const launcherInstallUrl = el.getAttribute('data-launcher-install-url') || '';
         const attachmentCount = Number(el.getAttribute('data-attachment-count') || '0');
         const materialNote = el.getAttribute('data-material-note') || '';
         const attachments = JSON.parse(el.getAttribute('data-attachments') || '[]');
         const canDelete = el.getAttribute('data-can-delete') === 'true';
         const deleteUrl = el.getAttribute('data-delete-url');
         openChoiceModal(pk, title, youtubeUrl, stepCount, playbackMode, creator, canDelete, deleteUrl, {
+            launcherInstallUrl,
             attachmentCount,
             materialNote,
             attachments,
@@ -385,7 +378,7 @@
         const recommendationEl = document.getElementById('modalRecommendation');
         const playLink = document.getElementById('playLink');
         const installBlock = document.getElementById('modalInstallBlock');
-        const installMissing = document.getElementById('modalInstallMissing');
+        const installGuideLink = document.getElementById('modalInstallGuideLink');
         const materialBlock = document.getElementById('modalMaterialBlock');
         const materialSummary = document.getElementById('modalMaterialSummary');
         const materialNoteEl = document.getElementById('modalMaterialNote');
@@ -403,8 +396,8 @@
         if (installBlock) {
             installBlock.classList.remove('hidden');
         }
-        if (installMissing) {
-            installMissing.classList.remove('hidden');
+        if (installGuideLink) {
+            installGuideLink.href = materials.launcherInstallUrl || '{{ launcher_install_url }}';
         }
         const attachmentCount = Number(materials.attachmentCount || 0);
         const materialNote = String(materials.materialNote || '').trim();

@@ -193,9 +193,13 @@
                                 <p id="launcherGuideReason" class="text-sm text-emerald-900/90 leading-relaxed">
                                     저장한 뒤 다음 화면의 초록 버튼을 누르면 런처가 열리고, 영상과 수업 안내가 나뉘어 바로 수업을 시작할 수 있습니다.
                                 </p>
-                                <p class="text-xs font-bold text-emerald-800/90">
-                                    실행이 안 되면 다음 화면에서 설치파일을 받을 수 있어요.
-                                </p>
+                                <div class="flex flex-wrap items-center gap-3 text-xs font-bold text-emerald-800/90">
+                                    <span>실행이 안 되면 같은 안내 화면에서 설치와 다시 설치를 한 번에 진행할 수 있어요.</span>
+                                    <a href="{{ launcher_install_url }}"
+                                        class="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-emerald-800 hover:bg-emerald-50 transition-all">
+                                        <i class="fa-solid fa-download"></i> 런처 설치 안내 보기
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>
