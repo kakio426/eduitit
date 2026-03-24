@@ -71,6 +71,7 @@
                         method="post"
                         action="{% url 'hwpxchat:chat_process' %}"
                         hx-post="{% url 'hwpxchat:chat_process' %}"
+                        hx-encoding="multipart/form-data"
                         hx-target="#hwpx-chat-result"
                         hx-swap="innerHTML"
                         hx-indicator="#hwpx-chat-loading"
@@ -400,4 +401,3 @@
     });
 </script>
 {% endblock %}
-

@@ -117,6 +117,7 @@ class HwpxChatViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "문서 올리기")
         self.assertContains(response, "공문을 교무수첩 실행업무로 정리하기")
+        self.assertContains(response, 'hx-encoding="multipart/form-data"')
         self.assertNotContains(response, "https://chatgpt.com/")
 
     def test_hwp_upload_is_blocked_server_side(self):
