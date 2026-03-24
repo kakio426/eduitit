@@ -1,5 +1,9 @@
+const fs = require("fs");
+const http = require("http");
+const https = require("https");
 const path = require("path");
 const { app, BrowserWindow, dialog, screen } = require("electron");
+const { NsisUpdater } = require("electron-updater");
 
 const PROTOCOL = "eduitit-launcher";
 const MIN_VIDEO_WIDTH = 640;
@@ -14,6 +18,8 @@ const WATCHDOG_MAX_RECOVERY_PER_MIN = 3;
 const SPLIT_RATIO_MIN = 0.45;
 const SPLIT_RATIO_MAX = 0.72;
 const SPLIT_RATIO_STEP = 0.03;
+const AUTO_UPDATE_CACHE_FILENAME = "launcher-release-config.json";
+const AUTO_UPDATE_CHECK_MIN_INTERVAL_MS = 30 * 60 * 1000;
 
 let videoWindow = null;
 let dashboardWindow = null;
@@ -30,6 +36,18 @@ let watchdogCircuitOpen = false;
 let splitRatioOverride = null;
 let appTerminating = false;
 let splitDisplayId = null;
+let autoUpdater = null;
+let updateCheckPromise = null;
+let downloadedUpdateInfo = null;
+let downloadedUpdatePromptOpen = false;
+let cachedLauncherReleaseConfig = {
+  configUrl: "",
+  updateBaseUrl: "",
+  downloadUrl: "",
+  bridgeNotice: "",
+  bridgeVersion: "",
+  lastCheckedAt: 0,
+};
 
 function extractLaunchUrlFromArgv(argv) {
   if (!Array.isArray(argv)) return null;
@@ -110,6 +128,7 @@ function parseLaunchUrl(rawUrl) {
     const payload = decodePayload(encodedPayload);
     const youtubeUrl = normalizeHttpUrl(payload.youtubeUrl);
     const dashboardUrl = normalizeHttpUrl(payload.dashboardUrl);
+    const updateConfigUrl = normalizeHttpUrl(payload.updateConfigUrl);
     if (!youtubeUrl || !dashboardUrl) {
       throw new Error("invalid_urls");
     }
@@ -126,6 +145,7 @@ function parseLaunchUrl(rawUrl) {
       title: payload.title || "Eduitit ArtClass",
       youtubeUrl,
       dashboardUrl,
+      updateConfigUrl: updateConfigUrl || "",
     };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "invalid_payload" };
@@ -134,6 +154,277 @@ function parseLaunchUrl(rawUrl) {
 
 function showErrorBox(message) {
   dialog.showErrorBox("Eduitit Teacher Launcher", message);
+}
+
+function normalizeUpdateBaseUrl(rawUrl) {
+  const normalized = normalizeHttpUrl(rawUrl);
+  if (!normalized) return "";
+  return normalized.endsWith("/") ? normalized : `${normalized}/`;
+}
+
+function normalizeTimestamp(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return 0;
+  return Math.trunc(parsed);
+}
+
+function normalizeShortText(value, maxLength = 500) {
+  if (typeof value !== "string") return "";
+  return value.trim().slice(0, maxLength);
+}
+
+function normalizeLauncherReleaseConfig(raw, fallback = {}) {
+  const source = raw && typeof raw === "object" ? raw : {};
+  const previous = fallback && typeof fallback === "object" ? fallback : {};
+  return {
+    configUrl: normalizeHttpUrl(source.configUrl) || normalizeHttpUrl(previous.configUrl) || "",
+    updateBaseUrl: normalizeUpdateBaseUrl(source.updateBaseUrl) || normalizeUpdateBaseUrl(previous.updateBaseUrl) || "",
+    downloadUrl: normalizeHttpUrl(source.downloadUrl) || normalizeHttpUrl(previous.downloadUrl) || "",
+    bridgeNotice: normalizeShortText(source.bridgeNotice || previous.bridgeNotice, 500),
+    bridgeVersion: normalizeShortText(source.bridgeVersion || previous.bridgeVersion, 50),
+    lastCheckedAt: normalizeTimestamp(source.lastCheckedAt || previous.lastCheckedAt),
+  };
+}
+
+function getLauncherReleaseConfigStatePath() {
+  try {
+    return path.join(app.getPath("userData"), AUTO_UPDATE_CACHE_FILENAME);
+  } catch (_) {
+    return "";
+  }
+}
+
+function loadLauncherReleaseConfigState() {
+  const statePath = getLauncherReleaseConfigStatePath();
+  if (!statePath || !fs.existsSync(statePath)) {
+    return cachedLauncherReleaseConfig;
+  }
+
+  try {
+    const raw = JSON.parse(fs.readFileSync(statePath, "utf8"));
+    cachedLauncherReleaseConfig = normalizeLauncherReleaseConfig(raw, cachedLauncherReleaseConfig);
+  } catch (err) {
+    console.error("[launcher-update] failed to read cached config:", err);
+  }
+
+  return cachedLauncherReleaseConfig;
+}
+
+function saveLauncherReleaseConfigState(patch = {}) {
+  cachedLauncherReleaseConfig = normalizeLauncherReleaseConfig(
+    { ...cachedLauncherReleaseConfig, ...patch },
+    cachedLauncherReleaseConfig
+  );
+
+  const statePath = getLauncherReleaseConfigStatePath();
+  if (!statePath) {
+    return cachedLauncherReleaseConfig;
+  }
+
+  try {
+    fs.mkdirSync(path.dirname(statePath), { recursive: true });
+    fs.writeFileSync(statePath, JSON.stringify(cachedLauncherReleaseConfig, null, 2), "utf8");
+  } catch (err) {
+    console.error("[launcher-update] failed to persist config:", err);
+  }
+
+  return cachedLauncherReleaseConfig;
+}
+
+function fetchJson(rawUrl) {
+  return new Promise((resolve, reject) => {
+    const normalizedUrl = normalizeHttpUrl(rawUrl);
+    if (!normalizedUrl) {
+      reject(new Error("invalid_url"));
+      return;
+    }
+
+    const target = new URL(normalizedUrl);
+    const client = target.protocol === "https:" ? https : http;
+    const request = client.request(
+      target,
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          "User-Agent": `EduititTeacherLauncher/${app.getVersion() || "0.2.0"}`,
+        },
+      },
+      (response) => {
+        const statusCode = Number(response.statusCode || 0);
+        if (statusCode >= 400) {
+          response.resume();
+          reject(new Error(`http_${statusCode}`));
+          return;
+        }
+
+        let body = "";
+        response.setEncoding("utf8");
+        response.on("data", (chunk) => {
+          body += chunk;
+        });
+        response.on("end", () => {
+          try {
+            resolve(JSON.parse(body || "{}"));
+          } catch (_) {
+            reject(new Error("invalid_json"));
+          }
+        });
+      }
+    );
+
+    request.on("error", reject);
+    request.setTimeout(5000, () => {
+      request.destroy(new Error("timeout"));
+    });
+    request.end();
+  });
+}
+
+function hasActiveSplitSession() {
+  return (
+    (videoWindow && !videoWindow.isDestroyed()) ||
+    (dashboardWindow && !dashboardWindow.isDestroyed()) ||
+    (blackoutWindow && !blackoutWindow.isDestroyed())
+  );
+}
+
+async function promptForDownloadedUpdate(info) {
+  if (!info || downloadedUpdatePromptOpen) return;
+
+  downloadedUpdatePromptOpen = true;
+  downloadedUpdateInfo = info;
+
+  try {
+    const ownerWindow = infoWindow && !infoWindow.isDestroyed() ? infoWindow : undefined;
+    const versionLabel = normalizeShortText(info.version, 40) || "새 버전";
+    const dialogOptions = {
+      type: "info",
+      buttons: ["지금 재시작", "나중에"],
+      defaultId: 0,
+      cancelId: 1,
+      noLink: true,
+      title: "Eduitit Teacher Launcher",
+      message: `런처 업데이트 ${versionLabel} 다운로드가 끝났습니다.`,
+      detail: "지금 재시작하면 바로 업데이트됩니다. 나중에를 누르면 다음 종료 때 자동으로 설치됩니다.",
+    };
+    const result = ownerWindow
+      ? await dialog.showMessageBox(ownerWindow, dialogOptions)
+      : await dialog.showMessageBox(dialogOptions);
+
+    if (result.response === 0) {
+      const updater = ensureAutoUpdater();
+      if (updater) {
+        updater.quitAndInstall();
+        return;
+      }
+    }
+  } catch (err) {
+    console.error("[launcher-update] failed to show restart prompt:", err);
+  } finally {
+    downloadedUpdatePromptOpen = false;
+    downloadedUpdateInfo = null;
+  }
+}
+
+function maybePromptForDownloadedUpdate() {
+  if (!downloadedUpdateInfo || hasActiveSplitSession()) return;
+  void promptForDownloadedUpdate(downloadedUpdateInfo);
+}
+
+function ensureAutoUpdater() {
+  if (!app.isPackaged) return null;
+  if (autoUpdater) return autoUpdater;
+
+  autoUpdater = new NsisUpdater();
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.logger = console;
+  autoUpdater.on("error", (err) => {
+    console.error("[launcher-update] updater error:", err);
+  });
+  autoUpdater.on("update-downloaded", (info) => {
+    downloadedUpdateInfo = info || { version: "" };
+    if (hasActiveSplitSession()) return;
+    maybePromptForDownloadedUpdate();
+  });
+  return autoUpdater;
+}
+
+async function checkForLauncherUpdates({ force = false } = {}) {
+  const state = loadLauncherReleaseConfigState();
+  if (!state.updateBaseUrl) return null;
+
+  if (!app.isPackaged) {
+    saveLauncherReleaseConfigState({ lastCheckedAt: Date.now() });
+    return null;
+  }
+
+  if (updateCheckPromise) {
+    return updateCheckPromise;
+  }
+
+  const now = Date.now();
+  if (!force && state.lastCheckedAt && now - state.lastCheckedAt < AUTO_UPDATE_CHECK_MIN_INTERVAL_MS) {
+    return null;
+  }
+
+  const updater = ensureAutoUpdater();
+  if (!updater) return null;
+
+  updater.setFeedURL({
+    provider: "generic",
+    url: state.updateBaseUrl,
+  });
+  saveLauncherReleaseConfigState({ lastCheckedAt: now });
+  updateCheckPromise = updater
+    .checkForUpdates()
+    .catch((err) => {
+      console.error("[launcher-update] check failed:", err);
+      return null;
+    })
+    .finally(() => {
+      updateCheckPromise = null;
+    });
+  return updateCheckPromise;
+}
+
+async function syncLauncherReleaseConfig(rawConfigUrl, { checkImmediately = false, force = false } = {}) {
+  const configUrl = normalizeHttpUrl(rawConfigUrl);
+  if (!configUrl) {
+    return loadLauncherReleaseConfigState();
+  }
+
+  saveLauncherReleaseConfigState({ configUrl });
+
+  try {
+    const payload = await fetchJson(configUrl);
+    const nextState = saveLauncherReleaseConfigState({
+      configUrl,
+      downloadUrl: payload.downloadUrl,
+      updateBaseUrl: payload.updateBaseUrl,
+      bridgeNotice: payload.bridgeNotice,
+      bridgeVersion: payload.bridgeVersion,
+    });
+    if (nextState.updateBaseUrl && (checkImmediately || force)) {
+      await checkForLauncherUpdates({ force });
+    }
+    return nextState;
+  } catch (err) {
+    console.error("[launcher-update] failed to refresh config:", err);
+    return loadLauncherReleaseConfigState();
+  }
+}
+
+function bootstrapLauncherAutoUpdate() {
+  const state = loadLauncherReleaseConfigState();
+  if (state.configUrl) {
+    void syncLauncherReleaseConfig(state.configUrl, { checkImmediately: true });
+    return;
+  }
+  if (state.updateBaseUrl) {
+    void checkForLauncherUpdates();
+  }
 }
 
 function closeSplitWindows() {
@@ -442,6 +733,9 @@ function createInfoWindow() {
   ].join("");
 
   infoWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+  infoWindow.webContents.once("did-finish-load", () => {
+    maybePromptForDownloadedUpdate();
+  });
   infoWindow.on("closed", () => {
     infoWindow = null;
   });
@@ -817,6 +1111,7 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
         }
 
         if (!window.__eduititRepeatEnforcer) {
+          const confirmedPlaybackThresholdSec = 3;
           const repeatState = window.__eduititRepeatState || {
             lastReplayAt: 0,
             lastRecoveryAt: 0,
@@ -843,10 +1138,25 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
 
             const pageVideoId = getPageVideoId();
             const activeVideoId = getActiveVideoId();
+            const playerState = getPlayerState();
+            const confirmedTargetPlayback =
+              !targetVideoId ||
+              (pageVideoId === targetVideoId &&
+                (!activeVideoId || activeVideoId === targetVideoId || activeVideoId === pageVideoId) &&
+                Boolean(
+                  video &&
+                    !video.ended &&
+                    video.currentTime >= confirmedPlaybackThresholdSec &&
+                    (playerState === null || playerState === 1 || playerState === 2 || playerState === 3)
+                ));
+
+            if (confirmedTargetPlayback) {
+              repeatState.sawTargetPlayback = true;
+            }
 
             // Recover only when the watch page itself drifts away. Ads can expose
             // a temporary internal video id that should not trigger a reload.
-            if (targetVideoId && pageVideoId && pageVideoId !== targetVideoId) {
+            if (targetVideoId && repeatState.sawTargetPlayback && pageVideoId && pageVideoId !== targetVideoId) {
               if (replayUrl && now - repeatState.lastRecoveryAt >= replayCooldownMs) {
                 repeatState.lastRecoveryAt = now;
                 repeatState.sawTargetPlayback = false;
@@ -855,17 +1165,7 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
               return;
             }
 
-            const playerState = getPlayerState();
-            const targetPlaybackInProgress =
-              !targetVideoId ||
-              activeVideoId === targetVideoId ||
-              ((!activeVideoId || activeVideoId === pageVideoId) &&
-                pageVideoId === targetVideoId &&
-                Boolean(video && !video.ended && video.currentTime > 0));
-
-            if (targetPlaybackInProgress) {
-              repeatState.sawTargetPlayback = true;
-            } else if (targetVideoId && activeVideoId && activeVideoId !== targetVideoId) {
+            if (!confirmedTargetPlayback && targetVideoId && activeVideoId && activeVideoId !== targetVideoId) {
               return;
             }
 
@@ -988,6 +1288,9 @@ function handleLaunchUrl(rawUrl) {
   lastRecoveryAt = 0;
   lockDisplayToCurrentPointer();
   lastLaunchPayload = parsed;
+  if (parsed.updateConfigUrl) {
+    void syncLauncherReleaseConfig(parsed.updateConfigUrl, { checkImmediately: true });
+  }
   createSplitWindows(parsed);
 }
 
@@ -1021,6 +1324,7 @@ if (!gotSingleInstanceLock) {
 
   app.whenReady().then(() => {
     bindDisplayEventHandlers();
+    bootstrapLauncherAutoUpdate();
     const launchUrl = extractLaunchUrlFromArgv(process.argv);
     if (launchUrl) {
       handleLaunchUrl(launchUrl);

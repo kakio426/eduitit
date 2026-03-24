@@ -1,6 +1,6 @@
 {
   "name": "eduitit-teacher-launcher",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Teacher launcher for one-click split classroom mode",
   "main": "main.js",
   "author": "Eduitit",
@@ -21,7 +21,9 @@
       "output": "dist"
     },
     "files": [
-      "main.js"
+      "main.js",
+      "package.json",
+      "node_modules/**/*"
     ],
     "protocols": [
       {
@@ -29,6 +31,12 @@
         "schemes": [
           "eduitit-launcher"
         ]
+      }
+    ],
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://example.com/eduitit/teacher-launcher/windows/"
       }
     ],
     "win": {
@@ -41,5 +49,8 @@
         }
       ]
     }
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.3"
   }
 }

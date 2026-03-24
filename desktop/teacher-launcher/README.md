@@ -24,6 +24,10 @@ npm run dist:win
 
 빌드 산출물은 `desktop/teacher-launcher/dist`에 생성됩니다.
 
+- 브릿지 설치본: `*.exe`
+- 자동 업데이트 메타데이터: `latest.yml`
+- 차등 업데이트 메타데이터: `*.blockmap`
+
 ## Protocol payload contract
 런처는 URL query `payload`를 base64url JSON으로 받습니다.
 
@@ -34,10 +38,17 @@ npm run dist:win
   "title": "수업 제목",
   "youtubeUrl": "https://www.youtube.com/watch?...",
   "dashboardUrl": "https://.../artclass/classroom/123/?display=dashboard&runtime=launcher",
+  "updateConfigUrl": "https://.../artclass/api/launcher-release-config/",
   "issuedAt": 1700000000,
   "expiresAt": 1700000120
 }
 ```
+
+## Auto update hosting
+- 브릿지 설치본 한 번만 수동 설치하면 이후부터는 자동 업데이트를 사용합니다.
+- 서버는 `latest.yml`, 설치파일(`.exe`), `.blockmap`을 같은 고정 디렉터리에 올려 두어야 합니다.
+- 웹 앱은 `ARTCLASS_LAUNCHER_DOWNLOAD_URL`로 브릿지 설치파일 링크를 노출합니다.
+- 런처 앱은 `updateConfigUrl`이 가리키는 JSON에서 `updateBaseUrl`을 받아 업데이트를 확인합니다.
 
 ## Notes
 - 웹 브라우저 팝업 제약을 우회하기 위해 창 배치는 런처가 담당합니다.

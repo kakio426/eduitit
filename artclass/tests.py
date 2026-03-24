@@ -1,15 +1,23 @@
 import json
+import os
 from io import StringIO
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
-from core.models import UserProfile
+from core.models import UserPolicyConsent, UserProfile
+from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
 from .classification import apply_auto_metadata
+from .launcher_release import (
+    LauncherReleaseValidationError,
+    parse_latest_yml_text,
+    upload_launcher_release_bundle,
+)
 from .manual_pipeline import ManualPipelineError, parse_manual_pipeline_result
 from .models import ArtClass, ArtClassAttachment, ArtStep
 
@@ -34,6 +42,41 @@ def make_test_material_upload(name="activity.pdf", content_type="application/pdf
     else:
         payload = b"a" * size_bytes
     return SimpleUploadedFile(name, payload, content_type=content_type)
+
+
+def make_test_launcher_manifest(version="0.2.0", installer_name=None):
+    installer_name = installer_name or f"Eduitit Teacher Launcher Setup {version}.exe"
+    return (
+        f"version: {version}\n"
+        "files:\n"
+        f"  - url: {installer_name}\n"
+        "    sha512: testsha512\n"
+        "    size: 123456\n"
+        f"path: {installer_name}\n"
+        "sha512: testsha512\n"
+        "releaseDate: '2026-03-24T00:00:00.000Z'\n"
+    )
+
+
+def make_test_launcher_release_uploads(version="0.2.0", installer_name=None):
+    installer_name = installer_name or f"Eduitit Teacher Launcher Setup {version}.exe"
+    blockmap_name = f"{installer_name}.blockmap"
+    latest_yml = SimpleUploadedFile(
+        "latest.yml",
+        make_test_launcher_manifest(version=version, installer_name=installer_name).encode("utf-8"),
+        content_type="text/yaml",
+    )
+    installer_file = SimpleUploadedFile(
+        installer_name,
+        b"launcher-binary",
+        content_type="application/octet-stream",
+    )
+    blockmap_file = SimpleUploadedFile(
+        blockmap_name,
+        b"{}",
+        content_type="application/octet-stream",
+    )
+    return latest_yml, installer_file, blockmap_file
 
 
 class ManualPipelineParserTest(TestCase):
@@ -142,6 +185,54 @@ class ManualPipelineParserTest(TestCase):
         self.assertTrue(any("앞 24개만 반영" in warning for warning in result["warnings"]))
 
 
+class LauncherReleaseStorageTest(TestCase):
+    def test_parse_latest_yml_text_reads_version_and_installer_name(self):
+        manifest = parse_latest_yml_text(make_test_launcher_manifest(version="0.2.0"))
+
+        self.assertEqual(manifest["version"], "0.2.0")
+        self.assertEqual(manifest["installer_filename"], "Eduitit Teacher Launcher Setup 0.2.0.exe")
+        self.assertEqual(
+            manifest["blockmap_filename"],
+            "Eduitit Teacher Launcher Setup 0.2.0.exe.blockmap",
+        )
+
+    def test_upload_launcher_release_bundle_rejects_mismatched_installer_name(self):
+        latest_yml, installer_file, blockmap_file = make_test_launcher_release_uploads(
+            version="0.2.0",
+            installer_name="Expected Setup 0.2.0.exe",
+        )
+        installer_file.name = "Different Setup 0.2.0.exe"
+        blockmap_file.name = "Different Setup 0.2.0.exe.blockmap"
+
+        with patch("artclass.launcher_release.is_launcher_bucket_configured", return_value=True):
+            with self.assertRaises(LauncherReleaseValidationError):
+                upload_launcher_release_bundle(
+                    latest_yml_file=latest_yml,
+                    installer_file=installer_file,
+                    blockmap_file=blockmap_file,
+                )
+
+    def test_upload_launcher_release_bundle_uploads_three_files(self):
+        latest_yml, installer_file, blockmap_file = make_test_launcher_release_uploads(version="0.2.0")
+        mock_client = Mock()
+
+        with patch("artclass.launcher_release.is_launcher_bucket_configured", return_value=True), patch(
+            "artclass.launcher_release._load_s3_client",
+            return_value=mock_client,
+        ), patch(
+            "artclass.launcher_release.get_launcher_bucket_settings",
+            return_value={"bucket_name": "launcher-bucket"},
+        ):
+            manifest = upload_launcher_release_bundle(
+                latest_yml_file=latest_yml,
+                installer_file=installer_file,
+                blockmap_file=blockmap_file,
+            )
+
+        self.assertEqual(manifest["version"], "0.2.0")
+        self.assertEqual(mock_client.upload_fileobj.call_count, 3)
+
+
 class ManualPipelineApiTest(TestCase):
     def setUp(self):
         self.owner = User.objects.create_user(
@@ -161,6 +252,24 @@ class ManualPipelineApiTest(TestCase):
         UserProfile.objects.update_or_create(
             user=self.other,
             defaults={"nickname": "외부교사", "role": "school"},
+        )
+        self.staff = User.objects.create_user(
+            username="api_staff",
+            password="pw123456",
+            email="api_staff@example.com",
+            is_staff=True,
+        )
+        UserProfile.objects.update_or_create(
+            user=self.staff,
+            defaults={"nickname": "운영교사", "role": "school"},
+        )
+        UserPolicyConsent.objects.create(
+            user=self.staff,
+            provider="direct",
+            terms_version=TERMS_VERSION,
+            privacy_version=PRIVACY_VERSION,
+            agreed_at=timezone.now(),
+            agreement_source="required_gate",
         )
 
     def test_parse_gemini_steps_api_success(self):
@@ -320,6 +429,125 @@ class ManualPipelineApiTest(TestCase):
         art_class.refresh_from_db()
         self.assertEqual(art_class.playback_mode, ArtClass.PLAYBACK_MODE_EMBED)
 
+    def test_launcher_release_config_api_returns_env_values(self):
+        with patch.dict(
+            os.environ,
+            {
+                "ARTCLASS_LAUNCHER_DOWNLOAD_URL": "https://downloads.eduitit.com/launcher/Eduitit-Teacher-Launcher-Setup-0.2.0.exe",
+                "ARTCLASS_LAUNCHER_UPDATE_BASE_URL": "https://downloads.eduitit.com/launcher/windows",
+                "ARTCLASS_LAUNCHER_BRIDGE_VERSION": "0.2.0",
+                "ARTCLASS_LAUNCHER_BRIDGE_NOTICE": "이미 설치했다면 이번 한 번만 다시 설치해 주세요.",
+            },
+            clear=False,
+        ):
+            response = self.client.get(reverse("artclass:launcher_release_config_api"))
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(
+            payload["downloadUrl"],
+            "https://downloads.eduitit.com/launcher/Eduitit-Teacher-Launcher-Setup-0.2.0.exe",
+        )
+        self.assertEqual(payload["updateBaseUrl"], "https://downloads.eduitit.com/launcher/windows/")
+        self.assertEqual(payload["bridgeVersion"], "0.2.0")
+        self.assertEqual(payload["bridgeNotice"], "이미 설치했다면 이번 한 번만 다시 설치해 주세요.")
+
+    def test_launcher_release_config_api_uses_bucket_release_urls_when_env_missing(self):
+        current_release = {
+            "version": "0.2.0",
+            "installer_filename": "Eduitit Teacher Launcher Setup 0.2.0.exe",
+            "blockmap_filename": "Eduitit Teacher Launcher Setup 0.2.0.exe.blockmap",
+            "latest_filename": "latest.yml",
+        }
+
+        with patch.dict(
+            os.environ,
+            {
+                "ARTCLASS_LAUNCHER_DOWNLOAD_URL": "",
+                "ARTCLASS_LAUNCHER_UPDATE_BASE_URL": "",
+                "ARTCLASS_LAUNCHER_BRIDGE_VERSION": "",
+            },
+            clear=False,
+        ), patch("artclass.views.get_current_launcher_release", return_value=current_release):
+            response = self.client.get(reverse("artclass:launcher_release_config_api"))
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(
+            payload["downloadUrl"],
+            "http://testserver/artclass/launcher-updates/windows/Eduitit%20Teacher%20Launcher%20Setup%200.2.0.exe",
+        )
+        self.assertEqual(
+            payload["updateBaseUrl"],
+            "http://testserver/artclass/launcher-updates/windows/",
+        )
+        self.assertEqual(payload["bridgeVersion"], "0.2.0")
+
+    def test_launcher_update_index_view_returns_current_release_urls(self):
+        current_release = {
+            "version": "0.2.0",
+            "installer_filename": "Eduitit Teacher Launcher Setup 0.2.0.exe",
+            "blockmap_filename": "Eduitit Teacher Launcher Setup 0.2.0.exe.blockmap",
+            "latest_filename": "latest.yml",
+        }
+
+        with patch("artclass.views.get_current_launcher_release", return_value=current_release):
+            response = self.client.get(reverse("artclass:launcher_update_index"))
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["available"])
+        self.assertEqual(payload["version"], "0.2.0")
+        self.assertEqual(
+            payload["latestYmlUrl"],
+            "http://testserver/artclass/launcher-updates/windows/latest.yml",
+        )
+
+    def test_launcher_update_asset_view_redirects_to_presigned_bucket_url(self):
+        with patch(
+            "artclass.views.get_launcher_asset_download_url",
+            return_value="https://storage.railway.app/signed-download",
+        ):
+            response = self.client.get(
+                reverse("artclass:launcher_update_asset", kwargs={"filename": "latest.yml"})
+            )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "https://storage.railway.app/signed-download")
+
+    def test_launcher_release_manager_requires_staff(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(reverse("artclass:launcher_release_manager"))
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_launcher_release_manager_uploads_release_bundle_for_staff(self):
+        self.client.force_login(self.staff)
+        latest_yml, installer_file, blockmap_file = make_test_launcher_release_uploads(version="0.2.0")
+
+        with patch(
+            "artclass.views.upload_launcher_release_bundle",
+            return_value={
+                "version": "0.2.0",
+                "installer_filename": installer_file.name,
+                "blockmap_filename": blockmap_file.name,
+                "latest_filename": "latest.yml",
+            },
+        ) as mock_upload:
+            response = self.client.post(
+                reverse("artclass:launcher_release_manager"),
+                data={
+                    "latest_yml": latest_yml,
+                    "installer_exe": installer_file,
+                    "installer_blockmap": blockmap_file,
+                },
+            )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("artclass:launcher_release_manager"))
+        mock_upload.assert_called_once()
+
     def test_start_launcher_session_api_success(self):
         art_class = ArtClass.objects.create(
             title="런처 테스트 수업",
@@ -343,6 +571,11 @@ class ManualPipelineApiTest(TestCase):
         self.assertIn("eduitit-launcher://launch?payload=", payload["launcherUrl"])
         self.assertIn("display=dashboard", payload["fallback"]["dashboardUrl"])
         self.assertIn("runtime=launcher", payload["fallback"]["dashboardUrl"])
+        self.assertEqual(
+            payload["payload"]["updateConfigUrl"],
+            f"http://testserver{reverse('artclass:launcher_release_config_api')}",
+        )
+        self.assertEqual(payload["fallback"]["updateConfigUrl"], payload["payload"]["updateConfigUrl"])
         self.assertIn("watch?v=2bBhnfh4StU", payload["fallback"]["youtubeUrl"])
         self.assertIn("autoplay=1", payload["fallback"]["youtubeUrl"])
         self.assertNotIn("playlist=", payload["fallback"]["youtubeUrl"])
@@ -701,6 +934,22 @@ class ArtClassSetupEditTest(TestCase):
         self.assertContains(response, "수업 준비를 저장하고 있어요")
         self.assertContains(response, "이미지나 자료 파일이 있으면 업로드 때문에 조금 더 걸릴 수 있어요.")
         self.assertNotContains(response, "샘플 영상으로 체험하기")
+        self.assertNotContains(response, "이번 한 번은 새 설치파일로 다시 설치해 주세요")
+
+    def test_setup_page_shows_launcher_bridge_notice_when_download_available(self):
+        with patch.dict(
+            os.environ,
+            {
+                "ARTCLASS_LAUNCHER_DOWNLOAD_URL": "https://downloads.eduitit.com/launcher/Eduitit-Teacher-Launcher-Setup-0.2.0.exe",
+                "ARTCLASS_LAUNCHER_BRIDGE_VERSION": "0.2.0",
+            },
+            clear=False,
+        ):
+            response = self.client.get(reverse("artclass:setup"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Bridge 0.2.0")
+        self.assertContains(response, "이미 런처를 설치했다면 이번 한 번은 새 설치파일로 다시 설치해 주세요. 이후부터는 자동 업데이트됩니다.")
 
     def test_setup_page_uses_gemini_example_without_sample_shortcut(self):
         response = self.client.get(reverse("artclass:setup"))
@@ -1239,6 +1488,21 @@ class ArtClassAutoMetadataTest(TestCase):
         self.assertContains(response, "초록 버튼을 누르면 영상과 수업 안내가 나뉘어 열립니다.")
         self.assertContains(response, "자료 1개")
 
+    def test_library_shows_launcher_bridge_notice_when_download_available(self):
+        with patch.dict(
+            os.environ,
+            {
+                "ARTCLASS_LAUNCHER_DOWNLOAD_URL": "https://downloads.eduitit.com/launcher/Eduitit-Teacher-Launcher-Setup-0.2.0.exe",
+                "ARTCLASS_LAUNCHER_BRIDGE_VERSION": "0.2.0",
+            },
+            clear=False,
+        ):
+            response = self.client.get(reverse("artclass:library"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Bridge 0.2.0")
+        self.assertContains(response, "이미 런처를 설치했다면 이번 한 번은 새 설치파일로 다시 설치해 주세요. 이후부터는 자동 업데이트됩니다.")
+
 
 class ArtClassPresentationUxTest(TestCase):
     def test_classroom_shows_launcher_recommended_state_for_external_mode(self):
@@ -1255,6 +1519,30 @@ class ArtClassPresentationUxTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "런처 시작")
         self.assertContains(response, "초록 버튼을 누르면 영상과 수업 안내가 나뉘어 열립니다.")
+        self.assertNotContains(response, "이번 한 번은 새 설치파일로 다시 설치해 주세요")
+
+    def test_classroom_shows_launcher_bridge_notice_when_download_available(self):
+        art_class = ArtClass.objects.create(
+            title="런처 안내 수업",
+            youtube_url="https://www.youtube.com/watch?v=UFQT5Wtamw0",
+            default_interval=10,
+            playback_mode=ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW,
+        )
+        ArtStep.objects.create(art_class=art_class, step_number=1, description="기본 단계")
+
+        with patch.dict(
+            os.environ,
+            {
+                "ARTCLASS_LAUNCHER_DOWNLOAD_URL": "https://downloads.eduitit.com/launcher/Eduitit-Teacher-Launcher-Setup-0.2.0.exe",
+                "ARTCLASS_LAUNCHER_BRIDGE_VERSION": "0.2.0",
+            },
+            clear=False,
+        ):
+            response = self.client.get(reverse("artclass:classroom", kwargs={"pk": art_class.pk}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Bridge 0.2.0")
+        self.assertContains(response, "이미 런처를 설치했다면 이번 한 번은 새 설치파일로 다시 설치해 주세요. 이후부터는 자동 업데이트됩니다.")
 
     def test_classroom_normalizes_legacy_embed_mode_to_launcher_flow(self):
         art_class = ArtClass.objects.create(

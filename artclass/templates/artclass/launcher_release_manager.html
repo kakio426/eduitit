@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+
+{% block title %}런처 버전 올리기 - Eduitit{% endblock %}
+
+{% block content %}
+<main class="min-h-screen pt-24 md:pt-32 pb-20 px-4">
+    <div class="max-w-4xl mx-auto space-y-8">
+        <section class="clay-card p-6 md:p-8 bg-white/90">
+            <div class="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                    <p class="text-xs font-black tracking-[0.18em] uppercase text-emerald-600">Launcher Deploy</p>
+                    <h1 class="mt-2 text-3xl font-black text-gray-900">런처 새 버전 올리기</h1>
+                    <p class="mt-3 text-sm text-gray-600 leading-relaxed">
+                        여기서는 `latest.yml`, 설치파일 `.exe`, `.blockmap` 파일 3개를 올리면 됩니다.
+                        업로드가 끝나면 기존 브릿지 설치자는 다음 실행 때 자동 업데이트를 받습니다.
+                    </p>
+                </div>
+                <a href="{% url 'artclass:setup' %}"
+                    class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 transition-all">
+                    <i class="fa-solid fa-arrow-left"></i> ArtClass로 돌아가기
+                </a>
+            </div>
+        </section>
+
+        <section class="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+            <div class="clay-card p-6 bg-white/90 space-y-4">
+                <div>
+                    <h2 class="text-xl font-black text-gray-900">현재 상태</h2>
+                    <p class="mt-2 text-sm text-gray-500">Bucket 연결과 현재 공개 주소를 바로 확인할 수 있습니다.</p>
+                </div>
+
+                <div class="rounded-2xl border px-4 py-4 {% if bucket_ready %}border-emerald-200 bg-emerald-50{% else %}border-amber-200 bg-amber-50{% endif %}">
+                    <p class="text-xs font-black tracking-[0.16em] uppercase {% if bucket_ready %}text-emerald-700{% else %}text-amber-700{% endif %}">
+                        {% if bucket_ready %}Bucket Ready{% else %}Bucket Check{% endif %}
+                    </p>
+                    {% if bucket_ready %}
+                    <p class="mt-2 text-sm font-bold text-emerald-950">Railway bucket 연결이 완료되었습니다.</p>
+                    <p class="mt-2 text-xs text-emerald-900/80 break-all">Bucket: {{ bucket_name }}</p>
+                    <p class="mt-1 text-xs text-emerald-900/80 break-all">Endpoint: {{ bucket_endpoint }}</p>
+                    {% else %}
+                    <p class="mt-2 text-sm font-bold text-amber-900">먼저 Railway 변수 연결이 필요합니다.</p>
+                    <p class="mt-2 text-xs text-amber-800">`LAUNCHER_BUCKET_*` 변수가 모두 설정되어야 업로드할 수 있습니다.</p>
+                    {% endif %}
+                </div>
+
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                    <p class="text-xs font-black tracking-[0.16em] uppercase text-slate-600">Current Release</p>
+                    {% if current_release %}
+                    <p class="mt-2 text-lg font-black text-slate-900">Bridge {{ current_release.version }}</p>
+                    <p class="mt-2 text-sm text-slate-700 break-all">설치파일: {{ current_release.installer_filename }}</p>
+                    <p class="mt-1 text-sm text-slate-700 break-all">Blockmap: {{ current_release.blockmap_filename }}</p>
+                    {% else %}
+                    <p class="mt-2 text-sm font-bold text-slate-900">아직 업로드된 런처 설치본이 없습니다.</p>
+                    <p class="mt-2 text-xs text-slate-600">첫 배포라면 아래 폼에서 3개 파일을 같이 올리면 됩니다.</p>
+                    {% endif %}
+                </div>
+
+                <div class="rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-4 text-sm text-indigo-950">
+                    <p class="font-black">기존 설치자 안내 문구</p>
+                    <p class="mt-2 leading-relaxed">{{ bridge_notice }}</p>
+                </div>
+            </div>
+
+            <div class="clay-card p-6 bg-white/90">
+                <div>
+                    <h2 class="text-xl font-black text-gray-900">새 버전 업로드</h2>
+                    <p class="mt-2 text-sm text-gray-500">
+                        `desktop/teacher-launcher/dist`에서 나온 파일 3개를 그대로 올려 주세요.
+                    </p>
+                </div>
+
+                <form method="post" enctype="multipart/form-data" class="mt-5 space-y-4">
+                    {% csrf_token %}
+                    <div>
+                        <label for="latestYmlInput" class="block text-sm font-black text-gray-900">1. latest.yml</label>
+                        <input id="latestYmlInput" name="latest_yml" type="file" accept=".yml,.yaml"
+                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800">
+                    </div>
+                    <div>
+                        <label for="installerExeInput" class="block text-sm font-black text-gray-900">2. 설치파일 .exe</label>
+                        <input id="installerExeInput" name="installer_exe" type="file" accept=".exe"
+                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800">
+                    </div>
+                    <div>
+                        <label for="installerBlockmapInput" class="block text-sm font-black text-gray-900">3. .blockmap</label>
+                        <input id="installerBlockmapInput" name="installer_blockmap" type="file" accept=".blockmap"
+                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800">
+                    </div>
+
+                    <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-xs leading-relaxed text-amber-900">
+                        <p class="font-black">중요</p>
+                        <p class="mt-2">세 파일은 같은 버전에서 같이 나온 묶음이어야 합니다. 파일 이름이 `latest.yml` 안의 `path`와 다르면 업로드가 막힙니다.</p>
+                    </div>
+
+                    <button type="submit"
+                        class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-emerald-600 text-white font-black hover:bg-emerald-700 transition-all">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> 버전 올리기
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <section class="clay-card p-6 bg-white/90 space-y-4">
+            <div>
+                <h2 class="text-xl font-black text-gray-900">공개 주소</h2>
+                <p class="mt-2 text-sm text-gray-500">런처와 웹 화면은 아래 Eduitit 주소를 기준으로 설치본을 찾습니다.</p>
+            </div>
+            <div class="grid gap-3">
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <p class="text-xs font-black tracking-[0.16em] uppercase text-slate-500">Update Base</p>
+                    <p class="mt-2 text-sm text-slate-900 break-all">{{ public_update_base_url }}</p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <p class="text-xs font-black tracking-[0.16em] uppercase text-slate-500">latest.yml</p>
+                    <p class="mt-2 text-sm text-slate-900 break-all">{{ public_latest_yml_url }}</p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <p class="text-xs font-black tracking-[0.16em] uppercase text-slate-500">다운로드 링크</p>
+                    <p class="mt-2 text-sm text-slate-900 break-all">{{ public_download_url|default:"아직 업로드된 설치파일이 없습니다." }}</p>
+                </div>
+                {% if public_blockmap_url %}
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <p class="text-xs font-black tracking-[0.16em] uppercase text-slate-500">blockmap</p>
+                    <p class="mt-2 text-sm text-slate-900 break-all">{{ public_blockmap_url }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="clay-card p-6 bg-white/90 space-y-4">
+            <div>
+                <h2 class="text-xl font-black text-gray-900">운영 순서</h2>
+            </div>
+            <div class="grid gap-3 md:grid-cols-3 text-sm">
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                    <p class="font-black text-slate-900">1. 새 버전 빌드</p>
+                    <p class="mt-2 text-slate-600 leading-relaxed">로컬에서 `dist` 폴더를 만들고 3개 파일을 준비합니다.</p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                    <p class="font-black text-slate-900">2. 이 화면에서 업로드</p>
+                    <p class="mt-2 text-slate-600 leading-relaxed">`latest.yml`, `.exe`, `.blockmap`을 한 번에 올립니다.</p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                    <p class="font-black text-slate-900">3. 기존 사용자 한 번 재설치</p>
+                    <p class="mt-2 text-slate-600 leading-relaxed">브릿지 이전 설치자는 이번 한 번만 다시 설치하고, 이후부터 자동 업데이트됩니다.</p>
+                </div>
+            </div>
+        </section>
+    </div>
+</main>
+{% endblock %}

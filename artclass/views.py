@@ -7,18 +7,27 @@ from urllib.request import Request, urlopen
 from urllib.parse import parse_qs, urlencode, urlparse
 from PIL import Image, UnidentifiedImageError
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.views import redirect_to_login
 from django.contrib.auth.decorators import login_required
 from django_ratelimit.decorators import ratelimit
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 from django.urls import reverse
 from core.utils import ratelimit_key_for_master_only
 from django.db.models import Count, Max, Q
 from .models import ArtClass, ArtClassAttachment, ArtStep
 from .classification import apply_auto_metadata, collect_popular_tags
+from .launcher_release import (
+    LauncherReleaseError,
+    LauncherReleaseValidationError,
+    get_current_launcher_release,
+    get_launcher_asset_download_url,
+    get_launcher_bucket_settings,
+    is_launcher_bucket_configured,
+    upload_launcher_release_bundle,
+)
 from .manual_pipeline import (
     ManualPipelineError,
     build_manual_pipeline_prompt,
@@ -124,11 +133,95 @@ def _encode_launcher_payload(payload):
     return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
 
 
-def _get_launcher_download_url():
-    raw_url = (os.getenv("ARTCLASS_LAUNCHER_DOWNLOAD_URL") or "").strip()
+def _normalize_http_url(raw_url):
+    raw_url = str(raw_url or "").strip()
     if raw_url.startswith("http://") or raw_url.startswith("https://"):
         return raw_url
     return ""
+
+
+def _normalize_launcher_update_base_url(raw_url):
+    normalized = _normalize_http_url(raw_url)
+    if normalized and not normalized.endswith("/"):
+        return f"{normalized}/"
+    return normalized
+
+
+def _build_launcher_public_base_url(request):
+    if not request:
+        return ""
+    base_url = request.build_absolute_uri(reverse("artclass:launcher_update_index"))
+    return base_url if base_url.endswith("/") else f"{base_url}/"
+
+
+def _build_launcher_public_asset_url(request, filename):
+    if not request or not filename:
+        return ""
+    return request.build_absolute_uri(
+        reverse("artclass:launcher_update_asset", kwargs={"filename": filename})
+    )
+
+
+def _get_launcher_release_config(request=None):
+    default_bridge_notice = "이미 런처를 설치했다면 이번 한 번은 새 설치파일로 다시 설치해 주세요. 이후부터는 자동 업데이트됩니다."
+    default_bridge_version = "0.2.0"
+    bridge_notice = (os.getenv("ARTCLASS_LAUNCHER_BRIDGE_NOTICE") or default_bridge_notice).strip() or default_bridge_notice
+    env_bridge_version = (os.getenv("ARTCLASS_LAUNCHER_BRIDGE_VERSION") or "").strip()
+    current_release = get_current_launcher_release()
+    bridge_version = env_bridge_version or (current_release or {}).get("version") or default_bridge_version
+    download_url = _normalize_http_url(os.getenv("ARTCLASS_LAUNCHER_DOWNLOAD_URL"))
+    update_base_url = _normalize_launcher_update_base_url(os.getenv("ARTCLASS_LAUNCHER_UPDATE_BASE_URL"))
+
+    if current_release and request:
+        if not download_url:
+            download_url = _build_launcher_public_asset_url(request, current_release["installer_filename"])
+        if not update_base_url:
+            update_base_url = _build_launcher_public_base_url(request)
+
+    return {
+        "downloadUrl": download_url,
+        "updateBaseUrl": update_base_url,
+        "bridgeNotice": bridge_notice,
+        "bridgeVersion": bridge_version,
+        "currentRelease": current_release,
+    }
+
+
+def _build_launcher_template_context(request=None):
+    release_config = _get_launcher_release_config(request)
+    download_url = release_config["downloadUrl"]
+    return {
+        "launcher_download_url": download_url,
+        "launcher_bridge_notice": release_config["bridgeNotice"] if download_url else "",
+        "launcher_bridge_version": release_config["bridgeVersion"] if download_url else "",
+        "launcher_release_manager_url": (
+            reverse("artclass:launcher_release_manager")
+            if request and getattr(request.user, "is_staff", False)
+            else ""
+        ),
+    }
+
+
+def _build_launcher_release_manager_context(request):
+    release_config = _get_launcher_release_config(request)
+    current_release = release_config.get("currentRelease") or {}
+    installer_filename = current_release.get("installer_filename", "")
+    blockmap_filename = current_release.get("blockmap_filename", "")
+    latest_filename = current_release.get("latest_filename", "latest.yml")
+    bucket_settings = get_launcher_bucket_settings()
+
+    return {
+        "bucket_ready": is_launcher_bucket_configured(),
+        "bucket_name": bucket_settings.get("bucket_name", ""),
+        "bucket_endpoint": bucket_settings.get("endpoint_url", ""),
+        "public_update_base_url": release_config["updateBaseUrl"] or _build_launcher_public_base_url(request),
+        "public_download_url": release_config["downloadUrl"],
+        "public_latest_yml_url": _build_launcher_public_asset_url(request, latest_filename),
+        "public_blockmap_url": _build_launcher_public_asset_url(request, blockmap_filename) if blockmap_filename else "",
+        "current_release": current_release,
+        "bridge_notice": release_config["bridgeNotice"],
+        "bridge_version": release_config["bridgeVersion"],
+    }
 
 
 VIDEO_ADVICE_STATUS_BROWSER_READY = "browser_ready"
@@ -436,6 +529,7 @@ def _build_launcher_safe_step_image_url(step):
 def _build_setup_context(
     art_class=None,
     *,
+    request=None,
     initial_steps=None,
     initial_playback_mode=None,
     setup_video_url="",
@@ -455,22 +549,23 @@ def _build_setup_context(
         title_hint=art_class.title if art_class else "",
     )
 
-    return {
+    context = {
         'art_class': art_class,
         'initial_steps': initial_steps,
         'initial_playback_mode': selected_mode,
         'video_advice': video_advice,
         'manual_prompt_template': build_manual_pipeline_prompt(video_url),
-        'launcher_download_url': _get_launcher_download_url(),
         'gemini_example_result': ARTCLASS_GEMINI_EXAMPLE_RESULT,
         'setup_video_url': video_url,
         'existing_material_attachments': _build_material_attachment_payloads(art_class),
         'setup_material_note': material_note,
     }
+    context.update(_build_launcher_template_context(request))
+    return context
 
 
 def _render_setup_page(request, art_class=None, **kwargs):
-    return render(request, 'artclass/setup.html', _build_setup_context(art_class, **kwargs))
+    return render(request, 'artclass/setup.html', _build_setup_context(art_class, request=request, **kwargs))
 
 
 def _resolve_setup_title(posted_title, art_class):
@@ -688,7 +783,7 @@ def classroom_view(request, pk):
         'videoAdvice': video_advice,
     }
     
-    return render(request, 'artclass/classroom.html', {
+    context = {
         'art_class': art_class,
         'steps': steps,
         'data': data,
@@ -697,12 +792,74 @@ def classroom_view(request, pk):
         'display_mode': display_mode,
         'runtime_mode': runtime_mode,
         'video_advice': video_advice,
-        'launcher_download_url': _get_launcher_download_url(),
         'teacher_material_attachments': teacher_material_attachments,
         'teacher_material_note': teacher_material_note,
         'has_teacher_materials': bool(teacher_material_attachments or teacher_material_note),
         'attachment_count': len(teacher_material_attachments),
-    })
+    }
+    context.update(_build_launcher_template_context(request))
+    return render(request, 'artclass/classroom.html', context)
+
+
+@login_required
+def launcher_release_manager_view(request):
+    if not request.user.is_staff:
+        raise PermissionDenied("런처 버전은 운영자만 올릴 수 있습니다.")
+
+    if request.method == "POST":
+        try:
+            manifest = upload_launcher_release_bundle(
+                latest_yml_file=request.FILES.get("latest_yml"),
+                installer_file=request.FILES.get("installer_exe"),
+                blockmap_file=request.FILES.get("installer_blockmap"),
+            )
+        except LauncherReleaseValidationError as exc:
+            messages.error(request, str(exc))
+        except LauncherReleaseError as exc:
+            messages.error(request, str(exc))
+        else:
+            messages.success(
+                request,
+                f"런처 {manifest['version']} 배포 파일을 bucket에 올렸습니다. 기존 설치자는 이번 한 번만 다시 설치하면 됩니다.",
+            )
+            return redirect("artclass:launcher_release_manager")
+
+    context = _build_launcher_release_manager_context(request)
+    return render(request, "artclass/launcher_release_manager.html", context)
+
+
+@require_GET
+def launcher_update_index_view(request):
+    context = _build_launcher_release_manager_context(request)
+    current_release = context["current_release"]
+    if not current_release:
+        return JsonResponse(
+            {
+                "available": False,
+                "message": "아직 업로드된 런처 설치본이 없습니다.",
+                "updateBaseUrl": context["public_update_base_url"],
+            },
+            status=404,
+        )
+
+    return JsonResponse(
+        {
+            "available": True,
+            "version": current_release["version"],
+            "downloadUrl": context["public_download_url"],
+            "latestYmlUrl": context["public_latest_yml_url"],
+            "updateBaseUrl": context["public_update_base_url"],
+        }
+    )
+
+
+@require_GET
+def launcher_update_asset_view(request, filename):
+    try:
+        asset_url = get_launcher_asset_download_url(filename)
+    except LauncherReleaseError as exc:
+        raise Http404(str(exc)) from exc
+    return redirect(asset_url)
 
 
 @require_POST
@@ -765,6 +922,13 @@ def update_playback_mode_api(request, pk):
     return JsonResponse({"success": True, "mode": art_class.playback_mode})
 
 
+@require_GET
+def launcher_release_config_api(request):
+    release_config = _get_launcher_release_config(request)
+    release_config.pop("currentRelease", None)
+    return JsonResponse(release_config)
+
+
 @require_POST
 def start_launcher_session_api(request, pk):
     """교사용 런처에서 좌/우 분할 실행에 필요한 payload를 생성한다."""
@@ -778,6 +942,7 @@ def start_launcher_session_api(request, pk):
     dashboard_query = urlencode({"display": "dashboard", "runtime": "launcher"})
     dashboard_url = f"{classroom_url}?{dashboard_query}"
     youtube_url = _build_launcher_video_url(art_class.youtube_url)
+    update_config_url = request.build_absolute_uri(reverse("artclass:launcher_release_config_api"))
 
     issued_at = int(time.time())
     expires_at = issued_at + 120
@@ -787,6 +952,7 @@ def start_launcher_session_api(request, pk):
         "title": art_class.title or f"수업 #{art_class.pk}",
         "youtubeUrl": youtube_url,
         "dashboardUrl": dashboard_url,
+        "updateConfigUrl": update_config_url,
         "issuedAt": issued_at,
         "expiresAt": expires_at,
     }
@@ -807,6 +973,7 @@ def start_launcher_session_api(request, pk):
             "fallback": {
                 "youtubeUrl": youtube_url,
                 "dashboardUrl": dashboard_url,
+                "updateConfigUrl": update_config_url,
             },
         }
     )
@@ -940,7 +1107,7 @@ def library_view(request):
     )
     popular_tags = collect_popular_tags(shared_only)
 
-    return render(request, 'artclass/library.html', {
+    context = {
         'my_classes': my_classes,
         'shared_classes': shared_classes,
         'query': query,
@@ -950,8 +1117,9 @@ def library_view(request):
         'category_options': category_options,
         'grade_options': grade_options,
         'popular_tags': popular_tags,
-        'launcher_download_url': _get_launcher_download_url(),
-    })
+    }
+    context.update(_build_launcher_template_context(request))
+    return render(request, 'artclass/library.html', context)
 
 
 @login_required

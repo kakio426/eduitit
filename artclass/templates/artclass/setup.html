@@ -219,6 +219,14 @@
                                     </div>
                                 </details>
                                 {% if launcher_download_url %}
+                                {% if launcher_bridge_notice %}
+                                <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-950 leading-relaxed">
+                                    {% if launcher_bridge_version %}
+                                    <p class="font-black tracking-[0.16em] uppercase text-emerald-700">Bridge {{ launcher_bridge_version }}</p>
+                                    {% endif %}
+                                    <p class="mt-1 font-bold">{{ launcher_bridge_notice }}</p>
+                                </div>
+                                {% endif %}
                                 <a href="{{ launcher_download_url }}" target="_blank" rel="noopener noreferrer"
                                     class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-heavy hover:bg-emerald-700 transition-all">
                                     <i class="fa-solid fa-download"></i> 런처 설치파일 다운로드
@@ -227,6 +235,12 @@
                                 <p class="text-xs font-bold text-amber-700">
                                     런처 다운로드 링크가 아직 설정되지 않았습니다. 운영팀에 설치 링크 설정을 요청해 주세요.
                                 </p>
+                                {% endif %}
+                                {% if launcher_release_manager_url %}
+                                <a href="{{ launcher_release_manager_url }}"
+                                    class="inline-flex items-center gap-2 text-xs font-black text-emerald-800 hover:text-emerald-900">
+                                    <i class="fa-solid fa-gear"></i> 운영자용 런처 버전 올리기
+                                </a>
                                 {% endif %}
                             </div>
                         </div>

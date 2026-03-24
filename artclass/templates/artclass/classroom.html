@@ -390,10 +390,24 @@
                             <p>1. 설치파일을 실행한 뒤 브라우저를 다시 열어 주세요.</p>
                             <p>2. 같은 화면에서 초록 버튼을 누르면 런처가 실행됩니다.</p>
                             <p>3. 자동 실행이 안 되면 같은 초록 버튼을 한 번 더 눌러 주세요.</p>
+                            {% if launcher_bridge_notice %}
+                            <div class="rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-left text-emerald-950">
+                                {% if launcher_bridge_version %}
+                                <p class="text-[11px] font-black tracking-[0.16em] uppercase text-emerald-700">Bridge {{ launcher_bridge_version }}</p>
+                                {% endif %}
+                                <p class="mt-1 font-bold">{{ launcher_bridge_notice }}</p>
+                            </div>
+                            {% endif %}
                             <a href="{{ launcher_download_url }}" target="_blank" rel="noopener noreferrer"
                                 class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-sm font-heavy transition-all">
                                 <i class="fa-solid fa-download"></i> 런처 설치파일 받기
                             </a>
+                            {% if launcher_release_manager_url %}
+                            <a href="{{ launcher_release_manager_url }}"
+                                class="inline-flex items-center gap-2 text-xs font-black text-emerald-900 hover:text-emerald-950">
+                                <i class="fa-solid fa-gear"></i> 운영자용 런처 버전 올리기
+                            </a>
+                            {% endif %}
                         </div>
                     </details>
                     {% endif %}
