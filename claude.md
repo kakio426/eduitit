@@ -17,6 +17,7 @@
 - For teacher-facing input/share/composer UIs, lock the mobile wireframe after checking real reference patterns first
 - Home UI keeps a role-based 3-zone shell by default: left navigation, center primary work, right personal utilities/favorites/SNS
 - PostgreSQL 운영 장애는 Railway 라이브 로그 기준으로 먼저 보고, `select_for_update()` 잠금 쿼리에는 nullable relation join을 섞지 않는다
+- ArtClass 런처 앱 수정은 `서버 push만으로 완료`로 판단하지 않는다: `version bump -> dist:win -> launcher-release-manager 업로드`까지 끝나야 실제 교사 PC 반영으로 본다
 
 ---
 
@@ -95,6 +96,32 @@
 - 메시지 보관 `commit` 류 API처럼 다건 저장/재사용 로직이 있는 엔드포인트는:
   - 깨진 참조(`committed_*`는 남아 있는데 실제 객체 없음) 복구 경로를 서버에서 방어하고
   - 잠금 대상 조회와 직렬화용 조회를 분리해 PostgreSQL 호환성을 유지한다
+
+### 2-4) ArtClass 런처 배포/업데이트 표준 (2026-03-24)
+- 교사 기본 흐름 SSOT:
+  - 교사는 항상 `초록 버튼 한 번`으로 시작한다.
+  - 실행이 안 될 때만 설치 허브(`/artclass/launcher/install/`)로 보낸다.
+  - 교사 UI에는 `latest.yml`, `.blockmap`, bucket, dist 같은 운영 용어를 노출하지 않는다.
+- 런처 코드 변경 SSOT:
+  - 런처 앱 로직은 `desktop/teacher-launcher/main.js`가 단일 원본이다.
+  - 설치형 런처 동작 버그(광고 반복, 다른 영상으로 넘어감, 자동업데이트 로직)는 서버 템플릿 수정만으로 해결됐다고 말하지 않는다.
+- 실제 배포 완료 기준:
+  1. `desktop/teacher-launcher/package.json` 버전 증가
+  2. `node --check desktop/teacher-launcher/main.js`
+  3. `python manage.py check`
+  4. 최소 `python manage.py test artclass.tests.ManualPipelineApiTest.test_start_launcher_session_api_success`
+  5. `desktop/teacher-launcher`에서 `npm run dist:win`
+  6. 운영자 화면 `/artclass/launcher-release-manager/`에 아래 3개 업로드
+     - `latest.yml`
+     - `Eduitit Teacher Launcher Setup <version>.exe`
+     - `Eduitit Teacher Launcher Setup <version>.exe.blockmap`
+- 중요한 운영 판단:
+  - `main` push만으로는 기존 교사 PC의 설치형 런처가 바뀌지 않는다.
+  - `0.2.0+` 브릿지 설치자는 새 릴리스 업로드 후 자동 업데이트 대상이다.
+  - 브릿지 이전 설치자는 이번 한 번 재설치가 필요할 수 있다.
+- 런처 다운로드/업데이트 경로 SSOT:
+  - 교사용 설치 링크와 auto-update base는 항상 `eduitit.site/artclass/launcher-updates/windows/...`
+  - 구글드라이브 링크는 fallback이나 임시 공유에만 쓰고, 정식 설치 경로로 되돌리지 않는다.
 
 ### 3) 서비스 진화 시 점검 체크리스트
 - 대시보드 진입 / 모달 열기·닫기(배경 클릭, ESC) / 서비스 라우팅 회귀 점검

@@ -13,6 +13,7 @@
 - Assume scale early: if list can exceed 100, include search + pagination
 - Replace developer jargon with teacher-friendly copy and concrete examples
 - Run a 30-second classroom smoke test before merge
+- ArtClass launcher app changes are not live at `git push` time; they are live only after `version bump -> dist build -> launcher-release-manager upload`
 
 ---
 
@@ -87,6 +88,25 @@
 - 목록 데이터가 100개 이상이 될 가능성이 있으면 초기 설계에 검색/페이지네이션 또는 동등한 탐색 장치를 포함한다.
 - 교사 대상 안내 문구는 개발자 용어(예: 헤더 줄, raw schema) 대신 작업 중심 문장으로 작성한다.
 - 배포 전 수업 시작 기준 30초 시나리오를 점검한다: `교사 배포 -> QR 전체화면 -> 학생 입장 확인`.
+
+### 8-2) ArtClass 런처 운영 계약 (MUST)
+- 교사 런처 시작 UX SSOT:
+  - 기본 진입은 항상 `초록 버튼 한 번`
+  - 설치/재설치 설명은 메인 화면에 상시 늘어놓지 않고, 설치 허브에서만 안내
+  - 교사 화면에는 bucket, dist, `latest.yml`, `.blockmap` 같은 운영 용어를 노출하지 않음
+- 런처 수정 완료 기준:
+  - `desktop/teacher-launcher/main.js` 또는 패키지 변경이 있으면, 서버 push만으로 완료로 보고하지 않는다.
+  - 아래가 모두 끝나야 실제 반영으로 본다:
+    1. `desktop/teacher-launcher/package.json` 버전 증가
+    2. `node --check desktop/teacher-launcher/main.js`
+    3. `python manage.py check`
+    4. 최소 `python manage.py test artclass.tests.ManualPipelineApiTest.test_start_launcher_session_api_success`
+    5. `npm run dist:win`
+    6. 운영자 화면 `/artclass/launcher-release-manager/`에 `latest.yml`, `.exe`, `.blockmap` 업로드
+- 배포/업데이트 SSOT:
+  - 교사용 설치 링크와 auto-update 경로는 `eduitit.site/artclass/launcher-updates/windows/...`를 단일 원본으로 사용
+  - 구글드라이브는 정식 설치 경로가 아니라 임시 수동 전달용으로만 취급
+  - 브릿지 버전(`0.2.0+`) 설치자는 이후부터 자동 업데이트 대상
 
 ### 8-1) 홈 3영역 셸 계약 (MUST for authenticated home surfaces)
 - 홈은 기본적으로 `왼쪽 메뉴 / 가운데 메인 작업 / 오른쪽 즐겨찾기·개인 유틸·SNS` 3영역 셸을 유지한다.

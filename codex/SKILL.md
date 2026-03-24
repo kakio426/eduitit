@@ -68,6 +68,21 @@ description: Core guardrails for Eduitit service development and maintenance, in
   - explicitly excluded files
   - verification commands and results
 
+## ArtClass Launcher Release Flow
+- Treat `desktop/teacher-launcher/main.js` as installed-app logic, not server-only UI.
+- When launcher app code changes, do not report "live" after `git push` alone.
+- Required release flow:
+  1. bump `desktop/teacher-launcher/package.json` version
+  2. run `node --check desktop/teacher-launcher/main.js`
+  3. run `python manage.py check`
+  4. run at least `python manage.py test artclass.tests.ManualPipelineApiTest.test_start_launcher_session_api_success`
+  5. build `desktop/teacher-launcher` with `npm run dist:win`
+  6. upload `latest.yml`, `Eduitit Teacher Launcher Setup <version>.exe`, and `.blockmap` through `/artclass/launcher-release-manager/`
+- Teacher-facing copy should keep one path:
+  - start with the green button
+  - if it fails, route to the install hub
+  - never expose bucket/dist/latest.yml vocabulary in teacher UI
+
 ## New Service SSOT
 - Create a separate Django app for major new services.
 - Register URL namespace explicitly.

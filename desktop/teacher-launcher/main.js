@@ -247,7 +247,7 @@ function fetchJson(rawUrl) {
         method: "GET",
         headers: {
           Accept: "application/json",
-          "User-Agent": `EduititTeacherLauncher/${app.getVersion() || "0.2.0"}`,
+          "User-Agent": `EduititTeacherLauncher/${app.getVersion() || "0.2.1"}`,
         },
       },
       (response) => {
@@ -1053,6 +1053,25 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
           return false;
         }
 
+        function disableAutoplayNext() {
+          const selectors = [
+            ".ytp-autonav-toggle-button[aria-checked='true']",
+            ".ytp-autonav-toggle-button[aria-pressed='true']",
+            "button[aria-label*='Autoplay'][aria-pressed='true']",
+            "button[aria-label*='자동재생'][aria-pressed='true']",
+          ];
+
+          for (const selector of selectors) {
+            const toggleButton = document.querySelector(selector);
+            if (toggleButton) {
+              toggleButton.click();
+              return true;
+            }
+          }
+
+          return false;
+        }
+
         const styleId = "eduitit-youtube-focus-style";
         if (!document.getElementById(styleId)) {
           const style = document.createElement("style");
@@ -1110,6 +1129,14 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
           sizeButton.click();
         }
 
+        disableAutoplayNext();
+
+        const currentPageVideoId = getPageVideoId();
+        if (targetVideoId && currentPageVideoId && currentPageVideoId !== targetVideoId && replayUrl) {
+          window.location.replace(replayUrl);
+          return;
+        }
+
         if (!window.__eduititRepeatEnforcer) {
           const confirmedPlaybackThresholdSec = 3;
           const repeatState = window.__eduititRepeatState || {
@@ -1126,6 +1153,7 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
               video.loop = false;
               video.removeAttribute("loop");
             }
+            disableAutoplayNext();
 
             if (isAdShowing()) {
               repeatState.lastAdSeenAt = now;
@@ -1154,9 +1182,9 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
               repeatState.sawTargetPlayback = true;
             }
 
-            // Recover only when the watch page itself drifts away. Ads can expose
-            // a temporary internal video id that should not trigger a reload.
-            if (targetVideoId && repeatState.sawTargetPlayback && pageVideoId && pageVideoId !== targetVideoId) {
+            // Ads do not change the watch URL, so a page-level video id mismatch
+            // means YouTube already drifted to a different video and should be restored.
+            if (targetVideoId && pageVideoId && pageVideoId !== targetVideoId) {
               if (replayUrl && now - repeatState.lastRecoveryAt >= replayCooldownMs) {
                 repeatState.lastRecoveryAt = now;
                 repeatState.sawTargetPlayback = false;
