@@ -660,6 +660,87 @@ class EduMaterialViewTests(TestCase):
         self.assertContains(response, reverse("edu_materials:detail", args=[existing_clone.id]))
         self.assertNotContains(response, "내 자료로 복사해 수정하기")
 
+    def test_main_view_public_catalog_excludes_cloned_copies(self):
+        other_user = self._create_other_user()
+        material = EduMaterial.objects.create(
+            teacher=other_user,
+            title="공개 참고 자료",
+            html_content="<html><body>public reference</body></html>",
+            is_published=True,
+            subject="SCIENCE",
+            material_type=EduMaterial.MaterialType.PRACTICE,
+        )
+        existing_clone = EduMaterial.objects.create(
+            teacher=self.user,
+            source_material=material,
+            title="공개 참고 자료 (내 자료)",
+            html_content=material.html_content,
+            is_published=True,
+            subject="SCIENCE",
+            material_type=EduMaterial.MaterialType.PRACTICE,
+        )
+
+        response = self.client.get(reverse("edu_materials:main"), data={"tab": "shared", "q": "공개 참고"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["shared_material_count"], 1)
+        self.assertEqual(response.context["featured_public_material"].id, material.id)
+        self.assertEqual(response.context["featured_public_material"].existing_clone_id, existing_clone.id)
+        self.assertEqual(len(response.context["shared_page_obj"].object_list), 0)
+        self.assertContains(response, "내 자료 열기")
+
+    def test_anonymous_public_catalog_excludes_cloned_copies(self):
+        original_teacher = self._create_other_user()
+        clone_teacher = User.objects.create_user(
+            username="clone-teacher",
+            email="clone@example.com",
+            password="pw123456",
+        )
+        material = EduMaterial.objects.create(
+            teacher=original_teacher,
+            title="공개 자료 원본",
+            html_content="<html><body>original public</body></html>",
+            is_published=True,
+        )
+        clone = EduMaterial.objects.create(
+            teacher=clone_teacher,
+            source_material=material,
+            title="공개 자료 원본 (내 자료)",
+            html_content=material.html_content,
+            is_published=True,
+        )
+
+        response = Client().get(reverse("edu_materials:main"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["shared_material_count"], 1)
+        self.assertEqual(response.context["featured_public_material"].id, material.id)
+        self.assertNotContains(response, reverse("edu_materials:detail", args=[clone.id]))
+
+    def test_cloned_copy_remains_directly_accessible_even_if_hidden_from_public_catalog(self):
+        other_user = self._create_other_user()
+        source = EduMaterial.objects.create(
+            teacher=other_user,
+            title="공개 원본 자료",
+            html_content="<html><body>public source</body></html>",
+            is_published=True,
+        )
+        clone = EduMaterial.objects.create(
+            teacher=self.user,
+            source_material=source,
+            title="공개 원본 자료 (내 자료)",
+            html_content=source.html_content,
+            is_published=True,
+        )
+
+        detail_response = Client().get(reverse("edu_materials:detail", args=[clone.id]))
+        share_board_response = Client().get(reverse("edu_materials:share_board", args=[clone.id]))
+        run_response = Client().get(reverse("edu_materials:run", args=[clone.id]))
+
+        self.assertEqual(detail_response.status_code, 200)
+        self.assertEqual(share_board_response.status_code, 200)
+        self.assertEqual(run_response.status_code, 200)
+
     def test_detail_view_keeps_private_material_hidden_from_anonymous_users(self):
         material = EduMaterial.objects.create(
             teacher=self.user,

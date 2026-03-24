@@ -66,10 +66,15 @@ def _build_preview_context():
 def _get_filter_accessible_queryset(user, active_tab):
     queryset = EduMaterial.objects.all()
     if not user.is_authenticated:
-        return queryset.filter(is_published=True)
+        return _get_public_catalog_queryset(queryset)
     if active_tab in {TAB_MY, TAB_CREATE}:
         return queryset.filter(teacher=user)
-    return queryset.filter(is_published=True)
+    return _get_public_catalog_queryset(queryset)
+
+
+def _get_public_catalog_queryset(queryset=None):
+    base_queryset = queryset if queryset is not None else EduMaterial.objects.all()
+    return base_queryset.filter(is_published=True, source_material__isnull=True)
 
 
 def _resolve_active_tab(request):
@@ -261,7 +266,7 @@ def main_view(request):
 
     shared_queryset = _apply_sort(
         _apply_metadata_filter(
-            EduMaterial.objects.select_related("teacher").filter(is_published=True),
+            _get_public_catalog_queryset(EduMaterial.objects.select_related("teacher")),
             query=filter_context["query"],
             subject=filter_context["current_subject"],
             material_type=filter_context["current_material_type"],
