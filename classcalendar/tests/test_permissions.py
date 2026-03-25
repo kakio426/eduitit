@@ -138,6 +138,19 @@ class PermissionTest(TestCase):
         self.assertIn("지난 일정", content)
         self.assertIn("기한 지남", content)
 
+    def test_center_view_renders_page_mode_with_agenda_search(self):
+        response = self.client_teacher.get(reverse("classcalendar:center"))
+        content = response.content.decode("utf-8")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["calendar_embed_mode"], "page")
+        self.assertEqual(response.context["calendar_center_url"], reverse("classcalendar:center"))
+        self.assertIn('data-classcalendar-center="true"', content)
+        self.assertIn('data-classcalendar-agenda-panel="true"', content)
+        self.assertIn('id="calendar-search"', content)
+        self.assertIn("교사용 일정 센터", content)
+        self.assertIn("월간 보기와 일정 목록을 한 화면에서 확인하세요.", content)
+
     @override_settings(
         FEATURE_MESSAGE_CAPTURE_ENABLED=True,
         FEATURE_MESSAGE_CAPTURE_ITEM_TYPES=True,

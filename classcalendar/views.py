@@ -66,6 +66,7 @@ SHEETBOOK_RECENT_SHEETBOOK_ID_SESSION_KEY = "sheetbook_recent_sheetbook_id"
 SHEETBOOK_SOURCE_SOURCES = {"sheetbook_action_calendar", "sheetbook_schedule_sync", "sheetbook_calendar_embed", "sheetbook_message_capture"}
 HOME_CALENDAR_ANCHOR = "home-calendar"
 HOME_CALENDAR_QUERY_KEYS = ("date", "action", "open_event", "open_task", "focus")
+CENTER_CALENDAR_QUERY_KEYS = ("date", "action", "open_event", "open_task")
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -145,6 +146,20 @@ def _build_home_calendar_surface_url(request, *, include_request_state=True):
     if query_string:
         return f"{home_url}?{query_string}#{HOME_CALENDAR_ANCHOR}"
     return f"{home_url}#{HOME_CALENDAR_ANCHOR}"
+
+
+def _build_calendar_center_url(request, *, include_request_state=True):
+    center_url = reverse("classcalendar:center")
+    preserved_pairs = []
+    if include_request_state:
+        for key in CENTER_CALENDAR_QUERY_KEYS:
+            for value in request.GET.getlist(key):
+                if str(value or "").strip():
+                    preserved_pairs.append((key, value))
+    query_string = urlencode(preserved_pairs, doseq=True)
+    if query_string:
+        return f"{center_url}?{query_string}"
+    return center_url
 
 
 def _prime_calendar_surface_state(request):
@@ -3273,6 +3288,9 @@ def build_calendar_surface_context(
     page_variant="main",
     embedded_surface="page",
 ):
+    normalized_surface = str(embedded_surface or "page").strip().lower()
+    if normalized_surface not in {"page", "sheetbook", "home"}:
+        normalized_surface = "page"
     visible_owner_ids, editable_owner_ids, incoming_calendars = _get_calendar_access_for_user(request.user)
     integration_setting = _get_integration_setting_for_user(request.user)
     service = Product.objects.filter(launch_route_name=SERVICE_ROUTE).first()
@@ -3288,12 +3306,21 @@ def build_calendar_surface_context(
         visible_events=visible_events,
         visible_tasks=visible_tasks,
     )
-    calendar_page_url = _build_home_calendar_surface_url(request, include_request_state=False)
+    center_url = _build_calendar_center_url(request, include_request_state=False)
+    home_surface_url = _build_home_calendar_surface_url(request, include_request_state=False)
+    if normalized_surface == "home":
+        calendar_page_url = _build_home_calendar_surface_url(request, include_request_state=True)
+    elif normalized_surface == "sheetbook":
+        calendar_page_url = _build_calendar_center_url(request, include_request_state=True)
+    else:
+        calendar_page_url = _build_calendar_center_url(request, include_request_state=True)
     calendar_api_base_url = reverse("classcalendar:main")
-    main_url = calendar_page_url
-    today_url = calendar_page_url
+    main_url = center_url
+    today_url = center_url
     create_api_url = reverse("classcalendar:api_create_event")
     today_focus = normalize_today_focus(request.GET.get("focus"))
+    initial_focus_search = _parse_bool_value(request.GET.get("focus_search", ""))
+    initial_search_query = str(request.GET.get("q") or "").strip()
     today_date = timezone.localdate()
     requested_date = str(request.GET.get("date") or "").strip()
     initial_selected_date = requested_date or _choose_default_selected_date_from_day_markers(
@@ -3312,9 +3339,6 @@ def build_calendar_surface_context(
         create_api_url=create_api_url,
         today_focus=today_focus,
     )
-    normalized_surface = str(embedded_surface or "page").strip().lower()
-    if normalized_surface not in {"page", "sheetbook", "home"}:
-        normalized_surface = "page"
     return {
         "service": service,
         "title": service.title if service else "학급 캘린더",
@@ -3349,12 +3373,16 @@ def build_calendar_surface_context(
         "today_memo_url": today_workspace["today_memo_url"],
         "today_review_url": today_workspace["today_review_url"],
         "main_url": main_url,
+        "calendar_center_url": center_url,
+        "home_surface_url": home_surface_url,
         "calendar_page_url": calendar_page_url,
         "calendar_api_base_url": calendar_api_base_url,
         "initial_selected_date": initial_selected_date or today_workspace["date_key"],
         "initial_open_create": initial_open_create,
         "initial_open_event_id": initial_open_event_id,
         "initial_open_task_id": initial_open_task_id,
+        "initial_focus_search": initial_focus_search,
+        "initial_search_query": initial_search_query,
         "embedded_sheetbook_context": embedded_sheetbook_context,
         "embedded_sheetbook_context_json": embedded_sheetbook_context or {},
         "calendar_embed_mode": normalized_surface,
@@ -3372,6 +3400,17 @@ def _build_calendar_page_context(request, *, embedded_sheetbook_context=None, pa
         page_variant=page_variant,
         embedded_surface=embedded_surface,
     )
+
+
+@login_required
+@xframe_options_sameorigin
+def center_view(request):
+    response = render(
+        request,
+        "classcalendar/main.html",
+        _build_calendar_page_context(request, page_variant="main"),
+    )
+    return _apply_workspace_cache_headers(response)
 
 
 @login_required

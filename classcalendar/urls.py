@@ -7,6 +7,7 @@ app_name = "classcalendar"
 urlpatterns = [
     # Teacher views
     path("", views.main_view, name="main"),
+    path("center/", views.center_view, name="center"),
     path("today/", views.today_view, name="today"),
     path("entry/", views.main_entry, name="sheetbook_entry"),
     path("legacy/", views.legacy_main_redirect, name="legacy_main"),

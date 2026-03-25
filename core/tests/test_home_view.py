@@ -643,6 +643,45 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('data-home-v2-calendar-empty="true"', content)
         self.assertNotIn('data-home-v2-calendar-supporting="true"', content)
 
+    def test_v2_authenticated_calendar_surface_exposes_center_links(self):
+        self._login('calendarcenterlink')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn(f'href="{reverse("classcalendar:center")}"', content)
+        self.assertIn(f'href="{reverse("classcalendar:center")}?focus_search=1#calendar-search"', content)
+
+    def test_calendar_center_surface_matches_home_calendar_source(self):
+        user = self._login('calendarcenteruser')
+        now = timezone.now().replace(second=0, microsecond=0)
+        self._create_calendar_event_with_note(
+            user,
+            title='전용 센터 일정',
+            note='홈과 전용 센터가 같은 원본을 봐야 함',
+            start_time=now,
+            end_time=now + timedelta(hours=1),
+        )
+        CalendarTask.objects.create(
+            author=user,
+            title='전용 센터 할 일',
+            note='검색 패널에서도 찾아야 함',
+            due_at=now,
+            has_time=True,
+            priority=CalendarTask.Priority.NORMAL,
+        )
+
+        home_response = self.client.get(reverse('home'))
+        center_response = self.client.get(reverse('classcalendar:center'))
+        center_content = center_response.content.decode('utf-8')
+
+        self.assertEqual(home_response.context['initial_selected_date'], center_response.context['initial_selected_date'])
+        self.assertEqual(self._sorted_event_source(home_response), self._sorted_event_source(center_response))
+        self.assertEqual(self._sorted_task_source(home_response), self._sorted_task_source(center_response))
+        self.assertEqual(center_response.context['calendar_embed_mode'], 'page')
+        self.assertIn('data-classcalendar-center="true"', center_content)
+        self.assertIn('id="calendar-search"', center_content)
+
     def test_v2_authenticated_calendar_surface_uses_selected_date_from_query(self):
         user = self._login('detailuser')
         now = timezone.make_aware(datetime.combine(timezone.localdate(), time(hour=11)))
