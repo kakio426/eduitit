@@ -807,6 +807,7 @@
                                 id="calendar-search"
                                 type="search"
                                 x-model.trim="agendaQuery"
+                                @input.debounce.150ms="rebuildAgendaSections()"
                                 placeholder="일정명, 메모, 할 일을 검색"
                                 autocomplete="off"
                             >
@@ -832,14 +833,14 @@
                         </div>
 
                         <div x-ref="agendaResults" class="mt-5 classcalendar-center-agenda-results">
-                            <template x-if="getAgendaDateSections().length === 0">
+                            <template x-if="agendaDateSections.length === 0">
                                 <section class="rounded-[1.4rem] border border-dashed border-slate-300 bg-slate-50 px-5 py-9 text-center">
                                     <p class="text-base font-black text-slate-800" x-text="getAgendaEmptyMessage()"></p>
                                     <p class="mt-2 text-sm text-slate-500">월간 보기에서 날짜를 고르거나 검색어를 바꾸면 결과가 바로 갱신됩니다.</p>
                                 </section>
                             </template>
 
-                            <template x-for="section in getAgendaDateSections()" :key="`agenda-${section.dateKey}`">
+                            <template x-for="section in agendaDateSections" :key="`agenda-${section.dateKey}`">
                                 <section class="classcalendar-agenda-date-group">
                                     <p class="text-sm font-black text-slate-900" x-text="formatAgendaDate(section.dateKey)"></p>
                                     <div class="mt-3 space-y-2.5">
@@ -1466,6 +1467,7 @@ function calendarApp() {
         initialFocusSearch: {{ initial_focus_search|yesno:"true,false" }},
         agendaQuery: '{{ initial_search_query|default:""|escapejs }}',
         agendaScope: 'month',
+        agendaDateSections: [],
         surfaceAllowsManage: true,
         integrationSettings: {
             collect_deadline_enabled: true,
@@ -1557,6 +1559,7 @@ function calendarApp() {
             this.loadDayMarkersFromScript();
             this.selectedDateKey = this.initialSelectedDateKey || this.dateKey(new Date());
             this.currentDate = new Date(this.parseDateKey(this.selectedDateKey).getFullYear(), this.parseDateKey(this.selectedDateKey).getMonth(), 1);
+            this.rebuildAgendaSections();
             this.registerReturnSync();
             this.registerEmbeddedActionBridge();
             if (this.initialOpenCreate) {
@@ -2600,6 +2603,7 @@ function calendarApp() {
             this.tasks = (payload.tasks || []).map((task) => this.normalizeTask(task));
             this.hubItems = (payload.hub_items || []).map((item) => this.normalizeHubItem(item));
             this.dayMarkers = payload.day_markers || {};
+            this.rebuildAgendaSections();
             this.$nextTick(() => notifyEmbeddedCalendarHeight());
         },
 
@@ -2661,6 +2665,7 @@ function calendarApp() {
             const selected = date ? new Date(date) : new Date();
             this.selectedDateKey = this.dateKey(selected);
             this.currentDate = new Date(selected.getFullYear(), selected.getMonth(), 1);
+            this.rebuildAgendaSections();
         },
 
         isCompactMobileViewport() {
@@ -2716,6 +2721,7 @@ function calendarApp() {
 
         clearAgendaQuery() {
             this.agendaQuery = '';
+            this.rebuildAgendaSections();
             this.focusAgendaSearch();
             this.scrollAgendaResultsToTop();
         },
@@ -2724,6 +2730,7 @@ function calendarApp() {
             const nextScope = ['today', 'week', 'month', 'upcoming'].includes(scope) ? scope : 'month';
             this.setSelectedDateContext(new Date());
             this.agendaScope = nextScope;
+            this.rebuildAgendaSections();
             this.scrollAgendaResultsToTop();
         },
 
@@ -2845,6 +2852,10 @@ function calendarApp() {
                 currentSection.items.push(item);
             });
             return sections;
+        },
+
+        rebuildAgendaSections() {
+            this.agendaDateSections = this.getAgendaDateSections();
         },
 
         getAgendaRangeLabel() {
