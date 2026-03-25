@@ -16,6 +16,7 @@
 }
 
 .home-v4-nav-shell,
+.home-v4-nav-stack,
 .home-v4-nav-card,
 .home-v4-nav-list,
 .home-v4-nav-group,
@@ -222,6 +223,11 @@
 
 .home-v4-nav-shell {
     display: none;
+}
+
+.home-v4-nav-stack {
+    display: grid;
+    gap: var(--home-v4-panel-gap);
 }
 
 .home-v4-nav-card {
@@ -561,6 +567,157 @@
     background: linear-gradient(180deg, rgba(248, 251, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 100%);
 }
 
+.home-v4-developer-chat-card {
+    display: grid;
+    gap: 0.95rem;
+    border-color: #d9e9ff;
+    background: linear-gradient(180deg, rgba(244, 250, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 100%);
+}
+
+.home-v4-developer-chat-card--desktop {
+    display: none;
+}
+
+.home-v4-developer-chat-head,
+.home-v4-developer-chat-heading,
+.home-v4-developer-chat-item,
+.home-v4-developer-chat-actions {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.85rem;
+}
+
+.home-v4-developer-chat-heading {
+    min-width: 0;
+    justify-content: flex-start;
+}
+
+.home-v4-developer-chat-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.65rem;
+    height: 2.65rem;
+    flex-shrink: 0;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #0f766e 0%, #0ea5e9 100%);
+    color: #ffffff;
+    box-shadow: 0 14px 28px rgba(14, 165, 233, 0.18);
+}
+
+.home-v4-developer-chat-badges {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.45rem;
+}
+
+.home-v4-developer-chat-chip,
+.home-v4-developer-chat-unread {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 900;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.home-v4-developer-chat-chip {
+    border: 1px solid #dbeafe;
+    background: #ffffff;
+    color: #0369a1;
+    padding: 0.45rem 0.72rem;
+}
+
+.home-v4-developer-chat-chip--alert,
+.home-v4-developer-chat-unread {
+    background: #ef4444;
+    border-color: #ef4444;
+    color: #ffffff;
+}
+
+.home-v4-developer-chat-summary {
+    margin: 0;
+    color: #475569;
+    font-size: 0.92rem;
+    line-height: 1.65;
+}
+
+.home-v4-developer-chat-list {
+    display: grid;
+    gap: 0.7rem;
+}
+
+.home-v4-developer-chat-item {
+    border: 1px solid #dbe4ee;
+    border-radius: 1.35rem;
+    background: #ffffff;
+    padding: 0.85rem 0.95rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.home-v4-developer-chat-item:hover,
+.home-v4-developer-chat-item:focus-visible {
+    border-color: #93c5fd;
+    box-shadow: 0 14px 28px rgba(59, 130, 246, 0.08);
+    transform: translateY(-1px);
+}
+
+.home-v4-developer-chat-item-title {
+    margin: 0;
+    color: #0f172a;
+    font-size: 0.94rem;
+    font-weight: 900;
+    line-height: 1.4;
+}
+
+.home-v4-developer-chat-item-preview,
+.home-v4-developer-chat-item-meta,
+.home-v4-developer-chat-empty {
+    margin: 0.35rem 0 0;
+    color: #64748b;
+    font-size: 0.8rem;
+    line-height: 1.6;
+}
+
+.home-v4-developer-chat-item-preview {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.home-v4-developer-chat-empty {
+    border: 1px dashed #cbd5e1;
+    border-radius: 1.35rem;
+    background: rgba(255, 255, 255, 0.86);
+    padding: 0.9rem 1rem;
+}
+
+.home-v4-developer-chat-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.75rem;
+    border-radius: 999px;
+    padding: 0 1rem;
+    background: linear-gradient(135deg, #0f766e 0%, #0ea5e9 100%);
+    color: #ffffff;
+    font-size: 0.9rem;
+    font-weight: 900;
+    box-shadow: 0 16px 30px rgba(14, 165, 233, 0.18);
+    transition: transform 0.2s ease;
+}
+
+.home-v4-developer-chat-primary:hover,
+.home-v4-developer-chat-primary:focus-visible {
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
 .home-v4-quickdrop-head {
     display: flex;
     align-items: flex-start;
@@ -765,7 +922,11 @@
     }
 
     .home-v4-nav-shell {
-        display: block;
+        display: grid;
+        gap: var(--home-v4-panel-gap);
+        position: sticky;
+        top: calc(var(--main-nav-height, 88px) + 1rem);
+        align-self: start;
     }
 
     .home-v4-mobile-quick-tools {
@@ -777,8 +938,15 @@
     }
 
     .home-v4-nav-card {
-        position: sticky;
-        top: calc(var(--main-nav-height, 88px) + 1rem);
+        position: static;
+    }
+
+    .home-v4-developer-chat-card--desktop {
+        display: grid;
+    }
+
+    .home-v4-developer-chat-card--mobile {
+        display: none;
     }
 }
 

@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'messagebox/developer_chat.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<section
+    class="developer-chat-page"
+    style="padding-top: calc(var(--main-nav-height, 88px) + 0.75rem);"
+    data-developer-chat-root="true"
+>
+    <div class="mx-auto max-w-[1520px] px-3 pb-8 sm:px-4 md:px-6 lg:px-8">
+        <header class="developer-chat-header" data-developer-chat-header="true">
+            <div class="developer-chat-header-copy">
+                <p class="developer-chat-kicker">Developer Inbox</p>
+                <h1 class="developer-chat-title">{{ title }}</h1>
+                <p class="developer-chat-subtitle">{{ page_subtitle }}</p>
+            </div>
+            <div class="developer-chat-header-actions">
+                <a href="{% url 'home' %}" class="developer-chat-header-link">홈으로</a>
+                <a href="{% url 'messagebox:main' %}" class="developer-chat-header-link">메시지 보관함</a>
+            </div>
+        </header>
+
+        <form class="hidden">{% csrf_token %}</form>
+
+        <div class="developer-chat-shell" data-developer-chat-shell="true">
+            <aside class="developer-chat-sidebar" data-developer-chat-sidebar="true">
+                <div class="developer-chat-sidebar-head">
+                    <div>
+                        <p class="developer-chat-section-kicker">{% if developer_chat_is_admin %}Conversation List{% else %}My Chat{% endif %}</p>
+                        <h2 class="developer-chat-section-title">{% if developer_chat_is_admin %}사용자 대화 목록{% else %}개발자와의 대화{% endif %}</h2>
+                    </div>
+                    <button type="button" class="developer-chat-refresh-button" data-developer-chat-refresh="true">새로고침</button>
+                </div>
+
+                {% if developer_chat_is_admin %}
+                <div class="developer-chat-search">
+                    <label for="developer-chat-search" class="sr-only">대화 검색</label>
+                    <input
+                        id="developer-chat-search"
+                        type="search"
+                        class="developer-chat-search-input"
+                        placeholder="이름, 아이디, 메일로 찾기"
+                        data-developer-chat-search="true"
+                    >
+                </div>
+                {% else %}
+                <div class="developer-chat-my-intro">
+                    <p>불편한 점이나 필요한 기능을 편하게 남겨 주세요. 대화는 이 자리에서 계속 이어집니다.</p>
+                </div>
+                {% endif %}
+
+                <div class="developer-chat-thread-list" data-developer-chat-thread-list="true"></div>
+            </aside>
+
+            <section class="developer-chat-panel" data-developer-chat-panel="true">
+                <div class="developer-chat-panel-head">
+                    <div class="min-w-0">
+                        <p class="developer-chat-section-kicker">Conversation</p>
+                        <h2 class="developer-chat-panel-title" data-developer-chat-panel-title="true">대화를 불러오는 중입니다.</h2>
+                        <p class="developer-chat-panel-subtitle" data-developer-chat-panel-subtitle="true">잠시만 기다려 주세요.</p>
+                    </div>
+                    <div class="developer-chat-panel-meta">
+                        <span class="developer-chat-status-badge" data-developer-chat-status="true">불러오는 중</span>
+                        <button type="button" class="developer-chat-refresh-button" data-developer-chat-refresh="true">새로고침</button>
+                    </div>
+                </div>
+
+                <div class="developer-chat-empty-state" data-developer-chat-empty="true">
+                    <div class="developer-chat-empty-card">
+                        <h3>대화를 선택하면 이 자리에서 바로 이어집니다.</h3>
+                        <p>{% if developer_chat_is_admin %}왼쪽 목록에서 사용자를 고르면 최근 메시지와 답장 창이 함께 열립니다.{% else %}아직 남긴 메시지가 없다면 아래 입력칸에서 바로 첫 문의를 보낼 수 있습니다.{% endif %}</p>
+                    </div>
+                </div>
+
+                <div class="developer-chat-message-wrap" data-developer-chat-message-wrap="true">
+                    <div class="developer-chat-message-list" data-developer-chat-message-list="true"></div>
+                </div>
+
+                <form class="developer-chat-composer" data-developer-chat-composer="true">
+                    <label for="developer-chat-input" class="sr-only">메시지 입력</label>
+                    <textarea
+                        id="developer-chat-input"
+                        class="developer-chat-input"
+                        rows="3"
+                        maxlength="4000"
+                        placeholder="{% if developer_chat_is_admin %}선택한 사용자에게 답장을 입력하세요.{% else %}개선 요청, 오류 내용, 필요한 기능을 적어 주세요.{% endif %}"
+                        data-developer-chat-input="true"
+                    ></textarea>
+                    <button type="submit" class="developer-chat-send-button" data-developer-chat-send="true">보내기</button>
+                </form>
+            </section>
+        </div>
+    </div>
+</section>
+
+<div id="developer-chat-toast-root" class="developer-chat-toast-root" aria-live="polite"></div>
+
+{{ developer_chat_api_urls_json|json_script:"developer-chat-api-urls-data" }}
+{{ developer_chat_is_admin|json_script:"developer-chat-admin-flag" }}
+{{ developer_chat_initial_thread_id|default:""|json_script:"developer-chat-initial-thread-id" }}
+<script src="{% static 'messagebox/developer_chat_page.js' %}"></script>
+{% endblock %}

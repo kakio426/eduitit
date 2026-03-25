@@ -67,6 +67,7 @@ from .seo import (
     build_prompt_lab_page_seo,
 )
 from .teacher_first_cards import build_favorite_service_title, build_workbench_card_meta
+from messagebox.developer_chat import build_developer_chat_home_card_context
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Case, Count, DateTimeField, F, IntegerField, Max, Q, Value, When
@@ -2895,6 +2896,7 @@ def _home_v4(request, products, posts, page_obj, feed_scope, pinned_notice_posts
         home_v4_nav_sections,
         limit=4,
     )
+    developer_chat_home_card = build_developer_chat_home_card_context(request.user)
 
     from classcalendar.views import build_calendar_surface_context
 
@@ -2923,6 +2925,7 @@ def _home_v4(request, products, posts, page_obj, feed_scope, pinned_notice_posts
         'home_v4_nav_sections': home_v4_nav_sections,
         'home_v4_mobile_calendar_first_enabled': home_v4_mobile_calendar_first_enabled,
         'home_v4_mobile_quick_items': home_v4_mobile_quick_items,
+        'developer_chat_home_card': developer_chat_home_card,
         'home_calendar_surface': home_calendar_surface,
         'home_v2_frontend_config': home_v2_frontend_config,
         'community_summary': community_summary,

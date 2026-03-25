@@ -1,0 +1,57 @@
+<section
+    class="home-v4-card home-v4-developer-chat-card home-v4-developer-chat-card--{{ card_variant|default:'desktop' }}"
+    data-home-v4-developer-chat-card="{{ card_variant|default:'desktop' }}"
+>
+    <div class="home-v4-developer-chat-head">
+        <div class="home-v4-developer-chat-heading">
+            <span class="home-v4-developer-chat-icon" aria-hidden="true">
+                <i class="fa-regular fa-comments"></i>
+            </span>
+            <div class="min-w-0">
+                <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Developer Chat</p>
+                <h2 class="mt-1 text-lg font-black text-slate-900">{{ developer_chat_home_card.title }}</h2>
+            </div>
+        </div>
+        <div class="home-v4-developer-chat-badges">
+            <span class="home-v4-developer-chat-chip">
+                {% if developer_chat_home_card.is_admin %}관리자 보기{% else %}1:1 채팅{% endif %}
+            </span>
+            {% if developer_chat_home_card.unread_count %}
+            <span class="home-v4-developer-chat-chip home-v4-developer-chat-chip--alert">안읽음 {{ developer_chat_home_card.unread_count }}건</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <p class="home-v4-developer-chat-summary">{{ developer_chat_home_card.summary }}</p>
+
+    {% if developer_chat_home_card.preview_threads %}
+    <div class="home-v4-developer-chat-list" data-home-v4-developer-chat-list="{{ card_variant|default:'desktop' }}">
+        {% for thread in developer_chat_home_card.preview_threads %}
+        <a href="{{ thread.detail_url }}" class="home-v4-developer-chat-item">
+            <div class="min-w-0">
+                <p class="home-v4-developer-chat-item-title">{{ thread.title }}</p>
+                <p class="home-v4-developer-chat-item-preview">{{ thread.last_message_preview }}</p>
+            </div>
+            <div class="shrink-0 text-right">
+                <p class="home-v4-developer-chat-item-meta">{{ thread.status_label }}</p>
+                {% if thread.unread_count %}
+                <span class="home-v4-developer-chat-unread">{{ thread.unread_count }}</span>
+                {% endif %}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="home-v4-developer-chat-empty">
+        {% if developer_chat_home_card.is_admin %}
+        새 문의가 오면 여기서 바로 확인할 수 있습니다.
+        {% else %}
+        오류나 개선 요청을 남기면 개발자 답장이 이 카드와 전용 화면에 함께 이어집니다.
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="home-v4-developer-chat-actions" data-home-v4-developer-chat-actions="{{ card_variant|default:'desktop' }}">
+        <a href="{{ developer_chat_home_card.url }}" class="home-v4-developer-chat-primary">{{ developer_chat_home_card.cta_label }}</a>
+    </div>
+</section>

@@ -132,13 +132,17 @@
 
                 <div class="home-v4-layout">
                     <aside class="home-v4-nav-shell">
-                        <div class="home-v4-card home-v4-nav-card">
-                            <div class="home-v4-nav-header">
-                                <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Menu</p>
-                                <h2 class="mt-1 text-xl font-black text-slate-900">오늘 바로 쓰는 메뉴</h2>
+                        <div class="home-v4-nav-stack">
+                            <div class="home-v4-card home-v4-nav-card">
+                                <div class="home-v4-nav-header">
+                                    <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Menu</p>
+                                    <h2 class="mt-1 text-xl font-black text-slate-900">오늘 바로 쓰는 메뉴</h2>
+                                </div>
+
+                                {% include 'core/partials/home_v4_nav_sections.html' with panel_name='desktop' %}
                             </div>
 
-                            {% include 'core/partials/home_v4_nav_sections.html' with panel_name='desktop' %}
+                            {% include 'core/partials/home_v4_developer_chat_card.html' with card_variant='desktop' %}
                         </div>
                     </aside>
 
@@ -153,6 +157,8 @@
                             {% if home_v4_mobile_calendar_first_enabled %}
                             {% include 'core/partials/home_v4_mobile_quick_tools.html' %}
                             {% endif %}
+
+                            {% include 'core/partials/home_v4_developer_chat_card.html' with card_variant='mobile' %}
 
                             <section class="home-v4-representative-section" data-home-v4-representative-services="true">
                                 <div class="home-v4-card">

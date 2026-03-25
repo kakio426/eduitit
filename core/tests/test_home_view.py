@@ -21,6 +21,8 @@ from core.mini_apps import (
 )
 from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
 from core.views import _build_home_v4_representative_slots, _rotate_items
+from messagebox.developer_chat import get_or_create_developer_chat_thread
+from messagebox.models import DeveloperChatMessage
 from products.models import Product
 from core.models import Post, ProductFavorite, ProductUsageLog, UserPolicyConsent, UserProfile
 
@@ -2146,6 +2148,54 @@ class HomeV4ViewTest(TestCase):
 
         self.assertIn('메시지 보관', content)
         self.assertIn('data-track-label="메시지 보관"', content)
+
+    def test_v4_home_places_developer_chat_card_under_menu_and_before_representatives(self):
+        self._login('v4devchatcard')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('data-home-v4-developer-chat-card="desktop"', content)
+        self.assertIn('data-home-v4-developer-chat-card="mobile"', content)
+        self.assertIn(f'href="{reverse("messagebox:developer_chat")}"', content)
+
+        desktop_menu_index = content.index('data-home-v4-nav="desktop"')
+        desktop_card_index = content.index('data-home-v4-developer-chat-card="desktop"')
+        mobile_card_index = content.index('data-home-v4-developer-chat-card="mobile"')
+        representative_index = content.index('data-home-v4-representative-services="true"')
+
+        self.assertLess(desktop_menu_index, desktop_card_index)
+        self.assertLess(mobile_card_index, representative_index)
+
+    def test_v4_admin_home_developer_chat_card_shows_recent_thread_preview(self):
+        admin = _create_onboarded_user('v4devadmin', nickname='홈관리자')
+        admin.is_staff = True
+        admin.save(update_fields=['is_staff'])
+        UserPolicyConsent.objects.create(
+            user=admin,
+            provider='direct',
+            terms_version=TERMS_VERSION,
+            privacy_version=PRIVACY_VERSION,
+            agreed_at=timezone.now(),
+            agreement_source='required_gate',
+        )
+        self.client.login(username='v4devadmin', password='pass1234')
+
+        teacher = _create_onboarded_user('v4devteacher', nickname='문의교사')
+        thread = get_or_create_developer_chat_thread(teacher)
+        DeveloperChatMessage.objects.create(
+            thread=thread,
+            sender=teacher,
+            sender_role=DeveloperChatMessage.SenderRole.USER,
+            body='알림장 수정이 필요합니다.',
+        )
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('문의교사', content)
+        self.assertIn('알림장 수정이 필요합니다.', content)
+        self.assertIn('안읽음 1건', content)
 
     @override_settings(HOME_V4_MOBILE_CALENDAR_FIRST_ENABLED=True)
     def test_v4_mobile_calendar_first_flag_swaps_hamburger_for_quick_tools(self):
