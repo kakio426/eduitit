@@ -187,6 +187,31 @@ function initCalendarMessageHub(host, options = {}) {
             }
         },
 
+        getMessageHubPanel: function(tabName) {
+            if (!this.$refs) return null;
+            const normalizedTab = tabName === 'archive' ? 'archive' : 'capture';
+            return normalizedTab === 'archive'
+                ? (this.$refs.messageHubArchivePanel || null)
+                : (this.$refs.messageHubCapturePanel || null);
+        },
+
+        scrollMessageHubPanelToTop: function(tabName) {
+            const run = () => {
+                const panel = this.getMessageHubPanel(tabName);
+                if (!panel) return;
+                if (typeof panel.scrollTo === 'function') {
+                    panel.scrollTo({ top: 0, behavior: 'auto' });
+                    return;
+                }
+                panel.scrollTop = 0;
+            };
+            if (typeof this.$nextTick === 'function') {
+                this.$nextTick(run);
+                return;
+            }
+            window.setTimeout(run, 0);
+        },
+
         buildMessageCaptureParseUrl: function() {
             return this.messageCaptureUrls.parse || '';
         },
@@ -389,6 +414,7 @@ function initCalendarMessageHub(host, options = {}) {
                 this.resetMessageCaptureFlow();
             }
             await this.switchMessageHubTab(tab, hubOptions);
+            this.scrollMessageHubPanelToTop(tab);
             this.syncMessageHubLayout();
         },
 
@@ -408,6 +434,7 @@ function initCalendarMessageHub(host, options = {}) {
                     await this.selectMessageArchiveItem(hubOptions.preferredCaptureId);
                 }
             }
+            this.scrollMessageHubPanelToTop(nextTab);
             this.syncMessageHubLayout();
         },
 
@@ -455,6 +482,7 @@ function initCalendarMessageHub(host, options = {}) {
         startAnotherMessageCapture: function() {
             this.switchMessageHubTab('capture');
             this.resetMessageCaptureFlow();
+            this.scrollMessageHubPanelToTop('capture');
         },
 
         setMessageArchiveFilter: function(filterValue) {
@@ -651,6 +679,7 @@ function initCalendarMessageHub(host, options = {}) {
             this.messageHubActiveTab = 'capture';
             this.messageCaptureInputText = String(detailPayload.raw_text || '');
             this.applyMessageCaptureResult(detailPayload);
+            this.scrollMessageHubPanelToTop('capture');
             this.syncMessageHubLayout();
         },
 
@@ -1083,6 +1112,7 @@ function initCalendarMessageHub(host, options = {}) {
             this.messageCaptureStep = 'input';
             this.messageCaptureErrorText = '';
             this.messageCaptureIdempotencyKey = this.createMessageCaptureIdempotencyKey();
+            this.scrollMessageHubPanelToTop('capture');
         },
 
         submitMessageCaptureLink: async function() {
