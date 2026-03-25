@@ -843,16 +843,19 @@
                             <template x-for="section in agendaDateSections" :key="`agenda-${section.dateKey}`">
                                 <section class="classcalendar-agenda-date-group">
                                     <p class="text-sm font-black text-slate-900" x-text="formatAgendaDate(section.dateKey)"></p>
-                                    <div class="mt-3 space-y-2.5">
+                                    <div x-show="section.items.length === 0" class="mt-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-400">
+                                        등록된 일정 없음
+                                    </div>
+                                    <div x-show="section.items.length > 0" class="mt-3 space-y-2.5">
                                         <template x-for="item in section.items" :key="`agenda-item-${item.id}`">
                                             <button
                                                 type="button"
-                                                @click="openAgendaItem(item, $event)"
+                                                @click="openAgendaItem(item, section.dateKey, $event)"
                                                 class="classcalendar-agenda-item"
                                             >
                                                 <div class="min-w-0">
                                                     <p class="classcalendar-copy text-sm font-black text-slate-900" x-text="item.title"></p>
-                                                    <p x-show="getAgendaItemSummaryText(item)" class="mt-1 text-xs font-semibold text-slate-500" x-text="getAgendaItemSummaryText(item)"></p>
+                                                    <p x-show="getAgendaItemSummaryText(item, section.dateKey)" class="mt-1 text-xs font-semibold text-slate-500" x-text="getAgendaItemSummaryText(item, section.dateKey)"></p>
                                                 </div>
                                             </button>
                                         </template>
@@ -2780,9 +2783,8 @@ function calendarApp() {
             return this.findTaskById(sourceId);
         },
 
-        getAgendaItemSummaryText(item) {
+        getAgendaItemSummaryText(item, referenceDateKey = '') {
             if (!item) return '';
-            const referenceDateKey = String(item.date_key || '').trim();
             if (item.item_kind === 'event') {
                 return this.formatAgendaEventSummary(this.getAgendaSourceEvent(item), referenceDateKey);
             }
@@ -2834,24 +2836,75 @@ function calendarApp() {
                 .sort((left, right) => this.sortHubItems(left, right));
         },
 
+        getAgendaBoundsDateKeys() {
+            const bounds = this.buildAgendaBounds();
+            const start = new Date(bounds.start);
+            const end = new Date(bounds.end);
+            start.setHours(0, 0, 0, 0);
+            end.setHours(0, 0, 0, 0);
+            const dateKeys = [];
+            const cursor = new Date(start);
+            while (cursor.getTime() <= end.getTime()) {
+                dateKeys.push(this.dateKey(cursor));
+                cursor.setDate(cursor.getDate() + 1);
+            }
+            return dateKeys;
+        },
+
+        getAgendaDateKeysForItemWithinBounds(item, bounds = null) {
+            const safeBounds = bounds || this.buildAgendaBounds();
+            const itemStart = item && (item.start_at || item.sort_at);
+            const itemEnd = item && (item.end_at || item.start_at || item.sort_at);
+            if (!itemStart) return [];
+
+            const overlapStart = new Date(Math.max(itemStart.getTime(), safeBounds.start.getTime()));
+            const overlapEnd = new Date(Math.min(itemEnd.getTime(), safeBounds.end.getTime()));
+            if (overlapEnd.getTime() < overlapStart.getTime()) {
+                return [];
+            }
+
+            overlapStart.setHours(0, 0, 0, 0);
+            overlapEnd.setHours(0, 0, 0, 0);
+
+            const dateKeys = [];
+            const cursor = new Date(overlapStart);
+            while (cursor.getTime() <= overlapEnd.getTime()) {
+                dateKeys.push(this.dateKey(cursor));
+                cursor.setDate(cursor.getDate() + 1);
+            }
+            return dateKeys;
+        },
+
         getAgendaDateSections() {
-            const sections = [];
-            let currentSection = null;
-            this.getAgendaItems().forEach((item) => {
-                const dateKey = String(item.date_key || '').trim();
-                if (!dateKey) {
-                    return;
-                }
-                if (!currentSection || currentSection.dateKey !== dateKey) {
-                    currentSection = {
+            const items = this.getAgendaItems();
+            const bounds = this.buildAgendaBounds();
+            const query = String(this.agendaQuery || '').trim();
+            const sectionLookup = new Map();
+
+            if (!query) {
+                this.getAgendaBoundsDateKeys().forEach((dateKey) => {
+                    sectionLookup.set(dateKey, {
                         dateKey,
                         items: [],
-                    };
-                    sections.push(currentSection);
-                }
-                currentSection.items.push(item);
+                    });
+                });
+            }
+
+            items.forEach((item) => {
+                this.getAgendaDateKeysForItemWithinBounds(item, bounds).forEach((dateKey) => {
+                    if (!sectionLookup.has(dateKey)) {
+                        sectionLookup.set(dateKey, {
+                            dateKey,
+                            items: [],
+                        });
+                    }
+                    sectionLookup.get(dateKey).items.push(item);
+                });
             });
-            return sections;
+
+            return Array.from(sectionLookup.values())
+                .sort((left, right) => String(left.dateKey).localeCompare(String(right.dateKey), 'ko'))
+                .filter((section) => !query || section.items.length > 0);
         },
 
         rebuildAgendaSections() {
@@ -2888,10 +2941,11 @@ function calendarApp() {
             return `${this.getAgendaRangeLabel()}에 등록된 일정이 없습니다.`;
         },
 
-        openAgendaItem(item, triggerEvent = null) {
+        openAgendaItem(item, referenceDateKey = '', triggerEvent = null) {
             if (!item) return;
-            if (item.date_key) {
-                this.setSelectedDateContext(this.parseDateKey(item.date_key));
+            const focusDateKey = String(referenceDateKey || item.date_key || '').trim();
+            if (focusDateKey) {
+                this.setSelectedDateContext(this.parseDateKey(focusDateKey));
             }
             if (item.item_kind === 'event') {
                 const event = this.getAgendaSourceEvent(item);
