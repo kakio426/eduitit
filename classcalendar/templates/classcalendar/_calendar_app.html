@@ -267,6 +267,8 @@
         font-size: 0.86rem;
         line-height: 1;
         font-weight: 800;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
         transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
     }
 
@@ -822,10 +824,10 @@
 
                         <div class="mt-4 space-y-3">
                             <div class="classcalendar-filter-row">
-                                <button type="button" @click="setAgendaScope('today')" class="classcalendar-filter-chip" :class="{ 'is-active': agendaScope === 'today' }">오늘</button>
-                                <button type="button" @click="setAgendaScope('week')" class="classcalendar-filter-chip" :class="{ 'is-active': agendaScope === 'week' }">이번 주</button>
-                                <button type="button" @click="setAgendaScope('month')" class="classcalendar-filter-chip" :class="{ 'is-active': agendaScope === 'month' }">이번 달</button>
-                                <button type="button" @click="setAgendaScope('upcoming')" class="classcalendar-filter-chip" :class="{ 'is-active': agendaScope === 'upcoming' }">다가오는 일정</button>
+                                <button type="button" @click.prevent.stop="setAgendaScope('today')" class="classcalendar-filter-chip" :class="{ 'is-active': agendaScope === 'today' }">오늘</button>
+                                <button type="button" @click.prevent.stop="setAgendaScope('week')" class="classcalendar-filter-chip" :class="{ 'is-active': agendaScope === 'week' }">이번 주</button>
+                                <button type="button" @click.prevent.stop="setAgendaScope('month')" class="classcalendar-filter-chip" :class="{ 'is-active': agendaScope === 'month' }">이번 달</button>
+                                <button type="button" @click.prevent.stop="setAgendaScope('upcoming')" class="classcalendar-filter-chip" :class="{ 'is-active': agendaScope === 'upcoming' }">다가오는 일정</button>
                             </div>
                         </div>
 
@@ -2720,11 +2722,7 @@ function calendarApp() {
 
         setAgendaScope(scope) {
             const nextScope = ['today', 'week', 'month', 'upcoming'].includes(scope) ? scope : 'month';
-            if (nextScope === 'today' || nextScope === 'upcoming') {
-                this.setSelectedDateContext(new Date());
-            } else if (!this.selectedDateKey) {
-                this.setSelectedDateContext(new Date());
-            }
+            this.setSelectedDateContext(new Date());
             this.agendaScope = nextScope;
             this.scrollAgendaResultsToTop();
         },
@@ -2864,7 +2862,7 @@ function calendarApp() {
                 return '오늘 일정만 간단히 보여줍니다.';
             }
             if (this.agendaScope === 'week') {
-                return '선택한 날짜가 들어 있는 주 일정입니다.';
+                return '오늘이 들어 있는 주 일정입니다.';
             }
             if (this.agendaScope === 'upcoming') {
                 return '오늘부터 3주 안의 일정만 모아봅니다.';
