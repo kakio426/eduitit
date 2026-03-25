@@ -109,6 +109,7 @@
     display: grid;
     gap: 1rem;
     padding: 1rem;
+    align-content: start;
 }
 
 .developer-chat-sidebar-head,
@@ -156,7 +157,9 @@
 .developer-chat-thread-list {
     display: grid;
     gap: 0.75rem;
-    min-height: 18rem;
+    min-height: 0;
+    align-content: start;
+    grid-auto-rows: max-content;
 }
 
 .developer-chat-thread-item {
@@ -168,6 +171,7 @@
     background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
     padding: 0.95rem;
     text-align: left;
+    align-content: start;
     transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 

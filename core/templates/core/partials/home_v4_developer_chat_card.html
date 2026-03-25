@@ -8,7 +8,6 @@
                 <i class="fa-regular fa-comments"></i>
             </span>
             <div class="min-w-0">
-                <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Developer Chat</p>
                 <h2 class="mt-1 text-lg font-black text-slate-900">{{ developer_chat_home_card.title }}</h2>
             </div>
         </div>
@@ -22,7 +21,9 @@
         </div>
     </div>
 
+    {% if developer_chat_home_card.summary %}
     <p class="home-v4-developer-chat-summary">{{ developer_chat_home_card.summary }}</p>
+    {% endif %}
 
     {% if developer_chat_home_card.preview_threads %}
     <div class="home-v4-developer-chat-list" data-home-v4-developer-chat-list="{{ card_variant|default:'desktop' }}">

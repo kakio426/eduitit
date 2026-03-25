@@ -249,7 +249,7 @@ def build_developer_chat_home_card_context(user):
     card = {
         "enabled": bool(getattr(user, "is_authenticated", False)),
         "title": "개발자야 도와줘",
-        "summary": "오류, 개선 요청, 빠르게 확인받고 싶은 내용을 1:1 채팅으로 남길 수 있어요.",
+        "summary": "",
         "cta_label": "메시지 열기",
         "url": get_developer_chat_page_url(),
         "preview_threads": [],

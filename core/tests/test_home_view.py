@@ -2149,7 +2149,7 @@ class HomeV4ViewTest(TestCase):
         self.assertIn('메시지 보관', content)
         self.assertIn('data-track-label="메시지 보관"', content)
 
-    def test_v4_home_places_developer_chat_card_under_menu_and_before_representatives(self):
+    def test_v4_home_places_developer_chat_card_under_menu_and_moves_mobile_card_to_bottom(self):
         self._login('v4devchatcard')
 
         response = self.client.get(reverse('home'))
@@ -2163,9 +2163,11 @@ class HomeV4ViewTest(TestCase):
         desktop_card_index = content.index('data-home-v4-developer-chat-card="desktop"')
         mobile_card_index = content.index('data-home-v4-developer-chat-card="mobile"')
         representative_index = content.index('data-home-v4-representative-services="true"')
+        community_index = content.index('data-home-v4-sns-panel="true"')
 
         self.assertLess(desktop_menu_index, desktop_card_index)
-        self.assertLess(mobile_card_index, representative_index)
+        self.assertLess(representative_index, mobile_card_index)
+        self.assertLess(community_index, mobile_card_index)
 
     def test_v4_admin_home_developer_chat_card_shows_recent_thread_preview(self):
         admin = _create_onboarded_user('v4devadmin', nickname='홈관리자')

@@ -158,8 +158,6 @@
                             {% include 'core/partials/home_v4_mobile_quick_tools.html' %}
                             {% endif %}
 
-                            {% include 'core/partials/home_v4_developer_chat_card.html' with card_variant='mobile' %}
-
                             <section class="home-v4-representative-section" data-home-v4-representative-services="true">
                                 <div class="home-v4-card">
                                     <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
@@ -275,6 +273,8 @@
                                 {% include 'core/partials/sns_widget.html' with embed_mode='full' compact_posts=True %}
                             </section>
                         </div>
+
+                        {% include 'core/partials/home_v4_developer_chat_card.html' with card_variant='mobile' %}
                     </div>
                 </div>
             </div>
