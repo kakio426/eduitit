@@ -3,11 +3,17 @@ from django.core.management.base import BaseCommand
 from products.models import ManualSection, Product, ProductFeature, ServiceManual
 
 
+SERVICE_TITLE = "초간단 PPT 만들기"
+LEGACY_SERVICE_TITLES = ("수업 발표 메이커",)
+SERVICE_MANUAL_TITLE = "초간단 PPT 만들기 사용 가이드"
+SERVICE_MANUAL_DESCRIPTION = "발표 제목 입력부터 새 탭 발표 화면 열기까지 빠르게 익히는 안내입니다."
+
+
 class Command(BaseCommand):
     help = "Ensure slidesmith product and manual exist in database"
 
     def handle(self, *args, **options):
-        title = "수업 발표 메이커"
+        title = SERVICE_TITLE
         defaults = {
             "lead_text": "제목과 발표 내용을 적으면 바로 발표할 수 있는 슬라이드 흐름을 만들어 줍니다.",
             "description": (
@@ -29,12 +35,25 @@ class Command(BaseCommand):
             "result_text": "발표용 슬라이드 화면",
             "time_text": "3분",
         }
-        product, created = Product.objects.get_or_create(title=title, defaults=defaults)
+        product = Product.objects.filter(title=title).first()
+        created = False
+        if product is None:
+            for legacy_title in LEGACY_SERVICE_TITLES:
+                product = Product.objects.filter(title=legacy_title).first()
+                if product:
+                    break
+
+        if product is None:
+            product = Product.objects.create(title=title, **defaults)
+            created = True
 
         if created:
             self.stdout.write(self.style.SUCCESS("[ensure_slidesmith] Product created"))
         else:
             changed_fields = []
+            if product.title != title:
+                product.title = title
+                changed_fields.append("title")
             if not (product.launch_route_name or "").strip():
                 product.launch_route_name = defaults["launch_route_name"]
                 changed_fields.append("launch_route_name")
@@ -81,18 +100,21 @@ class Command(BaseCommand):
         manual, _ = ServiceManual.objects.get_or_create(
             product=product,
             defaults={
-                "title": "수업 발표 메이커 사용 가이드",
-                "description": "발표 제목 입력부터 새 탭 발표 화면 열기까지 빠르게 익히는 안내입니다.",
+                "title": SERVICE_MANUAL_TITLE,
+                "description": SERVICE_MANUAL_DESCRIPTION,
                 "is_published": True,
             },
         )
 
         manual_changed = []
+        if manual.title != SERVICE_MANUAL_TITLE:
+            manual.title = SERVICE_MANUAL_TITLE
+            manual_changed.append("title")
         if not manual.is_published:
             manual.is_published = True
             manual_changed.append("is_published")
         if not (manual.description or "").strip():
-            manual.description = "발표 제목 입력부터 새 탭 발표 화면 열기까지 빠르게 익히는 안내입니다."
+            manual.description = SERVICE_MANUAL_DESCRIPTION
             manual_changed.append("description")
         if manual_changed:
             manual.save(update_fields=manual_changed)

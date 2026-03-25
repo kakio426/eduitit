@@ -5,8 +5,8 @@ from products.models import Product
 
 from .utils import build_slide_deck
 
-SERVICE_TITLE = "수업 발표 메이커"
-LEGACY_SERVICE_TITLES = ()
+SERVICE_TITLE = "초간단 PPT 만들기"
+LEGACY_SERVICE_TITLES = ("수업 발표 메이커",)
 
 
 def _get_service():

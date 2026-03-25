@@ -45,6 +45,7 @@ class SlidesmithViewTests(TestCase):
         response = self.client.get(reverse("slidesmith:main"))
 
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "초간단 PPT 만들기")
         self.assertContains(response, "홈으로 돌아가기")
         self.assertContains(response, "발표 자료 만들기")
         self.assertContains(response, 'id="slidesmith-form"', html=False)
@@ -53,6 +54,7 @@ class SlidesmithViewTests(TestCase):
         self.assertContains(response, 'id="slidesmith-present-button"', html=False)
         self.assertContains(response, "발표 시작 (새 탭)")
         self.assertContains(response, "slidesmith/slidesmith.js")
+        self.assertNotContains(response, "수업 발표 메이커")
         self.assertNotContains(response, "슬라이드 구분선")
         self.assertNotContains(response, "교사 발표 흐름")
         self.assertNotContains(response, "PDF 저장 안내")
@@ -70,9 +72,10 @@ class SlidesmithViewTests(TestCase):
         self.assertContains(response, "협의회 자료")
         self.assertContains(response, "회의 안건")
         self.assertContains(response, "다음 일정")
+        self.assertContains(response, "초간단 PPT 만들기")
         self.assertContains(response, 'id="slidesmith-presentation-status"', html=False)
 
-    def test_view_uses_route_name_product_fallback(self):
+    def test_view_supports_legacy_product_title(self):
         Product.objects.create(
             title="수업 발표 메이커",
             description="desc",
