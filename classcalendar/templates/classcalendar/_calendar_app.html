@@ -271,9 +271,10 @@
     }
 
     .classcalendar-filter-chip.is-active {
-        border-color: #cbd5e1;
-        background: #f8fafc;
-        color: #0f172a;
+        border-color: #99f6e4;
+        background: #ecfdf5;
+        color: #0f766e;
+        box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.16);
     }
 
     .classcalendar-center-agenda-results {
@@ -670,6 +671,14 @@
                             >
                                 오늘
                             </button>
+                            {% if messagebox_home_card.enabled and messagebox_home_card.url and not is_embedded_on_home %}
+                            <a
+                                href="{{ messagebox_home_card.url }}"
+                                class="classcalendar-main-secondary-link transition hover:bg-amber-100"
+                            >
+                                업무 메시지 보관함
+                            </a>
+                            {% endif %}
                             {% if is_embedded_on_home %}
                             <a
                                 href="{{ calendar_center_url }}?focus_search=1#calendar-search"
@@ -694,16 +703,6 @@
                         </div>
                     </div>
                 </div>
-                {% if messagebox_home_card.enabled and messagebox_home_card.url and not is_embedded_on_home %}
-                <div class="mt-2 flex justify-end">
-                    <a
-                        href="{{ messagebox_home_card.url }}"
-                        class="classcalendar-main-secondary-link transition hover:bg-amber-100"
-                    >
-                        업무 메시지 보관함
-                    </a>
-                </div>
-                {% endif %}
             </div>
 
             <div class="min-w-0">
@@ -792,7 +791,7 @@
                             <div class="min-w-0">
                                 <p class="classcalendar-eyebrow font-black text-slate-400">일정 찾기</p>
                                 <h2 class="classcalendar-copy mt-1 text-xl font-extrabold text-slate-900">날짜별 목록과 검색</h2>
-                                <p class="mt-1 text-sm font-medium text-slate-500">검색과 범위만 두고, 세부사항은 눌러서 보게 했습니다.</p>
+                                <p class="mt-1 text-sm font-medium text-slate-500" x-text="getAgendaScopeHelperText()"></p>
                             </div>
                             <a href="{{ home_surface_url }}" class="inline-flex items-center rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50">
                                 홈 캘린더
@@ -830,7 +829,7 @@
                             </div>
                         </div>
 
-                        <div class="mt-5 classcalendar-center-agenda-results">
+                        <div x-ref="agendaResults" class="mt-5 classcalendar-center-agenda-results">
                             <template x-if="getAgendaDateSections().length === 0">
                                 <section class="rounded-[1.4rem] border border-dashed border-slate-300 bg-slate-50 px-5 py-9 text-center">
                                     <p class="text-base font-black text-slate-800" x-text="getAgendaEmptyMessage()"></p>
@@ -2687,6 +2686,17 @@ function calendarApp() {
             });
         },
 
+        scrollAgendaResultsToTop() {
+            this.$nextTick(() => {
+                const panel = this.$refs && this.$refs.agendaResults ? this.$refs.agendaResults : null;
+                if (!panel) return;
+                panel.scrollTo({
+                    top: 0,
+                    behavior: 'smooth',
+                });
+            });
+        },
+
         hasSelectedDateInCurrentMonth() {
             if (!this.selectedDateKey) return false;
             const selectedDate = this.parseDateKey(this.selectedDateKey);
@@ -2705,10 +2715,18 @@ function calendarApp() {
         clearAgendaQuery() {
             this.agendaQuery = '';
             this.focusAgendaSearch();
+            this.scrollAgendaResultsToTop();
         },
 
         setAgendaScope(scope) {
-            this.agendaScope = scope;
+            const nextScope = ['today', 'week', 'month', 'upcoming'].includes(scope) ? scope : 'month';
+            if (nextScope === 'today' || nextScope === 'upcoming') {
+                this.setSelectedDateContext(new Date());
+            } else if (!this.selectedDateKey) {
+                this.setSelectedDateContext(new Date());
+            }
+            this.agendaScope = nextScope;
+            this.scrollAgendaResultsToTop();
         },
 
         getAgendaReferenceDate() {
@@ -2839,6 +2857,19 @@ function calendarApp() {
                 upcoming: '다가오는 3주',
             };
             return labelMap[this.agendaScope] || this.currentMonthText;
+        },
+
+        getAgendaScopeHelperText() {
+            if (this.agendaScope === 'today') {
+                return '오늘 일정만 간단히 보여줍니다.';
+            }
+            if (this.agendaScope === 'week') {
+                return '선택한 날짜가 들어 있는 주 일정입니다.';
+            }
+            if (this.agendaScope === 'upcoming') {
+                return '오늘부터 3주 안의 일정만 모아봅니다.';
+            }
+            return `${this.currentMonthText} 전체 일정을 보여줍니다.`;
         },
 
         getAgendaEmptyMessage() {

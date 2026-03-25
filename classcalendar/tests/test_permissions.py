@@ -7,6 +7,7 @@ from datetime import timedelta
 from classcalendar.models import CalendarEvent, CalendarMessageCapture, CalendarTask, EventPageBlock
 from core.models import UserProfile
 from happy_seed.models import HSClassroom
+from products.models import Product
 
 User = get_user_model()
 
@@ -155,6 +156,7 @@ class PermissionTest(TestCase):
         self.assertIn('id="calendar-search"', content)
         self.assertIn("교사용 일정 센터", content)
         self.assertIn("월간 보기와 일정 목록을 한 화면에서 확인하세요.", content)
+        self.assertIn("getAgendaScopeHelperText()", agenda_panel)
         self.assertIn("setAgendaScope('today')", agenda_panel)
         self.assertIn("setAgendaScope('week')", agenda_panel)
         self.assertIn("setAgendaScope('month')", agenda_panel)
@@ -172,6 +174,29 @@ class PermissionTest(TestCase):
         self.assertNotIn("지난 일정", agenda_panel)
         self.assertNotIn("예정", agenda_panel)
         self.assertNotIn("열기", agenda_panel)
+
+    @override_settings(
+        FEATURE_MESSAGE_CAPTURE_ENABLED=True,
+        FEATURE_MESSAGE_CAPTURE_ITEM_TYPES=True,
+    )
+    def test_center_view_keeps_messagebox_link_inside_toolbar(self):
+        Product.objects.create(
+            title="업무 메시지 보관함",
+            description="메시지 보관",
+            price=0,
+            is_active=True,
+            service_type="classroom",
+            launch_route_name="messagebox:main",
+        )
+
+        response = self.client_teacher.get(reverse("classcalendar:center"))
+        content = response.content.decode("utf-8")
+        toolbar_shell = content.split('class="classcalendar-main-actions"', 1)[1].split(
+            'class="grid grid-cols-7', 1
+        )[0]
+
+        self.assertIn("업무 메시지 보관함", toolbar_shell)
+        self.assertNotIn('class="mt-2 flex justify-end"', content)
 
     @override_settings(
         FEATURE_MESSAGE_CAPTURE_ENABLED=True,
