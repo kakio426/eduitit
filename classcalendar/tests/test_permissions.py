@@ -141,6 +141,11 @@ class PermissionTest(TestCase):
     def test_center_view_renders_page_mode_with_agenda_search(self):
         response = self.client_teacher.get(reverse("classcalendar:center"))
         content = response.content.decode("utf-8")
+        center_shell = content.split('data-classcalendar-center="true"', 1)[1]
+        center_header = center_shell.split('data-classcalendar-agenda-panel="true"', 1)[0]
+        agenda_panel = center_shell.split('data-classcalendar-agenda-panel="true"', 1)[1].split(
+            'x-show="detailModalOpen"', 1
+        )[0]
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["calendar_embed_mode"], "page")
@@ -150,6 +155,23 @@ class PermissionTest(TestCase):
         self.assertIn('id="calendar-search"', content)
         self.assertIn("교사용 일정 센터", content)
         self.assertIn("월간 보기와 일정 목록을 한 화면에서 확인하세요.", content)
+        self.assertIn("setAgendaScope('today')", agenda_panel)
+        self.assertIn("setAgendaScope('week')", agenda_panel)
+        self.assertIn("setAgendaScope('month')", agenda_panel)
+        self.assertIn("setAgendaScope('upcoming')", agenda_panel)
+        self.assertNotIn("classcalendar-center-kpi-card", center_header)
+        self.assertNotIn("보이는 전체 항목", center_header)
+        self.assertNotIn("이번 달 개인 할 일", center_header)
+        self.assertNotIn("setAgendaKindFilter(", content)
+        self.assertNotIn("agendaKindFilter:", content)
+        self.assertNotIn("메모 있음", agenda_panel)
+        self.assertNotIn("할 일만", agenda_panel)
+        self.assertNotIn("x-text=\"`${section.items.length}건`\"", agenda_panel)
+        self.assertNotIn("getAgendaItemStatusText(item)", agenda_panel)
+        self.assertNotIn("오늘 예정", agenda_panel)
+        self.assertNotIn("지난 일정", agenda_panel)
+        self.assertNotIn("예정", agenda_panel)
+        self.assertNotIn("열기", agenda_panel)
 
     @override_settings(
         FEATURE_MESSAGE_CAPTURE_ENABLED=True,

@@ -204,24 +204,8 @@
     .classcalendar-center-hero {
         border: 1px solid #e2e8f0;
         border-radius: 1.75rem;
-        background:
-            radial-gradient(circle at top left, rgba(251, 191, 36, 0.16), transparent 32%),
-            radial-gradient(circle at top right, rgba(59, 130, 246, 0.16), transparent 26%),
-            linear-gradient(135deg, #fffdf7 0%, #ffffff 55%, #f8fbff 100%);
-        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
-    }
-
-    .classcalendar-center-kpi-grid {
-        display: grid;
-        gap: 0.75rem;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .classcalendar-center-kpi-card {
-        border: 1px solid #dbe3ec;
-        border-radius: 1.25rem;
-        background: rgba(255, 255, 255, 0.92);
-        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.05);
+        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        box-shadow: 0 14px 28px rgba(15, 23, 42, 0.05);
     }
 
     .classcalendar-center-layout {
@@ -234,7 +218,7 @@
         border: 1px solid #e2e8f0;
         border-radius: 1.75rem;
         background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-        box-shadow: 0 16px 34px rgba(15, 23, 42, 0.07);
+        box-shadow: 0 14px 28px rgba(15, 23, 42, 0.05);
     }
 
     .classcalendar-search-field {
@@ -267,7 +251,7 @@
     .classcalendar-filter-row {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.5rem;
+        gap: 0.45rem;
     }
 
     .classcalendar-filter-chip {
@@ -275,7 +259,7 @@
         align-items: center;
         justify-content: center;
         min-height: 2.35rem;
-        padding: 0.55rem 0.95rem;
+        padding: 0.55rem 0.9rem;
         border: 1px solid #dbe3ec;
         border-radius: 9999px;
         background: #ffffff;
@@ -283,29 +267,26 @@
         font-size: 0.86rem;
         line-height: 1;
         font-weight: 800;
-        transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+        transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
     }
 
     .classcalendar-filter-chip.is-active {
-        border-color: #c7d2fe;
-        background: #eef2ff;
-        color: #3730a3;
-        box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.12);
+        border-color: #cbd5e1;
+        background: #f8fafc;
+        color: #0f172a;
     }
 
     .classcalendar-center-agenda-results {
         display: grid;
-        gap: 0.9rem;
+        gap: 0.75rem;
         max-height: 68vh;
         overflow-y: auto;
         padding-right: 0.25rem;
     }
 
     .classcalendar-agenda-date-group {
-        border: 1px solid #e2e8f0;
-        border-radius: 1.35rem;
-        background: #ffffff;
-        padding: 1rem;
+        border-top: 1px solid #e2e8f0;
+        padding-top: 0.9rem;
     }
 
     .classcalendar-agenda-item {
@@ -313,16 +294,15 @@
         width: 100%;
         border: 1px solid #e2e8f0;
         border-radius: 1rem;
-        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-        padding: 0.9rem 0.95rem;
+        background: #ffffff;
+        padding: 0.9rem 1rem;
         text-align: left;
-        transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+        transition: border-color 0.2s ease, background-color 0.2s ease;
     }
 
     .classcalendar-agenda-item:hover {
         border-color: #cbd5e1;
-        background: #ffffff;
-        transform: translateY(-1px);
+        background: #f8fafc;
     }
 
     @media (min-width: 640px) {
@@ -376,10 +356,6 @@
             min-height: 2.15rem;
             padding: 0.5rem 0.95rem;
             font-size: 0.82rem;
-        }
-
-        .classcalendar-center-kpi-grid {
-            grid-template-columns: repeat(4, minmax(0, 1fr));
         }
 
     }
@@ -660,34 +636,10 @@
             {% if not is_embedded_on_home and not is_embedded_in_sheetbook %}
             <div class="space-y-5" data-classcalendar-center="true">
                 <section class="classcalendar-center-hero p-5 sm:p-6">
-                    <div class="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-                        <div class="min-w-0">
-                            <p class="classcalendar-eyebrow font-black text-indigo-600">교사용 일정 센터</p>
-                            <h1 class="classcalendar-copy mt-2 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">월간 보기와 일정 목록을 한 화면에서 확인하세요.</h1>
-                            <p class="classcalendar-copy mt-2 text-sm font-medium text-slate-600">Outlook의 월간+목록 흐름, Google Calendar의 빠른 검색 진입, Todoist의 upcoming 스캔 방식을 참고해 교사가 날짜를 뒤지지 않도록 정리했습니다.</p>
-                        </div>
-                        <div class="classcalendar-center-kpi-grid w-full xl:max-w-[34rem]">
-                            <article class="classcalendar-center-kpi-card px-4 py-3">
-                                <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">오늘</p>
-                                <p class="mt-2 text-2xl font-black text-slate-900" x-text="todayEventsCount"></p>
-                                <p class="mt-1 text-xs font-semibold text-slate-500">오늘 일정</p>
-                            </article>
-                            <article class="classcalendar-center-kpi-card px-4 py-3">
-                                <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">이번 주</p>
-                                <p class="mt-2 text-2xl font-black text-slate-900" x-text="weekEventsCount"></p>
-                                <p class="mt-1 text-xs font-semibold text-slate-500">이번 주 일정</p>
-                            </article>
-                            <article class="classcalendar-center-kpi-card px-4 py-3">
-                                <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">이번 달</p>
-                                <p class="mt-2 text-2xl font-black text-slate-900" x-text="monthHubItemCount"></p>
-                                <p class="mt-1 text-xs font-semibold text-slate-500">보이는 전체 항목</p>
-                            </article>
-                            <article class="classcalendar-center-kpi-card px-4 py-3">
-                                <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">할 일</p>
-                                <p class="mt-2 text-2xl font-black text-slate-900" x-text="monthTasksCount"></p>
-                                <p class="mt-1 text-xs font-semibold text-slate-500">이번 달 개인 할 일</p>
-                            </article>
-                        </div>
+                    <div class="min-w-0">
+                        <p class="classcalendar-eyebrow font-black text-indigo-600">교사용 일정 센터</p>
+                        <h1 class="classcalendar-copy mt-2 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">월간 보기와 일정 목록을 한 화면에서 확인하세요.</h1>
+                        <p class="classcalendar-copy mt-2 text-sm font-medium text-slate-600">왼쪽에서 날짜를 살피고, 오른쪽에서는 제목만 먼저 본 뒤 필요한 내용만 눌러서 확인하도록 정리했습니다.</p>
                     </div>
                 </section>
                 <div class="classcalendar-center-layout">
@@ -815,17 +767,9 @@
                                 @click="openSelectedDateHubItem(item, $event)"
                                 class="classcalendar-mobile-agenda-item block w-full px-3.5 py-3 text-left transition hover:border-slate-300 hover:bg-white"
                             >
-                                <div class="flex items-start gap-3">
-                                    <span class="mt-1 h-2.5 w-2.5 shrink-0 rounded-full" :class="getHubItemToneDotClass(item)"></span>
-                                    <div class="min-w-0 flex-1">
-                                        <div class="flex flex-wrap items-center gap-1.5">
-                                            <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600" x-text="item.serviceLabel"></span>
-                                            <span x-show="item.status_label" class="rounded-full bg-slate-50 px-2 py-0.5 text-[11px] font-bold text-slate-500" x-text="item.status_label"></span>
-                                        </div>
-                                        <p class="classcalendar-copy mt-2 text-sm font-black text-slate-900" x-text="item.title"></p>
-                                        <p x-show="item.meta_text" class="mt-1 text-xs font-semibold text-slate-500" x-text="item.meta_text"></p>
-                                    </div>
-                                    <span class="shrink-0 text-xs font-bold text-slate-500">열기</span>
+                                <div class="min-w-0">
+                                    <p class="classcalendar-copy text-sm font-black text-slate-900" x-text="item.title"></p>
+                                    <p x-show="getAgendaItemSummaryText(item)" class="mt-1 text-xs font-semibold text-slate-500" x-text="getAgendaItemSummaryText(item)"></p>
                                 </div>
                             </button>
                         </template>
@@ -848,7 +792,7 @@
                             <div class="min-w-0">
                                 <p class="classcalendar-eyebrow font-black text-slate-400">일정 찾기</p>
                                 <h2 class="classcalendar-copy mt-1 text-xl font-extrabold text-slate-900">날짜별 목록과 검색</h2>
-                                <p class="mt-1 text-sm font-medium text-slate-500" x-text="`${getAgendaRangeLabel()} · ${getAgendaResultCount()}건`"></p>
+                                <p class="mt-1 text-sm font-medium text-slate-500">검색과 범위만 두고, 세부사항은 눌러서 보게 했습니다.</p>
                             </div>
                             <a href="{{ home_surface_url }}" class="inline-flex items-center rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50">
                                 홈 캘린더
@@ -884,12 +828,6 @@
                                 <button type="button" @click="setAgendaScope('month')" class="classcalendar-filter-chip" :class="{ 'is-active': agendaScope === 'month' }">이번 달</button>
                                 <button type="button" @click="setAgendaScope('upcoming')" class="classcalendar-filter-chip" :class="{ 'is-active': agendaScope === 'upcoming' }">다가오는 일정</button>
                             </div>
-                            <div class="classcalendar-filter-row">
-                                <button type="button" @click="setAgendaKindFilter('all')" class="classcalendar-filter-chip" :class="{ 'is-active': agendaKindFilter === 'all' }">모두</button>
-                                <button type="button" @click="setAgendaKindFilter('memo')" class="classcalendar-filter-chip" :class="{ 'is-active': agendaKindFilter === 'memo' }">메모 있음</button>
-                                <button type="button" @click="setAgendaKindFilter('task')" class="classcalendar-filter-chip" :class="{ 'is-active': agendaKindFilter === 'task' }">할 일만</button>
-                                <button type="button" @click="setAgendaKindFilter('external')" class="classcalendar-filter-chip" :class="{ 'is-active': agendaKindFilter === 'external' }">연결 항목</button>
-                            </div>
                         </div>
 
                         <div class="mt-5 classcalendar-center-agenda-results">
@@ -902,15 +840,7 @@
 
                             <template x-for="section in getAgendaDateSections()" :key="`agenda-${section.dateKey}`">
                                 <section class="classcalendar-agenda-date-group">
-                                    <div class="flex items-center justify-between gap-3">
-                                        <div>
-                                            <p class="text-sm font-black text-slate-900" x-text="formatAgendaDate(section.dateKey)"></p>
-                                            <p class="mt-1 text-xs font-semibold text-slate-500" x-text="`${section.items.length}건`"></p>
-                                        </div>
-                                        <button type="button" @click="openDayOverview(parseDateKey(section.dateKey), $event)" class="inline-flex items-center rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50">
-                                            날짜 보기
-                                        </button>
-                                    </div>
+                                    <p class="text-sm font-black text-slate-900" x-text="formatAgendaDate(section.dateKey)"></p>
                                     <div class="mt-3 space-y-2.5">
                                         <template x-for="item in section.items" :key="`agenda-item-${item.id}`">
                                             <button
@@ -918,18 +848,9 @@
                                                 @click="openAgendaItem(item, $event)"
                                                 class="classcalendar-agenda-item"
                                             >
-                                                <div class="flex items-start gap-3">
-                                                    <span class="mt-1 h-2.5 w-2.5 shrink-0 rounded-full" :class="getHubItemToneDotClass(item)"></span>
-                                                    <div class="min-w-0 flex-1">
-                                                        <div class="flex flex-wrap items-center gap-1.5">
-                                                            <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600" x-text="item.serviceLabel"></span>
-                                                            <span x-show="getAgendaItemStatusText(item)" class="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-bold text-slate-500" x-text="getAgendaItemStatusText(item)"></span>
-                                                        </div>
-                                                        <p class="classcalendar-copy mt-2 text-sm font-black text-slate-900" x-text="item.title"></p>
-                                                        <p x-show="item.meta_text" class="mt-1 text-xs font-semibold text-slate-500" x-text="item.meta_text"></p>
-                                                        <p x-show="agendaItemHasMemo(item)" class="classcalendar-copy classcalendar-clamp-2 mt-2 text-xs leading-5 text-slate-600" x-text="getAgendaItemNotePreview(item)"></p>
-                                                    </div>
-                                                    <span class="shrink-0 text-xs font-bold text-slate-500">열기</span>
+                                                <div class="min-w-0">
+                                                    <p class="classcalendar-copy text-sm font-black text-slate-900" x-text="item.title"></p>
+                                                    <p x-show="getAgendaItemSummaryText(item)" class="mt-1 text-xs font-semibold text-slate-500" x-text="getAgendaItemSummaryText(item)"></p>
                                                 </div>
                                             </button>
                                         </template>
@@ -1544,7 +1465,6 @@ function calendarApp() {
         initialFocusSearch: {{ initial_focus_search|yesno:"true,false" }},
         agendaQuery: '{{ initial_search_query|default:""|escapejs }}',
         agendaScope: 'month',
-        agendaKindFilter: 'all',
         surfaceAllowsManage: true,
         integrationSettings: {
             collect_deadline_enabled: true,
@@ -2791,10 +2711,6 @@ function calendarApp() {
             this.agendaScope = scope;
         },
 
-        setAgendaKindFilter(filter) {
-            this.agendaKindFilter = filter;
-        },
-
         getAgendaReferenceDate() {
             if (this.selectedDateKey) {
                 return this.parseDateKey(this.selectedDateKey);
@@ -2841,37 +2757,16 @@ function calendarApp() {
             return this.findTaskById(sourceId);
         },
 
-        agendaItemHasMemo(item) {
-            const event = this.getAgendaSourceEvent(item);
-            if (event) return this.hasEventNote(event);
-            const task = this.getAgendaSourceTask(item);
-            if (task) return this.hasTaskNote(task);
-            return false;
-        },
-
-        getAgendaItemNotePreview(item) {
-            const event = this.getAgendaSourceEvent(item);
-            if (event && this.hasEventNote(event)) {
-                return String(event.note || '').trim();
-            }
-            const task = this.getAgendaSourceTask(item);
-            if (task && this.hasTaskNote(task)) {
-                return String(task.note || '').trim();
-            }
-            return '';
-        },
-
-        getAgendaItemStatusText(item) {
+        getAgendaItemSummaryText(item) {
             if (!item) return '';
+            const referenceDateKey = String(item.date_key || '').trim();
             if (item.item_kind === 'event') {
-                const event = this.getAgendaSourceEvent(item);
-                return event ? this.getEventStatusText(event) : '';
+                return this.formatAgendaEventSummary(this.getAgendaSourceEvent(item), referenceDateKey);
             }
             if (item.item_kind === 'task') {
-                const task = this.getAgendaSourceTask(item);
-                return task ? this.getTaskStatusText(task) : '';
+                return this.formatAgendaTaskSummary(this.getAgendaSourceTask(item), referenceDateKey);
             }
-            return item.status_label || '';
+            return this.formatAgendaHubItemSummary(item, referenceDateKey);
         },
 
         getAgendaItemSearchableText(item) {
@@ -2880,15 +2775,16 @@ function calendarApp() {
                 item && item.meta_text ? item.meta_text : '',
                 item && item.status_label ? item.status_label : '',
                 item && item.serviceLabel ? item.serviceLabel : '',
-                this.getAgendaItemNotePreview(item),
             ];
             const event = this.getAgendaSourceEvent(item);
             if (event) {
+                parts.push(event.note || '');
                 parts.push(event.calendar_owner_name || '');
                 (event.attachments || []).forEach((attachment) => parts.push(attachment.original_name || ''));
             }
             const task = this.getAgendaSourceTask(item);
             if (task) {
+                parts.push(task.note || '');
                 parts.push(task.calendar_owner_name || '');
             }
             return parts.join(' ').toLowerCase();
@@ -2902,14 +2798,6 @@ function calendarApp() {
             return itemStart <= bounds.end && itemEnd >= bounds.start;
         },
 
-        agendaItemMatchesKindFilter(item) {
-            if (this.agendaKindFilter === 'all') return true;
-            if (this.agendaKindFilter === 'memo') return this.agendaItemHasMemo(item);
-            if (this.agendaKindFilter === 'task') return item && item.item_kind === 'task';
-            if (this.agendaKindFilter === 'external') return item && !['event', 'task'].includes(item.item_kind);
-            return true;
-        },
-
         agendaItemMatchesQuery(item) {
             const query = String(this.agendaQuery || '').trim().toLowerCase();
             if (!query) return true;
@@ -2919,7 +2807,6 @@ function calendarApp() {
         getAgendaItems() {
             return this.hubItems
                 .filter((item) => this.agendaItemMatchesScope(item))
-                .filter((item) => this.agendaItemMatchesKindFilter(item))
                 .filter((item) => this.agendaItemMatchesQuery(item))
                 .sort((left, right) => this.sortHubItems(left, right));
         },
@@ -2944,10 +2831,6 @@ function calendarApp() {
             return sections;
         },
 
-        getAgendaResultCount() {
-            return this.getAgendaItems().length;
-        },
-
         getAgendaRangeLabel() {
             const labelMap = {
                 today: '오늘',
@@ -2961,14 +2844,6 @@ function calendarApp() {
         getAgendaEmptyMessage() {
             if (String(this.agendaQuery || '').trim()) {
                 return '검색 결과가 없습니다. 일정명이나 메모 문구를 조금 다르게 입력해 보세요.';
-            }
-            const filterLabels = {
-                memo: '메모가 붙은 일정',
-                task: '할 일',
-                external: '연결 항목',
-            };
-            if (this.agendaKindFilter !== 'all') {
-                return `${this.getAgendaRangeLabel()}에 ${filterLabels[this.agendaKindFilter] || '항목'}이 없습니다.`;
             }
             return `${this.getAgendaRangeLabel()}에 등록된 일정이 없습니다.`;
         },
@@ -3603,43 +3478,6 @@ function calendarApp() {
             return map[this.messageCapturePredictedItemType] || 'border-slate-200 bg-slate-100 text-slate-700';
         },
         get currentMonthText() { return `${this.currentDate.getFullYear()}년 ${this.currentDate.getMonth() + 1}월`; },
-        get todayEventsCount() { return this.events.filter((e) => this.dateKey(e.start_time) === this.dateKey(new Date())).length; },
-        get weekEventsCount() {
-            const now = new Date();
-            const start = new Date(now);
-            const mondayOffset = (now.getDay() + 6) % 7;
-            start.setDate(now.getDate() - mondayOffset);
-            start.setHours(0, 0, 0, 0);
-            const end = new Date(start);
-            end.setDate(start.getDate() + 7);
-            return this.events.filter((e) => e.start_time >= start && e.start_time < end).length;
-        },
-        get monthEventsCount() {
-            const y = this.currentDate.getFullYear();
-            const m = this.currentDate.getMonth();
-            const start = new Date(y, m, 1, 0, 0, 0, 0);
-            const end = new Date(y, m + 1, 0, 23, 59, 59, 999);
-            return this.events.filter((event) => event.start_time <= end && event.end_time >= start).length;
-        },
-        get monthTasksCount() {
-            const y = this.currentDate.getFullYear();
-            const m = this.currentDate.getMonth();
-            return this.tasks.filter((task) => {
-                if (!task.due_at) return false;
-                return task.due_at.getFullYear() === y && task.due_at.getMonth() === m;
-            }).length;
-        },
-        get monthHubItemCount() {
-            const start = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth(), 1, 0, 0, 0, 0);
-            const end = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + 1, 0, 23, 59, 59, 999);
-            return this.hubItems.filter((item) => {
-                const itemStart = item.start_at || item.sort_at;
-                const itemEnd = item.end_at || item.start_at || item.sort_at;
-                if (!itemStart) return false;
-                return itemStart <= end && itemEnd >= start;
-            }).length;
-        },
-
         get calendarDates() {
             const y = this.currentDate.getFullYear();
             const m = this.currentDate.getMonth();
@@ -3739,15 +3577,6 @@ function calendarApp() {
         getDayMarker(date) {
             return this.dayMarkers[this.dateKey(date)] || null;
         },
-        getHubItemToneDotClass(item) {
-            const tone = item && item.tone ? item.tone : 'neutral';
-            const map = {
-                neutral: 'bg-slate-400',
-                warning: 'bg-amber-500',
-                done: 'bg-emerald-500',
-            };
-            return map[tone] || map.neutral;
-        },
         getMemoCountForDate(date) {
             const eventMemoCount = this.events.filter((event) => this.overlapsDate(event, date) && this.hasEventNote(event)).length;
             const taskMemoCount = this.getTasksForDate(date).filter((task) => this.hasTaskNote(task)).length;
@@ -3821,31 +3650,15 @@ function calendarApp() {
         },
         getVisibleEventsForDate(date) { return this.getEventsForDate(date).slice(0, 3); },
         getOverflowCountForDate(date) { const total = this.getEventsForDate(date).length; return total > 3 ? total - 3 : 0; },
-        getAgendaDates() {
-            const set = new Set();
-            this.hubItems.forEach((item) => {
-                const key = String(item.date_key || '').trim();
-                if (key) set.add(key);
-            });
-            return Array.from(set).sort();
-        },
-        getEventsByDateString(dateStr) {
-            return this.events.filter((e) => this.dateKey(e.start_time) === dateStr).sort((a, b) => a.start_time - b.start_time);
-        },
-        getTasksByDateString(dateStr) {
-            return this.tasks
-                .filter((task) => this.getTaskDateKey(task) === dateStr)
-                .sort((a, b) => {
-                    const left = a.due_at ? a.due_at.getTime() : 0;
-                    const right = b.due_at ? b.due_at.getTime() : 0;
-                    return left - right;
-                });
-        },
 
         formatAgendaDate(dateStr) {
             const date = this.parseDateKey(dateStr);
             const days = ['일', '월', '화', '수', '목', '금', '토'];
             return `${date.getMonth() + 1}월 ${date.getDate()}일 (${days[date.getDay()]})`;
+        },
+        formatAgendaShortDate(date) {
+            if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+            return `${date.getMonth() + 1}/${date.getDate()}`;
         },
         formatClock(date) {
             let h = date.getHours();
@@ -3855,14 +3668,68 @@ function calendarApp() {
             m = m < 10 ? `0${m}` : m;
             return `${p} ${h}:${m}`;
         },
-        formatEventTimeShort(date, isAllDay) {
-            if (isAllDay) return '종일';
-            let h = date.getHours();
-            let m = date.getMinutes();
-            const p = h >= 12 ? '오후' : '오전';
-            h = h % 12 || 12;
-            m = m < 10 ? `0${m}` : m;
-            return `${p}${h}:${m}`;
+        formatAgendaEventSummary(event, referenceDateKey = '') {
+            if (!event) return '';
+            const start = new Date(event.start_time);
+            const end = new Date(event.end_time);
+            const startKey = this.dateKey(start);
+            const endKey = this.dateKey(end);
+            if (event.is_all_day) {
+                if (startKey === endKey) return '하루 종일';
+                return `${this.formatAgendaShortDate(start)} - ${this.formatAgendaShortDate(end)} 하루 종일`;
+            }
+            if (startKey === endKey) {
+                return `${this.formatClock(start)} - ${this.formatClock(end)}`;
+            }
+            if (referenceDateKey && referenceDateKey === startKey) {
+                return `${this.formatClock(start)} 시작`;
+            }
+            if (referenceDateKey && referenceDateKey === endKey) {
+                return `${this.formatClock(end)} 종료`;
+            }
+            return `${this.formatAgendaShortDate(start)} ${this.formatClock(start)} ~ ${this.formatAgendaShortDate(end)} ${this.formatClock(end)}`;
+        },
+        formatAgendaTaskSummary(task, referenceDateKey = '') {
+            if (!task || !task.due_at) return '마감일 없음';
+            const dueAt = new Date(task.due_at);
+            const dueKey = this.dateKey(dueAt);
+            if (task.has_time) {
+                if (referenceDateKey && referenceDateKey === dueKey) {
+                    return `${this.formatClock(dueAt)}까지`;
+                }
+                return `${this.formatAgendaShortDate(dueAt)} ${this.formatClock(dueAt)}까지`;
+            }
+            if (referenceDateKey && referenceDateKey === dueKey) {
+                return '시간 미정';
+            }
+            return `${this.formatAgendaShortDate(dueAt)} · 시간 미정`;
+        },
+        formatAgendaHubItemSummary(item, referenceDateKey = '') {
+            if (!item) return '';
+            const start = item.start_at ? new Date(item.start_at) : null;
+            const end = item.end_at ? new Date(item.end_at) : null;
+            if (start && end) {
+                const startKey = this.dateKey(start);
+                const endKey = this.dateKey(end);
+                if (item.is_all_day) {
+                    if (startKey === endKey) return '하루 종일';
+                    return `${this.formatAgendaShortDate(start)} - ${this.formatAgendaShortDate(end)} 하루 종일`;
+                }
+                if (startKey === endKey) {
+                    return `${this.formatClock(start)} - ${this.formatClock(end)}`;
+                }
+                if (referenceDateKey && referenceDateKey === startKey) {
+                    return `${this.formatClock(start)} 시작`;
+                }
+                if (referenceDateKey && referenceDateKey === endKey) {
+                    return `${this.formatClock(end)} 종료`;
+                }
+                return `${this.formatAgendaShortDate(start)} ${this.formatClock(start)} ~ ${this.formatAgendaShortDate(end)} ${this.formatClock(end)}`;
+            }
+            if (start) {
+                return item.is_all_day ? '하루 종일' : this.formatClock(start);
+            }
+            return item.meta_text || item.status_label || '';
         },
         formatEventRange(event) {
             if (!event) return '';
