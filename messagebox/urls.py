@@ -25,4 +25,9 @@ urlpatterns = [
         views.developer_chat_mark_read_api,
         name="developer_chat_mark_read",
     ),
+    path(
+        "developer-chat/api/threads/<int:thread_id>/delete/",
+        views.developer_chat_delete_thread_api,
+        name="developer_chat_delete_thread",
+    ),
 ]

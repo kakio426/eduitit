@@ -185,3 +185,20 @@ def developer_chat_mark_read_api(request, thread_id):
             "unread_count": get_thread_unread_count(thread, request.user),
         }
     )
+
+
+@require_POST
+@login_required
+def developer_chat_delete_thread_api(request, thread_id):
+    thread = get_object_or_404(get_developer_chat_thread_queryset(), id=thread_id)
+    if not user_can_access_developer_chat_thread(request.user, thread):
+        return _developer_chat_permission_denied()
+
+    deleted_thread_id = thread.id
+    thread.delete()
+    return JsonResponse(
+        {
+            "status": "ok",
+            "thread_id": deleted_thread_id,
+        }
+    )

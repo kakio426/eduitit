@@ -68,6 +68,10 @@ def build_developer_chat_api_urls():
             "messagebox:developer_chat_mark_read",
             kwargs={"thread_id": THREAD_URL_PLACEHOLDER},
         ).replace(str(THREAD_URL_PLACEHOLDER), "__thread_id__"),
+        "delete_template": reverse(
+            "messagebox:developer_chat_delete_thread",
+            kwargs={"thread_id": THREAD_URL_PLACEHOLDER},
+        ).replace(str(THREAD_URL_PLACEHOLDER), "__thread_id__"),
     }
 
 
@@ -115,15 +119,34 @@ def _participant_search_query(raw_query):
     )
 
 
-def list_developer_chat_threads_for_user(user, *, query="", include_empty_user_thread=False, limit=THREAD_LIST_PAGE_SIZE):
+def list_developer_chat_threads_for_user(
+    user,
+    *,
+    query="",
+    include_empty_user_thread=False,
+    unread_only=False,
+    limit=THREAD_LIST_PAGE_SIZE,
+):
     if is_developer_chat_admin(user):
         queryset = get_developer_chat_thread_queryset().exclude(last_message_at__isnull=True)
         if str(query or "").strip():
             queryset = queryset.filter(_participant_search_query(query))
-        return list(queryset[:limit])
+        if not unread_only:
+            return list(queryset[:limit] if limit is not None else queryset)
+
+        threads = []
+        for thread in queryset:
+            if get_thread_unread_count(thread, user) <= 0:
+                continue
+            threads.append(thread)
+            if limit is not None and len(threads) >= limit:
+                break
+        return threads
 
     thread = get_or_create_developer_chat_thread(user) if include_empty_user_thread else get_existing_developer_chat_thread(user)
     if not thread:
+        return []
+    if unread_only and get_thread_unread_count(thread, user) <= 0:
         return []
     return [thread]
 
@@ -242,6 +265,7 @@ def serialize_thread_detail(thread, viewer):
         },
         "assigned_admin_name": assigned_admin_name,
         "messages": messages,
+        "can_delete": True,
     }
 
 
@@ -262,28 +286,25 @@ def build_developer_chat_home_card_context(user):
 
     is_admin_view = is_developer_chat_admin(user)
     card["is_admin"] = is_admin_view
-    preview_threads = list_developer_chat_threads_for_user(
+    unread_threads = list_developer_chat_threads_for_user(
         user,
         include_empty_user_thread=False,
-        limit=HOME_PREVIEW_THREAD_LIMIT,
+        unread_only=True,
+        limit=None,
     )
-    serialized_preview = [serialize_thread_summary(thread, user) for thread in preview_threads]
-    unread_count = sum(item["unread_count"] for item in serialized_preview)
-    unread_thread_count = sum(1 for item in serialized_preview if item["unread_count"] > 0)
+    serialized_unread_threads = [serialize_thread_summary(thread, user) for thread in unread_threads]
+    unread_count = sum(item["unread_count"] for item in serialized_unread_threads)
+    unread_thread_count = len(serialized_unread_threads)
 
-    card["preview_threads"] = serialized_preview
+    card["preview_threads"] = serialized_unread_threads[:HOME_PREVIEW_THREAD_LIMIT]
     card["unread_count"] = unread_count
     card["unread_thread_count"] = unread_thread_count
 
     if is_admin_view:
-        total_threads = get_developer_chat_thread_queryset().exclude(last_message_at__isnull=True).count()
-        if total_threads:
-            card["summary"] = f"지금 확인할 대화 {total_threads}명, 안 읽은 메시지 {unread_count}건입니다."
-        else:
-            card["summary"] = "아직 시작된 사용자 대화가 없어요. 새 문의가 오면 여기서 바로 확인할 수 있습니다."
+        if unread_thread_count:
+            card["summary"] = f"새로 확인할 대화 {unread_thread_count}명, 안 읽은 메시지 {unread_count}건입니다."
         return card
 
-    existing_thread = get_existing_developer_chat_thread(user)
-    if existing_thread and existing_thread.last_message_at:
-        card["summary"] = "대화가 이어지고 있어요. 최근 답장과 내가 보낸 문의를 한 자리에서 확인할 수 있습니다."
+    if unread_count:
+        card["summary"] = "새 답장이 도착했어요."
     return card

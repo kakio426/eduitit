@@ -5,7 +5,7 @@ from django.urls import reverse
 from core.models import UserPolicyConsent, UserProfile
 from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
 from messagebox.developer_chat import get_or_create_developer_chat_thread
-from messagebox.models import DeveloperChatMessage
+from messagebox.models import DeveloperChatMessage, DeveloperChatThread
 
 
 User = get_user_model()
@@ -135,3 +135,43 @@ class DeveloperChatViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["unread_count"], 0)
+
+    def test_admin_can_delete_selected_thread(self):
+        thread = get_or_create_developer_chat_thread(self.teacher)
+        DeveloperChatMessage.objects.create(
+            thread=thread,
+            sender=self.teacher,
+            sender_role=DeveloperChatMessage.SenderRole.USER,
+            body="삭제할 문의",
+        )
+        self.client.force_login(self.admin)
+
+        response = self.client.post(
+            reverse("messagebox:developer_chat_delete_thread", kwargs={"thread_id": thread.id})
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(DeveloperChatThread.objects.filter(id=thread.id).exists())
+
+    def test_regular_user_delete_recreates_empty_thread_on_next_list_load(self):
+        thread = get_or_create_developer_chat_thread(self.teacher)
+        DeveloperChatMessage.objects.create(
+            thread=thread,
+            sender=self.teacher,
+            sender_role=DeveloperChatMessage.SenderRole.USER,
+            body="삭제 후 새로 시작할게요",
+        )
+        self.client.force_login(self.teacher)
+
+        delete_response = self.client.post(
+            reverse("messagebox:developer_chat_delete_thread", kwargs={"thread_id": thread.id})
+        )
+        list_response = self.client.get(reverse("messagebox:developer_chat_threads"))
+
+        self.assertEqual(delete_response.status_code, 200)
+        self.assertFalse(DeveloperChatThread.objects.filter(id=thread.id).exists())
+        self.assertEqual(list_response.status_code, 200)
+        payload = list_response.json()
+        self.assertEqual(len(payload["threads"]), 1)
+        self.assertNotEqual(payload["threads"][0]["id"], thread.id)
+        self.assertEqual(payload["threads"][0]["unread_count"], 0)

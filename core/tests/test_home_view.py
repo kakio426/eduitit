@@ -21,7 +21,7 @@ from core.mini_apps import (
 )
 from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
 from core.views import _build_home_v4_representative_slots, _rotate_items
-from messagebox.developer_chat import get_or_create_developer_chat_thread
+from messagebox.developer_chat import get_or_create_developer_chat_thread, mark_thread_as_read
 from messagebox.models import DeveloperChatMessage
 from products.models import Product
 from core.models import Post, ProductFavorite, ProductUsageLog, UserPolicyConsent, UserProfile
@@ -2198,6 +2198,43 @@ class HomeV4ViewTest(TestCase):
         self.assertIn('문의교사', content)
         self.assertIn('알림장 수정이 필요합니다.', content)
         self.assertIn('안읽음 1건', content)
+
+    def test_v4_admin_home_developer_chat_card_hides_read_replied_threads(self):
+        admin = _create_onboarded_user('v4devadminread', nickname='홈관리자')
+        admin.is_staff = True
+        admin.save(update_fields=['is_staff'])
+        UserPolicyConsent.objects.create(
+            user=admin,
+            provider='direct',
+            terms_version=TERMS_VERSION,
+            privacy_version=PRIVACY_VERSION,
+            agreed_at=timezone.now(),
+            agreement_source='required_gate',
+        )
+        self.client.login(username='v4devadminread', password='pass1234')
+
+        teacher = _create_onboarded_user('v4devteacherread', nickname='응답완료교사')
+        thread = get_or_create_developer_chat_thread(teacher)
+        DeveloperChatMessage.objects.create(
+            thread=thread,
+            sender=teacher,
+            sender_role=DeveloperChatMessage.SenderRole.USER,
+            body='이미 확인한 문의입니다.',
+        )
+        mark_thread_as_read(thread, admin)
+        DeveloperChatMessage.objects.create(
+            thread=thread,
+            sender=admin,
+            sender_role=DeveloperChatMessage.SenderRole.ADMIN,
+            body='답변을 마쳤습니다.',
+        )
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertNotIn('응답완료교사', content)
+        self.assertNotIn('답변을 마쳤습니다.', content)
+        self.assertIn('새 문의가 오면 여기서 바로 확인할 수 있습니다.', content)
 
     @override_settings(HOME_V4_MOBILE_CALENDAR_FIRST_ENABLED=True)
     def test_v4_mobile_calendar_first_flag_swaps_hamburger_for_quick_tools(self):

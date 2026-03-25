@@ -46,6 +46,7 @@
             composer: root.querySelector('[data-developer-chat-composer="true"]'),
             input: root.querySelector('[data-developer-chat-input="true"]'),
             sendButton: root.querySelector('[data-developer-chat-send="true"]'),
+            deleteButton: root.querySelector('[data-developer-chat-delete="true"]'),
             search: root.querySelector('[data-developer-chat-search="true"]'),
             refreshButtons: Array.from(root.querySelectorAll('[data-developer-chat-refresh="true"]')),
             toastRoot: document.getElementById("developer-chat-toast-root"),
@@ -61,6 +62,7 @@
             isLoadingThreads: false,
             isLoadingDetail: false,
             isSending: false,
+            isDeleting: false,
             searchTimer: null,
         };
 
@@ -85,10 +87,13 @@
         }
 
         function setLoadingState() {
-            const disabled = state.isLoadingThreads || state.isLoadingDetail || state.isSending;
+            const disabled = state.isLoadingThreads || state.isLoadingDetail || state.isSending || state.isDeleting;
             elements.sendButton.disabled = disabled || !state.selectedThreadId;
+            if (elements.deleteButton) {
+                elements.deleteButton.disabled = disabled || !state.selectedThreadId;
+            }
             elements.refreshButtons.forEach((button) => {
-                button.disabled = state.isSending;
+                button.disabled = state.isSending || state.isDeleting;
             });
         }
 
@@ -375,6 +380,44 @@
             }
         }
 
+        async function handleDelete() {
+            if (!state.selectedThreadId || !state.selectedThread) {
+                showToast("삭제할 대화를 먼저 선택해 주세요.", "error");
+                return;
+            }
+
+            const confirmMessage = state.isAdmin
+                ? `${state.selectedThread.participant.display_name}님과의 대화를 삭제할까요?`
+                : "이 대화를 삭제할까요?";
+            if (!window.confirm(`${confirmMessage}\n삭제하면 메시지를 되돌릴 수 없습니다.`)) {
+                return;
+            }
+
+            state.isDeleting = true;
+            setLoadingState();
+            try {
+                const deletingThreadId = state.selectedThreadId;
+                await fetchJson(buildThreadUrl(urls.delete_template, deletingThreadId), {
+                    method: "POST",
+                    headers: {
+                        "X-CSRFToken": csrfToken,
+                    },
+                });
+                state.threads = state.threads.filter((thread) => String(thread.id) !== String(deletingThreadId));
+                state.selectedThreadId = "";
+                state.selectedThread = null;
+                renderThreadList();
+                renderSelectedThread();
+                showToast("대화를 삭제했어요.", "info");
+                await loadThreads({ markRead: false, preferInitialThread: false });
+            } catch (error) {
+                showToast(error.message, "error");
+            } finally {
+                state.isDeleting = false;
+                setLoadingState();
+            }
+        }
+
         elements.composer.addEventListener("submit", handleSend);
         elements.input.addEventListener("keydown", (event) => {
             if (event.key === "Enter" && !event.shiftKey) {
@@ -382,6 +425,9 @@
                 handleSend(event);
             }
         });
+        if (elements.deleteButton) {
+            elements.deleteButton.addEventListener("click", handleDelete);
+        }
 
         if (elements.search) {
             elements.search.addEventListener("input", (event) => {

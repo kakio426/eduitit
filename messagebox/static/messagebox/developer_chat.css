@@ -66,6 +66,7 @@
 
 .developer-chat-header-link,
 .developer-chat-refresh-button,
+.developer-chat-danger-button,
 .developer-chat-send-button {
     display: inline-flex;
     align-items: center;
@@ -76,13 +77,23 @@
 }
 
 .developer-chat-header-link,
-.developer-chat-refresh-button {
+.developer-chat-refresh-button,
+.developer-chat-danger-button {
     min-height: 2.7rem;
     padding: 0 1rem;
-    border: 1px solid #cbd5e1;
     background: #ffffff;
-    color: #334155;
     font-size: 0.88rem;
+}
+
+.developer-chat-header-link,
+.developer-chat-refresh-button {
+    border: 1px solid #cbd5e1;
+    color: #334155;
+}
+
+.developer-chat-danger-button {
+    border: 1px solid #fecaca;
+    color: #b91c1c;
 }
 
 .developer-chat-header-link:hover,
@@ -92,6 +103,14 @@
     border-color: #93c5fd;
     background: #f8fbff;
     color: #0f172a;
+    transform: translateY(-1px);
+}
+
+.developer-chat-danger-button:hover,
+.developer-chat-danger-button:focus-visible {
+    border-color: #fca5a5;
+    background: #fff1f2;
+    color: #991b1b;
     transform: translateY(-1px);
 }
 
@@ -415,7 +434,8 @@
 }
 
 .developer-chat-send-button:disabled,
-.developer-chat-refresh-button:disabled {
+.developer-chat-refresh-button:disabled,
+.developer-chat-danger-button:disabled {
     opacity: 0.55;
     cursor: not-allowed;
     transform: none;
