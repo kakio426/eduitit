@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 from django.urls import reverse
 
@@ -80,6 +81,47 @@ class DutyTickerActiveClassroomTests(TestCase):
         student = DTStudent.objects.get(user=self.user, name="새학생")
         self.assertEqual(student.classroom_id, self.classroom_b.id)
 
+    def test_admin_upload_students_csv_creates_rows_in_selected_classroom(self):
+        self._set_active_classroom(self.classroom_a)
+        csv_file = SimpleUploadedFile(
+            "students.csv",
+            "번호,이름\n1,김하늘\n2,박바다\n".encode("utf-8-sig"),
+            content_type="text/csv",
+        )
+
+        response = self.client.post(
+            reverse("dt_admin_upload_students_csv"),
+            data={"csv_file": csv_file},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        students = list(
+            DTStudent.objects.filter(user=self.user, classroom=self.classroom_a).order_by("number")
+        )
+        self.assertEqual([(student.number, student.name) for student in students], [(1, "김하늘"), (2, "박바다")])
+
+    def test_admin_clear_example_students_removes_known_sample_names_only(self):
+        self._set_active_classroom(self.classroom_a)
+        DTStudent.objects.create(user=self.user, classroom=self.classroom_a, name="김철수", number=1)
+        DTStudent.objects.create(user=self.user, classroom=self.classroom_a, name="진짜학생", number=2)
+
+        response = self.client.post(reverse("dt_admin_clear_example_students"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(DTStudent.objects.filter(user=self.user, classroom=self.classroom_a, name="김철수").exists())
+        self.assertTrue(DTStudent.objects.filter(user=self.user, classroom=self.classroom_a, name="진짜학생").exists())
+
+    def test_api_data_does_not_seed_example_students_when_empty(self):
+        self._set_active_classroom(self.classroom_a)
+
+        response = self.client.get(reverse("dt_api_data"))
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["students"], [])
+        self.assertEqual(payload["roles"], [])
+        self.assertFalse(DTStudent.objects.filter(user=self.user, classroom=self.classroom_a).exists())
+
     def test_api_data_uses_global_scope_when_no_selected_classroom(self):
         DTStudent.objects.create(user=self.user, classroom=None, name="전역 학생", number=1)
         DTRole.objects.create(user=self.user, classroom=None, name="전역 역할", time_slot="아침")
@@ -141,7 +183,7 @@ class DutyTickerActiveClassroomTests(TestCase):
             response,
             reverse("happy_seed:consent_manage", kwargs={"classroom_id": self.classroom_a.id}),
         )
-        self.assertContains(response, "확인 필요 학생 2명")
+        self.assertContains(response, "확인 필요한 학생 2명")
         self.assertContains(response, "박대기")
         self.assertContains(response, "최거부")
         self.assertNotContains(response, "다른반 만료")
@@ -155,5 +197,5 @@ class DutyTickerActiveClassroomTests(TestCase):
         summary = response.context["consent_summary"]
         self.assertFalse(summary["enabled"])
         self.assertEqual(summary["preview_students"], [])
-        self.assertContains(response, "학급 선택 후 사용")
-        self.assertContains(response, "상단바에서 반을 고르면")
+        self.assertContains(response, "반을 먼저 고르면")
+        self.assertContains(response, "이 기능을 필요할 때만")

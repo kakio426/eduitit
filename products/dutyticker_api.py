@@ -453,11 +453,6 @@ def get_dutyticker_data(request):
     students_qs = apply_classroom_scope(DTStudent.objects.filter(user=user, is_active=True), classroom)
     roles_qs = apply_classroom_scope(DTRole.objects.filter(user=user), classroom)
     
-    if not students_qs.exists() and not roles_qs.exists():
-        create_mockup_data(user, classroom=classroom)
-        students_qs = apply_classroom_scope(DTStudent.objects.filter(user=user, is_active=True), classroom)
-        roles_qs = apply_classroom_scope(DTRole.objects.filter(user=user), classroom)
-
     _apply_auto_rotation_if_due(user, settings, classroom=classroom)
 
     students = list(students_qs.values('id', 'name', 'number', 'is_mission_completed'))
@@ -802,9 +797,9 @@ def reset_data(request):
     apply_classroom_scope(DTRoleAssignment.objects.filter(user=user), classroom).delete()
     settings, _ = get_or_create_settings_for_scope(user, classroom)
     settings.last_broadcast_message = ""
-    settings.save()
-    create_mockup_data(user, classroom=classroom)
-    return JsonResponse({'success': True, 'message': 'Data reset to mockup'})
+    settings.spotlight_student = None
+    settings.save(update_fields=["last_broadcast_message", "spotlight_student"])
+    return JsonResponse({'success': True, 'message': '알림판 데이터를 비웠습니다.'})
 
 
 @require_http_methods(["POST"])

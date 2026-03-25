@@ -212,6 +212,8 @@ class DutyTickerRotationCsrfTests(TestCase):
         self.assertEqual(response.status_code, 403)
 
     def test_reset_data_accepts_valid_csrf(self):
+        DTStudent.objects.create(user=self.user, name="학생1", number=1)
+        DTRole.objects.create(user=self.user, name="역할1", time_slot="아침")
         token = self._csrf_token()
         response = self.client.post(
             reverse("dt_api_reset"),
@@ -219,6 +221,8 @@ class DutyTickerRotationCsrfTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json().get("success"))
+        self.assertFalse(DTStudent.objects.filter(user=self.user).exists())
+        self.assertFalse(DTRole.objects.filter(user=self.user).exists())
 
     def test_reset_assignments_only_rejects_missing_csrf(self):
         response = self.client.post(reverse("dt_api_reset_assignments"))

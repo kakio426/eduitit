@@ -1,10 +1,15 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
+import csv
+import datetime
+import io
+
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.db.models import Max
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
-import datetime
 
 from .models import DTStudent, DTRole, DTSettings, DTRoleAssignment, DTSchedule, DTTimeSlot
 from .dutyticker_scope import (
@@ -30,6 +35,35 @@ EDITABLE_TRANSITION_SLOT_CODES = {"b3", "lunch", "b5"}
 TRANSITION_SLOT_KIND_LABELS = {
     "break": "쉬는시간",
     "lunch": "점심시간",
+}
+EXAMPLE_STUDENT_NAMES = (
+    "김철수",
+    "이영희",
+    "박민수",
+    "정지원",
+    "최하늘",
+    "강다니엘",
+    "조유리",
+    "한지민",
+    "서태웅",
+    "윤대협",
+)
+CSV_NAME_HEADERS = {
+    "name",
+    "studentname",
+    "student",
+    "이름",
+    "학생이름",
+    "학생명",
+    "성명",
+}
+CSV_NUMBER_HEADERS = {
+    "number",
+    "studentnumber",
+    "num",
+    "번호",
+    "학생번호",
+    "학번",
 }
 
 
@@ -187,6 +221,128 @@ def _parse_time_value(raw_value):
         return None
 
 
+def _student_scope_queryset(user, classroom):
+    return apply_classroom_scope(
+        DTStudent.objects.filter(user=user),
+        classroom,
+    )
+
+
+def _next_student_number(user, classroom):
+    return int(
+        _student_scope_queryset(user, classroom).aggregate(max_number=Max("number")).get("max_number")
+        or 0
+    )
+
+
+def _build_student_rows_from_text(raw_text):
+    normalized = str(raw_text or "").replace("\r", "\n").replace(",", "\n")
+    return [
+        {"name": line.strip()[:100], "number": None}
+        for line in normalized.split("\n")
+        if line.strip()
+    ]
+
+
+def _decode_uploaded_csv(file_obj) -> str:
+    raw_bytes = file_obj.read()
+    for encoding in ("utf-8-sig", "cp949", "euc-kr", "utf-8"):
+        try:
+            return raw_bytes.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    raise UnicodeDecodeError("csv", raw_bytes, 0, len(raw_bytes), "지원하지 않는 CSV 인코딩입니다.")
+
+
+def _compact_csv_header(value):
+    return "".join(ch for ch in str(value or "").strip().lower() if ch.isalnum() or "\uac00" <= ch <= "\ud7a3")
+
+
+def _parse_student_number(raw_value):
+    try:
+        parsed = int(str(raw_value or "").strip())
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
+
+
+def _normalize_student_csv_rows(file_obj):
+    decoded_text = _decode_uploaded_csv(file_obj)
+    reader = csv.reader(io.StringIO(decoded_text))
+    header_map = None
+    rows = []
+
+    for row in reader:
+        cols = [str(cell or "").strip() for cell in row]
+        if not any(cols):
+            continue
+
+        if header_map is None:
+            detected = {}
+            for idx, cell in enumerate(cols):
+                compact = _compact_csv_header(cell)
+                if compact in CSV_NAME_HEADERS and "name" not in detected:
+                    detected["name"] = idx
+                if compact in CSV_NUMBER_HEADERS and "number" not in detected:
+                    detected["number"] = idx
+            if "name" in detected:
+                header_map = detected
+                continue
+            header_map = {}
+
+        if header_map:
+            name = cols[header_map["name"]] if header_map.get("name", -1) < len(cols) else ""
+            number = (
+                _parse_student_number(cols[header_map["number"]])
+                if header_map.get("number", -1) < len(cols)
+                else None
+            )
+        else:
+            first = cols[0] if cols else ""
+            second = cols[1] if len(cols) > 1 else ""
+            first_number = _parse_student_number(first)
+            second_number = _parse_student_number(second)
+
+            if first_number is not None and second:
+                number = first_number
+                name = second
+            else:
+                number = second_number
+                name = first
+
+        name = str(name or "").strip()[:100]
+        if not name:
+            continue
+        rows.append({"name": name, "number": number})
+
+    return rows
+
+
+def _build_student_payload(user, classroom, rows):
+    next_number = _next_student_number(user, classroom)
+    provided_numbers = [row["number"] for row in rows if row.get("number")]
+    if provided_numbers:
+        next_number = max(next_number, max(provided_numbers))
+
+    payload = []
+    for row in rows:
+        number = row.get("number")
+        if number is None:
+            next_number += 1
+            number = next_number
+        else:
+            next_number = max(next_number, number)
+        payload.append(
+            DTStudent(
+                user=user,
+                name=row["name"],
+                number=number,
+                **classroom_scope_create_kwargs(classroom),
+            )
+        )
+    return payload
+
+
 def _build_consent_summary(classroom):
     if classroom is None or not hasattr(classroom, "students"):
         return {
@@ -245,12 +401,13 @@ def _build_consent_summary(classroom):
 def admin_dashboard(request):
     user = request.user
     classroom = get_active_classroom_for_request(request)
-    students = apply_classroom_scope(DTStudent.objects.filter(user=user), classroom)
+    students = _student_scope_queryset(user, classroom).order_by("number", "id")
     roles = apply_classroom_scope(DTRole.objects.filter(user=user), classroom)
     settings, _ = get_or_create_settings_for_scope(user, classroom)
     time_slots = _ensure_time_slots_for_scope(user, classroom)
     period_rows = _build_period_subject_rows(user, classroom)
     consent_summary = _build_consent_summary(classroom)
+    example_student_count = students.filter(name__in=EXAMPLE_STUDENT_NAMES).count()
     
     return render(request, 'products/dutyticker/admin_dashboard.html', {
         'students': students,
@@ -258,6 +415,7 @@ def admin_dashboard(request):
         'settings': settings,
         'active_classroom': classroom,
         'consent_summary': consent_summary,
+        'example_student_count': example_student_count,
         'time_slots': time_slots,
         'editable_transition_slot_codes': sorted(EDITABLE_TRANSITION_SLOT_CODES),
         'period_rows': period_rows,
@@ -465,30 +623,68 @@ def update_tts_settings(request):
 @require_http_methods(["POST"])
 def add_student(request):
     classroom = get_active_classroom_for_request(request)
-    names = request.POST.get('names', '').split(',')
-    # Bulk add support (comma separated)
-    current_count = apply_classroom_scope(
-        DTStudent.objects.filter(user=request.user),
-        classroom,
-    ).count()
-    
-    new_students = []
-    for name in names:
-        name = name.strip()
-        if name:
-            current_count += 1
-            new_students.append(
-                DTStudent(
-                    user=request.user,
-                    name=name,
-                    number=current_count,
-                    **classroom_scope_create_kwargs(classroom),
-                )
-            )
-    
-    if new_students:
-        DTStudent.objects.bulk_create(new_students)
-             
+    rows = _build_student_rows_from_text(request.POST.get("names"))
+    if not rows:
+        messages.error(request, "먼저 넣을 학생 이름을 적어 주세요.")
+        return redirect("dt_admin_dashboard")
+
+    payload = _build_student_payload(request.user, classroom, rows)
+    DTStudent.objects.bulk_create(payload)
+    messages.success(request, f"{len(payload)}명의 학생을 넣었습니다.")
+    return redirect("dt_admin_dashboard")
+
+
+@login_required
+def download_student_csv_template(request):
+    response = HttpResponse(content_type="text/csv; charset=utf-8-sig")
+    response["Content-Disposition"] = 'attachment; filename="학생명단_양식.csv"'
+    writer = csv.writer(response)
+    writer.writerow(["번호", "이름"])
+    return response
+
+
+@login_required
+@require_http_methods(["POST"])
+def upload_students_csv(request):
+    classroom = get_active_classroom_for_request(request)
+    file_obj = request.FILES.get("csv_file")
+    if not file_obj:
+        messages.error(request, "CSV 파일을 선택해 주세요.")
+        return redirect("dt_admin_dashboard")
+    if not str(file_obj.name or "").lower().endswith(".csv"):
+        messages.error(request, "CSV 파일(.csv)만 넣을 수 있습니다.")
+        return redirect("dt_admin_dashboard")
+
+    try:
+        rows = _normalize_student_csv_rows(file_obj)
+    except UnicodeDecodeError:
+        messages.error(request, "CSV 글자를 읽지 못했습니다. UTF-8 또는 엑셀 CSV로 다시 저장해 주세요.")
+        return redirect("dt_admin_dashboard")
+    except csv.Error:
+        messages.error(request, "CSV 형식을 읽지 못했습니다. '이름' 또는 '번호,이름' 순서로 다시 확인해 주세요.")
+        return redirect("dt_admin_dashboard")
+
+    if not rows:
+        messages.error(request, "CSV에서 학생 이름을 찾지 못했습니다.")
+        return redirect("dt_admin_dashboard")
+
+    payload = _build_student_payload(request.user, classroom, rows)
+    DTStudent.objects.bulk_create(payload)
+    messages.success(request, f"CSV에서 {len(payload)}명의 학생을 넣었습니다.")
+    return redirect("dt_admin_dashboard")
+
+
+@login_required
+@require_http_methods(["POST"])
+def clear_example_students(request):
+    classroom = get_active_classroom_for_request(request)
+    deleted_count, _ = _student_scope_queryset(request.user, classroom).filter(
+        name__in=EXAMPLE_STUDENT_NAMES
+    ).delete()
+    if deleted_count:
+        messages.success(request, f"예시 이름 {deleted_count}개를 지웠습니다.")
+    else:
+        messages.info(request, "지울 예시 이름이 없습니다.")
     return redirect('dt_admin_dashboard')
 
 
@@ -497,24 +693,18 @@ def add_student(request):
 def sync_students_from_hs(request):
     classroom = get_active_classroom_for_request(request)
     if classroom is None:
-        messages.error(request, "상단에서 활성 학급을 먼저 선택해 주세요.")
+        messages.error(request, "위쪽에서 반을 먼저 골라 주세요.")
         return redirect("dt_admin_dashboard")
 
     try:
         summary = sync_dt_students_from_hs(request.user, classroom)
     except Exception as exc:
-        messages.error(request, f"학급 명단 동기화에 실패했습니다: {exc}")
+        messages.error(request, f"반 학생을 가져오지 못했습니다: {exc}")
         return redirect("dt_admin_dashboard")
 
     messages.success(
         request,
-        (
-            "학급 명단 동기화 완료: "
-            f"활성 {summary['active_count']}명, "
-            f"신규 {summary['created_count']}명, "
-            f"업데이트 {summary['updated_count']}명, "
-            f"비활성 {summary['deactivated_count']}명"
-        ),
+        f"선택한 반 학생 {summary['active_count']}명을 이 화면에 맞춰 가져왔습니다.",
     )
     return redirect("dt_admin_dashboard")
 
