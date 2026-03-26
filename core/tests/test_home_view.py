@@ -2611,6 +2611,33 @@ class HomeV5ViewTest(TestCase):
         self.assertNotIn('truncate text-[0.95rem] font-black leading-5 text-slate-900', favorites_block)
         self.assertIn('title="AI 수업 설계 길잡이">AI 수업 설계 길잡이</p>', favorites_block)
 
+    def test_v5_favorites_panel_renders_more_than_four_items(self):
+        user = self._login('v5favoriteoverflow')
+        favorite_products = []
+        for index in range(5):
+            favorite_products.append(
+                Product.objects.create(
+                    title=f'즐겨찾기 서비스 {index + 1}',
+                    description='빠른 실행 테스트',
+                    price=0,
+                    is_active=True,
+                    service_type='classroom',
+                    launch_route_name='qrgen:landing',
+                )
+            )
+        for order, product in enumerate(favorite_products, start=1):
+            ProductFavorite.objects.create(user=user, product=product, pin_order=order)
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        favorites_index = content.index('data-home-v4-favorites-panel="true"')
+        sns_index = content.index('data-home-v4-sns-panel="true"', favorites_index)
+        favorites_block = content[favorites_index:sns_index]
+
+        self.assertEqual(favorites_block.count('data-home-v4-favorite-card="true"'), 5)
+        self.assertIn('title="즐겨찾기 서비스 5">즐겨찾기 서비스 5</p>', favorites_block)
+
     def test_v5_anonymous_home_keeps_existing_guest_home_surface(self):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')

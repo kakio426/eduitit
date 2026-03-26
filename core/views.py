@@ -2824,7 +2824,7 @@ def _build_home_authenticated_v4_response(
     }
 
     UserProfile.objects.get_or_create(user=request.user)
-    favorite_products = _get_user_favorite_products(request.user, product_list, limit=12)
+    favorite_products = _get_user_favorite_products(request.user, product_list)
     recent_products = _get_recently_used_products(
         request.user,
         product_list,

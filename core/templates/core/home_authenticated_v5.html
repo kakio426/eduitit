@@ -213,7 +213,7 @@
 
                                 {% if favorite_items %}
                                 <div class="home-v4-favorites-grid" data-home-v4-favorites-grid="true">
-                                    {% for item in favorite_items|slice:":4" %}
+                                    {% for item in favorite_items %}
                                     {% with favorite_title=item.favorite_title|default:item.favorite_full_title %}
                                     <div class="home-v4-favorite-card product-card"
                                         data-home-v4-favorite-card="true"
