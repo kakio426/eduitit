@@ -133,51 +133,6 @@
                     </div>
                 </div>
 
-                <section class="home-v5-hero" data-home-v5-hero="true">
-                    <div class="home-v5-hero-grid">
-                        <div class="min-w-0">
-                            <span class="home-v5-kicker">Teacher-first home preview</span>
-                            <p class="home-v5-wordmark">EDUITIT</p>
-                            <h1 class="home-v5-title">오늘 필요한 교실 도구만 먼저 보이는 홈</h1>
-                            <p class="home-v5-summary">
-                                캘린더에서 오늘 일을 확인하고, 대표 도구와 즐겨찾기, 소통까지 한 흐름으로 바로 이어집니다.
-                            </p>
-                            <div class="home-v5-flow" data-home-v5-flow="true">
-                                <span class="home-v5-flow-chip">오늘 일정 확인</span>
-                                <span class="home-v5-flow-chip">대표 서비스 열기</span>
-                                <span class="home-v5-flow-chip">즐겨찾기 바로 실행</span>
-                                <span class="home-v5-flow-chip">실시간 소통 확인</span>
-                            </div>
-                        </div>
-                        <div class="home-v5-hero-side">
-                            <div class="home-v5-metric-grid" data-home-v5-metrics="true">
-                                <article class="home-v5-metric-card" data-home-v5-metric="date">
-                                    <p class="home-v5-metric-label">오늘 날짜</p>
-                                    <p class="home-v5-metric-value">{{ today_workspace.date_label|default:'오늘' }}</p>
-                                </article>
-                                <article class="home-v5-metric-card" data-home-v5-metric="events">
-                                    <p class="home-v5-metric-label">오늘 일정</p>
-                                    <p class="home-v5-metric-value">{{ today_workspace.today_event_count|default_if_none:0 }}건</p>
-                                </article>
-                                <article class="home-v5-metric-card" data-home-v5-metric="tasks">
-                                    <p class="home-v5-metric-label">오늘 할 일</p>
-                                    <p class="home-v5-metric-value">{{ today_workspace.today_task_count|default_if_none:0 }}건</p>
-                                </article>
-                                <article class="home-v5-metric-card" data-home-v5-metric="favorites">
-                                    <p class="home-v5-metric-label">즐겨찾기</p>
-                                    <p class="home-v5-metric-value">{{ favorite_items|length }}개</p>
-                                </article>
-                            </div>
-                            <div class="home-v5-note-card" data-home-v5-note="true">
-                                <p class="home-v5-note-label">오늘 홈 기준</p>
-                                <p class="home-v5-note-body">
-                                    기능은 그대로 두고, 시선이 분산되지 않게 위계와 카드 밀도만 다시 정리했습니다.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
                 <div class="home-v4-layout">
                     <aside class="home-v4-nav-shell">
                         <div class="home-v4-nav-stack">
