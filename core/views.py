@@ -77,6 +77,7 @@ from datetime import timedelta
 from urllib.parse import urlencode
 from PIL import Image
 import logging
+import random
 
 logger = logging.getLogger(__name__)
 
@@ -1115,82 +1116,13 @@ def _build_home_v4_representative_slots(
             and not _is_home_utility_product(product)
         ]
     )
-
-    recent_usage_stats = _get_product_usage_stats(
-        user,
-        candidate_products,
-        since=timezone.now() - timedelta(days=14),
-    )
-    product_map = {product.id: product for product in candidate_products}
-    top_used_products = [
-        product_map[product_id]
-        for product_id, _ in sorted(
-            recent_usage_stats.items(),
-            key=lambda item: (
-                -item[1]['count'],
-                -(item[1]['last_used'].timestamp() if item[1]['last_used'] else 0),
-                product_map[item[0]].display_order,
-                item[0],
-            ),
-        )[:2]
-    ]
-    fixed_products = _dedupe_products(
-        [
-            product
-            for product in [*top_used_products, *recent_products, *quick_actions]
-            if not _is_home_utility_product(product)
-        ],
-        limit=2,
-    )
-
-    used_ids = {product.id for product in fixed_products}
-    all_usage_stats = _get_product_usage_stats(user, candidate_products)
-    unused_products = [
-        product
-        for product in candidate_products
-        if product.id not in all_usage_stats and product.id not in used_ids
-    ]
-    rotating_candidates = _get_home_discovery_products(
-        user,
-        unused_products,
-        limit=None,
-    )
     rotation_seed = timezone.localdate().toordinal() + int(getattr(user, 'id', 0) or 0)
-    rotating_products = _rotate_items(rotating_candidates, rotation_seed)[:2]
-    used_ids.update(product.id for product in rotating_products)
-
-    if len(rotating_products) < 2:
-        low_usage_products = sorted(
-            [
-                product
-                for product in candidate_products
-                if product.id not in used_ids and product.id in all_usage_stats
-            ],
-            key=lambda product: (
-                all_usage_stats[product.id]['count'],
-                all_usage_stats[product.id]['last_used'],
-                0 if product.is_featured else 1,
-                product.display_order,
-                product.id,
-            ),
-        )
-        for product in low_usage_products:
-            if len(rotating_products) >= 2:
-                break
-            rotating_products.append(product)
-            used_ids.add(product.id)
-
-    fallback_products = _dedupe_products(candidate_products, exclude_ids=used_ids)
-
-    slots = (
-        [{'product': product, 'slot_kind': 'fixed'} for product in fixed_products]
-        + [{'product': product, 'slot_kind': 'rotating'} for product in rotating_products]
-    )
-    for product in fallback_products:
-        if len(slots) >= limit:
-            break
-        slots.append({'product': product, 'slot_kind': 'fallback'})
-    return slots[:limit]
+    shuffled_products = list(candidate_products)
+    random.Random(rotation_seed).shuffle(shuffled_products)
+    return [
+        {'product': product, 'slot_kind': 'random'}
+        for product in shuffled_products[:limit]
+    ]
 
 
 def _build_home_v4_recommendations(companion_items, discovery_items, *, exclude_ids=None, limit=3):

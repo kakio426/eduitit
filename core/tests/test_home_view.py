@@ -1,4 +1,5 @@
 import json
+import random
 from django.core.management import call_command
 from datetime import date, datetime, time, timedelta
 from unittest.mock import patch
@@ -20,7 +21,7 @@ from core.mini_apps import (
     plan_home_action_surface,
 )
 from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
-from core.views import _build_home_v4_representative_slots, _rotate_items
+from core.views import _build_home_v4_representative_slots
 from messagebox.developer_chat import get_or_create_developer_chat_thread, mark_thread_as_read
 from messagebox.models import DeveloperChatMessage
 from products.models import Product
@@ -1822,7 +1823,7 @@ class RepresentativeSlotSelectionTest(TestCase):
             display_order=display_order,
         )
 
-    def test_representative_slots_pin_top_used_products_and_rotate_unused_products(self):
+    def test_representative_slots_shuffle_all_four_cards(self):
         user = _create_onboarded_user('rep-fixed-user')
         p1 = self._create_product('많이 쓴 수업 도구', display_order=1)
         p2 = self._create_product('많이 쓴 행정 도구', display_order=2, service_type='work')
@@ -1850,16 +1851,13 @@ class RepresentativeSlotSelectionTest(TestCase):
                 games=[],
             )
 
-        expected_rotating = _rotate_items(
-            [p4, p5, p6],
-            frozen_day.toordinal() + user.id,
-        )[:2]
+        expected_products = [p1, p2, p3, p4, p5, p6]
+        random.Random(frozen_day.toordinal() + user.id).shuffle(expected_products)
 
-        self.assertEqual([slot['slot_kind'] for slot in slots], ['fixed', 'fixed', 'rotating', 'rotating'])
-        self.assertEqual([slot['product'] for slot in slots[:2]], [p1, p2])
-        self.assertEqual([slot['product'] for slot in slots[2:]], expected_rotating)
+        self.assertEqual([slot['slot_kind'] for slot in slots], ['random', 'random', 'random', 'random'])
+        self.assertEqual([slot['product'] for slot in slots], expected_products[:4])
 
-    def test_representative_slots_fill_rotation_with_low_usage_when_unused_pool_is_short(self):
+    def test_representative_slots_shuffle_only_available_cards_when_pool_is_short(self):
         user = _create_onboarded_user('rep-fallback-user')
         p1 = self._create_product('상위 사용 도구 A', display_order=1)
         p2 = self._create_product('상위 사용 도구 B', display_order=2, service_type='work')
@@ -1884,9 +1882,11 @@ class RepresentativeSlotSelectionTest(TestCase):
                 games=[],
             )
 
-        self.assertEqual([slot['product'] for slot in slots[:2]], [p1, p2])
-        self.assertEqual([slot['slot_kind'] for slot in slots[:4]], ['fixed', 'fixed', 'rotating', 'rotating'])
-        self.assertEqual([slot['product'] for slot in slots[2:4]], [p4, p3])
+        expected_products = [p1, p2, p3, p4]
+        random.Random(date(2026, 3, 15).toordinal() + user.id).shuffle(expected_products)
+
+        self.assertEqual([slot['slot_kind'] for slot in slots], ['random', 'random', 'random', 'random'])
+        self.assertEqual([slot['product'] for slot in slots], expected_products)
 
     def test_representative_slots_exclude_quickdrop_utility_without_filtering_other_tools(self):
         user = _create_onboarded_user('rep-utility-filter-user')
@@ -2069,6 +2069,7 @@ class HomeV4ViewTest(TestCase):
         self.assertNotIn('data-home-v4-active-panel=', content)
         self.assertNotIn('data-home-v4-section-panel=', content)
         self.assertNotIn('data-home-v2-favorites-panel="true"', content)
+        self.assertNotIn('>Representative<', content)
         self.assertIn('선생님들과 나누고 싶은 이야기가 있나요?', content)
         self.assertIn(f'hx-post="{reverse("post_create")}"', content)
         self.assertNotIn('data-home-v2-tablet-community-summary="true"', content)
@@ -2158,7 +2159,17 @@ class HomeV4ViewTest(TestCase):
         for _ in range(3):
             ProductUsageLog.objects.create(user=user, product=messagebox, action='launch', source='home_quick')
 
-        response = self.client.get(reverse('home'))
+        def prioritize_messagebox(_rng, items):
+            items.sort(
+                key=lambda product: (
+                    0 if getattr(product, 'launch_route_name', '') == 'messagebox:main' else 1,
+                    getattr(product, 'display_order', 0),
+                    getattr(product, 'id', 0),
+                )
+            )
+
+        with patch('core.views.random.Random.shuffle', new=prioritize_messagebox):
+            response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
         self.assertIn('메시지 보관', content)

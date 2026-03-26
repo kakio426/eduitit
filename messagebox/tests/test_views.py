@@ -83,6 +83,8 @@ class MessageboxViewTests(TestCase):
         self.assertNotContains(response, "내용을 접었다 펼 수 있어요.")
         self.assertNotContains(response, "달력으로 날짜를 옮긴 뒤 필요한 정보만 아래에서 다듬으세요.")
         self.assertNotContains(response, "직접 일정 추가를 눌러 제목과 날짜만 바로 넣을 수 있어요.")
+        self.assertNotContains(response, "교육청 메신저 등에서 받은 중요한 메시지를 붙여넣고, 필요하면 일정에 연결해 나중에 다시 보세요.")
+        self.assertNotContains(response, "왼쪽 후보에서 일정 수정을 누르면 여기서 바로 바꿀 수 있어요.")
         self.assertNotContains(response, "날짜 후보 불러오는 중...")
         self.assertNotContains(response, "이 일정 삭제")
         self.assertNotContains(response, "바로 일정 넣기")

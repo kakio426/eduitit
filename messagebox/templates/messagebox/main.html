@@ -57,7 +57,6 @@
                 <div class="min-w-0">
                     <p class="text-[11px] font-black uppercase tracking-[0.18em] text-amber-600">놓치지 않을 메시지</p>
                     <h1 class="mt-2 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">{{ title }}</h1>
-                    <p class="mt-3 hidden max-w-3xl text-sm font-medium leading-6 text-slate-600 sm:block">{{ page_subtitle }}</p>
                 </div>
                 <div class="flex flex-col gap-2 sm:items-end">
                     <a href="{{ calendar_main_url }}" class="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">학급 캘린더</a>
@@ -381,7 +380,7 @@
                                 </template>
 
                                 <div x-show="!hasActiveMessageCaptureCandidate() && messageCaptureCandidates.length > 0" class="rounded-[1.6rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm font-semibold text-slate-500">
-                                    왼쪽 후보에서 일정 수정을 누르면 여기서 바로 바꿀 수 있어요.
+                                    왼쪽에서 편집할 일정 후보를 선택하세요.
                                 </div>
                             </div>
                         </div>
