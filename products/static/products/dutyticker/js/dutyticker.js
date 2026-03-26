@@ -224,12 +224,11 @@ class DutyTickerManager {
     setupAdaptiveLayoutObserver() {
         if (this.layoutObserver || typeof ResizeObserver !== 'function') return;
 
+        // Observe only the outer app shell. Inner timer/student cards resize as a
+        // consequence of adaptive layout changes, and re-observing them creates
+        // a visible feedback loop when the mission panel opens.
         const targets = [
             document.getElementById('mainAppContainer'),
-            document.querySelector('.dt-left-column'),
-            document.querySelector('.dt-timer-card'),
-            document.getElementById('mainStudentCard'),
-            document.getElementById('mainStudentGridWrap'),
         ].filter(Boolean);
 
         if (!targets.length) return;
