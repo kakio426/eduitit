@@ -541,7 +541,7 @@ def item_payload(item):
         "sender_label": item.sender_label,
         "text": item.text,
         "download_url": reverse("quickdrop:item_download", kwargs={"slug": item.channel.slug, "item_id": item.id}) if (item.image or item.file) else "",
-        "preview_url": reverse("quickdrop:item_download", kwargs={"slug": item.channel.slug, "item_id": item.id}) if item.image else "",
+        "preview_url": reverse("quickdrop:item_image", kwargs={"slug": item.channel.slug, "item_id": item.id}) if item.image else "",
         "delete_url": reverse("quickdrop:delete_item", kwargs={"slug": item.channel.slug, "item_id": item.id}),
         "filename": item.filename,
         "mime_type": item.mime_type,
@@ -561,7 +561,7 @@ def session_payload(session):
             current_kind = QuickdropSession.KIND_FILE
         current_text = latest_item.text if latest_item.kind == QuickdropItem.KIND_TEXT else ""
         current_preview_url = (
-            reverse("quickdrop:item_download", kwargs={"slug": session.channel.slug, "item_id": latest_item.id})
+            reverse("quickdrop:item_image", kwargs={"slug": session.channel.slug, "item_id": latest_item.id})
             if latest_item.image
             else ""
         )

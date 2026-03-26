@@ -332,6 +332,45 @@ class QuickdropViewTests(TestCase):
         self.assertEqual(response.json()["session"]["current_filename"], "guide.pdf")
         self.assertIn("/download/", response.json()["session"]["current_download_url"])
 
+    def test_file_download_redirects_to_storage_url_for_connected_device(self):
+        self.client.logout()
+        cookie_value, _device = self._pair_device_cookie()
+        self.client.cookies[DEVICE_COOKIE_NAME] = cookie_value
+
+        response = self.client.post(
+            reverse("quickdrop:send_file", kwargs={"slug": self.channel.slug}),
+            {"file": SimpleUploadedFile("guide.pdf", b"%PDF-1.4\nquickdrop", content_type="application/pdf")},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        download_url = response.json()["session"]["current_download_url"]
+        item = QuickdropItem.objects.get(channel=self.channel)
+
+        blocked_client = self.client_class()
+        blocked_response = blocked_client.get(download_url)
+        allowed_response = self.client.get(download_url)
+
+        self.assertEqual(blocked_response.status_code, 403)
+        self.assertEqual(allowed_response.status_code, 302)
+        self.assertEqual(allowed_response.headers["Location"], item.file.url)
+
+    def test_image_preview_uses_inline_image_route(self):
+        self.client.logout()
+        cookie_value, _device = self._pair_device_cookie()
+        self.client.cookies[DEVICE_COOKIE_NAME] = cookie_value
+
+        response = self.client.post(
+            reverse("quickdrop:send_image", kwargs={"slug": self.channel.slug}),
+            {"image": SimpleUploadedFile("clip.png", PNG_BYTES, content_type="image/png")},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        preview_url = response.json()["session"]["current_preview_url"]
+
+        preview_response = self.client.get(preview_url)
+
+        self.assertIn("/image/", preview_url)
+        self.assertEqual(preview_response.status_code, 200)
+        self.assertEqual(preview_response.headers["Content-Type"], "image/png")
+
     def test_send_file_without_ajax_redirects_back_to_channel(self):
         self.client.logout()
         cookie_value, _device = self._pair_device_cookie()

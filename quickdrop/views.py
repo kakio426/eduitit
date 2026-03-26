@@ -9,7 +9,7 @@ from django_ratelimit.decorators import ratelimit
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
-from .models import QuickdropChannel
+from .models import QuickdropChannel, QuickdropItem
 from .services import (
     build_channel_bootstrap,
     build_pair_token,
@@ -76,6 +76,31 @@ def _json_or_redirect(request, channel, payload=None):
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return _apply_private_response_headers(JsonResponse({"ok": True, "session": payload or {}}, status=200))
     return _apply_private_response_headers(redirect("quickdrop:channel", slug=channel.slug))
+
+
+def _load_accessible_item(channel, item_id):
+    return channel.items.filter(id=item_id).first()
+
+
+def _build_asset_response(item, asset, *, as_attachment):
+    try:
+        opened_asset = asset.open("rb")
+    except Exception:
+        asset_url = str(getattr(asset, "url", "") or "").strip()
+        if asset_url:
+            return _apply_private_response_headers(redirect(asset_url))
+        raise
+
+    response = FileResponse(
+        opened_asset,
+        content_type=item.mime_type or "application/octet-stream",
+    )
+    response["Content-Disposition"] = content_disposition_header(
+        as_attachment,
+        item.filename or "quickdrop-file",
+    )
+    response["X-Content-Type-Options"] = "nosniff"
+    return _apply_private_response_headers(response)
 
 
 @login_required
@@ -255,25 +280,29 @@ def item_download_view(request, slug, item_id):
     if access is None:
         return _forbidden_pairing()
 
-    item = access["channel"].items.filter(id=item_id).first()
+    item = _load_accessible_item(access["channel"], item_id)
     asset = None if item is None else (item.image or item.file)
     if item is None or not asset:
         raise Http404()
 
-    image_file = asset.open("rb")
-    response = FileResponse(
-        image_file,
-        content_type=item.mime_type or "application/octet-stream",
-    )
-    response["Content-Disposition"] = content_disposition_header(
-        False,
-        item.filename or "quickdrop-image",
-    )
-    response["X-Content-Type-Options"] = "nosniff"
-    return _apply_private_response_headers(response)
+    if item.kind == QuickdropItem.KIND_FILE and item.file:
+        file_url = str(getattr(item.file, "url", "") or "").strip()
+        if file_url:
+            return _apply_private_response_headers(redirect(file_url))
+    return _build_asset_response(item, asset, as_attachment=True)
 
 
-item_image_view = item_download_view
+@require_GET
+def item_image_view(request, slug, item_id):
+    access = resolve_channel_access(request, slug)
+    if access is None:
+        return _forbidden_pairing()
+
+    item = _load_accessible_item(access["channel"], item_id)
+    if item is None or item.kind != QuickdropItem.KIND_IMAGE or not item.image:
+        raise Http404()
+
+    return _build_asset_response(item, item.image, as_attachment=False)
 
 
 @login_required

@@ -226,24 +226,13 @@
                         if (!this.session.current_download_url) {
                             return;
                         }
+                        if ((this.session.current_kind || '') === 'file') {
+                            this.startNativeDownload(this.session.current_download_url, this.session.current_filename || 'shared-file');
+                            return;
+                        }
                         try {
                             const asset = await this.fetchCurrentAsset();
-                            const file = new File([asset.blob], asset.filename, {
-                                type: asset.blob.type || 'application/octet-stream',
-                            });
-
-                            if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-                                await navigator.share({ files: [file], title: asset.filename });
-                                return;
-                            }
-
-                            const link = document.createElement('a');
-                            link.href = URL.createObjectURL(asset.blob);
-                            link.download = asset.filename;
-                            link.click();
-                            window.setTimeout(function () {
-                                URL.revokeObjectURL(link.href);
-                            }, 300);
+                            this.downloadBlobAsset(asset);
                         } catch (_error) {
                             const message = (this.session.current_kind || '') === 'image'
                                 ? '이미지를 저장할 수 없습니다.'
@@ -335,6 +324,34 @@
                     blob: await response.blob(),
                     filename: this.session.current_filename || 'shared-file',
                 };
+            },
+
+            async downloadBlobAsset(asset) {
+                const file = new File([asset.blob], asset.filename, {
+                    type: asset.blob.type || 'application/octet-stream',
+                });
+
+                if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({ files: [file], title: asset.filename });
+                    return;
+                }
+
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(asset.blob);
+                link.download = asset.filename;
+                link.click();
+                window.setTimeout(function () {
+                    URL.revokeObjectURL(link.href);
+                }, 300);
+            },
+
+            startNativeDownload(url, filename) {
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename || 'shared-file';
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
             },
 
             startSnapshotPolling(immediate) {
