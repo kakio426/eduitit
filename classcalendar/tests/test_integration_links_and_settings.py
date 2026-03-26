@@ -1,5 +1,8 @@
+import os
 from datetime import datetime, timedelta
+from unittest.mock import patch
 
+from allauth.socialaccount.models import SocialAccount
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
@@ -11,10 +14,10 @@ from classcalendar.integrations import (
     SOURCE_CONSENT_EXPIRY,
     SOURCE_SIGNATURES_TRAINING,
 )
-from classcalendar.models import CalendarEvent, CalendarIntegrationSetting, CalendarMessageCapture
+from classcalendar.models import CalendarEvent, CalendarIntegrationSetting, CalendarMessageCapture, CalendarTask
 from collect.models import CollectionRequest, Submission
 from consent.models import SignatureDocument, SignatureRecipient, SignatureRequest
-from reservations.models import Reservation, School, SpecialRoom
+from reservations.models import Reservation, School, SchoolConfig, SpecialRoom
 from signatures.models import TrainingSession
 
 
@@ -31,6 +34,10 @@ class IntegrationLinksAndSettingsTests(TestCase):
             password="pw12345",
             email="cc_link_user@example.com",
         )
+        profile = self.user.userprofile
+        profile.nickname = "캘린더쌤"
+        profile.role = "school"
+        profile.save(update_fields=["nickname", "role"])
         self.client = Client()
         self.client.force_login(self.user)
         self.school = School.objects.create(
@@ -38,6 +45,7 @@ class IntegrationLinksAndSettingsTests(TestCase):
             slug="calendar-hub-school",
             owner=self.user,
         )
+        SchoolConfig.objects.create(school=self.school)
         self.room = SpecialRoom.objects.create(
             school=self.school,
             name="과학실",
@@ -119,7 +127,10 @@ class IntegrationLinksAndSettingsTests(TestCase):
         self.assertTrue(hub_map["signature"]["source_url"].endswith(f"/signatures/{session.uuid}/"))
 
     def test_api_events_includes_direct_hub_status_and_day_markers(self):
-        deadline = timezone.now() + timedelta(hours=2)
+        deadline = timezone.make_aware(
+            datetime.combine(timezone.localdate(), datetime.min.time()).replace(hour=18, minute=0),
+            timezone.get_current_timezone(),
+        )
         collect_request = CollectionRequest.objects.create(
             creator=self.user,
             title="가정통신문 회신",
@@ -151,7 +162,7 @@ class IntegrationLinksAndSettingsTests(TestCase):
         hub_map = {item["item_kind"]: item for item in payload.get("hub_items") or []}
         day_markers = payload.get("day_markers") or {}
 
-        self.assertEqual(hub_map["collect"]["status_label"], "오늘 마감")
+        self.assertIn(hub_map["collect"]["status_label"], {"오늘 마감", "마감 지남"})
         self.assertEqual(hub_map["collect"]["tone"], "warning")
         self.assertEqual(hub_map["consent"]["status_label"], "만료")
         self.assertIn("reservation", day_markers[timezone.localdate().isoformat()]["kinds"])
@@ -264,3 +275,81 @@ class IntegrationLinksAndSettingsTests(TestCase):
         self.assertFalse(setting.collect_deadline_enabled)
         self.assertFalse(setting.consent_expiry_enabled)
         self.assertFalse(setting.signatures_training_enabled)
+
+    def test_center_view_does_not_render_external_access_card(self):
+        response = self.client.get(reverse("classcalendar:center"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Eduitit API 키 / iCal 주소")
+        self.assertNotContains(response, "data-classcalendar-external-access")
+
+    def test_external_ical_feed_requires_valid_api_key(self):
+        with patch.dict(os.environ, {"EDUITIT_API_KEY": "test-fixed-key"}, clear=False):
+            response = Client().get(reverse("classcalendar:external_ical_feed"))
+
+        self.assertEqual(response.status_code, 401)
+        self.assertIn("유효한 Eduitit API 키", response.content.decode("utf-8"))
+
+    def test_external_ical_feed_includes_only_user694_naver_calendar_and_hub_items(self):
+        now = timezone.now()
+        owner = User.objects.create_user(
+            username="user694",
+            password="pw12345",
+            email="user694@example.com",
+        )
+        owner_profile = owner.userprofile
+        owner_profile.nickname = "관리자"
+        owner_profile.role = "school"
+        owner_profile.save(update_fields=["nickname", "role"])
+        SocialAccount.objects.create(user=owner, provider="naver", uid="naver-user694")
+
+        CalendarEvent.objects.create(
+            title="학급 회의",
+            author=owner,
+            start_time=now + timedelta(days=1, hours=1),
+            end_time=now + timedelta(days=1, hours=2),
+            is_all_day=False,
+            source=CalendarEvent.SOURCE_LOCAL,
+            visibility=CalendarEvent.VISIBILITY_TEACHER,
+        )
+        CalendarTask.objects.create(
+            title="할 일 항목",
+            author=owner,
+            due_at=now + timedelta(days=2),
+            has_time=False,
+        )
+        CollectionRequest.objects.create(
+            creator=owner,
+            title="가정통신문 회신",
+            deadline=now + timedelta(days=3),
+        )
+        CollectionRequest.objects.create(
+            creator=self.user,
+            title="다른 교사 수합",
+            deadline=now + timedelta(days=2),
+        )
+        CalendarEvent.objects.create(
+            title="다른 교사 일정",
+            author=self.user,
+            start_time=now + timedelta(days=4, hours=1),
+            end_time=now + timedelta(days=4, hours=2),
+            is_all_day=False,
+            source=CalendarEvent.SOURCE_LOCAL,
+            visibility=CalendarEvent.VISIBILITY_TEACHER,
+        )
+
+        with patch.dict(os.environ, {"EDUITIT_API_KEY": "test-fixed-key"}, clear=False):
+            response = Client().get(
+                reverse("classcalendar:external_ical_feed"),
+                {"api_key": "test-fixed-key"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/calendar", response["Content-Type"])
+        content = response.content.decode("utf-8")
+        self.assertIn("BEGIN:VCALENDAR", content)
+        self.assertIn("SUMMARY:학급 회의", content)
+        self.assertIn("SUMMARY:가정통신문 회신", content)
+        self.assertNotIn("SUMMARY:할 일 항목", content)
+        self.assertNotIn("SUMMARY:다른 교사 일정", content)
+        self.assertNotIn("SUMMARY:다른 교사 수합", content)

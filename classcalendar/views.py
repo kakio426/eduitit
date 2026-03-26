@@ -3,10 +3,12 @@ import hashlib
 import json
 import mimetypes
 import os
+import secrets
 import uuid
 from datetime import datetime, time, timedelta
 from urllib.parse import urlencode
 
+from allauth.socialaccount.models import SocialAccount
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
@@ -14,7 +16,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.files.base import File
 from django.db import IntegrityError, transaction
 from django.db.models import Count, Q
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
@@ -67,6 +69,9 @@ SHEETBOOK_SOURCE_SOURCES = {"sheetbook_action_calendar", "sheetbook_schedule_syn
 HOME_CALENDAR_ANCHOR = "home-calendar"
 HOME_CALENDAR_QUERY_KEYS = ("date", "action", "open_event", "open_task", "focus")
 CENTER_CALENDAR_QUERY_KEYS = ("date", "action", "open_event", "open_task")
+EDUITIT_API_KEY_ENV_NAME = "EDUITIT_API_KEY"
+EDUITIT_EXTERNAL_CALENDAR_USERNAME = "user694"
+EDUITIT_EXTERNAL_CALENDAR_PROVIDER = "naver"
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -214,6 +219,192 @@ def _apply_sensitive_cache_headers(response):
     response["Pragma"] = "no-cache"
     response["Expires"] = "0"
     return response
+
+
+def _get_external_api_key_from_request(request):
+    header_key = request.headers.get("X-Eduitit-API-Key") or request.headers.get("X-API-Key")
+    authorization = str(request.headers.get("Authorization") or "").strip()
+    if authorization.lower().startswith("bearer "):
+        header_key = authorization[7:].strip() or header_key
+    return (
+        str(request.GET.get("api_key") or "").strip()
+        or str(header_key or "").strip()
+    )
+
+
+def _external_api_auth_failed_response(message="유효한 Eduitit API 키가 필요합니다."):
+    response = HttpResponse(message, status=401, content_type="text/plain; charset=utf-8")
+    response["WWW-Authenticate"] = 'Bearer realm="Eduitit ClassCalendar"'
+    return _apply_sensitive_cache_headers(response)
+
+
+def _external_api_unavailable_response(message="관리자 캘린더 연결 계정을 찾지 못했습니다."):
+    response = HttpResponse(message, status=503, content_type="text/plain; charset=utf-8")
+    return _apply_sensitive_cache_headers(response)
+
+
+def _get_configured_external_api_key():
+    return str(os.environ.get(EDUITIT_API_KEY_ENV_NAME) or "").strip()
+
+
+def _is_valid_external_api_key(raw_key):
+    configured_key = _get_configured_external_api_key()
+    presented_key = str(raw_key or "").strip()
+    return bool(
+        configured_key
+        and presented_key
+        and secrets.compare_digest(configured_key, presented_key)
+    )
+
+
+def _get_external_calendar_owner():
+    account = (
+        SocialAccount.objects.select_related("user")
+        .filter(
+            provider=EDUITIT_EXTERNAL_CALENDAR_PROVIDER,
+            user__username=EDUITIT_EXTERNAL_CALENDAR_USERNAME,
+        )
+        .order_by("id")
+        .first()
+    )
+    return account.user if account else None
+
+
+def _normalize_ical_datetime(value):
+    if value is None:
+        return None
+    if isinstance(value, str):
+        raw = value.strip()
+        if not raw:
+            return None
+        try:
+            value = datetime.fromisoformat(raw)
+        except ValueError:
+            return None
+    if timezone.is_naive(value):
+        return timezone.make_aware(value, timezone.get_current_timezone())
+    return timezone.localtime(value)
+
+
+def _ical_escape_text(value):
+    text = str(value or "")
+    return (
+        text.replace("\\", "\\\\")
+        .replace(";", r"\;")
+        .replace(",", r"\,")
+        .replace("\r\n", "\n")
+        .replace("\r", "\n")
+        .replace("\n", r"\n")
+    )
+
+
+def _ical_fold_line(line):
+    raw = str(line or "")
+    if len(raw) <= 75:
+        return raw
+    chunks = []
+    while raw:
+        chunks.append(raw[:75])
+        raw = raw[75:]
+    return "\r\n ".join(chunks)
+
+
+def _ical_format_utc(value):
+    normalized = _normalize_ical_datetime(value)
+    if normalized is None:
+        return ""
+    return normalized.astimezone(timezone.UTC).strftime("%Y%m%dT%H%M%SZ")
+
+
+def _ical_format_date(value):
+    normalized = _normalize_ical_datetime(value)
+    if normalized is None:
+        return ""
+    return normalized.date().strftime("%Y%m%d")
+
+
+def _build_ical_description(item):
+    lines = []
+    status_label = str(item.get("status_label") or "").strip()
+    meta_text = str(item.get("meta_text") or "").strip()
+    source_url = str(item.get("source_url") or "").strip()
+    source_label = str(item.get("source_label") or "").strip()
+
+    if status_label:
+        lines.append(f"상태: {status_label}")
+    if meta_text:
+        lines.append(meta_text)
+    if source_url:
+        lines.append(f"{source_label or '원본'}: {source_url}")
+    return "\n".join(lines)
+
+
+def _absolutize_hub_item_source_url(request, item):
+    source_url = str(item.get("source_url") or "").strip()
+    if not source_url or source_url.startswith("http://") or source_url.startswith("https://"):
+        return item
+    updated = dict(item)
+    updated["source_url"] = request.build_absolute_uri(source_url)
+    return updated
+
+
+def _build_ical_event_lines(item, *, dtstamp_utc):
+    start_at = _normalize_ical_datetime(item.get("start_at") or item.get("sort_at"))
+    end_at = _normalize_ical_datetime(item.get("end_at") or item.get("start_at") or item.get("sort_at")) or start_at
+    if start_at is None:
+        return []
+
+    is_all_day = bool(item.get("is_all_day"))
+    if is_all_day:
+        start_date = start_at.date()
+        end_date = max(end_at.date(), start_date)
+        dtstart_line = f"DTSTART;VALUE=DATE:{start_date:%Y%m%d}"
+        dtend_line = f"DTEND;VALUE=DATE:{(end_date + timedelta(days=1)):%Y%m%d}"
+    else:
+        if end_at <= start_at:
+            end_at = start_at + timedelta(minutes=30)
+        dtstart_line = f"DTSTART:{_ical_format_utc(start_at)}"
+        dtend_line = f"DTEND:{_ical_format_utc(end_at)}"
+
+    description = _build_ical_description(item)
+    item_kind = str(item.get("item_kind") or "").strip().lower()
+    summary = str(item.get("title") or HUB_SERVICE_LABELS.get(item_kind, "항목")).strip()
+    source_url = str(item.get("source_url") or "").strip()
+    uid = f"{str(item.get('id') or uuid.uuid4())}@eduitit.site"
+
+    lines = [
+        "BEGIN:VEVENT",
+        f"UID:{uid}",
+        f"DTSTAMP:{dtstamp_utc}",
+        dtstart_line,
+        dtend_line,
+        f"SUMMARY:{_ical_escape_text(summary)}",
+        f"CATEGORIES:{_ical_escape_text(HUB_SERVICE_LABELS.get(item_kind, item_kind or '일정'))}",
+    ]
+    if description:
+        lines.append(f"DESCRIPTION:{_ical_escape_text(description)}")
+    if source_url:
+        lines.append(f"URL:{_ical_escape_text(source_url)}")
+    lines.append("END:VEVENT")
+    return lines
+
+
+def _render_external_ical_feed(*, user, hub_items):
+    calendar_name = f"Eduitit 캘린더 - {_display_user_name(user)}"
+    dtstamp_utc = timezone.now().astimezone(timezone.UTC).strftime("%Y%m%dT%H%M%SZ")
+    lines = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//Eduitit//ClassCalendar//KO",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+        f"X-WR-CALNAME:{_ical_escape_text(calendar_name)}",
+        "X-WR-TIMEZONE:Asia/Seoul",
+    ]
+    for item in hub_items:
+        lines.extend(_build_ical_event_lines(item, dtstamp_utc=dtstamp_utc))
+    lines.append("END:VCALENDAR")
+    return "\r\n".join(_ical_fold_line(line) for line in lines) + "\r\n"
 
 
 def _is_message_capture_enabled_for_user(user):
@@ -3510,6 +3701,51 @@ def share_rotate(request):
     logger.info("[ClassCalendar] public share rotated | owner_id=%s | share_uuid=%s", request.user.id, setting.share_uuid)
     messages.success(request, "공유 링크를 재발급했습니다.")
     return redirect(_build_home_calendar_surface_url(request, include_request_state=False))
+
+
+@require_GET
+def external_ical_feed(request):
+    raw_key = _get_external_api_key_from_request(request)
+    if not _is_valid_external_api_key(raw_key):
+        return _external_api_auth_failed_response()
+
+    user = _get_external_calendar_owner()
+    if user is None:
+        logger.warning(
+            "[ClassCalendar] external ical owner missing | username=%s | provider=%s",
+            EDUITIT_EXTERNAL_CALENDAR_USERNAME,
+            EDUITIT_EXTERNAL_CALENDAR_PROVIDER,
+        )
+        return _external_api_unavailable_response()
+
+    visible_owner_ids, editable_owner_ids, _ = _get_calendar_access_for_user(user)
+    visible_events = list(
+        get_visible_events_queryset(
+            user,
+            visible_owner_ids=visible_owner_ids,
+        ).exclude(
+            is_locked=True,
+            integration_source__in=DIRECT_HUB_INTEGRATION_SOURCES,
+        )
+    )
+    visible_tasks = list(get_visible_tasks_queryset(user))
+    hub_items, _ = _build_calendar_hub_payload(
+        request_user=user,
+        visible_owner_ids=visible_owner_ids,
+        editable_owner_ids=editable_owner_ids,
+        visible_events=visible_events,
+        visible_tasks=visible_tasks,
+    )
+    exportable_items = [
+        _absolutize_hub_item_source_url(request, item)
+        for item in hub_items
+        if str(item.get("item_kind") or "").strip().lower() != "task"
+        and str(item.get("date_key") or "").strip()
+    ]
+    content = _render_external_ical_feed(user=user, hub_items=exportable_items)
+    response = HttpResponse(content, content_type="text/calendar; charset=utf-8")
+    response["Content-Disposition"] = 'inline; filename="eduitit-user694-calendar.ics"'
+    return _apply_sensitive_cache_headers(response)
 
 
 @require_GET
