@@ -257,7 +257,7 @@ def _build_post_feed_queryset(feed_scope=POST_FEED_SCOPE_ALL):
 
 def _get_home_layout_version():
     raw_version = str(getattr(settings, 'HOME_LAYOUT_VERSION', '') or '').strip().lower()
-    if raw_version in {'v1', 'v2', 'v4'}:
+    if raw_version in {'v1', 'v2', 'v4', 'v5'}:
         return raw_version
     return 'v2' if getattr(settings, 'HOME_V2_ENABLED', False) else 'v1'
 
@@ -2784,8 +2784,18 @@ def _home_public_v4(request, products, posts, page_obj, feed_scope, pinned_notic
     )
 
 
-def _home_v4(request, products, posts, page_obj, feed_scope, pinned_notice_posts):
-    """환경변수로 안전하게 롤아웃하는 인증 홈 V4."""
+def _build_home_authenticated_v4_response(
+    request,
+    products,
+    posts,
+    page_obj,
+    feed_scope,
+    pinned_notice_posts,
+    *,
+    template_name='core/home_authenticated_v4.html',
+    home_design_version='v4',
+):
+    """환경변수로 안전하게 롤아웃하는 인증 홈 공통 응답."""
     product_list = _attach_product_launch_meta(list(products), user=request.user)
     section_product_list = [
         product
@@ -2910,7 +2920,7 @@ def _home_v4(request, products, posts, page_obj, feed_scope, pinned_notice_posts
         'trackUsageUrl': reverse('track_product_usage'),
     }
 
-    return render(request, 'core/home_authenticated_v4.html', {
+    return render(request, template_name, {
         'products': products,
         'sections': sections,
         'aux_sections': aux_sections,
@@ -2928,6 +2938,7 @@ def _home_v4(request, products, posts, page_obj, feed_scope, pinned_notice_posts
         'developer_chat_home_card': developer_chat_home_card,
         'home_calendar_surface': home_calendar_surface,
         'home_v2_frontend_config': home_v2_frontend_config,
+        'home_design_version': home_design_version,
         'community_summary': community_summary,
         'posts': posts,
         'page_obj': page_obj,
@@ -2937,6 +2948,34 @@ def _home_v4(request, products, posts, page_obj, feed_scope, pinned_notice_posts
         **home_calendar_surface,
         **build_home_page_seo(request).as_context(),
     })
+
+
+def _home_v4(request, products, posts, page_obj, feed_scope, pinned_notice_posts):
+    """환경변수로 안전하게 롤아웃하는 인증 홈 V4."""
+    return _build_home_authenticated_v4_response(
+        request,
+        products,
+        posts,
+        page_obj,
+        feed_scope,
+        pinned_notice_posts,
+        template_name='core/home_authenticated_v4.html',
+        home_design_version='v4',
+    )
+
+
+def _home_v5(request, products, posts, page_obj, feed_scope, pinned_notice_posts):
+    """환경변수로 opt-in 미리보기하는 인증 홈 V5."""
+    return _build_home_authenticated_v4_response(
+        request,
+        products,
+        posts,
+        page_obj,
+        feed_scope,
+        pinned_notice_posts,
+        template_name='core/home_authenticated_v5.html',
+        home_design_version='v5',
+    )
 
 def home(request):
     # Order by display_order first, then by creation date
@@ -2969,6 +3008,11 @@ def home(request):
         if request.user.is_authenticated:
             return _home_v4(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
         return _home_public_v4(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
+
+    if home_layout_version == 'v5':
+        if request.user.is_authenticated:
+            return _home_v5(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
+        return _home_v2(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
 
     # V2 홈: Feature flag on 시 분기
     if home_layout_version == 'v2':

@@ -588,7 +588,8 @@ STORAGES = {
 # =============================================================================
 MAINTENANCE_MODE = os.getenv('MAINTENANCE_MODE', 'False').lower() in ('true', '1', 'yes')
 AUTOARTICLE_EXPORT_LAYOUT = os.getenv('AUTOARTICLE_EXPORT_LAYOUT', 'v1')
-# Home layout rollout: set HOME_LAYOUT_VERSION to v1, v2, or v4 to lock a version.
+# Home layout rollout: set HOME_LAYOUT_VERSION to v1, v2, v4, or v5 to lock a version.
+# V5 is opt-in only so Railway can preview it and roll back to v4 immediately.
 # If unset, legacy HOME_V2_ENABLED fallback decides between v1 and v2.
 HOME_LAYOUT_VERSION = os.environ.get('HOME_LAYOUT_VERSION', '').strip().lower()
 # UX-04 rollout rule: V2 is default-on. Set HOME_V2_ENABLED=False for immediate rollback.

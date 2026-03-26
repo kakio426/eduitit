@@ -1,7 +1,7 @@
 {# 미니 서비스 카드 - teacher-first 공통 카드 #}
 {# 사용: {% include 'core/includes/mini_card.html' with product=product %} #}
 {% with card_title=product.home_compact_title|default:product.public_service_name|default:product.title card_body=product.home_card_summary|default:product.teacher_first_support_label|default:product.solve_text|default:product.description %}
-<div class="relative rounded-[1.45rem] border border-slate-200 bg-white px-4 {% if product.launch_route_name == 'messagebox:main' %}py-3{% else %}py-3.5{% endif %} shadow-sm transition-all cursor-pointer group product-card hover:border-indigo-200 hover:shadow-md"
+<div class="relative rounded-[1.45rem] border border-slate-200 bg-white px-4 {% if product.launch_route_name == 'messagebox:main' %}py-3{% else %}py-3.5{% endif %} shadow-sm transition-all cursor-pointer group product-card {% if home_design_version == 'v5' %}home-mini-card--v5{% endif %} hover:border-indigo-200 hover:shadow-md"
     data-home-v2-service-card="true"
     data-teacher-first-card="true"
     {% if show_access_state %}data-home-v2-access-status="{{ product.home_access_status_label }}"{% endif %}

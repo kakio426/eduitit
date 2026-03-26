@@ -257,6 +257,18 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         self.assertEqual(response.status_code, 200)
 
+    @override_settings(HOME_LAYOUT_VERSION='', HOME_V2_ENABLED=True)
+    def test_empty_home_layout_version_keeps_existing_v2_authenticated_fallback(self):
+        self._login('v2emptyfallback')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('core/css/home_authenticated_v2.css', content)
+        self.assertIn('data-home-v2-content-shell="true"', content)
+        self.assertNotIn('core/css/home_authenticated_v4.css', content)
+        self.assertNotIn('core/css/home_authenticated_v5.css', content)
+
     def test_v2_anonymous_has_sections(self):
         """V2 비로그인 홈에 목적별 섹션 존재"""
         response = self.client.get(reverse('home'))
@@ -2468,6 +2480,124 @@ class HomeV4ViewTest(TestCase):
         self.assertIn('data-home-v2-top-zone="true"', content)
         self.assertNotIn('core/css/home_authenticated_v4.css', content)
         self.assertNotIn('data-home-v4-shell="true"', content)
+
+
+@override_settings(HOME_LAYOUT_VERSION='v5', HOME_V2_ENABLED=True)
+class HomeV5ViewTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.collect_product = Product.objects.create(
+            title="간편 수합",
+            description="서명과 수합",
+            price=0,
+            is_active=True,
+            service_type='collect_sign',
+            launch_route_name='collect:landing',
+            icon='fa-solid fa-inbox',
+        )
+        self.consent_product = Product.objects.create(
+            title="동의서는 나에게 맡겨",
+            description="동의서 회수",
+            price=0,
+            is_active=True,
+            service_type='collect_sign',
+            launch_route_name='consent:dashboard',
+            icon='fa-solid fa-file-signature',
+        )
+        self.signature_product = Product.objects.create(
+            title="가뿐하게 서명 톡",
+            description="링크 서명",
+            price=0,
+            is_active=True,
+            service_type='collect_sign',
+            launch_route_name='signatures:list',
+            icon='fa-solid fa-signature',
+        )
+        self.handoff_product = Product.objects.create(
+            title="배부 체크",
+            description="배부 확인",
+            price=0,
+            is_active=True,
+            service_type='collect_sign',
+            launch_route_name='handoff:landing',
+            icon='fa-solid fa-box-open',
+        )
+        self.p1 = Product.objects.create(
+            title="수업 도구",
+            description="수업용",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            is_featured=True,
+            launch_route_name='qrgen:landing',
+            solve_text='수업을 준비해요',
+        )
+        self.p2 = Product.objects.create(
+            title="행정 도구",
+            description="행정용",
+            price=0,
+            is_active=True,
+            service_type='work',
+            launch_route_name='noticegen:main',
+        )
+        self.p3 = Product.objects.create(
+            title="상담 도구",
+            description="상담용",
+            price=0,
+            is_active=True,
+            service_type='counsel',
+        )
+        self.p4 = Product.objects.create(
+            title="테스트 게임",
+            description="게임",
+            price=0,
+            is_active=True,
+            service_type='game',
+        )
+        _create_posts(count=2, username='v5snsauthor')
+
+    def _login(self, username='v5user', nickname=None):
+        user = _create_onboarded_user(username, nickname=nickname)
+        self.client.login(username=username, password='pass1234')
+        return user
+
+    def test_v5_authenticated_home_uses_v5_template_and_keeps_existing_interaction_hooks(self):
+        user = self._login('v5layout')
+        ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
+        ProductUsageLog.objects.create(user=user, product=self.p2, action='launch', source='home_quick')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertTemplateUsed(response, 'core/home_authenticated_v5.html')
+        self.assertEqual(response.context['home_design_version'], 'v5')
+        self.assertIn('core/css/home_authenticated_v4.css', content)
+        self.assertIn('core/css/home_authenticated_v5.css', content)
+        self.assertIn('data-home-v5-shell="true"', content)
+        self.assertIn('data-home-design-version="v5"', content)
+        self.assertIn('data-home-v5-hero="true"', content)
+        self.assertIn('Teacher-first home preview', content)
+        self.assertIn('EDUITIT', content)
+        self.assertIn('data-home-v4-home-panel="true"', content)
+        self.assertIn('data-home-v4-representative-services="true"', content)
+        self.assertIn('data-home-v4-favorites-panel="true"', content)
+        self.assertIn('data-home-v4-sns-panel="true"', content)
+        self.assertIn('data-home-v4-mobile-menu-trigger="true"', content)
+        self.assertIn('data-home-v5-metrics="true"', content)
+        self.assertIn('home-mini-card--v5', content)
+        self.assertIn('data-favorite-toggle="true"', content)
+        self.assertNotIn('data-home-v4-public-shell="true"', content)
+
+    def test_v5_anonymous_home_keeps_existing_guest_home_surface(self):
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertTemplateUsed(response, 'core/home_v2.html')
+        self.assertTemplateNotUsed(response, 'core/home_authenticated_v5.html')
+        self.assertIn('data-home-v2-guest-hero="true"', content)
+        self.assertIn('지금 바로 써보기', content)
+        self.assertNotIn('data-home-v5-shell="true"', content)
+        self.assertNotIn('core/css/home_authenticated_v5.css', content)
 
 
 @override_settings(HOME_V2_ENABLED=True)
