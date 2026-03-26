@@ -301,23 +301,10 @@ def build_messagebox_home_card_context(user):
     card = {
         "enabled": enabled,
         "title": "업무 메시지 보관함",
+        "description": "안내문이나 메모를 붙여넣고 바로 보관하거나 일정으로 넘길 수 있어요.",
         "primary_action_label": "새 메시지 보관",
         "url": build_messagebox_main_url(),
-        "incomplete_count": 0,
-        "linked_count": 0,
     }
-    if not enabled:
-        return card
-
-    queryset = _build_message_capture_archive_queryset(user)
-    incomplete_count = queryset.filter(completed_at__isnull=True).count()
-    linked_count = sum(1 for capture in queryset if _message_capture_has_linked_item(capture))
-    card.update(
-        {
-            "incomplete_count": incomplete_count,
-            "linked_count": linked_count,
-        }
-    )
     return card
 
 

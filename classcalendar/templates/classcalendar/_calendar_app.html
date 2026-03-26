@@ -870,27 +870,50 @@
             {% endif %}
             {% if is_embedded_on_home and messagebox_home_card.enabled and messagebox_home_card.url %}
             <section class="mt-4 rounded-[1.5rem] border border-amber-200 bg-gradient-to-r from-amber-50 via-white to-slate-50 p-4 sm:p-5" data-home-messagebox-card="true">
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div class="min-w-0">
-                        <h2 class="classcalendar-copy text-base font-extrabold text-slate-900 sm:text-xl">{{ messagebox_home_card.title }}</h2>
-                        <div class="mt-3 flex flex-wrap gap-2">
-                            <span class="inline-flex items-center rounded-full bg-white px-3 py-1 text-xs font-black text-slate-700">미처리 {{ messagebox_home_card.incomplete_count }}건</span>
-                            <span class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">캘린더 연결 {{ messagebox_home_card.linked_count }}건</span>
+                <div class="mx-auto max-w-4xl space-y-4">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div class="min-w-0">
+                            <h2 class="classcalendar-copy text-base font-extrabold text-slate-900 sm:text-xl">{{ messagebox_home_card.title }}</h2>
+                            <p class="mt-1 text-sm font-semibold text-slate-600">{{ messagebox_home_card.description }}</p>
                         </div>
-                    </div>
-                    <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row" data-home-messagebox-actions="true">
-                        <a
-                            href="{{ messagebox_home_card.url }}#messagebox-compose"
-                            class="inline-flex min-w-0 flex-1 items-center justify-center rounded-2xl bg-slate-900 px-3 py-2.5 text-sm font-extrabold text-white transition hover:bg-slate-800 sm:flex-none sm:px-4 sm:py-3"
-                        >
-                            메시지 보관
-                        </a>
-                        <a
-                            href="{{ messagebox_home_card.url }}#messagebox-archive"
-                            class="inline-flex min-w-0 flex-1 items-center justify-center rounded-2xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-extrabold text-slate-700 transition hover:bg-slate-50 sm:flex-none sm:px-4 sm:py-3"
+                        <button
+                            type="button"
+                            @click="openMessageArchive($event)"
+                            class="inline-flex w-full items-center justify-center rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-extrabold text-slate-700 transition hover:bg-slate-50 sm:w-auto"
                         >
                             보관함 열기
-                        </a>
+                        </button>
+                    </div>
+                    <div class="rounded-[1.35rem] border border-white/80 bg-white/90 p-3 shadow-sm sm:p-4">
+                        <label class="mb-2 block text-sm font-bold text-slate-700">메시지 붙여넣기</label>
+                        <textarea
+                            x-ref="messageboxHomeDraftInput"
+                            x-model="messageboxHomeDraftText"
+                            rows="5"
+                            class="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm leading-6 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                            placeholder="학부모 안내문, 교사용 메모, 전달받은 공지를 그대로 붙여넣으세요."
+                        ></textarea>
+                        <div class="mt-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                            <p class="text-xs font-semibold leading-5 text-slate-500">여기서 바로 보관하거나, 이어서 날짜를 찾아 일정으로 넘길 수 있어요.</p>
+                            <div class="flex flex-col gap-2 sm:flex-row" data-home-messagebox-actions="true">
+                                <button
+                                    type="button"
+                                    @click="submitMessageCaptureArchiveSaveFromHome()"
+                                    :disabled="isSavingMessageCaptureArchive || isParsingMessageCapture"
+                                    class="inline-flex min-w-0 items-center justify-center rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-extrabold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+                                >
+                                    보관만 하기
+                                </button>
+                                <button
+                                    type="button"
+                                    @click="openMessageCaptureFromHome($event)"
+                                    :disabled="isSavingMessageCaptureArchive || isParsingMessageCapture"
+                                    class="inline-flex min-w-0 items-center justify-center rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-extrabold text-white transition hover:bg-slate-800 disabled:opacity-60"
+                                >
+                                    일정 찾기
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -1489,6 +1512,7 @@ function calendarApp() {
         defaultCalendarOwnerId: '',
         createForm: { title: '', note: '', calendar_owner_id: '', start_date: '', end_date: '', has_time: false, start_clock: '09:00', end_clock: '10:00', end_clock_auto: true, color: 'indigo' },
         editForm: { title: '', note: '', start_date: '', end_date: '', has_time: false, start_clock: '09:00', end_clock: '10:00', end_clock_auto: true, color: 'indigo' },
+        messageboxHomeDraftText: '',
         messageCaptureStep: 'input',
         messageCaptureInputText: '',
         messageCaptureSourceHint: 'unknown',

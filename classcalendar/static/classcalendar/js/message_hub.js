@@ -456,6 +456,49 @@ function initCalendarMessageHub(host, options = {}) {
             await this.openMessageHub(event, 'capture', { resetCapture: true });
         },
 
+        focusMessageboxHomeDraftInput: function() {
+            const draftInput = this.$refs ? this.$refs.messageboxHomeDraftInput : null;
+            if (draftInput && typeof draftInput.focus === 'function') {
+                draftInput.focus();
+            }
+        },
+
+        openMessageCaptureFromHome: async function(event) {
+            const draftText = String(this.messageboxHomeDraftText || '');
+            await this.openMessageHub(event, 'capture', { resetCapture: true });
+            this.messageCaptureSourceHint = draftText.trim() ? 'home_card' : 'unknown';
+            this.messageCaptureInputText = draftText;
+            this.messageCaptureErrorText = '';
+            if (typeof this.$nextTick === 'function') {
+                this.$nextTick(() => {
+                    const captureInput = this.$refs ? this.$refs.messageCaptureInput : null;
+                    if (captureInput && typeof captureInput.focus === 'function') {
+                        captureInput.focus();
+                    }
+                });
+            }
+        },
+
+        submitMessageCaptureArchiveSaveFromHome: async function() {
+            const draftText = String(this.messageboxHomeDraftText || '');
+            if (!draftText.trim()) {
+                window.showToast('붙여넣을 메시지를 먼저 입력해 주세요.', 'info');
+                this.focusMessageboxHomeDraftInput();
+                return;
+            }
+            this.resetMessageCaptureFlow();
+            this.messageCaptureSourceHint = 'home_card';
+            this.messageCaptureInputText = draftText;
+            await this.submitMessageCaptureArchiveSave();
+            if (this.messageCaptureSuccessMode === 'archive' && !this.messageCaptureErrorText) {
+                this.messageboxHomeDraftText = '';
+                this.resetMessageCaptureFlow();
+                this.messageHubOpen = false;
+                this.messageHubActiveTab = 'capture';
+                this.syncMessageHubLayout();
+            }
+        },
+
         openMessageArchive: async function(event) {
             await this.openMessageHub(event, 'archive');
         },
