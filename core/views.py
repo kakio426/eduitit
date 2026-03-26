@@ -642,7 +642,11 @@ def _product_title_text(product):
 def _is_sheetbook_product(product):
     route_name = _product_route_name(product)
     title = _product_title_text(product)
-    return route_name.startswith("sheetbook:") or title in {"교무수첩", SHEETBOOK_PUBLIC_NAME}
+    if route_name.startswith("sheetbook:"):
+        return True
+    if route_name:
+        return False
+    return title in {"교무수첩", SHEETBOOK_PUBLIC_NAME}
 
 
 def _is_calendar_hub_product(product):
@@ -2686,6 +2690,18 @@ def _build_home_public_landing_context(request, products):
     product_list = _attach_product_launch_meta(list(products), user=request.user)
     login_url = reverse('account_login')
     guest_rotation_cards = _build_home_guest_rotation_cards(product_list)
+    guest_public_cards = _build_home_guest_highlight_cards(
+        product_list,
+        requires_login=False,
+        limit=6,
+    )
+    if not guest_public_cards:
+        guest_public_cards = _build_home_guest_highlight_cards(
+            product_list,
+            requires_login=False,
+            limit=6,
+            include_games=True,
+        )
     representative_products = _build_home_public_representative_products(
         product_list,
         login_url=login_url,
@@ -2703,6 +2719,8 @@ def _build_home_public_landing_context(request, products):
         'featured_product': featured_product,
         'representative_products': representative_products,
         'guest_rotation_cards': guest_rotation_cards,
+        'guest_public_cards': guest_public_cards,
+        'login_url': login_url,
         **build_home_page_seo(request).as_context(),
     }
 
@@ -2712,6 +2730,15 @@ def _home_public_v4(request, products, posts, page_obj, feed_scope, pinned_notic
     return render(
         request,
         'core/home_public_v4.html',
+        _build_home_public_landing_context(request, products),
+    )
+
+
+def _home_public_v5(request, products, posts, page_obj, feed_scope, pinned_notice_posts):
+    """모바일 우선 공개 홈 V5."""
+    return render(
+        request,
+        'core/home_public_v5.html',
         _build_home_public_landing_context(request, products),
     )
 
@@ -2801,6 +2828,11 @@ def _build_home_authenticated_v4_response(
         include_section_meta=True,
         user=request.user,
     )
+    recent_items = _build_product_link_items(
+        recent_products,
+        include_section_meta=True,
+        user=request.user,
+    )
     quickdrop_home_card = _build_home_quickdrop_card(
         request.user,
         favorite_products=favorite_products,
@@ -2838,6 +2870,22 @@ def _build_home_authenticated_v4_response(
         home_v4_nav_sections,
         limit=4,
     )
+    home_v5_mobile_workbench_items = favorite_items[:6]
+    home_v5_mobile_recommend_items = list(representative_recommendations)
+    if not home_v5_mobile_recommend_items:
+        home_v5_mobile_recommend_items = [
+            {
+                'title': item.get('favorite_title')
+                or getattr(item.get('product'), 'public_service_name', '')
+                or getattr(item.get('product'), 'title', '')
+                or '도구',
+                'href': item.get('href', ''),
+                'is_external': item.get('is_external', False),
+                'reason_label': item.get('section_title') or '추천 도구',
+            }
+            for item in discovery_items[:4]
+            if item.get('href')
+        ]
     developer_chat_home_card = build_developer_chat_home_card_context(request.user)
 
     from classcalendar.views import build_calendar_surface_context
@@ -2861,12 +2909,16 @@ def _build_home_authenticated_v4_response(
         'games': games,
         'favorite_items': favorite_items,
         'favorite_product_ids': [product.id for product in favorite_products],
+        'recent_items': recent_items,
+        'discovery_items': discovery_items,
         'quickdrop_home_card': quickdrop_home_card,
         'representative_slots': representative_slots,
         'representative_recommendations': representative_recommendations,
         'home_v4_nav_sections': home_v4_nav_sections,
         'home_v4_mobile_calendar_first_enabled': home_v4_mobile_calendar_first_enabled,
         'home_v4_mobile_quick_items': home_v4_mobile_quick_items,
+        'home_v5_mobile_workbench_items': home_v5_mobile_workbench_items,
+        'home_v5_mobile_recommend_items': home_v5_mobile_recommend_items,
         'developer_chat_home_card': developer_chat_home_card,
         'home_calendar_surface': home_calendar_surface,
         'home_v2_frontend_config': home_v2_frontend_config,
@@ -2944,7 +2996,7 @@ def home(request):
     if home_layout_version == 'v5':
         if request.user.is_authenticated:
             return _home_v5(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
-        return _home_v2(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
+        return _home_public_v5(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
 
     # V2 홈: Feature flag on 시 분기
     if home_layout_version == 'v2':

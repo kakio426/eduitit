@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.db.models import Q
 
 
 SHEETBOOK_LEGACY_TITLES = {"교무수첩", "학급 기록 보드"}
@@ -17,7 +18,11 @@ def is_sheetbook_discovery_visible():
 def is_sheetbook_product(product):
     route_name = str(getattr(product, "launch_route_name", "") or "").strip().lower()
     title = str(getattr(product, "title", "") or "").strip()
-    return route_name.startswith("sheetbook:") or title in SHEETBOOK_LEGACY_TITLES
+    if route_name.startswith("sheetbook:"):
+        return True
+    if route_name:
+        return False
+    return title in SHEETBOOK_LEGACY_TITLES
 
 
 def is_product_discoverable(product):
@@ -33,7 +38,8 @@ def filter_discoverable_products(products):
         queryset = products.filter(is_active=True)
         if not is_sheetbook_discovery_visible():
             queryset = queryset.exclude(launch_route_name__istartswith="sheetbook:").exclude(
-                title__in=SHEETBOOK_LEGACY_TITLES
+                Q(title__in=SHEETBOOK_LEGACY_TITLES)
+                & (Q(launch_route_name__isnull=True) | Q(launch_route_name__exact=""))
             )
         return queryset
     return [product for product in products if is_product_discoverable(product)]

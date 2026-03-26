@@ -6,7 +6,8 @@ Owner: Web + Ops
 ## Default Policy
 
 - `HOME_V2_ENABLED` default is `True` in both `config/settings.py` and `config/settings_production.py`.
-- V2 is treated as the baseline home experience unless explicitly disabled via environment variable.
+- `HOME_LAYOUT_VERSION` can pin `v1`, `v2`, `v4`, or `v5`.
+- V2 is treated as the baseline home experience unless explicitly overridden via `HOME_LAYOUT_VERSION`.
 
 ## Rollback Policy
 

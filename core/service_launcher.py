@@ -317,7 +317,11 @@ def resolve_product_launch_url(product, user=None):
 def is_sheetbook_product(product):
     route_name = product_route_name(product)
     title = product_title_text(product)
-    return route_name.startswith("sheetbook:") or title in {"교무수첩", SHEETBOOK_PUBLIC_NAME}
+    if route_name.startswith("sheetbook:"):
+        return True
+    if route_name:
+        return False
+    return title in {"교무수첩", SHEETBOOK_PUBLIC_NAME}
 
 
 def is_calendar_hub_product(product):

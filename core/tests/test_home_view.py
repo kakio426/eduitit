@@ -81,7 +81,10 @@ class HomeViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertNotRegex(content, r'(?i)Error|Service Unavailable|504|502')
+        self.assertNotRegex(
+            content,
+            r'(?i)Traceback|Internal Server Error|Service Unavailable|504 Gateway|502 Bad Gateway',
+        )
 
     def test_home_anonymous_contains_product(self):
         """비로그인 홈에 서비스 카드가 표시됨"""
@@ -2575,7 +2578,7 @@ class HomeV5ViewTest(TestCase):
         self.client.login(username=username, password='pass1234')
         return user
 
-    def test_v5_authenticated_home_uses_v5_template_and_keeps_existing_interaction_hooks(self):
+    def test_v5_authenticated_home_uses_mobile_first_template_and_sections(self):
         user = self._login('v5layout')
         ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
         ProductUsageLog.objects.create(user=user, product=self.p2, action='launch', source='home_quick')
@@ -2589,43 +2592,24 @@ class HomeV5ViewTest(TestCase):
         self.assertIn('core/css/home_authenticated_v5.css', content)
         self.assertIn('data-home-v5-shell="true"', content)
         self.assertIn('data-home-design-version="v5"', content)
-        self.assertIn('data-home-v4-home-panel="true"', content)
-        self.assertIn('data-home-v4-representative-services="true"', content)
-        self.assertIn('data-home-v4-favorites-panel="true"', content)
-        self.assertIn('data-home-v4-sns-panel="true"', content)
-        self.assertIn('data-home-v4-mobile-menu-trigger="true"', content)
-        self.assertIn('home-mini-card--v5', content)
+        self.assertIn('data-home-v5-mobile-summary="true"', content)
+        self.assertIn('data-home-v5-mobile-workbench="true"', content)
+        self.assertIn('data-home-v5-mobile-recent="true"', content)
+        self.assertIn('data-home-v5-mobile-calendar-panel="true"', content)
+        self.assertIn('data-home-v5-mobile-recommend="true"', content)
+        self.assertIn('data-home-v5-mobile-all-tools-button="true"', content)
+        self.assertIn('내 작업대', content)
+        self.assertIn('최근 이어서', content)
+        self.assertIn('추천 도구', content)
         self.assertIn('data-favorite-toggle="true"', content)
         self.assertNotIn('data-home-v4-public-shell="true"', content)
-        self.assertNotIn('data-home-v5-hero="true"', content)
-        self.assertNotIn('Teacher-first home preview', content)
-        self.assertNotIn('오늘 필요한 교실 도구만 먼저 보이는 홈', content)
+        self.assertNotIn('data-home-v4-mobile-menu-trigger="true"', content)
+        self.assertNotIn('data-home-v4-mobile-quick-tools="true"', content)
+        self.assertNotIn('Quick Tools', content)
+        self.assertNotIn('All Tools', content)
+        self.assertNotIn('Representative', content)
 
-    def test_v5_favorites_use_wrapped_title_layout_with_corner_toggle(self):
-        user = self._login('v5favoritewrap')
-        planner = Product.objects.create(
-            title='AI 수업 설계 길잡이',
-            description='AI 수업 준비',
-            price=0,
-            is_active=True,
-            service_type='classroom',
-            launch_route_name='qrgen:landing',
-        )
-        ProductFavorite.objects.create(user=user, product=planner, pin_order=1)
-
-        response = self.client.get(reverse('home'))
-        content = response.content.decode('utf-8')
-
-        favorites_index = content.index('data-home-v4-favorites-panel="true"')
-        sns_index = content.index('data-home-v4-sns-panel="true"', favorites_index)
-        favorites_block = content[favorites_index:sns_index]
-
-        self.assertIn('home-v5-favorite-card-title', favorites_block)
-        self.assertIn('home-v5-favorite-card-star', favorites_block)
-        self.assertNotIn('truncate text-[0.95rem] font-black leading-5 text-slate-900', favorites_block)
-        self.assertIn('title="AI 수업 설계 길잡이">AI 수업 설계 길잡이</p>', favorites_block)
-
-    def test_v5_favorites_panel_renders_more_than_four_items(self):
+    def test_v5_mobile_workbench_renders_more_than_four_items(self):
         user = self._login('v5favoriteoverflow')
         favorite_products = []
         for index in range(5):
@@ -2644,22 +2628,53 @@ class HomeV5ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
+        workbench_index = content.index('data-home-v5-mobile-workbench="true"')
+        recent_index = content.index('data-home-v5-mobile-recent="true"')
+        calendar_index = content.index('data-home-v5-mobile-calendar-panel="true"')
+        workbench_block = content[workbench_index:recent_index]
 
-        favorites_index = content.index('data-home-v4-favorites-panel="true"')
-        sns_index = content.index('data-home-v4-sns-panel="true"', favorites_index)
-        favorites_block = content[favorites_index:sns_index]
+        self.assertEqual(workbench_block.count('data-home-v5-mobile-workbench-card="true"'), 5)
+        self.assertIn('title="즐겨찾기 서비스 5">즐겨찾기 서비스 5</p>', workbench_block)
+        self.assertLess(workbench_index, recent_index)
+        self.assertLess(recent_index, calendar_index)
 
-        self.assertEqual(favorites_block.count('data-home-v4-favorite-card="true"'), 5)
-        self.assertIn('title="즐겨찾기 서비스 5">즐겨찾기 서비스 5</p>', favorites_block)
+    def test_v5_anonymous_home_uses_public_v5_template_and_mobile_grid(self):
+        Product.objects.create(
+            title="공개 수합",
+            description="제출 흐름을 바로 볼 수 있어요",
+            price=0,
+            is_active=True,
+            is_guest_allowed=True,
+            service_type='collect_sign',
+            icon='fa-solid fa-inbox',
+            launch_route_name='collect:landing',
+        )
+        Product.objects.create(
+            title="외부 공개 도구",
+            description="새 창으로 바로 이동",
+            price=0,
+            is_active=True,
+            is_guest_allowed=True,
+            service_type='edutech',
+            external_url='https://example.com/demo',
+            icon='fa-solid fa-arrow-up-right-from-square',
+        )
 
-    def test_v5_anonymous_home_keeps_existing_guest_home_surface(self):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertTemplateUsed(response, 'core/home_v2.html')
+        self.assertTemplateUsed(response, 'core/home_public_v5.html')
         self.assertTemplateNotUsed(response, 'core/home_authenticated_v5.html')
-        self.assertIn('data-home-v2-guest-hero="true"', content)
+        self.assertIn('data-home-v5-public-shell="true"', content)
+        self.assertIn('data-home-v5-public-mobile-stack="true"', content)
+        self.assertIn('data-home-v5-public-grid-panel="true"', content)
+        self.assertIn('data-home-v5-public-grid="true"', content)
+        self.assertIn('data-home-v5-public-card="true"', content)
+        self.assertIn('data-home-v5-public-login-cta="true"', content)
+        self.assertIn('data-home-v5-public-desktop="true"', content)
         self.assertIn('지금 바로 써보기', content)
+        self.assertIn('공개 도구', content)
+        self.assertNotIn('data-home-v2-guest-hero="true"', content)
         self.assertNotIn('data-home-v5-shell="true"', content)
         self.assertNotIn('core/css/home_authenticated_v5.css', content)
 

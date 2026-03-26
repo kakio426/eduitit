@@ -21,41 +21,25 @@
     <div class="mx-auto max-w-[1600px]" style="padding-top: calc(var(--main-nav-height, 88px) + 0.75rem);">
         <main class="min-w-0 px-3 pb-8 pt-0 sm:px-4 md:px-6 lg:px-7 xl:px-8 2xl:px-10">
             <div
-                class="home-v4-shell home-v5-shell"
+                class="home-v5-shell"
                 data-home-v4-shell="true"
                 data-home-v5-shell="true"
                 data-home-design-version="{{ home_design_version|default:'v5' }}"
                 x-data="{ openSection: '', menuSheetOpen: false }"
                 @keydown.escape.window="menuSheetOpen = false"
             >
-                {% if home_v4_mobile_calendar_first_enabled %}
-                <div class="home-v4-mobile-calendar-first-bar" data-home-v4-mobile-calendar-first="true">
-                    <div
-                        class="home-v4-mobile-calendar-first-status-scroll"
-                        data-home-v4-mobile-calendar-status-scroll="true"
-                    >
-                        <div
-                            class="home-v4-mobile-calendar-first-status"
-                            data-home-v4-mobile-calendar-status="true"
-                        >
-                            <span
-                                class="home-v4-mobile-calendar-first-chip home-v4-mobile-calendar-first-chip--date"
-                                data-home-v4-mobile-calendar-chip="date"
-                            >
+                <div class="home-v5-mobile-summary" data-home-v5-mobile-summary="true">
+                    <div class="home-v5-mobile-summary-scroll" data-home-v5-mobile-summary-scroll="true">
+                        <div class="home-v5-mobile-summary-chips" data-home-v5-mobile-summary-chips="true">
+                            <span class="home-v5-mobile-summary-chip home-v5-mobile-summary-chip--date" data-home-v5-mobile-summary-chip="date">
                                 <i class="fa-regular fa-calendar"></i>
                                 {{ today_workspace.date_label|default:'오늘' }}
                             </span>
-                            <span
-                                class="home-v4-mobile-calendar-first-chip"
-                                data-home-v4-mobile-calendar-chip="events"
-                            >
+                            <span class="home-v5-mobile-summary-chip" data-home-v5-mobile-summary-chip="events">
                                 <i class="fa-regular fa-clock"></i>
                                 일정 {{ today_workspace.today_event_count|default_if_none:0 }}건
                             </span>
-                            <span
-                                class="home-v4-mobile-calendar-first-chip"
-                                data-home-v4-mobile-calendar-chip="tasks"
-                            >
+                            <span class="home-v5-mobile-summary-chip" data-home-v5-mobile-summary-chip="tasks">
                                 <i class="fa-solid fa-list-check"></i>
                                 할 일 {{ today_workspace.today_task_count|default_if_none:0 }}건
                             </span>
@@ -63,9 +47,8 @@
                     </div>
                     <button
                         type="button"
-                        class="home-v4-mobile-all-tools-trigger home-v4-mobile-all-tools-trigger--icon"
-                        data-home-v4-mobile-calendar-first-trigger="true"
-                        data-home-v4-mobile-all-tools-button="true"
+                        class="home-v5-mobile-summary-button"
+                        data-home-v5-mobile-all-tools-button="true"
                         @click="menuSheetOpen = true"
                         aria-label="전체 도구 열기"
                         title="전체 도구"
@@ -74,27 +57,10 @@
                         <span class="sr-only">전체 도구</span>
                     </button>
                 </div>
-                {% else %}
-                <div class="home-v4-mobile-toolbar" data-home-v4-mobile-toolbar="true">
-                    <div class="min-w-0">
-                        <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Menu</p>
-                        <h2 class="mt-1 text-lg font-black text-slate-900">오늘 바로 쓰는 메뉴</h2>
-                    </div>
-                    <button
-                        type="button"
-                        class="home-v4-mobile-menu-button"
-                        data-home-v4-mobile-menu-trigger="true"
-                        @click="menuSheetOpen = true"
-                    >
-                        <i class="fa-solid fa-bars"></i>
-                        메뉴 열기
-                    </button>
-                </div>
-                {% endif %}
 
                 <div
                     class="home-v4-mobile-overlay"
-                    data-home-v4-mobile-overlay="true"
+                    data-home-v5-mobile-overlay="true"
                     x-cloak
                     x-show="menuSheetOpen"
                     x-transition.opacity
@@ -102,9 +68,9 @@
                 ></div>
 
                 <div
-                    id="home-v4-mobile-sheet"
-                    class="home-v4-mobile-sheet"
-                    data-home-v4-mobile-sheet="true"
+                    id="home-v5-mobile-sheet"
+                    class="home-v4-mobile-sheet home-v5-mobile-sheet"
+                    data-home-v5-mobile-sheet="true"
                     x-cloak
                     x-show="menuSheetOpen"
                     x-transition:enter="transition ease-out duration-200"
@@ -116,8 +82,8 @@
                 >
                     <div class="home-v4-mobile-sheet-header">
                         <div>
-                            <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">{% if home_v4_mobile_calendar_first_enabled %}All Tools{% else %}Quick Menu{% endif %}</p>
-                            <h2 class="mt-1 text-lg font-black text-slate-900">{% if home_v4_mobile_calendar_first_enabled %}전체 도구{% else %}필요한 도구만 펼쳐서 보기{% endif %}</h2>
+                            <p class="home-v5-mobile-sheet-label">전체 도구</p>
+                            <h2 class="mt-1 text-lg font-black text-slate-900">필요한 도구만 펼쳐서 보기</h2>
                         </div>
                         <button
                             type="button"
@@ -133,12 +99,138 @@
                     </div>
                 </div>
 
-                <div class="home-v4-layout">
+                <section class="home-v5-mobile-stack" data-home-v5-mobile-stack="true">
+                    <article class="home-v5-mobile-panel" data-home-v5-mobile-workbench="true">
+                        <div class="home-v5-mobile-panel-head">
+                            <div>
+                                <p class="home-v5-mobile-eyebrow">내 작업대</p>
+                                <h2 class="home-v5-mobile-panel-title">자주 여는 도구</h2>
+                            </div>
+                        </div>
+                        {% if home_v5_mobile_workbench_items %}
+                        <div class="home-v5-mobile-workbench-grid" data-home-v5-mobile-workbench-grid="true">
+                            {% for item in home_v5_mobile_workbench_items %}
+                            {% with favorite_title=item.favorite_title|default:item.favorite_full_title %}
+                            <div
+                                class="home-v5-mobile-workbench-card product-card"
+                                data-home-v5-mobile-workbench-card="true"
+                                data-product-id="{{ item.product.id }}"
+                                data-launch-href="{{ item.href }}"
+                                data-launch-external="{{ item.is_external|yesno:'true,false' }}"
+                                data-track="quick_action"
+                                data-track-label="{{ item.favorite_full_title }}"
+                                role="button"
+                                tabindex="0"
+                            >
+                                <div class="home-v5-mobile-workbench-icon {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-violet-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-pink-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
+                                    {% if item.product.icon %}
+                                        {% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }}"></i>{% else %}{{ item.product.icon }}{% endif %}
+                                    {% else %}
+                                        <i class="fa-solid fa-sparkles"></i>
+                                    {% endif %}
+                                </div>
+                                <p class="home-v5-mobile-workbench-title" title="{{ item.favorite_full_title }}">{{ favorite_title }}</p>
+                                <button
+                                    type="button"
+                                    class="home-v5-mobile-workbench-star favorite-toggle-btn"
+                                    data-product-id="{{ item.product.id }}"
+                                    data-favorite-toggle="true"
+                                    aria-pressed="false"
+                                    aria-label="{{ item.favorite_full_title }} 즐겨찾기 토글"
+                                    title="즐겨찾기"
+                                >
+                                    <i class="fa-solid fa-star text-[9px]"></i>
+                                </button>
+                            </div>
+                            {% endwith %}
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="home-v5-mobile-empty" data-home-v5-mobile-workbench-empty="true">
+                            별표한 서비스가 여기에 모입니다.
+                        </div>
+                        {% endif %}
+                    </article>
+
+                    <article class="home-v5-mobile-panel" data-home-v5-mobile-recent="true">
+                        <div class="home-v5-mobile-panel-head">
+                            <div>
+                                <p class="home-v5-mobile-eyebrow">최근 이어서</p>
+                                <h2 class="home-v5-mobile-panel-title">방금 하던 흐름</h2>
+                            </div>
+                        </div>
+                        {% if recent_items %}
+                        <div class="home-v5-mobile-recent-list" data-home-v5-mobile-recent-list="true">
+                            {% for item in recent_items %}
+                            <a
+                                href="{{ item.href }}"
+                                class="home-v5-mobile-recent-item"
+                                data-home-v5-mobile-recent-item="true"
+                                {% if item.is_external %}target="_blank" rel="noopener"{% endif %}
+                            >
+                                <span class="home-v5-mobile-recent-icon {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-violet-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-pink-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
+                                    {% if item.product.icon %}
+                                        {% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }}"></i>{% else %}{{ item.product.icon }}{% endif %}
+                                    {% else %}
+                                        <i class="fa-solid fa-sparkles"></i>
+                                    {% endif %}
+                                </span>
+                                <span class="min-w-0 flex-1">
+                                    <span class="home-v5-mobile-recent-title">{{ item.favorite_title|default:item.favorite_full_title }}</span>
+                                    {% if item.section_title %}
+                                    <span class="home-v5-mobile-recent-meta">{{ item.section_title }}</span>
+                                    {% endif %}
+                                </span>
+                                <span class="home-v5-mobile-recent-arrow" aria-hidden="true">
+                                    <i class="fa-solid fa-chevron-right text-[11px]"></i>
+                                </span>
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="home-v5-mobile-empty" data-home-v5-mobile-recent-empty="true">
+                            최근에 사용한 서비스가 여기에 이어집니다.
+                        </div>
+                        {% endif %}
+                    </article>
+
+                    <section class="home-v5-mobile-calendar-section" data-home-v5-mobile-calendar-panel="true">
+                        {% include 'core/partials/home_calendar_panel.html' %}
+                    </section>
+
+                    {% if home_v5_mobile_recommend_items %}
+                    <article class="home-v5-mobile-panel" data-home-v5-mobile-recommend="true">
+                        <div class="home-v5-mobile-panel-head">
+                            <div>
+                                <p class="home-v5-mobile-eyebrow">추천 도구</p>
+                                <h2 class="home-v5-mobile-panel-title">이어서 쓰면 편한 것</h2>
+                            </div>
+                        </div>
+                        <div class="home-v5-mobile-recommend-list" data-home-v5-mobile-recommend-list="true">
+                            {% for item in home_v5_mobile_recommend_items %}
+                            <a
+                                href="{{ item.href }}"
+                                class="home-v5-mobile-recommend-item"
+                                data-home-v5-mobile-recommend-item="true"
+                                {% if item.is_external %}target="_blank" rel="noopener"{% endif %}
+                            >
+                                <span class="home-v5-mobile-recommend-title">{{ item.title }}</span>
+                                {% if item.reason_label %}
+                                <span class="home-v5-mobile-recommend-meta">{{ item.reason_label }}</span>
+                                {% endif %}
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </article>
+                    {% endif %}
+                </section>
+
+                <div class="home-v4-layout home-v5-desktop-layout">
                     <aside class="home-v4-nav-shell">
                         <div class="home-v4-nav-stack">
                             <div class="home-v4-card home-v4-nav-card">
                                 <div class="home-v4-nav-header">
-                                    <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Menu</p>
+                                    <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">전체 도구</p>
                                     <h2 class="mt-1 text-xl font-black text-slate-900">오늘 바로 쓰는 메뉴</h2>
                                 </div>
 
@@ -157,16 +249,12 @@
                                 </div>
                             </section>
 
-                            {% if home_v4_mobile_calendar_first_enabled %}
-                            {% include 'core/partials/home_v4_mobile_quick_tools.html' %}
-                            {% endif %}
-
                             <section class="home-v4-representative-section" data-home-v4-representative-services="true">
                                 <div class="home-v4-card">
                                     <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                                         <div>
-                                            <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Representative</p>
-                                            <h2 class="mt-1 text-xl font-black text-slate-900">대표 서비스</h2>
+                                            <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">대표 서비스</p>
+                                            <h2 class="mt-1 text-xl font-black text-slate-900">추천 도구</h2>
                                         </div>
                                     </div>
 
@@ -180,7 +268,7 @@
                                     </div>
                                     {% else %}
                                     <div class="rounded-[1.6rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center">
-                                        <p class="text-sm font-bold text-slate-600">대표 서비스가 준비되면 여기에 먼저 보여줍니다.</p>
+                                        <p class="text-sm font-bold text-slate-600">추천 도구가 준비되면 여기에 먼저 보여줍니다.</p>
                                     </div>
                                     {% endif %}
 
@@ -205,10 +293,10 @@
                         </div>
 
                         <div class="home-v4-side-stack">
-                            <article class="home-v4-card home-v4-top-favorites{% if home_v4_mobile_calendar_first_enabled %} home-v4-desktop-favorites{% endif %}" data-home-v4-favorites-panel="true">
+                            <article class="home-v4-card home-v4-top-favorites" data-home-v4-favorites-panel="true">
                                 <div class="mb-4 flex items-center gap-2">
                                     <i class="fa-solid fa-star text-amber-500"></i>
-                                    <h2 class="text-lg font-black text-slate-900">즐겨찾기 빠른 실행</h2>
+                                    <h2 class="text-lg font-black text-slate-900">내 작업대</h2>
                                 </div>
 
                                 {% if favorite_items %}
@@ -276,8 +364,6 @@
                                 {% include 'core/partials/sns_widget.html' with embed_mode='full' compact_posts=True %}
                             </section>
                         </div>
-
-                        {% include 'core/partials/home_v4_developer_chat_card.html' with card_variant='mobile' %}
                     </div>
                 </div>
             </div>

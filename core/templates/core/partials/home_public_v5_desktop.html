@@ -1,0 +1,162 @@
+<section class="home-public-v4-surface rounded-[2rem] px-5 py-8 sm:px-7 md:px-10 md:py-10" data-home-v4-public-belief="true">
+    <span class="home-public-v4-kicker inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-black">
+        <span class="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+        오늘 바로 쓰는 교실 도구
+    </span>
+    <h1 class="home-public-v4-title mt-5 text-4xl font-black leading-[1.02] text-slate-900 break-keep sm:text-5xl md:text-6xl">
+        교실 일은,
+        <span class="home-public-v4-accent mt-2 block">더 단순해야 합니다</span>
+    </h1>
+    <p class="mt-5 max-w-2xl text-base font-semibold leading-7 text-slate-600 break-keep">
+        에듀잇잇은 선생님이 설명을 읽기 전에 바로 시작할 수 있는 도구를 만듭니다.
+    </p>
+    <div class="mt-6 flex flex-wrap gap-2.5">
+        <span class="home-public-v4-keyword rounded-full px-3.5 py-2 text-sm font-black text-slate-700">설명보다 실행</span>
+        <span class="home-public-v4-keyword rounded-full px-3.5 py-2 text-sm font-black text-slate-700">교사 시간을 아낌</span>
+        <span class="home-public-v4-keyword rounded-full px-3.5 py-2 text-sm font-black text-slate-700">바로 써서 끝냄</span>
+    </div>
+</section>
+
+{% if representative_products %}
+<section class="mt-4" data-home-v4-public-featured="true">
+    <div class="home-public-v4-surface rounded-[1.85rem] p-5 sm:p-6">
+        <p class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">대표 서비스</p>
+        <div class="mt-3 grid gap-3 md:grid-cols-2" data-home-v4-public-representatives="true">
+            {% for product in representative_products %}
+            <article class="home-public-v4-card rounded-[1.5rem] p-4 sm:p-5">
+                <div class="flex h-full flex-col gap-5">
+                    <div class="flex items-start gap-4">
+                        <div class="home-public-v4-icon flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl shadow-sm {% if product.service_type == 'collect_sign' %}text-blue-500{% elif product.service_type == 'classroom' %}text-violet-500{% elif product.service_type == 'work' %}text-emerald-500{% elif product.service_type == 'game' %}text-red-500{% elif product.service_type == 'counsel' %}text-pink-500{% elif product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
+                            {% if product.icon %}
+                                {% if "fa-" in product.icon %}
+                                <i class="{{ product.icon }}"></i>
+                                {% else %}
+                                {{ product.icon }}
+                                {% endif %}
+                            {% else %}
+                            <i class="fa-solid fa-sparkles"></i>
+                            {% endif %}
+                        </div>
+                        <div class="min-w-0">
+                            <h2 class="text-2xl font-black text-slate-900 break-keep">
+                                {{ product.public_service_name|default:product.title }}
+                            </h2>
+                            <p class="mt-2 text-sm font-semibold leading-6 text-slate-600 break-keep">
+                                {{ product.home_landing_summary|truncatechars:96 }}
+                            </p>
+                        </div>
+                    </div>
+                    <a href="{{ product.home_landing_cta_href }}"
+                        {% if product.home_landing_cta_is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+                        class="home-public-v4-primary-link inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-black text-white whitespace-nowrap transition">
+                        {{ product.home_landing_cta_label }}
+                        <i class="fa-solid fa-{% if product.home_landing_cta_is_external %}arrow-up-right-from-square{% else %}arrow-right{% endif %} text-xs"></i>
+                    </a>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% elif featured_product %}
+<section class="mt-4" data-home-v4-public-featured="true">
+    <div class="home-public-v4-surface rounded-[1.85rem] p-5 sm:p-6">
+        <p class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">대표 서비스</p>
+        <div class="home-public-v4-card mt-3 rounded-[1.5rem] p-4 sm:p-5">
+            <div class="flex flex-col gap-5 sm:gap-6 md:flex-row md:items-center md:justify-between">
+                <div class="flex items-start gap-4">
+                    <div class="home-public-v4-icon flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl shadow-sm {% if featured_product.service_type == 'collect_sign' %}text-blue-500{% elif featured_product.service_type == 'classroom' %}text-violet-500{% elif featured_product.service_type == 'work' %}text-emerald-500{% elif featured_product.service_type == 'game' %}text-red-500{% elif featured_product.service_type == 'counsel' %}text-pink-500{% elif featured_product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
+                        {% if featured_product.icon %}
+                            {% if "fa-" in featured_product.icon %}
+                            <i class="{{ featured_product.icon }}"></i>
+                            {% else %}
+                            {{ featured_product.icon }}
+                            {% endif %}
+                        {% else %}
+                        <i class="fa-solid fa-sparkles"></i>
+                        {% endif %}
+                    </div>
+                    <div class="min-w-0">
+                        <h2 class="text-2xl font-black text-slate-900 break-keep">
+                            {{ featured_product.public_service_name|default:featured_product.title }}
+                        </h2>
+                        <p class="mt-2 text-sm font-semibold leading-6 text-slate-600 break-keep">
+                            {{ featured_product.home_landing_summary|truncatechars:96 }}
+                        </p>
+                    </div>
+                </div>
+                <a href="{{ featured_product.home_landing_cta_href }}"
+                    {% if featured_product.home_landing_cta_is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+                    class="home-public-v4-primary-link inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-black text-white whitespace-nowrap transition sm:w-auto">
+                    {{ featured_product.home_landing_cta_label }}
+                    <i class="fa-solid fa-{% if featured_product.home_landing_cta_is_external %}arrow-up-right-from-square{% else %}arrow-right{% endif %} text-xs"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+{% if guest_rotation_cards %}
+<section class="mt-4" data-home-v4-public-rotation="true">
+    <div class="home-public-v4-surface rounded-[1.85rem] p-5 sm:p-6" data-guest-rotation data-guest-rotation-interval="5000">
+        <p class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">비로그인으로 바로</p>
+        <h2 class="mt-2 text-2xl font-black text-slate-900 break-keep">지금 써볼 수 있는 서비스</h2>
+        <div class="mt-4">
+            {% for card in guest_rotation_cards %}
+            <article class="home-public-v4-card home-public-v4-rotation-slide rounded-[1.5rem] p-4 sm:p-5"
+                data-guest-rotation-slide="{{ forloop.counter0 }}"
+                data-guest-rotation-active="{% if forloop.first %}true{% else %}false{% endif %}"
+                aria-hidden="{% if forloop.first %}false{% else %}true{% endif %}"
+                {% if not forloop.first %}hidden{% endif %}>
+                <div class="flex flex-col gap-5 sm:gap-6 md:flex-row md:items-center md:justify-between">
+                    <div class="flex items-start gap-4">
+                        <div class="home-public-v4-icon flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl shadow-sm">
+                            {% if card.icon %}
+                                {% if "fa-" in card.icon %}
+                                <i class="{{ card.icon }}"></i>
+                                {% else %}
+                                {{ card.icon }}
+                                {% endif %}
+                            {% else %}
+                            <i class="fa-solid fa-sparkles"></i>
+                            {% endif %}
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-xs font-black text-slate-400">비로그인 체험</p>
+                            <h3 class="mt-1 text-2xl font-black text-slate-900 break-keep">{{ card.title }}</h3>
+                            <p class="mt-2 text-sm font-semibold leading-6 text-slate-600 break-keep">
+                                {{ card.description|truncatechars:96 }}
+                            </p>
+                        </div>
+                    </div>
+                    <a href="{{ card.href }}"
+                        {% if card.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+                        class="home-public-v4-primary-link inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-black text-white whitespace-nowrap transition sm:w-auto">
+                        {{ card.cta_label }}
+                        <i class="fa-solid fa-{% if card.is_external %}arrow-up-right-from-square{% else %}arrow-right{% endif %} text-xs"></i>
+                    </a>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        <div class="mt-5 flex items-center justify-center gap-2" data-home-v4-public-rotation-dots="true">
+            {% for card in guest_rotation_cards %}
+            <button type="button"
+                class="home-public-v4-dot"
+                data-guest-rotation-dot="{{ forloop.counter0 }}"
+                aria-label="{{ card.title }} 보기"
+                aria-current="{% if forloop.first %}true{% else %}false{% endif %}"
+                aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}"></button>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<div class="mt-5 text-center" data-home-v4-public-login-cta="true">
+    <a href="{{ login_url }}" class="home-public-v4-secondary-link inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-black text-slate-700 whitespace-nowrap transition hover:-translate-y-0.5 hover:border-slate-300 hover:text-slate-900">
+        로그인 후 전체 서비스 보기
+        <i class="fa-solid fa-right-to-bracket text-xs"></i>
+    </a>
+</div>

@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title|default:'에듀잇잇 - 선생님의 스마트한 하루' }}{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'core/css/home_public_v5.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const rotationRoot = document.querySelector('[data-guest-rotation]');
+    if (!rotationRoot) return;
+
+    const slides = Array.from(rotationRoot.querySelectorAll('[data-guest-rotation-slide]'));
+    const dots = Array.from(rotationRoot.querySelectorAll('[data-guest-rotation-dot]'));
+    if (!slides.length) return;
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const intervalMs = Number(rotationRoot.dataset.guestRotationInterval || '5000');
+    let activeIndex = Math.max(0, slides.findIndex((slide) => slide.dataset.guestRotationActive === 'true'));
+    let timerId = null;
+
+    const syncState = (nextIndex) => {
+        activeIndex = nextIndex;
+        slides.forEach((slide, index) => {
+            const isActive = index === nextIndex;
+            slide.hidden = !isActive;
+            slide.dataset.guestRotationActive = isActive ? 'true' : 'false';
+            slide.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+        });
+
+        dots.forEach((dot, index) => {
+            const isActive = index === nextIndex;
+            dot.setAttribute('aria-current', isActive ? 'true' : 'false');
+            dot.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+    };
+
+    const stopRotation = () => {
+        if (timerId) {
+            window.clearInterval(timerId);
+            timerId = null;
+        }
+    };
+
+    const startRotation = () => {
+        if (prefersReducedMotion || slides.length < 2 || timerId || document.hidden) return;
+        timerId = window.setInterval(() => {
+            syncState((activeIndex + 1) % slides.length);
+        }, intervalMs);
+    };
+
+    dots.forEach((dot, index) => {
+        dot.addEventListener('click', () => {
+            stopRotation();
+            syncState(index);
+            startRotation();
+        });
+    });
+
+    rotationRoot.addEventListener('mouseenter', stopRotation);
+    rotationRoot.addEventListener('mouseleave', startRotation);
+    rotationRoot.addEventListener('focusin', stopRotation);
+    rotationRoot.addEventListener('focusout', () => {
+        window.setTimeout(() => {
+            if (!rotationRoot.contains(document.activeElement)) {
+                startRotation();
+            }
+        }, 0);
+    });
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            stopRotation();
+            return;
+        }
+        startRotation();
+    });
+
+    syncState(activeIndex);
+    startRotation();
+});
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen home-public-v5-page" data-home-v5-public-shell="true">
+    <div class="mx-auto home-public-v5-stage" style="padding-top: calc(var(--main-nav-height, 88px) + 1rem);">
+        <main class="px-4 pb-16 sm:px-5 md:px-6">
+            <section class="home-public-v5-mobile-stack" data-home-v5-public-mobile-stack="true">
+                <section class="home-public-v5-mobile-surface" data-home-v5-public-hero="true">
+                    <span class="home-public-v5-kicker">
+                        <span class="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+                        지금 바로 시작
+                    </span>
+                    <h1 class="home-public-v5-title">로그인 없이도 먼저 써볼 수 있습니다</h1>
+                    <p class="home-public-v5-summary">공개 도구를 먼저 열어 보고, 필요한 순간에만 로그인해서 교실 업무를 이어가세요.</p>
+                    <div class="home-public-v5-keywords">
+                        <span class="home-public-v5-keyword">설명보다 실행</span>
+                        <span class="home-public-v5-keyword">공개 도구 먼저</span>
+                    </div>
+                </section>
+
+                {% if featured_product %}
+                <section class="home-public-v5-mobile-surface" data-home-v5-public-featured-mobile="true">
+                    <div class="home-public-v5-head">
+                        <div>
+                            <p class="home-public-v5-eyebrow">대표 서비스</p>
+                            <h2 class="home-public-v5-panel-title">먼저 많이 찾는 도구</h2>
+                        </div>
+                    </div>
+                    <article class="home-public-v5-featured-card">
+                        <div class="flex items-start gap-3">
+                            <div class="home-public-v5-icon {% if featured_product.service_type == 'collect_sign' %}text-blue-500{% elif featured_product.service_type == 'classroom' %}text-violet-500{% elif featured_product.service_type == 'work' %}text-emerald-500{% elif featured_product.service_type == 'game' %}text-red-500{% elif featured_product.service_type == 'counsel' %}text-pink-500{% elif featured_product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
+                                {% if featured_product.icon %}
+                                    {% if "fa-" in featured_product.icon %}<i class="{{ featured_product.icon }}"></i>{% else %}{{ featured_product.icon }}{% endif %}
+                                {% else %}
+                                    <i class="fa-solid fa-sparkles"></i>
+                                {% endif %}
+                            </div>
+                            <div class="min-w-0">
+                                <h3 class="home-public-v5-featured-title">{{ featured_product.public_service_name|default:featured_product.title }}</h3>
+                                <p class="home-public-v5-featured-summary">{{ featured_product.home_landing_summary|truncatechars:82 }}</p>
+                            </div>
+                        </div>
+                        <a href="{{ featured_product.home_landing_cta_href }}"
+                            {% if featured_product.home_landing_cta_is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+                            class="home-public-v5-primary-link">
+                            {{ featured_product.home_landing_cta_label }}
+                            <i class="fa-solid fa-{% if featured_product.home_landing_cta_is_external %}arrow-up-right-from-square{% else %}arrow-right{% endif %} text-xs"></i>
+                        </a>
+                    </article>
+                </section>
+                {% endif %}
+
+                {% if guest_public_cards %}
+                <section class="home-public-v5-mobile-surface" data-home-v5-public-grid-panel="true">
+                    <div class="home-public-v5-head">
+                        <div>
+                            <p class="home-public-v5-eyebrow">지금 바로 써보기</p>
+                            <h2 class="home-public-v5-panel-title">공개 도구</h2>
+                        </div>
+                    </div>
+                    <div class="home-public-v5-grid" data-home-v5-public-grid="true">
+                        {% for card in guest_public_cards %}
+                        <a
+                            href="{{ card.href }}"
+                            class="home-public-v5-grid-card"
+                            data-home-v5-public-card="true"
+                            {% if card.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+                        >
+                            <div class="home-public-v5-grid-head">
+                                <span class="home-public-v5-grid-icon {% if card.service_type == 'collect_sign' %}text-blue-500{% elif card.service_type == 'classroom' %}text-violet-500{% elif card.service_type == 'work' %}text-emerald-500{% elif card.service_type == 'game' %}text-red-500{% elif card.service_type == 'counsel' %}text-pink-500{% elif card.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
+                                    {% if card.icon %}
+                                        {% if "fa-" in card.icon %}<i class="{{ card.icon }}"></i>{% else %}{{ card.icon }}{% endif %}
+                                    {% else %}
+                                        <i class="fa-solid fa-sparkles"></i>
+                                    {% endif %}
+                                </span>
+                                <span class="home-public-v5-grid-badge">{{ card.access_status_label }}</span>
+                            </div>
+                            <h3 class="home-public-v5-grid-title">{{ card.title }}</h3>
+                            <p class="home-public-v5-grid-summary">{{ card.description|truncatechars:52 }}</p>
+                            <span class="home-public-v5-grid-cta">
+                                {% if card.is_external %}새 창에서 시작{% else %}바로 시작{% endif %}
+                            </span>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </section>
+                {% endif %}
+
+                <section class="home-public-v5-mobile-surface home-public-v5-login-band" data-home-v5-public-login-cta="true">
+                    <div class="min-w-0">
+                        <p class="home-public-v5-eyebrow">로그인 후 확장</p>
+                        <h2 class="home-public-v5-panel-title">더 많은 교실 업무를 이어서 처리</h2>
+                        <p class="home-public-v5-login-copy">수합, 문서, 운영 도구는 로그인 후 같은 자리에서 이어집니다.</p>
+                    </div>
+                    <a href="{{ login_url }}" class="home-public-v5-secondary-link">
+                        로그인 후 전체 서비스 보기
+                        <i class="fa-solid fa-right-to-bracket text-xs"></i>
+                    </a>
+                </section>
+            </section>
+
+            <section class="home-public-v5-desktop" data-home-v5-public-desktop="true">
+                {% include 'core/partials/home_public_v5_desktop.html' %}
+            </section>
+        </main>
+    </div>
+</div>
+{% endblock %}
