@@ -313,6 +313,27 @@
     min-width: 0;
 }
 
+.home-v5-mobile-sns-panel {
+    min-width: 0;
+}
+
+.home-v5-mobile-sns {
+    display: block;
+}
+
+.home-v5-mobile-sns .sns-preview-card {
+    background: #ffffff;
+    border-radius: 1.5rem;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.home-v5-mobile-sns .sns-preview-card:hover {
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+    transform: translateY(-1px);
+}
+
 .home-v5-desktop-layout {
     display: none;
 }

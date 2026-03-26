@@ -150,75 +150,13 @@
                         {% endif %}
                     </article>
 
-                    <article class="home-v5-mobile-panel" data-home-v5-mobile-recent="true">
-                        <div class="home-v5-mobile-panel-head">
-                            <div>
-                                <h2 class="home-v5-mobile-panel-title">최근 이어서</h2>
-                            </div>
-                        </div>
-                        {% if recent_items %}
-                        <div class="home-v5-mobile-recent-list" data-home-v5-mobile-recent-list="true">
-                            {% for item in recent_items %}
-                            <a
-                                href="{{ item.href }}"
-                                class="home-v5-mobile-recent-item"
-                                data-home-v5-mobile-recent-item="true"
-                                {% if item.is_external %}target="_blank" rel="noopener"{% endif %}
-                            >
-                                <span class="home-v5-mobile-recent-icon {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-violet-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-pink-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
-                                    {% if item.product.icon %}
-                                        {% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }}"></i>{% else %}{{ item.product.icon }}{% endif %}
-                                    {% else %}
-                                        <i class="fa-solid fa-sparkles"></i>
-                                    {% endif %}
-                                </span>
-                                <span class="min-w-0 flex-1">
-                                    <span class="home-v5-mobile-recent-title">{{ item.favorite_title|default:item.favorite_full_title }}</span>
-                                    {% if item.section_title %}
-                                    <span class="home-v5-mobile-recent-meta">{{ item.section_title }}</span>
-                                    {% endif %}
-                                </span>
-                                <span class="home-v5-mobile-recent-arrow" aria-hidden="true">
-                                    <i class="fa-solid fa-chevron-right text-[11px]"></i>
-                                </span>
-                            </a>
-                            {% endfor %}
-                        </div>
-                        {% else %}
-                        <div class="home-v5-mobile-empty" data-home-v5-mobile-recent-empty="true">
-                            최근 기록이 없습니다.
-                        </div>
-                        {% endif %}
-                    </article>
-
                     <section class="home-v5-mobile-calendar-section" data-home-v5-mobile-calendar-panel="true">
                         {% include 'core/partials/home_calendar_panel.html' %}
                     </section>
 
-                    {% if home_v5_mobile_recommend_items %}
-                    <article class="home-v5-mobile-panel" data-home-v5-mobile-recommend="true">
-                        <div class="home-v5-mobile-panel-head">
-                            <div>
-                                <h2 class="home-v5-mobile-panel-title">추천 도구</h2>
-                            </div>
-                        </div>
-                        <div class="home-v5-mobile-recommend-list" data-home-v5-mobile-recommend-list="true">
-                            {% for item in home_v5_mobile_recommend_items %}
-                            <a
-                                href="{{ item.href }}"
-                                class="home-v5-mobile-recommend-item"
-                                data-home-v5-mobile-recommend-item="true"
-                                {% if item.is_external %}target="_blank" rel="noopener"{% endif %}
-                            >
-                                <span class="home-v5-mobile-recommend-title">{{ item.title }}</span>
-                                {% if item.reason_label %}
-                                <span class="home-v5-mobile-recommend-meta">{{ item.reason_label }}</span>
-                                {% endif %}
-                            </a>
-                            {% endfor %}
-                        </div>
-                    </article>
-                    {% endif %}
+                    <section class="home-v5-mobile-sns-panel" data-home-v5-mobile-sns="true">
+                        {% include 'core/partials/sns_mobile_preview_panel.html' with root_class='home-v5-mobile-sns' section_id='sns-full-section-auth-v5' start_open='false' %}
+                    </section>
                 </section>
 
                 <div class="home-v4-layout home-v5-desktop-layout">

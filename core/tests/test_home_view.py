@@ -2596,17 +2596,17 @@ class HomeV5ViewTest(TestCase):
         self.assertIn('data-home-design-version="v5"', content)
         self.assertIn('data-home-v5-mobile-summary="true"', content)
         self.assertIn('data-home-v5-mobile-workbench="true"', content)
-        self.assertIn('data-home-v5-mobile-recent="true"', content)
         self.assertIn('data-home-v5-mobile-calendar-panel="true"', content)
-        self.assertIn('data-home-v5-mobile-recommend="true"', content)
+        self.assertIn('data-home-v5-mobile-sns="true"', content)
+        self.assertIn('sns-full-section-auth-v5', content)
         self.assertIn('data-home-v5-mobile-all-tools-button="true"', content)
         self.assertIn('내 작업대', content)
-        self.assertIn('최근 이어서', content)
-        self.assertIn('추천 도구', content)
         self.assertIn('data-favorite-toggle="true"', content)
         self.assertNotIn('data-home-v4-public-shell="true"', content)
         self.assertNotIn('data-home-v4-mobile-menu-trigger="true"', content)
         self.assertNotIn('data-home-v4-mobile-quick-tools="true"', content)
+        self.assertNotIn('data-home-v5-mobile-recent="true"', content)
+        self.assertNotIn('data-home-v5-mobile-recommend="true"', content)
         self.assertNotIn('Quick Tools', content)
         self.assertNotIn('All Tools', content)
         self.assertNotIn('Representative', content)
@@ -2635,14 +2635,14 @@ class HomeV5ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         workbench_index = content.index('data-home-v5-mobile-workbench="true"')
-        recent_index = content.index('data-home-v5-mobile-recent="true"')
         calendar_index = content.index('data-home-v5-mobile-calendar-panel="true"')
-        workbench_block = content[workbench_index:recent_index]
+        sns_index = content.index('data-home-v5-mobile-sns="true"')
+        workbench_block = content[workbench_index:calendar_index]
 
         self.assertEqual(workbench_block.count('data-home-v5-mobile-workbench-card="true"'), 5)
         self.assertIn('title="즐겨찾기 서비스 5">즐겨찾기 서비스 5</p>', workbench_block)
-        self.assertLess(workbench_index, recent_index)
-        self.assertLess(recent_index, calendar_index)
+        self.assertLess(workbench_index, calendar_index)
+        self.assertLess(calendar_index, sns_index)
 
     def test_v5_anonymous_home_keeps_existing_public_v4_surface(self):
         Product.objects.create(
