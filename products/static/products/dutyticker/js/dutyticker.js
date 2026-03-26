@@ -246,6 +246,87 @@ class DutyTickerManager {
         });
     }
 
+    getAdaptiveDensityOrder(displayMode = 'windowed') {
+        return displayMode === 'fullscreen'
+            ? ['hero', 'presentation', 'balanced', 'compact']
+            : ['presentation', 'balanced', 'compact'];
+    }
+
+    measureMissionStackState() {
+        if (this.missionPanelCollapsed) {
+            return {
+                gap: Number.POSITIVE_INFINITY,
+                pressure: 0,
+                timerMainOverflow: 0,
+                timerCardOverflow: 0,
+                fit: 'normal',
+                needsMoreCompression: false,
+            };
+        }
+
+        const timerMain = document.querySelector('.dt-timer-main');
+        const timerCard = document.querySelector('.dt-timer-card');
+        const timerDisplay = document.getElementById('mainTimerDisplay');
+        const missionStage = document.querySelector('.dt-mission-stage');
+
+        if (!timerMain || !timerCard || !timerDisplay || !missionStage) {
+            return {
+                gap: Number.POSITIVE_INFINITY,
+                pressure: 0,
+                timerMainOverflow: 0,
+                timerCardOverflow: 0,
+                fit: 'normal',
+                needsMoreCompression: false,
+            };
+        }
+
+        const displayRect = timerDisplay.getBoundingClientRect();
+        const missionRect = missionStage.getBoundingClientRect();
+        const gap = missionRect.top - displayRect.bottom;
+        const timerMainOverflow = Math.max(0, Math.ceil(timerMain.scrollHeight - timerMain.clientHeight));
+        const timerCardOverflow = Math.max(0, Math.ceil(timerCard.scrollHeight - timerCard.clientHeight));
+        const desiredGap = 14;
+        const pressure = Math.max(desiredGap - gap, timerMainOverflow, timerCardOverflow);
+
+        let fit = 'normal';
+        if (pressure > 22 || gap < -12 || timerMainOverflow > 18 || timerCardOverflow > 18) {
+            fit = 'critical';
+        } else if (pressure > 6 || gap < 6 || timerMainOverflow > 8 || timerCardOverflow > 8) {
+            fit = 'tight';
+        }
+
+        return {
+            gap,
+            pressure,
+            timerMainOverflow,
+            timerCardOverflow,
+            fit,
+            needsMoreCompression: pressure > 2,
+        };
+    }
+
+    resolveAdaptiveDensity(app, displayMode, baseDensity) {
+        const densityOrder = this.getAdaptiveDensityOrder(displayMode);
+        const startIndex = Math.max(0, densityOrder.indexOf(baseDensity));
+        let resolvedDensity = densityOrder[startIndex] || densityOrder[0] || baseDensity;
+        let measurement = {
+            fit: 'normal',
+            needsMoreCompression: false,
+        };
+
+        for (let index = startIndex; index < densityOrder.length; index += 1) {
+            resolvedDensity = densityOrder[index];
+            app.setAttribute('data-layout-density', resolvedDensity);
+            measurement = this.measureMissionStackState();
+            if (!measurement.needsMoreCompression || index === densityOrder.length - 1) break;
+        }
+
+        return {
+            density: resolvedDensity,
+            fit: measurement.fit || 'normal',
+        };
+    }
+
     applyAdaptiveLayoutState() {
         const app = document.getElementById('mainAppContainer');
         const leftColumn = document.querySelector('.dt-left-column');
@@ -288,7 +369,11 @@ class DutyTickerManager {
         }
 
         app.setAttribute('data-display-mode', displayMode);
+        app.setAttribute('data-mission-stack-fit', 'normal');
+        const resolvedLayout = this.resolveAdaptiveDensity(app, displayMode, density);
+        density = resolvedLayout.density;
         app.setAttribute('data-layout-density', density);
+        app.setAttribute('data-mission-stack-fit', this.missionPanelCollapsed ? 'normal' : resolvedLayout.fit);
         if (previousDensity !== density || previousDisplayMode !== displayMode) {
             this.renderSchedule();
         }

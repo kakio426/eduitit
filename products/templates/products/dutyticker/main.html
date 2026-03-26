@@ -2259,6 +2259,173 @@
         word-break: keep-all;
     }
 
+    #mainAppContainer[data-mission-panel="expanded"][data-mission-stack-fit="tight"] .dt-timer-card {
+        padding: clamp(1rem, 1.56vw, 1.32rem);
+    }
+
+    #mainAppContainer[data-mission-panel="expanded"][data-mission-stack-fit="tight"] .dt-timer-main {
+        gap: clamp(0.22rem, 0.48vh, 0.42rem);
+    }
+
+    #mainAppContainer[data-mission-panel="expanded"][data-mission-stack-fit="tight"] .dt-clock-stage {
+        align-items: flex-end;
+        padding-top: 0;
+    }
+
+    #mainAppContainer[data-mission-panel="expanded"][data-mission-stack-fit="tight"] .dt-clock-shell {
+        width: min(100%, 44rem);
+        padding: clamp(0.18rem, 0.42vw, 0.34rem) clamp(0.5rem, 0.9vw, 0.72rem);
+    }
+
+    #mainAppContainer[data-mission-panel="expanded"][data-mission-stack-fit="tight"] .dt-mission-stage {
+        width: min(100%, 38rem);
+        padding: clamp(0.28rem, 0.56vw, 0.46rem) clamp(0.54rem, 0.94vw, 0.78rem);
+    }
+
+    #mainAppContainer[data-mission-panel="expanded"][data-mission-stack-fit="tight"] .dt-mission-lane {
+        gap: clamp(0.14rem, 0.3vh, 0.24rem);
+    }
+
+    #mainAppContainer[data-mission-panel="expanded"][data-mission-stack-fit="tight"] .dt-mission-kicker {
+        padding: 0.2rem 0.46rem;
+        font-size: clamp(
+            calc(0.46rem * var(--dt-mission-kicker-scale)),
+            calc((0.48rem * var(--dt-mission-kicker-scale)) + (0.04vw * var(--dt-mission-kicker-scale))),
+            calc(0.56rem * var(--dt-mission-kicker-scale))
+        );
+    }
+
+    #mainAppContainer[data-mission-panel="expanded"][data-mission-stack-fit="tight"] #mainTimerDisplay {
+        font-size: clamp(
+            calc(2.72rem * var(--dt-timer-font-scale)),
+            min(
+                calc(10.8vw * var(--dt-timer-font-scale)),
+                calc(10.2vh * var(--dt-timer-font-scale))
+            ),
+            calc(5.8rem * var(--dt-timer-font-scale))
+        );
+        line-height: 0.84;
+    }
+
+    #mainAppContainer[data-mission-panel="expanded"][data-mission-stack-fit="tight"] #mainMissionTitle {
+        font-size: clamp(
+            calc(1.08rem * var(--dt-mission-title-scale)),
+            calc(2vw * var(--dt-mission-title-scale)),
+            calc(1.68rem * var(--dt-mission-title-scale))
+        );
+        line-height: 1.02;
+        max-width: min(100%, 20rem);
+    }
+
+    #mainAppContainer[data-mission-panel="expanded"][data-mission-stack-fit="tight"] #mainMissionDesc {
+        font-size: clamp(
+            calc(0.72rem * var(--dt-mission-desc-scale)),
+            calc(0.88vw * var(--dt-mission-desc-scale)),
+            calc(0.86rem * var(--dt-mission-desc-scale))
+        );
+        max-width: min(100%, 26rem);
+        line-height: 1.08;
+        word-break: keep-all;
+    }
+
+    #mainAppContainer[data-mission-panel="expanded"][data-mission-stack-fit="tight"] #timerControls {
+        margin-top: clamp(0.28rem, 0.7vh, 0.5rem);
+        row-gap: 0.34rem;
+        column-gap: 0.34rem;
+    }
+
+    #mainAppContainer[data-mission-panel="expanded"][data-mission-stack-fit="tight"] #timerControls .timer-btn,
+    #mainAppContainer[data-mission-panel="expanded"][data-mission-stack-fit="tight"] #timerControls .timer-reset-btn {
+        padding: 0.42rem 0.68rem;
+        font-size: 0.82rem;
+    }
+
+    #mainAppContainer[data-mission-panel="expanded"][data-mission-stack-fit="tight"] #timerControls .timer-custom-wrap,
+    #mainAppContainer[data-mission-panel="expanded"][data-mission-stack-fit="tight"] #timerControls .mission-font-wrap,
+    #mainAppContainer[data-mission-panel="expanded"][data-mission-stack-fit="tight"] #timerControls .mission-quick-wrap {
+        padding: 0.28rem 0.44rem;
+    }
+
+    #mainAppContainer[data-mission-panel="expanded"][data-mission-stack-fit="critical"] .dt-timer-card {
+        padding: clamp(0.88rem, 1.28vw, 1.14rem);
+    }
+
+    #mainAppContainer[data-mission-panel="expanded"][data-mission-stack-fit="critical"] .dt-timer-main {
+        gap: clamp(0.14rem, 0.34vh, 0.28rem);
+    }
+
+    #mainAppContainer[data-mission-panel="expanded"][data-mission-stack-fit="critical"] .dt-clock-stage {
+        align-items: flex-end;
+        padding-top: 0;
+    }
+
+    #mainAppContainer[data-mission-panel="expanded"][data-mission-stack-fit="critical"] .dt-clock-shell {
+        width: min(100%, 40rem);
+        padding: clamp(0.14rem, 0.3vw, 0.26rem) clamp(0.42rem, 0.76vw, 0.62rem);
+    }
+
+    #mainAppContainer[data-mission-panel="expanded"][data-mission-stack-fit="critical"] .dt-mission-stage {
+        width: min(100%, 34rem);
+        padding: clamp(0.22rem, 0.46vw, 0.38rem) clamp(0.46rem, 0.8vw, 0.68rem);
+    }
+
+    #mainAppContainer[data-mission-panel="expanded"][data-mission-stack-fit="critical"] .dt-mission-lane {
+        gap: clamp(0.1rem, 0.22vh, 0.18rem);
+    }
+
+    #mainAppContainer[data-mission-panel="expanded"][data-mission-stack-fit="critical"] .dt-mission-kicker {
+        padding: 0.18rem 0.4rem;
+        font-size: clamp(
+            calc(0.42rem * var(--dt-mission-kicker-scale)),
+            calc((0.44rem * var(--dt-mission-kicker-scale)) + (0.03vw * var(--dt-mission-kicker-scale))),
+            calc(0.5rem * var(--dt-mission-kicker-scale))
+        );
+    }
+
+    #mainAppContainer[data-mission-panel="expanded"][data-mission-stack-fit="critical"] #mainTimerDisplay {
+        font-size: clamp(
+            calc(2.28rem * var(--dt-timer-font-scale)),
+            min(
+                calc(9.6vw * var(--dt-timer-font-scale)),
+                calc(9.2vh * var(--dt-timer-font-scale))
+            ),
+            calc(5rem * var(--dt-timer-font-scale))
+        );
+        line-height: 0.82;
+    }
+
+    #mainAppContainer[data-mission-panel="expanded"][data-mission-stack-fit="critical"] #mainMissionTitle {
+        font-size: clamp(
+            calc(0.96rem * var(--dt-mission-title-scale)),
+            calc(1.72vw * var(--dt-mission-title-scale)),
+            calc(1.46rem * var(--dt-mission-title-scale))
+        );
+        line-height: 1;
+        max-width: min(100%, 18rem);
+    }
+
+    #mainAppContainer[data-mission-panel="expanded"][data-mission-stack-fit="critical"] #mainMissionDesc {
+        display: none;
+    }
+
+    #mainAppContainer[data-mission-panel="expanded"][data-mission-stack-fit="critical"] #timerControls {
+        margin-top: clamp(0.18rem, 0.46vh, 0.36rem);
+        row-gap: 0.28rem;
+        column-gap: 0.28rem;
+    }
+
+    #mainAppContainer[data-mission-panel="expanded"][data-mission-stack-fit="critical"] #timerControls .timer-btn,
+    #mainAppContainer[data-mission-panel="expanded"][data-mission-stack-fit="critical"] #timerControls .timer-reset-btn {
+        padding: 0.36rem 0.58rem;
+        font-size: 0.76rem;
+    }
+
+    #mainAppContainer[data-mission-panel="expanded"][data-mission-stack-fit="critical"] #timerControls .timer-custom-wrap,
+    #mainAppContainer[data-mission-panel="expanded"][data-mission-stack-fit="critical"] #timerControls .mission-font-wrap,
+    #mainAppContainer[data-mission-panel="expanded"][data-mission-stack-fit="critical"] #timerControls .mission-quick-wrap {
+        padding: 0.24rem 0.38rem;
+    }
+
     #mainAppContainer[data-layout-density="presentation"] #timerControls {
         margin-top: clamp(0.66rem, 1.45vh, 1.08rem);
         row-gap: 0.54rem;
@@ -3040,7 +3207,7 @@
 
 {% block content %}
 <!-- Main App Container -->
-<div id="mainAppContainer" data-mission-panel="collapsed" data-role-view-mode="compact" data-layout-density="presentation" data-display-mode="windowed"
+<div id="mainAppContainer" data-mission-panel="collapsed" data-mission-stack-fit="normal" data-role-view-mode="compact" data-layout-density="presentation" data-display-mode="windowed"
     class="fixed inset-0 bg-slate-900 text-white p-4 md:p-6 font-sans overflow-x-hidden overflow-y-auto flex flex-col z-[100]">
 
     <!-- Header -->
