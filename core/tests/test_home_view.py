@@ -2638,7 +2638,7 @@ class HomeV5ViewTest(TestCase):
         self.assertLess(workbench_index, recent_index)
         self.assertLess(recent_index, calendar_index)
 
-    def test_v5_anonymous_home_uses_public_v5_template_and_mobile_grid(self):
+    def test_v5_anonymous_home_keeps_existing_public_v4_surface(self):
         Product.objects.create(
             title="공개 수합",
             description="제출 흐름을 바로 볼 수 있어요",
@@ -2663,18 +2663,15 @@ class HomeV5ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertTemplateUsed(response, 'core/home_public_v5.html')
+        self.assertTemplateUsed(response, 'core/home_public_v4.html')
         self.assertTemplateNotUsed(response, 'core/home_authenticated_v5.html')
-        self.assertIn('data-home-v5-public-shell="true"', content)
-        self.assertIn('data-home-v5-public-mobile-stack="true"', content)
-        self.assertIn('data-home-v5-public-grid-panel="true"', content)
-        self.assertIn('data-home-v5-public-grid="true"', content)
-        self.assertIn('data-home-v5-public-card="true"', content)
-        self.assertIn('data-home-v5-public-login-cta="true"', content)
-        self.assertIn('data-home-v5-public-desktop="true"', content)
-        self.assertIn('지금 바로 써보기', content)
-        self.assertIn('공개 도구', content)
-        self.assertNotIn('data-home-v2-guest-hero="true"', content)
+        self.assertIn('data-home-v4-public-shell="true"', content)
+        self.assertIn('data-home-v4-public-representatives="true"', content)
+        self.assertIn('대표 서비스', content)
+        self.assertIn('지금 써볼 수 있는 서비스', content)
+        self.assertIn('지금 시작', content)
+        self.assertIn('로그인 후 전체 서비스 보기', content)
+        self.assertNotIn('data-home-v5-public-shell="true"', content)
         self.assertNotIn('data-home-v5-shell="true"', content)
         self.assertNotIn('core/css/home_authenticated_v5.css', content)
 

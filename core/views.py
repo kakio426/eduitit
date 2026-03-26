@@ -2996,7 +2996,7 @@ def home(request):
     if home_layout_version == 'v5':
         if request.user.is_authenticated:
             return _home_v5(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
-        return _home_public_v5(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
+        return _home_public_v4(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
 
     # V2 홈: Feature flag on 시 분기
     if home_layout_version == 'v2':
