@@ -2263,7 +2263,7 @@ class HomeV4ViewTest(TestCase):
 
         self.assertNotIn('응답완료교사', content)
         self.assertNotIn('답변을 마쳤습니다.', content)
-        self.assertIn('새 문의가 오면 여기서 바로 확인할 수 있습니다.', content)
+        self.assertIn('새 문의 없음', content)
 
     @override_settings(HOME_V4_MOBILE_CALENDAR_FIRST_ENABLED=True)
     def test_v4_mobile_calendar_first_flag_swaps_hamburger_for_quick_tools(self):
@@ -2307,7 +2307,9 @@ class HomeV4ViewTest(TestCase):
         self.assertIn(expected_date_label, content)
         self.assertIn('일정 1건', content)
         self.assertIn('할 일 1건', content)
-        self.assertIn('자주 쓰는 도구', content)
+        self.assertIn('바로 열기', content)
+        self.assertNotIn('자주 쓰는 도구', content)
+        self.assertNotIn('Quick Tools', content)
         self.assertNotIn('오늘 학급 캘린더', content)
         self.assertNotIn('data-home-v4-mobile-menu-trigger="true"', content)
 
@@ -2608,6 +2610,10 @@ class HomeV5ViewTest(TestCase):
         self.assertNotIn('Quick Tools', content)
         self.assertNotIn('All Tools', content)
         self.assertNotIn('Representative', content)
+        self.assertNotIn('필요한 도구만 펼쳐서 보기', content)
+        self.assertNotIn('자주 여는 도구', content)
+        self.assertNotIn('방금 하던 흐름', content)
+        self.assertNotIn('이어서 쓰면 편한 것', content)
 
     def test_v5_mobile_workbench_renders_more_than_four_items(self):
         user = self._login('v5favoriteoverflow')

@@ -112,6 +112,8 @@ class PermissionTest(TestCase):
         self.assertNotIn("오늘 메모", content)
         self.assertNotIn("다시 볼 메모", content)
         self.assertNotIn("놓치지 않을 메시지", content)
+        self.assertNotIn("안내문이나 메모를 붙여넣고 바로 보관하거나 일정으로 넘길 수 있어요.", content)
+        self.assertNotIn("여기서 바로 보관하거나, 이어서 날짜를 찾아 일정으로 넘길 수 있어요.", content)
         self.assertNotIn('x-text="currentMonthSummaryText"', content)
         self.assertNotIn("이날의 항목", content)
         self.assertNotIn('selectedDateSummaryText()', content)

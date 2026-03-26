@@ -301,7 +301,7 @@ def build_messagebox_home_card_context(user):
     card = {
         "enabled": enabled,
         "title": "업무 메시지 보관함",
-        "description": "안내문이나 메모를 붙여넣고 바로 보관하거나 일정으로 넘길 수 있어요.",
+        "description": "",
         "primary_action_label": "새 메시지 보관",
         "url": build_messagebox_main_url(),
     }

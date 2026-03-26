@@ -74,7 +74,6 @@
                 {% else %}
                 <div class="home-v4-mobile-toolbar" data-home-v4-mobile-toolbar="true">
                     <div class="min-w-0">
-                        <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Menu</p>
                         <h2 class="mt-1 text-lg font-black text-slate-900">오늘 바로 쓰는 메뉴</h2>
                     </div>
                     <button
@@ -113,8 +112,7 @@
                 >
                     <div class="home-v4-mobile-sheet-header">
                         <div>
-                            <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">{% if home_v4_mobile_calendar_first_enabled %}All Tools{% else %}Quick Menu{% endif %}</p>
-                            <h2 class="mt-1 text-lg font-black text-slate-900">{% if home_v4_mobile_calendar_first_enabled %}전체 도구{% else %}필요한 도구만 펼쳐서 보기{% endif %}</h2>
+                            <h2 class="text-lg font-black text-slate-900">전체 도구</h2>
                         </div>
                         <button
                             type="button"
@@ -135,7 +133,6 @@
                         <div class="home-v4-nav-stack">
                             <div class="home-v4-card home-v4-nav-card">
                                 <div class="home-v4-nav-header">
-                                    <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Menu</p>
                                     <h2 class="mt-1 text-xl font-black text-slate-900">오늘 바로 쓰는 메뉴</h2>
                                 </div>
 
@@ -176,7 +173,7 @@
                                     </div>
                                     {% else %}
                                     <div class="rounded-[1.6rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center">
-                                        <p class="text-sm font-bold text-slate-600">대표 서비스가 준비되면 여기에 먼저 보여줍니다.</p>
+                                        <p class="text-sm font-bold text-slate-600">추천 도구가 없습니다.</p>
                                     </div>
                                     {% endif %}
 
@@ -184,7 +181,7 @@
                                     <div class="mt-4 border-t border-slate-100 pt-4">
                                         <div class="mb-2 flex items-center gap-2 text-sm font-black text-slate-700">
                                             <i class="fa-solid fa-compass text-sky-500"></i>
-                                            이어서 쓰면 좋은 도구
+                                            추천 도구
                                         </div>
                                         <div class="home-v4-recommend-row" data-home-v4-recommendations="true">
                                             {% for item in representative_recommendations %}
@@ -247,7 +244,7 @@
                                 </div>
                                 {% else %}
                                 <div class="rounded-[1.4rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center">
-                                    <p class="text-sm font-bold text-slate-600">별표한 서비스가 여기에 조용히 모입니다.</p>
+                                    <p class="text-sm font-bold text-slate-600">즐겨찾기가 없습니다.</p>
                                 </div>
                                 {% endif %}
                             </article>

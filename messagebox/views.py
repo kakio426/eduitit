@@ -40,7 +40,7 @@ def main_view(request):
         "service": service,
         "title": service.title if service else "업무 메시지 보관함",
         "page_title": (service.title if service else "업무 메시지 보관함"),
-        "page_subtitle": "교육청 메신저 등에서 받은 중요한 메시지를 붙여넣고, 필요하면 일정에 연결해 나중에 다시 보세요.",
+        "page_subtitle": "",
         "message_capture_enabled": message_capture_ui["enabled"],
         "message_capture_item_types_enabled": message_capture_ui["item_types_enabled"],
         "message_capture_limits_json": message_capture_ui["limits"],
