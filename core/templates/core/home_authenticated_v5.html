@@ -6,6 +6,9 @@
 {% block extra_css %}
 <link href="{% static 'core/css/home_authenticated_v4.css' %}" rel="stylesheet">
 <link href="{% static 'core/css/home_authenticated_v5.css' %}" rel="stylesheet">
+{% if home_design_version == 'v6' %}
+<link href="{% static 'core/css/home_authenticated_v6.css' %}" rel="stylesheet">
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
@@ -17,11 +20,11 @@
 {% endblock %}
 
 {% block content %}
-<div class="min-h-screen home-v5-page">
+<div class="min-h-screen home-v5-page{% if home_design_version == 'v6' %} home-v6-page{% endif %}" data-home-layout-version="{{ home_design_version|default:'v5' }}">
     <div class="mx-auto max-w-[1600px]" style="padding-top: calc(var(--main-nav-height, 88px) + 0.75rem);">
         <main class="min-w-0 px-3 pb-8 pt-0 sm:px-4 md:px-6 lg:px-7 xl:px-8 2xl:px-10">
             <div
-                class="home-v5-shell"
+                class="home-v5-shell{% if home_design_version == 'v6' %} home-v6-shell{% endif %}"
                 data-home-v4-shell="true"
                 data-home-v5-shell="true"
                 data-home-design-version="{{ home_design_version|default:'v5' }}"

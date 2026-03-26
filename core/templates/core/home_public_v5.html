@@ -5,6 +5,9 @@
 
 {% block extra_css %}
 <link href="{% static 'core/css/home_public_v5.css' %}" rel="stylesheet">
+{% if home_design_version == 'v6' %}
+<link href="{% static 'core/css/home_public_v6.css' %}" rel="stylesheet">
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
@@ -86,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
 {% endblock %}
 
 {% block content %}
-<div class="min-h-screen home-public-v5-page" data-home-v5-public-shell="true">
+<div class="min-h-screen home-public-v5-page{% if home_design_version == 'v6' %} home-public-v6-page{% endif %}" data-home-v5-public-shell="true" data-home-design-version="{{ home_design_version|default:'v5' }}">
     <div class="mx-auto home-public-v5-stage" style="padding-top: calc(var(--main-nav-height, 88px) + 1rem);">
         <main class="px-4 pb-16 sm:px-5 md:px-6">
             <section class="home-public-v5-mobile-stack" data-home-v5-public-mobile-stack="true">

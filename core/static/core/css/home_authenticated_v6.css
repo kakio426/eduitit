@@ -1,0 +1,295 @@
+.home-v6-page {
+    background:
+        radial-gradient(circle at top left, rgba(91, 44, 207, 0.14), transparent 24%),
+        radial-gradient(circle at top right, rgba(198, 165, 107, 0.14), transparent 18%),
+        linear-gradient(180deg, #f7f6fc 0%, #f3f2fb 48%, #faf9fe 100%);
+}
+
+.home-v6-page .home-v4-card,
+.home-v6-page .home-v4-mobile-toolbar,
+.home-v6-page .home-v4-mobile-sheet,
+.home-v6-page .home-v5-mobile-panel,
+.home-v6-page .home-v5-mobile-workbench-card,
+.home-v6-page .home-v5-mobile-recent-item,
+.home-v6-page .home-v5-mobile-recommend-item,
+.home-v6-page .home-v5-mobile-sns .sns-preview-card {
+    border-color: rgba(91, 44, 207, 0.12);
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.07);
+}
+
+.home-v6-page .home-v5-mobile-summary-chip,
+.home-v6-page .home-v4-mobile-calendar-first-chip,
+.home-v6-page .home-v4-mobile-menu-button,
+.home-v6-page .home-v4-mobile-sheet-close,
+.home-v6-page .home-v4-mobile-all-tools-trigger {
+    border-color: rgba(91, 44, 207, 0.12);
+    background: rgba(255, 255, 255, 0.94);
+    color: var(--color-text);
+}
+
+.home-v6-page .home-v5-mobile-summary-chip--date,
+.home-v6-page .home-v4-mobile-calendar-first-chip--date {
+    border-color: rgba(91, 44, 207, 0.16);
+    background: linear-gradient(135deg, rgba(238, 232, 255, 0.96) 0%, #ffffff 100%);
+    color: var(--color-brand-700);
+}
+
+.home-v6-page .home-v5-mobile-summary-chip--date i,
+.home-v6-page .home-v4-mobile-calendar-first-chip--date i {
+    color: var(--color-brand-700);
+}
+
+.home-v6-page .home-v5-mobile-summary-button:hover,
+.home-v6-page .home-v5-mobile-summary-button:focus-visible,
+.home-v6-page .home-v4-mobile-sheet-close:hover,
+.home-v6-page .home-v4-mobile-sheet-close:focus-visible,
+.home-v6-page .home-v4-mobile-menu-button:hover,
+.home-v6-page .home-v4-mobile-menu-button:focus-visible,
+.home-v6-page .home-v4-mobile-all-tools-trigger:hover,
+.home-v6-page .home-v4-mobile-all-tools-trigger:focus-visible {
+    border-color: rgba(124, 92, 250, 0.28);
+    color: var(--color-brand-700);
+    background: rgba(238, 232, 255, 0.78);
+}
+
+.home-v6-page .home-v4-nav-item,
+.home-v6-page .home-v4-tool-link,
+.home-v6-page .home-v4-favorite-card,
+.home-v6-page .home-v5-mobile-workbench-card,
+.home-v6-page .home-v5-mobile-recent-item,
+.home-v6-page .home-v5-mobile-recommend-item {
+    border-color: rgba(91, 44, 207, 0.1);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(251, 250, 255, 0.98) 100%);
+}
+
+.home-v6-page .home-v4-nav-item:hover,
+.home-v6-page .home-v4-nav-item:focus-visible,
+.home-v6-page .home-v4-tool-link:hover,
+.home-v6-page .home-v4-tool-link:focus-visible,
+.home-v6-page .home-v4-favorite-card:hover,
+.home-v6-page .home-v5-mobile-workbench-card:hover,
+.home-v6-page .home-v5-mobile-workbench-card:focus-visible,
+.home-v6-page .home-v5-mobile-recent-item:hover,
+.home-v6-page .home-v5-mobile-recent-item:focus-visible,
+.home-v6-page .home-v5-mobile-recommend-item:hover,
+.home-v6-page .home-v5-mobile-recommend-item:focus-visible {
+    border-color: rgba(124, 92, 250, 0.28);
+    background: #ffffff;
+    box-shadow: 0 16px 32px rgba(91, 44, 207, 0.08);
+}
+
+.home-v6-page .home-v4-nav-item--home.is-active,
+.home-v6-page .home-v4-nav-item--section.is-open {
+    border-color: rgba(91, 44, 207, 0.18);
+    background: linear-gradient(135deg, rgba(238, 232, 255, 0.94) 0%, #ffffff 100%);
+    box-shadow: 0 16px 32px rgba(91, 44, 207, 0.08);
+}
+
+.home-v6-page .home-v4-nav-icon--home,
+.home-v6-page .home-v4-nav-icon--slate {
+    background: linear-gradient(135deg, var(--color-brand-900) 0%, #22133f 100%);
+    color: var(--color-text-inverse);
+}
+
+.home-v6-page .home-v4-nav-icon--blue,
+.home-v6-page .home-v4-nav-icon--emerald,
+.home-v6-page .home-v4-nav-icon--violet,
+.home-v6-page .home-v4-nav-icon--cyan,
+.home-v6-page .home-v4-nav-icon--rose,
+.home-v6-page .home-v4-nav-icon--red {
+    background: linear-gradient(135deg, var(--color-brand-700) 0%, var(--color-brand-500) 100%);
+    color: var(--color-text-inverse);
+}
+
+.home-v6-page .home-v4-nav-chevron.is-open,
+.home-v6-page .home-v4-mobile-calendar-first-chip--date,
+.home-v6-page .home-v5-mobile-summary-chip--date,
+.home-v6-page .home-v4-recommend-pill:hover {
+    color: var(--color-brand-700);
+}
+
+.home-v6-page .home-v4-tool-icon,
+.home-v6-page .home-v4-mobile-quick-icon,
+.home-v6-page .home-v5-mobile-workbench-icon,
+.home-v6-page .home-v5-mobile-recent-icon,
+.home-v6-page .home-v4-quickdrop-icon {
+    background: linear-gradient(180deg, rgba(238, 232, 255, 0.95) 0%, #ffffff 100%);
+    box-shadow: inset 0 0 0 1px rgba(91, 44, 207, 0.08);
+    color: var(--color-brand-700);
+}
+
+.home-v6-page .favorite-toggle-btn,
+.home-v6-page .home-v5-mobile-workbench-star {
+    border-color: rgba(198, 165, 107, 0.24);
+    background: rgba(255, 255, 255, 0.95);
+    color: #b8a37b;
+}
+
+.home-v6-page .favorite-toggle-btn:hover,
+.home-v6-page .favorite-toggle-btn:focus-visible,
+.home-v6-page .home-v5-mobile-workbench-star:hover,
+.home-v6-page .home-v5-mobile-workbench-star:focus-visible {
+    border-color: rgba(198, 165, 107, 0.42);
+    background: #fffaf2;
+    color: var(--color-accent-champagne);
+}
+
+.home-v6-page .home-v4-quickdrop-panel,
+.home-v6-page .home-v4-developer-chat-card {
+    border-color: rgba(91, 44, 207, 0.14);
+    background: linear-gradient(180deg, rgba(251, 250, 255, 0.98) 0%, rgba(255, 255, 255, 0.96) 100%);
+}
+
+.home-v6-page .home-v4-developer-chat-icon,
+.home-v6-page .home-v4-quickdrop-primary,
+.home-v6-page .home-v4-developer-chat-primary {
+    background: linear-gradient(135deg, var(--color-brand-700) 0%, var(--color-brand-500) 100%);
+    color: var(--color-text-inverse);
+    box-shadow: 0 18px 34px rgba(91, 44, 207, 0.18);
+}
+
+.home-v6-page .home-v4-developer-chat-chip {
+    border-color: rgba(91, 44, 207, 0.12);
+    color: var(--color-brand-700);
+}
+
+.home-v6-page .home-v4-quickdrop-secondary {
+    border-color: rgba(91, 44, 207, 0.16);
+    background: #ffffff;
+    color: var(--color-brand-700);
+}
+
+.home-v6-page .home-v4-quickdrop-secondary:hover,
+.home-v6-page .home-v4-quickdrop-secondary:focus-visible {
+    border-color: rgba(124, 92, 250, 0.28);
+    background: rgba(238, 232, 255, 0.5);
+    color: var(--color-brand-900);
+}
+
+.home-v6-page .home-v4-recommend-pill {
+    border-color: rgba(91, 44, 207, 0.08);
+    background: rgba(255, 255, 255, 0.94);
+}
+
+.home-v6-page .home-v4-recommend-pill:hover {
+    border-color: rgba(124, 92, 250, 0.24);
+    background: rgba(238, 232, 255, 0.5);
+}
+
+.home-v6-page .text-blue-500,
+.home-v6-page .text-violet-500,
+.home-v6-page .text-emerald-500,
+.home-v6-page .text-red-500,
+.home-v6-page .text-pink-500,
+.home-v6-page .text-cyan-500,
+.home-v6-page .text-sky-500,
+.home-v6-page .text-indigo-500,
+.home-v6-page .text-indigo-600,
+.home-v6-page .text-indigo-700 {
+    color: var(--color-brand-700) !important;
+}
+
+.home-v6-page .bg-indigo-50 {
+    background-color: rgba(238, 232, 255, 0.92) !important;
+}
+
+.home-v6-page .bg-indigo-100 {
+    background-color: rgba(238, 232, 255, 0.98) !important;
+}
+
+.home-v6-page .border-indigo-200,
+.home-v6-page .border-indigo-300 {
+    border-color: rgba(91, 44, 207, 0.16) !important;
+}
+
+.home-v6-page .hover\:border-indigo-300:hover,
+.home-v6-page .hover\:border-indigo-200:hover {
+    border-color: rgba(124, 92, 250, 0.3) !important;
+}
+
+.home-v6-page .hover\:text-indigo-600:hover,
+.home-v6-page .hover\:text-indigo-700:hover {
+    color: var(--color-brand-700) !important;
+}
+
+.home-v6-page [data-classcalendar-surface="true"] > div {
+    border-color: rgba(91, 44, 207, 0.12);
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 18px 38px rgba(15, 23, 42, 0.07);
+}
+
+.home-v6-page .classcalendar-main-toolbar {
+    border-color: rgba(91, 44, 207, 0.14);
+    background: linear-gradient(90deg, rgba(238, 232, 255, 0.88) 0%, #ffffff 54%, rgba(255, 250, 242, 0.8) 100%);
+}
+
+.home-v6-page .classcalendar-main-month-group,
+.home-v6-page .classcalendar-main-nav-btn,
+.home-v6-page .classcalendar-mobile-agenda,
+.home-v6-page .classcalendar-mobile-agenda-item {
+    border-color: rgba(91, 44, 207, 0.1);
+}
+
+.home-v6-page .classcalendar-main-action-btn--ghost {
+    border-color: rgba(91, 44, 207, 0.12);
+    background: rgba(255, 255, 255, 0.94);
+    color: var(--color-brand-900);
+}
+
+.home-v6-page .classcalendar-main-action-btn--ghost:hover {
+    border-color: rgba(124, 92, 250, 0.24);
+    background: rgba(238, 232, 255, 0.68);
+    color: var(--color-brand-700);
+}
+
+.home-v6-page .classcalendar-main-action-btn--primary {
+    border-color: var(--color-brand-700);
+    background: var(--color-brand-700);
+    color: var(--color-text-inverse);
+    box-shadow: 0 16px 30px rgba(91, 44, 207, 0.16);
+}
+
+.home-v6-page .classcalendar-main-action-btn--primary:hover {
+    border-color: var(--color-brand-900);
+    background: var(--color-brand-900);
+}
+
+.home-v6-page .classcalendar-main-secondary-link {
+    border-color: rgba(91, 44, 207, 0.16);
+    background: rgba(238, 232, 255, 0.85);
+    color: var(--color-brand-700);
+}
+
+.home-v6-page .classcalendar-main-secondary-link:hover {
+    background: rgba(238, 232, 255, 1);
+}
+
+.home-v6-page [data-home-messagebox-card="true"] {
+    border-color: rgba(91, 44, 207, 0.14);
+    background: linear-gradient(135deg, rgba(238, 232, 255, 0.92) 0%, #ffffff 58%, rgba(255, 250, 242, 0.72) 100%);
+}
+
+.home-v6-page [data-home-messagebox-card="true"] .rounded-\[1\.35rem\] {
+    border-color: rgba(91, 44, 207, 0.08);
+    background: rgba(255, 255, 255, 0.94);
+}
+
+.home-v6-page [data-home-messagebox-card="true"] textarea {
+    border-color: rgba(91, 44, 207, 0.12);
+    background: rgba(255, 255, 255, 0.98);
+}
+
+.home-v6-page [data-home-messagebox-card="true"] textarea:focus {
+    outline: none;
+    border-color: rgba(124, 92, 250, 0.28);
+    box-shadow: 0 0 0 3px rgba(124, 92, 250, 0.16);
+}
+
+.home-v6-page [data-home-messagebox-card="true"] .bg-slate-900 {
+    background: var(--color-brand-700) !important;
+}
+
+.home-v6-page [data-home-messagebox-card="true"] .bg-slate-900:hover {
+    background: var(--color-brand-900) !important;
+}

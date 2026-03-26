@@ -258,7 +258,7 @@ def _build_post_feed_queryset(feed_scope=POST_FEED_SCOPE_ALL):
 
 def _get_home_layout_version():
     raw_version = str(getattr(settings, 'HOME_LAYOUT_VERSION', '') or '').strip().lower()
-    if raw_version in {'v1', 'v2', 'v4', 'v5'}:
+    if raw_version in {'v1', 'v2', 'v4', 'v5', 'v6'}:
         return raw_version
     return 'v2' if getattr(settings, 'HOME_V2_ENABLED', False) else 'v1'
 
@@ -2739,7 +2739,22 @@ def _home_public_v5(request, products, posts, page_obj, feed_scope, pinned_notic
     return render(
         request,
         'core/home_public_v5.html',
-        _build_home_public_landing_context(request, products),
+        {
+            **_build_home_public_landing_context(request, products),
+            'home_design_version': 'v5',
+        },
+    )
+
+
+def _home_public_v6(request, products, posts, page_obj, feed_scope, pinned_notice_posts):
+    """로열 럭스 테마를 실험하는 공개 홈 V6."""
+    return render(
+        request,
+        'core/home_public_v5.html',
+        {
+            **_build_home_public_landing_context(request, products),
+            'home_design_version': 'v6',
+        },
     )
 
 
@@ -2961,6 +2976,21 @@ def _home_v5(request, products, posts, page_obj, feed_scope, pinned_notice_posts
         home_design_version='v5',
     )
 
+
+def _home_v6(request, products, posts, page_obj, feed_scope, pinned_notice_posts):
+    """로열 럭스 테마를 실험하는 인증 홈 V6."""
+    return _build_home_authenticated_v4_response(
+        request,
+        products,
+        posts,
+        page_obj,
+        feed_scope,
+        pinned_notice_posts,
+        template_name='core/home_authenticated_v5.html',
+        home_design_version='v6',
+    )
+
+
 def home(request):
     # Order by display_order first, then by creation date
     products = filter_discoverable_products(
@@ -2997,6 +3027,11 @@ def home(request):
         if request.user.is_authenticated:
             return _home_v5(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
         return _home_public_v4(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
+
+    if home_layout_version == 'v6':
+        if request.user.is_authenticated:
+            return _home_v6(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
+        return _home_public_v6(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
 
     # V2 홈: Feature flag on 시 분기
     if home_layout_version == 'v2':

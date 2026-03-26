@@ -2682,6 +2682,74 @@ class HomeV5ViewTest(TestCase):
         self.assertNotIn('core/css/home_authenticated_v5.css', content)
 
 
+@override_settings(HOME_LAYOUT_VERSION='v6', HOME_V2_ENABLED=True)
+class HomeV6ViewTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.favorite_product = Product.objects.create(
+            title="로열 수업 도구",
+            description="브랜드 홈 테스트",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            is_featured=True,
+            launch_route_name='qrgen:landing',
+            icon='fa-solid fa-wand-magic-sparkles',
+        )
+        self.quick_product = Product.objects.create(
+            title="로열 행정 도구",
+            description="업무 흐름 연결",
+            price=0,
+            is_active=True,
+            service_type='work',
+            launch_route_name='noticegen:main',
+        )
+        Product.objects.create(
+            title="공개 수합",
+            description="로그인 없이 바로 시작",
+            price=0,
+            is_active=True,
+            is_guest_allowed=True,
+            service_type='collect_sign',
+            icon='fa-solid fa-inbox',
+            launch_route_name='collect:landing',
+        )
+        _create_posts(count=1, username='v6snsauthor')
+
+    def _login(self, username='v6user'):
+        user = _create_onboarded_user(username)
+        self.client.login(username=username, password='pass1234')
+        return user
+
+    def test_v6_authenticated_home_loads_royal_luxe_override(self):
+        user = self._login('v6layout')
+        ProductFavorite.objects.create(user=user, product=self.favorite_product, pin_order=1)
+        ProductUsageLog.objects.create(user=user, product=self.quick_product, action='launch', source='home_quick')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertTemplateUsed(response, 'core/home_authenticated_v5.html')
+        self.assertEqual(response.context['home_design_version'], 'v6')
+        self.assertIn('core/css/home_authenticated_v5.css', content)
+        self.assertIn('core/css/home_authenticated_v6.css', content)
+        self.assertIn('data-home-layout-version="v6"', content)
+        self.assertIn('data-home-design-version="v6"', content)
+        self.assertIn('home-v6-page', content)
+        self.assertIn('home-v6-shell', content)
+
+    def test_v6_anonymous_home_loads_royal_luxe_public_override(self):
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertTemplateUsed(response, 'core/home_public_v5.html')
+        self.assertEqual(response.context['home_design_version'], 'v6')
+        self.assertIn('core/css/home_public_v5.css', content)
+        self.assertIn('core/css/home_public_v6.css', content)
+        self.assertIn('home-public-v6-page', content)
+        self.assertIn('data-home-design-version="v6"', content)
+
+
 @override_settings(HOME_V2_ENABLED=True)
 class TrackUsageAPITest(TestCase):
     def setUp(self):
