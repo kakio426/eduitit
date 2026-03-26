@@ -2587,6 +2587,30 @@ class HomeV5ViewTest(TestCase):
         self.assertNotIn('Teacher-first home preview', content)
         self.assertNotIn('오늘 필요한 교실 도구만 먼저 보이는 홈', content)
 
+    def test_v5_favorites_use_wrapped_title_layout_with_corner_toggle(self):
+        user = self._login('v5favoritewrap')
+        planner = Product.objects.create(
+            title='AI 수업 설계 길잡이',
+            description='AI 수업 준비',
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='qrgen:landing',
+        )
+        ProductFavorite.objects.create(user=user, product=planner, pin_order=1)
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        favorites_index = content.index('data-home-v4-favorites-panel="true"')
+        sns_index = content.index('data-home-v4-sns-panel="true"', favorites_index)
+        favorites_block = content[favorites_index:sns_index]
+
+        self.assertIn('home-v5-favorite-card-title', favorites_block)
+        self.assertIn('home-v5-favorite-card-star', favorites_block)
+        self.assertNotIn('truncate text-[0.95rem] font-black leading-5 text-slate-900', favorites_block)
+        self.assertIn('title="AI 수업 설계 길잡이">AI 수업 설계 길잡이</p>', favorites_block)
+
     def test_v5_anonymous_home_keeps_existing_guest_home_surface(self):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')

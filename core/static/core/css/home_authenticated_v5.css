@@ -243,6 +243,7 @@
 .home-v5-shell .home-v4-favorite-card,
 .home-v5-shell .home-mini-card--v5,
 .home-v5-shell .home-product-card--v5 {
+    position: relative;
     border-color: rgba(203, 213, 225, 0.95);
     background: linear-gradient(180deg, #ffffff 0%, #f8fbfa 100%);
     box-shadow: 0 12px 26px rgba(148, 163, 184, 0.10);
@@ -260,6 +261,41 @@
 
 .home-v5-shell .home-mini-card--v5 [data-home-v2-service-card-body="true"] {
     color: #64748b;
+}
+
+.home-v5-favorite-card-body {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    min-height: 100%;
+    padding-right: 2.6rem;
+}
+
+.home-v5-favorite-card-copy {
+    flex: 1 1 auto;
+    min-width: 0;
+    align-self: center;
+}
+
+.home-v5-favorite-card-title {
+    margin: 0;
+    color: #0f172a;
+    font-size: 0.95rem;
+    font-weight: 900;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+}
+
+.home-v5-favorite-card-star {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    z-index: 1;
 }
 
 .home-v5-shell .home-v4-quickdrop-panel {
