@@ -1,0 +1,57 @@
+{% extends "admin/base_site.html" %}
+{% load admin_navigation %}
+
+{% block bodyclass %}{{ block.super }} dashboard admin-dashboard{% endblock %}
+
+{% block nav-breadcrumbs %}{% endblock %}
+
+{% block content_title %}{% endblock %}
+
+{% block content %}
+{% get_admin_navigation app_list as admin_nav_groups %}
+<div class="admin-dashboard-shell">
+  <section class="admin-dashboard-hero">
+    <p class="admin-dashboard-kicker">관리자 시작 화면</p>
+    <h1>운영 메뉴를 찾기 쉬운 흐름으로 다시 정리했습니다.</h1>
+    <p>
+      새 서비스와 기존 서비스가 한 목록에 섞여 있던 구조를 정리해서,
+      자주 쓰는 운영 메뉴와 예전 메뉴를 분리해 두었습니다.
+    </p>
+  </section>
+
+  <div class="admin-dashboard-groups">
+    {% for group in admin_nav_groups %}
+      <section class="admin-dashboard-group">
+        <header class="admin-dashboard-group-header">
+          <div>
+            <p class="admin-dashboard-group-title">{{ group.label }}</p>
+            <p class="admin-dashboard-group-description">{{ group.description }}</p>
+          </div>
+          <span class="admin-dashboard-group-count">{{ group.model_count }}개 모델</span>
+        </header>
+        <div class="admin-dashboard-app-grid">
+          {% for app in group.apps %}
+            <article class="admin-dashboard-app-card{% if app.is_current %} is-current{% endif %}">
+              <div class="admin-dashboard-app-top">
+                <a href="{{ app.app_url }}" class="admin-dashboard-app-link">{{ app.name }}</a>
+                <span class="admin-dashboard-app-count">{{ app.model_count }}개</span>
+              </div>
+              <ul class="admin-dashboard-model-list">
+                {% for model in app.models %}
+                  <li>
+                    {% if model.admin_url %}
+                      <a href="{{ model.admin_url }}">{{ model.name }}</a>
+                    {% else %}
+                      <span>{{ model.name }}</span>
+                    {% endif %}
+                  </li>
+                {% endfor %}
+              </ul>
+            </article>
+          {% endfor %}
+        </div>
+      </section>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

@@ -18,6 +18,12 @@ from .models import (
     UserModeration,
 )
 
+
+admin.site.site_header = "에듀잇잇 관리자"
+admin.site.site_title = "에듀잇잇 운영실"
+admin.site.index_title = "찾기 쉬운 운영 메뉴"
+
+
 class UserProfileInline(admin.StackedInline):
     model = UserProfile
     can_delete = False

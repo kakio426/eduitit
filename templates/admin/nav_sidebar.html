@@ -1,0 +1,40 @@
+{% load i18n admin_navigation %}
+<button class="sticky toggle-nav-sidebar" id="toggle-nav-sidebar" aria-label="{% translate 'Toggle navigation' %}"></button>
+<nav class="sticky admin-nav-shell" id="nav-sidebar" aria-label="{% translate 'Sidebar' %}">
+  <div class="admin-nav-header">
+    <p class="admin-nav-kicker">관리 탐색</p>
+    <h2 class="admin-nav-title">서비스와 DB 메뉴를 빠르게 찾기</h2>
+    <p class="admin-nav-copy">운영 메뉴를 용도별로 묶고, 스크롤 위치와 접기 상태를 유지합니다.</p>
+  </div>
+  <div class="admin-nav-search">
+    <label class="visually-hidden" for="nav-filter">관리 메뉴 검색</label>
+    <input
+      type="search"
+      id="nav-filter"
+      placeholder="서비스명, 모델명, 사용자, 상품..."
+      aria-label="관리 메뉴 검색"
+    >
+    <p class="admin-nav-search-hint">예: 사용자, 상품, 캘린더, 알림장, 퀴즈</p>
+  </div>
+  {% get_admin_navigation available_apps as admin_nav_groups %}
+  <div class="admin-nav-groups" id="admin-nav-groups">
+    {% for group in admin_nav_groups %}
+      <details
+        class="admin-nav-group{% if group.has_current %} is-current{% endif %}"
+        data-admin-group="{{ group.key }}"
+        {% if group.is_open_by_default or group.has_current %}open{% endif %}
+      >
+        <summary>
+          <span class="admin-nav-group-copy">
+            <span class="admin-nav-group-title">{{ group.label }}</span>
+            <span class="admin-nav-group-description">{{ group.description }}</span>
+          </span>
+          <span class="admin-nav-group-meta">{{ group.app_count }}개 앱</span>
+        </summary>
+        <div class="admin-nav-group-body">
+          {% include "admin/app_list.html" with app_list=group.apps show_changelinks=False %}
+        </div>
+      </details>
+    {% endfor %}
+  </div>
+</nav>
