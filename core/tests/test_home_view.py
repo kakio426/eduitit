@@ -561,6 +561,7 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('메시지 붙여넣기', content)
         self.assertIn('보관만 하기', content)
         self.assertNotIn('>전체 보기</button>', content)
+        self.assertIn('data-home-messagebox-header="true"', content)
         self.assertRegex(
             content,
             r'(?s)@click="openMessageArchive\(\$event\)".*?rounded-full.*?text-xs.*?font-bold',
@@ -2348,11 +2349,13 @@ class HomeV4ViewTest(TestCase):
         self.assertIn('바로 전송', content)
         self.assertIn('새 기기 연결', content)
 
+        home_panel_index = content.index('data-home-v4-home-panel="true"')
         mobile_quick_grid_index = content.index('data-home-v4-mobile-quick-grid="true"')
         mobile_quickdrop_index = content.index('data-home-v4-mobile-quickdrop="true"')
         representative_index = content.index('data-home-v4-representative-services="true"')
-        self.assertLess(mobile_quick_grid_index, mobile_quickdrop_index)
-        self.assertLess(mobile_quickdrop_index, representative_index)
+        self.assertLess(home_panel_index, mobile_quickdrop_index)
+        self.assertLess(mobile_quickdrop_index, mobile_quick_grid_index)
+        self.assertLess(mobile_quick_grid_index, representative_index)
 
     def test_v4_section_menu_lists_full_tool_links_without_switching_home_summary(self):
         self._login('v4section')
