@@ -3686,117 +3686,187 @@
             </div>
 
             <section class="mb-5 rounded-[1.6rem] border border-slate-700/70 bg-slate-950/35 p-4 md:p-5">
-                <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                     <div class="min-w-0">
                         <div class="flex items-center gap-2">
-                            <p class="text-sm font-black text-white">쉬는시간 자동</p>
-                            <span id="breakAutoStatusText"
-                                class="inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-black tracking-[0.08em]">
-                                자동OFF
+                            <p class="text-sm font-black text-white">자동화 만들기</p>
+                            <span id="missionAutomationCount"
+                                class="inline-flex items-center rounded-full border border-indigo-300/20 bg-indigo-500/10 px-2.5 py-1 text-[11px] font-black tracking-[0.08em] text-indigo-100">
+                                저장 0개
                             </span>
                         </div>
-                        <p id="breakAutoHintText" class="mt-1 text-xs font-bold text-slate-400 break-keep">
-                            저장 문구에서 하나를 선택해 자동 문구로 지정하면 쉬는시간마다 한 번만 자동 시작합니다.
+                        <p id="missionAutomationHint" class="mt-1 text-xs font-bold text-slate-400 break-keep">
+                            아침시간, 쉬는시간처럼 반복되는 시간을 직접 만들고 자동 문구를 연결하세요.
                         </p>
                     </div>
-                    <label class="inline-flex items-center gap-3 rounded-2xl border border-slate-700 bg-slate-900/70 px-4 py-3">
-                        <span class="text-xs font-black uppercase tracking-[0.14em] text-slate-300">사용</span>
-                        <input id="breakAutoEnabledInput" type="checkbox"
-                            class="h-5 w-5 rounded border-slate-500 bg-slate-950 text-emerald-400 focus:ring-emerald-400">
-                    </label>
+                    <button id="missionAutomationNewBtn" type="button"
+                        class="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-600 bg-slate-900/75 px-4 py-3 text-sm font-black text-slate-100 transition hover:bg-slate-800">
+                        <i class="fa-solid fa-plus"></i>
+                        새로 시작
+                    </button>
+                </div>
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <span class="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/65 px-3 py-1.5 text-[11px] font-black tracking-[0.08em] text-slate-200">1. 문구 고르기</span>
+                    <span class="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/65 px-3 py-1.5 text-[11px] font-black tracking-[0.08em] text-slate-200">2. 시간 정하기</span>
+                    <span class="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/65 px-3 py-1.5 text-[11px] font-black tracking-[0.08em] text-slate-200">3. 저장</span>
                 </div>
 
-                <div class="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
+                <div class="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,0.98fr)_minmax(0,1.02fr)]">
                     <div class="rounded-[1.2rem] border border-slate-700/70 bg-slate-900/70 p-4">
-                        <p class="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">현재 자동 문구</p>
-                        <p id="breakAutoPhraseLabel"
-                            class="dt-break-auto-card-label mt-2 text-sm font-black text-white">
-                            자동 문구 없음
-                        </p>
-                        <p id="breakAutoPhrasePreview"
-                            class="dt-break-auto-card-preview mt-1 text-sm font-bold leading-6 text-slate-300">
-                            문구관리에서 저장 문구를 선택해 자동 문구로 지정하세요.
-                        </p>
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <p class="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">자동화 목록</p>
+                                <p class="mt-1 text-xs font-bold text-slate-500">메인 알림판은 현재 시각에 맞는 자동화 하나만 적용합니다.</p>
+                            </div>
+                        </div>
+                        <div id="missionAutomationList" class="mt-3 space-y-2.5">
+                            <div class="rounded-2xl border border-dashed border-slate-700 bg-slate-950/40 p-4 text-center">
+                                <p class="text-sm font-black text-slate-200">자동화 시간이 없습니다.</p>
+                                <p class="mt-1 text-xs text-slate-400">오른쪽에서 시간을 만들고 저장해 보세요.</p>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="grid gap-3 sm:grid-cols-[minmax(0,8rem)_minmax(0,1fr)] sm:items-end">
-                        <label class="grid gap-1.5">
-                            <span class="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">타이머</span>
-                            <div class="flex items-center gap-2 rounded-2xl border border-slate-700 bg-slate-900/75 px-3 py-2.5">
-                                <input id="breakAutoMinutesInput" type="number" min="1" max="60" step="1" value="10"
-                                    inputmode="numeric"
-                                    class="w-full bg-transparent text-right text-base font-black text-white focus:outline-none">
-                                <span class="text-sm font-black text-slate-300">분</span>
+                    <div class="rounded-[1.2rem] border border-slate-700/70 bg-slate-900/70 p-4">
+                        <div class="grid gap-3">
+                            <label class="grid gap-1.5">
+                                <span class="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">시간 이름</span>
+                                <input id="missionAutomationNameInput" type="text" maxlength="50"
+                                    class="w-full rounded-2xl border border-slate-700 bg-slate-950/75 px-4 py-3 text-base font-black text-white focus:outline-none focus:border-indigo-400"
+                                    placeholder="예: 아침시간">
+                            </label>
+                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <label class="grid gap-1.5">
+                                    <span class="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">시작</span>
+                                    <input id="missionAutomationStartInput" type="time"
+                                        class="w-full rounded-2xl border border-slate-700 bg-slate-950/75 px-4 py-3 text-base font-black text-white focus:outline-none focus:border-indigo-400">
+                                </label>
+                                <label class="grid gap-1.5">
+                                    <span class="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">종료</span>
+                                    <input id="missionAutomationEndInput" type="time"
+                                        class="w-full rounded-2xl border border-slate-700 bg-slate-950/75 px-4 py-3 text-base font-black text-white focus:outline-none focus:border-indigo-400">
+                                </label>
                             </div>
-                        </label>
-                        <button id="missionQuickAssignBreakAutoBtn" type="button"
-                            class="rounded-2xl bg-emerald-500/90 px-4 py-3 text-sm font-black text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50">
-                            선택 문구를 자동 문구로 지정
-                        </button>
+                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                                <label class="grid gap-1.5">
+                                    <span class="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">타이머</span>
+                                    <div class="flex items-center gap-2 rounded-2xl border border-slate-700 bg-slate-950/75 px-4 py-3">
+                                        <input id="missionAutomationMinutesInput" type="number" min="1" max="60" step="1" value="10"
+                                            inputmode="numeric"
+                                            class="w-full bg-transparent text-right text-base font-black text-white focus:outline-none">
+                                        <span class="text-sm font-black text-slate-300">분</span>
+                                    </div>
+                                </label>
+                                <label class="inline-flex items-center justify-center gap-3 rounded-2xl border border-slate-700 bg-slate-950/75 px-4 py-3">
+                                    <span class="text-xs font-black uppercase tracking-[0.14em] text-slate-300">사용</span>
+                                    <input id="missionAutomationEnabledInput" type="checkbox" checked
+                                        class="h-5 w-5 rounded border-slate-500 bg-slate-950 text-emerald-400 focus:ring-emerald-400">
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 rounded-[1.2rem] border border-slate-700/70 bg-slate-950/45 p-4">
+                            <div>
+                                <p class="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">연결된 문구</p>
+                                <p id="missionAutomationPhraseLabel" class="mt-2 text-sm font-black text-white">문구를 연결해 주세요.</p>
+                            </div>
+                            <p id="missionAutomationPhrasePreview" class="mt-2 text-sm font-bold leading-6 text-slate-300">
+                                아래 저장 문구를 열어 하나 고르면 여기에 바로 들어옵니다.
+                            </p>
+                        </div>
+
+                        <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                            <button id="missionAutomationCreateBtn" type="button"
+                                class="rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-black text-white transition hover:bg-indigo-500">
+                                이 자동화 저장
+                            </button>
+                            <button id="missionAutomationUpdateBtn" type="button"
+                                class="rounded-2xl bg-amber-500/85 px-4 py-3 text-sm font-black text-slate-950 transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-50">
+                                선택 자동화 저장
+                            </button>
+                            <button id="missionAutomationDeleteBtn" type="button"
+                                class="rounded-2xl border border-rose-400/20 bg-rose-500/15 px-4 py-3 text-sm font-black text-rose-100 transition hover:bg-rose-500/25 disabled:cursor-not-allowed disabled:opacity-50">
+                                선택 삭제
+                            </button>
+                        </div>
                     </div>
                 </div>
             </section>
 
-            <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)] gap-5">
-                <section class="rounded-[1.6rem] border border-slate-700/70 bg-slate-950/35 p-4 md:p-5 min-h-[20rem] flex flex-col">
-                    <div class="flex items-center justify-between gap-3 mb-3">
-                        <div>
-                            <p class="text-sm font-black text-white">저장 목록</p>
-                            <p class="text-xs text-slate-400">선택 후 적용, 수정, 삭제할 수 있습니다.</p>
-                        </div>
-                        <button id="missionQuickDeleteAllBtn" type="button"
-                            class="px-3 py-2 rounded-xl bg-rose-500/15 text-rose-200 text-xs font-black border border-rose-400/20 hover:bg-rose-500/25 transition disabled:opacity-50 disabled:cursor-not-allowed">
-                            전체 삭제
-                        </button>
-                    </div>
-                    <div id="missionQuickPhraseList" class="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-2.5">
-                        <!-- JS Populated -->
-                    </div>
-                </section>
-
-                <section class="rounded-[1.6rem] border border-slate-700/70 bg-slate-950/35 p-4 md:p-5 min-h-[20rem] flex flex-col gap-4">
+            <section class="rounded-[1.6rem] border border-slate-700/70 bg-slate-950/35 p-4 md:p-5">
+                <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div>
-                        <p class="text-sm font-black text-white">문구 편집</p>
-                        <p id="missionQuickModalHint" class="text-xs text-slate-400 mt-1" aria-live="polite">현재 문구를 불러오거나 저장 문구를 선택해 편집하세요.</p>
+                        <p class="text-sm font-black text-white">저장 문구</p>
+                        <p id="missionPhrasePanelSummary" class="mt-1 text-xs text-slate-400">필요할 때만 열어 문구를 고르거나 수정하세요.</p>
                     </div>
-                    <div class="grid gap-3">
-                        <label class="grid gap-1.5">
-                            <span class="text-xs font-black text-slate-300 uppercase tracking-[0.14em]">제목</span>
-                            <input id="missionQuickTitleInput" type="text" maxlength="200"
-                                class="w-full rounded-2xl border border-slate-600 bg-slate-900/80 px-4 py-3 text-lg font-black text-white focus:outline-none focus:border-indigo-400"
-                                placeholder="예: 국어 활동" />
-                        </label>
-                        <label class="grid gap-1.5">
-                            <span class="text-xs font-black text-slate-300 uppercase tracking-[0.14em]">설명</span>
-                            <textarea id="missionQuickDescInput" rows="5" maxlength="400"
-                                class="w-full rounded-2xl border border-slate-600 bg-slate-900/80 px-4 py-3 text-base font-bold text-slate-100 focus:outline-none focus:border-indigo-400 resize-none"
-                                placeholder="예: 교과서 24~25쪽 문제 풀기"></textarea>
-                        </label>
-                    </div>
-                    <div class="mt-auto grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <button id="missionQuickLoadCurrentBtn" type="button"
-                            class="py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-100 font-black transition">
-                            현재 문구 가져오기
-                        </button>
-                        <button id="missionQuickCreateBtn" type="button"
-                            class="py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black transition">
-                            새 항목 저장
-                        </button>
-                        <button id="missionQuickUpdateBtn" type="button"
-                            class="py-3 rounded-2xl bg-amber-500/85 hover:bg-amber-400 text-slate-950 font-black transition disabled:opacity-50 disabled:cursor-not-allowed">
-                            선택 항목 수정
-                        </button>
-                        <button id="missionQuickApplySelectedBtn" type="button"
-                            class="py-3 rounded-2xl bg-emerald-500/85 hover:bg-emerald-400 text-slate-950 font-black transition disabled:opacity-50 disabled:cursor-not-allowed">
-                            선택 문구 적용
-                        </button>
-                        <button id="missionQuickDeleteBtn" type="button"
-                            class="sm:col-span-2 py-3 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-200 font-black border border-rose-400/20 transition disabled:opacity-50 disabled:cursor-not-allowed">
-                            선택 삭제
-                        </button>
-                    </div>
-                </section>
-            </div>
+                    <button id="missionPhrasePanelToggleBtn" type="button"
+                        class="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-600 bg-slate-900/75 px-4 py-3 text-sm font-black text-slate-100 transition hover:bg-slate-800">
+                        <i class="fa-solid fa-chevron-down"></i>
+                        저장 문구 열기
+                    </button>
+                </div>
+
+                <div id="missionPhrasePanelBody" class="hidden mt-4 grid grid-cols-1 xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)] gap-5">
+                    <section class="rounded-[1.6rem] border border-slate-700/70 bg-slate-950/35 p-4 md:p-5 min-h-[20rem] flex flex-col">
+                        <div class="flex items-center justify-between gap-3 mb-3">
+                            <div>
+                                <p class="text-sm font-black text-white">저장 목록</p>
+                                <p class="text-xs text-slate-400">하나를 고르면 위 자동화 편집칸에 바로 연결됩니다.</p>
+                            </div>
+                            <button id="missionQuickDeleteAllBtn" type="button"
+                                class="px-3 py-2 rounded-xl bg-rose-500/15 text-rose-200 text-xs font-black border border-rose-400/20 hover:bg-rose-500/25 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                전체 삭제
+                            </button>
+                        </div>
+                        <div id="missionQuickPhraseList" class="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-2.5">
+                            <!-- JS Populated -->
+                        </div>
+                    </section>
+
+                    <section class="rounded-[1.6rem] border border-slate-700/70 bg-slate-950/35 p-4 md:p-5 min-h-[20rem] flex flex-col gap-4">
+                        <div>
+                            <p class="text-sm font-black text-white">문구 편집</p>
+                            <p id="missionQuickModalHint" class="text-xs text-slate-400 mt-1" aria-live="polite">현재 문구를 불러오거나 저장 문구를 선택해 편집하세요.</p>
+                        </div>
+                        <div class="grid gap-3">
+                            <label class="grid gap-1.5">
+                                <span class="text-xs font-black text-slate-300 uppercase tracking-[0.14em]">제목</span>
+                                <input id="missionQuickTitleInput" type="text" maxlength="200"
+                                    class="w-full rounded-2xl border border-slate-600 bg-slate-900/80 px-4 py-3 text-lg font-black text-white focus:outline-none focus:border-indigo-400"
+                                    placeholder="예: 국어 활동" />
+                            </label>
+                            <label class="grid gap-1.5">
+                                <span class="text-xs font-black text-slate-300 uppercase tracking-[0.14em]">설명</span>
+                                <textarea id="missionQuickDescInput" rows="5" maxlength="400"
+                                    class="w-full rounded-2xl border border-slate-600 bg-slate-900/80 px-4 py-3 text-base font-bold text-slate-100 focus:outline-none focus:border-indigo-400 resize-none"
+                                    placeholder="예: 교과서 24~25쪽 문제 풀기"></textarea>
+                            </label>
+                        </div>
+                        <div class="mt-auto grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <button id="missionQuickLoadCurrentBtn" type="button"
+                                class="py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-100 font-black transition">
+                                현재 문구 가져오기
+                            </button>
+                            <button id="missionQuickCreateBtn" type="button"
+                                class="py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black transition">
+                                문구 저장
+                            </button>
+                            <button id="missionQuickUpdateBtn" type="button"
+                                class="py-3 rounded-2xl bg-amber-500/85 hover:bg-amber-400 text-slate-950 font-black transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                선택 문구 수정
+                            </button>
+                            <button id="missionQuickApplySelectedBtn" type="button"
+                                class="py-3 rounded-2xl bg-emerald-500/85 hover:bg-emerald-400 text-slate-950 font-black transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                지금 화면에 적용
+                            </button>
+                            <button id="missionQuickDeleteBtn" type="button"
+                                class="sm:col-span-2 py-3 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-200 font-black border border-rose-400/20 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                선택 삭제
+                            </button>
+                        </div>
+                    </section>
+                </div>
+            </section>
         </div>
     </div>
 
@@ -3974,6 +4044,7 @@
         rotateUrl: "{% url 'dt_api_rotate' %}",
         broadcastUrl: "{% url 'dt_api_broadcast_update' %}",
         missionUrl: "{% url 'dt_api_mission_update' %}",
+        missionAutomationsUrl: "{% url 'dt_api_mission_automations_update' %}",
         spotlightUrl: "{% url 'dt_api_spotlight_update' %}",
         resetAssignmentsUrl: "{% url 'dt_api_reset_assignments' %}",
         resetStudentMissionsUrl: "{% url 'dt_api_reset_student_missions' %}",
@@ -4015,7 +4086,7 @@
     };
 </script>
 <script src="{% static 'products/dutyticker/js/student_games_launcher.js' %}?v=20260327a"></script>
-<script src="{% static 'products/dutyticker/js/dutyticker.js' %}?v=20260324a"></script>
+<script src="{% static 'products/dutyticker/js/dutyticker.js' %}?v=20260327b"></script>
 <script>
     // App Init (DOMContentLoaded 이후에도 안전하게 초기화)
     function bootDutyTicker() {

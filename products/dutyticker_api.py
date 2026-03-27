@@ -2,9 +2,18 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
+import datetime
 import json
 import random
-from .models import DTStudent, DTRole, DTRoleAssignment, DTSchedule, DTTimeSlot, DTSettings
+from .models import (
+    DTStudent,
+    DTRole,
+    DTRoleAssignment,
+    DTSchedule,
+    DTTimeSlot,
+    DTSettings,
+    DTMissionAutomation,
+)
 from .dutyticker_scope import (
     apply_classroom_scope,
     classroom_scope_create_kwargs,
@@ -14,6 +23,8 @@ from .dutyticker_scope import (
 )
 from .dutyticker_slots import PERIOD_NUMBERS, SLOT_BY_CODE, SLOT_LAYOUT, WEEKDAY_LABELS
 from .dutyticker_sync import sync_dt_students_from_hs
+
+MISSION_AUTOMATION_LIMIT = 12
 
 
 def _build_today_fallback_schedule_from_classcalendar(user, classroom=None):
@@ -180,6 +191,7 @@ def get_guest_default_data():
         'roles': roles_data,
         'assignments': assignments,
         'schedule': weekly_schedule,
+        'automations': [],
         'settings': {
             'auto_rotation': False,
             'rotation_frequency': 'daily',
@@ -239,6 +251,105 @@ def create_mockup_data(user, classroom=None):
                 end_time=slot.end_time if slot else default_spec["end"],
             )
     return True
+
+
+def _sanitize_mission_automation_text(value, *, max_length):
+    return str(value or "").strip()[:max_length]
+
+
+def _parse_time_text(raw_value):
+    raw_text = str(raw_value or "").strip()
+    if not raw_text:
+        return None
+    try:
+        return datetime.datetime.strptime(raw_text, "%H:%M").time()
+    except ValueError:
+        return None
+
+
+def _normalize_mission_phrase_snapshot(raw_phrase):
+    if not isinstance(raw_phrase, dict):
+        return None
+
+    label = _sanitize_mission_automation_text(raw_phrase.get("label"), max_length=120)
+    title = _sanitize_mission_automation_text(raw_phrase.get("title"), max_length=200)
+    desc = _sanitize_mission_automation_text(raw_phrase.get("desc"), max_length=400)
+    if not label:
+        label = title or desc or "자동 문구"
+    if not label and not title and not desc:
+        return None
+    return {
+        "label": label,
+        "title": title,
+        "desc": desc,
+    }
+
+
+def _build_mission_automation_rows(user, classroom):
+    automations = apply_classroom_scope(
+        DTMissionAutomation.objects.filter(user=user),
+        classroom,
+    ).order_by("sort_order", "id")
+    return [
+        {
+            "id": automation.id,
+            "name": automation.name,
+            "startTime": automation.start_time.strftime("%H:%M"),
+            "endTime": automation.end_time.strftime("%H:%M"),
+            "timerMinutes": automation.timer_minutes,
+            "enabled": automation.is_enabled,
+            "phrase": {
+                "label": automation.mission_label,
+                "title": automation.mission_title,
+                "desc": automation.mission_desc,
+            },
+        }
+        for automation in automations
+    ]
+
+
+def _normalize_mission_automation_payload(raw_items):
+    if not isinstance(raw_items, list):
+        return None, "자동화 목록 형식이 올바르지 않습니다."
+
+    normalized_rows = []
+    for index, raw_item in enumerate(raw_items[:MISSION_AUTOMATION_LIMIT], start=1):
+        if not isinstance(raw_item, dict):
+            return None, "자동화 목록 형식이 올바르지 않습니다."
+
+        name = _sanitize_mission_automation_text(raw_item.get("name"), max_length=50)
+        start_time = _parse_time_text(raw_item.get("startTime"))
+        end_time = _parse_time_text(raw_item.get("endTime"))
+        timer_minutes = raw_item.get("timerMinutes")
+        phrase = _normalize_mission_phrase_snapshot(raw_item.get("phrase"))
+        enabled = raw_item.get("enabled") is True
+
+        if not name:
+            return None, f"{index}번째 자동화의 시간 이름을 입력해 주세요."
+        if not start_time or not end_time or start_time >= end_time:
+            return None, f"{name}의 시작/종료 시각을 다시 확인해 주세요."
+        try:
+            timer_minutes = int(timer_minutes)
+        except (TypeError, ValueError):
+            timer_minutes = 10
+        timer_minutes = max(1, min(60, timer_minutes))
+
+        if not phrase:
+            return None, f"{name}에 연결할 문구를 먼저 골라 주세요."
+
+        normalized_rows.append(
+            {
+                "name": name,
+                "start_time": start_time,
+                "end_time": end_time,
+                "timer_minutes": timer_minutes,
+                "enabled": enabled,
+                "phrase": phrase,
+                "sort_order": index,
+            }
+        )
+
+    return normalized_rows, None
 
 
 def _safe_json_body(request):
@@ -443,6 +554,12 @@ def get_dutyticker_data(request):
     if not request.user.is_authenticated:
         if 'guest_dt_data' not in request.session:
             request.session['guest_dt_data'] = get_guest_default_data()
+        else:
+            guest_data = request.session['guest_dt_data']
+            if 'automations' not in guest_data:
+                guest_data['automations'] = []
+                request.session['guest_dt_data'] = guest_data
+                request.session.modified = True
         return JsonResponse(request.session['guest_dt_data'])
 
     user = request.user
@@ -497,6 +614,7 @@ def get_dutyticker_data(request):
         'roles': roles,
         'assignments': assignments,
         'schedule': weekly_schedule,
+        'automations': _build_mission_automation_rows(user, classroom),
         'settings': {
             'auto_rotation': settings.auto_rotation,
             'rotation_frequency': settings.rotation_frequency,
@@ -618,6 +736,82 @@ def update_mission(request):
         return JsonResponse({'success': True})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def update_mission_automations(request):
+    try:
+        data = _safe_json_body(request)
+        normalized_rows, error_message = _normalize_mission_automation_payload(data.get("automations"))
+        if error_message:
+            return JsonResponse({"success": False, "error": error_message}, status=400)
+
+        if not request.user.is_authenticated:
+            guest_data = request.session.get("guest_dt_data") or get_guest_default_data()
+            guest_rows = []
+            for index, row in enumerate(normalized_rows, start=1):
+                guest_rows.append(
+                    {
+                        "id": f"guest-auto-{index}",
+                        "name": row["name"],
+                        "startTime": row["start_time"].strftime("%H:%M"),
+                        "endTime": row["end_time"].strftime("%H:%M"),
+                        "timerMinutes": row["timer_minutes"],
+                        "enabled": row["enabled"],
+                        "phrase": row["phrase"],
+                    }
+                )
+            guest_data["automations"] = guest_rows
+            request.session["guest_dt_data"] = guest_data
+            request.session.modified = True
+            return JsonResponse({"success": True, "automations": guest_rows})
+
+        classroom = get_active_classroom_for_request(request)
+        automation_qs = apply_classroom_scope(
+            DTMissionAutomation.objects.filter(user=request.user),
+            classroom,
+        )
+        automation_qs.delete()
+
+        created_rows = []
+        for row in normalized_rows:
+            created_rows.append(
+                DTMissionAutomation.objects.create(
+                    user=request.user,
+                    **classroom_scope_create_kwargs(classroom),
+                    name=row["name"],
+                    start_time=row["start_time"],
+                    end_time=row["end_time"],
+                    timer_minutes=row["timer_minutes"],
+                    mission_label=row["phrase"]["label"],
+                    mission_title=row["phrase"]["title"],
+                    mission_desc=row["phrase"]["desc"],
+                    is_enabled=row["enabled"],
+                    sort_order=row["sort_order"],
+                )
+            )
+
+        automations = [
+            {
+                "id": automation.id,
+                "name": automation.name,
+                "startTime": automation.start_time.strftime("%H:%M"),
+                "endTime": automation.end_time.strftime("%H:%M"),
+                "timerMinutes": automation.timer_minutes,
+                "enabled": automation.is_enabled,
+                "phrase": {
+                    "label": automation.mission_label,
+                    "title": automation.mission_title,
+                    "desc": automation.mission_desc,
+                },
+            }
+            for automation in created_rows
+        ]
+        return JsonResponse({"success": True, "automations": automations})
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
+
 
 @require_http_methods(["POST"])
 @csrf_exempt
@@ -795,6 +989,7 @@ def reset_data(request):
     apply_classroom_scope(DTRole.objects.filter(user=user), classroom).delete()
     apply_classroom_scope(DTSchedule.objects.filter(user=user), classroom).delete()
     apply_classroom_scope(DTRoleAssignment.objects.filter(user=user), classroom).delete()
+    apply_classroom_scope(DTMissionAutomation.objects.filter(user=user), classroom).delete()
     settings, _ = get_or_create_settings_for_scope(user, classroom)
     settings.last_broadcast_message = ""
     settings.spotlight_student = None

@@ -7,7 +7,15 @@ from django.urls import reverse
 
 from core.models import UserProfile
 from happy_seed.models import HSClassroom
-from products.models import DTRole, DTRoleAssignment, DTSchedule, DTSettings, DTStudent, DTTimeSlot
+from products.models import (
+    DTRole,
+    DTRoleAssignment,
+    DTSchedule,
+    DTSettings,
+    DTStudent,
+    DTTimeSlot,
+    DTMissionAutomation,
+)
 
 User = get_user_model()
 
@@ -140,6 +148,64 @@ class DutyTickerScheduleAndSpotlightTests(TestCase):
         self.assertTrue(api_settings["tts_enabled"])
         self.assertEqual(api_settings["tts_minutes_before"], 5)
         self.assertEqual(api_settings["tts_voice_uri"], "ko-KR-TestVoice")
+
+    def test_mission_automation_api_persists_teacher_defined_windows(self):
+        payload = {
+            "automations": [
+                {
+                    "name": "아침시간",
+                    "startTime": "08:30",
+                    "endTime": "08:50",
+                    "timerMinutes": 15,
+                    "enabled": True,
+                    "phrase": {
+                        "label": "아침 조회 준비",
+                        "title": "아침 조회 준비",
+                        "desc": "출석부와 전달사항 확인",
+                    },
+                },
+                {
+                    "name": "점심 전 정리",
+                    "startTime": "12:00",
+                    "endTime": "12:10",
+                    "timerMinutes": 8,
+                    "enabled": False,
+                    "phrase": {
+                        "label": "점심 전 정리",
+                        "title": "점심 전 정리",
+                        "desc": "사물함과 책상 주변을 정리하기",
+                    },
+                },
+            ]
+        }
+        response = self.client.post(
+            reverse("dt_api_mission_automations_update"),
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+
+        automations = list(
+            DTMissionAutomation.objects.filter(user=self.user, classroom=self.classroom).order_by("sort_order", "id")
+        )
+        self.assertEqual(len(automations), 2)
+        self.assertEqual(automations[0].name, "아침시간")
+        self.assertEqual(automations[0].mission_title, "아침 조회 준비")
+        self.assertEqual(automations[0].mission_desc, "출석부와 전달사항 확인")
+        self.assertEqual(automations[0].timer_minutes, 15)
+        self.assertTrue(automations[0].is_enabled)
+        self.assertFalse(automations[1].is_enabled)
+
+        api_response = self.client.get(reverse("dt_api_data"))
+        self.assertEqual(api_response.status_code, 200)
+        rows = api_response.json()["automations"]
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0]["name"], "아침시간")
+        self.assertEqual(rows[0]["startTime"], "08:30")
+        self.assertEqual(rows[0]["endTime"], "08:50")
+        self.assertEqual(rows[0]["timerMinutes"], 15)
+        self.assertEqual(rows[0]["phrase"]["label"], "아침 조회 준비")
 
     def test_spotlight_student_api_persists_setting(self):
         student = DTStudent.objects.create(user=self.user, classroom=self.classroom, name="김학생", number=1)

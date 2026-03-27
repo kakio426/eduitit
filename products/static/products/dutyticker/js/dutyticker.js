@@ -77,6 +77,13 @@ class DutyTickerManager {
         this.missionQuickPhraseLimit = 20;
         this.missionQuickPhrase = null;
         this.missionQuickSelectedId = null;
+        this.missionPhrasePanelExpanded = false;
+        this.missionAutomations = [];
+        this.missionAutomationSelectedId = null;
+        this.missionAutomationDraftPhrase = null;
+        this.missionAutomationRuntimeStorageKey = 'dt-mission-automation-runtime-v1';
+        this.missionAutomationRuntime = this.getDefaultMissionAutomationRuntime();
+        this.missionAutomationActiveId = '';
         this.breakAutoConfigStorageKey = 'dt-break-auto-config-v1';
         this.breakAutoRuntimeStorageKey = 'dt-break-auto-runtime-v1';
         this.breakAutoConfig = this.getDefaultBreakAutoConfig();
@@ -105,8 +112,7 @@ class DutyTickerManager {
         this.restoreMissionFontSize();
         this.applyMissionFontSize();
         this.restoreMissionQuickPhrase();
-        this.restoreBreakAutoConfig();
-        this.restoreBreakAutoRuntime();
+        this.restoreMissionAutomationRuntime();
         this.updateMissionQuickPhraseUI();
         this.restoreMissionPanelState();
         this.applyMissionPanelState();
@@ -167,8 +173,12 @@ class DutyTickerManager {
         this.bindButtonAction('missionQuickApplySelectedBtn', () => this.applyMissionQuickPhrase());
         this.bindButtonAction('missionQuickDeleteBtn', () => this.deleteSelectedMissionQuickPhrase());
         this.bindButtonAction('missionQuickDeleteAllBtn', () => this.clearMissionQuickPhrases());
-        this.bindButtonAction('missionQuickAssignBreakAutoBtn', () => this.assignSelectedMissionQuickPhraseToBreakAuto());
-        this.setupBreakAutoConfigControls();
+        this.bindButtonAction('missionPhrasePanelToggleBtn', () => this.toggleMissionPhrasePanel());
+        this.bindButtonAction('missionAutomationNewBtn', () => this.prepareNewMissionAutomation());
+        this.bindButtonAction('missionAutomationCreateBtn', () => this.createMissionAutomation());
+        this.bindButtonAction('missionAutomationUpdateBtn', () => this.updateSelectedMissionAutomation());
+        this.bindButtonAction('missionAutomationDeleteBtn', () => this.deleteSelectedMissionAutomation());
+        this.setupMissionAutomationControls();
 
         this.setupInlineMissionEditor();
 
@@ -399,16 +409,13 @@ class DutyTickerManager {
         input.dataset[boundKey] = '1';
     }
 
-    setupBreakAutoConfigControls() {
-        this.bindInputAction('breakAutoEnabledInput', 'change', (event) => {
-            this.handleBreakAutoEnabledToggle(event.target.checked);
-        });
-        this.bindInputAction('breakAutoMinutesInput', 'change', () => this.handleBreakAutoMinutesCommit());
-        this.bindInputAction('breakAutoMinutesInput', 'blur', () => this.handleBreakAutoMinutesCommit());
-        this.bindInputAction('breakAutoMinutesInput', 'keydown', (event) => {
+    setupMissionAutomationControls() {
+        this.bindInputAction('missionAutomationMinutesInput', 'change', () => this.normalizeMissionAutomationMinutesInput());
+        this.bindInputAction('missionAutomationMinutesInput', 'blur', () => this.normalizeMissionAutomationMinutesInput());
+        this.bindInputAction('missionAutomationMinutesInput', 'keydown', (event) => {
             if (event.key !== 'Enter') return;
             event.preventDefault();
-            this.handleBreakAutoMinutesCommit();
+            this.normalizeMissionAutomationMinutesInput();
         });
     }
 
@@ -978,6 +985,665 @@ class DutyTickerManager {
         }
     }
 
+    getDefaultMissionAutomationRuntime() {
+        return {
+            date: '',
+            runs: {},
+        };
+    }
+
+    normalizeMissionAutomationTimerMinutes(value) {
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed)) return 10;
+        return Math.max(1, Math.min(60, Math.round(parsed)));
+    }
+
+    sanitizeMissionAutomationName(value) {
+        return String(value || '').trim().slice(0, 50);
+    }
+
+    sanitizeMissionAutomationPhrase(rawPhrase = null) {
+        if (!rawPhrase || typeof rawPhrase !== 'object') return null;
+        const title = this.sanitizeMissionText(rawPhrase.title || '', 'title');
+        const desc = this.sanitizeMissionText(rawPhrase.desc || '', 'desc');
+        const label = this.buildMissionQuickPhraseLabel(title, desc, String(rawPhrase.label || ''));
+        if (!label && !title && !desc) return null;
+        return {
+            label: label || '자동 문구',
+            title,
+            desc,
+        };
+    }
+
+    normalizeMissionAutomationRow(rawItem = {}) {
+        const name = this.sanitizeMissionAutomationName(rawItem.name || '');
+        const startTime = String(rawItem.startTime || '').trim();
+        const endTime = String(rawItem.endTime || '').trim();
+        const phrase = this.sanitizeMissionAutomationPhrase(rawItem.phrase);
+        if (!name || !startTime || !endTime || !phrase) return null;
+        const rawId = rawItem.id !== undefined && rawItem.id !== null ? String(rawItem.id) : `${name}-${startTime}-${endTime}`;
+        return {
+            id: rawId,
+            name,
+            startTime,
+            endTime,
+            timerMinutes: this.normalizeMissionAutomationTimerMinutes(rawItem.timerMinutes),
+            enabled: rawItem.enabled === true,
+            phrase,
+        };
+    }
+
+    setMissionAutomations(rows = []) {
+        const normalizedRows = Array.isArray(rows)
+            ? rows.map((row) => this.normalizeMissionAutomationRow(row)).filter(Boolean)
+            : [];
+        this.missionAutomations = normalizedRows;
+        const stillSelected = normalizedRows.find((row) => row.id === this.missionAutomationSelectedId) || null;
+        this.missionAutomationSelectedId = stillSelected ? stillSelected.id : null;
+    }
+
+    restoreMissionAutomationRuntime() {
+        try {
+            const raw = localStorage.getItem(this.missionAutomationRuntimeStorageKey);
+            if (!raw) {
+                this.missionAutomationRuntime = this.getDefaultMissionAutomationRuntime();
+                return;
+            }
+
+            const parsed = JSON.parse(raw);
+            const runs = parsed?.runs && typeof parsed.runs === 'object' ? parsed.runs : {};
+            const normalizedRuns = {};
+            Object.entries(runs).forEach(([automationId, row]) => {
+                if (!automationId || !row || typeof row !== 'object') return;
+                normalizedRuns[String(automationId)] = {
+                    appliedAt: Number(row.appliedAt) || Date.now(),
+                    appliedTitle: this.sanitizeMissionText(row.appliedTitle || '', 'title'),
+                    appliedDesc: this.sanitizeMissionText(row.appliedDesc || '', 'desc'),
+                    prevTitle: this.sanitizeMissionText(row.prevTitle || '', 'title'),
+                    prevDesc: this.sanitizeMissionText(row.prevDesc || '', 'desc'),
+                };
+            });
+            this.missionAutomationRuntime = {
+                date: String(parsed?.date || ''),
+                runs: normalizedRuns,
+            };
+        } catch (error) {
+            console.warn('DutyTicker: failed to restore mission automation runtime', error);
+            this.missionAutomationRuntime = this.getDefaultMissionAutomationRuntime();
+        }
+    }
+
+    saveMissionAutomationRuntime() {
+        try {
+            localStorage.setItem(this.missionAutomationRuntimeStorageKey, JSON.stringify(this.missionAutomationRuntime));
+        } catch (error) {
+            console.warn('DutyTicker: failed to save mission automation runtime', error);
+        }
+    }
+
+    ensureMissionAutomationRuntime(date = new Date()) {
+        const todayKey = this.getLocalDateKey(date);
+        if (this.missionAutomationRuntime.date === todayKey) return;
+        this.missionAutomationRuntime = {
+            date: todayKey,
+            runs: {},
+        };
+        this.missionAutomationActiveId = '';
+        this.saveMissionAutomationRuntime();
+    }
+
+    getMissionAutomationRun(automationId, date = new Date()) {
+        this.ensureMissionAutomationRuntime(date);
+        return this.missionAutomationRuntime.runs[String(automationId)] || null;
+    }
+
+    setMissionAutomationRun(automationId, runData, date = new Date()) {
+        if (!automationId || !runData || typeof runData !== 'object') return;
+        this.ensureMissionAutomationRuntime(date);
+        this.missionAutomationRuntime.runs[String(automationId)] = {
+            appliedAt: Number(runData.appliedAt) || Date.now(),
+            appliedTitle: this.sanitizeMissionText(runData.appliedTitle || '', 'title'),
+            appliedDesc: this.sanitizeMissionText(runData.appliedDesc || '', 'desc'),
+            prevTitle: this.sanitizeMissionText(runData.prevTitle || '', 'title'),
+            prevDesc: this.sanitizeMissionText(runData.prevDesc || '', 'desc'),
+        };
+        this.saveMissionAutomationRuntime();
+    }
+
+    getSortedMissionAutomations() {
+        return [...this.missionAutomations].sort((a, b) => {
+            const aStart = this.timeStringToMinutes(a?.startTime);
+            const bStart = this.timeStringToMinutes(b?.startTime);
+            if (aStart !== bStart) return aStart - bStart;
+            const aEnd = this.timeStringToMinutes(a?.endTime);
+            const bEnd = this.timeStringToMinutes(b?.endTime);
+            if (aEnd !== bEnd) return aEnd - bEnd;
+            return String(a?.name || '').localeCompare(String(b?.name || ''), 'ko');
+        });
+    }
+
+    getMissionAutomationById(automationId) {
+        if (!automationId) return null;
+        return this.missionAutomations.find((row) => row.id === String(automationId)) || null;
+    }
+
+    getMissionAutomationDate(item, timeKey, now = new Date()) {
+        const target = String(item?.[timeKey] || '').trim();
+        const match = target.match(/^(\d{1,2}):(\d{2})$/);
+        if (!match) return null;
+        const date = new Date(now);
+        date.setHours(Number(match[1]), Number(match[2]), 0, 0);
+        return date;
+    }
+
+    getActiveMissionAutomation(now = new Date()) {
+        const currentTime = now.getTime();
+        const activeRows = this.getSortedMissionAutomations().filter((item) => {
+            if (!item || item.enabled !== true || !item.phrase) return false;
+            const startAt = this.getMissionAutomationDate(item, 'startTime', now);
+            const endAt = this.getMissionAutomationDate(item, 'endTime', now);
+            if (!startAt || !endAt || endAt <= startAt) return false;
+            return currentTime >= startAt.getTime() && currentTime < endAt.getTime();
+        });
+        return activeRows.length ? activeRows[activeRows.length - 1] : null;
+    }
+
+    getMissionAutomationRemainingSeconds(item, now = new Date()) {
+        const endAt = this.getMissionAutomationDate(item, 'endTime', now);
+        if (!endAt) return 0;
+        return Math.max(0, Math.ceil((endAt.getTime() - now.getTime()) / 1000));
+    }
+
+    restoreMissionAutomationFromRun(automationId, run) {
+        if (!automationId || !run) return;
+        this.applyMissionLocally({
+            title: run.appliedTitle,
+            desc: run.appliedDesc,
+        });
+        this.missionAutomationActiveId = String(automationId);
+    }
+
+    cleanupMissionAutomationRuntime(now = new Date(), activeAutomationId = '') {
+        this.ensureMissionAutomationRuntime(now);
+        const activeId = String(activeAutomationId || '');
+        const automationMap = new Map(this.missionAutomations.map((item) => [String(item.id), item]));
+        let didChange = false;
+
+        Object.entries(this.missionAutomationRuntime.runs).forEach(([automationId, run]) => {
+            const normalizedId = String(automationId || '');
+            if (!normalizedId || normalizedId === activeId) return;
+
+            const item = automationMap.get(normalizedId);
+            const endAt = item ? this.getMissionAutomationDate(item, 'endTime', now) : null;
+            const hasEnded = !item || !endAt || now.getTime() >= endAt.getTime();
+            if (!hasEnded) return;
+
+            if (
+                this.missionAutomationActiveId === normalizedId
+                && this.isMissionMatchingSnapshot({
+                    title: run?.appliedTitle || '',
+                    desc: run?.appliedDesc || '',
+                })
+            ) {
+                this.applyMissionLocally({
+                    title: run?.prevTitle || '',
+                    desc: run?.prevDesc || '',
+                });
+            }
+
+            delete this.missionAutomationRuntime.runs[normalizedId];
+            if (this.missionAutomationActiveId === normalizedId) {
+                this.missionAutomationActiveId = '';
+            }
+            didChange = true;
+        });
+
+        if (didChange) this.saveMissionAutomationRuntime();
+    }
+
+    applyMissionAutomation(item, now = new Date()) {
+        const automationId = String(item?.id || '').trim();
+        if (!automationId || !item?.phrase) return;
+
+        const runData = {
+            appliedAt: now.getTime(),
+            appliedTitle: item.phrase.title,
+            appliedDesc: item.phrase.desc,
+            prevTitle: this.sanitizeMissionText(this.missionTitle, 'title'),
+            prevDesc: this.sanitizeMissionText(this.missionDesc, 'desc'),
+        };
+
+        this.setMissionAutomationRun(automationId, runData, now);
+        this.restoreMissionAutomationFromRun(automationId, runData);
+
+        const configuredSeconds = this.normalizeMissionAutomationTimerMinutes(item.timerMinutes) * 60;
+        const remainingSeconds = this.getMissionAutomationRemainingSeconds(item, now);
+        const timerSeconds = remainingSeconds > 0
+            ? Math.min(configuredSeconds, remainingSeconds)
+            : configuredSeconds;
+
+        this.setTimerMode(timerSeconds, true);
+        this.showToast(`${item.name} 자동 시작`, 'success');
+    }
+
+    syncMissionAutomationState(now = new Date()) {
+        if (!this.hasLoadedData) return;
+
+        const activeAutomation = this.getActiveMissionAutomation(now);
+        const activeAutomationId = String(activeAutomation?.id || '');
+        this.cleanupMissionAutomationRuntime(now, activeAutomationId);
+
+        if (!activeAutomationId) {
+            this.missionAutomationActiveId = '';
+            return;
+        }
+
+        const existingRun = this.getMissionAutomationRun(activeAutomationId, now);
+        if (existingRun) {
+            if (
+                this.missionAutomationActiveId !== activeAutomationId
+                || this.isMissionMatchingSnapshot({
+                    title: existingRun.appliedTitle,
+                    desc: existingRun.appliedDesc,
+                })
+            ) {
+                this.restoreMissionAutomationFromRun(activeAutomationId, existingRun);
+            }
+            return;
+        }
+
+        this.applyMissionAutomation(activeAutomation, now);
+    }
+
+    setMissionAutomationHint(message) {
+        const hintEl = document.getElementById('missionAutomationHint');
+        if (hintEl) hintEl.textContent = message;
+    }
+
+    toggleMissionPhrasePanel(forceExpanded = null) {
+        if (typeof forceExpanded === 'boolean') {
+            this.missionPhrasePanelExpanded = forceExpanded;
+        } else {
+            this.missionPhrasePanelExpanded = !this.missionPhrasePanelExpanded;
+        }
+        this.renderMissionPhrasePanel();
+    }
+
+    renderMissionPhrasePanel() {
+        const body = document.getElementById('missionPhrasePanelBody');
+        const toggleBtn = document.getElementById('missionPhrasePanelToggleBtn');
+        const summaryEl = document.getElementById('missionPhrasePanelSummary');
+        const selectedPhrase = this.syncMissionQuickPhraseSelection(this.missionQuickSelectedId);
+        const savedCount = this.missionQuickPhrases.length;
+
+        if (body) body.classList.toggle('hidden', !this.missionPhrasePanelExpanded);
+
+        if (toggleBtn) {
+            toggleBtn.innerHTML = this.missionPhrasePanelExpanded
+                ? '<i class="fa-solid fa-chevron-up"></i> 저장 문구 접기'
+                : '<i class="fa-solid fa-chevron-down"></i> 저장 문구 열기';
+        }
+
+        if (summaryEl) {
+            if (selectedPhrase) {
+                summaryEl.textContent = `선택 중: ${selectedPhrase.label}`;
+            } else if (savedCount > 0) {
+                summaryEl.textContent = `저장 ${savedCount}개 · 필요할 때만 열어 문구를 고르거나 수정하세요.`;
+            } else {
+                summaryEl.textContent = '저장 문구가 아직 없습니다. 필요할 때 열어 새 문구를 만드세요.';
+            }
+        }
+    }
+
+    normalizeMissionAutomationMinutesInput() {
+        const input = document.getElementById('missionAutomationMinutesInput');
+        if (!input) return;
+        input.value = String(this.normalizeMissionAutomationTimerMinutes(input.value));
+    }
+
+    setMissionAutomationDraftPhrase(phrase) {
+        this.missionAutomationDraftPhrase = this.sanitizeMissionAutomationPhrase(phrase);
+    }
+
+    setMissionAutomationFormValues({
+        name = '',
+        startTime = '',
+        endTime = '',
+        timerMinutes = 10,
+        enabled = true,
+        phrase = null,
+    } = {}) {
+        const nameInput = document.getElementById('missionAutomationNameInput');
+        const startInput = document.getElementById('missionAutomationStartInput');
+        const endInput = document.getElementById('missionAutomationEndInput');
+        const minutesInput = document.getElementById('missionAutomationMinutesInput');
+        const enabledInput = document.getElementById('missionAutomationEnabledInput');
+
+        if (nameInput) nameInput.value = this.sanitizeMissionAutomationName(name);
+        if (startInput) startInput.value = String(startTime || '').trim();
+        if (endInput) endInput.value = String(endTime || '').trim();
+        if (minutesInput) minutesInput.value = String(this.normalizeMissionAutomationTimerMinutes(timerMinutes));
+        if (enabledInput) enabledInput.checked = enabled !== false;
+        this.setMissionAutomationDraftPhrase(phrase);
+    }
+
+    getMissionAutomationFormValues() {
+        const nameInput = document.getElementById('missionAutomationNameInput');
+        const startInput = document.getElementById('missionAutomationStartInput');
+        const endInput = document.getElementById('missionAutomationEndInput');
+        const minutesInput = document.getElementById('missionAutomationMinutesInput');
+        const enabledInput = document.getElementById('missionAutomationEnabledInput');
+
+        return {
+            name: this.sanitizeMissionAutomationName(nameInput ? nameInput.value : ''),
+            startTime: String(startInput ? startInput.value : '').trim(),
+            endTime: String(endInput ? endInput.value : '').trim(),
+            timerMinutes: this.normalizeMissionAutomationTimerMinutes(minutesInput ? minutesInput.value : 10),
+            enabled: enabledInput ? enabledInput.checked === true : true,
+            phrase: this.sanitizeMissionAutomationPhrase(this.missionAutomationDraftPhrase),
+        };
+    }
+
+    syncMissionAutomationSelection(selectedId = null) {
+        const targetId = String(selectedId || this.missionAutomationSelectedId || '').trim();
+        const selected = this.getMissionAutomationById(targetId) || null;
+        this.missionAutomationSelectedId = selected ? selected.id : null;
+        return selected;
+    }
+
+    getMissionAutomationSummary(item) {
+        if (!item?.phrase) return '문구 미연결';
+        return item.phrase.desc || item.phrase.title || item.phrase.label || '자동 문구';
+    }
+
+    renderMissionAutomationManager() {
+        const listEl = document.getElementById('missionAutomationList');
+        const countEl = document.getElementById('missionAutomationCount');
+        const nameInput = document.getElementById('missionAutomationNameInput');
+        const createBtn = document.getElementById('missionAutomationCreateBtn');
+        const updateBtn = document.getElementById('missionAutomationUpdateBtn');
+        const deleteBtn = document.getElementById('missionAutomationDeleteBtn');
+        const phraseLabelEl = document.getElementById('missionAutomationPhraseLabel');
+        const phrasePreviewEl = document.getElementById('missionAutomationPhrasePreview');
+        const newBtn = document.getElementById('missionAutomationNewBtn');
+        if (!listEl || !nameInput) return;
+
+        const count = this.missionAutomations.length;
+        const selected = this.syncMissionAutomationSelection(this.missionAutomationSelectedId);
+        const phrase = this.sanitizeMissionAutomationPhrase(this.missionAutomationDraftPhrase);
+
+        if (countEl) countEl.textContent = `저장 ${count}개`;
+        if (createBtn) createBtn.classList.toggle('hidden', !!selected);
+        if (updateBtn) {
+            updateBtn.disabled = !selected;
+            updateBtn.classList.toggle('hidden', !selected);
+        }
+        if (deleteBtn) {
+            deleteBtn.disabled = !selected;
+            deleteBtn.classList.toggle('hidden', !selected);
+        }
+        if (newBtn) newBtn.classList.toggle('hidden', !selected);
+        if (phraseLabelEl) phraseLabelEl.textContent = phrase?.label || '문구를 연결해 주세요.';
+        if (phrasePreviewEl) {
+            phrasePreviewEl.textContent = phrase
+                ? (phrase.desc || phrase.title || phrase.label)
+                : '아래 저장 문구를 열어 하나 고르면 여기에 바로 들어옵니다.';
+        }
+
+        if (!count) {
+            listEl.innerHTML = `
+                <div class="rounded-2xl border border-dashed border-slate-700 bg-slate-950/40 p-4 text-center">
+                    <p class="text-sm font-black text-slate-200">자동화 시간이 없습니다.</p>
+                    <p class="mt-1 text-xs text-slate-400">오른쪽에서 시간을 만들고 저장해 보세요.</p>
+                </div>
+            `;
+            if (!this.missionAutomationSelectedId) {
+                this.setMissionAutomationHint('아침시간, 쉬는시간처럼 반복되는 시간을 직접 만들고 자동 문구를 연결하세요.');
+            }
+            return;
+        }
+
+        const activeAutomationId = String(this.getActiveMissionAutomation()?.id || '');
+        listEl.innerHTML = this.getSortedMissionAutomations().map((item) => {
+            const isSelected = selected && item.id === selected.id;
+            const isActive = activeAutomationId && item.id === activeAutomationId;
+            const metaBits = [
+                `${this.escapeHtml(item.startTime)} ~ ${this.escapeHtml(item.endTime)}`,
+                `${this.escapeHtml(String(item.timerMinutes))}분 타이머`,
+                item.enabled ? '자동ON' : '자동OFF',
+            ];
+            return `
+                <button type="button"
+                    onclick="window.dtApp.selectMissionAutomation('${item.id}')"
+                    class="dt-phrase-list-item ${isSelected ? 'is-selected' : ''} w-full rounded-2xl border border-slate-700 bg-slate-900/55 px-4 py-3 text-left transition hover:bg-slate-800/80">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2">
+                                <p class="text-sm font-black text-white break-keep">${this.escapeHtml(item.name)}</p>
+                                ${isActive ? '<span class="rounded-full border border-emerald-300/30 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-black text-emerald-100">현재 적용</span>' : ''}
+                            </div>
+                            <p class="mt-1 text-[11px] font-black tracking-[0.08em] text-slate-400">${metaBits.join(' · ')}</p>
+                            <p class="mt-2 text-xs leading-relaxed text-slate-400 break-words">${this.escapeHtml(this.getMissionAutomationSummary(item))}</p>
+                        </div>
+                    </div>
+                </button>
+            `;
+        }).join('');
+
+        if (selected) {
+            this.setMissionAutomationHint('선택한 자동화를 바로 저장하거나 삭제할 수 있습니다.');
+        } else {
+            this.setMissionAutomationHint('문구 하나 고르고 시간만 정한 뒤 저장하면 됩니다.');
+        }
+    }
+
+    prepareNewMissionAutomation(showHint = true) {
+        const selectedPhrase = this.syncMissionQuickPhraseSelection(this.missionQuickSelectedId);
+        this.missionAutomationSelectedId = null;
+        this.setMissionAutomationFormValues({
+            name: '',
+            startTime: '',
+            endTime: '',
+            timerMinutes: 10,
+            enabled: true,
+            phrase: selectedPhrase
+                ? { label: selectedPhrase.label, title: selectedPhrase.title, desc: selectedPhrase.desc }
+                : null,
+        });
+        this.renderMissionAutomationManager();
+        if (showHint) {
+            this.setMissionAutomationHint('새 자동화 시간을 만들고 저장해 주세요.');
+        }
+    }
+
+    selectMissionAutomation(automationId) {
+        const selected = this.syncMissionAutomationSelection(automationId);
+        if (!selected) return;
+        this.setMissionAutomationFormValues(selected);
+        this.renderMissionAutomationManager();
+    }
+
+    assignSelectedMissionQuickPhraseToAutomation() {
+        const selectedPhrase = this.syncMissionQuickPhraseSelection(this.missionQuickSelectedId);
+        if (!selectedPhrase) {
+            this.showToast('연결할 저장 문구를 먼저 선택해 주세요.', 'error');
+            return;
+        }
+
+        this.setMissionAutomationDraftPhrase({
+            label: selectedPhrase.label,
+            title: selectedPhrase.title,
+            desc: selectedPhrase.desc,
+        });
+        this.renderMissionAutomationManager();
+        this.setMissionAutomationHint(`'${selectedPhrase.label}' 문구를 자동화 편집칸에 연결했습니다.`);
+        this.showToast('선택 문구를 자동화에 연결했습니다.', 'success');
+    }
+
+    buildMissionAutomationDraftFromForm() {
+        const draft = this.getMissionAutomationFormValues();
+        if (!draft.name) {
+            this.showToast('자동화 시간 이름을 입력해 주세요.', 'error');
+            return null;
+        }
+        if (!draft.startTime || !draft.endTime) {
+            this.showToast('시작과 종료 시각을 모두 입력해 주세요.', 'error');
+            return null;
+        }
+        const startMinutes = this.timeStringToMinutes(draft.startTime);
+        const endMinutes = this.timeStringToMinutes(draft.endTime);
+        if (!Number.isFinite(startMinutes) || !Number.isFinite(endMinutes) || startMinutes >= endMinutes) {
+            this.showToast('종료 시각은 시작 시각보다 뒤여야 합니다.', 'error');
+            return null;
+        }
+        if (!draft.phrase) {
+            this.showToast('자동화에 연결할 문구를 먼저 골라 주세요.', 'error');
+            return null;
+        }
+        return draft;
+    }
+
+    isSameMissionAutomation(left, right) {
+        if (!left || !right) return false;
+        const leftPhrase = this.sanitizeMissionAutomationPhrase(left.phrase);
+        const rightPhrase = this.sanitizeMissionAutomationPhrase(right.phrase);
+        return String(left.name || '') === String(right.name || '')
+            && String(left.startTime || '') === String(right.startTime || '')
+            && String(left.endTime || '') === String(right.endTime || '')
+            && Number(left.timerMinutes || 0) === Number(right.timerMinutes || 0)
+            && (left.enabled === true) === (right.enabled === true)
+            && String(leftPhrase?.label || '') === String(rightPhrase?.label || '')
+            && String(leftPhrase?.title || '') === String(rightPhrase?.title || '')
+            && String(leftPhrase?.desc || '') === String(rightPhrase?.desc || '');
+    }
+
+    async saveMissionAutomations(nextRows, { targetSelection = null, successMessage = '자동화 시간을 저장했습니다.' } = {}) {
+        const response = await this.secureFetch(this.getApiUrl('missionAutomationsUrl', '/products/dutyticker/api/mission-automations/update/'), {
+            method: 'POST',
+            body: JSON.stringify({ automations: nextRows }),
+        });
+        const payload = await this.parseJsonResponse(response, '자동화 시간을 저장하지 못했습니다.');
+        this.setMissionAutomations(payload.automations || []);
+
+        const matched = targetSelection
+            ? this.missionAutomations.find((item) => this.isSameMissionAutomation(item, targetSelection))
+            : null;
+        if (matched) {
+            this.missionAutomationSelectedId = matched.id;
+            this.setMissionAutomationFormValues(matched);
+        } else if (!this.missionAutomations.length) {
+            this.prepareNewMissionAutomation(false);
+        }
+
+        this.updateMissionQuickPhraseUI();
+        this.renderMissionAutomationManager();
+        this.syncMissionAutomationState(new Date());
+        this.showToast(successMessage, 'success');
+        return payload;
+    }
+
+    async createMissionAutomation() {
+        const draft = this.buildMissionAutomationDraftFromForm();
+        if (!draft) return;
+
+        const nextRows = this.getSortedMissionAutomations().map((item) => ({
+            name: item.name,
+            startTime: item.startTime,
+            endTime: item.endTime,
+            timerMinutes: item.timerMinutes,
+            enabled: item.enabled,
+            phrase: item.phrase,
+        }));
+        if (nextRows.length >= 12) {
+            this.showToast('자동화 시간은 12개까지만 저장할 수 있습니다.', 'error');
+            return;
+        }
+        nextRows.push(draft);
+
+        try {
+            await this.saveMissionAutomations(nextRows, {
+                targetSelection: draft,
+                successMessage: `'${draft.name}' 자동화를 저장했습니다.`,
+            });
+            this.setMissionAutomationHint('새 자동화 시간을 저장했습니다.');
+        } catch (error) {
+            console.error(error);
+            this.showToast(error?.message || '자동화 시간을 저장하지 못했습니다.', 'error');
+        }
+    }
+
+    async updateSelectedMissionAutomation() {
+        const selected = this.syncMissionAutomationSelection(this.missionAutomationSelectedId);
+        if (!selected) {
+            this.showToast('수정할 자동화 시간을 먼저 선택해 주세요.', 'error');
+            return;
+        }
+
+        const draft = this.buildMissionAutomationDraftFromForm();
+        if (!draft) return;
+
+        const nextRows = this.getSortedMissionAutomations().map((item) => (
+            item.id === selected.id
+                ? draft
+                : {
+                    name: item.name,
+                    startTime: item.startTime,
+                    endTime: item.endTime,
+                    timerMinutes: item.timerMinutes,
+                    enabled: item.enabled,
+                    phrase: item.phrase,
+                }
+        ));
+
+        try {
+            await this.saveMissionAutomations(nextRows, {
+                targetSelection: draft,
+                successMessage: `'${draft.name}' 자동화를 수정했습니다.`,
+            });
+            this.setMissionAutomationHint('선택한 자동화 시간을 수정했습니다.');
+        } catch (error) {
+            console.error(error);
+            this.showToast(error?.message || '자동화 시간을 수정하지 못했습니다.', 'error');
+        }
+    }
+
+    deleteSelectedMissionAutomation() {
+        const selected = this.syncMissionAutomationSelection(this.missionAutomationSelectedId);
+        if (!selected) {
+            this.showToast('삭제할 자동화 시간을 먼저 선택해 주세요.', 'error');
+            return;
+        }
+
+        this.requestResetConfirmation({
+            title: '자동화 삭제',
+            message: `'${selected.name}' 자동화를 삭제할까요?`,
+            confirmLabel: '선택 삭제',
+            onConfirm: async () => {
+                const nextRows = this.getSortedMissionAutomations()
+                    .filter((item) => item.id !== selected.id)
+                    .map((item) => ({
+                        name: item.name,
+                        startTime: item.startTime,
+                        endTime: item.endTime,
+                        timerMinutes: item.timerMinutes,
+                        enabled: item.enabled,
+                        phrase: item.phrase,
+                    }));
+                try {
+                    await this.saveMissionAutomations(nextRows, {
+                        successMessage: '선택한 자동화를 삭제했습니다.',
+                    });
+                    this.missionAutomationSelectedId = null;
+                    this.prepareNewMissionAutomation(false);
+                    this.setMissionAutomationHint('선택한 자동화 시간을 삭제했습니다.');
+                } catch (error) {
+                    console.error(error);
+                    this.showToast(error?.message || '자동화 시간을 삭제하지 못했습니다.', 'error');
+                }
+            },
+        });
+    }
+
     restoreTtsAutoAnnouncementHistory() {
         try {
             const raw = sessionStorage.getItem(this.ttsAutoAnnouncementStorageKey);
@@ -1388,6 +2054,7 @@ class DutyTickerManager {
             this.ttsVoiceUri = String(data.settings.tts_voice_uri || '').trim();
             this.ttsRate = this.normalizeTtsRate(data.settings.tts_rate);
             this.ttsPitch = this.normalizeTtsPitch(data.settings.tts_pitch);
+            this.setMissionAutomations(data.automations || []);
 
             // Apply Theme to DOM
             this.applyThemeToDom(this.theme);
@@ -1397,6 +2064,8 @@ class DutyTickerManager {
             this.todaySchedule = data.schedule[today] || [];
             this.hasLoadedData = true;
 
+            this.renderMissionAutomationManager();
+            this.updateMissionQuickPhraseUI();
             this.renderAll();
             this.checkAndTriggerScheduledAnnouncement(new Date());
         } catch (error) {
@@ -1455,7 +2124,7 @@ class DutyTickerManager {
 
         this.updateBroadcastModalTtsInfo();
         this.checkAndTriggerScheduledAnnouncement(new Date());
-        this.syncBreakAutoState(new Date());
+        this.syncMissionAutomationState(new Date());
 
         if (periodSchedule.length === 0) {
             container.innerHTML = '<span class="dt-header-schedule-empty">오늘 시간표 없음</span>';
@@ -2959,8 +3628,13 @@ class DutyTickerManager {
         }
         applyBtn.setAttribute('title', count > 0 ? '저장한 문구를 불러오고 수정하거나 삭제합니다.' : '저장한 문구를 관리합니다.');
         if (saveBtn) saveBtn.setAttribute('title', count > 0 ? `현재 문구를 새 항목으로 저장 (저장 ${count}개)` : '현재 문구를 새 항목으로 저장');
-        if (autoBadge) autoBadge.classList.toggle('hidden', !this.isBreakAutoEnabled());
-        this.renderBreakAutoConfigCard();
+        const enabledAutomationCount = this.missionAutomations.filter((item) => item.enabled === true).length;
+        if (autoBadge) {
+            autoBadge.textContent = enabledAutomationCount > 0 ? `자동 ${enabledAutomationCount}` : '';
+            autoBadge.classList.toggle('hidden', enabledAutomationCount === 0);
+        }
+        this.renderMissionAutomationManager();
+        this.renderMissionPhrasePanel();
     }
 
     renderMissionQuickPhraseModal() {
@@ -2968,6 +3642,7 @@ class DutyTickerManager {
         if (!listEl) return;
 
         const countEl = document.getElementById('missionQuickModalCount');
+        const createBtn = document.getElementById('missionQuickCreateBtn');
         const updateBtn = document.getElementById('missionQuickUpdateBtn');
         const applyBtn = document.getElementById('missionQuickApplySelectedBtn');
         const deleteBtn = document.getElementById('missionQuickDeleteBtn');
@@ -2975,12 +3650,16 @@ class DutyTickerManager {
         const count = this.missionQuickPhrases.length;
         const selected = this.syncMissionQuickPhraseSelection(this.missionQuickSelectedId);
 
-        this.renderBreakAutoConfigCard();
+        this.renderMissionAutomationManager();
+        this.renderMissionPhrasePanel();
 
         if (countEl) countEl.textContent = `저장 ${count}개`;
+        if (createBtn) createBtn.textContent = selected ? '새 문구로 저장' : '문구 저장';
         if (updateBtn) updateBtn.disabled = !selected;
+        if (updateBtn) updateBtn.classList.toggle('hidden', !selected);
         if (applyBtn) applyBtn.disabled = !selected;
         if (deleteBtn) deleteBtn.disabled = !selected;
+        if (deleteBtn) deleteBtn.classList.toggle('hidden', !selected);
         if (deleteAllBtn) deleteAllBtn.disabled = count === 0;
 
         if (!count) {
@@ -3021,6 +3700,7 @@ class DutyTickerManager {
         const selected = this.syncMissionQuickPhraseSelection(this.missionQuickSelectedId);
         if (selected) this.setMissionQuickPhraseFormValues(selected);
         else this.loadCurrentMissionIntoQuickPhraseForm();
+        this.missionPhrasePanelExpanded = this.missionQuickPhrases.length === 0 ? true : this.missionPhrasePanelExpanded;
         this.renderMissionQuickPhraseModal();
         this.openModal('missionQuickPhraseModal');
         const titleInput = document.getElementById('missionQuickTitleInput');
@@ -3035,7 +3715,15 @@ class DutyTickerManager {
         const selected = this.syncMissionQuickPhraseSelection(phraseId);
         if (!selected) return;
         this.setMissionQuickPhraseFormValues(selected);
+        this.setMissionAutomationDraftPhrase({
+            label: selected.label,
+            title: selected.title,
+            desc: selected.desc,
+        });
         this.renderMissionQuickPhraseModal();
+        this.renderMissionAutomationManager();
+        this.renderMissionPhrasePanel();
+        this.setMissionQuickPhraseModalHint('고른 문구를 위 자동화 편집칸에 바로 연결했습니다.');
     }
 
     loadCurrentMissionIntoQuickPhraseForm() {
@@ -3059,6 +3747,7 @@ class DutyTickerManager {
 
         this.missionQuickPhrase = this.missionQuickPhrases[0] || null;
         this.missionQuickSelectedId = entry.id;
+        this.setMissionAutomationDraftPhrase(entry);
         this.saveMissionQuickPhraseToStorage();
         this.syncBreakAutoSnapshotFromSavedPhrase();
         this.updateMissionQuickPhraseUI();
@@ -3082,6 +3771,7 @@ class DutyTickerManager {
 
         this.missionQuickPhrase = this.missionQuickPhrases[0] || null;
         this.missionQuickSelectedId = entry.id;
+        this.setMissionAutomationDraftPhrase(entry);
         this.saveMissionQuickPhraseToStorage();
         this.syncBreakAutoSnapshotFromSavedPhrase();
         this.updateMissionQuickPhraseUI();
@@ -3122,6 +3812,7 @@ class DutyTickerManager {
         this.missionQuickPhrases.unshift(updated);
         this.missionQuickPhrase = updated;
         this.missionQuickSelectedId = updated.id;
+        this.setMissionAutomationDraftPhrase(updated);
         this.saveMissionQuickPhraseToStorage();
         this.syncBreakAutoSnapshotFromSavedPhrase();
         this.updateMissionQuickPhraseUI();
@@ -3157,6 +3848,7 @@ class DutyTickerManager {
             desc: selected.desc,
         });
         this.setMissionQuickPhraseFormValues(selected);
+        this.setMissionAutomationDraftPhrase(selected);
         this.renderMissionQuickPhraseModal();
         this.closeMissionQuickPhraseModal();
         this.showToast(`'${selected.label}' 문구를 적용했습니다.`, 'success');
@@ -3181,8 +3873,13 @@ class DutyTickerManager {
                 this.updateMissionQuickPhraseUI();
 
                 const nextSelected = this.syncMissionQuickPhraseSelection(this.missionQuickSelectedId);
-                if (nextSelected) this.setMissionQuickPhraseFormValues(nextSelected);
-                else this.loadCurrentMissionIntoQuickPhraseForm();
+                if (nextSelected) {
+                    this.setMissionQuickPhraseFormValues(nextSelected);
+                    this.setMissionAutomationDraftPhrase(nextSelected);
+                } else {
+                    this.loadCurrentMissionIntoQuickPhraseForm();
+                    this.setMissionAutomationDraftPhrase(null);
+                }
                 this.renderMissionQuickPhraseModal();
                 this.setMissionQuickPhraseModalHint('선택한 문구를 삭제했습니다.');
                 this.showToast('선택한 문구를 삭제했습니다.', 'success');
@@ -3203,6 +3900,7 @@ class DutyTickerManager {
                 this.saveMissionQuickPhraseToStorage();
                 this.updateMissionQuickPhraseUI();
                 this.loadCurrentMissionIntoQuickPhraseForm();
+                this.setMissionAutomationDraftPhrase(null);
                 this.renderMissionQuickPhraseModal();
                 this.setMissionQuickPhraseModalHint('저장 문구를 모두 비웠습니다.');
                 this.showToast('저장 문구를 모두 비웠습니다.', 'success');

@@ -25,6 +25,7 @@ urlpatterns = [
     path('dutyticker/api/rotate/', dutyticker_api.rotation_trigger, name='dt_api_rotate'),
     path('dutyticker/api/broadcast/update/', dutyticker_api.update_broadcast_message, name='dt_api_broadcast_update'),
     path('dutyticker/api/mission/update/', dutyticker_api.update_mission, name='dt_api_mission_update'),
+    path('dutyticker/api/mission-automations/update/', dutyticker_api.update_mission_automations, name='dt_api_mission_automations_update'),
     path('dutyticker/api/spotlight/update/', dutyticker_api.update_spotlight_student, name='dt_api_spotlight_update'),
     path('dutyticker/api/assignments/reset/', dutyticker_api.reset_assignments_only, name='dt_api_reset_assignments'),
     path('dutyticker/api/students/reset-mission/', dutyticker_api.reset_student_missions, name='dt_api_reset_student_missions'),

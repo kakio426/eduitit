@@ -250,6 +250,36 @@ class DTTimeSlot(models.Model):
         return f"{self.user.username} {self.slot_label}"
 
 
+class DTMissionAutomation(models.Model):
+    """Teacher-defined mission automation windows for DutyTicker."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="dutyticker_mission_automations")
+    classroom = models.ForeignKey(
+        "happy_seed.HSClassroom",
+        on_delete=models.CASCADE,
+        related_name="dutyticker_mission_automations",
+        null=True,
+        blank=True,
+    )
+    name = models.CharField(max_length=50, default="아침시간")
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    timer_minutes = models.PositiveSmallIntegerField(default=10)
+    mission_label = models.CharField(max_length=120, blank=True, default="")
+    mission_title = models.CharField(max_length=200, blank=True, default="")
+    mission_desc = models.TextField(blank=True, default="")
+    is_enabled = models.BooleanField(default=True)
+    sort_order = models.PositiveSmallIntegerField(default=1)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["sort_order", "id"]
+
+    def __str__(self):
+        return f"{self.user.username} {self.name} ({self.start_time}~{self.end_time})"
+
+
 class DTStudent(models.Model):
     """Student roster for each teacher"""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='dt_students')
