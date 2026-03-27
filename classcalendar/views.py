@@ -20,6 +20,8 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
+from django.utils.dateparse import parse_date, parse_datetime
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 
@@ -69,9 +71,12 @@ SHEETBOOK_SOURCE_SOURCES = {"sheetbook_action_calendar", "sheetbook_schedule_syn
 HOME_CALENDAR_ANCHOR = "home-calendar"
 HOME_CALENDAR_QUERY_KEYS = ("date", "action", "open_event", "open_task", "focus")
 CENTER_CALENDAR_QUERY_KEYS = ("date", "action", "open_event", "open_task")
-EDUITIT_API_KEY_ENV_NAME = "EDUITIT_API_KEY"
+EDUITIT_API_KEY_ENV_NAMES = ("EDUITIT_API_KEY", "HOOK_TOKEN")
+EDUITIT_EXTERNAL_CALENDAR_USERNAME_ENV_NAME = "EDUITIT_EXTERNAL_CALENDAR_USERNAME"
+EDUITIT_EXTERNAL_CALENDAR_PROVIDER_ENV_NAME = "EDUITIT_EXTERNAL_CALENDAR_PROVIDER"
 EDUITIT_EXTERNAL_CALENDAR_USERNAME = "user694"
 EDUITIT_EXTERNAL_CALENDAR_PROVIDER = "naver"
+OPENCLO_WEBHOOK_INTEGRATION_SOURCE = "openclo_webhook"
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -222,7 +227,11 @@ def _apply_sensitive_cache_headers(response):
 
 
 def _get_external_api_key_from_request(request):
-    header_key = request.headers.get("X-Eduitit-API-Key") or request.headers.get("X-API-Key")
+    header_key = (
+        request.headers.get("X-Hook-Token")
+        or request.headers.get("X-Eduitit-API-Key")
+        or request.headers.get("X-API-Key")
+    )
     authorization = str(request.headers.get("Authorization") or "").strip()
     if authorization.lower().startswith("bearer "):
         header_key = authorization[7:].strip() or header_key
@@ -244,7 +253,11 @@ def _external_api_unavailable_response(message="관리자 캘린더 연결 계�
 
 
 def _get_configured_external_api_key():
-    return str(os.environ.get(EDUITIT_API_KEY_ENV_NAME) or "").strip()
+    for env_name in EDUITIT_API_KEY_ENV_NAMES:
+        value = str(os.environ.get(env_name) or "").strip()
+        if value:
+            return value
+    return ""
 
 
 def _is_valid_external_api_key(raw_key):
@@ -257,17 +270,84 @@ def _is_valid_external_api_key(raw_key):
     )
 
 
+def _get_external_calendar_owner_username():
+    return (
+        str(os.environ.get(EDUITIT_EXTERNAL_CALENDAR_USERNAME_ENV_NAME) or "").strip()
+        or EDUITIT_EXTERNAL_CALENDAR_USERNAME
+    )
+
+
+def _get_external_calendar_owner_provider():
+    return (
+        str(os.environ.get(EDUITIT_EXTERNAL_CALENDAR_PROVIDER_ENV_NAME) or "").strip()
+        or EDUITIT_EXTERNAL_CALENDAR_PROVIDER
+    )
+
+
 def _get_external_calendar_owner():
+    owner_username = _get_external_calendar_owner_username()
+    owner_provider = _get_external_calendar_owner_provider()
     account = (
         SocialAccount.objects.select_related("user")
         .filter(
-            provider=EDUITIT_EXTERNAL_CALENDAR_PROVIDER,
-            user__username=EDUITIT_EXTERNAL_CALENDAR_USERNAME,
+            provider=owner_provider,
+            user__username=owner_username,
         )
         .order_by("id")
         .first()
     )
-    return account.user if account else None
+    if account:
+        return account.user
+    return User.objects.filter(username=owner_username).order_by("id").first()
+
+
+def _external_api_json_error_response(code, message, *, status=400, errors=None):
+    payload = {
+        "status": "error",
+        "code": code,
+        "message": message,
+    }
+    if errors:
+        payload["errors"] = errors
+    response = JsonResponse(payload, status=status)
+    return _apply_sensitive_cache_headers(response)
+
+
+def _get_external_payload_value(payload, *keys):
+    for key in keys:
+        value = payload.get(key) if hasattr(payload, "get") else None
+        if value in (None, ""):
+            continue
+        return value
+    return None
+
+
+def _get_external_payload_text(payload, *keys, max_length=None):
+    value = _get_external_payload_value(payload, *keys)
+    text = str(value or "").strip()
+    if max_length is not None:
+        return text[:max_length]
+    return text
+
+
+def _normalize_external_webhook_datetime(value):
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        normalized = value
+    else:
+        raw_value = str(value or "").strip()
+        if not raw_value:
+            return None
+        normalized = parse_datetime(raw_value.replace("Z", "+00:00"))
+        if normalized is None:
+            date_value = parse_date(raw_value)
+            if date_value is None:
+                return None
+            normalized = datetime.combine(date_value, time.min)
+    if timezone.is_naive(normalized):
+        return timezone.make_aware(normalized, timezone.get_current_timezone())
+    return timezone.localtime(normalized)
 
 
 def _normalize_ical_datetime(value):
@@ -3713,8 +3793,8 @@ def external_ical_feed(request):
     if user is None:
         logger.warning(
             "[ClassCalendar] external ical owner missing | username=%s | provider=%s",
-            EDUITIT_EXTERNAL_CALENDAR_USERNAME,
-            EDUITIT_EXTERNAL_CALENDAR_PROVIDER,
+            _get_external_calendar_owner_username(),
+            _get_external_calendar_owner_provider(),
         )
         return _external_api_unavailable_response()
 
@@ -3744,7 +3824,127 @@ def external_ical_feed(request):
     ]
     content = _render_external_ical_feed(user=user, hub_items=exportable_items)
     response = HttpResponse(content, content_type="text/calendar; charset=utf-8")
-    response["Content-Disposition"] = 'inline; filename="eduitit-user694-calendar.ics"'
+    response["Content-Disposition"] = f'inline; filename="eduitit-{user.username}-calendar.ics"'
+    return _apply_sensitive_cache_headers(response)
+
+
+@csrf_exempt
+@require_POST
+def external_calendar_webhook(request):
+    raw_key = _get_external_api_key_from_request(request)
+    if not _is_valid_external_api_key(raw_key):
+        return _external_api_json_error_response(
+            "auth_failed",
+            "유효한 webhook 토큰이 필요합니다.",
+            status=401,
+        )
+
+    owner = _get_external_calendar_owner()
+    if owner is None:
+        logger.warning(
+            "[ClassCalendar] external webhook owner missing | username=%s | provider=%s",
+            _get_external_calendar_owner_username(),
+            _get_external_calendar_owner_provider(),
+        )
+        return _external_api_json_error_response(
+            "owner_unavailable",
+            "관리자 캘린더 연결 계정을 찾지 못했습니다.",
+            status=503,
+        )
+
+    payload = _extract_request_payload(request)
+    title = _get_external_payload_text(payload, "title", "summary", "name", max_length=200)
+    note = _get_external_payload_text(payload, "note", "description", "memo", "body", max_length=5000)
+    color = _get_external_payload_text(payload, "color", max_length=20) or "indigo"
+    if color not in dict(CalendarEventCreateForm.base_fields["color"].choices):
+        color = "indigo"
+
+    is_all_day = _parse_bool_value(
+        _get_external_payload_value(payload, "is_all_day", "all_day", "isAllDay")
+    )
+    start_time = _normalize_external_webhook_datetime(
+        _get_external_payload_value(payload, "start_time", "start", "start_at", "starts_at")
+    )
+    end_time = _normalize_external_webhook_datetime(
+        _get_external_payload_value(payload, "end_time", "end", "end_at", "ends_at")
+    )
+    if start_time is None:
+        return _external_api_json_error_response("validation_error", "시작 시간이 필요합니다.")
+    if end_time is None:
+        if is_all_day:
+            end_time = start_time + timedelta(days=1)
+        else:
+            return _external_api_json_error_response("validation_error", "종료 시간이 필요합니다.")
+    if end_time < start_time:
+        return _external_api_json_error_response(
+            "validation_error",
+            "종료 시간은 시작 시간보다 같거나 이후여야 합니다.",
+        )
+    if not title:
+        return _external_api_json_error_response("validation_error", "일정 제목이 필요합니다.")
+
+    form = CalendarEventCreateForm(
+        {
+            "title": title,
+            "note": note,
+            "start_time": start_time.isoformat(timespec="seconds"),
+            "end_time": end_time.isoformat(timespec="seconds"),
+            "is_all_day": "true" if is_all_day else "",
+            "color": color,
+        }
+    )
+    if not form.is_valid():
+        return _external_api_json_error_response(
+            "validation_error",
+            "Webhook payload를 확인해 주세요.",
+            errors=form.errors.get_json_data(),
+        )
+
+    integration_key = _get_external_payload_text(
+        payload,
+        "external_id",
+        "event_id",
+        "request_id",
+        "idempotency_key",
+        "uid",
+        max_length=255,
+    )
+    defaults = {
+        "title": form.cleaned_data["title"],
+        "start_time": form.cleaned_data["start_time"],
+        "end_time": form.cleaned_data["end_time"],
+        "is_all_day": form.cleaned_data.get("is_all_day", False),
+        "color": form.cleaned_data.get("color") or "indigo",
+        "visibility": CalendarEvent.VISIBILITY_TEACHER,
+        "classroom": None,
+        "source": CalendarEvent.SOURCE_LOCAL,
+        "integration_source": OPENCLO_WEBHOOK_INTEGRATION_SOURCE,
+        "integration_key": integration_key,
+    }
+
+    with transaction.atomic():
+        if integration_key:
+            event, created = CalendarEvent.objects.update_or_create(
+                author=owner,
+                integration_source=OPENCLO_WEBHOOK_INTEGRATION_SOURCE,
+                integration_key=integration_key,
+                defaults=defaults,
+            )
+        else:
+            event = CalendarEvent.objects.create(author=owner, **defaults)
+            created = True
+        _persist_primary_note(event, form.cleaned_data.get("note", ""))
+
+    response = JsonResponse(
+        {
+            "status": "success",
+            "result": "created" if created else "updated",
+            "event_id": str(event.id),
+            "owner_username": owner.username,
+            "integration_key": integration_key,
+        },
+        status=201 if created else 200,
+    )
     return _apply_sensitive_cache_headers(response)
 
 

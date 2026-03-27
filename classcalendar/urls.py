@@ -17,6 +17,7 @@ urlpatterns = [
     path("share/disable/", views.share_disable, name="share_disable"),
     path("share/rotate/", views.share_rotate, name="share_rotate"),
     path("external/calendar.ics", views.external_ical_feed, name="external_ical_feed"),
+    path("external/calendar/webhook/", views.external_calendar_webhook, name="external_calendar_webhook"),
     path("shared/<uuid:share_uuid>/", views.shared_view, name="shared"),
     path("api/events/", views.api_events, name="api_events"),
     path("api/integration-settings/", views.api_integration_settings, name="api_integration_settings"),
