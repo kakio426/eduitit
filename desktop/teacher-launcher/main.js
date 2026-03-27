@@ -27,6 +27,7 @@ let videoWindow = null;
 let dashboardWindow = null;
 let infoWindow = null;
 let blackoutWindow = null;
+let videoCurtainWindow = null;
 let watchdogTimer = null;
 let lastLaunchPayload = null;
 let isRestoringSplit = false;
@@ -387,7 +388,7 @@ function fetchJson(rawUrl) {
         method: "GET",
         headers: {
           Accept: "application/json",
-          "User-Agent": `EduititTeacherLauncher/${app.getVersion() || "0.2.9"}`,
+          "User-Agent": `EduititTeacherLauncher/${app.getVersion() || "0.2.10"}`,
         },
       },
       (response) => {
@@ -425,7 +426,8 @@ function hasActiveSplitSession() {
   return (
     (videoWindow && !videoWindow.isDestroyed()) ||
     (dashboardWindow && !dashboardWindow.isDestroyed()) ||
-    (blackoutWindow && !blackoutWindow.isDestroyed())
+    (blackoutWindow && !blackoutWindow.isDestroyed()) ||
+    (videoCurtainWindow && !videoCurtainWindow.isDestroyed())
   );
 }
 
@@ -682,6 +684,7 @@ function closeSplitWindows() {
     dashboardWindow.close();
   }
   if (blackoutWindow && !blackoutWindow.isDestroyed()) blackoutWindow.close();
+  if (videoCurtainWindow && !videoCurtainWindow.isDestroyed()) videoCurtainWindow.close();
   BrowserWindow.getAllWindows()
     .filter((win) => win && win.__eduititSplitWindow === true && !win.isDestroyed())
     .forEach((win) => {
@@ -695,6 +698,7 @@ function closeSplitWindows() {
   videoWindow = null;
   dashboardWindow = null;
   blackoutWindow = null;
+  videoCurtainWindow = null;
 }
 
 function closeBlackoutWindow() {
@@ -702,6 +706,104 @@ function closeBlackoutWindow() {
     blackoutWindow.close();
   }
   blackoutWindow = null;
+}
+
+function getVideoCurtainBounds() {
+  const bounds = computeSplitBounds();
+  return {
+    x: bounds.x,
+    y: bounds.y,
+    width: bounds.leftWidth,
+    height: bounds.height,
+  };
+}
+
+function syncVideoCurtainBounds() {
+  if (!videoCurtainWindow || videoCurtainWindow.isDestroyed()) return;
+  videoCurtainWindow.setBounds(getVideoCurtainBounds());
+}
+
+function closeVideoCurtainWindow() {
+  if (videoCurtainWindow && !videoCurtainWindow.isDestroyed()) {
+    videoCurtainWindow.close();
+  }
+  videoCurtainWindow = null;
+}
+
+function createVideoCurtainWindow() {
+  if (videoCurtainWindow && !videoCurtainWindow.isDestroyed()) {
+    syncVideoCurtainBounds();
+    videoCurtainWindow.showInactive();
+    return;
+  }
+
+  const bounds = getVideoCurtainBounds();
+  videoCurtainWindow = new BrowserWindow({
+    x: bounds.x,
+    y: bounds.y,
+    width: bounds.width,
+    height: bounds.height,
+    frame: false,
+    backgroundColor: "#050816",
+    autoHideMenuBar: true,
+    skipTaskbar: true,
+    alwaysOnTop: true,
+    focusable: false,
+    fullscreenable: false,
+    transparent: false,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  videoCurtainWindow.setAlwaysOnTop(true, ALWAYS_ON_TOP_LEVEL);
+  videoCurtainWindow.setIgnoreMouseEvents(true);
+  videoCurtainWindow.setMenuBarVisibility(false);
+  videoCurtainWindow.loadURL(
+    "data:text/html;charset=utf-8," +
+      encodeURIComponent(`
+        <html>
+          <body style="margin:0;background:#050816;color:#e2e8f0;font-family:'Segoe UI',Arial,sans-serif;display:flex;align-items:center;justify-content:center;">
+            <div style="text-align:center;padding:32px;">
+              <div style="font-size:20px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#86efac;">Eduitit</div>
+              <div style="margin-top:14px;font-size:34px;font-weight:900;">영상이 가려져 있습니다</div>
+              <div style="margin-top:14px;font-size:16px;font-weight:700;color:#cbd5e1;">오른쪽 대시보드에서 다시 재생 또는 다시 보이기를 눌러 주세요.</div>
+            </div>
+          </body>
+        </html>
+      `)
+  );
+  videoCurtainWindow.on("closed", () => {
+    videoCurtainWindow = null;
+  });
+}
+
+function toggleVideoCurtain() {
+  if (videoCurtainWindow && !videoCurtainWindow.isDestroyed()) {
+    closeVideoCurtainWindow();
+    return;
+  }
+  createVideoCurtainWindow();
+}
+
+function replayCurrentVideo() {
+  if (!lastLaunchPayload) return false;
+
+  closeVideoCurtainWindow();
+  const expectedUrl = normalizeHttpUrl(lastLaunchPayload.youtubeUrl);
+  if (!expectedUrl) return false;
+
+  if (!isSplitWindowAlive(videoWindow) || !isSplitWindowAlive(dashboardWindow)) {
+    createSplitWindows(lastLaunchPayload);
+    return true;
+  }
+
+  videoWindow.webContents.loadURL(expectedUrl).catch((err) => {
+    console.error("[launcher-video] failed to replay original video url:", err);
+  });
+  enforceWindowVisible(videoWindow);
+  enforceWindowVisible(dashboardWindow);
+  return true;
 }
 
 function emergencyQuit() {
@@ -855,6 +957,13 @@ function executeLauncherAction(action) {
   }
   if (action.name === "move_display") {
     cycleSplitDisplay();
+    return true;
+  }
+  if (action.name === "replay_video") {
+    return replayCurrentVideo();
+  }
+  if (action.name === "toggle_video_curtain") {
+    toggleVideoCurtain();
     return true;
   }
   return false;
@@ -1137,6 +1246,7 @@ function relayoutSplitWindows() {
     height: bounds.height,
   });
   syncBlackoutBounds();
+  syncVideoCurtainBounds();
 }
 
 function resetRecoveryWindow(now) {
@@ -1295,73 +1405,6 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
           return null;
         }
 
-        function isEndscreenVisible() {
-          return Boolean(
-            document.querySelector(
-              ".html5-endscreen, .ytp-endscreen-content, .ytp-autonav-endscreen-upnext-play-button, .ytp-replay-button"
-            )
-          );
-        }
-
-        function replayMainVideo() {
-          const playerApi = getPlayerApi();
-
-          try {
-            if (targetVideoId && playerApi && typeof playerApi.loadVideoById === "function") {
-              playerApi.loadVideoById(targetVideoId, 0);
-              if (typeof playerApi.playVideo === "function") {
-                playerApi.playVideo();
-              }
-
-              const resumedState =
-                playerApi && typeof playerApi.getPlayerState === "function" ? playerApi.getPlayerState() : null;
-              if (resumedState === 1 || resumedState === 2 || resumedState === 3) {
-                return true;
-              }
-            }
-          } catch (_) {}
-
-          const replayButton = document.querySelector(".ytp-replay-button");
-          if (replayButton) {
-            replayButton.click();
-            return true;
-          }
-
-          try {
-            if (playerApi && typeof playerApi.seekTo === "function") {
-              playerApi.seekTo(0, true);
-            }
-            if (playerApi && typeof playerApi.playVideo === "function") {
-              playerApi.playVideo();
-              const resumedState =
-                playerApi && typeof playerApi.getPlayerState === "function" ? playerApi.getPlayerState() : null;
-              if (resumedState === 1 || resumedState === 2 || resumedState === 3) {
-                return true;
-              }
-            }
-          } catch (_) {}
-
-          const video = document.querySelector("video");
-          if (video) {
-            try {
-              video.currentTime = 0;
-              video.play().catch(() => {});
-              return true;
-            } catch (_) {}
-          }
-
-          if (replayUrl) {
-            if (window.location.href !== replayUrl) {
-              window.location.replace(replayUrl);
-            } else {
-              window.location.reload();
-            }
-            return true;
-          }
-
-          return false;
-        }
-
         function disableAutoplayNext() {
           const selectors = [
             ".ytp-autonav-toggle-button[aria-checked='true']",
@@ -1446,194 +1489,70 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
           return;
         }
 
-        if (!window.__eduititRepeatEnforcer) {
-          const confirmedPlaybackThresholdSec = 3;
-          const seekCompletionThresholdSec = 0.5;
-          const minRepeatDurationSec = 60;
-          const replayVerifyDelayMs = 1500;
-          const repeatState = window.__eduititRepeatState || {
-            lastReplayAt: 0,
-            lastRecoveryAt: 0,
-            lastAdSeenAt: 0,
-            sawTargetPlayback: false,
-            sawPlaybackAfterLastAd: false,
-            activeMismatchSince: 0,
-            activeMismatchVideoId: "",
-            replayVerifyAt: 0,
-            phase: "bootstrap",
-          };
-          window.__eduititRepeatState = repeatState;
-          window.__eduititRepeatEnforcer = window.setInterval(() => {
-            const now = Date.now();
-            const video = document.querySelector("video");
-            if (video) {
-              video.loop = false;
-              video.removeAttribute("loop");
-            }
-            disableAutoplayNext();
-
-            if (isAdShowing()) {
-              repeatState.lastAdSeenAt = now;
-              repeatState.sawPlaybackAfterLastAd = false;
-              repeatState.replayVerifyAt = 0;
-              repeatState.phase = "ad";
-              return;
-            }
-
-            if (repeatState.lastAdSeenAt && now - repeatState.lastAdSeenAt < 4000) {
-              if (repeatState.phase === "ad") {
-                repeatState.phase = "await_content_after_ad";
-              }
-              return;
-            }
-
-            const pageVideoId = getPageVideoId();
-            const activeVideoId = getActiveVideoId();
-            const playerState = getPlayerState();
-            const playerApi = getPlayerApi();
-            let knownDurationSec = 0;
-            if (video && Number.isFinite(video.duration) && video.duration > 0) {
-              knownDurationSec = video.duration;
-            } else {
-              try {
-                if (playerApi && typeof playerApi.getDuration === "function") {
-                  const apiDuration = Number(playerApi.getDuration());
-                  if (Number.isFinite(apiDuration) && apiDuration > 0) {
-                    knownDurationSec = apiDuration;
-                  }
-                }
-              } catch (_) {}
-            }
-            const playbackPositionSec = video && Number.isFinite(video.currentTime) ? video.currentTime : 0;
-            const repeatAllowed = knownDurationSec >= minRepeatDurationSec || playbackPositionSec >= minRepeatDurationSec;
-            const contentReadyForRepeat =
-              repeatState.phase !== "ad" && repeatState.phase !== "await_content_after_ad";
-            const activeTargetPlayback =
-              Boolean(
-                video &&
-                  pageVideoId === targetVideoId &&
-                  (!activeVideoId || activeVideoId === targetVideoId || activeVideoId === pageVideoId) &&
-                  !video.ended &&
-                  !isEndscreenVisible() &&
-                  video.currentTime >= seekCompletionThresholdSec &&
-                  (playerState === null || playerState === 1 || playerState === 3)
-              );
-            const targetPlaybackSeenBySeekOrEnd =
-              Boolean(
-                video &&
-                  repeatAllowed &&
-                  contentReadyForRepeat &&
-                  pageVideoId === targetVideoId &&
-                  (!activeVideoId || activeVideoId === targetVideoId || activeVideoId === pageVideoId) &&
-                  video.currentTime >= seekCompletionThresholdSec &&
-                  (Boolean(video.ended) || playerState === 0 || isEndscreenVisible())
-              );
-            const confirmedTargetPlayback =
-              !targetVideoId ||
-              (pageVideoId === targetVideoId &&
-                (!activeVideoId || activeVideoId === targetVideoId || activeVideoId === pageVideoId) &&
-                Boolean(
-                  video &&
-                    (
-                      (
-                        !video.ended &&
-                        video.currentTime >= confirmedPlaybackThresholdSec &&
-                        (playerState === null || playerState === 1 || playerState === 2 || playerState === 3)
-                      ) ||
-                      targetPlaybackSeenBySeekOrEnd
-                    )
-                ));
-
-            if (activeTargetPlayback && repeatState.phase === "await_content_after_ad") {
-              repeatState.sawPlaybackAfterLastAd = true;
-              repeatState.phase = "content_ready";
-            } else if (activeTargetPlayback && repeatState.phase === "bootstrap") {
-              repeatState.phase = "content_ready";
-            }
-
-            if (confirmedTargetPlayback || activeTargetPlayback) {
-              repeatState.sawTargetPlayback = true;
-              repeatState.replayVerifyAt = 0;
-              if (repeatState.phase === "bootstrap") {
-                repeatState.phase = "content_ready";
-              }
-            }
-            if (!activeVideoId || activeVideoId === targetVideoId) {
-              repeatState.activeMismatchSince = 0;
-              repeatState.activeMismatchVideoId = "";
-            }
-
-            // Ads do not change the watch URL, so a page-level video id mismatch
-            // means YouTube already drifted to a different video and should be restored.
-            if (targetVideoId && pageVideoId && pageVideoId !== targetVideoId) {
-              if (replayUrl && now - repeatState.lastRecoveryAt >= replayCooldownMs) {
-                repeatState.lastRecoveryAt = now;
-                repeatState.sawTargetPlayback = false;
-                repeatState.sawPlaybackAfterLastAd = false;
-                window.location.replace(replayUrl);
-              }
-              return;
-            }
-
-            if (!confirmedTargetPlayback && targetVideoId && activeVideoId && activeVideoId !== targetVideoId) {
-              if (repeatState.activeMismatchVideoId !== activeVideoId) {
-                repeatState.activeMismatchVideoId = activeVideoId;
-                repeatState.activeMismatchSince = now;
-              }
-
-              const mismatchDurationMs = repeatState.activeMismatchSince ? now - repeatState.activeMismatchSince : 0;
-              const isPlayingAnotherVideo =
-                repeatState.sawTargetPlayback &&
-                Boolean(
-                  video &&
-                    video.currentTime >= 1 &&
-                    (playerState === null || playerState === 1 || playerState === 2 || playerState === 3)
-                );
-
-              if (
-                isPlayingAnotherVideo &&
-                mismatchDurationMs >= 1500 &&
-                replayUrl &&
-                now - repeatState.lastRecoveryAt >= replayCooldownMs
-              ) {
-                repeatState.lastRecoveryAt = now;
-                repeatState.sawTargetPlayback = false;
-                repeatState.sawPlaybackAfterLastAd = false;
-                window.location.replace(replayUrl);
-              }
-              return;
-            }
-
-            if (repeatState.replayVerifyAt && now >= repeatState.replayVerifyAt) {
-              repeatState.replayVerifyAt = 0;
-              const stillEnded = playerState === 0 || Boolean(video && video.ended) || isEndscreenVisible();
-              if (
-                contentReadyForRepeat &&
-                repeatAllowed &&
-                stillEnded &&
-                replayUrl &&
-                now - repeatState.lastRecoveryAt >= replayCooldownMs
-              ) {
-                repeatState.lastRecoveryAt = now;
-                repeatState.sawTargetPlayback = false;
-                repeatState.sawPlaybackAfterLastAd = false;
-                window.location.replace(replayUrl);
-                return;
-              }
-            }
-
-            const hasEnded = playerState === 0 || Boolean(video && video.ended) || isEndscreenVisible();
-            if (!hasEnded) return;
-            if (!contentReadyForRepeat) return;
-            if (!repeatAllowed) return;
-            if (targetVideoId && !repeatState.sawTargetPlayback) return;
-            if (now - repeatState.lastReplayAt < replayCooldownMs) return;
-
-            repeatState.lastReplayAt = now;
-            repeatState.replayVerifyAt = now + replayVerifyDelayMs;
-            replayMainVideo();
-          }, 1200);
+        if (window.__eduititVideoGuard) {
+          window.clearInterval(window.__eduititVideoGuard);
         }
+        const driftState = window.__eduititDriftState || {
+          lastRecoveryAt: 0,
+          activeMismatchSince: 0,
+          activeMismatchVideoId: "",
+        };
+        window.__eduititDriftState = driftState;
+        window.__eduititVideoGuard = window.setInterval(() => {
+          const now = Date.now();
+          const video = document.querySelector("video");
+          if (video) {
+            video.loop = false;
+            video.removeAttribute("loop");
+          }
+          disableAutoplayNext();
+
+          if (isAdShowing()) {
+            driftState.activeMismatchSince = 0;
+            driftState.activeMismatchVideoId = "";
+            return;
+          }
+
+          const pageVideoId = getPageVideoId();
+          const activeVideoId = getActiveVideoId();
+          const playerState = getPlayerState();
+
+          if (targetVideoId && pageVideoId && pageVideoId !== targetVideoId) {
+            if (replayUrl && now - driftState.lastRecoveryAt >= replayCooldownMs) {
+              driftState.lastRecoveryAt = now;
+              window.location.replace(replayUrl);
+            }
+            return;
+          }
+
+          if (!activeVideoId || activeVideoId === targetVideoId) {
+            driftState.activeMismatchSince = 0;
+            driftState.activeMismatchVideoId = "";
+            return;
+          }
+
+          if (driftState.activeMismatchVideoId !== activeVideoId) {
+            driftState.activeMismatchVideoId = activeVideoId;
+            driftState.activeMismatchSince = now;
+          }
+
+          const mismatchDurationMs = driftState.activeMismatchSince ? now - driftState.activeMismatchSince : 0;
+          const isPlayingAnotherVideo = Boolean(
+            video &&
+              video.currentTime >= 1 &&
+              (playerState === null || playerState === 1 || playerState === 2 || playerState === 3)
+          );
+
+          if (
+            isPlayingAnotherVideo &&
+            mismatchDurationMs >= 1500 &&
+            replayUrl &&
+            now - driftState.lastRecoveryAt >= replayCooldownMs
+          ) {
+            driftState.lastRecoveryAt = now;
+            window.location.replace(replayUrl);
+          }
+        }, 1200);
 
         window.scrollTo(0, 0);
       })();

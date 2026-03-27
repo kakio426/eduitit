@@ -606,14 +606,21 @@
 
             <div id="tvTeacherGuide"
                 class="hidden mx-3 mb-3 rounded-xl bg-gray-900/85 text-white p-2 shadow-2xl border border-white/15">
-                <button id="btnToggleTvGuide"
-                    class="w-full flex items-center justify-between gap-2 rounded-lg bg-white/10 hover:bg-white/20 px-3 py-2 transition-all">
-                    <span class="text-[10px] uppercase tracking-widest font-black text-emerald-200">TV 수업 도구</span>
-                    <span id="tvGuideToggleIcon" class="text-xs font-black text-white/80">+</span>
-                </button>
-                <div id="tvTeacherGuideBody" class="hidden mt-2 px-1 pb-1">
-                    <p class="text-[11px] font-semibold text-white/90">기본은 영상 넓게 · TV 모드는 설명 더 크게 · <span class="font-black text-amber-200">B</span> 블랙스크린</p>
-                    <p class="mt-1 text-[10px] font-semibold text-white/80">세부 조정: <span class="font-black">Ctrl+Alt+→</span> 영상 더 크게 · <span class="font-black">Ctrl+Alt+←</span> 줄이기 · <span class="font-black">Ctrl+Alt+0</span> 기본</p>
+                <div id="tvTeacherGuideBody" class="px-1 pb-1">
+                    <p class="px-2 pt-1 text-[10px] uppercase tracking-widest font-black text-emerald-200">수업 제어</p>
+                    <div class="mt-2 grid grid-cols-2 gap-2">
+                        <a href="eduitit-launcher://action?name=replay_video"
+                            class="rounded-xl bg-emerald-500 px-3 py-3 text-center text-sm font-black text-white shadow-lg transition-all hover:bg-emerald-400">
+                            <span class="block text-base">영상 다시 재생</span>
+                            <span class="mt-1 block text-[11px] font-bold text-emerald-50/90">왼쪽 영상을 처음부터 다시 엽니다</span>
+                        </a>
+                        <a href="eduitit-launcher://action?name=toggle_video_curtain"
+                            class="rounded-xl bg-slate-700 px-3 py-3 text-center text-sm font-black text-white shadow-lg transition-all hover:bg-slate-600">
+                            <span class="block text-base">가리기 / 다시 보기</span>
+                            <span class="mt-1 block text-[11px] font-bold text-slate-100/90">학생 화면 영상만 가리거나 다시 보여 줍니다</span>
+                        </a>
+                    </div>
+                    <p class="mt-3 px-2 text-[11px] font-semibold text-white/90">세부 조정</p>
                     <div class="mt-2 grid grid-cols-3 gap-1.5">
                         <a href="eduitit-launcher://action?name=tv_mode"
                             class="px-2 py-1 rounded-lg bg-white/15 hover:bg-white/25 text-[10px] font-black text-center transition-all">

@@ -1755,6 +1755,27 @@ class ArtClassPresentationUxTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, "수업 자료 보기")
 
+    def test_launcher_dashboard_shows_manual_video_controls(self):
+        art_class = ArtClass.objects.create(
+            title="런처 제어 수업",
+            youtube_url="https://www.youtube.com/watch?v=UFQT5Wtamw0",
+            default_interval=10,
+            playback_mode=ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW,
+        )
+        ArtStep.objects.create(art_class=art_class, step_number=1, description="기본 단계")
+
+        response = self.client.get(
+            reverse("artclass:classroom", kwargs={"pk": art_class.pk}),
+            data={"display": "dashboard", "runtime": "launcher"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "수업 제어")
+        self.assertContains(response, 'eduitit-launcher://action?name=replay_video')
+        self.assertContains(response, "영상 다시 재생")
+        self.assertContains(response, 'eduitit-launcher://action?name=toggle_video_curtain')
+        self.assertContains(response, "가리기 / 다시 보기")
+
 
 class ArtClassYoutubeTitleBackfillCommandTest(TestCase):
     @patch("artclass.management.commands.backfill_artclass_youtube_titles._fetch_youtube_title")
