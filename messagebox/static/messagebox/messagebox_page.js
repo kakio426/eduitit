@@ -126,7 +126,7 @@ function messageboxPage(options = {}) {
                 this.messageCaptureSourcePreviewOpen = false;
                 this.syncMessageCapturePlannerState();
                 if (!this.messageCapturePlannerIsDesktop()) {
-                    this.focusMessageInput({ preserveStep: true, focusInput: false });
+                    this.revealMessageCaptureConfirm();
                 }
             };
 
@@ -265,6 +265,71 @@ function messageboxPage(options = {}) {
                 if (input && typeof input.focus === "function") {
                     input.focus();
                 }
+            });
+        },
+
+        blurActiveMessageboxElement() {
+            if (typeof document === "undefined") return;
+            const active = document.activeElement;
+            if (!active || active === document.body) return;
+            const tagName = String(active.tagName || "").toLowerCase();
+            const isEditable = !!active.isContentEditable
+                || tagName === "input"
+                || tagName === "textarea"
+                || tagName === "select";
+            if (isEditable && typeof active.blur === "function") {
+                active.blur();
+            }
+        },
+
+        findMessageCaptureConfirmElement() {
+            if (typeof document === "undefined") return null;
+            const root = this.$root || document.querySelector("[data-messagebox-root='true']");
+            if (!root || typeof root.querySelector !== "function") return null;
+            return root.querySelector("[data-message-capture-confirm='true']");
+        },
+
+        findMessageCaptureConfirmSummaryElement() {
+            if (typeof document === "undefined") return null;
+            const root = this.$root || document.querySelector("[data-messagebox-root='true']");
+            if (!root || typeof root.querySelector !== "function") return null;
+            return root.querySelector("[data-message-capture-confirm-summary='true']");
+        },
+
+        revealMessageCaptureConfirm(options = {}) {
+            if (options.updateHash !== false) {
+                this.updateMessageboxHash("messagebox-compose");
+            }
+            this.blurActiveMessageboxElement();
+            const behavior = options.behavior || "smooth";
+            const revealConfirmSection = (nextBehavior) => {
+                const summaryCard = this.findMessageCaptureConfirmSummaryElement();
+                const confirmSection = summaryCard || this.findMessageCaptureConfirmElement();
+                if (!confirmSection) {
+                    return;
+                }
+                const rootStyle = typeof window !== "undefined" && window.getComputedStyle
+                    ? window.getComputedStyle(document.documentElement)
+                    : null;
+                const navHeight = rootStyle
+                    ? Number.parseFloat(rootStyle.getPropertyValue("--main-nav-height")) || 88
+                    : 88;
+                const topOffset = navHeight + 16;
+                const nextTop = Math.max(
+                    0,
+                    window.scrollY + confirmSection.getBoundingClientRect().top - topOffset,
+                );
+                window.scrollTo({
+                    top: nextTop,
+                    behavior: nextBehavior,
+                });
+            };
+            this.afterMessageboxDomUpdate(() => {
+                revealConfirmSection(behavior);
+                window.setTimeout(() => revealConfirmSection("auto"), 120);
+                window.setTimeout(() => revealConfirmSection("auto"), 320);
+                window.setTimeout(() => revealConfirmSection("auto"), 900);
+                window.setTimeout(() => revealConfirmSection("auto"), 1500);
             });
         },
 
@@ -1432,6 +1497,7 @@ function messageboxPage(options = {}) {
                     return;
                 }
             }
+            this.blurActiveMessageboxElement();
             this.isParsingMessageCapture = true;
             this.messageCaptureErrorText = "";
             try {

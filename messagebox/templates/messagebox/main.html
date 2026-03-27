@@ -201,8 +201,8 @@
                         </div>
                     </div>
 
-                    <div class="mt-5 space-y-4" x-show="messageCaptureStep === 'confirm'" x-cloak>
-                        <div class="rounded-[1.8rem] border border-amber-200 bg-amber-50 px-5 py-5">
+                    <div class="mt-5 space-y-4" x-show="messageCaptureStep === 'confirm'" x-cloak x-ref="messageCaptureConfirmSection" tabindex="-1" data-message-capture-confirm="true">
+                        <div class="rounded-[1.8rem] border border-amber-200 bg-amber-50 px-5 py-5" x-ref="messageCaptureConfirmSummary" data-message-capture-confirm-summary="true">
                             <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
                                 <div>
                                     <p class="text-base font-black text-slate-900" x-text="messageCaptureSummaryText || `실제 일정 후보 ${messageCaptureCandidates.length}개`"></p>
