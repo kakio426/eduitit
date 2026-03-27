@@ -125,6 +125,9 @@ function messageboxPage(options = {}) {
                 this.syncManualInputsFromPayload(payload);
                 this.messageCaptureSourcePreviewOpen = false;
                 this.syncMessageCapturePlannerState();
+                if (!this.messageCapturePlannerIsDesktop()) {
+                    this.focusMessageInput({ preserveStep: true, focusInput: false });
+                }
             };
 
             this.applyMessageCaptureArchiveSaveResult = (payload) => {

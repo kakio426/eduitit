@@ -889,6 +889,7 @@ function initCalendarMessageHub(host, options = {}) {
             this.messageCaptureErrorText = '';
             this.messageCaptureStep = 'confirm';
             this.messageHubActiveTab = 'capture';
+            this.scrollMessageHubPanelToTop('capture');
         },
 
         applyMessageCaptureArchiveSaveResult: function(payload) {
