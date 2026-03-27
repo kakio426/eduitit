@@ -51,6 +51,10 @@
         return "?";
     }
 
+    function pieceSideName(side) {
+        return side === "red" ? "초" : "한";
+    }
+
     function clonePiece(p) {
         return p ? { type: p.type, side: p.side, label: p.label } : null;
     }
@@ -477,19 +481,45 @@
         return squareName(from) + squareName(to);
     }
 
-    function pieceKoreanName(type) {
+    function pieceKoreanName(type, side) {
         if (type === "rook") return "\ucc28";
         if (type === "horse") return "\ub9c8";
         if (type === "elephant") return "\uc0c1";
         if (type === "guard") return "\uc0ac";
         if (type === "king") return "\uad81";
         if (type === "cannon") return "\ud3ec";
-        return "\uc878";
+        return side === "red" ? "\ubcd1" : "\uc878";
+    }
+
+    function buildPieceToken(pieceObj) {
+        var token = document.createElement("div");
+        var badge = document.createElement("span");
+        var glyph = document.createElement("span");
+        var name = document.createElement("span");
+
+        token.className = "janggi-piece " + (pieceObj.side === "red" ? "piece-red" : "piece-blue");
+        token.setAttribute("data-piece-type", pieceObj.type);
+        token.setAttribute("data-piece-side", pieceObj.side);
+        token.setAttribute("aria-label", pieceSideName(pieceObj.side) + " " + pieceKoreanName(pieceObj.type, pieceObj.side));
+
+        badge.className = "piece-side-badge";
+        badge.textContent = pieceSideName(pieceObj.side);
+
+        glyph.className = "piece-glyph";
+        glyph.textContent = pieceObj.label;
+
+        name.className = "piece-name";
+        name.textContent = pieceKoreanName(pieceObj.type, pieceObj.side);
+
+        token.appendChild(badge);
+        token.appendChild(glyph);
+        token.appendChild(name);
+        return token;
     }
 
     function recordMove(from, to, p, captured) {
-        var text = (moveHistory.length + 1) + ". " + pieceKoreanName(p.type) + " " + squareName(from) + "-" + squareName(to);
-        if (captured) text += " x" + pieceKoreanName(captured.type);
+        var text = (moveHistory.length + 1) + ". " + pieceKoreanName(p.type, p.side) + " " + squareName(from) + "-" + squareName(to);
+        if (captured) text += " x" + pieceKoreanName(captured.type, captured.side);
         moveHistory.push(text);
         moveTokens.push(moveToken(from, to));
         if (historyEl) historyEl.textContent = moveHistory.join("\n");
@@ -592,25 +622,20 @@
 
                 var p = getPiece(r, c);
                 if (p) {
-                    var token = document.createElement("div");
-                    token.className = "janggi-piece " + (p.side === "red" ? "piece-red" : "piece-blue");
-                    token.textContent = p.label;
-                    token.setAttribute("aria-label", p.label);
-                    cell.appendChild(token);
+                    cell.appendChild(buildPieceToken(p));
                 }
                 boardEl.appendChild(cell);
             }
         }
     }
 
-    function applyLocalAiMove(reason) {
+    function applyLocalAiMove() {
         var local = findLocalAiMove("blue");
         if (!local) {
             showToast("AI 수 없음", "합법 수를 찾지 못했습니다.");
             aiRequestPending = false;
             return;
         }
-        if (reason) showToast("로컬 AI", reason);
         movePiece(local.from, local.to, false);
         aiRequestPending = false;
     }
@@ -620,7 +645,7 @@
         aiRequestPending = true;
         setTimeout(function () {
             if (!aiRequestPending || gameEnded || currentTurn !== "blue") return;
-            applyLocalAiMove("현재 모드는 로컬 AI로 진행됩니다.");
+            applyLocalAiMove();
         }, 320);
     }
 
@@ -709,4 +734,3 @@
         resetAll();
     });
 })();
-
