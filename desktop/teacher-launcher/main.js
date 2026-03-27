@@ -387,7 +387,7 @@ function fetchJson(rawUrl) {
         method: "GET",
         headers: {
           Accept: "application/json",
-          "User-Agent": `EduititTeacherLauncher/${app.getVersion() || "0.2.8"}`,
+          "User-Agent": `EduititTeacherLauncher/${app.getVersion() || "0.2.9"}`,
         },
       },
       (response) => {
@@ -1456,9 +1456,11 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
             lastRecoveryAt: 0,
             lastAdSeenAt: 0,
             sawTargetPlayback: false,
+            sawPlaybackAfterLastAd: false,
             activeMismatchSince: 0,
             activeMismatchVideoId: "",
             replayVerifyAt: 0,
+            phase: "bootstrap",
           };
           window.__eduititRepeatState = repeatState;
           window.__eduititRepeatEnforcer = window.setInterval(() => {
@@ -1472,10 +1474,16 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
 
             if (isAdShowing()) {
               repeatState.lastAdSeenAt = now;
+              repeatState.sawPlaybackAfterLastAd = false;
+              repeatState.replayVerifyAt = 0;
+              repeatState.phase = "ad";
               return;
             }
 
             if (repeatState.lastAdSeenAt && now - repeatState.lastAdSeenAt < 4000) {
+              if (repeatState.phase === "ad") {
+                repeatState.phase = "await_content_after_ad";
+              }
               return;
             }
 
@@ -1498,10 +1506,25 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
             }
             const playbackPositionSec = video && Number.isFinite(video.currentTime) ? video.currentTime : 0;
             const repeatAllowed = knownDurationSec >= minRepeatDurationSec || playbackPositionSec >= minRepeatDurationSec;
+            const contentReadyForRepeat =
+              repeatState.phase !== "ad" && repeatState.phase !== "await_content_after_ad";
+            const activeTargetPlayback =
+              Boolean(
+                video &&
+                  pageVideoId === targetVideoId &&
+                  (!activeVideoId || activeVideoId === targetVideoId || activeVideoId === pageVideoId) &&
+                  !video.ended &&
+                  !isEndscreenVisible() &&
+                  video.currentTime >= seekCompletionThresholdSec &&
+                  (playerState === null || playerState === 1 || playerState === 3)
+              );
             const targetPlaybackSeenBySeekOrEnd =
               Boolean(
                 video &&
                   repeatAllowed &&
+                  contentReadyForRepeat &&
+                  pageVideoId === targetVideoId &&
+                  (!activeVideoId || activeVideoId === targetVideoId || activeVideoId === pageVideoId) &&
                   video.currentTime >= seekCompletionThresholdSec &&
                   (Boolean(video.ended) || playerState === 0 || isEndscreenVisible())
               );
@@ -1521,9 +1544,19 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
                     )
                 ));
 
-            if (confirmedTargetPlayback) {
+            if (activeTargetPlayback && repeatState.phase === "await_content_after_ad") {
+              repeatState.sawPlaybackAfterLastAd = true;
+              repeatState.phase = "content_ready";
+            } else if (activeTargetPlayback && repeatState.phase === "bootstrap") {
+              repeatState.phase = "content_ready";
+            }
+
+            if (confirmedTargetPlayback || activeTargetPlayback) {
               repeatState.sawTargetPlayback = true;
               repeatState.replayVerifyAt = 0;
+              if (repeatState.phase === "bootstrap") {
+                repeatState.phase = "content_ready";
+              }
             }
             if (!activeVideoId || activeVideoId === targetVideoId) {
               repeatState.activeMismatchSince = 0;
@@ -1536,6 +1569,7 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
               if (replayUrl && now - repeatState.lastRecoveryAt >= replayCooldownMs) {
                 repeatState.lastRecoveryAt = now;
                 repeatState.sawTargetPlayback = false;
+                repeatState.sawPlaybackAfterLastAd = false;
                 window.location.replace(replayUrl);
               }
               return;
@@ -1564,6 +1598,7 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
               ) {
                 repeatState.lastRecoveryAt = now;
                 repeatState.sawTargetPlayback = false;
+                repeatState.sawPlaybackAfterLastAd = false;
                 window.location.replace(replayUrl);
               }
               return;
@@ -1573,6 +1608,7 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
               repeatState.replayVerifyAt = 0;
               const stillEnded = playerState === 0 || Boolean(video && video.ended) || isEndscreenVisible();
               if (
+                contentReadyForRepeat &&
                 repeatAllowed &&
                 stillEnded &&
                 replayUrl &&
@@ -1580,6 +1616,7 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
               ) {
                 repeatState.lastRecoveryAt = now;
                 repeatState.sawTargetPlayback = false;
+                repeatState.sawPlaybackAfterLastAd = false;
                 window.location.replace(replayUrl);
                 return;
               }
@@ -1587,6 +1624,7 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
 
             const hasEnded = playerState === 0 || Boolean(video && video.ended) || isEndscreenVisible();
             if (!hasEnded) return;
+            if (!contentReadyForRepeat) return;
             if (!repeatAllowed) return;
             if (targetVideoId && !repeatState.sawTargetPlayback) return;
             if (now - repeatState.lastReplayAt < replayCooldownMs) return;
