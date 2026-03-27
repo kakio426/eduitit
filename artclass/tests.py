@@ -1773,8 +1773,8 @@ class ArtClassPresentationUxTest(TestCase):
         self.assertContains(response, "수업 제어")
         self.assertContains(response, 'eduitit-launcher://action?name=replay_video')
         self.assertContains(response, "영상 다시 재생")
-        self.assertContains(response, 'eduitit-launcher://action?name=toggle_video_curtain')
-        self.assertContains(response, "가리기 / 다시 보기")
+        self.assertContains(response, 'eduitit-launcher://quit')
+        self.assertContains(response, "수업 종료")
 
 
 class ArtClassYoutubeTitleBackfillCommandTest(TestCase):

@@ -478,6 +478,57 @@ function maybePromptForDownloadedUpdate() {
   void promptForDownloadedUpdate(downloadedUpdateInfo);
 }
 
+async function tryUpdateFromMissingPayload() {
+  if (!app.isPackaged) {
+    return false;
+  }
+
+  let state = loadLauncherReleaseConfigState();
+  if (!state.configUrl && !state.updateBaseUrl && !state.downloadUrl) {
+    return false;
+  }
+
+  try {
+    if (state.configUrl) {
+      state = await syncLauncherReleaseConfig(state.configUrl, { checkImmediately: true, force: true });
+    } else {
+      const updateResult = await checkForLauncherUpdates({ force: true });
+      if (updateResult && updateResult.downloadPromise) {
+        await updateResult.downloadPromise.catch((err) => {
+          console.error("[launcher-update] missing_payload download failed:", err);
+          return null;
+        });
+      }
+      state = loadLauncherReleaseConfigState();
+    }
+  } catch (err) {
+    console.error("[launcher-update] missing_payload recovery failed:", err);
+    state = loadLauncherReleaseConfigState();
+  }
+
+  const requiredVersion = normalizeVersionString(
+    state.minimumRequiredVersion || state.latestVersion || state.bridgeVersion
+  );
+  if (!requiredVersion || isVersionAtLeast(getCurrentLauncherVersion(), requiredVersion)) {
+    return false;
+  }
+
+  if (downloadedUpdateInfo && isVersionAtLeast(downloadedUpdateInfo.version, requiredVersion)) {
+    await promptForDownloadedUpdate(downloadedUpdateInfo);
+    return true;
+  }
+
+  const fallbackDownloadUrl = normalizeHttpUrl(state.downloadUrl);
+  if (fallbackDownloadUrl) {
+    shell.openExternal(fallbackDownloadUrl).catch((err) => {
+      console.error("[launcher-update] failed to open fallback download url from missing_payload:", err);
+    });
+  }
+
+  showErrorBox("현재 런처가 오래되어 이 버튼을 처리하지 못합니다. 업데이트 설치 화면을 열었습니다. 업데이트 후 다시 시도해 주세요.");
+  return true;
+}
+
 function installRequiredUpdateNow() {
   if (!requiredUpdateContext) return false;
 
@@ -1678,7 +1729,7 @@ async function launchSplitSession(payload) {
   createSplitWindows(normalizedPayload);
 }
 
-function handleLaunchUrl(rawUrl) {
+async function handleLaunchUrl(rawUrl) {
   const launcherAction = parseLauncherAction(rawUrl);
   if (launcherAction && executeLauncherAction(launcherAction)) {
     return;
@@ -1686,10 +1737,16 @@ function handleLaunchUrl(rawUrl) {
 
   const parsed = parseLaunchUrl(rawUrl);
   if (parsed.error) {
+    if (parsed.error === "missing_payload") {
+      const handledByUpdate = await tryUpdateFromMissingPayload();
+      if (handledByUpdate) {
+        return;
+      }
+    }
     showErrorBox(`런처 payload를 읽지 못했습니다: ${parsed.error}`);
     return;
   }
-  void launchSplitSession(parsed);
+  await launchSplitSession(parsed);
 }
 
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
