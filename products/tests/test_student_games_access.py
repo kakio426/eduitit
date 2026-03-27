@@ -8,6 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from core.models import SiteConfig, UserProfile
+from happy_seed.models import HSClassroom
 from products import views as product_views
 from products.models import DTStudentGamesLaunchTicket
 
@@ -70,6 +71,21 @@ class StudentGamesAccessTests(TestCase):
         session = self.student_client.session
         self.assertIn(product_views.STUDENT_GAMES_SESSION_KEY, session)
         self.assertEqual(session[product_views.STUDENT_GAMES_SESSION_KEY]["issuer_id"], self.user.id)
+
+    def test_teacher_preview_launch_works_with_active_classroom_uuid(self):
+        classroom = HSClassroom.objects.create(teacher=self.user, name="3학년 2반")
+        session = self.teacher_client.session
+        session["active_classroom_source"] = "hs"
+        session["active_classroom_id"] = str(classroom.id)
+        session.save()
+
+        payload = self._issue_ticket_payload()
+        response = self.teacher_client.get(payload["launch_path"])
+        self.assertRedirects(response, reverse("dt_student_games_portal"))
+
+        launch_session = self.teacher_client.session[product_views.STUDENT_GAMES_SESSION_KEY]
+        self.assertEqual(launch_session["issuer_id"], self.user.id)
+        self.assertEqual(launch_session["classroom_id"], str(classroom.id))
 
     def test_student_games_launch_rejects_invalid_token(self):
         launch_url = f"{reverse('dt_student_games_launch')}?token=invalid-token"

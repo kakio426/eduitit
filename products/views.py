@@ -688,7 +688,7 @@ def dutyticker_student_games_launch(request):
 
     request.session[STUDENT_GAMES_SESSION_KEY] = {
         "issuer_id": ticket.issued_by_id,
-        "classroom_id": ticket.classroom_id,
+        "classroom_id": str(ticket.classroom_id) if ticket.classroom_id else None,
         "enabled_at": int(time.time()),
     }
     request.session.set_expiry(_student_games_session_max_age_seconds())
