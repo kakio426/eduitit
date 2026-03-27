@@ -342,6 +342,12 @@ def _build_student_games_launch_url(request, token):
     return request.build_absolute_uri(f"{path}?{query}")
 
 
+def _build_student_games_launch_path(token):
+    path = reverse("dt_student_games_launch")
+    query = urlencode({"token": token})
+    return f"{path}?{query}"
+
+
 def _build_qr_data_url(raw_text):
     if not raw_text:
         return ""
@@ -656,6 +662,7 @@ def dutyticker_student_games_issue(request):
         {
             "success": True,
             "launch_url": launch_url,
+            "launch_path": _build_student_games_launch_path(raw_token),
             "qr_data_url": _build_qr_data_url(launch_url),
             "expires_in_minutes": _student_games_launch_ticket_ttl_minutes(),
         }

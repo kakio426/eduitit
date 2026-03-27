@@ -34,6 +34,24 @@
         return payload;
     }
 
+    function getPreviewHref(payload) {
+        if (payload && payload.launch_path) {
+            return payload.launch_path;
+        }
+        if (payload && payload.launch_url) {
+            try {
+                var parsed = new URL(payload.launch_url, window.location.origin);
+                if (parsed.origin === window.location.origin) {
+                    return parsed.pathname + parsed.search + parsed.hash;
+                }
+            } catch (error) {
+                return payload.launch_url;
+            }
+            return payload.launch_url;
+        }
+        return '#';
+    }
+
     function initLauncher(modal) {
         if (!modal || modal.dataset.studentGamesBound === 'true') {
             return;
@@ -99,7 +117,7 @@
                 urlInput.value = payload.launch_url || '';
             }
             if (previewLink) {
-                previewLink.href = payload.launch_url || '#';
+                previewLink.href = getPreviewHref(payload);
             }
             if (expiryLabel) {
                 expiryLabel.textContent = '유효시간: ' + (payload.expires_in_minutes || 0) + '분';

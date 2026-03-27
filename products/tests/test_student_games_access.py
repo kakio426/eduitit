@@ -58,6 +58,7 @@ class StudentGamesAccessTests(TestCase):
     def test_student_games_issue_returns_launch_url_and_qr_payload(self):
         payload = self._issue_ticket_payload()
         self.assertIn("/products/dutyticker/student-games/launch/?token=", payload["launch_url"])
+        self.assertIn("/products/dutyticker/student-games/launch/?token=", payload["launch_path"])
         self.assertTrue(payload["qr_data_url"].startswith("data:image/png;base64,"))
         self.assertEqual(payload["expires_in_minutes"], 15)
 
