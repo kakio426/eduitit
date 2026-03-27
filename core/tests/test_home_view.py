@@ -560,6 +560,11 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('data-home-messagebox-actions="true"', content)
         self.assertIn('메시지 붙여넣기', content)
         self.assertIn('보관만 하기', content)
+        self.assertNotIn('>전체 보기</button>', content)
+        self.assertRegex(
+            content,
+            r'(?s)@click="openMessageArchive\(\$event\)".*?rounded-full.*?text-xs.*?font-bold',
+        )
         self.assertIn('@click="openMessageArchive($event)"', content)
         self.assertIn('@click="openMessageCaptureFromHome($event)"', content)
         self.assertIn('data-classcalendar-main-view="true"', content)
@@ -2318,6 +2323,36 @@ class HomeV4ViewTest(TestCase):
         representative_index = content.index('data-home-v4-representative-services="true"')
         self.assertLess(home_panel_index, mobile_quick_index)
         self.assertLess(mobile_quick_index, representative_index)
+
+    @override_settings(HOME_V4_MOBILE_CALENDAR_FIRST_ENABLED=True)
+    def test_v4_mobile_calendar_first_surfaces_quickdrop_as_direct_action_card(self):
+        user = self._login('v4mobilequickdrop')
+        ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
+        Product.objects.create(
+            title='바로전송',
+            description='기기 사이 전송',
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='quickdrop:landing',
+            icon='fa-solid fa-right-left',
+        )
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('data-home-v4-mobile-quickdrop="true"', content)
+        self.assertIn('data-home-v4-mobile-quickdrop-actions="true"', content)
+        self.assertIn(f'href="{reverse("quickdrop:open")}"', content)
+        self.assertIn(f'href="{reverse("quickdrop:landing")}"', content)
+        self.assertIn('바로 전송', content)
+        self.assertIn('새 기기 연결', content)
+
+        mobile_quick_grid_index = content.index('data-home-v4-mobile-quick-grid="true"')
+        mobile_quickdrop_index = content.index('data-home-v4-mobile-quickdrop="true"')
+        representative_index = content.index('data-home-v4-representative-services="true"')
+        self.assertLess(mobile_quick_grid_index, mobile_quickdrop_index)
+        self.assertLess(mobile_quickdrop_index, representative_index)
 
     def test_v4_section_menu_lists_full_tool_links_without_switching_home_summary(self):
         self._login('v4section')

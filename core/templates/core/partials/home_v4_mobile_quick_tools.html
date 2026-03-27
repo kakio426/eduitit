@@ -5,7 +5,7 @@
         </div>
     </div>
 
-    <div class="home-v4-mobile-quick-grid">
+    <div class="home-v4-mobile-quick-grid" data-home-v4-mobile-quick-grid="true">
         {% for item in home_v4_mobile_quick_items %}
         <a
             href="{{ item.href }}"
@@ -24,4 +24,21 @@
         </a>
         {% endfor %}
     </div>
+
+    {% if quickdrop_home_card %}
+    <section class="home-v4-mobile-quickdrop" data-home-v4-mobile-quickdrop="true">
+        <div class="home-v4-mobile-quickdrop-head">
+            <div class="home-v4-mobile-quickdrop-icon" aria-hidden="true">↔</div>
+            <div class="min-w-0">
+                <p class="home-v4-mobile-quickdrop-eyebrow">바로 쓰는 전송</p>
+                <h3 class="text-base font-black text-slate-900">{{ quickdrop_home_card.title }}</h3>
+            </div>
+        </div>
+        <p class="home-v4-mobile-quickdrop-summary">휴대폰에서 사진이나 글을 바로 보내고, 다른 기기에서 바로 이어보세요.</p>
+        <div class="home-v4-mobile-quickdrop-actions" data-home-v4-mobile-quickdrop-actions="true">
+            <a href="{{ quickdrop_home_card.open_url }}" class="home-v4-mobile-quickdrop-primary">바로 전송</a>
+            <a href="{{ quickdrop_home_card.manage_url }}" class="home-v4-mobile-quickdrop-secondary">새 기기 연결</a>
+        </div>
+    </section>
+    {% endif %}
 </article>
