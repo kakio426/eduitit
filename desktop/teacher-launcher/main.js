@@ -57,7 +57,11 @@ let cachedLauncherReleaseConfig = {
 
 function extractLaunchUrlFromArgv(argv) {
   if (!Array.isArray(argv)) return null;
-  return argv.find((value) => typeof value === "string" && value.startsWith(`${PROTOCOL}://`)) || null;
+  return argv.find((value) => isLauncherProtocolUrl(value)) || null;
+}
+
+function isLauncherProtocolUrl(rawUrl) {
+  return typeof rawUrl === "string" && rawUrl.startsWith(`${PROTOCOL}:`);
 }
 
 function normalizeHttpUrl(raw) {
@@ -916,11 +920,14 @@ function parseLauncherAction(rawUrl) {
     const parsed = new URL(rawUrl);
     if (parsed.protocol !== `${PROTOCOL}:`) return null;
 
-    const host = String(parsed.hostname || "").toLowerCase();
-    if (host === "quit") {
+    const target = String(parsed.hostname || parsed.pathname || "")
+      .replace(/^\/+/, "")
+      .toLowerCase();
+
+    if (target === "quit") {
       return { type: "quit" };
     }
-    if (host === "action") {
+    if (target === "action") {
       const name = String(parsed.searchParams.get("name") || "").toLowerCase();
       if (name) return { type: "action", name };
     }
@@ -973,14 +980,14 @@ function installWindowGuards(win, payload, role) {
   if (!isSplitWindowAlive(win)) return;
 
   win.webContents.setWindowOpenHandler(({ url }) => {
-    if (String(url || "").startsWith(`${PROTOCOL}://`)) {
+    if (isLauncherProtocolUrl(url)) {
       handleLaunchUrl(url);
       return { action: "deny" };
     }
     return { action: "deny" };
   });
   win.webContents.on("will-navigate", (event, targetUrl) => {
-    if (String(targetUrl || "").startsWith(`${PROTOCOL}://`)) {
+    if (isLauncherProtocolUrl(targetUrl)) {
       event.preventDefault();
       handleLaunchUrl(targetUrl);
       return;
