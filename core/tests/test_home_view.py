@@ -2184,6 +2184,34 @@ class HomeV4ViewTest(TestCase):
         self.assertIn('메시지 보관', content)
         self.assertIn('data-track-label="메시지 보관"', content)
 
+    def test_v4_mobile_quickdrop_stays_visible_without_calendar_first_flag(self):
+        user = self._login('v4mobilequickdropdefault')
+        ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
+        Product.objects.create(
+            title='바로전송',
+            description='기기 사이 전송',
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='quickdrop:landing',
+            icon='fa-solid fa-right-left',
+        )
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('data-home-v4-mobile-quickdrop="true"', content)
+        self.assertIn('data-home-v4-mobile-quickdrop-actions="true"', content)
+        self.assertIn(f'href="{reverse("quickdrop:open")}"', content)
+        self.assertIn(f'href="{reverse("quickdrop:landing")}"', content)
+        self.assertNotIn('data-home-v4-mobile-quick-tools="true"', content)
+
+        home_panel_index = content.index('data-home-v4-home-panel="true"')
+        mobile_quickdrop_index = content.index('data-home-v4-mobile-quickdrop="true"')
+        representative_index = content.index('data-home-v4-representative-services="true"')
+        self.assertLess(home_panel_index, mobile_quickdrop_index)
+        self.assertLess(mobile_quickdrop_index, representative_index)
+
     def test_v4_home_places_developer_chat_card_under_menu_and_moves_mobile_card_to_bottom(self):
         self._login('v4devchatcard')
 
