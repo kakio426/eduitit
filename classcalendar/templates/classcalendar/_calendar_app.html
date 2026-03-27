@@ -121,6 +121,20 @@
         border-color: #cbd5e1;
     }
 
+    .classcalendar-message-hub-shell {
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    .classcalendar-message-hub-dialog {
+        max-height: calc(100dvh - 1.5rem);
+    }
+
+    .classcalendar-message-hub-panel {
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+    }
+
     .classcalendar-main-nav-icon {
         width: 0.95rem;
         height: 0.95rem;
@@ -376,6 +390,12 @@
         .classcalendar-center-agenda-panel {
             position: sticky;
             top: calc(var(--main-nav-height, 88px) + 1rem);
+        }
+    }
+
+    @media (min-width: 640px) {
+        .classcalendar-message-hub-dialog {
+            max-height: calc(100dvh - 3rem);
         }
     }
 </style>
