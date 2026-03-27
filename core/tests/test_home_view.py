@@ -2124,6 +2124,20 @@ class HomeV4ViewTest(TestCase):
         self.assertLess(favorites_index, quickdrop_index)
         self.assertLess(quickdrop_index, sns_index)
 
+    def test_v4_home_auto_provisions_quickdrop_card_when_product_is_missing(self):
+        user = self._login('v4quickdropautocreate')
+        ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
+        Product.objects.filter(launch_route_name='quickdrop:landing').delete()
+        Product.objects.filter(title='바로전송').delete()
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('data-home-v4-quickdrop-panel="true"', content)
+        self.assertIn(f'href="{reverse("quickdrop:open")}"', content)
+        self.assertTrue(Product.objects.filter(launch_route_name='quickdrop:landing', title='바로전송').exists())
+
     def test_v4_home_quickdrop_card_shows_latest_text_summary_without_status_copy(self):
         user = self._login('v4quickdropsummary')
         product = Product.objects.create(

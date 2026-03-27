@@ -1384,6 +1384,7 @@
             </div>
         </div>
     </div>
+    {% include "classcalendar/_message_hub.html" %}
 </section>
 
 <div id="calendar-toast-root" class="pointer-events-none fixed bottom-4 right-4 z-[80] flex max-w-sm flex-col gap-2"></div>
@@ -1562,23 +1563,47 @@ function calendarApp() {
         messageArchiveReturnFocusElement: null,
         isLoadingMessageArchive: false,
         isLoadingMessageArchiveDetail: false,
+        messageHubBridgeInitialized: false,
 
-        init() {
-            this.loadCalendarOwnerOptions();
-            this.loadEmbeddedSheetbookContext();
-            this.loadIntegrationSettingsFromScript();
-            this.loadMessageCaptureLimitsFromScript();
+        initializeCalendarMessageHub(retries = 8) {
+            const rawHost = this.$el && this.$el._x_dataStack && this.$el._x_dataStack.length
+                ? this.$el._x_dataStack[0]
+                : this;
+            if (rawHost.messageHubBridgeInitialized) {
+                this.messageHubBridgeInitialized = true;
+                return true;
+            }
+            if (typeof initCalendarMessageHub !== 'function') {
+                if (retries <= 0) {
+                    console.warn('calendar message hub init unavailable');
+                    return false;
+                }
+                window.setTimeout(() => this.initializeCalendarMessageHub(retries - 1), 50);
+                return false;
+            }
             try {
-                initCalendarMessageHub(this, {
+                initCalendarMessageHub(rawHost, {
                     enabled: this.messageCaptureEnabled,
                     itemTypesEnabled: this.messageCaptureItemTypesEnabled,
                     messageLimitsScriptId: 'message-capture-limits-data',
                     messageUrlsScriptId: 'message-capture-urls-data',
                     onLayoutChange: () => this.$nextTick(() => notifyEmbeddedCalendarHeight()),
                 });
+                rawHost.messageHubBridgeInitialized = true;
+                this.messageHubBridgeInitialized = true;
+                return true;
             } catch (error) {
                 console.warn('calendar message hub init failed', error);
+                return false;
             }
+        },
+
+        init() {
+            this.loadCalendarOwnerOptions();
+            this.loadEmbeddedSheetbookContext();
+            this.loadIntegrationSettingsFromScript();
+            this.loadMessageCaptureLimitsFromScript();
+            this.initializeCalendarMessageHub();
             this.loadEventsFromScript();
             this.loadTasksFromScript();
             this.loadHubItemsFromScript();

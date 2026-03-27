@@ -803,7 +803,13 @@ def _build_home_quickdrop_card(user, favorite_products, product_list):
         None,
     )
     if quickdrop_product is None:
-        return None
+        try:
+            from quickdrop.services import ensure_service_product
+
+            quickdrop_product = ensure_service_product()
+        except Exception:
+            logger.exception("[home quickdrop] failed to ensure quickdrop product")
+            return None
 
     summary = "PC와 휴대폰 사이에서 텍스트와 사진을 바로 옮길 수 있습니다."
     try:

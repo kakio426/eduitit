@@ -21,6 +21,27 @@ from .models import QuickdropChannel, QuickdropDevice, QuickdropItem, QuickdropS
 
 SERVICE_ROUTE = "quickdrop:landing"
 SERVICE_TITLE = "바로전송"
+SERVICE_PRODUCT_DEFAULTS = {
+    "lead_text": "처음 한 번만 로그인해 두면 내 기기끼리 텍스트나 이미지를 바로 옮깁니다.",
+    "description": (
+        "바로전송은 교사 기기에서 처음 한 번만 로그인해 개인 전용 통로를 만들고, 다른 기기는 한 번만 연결해 둔 뒤 텍스트 붙여넣기나 사진 선택만으로 "
+        "다른 기기에 바로 띄우는 임시 전송 서비스입니다."
+    ),
+    "price": 0.00,
+    "is_active": True,
+    "is_featured": False,
+    "is_guest_allowed": False,
+    "icon": "⚡",
+    "color_theme": "blue",
+    "card_size": "small",
+    "display_order": 17,
+    "service_type": "classroom",
+    "external_url": "",
+    "launch_route_name": SERVICE_ROUTE,
+    "solve_text": "내 폰과 PC 사이에 텍스트나 이미지를 바로 옮기고 싶어요",
+    "result_text": "개인 전용 즉시 전송 통로",
+    "time_text": "10초",
+}
 DEVICE_COOKIE_NAME = "quickdrop_device"
 DEVICE_COOKIE_PATH = "/quickdrop/"
 DEVICE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365
@@ -68,8 +89,30 @@ DEVICE_COOKIE_SALT = "quickdrop-device"
 PAIR_TOKEN_SALT = "quickdrop-pair"
 
 
-def get_service():
+def _find_service_product():
     return Product.objects.filter(launch_route_name=SERVICE_ROUTE).first() or Product.objects.filter(title=SERVICE_TITLE).first()
+
+
+def ensure_service_product():
+    product = _find_service_product()
+    if product is None:
+        return Product.objects.create(title=SERVICE_TITLE, **SERVICE_PRODUCT_DEFAULTS)
+
+    changed_fields = []
+    if product.title != SERVICE_TITLE:
+        product.title = SERVICE_TITLE
+        changed_fields.append("title")
+    for field_name, value in SERVICE_PRODUCT_DEFAULTS.items():
+        if getattr(product, field_name) != value:
+            setattr(product, field_name, value)
+            changed_fields.append(field_name)
+    if changed_fields:
+        product.save(update_fields=list(dict.fromkeys(changed_fields)))
+    return product
+
+
+def get_service():
+    return ensure_service_product()
 
 
 def history_day_start(now=None):

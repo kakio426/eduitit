@@ -465,18 +465,22 @@ function initCalendarMessageHub(host, options = {}) {
 
         openMessageCaptureFromHome: async function(event) {
             const draftText = String(this.messageboxHomeDraftText || '');
+            if (!draftText.trim()) {
+                window.showToast('붙여넣을 메시지를 먼저 입력해 주세요.', 'info');
+                this.focusMessageboxHomeDraftInput();
+                return;
+            }
             await this.openMessageHub(event, 'capture', { resetCapture: true });
-            this.messageCaptureSourceHint = draftText.trim() ? 'home_card' : 'unknown';
+            this.messageCaptureSourceHint = 'home_card';
             this.messageCaptureInputText = draftText;
             this.messageCaptureErrorText = '';
             if (typeof this.$nextTick === 'function') {
                 this.$nextTick(() => {
-                    const captureInput = this.$refs ? this.$refs.messageCaptureInput : null;
-                    if (captureInput && typeof captureInput.focus === 'function') {
-                        captureInput.focus();
-                    }
+                    this.submitMessageCaptureParse();
                 });
+                return;
             }
+            await this.submitMessageCaptureParse();
         },
 
         submitMessageCaptureArchiveSaveFromHome: async function() {
@@ -1353,13 +1357,22 @@ function initCalendarMessageHub(host, options = {}) {
     };
 
     Object.entries(hostExtensions).forEach(([key, value]) => {
-        if (Reflect.has(host, key)) {
+        if (typeof host[key] === 'function') {
             return;
         }
         try {
-            host[key] = value;
+            Object.defineProperty(host, key, {
+                configurable: true,
+                enumerable: true,
+                writable: true,
+                value,
+            });
         } catch (error) {
-            console.warn(`message hub host extension skipped: ${key}`, error);
+            try {
+                host[key] = value;
+            } catch (assignError) {
+                console.warn(`message hub host extension skipped: ${key}`, assignError);
+            }
         }
     });
 }
