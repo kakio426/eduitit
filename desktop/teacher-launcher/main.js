@@ -387,7 +387,7 @@ function fetchJson(rawUrl) {
         method: "GET",
         headers: {
           Accept: "application/json",
-          "User-Agent": `EduititTeacherLauncher/${app.getVersion() || "0.2.5"}`,
+          "User-Agent": `EduititTeacherLauncher/${app.getVersion() || "0.2.6"}`,
         },
       },
       (response) => {
@@ -1448,6 +1448,7 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
 
         if (!window.__eduititRepeatEnforcer) {
           const confirmedPlaybackThresholdSec = 3;
+          const seekCompletionThresholdSec = 0.5;
           const replayVerifyDelayMs = 1500;
           const repeatState = window.__eduititRepeatState || {
             lastReplayAt: 0,
@@ -1480,15 +1481,26 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
             const pageVideoId = getPageVideoId();
             const activeVideoId = getActiveVideoId();
             const playerState = getPlayerState();
+            const targetPlaybackSeenBySeekOrEnd =
+              Boolean(
+                video &&
+                  video.currentTime >= seekCompletionThresholdSec &&
+                  (Boolean(video.ended) || playerState === 0 || isEndscreenVisible())
+              );
             const confirmedTargetPlayback =
               !targetVideoId ||
               (pageVideoId === targetVideoId &&
                 (!activeVideoId || activeVideoId === targetVideoId || activeVideoId === pageVideoId) &&
                 Boolean(
                   video &&
-                    !video.ended &&
-                    video.currentTime >= confirmedPlaybackThresholdSec &&
-                    (playerState === null || playerState === 1 || playerState === 2 || playerState === 3)
+                    (
+                      (
+                        !video.ended &&
+                        video.currentTime >= confirmedPlaybackThresholdSec &&
+                        (playerState === null || playerState === 1 || playerState === 2 || playerState === 3)
+                      ) ||
+                      targetPlaybackSeenBySeekOrEnd
+                    )
                 ));
 
             if (confirmedTargetPlayback) {
