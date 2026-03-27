@@ -387,7 +387,7 @@ function fetchJson(rawUrl) {
         method: "GET",
         headers: {
           Accept: "application/json",
-          "User-Agent": `EduititTeacherLauncher/${app.getVersion() || "0.2.6"}`,
+          "User-Agent": `EduititTeacherLauncher/${app.getVersion() || "0.2.8"}`,
         },
       },
       (response) => {
@@ -1449,6 +1449,7 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
         if (!window.__eduititRepeatEnforcer) {
           const confirmedPlaybackThresholdSec = 3;
           const seekCompletionThresholdSec = 0.5;
+          const minRepeatDurationSec = 60;
           const replayVerifyDelayMs = 1500;
           const repeatState = window.__eduititRepeatState || {
             lastReplayAt: 0,
@@ -1481,9 +1482,26 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
             const pageVideoId = getPageVideoId();
             const activeVideoId = getActiveVideoId();
             const playerState = getPlayerState();
+            const playerApi = getPlayerApi();
+            let knownDurationSec = 0;
+            if (video && Number.isFinite(video.duration) && video.duration > 0) {
+              knownDurationSec = video.duration;
+            } else {
+              try {
+                if (playerApi && typeof playerApi.getDuration === "function") {
+                  const apiDuration = Number(playerApi.getDuration());
+                  if (Number.isFinite(apiDuration) && apiDuration > 0) {
+                    knownDurationSec = apiDuration;
+                  }
+                }
+              } catch (_) {}
+            }
+            const playbackPositionSec = video && Number.isFinite(video.currentTime) ? video.currentTime : 0;
+            const repeatAllowed = knownDurationSec >= minRepeatDurationSec || playbackPositionSec >= minRepeatDurationSec;
             const targetPlaybackSeenBySeekOrEnd =
               Boolean(
                 video &&
+                  repeatAllowed &&
                   video.currentTime >= seekCompletionThresholdSec &&
                   (Boolean(video.ended) || playerState === 0 || isEndscreenVisible())
               );
@@ -1555,6 +1573,7 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
               repeatState.replayVerifyAt = 0;
               const stillEnded = playerState === 0 || Boolean(video && video.ended) || isEndscreenVisible();
               if (
+                repeatAllowed &&
                 stillEnded &&
                 replayUrl &&
                 now - repeatState.lastRecoveryAt >= replayCooldownMs
@@ -1568,6 +1587,7 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
 
             const hasEnded = playerState === 0 || Boolean(video && video.ended) || isEndscreenVisible();
             if (!hasEnded) return;
+            if (!repeatAllowed) return;
             if (targetVideoId && !repeatState.sawTargetPlayback) return;
             if (now - repeatState.lastReplayAt < replayCooldownMs) return;
 
