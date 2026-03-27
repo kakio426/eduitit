@@ -1,4 +1,7 @@
+from unittest.mock import patch
+
 from django.contrib.auth.models import User
+from django.db import OperationalError
 from django.test import Client
 from django.test import TestCase
 from django.urls import reverse
@@ -72,6 +75,21 @@ class StudentGamesAccessTests(TestCase):
         response = self.student_client.get(launch_url)
         self.assertEqual(response.status_code, 403)
         self.assertContains(response, "선생님께 새 QR을 요청하세요.", status_code=403)
+
+    @patch("products.views._issue_student_games_launch_ticket", side_effect=OperationalError("no such table"))
+    def test_student_games_issue_handles_missing_ticket_table(self, _mock_issue_ticket):
+        response = self.teacher_client.post(reverse("dt_student_games_issue"))
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json()["success"], False)
+        self.assertEqual(response.json()["error"], product_views.STUDENT_GAMES_UNAVAILABLE_MESSAGE)
+
+    @patch("products.views._find_valid_student_games_launch_ticket", side_effect=OperationalError("no such table"))
+    def test_student_games_launch_handles_missing_ticket_table(self, _mock_find_ticket):
+        response = self.student_client.get(f"{reverse('dt_student_games_launch')}?token=abc123")
+
+        self.assertEqual(response.status_code, 503)
+        self.assertContains(response, product_views.STUDENT_GAMES_UNAVAILABLE_MESSAGE, status_code=503)
 
     def test_student_games_reissue_invalidates_previous_ticket(self):
         first_payload = self._issue_ticket_payload()

@@ -8,6 +8,7 @@ from urllib.parse import urlencode
 
 import qrcode
 from django.conf import settings
+from django.db import OperationalError, ProgrammingError
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -29,6 +30,9 @@ logger = logging.getLogger(__name__)
 STUDENT_GAMES_SESSION_MAX_AGE_SECONDS = 60 * 60 * 8
 STUDENT_GAMES_LAUNCH_TICKET_TTL_SECONDS = 60 * 15
 STUDENT_GAMES_SESSION_KEY = "dutyticker_student_games_mode"
+STUDENT_GAMES_UNAVAILABLE_MESSAGE = (
+    "학생 게임 입장 기능을 아직 준비하지 못했습니다. 잠시 후 다시 시도해 주세요."
+)
 
 PRODUCT_DETAIL_AUDIENCE_BY_ROUTE = {
     "collect:landing": "가정통신문 뒤 응답, 파일, 링크를 한 번에 모아야 하는 교사에게 맞는 도구입니다.",
@@ -349,6 +353,27 @@ def _build_qr_data_url(raw_text):
     return f"data:image/png;base64,{encoded}"
 
 
+def _student_games_storage_error_response(request, *, as_json):
+    logger.exception("Student games ticket storage is unavailable.")
+    if as_json:
+        return JsonResponse(
+            {
+                "success": False,
+                "error": STUDENT_GAMES_UNAVAILABLE_MESSAGE,
+            },
+            status=503,
+        )
+    return render(
+        request,
+        "products/dutyticker/student_games_invalid.html",
+        {
+            "hide_navbar": True,
+            "student_games_invalid_message": STUDENT_GAMES_UNAVAILABLE_MESSAGE,
+        },
+        status=503,
+    )
+
+
 def _is_phone_user_agent(user_agent):
     """
     Return True only for phone-class devices.
@@ -622,7 +647,10 @@ def dutyticker_student_games_issue(request):
     if not request.user.is_authenticated:
         return JsonResponse({"success": False, "error": "로그인이 필요합니다."}, status=401)
 
-    _, raw_token = _issue_student_games_launch_ticket(request)
+    try:
+        _, raw_token = _issue_student_games_launch_ticket(request)
+    except (OperationalError, ProgrammingError):
+        return _student_games_storage_error_response(request, as_json=True)
     launch_url = _build_student_games_launch_url(request, raw_token)
     return JsonResponse(
         {
@@ -636,7 +664,10 @@ def dutyticker_student_games_issue(request):
 
 def dutyticker_student_games_launch(request):
     token = (request.GET.get("token") or "").strip()
-    ticket = _find_valid_student_games_launch_ticket(token)
+    try:
+        ticket = _find_valid_student_games_launch_ticket(token)
+    except (OperationalError, ProgrammingError):
+        return _student_games_storage_error_response(request, as_json=False)
     if not ticket:
         return render(
             request,
