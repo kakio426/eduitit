@@ -1,9 +1,16 @@
 from django.contrib import admin
 
+from core.admin_helpers import ReadOnlyModelAdmin
+
 from .models import (
     CalendarCollaborator,
     CalendarEvent,
+    CalendarEventAttachment,
+    CalendarEventSyncTask,
     CalendarIntegrationSetting,
+    CalendarMessageCapture,
+    CalendarMessageCaptureAttachment,
+    CalendarMessageCaptureCandidate,
     CalendarTask,
     EventPageBlock,
 )
@@ -71,3 +78,15 @@ class CalendarCollaboratorAdmin(admin.ModelAdmin):
     list_display = ("owner", "collaborator", "can_edit", "created_at")
     list_filter = ("can_edit",)
     search_fields = ("owner__username", "owner__email", "collaborator__username", "collaborator__email")
+
+
+admin.site.register(
+    [
+        CalendarEventAttachment,
+        CalendarEventSyncTask,
+        CalendarMessageCapture,
+        CalendarMessageCaptureAttachment,
+        CalendarMessageCaptureCandidate,
+    ],
+    ReadOnlyModelAdmin,
+)

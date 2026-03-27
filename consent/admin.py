@@ -1,6 +1,16 @@
 from django.contrib import admin
 
-from .models import ConsentAuditLog, SignatureDocument, SignatureRecipient, SignatureRequest
+from core.admin_helpers import ReadOnlyModelAdmin
+
+from .models import (
+    ConsentAuditLog,
+    ConsentRoster,
+    ConsentRosterEntry,
+    SignatureDocument,
+    SignaturePosition,
+    SignatureRecipient,
+    SignatureRequest,
+)
 
 
 @admin.register(SignatureRequest)
@@ -50,3 +60,9 @@ class ConsentAuditLogAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related("request", "recipient")
+
+
+admin.site.register(
+    [ConsentRoster, ConsentRosterEntry, SignaturePosition],
+    ReadOnlyModelAdmin,
+)

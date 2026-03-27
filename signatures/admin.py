@@ -1,6 +1,15 @@
 from django.contrib import admin
 from django.db.models import Count
-from .models import AffiliationCorrectionLog, Signature, SignatureAuditLog, TrainingSession
+from core.admin_helpers import ReadOnlyModelAdmin
+from .models import (
+    AffiliationCorrectionLog,
+    ExpectedParticipant,
+    SavedSignature,
+    Signature,
+    SignatureAuditLog,
+    SignatureStyle,
+    TrainingSession,
+)
 
 
 class SignatureInline(admin.TabularInline):
@@ -73,3 +82,9 @@ class SignatureAuditLogAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('training_session', 'signature', 'expected_participant')
+
+
+admin.site.register(
+    [ExpectedParticipant, SavedSignature, SignatureStyle],
+    ReadOnlyModelAdmin,
+)

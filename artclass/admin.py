@@ -1,5 +1,7 @@
 from django.contrib import admin
-from .models import ArtClass, ArtStep
+from core.admin_helpers import ReadOnlyModelAdmin
+
+from .models import ArtClass, ArtClassAttachment, ArtStep
 
 
 class ArtStepInline(admin.TabularInline):
@@ -38,3 +40,6 @@ class ArtStepAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('art_class')
+
+
+admin.site.register([ArtClassAttachment], ReadOnlyModelAdmin)

@@ -3,6 +3,7 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
 from django.db.models import Count
 from django.utils import timezone
+from core.admin_helpers import ReadOnlyModelAdmin
 from .models import (
     UserProfile,
     UserMarketingEmailConsent,
@@ -15,7 +16,9 @@ from .models import (
     Feedback,
     ProductUsageLog,
     ProductFavorite,
+    ProductWorkbenchBundle,
     UserModeration,
+    VisitorLog,
 )
 
 
@@ -262,3 +265,6 @@ class ProductFavoriteAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('user', 'product')
+
+
+admin.site.register([ProductWorkbenchBundle, VisitorLog], ReadOnlyModelAdmin)

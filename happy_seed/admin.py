@@ -1,7 +1,11 @@
 from django.contrib import admin
 from django.db.models import Count
 
+from core.admin_helpers import ReadOnlyModelAdmin
+
 from .models import (
+    HSActivity,
+    HSActivityScore,
     HSBehaviorCategory,
     HSBehaviorLog,
     HSBloomDraw,
@@ -156,3 +160,15 @@ class HSClassEventLogAdmin(admin.ModelAdmin):
     list_display = ['timestamp', 'class_ref', 'type', 'student']
     list_filter = ['type', 'class_ref']
     raw_id_fields = ['class_ref', 'student', 'group']
+
+
+admin.site.register(
+    [
+        HSActivity,
+        HSActivityScore,
+        HSBehaviorCategory,
+        HSBehaviorLog,
+        HSStudentGroup,
+    ],
+    ReadOnlyModelAdmin,
+)

@@ -1,3 +1,8 @@
 from django.contrib import admin
 
-# Register your models here.
+from core.admin_helpers import ReadOnlyModelAdmin
+
+from .models import GeneratedArticle
+
+
+admin.site.register([GeneratedArticle], ReadOnlyModelAdmin)

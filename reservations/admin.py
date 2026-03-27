@@ -1,5 +1,15 @@
 from django.contrib import admin
-from .models import School, SchoolConfig, SpecialRoom, Reservation, RecurringSchedule, GradeRecurringLock, BlackoutDate
+from core.admin_helpers import ReadOnlyModelAdmin
+from .models import (
+    BlackoutDate,
+    GradeRecurringLock,
+    RecurringSchedule,
+    Reservation,
+    ReservationCollaborator,
+    School,
+    SchoolConfig,
+    SpecialRoom,
+)
 
 class SchoolConfigInline(admin.StackedInline):
     model = SchoolConfig
@@ -85,3 +95,6 @@ class BlackoutDateAdmin(admin.ModelAdmin):
     def school_name(self, obj):
         return obj.school.name
     school_name.admin_order_field = 'school__name'
+
+
+admin.site.register([ReservationCollaborator, SchoolConfig], ReadOnlyModelAdmin)

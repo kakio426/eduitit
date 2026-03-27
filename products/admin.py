@@ -1,5 +1,20 @@
 from django.contrib import admin
-from .models import Product, UserOwnedProduct, ProductFeature, ServiceManual, ManualSection
+from core.admin_helpers import ReadOnlyModelAdmin
+from .models import (
+    DTMissionAutomation,
+    DTRole,
+    DTRoleAssignment,
+    DTSchedule,
+    DTSettings,
+    DTStudent,
+    DTStudentGamesLaunchTicket,
+    DTTimeSlot,
+    ManualSection,
+    Product,
+    ProductFeature,
+    ServiceManual,
+    UserOwnedProduct,
+)
 
 class ProductFeatureInline(admin.TabularInline):
     model = ProductFeature
@@ -82,3 +97,20 @@ class UserOwnedProductAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('user', 'product')
+
+
+admin.site.register(
+    [
+        DTMissionAutomation,
+        DTRole,
+        DTRoleAssignment,
+        DTSchedule,
+        DTSettings,
+        DTStudent,
+        DTStudentGamesLaunchTicket,
+        DTTimeSlot,
+        ManualSection,
+        ProductFeature,
+    ],
+    ReadOnlyModelAdmin,
+)
