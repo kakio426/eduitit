@@ -387,7 +387,7 @@ function fetchJson(rawUrl) {
         method: "GET",
         headers: {
           Accept: "application/json",
-          "User-Agent": `EduititTeacherLauncher/${app.getVersion() || "0.2.4"}`,
+          "User-Agent": `EduititTeacherLauncher/${app.getVersion() || "0.2.5"}`,
         },
       },
       (response) => {
@@ -1448,6 +1448,7 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
 
         if (!window.__eduititRepeatEnforcer) {
           const confirmedPlaybackThresholdSec = 3;
+          const replayVerifyDelayMs = 1500;
           const repeatState = window.__eduititRepeatState || {
             lastReplayAt: 0,
             lastRecoveryAt: 0,
@@ -1455,6 +1456,7 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
             sawTargetPlayback: false,
             activeMismatchSince: 0,
             activeMismatchVideoId: "",
+            replayVerifyAt: 0,
           };
           window.__eduititRepeatState = repeatState;
           window.__eduititRepeatEnforcer = window.setInterval(() => {
@@ -1491,6 +1493,7 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
 
             if (confirmedTargetPlayback) {
               repeatState.sawTargetPlayback = true;
+              repeatState.replayVerifyAt = 0;
             }
             if (!activeVideoId || activeVideoId === targetVideoId) {
               repeatState.activeMismatchSince = 0;
@@ -1536,12 +1539,28 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
               return;
             }
 
+            if (repeatState.replayVerifyAt && now >= repeatState.replayVerifyAt) {
+              repeatState.replayVerifyAt = 0;
+              const stillEnded = playerState === 0 || Boolean(video && video.ended) || isEndscreenVisible();
+              if (
+                stillEnded &&
+                replayUrl &&
+                now - repeatState.lastRecoveryAt >= replayCooldownMs
+              ) {
+                repeatState.lastRecoveryAt = now;
+                repeatState.sawTargetPlayback = false;
+                window.location.replace(replayUrl);
+                return;
+              }
+            }
+
             const hasEnded = playerState === 0 || Boolean(video && video.ended) || isEndscreenVisible();
             if (!hasEnded) return;
             if (targetVideoId && !repeatState.sawTargetPlayback) return;
             if (now - repeatState.lastReplayAt < replayCooldownMs) return;
 
             repeatState.lastReplayAt = now;
+            repeatState.replayVerifyAt = now + replayVerifyDelayMs;
             replayMainVideo();
           }, 1200);
         }
