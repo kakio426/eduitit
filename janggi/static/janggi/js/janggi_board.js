@@ -4,6 +4,10 @@
 
     var boardEl = null;
     var turnEl = null;
+    var turnDetailEl = null;
+    var turnIndicatorEl = null;
+    var turnRedSideEl = null;
+    var turnBlueSideEl = null;
     var historyEl = null;
     var toastEl = null;
     var resultOverlayEl = null;
@@ -525,9 +529,49 @@
         if (historyEl) historyEl.textContent = moveHistory.join("\n");
     }
 
+    function setTurnSideState(el, isActive) {
+        if (!el) return;
+        el.classList.toggle("is-active", isActive);
+        el.classList.toggle("is-inactive", !isActive);
+    }
+
+    function updateTurnUI() {
+        var isRedTurn = currentTurn === "red";
+
+        if (turnIndicatorEl) {
+            turnIndicatorEl.classList.remove("is-red", "is-blue", "is-ended");
+            if (gameEnded) {
+                turnIndicatorEl.classList.add("is-ended");
+            } else {
+                turnIndicatorEl.classList.add(isRedTurn ? "is-red" : "is-blue");
+            }
+        }
+
+        if (turnEl) {
+            turnEl.textContent = gameEnded ? "대국 종료" : (isRedTurn ? "초 차례" : "한 차례");
+        }
+
+        if (turnDetailEl) {
+            turnDetailEl.textContent = gameEnded
+                ? "결과를 확인하거나 되돌리기로 직전 수를 다시 볼 수 있습니다."
+                : (isRedTurn ? "초 기물을 움직일 차례입니다." : "한 기물을 움직일 차례입니다.");
+        }
+
+        setTurnSideState(turnRedSideEl, !gameEnded && isRedTurn);
+        setTurnSideState(turnBlueSideEl, !gameEnded && !isRedTurn);
+
+        if (boardEl) {
+            boardEl.classList.remove("turn-red", "turn-blue", "turn-ended");
+            if (gameEnded) {
+                boardEl.classList.add("turn-ended");
+            } else {
+                boardEl.classList.add(isRedTurn ? "turn-red" : "turn-blue");
+            }
+        }
+    }
+
     function toggleTurn() {
         currentTurn = currentTurn === "red" ? "blue" : "red";
-        if (turnEl) turnEl.textContent = "\ucc28\ub840: " + (currentTurn === "red" ? "\ucd08" : "\ud55c");
     }
 
     function evaluateAfterMove(movedSide) {
@@ -562,10 +606,11 @@
 
         if (!silent) recordMove(from, to, p, captured);
         evaluateAfterMove(p.side);
-        toggleTurn();
+        if (!gameEnded) toggleTurn();
         selected = null;
         validTargets = [];
         renderBoard();
+        updateTurnUI();
         return true;
     }
 
@@ -668,9 +713,9 @@
         validTargets = [];
         aiRequestPending = false;
         if (historyEl) historyEl.textContent = moveHistory.length ? moveHistory.join("\n") : "-";
-        if (turnEl) turnEl.textContent = "\ucc28\ub840: " + (currentTurn === "red" ? "\ucd08" : "\ud55c");
         if (resultOverlayEl) resultOverlayEl.classList.remove("show");
         renderBoard();
+        updateTurnUI();
     }
 
     function resetAll() {
@@ -684,15 +729,19 @@
         aiRequestPending = false;
         gameEnded = false;
         if (historyEl) historyEl.textContent = "-";
-        if (turnEl) turnEl.textContent = "\ucc28\ub840: \ucd08";
         if (resultOverlayEl) resultOverlayEl.classList.remove("show");
         initBoardState();
         renderBoard();
+        updateTurnUI();
     }
 
     document.addEventListener("DOMContentLoaded", function () {
         boardEl = document.getElementById("janggiBoard");
         turnEl = document.getElementById("turnStatus");
+        turnDetailEl = document.getElementById("turnStatusDetail");
+        turnIndicatorEl = document.getElementById("turnIndicator");
+        turnRedSideEl = document.getElementById("turnRedSide");
+        turnBlueSideEl = document.getElementById("turnBlueSide");
         historyEl = document.getElementById("moveHistory");
         toastEl = document.getElementById("toast");
         resultOverlayEl = document.getElementById("gameResultOverlay");

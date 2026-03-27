@@ -12,6 +12,10 @@ class JanggiViewTests(TestCase):
         self.assertContains(response, "AI 장기 대전")
         self.assertContains(response, "브라우저에서 바로 AI가 다음 수를 둡니다.")
         self.assertContains(response, "브라우저에서 바로 AI가 응수하므로 같은 화면에서 자연스럽게 이어집니다.")
+        self.assertContains(response, 'id="turnIndicator"', html=False)
+        self.assertContains(response, "지금 둘 차례")
+        self.assertContains(response, 'id="turnRedSide"', html=False)
+        self.assertContains(response, 'id="turnBlueSide"', html=False)
         self.assertNotContains(response, "로컬 AI")
 
     def test_index_ai_card_does_not_call_out_local_ai(self):
@@ -30,5 +34,8 @@ class JanggiStaticScriptTests(SimpleTestCase):
         self.assertIn("piece-side-badge", script)
         self.assertIn("piece-glyph", script)
         self.assertIn("piece-name", script)
+        self.assertIn("updateTurnUI()", script)
+        self.assertIn("turn-ended", script)
+        self.assertIn("turnRedSide", script)
         self.assertIn("applyLocalAiMove();", script)
         self.assertNotIn("현재 모드는 로컬 AI로 진행됩니다.", script)

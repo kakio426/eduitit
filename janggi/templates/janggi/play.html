@@ -82,6 +82,139 @@
         margin-bottom: 16px;
     }
 
+    .turn-indicator {
+        border-radius: 20px;
+        padding: 16px;
+        border: 1px solid rgba(148, 163, 184, 0.26);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94));
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+        transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+    }
+    .turn-indicator.is-red {
+        border-color: rgba(185, 28, 28, 0.3);
+        background: linear-gradient(180deg, rgba(254, 242, 242, 0.98), rgba(255, 237, 213, 0.98));
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.7),
+            0 10px 26px rgba(185, 28, 28, 0.12);
+    }
+    .turn-indicator.is-blue {
+        border-color: rgba(21, 128, 61, 0.3);
+        background: linear-gradient(180deg, rgba(240, 253, 244, 0.98), rgba(236, 253, 245, 0.98));
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.7),
+            0 10px 26px rgba(21, 128, 61, 0.12);
+    }
+    .turn-indicator.is-ended {
+        border-color: rgba(71, 85, 105, 0.28);
+        background: linear-gradient(180deg, rgba(248, 250, 252, 0.98), rgba(241, 245, 249, 0.98));
+    }
+    .turn-kicker {
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #64748b;
+        margin-bottom: 8px;
+    }
+    .turn-main {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .turn-indicator-dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 999px;
+        flex: none;
+        background: #94a3b8;
+        box-shadow: 0 0 0 0 rgba(148, 163, 184, 0.28);
+    }
+    .turn-indicator.is-red .turn-indicator-dot {
+        background: #dc2626;
+        animation: turnDotPulseRed 1.55s ease-in-out infinite;
+    }
+    .turn-indicator.is-blue .turn-indicator-dot {
+        background: #16a34a;
+        animation: turnDotPulseBlue 1.55s ease-in-out infinite;
+    }
+    .turn-indicator.is-ended .turn-indicator-dot {
+        background: #64748b;
+        animation: none;
+    }
+    .turn-summary {
+        font-size: 1.25rem;
+        font-weight: 900;
+        color: #111827;
+        line-height: 1.1;
+    }
+    .turn-detail {
+        margin-top: 4px;
+        font-size: 0.9rem;
+        color: #475569;
+        line-height: 1.35;
+    }
+    .turn-sides {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 14px;
+    }
+    .turn-side {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border-radius: 16px;
+        border: 1px solid rgba(148, 163, 184, 0.24);
+        background: rgba(255, 255, 255, 0.72);
+        padding: 12px;
+        transition: all 0.22s ease;
+    }
+    .turn-side.is-inactive {
+        opacity: 0.58;
+    }
+    .turn-side.is-active {
+        opacity: 1;
+        transform: translateY(-1px);
+        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.1);
+    }
+    .turn-side-red.is-active {
+        border-color: rgba(185, 28, 28, 0.35);
+        background: rgba(254, 242, 242, 0.92);
+    }
+    .turn-side-blue.is-active {
+        border-color: rgba(21, 128, 61, 0.35);
+        background: rgba(240, 253, 244, 0.92);
+    }
+    .turn-side-badge {
+        min-width: 34px;
+        height: 34px;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        font-weight: 900;
+        color: #fff;
+        flex: none;
+    }
+    .turn-side-red .turn-side-badge {
+        background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%);
+    }
+    .turn-side-blue .turn-side-badge {
+        background: linear-gradient(180deg, #22c55e 0%, #15803d 100%);
+    }
+    .turn-side-title {
+        font-size: 0.95rem;
+        font-weight: 900;
+        color: #1f2937;
+        line-height: 1.1;
+    }
+    .turn-side-desc {
+        margin-top: 2px;
+        font-size: 0.76rem;
+        color: #64748b;
+    }
+
     .janggi-board-wrap {
         position: relative;
         width: min(100%, 640px);
@@ -101,6 +234,22 @@
             0 8px 22px rgba(53, 32, 12, 0.22);
         position: relative;
         z-index: 1;
+    }
+    .janggi-board.turn-red {
+        --turn-ring: rgba(220, 38, 38, 0.2);
+        --turn-glow: rgba(185, 28, 28, 0.2);
+        animation: boardTurnPulse 1.7s ease-in-out infinite;
+    }
+    .janggi-board.turn-blue {
+        --turn-ring: rgba(34, 197, 94, 0.18);
+        --turn-glow: rgba(21, 128, 61, 0.2);
+        animation: boardTurnPulse 1.7s ease-in-out infinite;
+    }
+    .janggi-board.turn-ended {
+        box-shadow:
+            inset 0 0 0 1px rgba(255, 255, 255, 0.35),
+            0 0 0 4px rgba(148, 163, 184, 0.16),
+            0 8px 22px rgba(53, 32, 12, 0.16);
     }
     .janggi-board.flipped {
         transform: rotate(180deg);
@@ -143,14 +292,14 @@
     .janggi-piece {
         position: relative;
         width: clamp(28px, 4.2vw, 44px);
-        height: clamp(36px, 5.3vw, 56px);
+        height: clamp(40px, 5.8vw, 58px);
         border-radius: 12px 12px 16px 16px;
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: flex-start;
-        gap: 1px;
-        padding: 3px 3px 4px;
+        justify-content: center;
+        gap: 0;
+        padding: 4px 3px 5px;
         line-height: 1;
         font-weight: 700;
         background:
@@ -187,18 +336,27 @@
         font-weight: 800;
         letter-spacing: -0.05em;
         font-family: "Malgun Gothic", "Batang", "Noto Serif CJK KR", "Nanum Myeongjo", serif;
-        line-height: 1;
+        line-height: 0.95;
         position: relative;
         z-index: 1;
+        width: 100%;
+        text-align: center;
     }
     .piece-name {
-        font-size: clamp(8px, 1.4vw, 11px);
+        font-size: clamp(7px, 1.05vw, 9px);
         font-weight: 800;
-        letter-spacing: 0.08em;
+        letter-spacing: 0.04em;
         color: #5b4630;
         text-transform: uppercase;
         position: relative;
         z-index: 1;
+        line-height: 0.95;
+        width: 100%;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: clip;
+        margin-top: -1px;
     }
     .janggi-piece[data-piece-type="king"] .piece-glyph,
     .janggi-piece[data-piece-type="cannon"] .piece-glyph {
@@ -245,6 +403,38 @@
         border-radius: 12px;
     }
 
+    @keyframes turnDotPulseRed {
+        0%, 100% {
+            box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.28);
+        }
+        50% {
+            box-shadow: 0 0 0 7px rgba(220, 38, 38, 0.08);
+        }
+    }
+    @keyframes turnDotPulseBlue {
+        0%, 100% {
+            box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.26);
+        }
+        50% {
+            box-shadow: 0 0 0 7px rgba(22, 163, 74, 0.08);
+        }
+    }
+    @keyframes boardTurnPulse {
+        0%, 100% {
+            box-shadow:
+                inset 0 0 0 1px rgba(255, 255, 255, 0.35),
+                0 0 0 4px var(--turn-ring),
+                0 8px 22px rgba(53, 32, 12, 0.22);
+        }
+        50% {
+            box-shadow:
+                inset 0 0 0 1px rgba(255, 255, 255, 0.35),
+                0 0 0 7px var(--turn-ring),
+                0 14px 28px var(--turn-glow),
+                0 8px 22px rgba(53, 32, 12, 0.22);
+        }
+    }
+
     @media (max-width: 640px) {
         .toast {
             min-width: 0;
@@ -260,10 +450,32 @@
         .result-title {
             font-size: 1.5rem;
         }
+        .turn-indicator {
+            padding: 14px;
+        }
+        .turn-summary {
+            font-size: 1.1rem;
+        }
+        .turn-detail {
+            font-size: 0.84rem;
+        }
+        .turn-side {
+            padding: 10px;
+            gap: 8px;
+        }
+        .turn-side-badge {
+            min-width: 30px;
+            height: 30px;
+            border-radius: 10px;
+            font-size: 0.92rem;
+        }
+        .turn-side-title {
+            font-size: 0.88rem;
+        }
         .janggi-piece {
             width: clamp(26px, 8vw, 34px);
-            height: clamp(34px, 10vw, 42px);
-            padding: 2px 2px 3px;
+            height: clamp(37px, 10.5vw, 44px);
+            padding: 3px 2px 4px;
         }
         .piece-side-badge {
             min-width: 18px;
@@ -271,7 +483,8 @@
             font-size: 8px;
         }
         .piece-name {
-            letter-spacing: 0.04em;
+            font-size: clamp(6px, 2vw, 7px);
+            letter-spacing: 0;
         }
         .engine-log {
             max-height: 180px;
@@ -350,7 +563,32 @@
 
                 <div class="clay-card p-4 sm:p-5">
                     <h2 class="text-base sm:text-lg font-bold text-gray-700 mb-3">대국 상태</h2>
-                    <p id="turnStatus" class="text-sm text-gray-600">차례: 초</p>
+                    <div id="turnIndicator" class="turn-indicator is-red" aria-live="polite">
+                        <p class="turn-kicker">지금 둘 차례</p>
+                        <div class="turn-main">
+                            <span class="turn-indicator-dot" aria-hidden="true"></span>
+                            <div>
+                                <p id="turnStatus" class="turn-summary">초 차례</p>
+                                <p id="turnStatusDetail" class="turn-detail">초 기물을 움직일 차례입니다.</p>
+                            </div>
+                        </div>
+                        <div class="turn-sides">
+                            <div id="turnRedSide" class="turn-side turn-side-red is-active">
+                                <span class="turn-side-badge">초</span>
+                                <div>
+                                    <div class="turn-side-title">초 진영</div>
+                                    <div class="turn-side-desc">붉은 기물</div>
+                                </div>
+                            </div>
+                            <div id="turnBlueSide" class="turn-side turn-side-blue is-inactive">
+                                <span class="turn-side-badge">한</span>
+                                <div>
+                                    <div class="turn-side-title">한 진영</div>
+                                    <div class="turn-side-desc">푸른 기물</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="mt-3 flex flex-wrap sm:flex-nowrap gap-2">
                         <button id="resetBoardBtn" class="flex-1 min-w-0 px-3 py-2 bg-gray-200 text-gray-700 rounded-xl text-xs sm:text-sm font-bold">초기화</button>
                         <button id="undoMoveBtn" class="flex-1 min-w-0 px-3 py-2 bg-amber-100 text-amber-800 rounded-xl text-xs sm:text-sm font-bold">되돌리기</button>
