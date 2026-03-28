@@ -54,6 +54,9 @@
     .materials-next-copy-status {
         min-height: 20px;
     }
+    .materials-next-scroll-target {
+        scroll-margin-top: 7rem;
+    }
     @media (max-width: 640px) {
         .materials-next-hero-grid {
             grid-template-columns: 1fr;
@@ -124,7 +127,7 @@
                 </div>
                 <div class="mt-5 space-y-3">
                     {% for mission in missions %}
-                    <a href="?mission={{ mission.slug }}#learn" class="materials-next-mission-link block rounded-[28px] border border-slate-200 p-4 transition" data-active="{% if selected_mission and selected_mission.slug == mission.slug %}true{% else %}false{% endif %}">
+                    <a href="?mission={{ mission.slug }}#build-flow" class="materials-next-mission-link block rounded-[28px] border border-slate-200 p-4 transition" data-active="{% if selected_mission and selected_mission.slug == mission.slug %}true{% else %}false{% endif %}">
                         <div class="text-xs font-black uppercase tracking-[0.24em] text-slate-400">{{ forloop.counter }}단계 미션</div>
                         <div class="mt-2 text-lg font-black text-slate-900">{{ mission.title }}</div>
                         <p class="mt-2 text-sm leading-6 text-slate-600">{{ mission.summary }}</p>
@@ -134,7 +137,7 @@
                 </div>
             </div>
 
-            <div class="materials-next-card rounded-[32px] p-6 md:p-8">
+            <div id="build-flow" class="materials-next-card materials-next-scroll-target rounded-[32px] p-6 md:p-8">
                 <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                     <div>
                         <p class="text-xs font-black uppercase tracking-[0.32em] text-emerald-600">2-5단계 만들기</p>
@@ -241,7 +244,7 @@
                         {% endfor %}
                     </div>
                     <div class="mt-5">
-                        <a href="?starter={{ starter.slug }}#learn" class="inline-flex rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white">이 예시로 바꾸기</a>
+                        <a href="?starter={{ starter.slug }}#build-flow" class="inline-flex rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white">이 예시로 바꾸기</a>
                     </div>
                 </article>
                 {% endfor %}

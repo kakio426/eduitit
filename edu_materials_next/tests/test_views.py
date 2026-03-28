@@ -33,6 +33,8 @@ class EduMaterialsNextViewTests(TestCase):
         self.assertContains(response, "내 자료 이어보기")
         self.assertContains(response, "오늘 수업 주제를 적고, AI에 프롬프트를 넣어 HTML 자료를 만든 뒤, QR로 학생에게 바로 보여 주세요.")
         self.assertNotContains(response, "비교용 새 버전")
+        self.assertContains(response, "?mission=vibe-basics#build-flow")
+        self.assertContains(response, "?starter=planet-lab#build-flow")
         self.assertEqual(response.context["selected_mission"]["slug"], "vibe-basics")
         self.assertEqual(response.context["selected_starter"]["slug"], "planet-lab")
         self.assertIn(TOPIC_PLACEHOLDER, response.context["generated_prompt_template"])
