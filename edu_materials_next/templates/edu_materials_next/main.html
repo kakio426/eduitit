@@ -1,0 +1,497 @@
+{% extends 'base.html' %}
+
+{% block title %}AI 자료실 Next{% endblock %}
+
+{% block extra_css %}
+<style>
+    .materials-next-shell {
+        background:
+            radial-gradient(circle at top left, rgba(22, 163, 74, 0.14), transparent 28%),
+            radial-gradient(circle at top right, rgba(14, 165, 233, 0.12), transparent 26%),
+            linear-gradient(180deg, #f8fcff 0%, #f2fbf5 44%, #eef7ff 100%);
+    }
+    .materials-next-card {
+        background: rgba(255, 255, 255, 0.94);
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+        backdrop-filter: blur(14px);
+    }
+    .materials-next-input {
+        width: 100%;
+        border: 1px solid #cbd5e1;
+        border-radius: 20px;
+        padding: 0.95rem 1rem;
+        background: #fff;
+    }
+    .materials-next-hero {
+        background:
+            radial-gradient(circle at top, rgba(34, 197, 94, 0.2), transparent 32%),
+            linear-gradient(180deg, #0f172a 0%, #14532d 100%);
+    }
+    .materials-next-start-button {
+        border: 1px solid rgba(226, 232, 240, 0.92);
+        transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    }
+    .materials-next-start-button:hover,
+    .materials-next-start-button:focus-visible {
+        transform: translateY(-1px);
+        box-shadow: 0 18px 34px rgba(15, 23, 42, 0.08);
+        border-color: rgba(22, 163, 74, 0.3);
+    }
+    .materials-next-mission-link[data-active="true"],
+    .materials-next-starter-card[data-active="true"] {
+        border-color: rgba(22, 163, 74, 0.45);
+        background: linear-gradient(180deg, rgba(236, 253, 245, 0.98), rgba(255, 255, 255, 0.98));
+        box-shadow: 0 18px 36px rgba(22, 163, 74, 0.12);
+    }
+    .materials-next-prompt {
+        min-height: 260px;
+        font-family: Consolas, "Courier New", monospace;
+        font-size: 0.82rem;
+        line-height: 1.6;
+        white-space: pre-wrap;
+    }
+    .materials-next-copy-status {
+        min-height: 20px;
+    }
+    @media (max-width: 640px) {
+        .materials-next-hero-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="materials-next-shell min-h-screen px-4 pb-20 pt-28">
+    <div class="mx-auto max-w-7xl space-y-8">
+        <div class="materials-next-card materials-next-hero rounded-[36px] p-6 text-white md:p-8">
+            <div class="grid gap-8 materials-next-hero-grid xl:grid-cols-[minmax(0,1.28fr)_360px] xl:items-start">
+                <div>
+                    <p class="text-sm font-black uppercase tracking-[0.32em] text-emerald-200">AI 자료실 Next</p>
+                    <h1 class="mt-3 text-4xl font-black leading-tight md:text-5xl">처음 쓰는 선생님도 오늘 수업 주제 하나로 첫 자료를 만듭니다</h1>
+                    <p class="mt-4 max-w-4xl text-base leading-7 text-emerald-50/95">비교용 새 버전이지만 첫 화면에서는 바로 해야 할 일만 남겼습니다. 주제를 적고, AI로 HTML을 만들고, QR로 학생에게 바로 보여 주세요.</p>
+                    <div class="mt-6 flex flex-wrap gap-3">
+                        <a href="#learn" class="rounded-2xl bg-white px-5 py-3 text-sm font-black text-slate-900">첫 자료 바로 만들기</a>
+                        <a href="#starters" class="rounded-2xl border border-white/15 bg-white/10 px-5 py-3 text-sm font-black text-white">예시로 시작</a>
+                    </div>
+                    <div class="mt-4 flex flex-wrap gap-3 text-sm font-bold text-emerald-50/95">
+                        <a href="#my" class="rounded-full border border-white/12 bg-white/8 px-4 py-2">내 자료 이어보기</a>
+                        <a href="#legacy-import" class="rounded-full border border-white/12 bg-white/8 px-4 py-2">기존 자료 가져오기</a>
+                    </div>
+                </div>
+                <div class="rounded-[30px] border border-white/10 bg-white/10 p-5">
+                    <div class="text-xs font-black uppercase tracking-[0.28em] text-emerald-100">처음 쓰는 순서</div>
+                    <div class="mt-4 space-y-3">
+                        <div class="flex items-start gap-3 rounded-[24px] bg-white/7 px-4 py-3">
+                            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-sm font-black text-slate-900">1</span>
+                            <div class="text-sm font-bold text-white">오늘 수업 주제를 한 문장으로 적기</div>
+                        </div>
+                        <div class="flex items-start gap-3 rounded-[24px] bg-white/7 px-4 py-3">
+                            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-sm font-black text-slate-900">2</span>
+                            <div class="text-sm font-bold text-white">추천 스타터로 AI 안내문 열기</div>
+                        </div>
+                        <div class="flex items-start gap-3 rounded-[24px] bg-white/7 px-4 py-3">
+                            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-sm font-black text-slate-900">3</span>
+                            <div class="text-sm font-bold text-white">완성된 HTML을 붙여넣고 저장하기</div>
+                        </div>
+                        <div class="flex items-start gap-3 rounded-[24px] bg-white/7 px-4 py-3">
+                            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-sm font-black text-slate-900">4</span>
+                            <div class="text-sm font-bold text-white">QR 전체화면으로 학생에게 바로 보여 주기</div>
+                        </div>
+                    </div>
+                    <details class="mt-4 rounded-[24px] border border-white/10 bg-white/6 px-4 py-3">
+                        <summary class="cursor-pointer text-sm font-black text-white">비교 기준 보기</summary>
+                        <div class="mt-3 space-y-2 text-sm leading-6 text-emerald-50/95">
+                            <p>첫 자료 생성 완료 시간</p>
+                            <p>QR 배포까지 클릭 수</p>
+                            <p>다음 행동 인지 여부</p>
+                        </div>
+                    </details>
+                </div>
+            </div>
+        </div>
+
+        <section id="learn" class="grid gap-6 xl:grid-cols-[minmax(0,0.78fr)_minmax(0,1.22fr)]">
+            <div class="materials-next-card rounded-[32px] p-6 md:p-8">
+                <div class="flex items-center justify-between gap-4">
+                    <div>
+                        <p class="text-xs font-black uppercase tracking-[0.32em] text-emerald-600">1단계</p>
+                        <h2 class="mt-2 text-3xl font-black text-slate-900">처음이라면 시작 미션 하나만 고르기</h2>
+                        <p class="mt-2 text-sm leading-6 text-slate-500">미션을 고르면 추천 스타터가 자동으로 연결됩니다.</p>
+                    </div>
+                    <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">추천값 자동 선택</span>
+                </div>
+                <div class="mt-5 space-y-3">
+                    {% for mission in missions %}
+                    <a href="?mission={{ mission.slug }}#learn" class="materials-next-mission-link block rounded-[28px] border border-slate-200 p-4 transition" data-active="{% if selected_mission and selected_mission.slug == mission.slug %}true{% else %}false{% endif %}">
+                        <div class="text-xs font-black uppercase tracking-[0.24em] text-slate-400">{{ forloop.counter }}단계 미션</div>
+                        <div class="mt-2 text-lg font-black text-slate-900">{{ mission.title }}</div>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">{{ mission.summary }}</p>
+                        <p class="mt-3 text-sm font-bold text-emerald-700">{{ mission.first_step }}</p>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="materials-next-card rounded-[32px] p-6 md:p-8">
+                <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div>
+                        <p class="text-xs font-black uppercase tracking-[0.32em] text-emerald-600">2-5단계 만들기</p>
+                        <h2 class="mt-2 text-3xl font-black text-slate-900">주제를 적고 바로 QR까지 가기</h2>
+                        <p class="mt-2 text-sm leading-6 text-slate-500">지금 보이는 추천 스타터 그대로 시작해도 됩니다. 필요할 때만 예시를 바꾸세요.</p>
+                    </div>
+                    {% if selected_starter %}
+                    <a href="#starters" class="rounded-full border border-slate-200 px-4 py-2 text-sm font-black text-slate-700">다른 예시 고르기</a>
+                    {% endif %}
+                </div>
+
+                {% if selected_starter %}
+                <div class="mt-5 rounded-[28px] border border-emerald-100 bg-emerald-50/80 p-5">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="rounded-full bg-white px-3 py-1 text-xs font-black text-emerald-700">2단계 추천 스타터</span>
+                        <span class="rounded-full bg-white px-3 py-1 text-xs font-black text-slate-700">{{ selected_starter.grade }}</span>
+                        <span class="rounded-full bg-white px-3 py-1 text-xs font-black text-slate-700">{{ selected_starter.estimated_minutes }}분</span>
+                    </div>
+                    <div class="mt-3 text-2xl font-black text-slate-900">{{ selected_starter.title }}</div>
+                    <p class="mt-2 text-sm leading-6 text-slate-700">{{ selected_starter.summary }}</p>
+                </div>
+                {% else %}
+                <div class="mt-5 rounded-[28px] border border-slate-200 bg-slate-50 p-5">
+                    <div class="text-sm font-black text-slate-900">2단계 추천 스타터</div>
+                    <p class="mt-2 text-sm leading-6 text-slate-600">아래 예시 중 하나를 고르면 이 자리에 바로 채워집니다.</p>
+                </div>
+                {% endif %}
+
+                {% if request.user.is_authenticated %}
+                <form method="post" action="{% url 'edu_materials_next:create' %}" enctype="multipart/form-data" class="mt-6 space-y-5">
+                    {% csrf_token %}
+                    <input type="hidden" name="starter_slug" id="starter-slug-input" value="{% if selected_starter %}{{ selected_starter.slug }}{% endif %}">
+                    <div class="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
+                        <label for="lesson-topic-input" class="mb-2 block text-sm font-black text-slate-700">3단계 오늘 만들고 싶은 수업 주제</label>
+                        <input id="lesson-topic-input" name="lesson_topic" value="{{ topic_seed }}" class="materials-next-input" placeholder="예: 태양계 행성의 자전과 공전, 분수 크기 비교, 화산 활동 실험">
+                    </div>
+                    <div class="rounded-[28px] border border-slate-200 bg-white p-5">
+                        <div class="mb-3 flex items-center justify-between gap-3">
+                            <div>
+                                <label for="lesson-prompt-preview" class="block text-sm font-black text-slate-700">4단계 AI에 그대로 넣기</label>
+                                <p class="mt-1 text-xs font-bold text-slate-500">주제를 바꾸면 안내문도 바로 갱신됩니다.</p>
+                            </div>
+                        </div>
+                        <textarea id="lesson-prompt-preview" class="materials-next-input materials-next-prompt" readonly>{{ generated_prompt }}</textarea>
+                        <div class="mt-3 grid gap-2 sm:grid-cols-2">
+                            <button type="button" id="copy-prompt-button" class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-900">안내문 복사</button>
+                            <a id="open-ai-button" href="https://gemini.google.com/app" target="_blank" rel="noopener noreferrer" class="rounded-2xl bg-emerald-600 px-4 py-3 text-center text-sm font-black text-white">AI 열기</a>
+                        </div>
+                        <p id="prompt-copy-status" class="materials-next-copy-status mt-3 text-xs font-bold text-slate-500">복사 후 AI에 붙여넣고, 완성된 HTML 전체를 아래에 넣어 주세요.</p>
+                    </div>
+                    <div class="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
+                        <div class="text-sm font-black text-slate-700">5단계 완성된 HTML 가져오기</div>
+                        <div class="mt-4">
+                            <label class="mb-2 block text-sm font-black text-slate-700">자료 제목</label>
+                            <input name="title" class="materials-next-input" placeholder="예: 행성 운동 실험실">
+                        </div>
+                        <div class="mt-4">
+                            <label class="mb-2 block text-sm font-black text-slate-700">완성된 HTML 붙여넣기</label>
+                            <textarea name="html_content" class="materials-next-input min-h-[240px]" placeholder="AI가 만들어 준 HTML 전체를 그대로 붙여넣어 주세요."></textarea>
+                        </div>
+                        <div class="mt-4">
+                            <label class="mb-2 block text-sm font-black text-slate-700">또는 파일 올리기</label>
+                            <input type="file" name="html_file" accept=".html,.htm,text/html" class="materials-next-input">
+                        </div>
+                        <button type="submit" class="mt-5 w-full rounded-[28px] bg-emerald-600 px-5 py-4 text-lg font-black text-white shadow-lg shadow-emerald-600/15">저장하고 QR 열기</button>
+                    </div>
+                </form>
+                {% else %}
+                <div class="mt-6 rounded-[28px] border border-slate-200 bg-slate-50 p-6">
+                    <div class="text-xl font-black text-slate-900">로그인하면 지금 이 흐름 그대로 저장됩니다.</div>
+                    <p class="mt-2 text-sm leading-6 text-slate-600">주제 입력과 예시 확인은 지금 둘러볼 수 있고, 실제 저장과 QR 배포는 로그인 후 이어집니다.</p>
+                    <a href="{% url 'account_login' %}?next={{ request.get_full_path|urlencode }}" class="mt-4 inline-flex rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white">로그인하고 첫 자료 만들기</a>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <section id="starters" class="materials-next-card rounded-[32px] p-6 md:p-8">
+            <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                <div>
+                    <p class="text-xs font-black uppercase tracking-[0.32em] text-sky-600">다른 예시 고르기</p>
+                    <h2 class="mt-2 text-3xl font-black text-slate-900">추천 스타터를 바꾸고 싶을 때만 여기서 하나 고르기</h2>
+                    <p class="mt-2 text-sm leading-6 text-slate-500">처음이라면 지금 추천된 스타터 그대로 시작해도 됩니다.</p>
+                </div>
+                <div class="rounded-full bg-slate-100 px-4 py-2 text-sm font-black text-slate-700">총 {{ starters|length }}개 스타터</div>
+            </div>
+            <div class="mt-6 grid gap-4 xl:grid-cols-2">
+                {% for starter in starters %}
+                <article class="materials-next-starter-card rounded-[30px] border border-slate-200 p-5 transition" data-active="{% if selected_starter and selected_starter.slug == starter.slug %}true{% else %}false{% endif %}">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-700">{{ starter.grade }}</span>
+                        <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">{{ starter.estimated_minutes }}분</span>
+                        <span class="rounded-full bg-sky-50 px-3 py-1 text-xs font-black text-sky-700">{{ starter.difficulty_level }}</span>
+                    </div>
+                    <div class="mt-3 text-2xl font-black text-slate-900">{{ starter.title }}</div>
+                    <p class="mt-2 text-sm leading-6 text-slate-600">{{ starter.summary }}</p>
+                    <div class="mt-4 rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+                        <div class="text-xs font-black uppercase tracking-[0.24em] text-slate-400">교사용 한 줄 진행</div>
+                        <p class="mt-2 text-sm leading-6 text-slate-700">{{ starter.teacher_guide }}</p>
+                    </div>
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        {% for tip in starter.remix_tips %}
+                        <span class="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-black text-slate-600">{{ tip }}</span>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-5">
+                        <a href="?starter={{ starter.slug }}#learn" class="inline-flex rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white">이 예시로 바꾸기</a>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section id="my" class="grid gap-6 xl:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]">
+            <div class="materials-next-card rounded-[32px] p-6 md:p-8">
+                <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                    <div>
+                        <p class="text-xs font-black uppercase tracking-[0.32em] text-violet-600">내 자료 이어보기</p>
+                        <h2 class="mt-2 text-3xl font-black text-slate-900">Next에서 만든 자료만 따로 보기</h2>
+                        <p class="mt-2 text-sm leading-6 text-slate-500">첫 자료를 만든 뒤에는 여기서 다시 열고 다듬으면 됩니다.</p>
+                    </div>
+                    {% if request.user.is_authenticated %}
+                    <div class="rounded-full bg-slate-100 px-4 py-2 text-sm font-black text-slate-700">{{ my_material_count }}개</div>
+                    {% endif %}
+                </div>
+
+                {% if request.user.is_authenticated %}
+                <form method="get" action="{% url 'edu_materials_next:main' %}" class="mt-6 flex flex-col gap-3 sm:flex-row">
+                    <input type="text" name="q" value="{{ material_query }}" class="materials-next-input" placeholder="내 Next 자료 찾기">
+                    {% if legacy_query %}<input type="hidden" name="legacy_q" value="{{ legacy_query }}">{% endif %}
+                    {% if selected_starter %}<input type="hidden" name="starter" value="{{ selected_starter.slug }}">{% endif %}
+                    {% if selected_mission %}<input type="hidden" name="mission" value="{{ selected_mission.slug }}">{% endif %}
+                    <button type="submit" class="rounded-2xl bg-violet-600 px-5 py-3 text-sm font-black text-white">검색</button>
+                </form>
+
+                {% if my_page_obj and my_page_obj.object_list %}
+                <div class="mt-6 grid gap-4">
+                    {% for material in my_page_obj.object_list %}
+                    <article class="rounded-[28px] border border-slate-200 bg-white p-5">
+                        <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                            <div>
+                                <a href="{% url 'edu_materials_next:detail' material.id %}" class="text-2xl font-black text-slate-900 transition hover:text-violet-700">{{ material.title }}</a>
+                                <p class="mt-2 text-sm leading-6 text-slate-600">{{ material.summary|default:"수업에 바로 쓰는 인터랙티브 HTML 자료입니다." }}</p>
+                                <div class="mt-3 flex flex-wrap gap-2 text-xs font-black">
+                                    <span class="rounded-full bg-slate-100 px-3 py-1 text-slate-700">{{ material.get_entry_mode_display }}</span>
+                                    <span class="rounded-full bg-slate-100 px-3 py-1 text-slate-700">{{ material.grade|default:"학년 미지정" }}</span>
+                                    <span class="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">{{ material.estimated_minutes }}분</span>
+                                </div>
+                            </div>
+                            <a href="{% url 'edu_materials_next:share_board' material.id %}" target="_blank" rel="noopener" class="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white">QR 전체화면</a>
+                        </div>
+                    </article>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="mt-6 rounded-[28px] border border-slate-200 bg-slate-50 p-8 text-center text-slate-500">
+                    <p class="text-lg font-black text-slate-800">아직 Next 자료가 없습니다.</p>
+                    <p class="mt-2 text-sm leading-6">위의 시작 흐름으로 첫 자료를 만든 뒤 여기서 계속 다듬어 보세요.</p>
+                </div>
+                {% endif %}
+
+                {% if my_page_obj and my_page_obj.has_other_pages %}
+                <div class="mt-4 flex flex-wrap items-center justify-center gap-2">
+                    {% if my_page_obj.has_previous %}
+                    <a href="?my_page={{ my_page_obj.previous_page_number }}{% if my_page_query_string %}&amp;{{ my_page_query_string }}{% endif %}#my" class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700">이전</a>
+                    {% endif %}
+                    <span class="rounded-full bg-slate-100 px-4 py-2 text-sm font-bold text-slate-600">{{ my_page_obj.number }} / {{ my_page_obj.paginator.num_pages }}</span>
+                    {% if my_page_obj.has_next %}
+                    <a href="?my_page={{ my_page_obj.next_page_number }}{% if my_page_query_string %}&amp;{{ my_page_query_string }}{% endif %}#my" class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700">다음</a>
+                    {% endif %}
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="mt-6 rounded-[28px] border border-slate-200 bg-slate-50 p-8">
+                    <div class="text-2xl font-black text-slate-900">내 자료는 로그인 후 따로 열립니다.</div>
+                    <p class="mt-2 text-sm leading-6 text-slate-600">Next와 old를 비교하려면 로그인 후 저장, 가져오기, QR 배포까지 이어서 볼 수 있습니다.</p>
+                    <a href="{% url 'account_login' %}?next={{ request.get_full_path|urlencode }}" class="mt-4 inline-flex rounded-2xl bg-violet-600 px-5 py-3 text-sm font-black text-white">로그인하고 비교 시작</a>
+                </div>
+                {% endif %}
+            </div>
+
+            <div id="legacy-import" class="materials-next-card rounded-[32px] p-6 md:p-8">
+                <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                    <div>
+                        <p class="text-xs font-black uppercase tracking-[0.32em] text-amber-600">기존 버전에서 가져오기</p>
+                        <h2 class="mt-2 text-3xl font-black text-slate-900">비교가 필요할 때만 old 자료 복사하기</h2>
+                        <p class="mt-2 text-sm leading-6 text-slate-500">첫 자료를 만든 뒤 필요할 때만 열어도 됩니다.</p>
+                    </div>
+                    {% if request.user.is_authenticated %}
+                    <div class="rounded-full bg-slate-100 px-4 py-2 text-sm font-black text-slate-700">{{ legacy_material_count }}개</div>
+                    {% endif %}
+                </div>
+
+                {% if request.user.is_authenticated %}
+                <details class="mt-6 rounded-[28px] border border-slate-200 bg-slate-50 p-5" {% if legacy_query %}open{% endif %}>
+                    <summary class="cursor-pointer text-sm font-black text-slate-900">old 자료 가져오기 열기</summary>
+                    <div class="mt-4">
+                        <form method="get" action="{% url 'edu_materials_next:main' %}" class="flex flex-col gap-3 sm:flex-row">
+                            {% if material_query %}<input type="hidden" name="q" value="{{ material_query }}">{% endif %}
+                            {% if selected_starter %}<input type="hidden" name="starter" value="{{ selected_starter.slug }}">{% endif %}
+                            {% if selected_mission %}<input type="hidden" name="mission" value="{{ selected_mission.slug }}">{% endif %}
+                            <input type="text" name="legacy_q" value="{{ legacy_query }}" class="materials-next-input" placeholder="old 자료 찾기">
+                            <button type="submit" class="rounded-2xl bg-amber-500 px-5 py-3 text-sm font-black text-white">검색</button>
+                        </form>
+
+                        {% if legacy_page_obj and legacy_page_obj.object_list %}
+                        <div class="mt-6 space-y-4">
+                            {% for legacy in legacy_page_obj.object_list %}
+                            <article class="rounded-[28px] border border-slate-200 bg-white p-5">
+                                <div class="text-xl font-black text-slate-900">{{ legacy.title }}</div>
+                                <p class="mt-2 text-sm leading-6 text-slate-600">{{ legacy.summary|default:"기존 버전 자료입니다. 필요하면 Next로 복사해 비교하세요." }}</p>
+                                <div class="mt-3 flex flex-wrap gap-2 text-xs font-black">
+                                    <span class="rounded-full bg-slate-100 px-3 py-1 text-slate-700">{{ legacy.get_subject_display }}</span>
+                                    <span class="rounded-full bg-slate-100 px-3 py-1 text-slate-700">{{ legacy.grade|default:"학년 미지정" }}</span>
+                                    <span class="rounded-full bg-slate-100 px-3 py-1 text-slate-700">{% if legacy.is_published %}공개 자료{% else %}내 자료{% endif %}</span>
+                                </div>
+                                <form method="post" action="{% url 'edu_materials_next:import_legacy' legacy.id %}" class="mt-4">
+                                    {% csrf_token %}
+                                    <button type="submit" class="rounded-2xl bg-amber-500 px-5 py-3 text-sm font-black text-white">Next로 복사 가져오기</button>
+                                </form>
+                            </article>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="mt-6 rounded-[28px] border border-slate-200 bg-white p-8 text-center text-slate-500">
+                            <p class="text-lg font-black text-slate-800">가져올 old 자료가 없습니다.</p>
+                            <p class="mt-2 text-sm leading-6">기존 AI 수업자료 메이커에서 만든 자료가 있으면 여기서 복사해 비교할 수 있습니다.</p>
+                        </div>
+                        {% endif %}
+
+                        {% if legacy_page_obj and legacy_page_obj.has_other_pages %}
+                        <div class="mt-4 flex flex-wrap items-center justify-center gap-2">
+                            {% if legacy_page_obj.has_previous %}
+                            <a href="?legacy_page={{ legacy_page_obj.previous_page_number }}{% if legacy_page_query_string %}&amp;{{ legacy_page_query_string }}{% endif %}#my" class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700">이전</a>
+                            {% endif %}
+                            <span class="rounded-full bg-slate-100 px-4 py-2 text-sm font-bold text-slate-600">{{ legacy_page_obj.number }} / {{ legacy_page_obj.paginator.num_pages }}</span>
+                            {% if legacy_page_obj.has_next %}
+                            <a href="?legacy_page={{ legacy_page_obj.next_page_number }}{% if legacy_page_query_string %}&amp;{{ legacy_page_query_string }}{% endif %}#my" class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700">다음</a>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </details>
+                {% else %}
+                <div class="mt-6 rounded-[28px] border border-slate-200 bg-slate-50 p-8 text-center text-slate-500">
+                    <p class="text-lg font-black text-slate-800">old 자료 가져오기는 로그인 후 열립니다.</p>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+    </div>
+</section>
+
+{% if starters %}
+{{ starters|json_script:"materials-next-starters-data" }}
+{% endif %}
+
+<script>
+    (function () {
+        const topicInput = document.getElementById('lesson-topic-input');
+        const promptPreview = document.getElementById('lesson-prompt-preview');
+        const copyPromptButton = document.getElementById('copy-prompt-button');
+        const copyStatus = document.getElementById('prompt-copy-status');
+        const starterSlugInput = document.getElementById('starter-slug-input');
+        const startersNode = document.getElementById('materials-next-starters-data');
+
+        let starterMap = {};
+        if (startersNode) {
+            try {
+                const starterArray = JSON.parse(startersNode.textContent);
+                starterMap = Object.fromEntries(starterArray.map((item) => [item.slug, item]));
+            } catch (error) {
+                starterMap = {};
+            }
+        }
+
+        const buildPrompt = (topic) => {
+            const starter = starterMap[(starterSlugInput && starterSlugInput.value) || ''] || null;
+            const lessonTopic = (topic || '').trim() || '[여기에 수업 주제를 입력하세요]';
+            const starterTitle = starter ? starter.title : '자유 제작';
+            const starterFocus = starter ? starter.prompt_focus : '교실에서 바로 쓸 수 있는 인터랙티브 HTML 자료';
+            return [
+                '[역할]',
+                '당신은 초보 교사도 바로 수업에 쓸 수 있는 HTML 활동 자료를 만드는 수업 디자이너이자 프론트엔드 개발자입니다.',
+                '',
+                '학습 주제: ' + lessonTopic,
+                '시작 스타터: ' + starterTitle,
+                '',
+                '[자료 목표]',
+                starterFocus,
+                '',
+                '[필수 원칙]',
+                '1. CSS와 JS를 포함한 단일 HTML 파일 전체를 작성합니다.',
+                '2. 학생이 직접 눌러 보거나 값을 바꿔 보며 개념을 확인할 수 있어야 합니다.',
+                '3. 교실 TV와 태블릿에서 읽기 쉬운 큰 글자와 분명한 버튼을 사용합니다.',
+                '4. 시작, 다시하기, 핵심 조작 버튼은 바로 보이게 배치합니다.',
+                '5. 학생 안내 문구는 짧고 쉬운 한국어로 씁니다.',
+                '',
+                '[출력 순서]',
+                '1. 교사용 사용 팁 3줄',
+                '2. 학생 질문 3개',
+                '3. 완성된 HTML 파일 전체',
+            ].join('\n');
+        };
+
+        const syncPrompt = () => {
+            if (!promptPreview) return;
+            promptPreview.value = buildPrompt(topicInput ? topicInput.value : '');
+        };
+
+        const setCopyStatus = (message, isError) => {
+            if (!copyStatus) return;
+            copyStatus.textContent = message;
+            copyStatus.classList.toggle('text-emerald-700', !isError);
+            copyStatus.classList.toggle('text-rose-600', !!isError);
+            copyStatus.classList.toggle('text-slate-500', false);
+        };
+
+        const fallbackCopy = (value) => {
+            const helper = document.createElement('textarea');
+            helper.value = value;
+            helper.style.position = 'fixed';
+            helper.style.opacity = '0';
+            document.body.appendChild(helper);
+            helper.focus();
+            helper.select();
+            const copied = document.execCommand('copy');
+            document.body.removeChild(helper);
+            return copied;
+        };
+
+        if (topicInput) {
+            topicInput.addEventListener('input', syncPrompt);
+        }
+
+        if (copyPromptButton) {
+            copyPromptButton.addEventListener('click', async () => {
+                const promptText = buildPrompt(topicInput ? topicInput.value : '');
+                syncPrompt();
+                try {
+                    if (navigator.clipboard && window.isSecureContext) {
+                        await navigator.clipboard.writeText(promptText);
+                    } else if (!fallbackCopy(promptText)) {
+                        throw new Error('copy-failed');
+                    }
+                    setCopyStatus('안내문을 복사했습니다. AI에 붙여넣고 HTML 전체를 다시 가져오면 됩니다.', false);
+                } catch (error) {
+                    if (promptPreview) {
+                        promptPreview.focus();
+                        promptPreview.select();
+                    }
+                    setCopyStatus('자동 복사가 막혀 있어 안내문을 선택해 두었습니다. 직접 복사해 주세요.', true);
+                }
+            });
+        }
+
+        syncPrompt();
+    })();
+</script>
+{% endblock %}

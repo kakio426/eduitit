@@ -49,6 +49,7 @@ class Command(BaseCommand):
             ("ensure_textbooks", lambda: call_command("ensure_textbooks")),
             ("ensure_textbook_ai", lambda: call_command("ensure_textbook_ai")),
             ("ensure_edu_materials", lambda: call_command("ensure_edu_materials")),
+            ("ensure_edu_materials_next", lambda: call_command("ensure_edu_materials_next")),
             ("ensure_tts_announce", lambda: call_command("ensure_tts_announce")),
             ("ensure_infoboard", lambda: call_command("ensure_infoboard")),
         ]

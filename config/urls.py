@@ -76,6 +76,7 @@ urlpatterns = [
     path('textbooks/', include('textbooks.urls', namespace='textbooks')),
     path('textbook-ai/', include('textbook_ai.urls', namespace='textbook_ai')),
     path('edu-materials/', include('edu_materials.urls', namespace='edu_materials')),
+    path('edu-materials-next/', include('edu_materials_next.urls', namespace='edu_materials_next')),
     path('infoboard/', include('infoboard.urls', namespace='infoboard')),
     path('m/', include('studentmbti.urls', namespace='studentmbti_short')),  # 짧은 URL 별칭에 고유 네임스페이스 부여
 ]

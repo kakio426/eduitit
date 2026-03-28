@@ -1,0 +1,114 @@
+{% load static %}
+<div
+    class="relative {{ frame_shell_classes|default:'overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950/95 shadow-xl shadow-slate-900/10' }}"
+    data-frame-mode="{{ frame_mode|default:'runtime' }}"
+    data-material-frame-shell
+    data-material-render-url="{{ material_render_url }}"
+>
+    <style>
+        [data-frame-status][data-tone="error"] [data-frame-status-card] {
+            border-color: rgba(248, 113, 113, 0.5);
+            background: rgba(69, 10, 10, 0.92);
+        }
+    </style>
+    <div
+        class="pointer-events-none absolute inset-x-4 bottom-4 z-20 flex justify-end"
+        data-frame-status
+        data-tone="notice"
+        hidden
+    >
+        <div
+            class="pointer-events-auto w-full max-w-md rounded-[24px] border border-emerald-300/30 bg-slate-950/92 p-4 text-white shadow-2xl shadow-slate-950/40 backdrop-blur"
+            data-frame-status-card
+        >
+            <div class="text-sm font-black" data-frame-status-title>자료 실행 확인 중</div>
+            <p class="mt-2 text-sm leading-6 text-slate-200" data-frame-status-body></p>
+            <div class="mt-3 flex justify-end">
+                <button
+                    type="button"
+                    class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-bold text-white transition hover:bg-white/20"
+                    data-frame-status-reload
+                >
+                    다시 열기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {% if not hide_frame_header %}
+    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 px-5 py-4 text-white">
+        <div>
+            <div class="text-xs uppercase tracking-[0.28em] text-emerald-300">Sandbox Preview</div>
+            <div class="mt-1 font-black">{{ frame_title|default:material.title }}</div>
+        </div>
+        <div class="flex flex-wrap items-center justify-end gap-3">
+            {% if frame_mode == 'preview' %}
+            <div class="inline-flex rounded-full border border-white/10 bg-white/5 p-1" role="tablist" aria-label="미리보기 viewport">
+                {% for viewport in preview_viewports %}
+                <button
+                    type="button"
+                    class="rounded-full px-3 py-1.5 text-xs font-bold transition {% if viewport.id == preview_default_viewport.id %}bg-emerald-400 text-slate-950 shadow-sm{% else %}text-slate-200 hover:bg-white/10{% endif %}"
+                    data-preview-button
+                    data-preview-mode="{{ viewport.id }}"
+                    data-preview-label="{{ viewport.label }}"
+                    data-preview-width="{{ viewport.width }}"
+                    data-preview-height="{{ viewport.height }}"
+                    aria-pressed="{% if viewport.id == preview_default_viewport.id %}true{% else %}false{% endif %}"
+                >
+                    {{ viewport.label }}
+                </button>
+                {% endfor %}
+            </div>
+            <div class="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-slate-300" data-preview-dimensions>
+                {{ preview_default_viewport.label }} {{ preview_default_viewport.width }}x{{ preview_default_viewport.height }}
+            </div>
+            {% endif %}
+            <div class="text-xs text-slate-300">{{ frame_hint|default:'호스트 화면과 분리된 iframe 실행' }}</div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if frame_mode == 'preview' %}
+    <div
+        class="overflow-hidden border-t border-white/5 bg-slate-950/90 p-4 md:p-6"
+        data-preview-root
+        data-active-viewport="{{ preview_default_viewport.id }}"
+    >
+        <div class="edu-materials-preview-stage flex h-[clamp(420px,62vh,760px)] w-full items-center justify-center overflow-hidden rounded-[24px] border border-white/10 bg-black/40 p-4 md:p-6" data-preview-stage>
+            <div
+                class="shrink-0 transform-gpu transition-transform duration-200 ease-out"
+                data-preview-viewport
+                style="width: {{ preview_default_viewport.width }}px; height: {{ preview_default_viewport.height }}px; transform: scale(1); transform-origin: center center;"
+            >
+                <iframe
+                    title="{{ frame_title|default:material.title }}"
+                    class="block border-0 bg-white shadow-2xl"
+                    {% if iframe_sandbox %}sandbox="{{ iframe_sandbox }}"{% endif %}
+                    loading="eager"
+                    referrerpolicy="no-referrer"
+                    src="{{ frame_src|default:material_render_url }}"
+                    width="{{ preview_default_viewport.width }}"
+                    height="{{ preview_default_viewport.height }}"
+                    data-preview-iframe
+                    data-material-iframe
+                    allowfullscreen
+                ></iframe>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="{{ frame_stage_classes|default:'bg-slate-950 h-[100dvh] w-full' }}">
+        <iframe
+            title="{{ frame_title|default:material.title }}"
+            class="{{ iframe_classes|default:'block h-full w-full bg-white' }}"
+            {% if iframe_sandbox %}sandbox="{{ iframe_sandbox }}"{% endif %}
+            loading="eager"
+            referrerpolicy="no-referrer"
+            src="{{ frame_src|default:material_render_url }}"
+            data-material-iframe
+            allowfullscreen
+        ></iframe>
+    </div>
+    {% endif %}
+</div>
+<script src="{% static 'edu_materials_next/material_frame_host.js' %}"></script>
