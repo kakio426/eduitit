@@ -812,22 +812,22 @@ def _build_home_quickdrop_card(user, favorite_products, product_list):
             return None
 
     summary = "PC와 휴대폰 사이에서 텍스트와 사진을 바로 옮길 수 있습니다."
+    channel = None
     try:
-        from quickdrop.models import QuickdropChannel
+        from quickdrop.services import get_or_create_personal_channel
 
-        channel = QuickdropChannel.objects.filter(owner=user).first()
-        if channel is not None:
-            day_start = timezone.localtime(timezone.now()).replace(hour=0, minute=0, second=0, microsecond=0)
-            today_items = channel.items.filter(created_at__gte=day_start).order_by("-created_at", "-id")
-            latest_item = today_items.first()
-            if latest_item is not None:
-                if getattr(latest_item, "kind", "") == "image":
-                    filename = str(getattr(latest_item, "filename", "") or "").strip()
-                    summary = filename[:50] if filename else "최근 사진 1장이 도착해 있습니다."
-                else:
-                    latest_text = " ".join(str(getattr(latest_item, "text", "") or "").split())
-                    if latest_text:
-                        summary = latest_text[:72] + ("..." if len(latest_text) > 72 else "")
+        channel = get_or_create_personal_channel(user)
+        day_start = timezone.localtime(timezone.now()).replace(hour=0, minute=0, second=0, microsecond=0)
+        today_items = channel.items.filter(created_at__gte=day_start).order_by("-created_at", "-id")
+        latest_item = today_items.first()
+        if latest_item is not None:
+            if getattr(latest_item, "kind", "") == "image":
+                filename = str(getattr(latest_item, "filename", "") or "").strip()
+                summary = filename[:50] if filename else "최근 사진 1장이 도착해 있습니다."
+            else:
+                latest_text = " ".join(str(getattr(latest_item, "text", "") or "").split())
+                if latest_text:
+                    summary = latest_text[:72] + ("..." if len(latest_text) > 72 else "")
     except Exception:
         logger.exception("[home quickdrop] failed to build quickdrop card context")
 
@@ -836,6 +836,7 @@ def _build_home_quickdrop_card(user, favorite_products, product_list):
         "summary": summary,
         "open_url": reverse("quickdrop:open"),
         "manage_url": reverse("quickdrop:landing"),
+        "send_text_url": reverse("quickdrop:send_text", kwargs={"slug": channel.slug}) if channel is not None else "",
     }
 
 

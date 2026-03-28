@@ -2213,11 +2213,17 @@ class HomeV4ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
+        from quickdrop.models import QuickdropChannel
+
+        channel = QuickdropChannel.objects.get(owner=user)
 
         self.assertIn('data-home-v4-mobile-quickdrop="true"', content)
         self.assertIn('data-home-v4-mobile-quickdrop-actions="true"', content)
-        self.assertIn(f'href="{reverse("quickdrop:open")}"', content)
+        self.assertIn('data-home-v4-mobile-quickdrop-form="true"', content)
+        self.assertIn(f'action="{reverse("quickdrop:send_text", kwargs={"slug": channel.slug})}"', content)
         self.assertIn(f'href="{reverse("quickdrop:landing")}"', content)
+        self.assertIn('바로 보낼 글', content)
+        self.assertIn('지금 보내기', content)
         self.assertNotIn('data-home-v4-mobile-quick-tools="true"', content)
 
         home_panel_index = content.index('data-home-v4-home-panel="true"')
@@ -2242,12 +2248,17 @@ class HomeV4ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
+        from quickdrop.models import QuickdropChannel
+
+        channel = QuickdropChannel.objects.get(owner=user)
 
         self.assertIn('data-home-messagebox-card="true"', content)
         self.assertIn('data-home-v4-mobile-quickdrop="true"', content)
         self.assertIn('data-home-v4-mobile-quickdrop-placement="under-messagebox"', content)
-        self.assertIn(f'href="{reverse("quickdrop:open")}"', content)
+        self.assertIn('data-home-v4-mobile-quickdrop-form="true"', content)
+        self.assertIn(f'action="{reverse("quickdrop:send_text", kwargs={"slug": channel.slug})}"', content)
         self.assertIn(f'href="{reverse("quickdrop:landing")}"', content)
+        self.assertIn('지금 보내기', content)
 
         home_panel_index = content.index('data-home-v4-home-panel="true"')
         messagebox_index = content.index('data-home-messagebox-card="true"')
@@ -2414,12 +2425,17 @@ class HomeV4ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
+        from quickdrop.models import QuickdropChannel
+
+        channel = QuickdropChannel.objects.get(owner=user)
 
         self.assertIn('data-home-v4-mobile-quickdrop="true"', content)
         self.assertIn('data-home-v4-mobile-quickdrop-actions="true"', content)
-        self.assertIn(f'href="{reverse("quickdrop:open")}"', content)
+        self.assertIn('data-home-v4-mobile-quickdrop-form="true"', content)
+        self.assertIn(f'action="{reverse("quickdrop:send_text", kwargs={"slug": channel.slug})}"', content)
         self.assertIn(f'href="{reverse("quickdrop:landing")}"', content)
-        self.assertIn('바로 전송', content)
+        self.assertIn('바로 보낼 글', content)
+        self.assertIn('지금 보내기', content)
         self.assertIn('새 기기 연결', content)
 
         home_panel_index = content.index('data-home-v4-home-panel="true"')

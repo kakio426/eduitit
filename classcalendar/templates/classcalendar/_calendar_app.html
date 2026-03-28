@@ -947,24 +947,7 @@
                 </div>
             </section>
             {% if quickdrop_home_card %}
-            <section
-                class="classcalendar-home-inline-quickdrop home-v4-mobile-quickdrop"
-                data-home-v4-mobile-quickdrop="true"
-                data-home-v4-mobile-quickdrop-placement="under-messagebox"
-            >
-                <div class="home-v4-mobile-quickdrop-head">
-                    <div class="home-v4-mobile-quickdrop-icon" aria-hidden="true">↔</div>
-                    <div class="min-w-0">
-                        <p class="home-v4-mobile-quickdrop-eyebrow">바로 쓰는 전송</p>
-                        <h3 class="text-base font-black text-slate-900">{{ quickdrop_home_card.title }}</h3>
-                    </div>
-                </div>
-                <p class="home-v4-mobile-quickdrop-summary">{{ quickdrop_home_card.summary|default:'휴대폰에서 사진이나 글을 바로 보내고, 다른 기기에서 바로 이어보세요.' }}</p>
-                <div class="home-v4-mobile-quickdrop-actions" data-home-v4-mobile-quickdrop-actions="true">
-                    <a href="{{ quickdrop_home_card.open_url }}" class="home-v4-mobile-quickdrop-primary">바로 전송</a>
-                    <a href="{{ quickdrop_home_card.manage_url }}" class="home-v4-mobile-quickdrop-secondary">새 기기 연결</a>
-                </div>
-            </section>
+            {% include 'core/partials/home_v4_mobile_quickdrop_card.html' with quickdrop_placement='under-messagebox' include_classcalendar_margin=True %}
             {% endif %}
             {% endif %}
         </div>
@@ -2307,11 +2290,21 @@ function calendarApp() {
         },
 
         scrollMessageArchiveDetailIntoView() {
+            const primaryAction = this.$refs && this.$refs.messageArchivePrimaryAction;
             const detailPane = this.$refs && this.$refs.messageArchiveDetailPane;
-            if (!detailPane) return;
+            const scrollTarget = primaryAction || detailPane;
+            if (!scrollTarget) return;
             const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
             if (viewportWidth >= 1024) return;
-            detailPane.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            const archivePanel = this.$refs && this.$refs.messageHubArchivePanel;
+            if (archivePanel && typeof archivePanel.scrollTo === 'function') {
+                const panelRect = archivePanel.getBoundingClientRect();
+                const targetRect = scrollTarget.getBoundingClientRect();
+                const nextTop = archivePanel.scrollTop + (targetRect.top - panelRect.top) - 16;
+                archivePanel.scrollTop = Math.max(0, nextTop);
+                return;
+            }
+            scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
         },
 
         async selectMessageArchiveItem(captureId, options = {}) {

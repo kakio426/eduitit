@@ -1,0 +1,49 @@
+<section
+    class="{% if include_classcalendar_margin %}classcalendar-home-inline-quickdrop {% endif %}home-v4-mobile-quickdrop"
+    data-home-v4-mobile-quickdrop="true"
+    {% if quickdrop_placement %}data-home-v4-mobile-quickdrop-placement="{{ quickdrop_placement }}"{% endif %}
+>
+    <div class="home-v4-mobile-quickdrop-head">
+        <div class="home-v4-mobile-quickdrop-icon" aria-hidden="true">↔</div>
+        <div class="min-w-0 flex-1">
+            <h3 class="text-base font-black text-slate-900">{{ quickdrop_home_card.title }}</h3>
+            <p
+                class="home-v4-mobile-quickdrop-summary mt-1"
+                data-default-summary="{{ quickdrop_home_card.summary|default:'휴대폰에서 사진이나 글을 바로 보내고, 다른 기기에서 바로 이어보세요.' }}"
+                x-text="typeof quickdropHomeSummaryText === 'function' ? quickdropHomeSummaryText($el.dataset.defaultSummary || '') : ($el.dataset.defaultSummary || '')"
+            >{{ quickdrop_home_card.summary|default:'휴대폰에서 사진이나 글을 바로 보내고, 다른 기기에서 바로 이어보세요.' }}</p>
+        </div>
+    </div>
+    <form
+        method="post"
+        action="{{ quickdrop_home_card.send_text_url }}"
+        class="home-v4-mobile-quickdrop-form"
+        data-home-v4-mobile-quickdrop-form="true"
+        @submit.prevent="typeof submitQuickdropHomeText === 'function' ? submitQuickdropHomeText($event) : $event.target.submit()"
+    >
+        {% csrf_token %}
+        <label class="home-v4-mobile-quickdrop-label">바로 보낼 글</label>
+        <textarea
+            name="text"
+            x-ref="quickdropHomeDraftInput"
+            x-model="quickdropHomeDraftText"
+            rows="3"
+            class="home-v4-mobile-quickdrop-textarea"
+            placeholder="휴대폰이나 다른 PC로 바로 보낼 글을 입력하세요."
+        ></textarea>
+        <p
+            class="home-v4-mobile-quickdrop-error"
+            style="display:none;"
+            x-show="quickdropHomeErrorText"
+            x-text="quickdropHomeErrorText"
+        ></p>
+        <div class="home-v4-mobile-quickdrop-actions" data-home-v4-mobile-quickdrop-actions="true">
+            <button
+                type="submit"
+                class="home-v4-mobile-quickdrop-primary"
+                :disabled="isSendingQuickdropHomeText"
+            >지금 보내기</button>
+            <a href="{{ quickdrop_home_card.manage_url }}" class="home-v4-mobile-quickdrop-secondary">새 기기 연결</a>
+        </div>
+    </form>
+</section>

@@ -243,8 +243,11 @@ class PermissionTest(TestCase):
         response = self.client_teacher.get(reverse("calendar_main"), follow=True)
         content = response.content.decode("utf-8")
 
-        self.assertIn("@click=\"selectMessageArchiveItem(item.capture_id, { scrollToDetail: true })\"", content)
+        self.assertIn("@click=\"openMessageArchiveItemFromList(item.capture_id)\"", content)
         self.assertIn("x-ref=\"messageArchiveDetailPane\"", content)
+        self.assertIn("x-ref=\"messageArchivePrimaryAction\"", content)
+        self.assertIn("여기서 일정 고치기", content)
+        self.assertIn("추가 옵션", content)
         self.assertIn(">메시지 정리</h3>", content)
         self.assertNotIn("안내문에서 일정 찾기", content)
         self.assertNotIn("<h3 class=\"text-xl font-extrabold text-slate-900 sm:text-2xl\">메시지 보관함</h3>", content)

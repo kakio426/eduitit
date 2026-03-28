@@ -87,6 +87,10 @@ function buildCalendarMessageHubState() {
         messageArchiveErrorText: '',
         isLoadingMessageArchive: false,
         isLoadingMessageArchiveDetail: false,
+        quickdropHomeDraftText: '',
+        quickdropHomeErrorText: '',
+        quickdropHomeLastSentText: '',
+        isSendingQuickdropHomeText: false,
     };
 }
 
@@ -463,6 +467,63 @@ function initCalendarMessageHub(host, options = {}) {
             }
         },
 
+        focusQuickdropHomeDraftInput: function() {
+            const draftInput = this.$refs ? this.$refs.quickdropHomeDraftInput : null;
+            if (draftInput && typeof draftInput.focus === 'function') {
+                draftInput.focus();
+            }
+        },
+
+        quickdropHomeSummaryText: function(defaultSummary = '') {
+            const latestText = String(this.quickdropHomeLastSentText || '').trim();
+            if (latestText) return latestText;
+            return String(defaultSummary || '').trim() || '휴대폰에서 사진이나 글을 바로 보내고, 다른 기기에서 바로 이어보세요.';
+        },
+
+        submitQuickdropHomeText: async function(event) {
+            const form = event && event.currentTarget ? event.currentTarget : null;
+            const action = form && form.action ? String(form.action) : '';
+            const draftText = String(this.quickdropHomeDraftText || '').trim();
+            if (!draftText) {
+                this.quickdropHomeErrorText = '보낼 글을 먼저 입력해 주세요.';
+                window.showToast(this.quickdropHomeErrorText, 'info');
+                this.focusQuickdropHomeDraftInput();
+                return;
+            }
+            if (!action) {
+                this.quickdropHomeErrorText = '바로전송 경로를 찾지 못했습니다.';
+                window.showToast(this.quickdropHomeErrorText, 'error');
+                return;
+            }
+            this.isSendingQuickdropHomeText = true;
+            this.quickdropHomeErrorText = '';
+            const formData = new FormData(form || undefined);
+            formData.set('text', draftText);
+            try {
+                const payload = await this.requestJson(action, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': this.getCsrfToken(),
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: formData,
+                });
+                const session = payload && payload.session ? payload.session : {};
+                this.quickdropHomeLastSentText = String(session.current_text || draftText).trim();
+                this.quickdropHomeDraftText = '';
+                if (form && typeof form.reset === 'function') {
+                    form.reset();
+                }
+                window.showToast('바로전송으로 보냈어요.', 'success');
+                this.focusQuickdropHomeDraftInput();
+            } catch (error) {
+                this.quickdropHomeErrorText = error.message || '바로전송에 실패했습니다.';
+                window.showToast(this.quickdropHomeErrorText, 'error');
+            } finally {
+                this.isSendingQuickdropHomeText = false;
+            }
+        },
+
         openMessageCaptureFromHome: async function(event) {
             const draftText = String(this.messageboxHomeDraftText || '');
             if (!draftText.trim()) {
@@ -595,12 +656,35 @@ function initCalendarMessageHub(host, options = {}) {
             await this.loadMessageArchive({ page: (this.messageArchivePage || 1) + 1 });
         },
 
+        openMessageArchiveItemFromList: async function(captureId) {
+            await this.selectMessageArchiveItem(captureId, { scrollToDetail: false });
+            if (!this.messageArchiveSelectedCapture) return;
+            const runScroll = () => this.scrollMessageArchiveDetailIntoView();
+            if (typeof this.$nextTick === 'function') {
+                this.$nextTick(runScroll);
+            } else {
+                window.setTimeout(runScroll, 0);
+            }
+            window.setTimeout(runScroll, 120);
+            window.setTimeout(runScroll, 280);
+        },
+
         scrollMessageArchiveDetailIntoView: function() {
+            const primaryAction = this.$refs && this.$refs.messageArchivePrimaryAction;
             const detailPane = this.$refs && this.$refs.messageArchiveDetailPane;
-            if (!detailPane) return;
+            const scrollTarget = primaryAction || detailPane;
+            if (!scrollTarget) return;
             const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
             if (viewportWidth >= 1024) return;
-            detailPane.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            const archivePanel = this.getMessageHubPanel ? this.getMessageHubPanel('archive') : null;
+            if (archivePanel && typeof archivePanel.scrollTo === 'function') {
+                const panelRect = archivePanel.getBoundingClientRect();
+                const targetRect = scrollTarget.getBoundingClientRect();
+                const nextTop = archivePanel.scrollTop + (targetRect.top - panelRect.top) - 16;
+                archivePanel.scrollTop = Math.max(0, nextTop);
+                return;
+            }
+            scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
         },
 
         refreshMessageArchiveAfterMutation: async function(preferredCaptureId = '') {
@@ -667,6 +751,32 @@ function initCalendarMessageHub(host, options = {}) {
 
         hasSelectedCaptureLinkedItems: function() {
             return this.selectedCaptureLinkedItems().length > 0;
+        },
+
+        messageArchivePrimaryActionTitle: function() {
+            const editableCount = this.messageArchiveVisibleCandidates().length;
+            if (editableCount > 0) {
+                return editableCount === 1 ? '이 일정 1개를 바로 고치기' : `찾은 일정 ${editableCount}개를 바로 고치기`;
+            }
+            if (this.hasSelectedCaptureLinkedItems()) {
+                return '이미 저장한 내용 다시 확인하기';
+            }
+            return '날짜 다시 확인하기';
+        },
+
+        messageArchivePrimaryActionDescription: function() {
+            const editableCount = this.messageArchiveVisibleCandidates().length;
+            if (editableCount > 0) {
+                return '눌러서 제목과 날짜를 바로 손보세요.';
+            }
+            if (this.hasSelectedCaptureLinkedItems()) {
+                return '다시 열고 필요한 날짜나 메모만 바로 고칠 수 있어요.';
+            }
+            return '다시 열어서 날짜를 확인하고 저장하면 됩니다.';
+        },
+
+        messageArchivePrimaryActionButtonText: function() {
+            return this.messageArchiveVisibleCandidates().length > 0 ? '이 일정 고치기' : '다시 열기';
         },
 
         formatTaskLinkedDate: function(task) {
