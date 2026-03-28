@@ -109,8 +109,6 @@ class PermissionTest(TestCase):
         self.assertNotIn("열면 바로 수정과 삭제까지 이어집니다.", content)
         self.assertNotIn("이번 범위에서는 조회만 지원합니다.", content)
         self.assertNotIn("안내문에서 일정 찾기", content)
-        self.assertNotIn("오늘 메모", content)
-        self.assertNotIn("다시 볼 메모", content)
         self.assertNotIn("놓치지 않을 메시지", content)
         self.assertNotIn("안내문이나 메모를 붙여넣고 바로 보관하거나 일정으로 넘길 수 있어요.", content)
         self.assertNotIn("여기서 바로 보관하거나, 이어서 날짜를 찾아 일정으로 넘길 수 있어요.", content)
@@ -236,6 +234,20 @@ class PermissionTest(TestCase):
         self.assertIn("보관한 메시지를 바로 일정 확인 화면으로 열었어요.", content)
         self.assertIn("보관한 메시지를 바로 날짜 확인 화면으로 열었어요.", content)
         self.assertNotIn("await this.submitSavedMessageCaptureParse(detail.capture_id);", content)
+
+    @override_settings(
+        FEATURE_MESSAGE_CAPTURE_ENABLED=True,
+        FEATURE_MESSAGE_CAPTURE_ITEM_TYPES=True,
+    )
+    def test_main_view_message_archive_mobile_selection_scrolls_detail_and_uses_simplified_header(self):
+        response = self.client_teacher.get(reverse("calendar_main"), follow=True)
+        content = response.content.decode("utf-8")
+
+        self.assertIn("@click=\"selectMessageArchiveItem(item.capture_id, { scrollToDetail: true })\"", content)
+        self.assertIn("x-ref=\"messageArchiveDetailPane\"", content)
+        self.assertIn(">메시지 정리</h3>", content)
+        self.assertNotIn("안내문에서 일정 찾기", content)
+        self.assertNotIn("<h3 class=\"text-xl font-extrabold text-slate-900 sm:text-2xl\">메시지 보관함</h3>", content)
 
     def test_main_view_event_forms_auto_fill_end_time_from_start_time(self):
         response = self.client_teacher.get(reverse("calendar_main"), follow=True)

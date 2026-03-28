@@ -595,6 +595,14 @@ function initCalendarMessageHub(host, options = {}) {
             await this.loadMessageArchive({ page: (this.messageArchivePage || 1) + 1 });
         },
 
+        scrollMessageArchiveDetailIntoView: function() {
+            const detailPane = this.$refs && this.$refs.messageArchiveDetailPane;
+            if (!detailPane) return;
+            const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+            if (viewportWidth >= 1024) return;
+            detailPane.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        },
+
         refreshMessageArchiveAfterMutation: async function(preferredCaptureId = '') {
             const targetId = String(preferredCaptureId || '');
             for (let attempt = 0; attempt < 8; attempt += 1) {
@@ -607,10 +615,11 @@ function initCalendarMessageHub(host, options = {}) {
             return false;
         },
 
-        selectMessageArchiveItem: async function(captureId) {
+        selectMessageArchiveItem: async function(captureId, options = {}) {
             if (!captureId) return;
             const url = this.buildMessageCaptureArchiveDetailUrl(captureId);
             if (!url) return;
+            const shouldScrollToDetail = !!(options && options.scrollToDetail);
             this.isLoadingMessageArchiveDetail = true;
             this.messageArchiveErrorText = '';
             try {
@@ -623,6 +632,13 @@ function initCalendarMessageHub(host, options = {}) {
             } finally {
                 this.isLoadingMessageArchiveDetail = false;
                 this.syncMessageHubLayout();
+                if (shouldScrollToDetail && this.messageArchiveSelectedCapture) {
+                    if (typeof this.$nextTick === 'function') {
+                        this.$nextTick(() => this.scrollMessageArchiveDetailIntoView());
+                    } else {
+                        window.setTimeout(() => this.scrollMessageArchiveDetailIntoView(), 0);
+                    }
+                }
             }
         },
 

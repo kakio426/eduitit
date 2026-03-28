@@ -2306,10 +2306,19 @@ function calendarApp() {
             await this.loadMessageArchive({ page: (this.messageArchivePage || 1) + 1 });
         },
 
-        async selectMessageArchiveItem(captureId) {
+        scrollMessageArchiveDetailIntoView() {
+            const detailPane = this.$refs && this.$refs.messageArchiveDetailPane;
+            if (!detailPane) return;
+            const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+            if (viewportWidth >= 1024) return;
+            detailPane.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        },
+
+        async selectMessageArchiveItem(captureId, options = {}) {
             if (!captureId) {
                 return;
             }
+            const shouldScrollToDetail = !!(options && options.scrollToDetail);
             this.isLoadingMessageArchiveDetail = true;
             this.messageArchiveErrorText = '';
             try {
@@ -2322,6 +2331,9 @@ function calendarApp() {
             } finally {
                 this.isLoadingMessageArchiveDetail = false;
                 this.$nextTick(() => notifyEmbeddedCalendarHeight());
+                if (shouldScrollToDetail && this.messageArchiveSelectedCapture) {
+                    this.$nextTick(() => this.scrollMessageArchiveDetailIntoView());
+                }
             }
         },
 
