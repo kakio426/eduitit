@@ -4,6 +4,7 @@ from django.test import Client, TestCase
 from django.urls import reverse
 
 from edu_materials.models import EduMaterial
+from edu_materials_next.learning_paths import TOPIC_PLACEHOLDER
 from edu_materials_next.models import NextEduMaterial
 from products.models import ManualSection, Product, ServiceManual
 
@@ -30,8 +31,12 @@ class EduMaterialsNextViewTests(TestCase):
         self.assertContains(response, "첫 자료 바로 만들기")
         self.assertContains(response, "예시로 시작")
         self.assertContains(response, "내 자료 이어보기")
+        self.assertContains(response, "오늘 수업 주제를 적고, AI에 프롬프트를 넣어 HTML 자료를 만든 뒤, QR로 학생에게 바로 보여 주세요.")
+        self.assertNotContains(response, "비교용 새 버전")
         self.assertEqual(response.context["selected_mission"]["slug"], "vibe-basics")
         self.assertEqual(response.context["selected_starter"]["slug"], "planet-lab")
+        self.assertIn(TOPIC_PLACEHOLDER, response.context["generated_prompt_template"])
+        self.assertIn("CDN 및 외부 리소스 규칙", response.context["generated_prompt"])
 
     def test_create_material_from_learn_flow_with_starter(self):
         response = self.client.post(

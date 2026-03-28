@@ -70,7 +70,7 @@
                 <div>
                     <p class="text-sm font-black uppercase tracking-[0.32em] text-emerald-200">AI 자료실 Next</p>
                     <h1 class="mt-3 text-4xl font-black leading-tight md:text-5xl">처음 쓰는 선생님도 오늘 수업 주제 하나로 첫 자료를 만듭니다</h1>
-                    <p class="mt-4 max-w-4xl text-base leading-7 text-emerald-50/95">비교용 새 버전이지만 첫 화면에서는 바로 해야 할 일만 남겼습니다. 주제를 적고, AI로 HTML을 만들고, QR로 학생에게 바로 보여 주세요.</p>
+                    <p class="mt-4 max-w-4xl text-base leading-7 text-emerald-50/95">오늘 수업 주제를 적고, AI에 프롬프트를 넣어 HTML 자료를 만든 뒤, QR로 학생에게 바로 보여 주세요.</p>
                     <div class="mt-6 flex flex-wrap gap-3">
                         <a href="#learn" class="rounded-2xl bg-white px-5 py-3 text-sm font-black text-slate-900">첫 자료 바로 만들기</a>
                         <a href="#starters" class="rounded-2xl border border-white/15 bg-white/10 px-5 py-3 text-sm font-black text-white">예시로 시작</a>
@@ -101,11 +101,11 @@
                         </div>
                     </div>
                     <details class="mt-4 rounded-[24px] border border-white/10 bg-white/6 px-4 py-3">
-                        <summary class="cursor-pointer text-sm font-black text-white">비교 기준 보기</summary>
+                        <summary class="cursor-pointer text-sm font-black text-white">처음이면 이렇게 더 쉽게 시작하세요</summary>
                         <div class="mt-3 space-y-2 text-sm leading-6 text-emerald-50/95">
-                            <p>첫 자료 생성 완료 시간</p>
-                            <p>QR 배포까지 클릭 수</p>
-                            <p>다음 행동 인지 여부</p>
+                            <p>주제는 한 문장으로만 적어도 충분합니다.</p>
+                            <p>처음에는 버튼 1~2개만 있는 단순한 자료가 가장 좋습니다.</p>
+                            <p>HTML은 한 화면에서 바로 써 볼 수 있게 만드는 것을 우선하세요.</p>
                         </div>
                     </details>
                 </div>
@@ -174,16 +174,16 @@
                     <div class="rounded-[28px] border border-slate-200 bg-white p-5">
                         <div class="mb-3 flex items-center justify-between gap-3">
                             <div>
-                                <label for="lesson-prompt-preview" class="block text-sm font-black text-slate-700">4단계 AI에 그대로 넣기</label>
-                                <p class="mt-1 text-xs font-bold text-slate-500">주제를 바꾸면 안내문도 바로 갱신됩니다.</p>
+                                <label for="lesson-prompt-preview" class="block text-sm font-black text-slate-700">4단계 AI에 넣을 HTML 제작 프롬프트</label>
+                                <p class="mt-1 text-xs font-bold text-slate-500">주제와 자료 유형에 맞춰 HTML 중심 프롬프트가 자동으로 바뀝니다.</p>
                             </div>
                         </div>
-                        <textarea id="lesson-prompt-preview" class="materials-next-input materials-next-prompt" readonly>{{ generated_prompt }}</textarea>
+                        <textarea id="lesson-prompt-preview" class="materials-next-input materials-next-prompt" data-prompt-template="{{ generated_prompt_template|escape }}" data-topic-placeholder="{{ prompt_topic_placeholder|escape }}" readonly>{{ generated_prompt }}</textarea>
                         <div class="mt-3 grid gap-2 sm:grid-cols-2">
                             <button type="button" id="copy-prompt-button" class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-900">안내문 복사</button>
                             <a id="open-ai-button" href="https://gemini.google.com/app" target="_blank" rel="noopener noreferrer" class="rounded-2xl bg-emerald-600 px-4 py-3 text-center text-sm font-black text-white">AI 열기</a>
                         </div>
-                        <p id="prompt-copy-status" class="materials-next-copy-status mt-3 text-xs font-bold text-slate-500">복사 후 AI에 붙여넣고, 완성된 HTML 전체를 아래에 넣어 주세요.</p>
+                        <p id="prompt-copy-status" class="materials-next-copy-status mt-3 text-xs font-bold text-slate-500">복사 후 AI에 붙여넣고, 답변 중에서 <code>&lt;!DOCTYPE html&gt;</code>부터 끝까지 HTML만 아래에 넣어 주세요.</p>
                     </div>
                     <div class="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
                         <div class="text-sm font-black text-slate-700">5단계 완성된 HTML 가져오기</div>
@@ -310,8 +310,8 @@
                 {% else %}
                 <div class="mt-6 rounded-[28px] border border-slate-200 bg-slate-50 p-8">
                     <div class="text-2xl font-black text-slate-900">내 자료는 로그인 후 따로 열립니다.</div>
-                    <p class="mt-2 text-sm leading-6 text-slate-600">Next와 old를 비교하려면 로그인 후 저장, 가져오기, QR 배포까지 이어서 볼 수 있습니다.</p>
-                    <a href="{% url 'account_login' %}?next={{ request.get_full_path|urlencode }}" class="mt-4 inline-flex rounded-2xl bg-violet-600 px-5 py-3 text-sm font-black text-white">로그인하고 비교 시작</a>
+                    <p class="mt-2 text-sm leading-6 text-slate-600">로그인하면 저장, 수정, QR 배포까지 바로 이어집니다.</p>
+                    <a href="{% url 'account_login' %}?next={{ request.get_full_path|urlencode }}" class="mt-4 inline-flex rounded-2xl bg-violet-600 px-5 py-3 text-sm font-black text-white">로그인하고 계속 만들기</a>
                 </div>
                 {% endif %}
             </div>
@@ -320,8 +320,8 @@
                 <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                     <div>
                         <p class="text-xs font-black uppercase tracking-[0.32em] text-amber-600">기존 버전에서 가져오기</p>
-                        <h2 class="mt-2 text-3xl font-black text-slate-900">비교가 필요할 때만 old 자료 복사하기</h2>
-                        <p class="mt-2 text-sm leading-6 text-slate-500">첫 자료를 만든 뒤 필요할 때만 열어도 됩니다.</p>
+                        <h2 class="mt-2 text-3xl font-black text-slate-900">필요할 때만 기존 자료 가져와 다시 다듬기</h2>
+                        <p class="mt-2 text-sm leading-6 text-slate-500">예전에 만든 자료가 있다면 여기서 가져와 손쉽게 고칠 수 있습니다.</p>
                     </div>
                     {% if request.user.is_authenticated %}
                     <div class="rounded-full bg-slate-100 px-4 py-2 text-sm font-black text-slate-700">{{ legacy_material_count }}개</div>
@@ -330,13 +330,13 @@
 
                 {% if request.user.is_authenticated %}
                 <details class="mt-6 rounded-[28px] border border-slate-200 bg-slate-50 p-5" {% if legacy_query %}open{% endif %}>
-                    <summary class="cursor-pointer text-sm font-black text-slate-900">old 자료 가져오기 열기</summary>
+                    <summary class="cursor-pointer text-sm font-black text-slate-900">기존 자료 가져오기 열기</summary>
                     <div class="mt-4">
                         <form method="get" action="{% url 'edu_materials_next:main' %}" class="flex flex-col gap-3 sm:flex-row">
                             {% if material_query %}<input type="hidden" name="q" value="{{ material_query }}">{% endif %}
                             {% if selected_starter %}<input type="hidden" name="starter" value="{{ selected_starter.slug }}">{% endif %}
                             {% if selected_mission %}<input type="hidden" name="mission" value="{{ selected_mission.slug }}">{% endif %}
-                            <input type="text" name="legacy_q" value="{{ legacy_query }}" class="materials-next-input" placeholder="old 자료 찾기">
+                            <input type="text" name="legacy_q" value="{{ legacy_query }}" class="materials-next-input" placeholder="기존 자료 찾기">
                             <button type="submit" class="rounded-2xl bg-amber-500 px-5 py-3 text-sm font-black text-white">검색</button>
                         </form>
 
@@ -360,8 +360,8 @@
                         </div>
                         {% else %}
                         <div class="mt-6 rounded-[28px] border border-slate-200 bg-white p-8 text-center text-slate-500">
-                            <p class="text-lg font-black text-slate-800">가져올 old 자료가 없습니다.</p>
-                            <p class="mt-2 text-sm leading-6">기존 AI 수업자료 메이커에서 만든 자료가 있으면 여기서 복사해 비교할 수 있습니다.</p>
+                            <p class="text-lg font-black text-slate-800">가져올 기존 자료가 없습니다.</p>
+                            <p class="mt-2 text-sm leading-6">기존 AI 수업자료 메이커에서 만든 자료가 있으면 여기로 복사해 이어서 다듬을 수 있습니다.</p>
                         </div>
                         {% endif %}
 
@@ -380,7 +380,7 @@
                 </details>
                 {% else %}
                 <div class="mt-6 rounded-[28px] border border-slate-200 bg-slate-50 p-8 text-center text-slate-500">
-                    <p class="text-lg font-black text-slate-800">old 자료 가져오기는 로그인 후 열립니다.</p>
+                    <p class="text-lg font-black text-slate-800">기존 자료 가져오기는 로그인 후 열립니다.</p>
                 </div>
                 {% endif %}
             </div>
@@ -388,56 +388,18 @@
     </div>
 </section>
 
-{% if starters %}
-{{ starters|json_script:"materials-next-starters-data" }}
-{% endif %}
-
 <script>
     (function () {
         const topicInput = document.getElementById('lesson-topic-input');
         const promptPreview = document.getElementById('lesson-prompt-preview');
         const copyPromptButton = document.getElementById('copy-prompt-button');
         const copyStatus = document.getElementById('prompt-copy-status');
-        const starterSlugInput = document.getElementById('starter-slug-input');
-        const startersNode = document.getElementById('materials-next-starters-data');
-
-        let starterMap = {};
-        if (startersNode) {
-            try {
-                const starterArray = JSON.parse(startersNode.textContent);
-                starterMap = Object.fromEntries(starterArray.map((item) => [item.slug, item]));
-            } catch (error) {
-                starterMap = {};
-            }
-        }
+        const promptTemplate = promptPreview ? promptPreview.dataset.promptTemplate || '' : '';
+        const topicPlaceholder = promptPreview ? promptPreview.dataset.topicPlaceholder || '[여기에 수업 주제를 입력하세요]' : '[여기에 수업 주제를 입력하세요]';
 
         const buildPrompt = (topic) => {
-            const starter = starterMap[(starterSlugInput && starterSlugInput.value) || ''] || null;
-            const lessonTopic = (topic || '').trim() || '[여기에 수업 주제를 입력하세요]';
-            const starterTitle = starter ? starter.title : '자유 제작';
-            const starterFocus = starter ? starter.prompt_focus : '교실에서 바로 쓸 수 있는 인터랙티브 HTML 자료';
-            return [
-                '[역할]',
-                '당신은 초보 교사도 바로 수업에 쓸 수 있는 HTML 활동 자료를 만드는 수업 디자이너이자 프론트엔드 개발자입니다.',
-                '',
-                '학습 주제: ' + lessonTopic,
-                '시작 스타터: ' + starterTitle,
-                '',
-                '[자료 목표]',
-                starterFocus,
-                '',
-                '[필수 원칙]',
-                '1. CSS와 JS를 포함한 단일 HTML 파일 전체를 작성합니다.',
-                '2. 학생이 직접 눌러 보거나 값을 바꿔 보며 개념을 확인할 수 있어야 합니다.',
-                '3. 교실 TV와 태블릿에서 읽기 쉬운 큰 글자와 분명한 버튼을 사용합니다.',
-                '4. 시작, 다시하기, 핵심 조작 버튼은 바로 보이게 배치합니다.',
-                '5. 학생 안내 문구는 짧고 쉬운 한국어로 씁니다.',
-                '',
-                '[출력 순서]',
-                '1. 교사용 사용 팁 3줄',
-                '2. 학생 질문 3개',
-                '3. 완성된 HTML 파일 전체',
-            ].join('\n');
+            const lessonTopic = (topic || '').trim() || topicPlaceholder;
+            return promptTemplate ? promptTemplate.replaceAll(topicPlaceholder, lessonTopic) : lessonTopic;
         };
 
         const syncPrompt = () => {
@@ -480,7 +442,7 @@
                     } else if (!fallbackCopy(promptText)) {
                         throw new Error('copy-failed');
                     }
-                    setCopyStatus('안내문을 복사했습니다. AI에 붙여넣고 HTML 전체를 다시 가져오면 됩니다.', false);
+                    setCopyStatus('안내문을 복사했습니다. AI 답변 중에서 HTML 부분만 가져오면 됩니다.', false);
                 } catch (error) {
                     if (promptPreview) {
                         promptPreview.focus();

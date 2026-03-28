@@ -16,7 +16,14 @@ from .classification import (
     apply_manual_metadata,
     build_search_text,
 )
-from .learning_paths import MISSION_LIBRARY, STARTER_LIBRARY, build_ai_prompt, get_mission, get_starter
+from .learning_paths import (
+    MISSION_LIBRARY,
+    STARTER_LIBRARY,
+    TOPIC_PLACEHOLDER,
+    build_ai_prompt,
+    get_mission,
+    get_starter,
+)
 from .models import NextEduMaterial
 from .runtime import build_runtime_data_url, build_runtime_html
 from .services import build_material_qr_data_url, get_service, validate_html_upload
@@ -116,9 +123,7 @@ def _build_import_tips(material):
 def _serialize_starter_for_template(starter):
     if not starter:
         return None
-    payload = dict(starter)
-    payload["prompt"] = build_ai_prompt("", starter=starter)
-    return payload
+    return dict(starter)
 
 
 def main_view(request):
@@ -138,8 +143,10 @@ def main_view(request):
     starters = [_serialize_starter_for_template(starter) for starter in STARTER_LIBRARY]
     missions = list(MISSION_LIBRARY)
     if selected_starter:
+        generated_prompt_template = build_ai_prompt("", starter=selected_starter, mission=selected_mission)
         generated_prompt = build_ai_prompt(topic_seed, starter=selected_starter, mission=selected_mission)
     else:
+        generated_prompt_template = build_ai_prompt("", mission=selected_mission)
         generated_prompt = build_ai_prompt(topic_seed, mission=selected_mission)
 
     my_page_obj = None
@@ -181,6 +188,8 @@ def main_view(request):
             "selected_starter": _serialize_starter_for_template(selected_starter),
             "selected_mission": selected_mission,
             "generated_prompt": generated_prompt,
+            "generated_prompt_template": generated_prompt_template,
+            "prompt_topic_placeholder": TOPIC_PLACEHOLDER,
             "topic_seed": topic_seed,
             "material_query": material_query,
             "legacy_query": legacy_query,
