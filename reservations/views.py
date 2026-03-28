@@ -20,7 +20,7 @@ from .models import (
     SchoolConfig,
     SpecialRoom,
 )
-from .utils import get_max_booking_date
+from .utils import get_max_booking_date, resolve_user_reservation_entry_url
 import logging
 
 logger = logging.getLogger(__name__)
@@ -337,6 +337,12 @@ def dashboard_landing(request):
         },
     )
     return _apply_sensitive_cache_headers(response)
+
+
+@login_required
+def smart_entry(request):
+    """Open the user's school reservation board directly when possible."""
+    return redirect(resolve_user_reservation_entry_url(request.user))
 
 @login_required
 @require_POST

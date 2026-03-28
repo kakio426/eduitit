@@ -1,5 +1,65 @@
+from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta
+
+from .models import ReservationCollaborator, School
+
+
+def list_user_accessible_schools(user):
+    """Return the schools that a logged-in user can reopen from home."""
+    if not getattr(user, "is_authenticated", False):
+        return []
+
+    entries = []
+    seen_school_ids = set()
+
+    owned_schools = (
+        School.objects.filter(owner=user)
+        .only("id", "name", "slug")
+        .order_by("name")
+    )
+    for school in owned_schools:
+        entries.append({
+            "school": school,
+            "role": "owner",
+            "role_label": "관리자",
+            "role_tone": "violet",
+            "summary": "내가 관리하는 예약판",
+            "can_edit": True,
+            "reservation_url": reverse("reservations:reservation_index", kwargs={"school_slug": school.slug}),
+        })
+        seen_school_ids.add(school.id)
+
+    shared_relations = (
+        ReservationCollaborator.objects.filter(collaborator=user)
+        .select_related("school", "school__owner")
+        .order_by("school__name")
+    )
+    for relation in shared_relations:
+        school = relation.school
+        if school.id in seen_school_ids:
+            continue
+        owner_name = school.owner.get_full_name() or school.owner.username
+        entries.append({
+            "school": school,
+            "role": "edit" if relation.can_edit else "view",
+            "role_label": "편집 가능" if relation.can_edit else "읽기 전용",
+            "role_tone": "emerald" if relation.can_edit else "slate",
+            "summary": f"{owner_name} 선생님이 공유한 예약판",
+            "can_edit": bool(relation.can_edit),
+            "reservation_url": reverse("reservations:reservation_index", kwargs={"school_slug": school.slug}),
+        })
+        seen_school_ids.add(school.id)
+
+    return entries
+
+
+def resolve_user_reservation_entry_url(user):
+    """Open the reservation board directly when the user has only one linked school."""
+    accessible_schools = list_user_accessible_schools(user)
+    if len(accessible_schools) == 1:
+        return accessible_schools[0]["reservation_url"]
+    return reverse("reservations:dashboard_landing")
 
 def get_max_booking_date(school):
     """

@@ -122,6 +122,52 @@ class ReservationsViewTest(TestCase):
         response = self.client.get(reverse('reservations:admin_dashboard', args=[self.school.slug]))
         self.assertEqual(response['Cache-Control'], 'no-store, private')
 
+    def test_smart_entry_redirects_directly_when_user_has_one_school(self):
+        response = self.client.get(reverse('reservations:smart_entry'))
+
+        self.assertRedirects(
+            response,
+            reverse('reservations:reservation_index', args=[self.school.slug]),
+        )
+
+    def test_smart_entry_redirects_collaborator_to_shared_school(self):
+        collaborator = User.objects.create_user(
+            username='shared-entry',
+            password='password2',
+            email='shared-entry@example.com',
+        )
+        collaborator_profile, _ = UserProfile.objects.get_or_create(user=collaborator)
+        collaborator_profile.nickname = '공유입장'
+        collaborator_profile.save(update_fields=['nickname'])
+        ReservationCollaborator.objects.create(
+            school=self.school,
+            collaborator=collaborator,
+            can_edit=True,
+        )
+
+        self.client.force_login(collaborator)
+        response = self.client.get(reverse('reservations:smart_entry'))
+
+        self.assertRedirects(
+            response,
+            reverse('reservations:reservation_index', args=[self.school.slug]),
+        )
+
+    def test_smart_entry_keeps_chooser_when_user_has_multiple_schools(self):
+        second_school = School.objects.create(
+            name='Another School',
+            slug='another-school',
+            owner=self.user,
+        )
+        SchoolConfig.objects.create(school=second_school)
+
+        response = self.client.get(reverse('reservations:smart_entry'))
+
+        self.assertRedirects(
+            response,
+            reverse('reservations:dashboard_landing'),
+        )
+
     def test_unshared_user_can_use_public_link(self):
         outsider = User.objects.create_user(username='outsider', password='password2', email='outsider@example.com')
         outsider_profile, _ = UserProfile.objects.get_or_create(user=outsider)

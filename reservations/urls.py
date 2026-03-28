@@ -7,6 +7,7 @@ urlpatterns = [
     # Dashboard
     path('', views.dashboard_landing, name='root'),
     path('dashboard/', views.dashboard_landing, name='dashboard_landing'), # 학교 선택/생성
+    path('entry/', views.smart_entry, name='smart_entry'),
     path('<str:school_slug>/dashboard/', views.admin_dashboard, name='admin_dashboard'),
     path('<str:school_slug>/collaborators/add/', views.collaborator_add, name='collaborator_add'),
     path('<str:school_slug>/collaborators/<int:collaborator_id>/remove/', views.collaborator_remove, name='collaborator_remove'),

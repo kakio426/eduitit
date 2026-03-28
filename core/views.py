@@ -1771,6 +1771,33 @@ def _build_home_community_summary_posts(page_obj, *, pinned_notice_posts=None, l
     return items
 
 
+def _build_home_reservation_card(user):
+    if not getattr(user, "is_authenticated", False):
+        return None
+
+    from reservations.utils import list_user_accessible_schools
+
+    items = []
+    for entry in list_user_accessible_schools(user):
+        school = entry["school"]
+        items.append({
+            "school_name": school.name,
+            "role_label": entry["role_label"],
+            "role_tone": entry["role_tone"],
+            "summary": entry["summary"],
+            "href": entry["reservation_url"],
+        })
+
+    if not items:
+        return None
+
+    return {
+        "items": items,
+        "count": len(items),
+        "dashboard_url": reverse("reservations:dashboard_landing"),
+    }
+
+
 def _format_home_calendar_schedule(event):
     start_dt = timezone.localtime(event.start_time)
     end_dt = timezone.localtime(event.end_time)
@@ -2909,6 +2936,7 @@ def _build_home_authenticated_v4_response(
             if item.get('href')
         ]
     developer_chat_home_card = build_developer_chat_home_card_context(request.user)
+    reservation_home_card = _build_home_reservation_card(request.user)
 
     from classcalendar.views import build_calendar_surface_context
 
@@ -2942,6 +2970,7 @@ def _build_home_authenticated_v4_response(
         'home_v5_mobile_workbench_items': home_v5_mobile_workbench_items,
         'home_v5_mobile_recommend_items': home_v5_mobile_recommend_items,
         'developer_chat_home_card': developer_chat_home_card,
+        'reservation_home_card': reservation_home_card,
         'home_calendar_surface': home_calendar_surface,
         'home_v2_frontend_config': home_v2_frontend_config,
         'home_design_version': home_design_version,

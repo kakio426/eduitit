@@ -21,11 +21,13 @@ from core.mini_apps import (
     plan_home_action_surface,
 )
 from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
+from core.service_launcher import resolve_product_launch_url
 from core.views import _build_home_v4_representative_slots
 from messagebox.developer_chat import get_or_create_developer_chat_thread, mark_thread_as_read
 from messagebox.models import DeveloperChatMessage
 from products.models import Product
 from core.models import Post, ProductFavorite, ProductUsageLog, UserPolicyConsent, UserProfile
+from reservations.models import ReservationCollaborator, School, SchoolConfig
 
 
 def _create_onboarded_user(username, email=None, nickname=None):
@@ -2785,6 +2787,38 @@ class HomeV5ViewTest(TestCase):
         self.assertLess(workbench_index, calendar_index)
         self.assertLess(calendar_index, sns_index)
 
+    def test_v5_home_shows_my_school_reservations_card(self):
+        user = self._login('v5reservations')
+        school = School.objects.create(name='테스트초', slug='test-school-home', owner=user)
+        SchoolConfig.objects.create(school=school)
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('내 학교 예약', content)
+        self.assertIn('테스트초', content)
+        self.assertIn(
+            reverse('reservations:reservation_index', args=['test-school-home']),
+            content,
+        )
+        self.assertContains(response, 'data-home-reservations-card="true"', html=False)
+
+    def test_reservations_product_uses_smart_entry_for_authenticated_user(self):
+        user = self._login('v5smartentry')
+        reservations_product = Product.objects.create(
+            title='학교 예약 시스템',
+            description='학교 예약 바로가기',
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='reservations:dashboard_landing',
+        )
+
+        href, is_external = resolve_product_launch_url(reservations_product, user=user)
+
+        self.assertFalse(is_external)
+        self.assertEqual(href, reverse('reservations:smart_entry'))
+
     def test_v5_anonymous_home_keeps_existing_public_v4_surface(self):
         Product.objects.create(
             title="공개 수합",
@@ -2906,6 +2940,25 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('지금 보내기', content)
         self.assertIn(f'href="{reverse("quickdrop:landing")}"', content)
         self.assertNotIn(f'href="{reverse("quickdrop:open")}"', content)
+
+    def test_v6_home_shows_shared_school_reservation_card(self):
+        owner = _create_onboarded_user('v6owner')
+        user = self._login('v6sharedreservation')
+        school = School.objects.create(name='공유중학교', slug='shared-middle-home', owner=owner)
+        SchoolConfig.objects.create(school=school)
+        ReservationCollaborator.objects.create(school=school, collaborator=user, can_edit=False)
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(response.context['home_design_version'], 'v6')
+        self.assertIn('내 학교 예약', content)
+        self.assertIn('공유중학교', content)
+        self.assertIn('읽기 전용', content)
+        self.assertIn(
+            reverse('reservations:reservation_index', args=['shared-middle-home']),
+            content,
+        )
 
     def test_v6_anonymous_home_loads_royal_luxe_public_override(self):
         response = self.client.get(reverse('home'))
