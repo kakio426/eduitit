@@ -152,6 +152,7 @@
                             </section>
 
                             {% if quickdrop_home_card %}
+                                {% if not messagebox_home_card.enabled or not messagebox_home_card.url %}
                             <section class="home-v4-mobile-quickdrop" data-home-v4-mobile-quickdrop="true">
                                 <div class="home-v4-mobile-quickdrop-head">
                                     <div class="home-v4-mobile-quickdrop-icon" aria-hidden="true">↔</div>
@@ -166,6 +167,7 @@
                                     <a href="{{ quickdrop_home_card.manage_url }}" class="home-v4-mobile-quickdrop-secondary">새 기기 연결</a>
                                 </div>
                             </section>
+                                {% endif %}
                             {% endif %}
 
                             {% if home_v4_mobile_calendar_first_enabled %}

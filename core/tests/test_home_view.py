@@ -2226,6 +2226,37 @@ class HomeV4ViewTest(TestCase):
         self.assertLess(home_panel_index, mobile_quickdrop_index)
         self.assertLess(mobile_quickdrop_index, representative_index)
 
+    @override_settings(FEATURE_MESSAGE_CAPTURE_ENABLED=True)
+    def test_v4_mobile_quickdrop_moves_under_messagebox_when_capture_is_enabled(self):
+        user = self._login('v4mobilequickdropmessagebox')
+        ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
+        Product.objects.create(
+            title='바로전송',
+            description='기기 사이 전송',
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='quickdrop:landing',
+            icon='fa-solid fa-right-left',
+        )
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('data-home-messagebox-card="true"', content)
+        self.assertIn('data-home-v4-mobile-quickdrop="true"', content)
+        self.assertIn('data-home-v4-mobile-quickdrop-placement="under-messagebox"', content)
+        self.assertIn(f'href="{reverse("quickdrop:open")}"', content)
+        self.assertIn(f'href="{reverse("quickdrop:landing")}"', content)
+
+        home_panel_index = content.index('data-home-v4-home-panel="true"')
+        messagebox_index = content.index('data-home-messagebox-card="true"')
+        mobile_quickdrop_index = content.index('data-home-v4-mobile-quickdrop="true"')
+        representative_index = content.index('data-home-v4-representative-services="true"')
+        self.assertLess(home_panel_index, messagebox_index)
+        self.assertLess(messagebox_index, mobile_quickdrop_index)
+        self.assertLess(mobile_quickdrop_index, representative_index)
+
     def test_v4_home_places_developer_chat_card_under_menu_and_moves_mobile_card_to_bottom(self):
         self._login('v4devchatcard')
 
