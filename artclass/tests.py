@@ -215,6 +215,7 @@ class LauncherReleaseStorageTest(TestCase):
     def test_upload_launcher_release_bundle_uploads_three_files(self):
         latest_yml, installer_file, blockmap_file = make_test_launcher_release_uploads(version="0.2.0")
         mock_client = Mock()
+        mock_client.list_objects_v2.return_value = {"Contents": [], "IsTruncated": False}
 
         with patch("artclass.launcher_release.is_launcher_bucket_configured", return_value=True), patch(
             "artclass.launcher_release._load_s3_client",
@@ -231,6 +232,47 @@ class LauncherReleaseStorageTest(TestCase):
 
         self.assertEqual(manifest["version"], "0.2.0")
         self.assertEqual(mock_client.upload_fileobj.call_count, 3)
+        self.assertEqual(manifest["deleted_stale_file_count"], 0)
+
+    def test_upload_launcher_release_bundle_deletes_old_exe_and_blockmap_files(self):
+        latest_yml, installer_file, blockmap_file = make_test_launcher_release_uploads(version="0.2.12")
+        mock_client = Mock()
+        mock_client.list_objects_v2.return_value = {
+            "Contents": [
+                {"Key": "launcher/windows/latest.yml"},
+                {"Key": "launcher/windows/Eduitit Teacher Launcher Setup 0.2.10.exe"},
+                {"Key": "launcher/windows/Eduitit Teacher Launcher Setup 0.2.10.exe.blockmap"},
+                {"Key": "launcher/windows/Eduitit Teacher Launcher Setup 0.2.12.exe"},
+                {"Key": "launcher/windows/Eduitit Teacher Launcher Setup 0.2.12.exe.blockmap"},
+                {"Key": "launcher/windows/notes.txt"},
+            ],
+            "IsTruncated": False,
+        }
+
+        with patch("artclass.launcher_release.is_launcher_bucket_configured", return_value=True), patch(
+            "artclass.launcher_release._load_s3_client",
+            return_value=mock_client,
+        ), patch(
+            "artclass.launcher_release.get_launcher_bucket_settings",
+            return_value={"bucket_name": "launcher-bucket"},
+        ):
+            manifest = upload_launcher_release_bundle(
+                latest_yml_file=latest_yml,
+                installer_file=installer_file,
+                blockmap_file=blockmap_file,
+            )
+
+        mock_client.delete_objects.assert_called_once_with(
+            Bucket="launcher-bucket",
+            Delete={
+                "Objects": [
+                    {"Key": "launcher/windows/Eduitit Teacher Launcher Setup 0.2.10.exe"},
+                    {"Key": "launcher/windows/Eduitit Teacher Launcher Setup 0.2.10.exe.blockmap"},
+                ],
+                "Quiet": True,
+            },
+        )
+        self.assertEqual(manifest["deleted_stale_file_count"], 2)
 
 
 class ManualPipelineApiTest(TestCase):

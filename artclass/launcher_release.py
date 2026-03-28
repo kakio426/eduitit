@@ -44,6 +44,14 @@ def _build_object_key(filename):
     return f"{LAUNCHER_RELEASE_PREFIX}/{_normalize_release_filename(filename)}"
 
 
+def _is_cleanup_candidate_key(key):
+    normalized_key = str(key or "").strip()
+    if not normalized_key.startswith(f"{LAUNCHER_RELEASE_PREFIX}/"):
+        return False
+    lowered = normalized_key.lower()
+    return lowered.endswith(".exe") or lowered.endswith(".exe.blockmap")
+
+
 def _load_s3_client():
     settings = get_launcher_bucket_settings()
     if not all(settings.values()):
@@ -140,6 +148,49 @@ def get_launcher_asset_download_url(filename, *, expires_in=900):
     )
 
 
+def _delete_stale_launcher_release_files(client, bucket_name, *, installer_filename, blockmap_filename):
+    keep_keys = {
+        LAUNCHER_RELEASE_LATEST_KEY,
+        _build_object_key(installer_filename),
+        _build_object_key(blockmap_filename),
+    }
+    continuation_token = None
+    stale_keys = []
+
+    while True:
+        request_kwargs = {
+            "Bucket": bucket_name,
+            "Prefix": f"{LAUNCHER_RELEASE_PREFIX}/",
+        }
+        if continuation_token:
+            request_kwargs["ContinuationToken"] = continuation_token
+
+        response = client.list_objects_v2(**request_kwargs)
+        for item in response.get("Contents") or []:
+            key = item.get("Key") or ""
+            if key in keep_keys:
+                continue
+            if _is_cleanup_candidate_key(key):
+                stale_keys.append(key)
+
+        if not response.get("IsTruncated"):
+            break
+        continuation_token = response.get("NextContinuationToken")
+
+    deleted_count = 0
+    for index in range(0, len(stale_keys), 1000):
+        chunk = stale_keys[index:index + 1000]
+        if not chunk:
+            continue
+        client.delete_objects(
+            Bucket=bucket_name,
+            Delete={"Objects": [{"Key": key} for key in chunk], "Quiet": True},
+        )
+        deleted_count += len(chunk)
+
+    return deleted_count
+
+
 def upload_launcher_release_bundle(*, latest_yml_file, installer_file, blockmap_file):
     if not is_launcher_bucket_configured():
         raise LauncherReleaseError("런처 bucket 연결 정보가 아직 설정되지 않았습니다.")
@@ -193,5 +244,13 @@ def upload_launcher_release_bundle(*, latest_yml_file, installer_file, blockmap_
         ExtraArgs={"ContentType": "application/octet-stream"},
     )
 
+    deleted_count = _delete_stale_launcher_release_files(
+        client,
+        bucket_name,
+        installer_filename=installer_filename,
+        blockmap_filename=blockmap_filename,
+    )
+
     manifest["latest_filename"] = "latest.yml"
+    manifest["deleted_stale_file_count"] = deleted_count
     return manifest
