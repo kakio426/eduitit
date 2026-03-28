@@ -1,6 +1,5 @@
 {% extends 'base.html' %}
-{% load i18n %}
-{% load account socialaccount %}
+{% load socialaccount %}
 
 {% block seo_meta %}
 <meta name="description" content="에듀이티잇에 로그인하고 교실 운영, 알림장 작성, 서비스 가이드를 이어서 사용하세요.">
@@ -20,112 +19,62 @@
 {% block title %}로그인 | Eduitit{% endblock %}
 
 {% block content %}
-{% url 'home' as home_url %}
-<main class="pt-32 pb-20 px-4 md:px-8 min-h-screen flex items-center justify-center">
-    <div class="w-full max-w-2xl" data-aos="zoom-in">
-        <div class="clay-card p-8 md:p-10 bg-[#E0E5EC]">
-            <!-- Header -->
-            <div class="text-center mb-8">
+<main class="flex min-h-screen items-center justify-center px-4 pb-16 pt-28 md:px-8 md:pt-32">
+    <div class="mx-auto w-full max-w-xl" data-aos="zoom-in">
+        <section class="clay-card w-full bg-[#E0E5EC] p-7 md:p-9">
+            <div class="text-center">
                 <div
-                    class="w-20 h-20 rounded-full bg-white mx-auto flex items-center justify-center shadow-clay text-amber-500 text-4xl mb-6">
+                    class="mx-auto mb-5 flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full bg-white text-3xl text-amber-500 shadow-clay md:h-20 md:w-20 md:text-4xl">
                     <i class="fa-solid fa-lock"></i>
                 </div>
-                <p class="inline-flex items-center gap-2 rounded-full bg-amber-50 px-4 py-1.5 text-[11px] font-black uppercase tracking-[0.22em] text-amber-700">로그인 안내</p>
-                <h1 class="mt-4 text-4xl md:text-5xl font-bold text-gray-700 mb-2 break-keep">이 도구는 로그인 후 이어집니다</h1>
+                <p class="inline-flex items-center rounded-full bg-white/80 px-4 py-1.5 text-[11px] font-black uppercase tracking-[0.22em] text-slate-600 shadow-sm">
+                    교사용 로그인
+                </p>
+                <h1 class="mt-4 text-3xl font-black leading-tight text-slate-800 md:text-4xl break-keep">
+                    로그인 후 바로 이어서 사용해요
+                </h1>
+                <p class="mt-3 text-base font-semibold leading-7 text-slate-600 md:text-lg">
+                    네이버나 카카오톡으로 로그인하면 학급 기록과 최근 작업을 그대로 불러옵니다.
+                </p>
             </div>
 
-            <!-- Social Login Only -->
-            <div class="space-y-6 animate-fade-in-up">
-                <div class="grid gap-4 rounded-[2rem] border border-slate-200 bg-white/80 p-5 shadow-sm md:grid-cols-3">
-                    <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-                        <div class="flex items-center gap-3">
-                            <span class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-                                <i class="fa-solid fa-check"></i>
-                            </span>
-                            <div>
-                                <p class="text-sm font-black text-slate-900">내 일정과 학급 설정 저장</p>
-                                <p class="mt-1 text-xs font-semibold leading-5 text-slate-500">다음 방문에도 바로 이어서 씁니다.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-                        <div class="flex items-center gap-3">
-                            <span class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-blue-600">
-                                <i class="fa-solid fa-shield-halved"></i>
-                            </span>
-                            <div>
-                                <p class="text-sm font-black text-slate-900">제출 결과와 기록 보호</p>
-                                <p class="mt-1 text-xs font-semibold leading-5 text-slate-500">학급별 데이터가 섞이지 않게 유지합니다.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-                        <div class="flex items-center gap-3">
-                            <span class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-amber-50 text-amber-600">
-                                <i class="fa-solid fa-star"></i>
-                            </span>
-                            <div>
-                                <p class="text-sm font-black text-slate-900">즐겨찾기와 최근 사용 유지</p>
-                                <p class="mt-1 text-xs font-semibold leading-5 text-slate-500">교사별 맞춤 흐름이 그대로 이어집니다.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div class="mt-8 space-y-3.5">
+                <a href="{% provider_login_url 'kakao' %}"
+                    class="flex min-h-[60px] items-center justify-center gap-3 rounded-3xl bg-[#FEE500] px-6 py-4 shadow-clay transition-all hover:shadow-clay-hover hover:scale-[1.02] active:scale-[0.98]">
+                    <svg viewBox="0 0 24 24" class="h-8 w-8 fill-[#3C1E1E]" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="M12 3C7.58 3 4 5.79 4 9.24C4 11.41 5.43 13.33 7.62 14.4L6.68 17.84C6.6 18.13 6.95 18.35 7.19 18.15L11.55 14.86C11.7 14.87 11.85 14.87 12 14.87C16.42 14.87 20 12.08 20 8.63C20 5.18 16.42 3 12 3Z" />
+                    </svg>
+                    <span class="text-lg font-black text-[#3C1E1E] md:text-xl">카카오톡으로 로그인</span>
+                </a>
 
-                <div class="grid gap-3 sm:grid-cols-2">
-                    <a href="{{ home_url }}#guest-home-try-now"
-                        class="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 transition hover:border-indigo-300 hover:text-indigo-600">
-                        <i class="fa-solid fa-circle-play"></i>
-                        데모 둘러보기
-                    </a>
-                    <a href="https://padlet.com/kakio1q2w/eduitit-wrjbzmk8oufxdzcv"
-                        target="_blank" rel="noopener noreferrer"
-                        class="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 transition hover:border-indigo-300 hover:text-indigo-600">
-                        <i class="fa-solid fa-book-open"></i>
-                        가이드 보기
-                    </a>
-                </div>
+                <a href="{% provider_login_url 'naver' %}"
+                    class="flex min-h-[60px] items-center justify-center gap-3 rounded-3xl bg-[#03C75A] px-6 py-4 shadow-clay transition-all hover:shadow-clay-hover hover:scale-[1.02] active:scale-[0.98]">
+                    <svg viewBox="0 0 24 24" class="h-6 w-6 fill-white" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M16.273 12.845L7.388 1H1V23H7.818V11.16L16.643 23H23V1H16.273V12.845Z" />
+                    </svg>
+                    <span class="text-lg font-black text-white md:text-xl">네이버로 로그인</span>
+                </a>
+            </div>
 
-                <div class="space-y-4">
-                    <!-- Kakao -->
-                    <a href="{% provider_login_url 'kakao' %}"
-                        class="flex items-center justify-center gap-3 py-4 rounded-2xl bg-[#FEE500] shadow-clay hover:shadow-clay-hover hover:scale-[1.02] active:scale-[0.98] transition-all group">
-                        <svg viewBox="0 0 24 24" class="w-8 h-8 fill-[#3C1E1E]" xmlns="http://www.w3.org/2000/svg">
-                            <path
-                                d="M12 3C7.58 3 4 5.79 4 9.24C4 11.41 5.43 13.33 7.62 14.4L6.68 17.84C6.6 18.13 6.95 18.35 7.19 18.15L11.55 14.86C11.7 14.87 11.85 14.87 12 14.87C16.42 14.87 20 12.08 20 8.63C20 5.18 16.42 3 12 3Z" />
-                        </svg>
-                        <span class="text-xl md:text-2xl font-bold text-[#3C1E1E]">카카오톡으로 시작하기</span>
-                    </a>
-
-                    <!-- Naver -->
-                    <a href="{% provider_login_url 'naver' %}"
-                        class="flex items-center justify-center gap-3 py-4 rounded-2xl bg-[#03C75A] shadow-clay hover:shadow-clay-hover hover:scale-[1.02] active:scale-[0.98] transition-all group">
-                        <svg viewBox="0 0 24 24" class="w-6 h-6 fill-white" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M16.273 12.845L7.388 1H1V23H7.818V11.16L16.643 23H23V1H16.273V12.845Z" />
-                        </svg>
-                        <span class="text-xl md:text-2xl font-bold text-white">네이버로 시작하기</span>
-                    </a>
-                </div>
-
-                <div
-                    class="mt-2 p-6 rounded-[2rem] bg-purple-50 border border-purple-100 shadow-sm relative overflow-hidden text-center">
-                    <p class="text-lg text-purple-700 font-bold">
-                        <i class="fa-solid fa-shield-halved mr-2"></i>
-                        선생님의 개인정보는 안전하게 보호됩니다.
+            <div class="mt-6 rounded-[1.75rem] border border-slate-200 bg-white/85 px-5 py-4 text-sm font-semibold text-slate-600 shadow-sm">
+                <div class="flex items-start gap-3">
+                    <span class="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-50 text-amber-600">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </span>
+                    <p class="leading-6">
+                        처음 로그인하면 이용약관과 개인정보처리방침 동의가 필요합니다. 개인정보는 안전하게 보호됩니다.
                     </p>
-                    <p class="mt-3 text-sm font-semibold leading-6 text-purple-600">
-                        로그인 후 최초 1회 이용약관 및 개인정보처리방침 동의가 필요합니다.
-                    </p>
-                    <div class="mt-3 flex items-center justify-center gap-3 text-sm font-bold text-purple-700">
-                        <a href="{% url 'policy' %}#terms" class="hover:underline">이용약관</a>
-                        <span class="text-purple-300">|</span>
-                        <a href="{% url 'policy' %}#privacy" class="hover:underline">개인정보처리방침</a>
-                        <span class="text-purple-300">|</span>
-                        <a href="{% url 'policy' %}#operations" class="hover:underline">운영정책</a>
-                    </div>
+                </div>
+                <div class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm font-bold text-slate-700">
+                    <a href="{% url 'policy' %}#terms" class="hover:underline">이용약관</a>
+                    <span class="text-slate-300">|</span>
+                    <a href="{% url 'policy' %}#privacy" class="hover:underline">개인정보처리방침</a>
+                    <span class="text-slate-300">|</span>
+                    <a href="{% url 'policy' %}#operations" class="hover:underline">운영정책</a>
                 </div>
             </div>
-        </div>
+        </section>
     </div>
 </main>
 
