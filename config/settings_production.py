@@ -100,6 +100,7 @@ INSTALLED_APPS = [
     'textbooks.apps.TextbooksConfig',
     'textbook_ai.apps.TextbookAiConfig',
     'edu_materials.apps.EduMaterialsConfig',
+    'edu_materials_next.apps.EduMaterialsNextConfig',
     'channels',
     'django_htmx',
     'django.contrib.humanize',

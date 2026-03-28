@@ -8,4 +8,4 @@ cmds = ["python3 -m pip install -r requirements.txt", "npm ci"]
 cmds = ["python3 manage.py collectstatic --noinput"]
 
 [phases.start]
-cmds = ["python3 manage.py bootstrap_runtime && uvicorn config.asgi:application --host 0.0.0.0 --port $PORT --workers 2 --loop uvloop --http httptools --timeout-keep-alive 120"]
+cmds = ["python3 manage.py migrate --noinput && python3 manage.py bootstrap_runtime && uvicorn config.asgi:application --host 0.0.0.0 --port $PORT --workers 2 --loop uvloop --http httptools --timeout-keep-alive 120"]
