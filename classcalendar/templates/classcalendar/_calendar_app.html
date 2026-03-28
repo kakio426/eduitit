@@ -737,7 +737,13 @@
                 </div>
             </div>
 
-            <div class="min-w-0">
+            <div
+                class="min-w-0"
+                {% if is_embedded_on_home %}
+                data-classcalendar-home-grid-wrap="true"
+                style="padding-bottom: 0.5rem;"
+                {% endif %}
+            >
                 <div class="grid grid-cols-7 gap-px bg-slate-200 rounded-xl overflow-hidden border border-slate-200">
                     <template x-for="day in ['일', '월', '화', '수', '목', '금', '토']">
                         <div class="bg-slate-100 py-2 sm:py-3 text-center text-xs sm:text-sm font-bold text-slate-600" x-text="day"></div>
