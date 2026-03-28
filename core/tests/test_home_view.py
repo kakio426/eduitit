@@ -2879,6 +2879,34 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('home-v6-page', content)
         self.assertIn('home-v6-shell', content)
 
+    def test_v6_quickdrop_card_uses_direct_send_form(self):
+        user = self._login('v6quickdropdirect')
+        ProductFavorite.objects.create(user=user, product=self.favorite_product, pin_order=1)
+        Product.objects.create(
+            title='바로전송',
+            description='빠른 전송',
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='quickdrop:landing',
+            icon='fa-solid fa-right-left',
+        )
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        from quickdrop.models import QuickdropChannel
+
+        channel = QuickdropChannel.objects.get(owner=user)
+
+        self.assertEqual(response.context['home_design_version'], 'v6')
+        self.assertIn('data-home-v4-quickdrop-panel="true"', content)
+        self.assertIn('data-home-v4-quickdrop-form="true"', content)
+        self.assertIn(f'action="{reverse("quickdrop:send_text", kwargs={"slug": channel.slug})}"', content)
+        self.assertIn('바로 보낼 글', content)
+        self.assertIn('지금 보내기', content)
+        self.assertIn(f'href="{reverse("quickdrop:landing")}"', content)
+        self.assertNotIn(f'href="{reverse("quickdrop:open")}"', content)
+
     def test_v6_anonymous_home_loads_royal_luxe_public_override(self):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
