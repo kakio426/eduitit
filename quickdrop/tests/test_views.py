@@ -1,3 +1,5 @@
+import json
+import os
 from datetime import timedelta
 from unittest.mock import patch
 
@@ -553,3 +555,111 @@ class QuickdropViewTests(TestCase):
         quickdrop = next(item for item in items if item["title"] == "바로전송")
         self.assertEqual(quickdrop["group_key"], "class_ops")
         self.assertEqual(quickdrop["href"], reverse("quickdrop:landing"))
+
+
+class QuickdropExternalApiTests(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="user694",
+            email="user694@example.com",
+            password="pw123456",
+        )
+        owner_profile, _ = UserProfile.objects.get_or_create(user=self.owner)
+        owner_profile.nickname = "관리자"
+        owner_profile.role = "school"
+        owner_profile.save(update_fields=["nickname", "role"])
+        self.channel = get_or_create_personal_channel(self.owner)
+
+        self.other_user = User.objects.create_user(
+            username="other_teacher",
+            email="other_teacher@example.com",
+            password="pw123456",
+        )
+        self.other_channel = get_or_create_personal_channel(self.other_user)
+        self.api_key = "test-quickdrop-key"
+
+    def test_external_snapshot_requires_valid_api_key(self):
+        with patch.dict(os.environ, {"QUICKDROP_EXTERNAL_API_KEY": self.api_key}, clear=False):
+            response = self.client.get(reverse("quickdrop:external_snapshot"))
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json()["code"], "auth_failed")
+        self.assertEqual(response.headers["Cache-Control"], "no-store, private")
+
+    def test_external_push_text_targets_only_user694_channel(self):
+        with patch.dict(os.environ, {"QUICKDROP_EXTERNAL_API_KEY": self.api_key}, clear=False):
+            response = self.client.post(
+                reverse("quickdrop:external_push_text"),
+                data=json.dumps({"text": "관리자 전용 전송", "sender_label": "OpenClaw"}),
+                content_type="application/json",
+                HTTP_AUTHORIZATION=f"Bearer {self.api_key}",
+            )
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["status"], "success")
+        self.assertEqual(payload["owner_username"], "user694")
+        self.assertEqual(payload["channel_slug"], self.channel.slug)
+        self.assertEqual(QuickdropItem.objects.filter(channel=self.channel).count(), 1)
+        self.assertEqual(QuickdropItem.objects.filter(channel=self.other_channel).count(), 0)
+        session = self.channel.sessions.get(status=QuickdropSession.STATUS_LIVE)
+        self.assertEqual(session.current_text, "관리자 전용 전송")
+
+    def test_external_snapshot_returns_user694_session(self):
+        QuickdropItem.objects.create(
+            channel=self.channel,
+            sender_label="OpenClaw",
+            kind=QuickdropItem.KIND_TEXT,
+            text="현재 상태",
+            mime_type="text/plain",
+        )
+
+        with patch.dict(os.environ, {"QUICKDROP_EXTERNAL_API_KEY": self.api_key}, clear=False):
+            response = self.client.get(
+                reverse("quickdrop:external_snapshot"),
+                HTTP_X_API_KEY=self.api_key,
+            )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["owner_username"], "user694")
+        self.assertEqual(payload["channel_slug"], self.channel.slug)
+        self.assertEqual(payload["session"]["current_text"], "현재 상태")
+        self.assertEqual(payload["session"]["today_count"], 1)
+
+    def test_external_push_file_stores_file_for_user694_channel(self):
+        with patch.dict(os.environ, {"QUICKDROP_EXTERNAL_API_KEY": self.api_key}, clear=False):
+            response = self.client.post(
+                reverse("quickdrop:external_push_file"),
+                {
+                    "file": SimpleUploadedFile(
+                        "guide.pdf",
+                        b"%PDF-1.4\nquickdrop",
+                        content_type="application/pdf",
+                    ),
+                    "sender_label": "OpenClaw",
+                },
+                HTTP_X_API_KEY=self.api_key,
+            )
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["owner_username"], "user694")
+        self.assertEqual(payload["session"]["current_filename"], "guide.pdf")
+        item = QuickdropItem.objects.get(channel=self.channel)
+        self.assertEqual(item.kind, QuickdropItem.KIND_FILE)
+        self.assertEqual(QuickdropItem.objects.filter(channel=self.other_channel).count(), 0)
+
+    def test_external_push_text_returns_owner_unavailable_when_user694_missing(self):
+        self.owner.delete()
+
+        with patch.dict(os.environ, {"QUICKDROP_EXTERNAL_API_KEY": self.api_key}, clear=False):
+            response = self.client.post(
+                reverse("quickdrop:external_push_text"),
+                data=json.dumps({"text": "관리자 없음"}),
+                content_type="application/json",
+                HTTP_AUTHORIZATION=f"Bearer {self.api_key}",
+            )
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json()["code"], "owner_unavailable")

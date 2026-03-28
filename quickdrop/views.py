@@ -1,3 +1,8 @@
+import json
+import os
+import secrets
+
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.http import FileResponse, Http404, HttpResponse, HttpResponseForbidden, JsonResponse
@@ -38,6 +43,10 @@ from .services import (
     today_item_count,
 )
 
+User = get_user_model()
+QUICKDROP_EXTERNAL_API_KEY_ENV_NAME = "QUICKDROP_EXTERNAL_API_KEY"
+QUICKDROP_EXTERNAL_OWNER_USERNAME = "user694"
+
 
 def _request_client_ip(request):
     x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR", "")
@@ -76,6 +85,86 @@ def _json_or_redirect(request, channel, payload=None):
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return _apply_private_response_headers(JsonResponse({"ok": True, "session": payload or {}}, status=200))
     return _apply_private_response_headers(redirect("quickdrop:channel", slug=channel.slug))
+
+
+def _get_external_api_key_from_request(request):
+    header_key = request.headers.get("X-Eduitit-API-Key") or request.headers.get("X-API-Key")
+    authorization = str(request.headers.get("Authorization") or "").strip()
+    if authorization.lower().startswith("bearer "):
+        header_key = authorization[7:].strip() or header_key
+    return str(request.GET.get("api_key") or "").strip() or str(header_key or "").strip()
+
+
+def _get_configured_external_api_key():
+    return str(os.environ.get(QUICKDROP_EXTERNAL_API_KEY_ENV_NAME) or "").strip()
+
+
+def _is_valid_external_api_key(raw_key):
+    configured_key = _get_configured_external_api_key()
+    presented_key = str(raw_key or "").strip()
+    return bool(
+        configured_key
+        and presented_key
+        and secrets.compare_digest(configured_key, presented_key)
+    )
+
+
+def _external_api_error_response(code, message, *, status=400):
+    response = JsonResponse(
+        {
+            "status": "error",
+            "code": code,
+            "message": message,
+        },
+        status=status,
+    )
+    if status == 401:
+        response["WWW-Authenticate"] = 'Bearer realm="Eduitit Quickdrop"'
+    return _apply_private_response_headers(response)
+
+
+def _get_external_owner():
+    return User.objects.filter(username=QUICKDROP_EXTERNAL_OWNER_USERNAME).first()
+
+
+def _resolve_external_channel():
+    owner = _get_external_owner()
+    if owner is None:
+        return None, None
+    return owner, get_or_create_personal_channel(owner)
+
+
+def _load_external_json_payload(request):
+    content_type = str(request.content_type or "").lower()
+    if "application/json" not in content_type:
+        return {
+            "text": request.POST.get("text"),
+            "content": request.POST.get("content"),
+            "message": request.POST.get("message"),
+            "sender_label": request.POST.get("sender_label"),
+            "sender": request.POST.get("sender"),
+        }
+    if not request.body:
+        return {}
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _build_external_push_response(owner, channel, session, *, created=True):
+    response = JsonResponse(
+        {
+            "status": "success",
+            "owner_username": owner.username,
+            "channel_slug": channel.slug,
+            "channel_url": reverse("quickdrop:channel", kwargs={"slug": channel.slug}),
+            "session": session_payload(session),
+        },
+        status=201 if created else 200,
+    )
+    return _apply_private_response_headers(response)
 
 
 def _load_accessible_item(channel, item_id):
@@ -371,6 +460,97 @@ def share_target_view(request):
 
     broadcast_item_replace(session)
     return _apply_private_response_headers(redirect("quickdrop:channel", slug=access["channel"].slug))
+
+
+@csrf_exempt
+@require_GET
+def external_snapshot_view(request):
+    raw_key = _get_external_api_key_from_request(request)
+    if not _is_valid_external_api_key(raw_key):
+        return _external_api_error_response("auth_failed", "유효한 Quickdrop API 키가 필요합니다.", status=401)
+
+    owner, channel = _resolve_external_channel()
+    if owner is None or channel is None:
+        return _external_api_error_response(
+            "owner_unavailable",
+            "user694 Quickdrop 채널을 찾지 못했습니다.",
+            status=503,
+        )
+
+    response = JsonResponse(
+        {
+            "status": "success",
+            "owner_username": owner.username,
+            "channel_slug": channel.slug,
+            "channel_url": reverse("quickdrop:channel", kwargs={"slug": channel.slug}),
+            "session": channel_snapshot_payload(channel),
+        }
+    )
+    return _apply_private_response_headers(response)
+
+
+@csrf_exempt
+@require_POST
+def external_push_text_view(request):
+    raw_key = _get_external_api_key_from_request(request)
+    if not _is_valid_external_api_key(raw_key):
+        return _external_api_error_response("auth_failed", "유효한 Quickdrop API 키가 필요합니다.", status=401)
+
+    owner, channel = _resolve_external_channel()
+    if owner is None or channel is None:
+        return _external_api_error_response(
+            "owner_unavailable",
+            "user694 Quickdrop 채널을 찾지 못했습니다.",
+            status=503,
+        )
+
+    payload = _load_external_json_payload(request)
+    if payload is None:
+        return _external_api_error_response("invalid_json", "JSON 본문을 확인해 주세요.", status=400)
+
+    text = (
+        str(payload.get("text") or "").strip()
+        or str(payload.get("content") or "").strip()
+        or str(payload.get("message") or "").strip()
+    )
+    sender_label = str(payload.get("sender_label") or payload.get("sender") or "OpenClaw").strip()[:80]
+
+    session, _ = ensure_live_session(channel)
+    try:
+        session = replace_with_text(session, text, sender_label=sender_label)
+    except ValidationError as exc:
+        return _external_api_error_response("validation_error", " ".join(exc.messages), status=400)
+
+    broadcast_item_replace(session)
+    return _build_external_push_response(owner, channel, session)
+
+
+@csrf_exempt
+@require_POST
+def external_push_file_view(request):
+    raw_key = _get_external_api_key_from_request(request)
+    if not _is_valid_external_api_key(raw_key):
+        return _external_api_error_response("auth_failed", "유효한 Quickdrop API 키가 필요합니다.", status=401)
+
+    owner, channel = _resolve_external_channel()
+    if owner is None or channel is None:
+        return _external_api_error_response(
+            "owner_unavailable",
+            "user694 Quickdrop 채널을 찾지 못했습니다.",
+            status=503,
+        )
+
+    uploaded_file = request.FILES.get("file") or request.FILES.get("image") or request.FILES.get("upload")
+    sender_label = str(request.POST.get("sender_label") or request.POST.get("sender") or "OpenClaw").strip()[:80]
+
+    session, _ = ensure_live_session(channel)
+    try:
+        session = replace_with_file(session, uploaded_file, sender_label=sender_label)
+    except ValidationError as exc:
+        return _external_api_error_response("validation_error", " ".join(exc.messages), status=400)
+
+    broadcast_item_replace(session)
+    return _build_external_push_response(owner, channel, session)
 
 
 @require_GET
