@@ -219,6 +219,10 @@
     box-shadow: 0 18px 38px rgba(15, 23, 42, 0.07);
 }
 
+.home-v6-page [data-classcalendar-home-grid-wrap="true"] {
+    padding-bottom: 1rem !important;
+}
+
 .home-v6-page .classcalendar-main-toolbar {
     border-color: rgba(91, 44, 207, 0.14);
     background: linear-gradient(90deg, rgba(238, 232, 255, 0.88) 0%, #ffffff 54%, rgba(255, 250, 242, 0.8) 100%);
@@ -266,6 +270,7 @@
 }
 
 .home-v6-page [data-home-messagebox-card="true"] {
+    margin-top: 0.35rem;
     border-color: rgba(91, 44, 207, 0.14);
     background: linear-gradient(135deg, rgba(238, 232, 255, 0.92) 0%, #ffffff 58%, rgba(255, 250, 242, 0.72) 100%);
 }
