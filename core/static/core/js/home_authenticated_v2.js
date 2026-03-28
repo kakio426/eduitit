@@ -34,6 +34,93 @@
         }
     }
 
+    window.homeV4Shell = function () {
+        return {
+            openSection: '',
+            menuSheetOpen: false,
+            quickdropHomeDraftText: '',
+            quickdropHomeErrorText: '',
+            quickdropHomeLastSentText: '',
+            isSendingQuickdropHomeText: false,
+
+            focusQuickdropHomeDraftInput: function (form) {
+                var scopedInput = form && typeof form.querySelector === 'function'
+                    ? form.querySelector('textarea[name="text"]')
+                    : document.querySelector('[data-home-v4-quickdrop-form="true"] textarea[name="text"], [data-home-v4-mobile-quickdrop-form="true"] textarea[name="text"]');
+                if (scopedInput && typeof scopedInput.focus === 'function') {
+                    scopedInput.focus();
+                }
+            },
+
+            quickdropHomeSummaryText: function (defaultSummary) {
+                var latestText = String(this.quickdropHomeLastSentText || '').trim();
+                if (latestText) {
+                    return latestText;
+                }
+                return String(defaultSummary || '').trim() || '휴대폰에서 사진이나 글을 바로 보내고, 다른 기기에서 바로 이어보세요.';
+            },
+
+            submitQuickdropHomeText: async function (event) {
+                var form = event && event.currentTarget ? event.currentTarget : null;
+                var action = form && form.action ? String(form.action) : '';
+                var draftText = String(this.quickdropHomeDraftText || '').trim();
+                var csrfToken = getCsrfToken();
+                if (!draftText) {
+                    this.quickdropHomeErrorText = '보낼 글을 먼저 입력해 주세요.';
+                    showFeedback(this.quickdropHomeErrorText, 'info');
+                    this.focusQuickdropHomeDraftInput(form);
+                    return;
+                }
+                if (!action) {
+                    this.quickdropHomeErrorText = '바로전송 경로를 찾지 못했습니다.';
+                    showFeedback(this.quickdropHomeErrorText, 'error');
+                    return;
+                }
+                if (!csrfToken) {
+                    this.quickdropHomeErrorText = '보안 토큰을 확인할 수 없습니다. 새로고침 후 다시 시도해 주세요.';
+                    showFeedback(this.quickdropHomeErrorText, 'error');
+                    return;
+                }
+                this.isSendingQuickdropHomeText = true;
+                this.quickdropHomeErrorText = '';
+                var formData = new FormData(form || undefined);
+                formData.set('text', draftText);
+                try {
+                    var response = await fetch(action, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': csrfToken,
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: formData,
+                    });
+                    var payload = {};
+                    try {
+                        payload = await response.json();
+                    } catch (jsonError) {
+                        payload = {};
+                    }
+                    if (!response.ok) {
+                        throw new Error(payload.error || '바로전송에 실패했습니다.');
+                    }
+                    var session = payload && payload.session ? payload.session : {};
+                    this.quickdropHomeLastSentText = String(session.current_text || draftText).trim();
+                    this.quickdropHomeDraftText = '';
+                    if (form && typeof form.reset === 'function') {
+                        form.reset();
+                    }
+                    showFeedback('바로전송으로 보냈어요.', 'success');
+                    this.focusQuickdropHomeDraftInput(form);
+                } catch (error) {
+                    this.quickdropHomeErrorText = error && error.message ? error.message : '바로전송에 실패했습니다.';
+                    showFeedback(this.quickdropHomeErrorText, 'error');
+                } finally {
+                    this.isSendingQuickdropHomeText = false;
+                }
+            },
+        };
+    };
+
     function launchCard(card) {
         var href = card.dataset.launchHref || (card.dataset.productId ? '/products/' + card.dataset.productId + '/' : '');
         if (!href) {

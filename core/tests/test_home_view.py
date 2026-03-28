@@ -2111,12 +2111,18 @@ class HomeV4ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
+        from quickdrop.models import QuickdropChannel
+
+        channel = QuickdropChannel.objects.get(owner=user)
 
         self.assertIn('data-home-v4-quickdrop-panel="true"', content)
         self.assertIn('data-home-v4-quickdrop-actions="true"', content)
-        self.assertIn(f'href="{reverse("quickdrop:open")}"', content)
+        self.assertIn('data-home-v4-quickdrop-form="true"', content)
+        self.assertIn(f'action="{reverse("quickdrop:send_text", kwargs={"slug": channel.slug})}"', content)
         self.assertIn(f'href="{reverse("quickdrop:landing")}"', content)
         self.assertIn('<h2 class="text-lg font-black text-slate-900">바로전송</h2>', content)
+        self.assertIn('바로 보낼 글', content)
+        self.assertIn('지금 보내기', content)
 
         favorites_index = content.index('data-home-v4-favorites-panel="true"')
         quickdrop_index = content.index('data-home-v4-quickdrop-panel="true"')
@@ -2132,10 +2138,14 @@ class HomeV4ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
+        from quickdrop.models import QuickdropChannel
+
+        channel = QuickdropChannel.objects.get(owner=user)
 
         self.assertEqual(response.status_code, 200)
         self.assertIn('data-home-v4-quickdrop-panel="true"', content)
-        self.assertIn(f'href="{reverse("quickdrop:open")}"', content)
+        self.assertIn('data-home-v4-quickdrop-form="true"', content)
+        self.assertIn(f'action="{reverse("quickdrop:send_text", kwargs={"slug": channel.slug})}"', content)
         self.assertTrue(Product.objects.filter(launch_route_name='quickdrop:landing', title='바로전송').exists())
 
     def test_v4_home_quickdrop_card_shows_latest_text_summary_without_status_copy(self):
@@ -2165,6 +2175,9 @@ class HomeV4ViewTest(TestCase):
         content = response.content.decode('utf-8')
 
         self.assertEqual(product.launch_route_name, 'quickdrop:landing')
+        self.assertIn('data-home-v4-quickdrop-form="true"', content)
+        self.assertIn(f'action="{reverse("quickdrop:send_text", kwargs={"slug": channel.slug})}"', content)
+        self.assertIn('지금 보내기', content)
         self.assertIn('회의 안내 문자를 정리해서 다시 보내야 합니다', content)
         self.assertNotIn('최근 전송은', content)
         self.assertNotIn('오늘 1개가 남아 있습니다.', content)
