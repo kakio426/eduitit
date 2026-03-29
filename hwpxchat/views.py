@@ -3,11 +3,12 @@ import logging
 import os
 from decimal import Decimal, InvalidOperation
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.files.base import ContentFile
 from django.db import IntegrityError, transaction
-from django.http import HttpResponse, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -15,6 +16,7 @@ from django.utils.dateparse import parse_date, parse_time
 from django.views.decorators.http import require_GET, require_POST
 
 from classcalendar.models import CalendarEvent, EventPageBlock
+from core.product_visibility import is_sheetbook_discovery_visible
 from products.models import Product
 from sheetbook.models import SheetCell, Sheetbook
 
@@ -66,6 +68,16 @@ def _get_service():
             return product
 
     return Product.objects.filter(launch_route_name="hwpxchat:main").first()
+
+
+def _is_sheetbook_companion_available():
+    return bool(getattr(settings, "SHEETBOOK_ENABLED", False)) and is_sheetbook_discovery_visible()
+
+
+def _ensure_sheetbook_companion_available():
+    if _is_sheetbook_companion_available():
+        return
+    raise Http404("Sheetbook companion is hidden.")
 
 
 @login_required
@@ -141,7 +153,7 @@ def chat_process(request):
     )
     _remember_document(request, document)
 
-    info_message = "문서에서 해야 할 일을 정리했어요. 틀린 곳만 확인한 뒤 교무수첩에 담아 보세요."
+    info_message = "문서에서 해야 할 일을 정리했어요. 틀린 곳만 확인한 뒤 복사해 바로 쓰세요."
     limit_message = ""
 
     structure_text, input_mode, too_large = summarize_text_for_structure(document.raw_markdown, document.parse_payload)
@@ -211,11 +223,12 @@ def chat_process(request):
 @login_required
 @require_POST
 def commit_document(request, document_id):
+    _ensure_sheetbook_companion_available()
     document = _get_owner_document_or_404(request.user, document_id)
     payload = _get_request_payload(request)
     sheetbook = _resolve_sheetbook(request.user, payload.get("sheetbook_id"))
     if sheetbook is None:
-        return _render_commit_error(request, document, "교무수첩을 선택해 주세요.")
+        return _render_commit_error(request, document, "학급 기록 보드를 선택해 주세요.")
 
     from sheetbook.views import _next_row_order, _upsert_grid_cell_value, ensure_execution_tab
 
@@ -225,7 +238,7 @@ def commit_document(request, document_id):
     requested_items = _extract_commit_items(payload, work_items)
 
     if not requested_items:
-        return _render_commit_error(request, document, "담을 업무를 하나 이상 선택해 주세요.")
+        return _render_commit_error(request, document, "보낼 업무를 하나 이상 선택해 주세요.")
 
     saved_count = 0
     updated_count = 0
@@ -309,7 +322,7 @@ def commit_document(request, document_id):
             }
         )
 
-    messages.success(request, "교무수첩 실행업무 탭에 담았어요.")
+    messages.success(request, "학급 기록 보드 실행업무 탭에 담았어요.")
     return redirect(redirect_url)
 
 
@@ -546,9 +559,15 @@ def _replace_work_items(document, items):
 
 
 def _build_page_context(request, *, document=None, error_message="", info_message="", limit_message=""):
+    sheetbook_companion_available = _is_sheetbook_companion_available()
     sheetbook_options, selected_sheetbook_id = _get_sheetbook_options(request)
     work_items = list(document.work_items.order_by("sort_order", "id")) if document else []
-    can_commit = bool(document and work_items and document.structure_status != HwpxDocument.StructureStatus.TOO_LARGE)
+    can_commit = bool(
+        sheetbook_companion_available
+        and document
+        and work_items
+        and document.structure_status != HwpxDocument.StructureStatus.TOO_LARGE
+    )
     return {
         "service": _get_service(),
         "current_document": document,
@@ -558,11 +577,12 @@ def _build_page_context(request, *, document=None, error_message="", info_messag
         "limit_message": limit_message,
         "has_document": bool(document),
         "can_commit": can_commit,
+        "sheetbook_companion_available": sheetbook_companion_available,
         "sheetbook_options": sheetbook_options,
         "selected_sheetbook_id": selected_sheetbook_id,
         "download_markdown_url": _build_download_url(document),
         "document_detail_url": reverse("hwpxchat:document_detail", kwargs={"document_id": document.id}) if document else "",
-        "sheetbook_index_url": reverse("sheetbook:index"),
+        "sheetbook_index_url": reverse("sheetbook:index") if sheetbook_companion_available else "",
     }
 
 
@@ -604,6 +624,9 @@ def _build_download_url(document):
 
 
 def _get_sheetbook_options(request):
+    if not _is_sheetbook_companion_available():
+        return [], 0
+
     sheetbooks = list(
         Sheetbook.objects.filter(owner=request.user)
         .prefetch_related("tabs")

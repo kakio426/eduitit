@@ -429,7 +429,7 @@ PRODUCT_CONTEXT_CHIP_OVERRIDES = {
     "handoff:landing": ["배부 뒤 확인", "휴대폰 응답", "학급 전체", "10분 안팎"],
     "reservations:dashboard_landing": ["일정 잡을 때", "PC·모바일", "개별·소그룹", "5분 안팎"],
     "reservations:landing": ["일정 잡을 때", "PC·모바일", "개별·소그룹", "5분 안팎"],
-    "hwpxchat:main": ["수업 준비", "PC 권장", "교사 1인", "10분 안팎"],
+    "hwpxchat:main": ["공문 정리", "PC 권장", "교사 1인", "10분 안팎"],
     "tts_announce": ["교시 방송", "PC·모바일", "학급 전체", "5분 전"],
     "chess:index": ["수업 중 활동", "모둠·전체", "교실 화면", "5분 안팎"],
     "chess:play": ["수업 중 활동", "모둠·전체", "교실 화면", "5분 안팎"],
@@ -740,6 +740,7 @@ def _build_teacher_first_product_labels(product):
     task_label = service_launcher_utils.sanitize_public_display_text(getattr(product, 'solve_text', ''))
     service_label = _product_title_text(product)
     support_label = ''
+    route_name = _product_route_name(product)
 
     if task_label and task_label != service_label:
         support_label = service_label
@@ -768,6 +769,9 @@ def _build_teacher_first_product_labels(product):
         task_label = '오늘 일정 정리'
     if _is_sheetbook_product(product) and task_label in {'', public_service_name}:
         task_label = '기록 이어쓰기'
+    if route_name == "hwpxchat:main":
+        task_label = "공문에서 해야 할 일을 바로 정리해요"
+        support_label = "공문이나 한글 문서를 올리면 해야 할 일, 기한, 전달 대상을 카드로 정리해 드려요."
 
     if not support_label:
         if _is_calendar_hub_product(product):

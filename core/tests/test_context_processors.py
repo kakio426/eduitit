@@ -92,6 +92,29 @@ class ServiceLauncherContextTests(TestCase):
         self.assertEqual(item["href"], reverse("collect:landing"))
         self.assertFalse(item["is_external"])
 
+    def test_service_launcher_json_uses_hwpxchat_cleanup_summary(self):
+        Product.objects.create(
+            title="한글문서 AI야 읽어줘",
+            description="공문을 읽어 업무 카드로 정리합니다.",
+            lead_text="공문이나 한글 문서를 올리면 해야 할 일, 기한, 전달 대상을 카드로 정리해 드려요.",
+            solve_text="공문에서 해야 할 일을 바로 정리해요",
+            result_text="실행용 업무 카드",
+            price=0,
+            is_active=True,
+            service_type="work",
+            icon="📄",
+            launch_route_name="hwpxchat:main",
+        )
+
+        context = search_products(self._request())
+        payload = json.loads(context["service_launcher_json"])
+
+        item = next(item for item in payload if item["title"] == "한글문서 AI야 읽어줘")
+        self.assertEqual(item["summary"], "공문에서 해야 할 일을 바로 정리해요")
+        self.assertEqual(item["group_key"], "doc_write")
+        self.assertEqual(item["href"], reverse("hwpxchat:main"))
+        self.assertFalse(item["is_external"])
+
     @override_settings(SHEETBOOK_ENABLED=True, SHEETBOOK_DISCOVERY_VISIBLE=True)
     def test_service_launcher_json_respects_product_is_active(self):
         Product.objects.create(

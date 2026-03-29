@@ -568,8 +568,8 @@
     {
       "product_id": 153,
       "title": "한글문서 AI야 읽어줘",
-      "lead_text": "HWPX 내부 XML을 직접 파싱해 문서 기반 AI 대화를 시작하세요.",
-      "description": "교사가 업로드한 HWPX 파일을 서버 메모리에서 직접 파싱하여 Markdown으로 변환하고, 그 문서 내용을 기반으로 AI(Gemini/Claude)와 질의응답할 수 있는 서비스입니다.",
+      "lead_text": "공문이나 한글 문서를 올리면 해야 할 일, 기한, 전달 대상을 카드로 정리해 드려요.",
+      "description": "교사가 업로드한 HWPX 문서를 읽어 공문의 해야 할 일, 기한, 전달 대상을 실행 카드로 정리하고, 필요할 때 문서 근거를 다시 묻거나 원문 Markdown을 내려받을 수 있는 서비스입니다.",
       "service_type": "work",
       "launch_route_name": "hwpxchat:main",
       "external_url": "",
@@ -577,8 +577,8 @@
       "is_featured": false,
       "display_order": 24,
       "value_props": {
-        "solve_text": "한글 문서 내용을 AI가 정확히 읽게 해주세요",
-        "result_text": "문서 근거 기반 답변",
+        "solve_text": "공문에서 해야 할 일을 바로 정리해요",
+        "result_text": "실행용 업무 카드",
         "time_text": "1분"
       },
       "mapped_app": "hwpxchat",

@@ -350,6 +350,37 @@ class SheetbookDiscoveryVisibilityTests(TestCase):
         self.assertEqual(response.context['catalog_hub']['guide_url'], SERVICE_GUIDE_PADLET_URL)
         self.assertContains(response, SERVICE_GUIDE_PADLET_URL)
 
+    def test_catalog_uses_hwpxchat_task_and_support_copy(self):
+        hwpx_product = Product.objects.create(
+            title="한글문서 AI야 읽어줘",
+            lead_text="공문이나 한글 문서를 올리면 해야 할 일, 기한, 전달 대상을 카드로 정리해 드려요.",
+            description="공문을 읽어 실행용 업무 카드로 정리합니다.",
+            solve_text="공문에서 해야 할 일을 바로 정리해요",
+            result_text="실행용 업무 카드",
+            price=0,
+            is_active=True,
+            service_type='work',
+            launch_route_name='hwpxchat:main',
+        )
+        ServiceManual.objects.create(
+            product=hwpx_product,
+            title="한글문서 AI야 읽어줘 사용 가이드",
+            description="공문 정리 시작 가이드",
+            is_published=True,
+        )
+
+        response = self.client.get(reverse('product_list'))
+
+        visible_product = next(product for product in response.context['products'] if product.id == hwpx_product.id)
+        self.assertEqual(visible_product.teacher_first_task_label, '공문에서 해야 할 일을 바로 정리해요')
+        self.assertEqual(
+            visible_product.teacher_first_support_label,
+            '공문이나 한글 문서를 올리면 해야 할 일, 기한, 전달 대상을 카드로 정리해 드려요.',
+        )
+        self.assertContains(response, '한글문서 AI야 읽어줘')
+        self.assertContains(response, '공문에서 해야 할 일을 바로 정리해요')
+        self.assertContains(response, '공문이나 한글 문서를 올리면 해야 할 일, 기한, 전달 대상을 카드로 정리해 드려요.')
+
     def test_catalog_section_filter_shows_selected_scenario_only(self):
         response = self.client.get(f"{reverse('product_list')}?section=today_ops")
         section_titles = [section['title'] for section in response.context['scenario_sections']]

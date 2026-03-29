@@ -801,26 +801,26 @@
     "launch_route_name": "hwpxchat:main",
     "launch_url": "/hwpx-chat/",
     "external_url": "",
-    "lead_text": "HWPX 내부 XML을 직접 파싱해 문서 기반 AI 대화를 시작하세요.",
-    "description": "교사가 업로드한 HWPX 파일을 서버 메모리에서 직접 파싱하여 Markdown으로 변환하고, 그 문서 내용을 기반으로 AI(Gemini/Claude)와 질의응답할 수 있는 서비스입니다.",
-    "solve_text": "한글 문서 내용을 AI가 정확히 읽게 해주세요",
-    "result_text": "문서 근거 기반 답변",
+    "lead_text": "공문이나 한글 문서를 올리면 해야 할 일, 기한, 전달 대상을 카드로 정리해 드려요.",
+    "description": "교사가 업로드한 HWPX 문서를 읽어 공문의 해야 할 일, 기한, 전달 대상을 실행 카드로 정리하고, 필요할 때 문서 근거를 다시 묻거나 원문 Markdown을 내려받을 수 있는 서비스입니다.",
+    "solve_text": "공문에서 해야 할 일을 바로 정리해요",
+    "result_text": "실행용 업무 카드",
     "time_text": "1분",
     "features": [
       {
-        "title": "문서 그대로 읽기",
-        "description": "HWPX 내부 XML을 직접 읽어 문서 내용을 놓치지 않습니다.",
-        "icon": "🧩"
+        "title": "공문 업무 카드 정리",
+        "description": "해야 할 일, 기한, 전달 대상을 한 번에 읽기 쉬운 카드로 정리합니다.",
+        "icon": "📌"
       },
       {
-        "title": "표도 깔끔하게 이해",
-        "description": "표를 Markdown 형식으로 변환해 AI가 더 잘 이해하게 만듭니다.",
-        "icon": "📊"
+        "title": "문서 근거 다시 묻기",
+        "description": "정리된 뒤에도 문서 안 근거를 바탕으로 필요한 내용을 다시 물어볼 수 있습니다.",
+        "icon": "💬"
       },
       {
-        "title": "질문하면 바로 답변",
-        "description": "문서 근거 중심으로 Gemini/Claude가 답변을 제공합니다.",
-        "icon": "🤖"
+        "title": "원문 복사와 다운로드",
+        "description": "업무 카드 전체 복사와 원문 Markdown 다운로드로 바로 다른 작업에 이어 붙일 수 있습니다.",
+        "icon": "⬇️"
       }
     ]
   },

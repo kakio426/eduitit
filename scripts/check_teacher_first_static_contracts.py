@@ -48,7 +48,7 @@ TEMPLATE_RULES = {
     },
     'hwpxchat/templates/hwpxchat/main.html': {
         'required': [
-            '공문을 교무수첩 실행업무로 정리하기',
+            '공문을 오늘 할 일로 바로 정리하기',
             'HWPX로 저장하는 방법',
         ],
         'forbidden': [
@@ -177,4 +177,3 @@ def main() -> int:
 
 if __name__ == '__main__':
     raise SystemExit(main())
-

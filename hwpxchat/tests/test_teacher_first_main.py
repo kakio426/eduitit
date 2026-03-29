@@ -22,9 +22,9 @@ class HwpxChatTeacherFirstMainTests(TestCase):
         response = self.client.get(reverse("hwpxchat:main"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "공문을 교무수첩 실행업무로 정리하기")
+        self.assertContains(response, "공문을 오늘 할 일로 바로 정리하기")
         self.assertContains(response, "HWPX로 저장하는 방법")
+        self.assertNotContains(response, "교무수첩")
         self.assertNotContains(response, "왜 이 도구를 쓰나요?")
         self.assertNotContains(response, "사용 방법")
         self.assertNotContains(response, "서비스 목록으로 돌아가기")
-

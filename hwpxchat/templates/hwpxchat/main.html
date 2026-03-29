@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}공문을 교무수첩 실행업무로 정리하기{% endblock %}
+{% block title %}공문을 오늘 할 일로 바로 정리하기{% endblock %}
 
 {% block content %}
 <style>
@@ -43,8 +43,8 @@
 
         <div class="text-center mb-8" data-aos="fade-up">
             <div class="text-6xl mb-3 float-icon">{{ service.icon|default:"📄" }}</div>
-            <h1 class="text-4xl md:text-5xl font-bold text-gray-700 font-title mb-3">공문을 교무수첩 실행업무로 정리하기</h1>
-            <p class="text-lg md:text-xl text-gray-500">문서를 올리면 지금 해야 할 일을 카드로 정리하고, 바로 교무수첩에 담을 수 있어요.</p>
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-700 font-title mb-3">공문을 오늘 할 일로 바로 정리하기</h1>
+            <p class="text-lg md:text-xl text-gray-500">공문이나 한글 문서를 올리면 해야 할 일, 기한, 전달 대상을 카드로 정리해 드려요.</p>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
@@ -61,10 +61,10 @@
 
                     <div class="text-sm md:text-base text-gray-700 bg-white border border-gray-200 rounded-xl p-4 mb-5 leading-relaxed">
                         <p class="font-bold text-gray-800 mb-2">올리는 순서</p>
-                        <p>1. 공문을 HWPX로 저장합니다.</p>
+                        <p>1. 공문이나 한글 문서를 HWPX로 저장합니다.</p>
                         <p>2. 여기서 파일을 올립니다.</p>
-                        <p>3. 정리된 업무 카드를 확인합니다.</p>
-                        <p>4. 교무수첩에 담기를 누릅니다.</p>
+                        <p>3. 정리된 업무 카드와 기한을 확인합니다.</p>
+                        <p>4. 필요한 카드만 다듬고 복사하거나 다운로드합니다.</p>
                     </div>
 
                     <form
@@ -296,6 +296,89 @@
         });
     }
 
+    function collectHwpxWorkItemsText() {
+        const cards = Array.from(document.querySelectorAll("#hwpx-chat-result .hwpx-work-card[data-work-card='true']"));
+        return cards.map((card, index) => {
+            const readField = (name) => {
+                const field = card.querySelector(`[data-copy-field='${name}']`);
+                if (!field) {
+                    return "";
+                }
+                if (field.type === "checkbox") {
+                    return field.checked ? "예" : "";
+                }
+                return (field.value || "").toString().trim();
+            };
+
+            const lines = [`[업무 카드 ${index + 1}]`];
+            const title = readField("title");
+            const actionText = readField("action_text");
+            const dueDate = readField("due_date");
+            const assigneeText = readField("assignee_text");
+            const targetText = readField("target_text");
+            const materialsText = readField("materials_text");
+            const deliveryRequired = readField("delivery_required");
+            const evidenceText = readField("evidence_text");
+
+            if (title) {
+                lines.push(`업무명: ${title}`);
+            }
+            if (actionText) {
+                lines.push(`해야 할 일: ${actionText}`);
+            }
+            if (dueDate) {
+                lines.push(`기한: ${dueDate}`);
+            }
+            if (assigneeText) {
+                lines.push(`담당: ${assigneeText}`);
+            }
+            if (targetText) {
+                lines.push(`대상: ${targetText}`);
+            }
+            if (materialsText) {
+                lines.push(`준비물: ${materialsText}`);
+            }
+            if (deliveryRequired) {
+                lines.push(`전달 필요: ${deliveryRequired}`);
+            }
+            if (evidenceText) {
+                lines.push(`근거 문장: ${evidenceText}`);
+            }
+
+            return lines.join("\n");
+        }).filter((block) => block.trim()).join("\n\n");
+    }
+
+    function copyHwpxWorkItems() {
+        const text = collectHwpxWorkItemsText();
+        if (!text.trim()) {
+            Swal.fire({
+                icon: "warning",
+                title: "복사할 카드가 없습니다",
+                confirmButtonText: "확인",
+                confirmButtonColor: "#10b981"
+            });
+            return;
+        }
+
+        navigator.clipboard.writeText(text).then(() => {
+            Swal.fire({
+                icon: "success",
+                title: "업무 카드를 복사했습니다",
+                confirmButtonText: "확인",
+                confirmButtonColor: "#10b981"
+            });
+        }).catch(() => {
+            Swal.fire({
+                icon: "error",
+                title: "복사에 실패했습니다",
+                text: "카드를 직접 선택해서 복사해 주세요.",
+                confirmButtonText: "확인",
+                confirmButtonColor: "#10b981"
+            });
+        });
+    }
+
     async function submitHwpxQuestion(form) {
         if (!form) {
             return false;
@@ -400,4 +483,3 @@
     });
 </script>
 {% endblock %}
-

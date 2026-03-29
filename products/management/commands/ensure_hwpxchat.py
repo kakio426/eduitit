@@ -11,7 +11,7 @@ LEGACY_MANUAL_TITLES = (
     "한글 문서 톡톡 사용 가이드",
     "HWPX 문서 AI 대화 사용 가이드",
 )
-MANUAL_DESCRIPTION = "한글(HWPX) 파일 업로드부터 문서 기반 대화까지 빠르게 시작하는 방법입니다."
+MANUAL_DESCRIPTION = "공문 업로드부터 해야 할 일 카드 확인, 복사, 다시 묻기까지 빠르게 시작하는 방법입니다."
 
 
 class Command(BaseCommand):
@@ -39,10 +39,10 @@ class Command(BaseCommand):
         if not product:
             product = Product.objects.create(
                 title=SERVICE_TITLE,
-                lead_text="한글 문서를 올리면 AI가 문서 내용을 읽고 답해줘요.",
+                lead_text="공문이나 한글 문서를 올리면 해야 할 일, 기한, 전달 대상을 카드로 정리해 드려요.",
                 description=(
-                    "교사가 업로드한 HWPX 파일을 서버 메모리에서 직접 파싱해 Markdown으로 변환하고, "
-                    "문서 내용을 바탕으로 AI(Gemini/Claude)와 질의응답할 수 있는 서비스입니다."
+                    "교사가 업로드한 HWPX 문서를 읽어 공문의 해야 할 일, 기한, 전달 대상을 실행 카드로 정리하고, "
+                    "필요할 때 문서 근거를 다시 묻거나 원문 Markdown을 내려받을 수 있는 서비스입니다."
                 ),
                 price=0.00,
                 is_active=True,
@@ -55,8 +55,8 @@ class Command(BaseCommand):
                 service_type="work",
                 external_url="",
                 launch_route_name="hwpxchat:main",
-                solve_text="한글 문서 내용을 빠르게 정리하고 질문하고 싶어요",
-                result_text="문서 근거 기반 답변",
+                solve_text="공문에서 해야 할 일을 바로 정리해요",
+                result_text="실행용 업무 카드",
                 time_text="1분",
             )
             self.stdout.write(self.style.SUCCESS("[OK] Created hwpxchat service product."))
@@ -65,33 +65,62 @@ class Command(BaseCommand):
             if not product.launch_route_name:
                 product.launch_route_name = "hwpxchat:main"
                 changed_fields.append("launch_route_name")
+            if product.lead_text != "공문이나 한글 문서를 올리면 해야 할 일, 기한, 전달 대상을 카드로 정리해 드려요.":
+                product.lead_text = "공문이나 한글 문서를 올리면 해야 할 일, 기한, 전달 대상을 카드로 정리해 드려요."
+                changed_fields.append("lead_text")
+            expected_description = (
+                "교사가 업로드한 HWPX 문서를 읽어 공문의 해야 할 일, 기한, 전달 대상을 실행 카드로 정리하고, "
+                "필요할 때 문서 근거를 다시 묻거나 원문 Markdown을 내려받을 수 있는 서비스입니다."
+            )
+            if product.description != expected_description:
+                product.description = expected_description
+                changed_fields.append("description")
+            if product.solve_text != "공문에서 해야 할 일을 바로 정리해요":
+                product.solve_text = "공문에서 해야 할 일을 바로 정리해요"
+                changed_fields.append("solve_text")
+            if product.result_text != "실행용 업무 카드":
+                product.result_text = "실행용 업무 카드"
+                changed_fields.append("result_text")
             if changed_fields:
                 product.save(update_fields=changed_fields)
                 self.stdout.write(self.style.SUCCESS("[OK] Updated hwpxchat product essentials."))
 
         features = [
             {
-                "icon": "🧩",
-                "title": "문서 그대로 읽기",
-                "description": "HWPX 내부 XML을 직접 읽어 문서 내용을 놓치지 않습니다.",
-            },
-            {
-                "icon": "🧠",
-                "title": "표도 깔끔하게 이해",
-                "description": "표를 Markdown 형식으로 변환해 AI가 구조를 잘 이해하게 만듭니다.",
+                "icon": "📌",
+                "title": "공문 업무 카드 정리",
+                "description": "해야 할 일, 기한, 전달 대상을 한 번에 읽기 쉬운 카드로 정리합니다.",
             },
             {
                 "icon": "💬",
-                "title": "질문하면 바로 답변",
-                "description": "문서 근거 중심으로 Gemini/Claude가 답변을 제공합니다.",
+                "title": "문서 근거 다시 묻기",
+                "description": "정리된 뒤에도 문서 안 근거를 바탕으로 필요한 내용을 다시 물어볼 수 있습니다.",
+            },
+            {
+                "icon": "⬇️",
+                "title": "원문 복사와 다운로드",
+                "description": "업무 카드 전체 복사와 원문 Markdown 다운로드로 바로 다른 작업에 이어 붙일 수 있습니다.",
             },
         ]
+        feature_titles = {feature["title"] for feature in features}
         for feature in features:
-            ProductFeature.objects.get_or_create(
+            product_feature, created = ProductFeature.objects.get_or_create(
                 product=product,
                 title=feature["title"],
                 defaults=feature,
             )
+            if created:
+                continue
+            changed_fields = []
+            if product_feature.icon != feature["icon"]:
+                product_feature.icon = feature["icon"]
+                changed_fields.append("icon")
+            if product_feature.description != feature["description"]:
+                product_feature.description = feature["description"]
+                changed_fields.append("description")
+            if changed_fields:
+                product_feature.save(update_fields=changed_fields)
+        ProductFeature.objects.filter(product=product).exclude(title__in=feature_titles).delete()
 
         manual, created = ServiceManual.objects.get_or_create(
             product=product,
@@ -115,31 +144,45 @@ class Command(BaseCommand):
         if manual_update_fields:
             manual.save(update_fields=manual_update_fields)
 
-        if manual.sections.count() == 0:
-            sections = [
-                {
-                    "title": "시작하기",
-                    "content": "서비스에서 HWPX 파일을 업로드하고 질문을 입력하면 문서 기반 답변을 받을 수 있습니다.",
-                    "layout_type": "text_only",
-                    "display_order": 1,
-                    "badge_text": "Step 1",
-                },
-                {
-                    "title": "파일 형식 주의",
-                    "content": "HWP 파일은 업로드되지 않습니다. 한글에서 '다른 이름으로 저장 → HWPX'로 변환해 주세요.",
-                    "layout_type": "text_only",
-                    "display_order": 2,
-                    "badge_text": "Step 2",
-                },
-                {
-                    "title": "답변 정확도 높이기",
-                    "content": "문서에 없는 내용은 추측하지 않도록 설계되어 있으니, 필요한 정보가 없으면 문서를 보완해 다시 질문해 주세요.",
-                    "layout_type": "text_only",
-                    "display_order": 3,
-                    "badge_text": "Tip",
-                },
-            ]
-            for section in sections:
-                ManualSection.objects.create(manual=manual, **section)
+        sections = [
+            {
+                "title": "시작하기",
+                "content": "공문이나 한글 문서를 HWPX로 저장해 올리면 해야 할 일, 기한, 전달 대상을 업무 카드로 정리해 줍니다.",
+                "layout_type": "text_only",
+                "display_order": 1,
+                "badge_text": "Step 1",
+            },
+            {
+                "title": "카드 확인과 복사",
+                "content": "정리된 카드에서 제목, 해야 할 일, 기한을 바로 다듬고 업무 카드 전체 복사로 다른 곳에 붙여 넣어 사용할 수 있습니다.",
+                "layout_type": "text_only",
+                "display_order": 2,
+                "badge_text": "Step 2",
+            },
+            {
+                "title": "원문과 다시 묻기",
+                "content": "원문 Markdown을 내려받거나 문서에게 더 물어보기로 근거 문장을 다시 확인할 수 있습니다. HWP 파일은 업로드되지 않으니 HWPX로 변환해 주세요.",
+                "layout_type": "text_only",
+                "display_order": 3,
+                "badge_text": "Tip",
+            },
+        ]
+        section_titles = {section["title"] for section in sections}
+        for section in sections:
+            manual_section, created = ManualSection.objects.get_or_create(
+                manual=manual,
+                title=section["title"],
+                defaults=section,
+            )
+            if created:
+                continue
+            changed_fields = []
+            for field in ("content", "layout_type", "display_order", "badge_text"):
+                if getattr(manual_section, field) != section[field]:
+                    setattr(manual_section, field, section[field])
+                    changed_fields.append(field)
+            if changed_fields:
+                manual_section.save(update_fields=changed_fields)
+        manual.sections.exclude(title__in=section_titles).delete()
 
         self.stdout.write(self.style.SUCCESS("[OK] hwpxchat service ensured."))
