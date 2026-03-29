@@ -446,17 +446,11 @@
                     if (this.session.status === 'ended') {
                         this.emptyBadge.textContent = '오늘 내용 비움';
                         this.emptyTitle.textContent = '오늘 기록을 비웠습니다.';
-                        this.emptyBody.textContent = isCompactMobile
-                            ? '다시 붙여넣거나 파일을 고른 뒤 보내면 됩니다.'
-                            : '다시 붙여넣거나 파일을 고른 뒤 보내면 새 기록이 바로 쌓입니다.';
+                        this.emptyBody.textContent = '새로 보내면 다시 여기에 쌓입니다.';
                     } else {
                         this.emptyBadge.textContent = '전송 준비';
-                        this.emptyTitle.textContent = isCompactMobile
-                            ? '붙여넣거나 파일을 고른 뒤 보내면 됩니다.'
-                            : 'PC끼리도, 휴대폰끼리도 바로 옮기세요.';
-                        this.emptyBody.textContent = isCompactMobile
-                            ? '같은 통로만 열어 두고 보내기만 누르면 됩니다.'
-                            : '붙여넣거나 파일을 고른 뒤 보내면 오늘 기록에 바로 쌓입니다.';
+                        this.emptyTitle.textContent = '아직 받은 내용이 없습니다.';
+                        this.emptyBody.textContent = '보낸 내용이 여기에 쌓입니다.';
                     }
                 }
 

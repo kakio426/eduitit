@@ -811,7 +811,8 @@ def _build_home_quickdrop_card(user, favorite_products, product_list):
             logger.exception("[home quickdrop] failed to ensure quickdrop product")
             return None
 
-    summary = "PC와 휴대폰 사이에서 텍스트와 사진을 바로 옮길 수 있습니다."
+    summary = ""
+    has_recent_item = False
     channel = None
     try:
         from quickdrop.services import get_or_create_personal_channel
@@ -821,6 +822,7 @@ def _build_home_quickdrop_card(user, favorite_products, product_list):
         today_items = channel.items.filter(created_at__gte=day_start).order_by("-created_at", "-id")
         latest_item = today_items.first()
         if latest_item is not None:
+            has_recent_item = True
             if getattr(latest_item, "kind", "") == "image":
                 filename = str(getattr(latest_item, "filename", "") or "").strip()
                 summary = filename[:50] if filename else "최근 사진 1장이 도착해 있습니다."
@@ -834,6 +836,7 @@ def _build_home_quickdrop_card(user, favorite_products, product_list):
     return {
         "title": getattr(quickdrop_product, "public_service_name", "") or getattr(quickdrop_product, "title", "") or "바로전송",
         "summary": summary,
+        "has_recent_item": has_recent_item,
         "open_url": reverse("quickdrop:open"),
         "manage_url": reverse("quickdrop:landing"),
         "send_text_url": reverse("quickdrop:send_text", kwargs={"slug": channel.slug}) if channel is not None else "",

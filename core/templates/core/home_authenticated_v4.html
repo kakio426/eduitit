@@ -265,9 +265,11 @@
                                 </div>
                                 <p
                                     class="home-v4-quickdrop-summary"
-                                    data-default-summary="{{ quickdrop_home_card.summary|default:'휴대폰에서 사진이나 글을 바로 보내고, 다른 기기에서 바로 이어보세요.' }}"
-                                    x-text="typeof quickdropHomeSummaryText === 'function' ? quickdropHomeSummaryText($el.dataset.defaultSummary || '') : ($el.dataset.defaultSummary || '')"
-                                >{{ quickdrop_home_card.summary|default:'휴대폰에서 사진이나 글을 바로 보내고, 다른 기기에서 바로 이어보세요.' }}</p>
+                                    data-initial-summary="{{ quickdrop_home_card.summary|default:'' }}"
+                                    x-show="typeof quickdropHomeHasSummary === 'function' ? quickdropHomeHasSummary($el.dataset.initialSummary || '') : !!($el.dataset.initialSummary || '')"
+                                    x-text="typeof quickdropHomeSummaryText === 'function' ? quickdropHomeSummaryText($el.dataset.initialSummary || '') : ($el.dataset.initialSummary || '')"
+                                    {% if not quickdrop_home_card.has_recent_item %}style="display:none;"{% endif %}
+                                >{{ quickdrop_home_card.summary|default:'' }}</p>
                                 <form
                                     method="post"
                                     action="{{ quickdrop_home_card.send_text_url }}"
@@ -276,13 +278,13 @@
                                     @submit.prevent="typeof submitQuickdropHomeText === 'function' ? submitQuickdropHomeText($event) : $event.target.submit()"
                                 >
                                     {% csrf_token %}
-                                    <label class="home-v4-quickdrop-label">바로 보낼 글</label>
                                     <textarea
                                         name="text"
                                         x-model="quickdropHomeDraftText"
                                         rows="4"
                                         class="home-v4-quickdrop-textarea"
-                                        placeholder="다른 기기나 휴대폰으로 바로 보낼 글을 입력하세요."
+                                        aria-label="보낼 내용"
+                                        placeholder="예) 회의 링크, 메모, 주소"
                                     ></textarea>
                                     <p
                                         class="home-v4-quickdrop-error"

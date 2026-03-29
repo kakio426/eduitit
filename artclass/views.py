@@ -327,7 +327,7 @@ def _build_video_advice_payload(status, *, title=""):
             "status": VIDEO_ADVICE_STATUS_LAUNCHER_RECOMMENDED,
             "recommendedMode": ARTCLASS_PRIMARY_PLAYBACK_MODE,
             "headline": "런처로 바로 시작하면 됩니다",
-            "reason": "ArtClass는 이제 런처로 수업을 시작합니다. 저장 후 다음 화면의 초록 버튼을 누르면 영상과 수업 안내가 나뉘어 열립니다.",
+            "reason": "저장 후 초록 버튼으로 시작합니다.",
             "title": resolved_title,
         }
     return {
@@ -1281,7 +1281,7 @@ def library_view(request):
         for item in my_classes:
             item.creator_display_name = _resolve_creator_display_name(item.created_by)
             item.start_mode_badge = "런처 시작"
-            item.start_mode_reason = "초록 버튼을 누르면 영상과 수업 안내가 나뉘어 열립니다."
+            item.start_mode_reason = "초록 버튼으로 시작합니다."
             item.primary_action_label = "런처로 수업 시작하기"
             item.launcher_start_url = _build_launcher_autostart_url(item)
             item.launcher_install_url = _build_launcher_install_url(
@@ -1319,7 +1319,7 @@ def library_view(request):
     for item in shared_classes:
         item.creator_display_name = _resolve_creator_display_name(item.created_by)
         item.start_mode_badge = "런처 시작"
-        item.start_mode_reason = "초록 버튼을 누르면 영상과 수업 안내가 나뉘어 열립니다."
+        item.start_mode_reason = "초록 버튼으로 시작합니다."
         item.primary_action_label = "런처로 수업 시작하기"
         item.launcher_start_url = _build_launcher_autostart_url(item)
         item.launcher_install_url = _build_launcher_install_url(

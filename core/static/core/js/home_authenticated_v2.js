@@ -52,12 +52,18 @@
                 }
             },
 
-            quickdropHomeSummaryText: function (defaultSummary) {
+            quickdropHomeHasSummary: function (initialSummary) {
+                var latestText = String(this.quickdropHomeLastSentText || '').trim();
+                var fallbackSummary = String(initialSummary || '').trim();
+                return Boolean(latestText || fallbackSummary);
+            },
+
+            quickdropHomeSummaryText: function (initialSummary) {
                 var latestText = String(this.quickdropHomeLastSentText || '').trim();
                 if (latestText) {
                     return latestText;
                 }
-                return String(defaultSummary || '').trim() || '휴대폰에서 사진이나 글을 바로 보내고, 다른 기기에서 바로 이어보세요.';
+                return String(initialSummary || '').trim();
             },
 
             submitQuickdropHomeText: async function (event) {

@@ -43,17 +43,13 @@
         <div x-show="messageHubActiveTab === 'capture'" x-ref="messageHubCapturePanel" class="classcalendar-message-hub-panel min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
             <div class="mx-auto max-w-4xl" x-show="messageCaptureStep === 'input'">
                 <div class="space-y-4">
-                    <div class="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-4">
-                        <p class="text-base font-extrabold text-slate-900">받은 메시지를 붙여넣으면 됩니다.</p>
-                        <p class="mt-1 text-sm font-semibold text-slate-600">날짜가 보이면 바로 아래에서 일정 후보를 확인하고 고칠 수 있어요.</p>
-                    </div>
                     <div>
-                        <label class="mb-1.5 block text-sm font-bold text-slate-700">받은 메시지</label>
                         <textarea
                             x-ref="messageCaptureInput"
                             x-model="messageCaptureInputText"
                             rows="11"
                             class="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm leading-6 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                            aria-label="정리할 메시지"
                             placeholder="예) 10월 3일 등잔박물관 체험학습, 준비물은 도시락과 물입니다."
                         ></textarea>
                     </div>
@@ -151,7 +147,7 @@
                 <div class="mx-auto mt-5 flex max-w-4xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
                     <button type="button" @click="closeMessageHub()" class="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-bold text-slate-700">닫기</button>
                     <button type="button" @click="submitMessageCaptureArchiveSave()" :disabled="isSavingMessageCaptureArchive || isParsingMessageCapture" class="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-extrabold text-white disabled:opacity-60">메시지 보관함에 저장</button>
-                    <button type="button" @click="submitMessageCaptureParse()" :disabled="isSavingMessageCaptureArchive || isParsingMessageCapture" class="rounded-2xl border border-indigo-200 bg-indigo-50 px-5 py-3 text-sm font-extrabold text-indigo-700 disabled:opacity-60">일정찾기</button>
+                    <button type="button" @click="submitMessageCaptureParse()" :disabled="isSavingMessageCaptureArchive || isParsingMessageCapture" class="rounded-2xl border border-indigo-200 bg-indigo-50 px-5 py-3 text-sm font-extrabold text-indigo-700 disabled:opacity-60">일정 찾기</button>
                 </div>
             </div>
 
@@ -159,17 +155,12 @@
                 <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
                     <div>
                         <p class="text-sm font-extrabold text-slate-900" x-text="messageCaptureCandidateSummaryText()"></p>
-                        <p x-show="messageCaptureVisibleCandidates().length > 0" class="mt-1 text-sm font-semibold text-slate-600">아래 카드에서 제목과 날짜를 바로 고치면 됩니다.</p>
                     </div>
                 </div>
                 <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3" x-show="messageCaptureWarnings.length > 0">
                     <template x-for="(warningText, index) in messageCaptureWarnings" :key="`capture-warning-${index}`">
                         <p class="text-sm font-semibold text-amber-800" x-text="warningText"></p>
                     </template>
-                </div>
-                <div x-show="messageCaptureVisibleCandidates().length > 0" class="rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3">
-                    <p class="text-sm font-extrabold text-slate-900">여기서 일정 고치기</p>
-                    <p class="mt-1 text-sm font-semibold text-slate-600">각 카드에서 제목, 메모, 날짜를 바로 손보면 됩니다.</p>
                 </div>
                 <div class="space-y-3">
                     <template x-for="candidate in messageCaptureVisibleCandidates()" :key="candidate.candidate_id">
@@ -280,7 +271,7 @@
             <div class="mx-auto max-w-3xl space-y-4 text-center" x-show="messageCaptureStep === 'done'">
                 <div class="rounded-3xl border border-emerald-200 bg-emerald-50 px-5 py-5">
                     <p class="text-lg font-black text-emerald-900" x-text="messageCaptureDoneTitle()"></p>
-                    <p class="mt-2 text-sm font-semibold text-emerald-800" x-text="messageCaptureSavedMessage || '메시지 보관함에서 다시 확인할 수 있어요.'"></p>
+                    <p class="mt-2 text-sm font-semibold text-emerald-800" x-text="messageCaptureSavedMessage || '저장되었습니다.'"></p>
                 </div>
                 <div x-show="messageCaptureSuccessMode === 'commit' && messageCaptureSavedEvents.length > 0" class="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left shadow-sm">
                     <p class="mb-3 text-sm font-extrabold text-slate-900">방금 저장한 일정</p>
@@ -292,7 +283,7 @@
                     </template>
                 </div>
                 <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                    <button type="button" @click="startAnotherMessageCapture()" class="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-bold text-slate-700">다른 안내문 넣기</button>
+                    <button type="button" @click="startAnotherMessageCapture()" class="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-bold text-slate-700">새 메시지</button>
                     <button type="button" @click="openMessageArchiveFromSuccess()" class="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-extrabold text-white">메시지 보관함 보기</button>
                 </div>
             </div>
@@ -331,7 +322,7 @@
 
                 <div x-ref="messageArchiveDetailPane" class="min-h-0 overflow-hidden rounded-[24px] border border-slate-200 bg-white">
                     <div x-show="isLoadingMessageArchiveDetail" class="flex items-center justify-center px-6 py-10 text-sm font-semibold text-slate-500">메모를 불러오는 중이에요.</div>
-                    <div x-show="!isLoadingMessageArchiveDetail && !messageArchiveSelectedCapture" class="flex items-center justify-center px-6 py-10 text-center text-sm font-semibold text-slate-500">왼쪽에서 메모를 선택하면 원문과 찾은 일정을 볼 수 있어요.</div>
+                    <div x-show="!isLoadingMessageArchiveDetail && !messageArchiveSelectedCapture" class="flex items-center justify-center px-6 py-10 text-center text-sm font-semibold text-slate-500">메모를 고르면 내용이 보입니다.</div>
                     <div x-show="!isLoadingMessageArchiveDetail && messageArchiveSelectedCapture" class="space-y-4 px-5 py-5 sm:px-6">
                         <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                             <p class="text-sm font-extrabold text-slate-900" x-text="messageArchiveSelectedCapture ? (messageArchiveSelectedCapture.summary_text || '저장된 메모') : ''"></p>

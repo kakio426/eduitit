@@ -13,7 +13,6 @@
                     </div>
                     <div class="space-y-2">
                         <h1 class="text-2xl md:text-3xl font-black text-slate-800">전담 시간표·특별실 배치 도우미</h1>
-                        <p class="text-slate-600">양식을 내려받아 작성한 뒤 올리면 점검과 자동 배치를 바로 진행합니다.</p>
                     </div>
                 </div>
                 <div class="flex flex-wrap gap-2">
@@ -37,7 +36,6 @@
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                         <h2 class="text-lg font-black text-slate-800">양식 받기</h2>
-                        <p class="mt-1 text-sm text-slate-600">필수 시트만 채우면 바로 점검할 수 있습니다.</p>
                     </div>
                     <a href="{% url 'timetable:download_template' %}"
                         class="inline-flex items-center justify-center w-full sm:w-auto px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 transition-colors">
@@ -59,7 +57,6 @@
                 <details class="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
                     <summary class="cursor-pointer text-sm font-bold text-slate-800">세부 조정용 시트 보기</summary>
                     <div class="mt-3">
-                        <p class="text-xs text-slate-500 mb-2">없어도 자동 배치는 가능합니다. 세밀 조정이 필요할 때만 작성하세요.</p>
                         <div class="flex flex-wrap gap-2">
                             {% for sheet_name in optional_sheet_names %}
                             <span class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">{{ sheet_name }}</span>
@@ -82,7 +79,6 @@
             <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
                 <div class="mb-4">
                     <h2 class="text-lg font-black text-slate-800">파일 올리기</h2>
-                    <p class="mt-1 text-sm text-slate-600">작성한 파일을 올리면 점검과 자동 배치를 바로 실행합니다.</p>
                 </div>
 
                 <form method="post" enctype="multipart/form-data" class="space-y-4">

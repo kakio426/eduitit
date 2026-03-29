@@ -650,12 +650,15 @@ class ManualPipelineApiTest(TestCase):
         self.assertContains(response, "런처 설치 / 다시 설치")
         self.assertContains(response, "설치파일 받기")
         self.assertContains(response, "설치 후 이 수업 시작")
+        self.assertContains(response, "상황별 정리")
         self.assertContains(response, "Bridge 0.2.0")
-        self.assertContains(response, "이미 런처를 설치했다면 이번 한 번은 새 설치파일로 다시 설치해 주세요. 이후부터는 자동 업데이트됩니다.")
-        self.assertContains(response, "수업 시작 전에 런처가 자동으로 업데이트를 마치고 같은 수업으로 다시 이어집니다.")
+        self.assertContains(response, "설치 후 브라우저를 다시 열고 초록 버튼을 누르세요.")
+        self.assertContains(response, "처음 설치")
+        self.assertContains(response, "기존 런처가 있으면 이번 한 번만 새 설치파일로 다시 설치하세요.")
+        self.assertContains(response, "그다음부터는 초록 버튼만 누르면 됩니다.")
         self.assertContains(response, "Windows 보호 화면이 나오면")
         self.assertContains(response, "추가 정보")
-        self.assertContains(response, "학교 PC 정책으로 실행이 막히면 관리자에게 런처 설치 허용을 요청하면 됩니다.")
+        self.assertContains(response, "학교 PC 정책으로 막히면 관리자에게 설치 허용을 요청하세요.")
         self.assertContains(response, "/artclass/classroom/14/?autostart_launcher=1")
 
     def test_launcher_release_manager_uploads_release_bundle_for_staff(self):
@@ -1135,23 +1138,24 @@ class ArtClassSetupEditTest(TestCase):
         self.assertContains(response, "오늘 바로 시작하는 미술 수업")
         self.assertContains(response, "런처로 수업 시작")
         self.assertContains(response, "응답 예시 보기")
-        self.assertContains(response, "저장하면 다음 화면에서 초록 버튼으로 바로 시작할 수 있어요.")
         self.assertContains(response, "저장 후 런처로 수업 시작")
-        self.assertContains(response, "실행이 안 되면 같은 안내 화면에서 설치와 다시 설치를 한 번에 진행할 수 있어요.")
         self.assertContains(response, "런처 설치 안내 보기")
-        self.assertContains(response, "수업 준비 팁")
+        self.assertContains(response, "활동지와 교사용 메모")
         self.assertNotContains(response, "브라우저로 시작")
         self.assertNotContains(response, "ArtClass는 이제 런처 한 가지 방식으로 시작합니다.")
         self.assertNotContains(response, "저장 후 이렇게 시작됩니다")
         self.assertNotContains(response, "처음이라면 이렇게 시작해 보세요")
         self.assertNotContains(response, "설치가 필요한 경우 보기")
         self.assertContains(response, "프롬프트 복사하고 제미나이 열기")
-        self.assertContains(response, "추천: 아래 파란 버튼 한 번이면 프롬프트를 복사하고 제미나이를 바로 엽니다.")
         self.assertContains(response, "프롬프트만 복사")
         self.assertContains(response, "수업 준비를 저장하고 있어요")
         self.assertContains(response, "이미지나 자료 파일이 있으면 업로드 때문에 조금 더 걸릴 수 있어요.")
         self.assertNotContains(response, "샘플 영상으로 체험하기")
         self.assertNotContains(response, "이번 한 번은 새 설치파일로 다시 설치해 주세요")
+        self.assertNotContains(response, "저장하면 다음 화면에서 초록 버튼으로 바로 시작할 수 있어요.")
+        self.assertNotContains(response, "수업 준비 팁")
+        self.assertNotContains(response, "실행이 안 되면 같은 안내 화면에서 설치와 다시 설치를 한 번에 진행할 수 있어요.")
+        self.assertNotContains(response, "추천: 아래 파란 버튼 한 번이면 프롬프트를 복사하고 제미나이를 바로 엽니다.")
 
     def test_legacy_setup_page_keeps_install_notice_off_main_flow_even_when_download_available(self):
         with patch.dict(
@@ -1449,10 +1453,11 @@ class ArtClassAutoMetadataTest(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "영상 주소 안내: 유튜브 주소만 넣어 주세요.")
+        self.assertContains(response, "수업에 쓸 유튜브 영상")
         self.assertContains(response, "외부 AI 서비스로 전송될 수 있습니다.")
         self.assertContains(response, "JPG, PNG, GIF, WEBP 파일만 가능하며 7MB 이하")
         self.assertContains(response, "PDF, HWP, HWPX / 최대 5개 / 파일당 20MB")
+        self.assertNotContains(response, "영상 주소 안내: 유튜브 주소만 넣어 주세요.")
 
     def test_setup_generates_auto_metadata_without_manual_title(self):
         response = self.client.post(
@@ -1710,14 +1715,14 @@ class ArtClassAutoMetadataTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, art_class.display_title)
         self.assertContains(response, "런처 시작")
-        self.assertContains(response, "초록 버튼을 누르면 영상과 수업 안내가 나뉘어 열립니다.")
+        self.assertContains(response, "초록 버튼으로 시작합니다.")
         self.assertContains(response, "자료 1개")
 
     def test_library_uses_single_install_guide_link(self):
         response = self.client.get(reverse("artclass:library"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "실행이 안 되면 보기")
+        self.assertContains(response, "설치 안내")
         self.assertContains(response, "설치 / 다시 설치 안내 열기")
         self.assertContains(response, reverse("artclass:launcher_install_guide"))
         self.assertNotContains(response, "설치파일 받기")
@@ -1739,7 +1744,7 @@ class ArtClassPresentationUxTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "런처 시작")
-        self.assertContains(response, "초록 버튼을 누르면 영상과 수업 안내가 나뉘어 열립니다.")
+        self.assertContains(response, "초록 버튼으로 시작합니다.")
         self.assertNotContains(response, "이번 한 번은 새 설치파일로 다시 설치해 주세요")
 
     def test_classroom_uses_single_install_guide_link(self):
@@ -1754,10 +1759,10 @@ class ArtClassPresentationUxTest(TestCase):
         response = self.client.get(reverse("artclass:classroom", kwargs={"pk": art_class.pk}))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "실행이 안 되면 보기")
+        self.assertContains(response, "설치 안내")
         self.assertContains(response, "설치 / 다시 설치 안내 열기")
-        self.assertContains(response, "안내 화면에서 설치를 마친 뒤 초록 버튼으로 다시 돌아오면 됩니다.")
         self.assertContains(response, reverse("artclass:launcher_install_guide"))
+        self.assertNotContains(response, "안내 화면에서 설치를 마친 뒤 초록 버튼으로 다시 돌아오면 됩니다.")
         self.assertNotContains(response, "설치파일 받기")
         self.assertNotContains(response, "Bridge 0.2.0")
         self.assertNotContains(response, "운영자용 런처 버전 올리기")
@@ -1777,7 +1782,7 @@ class ArtClassPresentationUxTest(TestCase):
         art_class.refresh_from_db()
         self.assertEqual(art_class.playback_mode, ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW)
         self.assertContains(response, "런처 시작")
-        self.assertContains(response, "초록 버튼을 누르면 영상과 수업 안내가 나뉘어 열립니다.")
+        self.assertContains(response, "초록 버튼으로 시작합니다.")
 
     def test_launcher_runtime_inlines_step_images_as_data_urls(self):
         art_class = ArtClass.objects.create(
