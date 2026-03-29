@@ -26,6 +26,7 @@ class UserProfile(models.Model):
         verbose_name="기본 학급",
     )
     pinned_notice_expanded = models.BooleanField(default=False, verbose_name="고정 공지 펼침 상태")
+    recent_reservation_school_ids = models.JSONField(default=list, blank=True, verbose_name="최근 연 학교 예약판")
 
     def __str__(self):
         return self.user.username

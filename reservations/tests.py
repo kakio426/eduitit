@@ -168,6 +168,50 @@ class ReservationsViewTest(TestCase):
             reverse('reservations:dashboard_landing'),
         )
 
+    def test_authenticated_public_link_is_saved_to_recent_history(self):
+        outsider = User.objects.create_user(username='recentoutsider', password='password2', email='recentoutsider@example.com')
+        outsider_profile, _ = UserProfile.objects.get_or_create(user=outsider)
+        outsider_profile.nickname = '최근교사'
+        outsider_profile.save(update_fields=['nickname'])
+
+        self.client.force_login(outsider)
+        self.client.get(reverse('reservations:reservation_index', args=[self.school.slug]))
+
+        outsider_profile.refresh_from_db()
+        self.assertEqual(outsider_profile.recent_reservation_school_ids, [self.school.id])
+
+    def test_smart_entry_redirects_recent_public_link_user_to_recent_school(self):
+        outsider = User.objects.create_user(username='smartrecent', password='password2', email='smartrecent@example.com')
+        outsider_profile, _ = UserProfile.objects.get_or_create(user=outsider)
+        outsider_profile.nickname = '기억교사'
+        outsider_profile.save(update_fields=['nickname'])
+
+        self.client.force_login(outsider)
+        self.client.get(reverse('reservations:reservation_index', args=[self.school.slug]))
+        response = self.client.get(reverse('reservations:smart_entry'))
+
+        self.assertRedirects(
+            response,
+            reverse('reservations:reservation_index', args=[self.school.slug]),
+        )
+
+    def test_dashboard_landing_shows_recent_public_reservation_boards(self):
+        outsider = User.objects.create_user(username='recentdashboard', password='password2', email='recentdashboard@example.com')
+        outsider_profile, _ = UserProfile.objects.get_or_create(user=outsider)
+        outsider_profile.nickname = '대시교사'
+        outsider_profile.save(update_fields=['nickname'])
+        second_school = School.objects.create(name='Second School', slug='second-school', owner=self.user)
+        SchoolConfig.objects.create(school=second_school)
+
+        self.client.force_login(outsider)
+        self.client.get(reverse('reservations:reservation_index', args=[self.school.slug]))
+        self.client.get(reverse('reservations:reservation_index', args=[second_school.slug]))
+        response = self.client.get(reverse('reservations:dashboard_landing'))
+
+        self.assertContains(response, '최근 열어본 예약판')
+        self.assertContains(response, 'Test School')
+        self.assertContains(response, 'Second School')
+
     def test_unshared_user_can_use_public_link(self):
         outsider = User.objects.create_user(username='outsider', password='password2', email='outsider@example.com')
         outsider_profile, _ = UserProfile.objects.get_or_create(user=outsider)

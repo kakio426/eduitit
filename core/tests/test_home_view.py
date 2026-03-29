@@ -2803,6 +2803,24 @@ class HomeV5ViewTest(TestCase):
         )
         self.assertContains(response, 'data-home-reservations-card="true"', html=False)
 
+    def test_v5_home_shows_recent_public_reservation_card_for_logged_in_user(self):
+        owner = _create_onboarded_user('v5recentowner')
+        user = self._login('v5recentreservation')
+        school = School.objects.create(name='최근예약초', slug='recent-school-home', owner=owner)
+        SchoolConfig.objects.create(school=school)
+
+        self.client.get(reverse('reservations:reservation_index', args=[school.slug]))
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('내 학교 예약', content)
+        self.assertIn('최근예약초', content)
+        self.assertIn('최근 사용', content)
+        self.assertIn(
+            reverse('reservations:reservation_index', args=['recent-school-home']),
+            content,
+        )
+
     def test_reservations_product_uses_smart_entry_for_authenticated_user(self):
         user = self._login('v5smartentry')
         reservations_product = Product.objects.create(

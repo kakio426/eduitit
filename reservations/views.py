@@ -20,7 +20,7 @@ from .models import (
     SchoolConfig,
     SpecialRoom,
 )
-from .utils import get_max_booking_date, resolve_user_reservation_entry_url
+from .utils import get_max_booking_date, list_user_accessible_schools, remember_recent_reservation_school, resolve_user_reservation_entry_url
 import logging
 
 logger = logging.getLogger(__name__)
@@ -289,13 +289,29 @@ def dashboard_landing(request):
     """
     사용자의 학교 목록을 보여주거나 새 학교 생성으로 안내
     """
-    # 사용자가 소유한 학교 목록 확인
-    user_schools = School.objects.filter(owner=request.user)
-    shared_school_relations = (
-        ReservationCollaborator.objects.filter(collaborator=request.user)
-        .select_related("school", "school__owner")
-        .order_by("school__name")
-    )
+    school_entries = list_user_accessible_schools(request.user)
+    user_schools = [
+        entry["school"]
+        for entry in school_entries
+        if entry["role"] == "owner"
+    ]
+    shared_schools = [
+        {
+            "school": entry["school"],
+            "can_edit": bool(entry["can_edit"]),
+            "owner_name": entry["owner_name"],
+        }
+        for entry in school_entries
+        if entry["role"] in {"edit", "view"}
+    ]
+    recent_schools = [
+        {
+            "school": entry["school"],
+            "summary": entry["summary"],
+        }
+        for entry in school_entries
+        if entry["role"] == "recent"
+    ]
     
     # 학교가 없거나 생성 요청(POST)인 경우 처리
     if request.method == 'POST':
@@ -326,14 +342,8 @@ def dashboard_landing(request):
         'reservations/landing.html',
         {
             'user_schools': user_schools,
-            'shared_schools': [
-                {
-                    "school": relation.school,
-                    "can_edit": bool(relation.can_edit),
-                    "owner_name": relation.school.owner.get_full_name() or relation.school.owner.username,
-                }
-                for relation in shared_school_relations
-            ],
+            'shared_schools': shared_schools,
+            'recent_schools': recent_schools,
         },
     )
     return _apply_sensitive_cache_headers(response)
@@ -686,6 +696,8 @@ def reservation_index(request, school_slug):
     school, access, access_response = _get_school_or_share_required(request, school_slug)
     if access_response is not None:
         return access_response
+    if request.user.is_authenticated and not request.headers.get("HX-Request"):
+        remember_recent_reservation_school(request.user, school)
     config, _ = SchoolConfig.objects.get_or_create(school=school)
     
     initial_open_reservation_id = request.GET.get('reservation')
@@ -837,6 +849,8 @@ def room_overview(request, school_slug):
     school, access, access_response = _get_school_or_share_required(request, school_slug)
     if access_response is not None:
         return access_response
+    if request.user.is_authenticated and not request.headers.get("HX-Request"):
+        remember_recent_reservation_school(request.user, school)
     config, _ = SchoolConfig.objects.get_or_create(school=school)
 
     from_str = request.GET.get('from')

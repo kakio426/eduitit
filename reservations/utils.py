@@ -2,7 +2,92 @@ from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta
 
+from core.models import UserProfile
 from .models import ReservationCollaborator, School
+
+RECENT_RESERVATION_SCHOOL_LIMIT = 6
+
+
+def _get_or_create_profile_for_user(user):
+    if not getattr(user, "is_authenticated", False):
+        return None
+    profile, _ = UserProfile.objects.get_or_create(user=user)
+    return profile
+
+
+def _normalize_recent_reservation_school_ids(raw_value):
+    normalized = []
+    seen_school_ids = set()
+    for value in raw_value if isinstance(raw_value, list) else []:
+        try:
+            school_id = int(value)
+        except (TypeError, ValueError):
+            continue
+        if school_id < 1 or school_id in seen_school_ids:
+            continue
+        normalized.append(school_id)
+        seen_school_ids.add(school_id)
+        if len(normalized) >= RECENT_RESERVATION_SCHOOL_LIMIT:
+            break
+    return normalized
+
+
+def _get_recent_reservation_school_ids_for_user(user):
+    profile = _get_or_create_profile_for_user(user)
+    if profile is None:
+        return None, []
+
+    school_ids = _normalize_recent_reservation_school_ids(profile.recent_reservation_school_ids)
+    if profile.recent_reservation_school_ids != school_ids:
+        profile.recent_reservation_school_ids = school_ids
+        profile.save(update_fields=["recent_reservation_school_ids"])
+    return profile, school_ids
+
+
+def remember_recent_reservation_school(user, school):
+    if not getattr(user, "is_authenticated", False) or school is None:
+        return []
+
+    profile, school_ids = _get_recent_reservation_school_ids_for_user(user)
+    if profile is None:
+        return []
+
+    next_school_ids = [school.id, *[school_id for school_id in school_ids if school_id != school.id]]
+    next_school_ids = next_school_ids[:RECENT_RESERVATION_SCHOOL_LIMIT]
+    if next_school_ids != school_ids:
+        profile.recent_reservation_school_ids = next_school_ids
+        profile.save(update_fields=["recent_reservation_school_ids"])
+    return next_school_ids
+
+
+def _build_recent_reservation_school_entries(user, *, exclude_school_ids=None):
+    profile, school_ids = _get_recent_reservation_school_ids_for_user(user)
+    if profile is None or not school_ids:
+        return []
+
+    school_map = School.objects.filter(id__in=school_ids).only("id", "name", "slug").in_bulk()
+    resolved_school_ids = [school_id for school_id in school_ids if school_id in school_map]
+    if resolved_school_ids != school_ids:
+        profile.recent_reservation_school_ids = resolved_school_ids
+        profile.save(update_fields=["recent_reservation_school_ids"])
+
+    excluded_ids = set(exclude_school_ids or ())
+    entries = []
+    for school_id in resolved_school_ids:
+        if school_id in excluded_ids:
+            continue
+        school = school_map[school_id]
+        entries.append({
+            "school": school,
+            "role": "recent",
+            "role_label": "최근 사용",
+            "role_tone": "amber",
+            "summary": "로그인 후 링크로 열어본 예약판",
+            "can_edit": True,
+            "owner_name": "",
+            "reservation_url": reverse("reservations:reservation_index", kwargs={"school_slug": school.slug}),
+        })
+    return entries
 
 
 def list_user_accessible_schools(user):
@@ -26,6 +111,7 @@ def list_user_accessible_schools(user):
             "role_tone": "violet",
             "summary": "내가 관리하는 예약판",
             "can_edit": True,
+            "owner_name": "",
             "reservation_url": reverse("reservations:reservation_index", kwargs={"school_slug": school.slug}),
         })
         seen_school_ids.add(school.id)
@@ -47,9 +133,17 @@ def list_user_accessible_schools(user):
             "role_tone": "emerald" if relation.can_edit else "slate",
             "summary": f"{owner_name} 선생님이 공유한 예약판",
             "can_edit": bool(relation.can_edit),
+            "owner_name": owner_name,
             "reservation_url": reverse("reservations:reservation_index", kwargs={"school_slug": school.slug}),
         })
         seen_school_ids.add(school.id)
+
+    entries.extend(
+        _build_recent_reservation_school_entries(
+            user,
+            exclude_school_ids=seen_school_ids,
+        )
+    )
 
     return entries
 

@@ -158,7 +158,7 @@
                         <div class="home-v5-mobile-panel-head">
                             <div>
                                 <h2 class="home-v5-mobile-panel-title">내 학교 예약</h2>
-                                <p class="mt-1 text-sm text-slate-500">로그인한 학교 예약판을 바로 엽니다.</p>
+                                <p class="mt-1 text-sm text-slate-500">공유된 학교와 최근 열어본 예약판을 바로 엽니다.</p>
                             </div>
                             <a
                                 href="{{ reservation_home_card.dashboard_url }}"
@@ -177,7 +177,7 @@
                                 <div class="min-w-0">
                                     <div class="flex flex-wrap items-center gap-2">
                                         <p class="text-sm font-black text-slate-900">{{ item.school_name }}</p>
-                                        <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold {% if item.role_tone == 'violet' %}bg-violet-100 text-violet-700{% elif item.role_tone == 'emerald' %}bg-emerald-100 text-emerald-700{% else %}bg-slate-200 text-slate-700{% endif %}">
+                                        <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold {% if item.role_tone == 'violet' %}bg-violet-100 text-violet-700{% elif item.role_tone == 'emerald' %}bg-emerald-100 text-emerald-700{% elif item.role_tone == 'amber' %}bg-amber-100 text-amber-700{% else %}bg-slate-200 text-slate-700{% endif %}">
                                             {{ item.role_label }}
                                         </span>
                                     </div>
@@ -328,7 +328,7 @@
                                             <i class="fa-solid fa-school text-indigo-500"></i>
                                             <h2 class="text-lg font-black text-slate-900">내 학교 예약</h2>
                                         </div>
-                                        <p class="text-sm text-slate-500">로그인한 학교 예약판으로 바로 들어갑니다.</p>
+                                        <p class="text-sm text-slate-500">공유된 학교와 최근 열어본 예약판으로 바로 들어갑니다.</p>
                                     </div>
                                     <a
                                         href="{{ reservation_home_card.dashboard_url }}"
@@ -348,7 +348,7 @@
                                         <div class="min-w-0">
                                             <div class="flex flex-wrap items-center gap-2">
                                                 <p class="text-sm font-black text-slate-900">{{ item.school_name }}</p>
-                                                <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold {% if item.role_tone == 'violet' %}bg-violet-100 text-violet-700{% elif item.role_tone == 'emerald' %}bg-emerald-100 text-emerald-700{% else %}bg-slate-200 text-slate-700{% endif %}">
+                                                <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold {% if item.role_tone == 'violet' %}bg-violet-100 text-violet-700{% elif item.role_tone == 'emerald' %}bg-emerald-100 text-emerald-700{% elif item.role_tone == 'amber' %}bg-amber-100 text-amber-700{% else %}bg-slate-200 text-slate-700{% endif %}">
                                                     {{ item.role_label }}
                                                 </span>
                                             </div>
