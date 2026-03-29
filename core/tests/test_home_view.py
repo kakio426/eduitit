@@ -3026,6 +3026,49 @@ class HomeV6ViewTest(TestCase):
             content,
         )
 
+    def test_v6_mobile_places_reservation_below_quickdrop_without_duplicate(self):
+        user = self._login('v6mobilequickdropreservation')
+        ProductFavorite.objects.create(user=user, product=self.favorite_product, pin_order=1)
+        quickdrop = Product.objects.create(
+            title='바로전송',
+            description='빠른 전송',
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='quickdrop:landing',
+            icon='fa-solid fa-bolt',
+        )
+        legacy_quickdrop = Product.objects.create(
+            title='바로전송',
+            description='이전 바로전송 링크',
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='qrgen:landing',
+            icon='fa-solid fa-link',
+        )
+        ProductFavorite.objects.create(user=user, product=quickdrop, pin_order=2)
+        ProductFavorite.objects.create(user=user, product=legacy_quickdrop, pin_order=3)
+        school = School.objects.create(name='로열예약초', slug='v6-mobile-reservation-school', owner=user)
+        SchoolConfig.objects.create(school=school)
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        workbench_index = content.index('data-home-v5-mobile-workbench="true"')
+        calendar_index = content.index('data-home-v5-mobile-calendar-panel="true"')
+        quickdrop_index = content.index('data-home-v4-mobile-quickdrop="true"')
+        reservation_index = content.index('data-home-reservations-card="true"')
+        sns_index = content.index('data-home-v5-mobile-sns="true"')
+        workbench_block = content[workbench_index:calendar_index]
+
+        self.assertEqual(response.context['home_design_version'], 'v6')
+        self.assertNotIn('title="바로전송">바로전송</p>', workbench_block)
+        self.assertEqual(content.count('data-home-v4-mobile-quickdrop="true"'), 1)
+        self.assertLess(workbench_index, calendar_index)
+        self.assertLess(calendar_index, quickdrop_index)
+        self.assertLess(quickdrop_index, reservation_index)
+        self.assertLess(reservation_index, sns_index)
+
     def test_v6_anonymous_home_loads_royal_luxe_public_override(self):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
