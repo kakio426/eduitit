@@ -592,6 +592,11 @@ def _build_setup_context(
     initial_playback_mode=None,
     setup_video_url="",
     setup_material_note=None,
+    setup_form_action_url="",
+    is_v2_review=False,
+    legacy_fallback_url="",
+    review_back_url="",
+    show_service_suggestion=True,
 ):
     initial_steps = initial_steps if initial_steps is not None else _build_initial_steps(art_class)
     selected_mode = ARTCLASS_PRIMARY_PLAYBACK_MODE
@@ -617,6 +622,12 @@ def _build_setup_context(
         'setup_video_url': video_url,
         'existing_material_attachments': _build_material_attachment_payloads(art_class),
         'setup_material_note': material_note,
+        'setup_form_action_url': setup_form_action_url,
+        'is_v2_review': is_v2_review,
+        'is_legacy_setup': not is_v2_review,
+        'legacy_fallback_url': legacy_fallback_url,
+        'review_back_url': review_back_url,
+        'show_service_suggestion': show_service_suggestion,
     }
     context.update(_build_launcher_template_context(request))
     return context
@@ -632,9 +643,7 @@ def _resolve_setup_title(posted_title, art_class):
     return (posted_title or "").strip()
 
 
-@ratelimit(key=ratelimit_key_for_master_only, rate='24/10m', method='POST', block=True, group='artclass_setup_submit')
-def setup_view(request, pk=None):
-    """Setup Page - 수업 준비 및 수정 페이지"""
+def _get_setup_art_class(request, pk=None):
     art_class = None
     if pk:
         art_class = get_object_or_404(ArtClass, pk=pk)
@@ -642,154 +651,301 @@ def setup_view(request, pk=None):
             if not request.user.is_authenticated:
                 return redirect_to_login(request.get_full_path())
             raise PermissionDenied("이 수업을 수정할 권한이 없습니다.")
-         
-    if request.method == 'POST':
-        video_url = (request.POST.get('videoUrl', '') or '').strip()
-        interval_default = art_class.default_interval if art_class else _default_step_interval()
-        interval, interval_corrected = _normalize_int_input(
-            request.POST.get('stepInterval'),
-            default=interval_default,
-            min_value=5,
-            max_value=3600,
+    return art_class
+
+
+def _build_video_flow_url(route_name, video_url):
+    trimmed = str(video_url or "").strip()
+    base_url = reverse(route_name)
+    if not trimmed:
+        return base_url
+    return f"{base_url}?{urlencode({'videoUrl': trimmed})}"
+
+
+def _render_legacy_setup_page(request, art_class=None, **kwargs):
+    form_action_url = (
+        reverse("artclass:legacy_setup_edit", kwargs={"pk": art_class.pk})
+        if art_class
+        else reverse("artclass:legacy_setup")
+    )
+    return _render_setup_page(
+        request,
+        art_class,
+        setup_form_action_url=form_action_url,
+        legacy_fallback_url=reverse("artclass:setup"),
+        show_service_suggestion=True,
+        **kwargs,
+    )
+
+
+def _render_v2_review_page(request, art_class=None, **kwargs):
+    kwargs = dict(kwargs)
+    video_url = kwargs.pop("setup_video_url", None)
+    if video_url is None:
+        video_url = art_class.youtube_url if art_class else ""
+
+    if art_class:
+        review_back_url = ""
+        legacy_fallback_url = reverse("artclass:legacy_setup_edit", kwargs={"pk": art_class.pk})
+        form_action_url = reverse("artclass:setup_edit", kwargs={"pk": art_class.pk})
+    else:
+        review_back_url = _build_video_flow_url("artclass:create_gemini", video_url)
+        legacy_fallback_url = reverse("artclass:legacy_setup")
+        form_action_url = reverse("artclass:create_review")
+
+    return _render_setup_page(
+        request,
+        art_class,
+        setup_video_url=video_url,
+        setup_form_action_url=form_action_url,
+        is_v2_review=True,
+        legacy_fallback_url=legacy_fallback_url,
+        review_back_url=review_back_url,
+        show_service_suggestion=False,
+        **kwargs,
+    )
+
+
+def _handle_setup_submission(request, art_class=None, *, render_invalid):
+    video_url = (request.POST.get('videoUrl', '') or '').strip()
+    interval_default = art_class.default_interval if art_class else _default_step_interval()
+    interval, interval_corrected = _normalize_int_input(
+        request.POST.get('stepInterval'),
+        default=interval_default,
+        min_value=5,
+        max_value=3600,
+    )
+    posted_title = request.POST.get('title')
+    title = _resolve_setup_title(posted_title, art_class)
+    playback_mode = ARTCLASS_PRIMARY_PLAYBACK_MODE
+    auto_corrected = interval_corrected
+    material_note = _normalize_material_note(request.POST.get("teacherMaterialNote"))
+    existing_attachments = list(art_class.attachments.all()) if art_class else []
+    existing_attachment_ids = {attachment.pk for attachment in existing_attachments}
+    deleted_attachment_ids = {
+        int(raw_id)
+        for raw_id in request.POST.getlist("delete_attachment_ids")
+        if str(raw_id).isdigit() and int(raw_id) in existing_attachment_ids
+    }
+    uploaded_attachments = [
+        uploaded
+        for uploaded in request.FILES.getlist("class_material_files")
+        if _normalize_attachment_name(getattr(uploaded, "name", ""))
+    ]
+
+    def invalid(message):
+        messages.error(request, message)
+        return render_invalid(
+            initial_steps=_build_posted_initial_steps(request, art_class),
+            setup_video_url=video_url,
+            setup_material_note=material_note,
         )
-        posted_title = request.POST.get('title')
-        title = _resolve_setup_title(posted_title, art_class)
-        playback_mode = ARTCLASS_PRIMARY_PLAYBACK_MODE
-        auto_corrected = interval_corrected
-        material_note = _normalize_material_note(request.POST.get("teacherMaterialNote"))
-        existing_attachments = list(art_class.attachments.all()) if art_class else []
-        existing_attachment_ids = {attachment.pk for attachment in existing_attachments}
-        deleted_attachment_ids = {
-            int(raw_id)
-            for raw_id in request.POST.getlist("delete_attachment_ids")
-            if str(raw_id).isdigit() and int(raw_id) in existing_attachment_ids
+
+    if not _is_allowed_youtube_url(video_url):
+        return invalid("유효한 유튜브 주소만 사용할 수 있어요. 유튜브 영상 링크를 다시 확인해 주세요.")
+
+    if len(material_note) > ARTCLASS_MAX_MATERIAL_NOTE_LENGTH:
+        return invalid("교사용 자료 활용 메모는 4000자 이하로 적어 주세요.")
+
+    kept_attachment_count = len(existing_attachments) - len(deleted_attachment_ids)
+    if kept_attachment_count + len(uploaded_attachments) > ARTCLASS_MAX_ATTACHMENTS:
+        return invalid("수업 자료는 한 수업에 최대 5개까지 올릴 수 있어요.")
+
+    for key, uploaded_image in request.FILES.items():
+        if not STEP_FORM_INDEX_RE.match(key):
+            continue
+        image_error = _validate_step_image(uploaded_image)
+        if image_error:
+            return invalid(image_error)
+
+    for uploaded_attachment in uploaded_attachments:
+        attachment_error = _validate_material_attachment(uploaded_attachment)
+        if attachment_error:
+            return invalid(attachment_error)
+
+    step_indexes, step_input_corrected = _resolve_step_indexes(request)
+    auto_corrected = auto_corrected or step_input_corrected
+
+    existing_step_image_names = {}
+    if art_class and art_class.pk:
+        existing_step_image_names = {
+            step.pk: step.image.name
+            for step in art_class.steps.all()
+            if step.image
         }
-        uploaded_attachments = [
-            uploaded
-            for uploaded in request.FILES.getlist("class_material_files")
-            if _normalize_attachment_name(getattr(uploaded, "name", ""))
-        ]
 
-        def render_postback():
-            return _render_setup_page(
-                request,
-                art_class,
-                initial_steps=_build_posted_initial_steps(request, art_class),
-                initial_playback_mode=playback_mode,
-                setup_video_url=video_url,
-                setup_material_note=material_note,
-            )
+    raw_step_payloads = []
+    for step_index in step_indexes:
+        description = request.POST.get(f'step_text_{step_index}', '')
+        uploaded_image = request.FILES.get(f'step_image_{step_index}')
+        image_value = uploaded_image
 
-        if not _is_allowed_youtube_url(video_url):
-            messages.error(request, "유효한 유튜브 주소만 사용할 수 있어요. 유튜브 영상 링크를 다시 확인해 주세요.")
-            return render_postback()
+        if not image_value:
+            existing_step_id_raw = (request.POST.get(f'step_existing_id_{step_index}') or '').strip()
+            if existing_step_id_raw.isdigit():
+                existing_step_id = int(existing_step_id_raw)
+                image_value = existing_step_image_names.get(existing_step_id)
 
-        if len(material_note) > ARTCLASS_MAX_MATERIAL_NOTE_LENGTH:
-            messages.error(request, "교사용 자료 활용 메모는 4000자 이하로 적어 주세요.")
-            return render_postback()
-
-        kept_attachment_count = len(existing_attachments) - len(deleted_attachment_ids)
-        if kept_attachment_count + len(uploaded_attachments) > ARTCLASS_MAX_ATTACHMENTS:
-            messages.error(request, "수업 자료는 한 수업에 최대 5개까지 올릴 수 있어요.")
-            return render_postback()
-
-        for key, uploaded_image in request.FILES.items():
-            if not STEP_FORM_INDEX_RE.match(key):
-                continue
-            image_error = _validate_step_image(uploaded_image)
-            if image_error:
-                messages.error(request, image_error)
-                return render_postback()
-
-        for uploaded_attachment in uploaded_attachments:
-            attachment_error = _validate_material_attachment(uploaded_attachment)
-            if attachment_error:
-                messages.error(request, attachment_error)
-                return render_postback()
-        
-        if art_class:
-            # 기존 수업 수정
-            art_class.title = title
-            art_class.youtube_url = video_url
-            art_class.default_interval = interval
-            art_class.playback_mode = playback_mode
-            art_class.teacher_material_note = material_note
-            art_class.save()
-        else:
-            # 새 수업 생성
-            art_class = ArtClass.objects.create(
-                title=title,
-                youtube_url=video_url,
-                default_interval=interval,
-                playback_mode=playback_mode,
-                created_by=request.user if request.user.is_authenticated else None,
-                teacher_material_note=material_note,
-            )
-
-        existing_step_image_names = {}
-        if art_class.pk:
-            existing_step_image_names = {
-                step.pk: step.image.name
-                for step in art_class.steps.all()
-                if step.image
+        raw_step_payloads.append(
+            {
+                'description': description,
+                'image': image_value,
             }
+        )
 
-        # Steps 처리
-        step_indexes, step_input_corrected = _resolve_step_indexes(request)
-        auto_corrected = auto_corrected or step_input_corrected
-        step_payloads = []
-        for step_number, step_index in enumerate(step_indexes, start=1):
-            description = request.POST.get(f'step_text_{step_index}', '')
-            uploaded_image = request.FILES.get(f'step_image_{step_index}')
-            image_value = uploaded_image
+    step_payloads = [
+        payload
+        for payload in raw_step_payloads
+        if str(payload.get("description") or "").strip()
+    ]
 
-            if not image_value:
-                existing_step_id_raw = (request.POST.get(f'step_existing_id_{step_index}') or '').strip()
-                if existing_step_id_raw.isdigit():
-                    existing_step_id = int(existing_step_id_raw)
-                    image_value = existing_step_image_names.get(existing_step_id)
+    if not step_payloads:
+        return invalid("단계를 한 개 이상 만들어 주세요.")
 
-            step_payloads.append(
-                {
-                    'step_number': step_number,
-                    'description': description,
-                    'image': image_value,
-                }
-            )
+    if art_class:
+        art_class.title = title
+        art_class.youtube_url = video_url
+        art_class.default_interval = interval
+        art_class.playback_mode = playback_mode
+        art_class.teacher_material_note = material_note
+        art_class.save()
+    else:
+        art_class = ArtClass.objects.create(
+            title=title,
+            youtube_url=video_url,
+            default_interval=interval,
+            playback_mode=playback_mode,
+            created_by=request.user if request.user.is_authenticated else None,
+            teacher_material_note=material_note,
+        )
 
-        if art_class.pk:
-            # 기존 단계는 새 payload로 교체하되, 재업로드하지 않은 이미지는 유지한다.
-            art_class.steps.all().delete()
+    if art_class.pk:
+        art_class.steps.all().delete()
 
-        for payload in step_payloads:
-            ArtStep.objects.create(
-                art_class=art_class,
-                step_number=payload['step_number'],
-                description=payload['description'],
-                image=payload['image'],
-            )
+    for step_number, payload in enumerate(step_payloads, start=1):
+        ArtStep.objects.create(
+            art_class=art_class,
+            step_number=step_number,
+            description=payload['description'],
+            image=payload['image'],
+        )
 
-        if deleted_attachment_ids:
-            art_class.attachments.filter(pk__in=deleted_attachment_ids).delete()
+    if deleted_attachment_ids:
+        art_class.attachments.filter(pk__in=deleted_attachment_ids).delete()
 
-        next_sort_order = art_class.attachments.aggregate(max_sort=Max("sort_order")).get("max_sort") or 0
-        for offset, uploaded_attachment in enumerate(uploaded_attachments, start=1):
-            ArtClassAttachment.objects.create(
-                art_class=art_class,
-                file=uploaded_attachment,
-                original_name=_normalize_attachment_name(uploaded_attachment.name),
-                sort_order=next_sort_order + offset,
-            )
+    next_sort_order = art_class.attachments.aggregate(max_sort=Max("sort_order")).get("max_sort") or 0
+    for offset, uploaded_attachment in enumerate(uploaded_attachments, start=1):
+        ArtClassAttachment.objects.create(
+            art_class=art_class,
+            file=uploaded_attachment,
+            original_name=_normalize_attachment_name(uploaded_attachment.name),
+            sort_order=next_sort_order + offset,
+        )
 
-        apply_auto_metadata(art_class)
+    apply_auto_metadata(art_class)
 
-        if auto_corrected:
-            messages.info(request, "입력 일부를 자동 보정했습니다. 그대로 시작 가능합니다.")
-         
-        classroom_url = _build_launcher_autostart_url(art_class)
-        return redirect(classroom_url)
-    
-    return _render_setup_page(request, art_class)
+    if auto_corrected:
+        messages.info(request, "입력 일부를 자동 보정했습니다. 그대로 시작 가능합니다.")
+
+    return redirect(_build_launcher_autostart_url(art_class))
+
+
+def setup_view(request):
+    return render(
+        request,
+        "artclass/setup_home.html",
+        {
+            "create_url": reverse("artclass:create_url"),
+            "library_url": reverse("artclass:library"),
+            "legacy_setup_url": reverse("artclass:legacy_setup"),
+        },
+    )
+
+
+def create_url_view(request):
+    setup_video_url = (request.GET.get("videoUrl") or "").strip()
+    if request.method == "POST":
+        setup_video_url = (request.POST.get("videoUrl") or "").strip()
+        if not _is_allowed_youtube_url(setup_video_url):
+            messages.error(request, "유효한 유튜브 주소만 사용할 수 있어요. 유튜브 영상 링크를 다시 확인해 주세요.")
+        else:
+            return redirect(_build_video_flow_url("artclass:create_gemini", setup_video_url))
+
+    return render(
+        request,
+        "artclass/setup_url.html",
+        {
+            "setup_video_url": setup_video_url,
+            "legacy_setup_url": reverse("artclass:legacy_setup"),
+        },
+    )
+
+
+def create_gemini_view(request):
+    video_url = (request.GET.get("videoUrl") or "").strip()
+    if not _is_allowed_youtube_url(video_url):
+        messages.error(request, "먼저 유효한 유튜브 주소를 입력해 주세요.")
+        return redirect("artclass:create_url")
+
+    return render(
+        request,
+        "artclass/setup_gemini.html",
+        {
+            "setup_video_url": video_url,
+            "manual_prompt_template": build_manual_pipeline_prompt(video_url),
+            "legacy_setup_url": reverse("artclass:legacy_setup"),
+            "review_url": _build_video_flow_url("artclass:create_review", video_url),
+            "url_step_url": _build_video_flow_url("artclass:create_url", video_url),
+        },
+    )
+
+
+@ratelimit(key=ratelimit_key_for_master_only, rate='24/10m', method='POST', block=True, group='artclass_setup_submit')
+def create_review_view(request):
+    if request.method == "POST":
+        return _handle_setup_submission(
+            request,
+            None,
+            render_invalid=lambda **kwargs: _render_v2_review_page(request, None, **kwargs),
+        )
+
+    video_url = (request.GET.get("videoUrl") or "").strip()
+    if not _is_allowed_youtube_url(video_url):
+        messages.error(request, "먼저 유효한 유튜브 주소를 입력해 주세요.")
+        return redirect("artclass:create_url")
+    return _render_v2_review_page(request, None, setup_video_url=video_url)
+
+
+@ratelimit(key=ratelimit_key_for_master_only, rate='24/10m', method='POST', block=True, group='artclass_setup_submit')
+def legacy_setup_view(request, pk=None):
+    art_class = _get_setup_art_class(request, pk)
+    if hasattr(art_class, "status_code"):
+        return art_class
+
+    if request.method == "POST":
+        return _handle_setup_submission(
+            request,
+            art_class,
+            render_invalid=lambda **kwargs: _render_legacy_setup_page(request, art_class, **kwargs),
+        )
+
+    return _render_legacy_setup_page(request, art_class)
+
+
+@ratelimit(key=ratelimit_key_for_master_only, rate='24/10m', method='POST', block=True, group='artclass_setup_submit')
+def setup_edit_view(request, pk):
+    art_class = _get_setup_art_class(request, pk)
+    if hasattr(art_class, "status_code"):
+        return art_class
+
+    if request.method == "POST":
+        return _handle_setup_submission(
+            request,
+            art_class,
+            render_invalid=lambda **kwargs: _render_v2_review_page(request, art_class, **kwargs),
+        )
+
+    return _render_v2_review_page(request, art_class)
 
 
 def classroom_view(request, pk):

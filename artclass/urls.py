@@ -5,7 +5,12 @@ app_name = 'artclass'
 
 urlpatterns = [
     path('', views.setup_view, name='setup'),
-    path('setup/<int:pk>/', views.setup_view, name='setup_edit'),
+    path('create/', views.create_url_view, name='create_url'),
+    path('create/gemini/', views.create_gemini_view, name='create_gemini'),
+    path('create/review/', views.create_review_view, name='create_review'),
+    path('setup/<int:pk>/', views.setup_edit_view, name='setup_edit'),
+    path('legacy/', views.legacy_setup_view, name='legacy_setup'),
+    path('legacy/setup/<int:pk>/', views.legacy_setup_view, name='legacy_setup_edit'),
     path('setup/from-library/<int:pk>/', views.clone_for_edit_view, name='setup_clone'),
     path('launcher-install/', views.launcher_install_guide_view, name='launcher_install_guide'),
     path('launcher-release-manager/', views.launcher_release_manager_view, name='launcher_release_manager'),

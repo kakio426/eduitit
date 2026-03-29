@@ -40,6 +40,12 @@
                     class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-[1.4rem] bg-purple-600 text-white text-base font-black shadow-lg shadow-purple-200 hover:bg-purple-700 transition-all">
                     <i class="fa-solid fa-plus"></i> 새 수업 만들기
                 </a>
+                <div>
+                    <a href="{% url 'artclass:legacy_setup' %}"
+                        class="inline-flex items-center gap-2 text-sm font-black text-slate-500 underline-offset-4 hover:text-slate-800 hover:underline">
+                        <i class="fa-solid fa-rotate-left text-xs"></i> 기존 한 화면 버전 열기
+                    </a>
+                </div>
             </div>
 
             <form method="GET" class="w-full md:w-[34rem] space-y-3">

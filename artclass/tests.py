@@ -18,7 +18,7 @@ from .launcher_release import (
     parse_latest_yml_text,
     upload_launcher_release_bundle,
 )
-from .manual_pipeline import ManualPipelineError, parse_manual_pipeline_result
+from .manual_pipeline import ManualPipelineError, build_manual_pipeline_prompt, parse_manual_pipeline_result
 from .models import ArtClass, ArtClassAttachment, ArtStep
 
 User = get_user_model()
@@ -1014,6 +1014,61 @@ class ArtClassDeleteTest(TestCase):
         self.assertTrue(ArtClass.objects.filter(pk=self.art_class.pk).exists())
 
 
+class ArtClassV2SetupFlowTest(TestCase):
+    def test_setup_route_renders_v2_home_and_links(self):
+        response = self.client.get(reverse("artclass:setup"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "순서대로 따라가며 미술 수업을 만듭니다")
+        self.assertContains(response, reverse("artclass:create_url"))
+        self.assertContains(response, reverse("artclass:library"))
+        self.assertContains(response, reverse("artclass:legacy_setup"))
+
+    def test_library_keeps_legacy_setup_fallback_link(self):
+        response = self.client.get(reverse("artclass:library"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse("artclass:setup"))
+        self.assertContains(response, reverse("artclass:legacy_setup"))
+        self.assertContains(response, "기존 한 화면 버전 열기")
+
+    def test_create_url_post_redirects_to_gemini_step(self):
+        video_url = "https://www.youtube.com/watch?v=2bBhnfh4StU"
+
+        response = self.client.post(reverse("artclass:create_url"), data={"videoUrl": video_url})
+
+        self.assertRedirects(response, f"{reverse('artclass:create_gemini')}?videoUrl=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3D2bBhnfh4StU")
+
+    def test_create_gemini_uses_existing_prompt_template(self):
+        video_url = "https://www.youtube.com/watch?v=2bBhnfh4StU"
+
+        response = self.client.get(reverse("artclass:create_gemini"), data={"videoUrl": video_url})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "복사하고 제미나이 열기")
+        self.assertEqual(response.context["manual_prompt_template"], build_manual_pipeline_prompt(video_url))
+
+    def test_create_review_requires_valid_video_url_on_get(self):
+        response = self.client.get(reverse("artclass:create_review"))
+
+        self.assertRedirects(response, reverse("artclass:create_url"))
+
+    def test_create_review_requires_at_least_one_step(self):
+        response = self.client.post(
+            reverse("artclass:create_review"),
+            data={
+                "videoUrl": "https://www.youtube.com/watch?v=2bBhnfh4StU",
+                "stepInterval": "12",
+                "teacherMaterialNote": "자료 설명",
+                "step_count": "0",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "단계를 한 개 이상 만들어 주세요.")
+        self.assertEqual(ArtClass.objects.count(), 0)
+
+
 class ArtClassSetupEditTest(TestCase):
     def setUp(self):
         self.owner = User.objects.create_user(
@@ -1073,8 +1128,8 @@ class ArtClassSetupEditTest(TestCase):
         self.assertIn('id="artclassInitialSteps"', body)
         self.assertIn(r'\u003C/script\u003E\u003Cscript\u003Ealert(1)\u003C/script\u003E', body)
 
-    def test_setup_page_uses_beginner_friendly_gemini_copy(self):
-        response = self.client.get(reverse("artclass:setup"))
+    def test_legacy_setup_page_uses_beginner_friendly_gemini_copy(self):
+        response = self.client.get(reverse("artclass:legacy_setup"))
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "오늘 바로 시작하는 미술 수업")
@@ -1098,7 +1153,7 @@ class ArtClassSetupEditTest(TestCase):
         self.assertNotContains(response, "샘플 영상으로 체험하기")
         self.assertNotContains(response, "이번 한 번은 새 설치파일로 다시 설치해 주세요")
 
-    def test_setup_page_keeps_install_notice_off_main_flow_even_when_download_available(self):
+    def test_legacy_setup_page_keeps_install_notice_off_main_flow_even_when_download_available(self):
         with patch.dict(
             os.environ,
             {
@@ -1107,7 +1162,7 @@ class ArtClassSetupEditTest(TestCase):
             },
             clear=False,
         ):
-            response = self.client.get(reverse("artclass:setup"))
+            response = self.client.get(reverse("artclass:legacy_setup"))
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "런처 설치 안내 보기")
@@ -1115,8 +1170,11 @@ class ArtClassSetupEditTest(TestCase):
         self.assertNotContains(response, "이미 런처를 설치했다면 이번 한 번은 새 설치파일로 다시 설치해 주세요. 이후부터는 자동 업데이트됩니다.")
         self.assertNotContains(response, "런처 설치파일 다운로드")
 
-    def test_setup_page_uses_gemini_example_without_sample_shortcut(self):
-        response = self.client.get(reverse("artclass:setup"))
+    def test_create_review_uses_gemini_example_without_sample_shortcut(self):
+        response = self.client.get(
+            reverse("artclass:create_review"),
+            data={"videoUrl": "https://www.youtube.com/watch?v=2bBhnfh4StU"},
+        )
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("gemini_example_result", response.context)
@@ -1285,7 +1343,7 @@ class ArtClassAutoMetadataTest(TestCase):
 
     def test_setup_rejects_non_youtube_url_and_preserves_posted_steps(self):
         response = self.client.post(
-            reverse("artclass:setup"),
+            reverse("artclass:create_review"),
             data={
                 "videoUrl": "http://127.0.0.1:8000/private",
                 "stepInterval": "12",
@@ -1304,7 +1362,7 @@ class ArtClassAutoMetadataTest(TestCase):
         upload = SimpleUploadedFile("step.txt", b"hello", content_type="text/plain")
 
         response = self.client.post(
-            reverse("artclass:setup"),
+            reverse("artclass:create_review"),
             data={
                 "videoUrl": "https://www.youtube.com/watch?v=2bBhnfh4StU",
                 "stepInterval": "12",
@@ -1323,7 +1381,7 @@ class ArtClassAutoMetadataTest(TestCase):
         upload = make_test_material_upload("guide.txt", content_type="text/plain")
 
         response = self.client.post(
-            reverse("artclass:setup"),
+            reverse("artclass:create_review"),
             data={
                 "videoUrl": "https://www.youtube.com/watch?v=2bBhnfh4StU",
                 "stepInterval": "12",
@@ -1343,7 +1401,7 @@ class ArtClassAutoMetadataTest(TestCase):
         uploads = [make_test_material_upload(f"sheet{index}.pdf") for index in range(6)]
 
         response = self.client.post(
-            reverse("artclass:setup"),
+            reverse("artclass:create_review"),
             data={
                 "videoUrl": "https://www.youtube.com/watch?v=2bBhnfh4StU",
                 "stepInterval": "12",
@@ -1360,7 +1418,7 @@ class ArtClassAutoMetadataTest(TestCase):
 
     def test_setup_saves_material_attachments_and_note(self):
         response = self.client.post(
-            reverse("artclass:setup"),
+            reverse("artclass:create_review"),
             data={
                 "videoUrl": "https://www.youtube.com/watch?v=2bBhnfh4StU",
                 "stepInterval": "12",
@@ -1385,7 +1443,10 @@ class ArtClassAutoMetadataTest(TestCase):
         )
 
     def test_setup_page_shows_input_guardrails(self):
-        response = self.client.get(reverse("artclass:setup"))
+        response = self.client.get(
+            reverse("artclass:create_review"),
+            data={"videoUrl": "https://www.youtube.com/watch?v=2bBhnfh4StU"},
+        )
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "영상 주소 안내: 유튜브 주소만 넣어 주세요.")
@@ -1395,7 +1456,7 @@ class ArtClassAutoMetadataTest(TestCase):
 
     def test_setup_generates_auto_metadata_without_manual_title(self):
         response = self.client.post(
-            reverse("artclass:setup"),
+            reverse("artclass:create_review"),
             data={
                 "videoUrl": "https://www.youtube.com/watch?v=2bBhnfh4StU",
                 "stepInterval": "12",
@@ -1417,7 +1478,7 @@ class ArtClassAutoMetadataTest(TestCase):
 
     def test_setup_accepts_invalid_step_interval_with_default(self):
         response = self.client.post(
-            reverse("artclass:setup"),
+            reverse("artclass:create_review"),
             data={
                 "videoUrl": "https://www.youtube.com/watch?v=2bBhnfh4StU",
                 "stepInterval": "abc",
@@ -1434,7 +1495,7 @@ class ArtClassAutoMetadataTest(TestCase):
 
     def test_setup_recovers_steps_without_step_count(self):
         response = self.client.post(
-            reverse("artclass:setup"),
+            reverse("artclass:create_review"),
             data={
                 "videoUrl": "https://www.youtube.com/watch?v=2bBhnfh4StU",
                 "stepInterval": "12",
@@ -1455,7 +1516,7 @@ class ArtClassAutoMetadataTest(TestCase):
 
     def test_setup_recovers_steps_when_step_count_is_invalid(self):
         response = self.client.post(
-            reverse("artclass:setup"),
+            reverse("artclass:create_review"),
             data={
                 "videoUrl": "https://www.youtube.com/watch?v=UFQT5Wtamw0",
                 "stepInterval": "12",
@@ -1476,7 +1537,7 @@ class ArtClassAutoMetadataTest(TestCase):
         mock_fetch_title.return_value = "삼각 이름표 만들기"
 
         response = self.client.post(
-            reverse("artclass:setup"),
+            reverse("artclass:create_review"),
             data={
                 "videoUrl": "https://www.youtube.com/watch?v=UFQT5Wtamw0",
                 "stepInterval": "12",
