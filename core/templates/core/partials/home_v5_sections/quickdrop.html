@@ -1,0 +1,57 @@
+{% if section.surface == 'mobile' %}
+{% include 'core/partials/home_v4_mobile_quickdrop_card.html' with quickdrop_placement='' include_classcalendar_margin=False %}
+{% else %}
+<section class="home-v4-card home-v4-quickdrop-panel" data-home-v4-quickdrop-panel="true">
+    <div class="home-v4-quickdrop-head">
+        <div class="home-v4-quickdrop-icon" aria-hidden="true">↔</div>
+        <div class="min-w-0">
+            <h2 class="text-lg font-black text-slate-900">{{ quickdrop_home_card.title }}</h2>
+        </div>
+    </div>
+    <p
+        class="home-v4-quickdrop-summary"
+        data-initial-summary="{{ quickdrop_home_card.summary|default:'' }}"
+        x-show="typeof quickdropHomeHasSummary === 'function' ? quickdropHomeHasSummary($el.dataset.initialSummary || '') : !!($el.dataset.initialSummary || '')"
+        x-text="typeof quickdropHomeSummaryText === 'function' ? quickdropHomeSummaryText($el.dataset.initialSummary || '') : ($el.dataset.initialSummary || '')"
+        {% if not quickdrop_home_card.has_recent_item %}style="display:none;"{% endif %}
+    >{{ quickdrop_home_card.summary|default:'' }}</p>
+    {% if home_design_version == 'v6' %}
+    <form
+        method="post"
+        action="{{ quickdrop_home_card.send_text_url }}"
+        class="home-v4-quickdrop-form"
+        data-home-v4-quickdrop-form="true"
+        @submit.prevent="typeof submitQuickdropHomeText === 'function' ? submitQuickdropHomeText($event) : $event.target.submit()"
+    >
+        {% csrf_token %}
+        <textarea
+            name="text"
+            x-model="quickdropHomeDraftText"
+            rows="4"
+            class="home-v4-quickdrop-textarea"
+            aria-label="보낼 내용"
+            placeholder="예) 회의 링크, 메모, 주소"
+        ></textarea>
+        <p
+            class="home-v4-quickdrop-error"
+            style="display:none;"
+            x-show="quickdropHomeErrorText"
+            x-text="quickdropHomeErrorText"
+        ></p>
+        <div class="home-v4-quickdrop-actions" data-home-v4-quickdrop-actions="true">
+            <button
+                type="submit"
+                class="home-v4-quickdrop-primary"
+                :disabled="isSendingQuickdropHomeText"
+            >지금 보내기</button>
+            <a href="{{ quickdrop_home_card.manage_url }}" class="home-v4-quickdrop-secondary">새 기기 연결</a>
+        </div>
+    </form>
+    {% else %}
+    <div class="home-v4-quickdrop-actions" data-home-v4-quickdrop-actions="true">
+        <a href="{{ quickdrop_home_card.open_url }}" class="home-v4-quickdrop-primary">바로 열기</a>
+        <a href="{{ quickdrop_home_card.manage_url }}" class="home-v4-quickdrop-secondary">새 기기 연결</a>
+    </div>
+    {% endif %}
+</section>
+{% endif %}
