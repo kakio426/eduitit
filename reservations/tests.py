@@ -211,6 +211,18 @@ class ReservationsViewTest(TestCase):
         self.assertContains(response, '최근 열어본 예약판')
         self.assertContains(response, 'Test School')
         self.assertContains(response, 'Second School')
+        self.assertContains(response, '학교 예약')
+        self.assertNotContains(response, '학교 예약 시스템')
+        self.assertNotContains(response, '내 학교 목록')
+
+    def test_dashboard_landing_uses_short_owner_labels(self):
+        response = self.client.get(reverse('reservations:dashboard_landing'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '학교 예약')
+        self.assertContains(response, '내 학교')
+        self.assertNotContains(response, '학교 예약 시스템')
+        self.assertNotContains(response, '내 학교 목록')
 
     def test_unshared_user_can_use_public_link(self):
         outsider = User.objects.create_user(username='outsider', password='password2', email='outsider@example.com')
@@ -600,6 +612,8 @@ class ReservationsViewTest(TestCase):
         self.assertContains(response, '복사에 실패했습니다. 다시 시도해 주세요.')
         self.assertContains(response, '공유할 선생님 추가')
         self.assertContains(response, '로그인 없이도 열리는 주소입니다.')
+        self.assertContains(response, '학교 목록')
+        self.assertNotContains(response, '내 학교 목록')
 
     def test_admin_delete_reservation(self):
         reservation = Reservation.objects.create(
