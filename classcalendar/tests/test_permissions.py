@@ -153,11 +153,12 @@ class PermissionTest(TestCase):
         self.assertEqual(response.context["calendar_embed_mode"], "page")
         self.assertEqual(response.context["calendar_center_url"], reverse("classcalendar:center"))
         self.assertIn('data-classcalendar-center="true"', content)
+        self.assertIn('data-classcalendar-center-layout="true"', content)
+        self.assertIn('data-classcalendar-search-priority="false"', content)
         self.assertIn('data-classcalendar-agenda-panel="true"', content)
         self.assertIn('id="calendar-search"', content)
-        self.assertIn("교사용 일정 센터", content)
-        self.assertIn("월간 보기와 일정 목록을 한 화면에서 확인하세요.", content)
-        self.assertIn("getAgendaScopeHelperText()", agenda_panel)
+        self.assertIn("전체 일정", content)
+        self.assertIn("일정 찾기", agenda_panel)
         self.assertIn("@click.prevent.stop=\"setAgendaScope('today')\"", agenda_panel)
         self.assertIn("@click.prevent.stop=\"setAgendaScope('week')\"", agenda_panel)
         self.assertIn("@click.prevent.stop=\"setAgendaScope('month')\"", agenda_panel)
@@ -179,10 +180,26 @@ class PermissionTest(TestCase):
         self.assertNotIn("할 일만", agenda_panel)
         self.assertNotIn("x-text=\"`${section.items.length}건`\"", agenda_panel)
         self.assertNotIn("getAgendaItemStatusText(item)", agenda_panel)
+        self.assertNotIn("교사용 일정 센터", content)
+        self.assertNotIn("월간 보기와 일정 목록을 한 화면에서 확인하세요.", content)
+        self.assertNotIn("getAgendaScopeHelperText()", content)
+        self.assertNotIn("월간 보기에서 날짜를 고르거나 검색어를 바꾸면 결과가 바로 갱신됩니다.", content)
         self.assertNotIn("오늘 예정", agenda_panel)
         self.assertNotIn("지난 일정", agenda_panel)
         self.assertNotIn("예정", agenda_panel)
         self.assertNotIn("열기", agenda_panel)
+
+    def test_center_view_focus_search_prioritizes_agenda_panel_on_mobile_layout(self):
+        response = self.client_teacher.get(f"{reverse('classcalendar:center')}?focus_search=1")
+        content = response.content.decode("utf-8")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["initial_focus_search"])
+        self.assertIn('data-classcalendar-center-layout="true"', content)
+        self.assertIn('data-classcalendar-search-priority="true"', content)
+        self.assertIn("classcalendar-center-layout--search-priority", content)
+        self.assertIn("classcalendar-center-month-wrap", content)
+        self.assertIn("scrollTarget.scrollIntoView({ block: 'start', inline: 'nearest' });", content)
 
     @override_settings(
         FEATURE_MESSAGE_CAPTURE_ENABLED=True,

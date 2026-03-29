@@ -235,7 +235,7 @@
     box-shadow: 0 18px 38px rgba(15, 23, 42, 0.07);
 }
 
-.home-v6-page [data-classcalendar-surface="true"][data-classcalendar-embed-mode="home"] > div {
+.home-v6-page [data-classcalendar-home-card="true"] {
     padding-bottom: 1.6rem !important;
 }
 

@@ -497,6 +497,7 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('data-classcalendar-surface="true"', content)
         self.assertIn('data-classcalendar-embed-mode="home"', content)
         self.assertIn('data-classcalendar-main-view="true"', content)
+        self.assertIn('data-classcalendar-home-card="true"', content)
         self.assertIn('data-classcalendar-home-grid-wrap="true"', content)
         self.assertIn('surfaceAllowsManage: true', content)
         self.assertIn('새 일정', content)
@@ -2935,6 +2936,7 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('data-home-design-version="v6"', content)
         self.assertIn('home-v6-page', content)
         self.assertIn('home-v6-shell', content)
+        self.assertIn('data-classcalendar-home-card="true"', content)
 
     def test_v6_quickdrop_card_uses_direct_send_form(self):
         user = self._login('v6quickdropdirect')
