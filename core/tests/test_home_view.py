@@ -2827,6 +2827,28 @@ class HomeV5ViewTest(TestCase):
             content,
         )
 
+    def test_v5_mobile_places_reservation_card_below_quickdrop_card(self):
+        user = self._login('v5mobilequickdropreservation')
+        Product.objects.create(
+            title='바로전송',
+            description='빠른 전송',
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='quickdrop:landing',
+            icon='fa-solid fa-bolt',
+        )
+        school = School.objects.create(name='모바일예약초', slug='mobile-reservation-school', owner=user)
+        SchoolConfig.objects.create(school=school)
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        quickdrop_index = content.index('data-home-v4-mobile-quickdrop="true"')
+        reservation_index = content.index('data-home-reservations-card="true"')
+
+        self.assertLess(quickdrop_index, reservation_index)
+
     def test_reservations_product_uses_smart_entry_for_authenticated_user(self):
         user = self._login('v5smartentry')
         reservations_product = Product.objects.create(
