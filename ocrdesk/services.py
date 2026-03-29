@@ -3,6 +3,7 @@ import os
 import tempfile
 from pathlib import Path
 from threading import Lock
+from time import monotonic
 
 from products.models import Product
 
@@ -14,6 +15,7 @@ SERVICE_TITLE = "사진 글자 읽기"
 
 _OCR_ENGINE = None
 _OCR_INIT_ERROR = None
+_OCR_LAST_INIT_ATTEMPT_AT = 0.0
 _OCR_LOCK = Lock()
 _TEXT_LIST_KEYS = {"rec_texts", "texts"}
 _TEXT_VALUE_KEYS = {"rec_text", "text"}
@@ -42,8 +44,41 @@ def get_service():
     return Product.objects.filter(launch_route_name=SERVICE_ROUTE).first() or Product.objects.filter(title=SERVICE_TITLE).first()
 
 
+def _get_init_retry_cooldown_seconds():
+    raw_value = os.environ.get("OCRDESK_ENGINE_RETRY_COOLDOWN_SECONDS", "15")
+    try:
+        cooldown_seconds = float(raw_value)
+    except (TypeError, ValueError):
+        return 15.0
+    return max(0.0, cooldown_seconds)
+
+
+def _get_cpu_threads():
+    raw_value = os.environ.get("OCRDESK_CPU_THREADS", "2")
+    try:
+        cpu_threads = int(raw_value)
+    except (TypeError, ValueError):
+        return 2
+    return max(1, cpu_threads)
+
+
+def _is_retry_cooldown_active(now):
+    if _OCR_INIT_ERROR is None:
+        return False
+    return (now - _OCR_LAST_INIT_ATTEMPT_AT) < _get_init_retry_cooldown_seconds()
+
+
+def reset_ocr_engine_state():
+    global _OCR_ENGINE, _OCR_INIT_ERROR, _OCR_LAST_INIT_ATTEMPT_AT
+
+    _OCR_ENGINE = None
+    _OCR_INIT_ERROR = None
+    _OCR_LAST_INIT_ATTEMPT_AT = 0.0
+
+
 def _build_engine():
     os.environ.setdefault("PADDLE_PDX_MODEL_SOURCE", "BOS")
+    os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
 
     try:
         from paddleocr import PaddleOCR
@@ -56,25 +91,36 @@ def _build_engine():
         use_doc_orientation_classify=False,
         use_doc_unwarping=False,
         use_textline_orientation=False,
+        enable_mkldnn=False,
+        enable_cinn=False,
+        cpu_threads=_get_cpu_threads(),
     )
 
 
 def get_ocr_engine():
-    global _OCR_ENGINE, _OCR_INIT_ERROR
+    global _OCR_ENGINE, _OCR_INIT_ERROR, _OCR_LAST_INIT_ATTEMPT_AT
 
     if _OCR_ENGINE is not None:
         return _OCR_ENGINE
-    if _OCR_INIT_ERROR is not None:
+
+    now = monotonic()
+    if _is_retry_cooldown_active(now):
         raise OCREngineUnavailable("ocr_engine_not_ready") from _OCR_INIT_ERROR
 
     with _OCR_LOCK:
         if _OCR_ENGINE is not None:
             return _OCR_ENGINE
-        if _OCR_INIT_ERROR is not None:
+
+        now = monotonic()
+        if _is_retry_cooldown_active(now):
             raise OCREngineUnavailable("ocr_engine_not_ready") from _OCR_INIT_ERROR
+
+        _OCR_LAST_INIT_ATTEMPT_AT = now
         try:
             _OCR_ENGINE = _build_engine()
+            _OCR_INIT_ERROR = None
         except Exception as exc:
+            _OCR_ENGINE = None
             _OCR_INIT_ERROR = exc
             logger.exception("[ocrdesk] OCR engine initialization failed")
             raise OCREngineUnavailable("ocr_engine_not_ready") from exc
@@ -175,4 +221,3 @@ def extract_text_from_upload(uploaded_file):
             pass
         except OSError:
             logger.warning("[ocrdesk] failed to remove temp file: %s", temp_path, exc_info=True)
-

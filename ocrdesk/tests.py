@@ -1,17 +1,22 @@
 import base64
 import json
+import sys
+from types import SimpleNamespace
 from unittest.mock import patch
+from unittest.mock import Mock
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
-from django.test import RequestFactory, TestCase, override_settings
+from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 
 from core.context_processors import search_products
 from products.models import ManualSection, Product, ProductFeature, ServiceManual
 
+from . import services as ocr_services
 from .forms import MAX_IMAGE_BYTES
+from .services import OCREngineUnavailable
 
 
 User = get_user_model()
@@ -130,6 +135,62 @@ class OCRDeskViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "사진을 읽는 중 문제가 생겼습니다.")
         mocked_extract.assert_called_once()
+
+
+class OCRDeskServiceTests(SimpleTestCase):
+    def tearDown(self):
+        ocr_services.reset_ocr_engine_state()
+
+    def test_build_engine_prefers_direct_bos_download_without_healthcheck_gate(self):
+        fake_engine = object()
+        fake_constructor = Mock(return_value=fake_engine)
+        fake_module = SimpleNamespace(PaddleOCR=fake_constructor)
+
+        with patch("ocrdesk.services.os.environ.setdefault") as mocked_setdefault:
+            with patch("ocrdesk.services._get_cpu_threads", return_value=2):
+                with patch.dict(sys.modules, {"paddleocr": fake_module}):
+                    engine = ocr_services._build_engine()
+
+        self.assertIs(engine, fake_engine)
+        mocked_setdefault.assert_any_call("PADDLE_PDX_MODEL_SOURCE", "BOS")
+        mocked_setdefault.assert_any_call("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
+        fake_constructor.assert_called_once_with(
+            lang="korean",
+            device="cpu",
+            use_doc_orientation_classify=False,
+            use_doc_unwarping=False,
+            use_textline_orientation=False,
+            enable_mkldnn=False,
+            enable_cinn=False,
+            cpu_threads=2,
+        )
+
+    def test_get_cpu_threads_uses_safe_default_on_invalid_input(self):
+        with patch.dict("ocrdesk.services.os.environ", {"OCRDESK_CPU_THREADS": "nope"}, clear=False):
+            self.assertEqual(ocr_services._get_cpu_threads(), 2)
+
+    def test_get_cpu_threads_clamps_to_positive_integer(self):
+        with patch.dict("ocrdesk.services.os.environ", {"OCRDESK_CPU_THREADS": "0"}, clear=False):
+            self.assertEqual(ocr_services._get_cpu_threads(), 1)
+
+        with patch.dict("ocrdesk.services.os.environ", {"OCRDESK_CPU_THREADS": "6"}, clear=False):
+            self.assertEqual(ocr_services._get_cpu_threads(), 6)
+
+    def test_get_ocr_engine_retries_after_cooldown_when_first_init_fails(self):
+        fake_engine = object()
+
+        with patch("ocrdesk.services._get_init_retry_cooldown_seconds", return_value=1.0):
+            with patch("ocrdesk.services.monotonic", side_effect=[0.0, 0.0, 0.5, 2.0, 2.0]):
+                with patch("ocrdesk.services._build_engine", side_effect=[RuntimeError("boom"), fake_engine]) as mocked_build:
+                    with self.assertRaises(OCREngineUnavailable):
+                        ocr_services.get_ocr_engine()
+
+                    with self.assertRaises(OCREngineUnavailable):
+                        ocr_services.get_ocr_engine()
+
+                    self.assertIs(ocr_services.get_ocr_engine(), fake_engine)
+
+        self.assertEqual(mocked_build.call_count, 2)
 
 
 class EnsureOCRDeskCommandTests(TestCase):
