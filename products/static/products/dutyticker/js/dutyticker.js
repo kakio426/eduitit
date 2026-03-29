@@ -77,8 +77,8 @@ class DutyTickerManager {
         this.missionQuickPhraseLimit = 20;
         this.missionQuickPhrase = null;
         this.missionQuickSelectedId = null;
-        this.missionPhrasePanelExpanded = false;
         this.missionAutomations = [];
+        this.missionAutomationPanelExpanded = false;
         this.missionAutomationSelectedId = null;
         this.missionAutomationDraftPhrase = null;
         this.missionAutomationRuntimeStorageKey = 'dt-mission-automation-runtime-v1';
@@ -173,7 +173,7 @@ class DutyTickerManager {
         this.bindButtonAction('missionQuickApplySelectedBtn', () => this.applyMissionQuickPhrase());
         this.bindButtonAction('missionQuickDeleteBtn', () => this.deleteSelectedMissionQuickPhrase());
         this.bindButtonAction('missionQuickDeleteAllBtn', () => this.clearMissionQuickPhrases());
-        this.bindButtonAction('missionPhrasePanelToggleBtn', () => this.toggleMissionPhrasePanel());
+        this.bindButtonAction('missionAutomationToggleBtn', () => this.toggleMissionAutomationPanel());
         this.bindButtonAction('missionAutomationNewBtn', () => this.prepareNewMissionAutomation());
         this.bindButtonAction('missionAutomationCreateBtn', () => this.createMissionAutomation());
         this.bindButtonAction('missionAutomationUpdateBtn', () => this.updateSelectedMissionAutomation());
@@ -1260,38 +1260,66 @@ class DutyTickerManager {
         if (hintEl) hintEl.textContent = message;
     }
 
-    toggleMissionPhrasePanel(forceExpanded = null) {
-        if (typeof forceExpanded === 'boolean') {
-            this.missionPhrasePanelExpanded = forceExpanded;
-        } else {
-            this.missionPhrasePanelExpanded = !this.missionPhrasePanelExpanded;
-        }
-        this.renderMissionPhrasePanel();
-    }
-
     renderMissionPhrasePanel() {
-        const body = document.getElementById('missionPhrasePanelBody');
-        const toggleBtn = document.getElementById('missionPhrasePanelToggleBtn');
         const summaryEl = document.getElementById('missionPhrasePanelSummary');
+        const selectionEl = document.getElementById('missionQuickModalSelection');
         const selectedPhrase = this.syncMissionQuickPhraseSelection(this.missionQuickSelectedId);
         const savedCount = this.missionQuickPhrases.length;
 
-        if (body) body.classList.toggle('hidden', !this.missionPhrasePanelExpanded);
-
-        if (toggleBtn) {
-            toggleBtn.innerHTML = this.missionPhrasePanelExpanded
-                ? '<i class="fa-solid fa-chevron-up"></i> 저장 문구 접기'
-                : '<i class="fa-solid fa-chevron-down"></i> 저장 문구 열기';
-        }
-
         if (summaryEl) {
             if (selectedPhrase) {
-                summaryEl.textContent = `선택 중: ${selectedPhrase.label}`;
+                summaryEl.textContent = `저장 ${savedCount}개 · 선택 중: ${selectedPhrase.label}`;
             } else if (savedCount > 0) {
-                summaryEl.textContent = `저장 ${savedCount}개 · 필요할 때만 열어 문구를 고르거나 수정하세요.`;
+                summaryEl.textContent = `저장 ${savedCount}개 · 목록에서 바로 고르고 수정할 수 있습니다.`;
             } else {
-                summaryEl.textContent = '저장 문구가 아직 없습니다. 필요할 때 열어 새 문구를 만드세요.';
+                summaryEl.textContent = '저장 문구가 아직 없습니다. 현재 문구를 저장해 목록을 만드세요.';
             }
+        }
+
+        if (selectionEl) {
+            if (selectedPhrase) {
+                selectionEl.textContent = `현재 선택: ${selectedPhrase.label}`;
+            } else if (savedCount > 0) {
+                selectionEl.textContent = '현재 선택: 없음';
+            } else {
+                selectionEl.textContent = '현재 선택: 저장 문구 없음';
+            }
+        }
+    }
+
+    toggleMissionAutomationPanel(forceExpanded = null) {
+        if (typeof forceExpanded === 'boolean') {
+            this.missionAutomationPanelExpanded = forceExpanded;
+        } else {
+            this.missionAutomationPanelExpanded = !this.missionAutomationPanelExpanded;
+        }
+        this.renderMissionAutomationPanel();
+    }
+
+    renderMissionAutomationPanel() {
+        const body = document.getElementById('missionAutomationPanelBody');
+        const toggleBtn = document.getElementById('missionAutomationToggleBtn');
+        const statusEl = document.getElementById('missionAutomationActiveStatus');
+        const activeAutomation = this.getActiveMissionAutomation();
+        const isExpanded = this.missionAutomationPanelExpanded === true;
+
+        if (body) body.classList.toggle('hidden', !isExpanded);
+
+        if (toggleBtn) {
+            toggleBtn.innerHTML = isExpanded
+                ? '<i class="fa-solid fa-chevron-up"></i> 자동화 접기'
+                : '<i class="fa-solid fa-chevron-down"></i> 자동화 열기';
+            toggleBtn.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+        }
+
+        if (statusEl) {
+            statusEl.textContent = activeAutomation ? `현재 적용: ${activeAutomation.name}` : '현재 적용 없음';
+            statusEl.classList.toggle('border-emerald-300/30', !!activeAutomation);
+            statusEl.classList.toggle('bg-emerald-500/15', !!activeAutomation);
+            statusEl.classList.toggle('text-emerald-100', !!activeAutomation);
+            statusEl.classList.toggle('border-slate-600', !activeAutomation);
+            statusEl.classList.toggle('bg-slate-900/75', !activeAutomation);
+            statusEl.classList.toggle('text-slate-300', !activeAutomation);
         }
     }
 
@@ -1366,6 +1394,7 @@ class DutyTickerManager {
         const phraseLabelEl = document.getElementById('missionAutomationPhraseLabel');
         const phrasePreviewEl = document.getElementById('missionAutomationPhrasePreview');
         const newBtn = document.getElementById('missionAutomationNewBtn');
+        this.renderMissionAutomationPanel();
         if (!listEl || !nameInput) return;
 
         const count = this.missionAutomations.length;
@@ -1440,6 +1469,7 @@ class DutyTickerManager {
     prepareNewMissionAutomation(showHint = true) {
         const selectedPhrase = this.syncMissionQuickPhraseSelection(this.missionQuickSelectedId);
         this.missionAutomationSelectedId = null;
+        if (showHint) this.missionAutomationPanelExpanded = true;
         this.setMissionAutomationFormValues({
             name: '',
             startTime: '',
@@ -1459,6 +1489,7 @@ class DutyTickerManager {
     selectMissionAutomation(automationId) {
         const selected = this.syncMissionAutomationSelection(automationId);
         if (!selected) return;
+        this.missionAutomationPanelExpanded = true;
         this.setMissionAutomationFormValues(selected);
         this.renderMissionAutomationManager();
     }
@@ -3700,7 +3731,7 @@ class DutyTickerManager {
         const selected = this.syncMissionQuickPhraseSelection(this.missionQuickSelectedId);
         if (selected) this.setMissionQuickPhraseFormValues(selected);
         else this.loadCurrentMissionIntoQuickPhraseForm();
-        this.missionPhrasePanelExpanded = this.missionQuickPhrases.length === 0 ? true : this.missionPhrasePanelExpanded;
+        this.missionAutomationPanelExpanded = false;
         this.renderMissionQuickPhraseModal();
         this.openModal('missionQuickPhraseModal');
         const titleInput = document.getElementById('missionQuickTitleInput');
