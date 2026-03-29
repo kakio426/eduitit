@@ -2845,16 +2845,16 @@ class HomeV5ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         workbench_index = content.index('data-home-v5-mobile-workbench="true"')
+        calendar_index = content.index('data-home-v5-mobile-calendar-panel="true"')
         quickdrop_index = content.index('data-home-v4-mobile-quickdrop="true"')
         reservation_index = content.index('data-home-reservations-card="true"')
-        calendar_index = content.index('data-home-v5-mobile-calendar-panel="true"')
         sns_index = content.index('data-home-v5-mobile-sns="true"')
-        workbench_block = content[workbench_index:quickdrop_index]
+        workbench_block = content[workbench_index:calendar_index]
 
         self.assertNotIn('title="바로전송">바로전송</p>', workbench_block)
-        self.assertLess(workbench_index, quickdrop_index)
+        self.assertLess(workbench_index, calendar_index)
+        self.assertLess(calendar_index, quickdrop_index)
         self.assertLess(quickdrop_index, reservation_index)
-        self.assertLess(reservation_index, calendar_index)
         self.assertLess(calendar_index, sns_index)
 
     def test_reservations_product_uses_smart_entry_for_authenticated_user(self):
