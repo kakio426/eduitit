@@ -1722,8 +1722,8 @@ class ArtClassAutoMetadataTest(TestCase):
         response = self.client.get(reverse("artclass:library"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "설치 안내")
-        self.assertContains(response, "설치 / 다시 설치 안내 열기")
+        self.assertContains(response, "설치 / 업데이트 안내")
+        self.assertContains(response, "설치가 진행되는 동안은 다른 버튼을 누르지 말고 10~20초 정도 기다려 주세요.")
         self.assertContains(response, reverse("artclass:launcher_install_guide"))
         self.assertNotContains(response, "설치파일 받기")
         self.assertNotContains(response, "Bridge 0.2.0")
@@ -1759,10 +1759,9 @@ class ArtClassPresentationUxTest(TestCase):
         response = self.client.get(reverse("artclass:classroom", kwargs={"pk": art_class.pk}))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "설치 안내")
-        self.assertContains(response, "설치 / 다시 설치 안내 열기")
+        self.assertContains(response, "설치 / 업데이트 안내")
+        self.assertContains(response, "설치가 진행되는 동안은 다른 버튼을 누르지 말고 10~20초 정도 기다려 주세요.")
         self.assertContains(response, reverse("artclass:launcher_install_guide"))
-        self.assertNotContains(response, "안내 화면에서 설치를 마친 뒤 초록 버튼으로 다시 돌아오면 됩니다.")
         self.assertNotContains(response, "설치파일 받기")
         self.assertNotContains(response, "Bridge 0.2.0")
         self.assertNotContains(response, "운영자용 런처 버전 올리기")

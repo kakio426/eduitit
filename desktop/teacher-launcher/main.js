@@ -1626,7 +1626,7 @@ function buildVideoControlWindowHtml() {
 
           .secondary-default {
             display: flex;
-            align-items: flex-start;
+            align-items: center;
             gap: 10px;
           }
 

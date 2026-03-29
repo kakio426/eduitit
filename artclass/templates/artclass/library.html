@@ -305,17 +305,13 @@
                     class="flex items-center justify-center gap-3 py-5 bg-green-500 text-white rounded-[2rem] text-xl font-black shadow-lg hover:bg-green-600 hover:scale-[1.02] active:scale-95 transition-all">
                     <i class="fa-solid fa-rocket"></i> 런처로 수업 시작하기
                 </a>
-                <details id="modalInstallBlock" class="hidden rounded-[2rem] bg-emerald-50 text-left border-2 border-emerald-200 px-5 py-4 shadow-sm">
-                    <summary class="cursor-pointer list-none text-base font-black text-emerald-700">
-                        설치 안내
-                    </summary>
-                    <div class="mt-3 text-sm font-bold text-emerald-900/85">
-                        <a id="modalInstallGuideLink" href="{{ launcher_install_url }}"
-                            class="inline-flex items-center justify-center gap-3 py-3 px-4 bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-2xl text-sm font-black hover:bg-emerald-200 transition-all">
-                                <i class="fa-solid fa-circle-info"></i> 설치 / 다시 설치 안내 열기
-                        </a>
-                    </div>
-                </details>
+                <a id="modalInstallGuideLink" href="{{ launcher_install_url }}"
+                    class="hidden items-center justify-center gap-3 py-4 px-4 bg-emerald-50 text-emerald-700 border-2 border-emerald-200 rounded-[2rem] text-base font-black shadow-sm hover:bg-emerald-100 transition-all">
+                    <i class="fa-solid fa-circle-info"></i> 설치 / 업데이트 안내
+                </a>
+                <p class="text-sm font-bold text-emerald-900/85 leading-relaxed">
+                    초록 버튼을 누르면 런처나 업데이트 창이 잠시 열릴 수 있습니다. 설치가 진행되는 동안은 다른 버튼을 누르지 말고 10~20초 정도 기다려 주세요.
+                </p>
                 <a id="editLink" href="#"
                     class="flex items-center justify-center gap-3 py-5 bg-white text-purple-600 border-2 border-purple-100 rounded-[2rem] text-xl font-black shadow-sm hover:border-purple-300 hover:bg-purple-50 hover:scale-[1.02] active:scale-95 transition-all">
                     <i class="fa-solid fa-wand-magic-sparkles"></i> 수정하여 사용하기
@@ -380,7 +376,6 @@
         const deleteForm = document.getElementById('deleteForm');
         const recommendationEl = document.getElementById('modalRecommendation');
         const playLink = document.getElementById('playLink');
-        const installBlock = document.getElementById('modalInstallBlock');
         const installGuideLink = document.getElementById('modalInstallGuideLink');
         const materialBlock = document.getElementById('modalMaterialBlock');
         const materialSummary = document.getElementById('modalMaterialSummary');
@@ -396,10 +391,9 @@
             recommendationEl.textContent = '초록 버튼으로 시작합니다.';
             recommendationEl.className = 'text-sm font-black text-emerald-700';
         }
-        if (installBlock) {
-            installBlock.classList.remove('hidden');
-        }
         if (installGuideLink) {
+            installGuideLink.classList.remove('hidden');
+            installGuideLink.classList.add('inline-flex');
             installGuideLink.href = materials.launcherInstallUrl || '{{ launcher_install_url }}';
         }
         const attachmentCount = Number(materials.attachmentCount || 0);
