@@ -892,10 +892,7 @@
                             <template x-for="section in agendaDateSections" :key="`agenda-${section.dateKey}`">
                                 <section class="classcalendar-agenda-date-group">
                                     <p class="text-sm font-black text-slate-900" x-text="formatAgendaDate(section.dateKey)"></p>
-                                    <div x-show="section.items.length === 0" class="mt-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-400">
-                                        등록된 일정 없음
-                                    </div>
-                                    <div x-show="section.items.length > 0" class="mt-3 space-y-2.5">
+                                    <div class="mt-3 space-y-2.5">
                                         <template x-for="item in section.items" :key="`agenda-item-${item.id}`">
                                             <button
                                                 type="button"
@@ -2988,21 +2985,6 @@ function calendarApp() {
                 .sort((left, right) => this.sortHubItems(left, right));
         },
 
-        getAgendaBoundsDateKeys() {
-            const bounds = this.buildAgendaBounds();
-            const start = new Date(bounds.start);
-            const end = new Date(bounds.end);
-            start.setHours(0, 0, 0, 0);
-            end.setHours(0, 0, 0, 0);
-            const dateKeys = [];
-            const cursor = new Date(start);
-            while (cursor.getTime() <= end.getTime()) {
-                dateKeys.push(this.dateKey(cursor));
-                cursor.setDate(cursor.getDate() + 1);
-            }
-            return dateKeys;
-        },
-
         getAgendaDateKeysForItemWithinBounds(item, bounds = null) {
             const safeBounds = bounds || this.buildAgendaBounds();
             const itemStart = item && (item.start_at || item.sort_at);
@@ -3030,17 +3012,7 @@ function calendarApp() {
         getAgendaDateSections() {
             const items = this.getAgendaItems();
             const bounds = this.buildAgendaBounds();
-            const query = String(this.agendaQuery || '').trim();
             const sectionLookup = new Map();
-
-            if (!query) {
-                this.getAgendaBoundsDateKeys().forEach((dateKey) => {
-                    sectionLookup.set(dateKey, {
-                        dateKey,
-                        items: [],
-                    });
-                });
-            }
 
             items.forEach((item) => {
                 this.getAgendaDateKeysForItemWithinBounds(item, bounds).forEach((dateKey) => {
@@ -3055,8 +3027,7 @@ function calendarApp() {
             });
 
             return Array.from(sectionLookup.values())
-                .sort((left, right) => String(left.dateKey).localeCompare(String(right.dateKey), 'ko'))
-                .filter((section) => !query || section.items.length > 0);
+                .sort((left, right) => String(left.dateKey).localeCompare(String(right.dateKey), 'ko'));
         },
 
         rebuildAgendaSections() {
