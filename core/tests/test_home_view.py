@@ -2827,9 +2827,9 @@ class HomeV5ViewTest(TestCase):
             content,
         )
 
-    def test_v5_mobile_places_reservation_card_below_quickdrop_in_original_position(self):
-        user = self._login('v5mobilereservationorder')
-        Product.objects.create(
+    def test_v5_mobile_keeps_quickdrop_in_workbench_without_duplicate_panel(self):
+        user = self._login('v5mobilequickdropnodupe')
+        quickdrop = Product.objects.create(
             title='바로전송',
             description='빠른 전송',
             price=0,
@@ -2838,19 +2838,22 @@ class HomeV5ViewTest(TestCase):
             launch_route_name='quickdrop:landing',
             icon='fa-solid fa-bolt',
         )
+        ProductFavorite.objects.create(user=user, product=quickdrop, pin_order=1)
         school = School.objects.create(name='모바일예약초', slug='mobile-reservation-school', owner=user)
         SchoolConfig.objects.create(school=school)
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        calendar_index = content.index('data-home-v5-mobile-calendar-panel="true"')
-        quickdrop_index = content.index('data-home-v4-mobile-quickdrop="true"')
+        workbench_index = content.index('data-home-v5-mobile-workbench="true"')
         reservation_index = content.index('data-home-reservations-card="true"')
+        calendar_index = content.index('data-home-v5-mobile-calendar-panel="true"')
         sns_index = content.index('data-home-v5-mobile-sns="true"')
 
-        self.assertLess(calendar_index, quickdrop_index)
-        self.assertLess(quickdrop_index, reservation_index)
+        self.assertIn('title="바로전송">바로전송</p>', content)
+        self.assertNotIn('data-home-v4-mobile-quickdrop="true"', content)
+        self.assertLess(workbench_index, reservation_index)
         self.assertLess(reservation_index, sns_index)
+        self.assertLess(reservation_index, calendar_index)
 
     def test_reservations_product_uses_smart_entry_for_authenticated_user(self):
         user = self._login('v5smartentry')
