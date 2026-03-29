@@ -2838,7 +2838,17 @@ class HomeV5ViewTest(TestCase):
             launch_route_name='quickdrop:landing',
             icon='fa-solid fa-bolt',
         )
+        legacy_quickdrop = Product.objects.create(
+            title='바로전송',
+            description='이전 바로전송 링크',
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='qrgen:landing',
+            icon='fa-solid fa-link',
+        )
         ProductFavorite.objects.create(user=user, product=quickdrop, pin_order=1)
+        ProductFavorite.objects.create(user=user, product=legacy_quickdrop, pin_order=2)
         school = School.objects.create(name='모바일예약초', slug='mobile-reservation-school', owner=user)
         SchoolConfig.objects.create(school=school)
 
@@ -2852,6 +2862,7 @@ class HomeV5ViewTest(TestCase):
         workbench_block = content[workbench_index:calendar_index]
 
         self.assertNotIn('title="바로전송">바로전송</p>', workbench_block)
+        self.assertEqual(content.count('data-home-v4-mobile-quickdrop="true"'), 1)
         self.assertLess(workbench_index, calendar_index)
         self.assertLess(calendar_index, quickdrop_index)
         self.assertLess(quickdrop_index, reservation_index)

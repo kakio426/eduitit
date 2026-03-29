@@ -794,7 +794,9 @@ def _build_home_card_summary(product):
 
 
 def _is_home_utility_product(product):
-    return _product_route_name(product) == "quickdrop:landing"
+    route_name = _product_route_name(product)
+    title = _product_title_text(product)
+    return route_name == "quickdrop:landing" or title == "바로전송"
 
 
 def _build_home_quickdrop_card(user, favorite_products, product_list):
