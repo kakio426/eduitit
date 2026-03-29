@@ -102,6 +102,14 @@ WORKBENCH_BUNDLE_LIMIT = 6
 WORKBENCH_BUNDLE_PRODUCT_LIMIT = 8
 WORKBENCH_SLOT_COUNT = 4
 WORKBENCH_WEEKLY_BUNDLE_LIMIT = 2
+HOME_V5_MOBILE_SECTION_ORDER = (
+    'workbench',
+    'calendar',
+    'quickdrop',
+    'reservations',
+    'sns',
+)
+HOME_PROMOTED_MOBILE_SERVICE_KEYS = {'quickdrop'}
 
 
 def _get_request_client_ip(request):
@@ -639,6 +647,14 @@ def _product_title_text(product):
     return service_launcher_utils.product_title_text(product)
 
 
+def _canonical_home_service_key(product):
+    route_name = _product_route_name(product)
+    title = _product_title_text(product)
+    if route_name == "quickdrop:landing" or title == "바로전송":
+        return "quickdrop"
+    return ""
+
+
 def _is_sheetbook_product(product):
     route_name = _product_route_name(product)
     title = _product_title_text(product)
@@ -794,9 +810,15 @@ def _build_home_card_summary(product):
 
 
 def _is_home_utility_product(product):
-    route_name = _product_route_name(product)
-    title = _product_title_text(product)
-    return route_name == "quickdrop:landing" or title == "바로전송"
+    return _canonical_home_service_key(product) in HOME_PROMOTED_MOBILE_SERVICE_KEYS
+
+
+def _filter_home_v5_mobile_workbench_items(favorite_items, *, limit=6):
+    filtered_items = [
+        item for item in favorite_items
+        if not _is_home_utility_product(item.get('product'))
+    ]
+    return filtered_items[:limit]
 
 
 def _build_home_quickdrop_card(user, favorite_products, product_list):
@@ -2924,9 +2946,7 @@ def _build_home_authenticated_v4_response(
         home_v4_nav_sections,
         limit=4,
     )
-    home_v5_mobile_workbench_items = [
-        item for item in favorite_items if not _is_home_utility_product(item.get('product'))
-    ][:6]
+    home_v5_mobile_workbench_items = _filter_home_v5_mobile_workbench_items(favorite_items, limit=6)
     home_v5_mobile_recommend_items = list(representative_recommendations)
     if not home_v5_mobile_recommend_items:
         home_v5_mobile_recommend_items = [
@@ -2974,6 +2994,7 @@ def _build_home_authenticated_v4_response(
         'home_v4_nav_sections': home_v4_nav_sections,
         'home_v4_mobile_calendar_first_enabled': home_v4_mobile_calendar_first_enabled,
         'home_v4_mobile_quick_items': home_v4_mobile_quick_items,
+        'home_v5_mobile_section_order': HOME_V5_MOBILE_SECTION_ORDER,
         'home_v5_mobile_workbench_items': home_v5_mobile_workbench_items,
         'home_v5_mobile_recommend_items': home_v5_mobile_recommend_items,
         'developer_chat_home_card': developer_chat_home_card,

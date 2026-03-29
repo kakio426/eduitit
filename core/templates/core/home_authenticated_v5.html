@@ -102,6 +102,8 @@
                 </div>
 
                 <section class="home-v5-mobile-stack" data-home-v5-mobile-stack="true">
+                    {% for mobile_section in home_v5_mobile_section_order %}
+                    {% if mobile_section == 'workbench' %}
                     <article class="home-v5-mobile-panel" data-home-v5-mobile-workbench="true">
                         <div class="home-v5-mobile-panel-head">
                             <div>
@@ -152,15 +154,15 @@
                         </div>
                         {% endif %}
                     </article>
-
+                    {% elif mobile_section == 'calendar' %}
                     <section class="home-v5-mobile-calendar-section" data-home-v5-mobile-calendar-panel="true">
                         {% include 'core/partials/home_calendar_panel.html' %}
                     </section>
-
+                    {% elif mobile_section == 'quickdrop' %}
                     {% if quickdrop_home_card %}
                     {% include 'core/partials/home_v4_mobile_quickdrop_card.html' with quickdrop_placement='' include_classcalendar_margin=False %}
                     {% endif %}
-
+                    {% elif mobile_section == 'reservations' %}
                     {% if reservation_home_card %}
                     <article class="home-v5-mobile-panel" data-home-reservations-card="true">
                         <div class="home-v5-mobile-panel-head">
@@ -199,10 +201,12 @@
                         </div>
                     </article>
                     {% endif %}
-
+                    {% elif mobile_section == 'sns' %}
                     <section class="home-v5-mobile-sns-panel" data-home-v5-mobile-sns="true">
                         {% include 'core/partials/sns_mobile_preview_panel.html' with root_class='home-v5-mobile-sns' section_id='sns-full-section-auth-v5' start_open='false' %}
                     </section>
+                    {% endif %}
+                    {% endfor %}
                 </section>
 
                 <div class="home-v4-layout home-v5-desktop-layout">
