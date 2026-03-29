@@ -170,7 +170,6 @@
                         <div class="home-v5-mobile-panel-head">
                             <div>
                                 <h2 class="home-v5-mobile-panel-title">내 학교 예약</h2>
-                                <p class="mt-1 text-sm text-slate-500">공유된 학교와 최근 열어본 예약판을 바로 엽니다.</p>
                             </div>
                             <a
                                 href="{{ reservation_home_card.dashboard_url }}"
@@ -193,7 +192,9 @@
                                             {{ item.role_label }}
                                         </span>
                                     </div>
+                                    {% if item.summary %}
                                     <p class="mt-1 text-xs leading-5 text-slate-500">{{ item.summary }}</p>
+                                    {% endif %}
                                 </div>
                                 <span class="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400">
                                     <i class="fa-solid fa-arrow-right"></i>
@@ -337,7 +338,6 @@
                                             <i class="fa-solid fa-school text-indigo-500"></i>
                                             <h2 class="text-lg font-black text-slate-900">내 학교 예약</h2>
                                         </div>
-                                        <p class="text-sm text-slate-500">공유된 학교와 최근 열어본 예약판으로 바로 들어갑니다.</p>
                                     </div>
                                     <a
                                         href="{{ reservation_home_card.dashboard_url }}"
@@ -361,7 +361,9 @@
                                                     {{ item.role_label }}
                                                 </span>
                                             </div>
+                                            {% if item.summary %}
                                             <p class="mt-1 text-xs leading-5 text-slate-500">{{ item.summary }}</p>
+                                            {% endif %}
                                         </div>
                                         <span class="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400">
                                             <i class="fa-solid fa-arrow-right"></i>

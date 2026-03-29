@@ -1807,11 +1807,14 @@ def _build_home_reservation_card(user):
     items = []
     for entry in list_user_accessible_schools(user):
         school = entry["school"]
+        summary = ""
+        if entry["role"] in {"edit", "view"} and entry["owner_name"]:
+            summary = f'{entry["owner_name"]} 선생님'
         items.append({
             "school_name": school.name,
             "role_label": entry["role_label"],
             "role_tone": entry["role_tone"],
-            "summary": entry["summary"],
+            "summary": summary,
             "href": entry["reservation_url"],
         })
 

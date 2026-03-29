@@ -2827,6 +2827,34 @@ class HomeV5ViewTest(TestCase):
             content,
         )
 
+    def test_v5_home_reservations_card_avoids_explanatory_copy(self):
+        owner = _create_onboarded_user('v5reservationcardowner')
+        recent_owner = _create_onboarded_user('v5reservationcardrecentowner')
+        user = self._login('v5reservationcardcopy')
+        my_school = School.objects.create(name='우리학교', slug='my-home-school', owner=user)
+        shared_school = School.objects.create(name='공유학교', slug='shared-home-school', owner=owner)
+        recent_school = School.objects.create(name='최근학교', slug='recent-home-school-copy', owner=recent_owner)
+        SchoolConfig.objects.create(school=my_school)
+        SchoolConfig.objects.create(school=shared_school)
+        SchoolConfig.objects.create(school=recent_school)
+        ReservationCollaborator.objects.create(
+            school=shared_school,
+            collaborator=user,
+            can_edit=True,
+        )
+
+        self.client.get(reverse('reservations:reservation_index', args=[recent_school.slug]))
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertNotIn('공유된 학교와 최근 열어본 예약판으로 바로 들어갑니다.', content)
+        self.assertNotIn('공유된 학교와 최근 열어본 예약판을 바로 엽니다.', content)
+        self.assertNotIn('내가 관리하는 예약판', content)
+        self.assertNotIn('로그인 후 링크로 열어본 예약판', content)
+        self.assertIn('관리자', content)
+        self.assertIn('최근 사용', content)
+        self.assertIn('v5reservationcardowner 선생님', content)
+
     @override_settings(FEATURE_MESSAGE_CAPTURE_ENABLED=True)
     def test_v5_mobile_places_reservation_below_quickdrop_without_duplicate(self):
         user = self._login('v5mobilequickdropreservation')
