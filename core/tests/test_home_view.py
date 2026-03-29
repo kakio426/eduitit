@@ -2796,42 +2796,6 @@ class HomeV5ViewTest(TestCase):
         self.assertLess(workbench_index, today_index)
         self.assertLess(today_index, sns_index)
 
-    def test_v5_today_panel_links_to_calendar_center_and_exposes_future_dates(self):
-        user = self._login('v5todaypanelactions')
-        today = timezone.localdate()
-        future_date = today + timedelta(days=2)
-        future_start = timezone.make_aware(datetime.combine(future_date, time(hour=14)))
-        event = CalendarEvent.objects.create(
-            title='다른 날 일정 확인',
-            author=user,
-            start_time=future_start,
-            end_time=future_start + timedelta(hours=1),
-            color='indigo',
-            visibility=CalendarEvent.VISIBILITY_TEACHER,
-        )
-        EventPageBlock.objects.create(
-            event=event,
-            block_type='text',
-            content={'text': '홈에서 바로 이동'},
-            order=0,
-        )
-
-        response = self.client.get(reverse('home'))
-        content = response.content.decode('utf-8')
-        card = response.context['home_today_card']
-        center_url = reverse('classcalendar:center')
-        today_url = f"{center_url}?date={today.isoformat()}"
-        create_url = f"{today_url}&action=create"
-
-        self.assertEqual(card['primary_cta']['href'], center_url)
-        self.assertEqual(card['secondary_cta']['href'], create_url)
-        self.assertTrue(card['date_shortcuts'])
-        self.assertEqual(card['date_shortcuts'][0]['href'], today_url)
-        self.assertIn(f"{center_url}?date={future_date.isoformat()}", {item['href'] for item in card['date_shortcuts']})
-        self.assertIn('data-home-v5-mobile-today-shortcuts="true"', content)
-        self.assertIn('data-home-v5-today-primary-action="true"', content)
-        self.assertIn('data-home-v5-today-secondary-action="true"', content)
-
     def test_v5_home_shows_my_school_reservations_card(self):
         user = self._login('v5reservations')
         school = School.objects.create(name='테스트초', slug='test-school-home', owner=user)
@@ -2925,22 +2889,6 @@ class HomeV5ViewTest(TestCase):
 
         self.assertFalse(is_external)
         self.assertEqual(href, reverse('reservations:smart_entry'))
-
-    def test_calendar_product_uses_center_entry_for_authenticated_user(self):
-        user = self._login('v5calendarentry')
-        calendar_product = Product.objects.create(
-            title='학급 캘린더',
-            description='달력 바로가기',
-            price=0,
-            is_active=True,
-            service_type='classroom',
-            launch_route_name='classcalendar:main',
-        )
-
-        href, is_external = resolve_product_launch_url(calendar_product, user=user)
-
-        self.assertFalse(is_external)
-        self.assertEqual(href, reverse('classcalendar:center'))
 
     def test_v5_anonymous_home_keeps_existing_public_v4_surface(self):
         Product.objects.create(
@@ -3066,21 +3014,6 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('지금 보내기', content)
         self.assertIn(f'href="{reverse("quickdrop:landing")}"', content)
         self.assertNotIn(f'href="{reverse("quickdrop:open")}"', content)
-
-    def test_v6_today_panel_uses_center_calendar_actions(self):
-        self._login('v6todaypanelactions')
-
-        response = self.client.get(reverse('home'))
-        content = response.content.decode('utf-8')
-        card = response.context['home_today_card']
-        center_url = reverse('classcalendar:center')
-        today_key = timezone.localdate().isoformat()
-
-        self.assertEqual(card['primary_cta']['href'], center_url)
-        self.assertEqual(card['secondary_cta']['href'], f"{center_url}?date={today_key}&action=create")
-        self.assertTrue(card['date_shortcuts'])
-        self.assertIn('data-home-v5-mobile-today-shortcuts="true"', content)
-        self.assertIn('data-home-v5-today-primary-action="true"', content)
 
     def test_v6_home_shows_shared_school_reservation_card(self):
         owner = _create_onboarded_user('v6owner')

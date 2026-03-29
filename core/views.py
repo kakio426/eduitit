@@ -72,7 +72,7 @@ from django.contrib import messages
 from django.db import transaction
 from django.db.models import Case, Count, DateTimeField, F, IntegerField, Max, Q, Value, When
 from django.utils import timezone
-from django.utils.dateparse import parse_date, parse_datetime
+from django.utils.dateparse import parse_datetime
 from datetime import timedelta
 from urllib.parse import urlencode
 from PIL import Image
@@ -1938,13 +1938,13 @@ def _build_home_calendar_summary_context(request):
         return summary
 
     try:
-        summary["main_url"] = _build_calendar_center_entry_url()
+        summary["main_url"] = _safe_calendar_surface_reverse("calendar_main", "classcalendar:main")
     except NoReverseMatch:
         summary["main_url"] = ""
     try:
-        summary["today_url"] = _build_calendar_center_entry_url(date_key=today.isoformat()) or summary["main_url"]
+        summary["today_url"] = _safe_calendar_surface_reverse("calendar_today", "classcalendar:today")
     except NoReverseMatch:
-        summary["today_url"] = summary["main_url"]
+        summary["today_url"] = ""
     if summary["main_url"]:
         summary["today_memo_panel_url"] = summary["today_url"] or summary["main_url"]
 
@@ -1978,31 +1978,6 @@ def _safe_reverse(route_name):
 
 def _safe_calendar_surface_reverse(alias_route_name, fallback_route_name):
     return _safe_reverse(alias_route_name) or _safe_reverse(fallback_route_name)
-
-
-def _build_calendar_center_entry_url(*, date_key="", action="", focus="", open_event="", open_task=""):
-    base_url = _safe_reverse("classcalendar:center")
-    if not base_url:
-        base_url = _safe_calendar_surface_reverse("calendar_main", "classcalendar:main")
-    if not base_url:
-        return ""
-
-    params = []
-    if str(date_key or "").strip():
-        params.append(("date", str(date_key).strip()))
-    if str(action or "").strip():
-        params.append(("action", str(action).strip()))
-    if str(focus or "").strip():
-        params.append(("focus", str(focus).strip()))
-    if str(open_event or "").strip():
-        params.append(("open_event", str(open_event).strip()))
-    if str(open_task or "").strip():
-        params.append(("open_task", str(open_task).strip()))
-
-    query_string = urlencode(params, doseq=True)
-    if query_string:
-        return f"{base_url}?{query_string}"
-    return base_url
 
 
 def _home_calendar_surface_url():
@@ -2430,9 +2405,6 @@ def _build_home_calendar_hub_context(request):
 
 def _build_home_today_card_context(request):
     calendar_hub = _build_home_calendar_hub_context(request)
-    today_key = calendar_hub.get("date_key") or timezone.localdate().isoformat()
-    fallback_main_url = _build_calendar_center_entry_url()
-    fallback_today_url = _build_calendar_center_entry_url(date_key=today_key) or fallback_main_url
     today_workspace = {
         "date_label": calendar_hub.get("date_label", ""),
         "today_event_count": calendar_hub.get("today_event_count", 0),
@@ -2441,14 +2413,11 @@ def _build_home_today_card_context(request):
             int(calendar_hub.get("today_event_memo_count", 0) or 0)
             + int(calendar_hub.get("today_task_memo_count", 0) or 0)
         ),
-        "today_all_url": calendar_hub.get("today_all_url") or fallback_today_url,
-        "today_memo_url": calendar_hub.get("today_memo_url") or fallback_today_url,
-        "today_review_url": calendar_hub.get("today_review_url") or fallback_today_url,
-        "today_create_url": (
-            calendar_hub.get("today_create_url")
-            or _build_calendar_center_entry_url(date_key=today_key, action="create")
-        ),
-        "main_url": calendar_hub.get("main_url") or fallback_main_url,
+        "today_all_url": calendar_hub.get("today_all_url", ""),
+        "today_memo_url": calendar_hub.get("today_memo_url", ""),
+        "today_review_url": calendar_hub.get("today_review_url", ""),
+        "today_create_url": calendar_hub.get("today_create_url", ""),
+        "main_url": calendar_hub.get("main_url", ""),
     }
 
     summary_chips = [
@@ -2520,56 +2489,15 @@ def _build_home_today_card_context(request):
                 }
             )
 
-    flat_days = [
-        day
-        for week in calendar_hub.get("month_grid", [])
-        for day in week
-    ]
-    start_index = next(
-        (
-            index
-            for index, day in enumerate(flat_days)
-            if str(day.get("date") or "").strip() == str(today_key)
-        ),
-        0,
-    )
-    visible_days = flat_days[start_index:start_index + 5]
-    if not visible_days:
-        visible_days = [
-            {
-                "date": (timezone.localdate() + timedelta(days=offset)).isoformat(),
-            }
-            for offset in range(5)
-        ]
-    weekday_labels = ("월", "화", "수", "목", "금", "토", "일")
-    date_shortcuts = []
-    for day in visible_days:
-        date_key = str(day.get("date") or "").strip()
-        date_value = parse_date(date_key) if date_key else None
-        if date_value is None:
-            continue
-        item_count = int(day.get("event_count", 0) or 0) + int(day.get("task_count", 0) or 0)
-        date_shortcuts.append(
-            {
-                "date_key": date_key,
-                "date_label": f"{date_value.month}월 {date_value.day}일",
-                "weekday_label": "오늘" if date_key == str(today_key) else weekday_labels[date_value.weekday()],
-                "day_number": date_value.day,
-                "count": item_count,
-                "has_items": item_count > 0,
-                "is_today": date_key == str(today_key),
-                "href": day.get("detail_url") or _build_calendar_center_entry_url(date_key=date_key),
-            }
-        )
-
     primary_href = (
-        calendar_hub.get("main_url")
-        or fallback_main_url
+        calendar_hub.get("today_all_url")
+        or calendar_hub.get("today_url")
+        or calendar_hub.get("main_url")
     )
     secondary_href = (
         calendar_hub.get("today_create_url")
-        or _build_calendar_center_entry_url(date_key=today_key, action="create")
-        or fallback_main_url
+        or calendar_hub.get("main_url")
+        or calendar_hub.get("today_url")
     )
 
     return {
@@ -2577,11 +2505,10 @@ def _build_home_today_card_context(request):
         "eyebrow": "오늘 바로 하는 일",
         "date_label": calendar_hub.get("date_label", ""),
         "summary_chips": summary_chips,
-        "date_shortcuts": date_shortcuts,
         "items": items,
         "empty_message": calendar_hub.get("empty_message", "오늘 확인할 일정과 할 일이 없습니다."),
         "primary_cta": {
-            "label": "캘린더 열기",
+            "label": "오늘 일정 보기",
             "href": primary_href,
         },
         "secondary_cta": {

@@ -308,11 +308,6 @@ def resolve_product_launch_url(product, user=None):
             and route_name.strip().lower() == "reservations:dashboard_landing"
         ):
             return reverse("reservations:smart_entry"), False
-        if (
-            getattr(user, "is_authenticated", False)
-            and route_name.strip().lower() == "classcalendar:main"
-        ):
-            return reverse("classcalendar:center"), False
         try:
             return reverse(route_name), False
         except NoReverseMatch:

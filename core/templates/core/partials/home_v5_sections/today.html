@@ -18,23 +18,6 @@
         {% endfor %}
     </div>
 
-    {% if home_today_card.date_shortcuts %}
-    <div class="mt-3 grid grid-cols-5 gap-2" data-home-v5-mobile-today-shortcuts="true">
-        {% for shortcut in home_today_card.date_shortcuts %}
-        <a
-            href="{{ shortcut.href|default:'#' }}"
-            class="flex min-h-[76px] flex-col items-center justify-center rounded-[1.1rem] border px-2 py-2 text-center transition {% if shortcut.is_today %}border-slate-900 bg-slate-900 text-white{% else %}border-slate-200 bg-white text-slate-700 hover:border-indigo-200 hover:text-indigo-700{% endif %}"
-            data-home-v5-today-shortcut="true"
-            aria-label="{{ shortcut.date_label }} 일정 보기"
-        >
-            <span class="text-[11px] font-black">{{ shortcut.weekday_label }}</span>
-            <span class="mt-1 text-lg font-black">{{ shortcut.day_number }}</span>
-            <span class="mt-1 text-[11px] font-bold {% if shortcut.is_today %}text-white/80{% else %}text-slate-400{% endif %}">{{ shortcut.count }}건</span>
-        </a>
-        {% endfor %}
-    </div>
-    {% endif %}
-
     {% if home_today_card.items %}
     <div class="mt-3 space-y-2.5" data-home-v5-mobile-today-items="true">
         {% for item in home_today_card.items %}
@@ -75,14 +58,12 @@
         <a
             href="{{ home_today_card.primary_cta.href|default:'#' }}"
             class="inline-flex min-h-[44px] items-center justify-center rounded-full bg-slate-900 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800"
-            data-home-v5-today-primary-action="true"
         >
             {{ home_today_card.primary_cta.label }}
         </a>
         <a
             href="{{ home_today_card.secondary_cta.href|default:'#' }}"
             class="inline-flex min-h-[44px] items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 transition hover:border-indigo-200 hover:text-indigo-700"
-            data-home-v5-today-secondary-action="true"
         >
             {{ home_today_card.secondary_cta.label }}
         </a>
@@ -105,23 +86,6 @@
                 {% endfor %}
             </div>
         </div>
-
-        {% if home_today_card.date_shortcuts %}
-        <div class="mt-5 grid grid-cols-5 gap-2.5" data-home-v5-today-shortcuts="true">
-            {% for shortcut in home_today_card.date_shortcuts %}
-            <a
-                href="{{ shortcut.href|default:'#' }}"
-                class="flex min-h-[88px] flex-col items-center justify-center rounded-[1.2rem] border px-3 py-3 text-center transition {% if shortcut.is_today %}border-slate-900 bg-slate-900 text-white{% else %}border-slate-200 bg-white text-slate-700 hover:border-indigo-200 hover:text-indigo-700{% endif %}"
-                data-home-v5-today-shortcut="true"
-                aria-label="{{ shortcut.date_label }} 일정 보기"
-            >
-                <span class="text-[11px] font-black uppercase tracking-[0.12em] {% if shortcut.is_today %}text-white/75{% else %}text-slate-400{% endif %}">{{ shortcut.weekday_label }}</span>
-                <span class="mt-1 text-2xl font-black">{{ shortcut.day_number }}</span>
-                <span class="mt-1 text-xs font-bold {% if shortcut.is_today %}text-white/80{% else %}text-slate-400{% endif %}">{{ shortcut.count }}건</span>
-            </a>
-            {% endfor %}
-        </div>
-        {% endif %}
 
         {% if home_today_card.items %}
         <div class="mt-5 grid gap-3" data-home-v5-today-items="true">
@@ -163,14 +127,12 @@
             <a
                 href="{{ home_today_card.primary_cta.href|default:'#' }}"
                 class="inline-flex items-center justify-center rounded-full bg-slate-900 px-4 py-2.5 text-sm font-black text-white transition hover:bg-slate-800"
-                data-home-v5-today-primary-action="true"
             >
                 {{ home_today_card.primary_cta.label }}
             </a>
             <a
                 href="{{ home_today_card.secondary_cta.href|default:'#' }}"
                 class="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-700 transition hover:border-indigo-200 hover:text-indigo-700"
-                data-home-v5-today-secondary-action="true"
             >
                 {{ home_today_card.secondary_cta.label }}
             </a>
