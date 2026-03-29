@@ -12,6 +12,8 @@ const DEFAULT_LEFT_RATIO = 0.62;
 const TV_MODE_LEFT_RATIO = 0.5;
 const SPLIT_GAP = 0;
 const ALWAYS_ON_TOP_LEVEL = "screen-saver";
+const VIDEO_CONTROL_BAR_HEIGHT = 96;
+const MIN_VIDEO_CONTENT_HEIGHT = 260;
 const WATCHDOG_INTERVAL_MS = 1400;
 const WATCHDOG_RECOVER_COOLDOWN_MS = 4000;
 const WATCHDOG_MAX_RECOVERY_PER_MIN = 3;
@@ -24,6 +26,7 @@ const AUTO_UPDATE_CHECK_MIN_INTERVAL_MS = 30 * 60 * 1000;
 const PENDING_LAUNCH_MAX_AGE_MS = 30 * 60 * 1000;
 
 let videoWindow = null;
+let videoControlWindow = null;
 let dashboardWindow = null;
 let infoWindow = null;
 let blackoutWindow = null;
@@ -734,6 +737,10 @@ function closeSplitWindows() {
     videoWindow.__eduititInternalClose = true;
     videoWindow.close();
   }
+  if (videoControlWindow && !videoControlWindow.isDestroyed()) {
+    videoControlWindow.__eduititInternalClose = true;
+    videoControlWindow.close();
+  }
   if (dashboardWindow && !dashboardWindow.isDestroyed()) {
     dashboardWindow.__eduititInternalClose = true;
     dashboardWindow.close();
@@ -751,6 +758,7 @@ function closeSplitWindows() {
       }
     });
   videoWindow = null;
+  videoControlWindow = null;
   dashboardWindow = null;
   blackoutWindow = null;
   videoCurtainWindow = null;
@@ -769,7 +777,7 @@ function getVideoCurtainBounds() {
     x: bounds.x,
     y: bounds.y,
     width: bounds.leftWidth,
-    height: bounds.height,
+    height: bounds.videoHeight,
   };
 }
 
@@ -822,7 +830,7 @@ function createVideoCurtainWindow() {
             <div style="text-align:center;padding:32px;">
               <div style="font-size:20px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#86efac;">Eduitit</div>
               <div style="margin-top:14px;font-size:34px;font-weight:900;">영상이 가려져 있습니다</div>
-              <div style="margin-top:14px;font-size:16px;font-weight:700;color:#cbd5e1;">오른쪽 대시보드에서 다시 재생 또는 다시 보이기를 눌러 주세요.</div>
+              <div style="margin-top:14px;font-size:16px;font-weight:700;color:#cbd5e1;">왼쪽 아래 제어 바에서 다시 재생하거나 수업을 종료해 주세요.</div>
             </div>
           </body>
         </html>
@@ -848,7 +856,7 @@ function replayCurrentVideo() {
   const expectedUrl = normalizeHttpUrl(lastLaunchPayload.youtubeUrl);
   if (!expectedUrl) return false;
 
-  if (!isSplitWindowAlive(videoWindow) || !isSplitWindowAlive(dashboardWindow)) {
+  if (!isSplitWindowAlive(videoWindow) || !isSplitWindowAlive(videoControlWindow) || !isSplitWindowAlive(dashboardWindow)) {
     createSplitWindows(lastLaunchPayload);
     return true;
   }
@@ -857,6 +865,7 @@ function replayCurrentVideo() {
     console.error("[launcher-video] failed to replay original video url:", err);
   });
   enforceWindowVisible(videoWindow);
+  enforceWindowVisible(videoControlWindow);
   enforceWindowVisible(dashboardWindow);
   return true;
 }
@@ -933,6 +942,9 @@ function isAllowedNavigation(targetUrl, payload, role) {
         return false;
       }
       return isAllowedVideoHost(parsed.hostname);
+    }
+    if (role === "control") {
+      return parsed.protocol === "data:";
     }
     const dashboardOrigin = new URL(payload.dashboardUrl).origin;
     return parsed.origin === dashboardOrigin;
@@ -1211,15 +1223,229 @@ function computeSplitBounds() {
     rightWidth = totalWidth - leftWidth;
   }
 
+  const controlHeight = Math.max(
+    72,
+    Math.min(VIDEO_CONTROL_BAR_HEIGHT, Math.max(72, area.height - MIN_VIDEO_CONTENT_HEIGHT))
+  );
+  const videoHeight = Math.max(MIN_VIDEO_CONTENT_HEIGHT, area.height - controlHeight);
+  const videoControlY = area.y + videoHeight;
+
   return {
     x: area.x,
     y: area.y,
     width: area.width,
     height: area.height,
     leftWidth,
+    videoHeight,
+    videoControlY,
+    videoControlHeight: controlHeight,
     rightX: area.x + leftWidth + SPLIT_GAP,
     rightWidth,
   };
+}
+
+function buildVideoControlWindowHtml() {
+  return `
+    <!doctype html>
+    <html lang="ko">
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <style>
+          :root {
+            color-scheme: dark;
+          }
+
+          * {
+            box-sizing: border-box;
+          }
+
+          body {
+            margin: 0;
+            height: 100vh;
+            background:
+              radial-gradient(circle at top left, rgba(16, 185, 129, 0.18), transparent 34%),
+              linear-gradient(180deg, #131d34 0%, #0f172a 100%);
+            color: #e2e8f0;
+            font-family: "Segoe UI", Arial, sans-serif;
+            overflow: hidden;
+          }
+
+          .shell {
+            height: 100%;
+            padding: 10px 12px;
+            display: grid;
+            grid-template-rows: 44px 1fr;
+            gap: 8px;
+          }
+
+          .primary-actions {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+          }
+
+          .primary-action {
+            border: 0;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            color: #ffffff;
+            font-size: 19px;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.24);
+          }
+
+          .primary-action.replay {
+            background: linear-gradient(135deg, #10b981, #34d399);
+          }
+
+          .primary-action.quit {
+            background: linear-gradient(135deg, #f43f5e, #fb7185);
+          }
+
+          .secondary-default,
+          .secondary-expanded {
+            min-height: 0;
+          }
+
+          .secondary-default {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+          }
+
+          .secondary-default.hidden,
+          .secondary-expanded.hidden {
+            display: none;
+          }
+
+          .toggle-button {
+            border: 0;
+            border-radius: 999px;
+            padding: 7px 12px;
+            background: rgba(148, 163, 184, 0.18);
+            color: #f8fafc;
+            font-size: 12px;
+            font-weight: 800;
+            cursor: pointer;
+            white-space: nowrap;
+          }
+
+          .hint {
+            min-width: 0;
+            color: #cbd5e1;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .secondary-expanded {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 8px;
+          }
+
+          .secondary-chip {
+            border-radius: 11px;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            background: rgba(255, 255, 255, 0.07);
+            color: #f8fafc;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 800;
+            line-height: 1.1;
+            padding: 6px 8px;
+          }
+
+          .secondary-chip.back {
+            background: rgba(99, 102, 241, 0.22);
+            border-color: rgba(129, 140, 248, 0.34);
+          }
+        </style>
+      </head>
+      <body>
+        <div class="shell">
+          <div class="primary-actions">
+            <a class="primary-action replay" href="${PROTOCOL}://action?name=replay_video">영상 다시 재생</a>
+            <a class="primary-action quit" href="${PROTOCOL}://quit">수업 종료</a>
+          </div>
+          <div id="secondaryDefault" class="secondary-default">
+            <button id="toggleAdvanced" class="toggle-button" type="button">세부 조정</button>
+            <div class="hint">반복은 영상 창 메뉴에서 직접 켜고 끕니다.</div>
+          </div>
+          <div id="secondaryExpanded" class="secondary-expanded hidden">
+            <button id="collapseAdvanced" class="secondary-chip back" type="button">기본 화면</button>
+            <a class="secondary-chip" href="${PROTOCOL}://action?name=tv_mode">TV 모드</a>
+            <a class="secondary-chip" href="${PROTOCOL}://action?name=ratio_reset">기본 비율</a>
+            <a class="secondary-chip" href="${PROTOCOL}://action?name=ratio_up">영상 더 크게</a>
+            <a class="secondary-chip" href="${PROTOCOL}://action?name=move_display">화면 위치 변경</a>
+          </div>
+        </div>
+        <script>
+          (() => {
+            const defaultRow = document.getElementById("secondaryDefault");
+            const expandedRow = document.getElementById("secondaryExpanded");
+            const toggleAdvanced = document.getElementById("toggleAdvanced");
+            const collapseAdvanced = document.getElementById("collapseAdvanced");
+
+            function setExpanded(next) {
+              const expanded = !!next;
+              defaultRow.classList.toggle("hidden", expanded);
+              expandedRow.classList.toggle("hidden", !expanded);
+            }
+
+            toggleAdvanced.addEventListener("click", () => setExpanded(true));
+            collapseAdvanced.addEventListener("click", () => setExpanded(false));
+            setExpanded(false);
+          })();
+        </script>
+      </body>
+    </html>
+  `;
+}
+
+function createVideoControlWindow(payload) {
+  const bounds = computeSplitBounds();
+  const controlBounds = {
+    x: bounds.x,
+    y: bounds.videoControlY,
+    width: bounds.leftWidth,
+    height: bounds.videoControlHeight,
+  };
+
+  videoControlWindow = new BrowserWindow({
+    x: controlBounds.x,
+    y: controlBounds.y,
+    width: controlBounds.width,
+    height: controlBounds.height,
+    frame: false,
+    backgroundColor: "#0f172a",
+    autoHideMenuBar: true,
+    skipTaskbar: true,
+    alwaysOnTop: true,
+    title: `${payload.title} - Controls`,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  videoControlWindow.__eduititSplitWindow = true;
+  applyTeachingWindowBehavior(videoControlWindow);
+  installWindowGuards(videoControlWindow, payload, "control");
+  videoControlWindow.loadURL(
+    "data:text/html;charset=utf-8," + encodeURIComponent(buildVideoControlWindowHtml())
+  );
 }
 
 function getBlackoutBounds() {
@@ -1288,6 +1514,7 @@ function applyTeachingWindowBehavior(win) {
 
 function relayoutSplitWindows() {
   if (!videoWindow || videoWindow.isDestroyed()) return;
+  if (!videoControlWindow || videoControlWindow.isDestroyed()) return;
   if (!dashboardWindow || dashboardWindow.isDestroyed()) return;
 
   const bounds = computeSplitBounds();
@@ -1295,7 +1522,13 @@ function relayoutSplitWindows() {
     x: bounds.x,
     y: bounds.y,
     width: bounds.leftWidth,
-    height: bounds.height,
+    height: bounds.videoHeight,
+  });
+  videoControlWindow.setBounds({
+    x: bounds.x,
+    y: bounds.videoControlY,
+    width: bounds.leftWidth,
+    height: bounds.videoControlHeight,
   });
   dashboardWindow.setBounds({
     x: bounds.rightX,
@@ -1328,8 +1561,9 @@ function ensureSplitHealthy() {
   if (watchdogCircuitOpen) return;
 
   const videoAlive = isSplitWindowAlive(videoWindow);
+  const videoControlAlive = isSplitWindowAlive(videoControlWindow);
   const dashboardAlive = isSplitWindowAlive(dashboardWindow);
-  if (!videoAlive || !dashboardAlive) {
+  if (!videoAlive || !videoControlAlive || !dashboardAlive) {
     const now = Date.now();
     if (!canRecoverNow(now)) {
       resetRecoveryWindow(now);
@@ -1353,8 +1587,10 @@ function ensureSplitHealthy() {
   }
 
   enforceWindowVisible(videoWindow);
+  enforceWindowVisible(videoControlWindow);
   enforceWindowVisible(dashboardWindow);
   applyTeachingWindowBehavior(videoWindow);
+  applyTeachingWindowBehavior(videoControlWindow);
   applyTeachingWindowBehavior(dashboardWindow);
   relayoutSplitWindows();
 }
@@ -1401,7 +1637,7 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
       (() => {
         const targetVideoId = ${JSON.stringify(targetVideoId)};
         const replayUrl = ${JSON.stringify(replayUrl)};
-        const replayCooldownMs = 2500;
+          const replayCooldownMs = 2500;
         const href = window.location.href || "";
         if (!href.includes("youtube.com/watch")) return;
 
@@ -1463,25 +1699,6 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
           return null;
         }
 
-        function disableAutoplayNext() {
-          const selectors = [
-            ".ytp-autonav-toggle-button[aria-checked='true']",
-            ".ytp-autonav-toggle-button[aria-pressed='true']",
-            "button[aria-label*='Autoplay'][aria-pressed='true']",
-            "button[aria-label*='자동재생'][aria-pressed='true']",
-          ];
-
-          for (const selector of selectors) {
-            const toggleButton = document.querySelector(selector);
-            if (toggleButton) {
-              toggleButton.click();
-              return true;
-            }
-          }
-
-          return false;
-        }
-
         const styleId = "eduitit-youtube-focus-style";
         if (!document.getElementById(styleId)) {
           const style = document.createElement("style");
@@ -1539,8 +1756,6 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
           sizeButton.click();
         }
 
-        disableAutoplayNext();
-
         const currentPageVideoId = getPageVideoId();
         if (targetVideoId && currentPageVideoId && currentPageVideoId !== targetVideoId && replayUrl) {
           window.location.replace(replayUrl);
@@ -1558,12 +1773,6 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
         window.__eduititDriftState = driftState;
         window.__eduititVideoGuard = window.setInterval(() => {
           const now = Date.now();
-          const video = document.querySelector("video");
-          if (video) {
-            video.loop = false;
-            video.removeAttribute("loop");
-          }
-          disableAutoplayNext();
 
           if (isAdShowing()) {
             driftState.activeMismatchSince = 0;
@@ -1574,6 +1783,7 @@ function installYouTubeFocusMode(targetWindow, targetVideoUrl) {
           const pageVideoId = getPageVideoId();
           const activeVideoId = getActiveVideoId();
           const playerState = getPlayerState();
+          const video = document.querySelector("video");
 
           if (targetVideoId && pageVideoId && pageVideoId !== targetVideoId) {
             if (replayUrl && now - driftState.lastRecoveryAt >= replayCooldownMs) {
@@ -1638,7 +1848,7 @@ function createSplitWindows(payload) {
     x: bounds.x,
     y: bounds.y,
     width: bounds.leftWidth,
-    height: bounds.height,
+    height: bounds.videoHeight,
     autoHideMenuBar: true,
     title: `${payload.title} - Video`,
     webPreferences: {
@@ -1651,6 +1861,8 @@ function createSplitWindows(payload) {
   installWindowGuards(videoWindow, payload, "video");
   videoWindow.loadURL(payload.youtubeUrl);
   installYouTubeFocusMode(videoWindow, payload.youtubeUrl);
+
+  createVideoControlWindow(payload);
 
   dashboardWindow = new BrowserWindow({
     x: bounds.rightX,
@@ -1675,10 +1887,16 @@ function createSplitWindows(payload) {
   });
 
   const videoRef = videoWindow;
+  const videoControlRef = videoControlWindow;
   const dashboardRef = dashboardWindow;
 
   videoRef.on("close", () => {
     if (!videoRef.__eduititInternalClose) {
+      handleUserWindowClose();
+    }
+  });
+  videoControlRef.on("close", () => {
+    if (!videoControlRef.__eduititInternalClose) {
       handleUserWindowClose();
     }
   });
@@ -1691,6 +1909,11 @@ function createSplitWindows(payload) {
   videoRef.on("closed", () => {
     if (videoWindow === videoRef) {
       videoWindow = null;
+    }
+  });
+  videoControlRef.on("closed", () => {
+    if (videoControlWindow === videoControlRef) {
+      videoControlWindow = null;
     }
   });
   dashboardRef.on("closed", () => {

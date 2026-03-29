@@ -1863,7 +1863,7 @@ class ArtClassPresentationUxTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, "수업 자료 보기")
 
-    def test_launcher_dashboard_shows_manual_video_controls(self):
+    def test_launcher_dashboard_prioritizes_reading_panel_over_launcher_controls(self):
         art_class = ArtClass.objects.create(
             title="런처 제어 수업",
             youtube_url="https://www.youtube.com/watch?v=UFQT5Wtamw0",
@@ -1878,11 +1878,15 @@ class ArtClassPresentationUxTest(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "수업 제어")
-        self.assertContains(response, 'eduitit-launcher://action?name=replay_video')
-        self.assertContains(response, "영상 다시 재생")
-        self.assertContains(response, 'eduitit-launcher://quit')
-        self.assertContains(response, "수업 종료")
+        self.assertContains(response, 'id="btnPrev"')
+        self.assertContains(response, 'id="btnFreeze"')
+        self.assertContains(response, 'id="btnNext"')
+        self.assertContains(response, "body.dashboard-reading-mode #stepImageShell")
+        self.assertContains(response, "body.dashboard-reading-mode #stepImageShell.is-empty")
+        self.assertNotContains(response, 'id="tvTeacherGuide"')
+        self.assertNotContains(response, "수업 제어")
+        self.assertNotContains(response, "영상 다시 재생")
+        self.assertNotContains(response, "수업 종료")
 
 
 class ArtClassYoutubeTitleBackfillCommandTest(TestCase):
