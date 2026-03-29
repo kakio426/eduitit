@@ -54,12 +54,14 @@
 }
 
 .home-v6-page .home-v4-nav-item,
-.home-v6-page .home-v4-tool-link,
+.home-v6-page .home-v4-tool-link {
+    background: transparent;
+}
+
 .home-v6-page .home-v4-favorite-card,
 .home-v6-page .home-v5-mobile-workbench-card,
 .home-v6-page .home-v5-mobile-recent-item,
 .home-v6-page .home-v5-mobile-recommend-item {
-    border-color: rgba(91, 44, 207, 0.1);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(251, 250, 255, 0.98) 100%);
 }
 
@@ -74,35 +76,49 @@
 .home-v6-page .home-v5-mobile-recent-item:focus-visible,
 .home-v6-page .home-v5-mobile-recommend-item:hover,
 .home-v6-page .home-v5-mobile-recommend-item:focus-visible {
-    border-color: rgba(124, 92, 250, 0.28);
     background: #ffffff;
-    box-shadow: 0 16px 32px rgba(91, 44, 207, 0.08);
+    box-shadow: 0 14px 28px rgba(91, 44, 207, 0.06);
 }
 
 .home-v6-page .home-v4-nav-item--home.is-active,
 .home-v6-page .home-v4-nav-item--section.is-open {
-    border-color: rgba(91, 44, 207, 0.18);
-    background: linear-gradient(135deg, rgba(238, 232, 255, 0.94) 0%, #ffffff 100%);
-    box-shadow: 0 16px 32px rgba(91, 44, 207, 0.08);
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 14px 28px rgba(91, 44, 207, 0.06);
 }
 
 .home-v6-page .home-v4-nav-icon--home,
 .home-v6-page .home-v4-nav-icon--slate {
-    background: linear-gradient(135deg, var(--color-brand-900) 0%, #22133f 100%);
-    color: var(--color-text-inverse);
+    background: rgba(255, 255, 255, 0.98);
+    color: var(--color-brand-900);
 }
 
-.home-v6-page .home-v4-nav-icon--blue,
-.home-v6-page .home-v4-nav-icon--emerald,
-.home-v6-page .home-v4-nav-icon--violet,
-.home-v6-page .home-v4-nav-icon--cyan,
+.home-v6-page .home-v4-nav-icon--blue {
+    background: rgba(233, 241, 255, 0.96);
+    color: #315fd4;
+}
+
+.home-v6-page .home-v4-nav-icon--emerald {
+    background: rgba(233, 250, 241, 0.96);
+    color: #0f8f63;
+}
+
+.home-v6-page .home-v4-nav-icon--violet {
+    background: rgba(242, 236, 255, 0.96);
+    color: #7143db;
+}
+
+.home-v6-page .home-v4-nav-icon--cyan {
+    background: rgba(231, 251, 255, 0.96);
+    color: #0b87a5;
+}
+
 .home-v6-page .home-v4-nav-icon--rose,
 .home-v6-page .home-v4-nav-icon--red {
-    background: linear-gradient(135deg, var(--color-brand-700) 0%, var(--color-brand-500) 100%);
-    color: var(--color-text-inverse);
+    background: rgba(255, 238, 242, 0.96);
+    color: #d33a68;
 }
 
-.home-v6-page .home-v4-nav-chevron.is-open,
+.home-v6-page .home-v4-nav-item--section.is-open .home-v4-nav-chevron,
 .home-v6-page .home-v4-mobile-calendar-first-chip--date,
 .home-v6-page .home-v5-mobile-summary-chip--date,
 .home-v6-page .home-v4-recommend-pill:hover {

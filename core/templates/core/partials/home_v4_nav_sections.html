@@ -16,7 +16,7 @@
     </a>
 
     {% for section in home_v4_nav_sections %}
-    <div class="home-v4-nav-group" data-home-v4-nav-section="{{ section.key }}">
+    <div class="home-v4-nav-group home-v4-nav-group--{{ section.color }}" data-home-v4-nav-section="{{ section.key }}">
         <button
             type="button"
             class="home-v4-nav-item home-v4-nav-item--section"
@@ -33,6 +33,8 @@
                 </span>
             </span>
             <span class="home-v4-nav-item-side">
+                <span class="home-v4-nav-count" data-home-v4-nav-count="true" aria-hidden="true">{{ section.count }}</span>
+                <span class="sr-only">서비스 {{ section.count }}개</span>
                 <span class="home-v4-nav-chevron" :class="{ 'is-open': openSection === '{{ section.key }}' }">
                     <i class="fa-solid fa-chevron-down"></i>
                 </span>

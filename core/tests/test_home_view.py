@@ -2482,6 +2482,7 @@ class HomeV4ViewTest(TestCase):
         self.assertIn(f'href="{reverse("handoff:landing")}"', content)
         self.assertIn('href="https://example.com/tool"', content)
         self.assertIn('target="_blank" rel="noopener"', content)
+        self.assertIn('data-home-v4-nav-count="true"', content)
         self.assertIn('data-home-v4-home-panel="true"', content)
         self.assertNotIn('data-home-v4-section-panel=', content)
 
