@@ -2,6 +2,7 @@ import base64
 import json
 import sys
 import tempfile
+from io import StringIO
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -10,6 +11,7 @@ from unittest.mock import Mock
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 
@@ -208,56 +210,64 @@ class OCRDeskServiceTests(SimpleTestCase):
 
         self.assertEqual(mocked_build.call_count, 2)
 
-    def test_extract_text_from_upload_uses_gemini_when_engine_is_unavailable(self):
-        fake_client = Mock()
-        fake_client.models.generate_content.return_value = SimpleNamespace(text="숙제\n수학")
+    def test_extract_text_from_upload_keeps_engine_unavailable_when_engine_init_fails(self):
+        with patch("ocrdesk.services.get_ocr_engine", side_effect=OCREngineUnavailable("ocr_engine_not_ready")):
+            with self.assertRaises(OCREngineUnavailable):
+                ocr_services.extract_text_from_upload(self._image_file())
 
-        with patch.dict("ocrdesk.services.os.environ", {"GEMINI_API_KEY": " test-key "}, clear=True):
-            with patch("ocrdesk.services.get_ocr_engine", side_effect=OCREngineUnavailable("ocr_engine_not_ready")):
-                with patch("ocrdesk.services.genai.Client", return_value=fake_client) as mocked_client:
-                    with patch("ocrdesk.services.genai_types.Part.from_bytes", return_value="image-part") as mocked_part:
-                        text = ocr_services.extract_text_from_upload(self._image_file())
-
-        self.assertEqual(text, "숙제\n수학")
-        mocked_client.assert_called_once_with(api_key="test-key")
-        mocked_part.assert_called_once()
-        self.assertEqual(mocked_part.call_args.kwargs["mime_type"], "image/png")
-        self.assertEqual(mocked_part.call_args.kwargs["data"], PNG_BYTES)
-        fake_client.models.generate_content.assert_called_once_with(
-            model="gemini-2.5-flash-lite",
-            contents=[ocr_services._GEMINI_OCR_PROMPT, "image-part"],
-        )
-
-    def test_extract_text_from_upload_uses_gemini_when_prediction_fails(self):
-        fake_engine = Mock()
-        fake_engine.predict.side_effect = RuntimeError("boom")
-        fake_client = Mock()
-        fake_client.models.generate_content.return_value = SimpleNamespace(text="준비물\n색연필")
-
-        with patch.dict("ocrdesk.services.os.environ", {"GEMINI_API_KEY": "test-key"}, clear=True):
-            with patch("ocrdesk.services.get_ocr_engine", return_value=fake_engine):
-                with patch("ocrdesk.services.genai.Client", return_value=fake_client):
-                    with patch("ocrdesk.services.genai_types.Part.from_bytes", return_value="image-part"):
-                        text = ocr_services.extract_text_from_upload(self._image_file())
-
-        self.assertEqual(text, "준비물\n색연필")
-        fake_engine.predict.assert_called_once()
-        fake_client.models.generate_content.assert_called_once()
-
-    def test_extract_text_from_upload_keeps_engine_unavailable_when_gemini_key_missing(self):
-        with patch.dict("ocrdesk.services.os.environ", {}, clear=True):
-            with patch("ocrdesk.services.get_ocr_engine", side_effect=OCREngineUnavailable("ocr_engine_not_ready")):
-                with self.assertRaises(OCREngineUnavailable):
-                    ocr_services.extract_text_from_upload(self._image_file())
-
-    def test_extract_text_from_upload_raises_processing_error_when_gemini_key_missing(self):
+    def test_extract_text_from_upload_raises_processing_error_when_prediction_fails(self):
         fake_engine = Mock()
         fake_engine.predict.side_effect = RuntimeError("boom")
 
-        with patch.dict("ocrdesk.services.os.environ", {}, clear=True):
-            with patch("ocrdesk.services.get_ocr_engine", return_value=fake_engine):
-                with self.assertRaises(ocr_services.OCRProcessingError):
-                    ocr_services.extract_text_from_upload(self._image_file())
+        with patch("ocrdesk.services.get_ocr_engine", return_value=fake_engine):
+            with self.assertRaises(ocr_services.OCRProcessingError):
+                ocr_services.extract_text_from_upload(self._image_file())
+
+
+class WarmOCRDeskCommandTests(SimpleTestCase):
+    def tearDown(self):
+        ocr_services.reset_ocr_engine_state()
+
+    @patch("ocrdesk.management.commands.warm_ocrdesk._get_paddlex_cache_dir", return_value="/tmp/ocrdesk")
+    @patch("ocrdesk.management.commands.warm_ocrdesk.get_ocr_engine", return_value=object())
+    def test_warm_command_prepares_engine(self, mocked_get_engine, mocked_cache_dir):
+        stdout = StringIO()
+
+        call_command("warm_ocrdesk", stdout=stdout)
+
+        output = stdout.getvalue()
+        self.assertIn("[ocrdesk] warming Paddle OCR engine", output)
+        self.assertIn("[ocrdesk] cache dir: /tmp/ocrdesk", output)
+        self.assertIn("[ocrdesk] Paddle OCR engine ready", output)
+        mocked_cache_dir.assert_called_once()
+        mocked_get_engine.assert_called_once()
+
+    @patch("ocrdesk.management.commands.warm_ocrdesk._get_paddlex_cache_dir", return_value="/tmp/ocrdesk")
+    @patch(
+        "ocrdesk.management.commands.warm_ocrdesk.get_ocr_engine",
+        side_effect=OCREngineUnavailable("ocr_engine_not_ready"),
+    )
+    def test_warm_command_warns_without_strict_mode(self, mocked_get_engine, mocked_cache_dir):
+        stdout = StringIO()
+        stderr = StringIO()
+
+        call_command("warm_ocrdesk", stdout=stdout, stderr=stderr)
+
+        self.assertIn("[ocrdesk] warmup failed: ocr_engine_not_ready", stderr.getvalue())
+        mocked_cache_dir.assert_called_once()
+        mocked_get_engine.assert_called_once()
+
+    @patch("ocrdesk.management.commands.warm_ocrdesk._get_paddlex_cache_dir", return_value="/tmp/ocrdesk")
+    @patch(
+        "ocrdesk.management.commands.warm_ocrdesk.get_ocr_engine",
+        side_effect=OCREngineUnavailable("ocr_engine_not_ready"),
+    )
+    def test_warm_command_can_fail_in_strict_mode(self, mocked_get_engine, mocked_cache_dir):
+        with self.assertRaises(CommandError):
+            call_command("warm_ocrdesk", "--strict")
+
+        mocked_cache_dir.assert_called_once()
+        mocked_get_engine.assert_called_once()
 
 
 class EnsureOCRDeskCommandTests(TestCase):
