@@ -2827,6 +2827,7 @@ class HomeV5ViewTest(TestCase):
             content,
         )
 
+    @override_settings(FEATURE_MESSAGE_CAPTURE_ENABLED=True)
     def test_v5_mobile_places_reservation_below_quickdrop_without_duplicate(self):
         user = self._login('v5mobilequickdropreservation')
         quickdrop = Product.objects.create(
@@ -2860,9 +2861,11 @@ class HomeV5ViewTest(TestCase):
         reservation_index = content.index('data-home-reservations-card="true"')
         sns_index = content.index('data-home-v5-mobile-sns="true"')
         workbench_block = content[workbench_index:calendar_index]
+        desktop_layout_index = content.index('home-v5-desktop-layout')
+        mobile_block = content[:desktop_layout_index]
 
         self.assertNotIn('title="바로전송">바로전송</p>', workbench_block)
-        self.assertEqual(content.count('data-home-v4-mobile-quickdrop="true"'), 1)
+        self.assertEqual(mobile_block.count('data-home-v4-mobile-quickdrop="true"'), 1)
         self.assertLess(workbench_index, calendar_index)
         self.assertLess(calendar_index, quickdrop_index)
         self.assertLess(quickdrop_index, reservation_index)
@@ -3026,6 +3029,7 @@ class HomeV6ViewTest(TestCase):
             content,
         )
 
+    @override_settings(FEATURE_MESSAGE_CAPTURE_ENABLED=True)
     def test_v6_mobile_places_reservation_below_quickdrop_without_duplicate(self):
         user = self._login('v6mobilequickdropreservation')
         ProductFavorite.objects.create(user=user, product=self.favorite_product, pin_order=1)
@@ -3060,10 +3064,12 @@ class HomeV6ViewTest(TestCase):
         reservation_index = content.index('data-home-reservations-card="true"')
         sns_index = content.index('data-home-v5-mobile-sns="true"')
         workbench_block = content[workbench_index:calendar_index]
+        desktop_layout_index = content.index('home-v5-desktop-layout')
+        mobile_block = content[:desktop_layout_index]
 
         self.assertEqual(response.context['home_design_version'], 'v6')
         self.assertNotIn('title="바로전송">바로전송</p>', workbench_block)
-        self.assertEqual(content.count('data-home-v4-mobile-quickdrop="true"'), 1)
+        self.assertEqual(mobile_block.count('data-home-v4-mobile-quickdrop="true"'), 1)
         self.assertLess(workbench_index, calendar_index)
         self.assertLess(calendar_index, quickdrop_index)
         self.assertLess(quickdrop_index, reservation_index)
