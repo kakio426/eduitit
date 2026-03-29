@@ -104,27 +104,11 @@ WORKBENCH_SLOT_COUNT = 4
 WORKBENCH_WEEKLY_BUNDLE_LIMIT = 2
 HOME_V5_MOBILE_SECTION_ORDER = (
     'workbench',
-    'today',
+    'calendar',
     'quickdrop',
     'reservations',
     'sns',
 )
-HOME_V5_DESKTOP_PRIMARY_SECTION_ORDER = (
-    'today',
-)
-HOME_V5_DESKTOP_SIDE_SECTION_ORDER = (
-    'workbench',
-    'quickdrop',
-    'reservations',
-    'sns',
-)
-HOME_V5_SECTION_TEMPLATE_MAP = {
-    'workbench': 'core/partials/home_v5_sections/workbench.html',
-    'today': 'core/partials/home_v5_sections/today.html',
-    'quickdrop': 'core/partials/home_v5_sections/quickdrop.html',
-    'reservations': 'core/partials/home_v5_sections/reservations.html',
-    'sns': 'core/partials/home_v5_sections/community.html',
-}
 HOME_PROMOTED_MOBILE_SERVICE_KEYS = {'quickdrop'}
 
 
@@ -2403,148 +2387,6 @@ def _build_home_calendar_hub_context(request):
     }
 
 
-def _build_home_today_card_context(request):
-    calendar_hub = _build_home_calendar_hub_context(request)
-    today_workspace = {
-        "date_label": calendar_hub.get("date_label", ""),
-        "today_event_count": calendar_hub.get("today_event_count", 0),
-        "today_task_count": calendar_hub.get("today_task_count", 0),
-        "today_memo_count": (
-            int(calendar_hub.get("today_event_memo_count", 0) or 0)
-            + int(calendar_hub.get("today_task_memo_count", 0) or 0)
-        ),
-        "today_all_url": calendar_hub.get("today_all_url", ""),
-        "today_memo_url": calendar_hub.get("today_memo_url", ""),
-        "today_review_url": calendar_hub.get("today_review_url", ""),
-        "today_create_url": calendar_hub.get("today_create_url", ""),
-        "main_url": calendar_hub.get("main_url", ""),
-    }
-
-    summary_chips = [
-        {
-            "label": "일정",
-            "count": today_workspace["today_event_count"],
-            "tone": "slate",
-        },
-        {
-            "label": "할 일",
-            "count": today_workspace["today_task_count"],
-            "tone": "indigo",
-        },
-        {
-            "label": "메모",
-            "count": today_workspace["today_memo_count"],
-            "tone": "amber",
-        },
-    ]
-
-    items = []
-    for event in calendar_hub.get("today_events", [])[:2]:
-        items.append(
-            {
-                "badge": "일정",
-                "badge_tone": "slate",
-                "title": event.get("title", ""),
-                "meta": event.get("schedule_text", ""),
-                "summary": event.get("note_excerpt", ""),
-                "href": calendar_hub.get("today_all_url") or calendar_hub.get("today_url"),
-            }
-        )
-    for task in calendar_hub.get("today_tasks", [])[:2]:
-        items.append(
-            {
-                "badge": "할 일",
-                "badge_tone": "indigo",
-                "title": task.get("title", ""),
-                "meta": task.get("schedule_text", ""),
-                "summary": task.get("note_excerpt", ""),
-                "href": calendar_hub.get("today_review_url")
-                or calendar_hub.get("today_all_url")
-                or calendar_hub.get("today_url"),
-            }
-        )
-    for memo in calendar_hub.get("today_memos", [])[:1]:
-        items.append(
-            {
-                "badge": "메모",
-                "badge_tone": "amber",
-                "title": memo.get("title", ""),
-                "meta": memo.get("schedule_text", ""),
-                "summary": memo.get("note_excerpt", ""),
-                "href": calendar_hub.get("today_memo_url")
-                or calendar_hub.get("today_all_url")
-                or calendar_hub.get("today_url"),
-            }
-        )
-    if not items:
-        for event in calendar_hub.get("next_upcoming_events", [])[:2]:
-            items.append(
-                {
-                    "badge": "다가오는 일정",
-                    "badge_tone": "emerald",
-                    "title": event.get("title", ""),
-                    "meta": event.get("schedule_text", ""),
-                    "summary": event.get("note_excerpt", ""),
-                    "href": calendar_hub.get("main_url") or calendar_hub.get("today_url"),
-                }
-            )
-
-    primary_href = (
-        calendar_hub.get("today_all_url")
-        or calendar_hub.get("today_url")
-        or calendar_hub.get("main_url")
-    )
-    secondary_href = (
-        calendar_hub.get("today_create_url")
-        or calendar_hub.get("main_url")
-        or calendar_hub.get("today_url")
-    )
-
-    return {
-        "title": "오늘 할 일",
-        "eyebrow": "오늘 바로 하는 일",
-        "date_label": calendar_hub.get("date_label", ""),
-        "summary_chips": summary_chips,
-        "items": items,
-        "empty_message": calendar_hub.get("empty_message", "오늘 확인할 일정과 할 일이 없습니다."),
-        "primary_cta": {
-            "label": "오늘 일정 보기",
-            "href": primary_href,
-        },
-        "secondary_cta": {
-            "label": "새 일정 추가",
-            "href": secondary_href,
-        },
-        "today_workspace": today_workspace,
-    }
-
-
-def _build_home_v5_section_entries(
-    keys,
-    *,
-    surface,
-    quickdrop_home_card=None,
-    reservation_home_card=None,
-):
-    sections = []
-    for key in keys:
-        if key == "quickdrop" and not quickdrop_home_card:
-            continue
-        if key == "reservations" and not reservation_home_card:
-            continue
-        template_name = HOME_V5_SECTION_TEMPLATE_MAP.get(key)
-        if not template_name:
-            continue
-        sections.append(
-            {
-                "key": key,
-                "surface": surface,
-                "template_name": template_name,
-            }
-        )
-    return sections
-
-
 def _normalize_catalog_section_key(raw_value):
     value = str(raw_value or "").strip().lower()
     if value in VALID_CATALOG_SECTION_KEYS:
@@ -2987,7 +2829,6 @@ def _build_home_authenticated_v4_response(
     *,
     template_name='core/home_authenticated_v4.html',
     home_design_version='v4',
-    include_calendar_surface=True,
 ):
     """환경변수로 안전하게 롤아웃하는 인증 홈 공통 응답."""
     product_list = _attach_product_launch_meta(list(products), user=request.user)
@@ -3123,34 +2964,14 @@ def _build_home_authenticated_v4_response(
         ]
     developer_chat_home_card = build_developer_chat_home_card_context(request.user)
     reservation_home_card = _build_home_reservation_card(request.user)
-    home_today_card = _build_home_today_card_context(request)
-    home_v5_mobile_sections = _build_home_v5_section_entries(
-        HOME_V5_MOBILE_SECTION_ORDER,
-        surface='mobile',
-        quickdrop_home_card=quickdrop_home_card,
-        reservation_home_card=reservation_home_card,
-    )
-    home_v5_desktop_primary_sections = _build_home_v5_section_entries(
-        HOME_V5_DESKTOP_PRIMARY_SECTION_ORDER,
-        surface='desktop',
-        quickdrop_home_card=quickdrop_home_card,
-        reservation_home_card=reservation_home_card,
-    )
-    home_v5_desktop_side_sections = _build_home_v5_section_entries(
-        HOME_V5_DESKTOP_SIDE_SECTION_ORDER,
-        surface='desktop',
-        quickdrop_home_card=quickdrop_home_card,
-        reservation_home_card=reservation_home_card,
-    )
-    home_calendar_surface = {}
-    if include_calendar_surface:
-        from classcalendar.views import build_calendar_surface_context
 
-        home_calendar_surface = build_calendar_surface_context(
-            request,
-            page_variant='main',
-            embedded_surface='home',
-        )
+    from classcalendar.views import build_calendar_surface_context
+
+    home_calendar_surface = build_calendar_surface_context(
+        request,
+        page_variant='main',
+        embedded_surface='home',
+    )
     home_v2_frontend_config = {
         'toggleFavoriteUrl': reverse('toggle_product_favorite'),
         'trackUsageUrl': reverse('track_product_usage'),
@@ -3173,14 +2994,10 @@ def _build_home_authenticated_v4_response(
         'home_v4_nav_sections': home_v4_nav_sections,
         'home_v4_mobile_calendar_first_enabled': home_v4_mobile_calendar_first_enabled,
         'home_v4_mobile_quick_items': home_v4_mobile_quick_items,
+        'home_v5_mobile_section_order': HOME_V5_MOBILE_SECTION_ORDER,
         'home_v5_mobile_workbench_items': home_v5_mobile_workbench_items,
         'home_v5_mobile_recommend_items': home_v5_mobile_recommend_items,
-        'home_v5_mobile_sections': home_v5_mobile_sections,
-        'home_v5_desktop_primary_sections': home_v5_desktop_primary_sections,
-        'home_v5_desktop_side_sections': home_v5_desktop_side_sections,
         'developer_chat_home_card': developer_chat_home_card,
-        'home_today_card': home_today_card,
-        'today_workspace': home_today_card['today_workspace'],
         'reservation_home_card': reservation_home_card,
         'home_calendar_surface': home_calendar_surface,
         'home_v2_frontend_config': home_v2_frontend_config,
@@ -3221,7 +3038,6 @@ def _home_v5(request, products, posts, page_obj, feed_scope, pinned_notice_posts
         pinned_notice_posts,
         template_name='core/home_authenticated_v5.html',
         home_design_version='v5',
-        include_calendar_surface=False,
     )
 
 
@@ -3236,7 +3052,6 @@ def _home_v6(request, products, posts, page_obj, feed_scope, pinned_notice_posts
         pinned_notice_posts,
         template_name='core/home_authenticated_v5.html',
         home_design_version='v6',
-        include_calendar_surface=False,
     )
 
 

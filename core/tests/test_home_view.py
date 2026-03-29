@@ -2743,15 +2743,12 @@ class HomeV5ViewTest(TestCase):
         self.assertIn('data-home-design-version="v5"', content)
         self.assertIn('data-home-v5-mobile-summary="true"', content)
         self.assertIn('data-home-v5-mobile-workbench="true"', content)
-        self.assertIn('data-home-v5-mobile-today-panel="true"', content)
+        self.assertIn('data-home-v5-mobile-calendar-panel="true"', content)
         self.assertIn('data-home-v5-mobile-sns="true"', content)
         self.assertIn('sns-full-section-auth-v5', content)
         self.assertIn('data-home-v5-mobile-all-tools-button="true"', content)
-        self.assertIn('오늘 할 일', content)
         self.assertIn('내 작업대', content)
         self.assertIn('data-favorite-toggle="true"', content)
-        self.assertNotIn('data-classcalendar-home-card="true"', content)
-        self.assertNotIn('data-classcalendar-surface="true"', content)
         self.assertNotIn('data-home-v4-public-shell="true"', content)
         self.assertNotIn('data-home-v4-mobile-menu-trigger="true"', content)
         self.assertNotIn('data-home-v4-mobile-quick-tools="true"', content)
@@ -2787,14 +2784,14 @@ class HomeV5ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         workbench_index = content.index('data-home-v5-mobile-workbench="true"')
-        today_index = content.index('data-home-v5-mobile-today-panel="true"')
+        calendar_index = content.index('data-home-v5-mobile-calendar-panel="true"')
         sns_index = content.index('data-home-v5-mobile-sns="true"')
-        workbench_block = content[workbench_index:today_index]
+        workbench_block = content[workbench_index:calendar_index]
 
         self.assertEqual(workbench_block.count('data-home-v5-mobile-workbench-card="true"'), 5)
         self.assertIn('title="즐겨찾기 서비스 5">즐겨찾기 서비스 5</p>', workbench_block)
-        self.assertLess(workbench_index, today_index)
-        self.assertLess(today_index, sns_index)
+        self.assertLess(workbench_index, calendar_index)
+        self.assertLess(calendar_index, sns_index)
 
     def test_v5_home_shows_my_school_reservations_card(self):
         user = self._login('v5reservations')
@@ -2859,20 +2856,20 @@ class HomeV5ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         workbench_index = content.index('data-home-v5-mobile-workbench="true"')
-        today_index = content.index('data-home-v5-mobile-today-panel="true"')
+        calendar_index = content.index('data-home-v5-mobile-calendar-panel="true"')
         quickdrop_index = content.index('data-home-v4-mobile-quickdrop="true"')
         reservation_index = content.index('data-home-reservations-card="true"')
         sns_index = content.index('data-home-v5-mobile-sns="true"')
-        workbench_block = content[workbench_index:today_index]
+        workbench_block = content[workbench_index:calendar_index]
         desktop_layout_index = content.index('home-v5-desktop-layout')
         mobile_block = content[:desktop_layout_index]
 
         self.assertNotIn('title="바로전송">바로전송</p>', workbench_block)
         self.assertEqual(mobile_block.count('data-home-v4-mobile-quickdrop="true"'), 1)
-        self.assertLess(workbench_index, today_index)
-        self.assertLess(today_index, quickdrop_index)
+        self.assertLess(workbench_index, calendar_index)
+        self.assertLess(calendar_index, quickdrop_index)
         self.assertLess(quickdrop_index, reservation_index)
-        self.assertLess(today_index, sns_index)
+        self.assertLess(calendar_index, sns_index)
 
     def test_reservations_product_uses_smart_entry_for_authenticated_user(self):
         user = self._login('v5smartentry')
@@ -2983,9 +2980,7 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('data-home-design-version="v6"', content)
         self.assertIn('home-v6-page', content)
         self.assertIn('home-v6-shell', content)
-        self.assertIn('data-home-v5-mobile-today-panel="true"', content)
-        self.assertNotIn('data-classcalendar-home-card="true"', content)
-        self.assertNotIn('data-classcalendar-surface="true"', content)
+        self.assertIn('data-classcalendar-home-card="true"', content)
 
     def test_v6_quickdrop_card_uses_direct_send_form(self):
         user = self._login('v6quickdropdirect')
@@ -3064,19 +3059,19 @@ class HomeV6ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         workbench_index = content.index('data-home-v5-mobile-workbench="true"')
-        today_index = content.index('data-home-v5-mobile-today-panel="true"')
+        calendar_index = content.index('data-home-v5-mobile-calendar-panel="true"')
         quickdrop_index = content.index('data-home-v4-mobile-quickdrop="true"')
         reservation_index = content.index('data-home-reservations-card="true"')
         sns_index = content.index('data-home-v5-mobile-sns="true"')
-        workbench_block = content[workbench_index:today_index]
+        workbench_block = content[workbench_index:calendar_index]
         desktop_layout_index = content.index('home-v5-desktop-layout')
         mobile_block = content[:desktop_layout_index]
 
         self.assertEqual(response.context['home_design_version'], 'v6')
         self.assertNotIn('title="바로전송">바로전송</p>', workbench_block)
         self.assertEqual(mobile_block.count('data-home-v4-mobile-quickdrop="true"'), 1)
-        self.assertLess(workbench_index, today_index)
-        self.assertLess(today_index, quickdrop_index)
+        self.assertLess(workbench_index, calendar_index)
+        self.assertLess(calendar_index, quickdrop_index)
         self.assertLess(quickdrop_index, reservation_index)
         self.assertLess(reservation_index, sns_index)
 
