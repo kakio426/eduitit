@@ -2827,8 +2827,8 @@ class HomeV5ViewTest(TestCase):
             content,
         )
 
-    def test_v5_mobile_places_reservation_card_below_quickdrop_card(self):
-        user = self._login('v5mobilequickdropreservation')
+    def test_v5_mobile_places_reservation_card_below_quickdrop_in_original_position(self):
+        user = self._login('v5mobilereservationorder')
         Product.objects.create(
             title='바로전송',
             description='빠른 전송',
@@ -2843,11 +2843,14 @@ class HomeV5ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-
+        calendar_index = content.index('data-home-v5-mobile-calendar-panel="true"')
         quickdrop_index = content.index('data-home-v4-mobile-quickdrop="true"')
         reservation_index = content.index('data-home-reservations-card="true"')
+        sns_index = content.index('data-home-v5-mobile-sns="true"')
 
+        self.assertLess(calendar_index, quickdrop_index)
         self.assertLess(quickdrop_index, reservation_index)
+        self.assertLess(reservation_index, sns_index)
 
     def test_reservations_product_uses_smart_entry_for_authenticated_user(self):
         user = self._login('v5smartentry')
