@@ -47,6 +47,8 @@ let updateCheckPromise = null;
 let downloadedUpdateInfo = null;
 let downloadedUpdatePromptOpen = false;
 let requiredUpdateContext = null;
+let infoWindowReady = false;
+let pendingInfoWindowState = null;
 let cachedLauncherReleaseConfig = {
   configUrl: "",
   updateBaseUrl: "",
@@ -184,6 +186,236 @@ function normalizeTimestamp(value) {
 function normalizeShortText(value, maxLength = 500) {
   if (typeof value !== "string") return "";
   return value.trim().slice(0, maxLength);
+}
+
+function getDefaultInfoWindowState() {
+  return {
+    badge: "런처 준비됨",
+    title: "Eduitit Teacher Launcher",
+    message: "브라우저에서 런처로 수업 시작을 누르면 왼쪽 영상과 오른쪽 대시보드가 함께 열립니다.",
+    detail: "업데이트가 필요하면 이 창에서 진행 상태를 바로 보여 줍니다.",
+    progress: null,
+    tone: "idle",
+  };
+}
+
+function normalizeInfoWindowState(rawState = {}) {
+  const base = getDefaultInfoWindowState();
+  const state = rawState && typeof rawState === "object" ? rawState : {};
+  const normalizedProgress = Number.isFinite(Number(state.progress))
+    ? Math.max(0, Math.min(100, Math.round(Number(state.progress))))
+    : null;
+
+  return {
+    badge: normalizeShortText(state.badge || base.badge, 40) || base.badge,
+    title: normalizeShortText(state.title || base.title, 120) || base.title,
+    message: normalizeShortText(state.message || base.message, 240) || base.message,
+    detail: normalizeShortText(state.detail || base.detail, 360) || "",
+    progress: normalizedProgress,
+    tone: ["idle", "info", "success", "warning", "error"].includes(state.tone) ? state.tone : base.tone,
+  };
+}
+
+function buildInfoWindowHtml() {
+  return `
+    <!doctype html>
+    <html lang="ko">
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <style>
+          :root {
+            color-scheme: dark;
+          }
+
+          * {
+            box-sizing: border-box;
+          }
+
+          body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Segoe UI", Arial, sans-serif;
+            background:
+              radial-gradient(circle at top left, rgba(16, 185, 129, 0.18), transparent 34%),
+              linear-gradient(180deg, #111827 0%, #0f172a 100%);
+            color: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+          }
+
+          .panel {
+            width: 100%;
+            max-width: 560px;
+            border-radius: 24px;
+            padding: 28px;
+            background: rgba(15, 23, 42, 0.92);
+            border: 1px solid rgba(148, 163, 184, 0.14);
+            box-shadow: 0 28px 60px rgba(15, 23, 42, 0.45);
+          }
+
+          .badge {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+            background: rgba(148, 163, 184, 0.16);
+            color: #dbeafe;
+          }
+
+          body[data-tone="info"] .badge {
+            background: rgba(59, 130, 246, 0.2);
+            color: #bfdbfe;
+          }
+
+          body[data-tone="success"] .badge {
+            background: rgba(16, 185, 129, 0.22);
+            color: #bbf7d0;
+          }
+
+          body[data-tone="warning"] .badge {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fde68a;
+          }
+
+          body[data-tone="error"] .badge {
+            background: rgba(244, 63, 94, 0.18);
+            color: #fecdd3;
+          }
+
+          h1 {
+            margin: 16px 0 10px;
+            font-size: 31px;
+            line-height: 1.18;
+            letter-spacing: -0.04em;
+          }
+
+          .message {
+            margin: 0;
+            font-size: 17px;
+            font-weight: 700;
+            line-height: 1.55;
+            color: #f8fafc;
+          }
+
+          .detail {
+            margin: 12px 0 0;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #cbd5e1;
+          }
+
+          .progress-wrap {
+            margin-top: 22px;
+            display: none;
+          }
+
+          .progress-wrap.visible {
+            display: block;
+          }
+
+          .progress-track {
+            width: 100%;
+            height: 12px;
+            border-radius: 999px;
+            background: rgba(148, 163, 184, 0.16);
+            overflow: hidden;
+          }
+
+          .progress-bar {
+            width: 0%;
+            height: 100%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #34d399 0%, #60a5fa 100%);
+            transition: width 180ms ease;
+          }
+
+          .progress-text {
+            margin-top: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #bfdbfe;
+          }
+        </style>
+      </head>
+      <body data-tone="idle">
+        <div class="panel">
+          <div id="statusBadge" class="badge">런처 준비됨</div>
+          <h1 id="statusTitle">Eduitit Teacher Launcher</h1>
+          <p id="statusMessage" class="message">브라우저에서 런처로 수업 시작을 누르면 왼쪽 영상과 오른쪽 대시보드가 함께 열립니다.</p>
+          <p id="statusDetail" class="detail">업데이트가 필요하면 이 창에서 진행 상태를 바로 보여 줍니다.</p>
+          <div id="progressWrap" class="progress-wrap">
+            <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
+            <div id="progressText" class="progress-text"></div>
+          </div>
+        </div>
+        <script>
+          window.__applyLauncherStatus = (nextState = {}) => {
+            const state = nextState && typeof nextState === "object" ? nextState : {};
+            document.body.dataset.tone = state.tone || "idle";
+            document.getElementById("statusBadge").textContent = state.badge || "";
+            document.getElementById("statusTitle").textContent = state.title || "";
+            document.getElementById("statusMessage").textContent = state.message || "";
+            document.getElementById("statusDetail").textContent = state.detail || "";
+
+            const progressWrap = document.getElementById("progressWrap");
+            const progressBar = document.getElementById("progressBar");
+            const progressText = document.getElementById("progressText");
+            if (Number.isFinite(state.progress)) {
+              progressWrap.classList.add("visible");
+              progressBar.style.width = state.progress + "%";
+              progressText.textContent = "진행률 " + state.progress + "%";
+            } else {
+              progressWrap.classList.remove("visible");
+              progressBar.style.width = "0%";
+              progressText.textContent = "";
+            }
+          };
+        </script>
+      </body>
+    </html>
+  `;
+}
+
+function applyInfoWindowState(state) {
+  if (!infoWindow || infoWindow.isDestroyed() || !infoWindowReady) return;
+  const payload = JSON.stringify(normalizeInfoWindowState(state));
+  infoWindow.webContents
+    .executeJavaScript(`window.__applyLauncherStatus(${payload});`, true)
+    .catch((err) => {
+      console.error("[launcher-ui] failed to apply info window state:", err);
+    });
+}
+
+function setInfoWindowState(rawState, { reveal = true, focus = false } = {}) {
+  pendingInfoWindowState = normalizeInfoWindowState(rawState);
+  createInfoWindow({ focus: reveal || focus });
+  if (reveal && infoWindow && !infoWindow.isDestroyed()) {
+    if (!infoWindow.isVisible()) infoWindow.show();
+    if (focus) infoWindow.focus();
+  }
+  if (infoWindowReady) {
+    applyInfoWindowState(pendingInfoWindowState);
+  }
+}
+
+function setUpdateWindowState({ badge, title, message, detail, progress = null, tone = "info" }) {
+  setInfoWindowState(
+    {
+      badge,
+      title,
+      message,
+      detail,
+      progress,
+      tone,
+    },
+    { reveal: true, focus: false }
+  );
 }
 
 function normalizeVersionString(value) {
@@ -492,6 +724,12 @@ async function tryUpdateFromMissingPayload() {
   }
 
   try {
+    setUpdateWindowState({
+      badge: "업데이트 확인 중",
+      title: "런처를 최신 상태로 맞추는 중입니다.",
+      message: "잠시만 기다려 주세요.",
+      detail: "오래된 런처가 감지되어 새 버전을 확인하고 있습니다.",
+    });
     if (state.configUrl) {
       state = await syncLauncherReleaseConfig(state.configUrl, { checkImmediately: true, force: true });
     } else {
@@ -517,6 +755,14 @@ async function tryUpdateFromMissingPayload() {
   }
 
   if (downloadedUpdateInfo && isVersionAtLeast(downloadedUpdateInfo.version, requiredVersion)) {
+    setUpdateWindowState({
+      badge: "업데이트 준비 완료",
+      title: "새 버전 설치를 시작합니다.",
+      message: "잠시만 기다려 주세요.",
+      detail: "업데이트 후 같은 수업을 다시 열 수 있게 준비하고 있습니다.",
+      progress: 100,
+      tone: "success",
+    });
     await promptForDownloadedUpdate(downloadedUpdateInfo);
     return true;
   }
@@ -528,6 +774,13 @@ async function tryUpdateFromMissingPayload() {
     });
   }
 
+  setUpdateWindowState({
+    badge: "수동 설치 필요",
+    title: "설치 파일을 열었습니다.",
+    message: "새 버전을 설치한 뒤 다시 눌러 주세요.",
+    detail: "자동 업데이트를 바로 적용하지 못해 설치 파일을 먼저 열었습니다.",
+    tone: "warning",
+  });
   showErrorBox("현재 런처가 오래되어 이 버튼을 처리하지 못합니다. 업데이트 설치 화면을 열었습니다. 업데이트 후 다시 시도해 주세요.");
   return true;
 }
@@ -547,6 +800,14 @@ function installRequiredUpdateNow() {
   }
 
   try {
+    setUpdateWindowState({
+      badge: "재시작 중",
+      title: "업데이트 설치를 시작합니다.",
+      message: "런처가 잠시 닫혔다가 다시 열립니다.",
+      detail: "설치가 끝나면 같은 수업을 자동으로 다시 엽니다.",
+      progress: 100,
+      tone: "success",
+    });
     updater.quitAndInstall();
     return true;
   } catch (err) {
@@ -564,11 +825,63 @@ function ensureAutoUpdater() {
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
   autoUpdater.logger = console;
+  autoUpdater.on("checking-for-update", () => {
+    setUpdateWindowState({
+      badge: "업데이트 확인 중",
+      title: "런처를 최신 상태로 확인하고 있습니다.",
+      message: "잠시만 기다려 주세요.",
+      detail: "새 버전이 있으면 자동으로 내려받고, 끝나면 같은 수업을 다시 엽니다.",
+    });
+  });
+  autoUpdater.on("update-available", (info) => {
+    const versionLabel = normalizeShortText(info && info.version, 40) || "새 버전";
+    setUpdateWindowState({
+      badge: "업데이트 다운로드 중",
+      title: `${versionLabel}을 내려받는 중입니다.`,
+      message: "조금만 기다려 주세요.",
+      detail: "다운로드가 끝나면 자동으로 설치 준비를 이어갑니다.",
+      progress: 0,
+    });
+  });
+  autoUpdater.on("download-progress", (progressInfo) => {
+    const percent = Number(progressInfo && progressInfo.percent);
+    setUpdateWindowState({
+      badge: "업데이트 다운로드 중",
+      title: "새 버전을 내려받고 있습니다.",
+      message: "런처를 닫지 말고 잠시만 기다려 주세요.",
+      detail: "다운로드가 끝나면 자동으로 설치 준비를 이어갑니다.",
+      progress: Number.isFinite(percent) ? percent : null,
+    });
+  });
+  autoUpdater.on("update-not-available", () => {
+    if (requiredUpdateContext) return;
+    pendingInfoWindowState = getDefaultInfoWindowState();
+    applyInfoWindowState(pendingInfoWindowState);
+  });
   autoUpdater.on("error", (err) => {
     console.error("[launcher-update] updater error:", err);
+    setUpdateWindowState({
+      badge: "업데이트 확인 실패",
+      title: "업데이트 상태를 바로 확인하지 못했습니다.",
+      message: "인터넷 연결을 확인한 뒤 다시 시도해 주세요.",
+      detail: "잠시 후 다시 실행하거나 설치 파일로 업데이트할 수 있습니다.",
+      tone: "warning",
+    });
   });
   autoUpdater.on("update-downloaded", (info) => {
     downloadedUpdateInfo = info || { version: "" };
+    setUpdateWindowState({
+      badge: "업데이트 준비 완료",
+      title: "새 버전 다운로드가 끝났습니다.",
+      message: requiredUpdateContext
+        ? "잠시 뒤 자동으로 다시 시작합니다."
+        : "재시작하면 바로 업데이트됩니다.",
+      detail: requiredUpdateContext
+        ? "업데이트 후 같은 수업을 다시 엽니다."
+        : "지금 재시작하거나 다음 종료 때 자동으로 설치할 수 있습니다.",
+      progress: 100,
+      tone: "success",
+    });
     if (
       requiredUpdateContext &&
       isVersionAtLeast(downloadedUpdateInfo.version, requiredUpdateContext.requiredVersion)
@@ -683,6 +996,13 @@ async function ensureLauncherVersionReadyForLaunch(payload) {
     downloadUrl: state.downloadUrl,
   };
   savePendingLaunchState(payload, { requiredVersion });
+  setUpdateWindowState({
+    badge: "업데이트 필요",
+    title: "런처를 먼저 업데이트합니다.",
+    message: "잠시만 기다려 주세요.",
+    detail: "최신 버전 설치가 끝나면 같은 수업을 자동으로 다시 엽니다.",
+    tone: "warning",
+  });
 
   if (
     downloadedUpdateInfo &&
@@ -1165,12 +1485,13 @@ function enableTvModeSplit() {
   relayoutSplitWindows();
 }
 
-function createInfoWindow() {
+function createInfoWindow({ focus = true } = {}) {
   if (infoWindow && !infoWindow.isDestroyed()) {
-    infoWindow.focus();
+    if (focus) infoWindow.focus();
     return;
   }
 
+  infoWindowReady = false;
   infoWindow = new BrowserWindow({
     width: 560,
     height: 420,
@@ -1181,24 +1502,15 @@ function createInfoWindow() {
     },
   });
   infoWindow.setMenuBarVisibility(false);
-
-  const html = [
-    "<html><head><meta charset='utf-8'><title>Eduitit Launcher</title></head>",
-    "<body style='font-family:Segoe UI,Arial,sans-serif;background:#0f172a;color:#e2e8f0;padding:28px;'>",
-    "<h2 style='margin-top:0;'>Eduitit Teacher Launcher</h2>",
-    "<p style='line-height:1.6;'>브라우저에서 <strong>런처로 수업 시작</strong> 버튼을 누르면",
-    " 왼쪽(유튜브) + 오른쪽(대시보드) 분할 창이 자동으로 열립니다.</p>",
-    "<p style='line-height:1.6;color:#94a3b8;'>기본은 영상이 더 넓은 62:38으로 시작하고, 수업 화면의 <strong>TV 모드</strong> 버튼으로 50:50으로 바꿀 수 있습니다.</p>",
-    "<p style='line-height:1.6;color:#94a3b8;'>이 창은 대기 화면입니다. 수업 시작 버튼으로 런처를 호출해 주세요.</p>",
-    "</body></html>",
-  ].join("");
-
-  infoWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+  infoWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(buildInfoWindowHtml())}`);
   infoWindow.webContents.once("did-finish-load", () => {
+    infoWindowReady = true;
+    applyInfoWindowState(pendingInfoWindowState || getDefaultInfoWindowState());
     maybePromptForDownloadedUpdate();
   });
   infoWindow.on("closed", () => {
     infoWindow = null;
+    infoWindowReady = false;
   });
 }
 
@@ -1314,7 +1626,7 @@ function buildVideoControlWindowHtml() {
 
           .secondary-default {
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             gap: 10px;
           }
 
@@ -1338,12 +1650,11 @@ function buildVideoControlWindowHtml() {
           .hint {
             min-width: 0;
             color: #cbd5e1;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 700;
-            line-height: 1.2;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            line-height: 1.3;
+            white-space: normal;
+            overflow: visible;
           }
 
           .secondary-expanded {
@@ -1382,7 +1693,7 @@ function buildVideoControlWindowHtml() {
           </div>
           <div id="secondaryDefault" class="secondary-default">
             <button id="toggleAdvanced" class="toggle-button" type="button">세부 조정</button>
-            <div class="hint">반복은 영상 창 메뉴에서 직접 켜고 끕니다.</div>
+            <div class="hint">영상에서 오른쪽 클릭 후 연속 재생을 누르면 영상이 자동 반복됩니다.</div>
           </div>
           <div id="secondaryExpanded" class="secondary-expanded hidden">
             <button id="collapseAdvanced" class="secondary-chip back" type="button">기본 화면</button>
