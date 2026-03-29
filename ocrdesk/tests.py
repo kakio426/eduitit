@@ -1,6 +1,8 @@
 import base64
 import json
 import sys
+import tempfile
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 from unittest.mock import Mock
@@ -138,22 +140,36 @@ class OCRDeskViewTests(TestCase):
 
 
 class OCRDeskServiceTests(SimpleTestCase):
+    def _image_file(self, *, name="board.png", content_type="image/png", payload=None):
+        return SimpleUploadedFile(name, payload or PNG_BYTES, content_type=content_type)
+
     def tearDown(self):
         ocr_services.reset_ocr_engine_state()
+
+    def test_get_paddlex_cache_dir_defaults_to_temp_dir(self):
+        with tempfile.TemporaryDirectory() as temp_root:
+            with patch("ocrdesk.services.tempfile.gettempdir", return_value=temp_root):
+                cache_dir = ocr_services._get_paddlex_cache_dir()
+
+            self.assertEqual(cache_dir, str(Path(temp_root) / "ocrdesk" / "paddlex"))
+            self.assertTrue(Path(cache_dir).exists())
 
     def test_build_engine_prefers_direct_bos_download_without_healthcheck_gate(self):
         fake_engine = object()
         fake_constructor = Mock(return_value=fake_engine)
         fake_module = SimpleNamespace(PaddleOCR=fake_constructor)
 
-        with patch("ocrdesk.services.os.environ.setdefault") as mocked_setdefault:
-            with patch("ocrdesk.services._get_cpu_threads", return_value=2):
-                with patch.dict(sys.modules, {"paddleocr": fake_module}):
-                    engine = ocr_services._build_engine()
+        with patch.dict("ocrdesk.services.os.environ", {}, clear=True):
+            with patch("ocrdesk.services._get_paddlex_cache_dir", return_value="C:\\ocr-cache"):
+                with patch("ocrdesk.services._get_cpu_threads", return_value=2):
+                    with patch.dict(sys.modules, {"paddleocr": fake_module}):
+                        engine = ocr_services._build_engine()
+            self.assertEqual(ocr_services.os.environ["PADDLE_PDX_CACHE_HOME"], "C:\\ocr-cache")
+            self.assertEqual(ocr_services.os.environ["PADDLE_HOME"], "C:\\ocr-cache")
+            self.assertEqual(ocr_services.os.environ["PADDLE_PDX_MODEL_SOURCE"], "BOS")
+            self.assertEqual(ocr_services.os.environ["PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK"], "True")
 
         self.assertIs(engine, fake_engine)
-        mocked_setdefault.assert_any_call("PADDLE_PDX_MODEL_SOURCE", "BOS")
-        mocked_setdefault.assert_any_call("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
         fake_constructor.assert_called_once_with(
             lang="korean",
             device="cpu",
@@ -191,6 +207,57 @@ class OCRDeskServiceTests(SimpleTestCase):
                     self.assertIs(ocr_services.get_ocr_engine(), fake_engine)
 
         self.assertEqual(mocked_build.call_count, 2)
+
+    def test_extract_text_from_upload_uses_gemini_when_engine_is_unavailable(self):
+        fake_client = Mock()
+        fake_client.models.generate_content.return_value = SimpleNamespace(text="숙제\n수학")
+
+        with patch.dict("ocrdesk.services.os.environ", {"GEMINI_API_KEY": " test-key "}, clear=True):
+            with patch("ocrdesk.services.get_ocr_engine", side_effect=OCREngineUnavailable("ocr_engine_not_ready")):
+                with patch("ocrdesk.services.genai.Client", return_value=fake_client) as mocked_client:
+                    with patch("ocrdesk.services.genai_types.Part.from_bytes", return_value="image-part") as mocked_part:
+                        text = ocr_services.extract_text_from_upload(self._image_file())
+
+        self.assertEqual(text, "숙제\n수학")
+        mocked_client.assert_called_once_with(api_key="test-key")
+        mocked_part.assert_called_once()
+        self.assertEqual(mocked_part.call_args.kwargs["mime_type"], "image/png")
+        self.assertEqual(mocked_part.call_args.kwargs["data"], PNG_BYTES)
+        fake_client.models.generate_content.assert_called_once_with(
+            model="gemini-2.5-flash-lite",
+            contents=[ocr_services._GEMINI_OCR_PROMPT, "image-part"],
+        )
+
+    def test_extract_text_from_upload_uses_gemini_when_prediction_fails(self):
+        fake_engine = Mock()
+        fake_engine.predict.side_effect = RuntimeError("boom")
+        fake_client = Mock()
+        fake_client.models.generate_content.return_value = SimpleNamespace(text="준비물\n색연필")
+
+        with patch.dict("ocrdesk.services.os.environ", {"GEMINI_API_KEY": "test-key"}, clear=True):
+            with patch("ocrdesk.services.get_ocr_engine", return_value=fake_engine):
+                with patch("ocrdesk.services.genai.Client", return_value=fake_client):
+                    with patch("ocrdesk.services.genai_types.Part.from_bytes", return_value="image-part"):
+                        text = ocr_services.extract_text_from_upload(self._image_file())
+
+        self.assertEqual(text, "준비물\n색연필")
+        fake_engine.predict.assert_called_once()
+        fake_client.models.generate_content.assert_called_once()
+
+    def test_extract_text_from_upload_keeps_engine_unavailable_when_gemini_key_missing(self):
+        with patch.dict("ocrdesk.services.os.environ", {}, clear=True):
+            with patch("ocrdesk.services.get_ocr_engine", side_effect=OCREngineUnavailable("ocr_engine_not_ready")):
+                with self.assertRaises(OCREngineUnavailable):
+                    ocr_services.extract_text_from_upload(self._image_file())
+
+    def test_extract_text_from_upload_raises_processing_error_when_gemini_key_missing(self):
+        fake_engine = Mock()
+        fake_engine.predict.side_effect = RuntimeError("boom")
+
+        with patch.dict("ocrdesk.services.os.environ", {}, clear=True):
+            with patch("ocrdesk.services.get_ocr_engine", return_value=fake_engine):
+                with self.assertRaises(ocr_services.OCRProcessingError):
+                    ocr_services.extract_text_from_upload(self._image_file())
 
 
 class EnsureOCRDeskCommandTests(TestCase):

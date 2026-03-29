@@ -1,4 +1,5 @@
 import logging
+import mimetypes
 import os
 import tempfile
 from pathlib import Path
@@ -7,11 +8,24 @@ from time import monotonic
 
 from products.models import Product
 
+try:
+    from google import genai
+    from google.genai import types as genai_types
+except ImportError:  # pragma: no cover - optional dependency
+    genai = None
+    genai_types = None
+
 
 logger = logging.getLogger(__name__)
 
 SERVICE_ROUTE = "ocrdesk:main"
 SERVICE_TITLE = "사진 글자 읽기"
+GEMINI_OCR_MODEL_NAME = "gemini-2.5-flash-lite"
+_GEMINI_OCR_PROMPT = (
+    "이미지에서 보이는 글자만 그대로 추출하세요.\n"
+    "설명, 요약, 번역, 마크다운 없이 텍스트만 출력하세요.\n"
+    "줄바꿈은 가능한 한 원본과 비슷하게 유지하고, 보이지 않는 내용은 추측하지 마세요."
+)
 
 _OCR_ENGINE = None
 _OCR_INIT_ERROR = None
@@ -62,6 +76,22 @@ def _get_cpu_threads():
     return max(1, cpu_threads)
 
 
+def _get_paddlex_cache_dir():
+    configured_dir = os.environ.get("OCRDESK_PADDLE_CACHE_HOME") or os.environ.get("PADDLE_PDX_CACHE_HOME")
+    cache_dir = Path(configured_dir) if configured_dir else Path(tempfile.gettempdir()) / "ocrdesk" / "paddlex"
+    cache_dir = cache_dir.expanduser()
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    return str(cache_dir)
+
+
+def _get_gemini_api_key():
+    return os.environ.get("GEMINI_API_KEY", "").strip()
+
+
+def _get_gemini_model_name():
+    return os.environ.get("OCRDESK_GEMINI_MODEL", GEMINI_OCR_MODEL_NAME).strip() or GEMINI_OCR_MODEL_NAME
+
+
 def _is_retry_cooldown_active(now):
     if _OCR_INIT_ERROR is None:
         return False
@@ -77,6 +107,9 @@ def reset_ocr_engine_state():
 
 
 def _build_engine():
+    cache_dir = _get_paddlex_cache_dir()
+    os.environ["PADDLE_PDX_CACHE_HOME"] = cache_dir
+    os.environ.setdefault("PADDLE_HOME", cache_dir)
     os.environ.setdefault("PADDLE_PDX_MODEL_SOURCE", "BOS")
     os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
 
@@ -130,6 +163,18 @@ def get_ocr_engine():
 def _normalize_text(value):
     text = " ".join(str(value or "").split())
     return text.strip()
+
+
+def _join_normalized_lines(lines):
+    normalized_lines = []
+    for raw_line in lines:
+        line = _normalize_text(raw_line)
+        if not line:
+            continue
+        if normalized_lines and normalized_lines[-1] == line:
+            continue
+        normalized_lines.append(line)
+    return "\n".join(normalized_lines).strip()
 
 
 def _extract_text_fragments(node, *, parent_key=""):
@@ -194,24 +239,66 @@ def _write_temp_upload(uploaded_file):
     return temp_path
 
 
+def _read_temp_file_bytes(temp_path):
+    with open(temp_path, "rb") as temp_file:
+        return temp_file.read()
+
+
+def _get_mime_type(uploaded_file, temp_path):
+    content_type = (getattr(uploaded_file, "content_type", "") or "").strip()
+    if content_type:
+        return content_type
+    guessed_type, _ = mimetypes.guess_type(temp_path)
+    return guessed_type or "image/png"
+
+
+def _extract_text_with_gemini(uploaded_file, temp_path):
+    api_key = _get_gemini_api_key()
+    if not api_key or genai is None or genai_types is None:
+        return None
+
+    try:
+        image_bytes = _read_temp_file_bytes(temp_path)
+        mime_type = _get_mime_type(uploaded_file, temp_path)
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model=_get_gemini_model_name(),
+            contents=[
+                _GEMINI_OCR_PROMPT,
+                genai_types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
+            ],
+        )
+        return _join_normalized_lines((getattr(response, "text", "") or "").splitlines())
+    except Exception:
+        logger.exception("[ocrdesk] Gemini OCR fallback failed")
+        return None
+
+
 def extract_text_from_upload(uploaded_file):
-    engine = get_ocr_engine()
     temp_path = _write_temp_upload(uploaded_file)
     try:
-        result = engine.predict(input=temp_path)
+        try:
+            engine = get_ocr_engine()
+            result = engine.predict(input=temp_path)
+        except OCREngineUnavailable:
+            fallback_text = _extract_text_with_gemini(uploaded_file, temp_path)
+            if fallback_text is not None:
+                logger.warning("[ocrdesk] Paddle OCR engine unavailable; served Gemini OCR fallback instead")
+                return fallback_text
+            raise
+        except Exception as exc:
+            logger.warning("[ocrdesk] OCR prediction failed; attempting Gemini fallback", exc_info=True)
+            fallback_text = _extract_text_with_gemini(uploaded_file, temp_path)
+            if fallback_text is not None:
+                logger.warning("[ocrdesk] Paddle OCR prediction failed; served Gemini OCR fallback instead")
+                return fallback_text
+            raise OCRProcessingError("ocr_prediction_failed") from exc
+
         fragments = _extract_text_fragments(result)
-        normalized_lines = []
-        for fragment in fragments:
-            line = _normalize_text(fragment)
-            if not line:
-                continue
-            if normalized_lines and normalized_lines[-1] == line:
-                continue
-            normalized_lines.append(line)
-        return "\n".join(normalized_lines).strip()
-    except OCREngineUnavailable:
-        raise
+        return _join_normalized_lines(fragments)
     except Exception as exc:
+        if isinstance(exc, (OCREngineUnavailable, OCRProcessingError)):
+            raise
         logger.exception("[ocrdesk] OCR prediction failed")
         raise OCRProcessingError("ocr_prediction_failed") from exc
     finally:
