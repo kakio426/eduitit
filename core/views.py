@@ -2922,7 +2922,9 @@ def _build_home_authenticated_v4_response(
         home_v4_nav_sections,
         limit=4,
     )
-    home_v5_mobile_workbench_items = favorite_items[:6]
+    home_v5_mobile_workbench_items = [
+        item for item in favorite_items if not _is_home_utility_product(item.get('product'))
+    ][:6]
     home_v5_mobile_recommend_items = list(representative_recommendations)
     if not home_v5_mobile_recommend_items:
         home_v5_mobile_recommend_items = [

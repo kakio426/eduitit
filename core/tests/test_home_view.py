@@ -2827,8 +2827,8 @@ class HomeV5ViewTest(TestCase):
             content,
         )
 
-    def test_v5_mobile_keeps_quickdrop_in_workbench_without_duplicate_panel(self):
-        user = self._login('v5mobilequickdropnodupe')
+    def test_v5_mobile_places_reservation_below_quickdrop_without_duplicate(self):
+        user = self._login('v5mobilequickdropreservation')
         quickdrop = Product.objects.create(
             title='바로전송',
             description='빠른 전송',
@@ -2845,15 +2845,17 @@ class HomeV5ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         workbench_index = content.index('data-home-v5-mobile-workbench="true"')
+        quickdrop_index = content.index('data-home-v4-mobile-quickdrop="true"')
         reservation_index = content.index('data-home-reservations-card="true"')
         calendar_index = content.index('data-home-v5-mobile-calendar-panel="true"')
         sns_index = content.index('data-home-v5-mobile-sns="true"')
+        workbench_block = content[workbench_index:quickdrop_index]
 
-        self.assertIn('title="바로전송">바로전송</p>', content)
-        self.assertNotIn('data-home-v4-mobile-quickdrop="true"', content)
-        self.assertLess(workbench_index, reservation_index)
-        self.assertLess(reservation_index, sns_index)
+        self.assertNotIn('title="바로전송">바로전송</p>', workbench_block)
+        self.assertLess(workbench_index, quickdrop_index)
+        self.assertLess(quickdrop_index, reservation_index)
         self.assertLess(reservation_index, calendar_index)
+        self.assertLess(calendar_index, sns_index)
 
     def test_reservations_product_uses_smart_entry_for_authenticated_user(self):
         user = self._login('v5smartentry')

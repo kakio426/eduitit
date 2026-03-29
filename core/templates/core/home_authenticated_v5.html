@@ -153,6 +153,10 @@
                         {% endif %}
                     </article>
 
+                    {% if quickdrop_home_card %}
+                    {% include 'core/partials/home_v4_mobile_quickdrop_card.html' with quickdrop_placement='' include_classcalendar_margin=False %}
+                    {% endif %}
+
                     {% if reservation_home_card %}
                     <article class="home-v5-mobile-panel" data-home-reservations-card="true">
                         <div class="home-v5-mobile-panel-head">
