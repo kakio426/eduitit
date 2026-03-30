@@ -48,7 +48,7 @@ class NoticeGenWorkflowFollowupTests(TestCase):
         self.assertContains(response, '예약 화면으로 돌아가기')
         self.assertContains(response, '03월 08일 Science Room 이용 안내')
     @patch("noticegen.views._call_deepseek")
-    def test_generated_result_surfaces_followup_buttons(self, mock_call):
+    def test_generated_result_does_not_surface_followup_buttons(self, mock_call):
         mock_call.return_value = "내일은 준비물을 꼭 챙겨 주세요."
 
         response = self.client.post(
@@ -63,8 +63,9 @@ class NoticeGenWorkflowFollowupTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "동의서로 이어서 만들기")
-        self.assertContains(response, "서명으로 이어서 만들기")
+        self.assertContains(response, "내일은 준비물을 꼭 챙겨 주세요.")
+        self.assertNotContains(response, "동의서로 이어서 만들기")
+        self.assertNotContains(response, "서명으로 이어서 만들기")
 
     def test_consent_followup_stores_seed_and_redirects(self):
         response = self.client.post(

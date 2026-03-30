@@ -27,10 +27,10 @@
                     <div>
                         <p class="text-xs font-bold uppercase tracking-wide text-indigo-600">바로 쓰는 안내문 문장</p>
                         <h1 class="text-3xl md:text-4xl font-bold text-gray-700 font-title">알림장 & 주간학습 멘트 생성기</h1>
-                        <p class="mt-2 text-sm text-gray-600">대상과 핵심만 적으면 바로 보낼 문장을 만듭니다.</p>
+                        <p class="mt-2 text-sm text-gray-600">메모처럼 툭 적어도, 바로 보낼 문장으로 정리합니다.</p>
                     </div>
                 </div>
-                <p class="text-xs font-semibold text-slate-500 lg:text-right">핵심만 적고 바로 복사해 쓰면 됩니다.</p>
+                <p class="text-xs font-semibold text-slate-500 lg:text-right">옵션보다 입력창이 먼저 보이게 단순하게 정리했습니다.</p>
             </div>
         </header>
 
@@ -47,8 +47,8 @@
                     {% endif %}
 
                     <div class="mb-5">
-                        <h2 class="text-xl font-bold text-gray-700">바로 만들기</h2>
-                        <p class="mt-1 text-sm text-gray-500">핵심만 적으면 됩니다.</p>
+                        <h2 class="text-xl font-bold text-gray-700">그냥 적어 주세요</h2>
+                        <p class="mt-1 text-sm text-gray-500">쉼표 메모, 줄바꿈 메모, 대충 적은 문장도 알아서 정리합니다.</p>
                     </div>
 
                     <form
@@ -62,40 +62,10 @@
                     >
                         {% csrf_token %}
 
-                        <div>
-                            <label class="block text-sm font-bold text-gray-600 mb-2">대상</label>
-                            <div class="grid grid-cols-1 gap-2">
-                                {% for value, label in target_options %}
-                                <label class="flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-white hover:border-blue-300 transition">
-                                    <input type="radio" name="target" value="{{ value }}" {% if initial_target == value %}checked{% endif %} class="text-blue-500 focus:ring-blue-300">
-                                    <span class="text-sm font-semibold text-gray-700">{{ label }}</span>
-                                </label>
-                                {% endfor %}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-bold text-gray-600 mb-2">주제</label>
-                            <div class="grid grid-cols-2 gap-2">
-                                {% for value, label in topic_options %}
-                                <label class="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-white hover:border-blue-300 transition text-sm">
-                                    <input type="radio" name="topic" value="{{ value }}" {% if initial_topic == value %}checked{% endif %} class="text-blue-500 focus:ring-blue-300">
-                                    <span class="font-medium text-gray-700">{{ label }}</span>
-                                </label>
-                                {% endfor %}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-bold text-gray-600 mb-2">분량</label>
-                            <div class="grid grid-cols-3 gap-2">
-                                {% for value, label in length_options %}
-                                <label class="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-white hover:border-blue-300 transition text-sm">
-                                    <input type="radio" name="length_style" value="{{ value }}" {% if initial_length_style == value %}checked{% endif %} class="text-blue-500 focus:ring-blue-300">
-                                    <span class="font-medium text-gray-700">{{ label }}</span>
-                                </label>
-                                {% endfor %}
-                            </div>
+                        <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                            <p class="text-sm font-bold text-slate-800">이렇게 적어도 됩니다</p>
+                            <p class="mt-2 text-sm leading-6 text-slate-600">내일 체험학습, 8시 40분까지 등교, 도시락이랑 물 챙겨 주세요</p>
+                            <p class="mt-1 text-sm leading-6 text-slate-600">금요일 미세먼지 심함, 실내체육으로 바뀜, 실내화 꼭 보내 주세요</p>
                         </div>
 
                         <div>
@@ -103,13 +73,57 @@
                             <textarea
                                 id="noticegen-keywords"
                                 name="keywords"
-                                rows="5"
+                                rows="9"
                                 required
-                                placeholder="예: 수학 3단원 평가, 실내화 지참"
+                                placeholder="예: 내일 체험학습, 8시 40분까지 등교, 도시락/물 챙겨 주세요"
                                 class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white text-sm md:text-base text-gray-700 focus:border-blue-500 focus:outline-none"
                             >{{ initial_keywords }}</textarea>
-                            <p class="mt-2 text-xs text-gray-500">핵심 단어만 적어도 충분합니다.</p>
+                            <p class="mt-2 text-xs text-gray-500">핵심만 메모처럼 적으면 됩니다. 날짜, 준비물, 부탁할 내용이 섞여 있어도 괜찮습니다.</p>
                         </div>
+
+                        <details class="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+                            <summary class="cursor-pointer text-sm font-bold text-slate-700">직접 조정</summary>
+                            <div class="mt-4 space-y-4">
+                                <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+                                    <label class="block">
+                                        <span class="mb-1 block text-xs font-bold text-slate-600">대상</span>
+                                        <select name="target" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:border-indigo-300 focus:outline-none">
+                                            {% for value, label in target_options %}
+                                            <option value="{{ value }}" {% if initial_target == value %}selected{% endif %}>{{ label }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </label>
+                                    <label class="block">
+                                        <span class="mb-1 block text-xs font-bold text-slate-600">주제</span>
+                                        <select name="topic" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:border-indigo-300 focus:outline-none">
+                                            {% for value, label in topic_options %}
+                                            <option value="{{ value }}" {% if initial_topic == value %}selected{% endif %}>{{ label }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </label>
+                                    <label class="block">
+                                        <span class="mb-1 block text-xs font-bold text-slate-600">분량</span>
+                                        <select name="length_style" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:border-indigo-300 focus:outline-none">
+                                            {% for value, label in length_options %}
+                                            <option value="{{ value }}" {% if initial_length_style == value %}selected{% endif %}>{{ label }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </label>
+                                </div>
+
+                                <div>
+                                    <p class="mb-2 text-xs font-bold text-slate-600">이런 내용이 섞여 있나요</p>
+                                    <div class="flex flex-wrap gap-2">
+                                        {% for value, label in context_options %}
+                                        <label class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
+                                            <input type="checkbox" name="contexts" value="{{ value }}" {% if value in initial_context_values %}checked{% endif %} class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-300">
+                                            <span>{{ label }}</span>
+                                        </label>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </details>
 
                         <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl font-bold text-base shadow-lg hover:shadow-xl transition">
                             <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>문장 만들기

@@ -248,7 +248,7 @@ class NoticeGenViewTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertContains(response, 'data-mini-app-state="error"', status_code=400, html=False)
-        self.assertContains(response, "대상, 주제, 전달 사항을 정확히 입력해 주세요.", status_code=400)
+        self.assertContains(response, "전달 사항을 2글자 이상 적어 주세요.", status_code=400)
 
     def test_generate_mini_daily_limit_uses_compact_error_panel(self):
         session = self.client.session
@@ -334,15 +334,85 @@ class NoticeGenViewTests(TestCase):
         response = self.client.get(reverse("noticegen:main"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "바로 쓰는 안내문 문장")
-        self.assertContains(response, "바로 만들기")
+        self.assertContains(response, "그냥 적어 주세요")
+        self.assertContains(response, "직접 조정")
         self.assertContains(response, "생성 결과")
         self.assertContains(response, "문장 만들기")
-        self.assertNotContains(response, "결과 복사")
-        self.assertNotContains(response, "길게 설명하지 않아도 됩니다. 핵심만 적어 주세요.")
+        self.assertEqual(response.context["initial_target"], "parent")
+        self.assertEqual(response.context["initial_topic"], "notice")
+        self.assertEqual(response.context["initial_length_style"], "medium")
+        self.assertNotContains(response, "동의서로 이어서 만들기")
 
     def test_main_uses_workspace_cache_headers(self):
         response = self.client.get(reverse("noticegen:main"))
         self.assertEqual(response["Cache-Control"], "private, no-cache, must-revalidate")
+
+    @patch("noticegen.views._call_deepseek")
+    def test_generate_accepts_keywords_only_with_parent_notice_defaults(self, mock_call):
+        mock_call.return_value = "가정통신문 안내를 확인해 주세요."
+
+        response = self.client.post(
+            reverse("noticegen:generate"),
+            {"keywords": "가정통신문 안내"},
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "가정통신문 안내를 확인해 주세요.")
+        user_prompt = mock_call.call_args.args[1]
+        self.assertIn("대상: 학부모", user_prompt)
+        self.assertIn("주제: 알림장", user_prompt)
+        self.assertIn("분량: 보통", user_prompt)
+
+    @patch("noticegen.views._call_deepseek")
+    def test_generate_infers_event_context_from_messy_keywords(self, mock_call):
+        mock_call.return_value = "내일 체험학습이 있어 8시 40분까지 등교할 수 있도록 도시락을 챙겨 보내 주세요."
+
+        response = self.client.post(
+            reverse("noticegen:generate"),
+            {"keywords": "내일 체험학습\n8시 40분까지 등교, 도시락 챙겨 주세요"},
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        user_prompt = mock_call.call_args.args[1]
+        self.assertIn("주제: 행사", user_prompt)
+        self.assertIn("핵심 전달사항: 내일 체험학습, 8시 40분까지 등교, 도시락 챙겨 주세요", user_prompt)
+        self.assertIn("추가 상황: 준비물, 일정 변경, 행사 안내", user_prompt)
+
+    @patch("noticegen.views._call_deepseek")
+    def test_generate_retries_once_when_first_output_misses_required_terms(self, mock_call):
+        mock_call.side_effect = [
+            "체험학습 안내입니다. 편한 복장으로 보내 주세요.",
+            "3월 8일 체험학습 안내입니다. 도시락을 챙겨 보내 주세요.",
+        ]
+
+        response = self.client.post(
+            reverse("noticegen:generate"),
+            {"keywords": "3월 8일 체험학습, 도시락 챙겨 주세요"},
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "3월 8일 체험학습 안내입니다. 도시락을 챙겨 보내 주세요.")
+        self.assertEqual(mock_call.call_count, 2)
+
+    @patch("noticegen.views._call_deepseek")
+    def test_generate_retries_once_when_output_adds_unverified_time(self, mock_call):
+        mock_call.side_effect = [
+            "내일 오전 9시에 체험학습이 있으니 도시락을 챙겨 보내 주세요.",
+            "체험학습이 있으니 도시락을 챙겨 보내 주세요.",
+        ]
+
+        response = self.client.post(
+            reverse("noticegen:generate"),
+            {"keywords": "체험학습 안내, 도시락 챙겨 주세요"},
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "체험학습이 있으니 도시락을 챙겨 보내 주세요.")
+        self.assertEqual(mock_call.call_count, 2)
 
     @patch("noticegen.views._call_deepseek")
     def test_result_panel_copy_button_has_failure_feedback(self, mock_call):
@@ -356,6 +426,8 @@ class NoticeGenViewTests(TestCase):
         self.assertContains(response, "copyError: '', async copyText(text)", html=False)
         self.assertContains(response, '@click="copyText($refs.output.value)"', html=False)
         self.assertContains(response, "복사에 실패했습니다. 직접 선택해 복사해 주세요.")
+        self.assertNotContains(response, "동의서로 이어서 만들기")
+        self.assertNotContains(response, "서명으로 이어서 만들기")
         self.assertEqual(response["Cache-Control"], "no-store, private")
 
     @patch("noticegen.views._call_deepseek")
