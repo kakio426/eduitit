@@ -85,6 +85,7 @@
             wsConnected: false,
             snapshotPollDelay: 15000,
             queuedFile: null,
+            didHandleHistoryFocus: false,
 
             init() {
                 this.cacheDom();
@@ -135,6 +136,11 @@
 
             isCompactMobile() {
                 return window.matchMedia('(max-width: 639px)').matches;
+            },
+
+            wantsHistoryFocus() {
+                const params = new URLSearchParams(window.location.search);
+                return params.get('focus') === 'history' || window.location.hash === '#history-panel';
             },
 
             sessionFingerprint(payload) {
@@ -489,14 +495,31 @@
                     this.historySummary.textContent = '오늘 ' + String(todayItems.length) + '개';
                 }
                 if (this.historyPanel) {
-                    this.historyPanel.classList.toggle('hidden', isCompactMobile && todayItems.length === 0);
+                    this.historyPanel.classList.toggle('hidden', isCompactMobile && todayItems.length === 0 && !this.wantsHistoryFocus());
                 }
                 if (this.endSessionBtn) {
                     this.endSessionBtn.classList.toggle('hidden', todayItems.length === 0);
                 }
                 this.renderHistory(todayItems);
+                this.maybeFocusHistory();
                 this.resizeComposer();
                 this.syncComposerState();
+            },
+
+            maybeFocusHistory() {
+                if (this.didHandleHistoryFocus || !this.historyPanel || !this.wantsHistoryFocus()) {
+                    return;
+                }
+                if (this.historyPanel.classList.contains('hidden')) {
+                    return;
+                }
+                this.didHandleHistoryFocus = true;
+                window.requestAnimationFrame(() => {
+                    this.historyPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    if (typeof this.historyPanel.focus === 'function') {
+                        this.historyPanel.focus();
+                    }
+                });
             },
 
             renderHistory(items) {

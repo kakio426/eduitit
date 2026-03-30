@@ -6,11 +6,20 @@
         <div class="rounded-[32px] bg-white p-6 shadow-[0_24px_80px_rgba(41,72,152,0.12)]">
             <div class="grid gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
                 <div>
-                    <p class="text-sm font-black uppercase tracking-[0.28em] text-[#5c73b8]">바로전송</p>
-                    <h1 class="mt-2 text-3xl font-black text-[#14213d] sm:text-4xl">{{ channel.title }}</h1>
-                    <p class="mt-3 text-base leading-7 text-slate-600">텍스트와 사진을 바로 옮깁니다.</p>
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-sm font-black uppercase tracking-[0.28em] text-[#5c73b8]">바로전송</p>
+                            <h1 class="mt-2 text-3xl font-black text-[#14213d] sm:text-4xl">{{ channel.title }}</h1>
+                        </div>
+                        <button type="button" id="pairing-shortcut-btn" class="inline-flex shrink-0 items-center gap-2 rounded-full border border-[#d9e4ff] bg-[#f8fbff] px-3 py-2 text-sm font-black text-[#1f4fd1]" aria-label="새 기기 연결">
+                            <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white text-lg leading-none shadow-sm">+</span>
+                            <span class="hidden sm:inline">새 기기</span>
+                        </button>
+                    </div>
+                    <p class="mt-3 text-base leading-7 text-slate-600">텍스트와 사진을 바로 옮기고, 오늘 보낸 내용도 다시 모아서 볼 수 있습니다.</p>
                     <div class="mt-4 flex flex-wrap gap-2 text-xs font-bold">
                         <span class="rounded-full bg-[#edf3ff] px-3 py-1.5 text-[#1f4fd1]">이 브라우저는 기억됩니다</span>
+                        <span class="rounded-full bg-[#f6f8fe] px-3 py-1.5 text-slate-600">오늘 보낸 내용은 다시 모아 확인할 수 있습니다</span>
                     </div>
                     <div class="mt-6 flex flex-wrap gap-3">
                         <a href="{{ open_url }}" class="rounded-full bg-[#1f4fd1] px-6 py-3 text-sm font-black text-white shadow-[0_16px_34px_rgba(31,79,209,0.24)]">지금 바로 열기</a>
@@ -18,31 +27,73 @@
                 </div>
 
                 <div class="rounded-[28px] border border-[#d9e4ff] bg-[#f8fbff] p-5">
-                    <p class="text-sm font-black text-[#1f4fd1]">새 기기 연결</p>
-                    <div class="mt-5 flex flex-col gap-5 md:flex-row md:items-center">
-                        <div class="flex h-[188px] w-[188px] shrink-0 items-center justify-center rounded-[24px] bg-white p-4 shadow-sm">
-                            {% if pair_qr_data_url %}
-                            <img src="{{ pair_qr_data_url }}" alt="바로전송 연결 QR" class="h-full w-full rounded-[18px] object-contain">
-                            {% endif %}
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-sm font-black text-[#1f4fd1]">오늘 보낸 내용</p>
+                            <p class="mt-2 text-sm leading-6 text-slate-600">예전처럼 오늘 보낸 텍스트와 파일을 한곳에서 모아 볼 수 있습니다.</p>
                         </div>
-                        <div class="min-w-0 flex-1 space-y-3">
-                            <label class="block text-sm font-bold text-slate-600">연결 링크</label>
-                            <div class="flex flex-col gap-3 sm:flex-row">
-                                <input id="pair-url-input" type="text" readonly value="{{ pair_url }}" class="min-w-0 flex-1 rounded-2xl border border-[#d6def5] bg-white px-4 py-3 text-sm text-slate-700">
-                                <button type="button" id="copy-pair-url-btn" class="rounded-2xl bg-[#14213d] px-4 py-3 text-sm font-black text-white">링크 복사</button>
-                            </div>
-                        </div>
+                        <span class="rounded-full bg-white px-3 py-1.5 text-xs font-black text-[#1f4fd1] shadow-sm">오늘 {{ today_count }}개</span>
+                    </div>
+                    <div class="mt-5 rounded-[24px] border border-[#dbe3fb] bg-white p-4">
+                        {% if latest_item %}
+                        <p class="text-xs font-black uppercase tracking-[0.18em] text-slate-400">최근 전송</p>
+                        {% if latest_item.kind == "image" %}
+                        <p class="mt-3 text-base font-black text-[#14213d]">사진을 보냈습니다.</p>
+                        {% elif latest_item.kind == "file" %}
+                        <p class="mt-3 break-all text-base font-black text-[#14213d]">{{ latest_item.filename|default:"파일을 보냈습니다." }}</p>
+                        {% else %}
+                        <p class="mt-3 text-base font-black leading-7 text-[#14213d]">{{ latest_item.text|default:"텍스트를 보냈습니다."|truncatechars:72 }}</p>
+                        {% endif %}
+                        <p class="mt-2 text-sm text-slate-500">{{ latest_item.created_at|date:"H:i" }}에 마지막으로 보낸 내용입니다.</p>
+                        {% else %}
+                        <p class="text-base font-black text-[#14213d]">아직 오늘 보낸 내용이 없습니다.</p>
+                        <p class="mt-2 text-sm leading-6 text-slate-500">통로를 열고 붙여넣거나 사진을 고르면 오늘 기록이 바로 쌓이고, 아래 버튼으로 다시 확인할 수 있습니다.</p>
+                        {% endif %}
+                    </div>
+                    <div class="mt-5">
+                        <a href="{{ history_url }}" class="inline-flex w-full items-center justify-center rounded-2xl bg-[#14213d] px-5 py-3 text-sm font-black text-white">오늘 보낸 내용 보기</a>
                     </div>
                 </div>
             </div>
         </div>
+
+        <details id="pairing-tools" class="rounded-[28px] bg-white p-5 shadow-[0_18px_50px_rgba(41,72,152,0.1)]">
+            <summary class="cursor-pointer list-none">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <p class="text-sm font-black text-[#1f4fd1]">새 기기 연결</p>
+                        <h2 class="mt-1 text-2xl font-black text-[#14213d]">휴대폰, 다른 PC, 태블릿을 이 통로에 한 번만 연결합니다.</h2>
+                    </div>
+                    <span class="rounded-full bg-[#f4f7ff] px-3 py-1.5 text-xs font-black text-slate-500">열기</span>
+                </div>
+            </summary>
+            <div class="mt-5 rounded-[28px] border border-[#d9e4ff] bg-[#f8fbff] p-5">
+                <p class="text-sm font-black text-[#1f4fd1]">새 기기 연결</p>
+                <p class="mt-2 text-sm leading-6 text-slate-600">휴대폰, 다른 PC, 태블릿 모두 QR이나 링크로 한 번만 연결하면 됩니다.</p>
+                <div class="mt-5 flex flex-col gap-5 md:flex-row md:items-center">
+                    <div class="flex h-[188px] w-[188px] shrink-0 items-center justify-center rounded-[24px] bg-white p-4 shadow-sm">
+                        {% if pair_qr_data_url %}
+                        <img src="{{ pair_qr_data_url }}" alt="바로전송 연결 QR" class="h-full w-full rounded-[18px] object-contain">
+                        {% endif %}
+                    </div>
+                    <div class="min-w-0 flex-1 space-y-3">
+                        <label class="block text-sm font-bold text-slate-600">연결 링크</label>
+                        <div class="flex flex-col gap-3 sm:flex-row">
+                            <input id="pair-url-input" type="text" readonly value="{{ pair_url }}" class="min-w-0 flex-1 rounded-2xl border border-[#d6def5] bg-white px-4 py-3 text-sm text-slate-700">
+                            <button type="button" id="copy-pair-url-btn" class="rounded-2xl bg-[#14213d] px-4 py-3 text-sm font-black text-white">링크 복사</button>
+                        </div>
+                        <p class="text-sm leading-6 text-slate-500">기억된 기기는 다음부터 같은 링크만 열어도 바로 들어옵니다.</p>
+                    </div>
+                </div>
+            </div>
+        </details>
 
         <details class="rounded-[28px] bg-white p-5 shadow-[0_18px_50px_rgba(41,72,152,0.1)]">
             <summary class="cursor-pointer list-none">
                 <div class="flex items-center justify-between gap-3">
                     <div>
                         <p class="text-sm font-black text-[#1f4fd1]">통로 상태와 연결 기기</p>
-                        <h2 class="mt-1 text-2xl font-black text-[#14213d]">상태와 연결 기기</h2>
+                        <h2 class="mt-1 text-2xl font-black text-[#14213d]">지금 상태를 보고 기기를 관리할 수 있습니다.</h2>
                     </div>
                     <span class="rounded-full bg-[#f4f7ff] px-3 py-1.5 text-xs font-black text-slate-500">펼쳐 보기</span>
                 </div>
@@ -62,7 +113,7 @@
                     </p>
                     {% else %}
                     <h2 class="mt-2 text-2xl font-black text-[#14213d]">아직 오늘 전송이 없습니다.</h2>
-                    <p class="mt-2 text-sm leading-6 text-slate-500">새로 보내면 여기에 쌓입니다.</p>
+                    <p class="mt-2 text-sm leading-6 text-slate-500">통로를 열고 붙여넣거나 사진을 고르면 오늘 기록이 바로 쌓입니다.</p>
                     {% endif %}
                     <p class="mt-4 text-xs font-bold text-slate-400">오늘 기록은 내일 정리되고, 기기 연결만 남습니다.</p>
                 </div>
@@ -104,9 +155,20 @@
     (function () {
         const button = document.getElementById('copy-pair-url-btn');
         const input = document.getElementById('pair-url-input');
+        const pairingShortcutButton = document.getElementById('pairing-shortcut-btn');
+        const pairingTools = document.getElementById('pairing-tools');
+
+        if (pairingShortcutButton && pairingTools) {
+            pairingShortcutButton.addEventListener('click', function () {
+                pairingTools.open = true;
+                pairingTools.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        }
+
         if (!button || !input) {
             return;
         }
+
         button.addEventListener('click', async function () {
             try {
                 await navigator.clipboard.writeText(input.value);

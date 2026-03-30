@@ -68,9 +68,14 @@ class QuickdropViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.channel.slug)
-        self.assertContains(response, "PC끼리, 휴대폰끼리, PC와 휴대폰 모두")
-        self.assertContains(response, "로그아웃돼도 바로전송은 다시 열 수 있습니다")
+        self.assertContains(response, "오늘 보낸 내용 보기")
+        self.assertContains(response, 'id="pairing-tools"')
+        self.assertContains(response, 'aria-label="새 기기 연결"')
         self.assertContains(response, "연결된 기기")
+        self.assertContains(
+            response,
+            reverse("quickdrop:channel", kwargs={"slug": self.channel.slug}) + "?focus=history#history-panel",
+        )
         self.assertEqual(response.headers["Cache-Control"], "no-store, private")
         self.assertEqual(response.headers["X-Robots-Tag"], "noindex, nofollow, noarchive")
         self.assertIn(DEVICE_COOKIE_NAME, response.cookies)
@@ -150,9 +155,9 @@ class QuickdropViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'data-quickdrop-root="true"')
-        self.assertContains(response, "붙여넣거나 파일을 고른 뒤 보내면 됩니다")
+        self.assertContains(response, "보낸 내용이 여기에 쌓입니다.")
         self.assertContains(response, "파일 추가")
-        self.assertContains(response, "여기에 붙여넣거나 직접 입력하세요.")
+        self.assertContains(response, "예) 회의 링크, 메모, 주소")
         self.assertContains(response, 'data-quickdrop-history-panel="true"')
         self.assertContains(response, reverse("quickdrop:snapshot", kwargs={"slug": self.channel.slug}))
         self.assertEqual(self.channel.sessions.filter(status=QuickdropSession.STATUS_LIVE).count(), 1)
@@ -204,6 +209,7 @@ class QuickdropViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "빠른쌤")
         self.assertNotContains(response, "quickdrop_teacher")
+        self.assertContains(response, "+ 새 기기")
 
     def test_send_text_replaces_current_payload(self):
         self.client.logout()
