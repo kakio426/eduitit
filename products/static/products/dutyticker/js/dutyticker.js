@@ -1310,9 +1310,9 @@ class DutyTickerManager {
 
         if (summaryEl) {
             if (selectedPhrase) {
-                summaryEl.textContent = `저장 ${savedCount}개 · 선택 중: ${selectedPhrase.label}`;
+                summaryEl.textContent = `저장 ${savedCount}개 · 자동 적용 문구: ${selectedPhrase.label}`;
             } else if (savedCount > 0) {
-                summaryEl.textContent = `저장 ${savedCount}개 · 목록에서 바로 고르고 수정할 수 있습니다.`;
+                summaryEl.textContent = `저장 ${savedCount}개 · 목록에서 고르면 시간표 자동 적용 문구가 바로 바뀝니다.`;
             } else {
                 summaryEl.textContent = '저장 문구가 아직 없습니다. 현재 문구를 저장해 목록을 만드세요.';
             }
@@ -1349,8 +1349,8 @@ class DutyTickerManager {
 
         if (toggleBtn) {
             toggleBtn.innerHTML = isExpanded
-                ? '<i class="fa-solid fa-chevron-up"></i> 자동화 접기'
-                : '<i class="fa-solid fa-chevron-down"></i> 자동화 열기';
+                ? '<i class="fa-solid fa-chevron-up"></i> 시간별 예외 접기'
+                : '<i class="fa-solid fa-chevron-down"></i> 시간별 예외 열기';
             toggleBtn.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
         }
 
@@ -1416,7 +1416,6 @@ class DutyTickerManager {
     }
 
     renderMissionAutomationManager() {
-        const listEl = document.getElementById('missionAutomationList');
         const slotListEl = document.getElementById('missionAutomationSlotList');
         const slotSummaryEl = document.getElementById('missionAutomationSlotSummary');
         const countEl = document.getElementById('missionAutomationCount');
@@ -1424,73 +1423,54 @@ class DutyTickerManager {
         const phrasePreviewEl = document.getElementById('missionAutomationPhrasePreview');
         const applyAllBtn = document.getElementById('missionAutomationApplyAllBtn');
         this.renderMissionAutomationPanel();
-        if (!listEl || !slotListEl) return;
+        if (!slotListEl) return;
 
         const sortedAutomations = this.getSortedMissionAutomations();
-        const count = sortedAutomations.length;
+        const configuredCount = sortedAutomations.length;
+        const enabledCount = sortedAutomations.filter((item) => item.enabled === true).length;
         const phrase = this.sanitizeMissionAutomationPhrase(this.missionAutomationDraftPhrase);
         const availableSlots = this.getAvailableMissionAutomationSlots();
         const activeAutomation = this.getActiveMissionAutomation();
         const activeAutomationId = String(activeAutomation?.id || '');
+        const totalSlotCount = availableSlots.length;
 
-        if (countEl) countEl.textContent = `저장 ${count}개 / 전체 ${availableSlots.length}칸`;
+        if (countEl) {
+            countEl.textContent = totalSlotCount
+                ? `자동 ${enabledCount}칸 ON / 전체 ${totalSlotCount}칸`
+                : '자동 시간 없음';
+        }
         if (phraseLabelEl) phraseLabelEl.textContent = phrase?.label || '문구를 먼저 골라 주세요.';
         if (phrasePreviewEl) {
             phrasePreviewEl.textContent = phrase
                 ? (phrase.desc || phrase.title || phrase.label)
-                : '위 저장 문구에서 하나를 고르면 아래 모든 시간칸에 바로 연결할 수 있습니다.';
+                : '위 저장 문구에서 하나를 고르면 아침시간, 쉬는시간, 점심시간 전체에 바로 적용할 수 있습니다.';
         }
         if (slotSummaryEl) {
-            slotSummaryEl.textContent = availableSlots.length
-                ? `설정된 아침시간, 쉬는시간, 점심시간 ${availableSlots.length}칸을 여기서 한 번에 관리합니다.`
-                : '설정된 자동화 시간이 없습니다. 시간표 설정에서 먼저 확인해 주세요.';
+            if (!totalSlotCount) {
+                slotSummaryEl.textContent = '설정된 자동 적용 시간이 없습니다. 시간표 설정에서 먼저 확인해 주세요.';
+            } else if (!configuredCount) {
+                slotSummaryEl.textContent = `아침시간, 쉬는시간, 점심시간 ${totalSlotCount}칸 전체에 아직 자동 적용 문구가 없습니다.`;
+            } else if (enabledCount === totalSlotCount && configuredCount === totalSlotCount) {
+                slotSummaryEl.textContent = `아침시간, 쉬는시간, 점심시간 ${totalSlotCount}칸 전체에 자동 적용됩니다.`;
+            } else {
+                slotSummaryEl.textContent = `전체 ${totalSlotCount}칸 중 ${enabledCount}칸은 자동 적용 중이고, 나머지는 시간별 예외로 조정되어 있습니다.`;
+            }
         }
         if (applyAllBtn) {
-            const shouldDisable = !phrase || availableSlots.length === 0;
+            const shouldDisable = !phrase || totalSlotCount === 0;
             applyAllBtn.disabled = shouldDisable;
             applyAllBtn.classList.toggle('cursor-not-allowed', shouldDisable);
             applyAllBtn.classList.toggle('opacity-50', shouldDisable);
         }
 
-        if (!count) {
-            listEl.innerHTML = `
-                <div class="rounded-2xl border border-dashed border-slate-700 bg-slate-950/40 p-4 text-center">
-                    <p class="text-sm font-black text-slate-200">연결된 자동화가 없습니다.</p>
-                    <p class="mt-1 text-xs text-slate-400">선택 문구를 전체 시간에 연결하거나 필요한 칸만 바로 지정해 보세요.</p>
-                </div>
-            `;
-        } else {
-            listEl.innerHTML = sortedAutomations.map((item) => {
-                const isActive = activeAutomationId && String(item.id) === activeAutomationId;
-                const stateBadge = item.enabled
-                    ? '<span class="rounded-full border border-emerald-300/30 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-black text-emerald-100">자동ON</span>'
-                    : '<span class="rounded-full border border-slate-700 bg-slate-900/80 px-2 py-0.5 text-[10px] font-black text-slate-300">자동OFF</span>';
-                return `
-                    <div class="rounded-2xl border ${isActive ? 'border-emerald-300/30 bg-emerald-500/10' : 'border-slate-700 bg-slate-900/55'} px-4 py-3">
-                        <div class="flex items-start justify-between gap-3">
-                            <div class="min-w-0">
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <p class="text-sm font-black text-white break-keep">${this.escapeHtml(item.name)}</p>
-                                    ${stateBadge}
-                                    ${isActive ? '<span class="rounded-full border border-sky-300/30 bg-sky-500/15 px-2 py-0.5 text-[10px] font-black text-sky-100">현재 적용</span>' : ''}
-                                </div>
-                                <p class="mt-1 text-[11px] font-black tracking-[0.08em] text-slate-400">${this.escapeHtml(item.startTime)} ~ ${this.escapeHtml(item.endTime)}</p>
-                                <p class="mt-2 text-xs leading-relaxed text-slate-400 break-words">${this.escapeHtml(this.getMissionAutomationSummary(item))}</p>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        if (!availableSlots.length) {
+        if (!totalSlotCount) {
             slotListEl.innerHTML = `
                 <div class="rounded-2xl border border-dashed border-slate-700 bg-slate-950/40 p-4 text-center">
                     <p class="text-sm font-black text-slate-200">연결할 시간이 없습니다.</p>
                     <p class="mt-1 text-xs text-slate-400">설정에서 아침시간, 쉬는시간, 점심시간을 먼저 확인해 주세요.</p>
                 </div>
             `;
-            this.setMissionAutomationHint('설정된 자동화 시간이 없습니다. 시간표 설정에서 아침시간과 쉬는시간을 먼저 확인해 주세요.');
+            this.setMissionAutomationHint('설정된 자동 적용 시간이 없습니다. 시간표 설정에서 아침시간, 쉬는시간, 점심시간을 먼저 확인해 주세요.');
             return;
         }
 
@@ -1499,8 +1479,8 @@ class DutyTickerManager {
             const hasAutomation = !!linkedAutomation;
             const isActive = hasAutomation && activeAutomationId && String(linkedAutomation.id) === activeAutomationId;
             const statusText = hasAutomation
-                ? (linkedAutomation.enabled ? '자동 적용 중' : '저장됨 · 꺼짐')
-                : '아직 연결 안 됨';
+                ? (linkedAutomation.enabled ? '이 시간 자동 켜짐' : '이 시간 예외로 꺼짐')
+                : '아직 따로 정한 문구 없음';
             const statusClass = hasAutomation
                 ? (linkedAutomation.enabled
                     ? 'border-emerald-300/30 bg-emerald-500/15 text-emerald-100'
@@ -1513,11 +1493,11 @@ class DutyTickerManager {
                 ? this.getMissionAutomationSummary(linkedAutomation)
                 : (phrase
                     ? (phrase.desc || phrase.title || phrase.label)
-                    : '위 저장 문구에서 하나를 고르면 바로 연결됩니다.');
+                    : '시간표 전체 적용 전에 이 시간만 따로 고를 수도 있습니다.');
             const actionDisabled = !phrase;
             const actionLabel = actionDisabled
                 ? '문구 먼저 선택'
-                : (hasAutomation ? '이 문구로 바꾸기' : '선택 문구 연결');
+                : (hasAutomation ? '이 시간만 이 문구로 바꾸기' : '이 시간만 따로 지정');
             return `
                 <div class="rounded-[1.2rem] border ${isActive ? 'border-emerald-300/30 bg-emerald-500/10' : 'border-slate-700/70 bg-slate-900/65'} p-4">
                     <div class="flex flex-wrap items-start justify-between gap-3">
@@ -1531,7 +1511,7 @@ class DutyTickerManager {
                         </div>
                     </div>
                     <div class="mt-3 rounded-2xl border border-slate-700/70 bg-slate-950/55 p-3">
-                        <p class="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">${hasAutomation ? '연결된 문구' : '다음 연결 문구'}</p>
+                        <p class="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">${hasAutomation ? '이 시간 문구' : '이 시간에 적용할 문구'}</p>
                         <p class="mt-2 text-sm font-black text-white break-keep">${this.escapeHtml(phraseLabel)}</p>
                         <p class="mt-2 text-xs leading-relaxed text-slate-300 break-words">${this.escapeHtml(phraseSummary)}</p>
                     </div>
@@ -1549,14 +1529,14 @@ class DutyTickerManager {
                                 ${hasAutomation ? '' : 'disabled'}
                                 onchange="window.dtApp.toggleMissionAutomationSlotEnabled('${slot.slotCode}', this.checked)"
                                 class="h-4 w-4 rounded border-slate-500 bg-slate-950 text-emerald-400 focus:ring-emerald-400">
-                            <span class="text-xs font-black uppercase tracking-[0.14em] text-slate-300">자동 사용</span>
+                            <span class="text-xs font-black uppercase tracking-[0.14em] text-slate-300">이 시간 자동 켜기</span>
                         </label>
                         ${hasAutomation ? `
                             <button type="button"
                                 onclick="window.dtApp.deleteMissionAutomationBySlot('${slot.slotCode}')"
                                 class="inline-flex items-center justify-center gap-2 rounded-2xl border border-rose-400/20 bg-rose-500/15 px-4 py-2.5 text-xs font-black text-rose-100 transition hover:bg-rose-500/25">
                                 <i class="fa-solid fa-link-slash"></i>
-                                연결 해제
+                                이 시간만 해제
                             </button>
                         ` : ''}
                     </div>
@@ -1565,11 +1545,11 @@ class DutyTickerManager {
         }).join('');
 
         if (phrase) {
-            this.setMissionAutomationHint(`'${phrase.label}' 문구를 원하는 시간칸에 바로 연결할 수 있습니다.`);
-        } else if (count) {
-            this.setMissionAutomationHint('위 저장 문구에서 하나를 고르면 각 시간칸에 바로 연결하거나 바꿀 수 있습니다.');
+            this.setMissionAutomationHint(`'${phrase.label}' 문구를 시간표 전체에 적용하거나, 필요한 시간만 예외로 바꿀 수 있습니다.`);
+        } else if (configuredCount) {
+            this.setMissionAutomationHint('저장 문구를 하나 고르면 시간표 전체를 다시 적용하고, 필요한 시간만 예외로 조정할 수 있습니다.');
         } else {
-            this.setMissionAutomationHint('위 저장 문구에서 하나를 고르면 아침시간, 쉬는시간, 점심시간 전체를 바로 자동화할 수 있습니다.');
+            this.setMissionAutomationHint('저장 문구 하나를 고르면 아침시간, 쉬는시간, 점심시간 전체에 바로 자동 적용합니다.');
         }
     }
 
@@ -1614,9 +1594,9 @@ class DutyTickerManager {
         try {
             this.missionAutomationPanelExpanded = true;
             await this.saveMissionAutomations(nextRows, {
-                successMessage: `'${draft.name}'에 자동 문구를 연결했습니다.`,
+                successMessage: `'${draft.name}' 시간만 다른 문구로 바꿨습니다.`,
             });
-            this.setMissionAutomationHint(`'${draft.name}'에 '${draft.phrase.label}' 문구를 연결했습니다.`);
+            this.setMissionAutomationHint(`'${draft.name}' 시간만 '${draft.phrase.label}' 문구로 바꿨습니다.`);
         } catch (error) {
             console.error(error);
             this.showToast(error?.message || '자동화를 저장하지 못했습니다.', 'error');
@@ -1635,22 +1615,18 @@ class DutyTickerManager {
             return;
         }
 
-        const existingByCode = new Map(this.missionAutomations.map((item) => [String(item.slotCode || ''), item]));
-        const nextRows = availableSlots.map((slot) => {
-            const existing = existingByCode.get(slot.slotCode);
-            return {
-                slotCode: slot.slotCode,
-                enabled: existing ? existing.enabled === true : true,
-                phrase,
-            };
-        });
+        const nextRows = availableSlots.map((slot) => ({
+            slotCode: slot.slotCode,
+            enabled: true,
+            phrase,
+        }));
 
         try {
-            this.missionAutomationPanelExpanded = true;
+            this.missionAutomationPanelExpanded = false;
             await this.saveMissionAutomations(nextRows, {
-                successMessage: '선택 문구를 전체 자동화 시간에 연결했습니다.',
+                successMessage: '선택 문구를 시간표 전체에 적용했습니다.',
             });
-            this.setMissionAutomationHint(`'${phrase.label}' 문구를 아침시간, 쉬는시간, 점심시간 전체에 연결했습니다.`);
+            this.setMissionAutomationHint(`'${phrase.label}' 문구를 아침시간, 쉬는시간, 점심시간 전체에 적용했습니다.`);
         } catch (error) {
             console.error(error);
             this.showToast(error?.message || '전체 자동화를 저장하지 못했습니다.', 'error');
@@ -1674,9 +1650,9 @@ class DutyTickerManager {
         try {
             this.missionAutomationPanelExpanded = true;
             await this.saveMissionAutomations(nextRows, {
-                successMessage: `'${linkedAutomation.name}' 자동화를 ${enabled ? '켰습니다' : '껐습니다'}.`,
+                successMessage: `'${linkedAutomation.name}' 시간 자동 적용을 ${enabled ? '켰습니다' : '껐습니다'}.`,
             });
-            this.setMissionAutomationHint(`'${linkedAutomation.name}' 자동화를 ${enabled ? '켜 두었습니다' : '잠시 꺼 두었습니다'}.`);
+            this.setMissionAutomationHint(`'${linkedAutomation.name}' 시간 자동 적용을 ${enabled ? '켜 두었습니다' : '잠시 꺼 두었습니다'}.`);
         } catch (error) {
             console.error(error);
             this.showToast(error?.message || '자동화 상태를 바꾸지 못했습니다.', 'error');
@@ -1691,9 +1667,9 @@ class DutyTickerManager {
         }
 
         this.requestResetConfirmation({
-            title: '자동화 해제',
-            message: `'${linkedAutomation.name}' 자동화를 해제할까요?`,
-            confirmLabel: '연결 해제',
+            title: '이 시간 자동 해제',
+            message: `'${linkedAutomation.name}' 시간 자동 적용을 해제할까요?`,
+            confirmLabel: '이 시간만 해제',
             onConfirm: async () => {
                 const nextRows = this.serializeMissionAutomations(
                     this.getSortedMissionAutomations().filter((item) => String(item.slotCode || '') !== String(slotCode))
@@ -1701,9 +1677,9 @@ class DutyTickerManager {
                 try {
                     this.missionAutomationPanelExpanded = true;
                     await this.saveMissionAutomations(nextRows, {
-                        successMessage: `'${linkedAutomation.name}' 자동화를 해제했습니다.`,
+                        successMessage: `'${linkedAutomation.name}' 시간 자동 적용을 해제했습니다.`,
                     });
-                    this.setMissionAutomationHint(`'${linkedAutomation.name}' 자동화를 해제했습니다.`);
+                    this.setMissionAutomationHint(`'${linkedAutomation.name}' 시간 자동 적용을 해제했습니다.`);
                 } catch (error) {
                     console.error(error);
                     this.showToast(error?.message || '자동화를 해제하지 못했습니다.', 'error');
@@ -1725,7 +1701,7 @@ class DutyTickerManager {
         });
         this.renderMissionAutomationManager();
         if (showHint) {
-            this.setMissionAutomationHint('위 저장 문구를 고르고 원하는 시간칸에 바로 연결해 주세요.');
+            this.setMissionAutomationHint('저장 문구를 고른 뒤 시간표 전체에 적용하거나, 필요한 시간만 예외로 조정해 주세요.');
         }
     }
 
@@ -1750,8 +1726,8 @@ class DutyTickerManager {
             desc: selectedPhrase.desc,
         });
         this.renderMissionAutomationManager();
-        this.setMissionAutomationHint(`'${selectedPhrase.label}' 문구를 자동화 편집칸에 연결했습니다.`);
-        this.showToast('선택 문구를 자동화에 연결했습니다.', 'success');
+        this.setMissionAutomationHint(`'${selectedPhrase.label}' 문구를 시간표 자동 적용 문구로 골랐습니다.`);
+        this.showToast('선택 문구를 시간표 자동 적용 문구로 골랐습니다.', 'success');
     }
 
     buildMissionAutomationDraftFromForm() {
@@ -3887,7 +3863,6 @@ class DutyTickerManager {
     updateMissionQuickPhraseUI() {
         const applyBtn = document.getElementById('missionQuickApplyBtn');
         const applyLabel = document.getElementById('missionQuickApplyLabel');
-        const autoBadge = document.getElementById('missionQuickAutoBadge');
         const saveBtn = document.getElementById('missionQuickSaveBtn');
         if (!applyBtn) return;
 
@@ -3895,17 +3870,12 @@ class DutyTickerManager {
         applyBtn.disabled = false;
         applyBtn.classList.remove('opacity-60', 'cursor-not-allowed');
         if (applyLabel) {
-            applyLabel.textContent = count > 0 ? `문구관리(${count})` : '문구관리';
+            applyLabel.textContent = '문구관리';
         } else {
-            applyBtn.textContent = count > 0 ? `문구관리(${count})` : '문구관리';
+            applyBtn.textContent = '문구관리';
         }
-        applyBtn.setAttribute('title', count > 0 ? '저장한 문구를 불러오고 수정하거나 삭제합니다.' : '저장한 문구를 관리합니다.');
+        applyBtn.setAttribute('title', count > 0 ? `저장 문구 ${count}개를 관리합니다.` : '저장한 문구를 관리합니다.');
         if (saveBtn) saveBtn.setAttribute('title', count > 0 ? `현재 문구를 새 항목으로 저장 (저장 ${count}개)` : '현재 문구를 새 항목으로 저장');
-        const enabledAutomationCount = this.missionAutomations.filter((item) => item.enabled === true).length;
-        if (autoBadge) {
-            autoBadge.textContent = enabledAutomationCount > 0 ? `자동 ${enabledAutomationCount}` : '';
-            autoBadge.classList.toggle('hidden', enabledAutomationCount === 0);
-        }
         this.renderMissionAutomationManager();
         this.renderMissionPhrasePanel();
     }
@@ -3939,7 +3909,7 @@ class DutyTickerManager {
             listEl.innerHTML = `
                 <div class="rounded-2xl border border-dashed border-slate-700 bg-slate-900/45 p-5 text-center">
                     <p class="text-sm font-black text-slate-200">저장된 문구가 없습니다.</p>
-                    <p class="mt-1 text-xs text-slate-400">아래 편집칸에서 새 문구를 저장하거나 현재 문구를 먼저 가져오세요.</p>
+                    <p class="mt-1 text-xs text-slate-400">아래에서 새 문구를 저장하거나 현재 문구를 먼저 가져오세요.</p>
                 </div>
             `;
             this.setMissionQuickPhraseModalHint('현재 문구를 불러오거나 새 문구를 입력해 저장하세요.');
@@ -3996,13 +3966,13 @@ class DutyTickerManager {
         this.renderMissionQuickPhraseModal();
         this.renderMissionAutomationManager();
         this.renderMissionPhrasePanel();
-        this.setMissionQuickPhraseModalHint('고른 문구를 위 자동화 편집칸에 바로 연결했습니다.');
+        this.setMissionQuickPhraseModalHint('고른 문구를 시간표 자동 적용 문구로 골랐습니다.');
     }
 
     loadCurrentMissionIntoQuickPhraseForm() {
         const draft = this.getCurrentMissionQuickPhraseDraft();
         this.setMissionQuickPhraseFormValues(draft);
-        this.setMissionQuickPhraseModalHint('현재 화면 문구를 편집칸으로 가져왔습니다. 새 항목 저장 또는 선택 항목 수정이 가능합니다.');
+        this.setMissionQuickPhraseModalHint('현재 화면 문구를 가져왔습니다. 새 문구로 저장하거나 선택 문구를 수정할 수 있습니다.');
     }
 
     saveMissionQuickPhraseFromCurrent() {

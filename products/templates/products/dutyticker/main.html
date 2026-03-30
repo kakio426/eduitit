@@ -1469,15 +1469,7 @@
         justify-content: center;
         gap: 0.38rem;
         position: relative;
-    }
-
-    #missionQuickAutoBadge {
-        width: 0.48rem;
-        height: 0.48rem;
-        border-radius: 9999px;
-        background: #86efac;
-        box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.35);
-        flex-shrink: 0;
+        white-space: nowrap;
     }
 
     .dt-break-auto-card-label {
@@ -3431,7 +3423,6 @@
                             class="px-2.5 py-1 bg-white/15 rounded-md text-white text-xs font-black hover:bg-white/25 transition"
                             title="저장 문구 관리">
                             <span id="missionQuickApplyLabel">문구관리</span>
-                            <span id="missionQuickAutoBadge" class="hidden" aria-hidden="true"></span>
                         </button>
                     </div>
                     <div class="timer-divider w-px h-auto bg-white/10 mx-1"></div>
@@ -3698,7 +3689,7 @@
                             <div class="flex items-center justify-between gap-3 mb-3">
                                 <div>
                                     <p class="text-sm font-black text-white">저장 목록</p>
-                                    <p class="text-xs text-slate-400">하나를 고르면 자동화 편집칸에도 바로 연결됩니다.</p>
+                                    <p class="text-xs text-slate-400">하나를 고르면 시간표 자동 적용 문구가 바로 바뀝니다.</p>
                                 </div>
                                 <button id="missionQuickDeleteAllBtn" type="button"
                                     class="px-3 py-2 rounded-xl bg-rose-500/15 text-rose-200 text-xs font-black border border-rose-400/20 hover:bg-rose-500/25 transition disabled:opacity-50 disabled:cursor-not-allowed">
@@ -3759,10 +3750,10 @@
                     <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                         <div>
                             <div class="flex flex-wrap items-center gap-2">
-                                <p class="text-sm font-black text-white">자동화 만들기</p>
+                                <p class="text-sm font-black text-white">시간표 자동 적용</p>
                                 <span id="missionAutomationCount"
                                     class="inline-flex items-center rounded-full border border-indigo-300/20 bg-indigo-500/10 px-2.5 py-1 text-[11px] font-black tracking-[0.08em] text-indigo-100">
-                                    저장 0개
+                                    자동 0칸 ON / 전체 0칸
                                 </span>
                                 <span id="missionAutomationActiveStatus"
                                     class="inline-flex items-center rounded-full border border-slate-600 bg-slate-900/75 px-2.5 py-1 text-[11px] font-black tracking-[0.08em] text-slate-300">
@@ -3770,67 +3761,51 @@
                                 </span>
                             </div>
                             <p id="missionAutomationHint" class="mt-1 text-xs font-bold text-slate-400 break-keep">
-                                위 저장 문구를 고른 뒤 아래 시간칸에 바로 연결하세요.
+                                저장 문구 하나를 고르면 아침시간, 쉬는시간, 점심시간 전체에 바로 자동 적용할 수 있습니다.
                             </p>
                         </div>
                         <div class="flex flex-wrap gap-2">
                             <button id="missionAutomationToggleBtn" type="button" aria-controls="missionAutomationPanelBody" aria-expanded="false"
                                 class="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-600 bg-slate-900/75 px-4 py-3 text-sm font-black text-slate-100 transition hover:bg-slate-800">
                                 <i class="fa-solid fa-chevron-down"></i>
-                                자동화 열기
+                                시간별 예외 열기
                             </button>
                         </div>
                     </div>
 
-                    <div id="missionAutomationPanelBody" class="hidden mt-4">
-                        <div class="mb-4 flex flex-wrap gap-2">
-                            <span class="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/65 px-3 py-1.5 text-[11px] font-black tracking-[0.08em] text-slate-200">1. 문구 고르기</span>
-                            <span class="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/65 px-3 py-1.5 text-[11px] font-black tracking-[0.08em] text-slate-200">2. 전체 시간에 바로 연결</span>
-                            <span class="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/65 px-3 py-1.5 text-[11px] font-black tracking-[0.08em] text-slate-200">3. 필요한 칸만 켜고 끄기</span>
-                        </div>
-
-                        <div class="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,0.98fr)_minmax(0,1.02fr)]">
-                            <div class="rounded-[1.2rem] border border-slate-700/70 bg-slate-900/70 p-4">
-                                <div class="flex items-center justify-between gap-3">
-                                    <div>
-                                        <p class="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">자동화 목록</p>
-                                        <p class="mt-1 text-xs font-bold text-slate-500">연결된 자동화만 간단히 모아 보여 주고, 실제 관리는 오른쪽 전체 시간칸에서 바로 합니다.</p>
-                                    </div>
-                                </div>
-                                <div id="missionAutomationList" class="mt-3 space-y-2.5">
-                                    <div class="rounded-2xl border border-dashed border-slate-700 bg-slate-950/40 p-4 text-center">
-                                        <p class="text-sm font-black text-slate-200">연결된 자동화가 없습니다.</p>
-                                        <p class="mt-1 text-xs text-slate-400">오른쪽에서 선택 문구를 전체 시간에 연결하거나 필요한 칸만 바로 지정해 보세요.</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="rounded-[1.2rem] border border-slate-700/70 bg-slate-900/70 p-4">
-                                <div class="rounded-[1.2rem] border border-slate-700/70 bg-slate-950/45 p-4">
-                                    <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                                        <div class="min-w-0">
-                                            <p class="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">지금 연결할 문구</p>
-                                            <p id="missionAutomationPhraseLabel" class="mt-2 text-sm font-black text-white">문구를 먼저 골라 주세요.</p>
-                                            <p id="missionAutomationPhrasePreview" class="mt-2 text-sm font-bold leading-6 text-slate-300">
-                                                위 저장 문구에서 하나를 고르면 아래 모든 시간칸에 바로 연결할 수 있습니다.
-                                            </p>
-                                        </div>
-                                        <button id="missionAutomationApplyAllBtn" type="button"
-                                            class="inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-black text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50">
-                                            <i class="fa-solid fa-layer-group"></i>
-                                            선택 문구를 전체 시간에 연결
-                                        </button>
-                                    </div>
-                                    <p id="missionAutomationSlotSummary" class="mt-4 text-xs font-bold text-slate-400">
-                                        설정된 아침시간, 쉬는시간, 점심시간 전체를 여기서 바로 관리합니다.
+                    <div class="mt-4 rounded-[1.2rem] border border-slate-700/70 bg-slate-900/70 p-4">
+                        <div class="rounded-[1.2rem] border border-slate-700/70 bg-slate-950/45 p-4">
+                            <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                                <div class="min-w-0">
+                                    <p class="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">자동 적용 문구</p>
+                                    <p id="missionAutomationPhraseLabel" class="mt-2 text-sm font-black text-white">문구를 먼저 골라 주세요.</p>
+                                    <p id="missionAutomationPhrasePreview" class="mt-2 text-sm font-bold leading-6 text-slate-300">
+                                        위 저장 문구에서 하나를 고르면 아침시간, 쉬는시간, 점심시간 전체에 바로 적용할 수 있습니다.
                                     </p>
                                 </div>
+                                <button id="missionAutomationApplyAllBtn" type="button"
+                                    class="inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-black text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50">
+                                    <i class="fa-solid fa-layer-group"></i>
+                                    시간표 전체에 적용
+                                </button>
+                            </div>
+                            <p id="missionAutomationSlotSummary" class="mt-4 text-xs font-bold text-slate-400">
+                                설정된 아침시간, 쉬는시간, 점심시간 전체를 같은 문구로 자동 적용합니다.
+                            </p>
+                        </div>
+                    </div>
 
-                                <div id="missionAutomationSlotList" class="mt-4 space-y-3">
-                                    <div class="rounded-2xl border border-dashed border-slate-700 bg-slate-950/40 p-4 text-center">
-                                        <p class="text-sm font-black text-slate-200">연결할 시간이 없습니다.</p>
-                                        <p class="mt-1 text-xs text-slate-400">설정에서 시간을 먼저 확인해 주세요.</p>
-                                    </div>
+                    <div id="missionAutomationPanelBody" class="hidden mt-4">
+                        <div class="rounded-[1.2rem] border border-slate-700/70 bg-slate-900/70 p-4">
+                            <div>
+                                <p class="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">시간별 예외 설정</p>
+                                <p class="mt-1 text-xs font-bold text-slate-500">기본은 시간표 전체 자동 적용으로 두고, 필요한 시간칸만 따로 바꾸거나 잠시 끌 수 있습니다.</p>
+                            </div>
+
+                            <div id="missionAutomationSlotList" class="mt-4 space-y-3">
+                                <div class="rounded-2xl border border-dashed border-slate-700 bg-slate-950/40 p-4 text-center">
+                                    <p class="text-sm font-black text-slate-200">연결할 시간이 없습니다.</p>
+                                    <p class="mt-1 text-xs text-slate-400">설정에서 시간을 먼저 확인해 주세요.</p>
                                 </div>
                             </div>
                         </div>
