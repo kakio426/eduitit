@@ -3,10 +3,13 @@ function buildCalendarMessageHubState() {
         messageHubOpen: false,
         messageHubActiveTab: 'capture',
         messageHubReturnFocusElement: null,
+        messageHubEntryMode: 'default',
         messageArchiveLoadedOnce: false,
         messageCaptureEnabled: false,
         messageCaptureItemTypesEnabled: false,
         messageCaptureStep: 'input',
+        messageCaptureMobileState: 'idle',
+        messageCaptureSourceExpanded: false,
         messageCaptureInputText: '',
         messageCaptureSourceHint: 'unknown',
         messageCaptureLinkedDate: '',
@@ -194,6 +197,13 @@ function initCalendarMessageHub(host, options = {}) {
         getMessageHubPanel: function(tabName) {
             if (!this.$refs) return null;
             const normalizedTab = tabName === 'archive' ? 'archive' : 'capture';
+            if (
+                normalizedTab === 'capture'
+                && typeof this.showHomeMobileMessageCaptureSheet === 'function'
+                && this.showHomeMobileMessageCaptureSheet()
+            ) {
+                return this.$refs.messageHubHomeMobilePanel || this.$refs.messageHubCapturePanel || null;
+            }
             return normalizedTab === 'archive'
                 ? (this.$refs.messageHubArchivePanel || null)
                 : (this.$refs.messageHubCapturePanel || null);
@@ -214,6 +224,66 @@ function initCalendarMessageHub(host, options = {}) {
                 return;
             }
             window.setTimeout(run, 0);
+        },
+
+        setMessageHubEntryMode: function(mode) {
+            this.messageHubEntryMode = mode === 'home_mobile_schedule' ? 'home_mobile_schedule' : 'default';
+        },
+
+        isHomeMobileMessageCaptureMode: function() {
+            if (this.messageHubEntryMode !== 'home_mobile_schedule') return false;
+            return typeof this.isCompactMobileViewport === 'function' ? this.isCompactMobileViewport() : false;
+        },
+
+        showHomeMobileMessageCaptureSheet: function() {
+            return !!this.messageHubOpen
+                && this.messageHubActiveTab === 'capture'
+                && this.isHomeMobileMessageCaptureMode();
+        },
+
+        isDefaultMessageHubSurfaceVisible: function() {
+            return !!this.messageHubOpen && !this.showHomeMobileMessageCaptureSheet();
+        },
+
+        setMessageCaptureMobileState: function(nextState) {
+            const allowedStates = new Set(['idle', 'loading', 'review', 'fallback', 'success']);
+            this.messageCaptureMobileState = allowedStates.has(nextState) ? nextState : 'idle';
+            if (this.messageCaptureMobileState !== 'review' && this.messageCaptureMobileState !== 'fallback') {
+                this.messageCaptureSourceExpanded = false;
+            }
+        },
+
+        toggleMessageCaptureSourceExpanded: function(forceValue = null) {
+            this.messageCaptureSourceExpanded = typeof forceValue === 'boolean'
+                ? forceValue
+                : !this.messageCaptureSourceExpanded;
+            if (!this.messageCaptureSourceExpanded) return;
+            const focusEditor = () => {
+                const editor = this.$refs ? this.$refs.messageCaptureMobileSourceInput : null;
+                if (editor && typeof editor.focus === 'function') {
+                    editor.focus();
+                }
+            };
+            if (typeof this.$nextTick === 'function') {
+                this.$nextTick(focusEditor);
+                return;
+            }
+            window.setTimeout(focusEditor, 0);
+        },
+
+        syncMessageCaptureInputToHomeDraft: function({ clearDraft = false } = {}) {
+            this.messageboxHomeDraftText = clearDraft ? '' : String(this.messageCaptureInputText || '');
+        },
+
+        returnToHomeMessageCaptureInput: function({ clearDraft = false } = {}) {
+            this.syncMessageCaptureInputToHomeDraft({ clearDraft });
+            this.closeMessageHub({ restoreFocus: false });
+            const focusDraft = () => this.focusMessageboxHomeDraftInput();
+            if (typeof this.$nextTick === 'function') {
+                this.$nextTick(focusDraft);
+                return;
+            }
+            window.setTimeout(focusDraft, 0);
         },
 
         buildMessageCaptureParseUrl: function() {
@@ -413,9 +483,13 @@ function initCalendarMessageHub(host, options = {}) {
                 return;
             }
             this.messageHubReturnFocusElement = event && event.currentTarget ? event.currentTarget : document.activeElement;
+            this.setMessageHubEntryMode(hubOptions.entryMode || 'default');
             this.messageHubOpen = true;
             if (hubOptions.resetCapture) {
                 this.resetMessageCaptureFlow();
+            }
+            if (tab !== 'archive' && this.messageHubEntryMode === 'home_mobile_schedule') {
+                this.setMessageCaptureMobileState(hubOptions.mobileState || 'loading');
             }
             await this.switchMessageHubTab(tab, hubOptions);
             this.scrollMessageHubPanelToTop(tab);
@@ -448,6 +522,8 @@ function initCalendarMessageHub(host, options = {}) {
             this.messageCaptureErrorText = '';
             this.messageArchiveErrorText = '';
             this.messageCaptureDropActive = false;
+            this.setMessageHubEntryMode('default');
+            this.setMessageCaptureMobileState('idle');
             this.syncMessageHubLayout();
             if (restoreFocus && this.messageHubReturnFocusElement && typeof this.messageHubReturnFocusElement.focus === 'function') {
                 setTimeout(() => {
@@ -457,7 +533,7 @@ function initCalendarMessageHub(host, options = {}) {
         },
 
         openMessageCaptureModal: async function(event) {
-            await this.openMessageHub(event, 'capture', { resetCapture: true });
+            await this.openMessageHub(event, 'capture', { resetCapture: true, entryMode: 'default' });
         },
 
         focusMessageboxHomeDraftInput: function() {
@@ -531,7 +607,14 @@ function initCalendarMessageHub(host, options = {}) {
                 this.focusMessageboxHomeDraftInput();
                 return;
             }
-            await this.openMessageHub(event, 'capture', { resetCapture: true });
+            const entryMode = typeof this.isCompactMobileViewport === 'function' && this.isCompactMobileViewport()
+                ? 'home_mobile_schedule'
+                : 'default';
+            await this.openMessageHub(event, 'capture', {
+                resetCapture: true,
+                entryMode,
+                mobileState: 'loading',
+            });
             this.messageCaptureSourceHint = 'home_card';
             this.messageCaptureInputText = draftText;
             this.messageCaptureErrorText = '';
@@ -569,6 +652,7 @@ function initCalendarMessageHub(host, options = {}) {
         },
 
         openMessageArchiveFromSuccess: async function() {
+            this.setMessageHubEntryMode('default');
             await this.switchMessageHubTab('archive', {
                 preferredCaptureId: this.messageCaptureCaptureId || '',
                 forceReload: true,
@@ -588,6 +672,10 @@ function initCalendarMessageHub(host, options = {}) {
         },
 
         startAnotherMessageCapture: function() {
+            if (this.isHomeMobileMessageCaptureMode()) {
+                this.returnToHomeMessageCaptureInput({ clearDraft: true });
+                return;
+            }
             this.switchMessageHubTab('capture');
             this.resetMessageCaptureFlow();
             this.scrollMessageHubPanelToTop('capture');
@@ -848,6 +936,7 @@ function initCalendarMessageHub(host, options = {}) {
 
         applyArchiveDetailToMessageCapture: function(detailPayload) {
             this.resetMessageCaptureFlow();
+            this.setMessageHubEntryMode('default');
             this.messageHubOpen = true;
             this.messageHubActiveTab = 'capture';
             this.messageCaptureInputText = String(detailPayload.raw_text || '');
@@ -872,10 +961,12 @@ function initCalendarMessageHub(host, options = {}) {
 
         resetMessageCaptureFlow: function() {
             this.messageCaptureStep = 'input';
+            this.setMessageCaptureMobileState('idle');
             this.messageCaptureInputText = '';
             this.messageCaptureSourceHint = 'unknown';
             this.messageCaptureLinkedDate = '';
             this.messageCaptureManualNote = '';
+            this.messageCaptureSourceExpanded = false;
             this.messageCaptureDropActive = false;
             this.messageCaptureFiles = [];
             this.messageCaptureFileErrors = [];
@@ -1019,6 +1110,11 @@ function initCalendarMessageHub(host, options = {}) {
             this.messageCaptureErrorText = '';
             this.messageCaptureStep = 'confirm';
             this.messageHubActiveTab = 'capture';
+            this.messageCaptureSourceExpanded = false;
+            if (this.isHomeMobileMessageCaptureMode()) {
+                const editableCount = this.messageCaptureEditableCandidates().length;
+                this.setMessageCaptureMobileState(editableCount > 0 ? 'review' : 'fallback');
+            }
             this.scrollMessageHubPanelToTop('capture');
         },
 
@@ -1042,6 +1138,10 @@ function initCalendarMessageHub(host, options = {}) {
             this.messageCaptureSavedEvents = [];
             this.messageCaptureErrorText = '';
             this.messageCaptureStep = 'done';
+            if (this.isHomeMobileMessageCaptureMode()) {
+                this.syncMessageCaptureInputToHomeDraft({ clearDraft: true });
+                this.setMessageCaptureMobileState('success');
+            }
             this.messageHubActiveTab = 'capture';
         },
 
@@ -1175,6 +1275,9 @@ function initCalendarMessageHub(host, options = {}) {
                 return;
             }
             this.isParsingMessageCapture = true;
+            if (this.isHomeMobileMessageCaptureMode()) {
+                this.setMessageCaptureMobileState('loading');
+            }
             this.messageCaptureErrorText = '';
             const formData = new FormData();
             formData.append('raw_text', this.messageCaptureInputText);
@@ -1197,9 +1300,20 @@ function initCalendarMessageHub(host, options = {}) {
                 });
                 this.applyMessageCaptureResult(payload);
                 await this.refreshMessageArchiveAfterMutation(payload.capture_id || '');
-                window.showToast('캘린더에 다시 띄울 날짜를 확인해 주세요.', 'success');
+                if (this.isHomeMobileMessageCaptureMode()) {
+                    if (this.messageCaptureEditableCandidates().length > 0) {
+                        window.showToast('찾은 일정을 확인하고 바로 저장해 보세요.', 'success');
+                    } else {
+                        window.showToast('바로 저장할 일정은 찾지 못했어요.', 'info');
+                    }
+                } else {
+                    window.showToast('캘린더에 다시 띄울 날짜를 확인해 주세요.', 'success');
+                }
             } catch (error) {
                 this.messageCaptureErrorText = error.message || '메모 읽기에 실패했습니다.';
+                if (this.isHomeMobileMessageCaptureMode()) {
+                    this.setMessageCaptureMobileState('fallback');
+                }
                 window.showToast(this.messageCaptureErrorText, 'error');
             } finally {
                 this.isParsingMessageCapture = false;
@@ -1272,6 +1386,9 @@ function initCalendarMessageHub(host, options = {}) {
                     body: formData,
                 });
                 this.applyMessageCaptureArchiveSaveResult(payload);
+                if (this.isHomeMobileMessageCaptureMode()) {
+                    this.syncMessageCaptureInputToHomeDraft({ clearDraft: true });
+                }
                 await this.refreshMessageArchiveAfterMutation(payload.capture_id || '');
                 window.showToast(payload.message || '메모를 보관함에 저장했어요.', 'success');
             } catch (error) {
@@ -1283,6 +1400,10 @@ function initCalendarMessageHub(host, options = {}) {
         },
 
         backToMessageCaptureInput: function() {
+            if (this.isHomeMobileMessageCaptureMode()) {
+                this.returnToHomeMessageCaptureInput();
+                return;
+            }
             this.messageCaptureStep = 'input';
             this.messageCaptureErrorText = '';
             this.messageCaptureIdempotencyKey = this.createMessageCaptureIdempotencyKey();
@@ -1385,6 +1506,10 @@ function initCalendarMessageHub(host, options = {}) {
                 this.messageCaptureSavedMessage = payload.message || '선택한 일정을 저장했어요.';
                 this.messageCaptureSavedEvents = ([]).concat(payload.created_events || [], payload.reused_events || []);
                 this.messageCaptureStep = 'done';
+                if (this.isHomeMobileMessageCaptureMode()) {
+                    this.syncMessageCaptureInputToHomeDraft({ clearDraft: true });
+                    this.setMessageCaptureMobileState('success');
+                }
                 notifyHost('classcalendar:event-saved', { source: 'message-capture' });
                 if (warningMessages.length > 0) {
                     window.showToast(warningMessages[0], 'info');
@@ -1469,6 +1594,9 @@ function initCalendarMessageHub(host, options = {}) {
             if (this.messageCaptureSuccessMode === 'link') {
                 return '메시지 항목을 저장했어요.';
             }
+            if (this.isHomeMobileMessageCaptureMode()) {
+                return '캘린더에 저장했어요.';
+            }
             return '메모에서 일정을 저장했어요.';
         },
 
@@ -1483,9 +1611,6 @@ function initCalendarMessageHub(host, options = {}) {
     };
 
     Object.entries(hostExtensions).forEach(([key, value]) => {
-        if (typeof host[key] === 'function') {
-            return;
-        }
         try {
             Object.defineProperty(host, key, {
                 configurable: true,
