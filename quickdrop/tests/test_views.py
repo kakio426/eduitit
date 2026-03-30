@@ -68,8 +68,8 @@ class QuickdropViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.channel.slug)
-        self.assertContains(response, "텍스트와 사진을 바로 옮깁니다.")
-        self.assertContains(response, "새 기기 연결")
+        self.assertContains(response, "텍스트를 붙여넣거나 첨부파일을 골라 바로 옮깁니다.")
+        self.assertContains(response, "새 기기 추가")
         self.assertContains(response, "연결된 기기")
         self.assertEqual(response.headers["Cache-Control"], "no-store, private")
         self.assertEqual(response.headers["X-Robots-Tag"], "noindex, nofollow, noarchive")
@@ -151,7 +151,7 @@ class QuickdropViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'data-quickdrop-root="true"')
         self.assertContains(response, "보낸 내용이 여기에 쌓입니다.")
-        self.assertContains(response, "파일 추가")
+        self.assertContains(response, "첨부파일")
         self.assertContains(response, "예) 회의 링크, 메모, 주소")
         self.assertContains(response, 'data-quickdrop-history-panel="true"')
         self.assertContains(response, reverse("quickdrop:snapshot", kwargs={"slug": self.channel.slug}))
@@ -204,7 +204,7 @@ class QuickdropViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "빠른쌤")
         self.assertNotContains(response, "quickdrop_teacher")
-        self.assertContains(response, "연결 기기")
+        self.assertContains(response, "새 기기 추가")
 
     def test_send_text_replaces_current_payload(self):
         self.client.logout()

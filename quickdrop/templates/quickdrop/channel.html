@@ -98,6 +98,21 @@
         background: #f8fafc;
     }
 
+    #quickdrop-root [data-quickdrop-helper-link="true"] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 2.5rem;
+        border-radius: 9999px;
+        padding: 0 0.95rem;
+        border: 1px solid #d6e3f6;
+        background: #ffffff;
+        color: #1e3a8a;
+        font-size: 0.82rem;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
     #quickdrop-root [data-quickdrop-chip="true"] {
         display: inline-flex;
         align-items: center;
@@ -457,17 +472,19 @@
                         </div>
                     </div>
                     <div data-quickdrop-top-actions="true" class="flex flex-wrap items-center gap-2">
-                        {% if is_owner %}
-                        <a href="{{ landing_url }}" data-quickdrop-secondary-button="true">연결 기기</a>
-                        {% endif %}
                         <button type="button" id="end-session-btn" data-quickdrop-muted-button="true" class="hidden">오늘 내용 지우기</button>
                     </div>
                 </div>
             </div>
 
             <div data-quickdrop-helper-bar="true" class="px-5 py-3 sm:px-6">
-                <div class="flex flex-wrap gap-2">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="flex flex-wrap gap-2">
                     <span id="session-expiry" data-quickdrop-chip="true" data-tone="accent">오늘 기록은 내일 정리됩니다</span>
+                    </div>
+                    {% if is_owner %}
+                    <a href="{{ landing_url }}" data-quickdrop-helper-link="true">새 기기 추가</a>
+                    {% endif %}
                 </div>
             </div>
 
@@ -518,10 +535,10 @@
                 <div class="mx-auto max-w-3xl">
                     <div data-quickdrop-composer-shell="true">
                         <div data-quickdrop-composer-row="true" class="flex items-stretch gap-3">
-                            <label id="photo-trigger" for="file-input" class="shrink-0 cursor-pointer" aria-label="파일 보내기">
+                            <label id="photo-trigger" for="file-input" class="shrink-0 cursor-pointer" aria-label="첨부파일 보내기">
                                 <span data-quickdrop-photo-icon="true" aria-hidden="true">+</span>
                                 <span data-quickdrop-photo-copy="true">
-                                    <span data-quickdrop-photo-title="true">파일 추가</span>
+                                    <span data-quickdrop-photo-title="true">첨부파일</span>
                                     <span data-quickdrop-photo-meta="true">사진, PDF, 문서</span>
                                 </span>
                             </label>
