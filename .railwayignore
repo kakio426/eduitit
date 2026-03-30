@@ -1,3 +1,17 @@
-# Force Railway to rebuild by changing this file
-# Updated: 2026-01-30 15:05
-# Deployment: 243fe9d - ensure_ssambti command added
+# Keep local-only artifacts out of CLI snapshot uploads.
+.git/
+.worktrees/
+.venv/
+env/
+venv/
+ENV/
+node_modules/
+__pycache__/
+*.pyc
+*.log
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+test_media/
+.env
