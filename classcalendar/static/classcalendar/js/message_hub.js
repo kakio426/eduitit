@@ -844,27 +844,27 @@ function initCalendarMessageHub(host, options = {}) {
         messageArchivePrimaryActionTitle: function() {
             const editableCount = this.messageArchiveVisibleCandidates().length;
             if (editableCount > 0) {
-                return editableCount === 1 ? '이 일정 1개를 바로 고치기' : `찾은 일정 ${editableCount}개를 바로 고치기`;
+                return editableCount === 1 ? '이 메시지에서 찾은 일정 1개를 다시 확인해 보세요.' : `이 메시지에서 찾은 일정 ${editableCount}개를 다시 확인해 보세요.`;
             }
             if (this.hasSelectedCaptureLinkedItems()) {
-                return '이미 저장한 내용 다시 확인하기';
+                return '이미 연결한 일정은 그대로 두고, 이 메시지를 다시 읽어볼 수 있어요.';
             }
-            return '날짜 다시 확인하기';
+            return '저장할 날짜가 없어도, 이 메시지를 다시 읽고 이어서 처리할 수 있어요.';
         },
 
         messageArchivePrimaryActionDescription: function() {
             const editableCount = this.messageArchiveVisibleCandidates().length;
             if (editableCount > 0) {
-                return '눌러서 제목과 날짜를 바로 손보세요.';
+                return '버튼을 누르면 찾은 일정 화면으로 돌아가 제목과 날짜를 바로 손볼 수 있어요.';
             }
             if (this.hasSelectedCaptureLinkedItems()) {
-                return '다시 열고 필요한 날짜나 메모만 바로 고칠 수 있어요.';
+                return '이미 저장한 일정은 유지한 채, 필요한 날짜와 메모만 다시 확인하면 됩니다.';
             }
-            return '다시 열어서 날짜를 확인하고 저장하면 됩니다.';
+            return '다시 읽기 화면으로 열어서 날짜를 확인한 뒤 저장하면 됩니다.';
         },
 
         messageArchivePrimaryActionButtonText: function() {
-            return this.messageArchiveVisibleCandidates().length > 0 ? '이 일정 고치기' : '다시 열기';
+            return this.messageArchiveVisibleCandidates().length > 0 ? '이 메시지로 다시 일정 만들기' : '이 메시지 다시 읽기';
         },
 
         formatTaskLinkedDate: function(task) {
@@ -953,10 +953,10 @@ function initCalendarMessageHub(host, options = {}) {
                 ? detail.candidates.filter((candidate) => !candidate.already_saved).length
                 : 0;
             if (editableCandidateCount > 0) {
-                window.showToast('보관한 메시지를 바로 일정 확인 화면으로 열었어요.', 'success');
+                window.showToast('보관한 메시지를 다시 열어 일정 확인 화면으로 옮겼어요.', 'success');
                 return;
             }
-            window.showToast('보관한 메시지를 바로 날짜 확인 화면으로 열었어요.', 'info');
+            window.showToast('보관한 메시지를 다시 읽기 화면으로 열었어요.', 'info');
         },
 
         resetMessageCaptureFlow: function() {
@@ -1603,10 +1603,10 @@ function initCalendarMessageHub(host, options = {}) {
         messageArchiveCandidateEmptyText: function() {
             if (!this.messageArchiveSelectedCapture) return '';
             return this.messageArchiveSelectedCapture.archive_status === 'unparsed'
-                ? '아직 이 메모는 읽지 않았어요. 필요할 때 일정찾기를 누르면 됩니다.'
+                ? '아직 이 메시지는 읽지 않았어요. 필요할 때 다시 열어 일정찾기를 누르면 됩니다.'
                 : (this.hasSelectedCaptureLinkedItems()
                     ? '이미 연결된 일정이나 할 일은 아래에서 확인할 수 있어요.'
-                    : '이 메모에서는 저장할 날짜를 찾지 못했어요.');
+                    : '이 메시지에서는 저장할 날짜를 찾지 못했어요.');
         },
     };
 

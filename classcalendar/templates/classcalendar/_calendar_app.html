@@ -130,6 +130,10 @@
         max-height: calc(100dvh - 1.5rem);
     }
 
+    .classcalendar-message-hub-dialog--archive {
+        max-height: calc(100dvh - 1.5rem);
+    }
+
     .classcalendar-message-hub-panel {
         -webkit-overflow-scrolling: touch;
         overscroll-behavior: contain;
@@ -428,6 +432,16 @@
     @media (min-width: 640px) {
         .classcalendar-message-hub-dialog {
             max-height: calc(100dvh - 3rem);
+        }
+
+        .classcalendar-message-hub-dialog--archive {
+            max-height: calc(100dvh - 3rem);
+        }
+    }
+
+    @media (min-width: 1024px) {
+        .classcalendar-message-hub-dialog--archive {
+            max-height: 92dvh;
         }
     }
 
