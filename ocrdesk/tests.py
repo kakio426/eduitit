@@ -163,9 +163,11 @@ class OCRDeskServiceTests(SimpleTestCase):
 
         with patch.dict("ocrdesk.services.os.environ", {}, clear=True):
             with patch("ocrdesk.services._get_paddlex_cache_dir", return_value="C:\\ocr-cache"):
-                with patch("ocrdesk.services._get_cpu_threads", return_value=2):
-                    with patch.dict(sys.modules, {"paddleocr": fake_module}):
-                        engine = ocr_services._build_engine()
+                with patch("ocrdesk.services._get_cpu_threads", return_value=1):
+                    with patch("ocrdesk.services._get_text_detection_model_name", return_value="PP-OCRv5_mobile_det"):
+                        with patch("ocrdesk.services._get_text_recognition_model_name", return_value="korean_PP-OCRv5_mobile_rec"):
+                            with patch.dict(sys.modules, {"paddleocr": fake_module}):
+                                engine = ocr_services._build_engine()
             self.assertEqual(ocr_services.os.environ["PADDLE_PDX_CACHE_HOME"], "C:\\ocr-cache")
             self.assertEqual(ocr_services.os.environ["PADDLE_HOME"], "C:\\ocr-cache")
             self.assertEqual(ocr_services.os.environ["PADDLE_PDX_MODEL_SOURCE"], "BOS")
@@ -173,19 +175,20 @@ class OCRDeskServiceTests(SimpleTestCase):
 
         self.assertIs(engine, fake_engine)
         fake_constructor.assert_called_once_with(
-            lang="korean",
             device="cpu",
+            text_detection_model_name="PP-OCRv5_mobile_det",
+            text_recognition_model_name="korean_PP-OCRv5_mobile_rec",
             use_doc_orientation_classify=False,
             use_doc_unwarping=False,
             use_textline_orientation=False,
             enable_mkldnn=False,
             enable_cinn=False,
-            cpu_threads=2,
+            cpu_threads=1,
         )
 
     def test_get_cpu_threads_uses_safe_default_on_invalid_input(self):
         with patch.dict("ocrdesk.services.os.environ", {"OCRDESK_CPU_THREADS": "nope"}, clear=False):
-            self.assertEqual(ocr_services._get_cpu_threads(), 2)
+            self.assertEqual(ocr_services._get_cpu_threads(), 1)
 
     def test_get_cpu_threads_clamps_to_positive_integer(self):
         with patch.dict("ocrdesk.services.os.environ", {"OCRDESK_CPU_THREADS": "0"}, clear=False):
@@ -193,6 +196,11 @@ class OCRDeskServiceTests(SimpleTestCase):
 
         with patch.dict("ocrdesk.services.os.environ", {"OCRDESK_CPU_THREADS": "6"}, clear=False):
             self.assertEqual(ocr_services._get_cpu_threads(), 6)
+
+    def test_model_names_default_to_mobile_variants(self):
+        with patch.dict("ocrdesk.services.os.environ", {}, clear=True):
+            self.assertEqual(ocr_services._get_text_detection_model_name(), "PP-OCRv5_mobile_det")
+            self.assertEqual(ocr_services._get_text_recognition_model_name(), "korean_PP-OCRv5_mobile_rec")
 
     def test_get_ocr_engine_retries_after_cooldown_when_first_init_fails(self):
         fake_engine = object()

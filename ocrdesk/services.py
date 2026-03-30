@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
 
 SERVICE_ROUTE = "ocrdesk:main"
 SERVICE_TITLE = "사진 글자 읽기"
+DEFAULT_TEXT_DETECTION_MODEL_NAME = "PP-OCRv5_mobile_det"
+DEFAULT_TEXT_RECOGNITION_MODEL_NAME = "korean_PP-OCRv5_mobile_rec"
 
 _OCR_ENGINE = None
 _OCR_INIT_ERROR = None
@@ -54,11 +56,11 @@ def _get_init_retry_cooldown_seconds():
 
 
 def _get_cpu_threads():
-    raw_value = os.environ.get("OCRDESK_CPU_THREADS", "2")
+    raw_value = os.environ.get("OCRDESK_CPU_THREADS", "1")
     try:
         cpu_threads = int(raw_value)
     except (TypeError, ValueError):
-        return 2
+        return 1
     return max(1, cpu_threads)
 
 
@@ -68,6 +70,16 @@ def _get_paddlex_cache_dir():
     cache_dir = cache_dir.expanduser()
     cache_dir.mkdir(parents=True, exist_ok=True)
     return str(cache_dir)
+
+
+def _get_text_detection_model_name():
+    model_name = os.environ.get("OCRDESK_TEXT_DETECTION_MODEL_NAME", DEFAULT_TEXT_DETECTION_MODEL_NAME).strip()
+    return model_name or DEFAULT_TEXT_DETECTION_MODEL_NAME
+
+
+def _get_text_recognition_model_name():
+    model_name = os.environ.get("OCRDESK_TEXT_RECOGNITION_MODEL_NAME", DEFAULT_TEXT_RECOGNITION_MODEL_NAME).strip()
+    return model_name or DEFAULT_TEXT_RECOGNITION_MODEL_NAME
 
 
 def _is_retry_cooldown_active(now):
@@ -97,8 +109,9 @@ def _build_engine():
         raise OCREngineUnavailable("paddleocr_import_error") from exc
 
     return PaddleOCR(
-        lang="korean",
         device="cpu",
+        text_detection_model_name=_get_text_detection_model_name(),
+        text_recognition_model_name=_get_text_recognition_model_name(),
         use_doc_orientation_classify=False,
         use_doc_unwarping=False,
         use_textline_orientation=False,
