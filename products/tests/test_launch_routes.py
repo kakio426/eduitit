@@ -72,7 +72,7 @@ class ProductLaunchRouteTests(TestCase):
 
     def test_resolver_uses_tts_announce_route(self):
         product = Product.objects.create(
-            title="교시 안내 TTS",
+            title="교실 방송 TTS",
             description="desc",
             price=0,
             is_active=True,

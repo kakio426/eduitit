@@ -1,15 +1,15 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}교시 안내 TTS - Eduitit{% endblock %}
+{% block title %}교실 방송 TTS - Eduitit{% endblock %}
 
 {% block extra_css %}
 <style>
     body {
         background:
-            radial-gradient(circle at top left, rgba(251, 191, 36, 0.2), transparent 28%),
-            radial-gradient(circle at 80% 0%, rgba(45, 212, 191, 0.18), transparent 24%),
-            linear-gradient(145deg, #fffdf7 0%, #eefcfb 45%, #f8fafc 100%);
+            radial-gradient(circle at top left, rgba(251, 191, 36, 0.18), transparent 24%),
+            radial-gradient(circle at 82% 12%, rgba(20, 184, 166, 0.18), transparent 28%),
+            linear-gradient(155deg, #fffaf2 0%, #f3fbf8 45%, #f8fafc 100%);
     }
 
     footer {
@@ -24,7 +24,7 @@
     .tts-surface {
         background: rgba(255, 255, 255, 0.88);
         backdrop-filter: blur(18px);
-        box-shadow: 0 24px 80px rgba(15, 23, 42, 0.08);
+        box-shadow: 0 28px 80px rgba(15, 23, 42, 0.08);
     }
 
     .tts-chip {
@@ -40,101 +40,57 @@
         color: #475569;
     }
 
-    .tts-action,
-    .tts-mini-action {
+    .tts-primary-btn,
+    .tts-secondary-btn,
+    .tts-soft-btn {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: 0.45rem;
+        gap: 0.5rem;
         border-radius: 9999px;
         font-weight: 800;
         transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease, color 0.18s ease;
         white-space: nowrap;
     }
 
-    .tts-action {
-        padding: 0.9rem 1.1rem;
-        font-size: 0.92rem;
-    }
-
-    .tts-mini-action {
-        padding: 0.65rem 0.95rem;
-        font-size: 0.84rem;
-    }
-
-    .tts-action:hover,
-    .tts-mini-action:hover {
+    .tts-primary-btn:hover,
+    .tts-secondary-btn:hover,
+    .tts-soft-btn:hover {
         transform: translateY(-1px);
     }
 
-    .tts-action-primary {
-        background: #0f172a;
+    .tts-primary-btn {
+        background: linear-gradient(135deg, #0f766e 0%, #0f172a 100%);
         color: #fff;
-        box-shadow: 0 16px 30px rgba(15, 23, 42, 0.16);
+        box-shadow: 0 18px 32px rgba(15, 23, 42, 0.16);
     }
 
-    .tts-action-primary:hover {
-        background: #0f766e;
-    }
-
-    .tts-action-secondary {
+    .tts-secondary-btn {
         background: #fff;
         color: #0f172a;
         border: 1px solid #cbd5e1;
         box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
     }
 
-    .tts-action-secondary:hover {
-        border-color: #94a3b8;
-        background: #f8fafc;
-    }
-
-    .tts-action-soft {
+    .tts-soft-btn {
         background: #f8fafc;
         color: #334155;
         border: 1px solid #e2e8f0;
     }
 
-    .tts-action-soft:hover {
-        background: #eef2ff;
-        color: #1e293b;
-    }
-
-    .tts-row {
-        transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
-    }
-
-    .tts-row[data-active="true"] {
-        border-color: rgba(34, 197, 94, 0.55);
-        box-shadow: 0 18px 42px rgba(15, 23, 42, 0.12);
-        transform: translateY(-1px);
-    }
-
-    .tts-row[data-status="ready"] {
-        border-color: rgba(20, 184, 166, 0.45);
-    }
-
-    .tts-row[data-status="future"] {
-        border-color: rgba(148, 163, 184, 0.32);
-    }
-
-    .tts-row[data-status="past"] {
-        opacity: 0.96;
-    }
-
     .tts-input {
         width: 100%;
-        border-radius: 1.4rem;
-        border: 1px solid #e2e8f0;
-        background: #f8fafc;
+        border-radius: 1.6rem;
+        border: 1px solid #dbe5ef;
+        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
         color: #0f172a;
-        padding: 1rem 1.1rem;
+        padding: 1.2rem 1.2rem;
         box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
     }
 
     .tts-input:focus {
         border-color: #14b8a6;
-        box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.12);
+        box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.14);
         outline: none;
     }
 
@@ -151,14 +107,52 @@
         outline: none;
         box-shadow: 0 0 0 3px rgba(103, 232, 249, 0.2);
     }
+
+    .tts-template-card,
+    .tts-schedule-card {
+        transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease, background-color 0.18s ease;
+    }
+
+    .tts-template-card[data-active="true"],
+    .tts-schedule-card[data-active="true"] {
+        border-color: rgba(20, 184, 166, 0.55);
+        box-shadow: 0 18px 44px rgba(15, 23, 42, 0.12);
+        transform: translateY(-1px);
+    }
+
+    .tts-template-card[data-active="true"] {
+        background: linear-gradient(180deg, rgba(236, 253, 245, 0.98) 0%, rgba(255, 255, 255, 0.98) 100%);
+    }
+
+    .tts-schedule-card[data-status="ready"] {
+        border-color: rgba(20, 184, 166, 0.35);
+    }
+
+    .tts-schedule-card[data-status="future"] {
+        border-color: rgba(148, 163, 184, 0.28);
+    }
+
+    .tts-schedule-card[data-status="past"] {
+        opacity: 0.96;
+    }
+
+    .tts-metric-card {
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.96) 100%);
+        border: 1px solid rgba(226, 232, 240, 0.9);
+    }
+
+    .tts-group-shell {
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        background: rgba(255, 255, 255, 0.72);
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<section class="tts-page px-4 pb-16 pt-24 md:pt-28" data-tts-page>
+<section class="tts-page px-4 pb-16 pt-24 md:pt-28" data-tts-page data-schedule-label="{{ schedule_source_label }}">
     <div class="pointer-events-none absolute inset-0 overflow-hidden">
-        <div class="absolute -left-16 top-24 h-72 w-72 rounded-full bg-cyan-200/35 blur-3xl"></div>
-        <div class="absolute right-0 top-8 h-80 w-80 rounded-full bg-amber-200/40 blur-3xl"></div>
+        <div class="absolute -left-20 top-24 h-72 w-72 rounded-full bg-amber-200/35 blur-3xl"></div>
+        <div class="absolute right-0 top-8 h-80 w-80 rounded-full bg-teal-200/35 blur-3xl"></div>
     </div>
 
     <div class="relative mx-auto max-w-7xl">
@@ -169,71 +163,70 @@
             <a href="/" class="inline-flex items-center gap-2 rounded-full px-3 py-2 text-slate-500 transition hover:text-slate-800">
                 홈으로
             </a>
+            <span class="tts-chip">직접 입력</span>
+            <span class="tts-chip">빠른 문구</span>
             <span class="tts-chip">{{ schedule_source_label }}</span>
         </div>
 
-        <div class="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)]">
+        <div class="grid gap-6 xl:grid-cols-[minmax(0,1.16fr)_minmax(340px,0.84fr)]">
             <section class="tts-surface rounded-[2rem] border border-white/70 p-5 md:p-8">
                 <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                     <div class="max-w-3xl">
-                        <p class="text-sm font-black uppercase tracking-[0.22em] text-cyan-600">교실 방송</p>
-                        <h1 class="mt-3 text-3xl font-black tracking-tight text-slate-900 md:text-5xl">교시 안내 TTS</h1>
+                        <p class="text-sm font-black uppercase tracking-[0.22em] text-teal-700">학생 대상 방송 도구</p>
+                        <h1 class="mt-3 text-3xl font-black tracking-tight text-slate-900 md:text-5xl">교실 방송 TTS</h1>
                         <p class="mt-4 text-base leading-7 text-slate-600 md:text-lg">
-                            1교시 5분 전처럼 교시별 안내 문구를 바로 읽고, 복사하고, 필요한 때는 방송할 수 있습니다.
+                            학생들에게 지금 필요한 말을 바로 읽어 주세요. 직접 입력해도 되고, 자주 쓰는 방송 문구나 시간표 안내를 바로 가져와도 됩니다.
                         </p>
                         <div class="mt-5 flex flex-wrap gap-2">
-                            <span class="tts-chip">브라우저 음성</span>
-                            <span class="tts-chip">교시별 문구</span>
-                            <span class="tts-chip">복사 · 읽기</span>
+                            <span class="tts-chip">바로 읽기</span>
+                            <span class="tts-chip">문구 복사</span>
+                            <span class="tts-chip">학생 안내</span>
                             <span class="tts-chip">{{ active_classroom_name }}</span>
                         </div>
                     </div>
 
-                    <div class="min-w-[14rem] rounded-[1.5rem] bg-slate-950 p-5 text-white shadow-xl">
-                        <p class="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">현재 시각</p>
-                        <p id="tts-clock" class="mt-2 text-3xl font-black">{{ current_clock }}</p>
-                        <p class="mt-2 text-sm leading-6 text-slate-300">{{ schedule_source_note }}</p>
+                    <div class="min-w-[15rem] rounded-[1.6rem] bg-slate-950 p-5 text-white shadow-xl">
+                        <p class="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">바로 쓰는 흐름</p>
+                        <ol class="mt-3 space-y-2 text-sm leading-6 text-slate-300">
+                            <li>1. 아래 빠른 문구를 누르거나 직접 입력합니다.</li>
+                            <li>2. 목소리와 속도를 고릅니다.</li>
+                            <li>3. 읽기 버튼으로 바로 학생들에게 들려줍니다.</li>
+                        </ol>
                     </div>
                 </div>
 
                 <div class="mt-6 grid gap-3 md:grid-cols-3">
-                    <div class="rounded-2xl bg-slate-50 p-4">
+                    <div class="tts-metric-card rounded-2xl p-4">
                         <p class="text-xs font-black uppercase tracking-[0.18em] text-slate-400">대상</p>
                         <p class="mt-2 text-lg font-black text-slate-900">{{ active_classroom_name }}</p>
+                        <p class="mt-1 text-sm text-slate-600">지금 안내할 반 또는 데모 학급</p>
                     </div>
-
-                    <div class="rounded-2xl bg-slate-50 p-4">
-                        <p class="text-xs font-black uppercase tracking-[0.18em] text-slate-400">다음 방송</p>
-                        <p class="mt-2 text-lg font-black text-slate-900" data-tts-next-summary>
-                            {{ next_announcement_subject|default:"준비 중" }}{% if next_announcement_time_label %} · {{ next_announcement_time_label }}{% endif %}
-                        </p>
-                        <p class="mt-1 text-sm text-slate-600" data-tts-next-countdown>{{ next_announcement_countdown }}</p>
+                    <div class="tts-metric-card rounded-2xl p-4">
+                        <p class="text-xs font-black uppercase tracking-[0.18em] text-slate-400">빠른 문구</p>
+                        <p class="mt-2 text-lg font-black text-slate-900">{{ broadcast_template_count }}개</p>
+                        <p class="mt-1 text-sm text-slate-600">자주 쓰는 방송을 바로 불러옵니다.</p>
                     </div>
-
-                    <div class="rounded-2xl bg-slate-50 p-4">
-                        <p class="text-xs font-black uppercase tracking-[0.18em] text-slate-400">방송 문구</p>
+                    <div class="tts-metric-card rounded-2xl p-4">
+                        <p class="text-xs font-black uppercase tracking-[0.18em] text-slate-400">시간표 프리셋</p>
                         <p class="mt-2 text-lg font-black text-slate-900">{{ schedule_rows|length }}개</p>
-                        <p class="mt-1 text-sm text-slate-600">오늘 읽을 문구 목록입니다.</p>
+                        <p class="mt-1 text-sm text-slate-600">{{ schedule_source_label }}</p>
                     </div>
                 </div>
 
-                <div class="mt-7 rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm">
+                <div class="mt-7 rounded-[1.6rem] border border-slate-200 bg-white p-4 shadow-sm md:p-5">
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <div>
-                            <p class="text-sm font-black uppercase tracking-[0.18em] text-slate-400">선택한 문구</p>
-                            <p class="mt-1 text-sm text-slate-500">아래 목록에서 한 번 누르면 여기로 들어옵니다.</p>
+                            <p class="text-sm font-black uppercase tracking-[0.18em] text-slate-400">지금 읽을 방송</p>
+                            <p class="mt-1 text-sm text-slate-500">예시를 눌러 가져온 뒤 바로 고쳐 읽어도 됩니다.</p>
                         </div>
                         <div class="flex flex-wrap gap-2">
-                            <button type="button" data-tts-action="read-selected" class="tts-mini-action tts-action-primary">
-                                <i class="fa-solid fa-volume-high"></i> 읽기
+                            <button type="button" data-tts-action="read-current" class="tts-primary-btn px-4 py-3 text-sm">
+                                <i class="fa-solid fa-volume-high"></i> 바로 읽기
                             </button>
-                            <button type="button" data-tts-action="copy-selected" class="tts-mini-action tts-action-secondary">
+                            <button type="button" data-tts-action="copy-current" class="tts-secondary-btn px-4 py-3 text-sm">
                                 <i class="fa-regular fa-copy"></i> 복사
                             </button>
-                            <button type="button" data-tts-action="read-all" class="tts-mini-action tts-action-soft">
-                                <i class="fa-solid fa-list-ol"></i> 전체 읽기
-                            </button>
-                            <button type="button" data-tts-action="stop" class="tts-mini-action tts-action-soft">
+                            <button type="button" data-tts-action="stop" class="tts-soft-btn px-4 py-3 text-sm">
                                 <i class="fa-solid fa-stop"></i> 중지
                             </button>
                         </div>
@@ -243,13 +236,13 @@
                     <textarea
                         id="tts-preview"
                         data-tts-preview
-                        rows="4"
+                        rows="6"
                         class="tts-input mt-4 text-lg leading-8"
                         spellcheck="false"
-                    >{{ next_announcement_text }}</textarea>
+                    >{{ initial_message_text }}</textarea>
 
                     <div class="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-500">
-                        <p>원하면 문구를 직접 고쳐도 됩니다.</p>
+                        <p>문구는 짧고 또렷할수록 학생들이 더 잘 듣습니다.</p>
                         <p data-tts-status role="status" aria-live="polite">읽기 준비 완료</p>
                     </div>
                 </div>
@@ -257,51 +250,105 @@
                 <div class="mt-8">
                     <div class="flex items-end justify-between gap-3">
                         <div>
-                            <p class="text-sm font-black uppercase tracking-[0.18em] text-slate-400">오늘 방송 순서</p>
-                            <h2 class="mt-2 text-2xl font-black tracking-tight text-slate-900">교시별 안내 문구</h2>
+                            <p class="text-sm font-black uppercase tracking-[0.18em] text-slate-400">빠른 문구</p>
+                            <h2 class="mt-2 text-2xl font-black tracking-tight text-slate-900">학생들에게 자주 하는 말</h2>
                         </div>
-                        <p class="text-sm text-slate-500">{{ schedule_source_label }}</p>
+                        <p class="text-sm text-slate-500">설명 대신 바로 누르고 읽기</p>
+                    </div>
+
+                    <div class="mt-4 grid gap-4 xl:grid-cols-2">
+                        {% for group in broadcast_groups %}
+                        <section class="tts-group-shell rounded-[1.6rem] p-4 md:p-5">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <p class="text-xs font-black uppercase tracking-[0.18em] text-teal-700">{{ group.title }}</p>
+                                    <p class="mt-2 text-sm leading-6 text-slate-500">{{ group.description }}</p>
+                                </div>
+                                <span class="tts-chip">{{ group.items|length }}개</span>
+                            </div>
+
+                            <div class="mt-4 space-y-3">
+                                {% for item in group.items %}
+                                <article
+                                    class="tts-template-card rounded-[1.4rem] border border-slate-200 bg-white p-4"
+                                    data-tts-template-card
+                                    data-template-id="{{ item.id }}"
+                                >
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div>
+                                            <h3 class="text-lg font-black text-slate-900">{{ item.title }}</h3>
+                                            <p class="mt-1 text-sm leading-6 text-slate-500">{{ item.summary }}</p>
+                                        </div>
+                                        <span class="rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-700">학생 안내</span>
+                                    </div>
+
+                                    <p class="mt-3 rounded-2xl bg-slate-50 px-4 py-4 text-sm leading-7 text-slate-800">{{ item.message }}</p>
+
+                                    <div class="mt-4 flex flex-wrap gap-2">
+                                        <button type="button" data-tts-action="select-template" data-template-id="{{ item.id }}" class="tts-secondary-btn px-4 py-2.5 text-sm">
+                                            <i class="fa-solid fa-wand-magic-sparkles"></i> 문구 넣기
+                                        </button>
+                                        <button type="button" data-tts-action="read-template" data-template-id="{{ item.id }}" class="tts-primary-btn px-4 py-2.5 text-sm">
+                                            <i class="fa-solid fa-volume-high"></i> 바로 읽기
+                                        </button>
+                                    </div>
+                                </article>
+                                {% endfor %}
+                            </div>
+                        </section>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="mt-8 rounded-[1.6rem] border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+                    <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                        <div>
+                            <p class="text-sm font-black uppercase tracking-[0.18em] text-slate-400">보조 프리셋</p>
+                            <h2 class="mt-2 text-2xl font-black tracking-tight text-slate-900">{{ schedule_source_label }}</h2>
+                            <p class="mt-2 text-sm leading-6 text-slate-500">{{ schedule_source_note }}</p>
+                        </div>
+                        <div class="rounded-2xl bg-slate-50 px-4 py-3">
+                            <p class="text-xs font-black uppercase tracking-[0.18em] text-slate-400">다음으로 쓰기 좋은 문구</p>
+                            <p class="mt-1 text-sm font-black text-slate-900">
+                                {{ next_schedule_subject|default:"준비 중" }}{% if next_schedule_time_label %} · {{ next_schedule_time_label }}{% endif %}
+                            </p>
+                            <p class="mt-1 text-sm text-slate-500">{{ next_schedule_countdown }}</p>
+                        </div>
                     </div>
 
                     <div class="mt-4 space-y-4">
                         {% for row in schedule_rows %}
                         <article
-                            class="tts-row rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm"
-                            data-tts-row
+                            class="tts-schedule-card rounded-[1.4rem] border border-slate-200 bg-slate-50/80 p-4"
+                            data-tts-schedule-card
                             data-row-id="{{ row.id }}"
                             data-status="{{ row.status_tone }}"
-                            data-announce-at="{{ row.announce_at_iso }}"
-                            data-start-at="{{ row.start_at_iso }}"
-                            {% if row.is_next %}data-active="true"{% endif %}
                         >
                             <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                                 <div class="flex-1">
                                     <div class="flex flex-wrap items-center gap-2 text-xs font-black">
                                         <span class="rounded-full bg-slate-900 px-3 py-1 text-white">{{ row.period_label }}</span>
-                                        <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-700">{{ row.announce_time_label }} 방송</span>
+                                        <span class="rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-700">{{ row.announce_time_label }} 방송</span>
                                         <span class="rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-500">{% if row.is_demo %}샘플{% else %}오늘 시간표{% endif %}</span>
                                     </div>
-                                    <h3 class="mt-3 text-2xl font-black tracking-tight text-slate-900">{{ row.subject }}</h3>
+                                    <h3 class="mt-3 text-xl font-black tracking-tight text-slate-900">{{ row.subject }}</h3>
                                     <p class="mt-2 text-sm leading-6 text-slate-500">{{ row.start_time_label }} - {{ row.end_time_label }} 수업</p>
                                 </div>
 
-                                <div class="rounded-2xl bg-slate-50 px-4 py-3 text-right">
+                                <div class="rounded-2xl bg-white px-4 py-3 text-right">
                                     <p class="text-xs font-black uppercase tracking-[0.18em] text-slate-400">{{ row.status_label }}</p>
                                     <p class="mt-1 text-sm font-black text-slate-900">{{ row.countdown_label }}</p>
                                 </div>
                             </div>
 
-                            <p class="mt-4 rounded-2xl bg-slate-50 px-4 py-4 text-base leading-7 text-slate-900" data-row-text>{{ row.announcement_text }}</p>
+                            <p class="mt-4 rounded-2xl bg-white px-4 py-4 text-sm leading-7 text-slate-800">{{ row.announcement_text }}</p>
 
                             <div class="mt-4 flex flex-wrap gap-2">
-                                <button type="button" data-tts-action="select-row" data-row-id="{{ row.id }}" class="tts-mini-action tts-action-secondary">
-                                    <i class="fa-solid fa-wand-magic-sparkles"></i> 문구 가져오기
+                                <button type="button" data-tts-action="select-schedule" data-row-id="{{ row.id }}" class="tts-secondary-btn px-4 py-2.5 text-sm">
+                                    <i class="fa-solid fa-wand-magic-sparkles"></i> 문구 넣기
                                 </button>
-                                <button type="button" data-tts-action="read-row" data-row-id="{{ row.id }}" class="tts-mini-action tts-action-primary">
-                                    <i class="fa-solid fa-volume-high"></i> 읽기
-                                </button>
-                                <button type="button" data-tts-action="copy-row" data-row-id="{{ row.id }}" class="tts-mini-action tts-action-soft">
-                                    <i class="fa-regular fa-copy"></i> 복사
+                                <button type="button" data-tts-action="read-schedule" data-row-id="{{ row.id }}" class="tts-soft-btn px-4 py-2.5 text-sm">
+                                    <i class="fa-solid fa-volume-high"></i> 바로 읽기
                                 </button>
                             </div>
                         </article>
@@ -311,20 +358,20 @@
             </section>
 
             <aside class="tts-surface rounded-[2rem] border border-white/70 p-5 md:p-6 xl:sticky xl:top-24 xl:self-start">
-                <div class="rounded-[1.5rem] bg-slate-950 p-5 text-white shadow-xl">
+                <div class="rounded-[1.6rem] bg-slate-950 p-5 text-white shadow-xl">
                     <p class="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">음성 설정</p>
                     <h2 class="mt-2 text-xl font-black">목소리와 속도</h2>
                     <p class="mt-2 text-sm leading-6 text-slate-300">
-                        한국어 목소리가 있으면 우선 보여 주고, 없으면 기본 목소리로 읽습니다.
+                        한국어 목소리를 우선 보여 주고, 없으면 기본 목소리로 읽습니다.
                     </p>
 
                     <label for="tts-voice" class="mt-4 block text-sm font-bold text-slate-200">목소리</label>
                     <select id="tts-voice" data-tts-voice class="tts-select mt-2"></select>
 
-                    <div class="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
+                    <div class="mt-4 grid gap-4">
                         <label class="block">
                             <span class="text-sm font-bold text-slate-200">읽는 속도</span>
-                            <input type="range" min="0.7" max="1.2" step="0.05" value="0.95" data-tts-rate class="mt-2 w-full">
+                            <input type="range" min="0.7" max="1.3" step="0.05" value="0.95" data-tts-rate class="mt-2 w-full">
                         </label>
                         <label class="block">
                             <span class="text-sm font-bold text-slate-200">목소리 높이</span>
@@ -333,22 +380,20 @@
                     </div>
                 </div>
 
-                <div class="mt-4 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
-                    <p class="text-sm font-black uppercase tracking-[0.18em] text-slate-400">읽는 방식</p>
+                <div class="mt-4 rounded-[1.6rem] border border-slate-200 bg-slate-50 p-4">
+                    <p class="text-sm font-black uppercase tracking-[0.18em] text-slate-400">쓰는 팁</p>
                     <ul class="mt-3 space-y-2 text-sm leading-6 text-slate-600">
-                        <li>1. 문구를 고르고 <span class="font-black text-slate-900">읽기</span>를 누릅니다.</li>
-                        <li>2. <span class="font-black text-slate-900">복사</span>로 교실 방송이나 메신저에 붙여 넣습니다.</li>
-                        <li>3. <span class="font-black text-slate-900">전체 읽기</span>로 오늘 문구를 순서대로 확인합니다.</li>
+                        <li>1. 한 문장은 짧게 끊을수록 학생들이 더 잘 듣습니다.</li>
+                        <li>2. 안내가 길면 먼저 핵심 문장만 읽고, 자세한 설명은 직접 덧붙이세요.</li>
+                        <li>3. 시간표 프리셋은 교시 안내가 필요할 때만 보조로 쓰면 됩니다.</li>
                     </ul>
-                    <p class="mt-4 rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-slate-600">
-                        브라우저가 음성 합성을 지원하지 않으면 복사 기능만 사용해도 됩니다.
-                    </p>
                 </div>
 
-                <div class="mt-4 rounded-[1.5rem] bg-amber-50 p-4">
+                <div class="mt-4 rounded-[1.6rem] bg-amber-50 p-4">
                     <p class="text-sm font-black uppercase tracking-[0.18em] text-amber-700">현재 선택</p>
-                    <p class="mt-2 text-lg font-black text-slate-900" data-tts-selected-summary>{{ next_announcement_subject|default:"문구" }}</p>
-                    <p class="mt-1 text-sm leading-6 text-slate-600" data-tts-selected-body>{{ next_announcement_text }}</p>
+                    <p class="mt-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500" data-tts-selected-source>{{ initial_message_source }}</p>
+                    <p class="mt-2 text-lg font-black text-slate-900" data-tts-selected-summary>{{ initial_message_title }}</p>
+                    <p class="mt-1 text-sm leading-6 text-slate-600" data-tts-selected-body>{{ initial_message_text }}</p>
                 </div>
             </aside>
         </div>
@@ -357,6 +402,7 @@
 {% endblock %}
 
 {% block extra_js %}
-{{ schedule_rows|json_script:"tts-rows-data" }}
+{{ broadcast_groups|json_script:"tts-template-groups-data" }}
+{{ schedule_rows|json_script:"tts-schedule-rows-data" }}
 <script src="{% static 'products/tts_announce.js' %}" defer></script>
 {% endblock %}

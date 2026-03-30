@@ -6,15 +6,15 @@ from products.models import ManualSection, Product, ProductFeature, ServiceManua
 class Command(BaseCommand):
     help = "Ensure TTS announcement product and manual exist in database"
 
-    PRODUCT_TITLE = "교시 안내 TTS"
+    PRODUCT_TITLE = "교실 방송 TTS"
     LAUNCH_ROUTE = "tts_announce"
 
     def handle(self, *args, **options):
         defaults = {
-            "lead_text": "교시별 안내 문구를 바로 읽고, 복사해서 교실 방송에 쓸 수 있습니다.",
+            "lead_text": "학생들에게 지금 필요한 말을 직접 쓰고 바로 읽을 수 있습니다.",
             "description": (
-                "교시 시작 5분 전에 읽을 문구를 자동으로 만들고, 브라우저 TTS로 읽거나 복사해서 "
-                "교실 방송과 메신저에 바로 붙여 넣는 서비스입니다. 저장된 시간표가 없으면 샘플 문구로 바로 시험할 수 있습니다."
+                "교사가 학생들에게 들려줄 안내 문구를 직접 입력하고, 자주 쓰는 방송 문구를 불러오고, "
+                "필요하면 오늘 시간표 기준 교시 안내까지 가져와 브라우저 TTS로 바로 읽는 서비스입니다."
             ),
             "price": 0.00,
             "is_active": True,
@@ -27,8 +27,8 @@ class Command(BaseCommand):
             "service_type": "classroom",
             "external_url": "",
             "launch_route_name": self.LAUNCH_ROUTE,
-            "solve_text": "교시 전에 방송할 문구를 빠르게 만들고 싶어요",
-            "result_text": "교시별 안내 문구",
+            "solve_text": "학생들에게 지금 필요한 말을 바로 읽어 주고 싶어요",
+            "result_text": "학급 방송 문구",
             "time_text": "1분",
         }
 
@@ -63,18 +63,18 @@ class Command(BaseCommand):
         feature_specs = [
             {
                 "icon": "🧭",
-                "title": "교시별 문구 자동 생성",
-                "description": "1교시, 2교시처럼 교시 번호와 과목을 묶어 바로 읽을 안내 문구를 만듭니다.",
+                "title": "직접 입력해 바로 읽기",
+                "description": "지금 필요한 방송 문구를 바로 고쳐 쓰고 학생들에게 곧바로 읽어 줄 수 있습니다.",
             },
             {
                 "icon": "🔊",
-                "title": "브라우저 음성 재생",
-                "description": "한국어 음성을 선택해 바로 읽고, 필요할 때는 중지할 수 있습니다.",
+                "title": "학생 대상 빠른 문구",
+                "description": "수업 시작, 집중 요청, 정리 안내처럼 자주 쓰는 방송 문구를 한 번에 불러옵니다.",
             },
             {
                 "icon": "📋",
-                "title": "복사해서 바로 방송",
-                "description": "읽기 전에 문구를 복사해 교실 방송, 메신저, 게시판에 붙여 넣을 수 있습니다.",
+                "title": "시간표 안내도 함께",
+                "description": "교시 안내가 필요하면 오늘 시간표 기준 문구도 바로 가져와 읽거나 복사할 수 있습니다.",
             },
         ]
 
@@ -101,18 +101,18 @@ class Command(BaseCommand):
         manual, _ = ServiceManual.objects.get_or_create(
             product=product,
             defaults={
-                "title": "교시 안내 TTS 시작 가이드",
-                "description": "오늘 시간표를 불러오고, 문구를 읽고, 복사하는 흐름을 바로 따라갈 수 있습니다.",
+                "title": "교실 방송 TTS 시작 가이드",
+                "description": "직접 입력, 빠른 문구, 시간표 안내 가져오기 흐름을 바로 따라갈 수 있습니다.",
                 "is_published": True,
             },
         )
 
         manual_changed = []
-        if manual.title != "교시 안내 TTS 시작 가이드":
-            manual.title = "교시 안내 TTS 시작 가이드"
+        if manual.title != "교실 방송 TTS 시작 가이드":
+            manual.title = "교실 방송 TTS 시작 가이드"
             manual_changed.append("title")
-        if manual.description != "오늘 시간표를 불러오고, 문구를 읽고, 복사하는 흐름을 바로 따라갈 수 있습니다.":
-            manual.description = "오늘 시간표를 불러오고, 문구를 읽고, 복사하는 흐름을 바로 따라갈 수 있습니다."
+        if manual.description != "직접 입력, 빠른 문구, 시간표 안내 가져오기 흐름을 바로 따라갈 수 있습니다.":
+            manual.description = "직접 입력, 빠른 문구, 시간표 안내 가져오기 흐름을 바로 따라갈 수 있습니다."
             manual_changed.append("description")
         if not manual.is_published:
             manual.is_published = True
@@ -121,9 +121,9 @@ class Command(BaseCommand):
             manual.save(update_fields=manual_changed)
 
         section_specs = [
-            ("오늘 시간표 불러오기", "저장된 시간표가 있으면 오늘 교시 목록을 보여 주고, 없으면 샘플 문구로 바로 시험할 수 있습니다.", 1),
-            ("읽기와 중지", "목소리, 속도, 높이를 고른 뒤 읽기를 누르면 브라우저 TTS가 안내 문구를 읽습니다.", 2),
-            ("복사해서 바로 방송", "문구를 복사해 교실 방송이나 메신저에 붙여 넣고, 필요하면 직접 고쳐서 사용합니다.", 3),
+            ("직접 입력해서 읽기", "큰 입력창에 지금 필요한 말을 바로 쓰고 읽기 버튼으로 학생들에게 들려줄 수 있습니다.", 1),
+            ("빠른 문구 가져오기", "수업 시작, 집중 요청, 정리 안내 같은 자주 쓰는 방송 문구를 한 번에 불러옵니다.", 2),
+            ("시간표 안내 함께 쓰기", "교시 안내가 필요하면 오늘 시간표 기반 문구도 아래 보조 목록에서 바로 가져와 씁니다.", 3),
         ]
 
         for title, content, display_order in section_specs:

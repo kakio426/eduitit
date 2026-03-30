@@ -430,7 +430,7 @@ PRODUCT_CONTEXT_CHIP_OVERRIDES = {
     "reservations:dashboard_landing": ["일정 잡을 때", "PC·모바일", "개별·소그룹", "5분 안팎"],
     "reservations:landing": ["일정 잡을 때", "PC·모바일", "개별·소그룹", "5분 안팎"],
     "hwpxchat:main": ["공문 정리", "PC 권장", "교사 1인", "10분 안팎"],
-    "tts_announce": ["교시 방송", "PC·모바일", "학급 전체", "5분 전"],
+    "tts_announce": ["학급 방송", "PC·모바일", "학급 전체", "1분 안팎"],
     "chess:index": ["수업 중 활동", "모둠·전체", "교실 화면", "5분 안팎"],
     "chess:play": ["수업 중 활동", "모둠·전체", "교실 화면", "5분 안팎"],
     "janggi:index": ["수업 중 활동", "모둠·전체", "교실 화면", "5분 안팎"],

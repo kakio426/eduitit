@@ -81,3 +81,14 @@ class ReadOnlyModelAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+class HiddenFromAdminIndexMixin:
+    """Keep the admin registered but remove it from the left navigation."""
+
+    def get_model_perms(self, request):
+        return {}
+
+
+class HiddenReadOnlyModelAdmin(HiddenFromAdminIndexMixin, ReadOnlyModelAdmin):
+    pass

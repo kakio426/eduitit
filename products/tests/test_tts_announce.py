@@ -8,7 +8,11 @@ from django.utils import timezone
 from core.models import UserProfile
 from happy_seed.models import HSClassroom
 from products.models import DTSchedule
-from products.tts_announcement import build_demo_tts_rows, build_tts_announcement_text
+from products.tts_announcement import (
+    build_demo_tts_rows,
+    build_tts_announcement_text,
+    build_tts_broadcast_template_groups,
+)
 
 User = get_user_model()
 
@@ -25,6 +29,12 @@ class TTSAnnouncementHelperTests(TestCase):
         self.assertGreaterEqual(len(rows), 4)
         self.assertTrue(rows[0]["announcement_text"].startswith("1교시"))
         self.assertTrue(rows[0]["is_demo"])
+
+    def test_broadcast_groups_use_classroom_audience_label(self):
+        groups = build_tts_broadcast_template_groups("4학년 1반")
+        self.assertGreaterEqual(len(groups), 4)
+        first_item = groups[0]["items"][0]
+        self.assertIn("4학년 1반 여러분", first_item["message"])
 
 
 class TTSAnnouncementViewTests(TestCase):
@@ -64,17 +74,22 @@ class TTSAnnouncementViewTests(TestCase):
 
         response = self.client.get(reverse("tts_announce"))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context["schedule_source_label"], "저장된 시간표")
-        self.assertContains(response, "교시 안내 TTS")
+        self.assertEqual(response.context["schedule_source_label"], "오늘 시간표 프리셋")
+        self.assertContains(response, "교실 방송 TTS")
+        self.assertContains(response, "학생들에게 지금 필요한 말을 바로 읽어 주세요")
+        self.assertContains(response, "수업 시작")
         self.assertContains(response, "과학")
+        self.assertGreaterEqual(len(response.context["broadcast_groups"]), 4)
         self.assertEqual(response.context["schedule_rows"][0]["subject"], "과학")
-        self.assertIn("과학", response.context["next_announcement_text"])
+        self.assertIn("4학년 1반 여러분", response.context["initial_message_text"])
+        self.assertEqual(response.context["next_schedule_subject"], "과학")
 
     def test_view_falls_back_to_demo_rows_for_anonymous_visitors(self):
         anonymous_client = Client()
 
         response = anonymous_client.get(reverse("tts_announce"))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context["schedule_source_label"], "샘플 시간표")
-        self.assertContains(response, "샘플")
+        self.assertEqual(response.context["schedule_source_label"], "샘플 시간표 프리셋")
+        self.assertContains(response, "샘플 시간표 프리셋")
+        self.assertContains(response, "데모 학급")
         self.assertGreaterEqual(len(response.context["schedule_rows"]), 4)

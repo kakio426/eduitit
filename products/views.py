@@ -23,7 +23,12 @@ from core.product_visibility import filter_discoverable_products
 
 from .dutyticker_scope import apply_classroom_scope, get_active_classroom_for_request, get_or_create_settings_for_scope
 from .models import DTStudentGamesLaunchTicket, DTSchedule, Product, ServiceManual
-from .tts_announcement import annotate_tts_rows, build_demo_tts_rows, build_tts_announcement_rows
+from .tts_announcement import (
+    annotate_tts_rows,
+    build_demo_tts_rows,
+    build_tts_announcement_rows,
+    build_tts_broadcast_template_groups,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +48,7 @@ PRODUCT_DETAIL_AUDIENCE_BY_ROUTE = {
     "happy_seed:landing": "긍정 행동 기록과 보상을 학급 루틴으로 운영하고 싶은 교사에게 맞는 도구입니다.",
     "reservations:landing": "특별실 예약이 겹치지 않도록 시간표를 조정해야 하는 교사에게 맞는 도구입니다.",
     "reservations:dashboard_landing": "특별실 예약이 겹치지 않도록 시간표를 조정해야 하는 교사에게 맞는 도구입니다.",
-    "tts_announce": "1교시 5분 전 안내처럼 교시별 방송 문구를 바로 읽고 복사해야 하는 교사에게 맞는 도구입니다.",
+    "tts_announce": "학생들에게 안내, 집중 신호, 정리 멘트를 바로 읽어 줘야 하는 교사에게 맞는 도구입니다.",
 }
 
 PRODUCT_DETAIL_AUDIENCE_BY_TYPE = {
@@ -559,8 +564,8 @@ def tts_announce_view(request):
     today_js_day = (today.weekday() + 1) % 7
 
     schedule_rows = []
-    schedule_source_label = "샘플 시간표"
-    schedule_source_note = "시간표가 없을 때도 바로 시험해 볼 수 있도록 샘플 문구를 보여 줍니다."
+    schedule_source_label = "샘플 시간표 프리셋"
+    schedule_source_note = "교시 안내가 필요할 때 아래에서 바로 가져와 읽을 수 있습니다."
 
     if request.user.is_authenticated:
         schedule_queryset = apply_classroom_scope(
@@ -569,32 +574,52 @@ def tts_announce_view(request):
         ).order_by("period", "id")
         if schedule_queryset.exists():
             schedule_rows = build_tts_announcement_rows(schedule_queryset, date=today)
-            schedule_source_label = "저장된 시간표"
-            schedule_source_note = "오늘 시간표를 기준으로 5분 전 안내 문구를 만듭니다."
+            schedule_source_label = "오늘 시간표 프리셋"
+            schedule_source_note = "알림판을 열지 않아도 교시 안내 문구만 빠르게 가져와 읽을 수 있습니다."
 
     if not schedule_rows:
         schedule_rows = build_demo_tts_rows(date=today)
 
     schedule_rows = annotate_tts_rows(schedule_rows)
     next_row = next((row for row in schedule_rows if row.get("is_next")), schedule_rows[0] if schedule_rows else None)
-    active_classroom_name = getattr(classroom, "name", "") or "데모 모드"
-    current_clock = timezone.localtime().strftime("%H:%M")
+    active_classroom_name = getattr(classroom, "name", "") or "데모 학급"
+    broadcast_groups = build_tts_broadcast_template_groups(active_classroom_name)
+    first_template = next(
+        (item for group in broadcast_groups for item in group.get("items", [])),
+        None,
+    )
+    broadcast_template_count = sum(len(group.get("items", [])) for group in broadcast_groups)
+    initial_message_text = ""
+    initial_message_title = "방송 문구"
+    initial_message_source = "빠른 문구"
+
+    if first_template is not None:
+        initial_message_text = first_template["message"]
+        initial_message_title = first_template["title"]
+        initial_message_source = broadcast_groups[0]["title"] if broadcast_groups else "빠른 문구"
+    elif next_row is not None:
+        initial_message_text = next_row["announcement_text"]
+        initial_message_title = f'{next_row["period_label"]} · {next_row["subject"]}'
+        initial_message_source = schedule_source_label
 
     return render(
         request,
         "products/tts_announce.html",
         {
             "hide_navbar": True,
-            "page_title": "교시 안내 TTS",
+            "page_title": "교실 방송 TTS",
+            "broadcast_groups": broadcast_groups,
+            "broadcast_template_count": broadcast_template_count,
             "schedule_rows": schedule_rows,
             "schedule_source_label": schedule_source_label,
             "schedule_source_note": schedule_source_note,
             "active_classroom_name": active_classroom_name,
-            "current_clock": current_clock,
-            "next_announcement_text": next_row["announcement_text"] if next_row else "",
-            "next_announcement_countdown": next_row["countdown_label"] if next_row else "읽을 문구가 없습니다.",
-            "next_announcement_time_label": next_row["announce_time_label"] if next_row else "",
-            "next_announcement_subject": next_row["subject"] if next_row else "",
+            "next_schedule_subject": next_row["subject"] if next_row else "",
+            "next_schedule_countdown": next_row["countdown_label"] if next_row else "바로 쓸 시간표 문구가 없습니다.",
+            "next_schedule_time_label": next_row["announce_time_label"] if next_row else "",
+            "initial_message_text": initial_message_text,
+            "initial_message_title": initial_message_title,
+            "initial_message_source": initial_message_source,
         },
     )
 

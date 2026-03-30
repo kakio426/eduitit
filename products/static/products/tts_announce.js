@@ -1,48 +1,53 @@
 document.addEventListener("DOMContentLoaded", () => {
     const root = document.querySelector("[data-tts-page]");
-    const rowsScript = document.getElementById("tts-rows-data");
-
-    if (!root || !rowsScript) {
+    if (!root) {
         return;
     }
 
-    let rows = [];
-    try {
-        rows = JSON.parse(rowsScript.textContent || "[]");
-    } catch (error) {
-        console.error("Failed to parse TTS rows", error);
+    const templateScript = document.getElementById("tts-template-groups-data");
+    const scheduleScript = document.getElementById("tts-schedule-rows-data");
+    if (!templateScript || !scheduleScript) {
         return;
     }
 
-    const rowMap = new Map(rows.map((row) => [String(row.id), row]));
-    const rowElements = Array.from(root.querySelectorAll("[data-tts-row]"));
+    function parseJsonScript(element, fallback) {
+        try {
+            return JSON.parse(element.textContent || JSON.stringify(fallback));
+        } catch (error) {
+            console.error("Failed to parse TTS page payload", error);
+            return fallback;
+        }
+    }
+
+    const templateGroups = parseJsonScript(templateScript, []);
+    const scheduleRows = parseJsonScript(scheduleScript, []);
+    const templateItems = templateGroups.flatMap((group) =>
+        (group.items || []).map((item) => ({
+            ...item,
+            groupTitle: group.title || "빠른 문구",
+        })),
+    );
+
+    const templateMap = new Map(templateItems.map((item) => [String(item.id), item]));
+    const scheduleMap = new Map(scheduleRows.map((row) => [String(row.id), row]));
+    const templateCards = Array.from(root.querySelectorAll("[data-tts-template-card]"));
+    const scheduleCards = Array.from(root.querySelectorAll("[data-tts-schedule-card]"));
     const preview = root.querySelector("[data-tts-preview]");
     const voiceSelect = root.querySelector("[data-tts-voice]");
     const rateInput = root.querySelector("[data-tts-rate]");
     const pitchInput = root.querySelector("[data-tts-pitch]");
     const status = root.querySelector("[data-tts-status]");
+    const selectedSource = root.querySelector("[data-tts-selected-source]");
     const selectedSummary = root.querySelector("[data-tts-selected-summary]");
     const selectedBody = root.querySelector("[data-tts-selected-body]");
-    const nextSummary = root.querySelector("[data-tts-next-summary]");
-    const nextCountdown = root.querySelector("[data-tts-next-countdown]");
-    const clock = root.querySelector("#tts-clock");
     const synth = window.speechSynthesis || null;
+    const scheduleLabel = root.dataset.scheduleLabel || "시간표 프리셋";
 
-    const timeFormatter = new Intl.DateTimeFormat("ko-KR", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-    });
-
-    let selectedRowId = "";
-    let queueActive = false;
     let voiceOptions = [];
     let selectedVoiceUri = "";
     let speechSessionId = 0;
-
-    function getRow(rowId) {
-        return rowMap.get(String(rowId));
-    }
+    let selectedSourceLabel = selectedSource ? selectedSource.textContent || "빠른 문구" : "빠른 문구";
+    let selectedDefaultText = preview ? String(preview.value || "").trim() : "";
 
     function setStatus(message, tone) {
         if (!status) {
@@ -62,63 +67,82 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    function setActiveRow(rowId) {
-        rowElements.forEach((element) => {
-            element.dataset.active = String(element.dataset.rowId === String(rowId));
+    function setActiveCards(kind, id) {
+        templateCards.forEach((element) => {
+            element.dataset.active = String(kind === "template" && element.dataset.templateId === String(id));
+        });
+        scheduleCards.forEach((element) => {
+            element.dataset.active = String(kind === "schedule" && element.dataset.rowId === String(id));
         });
     }
 
-    function updateSelectionSummary(row) {
-        if (!row) {
-            return;
-        }
+    function updateSelectedPanel({ sourceLabel, title, text, defaultText }) {
+        selectedSourceLabel = sourceLabel || "빠른 문구";
+        selectedDefaultText = String(defaultText || text || "").trim();
 
+        if (selectedSource) {
+            selectedSource.textContent = selectedSourceLabel;
+        }
         if (selectedSummary) {
-            selectedSummary.textContent = row.subject || "문구";
+            selectedSummary.textContent = title || "방송 문구";
         }
         if (selectedBody) {
-            selectedBody.textContent = row.announcement_text || "";
+            selectedBody.textContent = text || "";
         }
     }
 
-    function selectRow(rowId, options = {}) {
-        const row = getRow(rowId);
-        if (!row) {
-            return;
-        }
-
-        selectedRowId = String(row.id);
+    function fillComposer({ text, sourceLabel, title, defaultText, activeKind, activeId, statusMessage }) {
         if (preview) {
-            preview.value = row.announcement_text || "";
+            preview.value = text || "";
         }
-        setActiveRow(row.id);
-        updateSelectionSummary(row);
-        if (options.status !== false) {
-            setStatus(`${row.period_label} 문구를 불러왔습니다.`, "success");
-        }
-        if (options.focusPreview && preview) {
-            preview.focus();
+
+        updateSelectedPanel({
+            sourceLabel,
+            title,
+            text: text || "",
+            defaultText,
+        });
+        setActiveCards(activeKind, activeId);
+
+        if (statusMessage) {
+            setStatus(statusMessage, "success");
         }
     }
 
-    function updateClock() {
-        if (clock) {
-            clock.textContent = timeFormatter.format(new Date());
+    function selectTemplate(templateId, options = {}) {
+        const template = templateMap.get(String(templateId));
+        if (!template) {
+            return null;
         }
+
+        fillComposer({
+            text: template.message || "",
+            sourceLabel: template.groupTitle || "빠른 문구",
+            title: template.title || "방송 문구",
+            defaultText: template.message || "",
+            activeKind: "template",
+            activeId: template.id,
+            statusMessage: options.status === false ? "" : `${template.title} 문구를 가져왔습니다.`,
+        });
+        return template;
     }
 
-    function updateNextSummary() {
-        const nextRow = rows.find((row) => row.is_next) || rows[0];
-        if (!nextRow) {
-            return;
+    function selectSchedule(rowId, options = {}) {
+        const row = scheduleMap.get(String(rowId));
+        if (!row) {
+            return null;
         }
 
-        if (nextSummary) {
-            nextSummary.textContent = `${nextRow.subject || "준비 중"} · ${nextRow.announce_time_label || ""}`;
-        }
-        if (nextCountdown) {
-            nextCountdown.textContent = nextRow.countdown_label || "";
-        }
+        fillComposer({
+            text: row.announcement_text || "",
+            sourceLabel: scheduleLabel,
+            title: `${row.period_label || "교시"} · ${row.subject || "수업"}`,
+            defaultText: row.announcement_text || "",
+            activeKind: "schedule",
+            activeId: row.id,
+            statusMessage: options.status === false ? "" : `${row.period_label || "교시"} 안내 문구를 가져왔습니다.`,
+        });
+        return row;
     }
 
     function getAvailableVoices() {
@@ -133,7 +157,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const koreanVoices = available.filter((voice) => String(voice.lang || "").toLowerCase().startsWith("ko"));
         if (koreanVoices.length) {
-            return [...koreanVoices, ...available.filter((voice) => !String(voice.lang || "").toLowerCase().startsWith("ko"))];
+            return [
+                ...koreanVoices,
+                ...available.filter((voice) => !String(voice.lang || "").toLowerCase().startsWith("ko")),
+            ];
         }
         return available;
     }
@@ -202,9 +229,8 @@ document.addEventListener("DOMContentLoaded", () => {
         return utterance;
     }
 
-    function startSpeechSession(quiet) {
+    function stopSpeech(quiet) {
         speechSessionId += 1;
-        queueActive = false;
         if (synth) {
             synth.cancel();
         }
@@ -217,7 +243,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function speakText(text, label) {
         const content = String(text || "").trim();
         if (!content) {
-            setStatus("읽을 문구를 먼저 선택해 주세요.", "error");
+            setStatus("읽을 문구를 먼저 준비해 주세요.", "error");
             return;
         }
         if (!synth) {
@@ -225,13 +251,13 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        const sessionId = startSpeechSession(true);
+        const sessionId = stopSpeech(true);
         const utterance = buildUtterance(content);
         utterance.onstart = () => {
             setStatus(label ? `${label} 읽는 중` : "읽는 중", "warning");
         };
         utterance.onend = () => {
-            if (speechSessionId === sessionId && !queueActive) {
+            if (speechSessionId === sessionId) {
                 setStatus("읽기 완료", "success");
             }
         };
@@ -239,27 +265,15 @@ document.addEventListener("DOMContentLoaded", () => {
             if (speechSessionId !== sessionId) {
                 return;
             }
-            queueActive = false;
             setStatus("읽는 중 문제가 생겼습니다.", "error");
         };
         synth.speak(utterance);
     }
 
-    function readSelected() {
-        const row = getRow(selectedRowId) || rows[0];
-        if (!row) {
-            setStatus("읽을 문구가 없습니다.", "error");
-            return;
-        }
-
-        const previewText = preview ? String(preview.value || "").trim() : "";
-        speakText(previewText || row.announcement_text || "", row.period_label);
-    }
-
     function copyText(text) {
         const content = String(text || "").trim();
         if (!content) {
-            setStatus("복사할 문구를 먼저 선택해 주세요.", "error");
+            setStatus("복사할 문구를 먼저 준비해 주세요.", "error");
             return;
         }
 
@@ -293,168 +307,107 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    function readAll() {
-        if (!rows.length) {
-            setStatus("읽을 문구가 없습니다.", "error");
+    function handleAction(action, templateId, rowId) {
+        if (action === "select-template") {
+            selectTemplate(templateId);
             return;
         }
-        if (!synth) {
-            setStatus("이 브라우저는 음성 합성을 지원하지 않습니다.", "error");
-            return;
-        }
-
-        const sessionId = startSpeechSession(true);
-        queueActive = true;
-        let index = 0;
-
-        const speakNext = () => {
-            if (!queueActive || speechSessionId !== sessionId) {
-                return;
+        if (action === "read-template") {
+            const template = selectTemplate(templateId, { status: false });
+            if (template) {
+                speakText(template.message, template.title);
             }
-            if (index >= rows.length) {
-                if (speechSessionId === sessionId) {
-                    queueActive = false;
-                    setStatus("전체 읽기 완료", "success");
-                }
-                return;
+            return;
+        }
+        if (action === "select-schedule") {
+            selectSchedule(rowId);
+            return;
+        }
+        if (action === "read-schedule") {
+            const row = selectSchedule(rowId, { status: false });
+            if (row) {
+                speakText(row.announcement_text, `${row.period_label || "교시"} 안내`);
             }
-
-            const row = rows[index];
-            const utterance = buildUtterance(row.announcement_text || "");
-            utterance.onstart = () => {
-                if (speechSessionId !== sessionId) {
-                    return;
-                }
-                setStatus(`${row.period_label} 읽는 중`, "warning");
-            };
-            utterance.onend = () => {
-                if (speechSessionId !== sessionId) {
-                    return;
-                }
-                index += 1;
-                if (queueActive) {
-                    window.setTimeout(speakNext, 220);
-                }
-            };
-            utterance.onerror = () => {
-                if (speechSessionId !== sessionId) {
-                    return;
-                }
-                queueActive = false;
-                setStatus("전체 읽기 중 오류가 발생했습니다.", "error");
-            };
-            synth.speak(utterance);
-        };
-
-        speakNext();
-    }
-
-    function handleAction(action, rowId) {
-        const row = rowId ? getRow(rowId) : null;
-
-        if (action === "select-row" && row) {
-            selectRow(row.id);
             return;
         }
-        if (action === "read-row" && row) {
-            selectRow(row.id, { status: false, focusPreview: false });
-            speakText(row.announcement_text, row.period_label);
+        if (action === "read-current") {
+            speakText(preview ? preview.value : "", selectedSummary ? selectedSummary.textContent : "방송");
             return;
         }
-        if (action === "copy-row" && row) {
-            selectRow(row.id, { status: false, focusPreview: false });
-            copyText(row.announcement_text);
-            return;
-        }
-        if (action === "read-selected") {
-            readSelected();
-            return;
-        }
-        if (action === "copy-selected") {
-            const row = getRow(selectedRowId) || rows[0];
-            const previewText = preview ? String(preview.value || "").trim() : "";
-            copyText(previewText || (row && row.announcement_text) || "");
-            return;
-        }
-        if (action === "read-all") {
-            readAll();
+        if (action === "copy-current") {
+            copyText(preview ? preview.value : "");
             return;
         }
         if (action === "stop") {
-            startSpeechSession(false);
+            stopSpeech(false);
         }
     }
 
-    function bootstrap() {
-        if (!rows.length) {
-            setStatus("오늘 읽을 문구가 없습니다.", "warning");
+    function bootstrapSelection() {
+        if (templateItems.length) {
+            selectTemplate(templateItems[0].id, { status: false });
             return;
         }
-
-        const initialRow = rows.find((row) => row.is_next) || rows[0];
-        selectedRowId = String(initialRow.id);
-
-        if (preview) {
-            preview.value = initialRow.announcement_text || "";
-            preview.addEventListener("input", () => {
-                const activeRow = getRow(selectedRowId);
-                if (activeRow && selectedBody) {
-                    selectedBody.textContent = preview.value || "";
-                }
-            });
+        if (scheduleRows.length) {
+            selectSchedule(scheduleRows[0].id, { status: false });
         }
+    }
 
-        if (voiceSelect) {
-            voiceSelect.addEventListener("change", () => {
-                selectedVoiceUri = voiceSelect.value;
-            });
-        }
-
-        if (rateInput) {
-            rateInput.addEventListener("input", () => {
-                if (!queueActive) {
-                    setStatus("속도를 조정했습니다.", "success");
-                }
-            });
-        }
-
-        if (pitchInput) {
-            pitchInput.addEventListener("input", () => {
-                if (!queueActive) {
-                    setStatus("목소리 높이를 조정했습니다.", "success");
-                }
-            });
-        }
-
-        root.addEventListener("click", (event) => {
-            const trigger = event.target.closest("[data-tts-action]");
-            if (!trigger) {
+    if (preview) {
+        preview.addEventListener("input", () => {
+            const currentText = preview.value || "";
+            if (selectedBody) {
+                selectedBody.textContent = currentText;
+            }
+            if (!selectedSource) {
                 return;
             }
 
-            event.preventDefault();
-            handleAction(trigger.dataset.ttsAction, trigger.dataset.rowId);
+            const changed = String(currentText).trim() !== selectedDefaultText;
+            selectedSource.textContent = changed ? `${selectedSourceLabel} · 직접 수정` : selectedSourceLabel;
         });
-
-        if (synth) {
-            renderVoiceOptions();
-            if (typeof synth.addEventListener === "function") {
-                synth.addEventListener("voiceschanged", renderVoiceOptions);
-            }
-            synth.onvoiceschanged = renderVoiceOptions;
-        } else if (voiceSelect) {
-            voiceSelect.innerHTML = '<option value="">기본 목소리</option>';
-            voiceSelect.disabled = true;
-        }
-
-        setActiveRow(selectedRowId);
-        updateSelectionSummary(initialRow);
-        updateNextSummary();
-        updateClock();
-        window.setInterval(updateClock, 30000);
-
-        setStatus("읽기 준비 완료", "success");
     }
 
-    bootstrap();
+    if (voiceSelect) {
+        voiceSelect.addEventListener("change", () => {
+            selectedVoiceUri = voiceSelect.value;
+            setStatus("목소리를 바꿨습니다.", "success");
+        });
+    }
+
+    if (rateInput) {
+        rateInput.addEventListener("input", () => {
+            setStatus("읽는 속도를 조정했습니다.", "success");
+        });
+    }
+
+    if (pitchInput) {
+        pitchInput.addEventListener("input", () => {
+            setStatus("목소리 높이를 조정했습니다.", "success");
+        });
+    }
+
+    root.addEventListener("click", (event) => {
+        const trigger = event.target.closest("[data-tts-action]");
+        if (!trigger) {
+            return;
+        }
+
+        event.preventDefault();
+        handleAction(trigger.dataset.ttsAction, trigger.dataset.templateId, trigger.dataset.rowId);
+    });
+
+    if (synth) {
+        renderVoiceOptions();
+        if (typeof synth.addEventListener === "function") {
+            synth.addEventListener("voiceschanged", renderVoiceOptions);
+        }
+        synth.onvoiceschanged = renderVoiceOptions;
+    } else if (voiceSelect) {
+        voiceSelect.innerHTML = '<option value="">기본 목소리</option>';
+        voiceSelect.disabled = true;
+    }
+
+    bootstrapSelection();
+    setStatus("읽기 준비 완료", "success");
 });

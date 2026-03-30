@@ -7,7 +7,7 @@ from products.models import Product, ProductFeature
 class EnsureTTSAnnounceCommandTests(TestCase):
     def test_command_repairs_existing_product_without_reactivating_visibility(self):
         Product.objects.filter(launch_route_name="tts_announce").delete()
-        Product.objects.filter(title="교시 안내 TTS").delete()
+        Product.objects.filter(title="교실 방송 TTS").delete()
 
         Product.objects.create(
             title="legacy tts",
@@ -24,7 +24,7 @@ class EnsureTTSAnnounceCommandTests(TestCase):
 
         product = Product.objects.get(launch_route_name="tts_announce")
 
-        self.assertEqual(product.title, "교시 안내 TTS")
+        self.assertEqual(product.title, "교실 방송 TTS")
         self.assertEqual(product.icon, "📣")
         self.assertFalse(product.is_active)
         self.assertGreaterEqual(product.features.count(), 3)
@@ -37,8 +37,8 @@ class EnsureTTSAnnounceCommandTests(TestCase):
         self.assertSetEqual(
             feature_titles,
             {
-                "교시별 문구 자동 생성",
-                "브라우저 음성 재생",
-                "복사해서 바로 방송",
+                "직접 입력해 바로 읽기",
+                "학생 대상 빠른 문구",
+                "시간표 안내도 함께",
             },
         )
