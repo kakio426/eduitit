@@ -68,9 +68,11 @@
                     </div>
 
                     <form
+                        id="hwpx-chat-upload-form"
                         method="post"
                         action="{% url 'hwpxchat:chat_process' %}"
                         hx-post="{% url 'hwpxchat:chat_process' %}"
+                        hx-encoding="multipart/form-data"
                         hx-target="#hwpx-chat-result"
                         hx-swap="innerHTML"
                         hx-indicator="#hwpx-chat-loading"
@@ -460,6 +462,97 @@
         `;
     }
 
+    function resolveHwpxHtmxTarget(detail) {
+        if (!detail) {
+            return null;
+        }
+
+        const target = detail.target || (detail.requestConfig ? detail.requestConfig.target : null);
+        if (!target) {
+            return null;
+        }
+
+        if (typeof target === "string") {
+            return document.querySelector(target);
+        }
+
+        return target && target.nodeType === 1 ? target : null;
+    }
+
+    function renderHwpxUploadFallbackError(message) {
+        const result = document.getElementById("hwpx-chat-result");
+        if (!result) {
+            return;
+        }
+
+        result.innerHTML = `
+            <div class="clay-card p-5 md:p-6">
+                <div class="mb-4 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
+                    <i class="fa-solid fa-circle-exclamation mr-1"></i>${message}
+                </div>
+                <div class="rounded-2xl bg-white border border-gray-200 p-5 md:p-6 text-sm text-gray-500 leading-relaxed space-y-3">
+                    <p class="font-bold text-gray-700">문서를 다시 올려 주세요.</p>
+                    <p>잠시 후 다시 시도해도 같으면 파일 형식이 HWPX인지 먼저 확인해 주세요.</p>
+                </div>
+            </div>
+        `;
+    }
+
+    function bindHwpxUploadHtmxLifecycle() {
+        document.body.addEventListener("htmx:beforeSwap", function (event) {
+            const detail = event.detail || {};
+            const target = resolveHwpxHtmxTarget(detail);
+            const xhr = detail.xhr;
+            if (!target || target.id !== "hwpx-chat-result" || !xhr) {
+                return;
+            }
+
+            if (xhr.status >= 400 && xhr.responseText) {
+                detail.shouldSwap = true;
+                detail.isError = false;
+            }
+        });
+
+        document.body.addEventListener("htmx:afterSwap", function (event) {
+            if (!event.target || event.target.id !== "hwpx-chat-result") {
+                return;
+            }
+
+            applyMobileCardEditingState();
+            event.target.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+
+        document.body.addEventListener("htmx:responseError", function (event) {
+            const detail = event.detail || {};
+            const target = resolveHwpxHtmxTarget(detail);
+            const xhr = detail.xhr;
+            if (!target || target.id !== "hwpx-chat-result" || !xhr) {
+                return;
+            }
+
+            if (xhr.responseText) {
+                target.innerHTML = xhr.responseText;
+                applyMobileCardEditingState();
+                target.scrollIntoView({ behavior: "smooth", block: "start" });
+                return;
+            }
+
+            renderHwpxUploadFallbackError("문서 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+            window.alert("문서 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+        });
+
+        document.body.addEventListener("htmx:sendError", function (event) {
+            const detail = event.detail || {};
+            const target = resolveHwpxHtmxTarget(detail);
+            if (!target || target.id !== "hwpx-chat-result") {
+                return;
+            }
+
+            renderHwpxUploadFallbackError("네트워크 문제로 문서를 보내지 못했습니다. 연결 상태를 확인해 주세요.");
+            window.alert("네트워크 문제로 문서를 보내지 못했습니다. 연결 상태를 확인해 주세요.");
+        });
+    }
+
     function applyMobileCardEditingState() {
         const isMobile = window.innerWidth < 768;
         const cards = document.querySelectorAll(".hwpx-work-card[data-mobile-extra-card='true']");
@@ -476,10 +569,8 @@
 
     document.addEventListener("DOMContentLoaded", applyMobileCardEditingState);
     window.addEventListener("resize", applyMobileCardEditingState);
-    document.body.addEventListener("htmx:afterSwap", function (event) {
-        if (event.target && event.target.id === "hwpx-chat-result") {
-            applyMobileCardEditingState();
-        }
-    });
+    if (window.htmx) {
+        bindHwpxUploadHtmxLifecycle();
+    }
 </script>
 {% endblock %}
