@@ -8,7 +8,14 @@
                 <i class="fa-regular fa-comments"></i>
             </span>
             <div class="min-w-0">
+                {% if developer_chat_home_card.title == '개발자야 도와줘' %}
+                <h2 class="home-v4-developer-chat-title mt-1 text-lg font-black text-slate-900" data-home-v4-developer-chat-title="two-line">
+                    <span class="home-v4-developer-chat-title-line">개발자야</span>
+                    <span class="home-v4-developer-chat-title-line">도와줘</span>
+                </h2>
+                {% else %}
                 <h2 class="mt-1 text-lg font-black text-slate-900">{{ developer_chat_home_card.title }}</h2>
+                {% endif %}
             </div>
         </div>
         <div class="home-v4-developer-chat-badges">

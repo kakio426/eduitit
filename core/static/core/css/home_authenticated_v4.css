@@ -876,6 +876,20 @@
     justify-content: flex-start;
 }
 
+.home-v4-developer-chat-title {
+    display: flex;
+    flex-direction: column;
+    gap: 0.05rem;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+}
+
+.home-v4-developer-chat-title-line {
+    display: block;
+    white-space: nowrap;
+    word-break: keep-all;
+}
+
 .home-v4-developer-chat-icon {
     display: inline-flex;
     align-items: center;

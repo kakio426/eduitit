@@ -2307,6 +2307,16 @@ class HomeV4ViewTest(TestCase):
         self.assertLess(representative_index, mobile_card_index)
         self.assertLess(community_index, mobile_card_index)
 
+    def test_v4_home_developer_chat_card_renders_two_line_title(self):
+        self._login('v4devchattitle')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertContains(response, 'data-home-v4-developer-chat-title="two-line"', html=False)
+        self.assertIn('<span class="home-v4-developer-chat-title-line">개발자야</span>', content)
+        self.assertIn('<span class="home-v4-developer-chat-title-line">도와줘</span>', content)
+
     def test_v4_admin_home_developer_chat_card_shows_recent_thread_preview(self):
         admin = _create_onboarded_user('v4devadmin', nickname='홈관리자')
         admin.is_staff = True
