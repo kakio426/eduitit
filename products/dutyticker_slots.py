@@ -15,9 +15,18 @@ PERIOD_NUMBERS = [1, 2, 3, 4, 5, 6]
 
 SLOT_LAYOUT = [
     {
+        "code": "morning",
+        "kind": "morning",
+        "order": 1,
+        "period": None,
+        "label": "아침시간",
+        "start": datetime.time(8, 0),
+        "end": datetime.time(9, 0),
+    },
+    {
         "code": "p1",
         "kind": "period",
-        "order": 1,
+        "order": 2,
         "period": 1,
         "label": "1교시",
         "start": datetime.time(9, 0),
@@ -26,7 +35,7 @@ SLOT_LAYOUT = [
     {
         "code": "b1",
         "kind": "break",
-        "order": 2,
+        "order": 3,
         "period": None,
         "label": "쉬는시간 (1-2)",
         "start": datetime.time(9, 40),
@@ -35,7 +44,7 @@ SLOT_LAYOUT = [
     {
         "code": "p2",
         "kind": "period",
-        "order": 3,
+        "order": 4,
         "period": 2,
         "label": "2교시",
         "start": datetime.time(9, 50),
@@ -44,7 +53,7 @@ SLOT_LAYOUT = [
     {
         "code": "b2",
         "kind": "break",
-        "order": 4,
+        "order": 5,
         "period": None,
         "label": "쉬는시간 (2-3)",
         "start": datetime.time(10, 30),
@@ -53,7 +62,7 @@ SLOT_LAYOUT = [
     {
         "code": "p3",
         "kind": "period",
-        "order": 5,
+        "order": 6,
         "period": 3,
         "label": "3교시",
         "start": datetime.time(10, 40),
@@ -62,7 +71,7 @@ SLOT_LAYOUT = [
     {
         "code": "b3",
         "kind": "break",
-        "order": 6,
+        "order": 7,
         "period": None,
         "label": "쉬는시간 (3-4)",
         "start": datetime.time(11, 20),
@@ -71,7 +80,7 @@ SLOT_LAYOUT = [
     {
         "code": "p4",
         "kind": "period",
-        "order": 7,
+        "order": 8,
         "period": 4,
         "label": "4교시",
         "start": datetime.time(11, 30),
@@ -80,7 +89,7 @@ SLOT_LAYOUT = [
     {
         "code": "lunch",
         "kind": "lunch",
-        "order": 8,
+        "order": 9,
         "period": None,
         "label": "점심시간 (4-5)",
         "start": datetime.time(12, 10),
@@ -89,7 +98,7 @@ SLOT_LAYOUT = [
     {
         "code": "p5",
         "kind": "period",
-        "order": 9,
+        "order": 10,
         "period": 5,
         "label": "5교시",
         "start": datetime.time(13, 0),
@@ -98,7 +107,7 @@ SLOT_LAYOUT = [
     {
         "code": "b5",
         "kind": "break",
-        "order": 10,
+        "order": 11,
         "period": None,
         "label": "쉬는시간 (5-6)",
         "start": datetime.time(13, 40),
@@ -107,7 +116,7 @@ SLOT_LAYOUT = [
     {
         "code": "p6",
         "kind": "period",
-        "order": 11,
+        "order": 12,
         "period": 6,
         "label": "6교시",
         "start": datetime.time(13, 50),
@@ -117,4 +126,3 @@ SLOT_LAYOUT = [
 
 
 SLOT_BY_CODE = {row["code"]: row for row in SLOT_LAYOUT}
-

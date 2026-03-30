@@ -94,6 +94,46 @@ def _ensure_time_slots_for_scope(user, classroom):
     return list(apply_classroom_scope(DTTimeSlot.objects.filter(user=user), classroom).order_by("slot_order", "id"))
 
 
+def _serialize_time_slot_row(*, slot_code, slot_kind, slot_label, period_number, start_time, end_time):
+    return {
+        "slotCode": slot_code,
+        "slotLabel": slot_label,
+        "slotType": slot_kind,
+        "startTime": start_time.strftime("%H:%M"),
+        "endTime": end_time.strftime("%H:%M"),
+        "period": period_number,
+    }
+
+
+def _build_time_slots_payload(user, classroom):
+    time_slots = _ensure_time_slots_for_scope(user, classroom)
+    return [
+        _serialize_time_slot_row(
+            slot_code=slot.slot_code,
+            slot_kind=slot.slot_kind,
+            slot_label=slot.slot_label,
+            period_number=slot.period_number,
+            start_time=slot.start_time,
+            end_time=slot.end_time,
+        )
+        for slot in time_slots
+    ]
+
+
+def _build_guest_time_slots_payload():
+    return [
+        _serialize_time_slot_row(
+            slot_code=spec["code"],
+            slot_kind=spec["kind"],
+            slot_label=spec["label"],
+            period_number=spec["period"],
+            start_time=spec["start"],
+            end_time=spec["end"],
+        )
+        for spec in SLOT_LAYOUT
+    ]
+
+
 def _build_weekly_schedule_payload(user, classroom):
     time_slots = _ensure_time_slots_for_scope(user, classroom)
     slot_by_code = {slot.slot_code: slot for slot in time_slots}
@@ -119,7 +159,7 @@ def _build_weekly_schedule_payload(user, classroom):
             schedule_row = subject_by_day_period.get((day, period_number)) if is_period else None
 
             if is_period:
-                title = schedule_row.subject if schedule_row else f"{period_number}교시"
+                title = schedule_row.subject if schedule_row else ""
             else:
                 title = slot_label
 
@@ -191,6 +231,7 @@ def get_guest_default_data():
         'roles': roles_data,
         'assignments': assignments,
         'schedule': weekly_schedule,
+        'timeSlots': _build_guest_time_slots_payload(),
         'automations': [],
         'settings': {
             'auto_rotation': False,
@@ -267,6 +308,16 @@ def _parse_time_text(raw_value):
         return None
 
 
+def _calculate_slot_duration_minutes(start_time, end_time):
+    if not start_time or not end_time:
+        return 10
+    start_dt = datetime.datetime.combine(datetime.date.today(), start_time)
+    end_dt = datetime.datetime.combine(datetime.date.today(), end_time)
+    if end_dt <= start_dt:
+        return 10
+    return max(1, int((end_dt - start_dt).total_seconds() // 60))
+
+
 def _normalize_mission_phrase_snapshot(raw_phrase):
     if not isinstance(raw_phrase, dict):
         return None
@@ -285,64 +336,98 @@ def _normalize_mission_phrase_snapshot(raw_phrase):
     }
 
 
+def _build_mission_automation_slot_lookup_from_rows(slot_rows):
+    slot_by_code = {}
+    slot_by_window = {}
+    for row in slot_rows:
+        slot_type = str(row.get("slotType") or "").strip()
+        if slot_type == "period":
+            continue
+        slot_code = str(row.get("slotCode") or "").strip()
+        if not slot_code:
+            continue
+        slot_by_code[slot_code] = row
+        start_time = _parse_time_text(row.get("startTime"))
+        end_time = _parse_time_text(row.get("endTime"))
+        if start_time and end_time:
+            slot_by_window[(start_time, end_time)] = row
+    return slot_by_code, slot_by_window
+
+
+def _resolve_mission_automation_slot_row(automation, slot_by_code, slot_by_window):
+    preferred_code = str(getattr(automation, "slot_code", "") or "").strip()
+    if preferred_code:
+        preferred_slot = slot_by_code.get(preferred_code)
+        if preferred_slot:
+            return preferred_slot
+    return slot_by_window.get((automation.start_time, automation.end_time))
+
+
 def _build_mission_automation_rows(user, classroom):
+    time_slots = _build_time_slots_payload(user, classroom)
+    slot_by_code, slot_by_window = _build_mission_automation_slot_lookup_from_rows(time_slots)
     automations = apply_classroom_scope(
         DTMissionAutomation.objects.filter(user=user),
         classroom,
     ).order_by("sort_order", "id")
-    return [
-        {
-            "id": automation.id,
-            "name": automation.name,
-            "startTime": automation.start_time.strftime("%H:%M"),
-            "endTime": automation.end_time.strftime("%H:%M"),
-            "timerMinutes": automation.timer_minutes,
-            "enabled": automation.is_enabled,
-            "phrase": {
-                "label": automation.mission_label,
-                "title": automation.mission_title,
-                "desc": automation.mission_desc,
-            },
-        }
-        for automation in automations
-    ]
+    rows = []
+    for automation in automations:
+        slot_row = _resolve_mission_automation_slot_row(automation, slot_by_code, slot_by_window)
+        if not slot_row:
+            continue
+        rows.append(
+            {
+                "id": automation.id,
+                "slotCode": slot_row["slotCode"],
+                "name": slot_row["slotLabel"],
+                "startTime": slot_row["startTime"],
+                "endTime": slot_row["endTime"],
+                "enabled": automation.is_enabled,
+                "phrase": {
+                    "label": automation.mission_label,
+                    "title": automation.mission_title,
+                    "desc": automation.mission_desc,
+                },
+            }
+        )
+    return rows
 
 
-def _normalize_mission_automation_payload(raw_items):
+def _normalize_mission_automation_payload(raw_items, slot_rows):
     if not isinstance(raw_items, list):
         return None, "자동화 목록 형식이 올바르지 않습니다."
 
+    slot_by_code, _ = _build_mission_automation_slot_lookup_from_rows(slot_rows)
     normalized_rows = []
+    seen_slot_codes = set()
     for index, raw_item in enumerate(raw_items[:MISSION_AUTOMATION_LIMIT], start=1):
         if not isinstance(raw_item, dict):
             return None, "자동화 목록 형식이 올바르지 않습니다."
 
-        name = _sanitize_mission_automation_text(raw_item.get("name"), max_length=50)
-        start_time = _parse_time_text(raw_item.get("startTime"))
-        end_time = _parse_time_text(raw_item.get("endTime"))
-        timer_minutes = raw_item.get("timerMinutes")
+        slot_code = _sanitize_mission_automation_text(raw_item.get("slotCode"), max_length=20)
         phrase = _normalize_mission_phrase_snapshot(raw_item.get("phrase"))
         enabled = raw_item.get("enabled") is True
+        slot_row = slot_by_code.get(slot_code)
 
-        if not name:
-            return None, f"{index}번째 자동화의 시간 이름을 입력해 주세요."
-        if not start_time or not end_time or start_time >= end_time:
-            return None, f"{name}의 시작/종료 시각을 다시 확인해 주세요."
-        try:
-            timer_minutes = int(timer_minutes)
-        except (TypeError, ValueError):
-            timer_minutes = 10
-        timer_minutes = max(1, min(60, timer_minutes))
+        if not slot_row:
+            return None, f"{index}번째 자동화의 반복 시간을 다시 선택해 주세요."
+        if slot_code in seen_slot_codes:
+            return None, f"{slot_row['slotLabel']}은 한 번만 저장할 수 있습니다."
+        seen_slot_codes.add(slot_code)
 
         if not phrase:
-            return None, f"{name}에 연결할 문구를 먼저 골라 주세요."
+            return None, f"{slot_row['slotLabel']}에 연결할 문구를 먼저 골라 주세요."
+
+        start_time = _parse_time_text(slot_row["startTime"])
+        end_time = _parse_time_text(slot_row["endTime"])
 
         normalized_rows.append(
             {
-                "name": name,
+                "name": slot_row["slotLabel"],
+                "slot_code": slot_code,
                 "start_time": start_time,
                 "end_time": end_time,
-                "timer_minutes": timer_minutes,
+                "timer_minutes": _calculate_slot_duration_minutes(start_time, end_time),
                 "enabled": enabled,
                 "phrase": phrase,
                 "sort_order": index,
@@ -556,10 +641,12 @@ def get_dutyticker_data(request):
             request.session['guest_dt_data'] = get_guest_default_data()
         else:
             guest_data = request.session['guest_dt_data']
+            if 'timeSlots' not in guest_data:
+                guest_data['timeSlots'] = _build_guest_time_slots_payload()
             if 'automations' not in guest_data:
                 guest_data['automations'] = []
-                request.session['guest_dt_data'] = guest_data
-                request.session.modified = True
+            request.session['guest_dt_data'] = guest_data
+            request.session.modified = True
         return JsonResponse(request.session['guest_dt_data'])
 
     user = request.user
@@ -589,6 +676,7 @@ def get_dutyticker_data(request):
             'is_completed': a.is_completed
         })
         
+    time_slots = _build_time_slots_payload(user, classroom)
     weekly_schedule = _build_weekly_schedule_payload(user, classroom)
 
     # Fallback: if today's DTSchedule is empty, surface today's classcalendar events.
@@ -613,6 +701,7 @@ def get_dutyticker_data(request):
         'students': students,
         'roles': roles,
         'assignments': assignments,
+        'timeSlots': time_slots,
         'schedule': weekly_schedule,
         'automations': _build_mission_automation_rows(user, classroom),
         'settings': {
@@ -743,21 +832,21 @@ def update_mission(request):
 def update_mission_automations(request):
     try:
         data = _safe_json_body(request)
-        normalized_rows, error_message = _normalize_mission_automation_payload(data.get("automations"))
-        if error_message:
-            return JsonResponse({"success": False, "error": error_message}, status=400)
-
         if not request.user.is_authenticated:
             guest_data = request.session.get("guest_dt_data") or get_guest_default_data()
+            time_slots = guest_data.get("timeSlots") or _build_guest_time_slots_payload()
+            normalized_rows, error_message = _normalize_mission_automation_payload(data.get("automations"), time_slots)
+            if error_message:
+                return JsonResponse({"success": False, "error": error_message}, status=400)
             guest_rows = []
             for index, row in enumerate(normalized_rows, start=1):
                 guest_rows.append(
                     {
                         "id": f"guest-auto-{index}",
                         "name": row["name"],
+                        "slotCode": row["slot_code"],
                         "startTime": row["start_time"].strftime("%H:%M"),
                         "endTime": row["end_time"].strftime("%H:%M"),
-                        "timerMinutes": row["timer_minutes"],
                         "enabled": row["enabled"],
                         "phrase": row["phrase"],
                     }
@@ -768,6 +857,10 @@ def update_mission_automations(request):
             return JsonResponse({"success": True, "automations": guest_rows})
 
         classroom = get_active_classroom_for_request(request)
+        time_slots = _build_time_slots_payload(request.user, classroom)
+        normalized_rows, error_message = _normalize_mission_automation_payload(data.get("automations"), time_slots)
+        if error_message:
+            return JsonResponse({"success": False, "error": error_message}, status=400)
         automation_qs = apply_classroom_scope(
             DTMissionAutomation.objects.filter(user=request.user),
             classroom,
@@ -780,6 +873,7 @@ def update_mission_automations(request):
                 DTMissionAutomation.objects.create(
                     user=request.user,
                     **classroom_scope_create_kwargs(classroom),
+                    slot_code=row["slot_code"],
                     name=row["name"],
                     start_time=row["start_time"],
                     end_time=row["end_time"],
@@ -796,9 +890,9 @@ def update_mission_automations(request):
             {
                 "id": automation.id,
                 "name": automation.name,
+                "slotCode": automation.slot_code,
                 "startTime": automation.start_time.strftime("%H:%M"),
                 "endTime": automation.end_time.strftime("%H:%M"),
-                "timerMinutes": automation.timer_minutes,
                 "enabled": automation.is_enabled,
                 "phrase": {
                     "label": automation.mission_label,

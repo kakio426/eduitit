@@ -211,6 +211,7 @@ class DTTimeSlot(models.Model):
     """Slot definitions for one classroom day timeline (periods + breaks + lunch)."""
 
     SLOT_KIND_CHOICES = [
+        ("morning", "아침시간"),
         ("period", "교시"),
         ("break", "쉬는시간"),
         ("lunch", "점심시간"),
@@ -261,6 +262,7 @@ class DTMissionAutomation(models.Model):
         null=True,
         blank=True,
     )
+    slot_code = models.CharField(max_length=20, blank=True, default="")
     name = models.CharField(max_length=50, default="아침시간")
     start_time = models.TimeField()
     end_time = models.TimeField()

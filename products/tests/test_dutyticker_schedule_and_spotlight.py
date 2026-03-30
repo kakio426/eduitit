@@ -64,6 +64,8 @@ class DutyTickerScheduleAndSpotlightTests(TestCase):
             time_slot="쉬는시간 (5-6)",
         )
         payload = {
+            "slot_morning_start": "08:00",
+            "slot_morning_end": "09:00",
             "slot_p1_start": "08:55",
             "slot_p1_end": "09:35",
             "slot_b3_start": "11:20",
@@ -85,6 +87,11 @@ class DutyTickerScheduleAndSpotlightTests(TestCase):
         slot = DTTimeSlot.objects.get(user=self.user, classroom=self.classroom, slot_code="p1")
         self.assertEqual(slot.start_time, time(8, 55))
         self.assertEqual(slot.end_time, time(9, 35))
+
+        morning_slot = DTTimeSlot.objects.get(user=self.user, classroom=self.classroom, slot_code="morning")
+        self.assertEqual(morning_slot.slot_kind, "morning")
+        self.assertEqual(morning_slot.start_time, time(8, 0))
+        self.assertEqual(morning_slot.end_time, time(9, 0))
 
         monday_first = DTSchedule.objects.get(user=self.user, classroom=self.classroom, day=1, period=1)
         self.assertEqual(monday_first.subject, "국어")
@@ -112,11 +119,20 @@ class DutyTickerScheduleAndSpotlightTests(TestCase):
 
         api_response = self.client.get(reverse("dt_api_data"))
         self.assertEqual(api_response.status_code, 200)
-        weekly = api_response.json()["schedule"]
+        payload = api_response.json()
+        weekly = payload["schedule"]
+        time_slots = payload["timeSlots"]
         monday_rows = weekly.get("1", [])
+        morning_row = next(row for row in monday_rows if row.get("slot_code") == "morning")
         slot_34_row = next(row for row in monday_rows if row.get("slot_code") == "b3")
         lunch_row = next(row for row in monday_rows if row.get("slot_code") == "lunch")
         slot_56_row = next(row for row in monday_rows if row.get("slot_code") == "b5")
+        morning_slot_row = next(row for row in time_slots if row.get("slotCode") == "morning")
+        self.assertEqual(morning_row["slot_type"], "morning")
+        self.assertEqual(morning_row["slot_label"], "아침시간")
+        self.assertEqual(morning_slot_row["slotType"], "morning")
+        self.assertEqual(morning_slot_row["startTime"], "08:00")
+        self.assertEqual(morning_slot_row["endTime"], "09:00")
         self.assertEqual(slot_34_row["slot_type"], "lunch")
         self.assertEqual(slot_34_row["slot_label"], "점심시간 (3-4)")
         self.assertEqual(lunch_row["slot_type"], "break")
@@ -149,14 +165,33 @@ class DutyTickerScheduleAndSpotlightTests(TestCase):
         self.assertEqual(api_settings["tts_minutes_before"], 5)
         self.assertEqual(api_settings["tts_voice_uri"], "ko-KR-TestVoice")
 
-    def test_mission_automation_api_persists_teacher_defined_windows(self):
+    def test_mission_automation_api_persists_slot_linked_automations(self):
+        DTTimeSlot.objects.create(
+            user=self.user,
+            classroom=self.classroom,
+            slot_code="morning",
+            slot_kind="morning",
+            slot_order=1,
+            slot_label="아침시간",
+            period_number=None,
+            start_time=time(8, 0),
+            end_time=time(9, 0),
+        )
+        DTTimeSlot.objects.create(
+            user=self.user,
+            classroom=self.classroom,
+            slot_code="lunch",
+            slot_kind="lunch",
+            slot_order=9,
+            slot_label="점심시간 (4-5)",
+            period_number=None,
+            start_time=time(12, 10),
+            end_time=time(13, 0),
+        )
         payload = {
             "automations": [
                 {
-                    "name": "아침시간",
-                    "startTime": "08:30",
-                    "endTime": "08:50",
-                    "timerMinutes": 15,
+                    "slotCode": "morning",
                     "enabled": True,
                     "phrase": {
                         "label": "아침 조회 준비",
@@ -165,10 +200,7 @@ class DutyTickerScheduleAndSpotlightTests(TestCase):
                     },
                 },
                 {
-                    "name": "점심 전 정리",
-                    "startTime": "12:00",
-                    "endTime": "12:10",
-                    "timerMinutes": 8,
+                    "slotCode": "lunch",
                     "enabled": False,
                     "phrase": {
                         "label": "점심 전 정리",
@@ -191,9 +223,12 @@ class DutyTickerScheduleAndSpotlightTests(TestCase):
         )
         self.assertEqual(len(automations), 2)
         self.assertEqual(automations[0].name, "아침시간")
+        self.assertEqual(automations[0].slot_code, "morning")
         self.assertEqual(automations[0].mission_title, "아침 조회 준비")
         self.assertEqual(automations[0].mission_desc, "출석부와 전달사항 확인")
-        self.assertEqual(automations[0].timer_minutes, 15)
+        self.assertEqual(automations[0].start_time, time(8, 0))
+        self.assertEqual(automations[0].end_time, time(9, 0))
+        self.assertEqual(automations[0].timer_minutes, 60)
         self.assertTrue(automations[0].is_enabled)
         self.assertFalse(automations[1].is_enabled)
 
@@ -201,11 +236,90 @@ class DutyTickerScheduleAndSpotlightTests(TestCase):
         self.assertEqual(api_response.status_code, 200)
         rows = api_response.json()["automations"]
         self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0]["slotCode"], "morning")
         self.assertEqual(rows[0]["name"], "아침시간")
-        self.assertEqual(rows[0]["startTime"], "08:30")
-        self.assertEqual(rows[0]["endTime"], "08:50")
-        self.assertEqual(rows[0]["timerMinutes"], 15)
+        self.assertEqual(rows[0]["startTime"], "08:00")
+        self.assertEqual(rows[0]["endTime"], "09:00")
         self.assertEqual(rows[0]["phrase"]["label"], "아침 조회 준비")
+
+        self.client.post(
+            reverse("dt_admin_update_schedule_settings"),
+            data={
+                "slot_morning_start": "08:10",
+                "slot_morning_end": "09:00",
+                "slot_p1_start": "09:00",
+                "slot_p1_end": "09:40",
+                "slot_b1_start": "09:40",
+                "slot_b1_end": "09:50",
+                "slot_p2_start": "09:50",
+                "slot_p2_end": "10:30",
+                "slot_b2_start": "10:30",
+                "slot_b2_end": "10:40",
+                "slot_p3_start": "10:40",
+                "slot_p3_end": "11:20",
+                "slot_b3_start": "11:20",
+                "slot_b3_end": "11:30",
+                "slot_b3_kind": "break",
+                "slot_p4_start": "11:30",
+                "slot_p4_end": "12:10",
+                "slot_lunch_start": "12:10",
+                "slot_lunch_end": "13:10",
+                "slot_lunch_kind": "lunch",
+                "slot_p5_start": "13:10",
+                "slot_p5_end": "13:50",
+                "slot_b5_start": "13:50",
+                "slot_b5_end": "14:00",
+                "slot_b5_kind": "break",
+                "slot_p6_start": "14:00",
+                "slot_p6_end": "14:40",
+            },
+        )
+        refreshed_rows = self.client.get(reverse("dt_api_data")).json()["automations"]
+        self.assertEqual(refreshed_rows[0]["slotCode"], "morning")
+        self.assertEqual(refreshed_rows[0]["startTime"], "08:10")
+        self.assertEqual(refreshed_rows[0]["endTime"], "09:00")
+
+    def test_weekly_schedule_payload_leaves_empty_period_name_blank(self):
+        response = self.client.post(
+            reverse("dt_admin_update_schedule_settings"),
+            data={
+                "slot_morning_start": "08:00",
+                "slot_morning_end": "09:00",
+                "slot_p1_start": "09:00",
+                "slot_p1_end": "09:40",
+                "slot_b1_start": "09:40",
+                "slot_b1_end": "09:50",
+                "slot_p2_start": "09:50",
+                "slot_p2_end": "10:30",
+                "slot_b2_start": "10:30",
+                "slot_b2_end": "10:40",
+                "slot_p3_start": "10:40",
+                "slot_p3_end": "11:20",
+                "slot_b3_start": "11:20",
+                "slot_b3_end": "11:30",
+                "slot_b3_kind": "break",
+                "slot_p4_start": "11:30",
+                "slot_p4_end": "12:10",
+                "slot_lunch_start": "12:10",
+                "slot_lunch_end": "13:00",
+                "slot_lunch_kind": "lunch",
+                "slot_p5_start": "13:00",
+                "slot_p5_end": "13:40",
+                "slot_b5_start": "13:40",
+                "slot_b5_end": "13:50",
+                "slot_b5_kind": "break",
+                "slot_p6_start": "13:50",
+                "slot_p6_end": "14:30",
+                "subject_1_1": "국어",
+                "subject_1_2": "수학",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+
+        weekly = self.client.get(reverse("dt_api_data")).json()["schedule"]
+        monday_rows = weekly["1"]
+        sixth_row = next(row for row in monday_rows if row.get("slot_code") == "p6")
+        self.assertEqual(sixth_row["name"], "")
 
     def test_spotlight_student_api_persists_setting(self):
         student = DTStudent.objects.create(user=self.user, classroom=self.classroom, name="김학생", number=1)

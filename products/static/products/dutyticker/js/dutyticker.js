@@ -9,6 +9,7 @@ class DutyTickerManager {
         this.api = window.dtApiEndpoints || {};
         this.roles = [];
         this.students = [];
+        this.timeSlots = [];
         this.todaySchedule = [];
         this.rotationMode = 'manual_sequential';
         this.roleViewMode = 'compact';
@@ -80,6 +81,7 @@ class DutyTickerManager {
         this.missionAutomations = [];
         this.missionAutomationPanelExpanded = false;
         this.missionAutomationSelectedId = null;
+        this.missionAutomationDraftSlotCode = '';
         this.missionAutomationDraftPhrase = null;
         this.missionAutomationRuntimeStorageKey = 'dt-mission-automation-runtime-v1';
         this.missionAutomationRuntime = this.getDefaultMissionAutomationRuntime();
@@ -410,13 +412,7 @@ class DutyTickerManager {
     }
 
     setupMissionAutomationControls() {
-        this.bindInputAction('missionAutomationMinutesInput', 'change', () => this.normalizeMissionAutomationMinutesInput());
-        this.bindInputAction('missionAutomationMinutesInput', 'blur', () => this.normalizeMissionAutomationMinutesInput());
-        this.bindInputAction('missionAutomationMinutesInput', 'keydown', (event) => {
-            if (event.key !== 'Enter') return;
-            event.preventDefault();
-            this.normalizeMissionAutomationMinutesInput();
-        });
+        // Slot-linked automation uses click-based selection cards only.
     }
 
     bindGlobalShortcuts() {
@@ -1016,21 +1012,34 @@ class DutyTickerManager {
     }
 
     normalizeMissionAutomationRow(rawItem = {}) {
+        const slotCode = String(rawItem.slotCode || '').trim();
         const name = this.sanitizeMissionAutomationName(rawItem.name || '');
         const startTime = String(rawItem.startTime || '').trim();
         const endTime = String(rawItem.endTime || '').trim();
         const phrase = this.sanitizeMissionAutomationPhrase(rawItem.phrase);
-        if (!name || !startTime || !endTime || !phrase) return null;
-        const rawId = rawItem.id !== undefined && rawItem.id !== null ? String(rawItem.id) : `${name}-${startTime}-${endTime}`;
+        if (!slotCode || !name || !startTime || !endTime || !phrase) return null;
+        const rawId = rawItem.id !== undefined && rawItem.id !== null ? String(rawItem.id) : slotCode;
         return {
             id: rawId,
+            slotCode,
             name,
             startTime,
             endTime,
-            timerMinutes: this.normalizeMissionAutomationTimerMinutes(rawItem.timerMinutes),
             enabled: rawItem.enabled === true,
             phrase,
         };
+    }
+
+    setTimeSlots(rows = []) {
+        const nextRows = Array.isArray(rows) ? rows : [];
+        this.timeSlots = nextRows.map((row) => ({
+            slotCode: String(row.slotCode || '').trim(),
+            slotLabel: String(row.slotLabel || '').trim(),
+            slotType: String(row.slotType || '').trim(),
+            startTime: String(row.startTime || '').trim(),
+            endTime: String(row.endTime || '').trim(),
+            period: Number(row.period) || null,
+        })).filter((row) => row.slotCode && row.slotLabel && row.startTime && row.endTime);
     }
 
     setMissionAutomations(rows = []) {
@@ -1115,9 +1124,6 @@ class DutyTickerManager {
             const aStart = this.timeStringToMinutes(a?.startTime);
             const bStart = this.timeStringToMinutes(b?.startTime);
             if (aStart !== bStart) return aStart - bStart;
-            const aEnd = this.timeStringToMinutes(a?.endTime);
-            const bEnd = this.timeStringToMinutes(b?.endTime);
-            if (aEnd !== bEnd) return aEnd - bEnd;
             return String(a?.name || '').localeCompare(String(b?.name || ''), 'ko');
         });
     }
@@ -1127,8 +1133,24 @@ class DutyTickerManager {
         return this.missionAutomations.find((row) => row.id === String(automationId)) || null;
     }
 
-    getMissionAutomationDate(item, timeKey, now = new Date()) {
-        const target = String(item?.[timeKey] || '').trim();
+    getAvailableMissionAutomationSlots() {
+        return this.timeSlots
+            .filter((slot) => slot && slot.slotType && slot.slotType !== 'period')
+            .sort((a, b) => this.timeStringToMinutes(a?.startTime) - this.timeStringToMinutes(b?.startTime));
+    }
+
+    getMissionAutomationSlotByCode(slotCode) {
+        if (!slotCode) return null;
+        return this.getAvailableMissionAutomationSlots().find((slot) => slot.slotCode === String(slotCode)) || null;
+    }
+
+    getTodaySlotByCode(slotCode) {
+        if (!slotCode) return null;
+        return this.todaySchedule.find((slot) => String(slot?.slot_code || '') === String(slotCode)) || null;
+    }
+
+    getScheduleSlotDate(slot, timeKey, now = new Date()) {
+        const target = String(slot?.[timeKey] || '').trim();
         const match = target.match(/^(\d{1,2}):(\d{2})$/);
         if (!match) return null;
         const date = new Date(now);
@@ -1136,20 +1158,32 @@ class DutyTickerManager {
         return date;
     }
 
-    getActiveMissionAutomation(now = new Date()) {
+    getCurrentMissionAutomationSlot(now = new Date()) {
         const currentTime = now.getTime();
-        const activeRows = this.getSortedMissionAutomations().filter((item) => {
-            if (!item || item.enabled !== true || !item.phrase) return false;
-            const startAt = this.getMissionAutomationDate(item, 'startTime', now);
-            const endAt = this.getMissionAutomationDate(item, 'endTime', now);
+        return this.todaySchedule.find((slot) => {
+            const slotType = String(slot?.slot_type || '').trim();
+            if (!slot || !slotType || slotType === 'period') return false;
+            const startAt = this.getScheduleSlotDate(slot, 'startTime', now);
+            const endAt = this.getScheduleSlotDate(slot, 'endTime', now);
             if (!startAt || !endAt || endAt <= startAt) return false;
             return currentTime >= startAt.getTime() && currentTime < endAt.getTime();
-        });
-        return activeRows.length ? activeRows[activeRows.length - 1] : null;
+        }) || null;
+    }
+
+    getActiveMissionAutomation(now = new Date()) {
+        const activeSlotCode = String(this.getCurrentMissionAutomationSlot(now)?.slot_code || '').trim();
+        if (!activeSlotCode) return null;
+        return this.getSortedMissionAutomations().find((item) => (
+            item
+            && item.enabled === true
+            && item.phrase
+            && String(item.slotCode || '').trim() === activeSlotCode
+        )) || null;
     }
 
     getMissionAutomationRemainingSeconds(item, now = new Date()) {
-        const endAt = this.getMissionAutomationDate(item, 'endTime', now);
+        const slot = this.getTodaySlotByCode(item?.slotCode);
+        const endAt = this.getScheduleSlotDate(slot, 'endTime', now);
         if (!endAt) return 0;
         return Math.max(0, Math.ceil((endAt.getTime() - now.getTime()) / 1000));
     }
@@ -1174,7 +1208,8 @@ class DutyTickerManager {
             if (!normalizedId || normalizedId === activeId) return;
 
             const item = automationMap.get(normalizedId);
-            const endAt = item ? this.getMissionAutomationDate(item, 'endTime', now) : null;
+            const slot = item ? this.getTodaySlotByCode(item.slotCode) : null;
+            const endAt = slot ? this.getScheduleSlotDate(slot, 'endTime', now) : null;
             const hasEnded = !item || !endAt || now.getTime() >= endAt.getTime();
             if (!hasEnded) return;
 
@@ -1216,11 +1251,8 @@ class DutyTickerManager {
         this.setMissionAutomationRun(automationId, runData, now);
         this.restoreMissionAutomationFromRun(automationId, runData);
 
-        const configuredSeconds = this.normalizeMissionAutomationTimerMinutes(item.timerMinutes) * 60;
         const remainingSeconds = this.getMissionAutomationRemainingSeconds(item, now);
-        const timerSeconds = remainingSeconds > 0
-            ? Math.min(configuredSeconds, remainingSeconds)
-            : configuredSeconds;
+        const timerSeconds = remainingSeconds > 0 ? remainingSeconds : this.timerMaxSeconds;
 
         this.setTimerMode(timerSeconds, true);
         this.showToast(`${item.name} 자동 시작`, 'success');
@@ -1323,50 +1355,27 @@ class DutyTickerManager {
         }
     }
 
-    normalizeMissionAutomationMinutesInput() {
-        const input = document.getElementById('missionAutomationMinutesInput');
-        if (!input) return;
-        input.value = String(this.normalizeMissionAutomationTimerMinutes(input.value));
-    }
-
     setMissionAutomationDraftPhrase(phrase) {
         this.missionAutomationDraftPhrase = this.sanitizeMissionAutomationPhrase(phrase);
     }
 
     setMissionAutomationFormValues({
-        name = '',
-        startTime = '',
-        endTime = '',
-        timerMinutes = 10,
+        slotCode = '',
         enabled = true,
         phrase = null,
     } = {}) {
-        const nameInput = document.getElementById('missionAutomationNameInput');
-        const startInput = document.getElementById('missionAutomationStartInput');
-        const endInput = document.getElementById('missionAutomationEndInput');
-        const minutesInput = document.getElementById('missionAutomationMinutesInput');
         const enabledInput = document.getElementById('missionAutomationEnabledInput');
 
-        if (nameInput) nameInput.value = this.sanitizeMissionAutomationName(name);
-        if (startInput) startInput.value = String(startTime || '').trim();
-        if (endInput) endInput.value = String(endTime || '').trim();
-        if (minutesInput) minutesInput.value = String(this.normalizeMissionAutomationTimerMinutes(timerMinutes));
+        this.missionAutomationDraftSlotCode = String(slotCode || '').trim();
         if (enabledInput) enabledInput.checked = enabled !== false;
         this.setMissionAutomationDraftPhrase(phrase);
     }
 
     getMissionAutomationFormValues() {
-        const nameInput = document.getElementById('missionAutomationNameInput');
-        const startInput = document.getElementById('missionAutomationStartInput');
-        const endInput = document.getElementById('missionAutomationEndInput');
-        const minutesInput = document.getElementById('missionAutomationMinutesInput');
         const enabledInput = document.getElementById('missionAutomationEnabledInput');
 
         return {
-            name: this.sanitizeMissionAutomationName(nameInput ? nameInput.value : ''),
-            startTime: String(startInput ? startInput.value : '').trim(),
-            endTime: String(endInput ? endInput.value : '').trim(),
-            timerMinutes: this.normalizeMissionAutomationTimerMinutes(minutesInput ? minutesInput.value : 10),
+            slotCode: String(this.missionAutomationDraftSlotCode || '').trim(),
             enabled: enabledInput ? enabledInput.checked === true : true,
             phrase: this.sanitizeMissionAutomationPhrase(this.missionAutomationDraftPhrase),
         };
@@ -1384,10 +1393,23 @@ class DutyTickerManager {
         return item.phrase.desc || item.phrase.title || item.phrase.label || '자동 문구';
     }
 
+    selectMissionAutomationSlot(slotCode) {
+        const slot = this.getMissionAutomationSlotByCode(slotCode);
+        if (!slot) return;
+        const linkedAutomation = this.missionAutomations.find((item) => item.slotCode === slot.slotCode) || null;
+        if (linkedAutomation && linkedAutomation.id !== this.missionAutomationSelectedId) {
+            this.selectMissionAutomation(linkedAutomation.id);
+            return;
+        }
+        this.missionAutomationDraftSlotCode = slot.slotCode;
+        this.renderMissionAutomationManager();
+    }
+
     renderMissionAutomationManager() {
         const listEl = document.getElementById('missionAutomationList');
+        const slotListEl = document.getElementById('missionAutomationSlotList');
+        const slotSummaryEl = document.getElementById('missionAutomationSlotSummary');
         const countEl = document.getElementById('missionAutomationCount');
-        const nameInput = document.getElementById('missionAutomationNameInput');
         const createBtn = document.getElementById('missionAutomationCreateBtn');
         const updateBtn = document.getElementById('missionAutomationUpdateBtn');
         const deleteBtn = document.getElementById('missionAutomationDeleteBtn');
@@ -1395,11 +1417,13 @@ class DutyTickerManager {
         const phrasePreviewEl = document.getElementById('missionAutomationPhrasePreview');
         const newBtn = document.getElementById('missionAutomationNewBtn');
         this.renderMissionAutomationPanel();
-        if (!listEl || !nameInput) return;
+        if (!listEl || !slotListEl) return;
 
         const count = this.missionAutomations.length;
         const selected = this.syncMissionAutomationSelection(this.missionAutomationSelectedId);
         const phrase = this.sanitizeMissionAutomationPhrase(this.missionAutomationDraftPhrase);
+        const draftSlot = this.getMissionAutomationSlotByCode(this.missionAutomationDraftSlotCode);
+        const availableSlots = this.getAvailableMissionAutomationSlots();
 
         if (countEl) countEl.textContent = `저장 ${count}개`;
         if (createBtn) createBtn.classList.toggle('hidden', !!selected);
@@ -1416,18 +1440,57 @@ class DutyTickerManager {
         if (phrasePreviewEl) {
             phrasePreviewEl.textContent = phrase
                 ? (phrase.desc || phrase.title || phrase.label)
-                : '아래 저장 문구를 열어 하나 고르면 여기에 바로 들어옵니다.';
+                : '위 저장 문구에서 하나를 고르면 여기에 바로 들어옵니다.';
+        }
+        if (slotSummaryEl) {
+            slotSummaryEl.textContent = draftSlot
+                ? `${draftSlot.slotLabel} · ${draftSlot.startTime} ~ ${draftSlot.endTime}`
+                : '아직 반복 시간을 고르지 않았습니다.';
+        }
+
+        if (!availableSlots.length) {
+            slotListEl.innerHTML = `
+                <div class="rounded-2xl border border-dashed border-slate-700 bg-slate-950/40 p-4 text-center">
+                    <p class="text-sm font-black text-slate-200">연결할 시간이 없습니다.</p>
+                    <p class="mt-1 text-xs text-slate-400">설정에서 아침시간, 쉬는시간, 점심시간을 먼저 확인해 주세요.</p>
+                </div>
+            `;
+        } else {
+            slotListEl.innerHTML = availableSlots.map((slot) => {
+                const linkedAutomation = this.missionAutomations.find((item) => item.slotCode === slot.slotCode) || null;
+                const isSelectedSlot = draftSlot && slot.slotCode === draftSlot.slotCode;
+                const isSelectedAutomation = selected && linkedAutomation && linkedAutomation.id === selected.id;
+                const badgeText = linkedAutomation ? (isSelectedAutomation ? '편집 중' : '저장됨') : '선택 가능';
+                const badgeClass = linkedAutomation
+                    ? 'border-emerald-300/30 bg-emerald-500/15 text-emerald-100'
+                    : 'border-slate-700 bg-slate-900/80 text-slate-300';
+                return `
+                    <button type="button"
+                        onclick="window.dtApp.selectMissionAutomationSlot('${slot.slotCode}')"
+                        class="dt-phrase-list-item ${isSelectedSlot ? 'is-selected' : ''} w-full rounded-2xl border border-slate-700 bg-slate-900/55 px-4 py-3 text-left transition hover:bg-slate-800/80">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <p class="text-sm font-black text-white break-keep">${this.escapeHtml(slot.slotLabel)}</p>
+                                    <span class="rounded-full border px-2 py-0.5 text-[10px] font-black ${badgeClass}">${badgeText}</span>
+                                </div>
+                                <p class="mt-1 text-[11px] font-black tracking-[0.08em] text-slate-400">${this.escapeHtml(slot.startTime)} ~ ${this.escapeHtml(slot.endTime)}</p>
+                            </div>
+                        </div>
+                    </button>
+                `;
+            }).join('');
         }
 
         if (!count) {
             listEl.innerHTML = `
                 <div class="rounded-2xl border border-dashed border-slate-700 bg-slate-950/40 p-4 text-center">
-                    <p class="text-sm font-black text-slate-200">자동화 시간이 없습니다.</p>
-                    <p class="mt-1 text-xs text-slate-400">오른쪽에서 시간을 만들고 저장해 보세요.</p>
+                    <p class="text-sm font-black text-slate-200">연결된 자동화가 없습니다.</p>
+                    <p class="mt-1 text-xs text-slate-400">오른쪽에서 반복 시간을 하나 고르고 저장해 보세요.</p>
                 </div>
             `;
             if (!this.missionAutomationSelectedId) {
-                this.setMissionAutomationHint('아침시간, 쉬는시간처럼 반복되는 시간을 직접 만들고 자동 문구를 연결하세요.');
+                this.setMissionAutomationHint('설정된 반복 시간 하나를 고르고 자동 문구를 연결하세요.');
             }
             return;
         }
@@ -1438,7 +1501,6 @@ class DutyTickerManager {
             const isActive = activeAutomationId && item.id === activeAutomationId;
             const metaBits = [
                 `${this.escapeHtml(item.startTime)} ~ ${this.escapeHtml(item.endTime)}`,
-                `${this.escapeHtml(String(item.timerMinutes))}분 타이머`,
                 item.enabled ? '자동ON' : '자동OFF',
             ];
             return `
@@ -1461,8 +1523,10 @@ class DutyTickerManager {
 
         if (selected) {
             this.setMissionAutomationHint('선택한 자동화를 바로 저장하거나 삭제할 수 있습니다.');
+        } else if (draftSlot) {
+            this.setMissionAutomationHint(`${draftSlot.slotLabel}에 연결할 문구를 고르고 저장해 주세요.`);
         } else {
-            this.setMissionAutomationHint('문구 하나 고르고 시간만 정한 뒤 저장하면 됩니다.');
+            this.setMissionAutomationHint('설정된 반복 시간 하나를 먼저 고른 뒤 문구를 연결해 주세요.');
         }
     }
 
@@ -1471,10 +1535,7 @@ class DutyTickerManager {
         this.missionAutomationSelectedId = null;
         if (showHint) this.missionAutomationPanelExpanded = true;
         this.setMissionAutomationFormValues({
-            name: '',
-            startTime: '',
-            endTime: '',
-            timerMinutes: 10,
+            slotCode: '',
             enabled: true,
             phrase: selectedPhrase
                 ? { label: selectedPhrase.label, title: selectedPhrase.title, desc: selectedPhrase.desc }
@@ -1482,7 +1543,7 @@ class DutyTickerManager {
         });
         this.renderMissionAutomationManager();
         if (showHint) {
-            this.setMissionAutomationHint('새 자동화 시간을 만들고 저장해 주세요.');
+            this.setMissionAutomationHint('반복 시간 하나를 고르고 저장해 주세요.');
         }
     }
 
@@ -1513,47 +1574,42 @@ class DutyTickerManager {
 
     buildMissionAutomationDraftFromForm() {
         const draft = this.getMissionAutomationFormValues();
-        if (!draft.name) {
-            this.showToast('자동화 시간 이름을 입력해 주세요.', 'error');
-            return null;
-        }
-        if (!draft.startTime || !draft.endTime) {
-            this.showToast('시작과 종료 시각을 모두 입력해 주세요.', 'error');
-            return null;
-        }
-        const startMinutes = this.timeStringToMinutes(draft.startTime);
-        const endMinutes = this.timeStringToMinutes(draft.endTime);
-        if (!Number.isFinite(startMinutes) || !Number.isFinite(endMinutes) || startMinutes >= endMinutes) {
-            this.showToast('종료 시각은 시작 시각보다 뒤여야 합니다.', 'error');
+        const slot = this.getMissionAutomationSlotByCode(draft.slotCode);
+        if (!slot) {
+            this.showToast('반복 시간을 먼저 골라 주세요.', 'error');
             return null;
         }
         if (!draft.phrase) {
             this.showToast('자동화에 연결할 문구를 먼저 골라 주세요.', 'error');
             return null;
         }
-        return draft;
+        return {
+            slotCode: slot.slotCode,
+            name: slot.slotLabel,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            enabled: draft.enabled,
+            phrase: draft.phrase,
+        };
     }
 
     isSameMissionAutomation(left, right) {
         if (!left || !right) return false;
         const leftPhrase = this.sanitizeMissionAutomationPhrase(left.phrase);
         const rightPhrase = this.sanitizeMissionAutomationPhrase(right.phrase);
-        return String(left.name || '') === String(right.name || '')
-            && String(left.startTime || '') === String(right.startTime || '')
-            && String(left.endTime || '') === String(right.endTime || '')
-            && Number(left.timerMinutes || 0) === Number(right.timerMinutes || 0)
+        return String(left.slotCode || '') === String(right.slotCode || '')
             && (left.enabled === true) === (right.enabled === true)
             && String(leftPhrase?.label || '') === String(rightPhrase?.label || '')
             && String(leftPhrase?.title || '') === String(rightPhrase?.title || '')
             && String(leftPhrase?.desc || '') === String(rightPhrase?.desc || '');
     }
 
-    async saveMissionAutomations(nextRows, { targetSelection = null, successMessage = '자동화 시간을 저장했습니다.' } = {}) {
+    async saveMissionAutomations(nextRows, { targetSelection = null, successMessage = '자동화를 저장했습니다.' } = {}) {
         const response = await this.secureFetch(this.getApiUrl('missionAutomationsUrl', '/products/dutyticker/api/mission-automations/update/'), {
             method: 'POST',
             body: JSON.stringify({ automations: nextRows }),
         });
-        const payload = await this.parseJsonResponse(response, '자동화 시간을 저장하지 못했습니다.');
+        const payload = await this.parseJsonResponse(response, '자동화를 저장하지 못했습니다.');
         this.setMissionAutomations(payload.automations || []);
 
         const matched = targetSelection
@@ -1578,15 +1634,12 @@ class DutyTickerManager {
         if (!draft) return;
 
         const nextRows = this.getSortedMissionAutomations().map((item) => ({
-            name: item.name,
-            startTime: item.startTime,
-            endTime: item.endTime,
-            timerMinutes: item.timerMinutes,
+            slotCode: item.slotCode,
             enabled: item.enabled,
             phrase: item.phrase,
         }));
         if (nextRows.length >= 12) {
-            this.showToast('자동화 시간은 12개까지만 저장할 수 있습니다.', 'error');
+            this.showToast('자동화는 12개까지만 저장할 수 있습니다.', 'error');
             return;
         }
         nextRows.push(draft);
@@ -1596,17 +1649,17 @@ class DutyTickerManager {
                 targetSelection: draft,
                 successMessage: `'${draft.name}' 자동화를 저장했습니다.`,
             });
-            this.setMissionAutomationHint('새 자동화 시간을 저장했습니다.');
+            this.setMissionAutomationHint('새 자동화를 저장했습니다.');
         } catch (error) {
             console.error(error);
-            this.showToast(error?.message || '자동화 시간을 저장하지 못했습니다.', 'error');
+            this.showToast(error?.message || '자동화를 저장하지 못했습니다.', 'error');
         }
     }
 
     async updateSelectedMissionAutomation() {
         const selected = this.syncMissionAutomationSelection(this.missionAutomationSelectedId);
         if (!selected) {
-            this.showToast('수정할 자동화 시간을 먼저 선택해 주세요.', 'error');
+            this.showToast('수정할 자동화를 먼저 선택해 주세요.', 'error');
             return;
         }
 
@@ -1617,10 +1670,7 @@ class DutyTickerManager {
             item.id === selected.id
                 ? draft
                 : {
-                    name: item.name,
-                    startTime: item.startTime,
-                    endTime: item.endTime,
-                    timerMinutes: item.timerMinutes,
+                    slotCode: item.slotCode,
                     enabled: item.enabled,
                     phrase: item.phrase,
                 }
@@ -1631,17 +1681,17 @@ class DutyTickerManager {
                 targetSelection: draft,
                 successMessage: `'${draft.name}' 자동화를 수정했습니다.`,
             });
-            this.setMissionAutomationHint('선택한 자동화 시간을 수정했습니다.');
+            this.setMissionAutomationHint('선택한 자동화를 수정했습니다.');
         } catch (error) {
             console.error(error);
-            this.showToast(error?.message || '자동화 시간을 수정하지 못했습니다.', 'error');
+            this.showToast(error?.message || '자동화를 수정하지 못했습니다.', 'error');
         }
     }
 
     deleteSelectedMissionAutomation() {
         const selected = this.syncMissionAutomationSelection(this.missionAutomationSelectedId);
         if (!selected) {
-            this.showToast('삭제할 자동화 시간을 먼저 선택해 주세요.', 'error');
+            this.showToast('삭제할 자동화를 먼저 선택해 주세요.', 'error');
             return;
         }
 
@@ -1653,10 +1703,7 @@ class DutyTickerManager {
                 const nextRows = this.getSortedMissionAutomations()
                     .filter((item) => item.id !== selected.id)
                     .map((item) => ({
-                        name: item.name,
-                        startTime: item.startTime,
-                        endTime: item.endTime,
-                        timerMinutes: item.timerMinutes,
+                        slotCode: item.slotCode,
                         enabled: item.enabled,
                         phrase: item.phrase,
                     }));
@@ -1666,10 +1713,10 @@ class DutyTickerManager {
                     });
                     this.missionAutomationSelectedId = null;
                     this.prepareNewMissionAutomation(false);
-                    this.setMissionAutomationHint('선택한 자동화 시간을 삭제했습니다.');
+                    this.setMissionAutomationHint('선택한 자동화를 삭제했습니다.');
                 } catch (error) {
                     console.error(error);
-                    this.showToast(error?.message || '자동화 시간을 삭제하지 못했습니다.', 'error');
+                    this.showToast(error?.message || '자동화를 삭제하지 못했습니다.', 'error');
                 }
             },
         });
@@ -1753,21 +1800,30 @@ class DutyTickerManager {
         return `${safePeriodLabel}는 ${safeSubjectName}입니다!`;
     }
 
+    getSchedulePeriodLabel(slot) {
+        const periodNumber = Number(slot?.period);
+        return Number.isFinite(periodNumber) && periodNumber > 0
+            ? `${periodNumber}교시`
+            : String(slot?.slot_label || '').trim() || '교시';
+    }
+
+    getScheduleSubjectName(slot) {
+        const periodLabel = this.getSchedulePeriodLabel(slot);
+        const rawSubject = String(slot?.name || '').trim();
+        return rawSubject && rawSubject !== periodLabel ? rawSubject : '';
+    }
+
     getTodayScheduleAnnouncementRows() {
         const dateKey = this.getLocalDateKey();
         return this.todaySchedule
             .filter((slot) => slot && slot.slot_type === 'period')
             .map((slot) => {
-                const periodNumber = Number(slot.period);
-                const periodLabel = Number.isFinite(periodNumber) && periodNumber > 0
-                    ? `${periodNumber}교시`
-                    : String(slot.slot_label || '').trim() || '교시';
-                const rawSubject = String(slot.name || '').trim();
-                const subjectName = rawSubject && rawSubject !== periodLabel ? rawSubject : '미정';
-                const spokenSubject = rawSubject && rawSubject !== periodLabel ? rawSubject : '수업';
+                const periodLabel = this.getSchedulePeriodLabel(slot);
+                const subjectName = this.getScheduleSubjectName(slot);
+                const spokenSubject = subjectName || '수업';
                 const startTime = String(slot.startTime || '').trim();
                 const startMinutes = this.timeStringToMinutes(startTime);
-                if (!Number.isFinite(startMinutes)) return null;
+                if (!subjectName || !Number.isFinite(startMinutes)) return null;
 
                 const announceMinutes = Math.max(0, startMinutes - this.ttsMinutesBefore);
                 const rowId = String(slot.id || slot.slot_code || `${periodLabel}-${startTime}`);
@@ -2085,6 +2141,7 @@ class DutyTickerManager {
             this.ttsVoiceUri = String(data.settings.tts_voice_uri || '').trim();
             this.ttsRate = this.normalizeTtsRate(data.settings.tts_rate);
             this.ttsPitch = this.normalizeTtsPitch(data.settings.tts_pitch);
+            this.setTimeSlots(data.timeSlots || []);
             this.setMissionAutomations(data.automations || []);
 
             // Apply Theme to DOM
@@ -2150,7 +2207,7 @@ class DutyTickerManager {
         if (!container) return;
 
         const periodSchedule = this.todaySchedule
-            .filter((slot) => slot && slot.slot_type === 'period')
+            .filter((slot) => slot && slot.slot_type === 'period' && this.getScheduleSubjectName(slot))
             .sort((a, b) => Number(a?.period || 0) - Number(b?.period || 0));
 
         this.updateBroadcastModalTtsInfo();
@@ -2164,15 +2221,17 @@ class DutyTickerManager {
 
         const now = new Date();
         const nowMinutes = (now.getHours() * 60) + now.getMinutes();
-        const showAllMorningSlots = nowMinutes >= (8 * 60) && nowMinutes <= ((8 * 60) + 50);
+        const morningSlot = this.getTodaySlotByCode('morning');
+        const morningStart = this.timeStringToMinutes(morningSlot?.startTime);
+        const morningEnd = this.timeStringToMinutes(morningSlot?.endTime);
+        const showAllMorningSlots = Number.isFinite(morningStart)
+            && Number.isFinite(morningEnd)
+            && nowMinutes >= morningStart
+            && nowMinutes < morningEnd;
 
         const normalizedSlots = periodSchedule.map((slot) => {
-            const periodNumber = Number(slot.period);
-            const periodLabel = Number.isFinite(periodNumber) && periodNumber > 0
-                ? `${periodNumber}교시`
-                : String(slot.slot_label || '').trim() || '교시';
-            const rawSubject = String(slot.name || '').trim();
-            const subjectName = rawSubject && rawSubject !== periodLabel ? rawSubject : '미정';
+            const periodLabel = this.getSchedulePeriodLabel(slot);
+            const subjectName = this.getScheduleSubjectName(slot);
             const startTime = String(slot.startTime || '').trim();
             const endTime = String(slot.endTime || '').trim();
             const startMinutes = this.timeStringToMinutes(startTime);
