@@ -842,6 +842,7 @@ def _build_home_quickdrop_card(user, favorite_products, product_list):
     summary = ""
     has_recent_item = False
     channel = None
+    history_url = reverse("quickdrop:open")
     try:
         from quickdrop.services import get_or_create_personal_channel
 
@@ -858,6 +859,7 @@ def _build_home_quickdrop_card(user, favorite_products, product_list):
                 latest_text = " ".join(str(getattr(latest_item, "text", "") or "").split())
                 if latest_text:
                     summary = latest_text[:72] + ("..." if len(latest_text) > 72 else "")
+        history_url = f'{reverse("quickdrop:channel", kwargs={"slug": channel.slug})}?focus=history#history-panel'
     except Exception:
         logger.exception("[home quickdrop] failed to build quickdrop card context")
 
@@ -867,6 +869,7 @@ def _build_home_quickdrop_card(user, favorite_products, product_list):
         "has_recent_item": has_recent_item,
         "open_url": reverse("quickdrop:open"),
         "manage_url": reverse("quickdrop:landing"),
+        "history_url": history_url,
         "send_text_url": reverse("quickdrop:send_text", kwargs={"slug": channel.slug}) if channel is not None else "",
     }
 

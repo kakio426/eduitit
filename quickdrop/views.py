@@ -197,7 +197,6 @@ def landing_view(request):
     channel = get_or_create_personal_channel(request.user)
     owner_device, _created = remember_owner_device_for_request(request, channel)
     token = build_pair_token(channel)
-    channel_url = reverse("quickdrop:channel", kwargs={"slug": channel.slug})
     pair_url = request.build_absolute_uri(reverse("quickdrop:pair", args=[token]))
     latest_item = latest_today_item(channel)
     context = {
@@ -208,8 +207,7 @@ def landing_view(request):
         "latest_item": latest_item,
         "today_count": today_item_count(channel),
         "active_devices": channel.devices.filter(revoked_at__isnull=True).order_by("paired_at"),
-        "open_url": channel_url,
-        "history_url": f"{channel_url}?focus=history#history-panel",
+        "open_url": reverse("quickdrop:channel", kwargs={"slug": channel.slug}),
     }
     response = _apply_private_response_headers(render(request, "quickdrop/landing.html", context))
     issue_device_cookie(response, channel, owner_device)

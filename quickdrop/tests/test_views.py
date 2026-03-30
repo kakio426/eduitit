@@ -68,14 +68,9 @@ class QuickdropViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.channel.slug)
-        self.assertContains(response, "오늘 보낸 내용 보기")
-        self.assertContains(response, 'id="pairing-tools"')
-        self.assertContains(response, 'aria-label="새 기기 연결"')
+        self.assertContains(response, "텍스트와 사진을 바로 옮깁니다.")
+        self.assertContains(response, "새 기기 연결")
         self.assertContains(response, "연결된 기기")
-        self.assertContains(
-            response,
-            reverse("quickdrop:channel", kwargs={"slug": self.channel.slug}) + "?focus=history#history-panel",
-        )
         self.assertEqual(response.headers["Cache-Control"], "no-store, private")
         self.assertEqual(response.headers["X-Robots-Tag"], "noindex, nofollow, noarchive")
         self.assertIn(DEVICE_COOKIE_NAME, response.cookies)
@@ -209,7 +204,7 @@ class QuickdropViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "빠른쌤")
         self.assertNotContains(response, "quickdrop_teacher")
-        self.assertContains(response, "+ 새 기기")
+        self.assertContains(response, "연결 기기")
 
     def test_send_text_replaces_current_payload(self):
         self.client.logout()

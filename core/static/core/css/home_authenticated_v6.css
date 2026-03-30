@@ -157,6 +157,59 @@
     background: linear-gradient(180deg, rgba(251, 250, 255, 0.98) 0%, rgba(255, 255, 255, 0.96) 100%);
 }
 
+.home-v6-page .home-v6-quickdrop-head,
+.home-v6-page .home-v6-mobile-quickdrop-head {
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.home-v6-page .home-v6-quickdrop-heading,
+.home-v6-page .home-v6-mobile-quickdrop-heading {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+    min-width: 0;
+    flex: 1;
+}
+
+.home-v6-page .home-v6-mobile-quickdrop-heading {
+    gap: 0.8rem;
+}
+
+.home-v6-page .home-v6-quickdrop-shortcut {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.55rem;
+    height: 2.55rem;
+    flex-shrink: 0;
+    border: 1px solid rgba(91, 44, 207, 0.16);
+    border-radius: 999px;
+    background: #ffffff;
+    color: var(--color-brand-700);
+    box-shadow: 0 12px 24px rgba(91, 44, 207, 0.1);
+    text-decoration: none;
+}
+
+.home-v6-page .home-v6-quickdrop-shortcut:hover,
+.home-v6-page .home-v6-quickdrop-shortcut:focus-visible {
+    border-color: rgba(124, 92, 250, 0.28);
+    background: rgba(238, 232, 255, 0.5);
+    color: var(--color-brand-900);
+    transform: translateY(-1px);
+}
+
+.home-v6-page .home-v6-quickdrop-shortcut span {
+    font-size: 1.2rem;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.home-v6-page .home-v6-quickdrop-shortcut--mobile {
+    width: 2.4rem;
+    height: 2.4rem;
+}
+
 .home-v6-page .home-v4-developer-chat-icon,
 .home-v6-page .home-v4-quickdrop-primary,
 .home-v6-page .home-v4-developer-chat-primary {

@@ -3028,6 +3028,7 @@ class HomeV6ViewTest(TestCase):
         from quickdrop.models import QuickdropChannel
 
         channel = QuickdropChannel.objects.get(owner=user)
+        history_url = f'{reverse("quickdrop:channel", kwargs={"slug": channel.slug})}?focus=history#history-panel'
 
         self.assertEqual(response.context['home_design_version'], 'v6')
         self.assertIn('data-home-v4-quickdrop-panel="true"', content)
@@ -3036,6 +3037,9 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('aria-label="보낼 내용"', content)
         self.assertIn('지금 보내기', content)
         self.assertIn(f'href="{reverse("quickdrop:landing")}"', content)
+        self.assertIn('aria-label="새 기기 연결"', content)
+        self.assertIn(f'href="{history_url}"', content)
+        self.assertIn('오늘 보낸 내용', content)
         self.assertNotIn(f'href="{reverse("quickdrop:open")}"', content)
 
     def test_v6_home_shows_shared_school_reservation_card(self):
@@ -3098,6 +3102,8 @@ class HomeV6ViewTest(TestCase):
         self.assertEqual(response.context['home_design_version'], 'v6')
         self.assertNotIn('title="바로전송">바로전송</p>', workbench_block)
         self.assertEqual(mobile_block.count('data-home-v4-mobile-quickdrop="true"'), 1)
+        self.assertIn('aria-label="새 기기 연결"', mobile_block)
+        self.assertIn('오늘 보낸 내용', mobile_block)
         self.assertLess(workbench_index, calendar_index)
         self.assertLess(calendar_index, quickdrop_index)
         self.assertLess(quickdrop_index, reservation_index)

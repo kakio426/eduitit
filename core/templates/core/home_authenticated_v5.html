@@ -376,11 +376,23 @@
 
                             {% if quickdrop_home_card %}
                             <section class="home-v4-card home-v4-quickdrop-panel" data-home-v4-quickdrop-panel="true">
-                                <div class="home-v4-quickdrop-head">
+                                <div class="home-v4-quickdrop-head{% if home_design_version == 'v6' %} home-v6-quickdrop-head{% endif %}">
+                                    {% if home_design_version == 'v6' %}
+                                    <div class="home-v6-quickdrop-heading">
+                                        <div class="home-v4-quickdrop-icon" aria-hidden="true">↔</div>
+                                        <div class="min-w-0">
+                                            <h2 class="text-lg font-black text-slate-900">{{ quickdrop_home_card.title }}</h2>
+                                        </div>
+                                    </div>
+                                    <a href="{{ quickdrop_home_card.manage_url }}" class="home-v6-quickdrop-shortcut" aria-label="새 기기 연결">
+                                        <span aria-hidden="true">+</span>
+                                    </a>
+                                    {% else %}
                                     <div class="home-v4-quickdrop-icon" aria-hidden="true">↔</div>
                                     <div class="min-w-0">
                                         <h2 class="text-lg font-black text-slate-900">{{ quickdrop_home_card.title }}</h2>
                                     </div>
+                                    {% endif %}
                                 </div>
                                 <p
                                     class="home-v4-quickdrop-summary"
@@ -418,7 +430,7 @@
                                             class="home-v4-quickdrop-primary"
                                             :disabled="isSendingQuickdropHomeText"
                                         >지금 보내기</button>
-                                        <a href="{{ quickdrop_home_card.manage_url }}" class="home-v4-quickdrop-secondary">새 기기 연결</a>
+                                        <a href="{{ quickdrop_home_card.history_url }}" class="home-v4-quickdrop-secondary">오늘 보낸 내용</a>
                                     </div>
                                 </form>
                                 {% else %}

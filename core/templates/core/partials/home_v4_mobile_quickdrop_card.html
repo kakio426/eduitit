@@ -3,7 +3,25 @@
     data-home-v4-mobile-quickdrop="true"
     {% if quickdrop_placement %}data-home-v4-mobile-quickdrop-placement="{{ quickdrop_placement }}"{% endif %}
 >
-    <div class="home-v4-mobile-quickdrop-head">
+    <div class="home-v4-mobile-quickdrop-head{% if home_design_version == 'v6' %} home-v6-mobile-quickdrop-head{% endif %}">
+        {% if home_design_version == 'v6' %}
+        <div class="home-v6-mobile-quickdrop-heading">
+            <div class="home-v4-mobile-quickdrop-icon" aria-hidden="true">↔</div>
+            <div class="min-w-0 flex-1">
+                <h3 class="text-base font-black text-slate-900">{{ quickdrop_home_card.title }}</h3>
+                <p
+                    class="home-v4-mobile-quickdrop-summary mt-1"
+                    data-initial-summary="{{ quickdrop_home_card.summary|default:'' }}"
+                    x-show="typeof quickdropHomeHasSummary === 'function' ? quickdropHomeHasSummary($el.dataset.initialSummary || '') : !!($el.dataset.initialSummary || '')"
+                    x-text="typeof quickdropHomeSummaryText === 'function' ? quickdropHomeSummaryText($el.dataset.initialSummary || '') : ($el.dataset.initialSummary || '')"
+                    {% if not quickdrop_home_card.has_recent_item %}style="display:none;"{% endif %}
+                >{{ quickdrop_home_card.summary|default:'' }}</p>
+            </div>
+        </div>
+        <a href="{{ quickdrop_home_card.manage_url }}" class="home-v6-quickdrop-shortcut home-v6-quickdrop-shortcut--mobile" aria-label="새 기기 연결">
+            <span aria-hidden="true">+</span>
+        </a>
+        {% else %}
         <div class="home-v4-mobile-quickdrop-icon" aria-hidden="true">↔</div>
         <div class="min-w-0 flex-1">
             <h3 class="text-base font-black text-slate-900">{{ quickdrop_home_card.title }}</h3>
@@ -15,6 +33,7 @@
                 {% if not quickdrop_home_card.has_recent_item %}style="display:none;"{% endif %}
             >{{ quickdrop_home_card.summary|default:'' }}</p>
         </div>
+        {% endif %}
     </div>
     <form
         method="post"
@@ -45,7 +64,7 @@
                 class="home-v4-mobile-quickdrop-primary"
                 :disabled="isSendingQuickdropHomeText"
             >지금 보내기</button>
-            <a href="{{ quickdrop_home_card.manage_url }}" class="home-v4-mobile-quickdrop-secondary">새 기기 연결</a>
+            <a href="{% if home_design_version == 'v6' %}{{ quickdrop_home_card.history_url }}{% else %}{{ quickdrop_home_card.manage_url }}{% endif %}" class="home-v4-mobile-quickdrop-secondary">{% if home_design_version == 'v6' %}오늘 보낸 내용{% else %}새 기기 연결{% endif %}</a>
         </div>
     </form>
 </section>
