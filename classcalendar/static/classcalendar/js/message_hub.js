@@ -844,10 +844,10 @@ function initCalendarMessageHub(host, options = {}) {
         messageArchivePrimaryActionTitle: function() {
             const editableCount = this.messageArchiveVisibleCandidates().length;
             if (editableCount > 0) {
-                return editableCount === 1 ? '이 일정 1개를 바로 고치기' : `찾은 일정 ${editableCount}개를 바로 고치기`;
+                return editableCount === 1 ? '찾은 일정 1개를 다시 확인해요' : `찾은 일정 ${editableCount}개를 다시 확인해요`;
             }
             if (this.hasSelectedCaptureLinkedItems()) {
-                return '이미 저장한 내용 다시 확인하기';
+                return '이미 저장한 내용 다시 열기';
             }
             return '날짜 다시 확인하기';
         },
@@ -855,16 +855,16 @@ function initCalendarMessageHub(host, options = {}) {
         messageArchivePrimaryActionDescription: function() {
             const editableCount = this.messageArchiveVisibleCandidates().length;
             if (editableCount > 0) {
-                return '눌러서 제목과 날짜를 바로 손보세요.';
+                return '이 메시지를 다시 열어 제목과 날짜만 손보면 됩니다.';
             }
             if (this.hasSelectedCaptureLinkedItems()) {
-                return '다시 열고 필요한 날짜나 메모만 바로 고칠 수 있어요.';
+                return '저장한 내용을 다시 열어 필요한 날짜나 메모만 고칠 수 있어요.';
             }
             return '다시 열어서 날짜를 확인하고 저장하면 됩니다.';
         },
 
         messageArchivePrimaryActionButtonText: function() {
-            return this.messageArchiveVisibleCandidates().length > 0 ? '이 일정 고치기' : '다시 열기';
+            return '이 메시지 다시 열기';
         },
 
         formatTaskLinkedDate: function(task) {
