@@ -342,10 +342,14 @@
 
 .home-v4-nav-item-main {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 0.72rem;
     min-width: 0;
     flex: 1;
+}
+
+.home-v4-nav-copy {
+    min-width: 0;
 }
 
 .home-v4-nav-item-side {
@@ -414,6 +418,17 @@
     line-height: 1.25;
     letter-spacing: -0.015em;
     color: #0f172a;
+}
+
+.home-v4-nav-subtitle {
+    margin-top: 0.2rem;
+    color: #64748b;
+    font-size: 0.74rem;
+    font-weight: 700;
+    line-height: 1.35;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .home-v4-nav-count {
@@ -518,6 +533,13 @@
 .home-v4-tool-summary {
     overflow-wrap: anywhere;
     word-break: keep-all;
+}
+
+.home-v4-tool-summary {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+    overflow: hidden;
 }
 
 .home-v4-tool-favorite-badge {

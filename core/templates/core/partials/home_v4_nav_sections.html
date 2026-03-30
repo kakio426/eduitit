@@ -12,8 +12,11 @@
                 <span class="home-v4-nav-icon home-v4-nav-icon--{{ section.color }}">
                     <i class="{{ section.icon }}"></i>
                 </span>
-                <span class="min-w-0 flex-1">
+                <span class="home-v4-nav-copy min-w-0 flex-1">
                     <span class="block truncate home-v4-nav-title">{{ section.title }}</span>
+                    {% if section.subtitle %}
+                    <span class="block truncate home-v4-nav-subtitle">{{ section.subtitle }}</span>
+                    {% endif %}
                 </span>
             </span>
             <span class="home-v4-nav-item-side">

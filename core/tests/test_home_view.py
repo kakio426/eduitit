@@ -2999,6 +2999,8 @@ class HomeV6ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
+        nav_sections = response.context['home_v4_nav_sections']
+        first_subtitle = next(section['subtitle'] for section in nav_sections if section.get('subtitle'))
 
         self.assertTemplateUsed(response, 'core/home_authenticated_v5.html')
         self.assertEqual(response.context['home_design_version'], 'v6')
@@ -3009,6 +3011,11 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('home-v6-page', content)
         self.assertIn('home-v6-shell', content)
         self.assertIn('data-classcalendar-home-card="true"', content)
+        self.assertIn(first_subtitle, content)
+        self.assertIn('home-v4-nav-subtitle', content)
+        self.assertIn('data-home-v6-rail-card="true"', content)
+        self.assertIn('data-home-v6-rail-item="true"', content)
+        self.assertIn('data-home-v6-rail-action="true"', content)
 
     def test_v6_quickdrop_card_uses_direct_send_form(self):
         user = self._login('v6quickdropdirect')
@@ -3060,6 +3067,8 @@ class HomeV6ViewTest(TestCase):
             reverse('reservations:reservation_index', args=['shared-middle-home']),
             content,
         )
+        self.assertIn('data-home-v6-rail-card="true"', content)
+        self.assertIn('data-home-v6-rail-arrow="true"', content)
 
     @override_settings(FEATURE_MESSAGE_CAPTURE_ENABLED=True)
     def test_v6_mobile_places_reservation_below_quickdrop_without_duplicate(self):

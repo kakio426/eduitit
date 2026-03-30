@@ -104,7 +104,7 @@
                 <section class="home-v5-mobile-stack" data-home-v5-mobile-stack="true">
                     {% for mobile_section in home_v5_mobile_section_order %}
                     {% if mobile_section == 'workbench' %}
-                    <article class="home-v5-mobile-panel" data-home-v5-mobile-workbench="true">
+                    <article class="home-v5-mobile-panel" data-home-v5-mobile-workbench="true" data-home-v6-rail-card="true">
                         <div class="home-v5-mobile-panel-head">
                             <div>
                                 <h2 class="home-v5-mobile-panel-title">내 작업대</h2>
@@ -117,6 +117,7 @@
                             <div
                                 class="home-v5-mobile-workbench-card product-card"
                                 data-home-v5-mobile-workbench-card="true"
+                                data-home-v6-rail-item="true"
                                 data-service-type="{{ item.product.service_type|default:'etc' }}"
                                 data-product-id="{{ item.product.id }}"
                                 data-launch-href="{{ item.href }}"
@@ -137,6 +138,7 @@
                                 <button
                                     type="button"
                                     class="home-v5-mobile-workbench-star favorite-toggle-btn"
+                                    data-home-v6-rail-action="true"
                                     data-product-id="{{ item.product.id }}"
                                     data-favorite-toggle="true"
                                     aria-pressed="false"
@@ -167,7 +169,7 @@
                     {% endif %}
                     {% elif mobile_section == 'reservations' %}
                     {% if reservation_home_card %}
-                    <article class="home-v5-mobile-panel" data-home-reservations-card="true">
+                    <article class="home-v5-mobile-panel" data-home-reservations-card="true" data-home-v6-rail-card="true">
                         <div class="home-v5-mobile-panel-head">
                             <div>
                                 <h2 class="home-v5-mobile-panel-title">내 학교 예약</h2>
@@ -175,6 +177,7 @@
                             <a
                                 href="{{ reservation_home_card.dashboard_url }}"
                                 class="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 transition hover:border-indigo-200 hover:text-indigo-700"
+                                data-home-v6-rail-action="true"
                             >
                                 전체 보기
                             </a>
@@ -185,6 +188,7 @@
                                 href="{{ item.href }}"
                                 class="flex items-start justify-between gap-3 rounded-[1.4rem] border border-slate-200 bg-white/90 px-4 py-4 transition hover:border-indigo-200 hover:bg-indigo-50/70"
                                 data-home-reservations-item="true"
+                                data-home-v6-rail-item="true"
                             >
                                 <div class="min-w-0">
                                     <div class="flex flex-wrap items-center gap-2">
@@ -197,7 +201,7 @@
                                     <p class="mt-1 text-xs leading-5 text-slate-500">{{ item.summary }}</p>
                                     {% endif %}
                                 </div>
-                                <span class="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400">
+                                <span class="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400" data-home-v6-rail-arrow="true">
                                     <i class="fa-solid fa-arrow-right"></i>
                                 </span>
                             </a>
@@ -280,7 +284,7 @@
                         </div>
 
                         <div class="home-v4-side-stack">
-                            <article class="home-v4-card home-v4-top-favorites" data-home-v4-favorites-panel="true">
+                            <article class="home-v4-card home-v4-top-favorites" data-home-v4-favorites-panel="true" data-home-v6-rail-card="true">
                                 <div class="mb-4 flex items-center gap-2">
                                     <i class="fa-solid fa-star text-amber-500"></i>
                                     <h2 class="text-lg font-black text-slate-900">내 작업대</h2>
@@ -292,6 +296,7 @@
                                     {% with favorite_title=item.favorite_title|default:item.favorite_full_title %}
                                     <div class="home-v4-favorite-card product-card"
                                         data-home-v4-favorite-card="true"
+                                        data-home-v6-rail-item="true"
                                         data-service-type="{{ item.product.service_type|default:'etc' }}"
                                         data-product-id="{{ item.product.id }}"
                                         data-launch-href="{{ item.href }}"
@@ -314,6 +319,7 @@
                                         </div>
                                         <button type="button"
                                             class="home-v5-favorite-card-star favorite-toggle-btn inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-300 hover:border-amber-300 hover:text-amber-500 transition-colors"
+                                            data-home-v6-rail-action="true"
                                             data-product-id="{{ item.product.id }}"
                                             data-favorite-toggle="true"
                                             aria-pressed="false"
@@ -333,7 +339,7 @@
                             </article>
 
                             {% if reservation_home_card %}
-                            <section class="home-v4-card" data-home-reservations-card="true">
+                            <section class="home-v4-card" data-home-reservations-card="true" data-home-v6-rail-card="true">
                                 <div class="mb-4 flex items-center justify-between gap-3">
                                     <div>
                                         <div class="mb-1 flex items-center gap-2">
@@ -344,6 +350,7 @@
                                     <a
                                         href="{{ reservation_home_card.dashboard_url }}"
                                         class="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 transition hover:border-indigo-200 hover:text-indigo-700"
+                                        data-home-v6-rail-action="true"
                                     >
                                         전체 보기
                                     </a>
@@ -355,6 +362,7 @@
                                         href="{{ item.href }}"
                                         class="flex items-start justify-between gap-3 rounded-[1.25rem] border border-slate-200 bg-white/90 px-4 py-3.5 transition hover:border-indigo-200 hover:bg-indigo-50/70"
                                         data-home-reservations-item="true"
+                                        data-home-v6-rail-item="true"
                                     >
                                         <div class="min-w-0">
                                             <div class="flex flex-wrap items-center gap-2">
@@ -367,7 +375,7 @@
                                             <p class="mt-1 text-xs leading-5 text-slate-500">{{ item.summary }}</p>
                                             {% endif %}
                                         </div>
-                                        <span class="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400">
+                                        <span class="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400" data-home-v6-rail-arrow="true">
                                             <i class="fa-solid fa-arrow-right"></i>
                                         </span>
                                     </a>
