@@ -788,8 +788,8 @@
                     <template x-for="date in calendarDates" :key="date.toISOString()">
                         <button
                             type="button"
-                            class="classcalendar-day-cell flex w-full flex-col justify-between p-2 text-left transition hover:bg-slate-50 sm:p-2.5"
-                            :class="isSelectedDate(date) ? 'bg-slate-50 ring-1 ring-inset ring-slate-300' : 'bg-white'"
+                            class="classcalendar-day-cell flex h-full w-full flex-col justify-between border border-transparent p-2 text-left transition hover:bg-slate-50 sm:p-2.5"
+                            :class="isSelectedDate(date) ? 'border-indigo-200 bg-indigo-50' : 'bg-white'"
                             @click="handleDayCellClick(date, $event)"
                             :title="getDayTooltip(date)"
                         >
