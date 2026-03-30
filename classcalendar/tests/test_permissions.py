@@ -101,6 +101,8 @@ class PermissionTest(TestCase):
         self.assertIn('data-classcalendar-main-view="true"', content)
         self.assertIn('data-classcalendar-embed-mode="home"', content)
         self.assertIn('data-classcalendar-day-modal="true"', content)
+        self.assertIn("classcalendar-day-modal-shell", content)
+        self.assertIn("classcalendar-day-modal-dialog", content)
         self.assertIn("classcalendar-day-cell flex h-full w-full flex-col justify-between border border-transparent", content)
         self.assertIn("isSelectedDate(date) ? 'border-indigo-200 bg-indigo-50' : 'bg-white'", content)
         self.assertIn("surfaceAllowsManage: true", content)
