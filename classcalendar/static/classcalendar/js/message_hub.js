@@ -397,6 +397,10 @@ function initCalendarMessageHub(host, options = {}) {
             return map[String(status || 'pending')] || map.pending;
         },
 
+        isAdvancedMessageArchiveFilter: function() {
+            return ['pending', 'needs_review', 'failed'].includes(String(this.messageArchiveFilter || 'all'));
+        },
+
         archiveCandidateBadgeClass: function(kind) {
             const map = {
                 event: 'border-indigo-200 bg-indigo-50 text-indigo-700',
@@ -686,6 +690,23 @@ function initCalendarMessageHub(host, options = {}) {
             this.loadMessageArchive({ reset: true });
         },
 
+        scrollMessageArchivePaneToTop: function(refName) {
+            const run = () => {
+                const pane = this.$refs ? this.$refs[refName] : null;
+                if (!pane) return;
+                if (typeof pane.scrollTo === 'function') {
+                    pane.scrollTo({ top: 0, behavior: 'auto' });
+                    return;
+                }
+                pane.scrollTop = 0;
+            };
+            if (typeof this.$nextTick === 'function') {
+                this.$nextTick(run);
+                return;
+            }
+            window.setTimeout(run, 0);
+        },
+
         loadMessageArchive: async function({ reset = false, page = null, preferredCaptureId = '' } = {}) {
             if (this.isLoadingMessageArchive) return;
             const url = this.buildMessageCaptureArchiveUrl(page || (reset ? 1 : this.messageArchivePage || 1));
@@ -729,6 +750,9 @@ function initCalendarMessageHub(host, options = {}) {
                     await this.selectMessageArchiveItem(captureIdToSelect);
                 } else if (reset && this.messageArchiveItems.length > 0) {
                     await this.selectMessageArchiveItem(this.messageArchiveItems[0].capture_id);
+                }
+                if (reset) {
+                    this.scrollMessageArchivePaneToTop('messageHubArchiveList');
                 }
             } catch (error) {
                 this.messageArchiveErrorText = error.message || '보관 메모를 불러오지 못했습니다.';
@@ -797,6 +821,7 @@ function initCalendarMessageHub(host, options = {}) {
             try {
                 const payload = await this.requestJson(url);
                 this.messageArchiveSelectedCapture = payload;
+                this.scrollMessageArchivePaneToTop('messageHubArchiveDetailBody');
             } catch (error) {
                 this.messageArchiveSelectedCapture = null;
                 this.messageArchiveErrorText = error.message || '메모 상세를 불러오지 못했습니다.';
@@ -841,7 +866,14 @@ function initCalendarMessageHub(host, options = {}) {
             return this.selectedCaptureLinkedItems().length > 0;
         },
 
+        isSelectedCaptureUnparsed: function() {
+            return Boolean(this.messageArchiveSelectedCapture && this.messageArchiveSelectedCapture.archive_status === 'unparsed');
+        },
+
         messageArchivePrimaryActionTitle: function() {
+            if (this.isSelectedCaptureUnparsed()) {
+                return '아직 읽지 않은 메시지예요';
+            }
             const editableCount = this.messageArchiveVisibleCandidates().length;
             if (editableCount > 0) {
                 return editableCount === 1 ? '찾은 일정 1개를 다시 확인해요' : `찾은 일정 ${editableCount}개를 다시 확인해요`;
@@ -853,18 +885,25 @@ function initCalendarMessageHub(host, options = {}) {
         },
 
         messageArchivePrimaryActionDescription: function() {
+            if (this.isSelectedCaptureUnparsed()) {
+                return '보관한 원문을 읽어 날짜 후보를 먼저 찾아드립니다.';
+            }
             const editableCount = this.messageArchiveVisibleCandidates().length;
             if (editableCount > 0) {
-                return '이 메시지를 다시 열어 제목과 날짜만 손보면 됩니다.';
+                return '찾은 일정만 확인하고 저장 화면으로 이어집니다.';
             }
             if (this.hasSelectedCaptureLinkedItems()) {
-                return '저장한 내용을 다시 열어 필요한 날짜나 메모만 고칠 수 있어요.';
+                return '이미 저장한 내용이 있어도 다시 열어 필요한 날짜를 고칠 수 있어요.';
             }
-            return '다시 열어서 날짜를 확인하고 저장하면 됩니다.';
+            return '원문을 다시 열어 날짜를 다시 확인할 수 있어요.';
         },
 
         messageArchivePrimaryActionButtonText: function() {
-            return '이 메시지 다시 열기';
+            return this.isSelectedCaptureUnparsed() ? '일정 확인하기' : '다시 일정 만들기';
+        },
+
+        messageArchivePrimaryActionBusy: function() {
+            return Boolean(this.isLoadingMessageArchiveDetail || this.isParsingMessageCapture);
         },
 
         formatTaskLinkedDate: function(task) {
@@ -890,10 +929,6 @@ function initCalendarMessageHub(host, options = {}) {
             return Boolean(this.messageArchiveSelectedCapture && this.messageArchiveSelectedCapture.completed_at);
         },
 
-        canToggleSelectedCapture: function() {
-            return Boolean(this.messageArchiveSelectedCapture);
-        },
-
         selectedCaptureStatusText: function() {
             return this.isSelectedCaptureCompleted() ? '완료' : '진행 중';
         },
@@ -906,6 +941,10 @@ function initCalendarMessageHub(host, options = {}) {
 
         selectedCaptureActionText: function() {
             return this.isSelectedCaptureCompleted() ? '진행 중으로 되돌리기' : '처리 완료';
+        },
+
+        canToggleSelectedCapture: function() {
+            return Boolean(this.messageArchiveSelectedCapture);
         },
 
         toggleSelectedCapture: async function() {
@@ -932,6 +971,16 @@ function initCalendarMessageHub(host, options = {}) {
             } catch (error) {
                 window.showToast(error.message || '완료 처리에 실패했습니다.', 'error');
             }
+        },
+
+        runMessageArchivePrimaryAction: async function() {
+            const captureId = this.selectedCaptureId();
+            if (!captureId || this.messageArchivePrimaryActionBusy()) return;
+            if (this.isSelectedCaptureUnparsed()) {
+                await this.submitSavedMessageCaptureParse(captureId);
+                return;
+            }
+            await this.replayMessageArchiveCapture();
         },
 
         applyArchiveDetailToMessageCapture: function(detailPayload) {
