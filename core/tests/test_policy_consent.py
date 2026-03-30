@@ -53,6 +53,11 @@ class PolicyConsentTestCase(TestCase):
 
         self.assertRedirects(response, f"{reverse('policy_consent')}?next={reverse('select_role')}")
 
+    def test_social_user_without_consent_can_open_public_portfolio(self):
+        response = self.client.get(reverse('portfolio:list'))
+
+        self.assertEqual(response.status_code, 200)
+
     def test_policy_consent_requires_both_checkboxes(self):
         response = self.client.post(reverse('policy_consent'), {'agree_terms': 'on'})
 

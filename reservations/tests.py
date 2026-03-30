@@ -532,7 +532,7 @@ class ReservationsViewTest(TestCase):
         self.assertIsNone(created.created_by)
         self.assertIn(created.id, self.client.session.get('owned_reservation_ids', []))
 
-    def test_authenticated_create_surfaces_followup_actions_on_next_page(self):
+    def test_authenticated_create_shows_followup_summary_on_next_page(self):
         self.client.force_login(self.user)
         response = self.client.post(
             reverse('reservations:create_reservation', args=[self.school.slug]),
@@ -551,9 +551,9 @@ class ReservationsViewTest(TestCase):
 
         page = self.client.get(reverse('reservations:reservation_index', args=[self.school.slug]))
         self.assertContains(page, '방금 예약한 내용')
-        self.assertContains(page, '안내문으로 이어서 만들기')
-        self.assertContains(page, '학부모 연락으로 이어서 하기')
         self.assertContains(page, '실험 수업')
+        self.assertNotContains(page, '안내문으로 이어서 만들기')
+        self.assertNotContains(page, '학부모 연락으로 이어서 하기')
 
     def test_start_notice_followup_stores_seed_and_redirects(self):
         self.client.force_login(self.user)

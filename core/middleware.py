@@ -15,6 +15,13 @@ from .policy_consent import has_current_policy_consent, user_requires_policy_con
 
 logger = logging.getLogger(__name__)
 
+PUBLIC_ACCESS_PATH_PREFIXES = ("/portfolio/",)
+PUBLIC_ACCESS_EXACT_PATHS = {"/portfolio"}
+
+
+def is_public_access_path(path):
+    return path in PUBLIC_ACCESS_EXACT_PATHS or any(path.startswith(prefix) for prefix in PUBLIC_ACCESS_PATH_PREFIXES)
+
 
 class BlockKnownProbePathsMiddleware:
     """
@@ -135,6 +142,9 @@ class PolicyConsentMiddleware:
         if not request.user.is_authenticated:
             return self.get_response(request)
 
+        if is_public_access_path(request.path):
+            return self.get_response(request)
+
         if not user_requires_policy_consent(request.user):
             return self.get_response(request)
 
@@ -189,6 +199,9 @@ class OnboardingMiddleware:
         from django.conf import settings
 
         if request.user.is_authenticated:
+            if is_public_access_path(request.path):
+                return self.get_response(request)
+
             profile = getattr(request.user, 'userprofile', None)
             
             # 이메일이 없거나, 닉네임이 없거나, 닉네임이 여전히 'user'로 시작하는 자동생성된 것이라면

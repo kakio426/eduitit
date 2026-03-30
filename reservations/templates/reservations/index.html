@@ -221,7 +221,7 @@
     {% if reservation_followup %}
     <div class="max-w-7xl mx-auto px-4 mb-4">
         <div class="rounded-2xl border border-indigo-200 bg-indigo-50/80 p-4 md:p-5 shadow-sm">
-            <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div>
                 <div>
                     <p class="text-xs font-bold uppercase tracking-wide text-indigo-600">방금 예약한 내용</p>
                     <h2 class="mt-1 text-xl font-bold text-gray-800">{{ reservation_followup.summary }}</h2>
@@ -230,18 +230,6 @@
                     <p class="mt-2 text-sm text-gray-500">메모: {{ reservation_followup.memo }}</p>
                     {% endif %}
                 </div>
-                {% if request.user.is_authenticated %}
-                <div class="flex flex-col gap-2 sm:flex-row">
-                    <form method="post" action="{% url 'reservations:start_notice_followup' school.slug reservation_followup.reservation_id %}">
-                        {% csrf_token %}
-                        <button type="submit" class="w-full rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white hover:bg-indigo-700 transition">안내문으로 이어서 만들기</button>
-                    </form>
-                    <form method="post" action="{% url 'reservations:start_parentcomm_followup' school.slug reservation_followup.reservation_id %}">
-                        {% csrf_token %}
-                        <button type="submit" class="w-full rounded-xl border border-indigo-200 bg-white px-4 py-3 text-sm font-bold text-indigo-700 hover:bg-indigo-100 transition">학부모 연락으로 이어서 하기</button>
-                    </form>
-                </div>
-                {% endif %}
             </div>
         </div>
     </div>

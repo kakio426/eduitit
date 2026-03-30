@@ -47,6 +47,13 @@ class OnboardingTests(TestCase):
         response = self.client.get(reverse('home'))
         self.assertEqual(response.status_code, 200)
 
+    def test_public_portfolio_bypasses_onboarding_redirect(self):
+        self.client.login(username='test_no_email', password='password123')
+
+        response = self.client.get(reverse('portfolio:list'))
+
+        self.assertEqual(response.status_code, 200)
+
     def test_update_email_submission(self):
         self.client.login(username='test_no_email', password='password123')
         # Submit new name and email
