@@ -121,6 +121,8 @@ class PermissionTest(TestCase):
         self.assertNotIn("안내문이나 메모를 넣으면 날짜 후보를 찾아 저장하고, 나중에 다시 꺼내 볼 수 있습니다.", content)
         self.assertNotIn('<p class="classcalendar-meta-label font-semibold text-slate-500">선택한 날짜</p>', content)
         self.assertIn("scroll-margin-top: calc(var(--main-nav-height, 88px) + 1rem);", content)
+        self.assertNotIn("this.scrollHomeInlineDayPanelIntoView();", content)
+        self.assertIn("this.restoreWindowScrollPosition(preservedScroll);", content)
 
     def test_main_view_day_modal_can_show_connected_items(self):
         response = self.client_teacher.get(reverse("calendar_main"), follow=True)

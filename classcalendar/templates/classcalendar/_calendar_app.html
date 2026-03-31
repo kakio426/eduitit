@@ -2975,12 +2975,14 @@ function calendarApp() {
             return this.usesHomeInlineDayPanel() && this.homeInlineDayPanelOpen && this.hasSelectedDateInCurrentMonth();
         },
 
-        openHomeInlineDayPanel(date) {
+        openHomeInlineDayPanel(date, triggerEvent = null) {
+            const preservedScroll = this.captureWindowScrollPosition();
             this.selectDate(date);
             this.homeInlineDayPanelOpen = true;
             this.dayModalOpen = false;
             this.$nextTick(() => {
-                this.scrollHomeInlineDayPanelIntoView();
+                this.restoreWindowScrollPosition(preservedScroll);
+                this.restoreFocusWithoutScroll(triggerEvent && triggerEvent.currentTarget ? triggerEvent.currentTarget : null);
                 notifyEmbeddedCalendarHeight();
             });
         },
@@ -3005,40 +3007,53 @@ function calendarApp() {
             return (Number.isFinite(baseOffset) ? baseOffset : 88) + extra;
         },
 
+        captureWindowScrollPosition() {
+            if (typeof window === 'undefined') return null;
+            return {
+                left: window.scrollX || window.pageXOffset || 0,
+                top: window.scrollY || window.pageYOffset || 0,
+            };
+        },
+
+        restoreWindowScrollPosition(position) {
+            if (!position || typeof window === 'undefined' || typeof window.scrollTo !== 'function') return;
+            const applyScroll = () => {
+                try {
+                    window.scrollTo({
+                        left: position.left,
+                        top: position.top,
+                        behavior: 'auto',
+                    });
+                } catch (error) {
+                    window.scrollTo(position.left, position.top);
+                }
+            };
+            if (typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(applyScroll);
+                return;
+            }
+            window.setTimeout(applyScroll, 0);
+        },
+
+        restoreFocusWithoutScroll(target) {
+            if (!target || typeof target.focus !== 'function') return;
+            try {
+                target.focus({ preventScroll: true });
+            } catch (error) {
+                target.focus();
+            }
+        },
+
         handleDayCellClick(date, triggerEvent = null) {
             if (this.isCompactMobileViewport()) {
                 this.openDayOverview(date, triggerEvent);
                 return;
             }
             if (this.usesHomeInlineDayPanel()) {
-                this.openHomeInlineDayPanel(date);
+                this.openHomeInlineDayPanel(date, triggerEvent);
                 return;
             }
             this.openDayOverview(date, triggerEvent);
-        },
-
-        scrollHomeInlineDayPanelIntoView() {
-            this.$nextTick(() => {
-                const panel = this.$refs && this.$refs.homeInlineDayPanel ? this.$refs.homeInlineDayPanel : null;
-                if (!panel) return;
-                if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
-                    const currentScroll = window.scrollY || window.pageYOffset || 0;
-                    const targetTop = Math.max(
-                        currentScroll + panel.getBoundingClientRect().top - this.getMainNavScrollOffset(),
-                        0
-                    );
-                    window.scrollTo({
-                        top: targetTop,
-                        behavior: 'smooth',
-                    });
-                    return;
-                }
-                if (typeof panel.scrollIntoView !== 'function') return;
-                panel.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start',
-                });
-            });
         },
 
         scrollAgendaResultsToTop() {
@@ -3298,6 +3313,7 @@ function calendarApp() {
             this.selectedTask = null;
             this.dayModalMode = 'overview';
             if (this.usesHomeInlineDayPanel()) {
+                const preservedScroll = this.captureWindowScrollPosition();
                 this.dayModalOpen = false;
                 this.homeInlineDayPanelOpen = true;
                 this.syncPageState({
@@ -3307,7 +3323,7 @@ function calendarApp() {
                     open_task: '',
                 });
                 this.$nextTick(() => {
-                    this.scrollHomeInlineDayPanelIntoView();
+                    this.restoreWindowScrollPosition(preservedScroll);
                     notifyEmbeddedCalendarHeight();
                 });
                 return;
