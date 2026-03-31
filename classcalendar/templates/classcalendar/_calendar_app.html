@@ -58,19 +58,6 @@
         box-shadow: inset 0 0 0 1px #bfdbfe;
     }
 
-    .classcalendar-mobile-agenda {
-        border: 1px solid #dbe4ee;
-        border-radius: 1.5rem;
-        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-        box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
-    }
-
-    .classcalendar-mobile-agenda-item {
-        border: 1px solid #e2e8f0;
-        border-radius: 1rem;
-        background: rgba(255, 255, 255, 0.96);
-    }
-
     .classcalendar-main-toolbar-scroll {
         width: 100%;
         max-width: 100%;
@@ -887,47 +874,6 @@
                         </button>
                     </template>
                 </div>
-                <section
-                    x-show="hasSelectedDateInCurrentMonth()"
-                    x-cloak
-                    x-ref="selectedDateAgenda"
-                    class="classcalendar-mobile-agenda mt-3 scroll-mt-24 p-4 sm:hidden"
-                    style="scroll-margin-top: calc(var(--main-nav-height, 88px) + 1rem);"
-                >
-                    <div class="flex items-start justify-between gap-3">
-                        <div class="min-w-0">
-                            <p class="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-600">선택한 날짜</p>
-                            <h3 class="classcalendar-copy mt-1 text-lg font-black text-slate-900" x-text="formatAgendaDate(selectedDateKey)"></h3>
-                            <p class="mt-1 text-sm font-medium text-slate-500" x-text="`일정 ${getSelectedDateEventCount()}개 · 할 일 ${getSelectedDateTaskCount()}개`"></p>
-                        </div>
-                        <button
-                            type="button"
-                            @click="openCreateModalForSelectedDate($event)"
-                            class="inline-flex shrink-0 items-center rounded-full bg-slate-900 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-slate-700"
-                        >
-                            <i class="fa-solid fa-plus mr-1 text-[11px]"></i>
-                            일정
-                        </button>
-                    </div>
-                    <div class="mt-4 space-y-2.5" x-show="getSelectedDatePreviewItems().length > 0">
-                        <template x-for="item in getSelectedDatePreviewItems()" :key="`mobile-agenda-${item.id}`">
-                            <button
-                                type="button"
-                                @click="openSelectedDateHubItem(item, $event)"
-                                class="classcalendar-mobile-agenda-item block w-full px-3.5 py-3 text-left transition hover:border-slate-300 hover:bg-white"
-                            >
-                                <div class="min-w-0">
-                                    <p class="classcalendar-copy text-sm font-black text-slate-900" x-text="item.title"></p>
-                                    <p x-show="getAgendaItemSummaryText(item)" class="mt-1 text-xs font-semibold text-slate-500" x-text="getAgendaItemSummaryText(item)"></p>
-                                </div>
-                            </button>
-                        </template>
-                    </div>
-                    <div x-show="getSelectedDatePreviewItems().length === 0" class="mt-4 rounded-[1rem] border border-dashed border-slate-300 bg-white/70 px-4 py-5 text-center">
-                        <p class="text-sm font-bold text-slate-700">이 날짜에는 등록된 내용이 없습니다.</p>
-                        <button type="button" @click="openCreateModalForSelectedDate($event)" class="mt-3 inline-flex items-center rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-500">새 일정 추가</button>
-                    </div>
-                </section>
             </div>
             {% if not is_embedded_on_home and not is_embedded_in_sheetbook %}
                         </div>
@@ -3061,8 +3007,7 @@ function calendarApp() {
 
         handleDayCellClick(date, triggerEvent = null) {
             if (this.isCompactMobileViewport()) {
-                this.selectDate(date);
-                this.scrollSelectedDateAgendaIntoView();
+                this.openDayOverview(date, triggerEvent);
                 return;
             }
             if (this.usesHomeInlineDayPanel()) {
@@ -3070,30 +3015,6 @@ function calendarApp() {
                 return;
             }
             this.openDayOverview(date, triggerEvent);
-        },
-
-        scrollSelectedDateAgendaIntoView() {
-            this.$nextTick(() => {
-                const agenda = this.$refs && this.$refs.selectedDateAgenda ? this.$refs.selectedDateAgenda : null;
-                if (!agenda) return;
-                if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
-                    const currentScroll = window.scrollY || window.pageYOffset || 0;
-                    const targetTop = Math.max(
-                        currentScroll + agenda.getBoundingClientRect().top - this.getMainNavScrollOffset(),
-                        0
-                    );
-                    window.scrollTo({
-                        top: targetTop,
-                        behavior: 'smooth',
-                    });
-                    return;
-                }
-                if (typeof agenda.scrollIntoView !== 'function') return;
-                agenda.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start',
-                });
-            });
         },
 
         scrollHomeInlineDayPanelIntoView() {
@@ -4134,10 +4055,6 @@ function calendarApp() {
             return this.hubItems
                 .filter((item) => this.hubItemOverlapsDate(item, selectedDate))
                 .sort((left, right) => this.sortHubItems(left, right));
-        },
-        getSelectedDatePreviewItems() {
-            if (!this.hasSelectedDateInCurrentMonth()) return [];
-            return this.getSelectedDateHubItems();
         },
         getTasksForSelectedDate() {
             if (!this.selectedDateKey) return [];
