@@ -96,7 +96,7 @@ def parse_manual_pipeline_result(raw_text: str) -> dict[str, Any]:
 
 
 def build_manual_pipeline_prompt(video_url: str = "") -> str:
-    video_line = video_url.strip() if video_url else "(여기에 유튜브 URL 입력)"
+    video_line = video_url.strip() if video_url else "(여기에 영상 URL 입력)"
     return (
         "당신은 초등 미술 수업 설계 도우미입니다.\n"
         "아래 영상/자료를 보고 학생이 따라 하기 쉬운 단계별 수업안을 JSON으로만 출력하세요.\n\n"

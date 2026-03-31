@@ -3,7 +3,7 @@
 ## Purpose
 `eduitit-launcher://` 프로토콜을 받아서 수업 화면을 자동으로 좌/우 분할합니다.
 
-- Left window: YouTube playback (non-embeddable videos supported)
+- Left window: video playback (YouTube and public external video links supported)
 - Right window: Eduitit artclass dashboard (`display=dashboard`)
 
 ## Run (development)
@@ -36,6 +36,7 @@ npm run dist:win
   "version": 1,
   "classId": 123,
   "title": "수업 제목",
+  "videoUrl": "https://www.youtube.com/watch?...",
   "youtubeUrl": "https://www.youtube.com/watch?...",
   "dashboardUrl": "https://.../artclass/classroom/123/?display=dashboard&runtime=launcher",
   "updateConfigUrl": "https://.../artclass/api/launcher-release-config/",
@@ -55,3 +56,4 @@ npm run dist:win
 ## Notes
 - 웹 브라우저 팝업 제약을 우회하기 위해 창 배치는 런처가 담당합니다.
 - 런처 미설치 상태에서는 브라우저에서 프로토콜 실행이 실패하므로 설치가 필요합니다.
+- `videoUrl`이 표준 필드이며, `youtubeUrl`은 이전 런처 호환을 위한 별칭으로 함께 유지합니다.

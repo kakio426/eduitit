@@ -141,10 +141,10 @@ function parseLaunchUrl(rawUrl) {
     }
 
     const payload = decodePayload(encodedPayload);
-    const youtubeUrl = normalizeHttpUrl(payload.youtubeUrl);
+    const videoUrl = normalizeHttpUrl(payload.videoUrl || payload.youtubeUrl);
     const dashboardUrl = normalizeHttpUrl(payload.dashboardUrl);
     const updateConfigUrl = normalizeHttpUrl(payload.updateConfigUrl);
-    if (!youtubeUrl || !dashboardUrl) {
+    if (!videoUrl || !dashboardUrl) {
       throw new Error("invalid_urls");
     }
 
@@ -158,7 +158,8 @@ function parseLaunchUrl(rawUrl) {
     return {
       classId: payload.classId,
       title: payload.title || "Eduitit ArtClass",
-      youtubeUrl,
+      videoUrl,
+      youtubeUrl: videoUrl,
       dashboardUrl,
       updateConfigUrl: updateConfigUrl || "",
     };
@@ -459,17 +460,18 @@ function getCurrentLauncherVersion() {
 
 function normalizeLaunchPayload(rawPayload) {
   const source = rawPayload && typeof rawPayload === "object" ? rawPayload : {};
-  const youtubeUrl = normalizeHttpUrl(source.youtubeUrl);
+  const videoUrl = normalizeHttpUrl(source.videoUrl || source.youtubeUrl);
   const dashboardUrl = normalizeHttpUrl(source.dashboardUrl);
 
-  if (!youtubeUrl || !dashboardUrl) {
+  if (!videoUrl || !dashboardUrl) {
     return null;
   }
 
   return {
     classId: source.classId,
     title: normalizeShortText(source.title || "Eduitit ArtClass", 120) || "Eduitit ArtClass",
-    youtubeUrl,
+    videoUrl,
+    youtubeUrl: videoUrl,
     dashboardUrl,
     updateConfigUrl: normalizeHttpUrl(source.updateConfigUrl) || "",
   };
@@ -1173,7 +1175,7 @@ function replayCurrentVideo() {
   if (!lastLaunchPayload) return false;
 
   closeVideoCurtainWindow();
-  const expectedUrl = normalizeHttpUrl(lastLaunchPayload.youtubeUrl);
+  const expectedUrl = getPayloadVideoUrl(lastLaunchPayload);
   if (!expectedUrl) return false;
 
   if (!isSplitWindowAlive(videoWindow) || !isSplitWindowAlive(videoControlWindow) || !isSplitWindowAlive(dashboardWindow)) {
@@ -1221,8 +1223,16 @@ function enforceWindowVisible(win) {
   if (!win.isVisible()) win.show();
 }
 
+function getPayloadVideoUrl(payload) {
+  return normalizeHttpUrl(payload && (payload.videoUrl || payload.youtubeUrl));
+}
+
+function normalizeHostname(hostname) {
+  return String(hostname || "").toLowerCase().replace(/^www\./, "");
+}
+
 function isAllowedVideoHost(hostname) {
-  const host = String(hostname || "").replace(/^www\./, "");
+  const host = normalizeHostname(hostname);
   return (
     host === "youtube.com" ||
     host.endsWith(".youtube.com") ||
@@ -1233,8 +1243,65 @@ function isAllowedVideoHost(hostname) {
   );
 }
 
+function getRegistrableHost(hostname) {
+  const host = normalizeHostname(hostname);
+  if (!host || host.includes(":")) return host;
+  const parts = host.split(".").filter(Boolean);
+  if (parts.length <= 2) return host;
+  return parts.slice(-2).join(".");
+}
+
+function extractSupplementalVideoHosts(rawUrl) {
+  const hosts = new Set();
+  try {
+    const parsed = new URL(rawUrl);
+    for (const value of parsed.searchParams.values()) {
+      String(value || "")
+        .split(/[;,]+/)
+        .map((token) => token.trim())
+        .filter(Boolean)
+        .forEach((token) => {
+          const normalizedToken = token.replace(/^https?:\/\//i, "").replace(/\/.*$/, "");
+          if (!/[.]/.test(normalizedToken)) return;
+          hosts.add(normalizeHostname(normalizedToken));
+        });
+    }
+  } catch (_) {
+    return hosts;
+  }
+  return hosts;
+}
+
+function isAllowedExternalVideoHost(hostname, payload) {
+  const expectedUrl = getPayloadVideoUrl(payload);
+  if (!expectedUrl) return false;
+
+  const targetHost = normalizeHostname(hostname);
+  if (!targetHost) return false;
+
+  try {
+    const expectedHost = normalizeHostname(new URL(expectedUrl).hostname);
+    if (targetHost === expectedHost) return true;
+
+    const expectedSite = getRegistrableHost(expectedHost);
+    if (expectedSite && (targetHost === expectedSite || targetHost.endsWith(`.${expectedSite}`))) {
+      return true;
+    }
+
+    for (const extraHost of extractSupplementalVideoHosts(expectedUrl)) {
+      if (targetHost === extraHost || targetHost.endsWith(`.${extraHost}`)) {
+        return true;
+      }
+    }
+  } catch (_) {
+    return false;
+  }
+
+  return false;
+}
+
 function isUnexpectedVideoNavigation(targetUrl, payload) {
-  const expectedVideoId = extractYouTubeVideoId(payload && payload.youtubeUrl);
+  const expectedVideoId = extractYouTubeVideoId(getPayloadVideoUrl(payload));
   if (!expectedVideoId) return false;
 
   const navigatedVideoId = extractYouTubeVideoId(targetUrl);
@@ -1243,7 +1310,7 @@ function isUnexpectedVideoNavigation(targetUrl, payload) {
 
 function restoreOriginalVideoWindowUrl(win, payload) {
   if (!isSplitWindowAlive(win)) return;
-  const expectedUrl = normalizeHttpUrl(payload && payload.youtubeUrl);
+  const expectedUrl = getPayloadVideoUrl(payload);
   if (!expectedUrl) return;
 
   const currentUrl = normalizeHttpUrl(win.webContents.getURL());
@@ -1261,7 +1328,11 @@ function isAllowedNavigation(targetUrl, payload, role) {
       if (isUnexpectedVideoNavigation(targetUrl, payload)) {
         return false;
       }
-      return isAllowedVideoHost(parsed.hostname);
+      const expectedUrl = getPayloadVideoUrl(payload);
+      if (extractYouTubeVideoId(expectedUrl)) {
+        return isAllowedVideoHost(parsed.hostname);
+      }
+      return isAllowedExternalVideoHost(parsed.hostname, payload);
     }
     if (role === "control") {
       return parsed.protocol === "data:";
@@ -2170,8 +2241,10 @@ function createSplitWindows(payload) {
   videoWindow.__eduititSplitWindow = true;
   applyTeachingWindowBehavior(videoWindow);
   installWindowGuards(videoWindow, payload, "video");
-  videoWindow.loadURL(payload.youtubeUrl);
-  installYouTubeFocusMode(videoWindow, payload.youtubeUrl);
+  videoWindow.loadURL(getPayloadVideoUrl(payload));
+  if (extractYouTubeVideoId(getPayloadVideoUrl(payload))) {
+    installYouTubeFocusMode(videoWindow, getPayloadVideoUrl(payload));
+  }
 
   createVideoControlWindow(payload);
 

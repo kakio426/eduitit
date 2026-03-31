@@ -1,4 +1,5 @@
 import base64
+import ipaddress
 import json
 import os
 import re
@@ -87,10 +88,31 @@ def _extract_youtube_video_id(url):
     return matched.group(1) if matched else ""
 
 
+def _normalize_hostname(hostname):
+    normalized = str(hostname or "").strip().lower().rstrip(".")
+    if normalized.startswith("www."):
+        normalized = normalized[4:]
+    return normalized
+
+
+def _extract_video_hostname(video_url):
+    normalized_url = _normalize_http_url(video_url)
+    if not normalized_url:
+        return ""
+    try:
+        return _normalize_hostname(urlparse(normalized_url).hostname)
+    except Exception:
+        return ""
+
+
 def _build_launcher_video_url(video_url):
-    video_id = _extract_youtube_video_id(video_url)
+    normalized_url = _normalize_http_url(video_url)
+    if not normalized_url:
+        return ""
+
+    video_id = _extract_youtube_video_id(normalized_url)
     if not video_id:
-        return video_url
+        return normalized_url
 
     return (
         "https://www.youtube.com/watch?"
@@ -136,9 +158,39 @@ def _encode_launcher_payload(payload):
 
 def _normalize_http_url(raw_url):
     raw_url = str(raw_url or "").strip()
-    if raw_url.startswith("http://") or raw_url.startswith("https://"):
-        return raw_url
-    return ""
+    if not raw_url:
+        return ""
+    try:
+        parsed = urlparse(raw_url)
+    except Exception:
+        return ""
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return ""
+    return parsed.geturl()
+
+
+def _is_blocked_video_hostname(hostname):
+    normalized = _normalize_hostname(hostname)
+    if not normalized:
+        return True
+    if normalized == "localhost" or normalized.endswith(".localhost"):
+        return True
+    if normalized.endswith((".local", ".internal", ".lan", ".home", ".corp")):
+        return True
+
+    try:
+        parsed_ip = ipaddress.ip_address(normalized)
+    except ValueError:
+        return "." not in normalized
+
+    return (
+        parsed_ip.is_private
+        or parsed_ip.is_loopback
+        or parsed_ip.is_link_local
+        or parsed_ip.is_multicast
+        or parsed_ip.is_reserved
+        or parsed_ip.is_unspecified
+    )
 
 
 def _normalize_launcher_update_base_url(raw_url):
@@ -285,6 +337,8 @@ def _build_launcher_release_manager_context(request):
 VIDEO_ADVICE_STATUS_BROWSER_READY = "browser_ready"
 VIDEO_ADVICE_STATUS_LAUNCHER_RECOMMENDED = "launcher_recommended"
 VIDEO_ADVICE_STATUS_UNKNOWN = "unknown"
+ARTCLASS_VIDEO_SOURCE_YOUTUBE = "youtube"
+ARTCLASS_VIDEO_SOURCE_EXTERNAL = "external"
 ARTCLASS_PRIMARY_PLAYBACK_MODE = ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW
 
 ARTCLASS_GEMINI_EXAMPLE_RESULT = json.dumps(
@@ -312,8 +366,10 @@ ARTCLASS_GEMINI_EXAMPLE_RESULT = json.dumps(
 )
 
 
-def _build_video_advice_payload(status, *, title=""):
+def _build_video_advice_payload(status, *, title="", video_source=ARTCLASS_VIDEO_SOURCE_YOUTUBE, host_label=""):
     resolved_title = str(title or "").strip()
+    if not resolved_title and video_source == ARTCLASS_VIDEO_SOURCE_EXTERNAL and host_label:
+        resolved_title = f"{host_label} 영상"
     if status == VIDEO_ADVICE_STATUS_BROWSER_READY:
         return {
             "status": VIDEO_ADVICE_STATUS_BROWSER_READY,
@@ -323,34 +379,55 @@ def _build_video_advice_payload(status, *, title=""):
             "title": resolved_title,
         }
     if status == VIDEO_ADVICE_STATUS_LAUNCHER_RECOMMENDED:
+        if video_source == ARTCLASS_VIDEO_SOURCE_EXTERNAL:
+            return {
+                "status": VIDEO_ADVICE_STATUS_LAUNCHER_RECOMMENDED,
+                "recommendedMode": ARTCLASS_PRIMARY_PLAYBACK_MODE,
+                "headline": "이 영상도 런처로 바로 시작할 수 있습니다",
+                "reason": "유튜브가 아니어도 공개 영상 주소면 저장 후 다음 화면의 초록 버튼으로 바로 열 수 있어요.",
+                "title": resolved_title,
+            }
         return {
             "status": VIDEO_ADVICE_STATUS_LAUNCHER_RECOMMENDED,
             "recommendedMode": ARTCLASS_PRIMARY_PLAYBACK_MODE,
             "headline": "런처로 바로 시작하면 됩니다",
-            "reason": "저장 후 초록 버튼으로 시작합니다.",
+            "reason": "ArtClass는 이제 런처로 수업을 시작합니다. 저장 후 다음 화면의 초록 버튼을 누르면 영상과 수업 안내가 나뉘어 열립니다.",
             "title": resolved_title,
         }
     return {
         "status": VIDEO_ADVICE_STATUS_UNKNOWN,
         "recommendedMode": ARTCLASS_PRIMARY_PLAYBACK_MODE,
-        "headline": "유튜브 주소를 넣으면 런처로 바로 시작할 수 있어요",
-        "reason": "유효한 유튜브 주소를 확인한 뒤 저장하면 다음 화면에서 런처를 바로 실행할 수 있습니다.",
+        "headline": "유튜브나 공개 영상 주소를 넣어 주세요",
+        "reason": "공개적으로 열 수 있는 http/https 영상 주소만 사용할 수 있습니다. localhost나 내부망 주소는 사용할 수 없어요.",
         "title": resolved_title,
     }
 
 
 def _build_video_advice(video_url, *, playback_mode="", title_hint=""):
-    normalized_url = (video_url or "").strip()
+    normalized_url = _normalize_http_url(video_url)
     title = (title_hint or "").strip()
-    video_id = _extract_youtube_video_id(normalized_url)
+    video_source = _get_artclass_video_source(normalized_url)
+    host_label = _extract_video_host_label(normalized_url)
 
-    if not normalized_url or not video_id:
-        return _build_video_advice_payload(VIDEO_ADVICE_STATUS_UNKNOWN, title=title)
+    if not normalized_url or not _is_allowed_artclass_video_url(normalized_url):
+        return _build_video_advice_payload(
+            VIDEO_ADVICE_STATUS_UNKNOWN,
+            title=title,
+            video_source=video_source,
+            host_label=host_label,
+        )
 
-    if not title:
+    if video_source == ARTCLASS_VIDEO_SOURCE_YOUTUBE and not title:
         title = _fetch_youtube_title(normalized_url)
+    if video_source == ARTCLASS_VIDEO_SOURCE_EXTERNAL and not title:
+        title = f"{host_label} 영상"
 
-    return _build_video_advice_payload(VIDEO_ADVICE_STATUS_LAUNCHER_RECOMMENDED, title=title)
+    return _build_video_advice_payload(
+        VIDEO_ADVICE_STATUS_LAUNCHER_RECOMMENDED,
+        title=title,
+        video_source=video_source,
+        host_label=host_label,
+    )
 
 
 STEP_FORM_INDEX_RE = re.compile(r"^step_(?:text|existing_id|image)_(\d+)$")
@@ -397,17 +474,68 @@ def _default_step_interval():
     return int(ArtClass._meta.get_field("default_interval").default)
 
 
-def _is_allowed_youtube_url(video_url):
-    video_url = (video_url or "").strip()
-    if not video_url:
+def _is_youtube_video_url(video_url):
+    normalized_url = _normalize_http_url(video_url)
+    if not normalized_url or not _extract_youtube_video_id(normalized_url):
         return False
-    if not _extract_youtube_video_id(video_url):
-        return False
-    try:
-        hostname = (urlparse(video_url).hostname or "").lower().replace("www.", "")
-    except Exception:
-        hostname = ""
+
+    hostname = _extract_video_hostname(normalized_url)
     return hostname in ARTCLASS_ALLOWED_VIDEO_HOSTS or hostname.endswith(".youtube.com")
+
+
+def _is_allowed_artclass_video_url(video_url):
+    normalized_url = _normalize_http_url(video_url)
+    if not normalized_url:
+        return False
+    return not _is_blocked_video_hostname(_extract_video_hostname(normalized_url))
+
+
+def _get_artclass_video_source(video_url):
+    return ARTCLASS_VIDEO_SOURCE_YOUTUBE if _is_youtube_video_url(video_url) else ARTCLASS_VIDEO_SOURCE_EXTERNAL
+
+
+def _extract_video_host_label(video_url):
+    return _extract_video_hostname(video_url)
+
+
+def _build_video_preview(video_url):
+    video_id = _extract_youtube_video_id(video_url)
+    if video_id:
+        return {
+            "source": ARTCLASS_VIDEO_SOURCE_YOUTUBE,
+            "hostLabel": "YouTube",
+            "thumbnailUrl": f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg",
+            "thumbnailFallbackUrl": f"https://img.youtube.com/vi/{video_id}/0.jpg",
+        }
+    return {
+        "source": ARTCLASS_VIDEO_SOURCE_EXTERNAL,
+        "hostLabel": _extract_video_host_label(video_url) or "외부 영상",
+        "thumbnailUrl": "",
+        "thumbnailFallbackUrl": "",
+    }
+
+
+def _decorate_artclass_library_item(item):
+    item.creator_display_name = _resolve_creator_display_name(item.created_by)
+    item.start_mode_badge = "런처 시작"
+    item.start_mode_reason = "초록 버튼을 누르면 영상과 수업 안내가 나뉘어 열립니다."
+    item.primary_action_label = "런처로 수업 시작하기"
+    item.launcher_start_url = _build_launcher_autostart_url(item)
+    item.launcher_install_url = _build_launcher_install_url(
+        next_url=item.launcher_start_url,
+        next_label="설치 후 이 수업 시작",
+    )
+    item.material_attachments = _build_material_attachment_payloads(item)
+    item.teacher_material_note_text = _normalize_material_note(item.teacher_material_note)
+    item.attachment_count = len(item.material_attachments)
+    item.has_teacher_materials = bool(item.material_attachments or item.teacher_material_note_text)
+    item.material_attachments_json = json.dumps(item.material_attachments, ensure_ascii=False)
+
+    preview = _build_video_preview(item.youtube_url)
+    item.video_source = preview["source"]
+    item.video_host_label = preview["hostLabel"]
+    item.thumbnail_url = preview["thumbnailUrl"]
+    item.thumbnail_fallback_url = preview["thumbnailFallbackUrl"]
 
 
 def _resolve_step_indexes(request):
@@ -741,8 +869,10 @@ def _handle_setup_submission(request, art_class=None, *, render_invalid):
             setup_material_note=material_note,
         )
 
-    if not _is_allowed_youtube_url(video_url):
-        return invalid("유효한 유튜브 주소만 사용할 수 있어요. 유튜브 영상 링크를 다시 확인해 주세요.")
+    if not _is_allowed_artclass_video_url(video_url):
+        return invalid("유튜브나 공개 영상 주소만 사용할 수 있어요. localhost나 내부망 주소는 넣을 수 없습니다.")
+
+    video_url = _normalize_http_url(video_url)
 
     if len(material_note) > ARTCLASS_MAX_MATERIAL_NOTE_LENGTH:
         return invalid("교사용 자료 활용 메모는 4000자 이하로 적어 주세요.")
@@ -866,8 +996,8 @@ def create_url_view(request):
     setup_video_url = (request.GET.get("videoUrl") or "").strip()
     if request.method == "POST":
         setup_video_url = (request.POST.get("videoUrl") or "").strip()
-        if not _is_allowed_youtube_url(setup_video_url):
-            messages.error(request, "유효한 유튜브 주소만 사용할 수 있어요. 유튜브 영상 링크를 다시 확인해 주세요.")
+        if not _is_allowed_artclass_video_url(setup_video_url):
+            messages.error(request, "유튜브나 공개 영상 주소만 사용할 수 있어요. localhost나 내부망 주소는 넣을 수 없습니다.")
         else:
             return redirect(_build_video_flow_url("artclass:create_gemini", setup_video_url))
 
@@ -883,8 +1013,8 @@ def create_url_view(request):
 
 def create_gemini_view(request):
     video_url = (request.GET.get("videoUrl") or "").strip()
-    if not _is_allowed_youtube_url(video_url):
-        messages.error(request, "먼저 유효한 유튜브 주소를 입력해 주세요.")
+    if not _is_allowed_artclass_video_url(video_url):
+        messages.error(request, "먼저 유효한 영상 주소를 입력해 주세요.")
         return redirect("artclass:create_url")
 
     return render(
@@ -910,8 +1040,8 @@ def create_review_view(request):
         )
 
     video_url = (request.GET.get("videoUrl") or "").strip()
-    if not _is_allowed_youtube_url(video_url):
-        messages.error(request, "먼저 유효한 유튜브 주소를 입력해 주세요.")
+    if not _is_allowed_artclass_video_url(video_url):
+        messages.error(request, "먼저 유효한 영상 주소를 입력해 주세요.")
         return redirect("artclass:create_url")
     return _render_v2_review_page(request, None, setup_video_url=video_url)
 
@@ -991,6 +1121,8 @@ def classroom_view(request, pk):
     )
     data = {
         'videoUrl': art_class.youtube_url,
+        'videoSource': _get_artclass_video_source(art_class.youtube_url),
+        'videoHostLabel': _extract_video_host_label(art_class.youtube_url),
         'stepInterval': art_class.default_interval,
         'playbackMode': effective_playback_mode,
         'steps': steps_data,
@@ -1171,7 +1303,7 @@ def start_launcher_session_api(request, pk):
     classroom_url = request.build_absolute_uri(reverse("artclass:classroom", kwargs={"pk": art_class.pk}))
     dashboard_query = urlencode({"display": "dashboard", "runtime": "launcher"})
     dashboard_url = f"{classroom_url}?{dashboard_query}"
-    youtube_url = _build_launcher_video_url(art_class.youtube_url)
+    video_url = _build_launcher_video_url(art_class.youtube_url)
     update_config_url = request.build_absolute_uri(reverse("artclass:launcher_release_config_api"))
 
     issued_at = int(time.time())
@@ -1180,7 +1312,8 @@ def start_launcher_session_api(request, pk):
         "version": 1,
         "classId": art_class.pk,
         "title": art_class.title or f"수업 #{art_class.pk}",
-        "youtubeUrl": youtube_url,
+        "videoUrl": video_url,
+        "youtubeUrl": video_url,
         "dashboardUrl": dashboard_url,
         "updateConfigUrl": update_config_url,
         "issuedAt": issued_at,
@@ -1201,7 +1334,8 @@ def start_launcher_session_api(request, pk):
             "expiresInSec": max(0, expires_at - int(time.time())),
             "mode": art_class.playback_mode,
             "fallback": {
-                "youtubeUrl": youtube_url,
+                "videoUrl": video_url,
+                "youtubeUrl": video_url,
                 "dashboardUrl": dashboard_url,
                 "updateConfigUrl": update_config_url,
             },
@@ -1212,7 +1346,7 @@ def start_launcher_session_api(request, pk):
 @ratelimit(key=ratelimit_key_for_master_only, rate='180/10m', method='POST', block=True, group='artclass_video_advice')
 @require_POST
 def video_advice_api(request):
-    """유튜브 주소 기준으로 브라우저/런처 권장 상태를 반환한다."""
+    """영상 주소 기준으로 런처 시작 권장 상태를 반환한다."""
     try:
         payload = json.loads(request.body or "{}")
     except json.JSONDecodeError:
@@ -1279,20 +1413,7 @@ def library_view(request):
             .distinct()
         )
         for item in my_classes:
-            item.creator_display_name = _resolve_creator_display_name(item.created_by)
-            item.start_mode_badge = "런처 시작"
-            item.start_mode_reason = "초록 버튼으로 시작합니다."
-            item.primary_action_label = "런처로 수업 시작하기"
-            item.launcher_start_url = _build_launcher_autostart_url(item)
-            item.launcher_install_url = _build_launcher_install_url(
-                next_url=item.launcher_start_url,
-                next_label="설치 후 이 수업 시작",
-            )
-            item.material_attachments = _build_material_attachment_payloads(item)
-            item.teacher_material_note_text = _normalize_material_note(item.teacher_material_note)
-            item.attachment_count = len(item.material_attachments)
-            item.has_teacher_materials = bool(item.material_attachments or item.teacher_material_note_text)
-            item.material_attachments_json = json.dumps(item.material_attachments, ensure_ascii=False)
+            _decorate_artclass_library_item(item)
 
     shared_classes = ArtClass.objects.select_related('created_by', 'created_by__userprofile').prefetch_related("attachments").annotate(
         steps_count=Count('steps', distinct=True),
@@ -1317,20 +1438,7 @@ def library_view(request):
 
     shared_classes = list(shared_classes.distinct())
     for item in shared_classes:
-        item.creator_display_name = _resolve_creator_display_name(item.created_by)
-        item.start_mode_badge = "런처 시작"
-        item.start_mode_reason = "초록 버튼으로 시작합니다."
-        item.primary_action_label = "런처로 수업 시작하기"
-        item.launcher_start_url = _build_launcher_autostart_url(item)
-        item.launcher_install_url = _build_launcher_install_url(
-            next_url=item.launcher_start_url,
-            next_label="설치 후 이 수업 시작",
-        )
-        item.material_attachments = _build_material_attachment_payloads(item)
-        item.teacher_material_note_text = _normalize_material_note(item.teacher_material_note)
-        item.attachment_count = len(item.material_attachments)
-        item.has_teacher_materials = bool(item.material_attachments or item.teacher_material_note_text)
-        item.material_attachments_json = json.dumps(item.material_attachments, ensure_ascii=False)
+        _decorate_artclass_library_item(item)
 
     shared_only = ArtClass.objects.filter(is_shared=True)
     category_options = list(

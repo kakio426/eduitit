@@ -187,6 +187,10 @@
                 data-title="{{ item.display_title }}" data-url="{{ item.youtube_url }}" data-steps="{{ item.steps_count }}"
                 data-playback-mode="{{ item.playback_mode }}"
                 data-creator="{{ item.creator_display_name }}"
+                data-video-source="{{ item.video_source }}"
+                data-video-host="{{ item.video_host_label }}"
+                data-thumbnail-url="{{ item.thumbnail_url }}"
+                data-thumbnail-fallback-url="{{ item.thumbnail_fallback_url }}"
                 data-launcher-install-url="{{ item.launcher_install_url }}"
                 data-attachment-count="{{ item.attachment_count }}"
                 data-material-note="{{ item.teacher_material_note_text|default:''|escape }}"
@@ -195,11 +199,19 @@
                 data-can-delete="{% if user.is_authenticated and user.is_staff %}true{% elif user.is_authenticated and item.created_by_id == user.id %}true{% else %}false{% endif %}"
                 onclick="openChoiceModalFromData(this)">
 
-                <!-- YouTube Thumbnail -->
                 <div class="relative aspect-video overflow-hidden thumb-wrapper shrink-0">
-                    <img src="https://img.youtube.com/vi/{{ item.youtube_url|cut:'https://www.youtube.com/watch?v='|cut:'https://youtu.be/'|truncatechars:11|cut:'...' }}/maxresdefault.jpg"
-                        onerror="this.src='https://img.youtube.com/vi/{{ item.youtube_url|cut:'https://www.youtube.com/watch?v='|cut:'https://youtu.be/'|truncatechars:11|cut:'...' }}/0.jpg'"
+                    {% if item.thumbnail_url %}
+                    <img src="{{ item.thumbnail_url }}"
+                        onerror="this.src='{{ item.thumbnail_fallback_url }}'"
                         alt="{{ item.title }}" loading="lazy" class="w-full h-full object-cover">
+                    {% else %}
+                    <div class="w-full h-full bg-gradient-to-br from-slate-900 via-indigo-900 to-sky-700 text-white flex flex-col items-start justify-end p-5">
+                        <span class="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em]">
+                            <i class="fa-solid fa-up-right-from-square"></i> 외부 영상
+                        </span>
+                        <p class="mt-3 text-lg font-black leading-snug break-all">{{ item.video_host_label }}</p>
+                    </div>
+                    {% endif %}
 
                     <div class="absolute bottom-3 left-4 z-10 text-white flex items-center gap-2">
                         <i class="fa-solid fa-eye text-sm opacity-80"></i>
@@ -342,17 +354,25 @@
     function openChoiceModalFromData(el) {
         const pk = el.getAttribute('data-pk');
         const title = el.getAttribute('data-title');
-        const youtubeUrl = el.getAttribute('data-url');
+        const videoUrl = el.getAttribute('data-url');
         const stepCount = el.getAttribute('data-steps');
         const playbackMode = el.getAttribute('data-playback-mode') || 'embed';
         const creator = el.getAttribute('data-creator');
+        const videoSource = el.getAttribute('data-video-source') || 'external';
+        const videoHost = el.getAttribute('data-video-host') || '외부 영상';
+        const thumbnailUrl = el.getAttribute('data-thumbnail-url') || '';
+        const thumbnailFallbackUrl = el.getAttribute('data-thumbnail-fallback-url') || '';
         const launcherInstallUrl = el.getAttribute('data-launcher-install-url') || '';
         const attachmentCount = Number(el.getAttribute('data-attachment-count') || '0');
         const materialNote = el.getAttribute('data-material-note') || '';
         const attachments = JSON.parse(el.getAttribute('data-attachments') || '[]');
         const canDelete = el.getAttribute('data-can-delete') === 'true';
         const deleteUrl = el.getAttribute('data-delete-url');
-        openChoiceModal(pk, title, youtubeUrl, stepCount, playbackMode, creator, canDelete, deleteUrl, {
+        openChoiceModal(pk, title, videoUrl, stepCount, playbackMode, creator, canDelete, deleteUrl, {
+            videoSource,
+            videoHost,
+            thumbnailUrl,
+            thumbnailFallbackUrl,
             launcherInstallUrl,
             attachmentCount,
             materialNote,
@@ -369,11 +389,12 @@
             .replace(/'/g, '&#39;');
     }
 
-    function openChoiceModal(pk, title, youtubeUrl, stepCount, playbackMode, creator, canDelete, deleteUrl, materials = {}) {
+    function openChoiceModal(pk, title, videoUrl, stepCount, playbackMode, creator, canDelete, deleteUrl, materials = {}) {
         const modal = document.getElementById('choiceModal');
         const backdrop = document.getElementById('choiceBackdrop');
         const panel = document.getElementById('choicePanel');
         const deleteForm = document.getElementById('deleteForm');
+        const modalThumb = document.getElementById('modalThumb');
         const recommendationEl = document.getElementById('modalRecommendation');
         const playLink = document.getElementById('playLink');
         const installGuideLink = document.getElementById('modalInstallGuideLink');
@@ -424,9 +445,23 @@
             deleteForm.classList.add('hidden');
         }
 
-        // Extract video ID for thumbnail
-        const videoId = youtubeUrl.match(/(?:v=|youtu\.be\/|shorts\/)([^&?]+)/)?.[1] || '';
-        document.getElementById('modalThumb').querySelector('img').src = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+        if (modalThumb) {
+            if (materials.thumbnailUrl) {
+                modalThumb.innerHTML = `
+                    <img src="${escapeHtml(materials.thumbnailUrl)}" alt="${escapeHtml(title)}" class="w-full h-full object-cover"
+                        onerror="this.src='${escapeHtml(materials.thumbnailFallbackUrl || materials.thumbnailUrl)}'">
+                `;
+            } else {
+                modalThumb.innerHTML = `
+                    <div class="w-full h-full bg-gradient-to-br from-slate-900 via-indigo-900 to-sky-700 text-white flex flex-col items-start justify-end p-6">
+                        <span class="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em]">
+                            <i class="fa-solid fa-up-right-from-square"></i> 외부 영상
+                        </span>
+                        <p class="mt-3 text-xl font-black leading-snug break-all">${escapeHtml(materials.videoHost || '외부 영상')}</p>
+                    </div>
+                `;
+            }
+        }
 
         // Show modal
         modal.classList.remove('hidden');

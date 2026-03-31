@@ -734,12 +734,39 @@ class ManualPipelineApiTest(TestCase):
             f"http://testserver{reverse('artclass:launcher_release_config_api')}",
         )
         self.assertEqual(payload["fallback"]["updateConfigUrl"], payload["payload"]["updateConfigUrl"])
+        self.assertEqual(payload["payload"]["videoUrl"], payload["payload"]["youtubeUrl"])
+        self.assertEqual(payload["fallback"]["videoUrl"], payload["fallback"]["youtubeUrl"])
         self.assertIn("watch?v=2bBhnfh4StU", payload["fallback"]["youtubeUrl"])
         self.assertIn("autoplay=1", payload["fallback"]["youtubeUrl"])
         self.assertNotIn("playlist=", payload["fallback"]["youtubeUrl"])
         self.assertNotIn("loop=1", payload["fallback"]["youtubeUrl"])
         art_class.refresh_from_db()
         self.assertEqual(art_class.playback_mode, ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW)
+
+    def test_start_launcher_session_api_keeps_public_external_video_url(self):
+        external_url = "https://viewer-cms.mirae-n.com/video/viewers/video/video.html?ofp=video/1187880/1/sample.smil/playlist.m3u8"
+        art_class = ArtClass.objects.create(
+            title="외부 영상 런처 테스트",
+            youtube_url=external_url,
+            default_interval=10,
+            playback_mode=ArtClass.PLAYBACK_MODE_EMBED,
+            created_by=self.owner,
+        )
+        url = reverse("artclass:start_launcher_session_api", kwargs={"pk": art_class.pk})
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            url,
+            data=json.dumps({"source": "test"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["payload"]["videoUrl"], external_url)
+        self.assertEqual(payload["payload"]["youtubeUrl"], external_url)
+        self.assertEqual(payload["fallback"]["videoUrl"], external_url)
+        self.assertEqual(payload["fallback"]["youtubeUrl"], external_url)
 
     def test_start_launcher_session_api_requires_authentication(self):
         art_class = ArtClass.objects.create(
@@ -811,6 +838,27 @@ class ManualPipelineApiTest(TestCase):
         payload = response.json()
         self.assertEqual(payload["status"], "launcher_recommended")
         self.assertEqual(payload["recommendedMode"], ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW)
+
+    @patch("artclass.views._fetch_youtube_title")
+    def test_video_advice_api_returns_launcher_recommended_for_public_external_video(self, mock_fetch_title):
+        url = reverse("artclass:video_advice_api")
+
+        response = self.client.post(
+            url,
+            data=json.dumps(
+                {
+                    "videoUrl": "https://viewer-cms.mirae-n.com/video/viewers/video/video.html?ofp=video/1187880/1/sample.smil/playlist.m3u8"
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["status"], "launcher_recommended")
+        self.assertEqual(payload["headline"], "이 영상도 런처로 바로 시작할 수 있습니다")
+        self.assertIn("viewer-cms.mirae-n.com", payload["title"])
+        mock_fetch_title.assert_not_called()
 
     def test_video_advice_api_returns_unknown_for_invalid_url(self):
         url = reverse("artclass:video_advice_api")
@@ -1345,7 +1393,7 @@ class ArtClassAutoMetadataTest(TestCase):
             defaults={"nickname": "자동분류교사", "role": "school"},
         )
 
-    def test_setup_rejects_non_youtube_url_and_preserves_posted_steps(self):
+    def test_setup_rejects_local_video_url_and_preserves_posted_steps(self):
         response = self.client.post(
             reverse("artclass:create_review"),
             data={
@@ -1359,8 +1407,27 @@ class ArtClassAutoMetadataTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(ArtClass.objects.count(), 0)
-        self.assertContains(response, "유효한 유튜브 주소만 사용할 수 있어요.")
+        self.assertContains(response, "유튜브나 공개 영상 주소만 사용할 수 있어요.")
         self.assertEqual(response.context["initial_steps"][0]["text"], "도화지에 연필로 큰 원을 그린다.")
+
+    def test_setup_accepts_public_external_video_url(self):
+        external_url = "https://viewer-cms.mirae-n.com/video/viewers/video/video.html?ofp=video/1187880/1/sample.smil/playlist.m3u8"
+
+        response = self.client.post(
+            reverse("artclass:create_review"),
+            data={
+                "videoUrl": external_url,
+                "stepInterval": "12",
+                "playbackMode": ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW,
+                "step_count": "1",
+                "step_text_0": "도화지에 연필로 큰 원을 그린다.",
+            },
+        )
+
+        created = ArtClass.objects.latest("id")
+        expected_url = f"{reverse('artclass:classroom', kwargs={'pk': created.pk})}?autostart_launcher=1"
+        self.assertRedirects(response, expected_url)
+        self.assertEqual(created.youtube_url, external_url)
 
     def test_setup_rejects_invalid_step_image_type(self):
         upload = SimpleUploadedFile("step.txt", b"hello", content_type="text/plain")
@@ -1453,7 +1520,8 @@ class ArtClassAutoMetadataTest(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "수업에 쓸 유튜브 영상")
+        self.assertContains(response, "수업에 쓸 영상 주소")
+        self.assertContains(response, "유튜브나 공개 영상 주소를 확인하면 상태가 바뀝니다.")
         self.assertContains(response, "외부 AI 서비스로 전송될 수 있습니다.")
         self.assertContains(response, "JPG, PNG, GIF, WEBP 파일만 가능하며 7MB 이하")
         self.assertContains(response, "PDF, HWP, HWPX / 최대 5개 / 파일당 20MB")

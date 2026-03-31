@@ -412,7 +412,7 @@
     <!-- Split Workspace -->
     <div id="classroomWorkspace" class="flex-1 min-h-0 flex flex-col lg:flex-row gap-0 overflow-hidden">
 
-        <!-- Left: YouTube Theater -->
+        <!-- Left: Video Stage -->
         <div id="videoPanel" class="lg:w-[62%] xl:w-[65%] bg-slate-950 relative flex min-h-0 flex-col">
             <div id="videoStage" class="relative flex-1 min-h-0 group flex items-center justify-center bg-black">
                 <div id="player" class="w-full h-full"></div>
@@ -420,14 +420,14 @@
                     <div class="max-w-xl w-full rounded-2xl bg-white/95 text-gray-900 p-6 md:p-8 shadow-2xl">
                         <div class="flex items-start gap-3">
                             <div class="w-11 h-11 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
-                                <i class="fa-brands fa-youtube text-xl"></i>
+                                <i class="fa-solid fa-clapperboard text-xl"></i>
                             </div>
                             <div class="min-w-0 flex-1">
                                 <h3 class="text-lg font-black text-gray-900">새 창 재생 모드</h3>
                                 <p id="externalVideoMessage" class="text-sm text-gray-700 mt-2 leading-relaxed">
-                                    유튜브 영상을 새 창으로 열어 수업을 계속할 수 있습니다.
+                                    이 영상은 새 창으로 열어 수업을 계속할 수 있습니다.
                                 </p>
-                                <div class="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                                <div id="externalLoopHint" class="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
                                     <p class="text-[11px] font-black text-amber-700 uppercase tracking-widest">반복 재생</p>
                                     <p class="mt-1 text-xs text-amber-800 leading-relaxed">
                                         새 창 유튜브 화면에서 <strong>마우스 오른쪽 클릭</strong> 후
@@ -442,7 +442,7 @@
                         <div class="mt-5 flex flex-wrap gap-2">
                             <button id="btnOpenExternalVideo"
                                 class="px-4 py-2.5 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-all">
-                                새 창 열기(반복 재생)
+                                새 창 열기
                             </button>
                             <button id="btnFocusExternalVideo"
                                 class="px-4 py-2.5 rounded-xl bg-white/90 text-gray-700 border border-gray-300 text-sm font-semibold hover:bg-white transition-all disabled:opacity-40 disabled:cursor-not-allowed">
@@ -629,6 +629,9 @@
     const CAN_SAVE_STEP = {{ can_manage_classroom|yesno:"true,false" }};
     const VIDEO_URL = "{{ data.videoUrl|escapejs }}";
     const VIDEO_ID = extractYouTubeVideoId(VIDEO_URL);
+    const VIDEO_SOURCE = String(stepsData.videoSource || (VIDEO_ID ? 'youtube' : 'external'));
+    const VIDEO_HOST_LABEL = String(stepsData.videoHostLabel || '');
+    const IS_YOUTUBE_VIDEO = VIDEO_SOURCE === 'youtube' && !!VIDEO_ID;
     const PLAYBACK_MODE_STORAGE_KEY = `artclass_playback_mode_${CLASSROOM_ID}`;
     const defaultPlaybackMode = isValidPlaybackMode(stepsData.playbackMode) ? stepsData.playbackMode : 'external_window';
     let playbackMode = defaultPlaybackMode;
@@ -662,6 +665,7 @@
     const classroomWorkspaceEl = document.getElementById('classroomWorkspace');
     const externalVideoOverlayEl = document.getElementById('externalVideoOverlay');
     const externalVideoMessageEl = document.getElementById('externalVideoMessage');
+    const externalLoopHintEl = document.getElementById('externalLoopHint');
     const videoPanelEl = document.getElementById('videoPanel');
     const activityPanelEl = document.getElementById('activityPanel');
     const playerEl = document.getElementById('player');
@@ -982,9 +986,24 @@
             .replace(/'/g, '&#39;');
     }
 
+    function getExternalVideoDefaultMessage() {
+        if (IS_YOUTUBE_VIDEO) {
+            return '유튜브 영상을 새 창으로 열어 수업을 계속할 수 있습니다.';
+        }
+        return VIDEO_HOST_LABEL
+            ? `${VIDEO_HOST_LABEL} 영상을 새 창으로 열어 수업을 계속할 수 있습니다.`
+            : '이 영상은 새 창으로 열어 수업을 계속할 수 있습니다.';
+    }
+
+    function syncExternalVideoOverlayCopy() {
+        if (externalLoopHintEl) {
+            externalLoopHintEl.classList.toggle('hidden', !IS_YOUTUBE_VIDEO);
+        }
+    }
+
     function setExternalOverlay(visible, message = '') {
         if (visible) {
-            externalVideoMessageEl.textContent = message || '유튜브 영상을 새 창으로 열어 수업을 계속할 수 있습니다.';
+            externalVideoMessageEl.textContent = message || getExternalVideoDefaultMessage();
             externalVideoOverlayEl.classList.remove('hidden');
             externalVideoOverlayEl.classList.add('flex');
             return;
@@ -1090,7 +1109,7 @@
     }
 
     function buildExternalVideoUrl() {
-        if (!VIDEO_ID) return VIDEO_URL;
+        if (!IS_YOUTUBE_VIDEO) return VIDEO_URL;
         try {
             const loopUrl = new URL('https://www.youtube.com/watch');
             loopUrl.searchParams.set('v', VIDEO_ID);
@@ -1125,7 +1144,7 @@
         const split = options.split === true;
         const forceReopen = options.forceReopen === true;
         if (!VIDEO_URL) {
-            setExternalOverlay(true, '영상 주소가 비어 있습니다. 편집 화면에서 유튜브 주소를 확인해 주세요.');
+            setExternalOverlay(true, '영상 주소가 비어 있습니다. 편집 화면에서 영상 주소를 확인해 주세요.');
             return false;
         }
         if (!forceReopen && focusExternalVideoWindow()) {
@@ -1264,8 +1283,8 @@
     }
 
     function createYouTubePlayer(host) {
-        if (!VIDEO_ID) {
-            showEmbeddedPlaybackFallback('유효한 유튜브 영상 주소를 확인해 주세요.');
+        if (!IS_YOUTUBE_VIDEO) {
+            showEmbeddedPlaybackFallback('이 영상은 화면 안 재생 대신 새 창으로 시작해 주세요.');
             return;
         }
         if (!(window.YT && window.YT.Player)) {
@@ -1314,7 +1333,12 @@
             return;
         }
         if (playbackMode === 'external_window') {
-            switchToExternalMode('이 수업은 새 창 재생 모드로 설정되어 있습니다.', false);
+            switchToExternalMode(
+                IS_YOUTUBE_VIDEO
+                    ? '이 수업은 새 창 재생 모드로 설정되어 있습니다.'
+                    : '이 수업은 외부 영상 새 창 재생 모드로 설정되어 있습니다.',
+                false
+            );
             return;
         }
         createYouTubePlayer('https://www.youtube-nocookie.com');
@@ -1891,6 +1915,7 @@
 
     // Init
     applyResponsiveTokens();
+    syncExternalVideoOverlayCopy();
     syncStepEditorPermissionUi();
     syncStepRepeatUi();
     setLauncherPromptStatus('', 'info');
