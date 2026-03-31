@@ -340,6 +340,12 @@
     }
 
     @media (min-width: 640px) {
+        .classcalendar-home-day-modal {
+            align-items: flex-start;
+            padding-top: calc(var(--main-nav-height, 88px) + 1rem);
+            padding-bottom: 1.5rem;
+        }
+
         .classcalendar-day-cell {
             min-height: 92px;
         }
@@ -1149,7 +1155,7 @@
         x-show="dayModalOpen"
         x-cloak
         data-classcalendar-day-modal="true"
-        class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/55 px-3 py-4 sm:px-4"
+        class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/55 px-3 py-4 sm:px-4 {% if is_embedded_on_home %}classcalendar-home-day-modal{% endif %}"
         @click.self="closeDayModal()"
         @keydown.escape.window="if (dayModalOpen) closeDayModal()"
     >
