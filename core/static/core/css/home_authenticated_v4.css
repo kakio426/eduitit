@@ -1281,7 +1281,7 @@
     }
 
     .home-v4-layout {
-        grid-template-columns: 284px minmax(0, 1fr);
+        grid-template-columns: 312px minmax(0, 1fr);
     }
 
     .home-v4-nav-shell {
@@ -1319,7 +1319,7 @@
 
 @media (min-width: 1280px) {
     .home-v4-main {
-        grid-template-columns: minmax(0, 1fr) 340px;
+        grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.68fr);
         column-gap: var(--home-v4-panel-gap);
         align-items: start;
     }
