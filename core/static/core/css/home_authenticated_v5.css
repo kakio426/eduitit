@@ -230,6 +230,19 @@
     color: #94a3b8;
 }
 
+.home-v5-favorite-toggle {
+    width: 1.75rem;
+    height: 1.75rem;
+    min-width: 1.75rem;
+    min-height: 1.75rem;
+    padding: 0;
+}
+
+.home-v5-favorite-toggle i {
+    font-size: 0.625rem;
+    line-height: 1;
+}
+
 .home-v5-mobile-empty {
     border: 1px dashed #cbd5e1;
     border-radius: 1.2rem;

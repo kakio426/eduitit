@@ -2555,7 +2555,7 @@ class HomeV4ViewTest(TestCase):
         self.assertIn('data-home-v4-tool-item="collect_sign"', content)
         self.assertIn('data-home-v4-tool-favorite-badge="true"', content)
         self.assertIn('aria-label="간편 수합 즐겨찾기 토글"', content)
-        self.assertIn('class="home-v4-tool-favorite-badge favorite-toggle-btn', content)
+        self.assertIn('class="home-v4-tool-favorite-badge home-v5-favorite-toggle favorite-toggle-btn', content)
 
     def test_v4_anonymous_home_uses_public_v4_template(self):
         response = self.client.get(reverse('home'))
