@@ -2968,7 +2968,7 @@ function calendarApp() {
         },
 
         usesHomeInlineDayPanel() {
-            return this.calendarEmbedMode === 'home' && !this.isCompactHomeSurfaceViewport();
+            return this.calendarEmbedMode === 'home' && !this.isCompactMobileViewport();
         },
 
         showHomeInlineDayPanel() {
@@ -2995,11 +2995,6 @@ function calendarApp() {
         isCompactMobileViewport() {
             if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
             return window.matchMedia('(max-width: 639px)').matches;
-        },
-
-        isCompactHomeSurfaceViewport() {
-            if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
-            return window.matchMedia('(max-width: 1099px)').matches;
         },
 
         getMainNavScrollOffset(extra = 16) {
