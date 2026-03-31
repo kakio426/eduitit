@@ -2106,6 +2106,19 @@ class HomeV4ViewTest(TestCase):
         self.assertLess(representative_index, favorites_index)
         self.assertLess(favorites_index, sns_index)
 
+    def test_v4_home_calendar_teleports_overlay_modals_to_body(self):
+        self._login('v4modalportal')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        portal_marker = 'data-classcalendar-overlay-portal="true"'
+        day_modal_marker = 'data-classcalendar-day-modal="true"'
+
+        self.assertIn(portal_marker, content)
+        self.assertIn(day_modal_marker, content)
+        self.assertLess(content.index(portal_marker), content.index(day_modal_marker))
+
     def test_v4_home_places_quickdrop_card_between_favorites_and_sns(self):
         user = self._login('v4quickdropcard')
         ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)

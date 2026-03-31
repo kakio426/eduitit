@@ -982,6 +982,8 @@
 
     </div>
 
+    <template x-teleport="body" data-classcalendar-overlay-portal="true">
+        <div>
     <div x-show="detailModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4" @click.self="closeDetailModal()">
         <div class="w-full max-w-lg bg-white rounded-2xl p-6 border border-slate-200 shadow-2xl">
             <h3 class="classcalendar-copy mb-2 text-xl font-extrabold text-slate-900" x-text="selectedEvent ? selectedEvent.title : (selectedTask ? selectedTask.title : '')"></h3>
@@ -1399,7 +1401,8 @@
                 </div>
             </div>
         </div>
-    </div>
+        </div>
+    </template>
     {% include "classcalendar/_message_hub.html" %}
 </section>
 
