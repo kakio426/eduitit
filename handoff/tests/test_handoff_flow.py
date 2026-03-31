@@ -238,6 +238,35 @@ class HandoffFlowTest(TestCase):
         self.assertEqual(session.receipts.count(), 2)
         self.assertEqual(session.receipts.filter(state="pending").count(), 2)
 
+    def test_dashboard_is_roster_first_and_group_detail_owns_sessions(self):
+        group, members = self._create_group_with_members()
+        session = self._create_session(group, members)
+
+        dashboard_response = self.client.get(reverse("handoff:dashboard"))
+        self.assertContains(dashboard_response, "공용 명부 목록")
+        self.assertNotContains(dashboard_response, "최근 배부 세션")
+        self.assertNotContains(dashboard_response, "배부 세션 시작")
+        self.assertContains(dashboard_response, "진행 중 세션 이어하기")
+
+        detail_response = self.client.get(reverse("handoff:group_detail", args=[group.id]))
+        self.assertContains(detail_response, "이 명부로 배부 체크 시작")
+        self.assertContains(detail_response, "이 명부의 최근 배부 세션")
+        self.assertContains(detail_response, session.title)
+
+    def test_invalid_session_create_returns_to_group_detail(self):
+        group, _ = self._create_group_with_members()
+
+        response = self.client.post(
+            reverse("handoff:session_create"),
+            data={
+                "title": "",
+                "roster_group": str(group.id),
+                "note": "",
+            },
+        )
+
+        self.assertRedirects(response, reverse("handoff:group_detail", args=[group.id]))
+
     def test_receipt_state_update_json(self):
         group, members = self._create_group_with_members()
         session = self._create_session(group, members)

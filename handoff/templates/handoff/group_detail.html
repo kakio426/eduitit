@@ -84,27 +84,132 @@
                 </form>
             </div>
 
-            <div class="clay-card p-6 md:p-7" data-aos="fade-up" data-aos-delay="60">
-                <h2 class="text-2xl font-black text-gray-700 mb-4">채워진 항목</h2>
-                <div class="space-y-3 text-sm font-bold text-gray-600">
-                    <div class="rounded-2xl border border-slate-100 bg-white/80 px-4 py-3 flex items-center justify-between gap-3">
-                        <span>소속/학년반</span>
-                        <span class="text-indigo-600">{{ service_summary.with_affiliation }}/{{ service_summary.total }}</span>
+            <div class="space-y-6">
+                <div class="clay-card p-6 md:p-7" data-aos="fade-up" data-aos-delay="60">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-11 h-11 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-lg shadow-sm">
+                            <i class="fa-solid fa-clipboard-check"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-black text-gray-700">이 명부로 배부 체크 시작</h2>
+                            <p class="text-sm text-gray-500 font-bold mt-1">명부를 확인한 뒤, 필요할 때만 바로 배부 세션을 시작하면 됩니다.</p>
+                        </div>
                     </div>
-                    <div class="rounded-2xl border border-slate-100 bg-white/80 px-4 py-3 flex items-center justify-between gap-3">
-                        <span>보호자+전화 뒤 4자리</span>
-                        <span class="text-emerald-600">{{ service_summary.with_guardian_phone }}/{{ service_summary.total }}</span>
-                    </div>
-                    <div class="rounded-2xl border border-slate-100 bg-white/80 px-4 py-3 flex items-center justify-between gap-3">
-                        <span>학생 번호</span>
-                        <span class="text-rose-600">{{ service_summary.with_student_number }}/{{ service_summary.total }}</span>
-                    </div>
+                    <form action="{% url 'handoff:session_create' %}" method="post" class="space-y-4">
+                        {% csrf_token %}
+                        {% if return_to %}
+                        <input type="hidden" name="return_to" value="{{ return_to }}">
+                        {% endif %}
+                        <input type="hidden" name="roster_group" value="{{ group.id }}">
+                        <div>
+                            <label class="block text-sm font-black text-gray-600 mb-1">{{ session_form.title.label }}</label>
+                            {{ session_form.title }}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-black text-gray-600 mb-1">대상 명단</label>
+                            <div class="px-4 py-3 rounded-xl bg-white/80 border border-gray-200 text-gray-700 font-bold">
+                                {{ group.name }}
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-black text-gray-600 mb-1">{{ session_form.due_at.label }}</label>
+                            {{ session_form.due_at }}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-black text-gray-600 mb-1">{{ session_form.note.label }}</label>
+                            {{ session_form.note }}
+                        </div>
+                        <p class="text-xs font-bold text-gray-500">현재 활성 멤버 {{ active_member_count }}명 기준으로 세션이 만들어집니다.</p>
+                        {% if active_member_count %}
+                        <button type="submit" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black transition">
+                            <i class="fa-solid fa-play mr-1"></i>배부 세션 시작
+                        </button>
+                        {% else %}
+                        <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">
+                            활성 멤버를 먼저 추가해야 배부 세션을 시작할 수 있습니다.
+                        </div>
+                        <button type="button" class="w-full py-3 rounded-xl bg-slate-200 text-slate-500 font-black cursor-not-allowed" disabled>
+                            <i class="fa-solid fa-play mr-1"></i>배부 세션 시작
+                        </button>
+                        {% endif %}
+                    </form>
                 </div>
-                <div class="mt-5 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm text-slate-500">
-                    사인은 <strong>이름+소속</strong>, 동의서는 <strong>이름+보호자+전화 뒤 4자리</strong>, 행복씨앗은 <strong>번호+이름</strong>, 알림판은 <strong>이름</strong>만 사용합니다.
+
+                <div class="clay-card p-6 md:p-7" data-aos="fade-up" data-aos-delay="80">
+                    <h2 class="text-2xl font-black text-gray-700 mb-4">채워진 항목</h2>
+                    <div class="space-y-3 text-sm font-bold text-gray-600">
+                        <div class="rounded-2xl border border-slate-100 bg-white/80 px-4 py-3 flex items-center justify-between gap-3">
+                            <span>소속/학년반</span>
+                            <span class="text-indigo-600">{{ service_summary.with_affiliation }}/{{ service_summary.total }}</span>
+                        </div>
+                        <div class="rounded-2xl border border-slate-100 bg-white/80 px-4 py-3 flex items-center justify-between gap-3">
+                            <span>보호자+전화 뒤 4자리</span>
+                            <span class="text-emerald-600">{{ service_summary.with_guardian_phone }}/{{ service_summary.total }}</span>
+                        </div>
+                        <div class="rounded-2xl border border-slate-100 bg-white/80 px-4 py-3 flex items-center justify-between gap-3">
+                            <span>학생 번호</span>
+                            <span class="text-rose-600">{{ service_summary.with_student_number }}/{{ service_summary.total }}</span>
+                        </div>
+                    </div>
+                    <div class="mt-5 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm text-slate-500">
+                        사인은 <strong>이름+소속</strong>, 동의서는 <strong>이름+보호자+전화 뒤 4자리</strong>, 행복씨앗은 <strong>번호+이름</strong>, 알림판은 <strong>이름</strong>만 사용합니다.
+                    </div>
                 </div>
             </div>
         </div>
+
+        {% if recent_sessions %}
+        <div class="clay-card p-6 md:p-7 mb-8" data-aos="fade-up" data-aos-delay="100">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+                <div>
+                    <h2 class="text-2xl font-black text-gray-700">이 명부의 최근 배부 세션</h2>
+                    <p class="text-sm text-gray-500 font-bold mt-1">같은 명부에서 진행했던 배부 기록만 여기서 다시 이어서 봅니다.</p>
+                </div>
+                <span class="text-sm text-gray-500 font-bold">{{ recent_sessions|length }}건</span>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                {% for session in recent_sessions %}
+                <div class="rounded-2xl border border-gray-200 bg-white/70 p-4">
+                    <div class="flex items-start justify-between gap-2 mb-2">
+                        <div>
+                            <p class="text-lg font-black text-gray-700">{{ session.title }}</p>
+                            <p class="text-xs text-gray-500 font-bold mt-1">
+                                생성 {{ session.created_at|date:"m/d H:i" }}
+                                {% if session.due_at %}
+                                · 마감 {{ session.due_at|date:"m/d H:i" }}
+                                {% endif %}
+                            </p>
+                        </div>
+                        {% if session.status == "open" %}
+                        <span class="px-2 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-700">진행중</span>
+                        {% else %}
+                        <span class="px-2 py-1 rounded-full text-xs font-black bg-gray-200 text-gray-700">마감</span>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        <div class="flex justify-between text-xs font-black text-gray-500 mb-1">
+                            <span>수령 {{ session.received_count }}</span>
+                            <span>미수령 {{ session.pending_count }}</span>
+                        </div>
+                        {% if session.total_count %}
+                        <div class="w-full h-2 rounded-full bg-gray-200 overflow-hidden">
+                            <div class="h-full bg-indigo-500" style="width: {% widthratio session.received_count session.total_count 100 %}%"></div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <a href="{% url 'handoff:session_detail' session.id %}" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-bold text-sm">
+                            체크 화면
+                        </a>
+                        <a href="{% url 'handoff:session_edit' session.id %}" class="px-3 py-1.5 rounded-lg bg-white text-gray-700 font-bold text-sm border border-gray-200">
+                            수정
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
 
         <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
             <div class="clay-card p-6 md:p-7" data-aos="fade-up">

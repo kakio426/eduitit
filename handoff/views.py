@@ -5,6 +5,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.db.models import Count, Max, Q
 from django.http import HttpResponse, JsonResponse
@@ -347,6 +348,19 @@ def dashboard(request):
         )
         .order_by("-is_favorite", "name")
     )
+    open_sessions_by_group = {}
+    if groups:
+        group_ids = [group.id for group in groups]
+        open_sessions = (
+            HandoffSession.objects.filter(
+                owner=owner,
+                status="open",
+                roster_group_id__in=group_ids,
+            )
+            .order_by("roster_group_id", "-created_at")
+        )
+        for session in open_sessions:
+            open_sessions_by_group.setdefault(session.roster_group_id, session)
     for group in groups:
         group.manage_url = _append_query_params(
             reverse("handoff:group_detail", kwargs={"group_id": group.id}),
@@ -357,25 +371,19 @@ def dashboard(request):
             if return_to and group.active_member_count > 0
             else ""
         )
-    sessions = (
-        HandoffSession.objects.filter(owner=owner)
-        .select_related("roster_group")
-        .annotate(
-            total_count=Count("receipts"),
-            received_count=Count("receipts", filter=Q(receipts__state="received")),
-            pending_count=Count("receipts", filter=Q(receipts__state="pending")),
+        active_session = open_sessions_by_group.get(group.id)
+        group.active_session_url = (
+            reverse("handoff:session_detail", kwargs={"session_id": active_session.id})
+            if active_session
+            else ""
         )
-        .order_by("-created_at")
-    )
     return render(
         request,
         "handoff/dashboard.html",
         {
             "service": _get_service(),
             "groups": groups,
-            "sessions": sessions,
             "group_form": HandoffRosterGroupForm(),
-            "session_form": HandoffSessionCreateForm(owner=owner),
             "return_to": return_to,
         },
     )
@@ -413,6 +421,13 @@ def group_detail(request, group_id):
     group = get_object_or_404(HandoffRosterGroup, id=group_id, owner=request.user)
     members = group.members.order_by("sort_order", "id")
     active_member_count = group.members.filter(is_active=True).count()
+    recent_sessions = list(
+        group.sessions.annotate(
+            total_count=Count("receipts"),
+            received_count=Count("receipts", filter=Q(receipts__state="received")),
+            pending_count=Count("receipts", filter=Q(receipts__state="pending")),
+        ).order_by("-created_at")[:5]
+    )
     return render(
         request,
         "handoff/group_detail.html",
@@ -423,7 +438,12 @@ def group_detail(request, group_id):
             "active_member_count": active_member_count,
             "group_form": HandoffRosterGroupForm(instance=group),
             "bulk_form": HandoffMemberBulkAddForm(),
+            "session_form": HandoffSessionCreateForm(
+                owner=request.user,
+                initial={"roster_group": group},
+            ),
             "sessions_count": group.sessions.count(),
+            "recent_sessions": recent_sessions,
             "service_summary": roster_service_summary(group),
             "linked_service_counts": {
                 "handoff": group.sessions.count(),
@@ -663,18 +683,37 @@ def group_member_delete(request, group_id, member_id):
 @login_required
 @require_POST
 def session_create(request):
+    return_to = _get_safe_return_to(request)
+    requested_group = None
+    requested_group_id = (request.POST.get("roster_group") or "").strip()
+    if requested_group_id:
+        try:
+            requested_group = HandoffRosterGroup.objects.filter(
+                id=requested_group_id,
+                owner=request.user,
+            ).first()
+        except (ValidationError, ValueError):
+            requested_group = None
+    fallback_url = (
+        reverse("handoff:group_detail", kwargs={"group_id": requested_group.id})
+        if requested_group
+        else reverse("handoff:dashboard")
+    )
     form = HandoffSessionCreateForm(request.POST, owner=request.user)
     if not form.is_valid():
         for _, error_list in form.errors.items():
             for error in error_list:
                 messages.error(request, error)
-        return redirect("handoff:dashboard")
+        return _redirect_with_return(fallback_url, return_to)
 
     group = form.cleaned_data["roster_group"]
     active_members = list(group.members.filter(is_active=True).order_by("sort_order", "id"))
     if not active_members:
         messages.error(request, "명단에 활성 멤버가 없습니다. 멤버를 먼저 추가해주세요.")
-        return redirect("handoff:group_detail", group_id=group.id)
+        return _redirect_with_return(
+            reverse("handoff:group_detail", kwargs={"group_id": group.id}),
+            return_to,
+        )
 
     session = form.save(commit=False)
     session.owner = request.user
