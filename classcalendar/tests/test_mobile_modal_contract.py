@@ -15,6 +15,9 @@ class CalendarMobileModalContractTests(SimpleTestCase):
 
         self.assertIn("if (this.isCompactMobileViewport()) {", content)
         self.assertIn("this.openDayOverview(date, triggerEvent);", content)
+        self.assertIn("isCompactHomeSurfaceViewport()", content)
+        self.assertIn("window.matchMedia('(max-width: 1099px)').matches", content)
+        self.assertIn("return this.calendarEmbedMode === 'home' && !this.isCompactHomeSurfaceViewport();", content)
         self.assertNotIn('x-ref="selectedDateAgenda"', content)
         self.assertNotIn("scrollSelectedDateAgendaIntoView()", content)
         self.assertNotIn(".classcalendar-mobile-agenda", content)
