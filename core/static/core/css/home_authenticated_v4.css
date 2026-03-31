@@ -737,6 +737,22 @@
     transform: translateY(-1px);
 }
 
+@media (max-width: 639px) {
+    .home-v4-mobile-quickdrop-actions {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .home-v4-mobile-quickdrop-primary,
+    .home-v4-mobile-quickdrop-secondary {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        white-space: normal;
+        text-align: center;
+        line-height: 1.2;
+    }
+}
+
 @media (max-width: 1099px) {
     .home-v4-mobile-quickdrop {
         border-radius: 1.45rem;

@@ -1,9 +1,11 @@
 import json
 import random
+from pathlib import Path
 from django.core.management import call_command
 from datetime import date, datetime, time, timedelta
 from unittest.mock import patch
 
+from django.conf import settings
 from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 from django.contrib.auth.models import User
@@ -577,10 +579,13 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('캘린더 연결 ', content)
         self.assertNotIn('놓치지 않을 메시지', content)
         self.assertNotIn('메신저에서 받은 중요한 내용을 붙여넣고, 나중에 다시 보거나 일정에 연결하세요.', content)
-        self.assertLess(
-            content.index('data-classcalendar-main-view="true"'),
-            content.index('data-home-messagebox-card="true"'),
-        )
+        self.assertIn('flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between', content)
+        self.assertIn('inline-flex w-full items-center justify-center rounded-full', content)
+        self.assertIn('@media (max-width: 639px)', content)
+        self.assertIn('#home-calendar .classcalendar-main-toolbar', content)
+        main_view_index = content.index('data-classcalendar-main-view="true"')
+        messagebox_markup_index = content.index('data-home-messagebox-card="true"', main_view_index)
+        self.assertLess(main_view_index, messagebox_markup_index)
 
         section_products = [
             product.launch_route_name
@@ -3058,6 +3063,11 @@ class HomeV6ViewTest(TestCase):
         self.assertIn(f'href="{history_url}"', content)
         self.assertIn('오늘 보낸 내용', content)
         self.assertNotIn(f'href="{reverse("quickdrop:open")}"', content)
+
+        mobile_css = (Path(settings.BASE_DIR) / 'core' / 'static' / 'core' / 'css' / 'home_authenticated_v4.css').read_text(encoding='utf-8')
+        self.assertIn('@media (max-width: 639px)', mobile_css)
+        self.assertIn('.home-v4-mobile-quickdrop-actions', mobile_css)
+        self.assertIn('grid-template-columns: minmax(0, 1fr);', mobile_css)
 
     def test_v6_home_shows_shared_school_reservation_card(self):
         owner = _create_onboarded_user('v6owner')
