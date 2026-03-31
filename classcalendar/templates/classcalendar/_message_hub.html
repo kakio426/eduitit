@@ -306,10 +306,11 @@
 </template>
 {% endif %}
 
+<template x-teleport="body">
 <div
     x-show="messageHubOpen && !(messageHubActiveTab === 'capture' && messageHubEntryMode === 'home_mobile_schedule' && isCompactMobileViewport())"
     x-cloak
-    class="classcalendar-message-hub-shell fixed inset-0 z-[260] bg-slate-900/60 p-3 sm:p-6"
+    class="classcalendar-message-hub-shell fixed inset-0 z-[320] bg-slate-950/60 p-3 backdrop-blur-[2px] sm:p-6"
     @click.self="closeMessageHub()"
     @keydown.escape.window="closeMessageHub()"
 >
@@ -692,3 +693,4 @@
     </div>
     </div>
 </div>
+</template>
