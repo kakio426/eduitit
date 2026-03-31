@@ -517,7 +517,7 @@
                         </div>
                     </template>
                     <div x-show="messageCaptureCandidates.length > 0 && messageCaptureVisibleCandidates().length === 0" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold text-slate-500">
-                        이미 연결된 일정이나 할 일은 다시 후보에 보여주지 않아요.
+                        이미 연결된 일정은 다시 후보에 보여주지 않아요.
                     </div>
                 </div>
                 <details x-show="messageCaptureHiddenCandidates().length > 0" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
@@ -655,7 +655,7 @@
                             <div x-show="messageArchiveSelectedCapture && messageArchiveVisibleCandidates().length === 0" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold text-slate-500" x-text="messageArchiveCandidateEmptyText()"></div>
                         </div>
                         <div>
-                            <p class="mb-2 text-sm font-extrabold text-slate-900">연결된 일정 / 할 일</p>
+                            <p class="mb-2 text-sm font-extrabold text-slate-900">연결된 일정</p>
                             <div class="space-y-2" x-show="hasSelectedCaptureLinkedItems()">
                                 <template x-for="linked in selectedCaptureLinkedItems()" :key="`${linked.item_type}-${linked.id}`">
                                     <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
@@ -669,7 +669,7 @@
                                     </div>
                                 </template>
                             </div>
-                            <div x-show="messageArchiveSelectedCapture && !hasSelectedCaptureLinkedItems()" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold text-slate-500">아직 연결된 일정이나 할 일이 없어요.</div>
+                            <div x-show="messageArchiveSelectedCapture && !hasSelectedCaptureLinkedItems()" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold text-slate-500">아직 연결된 일정이 없어요.</div>
                         </div>
                     </div>
                     <div x-show="messageArchiveSelectedCapture" class="border-t border-slate-200 px-5 py-4 sm:px-6">

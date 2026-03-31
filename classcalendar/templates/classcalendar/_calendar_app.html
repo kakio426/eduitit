@@ -509,6 +509,7 @@
     data-classcalendar-page-variant="{{ calendar_page_variant }}"
     data-classcalendar-embed-mode="{{ calendar_embed_mode|default:'page' }}"
     x-data="calendarApp()"
+    x-effect="syncCalendarSurfaceScrollLock()"
 >
     <div class="{% if is_embedded_in_sheetbook or is_embedded_on_home %}max-w-none mx-0{% else %}max-w-7xl mx-auto{% endif %}">
         {% if calendar_page_variant == "today" and not is_embedded_in_sheetbook and not is_embedded_on_home %}
@@ -659,38 +660,7 @@
                     </section>
                     {% endif %}
 
-                    {% if today_workspace.today_tasks %}
-                    <section class="rounded-[1.5rem] border border-slate-200 bg-white p-4 sm:p-5" data-classcalendar-today-tasks="true">
-                        <div>
-                            <p class="classcalendar-eyebrow font-black text-slate-400">오늘 할 일</p>
-                            <h3 class="mt-1 text-lg font-extrabold text-slate-900">오늘 처리할 개인 할 일</h3>
-                        </div>
-                        <div class="mt-4 space-y-3">
-                            {% for item in today_workspace.today_tasks %}
-                            <div class="space-y-2">
-                                <button
-                                    type="button"
-                                    @click="openTaskDetailById('{{ item.id }}')"
-                                    class="block w-full rounded-[1.4rem] border border-slate-200 bg-slate-50 px-4 py-4 text-left transition hover:border-slate-300 hover:bg-white"
-                                >
-                                    <div class="flex items-start justify-between gap-3">
-                                        <div class="min-w-0">
-                                            <div class="flex flex-wrap items-center gap-2">
-                                                <p class="classcalendar-copy text-base font-black leading-6 text-slate-900">{{ item.title }}</p>
-                                                <span class="classcalendar-chip inline-flex items-center rounded-full bg-white px-2 py-1 font-black text-slate-600">{{ item.priority_label }}</span>
-                                            </div>
-                                            <p class="mt-1 text-xs font-semibold text-slate-500">{{ item.schedule_text }}</p>
-                                        </div>
-                                    </div>
-                                    {% if item.note_excerpt %}
-                                    <p class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-600">{{ item.note_excerpt }}</p>
-                                    {% endif %}
-                                </button>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </section>
-                    {% endif %}
+                    
                 {% elif today_focus == "memos" and today_workspace.today_memos %}
                 <section class="rounded-[1.5rem] border border-slate-200 bg-white p-4 sm:p-5" data-classcalendar-today-memos="true">
                     <div>
@@ -897,7 +867,7 @@
                                 type="search"
                                 x-model.trim="agendaQuery"
                                 @input.debounce.150ms="rebuildAgendaSections()"
-                                placeholder="일정명, 메모, 할 일을 검색"
+                                placeholder="일정명, 메모를 검색"
                                 autocomplete="off"
                             >
                             <button
@@ -953,141 +923,7 @@
             </div>
             {% endif %}
             {% endif %}
-            {% if is_embedded_on_home %}
-            <section
-                x-show="showHomeInlineDayPanel()"
-                x-cloak
-                x-ref="homeInlineDayPanel"
-                class="mt-4 rounded-[1.8rem] border border-slate-200 bg-white shadow-sm"
-                style="scroll-margin-top: calc(var(--main-nav-height, 88px) + 1rem);"
-            >
-                <div class="border-b border-slate-200 bg-slate-50 px-5 py-4 sm:px-6">
-                    <div class="flex items-start justify-between gap-3">
-                        <div class="min-w-0">
-                            <p class="text-[11px] font-black uppercase tracking-[0.18em] text-indigo-500">선택한 날짜</p>
-                            <h3 class="classcalendar-copy mt-1 text-2xl font-black text-slate-900" x-text="dayModalTitle()"></h3>
-                            <p class="mt-1 text-sm font-medium text-slate-500" x-text="dayModalSubtitle()"></p>
-                        </div>
-                        <button
-                            type="button"
-                            @click="closeHomeInlineDayPanel()"
-                            class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
-                            aria-label="닫기"
-                        >
-                            <i class="fa-solid fa-xmark"></i>
-                        </button>
-                    </div>
-                    <div class="mt-4 flex flex-wrap items-center gap-2">
-                        <span class="inline-flex items-center rounded-full bg-indigo-100 px-3 py-1.5 text-xs font-bold text-indigo-700">일정 <span class="ml-1.5" x-text="getSelectedDateEventCount()"></span></span>
-                        <span class="inline-flex items-center rounded-full bg-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700">할 일 <span class="ml-1.5" x-text="getSelectedDateTaskCount()"></span></span>
-                        <span x-show="getSelectedDateDirectHubCount() > 0" class="inline-flex items-center rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-800">연결 항목 <span class="ml-1.5" x-text="getSelectedDateDirectHubCount()"></span></span>
-                        <button
-                            type="button"
-                            @click="openCreateModalForSelectedDate($event)"
-                            class="inline-flex items-center rounded-full bg-slate-900 px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-slate-700"
-                        >
-                            <i class="fa-solid fa-plus mr-1.5 text-[11px]"></i>
-                            새 일정
-                        </button>
-                    </div>
-                </div>
-
-                <div class="space-y-6 px-5 py-5 sm:px-6">
-                    <div x-show="getSelectedDateEventCount() === 0 && getSelectedDateTaskCount() === 0 && getSelectedDateDirectHubCount() === 0" class="rounded-[1.6rem] border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center">
-                        <p class="text-base font-black text-slate-900">등록된 내용이 없습니다.</p>
-                        <p class="mt-2 text-sm text-slate-500">이 날짜에 필요한 일은 새 일정으로 바로 남길 수 있어요.</p>
-                        <button type="button" @click="openCreateModalForSelectedDate($event)" class="mt-4 inline-flex items-center rounded-2xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-indigo-700">새 일정 추가</button>
-                    </div>
-
-                    <section x-show="getSelectedDateDirectHubCount() > 0" class="space-y-3">
-                        <div class="flex items-center justify-between gap-2">
-                            <div>
-                                <h4 class="text-base font-black text-slate-900">연결 항목</h4>
-                            </div>
-                            <span class="text-xs font-bold text-slate-400" x-text="`${getSelectedDateDirectHubCount()}건`"></span>
-                        </div>
-                        <div class="space-y-3">
-                            <template x-for="item in getSelectedDateDirectHubItems()" :key="`home-day-hub-${item.id}`">
-                                <button
-                                    type="button"
-                                    @click="openSelectedDateHubItem(item, $event)"
-                                    class="block w-full rounded-[1.4rem] border border-slate-200 bg-white px-4 py-4 text-left shadow-sm transition hover:border-amber-300 hover:bg-amber-50/40"
-                                >
-                                    <div class="flex items-start justify-between gap-3">
-                                        <div class="min-w-0">
-                                            <div class="flex flex-wrap items-center gap-2">
-                                                <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800" x-text="item.serviceLabel"></span>
-                                                <span x-show="item.status_label" class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600" x-text="item.status_label"></span>
-                                            </div>
-                                            <p class="classcalendar-copy mt-2 text-base font-black text-slate-900" x-text="item.title"></p>
-                                            <p x-show="item.meta_text" class="mt-1 text-sm font-semibold text-slate-500" x-text="item.meta_text"></p>
-                                        </div>
-                                        <span class="shrink-0 text-xs font-bold text-amber-700">열기</span>
-                                    </div>
-                                </button>
-                            </template>
-                        </div>
-                    </section>
-
-                    <div class="grid gap-6 lg:grid-cols-2">
-                        <section class="space-y-3">
-                            <div class="flex items-center justify-between gap-2">
-                                <div>
-                                    <h4 class="text-base font-black text-slate-900">일정</h4>
-                                </div>
-                                <span class="text-xs font-bold text-slate-400" x-text="`${getSelectedDateEventCount()}건`"></span>
-                            </div>
-                            <div class="space-y-3">
-                                <template x-for="event in getEventsForSelectedDate()" :key="`home-day-event-${event.id}`">
-                                    <button type="button" @click="openEventDetail(event, $event)" class="block w-full rounded-[1.4rem] border px-4 py-4 text-left shadow-sm transition" :class="getEventCardClass(event)">
-                                        <div class="flex items-start justify-between gap-3">
-                                            <div class="min-w-0">
-                                                <div class="flex flex-wrap items-center gap-2">
-                                                    <p class="classcalendar-copy text-base font-black text-slate-900" x-text="event.title"></p>
-                                                    <span class="rounded-full border px-2 py-0.5 text-[11px] font-bold" :class="getEventStatusBadgeClass(event)" x-text="getEventStatusText(event)"></span>
-                                                    <span x-show="event.is_locked" class="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-700">자동 연동</span>
-                                                    <span x-show="event.is_shared_calendar" class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600">공유</span>
-                                                </div>
-                                                <p class="mt-1 text-sm font-semibold text-slate-500" x-text="formatEventRange(event)"></p>
-                                            </div>
-                                            <span class="shrink-0 text-xs font-bold text-indigo-600">열기</span>
-                                        </div>
-                                    </button>
-                                </template>
-                                <div x-show="getSelectedDateEventCount() === 0" class="rounded-[1.3rem] border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold text-slate-500">등록된 일정이 없습니다.</div>
-                            </div>
-                        </section>
-
-                        <section class="space-y-3">
-                            <div class="flex items-center justify-between gap-2">
-                                <div>
-                                    <h4 class="text-base font-black text-slate-900">할 일</h4>
-                                </div>
-                                <span class="text-xs font-bold text-slate-400" x-text="`${getSelectedDateTaskCount()}건`"></span>
-                            </div>
-                            <div class="space-y-3">
-                                <template x-for="task in getTasksForSelectedDate()" :key="`home-day-task-${task.id}`">
-                                    <button type="button" @click="openTaskDetail(task, $event)" class="block w-full rounded-[1.4rem] border px-4 py-4 text-left shadow-sm transition" :class="getTaskCardClass(task)">
-                                        <div class="flex items-start justify-between gap-3">
-                                            <div class="min-w-0">
-                                                <div class="flex flex-wrap items-center gap-2">
-                                                    <p class="classcalendar-copy text-base font-black" :class="getTaskTitleClass(task)" x-text="task.title"></p>
-                                                    <span class="rounded-full border px-2 py-0.5 text-[11px] font-bold" :class="getTaskPriorityBadgeClass(task)" x-text="task.priority === 'high' ? '중요' : (task.priority === 'low' ? '낮음' : '보통')"></span>
-                                                    <span class="rounded-full border px-2 py-0.5 text-[11px] font-bold" :class="getTaskStatusBadgeClass(task)" x-text="getTaskStatusText(task)"></span>
-                                                </div>
-                                                <p class="mt-1 text-sm font-semibold" :class="getTaskMetaClass(task)" x-text="formatTaskDue(task)"></p>
-                                            </div>
-                                            <span class="shrink-0 text-xs font-bold text-slate-600">열기</span>
-                                        </div>
-                                    </button>
-                                </template>
-                                <div x-show="getSelectedDateTaskCount() === 0" class="rounded-[1.3rem] border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold text-slate-500">등록된 할 일이 없습니다.</div>
-                            </div>
-                        </section>
-                    </div>
-                </div>
-            </section>
-            {% endif %}
+            
             {% if is_embedded_on_home and messagebox_home_card.enabled and messagebox_home_card.url %}
             <section class="mt-4 rounded-[1.5rem] border border-amber-200 bg-gradient-to-r from-amber-50 via-white to-slate-50 p-4 sm:p-5" data-home-messagebox-card="true">
                 <div class="mx-auto w-full max-w-4xl space-y-4">
@@ -1302,7 +1138,6 @@
                 </div>
                 <div class="mt-4 flex flex-wrap items-center gap-2">
                     <span class="inline-flex items-center rounded-full bg-indigo-100 px-3 py-1.5 text-xs font-bold text-indigo-700">일정 <span class="ml-1.5" x-text="getSelectedDateEventCount()"></span></span>
-                    <span class="inline-flex items-center rounded-full bg-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700">할 일 <span class="ml-1.5" x-text="getSelectedDateTaskCount()"></span></span>
                     <span x-show="getSelectedDateDirectHubCount() > 0" class="inline-flex items-center rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-800">연결 항목 <span class="ml-1.5" x-text="getSelectedDateDirectHubCount()"></span></span>
                     <button
                         type="button"
@@ -1317,7 +1152,7 @@
 
             <div class="overflow-y-auto px-5 py-5 sm:px-6">
                 <div x-show="dayModalMode === 'overview'" class="space-y-6">
-                    <div x-show="getSelectedDateEventCount() === 0 && getSelectedDateTaskCount() === 0 && getSelectedDateDirectHubCount() === 0" class="rounded-[1.6rem] border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center">
+                    <div x-show="getSelectedDateEventCount() === 0 && getSelectedDateDirectHubCount() === 0" class="rounded-[1.6rem] border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center">
                         <p class="text-base font-black text-slate-900">등록된 내용이 없습니다.</p>
                         <p class="mt-2 text-sm text-slate-500">이 날짜에 필요한 일은 새 일정으로 바로 남길 수 있어요.</p>
                         <button type="button" @click="openCreateModalForSelectedDate($event)" class="mt-4 inline-flex items-center rounded-2xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-indigo-700">새 일정 추가</button>
@@ -1380,35 +1215,8 @@
                                 </template>
                                 <div x-show="getSelectedDateEventCount() === 0" class="rounded-[1.3rem] border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold text-slate-500">등록된 일정이 없습니다.</div>
                             </div>
-                        </section>
-
-                        <section class="space-y-3">
-                            <div class="flex items-center justify-between gap-2">
-                                <div>
-                                    <h4 class="text-base font-black text-slate-900">할 일</h4>
-                                </div>
-                                <span class="text-xs font-bold text-slate-400" x-text="`${getSelectedDateTaskCount()}건`"></span>
-                            </div>
-                            <div class="space-y-3">
-                                <template x-for="task in getTasksForSelectedDate()" :key="`day-task-${task.id}`">
-                                    <button type="button" @click="openTaskDetail(task, $event)" class="block w-full rounded-[1.4rem] border px-4 py-4 text-left shadow-sm transition" :class="getTaskCardClass(task)">
-                                        <div class="flex items-start justify-between gap-3">
-                                            <div class="min-w-0">
-                                                <div class="flex flex-wrap items-center gap-2">
-                                                    <p class="classcalendar-copy text-base font-black" :class="getTaskTitleClass(task)" x-text="task.title"></p>
-                                                    <span class="rounded-full border px-2 py-0.5 text-[11px] font-bold" :class="getTaskPriorityBadgeClass(task)" x-text="task.priority === 'high' ? '중요' : (task.priority === 'low' ? '낮음' : '보통')"></span>
-                                                    <span class="rounded-full border px-2 py-0.5 text-[11px] font-bold" :class="getTaskStatusBadgeClass(task)" x-text="getTaskStatusText(task)"></span>
-                                                </div>
-                                                <p class="mt-1 text-sm font-semibold" :class="getTaskMetaClass(task)" x-text="formatTaskDue(task)"></p>
-                                            </div>
-                                            <span class="shrink-0 text-xs font-bold text-slate-600">열기</span>
-                                        </div>
-                                    </button>
-                                </template>
-                                <div x-show="getSelectedDateTaskCount() === 0" class="rounded-[1.3rem] border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold text-slate-500">등록된 할 일이 없습니다.</div>
-                            </div>
-                        </section>
-                    </div>
+                    </section>
+                </div>
                 </div>
 
                 <div x-show="dayModalMode === 'create'" class="space-y-4">
@@ -1520,23 +1328,6 @@
                         <button type="button" x-show="surfaceAllowsManage && selectedEvent && !selectedEvent.is_locked && selectedEvent.can_edit" @click="openEditModal()" class="rounded-xl border border-slate-300 px-3.5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">수정</button>
                         <button type="button" x-show="surfaceAllowsManage && selectedEvent && !selectedEvent.is_locked && selectedEvent.can_edit" @click="openDeleteConfirm()" class="rounded-xl border border-red-200 px-3.5 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50">삭제</button>
                         <button type="button" @click="showDayOverview()" class="rounded-xl bg-indigo-600 px-3.5 py-2 text-sm font-bold text-white">목록으로</button>
-                    </div>
-                </div>
-
-                <div x-show="dayModalMode === 'task-detail' && selectedTask" class="space-y-4">
-                    <p class="text-sm font-medium" :class="selectedTask ? getTaskMetaClass(selectedTask) : 'text-slate-600'" x-text="selectedTask ? formatTaskDue(selectedTask) : ''"></p>
-                    <div x-show="selectedTask" class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-                        <div class="flex flex-wrap items-center gap-2">
-                            <span class="text-xs font-bold border rounded-md px-1.5 py-0.5" :class="getTaskPriorityBadgeClass(selectedTask)" x-text="selectedTask && selectedTask.priority === 'high' ? '중요' : (selectedTask && selectedTask.priority === 'low' ? '낮음' : '보통')"></span>
-                            <span class="text-xs font-bold border rounded-md px-1.5 py-0.5" :class="getTaskStatusBadgeClass(selectedTask)" x-text="getTaskStatusText(selectedTask)"></span>
-                        </div>
-                    </div>
-                    <p x-show="selectedTask && selectedTask.note" class="classcalendar-copy rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 whitespace-pre-line" x-text="selectedTask ? selectedTask.note : ''"></p>
-                    <div x-show="selectedTask && hasSelectedItemMessageCapture()" class="flex flex-wrap items-center gap-2">
-                        <button type="button" x-show="selectedTask && canToggleSelectedItemMessageCapture()" @click="toggleSelectedItemMessageCapture()" class="inline-flex items-center rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-sm font-bold text-emerald-800 transition hover:bg-emerald-100" x-text="selectedItemMessageCaptureActionText()"></button>
-                    </div>
-                    <div class="flex justify-end border-t border-slate-100 pt-4">
-                        <button type="button" @click="showDayOverview()" class="rounded-xl bg-slate-900 px-3.5 py-2 text-sm font-bold text-white">목록으로</button>
                     </div>
                 </div>
 
@@ -1719,7 +1510,6 @@ function calendarApp() {
         agendaQuery: '{{ initial_search_query|default:""|escapejs }}',
         agendaScope: 'month',
         agendaDateSections: [],
-        homeInlineDayPanelOpen: false,
         surfaceAllowsManage: true,
         integrationSettings: {
             collect_deadline_enabled: true,
@@ -1730,6 +1520,8 @@ function calendarApp() {
         messageHubOpen: false,
         messageHubActiveTab: 'capture',
         messageHubReturnFocusElement: null,
+        surfaceScrollLocked: false,
+        surfaceScrollLockTop: 0,
         messageArchiveLoadedOnce: false,
         messageCaptureEnabled: {{ message_capture_enabled|yesno:"true,false" }},
         messageCaptureItemTypesEnabled: {{ message_capture_item_types_enabled|yesno:"true,false" }},
@@ -1938,7 +1730,7 @@ function calendarApp() {
         normalizeHubItem(item) {
             const serviceLabelMap = {
                 event: '일정',
-                task: '할 일',
+                task: '일정',
                 collect: '수합',
                 signature: '사인',
                 consent: '동의서',
@@ -1971,7 +1763,7 @@ function calendarApp() {
                 const raw = JSON.parse(document.getElementById('tasks-data').textContent || '[]');
                 this.tasks = raw.map((task) => this.normalizeTask(task));
             } catch (e) {
-                window.showToast('할 일 데이터를 읽는 중 오류가 발생했습니다.', 'error');
+                window.showToast('일정 데이터를 읽는 중 오류가 발생했습니다.', 'error');
             }
         },
 
@@ -2017,7 +1809,7 @@ function calendarApp() {
         openTaskDetailById(taskId) {
             const task = this.findTaskById(taskId);
             if (!task) {
-                window.showToast('할 일을 다시 불러오는 중입니다. 잠시 후 다시 시도해 주세요.', 'error');
+                window.showToast('일정을 다시 불러오는 중입니다. 잠시 후 다시 시도해 주세요.', 'error');
                 return;
             }
             this.openTaskDetail(task);
@@ -2967,31 +2759,6 @@ function calendarApp() {
             this.rebuildAgendaSections();
         },
 
-        usesHomeInlineDayPanel() {
-            return this.calendarEmbedMode === 'home' && !this.isCompactMobileViewport();
-        },
-
-        showHomeInlineDayPanel() {
-            return this.usesHomeInlineDayPanel() && this.homeInlineDayPanelOpen && this.hasSelectedDateInCurrentMonth();
-        },
-
-        openHomeInlineDayPanel(date, triggerEvent = null) {
-            const preservedScroll = this.captureWindowScrollPosition();
-            this.selectDate(date);
-            this.homeInlineDayPanelOpen = true;
-            this.dayModalOpen = false;
-            this.$nextTick(() => {
-                this.restoreWindowScrollPosition(preservedScroll);
-                this.restoreFocusWithoutScroll(triggerEvent && triggerEvent.currentTarget ? triggerEvent.currentTarget : null);
-                notifyEmbeddedCalendarHeight();
-            });
-        },
-
-        closeHomeInlineDayPanel() {
-            this.homeInlineDayPanelOpen = false;
-            this.$nextTick(() => notifyEmbeddedCalendarHeight());
-        },
-
         isCompactMobileViewport() {
             if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
             return window.matchMedia('(max-width: 639px)').matches;
@@ -3007,57 +2774,45 @@ function calendarApp() {
             return (Number.isFinite(baseOffset) ? baseOffset : 88) + extra;
         },
 
-        captureWindowScrollPosition() {
-            if (typeof window === 'undefined') return null;
-            return {
-                left: window.scrollX || window.pageXOffset || 0,
-                top: window.scrollY || window.pageYOffset || 0,
-            };
-        },
-
-        restoreWindowScrollPosition(position) {
-            if (!position || typeof window === 'undefined' || typeof window.scrollTo !== 'function') return;
-            const applyScroll = () => {
-                try {
-                    window.scrollTo({
-                        left: position.left,
-                        top: position.top,
-                        behavior: 'auto',
-                    });
-                } catch (error) {
-                    window.scrollTo(position.left, position.top);
-                }
-            };
-            if (typeof window.requestAnimationFrame === 'function') {
-                window.requestAnimationFrame(applyScroll);
+        syncCalendarSurfaceScrollLock() {
+            if (typeof window === 'undefined' || typeof document === 'undefined') return;
+            const shouldLock = !!(this.dayModalOpen || this.detailModalOpen || this.deleteConfirmOpen || this.messageHubOpen);
+            if (shouldLock === this.surfaceScrollLocked) return;
+            this.surfaceScrollLocked = shouldLock;
+            const body = document.body;
+            const documentElement = document.documentElement;
+            if (!body || !documentElement) return;
+            if (shouldLock) {
+                this.surfaceScrollLockTop = window.scrollY || window.pageYOffset || 0;
+                body.style.position = 'fixed';
+                body.style.top = `-${this.surfaceScrollLockTop}px`;
+                body.style.left = '0';
+                body.style.right = '0';
+                body.style.width = '100%';
+                body.style.overflow = 'hidden';
+                documentElement.style.overflow = 'hidden';
                 return;
             }
-            window.setTimeout(applyScroll, 0);
-        },
-
-        restoreFocusWithoutScroll(target) {
-            if (!target || typeof target.focus !== 'function') return;
-            try {
-                target.focus({ preventScroll: true });
-            } catch (error) {
-                target.focus();
+            const restoreTop = Number(this.surfaceScrollLockTop || 0);
+            body.style.position = '';
+            body.style.top = '';
+            body.style.left = '';
+            body.style.right = '';
+            body.style.width = '';
+            body.style.overflow = '';
+            documentElement.style.overflow = '';
+            this.surfaceScrollLockTop = 0;
+            if (typeof window.scrollTo === 'function') {
+                window.scrollTo(0, restoreTop);
             }
         },
 
         handleDayCellClick(date, triggerEvent = null) {
-            if (this.isCompactMobileViewport()) {
-                if (this.getDayItemCount(date) > 0) {
-                    this.openDayOverview(date, triggerEvent);
-                    return;
-                }
-                this.openCreateModal(date, triggerEvent);
+            if (this.getDayItemCount(date) > 0) {
+                this.openDayOverview(date, triggerEvent);
                 return;
             }
-            if (this.usesHomeInlineDayPanel()) {
-                this.openHomeInlineDayPanel(date, triggerEvent);
-                return;
-            }
-            this.openDayOverview(date, triggerEvent);
+            this.openCreateModal(date, triggerEvent);
         },
 
         scrollAgendaResultsToTop() {
@@ -3200,6 +2955,7 @@ function calendarApp() {
 
         getAgendaItems() {
             return this.hubItems
+                .filter((item) => item.item_kind !== 'task')
                 .filter((item) => this.agendaItemMatchesScope(item))
                 .filter((item) => this.agendaItemMatchesQuery(item))
                 .sort((left, right) => this.sortHubItems(left, right));
@@ -3316,22 +3072,6 @@ function calendarApp() {
             this.selectedEvent = null;
             this.selectedTask = null;
             this.dayModalMode = 'overview';
-            if (this.usesHomeInlineDayPanel()) {
-                const preservedScroll = this.captureWindowScrollPosition();
-                this.dayModalOpen = false;
-                this.homeInlineDayPanelOpen = true;
-                this.syncPageState({
-                    date: this.selectedDateKey,
-                    action: '',
-                    open_event: '',
-                    open_task: '',
-                });
-                this.$nextTick(() => {
-                    this.restoreWindowScrollPosition(preservedScroll);
-                    notifyEmbeddedCalendarHeight();
-                });
-                return;
-            }
             this.dayModalOpen = true;
             this.syncPageState({
                 date: this.selectedDateKey,
@@ -3394,7 +3134,6 @@ function calendarApp() {
                 overview: '선택한 날짜',
                 create: '새 일정',
                 detail: '일정 상세',
-                'task-detail': '할 일 상세',
                 edit: '일정 수정',
                 'confirm-delete': '삭제 확인',
             };
@@ -3403,7 +3142,6 @@ function calendarApp() {
 
         dayModalTitle() {
             if (this.dayModalMode === 'detail' && this.selectedEvent) return this.selectedEvent.title || '일정';
-            if (this.dayModalMode === 'task-detail' && this.selectedTask) return this.selectedTask.title || '할 일';
             if (this.dayModalMode === 'edit') return '일정 수정';
             if (this.dayModalMode === 'create') return '새 일정 만들기';
             if (this.dayModalMode === 'confirm-delete') return '일정 삭제';
@@ -3412,12 +3150,11 @@ function calendarApp() {
 
         dayModalSubtitle() {
             if (this.dayModalMode === 'detail' && this.selectedEvent) return this.formatEventRange(this.selectedEvent);
-            if (this.dayModalMode === 'task-detail' && this.selectedTask) return this.formatTaskDue(this.selectedTask);
             if (this.dayModalMode === 'edit' && this.selectedEvent) return this.selectedEvent.title || '';
+            if (this.dayModalMode === 'create') return '새 일정을 바로 추가할 수 있어요.';
             if (this.dayModalMode === 'confirm-delete' && this.selectedEvent) return this.selectedEvent.title || '';
             const parts = [
                 `일정 ${this.getSelectedDateEventCount()}건`,
-                `할 일 ${this.getSelectedDateTaskCount()}건`,
             ];
             if (this.getSelectedDateDirectHubCount() > 0) {
                 parts.push(`연결 항목 ${this.getSelectedDateDirectHubCount()}건`);
@@ -3582,19 +3319,11 @@ function calendarApp() {
         openTaskDetail(task, triggerEvent = null) {
             if (!task) return;
             this.rememberDayModalTrigger(triggerEvent);
-            this.selectedEvent = null;
             if (task.due_at) {
-                this.setSelectedDateContext(task.due_at);
+                this.openDayOverview(task.due_at, triggerEvent);
+                return;
             }
-            this.selectedTask = { ...task };
-            this.dayModalOpen = true;
-            this.dayModalMode = 'task-detail';
-            this.detailModalOpen = false;
-            this.syncPageState({
-                action: '',
-                open_event: '',
-                open_task: String(task.id || ''),
-            });
+            this.openDayOverview(new Date(), triggerEvent);
         },
 
         async openMessageArchiveCapture(captureId, triggerEvent = null) {
@@ -3902,7 +3631,7 @@ function calendarApp() {
         get messageCapturePredictionText() {
             const map = {
                 event: '일정으로 예측',
-                task: '할 일로 예측',
+                task: '일정 후보',
                 ignore: '안내 메시지로 예측',
                 unknown: '직접 확인 필요',
             };
@@ -4023,8 +3752,7 @@ function calendarApp() {
             return eventMemoCount + taskMemoCount;
         },
         getDayItemCount(date) {
-            const marker = this.getDayMarker(date);
-            return Number(marker && marker.count ? marker.count : 0);
+            return this.getEventCountForDate(date) + this.getVisibleHubItemsForDate(date).length;
         },
         formatDayItemCount(date) {
             const count = this.getDayItemCount(date);
@@ -4034,14 +3762,7 @@ function calendarApp() {
             const base = this.formatAgendaDate(this.dateKey(date));
             const count = this.getDayItemCount(date);
             if (!count) return `${base} · 비어 있음`;
-            const marker = this.getDayMarker(date);
-            const toneLabelMap = {
-                neutral: '진행 항목',
-                warning: '확인 필요',
-                done: '완료 포함',
-            };
-            const toneLabel = toneLabelMap[marker && marker.top_tone ? marker.top_tone : 'neutral'] || toneLabelMap.neutral;
-            return `${base} · ${count}건 · ${toneLabel}`;
+            return `${base} · ${count}건`;
         },
         hubItemOverlapsDate(item, date) {
             if (!item) return false;
@@ -4074,6 +3795,12 @@ function calendarApp() {
             const selectedDate = this.parseDateKey(this.selectedDateKey);
             return this.hubItems
                 .filter((item) => this.hubItemOverlapsDate(item, selectedDate))
+                .sort((left, right) => this.sortHubItems(left, right));
+        },
+        getVisibleHubItemsForDate(date) {
+            return this.hubItems
+                .filter((item) => item.item_kind !== 'task' && item.item_kind !== 'event')
+                .filter((item) => this.hubItemOverlapsDate(item, date))
                 .sort((left, right) => this.sortHubItems(left, right));
         },
         getTasksForSelectedDate() {

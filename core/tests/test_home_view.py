@@ -864,6 +864,7 @@ class HomeV2ViewTest(TestCase):
         }
 
         self.assertIn('data-classcalendar-main-view="true"', content)
+        self.assertNotIn('data-classcalendar-today-tasks="true"', content)
         self.assertIn(('아침 조회 준비', '출석부와 전달사항 확인'), task_notes)
         self.assertNotIn('data-home-v2-calendar-today-tasks="true"', content)
 
@@ -2418,7 +2419,7 @@ class HomeV4ViewTest(TestCase):
         self.assertIn('data-home-v4-mobile-calendar-status="true"', content)
         self.assertIn('data-home-v4-mobile-calendar-chip="date"', content)
         self.assertIn('data-home-v4-mobile-calendar-chip="events"', content)
-        self.assertIn('data-home-v4-mobile-calendar-chip="tasks"', content)
+        self.assertNotIn('data-home-v4-mobile-calendar-chip="tasks"', content)
         self.assertIn('data-home-v4-mobile-calendar-first-trigger="true"', content)
         self.assertIn('data-home-v4-mobile-quick-tools="true"', content)
         self.assertIn('data-home-v4-mobile-quick-item="true"', content)
@@ -2428,7 +2429,7 @@ class HomeV4ViewTest(TestCase):
         self.assertEqual(content.count('data-home-v4-mobile-all-tools-button="true"'), 1)
         self.assertIn(expected_date_label, content)
         self.assertIn('일정 1건', content)
-        self.assertIn('할 일 1건', content)
+        self.assertNotIn('할 일 1건', content)
         self.assertIn('바로 열기', content)
         self.assertNotIn('자주 쓰는 도구', content)
         self.assertNotIn('Quick Tools', content)

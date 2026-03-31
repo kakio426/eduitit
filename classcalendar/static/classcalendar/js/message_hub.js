@@ -34,7 +34,7 @@ function buildCalendarMessageHubState() {
             {
                 id: 'self_memo',
                 title: '나에게 메모',
-                body: '[언제 다시 볼지]\n그때 해야 할 일\n꼭 말할 멘트',
+                body: '[언제 다시 볼지]\n그때 확인할 내용\n꼭 말할 멘트',
             },
         ],
         messageCaptureFiles: [],
@@ -1168,7 +1168,7 @@ function initCalendarMessageHub(host, options = {}) {
                 return `찾은 일정 ${editableCount}개`;
             }
             if (Array.isArray(this.messageCaptureCandidates) && this.messageCaptureCandidates.length > 0) {
-                return '이미 연결된 일정이나 할 일만 있어요.';
+                return '이미 연결된 일정만 있어요.';
             }
             return '찾은 일정이 없어요.';
         },
@@ -1573,7 +1573,7 @@ function initCalendarMessageHub(host, options = {}) {
         },
 
         messageCapturePredictionText: function() {
-            const map = { event: '일정으로 예측', task: '할 일로 예측', ignore: '안내문만 예측', unknown: '직접 확인 필요' };
+            const map = { event: '일정으로 예측', task: '일정 후보', ignore: '안내문만 예측', unknown: '직접 확인 필요' };
             return map[this.messageCapturePredictedItemType] || '직접 확인 필요';
         },
 
@@ -1605,7 +1605,7 @@ function initCalendarMessageHub(host, options = {}) {
             return this.messageArchiveSelectedCapture.archive_status === 'unparsed'
                 ? '아직 이 메시지는 읽지 않았어요. 필요할 때 다시 열어 일정찾기를 누르면 됩니다.'
                 : (this.hasSelectedCaptureLinkedItems()
-                    ? '이미 연결된 일정이나 할 일은 아래에서 확인할 수 있어요.'
+                    ? '이미 연결된 일정은 아래에서 확인할 수 있어요.'
                     : '이 메시지에서는 저장할 날짜를 찾지 못했어요.');
         },
     };
