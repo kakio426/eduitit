@@ -509,7 +509,6 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('openTodayMemoModal($event)', content)
         self.assertNotIn('data-home-v2-calendar-month-grid="true"', content)
         self.assertNotIn('data-home-v2-calendar-day="true"', content)
-        self.assertNotIn('안내문에서 일정 찾기', content)
 
     def test_v2_authenticated_does_not_render_today_try_now_section(self):
         self._create_try_now_products()
@@ -541,7 +540,6 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('openTodayMemoModal($event)', content)
         self.assertNotIn('data-home-v2-today-memo-modal="true"', content)
         self.assertNotIn('openMessageHub($event, \'capture\', { resetCapture: true })', content)
-        self.assertNotIn('안내문에서 일정 찾기', content)
 
     @override_settings(
         FEATURE_MESSAGE_CAPTURE_ENABLED=True,

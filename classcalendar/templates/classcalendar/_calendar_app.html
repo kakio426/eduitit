@@ -3046,7 +3046,11 @@ function calendarApp() {
 
         handleDayCellClick(date, triggerEvent = null) {
             if (this.isCompactMobileViewport()) {
-                this.openDayOverview(date, triggerEvent);
+                if (this.getDayItemCount(date) > 0) {
+                    this.openDayOverview(date, triggerEvent);
+                    return;
+                }
+                this.openCreateModal(date, triggerEvent);
                 return;
             }
             if (this.usesHomeInlineDayPanel()) {
