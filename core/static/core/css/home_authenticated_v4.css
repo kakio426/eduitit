@@ -42,6 +42,9 @@
 }
 
 .home-v4-card {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     padding: 1.25rem;
 }
 
@@ -615,6 +618,9 @@
 
 .home-v4-mobile-quickdrop {
     display: grid;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     gap: 0.85rem;
     border: 1px solid #d8e5ff;
     border-radius: 1.6rem;
@@ -623,6 +629,16 @@
     overflow: hidden;
     isolation: isolate;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.home-v4-card textarea,
+.home-v4-card input,
+.home-v4-card select,
+.home-v4-mobile-quickdrop textarea,
+.home-v4-mobile-quickdrop input,
+.home-v4-mobile-quickdrop select {
+    min-width: 0;
+    max-width: 100%;
 }
 
 .home-v4-mobile-quickdrop-head {
@@ -1231,6 +1247,25 @@
     border-color: #93c5fd;
     color: #0f172a;
     background: #f8fbff;
+}
+
+@media (max-width: 1099px) {
+    .home-v4-layout,
+    .home-v4-main,
+    .home-v4-primary-stack,
+    .home-v4-side-stack,
+    .home-v4-home-panel-section,
+    .home-v4-card,
+    .home-v4-mobile-quickdrop {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+    }
+
+    .home-v4-card,
+    .home-v4-mobile-quickdrop {
+        overflow-x: clip;
+    }
 }
 
 @media (min-width: 768px) {

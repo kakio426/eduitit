@@ -121,14 +121,21 @@
 }
 
 .home-v5-mobile-stack {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     gap: 0.85rem;
 }
 
 .home-v5-mobile-panel {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     border: 1px solid #d8e4e1;
     border-radius: 1.55rem;
     background: rgba(255, 255, 255, 0.96);
     padding: 0.95rem;
+    overflow-x: clip;
     box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
 }
 

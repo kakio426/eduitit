@@ -72,6 +72,9 @@
     }
 
     .classcalendar-main-toolbar-scroll {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
         overflow-x: auto;
         padding-bottom: 0.12rem;
     }
@@ -260,6 +263,8 @@
 
     .classcalendar-search-field input {
         width: 100%;
+        min-width: 0;
+        max-width: 100%;
         border: 0;
         background: transparent;
         padding: 0.95rem 3rem 0.95rem 2.9rem;
@@ -446,7 +451,24 @@
     }
 
     .classcalendar-home-inline-quickdrop {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
         margin-top: 1rem;
+    }
+
+    [data-home-messagebox-card="true"] {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    [data-home-messagebox-card="true"] textarea,
+    [data-home-messagebox-card="true"] input,
+    [data-home-messagebox-card="true"] select {
+        min-width: 0;
+        max-width: 100%;
     }
 
     @media (min-width: 1100px) {
