@@ -43,26 +43,26 @@ except Exception:  # pragma: no cover
 
 
 SERVICE_ROUTE = "schoolcomm:main"
-SERVICE_TITLE = "학교 커뮤니티"
+SERVICE_TITLE = "우리끼리 채팅방"
 SERVICE_PRODUCT_DEFAULTS = {
-    "lead_text": "같은 학교 선생님끼리 공지, 자료, 대화를 한곳에서 정리하는 교사 전용 커뮤니티입니다.",
+    "lead_text": "동학년 선생님부터 편하게 공지, 자료, 대화를 나눌 수 있는 교사용 채팅방입니다.",
     "description": (
-        "학교 커뮤니티는 교사끼리 공지와 자료를 나누고, 1:1·소규모 대화를 이어가며, 받은 파일을 개인 기준으로 다시 분류하고 "
-        "캘린더 추천까지 연결하는 학교 내부 협업 공간입니다."
+        "우리끼리 채팅방은 공지와 자료를 나누고, 1:1·소규모 대화를 이어가며, 받은 파일을 개인 기준으로 다시 분류하고 "
+        "캘린더 추천까지 연결하는 교사용 대화 공간입니다."
     ),
     "price": 0.00,
     "is_active": True,
     "is_featured": False,
     "is_guest_allowed": False,
-    "icon": "🏫",
+    "icon": "💬",
     "color_theme": "blue",
     "card_size": "small",
     "display_order": 16,
     "service_type": "classroom",
     "external_url": "",
     "launch_route_name": SERVICE_ROUTE,
-    "solve_text": "우리 학교 선생님끼리 공지와 자료를 한곳에서 나누고 싶어요",
-    "result_text": "학교 내부 협업 커뮤니티",
+    "solve_text": "동학년 선생님들과 공지와 자료를 편하게 나누고 싶어요",
+    "result_text": "교사용 채팅방",
     "time_text": "1분",
 }
 NOTICE_ROOM_NAME = "공지"
@@ -215,18 +215,18 @@ def ensure_service_product():
     manual, _ = ServiceManual.objects.get_or_create(
         product=product,
         defaults={
-            "title": "학교 커뮤니티 시작 가이드",
-            "description": "워크스페이스 만들기부터 공지, 자료공유, 일정 추천까지 빠르게 익힐 수 있습니다.",
+            "title": "우리끼리 채팅방 시작 가이드",
+            "description": "채팅방 공간 만들기부터 공지, 자료공유, 일정 추천까지 빠르게 익힐 수 있습니다.",
             "is_published": True,
         },
     )
-    manual.title = "학교 커뮤니티 시작 가이드"
-    manual.description = "워크스페이스 만들기부터 공지, 자료공유, 일정 추천까지 빠르게 익힐 수 있습니다."
+    manual.title = "우리끼리 채팅방 시작 가이드"
+    manual.description = "채팅방 공간 만들기부터 공지, 자료공유, 일정 추천까지 빠르게 익힐 수 있습니다."
     manual.is_published = True
     manual.save(update_fields=["title", "description", "is_published", "updated_at"])
 
     sections = [
-        ("처음 만들기", "학교명 제안값을 확인해 워크스페이스를 만들고, 초대 링크로 선생님을 초대합니다.", 1),
+        ("처음 만들기", "이름 제안값을 확인해 채팅방 공간을 만들고, 초대 링크로 함께 쓸 선생님을 초대합니다.", 1),
         ("공지와 자료공유", "공지방은 관리자만 글을 올리고, 자료공유방에서는 파일과 메모를 함께 나눕니다.", 2),
         ("대화와 일정 추천", "1:1·그룹 대화 중 필요한 메시지는 일정 추천으로 확인 후 저장합니다.", 3),
     ]
@@ -704,7 +704,7 @@ def _calendar_payload_from_message(message, has_files=False):
     if not start_time or not end_time:
         return None
     return {
-        "title": parsed.get("extracted_title") or _truncate(message.body, limit=50) or "학교 커뮤니티 일정",
+        "title": parsed.get("extracted_title") or _truncate(message.body, limit=50) or "우리끼리 채팅방 일정",
         "start_time": start_time.isoformat(),
         "end_time": end_time.isoformat(),
         "is_all_day": bool(parsed.get("extracted_is_all_day")),
@@ -1036,18 +1036,18 @@ def build_home_card(user):
     workspace = get_default_workspace_for_user(user, create=False)
     if workspace is None:
         return {
-            "title": getattr(product, "public_service_name", "") or getattr(product, "title", "") or SERVICE_TITLE,
-            "summary": "우리 학교 선생님끼리 공지와 자료를 한곳에서 정리하세요.",
+            "title": getattr(product, "public_service_name", "") or SERVICE_TITLE,
+            "summary": "동학년 선생님부터 편하게 공지와 자료를 나눠 보세요.",
             "workspace_name": "",
             "manage_url": reverse("schoolcomm:main"),
             "open_url": reverse("schoolcomm:main"),
             "shortcut_url": reverse("schoolcomm:main"),
-            "shortcut_aria_label": "학교 커뮤니티 열기",
+            "shortcut_aria_label": "우리끼리 채팅방 열기",
             "shortcut_symbol": "+",
             "secondary_url": reverse("schoolcomm:main"),
-            "secondary_label": "학교 커뮤니티 만들기",
-            "icon_text": "🏫",
-            "primary_label": "학교 커뮤니티 열기",
+            "secondary_label": "채팅방 만들기",
+            "icon_text": "💬",
+            "primary_label": "채팅방 열기",
             "total_unread": 0,
             "notice_unread": 0,
             "suggestion_count": 0,
@@ -1068,18 +1068,18 @@ def build_home_card(user):
     )
     secondary_label = "공지 확인" if notification_summary["notice_unread"] and notice_room else "자료공유 열기"
     return {
-        "title": getattr(product, "public_service_name", "") or getattr(product, "title", "") or SERVICE_TITLE,
+        "title": getattr(product, "public_service_name", "") or SERVICE_TITLE,
         "workspace_name": workspace.name,
         "summary": summary,
         "manage_url": reverse("schoolcomm:main"),
         "open_url": reverse("schoolcomm:main"),
         "shortcut_url": reverse("schoolcomm:main"),
-        "shortcut_aria_label": "학교 커뮤니티 열기",
+        "shortcut_aria_label": "우리끼리 채팅방 열기",
         "shortcut_symbol": "+",
         "secondary_url": secondary_url,
         "secondary_label": secondary_label,
-        "icon_text": "🏫",
-        "primary_label": "학교 커뮤니티 열기",
+        "icon_text": "💬",
+        "primary_label": "채팅방 열기",
         "total_unread": notification_summary["total_unread"],
         "notice_unread": notification_summary["notice_unread"],
         "suggestion_count": notification_summary["suggestion_count"],

@@ -1,8 +1,10 @@
 from django.contrib.auth import get_user_model
+from django.db import DatabaseError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
+from unittest.mock import patch
 
 from classcalendar.models import CalendarEvent
 from core.models import UserPolicyConsent
@@ -248,3 +250,22 @@ class SchoolcommViewTests(SchoolcommTestCase):
         self.assertEqual(CalendarEvent.objects.count(), 1)
         suggestion.refresh_from_db()
         self.assertEqual(suggestion.status, CalendarSuggestion.Status.APPLIED)
+
+    def test_main_falls_back_to_unavailable_state_when_database_error_occurs(self):
+        self.client.force_login(self.owner)
+
+        with patch("schoolcomm.views._resolve_workspace", side_effect=DatabaseError("db unavailable")):
+            response = self.client.get(reverse("schoolcomm:main"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "우리끼리 채팅방")
+        self.assertContains(response, "지금은 채팅방을 준비하는 중입니다.")
+
+    def test_notifications_api_returns_503_when_database_error_occurs(self):
+        self.client.force_login(self.owner)
+
+        with patch("schoolcomm.views._resolve_workspace", side_effect=DatabaseError("db unavailable")):
+            response = self.client.get(reverse("schoolcomm:api_notifications_summary"))
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json()["code"], "service_unavailable")

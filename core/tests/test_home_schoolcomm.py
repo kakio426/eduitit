@@ -37,7 +37,7 @@ class HomeSchoolcommCardTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "core/home_authenticated_v5.html")
-        self.assertContains(response, "학교 커뮤니티")
+        self.assertContains(response, "우리끼리 채팅방")
         self.assertContains(response, "바로전송")
         self.assertIn('data-home-schoolcomm-card="desktop"', content)
         self.assertIn('data-home-v4-quickdrop-panel="true"', content)

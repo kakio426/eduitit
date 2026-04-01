@@ -149,7 +149,7 @@
         <section class="schoolcomm-panel rounded-[2rem] p-5">
             <h2 class="text-lg font-black text-slate-900">바로가기</h2>
             <div class="mt-4 space-y-2">
-                <a href="{% url 'schoolcomm:main' %}?workspace={{ workspace.id }}" class="block rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700">학교 커뮤니티 홈</a>
+                <a href="{% url 'schoolcomm:main' %}?workspace={{ workspace.id }}" class="block rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700">우리끼리 채팅방 홈</a>
                 {% if dashboard.notice_room and dashboard.notice_room.url != request.path %}
                 <a href="{{ dashboard.notice_room.url }}" class="block rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">공지방</a>
                 {% endif %}

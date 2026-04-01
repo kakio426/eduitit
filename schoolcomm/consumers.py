@@ -1,5 +1,6 @@
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
+from django.db import DatabaseError
 
 from .services import (
     build_notification_summary,
@@ -11,7 +12,11 @@ from .services import (
 
 class SchoolcommRoomConsumer(AsyncJsonWebsocketConsumer):
     async def connect(self):
-        room, membership = await self._get_room_and_membership()
+        try:
+            room, membership = await self._get_room_and_membership()
+        except DatabaseError:
+            await self.close(code=1013)
+            return
         if room is None:
             await self.close(code=4404)
             return
@@ -60,7 +65,11 @@ class SchoolcommUserConsumer(AsyncJsonWebsocketConsumer):
         self.group_name = user_group_name(user)
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
-        summary = await self._build_summary()
+        try:
+            summary = await self._build_summary()
+        except DatabaseError:
+            await self.close(code=1013)
+            return
         await self.send_json({"type": "notification.summary", "payload": summary})
 
     async def disconnect(self, code):
@@ -69,7 +78,11 @@ class SchoolcommUserConsumer(AsyncJsonWebsocketConsumer):
 
     async def receive_json(self, content, **kwargs):
         if content.get("type") == "ping":
-            summary = await self._build_summary()
+            try:
+                summary = await self._build_summary()
+            except DatabaseError:
+                await self.close(code=1013)
+                return
             await self.send_json({"type": "notification.summary", "payload": summary})
 
     async def schoolcomm_event(self, event):
@@ -78,4 +91,3 @@ class SchoolcommUserConsumer(AsyncJsonWebsocketConsumer):
     @database_sync_to_async
     def _build_summary(self):
         return build_notification_summary(self.user)
-

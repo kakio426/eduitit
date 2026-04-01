@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}학교 커뮤니티{% endblock %}
+{% block title %}우리끼리 채팅방{% endblock %}
 
 {% block extra_css %}
 <link href="{% static 'schoolcomm/schoolcomm.css' %}" rel="stylesheet">
@@ -17,16 +17,19 @@
         <section class="schoolcomm-panel mb-6 rounded-[2rem] p-6">
             <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <p class="text-sm font-bold text-blue-600">학교 커뮤니티</p>
-                    {% if workspace %}
+                    <p class="text-sm font-bold text-blue-600">우리끼리 채팅방</p>
+                    {% if service_unavailable %}
+                    <h1 class="mt-2 text-3xl font-black tracking-[-0.03em] text-slate-900">잠시만요, 지금 다시 준비하고 있어요.</h1>
+                    <p class="mt-2 text-sm text-slate-500">{{ service_unavailable_message }}</p>
+                    {% elif workspace %}
                     <h1 class="mt-2 text-3xl font-black tracking-[-0.03em] text-slate-900">{{ workspace.name }}</h1>
                     <p class="mt-2 text-sm text-slate-500">공지, 자료, 대화, 캘린더 추천을 한 화면에서 빠르게 확인합니다.</p>
                     {% else %}
-                    <h1 class="mt-2 text-3xl font-black tracking-[-0.03em] text-slate-900">우리 학교 선생님 공간 시작</h1>
-                    <p class="mt-2 text-sm text-slate-500">처음 한 번만 학교 커뮤니티를 만들면 공지와 자료, 대화를 바로 나눌 수 있습니다.</p>
+                    <h1 class="mt-2 text-3xl font-black tracking-[-0.03em] text-slate-900">우리끼리 채팅방 시작</h1>
+                    <p class="mt-2 text-sm text-slate-500">동학년 선생님부터 편하게 공지와 자료, 대화를 나눌 수 있어요.</p>
                     {% endif %}
                 </div>
-                {% if dashboard %}
+                {% if dashboard and not service_unavailable %}
                 <div class="flex flex-wrap items-center gap-2">
                     <span class="inline-flex items-center rounded-full bg-blue-50 px-3 py-1.5 text-sm font-bold text-blue-700">
                         미확인 <span class="ml-1" data-schoolcomm-badge="total_unread">{{ dashboard.notification_summary.total_unread }}</span>
@@ -42,10 +45,20 @@
             </div>
         </section>
 
-        {% if not workspace %}
+        {% if service_unavailable %}
+        <section class="schoolcomm-panel rounded-[2rem] p-6">
+            <h2 class="text-xl font-black text-slate-900">조금 뒤에 다시 열어 주세요</h2>
+            <p class="mt-2 text-sm text-slate-500">서비스 준비가 끝나면 바로 같은 화면으로 이어서 사용할 수 있습니다.</p>
+            <div class="mt-4">
+                <a href="{% url 'home' %}" class="inline-flex items-center rounded-full bg-slate-900 px-5 py-3 text-sm font-black text-white">
+                    홈으로 돌아가기
+                </a>
+            </div>
+        </section>
+        {% elif not workspace %}
         <div class="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
             <section class="schoolcomm-panel rounded-[2rem] p-6">
-                <h2 class="text-xl font-black text-slate-900">학교 커뮤니티 만들기</h2>
+                <h2 class="text-xl font-black text-slate-900">채팅방 만들기</h2>
                 <p class="mt-2 text-sm text-slate-500">학교 이름만 확인하면 바로 시작할 수 있습니다.</p>
                 <form method="post" action="{% url 'schoolcomm:create_workspace' %}" class="mt-5 space-y-4">
                     {% csrf_token %}
@@ -58,7 +71,7 @@
                         <input id="id_academic_year" name="academic_year" type="text" placeholder="예) 2026" class="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm">
                     </div>
                     <button type="submit" class="inline-flex items-center rounded-full bg-slate-900 px-5 py-3 text-sm font-black text-white">
-                        학교 커뮤니티 시작
+                        채팅방 시작
                     </button>
                 </form>
             </section>
@@ -169,8 +182,7 @@
         </section>
         {% endif %}
 
-        {% with has_secondary=dashboard.calendar_suggestions or dashboard.can_manage or latest_invite_url %}
-        <div class="{% if has_secondary %}grid gap-5 xl:grid-cols-[1.12fr_0.88fr]{% else %}space-y-5{% endif %}">
+        <div class="{% if dashboard.calendar_suggestions or dashboard.can_manage or latest_invite_url %}grid gap-5 xl:grid-cols-[1.12fr_0.88fr]{% else %}space-y-5{% endif %}">
             <div class="space-y-5">
                 <div class="grid gap-4 md:grid-cols-2">
                     <section class="schoolcomm-action-card rounded-[2rem] p-5">
@@ -286,7 +298,7 @@
                 </section>
             </div>
 
-            {% if has_secondary %}
+            {% if dashboard.calendar_suggestions or dashboard.can_manage or latest_invite_url %}
             <div class="space-y-5">
                 {% if dashboard.calendar_suggestions %}
                 <section id="calendar-suggestions" class="schoolcomm-panel rounded-[2rem] p-5">
@@ -371,7 +383,6 @@
             </div>
             {% endif %}
         </div>
-        {% endwith %}
         {% endif %}
     </div>
 </div>
