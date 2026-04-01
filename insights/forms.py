@@ -49,6 +49,10 @@ class InsightPasteForm(forms.Form):
             attrs={
                 'class': 'w-full px-5 py-4 rounded-2xl bg-[#E0E5EC] shadow-clay-inner focus:shadow-clay border-none outline-none text-lg',
                 'rows': 22,
+                'autocapitalize': 'off',
+                'autocorrect': 'off',
+                'autocomplete': 'off',
+                'spellcheck': 'false',
                 'placeholder': (
                     "Title: ...\n"
                     "카테고리:\nYouTube Scrap\n\n"

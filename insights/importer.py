@@ -1,4 +1,5 @@
 import re
+import unicodedata
 from urllib.parse import parse_qs, urlparse
 
 from django.core.exceptions import ValidationError
@@ -7,9 +8,9 @@ from .models import Insight
 
 
 HEADER_PATTERN = re.compile(
-    r"(?im)^\s*(?P<header>"
+    r"(?im)^[\t \u00A0\u200B\uFEFF]*(?:[-*•]\s+|#+\s+|>\s+)?(?:\*\*|__)?\s*(?P<header>"
     r"title|category|카테고리|video\s*url|thumbnail\s*url|content|kakio\s*note|tags?"
-    r")\s*:\s*(?P<inline>[^\n]*)"
+    r")\s*(?:\*\*|__)?\s*[:：﹕︓]\s*(?:\*\*|__)?\s*(?P<inline>[^\n]*)"
 )
 
 HEADER_KEY_MAP = {
@@ -35,7 +36,9 @@ CATEGORY_MAP = {
 
 
 def _normalize_header(raw_header: str) -> str:
-    return re.sub(r"\s+", "", raw_header.strip().lower())
+    normalized = unicodedata.normalize("NFKC", raw_header or "")
+    normalized = re.sub(r"[\u200B\u200C\u200D\uFEFF]", "", normalized)
+    return re.sub(r"\s+", "", normalized.strip().lower())
 
 
 def _extract_sections(raw_text: str) -> dict[str, str]:

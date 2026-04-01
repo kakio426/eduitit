@@ -2,6 +2,8 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 
+from .forms import InsightPasteForm
+from .importer import parse_pasted_insight
 from .models import Insight
 from .templatetags.insight_extras import parse_tags
 
@@ -244,6 +246,39 @@ class InsightPasteImportTest(TestCase):
         self.assertEqual(existing.content, "본문 내용입니다.")
         self.assertEqual(existing.tags, "#태그하나,#태그둘")
         self.assertEqual(Insight.objects.filter(video_url=existing.video_url).count(), 1)
+
+    def test_parse_pasted_insight_accepts_mobile_and_markdown_header_variants(self):
+        payload = (
+            "**Title:** 테스트 인사이트 제목\n\n"
+            "카테고리：\n"
+            "YouTube Scrap\n"
+            "Column/Essay\n\n"
+            "Video url：\n"
+            "https://www.youtube.com/watch?v=2bBhnfh4StU&t=450s\n\n"
+            "- **Content:**\n"
+            "본문 내용입니다.\n\n"
+            "Kakio note：\n"
+            "노트 내용입니다.\n\n"
+            "Tags：\n"
+            "#태그하나, #태그둘"
+        )
+
+        parsed = parse_pasted_insight(payload)
+
+        self.assertEqual(parsed["title"], "테스트 인사이트 제목")
+        self.assertEqual(parsed["content"], "본문 내용입니다.")
+        self.assertEqual(parsed["video_url"], "https://www.youtube.com/watch?v=2bBhnfh4StU")
+        self.assertEqual(parsed["tags"], "#태그하나,#태그둘")
+
+
+class InsightPasteFormTest(TestCase):
+    def test_paste_form_disables_mobile_text_corrections(self):
+        attrs = InsightPasteForm().fields["raw_text"].widget.attrs
+
+        self.assertEqual(attrs.get("autocapitalize"), "off")
+        self.assertEqual(attrs.get("autocorrect"), "off")
+        self.assertEqual(attrs.get("autocomplete"), "off")
+        self.assertEqual(attrs.get("spellcheck"), "false")
 
 
 class InsightTemplateTagsTest(TestCase):
