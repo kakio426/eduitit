@@ -35,6 +35,7 @@ from .prompts import (
     LENGTH_LABELS,
     LENGTH_LONG,
     LENGTH_MEDIUM,
+    LENGTH_RULES,
     LENGTH_SHORT,
     PROMPT_VERSION,
     TARGET_LABELS,
@@ -116,6 +117,10 @@ SUSPICIOUS_OUTPUT_SNIPPETS = (
     "대상:",
     "주제:",
     "분량:",
+)
+PARENT_META_INSTRUCTION_RE = re.compile(
+    r"(?:도록|게)\s*(?:안내|지도|전달|말씀)해\s*주(?:세요|시기\s*바랍니다)|"
+    r"(?:학생|자녀).{0,12}(?:에게|한테)\s*(?:안내|전달|말씀)해\s*주(?:세요|시기\s*바랍니다)"
 )
 
 CACHE_REUSE_THRESHOLD = 0.93
@@ -659,10 +664,26 @@ def _has_suspicious_output(result_text):
     return False
 
 
-def _collect_output_quality_issues(result_text, source_keywords, required_terms):
+def _has_length_issue(result_text, length_style):
+    rule = LENGTH_RULES.get(length_style, LENGTH_RULES[LENGTH_MEDIUM])
+    minimum_chars = int(rule.get("min_chars") or 0)
+    return len((result_text or "").strip()) < minimum_chars
+
+
+def _has_parent_meta_instruction(result_text):
+    return bool(PARENT_META_INSTRUCTION_RE.search(result_text or ""))
+
+
+def _collect_output_quality_issues(result_text, source_keywords, required_terms, *, target, length_style):
     issues = []
     if _has_suspicious_output(result_text):
         issues.append("SUSPICIOUS_OUTPUT")
+
+    if _has_length_issue(result_text, length_style):
+        issues.append(f"TOO_SHORT:{length_style}")
+
+    if target == TARGET_PARENT and _has_parent_meta_instruction(result_text):
+        issues.append("PARENT_META_INSTRUCTION")
 
     missing_terms = _missing_required_terms(result_text, required_terms)
     if missing_terms:
@@ -675,10 +696,42 @@ def _collect_output_quality_issues(result_text, source_keywords, required_terms)
     return issues
 
 
-def _generate_validated_result(system_prompt, user_prompt, source_keywords, required_terms):
+def _build_retry_user_prompt(user_prompt, issues, *, target, length_style, result_text):
+    correction_lines = []
+    if any(issue.startswith("TOO_SHORT:") for issue in issues):
+        length_rule = LENGTH_RULES.get(length_style, LENGTH_RULES[LENGTH_MEDIUM])
+        correction_lines.append(
+            f"- 직전 출력이 너무 짧았습니다. 이번에는 최소 {length_rule.get('min_chars', 0)}자 이상으로, "
+            f"{length_rule['sentence_range']} 흐름이 느껴지도록 내용을 충분히 보강하세요."
+        )
+    if target == TARGET_PARENT and "PARENT_META_INSTRUCTION" in issues:
+        correction_lines.append(
+            "- 직전 출력은 학부모에게 직접 보내는 안내문이 아니라 교사 메모처럼 들렸습니다. "
+            "'안내해 주세요', '전달해 주세요', '지도해 주세요'로 끝내지 말고 학부모가 바로 읽는 문장으로 다시 작성하세요."
+        )
+    for issue in issues:
+        if issue.startswith("MISSING_TERMS:"):
+            correction_lines.append(f"- 누락된 핵심 전달사항을 반드시 포함하세요: {issue.split(':', 1)[1]}.")
+        if issue.startswith("UNVERIFIED_DETAILS:"):
+            correction_lines.append(
+                f"- 입력에 없는 세부정보를 임의로 넣지 마세요. 제거할 표현: {issue.split(':', 1)[1]}."
+            )
+    if not correction_lines:
+        return user_prompt
+    return (
+        user_prompt
+        + "\n\n직전 초안:\n"
+        + result_text
+        + "\n\n재작성 지시:\n"
+        + "\n".join(correction_lines)
+    )
+
+
+def _generate_validated_result(system_prompt, user_prompt, source_keywords, required_terms, *, target, length_style):
     last_result_text = ""
+    active_user_prompt = user_prompt
     for attempt_index in range(2):
-        raw_output = _call_deepseek(system_prompt, user_prompt)
+        raw_output = _call_deepseek(system_prompt, active_user_prompt)
         result_text = _sanitize_output_text(raw_output)
         if not result_text:
             if attempt_index == 0:
@@ -686,13 +739,26 @@ def _generate_validated_result(system_prompt, user_prompt, source_keywords, requ
                 continue
             raise RuntimeError("EMPTY_OUTPUT")
 
-        issues = _collect_output_quality_issues(result_text, source_keywords, required_terms)
+        issues = _collect_output_quality_issues(
+            result_text,
+            source_keywords,
+            required_terms,
+            target=target,
+            length_style=length_style,
+        )
         if not issues:
             return result_text
 
         last_result_text = result_text
         if attempt_index == 0:
             logger.info("[NoticeGen] retry after output quality check | issues=%s", ", ".join(issues))
+            active_user_prompt = _build_retry_user_prompt(
+                user_prompt,
+                issues,
+                target=target,
+                length_style=length_style,
+                result_text=result_text,
+            )
 
     return last_result_text
 
@@ -896,7 +962,14 @@ def _generate_notice_payload(request):
     user_prompt = build_user_prompt(target, topic, normalized_keywords, context_text, key_data["length_style"])
 
     try:
-        result_text = _generate_validated_result(system_prompt, user_prompt, normalized_keywords, required_terms)
+        result_text = _generate_validated_result(
+            system_prompt,
+            user_prompt,
+            normalized_keywords,
+            required_terms,
+            target=target,
+            length_style=key_data["length_style"],
+        )
     except Exception as exc:
         error_code = _classify_error_code(exc)
         logger.exception(

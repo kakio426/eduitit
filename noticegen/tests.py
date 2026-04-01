@@ -9,13 +9,14 @@ from core.models import UserProfile
 from .models import NoticeGenerationAttempt, NoticeGenerationCache
 from .prompts import (
     LENGTH_LONG,
+    LENGTH_MEDIUM,
     LENGTH_SHORT,
     PROMPT_VERSION,
     build_system_prompt,
     build_user_prompt,
     get_tone_for_target,
 )
-from .views import _build_cache_key_data
+from .views import _build_cache_key_data, _build_page_context, _collect_output_quality_issues
 
 
 class NoticeGenViewTests(TestCase):
@@ -286,9 +287,44 @@ class NoticeGenViewTests(TestCase):
         self.assertIn("문어체", system_prompt)
         self.assertIn("거예요", system_prompt)
         self.assertIn("않을 거야", system_prompt)
+        self.assertIn("학부모가 바로 받아 읽는 가정통신문/알림장 문장", system_prompt)
+        self.assertIn("운동화를 신고오도록 안내해 주세요", system_prompt)
         self.assertIn("분량: 길게", user_prompt)
         self.assertIn("공백 포함 180~260자", user_prompt)
         self.assertIn("문어체 공지문", user_prompt)
+        self.assertIn("학부모에게 직접 보내는 완성 문장", user_prompt)
+        self.assertIn("안내해 주세요", user_prompt)
+
+    def test_default_page_context_starts_with_parent_target(self):
+        page_context = _build_page_context()
+        self.assertEqual(page_context["initial_target"], "parent")
+
+    def test_medium_parent_prompt_requests_fuller_default_length(self):
+        user_prompt = build_user_prompt("parent", "event", "탄천 생태체험, 운동화 착용", "", LENGTH_MEDIUM)
+        self.assertIn("공백 포함 140~220자", user_prompt)
+        self.assertIn("상황 안내, 핵심 준비/행동 안내, 마무리 당부", user_prompt)
+
+    def test_output_quality_flags_parent_meta_instruction(self):
+        issues = _collect_output_quality_issues(
+            "체험활동에 적합하도록 운동화를 신고오도록 안내해 주세요.",
+            "탄천 생태체험, 운동화 착용",
+            [],
+            target="parent",
+            length_style=LENGTH_MEDIUM,
+        )
+
+        self.assertIn("PARENT_META_INSTRUCTION", issues)
+
+    def test_output_quality_flags_too_short_for_medium_length(self):
+        issues = _collect_output_quality_issues(
+            "체험학습 준비물을 확인해 주시기 바랍니다.",
+            "체험학습, 준비물 확인",
+            ["체험학습", "준비물"],
+            target="parent",
+            length_style=LENGTH_MEDIUM,
+        )
+
+        self.assertTrue(any(issue.startswith("TOO_SHORT:") for issue in issues))
 
     def test_student_prompt_does_not_include_parent_only_guidance(self):
         user_prompt = build_user_prompt("student_low", "notice", "줄넘기 준비", "", LENGTH_SHORT)

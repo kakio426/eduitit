@@ -47,16 +47,19 @@ LENGTH_RULES = {
         "label": "짧게",
         "sentence_range": "2~3문장",
         "char_range": "공백 포함 80~120자",
+        "min_chars": 80,
     },
     LENGTH_MEDIUM: {
         "label": "보통",
         "sentence_range": "3~4문장",
-        "char_range": "공백 포함 120~180자",
+        "char_range": "공백 포함 140~220자",
+        "min_chars": 140,
     },
     LENGTH_LONG: {
         "label": "길게",
         "sentence_range": "4~5문장",
         "char_range": "공백 포함 180~260자",
+        "min_chars": 180,
     },
 }
 
@@ -78,7 +81,7 @@ TARGET_RULES = {
     ),
 }
 
-PROMPT_VERSION = "v4"
+PROMPT_VERSION = "v5"
 
 
 def get_tone_for_target(target):
@@ -95,7 +98,7 @@ def build_system_prompt(selected_target, length_style=LENGTH_MEDIUM):
     common_rules = (
         "당신은 대한민국 초등학교 담임교사입니다.\n"
         "입력된 대상과 주제에 맞춰 학교에서 바로 사용할 수 있는 멘트를 작성합니다.\n"
-        "출력은 문장 본문만 작성합니다.\n\n"
+        "출력은 최종 수신자에게 바로 전달할 수 있는 완성 문장 본문만 작성합니다.\n\n"
         "[대상 선택 규칙]\n"
         f"- {target_rule}\n\n"
         "[분량 규칙]\n"
@@ -120,8 +123,11 @@ def build_system_prompt(selected_target, length_style=LENGTH_MEDIUM):
         return (
             common_rules
             + "\n[학부모 전용 규칙]\n"
+            "- 학부모가 바로 받아 읽는 가정통신문/알림장 문장처럼 작성합니다.\n"
             "- 학부모가 편안하게 읽을 수 있는 따뜻하고 자연스러운 존댓말을 사용합니다.\n"
             "- 요청/당부 표현은 부담스럽지 않게 완곡하게 조절합니다.\n"
+            "- '운동화를 신고오도록 안내해 주세요', '~라고 전달해 주세요', '~을 지도해 주세요'처럼 교사 메모처럼 들리는 문장은 쓰지 않습니다.\n"
+            "- 학생의 행동을 말할 때는 '학생이 운동화를 신고 올 수 있도록 가정에서 함께 확인해 주시기 바랍니다', '~을 챙겨 보내 주시기 바랍니다'처럼 학부모가 바로 읽는 안내문으로 표현합니다.\n"
             "\n[최종 점검]\n"
             "- 조건을 만족할 때까지 내부적으로 다듬은 뒤, 최종본 1개만 출력합니다.\n"
             "- 점검 과정, 글자 수, 설명 문구는 출력하지 않습니다.\n"
@@ -157,9 +163,13 @@ def build_user_prompt(target, topic, keywords, context_text, length_style=LENGTH
         "- 출력은 문장 본문만 제공하고, 부연 설명은 쓰지 마세요.\n"
     )
 
+    if length_style in (LENGTH_MEDIUM, LENGTH_LONG):
+        prompt += "- 보통 이상 분량에서는 상황 안내, 핵심 준비/행동 안내, 마무리 당부가 모두 드러나도록 충분히 작성하세요.\n"
+
     if target == TARGET_PARENT:
         prompt += (
             "- 협조 요청 표현은 명령형보다 완곡한 안내형으로 작성하세요.\n"
+            "- 학부모에게 직접 보내는 완성 문장으로 쓰고, 교사에게 남기는 메모처럼 '안내해 주세요', '전달해 주세요', '지도해 주세요'로 끝내지 마세요.\n"
             "- 선택된 분량 범위를 벗어나면 내부 수정 후 최종본 1개만 출력하세요.\n"
         )
 
