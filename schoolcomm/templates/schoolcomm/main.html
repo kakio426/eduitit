@@ -59,16 +59,12 @@
         <div class="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
             <section class="schoolcomm-panel rounded-[2rem] p-6">
                 <h2 class="text-xl font-black text-slate-900">채팅방 만들기</h2>
-                <p class="mt-2 text-sm text-slate-500">학교 이름만 확인하면 바로 시작할 수 있습니다.</p>
+                <p class="mt-2 text-sm text-slate-500">채팅방 이름만 정하면 바로 시작할 수 있어요.</p>
                 <form method="post" action="{% url 'schoolcomm:create_workspace' %}" class="mt-5 space-y-4">
                     {% csrf_token %}
                     <div>
-                        <label class="mb-2 block text-sm font-bold text-slate-700" for="id_name">학교 이름</label>
-                        <input id="id_name" name="name" type="text" value="{{ workspace_name_suggestion }}" class="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm" required>
-                    </div>
-                    <div>
-                        <label class="mb-2 block text-sm font-bold text-slate-700" for="id_academic_year">학년도</label>
-                        <input id="id_academic_year" name="academic_year" type="text" placeholder="예) 2026" class="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm">
+                        <label class="mb-2 block text-sm font-bold text-slate-700" for="id_name">채팅방 이름</label>
+                        <input id="id_name" name="name" type="text" value="" placeholder="{{ workspace_name_suggestion }}" class="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm" required>
                     </div>
                     <button type="submit" class="inline-flex items-center rounded-full bg-slate-900 px-5 py-3 text-sm font-black text-white">
                         채팅방 시작
@@ -77,19 +73,22 @@
             </section>
 
             <section class="schoolcomm-panel rounded-[2rem] p-6">
-                <h2 class="text-xl font-black text-slate-900">승인 기다리는 학교</h2>
-                {% if pending_memberships_only %}
+                <h2 class="text-xl font-black text-slate-900">들어오는 방식</h2>
                 <div class="mt-4 space-y-3">
-                    {% for membership in pending_memberships_only %}
                     <div class="rounded-2xl border border-slate-200 px-4 py-4">
-                        <p class="text-sm font-black text-slate-900">{{ membership.workspace.name }}</p>
-                        <p class="mt-1 text-sm text-slate-500">관리자가 승인하면 바로 들어올 수 있습니다.</p>
+                        <p class="text-sm font-black text-slate-900">1. 채팅방 만들기</p>
+                        <p class="mt-1 text-sm text-slate-500">동학년, 교과, 업무 모임 이름만 정하면 바로 시작됩니다.</p>
                     </div>
-                    {% endfor %}
+                    <div class="rounded-2xl border border-slate-200 px-4 py-4">
+                        <p class="text-sm font-black text-slate-900">2. 초대 링크 보내기</p>
+                        <p class="mt-1 text-sm text-slate-500">함께 쓸 선생님에게 링크만 전달하면 됩니다.</p>
+                    </div>
+                    <div class="rounded-2xl border border-slate-200 px-4 py-4">
+                        <p class="text-sm font-black text-slate-900">3. 링크로 바로 입장</p>
+                        <p class="mt-1 text-sm text-slate-500">초대 링크가 있는 사람만 바로 들어올 수 있어요.</p>
+                    </div>
                 </div>
-                {% else %}
-                <p class="mt-4 text-sm text-slate-500">지금 기다리는 학교는 없습니다.</p>
-                {% endif %}
+                <p class="mt-4 text-sm text-slate-500">따로 승인 대기를 거치지 않아도 바로 공지, 자료, 대화를 이어갈 수 있습니다.</p>
             </section>
         </div>
         {% else %}
@@ -326,15 +325,14 @@
                 {% endif %}
 
                 {% if dashboard.can_manage or latest_invite_url %}
-                <details class="schoolcomm-panel-details rounded-[2rem] p-5" {% if latest_invite_url or dashboard.pending_count %}open{% endif %}>
+                <details class="schoolcomm-panel-details rounded-[2rem] p-5" {% if latest_invite_url %}open{% endif %}>
                     <summary class="flex items-center justify-between gap-3">
                         <div>
                             <h2 class="text-xl font-black text-slate-900">관리</h2>
-                            <p class="mt-1 text-sm text-slate-500">초대, 승인, 학교 구성원을 여기서만 관리합니다.</p>
+                            <p class="mt-1 text-sm text-slate-500">초대 링크와 멤버를 여기서만 관리합니다.</p>
                         </div>
                         <div class="flex flex-wrap justify-end gap-2">
                             <span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">선생님 {{ dashboard.member_count }}명</span>
-                            <span class="inline-flex rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-700">승인 대기 {{ dashboard.pending_count }}명</span>
                         </div>
                     </summary>
 
@@ -357,25 +355,6 @@
                     <div class="mt-5 rounded-[1.5rem] border border-emerald-200 bg-emerald-50 px-4 py-4">
                         <p class="text-sm font-bold text-emerald-800">방금 만든 초대 링크</p>
                         <div class="mt-2 break-all rounded-xl bg-white px-3 py-3 text-sm text-slate-700">{{ latest_invite_url }}</div>
-                    </div>
-                    {% endif %}
-
-                    {% if dashboard.pending_memberships %}
-                    <div class="mt-5 space-y-3">
-                        {% for membership in dashboard.pending_memberships %}
-                        <div class="rounded-2xl border border-slate-200 px-4 py-4">
-                            <div class="flex items-start justify-between gap-3">
-                                <div>
-                                    <p class="text-sm font-black text-slate-900">{{ membership.user.username }}</p>
-                                    <p class="mt-1 text-xs text-slate-500">승인 대기</p>
-                                </div>
-                                <form method="post" action="{% url 'schoolcomm:api_approve_membership' membership.id %}">
-                                    {% csrf_token %}
-                                    <button type="submit" class="inline-flex rounded-full border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700">승인</button>
-                                </form>
-                            </div>
-                        </div>
-                        {% endfor %}
                     </div>
                     {% endif %}
                 </details>

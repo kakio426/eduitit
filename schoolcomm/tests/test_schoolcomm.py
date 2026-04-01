@@ -19,7 +19,6 @@ from schoolcomm.models import (
     WorkspaceInvite,
 )
 from schoolcomm.services import (
-    accept_invite,
     create_room_message,
     create_workspace_for_user,
     ensure_user_asset_category,
@@ -143,7 +142,7 @@ class SchoolcommViewTests(SchoolcommTestCase):
         for room in (self.shared_room, self.notice_room):
             room.participants.get_or_create(membership=self.member_membership)
 
-    def test_invite_accept_and_approve_flow(self):
+    def test_invite_accept_links_member_directly_into_workspace(self):
         self.client.force_login(self.owner)
         response = self.client.post(
             reverse("schoolcomm:api_create_invite"),
@@ -154,15 +153,17 @@ class SchoolcommViewTests(SchoolcommTestCase):
         token = invite_url.rstrip("/").split("/")[-1]
         invite = WorkspaceInvite.objects.get(token=token)
 
-        pending_membership = accept_invite(invite, self.outsider)
-        self.assertEqual(pending_membership.status, SchoolMembership.Status.PENDING)
+        self.client.force_login(self.outsider)
+        accept_response = self.client.post(reverse("schoolcomm:invite_accept", kwargs={"token": token}))
+        self.assertEqual(accept_response.status_code, 302)
+        self.assertEqual(accept_response["Location"], f"{reverse('schoolcomm:main')}?workspace={self.workspace.id}")
 
-        self.client.force_login(self.owner)
-        self.client.post(reverse("schoolcomm:api_approve_membership", kwargs={"membership_id": pending_membership.id}))
-        pending_membership.refresh_from_db()
+        membership = SchoolMembership.objects.get(workspace=self.workspace, user=self.outsider)
         invite.refresh_from_db()
-        self.assertEqual(pending_membership.status, SchoolMembership.Status.ACTIVE)
+        self.assertEqual(membership.status, SchoolMembership.Status.ACTIVE)
         self.assertEqual(invite.status, WorkspaceInvite.Status.ACCEPTED)
+        self.assertTrue(self.notice_room.participants.filter(membership=membership).exists())
+        self.assertTrue(self.shared_room.participants.filter(membership=membership).exists())
 
     def test_room_post_updates_notifications(self):
         self.client.force_login(self.owner)
@@ -206,21 +207,35 @@ class SchoolcommViewTests(SchoolcommTestCase):
         self.assertIn("우리 학교 회의록", message_bodies)
         self.assertNotIn("숨겨야 하는 파일", message_bodies)
 
-    def test_invite_accept_page_shows_pending_state_message(self):
+    def test_invite_accept_page_promises_direct_entry(self):
         invite = WorkspaceInvite.objects.create(
             workspace=self.workspace,
             invited_by=self.owner,
             role=SchoolMembership.Role.MEMBER,
-            token="pending-invite-token",
+            token="direct-invite-token",
         )
-        accept_invite(invite, self.outsider)
 
         self.client.force_login(self.outsider)
         response = self.client.get(reverse("schoolcomm:invite_accept", kwargs={"token": invite.token}))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "승인 기다리는 중입니다.")
-        self.assertContains(response, "대기 상태 확인")
+        self.assertContains(response, "초대 링크를 받은 사람만 바로 들어올 수 있어요.")
+        self.assertContains(response, "초대 수락 후 바로 입장")
+        self.assertNotContains(response, "승인 기다리는 중입니다.")
+
+    def test_main_empty_state_focuses_on_chat_room_name_and_direct_link_entry(self):
+        starter = self.create_user("starter")
+        self.client.force_login(starter)
+
+        response = self.client.get(reverse("schoolcomm:main"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "채팅방 이름")
+        self.assertContains(response, "들어오는 방식")
+        self.assertContains(response, "초대 링크가 있는 사람만 바로 들어올 수 있어요.")
+        self.assertNotContains(response, "학교 이름")
+        self.assertNotContains(response, "학년도")
+        self.assertNotContains(response, "승인 기다리는 학교")
 
     def test_calendar_suggestion_apply_creates_event_only_on_apply(self):
         message = RoomMessage.objects.create(

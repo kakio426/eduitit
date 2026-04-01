@@ -273,12 +273,7 @@ def broadcast_user_summary(user):
 
 
 def school_name_suggestion_for_user(user):
-    profile = _safe_profile(user)
-    classroom = getattr(profile, "default_classroom", None)
-    school_name = str(getattr(classroom, "school_name", "") or "").strip()
-    if school_name:
-        return school_name
-    return f"{user_display_name(user)} 학교"
+    return "예) 3학년 우리끼리"
 
 
 def current_academic_year(now=None):
@@ -341,6 +336,22 @@ def ensure_default_rooms(workspace, created_by=None):
             RoomParticipant.objects.get_or_create(room=room, membership=membership)
             ensure_user_room_state(room, membership.user)
     return notice_room, shared_room
+
+
+def _activate_membership(membership, *, approver=None):
+    membership.status = SchoolMembership.Status.ACTIVE
+    membership.joined_at = membership.joined_at or timezone.now()
+    update_fields = ["status", "joined_at", "updated_at"]
+    if approver is not None or membership.approved_by_id:
+        membership.approved_by = approver or membership.approved_by
+        update_fields.append("approved_by")
+    membership.save(update_fields=update_fields)
+    notice_room, shared_room = ensure_default_rooms(membership.workspace, created_by=membership.workspace.created_by)
+    for room in (notice_room, shared_room):
+        RoomParticipant.objects.get_or_create(room=room, membership=membership)
+        ensure_user_room_state(room, membership.user)
+    broadcast_user_summary(membership.user)
+    return membership
 
 
 def get_user_memberships(user, *, statuses=None):
@@ -930,7 +941,7 @@ def _workspace_rooms_for_user(workspace, user):
 def build_workspace_dashboard(workspace, user):
     membership = get_membership(workspace, user)
     if membership is None:
-        raise MembershipRequiredError("워크스페이스 멤버가 아닙니다.")
+        raise MembershipRequiredError("채팅방 멤버가 아닙니다.")
 
     notice_room = get_default_room(workspace, CommunityRoom.RoomKind.NOTICE)
     shared_room = get_default_room(workspace, CommunityRoom.RoomKind.SHARED)
@@ -972,7 +983,7 @@ def build_workspace_dashboard(workspace, user):
 def search_workspace(workspace, user, query, *, page_number=1, per_page=12):
     membership = get_membership(workspace, user)
     if membership is None:
-        raise MembershipRequiredError("워크스페이스 멤버만 검색할 수 있습니다.")
+        raise MembershipRequiredError("채팅방 멤버만 검색할 수 있습니다.")
     query_text = str(query or "").strip()
     if not query_text:
         return {"query": "", "messages_page": None, "assets_page": None, "room_matches": []}
@@ -1109,20 +1120,28 @@ def accept_invite(invite, user):
         invite.status = WorkspaceInvite.Status.EXPIRED
         invite.save(update_fields=["status", "updated_at"])
         raise ValidationError("초대 링크가 만료되었습니다.")
+    approver = invite.invited_by or invite.workspace.created_by
     membership, _ = SchoolMembership.objects.get_or_create(
         workspace=invite.workspace,
         user=user,
         defaults={
             "role": invite.role,
-            "status": SchoolMembership.Status.PENDING,
+            "status": SchoolMembership.Status.ACTIVE,
             "invited_by": invite.invited_by,
+            "approved_by": approver,
+            "joined_at": timezone.now(),
         },
     )
+    update_fields = []
     if membership.status != SchoolMembership.Status.ACTIVE:
         membership.role = invite.role
-        membership.status = SchoolMembership.Status.PENDING
+        update_fields.append("role")
+    if membership.invited_by_id != getattr(invite.invited_by, "id", None):
         membership.invited_by = invite.invited_by
-        membership.save(update_fields=["role", "status", "invited_by", "updated_at"])
+        update_fields.append("invited_by")
+    if update_fields:
+        membership.save(update_fields=[*update_fields, "updated_at"])
+    membership = _activate_membership(membership, approver=approver)
     invite.status = WorkspaceInvite.Status.ACCEPTED
     invite.accepted_by = user
     invite.accepted_at = timezone.now()
@@ -1135,16 +1154,7 @@ def approve_membership(membership, approver):
     approver_membership = get_membership(membership.workspace, approver)
     if not membership_can_manage_workspace(approver_membership):
         raise MembershipRequiredError("멤버 승인 권한이 없습니다.")
-    membership.status = SchoolMembership.Status.ACTIVE
-    membership.joined_at = membership.joined_at or timezone.now()
-    membership.approved_by = approver
-    membership.save(update_fields=["status", "joined_at", "approved_by", "updated_at"])
-    notice_room, shared_room = ensure_default_rooms(membership.workspace, created_by=membership.workspace.created_by)
-    for room in (notice_room, shared_room):
-        RoomParticipant.objects.get_or_create(room=room, membership=membership)
-        ensure_user_room_state(room, membership.user)
-    broadcast_user_summary(membership.user)
-    return membership
+    return _activate_membership(membership, approver=approver)
 
 
 def user_can_download_asset(user, asset):

@@ -18,19 +18,10 @@
             {% if membership and membership.status == 'active' %}
             <div class="mt-6 rounded-[1.6rem] border border-emerald-200 bg-emerald-50 px-5 py-5">
                 <p class="text-sm font-black text-emerald-800">입장할 준비가 끝났습니다.</p>
-                <p class="mt-2 text-sm leading-6 text-emerald-700">이미 승인된 상태라서 바로 채팅방을 열 수 있습니다.</p>
+                <p class="mt-2 text-sm leading-6 text-emerald-700">이미 들어와 있는 상태라서 바로 채팅방을 열 수 있습니다.</p>
             </div>
             <a href="{% url 'schoolcomm:main' %}?workspace={{ invite.workspace.id }}" class="mt-5 inline-flex rounded-full bg-slate-900 px-5 py-3 text-sm font-black text-white">
                 채팅방 열기
-            </a>
-
-            {% elif membership and membership.status == 'pending' %}
-            <div class="mt-6 rounded-[1.6rem] border border-amber-200 bg-amber-50 px-5 py-5">
-                <p class="text-sm font-black text-amber-800">승인 기다리는 중입니다.</p>
-                <p class="mt-2 text-sm leading-6 text-amber-700">관리자가 확인하면 바로 들어올 수 있습니다. 지금은 대기 상태만 확인해 주세요.</p>
-            </div>
-            <a href="{% url 'schoolcomm:main' %}" class="mt-5 inline-flex rounded-full bg-slate-900 px-5 py-3 text-sm font-black text-white">
-                대기 상태 확인
             </a>
 
             {% elif invite.status == 'expired' or invite.status == 'revoked' %}
@@ -45,15 +36,15 @@
             {% else %}
             <div class="mt-6 rounded-[1.6rem] border border-slate-200 bg-slate-50 px-5 py-5">
                 <p class="text-sm font-black text-slate-900">가볍게 함께 쓰는 채팅방에 초대되었어요.</p>
-                <p class="mt-2 text-sm leading-6 text-slate-600">수락하면 관리자가 확인한 뒤 바로 들어올 수 있습니다.</p>
+                <p class="mt-2 text-sm leading-6 text-slate-600">초대 링크를 받은 사람만 바로 들어올 수 있어요. 수락하면 곧바로 이 채팅방으로 이어집니다.</p>
             </div>
             <form method="post" class="mt-5">
                 {% csrf_token %}
                 <button type="submit" class="inline-flex rounded-full bg-slate-900 px-5 py-3 text-sm font-black text-white">
-                    초대 수락
+                    초대 수락 후 바로 입장
                 </button>
             </form>
-            <p class="mt-4 text-sm text-slate-500">수락 후에는 승인 상태로 자동 전환됩니다.</p>
+            <p class="mt-4 text-sm text-slate-500">초대한 사람이 보낸 링크만 사용해 주세요.</p>
             {% endif %}
         </section>
     </div>

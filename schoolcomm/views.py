@@ -65,14 +65,6 @@ def _wants_json(request):
     return request.headers.get("x-requested-with") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", "")
 
 
-def _pending_workspace_memberships(user):
-    return (
-        get_user_memberships(user, statuses=[SchoolMembership.Status.PENDING])
-        .select_related("workspace")
-        .order_by("workspace__name")
-    )
-
-
 def _resolve_workspace(request):
     workspace_id = request.GET.get("workspace") or request.POST.get("workspace_id")
     active_memberships = get_user_memberships(request.user, statuses=[SchoolMembership.Status.ACTIVE]).select_related("workspace")
@@ -169,7 +161,6 @@ def main(request):
     try:
         workspace = _resolve_workspace(request)
         active_memberships = get_user_memberships(request.user, statuses=[SchoolMembership.Status.ACTIVE]).select_related("workspace")
-        pending_memberships = _pending_workspace_memberships(request.user)
         search_results = None
         dashboard = None
         latest_invite_url = request.session.pop("schoolcomm_latest_invite_url", "")
@@ -190,7 +181,6 @@ def main(request):
             "workspace": workspace,
             "workspace_name_suggestion": school_name_suggestion_for_user(request.user),
             "active_memberships": active_memberships,
-            "pending_memberships_only": pending_memberships,
             "dashboard": dashboard,
             "search_results": search_results,
             "latest_invite_url": latest_invite_url,
@@ -210,7 +200,7 @@ def create_workspace(request):
         name = (request.POST.get("name") or "").strip()
         academic_year = (request.POST.get("academic_year") or "").strip()
         workspace, _ = create_workspace_for_user(request.user, name=name, academic_year=academic_year)
-        messages.success(request, "우리끼리 채팅방을 시작했어요.")
+        messages.success(request, "우리끼리 채팅방을 만들었어요.")
         return redirect(f"{reverse('schoolcomm:main')}?workspace={workspace.id}")
     except DatabaseError:
         logger.exception("[schoolcomm] create_workspace unavailable")
@@ -227,7 +217,8 @@ def invite_accept(request, token):
         if request.method == "POST":
             try:
                 accepted_membership = accept_invite(invite, request.user)
-                messages.success(request, "초대를 수락했어요. 승인 후 입장할 수 있습니다.")
+                messages.success(request, "초대 링크로 바로 들어왔어요.")
+                return redirect(f"{reverse('schoolcomm:main')}?workspace={accepted_membership.workspace_id}")
             except ValidationError as exc:
                 messages.error(request, str(exc))
         context = {
