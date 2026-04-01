@@ -108,8 +108,8 @@
 }
 
 .home-v5-mobile-sheet {
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 2rem;
+    border-bottom-right-radius: 2rem;
 }
 
 .home-v5-mobile-sheet-label {
