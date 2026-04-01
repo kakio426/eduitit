@@ -13,6 +13,7 @@ SHEETBOOK_PUBLIC_NAME = "학급 기록 보드"
 PUBLIC_SERVICE_TITLE_BY_ROUTE = {
     "classcalendar:main": CALENDAR_HUB_PUBLIC_NAME,
     "messagebox:main": "업무 메시지 보관함",
+    "schoolcomm:main": "학교 커뮤니티",
     "quickdrop:landing": "바로전송",
     "sheetbook:index": SHEETBOOK_PUBLIC_NAME,
 }
@@ -99,6 +100,7 @@ HOME_SECTION_BY_ROUTE = {
     "hwp_converter:landing": "doc_write",
     "classcalendar:main": "class_ops",
     "messagebox:main": "class_ops",
+    "schoolcomm:main": "class_ops",
     "quickdrop:landing": "class_ops",
     "happy_seed:dashboard": "class_ops",
     "happy_seed:landing": "class_ops",

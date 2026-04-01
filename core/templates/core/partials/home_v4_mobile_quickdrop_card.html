@@ -6,7 +6,7 @@
     <div class="home-v4-mobile-quickdrop-head{% if home_design_version == 'v6' %} home-v6-mobile-quickdrop-head{% endif %}">
         {% if home_design_version == 'v6' %}
         <div class="home-v6-mobile-quickdrop-heading">
-            <div class="home-v4-mobile-quickdrop-icon" aria-hidden="true">↔</div>
+            <div class="home-v4-mobile-quickdrop-icon" aria-hidden="true">{{ quickdrop_home_card.icon_text|default:"↔" }}</div>
             <div class="min-w-0 flex-1">
                 <h3 class="text-base font-black text-slate-900">{{ quickdrop_home_card.title }}</h3>
                 <p
@@ -18,11 +18,11 @@
                 >{{ quickdrop_home_card.summary|default:'' }}</p>
             </div>
         </div>
-        <a href="{{ quickdrop_home_card.manage_url }}" class="home-v6-quickdrop-shortcut home-v6-quickdrop-shortcut--mobile" aria-label="새 기기 연결">
-            <span aria-hidden="true">+</span>
+        <a href="{{ quickdrop_home_card.shortcut_url|default:quickdrop_home_card.manage_url }}" class="home-v6-quickdrop-shortcut home-v6-quickdrop-shortcut--mobile" aria-label="{{ quickdrop_home_card.shortcut_aria_label|default:'새 기기 연결' }}">
+            <span aria-hidden="true">{{ quickdrop_home_card.shortcut_symbol|default:"+" }}</span>
         </a>
         {% else %}
-        <div class="home-v4-mobile-quickdrop-icon" aria-hidden="true">↔</div>
+        <div class="home-v4-mobile-quickdrop-icon" aria-hidden="true">{{ quickdrop_home_card.icon_text|default:"↔" }}</div>
         <div class="min-w-0 flex-1">
             <h3 class="text-base font-black text-slate-900">{{ quickdrop_home_card.title }}</h3>
             <p
@@ -35,6 +35,7 @@
         </div>
         {% endif %}
     </div>
+    {% if quickdrop_home_card.composer_enabled|default:True %}
     <form
         method="post"
         action="{{ quickdrop_home_card.send_text_url }}"
@@ -49,8 +50,8 @@
             x-model="quickdropHomeDraftText"
             rows="3"
             class="home-v4-mobile-quickdrop-textarea"
-            aria-label="보낼 내용"
-            placeholder="예) 회의 링크, 메모, 주소"
+            aria-label="{{ quickdrop_home_card.textarea_aria_label|default:'보낼 내용' }}"
+            placeholder="{{ quickdrop_home_card.compose_placeholder|default:'예) 회의 링크, 메모, 주소' }}"
         ></textarea>
         <p
             class="home-v4-mobile-quickdrop-error"
@@ -63,8 +64,16 @@
                 type="submit"
                 class="home-v4-mobile-quickdrop-primary"
                 :disabled="isSendingQuickdropHomeText"
-            >지금 보내기</button>
-            <a href="{% if home_design_version == 'v6' %}{{ quickdrop_home_card.history_url }}{% else %}{{ quickdrop_home_card.manage_url }}{% endif %}" class="home-v4-mobile-quickdrop-secondary">{% if home_design_version == 'v6' %}오늘 보낸 내용{% else %}새 기기 연결{% endif %}</a>
+                data-success-message="{{ quickdrop_home_card.success_message|default:'' }}"
+                data-error-action="{{ quickdrop_home_card.error_action_name|default:'' }}"
+            >{{ quickdrop_home_card.submit_label|default:"지금 보내기" }}</button>
+            <a href="{% if home_design_version == 'v6' %}{{ quickdrop_home_card.history_url|default:quickdrop_home_card.secondary_url }}{% else %}{{ quickdrop_home_card.secondary_url|default:quickdrop_home_card.manage_url }}{% endif %}" class="home-v4-mobile-quickdrop-secondary">{% if home_design_version == 'v6' %}{{ quickdrop_home_card.secondary_label_v6|default:'오늘 보낸 내용' }}{% else %}{{ quickdrop_home_card.secondary_label|default:'새 기기 연결' }}{% endif %}</a>
         </div>
     </form>
+    {% else %}
+    <div class="home-v4-mobile-quickdrop-actions" data-home-v4-mobile-quickdrop-actions="true">
+        <a href="{{ quickdrop_home_card.open_url|default:quickdrop_home_card.manage_url }}" class="home-v4-mobile-quickdrop-primary">{{ quickdrop_home_card.primary_label|default:"바로 열기" }}</a>
+        <a href="{{ quickdrop_home_card.secondary_url|default:quickdrop_home_card.manage_url }}" class="home-v4-mobile-quickdrop-secondary">{{ quickdrop_home_card.secondary_label|default:"새 기기 연결" }}</a>
+    </div>
+    {% endif %}
 </section>

@@ -110,6 +110,7 @@ HOME_V5_MOBILE_SECTION_ORDER = (
     'sns',
 )
 HOME_PROMOTED_MOBILE_SERVICE_KEYS = {'quickdrop'}
+HOME_UTILITY_SERVICE_KEYS = {'quickdrop', 'schoolcomm'}
 
 
 def _get_request_client_ip(request):
@@ -650,6 +651,8 @@ def _product_title_text(product):
 def _canonical_home_service_key(product):
     route_name = _product_route_name(product)
     title = _product_title_text(product)
+    if route_name == "schoolcomm:main" or title == "학교 커뮤니티":
+        return "schoolcomm"
     if route_name == "quickdrop:landing" or title == "바로전송":
         return "quickdrop"
     return ""
@@ -814,7 +817,7 @@ def _build_home_card_summary(product):
 
 
 def _is_home_utility_product(product):
-    return _canonical_home_service_key(product) in HOME_PROMOTED_MOBILE_SERVICE_KEYS
+    return _canonical_home_service_key(product) in HOME_UTILITY_SERVICE_KEYS
 
 
 def _filter_home_v5_mobile_workbench_items(favorite_items, *, limit=6):
@@ -871,7 +874,31 @@ def _build_home_quickdrop_card(user, favorite_products, product_list):
         "manage_url": reverse("quickdrop:landing"),
         "history_url": history_url,
         "send_text_url": reverse("quickdrop:send_text", kwargs={"slug": channel.slug}) if channel is not None else "",
+        "shortcut_url": reverse("quickdrop:landing"),
+        "shortcut_aria_label": "새 기기 연결",
+        "shortcut_symbol": "+",
+        "secondary_url": reverse("quickdrop:landing"),
+        "secondary_label": "새 기기 연결",
+        "secondary_label_v6": "오늘 보낸 내용",
+        "compose_placeholder": "예) 회의 링크, 메모, 주소",
+        "textarea_aria_label": "보낼 내용",
+        "submit_label": "지금 보내기",
+        "success_message": "바로전송으로 보냈어요.",
+        "error_action_name": "바로전송",
+        "icon_text": "↔",
+        "composer_enabled": True,
+        "primary_label": "바로 열기",
     }
+
+
+def _build_home_schoolcomm_card(user, favorite_products, product_list):
+    try:
+        from schoolcomm.services import build_home_card
+
+        return build_home_card(user)
+    except Exception:
+        logger.exception("[home schoolcomm] failed to build schoolcomm card context")
+        return None
 
 
 def _build_product_guide_url_map(products):
@@ -2919,6 +2946,11 @@ def _build_home_authenticated_v4_response(
         include_section_meta=True,
         user=request.user,
     )
+    schoolcomm_home_card = _build_home_schoolcomm_card(
+        request.user,
+        favorite_products=favorite_products,
+        product_list=product_list,
+    )
     quickdrop_home_card = _build_home_quickdrop_card(
         request.user,
         favorite_products=favorite_products,
@@ -2999,6 +3031,7 @@ def _build_home_authenticated_v4_response(
         'recent_items': recent_items,
         'discovery_items': discovery_items,
         'quickdrop_home_card': quickdrop_home_card,
+        'schoolcomm_home_card': schoolcomm_home_card,
         'representative_slots': representative_slots,
         'representative_recommendations': representative_recommendations,
         'home_v4_nav_sections': home_v4_nav_sections,

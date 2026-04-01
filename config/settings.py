@@ -91,6 +91,7 @@ INSTALLED_APPS = [
     'timetable.apps.TimetableConfig',
     'classcalendar.apps.ClasscalendarConfig',
     'messagebox.apps.MessageboxConfig',
+    'schoolcomm.apps.SchoolcommConfig',
     'quickdrop.apps.QuickdropConfig',
     'ocrdesk.apps.OcrdeskConfig',
     'textbooks.apps.TextbooksConfig',

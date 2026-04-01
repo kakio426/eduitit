@@ -67,6 +67,7 @@ urlpatterns = [
     path('timetable/', include('timetable.urls', namespace='timetable')),
     path('classcalendar/', include('classcalendar.urls', namespace='classcalendar')),
     path('messagebox/', include('messagebox.urls', namespace='messagebox')),
+    path('schoolcomm/', include('schoolcomm.urls', namespace='schoolcomm')),
     path('quickdrop/', include('quickdrop.urls', namespace='quickdrop')),
     path('ocrdesk/', include('ocrdesk.urls', namespace='ocrdesk')),
     path('parentcomm/', include('parentcomm.urls', namespace='parentcomm')),

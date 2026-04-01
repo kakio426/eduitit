@@ -1,0 +1,141 @@
+.schoolcomm-page {
+    background:
+        radial-gradient(circle at top left, rgba(219, 234, 254, 0.7), transparent 34%),
+        linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.schoolcomm-panel {
+    border: 1px solid #e2e8f0;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.04);
+}
+
+.schoolcomm-action-card {
+    border: 1px solid #e2e8f0;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.96) 100%);
+    transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.schoolcomm-action-card:hover,
+.schoolcomm-action-card:focus-within {
+    border-color: #bfdbfe;
+    box-shadow: 0 14px 30px rgba(59, 130, 246, 0.08);
+    transform: translateY(-1px);
+}
+
+.schoolcomm-panel-details {
+    border: 1px solid #e2e8f0;
+    background: rgba(248, 250, 252, 0.92);
+}
+
+.schoolcomm-panel-details > summary {
+    cursor: pointer;
+    list-style: none;
+}
+
+.schoolcomm-panel-details > summary::-webkit-details-marker {
+    display: none;
+}
+
+.schoolcomm-panel-details[open] {
+    background: rgba(255, 255, 255, 0.98);
+}
+
+.schoolcomm-compact-list {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.schoolcomm-room-content {
+    display: grid;
+    gap: 1.25rem;
+}
+
+.schoolcomm-room-list {
+    display: grid;
+    gap: 1rem;
+}
+
+.schoolcomm-thread-details > summary {
+    cursor: pointer;
+    list-style: none;
+}
+
+.schoolcomm-thread-details > summary::-webkit-details-marker {
+    display: none;
+}
+
+.schoolcomm-thread-details[open] {
+    background: #f8fafc;
+}
+
+.schoolcomm-message-asset-details > summary {
+    cursor: pointer;
+    list-style: none;
+}
+
+.schoolcomm-message-asset-details > summary::-webkit-details-marker {
+    display: none;
+}
+
+.schoolcomm-room-composer-shell {
+    position: sticky;
+    bottom: 1rem;
+    z-index: 10;
+}
+
+.schoolcomm-room-composer {
+    border: 1px solid #dbe7f3;
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 20px 36px rgba(15, 23, 42, 0.08);
+    backdrop-filter: blur(12px);
+}
+
+.schoolcomm-member-picker-list {
+    max-height: 18rem;
+    overflow-y: auto;
+}
+
+.schoolcomm-member-picker-list::-webkit-scrollbar {
+    width: 10px;
+}
+
+.schoolcomm-member-picker-list::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: #cbd5e1;
+    background-clip: padding-box;
+}
+
+.schoolcomm-member-row.is-hidden {
+    display: none;
+}
+
+.schoolcomm-room-sidebar {
+    display: grid;
+    gap: 1rem;
+}
+
+.schoolcomm-search-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+}
+
+@media (min-width: 1100px) {
+    .schoolcomm-room-content {
+        grid-template-columns: minmax(0, 1.08fr) minmax(300px, 0.72fr);
+        align-items: start;
+    }
+
+    .schoolcomm-room-sidebar {
+        position: sticky;
+        top: calc(var(--main-nav-height, 88px) + 1rem);
+    }
+}
+
+@media (max-width: 767px) {
+    .schoolcomm-room-composer-shell {
+        bottom: 0.75rem;
+    }
+}

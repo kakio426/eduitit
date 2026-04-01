@@ -71,6 +71,13 @@
                 var action = form && form.action ? String(form.action) : '';
                 var draftText = String(this.quickdropHomeDraftText || '').trim();
                 var csrfToken = getCsrfToken();
+                var submitButton = form ? form.querySelector('button[type="submit"]') : null;
+                var successMessage = submitButton && submitButton.dataset && submitButton.dataset.successMessage
+                    ? String(submitButton.dataset.successMessage)
+                    : '바로전송으로 보냈어요.';
+                var actionName = submitButton && submitButton.dataset && submitButton.dataset.errorAction
+                    ? String(submitButton.dataset.errorAction)
+                    : '바로전송';
                 if (!draftText) {
                     this.quickdropHomeErrorText = '보낼 글을 먼저 입력해 주세요.';
                     showFeedback(this.quickdropHomeErrorText, 'info');
@@ -78,7 +85,7 @@
                     return;
                 }
                 if (!action) {
-                    this.quickdropHomeErrorText = '바로전송 경로를 찾지 못했습니다.';
+                    this.quickdropHomeErrorText = actionName + ' 경로를 찾지 못했습니다.';
                     showFeedback(this.quickdropHomeErrorText, 'error');
                     return;
                 }
@@ -107,7 +114,7 @@
                         payload = {};
                     }
                     if (!response.ok) {
-                        throw new Error(payload.error || '바로전송에 실패했습니다.');
+                        throw new Error(payload.error || (actionName + '에 실패했습니다.'));
                     }
                     var session = payload && payload.session ? payload.session : {};
                     this.quickdropHomeLastSentText = String(session.current_text || draftText).trim();
@@ -115,10 +122,10 @@
                     if (form && typeof form.reset === 'function') {
                         form.reset();
                     }
-                    showFeedback('바로전송으로 보냈어요.', 'success');
+                    showFeedback(successMessage, 'success');
                     this.focusQuickdropHomeDraftInput(form);
                 } catch (error) {
-                    this.quickdropHomeErrorText = error && error.message ? error.message : '바로전송에 실패했습니다.';
+                    this.quickdropHomeErrorText = error && error.message ? error.message : (actionName + '에 실패했습니다.');
                     showFeedback(this.quickdropHomeErrorText, 'error');
                 } finally {
                     this.isSendingQuickdropHomeText = false;

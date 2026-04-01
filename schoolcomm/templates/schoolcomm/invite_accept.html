@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}초대 수락{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'schoolcomm/schoolcomm.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen schoolcomm-page">
+    <div class="mx-auto max-w-2xl px-4 pb-12 pt-28 sm:px-6">
+        <section class="schoolcomm-panel rounded-[2rem] p-6 sm:p-7">
+            <p class="text-sm font-bold text-blue-600">학교 커뮤니티</p>
+            <h1 class="mt-2 text-3xl font-black tracking-[-0.03em] text-slate-900">{{ invite.workspace.name }}</h1>
+            <p class="mt-2 text-sm text-slate-500">초대 역할: {{ invite.get_role_display }}</p>
+
+            {% if membership and membership.status == 'active' %}
+            <div class="mt-6 rounded-[1.6rem] border border-emerald-200 bg-emerald-50 px-5 py-5">
+                <p class="text-sm font-black text-emerald-800">입장할 준비가 끝났습니다.</p>
+                <p class="mt-2 text-sm leading-6 text-emerald-700">이미 승인된 상태라서 바로 학교 커뮤니티를 열 수 있습니다.</p>
+            </div>
+            <a href="{% url 'schoolcomm:main' %}?workspace={{ invite.workspace.id }}" class="mt-5 inline-flex rounded-full bg-slate-900 px-5 py-3 text-sm font-black text-white">
+                학교 커뮤니티 열기
+            </a>
+
+            {% elif membership and membership.status == 'pending' %}
+            <div class="mt-6 rounded-[1.6rem] border border-amber-200 bg-amber-50 px-5 py-5">
+                <p class="text-sm font-black text-amber-800">승인 기다리는 중입니다.</p>
+                <p class="mt-2 text-sm leading-6 text-amber-700">관리자가 확인하면 바로 들어올 수 있습니다. 지금은 대기 상태만 확인해 주세요.</p>
+            </div>
+            <a href="{% url 'schoolcomm:main' %}" class="mt-5 inline-flex rounded-full bg-slate-900 px-5 py-3 text-sm font-black text-white">
+                대기 상태 확인
+            </a>
+
+            {% elif invite.status == 'expired' or invite.status == 'revoked' %}
+            <div class="mt-6 rounded-[1.6rem] border border-rose-200 bg-rose-50 px-5 py-5">
+                <p class="text-sm font-black text-rose-800">이 초대는 사용할 수 없습니다.</p>
+                <p class="mt-2 text-sm leading-6 text-rose-700">링크가 만료되었거나 취소되었습니다. 새 초대 링크를 다시 받아 주세요.</p>
+            </div>
+            <a href="{% url 'schoolcomm:main' %}" class="mt-5 inline-flex rounded-full bg-slate-900 px-5 py-3 text-sm font-black text-white">
+                학교 커뮤니티 홈으로
+            </a>
+
+            {% else %}
+            <div class="mt-6 rounded-[1.6rem] border border-slate-200 bg-slate-50 px-5 py-5">
+                <p class="text-sm font-black text-slate-900">이 학교 선생님 공간에 초대되었습니다.</p>
+                <p class="mt-2 text-sm leading-6 text-slate-600">수락하면 관리자가 확인한 뒤 학교 커뮤니티에 들어올 수 있습니다.</p>
+            </div>
+            <form method="post" class="mt-5">
+                {% csrf_token %}
+                <button type="submit" class="inline-flex rounded-full bg-slate-900 px-5 py-3 text-sm font-black text-white">
+                    초대 수락
+                </button>
+            </form>
+            <p class="mt-4 text-sm text-slate-500">수락 후에는 승인 상태로 자동 전환됩니다.</p>
+            {% endif %}
+        </section>
+    </div>
+</div>
+{% endblock %}
