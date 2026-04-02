@@ -102,6 +102,35 @@
             <input type="hidden" name="draft_token" value="{{ draft_token }}">
             {% endif %}
 
+            {% if can_proxy_create %}
+            <section class="rounded-[1.75rem] border border-amber-200 bg-amber-50 p-5 md:p-6">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                        <p class="text-xs font-black uppercase tracking-[0.18em] text-amber-700">운영자 전용</p>
+                        <h2 class="mt-2 text-xl md:text-2xl font-black text-slate-800">교사가 부탁한 요청을 대신 준비할 수 있습니다.</h2>
+                        <p class="mt-2 text-sm md:text-base font-bold leading-relaxed text-slate-600">
+                            대상 교사를 고르면 그 교사 계정에서 바로 이어받을 수 있게 저장됩니다. 명단이 아직 없으면 아래 칸에 그대로 붙여 넣어도 됩니다.
+                        </p>
+                    </div>
+                    <span class="inline-flex min-h-[52px] items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-black text-amber-700 shadow-sm">
+                        {% if is_proxy_mode %}{{ proxy_target_user_label }} 계정으로 저장{% else %}비워두면 내 요청{% endif %}
+                    </span>
+                </div>
+                <div class="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <div class="rounded-2xl bg-white p-4 shadow-sm">
+                        <label class="mb-2 block text-sm font-black text-slate-700">요청을 맡길 교사</label>
+                        {{ form.acting_for_user }}
+                        <p class="mt-2 text-sm font-bold leading-relaxed text-slate-600">비워두면 기존처럼 내 요청으로 만들고, 교사를 고르면 그 교사 요청함에서 바로 보입니다.</p>
+                    </div>
+                    <div class="rounded-2xl bg-white p-4 shadow-sm">
+                        <label class="mb-2 block text-sm font-black text-slate-700">교사가 보낸 명단 (선택)</label>
+                        {{ form.proxy_participants_text }}
+                        <p class="mt-2 text-sm font-bold leading-relaxed text-slate-600">한 줄에 한 사람씩 `이름, 학년반/직위` 형식으로 넣으면 이번 요청에 바로 반영합니다.</p>
+                    </div>
+                </div>
+            </section>
+            {% endif %}
+
             <section class="space-y-5">
                 <div>
                     <p class="text-xs font-black uppercase tracking-[0.18em] text-slate-400">기본 정보</p>
@@ -157,7 +186,14 @@
 
                         {% if has_roster_groups %}
                         {{ form.shared_roster_group }}
-                        <p class="mt-2 text-sm font-bold leading-relaxed text-slate-600">누가 안 했는지 이름으로 보려면 명단을 연결하세요.</p>
+                        <p class="mt-2 text-sm font-bold leading-relaxed text-slate-600">
+                            {% if is_proxy_mode %}
+                            선택한 교사 계정에 저장된 명단이 있으면 여기서 바로 연결하세요. 새 명단이 아직 없으면 위 칸에 받은 이름을 붙여 넣어도 됩니다.
+                            {% else %}
+                            누가 안 했는지 이름으로 보려면 명단을 연결하세요.
+                            {% endif %}
+                        </p>
+                        {% if not is_proxy_mode %}
                         <div class="mt-4 flex flex-wrap gap-2">
                             <button
                                 type="submit"
@@ -169,11 +205,19 @@
                                 <i class="fa-solid fa-plus"></i>새 명단 만들기
                             </button>
                         </div>
+                        {% endif %}
                         {% else %}
                         <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4">
                             <p class="text-sm font-black text-slate-800">아직 연결할 명단이 없습니다.</p>
-                            <p class="mt-2 text-sm font-bold leading-relaxed text-slate-600">누가 안 했는지 이름으로 보려면 먼저 명단을 만들어 주세요.</p>
+                            <p class="mt-2 text-sm font-bold leading-relaxed text-slate-600">
+                                {% if is_proxy_mode %}
+                                이 교사 계정에는 아직 저장된 명단이 없습니다. 위 운영자 칸에 받은 명단을 붙여 넣으면 이번 요청은 바로 만들 수 있습니다.
+                                {% else %}
+                                누가 안 했는지 이름으로 보려면 먼저 명단을 만들어 주세요.
+                                {% endif %}
+                            </p>
                             <div class="mt-4 flex flex-wrap gap-2">
+                                {% if not is_proxy_mode %}
                                 <button
                                     type="submit"
                                     formaction="{% url 'signatures:prepare_roster_return' %}"
@@ -183,6 +227,7 @@
                                 >
                                     <i class="fa-solid fa-plus"></i>명단 만들기
                                 </button>
+                                {% endif %}
                                 <a
                                     href="#expectedCountField"
                                     class="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-600 hover:text-slate-800 transition"

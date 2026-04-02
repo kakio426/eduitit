@@ -1,11 +1,39 @@
 from django import forms
-from .models import TrainingSession, Signature
+from django.contrib.auth import get_user_model
+
 from handoff.models import HandoffRosterGroup
+
+from .models import Signature, TrainingSession
+
+
+User = get_user_model()
 
 
 class TrainingSessionForm(forms.ModelForm):
     """연수 생성/수정 폼"""
 
+    acting_for_user = forms.ModelChoiceField(
+        required=False,
+        queryset=User.objects.none(),
+        empty_label="내 요청으로 만들기",
+        label="요청을 맡길 교사",
+        widget=forms.Select(
+            attrs={
+                "class": "w-full px-4 py-3 rounded-2xl shadow-clay-inner bg-bg-soft focus:outline-none focus:ring-2 focus:ring-purple-300",
+            }
+        ),
+    )
+    proxy_participants_text = forms.CharField(
+        required=False,
+        label="교사가 보낸 명단",
+        widget=forms.Textarea(
+            attrs={
+                "class": "w-full px-4 py-3 rounded-2xl shadow-clay-inner bg-bg-soft focus:outline-none focus:ring-2 focus:ring-purple-300 resize-y",
+                "rows": 5,
+                "placeholder": "예: 김교사, 1-1\n이교사, 1-2",
+            }
+        ),
+    )
     shared_roster_group = forms.ModelChoiceField(
         required=False,
         queryset=HandoffRosterGroup.objects.none(),
@@ -20,6 +48,8 @@ class TrainingSessionForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         owner = kwargs.pop("owner", None)
+        can_delegate = kwargs.pop("can_delegate", False)
+        delegate_user = kwargs.pop("delegate_user", None)
         super().__init__(*args, **kwargs)
         if owner is None and self.instance and self.instance.pk:
             owner = self.instance.created_by
@@ -29,6 +59,37 @@ class TrainingSessionForm(forms.ModelForm):
                 "name",
             )
         self.fields["shared_roster_group"].label_from_instance = lambda group: group.name
+        if can_delegate:
+            delegate_queryset = (
+                User.objects.filter(is_active=True)
+                .exclude(is_staff=True)
+                .exclude(is_superuser=True)
+                .select_related("userprofile")
+                .order_by("userprofile__nickname", "username")
+                .distinct()
+            )
+            if delegate_user is not None:
+                delegate_queryset = delegate_queryset.exclude(pk=delegate_user.pk)
+            self.fields["acting_for_user"].queryset = delegate_queryset
+            self.fields["acting_for_user"].label_from_instance = self._delegate_user_label
+        else:
+            self.fields.pop("acting_for_user", None)
+            self.fields.pop("proxy_participants_text", None)
+
+    @staticmethod
+    def _delegate_user_label(user):
+        try:
+            profile = user.userprofile
+        except Exception:
+            profile = None
+        nickname = str(getattr(profile, "nickname", "") or "").strip()
+        role = profile.get_role_display() if profile and getattr(profile, "role", None) else ""
+        base = nickname or user.username
+        if nickname and nickname != user.username:
+            base = f"{nickname} ({user.username})"
+        if role:
+            return f"{base} - {role}"
+        return base
 
     class Meta:
         model = TrainingSession

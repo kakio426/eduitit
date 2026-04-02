@@ -9,10 +9,12 @@ from datetime import timedelta
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import qrcode
+from django.contrib.auth import get_user_model
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
+from django.db.models import Q
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
 from django.urls import reverse
@@ -37,6 +39,7 @@ CALENDAR_INTEGRATION_SOURCE = "signatures_training"
 WORKFLOW_ACTION_SEED_SESSION_KEY = "workflow_action_seeds"
 SHEETBOOK_ACTION_SEED_SESSION_KEY = "sheetbook_action_seeds"
 SIGNATURE_CREATE_DRAFT_SESSION_KEY = "signature_create_drafts"
+SIGNATURE_PROXY_MANAGER_USERNAMES = {"kakio"}
 DEFAULT_AFFILIATION_SUGGESTIONS = [
     "교사",
     "교감",
@@ -49,6 +52,8 @@ DEFAULT_AFFILIATION_SUGGESTIONS = [
     "상담교사",
     "행정실",
 ]
+
+User = get_user_model()
 
 
 def _apply_sensitive_cache_headers(response):
@@ -283,6 +288,77 @@ def _request_client_ip(request):
 
 def _request_user_agent(request):
     return (request.META.get("HTTP_USER_AGENT", "") or "")[:1000]
+
+
+def _is_signature_proxy_manager(user):
+    return bool(
+        getattr(user, "is_authenticated", False)
+        and user.is_superuser
+        and user.username in SIGNATURE_PROXY_MANAGER_USERNAMES
+    )
+
+
+def _get_signature_accessible_sessions(user):
+    if not getattr(user, "is_authenticated", False):
+        return TrainingSession.objects.none()
+
+    queryset = TrainingSession.objects.filter(created_by=user)
+    if _is_signature_proxy_manager(user):
+        queryset = TrainingSession.objects.filter(
+            Q(created_by=user) | Q(proxy_created_by=user)
+        )
+    return queryset.select_related("created_by", "proxy_created_by", "shared_roster_group")
+
+
+def _get_signature_session_or_404(user, uuid):
+    return get_object_or_404(_get_signature_accessible_sessions(user), uuid=uuid)
+
+
+def _get_signature_proxy_target_user(current_user, raw_user_id):
+    if not _is_signature_proxy_manager(current_user):
+        return None
+
+    raw_user_id = str(raw_user_id or "").strip()
+    if not raw_user_id:
+        return None
+    try:
+        return User.objects.filter(
+            pk=int(raw_user_id),
+            is_active=True,
+        ).exclude(pk=current_user.pk).exclude(is_staff=True).exclude(is_superuser=True).first()
+    except (TypeError, ValueError):
+        return None
+
+
+def _get_signature_user_display_name(user):
+    if user is None:
+        return ""
+
+    try:
+        profile = user.userprofile
+    except Exception:
+        profile = None
+    nickname = str(getattr(profile, "nickname", "") or "").strip()
+    full_name = str(getattr(user, "get_full_name", lambda: "")() or "").strip()
+    return nickname or full_name or user.username
+
+
+def _parse_expected_participants_text(raw_text):
+    participants = []
+    for line in str(raw_text or "").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        parts = [part.strip() for part in line.split(",")]
+        name = str(parts[0] if parts else "").strip()[:100]
+        affiliation = _normalize_affiliation_text(parts[1] if len(parts) > 1 else "")
+        if not name:
+            continue
+        participants.append({
+            "name": name,
+            "affiliation": affiliation,
+        })
+    return participants
 
 
 def _normalize_access_code(value):
@@ -640,6 +716,8 @@ def _build_signature_create_draft_payload(data):
         "description": str(data.get("description") or "").strip()[:2000],
         "shared_roster_group": str(data.get("shared_roster_group") or "").strip(),
         "expected_count": str(data.get("expected_count") or "").strip()[:10],
+        "acting_for_user": str(data.get("acting_for_user") or "").strip(),
+        "proxy_participants_text": str(data.get("proxy_participants_text") or "").strip()[:5000],
         "copy_from_uuid": str(data.get("copy_from_uuid") or "").strip(),
         "sheetbook_seed_token": str(data.get("sheetbook_seed_token") or "").strip(),
         "draft_token": str(data.get("draft_token") or "").strip(),
@@ -668,6 +746,12 @@ def _build_signature_create_initial_from_draft(draft_payload):
     expected_count = str(draft_payload.get("expected_count") or "").strip()
     if expected_count.isdigit() and int(expected_count) > 0:
         initial["expected_count"] = int(expected_count)
+    acting_for_user = str(draft_payload.get("acting_for_user") or "").strip()
+    if acting_for_user:
+        initial["acting_for_user"] = acting_for_user
+    proxy_participants_text = str(draft_payload.get("proxy_participants_text") or "").strip()
+    if proxy_participants_text:
+        initial["proxy_participants_text"] = proxy_participants_text
     shared_roster_group = str(draft_payload.get("shared_roster_group") or "").strip()
     if shared_roster_group:
         initial["shared_roster_group"] = shared_roster_group
@@ -864,7 +948,8 @@ def _build_session_stage_payload(session, *, signature_count, pending_count=None
 @login_required
 def session_list(request):
     """내가 만든 연수 목록"""
-    sessions = TrainingSession.objects.filter(created_by=request.user)
+    can_proxy_create = _is_signature_proxy_manager(request.user)
+    sessions = _get_signature_accessible_sessions(request.user)
     session_cards = []
     for session in sessions:
         signature_count = session.signatures.count()
@@ -888,6 +973,8 @@ def session_list(request):
                 "signature_count": signature_count,
                 "pending_count": pending_count,
                 "can_show_absentees": can_show_absentees,
+                "show_owner_label": bool(can_proxy_create and session.created_by_id != request.user.id),
+                "owner_label": _get_signature_user_display_name(session.created_by),
                 **stage_payload,
             }
         )
@@ -897,6 +984,7 @@ def session_list(request):
         'signatures/list.html',
         {
             'session_cards': session_cards,
+            'can_proxy_create': can_proxy_create,
         },
     )
 
@@ -926,12 +1014,22 @@ def prepare_roster_return(request):
 @login_required
 def session_create(request):
     """연수 생성"""
+    can_proxy_create = _is_signature_proxy_manager(request.user)
     draft_token = (
         request.POST.get("draft_token")
         or request.GET.get("draft_token")
         or ""
     ).strip()
     draft_payload = _peek_signature_create_draft(request, draft_token)
+    proxy_target_user_id = (
+        request.POST.get("acting_for_user")
+        or draft_payload.get("acting_for_user", "")
+        or request.GET.get("acting_for_user")
+        or ""
+    ).strip()
+    proxy_target_user = _get_signature_proxy_target_user(request.user, proxy_target_user_id)
+    session_owner = proxy_target_user or request.user
+    is_proxy_mode = proxy_target_user is not None
     copy_from_uuid = (
         request.POST.get("copy_from_uuid")
         or draft_payload.get("copy_from_uuid", "")
@@ -961,7 +1059,7 @@ def session_create(request):
         copy_source_session = get_object_or_404(
             TrainingSession,
             uuid=copy_from_uuid,
-            created_by=request.user,
+            created_by=session_owner,
         )
         copy_source_participants = list(
             copy_source_session.expected_participants.order_by("manual_sort_order", "id")
@@ -988,15 +1086,17 @@ def session_create(request):
             prefill_initial["expected_count"] = len(seed_participants)
     elif copy_source_session:
         prefill_initial = _build_copy_initial_from_session(copy_source_session)
+    if is_proxy_mode:
+        prefill_initial["acting_for_user"] = str(proxy_target_user.id)
 
     selected_roster_group_id = (
         request.GET.get("shared_roster_group")
         or draft_payload.get("shared_roster_group", "")
         or prefill_initial.get("shared_roster_group", "")
     )
-    selected_roster_group = _get_owned_roster_group(request.user, selected_roster_group_id)
+    selected_roster_group = _get_owned_roster_group(session_owner, selected_roster_group_id)
     restored_roster_group = _get_owned_roster_group(
-        request.user,
+        session_owner,
         request.GET.get("shared_roster_group"),
     )
     if selected_roster_group is not None:
@@ -1010,14 +1110,25 @@ def session_create(request):
     )
 
     if request.method == 'POST':
-        form = TrainingSessionForm(request.POST, owner=request.user)
+        form = TrainingSessionForm(
+            request.POST,
+            owner=session_owner,
+            can_delegate=can_proxy_create,
+            delegate_user=request.user,
+        )
         if form.is_valid():
             session = form.save(commit=False)
-            session.created_by = request.user
+            session.created_by = session_owner
+            session.proxy_created_by = request.user if is_proxy_mode else None
             session.save()
             roster_result = _sync_expected_participants_from_shared_roster(session)
             seed_created_count = 0
             seed_skipped_count = 0
+            proxy_created_count = 0
+            proxy_skipped_count = 0
+            proxy_participants = _parse_expected_participants_text(
+                form.cleaned_data.get("proxy_participants_text", "")
+            )
             if seed_participants and apply_sheetbook_participants:
                 for participant in seed_participants:
                     _, was_created = ExpectedParticipant.objects.get_or_create(
@@ -1029,6 +1140,17 @@ def session_create(request):
                         seed_created_count += 1
                     else:
                         seed_skipped_count += 1
+            if proxy_participants:
+                for participant in proxy_participants:
+                    _, was_created = ExpectedParticipant.objects.get_or_create(
+                        training_session=session,
+                        name=participant["name"],
+                        affiliation=participant["affiliation"],
+                    )
+                    if was_created:
+                        proxy_created_count += 1
+                    else:
+                        proxy_skipped_count += 1
             copied_participant_count = 0
             if copy_source_session and not seed_participants:
                 for participant in copy_source_participants:
@@ -1049,6 +1171,10 @@ def session_create(request):
                 _pop_signature_create_draft(request, draft_token)
             _sync_calendar_event_for_training(session)
             message_parts = []
+            if is_proxy_mode:
+                message_parts.append(
+                    f"{_get_signature_user_display_name(session_owner)} 선생님 대신 요청을 만들었습니다."
+                )
             if roster_result["total"] > 0:
                 message_parts.append(
                     f"연수가 생성되었습니다. 공유 명단 '{roster_result['group_name']}'에서 {roster_result['created']}명 가져왔습니다."
@@ -1059,12 +1185,21 @@ def session_create(request):
                 message_parts.append(f"연결된 서비스에서 참석자 후보 {seed_created_count}명을 반영했습니다.")
             elif seed_participants and apply_sheetbook_participants and seed_skipped_count > 0:
                 message_parts.append("연결된 서비스 참석자 후보는 이미 모두 포함되어 있었어요.")
+            if proxy_created_count > 0:
+                message_parts.append(f"교사가 보낸 명단 {proxy_created_count}명도 바로 넣었습니다.")
+            elif proxy_participants and proxy_skipped_count > 0:
+                message_parts.append("교사가 보낸 명단은 이미 모두 포함되어 있었어요.")
             if copied_participant_count > 0:
                 message_parts.append(f"이전 요청 명단 {copied_participant_count}명도 복사했습니다.")
             messages.success(request, " ".join(message_parts))
             return redirect('signatures:detail', uuid=session.uuid)
     else:
-        form = TrainingSessionForm(owner=request.user, initial=prefill_initial)
+        form = TrainingSessionForm(
+            owner=session_owner,
+            initial=prefill_initial,
+            can_delegate=can_proxy_create,
+            delegate_user=request.user,
+        )
 
     participant_preview = []
     preview_source = seed_participants
@@ -1099,6 +1234,10 @@ def session_create(request):
             'sheetbook_prefill_participants_count': len(seed_participants) or len(copy_source_participants),
             'sheetbook_prefill_participants_preview': participant_preview,
             'apply_sheetbook_participants': apply_sheetbook_participants,
+            'can_proxy_create': can_proxy_create,
+            'is_proxy_mode': is_proxy_mode,
+            'proxy_target_user': proxy_target_user,
+            'proxy_target_user_label': _get_signature_user_display_name(proxy_target_user),
             'has_roster_groups': form.fields["shared_roster_group"].queryset.exists(),
             'restored_roster_group': restored_roster_group,
         },
@@ -1112,7 +1251,7 @@ def session_detail(request, uuid):
     import traceback
 
     try:
-        session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
+        session = _get_signature_session_or_404(request.user, uuid)
         signatures = session.signatures.all()
         expected = session.expected_participants.all()
         has_expected_participants = expected.exists()
@@ -1219,9 +1358,9 @@ def session_detail(request, uuid):
 @login_required
 def session_edit(request, uuid):
     """연수 수정"""
-    session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
+    session = _get_signature_session_or_404(request.user, uuid)
     if request.method == 'POST':
-        form = TrainingSessionForm(request.POST, instance=session, owner=request.user)
+        form = TrainingSessionForm(request.POST, instance=session, owner=session.created_by)
         if form.is_valid():
             session = form.save()
             roster_result = _sync_expected_participants_from_shared_roster(session)
@@ -1235,7 +1374,7 @@ def session_edit(request, uuid):
                 messages.success(request, '연수 정보가 수정되었습니다.')
             return redirect('signatures:detail', uuid=session.uuid)
     else:
-        form = TrainingSessionForm(instance=session, owner=request.user)
+        form = TrainingSessionForm(instance=session, owner=session.created_by)
     return render(request, 'signatures/edit.html', {'form': form, 'session': session})
 
 
@@ -1243,7 +1382,7 @@ def session_edit(request, uuid):
 @require_POST
 def sync_expected_participants_from_roster(request, uuid):
     """연결된 공유 명단을 예상 참석자 목록으로 다시 가져오기."""
-    session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
+    session = _get_signature_session_or_404(request.user, uuid)
     if not session.shared_roster_group:
         messages.error(request, "먼저 연수 수정에서 공유 명단을 선택해 주세요.")
         return redirect("signatures:detail", uuid=session.uuid)
@@ -1262,7 +1401,7 @@ def sync_expected_participants_from_roster(request, uuid):
 @login_required
 def session_delete(request, uuid):
     """연수 삭제"""
-    session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
+    session = _get_signature_session_or_404(request.user, uuid)
     if request.method == 'POST':
         _delete_calendar_event_for_training(session)
         session.delete()
@@ -1402,7 +1541,7 @@ def sign(request, uuid):
 @login_required
 def print_view(request, uuid):
     """출석부 인쇄 페이지 - 명단 유무에 따라 동작 변경"""
-    session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
+    session = _get_signature_session_or_404(request.user, uuid)
     signature_sort_mode = _get_signature_sort_mode(session)
     participant_sort_mode = _get_participant_sort_mode(session)
     
@@ -1515,7 +1654,7 @@ def print_view(request, uuid):
 @require_POST
 def update_signature_sort_mode(request, uuid):
     """명단 유무에 따라 출석부 정렬 방식을 변경."""
-    session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
+    session = _get_signature_session_or_404(request.user, uuid)
     has_expected_participants = session.expected_participants.exists()
 
     try:
@@ -1560,7 +1699,7 @@ def update_signature_sort_mode(request, uuid):
 @require_POST
 def update_signature_manual_order(request, uuid, signature_id):
     """명단 없는 연수에서 수동 순서를 저장."""
-    session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
+    session = _get_signature_session_or_404(request.user, uuid)
     if session.expected_participants.exists():
         return JsonResponse(
             {'success': False, 'error': '명단이 있는 연수는 명단 기준으로 출력됩니다.'},
@@ -1601,7 +1740,7 @@ def update_signature_manual_order(request, uuid, signature_id):
 @require_POST
 def update_expected_participant_manual_order(request, uuid, participant_id):
     """명단이 있는 연수에서 참석자 수동 순서를 저장."""
-    session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
+    session = _get_signature_session_or_404(request.user, uuid)
     participant = get_object_or_404(ExpectedParticipant, id=participant_id, training_session=session)
 
     try:
@@ -1636,7 +1775,7 @@ def update_expected_participant_manual_order(request, uuid, participant_id):
 @require_POST
 def toggle_active(request, uuid):
     """서명 받기 활성화/비활성화 토글 (AJAX)"""
-    session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
+    session = _get_signature_session_or_404(request.user, uuid)
     session.is_active = not session.is_active
     session.save()
     return JsonResponse({
@@ -1649,7 +1788,7 @@ def toggle_active(request, uuid):
 @require_POST
 def update_access_code(request, uuid):
     """현장 코드 사용 여부와 현재 코드를 업데이트."""
-    session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
+    session = _get_signature_session_or_404(request.user, uuid)
 
     try:
         payload = json.loads(request.body or "{}")
@@ -1711,7 +1850,11 @@ def update_access_code(request, uuid):
 @require_POST
 def delete_signature(request, pk):
     """개별 서명 삭제 (AJAX)"""
-    signature = get_object_or_404(Signature, pk=pk, training_session__created_by=request.user)
+    signature = get_object_or_404(
+        Signature,
+        pk=pk,
+        training_session__in=_get_signature_accessible_sessions(request.user),
+    )
     session = signature.training_session
     signature.delete()
     if not session.expected_participants.exists():
@@ -1828,7 +1971,7 @@ def add_expected_participants(request, uuid):
     """예상 참석자 명단 일괄 등록"""
     from .models import ExpectedParticipant
     
-    session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
+    session = _get_signature_session_or_404(request.user, uuid)
     
     try:
         data = json.loads(request.body)
@@ -1886,7 +2029,7 @@ def upload_participants_file(request, uuid):
     import csv
     import io
     
-    session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
+    session = _get_signature_session_or_404(request.user, uuid)
     file_obj = request.FILES.get('file')
     
     if not file_obj:
@@ -1947,7 +2090,7 @@ def get_expected_participants(request, uuid):
     """예상 참석자 목록 조회 (JSON)"""
     from .models import ExpectedParticipant
     
-    session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
+    session = _get_signature_session_or_404(request.user, uuid)
     participant_sort_mode = _get_participant_sort_mode(session)
     participants = _sort_expected_participants_for_display(
         session.expected_participants.all(),
@@ -1981,7 +2124,7 @@ def delete_expected_participant(request, uuid, participant_id):
     """예상 참석자 삭제"""
     from .models import ExpectedParticipant
     
-    session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
+    session = _get_signature_session_or_404(request.user, uuid)
     participant = get_object_or_404(
         ExpectedParticipant,
         id=participant_id,
@@ -2000,7 +2143,7 @@ def match_signature(request, uuid, signature_id):
     from .models import ExpectedParticipant
     import json
     
-    session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
+    session = _get_signature_session_or_404(request.user, uuid)
     signature = get_object_or_404(Signature, id=signature_id, training_session=session)
     
     try:
@@ -2041,7 +2184,7 @@ def match_signature(request, uuid, signature_id):
 @require_POST
 def correct_signature_affiliation(request, uuid, signature_id):
     """개별 서명의 직위/학년반 정정."""
-    session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
+    session = _get_signature_session_or_404(request.user, uuid)
     signature = get_object_or_404(Signature, id=signature_id, training_session=session)
 
     try:
@@ -2096,7 +2239,7 @@ def correct_signature_affiliation(request, uuid, signature_id):
 @require_POST
 def correct_expected_participant_affiliation(request, uuid, participant_id):
     """개별 예상 참석자의 직위/학년반 정정."""
-    session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
+    session = _get_signature_session_or_404(request.user, uuid)
     participant = get_object_or_404(ExpectedParticipant, id=participant_id, training_session=session)
 
     try:
@@ -2151,7 +2294,7 @@ def correct_expected_participant_affiliation(request, uuid, participant_id):
 @require_POST
 def bulk_correct_affiliation(request, uuid):
     """직위/학년반 일괄 정정."""
-    session = get_object_or_404(TrainingSession, uuid=uuid, created_by=request.user)
+    session = _get_signature_session_or_404(request.user, uuid)
 
     try:
         payload = json.loads(request.body or "{}")

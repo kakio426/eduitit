@@ -46,6 +46,14 @@ class TrainingSession(models.Model):
         related_name='training_sessions',
         verbose_name='생성자'
     )
+    proxy_created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='proxy_created_training_sessions',
+        verbose_name='대행 생성자',
+    )
     created_at = models.DateTimeField('생성일', auto_now_add=True)
     updated_at = models.DateTimeField('수정일', auto_now=True)
 
