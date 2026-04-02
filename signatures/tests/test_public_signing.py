@@ -152,6 +152,16 @@ class SignaturePublicSigningTests(TestCase):
         self.assertContains(response, "이미완료 (교사) - 이미 완료")
         self.assertContains(response, "명단에 이름이 없어요")
 
+    def test_public_sign_page_uses_signature_vault_specific_close_handler(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("signatures:sign", kwargs={"uuid": self.session.uuid}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'onclick="openSignatureVault()"')
+        self.assertContains(response, 'onclick="closeSignatureVaultModal()"')
+        self.assertContains(response, "function closeSignatureVaultModal()")
+
     def test_roster_selection_submission_auto_matches_expected_participant(self):
         participant = ExpectedParticipant.objects.create(
             training_session=self.session,
