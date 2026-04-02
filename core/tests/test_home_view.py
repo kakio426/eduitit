@@ -585,6 +585,12 @@ class HomeV2ViewTest(TestCase):
         messagebox_markup_index = content.index('data-home-messagebox-card="true"', main_view_index)
         self.assertLess(main_view_index, messagebox_markup_index)
 
+        calendar_template = (Path(settings.BASE_DIR) / 'classcalendar' / 'templates' / 'classcalendar' / '_calendar_app.html').read_text(encoding='utf-8')
+        self.assertIn('if (this.isCompactMobileViewport()) {', calendar_template)
+        self.assertIn('if (this.getDayItemCount(date) > 0) {', calendar_template)
+        self.assertIn('this.openDayOverview(date, triggerEvent);', calendar_template)
+        self.assertIn('this.openCreateModal(date, triggerEvent);', calendar_template)
+
         section_products = [
             product.launch_route_name
             for section in [*response.context['sections'], *response.context['aux_sections']]
@@ -1142,7 +1148,7 @@ class HomeV2ViewTest(TestCase):
         self.assertEqual(build_favorite_service_title("왁자지껄 교실 윷놀이"), "윷놀이")
         self.assertEqual(build_favorite_service_title("글솜씨 뚝딱! 소식지"), "소식지")
         self.assertEqual(build_favorite_service_title("학교 예약 시스템"), "학교 예약")
-        self.assertEqual(build_favorite_service_title("<<<<<<<HEAD 업무 메시지 보관함"), "업무 메시지 보관함")
+        self.assertEqual(build_favorite_service_title("AI 업무 메시지 보관함"), "메시지 보관")
 
     @override_settings(SHEETBOOK_ENABLED=True, SHEETBOOK_DISCOVERY_VISIBLE=False)
     def test_v2_workspace_context_disabled_when_sheetbook_discovery_hidden(self):

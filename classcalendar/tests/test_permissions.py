@@ -210,7 +210,7 @@ class PermissionTest(TestCase):
     )
     def test_center_view_keeps_messagebox_link_inside_toolbar(self):
         Product.objects.create(
-            title="업무 메시지 보관함",
+            title="AI 업무 메시지 보관함",
             description="메시지 보관",
             price=0,
             is_active=True,
@@ -224,7 +224,7 @@ class PermissionTest(TestCase):
             'class="grid grid-cols-7', 1
         )[0]
 
-        self.assertIn("업무 메시지 보관함", toolbar_shell)
+        self.assertIn("AI 업무 메시지 보관함", toolbar_shell)
         self.assertNotIn('class="mt-2 flex justify-end"', content)
 
     @override_settings(

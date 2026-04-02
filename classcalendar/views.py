@@ -571,7 +571,7 @@ def build_messagebox_home_card_context(user):
     enabled = bool(getattr(user, "is_authenticated", False)) and _is_message_capture_enabled_for_user(user)
     card = {
         "enabled": enabled,
-        "title": "업무 메시지 보관함",
+        "title": "AI 업무 메시지 보관함",
         "description": "",
         "primary_action_label": "새 메시지 보관",
         "url": build_messagebox_main_url(),

@@ -6,14 +6,14 @@ from products.models import ManualSection, Product, ProductFeature, ServiceManua
 class Command(BaseCommand):
     help = "Ensure messagebox product and manual exist in database"
 
-    PRODUCT_TITLE = "업무 메시지 보관함"
+    PRODUCT_TITLE = "AI 업무 메시지 보관함"
     LAUNCH_ROUTE = "messagebox:main"
 
     def handle(self, *args, **options):
         defaults = {
             "lead_text": "메신저에서 받은 중요한 메시지를 붙여넣고, 나중에 다시 보거나 일정에 연결합니다.",
             "description": (
-                "업무 메시지 보관함은 교육청 메신저나 메모 앱에서 받은 중요한 내용을 복사해 붙여넣고, "
+                "AI 업무 메시지 보관함은 교육청 메신저나 메모 앱에서 받은 중요한 내용을 복사해 붙여넣고, "
                 "필요하면 날짜를 먼저 적어 둔 뒤 나중에 다시 보거나 학급 캘린더 일정과 연결하는 서비스입니다."
             ),
             "price": 0.00,
@@ -90,14 +90,14 @@ class Command(BaseCommand):
         manual, _ = ServiceManual.objects.get_or_create(
             product=product,
             defaults={
-                "title": "업무 메시지 보관함 시작 가이드",
+                "title": "AI 업무 메시지 보관함 시작 가이드",
                 "description": "메시지 붙여넣기부터 보관, 날짜 연결, 처리 완료까지 바로 따라갈 수 있습니다.",
                 "is_published": True,
             },
         )
         manual_changed = []
-        if manual.title != "업무 메시지 보관함 시작 가이드":
-            manual.title = "업무 메시지 보관함 시작 가이드"
+        if manual.title != "AI 업무 메시지 보관함 시작 가이드":
+            manual.title = "AI 업무 메시지 보관함 시작 가이드"
             manual_changed.append("title")
         if manual.description != "메시지 붙여넣기부터 보관, 날짜 연결, 처리 완료까지 바로 따라갈 수 있습니다.":
             manual.description = "메시지 붙여넣기부터 보관, 날짜 연결, 처리 완료까지 바로 따라갈 수 있습니다."
