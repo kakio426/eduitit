@@ -18,3 +18,31 @@ class CalendarMobileModalContractTests(SimpleTestCase):
         self.assertNotIn('x-ref="selectedDateAgenda"', content)
         self.assertNotIn("scrollSelectedDateAgendaIntoView()", content)
         self.assertNotIn(".classcalendar-mobile-agenda", content)
+
+    def test_existing_day_uses_day_overview_before_create_on_desktop(self):
+        template_path = (
+            Path(__file__).resolve().parents[1]
+            / "templates"
+            / "classcalendar"
+            / "_calendar_app.html"
+        )
+        content = template_path.read_text(encoding="utf-8")
+
+        self.assertIn(
+            """        handleDayCellClick(date, triggerEvent = null) {
+            if (this.isCompactMobileViewport()) {
+                if (this.getDayItemCount(date) > 0) {
+                    this.openDayOverview(date, triggerEvent);
+                    return;
+                }
+                this.openCreateModal(date, triggerEvent);
+                return;
+            }
+            if (this.getDayItemCount(date) > 0) {
+                this.openDayOverview(date, triggerEvent);
+                return;
+            }
+            this.openCreateModal(date, triggerEvent);
+        },""",
+            content,
+        )

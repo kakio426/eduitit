@@ -2819,6 +2819,10 @@ function calendarApp() {
                 this.openCreateModal(date, triggerEvent);
                 return;
             }
+            if (this.getDayItemCount(date) > 0) {
+                this.openDayOverview(date, triggerEvent);
+                return;
+            }
             this.openCreateModal(date, triggerEvent);
         },
 
