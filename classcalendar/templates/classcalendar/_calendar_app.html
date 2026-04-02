@@ -776,7 +776,7 @@
                                 href="{{ messagebox_home_card.url }}"
                                 class="classcalendar-main-secondary-link transition hover:bg-amber-100"
                             >
-                                업무 메시지 보관함
+                                AI 업무 메시지 보관함
                             </a>
                             {% endif %}
                             {% if is_embedded_on_home %}
@@ -2811,8 +2811,12 @@ function calendarApp() {
         },
 
         handleDayCellClick(date, triggerEvent = null) {
-            if (this.getDayItemCount(date) > 0) {
-                this.openDayOverview(date, triggerEvent);
+            if (this.isCompactMobileViewport()) {
+                if (this.getDayItemCount(date) > 0) {
+                    this.openDayOverview(date, triggerEvent);
+                    return;
+                }
+                this.openCreateModal(date, triggerEvent);
                 return;
             }
             this.openCreateModal(date, triggerEvent);

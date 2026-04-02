@@ -97,7 +97,7 @@ class MessageboxViewTests(TestCase):
         card = build_messagebox_home_card_context(self.user)
 
         self.assertTrue(card["enabled"])
-        self.assertEqual(card["title"], "업무 메시지 보관함")
+        self.assertEqual(card["title"], "AI 업무 메시지 보관함")
 
     def test_main_keeps_requested_capture_id_in_context(self):
         response = self.client.get(f"{reverse('messagebox:main')}?capture=test-capture-id")
@@ -118,4 +118,4 @@ class MessageboxViewTests(TestCase):
         self.assertTrue(card["enabled"])
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'data-messagebox-layout="true"')
-        self.assertNotContains(response, "업무 메시지 보관함이 아직 열리지 않았습니다.")
+        self.assertNotContains(response, "AI 업무 메시지 보관함이 아직 열리지 않았습니다.")

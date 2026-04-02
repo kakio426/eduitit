@@ -7,7 +7,7 @@ from products.models import Product, ProductFeature
 class EnsureMessageboxCommandTests(TestCase):
     def test_command_repairs_existing_product_without_reactivating_visibility(self):
         Product.objects.filter(launch_route_name="messagebox:main").delete()
-        Product.objects.filter(title="업무 메시지 보관함").delete()
+        Product.objects.filter(title="AI 업무 메시지 보관함").delete()
 
         Product.objects.create(
             title="legacy messagebox",
@@ -24,7 +24,7 @@ class EnsureMessageboxCommandTests(TestCase):
 
         product = Product.objects.get(launch_route_name="messagebox:main")
 
-        self.assertEqual(product.title, "업무 메시지 보관함")
+        self.assertEqual(product.title, "AI 업무 메시지 보관함")
         self.assertEqual(product.icon, "🗂️")
         self.assertFalse(product.is_active)
         self.assertGreaterEqual(product.features.count(), 3)

@@ -38,8 +38,8 @@ def main_view(request):
     initial_capture_id = str(request.GET.get("capture") or "").strip()
     context = {
         "service": service,
-        "title": service.title if service else "업무 메시지 보관함",
-        "page_title": (service.title if service else "업무 메시지 보관함"),
+        "title": service.title if service else "AI AI 업무 메시지 보관함",
+        "page_title": (service.title if service else "AI AI 업무 메시지 보관함"),
         "page_subtitle": "",
         "message_capture_enabled": message_capture_ui["enabled"],
         "message_capture_item_types_enabled": message_capture_ui["item_types_enabled"],
