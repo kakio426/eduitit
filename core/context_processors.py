@@ -14,6 +14,22 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+REQUEST_CACHE_MISS = object()
+SERVICE_LAUNCHER_PRODUCTS_ATTR = "_eduitit_service_launcher_products"
+SITE_CONFIG_REQUEST_ATTR = "_eduitit_site_config"
+SERVICE_LAUNCHER_DISABLED_PREFIXES = (
+    "/admin/",
+    "/secret-admin-kakio/",
+    "/admin-dashboard/",
+    "/health/",
+)
+SITE_CONFIG_DISABLED_PREFIXES = (
+    "/admin/",
+    "/secret-admin-kakio/",
+    "/admin-dashboard/",
+    "/health/",
+)
+
 TOAST_TAG_MAP = {
     'debug': 'info',
     'info': 'info',
@@ -21,6 +37,16 @@ TOAST_TAG_MAP = {
     'warning': 'warning',
     'error': 'danger',
 }
+
+
+def _path_matches_prefixes(request, prefixes):
+    path = str(getattr(request, "path", "") or "")
+    return any(path.startswith(prefix) for prefix in prefixes)
+
+
+def prime_service_launcher_products(request, products):
+    setattr(request, SERVICE_LAUNCHER_PRODUCTS_ATTR, products)
+    return products
 
 def visitor_counts(request):
     """
@@ -84,8 +110,21 @@ def site_config(request):
         except Exception:
             pinned_notice_expanded = False
 
+    if _path_matches_prefixes(request, SITE_CONFIG_DISABLED_PREFIXES):
+        return {
+            'banner_text': '',
+            'banner_active': False,
+            'banner_color': '#7c3aed',
+            'banner_link': '',
+            'pinned_notice_expanded': pinned_notice_expanded,
+            'notebook_manual_url': '',
+        }
+
     try:
-        config = SiteConfig.load()
+        config = getattr(request, SITE_CONFIG_REQUEST_ATTR, REQUEST_CACHE_MISS)
+        if config is REQUEST_CACHE_MISS:
+            config = SiteConfig.load()
+            setattr(request, SITE_CONFIG_REQUEST_ATTR, config)
         return {
             'banner_text': config.banner_text,
             'banner_active': config.banner_active,
@@ -111,13 +150,18 @@ def search_products(request):
     if not getattr(django_settings, 'GLOBAL_SEARCH_ENABLED', True):
         return {}
 
+    if _path_matches_prefixes(request, SERVICE_LAUNCHER_DISABLED_PREFIXES):
+        return {}
+
     from products.models import Product
-    import json
 
     try:
-        products = filter_discoverable_products(
-            Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
-        )
+        products = getattr(request, SERVICE_LAUNCHER_PRODUCTS_ATTR, REQUEST_CACHE_MISS)
+        if products is REQUEST_CACHE_MISS:
+            products = filter_discoverable_products(
+                Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
+            )
+            setattr(request, SERVICE_LAUNCHER_PRODUCTS_ATTR, products)
         items = build_service_launcher_items(products, user=getattr(request, "user", None))
         return {'service_launcher_json': json.dumps(items, ensure_ascii=False)}
     except Exception:

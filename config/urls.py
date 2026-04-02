@@ -19,7 +19,7 @@ from django.contrib.sitemaps.views import sitemap
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from core.views import health_check
+from core.views import database_health_check, health_check
 from core.seo_views import favicon_ico, robots_txt
 from core.sitemaps import PublicUrlSitemap
 from classcalendar import views as classcalendar_views
@@ -34,6 +34,7 @@ urlpatterns = [
     path('robots.txt', robots_txt, name='robots_txt'),
     path('sitemap.xml', sitemap, {'sitemaps': SITEMAPS}, name='sitemap'),
     path('health/', health_check, name='health_check'),
+    path('health/db/', database_health_check, name='database_health_check'),
     path('secret-admin-kakio/', admin.site.urls),
     path('calendar/', classcalendar_views.main_view, name='calendar_main'),
     path('calendar/today/', classcalendar_views.today_view, name='calendar_today'),

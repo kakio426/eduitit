@@ -17,10 +17,25 @@ logger = logging.getLogger(__name__)
 
 PUBLIC_ACCESS_PATH_PREFIXES = ("/portfolio/",)
 PUBLIC_ACCESS_EXACT_PATHS = {"/portfolio"}
+LIGHTWEIGHT_BYPASS_PREFIXES = ("/health/",)
+ADMIN_SURFACE_PREFIXES = ("/admin/", "/secret-admin-kakio/", "/admin-dashboard/")
+VISITOR_TRACKING_EXCLUDED_PREFIXES = (
+    "/static/",
+    "/media/",
+    "/favicon.ico",
+    *ADMIN_SURFACE_PREFIXES,
+    *LIGHTWEIGHT_BYPASS_PREFIXES,
+)
+SITE_CONFIG_REQUEST_ATTR = "_eduitit_site_config"
+REQUEST_CACHE_MISS = object()
 
 
 def is_public_access_path(path):
     return path in PUBLIC_ACCESS_EXACT_PATHS or any(path.startswith(prefix) for prefix in PUBLIC_ACCESS_PATH_PREFIXES)
+
+
+def is_lightweight_bypass_path(path):
+    return any(path.startswith(prefix) for prefix in LIGHTWEIGHT_BYPASS_PREFIXES)
 
 
 class BlockKnownProbePathsMiddleware:
@@ -86,11 +101,11 @@ class VisitorTrackingMiddleware:
 
     def __call__(self, request):
         # Consent public signer flow: do not store IP/User-Agent in visitor logs.
-        if request.path.startswith('/consent/public/'):
+        if request.path.startswith('/consent/public/') or is_lightweight_bypass_path(request.path):
             return self.get_response(request)
 
         # Exclude static, media, and admin paths to reduce DB load
-        if not any(request.path.startswith(p) for p in ['/static/', '/media/', '/admin/', '/favicon.ico']):
+        if not any(request.path.startswith(p) for p in VISITOR_TRACKING_EXCLUDED_PREFIXES):
             ip = get_client_ip(request)
             if not ip:
                 ip = '0.0.0.0' # Fallback for unknown IPs
@@ -139,6 +154,9 @@ class PolicyConsentMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        if is_lightweight_bypass_path(request.path):
+            return self.get_response(request)
+
         if not request.user.is_authenticated:
             return self.get_response(request)
 
@@ -198,6 +216,9 @@ class OnboardingMiddleware:
     def __call__(self, request):
         from django.conf import settings
 
+        if is_lightweight_bypass_path(request.path):
+            return self.get_response(request)
+
         if request.user.is_authenticated:
             if is_public_access_path(request.path):
                 return self.get_response(request)
@@ -250,23 +271,36 @@ class MaintenanceModeMiddleware:
         self.get_response = get_response
 
     @staticmethod
-    def _is_site_config_maintenance_enabled():
+    def _get_site_config(request):
+        config = getattr(request, SITE_CONFIG_REQUEST_ATTR, REQUEST_CACHE_MISS)
+        if config is not REQUEST_CACHE_MISS:
+            return config
+
         try:
-            return SiteConfig.load().maintenance_mode
+            config = SiteConfig.load()
         except Exception:
-            # 마이그레이션 중/DB 일시 오류 등에서는 안전하게 False 처리
-            return False
+            config = None
+
+        setattr(request, SITE_CONFIG_REQUEST_ATTR, config)
+        return config
+
+    def _is_site_config_maintenance_enabled(self, request):
+        config = self._get_site_config(request)
+        return bool(getattr(config, "maintenance_mode", False))
 
     def __call__(self, request):
         from django.conf import settings
         from django.shortcuts import render
+
+        if is_lightweight_bypass_path(request.path):
+            return self.get_response(request)
 
         # 점검 스위치 우선순위:
         # 1) 환경변수 MAINTENANCE_MODE (기존 방식 유지)
         # 2) 관리자 SiteConfig.maintenance_mode (운영 편의)
         is_maintenance = bool(getattr(settings, 'MAINTENANCE_MODE', False))
         if not is_maintenance:
-            is_maintenance = self._is_site_config_maintenance_enabled()
+            is_maintenance = self._is_site_config_maintenance_enabled(request)
         
         if is_maintenance:
             # 관리자(내 계정)는 점검 중에도 사이트를 볼 수 있어야 함

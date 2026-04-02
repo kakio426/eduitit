@@ -36,6 +36,7 @@ from .policy_meta import (
     get_provider_label,
     get_safe_next_url,
 )
+from .context_processors import prime_service_launcher_products
 from . import service_launcher as service_launcher_utils
 from .product_visibility import filter_discoverable_products, is_sheetbook_discovery_visible
 from .active_classroom import (
@@ -3100,8 +3101,11 @@ def _home_v6(request, products, posts, page_obj, feed_scope, pinned_notice_posts
 
 def home(request):
     # Order by display_order first, then by creation date
-    products = filter_discoverable_products(
+    products = prime_service_launcher_products(
+        request,
+        filter_discoverable_products(
         Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
+        ),
     )
     feed_scope = _get_post_feed_scope(request)
 
@@ -4559,6 +4563,10 @@ def set_active_classroom(request):
 
 
 def health_check(request):
+    return JsonResponse({'status': 'ok'})
+
+
+def database_health_check(request):
     from django.db import connection
     try:
         connection.ensure_connection()

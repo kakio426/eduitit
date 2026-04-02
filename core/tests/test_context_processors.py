@@ -221,3 +221,10 @@ class ServiceLauncherContextTests(TestCase):
     def test_service_launcher_json_absent_when_disabled(self):
         context = search_products(self._request())
         self.assertEqual(context, {})
+
+    def test_service_launcher_json_absent_on_admin_surfaces(self):
+        request = self.factory.get("/secret-admin-kakio/")
+
+        context = search_products(request)
+
+        self.assertEqual(context, {})
