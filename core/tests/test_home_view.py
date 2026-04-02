@@ -3086,6 +3086,10 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('@media (max-width: 639px)', mobile_css)
         self.assertIn('.home-v4-mobile-quickdrop-actions', mobile_css)
         self.assertIn('grid-template-columns: minmax(0, 1fr);', mobile_css)
+        self.assertIn('.home-v4-quickdrop-summary', mobile_css)
+        self.assertIn('.home-v4-mobile-quickdrop-summary', mobile_css)
+        self.assertIn('overflow-wrap: anywhere;', mobile_css)
+        self.assertIn('box-sizing: border-box;', mobile_css)
 
     def test_v6_home_shows_shared_school_reservation_card(self):
         owner = _create_onboarded_user('v6owner')

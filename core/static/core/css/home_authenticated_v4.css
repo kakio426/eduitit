@@ -634,13 +634,18 @@
 
 .home-v4-mobile-quickdrop-summary {
     margin: 0;
+    min-width: 0;
+    max-width: 100%;
     color: #475569;
     font-size: 0.9rem;
     line-height: 1.55;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .home-v4-mobile-quickdrop-form {
     display: grid;
+    min-width: 0;
     gap: 0.65rem;
 }
 
@@ -651,6 +656,7 @@
 }
 
 .home-v4-mobile-quickdrop-textarea {
+    box-sizing: border-box;
     width: 100%;
     min-height: 6.4rem;
     resize: vertical;
@@ -684,6 +690,7 @@
 .home-v4-mobile-quickdrop-actions {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
+    min-width: 0;
     gap: 0.65rem;
     align-items: center;
 }
@@ -1149,6 +1156,7 @@
 .home-v4-quickdrop-head {
     display: flex;
     align-items: flex-start;
+    min-width: 0;
     gap: 0.85rem;
 }
 
@@ -1171,13 +1179,18 @@
 
 .home-v4-quickdrop-summary {
     margin: 0;
+    min-width: 0;
+    max-width: 100%;
     color: #475569;
     font-size: 0.93rem;
     line-height: 1.6;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .home-v4-quickdrop-form {
     display: grid;
+    min-width: 0;
     gap: 0.75rem;
 }
 
@@ -1188,6 +1201,7 @@
 }
 
 .home-v4-quickdrop-textarea {
+    box-sizing: border-box;
     width: 100%;
     min-height: 7.2rem;
     resize: vertical;
@@ -1255,6 +1269,7 @@
 .home-v4-quickdrop-actions {
     display: flex;
     flex-wrap: wrap;
+    min-width: 0;
     gap: 0.65rem;
 }
 
