@@ -4,6 +4,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
+from datetime import datetime
 from unittest.mock import patch
 
 from classcalendar.models import CalendarEvent
@@ -14,12 +15,15 @@ from schoolcomm.models import (
     CommunityRoom,
     RoomMessage,
     SchoolMembership,
+    SharedCalendarEvent,
+    SharedCalendarEventCopy,
     StoredAssetBlob,
     UserAssetCategory,
     WorkspaceInvite,
 )
 from schoolcomm.services import (
     create_room_message,
+    create_shared_calendar_event,
     create_workspace_for_user,
     ensure_user_asset_category,
     get_default_room,
@@ -258,13 +262,109 @@ class SchoolcommViewTests(SchoolcommTestCase):
             },
         )
         self.assertEqual(CalendarEvent.objects.count(), 0)
+        self.assertEqual(SharedCalendarEvent.objects.count(), 0)
 
         self.client.force_login(self.owner)
         response = self.client.post(reverse("schoolcomm:api_apply_calendar_suggestion", kwargs={"suggestion_id": suggestion.id}))
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(CalendarEvent.objects.count(), 1)
+        self.assertEqual(CalendarEvent.objects.count(), 0)
+        self.assertEqual(SharedCalendarEvent.objects.count(), 1)
         suggestion.refresh_from_db()
         self.assertEqual(suggestion.status, CalendarSuggestion.Status.APPLIED)
+
+    def test_shared_calendar_copy_to_main_reuses_existing_personal_copy(self):
+        shared_event = create_shared_calendar_event(
+            self.workspace,
+            self.owner_membership,
+            title="학년 협의",
+            note="자료 확인",
+            start_time=timezone.make_aware(datetime(2026, 4, 10, 15, 0)),
+            end_time=timezone.make_aware(datetime(2026, 4, 10, 16, 0)),
+            color="emerald",
+        )
+
+        self.client.force_login(self.owner)
+        first = self.client.post(
+            reverse("schoolcomm:api_shared_calendar_event_copy_to_main", kwargs={"event_id": shared_event.id}),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        second = self.client.post(
+            reverse("schoolcomm:api_shared_calendar_event_copy_to_main", kwargs={"event_id": shared_event.id}),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(CalendarEvent.objects.count(), 1)
+        self.assertEqual(SharedCalendarEventCopy.objects.count(), 1)
+        self.assertTrue(first.json()["created"])
+        self.assertFalse(second.json()["created"])
+
+    def test_shared_calendar_copy_can_recreate_after_personal_event_deleted(self):
+        shared_event = create_shared_calendar_event(
+            self.workspace,
+            self.owner_membership,
+            title="수업 공개",
+            note="복사 테스트",
+            start_time=timezone.make_aware(datetime(2026, 4, 12, 9, 0)),
+            end_time=timezone.make_aware(datetime(2026, 4, 12, 10, 0)),
+            color="sky",
+        )
+
+        self.client.force_login(self.owner)
+        first = self.client.post(
+            reverse("schoolcomm:api_shared_calendar_event_copy_to_main", kwargs={"event_id": shared_event.id}),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        first_event_id = first.json()["event"]["id"]
+        CalendarEvent.objects.get(id=first_event_id).delete()
+
+        second = self.client.post(
+            reverse("schoolcomm:api_shared_calendar_event_copy_to_main", kwargs={"event_id": shared_event.id}),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(second.status_code, 200)
+        self.assertTrue(second.json()["created"])
+        self.assertEqual(CalendarEvent.objects.count(), 1)
+        self.assertNotEqual(first_event_id, second.json()["event"]["id"])
+
+    def test_shared_calendar_update_does_not_change_existing_personal_copy(self):
+        shared_event = create_shared_calendar_event(
+            self.workspace,
+            self.owner_membership,
+            title="원본 일정",
+            note="원본 메모",
+            start_time=timezone.make_aware(datetime(2026, 4, 14, 13, 0)),
+            end_time=timezone.make_aware(datetime(2026, 4, 14, 14, 0)),
+            color="amber",
+        )
+
+        self.client.force_login(self.owner)
+        copy_response = self.client.post(
+            reverse("schoolcomm:api_shared_calendar_event_copy_to_main", kwargs={"event_id": shared_event.id}),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        copied_event = CalendarEvent.objects.get(id=copy_response.json()["event"]["id"])
+
+        update_response = self.client.post(
+            reverse("schoolcomm:api_shared_calendar_event_update", kwargs={"event_id": shared_event.id}),
+            {
+                "title": "바뀐 원본 일정",
+                "note": "바뀐 메모",
+                "start_time": "2026-04-14T15:00",
+                "end_time": "2026-04-14T16:00",
+                "color": "rose",
+                "redirect_month": "2026-04",
+                "redirect_date": "2026-04-14",
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(update_response.status_code, 200)
+        copied_event.refresh_from_db()
+        self.assertEqual(copied_event.title, "원본 일정")
+        self.assertEqual(copied_event.color, "amber")
 
     def test_main_falls_back_to_unavailable_state_when_database_error_occurs(self):
         self.client.force_login(self.owner)
@@ -273,7 +373,7 @@ class SchoolcommViewTests(SchoolcommTestCase):
             response = self.client.get(reverse("schoolcomm:main"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "우리끼리 채팅방")
+        self.assertContains(response, "끼리끼리 채팅방")
         self.assertContains(response, "지금은 채팅방을 준비하는 중입니다.")
 
     def test_notifications_api_returns_503_when_database_error_occurs(self):
@@ -284,3 +384,30 @@ class SchoolcommViewTests(SchoolcommTestCase):
 
         self.assertEqual(response.status_code, 503)
         self.assertEqual(response.json()["code"], "service_unavailable")
+
+    def test_main_renders_shared_calendar_tab_contents(self):
+        create_shared_calendar_event(
+            self.workspace,
+            self.owner_membership,
+            title="주간 협의",
+            note="달력 노출",
+            start_time=timezone.make_aware(datetime(2026, 4, 20, 14, 0)),
+            end_time=timezone.make_aware(datetime(2026, 4, 20, 15, 0)),
+            color="indigo",
+        )
+
+        self.client.force_login(self.owner)
+        response = self.client.get(
+            reverse("schoolcomm:main"),
+            {
+                "workspace": str(self.workspace.id),
+                "calendar_tab": "shared",
+                "calendar_month": "2026-04",
+                "calendar_date": "2026-04-20",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "끼리끼리 캘린더")
+        self.assertContains(response, "내 메인 캘린더로 보내기")
+        self.assertContains(response, "내 캘린더에서는 독립 일정으로 관리됩니다.")

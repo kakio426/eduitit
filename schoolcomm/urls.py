@@ -21,5 +21,9 @@ urlpatterns = [
     path("api/search/", views.api_search, name="api_search"),
     path("api/assets/search/", views.api_asset_search, name="api_asset_search"),
     path("api/notifications/summary/", views.api_notifications_summary, name="api_notifications_summary"),
+    path("api/workspaces/<uuid:workspace_id>/calendar/events/", views.api_workspace_calendar_events, name="api_workspace_calendar_events"),
+    path("api/calendar/events/<uuid:event_id>/update/", views.api_shared_calendar_event_update, name="api_shared_calendar_event_update"),
+    path("api/calendar/events/<uuid:event_id>/delete/", views.api_shared_calendar_event_delete, name="api_shared_calendar_event_delete"),
+    path("api/calendar/events/<uuid:event_id>/copy-to-main/", views.api_shared_calendar_event_copy_to_main, name="api_shared_calendar_event_copy_to_main"),
     path("api/calendar-suggestions/<uuid:suggestion_id>/apply/", views.api_apply_calendar_suggestion, name="api_apply_calendar_suggestion"),
 ]

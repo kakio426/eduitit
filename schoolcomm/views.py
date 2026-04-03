@@ -1,9 +1,9 @@
 import logging
+from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import DatabaseError
-from django.core.paginator import Paginator
 from django.http import FileResponse, Http404, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -11,26 +11,30 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.views.decorators.http import require_GET, require_POST
 
-from classcalendar.models import CalendarEvent, EventPageBlock
-from core.active_classroom import get_active_classroom_for_request
-
 from .models import CalendarSuggestion, MessageReaction, RoomMessage, SchoolMembership, SharedAsset, WorkspaceInvite
 from .services import (
     MembershipRequiredError,
     ValidationError,
     accept_invite,
+    apply_calendar_suggestion_to_shared_calendar,
     approve_membership,
+    build_main_calendar_event_url,
     build_notification_summary,
     build_room_summary,
+    build_shared_calendar_panel,
     build_workspace_dashboard,
+    copy_shared_calendar_event_to_main,
     create_invite,
     create_room_message,
+    create_shared_calendar_event,
     create_workspace_for_user,
+    delete_shared_calendar_event,
     get_default_room,
     get_default_workspace_for_user,
     get_membership,
     get_or_create_dm_room,
     get_room_for_user,
+    get_shared_calendar_event_for_user,
     get_service_product,
     get_user_memberships,
     mark_room_read,
@@ -42,15 +46,17 @@ from .services import (
     serialize_asset,
     serialize_calendar_suggestion,
     serialize_message,
+    serialize_shared_calendar_event,
     toggle_ack_reaction,
     update_user_asset_category,
+    update_shared_calendar_event,
     user_can_download_asset,
 )
 
 
 logger = logging.getLogger(__name__)
 
-SERVICE_PUBLIC_NAME = "우리끼리 채팅방"
+SERVICE_PUBLIC_NAME = "끼리끼리 채팅방"
 SERVICE_UNAVAILABLE_MESSAGE = "지금은 채팅방을 준비하는 중입니다. 잠시 후 다시 열어 주세요."
 
 
@@ -137,6 +143,45 @@ def _build_ws_path(path):
     return f"/{path.lstrip('/')}"
 
 
+def _build_main_url(workspace_id=None, *, calendar_tab="", calendar_month="", calendar_date=""):
+    params = []
+    if workspace_id:
+        params.append(("workspace", str(workspace_id)))
+    if calendar_tab:
+        params.append(("calendar_tab", str(calendar_tab)))
+    if calendar_month:
+        params.append(("calendar_month", str(calendar_month)))
+    if calendar_date:
+        params.append(("calendar_date", str(calendar_date)))
+    base_url = reverse("schoolcomm:main")
+    if not params:
+        return base_url
+    return f"{base_url}?{urlencode(params)}"
+
+
+def _normalize_calendar_tab(raw_value):
+    value = str(raw_value or "").strip().lower()
+    if value in {"suggestions", "shared"}:
+        return value
+    return "suggestions"
+
+
+def _parse_calendar_form_datetimes(request):
+    start_raw = str(request.POST.get("start_time") or "").strip()
+    end_raw = str(request.POST.get("end_time") or "").strip()
+    if not start_raw or not end_raw:
+        raise ValidationError("시작 시간과 종료 시간을 모두 입력해 주세요.")
+    start_time = parse_datetime(start_raw)
+    end_time = parse_datetime(end_raw)
+    if start_time is None or end_time is None:
+        raise ValidationError("일정 시간 형식이 올바르지 않습니다.")
+    if timezone.is_naive(start_time):
+        start_time = timezone.make_aware(start_time, timezone.get_current_timezone())
+    if timezone.is_naive(end_time):
+        end_time = timezone.make_aware(end_time, timezone.get_current_timezone())
+    return start_time, end_time
+
+
 def _service_unavailable_context():
     return {
         "page_title": SERVICE_PUBLIC_NAME,
@@ -163,9 +208,17 @@ def main(request):
         active_memberships = get_user_memberships(request.user, statuses=[SchoolMembership.Status.ACTIVE]).select_related("workspace")
         search_results = None
         dashboard = None
+        shared_calendar = None
+        calendar_tab = _normalize_calendar_tab(request.GET.get("calendar_tab"))
         latest_invite_url = request.session.pop("schoolcomm_latest_invite_url", "")
         if workspace is not None:
             dashboard = build_workspace_dashboard(workspace, request.user)
+            shared_calendar = build_shared_calendar_panel(
+                workspace,
+                request.user,
+                month_value=request.GET.get("calendar_month"),
+                selected_date_value=request.GET.get("calendar_date"),
+            )
             if (request.GET.get("q") or "").strip():
                 search_results = search_workspace(
                     workspace,
@@ -182,6 +235,8 @@ def main(request):
             "workspace_name_suggestion": school_name_suggestion_for_user(request.user),
             "active_memberships": active_memberships,
             "dashboard": dashboard,
+            "shared_calendar": shared_calendar,
+            "calendar_tab": "shared" if calendar_tab == "shared" else "suggestions",
             "search_results": search_results,
             "latest_invite_url": latest_invite_url,
             "user_ws_url": _build_ws_path("schoolcomm/ws/users/me/"),
@@ -200,7 +255,7 @@ def create_workspace(request):
         name = (request.POST.get("name") or "").strip()
         academic_year = (request.POST.get("academic_year") or "").strip()
         workspace, _ = create_workspace_for_user(request.user, name=name, academic_year=academic_year)
-        messages.success(request, "우리끼리 채팅방을 만들었어요.")
+        messages.success(request, "끼리끼리 채팅방을 만들었어요.")
         return redirect(f"{reverse('schoolcomm:main')}?workspace={workspace.id}")
     except DatabaseError:
         logger.exception("[schoolcomm] create_workspace unavailable")
@@ -558,54 +613,218 @@ def api_notifications_summary(request):
 
 
 @login_required
+def api_workspace_calendar_events(request, workspace_id):
+    try:
+        workspace = get_object_or_404(
+            request.user.school_memberships.select_related("workspace").filter(status=SchoolMembership.Status.ACTIVE),
+            workspace_id=workspace_id,
+        ).workspace
+        membership = get_membership(workspace, request.user)
+        if membership is None:
+            return _json_error("채팅방 멤버만 끼리끼리 캘린더를 사용할 수 있습니다.", status=403, code="permission_denied")
+
+        if request.method == "GET":
+            panel = build_shared_calendar_panel(
+                workspace,
+                request.user,
+                month_value=request.GET.get("month"),
+                selected_date_value=request.GET.get("date"),
+            )
+            return JsonResponse({"status": "success", "calendar": panel})
+
+        start_time, end_time = _parse_calendar_form_datetimes(request)
+        try:
+            event = create_shared_calendar_event(
+                workspace,
+                membership,
+                title=request.POST.get("title"),
+                note=request.POST.get("note"),
+                start_time=start_time,
+                end_time=end_time,
+                is_all_day=str(request.POST.get("is_all_day") or "").strip().lower() in {"1", "true", "on", "yes"},
+                color=request.POST.get("color"),
+            )
+        except (MembershipRequiredError, ValidationError) as exc:
+            if _wants_json(request):
+                status = 403 if isinstance(exc, MembershipRequiredError) else 400
+                code = "permission_denied" if isinstance(exc, MembershipRequiredError) else "validation_error"
+                return _json_error(str(exc), status=status, code=code)
+            messages.error(request, str(exc))
+            return redirect(
+                _build_main_url(
+                    workspace.id,
+                    calendar_tab="shared",
+                    calendar_month=request.POST.get("redirect_month"),
+                    calendar_date=request.POST.get("redirect_date"),
+                )
+            )
+        if not _wants_json(request):
+            messages.success(request, "끼리끼리 캘린더에 일정을 넣었어요.")
+            return redirect(
+                _build_main_url(
+                    workspace.id,
+                    calendar_tab="shared",
+                    calendar_month=request.POST.get("redirect_month") or timezone.localtime(event.start_time).strftime("%Y-%m"),
+                    calendar_date=request.POST.get("redirect_date") or timezone.localtime(event.start_time).date().isoformat(),
+                )
+            )
+        return JsonResponse({"status": "success", "event": serialize_shared_calendar_event(event, user=request.user)}, status=201)
+    except DatabaseError:
+        logger.exception("[schoolcomm] api_workspace_calendar_events unavailable")
+        return _json_service_unavailable()
+
+
+@login_required
+@require_POST
+def api_shared_calendar_event_update(request, event_id):
+    try:
+        event, membership = get_shared_calendar_event_for_user(event_id, request.user)
+        if event is None:
+            raise Http404("일정을 찾을 수 없습니다.")
+        if membership is None:
+            return _json_error("이 일정을 수정할 수 없습니다.", status=403, code="permission_denied")
+        start_time, end_time = _parse_calendar_form_datetimes(request)
+        try:
+            event = update_shared_calendar_event(
+                event,
+                membership,
+                title=request.POST.get("title"),
+                note=request.POST.get("note"),
+                start_time=start_time,
+                end_time=end_time,
+                is_all_day=str(request.POST.get("is_all_day") or "").strip().lower() in {"1", "true", "on", "yes"},
+                color=request.POST.get("color"),
+            )
+        except (MembershipRequiredError, ValidationError) as exc:
+            if _wants_json(request):
+                status = 403 if isinstance(exc, MembershipRequiredError) else 400
+                code = "permission_denied" if isinstance(exc, MembershipRequiredError) else "validation_error"
+                return _json_error(str(exc), status=status, code=code)
+            messages.error(request, str(exc))
+            return redirect(
+                _build_main_url(
+                    event.workspace_id,
+                    calendar_tab="shared",
+                    calendar_month=request.POST.get("redirect_month"),
+                    calendar_date=request.POST.get("redirect_date"),
+                )
+            )
+        if not _wants_json(request):
+            messages.success(request, "끼리끼리 캘린더 일정을 수정했어요.")
+            return redirect(
+                _build_main_url(
+                    event.workspace_id,
+                    calendar_tab="shared",
+                    calendar_month=request.POST.get("redirect_month") or timezone.localtime(event.start_time).strftime("%Y-%m"),
+                    calendar_date=request.POST.get("redirect_date") or timezone.localtime(event.start_time).date().isoformat(),
+                )
+            )
+        return JsonResponse({"status": "success", "event": serialize_shared_calendar_event(event, user=request.user)})
+    except DatabaseError:
+        logger.exception("[schoolcomm] api_shared_calendar_event_update unavailable")
+        return _json_service_unavailable()
+
+
+@login_required
+@require_POST
+def api_shared_calendar_event_delete(request, event_id):
+    try:
+        event, membership = get_shared_calendar_event_for_user(event_id, request.user)
+        if event is None:
+            raise Http404("일정을 찾을 수 없습니다.")
+        if membership is None:
+            return _json_error("이 일정을 삭제할 수 없습니다.", status=403, code="permission_denied")
+        try:
+            delete_shared_calendar_event(event, membership)
+        except MembershipRequiredError as exc:
+            return _json_error(str(exc), status=403, code="permission_denied")
+        if not _wants_json(request):
+            messages.success(request, "끼리끼리 캘린더 일정을 삭제했어요.")
+            return redirect(
+                _build_main_url(
+                    event.workspace_id,
+                    calendar_tab="shared",
+                    calendar_month=request.POST.get("redirect_month"),
+                    calendar_date=request.POST.get("redirect_date"),
+                )
+            )
+        return JsonResponse({"status": "success"})
+    except DatabaseError:
+        logger.exception("[schoolcomm] api_shared_calendar_event_delete unavailable")
+        return _json_service_unavailable()
+
+
+@login_required
+@require_POST
+def api_shared_calendar_event_copy_to_main(request, event_id):
+    try:
+        event, membership = get_shared_calendar_event_for_user(event_id, request.user)
+        if event is None:
+            raise Http404("일정을 찾을 수 없습니다.")
+        if membership is None:
+            return _json_error("이 일정을 내 메인 캘린더로 보낼 수 없습니다.", status=403, code="permission_denied")
+        try:
+            personal_event, created = copy_shared_calendar_event_to_main(event, request.user)
+        except MembershipRequiredError as exc:
+            return _json_error(str(exc), status=403, code="permission_denied")
+        target_url = build_main_calendar_event_url(personal_event)
+        if not _wants_json(request):
+            messages.success(
+                request,
+                "내 메인 캘린더로 보냈어요. 내 캘린더에서는 독립 일정으로 관리됩니다.",
+            )
+            return redirect(target_url)
+        return JsonResponse(
+            {
+                "status": "success",
+                "created": created,
+                "event": {
+                    "id": str(personal_event.id),
+                    "title": personal_event.title,
+                    "url": target_url,
+                },
+                "message": "내 캘린더에서는 독립 일정으로 관리됩니다.",
+            }
+        )
+    except DatabaseError:
+        logger.exception("[schoolcomm] api_shared_calendar_event_copy_to_main unavailable")
+        return _json_service_unavailable()
+
+
+@login_required
 @require_POST
 def api_apply_calendar_suggestion(request, suggestion_id):
     try:
         suggestion = get_object_or_404(CalendarSuggestion, id=suggestion_id, user=request.user)
-        if suggestion.status != CalendarSuggestion.Status.PENDING:
-            return _json_error("이미 처리한 추천입니다.")
-        payload = suggestion.suggested_payload or {}
-        start_time = parse_datetime(str(payload.get("start_time") or ""))
-        end_time = parse_datetime(str(payload.get("end_time") or ""))
-        if start_time is None or end_time is None:
-            return _json_error("추천 일정 시간이 올바르지 않습니다.")
-
-        classroom = get_active_classroom_for_request(request)
-        event = CalendarEvent.objects.create(
-            title=str(payload.get("title") or "우리끼리 채팅방 일정"),
-            start_time=start_time,
-            end_time=end_time,
-            is_all_day=bool(payload.get("is_all_day")),
-            color="indigo",
-            visibility=CalendarEvent.VISIBILITY_TEACHER,
-            author=request.user,
-            classroom=classroom,
-            source=CalendarEvent.SOURCE_LOCAL,
-        )
-        note = str(payload.get("note") or "").strip()
-        if note:
-            EventPageBlock.objects.create(
-                event=event,
-                block_type="paragraph",
-                content={"text": note},
-                order=0,
-            )
-        suggestion.status = CalendarSuggestion.Status.APPLIED
-        suggestion.applied_at = timezone.now()
-        suggestion.save(update_fields=["status", "applied_at", "updated_at"])
+        try:
+            shared_event = apply_calendar_suggestion_to_shared_calendar(suggestion, request.user)
+        except MembershipRequiredError as exc:
+            return _json_error(str(exc), status=403, code="permission_denied")
+        except ValidationError as exc:
+            return _json_error(str(exc))
+        target_main_copy_url = reverse("schoolcomm:api_shared_calendar_event_copy_to_main", kwargs={"event_id": shared_event.id})
         if not _wants_json(request):
-            messages.success(request, "캘린더에 추천 일정을 저장했어요.")
-            room_id = (payload.get("source_room_id") or "").strip()
-            if room_id:
-                return redirect(reverse("schoolcomm:room_detail", kwargs={"room_id": room_id}))
-            return redirect(reverse("schoolcomm:main"))
+            messages.success(request, "끼리끼리 캘린더에 넣었어요. 내 캘린더에서는 독립 일정으로 관리됩니다.")
+            next_url = str(request.POST.get("next") or "").strip()
+            if next_url:
+                return redirect(next_url)
+            return redirect(
+                _build_main_url(
+                    shared_event.workspace_id,
+                    calendar_tab="shared",
+                    calendar_month=timezone.localtime(shared_event.start_time).strftime("%Y-%m"),
+                    calendar_date=timezone.localtime(shared_event.start_time).date().isoformat(),
+                )
+            )
         return JsonResponse(
             {
                 "status": "success",
-                "event": {
-                    "id": str(event.id),
-                    "title": event.title,
+                "shared_event": {
+                    "id": str(shared_event.id),
+                    "title": shared_event.title,
                 },
+                "copy_to_main_url": target_main_copy_url,
+                "message": "끼리끼리 캘린더에 넣었어요. 내 캘린더에서는 독립 일정으로 관리됩니다.",
             }
         )
     except DatabaseError:

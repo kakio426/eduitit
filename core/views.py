@@ -652,7 +652,7 @@ def _product_title_text(product):
 def _canonical_home_service_key(product):
     route_name = _product_route_name(product)
     title = _product_title_text(product)
-    if route_name == "schoolcomm:main" or title in {"학교 커뮤니티", "우리끼리 채팅방"}:
+    if route_name == "schoolcomm:main" or title in {"학교 커뮤니티", "우리끼리 채팅방", "끼리끼리 채팅방"}:
         return "schoolcomm"
     if route_name == "quickdrop:landing" or title == "바로전송":
         return "quickdrop"

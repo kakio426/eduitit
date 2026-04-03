@@ -1,11 +1,13 @@
+import calendar as calendar_module
 import hashlib
 import json
 import os
 import secrets
 import uuid
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
-from datetime import datetime, timedelta
+from datetime import date as date_cls, datetime, time, timedelta
 from decimal import Decimal
+from urllib.parse import urlencode
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
@@ -17,6 +19,7 @@ from django.template.defaultfilters import slugify
 from django.urls import reverse
 from django.utils import timezone
 
+from classcalendar.models import CalendarEvent, EventPageBlock
 from classcalendar.message_capture import parse_message_capture_draft
 from products.models import ManualSection, Product, ProductFeature, ServiceManual
 
@@ -29,6 +32,8 @@ from .models import (
     RoomParticipant,
     SchoolMembership,
     SchoolWorkspace,
+    SharedCalendarEvent,
+    SharedCalendarEventCopy,
     SharedAsset,
     StoredAssetBlob,
     UserAssetCategory,
@@ -43,12 +48,14 @@ except Exception:  # pragma: no cover
 
 
 SERVICE_ROUTE = "schoolcomm:main"
-SERVICE_TITLE = "우리끼리 채팅방"
+SERVICE_TITLE = "끼리끼리 채팅방"
+CALENDAR_COPY_INTEGRATION_SOURCE = "schoolcomm_calendar_copy"
+SHARED_CALENDAR_DEFAULT_COLORS = {"emerald", "indigo", "sky", "amber", "rose"}
 SERVICE_PRODUCT_DEFAULTS = {
-    "lead_text": "동학년 선생님부터 편하게 공지, 자료, 대화를 나눌 수 있는 교사용 채팅방입니다.",
+    "lead_text": "동학년 선생님부터 편하게 공지, 자료, 대화를 나누는 가벼운 채팅방입니다.",
     "description": (
-        "우리끼리 채팅방은 공지와 자료를 나누고, 1:1·소규모 대화를 이어가며, 받은 파일을 개인 기준으로 다시 분류하고 "
-        "캘린더 추천까지 연결하는 교사용 대화 공간입니다."
+        "끼리끼리 채팅방은 공지와 자료를 나누고, 1:1·소규모 대화를 이어가며, 받은 파일을 개인 기준으로 다시 분류하고 "
+        "끼리끼리 캘린더에 추천 일정을 모은 뒤 내 메인 캘린더로 필요한 일정만 보내는 대화 공간입니다."
     ),
     "price": 0.00,
     "is_active": True,
@@ -61,8 +68,8 @@ SERVICE_PRODUCT_DEFAULTS = {
     "service_type": "classroom",
     "external_url": "",
     "launch_route_name": SERVICE_ROUTE,
-    "solve_text": "동학년 선생님들과 공지와 자료를 편하게 나누고 싶어요",
-    "result_text": "교사용 채팅방",
+    "solve_text": "동학년 선생님들과 공지, 자료, 일정을 편하게 나누고 싶어요",
+    "result_text": "끼리끼리 채팅방",
     "time_text": "1분",
 }
 NOTICE_ROOM_NAME = "공지"
@@ -161,6 +168,82 @@ def _format_iso_datetime_label(raw_value):
     return _format_datetime_label(parsed)
 
 
+def _format_date_label(value):
+    if not value:
+        return ""
+    return value.strftime("%m월 %d일")
+
+
+def _normalize_month_value(raw_value):
+    text = str(raw_value or "").strip()
+    if not text:
+        now_local = timezone.localtime()
+        return date_cls(now_local.year, now_local.month, 1)
+    try:
+        return datetime.strptime(text, "%Y-%m").date().replace(day=1)
+    except ValueError as exc:
+        raise ValidationError("월 형식이 올바르지 않습니다.") from exc
+
+
+def _normalize_date_value(raw_value, *, fallback=None):
+    text = str(raw_value or "").strip()
+    if not text:
+        return fallback
+    try:
+        return datetime.strptime(text, "%Y-%m-%d").date()
+    except ValueError as exc:
+        raise ValidationError("날짜 형식이 올바르지 않습니다.") from exc
+
+
+def _normalize_local_datetime(raw_value):
+    text = str(raw_value or "").strip()
+    if not text:
+        raise ValidationError("일정 시간을 입력해 주세요.")
+    parsed = datetime.fromisoformat(text)
+    if timezone.is_naive(parsed):
+        parsed = timezone.make_aware(parsed, timezone.get_current_timezone())
+    return parsed
+
+
+def _normalize_shared_calendar_color(raw_value):
+    color = str(raw_value or "").strip().lower() or "emerald"
+    if color not in SHARED_CALENDAR_DEFAULT_COLORS:
+        return "emerald"
+    return color
+
+
+def _shared_event_date_bounds(event):
+    start_date = timezone.localtime(event.start_time).date()
+    end_date = timezone.localtime(event.end_time).date()
+    if end_date < start_date:
+        end_date = start_date
+    return start_date, end_date
+
+
+def _shared_event_overlaps_date(event, target_date):
+    start_date, end_date = _shared_event_date_bounds(event)
+    return start_date <= target_date <= end_date
+
+
+def _shared_event_time_label(event):
+    start_local = timezone.localtime(event.start_time)
+    end_local = timezone.localtime(event.end_time)
+    if event.is_all_day:
+        if start_local.date() == end_local.date():
+            return f"{start_local:%m월 %d일} 하루 종일"
+        return f"{start_local:%m월 %d일} ~ {end_local:%m월 %d일} 하루 종일"
+    if start_local.date() == end_local.date():
+        return f"{start_local:%m월 %d일 %H:%M} ~ {end_local:%H:%M}"
+    return f"{start_local:%m월 %d일 %H:%M} ~ {end_local:%m월 %d일 %H:%M}"
+
+
+def build_main_calendar_event_url(event):
+    params = [("open_event", str(event.id))]
+    if event.start_time:
+        params.insert(0, ("date", timezone.localtime(event.start_time).date().isoformat()))
+    return f"{reverse('classcalendar:main')}?{urlencode(params)}"
+
+
 def _find_service_product():
     return (
         Product.objects.filter(launch_route_name=SERVICE_ROUTE).order_by("id").first()
@@ -201,8 +284,8 @@ def ensure_service_product():
         },
         {
             "icon": "📅",
-            "title": "캘린더 추천 연결",
-            "description": "대화와 첨부를 바탕으로 일정 추천만 만들고 확인 후 저장합니다.",
+            "title": "끼리끼리 캘린더",
+            "description": "추천 일정을 공유 캘린더에 모으고, 필요한 일정만 내 메인 캘린더로 보냅니다.",
         },
     ]
     for item in feature_specs:
@@ -215,20 +298,20 @@ def ensure_service_product():
     manual, _ = ServiceManual.objects.get_or_create(
         product=product,
         defaults={
-            "title": "우리끼리 채팅방 시작 가이드",
-            "description": "채팅방 공간 만들기부터 공지, 자료공유, 일정 추천까지 빠르게 익힐 수 있습니다.",
+            "title": "끼리끼리 채팅방 시작 가이드",
+            "description": "채팅방 만들기부터 공지, 자료공유, 끼리끼리 캘린더까지 빠르게 익힐 수 있습니다.",
             "is_published": True,
         },
     )
-    manual.title = "우리끼리 채팅방 시작 가이드"
-    manual.description = "채팅방 공간 만들기부터 공지, 자료공유, 일정 추천까지 빠르게 익힐 수 있습니다."
+    manual.title = "끼리끼리 채팅방 시작 가이드"
+    manual.description = "채팅방 만들기부터 공지, 자료공유, 끼리끼리 캘린더까지 빠르게 익힐 수 있습니다."
     manual.is_published = True
     manual.save(update_fields=["title", "description", "is_published", "updated_at"])
 
     sections = [
         ("처음 만들기", "이름 제안값을 확인해 채팅방 공간을 만들고, 초대 링크로 함께 쓸 선생님을 초대합니다.", 1),
         ("공지와 자료공유", "공지방은 관리자만 글을 올리고, 자료공유방에서는 파일과 메모를 함께 나눕니다.", 2),
-        ("대화와 일정 추천", "1:1·그룹 대화 중 필요한 메시지는 일정 추천으로 확인 후 저장합니다.", 3),
+        ("대화와 캘린더", "1:1·그룹 대화 중 필요한 메시지는 끼리끼리 캘린더에 넣고, 필요한 일정만 내 메인 캘린더로 보냅니다.", 3),
     ]
     for title, content, order in sections:
         ManualSection.objects.update_or_create(
@@ -273,7 +356,7 @@ def broadcast_user_summary(user):
 
 
 def school_name_suggestion_for_user(user):
-    return "예) 3학년 우리끼리"
+    return "예) 3학년 끼리끼리"
 
 
 def current_academic_year(now=None):
@@ -522,6 +605,301 @@ def build_notification_summary(user, workspace=None):
     }
 
 
+def _shared_calendar_event_queryset(workspace):
+    return (
+        SharedCalendarEvent.objects
+        .filter(workspace=workspace)
+        .select_related(
+            "created_by_membership__user",
+            "updated_by_membership__user",
+        )
+        .prefetch_related("copies__personal_event")
+        .order_by("start_time", "created_at", "id")
+    )
+
+
+def get_shared_calendar_event_for_user(event_id, user):
+    event = (
+        SharedCalendarEvent.objects
+        .select_related(
+            "workspace",
+            "created_by_membership__user",
+            "updated_by_membership__user",
+        )
+        .prefetch_related("copies__personal_event")
+        .filter(id=event_id)
+        .first()
+    )
+    if event is None:
+        return None, None
+    membership = get_membership(event.workspace, user)
+    if membership is None:
+        return event, None
+    return event, membership
+
+
+def serialize_shared_calendar_event(event, *, user):
+    copy_record = next((copy for copy in event.copies.all() if copy.user_id == user.id), None)
+    personal_event = getattr(copy_record, "personal_event", None)
+    return {
+        "id": str(event.id),
+        "title": event.title,
+        "note": event.note,
+        "start_time": event.start_time.isoformat(),
+        "end_time": event.end_time.isoformat(),
+        "time_label": _shared_event_time_label(event),
+        "is_all_day": event.is_all_day,
+        "color": event.color or "emerald",
+        "created_by_name": user_display_name(getattr(event.created_by_membership, "user", None)),
+        "updated_by_name": user_display_name(getattr(event.updated_by_membership, "user", None)),
+        "copy_to_main_url": reverse("schoolcomm:api_shared_calendar_event_copy_to_main", kwargs={"event_id": event.id}),
+        "update_url": reverse("schoolcomm:api_shared_calendar_event_update", kwargs={"event_id": event.id}),
+        "delete_url": reverse("schoolcomm:api_shared_calendar_event_delete", kwargs={"event_id": event.id}),
+        "is_copied_to_main": bool(personal_event),
+        "personal_event_id": str(personal_event.id) if personal_event else "",
+        "personal_event_url": build_main_calendar_event_url(personal_event) if personal_event else "",
+        "copy_button_label": "내 메인 캘린더에서 보기" if personal_event else "내 메인 캘린더로 보내기",
+    }
+
+
+def _build_shared_calendar_month_grid(events, *, current_month, selected_date):
+    calendar_iter = calendar_module.Calendar(firstweekday=6)
+    today = timezone.localtime().date()
+    counts = {}
+    for event in events:
+        start_date, end_date = _shared_event_date_bounds(event)
+        cursor = max(start_date, current_month)
+        month_end = (current_month.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+        final_date = min(end_date, month_end)
+        while cursor <= final_date:
+            counts[cursor.isoformat()] = counts.get(cursor.isoformat(), 0) + 1
+            cursor += timedelta(days=1)
+
+    days = []
+    for day in calendar_iter.itermonthdates(current_month.year, current_month.month):
+        day_key = day.isoformat()
+        days.append(
+            {
+                "date": day_key,
+                "label": str(day.day),
+                "is_current_month": day.month == current_month.month,
+                "is_selected": day == selected_date,
+                "is_today": day == today,
+                "event_count": counts.get(day_key, 0),
+                "has_events": counts.get(day_key, 0) > 0,
+            }
+        )
+    return days
+
+
+def build_shared_calendar_panel(workspace, user, *, month_value="", selected_date_value=""):
+    membership = get_membership(workspace, user)
+    if membership is None:
+        raise MembershipRequiredError("채팅방 멤버만 끼리끼리 캘린더를 볼 수 있습니다.")
+
+    current_month = _normalize_month_value(month_value)
+    selected_date = _normalize_date_value(selected_date_value)
+    month_start = timezone.make_aware(datetime.combine(current_month, time.min), timezone.get_current_timezone())
+    next_month = (current_month.replace(day=28) + timedelta(days=4)).replace(day=1)
+    next_month_start = timezone.make_aware(datetime.combine(next_month, time.min), timezone.get_current_timezone())
+    month_events = list(
+        _shared_calendar_event_queryset(workspace)
+        .filter(start_time__lt=next_month_start, end_time__gte=month_start)
+    )
+    if selected_date is None or selected_date.month != current_month.month or selected_date.year != current_month.year:
+        today = timezone.localtime().date()
+        selected_date = today if today.year == current_month.year and today.month == current_month.month else current_month
+
+    selected_events = [
+        serialize_shared_calendar_event(event, user=user)
+        for event in month_events
+        if _shared_event_overlaps_date(event, selected_date)
+    ]
+    previous_month = (current_month - timedelta(days=1)).replace(day=1)
+    return {
+        "month": current_month.strftime("%Y-%m"),
+        "month_label": current_month.strftime("%Y년 %m월"),
+        "selected_date": selected_date.isoformat(),
+        "selected_date_label": _format_date_label(selected_date),
+        "previous_month": previous_month.strftime("%Y-%m"),
+        "next_month": next_month.strftime("%Y-%m"),
+        "days": _build_shared_calendar_month_grid(month_events, current_month=current_month, selected_date=selected_date),
+        "selected_events": selected_events,
+        "month_event_count": len(month_events),
+    }
+
+
+@transaction.atomic
+def create_shared_calendar_event(
+    workspace,
+    membership,
+    *,
+    title,
+    note="",
+    start_time,
+    end_time,
+    is_all_day=False,
+    color="emerald",
+):
+    if membership is None or membership.workspace_id != workspace.id or membership.status != SchoolMembership.Status.ACTIVE:
+        raise MembershipRequiredError("채팅방 멤버만 끼리끼리 캘린더를 사용할 수 있습니다.")
+    normalized_title = str(title or "").strip()
+    if not normalized_title:
+        raise ValidationError("일정 제목을 입력해 주세요.")
+    if end_time < start_time:
+        raise ValidationError("종료 시간이 시작 시간보다 빠를 수 없습니다.")
+    return SharedCalendarEvent.objects.create(
+        workspace=workspace,
+        title=normalized_title[:200],
+        note=str(note or "").strip(),
+        start_time=start_time,
+        end_time=end_time,
+        is_all_day=bool(is_all_day),
+        color=_normalize_shared_calendar_color(color),
+        created_by_membership=membership,
+        updated_by_membership=membership,
+    )
+
+
+@transaction.atomic
+def update_shared_calendar_event(
+    event,
+    membership,
+    *,
+    title,
+    note="",
+    start_time,
+    end_time,
+    is_all_day=False,
+    color="emerald",
+):
+    if membership is None or membership.workspace_id != event.workspace_id or membership.status != SchoolMembership.Status.ACTIVE:
+        raise MembershipRequiredError("이 일정을 수정할 수 없습니다.")
+    normalized_title = str(title or "").strip()
+    if not normalized_title:
+        raise ValidationError("일정 제목을 입력해 주세요.")
+    if end_time < start_time:
+        raise ValidationError("종료 시간이 시작 시간보다 빠를 수 없습니다.")
+    event.title = normalized_title[:200]
+    event.note = str(note or "").strip()
+    event.start_time = start_time
+    event.end_time = end_time
+    event.is_all_day = bool(is_all_day)
+    event.color = _normalize_shared_calendar_color(color)
+    event.updated_by_membership = membership
+    event.save(
+        update_fields=[
+            "title",
+            "note",
+            "start_time",
+            "end_time",
+            "is_all_day",
+            "color",
+            "updated_by_membership",
+            "updated_at",
+        ]
+    )
+    return event
+
+
+@transaction.atomic
+def delete_shared_calendar_event(event, membership):
+    if membership is None or membership.workspace_id != event.workspace_id or membership.status != SchoolMembership.Status.ACTIVE:
+        raise MembershipRequiredError("이 일정을 삭제할 수 없습니다.")
+    event.delete()
+
+
+@transaction.atomic
+def copy_shared_calendar_event_to_main(event, user):
+    membership = get_membership(event.workspace, user)
+    if membership is None or membership.status != SchoolMembership.Status.ACTIVE:
+        raise MembershipRequiredError("채팅방 멤버만 내 메인 캘린더로 보낼 수 있습니다.")
+
+    copy_record, _ = SharedCalendarEventCopy.objects.select_for_update().get_or_create(
+        shared_event=event,
+        user=user,
+    )
+    previous_personal_event_id = copy_record.personal_event_id
+    personal_event = copy_record.personal_event
+    if personal_event and not CalendarEvent.objects.filter(id=personal_event.id, author=user).exists():
+        personal_event = None
+        copy_record.personal_event = None
+
+    created = False
+    if personal_event is None:
+        personal_event = CalendarEvent.objects.create(
+            title=event.title,
+            start_time=event.start_time,
+            end_time=event.end_time,
+            is_all_day=event.is_all_day,
+            color=event.color or "emerald",
+            visibility=CalendarEvent.VISIBILITY_TEACHER,
+            author=user,
+            classroom=None,
+            source=CalendarEvent.SOURCE_LOCAL,
+            is_locked=False,
+            integration_source=CALENDAR_COPY_INTEGRATION_SOURCE,
+            integration_key=str(event.id),
+        )
+        if event.note:
+            EventPageBlock.objects.create(
+                event=personal_event,
+                block_type="text",
+                content={"text": event.note},
+                order=0,
+            )
+        copy_record.personal_event = personal_event
+        created = True
+
+    copy_record.last_opened_at = timezone.now()
+    update_fields = ["last_opened_at"]
+    if previous_personal_event_id != getattr(personal_event, "id", None):
+        copy_record.personal_event = personal_event
+        update_fields.append("personal_event")
+    copy_record.save(update_fields=update_fields)
+    return personal_event, created
+
+
+@transaction.atomic
+def apply_calendar_suggestion_to_shared_calendar(suggestion, user):
+    if suggestion.user_id != user.id:
+        raise MembershipRequiredError("이 추천을 처리할 권한이 없습니다.")
+    if suggestion.status != CalendarSuggestion.Status.PENDING:
+        raise ValidationError("이미 처리한 추천입니다.")
+    payload = suggestion.suggested_payload or {}
+    source_message = suggestion.source_message
+    workspace = getattr(getattr(source_message, "room", None), "workspace", None) or get_default_workspace_for_user(user, create=False)
+    if workspace is None:
+        raise ValidationError("추천 일정을 넣을 채팅방을 찾지 못했습니다.")
+    membership = get_membership(workspace, user)
+    if membership is None:
+        raise MembershipRequiredError("채팅방 멤버만 추천 일정을 저장할 수 있습니다.")
+    try:
+        start_time = datetime.fromisoformat(str(payload.get("start_time") or ""))
+        end_time = datetime.fromisoformat(str(payload.get("end_time") or ""))
+    except ValueError as exc:
+        raise ValidationError("추천 일정 시간이 올바르지 않습니다.") from exc
+    if timezone.is_naive(start_time):
+        start_time = timezone.make_aware(start_time, timezone.get_current_timezone())
+    if timezone.is_naive(end_time):
+        end_time = timezone.make_aware(end_time, timezone.get_current_timezone())
+    shared_event = create_shared_calendar_event(
+        workspace,
+        membership,
+        title=str(payload.get("title") or "끼리끼리 일정"),
+        note=str(payload.get("note") or "").strip(),
+        start_time=start_time,
+        end_time=end_time,
+        is_all_day=bool(payload.get("is_all_day")),
+        color="emerald",
+    )
+    suggestion.status = CalendarSuggestion.Status.APPLIED
+    suggestion.applied_at = timezone.now()
+    suggestion.save(update_fields=["status", "applied_at", "updated_at"])
+    broadcast_user_summary(user)
+    return shared_event
+
+
 def _normalize_category_code(raw_value):
     value = str(raw_value or "").strip().lower()
     mapping = {
@@ -715,7 +1093,7 @@ def _calendar_payload_from_message(message, has_files=False):
     if not start_time or not end_time:
         return None
     return {
-        "title": parsed.get("extracted_title") or _truncate(message.body, limit=50) or "우리끼리 채팅방 일정",
+        "title": parsed.get("extracted_title") or _truncate(message.body, limit=50) or "끼리끼리 일정",
         "start_time": start_time.isoformat(),
         "end_time": end_time.isoformat(),
         "is_all_day": bool(parsed.get("extracted_is_all_day")),
@@ -920,6 +1298,8 @@ def serialize_calendar_suggestion(suggestion):
         "note": str(payload.get("note") or ""),
         "status": suggestion.status,
         "apply_url": reverse("schoolcomm:api_apply_calendar_suggestion", kwargs={"suggestion_id": suggestion.id}),
+        "apply_label": "끼리끼리 캘린더에 넣기",
+        "helper_text": "내 캘린더에서는 독립 일정으로 관리됩니다.",
     }
 
 
@@ -1048,12 +1428,12 @@ def build_home_card(user):
     if workspace is None:
         return {
             "title": getattr(product, "public_service_name", "") or SERVICE_TITLE,
-            "summary": "동학년 선생님부터 편하게 공지와 자료를 나눠 보세요.",
+            "summary": "동학년 선생님부터 편하게 공지, 자료, 일정을 나눠 보세요.",
             "workspace_name": "",
             "manage_url": reverse("schoolcomm:main"),
             "open_url": reverse("schoolcomm:main"),
             "shortcut_url": reverse("schoolcomm:main"),
-            "shortcut_aria_label": "우리끼리 채팅방 열기",
+            "shortcut_aria_label": "끼리끼리 채팅방 열기",
             "shortcut_symbol": "+",
             "secondary_url": reverse("schoolcomm:main"),
             "secondary_label": "채팅방 만들기",
@@ -1085,7 +1465,7 @@ def build_home_card(user):
         "manage_url": reverse("schoolcomm:main"),
         "open_url": reverse("schoolcomm:main"),
         "shortcut_url": reverse("schoolcomm:main"),
-        "shortcut_aria_label": "우리끼리 채팅방 열기",
+        "shortcut_aria_label": "끼리끼리 채팅방 열기",
         "shortcut_symbol": "+",
         "secondary_url": secondary_url,
         "secondary_label": secondary_label,

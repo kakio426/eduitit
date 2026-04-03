@@ -122,6 +122,123 @@
     gap: 0.65rem;
 }
 
+.schoolcomm-calendar-tabs {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.schoolcomm-calendar-tab {
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    padding: 0.6rem 1rem;
+    background: #fff;
+    color: #475569;
+    font-size: 0.9rem;
+    font-weight: 800;
+}
+
+.schoolcomm-calendar-tab.is-active {
+    border-color: #0f172a;
+    background: #0f172a;
+    color: #fff;
+}
+
+.schoolcomm-calendar-weekdays,
+.schoolcomm-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 0.5rem;
+}
+
+.schoolcomm-calendar-weekdays span {
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: #64748b;
+}
+
+.schoolcomm-calendar-day {
+    min-height: 4.7rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 1.1rem;
+    padding: 0.7rem 0.65rem;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 0.35rem;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.schoolcomm-calendar-day:hover,
+.schoolcomm-calendar-day:focus-visible {
+    border-color: #93c5fd;
+    box-shadow: 0 10px 18px rgba(59, 130, 246, 0.08);
+    transform: translateY(-1px);
+}
+
+.schoolcomm-calendar-day.is-muted {
+    background: #f8fafc;
+    color: #94a3b8;
+}
+
+.schoolcomm-calendar-day.is-selected {
+    border-color: #0f172a;
+    background: #eff6ff;
+}
+
+.schoolcomm-calendar-day.is-today {
+    box-shadow: inset 0 0 0 1px #3b82f6;
+}
+
+.schoolcomm-calendar-day-label {
+    font-size: 0.9rem;
+    font-weight: 900;
+    color: #0f172a;
+}
+
+.schoolcomm-calendar-day.is-muted .schoolcomm-calendar-day-label {
+    color: #94a3b8;
+}
+
+.schoolcomm-calendar-day-count {
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #2563eb;
+}
+
+.schoolcomm-calendar-day-count.is-empty {
+    color: transparent;
+}
+
+.schoolcomm-color-dot {
+    display: inline-flex;
+    width: 0.72rem;
+    height: 0.72rem;
+    border-radius: 999px;
+}
+
+.schoolcomm-color-dot.color-emerald {
+    background: #10b981;
+}
+
+.schoolcomm-color-dot.color-indigo {
+    background: #6366f1;
+}
+
+.schoolcomm-color-dot.color-sky {
+    background: #0ea5e9;
+}
+
+.schoolcomm-color-dot.color-amber {
+    background: #f59e0b;
+}
+
+.schoolcomm-color-dot.color-rose {
+    background: #f43f5e;
+}
+
 @media (min-width: 1100px) {
     .schoolcomm-room-content {
         grid-template-columns: minmax(0, 1.08fr) minmax(300px, 0.72fr);
@@ -137,5 +254,15 @@
 @media (max-width: 767px) {
     .schoolcomm-room-composer-shell {
         bottom: 0.75rem;
+    }
+
+    .schoolcomm-calendar-weekdays,
+    .schoolcomm-calendar-grid {
+        gap: 0.35rem;
+    }
+
+    .schoolcomm-calendar-day {
+        min-height: 4.1rem;
+        padding: 0.55rem 0.45rem;
     }
 }

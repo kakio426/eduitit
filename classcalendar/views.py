@@ -2079,6 +2079,9 @@ def _resolve_integration_source_meta(event):
     if not source:
         return "", ""
 
+    if source == "schoolcomm_calendar_copy":
+        return "", "끼리끼리에서 가져옴"
+
     if source == SOURCE_COLLECT_DEADLINE:
         if payload:
             try:
