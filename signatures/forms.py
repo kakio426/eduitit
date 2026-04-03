@@ -1,16 +1,63 @@
+from pathlib import Path
+
 from django import forms
 from django.contrib.auth import get_user_model
 
 from handoff.models import HandoffRosterGroup
 
-from .models import Signature, TrainingSession
+from .models import (
+    SIGNATURE_ATTACHMENT_ALLOWED_EXTENSIONS,
+    SIGNATURE_ATTACHMENT_MAX_FILES,
+    SIGNATURE_ATTACHMENT_MAX_TOTAL_BYTES,
+    Signature,
+    TrainingSession,
+)
 
 
 User = get_user_model()
 
 
+class MultipleFileInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
+
+
+class MultipleFileField(forms.FileField):
+    widget = MultipleFileInput
+
+    def clean(self, data, initial=None):
+        single_file_clean = super().clean
+        if not data:
+            return []
+        if not isinstance(data, (list, tuple)):
+            data = [data]
+        return [single_file_clean(item, initial) for item in data]
+
+
+def validate_training_session_attachment_files(files):
+    cleaned_files = list(files or [])
+    errors = []
+    allowed_extensions_text = ", ".join(sorted(SIGNATURE_ATTACHMENT_ALLOWED_EXTENSIONS))
+    for file_obj in cleaned_files:
+        ext = Path(getattr(file_obj, "name", "") or "").suffix.lower()
+        if ext not in SIGNATURE_ATTACHMENT_ALLOWED_EXTENSIONS:
+            errors.append(f"첨부 파일은 {allowed_extensions_text} 형식만 올릴 수 있습니다.")
+            break
+    return cleaned_files, errors
+
+
 class TrainingSessionForm(forms.ModelForm):
     """연수 생성/수정 폼"""
+
+    attachments = MultipleFileField(
+        required=False,
+        label="서명 전에 볼 파일",
+        widget=MultipleFileInput(
+            attrs={
+                "class": "w-full px-4 py-3 rounded-2xl shadow-clay-inner bg-bg-soft focus:outline-none focus:ring-2 focus:ring-purple-300",
+                "accept": ",".join(sorted(SIGNATURE_ATTACHMENT_ALLOWED_EXTENSIONS)),
+            }
+        ),
+    )
 
     acting_for_user = forms.ModelChoiceField(
         required=False,
@@ -128,6 +175,14 @@ class TrainingSessionForm(forms.ModelForm):
             'is_active': forms.CheckboxInput(attrs={
                 'class': 'w-5 h-5 rounded shadow-clay-inner accent-purple-500',
             }),
+        }
+
+    @property
+    def attachment_limits(self):
+        return {
+            "max_files": SIGNATURE_ATTACHMENT_MAX_FILES,
+            "max_total_bytes": SIGNATURE_ATTACHMENT_MAX_TOTAL_BYTES,
+            "max_total_mb": SIGNATURE_ATTACHMENT_MAX_TOTAL_BYTES // (1024 * 1024),
         }
 
 

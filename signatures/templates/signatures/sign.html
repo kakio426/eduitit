@@ -45,6 +45,40 @@
             </div>
         </section>
 
+        {% if public_attachments %}
+        <section class="rounded-[1.75rem] border border-emerald-200 bg-emerald-50 p-5 md:p-6">
+            <div class="flex items-start gap-3">
+                <div class="mt-1 flex h-10 w-10 items-center justify-center rounded-full bg-white text-emerald-700">
+                    <i class="fa-solid fa-paperclip"></i>
+                </div>
+                <div class="flex-1">
+                    <p class="text-base font-black text-slate-800">첨부된 서류</p>
+                    <p class="mt-1 text-sm text-slate-600">파일을 내려받아 확인한 뒤 아래에서 바로 서명해 주세요.</p>
+                    <ul class="mt-4 space-y-3">
+                        {% for attachment in public_attachments %}
+                        <li class="rounded-2xl bg-white px-4 py-3 shadow-sm">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div class="min-w-0">
+                                    <p class="break-all text-sm font-black text-slate-800">{{ attachment.name }}</p>
+                                    {% if attachment.size_display %}
+                                    <p class="mt-1 text-xs text-slate-500">{{ attachment.size_display }}</p>
+                                    {% endif %}
+                                </div>
+                                <a
+                                    href="{{ attachment.download_url }}"
+                                    class="inline-flex min-h-11 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700 hover:bg-emerald-100 transition"
+                                >
+                                    다운로드
+                                </a>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </section>
+        {% endif %}
+
         <form method="post" id="signForm" class="clay-card rounded-[1.75rem] p-6 md:p-7">
             {% csrf_token %}
             {% if form.non_field_errors or form.access_code.errors or form.participant_name.errors or form.participant_affiliation.errors or form.signature_data.errors or form.expected_participant_id.errors %}

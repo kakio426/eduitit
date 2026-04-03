@@ -2,10 +2,12 @@ import base64
 import io
 import json
 import logging
+import mimetypes
 import re
 import uuid
 from collections import Counter, defaultdict
 from datetime import timedelta
+from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import qrcode
@@ -15,20 +17,24 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Q
-from django.http import JsonResponse, HttpResponse
+from django.http import FileResponse, Http404, JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
 from django.urls import reverse
+from django.utils.text import get_valid_filename
 from django.utils import timezone
 from django_ratelimit.decorators import ratelimit
 from handoff.models import HandoffRosterGroup
 from .models import (
+    SIGNATURE_ATTACHMENT_MAX_FILES,
+    SIGNATURE_ATTACHMENT_MAX_TOTAL_BYTES,
     AffiliationCorrectionLog,
     ExpectedParticipant,
     Signature,
     SignatureAuditLog,
     TrainingSession,
+    TrainingSessionAttachment,
 )
-from .forms import TrainingSessionForm, SignatureForm
+from .forms import TrainingSessionForm, SignatureForm, validate_training_session_attachment_files
 import csv
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
@@ -69,6 +75,164 @@ def _signature_public_ratelimit_key(group, request):
     if resolver_match is not None:
         session_uuid = resolver_match.kwargs.get("uuid", "")
     return f"{_request_client_ip(request) or 'unknown'}:{session_uuid or 'unknown'}"
+
+
+def _local_datetime_display(value):
+    if not value:
+        return ""
+    try:
+        return timezone.localtime(value).strftime("%Y.%m.%d %H:%M")
+    except Exception:
+        return value.strftime("%Y.%m.%d %H:%M")
+
+
+def _format_file_size(size):
+    try:
+        value = int(size or 0)
+    except (TypeError, ValueError):
+        value = 0
+    if value <= 0:
+        return ""
+    if value < 1024:
+        return f"{value}B"
+    if value < 1024 * 1024:
+        return f"{(value / 1024):.1f}KB"
+    return f"{(value / (1024 * 1024)):.1f}MB"
+
+
+def _safe_attachment_download_name(raw_name, *, fallback="attachment"):
+    original = str(raw_name or "").strip()
+    original_ext = Path(original).suffix or ""
+    original_base = Path(original).stem if original else fallback
+    safe_base = get_valid_filename(original_base) or fallback
+    safe_ext = re.sub(r"[^A-Za-z0-9.]", "", original_ext)[:12]
+    return f"{safe_base[:180]}{safe_ext}"
+
+
+def _get_session_attachments(session):
+    return list(session.attachments.order_by("sort_order", "id"))
+
+
+def _summarize_attachment_state(attachments):
+    total_count = len(attachments)
+    total_bytes = sum(attachment.file_size for attachment in attachments)
+    return {
+        "count": total_count,
+        "total_bytes": total_bytes,
+        "total_size_display": _format_file_size(total_bytes),
+        "summary_label": f"첨부 {total_count}개 포함" if total_count else "",
+    }
+
+
+def _build_signature_attachment_rows(session, *, public=False):
+    rows = []
+    route_name = "signatures:sign_attachment_download" if public else "signatures:attachment_download"
+    for attachment in _get_session_attachments(session):
+        rows.append(
+            {
+                "id": attachment.id,
+                "name": attachment.original_name,
+                "size_display": _format_file_size(attachment.file_size),
+                "download_url": reverse(
+                    route_name,
+                    kwargs={"uuid": session.uuid, "attachment_id": attachment.id},
+                ),
+            }
+        )
+    return rows
+
+
+def _build_signature_share_package_text(session, share_link, attachment_count=0):
+    lines = [
+        f"[{session.title}] 서명 부탁드립니다.",
+        f"일시: {_local_datetime_display(session.datetime)}",
+        f"장소: {session.location}",
+        "아래 링크에서 로그인 없이 바로 서명하실 수 있습니다.",
+    ]
+    if attachment_count:
+        lines.append(f"첨부 파일 {attachment_count}개 확인 후 서명 부탁드립니다.")
+    lines.append(share_link)
+    return "\n".join(lines)
+
+
+def _collect_attachment_upload_state(session, new_files, attachments_to_remove):
+    current_attachments = _get_session_attachments(session) if session else []
+    remove_ids = {attachment.id for attachment in attachments_to_remove}
+    remaining_attachments = [attachment for attachment in current_attachments if attachment.id not in remove_ids]
+    remaining_count = len(remaining_attachments)
+    remaining_total_bytes = sum(attachment.file_size for attachment in remaining_attachments)
+    new_total_bytes = sum(int(getattr(file_obj, "size", 0) or 0) for file_obj in new_files)
+    return {
+        "remaining_attachments": remaining_attachments,
+        "remaining_count": remaining_count,
+        "remaining_total_bytes": remaining_total_bytes,
+        "new_total_bytes": new_total_bytes,
+        "combined_count": remaining_count + len(new_files),
+        "combined_total_bytes": remaining_total_bytes + new_total_bytes,
+    }
+
+
+def _validate_session_attachment_batch(session, new_files, attachments_to_remove):
+    errors = []
+    upload_state = _collect_attachment_upload_state(session, new_files, attachments_to_remove)
+    if upload_state["combined_count"] > SIGNATURE_ATTACHMENT_MAX_FILES:
+        errors.append(f"첨부 파일은 최대 {SIGNATURE_ATTACHMENT_MAX_FILES}개까지 넣을 수 있습니다.")
+    if upload_state["combined_total_bytes"] > SIGNATURE_ATTACHMENT_MAX_TOTAL_BYTES:
+        errors.append(
+            f"첨부 파일 전체 용량은 {_format_file_size(SIGNATURE_ATTACHMENT_MAX_TOTAL_BYTES)} 이하로 맞춰 주세요."
+        )
+    return errors, upload_state
+
+
+def _resolve_attachment_removals(session, raw_ids):
+    attachment_ids = []
+    for raw_id in raw_ids or []:
+        try:
+            attachment_ids.append(int(raw_id))
+        except (TypeError, ValueError):
+            continue
+    if not session or not attachment_ids:
+        return []
+    return list(session.attachments.filter(id__in=attachment_ids).order_by("sort_order", "id"))
+
+
+def _sync_training_session_attachments(session, *, new_files, attachments_to_remove):
+    for attachment in attachments_to_remove:
+        attachment.delete()
+    for file_obj in new_files:
+        TrainingSessionAttachment.objects.create(
+            training_session=session,
+            file=file_obj,
+            original_name=Path(getattr(file_obj, "name", "") or "").name[:255],
+        )
+
+
+def _build_attachment_download_response(attachment):
+    if not attachment.file or not attachment.file.name:
+        raise Http404("첨부 파일을 찾을 수 없습니다.")
+
+    download_name = _safe_attachment_download_name(
+        attachment.original_name or attachment.file.name,
+        fallback=f"attachment-{attachment.pk}",
+    )
+    content_type = mimetypes.guess_type(download_name)[0] or "application/octet-stream"
+    try:
+        file_obj = attachment.file.open("rb")
+    except Exception as exc:
+        logger.exception(
+            "[signatures] attachment open failed session_uuid=%s attachment_id=%s",
+            attachment.training_session.uuid,
+            attachment.id,
+        )
+        raise Http404("첨부 파일을 찾을 수 없습니다.") from exc
+
+    response = FileResponse(
+        file_obj,
+        content_type=content_type,
+        as_attachment=True,
+        filename=download_name,
+    )
+    return _apply_sensitive_cache_headers(response)
 
 
 def _normalize_affiliation_text(value):
@@ -868,22 +1032,16 @@ def _build_session_stage_payload(session, *, signature_count, pending_count=None
         ]
         primary_actions = [
             {
-                "label": "링크 복사",
+                "label": "공유 패키지 복사",
                 "kind": "button",
-                "onclick": "copyLink()",
+                "onclick": "copySharePackage()",
                 "variant": "primary",
-            },
-            {
-                "label": "QR 보기",
-                "kind": "button",
-                "onclick": "openQrModal()",
-                "variant": "secondary",
             },
             {
                 "label": "참여 현황 보기",
                 "kind": "anchor",
                 "href": "#attendanceSummary",
-                "variant": "ghost",
+                "variant": "secondary",
             },
         ]
     else:
@@ -913,9 +1071,9 @@ def _build_session_stage_payload(session, *, signature_count, pending_count=None
         pending_action_label = "미참여 보기" if can_show_absentees else "남은 인원 보기"
         primary_actions = [
             {
-                "label": "참여 현황",
-                "kind": "anchor",
-                "href": "#attendanceSummary",
+                "label": "공유 패키지 복사",
+                "kind": "button",
+                "onclick": "copySharePackage()",
                 "variant": "primary",
             },
             {
@@ -923,6 +1081,12 @@ def _build_session_stage_payload(session, *, signature_count, pending_count=None
                 "kind": "anchor",
                 "href": "#pendingSummary" if pending_count is not None else "#attendanceSummary",
                 "variant": "secondary",
+            },
+            {
+                "label": "참여 현황",
+                "kind": "anchor",
+                "href": "#attendanceSummary",
+                "variant": "ghost",
             },
             {
                 "label": "마감하기",
@@ -1108,15 +1272,30 @@ def session_create(request):
         else draft_payload.get("apply_sheetbook_participants"),
         default=True,
     )
+    existing_attachments = []
+    selected_remove_attachment_ids = []
 
     if request.method == 'POST':
         form = TrainingSessionForm(
             request.POST,
+            request.FILES,
             owner=session_owner,
             can_delegate=can_proxy_create,
             delegate_user=request.user,
         )
-        if form.is_valid():
+        form_valid = form.is_valid()
+        attachment_files, attachment_file_errors = validate_training_session_attachment_files(
+            request.FILES.getlist("attachments")
+        )
+        attachment_batch_errors, _ = _validate_session_attachment_batch(
+            None,
+            attachment_files,
+            [],
+        )
+        for error in attachment_file_errors + attachment_batch_errors:
+            form.add_error("attachments", error)
+
+        if form_valid and not form.errors:
             session = form.save(commit=False)
             session.created_by = session_owner
             session.proxy_created_by = request.user if is_proxy_mode else None
@@ -1161,6 +1340,11 @@ def session_create(request):
                     )
                     if was_created:
                         copied_participant_count += 1
+            _sync_training_session_attachments(
+                session,
+                new_files=attachment_files,
+                attachments_to_remove=[],
+            )
             if sheetbook_seed:
                 _pop_sheetbook_seed(
                     request,
@@ -1191,6 +1375,8 @@ def session_create(request):
                 message_parts.append("교사가 보낸 명단은 이미 모두 포함되어 있었어요.")
             if copied_participant_count > 0:
                 message_parts.append(f"이전 요청 명단 {copied_participant_count}명도 복사했습니다.")
+            if attachment_files:
+                message_parts.append(f"첨부 파일 {len(attachment_files)}개도 함께 넣었습니다.")
             messages.success(request, " ".join(message_parts))
             return redirect('signatures:detail', uuid=session.uuid)
     else:
@@ -1240,6 +1426,9 @@ def session_create(request):
             'proxy_target_user_label': _get_signature_user_display_name(proxy_target_user),
             'has_roster_groups': form.fields["shared_roster_group"].queryset.exists(),
             'restored_roster_group': restored_roster_group,
+            'existing_attachments': existing_attachments,
+            'selected_remove_attachment_ids': selected_remove_attachment_ids,
+            'attachment_limits': form.attachment_limits,
         },
     )
 
@@ -1296,6 +1485,13 @@ def session_detail(request, uuid):
             reverse("signatures:sign", kwargs={"uuid": session.uuid})
         )
         share_qr_data_url = _build_qr_data_url(share_link)
+        attachment_rows = _build_signature_attachment_rows(session)
+        attachment_state = _summarize_attachment_state(_get_session_attachments(session))
+        share_package_text = _build_signature_share_package_text(
+            session,
+            share_link,
+            attachment_count=attachment_state["count"],
+        )
         correction_logs = session.affiliation_correction_logs.select_related(
             "corrected_by",
             "signature",
@@ -1344,6 +1540,9 @@ def session_detail(request, uuid):
             'has_duplicates': len(duplicates) > 0,
             'share_link': share_link,
             'share_qr_data_url': share_qr_data_url,
+            'share_package_text': share_package_text,
+            'attachment_rows': attachment_rows,
+            'attachment_state': attachment_state,
             'access_code_state': access_code_state,
             'affiliation_suggestions': _build_affiliation_suggestions(session),
             'affiliation_correction_logs': correction_logs,
@@ -1359,23 +1558,59 @@ def session_detail(request, uuid):
 def session_edit(request, uuid):
     """연수 수정"""
     session = _get_signature_session_or_404(request.user, uuid)
+    existing_attachments = _get_session_attachments(session)
+    selected_remove_attachment_ids = []
     if request.method == 'POST':
-        form = TrainingSessionForm(request.POST, instance=session, owner=session.created_by)
-        if form.is_valid():
+        selected_remove_attachment_ids = request.POST.getlist("remove_attachment_ids")
+        attachments_to_remove = _resolve_attachment_removals(session, selected_remove_attachment_ids)
+        form = TrainingSessionForm(request.POST, request.FILES, instance=session, owner=session.created_by)
+        form_valid = form.is_valid()
+        attachment_files, attachment_file_errors = validate_training_session_attachment_files(
+            request.FILES.getlist("attachments")
+        )
+        attachment_batch_errors, _ = _validate_session_attachment_batch(
+            session,
+            attachment_files,
+            attachments_to_remove,
+        )
+        for error in attachment_file_errors + attachment_batch_errors:
+            form.add_error("attachments", error)
+
+        if form_valid and not form.errors:
             session = form.save()
+            _sync_training_session_attachments(
+                session,
+                new_files=attachment_files,
+                attachments_to_remove=attachments_to_remove,
+            )
             roster_result = _sync_expected_participants_from_shared_roster(session)
             _sync_calendar_event_for_training(session)
+            message_parts = []
             if roster_result["total"] > 0 and roster_result["created"] > 0:
-                messages.success(
-                    request,
-                    f"연수 정보가 수정되었습니다. 공유 명단에서 {roster_result['created']}명을 추가 반영했습니다.",
+                message_parts.append(
+                    f"연수 정보가 수정되었습니다. 공유 명단에서 {roster_result['created']}명을 추가 반영했습니다."
                 )
             else:
-                messages.success(request, '연수 정보가 수정되었습니다.')
+                message_parts.append("연수 정보가 수정되었습니다.")
+            if attachment_files:
+                message_parts.append(f"첨부 파일 {len(attachment_files)}개를 추가했습니다.")
+            if attachments_to_remove:
+                message_parts.append(f"첨부 파일 {len(attachments_to_remove)}개를 제거했습니다.")
+            messages.success(request, " ".join(message_parts))
             return redirect('signatures:detail', uuid=session.uuid)
     else:
         form = TrainingSessionForm(instance=session, owner=session.created_by)
-    return render(request, 'signatures/edit.html', {'form': form, 'session': session})
+    return render(
+        request,
+        'signatures/edit.html',
+        {
+            'form': form,
+            'session': session,
+            'existing_attachments': existing_attachments,
+            'selected_remove_attachment_ids': [str(item) for item in selected_remove_attachment_ids],
+            'attachment_limits': form.attachment_limits,
+        },
+    )
 
 
 @login_required
@@ -1416,6 +1651,7 @@ def sign(request, uuid):
     session = get_object_or_404(TrainingSession, uuid=uuid)
     affiliation_suggestions = _build_affiliation_suggestions(session)
     request_time = timezone.now()
+    public_attachments = _build_signature_attachment_rows(session, public=True)
     roster_participant_options = _sort_expected_participants_for_display(
         session.expected_participants.all(),
         _get_participant_sort_mode(session),
@@ -1534,8 +1770,40 @@ def sign(request, uuid):
         'roster_participant_options': roster_participant_options,
         'walk_in_mode': walk_in_mode,
         'selected_expected_participant_id': str(selected_expected_participant_id),
+        'public_attachments': public_attachments,
     })
     return _apply_sensitive_cache_headers(response)
+
+
+@login_required
+def session_attachment_download(request, uuid, attachment_id):
+    session = _get_signature_session_or_404(request.user, uuid)
+    attachment = get_object_or_404(
+        TrainingSessionAttachment,
+        training_session=session,
+        id=attachment_id,
+    )
+    return _build_attachment_download_response(attachment)
+
+
+@ratelimit(
+    key=_signature_public_ratelimit_key,
+    rate="60/10m",
+    method="GET",
+    block=True,
+    group="signatures_public_attachment_download",
+)
+def sign_attachment_download(request, uuid, attachment_id):
+    """공개 서명 페이지에서 첨부 파일 다운로드."""
+    session = get_object_or_404(TrainingSession, uuid=uuid)
+    if not session.is_active:
+        raise Http404("첨부 파일을 찾을 수 없습니다.")
+    attachment = get_object_or_404(
+        TrainingSessionAttachment,
+        training_session=session,
+        id=attachment_id,
+    )
+    return _build_attachment_download_response(attachment)
 
 
 @login_required

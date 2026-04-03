@@ -1,0 +1,64 @@
+<section class="rounded-[1.75rem] border border-emerald-200 bg-emerald-50/70 p-5 md:p-6 space-y-4">
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+            <p class="text-xs font-black uppercase tracking-[0.18em] text-emerald-600">선택 사항</p>
+            <h2 class="mt-2 text-xl md:text-2xl font-black text-slate-800">서명 전에 볼 파일</h2>
+            <p class="mt-2 text-sm md:text-base font-bold leading-relaxed text-slate-600">
+                PDF, 이미지, 한글 파일을 함께 보낼 수 있습니다. 서명 화면에서는 미리보기 없이 다운로드만 제공합니다.
+            </p>
+        </div>
+        <span class="inline-flex min-h-[52px] items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-black text-emerald-700 shadow-sm">
+            최대 {{ attachment_limits.max_files }}개 · 전체 {{ attachment_limits.max_total_mb }}MB
+        </span>
+    </div>
+
+    <div class="rounded-2xl bg-white p-4 shadow-sm">
+        <label class="mb-2 block text-sm font-black text-slate-700">{{ form.attachments.label }}</label>
+        {{ form.attachments }}
+        {% if form.attachments.errors %}
+        <ul class="mt-3 space-y-1 text-sm font-bold text-red-600">
+            {% for error in form.attachments.errors %}
+            <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        <p class="mt-2 text-sm font-bold leading-relaxed text-slate-600">
+            허용 형식: PDF, PNG, JPG, JPEG, HWP, HWPX
+        </p>
+    </div>
+
+    <div class="rounded-2xl bg-white p-4 shadow-sm">
+        <div class="flex items-center justify-between gap-3">
+            <p class="text-sm font-black text-slate-800">현재 첨부</p>
+            <span class="text-xs font-bold text-slate-500">{{ existing_attachments|length }}개</span>
+        </div>
+        {% if existing_attachments %}
+        <ul class="mt-3 space-y-3">
+            {% for attachment in existing_attachments %}
+            <li class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div class="min-w-0">
+                        <p class="break-all text-sm font-black text-slate-800">{{ attachment.original_name }}</p>
+                        <p class="mt-1 text-xs text-slate-500">
+                            {% if attachment.file_size %}{{ attachment.file_size|filesizeformat }}{% else %}크기 확인 불가{% endif %}
+                        </p>
+                    </div>
+                    <label class="inline-flex items-center gap-2 text-sm font-bold text-slate-700">
+                        <input
+                            type="checkbox"
+                            name="remove_attachment_ids"
+                            value="{{ attachment.id }}"
+                            class="h-4 w-4 rounded border-slate-300 text-red-500 focus:ring-red-300"
+                            {% if attachment.id|stringformat:"s" in selected_remove_attachment_ids %}checked{% endif %}
+                        >
+                        이 파일 제거
+                    </label>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="mt-3 text-sm font-bold text-slate-500">아직 첨부된 파일이 없습니다.</p>
+        {% endif %}
+    </div>
+</section>

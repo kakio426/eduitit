@@ -212,7 +212,7 @@ class SignatureTeacherFirstPagesTests(TestCase):
         self.assertEqual(response.context["pending_count"], 10)
         self.assertContains(response, "이제 참여 링크를 보내세요")
         self.assertContains(response, "링크 복사")
-        self.assertContains(response, "QR 보기")
+        self.assertContains(response, "QR 보기", count=1)
         self.assertContains(response, "참여 현황 보기")
         self.assertContains(response, "남은 인원 수 확인 가능")
         self.assertContains(response, "현장 코드")

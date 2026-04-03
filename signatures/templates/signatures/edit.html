@@ -29,7 +29,7 @@
         </div>
         {% endif %}
 
-        <form method="post" class="clay-card rounded-[1.75rem] p-6 md:p-8 space-y-6">
+        <form method="post" enctype="multipart/form-data" class="clay-card rounded-[1.75rem] p-6 md:p-8 space-y-6">
             {% csrf_token %}
 
             <div class="rounded-[1.5rem] border border-indigo-100 bg-indigo-50/70 p-4 md:p-5">
@@ -71,6 +71,8 @@
                 <label class="mb-2 block text-sm font-black text-slate-700">간단 설명 (선택)</label>
                 {{ form.description }}
             </div>
+
+            {% include 'signatures/_attachments_panel.html' %}
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">

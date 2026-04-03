@@ -1,8 +1,22 @@
 import uuid
+from pathlib import Path
 from django.db import models
 from django.contrib.auth.models import User
 from django.db.models import Max
 from django.utils import timezone
+
+
+SIGNATURE_ATTACHMENT_ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".hwp", ".hwpx"}
+SIGNATURE_ATTACHMENT_MAX_FILES = 10
+SIGNATURE_ATTACHMENT_MAX_TOTAL_BYTES = 10 * 1024 * 1024
+
+
+def training_session_attachment_upload_to(instance, filename):
+    ext = Path(filename or "").suffix.lower()
+    if ext not in SIGNATURE_ATTACHMENT_ALLOWED_EXTENSIONS:
+        ext = ".bin"
+    date_path = timezone.now().strftime("%Y/%m/%d")
+    return f"signatures/session_attachments/{date_path}/{uuid.uuid4().hex}{ext}"
 
 
 class TrainingSession(models.Model):
@@ -143,6 +157,54 @@ class TrainingSession(models.Model):
         if self.active_access_code:
             return "expired"
         return "pending"
+
+
+class TrainingSessionAttachment(models.Model):
+    """서명 요청에 함께 전달하는 첨부 서류."""
+
+    training_session = models.ForeignKey(
+        TrainingSession,
+        on_delete=models.CASCADE,
+        related_name="attachments",
+        verbose_name="연수",
+    )
+    file = models.FileField(
+        "첨부 파일",
+        upload_to=training_session_attachment_upload_to,
+        max_length=500,
+    )
+    original_name = models.CharField("원본 파일명", max_length=255)
+    sort_order = models.PositiveIntegerField("정렬 순서", default=0, db_index=True)
+    created_at = models.DateTimeField("생성일", auto_now_add=True)
+
+    class Meta:
+        ordering = ["sort_order", "id"]
+        verbose_name = "연수 첨부 파일"
+        verbose_name_plural = "연수 첨부 파일"
+
+    def __str__(self):
+        return self.original_name or Path(self.file.name or "").name or f"첨부 #{self.pk}"
+
+    def save(self, *args, **kwargs):
+        if not self.sort_order and self.training_session_id:
+            current_max = (
+                TrainingSessionAttachment.objects.filter(training_session_id=self.training_session_id)
+                .exclude(pk=self.pk)
+                .aggregate(max_order=Max("sort_order"))
+                .get("max_order")
+                or 0
+            )
+            self.sort_order = current_max + 1
+        if self.file and not self.original_name:
+            self.original_name = Path(self.file.name or "").name[:255]
+        super().save(*args, **kwargs)
+
+    @property
+    def file_size(self):
+        try:
+            return int(self.file.size or 0)
+        except Exception:
+            return 0
 
 
 class Signature(models.Model):
