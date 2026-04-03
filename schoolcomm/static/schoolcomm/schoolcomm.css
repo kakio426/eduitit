@@ -91,6 +91,12 @@
     backdrop-filter: blur(12px);
 }
 
+.schoolcomm-room-composer.is-chat {
+    border-color: #c7d2fe;
+    background: rgba(255, 255, 255, 0.99);
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
+}
+
 .schoolcomm-member-picker-list {
     max-height: 18rem;
     overflow-y: auto;
@@ -114,6 +120,153 @@
 .schoolcomm-room-sidebar {
     display: grid;
     gap: 1rem;
+}
+
+.schoolcomm-chat-room {
+    border-radius: 2rem;
+    background:
+        linear-gradient(180deg, rgba(241, 245, 249, 0.92), rgba(226, 232, 240, 0.9));
+    border: 1px solid #dbe7f3;
+    padding: 1.1rem;
+}
+
+.schoolcomm-chat-stream {
+    display: grid;
+    gap: 0.85rem;
+}
+
+.schoolcomm-chat-row {
+    display: flex;
+}
+
+.schoolcomm-chat-row.is-mine {
+    justify-content: flex-end;
+}
+
+.schoolcomm-chat-row.is-other {
+    justify-content: flex-start;
+}
+
+.schoolcomm-chat-bubble-stack {
+    max-width: min(100%, 33rem);
+    display: grid;
+    gap: 0.35rem;
+}
+
+.schoolcomm-chat-sender {
+    padding: 0 0.6rem;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: #64748b;
+}
+
+.schoolcomm-chat-bubble {
+    border-radius: 1.5rem;
+    padding: 0.85rem 1rem;
+    background: #fff;
+    color: #0f172a;
+    box-shadow: 0 12px 20px rgba(15, 23, 42, 0.06);
+}
+
+.schoolcomm-chat-row.is-mine .schoolcomm-chat-bubble {
+    background: #fef3c7;
+    border-bottom-right-radius: 0.55rem;
+}
+
+.schoolcomm-chat-row.is-other .schoolcomm-chat-bubble {
+    border-bottom-left-radius: 0.55rem;
+}
+
+.schoolcomm-chat-parent-preview {
+    margin-bottom: 0.65rem;
+    border-left: 3px solid #93c5fd;
+    background: rgba(239, 246, 255, 0.92);
+    border-radius: 0.9rem;
+    padding: 0.55rem 0.7rem;
+}
+
+.schoolcomm-chat-parent-name {
+    font-size: 0.72rem;
+    font-weight: 900;
+    color: #1d4ed8;
+}
+
+.schoolcomm-chat-parent-body {
+    margin-top: 0.2rem;
+    font-size: 0.76rem;
+    color: #475569;
+}
+
+.schoolcomm-chat-body {
+    white-space: pre-wrap;
+    font-size: 0.94rem;
+    line-height: 1.6;
+}
+
+.schoolcomm-chat-assets {
+    display: grid;
+    gap: 0.45rem;
+    margin-top: 0.7rem;
+}
+
+.schoolcomm-chat-asset-card {
+    display: grid;
+    gap: 0.15rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: rgba(255, 255, 255, 0.72);
+    padding: 0.7rem 0.8rem;
+}
+
+.schoolcomm-chat-asset-name {
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.schoolcomm-chat-asset-meta {
+    font-size: 0.72rem;
+    color: #64748b;
+}
+
+.schoolcomm-chat-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0 0.35rem;
+    font-size: 0.71rem;
+    font-weight: 700;
+    color: #64748b;
+}
+
+.schoolcomm-chat-meta.is-mine {
+    justify-content: flex-end;
+}
+
+.schoolcomm-chat-meta-button {
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 0.22rem 0.6rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #475569;
+}
+
+.schoolcomm-chat-meta-button.is-acked {
+    border-color: #f59e0b;
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.schoolcomm-chat-empty {
+    border-radius: 1.6rem;
+    border: 1px dashed #cbd5e1;
+    padding: 2.75rem 1rem;
+    text-align: center;
+    font-size: 0.9rem;
+    color: #64748b;
 }
 
 .schoolcomm-search-pagination {
@@ -264,5 +417,13 @@
     .schoolcomm-calendar-day {
         min-height: 4.1rem;
         padding: 0.55rem 0.45rem;
+    }
+
+    .schoolcomm-chat-room {
+        padding: 0.8rem;
+    }
+
+    .schoolcomm-chat-bubble-stack {
+        max-width: 100%;
     }
 }

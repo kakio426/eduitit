@@ -1,10 +1,14 @@
+import re
+from pathlib import Path
+from datetime import datetime
+
+from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.db import DatabaseError
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import DatabaseError
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
-from datetime import datetime
 from unittest.mock import patch
 
 from classcalendar.models import CalendarEvent
@@ -196,6 +200,26 @@ class SchoolcommViewTests(SchoolcommTestCase):
         self.assertTemplateUsed(response, "schoolcomm/partials/room_content.html")
         self.assertContains(response, 'data-schoolcomm-thread-panel="')
         self.assertNotContains(response, "<html", html=False)
+
+    def test_dm_room_renders_chat_style_stream_and_reply_composer(self):
+        dm_room = get_or_create_dm_room(
+            self.workspace,
+            [self.owner_membership, self.member_membership],
+            created_by=self.owner,
+        )
+        parent = create_room_message(dm_room, self.owner_membership, text="안녕하세요")
+        create_room_message(dm_room, self.member_membership, text="네 확인했어요", parent_message=parent)
+
+        self.client.force_login(self.owner)
+        response = self.client.get(reverse("schoolcomm:room_detail", kwargs={"room_id": dm_room.id}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-schoolcomm-chat-room="true"')
+        self.assertContains(response, 'data-schoolcomm-chat-composer="true"')
+        self.assertContains(response, 'data-schoolcomm-chat-reply-trigger="true"')
+        self.assertContains(response, 'data-schoolcomm-chat-parent-input="true"')
+        self.assertContains(response, "카카오톡처럼 이어지는 대화 흐름")
+        self.assertNotContains(response, 'data-schoolcomm-thread-panel="')
 
     def test_search_is_scoped_to_workspace(self):
         other_owner = self.create_user("otherowner")
@@ -411,3 +435,128 @@ class SchoolcommViewTests(SchoolcommTestCase):
         self.assertContains(response, "끼리끼리 캘린더")
         self.assertContains(response, "내 메인 캘린더로 보내기")
         self.assertContains(response, "내 캘린더에서는 독립 일정으로 관리됩니다.")
+
+    def test_calendar_panel_fragment_returns_partial_markup(self):
+        self.client.force_login(self.owner)
+        response = self.client.get(
+            reverse("schoolcomm:main"),
+            {
+                "workspace": str(self.workspace.id),
+                "calendar_tab": "shared",
+                "calendar_month": "2026-05",
+                "calendar_date": "2026-05-02",
+                "fragment": "calendar_panel",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "schoolcomm/partials/calendar_panel.html")
+        self.assertContains(response, 'data-schoolcomm-calendar-panel="true"')
+        self.assertContains(response, 'data-schoolcomm-calendar-link="true"')
+        self.assertNotContains(response, "<html", html=False)
+
+    def test_shared_calendar_keeps_requested_date_inside_month(self):
+        self.client.force_login(self.owner)
+        response = self.client.get(
+            reverse("schoolcomm:main"),
+            {
+                "workspace": str(self.workspace.id),
+                "calendar_tab": "shared",
+                "calendar_month": "2026-05",
+                "calendar_date": "2026-05-02",
+            },
+        )
+
+        self.assertEqual(response.context["shared_calendar"]["selected_date"], "2026-05-02")
+
+    def test_shared_calendar_normalizes_out_of_month_date_to_first_day(self):
+        self.client.force_login(self.owner)
+        response = self.client.get(
+            reverse("schoolcomm:main"),
+            {
+                "workspace": str(self.workspace.id),
+                "calendar_tab": "shared",
+                "calendar_month": "2026-05",
+                "calendar_date": "2026-04-20",
+            },
+        )
+
+        self.assertEqual(response.context["shared_calendar"]["selected_date"], "2026-05-01")
+
+    def test_calendar_links_preserve_query_and_anchor(self):
+        self.client.force_login(self.owner)
+        response = self.client.get(
+            reverse("schoolcomm:main"),
+            {
+                "workspace": str(self.workspace.id),
+                "q": "meeting",
+                "calendar_tab": "shared",
+                "calendar_month": "2026-05",
+                "calendar_date": "2026-05-02",
+            },
+        )
+
+        content = response.content.decode("utf-8")
+        match = re.search(r'<a[^>]*href="([^"]+)"[^>]*data-schoolcomm-calendar-key="tab-shared"', content)
+
+        self.assertIsNotNone(match)
+        self.assertIn(f"workspace={self.workspace.id}", match.group(1))
+        self.assertIn("q=meeting", match.group(1))
+        self.assertIn("calendar_tab=shared", match.group(1))
+        self.assertTrue(match.group(1).endswith("#calendar-panel"))
+        self.assertContains(response, 'name="redirect_query" value="meeting"')
+
+    def test_calendar_async_link_contract_is_limited_to_tabs_months_and_days(self):
+        self.client.force_login(self.owner)
+        response = self.client.get(
+            reverse("schoolcomm:main"),
+            {
+                "workspace": str(self.workspace.id),
+                "calendar_tab": "shared",
+                "calendar_month": "2026-05",
+                "calendar_date": "2026-05-02",
+            },
+        )
+
+        expected_count = len(response.context["shared_calendar"]["days"]) + 4
+        self.assertEqual(response.content.decode("utf-8").count('data-schoolcomm-calendar-link="true"'), expected_count)
+
+    def test_muted_calendar_day_link_targets_clicked_day_month(self):
+        self.client.force_login(self.owner)
+        response = self.client.get(
+            reverse("schoolcomm:main"),
+            {
+                "workspace": str(self.workspace.id),
+                "calendar_tab": "shared",
+                "calendar_month": "2026-04",
+                "calendar_date": "2026-04-20",
+            },
+        )
+
+        muted_day = next(day for day in response.context["shared_calendar"]["days"] if not day["is_current_month"])
+        content = response.content.decode("utf-8")
+        match = re.search(
+            rf'<a[^>]*href="([^"]+)"[^>]*data-schoolcomm-calendar-key="day-{re.escape(muted_day["date"])}"',
+            content,
+        )
+
+        self.assertIsNotNone(match)
+        self.assertIn(f'calendar_month={muted_day["date"][:7]}', match.group(1))
+        self.assertIn(f'calendar_date={muted_day["date"]}', match.group(1))
+        self.assertTrue(match.group(1).endswith("#calendar-panel"))
+
+    def test_calendar_js_uses_fragment_refresh_contract(self):
+        js_path = Path(settings.BASE_DIR) / "schoolcomm" / "static" / "schoolcomm" / "schoolcomm.js"
+        source = js_path.read_text(encoding="utf-8")
+
+        self.assertIn('[data-schoolcomm-calendar-link="true"]', source)
+        self.assertIn("fragment', 'calendar_panel'", source)
+        self.assertIn('data-schoolcomm-calendar-key', source)
+
+    def test_chat_js_uses_reply_target_contract(self):
+        js_path = Path(settings.BASE_DIR) / "schoolcomm" / "static" / "schoolcomm" / "schoolcomm.js"
+        source = js_path.read_text(encoding="utf-8")
+
+        self.assertIn('[data-schoolcomm-chat-reply-trigger="true"]', source)
+        self.assertIn('[data-schoolcomm-chat-parent-input="true"]', source)
+        self.assertIn('setChatReplyState', source)

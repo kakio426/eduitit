@@ -1,0 +1,65 @@
+<div class="schoolcomm-chat-room" data-schoolcomm-chat-room="true">
+    <section class="schoolcomm-chat-stream">
+        {% for item in chat_items %}
+        <article id="message-{{ item.id }}" class="schoolcomm-chat-row {% if item.is_mine %}is-mine{% else %}is-other{% endif %}">
+            <div class="schoolcomm-chat-bubble-stack">
+                {% if not item.is_mine %}
+                <p class="schoolcomm-chat-sender">{{ item.sender_name }}</p>
+                {% endif %}
+                <div class="schoolcomm-chat-bubble">
+                    {% if item.parent_message_id %}
+                    <div class="schoolcomm-chat-parent-preview">
+                        <p class="schoolcomm-chat-parent-name">{{ item.parent_sender_name|default:"답글" }}</p>
+                        {% if item.parent_preview %}
+                        <p class="schoolcomm-chat-parent-body">{{ item.parent_preview }}</p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if item.body %}
+                    <p class="schoolcomm-chat-body">{{ item.body }}</p>
+                    {% endif %}
+
+                    {% if item.assets %}
+                    <div class="schoolcomm-chat-assets">
+                        {% for asset in item.assets %}
+                        <a href="{{ asset.download_url }}" class="schoolcomm-chat-asset-card">
+                            <span class="schoolcomm-chat-asset-name">{{ asset.original_name }}</span>
+                            <span class="schoolcomm-chat-asset-meta">{{ asset.category_label }}{% if asset.extension %} · {{ asset.extension|upper }}{% endif %}</span>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="schoolcomm-chat-meta {% if item.is_mine %}is-mine{% endif %}">
+                    <span>{{ item.created_at_label|default:item.created_at }}</span>
+                    <form method="post" action="{{ item.reaction_url }}">
+                        {% csrf_token %}
+                        <button
+                            type="submit"
+                            class="schoolcomm-chat-meta-button {% if item.acked_by_me %}is-acked{% endif %}"
+                        >
+                            확인 {{ item.ack_count }}
+                        </button>
+                    </form>
+                    <button
+                        type="button"
+                        class="schoolcomm-chat-meta-button"
+                        data-schoolcomm-chat-reply-trigger="true"
+                        data-schoolcomm-parent-message-id="{{ item.id }}"
+                        data-schoolcomm-parent-sender="{{ item.sender_name }}"
+                        data-schoolcomm-parent-preview="{{ item.body|default:''|truncatechars:40 }}"
+                    >
+                        답글
+                    </button>
+                </div>
+            </div>
+        </article>
+        {% empty %}
+        <div class="schoolcomm-chat-empty">
+            아직 대화가 없습니다.
+        </div>
+        {% endfor %}
+    </section>
+</div>

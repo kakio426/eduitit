@@ -104,6 +104,10 @@ def _build_room_items(room, user):
     return items
 
 
+def _build_room_chat_items(room, user):
+    return [serialize_message(message, user=user) for message in _room_message_queryset(room)]
+
+
 def _build_search_display(search_results, user):
     if not search_results:
         return None
@@ -143,10 +147,12 @@ def _build_ws_path(path):
     return f"/{path.lstrip('/')}"
 
 
-def _build_main_url(workspace_id=None, *, calendar_tab="", calendar_month="", calendar_date=""):
+def _build_main_url(workspace_id=None, *, calendar_tab="", calendar_month="", calendar_date="", query="", anchor=""):
     params = []
     if workspace_id:
         params.append(("workspace", str(workspace_id)))
+    if query:
+        params.append(("q", str(query)))
     if calendar_tab:
         params.append(("calendar_tab", str(calendar_tab)))
     if calendar_month:
@@ -154,9 +160,11 @@ def _build_main_url(workspace_id=None, *, calendar_tab="", calendar_month="", ca
     if calendar_date:
         params.append(("calendar_date", str(calendar_date)))
     base_url = reverse("schoolcomm:main")
-    if not params:
-        return base_url
-    return f"{base_url}?{urlencode(params)}"
+    url = base_url if not params else f"{base_url}?{urlencode(params)}"
+    anchor_value = str(anchor or "").strip()
+    if anchor_value:
+        return f"{url}#{anchor_value.lstrip('#')}"
+    return url
 
 
 def _normalize_calendar_tab(raw_value):
@@ -209,6 +217,7 @@ def main(request):
         search_results = None
         dashboard = None
         shared_calendar = None
+        current_query = request.GET.get("q", "")
         calendar_tab = _normalize_calendar_tab(request.GET.get("calendar_tab"))
         latest_invite_url = request.session.pop("schoolcomm_latest_invite_url", "")
         if workspace is not None:
@@ -219,11 +228,11 @@ def main(request):
                 month_value=request.GET.get("calendar_month"),
                 selected_date_value=request.GET.get("calendar_date"),
             )
-            if (request.GET.get("q") or "").strip():
+            if (current_query or "").strip():
                 search_results = search_workspace(
                     workspace,
                     request.user,
-                    request.GET.get("q"),
+                    current_query,
                     page_number=request.GET.get("page") or 1,
                 )
                 search_results = _build_search_display(search_results, request.user)
@@ -240,8 +249,12 @@ def main(request):
             "search_results": search_results,
             "latest_invite_url": latest_invite_url,
             "user_ws_url": _build_ws_path("schoolcomm/ws/users/me/"),
-            "current_query": request.GET.get("q", ""),
+            "current_query": current_query,
         }
+        if request.GET.get("fragment") == "calendar_panel":
+            if workspace is None or dashboard is None or shared_calendar is None:
+                return HttpResponse("", status=204)
+            return render(request, "schoolcomm/partials/calendar_panel.html", context)
         return render(request, "schoolcomm/main.html", context)
     except DatabaseError:
         logger.exception("[schoolcomm] main unavailable")
@@ -298,9 +311,11 @@ def room_detail(request, room_id):
         if membership is None:
             return HttpResponseForbidden("이 방에 접근할 수 없습니다.")
 
+        room_is_chat = room.room_kind in {room.RoomKind.DM, room.RoomKind.GROUP_DM}
         latest_message = room.messages.order_by("-created_at", "-id").first()
         mark_room_read(request.user, room, latest_message=latest_message)
-        room_items = _build_room_items(room, request.user)
+        room_items = [] if room_is_chat else _build_room_items(room, request.user)
+        chat_items = _build_room_chat_items(room, request.user) if room_is_chat else []
         workspace = room.workspace
         dashboard = build_workspace_dashboard(workspace, request.user)
         context = {
@@ -309,7 +324,9 @@ def room_detail(request, room_id):
             "membership": membership,
             "workspace": workspace,
             "room_items": room_items,
+            "chat_items": chat_items,
             "dashboard": dashboard,
+            "room_is_chat": room_is_chat,
             "can_post_top_level": membership_can_post_notice(membership) or room.room_kind != room.RoomKind.NOTICE,
             "room_ws_url": _build_ws_path(f"schoolcomm/ws/rooms/{room.id}/"),
             "room_refresh_url": f"{reverse('schoolcomm:room_detail', kwargs={'room_id': room.id})}?fragment=content",
@@ -656,6 +673,8 @@ def api_workspace_calendar_events(request, workspace_id):
                     calendar_tab="shared",
                     calendar_month=request.POST.get("redirect_month"),
                     calendar_date=request.POST.get("redirect_date"),
+                    query=request.POST.get("redirect_query"),
+                    anchor="calendar-panel",
                 )
             )
         if not _wants_json(request):
@@ -666,6 +685,8 @@ def api_workspace_calendar_events(request, workspace_id):
                     calendar_tab="shared",
                     calendar_month=request.POST.get("redirect_month") or timezone.localtime(event.start_time).strftime("%Y-%m"),
                     calendar_date=request.POST.get("redirect_date") or timezone.localtime(event.start_time).date().isoformat(),
+                    query=request.POST.get("redirect_query"),
+                    anchor="calendar-panel",
                 )
             )
         return JsonResponse({"status": "success", "event": serialize_shared_calendar_event(event, user=request.user)}, status=201)
@@ -707,6 +728,8 @@ def api_shared_calendar_event_update(request, event_id):
                     calendar_tab="shared",
                     calendar_month=request.POST.get("redirect_month"),
                     calendar_date=request.POST.get("redirect_date"),
+                    query=request.POST.get("redirect_query"),
+                    anchor="calendar-panel",
                 )
             )
         if not _wants_json(request):
@@ -717,6 +740,8 @@ def api_shared_calendar_event_update(request, event_id):
                     calendar_tab="shared",
                     calendar_month=request.POST.get("redirect_month") or timezone.localtime(event.start_time).strftime("%Y-%m"),
                     calendar_date=request.POST.get("redirect_date") or timezone.localtime(event.start_time).date().isoformat(),
+                    query=request.POST.get("redirect_query"),
+                    anchor="calendar-panel",
                 )
             )
         return JsonResponse({"status": "success", "event": serialize_shared_calendar_event(event, user=request.user)})
@@ -746,6 +771,8 @@ def api_shared_calendar_event_delete(request, event_id):
                     calendar_tab="shared",
                     calendar_month=request.POST.get("redirect_month"),
                     calendar_date=request.POST.get("redirect_date"),
+                    query=request.POST.get("redirect_query"),
+                    anchor="calendar-panel",
                 )
             )
         return JsonResponse({"status": "success"})
@@ -814,6 +841,8 @@ def api_apply_calendar_suggestion(request, suggestion_id):
                     calendar_tab="shared",
                     calendar_month=timezone.localtime(shared_event.start_time).strftime("%Y-%m"),
                     calendar_date=timezone.localtime(shared_event.start_time).date().isoformat(),
+                    query=request.POST.get("redirect_query"),
+                    anchor="calendar-panel",
                 )
             )
         return JsonResponse(

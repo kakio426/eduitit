@@ -699,6 +699,14 @@ def build_shared_calendar_panel(workspace, user, *, month_value="", selected_dat
 
     current_month = _normalize_month_value(month_value)
     selected_date = _normalize_date_value(selected_date_value)
+    today = timezone.localtime().date()
+    if selected_date is None:
+        if today.year == current_month.year and today.month == current_month.month:
+            selected_date = today
+        else:
+            selected_date = current_month
+    elif selected_date.month != current_month.month or selected_date.year != current_month.year:
+        selected_date = current_month
     month_start = timezone.make_aware(datetime.combine(current_month, time.min), timezone.get_current_timezone())
     next_month = (current_month.replace(day=28) + timedelta(days=4)).replace(day=1)
     next_month_start = timezone.make_aware(datetime.combine(next_month, time.min), timezone.get_current_timezone())
@@ -706,9 +714,6 @@ def build_shared_calendar_panel(workspace, user, *, month_value="", selected_dat
         _shared_calendar_event_queryset(workspace)
         .filter(start_time__lt=next_month_start, end_time__gte=month_start)
     )
-    if selected_date is None or selected_date.month != current_month.month or selected_date.year != current_month.year:
-        today = timezone.localtime().date()
-        selected_date = today if today.year == current_month.year and today.month == current_month.month else current_month
 
     selected_events = [
         serialize_shared_calendar_event(event, user=user)
@@ -1245,12 +1250,16 @@ def serialize_message(message, *, user):
     ack_user_ids = list(
         message.reactions.filter(reaction_type=MessageReaction.ReactionType.ACK).values_list("user_id", flat=True)
     )
+    parent_message = getattr(message, "parent_message", None)
     return {
         "id": str(message.id),
         "room_id": str(message.room_id),
         "parent_message_id": str(message.parent_message_id) if message.parent_message_id else "",
+        "parent_sender_name": parent_message.sender_name_snapshot if parent_message else "",
+        "parent_preview": _truncate(parent_message.body, limit=40) if parent_message and parent_message.body else "",
         "sender_name": message.sender_name_snapshot,
         "sender_role": message.sender_membership_snapshot,
+        "is_mine": bool(user and message.sender_id == user.id),
         "body": message.body,
         "created_at": message.created_at.isoformat(),
         "created_at_label": _format_datetime_label(message.created_at),

@@ -257,6 +257,205 @@
         });
     }
 
+    function focusCalendarTarget(panel, focusKey) {
+        if (!panel) {
+            return;
+        }
+        var target = null;
+        if (focusKey) {
+            target = panel.querySelector('[data-schoolcomm-calendar-key="' + focusKey + '"]');
+        }
+        if (!target) {
+            target = panel.querySelector('[data-schoolcomm-calendar-heading="true"]');
+        }
+        if (!target || typeof target.focus !== 'function') {
+            return;
+        }
+        try {
+            target.focus({ preventScroll: true });
+        } catch (error) {
+            target.focus();
+        }
+    }
+
+    function replaceCalendarPanel(root, html, focusKey) {
+        var currentPanel = root.querySelector('[data-schoolcomm-calendar-panel="true"]');
+        if (!currentPanel) {
+            return false;
+        }
+
+        var container = document.createElement('div');
+        container.innerHTML = html;
+        var nextPanel = container.querySelector('[data-schoolcomm-calendar-panel="true"]');
+        if (!nextPanel) {
+            return false;
+        }
+
+        currentPanel.replaceWith(nextPanel);
+        focusCalendarTarget(nextPanel, focusKey);
+        return true;
+    }
+
+    function shouldInterceptCalendarClick(event, link) {
+        if (!link || event.defaultPrevented) {
+            return false;
+        }
+        if (event.button !== 0) {
+            return false;
+        }
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+            return false;
+        }
+        if ((link.getAttribute('target') || '').trim() === '_blank') {
+            return false;
+        }
+        if (link.hasAttribute('download')) {
+            return false;
+        }
+        return typeof window.fetch === 'function';
+    }
+
+    function initCalendarPanel(root) {
+        if (!root.querySelector('[data-schoolcomm-calendar-panel="true"]')) {
+            return;
+        }
+
+        var calendarState = {
+            requestId: 0,
+            abortController: null,
+        };
+
+        root.addEventListener('click', function (event) {
+            var link = event.target.closest('[data-schoolcomm-calendar-link="true"]');
+            if (!link || !root.contains(link) || !shouldInterceptCalendarClick(event, link)) {
+                return;
+            }
+
+            var currentPanel = root.querySelector('[data-schoolcomm-calendar-panel="true"]');
+            if (!currentPanel) {
+                return;
+            }
+
+            var navigationUrl = new URL(link.href, window.location.origin);
+            if (navigationUrl.origin !== window.location.origin) {
+                return;
+            }
+
+            event.preventDefault();
+
+            var fragmentUrl = new URL(navigationUrl.toString());
+            fragmentUrl.searchParams.set('fragment', 'calendar_panel');
+            var focusKey = link.getAttribute('data-schoolcomm-calendar-key') || '';
+            var requestId = calendarState.requestId + 1;
+            calendarState.requestId = requestId;
+
+            if (calendarState.abortController) {
+                calendarState.abortController.abort();
+            }
+            calendarState.abortController = typeof AbortController !== 'undefined' ? new AbortController() : null;
+
+            currentPanel.setAttribute('aria-busy', 'true');
+
+            window.fetch(fragmentUrl.toString(), {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                signal: calendarState.abortController ? calendarState.abortController.signal : undefined,
+            }).then(function (response) {
+                if (!response.ok) {
+                    throw new Error('calendar fragment refresh failed: ' + response.status);
+                }
+                return response.text();
+            }).then(function (html) {
+                if (requestId !== calendarState.requestId) {
+                    return;
+                }
+                if (!replaceCalendarPanel(root, html, focusKey)) {
+                    throw new Error('calendar fragment missing panel');
+                }
+                if (window.history && typeof window.history.replaceState === 'function') {
+                    window.history.replaceState(window.history.state, '', navigationUrl.pathname + navigationUrl.search + navigationUrl.hash);
+                }
+            }).catch(function (error) {
+                if (error && error.name === 'AbortError') {
+                    return;
+                }
+                console.warn('[schoolcomm] failed to refresh calendar panel', error);
+                window.location.assign(navigationUrl.toString());
+            }).finally(function () {
+                if (requestId !== calendarState.requestId) {
+                    return;
+                }
+                var panel = root.querySelector('[data-schoolcomm-calendar-panel="true"]');
+                if (panel) {
+                    panel.removeAttribute('aria-busy');
+                }
+                calendarState.abortController = null;
+            });
+        });
+    }
+
+    function setChatReplyState(root, payload) {
+        var stateNode = root.querySelector('[data-schoolcomm-chat-reply-state="true"]');
+        var inputNode = root.querySelector('[data-schoolcomm-chat-parent-input="true"]');
+        var senderNode = root.querySelector('[data-schoolcomm-chat-reply-sender="true"]');
+        var previewNode = root.querySelector('[data-schoolcomm-chat-reply-preview="true"]');
+        var textarea = root.querySelector('[data-schoolcomm-chat-composer-text="true"]');
+
+        if (!stateNode || !inputNode) {
+            return;
+        }
+
+        if (!payload || !payload.parentMessageId) {
+            inputNode.value = '';
+            if (senderNode) {
+                senderNode.textContent = '';
+            }
+            if (previewNode) {
+                previewNode.textContent = '';
+            }
+            stateNode.classList.add('hidden');
+            return;
+        }
+
+        inputNode.value = String(payload.parentMessageId);
+        if (senderNode) {
+            senderNode.textContent = payload.senderName || '상대';
+        }
+        if (previewNode) {
+            previewNode.textContent = payload.preview || '원본 메시지에 답글을 남깁니다.';
+        }
+        stateNode.classList.remove('hidden');
+        if (textarea && typeof textarea.focus === 'function') {
+            textarea.focus();
+        }
+    }
+
+    function initChatReplyComposer(root) {
+        if (!root.querySelector('[data-schoolcomm-chat-composer="true"]')) {
+            return;
+        }
+
+        root.addEventListener('click', function (event) {
+            var replyTrigger = event.target.closest('[data-schoolcomm-chat-reply-trigger="true"]');
+            if (replyTrigger && root.contains(replyTrigger)) {
+                event.preventDefault();
+                setChatReplyState(root, {
+                    parentMessageId: replyTrigger.getAttribute('data-schoolcomm-parent-message-id') || '',
+                    senderName: replyTrigger.getAttribute('data-schoolcomm-parent-sender') || '',
+                    preview: replyTrigger.getAttribute('data-schoolcomm-parent-preview') || '',
+                });
+                return;
+            }
+
+            var cancelTrigger = event.target.closest('[data-schoolcomm-chat-reply-cancel="true"]');
+            if (cancelTrigger && root.contains(cancelTrigger)) {
+                event.preventDefault();
+                setChatReplyState(root, null);
+            }
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         var root = document.querySelector('[data-schoolcomm-root="true"]');
         if (!root) {
@@ -265,5 +464,7 @@
         connectUserSocket(root);
         connectRoomSocket(root);
         initMemberPicker(root);
+        initCalendarPanel(root);
+        initChatReplyComposer(root);
     });
 })();

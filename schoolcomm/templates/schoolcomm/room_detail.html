@@ -19,13 +19,16 @@
     data-schoolcomm-room-ws-url="{{ room_ws_url }}"
     data-schoolcomm-room-refresh-url="{{ room_refresh_url }}"
 >
-    <div class="mx-auto max-w-6xl px-4 pb-32 pt-28 sm:px-6">
+    <div class="mx-auto {% if room_is_chat %}max-w-4xl{% else %}max-w-6xl{% endif %} px-4 pb-32 pt-28 sm:px-6">
         <section class="schoolcomm-panel mb-5 rounded-[2rem] p-6">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                     <a href="{% url 'schoolcomm:main' %}?workspace={{ workspace.id }}" class="text-sm font-bold text-blue-600">끼리끼리 채팅방으로 돌아가기</a>
                     <h1 class="mt-2 text-3xl font-black tracking-[-0.03em] text-slate-900">{{ room.name }}</h1>
                     <p class="mt-2 text-sm text-slate-500">{{ workspace.name }}</p>
+                    {% if room_is_chat %}
+                    <p class="mt-3 text-sm text-slate-500">카카오톡처럼 이어지는 대화 흐름으로 메시지를 확인합니다.</p>
+                    {% endif %}
                     {% if not can_post_top_level %}
                     <p class="mt-3 inline-flex rounded-full bg-amber-50 px-4 py-2 text-sm font-bold text-amber-700">
                         이 방에서는 새 공지를 쓰지 않고 답글만 남길 수 있습니다.
@@ -56,16 +59,30 @@
                 method="post"
                 action="{% url 'schoolcomm:api_room_messages' room.id %}"
                 enctype="multipart/form-data"
-                class="schoolcomm-room-composer rounded-[2rem] p-4 sm:p-5"
+                class="schoolcomm-room-composer {% if room_is_chat %}is-chat{% endif %} rounded-[2rem] p-4 sm:p-5"
+                {% if room_is_chat %}data-schoolcomm-chat-composer="true"{% endif %}
             >
                 {% csrf_token %}
-                <label class="mb-2 block text-sm font-black text-slate-900" for="id_text">새 메시지</label>
+                {% if room_is_chat %}
+                <div class="mb-3 hidden rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" data-schoolcomm-chat-reply-state="true">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="font-black text-amber-900"><span data-schoolcomm-chat-reply-sender="true"></span>님에게 답글 작성 중</p>
+                            <p class="mt-1 truncate text-xs text-amber-700" data-schoolcomm-chat-reply-preview="true"></p>
+                        </div>
+                        <button type="button" class="rounded-full border border-amber-300 px-3 py-1 text-xs font-black text-amber-800" data-schoolcomm-chat-reply-cancel="true">취소</button>
+                    </div>
+                </div>
+                <input type="hidden" name="parent_message_id" value="" data-schoolcomm-chat-parent-input="true">
+                {% endif %}
+                <label class="mb-2 block text-sm font-black text-slate-900" for="id_text">{% if room_is_chat %}메시지 보내기{% else %}새 메시지{% endif %}</label>
                 <textarea
                     id="id_text"
                     name="text"
                     rows="3"
                     class="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-                    placeholder="메시지나 파일 설명을 남겨 주세요."
+                    placeholder="{% if room_is_chat %}메시지를 입력하세요.{% else %}메시지나 파일 설명을 남겨 주세요.{% endif %}"
+                    {% if room_is_chat %}data-schoolcomm-chat-composer-text="true"{% endif %}
                 ></textarea>
                 <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <input type="file" name="files" multiple class="block text-sm text-slate-600">
