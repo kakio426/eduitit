@@ -1,3 +1,4 @@
+import hashlib
 import logging
 import time
 import uuid
@@ -28,6 +29,7 @@ VISITOR_TRACKING_EXCLUDED_PREFIXES = (
 )
 SITE_CONFIG_REQUEST_ATTR = "_eduitit_site_config"
 REQUEST_CACHE_MISS = object()
+VISITOR_IDENTITY_SESSION_KEY = "visitor_identity"
 
 
 def is_public_access_path(path):
@@ -95,6 +97,92 @@ def get_client_ip(request):
         ip = request.META.get('REMOTE_ADDR')
     return ip
 
+
+def is_probable_bot(user_agent):
+    bot_keywords = [
+        'bot', 'spider', 'crawler', 'slurp', 'mediapartners', 'uptime',
+        'lighthouse', 'search', 'facebookexternalhit', 'pinterest',
+        'gptbot', 'chatgpt', 'yandex', 'naver', 'yeti'
+    ]
+    normalized_user_agent = (user_agent or "").lower()
+    return any(keyword in normalized_user_agent for keyword in bot_keywords)
+
+
+def get_or_create_session_visitor_id(request):
+    session = getattr(request, "session", None)
+    if session is None:
+        return uuid.uuid4().hex
+
+    visitor_id = session.get(VISITOR_IDENTITY_SESSION_KEY)
+    if visitor_id:
+        return visitor_id
+
+    visitor_id = uuid.uuid4().hex
+    session[VISITOR_IDENTITY_SESSION_KEY] = visitor_id
+    return visitor_id
+
+
+def build_visitor_identity(request, *, ip, is_bot):
+    if is_bot:
+        return {
+            "identity_type": VisitorLog.IDENTITY_BOT,
+            "visitor_key": f"bot:{ip}",
+            "session_visitor_key": None,
+            "user": None,
+        }
+
+    session_visitor_key = f"session:{get_or_create_session_visitor_id(request)}"
+    user = getattr(request, "user", None)
+    if user and user.is_authenticated:
+        return {
+            "identity_type": VisitorLog.IDENTITY_USER,
+            "visitor_key": f"user:{user.pk}",
+            "session_visitor_key": session_visitor_key,
+            "user": user,
+        }
+
+    return {
+        "identity_type": VisitorLog.IDENTITY_SESSION,
+        "visitor_key": session_visitor_key,
+        "session_visitor_key": session_visitor_key,
+        "user": None,
+    }
+
+
+def build_visitor_session_key(today, visitor_key):
+    digest = hashlib.sha256(visitor_key.encode("utf-8")).hexdigest()[:12]
+    return f"visitor_recorded_{today.isoformat()}_{digest}"
+
+
+def migrate_today_session_log_to_user(*, today, session_visitor_key, user_visitor_key, user, ip, user_agent):
+    if not session_visitor_key or session_visitor_key == user_visitor_key:
+        return
+
+    session_log = (
+        VisitorLog.objects
+        .filter(visit_date=today, visitor_key=session_visitor_key, is_bot=False)
+        .first()
+    )
+    if not session_log:
+        return
+
+    existing_user_log = (
+        VisitorLog.objects
+        .filter(visit_date=today, visitor_key=user_visitor_key)
+        .first()
+    )
+    if existing_user_log:
+        session_log.delete()
+        return existing_user_log
+
+    session_log.visitor_key = user_visitor_key
+    session_log.identity_type = VisitorLog.IDENTITY_USER
+    session_log.user = user
+    session_log.ip_address = ip
+    session_log.user_agent = user_agent
+    session_log.save(update_fields=["visitor_key", "identity_type", "user", "ip_address", "user_agent"])
+    return session_log
+
 class VisitorTrackingMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
@@ -111,37 +199,50 @@ class VisitorTrackingMiddleware:
                 ip = '0.0.0.0' # Fallback for unknown IPs
 
             today = timezone.localdate()
-
-            # Check session to avoid DB hit on every request
-            session_key = f'visitor_recorded_{today}'
-            already_recorded = request.session.get(session_key, False)
+            user_agent = request.META.get('HTTP_USER_AGENT', '')
+            is_bot = is_probable_bot(user_agent)
+            identity = build_visitor_identity(request, ip=ip, is_bot=is_bot)
+            session_key = build_visitor_session_key(today, identity["visitor_key"])
+            session = getattr(request, "session", None)
+            already_recorded = bool(session and session.get(session_key, False))
 
             logger.info(f"[VISITOR] Path: {request.path} | IP: {ip} | Already recorded: {already_recorded}")
 
             if not already_recorded:
                 try:
-                    user_agent = request.META.get('HTTP_USER_AGENT', '')
-                    
-                    # Common bot keywords
-                    bot_keywords = [
-                        'bot', 'spider', 'crawler', 'slurp', 'mediapartners', 'uptime',
-                        'lighthouse', 'search', 'facebookexternalhit', 'pinterest',
-                        'gptbot', 'chatgpt', 'yandex', 'naver', 'yeti'
-                    ]
-                    is_bot = any(keyword in user_agent.lower() for keyword in bot_keywords)
+                    if identity["identity_type"] == VisitorLog.IDENTITY_USER:
+                        migrate_today_session_log_to_user(
+                            today=today,
+                            session_visitor_key=identity["session_visitor_key"],
+                            user_visitor_key=identity["visitor_key"],
+                            user=identity["user"],
+                            ip=ip,
+                            user_agent=user_agent,
+                        )
 
-                    # Use update_or_create to save user_agent and is_bot if it already exists, 
-                    # but typically it shouldn't hit this if already_recorded works correctly.
-                    obj, created = VisitorLog.objects.get_or_create(
-                        ip_address=ip, 
+                    obj, created = VisitorLog.objects.update_or_create(
                         visit_date=today,
+                        visitor_key=identity["visitor_key"],
                         defaults={
+                            'ip_address': ip,
+                            'user': identity["user"],
+                            'visitor_key': identity["visitor_key"],
+                            'identity_type': identity["identity_type"],
                             'user_agent': user_agent,
-                            'is_bot': is_bot
+                            'is_bot': is_bot,
                         }
                     )
-                    request.session[session_key] = True
-                    logger.info(f"[VISITOR] DB operation - Created: {created} | IP: {ip} | Bot: {is_bot} | Date: {today}")
+                    if session is not None:
+                        session[session_key] = True
+                    logger.info(
+                        "[VISITOR] DB operation - Created: %s | VisitorKey: %s | Identity: %s | IP: %s | Bot: %s | Date: %s",
+                        created,
+                        identity["visitor_key"],
+                        identity["identity_type"],
+                        ip,
+                        is_bot,
+                        today,
+                    )
                 except Exception as e:
                     logger.error(f"[VISITOR] Error: {e}", exc_info=True)
 

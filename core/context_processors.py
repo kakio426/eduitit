@@ -1,4 +1,5 @@
-from .models import VisitorLog, SiteConfig
+from .models import SiteConfig
+from .utils import get_daily_visitor_count, get_unique_visitor_count
 from .active_classroom import (
     get_active_classroom_for_request,
     get_default_classroom_for_user,
@@ -68,8 +69,8 @@ def visitor_counts(request):
 
     try:
         today = timezone.localdate()
-        today_count = VisitorLog.objects.filter(visit_date=today).count()
-        total_count = VisitorLog.objects.count()
+        today_count = get_daily_visitor_count(target_date=today, exclude_bots=True)
+        total_count = get_unique_visitor_count(exclude_bots=True)
 
         logger.debug(f"Visitor counts - Today: {today_count}, Total: {total_count}")
 

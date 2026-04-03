@@ -478,16 +478,49 @@ class ProductWorkbenchBundle(models.Model):
 
 
 class VisitorLog(models.Model):
+    IDENTITY_USER = "user"
+    IDENTITY_SESSION = "session"
+    IDENTITY_BOT = "bot"
+    IDENTITY_LEGACY_IP = "ip"
+    IDENTITY_CHOICES = [
+        (IDENTITY_USER, "로그인 사용자"),
+        (IDENTITY_SESSION, "브라우저 세션"),
+        (IDENTITY_BOT, "봇"),
+        (IDENTITY_LEGACY_IP, "기존 IP"),
+    ]
+
     ip_address = models.GenericIPAddressField(verbose_name="IP 주소")
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="visitor_logs",
+        verbose_name="사용자",
+    )
+    visitor_key = models.CharField(max_length=80, db_index=True, verbose_name="방문 식별자")
+    identity_type = models.CharField(
+        max_length=20,
+        choices=IDENTITY_CHOICES,
+        default=IDENTITY_SESSION,
+        verbose_name="식별 기준",
+    )
     user_agent = models.TextField(blank=True, null=True, verbose_name="User Agent")
     is_bot = models.BooleanField(default=False, verbose_name="봇 여부")
-    visit_date = models.DateField(auto_now_add=True, verbose_name="방문 날짜")
+    visit_date = models.DateField(auto_now_add=True, db_index=True, verbose_name="방문 날짜")
 
     class Meta:
-        # Prevent multiple entries for same IP on same day
-        unique_together = ('ip_address', 'visit_date')
+        constraints = [
+            models.UniqueConstraint(
+                fields=["visit_date", "visitor_key"],
+                name="core_unique_visitor_per_day",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["visit_date", "is_bot"]),
+        ]
         verbose_name = "방문자 기록"
         verbose_name_plural = "방문자 기록"
 
     def __str__(self):
-        return f"{self.visit_date} - {self.ip_address}"
+        return f"{self.visit_date} - {self.identity_type}:{self.visitor_key}"

@@ -4092,8 +4092,13 @@ def admin_dashboard_view(request):
         messages.error(request, '관리자만 접근 가능합니다.')
         return redirect('home')
 
-    from .utils import get_visitor_stats, get_weekly_stats
-    from .models import VisitorLog, SiteConfig
+    from .utils import (
+        get_daily_visitor_count,
+        get_unique_visitor_count,
+        get_visitor_stats,
+        get_weekly_stats,
+    )
+    from .models import SiteConfig
     from products.models import Product
     from django.utils import timezone
     import datetime
@@ -4125,26 +4130,26 @@ def admin_dashboard_view(request):
 
     today = timezone.localdate()
     
-    # Total counts
-    total_count = VisitorLog.objects.count()
-    human_total_count = VisitorLog.objects.filter(is_bot=False).count()
+    # Total unique counts
+    total_count = get_unique_visitor_count()
+    human_total_count = get_unique_visitor_count(exclude_bots=True)
     bot_total_count = total_count - human_total_count
 
-    # Today's counts
-    today_count = VisitorLog.objects.filter(visit_date=today).count()
-    today_human_count = VisitorLog.objects.filter(visit_date=today, is_bot=False).count()
+    # Today's unique counts
+    today_count = get_daily_visitor_count(target_date=today)
+    today_human_count = get_daily_visitor_count(target_date=today, exclude_bots=True)
     today_bot_count = today_count - today_human_count
 
     # Weekly/Monthly start dates
     week_start = today - datetime.timedelta(days=today.weekday())
     month_start = today.replace(day=1)
 
-    # Weekly/Monthly counts
-    week_count = VisitorLog.objects.filter(visit_date__gte=week_start).count()
-    week_human_count = VisitorLog.objects.filter(visit_date__gte=week_start, is_bot=False).count()
+    # Weekly/Monthly unique counts
+    week_count = get_unique_visitor_count(start_date=week_start)
+    week_human_count = get_unique_visitor_count(start_date=week_start, exclude_bots=True)
     
-    month_count = VisitorLog.objects.filter(visit_date__gte=month_start).count()
-    month_human_count = VisitorLog.objects.filter(visit_date__gte=month_start, is_bot=False).count()
+    month_count = get_unique_visitor_count(start_date=month_start)
+    month_human_count = get_unique_visitor_count(start_date=month_start, exclude_bots=True)
 
     # Detailed stats (Humans only for the chart)
     daily_stats = get_visitor_stats(30, exclude_bots=True)
@@ -4152,6 +4157,7 @@ def admin_dashboard_view(request):
 
     # Chart max value
     max_daily = max((s['count'] for s in daily_stats), default=1) or 1
+    max_weekly = max((s['count'] for s in weekly_stats), default=1) or 1
     
     # Get current NotebookLM URL from Product (SIS Compliance)
     notebook_product = Product.objects.filter(title='교사 백과사전').first()
@@ -4171,6 +4177,7 @@ def admin_dashboard_view(request):
         'daily_stats': daily_stats,
         'weekly_stats': weekly_stats,
         'max_daily': max_daily,
+        'max_weekly': max_weekly,
         'current_notebook_url': current_notebook_url,
     })
 

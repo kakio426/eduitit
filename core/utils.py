@@ -1,9 +1,9 @@
 import jwt
 import datetime
 from django.conf import settings
-from django.utils import timezone
 from django.db.models import Count
-from django.db.models.functions import TruncDate, TruncWeek
+from django.db.models.functions import TruncWeek
+from django.utils import timezone
 
 
 def ratelimit_key_for_master_only(group, request):
@@ -60,6 +60,30 @@ def generate_sso_token(user):
     
     return jwt.encode(payload, settings.SSO_JWT_SECRET, algorithm='HS256')
 
+
+def get_unique_visitor_count(*, start_date=None, end_date=None, exclude_bots=False):
+    """VisitorLog에서 기간 내 고유 방문자 수를 반환한다."""
+    from .models import VisitorLog
+
+    queryset = VisitorLog.objects.all()
+    if start_date:
+        queryset = queryset.filter(visit_date__gte=start_date)
+    if end_date:
+        queryset = queryset.filter(visit_date__lte=end_date)
+    if exclude_bots:
+        queryset = queryset.filter(is_bot=False)
+
+    return queryset.aggregate(count=Count('visitor_key', distinct=True))['count'] or 0
+
+
+def get_daily_visitor_count(*, target_date, exclude_bots=False):
+    """VisitorLog에서 특정 날짜의 고유 방문자 수를 반환한다."""
+    return get_unique_visitor_count(
+        start_date=target_date,
+        end_date=target_date,
+        exclude_bots=exclude_bots,
+    )
+
 def get_visitor_stats(days=30, exclude_bots=False):
     """VisitorLog 일별 집계를 반환 (최근 N일)"""
     from .models import VisitorLog
@@ -72,7 +96,7 @@ def get_visitor_stats(days=30, exclude_bots=False):
     stats = (
         queryset
         .values('visit_date')
-        .annotate(count=Count('id'))
+        .annotate(count=Count('visitor_key', distinct=True))
         .order_by('visit_date')
     )
     # 빈 날짜 채우기
@@ -97,7 +121,7 @@ def get_weekly_stats(weeks=8, exclude_bots=False):
         queryset
         .annotate(week=TruncWeek('visit_date'))
         .values('week')
-        .annotate(count=Count('id'))
+        .annotate(count=Count('visitor_key', distinct=True))
         .order_by('week')
     )
     return list(stats)

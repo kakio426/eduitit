@@ -1,7 +1,9 @@
 from django.core.management.base import BaseCommand
 from django.db import connection
-from core.models import VisitorLog
 from django.utils import timezone
+
+from core.models import VisitorLog
+from core.utils import get_daily_visitor_count, get_unique_visitor_count
 
 
 class Command(BaseCommand):
@@ -32,18 +34,20 @@ class Command(BaseCommand):
         # 2. 데이터 개수 확인
         try:
             today = timezone.localdate()
-            total_count = VisitorLog.objects.count()
-            today_count = VisitorLog.objects.filter(visit_date=today).count()
+            total_count = get_unique_visitor_count()
+            today_count = get_daily_visitor_count(target_date=today)
 
-            self.stdout.write(self.style.SUCCESS(f'✓ 전체 방문 기록: {total_count}개'))
-            self.stdout.write(self.style.SUCCESS(f'✓ 오늘 방문 기록: {today_count}개'))
+            self.stdout.write(self.style.SUCCESS(f'✓ 전체 고유 방문자: {total_count}명'))
+            self.stdout.write(self.style.SUCCESS(f'✓ 오늘 고유 방문자: {today_count}명'))
 
             # 최근 5개 기록 출력
             recent_logs = VisitorLog.objects.order_by('-visit_date', '-id')[:5]
             if recent_logs:
                 self.stdout.write(self.style.SUCCESS('\n최근 방문 기록:'))
                 for log in recent_logs:
-                    self.stdout.write(f'  - {log.visit_date} | {log.ip_address}')
+                    self.stdout.write(
+                        f'  - {log.visit_date} | {log.identity_type} | {log.visitor_key} | {log.ip_address}'
+                    )
             else:
                 self.stdout.write(self.style.WARNING('\n⚠ 방문 기록이 없습니다.'))
 
@@ -54,14 +58,20 @@ class Command(BaseCommand):
         try:
             test_ip = '127.0.0.1'
             today = timezone.localdate()
-            obj, created = VisitorLog.objects.get_or_create(
-                ip_address=test_ip,
-                visit_date=today
+            obj, created = VisitorLog.objects.update_or_create(
+                visit_date=today,
+                visitor_key='check-visitors-test',
+                defaults={
+                    'ip_address': test_ip,
+                    'identity_type': VisitorLog.IDENTITY_SESSION,
+                    'user_agent': 'check_visitors command',
+                    'is_bot': False,
+                },
             )
             if created:
                 self.stdout.write(self.style.SUCCESS(f'\n✓ 테스트 기록 추가됨: {test_ip}'))
             else:
-                self.stdout.write(self.style.SUCCESS(f'\n✓ 테스트 기록 이미 존재: {test_ip}'))
+                self.stdout.write(self.style.SUCCESS(f'\n✓ 테스트 기록 갱신됨: {test_ip}'))
         except Exception as e:
             self.stdout.write(self.style.ERROR(f'\n✗ 테스트 기록 추가 실패: {e}'))
 
