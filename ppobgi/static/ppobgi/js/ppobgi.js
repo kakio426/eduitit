@@ -85,6 +85,27 @@
         resultModalOpen: false,
         editorOpen: false,
         orbLayout: new Map(),
+        audioContext: null,
+    };
+
+    const AUDIO_CONTEXT_CLASS = window.AudioContext || window.webkitAudioContext || null;
+
+    // Browser-synthesized chimes keep the feature self-contained.
+    const STAR_SFX_PATTERNS = {
+        launch: [
+            { frequency: 523.25, delay: 0, duration: 0.08, gain: 0.035, type: "sine" },
+            { frequency: 659.25, delay: 0.09, duration: 0.12, gain: 0.045, type: "triangle" },
+        ],
+        pick: [
+            { frequency: 784, delay: 0, duration: 0.08, gain: 0.045, type: "sine" },
+            { frequency: 987.77, delay: 0.09, duration: 0.1, gain: 0.052, type: "triangle" },
+            { frequency: 1318.51, delay: 0.2, duration: 0.14, gain: 0.042, type: "sine" },
+        ],
+        final: [
+            { frequency: 659.25, delay: 0, duration: 0.08, gain: 0.05, type: "sine" },
+            { frequency: 830.61, delay: 0.1, duration: 0.1, gain: 0.058, type: "triangle" },
+            { frequency: 987.77, delay: 0.22, duration: 0.16, gain: 0.065, type: "sine" },
+        ],
     };
 
     function decodeDefaultNames(raw) {
@@ -156,6 +177,66 @@
 
     function setEditorMessage(text, kind) {
         applyMessage(els.editorMessage, text, kind);
+    }
+
+    function getAudioContext() {
+        if (!AUDIO_CONTEXT_CLASS) {
+            return null;
+        }
+        if (state.audioContext && state.audioContext.state !== "closed") {
+            return state.audioContext;
+        }
+        try {
+            state.audioContext = new AUDIO_CONTEXT_CLASS();
+        } catch (error) {
+            state.audioContext = null;
+        }
+        return state.audioContext;
+    }
+
+    function scheduleTone(context, note, startTime) {
+        try {
+            const oscillator = context.createOscillator();
+            const gainNode = context.createGain();
+            const frequency = Math.max(1, Number(note.frequency) || 0);
+            const duration = Math.max(0.04, Number(note.duration) || 0.1);
+            const gain = Math.max(0.0001, Number(note.gain) || 0.04);
+            const attackEnd = startTime + Math.min(0.018, duration * 0.35);
+
+            oscillator.type = note.type || "sine";
+            oscillator.frequency.setValueAtTime(frequency, startTime);
+            oscillator.frequency.exponentialRampToValueAtTime(frequency * 1.02, startTime + duration);
+
+            gainNode.gain.setValueAtTime(0.0001, startTime);
+            gainNode.gain.exponentialRampToValueAtTime(gain, attackEnd);
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+
+            oscillator.connect(gainNode);
+            gainNode.connect(context.destination);
+            oscillator.start(startTime);
+            oscillator.stop(startTime + duration + 0.05);
+            oscillator.addEventListener("ended", () => {
+                oscillator.disconnect();
+                gainNode.disconnect();
+            });
+        } catch (error) {
+            // Silent fallback if the browser rejects a tone.
+        }
+    }
+
+    function playStarSfx(kind) {
+        const context = getAudioContext();
+        if (!context) {
+            return;
+        }
+        if (context.state === "suspended") {
+            context.resume().catch(() => {});
+        }
+        const pattern = STAR_SFX_PATTERNS[kind] || STAR_SFX_PATTERNS.pick;
+        const startTime = context.currentTime + 0.01;
+        pattern.forEach((note) => {
+            scheduleTone(context, note, startTime + (Number(note.delay) || 0));
+        });
     }
 
     function updateSetupStats() {
@@ -574,6 +655,7 @@
             return;
         }
         applyRosterAndStart(parsed.valid);
+        playStarSfx("launch");
     }
 
     function handleOrbClick(name, clickedBtn) {
@@ -604,6 +686,7 @@
         );
         setPickedPanel(name);
         openResultModal(name, left);
+        playStarSfx(left > 0 ? "pick" : "final");
 
         if (els.flash) {
             els.flash.style.opacity = state.reduceMotion ? "0.4" : "0.8";
@@ -3968,7 +4051,6 @@
 
     bindEvents();
 })();
-
 
 
 
