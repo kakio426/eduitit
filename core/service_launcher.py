@@ -13,7 +13,7 @@ SHEETBOOK_PUBLIC_NAME = "학급 기록 보드"
 PUBLIC_SERVICE_TITLE_BY_ROUTE = {
     "classcalendar:main": CALENDAR_HUB_PUBLIC_NAME,
     "messagebox:main": "AI 업무 메시지 보관함",
-    "schoolcomm:main": "우리끼리 채팅방",
+    "schoolcomm:main": "끼리끼리 채팅방",
     "quickdrop:landing": "바로전송",
     "sheetbook:index": SHEETBOOK_PUBLIC_NAME,
 }

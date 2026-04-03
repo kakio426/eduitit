@@ -23,7 +23,7 @@
         <section class="schoolcomm-panel mb-5 rounded-[2rem] p-6">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                    <a href="{% url 'schoolcomm:main' %}?workspace={{ workspace.id }}" class="text-sm font-bold text-blue-600">우리끼리 채팅방으로 돌아가기</a>
+                    <a href="{% url 'schoolcomm:main' %}?workspace={{ workspace.id }}" class="text-sm font-bold text-blue-600">끼리끼리 채팅방으로 돌아가기</a>
                     <h1 class="mt-2 text-3xl font-black tracking-[-0.03em] text-slate-900">{{ room.name }}</h1>
                     <p class="mt-2 text-sm text-slate-500">{{ workspace.name }}</p>
                     {% if not can_post_top_level %}

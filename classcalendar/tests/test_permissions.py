@@ -554,3 +554,17 @@ class PermissionTest(TestCase):
         )
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()["code"], "integration_event_readonly")
+
+    def test_schoolcomm_calendar_copy_event_uses_kirikiri_source_label(self):
+        event = self._create_event(title="끼리 일정")
+        event.integration_source = "schoolcomm_calendar_copy"
+        event.integration_key = "shared-event-1"
+        event.save(update_fields=["integration_source", "integration_key", "updated_at"])
+
+        response = self.client_teacher.get(reverse("calendar_main"), follow=True)
+        content = response.content.decode("utf-8")
+        serialized = next(item for item in response.context["events_json"] if item["id"] == str(event.id))
+
+        self.assertEqual(serialized["source_label"], "끼리끼리에서 가져옴")
+        self.assertEqual(serialized["integration_source"], "schoolcomm_calendar_copy")
+        self.assertIn("schoolcomm_calendar_copy: '끼리끼리'", content)

@@ -498,3 +498,85 @@ class CalendarSuggestion(models.Model):
     def __str__(self):
         title = str((self.suggested_payload or {}).get("title") or "추천 일정")
         return f"{self.user.username} - {title}"
+
+
+class SharedCalendarEvent(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    workspace = models.ForeignKey(
+        SchoolWorkspace,
+        on_delete=models.CASCADE,
+        related_name="shared_calendar_events",
+    )
+    title = models.CharField(max_length=200)
+    note = models.TextField(blank=True, default="")
+    start_time = models.DateTimeField()
+    end_time = models.DateTimeField()
+    is_all_day = models.BooleanField(default=False)
+    color = models.CharField(max_length=20, blank=True, default="emerald")
+    created_by_membership = models.ForeignKey(
+        SchoolMembership,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_shared_calendar_events",
+    )
+    updated_by_membership = models.ForeignKey(
+        SchoolMembership,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="updated_shared_calendar_events",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["start_time", "created_at", "id"]
+        indexes = [
+            models.Index(fields=["workspace", "start_time"]),
+            models.Index(fields=["workspace", "end_time"]),
+        ]
+        verbose_name = "끼리끼리 공유 일정"
+        verbose_name_plural = "끼리끼리 공유 일정"
+
+    def __str__(self):
+        return f"{self.workspace.name} - {self.title}"
+
+    def clean(self):
+        super().clean()
+        if self.end_time < self.start_time:
+            raise ValidationError("종료 시간이 시작 시간보다 빠를 수 없습니다.")
+
+
+class SharedCalendarEventCopy(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    shared_event = models.ForeignKey(
+        SharedCalendarEvent,
+        on_delete=models.CASCADE,
+        related_name="copies",
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="school_shared_calendar_copies",
+    )
+    personal_event = models.ForeignKey(
+        "classcalendar.CalendarEvent",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="schoolcomm_source_copies",
+    )
+    copied_at = models.DateTimeField(auto_now_add=True)
+    last_opened_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = [("shared_event", "user")]
+        indexes = [
+            models.Index(fields=["user", "copied_at"]),
+        ]
+        verbose_name = "끼리끼리 일정 개인 복사"
+        verbose_name_plural = "끼리끼리 일정 개인 복사"
+
+    def __str__(self):
+        return f"{self.user.username} - {self.shared_event.title}"
