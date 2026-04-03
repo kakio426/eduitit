@@ -28,6 +28,38 @@
         return String(value || '').trim();
     }
 
+    async function copyTextToClipboard(value) {
+        const text = normalizeTextContent(value);
+        if (!text) {
+            return false;
+        }
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+            await navigator.clipboard.writeText(text);
+            return true;
+        }
+
+        const helper = document.createElement('textarea');
+        helper.value = text;
+        helper.setAttribute('readonly', 'readonly');
+        helper.style.position = 'fixed';
+        helper.style.top = '-9999px';
+        helper.style.opacity = '0';
+        document.body.appendChild(helper);
+        helper.focus();
+        helper.select();
+
+        let copied = false;
+        try {
+            copied = document.execCommand('copy');
+        } finally {
+            helper.remove();
+        }
+        if (!copied) {
+            throw new Error('copy failed');
+        }
+        return true;
+    }
+
     function fileExtensionLabel(filename) {
         const name = String(filename || '').trim();
         const parts = name.split('.');
@@ -97,7 +129,6 @@
             },
 
             cacheDom() {
-                this.connectionBadge = byId('connection-badge');
                 this.sessionStatus = byId('session-status');
                 this.sessionExpiry = byId('session-expiry');
                 this.helperChipPaste = byId('helper-chip-paste');
@@ -360,6 +391,15 @@
                 link.remove();
             },
 
+            async copyHistoryText(text) {
+                try {
+                    await copyTextToClipboard(text);
+                    this.toast('내용을 복사했습니다.', 'success');
+                } catch (_error) {
+                    this.toast('내용을 복사할 수 없습니다.', 'error');
+                }
+            },
+
             startSnapshotPolling(immediate) {
                 if (!this.root.dataset.snapshotUrl) {
                     return;
@@ -439,7 +479,7 @@
                     }
                 }
                 if (this.sessionExpiry) {
-                    this.sessionExpiry.textContent = isCompactMobile ? '오늘 기록 유지' : '오늘 기록은 내일 정리됩니다';
+                    this.sessionExpiry.textContent = isCompactMobile ? '오늘 기록' : '오늘 기록은 내일 정리됩니다';
                 }
                 if (this.helperChipPaste) {
                     this.helperChipPaste.textContent = 'PC끼리 · 휴대폰끼리 · PC와 휴대폰 모두 가능';
@@ -606,10 +646,37 @@
                     body.appendChild(badge);
                     body.appendChild(fileName);
                 } else {
+                    const textValue = normalizeTextContent(item.text);
                     body.className = isCompactMobile
-                        ? 'mt-2 text-sm leading-6 text-slate-600'
-                        : 'mt-3 rounded-[16px] bg-[#f8fafc] px-4 py-3 text-sm leading-6 text-slate-600';
-                    body.textContent = normalizeTextContent(item.text);
+                        ? 'mt-2 rounded-[16px] border border-[#dbe4ee] bg-[#f8fafc] px-4 py-3'
+                        : 'mt-3 rounded-[16px] border border-[#dbe4ee] bg-[#f8fafc] px-4 py-3';
+
+                    const textBody = document.createElement('p');
+                    textBody.className = isCompactMobile
+                        ? 'text-[0.94rem] text-slate-600'
+                        : 'text-sm text-slate-600';
+                    textBody.textContent = textValue;
+                    textBody.style.whiteSpace = 'pre-wrap';
+                    textBody.style.overflowWrap = 'anywhere';
+                    textBody.style.wordBreak = 'break-word';
+                    textBody.style.lineHeight = '1.65';
+                    body.appendChild(textBody);
+
+                    if (textValue) {
+                        const actions = document.createElement('div');
+                        actions.className = 'mt-3 flex items-center justify-end';
+
+                        const copyButton = document.createElement('button');
+                        copyButton.type = 'button';
+                        copyButton.className = 'inline-flex items-center justify-center rounded-full border border-[#dbe4ee] bg-white px-3 py-1.5 text-[12px] font-black text-slate-500 transition hover:border-[#bfdbfe] hover:text-[#1d4ed8]';
+                        copyButton.textContent = '복사';
+                        copyButton.addEventListener('click', () => {
+                            this.copyHistoryText(textValue);
+                        });
+
+                        actions.appendChild(copyButton);
+                        body.appendChild(actions);
+                    }
                 }
 
                 card.appendChild(header);
@@ -624,9 +691,6 @@
                 socket.addEventListener('open', () => {
                     this.wsConnected = true;
                     this.stopSnapshotPolling();
-                    if (this.connectionBadge) {
-                        this.connectionBadge.textContent = '실시간 연결';
-                    }
                     this.startPing();
                     this.pullSnapshot();
                 });
@@ -642,9 +706,6 @@
                         return;
                     }
                     this.wsConnected = false;
-                    if (this.connectionBadge) {
-                        this.connectionBadge.textContent = '자동 갱신 중';
-                    }
                     window.clearInterval(this.pingTimer);
                     this.startSnapshotPolling(true);
                     window.clearTimeout(this.reconnectTimer);

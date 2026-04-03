@@ -56,40 +56,29 @@
         color: var(--qd-muted);
     }
 
-    #quickdrop-root #connection-badge {
-        display: inline-flex;
-        align-items: center;
-        border-radius: 9999px;
-        padding: 0.36rem 0.7rem;
-        background: #dbeafe;
-        color: var(--qd-blue);
-        font-size: 0.78rem;
-        font-weight: 900;
-        letter-spacing: 0.01em;
-    }
-
-    #quickdrop-root [data-quickdrop-top-actions="true"] a,
-    #quickdrop-root [data-quickdrop-top-actions="true"] button {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 2.75rem;
-        border-radius: 9999px;
-        padding: 0 1rem;
-        font-size: 0.9rem;
-        font-weight: 800;
-    }
-
     #quickdrop-root [data-quickdrop-secondary-button="true"] {
         border: 1px solid var(--qd-line);
         background: #ffffff;
         color: var(--qd-text);
     }
 
-    #quickdrop-root [data-quickdrop-muted-button="true"] {
-        border: 1px solid #e2e8f0;
-        background: #f8fafc;
-        color: #475569;
+    #quickdrop-root [data-quickdrop-inline-action="true"] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: #64748b;
+        font-size: 0.82rem;
+        font-weight: 800;
+        line-height: 1.2;
+        white-space: nowrap;
+    }
+
+    #quickdrop-root [data-quickdrop-inline-action="true"]:hover,
+    #quickdrop-root [data-quickdrop-inline-action="true"]:focus-visible {
+        color: var(--qd-blue-dark);
     }
 
     #quickdrop-root [data-quickdrop-helper-bar="true"] {
@@ -385,11 +374,6 @@
             align-items: stretch;
         }
 
-        #quickdrop-root [data-quickdrop-top-actions="true"] {
-            width: 100%;
-            justify-content: flex-start;
-        }
-
         #quickdrop-root [data-quickdrop-eyebrow="true"] {
             display: none;
         }
@@ -437,6 +421,12 @@
         #quickdrop-root #image-panel > div {
             border-radius: 20px;
         }
+
+        #quickdrop-root #history-list {
+            max-height: none;
+            overflow: visible;
+            padding-right: 0;
+        }
     }
 </style>
 {% endblock %}
@@ -464,23 +454,20 @@
                             <p data-quickdrop-eyebrow="true" class="text-[11px] font-black uppercase tracking-[0.18em] text-[#64748b]">빠르게 옮기기</p>
                             <h1 class="text-[29px] font-black tracking-[-0.04em] text-[#0f172a]">바로전송</h1>
                             <div data-quickdrop-primary-meta="true">
-                                <span id="connection-badge">연결 준비 중</span>
                                 <span id="viewer-label" class="hidden font-bold text-slate-700 lg:inline">{{ device_label }}</span>
                                 <span class="hidden text-slate-300 lg:inline">•</span>
                                 <span id="session-status" class="font-bold text-slate-500">전송 준비</span>
+                                <button type="button" id="end-session-btn" data-quickdrop-inline-action="true" class="hidden">오늘 지우기</button>
                             </div>
                         </div>
-                    </div>
-                    <div data-quickdrop-top-actions="true" class="flex flex-wrap items-center gap-2">
-                        <button type="button" id="end-session-btn" data-quickdrop-muted-button="true" class="hidden">오늘 내용 지우기</button>
                     </div>
                 </div>
             </div>
 
-            <div data-quickdrop-helper-bar="true" class="px-5 py-3 sm:px-6">
-                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div data-quickdrop-helper-bar="true" class="px-5 py-3 sm:px-6">
+                <div class="flex flex-wrap items-center justify-between gap-2">
                     <div class="flex flex-wrap gap-2">
-                    <span id="session-expiry" data-quickdrop-chip="true" data-tone="accent">오늘 기록은 내일 정리됩니다</span>
+                        <span id="session-expiry" data-quickdrop-chip="true">오늘 기록은 내일 정리됩니다</span>
                     </div>
                     {% if is_owner %}
                     <a href="{{ landing_url }}" data-quickdrop-helper-link="true">새 기기 추가</a>

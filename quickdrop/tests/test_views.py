@@ -154,6 +154,9 @@ class QuickdropViewTests(TestCase):
         self.assertContains(response, "첨부파일")
         self.assertContains(response, "예) 회의 링크, 메모, 주소")
         self.assertContains(response, 'data-quickdrop-history-panel="true"')
+        self.assertContains(response, 'id="end-session-btn"')
+        self.assertContains(response, "오늘 지우기")
+        self.assertNotContains(response, 'id="connection-badge"', html=False)
         self.assertContains(response, reverse("quickdrop:snapshot", kwargs={"slug": self.channel.slug}))
         self.assertEqual(self.channel.sessions.filter(status=QuickdropSession.STATUS_LIVE).count(), 1)
 
