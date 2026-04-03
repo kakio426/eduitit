@@ -230,14 +230,56 @@
         backgroundColor: 'rgb(248, 249, 250)',
         penColor: 'rgb(30, 30, 30)',
     });
+    const SIGNATURE_PAD_PADDING = 18;
+
+    function fitSignatureToPad(imageData) {
+        return new Promise((resolve, reject) => {
+            if (!imageData) {
+                signaturePad.clear();
+                resolve();
+                return;
+            }
+
+            const image = new Image();
+            image.onload = () => {
+                const imageWidth = image.naturalWidth || image.width || 1;
+                const imageHeight = image.naturalHeight || image.height || 1;
+                const padWidth = canvas.offsetWidth || canvas.clientWidth || 1;
+                const padHeight = canvas.offsetHeight || canvas.clientHeight || 1;
+                const availableWidth = Math.max(padWidth - (SIGNATURE_PAD_PADDING * 2), 24);
+                const availableHeight = Math.max(padHeight - (SIGNATURE_PAD_PADDING * 2), 24);
+                const scale = Math.min(availableWidth / imageWidth, availableHeight / imageHeight);
+                const renderWidth = Math.max(imageWidth * scale, 1);
+                const renderHeight = Math.max(imageHeight * scale, 1);
+
+                signaturePad.clear();
+                signaturePad.fromDataURL(imageData, {
+                    width: renderWidth,
+                    height: renderHeight,
+                    xOffset: Math.max((padWidth - renderWidth) / 2, 0),
+                    yOffset: Math.max((padHeight - renderHeight) / 2, 0),
+                });
+                resolve();
+            };
+            image.onerror = () => reject(new Error('signature image load failed'));
+            image.src = imageData;
+        });
+    }
 
     function resizeCanvas() {
+        const snapshot = signaturePad.isEmpty() ? '' : signaturePad.toDataURL('image/png');
         const ratio = Math.max(window.devicePixelRatio || 1, 1);
         const wrapper = canvas.parentElement;
         canvas.width = wrapper.offsetWidth * ratio;
         canvas.height = canvas.offsetHeight * ratio;
-        canvas.getContext('2d').scale(ratio, ratio);
+        const context = canvas.getContext('2d');
+        context.scale(ratio, ratio);
         signaturePad.clear();
+        if (snapshot) {
+            fitSignatureToPad(snapshot).catch((error) => {
+                console.error('서명 칸을 다시 그리는 중 오류가 발생했습니다.', error);
+            });
+        }
     }
 
     window.addEventListener('resize', resizeCanvas);
@@ -405,9 +447,14 @@
     }
 
     function applySavedSignature(imageData) {
-        signaturePad.clear();
-        signaturePad.fromDataURL(imageData);
-        closeSignatureVaultModal();
+        fitSignatureToPad(imageData)
+            .then(() => {
+                closeSignatureVaultModal();
+            })
+            .catch((error) => {
+                console.error(error);
+                alert('저장된 서명을 화면에 맞게 불러오지 못했습니다.');
+            });
     }
 </script>
 {% endblock %}
