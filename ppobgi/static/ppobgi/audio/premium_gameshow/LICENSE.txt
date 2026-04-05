@@ -1,0 +1,10 @@
+Premium Show v2 local audio pack
+
+These WAV files were generated in-house for this repository on 2026-04-05.
+They are not copied from third-party libraries or websites.
+
+Generation method:
+- Simple synthesized tones rendered with Python's standard-library `wave` module
+- Mixed from short sine-based note patterns for UI cues and celebration stingers
+
+Files in this folder may be reused within the EDUITIT project.

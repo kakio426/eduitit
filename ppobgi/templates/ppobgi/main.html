@@ -5,31 +5,83 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'ppobgi/css/ppobgi.css' %}">
+<link rel="stylesheet" href="{% static 'ppobgi/css/ppobgi_show.css' %}">
 {% endblock %}
 
 {% block content %}
 <main
     id="ppobgi-app"
     class="ppb-root"
+    data-audio-default="{{ audio_default }}"
+    data-audio-pack-base="{% static 'ppobgi/audio/premium_gameshow/' %}"
+    data-audio-pack-name="{{ audio_pack_name }}"
+    data-audio-pack-version="{{ audio_pack_version }}"
     data-default-names="{{ default_names|escapejs }}"
     data-roster-url="{% url 'ppobgi:roster_names' %}"
     data-role-cards-url="{% url 'ppobgi:role_cards' %}"
+    data-show-profile="{{ show_profile }}"
+    data-storage-scope="{{ storage_scope }}"
     {% if active_classroom %}data-classroom-url="{% url 'ppobgi:classroom_students' active_classroom.pk %}" data-classroom-name="{{ active_classroom.name|escapejs }}"{% endif %}
 >
     <div class="ppb-bg-gradient" aria-hidden="true"></div>
     <div id="ppb-stars" class="ppb-stars" aria-hidden="true"></div>
     <div id="ppb-flash" class="ppb-flash" aria-hidden="true"></div>
 
-    <header class="ppb-topbar">
-        <div class="ppb-top-main">
-            <div class="ppb-brand">
-                <span class="ppb-brand-icon">✨</span>
-                <div>
+    <header class="ppb-topbar ppb-host-dock">
+        <div class="ppb-host-shell">
+            <div class="ppb-host-console">
+                <div class="ppb-brand">
+                    <span class="ppb-brand-icon">✨</span>
+                    <div>
+                        <p class="ppb-brand-kicker">Premium Show v2</p>
+                        <h2>반짝반짝 교실 쇼</h2>
+                        <p>교사는 바로 진행하고, 학생은 발표 순간을 크게 느끼는 무대</p>
+                    </div>
+                </div>
+                <div class="ppb-host-kpis" aria-label="쇼 운영 상태">
+                    <span class="ppb-host-kpi">공정하게 추첨 중</span>
+                    <span class="ppb-host-kpi">한 번 뽑히면 자동 제외</span>
+                    {% if active_classroom %}
+                    <span class="ppb-host-kpi">현재 학급 우선 적용</span>
+                    {% else %}
+                    <span class="ppb-host-kpi">사용자별 명단 분리 저장</span>
+                    {% endif %}
+                </div>
+                <details class="ppb-host-guide">
+                    <summary>교사용 진행 힌트</summary>
+                    <div class="ppb-host-guide-body">
+                        <p>1. 명단을 붙여넣고 시작하면 준비는 끝입니다.</p>
+                        <p>2. 발표 순간에는 이름을 크게 보여 주고, 축하 연출이 끝난 뒤 다음 진행을 누르세요.</p>
+                        <p>3. 전체화면에서는 조작부가 자동으로 얇아져서 아이들이 무대에 더 집중합니다.</p>
+                    </div>
+                </details>
+            </div>
+            <div class="ppb-top-banner">
+                <div class="ppb-top-banner-copy">
+                    <span class="ppb-hero-badge">프리미엄 게임쇼 무대</span>
                     <h1>별빛 추첨기</h1>
-                    <p>교실용 멀티 추첨 스테이션</p>
+                    <p>아이들이 뽑히는 순간 기분 좋아지도록, 긴장감과 축하를 함께 보여 주는 발표 무대입니다.</p>
+                </div>
+                <div class="ppb-top-banner-stage" aria-live="polite">
+                    <p class="ppb-stage-kicker">현재 무대</p>
+                    <h2 id="ppb-shell-mode-label" class="ppb-stage-title">별빛 추첨기</h2>
+                    <p id="ppb-shell-mode-desc" class="ppb-stage-desc">별을 누르면 반짝 폭발과 함께 오늘의 주인공이 크게 공개됩니다.</p>
+                    <div class="ppb-stage-tags">
+                        <span class="ppb-stage-tag">대형 화면 발표</span>
+                        <span class="ppb-stage-tag">로컬 효과음 팩</span>
+                        <span class="ppb-stage-tag">축하 배지 + 칭찬 카피</span>
+                    </div>
+                    <p class="ppb-stage-reassurance">긴장감 있게 모으고, 결과는 환하게 축하하는 교실 게임쇼 톤으로 진행합니다.</p>
                 </div>
             </div>
+        </div>
+        <div class="ppb-top-main">
+            <div class="ppb-stage-trust">
+                <strong>호스트 도크</strong>
+                <span>명단 불러오기, 모드 전환, 음소거, 전체화면만 남기고 무대를 크게 씁니다.</span>
+            </div>
             <div class="ppb-top-controls">
+                <button id="ppb-audio-btn" type="button" class="ppb-ghost-btn ppb-audio-btn" aria-pressed="true">🔊 소리 켜짐</button>
                 <label class="ppb-toggle">
                     <input id="ppb-reduce-motion" type="checkbox">
                     <span>애니메이션 줄이기</span>
@@ -47,7 +99,11 @@
                 role="tab"
                 aria-selected="true"
             >
-                별빛 추첨기
+                <span class="ppb-mode-tab-icon" aria-hidden="true">✨</span>
+                <span class="ppb-mode-tab-copy">
+                    <strong>별빛</strong>
+                    <small>별을 눌러 주인공 발표</small>
+                </span>
             </button>
             <button
                 id="ppb-mode-ladder-btn"
@@ -57,7 +113,11 @@
                 role="tab"
                 aria-selected="false"
             >
-                사다리 뽑기
+                <span class="ppb-mode-tab-icon" aria-hidden="true">🌈</span>
+                <span class="ppb-mode-tab-copy">
+                    <strong>사다리</strong>
+                    <small>네온 경로로 결과 공개</small>
+                </span>
             </button>
             <button
                 id="ppb-mode-sequence-btn"
@@ -67,7 +127,11 @@
                 role="tab"
                 aria-selected="false"
             >
-                순서 뽑기
+                <span class="ppb-mode-tab-icon" aria-hidden="true">🎤</span>
+                <span class="ppb-mode-tab-copy">
+                    <strong>순서</strong>
+                    <small>한 명씩 카드처럼 발표</small>
+                </span>
             </button>
             <button
                 id="ppb-mode-teams-btn"
@@ -77,7 +141,11 @@
                 role="tab"
                 aria-selected="false"
             >
-                팀 나누기
+                <span class="ppb-mode-tab-icon" aria-hidden="true">🚀</span>
+                <span class="ppb-mode-tab-copy">
+                    <strong>팀</strong>
+                    <small>팀 깃발로 배치 공개</small>
+                </span>
             </button>
             <button
                 id="ppb-mode-meteor-btn"
@@ -87,7 +155,11 @@
                 role="tab"
                 aria-selected="false"
             >
-                유성우 뽑기
+                <span class="ppb-mode-tab-icon" aria-hidden="true">☄️</span>
+                <span class="ppb-mode-tab-copy">
+                    <strong>유성우</strong>
+                    <small>쏟아지는 유성으로 발표</small>
+                </span>
             </button>
             <button
                 id="ppb-mode-roles-btn"
@@ -97,7 +169,11 @@
                 role="tab"
                 aria-selected="false"
             >
-                역할 카드
+                <span class="ppb-mode-tab-icon" aria-hidden="true">🏆</span>
+                <span class="ppb-mode-tab-copy">
+                    <strong>역할 카드</strong>
+                    <small>오늘의 임무를 트로피처럼 공개</small>
+                </span>
             </button>
         </div>
     </header>
@@ -106,10 +182,11 @@
         <section id="ppb-setup" class="ppb-screen">
             <div class="ppb-setup-shell">
                 <article class="ppb-panel ppb-panel-info">
-                    <h2>추첨 준비</h2>
+                    <span class="ppb-panel-kicker">명단 준비</span>
+                    <h2>한 번에 붙여넣고 바로 쇼를 시작하세요</h2>
                     <p class="ppb-muted">
-                        줄바꿈으로 이름을 넣고 추첨을 시작하세요.
-                        기본은 비복원 추첨이라 한 번 뽑힌 학생은 자동 제외됩니다.
+                        줄바꿈으로 이름을 넣고 시작하면, 한 번 뽑힌 학생은 자동으로 제외됩니다.
+                        오늘 학급 명단이 있으면 그 명단을 우선으로 불러옵니다.
                     </p>
 
                     <div class="ppb-btn-row">
@@ -141,13 +218,30 @@
                 </article>
 
                 <article class="ppb-panel ppb-panel-input">
-                    <label for="ppb-name-input">학생 이름 명단</label>
+                    <div class="ppb-panel-preview-head">
+                        <div>
+                            <span class="ppb-panel-kicker">무대 미리보기</span>
+                            <label for="ppb-name-input">학생 이름 명단</label>
+                        </div>
+                        <span class="ppb-preview-badge">발표는 크게, 설정은 간단하게</span>
+                    </div>
                     <textarea
                         id="ppb-name-input"
                         class="ppb-textarea"
                         placeholder="예)&#10;김별빛&#10;이은하&#10;박우주"
                     ></textarea>
                     <p class="ppb-input-hint">한 줄에 한 명, 최대 40명까지 진행됩니다.</p>
+                    <div class="ppb-preview-card" aria-hidden="true">
+                        <div class="ppb-preview-stage">
+                            <span class="ppb-preview-star">✨</span>
+                            <span class="ppb-preview-star ppb-preview-star-cyan">🌟</span>
+                            <span class="ppb-preview-star ppb-preview-star-coral">💫</span>
+                        </div>
+                        <div class="ppb-preview-copy">
+                            <strong>아이들이 보게 될 장면</strong>
+                            <p>큰 이름 발표, 반짝 폭발, 또렷한 효과음으로 다음 순서를 바로 이어갑니다.</p>
+                        </div>
+                    </div>
                 </article>
             </div>
         </section>
@@ -188,10 +282,13 @@
                         <button id="ppb-edit-roster-btn" type="button" class="ppb-soft-btn">명단 수정</button>
                     </div>
                     <p class="ppb-shortcut-hint">단축키: <kbd>Space</kbd> 무작위 추첨, <kbd>Ctrl</kbd>+<kbd>Z</kbd> 직전 되돌리기</p>
-                    <div class="ppb-history-box">
-                        <h3>추첨 기록</h3>
-                        <ol id="ppb-history-list-universe" class="ppb-history-list"></ol>
-                    </div>
+                    <details class="ppb-side-disclosure">
+                        <summary>추첨 기록 보기</summary>
+                        <div class="ppb-history-box">
+                            <h3>추첨 기록</h3>
+                            <ol id="ppb-history-list-universe" class="ppb-history-list"></ol>
+                        </div>
+                    </details>
                 </aside>
             </div>
         </section>
@@ -199,11 +296,19 @@
     </div>
 
     <div id="ppb-result-modal" class="ppb-result-modal is-hidden" aria-hidden="true">
-        <div id="ppb-result-panel" class="ppb-result-panel" role="dialog" aria-modal="true" aria-label="추첨 결과">
-            <p class="ppb-result-label">방금 뽑힌 학생</p>
+        <div id="ppb-result-panel" class="ppb-result-panel" role="dialog" aria-modal="true" aria-label="발표 결과">
+            <div class="ppb-result-burst" aria-hidden="true">
+                <span></span><span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <p id="ppb-result-phase" class="ppb-result-phase">무대 준비 중</p>
+            <p id="ppb-result-label" class="ppb-result-label">방금 뽑힌 학생</p>
+            <p id="ppb-result-source" class="ppb-result-source">별빛 추첨 결과</p>
+            <p id="ppb-result-badge" class="ppb-result-badge">오늘의 주인공</p>
             <h2 id="ppb-result-name" class="ppb-result-name">-</h2>
+            <p id="ppb-result-compliment" class="ppb-result-compliment">오늘의 무대가 이 학생을 기다리고 있었어요.</p>
             <p id="ppb-result-meta" class="ppb-result-meta">결과를 준비 중입니다.</p>
-                        <div class="ppb-result-actions">
+            <div class="ppb-result-actions">
+                <span id="ppb-result-wait" class="ppb-result-wait" aria-live="polite">축하 연출이 진행 중입니다.</span>
                 <button id="ppb-result-next-btn" type="button" class="ppb-primary-btn ppb-result-next-btn">다음 추첨 계속</button>
                 <button id="ppb-result-fortune-btn" type="button" class="ppb-soft-btn ppb-result-fortune-btn">희망 포춘쿠키</button>
             </div>
@@ -363,10 +468,13 @@
                         <div id="pbl-live-sparks" class="pbl-live-sparks" aria-hidden="true"></div>
                     </div>
 
-                    <div class="pbl-history-box">
-                        <h3>역할 발표 기록</h3>
-                        <ol id="pbl-reveal-list" class="pbl-reveal-list"></ol>
-                    </div>
+                    <details class="ppb-side-disclosure">
+                        <summary>역할 발표 기록 보기</summary>
+                        <div class="pbl-history-box">
+                            <h3>역할 발표 기록</h3>
+                            <ol id="pbl-reveal-list" class="pbl-reveal-list"></ol>
+                        </div>
+                    </details>
                 </aside>
             </div>
         </section>
@@ -457,10 +565,13 @@
                         <button id="pps-fortune-btn" type="button" class="ppb-soft-btn pps-fortune-btn" disabled>희망 포춘쿠키</button>
                     </div>
 
-                    <div class="pps-history-box">
-                        <h3>공개 기록</h3>
-                        <ol id="pps-history-list" class="pps-history-list"></ol>
-                    </div>
+                    <details class="ppb-side-disclosure">
+                        <summary>공개 기록 보기</summary>
+                        <div class="pps-history-box">
+                            <h3>공개 기록</h3>
+                            <ol id="pps-history-list" class="pps-history-list"></ol>
+                        </div>
+                    </details>
                 </aside>
             </div>
         </section>
@@ -563,10 +674,13 @@
                         <button id="ppt-fortune-btn" type="button" class="ppb-soft-btn ppt-fortune-btn" disabled>희망 포춘쿠키</button>
                     </div>
 
-                    <div class="ppt-history-box">
-                        <h3>배치 기록</h3>
-                        <ol id="ppt-history-list" class="ppt-history-list"></ol>
-                    </div>
+                    <details class="ppb-side-disclosure">
+                        <summary>배치 기록 보기</summary>
+                        <div class="ppt-history-box">
+                            <h3>배치 기록</h3>
+                            <ol id="ppt-history-list" class="ppt-history-list"></ol>
+                        </div>
+                    </details>
                 </aside>
             </div>
         </section>
@@ -657,10 +771,13 @@
                         <button id="ppm-fortune-btn" type="button" class="ppb-soft-btn ppm-fortune-btn" disabled>희망 포춘쿠키</button>
                     </div>
 
-                    <div class="ppm-history-box">
-                        <h3>유성우 기록</h3>
-                        <ol id="ppm-history-list" class="ppm-history-list"></ol>
-                    </div>
+                    <details class="ppb-side-disclosure">
+                        <summary>유성우 기록 보기</summary>
+                        <div class="ppm-history-box">
+                            <h3>유성우 기록</h3>
+                            <ol id="ppm-history-list" class="ppm-history-list"></ol>
+                        </div>
+                    </details>
                 </aside>
             </div>
         </section>
@@ -696,10 +813,13 @@
                         <p id="ppr-live-assignee" class="ppr-live-assignee">오늘의 1인 1역을 불러오면 여기에 표시됩니다.</p>
                         <button id="ppr-fortune-btn" type="button" class="ppb-soft-btn ppr-fortune-btn" disabled>희망 포춘쿠키</button>
                     </div>
-                    <div class="ppr-history-box">
-                        <h3>공개 기록</h3>
-                        <ol id="ppr-history-list" class="ppr-history-list"></ol>
-                    </div>
+                    <details class="ppb-side-disclosure">
+                        <summary>공개 기록 보기</summary>
+                        <div class="ppr-history-box">
+                            <h3>공개 기록</h3>
+                            <ol id="ppr-history-list" class="ppr-history-list"></ol>
+                        </div>
+                    </details>
                 </aside>
             </div>
         </section>
@@ -708,6 +828,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'ppobgi/js/ppobgi_shared.js' %}"></script>
 <script src="{% static 'ppobgi/js/ppobgi.js' %}"></script>
 {% if active_classroom %}
 <script>
@@ -762,7 +883,5 @@
 </script>
 {% endif %}
 {% endblock %}
-
-
 
 

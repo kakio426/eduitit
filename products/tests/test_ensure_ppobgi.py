@@ -16,3 +16,6 @@ class EnsurePpobgiCommandTest(TestCase):
         self.assertTrue(product.is_active)
         self.assertTrue(manual.is_published)
         self.assertGreaterEqual(manual.sections.count(), 3)
+        self.assertIn("6가지", manual.description)
+        self.assertIn("사다리", product.description)
+        self.assertIn("유성우", product.description)

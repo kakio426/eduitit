@@ -27,11 +27,16 @@ class PpobgiViewTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(reverse("ppobgi:main"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "추첨 준비")
+        self.assertContains(response, "명단 준비")
+        self.assertContains(response, "Premium Show v2")
+        self.assertContains(response, "한 번에 붙여넣고 바로 쇼를 시작하세요")
+        self.assertContains(response, 'id="ppb-audio-btn"', html=False)
         self.assertContains(response, "추첨 우주 시작")
         self.assertContains(response, "방금 뽑힌 학생")
         self.assertContains(response, 'id="ppb-picked-name"', html=False)
         self.assertContains(response, 'id="ppb-result-modal"', html=False)
+        self.assertContains(response, 'id="ppb-result-badge"', html=False)
+        self.assertContains(response, 'id="ppb-result-compliment"', html=False)
         self.assertContains(response, 'id="ppb-result-name"', html=False)
         self.assertContains(response, "사다리 뽑기")
         self.assertContains(response, "순서 뽑기")
@@ -47,6 +52,11 @@ class PpobgiViewTest(TestCase):
         self.assertContains(response, "무작위 유성 공개")
         self.assertContains(response, reverse("dutyticker"))
         self.assertContains(response, 'title="반짝반짝 우리반 알림판"')
+        self.assertContains(response, 'data-show-profile="premium_gameshow"', html=False)
+        self.assertContains(response, f'data-storage-scope="user:{self.user.pk}"', html=False)
+        self.assertContains(response, 'data-audio-pack-name="premium_gameshow_v1"', html=False)
+        self.assertContains(response, 'data-audio-pack-version="1"', html=False)
+        self.assertContains(response, 'data-audio-default="on"', html=False)
 
     def test_roster_names_returns_active_students(self):
         self.client.force_login(self.user)
@@ -81,6 +91,44 @@ class PpobgiViewTest(TestCase):
         response = self.client.get(reverse("ppobgi:classroom_students", args=[classroom.pk]))
 
         self.assertEqual(response.status_code, 302)
+
+    def test_main_blocks_phone_user_agent_without_force_desktop(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse("ppobgi:main"),
+            HTTP_USER_AGENT="Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "products/mobile_not_supported.html")
+        self.assertContains(response, "교실 TV, PC, 태블릿 같은 큰 화면에 맞춰 설계된 서비스입니다.")
+        self.assertContains(response, "?force_desktop=1")
+
+    def test_main_allows_phone_user_agent_with_force_desktop(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            f"{reverse('ppobgi:main')}?force_desktop=1",
+            HTTP_USER_AGENT="Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "ppobgi/main.html")
+
+    def test_main_template_includes_classroom_scoped_storage_key(self):
+        self.client.force_login(self.user)
+        classroom = HSClassroom.objects.create(teacher=self.user, name="3학년 4반")
+        self.profile.default_classroom = classroom
+        self.profile.save(update_fields=["default_classroom"])
+
+        response = self.client.get(reverse("ppobgi:main"))
+
+        self.assertContains(
+            response,
+            f'data-storage-scope="user:{self.user.pk}:classroom:{classroom.pk}"',
+            html=False,
+        )
 
     def test_classroom_students_returns_404_for_non_owner(self):
         other_user = User.objects.create_user(

@@ -79,6 +79,9 @@ def _should_block_for_large_screen_service(request):
 @login_required
 def main(request):
     active_classroom = get_active_classroom_for_request(request)
+    storage_scope = f"user:{request.user.pk}"
+    if active_classroom:
+        storage_scope = f"{storage_scope}:classroom:{active_classroom.pk}"
     if _should_block_for_large_screen_service(request):
         return render(
             request,
@@ -97,8 +100,13 @@ def main(request):
         "ppobgi/main.html",
         {
             "active_classroom": active_classroom,
+            "audio_pack_name": "premium_gameshow_v1",
+            "audio_pack_version": "1",
+            "audio_default": "on",
             "default_names": DEFAULT_NAMES,
             "hide_navbar": True,
+            "show_profile": "premium_gameshow",
+            "storage_scope": storage_scope,
         },
     )
 
@@ -184,7 +192,5 @@ def role_cards(request):
             "message": message,
         }
     )
-
-
 
 

@@ -72,7 +72,7 @@
 
     const MAX_NAMES = 40;
     const REDUCE_MOTION_KEY = "ppobgi_reduce_motion";
-    const STAR_ROSTER_KEY = "ppobgi_star_roster_v1";
+    const STAR_ROSTER_STORAGE_NAME = "star-roster-v2";
 
     const state = {
         appState: "setup",
@@ -177,6 +177,19 @@
 
     function setEditorMessage(text, kind) {
         applyMessage(els.editorMessage, text, kind);
+    }
+
+    function dispatchSfx(kind) {
+        root.dispatchEvent(new CustomEvent("ppobgi:play-sfx", { detail: { cue: kind } }));
+    }
+
+    function getStarRosterKey() {
+        return window.ppobgiShared?.buildScopedStorageKey?.(STAR_ROSTER_STORAGE_NAME)
+            || `ppobgi:${STAR_ROSTER_STORAGE_NAME}`;
+    }
+
+    function isPresentationOpen() {
+        return Boolean(window.ppobgiShared?.isPresentationOpen?.());
     }
 
     function getAudioContext() {
@@ -564,12 +577,10 @@
     }
 
     function closeResultModal(shouldFocus = true) {
-        if (!els.resultModal || !state.resultModalOpen) {
+        if (!isPresentationOpen()) {
             return;
         }
-        els.resultModal.classList.add("is-hidden");
-        els.resultModal.setAttribute("aria-hidden", "true");
-        root.classList.remove("ppb-result-open");
+        root.dispatchEvent(new CustomEvent("ppobgi:close-presentation"));
         state.resultModalOpen = false;
         if (shouldFocus && state.appState === "universe") {
             focusFirstOrb();
@@ -577,27 +588,32 @@
     }
 
     function openResultModal(name, leftCount) {
-        if (!els.resultModal || !els.resultName || !els.resultMeta) {
-            return;
-        }
         const pickedName = normalizeName(name) || "이름 없음";
-        els.resultName.textContent = pickedName;
-        els.resultMeta.textContent = leftCount > 0
-            ? `남은 인원 ${leftCount}명`
-            : "모든 학생 추첨 완료";
-        if (els.resultNextBtn) {
-            els.resultNextBtn.textContent = leftCount > 0 ? "다음 추첨 계속" : "닫기";
-        }
-        els.resultModal.classList.remove("is-hidden");
-        els.resultModal.setAttribute("aria-hidden", "false");
-        root.classList.add("ppb-result-open");
         state.resultModalOpen = true;
-        els.resultNextBtn?.focus();
+        root.dispatchEvent(new CustomEvent("ppobgi:present", {
+            detail: {
+                badge: leftCount > 0 ? "오늘의 별빛 주인공" : "별빛 피날레 주인공",
+                celebration: leftCount > 0 ? "reveal" : "finale",
+                compliment: leftCount > 0
+                    ? "무대 조명이 이 학생에게 딱 멈추며 분위기가 환하게 살아났어요."
+                    : "마지막 별빛까지 환하게 마무리됐어요. 오늘 무대의 피날레를 크게 축하합니다.",
+                fortuneTarget: {
+                    sourceLabel: "별빛 추첨 결과",
+                    targetName: pickedName,
+                },
+                label: leftCount > 0 ? "방금 뽑힌 학생" : "오늘의 마지막 별빛",
+                meta: leftCount > 0 ? `남은 인원 ${leftCount}명` : "모든 학생 추첨 완료",
+                mode: "stars",
+                nextLabel: leftCount > 0 ? "다음 추첨 계속" : "닫기",
+                sourceLabel: "별빛 추첨 결과",
+                winnerName: pickedName,
+            },
+        }));
     }
 
     function persistRoster(names) {
         try {
-            window.localStorage.setItem(STAR_ROSTER_KEY, JSON.stringify(names));
+            window.localStorage.setItem(getStarRosterKey(), JSON.stringify(names));
         } catch (error) {
             // noop
         }
@@ -605,7 +621,7 @@
 
     function loadStoredRoster() {
         try {
-            const raw = window.localStorage.getItem(STAR_ROSTER_KEY);
+            const raw = window.localStorage.getItem(getStarRosterKey());
             if (!raw) {
                 return [];
             }
@@ -655,7 +671,7 @@
             return;
         }
         applyRosterAndStart(parsed.valid);
-        playStarSfx("launch");
+        dispatchSfx("launch");
     }
 
     function handleOrbClick(name, clickedBtn) {
@@ -686,7 +702,6 @@
         );
         setPickedPanel(name);
         openResultModal(name, left);
-        playStarSfx(left > 0 ? "pick" : "final");
 
         if (els.flash) {
             els.flash.style.opacity = state.reduceMotion ? "0.4" : "0.8";
@@ -738,6 +753,7 @@
         renderOrbs();
         setLiveCard("되돌리기", `${recent.name} 학생을 추첨 후보에 다시 추가했습니다.`);
         setPickedPanel(state.history[0]?.name || "");
+        dispatchSfx("undo");
         closeResultModal(false);
     }
 
@@ -875,6 +891,7 @@
         if (!els.fullscreenBtn) {
             return;
         }
+        root.classList.toggle("ppb-is-fullscreen", Boolean(document.fullscreenElement));
         els.fullscreenBtn.textContent = document.fullscreenElement ? "전체화면 종료" : "전체화면";
     }
 
@@ -936,8 +953,8 @@
         if (root.classList.contains("ppb-fortune-open")) {
             return;
         }
-        if (state.resultModalOpen) {
-            if (event.key === "Escape" || event.key === "Enter" || event.code === "Space") {
+        if (isPresentationOpen()) {
+            if (event.key === "Escape") {
                 event.preventDefault();
                 closeResultModal();
             }
@@ -982,14 +999,12 @@
         els.rerollBtn?.addEventListener("click", rerollCurrentRoster);
         els.undoBtn?.addEventListener("click", undoLastDraw);
         els.editRosterBtn?.addEventListener("click", openEditor);
-        els.resultNextBtn?.addEventListener("click", () => closeResultModal());
-        els.resultFortuneBtn?.addEventListener("click", openFortuneFromSelected);
-        els.resultModal?.addEventListener("click", (event) => {
-            if (event.target === els.resultModal) {
-                closeResultModal();
+        root.addEventListener("ppobgi:presentation-closed", () => {
+            state.resultModalOpen = false;
+            if (state.appState === "universe" && isStarsModeActive()) {
+                focusFirstOrb();
             }
         });
-        els.resultPanel?.addEventListener("click", (event) => event.stopPropagation());
 
         els.editorOverlay?.addEventListener("click", closeEditor);
         els.editorCloseBtn?.addEventListener("click", closeEditor);
@@ -1041,7 +1056,7 @@
         closeResultModal(false);
         syncFullscreenBtn();
 
-        const stored = loadStoredRoster();
+        const stored = root.dataset.classroomUrl ? [] : loadStoredRoster();
         if (stored.length > 0) {
             applyRosterAndStart(stored, `저장된 명단 ${stored.length}명을 불러왔습니다.`);
             setLiveCard("지난 명단 불러옴", "바로 별을 선택해 추첨을 시작할 수 있습니다.");
@@ -1058,18 +1073,8 @@
         return;
     }
 
-    const modeStarsBtn = document.getElementById("ppb-mode-stars-btn");
-    const modeLadderBtn = document.getElementById("ppb-mode-ladder-btn");
-    const modeSequenceBtn = document.getElementById("ppb-mode-sequence-btn");
-    const modeTeamsBtn = document.getElementById("ppb-mode-teams-btn");
-    const modeMeteorBtn = document.getElementById("ppb-mode-meteor-btn");
-    const modeRolesBtn = document.getElementById("ppb-mode-roles-btn");
-    const modeStars = document.getElementById("ppb-mode-stars");
+    const shared = window.ppobgiShared || null;
     const modeLadder = document.getElementById("ppb-mode-ladder");
-    const modeSequence = document.getElementById("ppb-mode-sequence");
-    const modeTeams = document.getElementById("ppb-mode-teams");
-    const modeMeteor = document.getElementById("ppb-mode-meteor");
-    const modeRoles = document.getElementById("ppb-mode-roles");
 
     const els = {
         setupScreen: document.getElementById("pbl-setup"),
@@ -1104,7 +1109,7 @@
         revealList: document.getElementById("pbl-reveal-list"),
     };
 
-    if (!modeStarsBtn || !modeLadderBtn || !modeSequenceBtn || !modeTeamsBtn || !modeMeteorBtn || !modeRolesBtn || !modeStars || !modeLadder || !modeSequence || !modeTeams || !modeMeteor || !modeRoles || !els.setupScreen || !els.stageScreen) {
+    if (!modeLadder || !els.setupScreen || !els.stageScreen) {
         return;
     }
 
@@ -1139,23 +1144,12 @@
         return root.classList.contains("ppb-reduce-motion");
     }
 
-    function setMode(mode) {
-        const tabs = [
-            { mode: "stars", button: modeStarsBtn, view: modeStars },
-            { mode: "ladder", button: modeLadderBtn, view: modeLadder },
-            { mode: "sequence", button: modeSequenceBtn, view: modeSequence },
-            { mode: "teams", button: modeTeamsBtn, view: modeTeams },
-            { mode: "meteor", button: modeMeteorBtn, view: modeMeteor },
-            { mode: "roles", button: modeRolesBtn, view: modeRoles },
-        ];
-        const activeMode = tabs.some((tab) => tab.mode === mode) ? mode : "stars";
-        tabs.forEach((tab) => {
-            const active = tab.mode === activeMode;
-            tab.view.classList.toggle("is-hidden", !active);
-            tab.button.classList.toggle("is-active", active);
-            tab.button.setAttribute("aria-selected", active ? "true" : "false");
-        });
-        root.dispatchEvent(new CustomEvent("ppobgi:mode-change", { detail: { mode: activeMode } }));
+    function requestMode(mode) {
+        shared?.requestModeChange?.(mode);
+    }
+
+    function dispatchSfx(kind) {
+        root.dispatchEvent(new CustomEvent("ppobgi:play-sfx", { detail: { cue: kind } }));
     }
 
     function setLadderScreen(next) {
@@ -1518,6 +1512,27 @@
         renderFeed();
         showLive(name, outcome);
         setMessage(els.stageMessage, outcome === "당첨" ? `${name} 학생이 당첨되었습니다!` : `${name} 학생 결과: ${outcome}`, "info");
+        root.dispatchEvent(new CustomEvent("ppobgi:present", {
+            detail: {
+                badge: outcome === "당첨"
+                    ? (unresolvedIndexes().length > 0 ? "사다리 결승 주인공" : "사다리 피날레 주인공")
+                    : `${outcome} 발표`,
+                celebration: unresolvedIndexes().length > 0 ? "reveal" : "finale",
+                compliment: outcome === "당첨"
+                    ? "끝까지 따라간 길이 이 학생에게 환하게 멈췄어요."
+                    : `${outcome} 결과가 또렷하게 공개되며 무대가 더 선명해졌어요.`,
+                fortuneTarget: {
+                    sourceLabel: "사다리 결과",
+                    targetName: name,
+                },
+                label: "사다리 결과 공개",
+                meta: outcome === "당첨" ? "오늘의 당첨이 발표되었습니다." : `${outcome} 결과가 공개되었습니다.`,
+                mode: "ladder",
+                nextLabel: unresolvedIndexes().length > 0 ? "다음 발표 계속" : "닫기",
+                sourceLabel: "사다리 결과",
+                winnerName: name,
+            },
+        }));
 
         if (state.revealedTop.size === scene.participants.length) {
             state.autoRun = false;
@@ -1544,6 +1559,7 @@
         state.autoRun = true;
         updateAutoButton();
         setMessage(els.stageMessage, "역할 발표 쇼를 시작합니다.", "info");
+        dispatchSfx("auto");
         for (const idx of queue) {
             if (!state.autoRun) break;
             await reveal(idx, "auto");
@@ -1592,6 +1608,7 @@
         }
         setMessage(els.stageMessage, "사다리 생성이 완료되었습니다. 상단 이름을 눌러 결과를 공개하세요.", "info");
         setLadderScreen("stage");
+        dispatchSfx("launch");
     }
 
     function reroll() {
@@ -1637,12 +1654,6 @@
     }
 
     function bindEvents() {
-        modeStarsBtn.addEventListener("click", () => setMode("stars"));
-        modeLadderBtn.addEventListener("click", () => setMode("ladder"));
-        modeSequenceBtn.addEventListener("click", () => setMode("sequence"));
-        modeTeamsBtn.addEventListener("click", () => setMode("teams"));
-        modeMeteorBtn.addEventListener("click", () => setMode("meteor"));
-        modeRolesBtn.addEventListener("click", () => setMode("roles"));
         els.modeRadios.forEach((radio) => radio.addEventListener("change", () => {
             syncRoleWrap();
             updateSetupStats();
@@ -1689,14 +1700,16 @@
     }
 
     function bootstrap() {
-        if (els.input) els.input.value = decodeDefaultNames(root.dataset.defaultNames || "");
+        if (els.input) els.input.value = "";
         if (els.roleInput) els.roleInput.value = DEFAULT_ROLES;
         syncRoleWrap();
         updateSetupStats();
         renderFeed();
         updateAutoButton();
         setLadderScreen("setup");
-        setMode("stars");
+        if (shared?.getMode?.() !== "stars") {
+            requestMode("stars");
+        }
         bindEvents();
     }
 
@@ -1753,6 +1766,10 @@
         autoRun: false,
         currentName: "",
     };
+
+    function dispatchSfx(kind) {
+        root.dispatchEvent(new CustomEvent("ppobgi:play-sfx", { detail: { cue: kind } }));
+    }
 
     function decodeDefaultNames(raw) {
         if (!raw) {
@@ -2019,6 +2036,7 @@
         setSequenceScreen("stage");
         syncStage();
         setStageMessage(message || `총 ${names.length}명의 순서를 만들었습니다.`, "info");
+        dispatchSfx("launch");
     }
 
     function startSequence() {
@@ -2054,6 +2072,27 @@
         }
         syncStage();
         setStageMessage(`${order}번째 순서로 ${name} 학생을 공개했습니다.`, "info");
+        root.dispatchEvent(new CustomEvent("ppobgi:present", {
+            detail: {
+                badge: order === 1 ? "첫 발표 스타" : (state.revealedCount < state.order.length ? "오늘의 발표 스타" : "순서 공개 피날레"),
+                celebration: state.revealedCount < state.order.length ? "reveal" : "finale",
+                compliment: order === 1
+                    ? "첫 순서가 힘 있게 열리면서 교실 무대가 자신 있게 시작됩니다."
+                    : (state.revealedCount < state.order.length
+                        ? "다음 순서가 또렷하게 드러나며 흐름이 더 쉬워졌어요."
+                        : "마지막 순서까지 환하게 정리되어 오늘 진행이 멋지게 완성됐어요."),
+                fortuneTarget: {
+                    sourceLabel: `${order}번째 순서 공개`,
+                    targetName: name,
+                },
+                label: "순서 발표",
+                meta: `전체 ${state.order.length}명 중 ${order}번째 순서입니다.`,
+                mode: "sequence",
+                nextLabel: state.revealedCount < state.order.length ? "다음 순서 계속" : "닫기",
+                sourceLabel: "순서 발표",
+                winnerName: name,
+            },
+        }));
         if (state.revealedCount >= state.order.length) {
             state.autoRun = false;
             updateActionButtons();
@@ -2081,6 +2120,7 @@
         state.autoRun = true;
         updateActionButtons();
         setStageMessage("순서 자동 발표를 시작합니다.", "info");
+        dispatchSfx("auto");
         while (state.autoRun && state.revealedCount < state.order.length) {
             revealNext("auto");
             if (!state.autoRun || state.revealedCount >= state.order.length) {
@@ -2200,7 +2240,7 @@
 
     function bootstrap() {
         if (els.input) {
-            els.input.value = decodeDefaultNames(root.dataset.defaultNames || "");
+            els.input.value = "";
         }
         updateSetupStats();
         renderOrderGrid();
@@ -2268,6 +2308,10 @@
         autoRun: false,
         currentAssignment: null,
     };
+
+    function dispatchSfx(kind) {
+        root.dispatchEvent(new CustomEvent("ppobgi:play-sfx", { detail: { cue: kind } }));
+    }
 
     function decodeDefaultNames(raw) {
         if (!raw) {
@@ -2595,6 +2639,7 @@
         setTeamScreen("stage");
         syncStage();
         setStageMessage(message || `${state.teamCount}팀 편성을 만들었습니다.`, "info");
+        dispatchSfx("launch");
     }
 
     function startTeamBuild() {
@@ -2604,7 +2649,7 @@
             els.input?.focus();
             return;
         }
-        buildTeams(parsed.valid, `${state.teamCount}팀 편성을 만들었습니다.`);
+        buildTeams(parsed.valid, `${readTeamCount()}팀 편성을 만들었습니다.`);
     }
 
     function revealNextAssignment(source) {
@@ -2633,6 +2678,25 @@
         }
         syncStage();
         setStageMessage(`${assignment.name} 학생을 ${assignment.teamLabel}에 배치했습니다.`, "info");
+        root.dispatchEvent(new CustomEvent("ppobgi:present", {
+            detail: {
+                badge: state.assignedCount < state.plan.length ? `${assignment.teamLabel} 합류 발표` : "팀 편성 피날레",
+                celebration: state.assignedCount < state.plan.length ? "reveal" : "finale",
+                compliment: state.assignedCount < state.plan.length
+                    ? `${assignment.teamLabel}의 분위기가 이 학생 합류로 더 또렷해졌어요.`
+                    : "마지막 배치까지 공개되며 팀 구성이 깔끔하게 완성됐어요.",
+                fortuneTarget: {
+                    sourceLabel: `${assignment.teamLabel} 배치 공개`,
+                    targetName: assignment.name,
+                },
+                label: "팀 배치 발표",
+                meta: `${assignment.teamLabel}에 새 멤버가 배치되었습니다.`,
+                mode: "teams",
+                nextLabel: state.assignedCount < state.plan.length ? "다음 팀 배치 계속" : "닫기",
+                sourceLabel: "팀 배치 발표",
+                winnerName: assignment.name,
+            },
+        }));
         if (state.assignedCount >= state.plan.length) {
             state.autoRun = false;
             updateActionButtons();
@@ -2660,6 +2724,7 @@
         state.autoRun = true;
         updateActionButtons();
         setStageMessage("팀 배치 자동 발표를 시작합니다.", "info");
+        dispatchSfx("auto");
         while (state.autoRun && state.assignedCount < state.plan.length) {
             revealNextAssignment("auto");
             if (!state.autoRun || state.assignedCount >= state.plan.length) {
@@ -2799,7 +2864,7 @@
 
     function bootstrap() {
         if (els.input) {
-            els.input.value = decodeDefaultNames(root.dataset.defaultNames || "");
+            els.input.value = "";
         }
         updateSetupStats();
         renderTeamGrid();
@@ -2866,6 +2931,10 @@
         resizeTimer: 0,
         burstTimer: 0,
     };
+
+    function dispatchSfx(kind) {
+        root.dispatchEvent(new CustomEvent("ppobgi:play-sfx", { detail: { cue: kind } }));
+    }
 
     function decodeDefaultNames(raw) {
         if (!raw) {
@@ -3226,6 +3295,7 @@
         setMeteorScreen("stage");
         syncStage();
         setStageMessage(message || `총 ${names.length}명의 유성을 펼쳤습니다.`, "info");
+        dispatchSfx("launch");
     }
 
     function startMeteorShow() {
@@ -3259,6 +3329,25 @@
         syncStage();
         triggerBurst();
         setStageMessage(`${order}번째 유성으로 ${name} 학생을 공개했습니다.`, "info");
+        root.dispatchEvent(new CustomEvent("ppobgi:present", {
+            detail: {
+                badge: state.remainingNames.length ? `${order}번째 유성 주인공` : "유성우 피날레 주인공",
+                celebration: state.remainingNames.length ? "reveal" : "finale",
+                compliment: state.remainingNames.length
+                    ? "밤하늘을 가르던 유성이 이 학생의 이름으로 환하게 완성됐어요."
+                    : "마지막 유성까지 화려하게 닿으며 오늘 무대가 시원하게 마무리됐어요.",
+                fortuneTarget: {
+                    sourceLabel: `${order}번째 유성 공개`,
+                    targetName: name,
+                },
+                label: "유성우 발표",
+                meta: state.remainingNames.length ? `남은 유성 ${state.remainingNames.length}개` : "모든 유성이 공개되었습니다.",
+                mode: "meteor",
+                nextLabel: state.remainingNames.length ? "다음 유성 계속" : "닫기",
+                sourceLabel: "유성우 발표",
+                winnerName: name,
+            },
+        }));
         if (!state.remainingNames.length) {
             state.autoRun = false;
             updateActionButtons();
@@ -3299,6 +3388,7 @@
         state.autoRun = true;
         updateActionButtons();
         setStageMessage("유성우 자동 발표를 시작합니다.", "info");
+        dispatchSfx("auto");
         while (state.autoRun && state.remainingNames.length) {
             revealRandomMeteor("auto");
             if (!state.autoRun || !state.remainingNames.length) {
@@ -3439,7 +3529,7 @@
 
     function bootstrap() {
         if (els.input) {
-            els.input.value = decodeDefaultNames(root.dataset.defaultNames || "");
+            els.input.value = "";
         }
         updateSetupStats();
         renderSky();
@@ -3488,6 +3578,10 @@
         loadedOnce: false,
         lastFortuneTarget: null,
     };
+
+    function dispatchSfx(kind) {
+        root.dispatchEvent(new CustomEvent("ppobgi:play-sfx", { detail: { cue: kind } }));
+    }
 
     function isReducedMotion() {
         return root.classList.contains("ppb-reduce-motion");
@@ -3706,6 +3800,7 @@
             }
             const payload = await response.json();
             hydrate(payload);
+            dispatchSfx("launch");
         } catch (error) {
             state.roles = [];
             state.revealed = new Set();
@@ -3763,6 +3858,25 @@
                 : `${roleName} 역할 담당은 ${assigneeName} 학생입니다.`,
             "info",
         );
+        root.dispatchEvent(new CustomEvent("ppobgi:present", {
+            detail: {
+                badge: role.is_unassigned ? `미배정 역할 · ${roleName}` : roleName,
+                celebration: unrevealedIndexes().length > 0 ? "reveal" : "finale",
+                compliment: role.is_unassigned
+                    ? "아직 담당 학생은 없지만, 이 역할도 오늘 무대의 중요한 장면으로 남겨 둘 수 있어요."
+                    : `${assigneeName} 학생이 오늘 맡을 임무가 메달처럼 또렷하게 공개됐어요.`,
+                fortuneTarget: role.is_unassigned ? null : {
+                    sourceLabel: `${roleName} 역할 공개`,
+                    targetName: assigneeName,
+                },
+                label: "역할 카드 발표",
+                meta: role.is_unassigned ? "아직 담당 학생이 정해지지 않았습니다." : `${assigneeName} 학생이 맡은 역할입니다.`,
+                mode: "roles",
+                nextLabel: unrevealedIndexes().length > 0 ? "다음 역할 계속" : "닫기",
+                sourceLabel: "역할 카드 발표",
+                winnerName: role.is_unassigned ? roleName : assigneeName,
+            },
+        }));
         if (!unrevealedIndexes().length) {
             state.autoRun = false;
             updateAutoButton();
@@ -3797,6 +3911,7 @@
         state.autoRun = true;
         updateAutoButton();
         setMessage("역할 카드 자동 발표를 시작합니다.", "info");
+        dispatchSfx("auto");
         for (const index of queue) {
             if (!state.autoRun) {
                 break;
@@ -4051,7 +4166,3 @@
 
     bindEvents();
 })();
-
-
-
-
