@@ -18,8 +18,8 @@
                 >{{ quickdrop_home_card.summary|default:'' }}</p>
             </div>
         </div>
-        <a href="{{ quickdrop_home_card.shortcut_url|default:quickdrop_home_card.manage_url }}" class="home-v6-quickdrop-shortcut home-v6-quickdrop-shortcut--mobile" aria-label="{{ quickdrop_home_card.shortcut_aria_label|default:'새 기기 연결' }}">
-            <span aria-hidden="true">{{ quickdrop_home_card.shortcut_symbol|default:"+" }}</span>
+        <a href="{{ quickdrop_home_card.shortcut_url|default:quickdrop_home_card.manage_url }}" class="home-v6-quickdrop-shortcut home-v6-quickdrop-shortcut--mobile" aria-label="{{ quickdrop_home_card.shortcut_aria_label|default:'새 기기 추가' }}">
+            <span class="home-v6-quickdrop-shortcut-icon" aria-hidden="true">{{ quickdrop_home_card.shortcut_symbol|default:"+" }}</span>
         </a>
         {% else %}
         <div class="home-v4-mobile-quickdrop-icon" aria-hidden="true">{{ quickdrop_home_card.icon_text|default:"↔" }}</div>
@@ -67,13 +67,13 @@
                 data-success-message="{{ quickdrop_home_card.success_message|default:'' }}"
                 data-error-action="{{ quickdrop_home_card.error_action_name|default:'' }}"
             >{{ quickdrop_home_card.submit_label|default:"지금 보내기" }}</button>
-            <a href="{% if home_design_version == 'v6' %}{{ quickdrop_home_card.history_url|default:quickdrop_home_card.secondary_url }}{% else %}{{ quickdrop_home_card.secondary_url|default:quickdrop_home_card.manage_url }}{% endif %}" class="home-v4-mobile-quickdrop-secondary">{% if home_design_version == 'v6' %}{{ quickdrop_home_card.secondary_label_v6|default:'오늘 보낸 내용' }}{% else %}{{ quickdrop_home_card.secondary_label|default:'새 기기 연결' }}{% endif %}</a>
+            <a href="{% if home_design_version == 'v6' %}{{ quickdrop_home_card.history_url|default:quickdrop_home_card.secondary_url }}{% else %}{{ quickdrop_home_card.secondary_url|default:quickdrop_home_card.manage_url }}{% endif %}" class="home-v4-mobile-quickdrop-secondary">{% if home_design_version == 'v6' %}{{ quickdrop_home_card.secondary_label_v6|default:'오늘 보낸 내용' }}{% else %}{{ quickdrop_home_card.secondary_label|default:'새 기기 추가' }}{% endif %}</a>
         </div>
     </form>
     {% else %}
     <div class="home-v4-mobile-quickdrop-actions" data-home-v4-mobile-quickdrop-actions="true">
         <a href="{{ quickdrop_home_card.open_url|default:quickdrop_home_card.manage_url }}" class="home-v4-mobile-quickdrop-primary">{{ quickdrop_home_card.primary_label|default:"바로 열기" }}</a>
-        <a href="{{ quickdrop_home_card.secondary_url|default:quickdrop_home_card.manage_url }}" class="home-v4-mobile-quickdrop-secondary">{{ quickdrop_home_card.secondary_label|default:"새 기기 연결" }}</a>
+        <a href="{{ quickdrop_home_card.secondary_url|default:quickdrop_home_card.manage_url }}" class="home-v4-mobile-quickdrop-secondary">{{ quickdrop_home_card.secondary_label|default:"새 기기 추가" }}</a>
     </div>
     {% endif %}
 </section>

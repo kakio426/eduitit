@@ -2488,7 +2488,7 @@ class HomeV4ViewTest(TestCase):
         self.assertIn(f'href="{reverse("quickdrop:landing")}"', content)
         self.assertIn('aria-label="보낼 내용"', content)
         self.assertIn('지금 보내기', content)
-        self.assertIn('새 기기 연결', content)
+        self.assertIn('새 기기 추가', content)
 
         home_panel_index = content.index('data-home-v4-home-panel="true"')
         mobile_quick_grid_index = content.index('data-home-v4-mobile-quick-grid="true"')
@@ -2543,6 +2543,46 @@ class HomeV4ViewTest(TestCase):
             {product.launch_route_name for product in class_ops_section['products']},
         )
         self.assertIn('data-home-v4-home-panel="true"', content)
+
+    def test_v4_section_menu_hides_schoolcomm_service_link(self):
+        Product.objects.create(
+            title="끼리끼리 채팅방",
+            description="채팅방 홈",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='schoolcomm:main',
+        )
+        self._login('v4schoolcommmenu')
+
+        response = self.client.get(reverse('home'))
+        nav_sections = response.context['home_v4_nav_sections']
+        class_ops_section = next(section for section in nav_sections if section['key'] == 'class_ops')
+
+        self.assertNotIn(
+            'schoolcomm:main',
+            {product.launch_route_name for product in class_ops_section['products']},
+        )
+
+    def test_v4_section_menu_hides_quickdrop_service_link(self):
+        Product.objects.create(
+            title="바로전송",
+            description="빠른 전송",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='quickdrop:landing',
+        )
+        self._login('v4quickdropmenu')
+
+        response = self.client.get(reverse('home'))
+        nav_sections = response.context['home_v4_nav_sections']
+        class_ops_section = next(section for section in nav_sections if section['key'] == 'class_ops')
+
+        self.assertNotIn(
+            'quickdrop:landing',
+            {product.launch_route_name for product in class_ops_section['products']},
+        )
 
     def test_v4_games_menu_restores_student_link_launcher(self):
         self._login('v4gameslink')
@@ -3077,7 +3117,8 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('aria-label="보낼 내용"', content)
         self.assertIn('지금 보내기', content)
         self.assertIn(f'href="{reverse("quickdrop:landing")}"', content)
-        self.assertIn('aria-label="새 기기 연결"', content)
+        self.assertIn('aria-label="새 기기 추가"', content)
+        self.assertIn('home-v6-quickdrop-shortcut-label">새 기기 추가</span>', content)
         self.assertIn(f'href="{history_url}"', content)
         self.assertIn('오늘 보낸 내용', content)
         self.assertNotIn(f'href="{reverse("quickdrop:open")}"', content)
@@ -3153,7 +3194,7 @@ class HomeV6ViewTest(TestCase):
         self.assertEqual(response.context['home_design_version'], 'v6')
         self.assertNotIn('title="바로전송">바로전송</p>', workbench_block)
         self.assertEqual(mobile_block.count('data-home-v4-mobile-quickdrop="true"'), 1)
-        self.assertIn('aria-label="새 기기 연결"', mobile_block)
+        self.assertIn('aria-label="새 기기 추가"', mobile_block)
         self.assertIn('오늘 보낸 내용', mobile_block)
         self.assertLess(workbench_index, calendar_index)
         self.assertLess(calendar_index, quickdrop_index)

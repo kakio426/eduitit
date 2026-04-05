@@ -298,13 +298,13 @@
                                             data-success-message="{{ quickdrop_home_card.success_message|default:'' }}"
                                             data-error-action="{{ quickdrop_home_card.error_action_name|default:'' }}"
                                         >{{ quickdrop_home_card.submit_label|default:"지금 보내기" }}</button>
-                                    <a href="{{ quickdrop_home_card.secondary_url|default:quickdrop_home_card.manage_url }}" class="home-v4-quickdrop-secondary">{{ quickdrop_home_card.secondary_label|default:"새 기기 연결" }}</a>
+                                    <a href="{{ quickdrop_home_card.secondary_url|default:quickdrop_home_card.manage_url }}" class="home-v4-quickdrop-secondary">{{ quickdrop_home_card.secondary_label|default:"새 기기 추가" }}</a>
                                     </div>
                                 </form>
                                 {% else %}
                                 <div class="home-v4-quickdrop-actions" data-home-v4-quickdrop-actions="true">
                                     <a href="{{ quickdrop_home_card.open_url|default:quickdrop_home_card.manage_url }}" class="home-v4-quickdrop-primary">{{ quickdrop_home_card.primary_label|default:"바로 열기" }}</a>
-                                    <a href="{{ quickdrop_home_card.secondary_url|default:quickdrop_home_card.manage_url }}" class="home-v4-quickdrop-secondary">{{ quickdrop_home_card.secondary_label|default:"새 기기 연결" }}</a>
+                                    <a href="{{ quickdrop_home_card.secondary_url|default:quickdrop_home_card.manage_url }}" class="home-v4-quickdrop-secondary">{{ quickdrop_home_card.secondary_label|default:"새 기기 추가" }}</a>
                                 </div>
                                 {% endif %}
                             </section>

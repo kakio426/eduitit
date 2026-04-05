@@ -398,8 +398,9 @@
                                             <h2 class="text-lg font-black text-slate-900">{{ quickdrop_home_card.title }}</h2>
                                         </div>
                                     </div>
-                                    <a href="{{ quickdrop_home_card.shortcut_url|default:quickdrop_home_card.manage_url }}" class="home-v6-quickdrop-shortcut" aria-label="{{ quickdrop_home_card.shortcut_aria_label|default:'새 기기 연결' }}">
-                                        <span aria-hidden="true">{{ quickdrop_home_card.shortcut_symbol|default:"+" }}</span>
+                                    <a href="{{ quickdrop_home_card.shortcut_url|default:quickdrop_home_card.manage_url }}" class="home-v6-quickdrop-shortcut" aria-label="{{ quickdrop_home_card.shortcut_aria_label|default:'새 기기 추가' }}">
+                                        <span class="home-v6-quickdrop-shortcut-icon" aria-hidden="true">{{ quickdrop_home_card.shortcut_symbol|default:"+" }}</span>
+                                        <span class="home-v6-quickdrop-shortcut-label">{{ quickdrop_home_card.shortcut_label|default:"새 기기 추가" }}</span>
                                     </a>
                                     {% else %}
                                     <div class="home-v4-quickdrop-icon" aria-hidden="true">{{ quickdrop_home_card.icon_text|default:"↔" }}</div>
@@ -452,7 +453,7 @@
                                 {% else %}
                                 <div class="home-v4-quickdrop-actions" data-home-v4-quickdrop-actions="true">
                                     <a href="{{ quickdrop_home_card.open_url|default:quickdrop_home_card.manage_url }}" class="home-v4-quickdrop-primary">{{ quickdrop_home_card.primary_label|default:"바로 열기" }}</a>
-                                    <a href="{{ quickdrop_home_card.secondary_url|default:quickdrop_home_card.manage_url }}" class="home-v4-quickdrop-secondary">{{ quickdrop_home_card.secondary_label|default:"새 기기 연결" }}</a>
+                                    <a href="{{ quickdrop_home_card.secondary_url|default:quickdrop_home_card.manage_url }}" class="home-v4-quickdrop-secondary">{{ quickdrop_home_card.secondary_label|default:"새 기기 추가" }}</a>
                                 </div>
                                 {% endif %}
                             </section>

@@ -876,10 +876,11 @@ def _build_home_quickdrop_card(user, favorite_products, product_list):
         "history_url": history_url,
         "send_text_url": reverse("quickdrop:send_text", kwargs={"slug": channel.slug}) if channel is not None else "",
         "shortcut_url": reverse("quickdrop:landing"),
-        "shortcut_aria_label": "새 기기 연결",
+        "shortcut_aria_label": "새 기기 추가",
+        "shortcut_label": "새 기기 추가",
         "shortcut_symbol": "+",
         "secondary_url": reverse("quickdrop:landing"),
-        "secondary_label": "새 기기 연결",
+        "secondary_label": "새 기기 추가",
         "secondary_label_v6": "오늘 보낸 내용",
         "compose_placeholder": "예) 회의 링크, 메모, 주소",
         "textarea_aria_label": "보낼 내용",
@@ -1244,11 +1245,11 @@ def _filter_home_v4_nav_products(section_key, products):
     if section_key != 'class_ops':
         return nav_products
 
-    # The home calendar panel already covers the calendar hub, so keep the menu
-    # focused on the remaining classroom-operation tools.
+    # The home calendar panel and dedicated utility cards already cover their
+    # entry points, so keep the menu focused on the remaining classroom-operation tools.
     return [
         product for product in nav_products
-        if not _is_calendar_hub_product(product)
+        if not _is_calendar_hub_product(product) and not _is_home_utility_product(product)
     ]
 
 
