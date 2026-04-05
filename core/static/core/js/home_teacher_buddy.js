@@ -18,6 +18,12 @@
         }
     }
 
+    function logBuddyUiError(message, error) {
+        if (window.console && typeof window.console.error === 'function') {
+            window.console.error('[teacher-buddy]', message, error);
+        }
+    }
+
     function wait(ms) {
         return new Promise(function (resolve) {
             window.setTimeout(resolve, ms);
@@ -163,7 +169,7 @@
     }
 
     function updateActiveBuddy(root, buddy) {
-        if (!buddy) {
+        if (!buddy || typeof buddy !== 'object') {
             return;
         }
         setText(root, '[data-buddy-name="true"]', buddy.name || '');
@@ -174,8 +180,9 @@
             rarity.className = 'teacher-buddy-rarity teacher-buddy-rarity--' + (buddy.rarity || 'common');
         }
         var asciiBox = root.querySelector('[data-buddy-ascii-box="true"]');
-        if (asciiBox && buddy.palette_tokens && buddy.palette_tokens.gradient) {
-            asciiBox.style.setProperty('--teacher-buddy-hero-gradient', buddy.palette_tokens.gradient);
+        var paletteTokens = buddy.palette_tokens && typeof buddy.palette_tokens === 'object' ? buddy.palette_tokens : null;
+        if (asciiBox && paletteTokens && typeof paletteTokens.gradient === 'string' && paletteTokens.gradient) {
+            asciiBox.style.setProperty('--teacher-buddy-hero-gradient', paletteTokens.gradient);
         }
     }
 
@@ -200,6 +207,16 @@
         setResultStage(root, 'sealed');
         modal.hidden = false;
         modal.classList.add('is-open');
+    }
+
+    function hideResultModal(root) {
+        var modal = root.querySelector('[data-buddy-result-modal="true"]');
+        if (!modal) {
+            return;
+        }
+        modal.classList.remove('is-open');
+        modal.hidden = true;
+        setResultStage(root, 'sealed');
     }
 
     function populateResult(root, payload) {
@@ -235,12 +252,7 @@
         if (!root.__buddyResultReady) {
             return;
         }
-        var modal = root.querySelector('[data-buddy-result-modal="true"]');
-        if (!modal) {
-            return;
-        }
-        modal.classList.remove('is-open');
-        modal.hidden = true;
+        hideResultModal(root);
         if (root.__buddyLastFocus && typeof root.__buddyLastFocus.focus === 'function') {
             root.__buddyLastFocus.focus();
         }
@@ -278,19 +290,23 @@
                 return values[0];
             });
         } catch (error) {
-            var modal = root.querySelector('[data-buddy-result-modal="true"]');
-            if (modal) {
-                modal.classList.remove('is-open');
-                modal.hidden = true;
-            }
+            hideResultModal(root);
             root.__buddyResultReady = true;
             throw error;
         }
-        if (payload.active_buddy) {
-            updateActiveBuddy(root, payload.active_buddy);
+        try {
+            if (payload.active_buddy) {
+                updateActiveBuddy(root, payload.active_buddy);
+            }
+            updateProgress(root, payload.buddy_progress || null, payload.collection_summary_text || '');
+        } catch (error) {
+            logBuddyUiError('Failed to refresh teacher buddy panel after draw.', error);
         }
-        updateProgress(root, payload.buddy_progress || null, payload.collection_summary_text || '');
-        populateResult(root, payload);
+        try {
+            populateResult(root, payload);
+        } catch (error) {
+            logBuddyUiError('Failed to populate teacher buddy draw result.', error);
+        }
         revealResult(root);
         return payload;
     }
@@ -307,6 +323,7 @@
                 try {
                     await runRevealSequence(root, submitForm(form));
                 } catch (error) {
+                    hideResultModal(root);
                     showFeedback(error.message || '메이트를 뽑지 못했습니다.', 'error');
                     if (drawButton) {
                         drawButton.disabled = false;
