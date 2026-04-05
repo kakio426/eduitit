@@ -38,6 +38,20 @@
         }
     }
 
+    function renderBuddyAvatarHTML(buddy) {
+        var tokens = buddy.palette_tokens || {};
+        return '' +
+            '<div class="teacher-buddy-avatar is-buddy h-16 w-16 teacher-buddy-compact-avatar" ' +
+            'style="--buddy-avatar-start:' + (tokens.bg_start || '#dbeafe') + ';' +
+            '--buddy-avatar-end:' + (tokens.bg_end || '#e0e7ff') + ';' +
+            '--buddy-avatar-text:' + (tokens.text || '#0f172a') + ';' +
+            '--buddy-avatar-accent:' + (tokens.accent || '#4f46e5') + ';" ' +
+            'title="' + (buddy.name || '교실 메이트') + ' 프로필">' +
+            '<span class="teacher-buddy-avatar-mark">' + (buddy.avatar_mark || '*') + '</span>' +
+            '<span class="teacher-buddy-avatar-dot" aria-hidden="true"></span>' +
+            '</div>';
+    }
+
     function updateProgress(root, payload, collectionSummaryText, stickerDust) {
         if (!payload) {
             return;
@@ -87,6 +101,10 @@
         var asciiBox = root.querySelector('[data-buddy-ascii-box="true"]');
         if (asciiBox && buddy.palette_tokens && buddy.palette_tokens.gradient) {
             asciiBox.style.setProperty('--teacher-buddy-hero-gradient', buddy.palette_tokens.gradient);
+        }
+        var avatarSlot = root.querySelector('[data-buddy-avatar="true"]');
+        if (avatarSlot) {
+            avatarSlot.innerHTML = renderBuddyAvatarHTML(buddy);
         }
     }
 

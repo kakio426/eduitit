@@ -691,6 +691,11 @@ class TeacherBuddyCatalogTests(TestCase):
             self.assertLessEqual(len(unlock_lines), 6)
             self.assertTrue(all(len(line) <= 12 for line in idle_lines))
             self.assertTrue(all(len(line) <= 12 for line in unlock_lines))
+            self.assertEqual(
+                len({len(line) for line in idle_lines}),
+                1,
+                msg=f"{buddy.key} idle ascii should keep a consistent width",
+            )
 
         legendary = next(buddy for buddy in buddies if buddy.rarity == RARITY_LEGENDARY)
         self.assertEqual(len(legendary.idle_ascii.splitlines()), 6)
