@@ -181,6 +181,11 @@
     font-size: 0.82rem;
 }
 
+.teacher-buddy-ascii--compact {
+    font-size: 0.72rem;
+    line-height: 1.08;
+}
+
 .teacher-buddy-name,
 .teacher-buddy-collection-name,
 .teacher-buddy-profile-name {
@@ -237,8 +242,13 @@
     margin-top: 1rem;
 }
 
-.teacher-buddy-compact-avatar-slot {
+.teacher-buddy-compact-ascii-box {
     flex: 0 0 auto;
+    min-width: 7.25rem;
+    padding: 0.8rem 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .teacher-buddy-compact-copy {
@@ -1025,6 +1035,11 @@
 
     .teacher-buddy-status-inline-list {
         grid-template-columns: minmax(0, 1fr);
+    }
+
+    .teacher-buddy-compact-ascii-box {
+        min-width: 0;
+        width: 100%;
     }
 
     .teacher-buddy-settings-item-actions,

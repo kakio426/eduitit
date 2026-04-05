@@ -628,8 +628,11 @@ class TeacherBuddyHomeRenderTests(TestCase):
         self.assertEqual(TeacherBuddyUnlock.objects.filter(user=self.user).count(), 1)
         self.assertContains(response, "오늘 티켓 조건: 서로 다른 홈 도구 3개 사용")
         self.assertContains(response, "보관함/프로필 보기")
+        self.assertContains(response, 'data-buddy-ascii="true"')
         self.assertNotContains(response, 'data-buddy-profile-form="true"')
         self.assertNotContains(response, 'data-buddy-home-form="true"')
+        self.assertNotContains(response, 'data-buddy-legendary-status="true"')
+        self.assertNotContains(response, 'data-buddy-collection-summary="true"')
 
     def test_settings_page_shows_hub_mode_toggle_and_share_button(self):
         self.client.login(username="buddyhome", password="pass1234")
