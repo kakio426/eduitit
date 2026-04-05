@@ -158,7 +158,7 @@
         var buddySummary = root.querySelector('[data-buddy-settings-buddy-summary="true"]');
         var styleSummary = root.querySelector('[data-buddy-settings-style-summary="true"]');
         if (dust && typeof payload.sticker_dust !== 'undefined') {
-            dust.textContent = '반짝 조각 ' + parseInt(payload.sticker_dust || 0, 10) + '개';
+            dust.textContent = '스타일 조각 ' + parseInt(payload.sticker_dust || 0, 10) + '개';
         }
         if (buddySummary && payload.buddy_collection_summary_text) {
             buddySummary.textContent = payload.buddy_collection_summary_text;
@@ -263,7 +263,7 @@
                         } else if (style.is_unlocked) {
                             copy.textContent = '해금 완료';
                         } else {
-                            copy.textContent = '반짝 조각 ' + parseInt(style.unlock_cost_dust || 0, 10) + '개';
+                copy.textContent = '스타일 조각 ' + parseInt(style.unlock_cost_dust || 0, 10) + '개';
                         }
                     }
                 }

@@ -546,7 +546,7 @@ class TeacherBuddyUnlock(models.Model):
 
 class TeacherBuddySkinUnlock(models.Model):
     OBTAINED_VIA_CHOICES = [
-        ('dust', '반짝 조각'),
+        ('dust', '스타일 조각'),
     ]
 
     user = models.ForeignKey(

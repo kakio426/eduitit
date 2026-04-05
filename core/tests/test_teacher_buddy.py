@@ -114,7 +114,7 @@ class TeacherBuddyServiceTests(TestCase):
 
         self.assertEqual(TeacherBuddyUnlock.objects.filter(user=self.user).count(), 1)
         self.assertEqual(payload["points_today"], 1)
-        self.assertEqual(payload["home_progress_text"], "오늘 홈 티켓 1/3")
+        self.assertEqual(payload["home_progress_text"], "오늘 반짝 조각 1/3")
         self.assertEqual(self._state().draw_token_count, 0)
 
     def test_same_day_same_section_does_not_duplicate_points(self):
@@ -136,7 +136,7 @@ class TeacherBuddyServiceTests(TestCase):
         self.assertEqual(third["points_today"], HOME_DAILY_SECTION_TARGET)
         self.assertTrue(third["token_ready"])
         self.assertTrue(third["home_ticket_awarded"])
-        self.assertEqual(third["home_ticket_status_text"], "오늘 홈 티켓 완료")
+        self.assertEqual(third["home_ticket_status_text"], "오늘 반짝 조각 완성")
         self.assertEqual(fourth["points_today"], HOME_DAILY_SECTION_TARGET)
         self.assertEqual(self._state().draw_token_count, 1)
         self.assertEqual(self._state().qualifying_day_count, 1)
@@ -151,7 +151,7 @@ class TeacherBuddyServiceTests(TestCase):
         state.refresh_from_db()
         self.assertEqual(state.qualifying_day_count, 1)
 
-    def test_weekly_sns_bonus_grants_one_token_once_per_week(self):
+    def test_daily_sns_bonus_grants_one_token_once_per_day(self):
         self._grant_home_ticket()
         state = self._state()
         state.draw_token_count = 0
@@ -175,11 +175,41 @@ class TeacherBuddyServiceTests(TestCase):
         self.assertTrue(first["reward_granted"])
         self.assertEqual(first["draw_token_count"], 1)
         self.assertFalse(second["reward_granted"])
-        self.assertIn("이번 주 SNS 보너스는 이미 받았어요", second["message"])
+        self.assertIn("오늘 SNS 보너스는 이미 받았어요", second["message"])
         self.assertEqual(
             TeacherBuddySocialRewardLog.objects.filter(user=self.user, reward_granted=True).count(),
             1,
         )
+
+    def test_sns_bonus_resets_on_next_day_key(self):
+        self._grant_home_ticket()
+        state = self._state()
+        state.draw_token_count = 0
+        state.last_sns_bonus_week_key = ""
+        state.save(update_fields=["draw_token_count", "last_sns_bonus_week_key"])
+
+        first_post = Post.objects.create(
+            author=self.user,
+            content="오늘 수업 정리를 충분히 길게 남기고 아이들 반응과 교실 분위기까지 자세히 기록해 둡니다.",
+            post_type="general",
+        )
+        first = record_teacher_buddy_sns_reward(self.user, first_post)
+        self.assertTrue(first["reward_granted"])
+
+        state.refresh_from_db()
+        state.draw_token_count = 0
+        state.last_sns_bonus_week_key = "2000-01-01"
+        state.save(update_fields=["draw_token_count", "last_sns_bonus_week_key"])
+
+        second_post = Post.objects.create(
+            author=self.user,
+            content="다음 날에도 다른 수업 정리를 충분히 길게 남기고 활동 흐름과 반응을 새롭게 적어 둡니다.",
+            post_type="general",
+        )
+        second = record_teacher_buddy_sns_reward(self.user, second_post)
+
+        self.assertTrue(second["reward_granted"])
+        self.assertEqual(second["draw_token_count"], 1)
 
     def test_sns_reward_rejects_short_similar_and_exact_repeat_posts(self):
         short_post = Post.objects.create(author=self.user, content="짧아요", post_type="general")
@@ -437,7 +467,7 @@ class TeacherBuddyApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertIn("buddy", payload)
-        self.assertEqual(payload["buddy"]["home_ticket_condition_text"], "오늘 티켓 조건: 서로 다른 홈 도구 3개 사용")
+        self.assertEqual(payload["buddy"]["home_ticket_condition_text"], "반짝 조각 3개면 메이트 뽑기 1개")
 
     def test_profile_select_endpoint_returns_json(self):
         self.client.login(username="buddyapi", password="pass1234")
@@ -487,13 +517,13 @@ class TeacherBuddyApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["unlocked_skin"]["key"], skin.key)
 
-    def test_htmx_post_create_triggers_weekly_sns_reward(self):
+    def test_htmx_post_create_triggers_daily_sns_reward(self):
         self.client.login(username="buddyapi", password="pass1234")
 
         response = self.client.post(
             reverse("post_create"),
             {
-                "content": "교실 메이트 주간 보상을 받을 만큼 충분히 길고 구체적으로 오늘의 수업 흐름을 남겨 봅니다.",
+                "content": "교실 메이트 오늘 보상을 받을 만큼 충분히 길고 구체적으로 오늘의 수업 흐름을 남겨 봅니다.",
                 "submit_kind": "general",
             },
             HTTP_HX_REQUEST="true",
@@ -626,7 +656,7 @@ class TeacherBuddyHomeRenderTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(TeacherBuddyUnlock.objects.filter(user=self.user).count(), 1)
-        self.assertContains(response, "오늘 티켓 조건: 서로 다른 홈 도구 3개 사용")
+        self.assertContains(response, "반짝 조각 3개면 메이트 뽑기 1개")
         self.assertContains(response, "보관함/프로필 보기")
         self.assertContains(response, 'data-buddy-ascii="true"')
         self.assertNotContains(response, 'data-buddy-profile-form="true"')

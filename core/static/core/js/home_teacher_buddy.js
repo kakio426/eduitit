@@ -57,7 +57,7 @@
             setText(root, '[data-buddy-collection-summary="true"]', collectionSummaryText);
         }
         if (typeof stickerDust !== 'undefined') {
-            setText(root, '[data-buddy-dust="true"]', '반짝 조각 ' + parseInt(stickerDust || 0, 10) + '개');
+            setText(root, '[data-buddy-dust="true"]', '스타일 조각 ' + parseInt(stickerDust || 0, 10) + '개');
         }
 
         var drawButton = root.querySelector('[data-buddy-draw-button="true"]');

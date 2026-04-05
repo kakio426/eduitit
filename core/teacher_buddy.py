@@ -110,10 +110,9 @@ def _today() -> date:
     return timezone.localdate()
 
 
-def _week_key(value: date | None = None) -> str:
+def _sns_bonus_key(value: date | None = None) -> str:
     target = value or _today()
-    iso = target.isocalendar()
-    return f"{iso.year}-W{iso.week:02d}"
+    return target.isoformat()
 
 
 def _normalize_text(value: str) -> str:
@@ -505,9 +504,9 @@ def _mark_qualifying_day(*, state: TeacherBuddyState, progress: TeacherBuddyDail
 
 def _build_home_ticket_status_text(points_today: int, home_ticket_awarded: bool, token_granted: bool) -> str:
     if home_ticket_awarded and token_granted:
-        return "오늘 홈 티켓 완료"
+        return "오늘 반짝 조각 완성"
     if home_ticket_awarded:
-        return "오늘 홈 티켓 완료 · 토큰 보관함 가득"
+        return "오늘 반짝 조각 완성 · 토큰 보관함 가득"
     remaining = max(0, HOME_DAILY_SECTION_TARGET - points_today)
     if remaining == HOME_DAILY_SECTION_TARGET:
         return "오늘 아직 시작 전"
@@ -515,7 +514,7 @@ def _build_home_ticket_status_text(points_today: int, home_ticket_awarded: bool,
 
 
 def _build_sns_status_text(*, available: bool) -> str:
-    return "이번 주 SNS 보너스 가능" if available else "이번 주 SNS 보너스 완료"
+    return "오늘 SNS 보너스 가능" if available else "오늘 SNS 보너스 완료"
 
 
 def _build_legendary_status_text(state: TeacherBuddyState) -> str:
@@ -545,7 +544,7 @@ def _build_progress_summary(
     points_today = min(HOME_DAILY_SECTION_TARGET, int(progress.point_total or 0))
     token_ready = int(state.draw_token_count or 0) > 0
     collection_completed = bool(state.collection_completed_at)
-    sns_bonus_available = str(state.last_sns_bonus_week_key or "") != _week_key(progress.activity_date)
+    sns_bonus_available = str(state.last_sns_bonus_week_key or "") != _sns_bonus_key(progress.activity_date)
     token_granted = bool(progress.draw_awarded)
     if token_ready:
         mood = "cheer"
@@ -580,8 +579,8 @@ def _build_progress_summary(
         "sns_bonus_available": sns_bonus_available,
         "sns_bonus_text": _build_sns_status_text(available=sns_bonus_available),
         "home_ticket_awarded": bool(progress.home_ticket_awarded),
-        "home_ticket_condition_text": "오늘 티켓 조건: 서로 다른 홈 도구 3개 사용",
-        "home_progress_text": f"오늘 홈 티켓 {points_today}/{HOME_DAILY_SECTION_TARGET}",
+        "home_ticket_condition_text": "반짝 조각 3개면 메이트 뽑기 1개",
+        "home_progress_text": f"오늘 반짝 조각 {points_today}/{HOME_DAILY_SECTION_TARGET}",
         "home_ticket_status_text": _build_home_ticket_status_text(
             points_today,
             bool(progress.home_ticket_awarded),
@@ -695,7 +694,7 @@ def build_teacher_buddy_panel_context(user) -> dict[str, object] | None:
         "enabled": True,
         "title": "교실 메이트",
         "eyebrow": "오늘 흐름 위젯",
-        "subtitle": "홈 도구 3개와 이번 주 SNS 보너스로 메이트 토큰을 모아요.",
+        "subtitle": "홈 도구 3개와 오늘 SNS 글 1개로 메이트 토큰을 모아요.",
         "active_buddy": active_buddy,
         "progress": progress_summary,
         "can_draw": bool(progress_summary["token_ready"]),
@@ -703,7 +702,7 @@ def build_teacher_buddy_panel_context(user) -> dict[str, object] | None:
         "collection_summary_text": _collection_summary_text(user),
         "legendary_progress_text": progress_summary["legendary_progress_text"],
         "settings_href": f"{reverse('settings')}#teacher-buddy-settings",
-        "sticker_dust_text": f"반짝 조각 {int(state.sticker_dust or 0)}개",
+        "sticker_dust_text": f"스타일 조각 {int(state.sticker_dust or 0)}개",
     }
 
 
@@ -764,7 +763,7 @@ def build_teacher_buddy_settings_context(user) -> dict[str, object] | None:
         "share_title": f"{nickname}님의 교실 메이트",
         "selection_mode_default": "profile",
         "sticker_dust": sticker_dust,
-        "sticker_dust_text": f"반짝 조각 {sticker_dust}개",
+        "sticker_dust_text": f"스타일 조각 {sticker_dust}개",
         "buddy_collection_summary_text": f"{TeacherBuddyUnlock.objects.filter(user=user).count()}/{TOTAL_BUDDY_COUNT} 메이트",
         "style_collection_summary_text": f"{TeacherBuddySkinUnlock.objects.filter(user=user).count()}/{TOTAL_SKIN_COUNT} 스타일",
         "cosmetic_tier": cosmetic_key,
@@ -982,7 +981,7 @@ def record_teacher_buddy_sns_reward(user, post) -> dict[str, object] | None:
     min_length = SNS_REWARD_MIN_TEXT_WITH_IMAGE if has_image else SNS_REWARD_MIN_TEXT
     content_hash = _content_hash(content)
     activity_date = _today()
-    current_week_key = _week_key(activity_date)
+    current_day_key = _sns_bonus_key(activity_date)
 
     with transaction.atomic():
         state = _get_or_create_state_for_update(user)
@@ -1031,7 +1030,7 @@ def record_teacher_buddy_sns_reward(user, post) -> dict[str, object] | None:
             return _log_and_payload(
                 False,
                 "too_short",
-                f"주간 SNS 보너스는 글 {min_length}자 이상일 때만 드려요.",
+                f"오늘 SNS 보너스는 글 {min_length}자 이상일 때만 드려요.",
             )
 
         recent_cutoff = timezone.now() - timedelta(days=SNS_DUPLICATE_LOOKBACK_DAYS)
@@ -1058,14 +1057,14 @@ def record_teacher_buddy_sns_reward(user, post) -> dict[str, object] | None:
                 return _log_and_payload(
                     False,
                     "similar_recent",
-                    "최근 보상 글과 너무 비슷해서 이번 주 보너스는 넘어갈게요.",
+                    "최근 보상 글과 너무 비슷해서 오늘 보너스는 넘어갈게요.",
                 )
 
-        if str(state.last_sns_bonus_week_key or "") == current_week_key:
+        if str(state.last_sns_bonus_week_key or "") == current_day_key:
             return _log_and_payload(
                 False,
-                "already_rewarded_this_week",
-                "이번 주 SNS 보너스는 이미 받았어요.",
+                "already_rewarded_today",
+                "오늘 SNS 보너스는 이미 받았어요.",
             )
 
         if int(state.draw_token_count or 0) >= MAX_DRAW_TOKEN_COUNT:
@@ -1079,7 +1078,7 @@ def record_teacher_buddy_sns_reward(user, post) -> dict[str, object] | None:
         progress.sns_reward_post_id = getattr(post, "id", None)
         progress.save(update_fields=["sns_reward_awarded", "sns_reward_post_id"])
         state.draw_token_count = min(MAX_DRAW_TOKEN_COUNT, int(state.draw_token_count or 0) + 1)
-        state.last_sns_bonus_week_key = current_week_key
+        state.last_sns_bonus_week_key = current_day_key
         state.save(update_fields=["draw_token_count", "last_sns_bonus_week_key"])
 
         TeacherBuddySocialRewardLog.objects.create(
@@ -1096,7 +1095,7 @@ def record_teacher_buddy_sns_reward(user, post) -> dict[str, object] | None:
             state=state,
             progress=progress,
             active_buddy_payload=active_buddy_payload,
-            message="이번 주 SNS 보너스로 메이트 토큰이 1장 쌓였어요.",
+            message="오늘 SNS 보너스로 메이트 토큰이 1장 쌓였어요.",
             reward_granted=True,
         )
 
@@ -1208,10 +1207,10 @@ def draw_teacher_buddy(user) -> dict[str, object]:
                 "collection_summary_text": _collection_summary_text(user),
                 "sticker_dust": int(state.sticker_dust or 0),
                 "dust_gained": dust_gained,
-                "message": f"{buddy.name}가 반짝 조각 {dust_gained}개를 남기고 지나갔어요.",
+                "message": f"{buddy.name}가 스타일 조각 {dust_gained}개를 남기고 지나갔어요.",
                 "result_rarity": buddy.rarity,
                 "result_reveal_theme": "duplicate",
-                "result_title": "반짝 조각으로 변환됐어요",
+                "result_title": "스타일 조각으로 변환됐어요",
                 "result_is_duplicate": True,
                 "buddy_progress": _build_progress_summary(
                     user=user,
@@ -1394,7 +1393,7 @@ def unlock_teacher_buddy_skin(user, buddy_key: str, skin_key: str) -> dict[str, 
         if TeacherBuddySkinUnlock.objects.filter(user=user, skin_key=normalized_skin_key).exists():
             raise TeacherBuddyError("이미 열린 스타일입니다.")
         if int(state.sticker_dust or 0) < int(skin.unlock_cost_dust or 0):
-            raise TeacherBuddyError("반짝 조각이 부족해요.")
+            raise TeacherBuddyError("스타일 조각이 부족해요.")
 
         TeacherBuddySkinUnlock.objects.create(
             user=user,
@@ -1569,7 +1568,7 @@ def build_teacher_buddy_share_svg(context: dict[str, object]) -> str:
         f'<rect x="90" y="300" width="340" height="206" rx="28" fill="white" fill-opacity="0.92" stroke="{ring}" stroke-width="2"/>'
         + "".join(ascii_markup)
         + f'<text x="472" y="244" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700" fill="{text}">{caption}</text>'
-        f'<text x="472" y="300" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="{text}">반짝 조각 {sticker_dust}개 · {escape(str(context.get("cosmetic_tier_label") or "새싹 링"))}</text>'
+        f'<text x="472" y="300" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="{text}">스타일 조각 {sticker_dust}개 · {escape(str(context.get("cosmetic_tier_label") or "새싹 링"))}</text>'
         f'<text x="472" y="354" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="500" fill="{text}">우리 사이트, 카카오톡, 인스타그램에서 함께 자랑해 보세요.</text>'
         f'<rect x="472" y="410" width="510" height="80" rx="24" fill="{accent}" fill-opacity="0.12"/>'
         f'<text x="506" y="460" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="{accent}">#{buddy_name}  #교실메이트  #Eduitit</text>'
