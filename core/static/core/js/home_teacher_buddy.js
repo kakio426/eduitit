@@ -24,6 +24,90 @@
         });
     }
 
+    function shouldPlayRevealSound() {
+        if (!window.AudioContext && !window.webkitAudioContext) {
+            return false;
+        }
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            return false;
+        }
+        return true;
+    }
+
+    function getAudioContext(root) {
+        if (!shouldPlayRevealSound()) {
+            return null;
+        }
+        var AudioCtor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtor) {
+            return null;
+        }
+        if (!root.__buddyAudioContext) {
+            root.__buddyAudioContext = new AudioCtor();
+        }
+        return root.__buddyAudioContext;
+    }
+
+    function playTone(context, startAt, frequency, duration, volume, type) {
+        var oscillator = context.createOscillator();
+        var gain = context.createGain();
+        oscillator.type = type || 'sine';
+        oscillator.frequency.setValueAtTime(frequency, startAt);
+        gain.gain.setValueAtTime(0.0001, startAt);
+        gain.gain.exponentialRampToValueAtTime(volume, startAt + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+        oscillator.connect(gain);
+        gain.connect(context.destination);
+        oscillator.start(startAt);
+        oscillator.stop(startAt + duration + 0.02);
+    }
+
+    function playRevealSound(root, kind) {
+        var context = getAudioContext(root);
+        if (!context) {
+            return;
+        }
+        if (context.state === 'suspended') {
+            context.resume().catch(function () {});
+        }
+        var startAt = context.currentTime + 0.01;
+        var sequences = {
+            suspense: [
+                [392, 0.08, 0.02, 'triangle'],
+                [523, 0.12, 0.025, 'triangle']
+            ],
+            common: [
+                [659, 0.09, 0.03, 'triangle'],
+                [880, 0.14, 0.035, 'triangle']
+            ],
+            rare: [
+                [659, 0.08, 0.03, 'triangle'],
+                [880, 0.1, 0.04, 'triangle'],
+                [988, 0.16, 0.045, 'sine']
+            ],
+            epic: [
+                [659, 0.08, 0.03, 'triangle'],
+                [880, 0.1, 0.04, 'triangle'],
+                [1174, 0.15, 0.05, 'sine'],
+                [1318, 0.22, 0.06, 'sine']
+            ],
+            legendary: [
+                [523, 0.08, 0.035, 'triangle'],
+                [784, 0.11, 0.05, 'triangle'],
+                [1046, 0.16, 0.06, 'sine'],
+                [1568, 0.28, 0.09, 'sine']
+            ],
+            duplicate: [
+                [440, 0.08, 0.02, 'triangle'],
+                [392, 0.14, 0.02, 'triangle']
+            ]
+        };
+        var notes = sequences[kind] || sequences.common;
+        notes.forEach(function (note) {
+            playTone(context, startAt + note[1], note[0], note[2], note[3], note[4]);
+        });
+    }
+
     function setProgressSteps(root, pointsToday) {
         root.querySelectorAll('[data-buddy-progress-step]').forEach(function (step) {
             var threshold = parseInt(step.getAttribute('data-buddy-progress-step') || '0', 10);
@@ -137,8 +221,10 @@
         if (!modal) {
             return;
         }
+        var dialog = root.querySelector('[data-buddy-result-dialog="true"]');
         setResultStage(root, 'reveal');
         root.__buddyResultReady = true;
+        playRevealSound(root, dialog ? (dialog.getAttribute('data-result-theme') || 'common') : 'common');
         var closeButton = modal.querySelector('[data-buddy-result-close="true"]');
         if (closeButton) {
             closeButton.focus();
@@ -185,6 +271,7 @@
         openResultModal(root);
         await wait(600);
         setResultStage(root, 'suspense');
+        playRevealSound(root, 'suspense');
         var payload = null;
         try {
             payload = await Promise.all([payloadPromise, wait(850)]).then(function (values) {

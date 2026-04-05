@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
@@ -720,6 +721,16 @@ class TeacherBuddyHomeRenderTests(TestCase):
         self.assertContains(page_response, "공개 메이트 카드")
         self.assertEqual(image_response.status_code, 200)
         self.assertEqual(image_response["Content-Type"], "image/svg+xml; charset=utf-8")
+
+    def test_reveal_assets_keep_stage_hiding_and_sound_hook(self):
+        css_path = Path(__file__).resolve().parents[1] / "static" / "core" / "css" / "home_teacher_buddy.css"
+        js_path = Path(__file__).resolve().parents[1] / "static" / "core" / "js" / "home_teacher_buddy.js"
+
+        css = css_path.read_text(encoding="utf-8")
+        js = js_path.read_text(encoding="utf-8")
+
+        self.assertIn(".teacher-buddy-result-stage[hidden]", css)
+        self.assertIn("playRevealSound", js)
 
 
 @override_settings(HOME_TEACHER_BUDDY_ENABLED=True)
