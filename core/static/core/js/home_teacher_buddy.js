@@ -31,6 +31,12 @@
         });
     }
 
+    function setSingleStep(root, selector, active) {
+        root.querySelectorAll(selector).forEach(function (step) {
+            step.classList.toggle('is-active', Boolean(active));
+        });
+    }
+
     function setText(root, selector, value) {
         var node = root.querySelector(selector);
         if (node && typeof value === 'string') {
@@ -50,6 +56,7 @@
         setText(root, '[data-buddy-home-ticket-condition="true"]', payload.home_ticket_condition_text || '');
         setText(root, '[data-buddy-home-ticket-status="true"]', payload.home_ticket_status_text || '');
         setText(root, '[data-buddy-sns-status="true"]', payload.sns_bonus_text || '');
+        setText(root, '[data-buddy-attendance-status="true"]', payload.attendance_text || '');
         setText(root, '[data-buddy-reaction="true"]', payload.reaction_text || '');
         setText(root, '[data-buddy-token-badge="true"]', '토큰 ' + tokenCount);
         if (typeof collectionSummaryText === 'string') {
@@ -67,6 +74,8 @@
             moodCard.setAttribute('data-buddy-mood', payload.mood);
         }
         setProgressSteps(root, pointsToday);
+        setSingleStep(root, '[data-buddy-sns-step]', !payload.sns_bonus_available);
+        setSingleStep(root, '[data-buddy-attendance-step]', payload.attendance_completed);
     }
 
     function updateActiveBuddy(root, buddy) {

@@ -300,7 +300,12 @@
     overflow: hidden;
 }
 
-.teacher-buddy-status-list,
+.teacher-buddy-status-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
 .teacher-buddy-settings-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -370,6 +375,10 @@
     overflow-wrap: break-word;
 }
 
+.teacher-buddy-status-value--primary {
+    font-size: 1rem;
+}
+
 .teacher-buddy-status-copy,
 .teacher-buddy-status-foot {
     margin: 0;
@@ -393,6 +402,10 @@
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.45rem;
+}
+
+.teacher-buddy-progress-steps--single {
+    grid-template-columns: minmax(0, 1fr);
 }
 
 .teacher-buddy-progress-step {
@@ -425,7 +438,7 @@
 
 .teacher-buddy-panel[data-panel-variant="v4"] .teacher-buddy-actions,
 .teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-actions {
-    flex-direction: column;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .teacher-buddy-panel[data-panel-variant="v4"] .teacher-buddy-title,
@@ -449,14 +462,34 @@
 .teacher-buddy-settings-item-actions,
 .teacher-buddy-share-actions,
 .teacher-buddy-share-links {
+    display: grid;
+    gap: 0.6rem;
+}
+
+.teacher-buddy-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.teacher-buddy-settings-item-actions,
+.teacher-buddy-share-actions,
+.teacher-buddy-share-links {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.6rem;
 }
 
 .teacher-buddy-actions form,
 .teacher-buddy-settings-item-actions form {
     margin: 0;
+}
+
+.teacher-buddy-actions > *,
+.teacher-buddy-actions form {
+    min-width: 0;
+}
+
+.teacher-buddy-actions .teacher-buddy-primary,
+.teacher-buddy-actions .teacher-buddy-secondary {
+    width: 100%;
 }
 
 .teacher-buddy-primary,
@@ -1062,7 +1095,6 @@
 
     .teacher-buddy-settings-item-actions,
     .teacher-buddy-style-actions,
-    .teacher-buddy-actions,
     .teacher-buddy-share-actions,
     .teacher-buddy-share-links {
         flex-direction: column;
@@ -1085,5 +1117,16 @@
     .teacher-buddy-share-page {
         padding-left: 0.75rem;
         padding-right: 0.75rem;
+    }
+
+    .teacher-buddy-actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .teacher-buddy-primary,
+    .teacher-buddy-secondary {
+        min-height: 3rem;
+        padding-inline: 0.85rem;
+        font-size: 0.84rem;
     }
 }

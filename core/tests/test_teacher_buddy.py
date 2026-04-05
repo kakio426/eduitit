@@ -96,8 +96,8 @@ class TeacherBuddyServiceTests(TestCase):
 
     def _grant_home_ticket(self):
         record_teacher_buddy_progress(self.user, self.classroom_product, "home_quick")
-        record_teacher_buddy_progress(self.user, self.doc_product, "home_section")
-        return record_teacher_buddy_progress(self.user, self.game_product, "home_game")
+        record_teacher_buddy_progress(self.user, self.classroom_product, "home_quick")
+        return record_teacher_buddy_progress(self.user, self.classroom_product, "home_quick")
 
     def _unlock_all_except(self, excluded_keys):
         for buddy in all_teacher_buddies():
@@ -114,21 +114,23 @@ class TeacherBuddyServiceTests(TestCase):
 
         self.assertEqual(TeacherBuddyUnlock.objects.filter(user=self.user).count(), 1)
         self.assertEqual(payload["points_today"], 1)
-        self.assertEqual(payload["home_progress_text"], "오늘 반짝 조각 1/3")
+        self.assertEqual(payload["home_progress_text"], "1/3")
         self.assertEqual(self._state().draw_token_count, 0)
 
-    def test_same_day_same_section_does_not_duplicate_points(self):
+    def test_same_day_repeated_home_launches_still_fill_daily_progress(self):
         first = record_teacher_buddy_progress(self.user, self.classroom_product, "home_quick")
         second = record_teacher_buddy_progress(self.user, self.classroom_product, "home_quick")
+        third = record_teacher_buddy_progress(self.user, self.classroom_product, "home_quick")
 
         self.assertEqual(first["points_today"], 1)
-        self.assertEqual(second["points_today"], 1)
-        self.assertEqual(self._state().total_points_earned, 1)
+        self.assertEqual(second["points_today"], 2)
+        self.assertEqual(third["points_today"], HOME_DAILY_SECTION_TARGET)
+        self.assertEqual(self._state().total_points_earned, 3)
 
-    def test_home_ticket_requires_three_distinct_sections_and_only_awards_once(self):
+    def test_home_ticket_requires_three_home_launches_and_only_awards_once(self):
         first = record_teacher_buddy_progress(self.user, self.classroom_product, "home_quick")
-        second = record_teacher_buddy_progress(self.user, self.doc_product, "home_section")
-        third = record_teacher_buddy_progress(self.user, self.game_product, "home_game")
+        second = record_teacher_buddy_progress(self.user, self.classroom_product, "home_quick")
+        third = record_teacher_buddy_progress(self.user, self.classroom_product, "home_quick")
         fourth = record_teacher_buddy_progress(self.user, self.collect_product, "home_section")
 
         self.assertEqual(first["points_today"], 1)
@@ -136,7 +138,7 @@ class TeacherBuddyServiceTests(TestCase):
         self.assertEqual(third["points_today"], HOME_DAILY_SECTION_TARGET)
         self.assertTrue(third["token_ready"])
         self.assertTrue(third["home_ticket_awarded"])
-        self.assertEqual(third["home_ticket_status_text"], "오늘 반짝 조각 완성")
+        self.assertEqual(third["home_ticket_status_text"], "오늘 완료")
         self.assertEqual(fourth["points_today"], HOME_DAILY_SECTION_TARGET)
         self.assertEqual(self._state().draw_token_count, 1)
         self.assertEqual(self._state().qualifying_day_count, 1)
@@ -462,7 +464,7 @@ class TeacherBuddyApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertIn("buddy", payload)
-        self.assertEqual(payload["buddy"]["home_ticket_condition_text"], "반짝 조각 3개면 메이트 뽑기 1개")
+        self.assertEqual(payload["buddy"]["home_ticket_condition_text"], "3개면 뽑기 1회")
 
     def test_profile_select_endpoint_returns_json(self):
         self.client.login(username="buddyapi", password="pass1234")
@@ -648,13 +650,22 @@ class TeacherBuddyHomeRenderTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(TeacherBuddyUnlock.objects.filter(user=self.user).count(), 1)
-        self.assertContains(response, "반짝 조각 3개면 메이트 뽑기 1개")
+        self.assertContains(response, "오늘 반짝 조각")
+        self.assertContains(response, "0/3")
+        self.assertContains(response, "3개면 뽑기 1회")
+        self.assertContains(response, "오늘 SNS")
+        self.assertContains(response, "오늘 출석")
+        self.assertContains(response, "0/1")
+        self.assertContains(response, "1/1")
+        self.assertContains(response, "토큰 1")
         self.assertContains(response, "보관함/프로필 보기")
         self.assertContains(response, 'data-buddy-ascii="true"')
         self.assertNotContains(response, 'data-buddy-profile-form="true"')
         self.assertNotContains(response, 'data-buddy-home-form="true"')
         self.assertNotContains(response, 'data-buddy-legendary-status="true"')
         self.assertNotContains(response, 'data-buddy-collection-summary="true"')
+        self.assertNotContains(response, "오늘 흐름 위젯")
+        self.assertNotContains(response, "홈 도구 3개와 오늘 SNS 글 1개로 메이트 토큰을 모아요.")
 
     def test_settings_page_shows_hub_mode_toggle_and_share_button(self):
         self.client.login(username="buddyhome", password="pass1234")

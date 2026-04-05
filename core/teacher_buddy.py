@@ -21,7 +21,6 @@ from .models import (
     UserProfile,
 )
 from .seo import SITE_CANONICAL_BASE_URL
-from .service_launcher import resolve_home_section_key
 from .teacher_buddy_catalog import (
     COMMON_BUDDY_KEYS,
     LOCKED_BUDDY_ASCII,
@@ -548,17 +547,21 @@ def _mark_qualifying_day(*, state: TeacherBuddyState, progress: TeacherBuddyDail
 
 def _build_home_ticket_status_text(points_today: int, home_ticket_awarded: bool, token_granted: bool) -> str:
     if home_ticket_awarded and token_granted:
-        return "오늘 반짝 조각 완성"
+        return "오늘 완료"
     if home_ticket_awarded:
-        return "오늘 반짝 조각 완성 · 토큰 보관함 가득"
+        return "오늘 완료"
     remaining = max(0, HOME_DAILY_SECTION_TARGET - points_today)
     if remaining == HOME_DAILY_SECTION_TARGET:
-        return "오늘 아직 시작 전"
-    return f"서로 다른 홈 도구 {remaining}개 더"
+        return "아직 시작 전"
+    return f"서비스 {remaining}개 더"
 
 
 def _build_sns_status_text(*, available: bool) -> str:
-    return "오늘 SNS 보너스 가능" if available else "오늘 SNS 보너스 완료"
+    return "0/1" if available else "1/1"
+
+
+def _build_attendance_status_text(*, completed: bool) -> str:
+    return "1/1" if completed else "0/1"
 
 
 def _build_legendary_status_text(state: TeacherBuddyState) -> str:
@@ -589,6 +592,7 @@ def _build_progress_summary(
     token_ready = int(state.draw_token_count or 0) > 0
     collection_completed = bool(state.collection_completed_at)
     sns_bonus_available = str(state.last_sns_bonus_week_key or "") != _sns_bonus_key(progress.activity_date)
+    attendance_completed = bool(progress.first_launch_awarded)
     token_granted = bool(progress.draw_awarded)
     if token_ready:
         mood = "cheer"
@@ -619,12 +623,14 @@ def _build_progress_summary(
         "legendary_unlock_days": LEGENDARY_UNLOCK_DAYS,
         "legendary_days_remaining": _remaining_legendary_days(state),
         "legendary_progress_text": _build_legendary_status_text(state),
+        "attendance_completed": attendance_completed,
+        "attendance_text": _build_attendance_status_text(completed=attendance_completed),
         "sns_reward_awarded": bool(progress.sns_reward_awarded),
         "sns_bonus_available": sns_bonus_available,
         "sns_bonus_text": _build_sns_status_text(available=sns_bonus_available),
         "home_ticket_awarded": bool(progress.home_ticket_awarded),
-        "home_ticket_condition_text": "반짝 조각 3개면 메이트 뽑기 1개",
-        "home_progress_text": f"오늘 반짝 조각 {points_today}/{HOME_DAILY_SECTION_TARGET}",
+        "home_ticket_condition_text": "3개면 뽑기 1회",
+        "home_progress_text": f"{points_today}/{HOME_DAILY_SECTION_TARGET}",
         "home_ticket_status_text": _build_home_ticket_status_text(
             points_today,
             bool(progress.home_ticket_awarded),
@@ -644,8 +650,28 @@ def ensure_teacher_buddy_state(user, *, touch_home: bool = False) -> TeacherBudd
         state = _ensure_starter_unlocked(user=user, state=state)
         _sync_collection_completion(state=state, user=user)
         if touch_home:
+            progress, _ = TeacherBuddyDailyProgress.objects.select_for_update().get_or_create(
+                user=user,
+                activity_date=_today(),
+                defaults={
+                    "point_total": 0,
+                    "awarded_section_keys": [],
+                    "first_launch_awarded": False,
+                    "draw_awarded": False,
+                    "home_ticket_awarded": False,
+                    "qualified_for_legendary_day": False,
+                    "sns_reward_awarded": False,
+                },
+            )
+            updated_fields: list[str] = ["last_home_seen_at"]
             state.last_home_seen_at = timezone.now()
-            state.save(update_fields=["last_home_seen_at"])
+            if not progress.first_launch_awarded:
+                progress.first_launch_awarded = True
+                progress.save(update_fields=["first_launch_awarded"])
+                if int(state.draw_token_count or 0) < MAX_DRAW_TOKEN_COUNT:
+                    state.draw_token_count = min(MAX_DRAW_TOKEN_COUNT, int(state.draw_token_count or 0) + 1)
+                    updated_fields.append("draw_token_count")
+            state.save(update_fields=list(dict.fromkeys(updated_fields)))
         return state
 
 
@@ -737,8 +763,8 @@ def build_teacher_buddy_panel_context(user) -> dict[str, object] | None:
     return {
         "enabled": True,
         "title": "교실 메이트",
-        "eyebrow": "오늘 흐름 위젯",
-        "subtitle": "홈 도구 3개와 오늘 SNS 글 1개로 메이트 토큰을 모아요.",
+        "eyebrow": "",
+        "subtitle": "",
         "active_buddy": active_buddy,
         "progress": progress_summary,
         "can_draw": bool(progress_summary["token_ready"]),
@@ -945,15 +971,9 @@ def record_teacher_buddy_progress(user, product, source: str) -> dict[str, objec
 
         progress_updated_fields: list[str] = []
         state_updated_fields: list[str] = []
-        section_key = resolve_home_section_key(product) or ""
-        awarded_section_keys = list(progress.awarded_section_keys or [])
-
-        if section_key and section_key not in awarded_section_keys and len(awarded_section_keys) < HOME_DAILY_SECTION_TARGET:
-            awarded_section_keys.append(section_key)
-            progress.awarded_section_keys = awarded_section_keys
-            progress.point_total = len(awarded_section_keys)
-            progress.first_launch_awarded = True
-            progress_updated_fields.extend(["awarded_section_keys", "point_total", "first_launch_awarded"])
+        if int(progress.point_total or 0) < HOME_DAILY_SECTION_TARGET:
+            progress.point_total = min(HOME_DAILY_SECTION_TARGET, int(progress.point_total or 0) + 1)
+            progress_updated_fields.append("point_total")
             state.total_points_earned = int(state.total_points_earned or 0) + 1
             state_updated_fields.append("total_points_earned")
 
