@@ -71,6 +71,25 @@
         menu.style.display = isHidden ? 'block' : 'none';
         menu.removeAttribute('x-cloak');
     };
+    function initNavbarClock() {
+        var clock = document.getElementById('navbarClock');
+        if (!clock) {
+            return;
+        }
+
+        function renderClock() {
+            var now = new Date();
+            clock.textContent = now.toLocaleTimeString('ko-KR', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false,
+            });
+        }
+
+        renderClock();
+        setInterval(renderClock, 1000);
+    }
 
     var classroomPickerState = {
         currentId: '',
@@ -861,6 +880,7 @@
         window.syncGlobalBannerOffset();
         window.syncMobileMenuOffset();
         bindClassroomPicker();
+        initNavbarClock();
 
         var banner = document.getElementById('globalBanner');
         if (banner && typeof ResizeObserver !== 'undefined') {

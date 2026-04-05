@@ -177,7 +177,10 @@
                         <kbd class="rounded border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-400">Ctrl+K</kbd>
                     </button>
                     {% endif %}
-
+                    <div class="flex items-center gap-2 px-4 py-2 rounded-full bg-white/70 shadow-clay-inner text-sm font-bold text-slate-600">
+                        <i class="fa-solid fa-clock text-slate-400"></i>
+                        <span id="navbarClock">--:--:--</span>
+                    </div>
                     {% if show_visitor_counts %}
                     <!-- Visitor Count (Desktop / Superuser only) -->
                     <div class="hidden lg:flex items-center gap-3 px-4 py-2 rounded-full bg-white/60 shadow-clay-inner text-sm transition hover:scale-105 cursor-help select-none"
