@@ -107,6 +107,7 @@ INSTALLED_APPS = [
     'slidesmith.apps.SlidesmithConfig',
     'blockclass.apps.BlockclassConfig',
     'infoboard.apps.InfoboardConfig',
+    'teacher_law.apps.TeacherLawConfig',
 
     # Auth & Allauth
     'django.contrib.sites',
@@ -610,6 +611,16 @@ NEWS_INGEST_ALLOWED_HOSTS = [
     for host in os.environ.get('NEWS_INGEST_ALLOWED_HOSTS', '').split(',')
     if host.strip()
 ]
+LAW_API_OC = os.environ.get('LAW_API_OC', '').strip()
+TEACHER_LAW_ENABLED = os.environ.get('TEACHER_LAW_ENABLED', 'False').lower() in ('true', '1', 'yes')
+TEACHER_LAW_DAILY_LIMIT_PER_USER = int(os.environ.get('TEACHER_LAW_DAILY_LIMIT_PER_USER', '20'))
+TEACHER_LAW_TOTAL_TIMEOUT_SECONDS = int(os.environ.get('TEACHER_LAW_TOTAL_TIMEOUT_SECONDS', '20'))
+TEACHER_LAW_SEARCH_TIMEOUT_SECONDS = int(os.environ.get('TEACHER_LAW_SEARCH_TIMEOUT_SECONDS', '4'))
+TEACHER_LAW_DETAIL_TIMEOUT_SECONDS = int(os.environ.get('TEACHER_LAW_DETAIL_TIMEOUT_SECONDS', '4'))
+TEACHER_LAW_LLM_TIMEOUT_SECONDS = int(os.environ.get('TEACHER_LAW_LLM_TIMEOUT_SECONDS', '12'))
+TEACHER_LAW_SEARCH_RESULT_LIMIT = int(os.environ.get('TEACHER_LAW_SEARCH_RESULT_LIMIT', '5'))
+TEACHER_LAW_DETAIL_FETCH_LIMIT = int(os.environ.get('TEACHER_LAW_DETAIL_FETCH_LIMIT', '3'))
+TEACHER_LAW_FAQ_CACHE_TTL_SECONDS = int(os.environ.get('TEACHER_LAW_FAQ_CACHE_TTL_SECONDS', '43200'))
 
 # =============================================================================
 # SENTRY ERROR TRACKING (production only)

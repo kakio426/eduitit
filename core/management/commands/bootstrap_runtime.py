@@ -54,6 +54,7 @@ class Command(BaseCommand):
             ("ensure_edu_materials_next", lambda: call_command("ensure_edu_materials_next")),
             ("ensure_tts_announce", lambda: call_command("ensure_tts_announce")),
             ("ensure_infoboard", lambda: call_command("ensure_infoboard")),
+            ("ensure_teacher_law", lambda: call_command("ensure_teacher_law")),
         ]
 
         for name, fn in steps:

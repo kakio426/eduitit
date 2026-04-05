@@ -19,8 +19,8 @@ def repair_textbookmaterial_schema(apps, schema_editor):
         return
 
     textbook_material = apps.get_model("textbooks", "TextbookMaterial")
-    current_columns = set(_column_names(connection, table_name))
     for field_name in ["source_type", "pdf_file", "page_count", "pdf_sha256", "original_filename"]:
+        current_columns = set(_column_names(connection, table_name))
         if field_name not in current_columns:
             field = textbook_material._meta.get_field(field_name)
             schema_editor.add_field(textbook_material, field)

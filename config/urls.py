@@ -77,6 +77,7 @@ urlpatterns = [
     path('blockclass/', include('blockclass.urls', namespace='blockclass')),
     path('textbooks/', include('textbooks.urls', namespace='textbooks')),
     path('textbook-ai/', include('textbook_ai.urls', namespace='textbook_ai')),
+    path('teacher-law/', include('teacher_law.urls', namespace='teacher_law')),
     path('edu-materials/', include('edu_materials.urls', namespace='edu_materials')),
     path('edu-materials-next/', include('edu_materials_next.urls', namespace='edu_materials_next')),
     path('infoboard/', include('infoboard.urls', namespace='infoboard')),

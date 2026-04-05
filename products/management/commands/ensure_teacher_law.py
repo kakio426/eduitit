@@ -4,32 +4,32 @@ from products.models import ManualSection, Product, ProductFeature, ServiceManua
 
 
 class Command(BaseCommand):
-    help = "Ensure textbook_ai product and manual exist in database"
+    help = "Ensure teacher_law product and manual exist in database"
 
-    PRODUCT_TITLE = "PDF 분석 도우미"
-    LAUNCH_ROUTE = "textbook_ai:main"
+    PRODUCT_TITLE = "교사용 AI 법률 가이드"
+    LAUNCH_ROUTE = "teacher_law:main"
 
     def handle(self, *args, **options):
         defaults = {
-            "lead_text": "PDF를 AI가 읽기 좋은 형태로 정리해 검색과 확인이 쉬워집니다.",
+            "lead_text": "학교폭력, 사진 게시, 생활지도처럼 교실에서 바로 확인해야 할 법령만 빠르게 정리합니다.",
             "description": (
-                "PDF 분석 도우미는 디지털 PDF를 로컬 파서로 읽어 목차, 본문, 표, 페이지 근거를 구조화하는 서비스입니다. "
-                "외부 생성 비용을 먼저 쓰지 않고, PDF를 믿고 읽고 찾을 수 있는 상태로 만드는 데 집중합니다."
+                "교사용 AI 법률 가이드는 국가법령정보 공식 API를 바탕으로 교사가 자주 묻는 학교 현장 질문을 정리해 주는 서비스입니다. "
+                "질문마다 관련 조문, 공식 출처, 조회 시각을 함께 보여 주고, 고위험 사안은 사람 상담이 더 필요하다는 안내를 함께 제공합니다."
             ),
             "price": 0.00,
             "is_active": True,
-            "is_featured": True,
+            "is_featured": False,
             "is_guest_allowed": False,
-            "icon": "🗂️",
-            "color_theme": "green",
+            "icon": "⚖️",
+            "color_theme": "blue",
             "card_size": "small",
-            "display_order": 17,
-            "service_type": "work",
+            "display_order": 18,
+            "service_type": "edutech",
             "external_url": "",
             "launch_route_name": self.LAUNCH_ROUTE,
-            "solve_text": "PDF를 AI가 읽기 좋게 정리하고 싶어요",
-            "result_text": "검색 가능한 구조화 PDF",
-            "time_text": "2분",
+            "solve_text": "교실에서 바로 확인할 법령 근거가 필요해요",
+            "result_text": "조문과 공식 출처가 함께 정리된 답변",
+            "time_text": "1분 안팎",
         }
 
         product = Product.objects.filter(launch_route_name=self.LAUNCH_ROUTE).order_by("id").first()
@@ -38,7 +38,7 @@ class Command(BaseCommand):
 
         if product is None:
             product = Product.objects.create(title=self.PRODUCT_TITLE, **defaults)
-            self.stdout.write(self.style.SUCCESS("[ensure_textbook_ai] Product created"))
+            self.stdout.write(self.style.SUCCESS("[ensure_teacher_law] Product created"))
         else:
             changed_fields = []
             for field_name, value in defaults.items():
@@ -62,25 +62,26 @@ class Command(BaseCommand):
                 product.save(update_fields=list(dict.fromkeys(changed_fields)))
                 self.stdout.write(
                     self.style.SUCCESS(
-                        f"[ensure_textbook_ai] Product fields updated: {', '.join(dict.fromkeys(changed_fields))}"
+                        "[ensure_teacher_law] Product fields updated: "
+                        + ", ".join(dict.fromkeys(changed_fields))
                     )
                 )
 
         features = [
             {
-                "icon": "📄",
-                "title": "PDF 구조화",
-                "description": "디지털 PDF를 읽어 목차, 본문, 표를 구조화하고 저장합니다.",
+                "icon": "📚",
+                "title": "공식 법령 근거 확인",
+                "description": "국가법령정보 API를 조회해 질문과 관련된 법령명, 조문, 공식 출처를 함께 보여 줍니다.",
             },
             {
-                "icon": "🔎",
-                "title": "페이지 근거 검색",
-                "description": "찾은 내용마다 페이지 근거를 함께 보여줘 다시 확인하기 쉽습니다.",
+                "icon": "🛟",
+                "title": "고위험 사안 분리 안내",
+                "description": "아동학대 의심, 신체 제지, 개인정보 유출처럼 위험도가 높은 질문은 사람 상담 권고를 함께 표시합니다.",
             },
             {
-                "icon": "💸",
-                "title": "비용 통제형 시작",
-                "description": "v1은 외부 LLM 없이 읽기 품질과 검색 가능한 구조에 집중합니다.",
+                "icon": "⚡",
+                "title": "빠른 질문 바로 시작",
+                "description": "교사가 자주 묻는 질문은 빠른 버튼과 캐시 응답으로 더 빨리 다시 확인할 수 있습니다.",
             },
         ]
         for feature in features:
@@ -96,17 +97,17 @@ class Command(BaseCommand):
         manual, _ = ServiceManual.objects.get_or_create(
             product=product,
             defaults={
-                "title": "PDF 분석 도우미 사용 가이드",
-                "description": "PDF 올리기부터 구조 확인, 검색까지 빠르게 따라가는 안내입니다.",
+                "title": "교사용 AI 법률 가이드 사용법",
+                "description": "질문 입력부터 근거 확인, 사람 상담이 더 필요한 경우까지 빠르게 따라가는 안내입니다.",
                 "is_published": True,
             },
         )
         manual_changed = []
         if not (manual.title or "").strip():
-            manual.title = "PDF 분석 도우미 사용 가이드"
+            manual.title = "교사용 AI 법률 가이드 사용법"
             manual_changed.append("title")
         if not (manual.description or "").strip():
-            manual.description = "PDF 올리기부터 구조 확인, 검색까지 빠르게 따라가는 안내입니다."
+            manual.description = "질문 입력부터 근거 확인, 사람 상담이 더 필요한 경우까지 빠르게 따라가는 안내입니다."
             manual_changed.append("description")
         if not manual.is_published:
             manual.is_published = True
@@ -116,20 +117,20 @@ class Command(BaseCommand):
 
         sections = [
             {
-                "title": "PDF 올리기",
-                "content": "자료 제목과 과목을 적고 PDF를 올리면 로컬 파서가 구조를 정리합니다.",
+                "title": "무엇을 물을 수 있나요?",
+                "content": "학교폭력, 사진·영상 게시, 개인정보, 생활지도, 학부모 민원, 신고 의무처럼 교실에서 바로 확인해야 할 질문을 먼저 적어 보세요.",
                 "display_order": 1,
                 "badge_text": "Step 1",
             },
             {
-                "title": "구조 확인",
-                "content": "상세 화면에서 목차, 본문 미리보기, 표 미리보기를 먼저 확인해 주세요.",
+                "title": "답변은 어떻게 읽나요?",
+                "content": "답변에는 핵심 정리, 지금 바로 할 일, 근거 조문, 공식 출처, 조회 시각이 함께 표시됩니다. 근거가 약하면 추가 확인 필요로 안내합니다.",
                 "display_order": 2,
                 "badge_text": "Step 2",
             },
             {
-                "title": "검색 활용",
-                "content": "검색 탭에서 필요한 내용을 찾고, 페이지 근거와 함께 원본 PDF를 다시 열 수 있습니다.",
+                "title": "언제 사람 상담이 필요한가요?",
+                "content": "아동학대 의심, 신체 제지, 개인정보 유출, 형사 책임 우려처럼 위험도가 높은 사안은 학교 관리자나 전문 상담과 함께 진행해 주세요.",
                 "display_order": 3,
                 "badge_text": "Step 3",
             },
@@ -145,4 +146,4 @@ class Command(BaseCommand):
                 },
             )
 
-        self.stdout.write(self.style.SUCCESS("[ensure_textbook_ai] Done"))
+        self.stdout.write(self.style.SUCCESS("[ensure_teacher_law] Done"))
