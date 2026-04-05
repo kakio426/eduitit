@@ -154,12 +154,8 @@
     }
 
     function updateSummaries(root, payload) {
-        var dust = root.querySelector('[data-buddy-settings-dust="true"]');
         var buddySummary = root.querySelector('[data-buddy-settings-buddy-summary="true"]');
         var styleSummary = root.querySelector('[data-buddy-settings-style-summary="true"]');
-        if (dust && typeof payload.sticker_dust !== 'undefined') {
-            dust.textContent = '스타일 조각 ' + parseInt(payload.sticker_dust || 0, 10) + '개';
-        }
         if (buddySummary && payload.buddy_collection_summary_text) {
             buddySummary.textContent = payload.buddy_collection_summary_text;
         }
@@ -194,13 +190,7 @@
         var skinKey = option.getAttribute('data-skin-key') || '';
         var styleDefault = option.getAttribute('data-style-default') === 'true';
         if (!unlocked && !styleDefault) {
-            actions.innerHTML = '' +
-                '<form method="post" action="' + root.dataset.unlockSkinUrl + '" data-buddy-unlock-form="true">' +
-                '<input type="hidden" name="csrfmiddlewaretoken" value="' + getCsrfToken() + '">' +
-                '<input type="hidden" name="buddy_key" value="' + buddyKey + '">' +
-                '<input type="hidden" name="skin_key" value="' + skinKey + '">' +
-                '<button type="submit" class="teacher-buddy-inline-button">스킨 해금</button>' +
-                '</form>';
+            actions.innerHTML = '<span class="teacher-buddy-status-chip teacher-buddy-status-chip--soft">메이트 뽑기에서 등장</span>';
             return;
         }
         var isProfile = buddyKey === state.profileKey && (skinKey || '') === (state.profileSkinKey || '');
@@ -263,7 +253,7 @@
                         } else if (style.is_unlocked) {
                             copy.textContent = '해금 완료';
                         } else {
-                copy.textContent = '스타일 조각 ' + parseInt(style.unlock_cost_dust || 0, 10) + '개';
+                            copy.textContent = '뽑기로 만나기';
                         }
                     }
                 }
@@ -299,7 +289,7 @@
     function bindForms(root, state) {
         root.addEventListener('submit', async function (event) {
             var form = event.target;
-            if (!form.matches('[data-buddy-apply-form], [data-buddy-unlock-form="true"]')) {
+            if (!form.matches('[data-buddy-apply-form]')) {
                 return;
             }
             event.preventDefault();

@@ -290,7 +290,7 @@ class TeacherBuddyServiceTests(TestCase):
         legendary_buddy = next(buddy for buddy in all_teacher_buddies() if buddy.key == "board_lighthouse")
         with patch("core.teacher_buddy.random.choices", side_effect=fake_choices), patch(
             "core.teacher_buddy.random.choice",
-            return_value=(legendary_buddy, False),
+            return_value=("buddy", legendary_buddy, False),
         ):
             payload = draw_teacher_buddy(self.user)
 
@@ -299,7 +299,7 @@ class TeacherBuddyServiceTests(TestCase):
         self.assertEqual(captured["choices"], [RARITY_COMMON, RARITY_RARE, RARITY_EPIC, RARITY_LEGENDARY])
         self.assertEqual(captured["weights"], [53, 28, 14, 5])
 
-    def test_repeat_pool_duplicate_grants_dust_without_new_unlock(self):
+    def test_repeat_pool_duplicate_does_not_grant_extra_reward(self):
         self._grant_home_ticket()
         state = self._state()
         duplicate_buddy = next(buddy for buddy in all_teacher_buddies() if buddy.rarity == RARITY_COMMON)
@@ -311,14 +311,14 @@ class TeacherBuddyServiceTests(TestCase):
 
         with patch("core.teacher_buddy.random.choices", return_value=[RARITY_COMMON]), patch(
             "core.teacher_buddy.random.choice",
-            return_value=(duplicate_buddy, True),
+            return_value=("buddy", duplicate_buddy, True),
         ):
             payload = draw_teacher_buddy(self.user)
 
         state.refresh_from_db()
         self.assertEqual(payload["draw_result_kind"], "duplicate")
-        self.assertEqual(payload["dust_gained"], 1)
-        self.assertEqual(state.sticker_dust, 1)
+        self.assertEqual(payload["dust_gained"], 0)
+        self.assertEqual(state.sticker_dust, 0)
         self.assertEqual(TeacherBuddyUnlock.objects.filter(user=self.user).count(), unlock_count_before)
 
     def test_select_teacher_buddy_rejects_locked_buddy(self):
@@ -344,33 +344,28 @@ class TeacherBuddyServiceTests(TestCase):
         state.refresh_from_db()
         self.assertEqual(state.profile_buddy_key, candidate.key)
 
-    def test_unlock_teacher_buddy_skin_requires_base_buddy_and_consumes_dust(self):
+    def test_draw_can_unlock_style_without_currency(self):
+        self._grant_home_ticket()
+        starter_key = self._state().active_buddy_key
+        starter_skin = get_teacher_buddy_skins_for_buddy(starter_key)[0]
+
+        with patch("core.teacher_buddy.random.choices", return_value=[RARITY_COMMON]), patch(
+            "core.teacher_buddy.random.choice",
+            return_value=("style", starter_skin, False),
+        ):
+            payload = draw_teacher_buddy(self.user)
+
+        self.assertEqual(payload["draw_result_kind"], "style_unlock")
+        self.assertEqual(payload["unlocked_skin"]["key"], starter_skin.key)
+        self.assertTrue(TeacherBuddySkinUnlock.objects.filter(user=self.user, skin_key=starter_skin.key).exists())
+
+    def test_unlock_teacher_buddy_skin_is_disabled_for_draw_only_flow(self):
         record_teacher_buddy_progress(self.user, self.classroom_product, "home_quick")
         starter_key = self._state().active_buddy_key
-        locked_candidate = next(
-            buddy for buddy in all_teacher_buddies() if buddy.key != starter_key and get_teacher_buddy_skins_for_buddy(buddy.key)
-        )
-        locked_skin = get_teacher_buddy_skins_for_buddy(locked_candidate.key)[0]
+        starter_skin = get_teacher_buddy_skins_for_buddy(starter_key)[0]
 
-        with self.assertRaisesMessage(TeacherBuddyError, "메이트 본체를 먼저 만나야 스타일을 열 수 있어요."):
-            unlock_teacher_buddy_skin(self.user, locked_candidate.key, locked_skin.key)
-
-        TeacherBuddyUnlock.objects.create(
-            user=self.user,
-            buddy_key=locked_candidate.key,
-            rarity=locked_candidate.rarity,
-            obtained_via="draw",
-        )
-        state = self._state()
-        state.sticker_dust = locked_skin.unlock_cost_dust
-        state.save(update_fields=["sticker_dust"])
-
-        payload = unlock_teacher_buddy_skin(self.user, locked_candidate.key, locked_skin.key)
-
-        state.refresh_from_db()
-        self.assertEqual(payload["unlocked_skin"]["key"], locked_skin.key)
-        self.assertTrue(TeacherBuddySkinUnlock.objects.filter(user=self.user, skin_key=locked_skin.key).exists())
-        self.assertEqual(state.sticker_dust, 0)
+        with self.assertRaisesMessage(TeacherBuddyError, "스타일은 뽑기로만 만날 수 있어요."):
+            unlock_teacher_buddy_skin(self.user, starter_key, starter_skin.key)
 
     def test_select_teacher_buddy_with_skin_updates_active_skin_key(self):
         record_teacher_buddy_progress(self.user, self.classroom_product, "home_quick")
@@ -490,7 +485,7 @@ class TeacherBuddyApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["profile_buddy"]["key"], candidate.key)
 
-    def test_skin_unlock_endpoint_returns_json(self):
+    def test_skin_unlock_endpoint_returns_400_for_draw_only_flow(self):
         self.client.login(username="buddyapi", password="pass1234")
         record_teacher_buddy_progress(self.user, self.product, "home_quick")
         starter_key = TeacherBuddyState.objects.get(user=self.user).active_buddy_key
@@ -504,9 +499,6 @@ class TeacherBuddyApiTests(TestCase):
             rarity=candidate.rarity,
             obtained_via="draw",
         )
-        state = TeacherBuddyState.objects.get(user=self.user)
-        state.sticker_dust = skin.unlock_cost_dust
-        state.save(update_fields=["sticker_dust"])
 
         response = self.client.post(
             reverse("teacher_buddy_unlock_skin"),
@@ -514,8 +506,8 @@ class TeacherBuddyApiTests(TestCase):
             HTTP_X_REQUESTED_WITH="XMLHttpRequest",
         )
 
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["unlocked_skin"]["key"], skin.key)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["error"], "스타일은 뽑기로만 만날 수 있어요.")
 
     def test_htmx_post_create_triggers_daily_sns_reward(self):
         self.client.login(username="buddyapi", password="pass1234")
@@ -678,6 +670,8 @@ class TeacherBuddyHomeRenderTests(TestCase):
         self.assertNotContains(response, 'data-buddy-preview-caption="home"')
         self.assertNotContains(response, 'data-buddy-settings-buddy-summary="true"')
         self.assertNotContains(response, 'data-buddy-settings-style-summary="true"')
+        self.assertNotContains(response, 'data-buddy-unlock-form="true"')
+        self.assertNotContains(response, "스타일 조각")
 
     def test_settings_collection_starts_with_current_starter_buddy(self):
         self.client.login(username="buddyhome", password="pass1234")

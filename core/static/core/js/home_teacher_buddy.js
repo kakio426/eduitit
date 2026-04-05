@@ -38,7 +38,7 @@
         }
     }
 
-    function updateProgress(root, payload, collectionSummaryText, stickerDust) {
+    function updateProgress(root, payload, collectionSummaryText) {
         if (!payload) {
             return;
         }
@@ -50,14 +50,10 @@
         setText(root, '[data-buddy-home-ticket-condition="true"]', payload.home_ticket_condition_text || '');
         setText(root, '[data-buddy-home-ticket-status="true"]', payload.home_ticket_status_text || '');
         setText(root, '[data-buddy-sns-status="true"]', payload.sns_bonus_text || '');
-        setText(root, '[data-buddy-legendary-status="true"]', payload.legendary_progress_text || '');
         setText(root, '[data-buddy-reaction="true"]', payload.reaction_text || '');
         setText(root, '[data-buddy-token-badge="true"]', '토큰 ' + tokenCount);
         if (typeof collectionSummaryText === 'string') {
             setText(root, '[data-buddy-collection-summary="true"]', collectionSummaryText);
-        }
-        if (typeof stickerDust !== 'undefined') {
-            setText(root, '[data-buddy-dust="true"]', '스타일 조각 ' + parseInt(stickerDust || 0, 10) + '개');
         }
 
         var drawButton = root.querySelector('[data-buddy-draw-button="true"]');
@@ -197,7 +193,7 @@
         if (payload.active_buddy) {
             updateActiveBuddy(root, payload.active_buddy);
         }
-        updateProgress(root, payload.buddy_progress || null, payload.collection_summary_text || '', payload.sticker_dust);
+        updateProgress(root, payload.buddy_progress || null, payload.collection_summary_text || '');
         populateResult(root, payload);
         revealResult(root);
         return payload;

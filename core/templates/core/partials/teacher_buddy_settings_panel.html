@@ -5,7 +5,6 @@
     data-selection-mode="{{ teacher_buddy_settings.selection_mode_default }}"
     data-select-url="{{ teacher_buddy_urls.select }}"
     data-select-profile-url="{{ teacher_buddy_urls.select_profile }}"
-    data-unlock-skin-url="{{ teacher_buddy_urls.unlock_skin }}"
 >
     <div class="teacher-buddy-settings-head">
         <div>
@@ -17,7 +16,6 @@
             <span class="teacher-buddy-settings-token" data-buddy-settings-token="true">
                 토큰 {{ teacher_buddy_settings.draw_token_count }}/{{ teacher_buddy_settings.max_draw_token_count }}
             </span>
-            <span class="teacher-buddy-settings-dust" data-buddy-settings-dust="true">{{ teacher_buddy_settings.sticker_dust_text }}</span>
         </div>
     </div>
 
@@ -151,7 +149,7 @@
                                     {% elif style.is_unlocked %}
                                     해금 완료
                                     {% else %}
-                                    스타일 조각 {{ style.unlock_cost_dust }}개
+                                    뽑기로 만나기
                                     {% endif %}
                                 </p>
                             </div>
@@ -174,12 +172,7 @@
                                 <button type="submit" class="teacher-buddy-inline-button teacher-buddy-inline-button--secondary">홈에 적용</button>
                             </form>
                             {% else %}
-                            <form method="post" action="{{ teacher_buddy_urls.unlock_skin }}" data-buddy-unlock-form="true">
-                                {% csrf_token %}
-                                <input type="hidden" name="buddy_key" value="{{ item.key }}">
-                                <input type="hidden" name="skin_key" value="{{ style.skin_key }}">
-                                <button type="submit" class="teacher-buddy-inline-button">스킨 해금</button>
-                            </form>
+                            <span class="teacher-buddy-status-chip teacher-buddy-status-chip--soft">메이트 뽑기에서 등장</span>
                             {% endif %}
                         </div>
                     </section>

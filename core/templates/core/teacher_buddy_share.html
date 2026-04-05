@@ -22,7 +22,7 @@
                         <p class="teacher-buddy-profile-name">{{ share_context.buddy.name }}</p>
                         <div class="teacher-buddy-share-stats">
                             <span class="teacher-buddy-rarity teacher-buddy-rarity--{{ share_context.buddy.rarity }}">{{ share_context.buddy.rarity_label }}</span>
-                <span class="teacher-buddy-share-stat">스타일 조각 {{ share_context.sticker_dust }}개</span>
+                            <span class="teacher-buddy-share-stat">{{ share_context.buddy.selected_skin_label }}</span>
                         </div>
                     </div>
                 </div>
@@ -33,7 +33,7 @@
 
                 <div class="teacher-buddy-share-copy-box">
                     <p class="teacher-buddy-share-description">{{ share_context.share_copy_text }}</p>
-                    <p class="teacher-buddy-share-description">{{ share_context.legendary_progress_text }} · {{ share_context.cosmetic_tier_label }}</p>
+                    <p class="teacher-buddy-share-description">{{ share_context.buddy.rarity_label }} 메이트 · {{ share_context.buddy.selected_skin_label }}</p>
                 </div>
 
                 <div class="teacher-buddy-share-links">

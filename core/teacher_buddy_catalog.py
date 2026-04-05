@@ -87,11 +87,35 @@ def _join_lines(*lines: str) -> str:
     return "\n".join(lines)
 
 
+def _has_batchim(value: str) -> bool:
+    cleaned = str(value or "").strip()
+    if not cleaned:
+        return False
+    for char in reversed(cleaned):
+        if char.isspace():
+            continue
+        code = ord(char)
+        if 0xAC00 <= code <= 0xD7A3:
+            return (code - 0xAC00) % 28 != 0
+        lowered = char.lower()
+        if lowered in "aeiou":
+            return False
+        if lowered.isalpha() or lowered.isdigit():
+            return True
+        return False
+    return False
+
+
+def with_particle(value: str, pair: tuple[str, str]) -> str:
+    first, second = pair
+    return f"{value}{first if _has_batchim(value) else second}"
+
+
 def _messages(name: str) -> tuple[str, str, str]:
     return (
-        f"{name}가 오늘 교실 흐름을 살펴보고 있어요.",
-        f"{name}가 한 칸씩 차분하게 맞춰 보고 있어요.",
-        f"{name}와 오늘 티켓을 완성했어요.",
+        f"{with_particle(name, ('이', '가'))} 오늘 교실 흐름을 살펴보고 있어요.",
+        f"{with_particle(name, ('이', '가'))} 한 칸씩 차분하게 맞춰 보고 있어요.",
+        f"{with_particle(name, ('와', '과'))} 오늘 반짝 조각을 완성했어요.",
     )
 
 
@@ -381,12 +405,12 @@ _BUDDIES = (
         "|______ | ",
         "   /__\\   ",
     )),
-    _buddy("board_lighthouse", "칠판등대", RARITY_LEGENDARY, "nightgold", "LH", "lighthouse", "lighthouse", "교실 전체를 비추는 전설 메이트로, 꾸준한 흐름 끝에 만날 수 있어요.", (
+    _buddy("board_lighthouse", "칠판등대", RARITY_LEGENDARY, "nightgold", "LH", "lighthouse", "lighthouse", "칠판 위를 가르는 빛처럼 등장해 교실 전체 분위기를 바꿔 놓는 전설 메이트예요.", (
         "    /\\    ",
-        "   /..\\   ",
+        "   /++\\   ",
         "  /_==_\\  ",
-        "  | || |  ",
-        " .|_||_|. ",
+        " <| /\\ |> ",
+        " <|_||_|> ",
         "   /__\\   ",
     )),
 )

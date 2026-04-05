@@ -38,6 +38,7 @@ from .teacher_buddy_catalog import (
     get_teacher_buddy_skin,
     get_teacher_buddy_palette,
     get_teacher_buddy_skins_for_buddy,
+    with_particle,
 )
 
 
@@ -69,10 +70,29 @@ RARITY_WEIGHTS_AFTER_LEGENDARY = {
     RARITY_EPIC: 14,
     RARITY_LEGENDARY: 5,
 }
-DUST_REWARD_BY_RARITY = {
-    RARITY_COMMON: 1,
-    RARITY_RARE: 3,
-    RARITY_EPIC: 6,
+# After rarity is chosen, new bodies stay most likely, locked styles are next,
+# and repeats remain possible but intentionally least likely.
+DRAW_CANDIDATE_WEIGHTS_BY_RARITY = {
+    RARITY_COMMON: {
+        "new_buddy": 4,
+        "new_style": 2,
+        "repeat_buddy": 1,
+    },
+    RARITY_RARE: {
+        "new_buddy": 4,
+        "new_style": 2,
+        "repeat_buddy": 1,
+    },
+    RARITY_EPIC: {
+        "new_buddy": 5,
+        "new_style": 0,
+        "repeat_buddy": 1,
+    },
+    RARITY_LEGENDARY: {
+        "new_buddy": 1,
+        "new_style": 0,
+        "repeat_buddy": 0,
+    },
 }
 COSMETIC_TIERS = (
     (0, "starter", "새싹 링"),
@@ -201,6 +221,30 @@ def _serialize_skin(
         "is_unlocked": unlocked,
         "is_active_style": buddy.key == active_key and (active_skin_key or DEFAULT_STYLE_KEY) == resolved_skin_key,
         "is_profile_style": buddy.key == profile_key and (profile_skin_key or DEFAULT_STYLE_KEY) == resolved_skin_key,
+    }
+
+
+def _serialize_unlocked_skin_result(
+    *,
+    skin: TeacherBuddySkinDefinition,
+    buddy: TeacherBuddyDefinition,
+) -> dict[str, object]:
+    palette_tokens = _build_palette_payload(skin.palette, accent_override=skin.avatar_accent)
+    return {
+        "key": skin.key,
+        "skin_key": skin.key,
+        "buddy_key": buddy.key,
+        "buddy_name": buddy.name,
+        "label": skin.label,
+        "palette": skin.palette,
+        "palette_tokens": palette_tokens,
+        "preview_badge": skin.preview_badge,
+        "avatar_accent": skin.avatar_accent,
+        "idle_ascii": buddy.idle_ascii,
+        "unlock_ascii": buddy.unlock_ascii,
+        "rarity": buddy.rarity,
+        "rarity_label": buddy.rarity_label,
+        "selected_skin_label": skin.label,
     }
 
 
@@ -1101,6 +1145,19 @@ def record_teacher_buddy_sns_reward(user, post) -> dict[str, object] | None:
 
 
 def _build_draw_groups(*, user, state: TeacherBuddyState) -> dict[str, list[tuple[TeacherBuddyDefinition, bool]]]:
+    unique_groups, repeat_groups = _build_body_draw_groups(user=user, state=state)
+    return {
+        RARITY_COMMON: unique_groups[RARITY_COMMON] or repeat_groups[RARITY_COMMON],
+        RARITY_RARE: unique_groups[RARITY_RARE] or repeat_groups[RARITY_RARE],
+        RARITY_EPIC: unique_groups[RARITY_EPIC] or repeat_groups[RARITY_EPIC],
+        RARITY_LEGENDARY: unique_groups[RARITY_LEGENDARY],
+    }
+
+
+def _build_body_draw_groups(*, user, state: TeacherBuddyState) -> tuple[
+    dict[str, list[tuple[TeacherBuddyDefinition, bool]]],
+    dict[str, list[tuple[TeacherBuddyDefinition, bool]]],
+]:
     unlock_map = {
         unlock.buddy_key: unlock
         for unlock in TeacherBuddyUnlock.objects.filter(user=user)
@@ -1127,16 +1184,32 @@ def _build_draw_groups(*, user, state: TeacherBuddyState) -> dict[str, list[tupl
         if buddy.rarity != RARITY_LEGENDARY:
             repeat_groups.setdefault(buddy.rarity, []).append((buddy, True))
 
-    return {
-        RARITY_COMMON: unique_groups[RARITY_COMMON] or repeat_groups[RARITY_COMMON],
-        RARITY_RARE: unique_groups[RARITY_RARE] or repeat_groups[RARITY_RARE],
-        RARITY_EPIC: unique_groups[RARITY_EPIC] or repeat_groups[RARITY_EPIC],
-        RARITY_LEGENDARY: unique_groups[RARITY_LEGENDARY],
+    return unique_groups, repeat_groups
+
+
+def _build_style_draw_groups(*, user) -> dict[str, list[TeacherBuddySkinDefinition]]:
+    unlocked_buddy_keys = set(TeacherBuddyUnlock.objects.filter(user=user).values_list("buddy_key", flat=True))
+    unlocked_skin_keys = set(TeacherBuddySkinUnlock.objects.filter(user=user).values_list("skin_key", flat=True))
+    groups = {
+        RARITY_COMMON: [],
+        RARITY_RARE: [],
+        RARITY_EPIC: [],
+        RARITY_LEGENDARY: [],
     }
+    for buddy_key in unlocked_buddy_keys:
+        buddy = get_teacher_buddy(buddy_key)
+        if buddy.rarity == RARITY_LEGENDARY:
+            continue
+        for skin in get_teacher_buddy_skins_for_buddy(buddy_key):
+            if skin.key in unlocked_skin_keys:
+                continue
+            groups.setdefault(buddy.rarity, []).append(skin)
+    return groups
 
 
-def _choose_draw_candidate(*, user, state: TeacherBuddyState) -> tuple[TeacherBuddyDefinition, bool] | None:
-    grouped = _build_draw_groups(user=user, state=state)
+def _choose_draw_candidate(*, user, state: TeacherBuddyState) -> tuple[str, object, bool] | None:
+    unique_body_groups, repeat_body_groups = _build_body_draw_groups(user=user, state=state)
+    style_groups = _build_style_draw_groups(user=user)
     weights = (
         RARITY_WEIGHTS_AFTER_LEGENDARY
         if _legendary_pool_unlocked(state)
@@ -1144,8 +1217,13 @@ def _choose_draw_candidate(*, user, state: TeacherBuddyState) -> tuple[TeacherBu
     )
     rarity_choices = [
         rarity
-        for rarity, items in grouped.items()
-        if items and int(weights.get(rarity, 0) or 0) > 0
+        for rarity in weights.keys()
+        if int(weights.get(rarity, 0) or 0) > 0
+        and (
+            unique_body_groups.get(rarity)
+            or style_groups.get(rarity)
+            or repeat_body_groups.get(rarity)
+        )
     ]
     if not rarity_choices:
         return None
@@ -1155,7 +1233,25 @@ def _choose_draw_candidate(*, user, state: TeacherBuddyState) -> tuple[TeacherBu
         weights=[weights[rarity] for rarity in rarity_choices],
         k=1,
     )[0]
-    return random.choice(grouped[chosen_rarity])
+    candidate_weights = DRAW_CANDIDATE_WEIGHTS_BY_RARITY.get(chosen_rarity, {})
+    weighted_candidates: list[tuple[str, object, bool]] = []
+
+    for buddy, _ in unique_body_groups.get(chosen_rarity, []):
+        weighted_candidates.extend(
+            [("buddy", buddy, False)] * int(candidate_weights.get("new_buddy", 0) or 0)
+        )
+    for skin in style_groups.get(chosen_rarity, []):
+        weighted_candidates.extend(
+            [("style", skin, False)] * int(candidate_weights.get("new_style", 0) or 0)
+        )
+    for buddy, _ in repeat_body_groups.get(chosen_rarity, []):
+        weighted_candidates.extend(
+            [("buddy", buddy, True)] * int(candidate_weights.get("repeat_buddy", 0) or 0)
+        )
+
+    if not weighted_candidates:
+        return None
+    return random.choice(weighted_candidates)
 
 
 def draw_teacher_buddy(user) -> dict[str, object]:
@@ -1173,14 +1269,69 @@ def draw_teacher_buddy(user) -> dict[str, object]:
         if chosen is None:
             raise TeacherBuddyError("지금은 메이트 뽑기 풀이 비어 있어요.")
 
-        buddy, is_duplicate = chosen
+        draw_kind, draw_target, is_duplicate = chosen
         state.draw_token_count = max(0, int(state.draw_token_count or 0) - 1)
         update_fields = ["draw_token_count"]
+        progress = _get_progress_for_date(user, _today())
+        active_key = state.active_buddy_key or state.profile_buddy_key
 
+        if draw_kind == "style":
+            skin = draw_target
+            buddy = get_teacher_buddy(skin.buddy_key)
+            TeacherBuddySkinUnlock.objects.create(
+                user=user,
+                buddy_key=skin.buddy_key,
+                skin_key=skin.key,
+                obtained_via="draw",
+            )
+            state.save(update_fields=update_fields)
+            active_payload = _serialize_state_buddy(
+                user=user,
+                state=state,
+                buddy_key=active_key,
+                selected_skin_key=_resolve_style_skin_key(state.active_skin_key, active_key, state.active_buddy_key),
+            )
+            collection_item = _serialize_state_buddy(
+                user=user,
+                state=state,
+                buddy_key=buddy.key,
+                selected_skin_key="",
+            )
+            unlocked_skin = _serialize_unlocked_skin_result(skin=skin, buddy=buddy)
+            result_payload = _serialize_state_buddy(
+                user=user,
+                state=state,
+                buddy_key=buddy.key,
+                selected_skin_key=skin.key,
+            )
+            return {
+                "status": "ok",
+                "draw_result_kind": "style_unlock",
+                "result_buddy": result_payload,
+                "active_buddy": active_payload,
+                "unlocked_buddy": collection_item,
+                "unlocked_skin": unlocked_skin,
+                "collection_item": collection_item,
+                "draw_token_count": int(state.draw_token_count or 0),
+                "collection_completed": bool(state.collection_completed_at),
+                "collection_summary_text": _collection_summary_text(user),
+                "sticker_dust": int(state.sticker_dust or 0),
+                "dust_gained": 0,
+                "message": f"{buddy.name}의 {skin.label} 스타일을 만났어요.",
+                "result_rarity": buddy.rarity,
+                "result_reveal_theme": DRAW_REVEAL_THEME_BY_RARITY.get(buddy.rarity, "common"),
+                "result_title": f"{buddy.rarity_label} 스타일 등장",
+                "result_is_duplicate": False,
+                "buddy_progress": _build_progress_summary(
+                    user=user,
+                    state=state,
+                    active_buddy_payload=active_payload,
+                    progress=progress,
+                ),
+            }
+
+        buddy = draw_target
         if is_duplicate:
-            dust_gained = int(DUST_REWARD_BY_RARITY.get(buddy.rarity, 0))
-            state.sticker_dust = int(state.sticker_dust or 0) + dust_gained
-            update_fields.append("sticker_dust")
             state.save(update_fields=update_fields)
             result_payload = _serialize_state_buddy(
                 user=user,
@@ -1188,14 +1339,12 @@ def draw_teacher_buddy(user) -> dict[str, object]:
                 buddy_key=buddy.key,
                 selected_skin_key="",
             )
-            active_key = state.active_buddy_key or state.profile_buddy_key
             active_payload = _serialize_state_buddy(
                 user=user,
                 state=state,
                 buddy_key=active_key,
                 selected_skin_key=_resolve_style_skin_key(state.active_skin_key, active_key, state.active_buddy_key),
             )
-            progress = _get_progress_for_date(user, _today())
             return {
                 "status": "ok",
                 "draw_result_kind": "duplicate",
@@ -1206,11 +1355,11 @@ def draw_teacher_buddy(user) -> dict[str, object]:
                 "collection_completed": bool(state.collection_completed_at),
                 "collection_summary_text": _collection_summary_text(user),
                 "sticker_dust": int(state.sticker_dust or 0),
-                "dust_gained": dust_gained,
-                "message": f"{buddy.name}가 스타일 조각 {dust_gained}개를 남기고 지나갔어요.",
+                "dust_gained": 0,
+                "message": f"{with_particle(buddy.name, ('이', '가'))} 다시 찾아왔어요. 이번에는 같은 메이트예요.",
                 "result_rarity": buddy.rarity,
                 "result_reveal_theme": "duplicate",
-                "result_title": "스타일 조각으로 변환됐어요",
+                "result_title": "같은 메이트가 다시 나왔어요",
                 "result_is_duplicate": True,
                 "buddy_progress": _build_progress_summary(
                     user=user,
@@ -1238,7 +1387,6 @@ def draw_teacher_buddy(user) -> dict[str, object]:
             buddy_key=buddy.key,
             selected_skin_key="",
         )
-        progress = _get_progress_for_date(user, _today())
         return {
             "status": "ok",
             "draw_result_kind": "unlock",
@@ -1250,7 +1398,7 @@ def draw_teacher_buddy(user) -> dict[str, object]:
             "collection_summary_text": _collection_summary_text(user),
             "sticker_dust": int(state.sticker_dust or 0),
             "dust_gained": 0,
-            "message": f"{buddy.name} 메이트가 새로 합류했어요.",
+            "message": f"{with_particle(buddy.name, ('이', '가'))} 새로 합류했어요.",
             "result_rarity": buddy.rarity,
             "result_reveal_theme": DRAW_REVEAL_THEME_BY_RARITY.get(buddy.rarity, "common"),
             "result_title": f"{buddy.rarity_label} 메이트 등장",
@@ -1340,7 +1488,7 @@ def select_teacher_buddy(user, buddy_key: str, skin_key: str = "") -> dict[str, 
         return _build_selection_payload(
             user=user,
             state=state,
-            message=f"{get_teacher_buddy(normalized_key).name}와 함께 홈을 둘러볼게요.",
+            message=f"{with_particle(get_teacher_buddy(normalized_key).name, ('와', '과'))} 함께 홈을 둘러볼게요.",
         )
 
 
@@ -1365,73 +1513,12 @@ def select_teacher_buddy_profile(user, buddy_key: str, skin_key: str = "") -> di
         return _build_selection_payload(
             user=user,
             state=state,
-            message=f"{get_teacher_buddy(normalized_key).name}가 SNS 대표 메이트가 됐어요.",
+            message=f"{with_particle(get_teacher_buddy(normalized_key).name, ('이', '가'))} SNS 대표 메이트가 됐어요.",
         )
 
 
 def unlock_teacher_buddy_skin(user, buddy_key: str, skin_key: str) -> dict[str, object]:
-    if not teacher_buddy_user_is_eligible(user):
-        raise TeacherBuddyError("교실 메이트는 교사 계정에서만 사용할 수 있어요.")
-
-    normalized_buddy_key = str(buddy_key or "").strip()
-    normalized_skin_key = str(skin_key or "").strip()
-    if not normalized_buddy_key or not normalized_skin_key:
-        raise TeacherBuddyError("스타일을 먼저 골라 주세요.")
-
-    try:
-        skin = get_teacher_buddy_skin(normalized_skin_key)
-    except KeyError as exc:
-        raise TeacherBuddyError("존재하지 않는 스타일입니다.") from exc
-    if skin.buddy_key != normalized_buddy_key:
-        raise TeacherBuddyError("이 스타일은 선택한 메이트 전용입니다.")
-
-    with transaction.atomic():
-        state = _get_or_create_state_for_update(user)
-        state = _ensure_starter_unlocked(user=user, state=state)
-        if TeacherBuddyUnlock.objects.filter(user=user, buddy_key=normalized_buddy_key).first() is None:
-            raise TeacherBuddyError("메이트 본체를 먼저 만나야 스타일을 열 수 있어요.")
-        if TeacherBuddySkinUnlock.objects.filter(user=user, skin_key=normalized_skin_key).exists():
-            raise TeacherBuddyError("이미 열린 스타일입니다.")
-        if int(state.sticker_dust or 0) < int(skin.unlock_cost_dust or 0):
-            raise TeacherBuddyError("스타일 조각이 부족해요.")
-
-        TeacherBuddySkinUnlock.objects.create(
-            user=user,
-            skin_key=normalized_skin_key,
-            buddy_key=normalized_buddy_key,
-            obtained_via="dust",
-        )
-        state.sticker_dust = int(state.sticker_dust or 0) - int(skin.unlock_cost_dust or 0)
-        state.save(update_fields=["sticker_dust"])
-
-        active_key = state.active_buddy_key or state.profile_buddy_key
-        payload = _build_selection_payload(
-            user=user,
-            state=state,
-            message=f"{skin.label} 스타일이 열렸어요.",
-        )
-        payload["collection_item"] = _serialize_state_buddy(
-            user=user,
-            state=state,
-            buddy_key=normalized_buddy_key,
-            selected_skin_key="",
-        )
-        payload["unlocked_skin"] = {
-            "key": skin.key,
-            "label": skin.label,
-            "buddy_key": skin.buddy_key,
-            "unlock_cost_dust": skin.unlock_cost_dust,
-            "palette": skin.palette,
-            "palette_tokens": _build_palette_payload(skin.palette, accent_override=skin.avatar_accent),
-            "preview_badge": skin.preview_badge,
-        }
-        payload["active_buddy"] = _serialize_state_buddy(
-            user=user,
-            state=state,
-            buddy_key=active_key,
-            selected_skin_key=_resolve_style_skin_key(state.active_skin_key, active_key, state.active_buddy_key),
-        )
-        return payload
+    raise TeacherBuddyError("스타일은 뽑기로만 만날 수 있어요.")
 
 
 def build_teacher_buddy_public_share_context(public_share_token) -> dict[str, object]:
@@ -1483,7 +1570,6 @@ def build_teacher_buddy_public_share_context(public_share_token) -> dict[str, ob
         "share_url": share_url,
         "share_image_path": share_image_path,
         "share_image_url": share_image_url,
-        "legendary_progress_text": _build_legendary_status_text(state),
         "sticker_dust": int(state.sticker_dust or 0),
         "cosmetic_tier": cosmetic_key,
         "cosmetic_tier_label": cosmetic_label,
@@ -1568,7 +1654,7 @@ def build_teacher_buddy_share_svg(context: dict[str, object]) -> str:
         f'<rect x="90" y="300" width="340" height="206" rx="28" fill="white" fill-opacity="0.92" stroke="{ring}" stroke-width="2"/>'
         + "".join(ascii_markup)
         + f'<text x="472" y="244" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700" fill="{text}">{caption}</text>'
-        f'<text x="472" y="300" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="{text}">스타일 조각 {sticker_dust}개 · {escape(str(context.get("cosmetic_tier_label") or "새싹 링"))}</text>'
+        f'<text x="472" y="300" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="{text}">{escape(str(buddy.get("selected_skin_label") or "기본 스타일"))} · {rarity_label}</text>'
         f'<text x="472" y="354" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="500" fill="{text}">우리 사이트, 카카오톡, 인스타그램에서 함께 자랑해 보세요.</text>'
         f'<rect x="472" y="410" width="510" height="80" rx="24" fill="{accent}" fill-opacity="0.12"/>'
         f'<text x="506" y="460" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="{accent}">#{buddy_name}  #교실메이트  #Eduitit</text>'
