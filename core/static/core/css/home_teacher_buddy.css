@@ -147,7 +147,7 @@
 .teacher-buddy-share-ascii-wrap {
     position: relative;
     align-self: start;
-    overflow: hidden;
+    overflow: visible;
     padding: 1rem;
     border-radius: 1.4rem;
     background:
@@ -157,33 +157,50 @@
     border: 1px solid var(--buddy-line);
 }
 
+.teacher-buddy-ascii-box {
+    min-height: 9.4rem;
+}
+
+.teacher-buddy-profile-body,
+.teacher-buddy-share-ascii-wrap {
+    min-height: 10rem;
+}
+
+.teacher-buddy-settings-item-body {
+    min-height: 9.5rem;
+    display: flex;
+    align-items: center;
+}
+
 .teacher-buddy-ascii,
 .teacher-buddy-collection-ascii,
 .teacher-buddy-profile-ascii,
 .teacher-buddy-result-ascii,
 .teacher-buddy-share-ascii {
     margin: 0;
+    display: inline-block;
     color: #0f172a;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-    font-size: 0.84rem;
+    font-size: 0.83rem;
     font-weight: 700;
-    line-height: 1.15;
-    letter-spacing: -0.01em;
+    line-height: 1.24;
+    letter-spacing: 0;
     white-space: pre;
 }
 
 .teacher-buddy-profile-ascii {
-    font-size: 0.9rem;
+    font-size: 0.88rem;
 }
 
 .teacher-buddy-profile-ascii--compact,
 .teacher-buddy-share-ascii {
     font-size: 0.82rem;
+    line-height: 1.22;
 }
 
 .teacher-buddy-ascii--compact {
-    font-size: 0.72rem;
-    line-height: 1.08;
+    font-size: 0.75rem;
+    line-height: 1.18;
 }
 
 .teacher-buddy-name,
@@ -245,6 +262,7 @@
 .teacher-buddy-compact-ascii-box {
     flex: 0 0 auto;
     min-width: 7.25rem;
+    min-height: 8.25rem;
     padding: 0.8rem 0.9rem;
     display: flex;
     align-items: center;
