@@ -18,8 +18,6 @@
                 토큰 {{ teacher_buddy_settings.draw_token_count }}/{{ teacher_buddy_settings.max_draw_token_count }}
             </span>
             <span class="teacher-buddy-settings-dust" data-buddy-settings-dust="true">{{ teacher_buddy_settings.sticker_dust_text }}</span>
-            <span class="teacher-buddy-status-chip teacher-buddy-status-chip--soft" data-buddy-settings-buddy-summary="true">{{ teacher_buddy_settings.buddy_collection_summary_text }}</span>
-            <span class="teacher-buddy-status-chip teacher-buddy-status-chip--soft" data-buddy-settings-style-summary="true">{{ teacher_buddy_settings.style_collection_summary_text }}</span>
         </div>
     </div>
 
@@ -40,7 +38,6 @@
                 <div class="teacher-buddy-profile-meta">
                     <span class="teacher-buddy-rarity teacher-buddy-rarity--{{ teacher_buddy_settings.profile_buddy.rarity }}" data-buddy-preview-rarity="profile">{{ teacher_buddy_settings.profile_buddy.rarity_label }}</span>
                     <span class="teacher-buddy-status-chip teacher-buddy-status-chip--style" data-buddy-preview-style="profile">{{ teacher_buddy_settings.profile_buddy.selected_skin_label }}</span>
-                    <span class="teacher-buddy-profile-summary" data-buddy-preview-summary="profile">{{ teacher_buddy_settings.collection_summary_text }}</span>
                 </div>
             </div>
         </article>
@@ -50,7 +47,6 @@
                 <div>
                     <p class="teacher-buddy-settings-label">홈 메이트</p>
                     <h3 class="teacher-buddy-profile-name" data-buddy-preview-name="home">{{ teacher_buddy_settings.active_buddy.name }}</h3>
-                    <p class="teacher-buddy-profile-caption" data-buddy-preview-caption="home">{{ teacher_buddy_settings.legendary_progress_text }}</p>
                 </div>
             </div>
             <div class="teacher-buddy-profile-body">

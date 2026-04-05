@@ -89,26 +89,6 @@
                         </button>
                     </div>
                 </form>
-
-                <div class="clay-card p-10 space-y-6 bg-red-50/30 border-2 border-dashed border-red-100"
-                    data-aos="fade-up">
-                    <div class="flex items-center gap-4 mb-2 text-red-500">
-                        <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
-                            <i class="fa-solid fa-triangle-exclamation text-xl"></i>
-                        </div>
-                        <h2 class="text-3xl font-bold font-round">위험 구역</h2>
-                    </div>
-                    <div class="flex flex-col md:flex-row items-center justify-between gap-6">
-                        <div class="text-left">
-                            <h4 class="text-xl font-bold text-gray-700">회원 탈퇴</h4>
-                            <p class="text-gray-400 font-medium text-lg">계정을 삭제하고 모든 데이터를 영구적으로 제거합니다.</p>
-                        </div>
-                        <a href="{% url 'delete_account' %}"
-                            class="px-8 py-3 bg-white text-red-400 border border-red-200 rounded-2xl font-bold text-lg hover:bg-red-50 hover:text-red-600 transition-all shadow-sm">
-                            탈퇴하기
-                        </a>
-                    </div>
-                </div>
             </div>
 
             <div class="space-y-8" data-aos="fade-left" data-aos-delay="400">
@@ -160,6 +140,27 @@
                         </div>
                     </div>
                     <p class="mt-5 text-sm leading-6 text-slate-400">명부 구조를 하나로 통일해 두면 서비스마다 받는 항목만 달라도 같은 사람 목록을 그대로 이어서 쓸 수 있습니다.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-8" data-aos="fade-up">
+            <div class="clay-card p-10 space-y-6 bg-red-50/30 border-2 border-dashed border-red-100">
+                <div class="flex items-center gap-4 mb-2 text-red-500">
+                    <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                        <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-bold font-round">위험 구역</h2>
+                </div>
+                <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div class="text-left">
+                        <h4 class="text-xl font-bold text-gray-700">회원 탈퇴</h4>
+                        <p class="text-gray-400 font-medium text-lg">계정을 삭제하고 모든 데이터를 영구적으로 제거합니다.</p>
+                    </div>
+                    <a href="{% url 'delete_account' %}"
+                        class="px-8 py-3 bg-white text-red-400 border border-red-200 rounded-2xl font-bold text-lg hover:bg-red-50 hover:text-red-600 transition-all shadow-sm">
+                        탈퇴하기
+                    </a>
                 </div>
             </div>
         </div>

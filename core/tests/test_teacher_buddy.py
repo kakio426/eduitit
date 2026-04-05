@@ -22,6 +22,7 @@ from core.teacher_buddy import (
     SNS_SIMILARITY_THRESHOLD,
     TeacherBuddyError,
     _build_draw_groups,
+    build_teacher_buddy_settings_context,
     draw_teacher_buddy,
     record_teacher_buddy_progress,
     record_teacher_buddy_sns_reward,
@@ -641,6 +642,21 @@ class TeacherBuddyHomeRenderTests(TestCase):
         self.assertContains(response, "홈 메이트 선택")
         self.assertContains(response, "자랑하기")
         self.assertContains(response, "스타일 보기")
+        self.assertNotContains(response, 'data-buddy-preview-caption="home"')
+        self.assertNotContains(response, 'data-buddy-settings-buddy-summary="true"')
+        self.assertNotContains(response, 'data-buddy-settings-style-summary="true"')
+
+    def test_settings_collection_starts_with_current_starter_buddy(self):
+        self.client.login(username="buddyhome", password="pass1234")
+
+        context = build_teacher_buddy_settings_context(self.user)
+        state = TeacherBuddyState.objects.get(user=self.user)
+        starter_key = state.profile_buddy_key or state.active_buddy_key
+
+        self.assertIsNotNone(context)
+        self.assertEqual(context["profile_buddy"]["key"], starter_key)
+        self.assertEqual(context["collection_items"][0]["key"], starter_key)
+        self.assertFalse(context["collection_items"][0]["is_locked"])
 
     def test_sns_feed_renders_buddy_avatar_for_author(self):
         record_teacher_buddy_progress(self.user, Product.objects.first(), "home_quick")

@@ -612,8 +612,9 @@ def _build_collection_items(*, user, state: TeacherBuddyState) -> list[dict[str,
         for unlock in TeacherBuddyUnlock.objects.filter(user=user).order_by("obtained_at", "id")
     }
     profile_key = state.profile_buddy_key or state.active_buddy_key
-    return [
-        _serialize_buddy(
+    ordered_items: list[tuple[int, int, dict[str, object]]] = []
+    for index, buddy in enumerate(all_teacher_buddies()):
+        payload = _serialize_buddy(
             buddy,
             user=user,
             unlock=unlock_map.get(buddy.key),
@@ -622,8 +623,16 @@ def _build_collection_items(*, user, state: TeacherBuddyState) -> list[dict[str,
             active_skin_key=_resolve_style_skin_key(state.active_skin_key, buddy.key, state.active_buddy_key),
             profile_skin_key=_resolve_style_skin_key(state.profile_skin_key, buddy.key, profile_key),
         )
-        for buddy in all_teacher_buddies()
-    ]
+        sort_rank = 3
+        if payload["is_profile"]:
+            sort_rank = 0
+        elif payload["is_active"]:
+            sort_rank = 1
+        elif not payload["is_locked"]:
+            sort_rank = 2
+        ordered_items.append((sort_rank, index, payload))
+    ordered_items.sort(key=lambda item: (item[0], item[1]))
+    return [payload for _, _, payload in ordered_items]
 
 
 def _serialize_state_buddy(
