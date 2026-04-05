@@ -5,6 +5,7 @@
 
 {% block extra_css %}
 <link href="{% static 'core/css/home_authenticated_v2.css' %}" rel="stylesheet">
+<link href="{% static 'core/css/home_teacher_buddy.css' %}" rel="stylesheet">
 {% endblock %}
 
 {% block extra_js %}
@@ -13,6 +14,7 @@
 <script src="{% static 'qrgen/js/qrgen_shared.js' %}"></script>
 <script src="{% static 'core/js/prompt_lab.js' %}"></script>
 <script src="{% static 'core/js/home_authenticated_v2.js' %}"></script>
+<script src="{% static 'core/js/home_teacher_buddy.js' %}"></script>
 {% endblock %}
 
 {% block content %}
@@ -86,6 +88,12 @@
                 <section class="mb-6 home-v2-primary-services" data-home-v2-service-groups="true">
                     {% include 'core/includes/purpose_sections.html' with sections=primary_display_sections|default:sections %}
                 </section>
+
+                {% if teacher_buddy_panel %}
+                <div class="mb-6" data-home-teacher-buddy-slot="v2-primary">
+                    {% include 'core/partials/home_teacher_buddy_panel.html' with panel_variant='v2' %}
+                </div>
+                {% endif %}
 
                 <div class="mb-6 home-v2-game-zone" data-home-v2-game-section="true">
                     {% include 'core/includes/game_banner.html' with games=games %}

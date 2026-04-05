@@ -1,6 +1,21 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}내 정보와 공용 명부 - Eduitit{% endblock %}
+
+{% block extra_head %}
+{% if kakao_js_key %}
+<script src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'core/css/home_teacher_buddy.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'core/js/teacher_buddy_settings.js' %}"></script>
+{% endblock %}
 
 {% block content %}
 <section class="pt-32 pb-20 px-6 min-h-screen">
@@ -97,6 +112,10 @@
             </div>
 
             <div class="space-y-8" data-aos="fade-left" data-aos-delay="400">
+                {% if teacher_buddy_settings %}
+                {% include 'core/partials/teacher_buddy_settings_panel.html' %}
+                {% endif %}
+
                 <div class="clay-card p-8 bg-white/80">
                     <div class="flex items-center gap-3 mb-6">
                         <div class="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center">

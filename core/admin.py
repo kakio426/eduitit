@@ -17,6 +17,11 @@ from .models import (
     ProductUsageLog,
     ProductFavorite,
     ProductWorkbenchBundle,
+    TeacherBuddyDailyProgress,
+    TeacherBuddySkinUnlock,
+    TeacherBuddySocialRewardLog,
+    TeacherBuddyState,
+    TeacherBuddyUnlock,
     UserModeration,
     VisitorLog,
 )
@@ -265,6 +270,94 @@ class ProductFavoriteAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('user', 'product')
+
+
+@admin.register(TeacherBuddyState)
+class TeacherBuddyStateAdmin(admin.ModelAdmin):
+    list_display = [
+        'user',
+        'active_buddy_key',
+        'profile_buddy_key',
+        'active_skin_key',
+        'profile_skin_key',
+        'draw_token_count',
+        'sticker_dust',
+        'qualifying_day_count',
+        'total_points_earned',
+        'collection_completed_at',
+        'last_home_seen_at',
+    ]
+    search_fields = ['user__username', 'active_buddy_key']
+    readonly_fields = [
+        'created_at',
+        'updated_at',
+        'starter_granted_at',
+        'collection_completed_at',
+        'last_home_seen_at',
+        'public_share_token',
+        'last_sns_bonus_week_key',
+    ]
+    raw_id_fields = ['user']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('user')
+
+
+@admin.register(TeacherBuddyUnlock)
+class TeacherBuddyUnlockAdmin(admin.ModelAdmin):
+    list_display = ['user', 'buddy_key', 'rarity', 'obtained_via', 'obtained_at']
+    list_filter = ['rarity', 'obtained_via', 'obtained_at']
+    search_fields = ['user__username', 'buddy_key']
+    readonly_fields = ['obtained_at']
+    raw_id_fields = ['user']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('user')
+
+
+@admin.register(TeacherBuddySkinUnlock)
+class TeacherBuddySkinUnlockAdmin(admin.ModelAdmin):
+    list_display = ['user', 'buddy_key', 'skin_key', 'obtained_via', 'obtained_at']
+    list_filter = ['obtained_via', 'obtained_at']
+    search_fields = ['user__username', 'buddy_key', 'skin_key']
+    readonly_fields = ['obtained_at']
+    raw_id_fields = ['user']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('user')
+
+
+@admin.register(TeacherBuddyDailyProgress)
+class TeacherBuddyDailyProgressAdmin(admin.ModelAdmin):
+    list_display = [
+        'user',
+        'activity_date',
+        'point_total',
+        'first_launch_awarded',
+        'draw_awarded',
+        'home_ticket_awarded',
+        'qualified_for_legendary_day',
+        'sns_reward_awarded',
+    ]
+    list_filter = ['activity_date', 'first_launch_awarded', 'draw_awarded', 'home_ticket_awarded', 'sns_reward_awarded']
+    search_fields = ['user__username']
+    readonly_fields = ['created_at', 'updated_at']
+    raw_id_fields = ['user']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('user')
+
+
+@admin.register(TeacherBuddySocialRewardLog)
+class TeacherBuddySocialRewardLogAdmin(admin.ModelAdmin):
+    list_display = ['user', 'activity_date', 'post_id', 'reward_granted', 'rejection_reason', 'created_at']
+    list_filter = ['activity_date', 'reward_granted', 'rejection_reason']
+    search_fields = ['user__username', 'content_hash', 'normalized_text']
+    readonly_fields = ['created_at']
+    raw_id_fields = ['user']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('user')
 
 
 admin.site.register([ProductWorkbenchBundle, VisitorLog], ReadOnlyModelAdmin)

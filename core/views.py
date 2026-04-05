@@ -63,11 +63,29 @@ from .service_launcher import (
 )
 from .prompt_lab_data import get_prompt_lab_catalog
 from .seo import (
+    PageSeoMeta,
+    SITE_CANONICAL_BASE_URL,
     build_about_page_seo,
     build_home_page_seo,
     build_prompt_lab_page_seo,
 )
 from .teacher_first_cards import build_favorite_service_title, build_workbench_card_meta
+from .teacher_buddy import (
+    TeacherBuddyError,
+    attach_teacher_buddy_avatar_context,
+    build_teacher_buddy_avatar_context,
+    build_teacher_buddy_panel_context,
+    build_teacher_buddy_public_share_context,
+    build_teacher_buddy_settings_context,
+    build_teacher_buddy_share_svg,
+    build_teacher_buddy_urls,
+    draw_teacher_buddy,
+    record_teacher_buddy_progress,
+    record_teacher_buddy_sns_reward,
+    select_teacher_buddy,
+    select_teacher_buddy_profile,
+    unlock_teacher_buddy_skin,
+)
 from messagebox.developer_chat import build_developer_chat_home_card_context
 from django.contrib import messages
 from django.db import transaction
@@ -77,6 +95,7 @@ from django.utils.dateparse import parse_datetime
 from datetime import timedelta
 from urllib.parse import urlencode
 from PIL import Image
+import json
 import logging
 import random
 
@@ -108,6 +127,7 @@ HOME_V5_MOBILE_SECTION_ORDER = (
     'calendar',
     'quickdrop',
     'reservations',
+    'buddy',
     'sns',
 )
 HOME_PROMOTED_MOBILE_SERVICE_KEYS = {'quickdrop'}
@@ -192,6 +212,8 @@ def _render_post_list_partial(request, page_obj, feed_scope, *, pinned_notice_po
         empty_subtitle = "새 공지가 올라오면 여기서 바로 확인할 수 있어요."
     if pinned_notice_posts is None:
         pinned_notice_posts = _build_pinned_notice_queryset(feed_scope=feed_scope)
+    attach_teacher_buddy_avatar_context(getattr(page_obj, "object_list", []))
+    attach_teacher_buddy_avatar_context(pinned_notice_posts)
 
     return render(
         request,
@@ -205,6 +227,8 @@ def _render_post_list_partial(request, page_obj, feed_scope, *, pinned_notice_po
             'compact_posts': _get_compact_posts(request),
             'empty_title': empty_title,
             'empty_subtitle': empty_subtitle,
+            'teacher_buddy_current_avatar': build_teacher_buddy_avatar_context(request.user) if request.user.is_authenticated else None,
+            'sns_compose_prefill': str(request.GET.get('compose') or '').strip(),
         },
     )
 
@@ -271,6 +295,58 @@ def _get_home_layout_version():
     if raw_version in {'v1', 'v2', 'v4', 'v5', 'v6'}:
         return raw_version
     return 'v2' if getattr(settings, 'HOME_V2_ENABLED', False) else 'v1'
+
+
+def _get_teacher_buddy_home_context(user):
+    panel = build_teacher_buddy_panel_context(user)
+    if not panel:
+        return {
+            'teacher_buddy_panel': None,
+            'teacher_buddy_urls': {},
+            'teacher_buddy_current_avatar': build_teacher_buddy_avatar_context(user) if getattr(user, 'is_authenticated', False) else None,
+        }
+    return {
+        'teacher_buddy_panel': panel,
+        'teacher_buddy_urls': build_teacher_buddy_urls(),
+        'teacher_buddy_current_avatar': build_teacher_buddy_avatar_context(user) if getattr(user, 'is_authenticated', False) else None,
+    }
+
+
+def _get_sns_compose_prefill(request):
+    return str(request.GET.get('compose') or '').strip()
+
+
+def _post_create_error_response(request, message, *, status=400):
+    if request.headers.get('HX-Request'):
+        return HttpResponse(
+            f'<div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">{message}</div>',
+            status=status,
+        )
+    messages.error(request, message)
+    return redirect('home')
+
+
+def _request_prefers_json(request):
+    accept = str(request.headers.get('Accept', '') or '').lower()
+    requested_with = str(request.headers.get('X-Requested-With', '') or '').lower()
+    return requested_with == 'xmlhttprequest' or 'application/json' in accept
+
+
+def _request_payload_data(request):
+    if request.POST:
+        return request.POST
+    try:
+        return json.loads(request.body or '{}')
+    except (json.JSONDecodeError, ValueError, TypeError):
+        return {}
+
+
+def _teacher_buddy_redirect_response(request):
+    return redirect(f"{reverse('home')}#teacher-buddy-panel")
+
+
+def _teacher_buddy_settings_redirect_response():
+    return redirect(f"{reverse('settings')}#teacher-buddy-settings")
 
 
 def _resolve_post_for_action(post_id, user):
@@ -2757,6 +2833,8 @@ def _home_v2(request, products, posts, page_obj, feed_scope, pinned_notice_posts
             'page_obj': page_obj,
             'pinned_notice_posts': pinned_notice_posts,
             'feed_scope': feed_scope,
+            'sns_compose_prefill': _get_sns_compose_prefill(request),
+            **_get_teacher_buddy_home_context(request.user),
             **home_calendar_surface,
             **build_home_page_seo(request).as_context(),
             **today_context,
@@ -2782,6 +2860,7 @@ def _home_v2(request, products, posts, page_obj, feed_scope, pinned_notice_posts
         'page_obj': page_obj,
         'pinned_notice_posts': pinned_notice_posts,
         'feed_scope': feed_scope,
+        'sns_compose_prefill': _get_sns_compose_prefill(request),
         **build_home_page_seo(request).as_context(),
     })
 
@@ -3052,6 +3131,8 @@ def _build_home_authenticated_v4_response(
         'page_obj': page_obj,
         'pinned_notice_posts': pinned_notice_posts,
         'feed_scope': feed_scope,
+        'sns_compose_prefill': _get_sns_compose_prefill(request),
+        **_get_teacher_buddy_home_context(request.user),
         **_build_home_student_games_qr_context(request),
         **home_calendar_surface,
         **build_home_page_seo(request).as_context(),
@@ -3118,6 +3199,10 @@ def home(request):
     paginator = Paginator(posts, 5) # 한 페이지에 5개씩
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
+    if request.user.is_authenticated:
+        build_teacher_buddy_avatar_context(request.user)
+    attach_teacher_buddy_avatar_context(getattr(page_obj, 'object_list', []))
+    attach_teacher_buddy_avatar_context(pinned_notice_posts)
 
     # HTMX 요청이면 post_list 영역만 반환
     if request.headers.get('HX-Request'):
@@ -3171,6 +3256,8 @@ def home(request):
             'page_obj': page_obj,
             'pinned_notice_posts': pinned_notice_posts,
             'feed_scope': feed_scope,
+            'teacher_buddy_current_avatar': build_teacher_buddy_avatar_context(request.user),
+            'sns_compose_prefill': _get_sns_compose_prefill(request),
             **build_home_page_seo(request).as_context(),
         })
 
@@ -3188,6 +3275,7 @@ def home(request):
         'page_obj': page_obj,
         'pinned_notice_posts': pinned_notice_posts,
         'feed_scope': feed_scope,
+        'sns_compose_prefill': _get_sns_compose_prefill(request),
         **build_home_page_seo(request).as_context(),
     })
 
@@ -3213,62 +3301,73 @@ def dashboard(request):
 
 @login_required
 def post_create(request):
-    if request.method == 'POST':
-        content = request.POST.get('content')
-        image = request.FILES.get('image')
-        submit_kind = (request.POST.get('submit_kind') or 'general').strip().lower()
-        post_type = 'notice' if request.user.is_staff and submit_kind == 'notice' else 'general'
-        is_notice_pinned = (
-            request.user.is_staff
-            and post_type == 'notice'
-            and _is_truthy(request.POST.get('pin_notice_to_top'))
+    if request.method != 'POST':
+        return redirect('home')
+
+    if _rate_limit_exceeded('post_create', request.user.id, [(60, 1), (3600, 5), (86400, 12)]):
+        return _post_create_error_response(
+            request,
+            '게시글은 1분 1개, 1시간 5개, 하루 12개까지 작성할 수 있어요.',
+            status=429,
         )
-        allow_notice_dismiss = is_notice_pinned and _is_truthy(request.POST.get('allow_notice_dismiss'))
 
-        # 이미지 검증
-        if image:
-            MAX_SIZE = 10 * 1024 * 1024  # 10MB
-            ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+    content = request.POST.get('content')
+    image = request.FILES.get('image')
+    submit_kind = (request.POST.get('submit_kind') or 'general').strip().lower()
+    post_type = 'notice' if request.user.is_staff and submit_kind == 'notice' else 'general'
+    is_notice_pinned = (
+        request.user.is_staff
+        and post_type == 'notice'
+        and _is_truthy(request.POST.get('pin_notice_to_top'))
+    )
+    allow_notice_dismiss = is_notice_pinned and _is_truthy(request.POST.get('allow_notice_dismiss'))
 
-            if image.size > MAX_SIZE:
-                messages.error(request, '이미지 크기는 10MB 이하만 가능합니다.')
-                return redirect('home')
+    if image:
+        MAX_SIZE = 10 * 1024 * 1024
+        ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 
-            if image.content_type not in ALLOWED_TYPES:
-                messages.error(request, '허용되지 않는 파일 형식입니다. (JPEG, PNG, GIF, WebP만 가능)')
-                return redirect('home')
+        if image.size > MAX_SIZE:
+            return _post_create_error_response(request, '이미지 크기는 10MB 이하만 가능합니다.')
 
-            # PIL로 이미지 무결성 검증 (악성 파일 방지)
-            try:
-                img = Image.open(image)
-                img.verify()
-                image.seek(0)  # 포인터 리셋
-            except Exception:
-                messages.error(request, '올바른 이미지 파일이 아닙니다.')
-                return redirect('home')
-
-        # 게시물 생성
-        if content or image:
-            Post.objects.create(
-                author=request.user,
-                content=content,
-                image=image,
-                post_type=post_type,
-                is_notice_pinned=is_notice_pinned,
-                allow_notice_dismiss=allow_notice_dismiss,
+        if image.content_type not in ALLOWED_TYPES:
+            return _post_create_error_response(
+                request,
+                '허용되지 않는 파일 형식입니다. (JPEG, PNG, GIF, WebP만 가능)',
             )
 
-    # HTMX 응답
+        try:
+            img = Image.open(image)
+            img.verify()
+            image.seek(0)
+        except Exception:
+            return _post_create_error_response(request, '올바른 이미지 파일이 아닙니다.')
+
+    if not (content or image):
+        return _post_create_error_response(request, '내용이나 이미지를 하나는 넣어 주세요.')
+
+    post = Post.objects.create(
+        author=request.user,
+        content=content,
+        image=image,
+        post_type=post_type,
+        is_notice_pinned=is_notice_pinned,
+        allow_notice_dismiss=allow_notice_dismiss,
+    )
+    sns_reward_payload = record_teacher_buddy_sns_reward(request.user, post)
+
     if request.headers.get('HX-Request'):
         feed_scope = _get_post_feed_scope(request)
         posts = _build_post_feed_queryset(feed_scope=feed_scope)
-        
-        from django.core.paginator import Paginator
-        paginator = Paginator(posts, 5) # 등록 후에는 무조건 1페이지로
+        paginator = Paginator(posts, 5)
         page_obj = paginator.get_page(1)
-        
-        return _render_post_list_partial(request, page_obj, feed_scope)
+        response = _render_post_list_partial(request, page_obj, feed_scope)
+        if sns_reward_payload:
+            response['HX-Trigger'] = json.dumps({'teacherBuddy:snsReward': sns_reward_payload})
+        return response
 
+    if sns_reward_payload:
+        level = messages.success if sns_reward_payload.get('reward_granted') else messages.info
+        level(request, sns_reward_payload.get('message') or '메이트 상태를 확인했어요.')
     return redirect('home')
 
 
@@ -3299,6 +3398,7 @@ def post_like(request, pk):
         post.likes.add(request.user)
         
     if request.headers.get('HX-Request'):
+        attach_teacher_buddy_avatar_context([post])
         return render(request, 'core/partials/post_item.html', {'post': post})
         
     return redirect('home')
@@ -3335,6 +3435,7 @@ def comment_create(request, pk):
             )
             
     if request.headers.get('HX-Request'):
+        attach_teacher_buddy_avatar_context([post])
         return render(request, 'core/partials/post_item.html', {'post': post})
         
     return redirect('home')
@@ -3396,6 +3497,7 @@ def post_edit(request, pk):
             post.content = content
             post.save()
             # Return the updated post item (expanded)
+            attach_teacher_buddy_avatar_context([post])
             return render(request, 'core/partials/post_item.html', {'post': post, 'is_first': True})
             
     # GET: Return the edit form
@@ -3408,6 +3510,7 @@ def post_detail_partial(request, pk):
     if post is None:
         return HttpResponse("Not found", status=404)
     # Force expansion when returning from edit mode
+    attach_teacher_buddy_avatar_context([post])
     return render(request, 'core/partials/post_item.html', {'post': post, 'is_first': True})
 
 @login_required
@@ -3912,6 +4015,14 @@ def settings_view(request):
             return redirect('settings')
     else:
         form = UserProfileUpdateForm(instance=profile)
+    buddy_settings = build_teacher_buddy_settings_context(request.user)
+    if buddy_settings:
+        buddy_settings = {
+            **buddy_settings,
+            'share_url': f"{SITE_CANONICAL_BASE_URL}{buddy_settings['share_path']}",
+            'share_image_url': f"{SITE_CANONICAL_BASE_URL}{buddy_settings['share_image_path']}",
+            'share_title': f"{profile.nickname or request.user.username}님의 교실 메이트",
+        }
     
     return render(
         request,
@@ -3919,8 +4030,53 @@ def settings_view(request):
         {
             'form': form,
             'profile': profile,
+            'teacher_buddy_settings': buddy_settings,
+            'teacher_buddy_urls': build_teacher_buddy_urls() if buddy_settings else {},
+            'teacher_buddy_current_avatar': build_teacher_buddy_avatar_context(request.user),
+            'kakao_js_key': getattr(settings, 'KAKAO_JS_KEY', ''),
         },
     )
+
+
+@require_GET
+def teacher_buddy_share_page(request, public_share_token):
+    try:
+        share_context = build_teacher_buddy_public_share_context(public_share_token)
+    except TeacherBuddyError:
+        return HttpResponse("Not found", status=404)
+
+    seo = PageSeoMeta(
+        title=f"{share_context['nickname']}님의 교실 메이트 | Eduitit",
+        description=share_context['buddy']['share_caption'],
+        canonical_url=share_context['share_url'],
+        og_title=f"{share_context['nickname']}님의 교실 메이트",
+        og_description=share_context['share_copy_text'],
+        og_image=share_context['share_image_url'],
+    )
+    return render(
+        request,
+        'core/teacher_buddy_share.html',
+        {
+            'share_context': share_context,
+            **seo.as_context(),
+        },
+    )
+
+
+@require_GET
+def teacher_buddy_share_image(request, public_share_token):
+    try:
+        share_context = build_teacher_buddy_public_share_context(public_share_token)
+    except TeacherBuddyError:
+        return HttpResponse("Not found", status=404)
+
+    response = HttpResponse(
+        build_teacher_buddy_share_svg(share_context),
+        content_type='image/svg+xml; charset=utf-8',
+    )
+    response['Content-Disposition'] = f'inline; filename="eduitit-buddy-{share_context["buddy"]["key"]}.svg"'
+    response['Cache-Control'] = 'public, max-age=300'
+    return response
 
 @login_required
 def select_role(request):
@@ -4228,10 +4384,8 @@ def track_product_usage(request):
     if not request.user.is_authenticated:
         return JsonResponse({'status': 'ignored'}, status=200)
 
-    import json
-    try:
-        data = json.loads(request.body)
-    except (json.JSONDecodeError, ValueError):
+    data = _request_payload_data(request)
+    if not data:
         return JsonResponse({'error': 'invalid json'}, status=400)
 
     product_id = data.get('product_id')
@@ -4259,14 +4413,98 @@ def track_product_usage(request):
         action=action,
         source=source,
     )
-    return JsonResponse({'status': 'ok'})
+    payload = {'status': 'ok'}
+    buddy_payload = record_teacher_buddy_progress(request.user, product, source)
+    if buddy_payload:
+        payload['buddy'] = buddy_payload
+    return JsonResponse(payload)
+
+
+@require_POST
+@login_required
+def teacher_buddy_draw(request):
+    try:
+        payload = draw_teacher_buddy(request.user)
+    except TeacherBuddyError as exc:
+        if _request_prefers_json(request):
+            return JsonResponse({'error': str(exc)}, status=400)
+        messages.error(request, str(exc))
+        return _teacher_buddy_redirect_response(request)
+
+    if _request_prefers_json(request):
+        return JsonResponse(payload)
+
+    messages.success(request, payload['message'])
+    return _teacher_buddy_redirect_response(request)
+
+
+@require_POST
+@login_required
+def teacher_buddy_select_view(request):
+    data = _request_payload_data(request)
+    buddy_key = str(data.get('buddy_key', '') or '').strip()
+    skin_key = str(data.get('skin_key', '') or '').strip()
+    try:
+        payload = select_teacher_buddy(request.user, buddy_key, skin_key)
+    except TeacherBuddyError as exc:
+        if _request_prefers_json(request):
+            return JsonResponse({'error': str(exc)}, status=400)
+        messages.error(request, str(exc))
+        return _teacher_buddy_settings_redirect_response()
+
+    if _request_prefers_json(request):
+        return JsonResponse(payload)
+
+    messages.success(request, payload['message'])
+    return _teacher_buddy_settings_redirect_response()
+
+
+@require_POST
+@login_required
+def teacher_buddy_select_profile_view(request):
+    data = _request_payload_data(request)
+    buddy_key = str(data.get('buddy_key', '') or '').strip()
+    skin_key = str(data.get('skin_key', '') or '').strip()
+    try:
+        payload = select_teacher_buddy_profile(request.user, buddy_key, skin_key)
+    except TeacherBuddyError as exc:
+        if _request_prefers_json(request):
+            return JsonResponse({'error': str(exc)}, status=400)
+        messages.error(request, str(exc))
+        return _teacher_buddy_settings_redirect_response()
+
+    if _request_prefers_json(request):
+        return JsonResponse(payload)
+
+    messages.success(request, payload['message'])
+    return _teacher_buddy_settings_redirect_response()
+
+
+@require_POST
+@login_required
+def teacher_buddy_unlock_skin_view(request):
+    data = _request_payload_data(request)
+    buddy_key = str(data.get('buddy_key', '') or '').strip()
+    skin_key = str(data.get('skin_key', '') or '').strip()
+    try:
+        payload = unlock_teacher_buddy_skin(request.user, buddy_key, skin_key)
+    except TeacherBuddyError as exc:
+        if _request_prefers_json(request):
+            return JsonResponse({'error': str(exc)}, status=400)
+        messages.error(request, str(exc))
+        return _teacher_buddy_settings_redirect_response()
+
+    if _request_prefers_json(request):
+        return JsonResponse(payload)
+
+    messages.success(request, payload['message'])
+    return _teacher_buddy_settings_redirect_response()
 
 
 @require_POST
 @login_required
 def toggle_product_favorite(request):
     """서비스 즐겨찾기 토글 API."""
-    import json
     try:
         data = json.loads(request.body)
     except (json.JSONDecodeError, ValueError):

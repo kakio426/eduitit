@@ -42,7 +42,7 @@
         aria-label="소통 글 상세 보기"
     >
         <div class="flex items-start gap-3">
-            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">{% if post.author.userprofile and post.author.userprofile.nickname %}{{ post.author.userprofile.nickname|truncatechars:1 }}{% else %}{{ post.author.username|truncatechars:1 }}{% endif %}</div>
+            {% include 'core/partials/teacher_buddy_avatar.html' with avatar_context=post.teacher_buddy_avatar_context size_class='h-9 w-9' %}
             <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 mb-1">
                     <span class="font-bold text-sm text-slate-800">{% if post.author.userprofile and post.author.userprofile.nickname %}{{ post.author.userprofile.nickname }}{% else %}{{ post.author.username }}{% endif %}</span>

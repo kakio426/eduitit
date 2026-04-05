@@ -501,6 +501,10 @@ HOME_V4_MOBILE_CALENDAR_FIRST_ENABLED = os.environ.get(
     'HOME_V4_MOBILE_CALENDAR_FIRST_ENABLED',
     'False',
 ).lower() == 'true'
+HOME_TEACHER_BUDDY_ENABLED = os.environ.get(
+    'HOME_TEACHER_BUDDY_ENABLED',
+    'False',
+).lower() == 'true'
 ALLOW_TABLET_ACCESS = os.environ.get('ALLOW_TABLET_ACCESS', 'True').lower() in ('true', '1', 'yes')
 GLOBAL_SEARCH_ENABLED = os.environ.get('GLOBAL_SEARCH_ENABLED', 'True').lower() in ('true', '1', 'yes')
 

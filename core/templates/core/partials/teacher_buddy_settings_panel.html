@@ -1,0 +1,215 @@
+<section
+    id="teacher-buddy-settings"
+    class="teacher-buddy-settings-card clay-card p-8 bg-white/85"
+    data-teacher-buddy-settings="true"
+    data-selection-mode="{{ teacher_buddy_settings.selection_mode_default }}"
+    data-select-url="{{ teacher_buddy_urls.select }}"
+    data-select-profile-url="{{ teacher_buddy_urls.select_profile }}"
+    data-unlock-skin-url="{{ teacher_buddy_urls.unlock_skin }}"
+>
+    <div class="teacher-buddy-settings-head">
+        <div>
+            <p class="teacher-buddy-settings-eyebrow">교실 메이트</p>
+            <h2 class="teacher-buddy-settings-title">{{ teacher_buddy_settings.title }}</h2>
+            <p class="teacher-buddy-settings-subtitle">{{ teacher_buddy_settings.subtitle }}</p>
+        </div>
+        <div class="teacher-buddy-settings-badges">
+            <span class="teacher-buddy-settings-token" data-buddy-settings-token="true">
+                토큰 {{ teacher_buddy_settings.draw_token_count }}/{{ teacher_buddy_settings.max_draw_token_count }}
+            </span>
+            <span class="teacher-buddy-settings-dust" data-buddy-settings-dust="true">{{ teacher_buddy_settings.sticker_dust_text }}</span>
+            <span class="teacher-buddy-status-chip teacher-buddy-status-chip--soft" data-buddy-settings-buddy-summary="true">{{ teacher_buddy_settings.buddy_collection_summary_text }}</span>
+            <span class="teacher-buddy-status-chip teacher-buddy-status-chip--soft" data-buddy-settings-style-summary="true">{{ teacher_buddy_settings.style_collection_summary_text }}</span>
+        </div>
+    </div>
+
+    <div class="teacher-buddy-profile-hero">
+        <article class="teacher-buddy-profile-card" data-buddy-preview-card="profile" data-buddy-preview-buddy-key="{{ teacher_buddy_settings.profile_buddy.key }}" data-buddy-preview-skin-key="{{ teacher_buddy_settings.profile_buddy.selected_skin_key }}" style="--teacher-buddy-hero-gradient: {{ teacher_buddy_settings.profile_buddy.palette_tokens.gradient }};">
+            <div class="teacher-buddy-profile-card-head">
+                <div data-buddy-preview-avatar="profile">
+                    {% include 'core/partials/teacher_buddy_avatar.html' with avatar_context=teacher_buddy_current_avatar size_class='h-14 w-14' extra_class='teacher-buddy-profile-avatar' %}
+                </div>
+                <div>
+                    <p class="teacher-buddy-settings-label">SNS 대표 메이트</p>
+                    <h3 class="teacher-buddy-profile-name" data-buddy-preview-name="profile">{{ teacher_buddy_settings.profile_buddy.name }}</h3>
+                    <p class="teacher-buddy-profile-caption" data-buddy-preview-caption="profile">{{ teacher_buddy_settings.profile_buddy.share_caption }}</p>
+                </div>
+            </div>
+            <div class="teacher-buddy-profile-body">
+                <pre class="teacher-buddy-profile-ascii" data-buddy-preview-ascii="profile">{{ teacher_buddy_settings.profile_buddy.idle_ascii }}</pre>
+                <div class="teacher-buddy-profile-meta">
+                    <span class="teacher-buddy-rarity teacher-buddy-rarity--{{ teacher_buddy_settings.profile_buddy.rarity }}" data-buddy-preview-rarity="profile">{{ teacher_buddy_settings.profile_buddy.rarity_label }}</span>
+                    <span class="teacher-buddy-status-chip teacher-buddy-status-chip--style" data-buddy-preview-style="profile">{{ teacher_buddy_settings.profile_buddy.selected_skin_label }}</span>
+                    <span class="teacher-buddy-profile-summary" data-buddy-preview-summary="profile">{{ teacher_buddy_settings.collection_summary_text }}</span>
+                </div>
+            </div>
+        </article>
+
+        <article class="teacher-buddy-profile-card teacher-buddy-profile-card--home" data-buddy-preview-card="home" data-buddy-preview-buddy-key="{{ teacher_buddy_settings.active_buddy.key }}" data-buddy-preview-skin-key="{{ teacher_buddy_settings.active_buddy.selected_skin_key }}" style="--teacher-buddy-hero-gradient: {{ teacher_buddy_settings.active_buddy.palette_tokens.gradient }};">
+            <div class="teacher-buddy-profile-card-head">
+                <div>
+                    <p class="teacher-buddy-settings-label">홈 메이트</p>
+                    <h3 class="teacher-buddy-profile-name" data-buddy-preview-name="home">{{ teacher_buddy_settings.active_buddy.name }}</h3>
+                    <p class="teacher-buddy-profile-caption" data-buddy-preview-caption="home">{{ teacher_buddy_settings.legendary_progress_text }}</p>
+                </div>
+            </div>
+            <div class="teacher-buddy-profile-body">
+                <pre class="teacher-buddy-profile-ascii teacher-buddy-profile-ascii--compact" data-buddy-preview-ascii="home">{{ teacher_buddy_settings.active_buddy.idle_ascii }}</pre>
+                <div class="teacher-buddy-profile-meta">
+                    <span class="teacher-buddy-rarity teacher-buddy-rarity--{{ teacher_buddy_settings.active_buddy.rarity }}" data-buddy-preview-rarity="home">{{ teacher_buddy_settings.active_buddy.rarity_label }}</span>
+                    <span class="teacher-buddy-status-chip teacher-buddy-status-chip--style" data-buddy-preview-style="home">{{ teacher_buddy_settings.active_buddy.selected_skin_label }}</span>
+                    <span class="teacher-buddy-profile-summary" data-buddy-preview-summary="home">{{ teacher_buddy_settings.progress.home_progress_text }}</span>
+                </div>
+            </div>
+        </article>
+    </div>
+
+    <div class="teacher-buddy-settings-toolbar">
+        <div class="teacher-buddy-mode-toggle" role="tablist" aria-label="메이트 선택 모드">
+            <button type="button" class="teacher-buddy-mode-button is-active" data-buddy-mode-trigger="profile" aria-pressed="true">SNS 대표 선택</button>
+            <button type="button" class="teacher-buddy-mode-button" data-buddy-mode-trigger="home" aria-pressed="false">홈 메이트 선택</button>
+        </div>
+        <button type="button" class="teacher-buddy-share-button teacher-buddy-share-button--primary" data-buddy-share-open="true">자랑하기</button>
+    </div>
+
+    <p class="teacher-buddy-mode-help" data-buddy-mode-help="true">현재: SNS 대표 메이트 선택 모드</p>
+
+    <div
+        class="teacher-buddy-share-data"
+        data-share-url="{{ teacher_buddy_settings.share_url }}"
+        data-share-image-url="{{ teacher_buddy_settings.share_image_url }}"
+        data-share-filename="{{ teacher_buddy_settings.share_filename }}"
+        data-share-title="{{ teacher_buddy_settings.share_title }}"
+        data-share-description="{{ teacher_buddy_settings.share_copy_text }}"
+        data-share-copy="{{ teacher_buddy_settings.share_copy_text }}"
+        data-share-indischool="{{ teacher_buddy_settings.indischool_share_text }}"
+        data-share-instagram="{{ teacher_buddy_settings.instagram_share_text }}"
+        data-share-community-url="{{ teacher_buddy_settings.community_share_url }}"
+        data-kakao-js-key="{{ kakao_js_key|default:'' }}"
+    ></div>
+
+    <div class="teacher-buddy-settings-grid">
+        {% for item in teacher_buddy_settings.collection_items %}
+        <article
+            class="teacher-buddy-settings-item{% if item.is_locked %} is-locked{% endif %}{% if item.is_profile %} is-profile{% endif %}{% if item.is_active %} is-active{% endif %}"
+            data-buddy-settings-item="true"
+            data-buddy-key="{{ item.key }}"
+            data-buddy-locked="{% if item.is_locked %}true{% else %}false{% endif %}"
+        >
+            <div class="teacher-buddy-settings-item-top">
+                {% include 'core/partials/teacher_buddy_avatar.html' with avatar_context=item size_class='h-12 w-12' extra_class='teacher-buddy-collection-avatar' %}
+                <div class="min-w-0 flex-1">
+                    <div class="teacher-buddy-collection-meta">
+                        <p class="teacher-buddy-collection-name">{{ item.name }}</p>
+                        <span class="teacher-buddy-rarity teacher-buddy-rarity--{{ item.rarity }}">{{ item.rarity_label }}</span>
+                    </div>
+                    <p class="teacher-buddy-settings-item-caption">
+                        {% if item.is_locked %}
+                        아직 잠금 중
+                        {% else %}
+                        {{ item.share_caption }}
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+
+            <div class="teacher-buddy-settings-item-body">
+                <pre class="teacher-buddy-collection-ascii">{{ item.idle_ascii }}</pre>
+            </div>
+
+            <div class="teacher-buddy-settings-item-meta">
+                <span class="teacher-buddy-status-chip teacher-buddy-status-chip--soft" data-buddy-style-summary="true">{{ item.style_summary_text }}</span>
+                <button type="button" class="teacher-buddy-inline-button teacher-buddy-inline-button--secondary" data-buddy-style-toggle="true" aria-expanded="false">스타일 보기</button>
+            </div>
+
+            <div class="teacher-buddy-style-drawer" data-buddy-style-drawer="true" hidden>
+                {% if item.is_locked %}
+                <p class="teacher-buddy-style-locked-copy">메이트 본체를 먼저 만나면 이 카드의 스타일을 열 수 있어요.</p>
+                {% else %}
+                <div class="teacher-buddy-style-list">
+                    {% for style in item.style_options %}
+                    <section
+                        class="teacher-buddy-style-option{% if style.is_profile_style %} is-profile{% endif %}{% if style.is_active_style %} is-active{% endif %}"
+                        data-buddy-style-option="true"
+                        data-buddy-key="{{ item.key }}"
+                        data-skin-key="{{ style.skin_key }}"
+                        data-style-unlocked="{% if style.is_unlocked %}true{% else %}false{% endif %}"
+                        data-style-default="{% if style.is_default %}true{% else %}false{% endif %}"
+                        data-style-label="{{ style.label }}"
+                        data-style-cost="{{ style.unlock_cost_dust }}"
+                        data-style-palette="{{ style.palette }}"
+                        data-style-gradient="{{ style.palette_tokens.gradient }}"
+                        data-style-start="{{ style.palette_tokens.bg_start }}"
+                        data-style-end="{{ style.palette_tokens.bg_end }}"
+                        data-style-text="{{ style.palette_tokens.text }}"
+                        data-style-accent="{{ style.palette_tokens.accent }}"
+                        data-style-badge="{{ style.preview_badge }}"
+                    >
+                        <div class="teacher-buddy-style-preview" style="--teacher-buddy-style-gradient: {{ style.palette_tokens.gradient }};">
+                            <div class="teacher-buddy-style-dot">{{ style.preview_badge }}</div>
+                            <div>
+                                <p class="teacher-buddy-style-name">{{ style.label }}</p>
+                                <p class="teacher-buddy-style-copy">
+                                    {% if style.is_default %}
+                                    기본 스타일
+                                    {% elif style.is_unlocked %}
+                                    해금 완료
+                                    {% else %}
+                                    반짝 조각 {{ style.unlock_cost_dust }}개
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="teacher-buddy-style-actions" data-buddy-style-actions="true">
+                            {% if style.is_unlocked %}
+                            <span class="teacher-buddy-status-chip{% if not style.is_profile_style %} hidden{% endif %}" data-buddy-style-status="profile">SNS 대표</span>
+                            <form method="post" action="{{ teacher_buddy_urls.select_profile }}" data-buddy-apply-form="profile" {% if style.is_profile_style %}hidden{% endif %}>
+                                {% csrf_token %}
+                                <input type="hidden" name="buddy_key" value="{{ item.key }}">
+                                <input type="hidden" name="skin_key" value="{{ style.skin_key }}">
+                                <button type="submit" class="teacher-buddy-inline-button">SNS 대표로 적용</button>
+                            </form>
+
+                            <span class="teacher-buddy-status-chip{% if not style.is_active_style %} hidden{% endif %}" data-buddy-style-status="home">홈 메이트</span>
+                            <form method="post" action="{{ teacher_buddy_urls.select }}" data-buddy-apply-form="home" {% if style.is_active_style %}hidden{% endif %}>
+                                {% csrf_token %}
+                                <input type="hidden" name="buddy_key" value="{{ item.key }}">
+                                <input type="hidden" name="skin_key" value="{{ style.skin_key }}">
+                                <button type="submit" class="teacher-buddy-inline-button teacher-buddy-inline-button--secondary">홈에 적용</button>
+                            </form>
+                            {% else %}
+                            <form method="post" action="{{ teacher_buddy_urls.unlock_skin }}" data-buddy-unlock-form="true">
+                                {% csrf_token %}
+                                <input type="hidden" name="buddy_key" value="{{ item.key }}">
+                                <input type="hidden" name="skin_key" value="{{ style.skin_key }}">
+                                <button type="submit" class="teacher-buddy-inline-button">스킨 해금</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </section>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+
+    <div class="teacher-buddy-share-modal" data-buddy-share-modal="true" hidden>
+        <button type="button" class="teacher-buddy-share-modal-backdrop" data-buddy-share-close="true" aria-label="공유 닫기"></button>
+        <div class="teacher-buddy-share-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="teacher-buddy-share-title">
+            <p class="teacher-buddy-settings-eyebrow">메이트 자랑하기</p>
+            <h3 id="teacher-buddy-share-title" class="teacher-buddy-share-title">{{ teacher_buddy_settings.share_title }}</h3>
+            <p class="teacher-buddy-share-subtitle">공유할 곳에 맞게 링크, 문구, 이미지를 한 번에 준비할 수 있어요.</p>
+            <div class="teacher-buddy-share-actions teacher-buddy-share-actions--modal">
+                <a href="{{ teacher_buddy_settings.community_share_url }}" class="teacher-buddy-share-button teacher-buddy-share-button--primary" data-buddy-community-share="true">우리 사이트 자랑</a>
+                <button type="button" class="teacher-buddy-share-button" data-buddy-share-kakao="true">카카오 공유</button>
+                <button type="button" class="teacher-buddy-share-button" data-buddy-copy-link="true">링크 복사</button>
+                <button type="button" class="teacher-buddy-share-button" data-buddy-copy-indischool="true">인디스쿨 문구</button>
+                <button type="button" class="teacher-buddy-share-button" data-buddy-copy-instagram="true">인스타 문구</button>
+                <button type="button" class="teacher-buddy-share-button" data-buddy-download-image="true">이미지 저장</button>
+            </div>
+            <button type="button" class="teacher-buddy-share-button teacher-buddy-share-button--ghost" data-buddy-share-close="true">닫기</button>
+        </div>
+    </div>
+</section>

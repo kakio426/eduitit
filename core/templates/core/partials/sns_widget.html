@@ -45,15 +45,20 @@
 
         <form hx-post="{% url 'post_create' %}" hx-target="#{{ list_target_id }}" hx-swap="outerHTML"
             hx-vals='js:{"feed_scope": (document.getElementById("{{ list_target_id }}") ? document.getElementById("{{ list_target_id }}").dataset.feedScope : "all"), "post_list_target_id": "{{ list_target_id }}", "compact_posts": {{ compact_posts|yesno:"true,false" }}}'
-            hx-on::after-request="this.reset(); document.getElementById('image-preview-container').classList.add('hidden'); document.getElementById('post-image-input').value = ''; if (window.syncPinnedNoticeComposerState) { window.syncPinnedNoticeComposerState(this); }"
+            hx-on::after-request="if (event.detail.successful) { this.reset(); document.getElementById('image-preview-container').classList.add('hidden'); document.getElementById('post-image-input').value = ''; if (window.syncPinnedNoticeComposerState) { window.syncPinnedNoticeComposerState(this); } }"
             hx-indicator="find .js-post-create-loading" hx-disabled-elt="find button[type='submit']"
-            hx-on::response-error="alert('게시글 등록 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
+            hx-on::response-error="var text = event.detail.xhr && event.detail.xhr.responseText ? event.detail.xhr.responseText.replace(/<[^>]+>/g, ' ').trim() : '게시글 등록 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'; if (window.showToast) { window.showToast(text, 'error'); } else { alert(text); }"
             hx-encoding="multipart/form-data"
             class="bg-white p-4 rounded-2xl border border-indigo-100 shadow-sm mb-4 transition-all focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-300">
             {% csrf_token %}
-            <textarea name="content" id="post-content-textarea"
-                class="w-full resize-none outline-none focus:ring-2 focus:ring-purple-300 rounded text-sm placeholder-slate-400 bg-transparent font-medium transition-colors"
-                rows="2" placeholder="선생님들과 나누고 싶은 이야기가 있나요?"></textarea>
+            <div class="flex items-start gap-3">
+                {% include 'core/partials/teacher_buddy_avatar.html' with avatar_context=teacher_buddy_current_avatar size_class='h-10 w-10' %}
+                <div class="flex-1 min-w-0">
+                    <textarea name="content" id="post-content-textarea"
+                        class="w-full resize-none outline-none focus:ring-2 focus:ring-purple-300 rounded text-sm placeholder-slate-400 bg-transparent font-medium transition-colors"
+                        rows="2" placeholder="선생님들과 나누고 싶은 이야기가 있나요?">{{ sns_compose_prefill }}</textarea>
+                </div>
+            </div>
 
             <p class="text-xs text-slate-400 mt-1">💡 이미지: Ctrl+V 붙여넣기 또는 드래그 앤 드롭</p>
 

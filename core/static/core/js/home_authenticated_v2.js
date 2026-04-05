@@ -278,12 +278,20 @@
                 }),
             })
                 .then(function (response) {
-                    if (!response.ok) {
-                        showFeedback('사용 기록 저장에 실패했습니다.', 'error');
-                    }
+                    return response.json().catch(function () { return {}; }).then(function (payload) {
+                        if (!response.ok) {
+                            throw new Error(payload.error || '사용 기록 저장에 실패했습니다.');
+                        }
+                        if (payload && payload.buddy) {
+                            document.dispatchEvent(new CustomEvent('teacherBuddy:progress', {
+                                detail: payload.buddy,
+                            }));
+                        }
+                        return payload;
+                    });
                 })
-                .catch(function () {
-                    showFeedback('사용 기록 저장 중 네트워크 오류가 발생했습니다.', 'error');
+                .catch(function (error) {
+                    showFeedback(error && error.message ? error.message : '사용 기록 저장 중 네트워크 오류가 발생했습니다.', 'error');
                 });
         });
 

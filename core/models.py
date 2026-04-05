@@ -1,3 +1,5 @@
+import uuid
+
 from django.db import models
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
@@ -407,6 +409,7 @@ class ProductUsageLog(models.Model):
         ('home_section', '홈 목적별 섹션'),
         ('home_game', '홈 게임 배너'),
         ('home_grid', '홈 전체 서비스'),
+        ('home_mini', '홈 미니 앱'),
         ('search', '검색 모달'),
         ('other', '기타'),
     ]
@@ -475,6 +478,165 @@ class ProductWorkbenchBundle(models.Model):
 
     def __str__(self):
         return f"{self.user.username} 작업대 조합 - {self.name}"
+
+
+class TeacherBuddyState(models.Model):
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='teacher_buddy_state',
+    )
+    active_buddy_key = models.CharField(max_length=60, blank=True, default='')
+    profile_buddy_key = models.CharField(max_length=60, blank=True, default='')
+    active_skin_key = models.CharField(max_length=60, blank=True, default='')
+    profile_skin_key = models.CharField(max_length=60, blank=True, default='')
+    starter_granted_at = models.DateTimeField(null=True, blank=True)
+    draw_token_count = models.PositiveIntegerField(default=0)
+    sticker_dust = models.PositiveIntegerField(default=0)
+    total_points_earned = models.PositiveIntegerField(default=0)
+    qualifying_day_count = models.PositiveIntegerField(default=0)
+    last_sns_bonus_week_key = models.CharField(max_length=12, blank=True, default='')
+    public_share_token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    collection_completed_at = models.DateTimeField(null=True, blank=True)
+    last_home_seen_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "교실 메이트 상태"
+        verbose_name_plural = "교실 메이트 상태"
+
+    def __str__(self):
+        return f"{self.user.username} 교실 메이트"
+
+
+class TeacherBuddyUnlock(models.Model):
+    OBTAINED_VIA_CHOICES = [
+        ('starter', '시작 지급'),
+        ('draw', '뽑기'),
+    ]
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='teacher_buddy_unlocks',
+    )
+    buddy_key = models.CharField(max_length=60)
+    rarity = models.CharField(max_length=20)
+    obtained_via = models.CharField(max_length=20, choices=OBTAINED_VIA_CHOICES)
+    obtained_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'buddy_key'],
+                name='core_teacherbuddyunlock_user_buddy_unique',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['user', '-obtained_at']),
+            models.Index(fields=['user', 'rarity']),
+        ]
+        verbose_name = "교실 메이트 언락"
+        verbose_name_plural = "교실 메이트 언락"
+
+    def __str__(self):
+        return f"{self.user.username} - {self.buddy_key}"
+
+
+class TeacherBuddySkinUnlock(models.Model):
+    OBTAINED_VIA_CHOICES = [
+        ('dust', '반짝 조각'),
+    ]
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='teacher_buddy_skin_unlocks',
+    )
+    skin_key = models.CharField(max_length=60)
+    buddy_key = models.CharField(max_length=60)
+    obtained_via = models.CharField(max_length=20, choices=OBTAINED_VIA_CHOICES, default='dust')
+    obtained_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'skin_key'],
+                name='core_teacherbuddyskinunlock_user_skin_unique',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['user', 'buddy_key']),
+            models.Index(fields=['user', '-obtained_at']),
+        ]
+        verbose_name = "교실 메이트 스킨 언락"
+        verbose_name_plural = "교실 메이트 스킨 언락"
+
+    def __str__(self):
+        return f"{self.user.username} - {self.skin_key}"
+
+
+class TeacherBuddyDailyProgress(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='teacher_buddy_daily_progress',
+    )
+    activity_date = models.DateField()
+    point_total = models.PositiveIntegerField(default=0)
+    awarded_section_keys = models.JSONField(default=list, blank=True)
+    first_launch_awarded = models.BooleanField(default=False)
+    draw_awarded = models.BooleanField(default=False)
+    home_ticket_awarded = models.BooleanField(default=False)
+    qualified_for_legendary_day = models.BooleanField(default=False)
+    sns_reward_awarded = models.BooleanField(default=False)
+    sns_reward_post_id = models.PositiveIntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'activity_date'],
+                name='core_teacherbuddydailyprogress_user_date_unique',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['user', '-activity_date']),
+        ]
+        verbose_name = "교실 메이트 일일 진행"
+        verbose_name_plural = "교실 메이트 일일 진행"
+
+    def __str__(self):
+        return f"{self.user.username} - {self.activity_date}"
+
+
+class TeacherBuddySocialRewardLog(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='teacher_buddy_social_reward_logs',
+    )
+    post_id = models.PositiveIntegerField(null=True, blank=True)
+    activity_date = models.DateField()
+    content_hash = models.CharField(max_length=64, blank=True, default='')
+    normalized_text = models.TextField(blank=True, default='')
+    reward_granted = models.BooleanField(default=False)
+    rejection_reason = models.CharField(max_length=40, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['user', '-activity_date']),
+            models.Index(fields=['user', 'content_hash']),
+            models.Index(fields=['user', 'reward_granted']),
+        ]
+        verbose_name = "교실 메이트 SNS 보상 로그"
+        verbose_name_plural = "교실 메이트 SNS 보상 로그"
+
+    def __str__(self):
+        return f"{self.user.username} - {self.activity_date} - {'reward' if self.reward_granted else 'skip'}"
 
 
 class VisitorLog(models.Model):
