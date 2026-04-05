@@ -55,17 +55,32 @@
     }
 
     function playTone(context, startAt, frequency, duration, volume, type) {
+        var resolvedFrequency = Number(frequency);
+        var resolvedDuration = Number(duration);
+        var resolvedVolume = Number(volume);
+        var resolvedType = type;
+        if (typeof volume === 'string' && !type) {
+            resolvedType = volume;
+            resolvedVolume = 0.04;
+        }
+        if (!Number.isFinite(resolvedFrequency) || !Number.isFinite(resolvedDuration) || resolvedDuration <= 0) {
+            return;
+        }
+        if (!Number.isFinite(resolvedVolume) || resolvedVolume <= 0) {
+            resolvedVolume = 0.04;
+        }
+        resolvedVolume = Math.max(0.0001, Math.min(resolvedVolume, 0.12));
         var oscillator = context.createOscillator();
         var gain = context.createGain();
-        oscillator.type = type || 'sine';
-        oscillator.frequency.setValueAtTime(frequency, startAt);
+        oscillator.type = resolvedType || 'sine';
+        oscillator.frequency.setValueAtTime(resolvedFrequency, startAt);
         gain.gain.setValueAtTime(0.0001, startAt);
-        gain.gain.exponentialRampToValueAtTime(volume, startAt + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+        gain.gain.exponentialRampToValueAtTime(resolvedVolume, startAt + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, startAt + resolvedDuration);
         oscillator.connect(gain);
         gain.connect(context.destination);
         oscillator.start(startAt);
-        oscillator.stop(startAt + duration + 0.02);
+        oscillator.stop(startAt + resolvedDuration + 0.02);
     }
 
     function playRevealSound(root, kind) {
@@ -110,7 +125,12 @@
         };
         var notes = sequences[kind] || sequences.common;
         notes.forEach(function (note) {
-            playTone(context, startAt + note[1], note[0], note[2], note[3], note[4]);
+            var offset = Number(note[1] || 0);
+            var frequency = note[0];
+            var duration = note[2];
+            var volume = note.length >= 5 ? note[3] : 0.04;
+            var type = note.length >= 5 ? note[4] : note[3];
+            playTone(context, startAt + offset, frequency, duration, volume, type);
         });
     }
 
