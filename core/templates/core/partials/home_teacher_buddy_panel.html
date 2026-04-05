@@ -14,7 +14,9 @@
             <div class="min-w-0">
                 <p class="teacher-buddy-eyebrow">{{ teacher_buddy_panel.eyebrow }}</p>
                 <h2 class="teacher-buddy-title">{{ teacher_buddy_panel.title }}</h2>
+                {% if panel_variant != 'v4' and panel_variant != 'v5-desktop' %}
                 <p class="teacher-buddy-subtitle">{{ teacher_buddy_panel.subtitle }}</p>
+                {% endif %}
             </div>
             <div class="teacher-buddy-head-badges">
                 <span class="teacher-buddy-token" data-buddy-token-badge="true">토큰 {{ teacher_buddy_panel.progress.draw_token_count }}</span>
@@ -36,6 +38,35 @@
             <div class="teacher-buddy-copy">
                 <p class="teacher-buddy-reaction" data-buddy-reaction="true">{{ teacher_buddy_panel.progress.reaction_text }}</p>
 
+                {% if panel_variant == 'v4' or panel_variant == 'v5-desktop' %}
+                <div class="teacher-buddy-status-stack teacher-buddy-status-stack--compact">
+                    <article class="teacher-buddy-status-card teacher-buddy-status-card--home teacher-buddy-status-card--compact">
+                        <div class="teacher-buddy-status-head">
+                            <p class="teacher-buddy-status-label">오늘 홈 티켓</p>
+                            <p class="teacher-buddy-status-value" data-buddy-home-progress-text="true">{{ teacher_buddy_panel.progress.home_progress_text }}</p>
+                        </div>
+                        <div class="teacher-buddy-progress-steps" data-buddy-progress-steps="true" data-points="{{ teacher_buddy_panel.progress.points_today }}">
+                            <span class="teacher-buddy-progress-step{% if teacher_buddy_panel.progress.points_today >= 1 %} is-active{% endif %}" data-buddy-progress-step="1"></span>
+                            <span class="teacher-buddy-progress-step{% if teacher_buddy_panel.progress.points_today >= 2 %} is-active{% endif %}" data-buddy-progress-step="2"></span>
+                            <span class="teacher-buddy-progress-step{% if teacher_buddy_panel.progress.points_today >= 3 %} is-active{% endif %}" data-buddy-progress-step="3"></span>
+                        </div>
+                        <p class="teacher-buddy-status-foot" data-buddy-home-ticket-status="true">{{ teacher_buddy_panel.progress.home_ticket_status_text }}</p>
+                        <p class="teacher-buddy-status-micro" data-buddy-home-ticket-condition="true">{{ teacher_buddy_panel.progress.home_ticket_condition_text }}</p>
+                    </article>
+
+                    <div class="teacher-buddy-status-inline-list">
+                        <article class="teacher-buddy-status-card teacher-buddy-status-card--compact-row">
+                            <p class="teacher-buddy-status-label">이번 주 SNS 보너스</p>
+                            <p class="teacher-buddy-status-value" data-buddy-sns-status="true">{{ teacher_buddy_panel.progress.sns_bonus_text }}</p>
+                        </article>
+
+                        <article class="teacher-buddy-status-card teacher-buddy-status-card--compact-row">
+                            <p class="teacher-buddy-status-label">전설 해금 진행</p>
+                            <p class="teacher-buddy-status-value" data-buddy-legendary-status="true">{{ teacher_buddy_panel.legendary_progress_text }}</p>
+                        </article>
+                    </div>
+                </div>
+                {% else %}
                 <div class="teacher-buddy-status-list">
                     <article class="teacher-buddy-status-card teacher-buddy-status-card--home">
                         <div class="teacher-buddy-status-head">
@@ -67,6 +98,7 @@
                         <p class="teacher-buddy-status-copy">홈 티켓을 받은 날만 전설 해금 일수에 반영돼요.</p>
                     </article>
                 </div>
+                {% endif %}
 
                 <div class="teacher-buddy-actions">
                     <form method="post" action="{{ teacher_buddy_urls.draw }}" data-buddy-draw-form="true">
