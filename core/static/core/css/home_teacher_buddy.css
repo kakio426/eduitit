@@ -738,8 +738,29 @@
 }
 
 .teacher-buddy-avatar.is-buddy {
-    background: linear-gradient(135deg, var(--buddy-avatar-start), var(--buddy-avatar-end));
+    background:
+        radial-gradient(circle at top left, rgba(255, 255, 255, 0.92), transparent 42%),
+        linear-gradient(135deg, var(--buddy-avatar-start), var(--buddy-avatar-end));
     color: var(--buddy-avatar-text);
+}
+
+.teacher-buddy-avatar-ascii {
+    margin: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 0.28rem;
+    font-weight: 800;
+    line-height: 1.02;
+    letter-spacing: -0.01em;
+    white-space: pre;
+    text-align: center;
+    transform: scale(0.72);
+    transform-origin: center;
+    color: transparent;
+    background: linear-gradient(180deg, var(--buddy-avatar-text), var(--buddy-avatar-accent, var(--buddy-avatar-text)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.55));
+    pointer-events: none;
 }
 
 .teacher-buddy-avatar--glow {
@@ -767,7 +788,6 @@
         0 16px 36px rgba(15, 118, 110, 0.24);
 }
 
-.teacher-buddy-avatar-mark,
 .teacher-buddy-avatar-initial {
     font-size: 0.94rem;
     font-weight: 900;

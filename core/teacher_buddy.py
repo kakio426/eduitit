@@ -441,6 +441,7 @@ def _build_avatar_context_from_buddy_payload(
     sticker_dust: int = 0,
 ) -> dict[str, object]:
     cosmetic_key, cosmetic_label = _cosmetic_tier(sticker_dust)
+    avatar_ascii_lines = str(buddy_payload.get("idle_ascii") or "").splitlines()[:5]
     return {
         "is_buddy": True,
         "initial": initial,
@@ -448,6 +449,7 @@ def _build_avatar_context_from_buddy_payload(
         "rarity": buddy_payload["rarity"],
         "rarity_label": buddy_payload["rarity_label"],
         "avatar_mark": buddy_payload["avatar_mark"],
+        "avatar_ascii": "\n".join(avatar_ascii_lines),
         "palette": buddy_payload["palette"],
         "palette_tokens": buddy_payload["palette_tokens"],
         "title": f"{buddy_payload['name']} 대표 메이트",
@@ -465,6 +467,7 @@ def _fallback_avatar_context(*, initial: str, label: str) -> dict[str, object]:
         "rarity": "",
         "rarity_label": "",
         "avatar_mark": "",
+        "avatar_ascii": "",
         "palette": "fallback",
         "palette_tokens": {},
         "title": f"{label} 프로필",

@@ -705,6 +705,7 @@ class TeacherBuddyHomeRenderTests(TestCase):
         response = self.client.get(reverse("home"))
 
         self.assertContains(response, "teacher-buddy-avatar")
+        self.assertContains(response, 'data-buddy-avatar-ascii="true"')
 
     def test_public_share_page_and_image_are_accessible_anonymously(self):
         record_teacher_buddy_progress(self.user, Product.objects.first(), "home_quick")
