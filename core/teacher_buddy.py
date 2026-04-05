@@ -786,18 +786,21 @@ def build_teacher_buddy_settings_context(user) -> dict[str, object] | None:
 
     active_key = state.active_buddy_key or state.profile_buddy_key
     profile_key = state.profile_buddy_key or state.active_buddy_key
+    active_skin_key = _resolve_style_skin_key(state.active_skin_key, active_key, state.active_buddy_key)
+    profile_skin_key = _resolve_style_skin_key(state.profile_skin_key, profile_key, profile_key)
     active_buddy = _serialize_state_buddy(
         user=user,
         state=state,
         buddy_key=active_key,
-        selected_skin_key=_resolve_style_skin_key(state.active_skin_key, active_key, state.active_buddy_key),
+        selected_skin_key=active_skin_key,
     )
     profile_buddy = _serialize_state_buddy(
         user=user,
         state=state,
         buddy_key=profile_key,
-        selected_skin_key=_resolve_style_skin_key(state.profile_skin_key, profile_key, profile_key),
+        selected_skin_key=profile_skin_key,
     )
+    is_synced = active_key == profile_key and active_skin_key == profile_skin_key
     progress_summary = _build_progress_summary(
         user=user,
         state=state,
@@ -812,8 +815,8 @@ def build_teacher_buddy_settings_context(user) -> dict[str, object] | None:
     share_path = reverse("teacher_buddy_share_page", kwargs={"public_share_token": state.public_share_token})
     share_image_path = reverse("teacher_buddy_share_image", kwargs={"public_share_token": state.public_share_token})
     return {
-        "title": "내 메이트 프로필 허브",
-        "subtitle": "SNS 대표 메이트와 홈 메이트를 한 곳에서 고르고 자랑해 보세요.",
+        "title": "대표 메이트 프로필",
+        "subtitle": "대표 하나만 고르면 홈과 SNS에 함께 보여요.",
         "active_buddy": active_buddy,
         "profile_buddy": profile_buddy,
         "collection_items": collection_items,
@@ -835,6 +838,13 @@ def build_teacher_buddy_settings_context(user) -> dict[str, object] | None:
         "share_filename": f"eduitit-buddy-{profile_buddy['key']}.svg",
         "share_title": f"{nickname}님의 교실 메이트",
         "selection_mode_default": "profile",
+        "is_synced": is_synced,
+        "sync_summary_text": (
+            "현재 홈과 SNS가 같은 메이트로 맞춰져 있어요."
+            if is_synced
+            else "지금은 홈과 SNS가 다르게 보이고 있어요. 아래에서 대표를 다시 고르면 바로 함께 맞춰집니다."
+        ),
+        "shared_selection_copy": "대표를 고르면 홈과 SNS에 함께 반영돼요.",
         "sticker_dust": sticker_dust,
         "sticker_dust_text": f"스타일 조각 {sticker_dust}개",
         "buddy_collection_summary_text": f"{TeacherBuddyUnlock.objects.filter(user=user).count()}/{TOTAL_BUDDY_COUNT} 메이트",
@@ -1506,38 +1516,19 @@ def select_teacher_buddy(user, buddy_key: str, skin_key: str = "") -> dict[str, 
             raise TeacherBuddyError("아직 잠금 해제되지 않은 메이트입니다.")
         normalized_skin_key = _validated_skin_key_for_user(user=user, buddy_key=normalized_key, skin_key=skin_key)
         state.active_buddy_key = normalized_key
+        state.profile_buddy_key = normalized_key
         state.active_skin_key = normalized_skin_key
-        state.save(update_fields=["active_buddy_key", "active_skin_key"])
+        state.profile_skin_key = normalized_skin_key
+        state.save(update_fields=["active_buddy_key", "profile_buddy_key", "active_skin_key", "profile_skin_key"])
         return _build_selection_payload(
             user=user,
             state=state,
-            message=f"{with_particle(get_teacher_buddy(normalized_key).name, ('와', '과'))} 함께 홈을 둘러볼게요.",
+            message=f"{with_particle(get_teacher_buddy(normalized_key).name, ('이', '가'))} 대표 메이트가 됐어요. 홈과 SNS에 함께 반영됩니다.",
         )
 
 
 def select_teacher_buddy_profile(user, buddy_key: str, skin_key: str = "") -> dict[str, object]:
-    if not teacher_buddy_user_is_eligible(user):
-        raise TeacherBuddyError("교실 메이트는 교사 계정에서만 사용할 수 있어요.")
-
-    normalized_key = str(buddy_key or "").strip()
-    if not normalized_key:
-        raise TeacherBuddyError("프로필 메이트를 먼저 골라 주세요.")
-
-    with transaction.atomic():
-        state = _get_or_create_state_for_update(user)
-        state = _ensure_starter_unlocked(user=user, state=state)
-        unlock = TeacherBuddyUnlock.objects.filter(user=user, buddy_key=normalized_key).first()
-        if unlock is None:
-            raise TeacherBuddyError("아직 잠금 해제되지 않은 메이트입니다.")
-        normalized_skin_key = _validated_skin_key_for_user(user=user, buddy_key=normalized_key, skin_key=skin_key)
-        state.profile_buddy_key = normalized_key
-        state.profile_skin_key = normalized_skin_key
-        state.save(update_fields=["profile_buddy_key", "profile_skin_key"])
-        return _build_selection_payload(
-            user=user,
-            state=state,
-            message=f"{with_particle(get_teacher_buddy(normalized_key).name, ('이', '가'))} SNS 대표 메이트가 됐어요.",
-        )
+    return select_teacher_buddy(user, buddy_key, skin_key)
 
 
 def unlock_teacher_buddy_skin(user, buddy_key: str, skin_key: str) -> dict[str, object]:

@@ -192,6 +192,11 @@
     font-size: 0.88rem;
 }
 
+.teacher-buddy-profile-ascii--hero {
+    font-size: 1.04rem;
+    line-height: 1.16;
+}
+
 .teacher-buddy-profile-ascii--compact,
 .teacher-buddy-share-ascii {
     font-size: 0.82rem;
@@ -747,13 +752,13 @@
 .teacher-buddy-avatar-ascii {
     margin: 0;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-    font-size: 0.28rem;
+    font-size: 0.34rem;
     font-weight: 800;
-    line-height: 1.02;
+    line-height: 1.04;
     letter-spacing: -0.01em;
     white-space: pre;
     text-align: center;
-    transform: scale(0.72);
+    transform: scale(0.86);
     transform-origin: center;
     color: transparent;
     background: linear-gradient(180deg, var(--buddy-avatar-text), var(--buddy-avatar-accent, var(--buddy-avatar-text)));
@@ -761,6 +766,16 @@
     background-clip: text;
     filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.55));
     pointer-events: none;
+}
+
+.teacher-buddy-avatar--compose .teacher-buddy-avatar-ascii {
+    font-size: 0.39rem;
+    transform: scale(0.94);
+}
+
+.teacher-buddy-avatar--hero .teacher-buddy-avatar-ascii {
+    font-size: 0.44rem;
+    transform: scale(1);
 }
 
 .teacher-buddy-avatar--glow {
@@ -805,6 +820,13 @@
     background: var(--buddy-avatar-accent, #4f46e5);
 }
 
+.teacher-buddy-avatar--hero .teacher-buddy-avatar-dot {
+    right: 0.22rem;
+    bottom: 0.22rem;
+    width: 0.6rem;
+    height: 0.6rem;
+}
+
 .teacher-buddy-settings-card {
     display: flex;
     flex-direction: column;
@@ -814,7 +836,7 @@
 
 .teacher-buddy-profile-hero {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: 0.9rem;
 }
 
@@ -831,6 +853,14 @@
     background-blend-mode: screen;
 }
 
+.teacher-buddy-profile-card--representative {
+    gap: 1.05rem;
+}
+
+.teacher-buddy-profile-body--hero {
+    min-height: 11.6rem;
+}
+
 .teacher-buddy-settings-toolbar {
     display: flex;
     align-items: center;
@@ -839,26 +869,11 @@
     flex-wrap: wrap;
 }
 
-.teacher-buddy-mode-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    padding: 0.3rem;
-    border-radius: 999px;
-    background: rgba(241, 245, 249, 0.96);
-    border: 1px solid rgba(203, 213, 225, 0.78);
-}
-
-.teacher-buddy-mode-button {
-    min-height: 2.45rem;
-    padding-inline: 0.95rem;
-    border-radius: 999px;
-}
-
 .teacher-buddy-mode-help {
     margin: 0;
     color: var(--buddy-soft);
-    font-size: 0.84rem;
+    font-size: 0.88rem;
+    font-weight: 700;
     line-height: 1.55;
 }
 
@@ -1077,7 +1092,6 @@
 }
 
 @media (max-width: 1023px) {
-    .teacher-buddy-profile-hero,
     .teacher-buddy-share-card {
         grid-template-columns: minmax(0, 1fr);
     }
@@ -1109,12 +1123,8 @@
         align-items: flex-start;
     }
 
-    .teacher-buddy-mode-toggle {
-        width: 100%;
-    }
-
-    .teacher-buddy-mode-button {
-        flex: 1 1 0;
+    .teacher-buddy-profile-ascii--hero {
+        font-size: 0.92rem;
     }
 
     .teacher-buddy-status-inline-list {

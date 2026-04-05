@@ -72,47 +72,50 @@
         }
     }
 
+    function escapeHtml(value) {
+        return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
     function renderAvatarHTML(buddy) {
         var tokens = buddy.palette_tokens || {};
         return '' +
-            '<div class="teacher-buddy-avatar is-buddy h-14 w-14 teacher-buddy-profile-avatar" ' +
+            '<div class="teacher-buddy-avatar teacher-buddy-avatar--hero is-buddy h-16 w-16 teacher-buddy-profile-avatar" ' +
             'style="--buddy-avatar-start:' + (tokens.bg_start || '#dbeafe') + ';' +
             '--buddy-avatar-end:' + (tokens.bg_end || '#e0e7ff') + ';' +
             '--buddy-avatar-text:' + (tokens.text || '#0f172a') + ';' +
             '--buddy-avatar-accent:' + (tokens.accent || '#4f46e5') + ';">' +
-            '<span class="teacher-buddy-avatar-mark">' + (buddy.avatar_mark || '*') + '</span>' +
+            '<pre class="teacher-buddy-avatar-ascii" data-buddy-avatar-ascii="true">' + escapeHtml(buddy.avatar_ascii || '') + '</pre>' +
             '<span class="teacher-buddy-avatar-dot" aria-hidden="true"></span>' +
             '</div>';
     }
 
     function getSelectionState(root) {
-        var profileCard = root.querySelector('[data-buddy-preview-card="profile"]');
-        var homeCard = root.querySelector('[data-buddy-preview-card="home"]');
+        var representativeCard = root.querySelector('[data-buddy-preview-card="representative"]');
         return {
-            mode: root.dataset.selectionMode || 'profile',
-            profileKey: profileCard ? (profileCard.getAttribute('data-buddy-preview-buddy-key') || '') : '',
-            profileSkinKey: profileCard ? (profileCard.getAttribute('data-buddy-preview-skin-key') || '') : '',
-            homeKey: homeCard ? (homeCard.getAttribute('data-buddy-preview-buddy-key') || '') : '',
-            homeSkinKey: homeCard ? (homeCard.getAttribute('data-buddy-preview-skin-key') || '') : ''
+            representativeKey: representativeCard ? (representativeCard.getAttribute('data-buddy-preview-buddy-key') || '') : '',
+            representativeSkinKey: representativeCard ? (representativeCard.getAttribute('data-buddy-preview-skin-key') || '') : ''
         };
     }
 
     function applyPayloadToState(state, payload) {
-        if (payload.profile_buddy) {
-            state.profileKey = payload.profile_buddy.key || state.profileKey;
-            state.profileSkinKey = payload.profile_buddy.selected_skin_key || '';
+        var representative = payload.profile_buddy || payload.active_buddy;
+        if (!representative) {
+            return;
         }
-        if (payload.active_buddy) {
-            state.homeKey = payload.active_buddy.key || state.homeKey;
-            state.homeSkinKey = payload.active_buddy.selected_skin_key || '';
-        }
+        state.representativeKey = representative.key || state.representativeKey;
+        state.representativeSkinKey = representative.selected_skin_key || '';
     }
 
-    function updatePreviewCard(root, type, buddy, captionText, summaryText) {
+    function updatePreviewCard(root, buddy, captionText, summaryText) {
         if (!buddy) {
             return;
         }
-        var card = root.querySelector('[data-buddy-preview-card="' + type + '"]');
+        var card = root.querySelector('[data-buddy-preview-card="representative"]');
         if (!card) {
             return;
         }
@@ -121,16 +124,16 @@
         if (buddy.palette_tokens && buddy.palette_tokens.gradient) {
             card.style.setProperty('--teacher-buddy-hero-gradient', buddy.palette_tokens.gradient);
         }
-        var avatarWrap = root.querySelector('[data-buddy-preview-avatar="' + type + '"]');
-        if (avatarWrap && type === 'profile') {
+        var avatarWrap = root.querySelector('[data-buddy-preview-avatar="representative"]');
+        if (avatarWrap) {
             avatarWrap.innerHTML = renderAvatarHTML(buddy);
         }
-        var name = root.querySelector('[data-buddy-preview-name="' + type + '"]');
-        var caption = root.querySelector('[data-buddy-preview-caption="' + type + '"]');
-        var ascii = root.querySelector('[data-buddy-preview-ascii="' + type + '"]');
-        var rarity = root.querySelector('[data-buddy-preview-rarity="' + type + '"]');
-        var summary = root.querySelector('[data-buddy-preview-summary="' + type + '"]');
-        var style = root.querySelector('[data-buddy-preview-style="' + type + '"]');
+        var name = root.querySelector('[data-buddy-preview-name="representative"]');
+        var caption = root.querySelector('[data-buddy-preview-caption="representative"]');
+        var ascii = root.querySelector('[data-buddy-preview-ascii="representative"]');
+        var rarity = root.querySelector('[data-buddy-preview-rarity="representative"]');
+        var summary = root.querySelector('[data-buddy-preview-summary="representative"]');
+        var style = root.querySelector('[data-buddy-preview-style="representative"]');
 
         if (name) {
             name.textContent = buddy.name || '';
@@ -164,19 +167,17 @@
         }
     }
 
-    function buildApplyAction(root, mode, buddyKey, skinKey, isSelected) {
+    function buildApplyAction(root, buddyKey, skinKey, isSelected) {
         if (isSelected) {
-            return '<span class="teacher-buddy-status-chip" data-buddy-style-status="' + mode + '">' + (mode === 'profile' ? 'SNS 대표' : '홈 메이트') + '</span>';
+            return '<span class="teacher-buddy-status-chip" data-buddy-style-status="representative">현재 대표</span>';
         }
-        var action = mode === 'profile' ? root.dataset.selectProfileUrl : root.dataset.selectUrl;
-        var buttonLabel = mode === 'profile' ? 'SNS 대표로 적용' : '홈에 적용';
-        var buttonClass = mode === 'profile' ? 'teacher-buddy-inline-button' : 'teacher-buddy-inline-button teacher-buddy-inline-button--secondary';
+        var action = root.dataset.selectUrl;
         return '' +
-            '<form method="post" action="' + action + '" data-buddy-apply-form="' + mode + '">' +
+            '<form method="post" action="' + action + '" data-buddy-apply-form="representative">' +
             '<input type="hidden" name="csrfmiddlewaretoken" value="' + getCsrfToken() + '">' +
             '<input type="hidden" name="buddy_key" value="' + buddyKey + '">' +
             '<input type="hidden" name="skin_key" value="' + skinKey + '">' +
-            '<button type="submit" class="' + buttonClass + '">' + buttonLabel + '</button>' +
+            '<button type="submit" class="teacher-buddy-inline-button">대표로 적용</button>' +
             '</form>';
     }
 
@@ -193,34 +194,24 @@
             actions.innerHTML = '<span class="teacher-buddy-status-chip teacher-buddy-status-chip--soft">메이트 뽑기에서 등장</span>';
             return;
         }
-        var isProfile = buddyKey === state.profileKey && (skinKey || '') === (state.profileSkinKey || '');
-        var isHome = buddyKey === state.homeKey && (skinKey || '') === (state.homeSkinKey || '');
-        actions.innerHTML = buildApplyAction(root, state.mode, buddyKey, skinKey, state.mode === 'profile' ? isProfile : isHome);
+        var isSelected = buddyKey === state.representativeKey && (skinKey || '') === (state.representativeSkinKey || '');
+        actions.innerHTML = buildApplyAction(root, buddyKey, skinKey, isSelected);
     }
 
     function updateSelectionUI(root, state) {
-        root.dataset.selectionMode = state.mode;
-        var help = root.querySelector('[data-buddy-mode-help="true"]');
-        if (help) {
-            help.textContent = state.mode === 'profile' ? '현재: SNS 대표 메이트 선택 모드' : '현재: 홈 메이트 선택 모드';
-        }
-        root.querySelectorAll('[data-buddy-mode-trigger]').forEach(function (button) {
-            var selected = button.getAttribute('data-buddy-mode-trigger') === state.mode;
-            button.classList.toggle('is-active', selected);
-            button.setAttribute('aria-pressed', selected ? 'true' : 'false');
-        });
-
         root.querySelectorAll('[data-buddy-settings-item="true"]').forEach(function (card) {
             var buddyKey = card.getAttribute('data-buddy-key') || '';
-            card.classList.toggle('is-profile', buddyKey === state.profileKey);
-            card.classList.toggle('is-active', buddyKey === state.homeKey);
+            var isSelected = buddyKey === state.representativeKey;
+            card.classList.toggle('is-profile', isSelected);
+            card.classList.toggle('is-active', isSelected);
         });
 
         root.querySelectorAll('[data-buddy-style-option="true"]').forEach(function (option) {
             var buddyKey = option.getAttribute('data-buddy-key') || '';
             var skinKey = option.getAttribute('data-skin-key') || '';
-            option.classList.toggle('is-profile', buddyKey === state.profileKey && skinKey === (state.profileSkinKey || ''));
-            option.classList.toggle('is-active', buddyKey === state.homeKey && skinKey === (state.homeSkinKey || ''));
+            var isSelected = buddyKey === state.representativeKey && skinKey === (state.representativeSkinKey || '');
+            option.classList.toggle('is-profile', isSelected);
+            option.classList.toggle('is-active', isSelected);
             renderStyleActions(root, option, state);
         });
     }
@@ -262,15 +253,6 @@
         updateSelectionUI(root, state);
     }
 
-    function bindModeButtons(root, state) {
-        root.querySelectorAll('[data-buddy-mode-trigger]').forEach(function (button) {
-            button.addEventListener('click', function () {
-                state.mode = button.getAttribute('data-buddy-mode-trigger') || 'profile';
-                updateSelectionUI(root, state);
-            });
-        });
-    }
-
     function bindStyleToggles(root) {
         root.querySelectorAll('[data-buddy-style-toggle="true"]').forEach(function (button) {
             button.addEventListener('click', function () {
@@ -297,18 +279,12 @@
                 var payload = await submitForm(form);
                 applyPayloadToState(state, payload);
                 updateSummaries(root, payload);
-                if (payload.profile_buddy) {
-                    updatePreviewCard(root, 'profile', payload.profile_buddy, payload.profile_buddy.share_caption || '', payload.collection_summary_text || '');
-                }
-                if (payload.active_buddy) {
-                    updatePreviewCard(
-                        root,
-                        'home',
-                        payload.active_buddy,
-                        payload.buddy_progress ? payload.buddy_progress.legendary_progress_text : '',
-                        payload.buddy_progress ? payload.buddy_progress.home_progress_text : ''
-                    );
-                }
+                updatePreviewCard(
+                    root,
+                    payload.profile_buddy || payload.active_buddy,
+                    payload.profile_buddy ? (payload.profile_buddy.share_caption || '') : '',
+                    root.dataset.sharedSelectionCopy || '대표를 고르면 홈과 SNS에 함께 반영돼요.'
+                );
                 if (payload.collection_item) {
                     updateCollectionItem(root, payload.collection_item, state);
                 } else {
@@ -444,7 +420,6 @@
             return;
         }
         var state = getSelectionState(root);
-        bindModeButtons(root, state);
         bindStyleToggles(root);
         bindForms(root, state);
         bindShareModal(root);

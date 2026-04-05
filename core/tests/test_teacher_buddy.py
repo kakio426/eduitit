@@ -344,8 +344,10 @@ class TeacherBuddyServiceTests(TestCase):
         payload = select_teacher_buddy_profile(self.user, candidate.key)
 
         self.assertEqual(payload["profile_buddy"]["key"], candidate.key)
+        self.assertEqual(payload["active_buddy"]["key"], candidate.key)
         state.refresh_from_db()
         self.assertEqual(state.profile_buddy_key, candidate.key)
+        self.assertEqual(state.active_buddy_key, candidate.key)
 
     def test_draw_can_unlock_style_without_currency(self):
         self._grant_home_ticket()
@@ -393,8 +395,11 @@ class TeacherBuddyServiceTests(TestCase):
 
         state = self._state()
         self.assertEqual(payload["active_buddy"]["selected_skin_key"], skin.key)
+        self.assertEqual(payload["profile_buddy"]["selected_skin_key"], skin.key)
         self.assertEqual(state.active_buddy_key, candidate.key)
+        self.assertEqual(state.profile_buddy_key, candidate.key)
         self.assertEqual(state.active_skin_key, skin.key)
+        self.assertEqual(state.profile_skin_key, skin.key)
 
 
 @override_settings(HOME_TEACHER_BUDDY_ENABLED=True, HOME_V2_ENABLED=True)
@@ -487,6 +492,7 @@ class TeacherBuddyApiTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["profile_buddy"]["key"], candidate.key)
+        self.assertEqual(response.json()["active_buddy"]["key"], candidate.key)
 
     def test_skin_unlock_endpoint_returns_400_for_draw_only_flow(self):
         self.client.login(username="buddyapi", password="pass1234")
@@ -668,18 +674,20 @@ class TeacherBuddyHomeRenderTests(TestCase):
         self.assertNotContains(response, "오늘 흐름 위젯")
         self.assertNotContains(response, "홈 도구 3개와 오늘 SNS 글 1개로 메이트 토큰을 모아요.")
 
-    def test_settings_page_shows_hub_mode_toggle_and_share_button(self):
+    def test_settings_page_shows_representative_buddy_hub_and_share_button(self):
         self.client.login(username="buddyhome", password="pass1234")
 
         response = self.client.get(reverse("settings"))
 
-        self.assertContains(response, "내 메이트 프로필 허브")
-        self.assertContains(response, 'data-selection-mode="profile"')
-        self.assertContains(response, "SNS 대표 선택")
-        self.assertContains(response, "홈 메이트 선택")
+        self.assertContains(response, "대표 메이트 프로필")
+        self.assertContains(response, 'data-buddy-preview-card="representative"')
+        self.assertContains(response, "대표 메이트")
+        self.assertContains(response, "대표를 고르면 홈과 SNS에 함께 반영돼요.")
         self.assertContains(response, "자랑하기")
         self.assertContains(response, "스타일 보기")
-        self.assertNotContains(response, 'data-buddy-preview-caption="home"')
+        self.assertNotContains(response, 'data-selection-mode="profile"')
+        self.assertNotContains(response, "SNS 대표 선택")
+        self.assertNotContains(response, "홈 메이트 선택")
         self.assertNotContains(response, 'data-buddy-settings-buddy-summary="true"')
         self.assertNotContains(response, 'data-buddy-settings-style-summary="true"')
         self.assertNotContains(response, 'data-buddy-unlock-form="true"')
