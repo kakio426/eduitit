@@ -683,6 +683,7 @@ class TeacherBuddyCatalogTests(TestCase):
 
     def test_catalog_respects_ascii_and_silhouette_rules(self):
         buddies = all_teacher_buddies()
+        directional_keys = {"pointer_beam"}
 
         for buddy in buddies:
             idle_lines = buddy.idle_ascii.splitlines()
@@ -696,6 +697,20 @@ class TeacherBuddyCatalogTests(TestCase):
                 1,
                 msg=f"{buddy.key} idle ascii should keep a consistent width",
             )
+            if buddy.key not in directional_keys:
+                centers = []
+                for line in idle_lines:
+                    stripped = line.rstrip()
+                    start = len(line) - len(line.lstrip(" "))
+                    end = len(stripped) - 1
+                    centers.append((start + end) / 2)
+                average_center = sum(centers) / len(centers)
+                max_spread = max(abs(center - average_center) for center in centers)
+                self.assertLessEqual(
+                    max_spread,
+                    0.55,
+                    msg=f"{buddy.key} idle ascii should stay visually centered",
+                )
 
         legendary = next(buddy for buddy in buddies if buddy.rarity == RARITY_LEGENDARY)
         self.assertEqual(len(legendary.idle_ascii.splitlines()), 6)
