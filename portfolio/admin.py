@@ -1,11 +1,19 @@
 from django.contrib import admin
-from .models import Achievement, LectureProgram, LectureHistory, Inquiry
+from .models import Achievement, AchievementPhoto, LectureProgram, LectureHistory, Inquiry
+
+
+class AchievementPhotoInline(admin.TabularInline):
+    model = AchievementPhoto
+    extra = 1
+    fields = ("image", "caption", "sort_order")
+    ordering = ("sort_order", "id")
 
 @admin.register(Achievement)
 class AchievementAdmin(admin.ModelAdmin):
     list_display = ('title', 'issuer', 'date_awarded', 'is_featured')
     list_filter = ('is_featured', 'date_awarded')
     search_fields = ('title', 'issuer')
+    inlines = [AchievementPhotoInline]
 
 @admin.register(LectureProgram)
 class LectureProgramAdmin(admin.ModelAdmin):

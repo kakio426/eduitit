@@ -35,6 +35,76 @@ class Achievement(models.Model):
         except Exception:
             return ""
 
+    @property
+    def gallery_images(self):
+        images = []
+
+        cover_url = self.safe_image_url
+        if cover_url:
+            images.append(
+                {
+                    "url": cover_url,
+                    "alt": self.title,
+                    "caption": "",
+                    "is_cover": True,
+                }
+            )
+
+        photos = getattr(self, "prefetched_photos", None)
+        if photos is None:
+            photos = self.photos.all()
+
+        for photo in photos:
+            photo_url = photo.safe_image_url
+            if not photo_url:
+                continue
+            images.append(
+                {
+                    "url": photo_url,
+                    "alt": photo.caption or self.title,
+                    "caption": photo.caption,
+                    "is_cover": False,
+                }
+            )
+
+        return images
+
+
+class AchievementPhoto(models.Model):
+    achievement = models.ForeignKey(
+        Achievement,
+        on_delete=models.CASCADE,
+        related_name="photos",
+        verbose_name="연결 실적",
+    )
+    image = models.ImageField(
+        upload_to="portfolio/achievements/",
+        max_length=500,
+        verbose_name="추가 사진",
+    )
+    caption = models.CharField(max_length=200, blank=True, verbose_name="사진 설명")
+    sort_order = models.PositiveIntegerField(default=0, verbose_name="정렬 순서")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "실적 사진"
+        verbose_name_plural = "실적 사진"
+        ordering = ["sort_order", "id"]
+
+    def __str__(self):
+        if self.caption:
+            return f"{self.achievement.title} - {self.caption}"
+        return f"{self.achievement.title} - 사진 {self.pk or '신규'}"
+
+    @property
+    def safe_image_url(self):
+        if not self.image:
+            return ""
+        try:
+            return self.image.url
+        except Exception:
+            return ""
+
 class LectureProgram(models.Model):
     title = models.CharField(max_length=200, verbose_name="강의명")
     description = models.TextField(verbose_name="강의 개요")

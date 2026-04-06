@@ -3,14 +3,24 @@ from django.db.models import Prefetch
 
 from core.seo import build_portfolio_page_seo
 
-from .models import Achievement, LectureProgram, Inquiry
+from .models import Achievement, AchievementPhoto, LectureProgram, Inquiry
 
 class PortfolioListView(ListView):
     template_name = 'portfolio/portfolio_list.html'
     context_object_name = 'achievements'
     
     def get_queryset(self):
-        return Achievement.objects.all().order_by('-is_featured', '-date_awarded')
+        return (
+            Achievement.objects
+            .prefetch_related(
+                Prefetch(
+                    'photos',
+                    queryset=AchievementPhoto.objects.all(),
+                    to_attr='prefetched_photos',
+                )
+            )
+            .order_by('-is_featured', '-date_awarded')
+        )
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
