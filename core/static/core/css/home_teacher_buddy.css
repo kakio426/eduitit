@@ -988,6 +988,11 @@
     color: #0f172a;
 }
 
+.teacher-buddy-style-copy-wrap {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
 .teacher-buddy-style-ascii {
     width: 5.3rem;
     min-width: 5.3rem;
@@ -1011,6 +1016,7 @@
     color: var(--buddy-text);
     font-size: 0.86rem;
     font-weight: 900;
+    word-break: keep-all;
 }
 
 .teacher-buddy-style-copy,
@@ -1018,6 +1024,7 @@
     color: var(--buddy-muted);
     font-size: 0.78rem;
     line-height: 1.5;
+    word-break: keep-all;
 }
 
 .teacher-buddy-style-actions {
@@ -1158,6 +1165,19 @@
     .teacher-buddy-share-actions,
     .teacher-buddy-share-links {
         flex-direction: column;
+    }
+
+    .teacher-buddy-style-option {
+        grid-template-columns: minmax(0, 1fr);
+        align-items: stretch;
+    }
+
+    .teacher-buddy-style-preview {
+        align-items: flex-start;
+    }
+
+    .teacher-buddy-style-copy-wrap {
+        min-width: 0;
     }
 
     .teacher-buddy-primary,

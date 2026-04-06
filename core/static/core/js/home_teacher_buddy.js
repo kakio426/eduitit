@@ -167,12 +167,14 @@
         });
     }
 
-    function setAsciiTone(node, paletteTokens) {
-        if (!node || !paletteTokens || typeof paletteTokens !== 'object') {
+    function setAsciiTone(node, asciiTokens, paletteTokens) {
+        if (!node) {
             return;
         }
-        node.style.setProperty('--teacher-buddy-ascii-start', paletteTokens.text || '#0f172a');
-        node.style.setProperty('--teacher-buddy-ascii-end', paletteTokens.accent || paletteTokens.text || '#334155');
+        var tokens = asciiTokens && typeof asciiTokens === 'object' ? asciiTokens : null;
+        var palette = paletteTokens && typeof paletteTokens === 'object' ? paletteTokens : null;
+        node.style.setProperty('--teacher-buddy-ascii-start', (tokens && tokens.start) || (palette && palette.text) || '#111827');
+        node.style.setProperty('--teacher-buddy-ascii-end', (tokens && tokens.end) || (palette && palette.accent) || (palette && palette.text) || '#111827');
     }
 
     function updateProgress(root, payload, collectionSummaryText) {
@@ -226,7 +228,7 @@
         if (asciiBox && paletteTokens && typeof paletteTokens.gradient === 'string' && paletteTokens.gradient) {
             asciiBox.style.setProperty('--teacher-buddy-hero-gradient', paletteTokens.gradient);
         }
-        setAsciiTone(ascii, paletteTokens);
+        setAsciiTone(ascii, buddy.ascii_tokens, paletteTokens);
     }
 
     function setResultStage(root, stage) {
@@ -273,7 +275,11 @@
         setText(modal, '[data-buddy-result-theme-title="true"]', payload.result_title || '메이트 결과');
         setText(modal, '[data-buddy-result-name="true"]', resultBuddy ? resultBuddy.name : '교실 메이트');
         renderAscii(modal.querySelector('[data-buddy-result-ascii="true"]'), resultBuddy ? (resultBuddy.unlock_ascii || resultBuddy.idle_ascii || '') : '');
-        setAsciiTone(modal.querySelector('[data-buddy-result-ascii="true"]'), resultBuddy ? resultBuddy.palette_tokens : null);
+        setAsciiTone(
+            modal.querySelector('[data-buddy-result-ascii="true"]'),
+            resultBuddy ? resultBuddy.ascii_tokens : null,
+            resultBuddy ? resultBuddy.palette_tokens : null
+        );
         setText(modal, '[data-buddy-result-message="true"]', payload.message || '메이트 결과를 확인했어요.');
     }
 

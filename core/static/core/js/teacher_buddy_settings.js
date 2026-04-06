@@ -94,12 +94,14 @@
         });
     }
 
-    function setAsciiTone(node, paletteTokens) {
-        if (!node || !paletteTokens || typeof paletteTokens !== 'object') {
+    function setAsciiTone(node, asciiTokens, paletteTokens) {
+        if (!node) {
             return;
         }
-        node.style.setProperty('--teacher-buddy-ascii-start', paletteTokens.text || '#0f172a');
-        node.style.setProperty('--teacher-buddy-ascii-end', paletteTokens.accent || paletteTokens.text || '#334155');
+        var tokens = asciiTokens && typeof asciiTokens === 'object' ? asciiTokens : null;
+        var palette = paletteTokens && typeof paletteTokens === 'object' ? paletteTokens : null;
+        node.style.setProperty('--teacher-buddy-ascii-start', (tokens && tokens.start) || (palette && palette.text) || '#111827');
+        node.style.setProperty('--teacher-buddy-ascii-end', (tokens && tokens.end) || (palette && palette.accent) || (palette && palette.text) || '#111827');
     }
 
     function renderAvatarHTML(buddy) {
@@ -164,7 +166,7 @@
         }
         if (ascii) {
             renderAscii(ascii, buddy.idle_ascii || '');
-            setAsciiTone(ascii, buddy.palette_tokens || {});
+            setAsciiTone(ascii, buddy.ascii_tokens, buddy.palette_tokens || {});
         }
         if (rarity) {
             rarity.textContent = buddy.rarity_label || '';
@@ -258,7 +260,7 @@
         }
         if (ascii) {
             renderAscii(ascii, item.idle_ascii || '');
-            setAsciiTone(ascii, item.palette_tokens || {});
+            setAsciiTone(ascii, item.ascii_tokens, item.palette_tokens || {});
         }
         (item.style_options || []).forEach(function (style) {
             card.querySelectorAll('[data-buddy-style-option="true"]').forEach(function (option) {

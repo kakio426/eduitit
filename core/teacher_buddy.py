@@ -193,6 +193,23 @@ def _build_palette_payload(palette_key: str, *, accent_override: str = "") -> di
     return tokens
 
 
+def _build_ascii_tokens(*, palette_tokens: dict[str, str] | None = None, colored: bool = False, locked: bool = False) -> dict[str, str]:
+    if locked:
+        return {
+            "start": "#64748b",
+            "end": "#64748b",
+        }
+    if colored and palette_tokens:
+        return {
+            "start": str(palette_tokens.get("text") or "#0f172a"),
+            "end": str(palette_tokens.get("accent") or palette_tokens.get("text") or "#334155"),
+        }
+    return {
+        "start": "#111827",
+        "end": "#111827",
+    }
+
+
 def _serialize_skin(
     *,
     skin: TeacherBuddySkinDefinition | None,
@@ -213,6 +230,7 @@ def _serialize_skin(
         "label": skin.label if skin else "기본 스타일",
         "palette": palette_key,
         "palette_tokens": palette_tokens,
+        "ascii_tokens": _build_ascii_tokens(palette_tokens=palette_tokens, colored=skin is not None),
         "preview_badge": skin.preview_badge if skin else buddy.avatar_mark,
         "avatar_accent": skin.avatar_accent if skin else palette_tokens.get("accent", ""),
         "idle_ascii": buddy.idle_ascii,
@@ -238,6 +256,7 @@ def _serialize_unlocked_skin_result(
         "label": skin.label,
         "palette": skin.palette,
         "palette_tokens": palette_tokens,
+        "ascii_tokens": _build_ascii_tokens(palette_tokens=palette_tokens, colored=True),
         "preview_badge": skin.preview_badge,
         "avatar_accent": skin.avatar_accent,
         "idle_ascii": buddy.idle_ascii,
@@ -322,6 +341,7 @@ def _locked_buddy_payload(
         "rarity_label": buddy.rarity_label,
         "palette": buddy.palette,
         "palette_tokens": palette_tokens,
+        "ascii_tokens": _build_ascii_tokens(locked=True),
         "avatar_mark": "?",
         "selected_skin_key": "",
         "selected_skin_label": "",
@@ -407,6 +427,10 @@ def _serialize_buddy(
         "rarity_label": buddy.rarity_label,
         "palette": palette_key,
         "palette_tokens": _build_palette_payload(palette_key, accent_override=selected_skin.avatar_accent if selected_skin else ""),
+        "ascii_tokens": _build_ascii_tokens(
+            palette_tokens=_build_palette_payload(palette_key, accent_override=selected_skin.avatar_accent if selected_skin else ""),
+            colored=selected_skin is not None,
+        ),
         "avatar_mark": buddy.avatar_mark,
         "selected_skin_key": selected_skin.key if selected_skin else "",
         "selected_skin_label": selected_skin.label if selected_skin else "기본 스타일",
@@ -1632,6 +1656,7 @@ def _build_share_frame_svg(frame_style: str, accent: str, ring: str, tier: str) 
 def build_teacher_buddy_share_svg(context: dict[str, object]) -> str:
     buddy = dict(context.get("buddy") or {})
     palette = dict(buddy.get("palette_tokens") or {})
+    ascii_tokens = dict(buddy.get("ascii_tokens") or {})
     nickname = escape(str(context.get("nickname") or "사용자"))
     buddy_name = escape(str(buddy.get("name") or "교실 메이트"))
     rarity_label = escape(str(buddy.get("rarity_label") or "메이트"))
@@ -1652,6 +1677,8 @@ def build_teacher_buddy_share_svg(context: dict[str, object]) -> str:
     bg_end = palette.get("bg_end", "#e0e7ff")
     accent = palette.get("accent", "#4f46e5")
     text = palette.get("text", "#0f172a")
+    ascii_start = ascii_tokens.get("start", "#111827")
+    ascii_end = ascii_tokens.get("end", ascii_start)
     ring = palette.get("ring", "#cbd5e1")
     avatar_mark = escape(str(buddy.get("avatar_mark") or "*"))
     frame_svg = _build_share_frame_svg(str(buddy.get("share_frame") or ""), accent, ring, cosmetic_tier)
@@ -1661,7 +1688,7 @@ def build_teacher_buddy_share_svg(context: dict[str, object]) -> str:
         f'<linearGradient id="buddy-bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">'
         f'<stop stop-color="{bg_start}"/><stop offset="1" stop-color="{bg_end}"/></linearGradient>'
         f'<linearGradient id="buddy-ascii" x1="90" y1="214" x2="90" y2="452" gradientUnits="userSpaceOnUse">'
-        f'<stop stop-color="{text}"/><stop offset="1" stop-color="{accent}"/></linearGradient>'
+        f'<stop stop-color="{ascii_start}"/><stop offset="1" stop-color="{ascii_end}"/></linearGradient>'
         '</defs>'
         f'<rect width="1200" height="630" rx="40" fill="url(#buddy-bg)"/>'
         f'<rect width="1200" height="630" rx="40" fill="white" fill-opacity="0.18"/>'

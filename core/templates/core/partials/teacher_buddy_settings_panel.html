@@ -36,7 +36,7 @@
                 <pre
                     class="teacher-buddy-profile-ascii teacher-buddy-profile-ascii--hero"
                     data-buddy-preview-ascii="representative"
-                    style="--teacher-buddy-ascii-start: {{ teacher_buddy_settings.profile_buddy.palette_tokens.text|default:'#0f172a' }}; --teacher-buddy-ascii-end: {{ teacher_buddy_settings.profile_buddy.palette_tokens.accent|default:'#334155' }};"
+                    style="--teacher-buddy-ascii-start: {{ teacher_buddy_settings.profile_buddy.ascii_tokens.start|default:'#111827' }}; --teacher-buddy-ascii-end: {{ teacher_buddy_settings.profile_buddy.ascii_tokens.end|default:'#111827' }};"
                 >{% for line in teacher_buddy_settings.profile_buddy.idle_ascii|ascii_display_lines %}<span class="teacher-buddy-ascii-line">{{ line }}</span>{% endfor %}</pre>
                 {% endspaceless %}
                 <div class="teacher-buddy-profile-meta">
@@ -97,7 +97,7 @@
                 {% spaceless %}
                 <pre
                     class="teacher-buddy-collection-ascii"
-                    style="--teacher-buddy-ascii-start: {{ item.palette_tokens.text|default:'#0f172a' }}; --teacher-buddy-ascii-end: {{ item.palette_tokens.accent|default:'#334155' }};"
+                    style="--teacher-buddy-ascii-start: {{ item.ascii_tokens.start|default:'#111827' }}; --teacher-buddy-ascii-end: {{ item.ascii_tokens.end|default:'#111827' }};"
                 >{% for line in item.idle_ascii|ascii_display_lines %}<span class="teacher-buddy-ascii-line">{{ line }}</span>{% endfor %}</pre>
                 {% endspaceless %}
             </div>
@@ -113,6 +113,7 @@
                 {% else %}
                 <div class="teacher-buddy-style-list">
                     {% for style in item.style_options %}
+                    {% if not style.is_default %}
                     <section
                         class="teacher-buddy-style-option{% if style.is_profile_style %} is-profile{% endif %}{% if style.is_active_style %} is-active{% endif %}"
                         data-buddy-style-option="true"
@@ -132,12 +133,12 @@
                     >
                         <div
                             class="teacher-buddy-style-preview"
-                            style="--teacher-buddy-style-gradient: {{ style.palette_tokens.gradient }}; --teacher-buddy-ascii-start: {{ style.palette_tokens.text|default:'#0f172a' }}; --teacher-buddy-ascii-end: {{ style.palette_tokens.accent|default:'#334155' }};"
+                            style="--teacher-buddy-style-gradient: {{ style.palette_tokens.gradient }}; --teacher-buddy-ascii-start: {{ style.ascii_tokens.start|default:'#111827' }}; --teacher-buddy-ascii-end: {{ style.ascii_tokens.end|default:'#111827' }};"
                         >
                             {% spaceless %}
                             <pre class="teacher-buddy-style-ascii">{% for line in style.idle_ascii|ascii_display_lines %}<span class="teacher-buddy-ascii-line">{{ line }}</span>{% endfor %}</pre>
                             {% endspaceless %}
-                            <div>
+                            <div class="teacher-buddy-style-copy-wrap">
                                 <p class="teacher-buddy-style-name">{{ style.label }}</p>
                                 <p class="teacher-buddy-style-copy">
                                     {% if style.is_default %}
@@ -164,6 +165,7 @@
                             {% endif %}
                         </div>
                     </section>
+                    {% endif %}
                     {% endfor %}
                 </div>
                 {% endif %}

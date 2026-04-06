@@ -27,7 +27,7 @@
                 <pre
                     class="teacher-buddy-ascii teacher-buddy-ascii--compact"
                     data-buddy-ascii="true"
-                    style="--teacher-buddy-ascii-start: {{ teacher_buddy_panel.active_buddy.palette_tokens.text|default:'#0f172a' }}; --teacher-buddy-ascii-end: {{ teacher_buddy_panel.active_buddy.palette_tokens.accent|default:'#334155' }};"
+                    style="--teacher-buddy-ascii-start: {{ teacher_buddy_panel.active_buddy.ascii_tokens.start|default:'#111827' }}; --teacher-buddy-ascii-end: {{ teacher_buddy_panel.active_buddy.ascii_tokens.end|default:'#111827' }};"
                 >{% for line in teacher_buddy_panel.active_buddy.idle_ascii|ascii_display_lines %}<span class="teacher-buddy-ascii-line">{{ line }}</span>{% endfor %}</pre>
                 {% endspaceless %}
             </div>
@@ -99,7 +99,7 @@
                 <pre
                     class="teacher-buddy-ascii"
                     data-buddy-ascii="true"
-                    style="--teacher-buddy-ascii-start: {{ teacher_buddy_panel.active_buddy.palette_tokens.text|default:'#0f172a' }}; --teacher-buddy-ascii-end: {{ teacher_buddy_panel.active_buddy.palette_tokens.accent|default:'#334155' }};"
+                    style="--teacher-buddy-ascii-start: {{ teacher_buddy_panel.active_buddy.ascii_tokens.start|default:'#111827' }}; --teacher-buddy-ascii-end: {{ teacher_buddy_panel.active_buddy.ascii_tokens.end|default:'#111827' }};"
                 >{% for line in teacher_buddy_panel.active_buddy.idle_ascii|ascii_display_lines %}<span class="teacher-buddy-ascii-line">{{ line }}</span>{% endfor %}</pre>
                 {% endspaceless %}
                 <div class="teacher-buddy-meta">
