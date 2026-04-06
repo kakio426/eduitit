@@ -48,7 +48,9 @@
     x-data="messageboxPage({
         enabled: {{ message_capture_enabled|yesno:'true,false' }},
         itemTypesEnabled: {{ message_capture_item_types_enabled|yesno:'true,false' }},
-        initialCaptureId: '{{ initial_capture_id|default:''|escapejs }}'
+        initialCaptureId: '{{ initial_capture_id|default:''|escapejs }}',
+        calendarCaptureUrl: '{{ calendar_capture_url|default:''|escapejs }}',
+        calendarCaptureTemplateUrl: '{{ calendar_capture_template_url|default:''|escapejs }}'
     })"
 >
     <div class="mx-auto max-w-7xl">
@@ -62,10 +64,10 @@
                     <a href="{{ calendar_main_url }}" class="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">학급 캘린더</a>
                     <div class="flex w-full gap-2 sm:w-auto" x-show="messageCaptureEnabled">
                         <button type="button" @click="focusMessageInput()" class="inline-flex min-w-0 flex-1 items-center justify-center rounded-2xl bg-slate-900 px-3 py-2.5 text-sm font-black text-white transition hover:bg-slate-800 sm:flex-none sm:px-4 sm:py-3">
-                            새 메시지에서 일정 만들기
+                            AI로 일정 만들기
                         </button>
                         <button type="button" @click="focusMessageArchive()" class="inline-flex min-w-0 flex-1 items-center justify-center rounded-2xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-black text-slate-700 transition hover:bg-slate-50 sm:flex-none sm:px-4 sm:py-3">
-                            보관함
+                            받은 메시지
                         </button>
                     </div>
                 </div>
@@ -80,14 +82,17 @@
             <p class="mt-2 text-sm font-medium text-slate-500">현재 기능이 활성화되지 않았습니다. 잠시 후 다시 확인해 주세요.</p>
         </section>
         {% else %}
-        <div class="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(22rem,0.95fr)_minmax(24rem,1.05fr)] lg:items-start" data-messagebox-layout="true">
-            <div class="order-2 space-y-5 lg:order-1">
-                <section id="messagebox-compose" class="scroll-mt-24 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6" style="scroll-margin-top: calc(var(--main-nav-height, 88px) + 1rem);" data-messagebox-compose="true">
-                    <div class="flex items-center justify-between gap-3">
+        <div class="grid grid-cols-1 gap-5" :class="messageCaptureStep === 'input' && !messageComposerOpen ? '' : 'lg:grid-cols-[minmax(24rem,1.05fr)_minmax(22rem,0.95fr)] lg:items-start'" data-messagebox-layout="true">
+            <div class="order-2 space-y-5">
+                <section id="messagebox-compose" x-show="messageComposerOpen || messageCaptureStep !== 'input'" x-cloak class="scroll-mt-24 rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6" style="scroll-margin-top: calc(var(--main-nav-height, 88px) + 1rem);" data-messagebox-compose="true">
+                    <div class="flex items-start justify-between gap-3">
                         <div>
                             <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">빠르게 일정 만들기</p>
-                            <h2 class="mt-1 text-xl font-black text-slate-900">메시지에서 일정 만들기</h2>
+                            <h2 class="mt-1 text-xl font-black text-slate-900">AI로 일정 만들기</h2>
                         </div>
+                        <button type="button" @click="closeMessageComposer()" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-slate-50">
+                            닫기
+                        </button>
                     </div>
 
                     <div class="mt-5 space-y-4" x-show="messageCaptureStep === 'input'">
@@ -100,11 +105,6 @@
                                 aria-label="보관할 메시지"
                                 placeholder="예) 3월 19일 학부모총회 실시, 12일(목)까지 자료 제출 부탁드립니다."
                             ></textarea>
-                        </div>
-
-                        <div class="rounded-[1.6rem] border border-slate-200 bg-slate-50 px-4 py-3">
-                            <p class="text-sm font-black text-slate-900">AI가 맞으면 바로 저장하고, 틀릴 때만 다음 단계에서 고치면 됩니다.</p>
-                            <p class="mt-1 text-xs font-medium text-slate-500">교사는 저장할지만 판단하면 되고, 수정은 꼭 필요할 때만 하면 돼요.</p>
                         </div>
 
                         <div>
@@ -156,227 +156,315 @@
 
                         <p x-show="messageCaptureErrorText" class="rounded-[1.6rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700" x-text="messageCaptureErrorText"></p>
 
-                        <div class="space-y-2">
+                        <div class="sticky bottom-0 z-10 space-y-2 border-t border-slate-200 bg-white/95 px-1 pb-1 pt-3 backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:px-0 sm:pb-0 sm:pt-0">
                             <button
                                 type="button"
                                 @click="submitMessageCaptureParse()"
                                 :disabled="isSavingMessageCaptureArchive || isParsingMessageCapture"
                                 class="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800 disabled:opacity-60"
-                                x-text="isParsingMessageCapture ? '일정 찾는 중...' : '일정 만들기'"
+                                x-text="isParsingMessageCapture ? '일정 찾는 중...' : '일정 찾기'"
                             ></button>
-                            <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                                <button
-                                    type="button"
-                                    @click="startManualMessageCaptureFromInput()"
-                                    :disabled="isSavingMessageCaptureArchive || isParsingMessageCapture"
-                                    class="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-black text-amber-900 transition hover:bg-amber-100 disabled:opacity-60"
-                                    x-text="isSavingMessageCaptureArchive && messageCaptureSaveMode === 'manual' ? '직접 입력 준비 중...' : '직접 날짜 정하기'"
-                                ></button>
-                                <button
-                                    type="button"
-                                    @click="submitMessageCaptureArchiveSave()"
-                                    :disabled="isSavingMessageCaptureArchive || isParsingMessageCapture"
-                                    class="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
-                                    x-text="isSavingMessageCaptureArchive && messageCaptureSaveMode !== 'manual' ? '보관 중...' : '메시지만 보관'"
-                                ></button>
-                            </div>
+                            <button
+                                type="button"
+                                @click="submitMessageCaptureArchiveSave()"
+                                :disabled="isSavingMessageCaptureArchive || isParsingMessageCapture"
+                                class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+                                x-text="isSavingMessageCaptureArchive ? '보관 중...' : '메시지만 보관'"
+                            ></button>
                         </div>
                     </div>
 
                     <div class="mt-5 space-y-4" x-show="messageCaptureStep === 'confirm'" x-cloak x-ref="messageCaptureConfirmSection" tabindex="-1" data-message-capture-confirm="true">
-                        <div class="rounded-[1.8rem] border border-amber-200 bg-amber-50 px-5 py-5" x-ref="messageCaptureConfirmSummary" data-message-capture-confirm-summary="true">
-                            <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-                                <div>
-                                    <p class="text-base font-black text-slate-900" x-text="messageCaptureSummaryText || `실제 일정 후보 ${messageCaptureCandidates.length}개`"></p>
-                                    <p class="mt-2 text-sm font-semibold text-slate-600" x-text="messageCaptureEditableCandidates().length > 0 ? 'AI가 맞으면 바로 저장하고, 틀리면 아래 일정만 고치세요.' : '자동으로 못 찾으면 아래에서 직접 일정만 정하면 됩니다.'"></p>
-                                </div>
-                                <div class="flex flex-wrap gap-2">
-                                    <span class="inline-flex items-center rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-black text-slate-700" x-text="messageCaptureWorkflowPreviewText()"></span>
-                                    <span x-show="messageCaptureManualDate" class="inline-flex items-center rounded-full border border-sky-200 bg-white px-3 py-1 text-xs font-black text-sky-700" x-text="`다시 볼 날짜 ${formatMessageCaptureDay(messageCaptureManualDate)}`"></span>
-                                </div>
+                        <div class="rounded-[1.4rem] border border-slate-200 bg-slate-50 px-4 py-3" x-ref="messageCaptureConfirmSummary" data-message-capture-confirm-summary="true">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <p class="text-sm font-black text-slate-900" x-text="messageCaptureCandidateSummaryText()"></p>
+                                <span x-show="messageCaptureManualDate" class="inline-flex items-center rounded-full border border-sky-200 bg-white px-3 py-1 text-xs font-black text-sky-700" x-text="`확인 날짜 ${formatMessageCaptureDay(messageCaptureManualDate)}`"></span>
                             </div>
-                            <p x-show="messageCaptureManualNote" class="mt-3 text-sm font-semibold text-slate-600" x-text="`메모: ${messageCaptureManualNote}`"></p>
+                            <p x-show="messageCaptureManualNote" class="mt-2 text-xs font-semibold text-slate-500" x-text="`메모: ${messageCaptureManualNote}`"></p>
                         </div>
 
-                        <div class="rounded-[1.6rem] border border-slate-200 bg-slate-50 px-4 py-4">
-                            <p class="text-sm font-black text-slate-900">지금은 저장할 일정만 고르면 됩니다.</p>
-                            <p class="mt-1 text-sm font-semibold text-slate-600">원문은 필요할 때만 펼쳐 보고, AI가 틀린 후보만 아래에서 고치세요.</p>
+                        <div x-show="messageCaptureWarnings.length > 0" class="rounded-[1.6rem] border border-amber-200 bg-amber-50 px-4 py-4">
+                            <template x-for="(warningText, index) in messageCaptureWarnings" :key="`messagebox-warning-${index}`">
+                                <p class="text-sm font-semibold text-amber-800" x-text="warningText"></p>
+                            </template>
                         </div>
 
-                        <div class="rounded-[1.6rem] border border-slate-200 bg-white px-4 py-4">
-                            <div class="flex flex-wrap items-center justify-between gap-3">
-                                <p class="text-sm font-black text-slate-900">원문</p>
-                                <button type="button" @click="messageCaptureSourcePreviewOpen = !messageCaptureSourcePreviewOpen" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-slate-50" x-text="messageCaptureSourcePreviewOpen ? '원문 접기' : '원문 보기'"></button>
-                            </div>
-                            <div x-show="messageCaptureSourcePreviewOpen" class="mt-4 rounded-[1.4rem] border border-slate-200 bg-slate-50 px-4 py-4 text-sm leading-6 text-slate-700 whitespace-pre-line" x-text="messageCaptureInputText || '원문이 비어 있어요.'"></div>
-                        </div>
-
-                        <div class="space-y-4" data-message-capture-planner="true">
-                            <div class="space-y-4" data-message-capture-planner-candidates="true" data-message-capture-candidate-column="true">
-                                <div class="rounded-[1.6rem] border border-slate-200 bg-white px-4 py-4">
-                                    <div class="flex items-start justify-between gap-3">
-                                        <p class="text-base font-black text-slate-900">실제 일정 후보</p>
-                                        <button type="button" @click="addManualMessageCaptureCandidate()" class="rounded-2xl border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-slate-50">
-                                            직접 일정 후보 추가
+                        <template x-if="messageCapturePrimaryCandidate()">
+                            <div class="space-y-4">
+                                <div class="rounded-[1.8rem] border border-slate-200 bg-white px-5 py-5 shadow-sm">
+                                    <div class="flex flex-wrap items-start justify-between gap-3">
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-black" :class="messageCapturePrimaryCandidate().badge_class" x-text="messageCapturePrimaryCandidate().badge_text"></span>
+                                            <span x-show="messageCapturePrimaryCandidate().needs_check" class="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-black text-amber-700">확인 필요</span>
+                                        </div>
+                                        <button type="button" @click="openMessageCapturePrimaryCorrection()" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-slate-50">
+                                            AI가 틀렸어요
                                         </button>
                                     </div>
+                                    <p class="mt-4 text-lg font-black text-slate-900" x-text="messageCapturePrimaryCandidate().title || '제목 없는 일정'"></p>
+                                    <p class="mt-1 text-sm font-bold text-slate-600" x-text="formatMessageCaptureCandidateDate(messageCapturePrimaryCandidate())"></p>
+                                    <p class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700" x-text="messageCapturePrimaryCandidate().summary || '메모가 없어요.'"></p>
+                                    <div x-show="messageCapturePrimaryCandidate().edit_open" class="mt-4 grid grid-cols-1 gap-3 rounded-[1.4rem] border border-slate-200 bg-slate-50 px-4 py-4 sm:grid-cols-2">
+                                        <div class="sm:col-span-2">
+                                            <label class="mb-1 block text-xs font-black text-slate-700">일정 제목</label>
+                                            <input x-ref="messageCapturePrimaryTitleInput" x-model="messageCapturePrimaryCandidate().title" type="text" maxlength="200" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm">
+                                        </div>
+                                        <div>
+                                            <label class="mb-1 block text-xs font-black text-slate-700">시작일</label>
+                                            <input x-model="messageCapturePrimaryCandidate().start_date" type="date" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm">
+                                        </div>
+                                        <div>
+                                            <label class="mb-1 block text-xs font-black text-slate-700">종료일</label>
+                                            <input x-model="messageCapturePrimaryCandidate().end_date" type="date" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm">
+                                        </div>
+                                        <label class="inline-flex items-center gap-2 text-xs font-black text-slate-700 sm:col-span-2">
+                                            <input x-model="messageCapturePrimaryCandidate().has_time" type="checkbox" class="rounded border-slate-300">
+                                            시간 지정
+                                        </label>
+                                        <div x-show="messageCapturePrimaryCandidate().has_time">
+                                            <label class="mb-1 block text-xs font-black text-slate-700">시작 시간</label>
+                                            <input x-model="messageCapturePrimaryCandidate().start_clock" type="time" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm">
+                                        </div>
+                                        <div x-show="messageCapturePrimaryCandidate().has_time">
+                                            <label class="mb-1 block text-xs font-black text-slate-700">종료 시간</label>
+                                            <input x-model="messageCapturePrimaryCandidate().end_clock" type="time" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm">
+                                        </div>
+                                        <div class="sm:col-span-2">
+                                            <label class="mb-1 block text-xs font-black text-slate-700">메모</label>
+                                            <textarea x-model="messageCapturePrimaryCandidate().summary" rows="3" maxlength="5000" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm leading-6"></textarea>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <div x-show="messageCapturePlannerCandidates().length === 0" class="rounded-[1.6rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center">
-                                    <p class="text-sm font-black text-slate-800">실제 일정 후보가 아직 없어요.</p>
-                                </div>
-
-                                <div class="space-y-3" data-message-capture-candidate-list="true">
-                                    <template x-for="candidate in messageCapturePlannerCandidates()" :key="candidate.candidate_id">
-                                        <div
-                                            data-message-capture-candidate-card="true"
-                                            :data-candidate-id="candidate.candidate_id"
-                                            :aria-pressed="String(messageCaptureActiveCandidateId || '') === String(candidate.candidate_id || '') ? 'true' : 'false'"
-                                            :draggable="messageCaptureDragEnabled() && !candidate.already_saved"
-                                            @dragstart="messageCaptureDragEnabled() && !candidate.already_saved && beginMessageCaptureCandidateDrag(candidate.candidate_id, $event)"
-                                            @dragend="clearMessageCaptureCandidateDrag()"
-                                            @click="!candidate.already_saved && selectMessageCaptureCandidate(candidate.candidate_id)"
-                                            class="rounded-[1.6rem] border px-4 py-4 shadow-sm transition"
-                                            :class="String(messageCaptureActiveCandidateId || '') === String(candidate.candidate_id || '') ? 'border-sky-400 bg-sky-50' : 'border-slate-200 bg-white hover:border-slate-300'"
-                                        >
-                                            <div class="flex flex-wrap items-start justify-between gap-2">
-                                                <div class="flex flex-wrap items-center gap-2">
-                                                    <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-black" :class="candidate.badge_class" x-text="candidate.badge_text"></span>
-                                                    <span x-show="candidate.already_saved" class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-black text-emerald-700">이미 연결됨</span>
-                                                    <span x-show="candidate.is_manual" class="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-xs font-black text-slate-700">직접 추가</span>
+                                <div x-show="messageCapturePlannerCandidates().length > 0" class="rounded-[1.6rem] border border-slate-200 bg-slate-50 px-4 py-4">
+                                    <button type="button" @click="messageCaptureAdvancedOpen = !messageCaptureAdvancedOpen" class="flex w-full items-center justify-between gap-3 text-left">
+                                        <span class="text-sm font-black text-slate-900">자세히 수정</span>
+                                        <span class="text-xs font-semibold text-slate-500" x-text="messageCaptureAdvancedOpen ? '접기' : '열기'"></span>
+                                    </button>
+                                    <div x-show="messageCaptureAdvancedOpen" class="mt-4 space-y-4">
+                                        <div class="space-y-4" data-message-capture-planner="true">
+                                            <div class="space-y-4" data-message-capture-planner-candidates="true" data-message-capture-candidate-column="true">
+                                                <div class="rounded-[1.6rem] border border-slate-200 bg-white px-4 py-4">
+                                                    <div class="flex items-start justify-between gap-3">
+                                                        <p class="text-base font-black text-slate-900">실제 일정 후보</p>
+                                                        <button type="button" @click="addManualMessageCaptureCandidate()" class="rounded-2xl border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-slate-50">
+                                                            직접 일정 후보 추가
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                                <div class="flex flex-wrap items-center gap-2">
-                                                    <button type="button" x-show="!candidate.already_saved" @click.stop="openMessageCaptureCandidateEditor(candidate.candidate_id)" class="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-black text-slate-700 transition hover:bg-slate-50">
-                                                        날짜/내용 수정
-                                                    </button>
-                                                    <label class="inline-flex items-center gap-2 text-sm font-black text-slate-700" x-show="!candidate.already_saved">
-                                                        <input type="checkbox" x-model="candidate.selected" class="rounded border-slate-300">
-                                                        연결
-                                                    </label>
+
+                                                <div x-show="messageCapturePlannerCandidates().length === 0" class="rounded-[1.6rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center">
+                                                    <p class="text-sm font-black text-slate-800">실제 일정 후보가 아직 없어요.</p>
+                                                </div>
+
+                                                <div class="space-y-3" data-message-capture-candidate-list="true">
+                                                    <template x-for="candidate in messageCapturePlannerCandidates()" :key="candidate.candidate_id">
+                                                        <div
+                                                            data-message-capture-candidate-card="true"
+                                                            :data-candidate-id="candidate.candidate_id"
+                                                            :aria-pressed="String(messageCaptureActiveCandidateId || '') === String(candidate.candidate_id || '') ? 'true' : 'false'"
+                                                            :draggable="messageCaptureDragEnabled() && !candidate.already_saved"
+                                                            @dragstart="messageCaptureDragEnabled() && !candidate.already_saved && beginMessageCaptureCandidateDrag(candidate.candidate_id, $event)"
+                                                            @dragend="clearMessageCaptureCandidateDrag()"
+                                                            @click="!candidate.already_saved && selectMessageCaptureCandidate(candidate.candidate_id)"
+                                                            class="rounded-[1.6rem] border px-4 py-4 shadow-sm transition"
+                                                            :class="String(messageCaptureActiveCandidateId || '') === String(candidate.candidate_id || '') ? 'border-sky-400 bg-sky-50' : 'border-slate-200 bg-white hover:border-slate-300'"
+                                                        >
+                                                            <div class="flex flex-wrap items-start justify-between gap-2">
+                                                                <div class="flex flex-wrap items-center gap-2">
+                                                                    <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-black" :class="candidate.badge_class" x-text="candidate.badge_text"></span>
+                                                                    <span x-show="candidate.already_saved" class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-black text-emerald-700">이미 연결됨</span>
+                                                                    <span x-show="candidate.is_manual" class="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-xs font-black text-slate-700">직접 추가</span>
+                                                                </div>
+                                                                <div class="flex flex-wrap items-center gap-2">
+                                                                    <button type="button" x-show="!candidate.already_saved" @click.stop="openMessageCaptureCandidateEditor(candidate.candidate_id)" class="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-black text-slate-700 transition hover:bg-slate-50">
+                                                                        날짜/내용 수정
+                                                                    </button>
+                                                                    <label class="inline-flex items-center gap-2 text-sm font-black text-slate-700" x-show="!candidate.already_saved">
+                                                                        <input type="checkbox" x-model="candidate.selected" class="rounded border-slate-300">
+                                                                        연결
+                                                                    </label>
+                                                                </div>
+                                                            </div>
+                                                            <p class="mt-3 text-base font-black text-slate-900" x-text="candidate.title || '제목을 입력해 주세요.'"></p>
+                                                            <p class="mt-1 text-sm font-semibold text-slate-500" x-text="formatMessageCaptureCandidateDate(candidate)"></p>
+                                                            <p class="mt-3 line-clamp-2 whitespace-pre-line text-sm leading-6 text-slate-700" x-text="candidate.summary || '메모 없음'"></p>
+                                                            <div class="mt-3 flex flex-wrap items-center justify-end gap-2">
+                                                                <button type="button" x-show="!candidate.already_saved" @click.stop="removeMessageCaptureCandidate(candidate.candidate_id)" class="text-xs font-black text-rose-600">지우기</button>
+                                                            </div>
+                                                        </div>
+                                                    </template>
                                                 </div>
                                             </div>
-                                            <p class="mt-3 text-base font-black text-slate-900" x-text="candidate.title || '제목을 입력해 주세요.'"></p>
-                                            <p class="mt-1 text-sm font-semibold text-slate-500" x-text="formatMessageCaptureCandidateDate(candidate)"></p>
-                                            <p class="mt-3 line-clamp-2 whitespace-pre-line text-sm leading-6 text-slate-700" x-text="candidate.summary || '메모 없음'"></p>
-                                            <div class="mt-3 flex flex-wrap items-center justify-end gap-2">
-                                                <button type="button" x-show="!candidate.already_saved" @click.stop="removeMessageCaptureCandidate(candidate.candidate_id)" class="text-xs font-black text-rose-600">지우기</button>
+
+                                            <div class="space-y-4" data-message-capture-planner-calendar="true" data-message-capture-calendar-column="true">
+                                                <div class="rounded-[1.6rem] border border-slate-200 bg-white px-4 py-4" x-ref="messageCaptureCalendarPanel" data-message-capture-calendar-panel="true">
+                                                    <div class="flex flex-wrap items-center justify-between gap-3">
+                                                        <p class="text-base font-black text-slate-900">실제 일정 날짜 달력</p>
+                                                        <div class="flex items-center gap-2">
+                                                            <button type="button" @click="moveMessageCaptureCalendarMonth(-1)" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-slate-50">이전</button>
+                                                            <p class="min-w-[7rem] text-center text-sm font-black text-slate-900" x-text="messageCaptureCalendarMonthLabel()"></p>
+                                                            <button type="button" @click="moveMessageCaptureCalendarMonth(1)" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-slate-50">다음</button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="mt-4 grid grid-cols-7 gap-2 text-center text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+                                                        <span>일</span>
+                                                        <span>월</span>
+                                                        <span>화</span>
+                                                        <span>수</span>
+                                                        <span>목</span>
+                                                        <span>금</span>
+                                                        <span>토</span>
+                                                    </div>
+
+                                                    <div class="mt-3 grid grid-cols-7 gap-2">
+                                                        <template x-for="day in messageCaptureCalendarDays()" :key="day.key">
+                                                            <button
+                                                                type="button"
+                                                                :data-day-key="day.key"
+                                                                :aria-label="`${day.key} 날짜로 정하기`"
+                                                                @click="applyActiveMessageCaptureDate(day.key)"
+                                                                @dragover.prevent
+                                                                @drop.prevent="handleMessageCaptureCalendarDrop(day.key, $event)"
+                                                                class="relative min-h-16 rounded-2xl border px-2 py-2 text-left transition"
+                                                                :class="messageCaptureCalendarDayButtonClass(day)"
+                                                            >
+                                                                <span class="text-sm font-black" :class="day.in_current_month ? 'text-slate-900' : 'text-slate-300'" x-text="day.day_number"></span>
+                                                                <span x-show="day.candidate_count > 0" class="absolute bottom-2 left-2 inline-flex min-w-[1.4rem] items-center justify-center rounded-full bg-slate-900 px-1.5 py-0.5 text-[10px] font-black text-white" x-text="day.candidate_count"></span>
+                                                            </button>
+                                                        </template>
+                                                    </div>
+                                                </div>
+
+                                                <template x-if="hasActiveMessageCaptureCandidate()">
+                                                    <div class="rounded-[1.6rem] border border-slate-200 bg-white px-4 py-4" x-cloak>
+                                                        <div class="flex flex-wrap items-start justify-between gap-3">
+                                                            <p class="text-base font-black text-slate-900">선택한 후보 편집</p>
+                                                            <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-black" :class="messageCaptureActiveCandidateRef.badge_class" x-text="messageCaptureActiveCandidateBadgeText()"></span>
+                                                        </div>
+
+                                                        <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                                            <div class="sm:col-span-2">
+                                                                <label class="mb-1 block text-xs font-black text-slate-700">제목</label>
+                                                                <input x-ref="messageCaptureActiveTitleInput" x-model="messageCaptureActiveCandidateRef.title" type="text" maxlength="200" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" placeholder="예) 의자 배치">
+                                                            </div>
+                                                            <div>
+                                                                <label class="mb-1 block text-xs font-black text-slate-700">종류</label>
+                                                                <select x-model="messageCaptureActiveCandidateRef.kind" @change="applyMessageCaptureCandidateKind(messageCaptureActiveCandidateRef, messageCaptureActiveCandidateRef.kind)" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                                                    <option value="event">행사</option>
+                                                                    <option value="meeting">회의</option>
+                                                                    <option value="class">수업</option>
+                                                                    <option value="consulting">상담</option>
+                                                                    <option value="training">연수</option>
+                                                                    <option value="exam">평가</option>
+                                                                    <option value="deadline">마감</option>
+                                                                    <option value="prep">준비</option>
+                                                                </select>
+                                                            </div>
+                                                            <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+                                                                <p class="text-xs font-black uppercase tracking-[0.16em] text-slate-500">선택한 일정 날짜</p>
+                                                                <p class="mt-2 text-sm font-black text-slate-900" x-text="messageCaptureActiveCandidateDateLabel()"></p>
+                                                            </div>
+                                                            <div>
+                                                                <label class="mb-1 block text-xs font-black text-slate-700">시작일</label>
+                                                                <input x-model="messageCaptureActiveCandidateRef.start_date" @change="applyMessageCaptureCandidateStartDate(messageCaptureActiveCandidateRef, messageCaptureActiveCandidateRef.start_date)" type="date" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                                            </div>
+                                                            <div>
+                                                                <label class="mb-1 block text-xs font-black text-slate-700">종료일</label>
+                                                                <input x-model="messageCaptureActiveCandidateRef.end_date" @change="applyMessageCaptureCandidateEndDate(messageCaptureActiveCandidateRef, messageCaptureActiveCandidateRef.end_date); markMessageCaptureCandidateEndManual(messageCaptureActiveCandidateRef)" type="date" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                                            </div>
+                                                            <label class="inline-flex items-center gap-2 text-xs font-black text-slate-700 sm:col-span-2">
+                                                                <input x-model="messageCaptureActiveCandidateRef.has_time" @change="applyMessageCaptureCandidateTimeToggle(messageCaptureActiveCandidateRef, messageCaptureActiveCandidateRef.has_time)" type="checkbox" class="rounded border-slate-300">
+                                                                시간 지정
+                                                            </label>
+                                                            <div x-show="messageCaptureActiveCandidateRef.has_time">
+                                                                <label class="mb-1 block text-xs font-black text-slate-700">시작 시간</label>
+                                                                <input x-model="messageCaptureActiveCandidateRef.start_clock" @change="handleMessageCaptureCandidateStartTimeChange(messageCaptureActiveCandidateRef)" type="time" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                                            </div>
+                                                            <div x-show="messageCaptureActiveCandidateRef.has_time">
+                                                                <label class="mb-1 block text-xs font-black text-slate-700">종료 시간</label>
+                                                                <input x-model="messageCaptureActiveCandidateRef.end_clock" @change="markMessageCaptureCandidateEndManual(messageCaptureActiveCandidateRef)" type="time" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                                            </div>
+                                                            <div class="sm:col-span-2">
+                                                                <label class="mb-1 block text-xs font-black text-slate-700">메모</label>
+                                                                <textarea x-model="messageCaptureActiveCandidateRef.summary" rows="3" maxlength="5000" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" placeholder="예) 담임, 주무관 협조"></textarea>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </template>
+
+                                                <div x-show="!hasActiveMessageCaptureCandidate() && messageCaptureCandidates.length > 0" class="rounded-[1.6rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm font-semibold text-slate-500">
+                                                    왼쪽에서 편집할 일정 후보를 선택하세요.
+                                                </div>
                                             </div>
                                         </div>
-                                    </template>
+                                    </div>
                                 </div>
                             </div>
+                        </template>
 
-                            <div class="space-y-4" data-message-capture-planner-calendar="true" data-message-capture-calendar-column="true">
-                                <div class="rounded-[1.6rem] border border-slate-200 bg-white px-4 py-4" x-ref="messageCaptureCalendarPanel" data-message-capture-calendar-panel="true">
-                                    <div class="flex flex-wrap items-center justify-between gap-3">
-                                        <p class="text-base font-black text-slate-900">실제 일정 날짜 달력</p>
-                                        <div class="flex items-center gap-2">
-                                            <button type="button" @click="moveMessageCaptureCalendarMonth(-1)" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-slate-50">이전</button>
-                                            <p class="min-w-[7rem] text-center text-sm font-black text-slate-900" x-text="messageCaptureCalendarMonthLabel()"></p>
-                                            <button type="button" @click="moveMessageCaptureCalendarMonth(1)" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-slate-50">다음</button>
-                                        </div>
-                                    </div>
+                        <div x-show="messageCaptureCandidates.length > 0 && messageCaptureEditableCandidates().length === 0" class="rounded-[1.6rem] border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold text-slate-500">
+                            이미 연결된 일정만 있어서 새로 저장할 일정은 없어요.
+                        </div>
 
-                                    <div class="mt-4 grid grid-cols-7 gap-2 text-center text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
-                                        <span>일</span>
-                                        <span>월</span>
-                                        <span>화</span>
-                                        <span>수</span>
-                                        <span>목</span>
-                                        <span>금</span>
-                                        <span>토</span>
-                                    </div>
-
-                                    <div class="mt-3 grid grid-cols-7 gap-2">
-                                        <template x-for="day in messageCaptureCalendarDays()" :key="day.key">
-                                            <button
-                                                type="button"
-                                                :data-day-key="day.key"
-                                                :aria-label="`${day.key} 날짜로 정하기`"
-                                                @click="applyActiveMessageCaptureDate(day.key)"
-                                                @dragover.prevent
-                                                @drop.prevent="handleMessageCaptureCalendarDrop(day.key, $event)"
-                                                class="relative min-h-16 rounded-2xl border px-2 py-2 text-left transition"
-                                                :class="messageCaptureCalendarDayButtonClass(day)"
-                                            >
-                                                <span class="text-sm font-black" :class="day.in_current_month ? 'text-slate-900' : 'text-slate-300'" x-text="day.day_number"></span>
-                                                <span x-show="day.candidate_count > 0" class="absolute bottom-2 left-2 inline-flex min-w-[1.4rem] items-center justify-center rounded-full bg-slate-900 px-1.5 py-0.5 text-[10px] font-black text-white" x-text="day.candidate_count"></span>
-                                            </button>
-                                        </template>
-                                    </div>
-                                </div>
-
-                                <template x-if="hasActiveMessageCaptureCandidate()">
-                                    <div class="rounded-[1.6rem] border border-slate-200 bg-white px-4 py-4" x-cloak>
-                                        <div class="flex flex-wrap items-start justify-between gap-3">
-                                            <p class="text-base font-black text-slate-900">선택한 후보 편집</p>
-                                            <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-black" :class="messageCaptureActiveCandidateRef.badge_class" x-text="messageCaptureActiveCandidateBadgeText()"></span>
-                                        </div>
-
-                                        <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                            <div class="sm:col-span-2">
-                                                <label class="mb-1 block text-xs font-black text-slate-700">제목</label>
-                                                <input x-ref="messageCaptureActiveTitleInput" x-model="messageCaptureActiveCandidateRef.title" type="text" maxlength="200" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" placeholder="예) 의자 배치">
-                                            </div>
-                                            <div>
-                                                <label class="mb-1 block text-xs font-black text-slate-700">종류</label>
-                                                <select x-model="messageCaptureActiveCandidateRef.kind" @change="applyMessageCaptureCandidateKind(messageCaptureActiveCandidateRef, messageCaptureActiveCandidateRef.kind)" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
-                                                    <option value="event">행사</option>
-                                                    <option value="meeting">회의</option>
-                                                    <option value="class">수업</option>
-                                                    <option value="consulting">상담</option>
-                                                    <option value="training">연수</option>
-                                                    <option value="exam">평가</option>
-                                                    <option value="deadline">마감</option>
-                                                    <option value="prep">준비</option>
-                                                </select>
-                                            </div>
-                                            <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-                                                <p class="text-xs font-black uppercase tracking-[0.16em] text-slate-500">선택한 일정 날짜</p>
-                                                <p class="mt-2 text-sm font-black text-slate-900" x-text="messageCaptureActiveCandidateDateLabel()"></p>
-                                            </div>
-                                            <div>
-                                                <label class="mb-1 block text-xs font-black text-slate-700">시작일</label>
-                                                <input x-model="messageCaptureActiveCandidateRef.start_date" @change="applyMessageCaptureCandidateStartDate(messageCaptureActiveCandidateRef, messageCaptureActiveCandidateRef.start_date)" type="date" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
-                                            </div>
-                                            <div>
-                                                <label class="mb-1 block text-xs font-black text-slate-700">종료일</label>
-                                                <input x-model="messageCaptureActiveCandidateRef.end_date" @change="applyMessageCaptureCandidateEndDate(messageCaptureActiveCandidateRef, messageCaptureActiveCandidateRef.end_date); markMessageCaptureCandidateEndManual(messageCaptureActiveCandidateRef)" type="date" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
-                                            </div>
-                                            <label class="inline-flex items-center gap-2 text-xs font-black text-slate-700 sm:col-span-2">
-                                                <input x-model="messageCaptureActiveCandidateRef.has_time" @change="applyMessageCaptureCandidateTimeToggle(messageCaptureActiveCandidateRef, messageCaptureActiveCandidateRef.has_time)" type="checkbox" class="rounded border-slate-300">
-                                                시간 지정
-                                            </label>
-                                            <div x-show="messageCaptureActiveCandidateRef.has_time">
-                                                <label class="mb-1 block text-xs font-black text-slate-700">시작 시간</label>
-                                                <input x-model="messageCaptureActiveCandidateRef.start_clock" @change="handleMessageCaptureCandidateStartTimeChange(messageCaptureActiveCandidateRef)" type="time" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
-                                            </div>
-                                            <div x-show="messageCaptureActiveCandidateRef.has_time">
-                                                <label class="mb-1 block text-xs font-black text-slate-700">종료 시간</label>
-                                                <input x-model="messageCaptureActiveCandidateRef.end_clock" @change="markMessageCaptureCandidateEndManual(messageCaptureActiveCandidateRef)" type="time" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
-                                            </div>
-                                            <div class="sm:col-span-2">
-                                                <label class="mb-1 block text-xs font-black text-slate-700">메모</label>
-                                                <textarea x-model="messageCaptureActiveCandidateRef.summary" rows="3" maxlength="5000" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" placeholder="예) 담임, 주무관 협조"></textarea>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </template>
-
-                                <div x-show="!hasActiveMessageCaptureCandidate() && messageCaptureCandidates.length > 0" class="rounded-[1.6rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm font-semibold text-slate-500">
-                                    왼쪽에서 편집할 일정 후보를 선택하세요.
-                                </div>
+                        <div x-show="messageCapturePlannerCandidates().length === 0" class="rounded-[1.6rem] border border-slate-200 bg-slate-50 px-4 py-4">
+                            <p class="text-sm font-black text-slate-900">AI가 바로 넣을 일정을 못 찾았어요.</p>
+                            <div class="mt-4 flex flex-col gap-2 sm:flex-row">
+                                <button type="button" @click="addManualMessageCaptureCandidate({ prefillFromSource: true })" class="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800">
+                                    직접 일정 정하기
+                                </button>
+                                <button type="button" @click="messageCaptureSourcePreviewOpen = !messageCaptureSourcePreviewOpen" class="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50" x-text="messageCaptureSourcePreviewOpen ? '원문 접기' : '원문 보기'"></button>
                             </div>
                         </div>
+
+                        <div x-show="messageCaptureServerAttachments.length > 0" class="rounded-[1.6rem] border border-slate-200 bg-slate-50 px-4 py-3">
+                            <p class="mb-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">첨부</p>
+                            <template x-for="attachment in messageCaptureServerAttachments" :key="`messagebox-capture-attachment-${attachment.id}`">
+                                <div class="mb-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 last:mb-0">
+                                    <p class="text-sm font-black text-slate-900" x-text="attachment.original_name"></p>
+                                    <p class="mt-1 text-xs font-semibold text-slate-500" x-text="formatBytes(attachment.size_bytes)"></p>
+                                </div>
+                            </template>
+                        </div>
+
+                        <details :open="messageCaptureSourcePreviewOpen" @toggle="messageCaptureSourcePreviewOpen = $event.target.open" class="rounded-[1.6rem] border border-slate-200 bg-white px-4 py-3">
+                            <summary class="cursor-pointer text-sm font-black text-slate-900">원문 보기</summary>
+                            <div class="mt-4 rounded-[1.4rem] border border-slate-200 bg-slate-50 px-4 py-4 text-sm leading-6 text-slate-700 whitespace-pre-line" x-text="messageCaptureInputText || '원문이 비어 있어요.'"></div>
+                        </details>
+
+                        <details x-show="messageCaptureEditableCandidates().length > 0 || messageCapturePlannerCandidates().length === 0" class="rounded-[1.6rem] border border-slate-200 bg-white px-4 py-3">
+                            <summary class="cursor-pointer text-sm font-black text-slate-900">일정으로 넣지 않고 메시지만 보관</summary>
+                            <div class="mt-3 space-y-3">
+                                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                    <div>
+                                        <label class="mb-1 block text-xs font-black text-slate-700">확인 날짜</label>
+                                        <input x-model="messageCaptureLinkedDate" type="date" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                    </div>
+                                    <div>
+                                        <label class="mb-1 block text-xs font-black text-slate-700">메모</label>
+                                        <input x-model="messageCaptureManualNote" type="text" maxlength="200" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" placeholder="예) 수업 전에 다시 보기">
+                                    </div>
+                                </div>
+                                <div class="flex justify-end">
+                                    <button type="button" @click="submitMessageCaptureLink()" :disabled="isCommittingMessageCapture" class="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:opacity-60">
+                                        메시지만 보관
+                                    </button>
+                                </div>
+                            </div>
+                        </details>
 
                         <p x-show="messageCaptureErrorText" class="rounded-[1.6rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700" x-text="messageCaptureErrorText"></p>
 
-                        <div class="flex flex-col gap-2 sm:flex-row sm:justify-between">
+                        <div class="sticky bottom-0 z-10 flex flex-col gap-2 border-t border-slate-200 bg-white/95 px-1 pb-1 pt-3 backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:px-0 sm:pb-0 sm:pt-0 sm:flex-row sm:justify-between">
                             <button type="button" @click="backToMessageCaptureInput()" class="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50">
                                 다시 붙여넣기
                             </button>
-                            <button type="button" @click="submitMessageCaptureCommit()" :disabled="isCommittingMessageCapture" class="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800 disabled:opacity-60">
+                            <button x-show="messageCaptureEditableCandidates().length > 0" type="button" @click="submitMessageCaptureCommit()" :disabled="isCommittingMessageCapture || messageCaptureSelectedCount() === 0" class="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800 disabled:opacity-60">
                                 캘린더에 저장
+                            </button>
+                            <button x-show="messageCaptureEditableCandidates().length === 0 && messageCapturePlannerCandidates().length === 0" type="button" @click="addManualMessageCaptureCandidate({ prefillFromSource: true })" class="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800">
+                                직접 일정 정하기
                             </button>
                         </div>
                     </div>
@@ -404,7 +492,7 @@
                                             class="rounded-xl border border-rose-200 px-3 py-2 text-xs font-black text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
                                             x-text="isDeletingLinkedItem({ ...savedEvent, item_type: 'event' }) ? '삭제 중...' : '삭제'"
                                         ></button>
-                                        <a :href="savedEvent.calendar_url || '{{ calendar_main_url }}'" class="text-xs font-black text-amber-700">캘린더에서 보기</a>
+                                        <a :href="buildCalendarFocusUrl(savedEvent.calendar_url || '{{ calendar_main_url }}', savedEvent.id)" class="text-xs font-black text-amber-700">캘린더에서 보기</a>
                                     </div>
                                 </div>
                             </template>
@@ -417,12 +505,12 @@
                 </section>
             </div>
 
-            <div class="order-1 space-y-5 lg:order-2">
+            <div class="order-1 space-y-5">
                 <section id="messagebox-archive" x-ref="messageArchiveSection" class="scroll-mt-24 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6" style="scroll-margin-top: calc(var(--main-nav-height, 88px) + 1rem);" data-messagebox-archive="true">
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                         <div>
-                            <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">보관함</p>
-                            <h2 class="mt-1 text-xl font-black text-slate-900">나중에 다시 볼 메시지</h2>
+                            <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">받은 메시지</p>
+                            <h2 class="mt-1 text-xl font-black text-slate-900">저장된 메시지</h2>
                         </div>
                         <button type="button" @click="loadMessageArchive({ reset: true, preferredCaptureId: selectedCaptureId() })" class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-slate-50">
                             새로고침
@@ -440,7 +528,7 @@
                         <div class="flex flex-wrap gap-2" data-messagebox-filters="true">
                             <button type="button" @click="setMessageArchiveFilter('all')" :class="workflowFilterButtonClass('all')" class="rounded-full border px-3 py-1.5 text-xs font-black transition">전체 <span x-text="messageArchiveCounts.all || 0"></span></button>
                             <button type="button" @click="setMessageArchiveFilter('kept')" :class="workflowFilterButtonClass('kept')" class="rounded-full border px-3 py-1.5 text-xs font-black transition">메시지만 보관 <span x-text="messageArchiveCounts.kept || 0"></span></button>
-                            <button type="button" @click="setMessageArchiveFilter('dated')" :class="workflowFilterButtonClass('dated')" class="rounded-full border px-3 py-1.5 text-xs font-black transition">다시 볼 날짜 <span x-text="messageArchiveCounts.dated || 0"></span></button>
+                            <button type="button" @click="setMessageArchiveFilter('dated')" :class="workflowFilterButtonClass('dated')" class="rounded-full border px-3 py-1.5 text-xs font-black transition">날짜 확인 필요 <span x-text="messageArchiveCounts.dated || 0"></span></button>
                             <button type="button" @click="setMessageArchiveFilter('linked')" :class="workflowFilterButtonClass('linked')" class="rounded-full border px-3 py-1.5 text-xs font-black transition">일정 저장됨 <span x-text="messageArchiveCounts.linked || 0"></span></button>
                             <button type="button" @click="setMessageArchiveFilter('done')" :class="workflowFilterButtonClass('done')" class="rounded-full border px-3 py-1.5 text-xs font-black transition">완료 <span x-text="messageArchiveCounts.done || 0"></span></button>
                         </div>
@@ -456,6 +544,7 @@
                                         <div class="min-w-0">
                                             <p class="text-xs font-black text-slate-400" x-text="formatMessageArchiveCreatedAt(item.created_at)"></p>
                                             <p class="mt-2 line-clamp-3 whitespace-pre-line text-sm font-black leading-6 text-slate-900" x-text="item.preview_text || '원문이 비어 있어요.'"></p>
+                                            <p class="mt-2 text-xs font-semibold text-slate-500" x-text="item.manual_date ? `확인 날짜 ${formatManualDateLabel(item.manual_date)}` : '날짜 확인 필요'"></p>
                                         </div>
                                         <span class="inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[11px] font-black" :class="workflowBadgeClass(item.workflow_status)" x-text="item.workflow_status_label"></span>
                                     </div>
@@ -486,7 +575,7 @@
                                             @click="replayMessageArchiveCapture()"
                                             :disabled="isLoadingMessageArchiveDetail"
                                             class="rounded-xl bg-slate-900 px-3 py-2 text-xs font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                                            x-text="'일정 수정하기'"
+                                            x-text="'다시 일정 만들기'"
                                         ></button>
                                         <button
                                             type="button"
@@ -500,59 +589,12 @@
 
                                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2" x-show="messageArchiveSelectedCapture && (messageArchiveSelectedCapture.manual_date || messageArchiveSelectedCapture.manual_note)">
                                     <div class="rounded-2xl border border-slate-200 bg-white px-4 py-3" x-show="messageArchiveSelectedCapture && messageArchiveSelectedCapture.manual_date">
-                                        <p class="text-xs font-black uppercase tracking-[0.16em] text-slate-500">다시 볼 날짜</p>
+                                        <p class="text-xs font-black uppercase tracking-[0.16em] text-slate-500">확인 날짜</p>
                                         <p class="mt-2 text-sm font-black text-slate-900" x-text="messageArchiveSelectedCapture ? formatManualDateLabel(messageArchiveSelectedCapture.manual_date) : ''"></p>
                                     </div>
                                     <div class="rounded-2xl border border-slate-200 bg-white px-4 py-3" x-show="messageArchiveSelectedCapture && messageArchiveSelectedCapture.manual_note">
-                                        <p class="text-xs font-black uppercase tracking-[0.16em] text-slate-500">다시 볼 메모</p>
+                                        <p class="text-xs font-black uppercase tracking-[0.16em] text-slate-500">메모</p>
                                         <p class="mt-2 text-sm font-black text-slate-900" x-text="messageArchiveSelectedCapture ? messageArchiveSelectedCapture.manual_note : ''"></p>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <p class="mb-2 text-sm font-black text-slate-900">원문</p>
-                                    <div class="rounded-[1.6rem] border border-slate-200 bg-white px-4 py-4 text-sm leading-6 text-slate-700 whitespace-pre-line" x-text="messageArchiveSelectedCapture ? (messageArchiveSelectedCapture.raw_text || '원문이 비어 있어요.') : ''"></div>
-                                </div>
-
-                                <div x-show="messageArchiveSelectedCapture && messageArchiveSelectedCapture.attachments && messageArchiveSelectedCapture.attachments.length > 0">
-                                    <p class="mb-2 text-sm font-black text-slate-900">첨부 문서</p>
-                                    <div class="space-y-2">
-                                        <template x-for="attachment in (messageArchiveSelectedCapture ? messageArchiveSelectedCapture.attachments : [])" :key="attachment.id">
-                                            <div class="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                                                <p class="text-sm font-black text-slate-900" x-text="attachment.original_name"></p>
-                                                <p class="mt-1 text-xs font-semibold text-slate-500" x-text="formatBytes(attachment.size_bytes)"></p>
-                                            </div>
-                                        </template>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <div class="mb-2 flex items-center justify-between gap-3">
-                                        <p class="text-sm font-black text-slate-900">실제 일정 후보</p>
-                                    </div>
-                                    <div class="space-y-2" x-show="messageArchiveVisibleCandidates().length > 0">
-                                        <template x-for="candidate in messageArchiveVisibleCandidates()" :key="candidate.candidate_id">
-                                            <div class="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                                                <div class="flex flex-wrap items-center justify-between gap-2">
-                                                    <div class="flex flex-wrap items-center gap-2">
-                                                        <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-black" :class="archiveCandidateBadgeClass(candidate.kind)" x-text="candidate.badge_text"></span>
-                                                    </div>
-                                                    <button
-                                                        type="button"
-                                                        @click="editSelectedArchiveCandidate(candidate.candidate_id)"
-                                                        class="text-xs font-black text-amber-700"
-                                                    >
-                                                        날짜/내용 수정
-                                                    </button>
-                                                </div>
-                                                <p class="mt-2 text-sm font-black text-slate-900" x-text="candidate.title"></p>
-                                                <p class="mt-1 text-xs font-semibold text-slate-500" x-text="formatArchiveCandidateDate(candidate)"></p>
-                                            </div>
-                                        </template>
-                                    </div>
-                                    <div x-show="messageArchiveSelectedCapture && messageArchiveVisibleCandidates().length === 0" class="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm font-semibold text-slate-500">
-                                        <p x-text="messageArchiveCandidateEmptyText()"></p>
-                                        <button type="button" @click="addManualCandidateFromSelectedArchive()" class="mt-3 text-xs font-black text-amber-700">직접 일정 후보 추가</button>
                                     </div>
                                 </div>
 
@@ -574,13 +616,62 @@
                                                         class="rounded-xl border border-rose-200 px-3 py-2 text-xs font-black text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
                                                         x-text="isDeletingLinkedItem(linked) ? '삭제 중...' : '삭제'"
                                                     ></button>
-                                                    <a :href="linked.calendar_url || '{{ calendar_main_url }}'" class="text-xs font-black text-amber-700">캘린더에서 보기</a>
+                                                    <a :href="buildCalendarFocusUrl(linked.calendar_url || '{{ calendar_main_url }}', linked)" class="text-xs font-black text-amber-700">캘린더에서 보기</a>
                                                 </div>
                                             </div>
                                         </template>
                                     </div>
                                     <div x-show="messageArchiveSelectedCapture && !hasSelectedCaptureLinkedItems()" class="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm font-semibold text-slate-500">아직 연결된 일정이나 할 일이 없어요.</div>
                                 </div>
+
+                                <details class="rounded-[1.6rem] border border-slate-200 bg-white px-4 py-3">
+                                    <summary class="cursor-pointer text-sm font-black text-slate-900">원문과 첨부 보기</summary>
+                                    <div class="mt-4 space-y-4">
+                                        <div>
+                                            <p class="mb-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">원문</p>
+                                            <div class="rounded-[1.4rem] border border-slate-200 bg-slate-50 px-4 py-4 text-sm leading-6 text-slate-700 whitespace-pre-line" x-text="messageArchiveSelectedCapture ? (messageArchiveSelectedCapture.raw_text || '원문이 비어 있어요.') : ''"></div>
+                                        </div>
+                                        <div x-show="messageArchiveSelectedCapture && messageArchiveSelectedCapture.attachments && messageArchiveSelectedCapture.attachments.length > 0">
+                                            <p class="mb-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">첨부 문서</p>
+                                            <div class="space-y-2">
+                                                <template x-for="attachment in (messageArchiveSelectedCapture ? messageArchiveSelectedCapture.attachments : [])" :key="attachment.id">
+                                                    <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                                        <p class="text-sm font-black text-slate-900" x-text="attachment.original_name"></p>
+                                                        <p class="mt-1 text-xs font-semibold text-slate-500" x-text="formatBytes(attachment.size_bytes)"></p>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </details>
+
+                                <details class="rounded-[1.6rem] border border-slate-200 bg-white px-4 py-3">
+                                    <summary class="cursor-pointer text-sm font-black text-slate-900">찾은 일정 보기</summary>
+                                    <div class="mt-4 space-y-2" x-show="messageArchiveVisibleCandidates().length > 0">
+                                        <template x-for="candidate in messageArchiveVisibleCandidates()" :key="candidate.candidate_id">
+                                            <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                                <div class="flex flex-wrap items-center justify-between gap-2">
+                                                    <div class="flex flex-wrap items-center gap-2">
+                                                        <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-black" :class="archiveCandidateBadgeClass(candidate.kind)" x-text="candidate.badge_text"></span>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        @click="editSelectedArchiveCandidate(candidate.candidate_id)"
+                                                        class="text-xs font-black text-amber-700"
+                                                    >
+                                                        날짜/내용 수정
+                                                    </button>
+                                                </div>
+                                                <p class="mt-2 text-sm font-black text-slate-900" x-text="candidate.title"></p>
+                                                <p class="mt-1 text-xs font-semibold text-slate-500" x-text="formatArchiveCandidateDate(candidate)"></p>
+                                            </div>
+                                        </template>
+                                    </div>
+                                    <div x-show="messageArchiveSelectedCapture && messageArchiveVisibleCandidates().length === 0" class="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold text-slate-500">
+                                        <p x-text="messageArchiveCandidateEmptyText()"></p>
+                                        <button type="button" @click="addManualCandidateFromSelectedArchive()" class="mt-3 text-xs font-black text-amber-700">직접 일정 후보 추가</button>
+                                    </div>
+                                </details>
                             </div>
                         </div>
                     </div>

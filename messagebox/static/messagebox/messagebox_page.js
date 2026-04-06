@@ -27,6 +27,7 @@ function ensureMessageboxToastBridge() {
 function messageboxPage(options = {}) {
     return {
         initialCaptureId: String(options.initialCaptureId || ""),
+        messageComposerOpen: false,
         messageCaptureManualDate: "",
         messageCaptureManualNote: "",
         messageCaptureSaveMode: "",
@@ -114,16 +115,20 @@ function messageboxPage(options = {}) {
 
             this.resetMessageCaptureFlow = () => {
                 baseResetFlow();
+                this.messageComposerOpen = false;
                 this.messageCaptureManualDate = "";
                 this.messageCaptureManualNote = "";
                 this.messageCaptureSaveMode = "";
+                this.messageCaptureAdvancedOpen = false;
                 this.resetMessageCapturePlannerState();
             };
 
             this.applyMessageCaptureResult = (payload) => {
                 baseApplyResult(payload);
+                this.messageComposerOpen = true;
                 this.syncManualInputsFromPayload(payload);
                 this.messageCaptureSourcePreviewOpen = false;
+                this.messageCaptureAdvancedOpen = false;
                 this.syncMessageCapturePlannerState();
                 if (!this.messageCapturePlannerIsDesktop()) {
                     this.revealMessageCaptureConfirm();
@@ -132,12 +137,14 @@ function messageboxPage(options = {}) {
 
             this.applyMessageCaptureArchiveSaveResult = (payload) => {
                 baseApplyArchiveResult(payload);
+                this.messageComposerOpen = true;
                 this.syncManualInputsFromPayload(payload);
                 this.resetMessageCapturePlannerState();
             };
 
             this.applyArchiveDetailToMessageCapture = (detailPayload) => {
                 baseApplyArchiveDetail(detailPayload);
+                this.messageComposerOpen = true;
                 this.syncManualInputsFromPayload(detailPayload);
                 this.messageCaptureSourcePreviewOpen = true;
                 this.syncMessageCapturePlannerState();
@@ -237,11 +244,52 @@ function messageboxPage(options = {}) {
                     this.messageCaptureStep = "confirm";
                     this.messageCaptureSourcePreviewOpen = false;
                 }
-                return baseSubmitCommit();
+                const commitResult = await baseSubmitCommit();
+                const firstSavedEventId = Array.isArray(this.messageCaptureSavedEvents) && this.messageCaptureSavedEvents.length > 0
+                    ? String(this.messageCaptureSavedEvents[0].id || "")
+                    : "";
+                const firstSavedEventUrl = Array.isArray(this.messageCaptureSavedEvents) && this.messageCaptureSavedEvents.length > 0
+                    ? this.buildCalendarFocusUrl(this.messageCaptureSavedEvents[0].calendar_url || "", firstSavedEventId)
+                    : "";
+                if (this.messageCaptureSuccessMode === "commit" && firstSavedEventUrl) {
+                    window.location.href = firstSavedEventUrl;
+                    return;
+                }
+                return commitResult;
             };
         },
 
+        buildCalendarFocusUrl(rawUrl, itemOrEvent = "") {
+            const baseUrl = String(rawUrl || "").trim();
+            if (!baseUrl) {
+                return "";
+            }
+            let eventId = "";
+            if (itemOrEvent && typeof itemOrEvent === "object") {
+                eventId = String(itemOrEvent.item_type || "") === "event"
+                    ? String(itemOrEvent.id || "")
+                    : "";
+            } else {
+                eventId = String(itemOrEvent || "");
+            }
+            eventId = eventId.trim();
+            if (!eventId) {
+                return baseUrl;
+            }
+            try {
+                const parsed = new URL(baseUrl, window.location.origin);
+                parsed.searchParams.set("highlight_event", eventId);
+                if (parsed.origin === window.location.origin) {
+                    return `${parsed.pathname}${parsed.search}${parsed.hash || ""}`;
+                }
+                return parsed.toString();
+            } catch (error) {
+                return baseUrl;
+            }
+        },
+
         focusMessageInput(options = {}) {
+            this.messageComposerOpen = true;
             if (!options.preserveStep) {
                 this.messageCaptureStep = String(options.step || "input");
             }
@@ -336,6 +384,9 @@ function messageboxPage(options = {}) {
         focusMessageArchive(options = {}) {
             const captureId = String(options.captureId || this.selectedCaptureId() || "");
             const shouldRevealSelection = !!options.revealSelection;
+            if (this.messageCaptureStep === "input") {
+                this.messageComposerOpen = false;
+            }
             if (options.updateHash !== false) {
                 this.updateMessageboxHash("messagebox-archive");
             }
@@ -384,6 +435,14 @@ function messageboxPage(options = {}) {
             if (hash === "#messagebox-compose") {
                 this.focusMessageInput({ behavior: "auto", updateHash: false });
             }
+        },
+
+        closeMessageComposer() {
+            if (this.messageCaptureStep !== "input") {
+                this.resetMessageCaptureFlow();
+            }
+            this.messageComposerOpen = false;
+            this.focusMessageArchive({ behavior: "smooth" });
         },
 
         openMessageArchiveCapture(captureId) {
@@ -1017,10 +1076,7 @@ function messageboxPage(options = {}) {
         },
 
         shouldSkipMessageCaptureParseRequest() {
-            if (this.messageCaptureFiles.length > 0) {
-                return false;
-            }
-            return !this.messageCaptureTextHasDateSignal();
+            return false;
         },
 
         ensureMessageCaptureSourceInput() {

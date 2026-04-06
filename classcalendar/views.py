@@ -571,12 +571,34 @@ def build_messagebox_home_card_context(user):
     enabled = bool(getattr(user, "is_authenticated", False)) and _is_message_capture_enabled_for_user(user)
     card = {
         "enabled": enabled,
-        "title": "AI 업무 메시지 보관함",
+        "title": "메시지에서 일정 만들기",
         "description": "",
-        "primary_action_label": "새 메시지 보관",
+        "primary_action_label": "메시지에서 일정 만들기",
+        "secondary_action_label": "받은 메시지 보기",
         "url": build_messagebox_main_url(),
     }
     return card
+
+
+def build_calendar_message_capture_url(*, capture_id="", mode="archive"):
+    try:
+        base_url = reverse("calendar_main")
+    except NoReverseMatch:
+        try:
+            base_url = reverse("classcalendar:main")
+        except NoReverseMatch:
+            return ""
+
+    normalized_mode = str(mode or "archive").strip().lower()
+    if normalized_mode not in {"archive", "capture"}:
+        normalized_mode = "archive"
+
+    params = [("message_capture", normalized_mode)]
+    capture_value = str(capture_id or "").strip()
+    if capture_value:
+        params.append(("capture", capture_value))
+    query_string = urlencode(params, doseq=True)
+    return f"{base_url}?{query_string}#home-calendar" if query_string else f"{base_url}#home-calendar"
 
 
 def build_messagebox_main_url(*, capture_id=""):
@@ -1296,7 +1318,7 @@ def _message_capture_workflow_status_code(capture):
 def _message_capture_workflow_status_label(status_code):
     labels = {
         "kept": "메시지만 보관",
-        "dated": "다시 볼 날짜",
+        "dated": "날짜 확인 필요",
         "linked": "일정 저장됨",
         "done": "완료",
     }
@@ -3590,7 +3612,12 @@ def build_calendar_surface_context(
     )
     initial_open_create = str(request.GET.get("action") or "").strip().lower() == "create"
     initial_open_event_id = str(request.GET.get("open_event") or "").strip()
+    initial_highlight_event_id = str(request.GET.get("highlight_event") or "").strip()
     initial_open_task_id = str(request.GET.get("open_task") or "").strip()
+    initial_message_hub_mode = str(request.GET.get("message_capture") or "").strip().lower()
+    if initial_message_hub_mode not in {"archive", "capture"}:
+        initial_message_hub_mode = ""
+    initial_message_capture_id = str(request.GET.get("capture") or "").strip() if initial_message_hub_mode else ""
     today_workspace = build_today_execution_context(
         request.user,
         active_classroom=active_classroom,
@@ -3641,7 +3668,10 @@ def build_calendar_surface_context(
         "initial_selected_date": initial_selected_date or today_workspace["date_key"],
         "initial_open_create": initial_open_create,
         "initial_open_event_id": initial_open_event_id,
+        "initial_highlight_event_id": initial_highlight_event_id,
         "initial_open_task_id": initial_open_task_id,
+        "initial_message_hub_mode": initial_message_hub_mode,
+        "initial_message_capture_id": initial_message_capture_id,
         "initial_focus_search": initial_focus_search,
         "initial_search_query": initial_search_query,
         "embedded_sheetbook_context": embedded_sheetbook_context,

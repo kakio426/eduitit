@@ -9,7 +9,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from products.models import Product
 
-from classcalendar.views import build_message_capture_ui_context
+from classcalendar.views import build_calendar_message_capture_url, build_message_capture_ui_context
 from .developer_chat import (
     build_developer_chat_api_urls,
     build_developer_chat_home_card_context,
@@ -56,6 +56,11 @@ def main_view(request):
         "message_capture_urls_json": message_capture_ui["urls"],
         "initial_capture_id": initial_capture_id,
         "calendar_main_url": reverse("calendar_main"),
+        "calendar_capture_url": build_calendar_message_capture_url(mode="capture"),
+        "calendar_capture_template_url": build_calendar_message_capture_url(
+            mode="capture",
+            capture_id="__capture_id__",
+        ),
     }
     return render(request, "messagebox/main.html", context)
 

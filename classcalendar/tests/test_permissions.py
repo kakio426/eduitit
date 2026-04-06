@@ -407,6 +407,17 @@ class PermissionTest(TestCase):
         self.assertEqual(response.context["initial_open_event_id"], str(event.id))
         self.assertIn("initialOpenEventId:", content)
 
+    def test_main_view_includes_initial_highlight_event_deep_link(self):
+        event = self._create_event(title="강조 일정")
+        url = f"{reverse('classcalendar:main')}?date=2026-03-01&open_event={event.id}&highlight_event={event.id}"
+
+        response = self.client_teacher.get(url, follow=True)
+        content = response.content.decode("utf-8")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["initial_highlight_event_id"], str(event.id))
+        self.assertIn("initialHighlightedEventId:", content)
+
     def test_create_event_rejects_invalid_time_range(self):
         response = self.client_teacher.post(
             reverse("classcalendar:api_create_event"),

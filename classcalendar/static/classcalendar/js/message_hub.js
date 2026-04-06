@@ -10,6 +10,7 @@ function buildCalendarMessageHubState() {
         messageCaptureStep: 'input',
         messageCaptureMobileState: 'idle',
         messageCaptureSourceExpanded: false,
+        messageCaptureAdvancedOpen: false,
         messageCaptureInputText: '',
         messageCaptureSourceHint: 'unknown',
         messageCaptureLinkedDate: '',
@@ -602,22 +603,30 @@ function initCalendarMessageHub(host, options = {}) {
 
         openMessageCaptureFromHome: async function(event) {
             const draftText = String(this.messageboxHomeDraftText || '');
-            if (!draftText.trim()) {
-                window.showToast('붙여넣을 메시지를 먼저 입력해 주세요.', 'info');
-                this.focusMessageboxHomeDraftInput();
-                return;
-            }
-            const entryMode = typeof this.isCompactMobileViewport === 'function' && this.isCompactMobileViewport()
+            const hasDraftText = !!draftText.trim();
+            const entryMode = hasDraftText && typeof this.isCompactMobileViewport === 'function' && this.isCompactMobileViewport()
                 ? 'home_mobile_schedule'
                 : 'default';
             await this.openMessageHub(event, 'capture', {
                 resetCapture: true,
                 entryMode,
-                mobileState: 'loading',
+                mobileState: hasDraftText ? 'loading' : 'idle',
             });
             this.messageCaptureSourceHint = 'home_card';
             this.messageCaptureInputText = draftText;
             this.messageCaptureErrorText = '';
+            if (!hasDraftText) {
+                this.scrollMessageHubPanelToTop('capture');
+                if (typeof this.$nextTick === 'function') {
+                    this.$nextTick(() => {
+                        const input = this.$refs ? this.$refs.messageCaptureInput : null;
+                        if (input && typeof input.focus === 'function') {
+                            input.focus();
+                        }
+                    });
+                }
+                return;
+            }
             if (typeof this.$nextTick === 'function') {
                 this.$nextTick(() => {
                     this.submitMessageCaptureParse();
@@ -844,27 +853,27 @@ function initCalendarMessageHub(host, options = {}) {
         messageArchivePrimaryActionTitle: function() {
             const editableCount = this.messageArchiveVisibleCandidates().length;
             if (editableCount > 0) {
-                return editableCount === 1 ? '이 메시지에서 찾은 일정 1개를 다시 확인해 보세요.' : `이 메시지에서 찾은 일정 ${editableCount}개를 다시 확인해 보세요.`;
+                return editableCount === 1 ? '이 메시지에서 찾은 일정 1개를 캘린더에 다시 넣을 수 있어요.' : `이 메시지에서 찾은 일정 ${editableCount}개를 캘린더에 다시 넣을 수 있어요.`;
             }
             if (this.hasSelectedCaptureLinkedItems()) {
-                return '이미 연결한 일정은 그대로 두고, 이 메시지를 다시 읽어볼 수 있어요.';
+                return '이미 저장한 일정은 그대로 두고, 원문만 다시 확인할 수 있어요.';
             }
-            return '저장할 날짜가 없어도, 이 메시지를 다시 읽고 이어서 처리할 수 있어요.';
+            return '저장할 일정이 없으면 원문만 다시 확인해도 됩니다.';
         },
 
         messageArchivePrimaryActionDescription: function() {
             const editableCount = this.messageArchiveVisibleCandidates().length;
             if (editableCount > 0) {
-                return '버튼을 누르면 찾은 일정 화면으로 돌아가 제목과 날짜를 바로 손볼 수 있어요.';
+                return '버튼을 누르면 일정 확인 화면으로 돌아가 제목과 날짜만 간단히 고칠 수 있어요.';
             }
             if (this.hasSelectedCaptureLinkedItems()) {
-                return '이미 저장한 일정은 유지한 채, 필요한 날짜와 메모만 다시 확인하면 됩니다.';
+                return '필요하면 캘린더 일정만 확인하고, 메시지는 보조 정보로 다시 보면 됩니다.';
             }
-            return '다시 읽기 화면으로 열어서 날짜를 확인한 뒤 저장하면 됩니다.';
+            return '이 메시지를 다시 읽고, 필요한 경우에만 일정 만들기를 다시 시작하면 됩니다.';
         },
 
         messageArchivePrimaryActionButtonText: function() {
-            return this.messageArchiveVisibleCandidates().length > 0 ? '이 메시지로 다시 일정 만들기' : '이 메시지 다시 읽기';
+            return this.messageArchiveVisibleCandidates().length > 0 ? '이 메시지로 다시 일정 만들기' : '원문 다시 보기';
         },
 
         formatTaskLinkedDate: function(task) {
@@ -962,6 +971,7 @@ function initCalendarMessageHub(host, options = {}) {
         resetMessageCaptureFlow: function() {
             this.messageCaptureStep = 'input';
             this.setMessageCaptureMobileState('idle');
+            this.messageCaptureAdvancedOpen = false;
             this.messageCaptureInputText = '';
             this.messageCaptureSourceHint = 'unknown';
             this.messageCaptureLinkedDate = '';
@@ -1121,6 +1131,8 @@ function initCalendarMessageHub(host, options = {}) {
                 }))
                 : [];
             this.messageCaptureCandidates = normalizedCandidates;
+            this.messageCaptureAdvancedOpen = false;
+            this.prioritizeMessageCapturePrimaryCandidate();
             this.messageCaptureSavedMessage = '';
             this.messageCaptureSavedEvents = [];
             this.messageCaptureErrorText = '';
@@ -1165,6 +1177,53 @@ function initCalendarMessageHub(host, options = {}) {
             return Array.isArray(this.messageCaptureCandidates)
                 ? this.messageCaptureCandidates.filter((candidate) => !candidate.already_saved)
                 : [];
+        },
+
+        prioritizeMessageCapturePrimaryCandidate: function() {
+            const editableCandidates = this.messageCaptureEditableCandidates();
+            if (editableCandidates.length === 0) {
+                return;
+            }
+            const primaryCandidateId = String(editableCandidates[0].candidate_id || '');
+            this.messageCaptureCandidates = this.messageCaptureCandidates.map((candidate) => {
+                if (candidate.already_saved) {
+                    return candidate;
+                }
+                return {
+                    ...candidate,
+                    selected: String(candidate.candidate_id || '') === primaryCandidateId,
+                    edit_open: false,
+                };
+            });
+        },
+
+        messageCapturePrimaryCandidate: function() {
+            const editableCandidates = this.messageCaptureEditableCandidates();
+            return editableCandidates.length > 0 ? editableCandidates[0] : null;
+        },
+
+        messageCaptureSecondaryCandidates: function() {
+            return this.messageCaptureEditableCandidates().slice(1);
+        },
+
+        hasAdditionalMessageCaptureCandidates: function() {
+            return this.messageCaptureSecondaryCandidates().length > 0;
+        },
+
+        openMessageCapturePrimaryCorrection: function() {
+            const primaryCandidate = this.messageCapturePrimaryCandidate();
+            if (!primaryCandidate) {
+                return;
+            }
+            primaryCandidate.edit_open = true;
+            if (typeof this.$nextTick === 'function') {
+                this.$nextTick(() => {
+                    const input = this.$refs ? this.$refs.messageCapturePrimaryTitleInput : null;
+                    if (input && typeof input.focus === 'function') {
+                        input.focus();
+                    }
+                });
+            }
         },
 
         messageCaptureVisibleCandidates: function() {
@@ -1525,10 +1584,10 @@ function initCalendarMessageHub(host, options = {}) {
                     body: JSON.stringify(body),
                 });
                 const warningMessages = Array.isArray(payload.warnings) ? payload.warnings : [];
+                const savedEvents = ([]).concat(payload.created_events || [], payload.reused_events || []);
                 this.messageCaptureSuccessMode = 'commit';
                 this.messageCaptureSavedMessage = payload.message || '선택한 일정을 저장했어요.';
-                this.messageCaptureSavedEvents = ([]).concat(payload.created_events || [], payload.reused_events || []);
-                this.messageCaptureStep = 'done';
+                this.messageCaptureSavedEvents = savedEvents;
                 if (this.isHomeMobileMessageCaptureMode()) {
                     this.syncMessageCaptureInputToHomeDraft({ clearDraft: true });
                     this.setMessageCaptureMobileState('success');
@@ -1549,6 +1608,14 @@ function initCalendarMessageHub(host, options = {}) {
                         }
                     }
                 }
+                const firstSavedEventUrl = savedEvents.length > 0
+                    ? String(savedEvents[0].calendar_url || '')
+                    : '';
+                if (firstSavedEventUrl) {
+                    window.location.href = firstSavedEventUrl;
+                    return;
+                }
+                this.messageCaptureStep = 'done';
             } catch (error) {
                 this.messageCaptureErrorText = error.message || '일정 저장에 실패했습니다.';
                 window.showToast(this.messageCaptureErrorText, 'error');
@@ -1625,8 +1692,8 @@ function initCalendarMessageHub(host, options = {}) {
             return this.messageArchiveSelectedCapture.archive_status === 'unparsed'
                 ? '아직 이 메시지는 읽지 않았어요. 필요할 때 다시 열어 일정 만들기를 누르면 됩니다.'
                 : (this.hasSelectedCaptureLinkedItems()
-                    ? '이미 연결된 일정은 아래에서 확인할 수 있어요.'
-                    : '이 메시지에서는 저장할 날짜를 찾지 못했어요.');
+                    ? '이미 저장한 일정은 아래에서 확인할 수 있어요.'
+                    : '이 메시지에서는 저장할 일정을 찾지 못했어요.');
         },
     };
 

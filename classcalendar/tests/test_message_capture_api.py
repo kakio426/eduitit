@@ -873,7 +873,7 @@ class MessageCaptureApiTests(TestCase):
         self.assertEqual({item["capture_id"] for item in dated_items}, {str(dated_capture.id)})
         self.assertEqual({item["capture_id"] for item in linked_items}, {str(linked_capture.id)})
         self.assertEqual({item["capture_id"] for item in done_items}, {str(done_capture.id)})
-        self.assertEqual(dated_items[0]["workflow_status_label"], "다시 볼 날짜")
+        self.assertEqual(dated_items[0]["workflow_status_label"], "날짜 확인 필요")
         self.assertIn(f"?capture={dated_capture.id}", dated_items[0]["messagebox_url"])
         self.assertTrue(dated_items[0]["messagebox_url"].endswith("#messagebox-archive"))
 
