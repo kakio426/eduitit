@@ -41,6 +41,7 @@ from core.teacher_buddy_catalog import (
     TOTAL_SKIN_COUNT,
     all_teacher_buddies,
     get_teacher_buddy_skins_for_buddy,
+    with_particle,
 )
 from products.models import Product
 
@@ -744,6 +745,12 @@ class TeacherBuddyHomeRenderTests(TestCase):
 
 @override_settings(HOME_TEACHER_BUDDY_ENABLED=True)
 class TeacherBuddyCatalogTests(TestCase):
+    def test_with_particle_uses_expected_korean_postpositions(self):
+        self.assertEqual(with_particle("메모싹", ("이", "가")), "메모싹이")
+        self.assertEqual(with_particle("타이머링", ("이", "가")), "타이머링이")
+        self.assertEqual(with_particle("메모싹", ("과", "와")), "메모싹과")
+        self.assertEqual(with_particle("오로라", ("과", "와")), "오로라와")
+
     def test_catalog_matches_36_buddy_and_40_skin_plan(self):
         buddies = all_teacher_buddies()
         avatar_marks = [buddy.avatar_mark for buddy in buddies]
@@ -791,3 +798,10 @@ class TeacherBuddyCatalogTests(TestCase):
 
         family_counts = {family: len(keys) for family, keys in SILHOUETTE_FAMILY_SHEET.items()}
         self.assertTrue(all(count <= 2 for count in family_counts.values()))
+
+    def test_catalog_messages_use_natural_particles(self):
+        memo = next(buddy for buddy in all_teacher_buddies() if buddy.key == "memo_sprout")
+        aurora = next(buddy for buddy in all_teacher_buddies() if buddy.key == "board_aurora")
+
+        self.assertIn("메모싹과 오늘 반짝 조각을 완성했어요.", memo.messages)
+        self.assertIn("칠판오로라와 오늘 반짝 조각을 완성했어요.", aurora.messages)

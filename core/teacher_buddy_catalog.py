@@ -115,7 +115,7 @@ def _messages(name: str) -> tuple[str, str, str]:
     return (
         f"{with_particle(name, ('이', '가'))} 오늘 교실 흐름을 살펴보고 있어요.",
         f"{with_particle(name, ('이', '가'))} 한 칸씩 차분하게 맞춰 보고 있어요.",
-        f"{with_particle(name, ('와', '과'))} 오늘 반짝 조각을 완성했어요.",
+        f"{with_particle(name, ('과', '와'))} 오늘 반짝 조각을 완성했어요.",
     )
 
 
