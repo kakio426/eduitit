@@ -11,7 +11,8 @@ class SignatureMakerTeacherFirstTests(TestCase):
         response = self.client.get(reverse("signatures:maker"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "이름만 넣고 서명 이미지를 만듭니다")
+        self.assertContains(response, "이름만 넣고 폰트형 서명 이미지를 만듭니다")
+        self.assertContains(response, "직접 쓴 손서명이 기본이고")
         self.assertContains(response, "이미지 저장")
         self.assertContains(response, "보관함 쓰려면 계정 만들기")
         self.assertContains(response, "서명 목록으로")
@@ -33,9 +34,9 @@ class SignatureMakerTeacherFirstTests(TestCase):
         response = self.client.get(reverse("signatures:maker"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "이 스타일 저장")
-        self.assertContains(response, "저장한 스타일 보기")
-        self.assertContains(response, "서명 스타일을 저장했습니다.", html=False)
+        self.assertContains(response, "폰트 스타일 저장")
+        self.assertContains(response, "내 서명 보관함 보기")
+        self.assertContains(response, "폰트 스타일을 저장했습니다.", html=False)
         self.assertContains(response, "response.ok", html=False)
 
     def test_authenticated_view_applies_saved_style_query_params(self):

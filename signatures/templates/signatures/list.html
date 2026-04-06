@@ -32,16 +32,19 @@
                         </a>
                         {% endif %}
                     </div>
-                    <div class="mt-4 flex flex-wrap items-center gap-2 text-sm text-slate-500">
-                        <span class="font-bold text-slate-400">보조 도구</span>
-                        <a href="{% url 'signatures:maker' %}"
-                            class="rounded-full bg-white/90 px-3 py-1 font-bold text-slate-600 shadow-sm hover:text-indigo-700 transition">
-                            서명 메이커
-                        </a>
-                        <a href="{% url 'signatures:style_list' %}"
-                            class="rounded-full bg-white/90 px-3 py-1 font-bold text-slate-600 shadow-sm hover:text-indigo-700 transition">
-                            저장한 스타일
-                        </a>
+                    <div class="mt-4 space-y-2 text-sm text-slate-500">
+                        <p>직접 쓴 손서명은 참여 화면에서 저장해 두고 다시 쓰세요. 폰트형 이름 이미지는 정말 필요할 때만 보조 도구로 쓰면 됩니다.</p>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="font-bold text-slate-400">보관함 & 보조 도구</span>
+                            <a href="{% url 'signatures:style_list' %}"
+                                class="rounded-full bg-white/90 px-3 py-1 font-bold text-slate-600 shadow-sm hover:text-indigo-700 transition">
+                                내 서명 보관함
+                            </a>
+                            <a href="{% url 'signatures:maker' %}"
+                                class="rounded-full bg-white/90 px-3 py-1 font-bold text-slate-600 shadow-sm hover:text-indigo-700 transition">
+                                이름 폰트 도구
+                            </a>
+                        </div>
                     </div>
                 </div>
                 <div class="rounded-[1.75rem] border border-white/70 bg-white/80 p-5 md:p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_20px_45px_-35px_rgba(15,23,42,0.35)] backdrop-blur">

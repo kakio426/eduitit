@@ -1,3 +1,4 @@
+import json
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
@@ -6,7 +7,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from core.models import UserProfile
-from signatures.models import ExpectedParticipant, Signature, SignatureAuditLog, TrainingSession
+from signatures.models import ExpectedParticipant, SavedSignature, Signature, SignatureAuditLog, TrainingSession
 
 
 User = get_user_model()
@@ -161,6 +162,34 @@ class SignaturePublicSigningTests(TestCase):
         self.assertContains(response, 'onclick="openSignatureVault()"')
         self.assertContains(response, 'onclick="closeSignatureVaultModal()"')
         self.assertContains(response, "function closeSignatureVaultModal()")
+        self.assertContains(response, "이 손서명 저장")
+        self.assertContains(response, "저장한 손서명 불러오기")
+        self.assertContains(response, "직접 써서 저장해 둔 서명만 다시 불러올 수 있습니다.")
+
+    def test_save_signature_image_api_deduplicates_same_handdrawn_signature(self):
+        self.client.force_login(self.user)
+
+        payload = json.dumps({"image_data": "data:image/png;base64,U0lH"})
+        first_response = self.client.post(
+            reverse("signatures:save_image_api"),
+            data=payload,
+            content_type="application/json",
+        )
+        second_response = self.client.post(
+            reverse("signatures:save_image_api"),
+            data=payload,
+            content_type="application/json",
+        )
+
+        self.assertEqual(first_response.status_code, 200)
+        self.assertEqual(second_response.status_code, 200)
+        self.assertEqual(SavedSignature.objects.filter(user=self.user).count(), 1)
+        self.assertTrue(first_response.json()["created"])
+        self.assertFalse(second_response.json()["created"])
+        self.assertEqual(
+            second_response.json()["message"],
+            "같은 손서명이 이미 보관함에 있습니다.",
+        )
 
     def test_roster_selection_submission_auto_matches_expected_participant(self):
         participant = ExpectedParticipant.objects.create(

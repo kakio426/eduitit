@@ -32,6 +32,7 @@ urlpatterns = [
     path("styles/save/", views.save_style_api, name="save_style_api"),
     path("api/save_image/", views.save_signature_image_api, name="save_image_api"),
     path("api/my_signatures/", views.get_my_signatures_api, name="get_my_signatures_api"),
+    path("api/my_signatures/<int:pk>/delete/", views.delete_saved_signature_api, name="delete_saved_signature_api"),
     path("styles/<int:pk>/delete/", views.delete_style_api, name="delete_style_api"),
     path("maker/", views.signature_maker, name="maker"),
     path("<uuid:uuid>/participants/add/", views.add_expected_participants, name="add_participants"),

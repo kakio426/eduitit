@@ -211,15 +211,29 @@
             </div>
 
             <div class="mb-6">
-                <div class="flex justify-between items-center mb-3">
+                <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-3">
                     <label class="block text-xl md:text-2xl font-black text-slate-700">
                         <i class="fa-solid fa-signature mr-1"></i> 서명
                     </label>
                     {% if user.is_authenticated %}
-                    <button type="button" onclick="openSignatureVault()"
-                        class="px-4 py-2 bg-indigo-100 text-indigo-600 rounded-xl font-bold hover:bg-indigo-200 transition">
-                        <i class="fa-solid fa-folder-open mr-1"></i>내 서명 불러오기
-                    </button>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" id="saveSignatureBtn"
+                            class="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-xl font-bold hover:bg-emerald-200 transition">
+                            <i class="fa-solid fa-floppy-disk mr-1"></i>이 손서명 저장
+                        </button>
+                        <button type="button" onclick="openSignatureVault()"
+                            class="px-4 py-2 bg-indigo-100 text-indigo-600 rounded-xl font-bold hover:bg-indigo-200 transition">
+                            <i class="fa-solid fa-folder-open mr-1"></i>저장한 손서명 불러오기
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="mb-4 rounded-[1.5rem] border border-indigo-100 bg-indigo-50/70 px-4 py-4">
+                    <p class="text-sm font-black text-slate-800">서명은 직접 손으로 써 주세요.</p>
+                    {% if user.is_authenticated %}
+                    <p class="mt-1 text-sm text-slate-600">지금 쓴 손서명을 보관함에 저장해 두면 다음번에도 바로 불러올 수 있습니다.</p>
+                    {% else %}
+                    <p class="mt-1 text-sm text-slate-600">로그인하면 지금 쓴 손서명을 보관함에 저장해 다음번에도 바로 불러올 수 있습니다.</p>
                     {% endif %}
                 </div>
                 <div class="signature-pad-wrapper">
@@ -230,7 +244,8 @@
                     </button>
                 </div>
                 {{ form.signature_data }}
-                <p class="mt-2 text-center text-sm text-slate-500">손가락이나 마우스로 위 칸에 서명해 주세요.</p>
+                <div id="signatureVaultNotice" class="hidden mt-3 rounded-2xl px-4 py-3 text-sm font-bold"></div>
+                <p class="mt-2 text-center text-sm text-slate-500">손가락, 펜, 마우스로 직접 이름 서명을 써 주세요.</p>
             </div>
 
             <div id="signatureModal"
@@ -240,7 +255,8 @@
                         class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
                         <i class="fa-solid fa-xmark text-2xl"></i>
                     </button>
-                    <h3 class="text-xl font-bold text-gray-800 mb-4">내 서명 보관함</h3>
+                    <h3 class="text-xl font-bold text-gray-800">내 손서명 보관함</h3>
+                    <p class="mt-2 text-sm text-slate-500">직접 써서 저장해 둔 서명만 다시 불러올 수 있습니다.</p>
                     <div id="signatureList" class="grid grid-cols-2 gap-4 max-h-60 overflow-y-auto p-2">
                     </div>
                 </div>
@@ -265,6 +281,43 @@
         penColor: 'rgb(30, 30, 30)',
     });
     const SIGNATURE_PAD_PADDING = 18;
+    const signatureModal = document.getElementById('signatureModal');
+    const signatureList = document.getElementById('signatureList');
+    const signatureVaultNotice = document.getElementById('signatureVaultNotice');
+    const saveSignatureBtn = document.getElementById('saveSignatureBtn');
+    const saveSignatureUrl = '{% url "signatures:save_image_api" %}';
+    const loadSignaturesUrl = '{% url "signatures:get_my_signatures_api" %}';
+    const deleteSignatureUrlTemplate = '{% url "signatures:delete_saved_signature_api" pk=0 %}';
+
+    function getSavedSignatureDeleteUrl(id) {
+        return deleteSignatureUrlTemplate.replace('/0/delete/', `/${id}/delete/`);
+    }
+
+    function showSignatureVaultNotice(message, tone = 'success') {
+        if (!signatureVaultNotice) return;
+        signatureVaultNotice.classList.remove(
+            'hidden',
+            'border',
+            'border-emerald-200',
+            'border-slate-200',
+            'border-red-200',
+            'bg-emerald-50',
+            'bg-slate-100',
+            'bg-red-50',
+            'text-emerald-700',
+            'text-slate-700',
+            'text-red-700',
+        );
+
+        if (tone === 'error') {
+            signatureVaultNotice.classList.add('border', 'border-red-200', 'bg-red-50', 'text-red-700');
+        } else if (tone === 'info') {
+            signatureVaultNotice.classList.add('border', 'border-slate-200', 'bg-slate-100', 'text-slate-700');
+        } else {
+            signatureVaultNotice.classList.add('border', 'border-emerald-200', 'bg-emerald-50', 'text-emerald-700');
+        }
+        signatureVaultNotice.textContent = message;
+    }
 
     function fitSignatureToPad(imageData) {
         return new Promise((resolve, reject) => {
@@ -321,6 +374,51 @@
 
     function clearSignature() {
         signaturePad.clear();
+    }
+
+    async function saveCurrentSignature() {
+        if (signaturePad.isEmpty()) {
+            alert('먼저 손으로 서명을 써 주세요.');
+            return;
+        }
+
+        if (saveSignatureBtn) {
+            saveSignatureBtn.disabled = true;
+            saveSignatureBtn.classList.add('opacity-60', 'cursor-not-allowed');
+        }
+
+        try {
+            const response = await fetch(saveSignatureUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}',
+                },
+                body: JSON.stringify({
+                    image_data: signaturePad.toDataURL('image/png'),
+                }),
+            });
+            let result = {};
+            try {
+                result = await response.json();
+            } catch (error) {
+                result = {};
+            }
+
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || '손서명을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+            }
+
+            showSignatureVaultNotice(result.message, result.created === false ? 'info' : 'success');
+        } catch (error) {
+            console.error(error);
+            showSignatureVaultNotice(error.message || '손서명을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.', 'error');
+        } finally {
+            if (saveSignatureBtn) {
+                saveSignatureBtn.disabled = false;
+                saveSignatureBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+            }
+        }
     }
 
     function setAffiliation(value) {
@@ -442,53 +540,143 @@
         signatureInput.value = signaturePad.toDataURL('image/png');
     });
 
+    function renderSignatureVault(signatures) {
+        if (!signatureList) return;
+        signatureList.innerHTML = '';
+
+        if (signatures && signatures.length > 0) {
+            signatures.forEach((sig) => {
+                const card = document.createElement('article');
+                card.className = 'col-span-2 rounded-2xl border border-slate-200 bg-slate-50 p-3';
+
+                const preview = document.createElement('div');
+                preview.className = 'rounded-xl bg-white p-3';
+
+                const img = document.createElement('img');
+                img.src = sig.image_data;
+                img.className = 'mx-auto h-20 w-full object-contain';
+                img.alt = '저장한 손서명';
+                preview.appendChild(img);
+
+                const meta = document.createElement('p');
+                meta.className = 'mt-3 text-xs font-semibold text-slate-500';
+                meta.textContent = `저장 시각 ${sig.created_at_display}`;
+
+                const actions = document.createElement('div');
+                actions.className = 'mt-3 flex gap-2';
+
+                const useButton = document.createElement('button');
+                useButton.type = 'button';
+                useButton.className = 'flex-1 rounded-xl bg-indigo-600 px-3 py-2 text-sm font-black text-white hover:bg-indigo-700 transition';
+                useButton.textContent = '이 서명 쓰기';
+                useButton.addEventListener('click', () => applySavedSignature(sig.image_data));
+
+                const deleteButton = document.createElement('button');
+                deleteButton.type = 'button';
+                deleteButton.className = 'rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-600 hover:border-red-200 hover:text-red-600 transition';
+                deleteButton.textContent = '삭제';
+                deleteButton.addEventListener('click', () => deleteSavedSignature(sig.id));
+
+                actions.appendChild(useButton);
+                actions.appendChild(deleteButton);
+
+                card.appendChild(preview);
+                card.appendChild(meta);
+                card.appendChild(actions);
+                signatureList.appendChild(card);
+            });
+        } else {
+            signatureList.innerHTML = '<p class="text-gray-400 col-span-2 text-center py-4">아직 저장한 손서명이 없습니다.</p>';
+        }
+    }
+
     async function openSignatureVault() {
         try {
-            const response = await fetch('{% url "signatures:get_my_signatures_api" %}');
-            const data = await response.json();
-
-            const list = document.getElementById('signatureList');
-            list.innerHTML = '';
-
-            if (data.signatures && data.signatures.length > 0) {
-                data.signatures.forEach(sig => {
-                    const div = document.createElement('div');
-                    div.className = 'border-2 border-slate-100 rounded-lg p-2 hover:border-indigo-500 cursor-pointer transition';
-                    div.onclick = () => applySavedSignature(sig.image_data);
-
-                    const img = document.createElement('img');
-                    img.src = sig.image_data;
-                    img.className = 'w-full h-auto object-contain bg-white';
-
-                    div.appendChild(img);
-                    list.appendChild(div);
-                });
-            } else {
-                list.innerHTML = '<p class="text-gray-400 col-span-2 text-center py-4">저장된 서명이 없습니다.</p>';
+            const response = await fetch(loadSignaturesUrl);
+            let data = {};
+            try {
+                data = await response.json();
+            } catch (error) {
+                data = {};
             }
 
-            document.getElementById('signatureModal').classList.remove('hidden');
-            document.getElementById('signatureModal').classList.add('flex');
+            if (!response.ok) {
+                throw new Error(data.error || '손서명 목록을 불러오지 못했습니다.');
+            }
+
+            renderSignatureVault(data.signatures || []);
+            signatureModal.classList.remove('hidden');
+            signatureModal.classList.add('flex');
         } catch (e) {
             console.error(e);
-            alert('서명 목록을 불러오는 중 오류가 발생했습니다.');
+            alert(e.message || '손서명 목록을 불러오는 중 오류가 발생했습니다.');
         }
     }
 
     function closeSignatureVaultModal() {
-        document.getElementById('signatureModal').classList.add('hidden');
-        document.getElementById('signatureModal').classList.remove('flex');
+        signatureModal.classList.add('hidden');
+        signatureModal.classList.remove('flex');
+    }
+
+    async function deleteSavedSignature(id) {
+        if (!confirm('이 손서명을 보관함에서 삭제할까요?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(getSavedSignatureDeleteUrl(id), {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                },
+            });
+            let result = {};
+            try {
+                result = await response.json();
+            } catch (error) {
+                result = {};
+            }
+
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || '손서명을 삭제하지 못했습니다.');
+            }
+
+            showSignatureVaultNotice('손서명을 보관함에서 삭제했습니다.', 'info');
+            await openSignatureVault();
+        } catch (error) {
+            console.error(error);
+            alert(error.message || '손서명을 삭제하지 못했습니다.');
+        }
     }
 
     function applySavedSignature(imageData) {
         fitSignatureToPad(imageData)
             .then(() => {
                 closeSignatureVaultModal();
+                showSignatureVaultNotice('저장한 손서명을 불러왔습니다.', 'success');
             })
             .catch((error) => {
                 console.error(error);
                 alert('저장된 서명을 화면에 맞게 불러오지 못했습니다.');
             });
     }
+
+    if (saveSignatureBtn) {
+        saveSignatureBtn.addEventListener('click', saveCurrentSignature);
+    }
+
+    if (signatureModal) {
+        signatureModal.addEventListener('click', (event) => {
+            if (event.target === signatureModal) {
+                closeSignatureVaultModal();
+            }
+        });
+    }
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && signatureModal && !signatureModal.classList.contains('hidden')) {
+            closeSignatureVaultModal();
+        }
+    });
 </script>
 {% endblock %}

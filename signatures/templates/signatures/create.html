@@ -27,16 +27,19 @@
                 <span class="rounded-full bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm">서명은 휴대폰에서도 가능합니다.</span>
                 <span class="rounded-full bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm">이 서비스는 학교 내부 참석 확인과 기록용입니다.</span>
             </div>
-            <div class="mt-4 flex flex-wrap items-center gap-2 text-sm text-slate-500">
-                <span class="font-bold text-slate-400">보조 도구</span>
-                <a href="{% url 'signatures:maker' %}"
-                    class="rounded-full bg-white px-3 py-1 font-bold text-slate-600 shadow-sm hover:text-indigo-700 transition">
-                    서명 메이커
-                </a>
-                <a href="{% url 'signatures:style_list' %}"
-                    class="rounded-full bg-white px-3 py-1 font-bold text-slate-600 shadow-sm hover:text-indigo-700 transition">
-                    저장한 스타일
-                </a>
+            <div class="mt-4 space-y-2 text-sm text-slate-500">
+                <p>직접 쓴 손서명은 참여 화면에서 저장해 두고, 폰트형 이름 이미지는 정말 급할 때만 보조 도구로 쓰는 흐름을 추천합니다.</p>
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="font-bold text-slate-400">보관함 & 보조 도구</span>
+                    <a href="{% url 'signatures:style_list' %}"
+                        class="rounded-full bg-white px-3 py-1 font-bold text-slate-600 shadow-sm hover:text-indigo-700 transition">
+                        내 서명 보관함
+                    </a>
+                    <a href="{% url 'signatures:maker' %}"
+                        class="rounded-full bg-white px-3 py-1 font-bold text-slate-600 shadow-sm hover:text-indigo-700 transition">
+                        이름 폰트 도구
+                    </a>
+                </div>
             </div>
         </section>
 

@@ -100,6 +100,30 @@ def _format_file_size(size):
     return f"{(value / (1024 * 1024)):.1f}MB"
 
 
+def _clean_saved_signature_image_data(raw_value):
+    value = str(raw_value or "").strip()
+    if not value:
+        raise ValueError("저장할 손서명이 없습니다.")
+    if len(value) > 2_000_000:
+        raise ValueError("서명 이미지가 너무 커서 저장할 수 없습니다. 다시 그려 주세요.")
+    prefix = "data:image/png;base64,"
+    if not value.startswith(prefix):
+        raise ValueError("저장할 서명 이미지를 다시 확인해 주세요.")
+    try:
+        base64.b64decode(value[len(prefix):], validate=True)
+    except Exception as exc:
+        raise ValueError("저장할 서명 이미지를 다시 확인해 주세요.") from exc
+    return value
+
+
+def _serialize_saved_signature(signature):
+    return {
+        "id": signature.id,
+        "image_data": signature.image_data,
+        "created_at_display": timezone.localtime(signature.created_at).strftime("%Y.%m.%d %H:%M"),
+    }
+
+
 def _safe_attachment_download_name(raw_name, *, fallback="attachment"):
     original = str(raw_name or "").strip()
     original_ext = Path(original).suffix or ""
@@ -2132,10 +2156,19 @@ def delete_signature(request, pk):
 
 @login_required
 def style_list(request):
-    """내 서명 스타일 즐겨찾기 목록"""
-    from .models import SignatureStyle
+    """내 서명 보관함"""
+    from .models import SavedSignature, SignatureStyle
+
+    saved_signatures = SavedSignature.objects.filter(user=request.user).order_by("-created_at")[:12]
     styles = SignatureStyle.objects.filter(user=request.user)
-    return render(request, 'signatures/style_list.html', {'styles': styles})
+    return render(
+        request,
+        'signatures/style_list.html',
+        {
+            'saved_signatures': saved_signatures,
+            'styles': styles,
+        },
+    )
 
 
 @login_required
@@ -2144,9 +2177,8 @@ def save_style_api(request):
     """스타일 즐겨찾기 저장 API"""
     try:
         data = json.loads(request.body)
-        from .models import SignatureStyle, SavedSignature
-        
-        # 스타일 저장
+        from .models import SignatureStyle
+
         SignatureStyle.objects.create(
             user=request.user,
             name=data.get('name', '내 서명 스타일'),
@@ -2155,13 +2187,6 @@ def save_style_api(request):
             background_color=data.get('background_color')
         )
 
-        # 이미지 데이터가 있으면 별도 저장 (선택)
-        if data.get('image_data'):
-            SavedSignature.objects.create(
-                user=request.user,
-                image_data=data.get('image_data')
-            )
-            
         return JsonResponse({'success': True})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
@@ -2174,11 +2199,25 @@ def save_signature_image_api(request):
     try:
         data = json.loads(request.body)
         from .models import SavedSignature
-        SavedSignature.objects.create(
-            user=request.user,
-            image_data=data.get('image_data')
+
+        image_data = _clean_saved_signature_image_data(data.get('image_data'))
+        saved_signature = SavedSignature.objects.filter(user=request.user, image_data=image_data).first()
+        created = False
+        if saved_signature is None:
+            saved_signature = SavedSignature.objects.create(
+                user=request.user,
+                image_data=image_data,
+            )
+            created = True
+
+        return JsonResponse(
+            {
+                'success': True,
+                'created': created,
+                'message': '손으로 쓴 서명을 보관함에 저장했습니다.' if created else '같은 손서명이 이미 보관함에 있습니다.',
+                'signature': _serialize_saved_signature(saved_signature),
+            }
         )
-        return JsonResponse({'success': True})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
@@ -2187,9 +2226,21 @@ def save_signature_image_api(request):
 def get_my_signatures_api(request):
     """내 저장된 서명 이미지 목록 가져오기"""
     from .models import SavedSignature
-    signatures = SavedSignature.objects.filter(user=request.user).order_by('-created_at')[:5]
-    data = [{'id': sig.id, 'image_data': sig.image_data} for sig in signatures]
+
+    signatures = SavedSignature.objects.filter(user=request.user).order_by('-created_at')[:8]
+    data = [_serialize_saved_signature(sig) for sig in signatures]
     return JsonResponse({'signatures': data})
+
+
+@login_required
+@require_POST
+def delete_saved_signature_api(request, pk):
+    """손서명 보관함 항목 삭제"""
+    from .models import SavedSignature
+
+    signature = get_object_or_404(SavedSignature, pk=pk, user=request.user)
+    signature.delete()
+    return JsonResponse({'success': True})
 
 
 @login_required
