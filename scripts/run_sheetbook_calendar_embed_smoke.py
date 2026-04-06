@@ -42,7 +42,8 @@ def _prepare_smoke_data() -> dict[str, Any]:
     from django.test import Client
     from django.utils import timezone
 
-    from core.models import UserProfile
+    from core.models import UserPolicyConsent, UserProfile
+    from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
     from sheetbook.models import SheetCell, SheetColumn, SheetRow, SheetTab, Sheetbook
 
     username = "sheetbook_calendar_smoke_admin"
@@ -74,6 +75,16 @@ def _prepare_smoke_data() -> dict[str, Any]:
         elif profile.role != "school":
             profile.role = "school"
             profile.save(update_fields=["role"])
+        UserPolicyConsent.objects.get_or_create(
+            user=user,
+            terms_version=TERMS_VERSION,
+            privacy_version=PRIVACY_VERSION,
+            defaults={
+                "provider": "direct",
+                "agreed_at": timezone.now(),
+                "agreement_source": "required_gate",
+            },
+        )
 
         sheetbook, _ = Sheetbook.objects.get_or_create(
             owner=user,
@@ -207,7 +218,63 @@ def _click_host_button(page, selector: str, timeout_ms: int = 15000) -> None:
     _click_locator(page.locator(selector), timeout_ms=timeout_ms)
 
 
-def _open_event_and_collect_source(page, event_title: str) -> dict[str, Any]:
+def _close_overlay_with_escape(page, selector: str, timeout_ms: int = 10000) -> bool:
+    locator = page.locator(selector).first
+    if locator.count() == 0 or not locator.is_visible():
+        return False
+    page.keyboard.press("Escape")
+    locator.wait_for(state="hidden", timeout=timeout_ms)
+    return True
+
+
+def _open_selected_day_overview(page, *, today: str) -> None:
+    selected_day = page.locator("#sheetbook-calendar-surface button.classcalendar-day-cell.bg-indigo-50:visible").first
+    if selected_day.count() and selected_day.is_visible():
+        _click_locator(selected_day, timeout_ms=10000)
+    else:
+        opened = page.evaluate(
+            """
+            (dateIso) => {
+                const root = document.querySelector('[data-classcalendar-surface="true"]');
+                if (!root) return false;
+                const alpine = window.Alpine;
+                const data = alpine && typeof alpine.$data === 'function'
+                    ? alpine.$data(root)
+                    : ((root.__x && root.__x.$data) || (root._x_dataStack && root._x_dataStack[0]) || null);
+                if (!data || typeof data.openDayOverview !== 'function') return false;
+                data.openDayOverview(new Date(`${dateIso}T12:00:00`));
+                return true;
+            }
+            """,
+            today,
+        )
+        if not opened:
+            raise RuntimeError("selected_day_overview_open_failed")
+    page.locator("[data-classcalendar-day-modal='true']").first.wait_for(state="visible", timeout=20000)
+
+
+def _open_event_and_collect_source(page, event_title: str, *, today: str) -> dict[str, Any]:
+    day_modal = page.locator("[data-classcalendar-day-modal='true']:visible").first
+    if day_modal.count() == 0:
+        _open_selected_day_overview(page, today=today)
+        day_modal = page.locator("[data-classcalendar-day-modal='true']:visible").first
+
+    if day_modal.count() and day_modal.is_visible():
+        source_link = day_modal.locator("a[href*='/sheetbook/']:visible").first
+        if source_link.count() == 0:
+            event_button = day_modal.get_by_role("button", name=re.compile(re.escape(event_title))).first
+            event_button.wait_for(state="visible", timeout=20000)
+            _click_locator(event_button, timeout_ms=10000)
+            source_link = day_modal.locator("a[href*='/sheetbook/']:visible").first
+        source_link.wait_for(state="visible", timeout=10000)
+        payload = {
+            "href": source_link.get_attribute("href"),
+            "target": source_link.get_attribute("target"),
+            "text": source_link.inner_text(timeout=2000).strip(),
+        }
+        _close_overlay_with_escape(page, "[data-classcalendar-day-modal='true']")
+        return payload
+
     surface = page.locator("#sheetbook-calendar-surface")
     event_button = surface.get_by_role("button", name=re.compile(re.escape(event_title))).first
     event_button.wait_for(state="visible", timeout=20000)
@@ -311,31 +378,47 @@ def _run_scenario(
     create_title = f"{label} create smoke"
     _click_host_button(page, "#sheetbook-calendar-create-btn")
     create_open_status = _wait_for_status(page, "일정 1건 추가 창을 열었어요.")
-    create_modal = page.locator("#sheetbook-calendar-surface div[x-show='createModalOpen']")
+    create_modal = page.locator("[data-classcalendar-day-modal='true']").first
     create_modal.wait_for(state="visible", timeout=20000)
     create_modal.locator("input[x-model='createForm.title']").fill(create_title, timeout=10000)
     _click_locator(create_modal.get_by_role("button", name="저장"), timeout_ms=10000)
     create_save_status = _wait_for_status(page, "일정을 저장했어요.")
-    create_source = _open_event_and_collect_source(page, create_title)
+    create_source = _open_event_and_collect_source(page, create_title, today=today)
 
     message_title = f"{label} message smoke"
+    message_hour_map = {
+        "desktop": 9,
+        "tablet": 10,
+        "mobile": 11,
+    }
+    message_start_hour = int(message_hour_map.get(label, 9))
+    message_end_hour = message_start_hour + 1
+    message_source_text = (
+        f"{today} {message_start_hour:02d}:00-{message_end_hour:02d}:00 "
+        f"{label} 학급 회의"
+    )
     _click_host_button(page, "#sheetbook-calendar-message-btn")
     message_open_status = _wait_for_status(page, "메시지 붙여넣기 창을 열었어요.")
-    message_modal = page.locator("#sheetbook-calendar-surface div[x-show='messageCaptureModalOpen']")
+    message_modal = page.locator(".classcalendar-message-hub-shell").first
     message_modal.wait_for(state="visible", timeout=20000)
     message_modal.locator("textarea[x-model='messageCaptureInputText']").fill(
-        "2026-03-22 09:00-10:00 학급 회의",
+        message_source_text,
         timeout=10000,
     )
-    _click_locator(message_modal.get_by_role("button", name="자동으로 읽기"), timeout_ms=10000)
-    message_confirm = page.locator("#sheetbook-calendar-surface input[x-model='messageCaptureDraft.title']")
+    _click_locator(message_modal.get_by_role("button", name="일정 만들기"), timeout_ms=10000)
+    message_confirm = message_modal.locator("input[x-model='candidate.title']:visible").first
+    if message_confirm.count() == 0 or not message_confirm.is_visible():
+        edit_button = message_modal.locator("button:visible").filter(has_text=re.compile("AI가 틀릴 때만 수정|수정")).first
+        _click_locator(edit_button, timeout_ms=10000)
+        message_confirm = message_modal.locator("input[x-model='candidate.title']:visible").first
     message_confirm.wait_for(state="visible", timeout=20000)
     message_confirm.fill(message_title, timeout=10000)
-    page.locator("#sheetbook-calendar-surface input[x-model='messageCaptureDraft.start_date']").fill(today, timeout=10000)
-    page.locator("#sheetbook-calendar-surface input[x-model='messageCaptureDraft.end_date']").fill(today, timeout=10000)
-    _click_locator(page.locator("#sheetbook-calendar-surface").get_by_role("button", name="이대로 저장"), timeout_ms=10000)
+    message_modal.locator("input[x-model='candidate.start_date']:visible").first.fill(today, timeout=10000)
+    message_modal.locator("input[x-model='candidate.end_date']:visible").first.fill(today, timeout=10000)
+    _click_locator(message_modal.get_by_role("button", name=re.compile("캘린더에 저장")).first, timeout_ms=10000)
     message_save_status = _wait_for_status(page, "메시지를 일정으로 저장했어요.")
-    message_source = _open_event_and_collect_source(page, message_title)
+    _close_overlay_with_escape(page, ".classcalendar-message-hub-shell")
+    message_source = _open_event_and_collect_source(page, message_title, today=today)
 
     result = {
         "scenario": label,

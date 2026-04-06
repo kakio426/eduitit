@@ -24,7 +24,7 @@ from core.mini_apps import (
 )
 from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
 from core.service_launcher import resolve_product_launch_url
-from core.views import _build_home_v4_representative_slots
+from core.views import HOME_V5_MOBILE_SECTION_ORDER, _build_home_v4_representative_slots
 from messagebox.developer_chat import get_or_create_developer_chat_thread, mark_thread_as_read
 from messagebox.models import DeveloperChatMessage
 from products.models import Product
@@ -55,6 +55,54 @@ def _create_posts(count=4, *, username='snsauthor'):
             )
         )
     return created_posts
+
+
+AUTHENTICATED_HOME_CONTEXT_KEYS = (
+    'sections',
+    'aux_sections',
+    'primary_display_sections',
+    'secondary_display_sections',
+    'games',
+    'favorite_items',
+    'favorite_product_ids',
+    'recent_items',
+    'discovery_items',
+    'quickdrop_home_card',
+    'schoolcomm_home_card',
+    'representative_slots',
+    'representative_recommendations',
+    'home_v4_nav_sections',
+    'home_v4_mobile_calendar_first_enabled',
+    'home_v4_mobile_quick_items',
+    'home_v5_mobile_section_order',
+    'home_v5_mobile_workbench_items',
+    'home_v5_mobile_recommend_items',
+    'developer_chat_home_card',
+    'reservation_home_card',
+    'home_calendar_surface',
+    'home_v2_frontend_config',
+    'home_design_version',
+    'community_summary',
+    'sns_preview_posts',
+    'teacher_buddy_panel',
+    'teacher_buddy_urls',
+    'teacher_buddy_current_avatar',
+    'messagebox_home_card',
+    'today_workspace',
+    'today_all_url',
+    'today_memo_url',
+    'today_review_url',
+)
+
+
+def _assert_authenticated_home_context_contract(testcase, response, *, design_version):
+    for key in AUTHENTICATED_HOME_CONTEXT_KEYS:
+        testcase.assertIn(key, response.context)
+    testcase.assertEqual(response.context['home_design_version'], design_version)
+    testcase.assertEqual(
+        tuple(response.context['home_v5_mobile_section_order']),
+        HOME_V5_MOBILE_SECTION_ORDER,
+    )
 
 
 @override_settings(HOME_V2_ENABLED=False)
@@ -2832,7 +2880,7 @@ class HomeV5ViewTest(TestCase):
         content = response.content.decode('utf-8')
 
         self.assertTemplateUsed(response, 'core/home_authenticated_v5.html')
-        self.assertEqual(response.context['home_design_version'], 'v5')
+        _assert_authenticated_home_context_contract(self, response, design_version='v5')
         self.assertIn('core/css/home_authenticated_v4.css', content)
         self.assertIn('core/css/home_authenticated_v5.css', content)
         self.assertIn('data-home-v5-shell="true"', content)
@@ -2859,6 +2907,33 @@ class HomeV5ViewTest(TestCase):
         self.assertNotIn('자주 여는 도구', content)
         self.assertNotIn('방금 하던 흐름', content)
         self.assertNotIn('이어서 쓰면 편한 것', content)
+
+    @patch('core.views.build_developer_chat_home_card_context', side_effect=RuntimeError('developer chat boom'))
+    def test_v5_home_keeps_rendering_when_developer_chat_provider_fails(self, _mock_developer_chat):
+        user = self._login('v5developerchatfallback')
+        ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(response.status_code, 200)
+        _assert_authenticated_home_context_contract(self, response, design_version='v5')
+        self.assertEqual(response.context['developer_chat_home_card']['title'], '개발자야 도와줘')
+        self.assertIn('data-home-v4-developer-chat-card="desktop"', content)
+
+    @patch('classcalendar.views.build_calendar_surface_context', side_effect=RuntimeError('calendar boom'))
+    def test_v5_home_keeps_rendering_when_calendar_provider_fails(self, _mock_calendar_surface):
+        user = self._login('v5calendarfallback')
+        ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(response.status_code, 200)
+        _assert_authenticated_home_context_contract(self, response, design_version='v5')
+        self.assertIn('data-home-v5-mobile-calendar-panel="true"', content)
+        self.assertEqual(response.context['today_workspace']['today_event_count'], 0)
+        self.assertFalse(response.context['messagebox_home_card']['enabled'])
 
     def test_v5_mobile_workbench_renders_more_than_four_items(self):
         user = self._login('v5favoriteoverflow')
@@ -3099,7 +3174,7 @@ class HomeV6ViewTest(TestCase):
         first_subtitle = next(section['subtitle'] for section in nav_sections if section.get('subtitle'))
 
         self.assertTemplateUsed(response, 'core/home_authenticated_v5.html')
-        self.assertEqual(response.context['home_design_version'], 'v6')
+        _assert_authenticated_home_context_contract(self, response, design_version='v6')
         self.assertIn('core/css/home_authenticated_v5.css', content)
         self.assertIn('core/css/home_authenticated_v6.css', content)
         self.assertIn('data-home-layout-version="v6"', content)

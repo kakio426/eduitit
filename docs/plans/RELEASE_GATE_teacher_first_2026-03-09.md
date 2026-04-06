@@ -22,11 +22,11 @@
 ## Runtime Smoke
 ### Home / Workbench
 - 로그인 후 홈 진입
-- `내 작업대` 카드 1개 이상 노출
-- `작업대 정리` 진입 후 좌우 버튼으로 위치 변경
-- 키보드 좌우 화살표로 위치 변경
-- `이 조합 저장` 저장/적용
-- 추천 카드 `작업대에 추가`
+- `data-home-design-version="v6"` shell 노출
+- desktop/tablet `내 작업대`, `내 학교 예약`, `바로전송`, 캘린더 surface 노출
+- mobile `내 작업대 -> 캘린더 -> 바로전송 -> 예약 -> SNS` 순서 유지
+- 즐겨찾기 토글 on/off round trip 성공
+- quickdrop 직접 전송 성공
 - 무반응 버튼 없음
 
 ### Workflow Bundles

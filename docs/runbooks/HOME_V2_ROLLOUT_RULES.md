@@ -5,20 +5,22 @@ Owner: Web + Ops
 
 ## Default Policy
 
-- `HOME_V2_ENABLED` default is `True` in both `config/settings.py` and `config/settings_production.py`.
-- `HOME_LAYOUT_VERSION` can pin `v1`, `v2`, `v4`, or `v5`.
-- V2 is treated as the baseline home experience unless explicitly overridden via `HOME_LAYOUT_VERSION`.
+- `HOME_V2_ENABLED` default is `True` in both `config/settings.py` and `config/settings_production.py`, but it only acts as a legacy fallback for `v1/v2` when `HOME_LAYOUT_VERSION` is empty.
+- `HOME_LAYOUT_VERSION` can pin `v1`, `v2`, `v4`, `v5`, or `v6`.
+- `v5/v6` should be selected explicitly with `HOME_LAYOUT_VERSION`; they do not use `HOME_V2_ENABLED` for activation.
 
 ## Rollback Policy
 
-- Emergency rollback: set `HOME_V2_ENABLED=False` and redeploy.
+- Emergency rollback for legacy `v2`: set `HOME_V2_ENABLED=False` and redeploy.
+- Emergency rollback for `v5/v6`: pin `HOME_LAYOUT_VERSION` back to the previous stable version and redeploy.
 - Partial rollback for search only: set `GLOBAL_SEARCH_ENABLED=False`.
 - Tablet policy rollback: set `ALLOW_TABLET_ACCESS=False` if tablet layout issues are found.
 
 ## Release Checklist
 
 1. Confirm env flags:
-   - `HOME_V2_ENABLED`
+   - `HOME_LAYOUT_VERSION`
+   - `HOME_V2_ENABLED` only if `HOME_LAYOUT_VERSION` is unset
    - `GLOBAL_SEARCH_ENABLED`
    - `ALLOW_TABLET_ACCESS`
 2. Apply DB migrations:
@@ -36,9 +38,10 @@ Owner: Web + Ops
 
 ## Fast Incident Decision Tree
 
-1. Home-wide V2 issue: flip `HOME_V2_ENABLED=False`.
-2. Search-only issue: flip `GLOBAL_SEARCH_ENABLED=False`.
-3. Tablet-specific issue: flip `ALLOW_TABLET_ACCESS=False` and keep V2 enabled.
+1. Home-wide `v5/v6` issue: pin `HOME_LAYOUT_VERSION` to the last stable version.
+2. Home-wide legacy `v2` issue: flip `HOME_V2_ENABLED=False`.
+3. Search-only issue: flip `GLOBAL_SEARCH_ENABLED=False`.
+4. Tablet-specific issue: flip `ALLOW_TABLET_ACCESS=False`.
 
 ## UX-05~07 Dependencies
 

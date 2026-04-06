@@ -312,6 +312,46 @@ def _get_teacher_buddy_home_context(user):
     }
 
 
+def _build_home_surface_developer_chat_card_fallback(user):
+    return {
+        'enabled': bool(getattr(user, 'is_authenticated', False)),
+        'title': '개발자야 도와줘',
+        'summary': '',
+        'cta_label': '메시지 열기',
+        'url': reverse('messagebox:developer_chat'),
+        'preview_threads': [],
+        'is_admin': False,
+        'unread_count': 0,
+        'unread_thread_count': 0,
+    }
+
+
+def _build_home_surface_teacher_buddy_provider(user):
+    try:
+        return _get_teacher_buddy_home_context(user)
+    except Exception:
+        logger.exception(
+            '[home surface] teacher buddy provider failed user_id=%s',
+            getattr(user, 'id', None),
+        )
+        return {
+            'teacher_buddy_panel': None,
+            'teacher_buddy_urls': {},
+            'teacher_buddy_current_avatar': build_teacher_buddy_avatar_context(user) if getattr(user, 'is_authenticated', False) else None,
+        }
+
+
+def _build_home_surface_developer_chat_provider(user):
+    try:
+        return build_developer_chat_home_card_context(user)
+    except Exception:
+        logger.exception(
+            '[home surface] developer chat provider failed user_id=%s',
+            getattr(user, 'id', None),
+        )
+        return _build_home_surface_developer_chat_card_fallback(user)
+
+
 def _get_sns_compose_prefill(request):
     return str(request.GET.get('compose') or '').strip()
 
@@ -2963,23 +3003,152 @@ def _home_public_v6(request, products, posts, page_obj, feed_scope, pinned_notic
     )
 
 
-def _build_home_authenticated_v4_response(
+def _build_home_surface_reservation_provider(user):
+    try:
+        return _build_home_reservation_card(user)
+    except Exception:
+        logger.exception(
+            '[home surface] reservation provider failed user_id=%s',
+            getattr(user, 'id', None),
+        )
+        return None
+
+
+def _build_home_surface_quickdrop_provider(request, *, favorite_products, product_list):
+    try:
+        return _build_home_quickdrop_card(
+            request.user,
+            favorite_products=favorite_products,
+            product_list=product_list,
+        )
+    except Exception:
+        logger.exception(
+            '[home surface] quickdrop provider failed user_id=%s',
+            getattr(request.user, 'id', None),
+        )
+        return None
+
+
+def _build_home_surface_calendar_fallback(request):
+    home_surface_url = _home_calendar_surface_url()
+    calendar_center_url = _safe_reverse('classcalendar:center') or home_surface_url
+    calendar_api_base_url = _safe_reverse('classcalendar:main')
+    today_key = timezone.localdate().isoformat()
+    empty_messagebox_home_card = {
+        'enabled': False,
+        'title': 'AI 업무 메시지 보관함',
+        'description': '',
+        'primary_action_label': '새 메시지 보관',
+        'url': '',
+    }
+    today_workspace = {
+        'date_label': '오늘',
+        'date_key': today_key,
+        'focus_heading': '',
+        'focus_description': '',
+        'focus_empty_message': '오늘 일정이 없습니다.',
+        'today_event_count': 0,
+        'today_task_count': 0,
+        'today_events': [],
+        'today_memos': [],
+        'review_groups': [],
+        'has_items': False,
+        'today_all_url': home_surface_url,
+        'today_memo_url': home_surface_url,
+        'today_review_url': home_surface_url,
+    }
+    return {
+        'service': None,
+        'title': '학급 캘린더',
+        'events_json': [],
+        'tasks_json': [],
+        'hub_items_json': [],
+        'day_markers_json': {},
+        'integration_settings_json': {},
+        'reservation_windows': [],
+        'share_enabled': False,
+        'share_url': '',
+        'calendar_owner_options_json': [],
+        'owner_collaborators': [],
+        'incoming_calendars': [],
+        'message_capture_enabled': False,
+        'message_capture_item_types_enabled': False,
+        'message_capture_limits_json': {
+            'max_files': 0,
+            'max_file_bytes': 0,
+            'allowed_extensions': [],
+        },
+        'message_capture_urls_json': {
+            'parse': '',
+            'save': '',
+            'archive': '',
+            'parse_saved_template': '',
+            'archive_detail_template': '',
+            'link_template': '',
+            'commit_template': '',
+            'complete_template': '',
+            'delete_template': '',
+            'messagebox_main': '',
+        },
+        'messagebox_home_card': empty_messagebox_home_card,
+        'calendar_page_variant': 'main',
+        'today_workspace': today_workspace,
+        'today_url': home_surface_url,
+        'today_focus': 'all',
+        'today_all_url': home_surface_url,
+        'today_memo_url': home_surface_url,
+        'today_review_url': home_surface_url,
+        'main_url': calendar_center_url,
+        'calendar_center_url': calendar_center_url,
+        'home_surface_url': home_surface_url,
+        'calendar_page_url': home_surface_url,
+        'calendar_api_base_url': calendar_api_base_url,
+        'initial_selected_date': today_key,
+        'initial_open_create': False,
+        'initial_open_event_id': '',
+        'initial_open_task_id': '',
+        'initial_focus_search': False,
+        'initial_search_query': '',
+        'embedded_sheetbook_context': None,
+        'embedded_sheetbook_context_json': {},
+        'calendar_embed_mode': 'home',
+        'is_embedded_in_sheetbook': False,
+        'is_embedded_on_home': True,
+        'hide_navbar': False,
+    }
+
+
+def _build_home_surface_calendar_provider(request):
+    try:
+        from classcalendar.views import build_calendar_surface_context
+
+        return build_calendar_surface_context(
+            request,
+            page_variant='main',
+            embedded_surface='home',
+        )
+    except Exception:
+        logger.exception(
+            '[home surface] calendar provider failed user_id=%s',
+            getattr(request.user, 'id', None),
+        )
+        return _build_home_surface_calendar_fallback(request)
+
+
+def build_home_surface_context(
     request,
-    products,
-    posts,
-    page_obj,
-    feed_scope,
-    pinned_notice_posts,
     *,
-    template_name='core/home_authenticated_v4.html',
-    home_design_version='v4',
+    products,
+    page_obj,
+    pinned_notice_posts,
+    feed_scope,
+    home_design_version,
 ):
-    """환경변수로 안전하게 롤아웃하는 인증 홈 공통 응답."""
     product_list = _attach_product_launch_meta(list(products), user=request.user)
     section_product_list = [
         product
         for product in product_list
-        if str(getattr(product, "launch_route_name", "") or "").strip().lower() != "messagebox:main"
+        if str(getattr(product, 'launch_route_name', '') or '').strip().lower() != 'messagebox:main'
     ]
     sections, aux_sections, games = get_purpose_sections(
         section_product_list,
@@ -3058,20 +3227,26 @@ def _build_home_authenticated_v4_response(
         include_section_meta=True,
         user=request.user,
     )
-    schoolcomm_home_card = _build_home_schoolcomm_card(
-        request.user,
-        favorite_products=favorite_products,
-        product_list=product_list,
-    )
-    quickdrop_home_card = _build_home_quickdrop_card(
-        request.user,
-        favorite_products=favorite_products,
-        product_list=product_list,
-    )
     discovery_items = _build_product_link_items(
         discovery_products,
         include_section_meta=True,
         user=request.user,
+    )
+    provider_cards = {
+        'reservation_home_card': _build_home_surface_reservation_provider(request.user),
+        'developer_chat_home_card': _build_home_surface_developer_chat_provider(request.user),
+        'teacher_buddy': _build_home_surface_teacher_buddy_provider(request.user),
+        'quickdrop_home_card': _build_home_surface_quickdrop_provider(
+            request,
+            favorite_products=favorite_products,
+            product_list=product_list,
+        ),
+        'calendar': _build_home_surface_calendar_provider(request),
+    }
+    schoolcomm_home_card = _build_home_schoolcomm_card(
+        request.user,
+        favorite_products=favorite_products,
+        product_list=product_list,
     )
     representative_slots = _build_home_v4_representative_slots(
         request.user,
@@ -3116,22 +3291,40 @@ def _build_home_authenticated_v4_response(
             for item in discovery_items[:4]
             if item.get('href')
         ]
-    developer_chat_home_card = build_developer_chat_home_card_context(request.user)
-    reservation_home_card = _build_home_reservation_card(request.user)
-
-    from classcalendar.views import build_calendar_surface_context
-
-    home_calendar_surface = build_calendar_surface_context(
-        request,
-        page_variant='main',
-        embedded_surface='home',
-    )
     home_v2_frontend_config = {
         'toggleFavoriteUrl': reverse('toggle_product_favorite'),
         'trackUsageUrl': reverse('track_product_usage'),
     }
-
-    return render(request, template_name, {
+    slots = {
+        'navigation': {
+            'sections': home_v4_nav_sections,
+            'mobile_section_order': HOME_V5_MOBILE_SECTION_ORDER,
+        },
+        'workbench': {
+            'favorite_items': favorite_items,
+            'favorite_product_ids': [product.id for product in favorite_products],
+            'recent_items': recent_items,
+            'mobile_items': home_v5_mobile_workbench_items,
+        },
+        'recommendations': {
+            'representative_slots': representative_slots,
+            'representative_recommendations': representative_recommendations,
+            'mobile_recommend_items': home_v5_mobile_recommend_items,
+            'discovery_items': discovery_items,
+        },
+        'cards': {
+            'schoolcomm_home_card': schoolcomm_home_card,
+            'quickdrop_home_card': provider_cards['quickdrop_home_card'],
+            'reservation_home_card': provider_cards['reservation_home_card'],
+            'developer_chat_home_card': provider_cards['developer_chat_home_card'],
+        },
+        'community': {
+            'community_summary': community_summary,
+            'sns_preview_posts': sns_preview_posts,
+        },
+        'calendar': provider_cards['calendar'],
+    }
+    legacy_context = {
         'products': products,
         'sections': sections,
         'aux_sections': aux_sections,
@@ -3139,10 +3332,10 @@ def _build_home_authenticated_v4_response(
         'secondary_display_sections': secondary_display_sections,
         'games': games,
         'favorite_items': favorite_items,
-        'favorite_product_ids': [product.id for product in favorite_products],
+        'favorite_product_ids': slots['workbench']['favorite_product_ids'],
         'recent_items': recent_items,
         'discovery_items': discovery_items,
-        'quickdrop_home_card': quickdrop_home_card,
+        'quickdrop_home_card': provider_cards['quickdrop_home_card'],
         'schoolcomm_home_card': schoolcomm_home_card,
         'representative_slots': representative_slots,
         'representative_recommendations': representative_recommendations,
@@ -3152,9 +3345,9 @@ def _build_home_authenticated_v4_response(
         'home_v5_mobile_section_order': HOME_V5_MOBILE_SECTION_ORDER,
         'home_v5_mobile_workbench_items': home_v5_mobile_workbench_items,
         'home_v5_mobile_recommend_items': home_v5_mobile_recommend_items,
-        'developer_chat_home_card': developer_chat_home_card,
-        'reservation_home_card': reservation_home_card,
-        'home_calendar_surface': home_calendar_surface,
+        'developer_chat_home_card': provider_cards['developer_chat_home_card'],
+        'reservation_home_card': provider_cards['reservation_home_card'],
+        'home_calendar_surface': provider_cards['calendar'],
         'home_v2_frontend_config': home_v2_frontend_config,
         'home_design_version': home_design_version,
         'community_summary': community_summary,
@@ -3164,11 +3357,39 @@ def _build_home_authenticated_v4_response(
         'pinned_notice_posts': pinned_notice_posts,
         'feed_scope': feed_scope,
         'sns_compose_prefill': _get_sns_compose_prefill(request),
-        **_get_teacher_buddy_home_context(request.user),
-        **_build_home_student_games_qr_context(request),
-        **home_calendar_surface,
-        **build_home_page_seo(request).as_context(),
-    })
+        'home_surface_slots': slots,
+    }
+    legacy_context.update(provider_cards['teacher_buddy'])
+    legacy_context.update(_build_home_student_games_qr_context(request))
+    legacy_context.update(provider_cards['calendar'])
+    legacy_context.update(build_home_page_seo(request).as_context())
+    return {
+        'slots': slots,
+        'legacy_context': legacy_context,
+    }
+
+
+def _build_home_authenticated_v4_response(
+    request,
+    products,
+    posts,
+    page_obj,
+    feed_scope,
+    pinned_notice_posts,
+    *,
+    template_name='core/home_authenticated_v4.html',
+    home_design_version='v4',
+):
+    """환경변수로 안전하게 롤아웃하는 인증 홈 공통 응답."""
+    home_surface = build_home_surface_context(
+        request,
+        products=products,
+        page_obj=page_obj,
+        pinned_notice_posts=pinned_notice_posts,
+        feed_scope=feed_scope,
+        home_design_version=home_design_version,
+    )
+    return render(request, template_name, home_surface['legacy_context'])
 
 
 def _home_v4(request, products, posts, page_obj, feed_scope, pinned_notice_posts):

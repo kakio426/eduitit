@@ -489,11 +489,10 @@ LOGGING = {
 # 배포 환경 변수에 MAINTENANCE_MODE=True 로 설정하면 작동합니다. 기본값은 False입니다.
 MAINTENANCE_MODE = os.getenv('MAINTENANCE_MODE', 'False') == 'True'
 AUTOARTICLE_EXPORT_LAYOUT = os.getenv('AUTOARTICLE_EXPORT_LAYOUT', 'v1')
-# Home layout rollout: set HOME_LAYOUT_VERSION to v1, v2, v4, or v5 to lock a version.
-# V5 is opt-in only so Railway/local can preview it and roll back to v4 immediately.
-# If unset, legacy HOME_V2_ENABLED fallback decides between v1 and v2.
+# Home layout rollout: set HOME_LAYOUT_VERSION to v1, v2, v4, v5, or v6 to lock a version.
+# If unset, legacy HOME_V2_ENABLED fallback still decides between v1 and v2 only.
 HOME_LAYOUT_VERSION = os.environ.get('HOME_LAYOUT_VERSION', '').strip().lower()
-# UX-04 rollout rule: V2 is default-on. Set HOME_V2_ENABLED=False for immediate rollback.
+# Legacy fallback flag for v1/v2 only. Keep until v1/v2 paths and rollback rules are retired.
 HOME_V2_ENABLED = os.environ.get('HOME_V2_ENABLED', 'True').lower() == 'true'
 # Mobile home V4 rollout: keep the current hamburger menu by default.
 # Set HOME_V4_MOBILE_CALENDAR_FIRST_ENABLED=True to switch mobile V4 to calendar-first quick tools.
