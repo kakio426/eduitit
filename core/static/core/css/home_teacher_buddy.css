@@ -443,19 +443,22 @@
 }
 
 .teacher-buddy-panel[data-panel-variant="v4"] .teacher-buddy-head,
-.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-head {
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-head,
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-head {
     flex-direction: column;
     align-items: flex-start;
 }
 
 .teacher-buddy-panel[data-panel-variant="v4"] .teacher-buddy-status-head,
-.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-status-head {
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-status-head,
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-status-head {
     flex-direction: column;
     align-items: flex-start;
 }
 
 .teacher-buddy-panel[data-panel-variant="v4"] .teacher-buddy-status-list,
-.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-status-list {
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-status-list,
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-status-list {
     grid-template-columns: minmax(0, 1fr);
 }
 
@@ -465,20 +468,209 @@
 }
 
 .teacher-buddy-panel[data-panel-variant="v4"] .teacher-buddy-title,
-.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-title {
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-title,
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-title {
     font-size: 1.22rem;
 }
 
 .teacher-buddy-panel[data-panel-variant="v4"] .teacher-buddy-status-inline-list,
-.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-status-inline-list {
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-status-inline-list,
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-status-inline-list {
     grid-template-columns: minmax(0, 1fr);
 }
 
 .teacher-buddy-panel[data-panel-variant="v4"] .teacher-buddy-primary,
 .teacher-buddy-panel[data-panel-variant="v4"] .teacher-buddy-secondary,
 .teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-primary,
-.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-secondary {
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-secondary,
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-primary,
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-secondary {
     width: 100%;
+}
+
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-card,
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-card {
+    padding: 0.95rem;
+    border-radius: 1.7rem;
+}
+
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-head,
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-head {
+    gap: 0.45rem;
+}
+
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-head-badges,
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-head-badges {
+    gap: 0.4rem;
+}
+
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-title,
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-title {
+    margin-top: 0;
+    font-size: 1.12rem;
+}
+
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-token,
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-token {
+    min-height: 1.9rem;
+    padding: 0.38rem 0.72rem;
+    font-size: 0.74rem;
+}
+
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-compact-hero,
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-compact-hero {
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+}
+
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-compact-ascii-box {
+    min-width: 6.15rem;
+    min-height: 6.9rem;
+    padding: 0.55rem 0.65rem;
+    border-radius: 1.15rem;
+}
+
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-compact-ascii-box {
+    min-width: 5.7rem;
+    min-height: 6.45rem;
+    padding: 0.5rem 0.58rem;
+    border-radius: 1.05rem;
+}
+
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-ascii--compact,
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-ascii--compact {
+    font-size: 0.67rem;
+    line-height: 1.08;
+}
+
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-compact-copy,
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-compact-copy {
+    gap: 0.28rem;
+    justify-content: center;
+    min-width: 0;
+}
+
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-meta--compact,
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-meta--compact {
+    gap: 0.35rem;
+}
+
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-name,
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-name {
+    font-size: 0.94rem;
+}
+
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-rarity,
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-rarity {
+    padding: 0.22rem 0.48rem;
+    font-size: 0.68rem;
+}
+
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-reaction--compact,
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-reaction--compact {
+    font-size: 0.85rem;
+    line-height: 1.38;
+    word-break: keep-all;
+    overflow-wrap: normal;
+}
+
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-copy--compact,
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-copy--compact {
+    margin-top: 0.72rem;
+}
+
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-status-stack {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9.2rem, 1fr));
+    align-items: stretch;
+    gap: 0.55rem;
+}
+
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-status-stack {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 0.5rem;
+}
+
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-status-inline-list,
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-status-inline-list {
+    display: contents;
+}
+
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-status-card,
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-status-card {
+    min-width: 0;
+    gap: 0.42rem;
+    padding: 0.78rem 0.82rem;
+    border-radius: 1.1rem;
+}
+
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-status-card--home {
+    grid-column: 1 / -1;
+}
+
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-status-head,
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-status-head {
+    gap: 0.18rem;
+}
+
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-status-label,
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-status-label {
+    font-size: 0.68rem;
+    white-space: nowrap;
+    overflow-wrap: normal;
+}
+
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-status-value,
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-status-value {
+    font-size: 0.78rem;
+    line-height: 1.35;
+    white-space: nowrap;
+    overflow-wrap: normal;
+}
+
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-status-value--primary,
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-status-value--primary {
+    font-size: 0.92rem;
+}
+
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-status-micro,
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-status-micro {
+    font-size: 0.72rem;
+    line-height: 1.32;
+    word-break: keep-all;
+    overflow-wrap: normal;
+}
+
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-progress-steps,
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-progress-steps {
+    gap: 0.35rem;
+}
+
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-progress-step,
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-progress-step {
+    height: 0.42rem;
+}
+
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-actions,
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-actions {
+    gap: 0.5rem;
+}
+
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-actions {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-primary,
+.teacher-buddy-panel[data-panel-variant="v5-desktop"] .teacher-buddy-secondary,
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-primary,
+.teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-secondary {
+    min-height: 2.55rem;
+    padding: 0.64rem 0.9rem;
+    border-radius: 0.95rem;
+    font-size: 0.84rem;
+    white-space: nowrap;
 }
 
 .teacher-buddy-actions,

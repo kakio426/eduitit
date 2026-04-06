@@ -236,6 +236,12 @@
                                 {% include 'core/partials/home_v4_nav_sections.html' with panel_name='desktop' %}
                             </div>
 
+                            {% if teacher_buddy_panel %}
+                            <section data-home-teacher-buddy-slot="v5-left-rail" data-home-v6-rail-card="true">
+                                {% include 'core/partials/home_teacher_buddy_panel.html' with panel_variant='v5-rail' %}
+                            </section>
+                            {% endif %}
+
                             {% if schoolcomm_home_card %}
                             {% include 'core/partials/home_schoolcomm_card.html' %}
                             {% endif %}
@@ -464,12 +470,6 @@
                                     <a href="{{ quickdrop_home_card.secondary_url|default:quickdrop_home_card.manage_url }}" class="home-v4-quickdrop-secondary">{{ quickdrop_home_card.secondary_label|default:"새 기기 추가" }}</a>
                                 </div>
                                 {% endif %}
-                            </section>
-                            {% endif %}
-
-                            {% if teacher_buddy_panel %}
-                            <section data-home-teacher-buddy-slot="v5-side" data-home-v6-rail-card="true">
-                                {% include 'core/partials/home_teacher_buddy_panel.html' with panel_variant='v5-desktop' %}
                             </section>
                             {% endif %}
 
