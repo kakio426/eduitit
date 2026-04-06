@@ -1,10 +1,12 @@
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from django.core.cache import cache
 from django.test import SimpleTestCase, TestCase, override_settings
 
+from teacher_law.services import law_api
 from teacher_law.services.chat import answer_legal_question
 from teacher_law.services.llm_client import _extract_json_payload
+from teacher_law.services.law_api import LawApiVerificationError
 from teacher_law.services.query_normalizer import QUICK_QUESTIONS, build_query_profile
 
 
@@ -29,6 +31,40 @@ class LlmPayloadParsingTests(SimpleTestCase):
             '먼저 정리했습니다.\n{"summary":"ok","action_items":["a"],"citations":[],"risk_level":"low","needs_human_help":false,"disclaimer":"d","scope_supported":true}\n이상입니다.'
         )
         self.assertEqual(payload["summary"], "ok")
+
+
+class LawApiRequestTests(SimpleTestCase):
+    @patch.dict("os.environ", {"LAW_API_OC": "test-oc"}, clear=False)
+    def test_request_falls_back_to_http_when_https_connection_fails(self):
+        success_response = Mock()
+        success_response.json.return_value = {"result": "success", "LawSearch": {"law": []}}
+
+        def fake_get(url, **kwargs):
+            if url.startswith("https://"):
+                raise law_api.requests.ConnectionError("connection reset by peer")
+            return success_response
+
+        with patch("teacher_law.services.law_api.requests.get", side_effect=fake_get) as request_mock:
+            payload = law_api._request("lawSearch.do", params={"target": "law"}, timeout_seconds=4)
+
+        self.assertEqual(payload["result"], "success")
+        attempted_urls = [call.args[0] for call in request_mock.call_args_list]
+        self.assertEqual(attempted_urls[0], "https://www.law.go.kr/DRF/lawSearch.do")
+        self.assertEqual(attempted_urls[1], "http://www.law.go.kr/DRF/lawSearch.do")
+
+    @patch.dict("os.environ", {"LAW_API_OC": "test-oc"}, clear=False)
+    def test_request_raises_verification_error_with_domain_ip_message(self):
+        verification_response = Mock()
+        verification_response.json.return_value = {
+            "result": "사용자 정보 검증에 실패하였습니다.",
+            "msg": "OPEN API 호출 시 사용자 검증을 위하여 정확한 서버장비의 IP주소 및 도메인주소를 등록해 주세요.",
+        }
+
+        with patch("teacher_law.services.law_api.requests.get", return_value=verification_response):
+            with self.assertRaises(LawApiVerificationError) as caught:
+                law_api._request("lawSearch.do", params={"target": "law"}, timeout_seconds=4)
+
+        self.assertIn("IP주소", str(caught.exception))
 
 
 @override_settings(

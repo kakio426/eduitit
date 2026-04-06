@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from datetime import timedelta
 
@@ -10,7 +11,12 @@ from django.utils import timezone
 from .query_normalizer import compact_text, normalize_for_matching
 
 
-API_BASE_URL = "https://www.law.go.kr/DRF"
+logger = logging.getLogger(__name__)
+
+API_BASE_URLS = (
+    "https://www.law.go.kr/DRF",
+    "http://www.law.go.kr/DRF",
+)
 
 
 class LawApiError(Exception):
@@ -53,6 +59,24 @@ def _as_list(value):
     return [value]
 
 
+def _candidate_base_urls() -> list[str]:
+    configured = str(os.environ.get("LAW_API_BASE_URL") or "").strip().rstrip("/")
+    candidates = []
+    if configured:
+        candidates.append(configured)
+    for base_url in API_BASE_URLS:
+        if base_url not in candidates:
+            candidates.append(base_url)
+    return candidates
+
+
+def _request_headers() -> dict[str, str]:
+    return {
+        "Accept": "application/json, text/plain, */*",
+        "User-Agent": "EduititTeacherLaw/1.0 (+https://eduitit.site)",
+    }
+
+
 def _request(endpoint: str, *, params: dict, timeout_seconds: int):
     oc = get_api_oc()
     if not oc:
@@ -63,25 +87,45 @@ def _request(endpoint: str, *, params: dict, timeout_seconds: int):
         "type": "JSON",
         **params,
     }
-    url = f"{API_BASE_URL}/{endpoint}"
-    try:
-        response = requests.get(url, params=request_params, timeout=timeout_seconds)
-    except requests.Timeout as exc:
-        raise LawApiTimeoutError("국가법령정보 응답이 지연되고 있습니다.") from exc
-    except requests.RequestException as exc:
-        raise LawApiError("국가법령정보에 연결하지 못했습니다.") from exc
+    last_error = None
+    attempted_urls = []
 
-    try:
-        payload = response.json()
-    except ValueError as exc:
-        raise LawApiError("국가법령정보 응답을 해석하지 못했습니다.") from exc
+    for base_url in _candidate_base_urls():
+        url = f"{base_url}/{endpoint}"
+        attempted_urls.append(url)
+        try:
+            response = requests.get(
+                url,
+                params=request_params,
+                headers=_request_headers(),
+                timeout=timeout_seconds,
+            )
+        except requests.Timeout as exc:
+            last_error = exc
+            continue
+        except requests.RequestException as exc:
+            last_error = exc
+            continue
 
-    error_text = compact_text(payload.get("msg") or payload.get("result") or "")
-    if error_text and "검증" in error_text:
-        raise LawApiVerificationError(error_text)
-    if error_text and error_text != "success":
-        raise LawApiError(error_text)
-    return payload
+        try:
+            payload = response.json()
+        except ValueError as exc:
+            last_error = exc
+            continue
+
+        error_text = compact_text(payload.get("msg") or payload.get("result") or "")
+        if error_text and "검증" in error_text:
+            raise LawApiVerificationError(error_text)
+        if error_text and error_text != "success":
+            raise LawApiError(error_text)
+        return payload
+
+    logger.warning("[TeacherLaw] law api request failed attempted_urls=%s", attempted_urls)
+    if isinstance(last_error, requests.Timeout):
+        raise LawApiTimeoutError("국가법령정보 응답이 지연되고 있습니다.") from last_error
+    if isinstance(last_error, ValueError):
+        raise LawApiError("국가법령정보 응답을 해석하지 못했습니다.") from last_error
+    raise LawApiError("국가법령정보에 연결하지 못했습니다.") from last_error
 
 
 def search_laws(query: str, *, search: int = 1, display: int | None = None) -> list[dict]:

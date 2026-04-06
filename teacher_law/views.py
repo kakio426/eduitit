@@ -280,15 +280,19 @@ def ask_question_api(request):
             return _json_error(message_text, status=503)
         messages.error(request, message_text)
         return redirect("teacher_law:main")
-    except LawApiVerificationError:
+    except LawApiVerificationError as exc:
+        verification_message = str(exc).strip()
         _persist_error_audit(
             session,
             user_message,
             question=question,
             failure_reason="law_api_verification",
-            error_message="law_api_domain_registration_required",
+            error_message=verification_message or "law_api_domain_registration_required",
         )
-        message_text = "법령 연결 점검이 필요합니다. 잠시 후 다시 시도해 주세요."
+        if "ip주소" in verification_message.lower() or "도메인주소" in verification_message.lower():
+            message_text = "국가법령정보에서 도메인 또는 서버 IP 검증에 실패했습니다. 등록 정보를 다시 확인해 주세요."
+        else:
+            message_text = verification_message or "법령 연결 점검이 필요합니다. 잠시 후 다시 시도해 주세요."
         if _is_json_request(request):
             return _json_error(message_text, status=503)
         messages.error(request, message_text)
