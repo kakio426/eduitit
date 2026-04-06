@@ -218,7 +218,8 @@ class SchoolcommViewTests(SchoolcommTestCase):
         self.assertContains(response, 'data-schoolcomm-chat-composer="true"')
         self.assertContains(response, 'data-schoolcomm-chat-reply-trigger="true"')
         self.assertContains(response, 'data-schoolcomm-chat-parent-input="true"')
-        self.assertContains(response, "카카오톡처럼 이어지는 대화 흐름")
+        self.assertNotContains(response, "카카오톡처럼 이어지는 대화 흐름")
+        self.assertNotContains(response, "확인 0")
         self.assertNotContains(response, 'data-schoolcomm-thread-panel="')
 
     def test_search_is_scoped_to_workspace(self):

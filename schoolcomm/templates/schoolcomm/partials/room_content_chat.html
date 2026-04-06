@@ -34,15 +34,6 @@
 
                 <div class="schoolcomm-chat-meta {% if item.is_mine %}is-mine{% endif %}">
                     <span>{{ item.created_at_label|default:item.created_at }}</span>
-                    <form method="post" action="{{ item.reaction_url }}">
-                        {% csrf_token %}
-                        <button
-                            type="submit"
-                            class="schoolcomm-chat-meta-button {% if item.acked_by_me %}is-acked{% endif %}"
-                        >
-                            확인 {{ item.ack_count }}
-                        </button>
-                    </form>
                     <button
                         type="button"
                         class="schoolcomm-chat-meta-button"

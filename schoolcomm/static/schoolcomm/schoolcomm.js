@@ -432,9 +432,30 @@
     }
 
     function initChatReplyComposer(root) {
-        if (!root.querySelector('[data-schoolcomm-chat-composer="true"]')) {
+        var composer = root.querySelector('[data-schoolcomm-chat-composer="true"]');
+        var textarea = root.querySelector('[data-schoolcomm-chat-composer-text="true"]');
+        if (!composer || !textarea) {
             return;
         }
+
+        textarea.addEventListener('keydown', function (event) {
+            if (event.key !== 'Enter') {
+                return;
+            }
+            if (event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) {
+                return;
+            }
+            if (event.isComposing || event.keyCode === 229) {
+                return;
+            }
+
+            event.preventDefault();
+            if (typeof composer.requestSubmit === 'function') {
+                composer.requestSubmit();
+                return;
+            }
+            composer.submit();
+        });
 
         root.addEventListener('click', function (event) {
             var replyTrigger = event.target.closest('[data-schoolcomm-chat-reply-trigger="true"]');
