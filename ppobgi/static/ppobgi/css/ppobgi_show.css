@@ -830,6 +830,208 @@
     background: linear-gradient(135deg, rgba(255, 212, 92, 0.36), rgba(255, 141, 115, 0.24));
 }
 
+.ppb-root.ppb-result-open .ppb-topbar,
+.ppb-root.ppb-result-open .ppb-mode-view:not(.is-hidden) {
+    filter: blur(24px) saturate(0.72);
+    opacity: 0.1;
+    pointer-events: none;
+    user-select: none;
+    transform: scale(0.985);
+    transform-origin: center top;
+    transition: filter 220ms ease, opacity 220ms ease, transform 220ms ease;
+}
+
+@media (min-width: 1280px) {
+    .ppr-shell {
+        grid-template-columns: minmax(0, 1.76fr) minmax(340px, 420px);
+        gap: 1.15rem;
+    }
+
+    .ppr-main {
+        padding: clamp(1.25rem, 1.75vw, 1.8rem);
+    }
+
+    .ppr-side-panel {
+        padding: clamp(1rem, 1.35vw, 1.25rem);
+        gap: 0.85rem;
+    }
+
+    .ppr-head {
+        gap: 1.1rem;
+        margin-top: 0.25rem;
+    }
+
+    .ppr-title {
+        font-size: clamp(2rem, 2.6vw, 2.82rem);
+        line-height: 1.04;
+    }
+
+    .ppr-guide {
+        max-width: 40rem;
+        font-size: 1.02rem;
+        line-height: 1.58;
+    }
+
+    .ppr-classroom-badge {
+        padding: 0.62rem 1rem;
+        font-size: 0.9rem;
+    }
+
+    .ppr-card-grid {
+        margin-top: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.05rem;
+    }
+
+    .ppr-card-inner {
+        min-height: clamp(18rem, 29vw, 21rem);
+    }
+
+    .ppr-card-face {
+        border-radius: 1.28rem;
+        padding: 1.24rem;
+        gap: 1rem;
+    }
+
+    .ppr-card-head {
+        gap: 1rem;
+    }
+
+    .ppr-card-icon {
+        width: 3rem;
+        height: 3rem;
+        border-radius: 1rem;
+        font-size: 1.38rem;
+    }
+
+    .ppr-card-slot {
+        font-size: 0.84rem;
+        line-height: 1.3;
+        text-align: right;
+    }
+
+    .ppr-card-title {
+        font-size: clamp(1.56rem, 1.18rem + 0.8vw, 2.2rem);
+        line-height: 1.1;
+        word-break: keep-all;
+        overflow-wrap: normal;
+    }
+
+    .ppr-card-hint {
+        font-size: 0.98rem;
+        line-height: 1.58;
+    }
+
+    .ppr-card-number {
+        font-size: 0.84rem;
+    }
+
+    .ppr-card-cta {
+        font-size: 0.96rem;
+        white-space: nowrap;
+    }
+
+    .ppr-card-back-label {
+        font-size: 0.8rem;
+    }
+
+    .ppr-card-assignee {
+        font-size: clamp(2.35rem, 3.9vw, 3.85rem);
+        line-height: 1.02;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .ppr-card-desc {
+        font-size: 1rem;
+        line-height: 1.58;
+    }
+
+    .ppr-card-status {
+        font-size: 0.94rem;
+    }
+
+    .ppr-live-role-name {
+        font-size: clamp(2rem, 2.3vw, 2.7rem);
+        line-height: 1.08;
+    }
+
+    .ppr-live-assignee {
+        font-size: 1.14rem;
+        line-height: 1.62;
+    }
+
+    .ppb-result-panel {
+        width: min(1120px, calc(100% - 2.4rem));
+        max-width: none;
+        padding: 2.6rem 2.55rem 2.35rem;
+    }
+
+    .ppb-result-badge {
+        min-height: 2.6rem;
+        margin-top: 1.1rem;
+        padding: 0.48rem 1.1rem;
+        font-size: 1rem;
+    }
+
+    .ppb-result-name {
+        font-size: clamp(4.2rem, 7vw, 7.6rem);
+        line-height: 0.96;
+    }
+
+    .ppb-result-compliment {
+        max-width: 44rem;
+        font-size: clamp(1.08rem, 1.5vw, 1.34rem);
+    }
+
+    .ppb-result-meta {
+        max-width: 42rem;
+        font-size: clamp(1.18rem, 1.7vw, 1.56rem);
+    }
+}
+
+@media (min-width: 1600px) and (min-height: 850px) {
+    .ppr-shell {
+        grid-template-columns: minmax(0, 1.82fr) minmax(380px, 470px);
+        gap: 1.35rem;
+    }
+
+    .ppr-main {
+        padding: 1.6rem;
+    }
+
+    .ppr-card-grid {
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 1.2rem;
+    }
+
+    .ppr-card-inner {
+        min-height: clamp(19.6rem, 26vw, 22.8rem);
+    }
+
+    .ppr-card-face {
+        padding: 1.38rem;
+    }
+
+    .ppr-card-title {
+        font-size: clamp(1.78rem, 1.28rem + 0.92vw, 2.46rem);
+    }
+
+    .ppr-card-assignee {
+        font-size: clamp(2.8rem, 4.3vw, 4.35rem);
+    }
+
+    .ppb-result-panel {
+        width: min(1240px, calc(100% - 3rem));
+        padding: 2.9rem 2.8rem 2.6rem;
+    }
+
+    .ppb-result-name {
+        font-size: clamp(5rem, 7.6vw, 8.4rem);
+    }
+}
+
 .ppb-is-fullscreen .ppb-host-console {
     padding: 0.75rem;
     gap: 0.6rem;
@@ -1163,23 +1365,25 @@
     padding: 0.48rem 0.72rem;
 }
 
-.ppb-result-panel {
-    max-width: min(540px, calc(100vw - 2rem));
-    padding: 1.45rem 1.25rem 1.25rem;
-}
+@media (max-width: 860px) {
+    .ppb-result-panel {
+        max-width: min(540px, calc(100vw - 2rem));
+        padding: 1.45rem 1.25rem 1.25rem;
+    }
 
-.ppb-result-source,
-.ppb-result-badge,
-.ppb-result-compliment {
-    display: none;
-}
+    .ppb-result-source,
+    .ppb-result-badge,
+    .ppb-result-compliment {
+        display: none;
+    }
 
-.ppb-result-name {
-    margin-top: 0.35rem;
-}
+    .ppb-result-name {
+        margin-top: 0.35rem;
+    }
 
-.ppb-result-meta {
-    margin-top: 0.4rem;
+    .ppb-result-meta {
+        margin-top: 0.4rem;
+    }
 }
 
 @media (max-width: 1180px) {

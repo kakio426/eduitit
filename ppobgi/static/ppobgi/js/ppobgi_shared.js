@@ -251,6 +251,19 @@
         };
     }
 
+    function buildSuspenseCopy(payload) {
+        const isRoleMode = payload.mode === "roles";
+        return {
+            name: isRoleMode ? "담당 학생 공개 준비 중" : "이름 공개 준비 중",
+            compliment: isRoleMode
+                ? "카드가 완전히 펼쳐질 때까지 담당 학생 이름은 숨겨 둡니다."
+                : "이름은 아직 숨겨 두고, 축하 연출이 시작되는 순간 크게 보여 줍니다.",
+            meta: payload.celebration === "finale"
+                ? "마지막 발표를 위한 긴장감을 모으고 있습니다."
+                : "지금은 결과 이름이 먼저 보이지 않도록 무대를 가리고 있습니다.",
+        };
+    }
+
     function clearPresentationTimers() {
         state.openTimers.forEach((timerId) => window.clearTimeout(timerId));
         state.openTimers = [];
@@ -330,6 +343,7 @@
         }
         clearPresentationTimers();
         const payload = normalizePresentation(detail);
+        const suspenseCopy = buildSuspenseCopy(payload);
         state.presentationDetail = payload;
         state.presentationOpen = true;
         setActionAvailability(false, payload);
@@ -347,13 +361,13 @@
             els.resultBadge.textContent = payload.badge;
         }
         if (els.resultName) {
-            els.resultName.textContent = payload.winnerName;
+            els.resultName.textContent = suspenseCopy.name;
         }
         if (els.resultCompliment) {
-            els.resultCompliment.textContent = payload.compliment;
+            els.resultCompliment.textContent = suspenseCopy.compliment;
         }
         if (els.resultMeta) {
-            els.resultMeta.textContent = payload.meta;
+            els.resultMeta.textContent = suspenseCopy.meta;
         }
         if (els.resultWait) {
             els.resultWait.hidden = false;
@@ -383,6 +397,15 @@
         state.openTimers.push(window.setTimeout(() => {
             if (!state.presentationOpen) {
                 return;
+            }
+            if (els.resultName) {
+                els.resultName.textContent = payload.winnerName;
+            }
+            if (els.resultCompliment) {
+                els.resultCompliment.textContent = payload.compliment;
+            }
+            if (els.resultMeta) {
+                els.resultMeta.textContent = payload.meta;
             }
             if (els.resultPhase) {
                 els.resultPhase.textContent = payload.celebration === "finale" ? "그랜드 피날레" : "축하합니다";
