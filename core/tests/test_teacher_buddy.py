@@ -692,6 +692,27 @@ class TeacherBuddyHomeRenderTests(TestCase):
         self.assertTrue(preview_posts)
         self.assertTrue(preview_posts[0].teacher_buddy_avatar_context["is_buddy"])
 
+    @override_settings(HOME_LAYOUT_VERSION="v5")
+    def test_v5_initial_feed_posts_keep_buddy_avatar_context(self):
+        staff_user = create_onboarded_user("buddyadmin")
+        staff_user.is_staff = True
+        staff_user.save(update_fields=["is_staff"])
+        record_teacher_buddy_progress(staff_user, Product.objects.first(), "home_quick")
+        Post.objects.create(
+            author=staff_user,
+            content="초기 홈 렌더에서도 게시글 카드 아바타가 유지돼야 합니다.",
+            post_type="general",
+        )
+        self.client.login(username="buddyhome", password="pass1234")
+
+        response = self.client.get(reverse("home"))
+
+        posts = response.context["posts"]
+        rendered_posts = list(getattr(posts, "object_list", posts))
+        self.assertTrue(rendered_posts)
+        self.assertTrue(hasattr(rendered_posts[0], "teacher_buddy_avatar_context"))
+        self.assertTrue(rendered_posts[0].teacher_buddy_avatar_context["is_buddy"])
+
     def test_company_role_hides_panel(self):
         company_user = create_onboarded_user("buddycompany", role="company")
         self.client.login(username="buddycompany", password="pass1234")
