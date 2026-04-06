@@ -181,11 +181,32 @@ class SchoolcommViewTests(SchoolcommTestCase):
             HTTP_X_REQUESTED_WITH="XMLHttpRequest",
         )
         self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["message"]["body"], "4월 10일 15:00 교무회의")
 
         self.client.force_login(self.member)
         summary = self.client.get(reverse("schoolcomm:api_notifications_summary"))
         self.assertEqual(summary.status_code, 200)
         self.assertGreaterEqual(summary.json()["summary"]["total_unread"], 1)
+
+    def test_chat_room_ajax_post_returns_json_without_redirect(self):
+        dm_room = get_or_create_dm_room(
+            self.workspace,
+            [self.owner_membership, self.member_membership],
+            created_by=self.owner,
+        )
+
+        self.client.force_login(self.owner)
+        response = self.client.post(
+            reverse("schoolcomm:api_room_messages", kwargs={"room_id": dm_room.id}),
+            {"text": "채팅 바로 보내기"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["status"], "success")
+        self.assertEqual(payload["message"]["body"], "채팅 바로 보내기")
+        self.assertEqual(payload["message"]["room_id"], str(dm_room.id))
 
     def test_room_fragment_refresh_returns_partial_content(self):
         create_room_message(self.shared_room, self.owner_membership, text="자료 확인 부탁드립니다")

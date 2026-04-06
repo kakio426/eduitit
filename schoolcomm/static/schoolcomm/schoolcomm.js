@@ -53,6 +53,17 @@
         };
     }
 
+    function getRoomRefreshState(root) {
+        if (!root._schoolcommRoomState) {
+            root._schoolcommRoomState = {
+                inFlight: false,
+                queued: false,
+                timerId: 0,
+            };
+        }
+        return root._schoolcommRoomState;
+    }
+
     function captureRoomUiState(fragment) {
         var state = {
             scrollTop: window.pageYOffset || window.scrollY || 0,
@@ -112,10 +123,11 @@
     }
 
     function refreshRoomFragment(root, roomState) {
+        roomState = roomState || getRoomRefreshState(root);
         var refreshUrl = root.getAttribute('data-schoolcomm-room-refresh-url') || '';
         var fragment = root.querySelector('[data-schoolcomm-room-fragment="true"]');
         if (!refreshUrl || !fragment) {
-            return Promise.resolve();
+            return Promise.resolve(false);
         }
 
         var uiState = captureRoomUiState(fragment);
@@ -134,9 +146,11 @@
             fragment.innerHTML = html;
             restoreRoomUiState(fragment, uiState);
             setRoomStatus(root, '', false);
+            return true;
         }).catch(function (error) {
             console.warn('[schoolcomm] failed to refresh room fragment', error);
             setRoomStatus(root, '새 메시지를 불러오지 못했습니다. 화면 새로고침 후 다시 확인해 주세요.', true);
+            return false;
         }).finally(function () {
             roomState.inFlight = false;
             if (roomState.queued) {
@@ -166,11 +180,7 @@
             return;
         }
 
-        var roomState = {
-            inFlight: false,
-            queued: false,
-            timerId: 0,
-        };
+        var roomState = getRoomRefreshState(root);
 
         var socket = new WebSocket(socketUrl);
         socket.onmessage = function (event) {
@@ -431,6 +441,98 @@
         }
     }
 
+    function requestFormSubmit(form) {
+        if (typeof form.requestSubmit === 'function') {
+            form.requestSubmit();
+            return;
+        }
+
+        var submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+        if (form.dispatchEvent(submitEvent)) {
+            form.submit();
+        }
+    }
+
+    function setChatComposerSubmitting(composer, textarea, isSubmitting) {
+        var submitButton = composer.querySelector('button[type="submit"]');
+        var fileInput = composer.querySelector('input[type="file"]');
+
+        composer.setAttribute('aria-busy', isSubmitting ? 'true' : 'false');
+        textarea.disabled = !!isSubmitting;
+        if (fileInput) {
+            fileInput.disabled = !!isSubmitting;
+        }
+        if (submitButton) {
+            submitButton.disabled = !!isSubmitting;
+            submitButton.classList.toggle('opacity-60', !!isSubmitting);
+            submitButton.classList.toggle('cursor-wait', !!isSubmitting);
+        }
+    }
+
+    function readComposerError(response) {
+        var fallbackMessage = '메시지를 보내지 못했습니다. 다시 확인해 주세요.';
+        var contentType = response.headers.get('content-type') || '';
+
+        if (contentType.indexOf('application/json') !== -1) {
+            return response.json().then(function (payload) {
+                return (payload && payload.error) || fallbackMessage;
+            }).catch(function () {
+                return fallbackMessage;
+            });
+        }
+
+        return response.text().then(function (text) {
+            var trimmed = (text || '').trim();
+            return trimmed || fallbackMessage;
+        }).catch(function () {
+            return fallbackMessage;
+        });
+    }
+
+    function submitChatComposer(root, composer, textarea) {
+        var roomState = getRoomRefreshState(root);
+        var formData = new FormData(composer);
+
+        setChatComposerSubmitting(composer, textarea, true);
+        setRoomStatus(root, '', false);
+
+        return window.fetch(composer.action, {
+            method: (composer.method || 'POST').toUpperCase(),
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                Accept: 'application/json',
+            },
+        }).then(function (response) {
+            if (response.ok) {
+                return response.json();
+            }
+            return readComposerError(response).then(function (message) {
+                throw new Error(message);
+            });
+        }).then(function (payload) {
+            composer.reset();
+            setChatReplyState(root, null);
+            return refreshRoomFragment(root, roomState).then(function (refreshed) {
+                if (!refreshed) {
+                    var redirectUrl = new URL(window.location.href);
+                    redirectUrl.hash = 'message-' + (payload.message && payload.message.id ? payload.message.id : '');
+                    window.location.assign(redirectUrl.toString());
+                    return;
+                }
+                if (typeof textarea.focus === 'function') {
+                    textarea.focus();
+                }
+            });
+        }).catch(function (error) {
+            var message = error && error.message ? error.message : '메시지를 보내지 못했습니다. 다시 확인해 주세요.';
+            setRoomStatus(root, message, true);
+            window.alert(message);
+        }).finally(function () {
+            setChatComposerSubmitting(composer, textarea, false);
+        });
+    }
+
     function initChatReplyComposer(root) {
         var composer = root.querySelector('[data-schoolcomm-chat-composer="true"]');
         var textarea = root.querySelector('[data-schoolcomm-chat-composer-text="true"]');
@@ -450,11 +552,15 @@
             }
 
             event.preventDefault();
-            if (typeof composer.requestSubmit === 'function') {
-                composer.requestSubmit();
+            requestFormSubmit(composer);
+        });
+
+        composer.addEventListener('submit', function (event) {
+            if (!window.fetch || !window.FormData) {
                 return;
             }
-            composer.submit();
+            event.preventDefault();
+            submitChatComposer(root, composer, textarea);
         });
 
         root.addEventListener('click', function (event) {
