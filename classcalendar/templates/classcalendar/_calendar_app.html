@@ -3454,12 +3454,14 @@ function calendarApp() {
                 await this.openEventDetailById(item.source_item_id);
                 return;
             }
+            const messageCaptureId = String(item.message_capture_id || item.messageCaptureId || '');
+            if (messageCaptureId) {
+                await this.openMessageArchiveCapture(messageCaptureId, triggerEvent);
+                return;
+            }
             if (item.source_url) {
                 window.location.href = item.source_url;
                 return;
-            }
-            if (item.messageCaptureId) {
-                await this.openMessageArchiveCapture(item.messageCaptureId, triggerEvent);
             }
         },
 

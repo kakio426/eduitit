@@ -389,25 +389,9 @@
                             placeholder="예) 3월 19일(목) 학부모총회가 실시됩니다. 12일(목)까지 연수물 수정 부탁드립니다."
                         ></textarea>
                     </div>
-                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <div>
-                            <label class="mb-1.5 block text-sm font-bold text-slate-700">다시 볼 날짜</label>
-                            <input
-                                x-model="messageCaptureLinkedDate"
-                                type="date"
-                                class="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                            >
-                        </div>
-                        <div>
-                            <label class="mb-1.5 block text-sm font-bold text-slate-700">다시 볼 메모</label>
-                            <input
-                                x-model="messageCaptureManualNote"
-                                type="text"
-                                maxlength="200"
-                                class="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                                placeholder="예) 점심시간 전에 확인"
-                            >
-                        </div>
+                    <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                        <p class="text-sm font-bold text-slate-900">AI가 날짜를 찾으면 그대로 바로 저장하면 됩니다.</p>
+                        <p class="mt-1 text-xs font-semibold text-slate-500">날짜가 틀릴 때만 다음 단계에서 고치면 돼요.</p>
                     </div>
                     <div>
                         <label class="mb-1.5 block text-sm font-bold text-slate-700">파일 첨부</label>
@@ -478,14 +462,44 @@
                         <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold" :class="messageCapturePredictionBadgeClass()" x-text="messageCapturePredictionText()"></span>
                     </div>
                 </div>
-                <div class="grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 sm:grid-cols-2">
-                    <div>
-                        <label class="mb-1 block text-xs font-bold text-slate-700">캘린더에 다시 띄울 날짜</label>
-                        <input x-model="messageCaptureLinkedDate" type="date" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+                    <div x-show="messageCaptureLinkedDate" class="space-y-3">
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                                <p class="text-sm font-extrabold text-slate-900">AI가 찾은 다시 볼 날짜</p>
+                                <p class="mt-1 text-xs font-semibold text-slate-500">맞으면 바로 저장하고, 틀릴 때만 아래에서 수정하세요.</p>
+                            </div>
+                            <span class="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700" x-text="formatMessageCaptureDay(messageCaptureLinkedDate)"></span>
+                        </div>
+                        <details class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                            <summary class="cursor-pointer text-sm font-bold text-slate-700">날짜나 메모가 틀릴 때만 수정</summary>
+                            <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <div>
+                                    <label class="mb-1 block text-xs font-bold text-slate-700">캘린더에 다시 띄울 날짜</label>
+                                    <input x-model="messageCaptureLinkedDate" type="date" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                </div>
+                                <div>
+                                    <label class="mb-1 block text-xs font-bold text-slate-700">다시 볼 메모</label>
+                                    <input x-model="messageCaptureManualNote" type="text" maxlength="200" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" placeholder="예) 수업 전 다시 확인">
+                                </div>
+                            </div>
+                        </details>
                     </div>
-                    <div>
-                        <label class="mb-1 block text-xs font-bold text-slate-700">다시 볼 메모</label>
-                        <input x-model="messageCaptureManualNote" type="text" maxlength="200" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" placeholder="예) 수업 전 다시 확인">
+                    <div x-show="!messageCaptureLinkedDate" class="space-y-3">
+                        <div>
+                            <p class="text-sm font-extrabold text-slate-900">AI가 다시 볼 날짜를 못 찾았어요.</p>
+                            <p class="mt-1 text-xs font-semibold text-slate-500">이 경우에만 날짜를 한 번 정해 주세요. 메모는 선택입니다.</p>
+                        </div>
+                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <div>
+                                <label class="mb-1 block text-xs font-bold text-slate-700">캘린더에 다시 띄울 날짜</label>
+                                <input x-model="messageCaptureLinkedDate" type="date" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                            </div>
+                            <div>
+                                <label class="mb-1 block text-xs font-bold text-slate-700">다시 볼 메모</label>
+                                <input x-model="messageCaptureManualNote" type="text" maxlength="200" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" placeholder="예) 수업 전 다시 확인">
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3" x-show="messageCaptureWarnings.length > 0">

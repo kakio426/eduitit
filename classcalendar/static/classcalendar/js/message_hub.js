@@ -1085,14 +1085,32 @@ function initCalendarMessageHub(host, options = {}) {
             };
         },
 
+        preferredMessageCaptureLinkedDate: function(candidates) {
+            const pool = Array.isArray(candidates) ? candidates : [];
+            const preferredCandidate = pool.find((candidate) => (
+                candidate.selected
+                && !candidate.already_saved
+                && String(candidate.start_date || candidate.end_date || '').trim()
+            )) || pool.find((candidate) => (
+                !candidate.already_saved
+                && String(candidate.start_date || candidate.end_date || '').trim()
+            )) || pool.find((candidate) => String(candidate.start_date || candidate.end_date || '').trim());
+            return preferredCandidate ? String(preferredCandidate.start_date || preferredCandidate.end_date || '').trim() : '';
+        },
+
         applyMessageCaptureResult: function(payload) {
+            const normalizedCandidates = Array.isArray(payload.candidates)
+                ? payload.candidates.map((candidate) => this.normalizeMessageCaptureCandidate(candidate))
+                : [];
+            const resolvedLinkedDate = String(payload.manual_date || '').trim()
+                || this.preferredMessageCaptureLinkedDate(normalizedCandidates);
             this.messageCaptureCaptureId = String(payload.capture_id || '');
             this.messageCaptureParseStatus = String(payload.parse_status || '');
             this.messageCaptureConfidenceScore = Number(payload.confidence_score || 0);
             this.messageCaptureConfidenceLabel = String(payload.confidence_label || 'low');
             this.messageCapturePredictedItemType = String(payload.predicted_item_type || 'event');
             this.messageCaptureSummaryText = String(payload.summary_text || '').trim();
-            this.messageCaptureLinkedDate = String(payload.manual_date || '').trim();
+            this.messageCaptureLinkedDate = resolvedLinkedDate;
             this.messageCaptureManualNote = String(payload.manual_note || '').trim();
             this.messageCaptureWarnings = Array.isArray(payload.warnings) ? payload.warnings : [];
             this.messageCaptureServerAttachments = Array.isArray(payload.attachments)
@@ -1102,9 +1120,7 @@ function initCalendarMessageHub(host, options = {}) {
                     size_bytes: Number(attachment.size_bytes || 0),
                 }))
                 : [];
-            this.messageCaptureCandidates = Array.isArray(payload.candidates)
-                ? payload.candidates.map((candidate) => this.normalizeMessageCaptureCandidate(candidate))
-                : [];
+            this.messageCaptureCandidates = normalizedCandidates;
             this.messageCaptureSavedMessage = '';
             this.messageCaptureSavedEvents = [];
             this.messageCaptureErrorText = '';
@@ -1306,8 +1322,10 @@ function initCalendarMessageHub(host, options = {}) {
                     } else {
                         window.showToast('바로 저장할 일정은 찾지 못했어요.', 'info');
                     }
+                } else if (this.messageCaptureLinkedDate) {
+                    window.showToast('AI가 찾은 날짜가 맞으면 바로 저장하고, 틀릴 때만 수정하세요.', 'success');
                 } else {
-                    window.showToast('캘린더에 다시 띄울 날짜를 확인해 주세요.', 'success');
+                    window.showToast('AI가 날짜를 못 잡아 한 번만 직접 정해 주세요.', 'info');
                 }
             } catch (error) {
                 this.messageCaptureErrorText = error.message || '메모 읽기에 실패했습니다.';
@@ -1416,11 +1434,14 @@ function initCalendarMessageHub(host, options = {}) {
                 window.showToast(this.messageCaptureErrorText, 'error');
                 return;
             }
-            if (!this.messageCaptureLinkedDate) {
-                this.messageCaptureErrorText = '다시 볼 날짜를 선택해 주세요.';
+            const resolvedLinkedDate = String(this.messageCaptureLinkedDate || '').trim()
+                || this.preferredMessageCaptureLinkedDate(this.messageCaptureCandidates);
+            if (!resolvedLinkedDate) {
+                this.messageCaptureErrorText = 'AI가 다시 볼 날짜를 못 잡았어요. 한 번만 날짜를 정해 주세요.';
                 window.showToast(this.messageCaptureErrorText, 'error');
                 return;
             }
+            this.messageCaptureLinkedDate = resolvedLinkedDate;
             const linkUrl = this.buildMessageCaptureLinkUrl(this.messageCaptureCaptureId);
             if (!linkUrl) {
                 this.messageCaptureErrorText = '메시지 저장 경로를 찾지 못했습니다.';
@@ -1437,7 +1458,7 @@ function initCalendarMessageHub(host, options = {}) {
                         'X-CSRFToken': this.getCsrfToken(),
                     },
                     body: JSON.stringify({
-                        manual_date: this.messageCaptureLinkedDate,
+                        manual_date: resolvedLinkedDate,
                         manual_note: this.messageCaptureManualNote || '',
                     }),
                 });

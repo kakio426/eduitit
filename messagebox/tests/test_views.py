@@ -30,6 +30,8 @@ class MessageboxViewTests(TestCase):
         response = self.client.get(reverse("messagebox:main"))
 
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["title"], "업무 메시지 보관함")
+        self.assertEqual(response.context["page_title"], "업무 메시지 보관함")
         self.assertContains(response, 'data-messagebox-root="true"')
         self.assertContains(response, 'data-messagebox-archive="true"')
         self.assertContains(response, 'id="messagebox-compose"')
@@ -44,6 +46,7 @@ class MessageboxViewTests(TestCase):
         self.assertContains(response, "자동으로 날짜 찾기")
         self.assertContains(response, "일정 날짜 정하기")
         self.assertContains(response, "보관만 하기")
+        self.assertContains(response, "AI가 날짜를 찾으면 다음 단계에서 바로 저장하면 됩니다.")
         self.assertContains(response, "다시 볼 날짜")
         self.assertContains(response, "다시 볼 메모")
         self.assertContains(response, "직접 일정 후보 추가")
@@ -118,4 +121,4 @@ class MessageboxViewTests(TestCase):
         self.assertTrue(card["enabled"])
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'data-messagebox-layout="true"')
-        self.assertNotContains(response, "AI 업무 메시지 보관함이 아직 열리지 않았습니다.")
+        self.assertNotContains(response, "업무 메시지 보관함이 아직 열리지 않았습니다.")

@@ -372,6 +372,15 @@ function messageboxPage(options = {}) {
                 });
                 return;
             }
+            if (this.initialCaptureId) {
+                this.focusMessageArchive({
+                    behavior: "auto",
+                    captureId: this.initialCaptureId,
+                    preferDetail: true,
+                    updateHash: false,
+                });
+                return;
+            }
             if (hash === "#messagebox-compose") {
                 this.focusMessageInput({ behavior: "auto", updateHash: false });
             }

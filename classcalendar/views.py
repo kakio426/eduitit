@@ -587,7 +587,7 @@ def build_messagebox_main_url(*, capture_id=""):
     capture_value = str(capture_id or "").strip()
     if not capture_value:
         return base_url
-    return f"{base_url}?capture={capture_value}"
+    return f"{base_url}?capture={capture_value}#messagebox-archive"
 
 
 def _build_message_capture_deep_link(capture_id):

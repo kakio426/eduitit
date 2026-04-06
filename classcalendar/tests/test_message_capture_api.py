@@ -874,7 +874,8 @@ class MessageCaptureApiTests(TestCase):
         self.assertEqual({item["capture_id"] for item in linked_items}, {str(linked_capture.id)})
         self.assertEqual({item["capture_id"] for item in done_items}, {str(done_capture.id)})
         self.assertEqual(dated_items[0]["workflow_status_label"], "날짜 정함")
-        self.assertTrue(dated_items[0]["messagebox_url"].endswith(f"?capture={dated_capture.id}"))
+        self.assertIn(f"?capture={dated_capture.id}", dated_items[0]["messagebox_url"])
+        self.assertTrue(dated_items[0]["messagebox_url"].endswith("#messagebox-archive"))
 
     def test_complete_toggle_marks_capture_done_and_updates_detail(self):
         capture = self._create_archive_capture(

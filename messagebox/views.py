@@ -28,6 +28,14 @@ from .developer_chat import (
 
 
 SERVICE_ROUTE = "messagebox:main"
+DEFAULT_SERVICE_TITLE = "AI 업무 메시지 보관함"
+
+
+def _messagebox_display_title(service):
+    base_title = service.title if service else DEFAULT_SERVICE_TITLE
+    if base_title.startswith("AI "):
+        return base_title[3:]
+    return base_title
 
 
 @login_required
@@ -36,10 +44,11 @@ def main_view(request):
     service = Product.objects.filter(launch_route_name=SERVICE_ROUTE).first()
     message_capture_ui = build_message_capture_ui_context(request.user)
     initial_capture_id = str(request.GET.get("capture") or "").strip()
+    display_title = _messagebox_display_title(service)
     context = {
         "service": service,
-        "title": service.title if service else "AI AI 업무 메시지 보관함",
-        "page_title": (service.title if service else "AI AI 업무 메시지 보관함"),
+        "title": display_title,
+        "page_title": display_title,
         "page_subtitle": "",
         "message_capture_enabled": message_capture_ui["enabled"],
         "message_capture_item_types_enabled": message_capture_ui["item_types_enabled"],

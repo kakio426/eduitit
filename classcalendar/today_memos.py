@@ -70,7 +70,7 @@ def _build_messagebox_capture_url(capture_id):
     if not capture_value:
         return ""
     try:
-        return f"{reverse('messagebox:main')}?capture={capture_value}"
+        return f"{reverse('messagebox:main')}?capture={capture_value}#messagebox-archive"
     except NoReverseMatch:
         return ""
 
