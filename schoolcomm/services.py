@@ -72,6 +72,7 @@ SERVICE_PRODUCT_DEFAULTS = {
     "result_text": "끼리끼리 채팅방",
     "time_text": "1분",
 }
+ADMIN_MANAGED_PRODUCT_FIELDS = {"is_active", "service_type", "display_order", "color_theme", "card_size"}
 NOTICE_ROOM_NAME = "공지"
 SHARED_ROOM_NAME = "자료공유"
 USER_SOCKET_GROUP_TEMPLATE = "schoolcomm-user-{user_id}"
@@ -265,6 +266,8 @@ def ensure_service_product():
             product.title = SERVICE_TITLE
             changed_fields.append("title")
         for field_name, value in SERVICE_PRODUCT_DEFAULTS.items():
+            if field_name in ADMIN_MANAGED_PRODUCT_FIELDS:
+                continue
             if getattr(product, field_name) != value:
                 setattr(product, field_name, value)
                 changed_fields.append(field_name)

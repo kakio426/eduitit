@@ -2177,6 +2177,29 @@ class HomeV4ViewTest(TestCase):
         self.assertIn(f'action="{reverse("quickdrop:send_text", kwargs={"slug": channel.slug})}"', content)
         self.assertTrue(Product.objects.filter(launch_route_name='quickdrop:landing', title='바로전송').exists())
 
+    def test_v4_home_keeps_hidden_quickdrop_hidden(self):
+        user = self._login('v4quickdrophidden')
+        ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
+        hidden_quickdrop = Product.objects.create(
+            title='바로전송',
+            description='빠른 전송',
+            price=0,
+            is_active=False,
+            service_type='classroom',
+            launch_route_name='quickdrop:landing',
+            icon='fa-solid fa-bolt',
+        )
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        from quickdrop.models import QuickdropChannel
+
+        hidden_quickdrop.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(hidden_quickdrop.is_active)
+        self.assertNotIn('data-home-v4-quickdrop-panel="true"', content)
+        self.assertFalse(QuickdropChannel.objects.filter(owner=user).exists())
+
     def test_v4_home_quickdrop_card_shows_latest_text_summary_without_status_copy(self):
         user = self._login('v4quickdropsummary')
         product = Product.objects.create(

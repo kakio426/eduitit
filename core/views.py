@@ -912,12 +912,16 @@ def _build_home_quickdrop_card(user, favorite_products, product_list):
     )
     if quickdrop_product is None:
         try:
-            from quickdrop.services import ensure_service_product
+            from quickdrop.services import ensure_service_product, get_service
 
-            quickdrop_product = ensure_service_product()
+            quickdrop_product = get_service()
+            if quickdrop_product is None:
+                quickdrop_product = ensure_service_product()
         except Exception:
             logger.exception("[home quickdrop] failed to ensure quickdrop product")
             return None
+    if quickdrop_product is None or not getattr(quickdrop_product, "is_active", False):
+        return None
 
     summary = ""
     has_recent_item = False

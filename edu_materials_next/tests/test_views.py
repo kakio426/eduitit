@@ -142,3 +142,28 @@ class EduMaterialsNextViewTests(TestCase):
         self.assertEqual(product.title, "AI 자료실 Next")
         self.assertTrue(manual.is_published)
         self.assertGreaterEqual(ManualSection.objects.filter(manual=manual).count(), 3)
+
+    def test_ensure_command_keeps_existing_product_hidden(self):
+        Product.objects.filter(launch_route_name="edu_materials_next:main").delete()
+
+        Product.objects.create(
+            title="legacy next",
+            description="legacy",
+            price=0,
+            is_active=False,
+            service_type="work",
+            display_order=77,
+            color_theme="blue",
+            card_size="hero",
+            launch_route_name="edu_materials_next:main",
+        )
+
+        call_command("ensure_edu_materials_next")
+
+        product = Product.objects.get(launch_route_name="edu_materials_next:main")
+        self.assertEqual(product.title, "AI 자료실 Next")
+        self.assertFalse(product.is_active)
+        self.assertEqual(product.service_type, "work")
+        self.assertEqual(product.display_order, 77)
+        self.assertEqual(product.color_theme, "blue")
+        self.assertEqual(product.card_size, "hero")

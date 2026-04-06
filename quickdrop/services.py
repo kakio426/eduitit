@@ -42,6 +42,7 @@ SERVICE_PRODUCT_DEFAULTS = {
     "result_text": "개인 전용 즉시 전송 통로",
     "time_text": "10초",
 }
+ADMIN_MANAGED_PRODUCT_FIELDS = {"is_active", "service_type", "display_order", "color_theme", "card_size"}
 DEVICE_COOKIE_NAME = "quickdrop_device"
 DEVICE_COOKIE_PATH = "/quickdrop/"
 DEVICE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365
@@ -103,6 +104,8 @@ def ensure_service_product():
         product.title = SERVICE_TITLE
         changed_fields.append("title")
     for field_name, value in SERVICE_PRODUCT_DEFAULTS.items():
+        if field_name in ADMIN_MANAGED_PRODUCT_FIELDS:
+            continue
         if getattr(product, field_name) != value:
             setattr(product, field_name, value)
             changed_fields.append(field_name)
@@ -112,7 +115,7 @@ def ensure_service_product():
 
 
 def get_service():
-    return ensure_service_product()
+    return _find_service_product()
 
 
 def history_day_start(now=None):
