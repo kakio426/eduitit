@@ -27,7 +27,7 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
-                <a href="{% url 'handoff:dashboard' %}" class="px-4 py-2 rounded-xl bg-white text-gray-600 font-bold shadow-clay">
+                <a href="{{ dashboard_url }}" class="px-4 py-2 rounded-xl bg-white text-gray-600 font-bold shadow-clay">
                     <i class="fa-solid fa-arrow-left mr-1"></i>대시보드
                 </a>
                 <a href="{% url 'handoff:session_edit' session.id %}" class="px-4 py-2 rounded-xl bg-white text-gray-700 font-bold border border-gray-200">

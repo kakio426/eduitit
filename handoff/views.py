@@ -4,6 +4,7 @@ from typing import Iterable
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
@@ -26,6 +27,9 @@ from .forms import (
 from .models import HandoffReceipt, HandoffRosterGroup, HandoffRosterMember, HandoffSession
 from .shared_roster import normalize_phone_last4, roster_service_summary
 
+HANDOFF_PROXY_MANAGER_USERNAMES = {"kakio"}
+User = get_user_model()
+
 
 def _get_service():
     return (
@@ -38,6 +42,91 @@ def _wants_json(request):
     accept = request.headers.get("Accept", "")
     requested_with = request.headers.get("X-Requested-With", "")
     return requested_with == "XMLHttpRequest" or "application/json" in accept
+
+
+def _is_handoff_proxy_manager(user):
+    return bool(
+        getattr(user, "is_authenticated", False)
+        and user.is_superuser
+        and user.username in HANDOFF_PROXY_MANAGER_USERNAMES
+    )
+
+
+def _get_handoff_proxy_target_queryset(current_user):
+    if not _is_handoff_proxy_manager(current_user):
+        return User.objects.none()
+
+    return (
+        User.objects.filter(is_active=True)
+        .exclude(pk=current_user.pk)
+        .exclude(is_staff=True)
+        .exclude(is_superuser=True)
+        .select_related("userprofile")
+        .order_by("userprofile__nickname", "username")
+        .distinct()
+    )
+
+
+def _get_handoff_proxy_target_user(current_user, raw_user_id):
+    raw_user_id = str(raw_user_id or "").strip()
+    if not raw_user_id or not _is_handoff_proxy_manager(current_user):
+        return None
+    try:
+        return _get_handoff_proxy_target_queryset(current_user).filter(pk=int(raw_user_id)).first()
+    except (TypeError, ValueError):
+        return None
+
+
+def _get_handoff_user_display_name(user):
+    if user is None:
+        return ""
+
+    try:
+        profile = user.userprofile
+    except Exception:
+        profile = None
+    nickname = str(getattr(profile, "nickname", "") or "").strip()
+    full_name = str(getattr(user, "get_full_name", lambda: "")() or "").strip()
+    return nickname or full_name or user.username
+
+
+def _get_handoff_proxy_option_label(user):
+    display_name = _get_handoff_user_display_name(user)
+    if display_name != user.username:
+        return f"{display_name} ({user.username})"
+    return user.username
+
+
+def _get_handoff_accessible_groups(user):
+    if not getattr(user, "is_authenticated", False):
+        return HandoffRosterGroup.objects.none()
+
+    queryset = HandoffRosterGroup.objects.filter(owner=user)
+    if _is_handoff_proxy_manager(user):
+        queryset = HandoffRosterGroup.objects.all()
+    return queryset.select_related("owner")
+
+
+def _get_handoff_accessible_sessions(user):
+    if not getattr(user, "is_authenticated", False):
+        return HandoffSession.objects.none()
+
+    queryset = HandoffSession.objects.filter(owner=user)
+    if _is_handoff_proxy_manager(user):
+        queryset = HandoffSession.objects.all()
+    return queryset.select_related("owner", "roster_group", "roster_group__owner")
+
+
+def _get_handoff_proxy_owner_for_group(current_user, group):
+    if _is_handoff_proxy_manager(current_user) and group.owner_id != current_user.id:
+        return group.owner
+    return None
+
+
+def _handoff_proxy_param_value(current_user, owner):
+    if owner and _is_handoff_proxy_manager(current_user) and owner.id != current_user.id:
+        return str(owner.id)
+    return ""
 
 
 def _split_bulk_member_line(raw_line: str) -> tuple[str, str]:
@@ -330,6 +419,16 @@ def _redirect_with_return(target_url, return_to):
     return redirect(target_url)
 
 
+def _redirect_with_context(target_url, *, return_to="", acting_for_user=""):
+    return redirect(
+        _append_query_params(
+            target_url,
+            return_to=return_to,
+            acting_for_user=acting_for_user,
+        )
+    )
+
+
 def landing(request):
     if request.user.is_authenticated:
         return redirect("handoff:dashboard")
@@ -338,10 +437,15 @@ def landing(request):
 
 @login_required
 def dashboard(request):
-    owner = request.user
     return_to = _get_safe_return_to(request)
+    proxy_target_user = _get_handoff_proxy_target_user(
+        request.user,
+        request.GET.get("acting_for_user"),
+    )
+    owner = proxy_target_user or request.user
     groups = list(
-        HandoffRosterGroup.objects.filter(owner=owner)
+        _get_handoff_accessible_groups(request.user)
+        .filter(owner=owner)
         .annotate(
             active_member_count=Count("members", filter=Q(members__is_active=True)),
             total_member_count=Count("members"),
@@ -352,7 +456,7 @@ def dashboard(request):
     if groups:
         group_ids = [group.id for group in groups]
         open_sessions = (
-            HandoffSession.objects.filter(
+            _get_handoff_accessible_sessions(request.user).filter(
                 owner=owner,
                 status="open",
                 roster_group_id__in=group_ids,
@@ -365,6 +469,7 @@ def dashboard(request):
         group.manage_url = _append_query_params(
             reverse("handoff:group_detail", kwargs={"group_id": group.id}),
             return_to=return_to,
+            acting_for_user=_handoff_proxy_param_value(request.user, owner),
         )
         group.continue_url = (
             _append_query_params(return_to, shared_roster_group=group.id)
@@ -385,6 +490,19 @@ def dashboard(request):
             "groups": groups,
             "group_form": HandoffRosterGroupForm(),
             "return_to": return_to,
+            "can_proxy_manage": _is_handoff_proxy_manager(request.user),
+            "proxy_target_user": proxy_target_user,
+            "proxy_target_user_id": _handoff_proxy_param_value(request.user, owner),
+            "proxy_target_user_label": _get_handoff_user_display_name(proxy_target_user),
+            "proxy_target_options": [
+                {"id": str(user.id), "label": _get_handoff_proxy_option_label(user)}
+                for user in _get_handoff_proxy_target_queryset(request.user)
+            ],
+            "roster_owner_label": _get_handoff_user_display_name(owner),
+            "own_dashboard_url": _append_query_params(
+                reverse("handoff:dashboard"),
+                return_to=return_to,
+            ),
         },
     )
 
@@ -393,32 +511,64 @@ def dashboard(request):
 @require_POST
 def group_create(request):
     return_to = _get_safe_return_to(request)
+    proxy_target_user = _get_handoff_proxy_target_user(
+        request.user,
+        request.POST.get("acting_for_user"),
+    )
+    if (
+        _is_handoff_proxy_manager(request.user)
+        and str(request.POST.get("acting_for_user") or "").strip()
+        and proxy_target_user is None
+    ):
+        messages.error(request, "명부를 넣어 줄 교사를 다시 선택해 주세요.")
+        return _redirect_with_context(
+            reverse("handoff:dashboard"),
+            return_to=return_to,
+            acting_for_user=str(request.POST.get("acting_for_user") or "").strip(),
+        )
+
     form = HandoffRosterGroupForm(request.POST)
     if not form.is_valid():
         for _, error_list in form.errors.items():
             for error in error_list:
                 messages.error(request, error)
-        return _redirect_with_return(reverse("handoff:dashboard"), return_to)
+        return _redirect_with_context(
+            reverse("handoff:dashboard"),
+            return_to=return_to,
+            acting_for_user=_handoff_proxy_param_value(request.user, proxy_target_user),
+        )
 
     group = form.save(commit=False)
-    group.owner = request.user
+    group.owner = proxy_target_user or request.user
     try:
         group.save()
     except IntegrityError:
         messages.error(request, "같은 이름의 명단이 이미 있습니다.")
-        return _redirect_with_return(reverse("handoff:dashboard"), return_to)
+        return _redirect_with_context(
+            reverse("handoff:dashboard"),
+            return_to=return_to,
+            acting_for_user=_handoff_proxy_param_value(request.user, group.owner),
+        )
 
-    messages.success(request, f"공용 명부 '{group.name}'을 만들었습니다.")
-    return _redirect_with_return(
+    if proxy_target_user:
+        messages.success(
+            request,
+            f"공용 명부 '{group.name}'을 {_get_handoff_user_display_name(group.owner)} 선생님 계정에 만들었습니다.",
+        )
+    else:
+        messages.success(request, f"공용 명부 '{group.name}'을 만들었습니다.")
+    return _redirect_with_context(
         reverse("handoff:group_detail", kwargs={"group_id": group.id}),
-        return_to,
+        return_to=return_to,
+        acting_for_user=_handoff_proxy_param_value(request.user, group.owner),
     )
 
 
 @login_required
 def group_detail(request, group_id):
     return_to = _get_safe_return_to(request)
-    group = get_object_or_404(HandoffRosterGroup, id=group_id, owner=request.user)
+    group = get_object_or_404(_get_handoff_accessible_groups(request.user), id=group_id)
+    proxy_target_user = _get_handoff_proxy_owner_for_group(request.user, group)
     members = group.members.order_by("sort_order", "id")
     active_member_count = group.members.filter(is_active=True).count()
     recent_sessions = list(
@@ -439,7 +589,7 @@ def group_detail(request, group_id):
             "group_form": HandoffRosterGroupForm(instance=group),
             "bulk_form": HandoffMemberBulkAddForm(),
             "session_form": HandoffSessionCreateForm(
-                owner=request.user,
+                owner=group.owner,
                 initial={"roster_group": group},
             ),
             "sessions_count": group.sessions.count(),
@@ -453,6 +603,16 @@ def group_detail(request, group_id):
                 "happy_seed": group.hs_classrooms.count(),
             },
             "return_to": return_to,
+            "dashboard_url": _append_query_params(
+                reverse("handoff:dashboard"),
+                return_to=return_to,
+                acting_for_user=_handoff_proxy_param_value(request.user, group.owner),
+            ),
+            "is_proxy_mode": proxy_target_user is not None,
+            "proxy_target_user": proxy_target_user,
+            "proxy_target_user_label": _get_handoff_user_display_name(proxy_target_user),
+            "group_owner_label": _get_handoff_user_display_name(group.owner),
+            "proxy_target_user_id": _handoff_proxy_param_value(request.user, group.owner),
             "continue_to_signatures_url": (
                 _append_query_params(return_to, shared_roster_group=group.id)
                 if return_to and active_member_count > 0
@@ -466,30 +626,33 @@ def group_detail(request, group_id):
 @require_POST
 def group_update(request, group_id):
     return_to = _get_safe_return_to(request)
-    group = get_object_or_404(HandoffRosterGroup, id=group_id, owner=request.user)
+    group = get_object_or_404(_get_handoff_accessible_groups(request.user), id=group_id)
     form = HandoffRosterGroupForm(request.POST, instance=group)
     if not form.is_valid():
         for _, error_list in form.errors.items():
             for error in error_list:
                 messages.error(request, error)
-        return _redirect_with_return(
+        return _redirect_with_context(
             reverse("handoff:group_detail", kwargs={"group_id": group.id}),
-            return_to,
+            return_to=return_to,
+            acting_for_user=_handoff_proxy_param_value(request.user, group.owner),
         )
 
     try:
         form.save()
     except IntegrityError:
         messages.error(request, "같은 이름의 명단이 이미 있습니다.")
-        return _redirect_with_return(
+        return _redirect_with_context(
             reverse("handoff:group_detail", kwargs={"group_id": group.id}),
-            return_to,
+            return_to=return_to,
+            acting_for_user=_handoff_proxy_param_value(request.user, group.owner),
         )
 
     messages.success(request, "공용 명부 정보를 수정했습니다.")
-    return _redirect_with_return(
+    return _redirect_with_context(
         reverse("handoff:group_detail", kwargs={"group_id": group.id}),
-        return_to,
+        return_to=return_to,
+        acting_for_user=_handoff_proxy_param_value(request.user, group.owner),
     )
 
 
@@ -497,40 +660,48 @@ def group_update(request, group_id):
 @require_POST
 def group_delete(request, group_id):
     return_to = _get_safe_return_to(request)
-    group = get_object_or_404(HandoffRosterGroup, id=group_id, owner=request.user)
+    group = get_object_or_404(_get_handoff_accessible_groups(request.user), id=group_id)
+    acting_for_user = _handoff_proxy_param_value(request.user, group.owner)
     name = group.name
     group.delete()
     messages.success(request, f"공용 명부 '{name}'을 삭제했습니다.")
-    return _redirect_with_return(reverse("handoff:dashboard"), return_to)
+    return _redirect_with_context(
+        reverse("handoff:dashboard"),
+        return_to=return_to,
+        acting_for_user=acting_for_user,
+    )
 
 
 @login_required
 @require_POST
 def group_members_add(request, group_id):
     return_to = _get_safe_return_to(request)
-    group = get_object_or_404(HandoffRosterGroup, id=group_id, owner=request.user)
+    group = get_object_or_404(_get_handoff_accessible_groups(request.user), id=group_id)
     form = HandoffMemberBulkAddForm(request.POST)
     if not form.is_valid():
         messages.error(request, "이름 목록을 확인해주세요.")
-        return _redirect_with_return(
+        return _redirect_with_context(
             reverse("handoff:group_detail", kwargs={"group_id": group.id}),
-            return_to,
+            return_to=return_to,
+            acting_for_user=_handoff_proxy_param_value(request.user, group.owner),
         )
 
     members = _normalize_bulk_members(form.cleaned_data["names_text"])
     if not members:
         messages.error(request, "추가할 이름이 없습니다.")
-        return _redirect_with_return(
+        return _redirect_with_context(
             reverse("handoff:group_detail", kwargs={"group_id": group.id}),
-            return_to,
+            return_to=return_to,
+            acting_for_user=_handoff_proxy_param_value(request.user, group.owner),
         )
 
     payload, skipped_existing = _build_member_payload(group, members)
     if not payload:
         messages.info(request, "이미 들어 있는 이름/소속 조합이라서 새로 추가할 멤버가 없었습니다.")
-        return _redirect_with_return(
+        return _redirect_with_context(
             reverse("handoff:group_detail", kwargs={"group_id": group.id}),
-            return_to,
+            return_to=return_to,
+            acting_for_user=_handoff_proxy_param_value(request.user, group.owner),
         )
 
     HandoffRosterMember.objects.bulk_create(payload)
@@ -541,9 +712,10 @@ def group_members_add(request, group_id):
         )
     else:
         messages.success(request, f"{len(payload)}명을 추가했습니다.")
-    return _redirect_with_return(
+    return _redirect_with_context(
         reverse("handoff:group_detail", kwargs={"group_id": group.id}),
-        return_to,
+        return_to=return_to,
+        acting_for_user=_handoff_proxy_param_value(request.user, group.owner),
     )
 
 
@@ -551,49 +723,55 @@ def group_members_add(request, group_id):
 @require_POST
 def group_members_upload(request, group_id):
     return_to = _get_safe_return_to(request)
-    group = get_object_or_404(HandoffRosterGroup, id=group_id, owner=request.user)
+    group = get_object_or_404(_get_handoff_accessible_groups(request.user), id=group_id)
     file_obj = request.FILES.get("csv_file")
     if not file_obj:
         messages.error(request, "CSV 파일을 선택해 주세요.")
-        return _redirect_with_return(
+        return _redirect_with_context(
             reverse("handoff:group_detail", kwargs={"group_id": group.id}),
-            return_to,
+            return_to=return_to,
+            acting_for_user=_handoff_proxy_param_value(request.user, group.owner),
         )
     if not str(file_obj.name or "").lower().endswith(".csv"):
         messages.error(request, "CSV 파일(.csv)만 업로드할 수 있습니다.")
-        return _redirect_with_return(
+        return _redirect_with_context(
             reverse("handoff:group_detail", kwargs={"group_id": group.id}),
-            return_to,
+            return_to=return_to,
+            acting_for_user=_handoff_proxy_param_value(request.user, group.owner),
         )
 
     try:
         members = _normalize_csv_members(file_obj)
     except UnicodeDecodeError:
         messages.error(request, "CSV 인코딩을 읽지 못했습니다. UTF-8 또는 엑셀 CSV로 다시 저장해 주세요.")
-        return _redirect_with_return(
+        return _redirect_with_context(
             reverse("handoff:group_detail", kwargs={"group_id": group.id}),
-            return_to,
+            return_to=return_to,
+            acting_for_user=_handoff_proxy_param_value(request.user, group.owner),
         )
     except csv.Error:
         messages.error(request, "CSV 형식을 읽지 못했습니다. 이름 열은 꼭 넣고, 나머지 열은 소속/보호자/전화 뒤 4자리/번호/메모를 맞춰 주세요.")
-        return _redirect_with_return(
+        return _redirect_with_context(
             reverse("handoff:group_detail", kwargs={"group_id": group.id}),
-            return_to,
+            return_to=return_to,
+            acting_for_user=_handoff_proxy_param_value(request.user, group.owner),
         )
 
     if not members:
         messages.error(request, "CSV에서 추가할 이름을 찾지 못했습니다.")
-        return _redirect_with_return(
+        return _redirect_with_context(
             reverse("handoff:group_detail", kwargs={"group_id": group.id}),
-            return_to,
+            return_to=return_to,
+            acting_for_user=_handoff_proxy_param_value(request.user, group.owner),
         )
 
     payload, skipped_existing = _build_member_payload(group, members)
     if not payload:
         messages.info(request, "CSV 내용이 이미 모두 들어 있어 새로 추가할 멤버가 없었습니다.")
-        return _redirect_with_return(
+        return _redirect_with_context(
             reverse("handoff:group_detail", kwargs={"group_id": group.id}),
-            return_to,
+            return_to=return_to,
+            acting_for_user=_handoff_proxy_param_value(request.user, group.owner),
         )
 
     HandoffRosterMember.objects.bulk_create(payload)
@@ -604,15 +782,16 @@ def group_members_upload(request, group_id):
         )
     else:
         messages.success(request, f"CSV에서 {len(payload)}명을 추가했습니다.")
-    return _redirect_with_return(
+    return _redirect_with_context(
         reverse("handoff:group_detail", kwargs={"group_id": group.id}),
-        return_to,
+        return_to=return_to,
+        acting_for_user=_handoff_proxy_param_value(request.user, group.owner),
     )
 
 
 @login_required
 def group_members_template_download(request, group_id):
-    group = get_object_or_404(HandoffRosterGroup, id=group_id, owner=request.user)
+    group = get_object_or_404(_get_handoff_accessible_groups(request.user), id=group_id)
     response = HttpResponse(content_type="text/csv; charset=utf-8-sig")
     response["Content-Disposition"] = f'attachment; filename="{group.name}_명단_양식.csv"'
 
@@ -628,15 +807,16 @@ def group_members_template_download(request, group_id):
 @require_POST
 def group_member_update(request, group_id, member_id):
     return_to = _get_safe_return_to(request)
-    group = get_object_or_404(HandoffRosterGroup, id=group_id, owner=request.user)
+    group = get_object_or_404(_get_handoff_accessible_groups(request.user), id=group_id)
     member = get_object_or_404(HandoffRosterMember, id=member_id, group=group)
 
     display_name = (request.POST.get("display_name") or "").strip()
     if not display_name:
         messages.error(request, "이름은 비울 수 없습니다.")
-        return _redirect_with_return(
+        return _redirect_with_context(
             reverse("handoff:group_detail", kwargs={"group_id": group.id}),
-            return_to,
+            return_to=return_to,
+            acting_for_user=_handoff_proxy_param_value(request.user, group.owner),
         )
 
     member.display_name = display_name
@@ -659,9 +839,10 @@ def group_member_update(request, group_id, member_id):
         ]
     )
     messages.success(request, f"{member.display_name} 정보가 저장되었습니다.")
-    return _redirect_with_return(
+    return _redirect_with_context(
         reverse("handoff:group_detail", kwargs={"group_id": group.id}),
-        return_to,
+        return_to=return_to,
+        acting_for_user=_handoff_proxy_param_value(request.user, group.owner),
     )
 
 
@@ -669,14 +850,15 @@ def group_member_update(request, group_id, member_id):
 @require_POST
 def group_member_delete(request, group_id, member_id):
     return_to = _get_safe_return_to(request)
-    group = get_object_or_404(HandoffRosterGroup, id=group_id, owner=request.user)
+    group = get_object_or_404(_get_handoff_accessible_groups(request.user), id=group_id)
     member = get_object_or_404(HandoffRosterMember, id=member_id, group=group)
     name = member.display_name
     member.delete()
     messages.success(request, f"{name}을(를) 삭제했습니다.")
-    return _redirect_with_return(
+    return _redirect_with_context(
         reverse("handoff:group_detail", kwargs={"group_id": group.id}),
-        return_to,
+        return_to=return_to,
+        acting_for_user=_handoff_proxy_param_value(request.user, group.owner),
     )
 
 
@@ -688,35 +870,60 @@ def session_create(request):
     requested_group_id = (request.POST.get("roster_group") or "").strip()
     if requested_group_id:
         try:
-            requested_group = HandoffRosterGroup.objects.filter(
-                id=requested_group_id,
-                owner=request.user,
-            ).first()
+            requested_group = _get_handoff_accessible_groups(request.user).filter(id=requested_group_id).first()
         except (ValidationError, ValueError):
             requested_group = None
+    proxy_target_user = None
+    proxy_target_raw = str(request.POST.get("acting_for_user") or "").strip()
+    if requested_group is not None:
+        proxy_target_user = _get_handoff_proxy_owner_for_group(request.user, requested_group)
+    elif proxy_target_raw:
+        proxy_target_user = _get_handoff_proxy_target_user(request.user, proxy_target_raw)
     fallback_url = (
         reverse("handoff:group_detail", kwargs={"group_id": requested_group.id})
         if requested_group
         else reverse("handoff:dashboard")
     )
-    form = HandoffSessionCreateForm(request.POST, owner=request.user)
+    if _is_handoff_proxy_manager(request.user) and proxy_target_raw and proxy_target_user is None:
+        messages.error(request, "세션을 맡길 교사를 다시 선택해 주세요.")
+        return _redirect_with_context(
+            fallback_url,
+            return_to=return_to,
+            acting_for_user=proxy_target_raw,
+        )
+
+    session_owner = proxy_target_user or request.user
+    form = HandoffSessionCreateForm(request.POST, owner=session_owner)
     if not form.is_valid():
         for _, error_list in form.errors.items():
             for error in error_list:
                 messages.error(request, error)
-        return _redirect_with_return(fallback_url, return_to)
+        return _redirect_with_context(
+            fallback_url,
+            return_to=return_to,
+            acting_for_user=_handoff_proxy_param_value(request.user, session_owner),
+        )
 
     group = form.cleaned_data["roster_group"]
+    if _is_handoff_proxy_manager(request.user) and group.owner_id != session_owner.id:
+        messages.error(request, "선택한 교사의 명부로 다시 시도해 주세요.")
+        return _redirect_with_context(
+            reverse("handoff:group_detail", kwargs={"group_id": group.id}),
+            return_to=return_to,
+            acting_for_user=_handoff_proxy_param_value(request.user, group.owner),
+        )
+
     active_members = list(group.members.filter(is_active=True).order_by("sort_order", "id"))
     if not active_members:
         messages.error(request, "명단에 활성 멤버가 없습니다. 멤버를 먼저 추가해주세요.")
-        return _redirect_with_return(
+        return _redirect_with_context(
             reverse("handoff:group_detail", kwargs={"group_id": group.id}),
-            return_to,
+            return_to=return_to,
+            acting_for_user=_handoff_proxy_param_value(request.user, group.owner),
         )
 
     session = form.save(commit=False)
-    session.owner = request.user
+    session.owner = group.owner if _is_handoff_proxy_manager(request.user) and group.owner_id != request.user.id else request.user
     session.roster_group_name = group.name
     session.save()
 
@@ -739,9 +946,8 @@ def session_create(request):
 @login_required
 def session_detail(request, session_id):
     session = get_object_or_404(
-        HandoffSession.objects.select_related("roster_group"),
+        _get_handoff_accessible_sessions(request.user),
         id=session_id,
-        owner=request.user,
     )
     receipts = list(session.receipts.order_by("member_order_snapshot", "id"))
     counts = _session_counts(session)
@@ -756,13 +962,17 @@ def session_detail(request, session_id):
             "counts": counts,
             "pending_notice_text": _session_summary_text(session, pending_names),
             "is_session_open": session.status == "open",
+            "dashboard_url": _append_query_params(
+                reverse("handoff:dashboard"),
+                acting_for_user=_handoff_proxy_param_value(request.user, session.owner),
+            ),
         },
     )
 
 
 @login_required
 def session_edit(request, session_id):
-    session = get_object_or_404(HandoffSession, id=session_id, owner=request.user)
+    session = get_object_or_404(_get_handoff_accessible_sessions(request.user), id=session_id)
 
     if request.method == "POST":
         form = HandoffSessionEditForm(request.POST, instance=session)
@@ -790,17 +1000,18 @@ def session_edit(request, session_id):
 @login_required
 @require_POST
 def session_delete(request, session_id):
-    session = get_object_or_404(HandoffSession, id=session_id, owner=request.user)
+    session = get_object_or_404(_get_handoff_accessible_sessions(request.user), id=session_id)
+    acting_for_user = _handoff_proxy_param_value(request.user, session.owner)
     title = session.title
     session.delete()
     messages.success(request, f"세션 '{title}'을 삭제했습니다.")
-    return redirect("handoff:dashboard")
+    return _redirect_with_context(reverse("handoff:dashboard"), acting_for_user=acting_for_user)
 
 
 @login_required
 @require_POST
 def session_toggle_status(request, session_id):
-    session = get_object_or_404(HandoffSession, id=session_id, owner=request.user)
+    session = get_object_or_404(_get_handoff_accessible_sessions(request.user), id=session_id)
     target = (request.POST.get("status") or "").strip()
     if target not in {"open", "closed"}:
         messages.error(request, "세션 상태 값이 올바르지 않습니다.")
@@ -819,7 +1030,7 @@ def session_toggle_status(request, session_id):
 @login_required
 @require_POST
 def receipt_set_state(request, session_id, receipt_id):
-    session = get_object_or_404(HandoffSession, id=session_id, owner=request.user)
+    session = get_object_or_404(_get_handoff_accessible_sessions(request.user), id=session_id)
     receipt = get_object_or_404(HandoffReceipt, id=receipt_id, session=session)
 
     state = (request.POST.get("state") or "").strip()
@@ -890,7 +1101,7 @@ def receipt_set_state(request, session_id, receipt_id):
 
 @login_required
 def session_export_csv(request, session_id):
-    session = get_object_or_404(HandoffSession, id=session_id, owner=request.user)
+    session = get_object_or_404(_get_handoff_accessible_sessions(request.user), id=session_id)
     receipts = session.receipts.select_related("received_by").order_by("member_order_snapshot", "id")
     filename = f"handoff_{session.created_at.strftime('%Y%m%d')}_{session.title[:30]}.csv"
 

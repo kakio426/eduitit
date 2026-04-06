@@ -9,7 +9,10 @@
             <div>
                 <p class="text-sm text-blue-600 font-black mb-1">공용 명부</p>
                 <h1 class="text-4xl font-black text-gray-700">{{ group.name }}</h1>
-                <p class="text-gray-500 font-bold mt-1">활성 {{ active_member_count }}명 · 전체 {{ members|length }}명 · 배부 체크 {{ linked_service_counts.handoff }}건 · 서명 {{ linked_service_counts.signatures }}건 · 동의서 {{ linked_service_counts.consent }}건</p>
+                <p class="text-gray-500 font-bold mt-1">
+                    {% if is_proxy_mode %}소유 교사 {{ group_owner_label }} · {% endif %}
+                    활성 {{ active_member_count }}명 · 전체 {{ members|length }}명 · 배부 체크 {{ linked_service_counts.handoff }}건 · 서명 {{ linked_service_counts.signatures }}건 · 동의서 {{ linked_service_counts.consent }}건
+                </p>
             </div>
             <div class="flex flex-wrap gap-2">
                 {% if return_to %}
@@ -25,12 +28,18 @@
                     </span>
                     {% endif %}
                 {% endif %}
-                <a href="{% if return_to %}{% url 'handoff:dashboard' %}?return_to={{ return_to|urlencode }}{% else %}{% url 'handoff:dashboard' %}{% endif %}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-gray-600 font-bold shadow-clay hover:text-blue-600 transition-colors">
+                <a href="{{ dashboard_url }}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-gray-600 font-bold shadow-clay hover:text-blue-600 transition-colors">
                     <i class="fa-solid fa-arrow-left"></i>
                     <span>공용 명부 목록</span>
                 </a>
             </div>
         </div>
+
+        {% if is_proxy_mode %}
+        <div class="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900" data-aos="fade-down" data-aos-delay="30">
+            {{ proxy_target_user_label }} 선생님 계정에 저장되는 명부를 대신 준비 중입니다. 여기서 저장한 내용은 해당 교사가 본인 명부처럼 바로 사용할 수 있습니다.
+        </div>
+        {% endif %}
 
         {% if messages %}
         <div class="mb-6 space-y-2" data-aos="fade-down" data-aos-delay="40">
@@ -99,6 +108,9 @@
                         {% csrf_token %}
                         {% if return_to %}
                         <input type="hidden" name="return_to" value="{{ return_to }}">
+                        {% endif %}
+                        {% if proxy_target_user_id %}
+                        <input type="hidden" name="acting_for_user" value="{{ proxy_target_user_id }}">
                         {% endif %}
                         <input type="hidden" name="roster_group" value="{{ group.id }}">
                         <div>

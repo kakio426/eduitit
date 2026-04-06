@@ -3,6 +3,8 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
+from core.models import UserPolicyConsent
+from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
 from handoff.models import HandoffReceipt, HandoffRosterGroup, HandoffRosterMember, HandoffSession
 
 
@@ -344,3 +346,126 @@ class HandoffFlowTest(TestCase):
         delete_response = self.client.post(reverse("handoff:session_delete", args=[session.id]))
         self.assertRedirects(delete_response, reverse("handoff:dashboard"))
         self.assertFalse(HandoffSession.objects.filter(id=session.id).exists())
+
+
+class HandoffProxyRosterTests(TestCase):
+    def setUp(self):
+        self.kakio = User.objects.create_superuser(
+            username="kakio",
+            email="kakio@example.com",
+            password="pw123456",
+        )
+        self.other_admin = User.objects.create_superuser(
+            username="admin",
+            email="admin@example.com",
+            password="pw123456",
+        )
+        self.teacher = User.objects.create_user(
+            username="teacher_proxy",
+            email="teacher_proxy@example.com",
+            password="pw123456",
+        )
+        for user, nickname in (
+            (self.kakio, "카키오"),
+            (self.other_admin, "다른관리자"),
+            (self.teacher, "김선생"),
+        ):
+            profile = user.userprofile
+            profile.nickname = nickname
+            profile.role = "school"
+            profile.save(update_fields=["nickname", "role"])
+        for user in (self.kakio, self.other_admin):
+            UserPolicyConsent.objects.create(
+                user=user,
+                provider="direct",
+                terms_version=TERMS_VERSION,
+                privacy_version=PRIVACY_VERSION,
+                agreed_at=user.date_joined,
+                agreement_source="required_gate",
+            )
+
+    def test_only_kakio_sees_proxy_roster_controls(self):
+        self.client.force_login(self.kakio)
+
+        response = self.client.get(reverse("handoff:dashboard"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "교사 대신 공용 명부를 만들어 넣을 수 있습니다.")
+        self.assertContains(response, 'name="acting_for_user"', html=False)
+
+        self.client.force_login(self.other_admin)
+
+        response = self.client.get(reverse("handoff:dashboard"))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "교사 대신 공용 명부를 만들어 넣을 수 있습니다.")
+        self.assertNotContains(response, 'name="acting_for_user"', html=False)
+
+    def test_kakio_can_create_teacher_owned_roster_and_teacher_can_use_it(self):
+        self.client.force_login(self.kakio)
+
+        create_response = self.client.post(
+            reverse("handoff:group_create"),
+            data={
+                "name": "3학년 2반 공용 명부",
+                "description": "운영자가 대신 준비",
+                "acting_for_user": str(self.teacher.id),
+            },
+            follow=True,
+        )
+
+        self.assertEqual(create_response.status_code, 200)
+        group = HandoffRosterGroup.objects.get(owner=self.teacher, name="3학년 2반 공용 명부")
+        self.assertContains(create_response, "김선생 선생님 계정에 만들었습니다.")
+
+        add_response = self.client.post(
+            reverse("handoff:group_members_add", args=[group.id]),
+            data={"names_text": "김민수, 3-2\n이서연, 3-2\n"},
+            follow=True,
+        )
+
+        self.assertEqual(add_response.status_code, 200)
+        self.assertEqual(group.members.count(), 2)
+        self.assertEqual(
+            list(group.members.order_by("sort_order").values_list("display_name", "affiliation")),
+            [("김민수", "3-2"), ("이서연", "3-2")],
+        )
+
+        self.client.force_login(self.teacher)
+
+        dashboard_response = self.client.get(reverse("handoff:dashboard"))
+        self.assertEqual(dashboard_response.status_code, 200)
+        self.assertContains(dashboard_response, "3학년 2반 공용 명부")
+
+        session_response = self.client.post(
+            reverse("handoff:session_create"),
+            data={
+                "title": "교사 본인 사용 세션",
+                "roster_group": str(group.id),
+                "note": "",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(session_response.status_code, 200)
+        session = HandoffSession.objects.get(owner=self.teacher, title="교사 본인 사용 세션")
+        self.assertEqual(session.roster_group_id, group.id)
+        self.assertEqual(session.receipts.count(), 2)
+
+    def test_other_admin_cannot_force_teacher_owned_roster_creation(self):
+        self.client.force_login(self.other_admin)
+
+        response = self.client.post(
+            reverse("handoff:group_create"),
+            data={
+                "name": "운영자 개인 명부",
+                "description": "",
+                "acting_for_user": str(self.teacher.id),
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        group = HandoffRosterGroup.objects.get(name="운영자 개인 명부")
+        self.assertEqual(group.owner, self.other_admin)
+        self.assertFalse(
+            HandoffRosterGroup.objects.filter(owner=self.teacher, name="운영자 개인 명부").exists()
+        )

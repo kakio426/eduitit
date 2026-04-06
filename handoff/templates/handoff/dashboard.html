@@ -41,20 +41,68 @@
         </div>
         {% endif %}
 
+        {% if can_proxy_manage %}
+        <div class="mb-6 rounded-3xl border border-amber-200 bg-amber-50 px-5 py-5 md:px-6" data-aos="fade-down" data-aos-delay="50">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                    <p class="text-xs font-black uppercase tracking-[0.18em] text-amber-700">운영자 전용</p>
+                    <h2 class="mt-2 text-2xl font-black text-slate-800">교사 대신 공용 명부를 만들어 넣을 수 있습니다.</h2>
+                    <p class="mt-2 text-sm font-bold leading-relaxed text-slate-600">대상 교사를 고른 뒤 여기서 만든 명부는 그 교사 계정에 저장되고, 교사는 본인 명부처럼 바로 사용할 수 있습니다.</p>
+                </div>
+                <span class="inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-white px-4 py-3 text-sm font-black text-amber-700 shadow-sm">
+                    {% if proxy_target_user %}{{ proxy_target_user_label }} 선생님 계정 작업 중{% else %}비워두면 내 명부 관리{% endif %}
+                </span>
+            </div>
+            <form method="get" class="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_160px_auto]">
+                {% if return_to %}
+                <input type="hidden" name="return_to" value="{{ return_to }}">
+                {% endif %}
+                <div>
+                    <label for="proxy-owner-select" class="mb-2 block text-sm font-black text-slate-700">명부를 넣어 줄 교사</label>
+                    <select id="proxy-owner-select" name="acting_for_user" class="w-full rounded-2xl border border-amber-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-300">
+                        <option value="">내 명부 보기</option>
+                        {% for option in proxy_target_options %}
+                        <option value="{{ option.id }}" {% if option.id == proxy_target_user_id %}selected{% endif %}>{{ option.label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-amber-600 px-4 py-3 text-sm font-black text-white transition hover:bg-amber-500">
+                    교사 명부 보기
+                </button>
+                {% if proxy_target_user %}
+                <a href="{{ own_dashboard_url }}" class="inline-flex min-h-[48px] items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-600 transition hover:text-slate-800">
+                    내 명부로 돌아가기
+                </a>
+                {% endif %}
+            </form>
+        </div>
+        {% endif %}
+
         <div class="grid grid-cols-1 xl:grid-cols-[380px_minmax(0,1fr)] gap-6">
             <div class="clay-card p-6 md:p-7" data-aos="fade-up">
                 <div class="flex items-center gap-3 mb-5">
                     <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl shadow-sm">
                         <i class="fa-solid fa-users"></i>
                     </div>
-                    <h2 class="text-2xl font-black text-gray-700">공용 명부 만들기</h2>
+                    <h2 class="text-2xl font-black text-gray-700">
+                        {% if proxy_target_user %}{{ proxy_target_user_label }} 선생님 명부 만들기{% else %}공용 명부 만들기{% endif %}
+                    </h2>
                 </div>
-                <p class="mb-4 text-sm font-bold text-gray-500">학생명, 소속/학년반, 보호자명, 연락처 뒤 4자리, 번호를 한 번만 정리하면 됩니다.</p>
+                <p class="mb-4 text-sm font-bold text-gray-500">
+                    {% if proxy_target_user %}
+                    이 화면에서 저장하면 {{ proxy_target_user_label }} 선생님 계정에 바로 들어갑니다.
+                    {% else %}
+                    학생명, 소속/학년반, 보호자명, 연락처 뒤 4자리, 번호를 한 번만 정리하면 됩니다.
+                    {% endif %}
+                </p>
 
                 <form action="{% url 'handoff:group_create' %}" method="post" class="space-y-4">
                     {% csrf_token %}
                     {% if return_to %}
                     <input type="hidden" name="return_to" value="{{ return_to }}">
+                    {% endif %}
+                    {% if proxy_target_user_id %}
+                    <input type="hidden" name="acting_for_user" value="{{ proxy_target_user_id }}">
                     {% endif %}
                     <div>
                         <label class="block text-sm font-black text-gray-600 mb-1">{{ group_form.name.label }}</label>
@@ -77,8 +125,16 @@
             <div class="clay-card p-6 md:p-7" data-aos="fade-up" data-aos-delay="60">
                 <div class="flex items-center justify-between gap-3 mb-4">
                     <div>
-                        <h2 class="text-2xl font-black text-gray-700">공용 명부 목록</h2>
-                        <p class="text-sm text-gray-500 font-bold mt-1">명부를 먼저 정리한 뒤, 필요한 작업은 각 명부 안에서 이어갑니다.</p>
+                        <h2 class="text-2xl font-black text-gray-700">
+                            {% if proxy_target_user %}{{ roster_owner_label }} 공용 명부 목록{% else %}공용 명부 목록{% endif %}
+                        </h2>
+                        <p class="text-sm text-gray-500 font-bold mt-1">
+                            {% if proxy_target_user %}
+                            여기서 손본 명부는 {{ proxy_target_user_label }} 선생님 화면에 그대로 보입니다.
+                            {% else %}
+                            명부를 먼저 정리한 뒤, 필요한 작업은 각 명부 안에서 이어갑니다.
+                            {% endif %}
+                        </p>
                     </div>
                     <span class="text-sm text-gray-500 font-bold">{{ groups|length }}개</span>
                 </div>
@@ -139,8 +195,13 @@
                 {% else %}
                 <div class="py-10 text-center text-gray-400">
                     <i class="fa-solid fa-users-slash text-4xl mb-3"></i>
+                    {% if proxy_target_user %}
+                    <p class="font-bold">{{ proxy_target_user_label }} 선생님 계정에는 아직 공용 명부가 없습니다.</p>
+                    <p class="text-sm">왼쪽 폼에서 첫 명부를 만들어 바로 넣어주세요.</p>
+                    {% else %}
                     <p class="font-bold">아직 공용 명부가 없습니다.</p>
                     <p class="text-sm">왼쪽 폼에서 첫 명부를 만들어주세요.</p>
+                    {% endif %}
                 </div>
                 {% endif %}
             </div>
