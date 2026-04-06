@@ -23,7 +23,9 @@ from core.teacher_buddy import (
     SNS_SIMILARITY_THRESHOLD,
     TeacherBuddyError,
     _build_draw_groups,
+    attach_teacher_buddy_avatar_context,
     build_teacher_buddy_settings_context,
+    build_teacher_buddy_avatar_context,
     draw_teacher_buddy,
     record_teacher_buddy_progress,
     record_teacher_buddy_sns_reward,
@@ -401,6 +403,41 @@ class TeacherBuddyServiceTests(TestCase):
         self.assertEqual(state.profile_buddy_key, candidate.key)
         self.assertEqual(state.active_skin_key, skin.key)
         self.assertEqual(state.profile_skin_key, skin.key)
+
+    def test_build_teacher_buddy_avatar_context_repairs_invalid_profile_key(self):
+        record_teacher_buddy_progress(self.user, self.classroom_product, "home_quick")
+        state = self._state()
+        candidate = next(buddy for buddy in all_teacher_buddies() if buddy.key != state.active_buddy_key)
+        TeacherBuddyUnlock.objects.create(
+            user=self.user,
+            buddy_key=candidate.key,
+            rarity=candidate.rarity,
+            obtained_via="draw",
+        )
+        state.active_buddy_key = candidate.key
+        state.profile_buddy_key = "missing_buddy_key"
+        state.save(update_fields=["active_buddy_key", "profile_buddy_key"])
+
+        avatar = build_teacher_buddy_avatar_context(self.user)
+
+        self.assertTrue(avatar["is_buddy"])
+        self.assertEqual(avatar["name"], candidate.name)
+        state.refresh_from_db()
+        self.assertEqual(state.profile_buddy_key, candidate.key)
+
+    def test_attach_teacher_buddy_avatar_context_creates_starter_for_missing_state(self):
+        author = create_onboarded_user("feedbuddy")
+        post = Post.objects.create(
+            author=author,
+            content="피드에서도 교실 메이트 아바타가 바로 보여야 하는지 확인하는 충분히 긴 테스트 글입니다.",
+            post_type="general",
+        )
+
+        attach_teacher_buddy_avatar_context([post])
+
+        self.assertTrue(post.teacher_buddy_avatar_context["is_buddy"])
+        state = TeacherBuddyState.objects.get(user=author)
+        self.assertEqual(post.teacher_buddy_avatar_context["name"], get_teacher_buddy(state.profile_buddy_key or state.active_buddy_key).name)
 
 
 @override_settings(HOME_TEACHER_BUDDY_ENABLED=True, HOME_V2_ENABLED=True)

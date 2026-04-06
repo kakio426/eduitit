@@ -502,6 +502,96 @@ def _fallback_avatar_context(*, initial: str, label: str) -> dict[str, object]:
     }
 
 
+def _ordered_unlock_map_for_user(user) -> dict[str, TeacherBuddyUnlock]:
+    return {
+        unlock.buddy_key: unlock
+        for unlock in TeacherBuddyUnlock.objects.filter(user=user).order_by("obtained_at", "id")
+    }
+
+
+def _valid_avatar_buddy_key(buddy_key: str, unlock_map: dict[str, TeacherBuddyUnlock]) -> bool:
+    if not buddy_key or buddy_key not in unlock_map:
+        return False
+    try:
+        get_teacher_buddy(buddy_key)
+    except KeyError:
+        return False
+    return True
+
+
+def _resolve_avatar_buddy_key(*, user, state: TeacherBuddyState | None, unlock_map: dict[str, TeacherBuddyUnlock]) -> str:
+    candidate_keys: list[str] = []
+    if state and state.profile_buddy_key:
+        candidate_keys.append(state.profile_buddy_key)
+    if state and state.active_buddy_key and state.active_buddy_key not in candidate_keys:
+        candidate_keys.append(state.active_buddy_key)
+    starter_key = _starter_buddy_key_for_user(user)
+    if starter_key not in candidate_keys:
+        candidate_keys.append(starter_key)
+
+    for buddy_key in candidate_keys:
+        if _valid_avatar_buddy_key(buddy_key, unlock_map):
+            return buddy_key
+    for buddy_key in unlock_map.keys():
+        if _valid_avatar_buddy_key(buddy_key, unlock_map):
+            return buddy_key
+    return ""
+
+
+def _repair_avatar_selection_state(
+    *,
+    state: TeacherBuddyState,
+    buddy_key: str,
+    unlock_map: dict[str, TeacherBuddyUnlock],
+) -> TeacherBuddyState:
+    updated_fields: list[str] = []
+    if not _valid_avatar_buddy_key(state.profile_buddy_key, unlock_map):
+        state.profile_buddy_key = buddy_key
+        updated_fields.append("profile_buddy_key")
+    if not _valid_avatar_buddy_key(state.active_buddy_key, unlock_map):
+        state.active_buddy_key = buddy_key
+        updated_fields.append("active_buddy_key")
+    if updated_fields:
+        state.save(update_fields=updated_fields)
+    return state
+
+
+def _build_avatar_buddy_payload(
+    *,
+    user,
+    state: TeacherBuddyState,
+    buddy_key: str,
+    unlock_map: dict[str, TeacherBuddyUnlock],
+) -> dict[str, object] | None:
+    unlock = unlock_map.get(buddy_key)
+    if unlock is None:
+        return None
+
+    resolved_profile_key = (
+        state.profile_buddy_key
+        if _valid_avatar_buddy_key(state.profile_buddy_key, unlock_map)
+        else buddy_key
+    )
+    resolved_active_key = (
+        state.active_buddy_key
+        if _valid_avatar_buddy_key(state.active_buddy_key, unlock_map)
+        else resolved_profile_key
+    )
+    active_skin_key = _resolve_style_skin_key(state.active_skin_key, buddy_key, resolved_active_key)
+    profile_skin_key = _resolve_style_skin_key(state.profile_skin_key, buddy_key, resolved_profile_key)
+    selected_skin_key = profile_skin_key or active_skin_key
+    return _serialize_buddy(
+        get_teacher_buddy(buddy_key),
+        user=user,
+        unlock=unlock,
+        active_key=resolved_active_key,
+        profile_key=resolved_profile_key,
+        active_skin_key=active_skin_key,
+        profile_skin_key=profile_skin_key,
+        selected_skin_key=selected_skin_key,
+    )
+
+
 def _pick_reaction_text(
     buddy_payload: dict[str, object],
     *,
@@ -906,22 +996,21 @@ def build_teacher_buddy_avatar_context(user) -> dict[str, object]:
         return _fallback_avatar_context(initial=initial, label=_safe_nickname_for_user(user))
 
     state = ensure_teacher_buddy_state(user)
-    buddy_key = ""
-    if state:
-        buddy_key = state.profile_buddy_key or state.active_buddy_key
+    if state is None:
+        return _fallback_avatar_context(initial=initial, label=_safe_nickname_for_user(user))
+    unlock_map = _ordered_unlock_map_for_user(user)
+    buddy_key = _resolve_avatar_buddy_key(user=user, state=state, unlock_map=unlock_map)
     if not buddy_key:
         return _fallback_avatar_context(initial=initial, label=_safe_nickname_for_user(user))
-
-    unlock = TeacherBuddyUnlock.objects.filter(user=user, buddy_key=buddy_key).first()
-    if unlock is None:
-        return _fallback_avatar_context(initial=initial, label=_safe_nickname_for_user(user))
-
-    buddy_payload = _serialize_state_buddy(
+    state = _repair_avatar_selection_state(state=state, buddy_key=buddy_key, unlock_map=unlock_map)
+    buddy_payload = _build_avatar_buddy_payload(
         user=user,
         state=state,
         buddy_key=buddy_key,
-        selected_skin_key=_resolve_style_skin_key(state.profile_skin_key, buddy_key, buddy_key),
+        unlock_map=unlock_map,
     )
+    if buddy_payload is None:
+        return _fallback_avatar_context(initial=initial, label=_safe_nickname_for_user(user))
     return _build_avatar_context_from_buddy_payload(
         buddy_payload,
         initial=initial,
@@ -951,29 +1040,37 @@ def attach_teacher_buddy_avatar_context(items) -> None:
         state.user_id: state
         for state in TeacherBuddyState.objects.filter(user_id__in=user_ids)
     }
-    buddy_keys = []
-    for state in states.values():
-        buddy_key = state.profile_buddy_key or state.active_buddy_key
-        if buddy_key:
-            buddy_keys.append(buddy_key)
-    unlocks = {
-        (unlock.user_id, unlock.buddy_key): unlock
-        for unlock in TeacherBuddyUnlock.objects.filter(user_id__in=user_ids, buddy_key__in=buddy_keys)
-    }
+    unlocks_by_user: dict[int, dict[str, TeacherBuddyUnlock]] = {}
+    for unlock in TeacherBuddyUnlock.objects.filter(user_id__in=user_ids).order_by("user_id", "obtained_at", "id"):
+        unlocks_by_user.setdefault(unlock.user_id, {})[unlock.buddy_key] = unlock
     avatar_contexts = {}
     for user_id, user in user_map.items():
         profile = profiles.get(user_id)
         initial = (profile.nickname if profile and profile.nickname else user.username or "?")[:1]
         state = states.get(user_id)
-        buddy_key = state.profile_buddy_key or state.active_buddy_key if state else ""
-        unlock = unlocks.get((user_id, buddy_key))
-        if state and buddy_key and unlock:
-            buddy_payload = _serialize_state_buddy(
-                user=user,
-                state=state,
-                buddy_key=buddy_key,
-                selected_skin_key=_resolve_style_skin_key(state.profile_skin_key, buddy_key, buddy_key),
-            )
+        unlock_map = unlocks_by_user.get(user_id, {})
+        eligible = bool(profile and profile.role in ELIGIBLE_ROLES)
+        buddy_payload = None
+
+        if eligible and (state is None or not _resolve_avatar_buddy_key(user=user, state=state, unlock_map=unlock_map)):
+            state = ensure_teacher_buddy_state(user)
+            if state is not None:
+                states[user_id] = state
+                unlock_map = _ordered_unlock_map_for_user(user)
+                unlocks_by_user[user_id] = unlock_map
+
+        if eligible and state is not None:
+            buddy_key = _resolve_avatar_buddy_key(user=user, state=state, unlock_map=unlock_map)
+            if buddy_key:
+                state = _repair_avatar_selection_state(state=state, buddy_key=buddy_key, unlock_map=unlock_map)
+                buddy_payload = _build_avatar_buddy_payload(
+                    user=user,
+                    state=state,
+                    buddy_key=buddy_key,
+                    unlock_map=unlock_map,
+                )
+
+        if buddy_payload is not None:
             avatar_contexts[user_id] = _build_avatar_context_from_buddy_payload(
                 buddy_payload,
                 initial=initial or "?",
