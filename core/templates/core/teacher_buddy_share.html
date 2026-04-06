@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load teacher_buddy_ascii %}
 
 {% block title %}{{ page_title }}{% endblock %}
 
@@ -28,7 +29,12 @@
                 </div>
 
                 <div class="teacher-buddy-share-ascii-wrap">
-                    <pre class="teacher-buddy-share-ascii">{{ share_context.buddy.idle_ascii }}</pre>
+                    {% spaceless %}
+                    <pre
+                        class="teacher-buddy-share-ascii"
+                        style="--teacher-buddy-ascii-start: {{ share_context.buddy.palette_tokens.text|default:'#0f172a' }}; --teacher-buddy-ascii-end: {{ share_context.buddy.palette_tokens.accent|default:'#334155' }};"
+                    >{% for line in share_context.buddy.idle_ascii|ascii_display_lines %}<span class="teacher-buddy-ascii-line">{{ line }}</span>{% endfor %}</pre>
+                    {% endspaceless %}
                 </div>
 
                 <div class="teacher-buddy-share-copy-box">

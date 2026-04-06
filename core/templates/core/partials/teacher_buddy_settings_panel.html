@@ -1,3 +1,4 @@
+{% load teacher_buddy_ascii %}
 <section
     id="teacher-buddy-settings"
     class="teacher-buddy-settings-card clay-card p-8 bg-white/85"
@@ -31,7 +32,13 @@
                 </div>
             </div>
             <div class="teacher-buddy-profile-body teacher-buddy-profile-body--hero">
-                <pre class="teacher-buddy-profile-ascii teacher-buddy-profile-ascii--hero" data-buddy-preview-ascii="representative">{{ teacher_buddy_settings.profile_buddy.idle_ascii }}</pre>
+                {% spaceless %}
+                <pre
+                    class="teacher-buddy-profile-ascii teacher-buddy-profile-ascii--hero"
+                    data-buddy-preview-ascii="representative"
+                    style="--teacher-buddy-ascii-start: {{ teacher_buddy_settings.profile_buddy.palette_tokens.text|default:'#0f172a' }}; --teacher-buddy-ascii-end: {{ teacher_buddy_settings.profile_buddy.palette_tokens.accent|default:'#334155' }};"
+                >{% for line in teacher_buddy_settings.profile_buddy.idle_ascii|ascii_display_lines %}<span class="teacher-buddy-ascii-line">{{ line }}</span>{% endfor %}</pre>
+                {% endspaceless %}
                 <div class="teacher-buddy-profile-meta">
                     <span class="teacher-buddy-rarity teacher-buddy-rarity--{{ teacher_buddy_settings.profile_buddy.rarity }}" data-buddy-preview-rarity="representative">{{ teacher_buddy_settings.profile_buddy.rarity_label }}</span>
                     <span class="teacher-buddy-status-chip teacher-buddy-status-chip--style" data-buddy-preview-style="representative">{{ teacher_buddy_settings.profile_buddy.selected_skin_label }}</span>
@@ -87,7 +94,12 @@
             </div>
 
             <div class="teacher-buddy-settings-item-body">
-                <pre class="teacher-buddy-collection-ascii">{{ item.idle_ascii }}</pre>
+                {% spaceless %}
+                <pre
+                    class="teacher-buddy-collection-ascii"
+                    style="--teacher-buddy-ascii-start: {{ item.palette_tokens.text|default:'#0f172a' }}; --teacher-buddy-ascii-end: {{ item.palette_tokens.accent|default:'#334155' }};"
+                >{% for line in item.idle_ascii|ascii_display_lines %}<span class="teacher-buddy-ascii-line">{{ line }}</span>{% endfor %}</pre>
+                {% endspaceless %}
             </div>
 
             <div class="teacher-buddy-settings-item-meta">
@@ -118,8 +130,13 @@
                         data-style-accent="{{ style.palette_tokens.accent }}"
                         data-style-badge="{{ style.preview_badge }}"
                     >
-                        <div class="teacher-buddy-style-preview" style="--teacher-buddy-style-gradient: {{ style.palette_tokens.gradient }};">
-                            <div class="teacher-buddy-style-dot">{{ style.preview_badge }}</div>
+                        <div
+                            class="teacher-buddy-style-preview"
+                            style="--teacher-buddy-style-gradient: {{ style.palette_tokens.gradient }}; --teacher-buddy-ascii-start: {{ style.palette_tokens.text|default:'#0f172a' }}; --teacher-buddy-ascii-end: {{ style.palette_tokens.accent|default:'#334155' }};"
+                        >
+                            {% spaceless %}
+                            <pre class="teacher-buddy-style-ascii">{% for line in style.idle_ascii|ascii_display_lines %}<span class="teacher-buddy-ascii-line">{{ line }}</span>{% endfor %}</pre>
+                            {% endspaceless %}
                             <div>
                                 <p class="teacher-buddy-style-name">{{ style.label }}</p>
                                 <p class="teacher-buddy-style-copy">

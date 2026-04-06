@@ -1,3 +1,4 @@
+{% load teacher_buddy_ascii %}
 {% with panel_dom_id='teacher-buddy-panel-'|add:panel_variant result_id='teacher-buddy-result-'|add:panel_variant %}
 <div
     class="teacher-buddy-panel"
@@ -22,7 +23,13 @@
         {% if panel_variant == 'v4' or panel_variant == 'v5-desktop' %}
         <div class="teacher-buddy-compact-hero">
             <div class="teacher-buddy-ascii-box teacher-buddy-compact-ascii-box" data-buddy-ascii-box="true">
-                <pre class="teacher-buddy-ascii teacher-buddy-ascii--compact" data-buddy-ascii="true">{{ teacher_buddy_panel.active_buddy.idle_ascii }}</pre>
+                {% spaceless %}
+                <pre
+                    class="teacher-buddy-ascii teacher-buddy-ascii--compact"
+                    data-buddy-ascii="true"
+                    style="--teacher-buddy-ascii-start: {{ teacher_buddy_panel.active_buddy.palette_tokens.text|default:'#0f172a' }}; --teacher-buddy-ascii-end: {{ teacher_buddy_panel.active_buddy.palette_tokens.accent|default:'#334155' }};"
+                >{% for line in teacher_buddy_panel.active_buddy.idle_ascii|ascii_display_lines %}<span class="teacher-buddy-ascii-line">{{ line }}</span>{% endfor %}</pre>
+                {% endspaceless %}
             </div>
             <div class="teacher-buddy-compact-copy">
                 <div class="teacher-buddy-meta teacher-buddy-meta--compact">
@@ -88,7 +95,13 @@
         {% else %}
         <div class="teacher-buddy-body">
             <div class="teacher-buddy-ascii-box" data-buddy-ascii-box="true">
-                <pre class="teacher-buddy-ascii" data-buddy-ascii="true">{{ teacher_buddy_panel.active_buddy.idle_ascii }}</pre>
+                {% spaceless %}
+                <pre
+                    class="teacher-buddy-ascii"
+                    data-buddy-ascii="true"
+                    style="--teacher-buddy-ascii-start: {{ teacher_buddy_panel.active_buddy.palette_tokens.text|default:'#0f172a' }}; --teacher-buddy-ascii-end: {{ teacher_buddy_panel.active_buddy.palette_tokens.accent|default:'#334155' }};"
+                >{% for line in teacher_buddy_panel.active_buddy.idle_ascii|ascii_display_lines %}<span class="teacher-buddy-ascii-line">{{ line }}</span>{% endfor %}</pre>
+                {% endspaceless %}
                 <div class="teacher-buddy-meta">
                     <p class="teacher-buddy-name" data-buddy-name="true">{{ teacher_buddy_panel.active_buddy.name }}</p>
                     <span class="teacher-buddy-rarity teacher-buddy-rarity--{{ teacher_buddy_panel.active_buddy.rarity }}" data-buddy-rarity="true">

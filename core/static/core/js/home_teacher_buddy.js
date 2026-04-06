@@ -154,6 +154,27 @@
         }
     }
 
+    function renderAscii(node, value) {
+        if (!node) {
+            return;
+        }
+        node.innerHTML = '';
+        String(value || '').split(/\r?\n/).forEach(function (line) {
+            var row = document.createElement('span');
+            row.className = 'teacher-buddy-ascii-line';
+            row.textContent = String(line || '').trim();
+            node.appendChild(row);
+        });
+    }
+
+    function setAsciiTone(node, paletteTokens) {
+        if (!node || !paletteTokens || typeof paletteTokens !== 'object') {
+            return;
+        }
+        node.style.setProperty('--teacher-buddy-ascii-start', paletteTokens.text || '#0f172a');
+        node.style.setProperty('--teacher-buddy-ascii-end', paletteTokens.accent || paletteTokens.text || '#334155');
+    }
+
     function updateProgress(root, payload, collectionSummaryText) {
         if (!payload) {
             return;
@@ -193,17 +214,19 @@
             return;
         }
         setText(root, '[data-buddy-name="true"]', buddy.name || '');
-        setText(root, '[data-buddy-ascii="true"]', buddy.idle_ascii || '');
+        renderAscii(root.querySelector('[data-buddy-ascii="true"]'), buddy.idle_ascii || '');
         var rarity = root.querySelector('[data-buddy-rarity="true"]');
         if (rarity) {
             rarity.textContent = buddy.rarity_label || '';
             rarity.className = 'teacher-buddy-rarity teacher-buddy-rarity--' + (buddy.rarity || 'common');
         }
         var asciiBox = root.querySelector('[data-buddy-ascii-box="true"]');
+        var ascii = root.querySelector('[data-buddy-ascii="true"]');
         var paletteTokens = buddy.palette_tokens && typeof buddy.palette_tokens === 'object' ? buddy.palette_tokens : null;
         if (asciiBox && paletteTokens && typeof paletteTokens.gradient === 'string' && paletteTokens.gradient) {
             asciiBox.style.setProperty('--teacher-buddy-hero-gradient', paletteTokens.gradient);
         }
+        setAsciiTone(ascii, paletteTokens);
     }
 
     function setResultStage(root, stage) {
@@ -249,7 +272,8 @@
         dialog.setAttribute('data-result-theme', payload.result_reveal_theme || 'common');
         setText(modal, '[data-buddy-result-theme-title="true"]', payload.result_title || '메이트 결과');
         setText(modal, '[data-buddy-result-name="true"]', resultBuddy ? resultBuddy.name : '교실 메이트');
-        setText(modal, '[data-buddy-result-ascii="true"]', resultBuddy ? (resultBuddy.unlock_ascii || resultBuddy.idle_ascii || '') : '');
+        renderAscii(modal.querySelector('[data-buddy-result-ascii="true"]'), resultBuddy ? (resultBuddy.unlock_ascii || resultBuddy.idle_ascii || '') : '');
+        setAsciiTone(modal.querySelector('[data-buddy-result-ascii="true"]'), resultBuddy ? resultBuddy.palette_tokens : null);
         setText(modal, '[data-buddy-result-message="true"]', payload.message || '메이트 결과를 확인했어요.');
     }
 

@@ -176,16 +176,34 @@
 .teacher-buddy-collection-ascii,
 .teacher-buddy-profile-ascii,
 .teacher-buddy-result-ascii,
-.teacher-buddy-share-ascii {
+.teacher-buddy-share-ascii,
+.teacher-buddy-style-ascii {
     margin: 0;
-    display: inline-block;
-    color: #0f172a;
+    display: block;
+    width: 100%;
+    color: var(--teacher-buddy-ascii-start, #0f172a);
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
     font-size: 0.83rem;
     font-weight: 700;
     line-height: 1.24;
     letter-spacing: 0;
+    text-align: center;
+    white-space: normal;
+}
+
+.teacher-buddy-ascii-line {
+    display: block;
     white-space: pre;
+    line-height: inherit;
+    color: transparent;
+    background-image: linear-gradient(
+        180deg,
+        var(--teacher-buddy-ascii-start, #0f172a),
+        var(--teacher-buddy-ascii-end, var(--teacher-buddy-ascii-start, #0f172a))
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
 .teacher-buddy-profile-ascii {
@@ -613,7 +631,6 @@
 }
 
 .teacher-buddy-result-ascii {
-    display: inline-block;
     margin: 1rem auto 0.9rem;
     padding: 0.9rem 1rem;
     border-radius: 1.2rem;
@@ -971,17 +988,17 @@
     color: #0f172a;
 }
 
-.teacher-buddy-style-dot {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 2.45rem;
-    height: 2.45rem;
-    flex-shrink: 0;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.82);
-    font-size: 0.74rem;
-    font-weight: 900;
+.teacher-buddy-style-ascii {
+    width: 5.3rem;
+    min-width: 5.3rem;
+    padding: 0.45rem 0.35rem;
+    border-radius: 0.95rem;
+    background: rgba(255, 255, 255, 0.8);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.42);
+    font-size: 0.45rem;
+    font-weight: 800;
+    line-height: 1.08;
+    letter-spacing: -0.01em;
 }
 
 .teacher-buddy-style-name,

@@ -215,6 +215,7 @@ def _serialize_skin(
         "palette_tokens": palette_tokens,
         "preview_badge": skin.preview_badge if skin else buddy.avatar_mark,
         "avatar_accent": skin.avatar_accent if skin else palette_tokens.get("accent", ""),
+        "idle_ascii": buddy.idle_ascii,
         "unlock_cost_dust": int(skin.unlock_cost_dust if skin else 0),
         "is_default": skin is None,
         "is_unlocked": unlocked,
@@ -686,6 +687,11 @@ def _build_collection_items(*, user, state: TeacherBuddyState) -> list[dict[str,
     profile_key = state.profile_buddy_key or state.active_buddy_key
     ordered_items: list[tuple[int, int, dict[str, object]]] = []
     for index, buddy in enumerate(all_teacher_buddies()):
+        selected_skin_key = ""
+        if buddy.key == profile_key:
+            selected_skin_key = _resolve_style_skin_key(state.profile_skin_key, buddy.key, profile_key)
+        elif buddy.key == state.active_buddy_key:
+            selected_skin_key = _resolve_style_skin_key(state.active_skin_key, buddy.key, state.active_buddy_key)
         payload = _serialize_buddy(
             buddy,
             user=user,
@@ -694,6 +700,7 @@ def _build_collection_items(*, user, state: TeacherBuddyState) -> list[dict[str,
             profile_key=profile_key,
             active_skin_key=_resolve_style_skin_key(state.active_skin_key, buddy.key, state.active_buddy_key),
             profile_skin_key=_resolve_style_skin_key(state.profile_skin_key, buddy.key, profile_key),
+            selected_skin_key=selected_skin_key,
         )
         sort_rank = 3
         if payload["is_profile"]:
@@ -1479,7 +1486,7 @@ def _build_selection_payload(*, user, state: TeacherBuddyState, message: str) ->
         user=user,
         state=state,
         buddy_key=active_key if active_key == profile_key else active_key,
-        selected_skin_key="",
+        selected_skin_key=_resolve_style_skin_key(state.profile_skin_key, profile_key, profile_key),
     )
     return {
         "status": "ok",
@@ -1631,13 +1638,13 @@ def build_teacher_buddy_share_svg(context: dict[str, object]) -> str:
     caption = escape(str(buddy.get("share_caption") or "오늘도 교실 흐름을 돕고 있어요."))
     sticker_dust = int(context.get("sticker_dust") or 0)
     cosmetic_tier = str(context.get("cosmetic_tier") or "starter")
-    ascii_lines = str(buddy.get("idle_ascii") or "").splitlines()[:6]
+    ascii_lines = [line.strip() for line in str(buddy.get("idle_ascii") or "").splitlines()[:6]]
     ascii_y = 230
     ascii_markup = []
     for line in ascii_lines:
         ascii_markup.append(
-            f'<text x="138" y="{ascii_y}" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" '
-            f'font-size="28" font-weight="700" fill="#0f172a">{escape(line)}</text>'
+            f'<text x="260" y="{ascii_y}" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" '
+            f'font-size="28" font-weight="700" fill="url(#buddy-ascii)">{escape(line)}</text>'
         )
         ascii_y += 34
 
@@ -1653,6 +1660,8 @@ def build_teacher_buddy_share_svg(context: dict[str, object]) -> str:
         '<defs>'
         f'<linearGradient id="buddy-bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">'
         f'<stop stop-color="{bg_start}"/><stop offset="1" stop-color="{bg_end}"/></linearGradient>'
+        f'<linearGradient id="buddy-ascii" x1="90" y1="214" x2="90" y2="452" gradientUnits="userSpaceOnUse">'
+        f'<stop stop-color="{text}"/><stop offset="1" stop-color="{accent}"/></linearGradient>'
         '</defs>'
         f'<rect width="1200" height="630" rx="40" fill="url(#buddy-bg)"/>'
         f'<rect width="1200" height="630" rx="40" fill="white" fill-opacity="0.18"/>'

@@ -81,6 +81,27 @@
             .replace(/'/g, '&#39;');
     }
 
+    function renderAscii(node, value) {
+        if (!node) {
+            return;
+        }
+        node.innerHTML = '';
+        String(value || '').split(/\r?\n/).forEach(function (line) {
+            var row = document.createElement('span');
+            row.className = 'teacher-buddy-ascii-line';
+            row.textContent = String(line || '').trim();
+            node.appendChild(row);
+        });
+    }
+
+    function setAsciiTone(node, paletteTokens) {
+        if (!node || !paletteTokens || typeof paletteTokens !== 'object') {
+            return;
+        }
+        node.style.setProperty('--teacher-buddy-ascii-start', paletteTokens.text || '#0f172a');
+        node.style.setProperty('--teacher-buddy-ascii-end', paletteTokens.accent || paletteTokens.text || '#334155');
+    }
+
     function renderAvatarHTML(buddy) {
         var tokens = buddy.palette_tokens || {};
         return '' +
@@ -142,7 +163,8 @@
             caption.textContent = captionText || buddy.share_caption || '';
         }
         if (ascii) {
-            ascii.textContent = buddy.idle_ascii || '';
+            renderAscii(ascii, buddy.idle_ascii || '');
+            setAsciiTone(ascii, buddy.palette_tokens || {});
         }
         if (rarity) {
             rarity.textContent = buddy.rarity_label || '';
@@ -230,8 +252,13 @@
             return;
         }
         var summary = card.querySelector('[data-buddy-style-summary="true"]');
+        var ascii = card.querySelector('.teacher-buddy-collection-ascii');
         if (summary && item.style_summary_text) {
             summary.textContent = item.style_summary_text;
+        }
+        if (ascii) {
+            renderAscii(ascii, item.idle_ascii || '');
+            setAsciiTone(ascii, item.palette_tokens || {});
         }
         (item.style_options || []).forEach(function (style) {
             card.querySelectorAll('[data-buddy-style-option="true"]').forEach(function (option) {
