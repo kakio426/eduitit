@@ -1150,7 +1150,7 @@ function initCalendarMessageHub(host, options = {}) {
                 : [];
             this.messageCaptureCandidates = [];
             this.messageCaptureSuccessMode = 'archive';
-            this.messageCaptureSavedMessage = payload.message || '메모를 보관함에 저장했어요.';
+            this.messageCaptureSavedMessage = payload.message || '메시지를 다시 보기로 보관했어요.';
             this.messageCaptureSavedEvents = [];
             this.messageCaptureErrorText = '';
             this.messageCaptureStep = 'done';
@@ -1322,8 +1322,10 @@ function initCalendarMessageHub(host, options = {}) {
                     } else {
                         window.showToast('바로 저장할 일정은 찾지 못했어요.', 'info');
                     }
+                } else if (this.messageCaptureEditableCandidates().length > 0) {
+                    window.showToast('AI가 찾은 일정이 맞으면 바로 저장하고, 틀릴 때만 고치세요.', 'success');
                 } else if (this.messageCaptureLinkedDate) {
-                    window.showToast('AI가 찾은 날짜가 맞으면 바로 저장하고, 틀릴 때만 수정하세요.', 'success');
+                    window.showToast('바로 넣을 일정이 없으면 메시지만 다시 보기로 저장할 수 있어요.', 'info');
                 } else {
                     window.showToast('AI가 날짜를 못 잡아 한 번만 직접 정해 주세요.', 'info');
                 }
@@ -1408,7 +1410,7 @@ function initCalendarMessageHub(host, options = {}) {
                     this.syncMessageCaptureInputToHomeDraft({ clearDraft: true });
                 }
                 await this.refreshMessageArchiveAfterMutation(payload.capture_id || '');
-                window.showToast(payload.message || '메모를 보관함에 저장했어요.', 'success');
+                window.showToast(payload.message || '메시지를 다시 보기로 보관했어요.', 'success');
             } catch (error) {
                 this.messageCaptureErrorText = error.message || '보관함 저장에 실패했습니다.';
                 window.showToast(this.messageCaptureErrorText, 'error');
@@ -1463,7 +1465,7 @@ function initCalendarMessageHub(host, options = {}) {
                     }),
                 });
                 this.messageCaptureSuccessMode = 'link';
-                this.messageCaptureSavedMessage = payload.message || '캘린더에 메시지 항목으로 연결했어요.';
+                this.messageCaptureSavedMessage = payload.message || '메시지를 다시 보기로 저장했어요.';
                 this.messageCaptureSavedEvents = [];
                 this.messageCaptureStep = 'done';
                 if (typeof this.refreshEvents === 'function') {
@@ -1474,7 +1476,7 @@ function initCalendarMessageHub(host, options = {}) {
                 }
                 window.showToast(this.messageCaptureSavedMessage, 'success');
             } catch (error) {
-                this.messageCaptureErrorText = error.message || '메시지 항목 저장에 실패했습니다.';
+                this.messageCaptureErrorText = error.message || '메시지 다시 보기 저장에 실패했습니다.';
                 window.showToast(this.messageCaptureErrorText, 'error');
             } finally {
                 this.isCommittingMessageCapture = false;
@@ -1610,21 +1612,18 @@ function initCalendarMessageHub(host, options = {}) {
 
         messageCaptureDoneTitle: function() {
             if (this.messageCaptureSuccessMode === 'archive') {
-                return '메시지를 보관했어요.';
+                return '메시지를 다시 보기로 보관했어요.';
             }
             if (this.messageCaptureSuccessMode === 'link') {
-                return '메시지 항목을 저장했어요.';
+                return '메시지를 다시 보기로 저장했어요.';
             }
-            if (this.isHomeMobileMessageCaptureMode()) {
-                return '캘린더에 저장했어요.';
-            }
-            return '메모에서 일정을 저장했어요.';
+            return '캘린더에 저장했어요.';
         },
 
         messageArchiveCandidateEmptyText: function() {
             if (!this.messageArchiveSelectedCapture) return '';
             return this.messageArchiveSelectedCapture.archive_status === 'unparsed'
-                ? '아직 이 메시지는 읽지 않았어요. 필요할 때 다시 열어 일정찾기를 누르면 됩니다.'
+                ? '아직 이 메시지는 읽지 않았어요. 필요할 때 다시 열어 일정 만들기를 누르면 됩니다.'
                 : (this.hasSelectedCaptureLinkedItems()
                     ? '이미 연결된 일정은 아래에서 확인할 수 있어요.'
                     : '이 메시지에서는 저장할 날짜를 찾지 못했어요.');

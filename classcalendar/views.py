@@ -1295,12 +1295,12 @@ def _message_capture_workflow_status_code(capture):
 
 def _message_capture_workflow_status_label(status_code):
     labels = {
-        "kept": "보관만 함",
-        "dated": "날짜 정함",
-        "linked": "캘린더 연결됨",
-        "done": "처리 완료",
+        "kept": "메시지만 보관",
+        "dated": "다시 볼 날짜",
+        "linked": "일정 저장됨",
+        "done": "완료",
     }
-    return labels.get(str(status_code or "").strip().lower(), "보관만 함")
+    return labels.get(str(status_code or "").strip().lower(), "메시지만 보관")
 
 
 def _serialize_message_capture(capture, *, warnings=None, reused=False):
@@ -4737,7 +4737,7 @@ def api_message_capture_link(request, capture_id):
 
     response_payload = _serialize_message_capture_archive_detail(capture)
     response_payload["message"] = (
-        "캘린더에 메시지 항목으로 연결했어요."
+        "메시지를 다시 보기로 저장했어요."
         if follow_up_state != CalendarMessageCapture.FollowUpState.DONE
         else "메시지를 처리 완료로 저장했어요."
     )

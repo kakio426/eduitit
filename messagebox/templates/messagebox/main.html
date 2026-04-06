@@ -62,7 +62,7 @@
                     <a href="{{ calendar_main_url }}" class="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">학급 캘린더</a>
                     <div class="flex w-full gap-2 sm:w-auto" x-show="messageCaptureEnabled">
                         <button type="button" @click="focusMessageInput()" class="inline-flex min-w-0 flex-1 items-center justify-center rounded-2xl bg-slate-900 px-3 py-2.5 text-sm font-black text-white transition hover:bg-slate-800 sm:flex-none sm:px-4 sm:py-3">
-                            새 메시지 보관
+                            새 메시지에서 일정 만들기
                         </button>
                         <button type="button" @click="focusMessageArchive()" class="inline-flex min-w-0 flex-1 items-center justify-center rounded-2xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-black text-slate-700 transition hover:bg-slate-50 sm:flex-none sm:px-4 sm:py-3">
                             보관함
@@ -85,8 +85,8 @@
                 <section id="messagebox-compose" class="scroll-mt-24 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6" style="scroll-margin-top: calc(var(--main-nav-height, 88px) + 1rem);" data-messagebox-compose="true">
                     <div class="flex items-center justify-between gap-3">
                         <div>
-                            <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">빠르게 보관</p>
-                            <h2 class="mt-1 text-xl font-black text-slate-900">메시지 보관</h2>
+                            <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">빠르게 일정 만들기</p>
+                            <h2 class="mt-1 text-xl font-black text-slate-900">메시지에서 일정 만들기</h2>
                         </div>
                     </div>
 
@@ -103,8 +103,8 @@
                         </div>
 
                         <div class="rounded-[1.6rem] border border-slate-200 bg-slate-50 px-4 py-3">
-                            <p class="text-sm font-black text-slate-900">AI가 날짜를 찾으면 다음 단계에서 바로 저장하면 됩니다.</p>
-                            <p class="mt-1 text-xs font-medium text-slate-500">날짜가 틀릴 때만 거기서 고치세요.</p>
+                            <p class="text-sm font-black text-slate-900">AI가 맞으면 바로 저장하고, 틀릴 때만 다음 단계에서 고치면 됩니다.</p>
+                            <p class="mt-1 text-xs font-medium text-slate-500">교사는 저장할지만 판단하면 되고, 수정은 꼭 필요할 때만 하면 돼요.</p>
                         </div>
 
                         <div>
@@ -157,29 +157,27 @@
                         <p x-show="messageCaptureErrorText" class="rounded-[1.6rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700" x-text="messageCaptureErrorText"></p>
 
                         <div class="space-y-2">
+                            <button
+                                type="button"
+                                @click="submitMessageCaptureParse()"
+                                :disabled="isSavingMessageCaptureArchive || isParsingMessageCapture"
+                                class="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800 disabled:opacity-60"
+                                x-text="isParsingMessageCapture ? '일정 찾는 중...' : '일정 만들기'"
+                            ></button>
                             <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                                <button
-                                    type="button"
-                                    @click="submitMessageCaptureParse()"
-                                    :disabled="isSavingMessageCaptureArchive || isParsingMessageCapture"
-                                    class="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800 disabled:opacity-60"
-                                    x-text="isParsingMessageCapture ? '날짜 찾는 중...' : '자동으로 날짜 찾기'"
-                                ></button>
                                 <button
                                     type="button"
                                     @click="startManualMessageCaptureFromInput()"
                                     :disabled="isSavingMessageCaptureArchive || isParsingMessageCapture"
                                     class="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-black text-amber-900 transition hover:bg-amber-100 disabled:opacity-60"
-                                    x-text="isSavingMessageCaptureArchive && messageCaptureSaveMode === 'manual' ? '일정칸 준비 중...' : '일정 날짜 정하기'"
+                                    x-text="isSavingMessageCaptureArchive && messageCaptureSaveMode === 'manual' ? '직접 입력 준비 중...' : '직접 날짜 정하기'"
                                 ></button>
-                            </div>
-                            <div class="flex justify-end">
                                 <button
                                     type="button"
                                     @click="submitMessageCaptureArchiveSave()"
                                     :disabled="isSavingMessageCaptureArchive || isParsingMessageCapture"
                                     class="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
-                                    x-text="isSavingMessageCaptureArchive && messageCaptureSaveMode !== 'manual' ? '보관 중...' : '보관만 하기'"
+                                    x-text="isSavingMessageCaptureArchive && messageCaptureSaveMode !== 'manual' ? '보관 중...' : '메시지만 보관'"
                                 ></button>
                             </div>
                         </div>
@@ -190,6 +188,7 @@
                             <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
                                 <div>
                                     <p class="text-base font-black text-slate-900" x-text="messageCaptureSummaryText || `실제 일정 후보 ${messageCaptureCandidates.length}개`"></p>
+                                    <p class="mt-2 text-sm font-semibold text-slate-600" x-text="messageCaptureEditableCandidates().length > 0 ? 'AI가 맞으면 바로 저장하고, 틀리면 아래 일정만 고치세요.' : '자동으로 못 찾으면 아래에서 직접 일정만 정하면 됩니다.'"></p>
                                 </div>
                                 <div class="flex flex-wrap gap-2">
                                     <span class="inline-flex items-center rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-black text-slate-700" x-text="messageCaptureWorkflowPreviewText()"></span>
@@ -197,6 +196,11 @@
                                 </div>
                             </div>
                             <p x-show="messageCaptureManualNote" class="mt-3 text-sm font-semibold text-slate-600" x-text="`메모: ${messageCaptureManualNote}`"></p>
+                        </div>
+
+                        <div class="rounded-[1.6rem] border border-slate-200 bg-slate-50 px-4 py-4">
+                            <p class="text-sm font-black text-slate-900">지금은 저장할 일정만 고르면 됩니다.</p>
+                            <p class="mt-1 text-sm font-semibold text-slate-600">원문은 필요할 때만 펼쳐 보고, AI가 틀린 후보만 아래에서 고치세요.</p>
                         </div>
 
                         <div class="rounded-[1.6rem] border border-slate-200 bg-white px-4 py-4">
@@ -435,10 +439,10 @@
                         >
                         <div class="flex flex-wrap gap-2" data-messagebox-filters="true">
                             <button type="button" @click="setMessageArchiveFilter('all')" :class="workflowFilterButtonClass('all')" class="rounded-full border px-3 py-1.5 text-xs font-black transition">전체 <span x-text="messageArchiveCounts.all || 0"></span></button>
-                            <button type="button" @click="setMessageArchiveFilter('kept')" :class="workflowFilterButtonClass('kept')" class="rounded-full border px-3 py-1.5 text-xs font-black transition">보관만 함 <span x-text="messageArchiveCounts.kept || 0"></span></button>
-                            <button type="button" @click="setMessageArchiveFilter('dated')" :class="workflowFilterButtonClass('dated')" class="rounded-full border px-3 py-1.5 text-xs font-black transition">날짜 정함 <span x-text="messageArchiveCounts.dated || 0"></span></button>
-                            <button type="button" @click="setMessageArchiveFilter('linked')" :class="workflowFilterButtonClass('linked')" class="rounded-full border px-3 py-1.5 text-xs font-black transition">캘린더 연결됨 <span x-text="messageArchiveCounts.linked || 0"></span></button>
-                            <button type="button" @click="setMessageArchiveFilter('done')" :class="workflowFilterButtonClass('done')" class="rounded-full border px-3 py-1.5 text-xs font-black transition">처리 완료 <span x-text="messageArchiveCounts.done || 0"></span></button>
+                            <button type="button" @click="setMessageArchiveFilter('kept')" :class="workflowFilterButtonClass('kept')" class="rounded-full border px-3 py-1.5 text-xs font-black transition">메시지만 보관 <span x-text="messageArchiveCounts.kept || 0"></span></button>
+                            <button type="button" @click="setMessageArchiveFilter('dated')" :class="workflowFilterButtonClass('dated')" class="rounded-full border px-3 py-1.5 text-xs font-black transition">다시 볼 날짜 <span x-text="messageArchiveCounts.dated || 0"></span></button>
+                            <button type="button" @click="setMessageArchiveFilter('linked')" :class="workflowFilterButtonClass('linked')" class="rounded-full border px-3 py-1.5 text-xs font-black transition">일정 저장됨 <span x-text="messageArchiveCounts.linked || 0"></span></button>
+                            <button type="button" @click="setMessageArchiveFilter('done')" :class="workflowFilterButtonClass('done')" class="rounded-full border px-3 py-1.5 text-xs font-black transition">완료 <span x-text="messageArchiveCounts.done || 0"></span></button>
                         </div>
                     </div>
 
