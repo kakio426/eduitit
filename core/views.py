@@ -1914,6 +1914,23 @@ def _build_home_community_summary_posts(page_obj, *, pinned_notice_posts=None, l
     return items
 
 
+def _build_sns_preview_posts(page_obj, *, pinned_notice_posts=None, limit=3):
+    pinned_items = list(pinned_notice_posts or [])
+    feed_items = list(getattr(page_obj, "object_list", []) or [])
+    merged: list[Post] = []
+    seen_ids: set[int] = set()
+    for post in [*pinned_items, *feed_items]:
+        post_id = getattr(post, "id", None)
+        if not post_id or post_id in seen_ids:
+            continue
+        seen_ids.add(post_id)
+        merged.append(post)
+        if len(merged) >= limit:
+            break
+    attach_teacher_buddy_avatar_context(merged)
+    return merged
+
+
 def _build_home_reservation_card(user):
     if not getattr(user, "is_authenticated", False):
         return None
@@ -2721,6 +2738,11 @@ def _home_v2(request, products, posts, page_obj, feed_scope, pinned_notice_posts
         pinned_notice_posts=pinned_notice_posts,
         limit=2,
     )
+    sns_preview_posts = _build_sns_preview_posts(
+        page_obj,
+        pinned_notice_posts=pinned_notice_posts,
+        limit=3,
+    )
     community_summary = {
         'title': '실시간 소통',
         'posts': sns_summary_posts,
@@ -2974,6 +2996,11 @@ def _build_home_authenticated_v4_response(
         pinned_notice_posts=pinned_notice_posts,
         limit=2,
     )
+    sns_preview_posts = _build_sns_preview_posts(
+        page_obj,
+        pinned_notice_posts=pinned_notice_posts,
+        limit=3,
+    )
     community_summary = {
         'title': '실시간 소통',
         'posts': sns_summary_posts,
@@ -3131,6 +3158,7 @@ def _build_home_authenticated_v4_response(
         'home_v2_frontend_config': home_v2_frontend_config,
         'home_design_version': home_design_version,
         'community_summary': community_summary,
+        'sns_preview_posts': sns_preview_posts,
         'posts': posts,
         'page_obj': page_obj,
         'pinned_notice_posts': pinned_notice_posts,

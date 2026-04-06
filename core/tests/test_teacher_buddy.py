@@ -42,6 +42,7 @@ from core.teacher_buddy_catalog import (
     TOTAL_BUDDY_COUNT,
     TOTAL_SKIN_COUNT,
     all_teacher_buddies,
+    get_teacher_buddy,
     get_teacher_buddy_skins_for_buddy,
     with_particle,
 )
@@ -674,6 +675,22 @@ class TeacherBuddyHomeRenderTests(TestCase):
         buddy_index = content.index('data-home-teacher-buddy-slot="v5-side"')
         sns_index = content.index('data-home-v4-sns-panel="true"')
         self.assertLess(buddy_index, sns_index)
+
+    @override_settings(HOME_LAYOUT_VERSION="v5")
+    def test_v5_mobile_preview_posts_keep_buddy_avatar_context(self):
+        record_teacher_buddy_progress(self.user, Product.objects.first(), "home_quick")
+        Post.objects.create(
+            author=self.user,
+            content="모바일 SNS 미리보기에서도 교실 메이트 아바타가 보여야 하는 테스트 글입니다.",
+            post_type="general",
+        )
+        self.client.login(username="buddyhome", password="pass1234")
+
+        response = self.client.get(reverse("home"))
+
+        preview_posts = response.context["sns_preview_posts"]
+        self.assertTrue(preview_posts)
+        self.assertTrue(preview_posts[0].teacher_buddy_avatar_context["is_buddy"])
 
     def test_company_role_hides_panel(self):
         company_user = create_onboarded_user("buddycompany", role="company")
