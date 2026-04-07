@@ -75,6 +75,7 @@
             data-buddy-settings-item="true"
             data-buddy-key="{{ item.key }}"
             data-buddy-locked="{% if item.is_locked %}true{% else %}false{% endif %}"
+            data-buddy-style-total="{{ item.style_total_count }}"
         >
             <div class="teacher-buddy-settings-item-top">
                 {% include 'core/partials/teacher_buddy_avatar.html' with avatar_context=item size_class='h-12 w-12' extra_class='teacher-buddy-collection-avatar' %}
@@ -104,13 +105,30 @@
 
             <div class="teacher-buddy-settings-item-meta">
                 <span class="teacher-buddy-status-chip teacher-buddy-status-chip--soft" data-buddy-style-summary="true">{{ item.style_summary_text }}</span>
-                <button type="button" class="teacher-buddy-inline-button teacher-buddy-inline-button--secondary" data-buddy-style-toggle="true" aria-expanded="false">스타일 보기</button>
             </div>
 
+            {% if not item.is_locked %}
+            <div class="teacher-buddy-settings-item-actions">
+                <div data-buddy-card-actions="true">
+                    {% if item.is_profile %}
+                    <span class="teacher-buddy-status-chip" data-buddy-card-status="true">현재 대표</span>
+                    {% else %}
+                    <form method="post" action="{{ teacher_buddy_urls.select }}" data-buddy-apply-form="representative" data-buddy-card-form="true">
+                        {% csrf_token %}
+                        <input type="hidden" name="buddy_key" value="{{ item.key }}">
+                        <input type="hidden" name="skin_key" value="">
+                        <button type="submit" class="teacher-buddy-inline-button">{% if item.style_total_count > 1 %}기본으로 적용{% else %}대표로 적용{% endif %}</button>
+                    </form>
+                    {% endif %}
+                </div>
+                {% if item.style_total_count > 1 %}
+                <button type="button" class="teacher-buddy-inline-button teacher-buddy-inline-button--secondary" data-buddy-style-toggle="true" aria-expanded="false">스타일 보기</button>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% if not item.is_locked and item.style_total_count > 1 %}
             <div class="teacher-buddy-style-drawer" data-buddy-style-drawer="true" hidden>
-                {% if item.is_locked %}
-                <p class="teacher-buddy-style-locked-copy">메이트 본체를 먼저 만나면 이 카드의 스타일을 열 수 있어요.</p>
-                {% else %}
                 <div class="teacher-buddy-style-list">
                     {% for style in item.style_options %}
                     {% if not style.is_default %}
@@ -168,8 +186,8 @@
                     {% endif %}
                     {% endfor %}
                 </div>
-                {% endif %}
             </div>
+            {% endif %}
         </article>
         {% endfor %}
     </div>

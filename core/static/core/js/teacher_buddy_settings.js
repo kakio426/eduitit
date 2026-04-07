@@ -205,6 +205,20 @@
             '</form>';
     }
 
+    function buildBuddyApplyAction(root, buddyKey, hasExtraStyles, isSelected) {
+        if (isSelected) {
+            return '<span class="teacher-buddy-status-chip" data-buddy-card-status="true">현재 대표</span>';
+        }
+        var action = root.dataset.selectUrl;
+        return '' +
+            '<form method="post" action="' + action + '" data-buddy-apply-form="representative" data-buddy-card-form="true">' +
+            '<input type="hidden" name="csrfmiddlewaretoken" value="' + getCsrfToken() + '">' +
+            '<input type="hidden" name="buddy_key" value="' + buddyKey + '">' +
+            '<input type="hidden" name="skin_key" value="">' +
+            '<button type="submit" class="teacher-buddy-inline-button">' + (hasExtraStyles ? '기본으로 적용' : '대표로 적용') + '</button>' +
+            '</form>';
+    }
+
     function renderStyleActions(root, option, state) {
         var actions = option.querySelector('[data-buddy-style-actions="true"]');
         if (!actions) {
@@ -222,12 +236,30 @@
         actions.innerHTML = buildApplyAction(root, buddyKey, skinKey, isSelected);
     }
 
+    function renderBuddyActions(root, card, state) {
+        var actions = card.querySelector('[data-buddy-card-actions="true"]');
+        if (!actions) {
+            return;
+        }
+        var buddyKey = card.getAttribute('data-buddy-key') || '';
+        var isLocked = card.getAttribute('data-buddy-locked') === 'true';
+        if (isLocked || !buddyKey) {
+            actions.innerHTML = '';
+            return;
+        }
+        var styleTotal = parseInt(card.getAttribute('data-buddy-style-total') || '1', 10);
+        var hasExtraStyles = !Number.isNaN(styleTotal) && styleTotal > 1;
+        var isSelected = buddyKey === state.representativeKey;
+        actions.innerHTML = buildBuddyApplyAction(root, buddyKey, hasExtraStyles, isSelected);
+    }
+
     function updateSelectionUI(root, state) {
         root.querySelectorAll('[data-buddy-settings-item="true"]').forEach(function (card) {
             var buddyKey = card.getAttribute('data-buddy-key') || '';
             var isSelected = buddyKey === state.representativeKey;
             card.classList.toggle('is-profile', isSelected);
             card.classList.toggle('is-active', isSelected);
+            renderBuddyActions(root, card, state);
         });
 
         root.querySelectorAll('[data-buddy-style-option="true"]').forEach(function (option) {

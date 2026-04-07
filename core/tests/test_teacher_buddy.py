@@ -1,3 +1,4 @@
+import re
 import json
 from pathlib import Path
 from unittest.mock import patch
@@ -768,6 +769,60 @@ class TeacherBuddyHomeRenderTests(TestCase):
         self.assertNotContains(response, 'data-buddy-settings-style-summary="true"')
         self.assertNotContains(response, 'data-buddy-unlock-form="true"')
         self.assertNotContains(response, "스타일 조각")
+
+    def test_settings_page_shows_direct_apply_button_for_unlocked_buddy_without_extra_styles(self):
+        context = build_teacher_buddy_settings_context(self.user)
+        starter_key = context["profile_buddy"]["key"]
+        candidate = next(
+            buddy for buddy in all_teacher_buddies() if buddy.key != starter_key and not get_teacher_buddy_skins_for_buddy(buddy.key)
+        )
+        TeacherBuddyUnlock.objects.get_or_create(
+            user=self.user,
+            buddy_key=candidate.key,
+            defaults={"rarity": candidate.rarity, "obtained_via": "draw"},
+        )
+        self.client.login(username="buddyhome", password="pass1234")
+
+        response = self.client.get(reverse("settings"))
+        content = response.content.decode("utf-8")
+        match = re.search(
+            rf'<article[^>]*data-buddy-key="{re.escape(candidate.key)}"[^>]*>(.*?)</article>',
+            content,
+            re.S,
+        )
+
+        self.assertIsNotNone(match)
+        article = match.group(1)
+        self.assertIn("대표로 적용", article)
+        self.assertIn(f'name="buddy_key" value="{candidate.key}"', article)
+        self.assertIn('name="skin_key" value=""', article)
+        self.assertNotIn('data-buddy-style-toggle="true"', article)
+
+    def test_settings_page_keeps_style_toggle_for_unlocked_buddy_with_extra_styles(self):
+        context = build_teacher_buddy_settings_context(self.user)
+        starter_key = context["profile_buddy"]["key"]
+        candidate = next(
+            buddy for buddy in all_teacher_buddies() if buddy.key != starter_key and get_teacher_buddy_skins_for_buddy(buddy.key)
+        )
+        TeacherBuddyUnlock.objects.get_or_create(
+            user=self.user,
+            buddy_key=candidate.key,
+            defaults={"rarity": candidate.rarity, "obtained_via": "draw"},
+        )
+        self.client.login(username="buddyhome", password="pass1234")
+
+        response = self.client.get(reverse("settings"))
+        content = response.content.decode("utf-8")
+        match = re.search(
+            rf'<article[^>]*data-buddy-key="{re.escape(candidate.key)}"[^>]*>(.*?)</article>',
+            content,
+            re.S,
+        )
+
+        self.assertIsNotNone(match)
+        article = match.group(1)
+        self.assertIn("기본으로 적용", article)
+        self.assertIn('data-buddy-style-toggle="true"', article)
 
     def test_settings_collection_starts_with_current_starter_buddy(self):
         self.client.login(username="buddyhome", password="pass1234")
