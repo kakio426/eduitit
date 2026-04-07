@@ -4859,6 +4859,29 @@ class DutyTickerManager {
         this.updateBroadcastModalTtsInfo();
     }
 
+    openCurrentPageInNewWindow() {
+        const targetUrl = this.buildFreshUrl(window.location.href || '/products/dutyticker/');
+        let nextWindow = null;
+        try {
+            nextWindow = window.open(targetUrl, 'eduititDutyTickerDisplayWindow');
+        } catch (error) {
+            console.error(error);
+        }
+
+        if (!nextWindow) {
+            this.showToast('새 창이 차단되었습니다. 브라우저에서 팝업 허용 후 다시 시도해 주세요.', 'error');
+            return;
+        }
+
+        try {
+            nextWindow.focus();
+        } catch (error) {
+            console.warn('DutyTicker: failed to focus display window', error);
+        }
+
+        this.showToast('알림판을 새 창으로 열었습니다. 이 창에서는 Eduitit을 계속 사용하시면 됩니다.', 'success');
+    }
+
     toggleFullscreen() {
         const el = document.getElementById('mainAppContainer') || document.documentElement;
         if (!document.fullscreenElement) el.requestFullscreen().catch(() => { });
