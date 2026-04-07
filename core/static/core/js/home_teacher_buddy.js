@@ -231,8 +231,138 @@
         setAsciiTone(ascii, buddy.ascii_tokens, paletteTokens);
     }
 
-    function setResultStage(root, stage) {
+    function getResultModal(root) {
+        if (root.__buddyResultModal) {
+            return root.__buddyResultModal;
+        }
+        return root.querySelector('[data-buddy-result-modal="true"]');
+    }
+
+    function getResultDialog(root) {
+        var modal = getResultModal(root);
+        if (root.__buddyResultDialog) {
+            return root.__buddyResultDialog;
+        }
+        return modal ? modal.querySelector('[data-buddy-result-dialog="true"]') : null;
+    }
+
+    function mountResultModal(root) {
         var modal = root.querySelector('[data-buddy-result-modal="true"]');
+        if (!modal) {
+            return;
+        }
+        root.__buddyResultModal = modal;
+        root.__buddyResultDialog = modal.querySelector('[data-buddy-result-dialog="true"]');
+        if (modal.parentNode !== document.body) {
+            document.body.appendChild(modal);
+        }
+    }
+
+    function getResultBuddy(payload) {
+        if (!payload || typeof payload !== 'object') {
+            return null;
+        }
+        if (payload.result_buddy && typeof payload.result_buddy === 'object') {
+            return payload.result_buddy;
+        }
+        if (payload.unlocked_buddy && typeof payload.unlocked_buddy === 'object') {
+            return payload.unlocked_buddy;
+        }
+        return null;
+    }
+
+    function getRevealThemeConfig(theme, resultBuddy) {
+        var palette = resultBuddy && resultBuddy.palette_tokens && typeof resultBuddy.palette_tokens === 'object'
+            ? resultBuddy.palette_tokens
+            : null;
+        var defaults = {
+            common: {
+                accent: '#64748b',
+                closeLabel: '확인',
+                suspenseMinMs: 620
+            },
+            rare: {
+                accent: '#4f46e5',
+                closeLabel: '오, 확인!',
+                suspenseMinMs: 1180
+            },
+            epic: {
+                accent: '#c026d3',
+                closeLabel: '좋아, 확인!',
+                suspenseMinMs: 1560
+            },
+            legendary: {
+                accent: '#d97706',
+                closeLabel: '와, 확인!',
+                suspenseMinMs: 2200
+            },
+            duplicate: {
+                accent: '#0f766e',
+                closeLabel: '다시 확인',
+                suspenseMinMs: 720
+            }
+        };
+        var base = defaults[theme] || defaults.common;
+        return {
+            accent: (palette && (palette.accent || palette.text)) || base.accent,
+            closeLabel: base.closeLabel,
+            suspenseMinMs: base.suspenseMinMs
+        };
+    }
+
+    function resetResultTheme(root) {
+        var modal = getResultModal(root);
+        var dialog = getResultDialog(root);
+        if (!modal || !dialog) {
+            return;
+        }
+        modal.setAttribute('data-result-theme', 'common');
+        dialog.setAttribute('data-result-theme', 'common');
+        dialog.style.removeProperty('--teacher-buddy-result-accent');
+        var rarityNode = modal.querySelector('[data-buddy-result-rarity="true"]');
+        if (rarityNode) {
+            rarityNode.textContent = '보통';
+            rarityNode.className = 'teacher-buddy-result-rarity-chip teacher-buddy-rarity teacher-buddy-rarity--common';
+        }
+        var confirmButton = modal.querySelector('[data-buddy-result-confirm="true"]');
+        if (confirmButton) {
+            confirmButton.textContent = '확인';
+        }
+    }
+
+    function applyResultTheme(root, payload) {
+        var modal = getResultModal(root);
+        var dialog = getResultDialog(root);
+        if (!modal || !dialog) {
+            return;
+        }
+        var resultBuddy = getResultBuddy(payload);
+        var theme = payload && payload.result_reveal_theme ? payload.result_reveal_theme : 'common';
+        var rarity = resultBuddy && resultBuddy.rarity ? resultBuddy.rarity : (payload && payload.result_rarity ? payload.result_rarity : 'common');
+        var config = getRevealThemeConfig(theme, resultBuddy);
+        modal.setAttribute('data-result-theme', theme);
+        dialog.setAttribute('data-result-theme', theme);
+        dialog.style.setProperty('--teacher-buddy-result-accent', config.accent);
+        var rarityNode = modal.querySelector('[data-buddy-result-rarity="true"]');
+        if (rarityNode) {
+            rarityNode.textContent = payload && payload.result_is_duplicate
+                ? '이미 만난 메이트'
+                : (resultBuddy && resultBuddy.rarity_label ? resultBuddy.rarity_label : '메이트');
+            rarityNode.className = 'teacher-buddy-result-rarity-chip teacher-buddy-rarity';
+            if (payload && payload.result_is_duplicate) {
+                rarityNode.classList.add('teacher-buddy-result-rarity-chip--duplicate');
+            } else {
+                rarityNode.classList.add('teacher-buddy-rarity--' + rarity);
+            }
+        }
+        var confirmButton = modal.querySelector('[data-buddy-result-confirm="true"]');
+        if (confirmButton) {
+            confirmButton.textContent = config.closeLabel;
+        }
+    }
+
+    function setResultStage(root, stage) {
+        var modal = getResultModal(root);
         if (!modal) {
             return;
         }
@@ -243,35 +373,38 @@
     }
 
     function openResultModal(root) {
-        var modal = root.querySelector('[data-buddy-result-modal="true"]');
+        var modal = getResultModal(root);
         if (!modal) {
             return;
         }
         root.__buddyLastFocus = document.activeElement;
         root.__buddyResultReady = false;
+        resetResultTheme(root);
         setResultStage(root, 'sealed');
         modal.hidden = false;
         modal.classList.add('is-open');
+        document.body.classList.add('teacher-buddy-modal-open');
     }
 
     function hideResultModal(root) {
-        var modal = root.querySelector('[data-buddy-result-modal="true"]');
+        var modal = getResultModal(root);
         if (!modal) {
             return;
         }
         modal.classList.remove('is-open');
         modal.hidden = true;
         setResultStage(root, 'sealed');
+        document.body.classList.remove('teacher-buddy-modal-open');
     }
 
     function populateResult(root, payload) {
-        var modal = root.querySelector('[data-buddy-result-modal="true"]');
-        var dialog = root.querySelector('[data-buddy-result-dialog="true"]');
+        var modal = getResultModal(root);
+        var dialog = getResultDialog(root);
         if (!modal || !dialog) {
             return;
         }
-        var resultBuddy = payload && (payload.result_buddy || payload.unlocked_buddy) ? (payload.result_buddy || payload.unlocked_buddy) : null;
-        dialog.setAttribute('data-result-theme', payload.result_reveal_theme || 'common');
+        var resultBuddy = getResultBuddy(payload);
+        applyResultTheme(root, payload);
         setText(modal, '[data-buddy-result-theme-title="true"]', payload.result_title || '메이트 결과');
         setText(modal, '[data-buddy-result-name="true"]', resultBuddy ? resultBuddy.name : '교실 메이트');
         renderAscii(modal.querySelector('[data-buddy-result-ascii="true"]'), resultBuddy ? (resultBuddy.unlock_ascii || resultBuddy.idle_ascii || '') : '');
@@ -284,17 +417,17 @@
     }
 
     function revealResult(root) {
-        var modal = root.querySelector('[data-buddy-result-modal="true"]');
+        var modal = getResultModal(root);
         if (!modal) {
             return;
         }
-        var dialog = root.querySelector('[data-buddy-result-dialog="true"]');
+        var dialog = getResultDialog(root);
         setResultStage(root, 'reveal');
         root.__buddyResultReady = true;
         playRevealSound(root, dialog ? (dialog.getAttribute('data-result-theme') || 'common') : 'common');
-        var closeButton = modal.querySelector('[data-buddy-result-close="true"]');
-        if (closeButton) {
-            closeButton.focus();
+        var confirmButton = modal.querySelector('[data-buddy-result-confirm="true"]');
+        if (confirmButton) {
+            confirmButton.focus();
         }
     }
 
@@ -331,14 +464,21 @@
 
     async function runRevealSequence(root, payloadPromise) {
         openResultModal(root);
-        await wait(600);
+        await wait(520);
         setResultStage(root, 'suspense');
         playRevealSound(root, 'suspense');
+        var suspenseStartedAt = Date.now();
         var payload = null;
         try {
-            payload = await Promise.all([payloadPromise, wait(850)]).then(function (values) {
-                return values[0];
-            });
+            payload = await payloadPromise;
+            applyResultTheme(root, payload);
+            var resultBuddy = getResultBuddy(payload);
+            var theme = payload && payload.result_reveal_theme ? payload.result_reveal_theme : 'common';
+            var themeConfig = getRevealThemeConfig(theme, resultBuddy);
+            var elapsedMs = Date.now() - suspenseStartedAt;
+            if (elapsedMs < themeConfig.suspenseMinMs) {
+                await wait(themeConfig.suspenseMinMs - elapsedMs);
+            }
         } catch (error) {
             hideResultModal(root);
             root.__buddyResultReady = true;
@@ -362,6 +502,7 @@
     }
 
     function bindPanel(root) {
+        mountResultModal(root);
         root.querySelectorAll('[data-buddy-draw-form="true"]').forEach(function (form) {
             form.addEventListener('submit', async function (event) {
                 event.preventDefault();
@@ -383,11 +524,14 @@
             });
         });
 
-        root.querySelectorAll('[data-buddy-result-close="true"]').forEach(function (button) {
-            button.addEventListener('click', function () {
-                closeResultModal(root);
+        var modal = getResultModal(root);
+        if (modal) {
+            modal.querySelectorAll('[data-buddy-result-close="true"]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    closeResultModal(root);
+                });
             });
-        });
+        }
     }
 
     function initTeacherBuddyPanels() {

@@ -165,7 +165,7 @@
         {% endif %}
     </div>
 
-    <div class="teacher-buddy-result" data-buddy-result-modal="true" id="{{ result_id }}" hidden data-result-stage="sealed">
+    <div class="teacher-buddy-result" data-buddy-result-modal="true" id="{{ result_id }}" hidden data-result-stage="sealed" data-result-theme="common">
         <button type="button" class="teacher-buddy-result-backdrop" data-buddy-result-close="true" aria-label="메이트 결과 닫기"></button>
         <div class="teacher-buddy-result-dialog" role="dialog" aria-modal="true" aria-labelledby="{{ result_id }}-title" data-buddy-result-dialog="true" data-result-theme="common">
             <div class="teacher-buddy-result-stage teacher-buddy-result-stage--sealed" data-buddy-result-stage="sealed">
@@ -184,11 +184,35 @@
                 <p class="teacher-buddy-result-message">교실 메이트가 모습을 고르고 있어요.</p>
             </div>
             <div class="teacher-buddy-result-stage teacher-buddy-result-stage--reveal" data-buddy-result-stage="reveal" hidden>
+                <div class="teacher-buddy-result-wave" aria-hidden="true"></div>
+                <div class="teacher-buddy-result-rays" aria-hidden="true">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+                <div class="teacher-buddy-result-effect" aria-hidden="true">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
                 <p class="teacher-buddy-result-eyebrow" data-buddy-result-theme-title="true">메이트 결과</p>
+                <p class="teacher-buddy-result-rarity-chip teacher-buddy-rarity teacher-buddy-rarity--common" data-buddy-result-rarity="true">보통</p>
                 <h3 id="{{ result_id }}-title" class="teacher-buddy-result-title" data-buddy-result-name="true">교실 메이트</h3>
                 <pre class="teacher-buddy-result-ascii" data-buddy-result-ascii="true"></pre>
                 <p class="teacher-buddy-result-message" data-buddy-result-message="true">메이트 결과를 확인했어요.</p>
-                <button type="button" class="teacher-buddy-result-button" data-buddy-result-close="true">확인</button>
+                <button type="button" class="teacher-buddy-result-button" data-buddy-result-close="true" data-buddy-result-confirm="true">확인</button>
             </div>
         </div>
     </div>

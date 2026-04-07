@@ -672,7 +672,7 @@ class TeacherBuddyHomeRenderTests(TestCase):
         response = self.client.get(reverse("home"))
         content = response.content.decode("utf-8")
 
-        buddy_index = content.index('data-home-teacher-buddy-slot="v5-side"')
+        buddy_index = content.index('data-home-teacher-buddy-slot="v5-left-rail"')
         sns_index = content.index('data-home-v4-sns-panel="true"')
         self.assertLess(buddy_index, sns_index)
 
