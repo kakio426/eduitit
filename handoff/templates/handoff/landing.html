@@ -20,26 +20,45 @@
                 <div>
                     <p class="text-xs font-black uppercase tracking-[0.18em] text-amber-700">운영자 전용</p>
                     <h2 class="mt-2 text-2xl font-black text-slate-800">다른 선생님 명부 넣어주기</h2>
-                    <p class="mt-2 text-sm font-bold leading-relaxed text-slate-600">대상 교사를 고르면 그 선생님 계정 명부를 바로 만들거나 수정할 수 있습니다.</p>
+                    <p class="mt-2 text-sm font-bold leading-relaxed text-slate-600">대상 교사를 고르면 그 선생님 계정 명부를 바로 만들거나 수정할 수 있습니다. 교사가 많으면 아이디나 별명으로 먼저 찾아보세요.</p>
                 </div>
                 <a href="{{ dashboard_url }}" class="inline-flex min-h-[48px] items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-600 transition hover:text-slate-800">
                     내 명부 관리
                 </a>
             </div>
-            <form action="{{ dashboard_url }}" method="get" class="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
+            <form action="{{ dashboard_url }}" method="get" class="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_220px_auto]">
+                <div>
+                    <label for="landing-teacher-query" class="mb-2 block text-sm font-black text-slate-700">교사 검색</label>
+                    <input
+                        id="landing-teacher-query"
+                        type="search"
+                        name="teacher_query"
+                        value="{{ teacher_query }}"
+                        placeholder="아이디, 별명, 이메일로 찾기"
+                        class="w-full rounded-2xl border border-amber-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                    >
+                </div>
                 <div>
                     <label for="landing-proxy-owner-select" class="mb-2 block text-sm font-black text-slate-700">명부를 넣어 줄 교사</label>
                     <select id="landing-proxy-owner-select" name="acting_for_user" class="w-full rounded-2xl border border-amber-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-300">
-                        <option value="">교사를 선택하세요</option>
+                        <option value="">{% if teacher_query and not proxy_target_options %}검색 결과가 없습니다{% else %}교사를 선택하세요{% endif %}</option>
                         {% for option in proxy_target_options %}
-                        <option value="{{ option.id }}">{{ option.label }}</option>
+                        <option value="{{ option.id }}" {% if option.id == proxy_target_user_id %}selected{% endif %}>{{ option.label }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <button type="submit" class="inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-amber-600 px-4 py-3 text-sm font-black text-white transition hover:bg-amber-500">
                     교사 명부 관리로 이동
                 </button>
+                {% if teacher_query %}
+                <a href="{% url 'handoff:landing' %}" class="inline-flex min-h-[48px] items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-600 transition hover:text-slate-800">
+                    검색 지우기
+                </a>
+                {% endif %}
             </form>
+            <p class="mt-3 text-xs font-bold text-slate-600">
+                {% if teacher_query %}"{{ teacher_query }}" 검색 결과 {{ proxy_target_options|length }}명{% else %}아이디, 별명, 이메일로 교사를 빠르게 찾을 수 있습니다.{% endif %}
+            </p>
         </div>
         {% endif %}
 

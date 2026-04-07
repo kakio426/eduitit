@@ -67,6 +67,22 @@ def _get_handoff_proxy_target_queryset(current_user):
     )
 
 
+def _get_handoff_teacher_query(request):
+    return str(request.GET.get("teacher_query") or request.POST.get("teacher_query") or "").strip()[:100]
+
+
+def _filter_handoff_proxy_targets(queryset, teacher_query):
+    if not teacher_query:
+        return queryset
+    return queryset.filter(
+        Q(username__icontains=teacher_query)
+        | Q(email__icontains=teacher_query)
+        | Q(first_name__icontains=teacher_query)
+        | Q(last_name__icontains=teacher_query)
+        | Q(userprofile__nickname__icontains=teacher_query)
+    ).distinct()
+
+
 def _get_handoff_proxy_target_user(current_user, raw_user_id):
     raw_user_id = str(raw_user_id or "").strip()
     if not raw_user_id or not _is_handoff_proxy_manager(current_user):
@@ -95,6 +111,19 @@ def _get_handoff_proxy_option_label(user):
     if display_name != user.username:
         return f"{display_name} ({user.username})"
     return user.username
+
+
+def _get_handoff_proxy_target_options(current_user, *, teacher_query="", selected_user=None):
+    queryset = _filter_handoff_proxy_targets(
+        _get_handoff_proxy_target_queryset(current_user),
+        teacher_query,
+    )
+    users = list(queryset)
+    if teacher_query:
+        return [{"id": str(user.id), "label": _get_handoff_proxy_option_label(user)} for user in users]
+    if selected_user and all(user.id != selected_user.id for user in users):
+        users.insert(0, selected_user)
+    return [{"id": str(user.id), "label": _get_handoff_proxy_option_label(user)} for user in users]
 
 
 def _get_handoff_accessible_groups(user):
@@ -419,12 +448,13 @@ def _redirect_with_return(target_url, return_to):
     return redirect(target_url)
 
 
-def _redirect_with_context(target_url, *, return_to="", acting_for_user=""):
+def _redirect_with_context(target_url, *, return_to="", acting_for_user="", teacher_query=""):
     return redirect(
         _append_query_params(
             target_url,
             return_to=return_to,
             acting_for_user=acting_for_user,
+            teacher_query=teacher_query,
         )
     )
 
@@ -488,6 +518,11 @@ def _get_handoff_landing_groups(user):
 def landing(request):
     service = _get_service()
     if request.user.is_authenticated:
+        teacher_query = _get_handoff_teacher_query(request)
+        proxy_target_user = _get_handoff_proxy_target_user(
+            request.user,
+            request.GET.get("acting_for_user"),
+        )
         return render(
             request,
             "handoff/landing.html",
@@ -498,10 +533,13 @@ def landing(request):
                 "recent_sessions": _get_handoff_landing_recent_sessions(request.user),
                 "dashboard_url": reverse("handoff:dashboard"),
                 "can_proxy_manage": _is_handoff_proxy_manager(request.user),
-                "proxy_target_options": [
-                    {"id": str(user.id), "label": _get_handoff_proxy_option_label(user)}
-                    for user in _get_handoff_proxy_target_queryset(request.user)
-                ],
+                "teacher_query": teacher_query,
+                "proxy_target_user_id": _handoff_proxy_param_value(request.user, proxy_target_user),
+                "proxy_target_options": _get_handoff_proxy_target_options(
+                    request.user,
+                    teacher_query=teacher_query,
+                    selected_user=proxy_target_user,
+                ),
             },
         )
     return render(request, "handoff/landing.html", {"service": service, "is_authenticated_landing": False})
@@ -510,6 +548,7 @@ def landing(request):
 @login_required
 def dashboard(request):
     return_to = _get_safe_return_to(request)
+    teacher_query = _get_handoff_teacher_query(request)
     proxy_target_user = _get_handoff_proxy_target_user(
         request.user,
         request.GET.get("acting_for_user"),
@@ -562,18 +601,26 @@ def dashboard(request):
             "groups": groups,
             "group_form": HandoffRosterGroupForm(),
             "return_to": return_to,
+            "teacher_query": teacher_query,
             "can_proxy_manage": _is_handoff_proxy_manager(request.user),
             "proxy_target_user": proxy_target_user,
             "proxy_target_user_id": _handoff_proxy_param_value(request.user, owner),
             "proxy_target_user_label": _get_handoff_user_display_name(proxy_target_user),
-            "proxy_target_options": [
-                {"id": str(user.id), "label": _get_handoff_proxy_option_label(user)}
-                for user in _get_handoff_proxy_target_queryset(request.user)
-            ],
+            "proxy_target_options": _get_handoff_proxy_target_options(
+                request.user,
+                teacher_query=teacher_query,
+                selected_user=proxy_target_user,
+            ),
             "roster_owner_label": _get_handoff_user_display_name(owner),
             "own_dashboard_url": _append_query_params(
                 reverse("handoff:dashboard"),
                 return_to=return_to,
+                teacher_query=teacher_query,
+            ),
+            "proxy_search_reset_url": _append_query_params(
+                reverse("handoff:dashboard"),
+                return_to=return_to,
+                acting_for_user=_handoff_proxy_param_value(request.user, owner),
             ),
         },
     )
@@ -583,6 +630,7 @@ def dashboard(request):
 @require_POST
 def group_create(request):
     return_to = _get_safe_return_to(request)
+    teacher_query = _get_handoff_teacher_query(request)
     proxy_target_user = _get_handoff_proxy_target_user(
         request.user,
         request.POST.get("acting_for_user"),
@@ -597,6 +645,7 @@ def group_create(request):
             reverse("handoff:dashboard"),
             return_to=return_to,
             acting_for_user=str(request.POST.get("acting_for_user") or "").strip(),
+            teacher_query=teacher_query,
         )
 
     form = HandoffRosterGroupForm(request.POST)
@@ -608,6 +657,7 @@ def group_create(request):
             reverse("handoff:dashboard"),
             return_to=return_to,
             acting_for_user=_handoff_proxy_param_value(request.user, proxy_target_user),
+            teacher_query=teacher_query,
         )
 
     group = form.save(commit=False)
@@ -620,6 +670,7 @@ def group_create(request):
             reverse("handoff:dashboard"),
             return_to=return_to,
             acting_for_user=_handoff_proxy_param_value(request.user, group.owner),
+            teacher_query=teacher_query,
         )
 
     if proxy_target_user:

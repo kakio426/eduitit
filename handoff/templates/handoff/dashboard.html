@@ -47,20 +47,31 @@
                 <div>
                     <p class="text-xs font-black uppercase tracking-[0.18em] text-amber-700">운영자 전용</p>
                     <h2 class="mt-2 text-2xl font-black text-slate-800">교사 대신 공용 명부를 만들어 넣을 수 있습니다.</h2>
-                    <p class="mt-2 text-sm font-bold leading-relaxed text-slate-600">대상 교사를 고른 뒤 여기서 만든 명부는 그 교사 계정에 저장되고, 교사는 본인 명부처럼 바로 사용할 수 있습니다.</p>
+                    <p class="mt-2 text-sm font-bold leading-relaxed text-slate-600">대상 교사를 고른 뒤 여기서 만든 명부는 그 교사 계정에 저장되고, 교사는 본인 명부처럼 바로 사용할 수 있습니다. 교사가 많으면 아이디나 별명으로 먼저 찾아보세요.</p>
                 </div>
                 <span class="inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-white px-4 py-3 text-sm font-black text-amber-700 shadow-sm">
                     {% if proxy_target_user %}{{ proxy_target_user_label }} 선생님 계정 작업 중{% else %}비워두면 내 명부 관리{% endif %}
                 </span>
             </div>
-            <form method="get" class="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_160px_auto]">
+            <form method="get" class="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_160px_auto]">
                 {% if return_to %}
                 <input type="hidden" name="return_to" value="{{ return_to }}">
                 {% endif %}
                 <div>
+                    <label for="proxy-teacher-query" class="mb-2 block text-sm font-black text-slate-700">교사 검색</label>
+                    <input
+                        id="proxy-teacher-query"
+                        type="search"
+                        name="teacher_query"
+                        value="{{ teacher_query }}"
+                        placeholder="아이디, 별명, 이메일로 찾기"
+                        class="w-full rounded-2xl border border-amber-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                    >
+                </div>
+                <div>
                     <label for="proxy-owner-select" class="mb-2 block text-sm font-black text-slate-700">명부를 넣어 줄 교사</label>
                     <select id="proxy-owner-select" name="acting_for_user" class="w-full rounded-2xl border border-amber-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-300">
-                        <option value="">내 명부 보기</option>
+                        <option value="">{% if teacher_query and not proxy_target_options %}검색 결과가 없습니다{% else %}내 명부 보기{% endif %}</option>
                         {% for option in proxy_target_options %}
                         <option value="{{ option.id }}" {% if option.id == proxy_target_user_id %}selected{% endif %}>{{ option.label }}</option>
                         {% endfor %}
@@ -74,7 +85,15 @@
                     내 명부로 돌아가기
                 </a>
                 {% endif %}
+                {% if teacher_query %}
+                <a href="{{ proxy_search_reset_url }}" class="inline-flex min-h-[48px] items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-600 transition hover:text-slate-800">
+                    검색 지우기
+                </a>
+                {% endif %}
             </form>
+            <p class="mt-3 text-xs font-bold text-slate-600">
+                {% if teacher_query %}"{{ teacher_query }}" 검색 결과 {{ proxy_target_options|length }}명{% else %}아이디, 별명, 이메일로 교사를 빠르게 찾을 수 있습니다.{% endif %}
+            </p>
         </div>
         {% endif %}
 
@@ -100,6 +119,9 @@
                     {% csrf_token %}
                     {% if return_to %}
                     <input type="hidden" name="return_to" value="{{ return_to }}">
+                    {% endif %}
+                    {% if teacher_query %}
+                    <input type="hidden" name="teacher_query" value="{{ teacher_query }}">
                     {% endif %}
                     {% if proxy_target_user_id %}
                     <input type="hidden" name="acting_for_user" value="{{ proxy_target_user_id }}">

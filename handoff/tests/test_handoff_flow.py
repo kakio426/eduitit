@@ -428,6 +428,18 @@ class HandoffProxyRosterTests(TestCase):
                 agreement_source="required_gate",
             )
 
+    def _create_teacher(self, username, email, nickname):
+        teacher = User.objects.create_user(
+            username=username,
+            email=email,
+            password="pw123456",
+        )
+        profile = teacher.userprofile
+        profile.nickname = nickname
+        profile.role = "school"
+        profile.save(update_fields=["nickname", "role"])
+        return teacher
+
     def test_only_main_admin_sees_proxy_roster_controls(self):
         self.client.force_login(self.main_admin)
 
@@ -457,6 +469,39 @@ class HandoffProxyRosterTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, "다른 선생님 명부 넣어주기")
         self.assertNotContains(response, 'name="acting_for_user"', html=False)
+
+    def test_main_admin_can_search_proxy_teachers_by_username_on_landing(self):
+        self._create_teacher("teacher_alpha", "alpha@example.com", "한빛선생")
+        self._create_teacher("teacher_beta", "beta@example.com", "별빛선생")
+        self.client.force_login(self.main_admin)
+
+        response = self.client.get(
+            reverse("handoff:landing"),
+            data={"teacher_query": "teacher_alpha"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="teacher_query"', html=False)
+        self.assertContains(response, "한빛선생 (teacher_alpha)")
+        self.assertNotContains(response, "별빛선생 (teacher_beta)")
+        self.assertContains(response, '"teacher_alpha" 검색 결과 1명')
+
+    def test_main_admin_can_search_proxy_teachers_by_nickname_on_dashboard(self):
+        self._create_teacher("teacher_alpha", "alpha@example.com", "한빛선생")
+        self._create_teacher("teacher_beta", "beta@example.com", "별빛선생")
+        self.client.force_login(self.main_admin)
+
+        response = self.client.get(
+            reverse("handoff:dashboard"),
+            data={"teacher_query": "김선생"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="teacher_query"', html=False)
+        self.assertContains(response, "김선생 (teacher_proxy)")
+        self.assertNotContains(response, "한빛선생 (teacher_alpha)")
+        self.assertNotContains(response, "별빛선생 (teacher_beta)")
+        self.assertContains(response, '"김선생" 검색 결과 1명')
 
     def test_main_admin_can_create_teacher_owned_roster_and_teacher_can_use_it(self):
         self.client.force_login(self.main_admin)
