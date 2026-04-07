@@ -191,7 +191,7 @@
         setText(root, '[data-buddy-sns-status="true"]', payload.sns_bonus_text || '');
         setText(root, '[data-buddy-attendance-status="true"]', payload.attendance_text || '');
         setText(root, '[data-buddy-reaction="true"]', payload.reaction_text || '');
-        setText(root, '[data-buddy-token-badge="true"]', '토큰 ' + tokenCount);
+        setText(root, '[data-buddy-token-badge="true"]', '뽑기권 ' + tokenCount + '장');
         if (typeof collectionSummaryText === 'string') {
             setText(root, '[data-buddy-collection-summary="true"]', collectionSummaryText);
         }

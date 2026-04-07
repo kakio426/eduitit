@@ -1,3 +1,4 @@
+import secrets
 import uuid
 
 from django.db import models
@@ -7,6 +8,19 @@ from django.dispatch import receiver
 from django.utils import timezone
 
 MARKETING_EMAIL_CONSENT_VERSION = "2026-03-20.1"
+TEACHER_BUDDY_COUPON_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+
+def normalize_teacher_buddy_coupon_code(value):
+    return ''.join(char for char in str(value or '').upper() if char.isalnum())
+
+
+def generate_teacher_buddy_coupon_code():
+    blocks = [
+        ''.join(secrets.choice(TEACHER_BUDDY_COUPON_ALPHABET) for _ in range(4)),
+        ''.join(secrets.choice(TEACHER_BUDDY_COUPON_ALPHABET) for _ in range(4)),
+    ]
+    return f"MATE-{'-'.join(blocks)}"
 
 
 class UserProfile(models.Model):
@@ -637,6 +651,68 @@ class TeacherBuddySocialRewardLog(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.activity_date} - {'reward' if self.reward_granted else 'skip'}"
+
+
+class TeacherBuddyGiftCoupon(models.Model):
+    code = models.CharField(
+        max_length=24,
+        unique=True,
+        default=generate_teacher_buddy_coupon_code,
+        verbose_name='쿠폰 코드',
+    )
+    normalized_code = models.CharField(
+        max_length=24,
+        unique=True,
+        editable=False,
+        verbose_name='정규화 쿠폰 코드',
+    )
+    token_amount = models.PositiveIntegerField(default=1, verbose_name='지급 뽑기권 수')
+    note = models.CharField(max_length=200, blank=True, verbose_name='메모')
+    is_active = models.BooleanField(default=True, verbose_name='사용 가능')
+    expires_at = models.DateTimeField(null=True, blank=True, verbose_name='만료 시각')
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='issued_teacher_buddy_coupons',
+        verbose_name='발급자',
+    )
+    redeemed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='redeemed_teacher_buddy_coupons',
+        verbose_name='사용자',
+    )
+    redeemed_at = models.DateTimeField(null=True, blank=True, verbose_name='사용 시각')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['normalized_code']),
+            models.Index(fields=['is_active', '-created_at']),
+            models.Index(fields=['redeemed_at']),
+        ]
+        verbose_name = '교실 메이트 선물 쿠폰'
+        verbose_name_plural = '교실 메이트 선물 쿠폰'
+
+    def __str__(self):
+        return f'{self.code} ({self.token_amount}장)'
+
+    @property
+    def is_expired(self):
+        return bool(self.expires_at and self.expires_at <= timezone.now())
+
+    def save(self, *args, **kwargs):
+        if not self.code:
+            self.code = generate_teacher_buddy_coupon_code()
+        self.code = str(self.code or '').strip().upper()
+        self.normalized_code = normalize_teacher_buddy_coupon_code(self.code)
+        super().save(*args, **kwargs)
 
 
 class VisitorLog(models.Model):

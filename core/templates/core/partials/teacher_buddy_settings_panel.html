@@ -14,7 +14,7 @@
         </div>
         <div class="teacher-buddy-settings-badges">
             <span class="teacher-buddy-settings-token" data-buddy-settings-token="true">
-                토큰 {{ teacher_buddy_settings.draw_token_count }}/{{ teacher_buddy_settings.max_draw_token_count }}
+                보유 뽑기권 {{ teacher_buddy_settings.draw_token_count }}장
             </span>
         </div>
     </div>
@@ -53,6 +53,30 @@
         <p class="teacher-buddy-mode-help">{{ teacher_buddy_settings.shared_selection_copy }}</p>
         <button type="button" class="teacher-buddy-share-button teacher-buddy-share-button--primary" data-buddy-share-open="true">자랑하기</button>
     </div>
+
+    <section class="teacher-buddy-coupon-card">
+        <div class="teacher-buddy-coupon-copy">
+            <p class="teacher-buddy-settings-label">선물 쿠폰 등록</p>
+            <p class="teacher-buddy-coupon-help">받은 메이트 쿠폰 코드를 넣으면 뽑기권이 바로 들어와요.</p>
+        </div>
+        <form method="post" action="{{ teacher_buddy_urls.redeem_coupon }}" class="teacher-buddy-coupon-form" data-buddy-coupon-form="true">
+            {% csrf_token %}
+            <label class="teacher-buddy-coupon-field">
+                <span class="sr-only">메이트 쿠폰 코드</span>
+                <input
+                    type="text"
+                    name="coupon_code"
+                    class="teacher-buddy-coupon-input"
+                    data-buddy-coupon-input="true"
+                    placeholder="예: MATE-ABCD-92KF"
+                    autocomplete="off"
+                    autocapitalize="characters"
+                    spellcheck="false"
+                >
+            </label>
+            <button type="submit" class="teacher-buddy-share-button teacher-buddy-share-button--primary" data-buddy-coupon-submit="true">쿠폰 등록</button>
+        </form>
+    </section>
 
     <div
         class="teacher-buddy-share-data"

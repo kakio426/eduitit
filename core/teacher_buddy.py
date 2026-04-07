@@ -14,11 +14,13 @@ from django.utils import timezone
 
 from .models import (
     TeacherBuddyDailyProgress,
+    TeacherBuddyGiftCoupon,
     TeacherBuddySkinUnlock,
     TeacherBuddySocialRewardLog,
     TeacherBuddyState,
     TeacherBuddyUnlock,
     UserProfile,
+    normalize_teacher_buddy_coupon_code,
 )
 from .seo import SITE_CANONICAL_BASE_URL
 from .teacher_buddy_catalog import (
@@ -688,6 +690,10 @@ def _build_legendary_status_text(state: TeacherBuddyState) -> str:
     return f"전설 풀까지 {int(state.qualifying_day_count or 0)}/{LEGENDARY_UNLOCK_DAYS}일"
 
 
+def _token_label(count: int) -> str:
+    return f"메이트 뽑기권 {int(count or 0)}장"
+
+
 def _build_progress_summary(
     *,
     user,
@@ -979,6 +985,7 @@ def build_teacher_buddy_settings_context(user) -> dict[str, object] | None:
 def build_teacher_buddy_urls() -> dict[str, str]:
     return {
         "draw": reverse("teacher_buddy_draw"),
+        "redeem_coupon": reverse("teacher_buddy_redeem_coupon"),
         "select": reverse("teacher_buddy_select"),
         "select_profile": reverse("teacher_buddy_select_profile"),
         "unlock_skin": reverse("teacher_buddy_unlock_skin"),
@@ -1276,7 +1283,7 @@ def record_teacher_buddy_sns_reward(user, post) -> dict[str, object] | None:
             return _log_and_payload(
                 False,
                 "token_cap_reached",
-                f"토큰은 최대 {MAX_DRAW_TOKEN_COUNT}개까지 모을 수 있어요. 먼저 한 번 뽑아 보세요.",
+                f"활동으로 모으는 뽑기권은 최대 {MAX_DRAW_TOKEN_COUNT}장까지 쌓여요. 먼저 한 번 뽑아 보세요.",
             )
 
         progress.sns_reward_awarded = True
@@ -1300,9 +1307,66 @@ def record_teacher_buddy_sns_reward(user, post) -> dict[str, object] | None:
             state=state,
             progress=progress,
             active_buddy_payload=active_buddy_payload,
-            message="오늘 SNS 보너스로 메이트 토큰이 1장 쌓였어요.",
+            message="오늘 SNS 보너스로 메이트 뽑기권이 1장 쌓였어요.",
             reward_granted=True,
         )
+
+
+def redeem_teacher_buddy_coupon(user, raw_code: str) -> dict[str, object]:
+    if not teacher_buddy_user_is_eligible(user):
+        raise TeacherBuddyError("교실 메이트는 교사 계정에서만 사용할 수 있어요.")
+
+    normalized_code = normalize_teacher_buddy_coupon_code(raw_code)
+    if not normalized_code:
+        raise TeacherBuddyError("쿠폰 코드를 입력해 주세요.")
+
+    with transaction.atomic():
+        state = _get_or_create_state_for_update(user)
+        state = _ensure_starter_unlocked(user=user, state=state)
+        try:
+            coupon = TeacherBuddyGiftCoupon.objects.select_for_update().get(normalized_code=normalized_code)
+        except TeacherBuddyGiftCoupon.DoesNotExist as exc:
+            raise TeacherBuddyError("등록할 수 없는 쿠폰 코드예요.") from exc
+
+        if not coupon.is_active:
+            raise TeacherBuddyError("지금은 사용할 수 없는 쿠폰이에요.")
+        if coupon.redeemed_at is not None:
+            raise TeacherBuddyError("이미 사용된 쿠폰이에요.")
+        if coupon.is_expired:
+            raise TeacherBuddyError("사용 기간이 지난 쿠폰이에요.")
+
+        coupon.redeemed_by = user
+        coupon.redeemed_at = timezone.now()
+        coupon.save(update_fields=["redeemed_by", "redeemed_at", "updated_at"])
+
+        granted_amount = int(coupon.token_amount or 0)
+        state.draw_token_count = int(state.draw_token_count or 0) + granted_amount
+        state.save(update_fields=["draw_token_count"])
+
+        active_key = state.active_buddy_key or state.profile_buddy_key
+        active_buddy_payload = _serialize_state_buddy(
+            user=user,
+            state=state,
+            buddy_key=active_key,
+            selected_skin_key=_resolve_style_skin_key(state.active_skin_key, active_key, state.active_buddy_key),
+        )
+        progress_summary = _build_progress_summary(
+            user=user,
+            state=state,
+            active_buddy_payload=active_buddy_payload,
+            progress=_get_progress_for_date(user, _today()),
+        )
+        return {
+            "status": "ok",
+            "message": f"{_token_label(granted_amount)}이 들어왔어요.",
+            "draw_token_count": int(state.draw_token_count or 0),
+            "active_buddy": active_buddy_payload,
+            "buddy_progress": progress_summary,
+            "coupon": {
+                "code": coupon.code,
+                "token_amount": granted_amount,
+            },
+        }
 
 
 def _build_draw_groups(*, user, state: TeacherBuddyState) -> dict[str, list[tuple[TeacherBuddyDefinition, bool]]]:

@@ -39,6 +39,7 @@ urlpatterns = [
     path('admin-dashboard/', views.admin_dashboard_view, name='admin_dashboard'),
     path('api/track-usage/', views.track_product_usage, name='track_product_usage'),
     path('api/buddy/draw/', views.teacher_buddy_draw, name='teacher_buddy_draw'),
+    path('api/buddy/coupon/redeem/', views.teacher_buddy_redeem_coupon_view, name='teacher_buddy_redeem_coupon'),
     path('api/buddy/select/', views.teacher_buddy_select_view, name='teacher_buddy_select'),
     path('api/buddy/select/profile/', views.teacher_buddy_select_profile_view, name='teacher_buddy_select_profile'),
     path('api/buddy/skin/unlock/', views.teacher_buddy_unlock_skin_view, name='teacher_buddy_unlock_skin'),

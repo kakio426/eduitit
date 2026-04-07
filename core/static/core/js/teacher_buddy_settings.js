@@ -191,6 +191,14 @@
         }
     }
 
+    function updateTokenBadge(root, count) {
+        var badge = root.querySelector('[data-buddy-settings-token="true"]');
+        if (!badge) {
+            return;
+        }
+        badge.textContent = '보유 뽑기권 ' + parseInt(count || 0, 10) + '장';
+    }
+
     function buildApplyAction(root, buddyKey, skinKey, isSelected) {
         if (isSelected) {
             return '<span class="teacher-buddy-status-chip" data-buddy-style-status="representative">현재 대표</span>';
@@ -475,6 +483,37 @@
         }
     }
 
+    function bindCouponForm(root) {
+        var form = root.querySelector('[data-buddy-coupon-form="true"]');
+        if (!form) {
+            return;
+        }
+        form.addEventListener('submit', async function (event) {
+            event.preventDefault();
+            var input = form.querySelector('[data-buddy-coupon-input="true"]');
+            var submitButton = form.querySelector('[data-buddy-coupon-submit="true"]');
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = '등록 중...';
+            }
+            try {
+                var payload = await submitForm(form);
+                updateTokenBadge(root, payload.draw_token_count || 0);
+                if (input) {
+                    input.value = '';
+                }
+                showFeedback(payload.message || '쿠폰을 등록했어요.', 'success');
+            } catch (error) {
+                showFeedback(error.message || '쿠폰을 등록하지 못했습니다.', 'error');
+            } finally {
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.textContent = '쿠폰 등록';
+                }
+            }
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         var root = document.querySelector('[data-teacher-buddy-settings="true"]');
         if (!root) {
@@ -485,6 +524,7 @@
         bindForms(root, state);
         bindShareModal(root);
         bindShareActions(root);
+        bindCouponForm(root);
         updateSelectionUI(root, state);
     });
 })();

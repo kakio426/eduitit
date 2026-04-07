@@ -18,6 +18,7 @@ from .models import (
     ProductFavorite,
     ProductWorkbenchBundle,
     TeacherBuddyDailyProgress,
+    TeacherBuddyGiftCoupon,
     TeacherBuddySkinUnlock,
     TeacherBuddySocialRewardLog,
     TeacherBuddyState,
@@ -358,6 +359,23 @@ class TeacherBuddySocialRewardLogAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('user')
+
+
+@admin.register(TeacherBuddyGiftCoupon)
+class TeacherBuddyGiftCouponAdmin(admin.ModelAdmin):
+    list_display = ['code', 'token_amount', 'is_active', 'expires_at', 'redeemed_by', 'redeemed_at', 'created_at']
+    list_filter = ['is_active', 'token_amount', 'redeemed_at', 'created_at']
+    search_fields = ['code', 'normalized_code', 'note', 'redeemed_by__username', 'created_by__username']
+    readonly_fields = ['normalized_code', 'redeemed_by', 'redeemed_at', 'created_at', 'updated_at']
+    raw_id_fields = ['created_by', 'redeemed_by']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('created_by', 'redeemed_by')
+
+    def save_model(self, request, obj, form, change):
+        if not obj.created_by_id:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
 
 
 admin.site.register([ProductWorkbenchBundle, VisitorLog], ReadOnlyModelAdmin)

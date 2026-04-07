@@ -1,5 +1,6 @@
 import re
 import json
+from datetime import timedelta
 from pathlib import Path
 from unittest.mock import patch
 
@@ -7,10 +8,12 @@ from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from core.models import (
     Post,
     TeacherBuddyDailyProgress,
+    TeacherBuddyGiftCoupon,
     TeacherBuddySkinUnlock,
     TeacherBuddySocialRewardLog,
     TeacherBuddyState,
@@ -30,6 +33,7 @@ from core.teacher_buddy import (
     draw_teacher_buddy,
     record_teacher_buddy_progress,
     record_teacher_buddy_sns_reward,
+    redeem_teacher_buddy_coupon,
     select_teacher_buddy,
     select_teacher_buddy_profile,
     unlock_teacher_buddy_skin,
@@ -264,6 +268,36 @@ class TeacherBuddyServiceTests(TestCase):
         self.assertIsNone(payload)
         self.assertFalse(TeacherBuddySocialRewardLog.objects.filter(user=self.user).exists())
 
+    def test_redeem_teacher_buddy_coupon_grants_tokens_and_marks_coupon_used(self):
+        coupon = TeacherBuddyGiftCoupon.objects.create(code="MATE-ABCD-92KF", token_amount=2)
+
+        payload = redeem_teacher_buddy_coupon(self.user, "mate abcd 92kf")
+
+        self.assertEqual(payload["draw_token_count"], 2)
+        self.assertEqual(payload["buddy_progress"]["draw_token_count"], 2)
+        self.assertEqual(payload["coupon"]["code"], "MATE-ABCD-92KF")
+        self.assertEqual(self._state().draw_token_count, 2)
+        coupon.refresh_from_db()
+        self.assertEqual(coupon.redeemed_by, self.user)
+        self.assertIsNotNone(coupon.redeemed_at)
+
+    def test_redeem_teacher_buddy_coupon_rejects_used_and_expired_coupon(self):
+        used_coupon = TeacherBuddyGiftCoupon.objects.create(code="MATE-USED-92KF", token_amount=1)
+        redeem_teacher_buddy_coupon(self.user, used_coupon.code)
+
+        other_user = create_onboarded_user("couponother")
+        with self.assertRaisesMessage(TeacherBuddyError, "이미 사용된 쿠폰이에요."):
+            redeem_teacher_buddy_coupon(other_user, used_coupon.code)
+
+        expired_coupon = TeacherBuddyGiftCoupon.objects.create(
+            code="MATE-OLD1-92KF",
+            token_amount=1,
+            expires_at=timezone.now() - timedelta(days=1),
+        )
+        another_user = create_onboarded_user("couponlate")
+        with self.assertRaisesMessage(TeacherBuddyError, "사용 기간이 지난 쿠폰이에요."):
+            redeem_teacher_buddy_coupon(another_user, expired_coupon.code)
+
     def test_legendary_is_absent_before_60_days(self):
         self._grant_home_ticket()
         state = self._state()
@@ -469,6 +503,41 @@ class TeacherBuddyApiTests(TestCase):
         response = self.client.post(reverse("teacher_buddy_draw"), HTTP_X_REQUESTED_WITH="XMLHttpRequest")
 
         self.assertEqual(response.status_code, 400)
+
+    def test_redeem_coupon_returns_json_and_marks_coupon_used(self):
+        self.client.login(username="buddyapi", password="pass1234")
+        coupon = TeacherBuddyGiftCoupon.objects.create(code="MATE-API1-2345", token_amount=3)
+
+        response = self.client.post(
+            reverse("teacher_buddy_redeem_coupon"),
+            {"coupon_code": "mate-api1-2345"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["draw_token_count"], 3)
+        self.assertEqual(payload["coupon"]["token_amount"], 3)
+        coupon.refresh_from_db()
+        self.assertEqual(coupon.redeemed_by, self.user)
+
+    def test_redeem_coupon_returns_400_when_reused(self):
+        self.client.login(username="buddyapi", password="pass1234")
+        coupon = TeacherBuddyGiftCoupon.objects.create(code="MATE-REUS-2345", token_amount=1)
+        self.client.post(
+            reverse("teacher_buddy_redeem_coupon"),
+            {"coupon_code": coupon.code},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        response = self.client.post(
+            reverse("teacher_buddy_redeem_coupon"),
+            {"coupon_code": coupon.code},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["error"], "이미 사용된 쿠폰이에요.")
 
     def test_select_locked_buddy_returns_400_for_ajax(self):
         self.client.login(username="buddyapi", password="pass1234")
@@ -741,7 +810,7 @@ class TeacherBuddyHomeRenderTests(TestCase):
         self.assertContains(response, "오늘 출석")
         self.assertContains(response, "0/1")
         self.assertContains(response, "1/1")
-        self.assertContains(response, "토큰 1")
+        self.assertContains(response, "뽑기권 1장")
         self.assertContains(response, "보관함/프로필 보기")
         self.assertContains(response, 'data-buddy-ascii="true"')
         self.assertNotContains(response, 'data-buddy-profile-form="true"')
@@ -760,6 +829,8 @@ class TeacherBuddyHomeRenderTests(TestCase):
         self.assertContains(response, 'data-buddy-preview-card="representative"')
         self.assertContains(response, "대표 메이트")
         self.assertContains(response, "대표를 고르면 홈과 SNS에 함께 반영돼요.")
+        self.assertContains(response, "선물 쿠폰 등록")
+        self.assertContains(response, 'data-buddy-coupon-form="true"')
         self.assertContains(response, "자랑하기")
         self.assertContains(response, "스타일 보기")
         self.assertNotContains(response, 'data-selection-mode="profile"')

@@ -82,6 +82,7 @@ from .teacher_buddy import (
     draw_teacher_buddy,
     record_teacher_buddy_progress,
     record_teacher_buddy_sns_reward,
+    redeem_teacher_buddy_coupon,
     select_teacher_buddy,
     select_teacher_buddy_profile,
     unlock_teacher_buddy_skin,
@@ -4689,6 +4690,26 @@ def teacher_buddy_draw(request):
 
     messages.success(request, payload['message'])
     return _teacher_buddy_redirect_response(request)
+
+
+@require_POST
+@login_required
+def teacher_buddy_redeem_coupon_view(request):
+    data = _request_payload_data(request)
+    coupon_code = str(data.get('coupon_code', '') or '').strip()
+    try:
+        payload = redeem_teacher_buddy_coupon(request.user, coupon_code)
+    except TeacherBuddyError as exc:
+        if _request_prefers_json(request):
+            return JsonResponse({'error': str(exc)}, status=400)
+        messages.error(request, str(exc))
+        return _teacher_buddy_settings_redirect_response()
+
+    if _request_prefers_json(request):
+        return JsonResponse(payload)
+
+    messages.success(request, payload['message'])
+    return _teacher_buddy_settings_redirect_response()
 
 
 @require_POST
