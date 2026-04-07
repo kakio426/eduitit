@@ -429,17 +429,6 @@ def _redirect_with_context(target_url, *, return_to="", acting_for_user=""):
     )
 
 
-def _get_handoff_landing_open_session(user):
-    if not getattr(user, "is_authenticated", False):
-        return None
-    return (
-        _get_handoff_accessible_sessions(user)
-        .filter(owner=user, status="open")
-        .order_by("-updated_at", "-created_at")
-        .first()
-    )
-
-
 def _get_handoff_landing_recent_sessions(user, *, limit=3):
     if not getattr(user, "is_authenticated", False):
         return []
@@ -455,42 +444,64 @@ def _get_handoff_landing_recent_sessions(user, *, limit=3):
     )
 
 
-def _get_handoff_landing_preferred_group(user):
+def _get_handoff_landing_groups(user):
     if not getattr(user, "is_authenticated", False):
-        return None
-    return (
+        return []
+
+    groups = list(
         _get_handoff_accessible_groups(user)
         .filter(owner=user)
-        .annotate(active_member_count=Count("members", filter=Q(members__is_active=True)))
-        .order_by("-is_favorite", "-active_member_count", "-updated_at", "name")
-        .first()
+        .annotate(
+            active_member_count=Count("members", filter=Q(members__is_active=True)),
+            total_member_count=Count("members"),
+        )
+        .order_by("-is_favorite", "name")
     )
+    if not groups:
+        return groups
+
+    open_sessions_by_group = {}
+    open_sessions = (
+        _get_handoff_accessible_sessions(user)
+        .filter(
+            owner=user,
+            status="open",
+            roster_group_id__in=[group.id for group in groups],
+        )
+        .order_by("roster_group_id", "-created_at")
+    )
+    for session in open_sessions:
+        open_sessions_by_group.setdefault(session.roster_group_id, session)
+
+    for group in groups:
+        group.manage_url = reverse("handoff:group_detail", kwargs={"group_id": group.id})
+        group.start_url = f"{group.manage_url}#start-session"
+        active_session = open_sessions_by_group.get(group.id)
+        group.active_session_url = (
+            reverse("handoff:session_detail", kwargs={"session_id": active_session.id})
+            if active_session
+            else ""
+        )
+    return groups
 
 
 def landing(request):
     service = _get_service()
     if request.user.is_authenticated:
-        open_session = _get_handoff_landing_open_session(request.user)
-        if open_session is not None:
-            return redirect("handoff:session_detail", session_id=open_session.id)
-
-        preferred_group = _get_handoff_landing_preferred_group(request.user)
-        recent_sessions = _get_handoff_landing_recent_sessions(request.user)
-        preferred_group_url = (
-            reverse("handoff:group_detail", kwargs={"group_id": preferred_group.id})
-            if preferred_group is not None
-            else reverse("handoff:dashboard")
-        )
         return render(
             request,
             "handoff/landing.html",
             {
                 "service": service,
                 "is_authenticated_landing": True,
-                "preferred_group": preferred_group,
-                "preferred_group_url": preferred_group_url,
-                "recent_sessions": recent_sessions,
+                "landing_groups": _get_handoff_landing_groups(request.user),
+                "recent_sessions": _get_handoff_landing_recent_sessions(request.user),
                 "dashboard_url": reverse("handoff:dashboard"),
+                "can_proxy_manage": _is_handoff_proxy_manager(request.user),
+                "proxy_target_options": [
+                    {"id": str(user.id), "label": _get_handoff_proxy_option_label(user)}
+                    for user in _get_handoff_proxy_target_queryset(request.user)
+                ],
             },
         )
     return render(request, "handoff/landing.html", {"service": service, "is_authenticated_landing": False})

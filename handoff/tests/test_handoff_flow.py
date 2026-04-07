@@ -240,16 +240,31 @@ class HandoffFlowTest(TestCase):
         self.assertEqual(session.receipts.count(), 2)
         self.assertEqual(session.receipts.filter(state="pending").count(), 2)
 
-    def test_landing_redirects_authenticated_user_to_open_session(self):
+    def test_landing_shows_open_session_instead_of_redirecting(self):
         group, members = self._create_group_with_members()
         session = self._create_session(group, members)
 
         response = self.client.get(reverse("handoff:landing"))
 
-        self.assertRedirects(response, reverse("handoff:session_detail", args=[session.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "내 명부 선택")
+        self.assertContains(response, session.title)
+        self.assertContains(response, reverse("handoff:session_detail", args=[session.id]))
+        self.assertContains(response, f"{reverse('handoff:group_detail', args=[group.id])}#start-session", html=False)
 
-    def test_landing_shows_start_surface_instead_of_dashboard_when_no_open_session(self):
+    def test_landing_shows_roster_selection_cards_when_no_open_session(self):
         group, members = self._create_group_with_members()
+        second_group = HandoffRosterGroup.objects.create(
+            owner=self.user,
+            name="학년부 명부",
+            is_favorite=True,
+        )
+        HandoffRosterMember.objects.create(
+            group=second_group,
+            display_name="최지원",
+            sort_order=1,
+            is_active=True,
+        )
         closed_session = self._create_session(group, members)
         closed_session.status = "closed"
         closed_session.save(update_fields=["status"])
@@ -257,11 +272,17 @@ class HandoffFlowTest(TestCase):
         response = self.client.get(reverse("handoff:landing"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "오늘 바로 하는 일")
-        self.assertContains(response, "배부 체크 시작하기")
+        self.assertContains(response, "내 명부 선택")
+        self.assertContains(response, "이 명부로 배부 시작")
         self.assertContains(response, group.name)
-        self.assertContains(response, reverse("handoff:group_detail", args=[group.id]))
-        self.assertNotContains(response, "공용 명부 허브")
+        self.assertContains(response, second_group.name)
+        self.assertContains(response, f"{reverse('handoff:group_detail', args=[group.id])}#start-session", html=False)
+        self.assertContains(
+            response,
+            f"{reverse('handoff:group_detail', args=[second_group.id])}#start-session",
+            html=False,
+        )
+        self.assertNotContains(response, "명부에서 바로 시작")
 
     def test_dashboard_is_roster_first_and_group_detail_owns_sessions(self):
         group, members = self._create_group_with_members()
@@ -420,6 +441,21 @@ class HandoffProxyRosterTests(TestCase):
         response = self.client.get(reverse("handoff:dashboard"))
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, "교사 대신 공용 명부를 만들어 넣을 수 있습니다.")
+        self.assertNotContains(response, 'name="acting_for_user"', html=False)
+
+    def test_only_kakio_sees_proxy_roster_controls_on_landing(self):
+        self.client.force_login(self.kakio)
+
+        response = self.client.get(reverse("handoff:landing"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "다른 선생님 명부 넣어주기")
+        self.assertContains(response, 'name="acting_for_user"', html=False)
+
+        self.client.force_login(self.other_admin)
+
+        response = self.client.get(reverse("handoff:landing"))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "다른 선생님 명부 넣어주기")
         self.assertNotContains(response, 'name="acting_for_user"', html=False)
 
     def test_kakio_can_create_teacher_owned_roster_and_teacher_can_use_it(self):
