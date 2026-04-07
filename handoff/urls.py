@@ -8,6 +8,7 @@ urlpatterns = [
     path("", views.landing, name="landing"),
     path("dashboard/", views.dashboard, name="dashboard"),
     path("groups/create/", views.group_create, name="group_create"),
+    path("groups/<uuid:group_id>/copy/", views.group_copy, name="group_copy"),
     path("groups/<uuid:group_id>/", views.group_detail, name="group_detail"),
     path("groups/<uuid:group_id>/update/", views.group_update, name="group_update"),
     path("groups/<uuid:group_id>/delete/", views.group_delete, name="group_delete"),

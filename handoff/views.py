@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import Count, Max, Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -124,6 +124,50 @@ def _get_handoff_proxy_target_options(current_user, *, teacher_query="", selecte
     if selected_user and all(user.id != selected_user.id for user in users):
         users.insert(0, selected_user)
     return [{"id": str(user.id), "label": _get_handoff_proxy_option_label(user)} for user in users]
+
+
+def _build_handoff_copy_group_name(source_name, target_owner):
+    source_name = str(source_name or "").strip()[:120] or "복사된 공용 명부"
+    existing_names = set(
+        HandoffRosterGroup.objects.filter(owner=target_owner).values_list("name", flat=True)
+    )
+    if source_name not in existing_names:
+        return source_name
+
+    copy_index = 1
+    while True:
+        suffix = " (복사본)" if copy_index == 1 else f" (복사본 {copy_index})"
+        candidate = f"{source_name[: max(1, 120 - len(suffix))]}{suffix}"
+        if candidate not in existing_names:
+            return candidate
+        copy_index += 1
+
+
+def _copy_handoff_group_to_owner(source_group, target_owner):
+    copied_group = HandoffRosterGroup.objects.create(
+        owner=target_owner,
+        name=_build_handoff_copy_group_name(source_group.name, target_owner),
+        description=source_group.description,
+        is_favorite=source_group.is_favorite,
+    )
+    source_members = list(source_group.members.order_by("sort_order", "id"))
+    HandoffRosterMember.objects.bulk_create(
+        [
+            HandoffRosterMember(
+                group=copied_group,
+                display_name=member.display_name,
+                affiliation=member.affiliation,
+                guardian_name=member.guardian_name,
+                phone_last4=member.phone_last4,
+                student_number=member.student_number,
+                sort_order=member.sort_order,
+                note=member.note,
+                is_active=member.is_active,
+            )
+            for member in source_members
+        ]
+    )
+    return copied_group
 
 
 def _get_handoff_accessible_groups(user):
@@ -603,6 +647,7 @@ def dashboard(request):
             "return_to": return_to,
             "teacher_query": teacher_query,
             "can_proxy_manage": _is_handoff_proxy_manager(request.user),
+            "can_copy_from_current_view": _is_handoff_proxy_manager(request.user) and proxy_target_user is None,
             "proxy_target_user": proxy_target_user,
             "proxy_target_user_id": _handoff_proxy_param_value(request.user, owner),
             "proxy_target_user_label": _get_handoff_user_display_name(proxy_target_user),
@@ -684,6 +729,64 @@ def group_create(request):
         reverse("handoff:group_detail", kwargs={"group_id": group.id}),
         return_to=return_to,
         acting_for_user=_handoff_proxy_param_value(request.user, group.owner),
+        teacher_query=teacher_query,
+    )
+
+
+@login_required
+@require_POST
+def group_copy(request, group_id):
+    return_to = _get_safe_return_to(request)
+    teacher_query = _get_handoff_teacher_query(request)
+    if not _is_handoff_proxy_manager(request.user):
+        messages.error(request, "운영자 계정에서만 다른 교사에게 명부를 복사할 수 있습니다.")
+        return _redirect_with_context(
+            reverse("handoff:dashboard"),
+            return_to=return_to,
+            teacher_query=teacher_query,
+        )
+
+    source_group = get_object_or_404(HandoffRosterGroup.objects.filter(owner=request.user), id=group_id)
+    target_user = _get_handoff_proxy_target_user(
+        request.user,
+        request.POST.get("copy_to_user"),
+    )
+    if target_user is None:
+        messages.error(request, "복사할 교사를 다시 선택해 주세요.")
+        return _redirect_with_context(
+            reverse("handoff:dashboard"),
+            return_to=return_to,
+            teacher_query=teacher_query,
+        )
+    if target_user.id == source_group.owner_id:
+        messages.error(request, "같은 계정에는 복사할 수 없습니다. 다른 교사를 선택해 주세요.")
+        return _redirect_with_context(
+            reverse("handoff:dashboard"),
+            return_to=return_to,
+            teacher_query=teacher_query,
+        )
+
+    with transaction.atomic():
+        copied_group = _copy_handoff_group_to_owner(source_group, target_user)
+
+    if copied_group.name == source_group.name:
+        messages.success(
+            request,
+            f"공용 명부 '{source_group.name}'을 {_get_handoff_user_display_name(target_user)} 선생님 계정에 복사했습니다.",
+        )
+    else:
+        messages.success(
+            request,
+            (
+                f"공용 명부 '{source_group.name}'을 "
+                f"{_get_handoff_user_display_name(target_user)} 선생님 계정에 "
+                f"'{copied_group.name}' 이름으로 복사했습니다."
+            ),
+        )
+    return _redirect_with_context(
+        reverse("handoff:dashboard"),
+        return_to=return_to,
+        teacher_query=teacher_query,
     )
 
 

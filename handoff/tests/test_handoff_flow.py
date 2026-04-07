@@ -1,4 +1,5 @@
 from django.contrib.auth.models import User
+from django.contrib.messages import get_messages
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
@@ -440,6 +441,9 @@ class HandoffProxyRosterTests(TestCase):
         profile.save(update_fields=["nickname", "role"])
         return teacher
 
+    def _message_texts(self, response):
+        return [message.message for message in get_messages(response.wsgi_request)]
+
     def test_only_main_admin_sees_proxy_roster_controls(self):
         self.client.force_login(self.main_admin)
 
@@ -554,6 +558,101 @@ class HandoffProxyRosterTests(TestCase):
         self.assertEqual(session.roster_group_id, group.id)
         self.assertEqual(session.receipts.count(), 2)
 
+    def test_main_admin_can_copy_existing_roster_to_teacher(self):
+        source_group = HandoffRosterGroup.objects.create(
+            owner=self.main_admin,
+            name="행사 배부 명부",
+            description="기존 명부 재사용",
+            is_favorite=True,
+        )
+        HandoffRosterMember.objects.create(
+            group=source_group,
+            display_name="김민수",
+            affiliation="3-2",
+            guardian_name="김민수 보호자",
+            phone_last4="5678",
+            student_number=12,
+            sort_order=1,
+            note="우선 배부",
+            is_active=True,
+        )
+        HandoffRosterMember.objects.create(
+            group=source_group,
+            display_name="이서연",
+            affiliation="교감",
+            guardian_name="",
+            phone_last4="",
+            student_number=None,
+            sort_order=2,
+            note="",
+            is_active=False,
+        )
+        self.client.force_login(self.main_admin)
+
+        response = self.client.post(
+            reverse("handoff:group_copy", args=[source_group.id]),
+            data={"copy_to_user": str(self.teacher.id)},
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        copied_group = HandoffRosterGroup.objects.get(owner=self.teacher, name="행사 배부 명부")
+        self.assertTrue(
+            any("김선생 선생님 계정에 복사했습니다." in text for text in self._message_texts(response))
+        )
+        self.assertEqual(copied_group.description, "기존 명부 재사용")
+        self.assertTrue(copied_group.is_favorite)
+        self.assertEqual(
+            list(
+                copied_group.members.order_by("sort_order").values_list(
+                    "display_name",
+                    "affiliation",
+                    "guardian_name",
+                    "phone_last4",
+                    "student_number",
+                    "sort_order",
+                    "note",
+                    "is_active",
+                )
+            ),
+            [
+                ("김민수", "3-2", "김민수 보호자", "5678", 12, 1, "우선 배부", True),
+                ("이서연", "교감", "", "", None, 2, "", False),
+            ],
+        )
+
+    def test_group_copy_renames_when_target_teacher_has_same_name(self):
+        source_group = HandoffRosterGroup.objects.create(
+            owner=self.main_admin,
+            name="중복 명부",
+            description="원본",
+        )
+        HandoffRosterMember.objects.create(
+            group=source_group,
+            display_name="김민수",
+            sort_order=1,
+            is_active=True,
+        )
+        HandoffRosterGroup.objects.create(
+            owner=self.teacher,
+            name="중복 명부",
+            description="이미 있음",
+        )
+        self.client.force_login(self.main_admin)
+
+        response = self.client.post(
+            reverse("handoff:group_copy", args=[source_group.id]),
+            data={"copy_to_user": str(self.teacher.id)},
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        copied_group = HandoffRosterGroup.objects.get(owner=self.teacher, name="중복 명부 (복사본)")
+        self.assertTrue(
+            any("'중복 명부 (복사본)' 이름으로 복사했습니다." in text for text in self._message_texts(response))
+        )
+        self.assertEqual(copied_group.members.count(), 1)
+
     def test_other_admin_cannot_force_teacher_owned_roster_creation(self):
         self.client.force_login(self.other_admin)
 
@@ -573,3 +672,20 @@ class HandoffProxyRosterTests(TestCase):
         self.assertFalse(
             HandoffRosterGroup.objects.filter(owner=self.teacher, name="운영자 개인 명부").exists()
         )
+
+    def test_other_admin_cannot_copy_roster_to_teacher(self):
+        source_group = HandoffRosterGroup.objects.create(
+            owner=self.other_admin,
+            name="운영자 명부",
+        )
+        self.client.force_login(self.other_admin)
+
+        response = self.client.post(
+            reverse("handoff:group_copy", args=[source_group.id]),
+            data={"copy_to_user": str(self.teacher.id)},
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("운영자 계정에서만 다른 교사에게 명부를 복사할 수 있습니다.", self._message_texts(response))
+        self.assertFalse(HandoffRosterGroup.objects.filter(owner=self.teacher, name="운영자 명부").exists())

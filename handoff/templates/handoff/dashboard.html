@@ -211,6 +211,36 @@
                             </a>
                             {% endif %}
                         </div>
+                        {% if can_copy_from_current_view %}
+                        <details class="mt-4 rounded-2xl border border-amber-200 bg-amber-50/70 px-4 py-3">
+                            <summary class="cursor-pointer list-none text-sm font-black text-amber-800 flex items-center justify-between gap-3">
+                                <span>다른 교사에게 이 명부 복사</span>
+                                <span class="text-xs text-amber-600">원본은 그대로 유지</span>
+                            </summary>
+                            <form action="{% url 'handoff:group_copy' group.id %}" method="post" class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+                                {% csrf_token %}
+                                {% if return_to %}
+                                <input type="hidden" name="return_to" value="{{ return_to }}">
+                                {% endif %}
+                                {% if teacher_query %}
+                                <input type="hidden" name="teacher_query" value="{{ teacher_query }}">
+                                {% endif %}
+                                <div class="min-w-0 flex-1">
+                                    <label for="copy-target-{{ group.id }}" class="mb-2 block text-xs font-black text-amber-800">복사할 교사</label>
+                                    <select id="copy-target-{{ group.id }}" name="copy_to_user" class="w-full rounded-xl border border-amber-200 bg-white px-3 py-2.5 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-300">
+                                        <option value="">{% if teacher_query and not proxy_target_options %}검색 결과가 없습니다{% else %}교사를 선택하세요{% endif %}</option>
+                                        {% for option in proxy_target_options %}
+                                        <option value="{{ option.id }}">{{ option.label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <button type="submit" class="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-amber-500" {% if not proxy_target_options %}disabled{% endif %}>
+                                    이 명부 복사
+                                </button>
+                            </form>
+                            <p class="mt-3 text-xs font-bold text-amber-700">위에서 교사를 먼저 검색하면 여기 복사 대상 목록도 같이 줄어듭니다.</p>
+                        </details>
+                        {% endif %}
                     </div>
                     {% endfor %}
                 </div>
