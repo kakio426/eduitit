@@ -18,8 +18,10 @@ from core.models import (
     TeacherBuddySocialRewardLog,
     TeacherBuddyState,
     TeacherBuddyUnlock,
+    UserPolicyConsent,
     UserProfile,
 )
+from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
 from core.teacher_buddy import (
     HOME_DAILY_SECTION_TARGET,
     LEGENDARY_UNLOCK_DAYS,
@@ -840,6 +842,36 @@ class TeacherBuddyHomeRenderTests(TestCase):
         self.assertNotContains(response, 'data-buddy-settings-style-summary="true"')
         self.assertNotContains(response, 'data-buddy-unlock-form="true"')
         self.assertNotContains(response, "스타일 조각")
+        self.assertNotContains(response, "쿠폰 만들기")
+        self.assertNotContains(response, "인원 찾는 대시보드")
+
+    def test_settings_page_shows_admin_shortcuts_for_user694(self):
+        admin_user = create_onboarded_user("user694")
+        admin_user.email = "kakio@naver.com"
+        admin_user.is_staff = True
+        admin_user.is_superuser = True
+        admin_user.save(update_fields=["email", "is_staff", "is_superuser"])
+        admin_profile = admin_user.userprofile
+        admin_profile.nickname = "메인관리자"
+        admin_profile.save(update_fields=["nickname"])
+        UserPolicyConsent.objects.create(
+            user=admin_user,
+            provider="direct",
+            terms_version=TERMS_VERSION,
+            privacy_version=PRIVACY_VERSION,
+            agreed_at=timezone.now(),
+            agreement_source="required_gate",
+        )
+        self.client.login(username="user694", password="pass1234")
+
+        response = self.client.get(reverse("settings"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "관리자 빠른 이동")
+        self.assertContains(response, "쿠폰 만들기")
+        self.assertContains(response, reverse("admin:core_teacherbuddygiftcoupon_add"))
+        self.assertContains(response, "인원 찾는 대시보드")
+        self.assertContains(response, reverse("handoff:dashboard"))
 
     def test_settings_page_shows_direct_apply_button_for_unlocked_buddy_without_extra_styles(self):
         context = build_teacher_buddy_settings_context(self.user)

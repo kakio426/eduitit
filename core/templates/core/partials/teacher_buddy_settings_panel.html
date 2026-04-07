@@ -54,6 +54,23 @@
         <button type="button" class="teacher-buddy-share-button teacher-buddy-share-button--primary" data-buddy-share-open="true">자랑하기</button>
     </div>
 
+    {% if teacher_buddy_settings.admin_shortcuts %}
+    <section class="teacher-buddy-admin-shortcuts">
+        <div class="teacher-buddy-coupon-copy">
+            <p class="teacher-buddy-settings-label">관리자 빠른 이동</p>
+            <p class="teacher-buddy-coupon-help">쿠폰 만들기와 인원 관리 화면을 여기서 바로 열 수 있어요.</p>
+        </div>
+        <div class="teacher-buddy-admin-actions">
+            {% for shortcut in teacher_buddy_settings.admin_shortcuts %}
+            <a
+                href="{{ shortcut.href }}"
+                class="teacher-buddy-share-button{% if shortcut.is_primary %} teacher-buddy-share-button--primary{% endif %}"
+            >{{ shortcut.label }}</a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
     <section class="teacher-buddy-coupon-card">
         <div class="teacher-buddy-coupon-copy">
             <p class="teacher-buddy-settings-label">선물 쿠폰 등록</p>

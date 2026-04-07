@@ -1533,6 +1533,24 @@ body.teacher-buddy-modal-open {
         linear-gradient(135deg, rgba(219, 234, 254, 0.28), rgba(236, 254, 255, 0.22));
 }
 
+.teacher-buddy-admin-shortcuts {
+    display: grid;
+    gap: 0.9rem;
+    padding: 1rem;
+    border-radius: 1.45rem;
+    border: 1px solid rgba(203, 213, 225, 0.82);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(248, 250, 252, 0.94)),
+        linear-gradient(135deg, rgba(248, 250, 252, 0.3), rgba(224, 231, 255, 0.18));
+}
+
+.teacher-buddy-admin-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+}
+
 .teacher-buddy-coupon-copy {
     display: grid;
     gap: 0.22rem;
@@ -1874,6 +1892,10 @@ body.teacher-buddy-modal-open {
     .teacher-buddy-share-button,
     .teacher-buddy-coupon-form button {
         width: 100%;
+    }
+
+    .teacher-buddy-admin-actions {
+        flex-direction: column;
     }
 
     .teacher-buddy-coupon-form {

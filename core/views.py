@@ -390,6 +390,43 @@ def _teacher_buddy_settings_redirect_response():
     return redirect(f"{reverse('settings')}#teacher-buddy-settings")
 
 
+def _build_teacher_buddy_admin_shortcuts(user):
+    shortcuts = []
+    if not getattr(user, "is_authenticated", False):
+        return shortcuts
+
+    if user.has_perm("core.add_teacherbuddygiftcoupon"):
+        try:
+            shortcuts.append(
+                {
+                    "label": "쿠폰 만들기",
+                    "href": reverse("admin:core_teacherbuddygiftcoupon_add"),
+                    "is_primary": True,
+                }
+            )
+        except NoReverseMatch:
+            pass
+
+    try:
+        from handoff.views import HANDOFF_PROXY_MANAGER_USERNAMES
+    except Exception:
+        HANDOFF_PROXY_MANAGER_USERNAMES = set()
+
+    if getattr(user, "is_superuser", False) and getattr(user, "username", "") in HANDOFF_PROXY_MANAGER_USERNAMES:
+        try:
+            shortcuts.append(
+                {
+                    "label": "인원 찾는 대시보드",
+                    "href": reverse("handoff:dashboard"),
+                    "is_primary": False,
+                }
+            )
+        except NoReverseMatch:
+            pass
+
+    return shortcuts
+
+
 def _resolve_post_for_action(post_id, user):
     post = get_object_or_404(Post, pk=post_id)
     if post.approval_status != 'approved' and not user.is_staff and post.author_id != user.id:
@@ -4276,6 +4313,7 @@ def settings_view(request):
             'share_url': f"{SITE_CANONICAL_BASE_URL}{buddy_settings['share_path']}",
             'share_image_url': f"{SITE_CANONICAL_BASE_URL}{buddy_settings['share_image_path']}",
             'share_title': f"{profile.nickname or request.user.username}님의 교실 메이트",
+            'admin_shortcuts': _build_teacher_buddy_admin_shortcuts(request.user),
         }
     
     return render(
