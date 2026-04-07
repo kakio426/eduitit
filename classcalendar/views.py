@@ -2654,6 +2654,7 @@ def _build_hub_item(
     is_readonly=True,
     source_item_kind="",
     source_item_id="",
+    message_capture_id="",
 ):
     safe_start = _normalize_hub_datetime(start_at)
     safe_end = _normalize_hub_datetime(end_at) or safe_start
@@ -2681,6 +2682,7 @@ def _build_hub_item(
         "is_readonly": bool(is_readonly),
         "source_item_kind": str(source_item_kind or "").strip(),
         "source_item_id": str(source_item_id or "").strip(),
+        "message_capture_id": str(message_capture_id or "").strip(),
     }
 
 
@@ -3110,6 +3112,7 @@ def _build_message_direct_hub_items(user):
                 source_label="메시지 보관함으로 이동",
                 has_attachment=capture.attachments.exists(),
                 is_readonly=True,
+                message_capture_id=str(capture.id),
             )
         )
     return items

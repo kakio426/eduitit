@@ -227,6 +227,7 @@ class IntegrationLinksAndSettingsTests(TestCase):
         )
 
         self.assertEqual(message_item["status_label"], "처리 예정")
+        self.assertEqual(message_item["message_capture_id"], str(capture.id))
         self.assertIn(f"capture={capture.id}", message_item["source_url"])
 
     def test_api_integration_settings_disables_and_cleans_up_sources(self):
