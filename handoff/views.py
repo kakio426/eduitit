@@ -27,7 +27,7 @@ from .forms import (
 from .models import HandoffReceipt, HandoffRosterGroup, HandoffRosterMember, HandoffSession
 from .shared_roster import normalize_phone_last4, roster_service_summary
 
-HANDOFF_PROXY_MANAGER_USERNAMES = {"kakio"}
+HANDOFF_PROXY_MANAGER_USERNAMES = {"kakio", "user694"}
 User = get_user_model()
 
 

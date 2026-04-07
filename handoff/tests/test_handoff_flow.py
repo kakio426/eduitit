@@ -394,9 +394,9 @@ class HandoffFlowTest(TestCase):
 
 class HandoffProxyRosterTests(TestCase):
     def setUp(self):
-        self.kakio = User.objects.create_superuser(
-            username="kakio",
-            email="kakio@example.com",
+        self.main_admin = User.objects.create_superuser(
+            username="user694",
+            email="kakio@naver.com",
             password="pw123456",
         )
         self.other_admin = User.objects.create_superuser(
@@ -410,7 +410,7 @@ class HandoffProxyRosterTests(TestCase):
             password="pw123456",
         )
         for user, nickname in (
-            (self.kakio, "카키오"),
+            (self.main_admin, "메인관리자"),
             (self.other_admin, "다른관리자"),
             (self.teacher, "김선생"),
         ):
@@ -418,7 +418,7 @@ class HandoffProxyRosterTests(TestCase):
             profile.nickname = nickname
             profile.role = "school"
             profile.save(update_fields=["nickname", "role"])
-        for user in (self.kakio, self.other_admin):
+        for user in (self.main_admin, self.other_admin):
             UserPolicyConsent.objects.create(
                 user=user,
                 provider="direct",
@@ -428,8 +428,8 @@ class HandoffProxyRosterTests(TestCase):
                 agreement_source="required_gate",
             )
 
-    def test_only_kakio_sees_proxy_roster_controls(self):
-        self.client.force_login(self.kakio)
+    def test_only_main_admin_sees_proxy_roster_controls(self):
+        self.client.force_login(self.main_admin)
 
         response = self.client.get(reverse("handoff:dashboard"))
         self.assertEqual(response.status_code, 200)
@@ -443,8 +443,8 @@ class HandoffProxyRosterTests(TestCase):
         self.assertNotContains(response, "교사 대신 공용 명부를 만들어 넣을 수 있습니다.")
         self.assertNotContains(response, 'name="acting_for_user"', html=False)
 
-    def test_only_kakio_sees_proxy_roster_controls_on_landing(self):
-        self.client.force_login(self.kakio)
+    def test_only_main_admin_sees_proxy_roster_controls_on_landing(self):
+        self.client.force_login(self.main_admin)
 
         response = self.client.get(reverse("handoff:landing"))
         self.assertEqual(response.status_code, 200)
@@ -458,8 +458,8 @@ class HandoffProxyRosterTests(TestCase):
         self.assertNotContains(response, "다른 선생님 명부 넣어주기")
         self.assertNotContains(response, 'name="acting_for_user"', html=False)
 
-    def test_kakio_can_create_teacher_owned_roster_and_teacher_can_use_it(self):
-        self.client.force_login(self.kakio)
+    def test_main_admin_can_create_teacher_owned_roster_and_teacher_can_use_it(self):
+        self.client.force_login(self.main_admin)
 
         create_response = self.client.post(
             reverse("handoff:group_create"),
