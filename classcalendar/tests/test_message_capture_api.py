@@ -1015,6 +1015,43 @@ class MessageCaptureApiTests(TestCase):
         )
         self.assertTrue(all("완료한 메시지" != item.get("title") for item in hub_items))
 
+    def test_api_events_hides_saved_message_hub_item_and_keeps_capture_on_saved_event(self):
+        linked_for_at = timezone.make_aware(
+            datetime(2026, 3, 26, 0, 0),
+            timezone.get_current_timezone(),
+        )
+        saved_event = CalendarEvent.objects.create(
+            author=self.user,
+            title="학부모 회의",
+            start_time=timezone.make_aware(datetime(2026, 3, 26, 15, 0), timezone.get_current_timezone()),
+            end_time=timezone.make_aware(datetime(2026, 3, 26, 16, 0), timezone.get_current_timezone()),
+            is_all_day=False,
+            color="indigo",
+        )
+        saved_capture = CalendarMessageCapture.objects.create(
+            author=self.user,
+            raw_text="3월 26일 학부모 회의",
+            extracted_title="학부모 회의",
+            linked_for_at=linked_for_at,
+            parse_status=CalendarMessageCapture.ParseStatus.PARSED,
+            committed_event=saved_event,
+            follow_up_state=CalendarMessageCapture.FollowUpState.PENDING,
+        )
+
+        response = self.client.get(reverse("classcalendar:api_events"))
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        hub_items = payload.get("hub_items") or []
+        events = payload.get("events") or []
+
+        self.assertTrue(all(item.get("id") != f"message:{saved_capture.id}" for item in hub_items))
+        serialized_event = next(item for item in events if item.get("id") == str(saved_event.id))
+        self.assertEqual(serialized_event["message_capture_id"], str(saved_capture.id))
+        self.assertEqual(
+            serialized_event["message_capture_follow_up_state_label"],
+            "처리 예정",
+        )
+
     def test_archive_is_private_to_current_user(self):
         other_user = User.objects.create_user(
             username="another_teacher",

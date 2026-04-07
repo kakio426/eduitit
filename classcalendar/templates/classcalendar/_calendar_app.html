@@ -1037,6 +1037,14 @@
             <div x-show="selectedEvent && hasSelectedItemMessageCapture()" class="mb-4 flex flex-wrap items-center gap-2">
                 <button
                     type="button"
+                    x-show="selectedEvent && !selectedEvent.is_shared_calendar && selectedEvent.message_capture_id"
+                    @click="openMessageArchiveCapture(selectedEvent.message_capture_id, $event)"
+                    class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+                >
+                    원문 메시지 보기
+                </button>
+                <button
+                    type="button"
                     x-show="selectedEvent && canToggleSelectedItemMessageCapture()"
                     @click="toggleSelectedItemMessageCapture()"
                     class="inline-flex items-center rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-sm font-bold text-emerald-800 transition hover:bg-emerald-100"
@@ -1044,6 +1052,14 @@
                 ></button>
             </div>
             <div x-show="selectedTask && hasSelectedItemMessageCapture()" class="mb-4 flex flex-wrap items-center gap-2">
+                <button
+                    type="button"
+                    x-show="selectedTask && selectedTask.message_capture_id"
+                    @click="openMessageArchiveCapture(selectedTask.message_capture_id, $event)"
+                    class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+                >
+                    원문 메시지 보기
+                </button>
                 <button
                     type="button"
                     x-show="selectedTask && canToggleSelectedItemMessageCapture()"
@@ -1307,6 +1323,7 @@
                         </a>
                     </div>
                     <div x-show="selectedEvent && hasSelectedItemMessageCapture()" class="flex flex-wrap items-center gap-2">
+                        <button type="button" x-show="selectedEvent && !selectedEvent.is_shared_calendar && selectedEvent.message_capture_id" @click="openMessageArchiveCapture(selectedEvent.message_capture_id, $event)" class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50">원문 메시지 보기</button>
                         <button type="button" x-show="selectedEvent && canToggleSelectedItemMessageCapture()" @click="toggleSelectedItemMessageCapture()" class="inline-flex items-center rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-sm font-bold text-emerald-800 transition hover:bg-emerald-100" x-text="selectedItemMessageCaptureActionText()"></button>
                     </div>
                     <div class="flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-4">

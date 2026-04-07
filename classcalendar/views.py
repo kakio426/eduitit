@@ -3065,8 +3065,20 @@ def _build_message_direct_hub_items(user):
         return []
 
     captures = (
-        CalendarMessageCapture.objects.filter(author=user, linked_for_at__isnull=False)
+        CalendarMessageCapture.objects.filter(
+            author=user,
+            linked_for_at__isnull=False,
+            committed_event__isnull=True,
+            committed_task__isnull=True,
+        )
         .exclude(follow_up_state=CalendarMessageCapture.FollowUpState.DONE)
+        .annotate(
+            saved_event_count=Count(
+                "candidates",
+                filter=Q(candidates__committed_event__isnull=False),
+                distinct=True,
+            )
+        )
         .prefetch_related("attachments")
         .order_by("linked_for_at", "created_at", "id")
     )
@@ -3077,6 +3089,8 @@ def _build_message_direct_hub_items(user):
             continue
         follow_up_state = _normalize_follow_up_state_value(capture)
         if follow_up_state == CalendarMessageCapture.FollowUpState.DONE:
+            continue
+        if int(getattr(capture, "saved_event_count", 0) or 0) > 0:
             continue
         status_label = _follow_up_state_label(follow_up_state)
         tone = "warning" if follow_up_state == CalendarMessageCapture.FollowUpState.NEEDS_CHECK else "neutral"
