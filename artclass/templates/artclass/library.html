@@ -122,7 +122,7 @@
                         {% endif %}
                     </div>
 
-                        <div class="grid grid-cols-3 gap-2 pt-2">
+                        <div class="grid {% if item.share_url %}grid-cols-2{% else %}grid-cols-3{% endif %} gap-2 pt-2">
                             <a href="{{ item.launcher_start_url }}"
                                 class="flex items-center justify-center rounded-2xl bg-green-500 px-3 py-3 text-sm font-black text-white hover:bg-green-600 transition-all">
                                 {{ item.primary_action_label }}
@@ -131,6 +131,13 @@
                             class="flex items-center justify-center rounded-2xl border-2 border-purple-100 px-3 py-3 text-sm font-black text-purple-600 hover:border-purple-300 hover:bg-purple-50 transition-all">
                             수정
                         </a>
+                        {% if item.share_url %}
+                        <button type="button"
+                            data-share-url="{{ item.share_url|escape }}"
+                            class="flex items-center justify-center rounded-2xl border-2 border-sky-100 px-3 py-3 text-sm font-black text-sky-700 hover:border-sky-300 hover:bg-sky-50 transition-all">
+                            공유 링크 복사
+                        </button>
+                        {% endif %}
                         <form method="post" action="{% url 'artclass:delete' pk=item.pk %}">
                             {% csrf_token %}
                             <button type="submit"
@@ -139,6 +146,11 @@
                             </button>
                         </form>
                     </div>
+                    {% if item.share_url %}
+                    <p class="text-xs font-bold text-slate-500">
+                        링크를 받은 선생님은 로그인 후 자기 수업으로 바로 가져갑니다.
+                    </p>
+                    {% endif %}
                 </article>
                 {% endfor %}
             </div>
@@ -351,6 +363,53 @@
 </div>
 
 <script>
+    async function copyTextToClipboard(text) {
+        const value = String(text || '').trim();
+        if (!value) {
+            throw new Error('missing_text');
+        }
+
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(value);
+            return;
+        }
+
+        const input = document.createElement('textarea');
+        input.value = value;
+        input.setAttribute('readonly', '');
+        input.style.position = 'fixed';
+        input.style.opacity = '0';
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+    }
+
+    function wireShareCopyButtons() {
+        document.querySelectorAll('[data-share-url]').forEach((button) => {
+            if (button.dataset.shareBound === 'true') return;
+            button.dataset.shareBound = 'true';
+            button.dataset.defaultHtml = button.innerHTML;
+
+            button.addEventListener('click', async () => {
+                try {
+                    await copyTextToClipboard(button.getAttribute('data-share-url'));
+                    button.innerHTML = '복사 완료';
+                    button.classList.remove('text-sky-700', 'border-sky-100');
+                    button.classList.add('text-emerald-700', 'border-emerald-200', 'bg-emerald-50');
+                } catch (_) {
+                    window.prompt('공유 링크를 복사해 주세요.', button.getAttribute('data-share-url') || '');
+                }
+
+                window.setTimeout(() => {
+                    button.innerHTML = button.dataset.defaultHtml || '공유 링크 복사';
+                    button.classList.remove('text-emerald-700', 'border-emerald-200', 'bg-emerald-50');
+                    button.classList.add('text-sky-700', 'border-sky-100');
+                }, 1800);
+            });
+        });
+    }
+
     function openChoiceModalFromData(el) {
         const pk = el.getAttribute('data-pk');
         const title = el.getAttribute('data-title');
@@ -496,5 +555,7 @@
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') closeChoiceModal();
     });
+
+    wireShareCopyButtons();
 </script>
 {% endblock %}

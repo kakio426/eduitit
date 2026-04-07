@@ -10,6 +10,7 @@ from PIL import Image, UnidentifiedImageError
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import Http404, JsonResponse
 from django.contrib import messages
+from django.core import signing
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.views import redirect_to_login
 from django.contrib.auth.decorators import login_required
@@ -35,6 +36,8 @@ from .manual_pipeline import (
     build_manual_pipeline_prompt,
     parse_manual_pipeline_result,
 )
+
+ARTCLASS_SHARE_LINK_SALT = "artclass.share-link.v1"
 
 
 def _can_manage_art_class(user, art_class):
@@ -217,6 +220,40 @@ def _build_launcher_public_asset_url(request, filename):
 
 def _build_launcher_autostart_url(art_class):
     return f"{reverse('artclass:classroom', kwargs={'pk': art_class.pk})}?{urlencode({'autostart_launcher': '1'})}"
+
+
+def _build_artclass_share_token(art_class):
+    signer = signing.Signer(salt=ARTCLASS_SHARE_LINK_SALT)
+    return signer.sign_object({"pk": art_class.pk}, compress=True)
+
+
+def _build_artclass_share_url(art_class, request=None):
+    relative_url = f"{reverse('artclass:shared')}?{urlencode({'token': _build_artclass_share_token(art_class)})}"
+    if request is None:
+        return relative_url
+    return request.build_absolute_uri(relative_url)
+
+
+def _get_shared_art_class_from_token(raw_token):
+    token = str(raw_token or "").strip()
+    if not token:
+        raise Http404("공유 링크가 올바르지 않습니다.")
+
+    signer = signing.Signer(salt=ARTCLASS_SHARE_LINK_SALT)
+    try:
+        payload = signer.unsign_object(token)
+    except signing.BadSignature as exc:
+        raise Http404("공유 링크가 올바르지 않습니다.") from exc
+
+    class_id = payload.get("pk") if isinstance(payload, dict) else None
+    if not isinstance(class_id, int):
+        raise Http404("공유 링크가 올바르지 않습니다.")
+
+    return get_object_or_404(
+        ArtClass.objects.prefetch_related("steps", "attachments").select_related("created_by", "created_by__userprofile"),
+        pk=class_id,
+        is_shared=True,
+    )
 
 
 def _normalize_launcher_next_url(request, raw_url):
@@ -515,7 +552,7 @@ def _build_video_preview(video_url):
     }
 
 
-def _decorate_artclass_library_item(item):
+def _decorate_artclass_library_item(item, request=None):
     item.creator_display_name = _resolve_creator_display_name(item.created_by)
     item.start_mode_badge = "런처 시작"
     item.start_mode_reason = "초록 버튼을 누르면 영상과 수업 안내가 나뉘어 열립니다."
@@ -530,12 +567,46 @@ def _decorate_artclass_library_item(item):
     item.attachment_count = len(item.material_attachments)
     item.has_teacher_materials = bool(item.material_attachments or item.teacher_material_note_text)
     item.material_attachments_json = json.dumps(item.material_attachments, ensure_ascii=False)
+    item.share_url = _build_artclass_share_url(item, request=request) if item.is_shared else ""
 
     preview = _build_video_preview(item.youtube_url)
     item.video_source = preview["source"]
     item.video_host_label = preview["hostLabel"]
     item.thumbnail_url = preview["thumbnailUrl"]
     item.thumbnail_fallback_url = preview["thumbnailFallbackUrl"]
+
+
+def _clone_art_class_for_user(source, user, *, is_shared=False):
+    cloned = ArtClass.objects.create(
+        title=source.title,
+        youtube_url=source.youtube_url,
+        default_interval=source.default_interval,
+        playback_mode=ARTCLASS_PRIMARY_PLAYBACK_MODE,
+        created_by=user,
+        is_shared=is_shared,
+        teacher_material_note=source.teacher_material_note,
+    )
+
+    for step in source.steps.all():
+        ArtStep.objects.create(
+            art_class=cloned,
+            step_number=step.step_number,
+            description=step.description,
+            image=step.image.name if step.image else None,
+        )
+
+    for attachment in source.attachments.all():
+        if not attachment.file:
+            continue
+        ArtClassAttachment.objects.create(
+            art_class=cloned,
+            file=attachment.file.name,
+            original_name=attachment.original_name,
+            sort_order=attachment.sort_order,
+        )
+
+    apply_auto_metadata(cloned)
+    return cloned
 
 
 def _resolve_step_indexes(request):
@@ -1131,6 +1202,11 @@ def classroom_view(request, pk):
     
     context = {
         'art_class': art_class,
+        'art_class_share_url': (
+            _build_artclass_share_url(art_class, request=request)
+            if can_manage_classroom and art_class.is_shared
+            else ""
+        ),
         'steps': steps,
         'data': data,
         'data_json': json.dumps(data, ensure_ascii=False),
@@ -1413,7 +1489,7 @@ def library_view(request):
             .distinct()
         )
         for item in my_classes:
-            _decorate_artclass_library_item(item)
+            _decorate_artclass_library_item(item, request=request)
 
     shared_classes = ArtClass.objects.select_related('created_by', 'created_by__userprofile').prefetch_related("attachments").annotate(
         steps_count=Count('steps', distinct=True),
@@ -1438,7 +1514,7 @@ def library_view(request):
 
     shared_classes = list(shared_classes.distinct())
     for item in shared_classes:
-        _decorate_artclass_library_item(item)
+        _decorate_artclass_library_item(item, request=request)
 
     shared_only = ArtClass.objects.filter(is_shared=True)
     category_options = list(
@@ -1481,36 +1557,25 @@ def clone_for_edit_view(request, pk):
     if not source.is_shared:
         raise PermissionDenied("이 수업을 복사할 권한이 없습니다.")
 
-    cloned = ArtClass.objects.create(
-        title=source.title,
-        youtube_url=source.youtube_url,
-        default_interval=source.default_interval,
-        playback_mode=ARTCLASS_PRIMARY_PLAYBACK_MODE,
-        created_by=request.user,
-        is_shared=source.is_shared,
-        teacher_material_note=source.teacher_material_note,
-    )
+    cloned = _clone_art_class_for_user(source, request.user, is_shared=False)
+    messages.success(request, "수업을 내 수업으로 복사했습니다. 이 복사본은 내 공간 전용으로 저장됐어요.")
+    return redirect("artclass:setup_edit", pk=cloned.pk)
 
-    for step in source.steps.all():
-        ArtStep.objects.create(
-            art_class=cloned,
-            step_number=step.step_number,
-            description=step.description,
-            image=step.image.name if step.image else None,
-        )
 
-    for attachment in source.attachments.all():
-        if not attachment.file:
-            continue
-        ArtClassAttachment.objects.create(
-            art_class=cloned,
-            file=attachment.file.name,
-            original_name=attachment.original_name,
-            sort_order=attachment.sort_order,
-        )
+@require_GET
+def shared_class_view(request):
+    token = request.GET.get("token")
+    if not request.user.is_authenticated:
+        return redirect_to_login(request.get_full_path())
 
-    apply_auto_metadata(cloned)
-    messages.success(request, "수업을 내 수업으로 복사했습니다. 원하는 대로 수정해 주세요.")
+    source = _get_shared_art_class_from_token(token)
+
+    if _can_manage_art_class(request.user, source):
+        messages.info(request, "이미 관리할 수 있는 공유 수업입니다. 바로 수정할 수 있어요.")
+        return redirect("artclass:setup_edit", pk=source.pk)
+
+    cloned = _clone_art_class_for_user(source, request.user, is_shared=False)
+    messages.success(request, "공유 수업을 내 수업으로 가져왔습니다. 이 복사본은 내 공간 전용으로 저장됐어요.")
     return redirect("artclass:setup_edit", pk=cloned.pk)
 
 

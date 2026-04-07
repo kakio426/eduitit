@@ -302,6 +302,12 @@
                 class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-bold transition-all flex items-center gap-2">
                 <i class="fa-solid fa-rocket"></i> 런처 실행
             </button>
+            {% if art_class_share_url %}
+            <button id="btnCopyShareLink"
+                class="px-3 py-2 rounded-xl bg-sky-500 hover:bg-sky-600 text-sm font-bold transition-all flex items-center gap-2">
+                <i class="fa-solid fa-share-nodes"></i> 공유 링크 복사
+            </button>
+            {% endif %}
             <button id="btnFullscreen" class="p-3 hover:bg-white/10 rounded-full transition-all">
                 <i class="fa-solid fa-expand text-xl"></i>
             </button>
@@ -626,6 +632,7 @@
     const LAUNCHER_START_URL = '{% url "artclass:start_launcher_session_api" art_class.pk %}';
     const STEP_UPDATE_URL_TEMPLATE = '{% url "artclass:update_step_text_api" art_class.pk 0 %}';
     const LAUNCHER_INSTALL_URL = "{{ launcher_install_url|default:''|escapejs }}";
+    const SHARE_LINK_URL = "{{ art_class_share_url|default:''|escapejs }}";
     const CAN_SAVE_STEP = {{ can_manage_classroom|yesno:"true,false" }};
     const VIDEO_URL = "{{ data.videoUrl|escapejs }}";
     const VIDEO_ID = extractYouTubeVideoId(VIDEO_URL);
@@ -672,6 +679,7 @@
     const btnOpenExternalVideoEl = document.getElementById('btnOpenExternalVideo');
     const btnFocusExternalVideoEl = document.getElementById('btnFocusExternalVideo');
     const btnLaunchRuntimeEl = document.getElementById('btnLaunchRuntime');
+    const btnCopyShareLinkEl = document.getElementById('btnCopyShareLink');
     const launcherPromptBannerEl = document.getElementById('launcherPromptBanner');
     const launcherPromptStatusEl = document.getElementById('launcherPromptStatus');
     const btnLauncherPromptLaunchEl = document.getElementById('btnLauncherPromptLaunch');
@@ -744,6 +752,46 @@
             return;
         }
         launcherPromptStatusEl.classList.add('text-emerald-800');
+    }
+
+    async function copyTextToClipboard(text) {
+        const value = String(text || '').trim();
+        if (!value) {
+            throw new Error('missing_text');
+        }
+
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(value);
+            return;
+        }
+
+        const input = document.createElement('textarea');
+        input.value = value;
+        input.setAttribute('readonly', '');
+        input.style.position = 'fixed';
+        input.style.opacity = '0';
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+    }
+
+    async function handleShareCopy() {
+        if (!btnCopyShareLinkEl || !SHARE_LINK_URL) return;
+
+        const defaultHtml = btnCopyShareLinkEl.dataset.defaultHtml || btnCopyShareLinkEl.innerHTML;
+        btnCopyShareLinkEl.dataset.defaultHtml = defaultHtml;
+
+        try {
+            await copyTextToClipboard(SHARE_LINK_URL);
+            btnCopyShareLinkEl.innerHTML = '<i class="fa-solid fa-check"></i> 복사 완료';
+        } catch (_) {
+            window.prompt('공유 링크를 복사해 주세요.', SHARE_LINK_URL);
+        }
+
+        window.setTimeout(() => {
+            btnCopyShareLinkEl.innerHTML = btnCopyShareLinkEl.dataset.defaultHtml || defaultHtml;
+        }, 1800);
     }
 
     function syncLauncherPrompt(mode = playbackMode) {
@@ -1818,6 +1866,12 @@
     if (btnLauncherPromptLaunchEl) {
         btnLauncherPromptLaunchEl.onclick = async () => {
             await startTeacherLauncher();
+        };
+    }
+
+    if (btnCopyShareLinkEl) {
+        btnCopyShareLinkEl.onclick = async () => {
+            await handleShareCopy();
         };
     }
 

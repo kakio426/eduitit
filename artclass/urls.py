@@ -8,6 +8,7 @@ urlpatterns = [
     path('create/', views.create_url_view, name='create_url'),
     path('create/gemini/', views.create_gemini_view, name='create_gemini'),
     path('create/review/', views.create_review_view, name='create_review'),
+    path('shared/', views.shared_class_view, name='shared'),
     path('setup/<int:pk>/', views.setup_edit_view, name='setup_edit'),
     path('legacy/', views.legacy_setup_view, name='legacy_setup'),
     path('legacy/setup/<int:pk>/', views.legacy_setup_view, name='legacy_setup_edit'),

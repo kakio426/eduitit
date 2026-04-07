@@ -20,6 +20,7 @@ from .launcher_release import (
 )
 from .manual_pipeline import ManualPipelineError, build_manual_pipeline_prompt, parse_manual_pipeline_result
 from .models import ArtClass, ArtClassAttachment, ArtStep
+from .views import _build_artclass_share_url
 
 User = get_user_model()
 
@@ -1338,6 +1339,7 @@ class ArtClassSetupEditTest(TestCase):
         cloned = ArtClass.objects.exclude(pk=self.art_class.pk).latest("id")
         self.assertRedirects(response, reverse("artclass:setup_edit", kwargs={"pk": cloned.pk}))
         self.assertEqual(cloned.created_by, self.other)
+        self.assertFalse(cloned.is_shared)
         self.assertEqual(cloned.youtube_url, self.art_class.youtube_url)
         self.assertEqual(cloned.default_interval, self.art_class.default_interval)
         self.assertEqual(cloned.steps.count(), original_step_count)
@@ -1379,6 +1381,52 @@ class ArtClassSetupEditTest(TestCase):
         response = self.client.get(reverse("artclass:setup_clone", kwargs={"pk": self.art_class.pk}))
 
         self.assertEqual(response.status_code, 403)
+
+    def test_shared_link_redirects_anonymous_teacher_to_login(self):
+        response = self.client.get(_build_artclass_share_url(self.art_class))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("account_login"), response.url)
+        self.assertIn("next=", response.url)
+
+    def test_shared_link_clones_public_class_for_recipient(self):
+        self.client.force_login(self.other)
+
+        response = self.client.get(_build_artclass_share_url(self.art_class))
+
+        cloned = ArtClass.objects.exclude(pk=self.art_class.pk).latest("id")
+        self.assertRedirects(response, reverse("artclass:setup_edit", kwargs={"pk": cloned.pk}))
+        self.assertEqual(cloned.created_by, self.other)
+        self.assertFalse(cloned.is_shared)
+        self.assertEqual(cloned.steps.count(), self.art_class.steps.count())
+        self.assertEqual(cloned.steps.get(step_number=1).description, self.existing_step.description)
+
+    def test_shared_link_redirects_owner_to_existing_edit(self):
+        self.client.force_login(self.owner)
+        original_count = ArtClass.objects.count()
+
+        response = self.client.get(_build_artclass_share_url(self.art_class))
+
+        self.assertRedirects(response, reverse("artclass:setup_edit", kwargs={"pk": self.art_class.pk}))
+        self.assertEqual(ArtClass.objects.count(), original_count)
+
+    def test_shared_link_returns_not_found_when_source_is_private(self):
+        self.art_class.is_shared = False
+        self.art_class.save(update_fields=["is_shared"])
+        self.client.force_login(self.other)
+
+        response = self.client.get(_build_artclass_share_url(self.art_class))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_classroom_shows_share_copy_button_for_public_owner(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(reverse("artclass:classroom", kwargs={"pk": self.art_class.pk}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "공유 링크 복사")
+        self.assertContains(response, reverse("artclass:shared"))
 
 
 class ArtClassAutoMetadataTest(TestCase):
@@ -1785,6 +1833,32 @@ class ArtClassAutoMetadataTest(TestCase):
         self.assertContains(response, "런처 시작")
         self.assertContains(response, "초록 버튼으로 시작합니다.")
         self.assertContains(response, "자료 1개")
+
+    def test_library_shows_share_copy_button_for_public_my_class(self):
+        self.client.force_login(self.owner)
+        my_public = ArtClass.objects.create(
+            title="내 공유 수업",
+            youtube_url="https://www.youtube.com/watch?v=sharecopy01",
+            default_interval=10,
+            created_by=self.owner,
+            is_shared=True,
+        )
+        my_private = ArtClass.objects.create(
+            title="내 비공개 수업",
+            youtube_url="https://www.youtube.com/watch?v=sharecopy02",
+            default_interval=10,
+            created_by=self.owner,
+            is_shared=False,
+        )
+
+        response = self.client.get(reverse("artclass:library"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, my_public.display_title)
+        self.assertContains(response, my_private.display_title)
+        self.assertContains(response, reverse("artclass:shared"))
+        self.assertContains(response, "링크를 받은 선생님은 로그인 후 자기 수업으로 바로 가져갑니다.")
+        self.assertEqual(response.content.decode("utf-8").count("data-share-url="), 1)
 
     def test_library_uses_single_install_guide_link(self):
         response = self.client.get(reverse("artclass:library"))
