@@ -1827,7 +1827,7 @@ def _build_sheetbook_workspace_context(request, *, require_discovery_visible=Tru
     quick_action_specs = [
         ("간편 수합", "collect:dashboard", "fa-solid fa-inbox"),
         ("동의서", "consent:dashboard", "fa-solid fa-file-signature"),
-        ("배부 체크", "handoff:dashboard", "fa-solid fa-list-check"),
+        ("배부 체크", "handoff:landing", "fa-solid fa-list-check"),
         ("안내문", "noticegen:main", "fa-solid fa-newspaper"),
     ]
     quick_actions = []

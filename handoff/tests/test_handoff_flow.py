@@ -240,6 +240,29 @@ class HandoffFlowTest(TestCase):
         self.assertEqual(session.receipts.count(), 2)
         self.assertEqual(session.receipts.filter(state="pending").count(), 2)
 
+    def test_landing_redirects_authenticated_user_to_open_session(self):
+        group, members = self._create_group_with_members()
+        session = self._create_session(group, members)
+
+        response = self.client.get(reverse("handoff:landing"))
+
+        self.assertRedirects(response, reverse("handoff:session_detail", args=[session.id]))
+
+    def test_landing_shows_start_surface_instead_of_dashboard_when_no_open_session(self):
+        group, members = self._create_group_with_members()
+        closed_session = self._create_session(group, members)
+        closed_session.status = "closed"
+        closed_session.save(update_fields=["status"])
+
+        response = self.client.get(reverse("handoff:landing"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "오늘 바로 하는 일")
+        self.assertContains(response, "배부 체크 시작하기")
+        self.assertContains(response, group.name)
+        self.assertContains(response, reverse("handoff:group_detail", args=[group.id]))
+        self.assertNotContains(response, "공용 명부 허브")
+
     def test_dashboard_is_roster_first_and_group_detail_owns_sessions(self):
         group, members = self._create_group_with_members()
         session = self._create_session(group, members)

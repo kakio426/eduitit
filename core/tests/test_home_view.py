@@ -1235,6 +1235,19 @@ class HomeV2ViewTest(TestCase):
         )
         self.assertNotIn('교무수첩 워크스페이스', content)
 
+    @override_settings(SHEETBOOK_ENABLED=True, SHEETBOOK_DISCOVERY_VISIBLE=True)
+    def test_v2_workspace_quick_action_uses_handoff_landing(self):
+        from sheetbook.models import Sheetbook
+
+        user = self._login('workspacehandoff')
+        Sheetbook.objects.create(owner=user, title='배부 확인 수첩', academic_year=2026)
+
+        response = self.client.get(reverse('home'))
+        quick_actions = response.context['sheetbook_workspace']['quick_actions']
+        handoff_action = next(item for item in quick_actions if item['title'] == '배부 체크')
+
+        self.assertEqual(handoff_action['href'], reverse('handoff:landing'))
+
     def test_v2_usage_based_quick_actions(self):
         """V2 사용 기록 기반 퀵 액션 반영"""
         from core.models import ProductUsageLog

@@ -429,10 +429,71 @@ def _redirect_with_context(target_url, *, return_to="", acting_for_user=""):
     )
 
 
+def _get_handoff_landing_open_session(user):
+    if not getattr(user, "is_authenticated", False):
+        return None
+    return (
+        _get_handoff_accessible_sessions(user)
+        .filter(owner=user, status="open")
+        .order_by("-updated_at", "-created_at")
+        .first()
+    )
+
+
+def _get_handoff_landing_recent_sessions(user, *, limit=3):
+    if not getattr(user, "is_authenticated", False):
+        return []
+    return list(
+        _get_handoff_accessible_sessions(user)
+        .filter(owner=user)
+        .annotate(
+            total_count=Count("receipts"),
+            received_count=Count("receipts", filter=Q(receipts__state="received")),
+            pending_count=Count("receipts", filter=Q(receipts__state="pending")),
+        )
+        .order_by("-updated_at", "-created_at")[:limit]
+    )
+
+
+def _get_handoff_landing_preferred_group(user):
+    if not getattr(user, "is_authenticated", False):
+        return None
+    return (
+        _get_handoff_accessible_groups(user)
+        .filter(owner=user)
+        .annotate(active_member_count=Count("members", filter=Q(members__is_active=True)))
+        .order_by("-is_favorite", "-active_member_count", "-updated_at", "name")
+        .first()
+    )
+
+
 def landing(request):
+    service = _get_service()
     if request.user.is_authenticated:
-        return redirect("handoff:dashboard")
-    return render(request, "handoff/landing.html", {"service": _get_service()})
+        open_session = _get_handoff_landing_open_session(request.user)
+        if open_session is not None:
+            return redirect("handoff:session_detail", session_id=open_session.id)
+
+        preferred_group = _get_handoff_landing_preferred_group(request.user)
+        recent_sessions = _get_handoff_landing_recent_sessions(request.user)
+        preferred_group_url = (
+            reverse("handoff:group_detail", kwargs={"group_id": preferred_group.id})
+            if preferred_group is not None
+            else reverse("handoff:dashboard")
+        )
+        return render(
+            request,
+            "handoff/landing.html",
+            {
+                "service": service,
+                "is_authenticated_landing": True,
+                "preferred_group": preferred_group,
+                "preferred_group_url": preferred_group_url,
+                "recent_sessions": recent_sessions,
+                "dashboard_url": reverse("handoff:dashboard"),
+            },
+        )
+    return render(request, "handoff/landing.html", {"service": service, "is_authenticated_landing": False})
 
 
 @login_required

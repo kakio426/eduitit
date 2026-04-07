@@ -5,6 +5,77 @@
 {% block content %}
 <section class="pt-32 pb-20 px-4 min-h-screen bg-[#E0E5EC]">
     <div class="max-w-5xl mx-auto">
+        {% if is_authenticated_landing %}
+        <div class="text-center mb-10" data-aos="fade-up">
+            <div class="inline-flex items-center justify-center w-24 h-24 rounded-full bg-blue-100 text-blue-600 text-5xl shadow-clay mb-5">
+                {{ service.icon|default:"📦" }}
+            </div>
+            <h1 class="text-4xl md:text-5xl font-black text-gray-700 mb-3">배부 체크</h1>
+            <p class="text-lg md:text-xl text-gray-500 font-bold">진행 중 세션은 바로 이어서 열고, 없으면 명부를 골라 바로 시작하세요.</p>
+        </div>
+
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+            <div class="clay-card p-7 md:p-8" data-aos="fade-up" data-handoff-start-surface="true">
+                <p class="text-sm font-black text-blue-600 mb-2">오늘 바로 하는 일</p>
+                {% if preferred_group %}
+                <h2 class="text-3xl font-black text-gray-700">{{ preferred_group.name }} 명부에서 바로 시작</h2>
+                <p class="mt-3 text-sm md:text-base text-gray-500 font-bold">활성 멤버 {{ preferred_group.active_member_count }}명을 기준으로 새 배부 세션을 시작하거나, 최근 기록을 바로 이어서 볼 수 있습니다.</p>
+                <div class="mt-6 flex flex-wrap gap-3">
+                    <a href="{{ preferred_group_url }}" class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-clay transition hover:bg-blue-500">
+                        <i class="fa-solid fa-list-check"></i>
+                        <span>배부 체크 시작하기</span>
+                    </a>
+                    <a href="{{ dashboard_url }}" class="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-gray-700 shadow-clay transition hover:text-blue-600">
+                        <i class="fa-solid fa-users"></i>
+                        <span>명부 관리</span>
+                    </a>
+                </div>
+                {% else %}
+                <h2 class="text-3xl font-black text-gray-700">배부에 쓸 명부부터 준비하세요.</h2>
+                <p class="mt-3 text-sm md:text-base text-gray-500 font-bold">첫 명부를 한 번 만들어 두면 다음부터는 같은 명단으로 바로 배부 체크를 시작할 수 있습니다.</p>
+                <div class="mt-6 flex flex-wrap gap-3">
+                    <a href="{{ dashboard_url }}" class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-clay transition hover:bg-blue-500">
+                        <i class="fa-solid fa-users"></i>
+                        <span>첫 명부 만들기</span>
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="clay-card p-6 md:p-7" data-aos="fade-up" data-aos-delay="70">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <p class="text-sm font-black text-blue-600">최근 배부 기록</p>
+                        <h2 class="mt-2 text-2xl font-black text-gray-700">최근 세션</h2>
+                    </div>
+                    <a href="{{ dashboard_url }}" class="text-sm font-bold text-blue-600 hover:underline">명부 허브</a>
+                </div>
+                {% if recent_sessions %}
+                <div class="mt-5 space-y-3">
+                    {% for session in recent_sessions %}
+                    <a href="{% url 'handoff:session_detail' session.id %}" class="block rounded-2xl border border-gray-200 bg-white/80 px-4 py-4 transition hover:border-blue-200 hover:bg-white">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <p class="text-base font-black text-gray-700">{{ session.title }}</p>
+                                <p class="mt-1 text-xs font-bold text-gray-500">{{ session.roster_group_name|default:"삭제된 명단" }} · 미수령 {{ session.pending_count }}명</p>
+                            </div>
+                            {% if session.status == "open" %}
+                            <span class="shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-black text-emerald-700">진행중</span>
+                            {% else %}
+                            <span class="shrink-0 rounded-full bg-gray-200 px-2.5 py-1 text-xs font-black text-gray-700">마감</span>
+                            {% endif %}
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="mt-5 rounded-2xl border border-dashed border-gray-300 bg-white/50 px-4 py-8 text-center text-sm font-bold text-gray-500">
+                    아직 배부 기록이 없습니다.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
         <div class="text-center mb-12" data-aos="fade-up">
             <div class="inline-flex items-center justify-center w-24 h-24 rounded-full bg-blue-100 text-blue-600 text-5xl shadow-clay mb-5">
                 {{ service.icon|default:"📦" }}
@@ -36,6 +107,7 @@
                 <span>로그인하고 시작하기</span>
             </a>
         </div>
+        {% endif %}
     </div>
 </section>
 {% endblock %}
