@@ -180,7 +180,10 @@
 .home-v6-primary-stack,
 .home-v6-side-stack,
 .home-v6-mobile-summary,
-.home-v6-mobile-stack {
+.home-v6-mobile-stack,
+.home-v6-calendar-section,
+.home-v6-calendar-wrap,
+.home-v6-mobile-calendar-section {
     min-width: 0;
     display: grid;
 }
@@ -899,21 +902,21 @@
     transform: translateY(-1px);
 }
 
-.home-v6-page [data-home-v4-home-panel="true"] [data-classcalendar-surface="true"] > div,
-.home-v6-page .home-v5-mobile-calendar-section [data-classcalendar-surface="true"] > div {
+.home-v6-page [data-home-v6-calendar-panel="desktop"] [data-classcalendar-surface="true"] > div,
+.home-v6-page [data-home-v6-calendar-panel="mobile"] [data-classcalendar-surface="true"] > div {
     border-color: var(--home-v6-border-strong);
     background: var(--home-v6-surface-hero);
     box-shadow: var(--home-v6-shadow-hero);
 }
 
-.home-v6-page [data-home-v4-home-panel="true"] [data-classcalendar-surface="true"],
-.home-v6-page .home-v5-mobile-calendar-section [data-classcalendar-surface="true"] {
+.home-v6-page [data-home-v6-calendar-panel="desktop"] [data-classcalendar-surface="true"],
+.home-v6-page [data-home-v6-calendar-panel="mobile"] [data-classcalendar-surface="true"] {
     display: grid;
     gap: 1rem;
 }
 
-.home-v6-page [data-home-v4-home-panel="true"] [data-classcalendar-surface="true"] > div::after,
-.home-v6-page .home-v5-mobile-calendar-section [data-classcalendar-surface="true"] > div::after {
+.home-v6-page [data-home-v6-calendar-panel="desktop"] [data-classcalendar-surface="true"] > div::after,
+.home-v6-page [data-home-v6-calendar-panel="mobile"] [data-classcalendar-surface="true"] > div::after {
     width: 12rem;
     height: 12rem;
     top: -6rem;
