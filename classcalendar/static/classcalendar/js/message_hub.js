@@ -14,6 +14,7 @@ function buildCalendarMessageHubState() {
         messageCaptureInputText: '',
         messageCaptureSourceHint: 'unknown',
         messageCaptureLinkedDate: '',
+        messageCaptureManualDate: '',
         messageCaptureManualNote: '',
         messageCaptureDropActive: false,
         messageCaptureTemplates: [

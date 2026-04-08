@@ -332,15 +332,27 @@ def _run_scenario(
         page.get_by_role('heading', name='내 작업대').first.wait_for(state='visible', timeout=10000)
 
         if expect_mobile_layout:
-            workbench = page.locator('[data-home-v5-mobile-workbench="true"]:visible').first
-            workbench_cards = page.locator('[data-home-v5-mobile-workbench-card="true"]:visible')
-            quickdrop_panel = page.locator('[data-home-v4-mobile-quickdrop="true"]:visible').first
-            quickdrop_form = page.locator('[data-home-v4-mobile-quickdrop-form="true"]:visible').first
+            if layout_version == 'v6':
+                workbench = page.locator('[data-home-v6-workbench="mobile"]:visible').first
+                workbench_cards = page.locator('[data-home-v6-mobile-workbench-card="true"]:visible')
+                quickdrop_panel = page.locator('[data-home-v6-mobile-quickdrop="true"]:visible').first
+                quickdrop_form = page.locator('[data-home-v6-mobile-quickdrop-form="true"]:visible').first
+            else:
+                workbench = page.locator('[data-home-v5-mobile-workbench="true"]:visible').first
+                workbench_cards = page.locator('[data-home-v5-mobile-workbench-card="true"]:visible')
+                quickdrop_panel = page.locator('[data-home-v4-mobile-quickdrop="true"]:visible').first
+                quickdrop_form = page.locator('[data-home-v4-mobile-quickdrop-form="true"]:visible').first
         else:
-            workbench = page.locator('[data-home-v4-favorites-panel="true"]:visible').first
-            workbench_cards = page.locator('[data-home-v4-favorite-card="true"]:visible')
-            quickdrop_panel = page.locator('[data-home-v4-quickdrop-panel="true"]:visible').first
-            quickdrop_form = page.locator('[data-home-v4-quickdrop-form="true"]:visible').first
+            if layout_version == 'v6':
+                workbench = page.locator('[data-home-v6-favorites-panel="true"]:visible').first
+                workbench_cards = page.locator('[data-home-v6-favorite-card="true"]:visible')
+                quickdrop_panel = page.locator('[data-home-v6-quickdrop-panel="true"]:visible').first
+                quickdrop_form = page.locator('[data-home-v6-quickdrop-form="true"]:visible').first
+            else:
+                workbench = page.locator('[data-home-v4-favorites-panel="true"]:visible').first
+                workbench_cards = page.locator('[data-home-v4-favorite-card="true"]:visible')
+                quickdrop_panel = page.locator('[data-home-v4-quickdrop-panel="true"]:visible').first
+                quickdrop_form = page.locator('[data-home-v4-quickdrop-form="true"]:visible').first
 
         workbench.wait_for(state='visible', timeout=20000)
         initial_count = workbench_cards.count()
@@ -354,7 +366,10 @@ def _run_scenario(
 
         developer_chat_visible = False
         if not expect_mobile_layout:
-            developer_chat_card = page.locator('[data-home-v4-developer-chat-card="desktop"]:visible').first
+            if layout_version == 'v6':
+                developer_chat_card = page.locator('[data-home-v6-developer-chat-card="desktop"]:visible').first
+            else:
+                developer_chat_card = page.locator('[data-home-v4-developer-chat-card="desktop"]:visible').first
             developer_chat_card.wait_for(state='visible', timeout=10000)
             developer_chat_visible = True
 
@@ -383,13 +398,22 @@ def _run_scenario(
         page_html = page.content()
         mobile_order_ok = None
         if expect_mobile_layout:
-            markers = [
-                'data-home-v5-mobile-workbench="true"',
-                'data-home-v5-mobile-calendar-panel="true"',
-                'data-home-v4-mobile-quickdrop="true"',
-                'data-home-reservations-card="true"',
-                'data-home-v5-mobile-sns="true"',
-            ]
+            if layout_version == 'v6':
+                markers = [
+                    'data-home-v6-workbench="mobile"',
+                    'data-home-v6-calendar-panel="mobile"',
+                    'data-home-v6-mobile-quickdrop="true"',
+                    'data-home-v6-reservations-panel="mobile"',
+                    'data-home-v6-mobile-sns="true"',
+                ]
+            else:
+                markers = [
+                    'data-home-v5-mobile-workbench="true"',
+                    'data-home-v5-mobile-calendar-panel="true"',
+                    'data-home-v4-mobile-quickdrop="true"',
+                    'data-home-reservations-card="true"',
+                    'data-home-v5-mobile-sns="true"',
+                ]
             positions = [page_html.find(marker) for marker in markers]
             visible_positions = [position for position in positions if position != -1]
             mobile_order_ok = visible_positions == sorted(visible_positions)
