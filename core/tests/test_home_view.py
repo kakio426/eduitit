@@ -3084,7 +3084,7 @@ class HomeV5ViewTest(TestCase):
         reservation_index = content.index('data-home-reservations-card="true"')
         sns_index = content.index('data-home-v5-mobile-sns="true"')
         workbench_block = content[workbench_index:calendar_index]
-        desktop_layout_index = content.index('home-v5-desktop-layout')
+        desktop_layout_index = content.index('data-home-v6-layout="true"')
         mobile_block = content[:desktop_layout_index]
 
         self.assertNotIn('title="바로전송">바로전송</p>', workbench_block)
@@ -3196,6 +3196,7 @@ class HomeV6ViewTest(TestCase):
         content = response.content.decode('utf-8')
         nav_sections = response.context['home_v4_nav_sections']
         first_subtitle = next(section['subtitle'] for section in nav_sections if section.get('subtitle'))
+        first_section_key = nav_sections[0]['key']
 
         self.assertTemplateUsed(response, 'core/home_authenticated_v6_canonical.html')
         _assert_authenticated_home_context_contract(self, response, design_version='v6')
@@ -3210,12 +3211,15 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('data-home-v6-mobile-sheet="true"', content)
         self.assertIn('data-home-v6-nav="desktop"', content)
         self.assertIn('data-home-v6-nav="mobile"', content)
+        self.assertIn(f'data-home-v6-nav-section="{first_section_key}"', content)
+        self.assertIn(f'data-home-v6-tool-list="{first_section_key}"', content)
         self.assertIn('home-v6-page', content)
         self.assertIn('home-v6-shell', content)
-        self.assertIn('window.homeV6Shell ? window.homeV6Shell()', content)
+        self.assertIn('window.homeV6Shell()', content)
         self.assertIn('data-classcalendar-home-card="true"', content)
         self.assertIn(first_subtitle, content)
-        self.assertIn('home-v4-nav-subtitle', content)
+        self.assertIn('home-v6-nav-subtitle', content)
+        self.assertNotIn('home-v4-nav-subtitle', content)
         self.assertIn('data-home-v6-rail-card="true"', content)
         self.assertIn('data-home-v6-rail-item="true"', content)
         self.assertIn('data-home-v6-rail-action="true"', content)
@@ -3230,6 +3234,7 @@ class HomeV6ViewTest(TestCase):
         content = response.content.decode('utf-8')
         nav_sections = response.context['home_v4_nav_sections']
         first_subtitle = next(section['subtitle'] for section in nav_sections if section.get('subtitle'))
+        first_section_key = nav_sections[0]['key']
 
         self.assertTemplateUsed(response, 'core/home_authenticated_v6_canonical.html')
         _assert_authenticated_home_context_contract(self, response, design_version='v6')
@@ -3244,12 +3249,15 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('data-home-v6-mobile-sheet="true"', content)
         self.assertIn('data-home-v6-nav="desktop"', content)
         self.assertIn('data-home-v6-nav="mobile"', content)
+        self.assertIn(f'data-home-v6-nav-section="{first_section_key}"', content)
+        self.assertIn(f'data-home-v6-tool-list="{first_section_key}"', content)
         self.assertIn('home-v6-page', content)
         self.assertIn('home-v6-shell', content)
-        self.assertIn('window.homeV6Shell ? window.homeV6Shell()', content)
+        self.assertIn('window.homeV6Shell()', content)
         self.assertIn('data-classcalendar-home-card="true"', content)
         self.assertIn(first_subtitle, content)
-        self.assertIn('home-v4-nav-subtitle', content)
+        self.assertIn('home-v6-nav-subtitle', content)
+        self.assertNotIn('home-v4-nav-subtitle', content)
         self.assertIn('data-home-v6-rail-card="true"', content)
         self.assertIn('data-home-v6-rail-item="true"', content)
         self.assertIn('data-home-v6-rail-action="true"', content)
@@ -3352,7 +3360,7 @@ class HomeV6ViewTest(TestCase):
         reservation_index = content.index('data-home-reservations-card="true"')
         sns_index = content.index('data-home-v5-mobile-sns="true"')
         workbench_block = content[workbench_index:calendar_index]
-        desktop_layout_index = content.index('home-v5-desktop-layout')
+        desktop_layout_index = content.index('data-home-v6-layout="true"')
         mobile_block = content[:desktop_layout_index]
 
         self.assertEqual(response.context['home_design_version'], 'v6')

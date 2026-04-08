@@ -1,0 +1,125 @@
+<nav
+    class="home-v6-nav-list"
+    data-home-v4-nav="{{ panel_name|default:'desktop' }}"
+    data-home-v6-nav="{{ panel_name|default:'desktop' }}"
+>
+    {% for section in home_v4_nav_sections %}
+    <div
+        class="home-v6-nav-group home-v6-nav-group--{{ section.color }}"
+        data-home-v4-nav-section="{{ section.key }}"
+        data-home-v6-nav-section="{{ section.key }}"
+    >
+        <button
+            type="button"
+            class="home-v6-nav-item home-v6-nav-item--section"
+            @click="openSection = openSection === '{{ section.key }}' ? '' : '{{ section.key }}'"
+            :class="{ 'is-open': openSection === '{{ section.key }}' }"
+            :aria-expanded="openSection === '{{ section.key }}' ? 'true' : 'false'"
+        >
+            <span class="home-v6-nav-item-main">
+                <span class="home-v6-nav-icon home-v6-nav-icon--{{ section.color }}">
+                    <i class="{{ section.icon }}"></i>
+                </span>
+                <span class="home-v6-nav-copy min-w-0 flex-1">
+                    <span class="block truncate home-v6-nav-title">{{ section.title }}</span>
+                    {% if section.subtitle %}
+                    <span class="block truncate home-v6-nav-subtitle">{{ section.subtitle }}</span>
+                    {% endif %}
+                </span>
+            </span>
+            <span class="home-v6-nav-item-side">
+                <span class="home-v6-nav-chevron" :class="{ 'is-open': openSection === '{{ section.key }}' }">
+                    <i class="fa-solid fa-chevron-down"></i>
+                </span>
+            </span>
+        </button>
+
+        <div
+            class="home-v6-tool-list"
+            x-show="openSection === '{{ section.key }}'"
+            x-cloak
+            data-home-v4-tool-list="{{ section.key }}"
+            data-home-v6-tool-list="{{ section.key }}"
+        >
+            {% if section.key == 'games' and request.user.is_authenticated and student_games_issue_url %}
+            <div
+                class="home-v6-tool-item"
+                data-home-v4-tool-item="games-student-link"
+                data-home-v6-tool-item="games-student-link"
+            >
+                <button
+                    type="button"
+                    class="home-v6-tool-link w-full text-left"
+                    data-home-v4-tool-link="games-student-link"
+                    data-home-v6-tool-link="games-student-link"
+                    data-home-v4-student-games-link="true"
+                    data-home-v6-student-games-link="true"
+                    data-student-games-open="studentGamesQrModal"
+                    {% if close_action %}@click="{{ close_action }}"{% endif %}
+                >
+                    <span class="home-v6-tool-leading">
+                        <span class="home-v6-tool-icon">
+                            <i class="fa-solid fa-link"></i>
+                        </span>
+                    </span>
+                    <span class="home-v6-tool-copy min-w-0 flex-1">
+                        <span class="home-v6-tool-title block truncate text-sm font-black text-slate-900">학생 링크</span>
+                        <span class="home-v6-tool-summary mt-1 block text-xs leading-5 text-slate-500 line-clamp-2">학생이 게임 목록으로 바로 들어가는 링크와 QR을 엽니다.</span>
+                    </span>
+                </button>
+            </div>
+            {% endif %}
+            {% for product in section.products %}
+            <div
+                class="home-v6-tool-item"
+                data-home-v4-tool-item="{{ section.key }}"
+                data-home-v6-tool-item="{{ section.key }}"
+            >
+                <a
+                    href="{{ product.launch_href }}"
+                    class="home-v6-tool-link"
+                    data-home-v4-tool-link="{{ section.key }}"
+                    data-home-v6-tool-link="{{ section.key }}"
+                    {% if product.launch_is_external %}target="_blank" rel="noopener"{% endif %}
+                    {% if close_action %}@click="{{ close_action }}"{% endif %}
+                >
+                    <span class="home-v6-tool-leading">
+                        <span class="home-v6-tool-icon">
+                            {% if product.icon %}
+                                {% if "fa-" in product.icon %}<i class="{{ product.icon }}"></i>{% else %}{{ product.icon }}{% endif %}
+                            {% else %}
+                                <i class="fa-solid fa-sparkles"></i>
+                            {% endif %}
+                        </span>
+                    </span>
+                    <span class="home-v6-tool-copy min-w-0 flex-1">
+                        <span class="home-v6-tool-title block truncate text-sm font-black text-slate-900">{{ product.public_service_name|default:product.title }}</span>
+                        <span class="home-v6-tool-summary mt-1 block text-xs leading-5 text-slate-500 line-clamp-2">{{ product.home_card_summary|default:product.description }}</span>
+                    </span>
+                    {% if product.launch_is_external %}
+                    <span class="home-v6-tool-link-arrow" aria-hidden="true">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                    </span>
+                    {% endif %}
+                </a>
+                {% if request.user.is_authenticated %}
+                <button
+                    type="button"
+                    class="home-v6-tool-favorite-badge home-v5-favorite-toggle favorite-toggle-btn inline-flex items-center justify-center rounded-full border border-slate-200 bg-white text-slate-300 hover:border-amber-300 hover:text-amber-500 transition-colors"
+                    data-home-v4-tool-favorite-badge="true"
+                    data-home-v6-tool-favorite-badge="true"
+                    data-product-id="{{ product.id }}"
+                    data-favorite-toggle="true"
+                    aria-pressed="false"
+                    aria-label="{{ product.public_service_name|default:product.title }} 즐겨찾기 토글"
+                    title="즐겨찾기"
+                >
+                    <i class="fa-solid fa-star" aria-hidden="true"></i>
+                </button>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</nav>
