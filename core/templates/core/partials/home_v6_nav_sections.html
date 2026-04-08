@@ -1,12 +1,10 @@
 <nav
     class="home-v6-nav-list"
-    data-home-v4-nav="{{ panel_name|default:'desktop' }}"
     data-home-v6-nav="{{ panel_name|default:'desktop' }}"
 >
     {% for section in home_v4_nav_sections %}
     <div
         class="home-v6-nav-group home-v6-nav-group--{{ section.color }}"
-        data-home-v4-nav-section="{{ section.key }}"
         data-home-v6-nav-section="{{ section.key }}"
     >
         <button
@@ -38,21 +36,17 @@
             class="home-v6-tool-list"
             x-show="openSection === '{{ section.key }}'"
             x-cloak
-            data-home-v4-tool-list="{{ section.key }}"
             data-home-v6-tool-list="{{ section.key }}"
         >
             {% if section.key == 'games' and request.user.is_authenticated and student_games_issue_url %}
             <div
                 class="home-v6-tool-item"
-                data-home-v4-tool-item="games-student-link"
                 data-home-v6-tool-item="games-student-link"
             >
                 <button
                     type="button"
                     class="home-v6-tool-link w-full text-left"
-                    data-home-v4-tool-link="games-student-link"
                     data-home-v6-tool-link="games-student-link"
-                    data-home-v4-student-games-link="true"
                     data-home-v6-student-games-link="true"
                     data-student-games-open="studentGamesQrModal"
                     {% if close_action %}@click="{{ close_action }}"{% endif %}
@@ -72,13 +66,11 @@
             {% for product in section.products %}
             <div
                 class="home-v6-tool-item"
-                data-home-v4-tool-item="{{ section.key }}"
                 data-home-v6-tool-item="{{ section.key }}"
             >
                 <a
                     href="{{ product.launch_href }}"
                     class="home-v6-tool-link"
-                    data-home-v4-tool-link="{{ section.key }}"
                     data-home-v6-tool-link="{{ section.key }}"
                     {% if product.launch_is_external %}target="_blank" rel="noopener"{% endif %}
                     {% if close_action %}@click="{{ close_action }}"{% endif %}
@@ -105,8 +97,7 @@
                 {% if request.user.is_authenticated %}
                 <button
                     type="button"
-                    class="home-v6-tool-favorite-badge home-v5-favorite-toggle favorite-toggle-btn inline-flex items-center justify-center rounded-full border border-slate-200 bg-white text-slate-300 hover:border-amber-300 hover:text-amber-500 transition-colors"
-                    data-home-v4-tool-favorite-badge="true"
+                    class="home-v6-tool-favorite-badge favorite-toggle-btn inline-flex items-center justify-center rounded-full border border-slate-200 bg-white text-slate-300 hover:border-amber-300 hover:text-amber-500 transition-colors"
                     data-home-v6-tool-favorite-badge="true"
                     data-product-id="{{ product.id }}"
                     data-favorite-toggle="true"

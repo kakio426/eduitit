@@ -214,6 +214,10 @@
     padding: 1.25rem;
 }
 
+.home-v6-layout {
+    display: none;
+}
+
 .home-v6-nav-shell {
     display: none;
 }
@@ -2146,6 +2150,10 @@
 }
 
 @media (max-width: 1099px) {
+    .home-v6-layout {
+        display: none !important;
+    }
+
     .home-v6-layout,
     .home-v6-main,
     .home-v6-primary-stack,
@@ -2166,11 +2174,13 @@
 @media (min-width: 1100px) {
     .home-v6-mobile-summary,
     .home-v6-mobile-overlay,
-    .home-v6-mobile-sheet {
+    .home-v6-mobile-sheet,
+    .home-v6-mobile-stack {
         display: none !important;
     }
 
     .home-v6-layout {
+        display: grid;
         grid-template-columns: 312px minmax(0, 1fr);
     }
 

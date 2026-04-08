@@ -1,5 +1,6 @@
 import json
 import random
+import re
 from pathlib import Path
 from django.core.management import call_command
 from datetime import date, datetime, time, timedelta
@@ -2904,26 +2905,31 @@ class HomeV5ViewTest(TestCase):
 
         self.assertTemplateUsed(response, 'core/home_authenticated_v6_canonical.html')
         _assert_authenticated_home_context_contract(self, response, design_version='v6')
-        self.assertIn('core/css/home_authenticated_v4.css', content)
-        self.assertIn('core/css/home_authenticated_v5.css', content)
         self.assertIn('core/css/home_authenticated_v6.css', content)
-        self.assertIn('data-home-v5-shell="true"', content)
+        self.assertNotIn('core/css/home_authenticated_v4.css', content)
+        self.assertNotIn('core/css/home_authenticated_v5.css', content)
+        self.assertNotIn('core/js/home_authenticated_v2.js', content)
+        self.assertIn('data-home-v6-shell="true"', content)
         self.assertIn('data-home-design-version="v6"', content)
-        self.assertIn('data-home-v5-mobile-summary="true"', content)
+        self.assertIn('data-home-v6-mobile-summary="true"', content)
         self.assertIn('data-home-v6-workbench="mobile"', content)
         self.assertIn('data-home-v6-favorites-panel="true"', content)
         self.assertIn('data-home-v6-calendar-panel="mobile"', content)
         self.assertIn('data-home-v6-calendar-panel="desktop"', content)
         self.assertIn('data-home-v6-mobile-sns="true"', content)
         self.assertIn('sns-full-section-auth-v6', content)
-        self.assertIn('data-home-v5-mobile-all-tools-button="true"', content)
+        self.assertIn('data-home-v6-mobile-summary-button="true"', content)
         self.assertIn('내 작업대', content)
         self.assertIn('data-favorite-toggle="true"', content)
         self.assertNotIn('data-home-v4-public-shell="true"', content)
         self.assertNotIn('data-home-v4-mobile-menu-trigger="true"', content)
         self.assertNotIn('data-home-v4-mobile-quick-tools="true"', content)
+        self.assertNotIn('data-home-v4-shell="true"', content)
+        self.assertNotIn('data-home-v5-shell="true"', content)
+        self.assertNotIn('data-home-v5-mobile-summary="true"', content)
         self.assertNotIn('data-home-v5-mobile-recent="true"', content)
         self.assertNotIn('data-home-v5-mobile-recommend="true"', content)
+        self.assertNotIn('home-v5-page', content)
         self.assertNotIn('Quick Tools', content)
         self.assertNotIn('All Tools', content)
         self.assertNotIn('Representative', content)
@@ -3205,10 +3211,11 @@ class HomeV6ViewTest(TestCase):
 
         self.assertTemplateUsed(response, 'core/home_authenticated_v6_canonical.html')
         _assert_authenticated_home_context_contract(self, response, design_version='v6')
-        self.assertIn('core/css/home_authenticated_v5.css', content)
         self.assertIn('core/css/home_authenticated_v6.css', content)
-        self.assertIn('core/js/home_authenticated_v2.js', content)
         self.assertIn('core/js/home_authenticated_v6.js', content)
+        self.assertNotIn('core/css/home_authenticated_v4.css', content)
+        self.assertNotIn('core/css/home_authenticated_v5.css', content)
+        self.assertNotIn('core/js/home_authenticated_v2.js', content)
         self.assertIn('data-home-layout-version="v6"', content)
         self.assertIn('data-home-design-version="v6"', content)
         self.assertIn('data-home-v6-shell="true"', content)
@@ -3228,6 +3235,11 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('home-v6-shell', content)
         self.assertIn('window.homeV6Shell()', content)
         self.assertIn('data-classcalendar-home-card="true"', content)
+        self.assertNotIn('data-home-v4-shell="true"', content)
+        self.assertNotIn('data-home-v5-shell="true"', content)
+        self.assertNotIn('data-home-v5-mobile-summary="true"', content)
+        self.assertNotIn('data-home-v4-nav=', content)
+        self.assertNotIn('data-home-v4-tool-list=', content)
         self.assertNotIn('data-home-v4-home-panel="true"', content)
         self.assertNotIn('data-home-v5-mobile-calendar-panel="true"', content)
         self.assertNotIn('data-home-v5-mobile-workbench="true"', content)
@@ -3254,10 +3266,11 @@ class HomeV6ViewTest(TestCase):
 
         self.assertTemplateUsed(response, 'core/home_authenticated_v6_canonical.html')
         _assert_authenticated_home_context_contract(self, response, design_version='v6')
-        self.assertIn('core/css/home_authenticated_v5.css', content)
         self.assertIn('core/css/home_authenticated_v6.css', content)
-        self.assertIn('core/js/home_authenticated_v2.js', content)
         self.assertIn('core/js/home_authenticated_v6.js', content)
+        self.assertNotIn('core/css/home_authenticated_v4.css', content)
+        self.assertNotIn('core/css/home_authenticated_v5.css', content)
+        self.assertNotIn('core/js/home_authenticated_v2.js', content)
         self.assertIn('data-home-layout-version="v6"', content)
         self.assertIn('data-home-design-version="v6"', content)
         self.assertIn('data-home-v6-shell="true"', content)
@@ -3277,6 +3290,11 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('home-v6-shell', content)
         self.assertIn('window.homeV6Shell()', content)
         self.assertIn('data-classcalendar-home-card="true"', content)
+        self.assertNotIn('data-home-v4-shell="true"', content)
+        self.assertNotIn('data-home-v5-shell="true"', content)
+        self.assertNotIn('data-home-v5-mobile-summary="true"', content)
+        self.assertNotIn('data-home-v4-nav=', content)
+        self.assertNotIn('data-home-v4-tool-list=', content)
         self.assertNotIn('data-home-v4-home-panel="true"', content)
         self.assertNotIn('data-home-v5-mobile-calendar-panel="true"', content)
         self.assertNotIn('data-home-v5-mobile-workbench="true"', content)
@@ -3332,6 +3350,31 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('.home-v6-mobile-quickdrop-summary', mobile_css)
         self.assertIn('overflow-wrap: anywhere;', mobile_css)
         self.assertIn('box-sizing: border-box;', mobile_css)
+
+    def test_v6_css_keeps_mobile_and_desktop_layouts_separate(self):
+        css = (Path(settings.BASE_DIR) / 'core' / 'static' / 'core' / 'css' / 'home_authenticated_v6.css').read_text(encoding='utf-8')
+
+        self.assertRegex(
+            css,
+            re.compile(
+                r'@media \(max-width: 1099px\)\s*\{[\s\S]*?\.home-v6-layout\s*\{\s*display:\s*none\s*!important;',
+                re.S,
+            ),
+        )
+        self.assertRegex(
+            css,
+            re.compile(
+                r'@media \(min-width: 1100px\)\s*\{[\s\S]*?\.home-v6-mobile-summary,\s*\.home-v6-mobile-overlay,\s*\.home-v6-mobile-sheet,\s*\.home-v6-mobile-stack\s*\{\s*display:\s*none\s*!important;',
+                re.S,
+            ),
+        )
+        self.assertRegex(
+            css,
+            re.compile(
+                r'@media \(min-width: 1100px\)\s*\{[\s\S]*?\.home-v6-layout\s*\{\s*display:\s*grid;',
+                re.S,
+            ),
+        )
 
     def test_v6_home_shows_shared_school_reservation_card(self):
         owner = _create_onboarded_user('v6owner')
