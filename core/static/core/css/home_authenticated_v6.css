@@ -11,16 +11,16 @@
     --home-v6-border: rgba(106, 74, 154, 0.14);
     --home-v6-border-strong: rgba(106, 74, 154, 0.24);
     --home-v6-border-soft: rgba(106, 74, 154, 0.08);
-    --home-v6-star-border: rgba(215, 170, 71, 0.34);
-    --home-v6-star-border-strong: rgba(215, 170, 71, 0.52);
+    --home-v6-star-border: rgba(186, 126, 18, 0.54);
+    --home-v6-star-border-strong: rgba(150, 94, 7, 0.76);
     --home-v6-star-bg:
-        linear-gradient(180deg, rgba(255, 251, 243, 0.98) 0%, rgba(255, 246, 228, 0.94) 100%);
+        linear-gradient(180deg, rgba(255, 229, 154, 1) 0%, rgba(240, 177, 34, 0.99) 100%);
     --home-v6-star-bg-hover:
-        linear-gradient(180deg, rgba(255, 248, 230, 1) 0%, rgba(255, 239, 206, 0.98) 100%);
+        linear-gradient(180deg, rgba(255, 219, 118, 1) 0%, rgba(226, 154, 13, 1) 100%);
     --home-v6-star-bg-active:
-        linear-gradient(180deg, rgba(255, 245, 216, 0.99) 0%, rgba(255, 236, 192, 0.96) 100%);
-    --home-v6-star-text: #d7aa47;
-    --home-v6-star-text-strong: #b67816;
+        linear-gradient(180deg, rgba(240, 162, 20, 1) 0%, rgba(204, 123, 0, 1) 100%);
+    --home-v6-star-text: #7c4a00;
+    --home-v6-star-text-strong: #fff8e8;
     --home-v6-surface-hero:
         linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(252, 248, 255, 0.97) 100%);
     --home-v6-surface-primary:
@@ -1522,28 +1522,40 @@
 .home-v6-page [data-home-v4-favorites-panel="true"],
 .home-v6-page [data-home-v6-favorites-panel="true"] {
     background:
-        linear-gradient(180deg, rgba(248, 244, 255, 0.98) 0%, rgba(241, 246, 252, 0.96) 100%);
+        linear-gradient(180deg, rgba(239, 233, 249, 0.98) 0%, rgba(232, 239, 247, 0.97) 100%);
 }
 
 .home-v6-page [data-home-v6-favorites-panel="true"] [data-home-v6-favorite-card="true"] {
-    border-color: rgba(148, 163, 184, 0.42);
+    border: 1px solid rgba(148, 163, 184, 0.5);
     background:
-        linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(250, 252, 255, 0.995) 100%);
+        linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(244, 248, 254, 0.995) 100%);
     box-shadow:
-        0 22px 38px rgba(15, 23, 42, 0.1),
-        0 2px 8px rgba(99, 102, 241, 0.04),
-        inset 0 1px 0 rgba(255, 255, 255, 0.94);
+        0 24px 40px rgba(15, 23, 42, 0.13),
+        0 3px 10px rgba(99, 102, 241, 0.06),
+        inset 0 1px 0 rgba(255, 255, 255, 0.96);
 }
 
 .home-v6-page [data-home-v6-favorites-panel="true"] [data-home-v6-favorite-card="true"]:hover,
 .home-v6-page [data-home-v6-favorites-panel="true"] [data-home-v6-favorite-card="true"]:focus-visible {
-    border-color: rgba(106, 74, 154, 0.32);
+    border-color: rgba(106, 74, 154, 0.38);
     background:
-        linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(246, 243, 255, 0.995) 100%);
+        linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(240, 238, 252, 0.995) 100%);
     box-shadow:
         0 24px 42px rgba(15, 23, 42, 0.12),
         0 4px 12px rgba(99, 102, 241, 0.06),
         inset 0 1px 0 rgba(255, 255, 255, 0.96);
+}
+
+.home-v6-page [data-home-v6-favorites-panel="true"] [data-home-v6-favorite-card="true"] [data-home-v6-service-icon="true"] {
+    border: 1px solid rgba(167, 139, 250, 0.22);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(244, 241, 255, 0.98) 100%);
+    box-shadow:
+        0 10px 20px rgba(91, 44, 207, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.96);
+}
+
+.home-v6-page [data-home-v6-favorites-panel="true"] [data-home-v6-favorite-card="true"] [data-home-v6-service-title="true"] {
+    color: #201335;
 }
 
 .home-v6-page [data-home-v6-rail-card="true"] {
@@ -2036,14 +2048,14 @@
 .home-v6-page .home-v5-mobile-workbench-star,
 .home-v6-page .home-v6-mobile-workbench-star {
     border-radius: var(--home-v6-radius-card);
-    border-color: rgba(180, 120, 24, 0.72);
-    background:
-        linear-gradient(180deg, rgba(255, 233, 173, 1) 0%, rgba(242, 185, 58, 0.98) 100%);
-    color: #7c4a00;
+    border-color: rgba(150, 94, 7, 0.76);
+    background: var(--home-v6-star-bg);
+    color: var(--home-v6-star-text);
     box-shadow:
-        0 14px 26px rgba(180, 120, 24, 0.24),
-        inset 0 1px 0 rgba(255, 250, 230, 0.96),
-        inset 0 -1px 0 rgba(168, 111, 18, 0.22);
+        0 16px 28px rgba(180, 120, 24, 0.32),
+        0 0 0 2px rgba(255, 226, 150, 0.52),
+        inset 0 1px 0 rgba(255, 245, 214, 0.94),
+        inset 0 -1px 0 rgba(130, 78, 5, 0.24);
 }
 
 .home-v6-page .favorite-toggle-btn:hover,
@@ -2052,14 +2064,14 @@
 .home-v6-page .home-v5-mobile-workbench-star:focus-visible,
 .home-v6-page .home-v6-mobile-workbench-star:hover,
 .home-v6-page .home-v6-mobile-workbench-star:focus-visible {
-    border-color: rgba(157, 101, 14, 0.8);
-    background:
-        linear-gradient(180deg, rgba(255, 225, 142, 1) 0%, rgba(232, 167, 33, 1) 100%);
-    color: #663c00;
+    border-color: rgba(138, 84, 4, 0.84);
+    background: var(--home-v6-star-bg-hover);
+    color: #5f3700;
     box-shadow:
-        0 16px 30px rgba(180, 120, 24, 0.28),
-        inset 0 1px 0 rgba(255, 246, 216, 0.98),
-        inset 0 -1px 0 rgba(145, 92, 12, 0.24);
+        0 18px 32px rgba(180, 120, 24, 0.34),
+        0 0 0 2px rgba(255, 217, 120, 0.58),
+        inset 0 1px 0 rgba(255, 241, 196, 0.98),
+        inset 0 -1px 0 rgba(118, 68, 4, 0.26);
 }
 
 .home-v6-page .teacher-buddy-panel[data-panel-variant="v5-mobile"] .teacher-buddy-card,
@@ -2189,18 +2201,21 @@
 .home-v6-page .favorite-toggle-btn[aria-pressed="true"],
 .home-v6-page .home-v5-mobile-workbench-star[aria-pressed="true"],
 .home-v6-page .home-v6-mobile-workbench-star[aria-pressed="true"] {
-    border-color: rgba(215, 170, 71, 0.56);
+    border-color: rgba(128, 74, 0, 0.88);
     background: var(--home-v6-star-bg-active);
-    color: #9c6612;
+    color: var(--home-v6-star-text-strong);
     box-shadow:
-        0 16px 28px rgba(215, 170, 71, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.88);
+        0 18px 32px rgba(173, 103, 5, 0.38),
+        0 0 0 2px rgba(255, 214, 112, 0.56),
+        inset 0 1px 0 rgba(255, 226, 161, 0.52),
+        inset 0 -1px 0 rgba(102, 58, 0, 0.28);
 }
 
 .home-v6-page .favorite-toggle-btn i,
 .home-v6-page .home-v5-mobile-workbench-star i,
 .home-v6-page .home-v6-mobile-workbench-star i {
-    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.66);
+    text-shadow: 0 1px 0 rgba(84, 48, 0, 0.18);
+    filter: drop-shadow(0 1px 1px rgba(84, 48, 0, 0.14));
 }
 
 .home-v6-page [data-home-v4-favorites-panel="true"] > .mb-4 .fa-star,
