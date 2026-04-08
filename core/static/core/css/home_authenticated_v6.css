@@ -466,6 +466,142 @@
     gap: 0.85rem;
 }
 
+.home-v6-mobile-panel {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 0.95rem;
+    overflow-x: clip;
+    border-radius: 1.55rem;
+}
+
+.home-v6-mobile-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.85rem;
+    margin-bottom: 0.8rem;
+}
+
+.home-v6-mobile-panel-title {
+    margin: 0.18rem 0 0;
+    font-size: 1.02rem;
+    font-weight: 900;
+    line-height: 1.25;
+    color: #0f172a;
+}
+
+.home-v6-mobile-workbench-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.65rem;
+}
+
+.home-v6-mobile-workbench-card {
+    position: relative;
+    min-height: 92px;
+    padding: 0.72rem;
+}
+
+.home-v6-mobile-workbench-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.2rem;
+    height: 2.2rem;
+    border-radius: 0.9rem;
+    background: #ffffff;
+    box-shadow: inset 0 0 0 1px #e2e8f0;
+    font-size: 0.92rem;
+}
+
+.home-v6-mobile-workbench-title {
+    margin: 0.7rem 0 0;
+    padding-right: 1rem;
+    font-size: 0.84rem;
+    font-weight: 900;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+}
+
+.home-v6-mobile-workbench-star {
+    position: absolute;
+    top: 0.55rem;
+    right: 0.55rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 999px;
+}
+
+.home-v6-mobile-empty {
+    border: 1px dashed #cbd5e1;
+    border-radius: 1.2rem;
+    background: #f8fafc;
+    padding: 1rem;
+    text-align: center;
+    color: #64748b;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.home-v6-favorites-grid {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.home-v6-favorite-card {
+    min-height: 74px;
+    padding: 0.75rem;
+}
+
+.home-v6-favorite-card-body {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    min-height: 100%;
+    padding-right: 2.6rem;
+}
+
+.home-v6-favorite-card-copy {
+    flex: 1 1 auto;
+    min-width: 0;
+    align-self: center;
+}
+
+.home-v6-favorite-card-title {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 900;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+}
+
+.home-v6-favorite-card-star {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    z-index: 1;
+    width: 1.75rem;
+    height: 1.75rem;
+    min-width: 1.75rem;
+    min-height: 1.75rem;
+    padding: 0;
+}
+
 .home-v6-mobile-overlay {
     position: fixed;
     inset: 0;
@@ -749,8 +885,10 @@
 .home-v6-page .home-v4-nav-header h2,
 .home-v6-page .home-v6-nav-header h2,
 .home-v6-page .home-v5-mobile-panel-title,
+.home-v6-page .home-v6-mobile-panel-title,
 .home-v6-page [data-home-v4-representative-services="true"] h2,
 .home-v6-page [data-home-v4-favorites-panel="true"] h2,
+.home-v6-page [data-home-v6-favorites-panel="true"] h2,
 .home-v6-page .home-v4-quickdrop-head h2,
 .home-v6-page [data-home-reservations-card="true"] h2,
 .home-v6-page .home-v4-developer-chat-heading h2 {
@@ -1030,7 +1168,8 @@
     background: var(--home-v6-surface-primary);
 }
 
-.home-v6-page [data-home-v4-favorites-panel="true"] {
+.home-v6-page [data-home-v4-favorites-panel="true"],
+.home-v6-page [data-home-v6-favorites-panel="true"] {
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.975) 0%, rgba(253, 250, 255, 0.95) 100%);
 }
@@ -1346,7 +1485,8 @@
 }
 
 .home-v6-page .favorite-toggle-btn,
-.home-v6-page .home-v5-mobile-workbench-star {
+.home-v6-page .home-v5-mobile-workbench-star,
+.home-v6-page .home-v6-mobile-workbench-star {
     border-color: var(--home-v6-star-border);
     background: var(--home-v6-star-bg);
     color: var(--home-v6-star-text);
@@ -1358,7 +1498,9 @@
 .home-v6-page .favorite-toggle-btn:hover,
 .home-v6-page .favorite-toggle-btn:focus-visible,
 .home-v6-page .home-v5-mobile-workbench-star:hover,
-.home-v6-page .home-v5-mobile-workbench-star:focus-visible {
+.home-v6-page .home-v5-mobile-workbench-star:focus-visible,
+.home-v6-page .home-v6-mobile-workbench-star:hover,
+.home-v6-page .home-v6-mobile-workbench-star:focus-visible {
     border-color: var(--home-v6-star-border-strong);
     background: var(--home-v6-star-bg-hover);
     color: var(--home-v6-star-text-strong);
@@ -1432,7 +1574,8 @@
 }
 
 .home-v6-page .favorite-toggle-btn[aria-pressed="true"],
-.home-v6-page .home-v5-mobile-workbench-star[aria-pressed="true"] {
+.home-v6-page .home-v5-mobile-workbench-star[aria-pressed="true"],
+.home-v6-page .home-v6-mobile-workbench-star[aria-pressed="true"] {
     border-color: rgba(215, 170, 71, 0.56);
     background: var(--home-v6-star-bg-active);
     color: #9c6612;
@@ -1442,11 +1585,13 @@
 }
 
 .home-v6-page .favorite-toggle-btn i,
-.home-v6-page .home-v5-mobile-workbench-star i {
+.home-v6-page .home-v5-mobile-workbench-star i,
+.home-v6-page .home-v6-mobile-workbench-star i {
     text-shadow: 0 1px 0 rgba(255, 255, 255, 0.66);
 }
 
-.home-v6-page [data-home-v4-favorites-panel="true"] > .mb-4 .fa-star {
+.home-v6-page [data-home-v4-favorites-panel="true"] > .mb-4 .fa-star,
+.home-v6-page [data-home-v6-favorites-panel="true"] > .mb-4 .fa-star {
     color: var(--home-v6-star-text) !important;
     filter: drop-shadow(0 4px 10px rgba(215, 170, 71, 0.18));
 }
@@ -1583,6 +1728,12 @@
     }
 }
 
+@media (max-width: 420px) {
+    .home-v6-mobile-workbench-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 @media (min-width: 1100px) {
     .home-v6-mobile-summary,
     .home-v6-mobile-overlay,
@@ -1627,7 +1778,9 @@
     .home-v6-page .home-v4-tool-link,
     .home-v6-page .home-v6-tool-link,
     .home-v6-page .home-v5-mobile-workbench-card,
+    .home-v6-page .home-v6-mobile-workbench-card,
     .home-v6-page .home-v4-favorite-card,
+    .home-v6-page .home-v6-favorite-card,
     .home-v6-page .home-mini-card--v6,
     .home-v6-page [data-home-reservations-item="true"],
     .home-v6-page .favorite-toggle-btn,
@@ -1643,8 +1796,12 @@
     .home-v6-page .home-v6-tool-link:focus-visible,
     .home-v6-page .home-v5-mobile-workbench-card:hover,
     .home-v6-page .home-v5-mobile-workbench-card:focus-visible,
+    .home-v6-page .home-v6-mobile-workbench-card:hover,
+    .home-v6-page .home-v6-mobile-workbench-card:focus-visible,
     .home-v6-page .home-v4-favorite-card:hover,
     .home-v6-page .home-v4-favorite-card:focus-visible,
+    .home-v6-page .home-v6-favorite-card:hover,
+    .home-v6-page .home-v6-favorite-card:focus-visible,
     .home-v6-page .home-mini-card--v6:hover,
     .home-v6-page .home-mini-card--v6:focus-visible,
     .home-v6-page [data-home-reservations-item="true"]:hover,

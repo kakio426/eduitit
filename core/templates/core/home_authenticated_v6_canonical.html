@@ -112,19 +112,19 @@
                 <section class="home-v6-mobile-stack" data-home-v5-mobile-stack="true" data-home-v6-mobile-stack="true">
                     {% for mobile_section in home_v5_mobile_section_order %}
                     {% if mobile_section == 'workbench' %}
-                    <article class="home-v5-mobile-panel home-v6-mobile-panel" data-home-v5-mobile-workbench="true" data-home-v6-rail-card="true">
-                        <div class="home-v5-mobile-panel-head">
+                    <article class="home-v6-mobile-panel home-v6-workbench-panel" data-home-v6-workbench="mobile" data-home-v6-rail-card="true">
+                        <div class="home-v6-mobile-panel-head">
                             <div>
-                                <h2 class="home-v5-mobile-panel-title">내 작업대</h2>
+                                <h2 class="home-v6-mobile-panel-title">내 작업대</h2>
                             </div>
                         </div>
                         {% if home_v5_mobile_workbench_items %}
-                        <div class="home-v5-mobile-workbench-grid" data-home-v5-mobile-workbench-grid="true">
+                        <div class="home-v6-mobile-workbench-grid" data-home-v6-mobile-workbench-grid="true">
                             {% for item in home_v5_mobile_workbench_items %}
                             {% with favorite_title=item.favorite_title|default:item.favorite_full_title %}
                             <div
-                                class="home-v5-mobile-workbench-card product-card"
-                                data-home-v5-mobile-workbench-card="true"
+                                class="home-v6-mobile-workbench-card product-card"
+                                data-home-v6-mobile-workbench-card="true"
                                 data-home-v6-rail-item="true"
                                 data-service-type="{{ item.product.service_type|default:'etc' }}"
                                 data-product-id="{{ item.product.id }}"
@@ -135,17 +135,17 @@
                                 role="button"
                                 tabindex="0"
                             >
-                                <div class="home-v5-mobile-workbench-icon {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-violet-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-pink-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}" data-home-v6-service-icon="true">
+                                <div class="home-v6-mobile-workbench-icon {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-violet-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-pink-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}" data-home-v6-service-icon="true">
                                     {% if item.product.icon %}
                                         {% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }}"></i>{% else %}{{ item.product.icon }}{% endif %}
                                     {% else %}
                                         <i class="fa-solid fa-sparkles"></i>
                                     {% endif %}
                                 </div>
-                                <p class="home-v5-mobile-workbench-title" data-home-v6-service-title="true" title="{{ item.favorite_full_title }}">{{ favorite_title }}</p>
+                                <p class="home-v6-mobile-workbench-title" data-home-v6-service-title="true" title="{{ item.favorite_full_title }}">{{ favorite_title }}</p>
                                 <button
                                     type="button"
-                                    class="home-v5-mobile-workbench-star favorite-toggle-btn"
+                                    class="home-v6-mobile-workbench-star favorite-toggle-btn"
                                     data-home-v6-rail-action="true"
                                     data-product-id="{{ item.product.id }}"
                                     data-favorite-toggle="true"
@@ -160,7 +160,7 @@
                             {% endfor %}
                         </div>
                         {% else %}
-                        <div class="home-v5-mobile-empty" data-home-v5-mobile-workbench-empty="true">
+                        <div class="home-v6-mobile-empty" data-home-v6-mobile-workbench-empty="true">
                             즐겨찾기가 없습니다.
                         </div>
                         {% endif %}
@@ -177,10 +177,10 @@
                     {% endif %}
                     {% elif mobile_section == 'reservations' %}
                     {% if reservation_home_card %}
-                    <article class="home-v5-mobile-panel home-v6-mobile-panel" data-home-reservations-card="true" data-home-v6-rail-card="true">
-                        <div class="home-v5-mobile-panel-head">
+                    <article class="home-v6-mobile-panel home-v6-reservations-panel" data-home-reservations-card="true" data-home-v6-reservations-panel="mobile" data-home-v6-rail-card="true">
+                        <div class="home-v6-mobile-panel-head">
                             <div>
-                                <h2 class="home-v5-mobile-panel-title">내 학교 예약</h2>
+                                <h2 class="home-v6-mobile-panel-title">내 학교 예약</h2>
                             </div>
                             <a
                                 href="{{ reservation_home_card.dashboard_url }}"
@@ -310,18 +310,18 @@
                         </div>
 
                         <div class="home-v6-side-stack">
-                            <article class="home-v4-card home-v4-top-favorites home-v6-card" data-home-v4-favorites-panel="true" data-home-v6-rail-card="true">
+                            <article class="home-v6-card home-v6-favorites-panel" data-home-v6-favorites-panel="true" data-home-v6-rail-card="true">
                                 <div class="mb-4 flex items-center gap-2">
                                     <i class="fa-solid fa-star text-amber-500"></i>
                                     <h2 class="text-lg font-black text-slate-900">내 작업대</h2>
                                 </div>
 
                                 {% if favorite_items %}
-                                <div class="home-v4-favorites-grid" data-home-v4-favorites-grid="true">
+                                <div class="home-v6-favorites-grid" data-home-v6-favorites-grid="true">
                                     {% for item in favorite_items %}
                                     {% with favorite_title=item.favorite_title|default:item.favorite_full_title %}
-                                    <div class="home-v4-favorite-card product-card"
-                                        data-home-v4-favorite-card="true"
+                                    <div class="home-v6-favorite-card product-card"
+                                        data-home-v6-favorite-card="true"
                                         data-home-v6-rail-item="true"
                                         data-service-type="{{ item.product.service_type|default:'etc' }}"
                                         data-product-id="{{ item.product.id }}"
@@ -331,7 +331,7 @@
                                         data-track-label="{{ item.favorite_full_title }}"
                                         role="button"
                                         tabindex="0">
-                                        <div class="home-v5-favorite-card-body">
+                                        <div class="home-v6-favorite-card-body">
                                             <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white text-sm shadow-sm {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-violet-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-pink-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}" data-home-v6-service-icon="true">
                                                 {% if item.product.icon %}
                                                     {% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }}"></i>{% else %}{{ item.product.icon }}{% endif %}
@@ -339,12 +339,12 @@
                                                     <i class="fa-solid fa-sparkles"></i>
                                                 {% endif %}
                                             </div>
-                                            <div class="home-v5-favorite-card-copy">
-                                                <p class="home-v5-favorite-card-title" data-home-v6-service-title="true" title="{{ item.favorite_full_title }}">{{ favorite_title }}</p>
+                                            <div class="home-v6-favorite-card-copy">
+                                                <p class="home-v6-favorite-card-title" data-home-v6-service-title="true" title="{{ item.favorite_full_title }}">{{ favorite_title }}</p>
                                             </div>
                                         </div>
                                         <button type="button"
-                                            class="home-v5-favorite-card-star home-v5-favorite-toggle favorite-toggle-btn inline-flex items-center justify-center rounded-full border border-slate-200 bg-white text-slate-300 hover:border-amber-300 hover:text-amber-500 transition-colors"
+                                            class="home-v6-favorite-card-star favorite-toggle-btn inline-flex items-center justify-center rounded-full border border-slate-200 bg-white text-slate-300 hover:border-amber-300 hover:text-amber-500 transition-colors"
                                             data-home-v6-rail-action="true"
                                             data-product-id="{{ item.product.id }}"
                                             data-favorite-toggle="true"
@@ -365,7 +365,7 @@
                             </article>
 
                             {% if reservation_home_card %}
-                            <section class="home-v4-card home-v6-card" data-home-reservations-card="true" data-home-v6-rail-card="true">
+                            <section class="home-v6-card home-v6-reservations-panel" data-home-reservations-card="true" data-home-v6-reservations-panel="desktop" data-home-v6-rail-card="true">
                                 <div class="mb-4 flex items-center justify-between gap-3">
                                     <div>
                                         <div class="mb-1 flex items-center gap-2">
