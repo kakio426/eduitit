@@ -157,9 +157,10 @@ class PermissionTest(TestCase):
         self.assertIn("getHolidayLabel(date)", content)
         self.assertIn("getHolidayCellLabel(date)", content)
         self.assertIn("classcalendar-day-holiday-label classcalendar-clamp-2", content)
+        self.assertIn("!getHolidayCellLabel(date) && getDayItemCount(date) > 0", content)
+        self.assertIn("classcalendar-day-count", content)
+        self.assertIn("formatDayItemCount(date)", content)
         self.assertIn("isSunday(date) || !!this.getHolidayMarker(date)", content)
-        self.assertNotIn("classcalendar-day-count", content)
-        self.assertNotIn("formatDayItemCount(date)", content)
 
     def test_holiday_api_returns_korean_public_holidays_and_labor_day(self):
         response = self.client_teacher.get(
