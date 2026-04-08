@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.management import call_command
 from django.test import RequestFactory, TestCase, override_settings
+from django.utils import timezone
 
 from products.models import Product, ServiceManual
 from teacher_law.models import LegalCitation, LegalChatMessage, LegalChatSession, LegalQueryAudit
@@ -81,6 +82,87 @@ class TeacherLawViewTests(TestCase):
         self.assertNotContains(response, "교실에서 바로 확인해야 할 법령만 빠르게 묻습니다")
         self.assertNotContains(response, "현재 상태")
         self.assertNotContains(response, "도와드리는 범위")
+
+    @patch("teacher_law.views.is_law_api_configured", return_value=True)
+    @patch("teacher_law.views.is_llm_configured", return_value=True)
+    def test_main_view_splits_law_and_case_evidence_sections(self, _llm_mock, _law_mock):
+        session = LegalChatSession.objects.create(user=self.user)
+        user_message = LegalChatMessage.objects.create(
+            session=session,
+            role=LegalChatMessage.Role.USER,
+            body="쉬는시간에 학생이 다쳤는데 교사 책임이 있나요?",
+        )
+        assistant_message = LegalChatMessage.objects.create(
+            session=session,
+            role=LegalChatMessage.Role.ASSISTANT,
+            body="답변",
+            payload_json={
+                "summary": "학교안전사고 관련 법령과 판례를 함께 확인해야 합니다.",
+                "action_items": ["사고 경위를 기록합니다."],
+                "citations": [],
+                "risk_level": "medium",
+                "needs_human_help": False,
+                "disclaimer": "",
+                "scope_supported": True,
+            },
+        )
+        LegalCitation.objects.create(
+            message=assistant_message,
+            law_name="학교안전사고 예방 및 보상에 관한 법률",
+            law_id="009620",
+            mst="",
+            source_type=LegalCitation.SourceType.LAW,
+            article_label="제2조",
+            case_number="",
+            quote="학교안전사고의 정의를 정한다.",
+            source_url="",
+            fetched_at=timezone.now(),
+            display_order=1,
+        )
+        LegalCitation.objects.create(
+            message=assistant_message,
+            law_name="학교안전사고 손해배상",
+            law_id="009620",
+            mst="",
+            source_type=LegalCitation.SourceType.CASE,
+            article_label="2024다12345",
+            case_number="2024다12345",
+            quote="보호의무 위반 여부를 구체적 사정에 따라 판단했다.",
+            source_url="",
+            fetched_at=timezone.now(),
+            display_order=2,
+        )
+        LegalQueryAudit.objects.create(
+            session=session,
+            user_message=user_message,
+            assistant_message=assistant_message,
+            original_question=user_message.body,
+            normalized_question=user_message.body,
+            topic="school_safety",
+            scope_supported=True,
+            risk_flags_json=[],
+            candidate_queries_json=[],
+            selected_laws_json=[],
+            search_attempt_count=1,
+            search_result_count=1,
+            detail_fetch_count=1,
+            cache_hit=False,
+            elapsed_ms=100,
+            failure_reason="",
+            error_message="",
+        )
+
+        request = self.factory.get("/teacher-law/")
+        request.user = self.user
+        request.session = {}
+
+        response = main_view(request)
+
+        self.assertContains(response, "이번 답변에서 먼저 본 것")
+        self.assertContains(response, "기본 법령")
+        self.assertContains(response, "참고 판례")
+        self.assertContains(response, "학교안전사고 예방 및 보상에 관한 법률")
+        self.assertContains(response, "학교안전사고 손해배상")
 
     @override_settings(TEACHER_LAW_PROVIDER="beopmang")
     @patch("teacher_law.views.is_llm_configured", return_value=True)
@@ -287,12 +369,32 @@ class TeacherLawViewTests(TestCase):
         result["payload"]["citations"] = [
             {
                 "citation_id": "law-1",
+                "source_type": "law",
+                "title": "개인정보 보호법",
                 "law_name": "개인정보 보호법",
                 "law_id": "123",
                 "mst": "456",
+                "reference_label": "제15조",
                 "article_label": "제15조",
+                "case_number": "",
                 "quote": "개인정보 처리와 동의에 관한 조문",
                 "source_url": "https://www.law.go.kr",
+                "provider": "beopmang",
+                "fetched_at": "2026-04-05T00:00:00+09:00",
+            },
+            {
+                "citation_id": "case-1",
+                "source_type": "case",
+                "title": "학생 사진 게시 분쟁",
+                "law_name": "학생 사진 게시 분쟁",
+                "law_id": "123",
+                "mst": "",
+                "reference_label": "2024다12345",
+                "article_label": "2024다12345",
+                "case_number": "2024다12345",
+                "quote": "게시 범위와 동의 여부를 함께 봤다.",
+                "source_url": "",
+                "provider": "beopmang",
                 "fetched_at": "2026-04-05T00:00:00+09:00",
             }
         ]
@@ -303,9 +405,11 @@ class TeacherLawViewTests(TestCase):
         payload = json.loads(response.content)
         self.assertEqual(response.status_code, 201)
         self.assertEqual(LegalChatMessage.objects.filter(role="assistant").count(), 1)
-        self.assertEqual(LegalCitation.objects.count(), 1)
+        self.assertEqual(LegalCitation.objects.count(), 2)
         self.assertEqual(LegalQueryAudit.objects.count(), 1)
         self.assertEqual(payload["assistant_message"]["citations"][0]["law_name"], "개인정보 보호법")
+        self.assertEqual(payload["assistant_message"]["citations"][1]["source_type"], "case")
+        self.assertEqual(payload["assistant_message"]["case_citations"][0]["case_number"], "2024다12345")
 
 
 class EnsureTeacherLawCommandTests(TestCase):

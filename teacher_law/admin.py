@@ -19,8 +19,9 @@ class LegalChatMessageAdmin(admin.ModelAdmin):
 
 @admin.register(LegalCitation)
 class LegalCitationAdmin(admin.ModelAdmin):
-    list_display = ("id", "law_name", "article_label", "fetched_at", "display_order")
-    search_fields = ("law_name", "article_label", "quote")
+    list_display = ("id", "source_type", "law_name", "article_label", "case_number", "fetched_at", "display_order")
+    search_fields = ("law_name", "article_label", "case_number", "quote")
+    list_filter = ("source_type",)
 
 
 @admin.register(LegalQueryAudit)
@@ -38,4 +39,3 @@ class LegalQueryAuditAdmin(admin.ModelAdmin):
     )
     search_fields = ("original_question", "normalized_question", "failure_reason", "error_message")
     list_filter = ("scope_supported", "cache_hit", "topic")
-

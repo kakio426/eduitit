@@ -264,6 +264,35 @@
         color: #475569;
         text-transform: uppercase;
     }
+    .teacher-law-evidence-overview {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+        margin-top: 0.65rem;
+    }
+    .teacher-law-evidence-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        border-radius: 999px;
+        background: #ecfeff;
+        color: #155e75;
+        padding: 0.45rem 0.8rem;
+        font-size: 0.82rem;
+        font-weight: 800;
+        line-height: 1.4;
+    }
+    .teacher-law-evidence-pill--case {
+        background: #f8fafc;
+        color: #334155;
+    }
+    .teacher-law-evidence-label {
+        color: #64748b;
+        font-size: 0.76rem;
+        font-weight: 900;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
     .teacher-law-list {
         display: flex;
         flex-direction: column;
@@ -453,6 +482,23 @@
                         </div>
                     </div>
                     <p class="teacher-law-summary">{{ latest_pair.assistant_message.summary|default:latest_pair.assistant_message.body }}</p>
+                    {% if latest_pair.assistant_message.law_citations or latest_pair.assistant_message.case_citations %}
+                    <div class="teacher-law-section-title">이번 답변에서 먼저 본 것</div>
+                    <div class="teacher-law-evidence-overview">
+                        {% for citation in latest_pair.assistant_message.law_citations|slice:":2" %}
+                        <div class="teacher-law-evidence-pill">
+                            <span class="teacher-law-evidence-label">법령</span>
+                            <span>{{ citation.title }}</span>
+                        </div>
+                        {% endfor %}
+                        {% for citation in latest_pair.assistant_message.case_citations|slice:":2" %}
+                        <div class="teacher-law-evidence-pill teacher-law-evidence-pill--case">
+                            <span class="teacher-law-evidence-label">판례</span>
+                            <span>{{ citation.title }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                     {% if latest_pair.assistant_message.action_items %}
                     <div class="teacher-law-section-title">지금 바로 할 일</div>
                     <ul class="teacher-law-list">
@@ -461,11 +507,26 @@
                         {% endfor %}
                     </ul>
                     {% endif %}
-                    {% if latest_pair.assistant_message.citations %}
-                    <div class="teacher-law-section-title">근거 조문</div>
-                    {% for citation in latest_pair.assistant_message.citations %}
+                    {% if latest_pair.assistant_message.law_citations %}
+                    <div class="teacher-law-section-title">기본 법령</div>
+                    {% for citation in latest_pair.assistant_message.law_citations %}
                     <div class="teacher-law-citation">
-                        <div class="teacher-law-citation-title">{{ citation.law_name }}{% if citation.article_label %} · {{ citation.article_label }}{% endif %}</div>
+                        <div class="teacher-law-citation-title">{{ citation.title }}{% if citation.reference_label %} · {{ citation.reference_label }}{% endif %}</div>
+                        <p class="teacher-law-citation-quote">{{ citation.quote }}</p>
+                        {% if citation.source_url %}
+                        <a href="{{ citation.source_url }}" target="_blank" rel="noopener noreferrer" class="teacher-law-citation-link">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            공식 출처 보기
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                    {% if latest_pair.assistant_message.case_citations %}
+                    <div class="teacher-law-section-title">참고 판례</div>
+                    {% for citation in latest_pair.assistant_message.case_citations %}
+                    <div class="teacher-law-citation">
+                        <div class="teacher-law-citation-title">{{ citation.title }}{% if citation.reference_label %} · {{ citation.reference_label }}{% endif %}</div>
                         <p class="teacher-law-citation-quote">{{ citation.quote }}</p>
                         {% if citation.source_url %}
                         <a href="{{ citation.source_url }}" target="_blank" rel="noopener noreferrer" class="teacher-law-citation-link">

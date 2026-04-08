@@ -104,7 +104,7 @@ def _request_headers() -> dict[str, str]:
 def _error_text_from_payload(payload: dict) -> str:
     if not isinstance(payload, dict):
         return ""
-    for key in ("msg", "result", "message", "detail", "error"):
+    for key in ("msg", "result", "message", "detail", "error", "instruction"):
         text = compact_text(payload.get(key))
         if text:
             return text
@@ -222,6 +222,54 @@ def _normalize_beopmang_article(article: dict, *, text_keys: tuple[str, ...]) ->
     return {
         "article_label": article_label,
         "article_text": article_text,
+    }
+
+
+def _normalize_beopmang_case(item: dict) -> dict | None:
+    if not isinstance(item, dict):
+        return None
+
+    title = compact_text(
+        item.get("title")
+        or item.get("case_name")
+        or item.get("case_title")
+        or item.get("name")
+        or item.get("caseNumber")
+    )
+    case_number = compact_text(
+        item.get("case_number")
+        or item.get("case_no")
+        or item.get("name")
+        or item.get("caseNumber")
+    )
+    quote = compact_text(
+        item.get("summary")
+        or item.get("summary_text")
+        or item.get("holding")
+        or item.get("decision_summary")
+        or item.get("judgment_summary")
+        or item.get("snippet")
+        or item.get("excerpt")
+        or item.get("reasoning")
+    )
+    if not quote:
+        return None
+
+    if not title:
+        title = case_number or "참고 판례"
+
+    return {
+        "case_id": compact_text(item.get("case_id") or item.get("id")),
+        "title": title,
+        "case_number": case_number,
+        "reference_label": case_number or "판례 요지",
+        "quote": quote,
+        "source_url": compact_text(item.get("url") or item.get("link") or item.get("detail_url") or item.get("source_url")),
+        "provider": "beopmang",
+        "source_type": "case",
+        "law_id": compact_text(item.get("law_id")),
+        "article": compact_text(item.get("article") or item.get("article_no")),
+        "raw": item,
     }
 
 
@@ -372,6 +420,7 @@ def _get_open_law_details(*, law_id: str = "", mst: str = "", detail_link: str =
         "detail_link": detail_link,
         "provider": "open_law",
         "articles": articles,
+        "related_cases": [],
     }
 
 
@@ -382,6 +431,15 @@ def _map_beopmang_article_candidates(items, *, text_keys: tuple[str, ...]) -> li
         if normalized:
             articles.append(normalized)
     return articles
+
+
+def _map_beopmang_case_candidates(items) -> list[dict]:
+    cases = []
+    for item in _as_list(items):
+        normalized = _normalize_beopmang_case(item)
+        if normalized:
+            cases.append(normalized)
+    return cases
 
 
 def _get_beopmang_details(*, law_id: str = "", query_hint: str = "", law_name: str = "") -> dict:
@@ -403,8 +461,9 @@ def _get_beopmang_details(*, law_id: str = "", query_hint: str = "", law_name: s
     )
     data = payload.get("data") or {}
     articles = _map_beopmang_article_candidates(data.get("articles"), text_keys=("full_text", "content"))
+    related_cases = []
 
-    if not articles and hint:
+    if hint and not articles:
         overview_payload = _request_beopmang(
             "tools",
             params={
@@ -415,8 +474,14 @@ def _get_beopmang_details(*, law_id: str = "", query_hint: str = "", law_name: s
             timeout_seconds=int(getattr(settings, "TEACHER_LAW_DETAIL_TIMEOUT_SECONDS", 4)),
         )
         overview_data = overview_payload.get("data") or {}
-        articles = _map_beopmang_article_candidates(overview_data.get("top_articles"), text_keys=("full_text", "snippet"))
-        data = overview_data or data
+        if not articles:
+            articles = _map_beopmang_article_candidates(
+                overview_data.get("top_articles"),
+                text_keys=("full_text", "snippet"),
+            )
+        related_cases = _map_beopmang_case_candidates(overview_data.get("top_cases"))
+        if overview_data:
+            data = {**data, **overview_data}
 
     return {
         "law_name": compact_text(data.get("law_name") or law_name),
@@ -429,6 +494,7 @@ def _get_beopmang_details(*, law_id: str = "", query_hint: str = "", law_name: s
         "detail_link": "",
         "provider": "beopmang",
         "articles": articles,
+        "related_cases": related_cases,
     }
 
 
@@ -452,10 +518,62 @@ def get_law_details(
     return _get_beopmang_details(law_id=law_id, query_hint=query_hint, law_name=law_name)
 
 
+def _extract_article_reference(reference_label: str) -> str:
+    digits = "".join(char for char in str(reference_label or "") if char.isdigit())
+    return digits
+
+
+def _search_beopmang_cases(query: str, *, law_id: str = "", article: str = "", display: int | None = None) -> list[dict]:
+    params = {
+        "action": "search",
+        "q": query,
+        "mode": "keyword",
+    }
+    if law_id:
+        params["law_id"] = law_id
+    if article:
+        params["article"] = article
+
+    payload = _request_beopmang(
+        "case",
+        params=params,
+        timeout_seconds=int(getattr(settings, "TEACHER_LAW_DETAIL_TIMEOUT_SECONDS", 4)),
+    )
+    limit = int(display or 2)
+    results = _map_beopmang_case_candidates((payload.get("data") or {}).get("results"))
+    if results:
+        return results[:limit]
+
+    if law_id:
+        overview_payload = _request_beopmang(
+            "tools",
+            params={
+                "action": "overview",
+                "law_id": law_id,
+                "q": query,
+            },
+            timeout_seconds=int(getattr(settings, "TEACHER_LAW_DETAIL_TIMEOUT_SECONDS", 4)),
+        )
+        overview_results = _map_beopmang_case_candidates((overview_payload.get("data") or {}).get("top_cases"))
+        if overview_results:
+            return overview_results[:limit]
+
+    return []
+
+
+def search_cases(query: str, *, law_id: str = "", article: str = "", display: int | None = None) -> list[dict]:
+    provider = get_law_provider()
+    logger.info("[TeacherLaw] case search provider=%s query=%s", provider, query)
+    if provider == "open_law":
+        return []
+    return _search_beopmang_cases(query, law_id=law_id, article=article, display=display)
+
+
 def rank_search_results(results: list[dict], profile: dict) -> list[dict]:
     normalized_question = normalize_for_matching(profile.get("normalized_question"))
     hint_queries = [normalize_for_matching(item) for item in profile.get("hint_queries") or []]
     core_terms = [normalize_for_matching(item) for item in profile.get("core_terms") or []]
+    search_terms = [normalize_for_matching(item) for item in profile.get("search_terms") or []]
     scored = []
     for result in results:
         law_name = normalize_for_matching(result.get("law_name"))
@@ -463,6 +581,7 @@ def rank_search_results(results: list[dict], profile: dict) -> list[dict]:
         if law_name and law_name in normalized_question:
             score += 8
         score += sum(2 for term in core_terms[:4] if term and term in law_name)
+        score += sum(3 for term in search_terms[:6] if term and term in law_name)
         score += sum(6 for hint in hint_queries if hint and hint in law_name)
         if result.get("law_type"):
             score += 1
@@ -471,45 +590,107 @@ def rank_search_results(results: list[dict], profile: dict) -> list[dict]:
     return [result for _, result in scored]
 
 
+def _build_match_terms(profile: dict) -> list[str]:
+    terms = []
+    for value in [
+        *(profile.get("search_terms") or []),
+        *(profile.get("core_terms") or []),
+        *(profile.get("hint_queries") or []),
+    ]:
+        normalized = normalize_for_matching(value)
+        if normalized and normalized not in terms:
+            terms.append(normalized)
+    return terms
+
+
+def _build_law_citation(details: dict, article: dict, *, index: int, fetched_at) -> dict:
+    reference_label = article.get("article_label") or ""
+    title = details.get("law_name") or "법령"
+    return {
+        "citation_id": f"law-{details.get('law_id') or details.get('mst') or 'LAW'}-{index}",
+        "source_type": "law",
+        "title": title,
+        "law_name": title,
+        "law_id": details.get("law_id") or "",
+        "mst": details.get("mst") or "",
+        "reference_label": reference_label,
+        "article_label": reference_label,
+        "case_number": "",
+        "quote": compact_text(article.get("article_text"))[:320],
+        "source_url": details.get("detail_link") or "",
+        "provider": details.get("provider") or get_law_provider(),
+        "fetched_at": fetched_at.isoformat(),
+    }
+
+
 def select_relevant_citations(details: dict, profile: dict, *, limit: int = 2) -> list[dict]:
-    match_terms = [
-        normalize_for_matching(term)
-        for term in [
-            *(profile.get("core_terms") or []),
-            *(profile.get("hint_queries") or []),
-        ]
-        if term
-    ]
+    match_terms = _build_match_terms(profile)
     scored = []
     for article in details.get("articles") or []:
-        haystack = normalize_for_matching(
-            f"{article.get('article_label')} {article.get('article_text')}"
-        )
+        haystack = normalize_for_matching(f"{article.get('article_label')} {article.get('article_text')}")
         score = sum(1 for term in match_terms if term and term in haystack)
-        if score <= 0:
-            continue
         scored.append((score, article))
 
     if not scored:
         return []
 
     scored.sort(key=lambda item: (-item[0], item[1].get("article_label") or ""))
+    selected_articles = [article for score, article in scored if score > 0][:limit]
+    if not selected_articles:
+        selected_articles = [article for _, article in scored[:limit]]
+
     fetched_at = timezone.now()
-    citations = []
-    for index, (_, article) in enumerate(scored[:limit], start=1):
-        citations.append(
-            {
-                "citation_id": f"{details.get('law_id') or details.get('mst') or 'LAW'}-{index}",
-                "law_name": details.get("law_name") or "법령",
-                "law_id": details.get("law_id") or "",
-                "mst": details.get("mst") or "",
-                "article_label": article.get("article_label") or "",
-                "quote": compact_text(article.get("article_text"))[:320],
-                "source_url": details.get("detail_link") or "",
-                "fetched_at": fetched_at.isoformat(),
-            }
+    return [
+        _build_law_citation(details, article, index=index, fetched_at=fetched_at)
+        for index, article in enumerate(selected_articles, start=1)
+    ]
+
+
+def _build_case_citation(case_result: dict, *, index: int, law_id: str = "") -> dict:
+    title = compact_text(case_result.get("title") or case_result.get("law_name") or "참고 판례")
+    reference_label = compact_text(case_result.get("reference_label") or case_result.get("case_number") or "판례 요지")
+    quote = compact_text(case_result.get("quote"))[:320]
+    fetched_at = timezone.now().isoformat()
+    return {
+        "citation_id": f"case-{case_result.get('case_id') or reference_label or index}-{index}",
+        "source_type": "case",
+        "title": title,
+        "law_name": title,
+        "law_id": law_id or case_result.get("law_id") or "",
+        "mst": "",
+        "reference_label": reference_label,
+        "article_label": reference_label,
+        "case_number": compact_text(case_result.get("case_number") or reference_label),
+        "quote": quote,
+        "source_url": compact_text(case_result.get("source_url")),
+        "provider": case_result.get("provider") or get_law_provider(),
+        "fetched_at": fetched_at,
+    }
+
+
+def select_relevant_case_citations(case_results: list[dict], profile: dict, *, limit: int = 2, law_id: str = "") -> list[dict]:
+    match_terms = _build_match_terms(profile)
+    scored = []
+    for case_result in case_results:
+        haystack = normalize_for_matching(
+            f"{case_result.get('title')} {case_result.get('case_number')} {case_result.get('quote')}"
         )
-    return citations
+        score = sum(1 for term in match_terms if term and term in haystack)
+        scored.append((score, case_result))
+
+    if not scored:
+        return []
+
+    scored.sort(key=lambda item: (-item[0], item[1].get("case_number") or item[1].get("title") or ""))
+    selected_cases = [case_result for score, case_result in scored if score > 0][:limit]
+    if not selected_cases:
+        selected_cases = [case_result for _, case_result in scored[:limit]]
+
+    return [
+        _build_case_citation(case_result, index=index, law_id=law_id)
+        for index, case_result in enumerate(selected_cases, start=1)
+        if compact_text(case_result.get("quote"))
+    ]
 
 
 def build_retry_after_timeout_message() -> str:

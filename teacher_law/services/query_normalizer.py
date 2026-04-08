@@ -4,7 +4,7 @@ import re
 from typing import Iterable
 
 
-ANSWER_POLICY_VERSION = "teacher-law-v1"
+ANSWER_POLICY_VERSION = "teacher-law-v2"
 
 QUESTION_REPLACEMENTS = (
     ("학폭", "학교폭력"),
@@ -17,6 +17,8 @@ QUESTION_REPLACEMENTS = (
     ("막말", "막말 폭언 모욕"),
     ("반톡", "학급 채팅방"),
     ("학부모톡", "학부모 채팅"),
+    ("몰래 녹음", "녹음 녹취"),
+    ("쉬는 시간", "쉬는시간"),
 )
 
 STOPWORDS = {
@@ -57,20 +59,45 @@ UNSUPPORTED_KEYWORDS = (
     "이혼",
     "세금",
     "세무",
-    "교통사고",
     "주식",
     "투자",
     "창업",
     "사업자",
     "계약서 작성",
     "소장",
-    "판례",
     "고소장",
 )
 
-TEACHER_CONTEXT_KEYWORDS = (
-    "교사",
-    "선생님",
+ACTOR_KEYWORDS = {
+    "교사": ("교사", "선생님", "담임", "담임교사", "교원"),
+    "학생": ("학생", "아이", "아동", "피해학생", "가해학생"),
+    "학부모": ("학부모", "보호자", "부모", "어머니", "아버지"),
+    "관리자": ("학교장", "교감", "관리자", "부장", "행정실"),
+}
+
+SCENE_KEYWORDS = {
+    "교실": ("교실", "학급", "반", "교내"),
+    "쉬는시간": ("쉬는시간", "휴식시간", "점심시간"),
+    "상담": ("상담", "면담", "상담실"),
+    "수업": ("수업", "조회", "종례", "체육시간"),
+    "체험학습": ("현장체험학습", "체험학습", "수학여행", "체험활동", "야외활동"),
+    "SNS·단체방": ("sns", "카톡", "단체방", "학급 밴드", "밴드", "채팅방"),
+}
+
+LEGAL_ISSUE_KEYWORDS = {
+    "보호의무": ("보호의무", "주의의무", "안전조치", "안전관리"),
+    "법적 책임": ("책임", "법적 책임", "과실", "책임지", "문제될", "위험할"),
+    "손해배상": ("손해배상", "배상", "변상", "청구"),
+    "교육활동 침해": ("교육활동 침해", "교권", "민원", "폭언", "욕설", "욕", "모욕", "협박"),
+    "위법성": ("위법", "처벌", "고소", "고발", "형사", "경찰", "신고할", "범죄"),
+    "신고의무": ("신고", "즉시 신고", "의심", "은폐", "축소", "보고"),
+    "명예훼손": ("명예훼손", "허위사실", "게시", "공개", "비방"),
+    "개인정보": ("개인정보", "유출", "사진", "영상", "촬영", "동의", "초상"),
+    "생활지도": ("생활지도", "훈육", "체벌", "신체 접촉", "압수", "소지품"),
+    "기록관리": ("학교생활기록부", "생활기록부", "기록", "공문", "보관", "증빙", "문서"),
+}
+
+TEACHER_CONTEXT_KEYWORDS = tuple({keyword for keywords in ACTOR_KEYWORDS.values() for keyword in keywords}) + (
     "학교",
     "교실",
     "수업",
@@ -78,96 +105,176 @@ TEACHER_CONTEXT_KEYWORDS = (
     "학부모",
     "보호자",
     "학급",
-    "반",
-    "상담",
     "생활지도",
-    "학교장",
-    "담임",
+    "상담",
+    "학교폭력",
+    "체험학습",
+    "쉬는시간",
 )
 
-TEACHER_LEGAL_ISSUE_KEYWORDS = (
-    "민원",
-    "폭언",
-    "욕설",
-    "욕",
-    "막말",
-    "모욕",
-    "협박",
-    "명예훼손",
-    "녹음",
-    "녹취",
-    "고소",
-    "고발",
-    "신고",
-    "경찰",
-    "아동학대",
-    "학대",
-    "개인정보",
-    "유출",
-    "사진",
-    "영상",
-    "촬영",
-    "게시",
-    "동의",
-    "체벌",
-    "신체",
-    "압수",
-    "공문",
-    "기록",
-    "생기부",
-    "학교생활기록부",
-    "교권",
-    "교육활동 침해",
-    "법령",
-    "법적",
-    "위법",
-    "처벌",
-    "손해배상",
+TEACHER_LEGAL_ISSUE_KEYWORDS = tuple(
+    {keyword for keywords in LEGAL_ISSUE_KEYWORDS.values() for keyword in keywords}
+) + (
+    "다쳤",
+    "사고",
+    "부상",
+    "학교폭력",
+    "안전",
 )
 
-TOPIC_CONFIG = {
-    "school_violence": {
-        "keywords": ("학교폭력", "사안조사", "피해학생", "가해학생", "전담기구", "학교장 자체해결", "언어폭력", "괴롭힘"),
-        "hints": ["학교폭력예방 및 대책에 관한 법률"],
-    },
-    "privacy_photo": {
-        "keywords": ("개인정보", "사진", "영상", "촬영", "게시", "초상", "학급 밴드", "sns", "단체방", "동의서"),
-        "hints": ["개인정보 보호법", "초ㆍ중등교육법"],
-    },
-    "student_guidance": {
-        "keywords": ("생활지도", "훈육", "체벌", "신체", "압수", "소지품", "지도", "교실 통제"),
-        "hints": ["초ㆍ중등교육법", "교원의 학생생활지도에 관한 고시"],
+INCIDENT_CONFIG = {
+    "school_safety": {
+        "label": "안전사고",
+        "topic": "school_safety",
+        "keywords": ("다쳤", "사고", "부상", "응급", "구급", "넘어", "쉬는시간", "안전"),
+        "laws": ["학교안전사고 예방 및 보상에 관한 법률", "민법", "초ㆍ중등교육법"],
+        "search_queries": [
+            "학생 안전사고 교사 책임",
+            "학교안전사고 보호의무",
+            "학교안전사고 손해배상",
+        ],
+        "case_queries": [
+            "학교안전사고 손해배상",
+            "학생 안전사고 교사 과실",
+        ],
+        "issue_labels": ("보호의무", "법적 책임", "손해배상"),
+        "scene_labels": ("교실", "쉬는시간", "수업"),
     },
     "education_activity": {
-        "keywords": (
-            "교육활동 침해",
-            "교권",
-            "악성 민원",
-            "학부모 민원",
-            "보호조치",
-            "교원 보호",
-            "폭언",
-            "욕설",
-            "욕",
-            "막말",
-            "모욕",
-            "협박",
-            "녹음",
-            "녹취",
-            "명예훼손",
-            "상담 중",
-            "상담중",
-            "학부모 상담",
-        ),
-        "hints": ["교원의 지위 향상 및 교육활동 보호를 위한 특별법", "형법"],
+        "label": "교육활동 침해",
+        "topic": "education_activity",
+        "keywords": ("교육활동 침해", "교권", "민원", "폭언", "욕설", "욕", "모욕", "협박", "녹음", "녹취"),
+        "laws": ["교원의 지위 향상 및 교육활동 보호를 위한 특별법", "형법"],
+        "search_queries": [
+            "교육활동 침해 학부모 폭언",
+            "학부모 폭언 교사 대응",
+            "교원 보호 모욕 명예훼손",
+        ],
+        "case_queries": [
+            "학부모 폭언 모욕 교사",
+            "교사 명예훼손 모욕",
+        ],
+        "issue_labels": ("교육활동 침해", "위법성", "명예훼손"),
+        "scene_labels": ("상담", "교실", "SNS·단체방"),
+    },
+    "privacy_photo": {
+        "label": "개인정보·사진",
+        "topic": "privacy_photo",
+        "keywords": ("개인정보", "사진", "영상", "촬영", "게시", "초상", "동의", "유출", "단체방", "sns"),
+        "laws": ["개인정보 보호법", "초ㆍ중등교육법"],
+        "search_queries": [
+            "학생 사진 게시 개인정보",
+            "학생 사진 게시 동의",
+            "개인정보 보호법 학생 사진",
+        ],
+        "case_queries": [
+            "학생 사진 게시 개인정보",
+            "개인정보 유출 학교",
+        ],
+        "issue_labels": ("개인정보", "위법성"),
+        "scene_labels": ("교실", "SNS·단체방"),
+    },
+    "school_violence": {
+        "label": "학교폭력",
+        "topic": "school_violence",
+        "keywords": ("학교폭력", "학폭", "언어폭력", "괴롭힘", "사안조사", "피해학생", "가해학생", "전담기구"),
+        "laws": ["학교폭력예방 및 대책에 관한 법률"],
+        "search_queries": [
+            "학교폭력 초기 대응 교사",
+            "학교폭력 사안조사 절차",
+            "학교폭력예방 및 대책에 관한 법률",
+        ],
+        "case_queries": [
+            "학교폭력 손해배상",
+            "학교폭력 교사 대응",
+        ],
+        "issue_labels": ("위법성", "법적 책임"),
+        "scene_labels": ("교실", "수업", "SNS·단체방"),
+    },
+    "student_guidance": {
+        "label": "생활지도",
+        "topic": "student_guidance",
+        "keywords": ("생활지도", "훈육", "체벌", "신체", "압수", "소지품", "지도", "교실 통제"),
+        "laws": ["초ㆍ중등교육법", "교원의 학생생활지도에 관한 고시"],
+        "search_queries": [
+            "학생 생활지도 신체 접촉",
+            "생활지도 압수 기준",
+            "교원의 학생생활지도에 관한 고시",
+        ],
+        "case_queries": [
+            "학생 생활지도 체벌",
+            "교사 신체 접촉 학생지도",
+        ],
+        "issue_labels": ("생활지도", "위법성", "법적 책임"),
+        "scene_labels": ("교실", "수업"),
     },
     "reporting_duty": {
+        "label": "신고의무",
+        "topic": "reporting_duty",
         "keywords": ("신고 의무", "아동학대", "즉시 신고", "의심", "은폐", "축소", "보고"),
-        "hints": ["아동학대범죄의 처벌 등에 관한 특례법", "아동복지법"],
+        "laws": ["아동학대범죄의 처벌 등에 관한 특례법", "아동복지법"],
+        "search_queries": [
+            "아동학대 의심 교사 신고의무",
+            "즉시 신고 아동학대",
+            "아동복지법 신고 의무",
+        ],
+        "case_queries": [
+            "아동학대 신고의무 교사",
+            "신고의무 위반 아동학대",
+        ],
+        "issue_labels": ("신고의무", "위법성"),
+        "scene_labels": ("교실", "상담"),
     },
     "records_docs": {
+        "label": "기록·문서",
+        "topic": "records_docs",
         "keywords": ("학교생활기록부", "생활기록부", "기록", "보관", "문서", "공문", "증빙"),
-        "hints": ["초ㆍ중등교육법", "공공기록물 관리에 관한 법률"],
+        "laws": ["초ㆍ중등교육법", "공공기록물 관리에 관한 법률"],
+        "search_queries": [
+            "학교생활기록부 기록 기준",
+            "학교 문서 보관 기준",
+            "공공기록물 관리에 관한 법률 학교",
+        ],
+        "case_queries": [
+            "학교생활기록부 정정 분쟁",
+            "학교 기록 문서 분쟁",
+        ],
+        "issue_labels": ("기록관리", "위법성"),
+        "scene_labels": ("교실", "상담"),
+    },
+    "property_damage": {
+        "label": "재산·파손",
+        "topic": "property_damage",
+        "keywords": ("파손", "깨졌", "부서졌", "망가졌", "변상", "배상", "물건"),
+        "laws": ["민법", "초ㆍ중등교육법"],
+        "search_queries": [
+            "학교 물건 파손 변상 책임",
+            "학생 물건 파손 손해배상",
+            "민법 손해배상 파손",
+        ],
+        "case_queries": [
+            "물건 파손 손해배상 학교",
+            "학생 물건 파손 배상",
+        ],
+        "issue_labels": ("손해배상", "법적 책임"),
+        "scene_labels": ("교실", "수업"),
+    },
+    "field_trip": {
+        "label": "현장체험학습",
+        "topic": "field_trip",
+        "keywords": ("현장체험학습", "체험학습", "수학여행", "체험활동", "야외활동"),
+        "laws": ["학교안전사고 예방 및 보상에 관한 법률", "민법", "초ㆍ중등교육법"],
+        "search_queries": [
+            "현장체험학습 안전사고 교사 책임",
+            "체험학습 보호의무",
+            "수학여행 사고 손해배상",
+        ],
+        "case_queries": [
+            "체험학습 안전사고 손해배상",
+            "수학여행 교사 과실",
+        ],
+        "issue_labels": ("보호의무", "법적 책임", "손해배상"),
+        "scene_labels": ("체험학습",),
     },
 }
 
@@ -177,13 +284,14 @@ HIGH_RISK_KEYWORDS = {
     "형사 책임 우려": ("폭행", "고소", "형사", "경찰"),
     "학교폭력 은폐·축소 우려": ("은폐", "축소", "쉬쉬"),
     "개인정보 유출 사고": ("유출", "개인정보", "사진 게시", "영상 게시"),
+    "안전사고 책임 우려": ("다쳤", "사고", "부상", "손해배상", "책임"),
 }
 
 QUICK_QUESTIONS = [
     "학생 사진을 학급 밴드나 단체방에 올려도 되나요?",
+    "쉬는시간에 학생이 다쳤다면 교사 책임은 어디까지 보나요?",
+    "학부모의 폭언이나 녹음이 있을 때 교사는 어떻게 대응해야 하나요?",
     "학교폭력을 알게 되면 교사가 가장 먼저 해야 할 일은 무엇인가요?",
-    "학부모의 과도한 민원이나 폭언이 있을 때 교사는 어떻게 대응해야 하나요?",
-    "학생 생활지도 중 신체 접촉이 문제가 될 수 있는 기준이 있나요?",
 ]
 
 
@@ -213,16 +321,17 @@ def tokenize_question(value: str) -> list[str]:
     return tokens
 
 
-def detect_topic(question: str) -> str:
-    normalized = normalize_for_matching(question)
-    best_topic = ""
-    best_score = 0
-    for topic, config in TOPIC_CONFIG.items():
-        score = sum(1 for keyword in config["keywords"] if keyword.lower() in normalized)
-        if score > best_score:
-            best_score = score
-            best_topic = topic
-    return best_topic
+def _has_any_keyword(normalized: str, keywords: Iterable[str]) -> bool:
+    return any(keyword.lower() in normalized for keyword in keywords)
+
+
+def _unique_items(values: Iterable[str]) -> list[str]:
+    items = []
+    for value in values:
+        compact_value = compact_text(value)
+        if compact_value and compact_value not in items:
+            items.append(compact_value)
+    return items
 
 
 def detect_risk_flags(question: str) -> list[str]:
@@ -234,23 +343,60 @@ def detect_risk_flags(question: str) -> list[str]:
     return flags
 
 
-def _has_any_keyword(normalized: str, keywords: Iterable[str]) -> bool:
-    return any(keyword.lower() in normalized for keyword in keywords)
+def detect_actors(question: str) -> list[str]:
+    normalized = normalize_for_matching(question)
+    actors = []
+    for label, keywords in ACTOR_KEYWORDS.items():
+        if _has_any_keyword(normalized, keywords):
+            actors.append(label)
+    return actors
+
+
+def detect_scene(question: str) -> list[str]:
+    normalized = normalize_for_matching(question)
+    scenes = []
+    for label, keywords in SCENE_KEYWORDS.items():
+        if _has_any_keyword(normalized, keywords):
+            scenes.append(label)
+    return scenes
+
+
+def detect_legal_issues(question: str) -> list[str]:
+    normalized = normalize_for_matching(question)
+    issues = []
+    for label, keywords in LEGAL_ISSUE_KEYWORDS.items():
+        if _has_any_keyword(normalized, keywords):
+            issues.append(label)
+    return issues
+
+
+def detect_incident_type(question: str, *, legal_issues: list[str], scene: list[str]) -> str:
+    normalized = normalize_for_matching(question)
+    best_incident = ""
+    best_score = 0
+    for incident_type, config in INCIDENT_CONFIG.items():
+        score = sum(3 for keyword in config["keywords"] if keyword.lower() in normalized)
+        score += sum(2 for label in config.get("issue_labels", ()) if label in legal_issues)
+        score += sum(1 for label in config.get("scene_labels", ()) if label in scene)
+        if score > best_score:
+            best_score = score
+            best_incident = incident_type
+    return best_incident
 
 
 def _looks_like_teacher_context_question(normalized: str) -> bool:
-    return _has_any_keyword(normalized, TEACHER_CONTEXT_KEYWORDS) and _has_any_keyword(normalized, TEACHER_LEGAL_ISSUE_KEYWORDS)
+    return _has_any_keyword(normalized, TEACHER_CONTEXT_KEYWORDS) and _has_any_keyword(
+        normalized, TEACHER_LEGAL_ISSUE_KEYWORDS
+    )
 
 
-def is_supported_question(question: str, *, topic: str) -> bool:
+def is_supported_question(question: str, *, incident_type: str) -> bool:
     normalized = normalize_for_matching(question)
     if _has_any_keyword(normalized, UNSUPPORTED_KEYWORDS):
         return False
-    if topic:
+    if incident_type:
         return True
-    if _looks_like_teacher_context_question(normalized):
-        return True
-    return any(keyword.lower() in normalized for config in TOPIC_CONFIG.values() for keyword in config["keywords"])
+    return _looks_like_teacher_context_question(normalized)
 
 
 def build_core_query(terms: Iterable[str], normalized_question: str) -> str:
@@ -260,26 +406,82 @@ def build_core_query(terms: Iterable[str], normalized_question: str) -> str:
     return compact_text(normalized_question)[:120]
 
 
+def _build_structured_queries(
+    *,
+    incident_type: str,
+    actors: list[str],
+    legal_issues: list[str],
+    scene: list[str],
+    law_hints: list[str],
+    core_query: str,
+    normalized_question: str,
+) -> tuple[list[str], list[str]]:
+    config = INCIDENT_CONFIG.get(incident_type, {})
+    actor_text = " ".join(actors[:2])
+    issue_text = " ".join(legal_issues[:2])
+    scene_text = " ".join(scene[:1])
+    incident_label = config.get("label") or ""
+
+    search_queries = list(config.get("search_queries") or [])
+    case_queries = list(config.get("case_queries") or [])
+
+    if incident_label and issue_text:
+        search_queries.append(f"{incident_label} {issue_text}")
+        case_queries.append(f"{incident_label} {issue_text}")
+    if actor_text and incident_label:
+        search_queries.append(f"{actor_text} {incident_label}")
+    if scene_text and incident_label and issue_text:
+        search_queries.append(f"{scene_text} {incident_label} {issue_text}")
+    if actor_text and issue_text:
+        search_queries.append(f"{actor_text} {issue_text}")
+        case_queries.append(f"{actor_text} {issue_text}")
+
+    for law_name in law_hints[:2]:
+        if incident_label and issue_text:
+            search_queries.append(f"{incident_label} {issue_text} {law_name}")
+        elif incident_label:
+            search_queries.append(f"{incident_label} {law_name}")
+        elif issue_text:
+            search_queries.append(f"{issue_text} {law_name}")
+        if actor_text and issue_text:
+            search_queries.append(f"{actor_text} {issue_text} {law_name}")
+        search_queries.append(law_name)
+        case_queries.append(f"{law_name} {issue_text}".strip())
+
+    if core_query:
+        search_queries.append(core_query)
+    if normalized_question:
+        search_queries.append(normalized_question)
+
+    return _unique_items(search_queries), _unique_items(case_queries)
+
+
 def build_query_profile(question: str) -> dict:
     original_question = compact_text(question)
     normalized_question = apply_question_replacements(original_question)
-    topic = detect_topic(normalized_question)
-    scope_supported = is_supported_question(normalized_question, topic=topic)
+    actors = detect_actors(normalized_question)
+    scene = detect_scene(normalized_question)
+    legal_issues = detect_legal_issues(normalized_question)
+    incident_type = detect_incident_type(
+        normalized_question,
+        legal_issues=legal_issues,
+        scene=scene,
+    )
+    topic = INCIDENT_CONFIG.get(incident_type, {}).get("topic", "")
+    scope_supported = is_supported_question(normalized_question, incident_type=incident_type)
     risk_flags = detect_risk_flags(normalized_question)
     core_terms = tokenize_question(normalized_question)
     core_query = build_core_query(core_terms, normalized_question)
-    hint_queries = list(TOPIC_CONFIG.get(topic, {}).get("hints", []))
-
-    candidate_queries = []
-    candidate_seed_items = [core_query]
-    for hint in hint_queries[:2]:
-        candidate_seed_items.append(f"{core_query} {hint}".strip())
-    candidate_seed_items.extend(hint_queries[:2])
-
-    for item in candidate_seed_items:
-        compact_item = compact_text(item)
-        if compact_item and compact_item not in candidate_queries:
-            candidate_queries.append(compact_item)
+    law_hints = list(INCIDENT_CONFIG.get(incident_type, {}).get("laws", []))
+    candidate_queries, case_queries = _build_structured_queries(
+        incident_type=incident_type,
+        actors=actors,
+        legal_issues=legal_issues,
+        scene=scene,
+        law_hints=law_hints,
+        core_query=core_query,
+        normalized_question=normalized_question,
+    )
 
     quick_question_key = ""
     normalized_matching = normalize_for_matching(normalized_question)
@@ -293,10 +495,17 @@ def build_query_profile(question: str) -> dict:
         "normalized_question": normalized_question,
         "normalized_matching_question": normalized_matching,
         "topic": topic,
+        "incident_type": incident_type,
+        "actors": actors,
+        "scene": scene,
+        "legal_issues": legal_issues,
         "scope_supported": scope_supported,
         "risk_flags": risk_flags,
         "core_terms": core_terms,
         "candidate_queries": candidate_queries,
-        "hint_queries": hint_queries,
+        "hint_queries": law_hints,
+        "default_law_hints": law_hints,
+        "case_queries": case_queries,
+        "search_terms": _unique_items([*actors, *scene, *legal_issues, *law_hints, *core_terms[:4]]),
         "quick_question_key": quick_question_key,
     }

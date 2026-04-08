@@ -68,6 +68,10 @@ class LegalChatMessage(models.Model):
 
 
 class LegalCitation(models.Model):
+    class SourceType(models.TextChoices):
+        LAW = "law", "법령"
+        CASE = "case", "판례"
+
     message = models.ForeignKey(
         LegalChatMessage,
         on_delete=models.CASCADE,
@@ -76,7 +80,9 @@ class LegalCitation(models.Model):
     law_name = models.CharField(max_length=255)
     law_id = models.CharField(max_length=32, blank=True, default="")
     mst = models.CharField(max_length=32, blank=True, default="")
+    source_type = models.CharField(max_length=16, choices=SourceType.choices, default=SourceType.LAW)
     article_label = models.CharField(max_length=120, blank=True, default="")
+    case_number = models.CharField(max_length=120, blank=True, default="")
     quote = models.TextField()
     source_url = models.URLField(blank=True, default="")
     fetched_at = models.DateTimeField()

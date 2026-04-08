@@ -31,12 +31,14 @@ def generate_legal_answer(*, question: str, profile: dict, citations: list[dict]
 
     citation_lines = []
     for citation in citations:
+        source_type = "판례" if citation.get("source_type") == "case" else "법령"
         citation_lines.append(
             "\n".join(
                 [
                     f"[citation_id={citation.get('citation_id')}]",
-                    f"법령명: {citation.get('law_name')}",
-                    f"조문: {citation.get('article_label')}",
+                    f"근거 유형: {source_type}",
+                    f"제목: {citation.get('title') or citation.get('law_name')}",
+                    f"참조: {citation.get('reference_label') or citation.get('article_label')}",
                     f"근거: {citation.get('quote')}",
                 ]
             )
@@ -46,6 +48,8 @@ def generate_legal_answer(*, question: str, profile: dict, citations: list[dict]
         "당신은 교사를 위한 법령 정보 요약 도우미입니다. "
         "반드시 JSON 객체만 반환하세요. "
         "주어진 근거 외의 조문이나 판례를 지어내지 마세요. "
+        "법령은 1차 근거이고 판례는 2차 보조 근거입니다. "
+        "판례가 있더라도 법령보다 앞세워 단정하지 마세요. "
         "summary는 220자 이하, action_items는 1~4개, "
         "citations는 선택한 citation_id 배열, risk_level은 low/medium/high 중 하나입니다. "
         "근거가 약하면 summary에 '추가 확인 필요'를 포함하고 needs_human_help를 true로 올리세요. "
@@ -55,6 +59,10 @@ def generate_legal_answer(*, question: str, profile: dict, citations: list[dict]
         [
             f"질문: {question}",
             f"정규화 질문: {profile.get('normalized_question')}",
+            f"사건 유형: {profile.get('incident_type') or profile.get('topic') or '미분류'}",
+            f"행위 주체: {', '.join(profile.get('actors') or []) or '없음'}",
+            f"쟁점: {', '.join(profile.get('legal_issues') or []) or '없음'}",
+            f"장면: {', '.join(profile.get('scene') or []) or '없음'}",
             f"위험 플래그: {', '.join(profile.get('risk_flags') or []) or '없음'}",
             "근거 목록:",
             "\n\n".join(citation_lines).strip(),

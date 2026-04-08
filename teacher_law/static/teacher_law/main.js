@@ -40,7 +40,7 @@
 
     function buildCitationHtml(citation) {
         const sourceUrl = String(citation.source_url || "").trim();
-        const title = [citation.law_name, citation.article_label].filter(Boolean).join(" · ");
+        const title = [citation.title || citation.law_name, citation.reference_label || citation.article_label].filter(Boolean).join(" · ");
         return `
             <div class="teacher-law-citation">
                 <div class="teacher-law-citation-title">${escapeHtml(title)}</div>
@@ -54,6 +54,42 @@
         `;
     }
 
+    function partitionCitations(assistantMessage) {
+        const citations = Array.isArray(assistantMessage.citations) ? assistantMessage.citations : [];
+        const lawCitations = Array.isArray(assistantMessage.law_citations) && assistantMessage.law_citations.length
+            ? assistantMessage.law_citations
+            : citations.filter(function (citation) { return citation.source_type !== "case"; });
+        const caseCitations = Array.isArray(assistantMessage.case_citations) && assistantMessage.case_citations.length
+            ? assistantMessage.case_citations
+            : citations.filter(function (citation) { return citation.source_type === "case"; });
+        return { lawCitations, caseCitations };
+    }
+
+    function buildEvidenceOverviewHtml(lawCitations, caseCitations) {
+        if (!lawCitations.length && !caseCitations.length) return "";
+        return `
+            <div class="teacher-law-section-title">이번 답변에서 먼저 본 것</div>
+            <div class="teacher-law-evidence-overview">
+                ${lawCitations.slice(0, 2).map(function (citation) {
+                    return `
+                        <div class="teacher-law-evidence-pill">
+                            <span class="teacher-law-evidence-label">법령</span>
+                            <span>${escapeHtml(citation.title || citation.law_name || "")}</span>
+                        </div>
+                    `;
+                }).join("")}
+                ${caseCitations.slice(0, 2).map(function (citation) {
+                    return `
+                        <div class="teacher-law-evidence-pill teacher-law-evidence-pill--case">
+                            <span class="teacher-law-evidence-label">판례</span>
+                            <span>${escapeHtml(citation.title || citation.law_name || "")}</span>
+                        </div>
+                    `;
+                }).join("")}
+            </div>
+        `;
+    }
+
     function buildLatestPairHtml(pair) {
         if (!pair || !pair.user_message || !pair.assistant_message) {
             return buildLatestEmptyHtml();
@@ -61,7 +97,9 @@
         const userMessage = pair.user_message;
         const assistantMessage = pair.assistant_message;
         const actionItems = Array.isArray(assistantMessage.action_items) ? assistantMessage.action_items.filter(Boolean) : [];
-        const citations = Array.isArray(assistantMessage.citations) ? assistantMessage.citations : [];
+        const partitioned = partitionCitations(assistantMessage);
+        const lawCitations = partitioned.lawCitations;
+        const caseCitations = partitioned.caseCitations;
         const actionHtml = actionItems.length
             ? `
                 <div class="teacher-law-section-title">지금 바로 할 일</div>
@@ -70,10 +108,17 @@
                 </ul>
             `
             : "";
-        const citationHtml = citations.length
+        const evidenceOverviewHtml = buildEvidenceOverviewHtml(lawCitations, caseCitations);
+        const lawCitationHtml = lawCitations.length
             ? `
-                <div class="teacher-law-section-title">근거 조문</div>
-                ${citations.map(buildCitationHtml).join("")}
+                <div class="teacher-law-section-title">기본 법령</div>
+                ${lawCitations.map(buildCitationHtml).join("")}
+            `
+            : "";
+        const caseCitationHtml = caseCitations.length
+            ? `
+                <div class="teacher-law-section-title">참고 판례</div>
+                ${caseCitations.map(buildCitationHtml).join("")}
             `
             : "";
         const disclaimerHtml = assistantMessage.disclaimer
@@ -96,8 +141,10 @@
                     </div>
                 </div>
                 <p class="teacher-law-summary">${escapeHtml(assistantMessage.summary || assistantMessage.body || "")}</p>
+                ${evidenceOverviewHtml}
                 ${actionHtml}
-                ${citationHtml}
+                ${lawCitationHtml}
+                ${caseCitationHtml}
                 ${disclaimerHtml}
             </article>
         `;

@@ -62,18 +62,30 @@ def _is_json_request(request) -> bool:
 
 def _serialize_message(message: LegalChatMessage) -> dict:
     payload = message.payload_json or {}
-    citations = [
-        {
-            "law_name": citation.law_name,
-            "law_id": citation.law_id,
-            "mst": citation.mst,
-            "article_label": citation.article_label,
-            "quote": citation.quote,
-            "source_url": citation.source_url,
-            "fetched_at": citation.fetched_at.isoformat() if citation.fetched_at else "",
-        }
-        for citation in message.citations.all()
-    ]
+    payload_citations = list(payload.get("citations") or [])
+    citations = []
+    for index, citation in enumerate(message.citations.all()):
+        payload_citation = payload_citations[index] if index < len(payload_citations) and isinstance(payload_citations[index], dict) else {}
+        title = citation.law_name
+        reference_label = citation.article_label or citation.case_number
+        citations.append(
+            {
+                "source_type": citation.source_type,
+                "title": title,
+                "law_name": citation.law_name,
+                "law_id": citation.law_id,
+                "mst": citation.mst,
+                "reference_label": reference_label,
+                "article_label": citation.article_label,
+                "case_number": citation.case_number,
+                "quote": citation.quote,
+                "source_url": citation.source_url,
+                "provider": payload_citation.get("provider") or "",
+                "fetched_at": citation.fetched_at.isoformat() if citation.fetched_at else "",
+            }
+        )
+    law_citations = [citation for citation in citations if citation.get("source_type") != "case"]
+    case_citations = [citation for citation in citations if citation.get("source_type") == "case"]
     return {
         "id": message.id,
         "role": message.role,
@@ -83,6 +95,8 @@ def _serialize_message(message: LegalChatMessage) -> dict:
         "summary": payload.get("summary") or "",
         "action_items": list(payload.get("action_items") or []),
         "citations": citations,
+        "law_citations": law_citations,
+        "case_citations": case_citations,
         "risk_level": payload.get("risk_level") or "",
         "needs_human_help": bool(payload.get("needs_human_help")),
         "disclaimer": payload.get("disclaimer") or "",
@@ -236,7 +250,9 @@ def _create_assistant_message(session, payload: dict):
             law_name=str(citation.get("law_name") or "").strip(),
             law_id=str(citation.get("law_id") or "").strip(),
             mst=str(citation.get("mst") or "").strip(),
+            source_type=str(citation.get("source_type") or LegalCitation.SourceType.LAW).strip(),
             article_label=str(citation.get("article_label") or "").strip(),
+            case_number=str(citation.get("case_number") or "").strip(),
             quote=str(citation.get("quote") or "").strip(),
             source_url=str(citation.get("source_url") or "").strip(),
             fetched_at=fetched_at or assistant_message.created_at,
