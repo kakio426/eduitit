@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{% if is_v2_review %}ArtClass v2 단계 확인 - Eduitit{% else %}오늘 바로 시작하는 미술 수업 - Eduitit{% endif %}{% endblock %}
+{% block title %}{% if is_v2_review %}ArtClass 단계 확인 - Eduitit{% else %}오늘 바로 시작하는 미술 수업 - Eduitit{% endif %}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -107,37 +107,20 @@
                 <span>기존 수업 수정</span>
                 <span class="rounded-full bg-purple-600 px-3 py-1.5 text-white">단계 확인 및 저장</span>
                 {% else %}
-                        <span>1 영상 주소</span>
+                <span>1 영상 주소</span>
                 <span>2 제미나이</span>
-                <span class="rounded-full bg-emerald-600 px-3 py-1.5 text-white">3 붙여넣기/저장</span>
+                <span class="rounded-full bg-emerald-600 px-3 py-1.5 text-white">3 답변 불러오기·저장</span>
                 {% endif %}
             </div>
 
             <div class="rounded-[2rem] border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-lime-50 p-6 md:p-8 shadow-sm">
-                <div class="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-                    <div class="max-w-3xl">
+                <div class="max-w-3xl">
                         <h1 class="text-3xl md:text-4xl font-heavy text-gray-900 break-keep">
-                            {% if art_class %}단계와 자료를 확인하고 바로 저장하세요{% else %}제미나이 결과를 붙여넣고 단계를 다듬어 주세요{% endif %}
+                            {% if art_class %}단계와 자료를 확인하고 바로 저장하세요{% else %}제미나이 결과를 불러오고 단계를 다듬어 주세요{% endif %}
                         </h1>
                         <div class="mt-4 rounded-2xl border border-white/80 bg-white/90 px-4 py-3 text-sm font-bold text-slate-700 break-all">
                             {% if setup_video_url %}{{ setup_video_url }}{% elif art_class %}{{ art_class.youtube_url }}{% endif %}
                         </div>
-                    </div>
-
-                    <div class="flex flex-wrap gap-2">
-                        {% if review_back_url %}
-                        <a href="{{ review_back_url }}"
-                            class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-heavy text-slate-700 hover:bg-slate-50 transition-all">
-                            <i class="fa-solid fa-arrow-left"></i> 제미나이 화면으로
-                        </a>
-                        {% endif %}
-                        {% if legacy_fallback_url %}
-                        <a href="{{ legacy_fallback_url }}"
-                            class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-heavy text-slate-700 hover:bg-slate-50 transition-all">
-                            <i class="fa-solid fa-rotate-left"></i> 기존 버전으로 돌아가기
-                        </a>
-                        {% endif %}
-                    </div>
                 </div>
             </div>
         </div>
@@ -156,7 +139,7 @@
                 </a>
                 <a href="{% url 'artclass:setup' %}"
                     class="px-6 py-3 rounded-2xl bg-emerald-600 text-white font-heavy shadow-sm border border-emerald-500 hover:bg-emerald-700 transition-all flex items-center gap-2">
-                    <i class="fa-solid fa-route"></i> ArtClass v2로 이동
+                    <i class="fa-solid fa-route"></i> ArtClass로 이동
                 </a>
             </div>
         </div>
@@ -247,69 +230,64 @@
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
                 <div class="lg:col-span-5 lg:sticky lg:top-36 space-y-6">
-                    <div class="clay-card p-6 bg-indigo-50/80 border border-indigo-100">
-                        <div class="space-y-2">
-                            <span class="text-xs font-black tracking-[0.18em] text-indigo-600 uppercase">Step 3</span>
-                            <h3 class="text-2xl font-heavy text-gray-900 flex items-center gap-2">
-                                <i class="fa-solid fa-wand-magic-sparkles text-indigo-500"></i> 제미나이로 단계 자동 채우기
-                            </h3>
+                    <div class="overflow-hidden rounded-[2rem] border border-emerald-100 bg-[linear-gradient(180deg,_rgba(255,255,255,0.98)_0%,_rgba(244,250,255,0.96)_100%)] shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
+                        <div class="bg-[linear-gradient(135deg,_rgba(15,23,42,0.96)_0%,_rgba(30,41,59,0.98)_100%)] px-6 py-6 text-white md:px-7 md:py-7">
+                            <p class="text-xs font-black uppercase tracking-[0.22em] text-emerald-200">제미나이 결과</p>
+                            <h3 class="mt-3 text-3xl font-black leading-tight text-white">복사한 답변을 바로 적용합니다</h3>
+                            <p class="mt-4 text-sm font-bold leading-relaxed text-slate-300">
+                                이 화면에 들어오기 전에 복사한 답변이 있으면 자동으로 먼저 시도하고, 안 되면 아래에서 바로 다시 불러옵니다.
+                            </p>
+
+                            <div class="mt-6 flex flex-wrap gap-3">
+                                <button type="button" id="btnApplyGeminiResult"
+                                    class="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-400 px-6 py-3 text-sm font-black text-slate-950 shadow-[0_16px_30px_rgba(16,185,129,0.28)] transition-all hover:-translate-y-0.5 hover:bg-emerald-300">
+                                    복사한 답변 불러오기 <i class="fa-solid fa-arrow-down"></i>
+                                </button>
+                                <button type="button" id="btnLaunchGeminiFlow"
+                                    class="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 bg-white/5 px-5 py-3 text-sm font-black text-white transition-all hover:bg-white/10">
+                                    제미나이 다시 열기
+                                </button>
+                            </div>
                         </div>
-                        <p class="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-800">
-                            학생 이름, 연락처, 생활기록처럼 민감한 정보는 그대로 붙여넣지 마세요. 외부 AI 서비스로 전송될 수 있습니다.
-                        </p>
 
-                        <div class="mt-5 space-y-4">
-                            <div class="rounded-2xl bg-white border border-indigo-100 p-4">
-                                <div class="flex items-center justify-between gap-3">
-                                    <div>
-                                        <p class="text-sm font-heavy text-gray-900">{% if is_v2_review %}필요하면 프롬프트 다시 열기{% else %}1) 프롬프트 복사하고 제미나이 열기{% endif %}</p>
-                                    </div>
-                                    <button type="button" id="btnLaunchGeminiFlow"
-                                        class="px-3 py-2 rounded-xl bg-indigo-600 text-white text-xs font-heavy hover:bg-indigo-700 transition-all">
-                                        {% if is_v2_review %}제미나이 다시 열기{% else %}복사하고 제미나이 열기{% endif %}
-                                    </button>
-                                </div>
-                                <details class="mt-3 rounded-xl bg-gray-50 border border-gray-200 p-3">
-                                    <summary class="cursor-pointer text-sm font-bold text-gray-700">복사 프롬프트 보기</summary>
-                                    <textarea id="geminiPromptBox" readonly
-                                        class="mt-3 w-full h-56 p-3 rounded-xl bg-gray-900 text-gray-100 text-xs leading-relaxed shadow-inner border border-gray-800">{{ manual_prompt_template }}</textarea>
-                                </details>
+                        <div class="space-y-4 px-6 py-6 md:px-7 md:py-7">
+                            <div class="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-4">
+                                <p id="geminiManualStatus" class="hidden text-sm font-black text-emerald-800"></p>
+                                <ul id="geminiWarningList" class="hidden space-y-1 text-xs font-bold text-amber-700"></ul>
+                                <p class="text-xs font-bold leading-relaxed text-emerald-900/75">
+                                    학생 이름, 연락처, 생활기록처럼 민감한 정보는 그대로 붙여넣지 마세요. 외부 AI 서비스로 전송될 수 있습니다.
+                                </p>
                             </div>
 
-                            <div class="rounded-2xl bg-white border border-indigo-100 p-4">
-                                <div class="flex items-center justify-between gap-3">
-                                    <div>
-                                        <p class="text-sm font-heavy text-gray-900">{% if is_v2_review %}복사한 제미나이 답변 불러오기{% else %}2) 복사한 답변 불러오기{% endif %}</p>
-                                    </div>
-                                    <button type="button" id="btnApplyGeminiResult"
-                                        class="px-3 py-2 rounded-xl bg-emerald-600 text-white text-xs font-heavy hover:bg-emerald-700 transition-all">
-                                        복사한 답변 불러오기
-                                    </button>
-                                </div>
+                            <details id="geminiPromptDetails" class="rounded-[1.6rem] border border-slate-200 bg-slate-50 px-5 py-4">
+                                <summary class="cursor-pointer list-none text-sm font-black text-slate-800">프롬프트 보기</summary>
+                                <textarea id="geminiPromptBox" readonly
+                                    class="mt-4 h-52 w-full rounded-2xl border border-slate-800 bg-slate-950 p-4 text-xs leading-relaxed text-slate-100 shadow-inner">{{ manual_prompt_template }}</textarea>
+                            </details>
+
+                            <details id="geminiManualFallbackDetails" class="rounded-[1.6rem] border border-slate-200 bg-white px-5 py-4">
+                                <summary class="cursor-pointer list-none text-sm font-black text-slate-800">자동 불러오기가 안 되면 직접 붙여넣기</summary>
                                 <textarea id="geminiResultInput"
-                                    class="mt-3 w-full h-56 p-3 rounded-xl bg-white border-2 border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200 outline-none text-sm"
+                                    class="mt-4 h-44 w-full rounded-2xl border-2 border-slate-200 bg-white p-4 text-sm outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-200"
                                     placeholder="클립보드 읽기가 막히면 여기에 제미나이 답변을 직접 붙여넣으세요"></textarea>
-                                <p id="geminiManualStatus" class="mt-3 text-sm font-bold text-indigo-700 hidden"></p>
-                                <ul id="geminiWarningList" class="mt-2 space-y-1 text-xs text-amber-700 hidden"></ul>
-                                <details class="mt-4 rounded-xl bg-gray-50 border border-gray-200 p-3">
-                                    <summary class="cursor-pointer text-sm font-bold text-gray-700">응답 예시 보기</summary>
-                                    <p class="mt-2 text-[11px] text-gray-500">이 형식처럼 오면 가장 안정적으로 읽을 수 있어요.</p>
+                                <details class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                                    <summary class="cursor-pointer text-sm font-bold text-slate-700">응답 예시 보기</summary>
+                                    <p class="mt-2 text-[11px] text-slate-500">이 형식처럼 오면 가장 안정적으로 읽을 수 있어요.</p>
                                     <pre id="geminiExampleBox"
-                                        class="mt-3 whitespace-pre-wrap break-words rounded-xl bg-gray-900 text-gray-100 text-[11px] leading-relaxed p-3 overflow-auto">{{ gemini_example_result }}</pre>
+                                        class="mt-3 whitespace-pre-wrap break-words rounded-xl bg-slate-900 p-3 text-[11px] leading-relaxed text-slate-100 overflow-auto">{{ gemini_example_result }}</pre>
                                 </details>
-                            </div>
+                            </details>
                         </div>
                     </div>
-
                 </div>
 
                 <!-- Right: Steps Editor -->
                 <div class="lg:col-span-7 space-y-6">
                     <div class="flex justify-between items-center mb-2">
                         <div>
-                            <p class="text-xs font-black tracking-[0.18em] text-purple-600 uppercase">Step 4</p>
-                            <h2 class="text-2xl font-heavy text-gray-700">📋 단계별 활동 구성</h2>
-                            <p class="mt-2 text-xs font-bold text-gray-500">단계 이미지는 JPG, PNG, GIF, WEBP 파일만 가능하며 7MB 이하로 올려 주세요.</p>
+                            <p class="text-xs font-black tracking-[0.18em] text-purple-600 uppercase">단계 편집</p>
+                            <h2 class="text-2xl font-heavy text-gray-900">단계별 활동 구성</h2>
+                            <p class="mt-2 text-xs font-bold text-gray-500">이미지는 선택 사항입니다. JPG, PNG, GIF, WEBP / 7MB 이하</p>
                         </div>
                         <button type="button" id="btnAddStep"
                             class="px-5 py-2 rounded-xl bg-white text-purple-600 font-heavy shadow-sm hover:shadow-md transition-all flex items-center gap-2">
@@ -322,12 +300,13 @@
                         <div id="emptyState"
                             class="text-center py-24 bg-white/30 rounded-[2rem] border-2 border-dashed border-gray-300">
                             <i class="fa-solid fa-magic text-4xl text-gray-300 mb-4 block"></i>
-                            <p class="text-gray-400 font-bold">{% if is_v2_review %}제미나이 결과를 붙여넣거나,<br>직접 단계를 추가해 주세요.{% else %}영상 주소를 넣고 답변을 붙여넣거나,<br>직접 단계를 추가해 주세요.{% endif %}</p>
+                            <p class="text-gray-400 font-bold">제미나이 결과를 불러오거나,<br>직접 단계를 추가해 주세요.</p>
                         </div>
                     </div>
                 </div>
             </div>
 
+            {% if art_class %}
             <div class="clay-card p-6 md:p-8 bg-white/85 border border-slate-200">
                 <div class="flex flex-col gap-5">
                     <div>
@@ -335,7 +314,7 @@
                         <h2 class="mt-1 text-2xl font-heavy text-gray-900">활동지와 교사용 메모</h2>
                     </div>
 
-                    <details class="rounded-[1.8rem] border border-slate-200 bg-slate-50/70 px-5 py-4" {% if not is_v2_review %}open{% endif %}>
+                    <details class="rounded-[1.8rem] border border-slate-200 bg-slate-50/70 px-5 py-4" open>
                         <summary class="cursor-pointer list-none flex items-center justify-between gap-3 text-sm font-heavy text-slate-800">
                             자료 파일과 활용 메모 입력하기
                             <span class="text-xs font-bold text-slate-500">PDF, HWP, HWPX / 최대 5개 / 파일당 20MB</span>
@@ -392,10 +371,19 @@
                     </details>
                 </div>
             </div>
+            {% else %}
+            <div class="rounded-[2rem] border border-slate-200 bg-[linear-gradient(180deg,_rgba(255,255,255,0.96)_0%,_rgba(248,250,252,0.98)_100%)] px-6 py-6 shadow-sm">
+                <p class="text-xs font-black uppercase tracking-[0.18em] text-slate-500">다음에 하기</p>
+                <h2 class="mt-2 text-2xl font-heavy text-slate-900">활동지와 교사용 메모는 저장 후 수정에서 더하면 됩니다</h2>
+                <p class="mt-3 text-sm font-bold leading-relaxed text-slate-600">
+                    지금은 단계만 다듬고 먼저 저장하세요. 수업이 만들어진 뒤에는 내가 만든 수업에서 자료, 메모, 공유까지 한 번에 이어서 정리할 수 있습니다.
+                </p>
+            </div>
+            {% endif %}
 
             <div class="clay-card p-8 bg-white/80 text-center">
                 <div class="max-w-xl mx-auto mb-8 text-left">
-                    <p class="text-xs font-black tracking-[0.18em] text-emerald-600 uppercase">{% if is_v2_review %}마지막 단계{% else %}Step 5{% endif %}</p>
+                    <p class="text-xs font-black tracking-[0.18em] text-emerald-600 uppercase">수업 시작</p>
                     <h2 class="mt-1 text-2xl font-heavy text-gray-900">수업 시작</h2>
                 </div>
 
@@ -448,9 +436,6 @@
             </div>
         </form>
 
-        {% if show_service_suggestion %}
-        {% include 'core/partials/service_suggestion.html' with service_key='artclass' %}
-        {% endif %}
     </div>
 </main>
 
@@ -469,7 +454,9 @@
     const stepCountInput = document.getElementById('stepCountInput');
     const videoUrlEl = document.getElementById('videoUrl');
     const geminiPromptBoxEl = document.getElementById('geminiPromptBox');
+    const geminiPromptDetailsEl = document.getElementById('geminiPromptDetails');
     const geminiResultInputEl = document.getElementById('geminiResultInput');
+    const geminiManualFallbackDetailsEl = document.getElementById('geminiManualFallbackDetails');
     const geminiManualStatusEl = document.getElementById('geminiManualStatus');
     const geminiWarningListEl = document.getElementById('geminiWarningList');
     const btnLaunchGeminiFlowEl = document.getElementById('btnLaunchGeminiFlow');
@@ -488,6 +475,7 @@
     const modeSelectedEls = document.querySelectorAll('[data-mode-selected]');
     const modeRecommendedEls = document.querySelectorAll('[data-mode-recommended]');
     const launcherGuideBlockEl = document.getElementById('launcherGuideBlock');
+    const GEMINI_REVIEW_CLIPBOARD_STORAGE_KEY = 'artclass.geminiReviewClipboard';
     const launcherGuideReasonEl = document.getElementById('launcherGuideReason');
     const setupSubmitLabelEl = document.getElementById('setupSubmitLabel');
     const setupSubmitHelpEl = document.getElementById('setupSubmitHelp');
@@ -618,6 +606,18 @@ JSON 스키마 예시:
             error: 'text-red-700',
         };
         geminiManualStatusEl.classList.add(classByTone[tone] || classByTone.indigo);
+    }
+
+    function openGeminiPromptDetails() {
+        if (geminiPromptDetailsEl) {
+            geminiPromptDetailsEl.open = true;
+        }
+    }
+
+    function openGeminiManualFallback() {
+        if (geminiManualFallbackDetailsEl) {
+            geminiManualFallbackDetailsEl.open = true;
+        }
     }
 
     function renderGeminiWarnings(warnings) {
@@ -1027,7 +1027,8 @@ JSON 스키마 예시:
             setGeminiStatus('프롬프트를 복사했어요. 제미나이에 바로 붙여넣어 주세요.', 'success');
             return true;
         } catch (_) {
-            setGeminiStatus('자동 복사가 안 됐어요. 아래 프롬프트 보기에서 직접 복사해 주세요.', 'error');
+            openGeminiPromptDetails();
+            setGeminiStatus('자동 복사가 안 됐어요. 프롬프트 보기에서 직접 복사해 주세요.', 'error');
             return false;
         }
     }
@@ -1035,14 +1036,16 @@ JSON 스키마 예시:
     async function loadGeminiResultFromClipboard() {
         if (!geminiResultInputEl) return;
         if (!navigator.clipboard?.readText) {
+            openGeminiManualFallback();
             geminiResultInputEl.focus();
-            setGeminiStatus('이 브라우저에서는 클립보드 자동 읽기가 안 돼요. 아래 칸에 답변을 직접 붙여넣어 주세요.', 'error');
+            setGeminiStatus('이 브라우저에서는 클립보드 자동 읽기가 안 돼요. 직접 붙여넣기 칸에 답변을 붙여넣어 주세요.', 'error');
             return;
         }
 
         try {
             const clipboardText = (await navigator.clipboard.readText()).trim();
             if (!clipboardText) {
+                openGeminiManualFallback();
                 geminiResultInputEl.focus();
                 setGeminiStatus('먼저 제미나이 답변 전체를 복사해 주세요.', 'error');
                 return;
@@ -1050,8 +1053,9 @@ JSON 스키마 예시:
             geminiResultInputEl.value = clipboardText;
             await applyGeminiResult({ source: 'clipboard', rawText: clipboardText });
         } catch (_) {
+            openGeminiManualFallback();
             geminiResultInputEl.focus();
-            setGeminiStatus('클립보드 읽기 권한이 막혀 있어요. 아래 칸에 답변을 직접 붙여넣어 주세요.', 'error');
+            setGeminiStatus('클립보드 읽기 권한이 막혀 있어요. 직접 붙여넣기 칸에 답변을 붙여넣어 주세요.', 'error');
         }
     }
 
@@ -1060,6 +1064,7 @@ JSON 스키마 예시:
         const rawText = String(options.rawText ?? geminiResultInputEl?.value ?? '').trim();
         if (!rawText) {
             if (!options.silentNoInput) {
+                openGeminiManualFallback();
                 setGeminiStatus('답변을 붙여넣어 주세요.', 'error');
             }
             return;
@@ -1117,6 +1122,7 @@ JSON 스키마 예시:
                 'success'
             );
         } catch (err) {
+            openGeminiManualFallback();
             setGeminiStatus(err.message || '내용을 읽지 못했어요. 답변 전체를 다시 붙여넣어 주세요.', 'error');
         } finally {
             geminiApplyInProgress = false;
@@ -1127,6 +1133,22 @@ JSON 스키마 예시:
         }
     }
 
+    function takeQueuedGeminiResult() {
+        if (!window.sessionStorage) return '';
+        const queuedText = window.sessionStorage.getItem(GEMINI_REVIEW_CLIPBOARD_STORAGE_KEY) || '';
+        if (queuedText) {
+            window.sessionStorage.removeItem(GEMINI_REVIEW_CLIPBOARD_STORAGE_KEY);
+        }
+        return queuedText.trim();
+    }
+
+    function applyQueuedGeminiResultFromPreviousStep() {
+        const queuedText = takeQueuedGeminiResult();
+        if (!queuedText || !geminiResultInputEl) return;
+        geminiResultInputEl.value = queuedText;
+        applyGeminiResult({ source: 'clipboard', rawText: queuedText });
+    }
+
     if (btnLaunchGeminiFlowEl) {
         btnLaunchGeminiFlowEl.addEventListener('click', async () => {
             const copied = await copyGeminiPrompt();
@@ -1135,16 +1157,18 @@ JSON 스키마 예시:
                 setGeminiStatus(
                     copied
                         ? '프롬프트는 복사했지만 팝업이 막혀 있어요. 팝업을 허용하거나 제미나이를 직접 열어 붙여넣어 주세요.'
-                        : '팝업이 막혀 있거나 자동 복사가 안 됐어요. 아래 프롬프트 보기에서 직접 복사해 주세요.',
+                        : '팝업이 막혀 있거나 자동 복사가 안 됐어요. 프롬프트 보기에서 직접 복사해 주세요.',
                     'error'
                 );
+                openGeminiPromptDetails();
                 return;
             }
             if (copied) {
                 setGeminiStatus('프롬프트를 복사하고 제미나이를 열었어요. 제미나이에 바로 붙여넣어 주세요.', 'success');
                 return;
             }
-            setGeminiStatus('제미나이는 열렸지만 자동 복사는 안 됐어요. 아래 프롬프트 보기에서 직접 복사해 붙여넣어 주세요.', 'error');
+            openGeminiPromptDetails();
+            setGeminiStatus('제미나이는 열렸지만 자동 복사는 안 됐어요. 프롬프트 보기에서 직접 복사해 붙여넣어 주세요.', 'error');
         });
     }
 
@@ -1194,5 +1218,6 @@ JSON 스키마 예시:
     setPlaybackMode(playbackModeInputEl?.value || initialVideoAdvice?.recommendedMode || 'external_window', { preserveTouched: IS_EDIT_MODE });
     renderGeminiWarnings([]);
     renderSteps();
+    applyQueuedGeminiResultFromPreviousStep();
 </script>
 {% endblock %}

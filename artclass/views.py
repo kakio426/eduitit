@@ -822,9 +822,6 @@ def _build_setup_context(
     setup_material_note=None,
     setup_form_action_url="",
     is_v2_review=False,
-    legacy_fallback_url="",
-    review_back_url="",
-    show_service_suggestion=True,
 ):
     initial_steps = initial_steps if initial_steps is not None else _build_initial_steps(art_class)
     selected_mode = ARTCLASS_PRIMARY_PLAYBACK_MODE
@@ -852,10 +849,6 @@ def _build_setup_context(
         'setup_material_note': material_note,
         'setup_form_action_url': setup_form_action_url,
         'is_v2_review': is_v2_review,
-        'is_legacy_setup': not is_v2_review,
-        'legacy_fallback_url': legacy_fallback_url,
-        'review_back_url': review_back_url,
-        'show_service_suggestion': show_service_suggestion,
     }
     context.update(_build_launcher_template_context(request))
     return context
@@ -905,22 +898,6 @@ def _get_safe_return_url(request, raw_target, fallback):
     return fallback
 
 
-def _render_legacy_setup_page(request, art_class=None, **kwargs):
-    form_action_url = (
-        reverse("artclass:legacy_setup_edit", kwargs={"pk": art_class.pk})
-        if art_class
-        else reverse("artclass:legacy_setup")
-    )
-    return _render_setup_page(
-        request,
-        art_class,
-        setup_form_action_url=form_action_url,
-        legacy_fallback_url=reverse("artclass:setup"),
-        show_service_suggestion=True,
-        **kwargs,
-    )
-
-
 def _render_v2_review_page(request, art_class=None, **kwargs):
     kwargs = dict(kwargs)
     video_url = kwargs.pop("setup_video_url", None)
@@ -928,12 +905,8 @@ def _render_v2_review_page(request, art_class=None, **kwargs):
         video_url = art_class.youtube_url if art_class else ""
 
     if art_class:
-        review_back_url = ""
-        legacy_fallback_url = reverse("artclass:legacy_setup_edit", kwargs={"pk": art_class.pk})
         form_action_url = reverse("artclass:setup_edit", kwargs={"pk": art_class.pk})
     else:
-        review_back_url = _build_video_flow_url("artclass:create_gemini", video_url)
-        legacy_fallback_url = reverse("artclass:legacy_setup")
         form_action_url = reverse("artclass:create_review")
 
     return _render_setup_page(
@@ -942,9 +915,6 @@ def _render_v2_review_page(request, art_class=None, **kwargs):
         setup_video_url=video_url,
         setup_form_action_url=form_action_url,
         is_v2_review=True,
-        legacy_fallback_url=legacy_fallback_url,
-        review_back_url=review_back_url,
-        show_service_suggestion=False,
         **kwargs,
     )
 
@@ -1102,7 +1072,6 @@ def setup_view(request):
         {
             "create_url": reverse("artclass:create_url"),
             "library_url": reverse("artclass:library"),
-            "legacy_setup_url": reverse("artclass:legacy_setup"),
         },
     )
 
@@ -1121,7 +1090,6 @@ def create_url_view(request):
         "artclass/setup_url.html",
         {
             "setup_video_url": setup_video_url,
-            "legacy_setup_url": reverse("artclass:legacy_setup"),
         },
     )
 
@@ -1138,7 +1106,6 @@ def create_gemini_view(request):
         {
             "setup_video_url": video_url,
             "manual_prompt_template": build_manual_pipeline_prompt(video_url),
-            "legacy_setup_url": reverse("artclass:legacy_setup"),
             "review_url": _build_video_flow_url("artclass:create_review", video_url),
             "url_step_url": _build_video_flow_url("artclass:create_url", video_url),
         },
@@ -1161,20 +1128,16 @@ def create_review_view(request):
     return _render_v2_review_page(request, None, setup_video_url=video_url)
 
 
-@ratelimit(key=ratelimit_key_for_master_only, rate='24/10m', method='POST', block=True, group='artclass_setup_submit')
 def legacy_setup_view(request, pk=None):
-    art_class = _get_setup_art_class(request, pk)
-    if hasattr(art_class, "status_code"):
-        return art_class
-
     if request.method == "POST":
-        return _handle_setup_submission(
-            request,
-            art_class,
-            render_invalid=lambda **kwargs: _render_legacy_setup_page(request, art_class, **kwargs),
-        )
+        if pk:
+            return setup_edit_view(request, pk)
+        return create_review_view(request)
 
-    return _render_legacy_setup_page(request, art_class)
+    if pk:
+        return redirect("artclass:setup_edit", pk=pk)
+
+    return redirect(_build_video_flow_url("artclass:create_url", request.GET.get("videoUrl")))
 
 
 @ratelimit(key=ratelimit_key_for_master_only, rate='24/10m', method='POST', block=True, group='artclass_setup_submit')

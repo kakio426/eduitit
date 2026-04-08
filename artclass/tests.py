@@ -1097,16 +1097,17 @@ class ArtClassDeleteTest(TestCase):
 
 
 class ArtClassV2SetupFlowTest(TestCase):
-    def test_setup_route_renders_v2_home_and_links(self):
+    def test_setup_route_renders_home_and_links(self):
         response = self.client.get(reverse("artclass:setup"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "순서대로 따라가며 미술 수업을 만듭니다")
+        self.assertContains(response, "영상 하나로 수업 뼈대를 바로 만듭니다")
         self.assertContains(response, reverse("artclass:create_url"))
         self.assertContains(response, f'{reverse("artclass:library")}#shared-classes')
-        self.assertContains(response, reverse("artclass:legacy_setup"))
         self.assertContains(response, "함께 보는 공개 수업")
         self.assertNotContains(response, "내가 만든 수업 보기")
+        self.assertNotContains(response, "기존 버전으로 돌아가기")
+        self.assertNotContains(response, "ArtClass v2")
 
     def test_setup_route_shows_my_class_shortcut_for_logged_in_teacher(self):
         user = User.objects.create_user(
@@ -1131,16 +1132,16 @@ class ArtClassV2SetupFlowTest(TestCase):
         response = self.client.get(reverse("artclass:setup"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "내가 만든 수업 보기")
+        self.assertContains(response, "내가 만든 수업")
         self.assertContains(response, f'{reverse("artclass:library")}#my-classes')
 
-    def test_library_keeps_legacy_setup_fallback_link(self):
+    def test_library_hides_legacy_setup_link(self):
         response = self.client.get(reverse("artclass:library"))
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, reverse("artclass:setup"))
-        self.assertContains(response, reverse("artclass:legacy_setup"))
-        self.assertContains(response, "기존 한 화면 버전 열기")
+        self.assertNotContains(response, reverse("artclass:legacy_setup"))
+        self.assertNotContains(response, "기존 한 화면 버전 열기")
 
     def test_create_url_post_redirects_to_gemini_step(self):
         video_url = "https://www.youtube.com/watch?v=2bBhnfh4StU"
@@ -1156,14 +1157,36 @@ class ArtClassV2SetupFlowTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "복사하고 제미나이 열기")
-        self.assertContains(response, "다음: 답변 불러오기")
+        self.assertContains(response, "다음: 자동으로 불러오기")
         self.assertNotContains(response, "프롬프트만 복사")
         self.assertEqual(response.context["manual_prompt_template"], build_manual_pipeline_prompt(video_url))
+        self.assertNotContains(response, "기존 버전으로 돌아가기")
+
+    def test_create_gemini_next_button_queues_copied_result_for_review(self):
+        response = self.client.get(
+            reverse("artclass:create_gemini"),
+            data={"videoUrl": "https://www.youtube.com/watch?v=2bBhnfh4StU"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="btnGoToReview"')
+        self.assertContains(response, "artclass.geminiReviewClipboard")
+        self.assertContains(response, "queueGeminiResultForReview")
 
     def test_create_review_requires_valid_video_url_on_get(self):
         response = self.client.get(reverse("artclass:create_review"))
 
         self.assertRedirects(response, reverse("artclass:create_url"))
+
+    def test_create_review_auto_applies_queued_gemini_result(self):
+        response = self.client.get(
+            reverse("artclass:create_review"),
+            data={"videoUrl": "https://www.youtube.com/watch?v=2bBhnfh4StU"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "artclass.geminiReviewClipboard")
+        self.assertContains(response, "applyQueuedGeminiResultFromPreviousStep")
 
     def test_create_review_requires_at_least_one_step(self):
         response = self.client.post(
@@ -1179,6 +1202,38 @@ class ArtClassV2SetupFlowTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "단계를 한 개 이상 만들어 주세요.")
         self.assertEqual(ArtClass.objects.count(), 0)
+
+    def test_legacy_setup_get_redirects_to_current_video_step(self):
+        response = self.client.get(reverse("artclass:legacy_setup"))
+
+        self.assertRedirects(response, reverse("artclass:create_url"))
+
+    def test_legacy_setup_get_preserves_video_url_when_redirecting(self):
+        video_url = "https://www.youtube.com/watch?v=2bBhnfh4StU"
+
+        response = self.client.get(reverse("artclass:legacy_setup"), data={"videoUrl": video_url})
+
+        self.assertRedirects(
+            response,
+            f"{reverse('artclass:create_url')}?videoUrl=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3D2bBhnfh4StU",
+        )
+
+    def test_legacy_setup_post_still_submits_through_current_flow(self):
+        response = self.client.post(
+            reverse("artclass:legacy_setup"),
+            data={
+                "videoUrl": "https://www.youtube.com/watch?v=2bBhnfh4StU",
+                "stepInterval": "12",
+                "teacherMaterialNote": "자료 설명",
+                "step_count": "1",
+                "step_text_0": "첫 번째 단계",
+            },
+        )
+
+        self.assertEqual(ArtClass.objects.count(), 1)
+        art_class = ArtClass.objects.get()
+        expected_url = f"{reverse('artclass:classroom', kwargs={'pk': art_class.pk})}?autostart_launcher=1"
+        self.assertRedirects(response, expected_url)
 
 
 class ArtClassSetupEditTest(TestCase):
@@ -1240,50 +1295,6 @@ class ArtClassSetupEditTest(TestCase):
         self.assertIn('id="artclassInitialSteps"', body)
         self.assertIn(r'\u003C/script\u003E\u003Cscript\u003Ealert(1)\u003C/script\u003E', body)
 
-    def test_legacy_setup_page_uses_beginner_friendly_gemini_copy(self):
-        response = self.client.get(reverse("artclass:legacy_setup"))
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "오늘 바로 시작하는 미술 수업")
-        self.assertContains(response, "런처로 수업 시작")
-        self.assertContains(response, "응답 예시 보기")
-        self.assertContains(response, "저장 후 런처로 수업 시작")
-        self.assertContains(response, "런처 설치 안내 보기")
-        self.assertContains(response, "활동지와 교사용 메모")
-        self.assertNotContains(response, "브라우저로 시작")
-        self.assertNotContains(response, "ArtClass는 이제 런처 한 가지 방식으로 시작합니다.")
-        self.assertNotContains(response, "저장 후 이렇게 시작됩니다")
-        self.assertNotContains(response, "처음이라면 이렇게 시작해 보세요")
-        self.assertNotContains(response, "설치가 필요한 경우 보기")
-        self.assertContains(response, "프롬프트 복사하고 제미나이 열기")
-        self.assertContains(response, "복사한 답변 불러오기")
-        self.assertNotContains(response, "프롬프트만 복사")
-        self.assertContains(response, "수업 준비를 저장하고 있어요")
-        self.assertContains(response, "이미지나 자료 파일이 있으면 업로드 때문에 조금 더 걸릴 수 있어요.")
-        self.assertNotContains(response, "샘플 영상으로 체험하기")
-        self.assertNotContains(response, "이번 한 번은 새 설치파일로 다시 설치해 주세요")
-        self.assertNotContains(response, "저장하면 다음 화면에서 초록 버튼으로 바로 시작할 수 있어요.")
-        self.assertNotContains(response, "수업 준비 팁")
-        self.assertNotContains(response, "실행이 안 되면 같은 안내 화면에서 설치와 다시 설치를 한 번에 진행할 수 있어요.")
-        self.assertNotContains(response, "추천: 아래 파란 버튼 한 번이면 프롬프트를 복사하고 제미나이를 바로 엽니다.")
-
-    def test_legacy_setup_page_keeps_install_notice_off_main_flow_even_when_download_available(self):
-        with patch.dict(
-            os.environ,
-            {
-                "ARTCLASS_LAUNCHER_DOWNLOAD_URL": "https://downloads.eduitit.com/launcher/Eduitit-Teacher-Launcher-Setup-0.2.0.exe",
-                "ARTCLASS_LAUNCHER_BRIDGE_VERSION": "0.2.0",
-            },
-            clear=False,
-        ):
-            response = self.client.get(reverse("artclass:legacy_setup"))
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "런처 설치 안내 보기")
-        self.assertNotContains(response, "Bridge 0.2.0")
-        self.assertNotContains(response, "이미 런처를 설치했다면 이번 한 번은 새 설치파일로 다시 설치해 주세요. 이후부터는 자동 업데이트됩니다.")
-        self.assertNotContains(response, "런처 설치파일 다운로드")
-
     def test_create_review_uses_gemini_example_without_sample_shortcut(self):
         response = self.client.get(
             reverse("artclass:create_review"),
@@ -1294,6 +1305,36 @@ class ArtClassSetupEditTest(TestCase):
         self.assertIn("gemini_example_result", response.context)
         self.assertIn('"video_title": "봄 꽃병 꾸미기"', response.context["gemini_example_result"])
         self.assertNotContains(response, 'artclassSampleLesson')
+
+    def test_legacy_setup_edit_redirects_to_current_edit_page(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(reverse("artclass:legacy_setup_edit", kwargs={"pk": self.art_class.pk}))
+
+        self.assertRedirects(response, reverse("artclass:setup_edit", kwargs={"pk": self.art_class.pk}))
+
+    def test_legacy_setup_edit_post_uses_current_edit_flow(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            reverse("artclass:legacy_setup_edit", kwargs={"pk": self.art_class.pk}),
+            data={
+                "title": "레거시 수정 테스트",
+                "videoUrl": "https://www.youtube.com/watch?v=2bBhnfh4StU",
+                "stepInterval": "15",
+                "playbackMode": ArtClass.PLAYBACK_MODE_EMBED,
+                "step_count": "1",
+                "step_text_0": "레거시로 수정한 단계",
+                "step_existing_id_0": str(self.existing_step.pk),
+            },
+        )
+
+        expected_url = f"{reverse('artclass:classroom', kwargs={'pk': self.art_class.pk})}?autostart_launcher=1"
+        self.assertRedirects(response, expected_url)
+        self.art_class.refresh_from_db()
+        self.assertEqual(self.art_class.title, "레거시 수정 테스트")
+        self.assertEqual(self.art_class.steps.count(), 1)
+        self.assertEqual(self.art_class.steps.get().description, "레거시로 수정한 단계")
 
     def test_setup_edit_preserves_existing_image_if_not_reuploaded(self):
         self.client.force_login(self.owner)
@@ -1632,8 +1673,10 @@ class ArtClassAutoMetadataTest(TestCase):
         self.assertContains(response, "수업에 쓸 영상 주소")
         self.assertContains(response, "유튜브나 공개 영상 주소를 확인하면 상태가 바뀝니다.")
         self.assertContains(response, "외부 AI 서비스로 전송될 수 있습니다.")
-        self.assertContains(response, "JPG, PNG, GIF, WEBP 파일만 가능하며 7MB 이하")
-        self.assertContains(response, "PDF, HWP, HWPX / 최대 5개 / 파일당 20MB")
+        self.assertContains(response, "이미지는 선택 사항입니다. JPG, PNG, GIF, WEBP / 7MB 이하")
+        self.assertContains(response, "활동지와 교사용 메모는 저장 후 수정에서 더하면 됩니다")
+        self.assertNotContains(response, "PDF, HWP, HWPX / 최대 5개 / 파일당 20MB")
+        self.assertNotContains(response, "제미나이 화면으로")
         self.assertNotContains(response, "영상 주소 안내: 유튜브 주소만 넣어 주세요.")
 
     def test_setup_generates_auto_metadata_without_manual_title(self):

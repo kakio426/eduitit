@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}ArtClass v2 2단계 - Eduitit{% endblock %}
+{% block title %}ArtClass 2단계 - Eduitit{% endblock %}
 
 {% block content %}
 <main class="min-h-screen pt-24 md:pt-32 pb-20 px-4">
@@ -8,54 +8,68 @@
         <div class="mb-6 flex items-center gap-3 text-xs font-black uppercase tracking-[0.18em] text-slate-400">
             <span>1 영상 주소</span>
             <span class="rounded-full bg-indigo-600 px-3 py-1.5 text-white">2 제미나이</span>
-            <span>3 붙여넣기/저장</span>
+            <span>3 답변 불러오기·저장</span>
         </div>
 
-        <section class="rounded-[2rem] border border-indigo-100 bg-white px-6 py-8 md:px-10 md:py-10 shadow-sm">
-            <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <section class="rounded-[2.2rem] border border-indigo-100 bg-[linear-gradient(180deg,_rgba(255,255,255,0.98)_0%,_rgba(244,248,255,0.95)_100%)] px-6 py-8 md:px-8 md:py-8 shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
+            <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                 <div class="max-w-2xl">
-                    <h1 class="text-3xl md:text-4xl font-black text-slate-900 break-keep">프롬프트를 복사하고 제미나이를 열어 주세요</h1>
-                    <div class="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 break-all">
+                    <p class="text-xs font-black uppercase tracking-[0.22em] text-indigo-500">2 제미나이</p>
+                    <h1 class="mt-3 text-3xl md:text-5xl font-black text-slate-900 leading-tight break-keep">프롬프트를 보내고 결과만 받아오면 됩니다</h1>
+                    <div class="mt-4 inline-flex max-w-full items-center rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 break-all shadow-sm">
                         {{ setup_video_url }}
                     </div>
                 </div>
 
-                <div class="flex flex-wrap gap-2">
-                    <a href="{{ url_step_url }}" class="inline-flex items-center rounded-full border border-slate-200 px-4 py-2 text-sm font-black text-slate-600 transition-all hover:bg-slate-50">
-                        주소 다시 보기
-                    </a>
-                    <a href="{{ legacy_setup_url }}" class="inline-flex items-center rounded-full border border-slate-200 px-4 py-2 text-sm font-black text-slate-600 transition-all hover:bg-slate-50">
-                        기존 버전으로 돌아가기
-                    </a>
-                </div>
+                <a href="{{ url_step_url }}"
+                    class="inline-flex items-center gap-2 text-sm font-black text-slate-500 underline-offset-4 hover:text-slate-800 hover:underline">
+                    <i class="fa-solid fa-arrow-left text-xs"></i> 주소 수정
+                </a>
             </div>
 
-            <div class="mt-8 grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
-                <div class="rounded-[1.8rem] border border-indigo-100 bg-indigo-50/60 p-5">
+            <div class="mt-8 grid gap-5 lg:grid-cols-[1.08fr_0.92fr]">
+                <div class="rounded-[2rem] bg-slate-950 px-6 py-6 text-white shadow-[0_25px_70px_rgba(15,23,42,0.24)] md:px-7 md:py-7">
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <div>
-                            <p class="text-xs font-black uppercase tracking-[0.18em] text-indigo-500">Prompt</p>
-                            <h2 class="mt-2 text-xl font-black text-slate-900">복사하고 제미나이 열기</h2>
+                            <p class="text-xs font-black uppercase tracking-[0.22em] text-indigo-200">Prompt</p>
+                            <h2 class="mt-2 text-2xl font-black text-white">복사하고 제미나이 열기</h2>
                         </div>
                         <button type="button" id="btnLaunchGeminiFlow"
-                            class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-black text-white transition-all hover:bg-indigo-700">
+                            class="rounded-full bg-indigo-500 px-5 py-3 text-sm font-black text-white transition-all hover:-translate-y-0.5 hover:bg-indigo-400">
                             복사하고 제미나이 열기
                         </button>
                     </div>
 
+                    <p class="mt-4 text-sm font-bold leading-relaxed text-slate-300">
+                        프롬프트는 버튼을 누를 때 자동 복사됩니다. 제미나이에 붙여넣고 답변 전체를 다시 복사해 주세요.
+                    </p>
                     <p id="geminiStatus" class="mt-4 hidden text-sm font-black"></p>
-                    <textarea id="geminiPromptBox" readonly
-                        class="mt-4 h-72 w-full rounded-2xl border border-slate-800 bg-slate-950 p-4 text-xs leading-relaxed text-slate-100 shadow-inner">{{ manual_prompt_template }}</textarea>
+
+                    <details class="mt-6 rounded-[1.5rem] border border-white/10 bg-white/5 px-4 py-4">
+                        <summary class="cursor-pointer list-none text-sm font-black text-slate-200">프롬프트 보기</summary>
+                        <textarea id="geminiPromptBox" readonly
+                            class="mt-4 h-64 w-full rounded-2xl border border-slate-800 bg-slate-900 p-4 text-xs leading-relaxed text-slate-100 shadow-inner">{{ manual_prompt_template }}</textarea>
+                    </details>
                 </div>
 
-                <div class="rounded-[1.8rem] border border-emerald-100 bg-emerald-50/60 p-5">
-                    <p class="text-xs font-black uppercase tracking-[0.18em] text-emerald-600">Next</p>
-                    <h2 class="mt-2 text-xl font-black text-slate-900">제미나이 결과를 받았나요?</h2>
-                    <p class="mt-3 text-sm font-bold text-emerald-900/80">다음 화면에서 복사한 답변을 버튼 한 번으로 바로 불러올 수 있어요.</p>
-                    <a href="{{ review_url }}"
-                        class="mt-6 inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-6 py-3 text-base font-black text-white transition-all hover:bg-emerald-700">
-                        다음: 답변 불러오기 <i class="fa-solid fa-arrow-right"></i>
-                    </a>
+                <div class="flex flex-col justify-between rounded-[2rem] bg-[linear-gradient(160deg,_#12b981_0%,_#0f766e_100%)] px-6 py-6 text-white shadow-[0_24px_60px_rgba(16,185,129,0.28)] md:px-7 md:py-7">
+                    <div>
+                        <p class="text-xs font-black uppercase tracking-[0.22em] text-emerald-100/90">Next</p>
+                        <h2 class="mt-3 text-3xl font-black leading-tight">결과를 복사했다면 바로 다음으로 가세요</h2>
+                        <p class="mt-4 text-sm font-bold leading-relaxed text-emerald-50/90">
+                            초록 버튼을 누르면 지금 복사된 답변을 먼저 확인하고, 다음 화면이 열리자마자 자동으로 채웁니다.
+                        </p>
+                    </div>
+
+                    <div class="mt-8 space-y-4">
+                        <a href="{{ review_url }}" id="btnGoToReview"
+                            class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-6 py-4 text-base font-black text-emerald-900 transition-all hover:-translate-y-0.5 hover:bg-emerald-50">
+                            다음: 자동으로 불러오기 <i class="fa-solid fa-arrow-right"></i>
+                        </a>
+                        <div class="rounded-2xl bg-white/10 px-4 py-3 text-xs font-bold leading-relaxed text-emerald-50/90">
+                            복사가 안 됐다면 다음 화면에서 직접 붙여넣어도 됩니다.
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -65,6 +79,8 @@
 <script>
     const geminiPromptBoxEl = document.getElementById('geminiPromptBox');
     const geminiStatusEl = document.getElementById('geminiStatus');
+    const btnGoToReviewEl = document.getElementById('btnGoToReview');
+    const GEMINI_REVIEW_CLIPBOARD_STORAGE_KEY = 'artclass.geminiReviewClipboard';
 
     function setGeminiStatus(message, tone = 'success') {
         geminiStatusEl.textContent = message || '';
@@ -82,10 +98,40 @@
             setGeminiStatus('프롬프트를 복사했어요. 제미나이에 바로 붙여넣어 주세요.');
             return true;
         } catch (_) {
-            setGeminiStatus('자동 복사가 안 됐어요. 프롬프트 상자에서 직접 복사해 주세요.', 'error');
+            setGeminiStatus('자동 복사가 안 됐어요. 프롬프트 보기에서 직접 복사해 주세요.', 'error');
             return false;
         }
     }
+
+    function looksLikeGeminiResult(rawText) {
+        const text = String(rawText || '').trim();
+        if (!text) return false;
+        if (text === geminiPromptBoxEl.value.trim()) return false;
+        return (
+            text.startsWith('{') ||
+            text.startsWith('[') ||
+            text.startsWith('```') ||
+            text.includes('"steps"') ||
+            text.includes('"video_title"')
+        );
+    }
+
+    async function queueGeminiResultForReview() {
+        if (!window.sessionStorage || !navigator.clipboard?.readText) {
+            return false;
+        }
+        try {
+            const clipboardText = (await navigator.clipboard.readText()).trim();
+            if (!looksLikeGeminiResult(clipboardText)) {
+                return false;
+            }
+            window.sessionStorage.setItem(GEMINI_REVIEW_CLIPBOARD_STORAGE_KEY, clipboardText);
+            return true;
+        } catch (_) {
+            return false;
+        }
+    }
+
     document.getElementById('btnLaunchGeminiFlow').addEventListener('click', async () => {
         const copied = await copyPrompt();
         const popup = window.open('https://gemini.google.com/app', '_blank', 'noopener,noreferrer');
@@ -93,10 +139,20 @@
             setGeminiStatus(
                 copied
                     ? '프롬프트는 복사했지만 팝업이 막혀 있어요. 제미나이를 직접 열어 붙여넣어 주세요.'
-                    : '팝업이 막혀 있거나 자동 복사가 안 됐어요. 아래 프롬프트 상자에서 직접 복사해 주세요.',
+                    : '팝업이 막혀 있거나 자동 복사가 안 됐어요. 프롬프트 보기에서 직접 복사해 주세요.',
                 'error'
             );
         }
     });
+
+    if (btnGoToReviewEl) {
+        btnGoToReviewEl.addEventListener('click', async (event) => {
+            event.preventDefault();
+            btnGoToReviewEl.classList.add('opacity-70');
+            btnGoToReviewEl.setAttribute('aria-disabled', 'true');
+            await queueGeminiResultForReview();
+            window.location.href = btnGoToReviewEl.href;
+        });
+    }
 </script>
 {% endblock %}
