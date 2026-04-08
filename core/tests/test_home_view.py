@@ -3285,6 +3285,14 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('--home-v6-radius-panel:', css)
         self.assertIn('.home-v6-page .home-v6-top-sns #feed-scroll-container > *', css)
 
+    def test_v6_css_keeps_teacher_buddy_and_workbench_controls_distinct(self):
+        css = (Path(settings.BASE_DIR) / 'core' / 'static' / 'core' / 'css' / 'home_authenticated_v6.css').read_text(encoding='utf-8')
+
+        self.assertIn('.home-v6-page [data-home-v6-favorites-panel="true"] [data-home-v6-favorite-card="true"]', css)
+        self.assertIn('.home-v6-page .teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-card', css)
+        self.assertIn('clip-path: inset(0 round var(--home-v6-radius-panel));', css)
+        self.assertIn('border-color: rgba(148, 163, 184, 0.24) !important;', css)
+
     @override_settings(HOME_LAYOUT_VERSION='v2', HOME_V2_ENABLED=True)
     def test_authenticated_home_uses_canonical_v6_even_when_env_requests_v2(self):
         user = self._login('v6canonical')
