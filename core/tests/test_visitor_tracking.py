@@ -8,7 +8,7 @@ from django.test import RequestFactory, TestCase
 from django.utils import timezone
 
 from core.context_processors import visitor_counts
-from core.middleware import VisitorTrackingMiddleware
+from core.middleware import VISITOR_IDENTITY_COOKIE_NAME, VisitorTrackingMiddleware
 from core.models import VisitorLog
 from core.utils import get_unique_visitor_count, get_weekly_stats
 
@@ -39,12 +39,13 @@ class VisitorTrackingMiddlewareTest(TestCase):
     def test_same_session_same_day_is_counted_once(self):
         request = self._build_request()
 
-        self.middleware(request)
+        first_response = self.middleware(request)
         self.middleware(request)
 
         self.assertEqual(VisitorLog.objects.filter(is_bot=False).count(), 1)
         log = VisitorLog.objects.get(is_bot=False)
         self.assertEqual(log.identity_type, VisitorLog.IDENTITY_SESSION)
+        self.assertIn(VISITOR_IDENTITY_COOKIE_NAME, first_response.cookies)
 
     def test_different_sessions_on_same_ip_are_counted_separately(self):
         first_request = self._build_request()
@@ -58,12 +59,29 @@ class VisitorTrackingMiddlewareTest(TestCase):
         self.assertEqual(logs.values("visitor_key").distinct().count(), 2)
         self.assertTrue(all(log.ip_address == self.ip_address for log in logs))
 
+    def test_anonymous_cookie_keeps_identity_stable_across_new_sessions(self):
+        first_request = self._build_request()
+        first_response = self.middleware(first_request)
+
+        visitor_cookie = first_response.cookies[VISITOR_IDENTITY_COOKIE_NAME].value
+
+        second_request = self._build_request()
+        second_request.COOKIES[VISITOR_IDENTITY_COOKIE_NAME] = visitor_cookie
+
+        second_response = self.middleware(second_request)
+
+        logs = VisitorLog.objects.filter(is_bot=False)
+        self.assertEqual(logs.count(), 1)
+        self.assertEqual(logs.get().visitor_key, f"session:{visitor_cookie}")
+        self.assertNotIn(VISITOR_IDENTITY_COOKIE_NAME, second_response.cookies)
+
     def test_anonymous_visit_is_upgraded_after_login(self):
         user = User.objects.create_user(username="teacher", password="password123")
         request = self._build_request()
 
-        self.middleware(request)
+        response = self.middleware(request)
         self.assertEqual(VisitorLog.objects.filter(is_bot=False).count(), 1)
+        request.COOKIES[VISITOR_IDENTITY_COOKIE_NAME] = response.cookies[VISITOR_IDENTITY_COOKIE_NAME].value
 
         request.user = user
         self.middleware(request)

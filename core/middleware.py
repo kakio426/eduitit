@@ -30,6 +30,24 @@ VISITOR_TRACKING_EXCLUDED_PREFIXES = (
 SITE_CONFIG_REQUEST_ATTR = "_eduitit_site_config"
 REQUEST_CACHE_MISS = object()
 VISITOR_IDENTITY_SESSION_KEY = "visitor_identity"
+VISITOR_IDENTITY_COOKIE_NAME = "eduitit_visitor"
+VISITOR_IDENTITY_COOKIE_MAX_AGE = 60 * 60 * 24 * 365
+
+
+def normalize_visitor_id(raw_value):
+    if not raw_value:
+        return None
+
+    candidate = str(raw_value).strip().lower()
+    if len(candidate) != 32:
+        return None
+
+    try:
+        uuid.UUID(hex=candidate)
+    except ValueError:
+        return None
+
+    return candidate
 
 
 def is_public_access_path(path):
@@ -110,16 +128,39 @@ def is_probable_bot(user_agent):
 
 def get_or_create_session_visitor_id(request):
     session = getattr(request, "session", None)
-    if session is None:
-        return uuid.uuid4().hex
+    cookie_visitor_id = normalize_visitor_id(request.COOKIES.get(VISITOR_IDENTITY_COOKIE_NAME))
+    session_visitor_id = None
+    if session is not None:
+        session_visitor_id = normalize_visitor_id(session.get(VISITOR_IDENTITY_SESSION_KEY))
 
-    visitor_id = session.get(VISITOR_IDENTITY_SESSION_KEY)
-    if visitor_id:
-        return visitor_id
+    visitor_id = cookie_visitor_id or session_visitor_id
+    if not visitor_id:
+        visitor_id = uuid.uuid4().hex
 
-    visitor_id = uuid.uuid4().hex
-    session[VISITOR_IDENTITY_SESSION_KEY] = visitor_id
+    if session is not None and session_visitor_id != visitor_id:
+        session[VISITOR_IDENTITY_SESSION_KEY] = visitor_id
+
+    if cookie_visitor_id != visitor_id:
+        request._eduitit_pending_visitor_cookie = visitor_id
+
     return visitor_id
+
+
+def set_pending_visitor_cookie(request, response):
+    visitor_id = normalize_visitor_id(getattr(request, "_eduitit_pending_visitor_cookie", None))
+    if not visitor_id:
+        return response
+
+    response.set_cookie(
+        VISITOR_IDENTITY_COOKIE_NAME,
+        visitor_id,
+        max_age=VISITOR_IDENTITY_COOKIE_MAX_AGE,
+        httponly=True,
+        samesite="Lax",
+        secure=request.is_secure(),
+        path="/",
+    )
+    return response
 
 
 def build_visitor_identity(request, *, ip, is_bot):
@@ -247,7 +288,7 @@ class VisitorTrackingMiddleware:
                     logger.error(f"[VISITOR] Error: {e}", exc_info=True)
 
         response = self.get_response(request)
-        return response
+        return set_pending_visitor_cookie(request, response)
 
 
 class PolicyConsentMiddleware:
