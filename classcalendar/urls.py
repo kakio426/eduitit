@@ -20,6 +20,7 @@ urlpatterns = [
     path("external/calendar/webhook/", views.external_calendar_webhook, name="external_calendar_webhook"),
     path("shared/<uuid:share_uuid>/", views.shared_view, name="shared"),
     path("api/events/", views.api_events, name="api_events"),
+    path("api/holidays/", views.api_holidays, name="api_holidays"),
     path("api/integration-settings/", views.api_integration_settings, name="api_integration_settings"),
     path("api/events/create/", views.api_create_event, name="api_create_event"),
     path("api/events/<uuid:event_id>/update/", views.api_update_event, name="api_update_event"),

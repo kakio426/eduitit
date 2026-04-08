@@ -5,7 +5,7 @@ import mimetypes
 import os
 import secrets
 import uuid
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 from urllib.parse import urlencode
 
 from allauth.socialaccount.models import SocialAccount
@@ -22,8 +22,9 @@ from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_GET, require_POST
 from django.views.decorators.clickjacking import xframe_options_sameorigin
+from django.views.decorators.http import require_GET, require_POST
+from korean_lunar_calendar import KoreanLunarCalendar
 
 from core.active_classroom import get_active_classroom_for_request
 from products.models import Product
@@ -120,6 +121,8 @@ HUB_TONE_PRIORITY = {
     "neutral": 2,
     "done": 1,
 }
+KOREAN_HOLIDAY_MIN_YEAR = 1900
+KOREAN_HOLIDAY_MAX_YEAR = 2100
 HUB_SERVICE_LABELS = {
     "event": "일정",
     "task": "할 일",
@@ -759,6 +762,165 @@ def _serialize_temporal_value(value):
     if hasattr(value, "isoformat"):
         return value.isoformat()
     return value
+
+
+def _parse_iso_date(value):
+    if isinstance(value, date):
+        return value
+    if not value:
+        return None
+    return parse_date(str(value))
+
+
+def _solar_date_from_lunar(year, month, day, *, intercalation=False):
+    calendar = KoreanLunarCalendar()
+    calendar.setLunarDate(year, month, day, intercalation)
+    solar_value = _parse_iso_date(calendar.SolarIsoFormat())
+    if solar_value is None:
+        raise ValueError(f"Unable to convert lunar date {year}-{month}-{day}")
+    return solar_value
+
+
+def _merge_holiday_marker(markers, marker_date, *, name, kind="public", is_observed=False):
+    if not isinstance(marker_date, date):
+        return
+    date_key = marker_date.isoformat()
+    existing = markers.get(date_key)
+    if existing is None:
+        markers[date_key] = {
+            "name": name,
+            "kind": kind,
+            "is_observed": bool(is_observed),
+        }
+        return
+
+    existing_names = [part.strip() for part in str(existing.get("name") or "").split(" / ") if part.strip()]
+    if name not in existing_names:
+        existing_names.append(name)
+    existing["name"] = " / ".join(existing_names)
+    if existing.get("kind") != "public" and kind == "public":
+        existing["kind"] = "public"
+    existing["is_observed"] = bool(existing.get("is_observed")) or bool(is_observed)
+
+
+def _is_public_holiday_day(target_date, public_dates):
+    if not isinstance(target_date, date):
+        return False
+    return target_date.weekday() == 6 or target_date in public_dates
+
+
+def _next_substitute_holiday(start_date, public_dates, observed_dates):
+    candidate = start_date
+    while (
+        candidate.weekday() == 5
+        or _is_public_holiday_day(candidate, public_dates)
+        or candidate in observed_dates
+    ):
+        candidate += timedelta(days=1)
+    return candidate
+
+
+def _build_korean_holiday_markers(year):
+    year = int(year)
+    if year < KOREAN_HOLIDAY_MIN_YEAR or year > KOREAN_HOLIDAY_MAX_YEAR:
+        return {}
+
+    markers = {}
+    public_dates = {}
+    observed_dates = set()
+    observed_candidates = []
+
+    def add_public_holiday(marker_date, name, *, substitute_group=""):
+        if not isinstance(marker_date, date) or marker_date.year != year:
+            return
+        _merge_holiday_marker(markers, marker_date, name=name, kind="public", is_observed=False)
+        public_dates.setdefault(marker_date, []).append(
+            {
+                "name": name,
+                "substitute_group": substitute_group,
+            }
+        )
+
+    fixed_public_holidays = (
+        (date(year, 1, 1), "신정", ""),
+        (date(year, 3, 1), "삼일절", "single"),
+        (date(year, 5, 5), "어린이날", "single"),
+        (date(year, 6, 6), "현충일", ""),
+        (date(year, 8, 15), "광복절", "single"),
+        (date(year, 10, 3), "개천절", "single"),
+        (date(year, 10, 9), "한글날", "single"),
+        (date(year, 12, 25), "기독탄신일", "single"),
+    )
+    for marker_date, name, substitute_group in fixed_public_holidays:
+        add_public_holiday(marker_date, name, substitute_group=substitute_group)
+
+    seollal_date = _solar_date_from_lunar(year, 1, 1)
+    seollal_days = (
+        (seollal_date - timedelta(days=1), "설날 연휴"),
+        (seollal_date, "설날"),
+        (seollal_date + timedelta(days=1), "설날 연휴"),
+    )
+    for marker_date, name in seollal_days:
+        add_public_holiday(marker_date, name, substitute_group="seollal")
+
+    buddha_birthday = _solar_date_from_lunar(year, 4, 8)
+    add_public_holiday(buddha_birthday, "부처님오신날", substitute_group="single")
+
+    chuseok_date = _solar_date_from_lunar(year, 8, 15)
+    chuseok_days = (
+        (chuseok_date - timedelta(days=1), "추석 연휴"),
+        (chuseok_date, "추석"),
+        (chuseok_date + timedelta(days=1), "추석 연휴"),
+    )
+    for marker_date, name in chuseok_days:
+        add_public_holiday(marker_date, name, substitute_group="chuseok")
+
+    _merge_holiday_marker(markers, date(year, 5, 1), name="근로자의 날", kind="labor", is_observed=False)
+
+    for marker_date, entries in public_dates.items():
+        if marker_date.weekday() not in {5, 6} and len(entries) <= 1:
+            continue
+        single_entry = next(
+            (entry for entry in entries if (entry.get("substitute_group") or "") == "single"),
+            None,
+        )
+        if single_entry is None:
+            continue
+        observed_candidates.append((marker_date + timedelta(days=1), f"{single_entry['name']} 대체공휴일"))
+
+    for group_name, label in (("seollal", "설날 대체공휴일"), ("chuseok", "추석 대체공휴일")):
+        group_dates = sorted(
+            marker_date
+            for marker_date, entries in public_dates.items()
+            if any((entry.get("substitute_group") or "") == group_name for entry in entries)
+        )
+        if not group_dates:
+            continue
+        has_sunday = any(marker_date.weekday() == 6 for marker_date in group_dates)
+        has_overlap = any(
+            len(public_dates.get(marker_date, [])) > 1 and marker_date.weekday() not in {5, 6}
+            for marker_date in group_dates
+        )
+        if not has_sunday and not has_overlap:
+            continue
+        observed_candidates.append((max(group_dates) + timedelta(days=1), label))
+
+    ordered_public_dates = set(public_dates.keys())
+    for start_date, name in sorted(observed_candidates, key=lambda item: item[0]):
+        observed_date = _next_substitute_holiday(start_date, ordered_public_dates, observed_dates)
+        observed_dates.add(observed_date)
+        _merge_holiday_marker(markers, observed_date, name=name, kind="public", is_observed=True)
+
+    return markers
+
+
+def _build_initial_holiday_payload(*, selected_date_key, fallback_date):
+    selected_date = _parse_iso_date(selected_date_key) or fallback_date
+    target_year = selected_date.year if selected_date else timezone.localdate().year
+    return {
+        "year": target_year,
+        "markers": _build_korean_holiday_markers(target_year),
+    }
 
 
 def _to_local_date(value):
@@ -3627,6 +3789,10 @@ def build_calendar_surface_context(
         day_markers,
         fallback_date=today_date,
     )
+    initial_holiday_payload = _build_initial_holiday_payload(
+        selected_date_key=initial_selected_date,
+        fallback_date=today_date,
+    )
     initial_open_create = str(request.GET.get("action") or "").strip().lower() == "create"
     initial_open_event_id = str(request.GET.get("open_event") or "").strip()
     initial_highlight_event_id = str(request.GET.get("highlight_event") or "").strip()
@@ -3658,6 +3824,7 @@ def build_calendar_surface_context(
         ),
         "hub_items_json": hub_items,
         "day_markers_json": day_markers,
+        "holiday_markers_json": initial_holiday_payload,
         "integration_settings_json": serialize_integration_setting(integration_setting),
         "reservation_windows": _build_reservation_windows_for_user(request.user),
         "share_enabled": bool(integration_setting.share_enabled),
@@ -3682,6 +3849,7 @@ def build_calendar_surface_context(
         "home_surface_url": home_surface_url,
         "calendar_page_url": calendar_page_url,
         "calendar_api_base_url": calendar_api_base_url,
+        "holiday_api_url": reverse("classcalendar:api_holidays"),
         "initial_selected_date": initial_selected_date or today_workspace["date_key"],
         "initial_open_create": initial_open_create,
         "initial_open_event_id": initial_open_event_id,
@@ -4059,6 +4227,39 @@ def api_events(request):
         }
     )
     return _apply_workspace_cache_headers(response)
+
+
+@login_required
+@require_GET
+def api_holidays(request):
+    raw_year = str(request.GET.get("year") or "").strip()
+    try:
+        year = int(raw_year)
+    except (TypeError, ValueError):
+        return JsonResponse(
+            {
+                "status": "error",
+                "message": "연도를 확인해 주세요.",
+            },
+            status=400,
+        )
+
+    if year < KOREAN_HOLIDAY_MIN_YEAR or year > KOREAN_HOLIDAY_MAX_YEAR:
+        return JsonResponse(
+            {
+                "status": "error",
+                "message": f"휴일은 {KOREAN_HOLIDAY_MIN_YEAR}년부터 {KOREAN_HOLIDAY_MAX_YEAR}년까지 확인할 수 있어요.",
+            },
+            status=400,
+        )
+
+    return JsonResponse(
+        {
+            "status": "success",
+            "year": year,
+            "holiday_markers": _build_korean_holiday_markers(year),
+        }
+    )
 
 
 @login_required

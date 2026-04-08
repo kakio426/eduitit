@@ -832,9 +832,12 @@
                                     class="flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold sm:h-8 sm:w-8 sm:text-sm"
                                     :class="[
                                         isToday(date) ? 'bg-indigo-600 text-white' : '',
-                                        isSelectedDate(date) && !isToday(date) ? 'bg-slate-100 text-slate-900 ring-1 ring-slate-300' : '',
-                                        !isToday(date) && !isSelectedDate(date) && !isCurrentMonth(date) ? 'text-slate-400' : '',
-                                        !isToday(date) && !isSelectedDate(date) && isCurrentMonth(date) ? 'text-slate-700' : ''
+                                        isSelectedDate(date) && !isToday(date) && isHolidayDate(date) ? 'bg-rose-50 text-rose-700 ring-1 ring-rose-200' : '',
+                                        isSelectedDate(date) && !isToday(date) && !isHolidayDate(date) ? 'bg-slate-100 text-slate-900 ring-1 ring-slate-300' : '',
+                                        !isToday(date) && !isSelectedDate(date) && isHolidayDate(date) && !isCurrentMonth(date) ? 'text-rose-300' : '',
+                                        !isToday(date) && !isSelectedDate(date) && isHolidayDate(date) && isCurrentMonth(date) ? 'text-rose-600' : '',
+                                        !isToday(date) && !isSelectedDate(date) && !isHolidayDate(date) && !isCurrentMonth(date) ? 'text-slate-400' : '',
+                                        !isToday(date) && !isSelectedDate(date) && !isHolidayDate(date) && isCurrentMonth(date) ? 'text-slate-700' : ''
                                     ]"
                                     x-text="date.getDate()"
                                 ></span>
@@ -1413,6 +1416,7 @@
 {{ tasks_json|json_script:"tasks-data" }}
 {{ hub_items_json|json_script:"hub-items-data" }}
 {{ day_markers_json|json_script:"day-markers-data" }}
+{{ holiday_markers_json|json_script:"holiday-markers-data" }}
 {{ calendar_owner_options_json|json_script:"calendar-owner-options-data" }}
 {{ message_capture_limits_json|json_script:"message-capture-limits-data" }}
 {{ message_capture_urls_json|json_script:"message-capture-urls-data" }}
@@ -1493,6 +1497,9 @@ function calendarApp() {
         tasks: [],
         hubItems: [],
         dayMarkers: {},
+        holidayMarkers: {},
+        holidayYearsLoaded: {},
+        holidayYearsLoading: {},
         selectedEvent: null,
         selectedTask: null,
         dayModalOpen: false,
@@ -1511,6 +1518,7 @@ function calendarApp() {
         calendarPageUrl: '{{ calendar_page_url|default:""|escapejs }}',
         calendarCenterUrl: '{{ calendar_center_url|default:""|escapejs }}',
         calendarApiBaseUrl: '{{ calendar_api_base_url|default:""|escapejs }}',
+        holidayApiUrl: '{{ holiday_api_url|default:""|escapejs }}',
         calendarEmbedMode: '{{ calendar_embed_mode|default:"page"|escapejs }}',
         initialFocusSearch: {{ initial_focus_search|yesno:"true,false" }},
         agendaQuery: '{{ initial_search_query|default:""|escapejs }}',
@@ -1635,8 +1643,10 @@ function calendarApp() {
             this.loadTasksFromScript();
             this.loadHubItemsFromScript();
             this.loadDayMarkersFromScript();
+            this.loadHolidayMarkersFromScript();
             this.selectedDateKey = this.initialSelectedDateKey || this.dateKey(new Date());
             this.currentDate = new Date(this.parseDateKey(this.selectedDateKey).getFullYear(), this.parseDateKey(this.selectedDateKey).getMonth(), 1);
+            this.ensureHolidayYearLoaded(this.currentDate.getFullYear());
             if (this.initialHighlightedEventId) {
                 this.highlightSavedEventById(this.initialHighlightedEventId, { persist: true });
             }
@@ -1835,6 +1845,61 @@ function calendarApp() {
             } catch (e) {
                 this.dayMarkers = {};
                 window.showToast('날짜 표시 데이터를 읽는 중 오류가 발생했습니다.', 'error');
+            }
+        },
+
+        normalizeHolidayMarker(marker) {
+            return {
+                name: marker && marker.name ? String(marker.name) : '',
+                kind: marker && marker.kind ? String(marker.kind) : 'public',
+                is_observed: !!(marker && marker.is_observed),
+            };
+        },
+
+        mergeHolidayMarkers(markers) {
+            if (!markers || typeof markers !== 'object') return;
+            Object.entries(markers).forEach(([dateKey, marker]) => {
+                this.holidayMarkers[dateKey] = this.normalizeHolidayMarker(marker);
+            });
+        },
+
+        loadHolidayMarkersFromScript() {
+            try {
+                const raw = JSON.parse(document.getElementById('holiday-markers-data').textContent || '{}');
+                const year = Number(raw.year || 0);
+                this.holidayMarkers = {};
+                this.holidayYearsLoaded = {};
+                this.holidayYearsLoading = {};
+                this.mergeHolidayMarkers(raw && raw.markers ? raw.markers : {});
+                if (Number.isInteger(year) && year > 0) {
+                    this.holidayYearsLoaded[String(year)] = true;
+                }
+            } catch (e) {
+                this.holidayMarkers = {};
+                this.holidayYearsLoaded = {};
+                this.holidayYearsLoading = {};
+                window.showToast('휴일 데이터를 읽는 중 오류가 발생했습니다.', 'error');
+            }
+        },
+
+        async ensureHolidayYearLoaded(year) {
+            const numericYear = Number(year || 0);
+            if (!Number.isInteger(numericYear) || numericYear <= 0 || !this.holidayApiUrl) {
+                return;
+            }
+            const yearKey = String(numericYear);
+            if (this.holidayYearsLoaded[yearKey] || this.holidayYearsLoading[yearKey]) {
+                return;
+            }
+            this.holidayYearsLoading[yearKey] = true;
+            try {
+                const payload = await this.requestJson(`${this.holidayApiUrl}?year=${encodeURIComponent(yearKey)}`);
+                this.mergeHolidayMarkers(payload.holiday_markers || {});
+                this.holidayYearsLoaded[yearKey] = true;
+            } catch (error) {
+                window.showToast(error.message || '휴일 정보를 불러오지 못했습니다.', 'error');
+            } finally {
+                delete this.holidayYearsLoading[yearKey];
             }
         },
 
@@ -2879,6 +2944,7 @@ function calendarApp() {
             const selected = date ? new Date(date) : new Date();
             this.selectedDateKey = this.dateKey(selected);
             this.currentDate = new Date(selected.getFullYear(), selected.getMonth(), 1);
+            this.ensureHolidayYearLoaded(this.currentDate.getFullYear());
             this.rebuildAgendaSections();
         },
 
@@ -3793,11 +3859,33 @@ function calendarApp() {
             for (let cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) dates.push(new Date(cursor));
             return dates;
         },
-        prevMonth() { this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() - 1, 1); },
-        nextMonth() { this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + 1, 1); },
+        prevMonth() {
+            this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() - 1, 1);
+            this.ensureHolidayYearLoaded(this.currentDate.getFullYear());
+        },
+        nextMonth() {
+            this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + 1, 1);
+            this.ensureHolidayYearLoaded(this.currentDate.getFullYear());
+        },
         isCurrentMonth(date) { return date.getMonth() === this.currentDate.getMonth() && date.getFullYear() === this.currentDate.getFullYear(); },
         isToday(date) { const t = new Date(); return date.getDate() === t.getDate() && date.getMonth() === t.getMonth() && date.getFullYear() === t.getFullYear(); },
         isSelectedDate(date) { return this.selectedDateKey && this.dateKey(date) === this.selectedDateKey; },
+        isSunday(date) { return date instanceof Date && date.getDay() === 0; },
+        getHolidayMarker(date) { return this.holidayMarkers[this.dateKey(date)] || null; },
+        getHolidayLabel(date) {
+            const labels = [];
+            const marker = this.getHolidayMarker(date);
+            if (this.isSunday(date)) {
+                labels.push('일요일');
+            }
+            if (marker && marker.name) {
+                labels.push(marker.name);
+            }
+            return labels.join(' · ');
+        },
+        isHolidayDate(date) {
+            return this.isSunday(date) || !!this.getHolidayMarker(date);
+        },
 
         isRangeEvent(event) {
             return this.dateKey(event.start_time) !== this.dateKey(event.end_time);
@@ -3893,9 +3981,12 @@ function calendarApp() {
         },
         getDayTooltip(date) {
             const base = this.formatAgendaDate(this.dateKey(date));
+            const holidayLabel = this.getHolidayLabel(date);
             const count = this.getDayItemCount(date);
-            if (!count) return `${base} · 비어 있음`;
-            return `${base} · ${count}건`;
+            if (!count && !holidayLabel) return `${base} · 비어 있음`;
+            if (!count) return `${base} · ${holidayLabel}`;
+            if (!holidayLabel) return `${base} · ${count}건`;
+            return `${base} · ${holidayLabel} · ${count}건`;
         },
         hubItemOverlapsDate(item, date) {
             if (!item) return false;

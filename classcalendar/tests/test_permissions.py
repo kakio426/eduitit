@@ -144,6 +144,38 @@ class PermissionTest(TestCase):
         self.assertIn("지난 일정", content)
         self.assertIn("기한 지남", content)
 
+    def test_main_view_loads_korean_holiday_markers_for_red_dates(self):
+        response = self.client_teacher.get(reverse("calendar_main"), follow=True)
+        content = response.content.decode("utf-8")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('holiday-markers-data', content)
+        self.assertIn("holidayApiUrl:", content)
+        self.assertIn("this.loadHolidayMarkersFromScript();", content)
+        self.assertIn("this.ensureHolidayYearLoaded(this.currentDate.getFullYear());", content)
+        self.assertIn("isHolidayDate(date) && isCurrentMonth(date) ? 'text-rose-600' : ''", content)
+        self.assertIn("getHolidayLabel(date)", content)
+        self.assertIn("isSunday(date) || !!this.getHolidayMarker(date)", content)
+
+    def test_holiday_api_returns_korean_public_holidays_and_labor_day(self):
+        response = self.client_teacher.get(
+            reverse("classcalendar:api_holidays"),
+            {
+                "year": 2026,
+            },
+        )
+        payload = response.json()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(payload["status"], "success")
+        self.assertEqual(payload["year"], 2026)
+        self.assertEqual(payload["holiday_markers"]["2026-03-01"]["name"], "삼일절")
+        self.assertTrue(payload["holiday_markers"]["2026-03-02"]["is_observed"])
+        self.assertEqual(payload["holiday_markers"]["2026-05-01"]["name"], "근로자의 날")
+        self.assertEqual(payload["holiday_markers"]["2026-05-01"]["kind"], "labor")
+        self.assertEqual(payload["holiday_markers"]["2026-05-24"]["name"], "부처님오신날")
+        self.assertEqual(payload["holiday_markers"]["2026-05-25"]["name"], "부처님오신날 대체공휴일")
+
     def test_center_view_renders_page_mode_with_agenda_search(self):
         response = self.client_teacher.get(reverse("classcalendar:center"))
         content = response.content.decode("utf-8")
