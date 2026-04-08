@@ -4,6 +4,8 @@
 {% block title %}{{ page_title|default:'에듀잇잇 - 선생님의 스마트한 하루' }}{% endblock %}
 
 {% block extra_css %}
+<link href="{% static 'core/css/home_authenticated_v4.css' %}" rel="stylesheet">
+<link href="{% static 'core/css/home_authenticated_v5.css' %}" rel="stylesheet">
 <link href="{% static 'core/css/home_teacher_buddy.css' %}" rel="stylesheet">
 <link href="{% static 'core/css/home_authenticated_v6.css' %}" rel="stylesheet">
 {% endblock %}
@@ -13,33 +15,36 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="{% static 'qrgen/js/qrgen_shared.js' %}"></script>
 <script src="{% static 'core/js/prompt_lab.js' %}"></script>
+<script src="{% static 'core/js/home_authenticated_v2.js' %}"></script>
 <script src="{% static 'core/js/home_authenticated_v6.js' %}"></script>
 <script src="{% static 'core/js/home_teacher_buddy.js' %}"></script>
 {% endblock %}
 
 {% block content %}
-<div class="min-h-screen home-v6-page" data-home-layout-version="v6">
+<div class="min-h-screen home-v5-page home-v6-page" data-home-layout-version="v6">
     <div class="mx-auto max-w-[1600px]" style="padding-top: calc(var(--main-nav-height, 88px) + 0.75rem);">
         <main class="min-w-0 px-3 pb-8 pt-0 sm:px-4 md:px-6 lg:px-7 xl:px-8 2xl:px-10">
             <div
                 class="home-v6-shell"
+                data-home-v4-shell="true"
+                data-home-v5-shell="true"
                 data-home-v6-shell="true"
                 data-home-design-version="v6"
                 x-data="window.homeV6Shell()"
                 @keydown.escape.window="menuSheetOpen = false"
             >
-                <div class="home-v6-mobile-summary" data-home-v6-mobile-summary="true">
-                    <div class="home-v6-mobile-summary-scroll" data-home-v6-mobile-summary-scroll="true">
-                        <div class="home-v6-mobile-summary-chips" data-home-v6-mobile-summary-chips="true">
-                            <span class="home-v6-mobile-summary-chip home-v6-mobile-summary-chip--date" data-home-v6-mobile-summary-chip="date">
+                <div class="home-v6-mobile-summary" data-home-v5-mobile-summary="true" data-home-v6-mobile-summary="true">
+                    <div class="home-v6-mobile-summary-scroll" data-home-v5-mobile-summary-scroll="true" data-home-v6-mobile-summary-scroll="true">
+                        <div class="home-v6-mobile-summary-chips" data-home-v5-mobile-summary-chips="true" data-home-v6-mobile-summary-chips="true">
+                            <span class="home-v6-mobile-summary-chip home-v6-mobile-summary-chip--date" data-home-v5-mobile-summary-chip="date" data-home-v6-mobile-summary-chip="date">
                                 <i class="fa-regular fa-calendar"></i>
                                 {{ today_workspace.date_label|default:'오늘' }}
                             </span>
-                            <span class="home-v6-mobile-summary-chip" data-home-v6-mobile-summary-chip="events">
+                            <span class="home-v6-mobile-summary-chip" data-home-v5-mobile-summary-chip="events" data-home-v6-mobile-summary-chip="events">
                                 <i class="fa-regular fa-clock"></i>
                                 일정 {{ today_workspace.today_event_count|default_if_none:0 }}건
                             </span>
-                            <span class="home-v6-mobile-summary-chip" data-home-v6-mobile-summary-chip="tasks">
+                            <span class="home-v6-mobile-summary-chip" data-home-v5-mobile-summary-chip="tasks" data-home-v6-mobile-summary-chip="tasks">
                                 <i class="fa-solid fa-list-check"></i>
                                 할 일 {{ today_workspace.today_task_count|default_if_none:0 }}건
                             </span>
@@ -48,6 +53,7 @@
                     <button
                         type="button"
                         class="home-v6-mobile-summary-button"
+                        data-home-v5-mobile-all-tools-button="true"
                         data-home-v6-mobile-summary-button="true"
                         @click="menuSheetOpen = true"
                         aria-label="전체 도구 열기"
@@ -60,6 +66,7 @@
 
                 <div
                     class="home-v6-mobile-overlay"
+                    data-home-v5-mobile-overlay="true"
                     data-home-v6-mobile-overlay="true"
                     x-cloak
                     x-show="menuSheetOpen"
@@ -70,6 +77,7 @@
                 <div
                     id="home-v6-mobile-sheet"
                     class="home-v6-mobile-sheet"
+                    data-home-v5-mobile-sheet="true"
                     data-home-v6-mobile-sheet="true"
                     x-cloak
                     x-show="menuSheetOpen"
@@ -101,7 +109,7 @@
                     </div>
                 </div>
 
-                <section class="home-v6-mobile-stack" data-home-v6-mobile-stack="true">
+                <section class="home-v6-mobile-stack" data-home-v5-mobile-stack="true" data-home-v6-mobile-stack="true">
                     {% for mobile_section in home_v5_mobile_section_order %}
                     {% if mobile_section == 'workbench' %}
                     <article class="home-v6-mobile-panel home-v6-workbench-panel" data-home-v6-workbench="mobile" data-home-v6-rail-card="true">
