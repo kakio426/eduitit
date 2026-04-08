@@ -73,9 +73,12 @@ class TeacherLawViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "교사용 AI 법률 가이드")
+        self.assertContains(response, "지금 상황만 적어 주세요")
         self.assertContains(response, "상황을 한 문장으로 적으면 됩니다")
         self.assertContains(response, "학생 사진을 학급 밴드나 단체방에 올려도 되나요?")
         self.assertContains(response, "하루 15회까지 질문할 수 있습니다.")
+        self.assertContains(response, "개별 사건의 법적 판단이나 결과를 보장하지 않습니다.")
+        self.assertNotContains(response, "교실에서 바로 확인해야 할 법령만 빠르게 묻습니다")
         self.assertNotContains(response, "현재 상태")
         self.assertNotContains(response, "도와드리는 범위")
 
