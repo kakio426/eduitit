@@ -2914,8 +2914,8 @@ class HomeV5ViewTest(TestCase):
         self.assertIn('data-home-v6-favorites-panel="true"', content)
         self.assertIn('data-home-v6-calendar-panel="mobile"', content)
         self.assertIn('data-home-v6-calendar-panel="desktop"', content)
-        self.assertIn('data-home-v5-mobile-sns="true"', content)
-        self.assertIn('sns-full-section-auth-v5', content)
+        self.assertIn('data-home-v6-mobile-sns="true"', content)
+        self.assertIn('sns-full-section-auth-v6', content)
         self.assertIn('data-home-v5-mobile-all-tools-button="true"', content)
         self.assertIn('내 작업대', content)
         self.assertIn('data-favorite-toggle="true"', content)
@@ -2945,7 +2945,8 @@ class HomeV5ViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
         _assert_authenticated_home_context_contract(self, response, design_version='v6')
         self.assertEqual(response.context['developer_chat_home_card']['title'], '개발자야 도와줘')
-        self.assertIn('data-home-v4-developer-chat-card="desktop"', content)
+        self.assertIn('data-home-v6-developer-chat-card="desktop"', content)
+        self.assertNotIn('data-home-v4-developer-chat-card="desktop"', content)
 
     @patch('classcalendar.views.build_calendar_surface_context', side_effect=RuntimeError('calendar boom'))
     def test_v5_home_keeps_rendering_when_calendar_provider_fails(self, _mock_calendar_surface):
@@ -2983,7 +2984,7 @@ class HomeV5ViewTest(TestCase):
         content = response.content.decode('utf-8')
         workbench_index = content.index('data-home-v6-workbench="mobile"')
         calendar_index = content.index('data-home-v6-calendar-panel="mobile"')
-        sns_index = content.index('data-home-v5-mobile-sns="true"')
+        sns_index = content.index('data-home-v6-mobile-sns="true"')
         workbench_block = content[workbench_index:calendar_index]
 
         self.assertEqual(workbench_block.count('data-home-v6-mobile-workbench-card="true"'), 5)
@@ -3085,7 +3086,7 @@ class HomeV5ViewTest(TestCase):
         calendar_index = content.index('data-home-v6-calendar-panel="mobile"')
         quickdrop_index = content.index('data-home-v6-mobile-quickdrop="true"')
         reservation_index = content.index('data-home-reservations-card="true"')
-        sns_index = content.index('data-home-v5-mobile-sns="true"')
+        sns_index = content.index('data-home-v6-mobile-sns="true"')
         workbench_block = content[workbench_index:calendar_index]
         desktop_layout_index = content.index('data-home-v6-layout="true"')
         mobile_block = content[:desktop_layout_index]
@@ -3386,7 +3387,7 @@ class HomeV6ViewTest(TestCase):
         calendar_index = content.index('data-home-v6-calendar-panel="mobile"')
         quickdrop_index = content.index('data-home-v6-mobile-quickdrop="true"')
         reservation_index = content.index('data-home-reservations-card="true"')
-        sns_index = content.index('data-home-v5-mobile-sns="true"')
+        sns_index = content.index('data-home-v6-mobile-sns="true"')
         workbench_block = content[workbench_index:calendar_index]
         desktop_layout_index = content.index('data-home-v6-layout="true"')
         mobile_block = content[:desktop_layout_index]

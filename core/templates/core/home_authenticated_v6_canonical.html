@@ -219,13 +219,13 @@
                     {% endif %}
                     {% elif mobile_section == 'buddy' %}
                     {% if teacher_buddy_panel %}
-                    <article data-home-teacher-buddy-slot="v5-mobile" data-home-v6-rail-card="true">
+                    <article data-home-v6-teacher-buddy-slot="mobile" data-home-v6-rail-card="true">
                         {% include 'core/partials/home_teacher_buddy_panel.html' with panel_variant='v5-mobile' %}
                     </article>
                     {% endif %}
                     {% elif mobile_section == 'sns' %}
-                    <section class="home-v5-mobile-sns-panel home-v6-mobile-panel home-v6-mobile-sns" data-home-v5-mobile-sns="true">
-                        {% include 'core/partials/sns_mobile_preview_panel.html' with root_class='home-v5-mobile-sns' section_id='sns-full-section-auth-v5' start_open='false' %}
+                    <section class="home-v6-mobile-sns-panel home-v6-mobile-panel home-v6-mobile-sns" data-home-v6-mobile-sns="true">
+                        {% include 'core/partials/sns_mobile_preview_panel.html' with root_class='home-v6-mobile-sns' section_id='sns-full-section-auth-v6' start_open='false' %}
                     </section>
                     {% endif %}
                     {% endfor %}
@@ -245,7 +245,7 @@
                             </div>
 
                             {% if teacher_buddy_panel %}
-                            <section data-home-teacher-buddy-slot="v5-left-rail" data-home-v6-rail-card="true">
+                            <section data-home-v6-teacher-buddy-slot="rail" data-home-v6-rail-card="true">
                                 {% include 'core/partials/home_teacher_buddy_panel.html' with panel_variant='v5-rail' %}
                             </section>
                             {% endif %}
@@ -474,7 +474,7 @@
                             </section>
                             {% endif %}
 
-                            <section class="home-v4-community-section home-v4-top-sns" data-home-v4-sns-panel="true">
+                            <section class="home-v6-community-section home-v6-top-sns" data-home-v6-sns-panel="true">
                                 {% include 'core/partials/sns_widget.html' with embed_mode='full' compact_posts=True %}
                             </section>
                         </div>

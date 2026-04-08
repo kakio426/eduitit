@@ -1,56 +1,56 @@
 <section
-    class="home-v4-card home-v4-developer-chat-card home-v4-developer-chat-card--{{ card_variant|default:'desktop' }}"
-    data-home-v4-developer-chat-card="{{ card_variant|default:'desktop' }}"
+    class="{% if home_design_version == 'v6' %}home-v6-card home-v6-developer-chat-card home-v6-developer-chat-card--{{ card_variant|default:'desktop' }}{% else %}home-v4-card home-v4-developer-chat-card home-v4-developer-chat-card--{{ card_variant|default:'desktop' }}{% endif %}"
+    {% if home_design_version == 'v6' %}data-home-v6-developer-chat-card="{{ card_variant|default:'desktop' }}"{% else %}data-home-v4-developer-chat-card="{{ card_variant|default:'desktop' }}"{% endif %}
 >
-    <div class="home-v4-developer-chat-head">
-        <div class="home-v4-developer-chat-heading">
-            <span class="home-v4-developer-chat-icon" aria-hidden="true">
+    <div class="{% if home_design_version == 'v6' %}home-v6-developer-chat-head{% else %}home-v4-developer-chat-head{% endif %}">
+        <div class="{% if home_design_version == 'v6' %}home-v6-developer-chat-heading{% else %}home-v4-developer-chat-heading{% endif %}">
+            <span class="{% if home_design_version == 'v6' %}home-v6-developer-chat-icon{% else %}home-v4-developer-chat-icon{% endif %}" aria-hidden="true">
                 <i class="fa-regular fa-comments"></i>
             </span>
             <div class="min-w-0">
                 {% if developer_chat_home_card.title == '개발자야 도와줘' %}
-                <h2 class="home-v4-developer-chat-title mt-1 text-lg font-black text-slate-900" data-home-v4-developer-chat-title="two-line">
-                    <span class="home-v4-developer-chat-title-line">개발자야</span>
-                    <span class="home-v4-developer-chat-title-line">도와줘</span>
+                <h2 class="{% if home_design_version == 'v6' %}home-v6-developer-chat-title{% else %}home-v4-developer-chat-title{% endif %} mt-1 text-lg font-black text-slate-900" {% if home_design_version == 'v6' %}data-home-v6-developer-chat-title="two-line"{% else %}data-home-v4-developer-chat-title="two-line"{% endif %}>
+                    <span class="{% if home_design_version == 'v6' %}home-v6-developer-chat-title-line{% else %}home-v4-developer-chat-title-line{% endif %}">개발자야</span>
+                    <span class="{% if home_design_version == 'v6' %}home-v6-developer-chat-title-line{% else %}home-v4-developer-chat-title-line{% endif %}">도와줘</span>
                 </h2>
                 {% else %}
                 <h2 class="mt-1 text-lg font-black text-slate-900">{{ developer_chat_home_card.title }}</h2>
                 {% endif %}
             </div>
         </div>
-        <div class="home-v4-developer-chat-badges">
-            <span class="home-v4-developer-chat-chip">
+        <div class="{% if home_design_version == 'v6' %}home-v6-developer-chat-badges{% else %}home-v4-developer-chat-badges{% endif %}">
+            <span class="{% if home_design_version == 'v6' %}home-v6-developer-chat-chip{% else %}home-v4-developer-chat-chip{% endif %}">
                 {% if developer_chat_home_card.is_admin %}관리자 보기{% else %}1:1 채팅{% endif %}
             </span>
             {% if developer_chat_home_card.unread_count %}
-            <span class="home-v4-developer-chat-chip home-v4-developer-chat-chip--alert">안읽음 {{ developer_chat_home_card.unread_count }}건</span>
+            <span class="{% if home_design_version == 'v6' %}home-v6-developer-chat-chip home-v6-developer-chat-chip--alert{% else %}home-v4-developer-chat-chip home-v4-developer-chat-chip--alert{% endif %}">안읽음 {{ developer_chat_home_card.unread_count }}건</span>
             {% endif %}
         </div>
     </div>
 
     {% if developer_chat_home_card.summary %}
-    <p class="home-v4-developer-chat-summary">{{ developer_chat_home_card.summary }}</p>
+    <p class="{% if home_design_version == 'v6' %}home-v6-developer-chat-summary{% else %}home-v4-developer-chat-summary{% endif %}">{{ developer_chat_home_card.summary }}</p>
     {% endif %}
 
     {% if developer_chat_home_card.preview_threads %}
-    <div class="home-v4-developer-chat-list" data-home-v4-developer-chat-list="{{ card_variant|default:'desktop' }}">
+    <div class="{% if home_design_version == 'v6' %}home-v6-developer-chat-list{% else %}home-v4-developer-chat-list{% endif %}" {% if home_design_version == 'v6' %}data-home-v6-developer-chat-list="{{ card_variant|default:'desktop' }}"{% else %}data-home-v4-developer-chat-list="{{ card_variant|default:'desktop' }}"{% endif %}>
         {% for thread in developer_chat_home_card.preview_threads %}
-        <a href="{{ thread.detail_url }}" class="home-v4-developer-chat-item">
+        <a href="{{ thread.detail_url }}" class="{% if home_design_version == 'v6' %}home-v6-developer-chat-item{% else %}home-v4-developer-chat-item{% endif %}">
             <div class="min-w-0">
-                <p class="home-v4-developer-chat-item-title">{{ thread.title }}</p>
-                <p class="home-v4-developer-chat-item-preview">{{ thread.last_message_preview }}</p>
+                <p class="{% if home_design_version == 'v6' %}home-v6-developer-chat-item-title{% else %}home-v4-developer-chat-item-title{% endif %}">{{ thread.title }}</p>
+                <p class="{% if home_design_version == 'v6' %}home-v6-developer-chat-item-preview{% else %}home-v4-developer-chat-item-preview{% endif %}">{{ thread.last_message_preview }}</p>
             </div>
             <div class="shrink-0 text-right">
-                <p class="home-v4-developer-chat-item-meta">{{ thread.status_label }}</p>
+                <p class="{% if home_design_version == 'v6' %}home-v6-developer-chat-item-meta{% else %}home-v4-developer-chat-item-meta{% endif %}">{{ thread.status_label }}</p>
                 {% if thread.unread_count %}
-                <span class="home-v4-developer-chat-unread">{{ thread.unread_count }}</span>
+                <span class="{% if home_design_version == 'v6' %}home-v6-developer-chat-unread{% else %}home-v4-developer-chat-unread{% endif %}">{{ thread.unread_count }}</span>
                 {% endif %}
             </div>
         </a>
         {% endfor %}
     </div>
     {% else %}
-    <div class="home-v4-developer-chat-empty">
+    <div class="{% if home_design_version == 'v6' %}home-v6-developer-chat-empty{% else %}home-v4-developer-chat-empty{% endif %}">
         {% if developer_chat_home_card.is_admin %}
         새 문의 없음
         {% else %}
@@ -59,7 +59,7 @@
     </div>
     {% endif %}
 
-    <div class="home-v4-developer-chat-actions" data-home-v4-developer-chat-actions="{{ card_variant|default:'desktop' }}">
-        <a href="{{ developer_chat_home_card.url }}" class="home-v4-developer-chat-primary">{{ developer_chat_home_card.cta_label }}</a>
+    <div class="{% if home_design_version == 'v6' %}home-v6-developer-chat-actions{% else %}home-v4-developer-chat-actions{% endif %}" {% if home_design_version == 'v6' %}data-home-v6-developer-chat-actions="{{ card_variant|default:'desktop' }}"{% else %}data-home-v4-developer-chat-actions="{{ card_variant|default:'desktop' }}"{% endif %}>
+        <a href="{{ developer_chat_home_card.url }}" class="{% if home_design_version == 'v6' %}home-v6-developer-chat-primary{% else %}home-v4-developer-chat-primary{% endif %}">{{ developer_chat_home_card.cta_label }}</a>
     </div>
 </section>

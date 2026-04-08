@@ -201,6 +201,12 @@
     align-self: start;
 }
 
+.home-v6-community-section,
+.home-v6-top-sns {
+    min-width: 0;
+    align-self: start;
+}
+
 .home-v6-card {
     width: 100%;
     max-width: 100%;
@@ -724,6 +730,139 @@
     transform: none;
 }
 
+.home-v6-developer-chat-card {
+    display: grid;
+    gap: 0.95rem;
+}
+
+.home-v6-developer-chat-card--desktop {
+    display: none;
+}
+
+.home-v6-developer-chat-head,
+.home-v6-developer-chat-heading,
+.home-v6-developer-chat-item,
+.home-v6-developer-chat-actions {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.85rem;
+}
+
+.home-v6-developer-chat-heading {
+    min-width: 0;
+    justify-content: flex-start;
+}
+
+.home-v6-developer-chat-title {
+    display: flex;
+    flex-direction: column;
+    gap: 0.05rem;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+}
+
+.home-v6-developer-chat-title-line {
+    display: block;
+    white-space: nowrap;
+    word-break: keep-all;
+}
+
+.home-v6-developer-chat-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.65rem;
+    height: 2.65rem;
+    flex-shrink: 0;
+    border-radius: 1rem;
+}
+
+.home-v6-developer-chat-badges {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.45rem;
+}
+
+.home-v6-developer-chat-chip,
+.home-v6-developer-chat-unread {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 900;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.home-v6-developer-chat-chip {
+    padding: 0.45rem 0.72rem;
+}
+
+.home-v6-developer-chat-chip--alert,
+.home-v6-developer-chat-unread {
+    background: #ef4444;
+    border-color: #ef4444;
+    color: #ffffff;
+}
+
+.home-v6-developer-chat-summary {
+    margin: 0;
+    font-size: 0.92rem;
+    line-height: 1.65;
+}
+
+.home-v6-developer-chat-list {
+    display: grid;
+    gap: 0.7rem;
+}
+
+.home-v6-developer-chat-item {
+    border-radius: 1.35rem;
+    padding: 0.85rem 0.95rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.home-v6-developer-chat-item-title {
+    margin: 0;
+    font-size: 0.94rem;
+    font-weight: 900;
+    line-height: 1.4;
+}
+
+.home-v6-developer-chat-item-preview,
+.home-v6-developer-chat-item-meta,
+.home-v6-developer-chat-empty {
+    margin: 0.35rem 0 0;
+    font-size: 0.8rem;
+    line-height: 1.6;
+}
+
+.home-v6-developer-chat-item-preview {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.home-v6-developer-chat-empty {
+    border-radius: 1.35rem;
+    padding: 0.9rem 1rem;
+}
+
+.home-v6-developer-chat-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.75rem;
+    border-radius: 999px;
+    padding: 0 1rem;
+    font-size: 0.9rem;
+    font-weight: 900;
+}
+
 .home-v6-service-grid {
     display: grid;
     gap: 0.9rem;
@@ -1087,7 +1226,8 @@
 .home-v6-page .home-v4-quickdrop-head h2,
 .home-v6-page .home-v6-quickdrop-head h2,
 .home-v6-page [data-home-reservations-card="true"] h2,
-.home-v6-page .home-v4-developer-chat-heading h2 {
+.home-v6-page .home-v4-developer-chat-heading h2,
+.home-v6-page .home-v6-developer-chat-heading h2 {
     font-family: 'Outfit', 'NanumSquareRound', sans-serif;
     letter-spacing: -0.035em;
 }
@@ -1484,7 +1624,8 @@
 .home-v6-page .home-v4-quickdrop-primary,
 .home-v6-page .home-v6-quickdrop-primary,
 .home-v6-page .home-v6-mobile-quickdrop-primary,
-.home-v6-page .home-v4-developer-chat-primary {
+.home-v6-page .home-v4-developer-chat-primary,
+.home-v6-page .home-v6-developer-chat-primary {
     background: linear-gradient(135deg, var(--color-brand-900) 0%, var(--color-brand-700) 58%, #a47dfb 100%);
     color: var(--color-text-inverse);
     box-shadow: 0 20px 36px rgba(91, 44, 207, 0.22);
@@ -1494,10 +1635,12 @@
 .home-v6-page .home-v6-quickdrop-primary:hover,
 .home-v6-page .home-v6-mobile-quickdrop-primary:hover,
 .home-v6-page .home-v4-developer-chat-primary:hover,
+.home-v6-page .home-v6-developer-chat-primary:hover,
 .home-v6-page .home-v4-quickdrop-primary:focus-visible,
 .home-v6-page .home-v6-quickdrop-primary:focus-visible,
 .home-v6-page .home-v6-mobile-quickdrop-primary:focus-visible,
-.home-v6-page .home-v4-developer-chat-primary:focus-visible {
+.home-v6-page .home-v4-developer-chat-primary:focus-visible,
+.home-v6-page .home-v6-developer-chat-primary:focus-visible {
     background: linear-gradient(135deg, #311753 0%, var(--color-brand-900) 54%, var(--color-brand-700) 100%);
 }
 
@@ -1520,22 +1663,52 @@
     color: #7b541e;
 }
 
-.home-v6-page .home-v4-developer-chat-card {
+.home-v6-page .home-v4-developer-chat-card,
+.home-v6-page .home-v6-developer-chat-card {
     border-color: rgba(16, 118, 110, 0.16);
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(244, 252, 250, 0.95) 100%);
 }
 
-.home-v6-page .home-v4-developer-chat-icon {
+.home-v6-page .home-v4-developer-chat-icon,
+.home-v6-page .home-v6-developer-chat-icon {
     background: linear-gradient(135deg, #0f766e 0%, #0891b2 100%);
     color: #ffffff;
     box-shadow: 0 18px 34px rgba(8, 145, 178, 0.18);
 }
 
-.home-v6-page .home-v4-developer-chat-chip {
+.home-v6-page .home-v4-developer-chat-chip,
+.home-v6-page .home-v6-developer-chat-chip {
     border-color: rgba(8, 145, 178, 0.18);
     background: rgba(255, 255, 255, 0.84);
     color: #0f766e;
+}
+
+.home-v6-page .home-v6-developer-chat-item {
+    border: 1px solid #dbe4ee;
+    background: #ffffff;
+}
+
+.home-v6-page .home-v6-developer-chat-item:hover,
+.home-v6-page .home-v6-developer-chat-item:focus-visible {
+    border-color: #93c5fd;
+    box-shadow: 0 14px 28px rgba(59, 130, 246, 0.08);
+    transform: translateY(-1px);
+}
+
+.home-v6-page .home-v6-developer-chat-item-title {
+    color: #0f172a;
+}
+
+.home-v6-page .home-v6-developer-chat-item-preview,
+.home-v6-page .home-v6-developer-chat-item-meta,
+.home-v6-page .home-v6-developer-chat-empty {
+    color: #64748b;
+}
+
+.home-v6-page .home-v6-developer-chat-empty {
+    border: 1px dashed #cbd5e1;
+    background: rgba(255, 255, 255, 0.86);
 }
 
 .home-v6-page .home-schoolcomm-card {
@@ -1570,7 +1743,9 @@
 }
 
 .home-v6-page [data-home-v4-sns-panel="true"] .sns-preview-card,
-.home-v6-page .home-v5-mobile-sns .sns-preview-card {
+.home-v6-page [data-home-v6-sns-panel="true"] .sns-preview-card,
+.home-v6-page .home-v5-mobile-sns .sns-preview-card,
+.home-v6-page .home-v6-mobile-sns .sns-preview-card {
     border-color: rgba(106, 74, 154, 0.12);
     background: rgba(255, 255, 255, 0.88);
     box-shadow: var(--home-v6-shadow-tile);
