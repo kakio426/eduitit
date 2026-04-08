@@ -1101,7 +1101,7 @@ class ArtClassV2SetupFlowTest(TestCase):
         response = self.client.get(reverse("artclass:setup"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "영상 하나로 수업 뼈대를 바로 만듭니다")
+        self.assertContains(response, "미술 수업을 편리하게")
         self.assertContains(response, reverse("artclass:create_url"))
         self.assertContains(response, f'{reverse("artclass:library")}#shared-classes')
         self.assertContains(response, "함께 보는 공개 수업")
