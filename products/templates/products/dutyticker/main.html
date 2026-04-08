@@ -38,9 +38,11 @@
         --dt-role-assignee-bg: rgba(79, 70, 229, 0.48);
         --dt-role-assignee-border: rgba(129, 140, 248, 0.5);
         --dt-role-assignee-text: #e0e7ff;
+        --dt-role-assignee-shadow: 0 8px 16px rgba(15, 23, 42, 0.26);
         --dt-role-assignee-done-bg: rgba(16, 185, 129, 0.18);
         --dt-role-assignee-done-border: rgba(52, 211, 153, 0.45);
         --dt-role-assignee-done-text: #a7f3d0;
+        --dt-role-assignee-done-shadow: 0 8px 16px rgba(16, 185, 129, 0.2);
         --dt-role-status-pending: #94a3b8;
         --dt-role-status-done: #34d399;
         --dt-role-empty-bg: rgba(15, 23, 42, 0.74);
@@ -334,12 +336,14 @@
         --dt-role-slot: #334155;
         --dt-role-name: #0f172a;
         --dt-role-assignee-label: #0f766e;
-        --dt-role-assignee-bg: #d1fae5;
-        --dt-role-assignee-border: #6ee7b7;
-        --dt-role-assignee-text: #065f46;
+        --dt-role-assignee-bg: #ecfeff;
+        --dt-role-assignee-border: #67e8f9;
+        --dt-role-assignee-text: #155e75;
+        --dt-role-assignee-shadow: 0 12px 24px rgba(8, 145, 178, 0.16);
         --dt-role-assignee-done-bg: #dcfce7;
         --dt-role-assignee-done-border: #86efac;
         --dt-role-assignee-done-text: #14532d;
+        --dt-role-assignee-done-shadow: 0 10px 20px rgba(34, 197, 94, 0.16);
         --dt-role-status-pending: #334155;
         --dt-role-status-done: #166534;
         --dt-role-empty-bg: #ecfdf5;
@@ -414,13 +418,15 @@
         --dt-role-row-border: #e5d0b3;
         --dt-role-slot: #374151;
         --dt-role-name: #111827;
-        --dt-role-assignee-label: #9d174d;
-        --dt-role-assignee-bg: #ffe4e6;
-        --dt-role-assignee-border: #f9a8d4;
-        --dt-role-assignee-text: #831843;
+        --dt-role-assignee-label: #7c3aed;
+        --dt-role-assignee-bg: #f5f3ff;
+        --dt-role-assignee-border: #c084fc;
+        --dt-role-assignee-text: #6b21a8;
+        --dt-role-assignee-shadow: 0 12px 24px rgba(168, 85, 247, 0.18);
         --dt-role-assignee-done-bg: #dcfce7;
         --dt-role-assignee-done-border: #86efac;
         --dt-role-assignee-done-text: #14532d;
+        --dt-role-assignee-done-shadow: 0 10px 20px rgba(34, 197, 94, 0.16);
         --dt-role-status-pending: #374151;
         --dt-role-status-done: #166534;
         --dt-role-empty-bg: #fff7ed;
@@ -797,7 +803,7 @@
         background: var(--dt-role-assignee-bg) !important;
         border: 1px solid var(--dt-role-assignee-border) !important;
         border-radius: 1rem;
-        box-shadow: 0 8px 16px rgba(15, 23, 42, 0.26);
+        box-shadow: var(--dt-role-assignee-shadow);
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -1031,7 +1037,7 @@
         color: var(--dt-role-assignee-done-text) !important;
         background: var(--dt-role-assignee-done-bg) !important;
         border-color: var(--dt-role-assignee-done-border) !important;
-        box-shadow: 0 8px 16px rgba(16, 185, 129, 0.2);
+        box-shadow: var(--dt-role-assignee-done-shadow);
     }
 
     .glass-card {

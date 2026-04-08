@@ -154,6 +154,8 @@ class DutyTickerRotationModeTests(TestCase):
         self.assertContains(response, "알림판 설정")
         self.assertContains(response, "학급 데이터 관리")
         self.assertContains(response, "화면 표시 저장")
+        self.assertContains(response, 'bg-cyan-100 text-cyan-950')
+        self.assertContains(response, 'fa-solid fa-check')
         self.assertContains(response, 'id="rotationMode"')
         self.assertContains(response, "지금 1칸 순환")
         self.assertContains(response, "방송 저장")

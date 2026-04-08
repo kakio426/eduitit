@@ -102,6 +102,10 @@ class DutyTickerTimerUiTests(TestCase):
         self.assertContains(response, 'id="bgmVolumeRange"')
         self.assertContains(response, 'id="bgmVolumeValue"')
         self.assertContains(response, 'window.dtBgmTracks = {')
+        self.assertContains(response, '--dt-role-assignee-bg: #ecfeff;')
+        self.assertContains(response, '--dt-role-assignee-border: #67e8f9;')
+        self.assertContains(response, '--dt-role-assignee-bg: #f5f3ff;')
+        self.assertContains(response, '--dt-role-assignee-border: #c084fc;')
         self.assertNotContains(response, '천리 길도 한 걸음부터')
         self.assertNotContains(response, 'id="breakAutoOpenBtn"')
 
