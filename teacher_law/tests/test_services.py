@@ -18,6 +18,24 @@ class QueryNormalizerTests(SimpleTestCase):
         self.assertTrue(profile["scope_supported"])
         self.assertTrue(profile["candidate_queries"])
 
+    def test_build_query_profile_supports_parent_verbal_abuse_question(self):
+        profile = build_query_profile("학부모가 상담 중에 저에게 욕을 했습니다. 어떻게 해야 하나요?")
+
+        self.assertEqual(profile["topic"], "education_activity")
+        self.assertTrue(profile["scope_supported"])
+        self.assertIn("교원의 지위 향상 및 교육활동 보호를 위한 특별법", profile["hint_queries"])
+
+    def test_build_query_profile_supports_teacher_context_legal_question_even_without_fixed_topic(self):
+        profile = build_query_profile("학부모가 저를 몰래 녹음해서 공개하면 법적으로 어떻게 대응하나요?")
+
+        self.assertTrue(profile["scope_supported"])
+        self.assertTrue(profile["candidate_queries"])
+
+    def test_build_query_profile_keeps_personal_life_legal_question_out_of_scope(self):
+        profile = build_query_profile("중고거래 환불이 안 되는데 어떻게 대응하나요?")
+
+        self.assertFalse(profile["scope_supported"])
+
 
 class LlmPayloadParsingTests(SimpleTestCase):
     def test_extract_json_payload_handles_code_fence(self):

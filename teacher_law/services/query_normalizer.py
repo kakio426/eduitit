@@ -12,6 +12,9 @@ QUESTION_REPLACEMENTS = (
     ("교권 침해", "교육활동 침해"),
     ("초상권", "사진 게시 영상 게시 초상 관련"),
     ("민원", "학부모 민원 민원 응대"),
+    ("욕설", "욕설 폭언 모욕"),
+    ("폭언", "폭언 욕설 모욕"),
+    ("막말", "막말 폭언 모욕"),
     ("반톡", "학급 채팅방"),
     ("학부모톡", "학부모 채팅"),
 )
@@ -65,9 +68,66 @@ UNSUPPORTED_KEYWORDS = (
     "고소장",
 )
 
+TEACHER_CONTEXT_KEYWORDS = (
+    "교사",
+    "선생님",
+    "학교",
+    "교실",
+    "수업",
+    "학생",
+    "학부모",
+    "보호자",
+    "학급",
+    "반",
+    "상담",
+    "생활지도",
+    "학교장",
+    "담임",
+)
+
+TEACHER_LEGAL_ISSUE_KEYWORDS = (
+    "민원",
+    "폭언",
+    "욕설",
+    "욕",
+    "막말",
+    "모욕",
+    "협박",
+    "명예훼손",
+    "녹음",
+    "녹취",
+    "고소",
+    "고발",
+    "신고",
+    "경찰",
+    "아동학대",
+    "학대",
+    "개인정보",
+    "유출",
+    "사진",
+    "영상",
+    "촬영",
+    "게시",
+    "동의",
+    "체벌",
+    "신체",
+    "압수",
+    "공문",
+    "기록",
+    "생기부",
+    "학교생활기록부",
+    "교권",
+    "교육활동 침해",
+    "법령",
+    "법적",
+    "위법",
+    "처벌",
+    "손해배상",
+)
+
 TOPIC_CONFIG = {
     "school_violence": {
-        "keywords": ("학교폭력", "사안조사", "피해학생", "가해학생", "전담기구", "학교장 자체해결"),
+        "keywords": ("학교폭력", "사안조사", "피해학생", "가해학생", "전담기구", "학교장 자체해결", "언어폭력", "괴롭힘"),
         "hints": ["학교폭력예방 및 대책에 관한 법률"],
     },
     "privacy_photo": {
@@ -79,8 +139,27 @@ TOPIC_CONFIG = {
         "hints": ["초ㆍ중등교육법", "교원의 학생생활지도에 관한 고시"],
     },
     "education_activity": {
-        "keywords": ("교육활동 침해", "교권", "악성 민원", "학부모 민원", "보호조치", "교원 보호"),
-        "hints": ["교원의 지위 향상 및 교육활동 보호를 위한 특별법"],
+        "keywords": (
+            "교육활동 침해",
+            "교권",
+            "악성 민원",
+            "학부모 민원",
+            "보호조치",
+            "교원 보호",
+            "폭언",
+            "욕설",
+            "욕",
+            "막말",
+            "모욕",
+            "협박",
+            "녹음",
+            "녹취",
+            "명예훼손",
+            "상담 중",
+            "상담중",
+            "학부모 상담",
+        ),
+        "hints": ["교원의 지위 향상 및 교육활동 보호를 위한 특별법", "형법"],
     },
     "reporting_duty": {
         "keywords": ("신고 의무", "아동학대", "즉시 신고", "의심", "은폐", "축소", "보고"),
@@ -155,11 +234,21 @@ def detect_risk_flags(question: str) -> list[str]:
     return flags
 
 
+def _has_any_keyword(normalized: str, keywords: Iterable[str]) -> bool:
+    return any(keyword.lower() in normalized for keyword in keywords)
+
+
+def _looks_like_teacher_context_question(normalized: str) -> bool:
+    return _has_any_keyword(normalized, TEACHER_CONTEXT_KEYWORDS) and _has_any_keyword(normalized, TEACHER_LEGAL_ISSUE_KEYWORDS)
+
+
 def is_supported_question(question: str, *, topic: str) -> bool:
     normalized = normalize_for_matching(question)
-    if any(keyword.lower() in normalized for keyword in UNSUPPORTED_KEYWORDS):
+    if _has_any_keyword(normalized, UNSUPPORTED_KEYWORDS):
         return False
     if topic:
+        return True
+    if _looks_like_teacher_context_question(normalized):
         return True
     return any(keyword.lower() in normalized for config in TOPIC_CONFIG.values() for keyword in config["keywords"])
 
@@ -182,11 +271,12 @@ def build_query_profile(question: str) -> dict:
     hint_queries = list(TOPIC_CONFIG.get(topic, {}).get("hints", []))
 
     candidate_queries = []
-    for item in (
-        core_query,
-        f"{core_query} {' '.join(hint_queries[:1])}".strip() if hint_queries else "",
-        hint_queries[0] if hint_queries else "",
-    ):
+    candidate_seed_items = [core_query]
+    for hint in hint_queries[:2]:
+        candidate_seed_items.append(f"{core_query} {hint}".strip())
+    candidate_seed_items.extend(hint_queries[:2])
+
+    for item in candidate_seed_items:
         compact_item = compact_text(item)
         if compact_item and compact_item not in candidate_queries:
             candidate_queries.append(compact_item)
