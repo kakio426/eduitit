@@ -492,8 +492,6 @@ AUTOARTICLE_EXPORT_LAYOUT = os.getenv('AUTOARTICLE_EXPORT_LAYOUT', 'v1')
 # Home layout rollout: set HOME_LAYOUT_VERSION to v1, v2, v4, v5, or v6 to lock a version.
 # If unset, legacy HOME_V2_ENABLED fallback still decides between v1 and v2 only.
 HOME_LAYOUT_VERSION = os.environ.get('HOME_LAYOUT_VERSION', '').strip().lower()
-# Keep HOME_LAYOUT_VERSION=v6 and switch only the authenticated renderer implementation.
-HOME_AUTHENTICATED_V6_SOURCE = os.environ.get('HOME_AUTHENTICATED_V6_SOURCE', 'legacy').strip().lower()
 # Legacy fallback flag for v1/v2 only. Keep until v1/v2 paths and rollback rules are retired.
 HOME_V2_ENABLED = os.environ.get('HOME_V2_ENABLED', 'True').lower() == 'true'
 # Mobile home V4 rollout: keep the current hamburger menu by default.

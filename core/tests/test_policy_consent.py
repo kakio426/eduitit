@@ -48,8 +48,8 @@ class PolicyConsentTestCase(TestCase):
 
         self.assertRedirects(response, f"{reverse('policy_consent')}?next={reverse('home')}")
 
-    @override_settings(HOME_LAYOUT_VERSION='v6', HOME_AUTHENTICATED_V6_SOURCE='canonical')
-    def test_social_user_without_consent_still_redirects_from_canonical_v6_home(self):
+    @override_settings(HOME_LAYOUT_VERSION='v2', HOME_V2_ENABLED=True)
+    def test_social_user_without_consent_still_redirects_when_env_requests_v2(self):
         response = self.client.get(reverse('home'))
 
         self.assertRedirects(response, f"{reverse('policy_consent')}?next={reverse('home')}")

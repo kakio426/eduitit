@@ -55,19 +55,6 @@ def _create_posts(count=4, *, username='snsauthor'):
             )
         )
     return created_posts
-
-
-def _grant_required_policy_consent(user, *, provider='direct'):
-    UserPolicyConsent.objects.create(
-        user=user,
-        provider=provider,
-        terms_version=TERMS_VERSION,
-        privacy_version=PRIVACY_VERSION,
-        agreed_at=timezone.now(),
-        agreement_source='required_gate',
-    )
-
-
 AUTHENTICATED_HOME_CONTEXT_KEYS = (
     'sections',
     'aux_sections',
@@ -325,16 +312,18 @@ class HomeV2ViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
     @override_settings(HOME_LAYOUT_VERSION='', HOME_V2_ENABLED=True)
-    def test_empty_home_layout_version_keeps_existing_v2_authenticated_fallback(self):
+    def test_empty_home_layout_version_keeps_authenticated_home_on_canonical_v6(self):
         self._login('v2emptyfallback')
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('core/css/home_authenticated_v2.css', content)
-        self.assertIn('data-home-v2-content-shell="true"', content)
-        self.assertNotIn('core/css/home_authenticated_v4.css', content)
-        self.assertNotIn('core/css/home_authenticated_v5.css', content)
+        self.assertTemplateUsed(response, 'core/home_authenticated_v6_canonical.html')
+        self.assertEqual(response.context['home_design_version'], 'v6')
+        self.assertIn('core/css/home_authenticated_v5.css', content)
+        self.assertIn('core/css/home_authenticated_v6.css', content)
+        self.assertIn('data-home-design-version="v6"', content)
+        self.assertNotIn('core/css/home_authenticated_v2.css', content)
 
     def test_v2_anonymous_has_sections(self):
         """V2 비로그인 홈에 목적별 섹션 존재"""
@@ -2803,17 +2792,27 @@ class HomeV4ViewTest(TestCase):
         self.assertIn('로그인 후 전체 서비스 보기', content)
 
     @override_settings(HOME_LAYOUT_VERSION='v2', HOME_V2_ENABLED=True)
-    def test_setting_home_layout_version_to_v2_rolls_back_to_existing_authenticated_home(self):
+    def test_setting_home_layout_version_to_v2_keeps_anonymous_v2_but_authenticated_home_uses_v6(self):
         user = self._login('rollbackuser')
         ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('core/css/home_authenticated_v2.css', content)
-        self.assertIn('data-home-v2-top-zone="true"', content)
-        self.assertNotIn('core/css/home_authenticated_v4.css', content)
-        self.assertNotIn('data-home-v4-shell="true"', content)
+        self.assertTemplateUsed(response, 'core/home_authenticated_v6_canonical.html')
+        self.assertEqual(response.context['home_design_version'], 'v6')
+        self.assertIn('core/css/home_authenticated_v5.css', content)
+        self.assertIn('core/css/home_authenticated_v6.css', content)
+        self.assertIn('data-home-design-version="v6"', content)
+        self.assertNotIn('core/css/home_authenticated_v2.css', content)
+
+        self.client.logout()
+        public_response = self.client.get(reverse('home'))
+        public_content = public_response.content.decode('utf-8')
+
+        self.assertTemplateUsed(public_response, 'core/home_v2.html')
+        self.assertIn('data-home-v2-hero-proof="true"', public_content)
+        self.assertIn('지금 바로 써보기', public_content)
 
 
 @override_settings(HOME_LAYOUT_VERSION='v5', HOME_V2_ENABLED=True)
@@ -2903,12 +2902,13 @@ class HomeV5ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertTemplateUsed(response, 'core/home_authenticated_v5.html')
-        _assert_authenticated_home_context_contract(self, response, design_version='v5')
+        self.assertTemplateUsed(response, 'core/home_authenticated_v6_canonical.html')
+        _assert_authenticated_home_context_contract(self, response, design_version='v6')
         self.assertIn('core/css/home_authenticated_v4.css', content)
         self.assertIn('core/css/home_authenticated_v5.css', content)
+        self.assertIn('core/css/home_authenticated_v6.css', content)
         self.assertIn('data-home-v5-shell="true"', content)
-        self.assertIn('data-home-design-version="v5"', content)
+        self.assertIn('data-home-design-version="v6"', content)
         self.assertIn('data-home-v5-mobile-summary="true"', content)
         self.assertIn('data-home-v5-mobile-workbench="true"', content)
         self.assertIn('data-home-v5-mobile-calendar-panel="true"', content)
@@ -2941,7 +2941,7 @@ class HomeV5ViewTest(TestCase):
         content = response.content.decode('utf-8')
 
         self.assertEqual(response.status_code, 200)
-        _assert_authenticated_home_context_contract(self, response, design_version='v5')
+        _assert_authenticated_home_context_contract(self, response, design_version='v6')
         self.assertEqual(response.context['developer_chat_home_card']['title'], '개발자야 도와줘')
         self.assertIn('data-home-v4-developer-chat-card="desktop"', content)
 
@@ -2954,7 +2954,7 @@ class HomeV5ViewTest(TestCase):
         content = response.content.decode('utf-8')
 
         self.assertEqual(response.status_code, 200)
-        _assert_authenticated_home_context_contract(self, response, design_version='v5')
+        _assert_authenticated_home_context_contract(self, response, design_version='v6')
         self.assertIn('data-home-v5-mobile-calendar-panel="true"', content)
         self.assertEqual(response.context['today_workspace']['today_event_count'], 0)
         self.assertFalse(response.context['messagebox_home_card']['enabled'])
@@ -3197,7 +3197,7 @@ class HomeV6ViewTest(TestCase):
         nav_sections = response.context['home_v4_nav_sections']
         first_subtitle = next(section['subtitle'] for section in nav_sections if section.get('subtitle'))
 
-        self.assertTemplateUsed(response, 'core/home_authenticated_v5.html')
+        self.assertTemplateUsed(response, 'core/home_authenticated_v6_canonical.html')
         _assert_authenticated_home_context_contract(self, response, design_version='v6')
         self.assertIn('core/css/home_authenticated_v5.css', content)
         self.assertIn('core/css/home_authenticated_v6.css', content)
@@ -3212,8 +3212,8 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('data-home-v6-rail-item="true"', content)
         self.assertIn('data-home-v6-rail-action="true"', content)
 
-    @override_settings(HOME_AUTHENTICATED_V6_SOURCE='canonical')
-    def test_v6_authenticated_home_can_use_canonical_renderer_without_contract_change(self):
+    @override_settings(HOME_LAYOUT_VERSION='v2', HOME_V2_ENABLED=True)
+    def test_authenticated_home_uses_canonical_v6_even_when_env_requests_v2(self):
         user = self._login('v6canonical')
         ProductFavorite.objects.create(user=user, product=self.favorite_product, pin_order=1)
         ProductUsageLog.objects.create(user=user, product=self.quick_product, action='launch', source='home_quick')
@@ -3359,40 +3359,6 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('core/css/home_public_v6.css', content)
         self.assertIn('home-public-v6-page', content)
         self.assertIn('data-home-design-version="v6"', content)
-
-    @override_settings(DEBUG=False)
-    def test_v6_canonical_preview_requires_staff_when_debug_disabled(self):
-        self._login('v6previewdenied')
-
-        response = self.client.get(reverse('home_v6_canonical_preview'))
-
-        self.assertEqual(response.status_code, 404)
-
-    @override_settings(DEBUG=False, HOME_AUTHENTICATED_V6_SOURCE='legacy')
-    def test_v6_canonical_preview_uses_canonical_renderer_for_staff(self):
-        staff = _create_onboarded_user('v6previewstaff')
-        staff.is_staff = True
-        staff.save(update_fields=['is_staff'])
-        _grant_required_policy_consent(staff)
-        self.client.login(username='v6previewstaff', password='pass1234')
-
-        response = self.client.get(reverse('home_v6_canonical_preview'))
-
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'core/home_authenticated_v6_canonical.html')
-        self.assertEqual(response.context['home_design_version'], 'v6')
-
-    @override_settings(DEBUG=True, HOME_LAYOUT_VERSION='v2', HOME_AUTHENTICATED_V6_SOURCE='legacy')
-    def test_v6_canonical_preview_forces_v6_even_when_main_home_rolls_back(self):
-        user = self._login('v6previewoverride')
-        _grant_required_policy_consent(user)
-
-        response = self.client.get(reverse('home_v6_canonical_preview'))
-
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'core/home_authenticated_v6_canonical.html')
-        self.assertEqual(response.context['home_design_version'], 'v6')
-
 
 @override_settings(HOME_V2_ENABLED=True)
 class TrackUsageAPITest(TestCase):

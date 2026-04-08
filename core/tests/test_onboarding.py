@@ -42,8 +42,8 @@ class OnboardingTests(TestCase):
         # Should redirect to update_email
         self.assertRedirects(response, f"{reverse('update_email')}?next=%2F")
 
-    @override_settings(HOME_LAYOUT_VERSION='v6', HOME_AUTHENTICATED_V6_SOURCE='canonical')
-    def test_v6_canonical_home_keeps_onboarding_redirect_for_incomplete_user(self):
+    @override_settings(HOME_LAYOUT_VERSION='v2', HOME_V2_ENABLED=True)
+    def test_authenticated_home_keeps_onboarding_redirect_even_when_env_requests_v2(self):
         self.client.login(username='test_no_email', password='password123')
 
         response = self.client.get(reverse('home'))

@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, reverse, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse, JsonResponse, Http404
+from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST, require_GET
 from django.conf import settings
 from django.core.paginator import Paginator
@@ -291,73 +291,24 @@ def _build_post_feed_queryset(feed_scope=POST_FEED_SCOPE_ALL):
     return queryset.order_by('-active_feature_order', '-active_feature_from', '-created_at')
 
 
-HOME_AUTHENTICATED_V6_SOURCE_LEGACY = 'legacy'
-HOME_AUTHENTICATED_V6_SOURCE_CANONICAL = 'canonical'
-HOME_AUTHENTICATED_V6_SOURCE_DEFAULT = HOME_AUTHENTICATED_V6_SOURCE_LEGACY
-HOME_AUTHENTICATED_V6_SOURCE_CHOICES = {
-    HOME_AUTHENTICATED_V6_SOURCE_LEGACY,
-    HOME_AUTHENTICATED_V6_SOURCE_CANONICAL,
-}
-
-
-def _normalize_home_authenticated_v6_source(raw_source):
-    source = str(raw_source or '').strip().lower()
-    if source in HOME_AUTHENTICATED_V6_SOURCE_CHOICES:
-        return source
-    return HOME_AUTHENTICATED_V6_SOURCE_DEFAULT
-
-
-def _get_home_layout_version(request=None):
-    override_version = getattr(request, '_home_layout_version_override', None) if request is not None else None
-    if override_version is not None:
-        raw_version = str(override_version or '').strip().lower()
-    else:
-        raw_version = str(getattr(settings, 'HOME_LAYOUT_VERSION', '') or '').strip().lower()
+def _get_home_layout_version():
+    raw_version = str(getattr(settings, 'HOME_LAYOUT_VERSION', '') or '').strip().lower()
     if raw_version in {'v1', 'v2', 'v4', 'v5', 'v6'}:
         return raw_version
 
     fallback_version = 'v2' if getattr(settings, 'HOME_V2_ENABLED', False) else 'v1'
-    if override_version is None:
-        if raw_version:
-            logger.warning(
-                "[HomeLayout] Invalid HOME_LAYOUT_VERSION=%r; falling back to %s",
-                raw_version,
-                fallback_version,
-            )
-        else:
-            logger.warning(
-                "[HomeLayout] HOME_LAYOUT_VERSION is unset; falling back to %s",
-                fallback_version,
-            )
-    return fallback_version
-
-
-def _get_home_authenticated_v6_source(request=None):
-    override_source = getattr(request, '_home_authenticated_v6_source_override', None) if request is not None else None
-    raw_source = (
-        override_source
-        if override_source is not None
-        else getattr(settings, 'HOME_AUTHENTICATED_V6_SOURCE', HOME_AUTHENTICATED_V6_SOURCE_DEFAULT)
-    )
-    normalized_source = _normalize_home_authenticated_v6_source(raw_source)
-    if (
-        override_source is None
-        and str(raw_source or '').strip().lower() not in HOME_AUTHENTICATED_V6_SOURCE_CHOICES
-    ):
+    if raw_version:
         logger.warning(
-            "[HomeLayout] Invalid HOME_AUTHENTICATED_V6_SOURCE=%r; falling back to %s",
-            raw_source,
-            normalized_source,
+            "[HomeLayout] Invalid HOME_LAYOUT_VERSION=%r; falling back to %s",
+            raw_version,
+            fallback_version,
         )
-    return normalized_source
-
-
-def _is_home_v6_preview_allowed(request):
-    return bool(
-        getattr(settings, 'DEBUG', False)
-        or getattr(request.user, 'is_staff', False)
-        or getattr(request.user, 'is_superuser', False)
-    )
+    else:
+        logger.warning(
+            "[HomeLayout] HOME_LAYOUT_VERSION is unset; falling back to %s",
+            fallback_version,
+        )
+    return fallback_version
 
 
 def _get_teacher_buddy_home_context(user):
@@ -3520,22 +3471,8 @@ def _home_v5(request, products, posts, page_obj, feed_scope, pinned_notice_posts
     )
 
 
-def _home_v6_legacy(request, products, posts, page_obj, feed_scope, pinned_notice_posts):
-    """현재 운영 중인 V6 인증 홈 레거시 렌더러."""
-    return _build_home_authenticated_v4_response(
-        request,
-        products,
-        posts,
-        page_obj,
-        feed_scope,
-        pinned_notice_posts,
-        template_name='core/home_authenticated_v5.html',
-        home_design_version='v6',
-    )
-
-
-def _home_v6_canonical(request, products, posts, page_obj, feed_scope, pinned_notice_posts):
-    """V6 무변화 통합을 위한 canonical 인증 홈 렌더러."""
+def _home_v6(request, products, posts, page_obj, feed_scope, pinned_notice_posts):
+    """로그인 홈의 단일 canonical V6 렌더러."""
     return _build_home_authenticated_v4_response(
         request,
         products,
@@ -3546,23 +3483,6 @@ def _home_v6_canonical(request, products, posts, page_obj, feed_scope, pinned_no
         template_name='core/home_authenticated_v6_canonical.html',
         home_design_version='v6',
     )
-
-
-def _home_v6(request, products, posts, page_obj, feed_scope, pinned_notice_posts):
-    """V6 인증 홈 렌더러를 내부 소스 스위치로 선택한다."""
-    if _get_home_authenticated_v6_source(request) == HOME_AUTHENTICATED_V6_SOURCE_CANONICAL:
-        return _home_v6_canonical(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
-    return _home_v6_legacy(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
-
-
-@login_required
-def home_v6_canonical_preview(request):
-    if not _is_home_v6_preview_allowed(request):
-        raise Http404
-
-    request._home_layout_version_override = 'v6'
-    request._home_authenticated_v6_source_override = HOME_AUTHENTICATED_V6_SOURCE_CANONICAL
-    return home(request)
 
 
 def home(request):
@@ -3597,7 +3517,10 @@ def home(request):
             pinned_notice_posts=pinned_notice_posts,
         )
 
-    home_layout_version = _get_home_layout_version(request)
+    if request.user.is_authenticated:
+        return _home_v6(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
+
+    home_layout_version = _get_home_layout_version()
 
     if home_layout_version == 'v4':
         if request.user.is_authenticated:
@@ -3617,33 +3540,6 @@ def home(request):
     # V2 홈: Feature flag on 시 분기
     if home_layout_version == 'v2':
         return _home_v2(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
-
-    # If user is logged in, show the "dashboard-style" authenticated home
-    if request.user.is_authenticated:
-        # Ensure profile exists to prevent 500 errors for legacy users
-        UserProfile.objects.get_or_create(user=request.user)
-
-        from django.db.models import Q
-        # Get IDs of products explicitly owned by the user
-        owned_ids = request.user.owned_products.values_list('product_id', flat=True)
-        # Filter products that are either owned or free, and exclude specific ones
-        available_products = products.filter(
-            Q(id__in=owned_ids) | Q(price=0)
-        ).exclude(
-            Q(title__icontains="인사이트") | Q(title__icontains="사주")
-        ).distinct()
-        available_products = _attach_product_launch_meta(list(available_products), user=request.user)
-
-        return render(request, 'core/home_authenticated.html', {
-            'products': available_products,
-            'posts': page_obj,
-            'page_obj': page_obj,
-            'pinned_notice_posts': pinned_notice_posts,
-            'feed_scope': feed_scope,
-            'teacher_buddy_current_avatar': build_teacher_buddy_avatar_context(request.user),
-            'sns_compose_prefill': _get_sns_compose_prefill(request),
-            **build_home_page_seo(request).as_context(),
-        })
 
     # Else show the public home
     products = _attach_product_launch_meta(list(products), user=request.user)
