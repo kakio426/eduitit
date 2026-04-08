@@ -1,6 +1,7 @@
 <section
-    class="home-v4-card home-schoolcomm-card"
+    class="{% if home_design_version == 'v6' %}home-v6-card home-schoolcomm-card home-v6-schoolcomm-card{% else %}home-v4-card home-schoolcomm-card{% endif %}"
     data-home-schoolcomm-card="desktop"
+    {% if home_design_version == 'v6' %}data-home-v6-schoolcomm-card="desktop"{% endif %}
 >
     <div class="home-schoolcomm-card-head">
         <div class="home-schoolcomm-card-heading">

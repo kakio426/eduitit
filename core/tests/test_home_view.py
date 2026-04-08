@@ -3252,6 +3252,39 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('data-home-v6-rail-item="true"', content)
         self.assertIn('data-home-v6-rail-action="true"', content)
 
+    def test_v6_schoolcomm_card_uses_v6_markup_and_styles(self):
+        user = self._login('v6schoolcomm')
+        ProductFavorite.objects.create(user=user, product=self.favorite_product, pin_order=1)
+
+        with patch(
+            'core.views._build_home_schoolcomm_card',
+            return_value={
+                'title': '끼리끼리 채팅방',
+                'workspace_name': '현암초 3학년 끼리',
+                'summary': '미확인 0건 · 추천 0건',
+                'total_unread': 0,
+                'notice_unread': 0,
+                'suggestion_count': 0,
+                'open_url': reverse('home'),
+                'manage_url': reverse('home'),
+                'secondary_url': reverse('home'),
+                'secondary_label': '자료공유 열기',
+            },
+        ):
+            response = self.client.get(reverse('home'))
+
+        content = response.content.decode('utf-8')
+        css = (Path(settings.BASE_DIR) / 'core' / 'static' / 'core' / 'css' / 'home_authenticated_v6.css').read_text(encoding='utf-8')
+
+        self.assertEqual(response.context['home_design_version'], 'v6')
+        self.assertIn('data-home-v6-schoolcomm-card="desktop"', content)
+        self.assertIn('home-v6-schoolcomm-card', content)
+        self.assertNotIn('class="home-v4-card home-schoolcomm-card"', content)
+        self.assertIn('.home-v6-page .home-schoolcomm-card-head', css)
+        self.assertIn('.home-v6-page .home-schoolcomm-card-primary', css)
+        self.assertIn('--home-v6-radius-panel:', css)
+        self.assertIn('.home-v6-page .home-v6-top-sns #feed-scroll-container > *', css)
+
     @override_settings(HOME_LAYOUT_VERSION='v2', HOME_V2_ENABLED=True)
     def test_authenticated_home_uses_canonical_v6_even_when_env_requests_v2(self):
         user = self._login('v6canonical')
