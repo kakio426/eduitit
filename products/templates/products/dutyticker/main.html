@@ -316,6 +316,21 @@
         --dt-cycle-focus-pill-text: #7c2d12;
         --dt-cycle-focus-label: #9a3412;
         --dt-cycle-focus-flash: rgba(254, 240, 138, 0.34);
+        --dt-quick-modal-shell-bg: rgba(255, 255, 255, 0.97);
+        --dt-quick-modal-shell-border: rgba(154, 52, 18, 0.18);
+        --dt-quick-modal-shell-shadow: rgba(154, 52, 18, 0.18);
+        --dt-quick-modal-section-bg: rgba(255, 247, 237, 0.96);
+        --dt-quick-modal-section-border: rgba(211, 191, 165, 0.82);
+        --dt-quick-modal-card-bg: rgba(255, 255, 255, 0.98);
+        --dt-quick-modal-card-border: rgba(154, 52, 18, 0.14);
+        --dt-quick-modal-card-hover: rgba(255, 237, 213, 0.98);
+        --dt-quick-modal-subcard-bg: rgba(255, 247, 237, 0.92);
+        --dt-quick-modal-input-bg: rgba(255, 255, 255, 0.98);
+        --dt-quick-modal-input-border: rgba(154, 52, 18, 0.22);
+        --dt-quick-modal-selected-from: #ffedd5;
+        --dt-quick-modal-selected-to: #fff7ed;
+        --dt-quick-modal-selected-border: #fb923c;
+        --dt-quick-modal-selected-shadow: rgba(251, 146, 60, 0.18);
     }
 
     html[data-theme="pastel"] {
@@ -399,6 +414,21 @@
         --dt-cycle-focus-pill-text: #115e59;
         --dt-cycle-focus-label: #0f766e;
         --dt-cycle-focus-flash: rgba(153, 246, 228, 0.32);
+        --dt-quick-modal-shell-bg: rgba(248, 255, 251, 0.97);
+        --dt-quick-modal-shell-border: rgba(15, 118, 110, 0.16);
+        --dt-quick-modal-shell-shadow: rgba(15, 118, 110, 0.12);
+        --dt-quick-modal-section-bg: rgba(236, 253, 245, 0.96);
+        --dt-quick-modal-section-border: rgba(110, 231, 183, 0.62);
+        --dt-quick-modal-card-bg: rgba(255, 255, 255, 0.98);
+        --dt-quick-modal-card-border: rgba(15, 118, 110, 0.12);
+        --dt-quick-modal-card-hover: rgba(220, 252, 231, 0.98);
+        --dt-quick-modal-subcard-bg: rgba(209, 250, 229, 0.72);
+        --dt-quick-modal-input-bg: rgba(255, 255, 255, 0.98);
+        --dt-quick-modal-input-border: rgba(15, 118, 110, 0.2);
+        --dt-quick-modal-selected-from: #ccfbf1;
+        --dt-quick-modal-selected-to: #ecfeff;
+        --dt-quick-modal-selected-border: #14b8a6;
+        --dt-quick-modal-selected-shadow: rgba(20, 184, 166, 0.16);
     }
 
     html[data-theme="vivid"] {
@@ -482,6 +512,92 @@
         --dt-cycle-focus-pill-text: #881337;
         --dt-cycle-focus-label: #9d174d;
         --dt-cycle-focus-flash: rgba(254, 205, 211, 0.34);
+        --dt-quick-modal-shell-bg: rgba(255, 252, 247, 0.97);
+        --dt-quick-modal-shell-border: rgba(190, 24, 93, 0.18);
+        --dt-quick-modal-shell-shadow: rgba(190, 24, 93, 0.16);
+        --dt-quick-modal-section-bg: rgba(255, 241, 242, 0.94);
+        --dt-quick-modal-section-border: rgba(251, 113, 133, 0.38);
+        --dt-quick-modal-card-bg: rgba(255, 255, 255, 0.98);
+        --dt-quick-modal-card-border: rgba(190, 24, 93, 0.16);
+        --dt-quick-modal-card-hover: rgba(255, 228, 230, 0.98);
+        --dt-quick-modal-subcard-bg: rgba(255, 237, 213, 0.9);
+        --dt-quick-modal-input-bg: rgba(255, 255, 255, 0.98);
+        --dt-quick-modal-input-border: rgba(190, 24, 93, 0.24);
+        --dt-quick-modal-selected-from: #fff1f2;
+        --dt-quick-modal-selected-to: #ffe4e6;
+        --dt-quick-modal-selected-border: #fb7185;
+        --dt-quick-modal-selected-shadow: rgba(244, 63, 94, 0.18);
+    }
+
+    html[data-theme="sunny"] #missionQuickPhraseModal .dt-quick-modal-shell,
+    html[data-theme="pastel"] #missionQuickPhraseModal .dt-quick-modal-shell,
+    html[data-theme="vivid"] #missionQuickPhraseModal .dt-quick-modal-shell {
+        background: var(--dt-quick-modal-shell-bg) !important;
+        border-color: var(--dt-quick-modal-shell-border) !important;
+        box-shadow: 0 28px 60px var(--dt-quick-modal-shell-shadow) !important;
+    }
+
+    html[data-theme="sunny"] #missionQuickPhraseModal .dt-quick-modal-section,
+    html[data-theme="pastel"] #missionQuickPhraseModal .dt-quick-modal-section,
+    html[data-theme="vivid"] #missionQuickPhraseModal .dt-quick-modal-section {
+        background: var(--dt-quick-modal-section-bg) !important;
+        border-color: var(--dt-quick-modal-section-border) !important;
+    }
+
+    html[data-theme="sunny"] #missionQuickPhraseModal .dt-quick-modal-card,
+    html[data-theme="pastel"] #missionQuickPhraseModal .dt-quick-modal-card,
+    html[data-theme="vivid"] #missionQuickPhraseModal .dt-quick-modal-card,
+    html[data-theme="sunny"] #missionQuickPhraseModal #missionQuickPhraseList > div,
+    html[data-theme="pastel"] #missionQuickPhraseModal #missionQuickPhraseList > div,
+    html[data-theme="vivid"] #missionQuickPhraseModal #missionQuickPhraseList > div,
+    html[data-theme="sunny"] #missionQuickPhraseModal #missionQuickPhraseList .dt-phrase-list-item,
+    html[data-theme="pastel"] #missionQuickPhraseModal #missionQuickPhraseList .dt-phrase-list-item,
+    html[data-theme="vivid"] #missionQuickPhraseModal #missionQuickPhraseList .dt-phrase-list-item,
+    html[data-theme="sunny"] #missionQuickPhraseModal #missionAutomationSlotList > div,
+    html[data-theme="pastel"] #missionQuickPhraseModal #missionAutomationSlotList > div,
+    html[data-theme="vivid"] #missionQuickPhraseModal #missionAutomationSlotList > div {
+        background: var(--dt-quick-modal-card-bg) !important;
+        border-color: var(--dt-quick-modal-card-border) !important;
+    }
+
+    html[data-theme="sunny"] #missionQuickPhraseModal #missionQuickPhraseList .dt-phrase-list-item:hover,
+    html[data-theme="pastel"] #missionQuickPhraseModal #missionQuickPhraseList .dt-phrase-list-item:hover,
+    html[data-theme="vivid"] #missionQuickPhraseModal #missionQuickPhraseList .dt-phrase-list-item:hover,
+    html[data-theme="sunny"] #missionQuickPhraseModal #missionAutomationToggleBtn:hover,
+    html[data-theme="pastel"] #missionQuickPhraseModal #missionAutomationToggleBtn:hover,
+    html[data-theme="vivid"] #missionQuickPhraseModal #missionAutomationToggleBtn:hover {
+        background: var(--dt-quick-modal-card-hover) !important;
+    }
+
+    html[data-theme="sunny"] #missionQuickPhraseModal .dt-quick-modal-subcard,
+    html[data-theme="pastel"] #missionQuickPhraseModal .dt-quick-modal-subcard,
+    html[data-theme="vivid"] #missionQuickPhraseModal .dt-quick-modal-subcard,
+    html[data-theme="sunny"] #missionQuickPhraseModal #missionAutomationActiveStatus,
+    html[data-theme="pastel"] #missionQuickPhraseModal #missionAutomationActiveStatus,
+    html[data-theme="vivid"] #missionQuickPhraseModal #missionAutomationActiveStatus,
+    html[data-theme="sunny"] #missionQuickPhraseModal #missionAutomationSlotList > div > div:nth-of-type(2),
+    html[data-theme="pastel"] #missionQuickPhraseModal #missionAutomationSlotList > div > div:nth-of-type(2),
+    html[data-theme="vivid"] #missionQuickPhraseModal #missionAutomationSlotList > div > div:nth-of-type(2),
+    html[data-theme="sunny"] #missionQuickPhraseModal #missionAutomationSlotList label,
+    html[data-theme="pastel"] #missionQuickPhraseModal #missionAutomationSlotList label,
+    html[data-theme="vivid"] #missionQuickPhraseModal #missionAutomationSlotList label {
+        background: var(--dt-quick-modal-subcard-bg) !important;
+        border-color: var(--dt-quick-modal-card-border) !important;
+    }
+
+    html[data-theme="sunny"] #missionQuickPhraseModal .dt-quick-modal-input,
+    html[data-theme="pastel"] #missionQuickPhraseModal .dt-quick-modal-input,
+    html[data-theme="vivid"] #missionQuickPhraseModal .dt-quick-modal-input {
+        background: var(--dt-quick-modal-input-bg) !important;
+        border-color: var(--dt-quick-modal-input-border) !important;
+    }
+
+    html[data-theme="sunny"] #missionQuickPhraseModal .dt-phrase-list-item.is-selected,
+    html[data-theme="pastel"] #missionQuickPhraseModal .dt-phrase-list-item.is-selected,
+    html[data-theme="vivid"] #missionQuickPhraseModal .dt-phrase-list-item.is-selected {
+        border-color: var(--dt-quick-modal-selected-border) !important;
+        background: linear-gradient(180deg, var(--dt-quick-modal-selected-from), var(--dt-quick-modal-selected-to)) !important;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.46), 0 16px 34px var(--dt-quick-modal-selected-shadow) !important;
     }
 
     html[data-theme="sunny"] #mainAppContainer,
@@ -3672,7 +3788,7 @@
     <div id="missionQuickPhraseModal" role="dialog" aria-modal="true" aria-labelledby="missionQuickModalTitle"
         class="fixed inset-0 z-[225] hidden items-start justify-center overflow-y-auto bg-slate-950/82 px-4 py-4 opacity-0 backdrop-blur-md transition-opacity duration-300 md:items-center md:py-8"
         onclick="if (event.target === this) window.dtApp.closeMissionQuickPhraseModal()">
-        <div class="my-auto flex max-h-[calc(100vh-2rem)] w-full max-w-5xl min-h-0 flex-col rounded-[2rem] border border-indigo-300/20 bg-slate-900/92 p-5 shadow-2xl md:max-h-[calc(100vh-4rem)] md:p-7">
+        <div class="dt-quick-modal-shell my-auto flex max-h-[calc(100vh-2rem)] w-full max-w-5xl min-h-0 flex-col rounded-[2rem] border border-indigo-300/20 bg-slate-900/92 p-5 shadow-2xl md:max-h-[calc(100vh-4rem)] md:p-7">
             <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-5">
                 <div>
                     <h3 id="missionQuickModalTitle" class="text-2xl md:text-3xl font-black text-white flex items-center gap-3">
@@ -3689,14 +3805,14 @@
             </div>
 
             <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-1">
-                <section class="rounded-[1.6rem] border border-slate-700/70 bg-slate-950/35 p-4 md:p-5">
+                <section class="dt-quick-modal-section rounded-[1.6rem] border border-slate-700/70 bg-slate-950/35 p-4 md:p-5">
                     <div>
                         <p class="text-sm font-black text-white">저장 문구</p>
                         <p id="missionPhrasePanelSummary" class="mt-1 text-xs text-slate-400">저장한 문구를 바로 고르고 수정할 수 있습니다.</p>
                     </div>
 
                     <div id="missionPhrasePanelBody" class="mt-4 grid min-h-0 grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
-                        <section class="rounded-[1.6rem] border border-slate-700/70 bg-slate-950/35 p-4 md:p-5 min-h-[20rem] flex flex-col">
+                        <section class="dt-quick-modal-section rounded-[1.6rem] border border-slate-700/70 bg-slate-950/35 p-4 md:p-5 min-h-[20rem] flex flex-col">
                             <div class="flex items-center justify-between gap-3 mb-3">
                                 <div>
                                     <p class="text-sm font-black text-white">저장 목록</p>
@@ -3712,7 +3828,7 @@
                             </div>
                         </section>
 
-                        <section class="rounded-[1.6rem] border border-slate-700/70 bg-slate-950/35 p-4 md:p-5 min-h-[20rem] flex flex-col gap-4">
+                        <section class="dt-quick-modal-section rounded-[1.6rem] border border-slate-700/70 bg-slate-950/35 p-4 md:p-5 min-h-[20rem] flex flex-col gap-4">
                             <div>
                                 <p class="text-sm font-black text-white">문구 편집</p>
                                 <p id="missionQuickModalHint" class="text-xs text-slate-400 mt-1" aria-live="polite">현재 문구를 불러오거나 저장 문구를 선택해 편집하세요.</p>
@@ -3721,13 +3837,13 @@
                                 <label class="grid gap-1.5">
                                     <span class="text-xs font-black text-slate-300 uppercase tracking-[0.14em]">제목</span>
                                     <input id="missionQuickTitleInput" type="text" maxlength="200"
-                                        class="w-full rounded-2xl border border-slate-600 bg-slate-900/80 px-4 py-3 text-lg font-black text-white focus:outline-none focus:border-indigo-400"
+                                        class="dt-quick-modal-input w-full rounded-2xl border border-slate-600 bg-slate-900/80 px-4 py-3 text-lg font-black text-white focus:outline-none focus:border-indigo-400"
                                         placeholder="예: 국어 활동" />
                                 </label>
                                 <label class="grid gap-1.5">
                                     <span class="text-xs font-black text-slate-300 uppercase tracking-[0.14em]">설명</span>
                                     <textarea id="missionQuickDescInput" rows="5" maxlength="400"
-                                        class="w-full rounded-2xl border border-slate-600 bg-slate-900/80 px-4 py-3 text-base font-bold text-slate-100 focus:outline-none focus:border-indigo-400 resize-none"
+                                        class="dt-quick-modal-input w-full rounded-2xl border border-slate-600 bg-slate-900/80 px-4 py-3 text-base font-bold text-slate-100 focus:outline-none focus:border-indigo-400 resize-none"
                                         placeholder="예: 교과서 24~25쪽 문제 풀기"></textarea>
                                 </label>
                             </div>
@@ -3757,7 +3873,7 @@
                     </div>
                 </section>
 
-                <section class="mt-5 rounded-[1.6rem] border border-slate-700/70 bg-slate-950/35 p-4 md:p-5">
+                <section class="dt-quick-modal-section mt-5 rounded-[1.6rem] border border-slate-700/70 bg-slate-950/35 p-4 md:p-5">
                     <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                         <div>
                             <div class="flex flex-wrap items-center gap-2">
@@ -3767,7 +3883,7 @@
                                     자동 0칸 ON / 전체 0칸
                                 </span>
                                 <span id="missionAutomationActiveStatus"
-                                    class="inline-flex items-center rounded-full border border-slate-600 bg-slate-900/75 px-2.5 py-1 text-[11px] font-black tracking-[0.08em] text-slate-300">
+                                    class="dt-quick-modal-subcard inline-flex items-center rounded-full border border-slate-600 bg-slate-900/75 px-2.5 py-1 text-[11px] font-black tracking-[0.08em] text-slate-300">
                                     현재 적용 없음
                                 </span>
                             </div>
@@ -3777,15 +3893,15 @@
                         </div>
                         <div class="flex flex-wrap gap-2">
                             <button id="missionAutomationToggleBtn" type="button" aria-controls="missionAutomationPanelBody" aria-expanded="false"
-                                class="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-600 bg-slate-900/75 px-4 py-3 text-sm font-black text-slate-100 transition hover:bg-slate-800">
+                                class="dt-quick-modal-card inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-600 bg-slate-900/75 px-4 py-3 text-sm font-black text-slate-100 transition hover:bg-slate-800">
                                 <i class="fa-solid fa-chevron-down"></i>
                                 시간별 예외 열기
                             </button>
                         </div>
                     </div>
 
-                    <div class="mt-4 rounded-[1.2rem] border border-slate-700/70 bg-slate-900/70 p-4">
-                        <div class="rounded-[1.2rem] border border-slate-700/70 bg-slate-950/45 p-4">
+                    <div class="dt-quick-modal-card mt-4 rounded-[1.2rem] border border-slate-700/70 bg-slate-900/70 p-4">
+                        <div class="dt-quick-modal-subcard rounded-[1.2rem] border border-slate-700/70 bg-slate-950/45 p-4">
                             <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                                 <div class="min-w-0">
                                     <p class="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">자동 적용 문구</p>
@@ -3807,7 +3923,7 @@
                     </div>
 
                     <div id="missionAutomationPanelBody" class="hidden mt-4">
-                        <div class="rounded-[1.2rem] border border-slate-700/70 bg-slate-900/70 p-4">
+                        <div class="dt-quick-modal-section rounded-[1.2rem] border border-slate-700/70 bg-slate-900/70 p-4">
                             <div>
                                 <p class="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">시간별 예외 설정</p>
                                 <p class="mt-1 text-xs font-bold text-slate-500">기본은 시간표 전체 자동 적용으로 두고, 필요한 시간칸만 따로 바꾸거나 잠시 끌 수 있습니다.</p>

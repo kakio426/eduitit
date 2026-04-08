@@ -106,6 +106,11 @@ class DutyTickerTimerUiTests(TestCase):
         self.assertContains(response, '--dt-role-assignee-border: #67e8f9;')
         self.assertContains(response, '--dt-role-assignee-bg: #f5f3ff;')
         self.assertContains(response, '--dt-role-assignee-border: #c084fc;')
+        self.assertContains(response, '--dt-quick-modal-shell-bg: rgba(255, 255, 255, 0.97);')
+        self.assertContains(response, '--dt-quick-modal-section-bg: rgba(236, 253, 245, 0.96);')
+        self.assertContains(response, '--dt-quick-modal-selected-border: #fb7185;')
+        self.assertContains(response, 'dt-quick-modal-shell')
+        self.assertContains(response, 'dt-quick-modal-input')
         self.assertNotContains(response, '천리 길도 한 걸음부터')
         self.assertNotContains(response, 'id="breakAutoOpenBtn"')
 
