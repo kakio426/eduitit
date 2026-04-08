@@ -48,9 +48,7 @@
                     ? form.querySelector('textarea[name="text"]')
                     : document.querySelector(
                         '[data-home-v6-quickdrop-form="true"] textarea[name="text"], ' +
-                        '[data-home-v6-mobile-quickdrop-form="true"] textarea[name="text"], ' +
-                        '[data-home-v4-quickdrop-form="true"] textarea[name="text"], ' +
-                        '[data-home-v4-mobile-quickdrop-form="true"] textarea[name="text"]'
+                        '[data-home-v6-mobile-quickdrop-form="true"] textarea[name="text"]'
                     );
                 if (scopedInput && typeof scopedInput.focus === 'function') {
                     scopedInput.focus();
@@ -138,8 +136,6 @@
             },
         };
     };
-
-    window.homeV4Shell = window.homeV6Shell;
 
     function launchCard(card) {
         var href = card.dataset.launchHref || (card.dataset.productId ? '/products/' + card.dataset.productId + '/' : '');
