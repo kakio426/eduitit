@@ -1035,6 +1035,14 @@ class ArtClassDeleteTest(TestCase):
             user=self.staff,
             defaults={"nickname": "관리교사", "role": "school"},
         )
+        UserPolicyConsent.objects.create(
+            user=self.staff,
+            provider="direct",
+            terms_version=TERMS_VERSION,
+            privacy_version=PRIVACY_VERSION,
+            agreed_at=timezone.now(),
+            agreement_source="required_gate",
+        )
         self.art_class = ArtClass.objects.create(
             title="삭제 테스트 수업",
             youtube_url="https://www.youtube.com/watch?v=2bBhnfh4StU",
@@ -1046,6 +1054,17 @@ class ArtClassDeleteTest(TestCase):
         self.client.force_login(self.owner)
         response = self.client.post(reverse("artclass:delete", kwargs={"pk": self.art_class.pk}))
         self.assertRedirects(response, reverse("artclass:library"))
+        self.assertFalse(ArtClass.objects.filter(pk=self.art_class.pk).exists())
+
+    def test_owner_delete_respects_return_anchor(self):
+        self.client.force_login(self.owner)
+        response = self.client.post(
+            reverse("artclass:delete", kwargs={"pk": self.art_class.pk}),
+            data={"next": f"{reverse('artclass:library')}#my-classes"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], f"{reverse('artclass:library')}#my-classes")
         self.assertFalse(ArtClass.objects.filter(pk=self.art_class.pk).exists())
 
     def test_staff_can_delete_class(self):
@@ -1065,6 +1084,17 @@ class ArtClassDeleteTest(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertTrue(ArtClass.objects.filter(pk=self.art_class.pk).exists())
 
+    def test_delete_missing_class_redirects_without_not_found(self):
+        self.client.force_login(self.owner)
+        response = self.client.post(
+            reverse("artclass:delete", kwargs={"pk": self.art_class.pk + 999}),
+            data={"next": f"{reverse('artclass:library')}#my-classes"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], f"{reverse('artclass:library')}#my-classes")
+        self.assertTrue(ArtClass.objects.filter(pk=self.art_class.pk).exists())
+
 
 class ArtClassV2SetupFlowTest(TestCase):
     def test_setup_route_renders_v2_home_and_links(self):
@@ -1073,8 +1103,36 @@ class ArtClassV2SetupFlowTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "순서대로 따라가며 미술 수업을 만듭니다")
         self.assertContains(response, reverse("artclass:create_url"))
-        self.assertContains(response, reverse("artclass:library"))
+        self.assertContains(response, f'{reverse("artclass:library")}#shared-classes')
         self.assertContains(response, reverse("artclass:legacy_setup"))
+        self.assertContains(response, "함께 보는 공개 수업")
+        self.assertNotContains(response, "내가 만든 수업 보기")
+
+    def test_setup_route_shows_my_class_shortcut_for_logged_in_teacher(self):
+        user = User.objects.create_user(
+            username="setup_home_user",
+            password="pw123456",
+            email="setup_home_user@example.com",
+        )
+        UserProfile.objects.update_or_create(
+            user=user,
+            defaults={"nickname": "홈교사", "role": "school"},
+        )
+        UserPolicyConsent.objects.create(
+            user=user,
+            provider="direct",
+            terms_version=TERMS_VERSION,
+            privacy_version=PRIVACY_VERSION,
+            agreed_at=timezone.now(),
+            agreement_source="required_gate",
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("artclass:setup"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "내가 만든 수업 보기")
+        self.assertContains(response, f'{reverse("artclass:library")}#my-classes')
 
     def test_library_keeps_legacy_setup_fallback_link(self):
         response = self.client.get(reverse("artclass:library"))
@@ -1098,6 +1156,8 @@ class ArtClassV2SetupFlowTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "복사하고 제미나이 열기")
+        self.assertContains(response, "다음: 답변 불러오기")
+        self.assertNotContains(response, "프롬프트만 복사")
         self.assertEqual(response.context["manual_prompt_template"], build_manual_pipeline_prompt(video_url))
 
     def test_create_review_requires_valid_video_url_on_get(self):
@@ -1196,7 +1256,8 @@ class ArtClassSetupEditTest(TestCase):
         self.assertNotContains(response, "처음이라면 이렇게 시작해 보세요")
         self.assertNotContains(response, "설치가 필요한 경우 보기")
         self.assertContains(response, "프롬프트 복사하고 제미나이 열기")
-        self.assertContains(response, "프롬프트만 복사")
+        self.assertContains(response, "복사한 답변 불러오기")
+        self.assertNotContains(response, "프롬프트만 복사")
         self.assertContains(response, "수업 준비를 저장하고 있어요")
         self.assertContains(response, "이미지나 자료 파일이 있으면 업로드 때문에 조금 더 걸릴 수 있어요.")
         self.assertNotContains(response, "샘플 영상으로 체험하기")
@@ -1810,6 +1871,18 @@ class ArtClassAutoMetadataTest(TestCase):
         self.assertEqual(my_titles, {my_private.display_title, my_shared.display_title})
         self.assertEqual(shared_titles, {my_shared.display_title, other_shared.display_title})
 
+    def test_library_shows_shortcuts_to_my_and_shared_sections(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(reverse("artclass:library"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="my-classes"', html=False)
+        self.assertContains(response, 'id="shared-classes"', html=False)
+        self.assertContains(response, 'href="#my-classes"', html=False)
+        self.assertContains(response, 'href="#shared-classes"', html=False)
+        self.assertContains(response, "내 수업 바로 보기")
+
     def test_library_shows_start_mode_badge_and_reason(self):
         art_class = ArtClass.objects.create(
             title="런처 권장 공개 수업",
@@ -1859,6 +1932,50 @@ class ArtClassAutoMetadataTest(TestCase):
         self.assertContains(response, reverse("artclass:shared"))
         self.assertContains(response, "링크를 받은 선생님은 로그인 후 자기 수업으로 바로 가져갑니다.")
         self.assertEqual(response.content.decode("utf-8").count("data-share-url="), 1)
+
+    def test_library_my_classes_show_youtube_thumbnail(self):
+        self.client.force_login(self.owner)
+        my_class = ArtClass.objects.create(
+            title="썸네일 확인 수업",
+            youtube_url="https://www.youtube.com/watch?v=2bBhnfh4StU",
+            default_interval=10,
+            created_by=self.owner,
+            is_shared=False,
+        )
+
+        response = self.client.get(reverse("artclass:library"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, my_class.display_title)
+        self.assertContains(response, "https://img.youtube.com/vi/2bBhnfh4StU/maxresdefault.jpg")
+
+    def test_library_my_classes_prefer_first_step_over_auto_generated_title(self):
+        self.client.force_login(self.owner)
+        my_class = ArtClass.objects.create(
+            title="",
+            youtube_url="https://www.youtube.com/watch?v=2bBhnfh4StU",
+            default_interval=10,
+            created_by=self.owner,
+            is_shared=False,
+        )
+        ArtStep.objects.create(
+            art_class=my_class,
+            step_number=1,
+            description="도화지에 크게 꽃병 윤곽을 그리고 중심 모양을 정한다.",
+        )
+        ArtStep.objects.create(
+            art_class=my_class,
+            step_number=2,
+            description="물감으로 배경을 채우고 꽃무늬를 더한다.",
+        )
+        apply_auto_metadata(my_class)
+        my_class.refresh_from_db()
+
+        response = self.client.get(reverse("artclass:library"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "도화지에 크게 꽃병 윤곽을 그리고 중심 모양을 정한다.")
+        self.assertNotContains(response, my_class.display_title)
 
     def test_library_uses_single_install_guide_link(self):
         response = self.client.get(reverse("artclass:library"))

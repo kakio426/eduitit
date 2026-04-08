@@ -36,6 +36,18 @@
             <div class="space-y-4">
                 <h1 class="text-4xl md:text-5xl font-black text-gray-800 tracking-tight">미술 수업 도서관</h1>
                 <p class="text-xl text-gray-500 font-bold">내 수업과 공개 수업을 봅니다.</p>
+                <div class="flex flex-wrap gap-2">
+                    {% if user.is_authenticated %}
+                    <a href="#my-classes"
+                        class="inline-flex items-center justify-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-black text-violet-700 hover:border-violet-300 hover:bg-violet-100 transition-all">
+                        <i class="fa-solid fa-folder-open"></i> 내 수업 바로 보기
+                    </a>
+                    {% endif %}
+                    <a href="#shared-classes"
+                        class="inline-flex items-center justify-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-black text-indigo-700 hover:border-indigo-300 hover:bg-indigo-100 transition-all">
+                        <i class="fa-solid fa-book-open"></i> 공개 수업 보기
+                    </a>
+                </div>
                 <a href="{% url 'artclass:setup' %}"
                     class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-[1.4rem] bg-purple-600 text-white text-base font-black shadow-lg shadow-purple-200 hover:bg-purple-700 transition-all">
                     <i class="fa-solid fa-plus"></i> 새 수업 만들기
@@ -80,7 +92,7 @@
         </div>
 
         {% if user.is_authenticated %}
-        <section class="mb-14 px-2">
+        <section id="my-classes" class="mb-14 scroll-mt-32 px-2">
             <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
                 <div>
                     <p class="text-sm font-black uppercase tracking-[0.24em] text-purple-500">My Classes</p>
@@ -95,6 +107,28 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {% for item in my_classes %}
                 <article class="clay-card p-6 bg-white/90 flex flex-col gap-5">
+                    <div class="relative aspect-video overflow-hidden rounded-[1.8rem] border border-slate-200">
+                        {% if item.thumbnail_url %}
+                        <img src="{{ item.thumbnail_url }}"
+                            onerror="this.src='{{ item.thumbnail_fallback_url }}'"
+                            alt="{{ item.my_class_display_title|default:item.display_title }}" loading="lazy" class="h-full w-full object-cover">
+                        {% else %}
+                        <div class="h-full w-full bg-gradient-to-br from-slate-900 via-indigo-900 to-sky-700 text-white flex flex-col items-start justify-end p-5">
+                            <span class="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em]">
+                                <i class="fa-solid fa-up-right-from-square"></i> 외부 영상
+                            </span>
+                            <p class="mt-3 text-lg font-black leading-snug break-all">{{ item.video_host_label }}</p>
+                        </div>
+                        {% endif %}
+                        <div class="absolute inset-x-0 bottom-0 flex items-center justify-between gap-3 bg-gradient-to-t from-black/65 via-black/20 to-transparent px-4 py-3 text-white">
+                            <span class="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em]">
+                                {{ item.video_host_label }}
+                            </span>
+                            <span class="text-[11px] font-black tracking-[0.18em] uppercase text-white/90">
+                                {{ item.created_at|date:"Y.m.d" }}
+                            </span>
+                        </div>
+                    </div>
                     <div class="space-y-3">
                         <div class="flex flex-wrap items-center gap-2">
                             <span class="text-[10px] font-black tracking-widest uppercase {% if item.is_shared %}text-emerald-700 bg-emerald-100{% else %}text-amber-700 bg-amber-100{% endif %} px-2.5 py-1 rounded-lg">
@@ -108,11 +142,8 @@
                                 자료 {{ item.attachment_count }}개
                             </span>
                             {% endif %}
-                            <span class="text-[10px] font-black tracking-widest uppercase text-gray-400">
-                                {{ item.created_at|date:"Y.m.d" }}
-                            </span>
                         </div>
-                        <h3 class="text-2xl font-black text-gray-800 leading-snug break-keep">{{ item.display_title }}</h3>
+                        <h3 class="text-2xl font-black text-gray-800 leading-snug break-keep">{{ item.my_class_display_title|truncatechars:72 }}</h3>
                         {% if item.auto_tags %}
                         <div class="flex flex-wrap gap-1.5">
                             {% for tag in item.auto_tags|slice:":4" %}
@@ -140,6 +171,7 @@
                         {% endif %}
                         <form method="post" action="{% url 'artclass:delete' pk=item.pk %}">
                             {% csrf_token %}
+                            <input type="hidden" name="next" value="{% url 'artclass:library' %}#my-classes">
                             <button type="submit"
                                 class="w-full rounded-2xl border-2 border-red-100 px-3 py-3 text-sm font-black text-red-600 hover:border-red-300 hover:bg-red-50 transition-all">
                                 삭제
@@ -163,7 +195,7 @@
         </section>
         {% endif %}
 
-        <section class="px-2">
+        <section id="shared-classes" class="scroll-mt-32 px-2">
             <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
                 <div>
                     <p class="text-sm font-black uppercase tracking-[0.24em] text-indigo-500">Shared Library</p>
@@ -351,6 +383,7 @@
                 </details>
                 <form id="deleteForm" method="post" action="#" class="hidden">
                     {% csrf_token %}
+                    <input type="hidden" name="next" id="deleteNextInput" value="{% url 'artclass:library' %}#shared-classes">
                     <button type="submit"
                         onclick="return confirm('이 수업을 삭제할까요? 삭제 후에는 복구할 수 없습니다.');"
                         class="w-full flex items-center justify-center gap-3 py-5 bg-red-50 text-red-600 border-2 border-red-100 rounded-[2rem] text-xl font-black shadow-sm hover:border-red-300 hover:bg-red-100 hover:scale-[1.02] active:scale-95 transition-all">
@@ -453,6 +486,7 @@
         const backdrop = document.getElementById('choiceBackdrop');
         const panel = document.getElementById('choicePanel');
         const deleteForm = document.getElementById('deleteForm');
+        const deleteNextInput = document.getElementById('deleteNextInput');
         const modalThumb = document.getElementById('modalThumb');
         const recommendationEl = document.getElementById('modalRecommendation');
         const playLink = document.getElementById('playLink');
@@ -498,6 +532,9 @@
             : `/artclass/setup/from-library/${pk}/`;
         if (canDelete && deleteUrl) {
             deleteForm.action = deleteUrl;
+            if (deleteNextInput) {
+                deleteNextInput.value = '{% url "artclass:library" %}#shared-classes';
+            }
             deleteForm.classList.remove('hidden');
         } else {
             deleteForm.action = '#';

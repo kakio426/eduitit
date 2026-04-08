@@ -21,7 +21,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from core.utils import ratelimit_key_for_master_only
 from django.db.models import Count, Max, Q
 from .models import ArtClass, ArtClassAttachment, ArtStep
-from .classification import apply_auto_metadata, collect_popular_tags
+from .classification import apply_auto_metadata, build_auto_metadata, collect_popular_tags
 from .launcher_release import (
     LauncherReleaseError,
     LauncherReleaseValidationError,
@@ -574,6 +574,35 @@ def _decorate_artclass_library_item(item, request=None):
     item.video_host_label = preview["hostLabel"]
     item.thumbnail_url = preview["thumbnailUrl"]
     item.thumbnail_fallback_url = preview["thumbnailFallbackUrl"]
+    item.my_class_display_title = _resolve_my_class_library_title(item)
+
+
+def _resolve_my_class_library_title(item):
+    current_title = (item.title or "").strip()
+    if not current_title:
+        return item.display_title
+
+    prefetched = getattr(item, "_prefetched_objects_cache", {}).get("steps")
+    if prefetched is None:
+        return current_title
+
+    step_texts = [
+        str(getattr(step, "description", "") or "").strip()
+        for step in prefetched
+        if str(getattr(step, "description", "") or "").strip()
+    ]
+    if not step_texts:
+        return current_title
+
+    generated_title = build_auto_metadata(
+        title="",
+        youtube_url=item.youtube_url or "",
+        step_texts=step_texts,
+    ).suggested_title.strip()
+    if not generated_title or current_title != generated_title:
+        return current_title
+
+    return step_texts[0]
 
 
 def _clone_art_class_for_user(source, user, *, is_shared=False):
@@ -859,6 +888,21 @@ def _build_video_flow_url(route_name, video_url):
     if not trimmed:
         return base_url
     return f"{base_url}?{urlencode({'videoUrl': trimmed})}"
+
+
+def _get_safe_return_url(request, raw_target, fallback):
+    target = str(raw_target or "").strip()
+    if not target:
+        return fallback
+    if target.startswith("/"):
+        return target
+    if url_has_allowed_host_and_scheme(
+        target,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return target
+    return fallback
 
 
 def _render_legacy_setup_page(request, art_class=None, **kwargs):
@@ -1483,7 +1527,7 @@ def library_view(request):
     if request.user.is_authenticated:
         my_classes = list(
             ArtClass.objects.select_related('created_by', 'created_by__userprofile')
-            .prefetch_related("attachments")
+            .prefetch_related("attachments", "steps")
             .annotate(steps_count=Count('steps', distinct=True), attachment_count=Count('attachments', distinct=True))
             .filter(created_by=request.user)
             .distinct()
@@ -1583,14 +1627,20 @@ def shared_class_view(request):
 @require_POST
 def delete_class_view(request, pk):
     """라이브러리에서 미술 수업 삭제"""
-    art_class = get_object_or_404(ArtClass, pk=pk)
+    fallback_url = reverse("artclass:library")
+    return_url = _get_safe_return_url(request, request.POST.get("next"), fallback_url)
+    art_class = ArtClass.objects.filter(pk=pk).first()
+
+    if art_class is None:
+        messages.info(request, "이미 삭제된 수업입니다.")
+        return redirect(return_url)
 
     can_delete = request.user.is_staff or art_class.created_by_id == request.user.id
     if not can_delete:
         messages.error(request, "이 수업을 삭제할 권한이 없습니다.")
-        return redirect("artclass:library")
+        return redirect(return_url)
 
     title = art_class.title or f"수업 #{art_class.pk}"
     art_class.delete()
     messages.success(request, f'"{title}" 수업을 삭제했습니다.')
-    return redirect("artclass:library")
+    return redirect(return_url)

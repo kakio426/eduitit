@@ -269,12 +269,6 @@
                                         {% if is_v2_review %}제미나이 다시 열기{% else %}복사하고 제미나이 열기{% endif %}
                                     </button>
                                 </div>
-                                <div class="mt-3 flex flex-wrap gap-2">
-                                    <button type="button" id="btnCopyGeminiPrompt"
-                                        class="px-3 py-2 rounded-xl bg-white border border-indigo-200 text-indigo-700 text-xs font-heavy hover:bg-indigo-50 transition-all">
-                                        프롬프트만 복사
-                                    </button>
-                                </div>
                                 <details class="mt-3 rounded-xl bg-gray-50 border border-gray-200 p-3">
                                     <summary class="cursor-pointer text-sm font-bold text-gray-700">복사 프롬프트 보기</summary>
                                     <textarea id="geminiPromptBox" readonly
@@ -285,16 +279,16 @@
                             <div class="rounded-2xl bg-white border border-indigo-100 p-4">
                                 <div class="flex items-center justify-between gap-3">
                                     <div>
-                                        <p class="text-sm font-heavy text-gray-900">{% if is_v2_review %}제미나이 결과 붙여넣기{% else %}2) 답변 붙여넣기{% endif %}</p>
+                                        <p class="text-sm font-heavy text-gray-900">{% if is_v2_review %}복사한 제미나이 답변 불러오기{% else %}2) 복사한 답변 불러오기{% endif %}</p>
                                     </div>
                                     <button type="button" id="btnApplyGeminiResult"
                                         class="px-3 py-2 rounded-xl bg-emerald-600 text-white text-xs font-heavy hover:bg-emerald-700 transition-all">
-                                        지금 반영
+                                        복사한 답변 불러오기
                                     </button>
                                 </div>
                                 <textarea id="geminiResultInput"
                                     class="mt-3 w-full h-56 p-3 rounded-xl bg-white border-2 border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200 outline-none text-sm"
-                                    placeholder="여기에 제미나이 답변을 붙여넣으세요"></textarea>
+                                    placeholder="클립보드 읽기가 막히면 여기에 제미나이 답변을 직접 붙여넣으세요"></textarea>
                                 <p id="geminiManualStatus" class="mt-3 text-sm font-bold text-indigo-700 hidden"></p>
                                 <ul id="geminiWarningList" class="mt-2 space-y-1 text-xs text-amber-700 hidden"></ul>
                                 <details class="mt-4 rounded-xl bg-gray-50 border border-gray-200 p-3">
@@ -479,7 +473,6 @@
     const geminiManualStatusEl = document.getElementById('geminiManualStatus');
     const geminiWarningListEl = document.getElementById('geminiWarningList');
     const btnLaunchGeminiFlowEl = document.getElementById('btnLaunchGeminiFlow');
-    const btnCopyGeminiPromptEl = document.getElementById('btnCopyGeminiPrompt');
     const btnApplyGeminiResultEl = document.getElementById('btnApplyGeminiResult');
     const playbackModeInputEl = document.getElementById('playbackModeInput');
     const videoAdvicePanelEl = document.getElementById('videoAdvicePanel');
@@ -1039,9 +1032,32 @@ JSON 스키마 예시:
         }
     }
 
+    async function loadGeminiResultFromClipboard() {
+        if (!geminiResultInputEl) return;
+        if (!navigator.clipboard?.readText) {
+            geminiResultInputEl.focus();
+            setGeminiStatus('이 브라우저에서는 클립보드 자동 읽기가 안 돼요. 아래 칸에 답변을 직접 붙여넣어 주세요.', 'error');
+            return;
+        }
+
+        try {
+            const clipboardText = (await navigator.clipboard.readText()).trim();
+            if (!clipboardText) {
+                geminiResultInputEl.focus();
+                setGeminiStatus('먼저 제미나이 답변 전체를 복사해 주세요.', 'error');
+                return;
+            }
+            geminiResultInputEl.value = clipboardText;
+            await applyGeminiResult({ source: 'clipboard', rawText: clipboardText });
+        } catch (_) {
+            geminiResultInputEl.focus();
+            setGeminiStatus('클립보드 읽기 권한이 막혀 있어요. 아래 칸에 답변을 직접 붙여넣어 주세요.', 'error');
+        }
+    }
+
     async function applyGeminiResult(options = {}) {
         const source = options.source || 'manual';
-        const rawText = (geminiResultInputEl?.value || '').trim();
+        const rawText = String(options.rawText ?? geminiResultInputEl?.value ?? '').trim();
         if (!rawText) {
             if (!options.silentNoInput) {
                 setGeminiStatus('답변을 붙여넣어 주세요.', 'error');
@@ -1049,16 +1065,21 @@ JSON 스키마 예시:
             return;
         }
         if (geminiApplyInProgress) return;
-        if (source !== 'manual' && rawText === lastAppliedGeminiText) return;
+        if (source === 'paste' && rawText === lastAppliedGeminiText) return;
 
         geminiApplyInProgress = true;
         if (btnApplyGeminiResultEl) {
             btnApplyGeminiResultEl.disabled = true;
-            btnApplyGeminiResultEl.textContent = '읽는 중...';
+            btnApplyGeminiResultEl.textContent = source === 'clipboard' ? '불러오는 중...' : '읽는 중...';
         }
-        setGeminiStatus(source === 'paste'
-            ? '붙여넣은 내용을 읽고 있습니다...'
-            : '내용을 읽고 있습니다...', 'indigo');
+        setGeminiStatus(
+            source === 'paste'
+                ? '붙여넣은 내용을 읽고 있습니다...'
+                : source === 'clipboard'
+                    ? '복사한 답변을 불러오고 있습니다...'
+                    : '내용을 읽고 있습니다...',
+            'indigo'
+        );
         renderGeminiWarnings([]);
 
         try {
@@ -1089,14 +1110,19 @@ JSON 스키마 예시:
 
             lastAppliedGeminiText = rawText;
             const parsedCount = data?.meta?.step_count || steps.length;
-            setGeminiStatus(`${parsedCount}단계가 채워졌습니다.`, 'success');
+            setGeminiStatus(
+                source === 'clipboard'
+                    ? `복사한 답변으로 ${parsedCount}단계가 채워졌습니다.`
+                    : `${parsedCount}단계가 채워졌습니다.`,
+                'success'
+            );
         } catch (err) {
             setGeminiStatus(err.message || '내용을 읽지 못했어요. 답변 전체를 다시 붙여넣어 주세요.', 'error');
         } finally {
             geminiApplyInProgress = false;
             if (btnApplyGeminiResultEl) {
                 btnApplyGeminiResultEl.disabled = false;
-                btnApplyGeminiResultEl.textContent = '지금 반영';
+                btnApplyGeminiResultEl.textContent = '복사한 답변 불러오기';
             }
         }
     }
@@ -1109,7 +1135,7 @@ JSON 스키마 예시:
                 setGeminiStatus(
                     copied
                         ? '프롬프트는 복사했지만 팝업이 막혀 있어요. 팝업을 허용하거나 제미나이를 직접 열어 붙여넣어 주세요.'
-                        : '팝업이 막혀 있어요. 먼저 프롬프트만 복사하거나 팝업을 허용한 뒤 다시 눌러 주세요.',
+                        : '팝업이 막혀 있거나 자동 복사가 안 됐어요. 아래 프롬프트 보기에서 직접 복사해 주세요.',
                     'error'
                 );
                 return;
@@ -1118,7 +1144,7 @@ JSON 스키마 예시:
                 setGeminiStatus('프롬프트를 복사하고 제미나이를 열었어요. 제미나이에 바로 붙여넣어 주세요.', 'success');
                 return;
             }
-            setGeminiStatus('제미나이는 열렸지만 자동 복사는 안 됐어요. 아래에서 프롬프트만 복사해 붙여넣어 주세요.', 'error');
+            setGeminiStatus('제미나이는 열렸지만 자동 복사는 안 됐어요. 아래 프롬프트 보기에서 직접 복사해 붙여넣어 주세요.', 'error');
         });
     }
 
@@ -1139,15 +1165,9 @@ JSON 스키마 예시:
         });
     }
 
-    if (btnCopyGeminiPromptEl) {
-        btnCopyGeminiPromptEl.addEventListener('click', async () => {
-            await copyGeminiPrompt();
-        });
-    }
-
     if (btnApplyGeminiResultEl) {
         btnApplyGeminiResultEl.addEventListener('click', () => {
-            applyGeminiResult({ source: 'manual' });
+            loadGeminiResultFromClipboard();
         });
     }
 
