@@ -3083,7 +3083,7 @@ class HomeV5ViewTest(TestCase):
         content = response.content.decode('utf-8')
         workbench_index = content.index('data-home-v6-workbench="mobile"')
         calendar_index = content.index('data-home-v6-calendar-panel="mobile"')
-        quickdrop_index = content.index('data-home-v4-mobile-quickdrop="true"')
+        quickdrop_index = content.index('data-home-v6-mobile-quickdrop="true"')
         reservation_index = content.index('data-home-reservations-card="true"')
         sns_index = content.index('data-home-v5-mobile-sns="true"')
         workbench_block = content[workbench_index:calendar_index]
@@ -3091,7 +3091,8 @@ class HomeV5ViewTest(TestCase):
         mobile_block = content[:desktop_layout_index]
 
         self.assertNotIn('title="바로전송">바로전송</p>', workbench_block)
-        self.assertEqual(mobile_block.count('data-home-v4-mobile-quickdrop="true"'), 1)
+        self.assertEqual(mobile_block.count('data-home-v6-mobile-quickdrop="true"'), 1)
+        self.assertNotIn('data-home-v4-mobile-quickdrop="true"', mobile_block)
         self.assertLess(workbench_index, calendar_index)
         self.assertLess(calendar_index, quickdrop_index)
         self.assertLess(quickdrop_index, reservation_index)
@@ -3308,8 +3309,8 @@ class HomeV6ViewTest(TestCase):
         history_url = f'{reverse("quickdrop:channel", kwargs={"slug": channel.slug})}?focus=history#history-panel'
 
         self.assertEqual(response.context['home_design_version'], 'v6')
-        self.assertIn('data-home-v4-quickdrop-panel="true"', content)
-        self.assertIn('data-home-v4-quickdrop-form="true"', content)
+        self.assertIn('data-home-v6-quickdrop-panel="true"', content)
+        self.assertIn('data-home-v6-quickdrop-form="true"', content)
         self.assertIn(f'action="{reverse("quickdrop:send_text", kwargs={"slug": channel.slug})}"', content)
         self.assertIn('aria-label="보낼 내용"', content)
         self.assertIn('지금 보내기', content)
@@ -3319,13 +3320,15 @@ class HomeV6ViewTest(TestCase):
         self.assertIn(f'href="{history_url}"', content)
         self.assertIn('오늘 보낸 내용', content)
         self.assertNotIn(f'href="{reverse("quickdrop:open")}"', content)
+        self.assertNotIn('data-home-v4-quickdrop-panel="true"', content)
+        self.assertNotIn('data-home-v4-quickdrop-form="true"', content)
 
-        mobile_css = (Path(settings.BASE_DIR) / 'core' / 'static' / 'core' / 'css' / 'home_authenticated_v4.css').read_text(encoding='utf-8')
+        mobile_css = (Path(settings.BASE_DIR) / 'core' / 'static' / 'core' / 'css' / 'home_authenticated_v6.css').read_text(encoding='utf-8')
         self.assertIn('@media (max-width: 639px)', mobile_css)
-        self.assertIn('.home-v4-mobile-quickdrop-actions', mobile_css)
+        self.assertIn('.home-v6-mobile-quickdrop-actions', mobile_css)
         self.assertIn('grid-template-columns: minmax(0, 1fr);', mobile_css)
-        self.assertIn('.home-v4-quickdrop-summary', mobile_css)
-        self.assertIn('.home-v4-mobile-quickdrop-summary', mobile_css)
+        self.assertIn('.home-v6-quickdrop-summary', mobile_css)
+        self.assertIn('.home-v6-mobile-quickdrop-summary', mobile_css)
         self.assertIn('overflow-wrap: anywhere;', mobile_css)
         self.assertIn('box-sizing: border-box;', mobile_css)
 
@@ -3381,7 +3384,7 @@ class HomeV6ViewTest(TestCase):
         content = response.content.decode('utf-8')
         workbench_index = content.index('data-home-v6-workbench="mobile"')
         calendar_index = content.index('data-home-v6-calendar-panel="mobile"')
-        quickdrop_index = content.index('data-home-v4-mobile-quickdrop="true"')
+        quickdrop_index = content.index('data-home-v6-mobile-quickdrop="true"')
         reservation_index = content.index('data-home-reservations-card="true"')
         sns_index = content.index('data-home-v5-mobile-sns="true"')
         workbench_block = content[workbench_index:calendar_index]
@@ -3390,9 +3393,10 @@ class HomeV6ViewTest(TestCase):
 
         self.assertEqual(response.context['home_design_version'], 'v6')
         self.assertNotIn('title="바로전송">바로전송</p>', workbench_block)
-        self.assertEqual(mobile_block.count('data-home-v4-mobile-quickdrop="true"'), 1)
+        self.assertEqual(mobile_block.count('data-home-v6-mobile-quickdrop="true"'), 1)
         self.assertIn('aria-label="새 기기 추가"', mobile_block)
         self.assertIn('오늘 보낸 내용', mobile_block)
+        self.assertNotIn('data-home-v4-mobile-quickdrop="true"', mobile_block)
         self.assertLess(workbench_index, calendar_index)
         self.assertLess(calendar_index, quickdrop_index)
         self.assertLess(quickdrop_index, reservation_index)
