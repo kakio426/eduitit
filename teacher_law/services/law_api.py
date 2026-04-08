@@ -683,7 +683,7 @@ def _build_law_citation(details: dict, article: dict, *, index: int, fetched_at)
         "reference_label": reference_label,
         "article_label": reference_label,
         "case_number": "",
-        "quote": compact_text(article.get("article_text"))[:320],
+        "quote": compact_text(article.get("article_text")),
         "source_url": details.get("detail_link") or "",
         "provider": details.get("provider") or get_law_provider(),
         "fetched_at": fetched_at.isoformat(),
@@ -716,7 +716,7 @@ def select_relevant_citations(details: dict, profile: dict, *, limit: int = 2) -
 def _build_case_citation(case_result: dict, *, index: int, law_id: str = "") -> dict:
     title = compact_text(case_result.get("title") or case_result.get("law_name") or "참고 판례")
     reference_label = compact_text(case_result.get("reference_label") or case_result.get("case_number") or "판례 요지")
-    quote = compact_text(case_result.get("quote"))[:320]
+    quote = compact_text(case_result.get("quote"))
     fetched_at = timezone.now().isoformat()
     return {
         "citation_id": f"case-{case_result.get('case_id') or reference_label or index}-{index}",

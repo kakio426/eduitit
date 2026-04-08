@@ -25,6 +25,13 @@ def is_configured() -> bool:
     return bool(_get_api_key())
 
 
+def _truncate_prompt_quote(value: str, *, limit: int = 900) -> str:
+    text = str(value or "").strip()
+    if len(text) <= limit:
+        return text
+    return f"{text[:limit].rstrip()}..."
+
+
 def generate_legal_answer(*, question: str, profile: dict, citations: list[dict], timeout_seconds: int = 12) -> dict:
     if not is_configured():
         raise LlmClientError("DeepSeek API key is not configured.")
@@ -39,7 +46,7 @@ def generate_legal_answer(*, question: str, profile: dict, citations: list[dict]
                     f"근거 유형: {source_type}",
                     f"제목: {citation.get('title') or citation.get('law_name')}",
                     f"참조: {citation.get('reference_label') or citation.get('article_label')}",
-                    f"근거: {citation.get('quote')}",
+                    f"근거: {_truncate_prompt_quote(citation.get('quote'))}",
                 ]
             )
         )

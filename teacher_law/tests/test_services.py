@@ -5,7 +5,7 @@ from django.test import SimpleTestCase, TestCase, override_settings
 
 from teacher_law.services import law_api
 from teacher_law.services.chat import answer_legal_question
-from teacher_law.services.llm_client import _extract_json_payload
+from teacher_law.services.llm_client import _extract_json_payload, _truncate_prompt_quote
 from teacher_law.services.law_api import LawApiError, LawApiTimeoutError, LawApiVerificationError
 from teacher_law.services.query_normalizer import (
     build_query_profile,
@@ -89,6 +89,14 @@ class LlmPayloadParsingTests(SimpleTestCase):
             '먼저 정리했습니다.\n{"summary":"ok","action_items":["a"],"citations":[],"risk_level":"low","needs_human_help":false,"disclaimer":"d","scope_supported":true}\n이상입니다.'
         )
         self.assertEqual(payload["summary"], "ok")
+
+    def test_truncate_prompt_quote_only_limits_llm_copy(self):
+        text = "가" * 1200
+
+        truncated = _truncate_prompt_quote(text, limit=900)
+
+        self.assertEqual(len(truncated), 903)
+        self.assertTrue(truncated.endswith("..."))
 
 
 class OpenLawRequestTests(SimpleTestCase):
@@ -231,6 +239,23 @@ class BeopmangLawApiTests(SimpleTestCase):
         self.assertEqual(first_params["action"], "get")
         self.assertEqual(second_params["action"], "overview")
         self.assertEqual(second_params["q"], "손해배상")
+
+    def test_build_law_citation_keeps_full_quote_for_display(self):
+        details = {
+            "law_name": "학교안전사고 예방 및 보상에 관한 법률",
+            "law_id": "009620",
+            "mst": "",
+            "detail_link": "",
+            "provider": "beopmang",
+        }
+        article = {
+            "article_label": "제20조의2",
+            "article_text": "가" * 500,
+        }
+
+        citation = law_api._build_law_citation(details, article, index=1, fetched_at=law_api.timezone.now())
+
+        self.assertEqual(citation["quote"], "가" * 500)
 
     @override_settings(TEACHER_LAW_PROVIDER="beopmang")
     def test_beopmang_429_maps_to_law_api_error(self):
