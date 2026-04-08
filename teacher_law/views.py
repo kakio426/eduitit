@@ -29,6 +29,7 @@ from .services.law_api import (
     LawApiTimeoutError,
     LawApiVerificationError,
     build_retry_after_timeout_message,
+    get_law_provider,
     is_configured as is_law_api_configured,
 )
 from .services.llm_client import LlmClientError, is_configured as is_llm_configured
@@ -91,6 +92,7 @@ def _build_page_context(request):
     service = _get_service()
     session = get_or_create_active_session(request.user)
     messages_qs = session.messages.prefetch_related("citations").order_by("created_at", "id")
+    law_provider = get_law_provider()
     warning_messages = []
     if not getattr(request.user, "is_authenticated", False):
         warning_messages.append("로그인 후 사용할 수 있습니다.")
@@ -108,6 +110,11 @@ def _build_page_context(request):
         "service_enabled": getattr(settings, "TEACHER_LAW_ENABLED", False),
         "law_api_configured": is_law_api_configured(),
         "llm_configured": is_llm_configured(),
+        "law_data_notice": (
+            "법령 데이터는 법망(API.beopmang.org)을 통해 조회되며, 답변은 참고용입니다."
+            if law_provider == "beopmang"
+            else ""
+        ),
         "warning_messages": warning_messages,
         "quick_questions": get_quick_questions(),
         "session": session,

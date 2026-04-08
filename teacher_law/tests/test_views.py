@@ -41,6 +41,19 @@ class TeacherLawViewTests(TestCase):
         self.assertContains(response, "교사용 AI 법률 가이드")
         self.assertContains(response, "학생 사진을 학급 밴드나 단체방에 올려도 되나요?")
 
+    @override_settings(TEACHER_LAW_PROVIDER="beopmang")
+    @patch("teacher_law.views.is_llm_configured", return_value=True)
+    def test_main_view_shows_beopmang_notice_without_law_api_warning(self, _llm_mock):
+        request = self.factory.get("/teacher-law/")
+        request.user = self.user
+        request.session = {}
+
+        response = main_view(request)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "법령 데이터는 법망(API.beopmang.org)을 통해 조회되며, 답변은 참고용입니다.")
+        self.assertNotContains(response, "관리자가 아직 법령 연결을 마치지 않았습니다.")
+
     def test_ask_api_out_of_scope_returns_scope_supported_false(self):
         request = self.factory.post(
             "/teacher-law/ask/",

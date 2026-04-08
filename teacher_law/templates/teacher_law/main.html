@@ -374,7 +374,7 @@
                             <h2 class="mt-2 text-2xl font-black text-slate-950">상황을 한 문장으로 적으면 됩니다</h2>
                         </div>
                         <div class="text-sm leading-6 text-slate-500">
-                            답변에는 공식 출처, 조문, 조회 시각이 함께 표시됩니다.
+                            답변에는 관련 조문과 참고 안내가 함께 표시됩니다.
                         </div>
                     </div>
 
@@ -396,6 +396,9 @@
                         <span data-teacher-law-progress-text="true">질문 정리 중...</span>
                     </div>
                     <div class="teacher-law-inline-error" data-teacher-law-error="true" role="alert"></div>
+                    {% if law_data_notice %}
+                    <p class="teacher-law-disclaimer">{{ law_data_notice }}</p>
+                    {% endif %}
                 </div>
 
                 <div class="mt-8 border-t border-slate-100 pt-6">

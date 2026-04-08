@@ -6,7 +6,7 @@ from django.test import SimpleTestCase, TestCase, override_settings
 from teacher_law.services import law_api
 from teacher_law.services.chat import answer_legal_question
 from teacher_law.services.llm_client import _extract_json_payload
-from teacher_law.services.law_api import LawApiVerificationError
+from teacher_law.services.law_api import LawApiError, LawApiTimeoutError, LawApiVerificationError
 from teacher_law.services.query_normalizer import QUICK_QUESTIONS, build_query_profile
 
 
@@ -33,7 +33,8 @@ class LlmPayloadParsingTests(SimpleTestCase):
         self.assertEqual(payload["summary"], "ok")
 
 
-class LawApiRequestTests(SimpleTestCase):
+class OpenLawRequestTests(SimpleTestCase):
+    @override_settings(TEACHER_LAW_PROVIDER="open_law")
     @patch.dict("os.environ", {"LAW_API_OC": "test-oc"}, clear=False)
     def test_request_falls_back_to_http_when_https_connection_fails(self):
         success_response = Mock()
@@ -52,6 +53,7 @@ class LawApiRequestTests(SimpleTestCase):
         self.assertEqual(attempted_urls[0], "https://www.law.go.kr/DRF/lawSearch.do")
         self.assertEqual(attempted_urls[1], "http://www.law.go.kr/DRF/lawSearch.do")
 
+    @override_settings(TEACHER_LAW_PROVIDER="open_law")
     @patch.dict("os.environ", {"LAW_API_OC": "test-oc"}, clear=False)
     def test_request_raises_verification_error_with_domain_ip_message(self):
         verification_response = Mock()
@@ -65,6 +67,127 @@ class LawApiRequestTests(SimpleTestCase):
                 law_api._request("lawSearch.do", params={"target": "law"}, timeout_seconds=4)
 
         self.assertIn("IP주소", str(caught.exception))
+
+
+class BeopmangLawApiTests(SimpleTestCase):
+    @override_settings(TEACHER_LAW_PROVIDER="beopmang")
+    @patch.dict("os.environ", {}, clear=True)
+    def test_is_configured_without_law_api_oc(self):
+        self.assertTrue(law_api.is_configured())
+
+    @override_settings(TEACHER_LAW_PROVIDER="beopmang", TEACHER_LAW_SEARCH_RESULT_LIMIT=5)
+    def test_search_laws_maps_beopmang_results(self):
+        response = Mock(status_code=200)
+        response.json.return_value = {
+            "success": True,
+            "data": {
+                "results": [
+                    {
+                        "law_id": "001706",
+                        "law_name": "민법",
+                        "law_type": "법률",
+                        "enforcement_date": "2025-01-01",
+                        "last_amended": "2024-12-31",
+                    }
+                ]
+            },
+        }
+
+        with patch("teacher_law.services.law_api.requests.get", return_value=response) as request_mock:
+            results = law_api.search_laws("민법")
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["law_name"], "민법")
+        self.assertEqual(results[0]["law_id"], "001706")
+        self.assertEqual(results[0]["provider"], "beopmang")
+        self.assertEqual(results[0]["mst"], "")
+        params = request_mock.call_args.kwargs["params"]
+        self.assertEqual(params["action"], "search")
+        self.assertEqual(params["mode"], "keyword")
+
+    @override_settings(TEACHER_LAW_PROVIDER="beopmang")
+    def test_get_law_details_maps_grep_articles(self):
+        response = Mock(status_code=200)
+        response.json.return_value = {
+            "success": True,
+            "data": {
+                "law_id": "001706",
+                "law_type": "법률",
+                "articles": [
+                    {
+                        "label": "제750조",
+                        "full_text": "제750조(불법행위의 내용) 고의 또는 과실로 인한 손해배상 책임이 있다.",
+                    }
+                ],
+            },
+        }
+
+        with patch("teacher_law.services.law_api.requests.get", return_value=response) as request_mock:
+            details = law_api.get_law_details(law_id="001706", query_hint="손해배상", law_name="민법")
+
+        self.assertEqual(details["law_name"], "민법")
+        self.assertEqual(details["provider"], "beopmang")
+        self.assertEqual(details["articles"][0]["article_label"], "제750조")
+        self.assertIn("손해배상", details["articles"][0]["article_text"])
+        params = request_mock.call_args.kwargs["params"]
+        self.assertEqual(params["action"], "get")
+        self.assertEqual(params["grep"], "손해배상")
+
+    @override_settings(TEACHER_LAW_PROVIDER="beopmang")
+    def test_get_law_details_falls_back_to_overview_when_grep_is_empty(self):
+        grep_response = Mock(status_code=200)
+        grep_response.json.return_value = {
+            "success": True,
+            "data": {
+                "law_id": "001706",
+                "law_name": "민법",
+                "articles": [],
+            },
+        }
+        overview_response = Mock(status_code=200)
+        overview_response.json.return_value = {
+            "success": True,
+            "data": {
+                "law_id": "001706",
+                "law_name": "민법",
+                "top_articles": [
+                    {
+                        "label": "제214조",
+                        "snippet": "소유자는 방해의 제거와 손해배상의 담보를 청구할 수 있다.",
+                    }
+                ],
+            },
+        }
+
+        with patch(
+            "teacher_law.services.law_api.requests.get",
+            side_effect=[grep_response, overview_response],
+        ) as request_mock:
+            details = law_api.get_law_details(law_id="001706", query_hint="손해배상")
+
+        self.assertEqual(len(details["articles"]), 1)
+        self.assertEqual(details["articles"][0]["article_label"], "제214조")
+        self.assertIn("손해배상", details["articles"][0]["article_text"])
+        first_params = request_mock.call_args_list[0].kwargs["params"]
+        second_params = request_mock.call_args_list[1].kwargs["params"]
+        self.assertEqual(first_params["action"], "get")
+        self.assertEqual(second_params["action"], "overview")
+        self.assertEqual(second_params["q"], "손해배상")
+
+    @override_settings(TEACHER_LAW_PROVIDER="beopmang")
+    def test_beopmang_429_maps_to_law_api_error(self):
+        response = Mock(status_code=429)
+        response.json.return_value = {"detail": "rate limited"}
+
+        with patch("teacher_law.services.law_api.requests.get", return_value=response):
+            with self.assertRaises(LawApiError):
+                law_api.search_laws("민법")
+
+    @override_settings(TEACHER_LAW_PROVIDER="beopmang")
+    def test_beopmang_timeout_maps_to_timeout_error(self):
+        with patch("teacher_law.services.law_api.requests.get", side_effect=law_api.requests.Timeout("timeout")):
+            with self.assertRaises(LawApiTimeoutError):
+                law_api.search_laws("민법")
 
 
 @override_settings(
@@ -110,3 +233,39 @@ class TeacherLawCachingTests(TestCase):
         self.assertFalse(first["audit"]["cache_hit"])
         self.assertTrue(second["audit"]["cache_hit"])
         self.assertEqual(search_mock.call_count, 1)
+
+    @override_settings(TEACHER_LAW_PROVIDER="beopmang")
+    @patch.dict("os.environ", {}, clear=True)
+    def test_answer_question_works_without_law_api_oc_when_provider_is_beopmang(self):
+        citation = {
+            "citation_id": "law-1",
+            "law_name": "민법",
+            "law_id": "001706",
+            "mst": "",
+            "article_label": "제750조",
+            "quote": "고의 또는 과실로 인한 손해배상 책임이 있다.",
+            "source_url": "",
+            "fetched_at": "2026-04-05T00:00:00+09:00",
+        }
+        llm_answer = {
+            "summary": "민법상 손해배상 책임 기준을 먼저 확인해야 합니다.",
+            "action_items": ["사실관계를 기록합니다."],
+            "citations": ["law-1"],
+            "risk_level": "medium",
+            "needs_human_help": False,
+            "disclaimer": "일반적 법령 정보 안내이며 개별 사건의 법률 자문은 아닙니다.",
+            "scope_supported": True,
+        }
+
+        with (
+            patch("teacher_law.services.chat.is_llm_configured", return_value=True),
+            patch("teacher_law.services.chat.search_laws", return_value=[{"law_name": "민법", "law_id": "001706", "mst": "", "detail_link": "", "provider": "beopmang"}]),
+            patch("teacher_law.services.chat.get_law_details", return_value={"law_name": "민법", "law_id": "001706", "mst": "", "detail_link": "", "provider": "beopmang", "articles": []}) as detail_mock,
+            patch("teacher_law.services.chat.select_relevant_citations", return_value=[citation]),
+            patch("teacher_law.services.chat.generate_legal_answer", return_value=llm_answer),
+        ):
+            result = answer_legal_question(question="학생 사진을 올리려면 동의가 필요한가요?")
+
+        self.assertEqual(result["payload"]["summary"], llm_answer["summary"])
+        self.assertEqual(result["audit"]["selected_laws_json"][0]["provider"], "beopmang")
+        self.assertTrue(detail_mock.call_args.kwargs["query_hint"])

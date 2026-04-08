@@ -14,6 +14,7 @@ from .law_api import (
     build_cache_expiry,
     get_cache_date_token,
     get_law_details,
+    get_law_provider,
     is_configured as is_law_api_configured,
     rank_search_results,
     search_laws,
@@ -87,6 +88,7 @@ def build_answer_body(payload: dict) -> str:
 def answer_legal_question(*, question: str) -> dict:
     started = perf_counter()
     profile = build_query_profile(question)
+    law_provider = get_law_provider()
     if not getattr(settings, "TEACHER_LAW_ENABLED", False):
         raise TeacherLawDisabledError("교사용 AI 법률 가이드가 아직 활성화되지 않았습니다.")
 
@@ -114,8 +116,9 @@ def answer_legal_question(*, question: str) -> dict:
         cached_payload = _restore_cache_payload(cache.get(cache_key))
     if cached_payload:
         logger.info(
-            "[TeacherLaw] Action: QUICK_CACHE_HIT, Status: SUCCESS, Topic: %s",
+            "[TeacherLaw] Action: QUICK_CACHE_HIT, Status: SUCCESS, Topic: %s, Provider: %s",
             profile.get("topic") or "unknown",
+            law_provider,
         )
         return {
             "profile": profile,
@@ -149,6 +152,7 @@ def answer_legal_question(*, question: str) -> dict:
     selected_laws = []
     aggregated_results = []
     collected_citations = []
+    law_query_hint = _build_law_query_hint(profile)
 
     for query in candidate_queries:
         _ensure_total_timeout(started, total_timeout_seconds)
@@ -167,6 +171,8 @@ def answer_legal_question(*, question: str) -> dict:
             law_id=ranked.get("law_id") or "",
             mst=ranked.get("mst") or "",
             detail_link=ranked.get("detail_link") or "",
+            query_hint=law_query_hint,
+            law_name=ranked.get("law_name") or "",
         )
         selected_laws.append(
             {
@@ -174,6 +180,7 @@ def answer_legal_question(*, question: str) -> dict:
                 "law_id": detail.get("law_id") or ranked.get("law_id") or "",
                 "mst": detail.get("mst") or ranked.get("mst") or "",
                 "detail_link": detail.get("detail_link") or ranked.get("detail_link") or "",
+                "provider": detail.get("provider") or ranked.get("provider") or law_provider,
             }
         )
         collected_citations.extend(select_relevant_citations(detail, profile, limit=2))
@@ -194,8 +201,9 @@ def answer_legal_question(*, question: str) -> dict:
             "elapsed_ms": _elapsed_ms(started),
         }
         logger.info(
-            "[TeacherLaw] Action: GENERATE_ANSWER, Status: SUCCESS, Topic: %s, Outcome: insufficient",
+            "[TeacherLaw] Action: GENERATE_ANSWER, Status: SUCCESS, Topic: %s, Outcome: insufficient, Provider: %s",
             profile.get("topic") or "unknown",
+            law_provider,
         )
         return {"profile": profile, "payload": payload, "audit": audit}
 
@@ -220,9 +228,10 @@ def answer_legal_question(*, question: str) -> dict:
     if cache_key:
         cache.set(cache_key, _serialize_cache_payload(payload), timeout=build_cache_expiry())
     logger.info(
-        "[TeacherLaw] Action: GENERATE_ANSWER, Status: SUCCESS, Topic: %s, Cache: %s",
+        "[TeacherLaw] Action: GENERATE_ANSWER, Status: SUCCESS, Topic: %s, Cache: %s, Provider: %s",
         profile.get("topic") or "unknown",
         "hit" if audit["cache_hit"] else "miss",
+        law_provider,
     )
     return {"profile": profile, "payload": payload, "audit": audit}
 
@@ -234,6 +243,16 @@ def _elapsed_ms(started: float) -> int:
 def _ensure_total_timeout(started: float, limit_seconds: int) -> None:
     if perf_counter() - started > limit_seconds:
         raise TeacherLawTimeoutError("법령 확인 시간이 길어져 잠시 후 다시 시도해 주세요.")
+
+
+def _build_law_query_hint(profile: dict) -> str:
+    hint_queries = [compact_text(item) for item in profile.get("hint_queries") or [] if compact_text(item)]
+    if hint_queries:
+        return hint_queries[0]
+    core_terms = [compact_text(item) for item in profile.get("core_terms") or [] if compact_text(item)]
+    if core_terms:
+        return " ".join(core_terms[:4])
+    return compact_text(profile.get("original_question") or profile.get("normalized_question"))
 
 
 def _dedupe_search_results(results: list[dict]) -> list[dict]:
@@ -409,6 +428,7 @@ def _restore_cache_payload(raw_payload):
 
 
 def _serialize_selected_laws(citations: list[dict]) -> list[dict]:
+    provider = get_law_provider()
     selected = []
     for citation in citations:
         if not isinstance(citation, dict):
@@ -419,6 +439,7 @@ def _serialize_selected_laws(citations: list[dict]) -> list[dict]:
                 "law_id": citation.get("law_id") or "",
                 "mst": citation.get("mst") or "",
                 "detail_link": citation.get("source_url") or "",
+                "provider": citation.get("provider") or provider,
             }
         )
     return selected
