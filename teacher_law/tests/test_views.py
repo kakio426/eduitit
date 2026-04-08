@@ -33,8 +33,20 @@ class TeacherLawViewTests(TestCase):
         self.user = _build_user()
         cache.clear()
 
+    def _build_request_payload(self, question, **overrides):
+        payload = {
+            "question": question,
+            "incident_type": "privacy_photo",
+            "legal_goal": "posting_allowed",
+            "scene": "",
+            "counterpart": "student",
+        }
+        payload.update(overrides)
+        return payload
+
     def _build_success_result(self, question="학생 사진 올려도 되나요?"):
         return {
+            "status": "ok",
             "profile": {
                 "original_question": question,
                 "normalized_question": question,
@@ -76,6 +88,9 @@ class TeacherLawViewTests(TestCase):
         self.assertContains(response, "교사용 AI 법률 가이드")
         self.assertContains(response, "지금 상황만 적어 주세요")
         self.assertContains(response, "상황을 한 문장으로 적으면 됩니다")
+        self.assertContains(response, "사건 유형")
+        self.assertContains(response, "지금 궁금한 것")
+        self.assertContains(response, "안전사고·책임")
         self.assertContains(response, "학생 사진을 학급 밴드나 단체방에 올려도 되나요?")
         self.assertContains(response, "하루 15회까지 질문할 수 있습니다.")
         self.assertContains(response, "개별 사건의 법적 판단이나 결과를 보장하지 않습니다.")
@@ -253,14 +268,21 @@ class TeacherLawViewTests(TestCase):
     def test_ask_api_returns_429_after_daily_limit(self):
         first_request = self.factory.post(
             "/teacher-law/ask/",
-            data=json.dumps({"question": "학생 사진 올려도 되나요?"}),
+            data=json.dumps(self._build_request_payload("학생 사진 올려도 되나요?")),
             content_type="application/json",
         )
         first_request.user = self.user
 
         second_request = self.factory.post(
             "/teacher-law/ask/",
-            data=json.dumps({"question": "학부모가 민원을 넣겠다고 합니다."}),
+            data=json.dumps(
+                self._build_request_payload(
+                    "학부모가 민원을 넣겠다고 합니다.",
+                    incident_type="education_activity",
+                    legal_goal="immediate_action",
+                    counterpart="parent",
+                )
+            ),
             content_type="application/json",
         )
         second_request.user = self.user
@@ -282,7 +304,7 @@ class TeacherLawViewTests(TestCase):
     def test_main_view_blocks_form_when_daily_limit_is_reached(self, _llm_mock, _law_mock):
         request = self.factory.post(
             "/teacher-law/ask/",
-            data=json.dumps({"question": "학생 사진 올려도 되나요?"}),
+            data=json.dumps(self._build_request_payload("학생 사진 올려도 되나요?")),
             content_type="application/json",
         )
         request.user = self.user
@@ -306,14 +328,14 @@ class TeacherLawViewTests(TestCase):
     def test_failed_request_does_not_consume_daily_limit(self):
         failed_request = self.factory.post(
             "/teacher-law/ask/",
-            data=json.dumps({"question": "학생 사진 올려도 되나요?"}),
+            data=json.dumps(self._build_request_payload("학생 사진 올려도 되나요?")),
             content_type="application/json",
         )
         failed_request.user = self.user
 
         success_request = self.factory.post(
             "/teacher-law/ask/",
-            data=json.dumps({"question": "학생 사진 올려도 되나요?"}),
+            data=json.dumps(self._build_request_payload("학생 사진 올려도 되나요?")),
             content_type="application/json",
         )
         success_request.user = self.user
@@ -328,10 +350,10 @@ class TeacherLawViewTests(TestCase):
         self.assertEqual(success_response.status_code, 201)
         self.assertEqual(LegalQueryAudit.objects.count(), 2)
 
-    def test_ask_api_out_of_scope_returns_scope_supported_false(self):
+    def test_ask_api_missing_structured_fields_returns_400_without_saving_messages(self):
         request = self.factory.post(
             "/teacher-law/ask/",
-            data=json.dumps({"question": "중고거래 환불은 어떻게 되나요?"}),
+            data=json.dumps({"question": "학생 사진 올려도 되나요?"}),
             content_type="application/json",
         )
         request.user = self.user
@@ -339,14 +361,16 @@ class TeacherLawViewTests(TestCase):
         response = ask_question_api(request)
         payload = json.loads(response.content)
 
-        self.assertEqual(response.status_code, 201)
-        self.assertFalse(payload["assistant_message"]["scope_supported"])
-        self.assertEqual(LegalQueryAudit.objects.count(), 1)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("field_errors", payload)
+        self.assertIn("incident_type", payload["field_errors"])
+        self.assertEqual(LegalChatMessage.objects.count(), 0)
+        self.assertEqual(LegalQueryAudit.objects.count(), 0)
 
     def test_ask_api_missing_law_api_key_returns_503(self):
         request = self.factory.post(
             "/teacher-law/ask/",
-            data=json.dumps({"question": "학생 사진 올려도 되나요?"}),
+            data=json.dumps(self._build_request_payload("학생 사진 올려도 되나요?")),
             content_type="application/json",
         )
         request.user = self.user
@@ -361,7 +385,7 @@ class TeacherLawViewTests(TestCase):
     def test_ask_api_saves_assistant_message_citations_and_audit(self):
         request = self.factory.post(
             "/teacher-law/ask/",
-            data=json.dumps({"question": "학생 사진 올려도 되나요?"}),
+            data=json.dumps(self._build_request_payload("학생 사진 올려도 되나요?")),
             content_type="application/json",
         )
         request.user = self.user

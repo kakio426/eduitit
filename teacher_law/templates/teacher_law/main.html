@@ -153,6 +153,74 @@
         line-height: 1.7;
         color: #475569;
     }
+    .teacher-law-picker {
+        border-radius: 24px;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        background: #f8fafc;
+        padding: 1rem;
+    }
+    .teacher-law-picker[hidden] {
+        display: none !important;
+    }
+    .teacher-law-picker.is-error {
+        border-color: rgba(239, 68, 68, 0.3);
+        box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.12);
+        background: #fff7f7;
+    }
+    .teacher-law-picker-title {
+        font-size: 0.95rem;
+        font-weight: 900;
+        color: #0f172a;
+    }
+    .teacher-law-picker-hint {
+        margin-top: 0.25rem;
+        font-size: 0.82rem;
+        line-height: 1.6;
+        color: #64748b;
+    }
+    .teacher-law-choice-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.65rem;
+        margin-top: 0.8rem;
+    }
+    .teacher-law-choice {
+        position: relative;
+    }
+    .teacher-law-chip-input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+    .teacher-law-chip-label {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 184, 0.26);
+        background: #fff;
+        padding: 0.8rem 1rem;
+        font-size: 0.92rem;
+        font-weight: 800;
+        line-height: 1.45;
+        color: #334155;
+        transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease, color 160ms ease;
+        cursor: pointer;
+    }
+    .teacher-law-chip-input:checked + .teacher-law-chip-label {
+        border-color: rgba(13, 148, 136, 0.6);
+        background: #ecfeff;
+        color: #115e59;
+        box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
+    }
+    .teacher-law-chip-input:focus-visible + .teacher-law-chip-label {
+        outline: 3px solid rgba(13, 148, 136, 0.18);
+        outline-offset: 2px;
+    }
+    .teacher-law-chip-input:disabled + .teacher-law-chip-label {
+        opacity: 0.58;
+        cursor: not-allowed;
+    }
     .teacher-law-progress {
         display: none;
         align-items: center;
@@ -244,6 +312,17 @@
         border-radius: 999px;
         background: rgba(239, 68, 68, 0.12);
         color: #b91c1c;
+        padding: 0.4rem 0.7rem;
+        font-size: 0.78rem;
+        font-weight: 900;
+    }
+    .teacher-law-clarify-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        border-radius: 999px;
+        background: rgba(245, 158, 11, 0.14);
+        color: #b45309;
         padding: 0.4rem 0.7rem;
         font-size: 0.78rem;
         font-weight: 900;
@@ -423,7 +502,7 @@
                 <div class="space-y-2">
                     <p class="text-sm font-black uppercase tracking-[0.24em] text-slate-500">질문하기</p>
                     <h2 class="text-2xl md:text-3xl font-black text-slate-950">상황을 한 문장으로 적으면 됩니다</h2>
-                    <p class="teacher-law-helper">학교폭력, 학생 사진·개인정보, 생활지도, 학부모 민원, 신고 의무처럼 교실에서 바로 확인해야 하는 주제를 가장 잘 다룹니다.</p>
+                    <p class="teacher-law-helper">질문을 적고 사건 유형과 지금 궁금한 것을 고르면, 관련 법령 안에서만 먼저 찾습니다.</p>
                 </div>
 
                 {% if ui_blocked and ui_block_reason %}
@@ -434,15 +513,106 @@
                     {% csrf_token %}
                     <label class="sr-only" for="teacher-law-question">질문 입력</label>
                     <textarea id="teacher-law-question" name="question" class="teacher-law-textarea" data-teacher-law-input="true" placeholder="예: 학생 사진을 학급 밴드에 올리려면 어떤 동의가 필요한가요?" {% if ui_blocked %}disabled{% endif %}></textarea>
+                    <section class="teacher-law-picker" data-teacher-law-field-group="incident_type">
+                        <div class="teacher-law-picker-title">사건 유형</div>
+                        <p class="teacher-law-picker-hint">이 질문이 어떤 상황인지 먼저 골라 주세요.</p>
+                        <div class="teacher-law-choice-grid">
+                            {% for option in incident_options %}
+                            <div class="teacher-law-choice">
+                                <input
+                                    class="teacher-law-chip-input"
+                                    type="radio"
+                                    name="incident_type"
+                                    id="teacher-law-incident-{{ option.value }}"
+                                    value="{{ option.value }}"
+                                    data-teacher-law-incident-option="true"
+                                    data-requires="{{ option.requires }}"
+                                    {% if ui_blocked %}disabled{% endif %}
+                                >
+                                <label class="teacher-law-chip-label" for="teacher-law-incident-{{ option.value }}">{{ option.label }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </section>
+                    <section class="teacher-law-picker" data-teacher-law-field-group="legal_goal">
+                        <div class="teacher-law-picker-title">지금 궁금한 것</div>
+                        <p class="teacher-law-picker-hint">이번 답변에서 가장 먼저 알고 싶은 방향을 골라 주세요.</p>
+                        <div class="teacher-law-choice-grid">
+                            {% for option in legal_goal_options %}
+                            <div class="teacher-law-choice">
+                                <input
+                                    class="teacher-law-chip-input"
+                                    type="radio"
+                                    name="legal_goal"
+                                    id="teacher-law-goal-{{ option.value }}"
+                                    value="{{ option.value }}"
+                                    data-teacher-law-goal-option="true"
+                                    {% if ui_blocked %}disabled{% endif %}
+                                >
+                                <label class="teacher-law-chip-label" for="teacher-law-goal-{{ option.value }}">{{ option.label }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </section>
+                    <section class="teacher-law-picker" data-teacher-law-field-group="scene" data-teacher-law-scene-group="true" hidden>
+                        <div class="teacher-law-picker-title">장면</div>
+                        <p class="teacher-law-picker-hint">안전사고나 학교폭력 질문은 장면을 함께 골라야 합니다.</p>
+                        <div class="teacher-law-choice-grid">
+                            {% for option in scene_options %}
+                            <div class="teacher-law-choice">
+                                <input
+                                    class="teacher-law-chip-input"
+                                    type="radio"
+                                    name="scene"
+                                    id="teacher-law-scene-{{ option.value }}"
+                                    value="{{ option.value }}"
+                                    data-teacher-law-scene-option="true"
+                                    {% if ui_blocked %}disabled{% endif %}
+                                >
+                                <label class="teacher-law-chip-label" for="teacher-law-scene-{{ option.value }}">{{ option.label }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </section>
+                    <section class="teacher-law-picker" data-teacher-law-field-group="counterpart" data-teacher-law-counterpart-group="true" hidden>
+                        <div class="teacher-law-picker-title">상대</div>
+                        <p class="teacher-law-picker-hint">민원, 녹음, 공개, 개인정보 질문은 상대를 함께 골라야 합니다.</p>
+                        <div class="teacher-law-choice-grid">
+                            {% for option in counterpart_options %}
+                            <div class="teacher-law-choice">
+                                <input
+                                    class="teacher-law-chip-input"
+                                    type="radio"
+                                    name="counterpart"
+                                    id="teacher-law-counterpart-{{ option.value }}"
+                                    value="{{ option.value }}"
+                                    data-teacher-law-counterpart-option="true"
+                                    {% if ui_blocked %}disabled{% endif %}
+                                >
+                                <label class="teacher-law-chip-label" for="teacher-law-counterpart-{{ option.value }}">{{ option.label }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </section>
                     <div class="teacher-law-quick-list">
-                        {% for question in quick_questions %}
-                        <button type="button" class="teacher-law-quick-button" data-teacher-law-quick-question="true" data-question="{{ question }}" {% if ui_blocked %}disabled{% endif %}>
-                            {{ question }}
+                        {% for preset in quick_questions %}
+                        <button
+                            type="button"
+                            class="teacher-law-quick-button"
+                            data-teacher-law-quick-question="true"
+                            data-question="{{ preset.question }}"
+                            data-incident-type="{{ preset.incident_type }}"
+                            data-legal-goal="{{ preset.legal_goal }}"
+                            data-scene="{{ preset.scene }}"
+                            data-counterpart="{{ preset.counterpart }}"
+                            {% if ui_blocked %}disabled{% endif %}
+                        >
+                            {{ preset.question }}
                         </button>
                         {% endfor %}
                     </div>
                     <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                        <div class="teacher-law-helper">빠른 질문은 입력만 채웁니다. 하루 {{ daily_limit_per_user }}회까지 질문할 수 있습니다.</div>
+                        <div class="teacher-law-helper">필수 항목을 고르면 질문 보내기가 열립니다. 하루 {{ daily_limit_per_user }}회까지 질문할 수 있습니다.</div>
                         <button type="submit" class="teacher-law-send-button" data-teacher-law-send="true" {% if ui_blocked %}disabled{% endif %}>
                             <i class="fa-solid fa-paper-plane"></i>
                             질문 보내기
@@ -475,6 +645,9 @@
                     <div class="teacher-law-answer-meta">
                         <span>법률 가이드</span>
                         <div class="flex items-center gap-3">
+                            {% if latest_pair.assistant_message.answer_held %}
+                            <span class="teacher-law-clarify-badge">추가 확인 필요</span>
+                            {% endif %}
                             {% if latest_pair.assistant_message.needs_human_help %}
                             <span class="teacher-law-urgency-badge">사람 상담 권장</span>
                             {% endif %}
@@ -544,7 +717,7 @@
                 {% else %}
                 <div class="teacher-law-empty" data-teacher-law-latest-empty="true">
                     <p class="text-lg font-black text-slate-900">질문을 보내면 가장 최근 답변이 여기 가장 크게 표시됩니다.</p>
-                    <p class="mt-2 text-sm leading-6">지금 교실에서 바로 확인해야 하는 상황을 한 문장으로 적어 주세요.</p>
+                    <p class="mt-2 text-sm leading-6">상황을 적고 사건 유형과 궁금한 것을 고르면 답변이 나옵니다.</p>
                 </div>
                 {% endif %}
             </div>

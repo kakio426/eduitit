@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from datetime import timedelta
 
 import requests
 from django.conf import settings
+from django.core.cache import cache
 from django.utils import timezone
 
 from .query_normalizer import compact_text, normalize_for_matching
@@ -59,6 +61,11 @@ def get_beopmang_base_url() -> str:
         or ""
     ).strip()
     return configured.rstrip("/") or DEFAULT_BEOPMANG_BASE_URL
+
+
+def _normalize_law_name_key(value: str) -> str:
+    normalized = normalize_for_matching(value)
+    return re.sub(r"[^0-9a-z가-힣]", "", normalized)
 
 
 def is_configured() -> bool:
@@ -347,6 +354,62 @@ def search_laws(query: str, *, search: int = 1, display: int | None = None) -> l
     if provider == "open_law":
         return _search_open_law(query, search=search, display=display)
     return _search_beopmang(query, display=display)
+
+
+def _rank_exact_law_matches(results: list[dict], *, target_name: str) -> list[dict]:
+    target_compact = compact_text(target_name)
+    target_key = _normalize_law_name_key(target_name)
+    scored = []
+    for result in results:
+        law_name = compact_text(result.get("law_name"))
+        law_key = _normalize_law_name_key(law_name)
+        if not law_name or not law_key:
+            continue
+        score = 0
+        if law_name == target_compact:
+            score += 220
+        if law_key == target_key:
+            score += 200
+        if target_key and law_key.startswith(target_key):
+            score += 90
+        if target_key and target_key in law_key:
+            score += 50
+        if compact_text(result.get("law_type")) == "법률":
+            score += 8
+        elif result.get("law_type"):
+            score += 2
+        if any(keyword in law_name for keyword in ("시행규칙", "시행령", "고시")):
+            score -= 30
+        if score > 0:
+            scored.append((score, result))
+    scored.sort(key=lambda item: (-item[0], len(compact_text(item[1].get("law_name"))), item[1].get("law_name") or ""))
+    return [result for _, result in scored]
+
+
+def resolve_law_by_name(law_name: str) -> dict | None:
+    compact_name = compact_text(law_name)
+    if not compact_name:
+        return None
+
+    cache_key = f"teacher_law:resolve_law:{get_law_provider()}:{_normalize_law_name_key(compact_name)}"
+    cached = cache.get(cache_key)
+    if isinstance(cached, dict) and cached.get("law_name"):
+        return cached
+
+    ranked = _rank_exact_law_matches(search_laws(compact_name, display=10), target_name=compact_name)
+    if not ranked:
+        return None
+
+    resolved = {
+        "law_name": compact_text(ranked[0].get("law_name")),
+        "law_id": compact_text(ranked[0].get("law_id")),
+        "mst": compact_text(ranked[0].get("mst")),
+        "law_type": compact_text(ranked[0].get("law_type")),
+        "detail_link": compact_text(ranked[0].get("detail_link")),
+        "provider": compact_text(ranked[0].get("provider")) or get_law_provider(),
+    }
+    cache.set(cache_key, resolved, timeout=86400)
+    return resolved
 
 
 def _build_article_text(article: dict) -> str:
@@ -641,7 +704,7 @@ def select_relevant_citations(details: dict, profile: dict, *, limit: int = 2) -
     scored.sort(key=lambda item: (-item[0], item[1].get("article_label") or ""))
     selected_articles = [article for score, article in scored if score > 0][:limit]
     if not selected_articles:
-        selected_articles = [article for _, article in scored[:limit]]
+        return []
 
     fetched_at = timezone.now()
     return [
@@ -688,7 +751,7 @@ def select_relevant_case_citations(case_results: list[dict], profile: dict, *, l
     scored.sort(key=lambda item: (-item[0], item[1].get("case_number") or item[1].get("title") or ""))
     selected_cases = [case_result for score, case_result in scored if score > 0][:limit]
     if not selected_cases:
-        selected_cases = [case_result for _, case_result in scored[:limit]]
+        return []
 
     return [
         _build_case_citation(case_result, index=index, law_id=law_id)

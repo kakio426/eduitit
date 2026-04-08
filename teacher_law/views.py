@@ -25,6 +25,7 @@ from .services.chat import (
     get_or_create_active_session,
     get_quick_questions,
 )
+from .services.query_normalizer import get_input_options, validate_structured_input
 from .services.law_api import (
     LawApiConfigError,
     LawApiError,
@@ -101,6 +102,9 @@ def _serialize_message(message: LegalChatMessage) -> dict:
         "needs_human_help": bool(payload.get("needs_human_help")),
         "disclaimer": payload.get("disclaimer") or "",
         "scope_supported": payload.get("scope_supported", True),
+        "status": payload.get("status") or "ok",
+        "answer_held": bool(payload.get("answer_held")),
+        "clarify_reason": payload.get("clarify_reason") or "",
     }
 
 
@@ -167,6 +171,7 @@ def _build_page_context(request):
         ),
         "warning_messages": warning_messages,
         "quick_questions": get_quick_questions(),
+        **get_input_options(),
         "daily_limit_per_user": _daily_limit_per_user(),
         "session": session,
         "latest_pair": latest_pair,
@@ -310,6 +315,12 @@ def _json_error(message_text: str, *, status: int):
     return JsonResponse({"status": "error", "message": message_text}, status=status)
 
 
+def _read_request_value(request, payload: dict | None, field_name: str) -> str:
+    if _is_json_request(request):
+        return str((payload or {}).get(field_name) or "").strip()
+    return str(request.POST.get(field_name) or "").strip()
+
+
 @login_required
 def main_view(request):
     return render(request, "teacher_law/main.html", _build_page_context(request))
@@ -322,15 +333,42 @@ def ask_question_api(request):
     if _is_json_request(request) and payload is None:
         return _json_error("잘못된 요청 형식입니다.", status=400)
 
-    question = (
-        str((payload or {}).get("question") or "").strip()
-        if _is_json_request(request)
-        else str(request.POST.get("question") or "").strip()
-    )
+    question = _read_request_value(request, payload, "question")
+    incident_type = _read_request_value(request, payload, "incident_type")
+    legal_goal = _read_request_value(request, payload, "legal_goal")
+    scene = _read_request_value(request, payload, "scene")
+    counterpart = _read_request_value(request, payload, "counterpart")
+
     if not question:
         if _is_json_request(request):
-            return _json_error("질문을 입력해 주세요.", status=400)
+            return JsonResponse(
+                {
+                    "status": "error",
+                    "message": "질문을 입력해 주세요.",
+                    "field_errors": {"question": "질문을 입력해 주세요."},
+                },
+                status=400,
+            )
         messages.error(request, "질문을 입력해 주세요.")
+        return redirect("teacher_law:main")
+
+    field_errors = validate_structured_input(
+        incident_type=incident_type,
+        legal_goal=legal_goal,
+        scene=scene,
+        counterpart=counterpart,
+    )
+    if field_errors:
+        if _is_json_request(request):
+            return JsonResponse(
+                {
+                    "status": "error",
+                    "message": "필수 항목을 먼저 선택해 주세요.",
+                    "field_errors": field_errors,
+                },
+                status=400,
+            )
+        messages.error(request, "필수 항목을 먼저 선택해 주세요.")
         return redirect("teacher_law:main")
 
     if not _reserve_daily_limit(request.user.id):
@@ -348,7 +386,13 @@ def ask_question_api(request):
     )
 
     try:
-        result = answer_legal_question(question=question)
+        result = answer_legal_question(
+            question=question,
+            incident_type=incident_type,
+            legal_goal=legal_goal,
+            scene=scene,
+            counterpart=counterpart,
+        )
         profile = result.get("profile") or {}
         LegalChatMessage.objects.filter(id=user_message.id).update(
             normalized_question=profile.get("normalized_question") or "",
@@ -479,10 +523,10 @@ def ask_question_api(request):
     if _is_json_request(request):
         return JsonResponse(
             {
-                "status": "ok",
+                "status": result.get("status") or "ok",
                 "user_message": _serialize_message(user_message),
                 "assistant_message": _serialize_message(assistant_message),
             },
-            status=201,
+            status=201 if (result.get("status") or "ok") == "ok" else 200,
         )
     return redirect("teacher_law:main")

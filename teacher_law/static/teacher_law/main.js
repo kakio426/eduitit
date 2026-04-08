@@ -78,7 +78,7 @@
                         </div>
                     `;
                 }).join("")}
-                ${caseCitations.slice(0, 2).map(function (citation) {
+                ${caseCitations.slice(0, 1).map(function (citation) {
                     return `
                         <div class="teacher-law-evidence-pill teacher-law-evidence-pill--case">
                             <span class="teacher-law-evidence-label">판례</span>
@@ -104,7 +104,7 @@
             ? `
                 <div class="teacher-law-section-title">지금 바로 할 일</div>
                 <ul class="teacher-law-list">
-                    ${actionItems.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+                    ${actionItems.map(function (item) { return `<li>${escapeHtml(item)}</li>`; }).join("")}
                 </ul>
             `
             : "";
@@ -127,6 +127,9 @@
         const urgencyHtml = assistantMessage.needs_human_help
             ? `<span class="teacher-law-urgency-badge">사람 상담 권장</span>`
             : "";
+        const clarifyHtml = assistantMessage.answer_held
+            ? `<span class="teacher-law-clarify-badge">추가 확인 필요</span>`
+            : "";
         return `
             <div class="teacher-law-question-card">
                 <div class="teacher-law-question-label">내 질문</div>
@@ -136,6 +139,7 @@
                 <div class="teacher-law-answer-meta">
                     <span>법률 가이드</span>
                     <div class="flex items-center gap-3">
+                        ${clarifyHtml}
                         ${urgencyHtml}
                         <time datetime="${escapeHtml(assistantMessage.created_at || "")}">${escapeHtml(formatDate(assistantMessage.created_at))}</time>
                     </div>
@@ -163,7 +167,7 @@
         return `
             <div class="teacher-law-empty" data-teacher-law-latest-empty="true">
                 <p class="text-lg font-black text-slate-900">질문을 보내면 가장 최근 답변이 여기 가장 크게 표시됩니다.</p>
-                <p class="mt-2 text-sm leading-6">지금 교실에서 바로 확인해야 하는 상황을 한 문장으로 적어 주세요.</p>
+                <p class="mt-2 text-sm leading-6">상황을 적고 사건 유형과 궁금한 것을 고르면 답변이 나옵니다.</p>
             </div>
         `;
     }
@@ -194,6 +198,23 @@
         element.classList.toggle("is-visible", Boolean(message));
     }
 
+    function getCheckedValue(root, name) {
+        const checked = root.querySelector(`input[name="${name}"]:checked`);
+        return checked ? String(checked.value || "").trim() : "";
+    }
+
+    function setCheckedValue(root, name, value) {
+        root.querySelectorAll(`input[name="${name}"]`).forEach(function (input) {
+            input.checked = String(input.value || "") === String(value || "");
+        });
+    }
+
+    function clearRadioValue(root, name) {
+        root.querySelectorAll(`input[name="${name}"]`).forEach(function (input) {
+            input.checked = false;
+        });
+    }
+
     document.addEventListener("DOMContentLoaded", function () {
         const root = document.querySelector("[data-teacher-law-root='true']");
         if (!root) return;
@@ -210,6 +231,19 @@
         const latestContainer = root.querySelector("[data-teacher-law-latest-container='true']");
         const historyList = root.querySelector("[data-teacher-law-history-list='true']");
         const quickButtons = Array.from(root.querySelectorAll("[data-teacher-law-quick-question='true']"));
+        const incidentRadios = Array.from(root.querySelectorAll("[data-teacher-law-incident-option='true']"));
+        const goalRadios = Array.from(root.querySelectorAll("[data-teacher-law-goal-option='true']"));
+        const sceneRadios = Array.from(root.querySelectorAll("[data-teacher-law-scene-option='true']"));
+        const counterpartRadios = Array.from(root.querySelectorAll("[data-teacher-law-counterpart-option='true']"));
+        const sceneGroup = root.querySelector("[data-teacher-law-scene-group='true']");
+        const counterpartGroup = root.querySelector("[data-teacher-law-counterpart-group='true']");
+        const fieldGroups = {
+            question: null,
+            incident_type: root.querySelector("[data-teacher-law-field-group='incident_type']"),
+            legal_goal: root.querySelector("[data-teacher-law-field-group='legal_goal']"),
+            scene: root.querySelector("[data-teacher-law-field-group='scene']"),
+            counterpart: root.querySelector("[data-teacher-law-field-group='counterpart']"),
+        };
 
         let isSubmitting = false;
         let progressTimers = [];
@@ -217,6 +251,39 @@
         let latestPair = latestPairData && latestPairData.user_message && latestPairData.assistant_message ? latestPairData : null;
         let historyPairs = Array.isArray(historyPairData) ? historyPairData.filter(Boolean) : [];
         const uiBlocked = root.dataset.uiBlocked === "true";
+
+        function currentRequirement() {
+            const selected = incidentRadios.find(function (radio) { return radio.checked; });
+            return selected ? String(selected.dataset.requires || "").trim() : "";
+        }
+
+        function applyFieldErrors(fieldErrors) {
+            const normalized = fieldErrors || {};
+            Object.keys(fieldGroups).forEach(function (key) {
+                const group = fieldGroups[key];
+                if (!group) return;
+                group.classList.toggle("is-error", Boolean(normalized[key]));
+            });
+        }
+
+        function buildFieldErrors() {
+            const errors = {};
+            const incidentType = getCheckedValue(root, "incident_type");
+            const legalGoal = getCheckedValue(root, "legal_goal");
+            const requirement = currentRequirement();
+            const question = String(input.value || "").trim();
+
+            if (!question) errors.question = "질문을 입력해 주세요.";
+            if (!incidentType) errors.incident_type = "사건 유형을 먼저 골라 주세요.";
+            if (!legalGoal) errors.legal_goal = "지금 궁금한 것을 먼저 골라 주세요.";
+            if (requirement === "scene" && !getCheckedValue(root, "scene")) {
+                errors.scene = "장면을 하나 골라 주세요.";
+            }
+            if (requirement === "counterpart" && !getCheckedValue(root, "counterpart")) {
+                errors.counterpart = "상대를 하나 골라 주세요.";
+            }
+            return errors;
+        }
 
         function renderLatestPair(html) {
             if (!latestContainer) return;
@@ -237,7 +304,7 @@
         }
 
         function clearProgressTimers() {
-            progressTimers.forEach((timerId) => window.clearTimeout(timerId));
+            progressTimers.forEach(function (timerId) { window.clearTimeout(timerId); });
             progressTimers = [];
             if (longWaitTimer) {
                 window.clearTimeout(longWaitTimer);
@@ -245,14 +312,25 @@
             }
         }
 
-        function setSubmittingState(nextState) {
-            isSubmitting = nextState;
-            const disabled = nextState || uiBlocked;
-            if (input) input.disabled = disabled;
-            if (sendButton) sendButton.disabled = disabled;
-            quickButtons.forEach(function (button) {
-                button.disabled = disabled;
+        function updateDependentVisibility() {
+            const requirement = currentRequirement();
+            if (sceneGroup) sceneGroup.hidden = requirement !== "scene";
+            if (counterpartGroup) counterpartGroup.hidden = requirement !== "counterpart";
+            if (requirement !== "scene") clearRadioValue(root, "scene");
+            if (requirement !== "counterpart") clearRadioValue(root, "counterpart");
+        }
+
+        function updateSubmitEnabled() {
+            const hasErrors = Object.keys(buildFieldErrors()).length > 0;
+            const disabled = isSubmitting || uiBlocked || hasErrors;
+            if (input) input.disabled = isSubmitting || uiBlocked;
+            incidentRadios.concat(goalRadios, sceneRadios, counterpartRadios).forEach(function (radio) {
+                radio.disabled = isSubmitting || uiBlocked;
             });
+            quickButtons.forEach(function (button) {
+                button.disabled = isSubmitting || uiBlocked;
+            });
+            if (sendButton) sendButton.disabled = disabled;
         }
 
         function syncPlaceholderText(message) {
@@ -263,27 +341,23 @@
         function startProgressSequence() {
             if (!progress || !progressText) return;
             progress.classList.add("is-visible");
-            progressText.textContent = "질문 정리 중...";
-            renderLatestPair(buildLatestPlaceholderHtml("질문 정리 중..."));
+            progressText.textContent = "관련 법령 확인 중...";
+            renderLatestPair(buildLatestPlaceholderHtml("관련 법령 확인 중..."));
             progressTimers = [
                 window.setTimeout(function () {
-                    progressText.textContent = "관련 법령 검색 중...";
-                    syncPlaceholderText("관련 법령 검색 중...");
+                    progressText.textContent = "허용된 법령 안에서 조문 찾는 중...";
+                    syncPlaceholderText("허용된 법령 안에서 조문 찾는 중...");
                 }, 2000),
                 window.setTimeout(function () {
-                    progressText.textContent = "근거 조문 확인 중...";
-                    syncPlaceholderText("근거 조문 확인 중...");
-                }, 4000),
-                window.setTimeout(function () {
-                    progressText.textContent = "가이드 정리 중...";
-                    syncPlaceholderText("가이드 정리 중...");
-                }, 6000),
+                    progressText.textContent = "답변 정리 중...";
+                    syncPlaceholderText("답변 정리 중...");
+                }, 4500),
             ];
             longWaitTimer = window.setTimeout(function () {
                 const message = "조금 오래 걸리고 있어요. 근거를 다시 확인하는 중입니다.";
                 progressText.textContent = message;
                 syncPlaceholderText(message);
-            }, 10000);
+            }, 9000);
         }
 
         function stopProgressSequence() {
@@ -303,10 +377,30 @@
             };
         }
 
-        async function submitQuestion(question) {
-            if (!question || isSubmitting || uiBlocked) return;
+        async function submitQuestion() {
+            const fieldErrors = buildFieldErrors();
+            applyFieldErrors(fieldErrors);
+            if (Object.keys(fieldErrors).length) {
+                const message = Object.values(fieldErrors)[0] || "필수 항목을 먼저 선택해 주세요.";
+                showInlineError(errorBox, message);
+                dispatchToast(message, "warning");
+                updateSubmitEnabled();
+                return;
+            }
+
+            const question = String(input.value || "").trim();
+            const payload = {
+                question: question,
+                incident_type: getCheckedValue(root, "incident_type"),
+                legal_goal: getCheckedValue(root, "legal_goal"),
+                scene: getCheckedValue(root, "scene"),
+                counterpart: getCheckedValue(root, "counterpart"),
+            };
+
             showInlineError(errorBox, "");
-            setSubmittingState(true);
+            applyFieldErrors({});
+            isSubmitting = true;
+            updateSubmitEnabled();
             startProgressSequence();
 
             try {
@@ -316,12 +410,11 @@
                         "Content-Type": "application/json",
                         "X-CSRFToken": form.querySelector("[name='csrfmiddlewaretoken']").value,
                     },
-                    body: JSON.stringify({ question }),
+                    body: JSON.stringify(payload),
                 });
-                const data = await response.json().catch(function () {
-                    return {};
-                });
+                const data = await response.json().catch(function () { return {}; });
                 if (!response.ok) {
+                    if (data.field_errors) applyFieldErrors(data.field_errors);
                     throw new Error(data.message || "답변을 준비하지 못했습니다.");
                 }
                 const nextPair = buildPairFromResponse(data, question);
@@ -332,41 +425,75 @@
                 stopProgressSequence();
                 renderHistory();
                 if (input) input.value = "";
+                clearRadioValue(root, "incident_type");
+                clearRadioValue(root, "legal_goal");
+                clearRadioValue(root, "scene");
+                clearRadioValue(root, "counterpart");
+                updateDependentVisibility();
+                updateSubmitEnabled();
+                if ((data.status || "ok") === "clarify") {
+                    dispatchToast("추가 정보를 더 확인해야 해서 보수적으로 안내했어요.", "info");
+                }
             } catch (error) {
                 stopProgressSequence();
                 const message = error && error.message ? error.message : "답변을 준비하지 못했습니다.";
                 showInlineError(errorBox, message);
                 dispatchToast(message, "error");
             } finally {
-                setSubmittingState(false);
+                isSubmitting = false;
+                updateSubmitEnabled();
             }
+        }
+
+        function applyQuickPreset(button) {
+            const question = String(button.dataset.question || "").trim();
+            const incidentType = String(button.dataset.incidentType || "").trim();
+            const legalGoal = String(button.dataset.legalGoal || "").trim();
+            const scene = String(button.dataset.scene || "").trim();
+            const counterpart = String(button.dataset.counterpart || "").trim();
+
+            if (question) input.value = question;
+            if (incidentType) setCheckedValue(root, "incident_type", incidentType);
+            if (legalGoal) setCheckedValue(root, "legal_goal", legalGoal);
+            updateDependentVisibility();
+            if (scene) setCheckedValue(root, "scene", scene);
+            if (counterpart) setCheckedValue(root, "counterpart", counterpart);
+            applyFieldErrors({});
+            showInlineError(errorBox, "");
+            updateSubmitEnabled();
+            input.focus();
         }
 
         renderLatest();
         renderHistory();
-        setSubmittingState(false);
+        updateDependentVisibility();
+        updateSubmitEnabled();
 
         form.addEventListener("submit", function (event) {
             event.preventDefault();
-            if (uiBlocked) return;
-            const question = String(input.value || "").trim();
-            if (!question) {
-                const message = "질문을 입력해 주세요.";
-                showInlineError(errorBox, message);
-                dispatchToast(message, "warning");
-                input.focus();
-                return;
-            }
-            submitQuestion(question);
+            if (uiBlocked || isSubmitting) return;
+            submitQuestion();
+        });
+
+        input.addEventListener("input", function () {
+            applyFieldErrors({});
+            if (errorBox && errorBox.classList.contains("is-visible")) showInlineError(errorBox, "");
+            updateSubmitEnabled();
+        });
+
+        incidentRadios.concat(goalRadios, sceneRadios, counterpartRadios).forEach(function (radio) {
+            radio.addEventListener("change", function () {
+                updateDependentVisibility();
+                applyFieldErrors({});
+                showInlineError(errorBox, "");
+                updateSubmitEnabled();
+            });
         });
 
         quickButtons.forEach(function (button) {
             button.addEventListener("click", function () {
-                if (uiBlocked) return;
-                const question = String(button.dataset.question || "").trim();
-                if (!question) return;
-                input.value = question;
-                input.focus();
+                if (uiBlocked || isSubmitting) return;
+                applyQuickPreset(button);
             });
         });
     });

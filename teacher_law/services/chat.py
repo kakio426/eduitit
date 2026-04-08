@@ -19,14 +19,18 @@ from .law_api import (
     get_law_details,
     get_law_provider,
     is_configured as is_law_api_configured,
-    rank_search_results,
+    resolve_law_by_name,
     search_cases,
-    search_laws,
     select_relevant_case_citations,
     select_relevant_citations,
 )
 from .llm_client import LlmClientError, generate_legal_answer, is_configured as is_llm_configured
-from .query_normalizer import ANSWER_POLICY_VERSION, QUICK_QUESTIONS, build_query_profile, compact_text
+from .query_normalizer import (
+    ANSWER_POLICY_VERSION,
+    build_query_profile,
+    compact_text,
+    get_quick_question_presets,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -44,8 +48,8 @@ class TeacherLawTimeoutError(TeacherLawError):
     pass
 
 
-def get_quick_questions() -> list[str]:
-    return list(QUICK_QUESTIONS)
+def get_quick_questions() -> list[dict]:
+    return get_quick_question_presets()
 
 
 def get_or_create_active_session(user) -> LegalChatSession:
@@ -121,9 +125,22 @@ def build_answer_body(payload: dict) -> str:
     return "\n".join(lines).strip()
 
 
-def answer_legal_question(*, question: str) -> dict:
+def answer_legal_question(
+    *,
+    question: str,
+    incident_type: str = "",
+    legal_goal: str = "",
+    scene: str = "",
+    counterpart: str = "",
+) -> dict:
     started = perf_counter()
-    profile = build_query_profile(question)
+    profile = build_query_profile(
+        question,
+        incident_type=incident_type,
+        legal_goal=legal_goal,
+        scene=scene,
+        counterpart=counterpart,
+    )
     law_provider = get_law_provider()
     if not getattr(settings, "TEACHER_LAW_ENABLED", False):
         raise TeacherLawDisabledError("교사용 AI 법률 가이드가 아직 활성화되지 않았습니다.")
@@ -131,6 +148,7 @@ def answer_legal_question(*, question: str) -> dict:
     if not profile.get("scope_supported"):
         payload = _build_out_of_scope_payload(profile)
         return {
+            "status": "ok",
             "profile": profile,
             "payload": payload,
             "audit": {
@@ -157,6 +175,7 @@ def answer_legal_question(*, question: str) -> dict:
             law_provider,
         )
         return {
+            "status": "ok",
             "profile": profile,
             "payload": cached_payload,
             "audit": {
@@ -179,32 +198,28 @@ def answer_legal_question(*, question: str) -> dict:
         raise LawApiConfigError("국가법령정보 API 인증값이 아직 연결되지 않았습니다.")
 
     total_timeout_seconds = int(getattr(settings, "TEACHER_LAW_TOTAL_TIMEOUT_SECONDS", 20))
-    detail_limit = int(getattr(settings, "TEACHER_LAW_DETAIL_FETCH_LIMIT", 3))
-    candidate_queries = list(profile.get("candidate_queries") or [])[:6]
+    detail_limit = min(int(getattr(settings, "TEACHER_LAW_DETAIL_FETCH_LIMIT", 3)), max(len(profile.get("law_allowlist") or []), 1))
     case_queries = list(profile.get("case_queries") or [])[:2]
 
     search_attempt_count = 0
     search_result_count = 0
     detail_fetch_count = 0
     selected_sources = []
-    aggregated_results = []
     collected_law_citations = []
     related_case_results = []
-    law_query_hint = _build_law_query_hint(profile)
+    law_query_hint = profile.get("law_query_hint") or _build_law_query_hint(profile)
+    resolved_laws = []
 
-    for query in candidate_queries:
+    for law_name in profile.get("law_allowlist") or []:
         _ensure_total_timeout(started, total_timeout_seconds)
         search_attempt_count += 1
-        search_results = search_laws(query, search=1)
-        search_result_count += len(search_results)
-        aggregated_results.extend(search_results)
-        if search_results and _has_hint_match(search_results, profile):
-            break
-        if not profile.get("hint_queries") and search_results:
-            break
+        resolved = resolve_law_by_name(law_name)
+        if not resolved:
+            continue
+        search_result_count += 1
+        resolved_laws.append(resolved)
 
-    ranked_results = _dedupe_search_results(rank_search_results(aggregated_results, profile))
-    for ranked in ranked_results[:detail_limit]:
+    for ranked in _dedupe_search_results(resolved_laws)[:detail_limit]:
         _ensure_total_timeout(started, total_timeout_seconds)
         detail_fetch_count += 1
         detail = get_law_details(
@@ -243,7 +258,7 @@ def answer_legal_question(*, question: str) -> dict:
                 select_relevant_case_citations(
                     deduped_case_results,
                     profile,
-                    limit=2,
+                    limit=1,
                     law_id=first_law_id,
                 )
             )
@@ -263,7 +278,7 @@ def answer_legal_question(*, question: str) -> dict:
                     select_relevant_case_citations(
                         case_results,
                         profile,
-                        limit=2,
+                        limit=1,
                         law_id=first_law_id,
                     )
                 )
@@ -271,7 +286,7 @@ def answer_legal_question(*, question: str) -> dict:
                     break
 
     case_citations = _dedupe_citations(collected_case_citations)
-    for citation in case_citations[:2]:
+    for citation in case_citations[:1]:
         selected_sources.append(
             {
                 "source_type": "case",
@@ -286,25 +301,25 @@ def answer_legal_question(*, question: str) -> dict:
             }
         )
 
-    visible_citations = law_citations[:2] + case_citations[:2]
+    visible_citations = law_citations[:2] + case_citations[:1]
     if not law_citations:
-        payload = _build_insufficient_payload(profile, selected_sources)
+        payload = _build_clarify_payload(profile, selected_sources)
         audit = {
             "cache_hit": False,
             "search_attempt_count": search_attempt_count,
             "search_result_count": search_result_count,
             "detail_fetch_count": detail_fetch_count,
             "selected_laws_json": selected_sources,
-            "failure_reason": "insufficient_citations",
+            "failure_reason": "clarify",
             "error_message": "",
             "elapsed_ms": _elapsed_ms(started),
         }
         logger.info(
-            "[TeacherLaw] Action: GENERATE_ANSWER, Status: SUCCESS, Topic: %s, Outcome: insufficient, Provider: %s",
+            "[TeacherLaw] Action: GENERATE_ANSWER, Status: CLARIFY, Topic: %s, Provider: %s",
             profile.get("topic") or "unknown",
             law_provider,
         )
-        return {"profile": profile, "payload": payload, "audit": audit}
+        return {"status": "clarify", "profile": profile, "payload": payload, "audit": audit}
 
     _ensure_total_timeout(started, total_timeout_seconds)
     llm_answer = generate_legal_answer(
@@ -332,7 +347,7 @@ def answer_legal_question(*, question: str) -> dict:
         "hit" if audit["cache_hit"] else "miss",
         law_provider,
     )
-    return {"profile": profile, "payload": payload, "audit": audit}
+    return {"status": "ok", "profile": profile, "payload": payload, "audit": audit}
 
 
 def _elapsed_ms(started: float) -> int:
@@ -447,6 +462,9 @@ def _build_out_of_scope_payload(profile: dict) -> dict:
         "needs_human_help": False,
         "disclaimer": "일반적 법령 정보 안내이며 개별 사건의 법률 자문은 아닙니다.",
         "scope_supported": False,
+        "status": "ok",
+        "answer_held": False,
+        "clarify_reason": "",
     }
 
 
@@ -476,30 +494,58 @@ def _build_placeholder_citation(source: dict, *, fetched_at: str) -> dict:
     }
 
 
-def _build_insufficient_payload(profile: dict, selected_sources: list[dict]) -> dict:
+def _build_clarify_payload(profile: dict, selected_sources: list[dict]) -> dict:
     fetched_at = timezone.now().isoformat()
     citations = [_build_placeholder_citation(source, fetched_at=fetched_at) for source in selected_sources[:2]]
-    has_law_source = any(source.get("source_type") == "law" for source in selected_sources)
-    has_case_source = any(source.get("source_type") == "case" for source in selected_sources)
-
-    if has_law_source and has_case_source:
-        summary = "관련 법령은 찾았지만 질문과 바로 맞는 조문 연결이 약하고, 대표 판례 연결도 더 확인이 필요합니다."
-    elif has_law_source:
-        summary = "관련 법령은 찾았지만 질문과 바로 맞는 조문 연결이 약합니다."
+    legal_goal = profile.get("legal_goal") or ""
+    if profile.get("requires_scene") and not profile.get("scene_value"):
+        summary = "관련 법령은 정해졌지만, 책임 판단에 필요한 장면 정보가 부족합니다."
+        action_items = [
+            "수업 중인지, 쉬는시간인지, 체험학습인지 장면을 먼저 골라 주세요.",
+            "학생이 언제 어떻게 다쳤는지 한두 문장 더 적어 주세요.",
+        ]
+    elif profile.get("requires_counterpart") and not profile.get("counterpart"):
+        summary = "관련 법령은 정해졌지만, 상대가 누구인지 불분명해 추가 확인이 필요합니다."
+        action_items = [
+            "학생, 학부모, 보호자, 외부인 중 상대를 먼저 골라 주세요.",
+            "무슨 방식으로 문제가 생겼는지 한두 문장 더 적어 주세요.",
+        ]
+    elif legal_goal == "teacher_liability":
+        summary = "관련 법령은 정해졌지만, 책임 판단에 필요한 사고 경위와 교사의 대응 상황을 더 확인해야 합니다."
+        action_items = [
+            "사고가 난 장면과 당시 교사의 위치·대응을 한두 문장 더 적어 주세요.",
+            "학생 상태와 즉시 조치 내용을 함께 적어 주세요.",
+        ]
+    elif legal_goal == "posting_allowed":
+        summary = "관련 법령은 정해졌지만, 공개 범위와 동의 여부를 더 확인해야 합니다."
+        action_items = [
+            "어디에 올릴지와 누가 볼 수 있는지 먼저 적어 주세요.",
+            "학생 또는 보호자 동의 여부를 함께 확인해 주세요.",
+        ]
+    elif legal_goal == "reporting_duty":
+        summary = "관련 법령은 정해졌지만, 신고 시점과 보고 대상 판단을 위해 사실관계를 더 확인해야 합니다."
+        action_items = [
+            "언제 어떤 의심 정황을 알게 되었는지 적어 주세요.",
+            "학교 내부 보고와 외부 신고가 필요한 상황인지 함께 확인해 주세요.",
+        ]
     else:
-        summary = "질문과 바로 연결되는 근거를 충분히 찾지 못해 추가 확인이 필요합니다."
+        summary = "관련 법령은 정해졌지만, 질문과 바로 맞는 조문 연결이 약해 추가 확인이 필요합니다."
+        action_items = [
+            "누가, 언제, 어디서, 무엇을 했는지 한두 문장 더 적어 주세요.",
+            "학교 규정이나 교육청 지침이 있다면 함께 확인해 주세요.",
+        ]
 
     return {
         "summary": summary,
-        "action_items": [
-            "누가 다쳤는지, 언제였는지, 어떤 대응을 했는지처럼 사실관계를 한두 문장 더 적어 주세요.",
-            "학교 규정이나 교육청 지침이 있다면 함께 확인해 주세요.",
-        ],
+        "action_items": action_items,
         "citations": citations,
         "risk_level": "medium",
         "needs_human_help": bool(profile.get("risk_flags")),
         "disclaimer": "일반적 법령 정보 안내이며 개별 사건의 법률 자문은 아닙니다.",
         "scope_supported": True,
+        "status": "clarify",
+        "answer_held": True,
+        "clarify_reason": summary,
     }
 
 
@@ -539,6 +585,9 @@ def _normalize_answer_payload(answer: dict, citations: list[dict], profile: dict
             answer.get("disclaimer") or "일반적 법령 정보 안내이며 개별 사건의 법률 자문은 아닙니다."
         ),
         "scope_supported": bool(answer.get("scope_supported", True)),
+        "status": "ok",
+        "answer_held": False,
+        "clarify_reason": "",
     }
 
 
@@ -551,6 +600,9 @@ def _serialize_cache_payload(payload: dict) -> dict:
         "needs_human_help": bool(payload.get("needs_human_help")),
         "disclaimer": payload.get("disclaimer") or "",
         "scope_supported": bool(payload.get("scope_supported", True)),
+        "status": payload.get("status") or "ok",
+        "answer_held": bool(payload.get("answer_held")),
+        "clarify_reason": payload.get("clarify_reason") or "",
     }
     for citation in payload.get("citations") or []:
         if not isinstance(citation, dict):
@@ -593,6 +645,9 @@ def _restore_cache_payload(raw_payload):
             raw_payload.get("disclaimer") or "일반적 법령 정보 안내이며 개별 사건의 법률 자문은 아닙니다."
         ),
         "scope_supported": bool(raw_payload.get("scope_supported", True)),
+        "status": compact_text(raw_payload.get("status") or "ok") or "ok",
+        "answer_held": bool(raw_payload.get("answer_held")),
+        "clarify_reason": compact_text(raw_payload.get("clarify_reason")),
     }
 
 

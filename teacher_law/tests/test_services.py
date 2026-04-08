@@ -7,7 +7,11 @@ from teacher_law.services import law_api
 from teacher_law.services.chat import answer_legal_question
 from teacher_law.services.llm_client import _extract_json_payload
 from teacher_law.services.law_api import LawApiError, LawApiTimeoutError, LawApiVerificationError
-from teacher_law.services.query_normalizer import QUICK_QUESTIONS, build_query_profile
+from teacher_law.services.query_normalizer import (
+    build_query_profile,
+    get_quick_question_presets,
+    validate_structured_input,
+)
 
 
 class QueryNormalizerTests(SimpleTestCase):
@@ -41,12 +45,36 @@ class QueryNormalizerTests(SimpleTestCase):
         self.assertIn("법적 책임", profile["legal_issues"])
         self.assertIn("학교안전사고 예방 및 보상에 관한 법률", profile["hint_queries"])
         self.assertIn("민법", profile["hint_queries"])
-        self.assertIn("학생 안전사고 교사 책임", profile["candidate_queries"])
+        self.assertEqual(profile["legal_goal"], "teacher_liability")
+        self.assertIn("안전사고·책임 교사 책임이 있는지", profile["candidate_queries"])
+
+    def test_build_query_profile_prefers_structured_input_over_free_text_only_guess(self):
+        profile = build_query_profile(
+            "학생 사진을 올려도 되나요?",
+            incident_type="privacy_photo",
+            legal_goal="posting_allowed",
+            counterpart="student",
+        )
+
+        self.assertEqual(profile["incident_type"], "privacy_photo")
+        self.assertEqual(profile["legal_goal"], "posting_allowed")
+        self.assertEqual(profile["counterpart_label"], "학생")
+        self.assertEqual(profile["law_allowlist"], ["개인정보 보호법", "초ㆍ중등교육법"])
 
     def test_build_query_profile_keeps_personal_life_legal_question_out_of_scope(self):
         profile = build_query_profile("중고거래 환불이 안 되는데 어떻게 대응하나요?")
 
         self.assertFalse(profile["scope_supported"])
+
+    def test_validate_structured_input_requires_scene_for_school_safety(self):
+        field_errors = validate_structured_input(
+            incident_type="school_safety",
+            legal_goal="teacher_liability",
+            scene="",
+            counterpart="",
+        )
+
+        self.assertIn("scene", field_errors)
 
 
 class LlmPayloadParsingTests(SimpleTestCase):
@@ -249,6 +277,20 @@ class BeopmangLawApiTests(SimpleTestCase):
         self.assertEqual(params["law_id"], "009620")
         self.assertEqual(params["article"], "750")
 
+    @override_settings(TEACHER_LAW_PROVIDER="beopmang")
+    def test_resolve_law_by_name_prefers_exact_law_over_enforcement_rule(self):
+        cache.clear()
+        with patch(
+            "teacher_law.services.law_api.search_laws",
+            return_value=[
+                {"law_name": "학교안전사고 예방 및 보상에 관한 법률 시행규칙", "law_id": "rule-1", "mst": "", "law_type": "교육부령", "detail_link": "", "provider": "beopmang"},
+                {"law_name": "학교안전사고 예방 및 보상에 관한 법률", "law_id": "law-1", "mst": "", "law_type": "법률", "detail_link": "", "provider": "beopmang"},
+            ],
+        ):
+            resolved = law_api.resolve_law_by_name("학교안전사고 예방 및 보상에 관한 법률")
+
+        self.assertEqual(resolved["law_id"], "law-1")
+
     def test_rank_search_results_prefers_exact_hint_law_over_subordinate_rule(self):
         profile = build_query_profile("쉬는시간에 학생이 다쳤습니다. 교사인 제 책임인가요?")
         results = [
@@ -284,6 +326,7 @@ class TeacherLawCachingTests(TestCase):
         cache.clear()
 
     def test_quick_question_uses_cache_on_second_request(self):
+        preset = get_quick_question_presets()[0]
         citation = {
             "citation_id": "law-1",
             "source_type": "law",
@@ -311,18 +354,36 @@ class TeacherLawCachingTests(TestCase):
         with (
             patch("teacher_law.services.chat.is_law_api_configured", return_value=True),
             patch("teacher_law.services.chat.is_llm_configured", return_value=True),
-            patch("teacher_law.services.chat.search_laws", return_value=[{"law_name": citation["law_name"], "law_id": "123", "mst": "999", "detail_link": citation["source_url"]}]) as search_mock,
+            patch(
+                "teacher_law.services.chat.resolve_law_by_name",
+                side_effect=[
+                    {"law_name": "개인정보 보호법", "law_id": "123", "mst": "999", "detail_link": citation["source_url"], "provider": "beopmang"},
+                    {"law_name": "초ㆍ중등교육법", "law_id": "456", "mst": "", "detail_link": "", "provider": "beopmang"},
+                ],
+            ) as resolve_mock,
             patch("teacher_law.services.chat.get_law_details", return_value={"law_name": citation["law_name"], "law_id": "123", "mst": "999", "detail_link": citation["source_url"], "articles": []}),
             patch("teacher_law.services.chat.select_relevant_citations", return_value=[citation]),
             patch("teacher_law.services.chat.search_cases", return_value=[]),
             patch("teacher_law.services.chat.generate_legal_answer", return_value=llm_answer),
         ):
-            first = answer_legal_question(question=QUICK_QUESTIONS[0])
-            second = answer_legal_question(question=QUICK_QUESTIONS[0])
+            first = answer_legal_question(
+                question=preset["question"],
+                incident_type=preset["incident_type"],
+                legal_goal=preset["legal_goal"],
+                counterpart=preset["counterpart"],
+                scene=preset["scene"],
+            )
+            second = answer_legal_question(
+                question=preset["question"],
+                incident_type=preset["incident_type"],
+                legal_goal=preset["legal_goal"],
+                counterpart=preset["counterpart"],
+                scene=preset["scene"],
+            )
 
         self.assertFalse(first["audit"]["cache_hit"])
         self.assertTrue(second["audit"]["cache_hit"])
-        self.assertEqual(search_mock.call_count, 1)
+        self.assertEqual(resolve_mock.call_count, 2)
 
     @override_settings(TEACHER_LAW_PROVIDER="beopmang")
     @patch.dict("os.environ", {}, clear=True)
@@ -354,12 +415,23 @@ class TeacherLawCachingTests(TestCase):
 
         with (
             patch("teacher_law.services.chat.is_llm_configured", return_value=True),
-            patch("teacher_law.services.chat.search_laws", return_value=[{"law_name": "민법", "law_id": "001706", "mst": "", "detail_link": "", "provider": "beopmang"}]),
+            patch(
+                "teacher_law.services.chat.resolve_law_by_name",
+                side_effect=[
+                    {"law_name": "개인정보 보호법", "law_id": "001111", "mst": "", "detail_link": "", "provider": "beopmang"},
+                    {"law_name": "초ㆍ중등교육법", "law_id": "001222", "mst": "", "detail_link": "", "provider": "beopmang"},
+                ],
+            ),
             patch("teacher_law.services.chat.get_law_details", return_value={"law_name": "민법", "law_id": "001706", "mst": "", "detail_link": "", "provider": "beopmang", "articles": []}) as detail_mock,
             patch("teacher_law.services.chat.select_relevant_citations", return_value=[citation]),
             patch("teacher_law.services.chat.generate_legal_answer", return_value=llm_answer),
         ):
-            result = answer_legal_question(question="학생 사진을 올리려면 동의가 필요한가요?")
+            result = answer_legal_question(
+                question="학생 사진을 올리려면 동의가 필요한가요?",
+                incident_type="privacy_photo",
+                legal_goal="posting_allowed",
+                counterpart="student",
+            )
 
         self.assertEqual(result["payload"]["summary"], llm_answer["summary"])
         self.assertEqual(result["audit"]["selected_laws_json"][0]["provider"], "beopmang")
@@ -410,63 +482,56 @@ class TeacherLawCachingTests(TestCase):
 
         with (
             patch("teacher_law.services.chat.is_llm_configured", return_value=True),
-            patch("teacher_law.services.chat.search_laws", return_value=[{"law_name": law_citation["law_name"], "law_id": "009620", "mst": "", "detail_link": "", "provider": "beopmang"}]),
+            patch(
+                "teacher_law.services.chat.resolve_law_by_name",
+                side_effect=[
+                    {"law_name": law_citation["law_name"], "law_id": "009620", "mst": "", "detail_link": "", "provider": "beopmang"},
+                    {"law_name": "민법", "law_id": "001706", "mst": "", "detail_link": "", "provider": "beopmang"},
+                    {"law_name": "초ㆍ중등교육법", "law_id": "001901", "mst": "", "detail_link": "", "provider": "beopmang"},
+                ],
+            ),
             patch("teacher_law.services.chat.get_law_details", return_value={"law_name": law_citation["law_name"], "law_id": "009620", "mst": "", "detail_link": "", "provider": "beopmang", "articles": [], "related_cases": []}),
             patch("teacher_law.services.chat.select_relevant_citations", return_value=[law_citation]),
             patch("teacher_law.services.chat.search_cases", return_value=[{"case_id": "case-1", "title": case_citation["title"], "case_number": case_citation["case_number"], "quote": case_citation["quote"], "provider": "beopmang"}]),
             patch("teacher_law.services.chat.select_relevant_case_citations", return_value=[case_citation]),
             patch("teacher_law.services.chat.generate_legal_answer", return_value=llm_answer),
         ):
-            result = answer_legal_question(question="쉬는시간에 학생이 다쳤는데 교사 책임이 있나요?")
+            result = answer_legal_question(
+                question="쉬는시간에 학생이 다쳤는데 교사 책임이 있나요?",
+                incident_type="school_safety",
+                legal_goal="teacher_liability",
+                scene="break_time",
+            )
 
         self.assertEqual(result["payload"]["citations"][0]["source_type"], "law")
         self.assertEqual(result["payload"]["citations"][1]["source_type"], "case")
-        self.assertEqual(result["audit"]["selected_laws_json"][1]["source_type"], "case")
+        self.assertTrue(any(item["source_type"] == "case" for item in result["audit"]["selected_laws_json"]))
 
     @override_settings(TEACHER_LAW_PROVIDER="beopmang")
     @patch.dict("os.environ", {}, clear=True)
-    def test_answer_question_keeps_searching_until_hint_law_appears(self):
-        citation = {
-            "citation_id": "law-1",
-            "source_type": "law",
-            "title": "학교안전사고 예방 및 보상에 관한 법률",
-            "law_name": "학교안전사고 예방 및 보상에 관한 법률",
-            "law_id": "010380",
-            "mst": "",
-            "reference_label": "제2조",
-            "article_label": "제2조",
-            "case_number": "",
-            "quote": "학교안전사고의 정의를 정한다.",
-            "source_url": "",
-            "provider": "beopmang",
-            "fetched_at": "2026-04-05T00:00:00+09:00",
-        }
-        llm_answer = {
-            "summary": "학교안전사고 예방 및 보상에 관한 법률을 먼저 확인해야 합니다.",
-            "action_items": ["사고 상황을 기록합니다."],
-            "citations": ["law-1"],
-            "risk_level": "medium",
-            "needs_human_help": False,
-            "disclaimer": "일반적 법령 정보 안내이며 개별 사건의 법률 자문은 아닙니다.",
-            "scope_supported": True,
-        }
-        irrelevant_results = [
-            {"law_name": "상법", "law_id": "001702", "mst": "", "detail_link": "", "provider": "beopmang", "law_type": "법률"},
-        ]
-        relevant_results = [
-            {"law_name": "학교안전사고 예방 및 보상에 관한 법률", "law_id": "010380", "mst": "", "detail_link": "", "provider": "beopmang", "law_type": "법률"},
-        ]
-
+    def test_answer_question_clarifies_when_allowlist_has_no_relevant_articles(self):
         with (
             patch("teacher_law.services.chat.is_llm_configured", return_value=True),
-            patch("teacher_law.services.chat.search_laws", side_effect=[irrelevant_results, relevant_results]) as search_mock,
-            patch("teacher_law.services.chat.get_law_details", return_value={"law_name": citation["law_name"], "law_id": "010380", "mst": "", "detail_link": "", "provider": "beopmang", "articles": []}) as detail_mock,
-            patch("teacher_law.services.chat.select_relevant_citations", return_value=[citation]),
-            patch("teacher_law.services.chat.search_cases", return_value=[]),
-            patch("teacher_law.services.chat.generate_legal_answer", return_value=llm_answer),
+            patch(
+                "teacher_law.services.chat.resolve_law_by_name",
+                side_effect=[
+                    {"law_name": "학교안전사고 예방 및 보상에 관한 법률", "law_id": "010380", "mst": "", "detail_link": "", "provider": "beopmang"},
+                    {"law_name": "민법", "law_id": "001706", "mst": "", "detail_link": "", "provider": "beopmang"},
+                    {"law_name": "초ㆍ중등교육법", "law_id": "001901", "mst": "", "detail_link": "", "provider": "beopmang"},
+                ],
+            ),
+            patch("teacher_law.services.chat.get_law_details", return_value={"law_name": "학교안전사고 예방 및 보상에 관한 법률", "law_id": "010380", "mst": "", "detail_link": "", "provider": "beopmang", "articles": []}),
+            patch("teacher_law.services.chat.select_relevant_citations", return_value=[]),
+            patch("teacher_law.services.chat.generate_legal_answer") as llm_mock,
         ):
-            result = answer_legal_question(question="쉬는시간에 학생이 다쳤습니다. 교사인 제 책임인가요?")
+            result = answer_legal_question(
+                question="쉬는시간에 학생이 다쳤습니다. 교사인 제 책임인가요?",
+                incident_type="school_safety",
+                legal_goal="teacher_liability",
+                scene="break_time",
+            )
 
-        self.assertEqual(result["payload"]["summary"], llm_answer["summary"])
-        self.assertEqual(search_mock.call_count, 2)
-        self.assertEqual(detail_mock.call_args_list[0].kwargs["law_id"], "010380")
+        self.assertEqual(result["status"], "clarify")
+        self.assertTrue(result["payload"]["answer_held"])
+        self.assertIn("책임 판단", result["payload"]["summary"])
+        llm_mock.assert_not_called()
