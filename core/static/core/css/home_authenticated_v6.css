@@ -159,11 +159,13 @@
 .home-v6-page [data-classcalendar-surface="true"] > div {
     position: relative;
     isolation: isolate;
-    overflow: visible;
+    overflow: hidden;
     border-color: var(--home-v6-border);
     background: var(--home-v6-surface-secondary);
+    background-clip: padding-box;
     box-shadow: var(--home-v6-shadow-panel);
     backdrop-filter: blur(24px);
+    -webkit-mask-image: -webkit-radial-gradient(white, black);
 }
 
 .home-v6-page .home-v4-card::before,
@@ -178,6 +180,7 @@
     right: 1.25rem;
     top: 0;
     height: 1px;
+    border-radius: 999px;
     background: linear-gradient(90deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.08) 100%);
     pointer-events: none;
 }
