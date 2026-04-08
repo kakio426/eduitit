@@ -11,7 +11,7 @@
         }
     }
 
-    function getHomeV2Config() {
+    function getHomeFrontendConfig() {
         return parseJsonScript('home-v2-frontend-config', {}) || {};
     }
 
@@ -34,7 +34,7 @@
         }
     }
 
-    window.homeV4Shell = function () {
+    window.homeV6Shell = function () {
         return {
             openSection: '',
             menuSheetOpen: false,
@@ -46,7 +46,12 @@
             focusQuickdropHomeDraftInput: function (form) {
                 var scopedInput = form && typeof form.querySelector === 'function'
                     ? form.querySelector('textarea[name="text"]')
-                    : document.querySelector('[data-home-v4-quickdrop-form="true"] textarea[name="text"], [data-home-v4-mobile-quickdrop-form="true"] textarea[name="text"]');
+                    : document.querySelector(
+                        '[data-home-v6-quickdrop-form="true"] textarea[name="text"], ' +
+                        '[data-home-v6-mobile-quickdrop-form="true"] textarea[name="text"], ' +
+                        '[data-home-v4-quickdrop-form="true"] textarea[name="text"], ' +
+                        '[data-home-v4-mobile-quickdrop-form="true"] textarea[name="text"]'
+                    );
                 if (scopedInput && typeof scopedInput.focus === 'function') {
                     scopedInput.focus();
                 }
@@ -134,6 +139,8 @@
         };
     };
 
+    window.homeV4Shell = window.homeV6Shell;
+
     function launchCard(card) {
         var href = card.dataset.launchHref || (card.dataset.productId ? '/products/' + card.dataset.productId + '/' : '');
         if (!href) {
@@ -146,13 +153,13 @@
         window.location.href = href;
     }
 
-    function initHomeV2Interactions() {
+    function initHomeV6Interactions() {
         if (window.__homeCommonInteractionsInitialized) {
             return;
         }
         window.__homeCommonInteractionsInitialized = true;
 
-        var config = getHomeV2Config();
+        var config = getHomeFrontendConfig();
         var favoriteIds = new Set();
         var favoriteData = parseJsonScript('home-favorite-ids-data', []);
         if (Array.isArray(favoriteData)) {
@@ -303,5 +310,5 @@
         syncFavoriteButtons();
     }
 
-    document.addEventListener('DOMContentLoaded', initHomeV2Interactions);
+    document.addEventListener('DOMContentLoaded', initHomeV6Interactions);
 })();

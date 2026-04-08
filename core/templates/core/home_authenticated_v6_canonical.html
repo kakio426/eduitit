@@ -16,6 +16,7 @@
 <script src="{% static 'qrgen/js/qrgen_shared.js' %}"></script>
 <script src="{% static 'core/js/prompt_lab.js' %}"></script>
 <script src="{% static 'core/js/home_authenticated_v2.js' %}"></script>
+<script src="{% static 'core/js/home_authenticated_v6.js' %}"></script>
 <script src="{% static 'core/js/home_teacher_buddy.js' %}"></script>
 {% endblock %}
 
@@ -27,22 +28,23 @@
                 class="home-v5-shell home-v6-shell"
                 data-home-v4-shell="true"
                 data-home-v5-shell="true"
+                data-home-v6-shell="true"
                 data-home-design-version="v6"
-                x-data="window.homeV4Shell ? window.homeV4Shell() : { openSection: '', menuSheetOpen: false }"
+                x-data="window.homeV6Shell ? window.homeV6Shell() : (window.homeV4Shell ? window.homeV4Shell() : { openSection: '', menuSheetOpen: false })"
                 @keydown.escape.window="menuSheetOpen = false"
             >
-                <div class="home-v5-mobile-summary" data-home-v5-mobile-summary="true">
-                    <div class="home-v5-mobile-summary-scroll" data-home-v5-mobile-summary-scroll="true">
-                        <div class="home-v5-mobile-summary-chips" data-home-v5-mobile-summary-chips="true">
-                            <span class="home-v5-mobile-summary-chip home-v5-mobile-summary-chip--date" data-home-v5-mobile-summary-chip="date">
+                <div class="home-v5-mobile-summary home-v6-mobile-summary" data-home-v5-mobile-summary="true" data-home-v6-mobile-summary="true">
+                    <div class="home-v5-mobile-summary-scroll home-v6-mobile-summary-scroll" data-home-v5-mobile-summary-scroll="true" data-home-v6-mobile-summary-scroll="true">
+                        <div class="home-v5-mobile-summary-chips home-v6-mobile-summary-chips" data-home-v5-mobile-summary-chips="true" data-home-v6-mobile-summary-chips="true">
+                            <span class="home-v5-mobile-summary-chip home-v5-mobile-summary-chip--date home-v6-mobile-summary-chip home-v6-mobile-summary-chip--date" data-home-v5-mobile-summary-chip="date" data-home-v6-mobile-summary-chip="date">
                                 <i class="fa-regular fa-calendar"></i>
                                 {{ today_workspace.date_label|default:'오늘' }}
                             </span>
-                            <span class="home-v5-mobile-summary-chip" data-home-v5-mobile-summary-chip="events">
+                            <span class="home-v5-mobile-summary-chip home-v6-mobile-summary-chip" data-home-v5-mobile-summary-chip="events" data-home-v6-mobile-summary-chip="events">
                                 <i class="fa-regular fa-clock"></i>
                                 일정 {{ today_workspace.today_event_count|default_if_none:0 }}건
                             </span>
-                            <span class="home-v5-mobile-summary-chip" data-home-v5-mobile-summary-chip="tasks">
+                            <span class="home-v5-mobile-summary-chip home-v6-mobile-summary-chip" data-home-v5-mobile-summary-chip="tasks" data-home-v6-mobile-summary-chip="tasks">
                                 <i class="fa-solid fa-list-check"></i>
                                 할 일 {{ today_workspace.today_task_count|default_if_none:0 }}건
                             </span>
@@ -50,8 +52,9 @@
                     </div>
                     <button
                         type="button"
-                        class="home-v5-mobile-summary-button"
+                        class="home-v5-mobile-summary-button home-v6-mobile-summary-button"
                         data-home-v5-mobile-all-tools-button="true"
+                        data-home-v6-mobile-summary-button="true"
                         @click="menuSheetOpen = true"
                         aria-label="전체 도구 열기"
                         title="전체 도구"
@@ -62,8 +65,9 @@
                 </div>
 
                 <div
-                    class="home-v4-mobile-overlay"
+                    class="home-v4-mobile-overlay home-v6-mobile-overlay"
                     data-home-v5-mobile-overlay="true"
+                    data-home-v6-mobile-overlay="true"
                     x-cloak
                     x-show="menuSheetOpen"
                     x-transition.opacity
@@ -72,8 +76,9 @@
 
                 <div
                     id="home-v5-mobile-sheet"
-                    class="home-v4-mobile-sheet home-v5-mobile-sheet"
+                    class="home-v4-mobile-sheet home-v5-mobile-sheet home-v6-mobile-sheet"
                     data-home-v5-mobile-sheet="true"
+                    data-home-v6-mobile-sheet="true"
                     x-cloak
                     x-show="menuSheetOpen"
                     x-transition:enter="transition ease-out duration-200"
@@ -83,28 +88,31 @@
                     x-transition:leave-start="translate-y-0 opacity-100"
                     x-transition:leave-end="translate-y-full opacity-0"
                 >
-                    <div class="home-v4-mobile-sheet-header">
+                    <div class="home-v4-mobile-sheet-header home-v6-mobile-sheet-header" data-home-v6-mobile-sheet-header="true">
                         <div>
                             <h2 class="text-lg font-black text-slate-900">전체 도구</h2>
                         </div>
                         <button
                             type="button"
-                            class="home-v4-mobile-sheet-close"
+                            class="home-v4-mobile-sheet-close home-v6-mobile-sheet-close"
+                            data-home-v6-mobile-sheet-close="true"
                             @click="menuSheetOpen = false"
                             aria-label="메뉴 닫기"
                         >
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                     </div>
-                    <div class="home-v4-mobile-sheet-body">
-                        {% include 'core/partials/home_v4_nav_sections.html' with panel_name='mobile' close_action='menuSheetOpen = false' %}
+                    <div class="home-v4-mobile-sheet-body home-v6-mobile-sheet-body" data-home-v6-mobile-sheet-body="true">
+                        <div data-home-v6-nav="mobile">
+                            {% include 'core/partials/home_v4_nav_sections.html' with panel_name='mobile' close_action='menuSheetOpen = false' %}
+                        </div>
                     </div>
                 </div>
 
-                <section class="home-v5-mobile-stack" data-home-v5-mobile-stack="true">
+                <section class="home-v5-mobile-stack home-v6-mobile-stack" data-home-v5-mobile-stack="true" data-home-v6-mobile-stack="true">
                     {% for mobile_section in home_v5_mobile_section_order %}
                     {% if mobile_section == 'workbench' %}
-                    <article class="home-v5-mobile-panel" data-home-v5-mobile-workbench="true" data-home-v6-rail-card="true">
+                    <article class="home-v5-mobile-panel home-v6-mobile-panel" data-home-v5-mobile-workbench="true" data-home-v6-rail-card="true">
                         <div class="home-v5-mobile-panel-head">
                             <div>
                                 <h2 class="home-v5-mobile-panel-title">내 작업대</h2>
@@ -169,7 +177,7 @@
                     {% endif %}
                     {% elif mobile_section == 'reservations' %}
                     {% if reservation_home_card %}
-                    <article class="home-v5-mobile-panel" data-home-reservations-card="true" data-home-v6-rail-card="true">
+                    <article class="home-v5-mobile-panel home-v6-mobile-panel" data-home-reservations-card="true" data-home-v6-rail-card="true">
                         <div class="home-v5-mobile-panel-head">
                             <div>
                                 <h2 class="home-v5-mobile-panel-title">내 학교 예약</h2>
@@ -216,22 +224,24 @@
                     </article>
                     {% endif %}
                     {% elif mobile_section == 'sns' %}
-                    <section class="home-v5-mobile-sns-panel" data-home-v5-mobile-sns="true">
+                    <section class="home-v5-mobile-sns-panel home-v6-mobile-panel home-v6-mobile-sns" data-home-v5-mobile-sns="true">
                         {% include 'core/partials/sns_mobile_preview_panel.html' with root_class='home-v5-mobile-sns' section_id='sns-full-section-auth-v5' start_open='false' %}
                     </section>
                     {% endif %}
                     {% endfor %}
                 </section>
 
-                <div class="home-v4-layout home-v5-desktop-layout">
-                    <aside class="home-v4-nav-shell">
-                        <div class="home-v4-nav-stack">
-                            <div class="home-v4-card home-v4-nav-card">
+                <div class="home-v4-layout home-v5-desktop-layout home-v6-layout" data-home-v6-layout="true">
+                    <aside class="home-v4-nav-shell home-v6-nav-shell">
+                        <div class="home-v4-nav-stack home-v6-nav-stack">
+                            <div class="home-v4-card home-v4-nav-card home-v6-card home-v6-nav-card" data-home-v6-nav-card="true">
                                 <div class="home-v4-nav-header">
                                     <h2 class="mt-1 text-xl font-black text-slate-900">전체 도구</h2>
                                 </div>
 
-                                {% include 'core/partials/home_v4_nav_sections.html' with panel_name='desktop' %}
+                                <div data-home-v6-nav="desktop">
+                                    {% include 'core/partials/home_v4_nav_sections.html' with panel_name='desktop' %}
+                                </div>
                             </div>
 
                             {% if teacher_buddy_panel %}
@@ -248,7 +258,7 @@
                         </div>
                     </aside>
 
-                    <div class="home-v4-main">
+                    <div class="home-v4-main home-v6-main">
                         <div class="home-v4-primary-stack">
                             <section class="home-v4-home-panel-section" data-home-v4-home-panel="true">
                                 <div class="home-v4-calendar-wrap">
@@ -257,7 +267,7 @@
                             </section>
 
                             <section class="home-v4-representative-section" data-home-v4-representative-services="true">
-                                <div class="home-v4-card">
+                                <div class="home-v4-card home-v6-card">
                                     <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                                         <div>
                                             <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">대표 서비스</p>
@@ -300,7 +310,7 @@
                         </div>
 
                         <div class="home-v4-side-stack">
-                            <article class="home-v4-card home-v4-top-favorites" data-home-v4-favorites-panel="true" data-home-v6-rail-card="true">
+                            <article class="home-v4-card home-v4-top-favorites home-v6-card" data-home-v4-favorites-panel="true" data-home-v6-rail-card="true">
                                 <div class="mb-4 flex items-center gap-2">
                                     <i class="fa-solid fa-star text-amber-500"></i>
                                     <h2 class="text-lg font-black text-slate-900">내 작업대</h2>
@@ -355,7 +365,7 @@
                             </article>
 
                             {% if reservation_home_card %}
-                            <section class="home-v4-card" data-home-reservations-card="true" data-home-v6-rail-card="true">
+                            <section class="home-v4-card home-v6-card" data-home-reservations-card="true" data-home-v6-rail-card="true">
                                 <div class="mb-4 flex items-center justify-between gap-3">
                                     <div>
                                         <div class="mb-1 flex items-center gap-2">
@@ -401,7 +411,7 @@
                             {% endif %}
 
                             {% if quickdrop_home_card %}
-                            <section class="home-v4-card home-v4-quickdrop-panel" data-home-v4-quickdrop-panel="true">
+                            <section class="home-v4-card home-v4-quickdrop-panel home-v6-card" data-home-v4-quickdrop-panel="true">
                                 <div class="home-v4-quickdrop-head home-v6-quickdrop-head">
                                     <div class="home-v6-quickdrop-heading">
                                         <div class="home-v4-quickdrop-icon" aria-hidden="true">{{ quickdrop_home_card.icon_text|default:"↔" }}</div>
