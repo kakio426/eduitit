@@ -120,7 +120,7 @@ LEGAL_GOAL_OPTIONS = [
         "value": "legal_risk",
         "label": "위법·처벌 위험이 있는지",
         "issue_labels": ("위법성", "교육활동 침해", "명예훼손"),
-        "grep_terms": ("위법", "처벌", "형사 책임", "모욕", "명예훼손"),
+        "grep_terms": ("위법", "처벌", "형사 책임", "폭행", "상해", "모욕", "명예훼손"),
     },
     {
         "value": "reporting_duty",
@@ -150,13 +150,30 @@ INCIDENT_OPTIONS = [
     },
     {
         "value": "education_activity",
-        "label": "학부모 민원·폭언",
+        "label": "교육활동 침해·폭언·폭행",
         "topic": "education_activity",
         "requires": "counterpart",
-        "keywords": ("교육활동 침해", "교권", "민원", "폭언", "욕설", "욕", "모욕", "협박", "항의"),
+        "keywords": (
+            "교육활동 침해",
+            "교권",
+            "민원",
+            "폭언",
+            "욕설",
+            "욕",
+            "모욕",
+            "협박",
+            "항의",
+            "폭행",
+            "상해",
+            "때렸",
+            "맞았",
+            "구타",
+            "손찌검",
+            "밀쳤",
+        ),
         "laws": ["교원의 지위 향상 및 교육활동 보호를 위한 특별법", "형법"],
-        "default_issues": ("교육활동 침해", "위법성"),
-        "case_queries": ("학부모 폭언 모욕 교사", "교사 명예훼손 모욕"),
+        "default_issues": ("교육활동 침해", "위법성", "폭행"),
+        "case_queries": ("교사 폭행 형법", "교육활동 침해 교사 폭행"),
     },
     {
         "value": "recording_defamation",
@@ -230,6 +247,8 @@ HIGH_RISK_KEYWORDS = {
     "안전사고 책임 우려": ("다쳤", "사고", "부상", "손해배상", "책임"),
 }
 
+PHYSICAL_VIOLENCE_KEYWORDS = ("폭행", "상해", "때렸", "맞았", "구타", "손찌검", "밀쳤")
+
 QUICK_QUESTION_PRESETS = [
     {
         "key": "privacy-photo-posting",
@@ -270,8 +289,9 @@ LEGAL_ISSUE_KEYWORDS = {
     "보호의무": ("보호의무", "주의의무", "안전조치", "안전관리"),
     "법적 책임": ("책임", "법적 책임", "과실", "책임지", "문제될", "위험할"),
     "손해배상": ("손해배상", "배상", "변상", "청구"),
-    "교육활동 침해": ("교육활동 침해", "교권", "민원", "폭언", "욕설", "욕", "모욕", "협박"),
-    "위법성": ("위법", "처벌", "고소", "고발", "형사", "경찰", "신고할", "범죄"),
+    "교육활동 침해": ("교육활동 침해", "교권", "민원", "폭언", "욕설", "욕", "모욕", "협박", "폭행", "상해"),
+    "위법성": ("위법", "처벌", "고소", "고발", "형사", "경찰", "신고할", "범죄", "폭행", "상해", "때렸", "맞았"),
+    "폭행": ("폭행", "상해", "때렸", "맞았", "구타", "손찌검", "밀쳤", "폭행죄", "상해죄"),
     "신고의무": ("신고", "즉시 신고", "의심", "은폐", "축소", "보고"),
     "명예훼손": ("명예훼손", "허위사실", "게시", "공개", "비방"),
     "개인정보": ("개인정보", "유출", "사진", "영상", "촬영", "동의", "초상"),
@@ -388,6 +408,8 @@ def infer_legal_goal(question: str, *, legal_issues: list[str]) -> str:
         return "teacher_liability"
     if any(keyword in normalized for keyword in ("게시", "공개", "올려", "기록", "촬영")):
         return "posting_allowed"
+    if any(keyword in normalized for keyword in ("적용되는 법", "어떤 법", "무슨 법", "적용되나", "적용되나요")):
+        return "legal_risk"
     if "위법성" in legal_issues or any(keyword in normalized for keyword in ("처벌", "위법", "고소")):
         return "legal_risk"
     return ""
@@ -411,6 +433,10 @@ def _looks_like_teacher_context_question(normalized: str) -> bool:
     return _has_any_keyword(normalized, TEACHER_CONTEXT_KEYWORDS) and _has_any_keyword(
         normalized, TEACHER_LEGAL_ISSUE_KEYWORDS
     )
+
+
+def _has_physical_violence_context(normalized_question: str, legal_issues: list[str]) -> bool:
+    return "폭행" in legal_issues or _has_any_keyword(normalized_question, PHYSICAL_VIOLENCE_KEYWORDS)
 
 
 def is_supported_question(question: str, *, incident_type: str) -> bool:
@@ -634,6 +660,20 @@ def build_query_profile(
         counterpart_label=counterpart_label,
         core_terms=core_terms,
     )
+    if _has_physical_violence_context(normalized_question, legal_issues):
+        legal_issues = _unique_items(["폭행", *legal_issues])
+        law_hints = _unique_items(["형법", *law_hints])
+        violence_terms = _unique_items(
+            [
+                compact_text(f"{counterpart_label} 교사 폭행") if counterpart_label else "교사 폭행",
+                "교육활동 침해 폭행",
+                "형법 폭행",
+                "형사 책임 폭행",
+            ]
+        )
+        candidate_queries = _unique_items([*violence_terms, *candidate_queries])
+        case_queries = _unique_items([*violence_terms, *case_queries])
+        law_query_hint = compact_text(" ".join(_unique_items([law_query_hint, "폭행", "상해", "형법"])))
     quick_question_key = _match_quick_question_key(
         normalized_question,
         incident_type=incident_key,

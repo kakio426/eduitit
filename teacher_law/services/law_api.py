@@ -21,6 +21,8 @@ OPEN_LAW_BASE_URLS = (
 )
 DEFAULT_BEOPMANG_BASE_URL = "https://api.beopmang.org/api/v4"
 SUPPORTED_PROVIDERS = {"beopmang", "open_law"}
+SUBORDINATE_LAW_MARKERS = ("시행령", "시행규칙", "고시", "훈령", "예규")
+GENERIC_ARTICLE_MARKERS = ("목적", "정의", "적용 범위", "해석", "준용")
 
 
 class LawApiError(Exception):
@@ -66,6 +68,11 @@ def get_beopmang_base_url() -> str:
 def _normalize_law_name_key(value: str) -> str:
     normalized = normalize_for_matching(value)
     return re.sub(r"[^0-9a-z가-힣]", "", normalized)
+
+
+def _is_subordinate_law_name(value: str) -> bool:
+    law_name = compact_text(value)
+    return any(marker in law_name for marker in SUBORDINATE_LAW_MARKERS)
 
 
 def is_configured() -> bool:
@@ -400,6 +407,11 @@ def resolve_law_by_name(law_name: str) -> dict | None:
     if not ranked:
         return None
 
+    if not _is_subordinate_law_name(compact_name):
+        ranked = [result for result in ranked if not _is_subordinate_law_name(result.get("law_name"))]
+        if not ranked:
+            return None
+
     resolved = {
         "law_name": compact_text(ranked[0].get("law_name")),
         "law_id": compact_text(ranked[0].get("law_id")),
@@ -652,22 +664,44 @@ def rank_search_results(results: list[dict], profile: dict) -> list[dict]:
             score += 3
         elif result.get("law_type"):
             score += 1
+        if _is_subordinate_law_name(result.get("law_name")):
+            score -= 20
         scored.append((score, result))
     scored.sort(key=lambda item: (-item[0], item[1].get("law_name") or ""))
     return [result for _, result in scored]
 
 
-def _build_match_terms(profile: dict) -> list[str]:
+def _build_strong_match_terms(profile: dict) -> list[str]:
+    terms = []
+    for value in [
+        *(profile.get("legal_issues") or []),
+        profile.get("legal_goal_label") or "",
+        profile.get("counterpart_label") or "",
+        *(profile.get("scene") or []),
+        *(profile.get("core_terms") or []),
+    ]:
+        normalized = normalize_for_matching(value)
+        if normalized and normalized not in terms:
+            terms.append(normalized)
+    return terms
+
+
+def _build_weak_match_terms(profile: dict) -> list[str]:
     terms = []
     for value in [
         *(profile.get("search_terms") or []),
-        *(profile.get("core_terms") or []),
         *(profile.get("hint_queries") or []),
     ]:
         normalized = normalize_for_matching(value)
         if normalized and normalized not in terms:
             terms.append(normalized)
     return terms
+
+
+def _looks_like_generic_article(article: dict) -> bool:
+    label = compact_text(article.get("article_label"))
+    text = compact_text(article.get("article_text"))
+    return any(marker in label or marker in text[:120] for marker in GENERIC_ARTICLE_MARKERS)
 
 
 def _build_law_citation(details: dict, article: dict, *, index: int, fetched_at) -> dict:
@@ -691,11 +725,18 @@ def _build_law_citation(details: dict, article: dict, *, index: int, fetched_at)
 
 
 def select_relevant_citations(details: dict, profile: dict, *, limit: int = 2) -> list[dict]:
-    match_terms = _build_match_terms(profile)
+    strong_terms = _build_strong_match_terms(profile)
+    weak_terms = _build_weak_match_terms(profile)
     scored = []
     for article in details.get("articles") or []:
         haystack = normalize_for_matching(f"{article.get('article_label')} {article.get('article_text')}")
-        score = sum(1 for term in match_terms if term and term in haystack)
+        strong_score = sum(4 for term in strong_terms if term and term in haystack)
+        weak_score = sum(1 for term in weak_terms if term and term in haystack)
+        if strong_score <= 0:
+            continue
+        score = strong_score + weak_score
+        if _looks_like_generic_article(article):
+            score -= 3
         scored.append((score, article))
 
     if not scored:
@@ -736,13 +777,18 @@ def _build_case_citation(case_result: dict, *, index: int, law_id: str = "") -> 
 
 
 def select_relevant_case_citations(case_results: list[dict], profile: dict, *, limit: int = 2, law_id: str = "") -> list[dict]:
-    match_terms = _build_match_terms(profile)
+    strong_terms = _build_strong_match_terms(profile)
+    weak_terms = _build_weak_match_terms(profile)
     scored = []
     for case_result in case_results:
         haystack = normalize_for_matching(
             f"{case_result.get('title')} {case_result.get('case_number')} {case_result.get('quote')}"
         )
-        score = sum(1 for term in match_terms if term and term in haystack)
+        strong_score = sum(4 for term in strong_terms if term and term in haystack)
+        weak_score = sum(1 for term in weak_terms if term and term in haystack)
+        if strong_score <= 0:
+            continue
+        score = strong_score + weak_score
         scored.append((score, case_result))
 
     if not scored:

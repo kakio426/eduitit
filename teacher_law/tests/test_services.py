@@ -29,6 +29,17 @@ class QueryNormalizerTests(SimpleTestCase):
         self.assertTrue(profile["scope_supported"])
         self.assertIn("교원의 지위 향상 및 교육활동 보호를 위한 특별법", profile["hint_queries"])
 
+    def test_build_query_profile_supports_parent_assault_question_with_criminal_focus(self):
+        profile = build_query_profile("학부모가 학교에 들어와서 교사인 저를 때렸습니다. 어떤 법이 적용되나요?")
+
+        self.assertEqual(profile["topic"], "education_activity")
+        self.assertTrue(profile["scope_supported"])
+        self.assertEqual(profile["legal_goal"], "legal_risk")
+        self.assertIn("폭행", profile["legal_issues"])
+        self.assertEqual(profile["hint_queries"][0], "형법")
+        self.assertIn("교사 폭행", " ".join(profile["candidate_queries"]))
+        self.assertIn("교사 폭행 형법", profile["case_queries"])
+
     def test_build_query_profile_supports_teacher_context_legal_question_even_without_fixed_topic(self):
         profile = build_query_profile("학부모가 저를 몰래 녹음해서 공개하면 법적으로 어떻게 대응하나요?")
 
@@ -316,6 +327,19 @@ class BeopmangLawApiTests(SimpleTestCase):
 
         self.assertEqual(resolved["law_id"], "law-1")
 
+    @override_settings(TEACHER_LAW_PROVIDER="beopmang")
+    def test_resolve_law_by_name_skips_subordinate_rule_when_main_law_is_missing(self):
+        cache.clear()
+        with patch(
+            "teacher_law.services.law_api.search_laws",
+            return_value=[
+                {"law_name": "교원의 지위 향상 및 교육활동 보호를 위한 특별법 시행령", "law_id": "rule-1", "mst": "", "law_type": "대통령령", "detail_link": "", "provider": "beopmang"},
+            ],
+        ):
+            resolved = law_api.resolve_law_by_name("교원의 지위 향상 및 교육활동 보호를 위한 특별법")
+
+        self.assertIsNone(resolved)
+
     def test_rank_search_results_prefers_exact_hint_law_over_subordinate_rule(self):
         profile = build_query_profile("쉬는시간에 학생이 다쳤습니다. 교사인 제 책임인가요?")
         results = [
@@ -339,6 +363,33 @@ class BeopmangLawApiTests(SimpleTestCase):
         ranked = law_api.rank_search_results(results, profile)
 
         self.assertEqual(ranked[0]["law_name"], "학교안전사고 예방 및 보상에 관한 법률")
+
+    def test_select_relevant_citations_prefers_specific_assault_article_over_generic_purpose(self):
+        profile = build_query_profile(
+            "학부모가 학교에 들어와서 교사인 저를 때렸습니다. 어떤 법이 적용되나요?"
+        )
+        details = {
+            "law_name": "형법",
+            "law_id": "001695",
+            "mst": "",
+            "detail_link": "",
+            "provider": "beopmang",
+            "articles": [
+                {
+                    "article_label": "제1조(목적)",
+                    "article_text": "이 법은 국가 형벌권의 행사와 범죄 처벌의 기준을 정한다.",
+                },
+                {
+                    "article_label": "제260조(폭행)",
+                    "article_text": "사람의 신체에 대하여 폭행을 가한 자는 처벌한다.",
+                },
+            ],
+        }
+
+        citations = law_api.select_relevant_citations(details, profile, limit=2)
+
+        self.assertEqual(len(citations), 1)
+        self.assertEqual(citations[0]["reference_label"], "제260조(폭행)")
 
 
 @override_settings(

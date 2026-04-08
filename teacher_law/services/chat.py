@@ -498,7 +498,15 @@ def _build_clarify_payload(profile: dict, selected_sources: list[dict]) -> dict:
     fetched_at = timezone.now().isoformat()
     citations = [_build_placeholder_citation(source, fetched_at=fetched_at) for source in selected_sources[:2]]
     legal_goal = profile.get("legal_goal") or ""
-    if profile.get("requires_scene") and not profile.get("scene_value"):
+    legal_issues = set(profile.get("legal_issues") or [])
+    if profile.get("incident_type") == "education_activity" and "폭행" in legal_issues:
+        summary = "형법상 폭행·상해와 교육활동 침해 여부를 함께 봐야 하지만, 지금 근거만으로는 바로 맞는 조문 연결이 약합니다."
+        action_items = [
+            "학교 관리자와 교육청에 교육활동 침해 사실을 바로 알리고 기록해 두세요.",
+            "진단서, CCTV, 목격자 진술, 상담 기록처럼 폭행 사실을 보여줄 자료를 확보해 두세요.",
+            "즉시 위험이 있거나 실제 폭행이 있었다면 경찰 신고도 함께 검토하세요.",
+        ]
+    elif profile.get("requires_scene") and not profile.get("scene_value"):
         summary = "관련 법령은 정해졌지만, 책임 판단에 필요한 장면 정보가 부족합니다."
         action_items = [
             "수업 중인지, 쉬는시간인지, 체험학습인지 장면을 먼저 골라 주세요.",
