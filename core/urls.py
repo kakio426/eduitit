@@ -6,6 +6,7 @@ from . import views
 urlpatterns = [
     path(OPENCLO_LOGIN_PATH, openclo_login_view, name='openclo_hidden_login'),
     path('', views.home, name='home'),
+    path('__debug/home/v6-canonical/', views.home_v6_canonical_preview, name='home_v6_canonical_preview'),
     path('community/', views.community_feed, name='community_feed'),
     path('dashboard/', views.dashboard, name='dashboard'),
     path('post/create/', views.post_create, name='post_create'),

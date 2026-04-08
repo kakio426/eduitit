@@ -1,4 +1,4 @@
-from django.test import TestCase, Client
+from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -40,6 +40,14 @@ class OnboardingTests(TestCase):
         self.client.login(username='test_default', password='password123')
         response = self.client.get(reverse('home'))
         # Should redirect to update_email
+        self.assertRedirects(response, f"{reverse('update_email')}?next=%2F")
+
+    @override_settings(HOME_LAYOUT_VERSION='v6', HOME_AUTHENTICATED_V6_SOURCE='canonical')
+    def test_v6_canonical_home_keeps_onboarding_redirect_for_incomplete_user(self):
+        self.client.login(username='test_no_email', password='password123')
+
+        response = self.client.get(reverse('home'))
+
         self.assertRedirects(response, f"{reverse('update_email')}?next=%2F")
 
     def test_middleware_allows_complete_user(self):

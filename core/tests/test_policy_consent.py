@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from allauth.socialaccount.models import SocialAccount
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -44,6 +44,12 @@ class PolicyConsentTestCase(TestCase):
         return UserPolicyConsent.objects.create(user=self.user, **defaults)
 
     def test_social_user_without_consent_redirects_from_home(self):
+        response = self.client.get(reverse('home'))
+
+        self.assertRedirects(response, f"{reverse('policy_consent')}?next={reverse('home')}")
+
+    @override_settings(HOME_LAYOUT_VERSION='v6', HOME_AUTHENTICATED_V6_SOURCE='canonical')
+    def test_social_user_without_consent_still_redirects_from_canonical_v6_home(self):
         response = self.client.get(reverse('home'))
 
         self.assertRedirects(response, f"{reverse('policy_consent')}?next={reverse('home')}")

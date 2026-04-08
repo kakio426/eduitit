@@ -1,0 +1,480 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title|default:'에듀잇잇 - 선생님의 스마트한 하루' }}{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'core/css/home_authenticated_v4.css' %}" rel="stylesheet">
+<link href="{% static 'core/css/home_authenticated_v5.css' %}" rel="stylesheet">
+<link href="{% static 'core/css/home_teacher_buddy.css' %}" rel="stylesheet">
+<link href="{% static 'core/css/home_authenticated_v6.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="{% static 'qrgen/js/qrgen_shared.js' %}"></script>
+<script src="{% static 'core/js/prompt_lab.js' %}"></script>
+<script src="{% static 'core/js/home_authenticated_v2.js' %}"></script>
+<script src="{% static 'core/js/home_teacher_buddy.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen home-v5-page home-v6-page" data-home-layout-version="v6">
+    <div class="mx-auto max-w-[1600px]" style="padding-top: calc(var(--main-nav-height, 88px) + 0.75rem);">
+        <main class="min-w-0 px-3 pb-8 pt-0 sm:px-4 md:px-6 lg:px-7 xl:px-8 2xl:px-10">
+            <div
+                class="home-v5-shell home-v6-shell"
+                data-home-v4-shell="true"
+                data-home-v5-shell="true"
+                data-home-design-version="v6"
+                x-data="window.homeV4Shell ? window.homeV4Shell() : { openSection: '', menuSheetOpen: false }"
+                @keydown.escape.window="menuSheetOpen = false"
+            >
+                <div class="home-v5-mobile-summary" data-home-v5-mobile-summary="true">
+                    <div class="home-v5-mobile-summary-scroll" data-home-v5-mobile-summary-scroll="true">
+                        <div class="home-v5-mobile-summary-chips" data-home-v5-mobile-summary-chips="true">
+                            <span class="home-v5-mobile-summary-chip home-v5-mobile-summary-chip--date" data-home-v5-mobile-summary-chip="date">
+                                <i class="fa-regular fa-calendar"></i>
+                                {{ today_workspace.date_label|default:'오늘' }}
+                            </span>
+                            <span class="home-v5-mobile-summary-chip" data-home-v5-mobile-summary-chip="events">
+                                <i class="fa-regular fa-clock"></i>
+                                일정 {{ today_workspace.today_event_count|default_if_none:0 }}건
+                            </span>
+                            <span class="home-v5-mobile-summary-chip" data-home-v5-mobile-summary-chip="tasks">
+                                <i class="fa-solid fa-list-check"></i>
+                                할 일 {{ today_workspace.today_task_count|default_if_none:0 }}건
+                            </span>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        class="home-v5-mobile-summary-button"
+                        data-home-v5-mobile-all-tools-button="true"
+                        @click="menuSheetOpen = true"
+                        aria-label="전체 도구 열기"
+                        title="전체 도구"
+                    >
+                        <i class="fa-solid fa-grip"></i>
+                        <span class="sr-only">전체 도구</span>
+                    </button>
+                </div>
+
+                <div
+                    class="home-v4-mobile-overlay"
+                    data-home-v5-mobile-overlay="true"
+                    x-cloak
+                    x-show="menuSheetOpen"
+                    x-transition.opacity
+                    @click="menuSheetOpen = false"
+                ></div>
+
+                <div
+                    id="home-v5-mobile-sheet"
+                    class="home-v4-mobile-sheet home-v5-mobile-sheet"
+                    data-home-v5-mobile-sheet="true"
+                    x-cloak
+                    x-show="menuSheetOpen"
+                    x-transition:enter="transition ease-out duration-200"
+                    x-transition:enter-start="translate-y-full opacity-0"
+                    x-transition:enter-end="translate-y-0 opacity-100"
+                    x-transition:leave="transition ease-in duration-150"
+                    x-transition:leave-start="translate-y-0 opacity-100"
+                    x-transition:leave-end="translate-y-full opacity-0"
+                >
+                    <div class="home-v4-mobile-sheet-header">
+                        <div>
+                            <h2 class="text-lg font-black text-slate-900">전체 도구</h2>
+                        </div>
+                        <button
+                            type="button"
+                            class="home-v4-mobile-sheet-close"
+                            @click="menuSheetOpen = false"
+                            aria-label="메뉴 닫기"
+                        >
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                    <div class="home-v4-mobile-sheet-body">
+                        {% include 'core/partials/home_v4_nav_sections.html' with panel_name='mobile' close_action='menuSheetOpen = false' %}
+                    </div>
+                </div>
+
+                <section class="home-v5-mobile-stack" data-home-v5-mobile-stack="true">
+                    {% for mobile_section in home_v5_mobile_section_order %}
+                    {% if mobile_section == 'workbench' %}
+                    <article class="home-v5-mobile-panel" data-home-v5-mobile-workbench="true" data-home-v6-rail-card="true">
+                        <div class="home-v5-mobile-panel-head">
+                            <div>
+                                <h2 class="home-v5-mobile-panel-title">내 작업대</h2>
+                            </div>
+                        </div>
+                        {% if home_v5_mobile_workbench_items %}
+                        <div class="home-v5-mobile-workbench-grid" data-home-v5-mobile-workbench-grid="true">
+                            {% for item in home_v5_mobile_workbench_items %}
+                            {% with favorite_title=item.favorite_title|default:item.favorite_full_title %}
+                            <div
+                                class="home-v5-mobile-workbench-card product-card"
+                                data-home-v5-mobile-workbench-card="true"
+                                data-home-v6-rail-item="true"
+                                data-service-type="{{ item.product.service_type|default:'etc' }}"
+                                data-product-id="{{ item.product.id }}"
+                                data-launch-href="{{ item.href }}"
+                                data-launch-external="{{ item.is_external|yesno:'true,false' }}"
+                                data-track="quick_action"
+                                data-track-label="{{ item.favorite_full_title }}"
+                                role="button"
+                                tabindex="0"
+                            >
+                                <div class="home-v5-mobile-workbench-icon {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-violet-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-pink-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}" data-home-v6-service-icon="true">
+                                    {% if item.product.icon %}
+                                        {% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }}"></i>{% else %}{{ item.product.icon }}{% endif %}
+                                    {% else %}
+                                        <i class="fa-solid fa-sparkles"></i>
+                                    {% endif %}
+                                </div>
+                                <p class="home-v5-mobile-workbench-title" data-home-v6-service-title="true" title="{{ item.favorite_full_title }}">{{ favorite_title }}</p>
+                                <button
+                                    type="button"
+                                    class="home-v5-mobile-workbench-star favorite-toggle-btn"
+                                    data-home-v6-rail-action="true"
+                                    data-product-id="{{ item.product.id }}"
+                                    data-favorite-toggle="true"
+                                    aria-pressed="false"
+                                    aria-label="{{ item.favorite_full_title }} 즐겨찾기 토글"
+                                    title="즐겨찾기"
+                                >
+                                    <i class="fa-solid fa-star text-[9px]"></i>
+                                </button>
+                            </div>
+                            {% endwith %}
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="home-v5-mobile-empty" data-home-v5-mobile-workbench-empty="true">
+                            즐겨찾기가 없습니다.
+                        </div>
+                        {% endif %}
+                    </article>
+                    {% elif mobile_section == 'calendar' %}
+                    <section class="home-v5-mobile-calendar-section" data-home-v5-mobile-calendar-panel="true">
+                        {% include 'core/partials/home_calendar_panel.html' %}
+                    </section>
+                    {% elif mobile_section == 'quickdrop' %}
+                    {% if quickdrop_home_card %}
+                    {% if not messagebox_home_card.enabled or not messagebox_home_card.url %}
+                    {% include 'core/partials/home_v4_mobile_quickdrop_card.html' with quickdrop_placement='' include_classcalendar_margin=False %}
+                    {% endif %}
+                    {% endif %}
+                    {% elif mobile_section == 'reservations' %}
+                    {% if reservation_home_card %}
+                    <article class="home-v5-mobile-panel" data-home-reservations-card="true" data-home-v6-rail-card="true">
+                        <div class="home-v5-mobile-panel-head">
+                            <div>
+                                <h2 class="home-v5-mobile-panel-title">내 학교 예약</h2>
+                            </div>
+                            <a
+                                href="{{ reservation_home_card.dashboard_url }}"
+                                class="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 transition hover:border-indigo-200 hover:text-indigo-700"
+                                data-home-v6-rail-action="true"
+                            >
+                                전체 보기
+                            </a>
+                        </div>
+                        <div class="space-y-3">
+                            {% for item in reservation_home_card.items %}
+                            <a
+                                href="{{ item.href }}"
+                                class="flex items-start justify-between gap-3 rounded-[1.4rem] border border-slate-200 bg-white/90 px-4 py-4 transition hover:border-indigo-200 hover:bg-indigo-50/70"
+                                data-home-reservations-item="true"
+                                data-home-v6-rail-item="true"
+                            >
+                                <div class="min-w-0">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <p class="text-sm font-black text-slate-900">{{ item.school_name }}</p>
+                                        <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold {% if item.role_tone == 'violet' %}bg-violet-100 text-violet-700{% elif item.role_tone == 'emerald' %}bg-emerald-100 text-emerald-700{% elif item.role_tone == 'amber' %}bg-amber-100 text-amber-700{% else %}bg-slate-200 text-slate-700{% endif %}">
+                                            {{ item.role_label }}
+                                        </span>
+                                    </div>
+                                    {% if item.summary %}
+                                    <p class="mt-1 text-xs leading-5 text-slate-500">{{ item.summary }}</p>
+                                    {% endif %}
+                                </div>
+                                <span class="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400" data-home-v6-rail-arrow="true">
+                                    <i class="fa-solid fa-arrow-right"></i>
+                                </span>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </article>
+                    {% endif %}
+                    {% elif mobile_section == 'buddy' %}
+                    {% if teacher_buddy_panel %}
+                    <article data-home-teacher-buddy-slot="v5-mobile" data-home-v6-rail-card="true">
+                        {% include 'core/partials/home_teacher_buddy_panel.html' with panel_variant='v5-mobile' %}
+                    </article>
+                    {% endif %}
+                    {% elif mobile_section == 'sns' %}
+                    <section class="home-v5-mobile-sns-panel" data-home-v5-mobile-sns="true">
+                        {% include 'core/partials/sns_mobile_preview_panel.html' with root_class='home-v5-mobile-sns' section_id='sns-full-section-auth-v5' start_open='false' %}
+                    </section>
+                    {% endif %}
+                    {% endfor %}
+                </section>
+
+                <div class="home-v4-layout home-v5-desktop-layout">
+                    <aside class="home-v4-nav-shell">
+                        <div class="home-v4-nav-stack">
+                            <div class="home-v4-card home-v4-nav-card">
+                                <div class="home-v4-nav-header">
+                                    <h2 class="mt-1 text-xl font-black text-slate-900">전체 도구</h2>
+                                </div>
+
+                                {% include 'core/partials/home_v4_nav_sections.html' with panel_name='desktop' %}
+                            </div>
+
+                            {% if teacher_buddy_panel %}
+                            <section data-home-teacher-buddy-slot="v5-left-rail" data-home-v6-rail-card="true">
+                                {% include 'core/partials/home_teacher_buddy_panel.html' with panel_variant='v5-rail' %}
+                            </section>
+                            {% endif %}
+
+                            {% if schoolcomm_home_card %}
+                            {% include 'core/partials/home_schoolcomm_card.html' %}
+                            {% endif %}
+
+                            {% include 'core/partials/home_v4_developer_chat_card.html' with card_variant='desktop' %}
+                        </div>
+                    </aside>
+
+                    <div class="home-v4-main">
+                        <div class="home-v4-primary-stack">
+                            <section class="home-v4-home-panel-section" data-home-v4-home-panel="true">
+                                <div class="home-v4-calendar-wrap">
+                                    {% include 'core/partials/home_calendar_panel.html' %}
+                                </div>
+                            </section>
+
+                            <section class="home-v4-representative-section" data-home-v4-representative-services="true">
+                                <div class="home-v4-card">
+                                    <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                                        <div>
+                                            <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">대표 서비스</p>
+                                            <h2 class="mt-1 text-xl font-black text-slate-900">추천 도구</h2>
+                                        </div>
+                                    </div>
+
+                                    {% if representative_slots %}
+                                    <div class="home-v4-service-grid" data-home-v4-service-grid="true">
+                                        {% for slot in representative_slots %}
+                                        <div data-home-v4-slot-kind="{{ slot.slot_kind }}">
+                                            {% include 'core/includes/mini_card.html' with product=slot.product %}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% else %}
+                                    <div class="rounded-[1.6rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center">
+                                        <p class="text-sm font-bold text-slate-600">추천 도구가 없습니다.</p>
+                                    </div>
+                                    {% endif %}
+
+                                    {% if representative_recommendations %}
+                                    <div class="mt-4 border-t border-slate-100 pt-4">
+                                        <div class="mb-2 flex items-center gap-2 text-sm font-black text-slate-700">
+                                            <i class="fa-solid fa-compass text-sky-500"></i>
+                                            추천 도구
+                                        </div>
+                                        <div class="home-v4-recommend-row" data-home-v4-recommendations="true">
+                                            {% for item in representative_recommendations %}
+                                            <a href="{{ item.href }}" class="home-v4-recommend-pill" {% if item.is_external %}target="_blank" rel="noopener"{% endif %}>
+                                                <span class="truncate">{{ item.title }}</span>
+                                                <span class="text-slate-400">{{ item.reason_label }}</span>
+                                            </a>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </section>
+                        </div>
+
+                        <div class="home-v4-side-stack">
+                            <article class="home-v4-card home-v4-top-favorites" data-home-v4-favorites-panel="true" data-home-v6-rail-card="true">
+                                <div class="mb-4 flex items-center gap-2">
+                                    <i class="fa-solid fa-star text-amber-500"></i>
+                                    <h2 class="text-lg font-black text-slate-900">내 작업대</h2>
+                                </div>
+
+                                {% if favorite_items %}
+                                <div class="home-v4-favorites-grid" data-home-v4-favorites-grid="true">
+                                    {% for item in favorite_items %}
+                                    {% with favorite_title=item.favorite_title|default:item.favorite_full_title %}
+                                    <div class="home-v4-favorite-card product-card"
+                                        data-home-v4-favorite-card="true"
+                                        data-home-v6-rail-item="true"
+                                        data-service-type="{{ item.product.service_type|default:'etc' }}"
+                                        data-product-id="{{ item.product.id }}"
+                                        data-launch-href="{{ item.href }}"
+                                        data-launch-external="{{ item.is_external|yesno:'true,false' }}"
+                                        data-track="quick_action"
+                                        data-track-label="{{ item.favorite_full_title }}"
+                                        role="button"
+                                        tabindex="0">
+                                        <div class="home-v5-favorite-card-body">
+                                            <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white text-sm shadow-sm {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-violet-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-pink-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}" data-home-v6-service-icon="true">
+                                                {% if item.product.icon %}
+                                                    {% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }}"></i>{% else %}{{ item.product.icon }}{% endif %}
+                                                {% else %}
+                                                    <i class="fa-solid fa-sparkles"></i>
+                                                {% endif %}
+                                            </div>
+                                            <div class="home-v5-favorite-card-copy">
+                                                <p class="home-v5-favorite-card-title" data-home-v6-service-title="true" title="{{ item.favorite_full_title }}">{{ favorite_title }}</p>
+                                            </div>
+                                        </div>
+                                        <button type="button"
+                                            class="home-v5-favorite-card-star home-v5-favorite-toggle favorite-toggle-btn inline-flex items-center justify-center rounded-full border border-slate-200 bg-white text-slate-300 hover:border-amber-300 hover:text-amber-500 transition-colors"
+                                            data-home-v6-rail-action="true"
+                                            data-product-id="{{ item.product.id }}"
+                                            data-favorite-toggle="true"
+                                            aria-pressed="false"
+                                            aria-label="{{ item.favorite_full_title }} 즐겨찾기 토글"
+                                            title="즐겨찾기">
+                                            <i class="fa-solid fa-star"></i>
+                                        </button>
+                                    </div>
+                                    {% endwith %}
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                <div class="rounded-[1.4rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center">
+                                    <p class="text-sm font-bold text-slate-600">즐겨찾기가 없습니다.</p>
+                                </div>
+                                {% endif %}
+                            </article>
+
+                            {% if reservation_home_card %}
+                            <section class="home-v4-card" data-home-reservations-card="true" data-home-v6-rail-card="true">
+                                <div class="mb-4 flex items-center justify-between gap-3">
+                                    <div>
+                                        <div class="mb-1 flex items-center gap-2">
+                                            <i class="fa-solid fa-school text-indigo-500"></i>
+                                            <h2 class="text-lg font-black text-slate-900">내 학교 예약</h2>
+                                        </div>
+                                    </div>
+                                    <a
+                                        href="{{ reservation_home_card.dashboard_url }}"
+                                        class="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 transition hover:border-indigo-200 hover:text-indigo-700"
+                                        data-home-v6-rail-action="true"
+                                    >
+                                        전체 보기
+                                    </a>
+                                </div>
+
+                                <div class="space-y-3">
+                                    {% for item in reservation_home_card.items %}
+                                    <a
+                                        href="{{ item.href }}"
+                                        class="flex items-start justify-between gap-3 rounded-[1.25rem] border border-slate-200 bg-white/90 px-4 py-3.5 transition hover:border-indigo-200 hover:bg-indigo-50/70"
+                                        data-home-reservations-item="true"
+                                        data-home-v6-rail-item="true"
+                                    >
+                                        <div class="min-w-0">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <p class="text-sm font-black text-slate-900">{{ item.school_name }}</p>
+                                                <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold {% if item.role_tone == 'violet' %}bg-violet-100 text-violet-700{% elif item.role_tone == 'emerald' %}bg-emerald-100 text-emerald-700{% elif item.role_tone == 'amber' %}bg-amber-100 text-amber-700{% else %}bg-slate-200 text-slate-700{% endif %}">
+                                                    {{ item.role_label }}
+                                                </span>
+                                            </div>
+                                            {% if item.summary %}
+                                            <p class="mt-1 text-xs leading-5 text-slate-500">{{ item.summary }}</p>
+                                            {% endif %}
+                                        </div>
+                                        <span class="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400" data-home-v6-rail-arrow="true">
+                                            <i class="fa-solid fa-arrow-right"></i>
+                                        </span>
+                                    </a>
+                                    {% endfor %}
+                                </div>
+                            </section>
+                            {% endif %}
+
+                            {% if quickdrop_home_card %}
+                            <section class="home-v4-card home-v4-quickdrop-panel" data-home-v4-quickdrop-panel="true">
+                                <div class="home-v4-quickdrop-head home-v6-quickdrop-head">
+                                    <div class="home-v6-quickdrop-heading">
+                                        <div class="home-v4-quickdrop-icon" aria-hidden="true">{{ quickdrop_home_card.icon_text|default:"↔" }}</div>
+                                        <div class="min-w-0">
+                                            <h2 class="text-lg font-black text-slate-900">{{ quickdrop_home_card.title }}</h2>
+                                        </div>
+                                    </div>
+                                    <a href="{{ quickdrop_home_card.shortcut_url|default:quickdrop_home_card.manage_url }}" class="home-v6-quickdrop-shortcut" aria-label="{{ quickdrop_home_card.shortcut_aria_label|default:'새 기기 추가' }}">
+                                        <span class="home-v6-quickdrop-shortcut-icon" aria-hidden="true">{{ quickdrop_home_card.shortcut_symbol|default:"+" }}</span>
+                                        <span class="home-v6-quickdrop-shortcut-label">{{ quickdrop_home_card.shortcut_label|default:"새 기기 추가" }}</span>
+                                    </a>
+                                </div>
+                                <p
+                                    class="home-v4-quickdrop-summary"
+                                    data-initial-summary="{{ quickdrop_home_card.summary|default:'' }}"
+                                    x-show="typeof quickdropHomeHasSummary === 'function' ? quickdropHomeHasSummary($el.dataset.initialSummary || '') : !!($el.dataset.initialSummary || '')"
+                                    x-text="typeof quickdropHomeSummaryText === 'function' ? quickdropHomeSummaryText($el.dataset.initialSummary || '') : ($el.dataset.initialSummary || '')"
+                                    {% if not quickdrop_home_card.has_recent_item %}style="display:none;"{% endif %}
+                                >{{ quickdrop_home_card.summary|default:'' }}</p>
+                                {% if quickdrop_home_card.composer_enabled|default:True %}
+                                <form
+                                    method="post"
+                                    action="{{ quickdrop_home_card.send_text_url }}"
+                                    class="home-v4-quickdrop-form"
+                                    data-home-v4-quickdrop-form="true"
+                                    @submit.prevent="typeof submitQuickdropHomeText === 'function' ? submitQuickdropHomeText($event) : $event.target.submit()"
+                                >
+                                    {% csrf_token %}
+                                    <textarea
+                                        name="text"
+                                        x-model="quickdropHomeDraftText"
+                                        rows="4"
+                                        class="home-v4-quickdrop-textarea"
+                                        aria-label="{{ quickdrop_home_card.textarea_aria_label|default:'보낼 내용' }}"
+                                        placeholder="{{ quickdrop_home_card.compose_placeholder|default:'예) 회의 링크, 메모, 주소' }}"
+                                    ></textarea>
+                                    <p
+                                        class="home-v4-quickdrop-error"
+                                        style="display:none;"
+                                        x-show="quickdropHomeErrorText"
+                                        x-text="quickdropHomeErrorText"
+                                    ></p>
+                                    <div class="home-v4-quickdrop-actions" data-home-v4-quickdrop-actions="true">
+                                        <button
+                                            type="submit"
+                                            class="home-v4-quickdrop-primary"
+                                            :disabled="isSendingQuickdropHomeText"
+                                            data-success-message="{{ quickdrop_home_card.success_message|default:'' }}"
+                                            data-error-action="{{ quickdrop_home_card.error_action_name|default:'' }}"
+                                        >{{ quickdrop_home_card.submit_label|default:"지금 보내기" }}</button>
+                                        <a href="{{ quickdrop_home_card.history_url|default:quickdrop_home_card.secondary_url }}" class="home-v4-quickdrop-secondary">{{ quickdrop_home_card.secondary_label_v6|default:"오늘 보낸 내용" }}</a>
+                                    </div>
+                                </form>
+                                {% else %}
+                                <div class="home-v4-quickdrop-actions" data-home-v4-quickdrop-actions="true">
+                                    <a href="{{ quickdrop_home_card.open_url|default:quickdrop_home_card.manage_url }}" class="home-v4-quickdrop-primary">{{ quickdrop_home_card.primary_label|default:"바로 열기" }}</a>
+                                    <a href="{{ quickdrop_home_card.secondary_url|default:quickdrop_home_card.manage_url }}" class="home-v4-quickdrop-secondary">{{ quickdrop_home_card.secondary_label|default:"새 기기 추가" }}</a>
+                                </div>
+                                {% endif %}
+                            </section>
+                            {% endif %}
+
+                            <section class="home-v4-community-section home-v4-top-sns" data-home-v4-sns-panel="true">
+                                {% include 'core/partials/sns_widget.html' with embed_mode='full' compact_posts=True %}
+                            </section>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+{% include 'core/includes/student_games_qr_modal.html' %}
+{{ favorite_product_ids|json_script:"home-favorite-ids-data" }}
+{{ home_v2_frontend_config|json_script:"home-v2-frontend-config" }}
+{% endblock %}
