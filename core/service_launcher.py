@@ -200,6 +200,10 @@ ANONYMOUS_ROUTE_OVERRIDES = {
     "happy_seed:dashboard": "happy_seed:landing",
 }
 
+NEW_WINDOW_ROUTE_NAMES = {
+    "dutyticker",
+}
+
 SERVICE_LAUNCHER_GROUP_META_BY_SECTION = {
     "class_ops": {"key": "class_ops", "title": "오늘/운영", "order": 1},
     "collect_sign": {"key": "collect_sign", "title": "수합·서명", "order": 2},
@@ -311,7 +315,8 @@ def resolve_product_launch_url(product, user=None):
         ):
             return reverse("reservations:smart_entry"), False
         try:
-            return reverse(route_name), False
+            resolved_url = reverse(route_name)
+            return resolved_url, route_name.strip().lower() in NEW_WINDOW_ROUTE_NAMES
         except NoReverseMatch:
             logger.warning("Launch route missing for product '%s' (%s).", product_title_text(product), route_name)
 

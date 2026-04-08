@@ -83,6 +83,19 @@ class ProductLaunchRouteTests(TestCase):
         self.assertEqual(href, reverse("tts_announce"))
         self.assertFalse(is_external)
 
+    def test_resolver_opens_dutyticker_in_new_window(self):
+        product = Product.objects.create(
+            title="반짝반짝 우리반 알림판",
+            description="desc",
+            price=0,
+            is_active=True,
+            launch_route_name="dutyticker",
+        )
+
+        href, is_external = _resolve_product_launch_url(product)
+        self.assertEqual(href, reverse("dutyticker"))
+        self.assertTrue(is_external)
+
     def test_resolver_redirects_happy_seed_guest_users_to_public_landing(self):
         product = Product.objects.create(
             title="행복의 씨앗",
@@ -157,3 +170,19 @@ class ProductLaunchRouteTests(TestCase):
         self.assertEqual(teacher_item["href"], reverse("happy_seed:dashboard"))
         self.assertFalse(guest_item["is_external"])
         self.assertFalse(teacher_item["is_external"])
+
+    def test_service_launcher_marks_dutyticker_as_new_window_launch(self):
+        product = Product.objects.create(
+            title="반짝반짝 우리반 알림판",
+            description="desc",
+            solve_text="교실 화면으로 바로 띄웁니다",
+            price=0,
+            is_active=True,
+            launch_route_name="dutyticker",
+            service_type="classroom",
+        )
+
+        launcher_item = build_service_launcher_items([product])[0]
+
+        self.assertEqual(launcher_item["href"], reverse("dutyticker"))
+        self.assertTrue(launcher_item["is_external"])
