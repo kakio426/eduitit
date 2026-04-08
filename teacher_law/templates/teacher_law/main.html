@@ -7,13 +7,17 @@
 <style>
     .teacher-law-shell {
         background:
-            radial-gradient(circle at top left, rgba(14, 116, 144, 0.12), transparent 26rem),
-            radial-gradient(circle at bottom right, rgba(22, 163, 74, 0.12), transparent 28rem),
-            linear-gradient(180deg, #f7fbff 0%, #f8fcfa 48%, #eef4f7 100%);
+            radial-gradient(circle at top left, rgba(14, 116, 144, 0.11), transparent 24rem),
+            radial-gradient(circle at bottom right, rgba(22, 163, 74, 0.1), transparent 26rem),
+            linear-gradient(180deg, #f7fbff 0%, #f6fbf9 48%, #eef4f7 100%);
+    }
+    .teacher-law-frame {
+        max-width: 960px;
+        margin: 0 auto;
     }
     .teacher-law-panel {
-        background: rgba(255, 255, 255, 0.94);
-        border: 1px solid rgba(148, 163, 184, 0.2);
+        background: rgba(255, 255, 255, 0.96);
+        border: 1px solid rgba(148, 163, 184, 0.18);
         box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
         backdrop-filter: blur(14px);
     }
@@ -29,44 +33,49 @@
         font-weight: 800;
         letter-spacing: 0.04em;
     }
-    .teacher-law-status-chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.45rem;
-        border-radius: 999px;
-        padding: 0.4rem 0.85rem;
-        font-size: 0.77rem;
-        font-weight: 800;
+    .teacher-law-banner {
+        display: flex;
+        gap: 0.85rem;
+        border-radius: 26px;
+        border: 1px solid rgba(245, 158, 11, 0.2);
+        background: rgba(255, 251, 235, 0.95);
+        padding: 1rem 1.1rem;
+        color: #92400e;
     }
-    .teacher-law-status-chip::before {
-        content: "";
-        width: 0.48rem;
-        height: 0.48rem;
-        border-radius: 999px;
-        background: currentColor;
+    .teacher-law-banner-icon {
+        margin-top: 0.15rem;
+        font-size: 1rem;
     }
-    .teacher-law-status-chip--ready {
-        background: rgba(22, 163, 74, 0.12);
-        color: #15803d;
+    .teacher-law-banner-copy {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        font-weight: 700;
     }
-    .teacher-law-status-chip--warn {
-        background: rgba(245, 158, 11, 0.16);
-        color: #b45309;
+    .teacher-law-card-note {
+        border-radius: 20px;
+        padding: 0.85rem 1rem;
+        font-size: 0.93rem;
+        line-height: 1.6;
     }
-    .teacher-law-status-chip--idle {
-        background: rgba(148, 163, 184, 0.16);
-        color: #475569;
+    .teacher-law-card-note--warn {
+        border: 1px solid rgba(245, 158, 11, 0.18);
+        background: rgba(255, 251, 235, 0.92);
+        color: #92400e;
+        font-weight: 700;
     }
     .teacher-law-textarea {
-        min-height: 132px;
+        min-height: 170px;
         width: 100%;
         resize: vertical;
-        border-radius: 24px;
+        border-radius: 26px;
         border: 1px solid #cbd5e1;
         background: #fff;
         padding: 1rem 1rem 1.1rem;
         font-size: 1rem;
-        line-height: 1.7;
+        line-height: 1.75;
         color: #0f172a;
         box-shadow: inset 0 1px 1px rgba(15, 23, 42, 0.04);
     }
@@ -75,38 +84,52 @@
         border-color: #0f766e;
         box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.12);
     }
+    .teacher-law-textarea:disabled {
+        background: #f8fafc;
+        color: #64748b;
+        cursor: not-allowed;
+    }
+    .teacher-law-quick-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
     .teacher-law-quick-button {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 100%;
-        border-radius: 18px;
-        border: 1px solid rgba(148, 163, 184, 0.28);
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 184, 0.25);
         background: rgba(255, 255, 255, 0.92);
-        padding: 0.95rem 1rem;
+        padding: 0.8rem 1rem;
         text-align: left;
         font-size: 0.92rem;
         font-weight: 700;
-        line-height: 1.55;
+        line-height: 1.5;
         color: #334155;
         transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
     }
     .teacher-law-quick-button:hover,
     .teacher-law-quick-button:focus-visible {
-        border-color: rgba(13, 148, 136, 0.4);
+        border-color: rgba(13, 148, 136, 0.38);
         box-shadow: 0 14px 26px rgba(15, 23, 42, 0.08);
         transform: translateY(-1px);
         outline: none;
     }
+    .teacher-law-quick-button:disabled {
+        opacity: 0.62;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
     .teacher-law-send-button {
         display: inline-flex;
-        width: 100%;
         align-items: center;
         justify-content: center;
         gap: 0.6rem;
         border-radius: 20px;
         background: linear-gradient(135deg, #0f766e, #0f172a);
-        padding: 1rem 1.1rem;
+        padding: 1rem 1.25rem;
         color: #fff;
         font-size: 1rem;
         font-weight: 900;
@@ -125,61 +148,112 @@
         transform: none;
         box-shadow: none;
     }
-    .teacher-law-chat-list {
+    .teacher-law-helper {
+        font-size: 0.92rem;
+        line-height: 1.7;
+        color: #475569;
+    }
+    .teacher-law-progress {
+        display: none;
+        align-items: center;
+        gap: 0.65rem;
+        border-radius: 18px;
+        background: #f0fdfa;
+        color: #0f766e;
+        padding: 0.85rem 0.95rem;
+        font-size: 0.92rem;
+        font-weight: 800;
+    }
+    .teacher-law-progress.is-visible {
+        display: inline-flex;
+    }
+    .teacher-law-progress-spinner {
+        width: 1rem;
+        height: 1rem;
+        border-radius: 999px;
+        border: 2px solid rgba(13, 148, 136, 0.2);
+        border-top-color: #0f766e;
+        animation: teacher-law-spin 900ms linear infinite;
+    }
+    .teacher-law-inline-error {
+        display: none;
+        border-radius: 18px;
+        border: 1px solid rgba(239, 68, 68, 0.18);
+        background: #fff1f2;
+        color: #be123c;
+        padding: 0.85rem 0.95rem;
+        font-size: 0.92rem;
+        font-weight: 700;
+        line-height: 1.6;
+    }
+    .teacher-law-inline-error.is-visible {
+        display: block;
+    }
+    .teacher-law-disclaimer {
+        font-size: 0.82rem;
+        line-height: 1.6;
+        color: #64748b;
+    }
+    .teacher-law-answer-shell {
         display: flex;
         flex-direction: column;
         gap: 1rem;
     }
-    .teacher-law-message-row {
-        display: flex;
-    }
-    .teacher-law-message-row--user {
-        justify-content: flex-end;
-    }
-    .teacher-law-message-row--assistant,
-    .teacher-law-message-row--placeholder {
-        justify-content: flex-start;
-    }
-    .teacher-law-message-card {
-        width: min(100%, 48rem);
-        border-radius: 28px;
-        padding: 1rem 1.1rem;
-        border: 1px solid rgba(148, 163, 184, 0.18);
-    }
-    .teacher-law-message-card--user {
+    .teacher-law-question-card {
+        border-radius: 24px;
         background: linear-gradient(135deg, #0f766e, #0f172a);
         color: #fff;
-        box-shadow: 0 18px 30px rgba(15, 23, 42, 0.18);
+        padding: 1rem 1.05rem;
+        box-shadow: 0 18px 30px rgba(15, 23, 42, 0.16);
     }
-    .teacher-law-message-card--assistant {
+    .teacher-law-question-label {
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.78);
+    }
+    .teacher-law-question-text {
+        margin-top: 0.55rem;
+        font-size: 1rem;
+        line-height: 1.75;
+        color: #fff;
+        white-space: pre-wrap;
+    }
+    .teacher-law-answer-card {
+        border-radius: 28px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
         background: rgba(255, 255, 255, 0.98);
+        padding: 1.15rem 1.15rem 1.2rem;
         color: #0f172a;
-        box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
+        box-shadow: 0 16px 30px rgba(15, 23, 42, 0.08);
     }
-    .teacher-law-message-card--placeholder {
-        background: rgba(240, 249, 255, 0.95);
-        color: #0f172a;
-        border-style: dashed;
-    }
-    .teacher-law-meta {
+    .teacher-law-answer-meta {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 1rem;
-        margin-bottom: 0.65rem;
-        font-size: 0.78rem;
+        font-size: 0.8rem;
         font-weight: 800;
-    }
-    .teacher-law-meta--user {
-        color: rgba(255, 255, 255, 0.8);
-    }
-    .teacher-law-meta--assistant {
         color: #64748b;
     }
+    .teacher-law-urgency-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        border-radius: 999px;
+        background: rgba(239, 68, 68, 0.12);
+        color: #b91c1c;
+        padding: 0.4rem 0.7rem;
+        font-size: 0.78rem;
+        font-weight: 900;
+    }
     .teacher-law-summary {
+        margin-top: 0.8rem;
         font-size: 1rem;
         line-height: 1.8;
         white-space: pre-wrap;
+        color: #0f172a;
     }
     .teacher-law-section-title {
         margin-top: 1rem;
@@ -226,55 +300,41 @@
         font-weight: 800;
         color: #0f766e;
     }
-    .teacher-law-disclaimer {
-        margin-top: 0.95rem;
-        font-size: 0.82rem;
-        line-height: 1.6;
-        color: #64748b;
-    }
-    .teacher-law-inline-error {
-        display: none;
-        border-radius: 18px;
-        border: 1px solid rgba(239, 68, 68, 0.18);
-        background: #fff1f2;
-        color: #be123c;
-        padding: 0.85rem 0.95rem;
-        font-size: 0.92rem;
-        font-weight: 700;
-        line-height: 1.6;
-    }
-    .teacher-law-inline-error.is-visible {
-        display: block;
-    }
-    .teacher-law-progress {
-        display: none;
-        align-items: center;
-        gap: 0.65rem;
-        border-radius: 18px;
-        background: #f0fdfa;
-        color: #0f766e;
-        padding: 0.85rem 0.95rem;
-        font-size: 0.92rem;
-        font-weight: 800;
-    }
-    .teacher-law-progress.is-visible {
-        display: inline-flex;
-    }
-    .teacher-law-progress-spinner {
-        width: 1rem;
-        height: 1rem;
-        border-radius: 999px;
-        border: 2px solid rgba(13, 148, 136, 0.2);
-        border-top-color: #0f766e;
-        animation: teacher-law-spin 900ms linear infinite;
-    }
     .teacher-law-empty {
-        border: 1px dashed rgba(148, 163, 184, 0.45);
+        border-radius: 26px;
+        border: 1px dashed rgba(148, 163, 184, 0.4);
         background: rgba(255, 255, 255, 0.82);
-        border-radius: 28px;
-        padding: 2.4rem 1.4rem;
+        padding: 1.5rem 1.2rem;
         text-align: center;
         color: #64748b;
+    }
+    .teacher-law-history-list {
+        display: grid;
+        gap: 0.9rem;
+    }
+    .teacher-law-history-card {
+        border-radius: 22px;
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        background: rgba(255, 255, 255, 0.82);
+        padding: 1rem 1.05rem;
+    }
+    .teacher-law-history-question {
+        font-size: 0.92rem;
+        line-height: 1.65;
+        font-weight: 800;
+        color: #0f172a;
+    }
+    .teacher-law-history-answer {
+        margin-top: 0.45rem;
+        font-size: 0.9rem;
+        line-height: 1.65;
+        color: #475569;
+    }
+    .teacher-law-history-meta {
+        margin-top: 0.5rem;
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #94a3b8;
     }
     @keyframes teacher-law-spin {
         from { transform: rotate(0deg); }
@@ -288,193 +348,177 @@
         .teacher-law-textarea {
             min-height: 148px;
         }
+        .teacher-law-quick-list {
+            gap: 0.6rem;
+        }
+        .teacher-law-quick-button {
+            width: 100%;
+            justify-content: flex-start;
+        }
+        .teacher-law-send-button {
+            width: 100%;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<section class="teacher-law-shell pt-32 pb-20 px-4 min-h-screen">
-    <div class="max-w-[1380px] mx-auto space-y-6" data-teacher-law-root="true">
-        <header class="teacher-law-panel rounded-[34px] px-6 py-6 md:px-8 md:py-8">
-            <div class="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-                <div class="max-w-4xl">
-                    <div class="teacher-law-badge">
-                        <i class="fa-solid fa-scale-balanced"></i>
-                        교사용 AI 법률 가이드
-                    </div>
-                    <h1 class="mt-4 text-4xl md:text-5xl font-black text-slate-950">교실에서 바로 확인해야 할 법령만 빠르게 묻습니다</h1>
-                    <p class="mt-4 text-base md:text-lg leading-8 text-slate-600">학교폭력, 사진·개인정보, 생활지도, 학부모 민원, 신고 의무처럼 교사가 자주 부딪히는 질문만 공식 법령 근거로 정리합니다.</p>
-                </div>
-                <div class="teacher-law-panel rounded-[28px] px-5 py-5 min-w-[280px] shadow-none">
-                    <div class="text-sm font-black text-slate-900">현재 상태</div>
-                    <div class="mt-4 flex flex-wrap gap-2">
-                        {% if service_enabled and law_api_configured and llm_configured %}
-                        <span class="teacher-law-status-chip teacher-law-status-chip--ready">답변 준비 완료</span>
-                        {% elif warning_messages %}
-                        <span class="teacher-law-status-chip teacher-law-status-chip--warn">연결 확인 필요</span>
-                        {% else %}
-                        <span class="teacher-law-status-chip teacher-law-status-chip--idle">준비 중</span>
-                        {% endif %}
-                    </div>
-                    <div class="mt-4 text-sm leading-6 text-slate-600">
-                        <div>지원 범위: 학교폭력 · 사진/개인정보 · 생활지도 · 학부모 민원 · 신고 의무</div>
-                        <div class="mt-2">고위험 사안은 사람 상담 권고가 함께 표시됩니다.</div>
-                    </div>
-                </div>
+<section class="teacher-law-shell pt-28 pb-20 px-4 min-h-screen">
+    <div class="teacher-law-frame space-y-5" data-teacher-law-root="true" data-ui-blocked="{{ ui_blocked|yesno:'true,false' }}">
+        <header class="space-y-4 px-1">
+            <div class="teacher-law-badge">
+                <i class="fa-solid fa-scale-balanced"></i>
+                교사용 AI 법률 가이드
+            </div>
+            <div class="space-y-3">
+                <h1 class="text-4xl md:text-5xl font-black text-slate-950 leading-tight">교실에서 바로 확인해야 할 법령만 빠르게 묻습니다</h1>
+                <p class="text-base md:text-lg leading-8 text-slate-600">복잡한 메뉴 대신 지금 부딪히는 상황을 한 문장으로 적으면, 핵심 답변과 바로 할 일, 관련 조문만 빠르게 정리해드립니다.</p>
             </div>
         </header>
 
         {% if warning_messages %}
-        <div class="teacher-law-panel rounded-[28px] px-5 py-4 md:px-6">
-            <div class="flex items-start gap-3 text-amber-700">
-                <i class="fa-solid fa-triangle-exclamation mt-1"></i>
-                <div class="space-y-1 text-sm leading-6 font-bold">
-                    {% for warning in warning_messages %}
-                    <p>{{ warning }}</p>
-                    {% endfor %}
-                </div>
+        <div class="teacher-law-banner">
+            <div class="teacher-law-banner-icon">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div class="teacher-law-banner-copy">
+                {% for warning in warning_messages %}
+                <p>{{ warning }}</p>
+                {% endfor %}
             </div>
         </div>
         {% endif %}
 
-        <div class="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
-            <aside class="space-y-6">
-                <section class="teacher-law-panel rounded-[30px] p-5 md:p-6">
-                    <p class="text-sm font-black uppercase tracking-[0.24em] text-teal-700">오늘 바로 묻기</p>
-                    <h2 class="mt-3 text-2xl font-black text-slate-950">이 질문들부터 시작할 수 있어요</h2>
-                    <div class="mt-5 grid gap-3">
+        <section class="teacher-law-panel rounded-[34px] p-5 md:p-7">
+            <div class="space-y-5">
+                <div class="space-y-2">
+                    <p class="text-sm font-black uppercase tracking-[0.24em] text-slate-500">질문하기</p>
+                    <h2 class="text-2xl md:text-3xl font-black text-slate-950">상황을 한 문장으로 적으면 됩니다</h2>
+                    <p class="teacher-law-helper">학교폭력, 학생 사진·개인정보, 생활지도, 학부모 민원, 신고 의무처럼 교실에서 바로 확인해야 하는 주제를 가장 잘 다룹니다.</p>
+                </div>
+
+                {% if ui_blocked and ui_block_reason %}
+                <div class="teacher-law-card-note teacher-law-card-note--warn">{{ ui_block_reason }}</div>
+                {% endif %}
+
+                <form action="{{ ask_url }}" method="post" data-teacher-law-form="true" novalidate class="space-y-4">
+                    {% csrf_token %}
+                    <label class="sr-only" for="teacher-law-question">질문 입력</label>
+                    <textarea id="teacher-law-question" name="question" class="teacher-law-textarea" data-teacher-law-input="true" placeholder="예: 학생 사진을 학급 밴드에 올리려면 어떤 동의가 필요한가요?" {% if ui_blocked %}disabled{% endif %}></textarea>
+                    <div class="teacher-law-quick-list">
                         {% for question in quick_questions %}
-                        <button type="button" class="teacher-law-quick-button" data-teacher-law-quick-question="true" data-question="{{ question }}">
+                        <button type="button" class="teacher-law-quick-button" data-teacher-law-quick-question="true" data-question="{{ question }}" {% if ui_blocked %}disabled{% endif %}>
                             {{ question }}
                         </button>
                         {% endfor %}
                     </div>
-                </section>
-
-                <section class="teacher-law-panel rounded-[30px] p-5 md:p-6">
-                    <p class="text-sm font-black uppercase tracking-[0.24em] text-slate-500">도와드리는 범위</p>
-                    <ul class="mt-4 space-y-3 text-sm leading-7 text-slate-600">
-                        <li>학교폭력 인지 후 첫 조치와 기록 흐름</li>
-                        <li>학생 사진·영상 게시와 개인정보 주의점</li>
-                        <li>생활지도 중 신체 접촉이 문제가 되는 기준</li>
-                        <li>학부모의 폭언·과도한 민원 대응 근거</li>
-                        <li>아동학대 의심 등 즉시 신고가 필요한 상황</li>
-                    </ul>
-                    <div class="mt-5 rounded-2xl bg-slate-50 px-4 py-4 text-sm leading-6 text-slate-500">
-                        일반 소비자 분쟁, 세무, 소송 전략, 판례 심층 분석은 아직 지원하지 않습니다.
+                    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                        <div class="teacher-law-helper">빠른 질문은 입력만 채웁니다. 하루 {{ daily_limit_per_user }}회까지 질문할 수 있습니다.</div>
+                        <button type="submit" class="teacher-law-send-button" data-teacher-law-send="true" {% if ui_blocked %}disabled{% endif %}>
+                            <i class="fa-solid fa-paper-plane"></i>
+                            질문 보내기
+                        </button>
                     </div>
-                </section>
-            </aside>
+                </form>
 
-            <section class="teacher-law-panel rounded-[34px] p-5 md:p-6 lg:p-8">
-                <div class="flex flex-col gap-4">
-                    <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                        <div>
-                            <p class="text-sm font-black uppercase tracking-[0.24em] text-slate-500">질문하기</p>
-                            <h2 class="mt-2 text-2xl font-black text-slate-950">상황을 한 문장으로 적으면 됩니다</h2>
-                        </div>
-                        <div class="text-sm leading-6 text-slate-500">
-                            답변에는 관련 조문과 참고 안내가 함께 표시됩니다.
-                        </div>
-                    </div>
-
-                    <form action="{{ ask_url }}" method="post" data-teacher-law-form="true" novalidate>
-                        {% csrf_token %}
-                        <label class="sr-only" for="teacher-law-question">질문 입력</label>
-                        <textarea id="teacher-law-question" name="question" class="teacher-law-textarea" data-teacher-law-input="true" placeholder="예: 학생 사진을 학급 밴드에 올리려면 어떤 동의가 필요한가요?"></textarea>
-                        <div class="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                            <div class="text-sm leading-6 text-slate-500">상황을 구체적으로 적을수록 관련 조문을 더 잘 찾습니다.</div>
-                            <button type="submit" class="teacher-law-send-button md:w-auto md:min-w-[220px]" data-teacher-law-send="true">
-                                <i class="fa-solid fa-paper-plane"></i>
-                                질문 보내기
-                            </button>
-                        </div>
-                    </form>
-
-                    <div class="teacher-law-progress" data-teacher-law-progress="true" aria-live="polite">
-                        <span class="teacher-law-progress-spinner" aria-hidden="true"></span>
-                        <span data-teacher-law-progress-text="true">질문 정리 중...</span>
-                    </div>
-                    <div class="teacher-law-inline-error" data-teacher-law-error="true" role="alert"></div>
-                    {% if law_data_notice %}
-                    <p class="teacher-law-disclaimer">{{ law_data_notice }}</p>
-                    {% endif %}
+                <div class="teacher-law-progress" data-teacher-law-progress="true" aria-live="polite">
+                    <span class="teacher-law-progress-spinner" aria-hidden="true"></span>
+                    <span data-teacher-law-progress-text="true">질문 정리 중...</span>
                 </div>
+                <div class="teacher-law-inline-error{% if ui_blocked and ui_block_reason %} is-visible{% endif %}" data-teacher-law-error="true" role="alert">{% if ui_blocked and ui_block_reason %}{{ ui_block_reason }}{% endif %}</div>
+                {% if law_data_notice %}
+                <p class="teacher-law-disclaimer">{{ law_data_notice }}</p>
+                {% endif %}
+            </div>
+        </section>
 
-                <div class="mt-8 border-t border-slate-100 pt-6">
-                    <div class="flex items-center justify-between gap-3">
-                        <div>
-                            <p class="text-sm font-black uppercase tracking-[0.24em] text-slate-500">대화 기록</p>
-                            <h3 class="mt-2 text-xl font-black text-slate-950">최근 질문과 답변</h3>
+        <section class="space-y-4">
+            <div class="px-1">
+                <p class="text-sm font-black uppercase tracking-[0.24em] text-slate-500">최신 답변</p>
+            </div>
+            <div class="teacher-law-answer-shell" data-teacher-law-latest-container="true">
+                {% if latest_pair %}
+                <div class="teacher-law-question-card">
+                    <div class="teacher-law-question-label">내 질문</div>
+                    <div class="teacher-law-question-text">{{ latest_pair.user_message.body }}</div>
+                </div>
+                <article class="teacher-law-answer-card">
+                    <div class="teacher-law-answer-meta">
+                        <span>법률 가이드</span>
+                        <div class="flex items-center gap-3">
+                            {% if latest_pair.assistant_message.needs_human_help %}
+                            <span class="teacher-law-urgency-badge">사람 상담 권장</span>
+                            {% endif %}
+                            <time datetime="{{ latest_pair.assistant_message.created_at }}">{{ latest_pair.assistant_message.created_at_display }}</time>
                         </div>
                     </div>
-
-                    <div class="mt-5 teacher-law-chat-list" data-teacher-law-message-list="true">
-                        {% if message_items %}
-                            {% for item in message_items %}
-                                {% if item.role == 'user' %}
-                                <div class="teacher-law-message-row teacher-law-message-row--user">
-                                    <article class="teacher-law-message-card teacher-law-message-card--user">
-                                        <div class="teacher-law-meta teacher-law-meta--user">
-                                            <span>질문</span>
-                                            <time datetime="{{ item.created_at }}">{{ item.created_at_display }}</time>
-                                        </div>
-                                        <p class="teacher-law-summary">{{ item.body }}</p>
-                                    </article>
-                                </div>
-                                {% else %}
-                                <div class="teacher-law-message-row teacher-law-message-row--assistant">
-                                    <article class="teacher-law-message-card teacher-law-message-card--assistant">
-                                        <div class="teacher-law-meta teacher-law-meta--assistant">
-                                            <span>법률 가이드</span>
-                                            <time datetime="{{ item.created_at }}">{{ item.created_at_display }}</time>
-                                        </div>
-                                        <p class="teacher-law-summary">{{ item.summary|default:item.body }}</p>
-                                        {% if item.action_items %}
-                                        <div class="teacher-law-section-title">지금 바로 할 일</div>
-                                        <ul class="teacher-law-list">
-                                            {% for action in item.action_items %}
-                                            <li>{{ action }}</li>
-                                            {% endfor %}
-                                        </ul>
-                                        {% endif %}
-                                        {% if item.citations %}
-                                        <div class="teacher-law-section-title">근거 조문</div>
-                                        {% for citation in item.citations %}
-                                        <div class="teacher-law-citation">
-                                            <div class="teacher-law-citation-title">{{ citation.law_name }}{% if citation.article_label %} · {{ citation.article_label }}{% endif %}</div>
-                                            <p class="teacher-law-citation-quote">{{ citation.quote }}</p>
-                                            {% if citation.source_url %}
-                                            <a href="{{ citation.source_url }}" target="_blank" rel="noopener noreferrer" class="teacher-law-citation-link">
-                                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                                                공식 출처 보기
-                                            </a>
-                                            {% endif %}
-                                        </div>
-                                        {% endfor %}
-                                        {% endif %}
-                                        {% if item.disclaimer %}
-                                        <p class="teacher-law-disclaimer">{{ item.disclaimer }}</p>
-                                        {% endif %}
-                                    </article>
-                                </div>
-                                {% endif %}
-                            {% endfor %}
-                        {% else %}
-                        <div class="teacher-law-empty" data-teacher-law-empty="true">
-                            <p class="text-lg font-black text-slate-900">첫 질문을 보내면 여기에서 답이 이어집니다.</p>
-                            <p class="mt-2 text-sm leading-6">학교폭력, 사진 게시, 생활지도, 학부모 민원처럼 지금 부딪히는 상황을 한 문장으로 적어 주세요.</p>
-                        </div>
+                    <p class="teacher-law-summary">{{ latest_pair.assistant_message.summary|default:latest_pair.assistant_message.body }}</p>
+                    {% if latest_pair.assistant_message.action_items %}
+                    <div class="teacher-law-section-title">지금 바로 할 일</div>
+                    <ul class="teacher-law-list">
+                        {% for action in latest_pair.assistant_message.action_items %}
+                        <li>{{ action }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                    {% if latest_pair.assistant_message.citations %}
+                    <div class="teacher-law-section-title">근거 조문</div>
+                    {% for citation in latest_pair.assistant_message.citations %}
+                    <div class="teacher-law-citation">
+                        <div class="teacher-law-citation-title">{{ citation.law_name }}{% if citation.article_label %} · {{ citation.article_label }}{% endif %}</div>
+                        <p class="teacher-law-citation-quote">{{ citation.quote }}</p>
+                        {% if citation.source_url %}
+                        <a href="{{ citation.source_url }}" target="_blank" rel="noopener noreferrer" class="teacher-law-citation-link">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            공식 출처 보기
+                        </a>
                         {% endif %}
                     </div>
+                    {% endfor %}
+                    {% endif %}
+                    {% if latest_pair.assistant_message.disclaimer %}
+                    <p class="teacher-law-disclaimer mt-4">{{ latest_pair.assistant_message.disclaimer }}</p>
+                    {% endif %}
+                </article>
+                {% else %}
+                <div class="teacher-law-empty" data-teacher-law-latest-empty="true">
+                    <p class="text-lg font-black text-slate-900">질문을 보내면 가장 최근 답변이 여기 가장 크게 표시됩니다.</p>
+                    <p class="mt-2 text-sm leading-6">지금 교실에서 바로 확인해야 하는 상황을 한 문장으로 적어 주세요.</p>
                 </div>
-            </section>
-        </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="teacher-law-panel rounded-[30px] p-5 md:p-6">
+            <div class="flex items-center justify-between gap-3">
+                <div>
+                    <p class="text-sm font-black uppercase tracking-[0.24em] text-slate-500">이전 답변</p>
+                    <h3 class="mt-2 text-xl font-black text-slate-950">최근에 확인한 질문</h3>
+                </div>
+            </div>
+            <div class="teacher-law-history-list mt-5" data-teacher-law-history-list="true">
+                {% if history_pairs %}
+                    {% for pair in history_pairs %}
+                    <article class="teacher-law-history-card">
+                        <div class="teacher-law-history-question">{{ pair.user_message.body }}</div>
+                        <div class="teacher-law-history-answer">{{ pair.assistant_message.summary|default:pair.assistant_message.body }}</div>
+                        <div class="teacher-law-history-meta">{{ pair.assistant_message.created_at_display }}</div>
+                    </article>
+                    {% endfor %}
+                {% else %}
+                <div class="teacher-law-empty" data-teacher-law-history-empty="true">
+                    <p class="text-base font-black text-slate-900">아직 이전 답변은 없습니다.</p>
+                    <p class="mt-2 text-sm leading-6">첫 질문을 보내면 최신 답변 아래에 이전 기록이 차례대로 쌓입니다.</p>
+                </div>
+                {% endif %}
+            </div>
+        </section>
     </div>
 </section>
 
 {{ ask_url|json_script:"teacher-law-ask-url" }}
-{{ message_items|json_script:"teacher-law-message-data" }}
+{{ latest_pair|json_script:"teacher-law-latest-pair" }}
+{{ history_pairs|json_script:"teacher-law-history-data" }}
 {% endblock %}
 
 {% block extra_js %}

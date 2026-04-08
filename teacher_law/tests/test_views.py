@@ -2,12 +2,13 @@ import json
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.core.management import call_command
 from django.test import RequestFactory, TestCase, override_settings
 
 from products.models import Product, ServiceManual
-from teacher_law.models import LegalCitation, LegalChatMessage, LegalQueryAudit
-from teacher_law.views import ask_question_api, main_view
+from teacher_law.models import LegalCitation, LegalChatMessage, LegalChatSession, LegalQueryAudit
+from teacher_law.views import _build_page_context, ask_question_api, main_view
 
 
 User = get_user_model()
@@ -29,6 +30,39 @@ class TeacherLawViewTests(TestCase):
     def setUp(self):
         self.factory = RequestFactory()
         self.user = _build_user()
+        cache.clear()
+
+    def _build_success_result(self, question="학생 사진 올려도 되나요?"):
+        return {
+            "profile": {
+                "original_question": question,
+                "normalized_question": question,
+                "topic": "privacy_photo",
+                "scope_supported": True,
+                "risk_flags": [],
+                "candidate_queries": ["학생 사진 개인정보 보호법"],
+                "quick_question_key": "",
+            },
+            "payload": {
+                "summary": "보호자 동의 범위와 게시 장소를 먼저 확인해야 합니다.",
+                "action_items": ["게시 장소를 먼저 정합니다."],
+                "citations": [],
+                "risk_level": "medium",
+                "needs_human_help": False,
+                "disclaimer": "일반적 법령 정보 안내이며 개별 사건의 법률 자문은 아닙니다.",
+                "scope_supported": True,
+            },
+            "audit": {
+                "cache_hit": False,
+                "search_attempt_count": 1,
+                "search_result_count": 2,
+                "detail_fetch_count": 1,
+                "selected_laws_json": [{"law_name": "개인정보 보호법"}],
+                "failure_reason": "",
+                "error_message": "",
+                "elapsed_ms": 420,
+            },
+        }
 
     def test_main_view_renders_quick_questions(self):
         request = self.factory.get("/teacher-law/")
@@ -39,7 +73,11 @@ class TeacherLawViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "교사용 AI 법률 가이드")
+        self.assertContains(response, "상황을 한 문장으로 적으면 됩니다")
         self.assertContains(response, "학생 사진을 학급 밴드나 단체방에 올려도 되나요?")
+        self.assertContains(response, "하루 15회까지 질문할 수 있습니다.")
+        self.assertNotContains(response, "현재 상태")
+        self.assertNotContains(response, "도와드리는 범위")
 
     @override_settings(TEACHER_LAW_PROVIDER="beopmang")
     @patch("teacher_law.views.is_llm_configured", return_value=True)
@@ -53,6 +91,157 @@ class TeacherLawViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "법령 데이터는 법망(API.beopmang.org)을 통해 조회되며, 답변은 참고용입니다.")
         self.assertNotContains(response, "관리자가 아직 법령 연결을 마치지 않았습니다.")
+
+    @patch("teacher_law.views.is_law_api_configured", return_value=True)
+    @patch("teacher_law.views.is_llm_configured", return_value=False)
+    def test_main_view_blocks_form_when_answer_pipeline_unavailable(self, _llm_mock, _law_mock):
+        request = self.factory.get("/teacher-law/")
+        request.user = self.user
+        request.session = {}
+
+        context = _build_page_context(request)
+        response = main_view(request)
+
+        self.assertTrue(context["ui_blocked"])
+        self.assertIn("답변 연결", context["ui_block_reason"])
+        self.assertContains(response, 'data-ui-blocked="true"')
+        self.assertContains(response, 'data-teacher-law-input="true" placeholder=')
+        self.assertContains(response, "disabled")
+
+    @patch("teacher_law.views.is_law_api_configured", return_value=True)
+    @patch("teacher_law.views.is_llm_configured", return_value=True)
+    def test_page_context_builds_latest_pair_and_recent_history(self, _llm_mock, _law_mock):
+        session = LegalChatSession.objects.create(user=self.user)
+        for index in range(8):
+            user_message = LegalChatMessage.objects.create(
+                session=session,
+                role=LegalChatMessage.Role.USER,
+                body=f"질문 {index}",
+            )
+            assistant_message = LegalChatMessage.objects.create(
+                session=session,
+                role=LegalChatMessage.Role.ASSISTANT,
+                body=f"답변 {index}",
+                payload_json={
+                    "summary": f"요약 {index}",
+                    "action_items": [],
+                    "citations": [],
+                    "risk_level": "low",
+                    "needs_human_help": False,
+                    "disclaimer": "",
+                    "scope_supported": True,
+                },
+            )
+            LegalQueryAudit.objects.create(
+                session=session,
+                user_message=user_message,
+                assistant_message=assistant_message,
+                original_question=user_message.body,
+                normalized_question=user_message.body,
+                topic="privacy_photo",
+                scope_supported=True,
+                risk_flags_json=[],
+                candidate_queries_json=[],
+                selected_laws_json=[],
+                search_attempt_count=1,
+                search_result_count=1,
+                detail_fetch_count=1,
+                cache_hit=False,
+                elapsed_ms=100,
+                failure_reason="",
+                error_message="",
+            )
+
+        request = self.factory.get("/teacher-law/")
+        request.user = self.user
+        request.session = {}
+
+        context = _build_page_context(request)
+
+        self.assertEqual(context["latest_pair"]["user_message"]["body"], "질문 7")
+        self.assertEqual(context["latest_pair"]["assistant_message"]["summary"], "요약 7")
+        self.assertEqual(len(context["history_pairs"]), 6)
+        self.assertEqual(context["history_pairs"][0]["user_message"]["body"], "질문 6")
+        self.assertEqual(context["history_pairs"][-1]["user_message"]["body"], "질문 1")
+
+    @override_settings(TEACHER_LAW_DAILY_LIMIT_PER_USER=1)
+    def test_ask_api_returns_429_after_daily_limit(self):
+        first_request = self.factory.post(
+            "/teacher-law/ask/",
+            data=json.dumps({"question": "학생 사진 올려도 되나요?"}),
+            content_type="application/json",
+        )
+        first_request.user = self.user
+
+        second_request = self.factory.post(
+            "/teacher-law/ask/",
+            data=json.dumps({"question": "학부모가 민원을 넣겠다고 합니다."}),
+            content_type="application/json",
+        )
+        second_request.user = self.user
+
+        with patch("teacher_law.views.answer_legal_question", return_value=self._build_success_result()):
+            first_response = ask_question_api(first_request)
+        with patch("teacher_law.views.answer_legal_question", return_value=self._build_success_result("학부모가 민원을 넣겠다고 합니다.")):
+            second_response = ask_question_api(second_request)
+
+        second_payload = json.loads(second_response.content)
+        self.assertEqual(first_response.status_code, 201)
+        self.assertEqual(second_response.status_code, 429)
+        self.assertIn("오늘 질문 1회를 모두 사용했어요.", second_payload["message"])
+        self.assertEqual(LegalQueryAudit.objects.count(), 1)
+
+    @override_settings(TEACHER_LAW_DAILY_LIMIT_PER_USER=1)
+    @patch("teacher_law.views.is_law_api_configured", return_value=True)
+    @patch("teacher_law.views.is_llm_configured", return_value=True)
+    def test_main_view_blocks_form_when_daily_limit_is_reached(self, _llm_mock, _law_mock):
+        request = self.factory.post(
+            "/teacher-law/ask/",
+            data=json.dumps({"question": "학생 사진 올려도 되나요?"}),
+            content_type="application/json",
+        )
+        request.user = self.user
+
+        with patch("teacher_law.views.answer_legal_question", return_value=self._build_success_result()):
+            ask_question_api(request)
+
+        page_request = self.factory.get("/teacher-law/")
+        page_request.user = self.user
+        page_request.session = {}
+
+        context = _build_page_context(page_request)
+        response = main_view(page_request)
+
+        self.assertTrue(context["ui_blocked"])
+        self.assertIn("오늘 질문 1회를 모두 사용했어요.", context["ui_block_reason"])
+        self.assertContains(response, 'data-ui-blocked="true"')
+        self.assertContains(response, "오늘 질문 1회를 모두 사용했어요.")
+
+    @override_settings(TEACHER_LAW_DAILY_LIMIT_PER_USER=1)
+    def test_failed_request_does_not_consume_daily_limit(self):
+        failed_request = self.factory.post(
+            "/teacher-law/ask/",
+            data=json.dumps({"question": "학생 사진 올려도 되나요?"}),
+            content_type="application/json",
+        )
+        failed_request.user = self.user
+
+        success_request = self.factory.post(
+            "/teacher-law/ask/",
+            data=json.dumps({"question": "학생 사진 올려도 되나요?"}),
+            content_type="application/json",
+        )
+        success_request.user = self.user
+
+        llm_error = __import__("teacher_law.services.llm_client", fromlist=["LlmClientError"]).LlmClientError("boom")
+        with patch("teacher_law.views.answer_legal_question", side_effect=llm_error):
+            failed_response = ask_question_api(failed_request)
+        with patch("teacher_law.views.answer_legal_question", return_value=self._build_success_result()):
+            success_response = ask_question_api(success_request)
+
+        self.assertEqual(failed_response.status_code, 503)
+        self.assertEqual(success_response.status_code, 201)
+        self.assertEqual(LegalQueryAudit.objects.count(), 2)
 
     def test_ask_api_out_of_scope_returns_scope_supported_false(self):
         request = self.factory.post(
@@ -91,47 +280,19 @@ class TeacherLawViewTests(TestCase):
             content_type="application/json",
         )
         request.user = self.user
-        result = {
-            "profile": {
-                "original_question": "학생 사진 올려도 되나요?",
-                "normalized_question": "학생 사진 올려도 되나요?",
-                "topic": "privacy_photo",
-                "scope_supported": True,
-                "risk_flags": [],
-                "candidate_queries": ["학생 사진 개인정보 보호법"],
-                "quick_question_key": "",
-            },
-            "payload": {
-                "summary": "보호자 동의 범위와 게시 장소를 먼저 확인해야 합니다.",
-                "action_items": ["게시 장소를 먼저 정합니다."],
-                "citations": [
-                    {
-                        "citation_id": "law-1",
-                        "law_name": "개인정보 보호법",
-                        "law_id": "123",
-                        "mst": "456",
-                        "article_label": "제15조",
-                        "quote": "개인정보 처리와 동의에 관한 조문",
-                        "source_url": "https://www.law.go.kr",
-                        "fetched_at": "2026-04-05T00:00:00+09:00",
-                    }
-                ],
-                "risk_level": "medium",
-                "needs_human_help": False,
-                "disclaimer": "일반적 법령 정보 안내이며 개별 사건의 법률 자문은 아닙니다.",
-                "scope_supported": True,
-            },
-            "audit": {
-                "cache_hit": False,
-                "search_attempt_count": 1,
-                "search_result_count": 2,
-                "detail_fetch_count": 1,
-                "selected_laws_json": [{"law_name": "개인정보 보호법"}],
-                "failure_reason": "",
-                "error_message": "",
-                "elapsed_ms": 420,
-            },
-        }
+        result = self._build_success_result()
+        result["payload"]["citations"] = [
+            {
+                "citation_id": "law-1",
+                "law_name": "개인정보 보호법",
+                "law_id": "123",
+                "mst": "456",
+                "article_label": "제15조",
+                "quote": "개인정보 처리와 동의에 관한 조문",
+                "source_url": "https://www.law.go.kr",
+                "fetched_at": "2026-04-05T00:00:00+09:00",
+            }
+        ]
 
         with patch("teacher_law.views.answer_legal_question", return_value=result):
             response = ask_question_api(request)

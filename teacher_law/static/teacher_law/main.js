@@ -38,20 +38,6 @@
             .replace(/'/g, "&#39;");
     }
 
-    function buildUserMessageHtml(message) {
-        return `
-            <div class="teacher-law-message-row teacher-law-message-row--user">
-                <article class="teacher-law-message-card teacher-law-message-card--user">
-                    <div class="teacher-law-meta teacher-law-meta--user">
-                        <span>질문</span>
-                        <time datetime="${escapeHtml(message.created_at || "")}">${escapeHtml(formatDate(message.created_at))}</time>
-                    </div>
-                    <p class="teacher-law-summary">${escapeHtml(message.body || "")}</p>
-                </article>
-            </div>
-        `;
-    }
-
     function buildCitationHtml(citation) {
         const sourceUrl = String(citation.source_url || "").trim();
         const title = [citation.law_name, citation.article_label].filter(Boolean).join(" · ");
@@ -68,9 +54,14 @@
         `;
     }
 
-    function buildAssistantMessageHtml(message) {
-        const actionItems = Array.isArray(message.action_items) ? message.action_items.filter(Boolean) : [];
-        const citations = Array.isArray(message.citations) ? message.citations : [];
+    function buildLatestPairHtml(pair) {
+        if (!pair || !pair.user_message || !pair.assistant_message) {
+            return buildLatestEmptyHtml();
+        }
+        const userMessage = pair.user_message;
+        const assistantMessage = pair.assistant_message;
+        const actionItems = Array.isArray(assistantMessage.action_items) ? assistantMessage.action_items.filter(Boolean) : [];
+        const citations = Array.isArray(assistantMessage.citations) ? assistantMessage.citations : [];
         const actionHtml = actionItems.length
             ? `
                 <div class="teacher-law-section-title">지금 바로 할 일</div>
@@ -85,35 +76,67 @@
                 ${citations.map(buildCitationHtml).join("")}
             `
             : "";
-        const disclaimerHtml = message.disclaimer
-            ? `<p class="teacher-law-disclaimer">${escapeHtml(message.disclaimer)}</p>`
+        const disclaimerHtml = assistantMessage.disclaimer
+            ? `<p class="teacher-law-disclaimer mt-4">${escapeHtml(assistantMessage.disclaimer)}</p>`
+            : "";
+        const urgencyHtml = assistantMessage.needs_human_help
+            ? `<span class="teacher-law-urgency-badge">사람 상담 권장</span>`
             : "";
         return `
-            <div class="teacher-law-message-row teacher-law-message-row--assistant">
-                <article class="teacher-law-message-card teacher-law-message-card--assistant">
-                    <div class="teacher-law-meta teacher-law-meta--assistant">
-                        <span>법률 가이드</span>
-                        <time datetime="${escapeHtml(message.created_at || "")}">${escapeHtml(formatDate(message.created_at))}</time>
+            <div class="teacher-law-question-card">
+                <div class="teacher-law-question-label">내 질문</div>
+                <div class="teacher-law-question-text">${escapeHtml(userMessage.body || "")}</div>
+            </div>
+            <article class="teacher-law-answer-card">
+                <div class="teacher-law-answer-meta">
+                    <span>법률 가이드</span>
+                    <div class="flex items-center gap-3">
+                        ${urgencyHtml}
+                        <time datetime="${escapeHtml(assistantMessage.created_at || "")}">${escapeHtml(formatDate(assistantMessage.created_at))}</time>
                     </div>
-                    <p class="teacher-law-summary">${escapeHtml(message.summary || message.body || "")}</p>
-                    ${actionHtml}
-                    ${citationHtml}
-                    ${disclaimerHtml}
-                </article>
+                </div>
+                <p class="teacher-law-summary">${escapeHtml(assistantMessage.summary || assistantMessage.body || "")}</p>
+                ${actionHtml}
+                ${citationHtml}
+                ${disclaimerHtml}
+            </article>
+        `;
+    }
+
+    function buildLatestPlaceholderHtml(progressText) {
+        return `
+            <div class="teacher-law-question-card" data-teacher-law-placeholder="true">
+                <div class="teacher-law-question-label">답변 준비 중</div>
+                <div class="teacher-law-question-text" data-teacher-law-placeholder-summary="true">${escapeHtml(progressText)}</div>
             </div>
         `;
     }
 
-    function buildPlaceholderHtml(progressText) {
+    function buildLatestEmptyHtml() {
         return `
-            <div class="teacher-law-message-row teacher-law-message-row--placeholder" data-teacher-law-placeholder="true">
-                <article class="teacher-law-message-card teacher-law-message-card--placeholder">
-                    <div class="teacher-law-meta teacher-law-meta--assistant">
-                        <span>법률 가이드 준비 중</span>
-                        <span>진행 중</span>
-                    </div>
-                    <p class="teacher-law-summary">${escapeHtml(progressText)}</p>
-                </article>
+            <div class="teacher-law-empty" data-teacher-law-latest-empty="true">
+                <p class="text-lg font-black text-slate-900">질문을 보내면 가장 최근 답변이 여기 가장 크게 표시됩니다.</p>
+                <p class="mt-2 text-sm leading-6">지금 교실에서 바로 확인해야 하는 상황을 한 문장으로 적어 주세요.</p>
+            </div>
+        `;
+    }
+
+    function buildHistoryPairHtml(pair) {
+        if (!pair || !pair.user_message || !pair.assistant_message) return "";
+        return `
+            <article class="teacher-law-history-card">
+                <div class="teacher-law-history-question">${escapeHtml(pair.user_message.body || "")}</div>
+                <div class="teacher-law-history-answer">${escapeHtml(pair.assistant_message.summary || pair.assistant_message.body || "")}</div>
+                <div class="teacher-law-history-meta">${escapeHtml(formatDate(pair.assistant_message.created_at))}</div>
+            </article>
+        `;
+    }
+
+    function buildHistoryEmptyHtml() {
+        return `
+            <div class="teacher-law-empty" data-teacher-law-history-empty="true">
+                <p class="text-base font-black text-slate-900">아직 이전 답변은 없습니다.</p>
+                <p class="mt-2 text-sm leading-6">첫 질문을 보내면 최신 답변 아래에 이전 기록이 차례대로 쌓입니다.</p>
             </div>
         `;
     }
@@ -129,19 +152,42 @@
         if (!root) return;
 
         const askUrl = parseJsonScript("teacher-law-ask-url", "");
-        const initialMessages = parseJsonScript("teacher-law-message-data", []);
+        const latestPairData = parseJsonScript("teacher-law-latest-pair", null);
+        const historyPairData = parseJsonScript("teacher-law-history-data", []);
         const form = root.querySelector("[data-teacher-law-form='true']");
         const input = root.querySelector("[data-teacher-law-input='true']");
         const sendButton = root.querySelector("[data-teacher-law-send='true']");
         const progress = root.querySelector("[data-teacher-law-progress='true']");
         const progressText = root.querySelector("[data-teacher-law-progress-text='true']");
         const errorBox = root.querySelector("[data-teacher-law-error='true']");
-        const messageList = root.querySelector("[data-teacher-law-message-list='true']");
+        const latestContainer = root.querySelector("[data-teacher-law-latest-container='true']");
+        const historyList = root.querySelector("[data-teacher-law-history-list='true']");
         const quickButtons = Array.from(root.querySelectorAll("[data-teacher-law-quick-question='true']"));
 
         let isSubmitting = false;
         let progressTimers = [];
         let longWaitTimer = null;
+        let latestPair = latestPairData && latestPairData.user_message && latestPairData.assistant_message ? latestPairData : null;
+        let historyPairs = Array.isArray(historyPairData) ? historyPairData.filter(Boolean) : [];
+        const uiBlocked = root.dataset.uiBlocked === "true";
+
+        function renderLatestPair(html) {
+            if (!latestContainer) return;
+            latestContainer.innerHTML = html;
+        }
+
+        function renderLatest() {
+            renderLatestPair(buildLatestPairHtml(latestPair));
+        }
+
+        function renderHistory() {
+            if (!historyList) return;
+            if (!historyPairs.length) {
+                historyList.innerHTML = buildHistoryEmptyHtml();
+                return;
+            }
+            historyList.innerHTML = historyPairs.map(buildHistoryPairHtml).join("");
+        }
 
         function clearProgressTimers() {
             progressTimers.forEach((timerId) => window.clearTimeout(timerId));
@@ -154,31 +200,16 @@
 
         function setSubmittingState(nextState) {
             isSubmitting = nextState;
-            if (input) input.disabled = nextState;
-            if (sendButton) sendButton.disabled = nextState;
-            quickButtons.forEach((button) => {
-                button.disabled = nextState;
+            const disabled = nextState || uiBlocked;
+            if (input) input.disabled = disabled;
+            if (sendButton) sendButton.disabled = disabled;
+            quickButtons.forEach(function (button) {
+                button.disabled = disabled;
             });
         }
 
-        function ensureEmptyStateRemoved() {
-            const empty = messageList.querySelector("[data-teacher-law-empty='true']");
-            if (empty) empty.remove();
-        }
-
-        function appendMessageHtml(html) {
-            ensureEmptyStateRemoved();
-            messageList.insertAdjacentHTML("beforeend", html);
-            messageList.scrollTop = messageList.scrollHeight;
-        }
-
-        function removePlaceholder() {
-            const placeholder = messageList.querySelector("[data-teacher-law-placeholder='true']");
-            if (placeholder) placeholder.remove();
-        }
-
         function syncPlaceholderText(message) {
-            const placeholder = messageList.querySelector("[data-teacher-law-placeholder='true'] .teacher-law-summary");
+            const placeholder = latestContainer.querySelector("[data-teacher-law-placeholder-summary='true']");
             if (placeholder) placeholder.textContent = message;
         }
 
@@ -186,6 +217,7 @@
             if (!progress || !progressText) return;
             progress.classList.add("is-visible");
             progressText.textContent = "질문 정리 중...";
+            renderLatestPair(buildLatestPlaceholderHtml("질문 정리 중..."));
             progressTimers = [
                 window.setTimeout(function () {
                     progressText.textContent = "관련 법령 검색 중...";
@@ -210,15 +242,24 @@
         function stopProgressSequence() {
             clearProgressTimers();
             if (progress) progress.classList.remove("is-visible");
-            removePlaceholder();
+            renderLatest();
+        }
+
+        function buildPairFromResponse(data, question) {
+            const userMessage = data.user_message || { body: question, created_at: new Date().toISOString() };
+            const assistantMessage = data.assistant_message || null;
+            if (!assistantMessage) return null;
+            return {
+                pair_id: assistantMessage.id || Date.now(),
+                user_message: userMessage,
+                assistant_message: assistantMessage,
+            };
         }
 
         async function submitQuestion(question) {
-            if (!question || isSubmitting) return;
+            if (!question || isSubmitting || uiBlocked) return;
             showInlineError(errorBox, "");
             setSubmittingState(true);
-            ensureEmptyStateRemoved();
-            appendMessageHtml(buildPlaceholderHtml("질문 정리 중..."));
             startProgressSequence();
 
             try {
@@ -236,9 +277,13 @@
                 if (!response.ok) {
                     throw new Error(data.message || "답변을 준비하지 못했습니다.");
                 }
+                const nextPair = buildPairFromResponse(data, question);
+                if (latestPair) {
+                    historyPairs = [latestPair].concat(historyPairs).slice(0, 6);
+                }
+                latestPair = nextPair;
                 stopProgressSequence();
-                appendMessageHtml(buildUserMessageHtml(data.user_message || { body: question, created_at: new Date().toISOString() }));
-                appendMessageHtml(buildAssistantMessageHtml(data.assistant_message || {}));
+                renderHistory();
                 if (input) input.value = "";
             } catch (error) {
                 stopProgressSequence();
@@ -250,12 +295,13 @@
             }
         }
 
-        if (Array.isArray(initialMessages) && initialMessages.length) {
-            messageList.scrollTop = messageList.scrollHeight;
-        }
+        renderLatest();
+        renderHistory();
+        setSubmittingState(false);
 
         form.addEventListener("submit", function (event) {
             event.preventDefault();
+            if (uiBlocked) return;
             const question = String(input.value || "").trim();
             if (!question) {
                 const message = "질문을 입력해 주세요.";
@@ -269,6 +315,7 @@
 
         quickButtons.forEach(function (button) {
             button.addEventListener("click", function () {
+                if (uiBlocked) return;
                 const question = String(button.dataset.question || "").trim();
                 if (!question) return;
                 input.value = question;

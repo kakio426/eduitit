@@ -6,10 +6,12 @@ import logging
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
+from django.core.cache import cache
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.dateparse import parse_datetime
+from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from products.models import Product
@@ -88,10 +90,36 @@ def _serialize_message(message: LegalChatMessage) -> dict:
     }
 
 
+def _serialize_pair(user_message: LegalChatMessage, assistant_message: LegalChatMessage) -> dict:
+    return {
+        "pair_id": assistant_message.id,
+        "user_message": _serialize_message(user_message),
+        "assistant_message": _serialize_message(assistant_message),
+    }
+
+
+def _build_message_pairs(session) -> list[dict]:
+    audits = (
+        LegalQueryAudit.objects.filter(
+            session=session,
+            user_message__isnull=False,
+            assistant_message__isnull=False,
+        )
+        .select_related("user_message", "assistant_message")
+        .prefetch_related("assistant_message__citations")
+        .order_by("assistant_message__created_at", "assistant_message__id")
+    )
+    pairs = []
+    for audit in audits:
+        if not audit.user_message or not audit.assistant_message:
+            continue
+        pairs.append(_serialize_pair(audit.user_message, audit.assistant_message))
+    return pairs
+
+
 def _build_page_context(request):
     service = _get_service()
     session = get_or_create_active_session(request.user)
-    messages_qs = session.messages.prefetch_related("citations").order_by("created_at", "id")
     law_provider = get_law_provider()
     warning_messages = []
     if not getattr(request.user, "is_authenticated", False):
@@ -102,6 +130,12 @@ def _build_page_context(request):
         warning_messages.append("관리자가 아직 법령 연결을 마치지 않았습니다.")
     if not is_llm_configured():
         warning_messages.append("관리자가 아직 답변 연결을 마치지 않았습니다.")
+    if getattr(request.user, "is_authenticated", False) and _daily_limit_reached(request.user.id):
+        warning_messages.append(_daily_limit_message())
+    all_pairs = _build_message_pairs(session)
+    latest_pair = all_pairs[-1] if all_pairs else None
+    history_pairs = list(reversed(all_pairs[:-1]))[:6] if len(all_pairs) > 1 else []
+    ui_blocked = bool(warning_messages)
 
     return {
         "service": service,
@@ -110,6 +144,8 @@ def _build_page_context(request):
         "service_enabled": getattr(settings, "TEACHER_LAW_ENABLED", False),
         "law_api_configured": is_law_api_configured(),
         "llm_configured": is_llm_configured(),
+        "ui_blocked": ui_blocked,
+        "ui_block_reason": " ".join(warning_messages).strip(),
         "law_data_notice": (
             "법령 데이터는 법망(API.beopmang.org)을 통해 조회되며, 답변은 참고용입니다."
             if law_provider == "beopmang"
@@ -117,28 +153,72 @@ def _build_page_context(request):
         ),
         "warning_messages": warning_messages,
         "quick_questions": get_quick_questions(),
+        "daily_limit_per_user": _daily_limit_per_user(),
         "session": session,
-        "message_items": [_serialize_message(message) for message in messages_qs],
+        "latest_pair": latest_pair,
+        "history_pairs": history_pairs,
         "ask_url": reverse("teacher_law:ask"),
     }
 
 
-def _daily_limit_exceeded(user_id: int) -> bool:
-    from django.core.cache import cache
-    from django.utils import timezone
+def _daily_limit_per_user() -> int:
+    return max(int(getattr(settings, "TEACHER_LAW_DAILY_LIMIT_PER_USER", 15)), 0)
 
-    limit = int(getattr(settings, "TEACHER_LAW_DAILY_LIMIT_PER_USER", 20))
-    cache_key = f"teacher_law:daily:{user_id}:{timezone.localdate().isoformat()}"
+
+def _daily_limit_cache_key(user_id: int) -> str:
+    return f"teacher_law:daily:{user_id}:{timezone.localdate().isoformat()}"
+
+
+def _daily_limit_message(limit: int | None = None) -> str:
+    effective_limit = _daily_limit_per_user() if limit is None else max(int(limit), 0)
+    return f"오늘 질문 {effective_limit}회를 모두 사용했어요. 내일 다시 시도해 주세요."
+
+
+def _daily_limit_reached(user_id: int) -> bool:
+    limit = _daily_limit_per_user()
+    if limit <= 0:
+        return True
+    current = cache.get(_daily_limit_cache_key(user_id)) or 0
+    try:
+        current = int(current)
+    except (TypeError, ValueError):
+        current = 0
+    return current >= limit
+
+
+def _reserve_daily_limit(user_id: int) -> bool:
+    limit = _daily_limit_per_user()
+    if limit <= 0:
+        return False
+    if _daily_limit_reached(user_id):
+        return False
+
+    cache_key = _daily_limit_cache_key(user_id)
     current = cache.get(cache_key)
     if current is None:
         cache.set(cache_key, 1, timeout=86410)
-        return False
+        return True
     try:
         current = cache.incr(cache_key)
     except Exception:
         current = int(current) + 1
         cache.set(cache_key, current, timeout=86410)
-    return int(current) > limit
+    return int(current) <= limit
+
+
+def _release_daily_limit(user_id: int) -> None:
+    cache_key = _daily_limit_cache_key(user_id)
+    current = cache.get(cache_key)
+    if current is None:
+        return
+    try:
+        current = int(current)
+    except (TypeError, ValueError):
+        current = 0
+    if current <= 1:
+        cache.delete(cache_key)
+        return
+    cache.set(cache_key, current - 1, timeout=86410)
 
 
 def _create_assistant_message(session, payload: dict):
@@ -237,8 +317,8 @@ def ask_question_api(request):
         messages.error(request, "질문을 입력해 주세요.")
         return redirect("teacher_law:main")
 
-    if _daily_limit_exceeded(request.user.id):
-        message_text = "오늘 질문 가능 횟수를 모두 사용했어요. 내일 다시 시도해 주세요."
+    if not _reserve_daily_limit(request.user.id):
+        message_text = _daily_limit_message()
         if _is_json_request(request):
             return _json_error(message_text, status=429)
         messages.error(request, message_text)
@@ -262,6 +342,7 @@ def ask_question_api(request):
         assistant_message = _create_assistant_message(session, result.get("payload") or {})
         _persist_success_audit(session, user_message, assistant_message, result)
     except TeacherLawDisabledError:
+        _release_daily_limit(request.user.id)
         _persist_error_audit(
             session,
             user_message,
@@ -275,6 +356,7 @@ def ask_question_api(request):
         messages.error(request, message_text)
         return redirect("teacher_law:main")
     except LawApiConfigError:
+        _release_daily_limit(request.user.id)
         _persist_error_audit(
             session,
             user_message,
@@ -288,6 +370,7 @@ def ask_question_api(request):
         messages.error(request, message_text)
         return redirect("teacher_law:main")
     except LawApiVerificationError as exc:
+        _release_daily_limit(request.user.id)
         verification_message = str(exc).strip()
         _persist_error_audit(
             session,
@@ -305,6 +388,7 @@ def ask_question_api(request):
         messages.error(request, message_text)
         return redirect("teacher_law:main")
     except LawApiTimeoutError:
+        _release_daily_limit(request.user.id)
         _persist_error_audit(
             session,
             user_message,
@@ -318,6 +402,7 @@ def ask_question_api(request):
         messages.error(request, message_text)
         return redirect("teacher_law:main")
     except TeacherLawTimeoutError:
+        _release_daily_limit(request.user.id)
         _persist_error_audit(
             session,
             user_message,
@@ -331,6 +416,7 @@ def ask_question_api(request):
         messages.error(request, message_text)
         return redirect("teacher_law:main")
     except LlmClientError:
+        _release_daily_limit(request.user.id)
         _persist_error_audit(
             session,
             user_message,
@@ -344,6 +430,7 @@ def ask_question_api(request):
         messages.error(request, message_text)
         return redirect("teacher_law:main")
     except LawApiError:
+        _release_daily_limit(request.user.id)
         logger.exception("[TeacherLaw] law api error")
         _persist_error_audit(
             session,
@@ -358,6 +445,7 @@ def ask_question_api(request):
         messages.error(request, message_text)
         return redirect("teacher_law:main")
     except Exception:
+        _release_daily_limit(request.user.id)
         logger.exception("[TeacherLaw] unexpected error")
         _persist_error_audit(
             session,
