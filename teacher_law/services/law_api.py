@@ -578,12 +578,16 @@ def rank_search_results(results: list[dict], profile: dict) -> list[dict]:
     for result in results:
         law_name = normalize_for_matching(result.get("law_name"))
         score = 0
+        if law_name in hint_queries:
+            score += 30
+        score += sum(12 for hint in hint_queries if hint and hint in law_name and law_name != hint)
         if law_name and law_name in normalized_question:
             score += 8
         score += sum(2 for term in core_terms[:4] if term and term in law_name)
         score += sum(3 for term in search_terms[:6] if term and term in law_name)
-        score += sum(6 for hint in hint_queries if hint and hint in law_name)
-        if result.get("law_type"):
+        if compact_text(result.get("law_type")) == "법률":
+            score += 3
+        elif result.get("law_type"):
             score += 1
         scored.append((score, result))
     scored.sort(key=lambda item: (-item[0], item[1].get("law_name") or ""))

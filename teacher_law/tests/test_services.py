@@ -249,6 +249,30 @@ class BeopmangLawApiTests(SimpleTestCase):
         self.assertEqual(params["law_id"], "009620")
         self.assertEqual(params["article"], "750")
 
+    def test_rank_search_results_prefers_exact_hint_law_over_subordinate_rule(self):
+        profile = build_query_profile("쉬는시간에 학생이 다쳤습니다. 교사인 제 책임인가요?")
+        results = [
+            {
+                "law_name": "학교안전사고 예방 및 보상에 관한 법률 시행규칙",
+                "law_id": "010520",
+                "law_type": "교육부령",
+            },
+            {
+                "law_name": "학교안전사고 예방 및 보상에 관한 법률",
+                "law_id": "010380",
+                "law_type": "법률",
+            },
+            {
+                "law_name": "상법",
+                "law_id": "001702",
+                "law_type": "법률",
+            },
+        ]
+
+        ranked = law_api.rank_search_results(results, profile)
+
+        self.assertEqual(ranked[0]["law_name"], "학교안전사고 예방 및 보상에 관한 법률")
+
 
 @override_settings(
     TEACHER_LAW_ENABLED=True,
@@ -262,12 +286,17 @@ class TeacherLawCachingTests(TestCase):
     def test_quick_question_uses_cache_on_second_request(self):
         citation = {
             "citation_id": "law-1",
-            "law_name": "학교폭력예방 및 대책에 관한 법률",
+            "source_type": "law",
+            "title": "개인정보 보호법",
+            "law_name": "개인정보 보호법",
             "law_id": "123",
             "mst": "999",
-            "article_label": "제1조",
-            "quote": "학교폭력 예방과 대응에 관한 내용",
-            "source_url": "https://www.law.go.kr",
+            "reference_label": "제15조",
+            "article_label": "제15조",
+            "case_number": "",
+            "quote": "개인정보 처리와 동의에 관한 내용",
+            "source_url": "",
+            "provider": "beopmang",
             "fetched_at": "2026-04-05T00:00:00+09:00",
         }
         llm_answer = {
@@ -285,6 +314,7 @@ class TeacherLawCachingTests(TestCase):
             patch("teacher_law.services.chat.search_laws", return_value=[{"law_name": citation["law_name"], "law_id": "123", "mst": "999", "detail_link": citation["source_url"]}]) as search_mock,
             patch("teacher_law.services.chat.get_law_details", return_value={"law_name": citation["law_name"], "law_id": "123", "mst": "999", "detail_link": citation["source_url"], "articles": []}),
             patch("teacher_law.services.chat.select_relevant_citations", return_value=[citation]),
+            patch("teacher_law.services.chat.search_cases", return_value=[]),
             patch("teacher_law.services.chat.generate_legal_answer", return_value=llm_answer),
         ):
             first = answer_legal_question(question=QUICK_QUESTIONS[0])
@@ -392,3 +422,51 @@ class TeacherLawCachingTests(TestCase):
         self.assertEqual(result["payload"]["citations"][0]["source_type"], "law")
         self.assertEqual(result["payload"]["citations"][1]["source_type"], "case")
         self.assertEqual(result["audit"]["selected_laws_json"][1]["source_type"], "case")
+
+    @override_settings(TEACHER_LAW_PROVIDER="beopmang")
+    @patch.dict("os.environ", {}, clear=True)
+    def test_answer_question_keeps_searching_until_hint_law_appears(self):
+        citation = {
+            "citation_id": "law-1",
+            "source_type": "law",
+            "title": "학교안전사고 예방 및 보상에 관한 법률",
+            "law_name": "학교안전사고 예방 및 보상에 관한 법률",
+            "law_id": "010380",
+            "mst": "",
+            "reference_label": "제2조",
+            "article_label": "제2조",
+            "case_number": "",
+            "quote": "학교안전사고의 정의를 정한다.",
+            "source_url": "",
+            "provider": "beopmang",
+            "fetched_at": "2026-04-05T00:00:00+09:00",
+        }
+        llm_answer = {
+            "summary": "학교안전사고 예방 및 보상에 관한 법률을 먼저 확인해야 합니다.",
+            "action_items": ["사고 상황을 기록합니다."],
+            "citations": ["law-1"],
+            "risk_level": "medium",
+            "needs_human_help": False,
+            "disclaimer": "일반적 법령 정보 안내이며 개별 사건의 법률 자문은 아닙니다.",
+            "scope_supported": True,
+        }
+        irrelevant_results = [
+            {"law_name": "상법", "law_id": "001702", "mst": "", "detail_link": "", "provider": "beopmang", "law_type": "법률"},
+        ]
+        relevant_results = [
+            {"law_name": "학교안전사고 예방 및 보상에 관한 법률", "law_id": "010380", "mst": "", "detail_link": "", "provider": "beopmang", "law_type": "법률"},
+        ]
+
+        with (
+            patch("teacher_law.services.chat.is_llm_configured", return_value=True),
+            patch("teacher_law.services.chat.search_laws", side_effect=[irrelevant_results, relevant_results]) as search_mock,
+            patch("teacher_law.services.chat.get_law_details", return_value={"law_name": citation["law_name"], "law_id": "010380", "mst": "", "detail_link": "", "provider": "beopmang", "articles": []}) as detail_mock,
+            patch("teacher_law.services.chat.select_relevant_citations", return_value=[citation]),
+            patch("teacher_law.services.chat.search_cases", return_value=[]),
+            patch("teacher_law.services.chat.generate_legal_answer", return_value=llm_answer),
+        ):
+            result = answer_legal_question(question="쉬는시간에 학생이 다쳤습니다. 교사인 제 책임인가요?")
+
+        self.assertEqual(result["payload"]["summary"], llm_answer["summary"])
+        self.assertEqual(search_mock.call_count, 2)
+        self.assertEqual(detail_mock.call_args_list[0].kwargs["law_id"], "010380")

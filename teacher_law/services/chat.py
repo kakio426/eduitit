@@ -180,7 +180,7 @@ def answer_legal_question(*, question: str) -> dict:
 
     total_timeout_seconds = int(getattr(settings, "TEACHER_LAW_TOTAL_TIMEOUT_SECONDS", 20))
     detail_limit = int(getattr(settings, "TEACHER_LAW_DETAIL_FETCH_LIMIT", 3))
-    candidate_queries = list(profile.get("candidate_queries") or [])[:3]
+    candidate_queries = list(profile.get("candidate_queries") or [])[:6]
     case_queries = list(profile.get("case_queries") or [])[:2]
 
     search_attempt_count = 0
@@ -198,7 +198,9 @@ def answer_legal_question(*, question: str) -> dict:
         search_results = search_laws(query, search=1)
         search_result_count += len(search_results)
         aggregated_results.extend(search_results)
-        if search_results:
+        if search_results and _has_hint_match(search_results, profile):
+            break
+        if not profile.get("hint_queries") and search_results:
             break
 
     ranked_results = _dedupe_search_results(rank_search_results(aggregated_results, profile))
@@ -365,6 +367,21 @@ def _dedupe_search_results(results: list[dict]) -> list[dict]:
         seen.add(key)
         deduped.append(result)
     return deduped
+
+
+def _has_hint_match(results: list[dict], profile: dict) -> bool:
+    hint_queries = [compact_text(item).lower() for item in profile.get("hint_queries") or [] if compact_text(item)]
+    if not hint_queries:
+        return bool(results)
+    for result in results:
+        law_name = compact_text(result.get("law_name")).lower()
+        if not law_name:
+            continue
+        if law_name in hint_queries:
+            return True
+        if any(hint and hint in law_name for hint in hint_queries):
+            return True
+    return False
 
 
 def _dedupe_case_results(results: list[dict]) -> list[dict]:
