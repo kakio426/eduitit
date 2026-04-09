@@ -171,6 +171,55 @@ def _rank_listing_queryset(queryset):
     ).order_by("-is_featured", "-recent_interest", "-view_count", "-published_at", "-id")
 
 
+def _build_provider_cards(listings):
+    cards_by_provider = {}
+
+    for listing in listings:
+        provider = listing.provider
+        card = cards_by_provider.get(provider.pk)
+        if card is None:
+            card = {
+                "provider": provider,
+                "representative_listing": listing,
+                "listings": [],
+                "category_labels": [],
+                "region_labels": [],
+                "recent_interest": 0,
+                "total_view_count": 0,
+            }
+            cards_by_provider[provider.pk] = card
+
+        card["listings"].append(listing)
+        card["recent_interest"] += int(getattr(listing, "recent_interest", 0) or 0)
+        card["total_view_count"] += int(getattr(listing, "view_count", 0) or 0)
+
+        category_label = listing.get_category_display()
+        if category_label not in card["category_labels"]:
+            card["category_labels"].append(category_label)
+
+        region_label = listing.public_regions_text
+        if region_label and region_label not in card["region_labels"]:
+            card["region_labels"].append(region_label)
+
+    cards = list(cards_by_provider.values())
+    for card in cards:
+        representative_listing = card["representative_listing"]
+        card["listing_count"] = len(card["listings"])
+        card["preview_listings"] = card["listings"][:3]
+        card["category_labels"] = card["category_labels"][:3]
+        card["region_labels"] = card["region_labels"][:2]
+        card["headline_listing_title"] = representative_listing.title
+        card["summary"] = card["provider"].summary or representative_listing.summary
+        card["service_area_text"] = (
+            card["provider"].service_area_summary
+            or " · ".join(card["region_labels"])
+            or representative_listing.public_regions_text
+        )
+        card["price_hint"] = representative_listing.price_text
+
+    return cards
+
+
 def _apply_listing_filters(
     queryset,
     *,
@@ -383,9 +432,11 @@ def landing(request):
         grade_band=grade_band,
         delivery_mode=delivery_mode,
     )
-    listings = _rank_listing_queryset(listings)
-    featured_listings = list(listings[:3])
-    page_obj = Paginator(listings, 12).get_page(request.GET.get("page"))
+    ranked_listings = list(_rank_listing_queryset(listings))
+    provider_cards = _build_provider_cards(ranked_listings)
+    featured_provider_cards = provider_cards[:3]
+    page_obj = Paginator(provider_cards, 12).get_page(request.GET.get("page"))
+    has_active_filters = bool(q or province or region_text or category or grade_band or delivery_mode)
 
     return _render_schoolprograms(
         request,
@@ -394,9 +445,11 @@ def landing(request):
             "page_title": f"{SERVICE_TITLE} | Eduitit",
             "meta_description": "지역과 주제로 학교로 찾아오는 체험학습, 교사연수, 학교행사를 바로 비교하고 문의하세요.",
             "canonical_url": request.build_absolute_uri(reverse("schoolprograms:landing")),
-            "featured_listings": featured_listings,
+            "featured_provider_cards": featured_provider_cards,
             "page_obj": page_obj,
-            "result_count": page_obj.paginator.count,
+            "provider_count": len(provider_cards),
+            "listing_result_count": len(ranked_listings),
+            "has_active_filters": has_active_filters,
             "region_suggestions": region_suggestions_for(province),
             "q": q,
             "selected_province": province,
@@ -411,6 +464,7 @@ def landing(request):
                 else 0
             ),
             "compare_count": _compare_count_for_request(request),
+            "show_vendor_cta": not (request.user.is_authenticated and _is_teacher_role(request.user)),
         },
     )
 

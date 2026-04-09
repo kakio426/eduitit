@@ -89,14 +89,16 @@ class SchoolProgramsLandingTests(TestCase):
         response = self.client.get(reverse("schoolprograms:landing"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "학교 체험·행사 찾기")
-        self.assertContains(response, "찾아오는 환경 체험")
+        self.assertContains(response, "전국 업체를 먼저 둘러보고 마음에 드는 곳을 고르세요")
+        self.assertContains(response, self.provider.provider_name)
+        self.assertNotContains(response, "업체 등록하기")
 
 
 class SchoolProgramsDiscoveryTests(TestCase):
     def setUp(self):
         self.client = self.client_class()
         _, self.provider = create_provider(username="vendor1", provider_name="배움 체험연구소")
+        _, self.other_provider = create_provider(username="vendor4", provider_name="전국 스포츠 랩")
         self.primary = create_listing(
             provider=self.provider,
             title="찾아오는 환경 체험",
@@ -107,7 +109,7 @@ class SchoolProgramsDiscoveryTests(TestCase):
             theme_tags=["환경", "생태"],
         )
         create_listing(
-            provider=self.provider,
+            provider=self.other_provider,
             title="교사 AI 연수",
             category=ProgramListing.Category.TEACHER_TRAINING,
             province="seoul",
@@ -125,8 +127,8 @@ class SchoolProgramsDiscoveryTests(TestCase):
         response = self.client.get(reverse("schoolprograms:landing"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "찾아오는 환경 체험")
-        self.assertContains(response, "교사 AI 연수")
+        self.assertContains(response, "배움 체험연구소")
+        self.assertContains(response, "전국 스포츠 랩")
         self.assertNotContains(response, "심사중 프로그램")
 
         detail = self.client.get(reverse("schoolprograms:listing_detail", args=[self.primary.slug]))
@@ -146,22 +148,24 @@ class SchoolProgramsDiscoveryTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "찾아오는 환경 체험")
-        self.assertNotContains(response, "교사 AI 연수")
+        self.assertContains(response, "배움 체험연구소")
+        self.assertNotContains(response, "전국 스포츠 랩")
 
-    def test_pagination_handles_more_than_one_hundred_results(self):
-        for index in range(1, 102):
-            create_listing(provider=self.provider, title=f"대량 프로그램 {index:03d}")
+    def test_provider_pagination_handles_multiple_pages(self):
+        for index in range(1, 14):
+            _, provider = create_provider(username=f"bulkvendor{index}", provider_name=f"전국 체험 파트너 {index:02d}")
+            create_listing(provider=provider, title=f"대량 프로그램 {index:03d}")
 
         response = self.client.get(reverse("schoolprograms:landing"), {"page": 2})
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "2 /")
-        self.assertContains(response, "대량 프로그램")
+        self.assertContains(response, "전국 체험 파트너")
 
     def test_recommendations_prioritize_recent_interest(self):
+        _, hot_provider = create_provider(username="hotvendor", provider_name="요즘 인기 체험사")
         hot_listing = create_listing(
-            provider=self.provider,
+            provider=hot_provider,
             title="요즘 인기 체험",
             category=ProgramListing.Category.SCHOOL_EVENT,
             province="gyeonggi",
@@ -178,9 +182,9 @@ class SchoolProgramsDiscoveryTests(TestCase):
         response = self.client.get(reverse("schoolprograms:landing"))
 
         self.assertEqual(response.status_code, 200)
-        featured = response.context["featured_listings"]
+        featured = response.context["featured_provider_cards"]
         self.assertGreaterEqual(len(featured), 1)
-        self.assertEqual(featured[0].pk, hot_listing.pk)
+        self.assertEqual(featured[0]["provider"].pk, hot_provider.pk)
 
 
 class SchoolProgramsInquiryTests(TestCase):
