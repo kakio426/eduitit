@@ -12,7 +12,7 @@
     }
 
     function getHomeFrontendConfig() {
-        return parseJsonScript('home-v2-frontend-config', {}) || {};
+        return parseJsonScript('home-frontend-config', {}) || {};
     }
 
     function getCsrfToken() {

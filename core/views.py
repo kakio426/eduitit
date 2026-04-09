@@ -123,7 +123,7 @@ WORKBENCH_BUNDLE_LIMIT = 6
 WORKBENCH_BUNDLE_PRODUCT_LIMIT = 8
 WORKBENCH_SLOT_COUNT = 4
 WORKBENCH_WEEKLY_BUNDLE_LIMIT = 2
-HOME_V5_MOBILE_SECTION_ORDER = (
+HOME_MOBILE_SECTION_ORDER = (
     'workbench',
     'calendar',
     'quickdrop',
@@ -131,6 +131,7 @@ HOME_V5_MOBILE_SECTION_ORDER = (
     'buddy',
     'sns',
 )
+HOME_V5_MOBILE_SECTION_ORDER = HOME_MOBILE_SECTION_ORDER
 HOME_PROMOTED_MOBILE_SERVICE_KEYS = {'quickdrop'}
 HOME_UTILITY_SERVICE_KEYS = {'quickdrop', 'schoolcomm'}
 
@@ -525,7 +526,7 @@ def _build_section_payload(section, items, preview_limit=None):
     }
 
 
-def _build_home_v2_display_groups(sections, aux_sections):
+def _build_home_display_groups(sections, aux_sections):
     ordered_sections = [*sections, *aux_sections]
     section_by_key = {section["key"]: section for section in ordered_sections}
 
@@ -988,7 +989,7 @@ def _is_home_utility_product(product):
     return _canonical_home_service_key(product) in HOME_UTILITY_SERVICE_KEYS
 
 
-def _filter_home_v5_mobile_workbench_items(favorite_items, *, limit=6):
+def _filter_home_mobile_workbench_items(favorite_items, *, limit=6):
     filtered_items = [
         item for item in favorite_items
         if not _is_home_utility_product(item.get('product'))
@@ -1332,7 +1333,7 @@ def _get_product_usage_stats(user, products, *, since=None):
     }
 
 
-def _build_home_v4_representative_slots(
+def _build_home_representative_slots(
     user,
     *,
     favorite_products,
@@ -1370,7 +1371,7 @@ def _build_home_v4_representative_slots(
     ]
 
 
-def _build_home_v4_recommendations(companion_items, discovery_items, *, exclude_ids=None, limit=3):
+def _build_home_recommendations(companion_items, discovery_items, *, exclude_ids=None, limit=3):
     exclude_ids = set(exclude_ids or [])
     recommendations = []
     seen_ids = set(exclude_ids)
@@ -1411,7 +1412,7 @@ def _build_home_v4_recommendations(companion_items, discovery_items, *, exclude_
     return recommendations
 
 
-def _filter_home_v4_nav_products(section_key, products):
+def _filter_home_nav_products(section_key, products):
     nav_products = list(products or [])
     if section_key != 'class_ops':
         return nav_products
@@ -1434,7 +1435,7 @@ DIRECT_HOME_NAV_ROUTE_META = {
 }
 
 
-def _build_home_v4_direct_nav_section(product, *, fallback_color='slate'):
+def _build_home_direct_nav_section(product, *, fallback_color='slate'):
     route_name = str(getattr(product, 'launch_route_name', '') or '').strip().lower()
     meta = DIRECT_HOME_NAV_ROUTE_META.get(route_name, {})
     href = getattr(product, 'launch_href', '') or ''
@@ -1456,7 +1457,7 @@ def _build_home_v4_direct_nav_section(product, *, fallback_color='slate'):
     }
 
 
-def _split_home_v4_direct_nav_sections(section_key, products, *, fallback_color='slate'):
+def _split_home_direct_nav_sections(section_key, products, *, fallback_color='slate'):
     if section_key != 'class_ops':
         return list(products or []), []
 
@@ -1467,7 +1468,7 @@ def _split_home_v4_direct_nav_sections(section_key, products, *, fallback_color=
         if route_name not in DIRECT_HOME_NAV_ROUTE_META:
             nav_products.append(product)
             continue
-        direct_section = _build_home_v4_direct_nav_section(product, fallback_color=fallback_color)
+        direct_section = _build_home_direct_nav_section(product, fallback_color=fallback_color)
         if direct_section is None:
             nav_products.append(product)
             continue
@@ -1475,15 +1476,15 @@ def _split_home_v4_direct_nav_sections(section_key, products, *, fallback_color=
     return nav_products, direct_sections
 
 
-def _build_home_v4_nav_sections(primary_display_sections, secondary_display_sections, games):
+def _build_home_nav_sections(primary_display_sections, secondary_display_sections, games):
     nav_sections = []
 
     for section in [*primary_display_sections, *secondary_display_sections]:
-        nav_products = _filter_home_v4_nav_products(section['key'], [
+        nav_products = _filter_home_nav_products(section['key'], [
             *section.get('products', []),
             *section.get('overflow_products', []),
         ])
-        nav_products, direct_sections = _split_home_v4_direct_nav_sections(
+        nav_products, direct_sections = _split_home_direct_nav_sections(
             section['key'],
             nav_products,
             fallback_color=section.get('color', 'slate'),
@@ -1516,7 +1517,7 @@ def _build_home_v4_nav_sections(primary_display_sections, secondary_display_sect
     return nav_sections
 
 
-def _ensure_home_v4_direct_nav_sections(nav_sections, product_list):
+def _ensure_home_direct_nav_sections(nav_sections, product_list):
     grouped_sections = []
     direct_sections_by_key = {}
 
@@ -1534,7 +1535,7 @@ def _ensure_home_v4_direct_nav_sections(nav_sections, product_list):
         key = meta.get('key') or route_name.replace(':', '-')
         if key in direct_sections_by_key:
             continue
-        direct_section = _build_home_v4_direct_nav_section(
+        direct_section = _build_home_direct_nav_section(
             product,
             fallback_color=meta.get('color', 'slate'),
         )
@@ -1552,7 +1553,7 @@ def _ensure_home_v4_direct_nav_sections(nav_sections, product_list):
     return [*grouped_sections, *ordered_direct_sections]
 
 
-def _build_home_v4_mobile_quick_items(favorite_products, nav_sections, *, limit=4):
+def _build_home_mobile_quick_items(favorite_products, nav_sections, *, limit=4):
     candidate_products = list(favorite_products or [])
 
     for section in nav_sections:
@@ -1588,6 +1589,32 @@ def _build_home_v4_mobile_quick_items(favorite_products, nav_sections, *, limit=
             break
 
     return quick_items
+
+
+# Compatibility-only aliases for remaining v2/v4/v5 imports and fallback paths.
+(
+    _build_home_v2_display_groups,
+    _filter_home_v5_mobile_workbench_items,
+    _build_home_v4_representative_slots,
+    _build_home_v4_recommendations,
+    _filter_home_v4_nav_products,
+    _build_home_v4_direct_nav_section,
+    _split_home_v4_direct_nav_sections,
+    _build_home_v4_nav_sections,
+    _ensure_home_v4_direct_nav_sections,
+    _build_home_v4_mobile_quick_items,
+) = (
+    _build_home_display_groups,
+    _filter_home_mobile_workbench_items,
+    _build_home_representative_slots,
+    _build_home_recommendations,
+    _filter_home_nav_products,
+    _build_home_direct_nav_section,
+    _split_home_direct_nav_sections,
+    _build_home_nav_sections,
+    _ensure_home_direct_nav_sections,
+    _build_home_mobile_quick_items,
+)
 
 
 def _get_usage_based_quick_actions(user, product_list, limit=5):
@@ -2901,7 +2928,7 @@ def _home_v2(request, products, posts, page_obj, feed_scope, pinned_notice_posts
         section_product_list,
         preview_limit=2,
     )
-    primary_display_sections, secondary_display_sections = _build_home_v2_display_groups(sections, aux_sections)
+    primary_display_sections, secondary_display_sections = _build_home_display_groups(sections, aux_sections)
     guest_public_cards = _build_home_guest_highlight_cards(product_list, requires_login=False, limit=4)
     if not guest_public_cards:
         guest_public_cards = _build_home_guest_highlight_cards(
@@ -3012,7 +3039,7 @@ def _home_v2(request, products, posts, page_obj, feed_scope, pinned_notice_posts
         today_context = _build_today_context(request)
         home_calendar_summary = next(iter(today_context.get('today_items', [])), None)
         home_sections = [*sections, *aux_sections]
-        home_v2_frontend_config = {
+        home_frontend_config = {
             'toggleFavoriteUrl': reverse('toggle_product_favorite'),
             'trackUsageUrl': reverse('track_product_usage'),
         }
@@ -3038,7 +3065,8 @@ def _home_v2(request, products, posts, page_obj, feed_scope, pinned_notice_posts
             'home_calendar_summary': home_calendar_summary,
             'today_try_cards': today_try_cards,
             'today_try_support_cards': today_try_support_cards,
-            'home_v2_frontend_config': home_v2_frontend_config,
+            'home_frontend_config': home_frontend_config,
+            'home_v2_frontend_config': home_frontend_config,
             'community_summary': community_summary,
             'posts': page_obj,
             'page_obj': page_obj,
@@ -3280,6 +3308,41 @@ def _build_home_surface_calendar_provider(request):
         return _build_home_surface_calendar_fallback(request)
 
 
+HOME_SURFACE_LEGACY_ALIAS_KEY_MAP = {
+    'home_v4_nav_sections': 'home_nav_sections',
+    'home_v4_mobile_calendar_first_enabled': 'home_mobile_calendar_first_enabled',
+    'home_v4_mobile_quick_items': 'home_mobile_quick_items',
+    'home_v5_mobile_workbench_items': 'home_mobile_workbench_items',
+    'home_v5_mobile_recommend_items': 'home_mobile_recommend_items',
+    'home_v2_frontend_config': 'home_frontend_config',
+}
+
+
+def _build_home_surface_legacy_aliases(
+    *,
+    home_nav_sections,
+    home_mobile_calendar_first_enabled,
+    home_mobile_quick_items,
+    home_mobile_workbench_items,
+    home_mobile_recommend_items,
+    home_frontend_config,
+):
+    neutral_values = {
+        'home_nav_sections': home_nav_sections,
+        'home_mobile_calendar_first_enabled': home_mobile_calendar_first_enabled,
+        'home_mobile_quick_items': home_mobile_quick_items,
+        'home_mobile_workbench_items': home_mobile_workbench_items,
+        'home_mobile_recommend_items': home_mobile_recommend_items,
+        'home_frontend_config': home_frontend_config,
+    }
+    legacy_values = {
+        legacy_key: neutral_values[neutral_key]
+        for legacy_key, neutral_key in HOME_SURFACE_LEGACY_ALIAS_KEY_MAP.items()
+    }
+    legacy_values['home_v5_mobile_section_order'] = HOME_V5_MOBILE_SECTION_ORDER
+    return legacy_values
+
+
 def build_home_surface_context(
     request,
     *,
@@ -3299,14 +3362,14 @@ def build_home_surface_context(
         section_product_list,
         preview_limit=2,
     )
-    primary_display_sections, secondary_display_sections = _build_home_v2_display_groups(sections, aux_sections)
-    home_v4_nav_sections = _build_home_v4_nav_sections(
+    primary_display_sections, secondary_display_sections = _build_home_display_groups(sections, aux_sections)
+    home_nav_sections = _build_home_nav_sections(
         primary_display_sections,
         secondary_display_sections,
         games,
     )
-    home_v4_nav_sections = _ensure_home_v4_direct_nav_sections(
-        home_v4_nav_sections,
+    home_nav_sections = _ensure_home_direct_nav_sections(
+        home_nav_sections,
         product_list,
     )
     sns_summary_posts = _build_home_community_summary_posts(
@@ -3397,7 +3460,7 @@ def build_home_surface_context(
         favorite_products=favorite_products,
         product_list=product_list,
     )
-    representative_slots = _build_home_v4_representative_slots(
+    representative_slots = _build_home_representative_slots(
         request.user,
         favorite_products=favorite_products,
         recent_products=recent_products,
@@ -3407,7 +3470,7 @@ def build_home_surface_context(
         aux_sections=aux_sections,
         games=games,
     )
-    representative_recommendations = _build_home_v4_recommendations(
+    representative_recommendations = _build_home_recommendations(
         companion_items,
         discovery_items,
         exclude_ids=(
@@ -3416,18 +3479,18 @@ def build_home_surface_context(
         ),
         limit=3,
     )
-    home_v4_mobile_calendar_first_enabled = bool(
+    home_mobile_calendar_first_enabled = bool(
         getattr(settings, 'HOME_V4_MOBILE_CALENDAR_FIRST_ENABLED', False)
     )
-    home_v4_mobile_quick_items = _build_home_v4_mobile_quick_items(
+    home_mobile_quick_items = _build_home_mobile_quick_items(
         favorite_products,
-        home_v4_nav_sections,
+        home_nav_sections,
         limit=4,
     )
-    home_v5_mobile_workbench_items = _filter_home_v5_mobile_workbench_items(favorite_items, limit=6)
-    home_v5_mobile_recommend_items = list(representative_recommendations)
-    if not home_v5_mobile_recommend_items:
-        home_v5_mobile_recommend_items = [
+    home_mobile_workbench_items = _filter_home_mobile_workbench_items(favorite_items, limit=6)
+    home_mobile_recommend_items = list(representative_recommendations)
+    if not home_mobile_recommend_items:
+        home_mobile_recommend_items = [
             {
                 'title': item.get('favorite_title')
                 or getattr(item.get('product'), 'public_service_name', '')
@@ -3440,25 +3503,26 @@ def build_home_surface_context(
             for item in discovery_items[:4]
             if item.get('href')
         ]
-    home_v2_frontend_config = {
+    home_frontend_config = {
         'toggleFavoriteUrl': reverse('toggle_product_favorite'),
         'trackUsageUrl': reverse('track_product_usage'),
     }
+    home_mobile_section_order = HOME_MOBILE_SECTION_ORDER
     slots = {
         'navigation': {
-            'sections': home_v4_nav_sections,
-            'mobile_section_order': HOME_V5_MOBILE_SECTION_ORDER,
+            'sections': home_nav_sections,
+            'mobile_section_order': home_mobile_section_order,
         },
         'workbench': {
             'favorite_items': favorite_items,
             'favorite_product_ids': [product.id for product in favorite_products],
             'recent_items': recent_items,
-            'mobile_items': home_v5_mobile_workbench_items,
+            'mobile_items': home_mobile_workbench_items,
         },
         'recommendations': {
             'representative_slots': representative_slots,
             'representative_recommendations': representative_recommendations,
-            'mobile_recommend_items': home_v5_mobile_recommend_items,
+            'mobile_recommend_items': home_mobile_recommend_items,
             'discovery_items': discovery_items,
         },
         'cards': {
@@ -3473,7 +3537,7 @@ def build_home_surface_context(
         },
         'calendar': provider_cards['calendar'],
     }
-    legacy_context = {
+    template_context = {
         'products': products,
         'sections': sections,
         'aux_sections': aux_sections,
@@ -3488,16 +3552,14 @@ def build_home_surface_context(
         'schoolcomm_home_card': schoolcomm_home_card,
         'representative_slots': representative_slots,
         'representative_recommendations': representative_recommendations,
-        'home_v4_nav_sections': home_v4_nav_sections,
-        'home_v4_mobile_calendar_first_enabled': home_v4_mobile_calendar_first_enabled,
-        'home_v4_mobile_quick_items': home_v4_mobile_quick_items,
-        'home_v5_mobile_section_order': HOME_V5_MOBILE_SECTION_ORDER,
-        'home_v5_mobile_workbench_items': home_v5_mobile_workbench_items,
-        'home_v5_mobile_recommend_items': home_v5_mobile_recommend_items,
+        'home_nav_sections': home_nav_sections,
+        'home_mobile_section_order': home_mobile_section_order,
+        'home_mobile_workbench_items': home_mobile_workbench_items,
+        'home_mobile_recommend_items': home_mobile_recommend_items,
         'developer_chat_home_card': provider_cards['developer_chat_home_card'],
         'reservation_home_card': provider_cards['reservation_home_card'],
         'home_calendar_surface': provider_cards['calendar'],
-        'home_v2_frontend_config': home_v2_frontend_config,
+        'home_frontend_config': home_frontend_config,
         'home_design_version': home_design_version,
         'community_summary': community_summary,
         'sns_preview_posts': sns_preview_posts,
@@ -3508,17 +3570,27 @@ def build_home_surface_context(
         'sns_compose_prefill': _get_sns_compose_prefill(request),
         'home_surface_slots': slots,
     }
-    legacy_context.update(provider_cards['teacher_buddy'])
-    legacy_context.update(_build_home_student_games_qr_context(request))
-    legacy_context.update(provider_cards['calendar'])
-    legacy_context.update(build_home_page_seo(request).as_context())
+    template_context.update(
+        _build_home_surface_legacy_aliases(
+            home_nav_sections=home_nav_sections,
+            home_mobile_calendar_first_enabled=home_mobile_calendar_first_enabled,
+            home_mobile_quick_items=home_mobile_quick_items,
+            home_mobile_workbench_items=home_mobile_workbench_items,
+            home_mobile_recommend_items=home_mobile_recommend_items,
+            home_frontend_config=home_frontend_config,
+        )
+    )
+    template_context.update(provider_cards['teacher_buddy'])
+    template_context.update(_build_home_student_games_qr_context(request))
+    template_context.update(provider_cards['calendar'])
+    template_context.update(build_home_page_seo(request).as_context())
     return {
         'slots': slots,
-        'legacy_context': legacy_context,
+        'legacy_context': template_context,
     }
 
 
-def _build_home_authenticated_v4_response(
+def _build_home_authenticated_surface_response(
     request,
     products,
     posts,
@@ -3541,9 +3613,12 @@ def _build_home_authenticated_v4_response(
     return render(request, template_name, home_surface['legacy_context'])
 
 
+_build_home_authenticated_v4_response = _build_home_authenticated_surface_response
+
+
 def _home_v4(request, products, posts, page_obj, feed_scope, pinned_notice_posts):
     """환경변수로 안전하게 롤아웃하는 인증 홈 V4."""
-    return _build_home_authenticated_v4_response(
+    return _build_home_authenticated_surface_response(
         request,
         products,
         posts,
@@ -3557,7 +3632,7 @@ def _home_v4(request, products, posts, page_obj, feed_scope, pinned_notice_posts
 
 def _home_v5(request, products, posts, page_obj, feed_scope, pinned_notice_posts):
     """환경변수로 opt-in 미리보기하는 인증 홈 V5."""
-    return _build_home_authenticated_v4_response(
+    return _build_home_authenticated_surface_response(
         request,
         products,
         posts,
@@ -3571,7 +3646,7 @@ def _home_v5(request, products, posts, page_obj, feed_scope, pinned_notice_posts
 
 def _home_v6(request, products, posts, page_obj, feed_scope, pinned_notice_posts):
     """로그인 홈의 단일 canonical V6 렌더러."""
-    return _build_home_authenticated_v4_response(
+    return _build_home_authenticated_surface_response(
         request,
         products,
         posts,

@@ -6,6 +6,7 @@
 {% block extra_css %}
 <link href="{% static 'core/css/home_teacher_buddy.css' %}" rel="stylesheet">
 <link href="{% static 'core/css/home_authenticated_v6.css' %}" rel="stylesheet">
+<link href="{% static 'core/css/home_authenticated_v6_canonical.css' %}" rel="stylesheet">
 {% endblock %}
 
 {% block extra_js %}
@@ -102,7 +103,7 @@
                 </div>
 
                 <section class="home-v6-mobile-stack" data-home-v6-mobile-stack="true">
-                    {% for mobile_section in home_v5_mobile_section_order %}
+                    {% for mobile_section in home_mobile_section_order %}
                     {% if mobile_section == 'workbench' %}
                     <article class="home-v6-mobile-panel home-v6-workbench-panel" data-home-v6-workbench="mobile" data-home-v6-rail-card="true">
                         <div class="home-v6-mobile-panel-head">
@@ -110,9 +111,9 @@
                                 <h2 class="home-v6-mobile-panel-title">내 작업대</h2>
                             </div>
                         </div>
-                        {% if home_v5_mobile_workbench_items %}
+                        {% if home_mobile_workbench_items %}
                         <div class="home-v6-mobile-workbench-grid" data-home-v6-mobile-workbench-grid="true">
-                            {% for item in home_v5_mobile_workbench_items %}
+                            {% for item in home_mobile_workbench_items %}
                             {% with favorite_title=item.favorite_title|default:item.favorite_full_title %}
                             <div
                                 class="home-v6-mobile-workbench-card product-card"
@@ -159,12 +160,12 @@
                     </article>
                     {% elif mobile_section == 'calendar' %}
                     <section class="home-v6-mobile-calendar-section" data-home-v6-calendar-panel="mobile">
-                        {% include 'core/partials/home_calendar_panel.html' %}
+                        {% include 'core/partials/home_v6_calendar_panel.html' %}
                     </section>
                     {% elif mobile_section == 'quickdrop' %}
                     {% if quickdrop_home_card %}
                     {% if not messagebox_home_card.enabled or not messagebox_home_card.url %}
-                    {% include 'core/partials/home_v4_mobile_quickdrop_card.html' with quickdrop_placement='' include_classcalendar_margin=False %}
+                    {% include 'core/partials/home_v6_mobile_quickdrop_card.html' with quickdrop_placement='' include_classcalendar_margin=False %}
                     {% endif %}
                     {% endif %}
                     {% elif mobile_section == 'reservations' %}
@@ -212,12 +213,12 @@
                     {% elif mobile_section == 'buddy' %}
                     {% if teacher_buddy_panel %}
                     <article data-home-v6-teacher-buddy-slot="mobile" data-home-v6-rail-card="true">
-                        {% include 'core/partials/home_teacher_buddy_panel.html' with panel_variant='v5-mobile' %}
+                        {% include 'core/partials/home_v6_teacher_buddy_panel_mobile.html' %}
                     </article>
                     {% endif %}
                     {% elif mobile_section == 'sns' %}
                     <section class="home-v6-mobile-sns-panel home-v6-mobile-panel home-v6-mobile-sns" data-home-v6-mobile-sns="true">
-                        {% include 'core/partials/sns_mobile_preview_panel.html' with root_class='home-v6-mobile-sns' section_id='sns-full-section-auth-v6' start_open='false' %}
+                        {% include 'core/partials/home_v6_sns_mobile_preview_panel.html' with root_class='home-v6-mobile-sns' section_id='sns-full-section-auth-v6' start_open='false' %}
                     </section>
                     {% endif %}
                     {% endfor %}
@@ -238,15 +239,15 @@
 
                             {% if teacher_buddy_panel %}
                             <section data-home-v6-teacher-buddy-slot="rail" data-home-v6-rail-card="true">
-                                {% include 'core/partials/home_teacher_buddy_panel.html' with panel_variant='v5-rail' %}
+                                {% include 'core/partials/home_v6_teacher_buddy_panel_rail.html' %}
                             </section>
                             {% endif %}
 
                             {% if schoolcomm_home_card %}
-                            {% include 'core/partials/home_schoolcomm_card.html' %}
+                            {% include 'core/partials/home_v6_schoolcomm_card.html' %}
                             {% endif %}
 
-                            {% include 'core/partials/home_v4_developer_chat_card.html' with card_variant='desktop' %}
+                            {% include 'core/partials/home_v6_developer_chat_card.html' with card_variant='desktop' %}
                         </div>
                     </aside>
 
@@ -254,7 +255,7 @@
                         <div class="home-v6-primary-stack">
                             <section class="home-v6-calendar-section" data-home-v6-calendar-panel="desktop">
                                 <div class="home-v6-calendar-wrap">
-                                    {% include 'core/partials/home_calendar_panel.html' %}
+                                    {% include 'core/partials/home_v6_calendar_panel.html' %}
                                 </div>
                             </section>
 
@@ -271,7 +272,7 @@
                                     <div class="home-v6-service-grid" data-home-v6-service-grid="true">
                                         {% for slot in representative_slots %}
                                         <div data-home-v6-slot-kind="{{ slot.slot_kind }}">
-                                            {% include 'core/includes/mini_card.html' with product=slot.product %}
+                                            {% include 'core/partials/home_v6_mini_card.html' with product=slot.product %}
                                         </div>
                                         {% endfor %}
                                     </div>
@@ -403,71 +404,11 @@
                             {% endif %}
 
                             {% if quickdrop_home_card %}
-                            <section class="home-v6-card home-v6-quickdrop-panel" data-home-v6-quickdrop-panel="true">
-                                <div class="home-v6-quickdrop-head">
-                                    <div class="home-v6-quickdrop-heading">
-                                        <div class="home-v6-quickdrop-icon" aria-hidden="true">{{ quickdrop_home_card.icon_text|default:"↔" }}</div>
-                                        <div class="min-w-0">
-                                            <h2 class="text-lg font-black text-slate-900">{{ quickdrop_home_card.title }}</h2>
-                                        </div>
-                                    </div>
-                                    <a href="{{ quickdrop_home_card.shortcut_url|default:quickdrop_home_card.manage_url }}" class="home-v6-quickdrop-shortcut" aria-label="{{ quickdrop_home_card.shortcut_aria_label|default:'새 기기 추가' }}">
-                                        <span class="home-v6-quickdrop-shortcut-icon" aria-hidden="true">{{ quickdrop_home_card.shortcut_symbol|default:"+" }}</span>
-                                        <span class="home-v6-quickdrop-shortcut-label">{{ quickdrop_home_card.shortcut_label|default:"새 기기 추가" }}</span>
-                                    </a>
-                                </div>
-                                <p
-                                    class="home-v6-quickdrop-summary"
-                                    data-initial-summary="{{ quickdrop_home_card.summary|default:'' }}"
-                                    x-show="typeof quickdropHomeHasSummary === 'function' ? quickdropHomeHasSummary($el.dataset.initialSummary || '') : !!($el.dataset.initialSummary || '')"
-                                    x-text="typeof quickdropHomeSummaryText === 'function' ? quickdropHomeSummaryText($el.dataset.initialSummary || '') : ($el.dataset.initialSummary || '')"
-                                    {% if not quickdrop_home_card.has_recent_item %}style="display:none;"{% endif %}
-                                >{{ quickdrop_home_card.summary|default:'' }}</p>
-                                {% if quickdrop_home_card.composer_enabled|default:True %}
-                                <form
-                                    method="post"
-                                    action="{{ quickdrop_home_card.send_text_url }}"
-                                    class="home-v6-quickdrop-form"
-                                    data-home-v6-quickdrop-form="true"
-                                    @submit.prevent="typeof submitQuickdropHomeText === 'function' ? submitQuickdropHomeText($event) : $event.target.submit()"
-                                >
-                                    {% csrf_token %}
-                                    <textarea
-                                        name="text"
-                                        x-model="quickdropHomeDraftText"
-                                        rows="4"
-                                        class="home-v6-quickdrop-textarea"
-                                        aria-label="{{ quickdrop_home_card.textarea_aria_label|default:'보낼 내용' }}"
-                                        placeholder="{{ quickdrop_home_card.compose_placeholder|default:'예) 회의 링크, 메모, 주소' }}"
-                                    ></textarea>
-                                    <p
-                                        class="home-v6-quickdrop-error"
-                                        style="display:none;"
-                                        x-show="quickdropHomeErrorText"
-                                        x-text="quickdropHomeErrorText"
-                                    ></p>
-                                    <div class="home-v6-quickdrop-actions" data-home-v6-quickdrop-actions="true">
-                                        <button
-                                            type="submit"
-                                            class="home-v6-quickdrop-primary"
-                                            :disabled="isSendingQuickdropHomeText"
-                                            data-success-message="{{ quickdrop_home_card.success_message|default:'' }}"
-                                            data-error-action="{{ quickdrop_home_card.error_action_name|default:'' }}"
-                                        >{{ quickdrop_home_card.submit_label|default:"지금 보내기" }}</button>
-                                        <a href="{{ quickdrop_home_card.history_url|default:quickdrop_home_card.secondary_url }}" class="home-v6-quickdrop-secondary">{{ quickdrop_home_card.secondary_label_v6|default:"오늘 보낸 내용" }}</a>
-                                    </div>
-                                </form>
-                                {% else %}
-                                <div class="home-v6-quickdrop-actions" data-home-v6-quickdrop-actions="true">
-                                    <a href="{{ quickdrop_home_card.open_url|default:quickdrop_home_card.manage_url }}" class="home-v6-quickdrop-primary">{{ quickdrop_home_card.primary_label|default:"바로 열기" }}</a>
-                                    <a href="{{ quickdrop_home_card.secondary_url|default:quickdrop_home_card.manage_url }}" class="home-v6-quickdrop-secondary">{{ quickdrop_home_card.secondary_label|default:"새 기기 추가" }}</a>
-                                </div>
-                                {% endif %}
-                            </section>
+                            {% include 'core/partials/home_v6_quickdrop_panel.html' %}
                             {% endif %}
 
                             <section class="home-v6-community-section home-v6-top-sns" data-home-v6-sns-panel="true">
-                                {% include 'core/partials/sns_widget.html' with embed_mode='full' compact_posts=True %}
+                                {% include 'core/partials/home_v6_sns_widget.html' with embed_mode='full' compact_posts=True %}
                             </section>
                         </div>
                     </div>
@@ -476,7 +417,7 @@
         </main>
     </div>
 </div>
-{% include 'core/includes/student_games_qr_modal.html' %}
+{% include 'core/partials/home_v6_student_games_qr_modal.html' %}
 {{ favorite_product_ids|json_script:"home-favorite-ids-data" }}
-{{ home_v2_frontend_config|json_script:"home-v2-frontend-config" }}
+{{ home_frontend_config|json_script:"home-frontend-config" }}
 {% endblock %}

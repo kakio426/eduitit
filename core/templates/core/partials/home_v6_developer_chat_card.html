@@ -1,0 +1,65 @@
+<section
+    class="home-v6-card home-v6-developer-chat-card home-v6-developer-chat-card--{{ card_variant|default:'desktop' }}"
+    data-home-v6-developer-chat-card="{{ card_variant|default:'desktop' }}"
+>
+    <div class="home-v6-developer-chat-head">
+        <div class="home-v6-developer-chat-heading">
+            <span class="home-v6-developer-chat-icon" aria-hidden="true">
+                <i class="fa-regular fa-comments"></i>
+            </span>
+            <div class="min-w-0">
+                {% if developer_chat_home_card.title == '개발자야 도와줘' %}
+                <h2 class="home-v6-developer-chat-title mt-1 text-lg font-black text-slate-900" data-home-v6-developer-chat-title="two-line">
+                    <span class="home-v6-developer-chat-title-line">개발자야</span>
+                    <span class="home-v6-developer-chat-title-line">도와줘</span>
+                </h2>
+                {% else %}
+                <h2 class="mt-1 text-lg font-black text-slate-900">{{ developer_chat_home_card.title }}</h2>
+                {% endif %}
+            </div>
+        </div>
+        <div class="home-v6-developer-chat-badges">
+            <span class="home-v6-developer-chat-chip">
+                {% if developer_chat_home_card.is_admin %}관리자 보기{% else %}1:1 채팅{% endif %}
+            </span>
+            {% if developer_chat_home_card.unread_count %}
+            <span class="home-v6-developer-chat-chip home-v6-developer-chat-chip--alert">안읽음 {{ developer_chat_home_card.unread_count }}건</span>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if developer_chat_home_card.summary %}
+    <p class="home-v6-developer-chat-summary">{{ developer_chat_home_card.summary }}</p>
+    {% endif %}
+
+    {% if developer_chat_home_card.preview_threads %}
+    <div class="home-v6-developer-chat-list" data-home-v6-developer-chat-list="{{ card_variant|default:'desktop' }}">
+        {% for thread in developer_chat_home_card.preview_threads %}
+        <a href="{{ thread.detail_url }}" class="home-v6-developer-chat-item">
+            <div class="min-w-0">
+                <p class="home-v6-developer-chat-item-title">{{ thread.title }}</p>
+                <p class="home-v6-developer-chat-item-preview">{{ thread.last_message_preview }}</p>
+            </div>
+            <div class="shrink-0 text-right">
+                <p class="home-v6-developer-chat-item-meta">{{ thread.status_label }}</p>
+                {% if thread.unread_count %}
+                <span class="home-v6-developer-chat-unread">{{ thread.unread_count }}</span>
+                {% endif %}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="home-v6-developer-chat-empty">
+        {% if developer_chat_home_card.is_admin %}
+        새 문의 없음
+        {% else %}
+        문의 내역 없음
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="home-v6-developer-chat-actions" data-home-v6-developer-chat-actions="{{ card_variant|default:'desktop' }}">
+        <a href="{{ developer_chat_home_card.url }}" class="home-v6-developer-chat-primary">{{ developer_chat_home_card.cta_label }}</a>
+    </div>
+</section>

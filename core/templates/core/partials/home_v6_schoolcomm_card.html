@@ -1,0 +1,51 @@
+<section
+    class="home-v6-card home-schoolcomm-card home-v6-schoolcomm-card"
+    data-home-schoolcomm-card="desktop"
+    data-home-v6-schoolcomm-card="desktop"
+>
+    <div class="home-schoolcomm-card-head">
+        <div class="home-schoolcomm-card-heading">
+            <span class="home-schoolcomm-card-icon" aria-hidden="true">{{ schoolcomm_home_card.icon_text|default:"💬" }}</span>
+            <div class="min-w-0">
+                <h2 class="text-lg font-black text-slate-900">{{ schoolcomm_home_card.title }}</h2>
+                {% if schoolcomm_home_card.workspace_name %}
+                <p class="mt-1 text-xs font-bold text-slate-500">{{ schoolcomm_home_card.workspace_name }}</p>
+                {% endif %}
+            </div>
+        </div>
+        {% if schoolcomm_home_card.shortcut_url %}
+        <a
+            href="{{ schoolcomm_home_card.shortcut_url }}"
+            class="home-schoolcomm-card-shortcut"
+            aria-label="{{ schoolcomm_home_card.shortcut_aria_label|default:'끼리끼리 채팅방 열기' }}"
+        >
+            <span aria-hidden="true">{{ schoolcomm_home_card.shortcut_symbol|default:"+" }}</span>
+        </a>
+        {% endif %}
+    </div>
+
+    {% if schoolcomm_home_card.summary %}
+    <p class="home-schoolcomm-card-summary">{{ schoolcomm_home_card.summary }}</p>
+    {% endif %}
+
+    {% if schoolcomm_home_card.workspace_name %}
+    <div class="home-schoolcomm-card-badges">
+        <span class="home-schoolcomm-card-chip">미확인 {{ schoolcomm_home_card.total_unread|default:0 }}건</span>
+        <span class="home-schoolcomm-card-chip">공지 {{ schoolcomm_home_card.notice_unread|default:0 }}건</span>
+        <span class="home-schoolcomm-card-chip">추천 {{ schoolcomm_home_card.suggestion_count|default:0 }}건</span>
+    </div>
+    {% else %}
+    <p class="home-schoolcomm-card-helper">아직 연결된 채팅방이 없어요. 동학년 선생님부터 편하게 시작해 보세요.</p>
+    {% endif %}
+
+    <div class="home-schoolcomm-card-actions">
+        <a href="{{ schoolcomm_home_card.open_url|default:schoolcomm_home_card.manage_url }}" class="home-schoolcomm-card-primary">
+            {{ schoolcomm_home_card.primary_label|default:"채팅방 열기" }}
+        </a>
+        {% if schoolcomm_home_card.secondary_url and schoolcomm_home_card.secondary_label %}
+        <a href="{{ schoolcomm_home_card.secondary_url }}" class="home-schoolcomm-card-secondary">
+            {{ schoolcomm_home_card.secondary_label }}
+        </a>
+        {% endif %}
+    </div>
+</section>

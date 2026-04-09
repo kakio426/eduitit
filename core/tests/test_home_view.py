@@ -25,7 +25,7 @@ from core.mini_apps import (
 )
 from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
 from core.service_launcher import resolve_product_launch_url
-from core.views import HOME_V5_MOBILE_SECTION_ORDER, _build_home_v4_representative_slots
+from core.views import HOME_MOBILE_SECTION_ORDER, HOME_V5_MOBILE_SECTION_ORDER, _build_home_representative_slots
 from messagebox.developer_chat import get_or_create_developer_chat_thread, mark_thread_as_read
 from messagebox.models import DeveloperChatMessage
 from products.models import Product
@@ -56,6 +56,17 @@ def _create_posts(count=4, *, username='snsauthor'):
             )
         )
     return created_posts
+
+
+def _read_home_v6_css_bundle():
+    css_dir = Path(settings.BASE_DIR) / 'core' / 'static' / 'core' / 'css'
+    css_parts = [
+        (css_dir / 'home_authenticated_v6.css').read_text(encoding='utf-8'),
+        (css_dir / 'home_authenticated_v6_canonical.css').read_text(encoding='utf-8'),
+    ]
+    return '\n'.join(css_parts)
+
+
 AUTHENTICATED_HOME_CONTEXT_KEYS = (
     'sections',
     'aux_sections',
@@ -70,15 +81,20 @@ AUTHENTICATED_HOME_CONTEXT_KEYS = (
     'schoolcomm_home_card',
     'representative_slots',
     'representative_recommendations',
+    'home_nav_sections',
     'home_v4_nav_sections',
+    'home_mobile_section_order',
     'home_v4_mobile_calendar_first_enabled',
     'home_v4_mobile_quick_items',
     'home_v5_mobile_section_order',
+    'home_mobile_workbench_items',
     'home_v5_mobile_workbench_items',
+    'home_mobile_recommend_items',
     'home_v5_mobile_recommend_items',
     'developer_chat_home_card',
     'reservation_home_card',
     'home_calendar_surface',
+    'home_frontend_config',
     'home_v2_frontend_config',
     'home_design_version',
     'community_summary',
@@ -99,8 +115,25 @@ def _assert_authenticated_home_context_contract(testcase, response, *, design_ve
         testcase.assertIn(key, response.context)
     testcase.assertEqual(response.context['home_design_version'], design_version)
     testcase.assertEqual(
+        tuple(response.context['home_mobile_section_order']),
+        HOME_MOBILE_SECTION_ORDER,
+    )
+    testcase.assertEqual(
         tuple(response.context['home_v5_mobile_section_order']),
         HOME_V5_MOBILE_SECTION_ORDER,
+    )
+    testcase.assertEqual(response.context['home_nav_sections'], response.context['home_v4_nav_sections'])
+    testcase.assertEqual(
+        response.context['home_mobile_workbench_items'],
+        response.context['home_v5_mobile_workbench_items'],
+    )
+    testcase.assertEqual(
+        response.context['home_mobile_recommend_items'],
+        response.context['home_v5_mobile_recommend_items'],
+    )
+    testcase.assertEqual(
+        response.context['home_frontend_config'],
+        response.context['home_v2_frontend_config'],
     )
 
 
@@ -323,6 +356,7 @@ class HomeV2ViewTest(TestCase):
         self.assertEqual(response.context['home_design_version'], 'v6')
         self.assertIn('core/css/home_authenticated_v5.css', content)
         self.assertIn('core/css/home_authenticated_v6.css', content)
+        self.assertIn('core/css/home_authenticated_v6_canonical.css', content)
         self.assertIn('data-home-design-version="v6"', content)
         self.assertNotIn('core/css/home_authenticated_v2.css', content)
 
@@ -1925,7 +1959,7 @@ class RepresentativeSlotSelectionTest(TestCase):
 
         frozen_day = date(2026, 3, 15)
         with patch('core.views.timezone.localdate', return_value=frozen_day):
-            slots = _build_home_v4_representative_slots(
+            slots = _build_home_representative_slots(
                 user,
                 favorite_products=[],
                 recent_products=[p3, p2, p1],
@@ -1956,7 +1990,7 @@ class RepresentativeSlotSelectionTest(TestCase):
         ProductUsageLog.objects.create(user=user, product=p3, action='launch', source='home_quick')
 
         with patch('core.views.timezone.localdate', return_value=date(2026, 3, 15)):
-            slots = _build_home_v4_representative_slots(
+            slots = _build_home_representative_slots(
                 user,
                 favorite_products=[],
                 recent_products=[p3, p2, p1],
@@ -1998,7 +2032,7 @@ class RepresentativeSlotSelectionTest(TestCase):
             launch_route_name='quickdrop:landing',
         )
 
-        slots = _build_home_v4_representative_slots(
+        slots = _build_home_representative_slots(
             user,
             favorite_products=[messagebox],
             recent_products=[quickdrop, p1],
@@ -2588,7 +2622,7 @@ class HomeV4ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        nav_sections = response.context['home_v4_nav_sections']
+        nav_sections = response.context['home_nav_sections']
         collect_section = next(section for section in nav_sections if section['key'] == 'collect_sign')
 
         self.assertGreaterEqual(collect_section['count'], 4)
@@ -2620,7 +2654,7 @@ class HomeV4ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        nav_sections = response.context['home_v4_nav_sections']
+        nav_sections = response.context['home_nav_sections']
         class_ops_section = next(section for section in nav_sections if section['key'] == 'class_ops')
 
         self.assertNotIn(
@@ -2641,7 +2675,7 @@ class HomeV4ViewTest(TestCase):
         self._login('v4schoolcommmenu')
 
         response = self.client.get(reverse('home'))
-        nav_sections = response.context['home_v4_nav_sections']
+        nav_sections = response.context['home_nav_sections']
         class_ops_section = next(section for section in nav_sections if section['key'] == 'class_ops')
 
         self.assertNotIn(
@@ -2661,7 +2695,7 @@ class HomeV4ViewTest(TestCase):
         self._login('v4quickdropmenu')
 
         response = self.client.get(reverse('home'))
-        nav_sections = response.context['home_v4_nav_sections']
+        nav_sections = response.context['home_nav_sections']
         class_ops_section = next(section for section in nav_sections if section['key'] == 'class_ops')
 
         self.assertNotIn(
@@ -2683,7 +2717,7 @@ class HomeV4ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        nav_sections = response.context['home_v4_nav_sections']
+        nav_sections = response.context['home_nav_sections']
         self.assertEqual(nav_sections[-1]['key'], 'schoolprograms')
         class_ops_section = next(section for section in nav_sections if section['key'] == 'class_ops')
         direct_section = next(section for section in nav_sections if section['key'] == 'schoolprograms')
@@ -2720,7 +2754,7 @@ class HomeV4ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        nav_sections = response.context['home_v4_nav_sections']
+        nav_sections = response.context['home_nav_sections']
         games_section = next(section for section in nav_sections if section['key'] == 'games')
 
         self.assertIn('리버시', {product.title for product in games_section['products']})
@@ -2836,6 +2870,7 @@ class HomeV4ViewTest(TestCase):
         self.assertEqual(response.context['home_design_version'], 'v6')
         self.assertIn('core/css/home_authenticated_v5.css', content)
         self.assertIn('core/css/home_authenticated_v6.css', content)
+        self.assertIn('core/css/home_authenticated_v6_canonical.css', content)
         self.assertIn('data-home-design-version="v6"', content)
         self.assertNotIn('core/css/home_authenticated_v2.css', content)
 
@@ -2938,6 +2973,7 @@ class HomeV5ViewTest(TestCase):
         self.assertTemplateUsed(response, 'core/home_authenticated_v6_canonical.html')
         _assert_authenticated_home_context_contract(self, response, design_version='v6')
         self.assertIn('core/css/home_authenticated_v6.css', content)
+        self.assertIn('core/css/home_authenticated_v6_canonical.css', content)
         self.assertNotIn('core/css/home_authenticated_v4.css', content)
         self.assertNotIn('core/css/home_authenticated_v5.css', content)
         self.assertNotIn('core/js/home_authenticated_v2.js', content)
@@ -2971,6 +3007,48 @@ class HomeV5ViewTest(TestCase):
         self.assertNotIn('자주 여는 도구', content)
         self.assertNotIn('방금 하던 흐름', content)
         self.assertNotIn('이어서 쓰면 편한 것', content)
+
+    def test_v5_preview_template_routes_v6_mode_through_neutral_contract_and_wrappers(self):
+        template_path = Path(settings.BASE_DIR) / 'core' / 'templates' / 'core' / 'home_authenticated_v5.html'
+        template = template_path.read_text(encoding='utf-8')
+
+        self.assertIn('home_mobile_section_order', template)
+        self.assertIn('home_mobile_workbench_items', template)
+        self.assertIn("core/partials/home_v6_nav_sections.html", template)
+        self.assertIn("core/partials/home_v6_calendar_panel.html", template)
+        self.assertIn("core/partials/home_v6_mobile_quickdrop_card.html", template)
+        self.assertIn("core/partials/home_v6_quickdrop_panel.html", template)
+        self.assertIn("core/partials/home_v6_teacher_buddy_panel_mobile.html", template)
+        self.assertIn("core/partials/home_v6_teacher_buddy_panel_rail.html", template)
+        self.assertIn("core/partials/home_v6_schoolcomm_card.html", template)
+        self.assertIn("core/partials/home_v6_developer_chat_card.html", template)
+        self.assertIn("core/partials/home_v6_sns_mobile_preview_panel.html", template)
+        self.assertIn("core/partials/home_v6_sns_widget.html", template)
+        self.assertIn('json_script:"home-frontend-config"', template)
+
+    def test_v5_v6_bridge_css_excludes_canonical_only_v6_wrappers(self):
+        bridge_path = Path(settings.BASE_DIR) / 'core' / 'static' / 'core' / 'css' / 'home_authenticated_v5_v6_bridge.css'
+        bridge_css = bridge_path.read_text(encoding='utf-8')
+
+        self.assertNotIn('data-home-v6-calendar-panel', bridge_css)
+        self.assertNotIn('data-home-v6-favorite-card', bridge_css)
+        self.assertNotIn('data-home-v6-sns-panel', bridge_css)
+        self.assertNotIn('.home-v6-top-sns', bridge_css)
+        self.assertNotIn('.home-v6-mobile-summary', bridge_css)
+        self.assertNotIn('.home-v6-mobile-sheet', bridge_css)
+        self.assertNotIn('.home-v6-mobile-workbench-card', bridge_css)
+        self.assertNotIn('.home-v6-mobile-workbench-star', bridge_css)
+        self.assertNotIn('.home-v6-nav-card', bridge_css)
+        self.assertNotIn('.home-v6-nav-header h2', bridge_css)
+        self.assertNotIn('.home-v6-recommend-pill', bridge_css)
+        self.assertNotIn('.home-v6-nav-icon--home', bridge_css)
+        self.assertNotIn('.home-v6-nav-icon--slate', bridge_css)
+        self.assertNotIn('.home-v6-nav-item--home', bridge_css)
+        self.assertNotIn('.home-v6-layout', bridge_css)
+        self.assertNotIn('.home-v6-main', bridge_css)
+        self.assertNotIn('.home-v6-nav-shell', bridge_css)
+        self.assertNotIn('.home-v6-favorite-card', bridge_css)
+        self.assertIn('.home-v6-mobile-quickdrop', bridge_css)
 
     @patch('core.views.build_developer_chat_home_card_context', side_effect=RuntimeError('developer chat boom'))
     def test_v5_home_keeps_rendering_when_developer_chat_provider_fails(self, _mock_developer_chat):
@@ -3237,13 +3315,14 @@ class HomeV6ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        nav_sections = response.context['home_v4_nav_sections']
+        nav_sections = response.context['home_nav_sections']
         first_subtitle = next(section['subtitle'] for section in nav_sections if section.get('subtitle'))
         first_section_key = nav_sections[0]['key']
 
         self.assertTemplateUsed(response, 'core/home_authenticated_v6_canonical.html')
         _assert_authenticated_home_context_contract(self, response, design_version='v6')
         self.assertIn('core/css/home_authenticated_v6.css', content)
+        self.assertIn('core/css/home_authenticated_v6_canonical.css', content)
         self.assertIn('core/js/home_authenticated_v6.js', content)
         self.assertNotIn('core/css/home_authenticated_v4.css', content)
         self.assertNotIn('core/css/home_authenticated_v5.css', content)
@@ -3259,12 +3338,17 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('data-home-v6-favorites-panel="true"', content)
         self.assertIn('data-home-v6-calendar-panel="desktop"', content)
         self.assertIn('data-home-v6-calendar-panel="mobile"', content)
+        self.assertIn('data-home-v6-top-calendar="true"', content)
+        self.assertIn('data-home-v6-calendar-surface="true"', content)
+        self.assertNotIn('data-home-v2-top-calendar="true"', content)
+        self.assertNotIn('data-home-v2-calendar-surface="true"', content)
         self.assertIn('data-home-v6-representative-services="true"', content)
         self.assertIn('data-home-v6-service-grid="true"', content)
         self.assertIn(f'data-home-v6-nav-section="{first_section_key}"', content)
         self.assertIn(f'data-home-v6-tool-list="{first_section_key}"', content)
         self.assertIn('home-v6-page', content)
         self.assertIn('home-v6-shell', content)
+        self.assertIn('home-frontend-config', content)
         self.assertIn('window.homeV6Shell()', content)
         self.assertIn('data-classcalendar-home-card="true"', content)
         self.assertNotIn('data-home-v4-shell="true"', content)
@@ -3277,6 +3361,7 @@ class HomeV6ViewTest(TestCase):
         self.assertNotIn('data-home-v5-mobile-workbench="true"', content)
         self.assertNotIn('data-home-v4-favorites-panel="true"', content)
         self.assertNotIn('data-home-v4-representative-services="true"', content)
+        self.assertNotIn('home-v2-frontend-config', content)
         self.assertIn(first_subtitle, content)
         self.assertIn('home-v6-nav-subtitle', content)
         self.assertNotIn('home-v4-nav-subtitle', content)
@@ -3306,7 +3391,7 @@ class HomeV6ViewTest(TestCase):
             response = self.client.get(reverse('home'))
 
         content = response.content.decode('utf-8')
-        css = (Path(settings.BASE_DIR) / 'core' / 'static' / 'core' / 'css' / 'home_authenticated_v6.css').read_text(encoding='utf-8')
+        css = _read_home_v6_css_bundle()
 
         self.assertEqual(response.context['home_design_version'], 'v6')
         self.assertIn('data-home-v6-schoolcomm-card="desktop"', content)
@@ -3331,7 +3416,7 @@ class HomeV6ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        nav_sections = response.context['home_v4_nav_sections']
+        nav_sections = response.context['home_nav_sections']
         self.assertEqual(nav_sections[-1]['key'], 'schoolprograms')
         class_ops_section = next(section for section in nav_sections if section['key'] == 'class_ops')
         direct_section = next(section for section in nav_sections if section['key'] == 'schoolprograms')
@@ -3347,7 +3432,7 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('학교 체험·행사 찾기', content)
 
     def test_v6_css_keeps_teacher_buddy_and_workbench_controls_distinct(self):
-        css = (Path(settings.BASE_DIR) / 'core' / 'static' / 'core' / 'css' / 'home_authenticated_v6.css').read_text(encoding='utf-8')
+        css = _read_home_v6_css_bundle()
 
         self.assertIn('.home-v6-page [data-home-v6-favorites-panel="true"] [data-home-v6-favorite-card="true"]', css)
         self.assertIn('.home-v6-page .teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-card', css)
@@ -3362,13 +3447,14 @@ class HomeV6ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        nav_sections = response.context['home_v4_nav_sections']
+        nav_sections = response.context['home_nav_sections']
         first_subtitle = next(section['subtitle'] for section in nav_sections if section.get('subtitle'))
         first_section_key = nav_sections[0]['key']
 
         self.assertTemplateUsed(response, 'core/home_authenticated_v6_canonical.html')
         _assert_authenticated_home_context_contract(self, response, design_version='v6')
         self.assertIn('core/css/home_authenticated_v6.css', content)
+        self.assertIn('core/css/home_authenticated_v6_canonical.css', content)
         self.assertIn('core/js/home_authenticated_v6.js', content)
         self.assertNotIn('core/css/home_authenticated_v4.css', content)
         self.assertNotIn('core/css/home_authenticated_v5.css', content)
@@ -3384,12 +3470,17 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('data-home-v6-favorites-panel="true"', content)
         self.assertIn('data-home-v6-calendar-panel="desktop"', content)
         self.assertIn('data-home-v6-calendar-panel="mobile"', content)
+        self.assertIn('data-home-v6-top-calendar="true"', content)
+        self.assertIn('data-home-v6-calendar-surface="true"', content)
+        self.assertNotIn('data-home-v2-top-calendar="true"', content)
+        self.assertNotIn('data-home-v2-calendar-surface="true"', content)
         self.assertIn('data-home-v6-representative-services="true"', content)
         self.assertIn('data-home-v6-service-grid="true"', content)
         self.assertIn(f'data-home-v6-nav-section="{first_section_key}"', content)
         self.assertIn(f'data-home-v6-tool-list="{first_section_key}"', content)
         self.assertIn('home-v6-page', content)
         self.assertIn('home-v6-shell', content)
+        self.assertIn('home-frontend-config', content)
         self.assertIn('window.homeV6Shell()', content)
         self.assertIn('data-classcalendar-home-card="true"', content)
         self.assertNotIn('data-home-v4-shell="true"', content)
@@ -3402,6 +3493,7 @@ class HomeV6ViewTest(TestCase):
         self.assertNotIn('data-home-v5-mobile-workbench="true"', content)
         self.assertNotIn('data-home-v4-favorites-panel="true"', content)
         self.assertNotIn('data-home-v4-representative-services="true"', content)
+        self.assertNotIn('home-v2-frontend-config', content)
         self.assertIn(first_subtitle, content)
         self.assertIn('home-v6-nav-subtitle', content)
         self.assertNotIn('home-v4-nav-subtitle', content)
@@ -3444,7 +3536,7 @@ class HomeV6ViewTest(TestCase):
         self.assertNotIn('data-home-v4-quickdrop-panel="true"', content)
         self.assertNotIn('data-home-v4-quickdrop-form="true"', content)
 
-        mobile_css = (Path(settings.BASE_DIR) / 'core' / 'static' / 'core' / 'css' / 'home_authenticated_v6.css').read_text(encoding='utf-8')
+        mobile_css = _read_home_v6_css_bundle()
         self.assertIn('@media (max-width: 639px)', mobile_css)
         self.assertIn('.home-v6-mobile-quickdrop-actions', mobile_css)
         self.assertIn('grid-template-columns: minmax(0, 1fr);', mobile_css)
@@ -3454,7 +3546,7 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('box-sizing: border-box;', mobile_css)
 
     def test_v6_css_keeps_mobile_and_desktop_layouts_separate(self):
-        css = (Path(settings.BASE_DIR) / 'core' / 'static' / 'core' / 'css' / 'home_authenticated_v6.css').read_text(encoding='utf-8')
+        css = _read_home_v6_css_bundle()
 
         self.assertRegex(
             css,

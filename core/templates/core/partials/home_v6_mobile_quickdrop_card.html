@@ -1,0 +1,65 @@
+<section
+    class="{% if include_classcalendar_margin %}classcalendar-home-inline-quickdrop {% endif %}home-v6-mobile-quickdrop"
+    data-home-v6-mobile-quickdrop="true"
+    {% if quickdrop_placement %}data-home-v6-mobile-quickdrop-placement="{{ quickdrop_placement }}"{% endif %}
+>
+    <div class="home-v6-mobile-quickdrop-head">
+        <div class="home-v6-mobile-quickdrop-heading">
+            <div class="home-v6-mobile-quickdrop-icon" aria-hidden="true">{{ quickdrop_home_card.icon_text|default:"↔" }}</div>
+            <div class="min-w-0 flex-1">
+                <h3 class="text-base font-black text-slate-900">{{ quickdrop_home_card.title }}</h3>
+                <p
+                    class="home-v6-mobile-quickdrop-summary mt-1"
+                    data-initial-summary="{{ quickdrop_home_card.summary|default:'' }}"
+                    x-show="typeof quickdropHomeHasSummary === 'function' ? quickdropHomeHasSummary($el.dataset.initialSummary || '') : !!($el.dataset.initialSummary || '')"
+                    x-text="typeof quickdropHomeSummaryText === 'function' ? quickdropHomeSummaryText($el.dataset.initialSummary || '') : ($el.dataset.initialSummary || '')"
+                    {% if not quickdrop_home_card.has_recent_item %}style="display:none;"{% endif %}
+                >{{ quickdrop_home_card.summary|default:'' }}</p>
+            </div>
+        </div>
+        <a href="{{ quickdrop_home_card.shortcut_url|default:quickdrop_home_card.manage_url }}" class="home-v6-quickdrop-shortcut home-v6-quickdrop-shortcut--mobile" aria-label="{{ quickdrop_home_card.shortcut_aria_label|default:'새 기기 추가' }}">
+            <span class="home-v6-quickdrop-shortcut-icon" aria-hidden="true">{{ quickdrop_home_card.shortcut_symbol|default:"+" }}</span>
+        </a>
+    </div>
+    {% if quickdrop_home_card.composer_enabled|default:True %}
+    <form
+        method="post"
+        action="{{ quickdrop_home_card.send_text_url }}"
+        class="home-v6-mobile-quickdrop-form"
+        data-home-v6-mobile-quickdrop-form="true"
+        @submit.prevent="typeof submitQuickdropHomeText === 'function' ? submitQuickdropHomeText($event) : $event.target.submit()"
+    >
+        {% csrf_token %}
+        <textarea
+            name="text"
+            x-ref="quickdropHomeDraftInput"
+            x-model="quickdropHomeDraftText"
+            rows="3"
+            class="home-v6-mobile-quickdrop-textarea"
+            aria-label="{{ quickdrop_home_card.textarea_aria_label|default:'보낼 내용' }}"
+            placeholder="{{ quickdrop_home_card.compose_placeholder|default:'예) 회의 링크, 메모, 주소' }}"
+        ></textarea>
+        <p
+            class="home-v6-mobile-quickdrop-error"
+            style="display:none;"
+            x-show="quickdropHomeErrorText"
+            x-text="quickdropHomeErrorText"
+        ></p>
+        <div class="home-v6-mobile-quickdrop-actions" data-home-v6-mobile-quickdrop-actions="true">
+            <button
+                type="submit"
+                class="home-v6-mobile-quickdrop-primary"
+                :disabled="isSendingQuickdropHomeText"
+                data-success-message="{{ quickdrop_home_card.success_message|default:'' }}"
+                data-error-action="{{ quickdrop_home_card.error_action_name|default:'' }}"
+            >{{ quickdrop_home_card.submit_label|default:"지금 보내기" }}</button>
+            <a href="{{ quickdrop_home_card.history_url|default:quickdrop_home_card.secondary_url }}" class="home-v6-mobile-quickdrop-secondary">{{ quickdrop_home_card.secondary_label_v6|default:'오늘 보낸 내용' }}</a>
+        </div>
+    </form>
+    {% else %}
+    <div class="home-v6-mobile-quickdrop-actions" data-home-v6-mobile-quickdrop-actions="true">
+        <a href="{{ quickdrop_home_card.open_url|default:quickdrop_home_card.manage_url }}" class="home-v6-mobile-quickdrop-primary">{{ quickdrop_home_card.primary_label|default:"바로 열기" }}</a>
+        <a href="{{ quickdrop_home_card.secondary_url|default:quickdrop_home_card.manage_url }}" class="home-v6-mobile-quickdrop-secondary">{{ quickdrop_home_card.secondary_label|default:"새 기기 추가" }}</a>
+    </div>
+    {% endif %}
+</section>
