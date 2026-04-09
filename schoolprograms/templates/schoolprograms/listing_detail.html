@@ -6,8 +6,9 @@
 <main class="min-h-screen bg-slate-50 pt-32 pb-20">
     <section class="mx-auto max-w-7xl px-4 sm:px-6">
         <div class="mb-5 flex flex-wrap items-center gap-3 text-sm font-bold text-slate-500">
-            <a href="{% url 'schoolprograms:landing' %}" class="rounded-full bg-white px-4 py-2 shadow-sm">목록으로</a>
+            <a href="{% url 'schoolprograms:provider_detail' listing.provider.slug %}?activity={{ listing.slug }}" class="rounded-full bg-white px-4 py-2 shadow-sm">업체에서 바로 문의하기</a>
             <a href="{% url 'schoolprograms:provider_detail' listing.provider.slug %}" class="rounded-full bg-white px-4 py-2 shadow-sm">업체 보기</a>
+            <a href="{% url 'schoolprograms:landing' %}" class="rounded-full bg-white px-4 py-2 shadow-sm">목록으로</a>
             <span class="rounded-full bg-emerald-100 px-4 py-2 text-emerald-700">승인 완료</span>
             {% if inquiry_form %}
                 <form method="post" action="{% url 'schoolprograms:toggle_saved_listing' listing.slug %}">

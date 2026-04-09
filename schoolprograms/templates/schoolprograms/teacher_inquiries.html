@@ -42,7 +42,7 @@
                                 {% elif thread.bucket == "proposal" %}
                                     <span class="rounded-full bg-orange-100 px-3 py-1 text-xs font-black text-orange-700">제안 카드 도착</span>
                                 {% elif thread.bucket == "closed" %}
-                                    <span class="rounded-full bg-slate-200 px-3 py-1 text-xs font-black text-slate-600">종료</span>
+                                    <span class="rounded-full {% if thread.is_agreement_reached %}bg-emerald-100 text-emerald-700{% else %}bg-slate-200 text-slate-600{% endif %} px-3 py-1 text-xs font-black">{% if thread.is_agreement_reached %}합의 완료{% else %}종료{% endif %}</span>
                                 {% else %}
                                     <span class="rounded-full bg-blue-100 px-3 py-1 text-xs font-black text-blue-700">진행 중</span>
                                 {% endif %}
@@ -68,4 +68,3 @@
     </section>
 </main>
 {% endblock %}
-

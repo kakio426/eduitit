@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
+from urllib.parse import quote
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -345,6 +346,17 @@ def _build_compare_inquiry_entries(compare_listings, *, bound_form=None, open_sl
     return entries
 
 
+def _pick_listing_by_slug(listings, slug):
+    selected_slug = str(slug or "").strip()
+    if not listings:
+        return None
+    if selected_slug:
+        for listing in listings:
+            if listing.slug == selected_slug:
+                return listing
+    return listings[0]
+
+
 def _create_inquiry_thread(*, listing, teacher, form):
     thread = InquiryThread.objects.create(
         listing=listing,
@@ -572,6 +584,31 @@ def provider_detail(request, slug):
     if not listings:
         raise Http404("공개된 프로그램이 없습니다.")
 
+    selected_listing = _pick_listing_by_slug(
+        listings,
+        request.POST.get("listing_slug") if request.method == "POST" else request.GET.get("activity"),
+    )
+    inquiry_form = None
+
+    if request.method == "POST":
+        if not request.user.is_authenticated:
+            next_url = f"{reverse('schoolprograms:provider_detail', args=[provider.slug])}?activity={selected_listing.slug}"
+            login_url = f"{reverse('account_login')}?next={quote(next_url)}"
+            return redirect(login_url)
+        denied = _ensure_teacher_or_403(request.user)
+        if denied:
+            return denied
+        inquiry_form = InquiryCreateForm(request.POST)
+        if inquiry_form.is_valid():
+            thread = _create_inquiry_thread(listing=selected_listing, teacher=request.user, form=inquiry_form)
+            messages.success(request, "업체 상세에서 바로 문의를 보냈습니다. 답변은 문의함에서 이어집니다.")
+            return redirect("schoolprograms:teacher_inquiry_detail", thread_id=thread.id)
+    elif request.user.is_authenticated and _is_teacher_role(request.user):
+        inquiry_form = InquiryCreateForm()
+
+    provider_inquiry_next_url = f"{reverse('schoolprograms:provider_detail', args=[provider.slug])}?activity={selected_listing.slug}"
+    provider_inquiry_login_url = f"{reverse('account_login')}?next={quote(provider_inquiry_next_url)}"
+
     return _render_schoolprograms(
         request,
         "schoolprograms/provider_detail.html",
@@ -581,7 +618,11 @@ def provider_detail(request, slug):
             "canonical_url": request.build_absolute_uri(reverse("schoolprograms:provider_detail", args=[provider.slug])),
             "provider": provider,
             "listings": listings,
+            "selected_listing": selected_listing,
+            "inquiry_form": inquiry_form,
+            "provider_inquiry_login_url": provider_inquiry_login_url,
         },
+        status=400 if request.method == "POST" and inquiry_form is not None and inquiry_form.errors else 200,
     )
 
 
@@ -813,8 +854,29 @@ def teacher_inquiry_detail(request, thread_id):
         action = str(request.POST.get("action") or "message").strip()
         if action == "close":
             thread.status = InquiryThread.Status.CLOSED
-            thread.save(update_fields=["status", "updated_at"])
+            thread.is_agreement_reached = False
+            thread.save(update_fields=["status", "is_agreement_reached", "updated_at"])
             messages.success(request, "문의가 종료되었습니다.")
+            return redirect("schoolprograms:teacher_inquiry_detail", thread_id=thread.id)
+
+        if thread.status == InquiryThread.Status.CLOSED:
+            messages.error(request, "종료된 스레드에는 더 이상 메시지를 보낼 수 없습니다.")
+            return redirect("schoolprograms:teacher_inquiry_detail", thread_id=thread.id)
+
+        if action == "accept_proposal":
+            if not hasattr(thread, "proposal"):
+                messages.error(request, "수락할 제안 카드가 아직 없습니다.")
+                return redirect("schoolprograms:teacher_inquiry_detail", thread_id=thread.id)
+            InquiryMessage.objects.create(
+                thread=thread,
+                sender=request.user,
+                sender_role=InquiryThread.SenderRole.TEACHER,
+                body="[합의 완료] 제안 내용을 기준으로 진행하겠습니다. 세부 확정은 후속 연락으로 이어가겠습니다.",
+            )
+            thread.status = InquiryThread.Status.CLOSED
+            thread.is_agreement_reached = True
+            thread.save(update_fields=["status", "is_agreement_reached", "updated_at"])
+            messages.success(request, "제안을 수락하고 합의 완료로 정리했습니다.")
             return redirect("schoolprograms:teacher_inquiry_detail", thread_id=thread.id)
 
         message_form = InquiryMessageForm(request.POST)
@@ -825,10 +887,11 @@ def teacher_inquiry_detail(request, thread_id):
                 sender_role=InquiryThread.SenderRole.TEACHER,
                 body=message_form.cleaned_data["body"],
             )
-            next_status = InquiryThread.Status.PROPOSAL_SENT if hasattr(thread, "proposal") else InquiryThread.Status.IN_PROGRESS
+            next_status = InquiryThread.Status.IN_PROGRESS
             if thread.status != InquiryThread.Status.CLOSED:
                 thread.status = next_status
-                thread.save(update_fields=["status", "updated_at"])
+                thread.is_agreement_reached = False
+                thread.save(update_fields=["status", "is_agreement_reached", "updated_at"])
             messages.success(request, "추가 메시지를 보냈습니다.")
             return redirect("schoolprograms:teacher_inquiry_detail", thread_id=thread.id)
 
@@ -954,6 +1017,7 @@ def vendor_listing_edit(request, slug):
 
 def _vendor_listing_editor(request, provider=None, listing=None):
     provider = provider or _get_or_create_provider(request.user)
+    is_create_mode = listing is None or not getattr(listing, "pk", None)
     selected_province = ""
     if request.method == "POST":
         selected_province = str(request.POST.get("province") or "").strip()
@@ -965,20 +1029,23 @@ def _vendor_listing_editor(request, provider=None, listing=None):
             listing = form.save(commit=False)
             listing.provider = provider
             action = str(request.POST.get("action") or "save").strip()
-            if action == "submit" and existing_status != ProgramListing.ApprovalStatus.APPROVED:
-                listing.mark_pending_review()
-            elif not listing.pk:
-                listing.mark_draft()
-            listing.save()
-            for image in request.FILES.getlist("new_images"):
-                ListingImage.objects.create(listing=listing, image=image, sort_order=listing.images.count())
-            if existing_status == ProgramListing.ApprovalStatus.APPROVED:
-                messages.success(request, "공개중 프로그램 정보를 저장했습니다. 현재 공개 상태는 유지됩니다.")
-            elif action == "submit":
-                messages.success(request, "심사 요청까지 보냈습니다. 승인 전에는 공개 검색에 노출되지 않습니다.")
+            if action == "submit" and not provider.is_profile_ready:
+                form.add_error(None, "회사 정보와 증빙 서류를 먼저 완료해 주세요. 그다음 심사 요청을 보낼 수 있습니다.")
             else:
-                messages.success(request, "프로그램을 저장했습니다.")
-            return redirect("schoolprograms:vendor_listing_edit", slug=listing.slug)
+                if action == "submit" and existing_status != ProgramListing.ApprovalStatus.APPROVED:
+                    listing.mark_pending_review()
+                elif not listing.pk:
+                    listing.mark_draft()
+                listing.save()
+                for image in request.FILES.getlist("new_images"):
+                    ListingImage.objects.create(listing=listing, image=image, sort_order=listing.images.count())
+                if existing_status == ProgramListing.ApprovalStatus.APPROVED:
+                    messages.success(request, "공개중 프로그램 정보를 저장했습니다. 현재 공개 상태는 유지됩니다.")
+                elif action == "submit":
+                    messages.success(request, "심사 요청까지 보냈습니다. 승인 전에는 공개 검색에 노출되지 않습니다.")
+                else:
+                    messages.success(request, "프로그램을 저장했습니다.")
+                return redirect("schoolprograms:vendor_listing_edit", slug=listing.slug)
     else:
         selected_province = getattr(listing, "province", "") if listing else ""
         form = ProgramListingForm(instance=listing, region_list_id="listing-region-suggestions")
@@ -987,16 +1054,20 @@ def _vendor_listing_editor(request, provider=None, listing=None):
         request,
         "schoolprograms/vendor/listing_form.html",
         {
-            "page_title": f"프로그램 등록 | {SERVICE_TITLE}" if listing is None else f"프로그램 수정 | {SERVICE_TITLE}",
+            "page_title": f"프로그램 등록 | {SERVICE_TITLE}" if is_create_mode else f"프로그램 수정 | {SERVICE_TITLE}",
             "meta_description": "학교 프로그램 등록 정보를 작성하고 심사 요청을 보냅니다.",
             "canonical_url": request.build_absolute_uri(
-                reverse("schoolprograms:vendor_listing_create" if listing is None else "schoolprograms:vendor_listing_edit", args=[] if listing is None else [listing.slug])
+                reverse(
+                    "schoolprograms:vendor_listing_create" if is_create_mode else "schoolprograms:vendor_listing_edit",
+                    args=[] if is_create_mode else [listing.slug],
+                )
             ),
             "provider": provider,
             "listing": listing,
             "review_status": _build_listing_review_status(listing) if listing else None,
             "form": form,
             "region_suggestions": region_suggestions_for(selected_province),
+            "profile_ready": provider.is_profile_ready,
         },
         noindex=True,
     )
@@ -1053,8 +1124,13 @@ def vendor_inquiry_detail(request, thread_id):
         action = str(request.POST.get("action") or "message").strip()
         if action == "close":
             thread.status = InquiryThread.Status.CLOSED
-            thread.save(update_fields=["status", "updated_at"])
+            thread.is_agreement_reached = False
+            thread.save(update_fields=["status", "is_agreement_reached", "updated_at"])
             messages.success(request, "문의 스레드를 종료했습니다.")
+            return redirect("schoolprograms:vendor_inquiry_detail", thread_id=thread.id)
+
+        if thread.status == InquiryThread.Status.CLOSED:
+            messages.error(request, "종료된 스레드에는 더 이상 답변이나 제안을 보낼 수 없습니다.")
             return redirect("schoolprograms:vendor_inquiry_detail", thread_id=thread.id)
 
         if action == "proposal":
@@ -1071,7 +1147,8 @@ def vendor_inquiry_detail(request, thread_id):
                     body=f"[제안 카드] {proposal.price_text} / {proposal.schedule_note}",
                 )
                 thread.status = InquiryThread.Status.PROPOSAL_SENT
-                thread.save(update_fields=["status", "updated_at"])
+                thread.is_agreement_reached = False
+                thread.save(update_fields=["status", "is_agreement_reached", "updated_at"])
                 messages.success(request, "제안 카드를 보냈습니다.")
                 return redirect("schoolprograms:vendor_inquiry_detail", thread_id=thread.id)
         else:
@@ -1085,7 +1162,8 @@ def vendor_inquiry_detail(request, thread_id):
                 )
                 if thread.status != InquiryThread.Status.CLOSED:
                     thread.status = InquiryThread.Status.IN_PROGRESS
-                    thread.save(update_fields=["status", "updated_at"])
+                    thread.is_agreement_reached = False
+                    thread.save(update_fields=["status", "is_agreement_reached", "updated_at"])
                 messages.success(request, "답변을 보냈습니다.")
                 return redirect("schoolprograms:vendor_inquiry_detail", thread_id=thread.id)
 

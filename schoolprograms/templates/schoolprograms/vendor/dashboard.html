@@ -29,14 +29,20 @@
                     </div>
                 </div>
                 <div class="mt-6 flex flex-wrap gap-3">
-                    <a href="{% url 'schoolprograms:vendor_listing_create' %}" class="inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-orange-500 px-5 text-sm font-black text-white">
-                        새 프로그램 등록
-                    </a>
+                    {% if checklist.profile_ready %}
+                        <a href="{% url 'schoolprograms:vendor_listing_create' %}" class="inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-orange-500 px-5 text-sm font-black text-white">
+                            새 프로그램 등록
+                        </a>
+                    {% else %}
+                        <a href="{% url 'schoolprograms:vendor_profile_edit' %}" class="inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-orange-500 px-5 text-sm font-black text-white">
+                            회사 정보 먼저 입력
+                        </a>
+                    {% endif %}
                     <a href="{% url 'schoolprograms:vendor_inquiries' %}" class="inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-white px-5 text-sm font-black text-slate-900">
                         문의함 보기
                     </a>
                     <a href="{% url 'schoolprograms:vendor_profile_edit' %}" class="inline-flex min-h-[48px] items-center justify-center rounded-2xl border border-white/20 px-5 text-sm font-black text-white">
-                        회사 정보 수정
+                        {% if checklist.profile_ready %}회사 정보 수정{% else %}업체 정보 이어서 작성{% endif %}
                     </a>
                 </div>
             </div>
@@ -44,7 +50,18 @@
             <aside class="rounded-[2rem] border border-white/10 bg-white/10 p-6 shadow-2xl backdrop-blur sm:p-8">
                 <p class="text-sm font-black uppercase tracking-[0.2em] text-orange-300">지금 해야 할 일</p>
                 <div class="mt-5 space-y-3">
-                    {% if action_required_listings %}
+                    {% if not checklist.profile_ready %}
+                        <article class="rounded-2xl bg-white/10 p-4">
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="text-sm font-black">회사 정보와 증빙 서류</div>
+                                <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-700">먼저 완료</span>
+                            </div>
+                            <p class="mt-3 text-sm leading-6 text-slate-200">업체 소개와 증빙이 완료되어야 심사 요청 버튼이 열립니다. 지금 단계에서는 회사 정보를 먼저 채우는 것이 가장 빠릅니다.</p>
+                            <a href="{% url 'schoolprograms:vendor_profile_edit' %}" class="mt-4 inline-flex min-h-[42px] items-center justify-center rounded-2xl bg-white px-4 text-sm font-black text-slate-900">
+                                회사 정보 입력하기
+                            </a>
+                        </article>
+                    {% elif action_required_listings %}
                         {% for listing in action_required_listings %}
                             <article class="rounded-2xl bg-white/10 p-4">
                                 <div class="flex items-center justify-between gap-3">

@@ -9,7 +9,7 @@
             <a href="{% url 'schoolprograms:teacher_inquiries' %}" class="inline-flex min-h-[44px] items-center rounded-full bg-white px-4 text-sm font-black text-slate-600 shadow-sm">
                 문의함으로
             </a>
-            <span class="rounded-full bg-slate-100 px-4 py-2 text-sm font-black text-slate-600">{{ thread.get_status_display }}</span>
+            <span class="rounded-full {% if thread.is_agreement_reached %}bg-emerald-100 text-emerald-700{% else %}bg-slate-100 text-slate-600{% endif %} px-4 py-2 text-sm font-black">{{ thread.workflow_status_label }}</span>
         </div>
 
         <div class="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
@@ -54,6 +54,19 @@
                 {% if thread.proposal %}
                     <div class="rounded-[1.5rem] border border-orange-200 bg-orange-50 p-5 shadow-sm">
                         <p class="text-sm font-black uppercase tracking-[0.2em] text-orange-500">제안 카드</p>
+                        {% if thread.status != "closed" %}
+                            <div class="mt-4 rounded-2xl bg-white/80 px-4 py-4">
+                                <p class="text-sm font-black text-slate-900">다음 단계</p>
+                                <p class="mt-2 text-sm leading-6 text-slate-700">조건이 맞으면 바로 합의 완료로 정리하고, 더 조율할 내용이 있으면 아래 메시지에서 추가 조건을 보내세요.</p>
+                                <form method="post" class="mt-4">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="accept_proposal">
+                                    <button type="submit" class="inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-slate-900 px-4 text-sm font-black text-white">
+                                        제안 수락하고 합의 완료
+                                    </button>
+                                </form>
+                            </div>
+                        {% endif %}
                         <div class="mt-4 space-y-4 text-sm">
                             <div>
                                 <div class="font-black text-orange-700">비용 범위</div>
@@ -104,7 +117,7 @@
 
                 {% if thread.status != "closed" %}
                     <div class="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
-                        <h2 class="text-xl font-black text-slate-900">추가 질문 보내기</h2>
+                        <h2 class="text-xl font-black text-slate-900">{% if thread.proposal %}추가 조건 보내기{% else %}추가 질문 보내기{% endif %}</h2>
                         <form method="post" class="mt-4 space-y-4">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="message">
@@ -125,10 +138,17 @@
                             </button>
                         </form>
                     </div>
+                {% else %}
+                    <div class="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm text-sm font-bold text-slate-600">
+                        {% if thread.is_agreement_reached %}
+                            합의가 완료된 스레드입니다. 후속 일정과 세부 확정은 별도 연락으로 이어가면 됩니다.
+                        {% else %}
+                            종료된 스레드라 더 이상 메시지를 보낼 수 없습니다.
+                        {% endif %}
+                    </div>
                 {% endif %}
             </section>
         </div>
     </section>
 </main>
 {% endblock %}
-

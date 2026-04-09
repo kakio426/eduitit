@@ -26,16 +26,16 @@ def create_user_with_role(*, username, role, nickname=None):
     return user
 
 
-def create_provider(*, username="vendor", provider_name="에듀이티잇 체험랩"):
+def create_provider(*, username="vendor", provider_name="에듀이티잇 체험랩", summary="학교로 찾아가는 환경·과학 체험 프로그램", verified=True):
     user = create_user_with_role(username=username, role="company", nickname=provider_name)
     provider = ProviderProfile.objects.create(
         user=user,
         provider_name=provider_name,
-        summary="학교로 찾아가는 환경·과학 체험 프로그램",
+        summary=summary,
         description="학교 현장 맞춤형 체험 수업을 제공합니다.",
         contact_email=f"{username}@company.com",
         service_area_summary="서울·경기",
-        verification_document=SimpleUploadedFile("verify.txt", b"verified"),
+        verification_document=SimpleUploadedFile("verify.txt", b"verified") if verified else None,
     )
     return user, provider
 
@@ -133,6 +133,17 @@ class SchoolProgramsDiscoveryTests(TestCase):
 
         detail = self.client.get(reverse("schoolprograms:listing_detail", args=[self.primary.slug]))
         self.assertEqual(detail.status_code, 200)
+
+    def test_provider_detail_defaults_to_inline_inquiry_flow(self):
+        teacher_user = create_user_with_role(username="teacher-inline", role="school", nickname="교사")
+        self.client.force_login(teacher_user)
+
+        response = self.client.get(reverse("schoolprograms:provider_detail", args=[self.provider.slug]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "이 페이지에서 바로 활동을 고르고 문의를 시작할 수 있습니다.")
+        self.assertContains(response, "이 활동으로 문의 보내기")
+        self.assertEqual(response.context["selected_listing"].pk, self.primary.pk)
 
     def test_filter_combination_returns_expected_listing(self):
         response = self.client.get(
@@ -260,6 +271,87 @@ class SchoolProgramsInquiryTests(TestCase):
         self.assertEqual(teacher_inquiries.status_code, 200)
         self.assertContains(teacher_inquiries, "찾아오는 과학 체험")
         self.assertContains(teacher_inquiries, "제안 카드 도착")
+
+    def test_teacher_can_create_inquiry_directly_from_provider_detail(self):
+        self.client.force_login(self.teacher_user)
+
+        response = self.client.post(
+            reverse("schoolprograms:provider_detail", args=[self.provider.slug]),
+            {
+                "listing_slug": self.listing.slug,
+                "school_region": "경기 수원",
+                "preferred_schedule": "6월 셋째 주 오전",
+                "target_audience": "초등 5학년 3개 반",
+                "expected_participants": 90,
+                "budget_text": "총액 120만원대 희망",
+                "request_message": "체육관 진행 가능 여부를 먼저 알고 싶습니다.",
+            },
+        )
+
+        thread = InquiryThread.objects.get(listing=self.listing, teacher=self.teacher_user)
+        self.assertRedirects(response, reverse("schoolprograms:teacher_inquiry_detail", args=[thread.id]))
+        self.assertEqual(thread.school_region, "경기 수원")
+
+    def test_closed_thread_blocks_teacher_and_vendor_followup_posts(self):
+        self.client.force_login(self.teacher_user)
+        self.client.post(reverse("schoolprograms:create_inquiry", args=[self.listing.slug]), self._inquiry_payload())
+        thread = InquiryThread.objects.get(listing=self.listing, teacher=self.teacher_user)
+
+        self.client.post(reverse("schoolprograms:teacher_inquiry_detail", args=[thread.id]), {"action": "close"})
+        teacher_message_count = thread.messages.count()
+
+        blocked_teacher = self.client.post(
+            reverse("schoolprograms:teacher_inquiry_detail", args=[thread.id]),
+            {"action": "message", "body": "종료 후 다시 보내는 메시지"},
+        )
+        self.assertRedirects(blocked_teacher, reverse("schoolprograms:teacher_inquiry_detail", args=[thread.id]))
+        thread.refresh_from_db()
+        self.assertEqual(thread.messages.count(), teacher_message_count)
+
+        self.client.force_login(self.company_user)
+        blocked_vendor = self.client.post(
+            reverse("schoolprograms:vendor_inquiry_detail", args=[thread.id]),
+            {
+                "action": "proposal",
+                "price_text": "총액 130만원",
+                "included_items": "강사와 재료",
+                "schedule_note": "6월 가능",
+                "preparation_note": "",
+                "followup_request": "",
+            },
+        )
+        self.assertRedirects(blocked_vendor, reverse("schoolprograms:vendor_inquiry_detail", args=[thread.id]))
+        self.assertFalse(InquiryProposal.objects.filter(thread=thread).exists())
+
+    def test_teacher_can_accept_proposal_and_thread_marks_agreement(self):
+        self.client.force_login(self.teacher_user)
+        self.client.post(reverse("schoolprograms:create_inquiry", args=[self.listing.slug]), self._inquiry_payload())
+        thread = InquiryThread.objects.get(listing=self.listing, teacher=self.teacher_user)
+
+        self.client.force_login(self.company_user)
+        self.client.post(
+            reverse("schoolprograms:vendor_inquiry_detail", args=[thread.id]),
+            {
+                "action": "proposal",
+                "price_text": "총액 140만원부터 또는 학급당 35만원",
+                "included_items": "강사 파견, 체험 재료, 사후 정리",
+                "schedule_note": "5월 둘째 주 화·수 오전 가능",
+                "preparation_note": "빔프로젝터와 책상 배치만 부탁드립니다.",
+                "followup_request": "정확한 반 수와 강당 여부를 알려 주세요.",
+            },
+        )
+
+        self.client.force_login(self.teacher_user)
+        response = self.client.post(
+            reverse("schoolprograms:teacher_inquiry_detail", args=[thread.id]),
+            {"action": "accept_proposal"},
+        )
+
+        self.assertRedirects(response, reverse("schoolprograms:teacher_inquiry_detail", args=[thread.id]))
+        thread.refresh_from_db()
+        self.assertEqual(thread.status, InquiryThread.Status.CLOSED)
+        self.assertTrue(thread.is_agreement_reached)
+        self.assertEqual(thread.workflow_status_label, "합의 완료")
 
 
 class SchoolProgramsSavedListingTests(TestCase):
@@ -501,3 +593,43 @@ class SchoolProgramsVendorWorkflowTests(TestCase):
         self.assertRedirects(post_response, reverse("schoolprograms:vendor_listing_edit", args=[self.approved_listing.slug]))
         self.approved_listing.refresh_from_db()
         self.assertEqual(self.approved_listing.approval_status, ProgramListing.ApprovalStatus.APPROVED)
+
+    def test_vendor_without_profile_ready_cannot_submit_review_yet(self):
+        incomplete_user, incomplete_provider = create_provider(
+            username="vendor-incomplete",
+            provider_name="미완료 업체",
+            summary="",
+            verified=False,
+        )
+        self.client.force_login(incomplete_user)
+
+        dashboard = self.client.get(reverse("schoolprograms:vendor_dashboard"))
+        self.assertEqual(dashboard.status_code, 200)
+        self.assertContains(dashboard, "회사 정보 먼저 입력")
+
+        response = self.client.post(
+            reverse("schoolprograms:vendor_listing_create"),
+            {
+                "title": "심사 보내려는 프로그램",
+                "category": ProgramListing.Category.FIELDTRIP,
+                "summary": "대표 소개",
+                "description": "상세 설명",
+                "theme_tags_text": "환경, 생태",
+                "grade_bands": ["elementary_high"],
+                "delivery_mode": ProgramListing.DeliveryMode.VISITING,
+                "province": "gyeonggi",
+                "city": "수원",
+                "coverage_note": "수원·용인",
+                "duration_text": "90분",
+                "capacity_text": "학급당 30명",
+                "price_text": "학급당 35만원",
+                "safety_info": "안전 운영 정보",
+                "materials_info": "준비물 정보",
+                "faq": "FAQ",
+                "action": "submit",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "회사 정보와 증빙 서류를 먼저 완료해 주세요.")
+        self.assertFalse(ProgramListing.objects.filter(provider=incomplete_provider, title="심사 보내려는 프로그램").exists())

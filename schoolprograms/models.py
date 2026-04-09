@@ -290,6 +290,7 @@ class InquiryThread(models.Model):
     expected_participants = models.PositiveIntegerField(verbose_name="예상 인원")
     budget_text = models.CharField(max_length=120, blank=True, verbose_name="예산")
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.AWAITING_VENDOR)
+    is_agreement_reached = models.BooleanField(default=False, verbose_name="합의 완료 여부")
     last_message_at = models.DateTimeField(blank=True, null=True, db_index=True)
     last_message_preview = models.CharField(max_length=200, blank=True)
     last_message_sender_role = models.CharField(
@@ -313,10 +314,16 @@ class InquiryThread(models.Model):
         return f"{self.listing.title} 문의 {self.id}"
 
     @property
+    def workflow_status_label(self) -> str:
+        if self.status == self.Status.CLOSED and self.is_agreement_reached:
+            return "합의 완료"
+        return self.get_status_display()
+
+    @property
     def teacher_bucket(self) -> str:
         if self.status == self.Status.CLOSED:
             return "closed"
-        if getattr(self, "proposal", None) is not None:
+        if self.status == self.Status.PROPOSAL_SENT and getattr(self, "proposal", None) is not None:
             return "proposal"
         if self.last_message_sender_role == self.SenderRole.VENDOR:
             return "new"
