@@ -2684,7 +2684,7 @@ class HomeV4ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         nav_sections = response.context['home_v4_nav_sections']
-        self.assertEqual(nav_sections[0]['key'], 'schoolprograms')
+        self.assertEqual(nav_sections[-1]['key'], 'schoolprograms')
         class_ops_section = next(section for section in nav_sections if section['key'] == 'class_ops')
         direct_section = next(section for section in nav_sections if section['key'] == 'schoolprograms')
 
@@ -3332,7 +3332,7 @@ class HomeV6ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         nav_sections = response.context['home_v4_nav_sections']
-        self.assertEqual(nav_sections[0]['key'], 'schoolprograms')
+        self.assertEqual(nav_sections[-1]['key'], 'schoolprograms')
         class_ops_section = next(section for section in nav_sections if section['key'] == 'class_ops')
         direct_section = next(section for section in nav_sections if section['key'] == 'schoolprograms')
 

@@ -1549,7 +1549,7 @@ def _ensure_home_v4_direct_nav_sections(nav_sections, product_list):
             ordered_direct_sections.append(direct_section)
 
     ordered_direct_sections.extend(direct_sections_by_key.values())
-    return [*ordered_direct_sections, *grouped_sections]
+    return [*grouped_sections, *ordered_direct_sections]
 
 
 def _build_home_v4_mobile_quick_items(favorite_products, nav_sections, *, limit=4):
