@@ -11,6 +11,7 @@
             buttonId: "ppb-mode-stars-btn",
             viewId: "ppb-mode-stars",
             label: "별빛 추첨기",
+            stageTitle: "별 하나로 뽑기",
             desc: "별을 누르면 반짝 폭발과 함께 오늘의 주인공이 크게 공개됩니다.",
             badge: "오늘의 별빛 주인공",
             compliments: [
@@ -289,7 +290,7 @@
     function syncShowBanner(mode) {
         const config = MODE_CONFIG[mode] || MODE_CONFIG.stars;
         if (els.stageTitle) {
-            els.stageTitle.textContent = config.label;
+            els.stageTitle.textContent = config.stageTitle || config.label;
         }
         if (els.stageDesc) {
             els.stageDesc.textContent = config.desc;
