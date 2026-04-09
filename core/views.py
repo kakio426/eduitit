@@ -1516,6 +1516,42 @@ def _build_home_v4_nav_sections(primary_display_sections, secondary_display_sect
     return nav_sections
 
 
+def _ensure_home_v4_direct_nav_sections(nav_sections, product_list):
+    grouped_sections = []
+    direct_sections_by_key = {}
+
+    for section in list(nav_sections or []):
+        if section.get('is_direct'):
+            direct_sections_by_key.setdefault(section['key'], section)
+            continue
+        grouped_sections.append(section)
+
+    for product in list(product_list or []):
+        route_name = str(getattr(product, 'launch_route_name', '') or '').strip().lower()
+        meta = DIRECT_HOME_NAV_ROUTE_META.get(route_name)
+        if not meta:
+            continue
+        key = meta.get('key') or route_name.replace(':', '-')
+        if key in direct_sections_by_key:
+            continue
+        direct_section = _build_home_v4_direct_nav_section(
+            product,
+            fallback_color=meta.get('color', 'slate'),
+        )
+        if direct_section is not None:
+            direct_sections_by_key[key] = direct_section
+
+    ordered_direct_sections = []
+    for route_name, meta in DIRECT_HOME_NAV_ROUTE_META.items():
+        key = meta.get('key') or route_name.replace(':', '-')
+        direct_section = direct_sections_by_key.pop(key, None)
+        if direct_section is not None:
+            ordered_direct_sections.append(direct_section)
+
+    ordered_direct_sections.extend(direct_sections_by_key.values())
+    return [*ordered_direct_sections, *grouped_sections]
+
+
 def _build_home_v4_mobile_quick_items(favorite_products, nav_sections, *, limit=4):
     candidate_products = list(favorite_products or [])
 
@@ -3268,6 +3304,10 @@ def build_home_surface_context(
         primary_display_sections,
         secondary_display_sections,
         games,
+    )
+    home_v4_nav_sections = _ensure_home_v4_direct_nav_sections(
+        home_v4_nav_sections,
+        product_list,
     )
     sns_summary_posts = _build_home_community_summary_posts(
         page_obj,
