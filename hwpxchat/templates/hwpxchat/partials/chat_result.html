@@ -1,45 +1,54 @@
-<div class="clay-card p-5 md:p-6">
+<div class="hwpx-result-shell">
     {% if error_message %}
-    <div class="mb-4 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
+    <div class="hwpx-alert hwpx-alert--error">
         <i class="fa-solid fa-circle-exclamation mr-1"></i>{{ error_message }}
     </div>
     {% endif %}
 
     {% if info_message %}
-    <div class="mb-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl px-4 py-3 text-sm">
+    <div class="hwpx-alert hwpx-alert--info">
         <i class="fa-solid fa-circle-info mr-1"></i>{{ info_message }}
     </div>
     {% endif %}
 
     {% if limit_message %}
-    <div class="mb-4 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl px-4 py-3 text-sm">
+    <div class="hwpx-alert hwpx-alert--warn">
         <i class="fa-solid fa-triangle-exclamation mr-1"></i>{{ limit_message }}
     </div>
     {% endif %}
 
     {% if has_document and current_document %}
-    <div class="space-y-5">
-        <div class="flex items-start justify-between gap-3 flex-wrap">
-            <div>
-                <p class="text-xs font-bold text-gray-500 mb-1">원본 문서</p>
-                <h2 class="text-xl md:text-2xl font-bold text-gray-800">{{ current_document.document_title }}</h2>
-                <p class="text-xs text-gray-500 mt-1">{{ current_document.original_name }} · {{ current_document.created_at|date:"Y.m.d H:i" }}</p>
+    <div class="hwpx-thread">
+        <section class="hwpx-summary-card">
+            <div class="hwpx-summary-top">
+                <div>
+                    <p class="hwpx-summary-label">문서 요약</p>
+                    <h2 class="hwpx-summary-title">{{ current_document.document_title }}</h2>
+                    <div class="hwpx-summary-meta">
+                        <span class="hwpx-meta-pill">{{ current_document.original_name }}</span>
+                        <span class="hwpx-meta-pill">{{ current_document.created_at|date:"Y.m.d H:i" }}</span>
+                        {% if current_document.structure_status %}
+                        <span class="hwpx-meta-pill">{{ current_document.get_structure_status_display }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <a href="{{ document_detail_url }}" class="hwpx-stage-action">이 문서 다시 열기</a>
             </div>
-            <a href="{{ document_detail_url }}" class="px-3 py-2 bg-white text-gray-600 rounded-xl text-sm font-bold border border-gray-200 hover:bg-gray-50 transition">
-                이 문서 다시 열기
-            </a>
-        </div>
+            <div class="hwpx-summary-answer">
+                <div class="hwpx-summary-answer-label">AI가 먼저 정리한 한 줄 요약</div>
+                <p class="hwpx-summary-answer-text">{{ current_document.summary_text|default:"문서를 저장했어요." }}</p>
+            </div>
+        </section>
 
-        <div class="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5">
-            <p class="text-xs font-bold text-emerald-700 mb-2">한 줄 요약</p>
-            <p class="text-base md:text-lg font-bold text-gray-800">{{ current_document.summary_text|default:"문서를 저장했어요." }}</p>
-        </div>
-
-        <div>
-            <div class="flex items-center justify-between gap-2 flex-wrap mb-3">
-                <h3 class="text-lg font-bold text-gray-800">지금 해야 할 일</h3>
+        <section class="hwpx-section-card">
+            <div class="hwpx-section-head">
+                <div>
+                    <p class="hwpx-section-label">업무 카드</p>
+                    <h3 class="hwpx-section-title">지금 해야 할 일을 카드로 나눴습니다</h3>
+                    <p class="hwpx-section-copy">먼저 카드부터 확인하고, 필요한 것만 다듬어 복사하거나 보드로 보내면 됩니다.</p>
+                </div>
                 <p id="hwpx-mobile-edit-note" class="hidden text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-3 py-1">
-                    휴대폰에서는 첫 번째 카드만 자세히 수정할 수 있어요.
+                    휴대폰에서는 첫 번째 카드만 수정되고, 나머지 카드는 그대로 확인하거나 보내기만 할 수 있어요.
                 </p>
             </div>
 
@@ -49,161 +58,223 @@
                 {% csrf_token %}
             {% endif %}
 
-                {% for item in work_items %}
-                <div class="hwpx-work-card rounded-2xl border border-gray-200 bg-white p-4 md:p-5 space-y-4" data-work-card="true" {% if forloop.counter > 1 %}data-mobile-extra-card="true"{% endif %}>
-                    <div class="flex items-start justify-between gap-3 flex-wrap">
-                        <p class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
-                            업무 카드 {{ forloop.counter }}
-                        </p>
-                        {% if can_commit %}
-                        <div class="flex items-center gap-3 flex-wrap">
-                            <label class="inline-flex items-center gap-2 text-sm font-bold text-gray-700">
-                                <input type="checkbox" name="selected_{{ item.id }}" checked class="rounded border-gray-300 text-emerald-500 focus:ring-emerald-500">
-                                이 카드 보내기
-                            </label>
-                            {% if item.due_date %}
-                            <label class="inline-flex items-center gap-2 text-sm text-gray-600">
-                                <input type="checkbox" name="calendar_enabled_{{ item.id }}" checked class="rounded border-gray-300 text-emerald-500 focus:ring-emerald-500">
-                                달력에도 넣기
-                            </label>
+                <div class="hwpx-card-grid">
+                    {% for item in work_items %}
+                    <div class="hwpx-work-card" data-work-card="true" {% if forloop.counter > 1 %}data-mobile-extra-card="true"{% endif %}>
+                        <div class="hwpx-card-top">
+                            <div class="hwpx-card-badge">업무 카드 {{ forloop.counter }}</div>
+                            {% if can_commit %}
+                            <div class="hwpx-card-controls">
+                                <label>
+                                    <input type="checkbox" name="selected_{{ item.id }}" checked class="rounded border-gray-300 text-emerald-500 focus:ring-emerald-500">
+                                    이 카드 보내기
+                                </label>
+                                {% if item.due_date %}
+                                <label>
+                                    <input type="checkbox" name="calendar_enabled_{{ item.id }}" checked class="rounded border-gray-300 text-emerald-500 focus:ring-emerald-500">
+                                    달력에도 넣기
+                                </label>
+                                {% endif %}
+                            </div>
+                            {% elif item.due_date %}
+                            <div class="hwpx-card-controls">
+                                <span class="hwpx-meta-pill">기한 {{ item.due_date|date:"Y-m-d" }}</span>
+                            </div>
                             {% endif %}
                         </div>
-                        {% elif item.due_date %}
-                        <p class="text-xs font-medium text-gray-500">기한 {{ item.due_date|date:"Y-m-d" }}</p>
+
+                        {% if forloop.counter > 1 %}
+                        <div class="hwpx-mobile-card-note">
+                            휴대폰에서는 이 카드 내용을 수정할 수 없습니다. 그대로 확인하거나 보내기만 할 수 있어요.
+                        </div>
                         {% endif %}
-                    </div>
 
-                    {% if can_commit %}
-                    <input type="hidden" name="start_time_{{ item.id }}" value="{{ item.start_time|time:'H:i'|default:'' }}">
-                    <input type="hidden" name="end_time_{{ item.id }}" value="{{ item.end_time|time:'H:i'|default:'' }}">
-                    <input type="hidden" name="is_all_day_{{ item.id }}" value="{% if item.is_all_day %}1{% endif %}">
-                    {% endif %}
+                        {% if can_commit %}
+                        <input type="hidden" name="start_time_{{ item.id }}" value="{{ item.start_time|time:'H:i'|default:'' }}">
+                        <input type="hidden" name="end_time_{{ item.id }}" value="{{ item.end_time|time:'H:i'|default:'' }}">
+                        <input type="hidden" name="is_all_day_{{ item.id }}" value="{% if item.is_all_day %}1{% endif %}">
+                        {% endif %}
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="md:col-span-2">
-                            <label class="block text-xs font-bold text-gray-500 mb-1">업무명</label>
-                            <input data-edit-field="true" data-copy-field="title" type="text" {% if not can_commit %}name="title_preview_{{ item.id }}"{% else %}name="title_{{ item.id }}"{% endif %} value="{{ item.title }}" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-700 focus:border-emerald-500 focus:outline-none">
-                        </div>
-                        <div class="md:col-span-2">
-                            <label class="block text-xs font-bold text-gray-500 mb-1">해야 할 일</label>
-                            <textarea data-edit-field="true" data-copy-field="action_text" {% if not can_commit %}name="action_text_preview_{{ item.id }}"{% else %}name="action_text_{{ item.id }}"{% endif %} rows="3" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-700 focus:border-emerald-500 focus:outline-none">{{ item.action_text }}</textarea>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 mb-1">기한</label>
-                            <input data-edit-field="true" data-copy-field="due_date" type="date" {% if not can_commit %}name="due_date_preview_{{ item.id }}"{% else %}name="due_date_{{ item.id }}"{% endif %} value="{{ item.due_date|date:'Y-m-d'|default:'' }}" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-700 focus:border-emerald-500 focus:outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 mb-1">담당</label>
-                            <input data-edit-field="true" data-copy-field="assignee_text" type="text" {% if not can_commit %}name="assignee_text_preview_{{ item.id }}"{% else %}name="assignee_text_{{ item.id }}"{% endif %} value="{{ item.assignee_text }}" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-700 focus:border-emerald-500 focus:outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 mb-1">대상</label>
-                            <input data-edit-field="true" data-copy-field="target_text" type="text" {% if not can_commit %}name="target_text_preview_{{ item.id }}"{% else %}name="target_text_{{ item.id }}"{% endif %} value="{{ item.target_text }}" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-700 focus:border-emerald-500 focus:outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 mb-1">준비물</label>
-                            <input data-edit-field="true" data-copy-field="materials_text" type="text" {% if not can_commit %}name="materials_text_preview_{{ item.id }}"{% else %}name="materials_text_{{ item.id }}"{% endif %} value="{{ item.materials_text }}" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-700 focus:border-emerald-500 focus:outline-none">
-                        </div>
-                        <div class="md:col-span-2">
-                            <label class="inline-flex items-center gap-2 text-sm text-gray-700 font-medium">
+                        <div class="hwpx-field-grid">
+                            <div class="hwpx-field-full">
+                                <label class="hwpx-field-label">업무명</label>
+                                <input data-edit-field="true" data-copy-field="title" type="text" {% if not can_commit %}name="title_preview_{{ item.id }}"{% else %}name="title_{{ item.id }}"{% endif %} value="{{ item.title }}" class="hwpx-input">
+                            </div>
+                            <div class="hwpx-field-full">
+                                <label class="hwpx-field-label">해야 할 일</label>
+                                <textarea data-edit-field="true" data-copy-field="action_text" {% if not can_commit %}name="action_text_preview_{{ item.id }}"{% else %}name="action_text_{{ item.id }}"{% endif %} rows="3" class="hwpx-textarea">{{ item.action_text }}</textarea>
+                            </div>
+                            <div>
+                                <label class="hwpx-field-label">기한</label>
+                                <input data-edit-field="true" data-copy-field="due_date" type="date" {% if not can_commit %}name="due_date_preview_{{ item.id }}"{% else %}name="due_date_{{ item.id }}"{% endif %} value="{{ item.due_date|date:'Y-m-d'|default:'' }}" class="hwpx-input">
+                            </div>
+                            <div>
+                                <label class="hwpx-field-label">담당</label>
+                                <input data-edit-field="true" data-copy-field="assignee_text" type="text" {% if not can_commit %}name="assignee_text_preview_{{ item.id }}"{% else %}name="assignee_text_{{ item.id }}"{% endif %} value="{{ item.assignee_text }}" class="hwpx-input">
+                            </div>
+                            <div>
+                                <label class="hwpx-field-label">대상</label>
+                                <input data-edit-field="true" data-copy-field="target_text" type="text" {% if not can_commit %}name="target_text_preview_{{ item.id }}"{% else %}name="target_text_{{ item.id }}"{% endif %} value="{{ item.target_text }}" class="hwpx-input">
+                            </div>
+                            <div>
+                                <label class="hwpx-field-label">준비물</label>
+                                <input data-edit-field="true" data-copy-field="materials_text" type="text" {% if not can_commit %}name="materials_text_preview_{{ item.id }}"{% else %}name="materials_text_{{ item.id }}"{% endif %} value="{{ item.materials_text }}" class="hwpx-input">
+                            </div>
+                            <label class="hwpx-inline-check hwpx-field-full">
                                 <input data-edit-field="true" data-copy-field="delivery_required" type="checkbox" {% if not can_commit %}name="delivery_required_preview_{{ item.id }}"{% else %}name="delivery_required_{{ item.id }}"{% endif %} {% if item.delivery_required %}checked{% endif %} class="rounded border-gray-300 text-emerald-500 focus:ring-emerald-500">
                                 전달이 필요한 일
                             </label>
-                        </div>
-                        <div class="md:col-span-2">
-                            <label class="block text-xs font-bold text-gray-500 mb-1">근거 문장</label>
-                            <textarea data-edit-field="true" data-copy-field="evidence_text" {% if not can_commit %}name="evidence_text_preview_{{ item.id }}"{% else %}name="evidence_text_{{ item.id }}"{% endif %} rows="2" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-700 focus:border-emerald-500 focus:outline-none">{{ item.evidence_text }}</textarea>
+                            <div class="hwpx-field-full">
+                                <label class="hwpx-field-label">근거 문장</label>
+                                <textarea data-edit-field="true" data-copy-field="evidence_text" {% if not can_commit %}name="evidence_text_preview_{{ item.id }}"{% else %}name="evidence_text_{{ item.id }}"{% endif %} rows="2" class="hwpx-textarea">{{ item.evidence_text }}</textarea>
+                            </div>
                         </div>
                     </div>
+                    {% endfor %}
                 </div>
-                {% endfor %}
 
-                {% if can_commit %}
-                <div class="rounded-2xl border border-gray-200 bg-gray-50 p-4 space-y-4">
+                <div class="hwpx-secondary-panel">
                     <div>
-                        <p class="text-xs font-bold text-gray-500 mb-1">보조로 이어서 정리하기</p>
-                        <p class="text-sm text-gray-600 leading-relaxed">복사로 바로 써도 되고, 필요하면 체크한 카드만 학급 기록 보드에 보내 둘 수 있어요.</p>
-                    </div>
-                    {% if sheetbook_options %}
-                    <div>
-                        <label for="hwpx-sheetbook-id" class="block text-xs font-bold text-gray-500 mb-1">보낼 학급 기록 보드</label>
-                        <select id="hwpx-sheetbook-id" name="sheetbook_id" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-700 focus:border-emerald-500 focus:outline-none bg-white">
-                            <option value="">학급 기록 보드를 선택해 주세요</option>
-                            {% for sheetbook in sheetbook_options %}
-                            <option value="{{ sheetbook.id }}" {% if sheetbook.id == selected_sheetbook_id %}selected{% endif %}>{{ sheetbook.title }}</option>
-                            {% endfor %}
-                        </select>
+                        <p class="hwpx-section-label">보조 액션</p>
+                        <p class="text-sm text-slate-600 leading-relaxed">복사로 바로 써도 되고, 필요하면 체크한 카드만 학급 기록 보드에 보내 둘 수 있어요.</p>
                     </div>
 
-                    <button type="submit" class="w-full py-3.5 bg-white text-gray-800 rounded-xl font-bold text-base border border-gray-200 hover:bg-gray-50 transition">
-                        <i class="fa-solid fa-book-open mr-1"></i>학급 기록 보드에 보내기
-                    </button>
-                    {% else %}
-                    <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                        먼저 학급 기록 보드를 하나 만든 뒤 다시 보내 주세요.
-                    </div>
-                    <a href="{{ sheetbook_index_url }}" class="inline-flex items-center justify-center w-full py-3 rounded-xl bg-white border border-gray-200 text-sm font-bold text-gray-700 hover:bg-gray-50 transition">
-                        학급 기록 보드 열기
-                    </a>
-                    {% endif %}
-                </div>
-                </form>
-                {% endif %}
-
-                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 md:p-5">
-                    <div class="flex items-start justify-between gap-4 flex-wrap">
-                        <div class="max-w-xl">
-                            <p class="text-xs font-bold text-slate-500 mb-1">바로 가져가기</p>
-                            <p class="text-sm text-slate-600 leading-relaxed">수정한 카드 내용을 한 번에 복사해 메신저, 메모, 다른 AI에 바로 붙여 넣을 수 있어요.</p>
+                    {% if can_commit %}
+                        {% if sheetbook_options %}
+                        <div class="mt-4">
+                            <label for="hwpx-sheetbook-id" class="hwpx-field-label">보낼 학급 기록 보드</label>
+                            <select id="hwpx-sheetbook-id" name="sheetbook_id" class="hwpx-select">
+                                <option value="">학급 기록 보드를 선택해 주세요</option>
+                                {% for sheetbook in sheetbook_options %}
+                                <option value="{{ sheetbook.id }}" {% if sheetbook.id == selected_sheetbook_id %}selected{% endif %}>{{ sheetbook.title }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
-                        <div class="flex flex-wrap gap-2">
-                            <button type="button" onclick="copyHwpxWorkItems()" class="px-3 py-2 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-slate-700 transition">
+                        <div class="hwpx-secondary-actions">
+                            <button type="submit" class="hwpx-secondary-button hwpx-secondary-button--dark">
+                                <i class="fa-solid fa-book-open mr-1"></i>학급 기록 보드에 보내기
+                            </button>
+                            <button type="button" onclick="copyHwpxWorkItems()" class="hwpx-secondary-button hwpx-secondary-button--light">
                                 업무 카드 전체 복사
                             </button>
                             {% if download_markdown_url %}
-                            <a href="{{ download_markdown_url }}" class="px-3 py-2 bg-white text-gray-700 rounded-xl text-sm font-bold border border-gray-200 hover:bg-gray-50 transition">
+                            <a href="{{ download_markdown_url }}" class="hwpx-secondary-button hwpx-secondary-button--light">
                                 원문 Markdown 다운로드
                             </a>
                             {% endif %}
                         </div>
+                        {% else %}
+                        <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                            먼저 학급 기록 보드를 하나 만든 뒤 다시 보내 주세요.
+                        </div>
+                        <div class="hwpx-secondary-actions">
+                            <a href="{{ sheetbook_index_url }}" class="hwpx-secondary-button hwpx-secondary-button--light">학급 기록 보드 열기</a>
+                            <button type="button" onclick="copyHwpxWorkItems()" class="hwpx-secondary-button hwpx-secondary-button--dark">
+                                업무 카드 전체 복사
+                            </button>
+                            {% if download_markdown_url %}
+                            <a href="{{ download_markdown_url }}" class="hwpx-secondary-button hwpx-secondary-button--light">
+                                원문 Markdown 다운로드
+                            </a>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    {% else %}
+                    <div class="hwpx-secondary-actions">
+                        <button type="button" onclick="copyHwpxWorkItems()" class="hwpx-secondary-button hwpx-secondary-button--dark">
+                            업무 카드 전체 복사
+                        </button>
+                        {% if download_markdown_url %}
+                        <a href="{{ download_markdown_url }}" class="hwpx-secondary-button hwpx-secondary-button--light">
+                            원문 Markdown 다운로드
+                        </a>
+                        {% endif %}
                     </div>
+                    {% endif %}
                 </div>
-            {% else %}
-            <div class="rounded-2xl bg-white border border-gray-200 p-5 text-sm text-gray-500 leading-relaxed">
-                아직 정리된 업무 카드가 없습니다.
-            </div>
+
+            {% if can_commit %}
+            </form>
             {% endif %}
-        </div>
+            {% else %}
+            <div class="hwpx-inline-empty">아직 정리된 업무 카드가 없습니다.</div>
+            {% endif %}
+        </section>
 
-        <details class="rounded-2xl border border-gray-200 bg-white p-4">
-            <summary class="cursor-pointer text-sm font-bold text-gray-700">원문 Markdown 보기</summary>
-            <div class="mt-4 space-y-3">
-                <p class="text-xs text-gray-500">원문을 확인하거나 다른 곳에 옮겨 써야 할 때만 사용하세요.</p>
-                <textarea id="hwpx-markdown-output" readonly class="w-full h-[280px] px-4 py-3 rounded-xl border-2 border-gray-200 bg-gray-50 text-sm text-gray-700 leading-relaxed focus:outline-none">{{ current_document.raw_markdown }}</textarea>
-                <button type="button" onclick="copyHwpxMarkdown()" class="px-3 py-2 bg-white text-gray-700 rounded-xl text-sm font-bold border border-gray-200 hover:bg-gray-50 transition">
-                    원문 복사
-                </button>
+        <section class="hwpx-section-card">
+            <div class="hwpx-section-head">
+                <div>
+                    <p class="hwpx-section-label">후속 질문</p>
+                    <h3 class="hwpx-section-title">문서에게 더 물어보기</h3>
+                    <p class="hwpx-section-copy">방금 정리된 문서를 바탕으로, 필요한 내용만 이어서 다시 질문할 수 있습니다.</p>
+                </div>
             </div>
-        </details>
 
-        <details class="rounded-2xl border border-gray-200 bg-white p-4">
-            <summary class="cursor-pointer text-sm font-bold text-gray-700">문서에게 더 물어보기</summary>
-            <div class="mt-4 space-y-4">
-                <form method="post" action="{% url 'hwpxchat:ask_document' current_document.id %}" onsubmit="return submitHwpxQuestion(this);" class="space-y-3">
+            <div class="hwpx-question-compose">
+                <form method="post" action="{% url 'hwpxchat:ask_document' current_document.id %}" onsubmit="return submitHwpxQuestion(this);" class="hwpx-question-compose">
                     {% csrf_token %}
-                    <textarea name="question" rows="3" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-700 focus:border-emerald-500 focus:outline-none" placeholder="예: 학부모에게 전달해야 하는 일만 다시 알려줘"></textarea>
-                    <button type="submit" class="px-4 py-2.5 bg-white text-gray-700 rounded-xl text-sm font-bold border border-gray-200 hover:bg-gray-50 transition">
-                        문서에게 묻기
-                    </button>
+                    <label class="hwpx-field-label" for="hwpx-question-input">질문 입력</label>
+                    <textarea id="hwpx-question-input" name="question" rows="3" class="hwpx-textarea" placeholder="예: 학부모에게 전달해야 하는 일만 다시 알려줘"></textarea>
+                    <div class="hwpx-question-toolbar">
+                        <p class="text-sm text-slate-600 leading-relaxed">답변은 문서 근거 안에서만 정리합니다. 근거가 약하면 부족하다고 바로 알려드립니다.</p>
+                        <button type="submit" class="hwpx-secondary-button hwpx-secondary-button--dark">문서에게 묻기</button>
+                    </div>
                 </form>
+
                 <div id="hwpx-ask-result"></div>
+
+                <div id="hwpx-question-thread" class="hwpx-question-thread">
+                    {% for item in question_history %}
+                    <article class="hwpx-question-entry">
+                        <div class="hwpx-question-user">{{ item.question }}</div>
+                        <div class="hwpx-question-answer">
+                            <div class="hwpx-question-answer-top">
+                                <div class="hwpx-question-answer-label">문서 답변</div>
+                                <div class="hwpx-question-badges">
+                                    {% if item.has_insufficient_evidence %}
+                                    <span class="hwpx-question-badge hwpx-question-badge--warn">근거 부족</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="hwpx-question-answer-body">{{ item.answer }}</div>
+                            {% if item.citations_json %}
+                            <div class="hwpx-question-citations">
+                                <div class="hwpx-question-citations-title">근거</div>
+                                <ul>
+                                    {% for citation in item.citations_json %}
+                                    <li>{{ citation.quote }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </article>
+                    {% empty %}
+                    <div class="hwpx-inline-empty" data-hwpx-question-empty="true">
+                        아직 후속 질문은 없습니다. 첫 질문을 보내면 아래에 문서 대화 기록이 쌓입니다.
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+
+        <details class="hwpx-markdown-card">
+            <summary class="cursor-pointer text-sm font-black text-slate-900">원문 Markdown 보기</summary>
+            <div class="mt-4 space-y-3">
+                <p class="text-sm text-slate-500">원문을 확인하거나 다른 곳에 옮겨 써야 할 때만 사용하세요.</p>
+                <textarea id="hwpx-markdown-output" readonly class="hwpx-markdown-area">{{ current_document.raw_markdown }}</textarea>
+                <div class="hwpx-secondary-actions">
+                    <button type="button" onclick="copyHwpxMarkdown()" class="hwpx-secondary-button hwpx-secondary-button--light">
+                        원문 복사
+                    </button>
+                </div>
             </div>
         </details>
     </div>
     {% else %}
-    <div class="rounded-2xl bg-white border border-gray-200 p-5 md:p-6 text-sm text-gray-500 leading-relaxed space-y-3">
-        <p class="font-bold text-gray-700">문서를 올리면 여기에 결과가 표시됩니다.</p>
-        <p>긴 공문을 다시 읽어 정리하지 않아도 되도록, 해야 할 일과 기한 후보를 카드부터 바로 보여드려요.</p>
+    <div class="hwpx-empty-state">
+        <p class="hwpx-empty-state-title">문서를 올리면 여기에 결과가 표시됩니다.</p>
+        <p class="hwpx-empty-state-copy">긴 공문을 다시 읽어 정리하지 않아도 되도록, 해야 할 일과 기한 후보를 카드부터 바로 보여드려요.</p>
     </div>
     {% endif %}
 </div>

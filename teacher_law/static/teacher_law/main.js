@@ -230,6 +230,7 @@
         const errorBox = root.querySelector("[data-teacher-law-error='true']");
         const latestContainer = root.querySelector("[data-teacher-law-latest-container='true']");
         const historyList = root.querySelector("[data-teacher-law-history-list='true']");
+        const scrollRegion = root.querySelector("[data-teacher-law-scroll-region='true']");
         const quickButtons = Array.from(root.querySelectorAll("[data-teacher-law-quick-question='true']"));
         const incidentRadios = Array.from(root.querySelectorAll("[data-teacher-law-incident-option='true']"));
         const goalRadios = Array.from(root.querySelectorAll("[data-teacher-law-goal-option='true']"));
@@ -301,6 +302,27 @@
                 return;
             }
             historyList.innerHTML = historyPairs.map(buildHistoryPairHtml).join("");
+        }
+
+        function scrollConversationToBottom(options) {
+            if (!scrollRegion) return;
+            window.requestAnimationFrame(function () {
+                const scrollStyles = window.getComputedStyle(scrollRegion);
+                const canUseInnerScroll = scrollStyles.overflowY !== "visible" && scrollRegion.scrollHeight > scrollRegion.clientHeight + 4;
+                if (canUseInnerScroll) {
+                    scrollRegion.scrollTop = scrollRegion.scrollHeight;
+                    return;
+                }
+                if (!options || !options.page) {
+                    return;
+                }
+                const target = latestContainer && latestContainer.lastElementChild
+                    ? latestContainer.lastElementChild
+                    : latestContainer;
+                if (target && typeof target.scrollIntoView === "function") {
+                    target.scrollIntoView({ behavior: "smooth", block: "end" });
+                }
+            });
         }
 
         function clearProgressTimers() {
@@ -431,6 +453,7 @@
                 clearRadioValue(root, "counterpart");
                 updateDependentVisibility();
                 updateSubmitEnabled();
+                scrollConversationToBottom({ page: true });
                 if ((data.status || "ok") === "clarify") {
                     dispatchToast("추가 정보를 더 확인해야 해서 보수적으로 안내했어요.", "info");
                 }
@@ -468,6 +491,7 @@
         renderHistory();
         updateDependentVisibility();
         updateSubmitEnabled();
+        scrollConversationToBottom();
 
         form.addEventListener("submit", function (event) {
             event.preventDefault();

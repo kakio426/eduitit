@@ -112,7 +112,7 @@ def chat_process(request):
         owner=request.user,
         file_sha256=file_sha256,
         pipeline_version=PIPELINE_VERSION,
-    ).prefetch_related("work_items").first()
+    ).prefetch_related("work_items", "questions").first()
     if existing_document:
         _remember_document(request, existing_document)
         log_hwpx_metric(
@@ -562,6 +562,7 @@ def _build_page_context(request, *, document=None, error_message="", info_messag
     sheetbook_companion_available = _is_sheetbook_companion_available()
     sheetbook_options, selected_sheetbook_id = _get_sheetbook_options(request)
     work_items = list(document.work_items.order_by("sort_order", "id")) if document else []
+    question_history = list(document.questions.order_by("-created_at", "-id")[:6]) if document else []
     can_commit = bool(
         sheetbook_companion_available
         and document
@@ -572,6 +573,7 @@ def _build_page_context(request, *, document=None, error_message="", info_messag
         "service": _get_service(),
         "current_document": document,
         "work_items": work_items,
+        "question_history": question_history,
         "error_message": error_message,
         "info_message": info_message,
         "limit_message": limit_message,
@@ -613,7 +615,7 @@ def _get_last_document(request):
     document_id = request.session.get(HWPX_SESSION_DOCUMENT_KEY)
     if not document_id:
         return None
-    return HwpxDocument.objects.filter(owner=request.user, id=document_id).prefetch_related("work_items").first()
+    return HwpxDocument.objects.filter(owner=request.user, id=document_id).prefetch_related("work_items", "questions").first()
 
 
 def _build_download_url(document):

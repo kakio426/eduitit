@@ -14,132 +14,900 @@
         display: flex;
         pointer-events: auto;
     }
+
+    .hwpx-shell {
+        background:
+            radial-gradient(circle at top left, rgba(16, 185, 129, 0.14), transparent 22rem),
+            radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.12), transparent 24rem),
+            linear-gradient(180deg, #eff8f4 0%, #eef6fb 48%, #f8fbfd 100%);
+    }
+    .hwpx-frame {
+        max-width: 1460px;
+        margin: 0 auto;
+    }
+    .hwpx-header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+    }
+    .hwpx-header-copy {
+        max-width: 54rem;
+    }
+    .hwpx-back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        color: #475569;
+        font-size: 0.92rem;
+        font-weight: 800;
+    }
+    .hwpx-back-link:hover {
+        color: #0f172a;
+    }
+    .hwpx-header-card {
+        min-width: 280px;
+        max-width: 360px;
+        border-radius: 30px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: rgba(255, 255, 255, 0.88);
+        padding: 1rem 1.1rem;
+        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+        backdrop-filter: blur(14px);
+    }
+    .hwpx-header-card-title {
+        font-size: 0.76rem;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #059669;
+    }
+    .hwpx-header-card-body {
+        margin-top: 0.55rem;
+        font-size: 0.94rem;
+        line-height: 1.7;
+        color: #334155;
+        font-weight: 700;
+    }
+    .hwpx-layout {
+        display: grid;
+        gap: 1.25rem;
+        grid-template-columns: minmax(320px, 370px) minmax(0, 1fr);
+        align-items: start;
+    }
+    .hwpx-panel {
+        border-radius: 34px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: rgba(255, 255, 255, 0.92);
+        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+        backdrop-filter: blur(14px);
+    }
+    .hwpx-sidebar {
+        position: sticky;
+        top: 7.25rem;
+        padding: 1.2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    .hwpx-sidebar-intro {
+        border-radius: 28px;
+        background: linear-gradient(180deg, rgba(16, 185, 129, 0.08), rgba(248, 250, 252, 0.96));
+        border: 1px solid rgba(16, 185, 129, 0.14);
+        padding: 1rem 1.05rem;
+    }
+    .hwpx-sidebar-eyebrow {
+        font-size: 0.78rem;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #059669;
+    }
+    .hwpx-sidebar-title {
+        margin-top: 0.5rem;
+        font-size: 1.35rem;
+        line-height: 1.35;
+        font-weight: 900;
+        color: #0f172a;
+    }
+    .hwpx-sidebar-copy {
+        margin-top: 0.5rem;
+        font-size: 0.95rem;
+        line-height: 1.75;
+        color: #475569;
+    }
+    .hwpx-note {
+        border-radius: 24px;
+        padding: 0.95rem 1rem;
+        font-size: 0.92rem;
+        line-height: 1.7;
+        border: 1px solid rgba(148, 163, 184, 0.16);
+    }
+    .hwpx-note--warn {
+        background: rgba(255, 251, 235, 0.95);
+        border-color: rgba(245, 158, 11, 0.22);
+        color: #92400e;
+    }
+    .hwpx-note--info {
+        background: rgba(239, 246, 255, 0.96);
+        border-color: rgba(59, 130, 246, 0.2);
+        color: #1d4ed8;
+    }
+    .hwpx-steps {
+        border-radius: 28px;
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        background: #f8fafc;
+        padding: 1rem 1.05rem;
+    }
+    .hwpx-steps-title {
+        font-size: 0.9rem;
+        font-weight: 900;
+        color: #0f172a;
+    }
+    .hwpx-steps-list {
+        margin-top: 0.6rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+        font-size: 0.92rem;
+        line-height: 1.7;
+        color: #475569;
+    }
+    .hwpx-upload-form {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    .hwpx-upload-label {
+        display: block;
+        font-size: 0.82rem;
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #475569;
+        margin-bottom: 0.45rem;
+    }
+    .hwpx-drop-zone {
+        width: 100%;
+        border-radius: 28px;
+        border: 2px dashed rgba(148, 163, 184, 0.3);
+        background: rgba(255, 255, 255, 0.94);
+        padding: 1rem;
+        transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+    }
+    .hwpx-drop-zone.is-active {
+        border-color: #10b981;
+        background: #ecfdf5;
+        box-shadow: 0 16px 30px rgba(16, 185, 129, 0.12);
+    }
+    .hwpx-file-input {
+        width: 100%;
+        padding: 0.8rem 0.9rem;
+        border-radius: 20px;
+        border: 1px solid rgba(148, 163, 184, 0.28);
+        background: #fff;
+        color: #334155;
+    }
+    .hwpx-file-name {
+        margin-top: 0.55rem;
+        font-size: 0.78rem;
+        font-weight: 800;
+        color: #047857;
+    }
+    .hwpx-submit-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.55rem;
+        width: 100%;
+        border-radius: 22px;
+        background: linear-gradient(135deg, #10b981, #0f766e);
+        padding: 1rem 1.15rem;
+        color: #fff;
+        font-size: 1rem;
+        font-weight: 900;
+        box-shadow: 0 18px 34px rgba(15, 23, 42, 0.16);
+        transition: transform 160ms ease, box-shadow 160ms ease;
+    }
+    .hwpx-submit-button:hover,
+    .hwpx-submit-button:focus-visible {
+        transform: translateY(-1px);
+        box-shadow: 0 22px 36px rgba(15, 23, 42, 0.2);
+        outline: none;
+    }
+    .hwpx-help-details {
+        border-radius: 24px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: rgba(255, 255, 255, 0.96);
+        padding: 1rem;
+        color: #475569;
+    }
+    .hwpx-help-details summary {
+        list-style: none;
+        cursor: pointer;
+        font-size: 0.92rem;
+        font-weight: 900;
+        color: #0f172a;
+    }
+    .hwpx-help-details summary::-webkit-details-marker {
+        display: none;
+    }
+    .hwpx-help-body {
+        margin-top: 0.75rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+        font-size: 0.9rem;
+        line-height: 1.7;
+    }
+    .hwpx-stage {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: visible;
+    }
+    .hwpx-stage-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 1.25rem 1.25rem 1rem;
+        border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+    }
+    .hwpx-stage-label {
+        font-size: 0.76rem;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #64748b;
+    }
+    .hwpx-stage-title {
+        margin-top: 0.45rem;
+        font-size: 1.55rem;
+        line-height: 1.3;
+        font-weight: 900;
+        color: #0f172a;
+    }
+    .hwpx-stage-copy {
+        margin-top: 0.45rem;
+        font-size: 0.95rem;
+        line-height: 1.75;
+        color: #64748b;
+    }
+    .hwpx-stage-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+    }
+    .hwpx-stage-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        background: #f8fafc;
+        padding: 0.65rem 0.95rem;
+        font-size: 0.82rem;
+        font-weight: 900;
+        color: #475569;
+    }
+    .hwpx-stage-action:hover {
+        background: #fff;
+        color: #0f172a;
+    }
+    .hwpx-stage-body {
+        flex: 1;
+        overflow: visible;
+        background:
+            radial-gradient(circle at top, rgba(16, 185, 129, 0.08), transparent 18rem),
+            linear-gradient(180deg, #fbfefd 0%, #f7fafc 100%);
+        padding: 1.25rem;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(148, 163, 184, 0.45) transparent;
+    }
+    .hwpx-stage-body::-webkit-scrollbar {
+        width: 8px;
+    }
+    .hwpx-stage-body::-webkit-scrollbar-thumb {
+        background: rgba(148, 163, 184, 0.45);
+        border-radius: 999px;
+    }
+    .hwpx-result-shell {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    .hwpx-alert {
+        border-radius: 22px;
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        padding: 0.95rem 1rem;
+        font-size: 0.92rem;
+        line-height: 1.7;
+        font-weight: 700;
+    }
+    .hwpx-alert--error {
+        background: #fff1f2;
+        border-color: rgba(239, 68, 68, 0.2);
+        color: #be123c;
+    }
+    .hwpx-alert--info {
+        background: #ecfdf5;
+        border-color: rgba(16, 185, 129, 0.2);
+        color: #047857;
+    }
+    .hwpx-alert--warn {
+        background: #fffbeb;
+        border-color: rgba(245, 158, 11, 0.2);
+        color: #b45309;
+    }
+    .hwpx-thread {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    .hwpx-summary-card,
+    .hwpx-section-card,
+    .hwpx-markdown-card {
+        border-radius: 30px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: rgba(255, 255, 255, 0.98);
+        padding: 1.15rem 1.15rem 1.2rem;
+        box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
+    }
+    .hwpx-summary-card {
+        background: linear-gradient(180deg, rgba(236, 253, 245, 0.98), rgba(255, 255, 255, 0.98));
+    }
+    .hwpx-summary-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    .hwpx-summary-label {
+        font-size: 0.76rem;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #047857;
+    }
+    .hwpx-summary-title {
+        margin-top: 0.45rem;
+        font-size: 1.4rem;
+        line-height: 1.35;
+        font-weight: 900;
+        color: #0f172a;
+    }
+    .hwpx-summary-meta {
+        margin-top: 0.55rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+    }
+    .hwpx-meta-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.88);
+        border: 1px solid rgba(16, 185, 129, 0.14);
+        padding: 0.45rem 0.75rem;
+        font-size: 0.8rem;
+        font-weight: 800;
+        color: #065f46;
+    }
+    .hwpx-summary-answer {
+        margin-top: 0.95rem;
+        border-radius: 24px 24px 24px 10px;
+        background: #fff;
+        border: 1px solid rgba(16, 185, 129, 0.16);
+        padding: 1rem 1.05rem;
+        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.04);
+    }
+    .hwpx-summary-answer-label {
+        font-size: 0.78rem;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #047857;
+    }
+    .hwpx-summary-answer-text {
+        margin-top: 0.55rem;
+        font-size: 1rem;
+        line-height: 1.8;
+        color: #0f172a;
+        font-weight: 700;
+    }
+    .hwpx-section-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.9rem;
+    }
+    .hwpx-section-label {
+        font-size: 0.76rem;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #64748b;
+    }
+    .hwpx-section-title {
+        margin-top: 0.45rem;
+        font-size: 1.2rem;
+        line-height: 1.35;
+        font-weight: 900;
+        color: #0f172a;
+    }
+    .hwpx-section-copy {
+        margin-top: 0.35rem;
+        font-size: 0.92rem;
+        line-height: 1.7;
+        color: #64748b;
+    }
+    .hwpx-card-grid {
+        display: grid;
+        gap: 1rem;
+    }
+    .hwpx-work-card {
+        border-radius: 26px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: #fff;
+        padding: 1rem;
+        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.04);
+    }
+    .hwpx-work-card.is-mobile-readonly {
+        border-color: rgba(245, 158, 11, 0.28);
+        background: linear-gradient(180deg, rgba(255, 251, 235, 0.72), rgba(255, 255, 255, 0.98));
+    }
+    .hwpx-card-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.8rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.9rem;
+    }
+    .hwpx-card-badge {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        background: #ecfdf5;
+        color: #047857;
+        padding: 0.45rem 0.8rem;
+        font-size: 0.78rem;
+        font-weight: 900;
+    }
+    .hwpx-card-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.8rem;
+    }
+    .hwpx-card-controls label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        font-size: 0.84rem;
+        font-weight: 800;
+        color: #334155;
+    }
+    .hwpx-mobile-card-note {
+        display: none;
+        margin-bottom: 0.9rem;
+        border-radius: 18px;
+        border: 1px solid rgba(245, 158, 11, 0.24);
+        background: #fffbeb;
+        padding: 0.8rem 0.9rem;
+        font-size: 0.84rem;
+        line-height: 1.6;
+        color: #92400e;
+        font-weight: 700;
+    }
+    .hwpx-field-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.85rem;
+    }
+    .hwpx-field-grid > div,
+    .hwpx-field-grid > label {
+        min-width: 0;
+    }
+    .hwpx-field-grid .hwpx-field-full {
+        grid-column: 1 / -1;
+    }
+    .hwpx-field-label {
+        display: block;
+        font-size: 0.76rem;
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #64748b;
+        margin-bottom: 0.38rem;
+    }
+    .hwpx-input,
+    .hwpx-textarea,
+    .hwpx-select {
+        width: 100%;
+        border-radius: 18px;
+        border: 1px solid rgba(148, 163, 184, 0.24);
+        background: #fff;
+        padding: 0.8rem 0.9rem;
+        font-size: 0.92rem;
+        color: #334155;
+    }
+    .hwpx-textarea {
+        min-height: 96px;
+        resize: vertical;
+        line-height: 1.65;
+    }
+    .hwpx-inline-check {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        font-size: 0.9rem;
+        font-weight: 800;
+        color: #334155;
+    }
+    .hwpx-secondary-panel {
+        border-radius: 24px;
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        background: #f8fafc;
+        padding: 1rem;
+    }
+    .hwpx-secondary-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.65rem;
+        margin-top: 0.8rem;
+    }
+    .hwpx-secondary-button,
+    .hwpx-secondary-actions a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 18px;
+        padding: 0.8rem 1rem;
+        font-size: 0.88rem;
+        font-weight: 900;
+        transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+    }
+    .hwpx-secondary-button--dark {
+        background: #0f172a;
+        color: #fff;
+    }
+    .hwpx-secondary-button--light {
+        background: #fff;
+        color: #334155;
+        border: 1px solid rgba(148, 163, 184, 0.24);
+    }
+    .hwpx-question-compose {
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+    }
+    .hwpx-question-compose textarea {
+        min-height: 108px;
+    }
+    .hwpx-question-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.8rem;
+        flex-wrap: wrap;
+    }
+    .hwpx-question-thread {
+        display: flex;
+        flex-direction: column;
+        gap: 0.85rem;
+    }
+    .hwpx-question-entry {
+        display: flex;
+        flex-direction: column;
+        gap: 0.7rem;
+    }
+    .hwpx-question-user {
+        align-self: flex-end;
+        max-width: min(38rem, 88%);
+        border-radius: 22px 22px 8px 22px;
+        background: linear-gradient(135deg, #0f766e, #0f172a);
+        color: #fff;
+        padding: 0.9rem 1rem;
+        font-size: 0.94rem;
+        line-height: 1.7;
+        font-weight: 700;
+        white-space: pre-wrap;
+        box-shadow: 0 16px 30px rgba(15, 23, 42, 0.14);
+    }
+    .hwpx-question-answer {
+        max-width: min(50rem, 100%);
+        border-radius: 24px 24px 24px 8px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: #fff;
+        padding: 1rem;
+        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.05);
+    }
+    .hwpx-question-answer-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.8rem;
+        flex-wrap: wrap;
+    }
+    .hwpx-question-answer-label {
+        font-size: 0.78rem;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #64748b;
+    }
+    .hwpx-question-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+    }
+    .hwpx-question-badge {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 0.35rem 0.7rem;
+        font-size: 0.74rem;
+        font-weight: 900;
+    }
+    .hwpx-question-badge--cache {
+        background: #ecfdf5;
+        color: #047857;
+    }
+    .hwpx-question-badge--warn {
+        background: #fffbeb;
+        color: #b45309;
+    }
+    .hwpx-question-answer-body {
+        margin-top: 0.7rem;
+        font-size: 0.92rem;
+        line-height: 1.75;
+        color: #334155;
+        white-space: pre-wrap;
+    }
+    .hwpx-question-citations {
+        margin-top: 0.8rem;
+        border-radius: 18px;
+        background: #f8fafc;
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        padding: 0.85rem 0.95rem;
+    }
+    .hwpx-question-citations-title {
+        font-size: 0.76rem;
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #64748b;
+        margin-bottom: 0.45rem;
+    }
+    .hwpx-question-citations ul {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        color: #475569;
+        font-size: 0.86rem;
+        line-height: 1.6;
+    }
+    .hwpx-inline-empty {
+        border-radius: 22px;
+        border: 1px dashed rgba(148, 163, 184, 0.35);
+        background: rgba(248, 250, 252, 0.9);
+        padding: 1rem;
+        text-align: center;
+        font-size: 0.9rem;
+        line-height: 1.7;
+        color: #64748b;
+    }
+    .hwpx-empty-state {
+        border-radius: 30px;
+        border: 1px dashed rgba(148, 163, 184, 0.32);
+        background: rgba(255, 255, 255, 0.86);
+        padding: 2rem 1.4rem;
+        text-align: center;
+        color: #64748b;
+    }
+    .hwpx-empty-state-title {
+        font-size: 1.15rem;
+        font-weight: 900;
+        color: #0f172a;
+    }
+    .hwpx-empty-state-copy {
+        margin-top: 0.6rem;
+        font-size: 0.94rem;
+        line-height: 1.7;
+    }
+    .hwpx-markdown-area {
+        width: 100%;
+        min-height: 280px;
+        border-radius: 22px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: #f8fafc;
+        padding: 0.95rem 1rem;
+        color: #334155;
+        font-size: 0.9rem;
+        line-height: 1.7;
+    }
+    @media (max-width: 1180px) {
+        .hwpx-layout {
+            grid-template-columns: 1fr;
+        }
+        .hwpx-sidebar {
+            position: static;
+        }
+    }
+    @media (max-width: 767px) {
+        .hwpx-mobile-card-note {
+            display: block;
+        }
+    }
+    @media (max-width: 720px) {
+        .hwpx-shell {
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+        .hwpx-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .hwpx-header-card {
+            min-width: 0;
+            max-width: none;
+        }
+        .hwpx-stage {
+            min-height: auto;
+        }
+        .hwpx-stage-header,
+        .hwpx-question-toolbar {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .hwpx-stage-body {
+            max-height: none;
+            overflow: visible;
+        }
+        .hwpx-field-grid {
+            grid-template-columns: 1fr;
+        }
+    }
 </style>
 
-<section class="pt-32 pb-20 px-4 md:px-6 min-h-screen bg-[#E0E5EC]" x-data="hwpxChatPage()">
-    <div class="max-w-6xl mx-auto">
-        <div class="mb-6 flex items-center justify-between gap-3 flex-wrap">
-            <a href="{% url 'home' %}" class="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors">
-                <i class="fa-solid fa-arrow-left"></i>
-                <span class="font-medium">전체 서비스</span>
-            </a>
-            {% if current_document %}
-            <form
-                method="post"
-                action="{% url 'hwpxchat:chat_reset' %}"
-                hx-post="{% url 'hwpxchat:chat_reset' %}"
-                hx-target="#hwpx-chat-result"
-                hx-swap="innerHTML"
-                hx-indicator="#hwpx-chat-loading"
-                class="inline-flex"
-            >
-                {% csrf_token %}
-                <button type="submit" class="px-3 py-2 bg-white text-gray-600 rounded-xl text-sm font-bold border border-gray-200 hover:bg-gray-50 transition">
-                    최근 문서 숨기기
-                </button>
-            </form>
-            {% endif %}
+<section class="hwpx-shell pt-28 pb-20 px-4 min-h-screen" x-data="hwpxChatPage()">
+    <div class="hwpx-frame">
+        <div class="hwpx-header">
+            <div class="hwpx-header-copy">
+                <a href="{% url 'home' %}" class="hwpx-back-link">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span>전체 서비스</span>
+                </a>
+                <div class="mt-5 space-y-3">
+                    <h1 class="text-4xl md:text-5xl font-black text-slate-950 leading-tight">공문을 오늘 할 일로 바로 정리하기</h1>
+                    <p class="text-base md:text-lg leading-8 text-slate-600">공문이나 한글 문서를 올리면 해야 할 일, 기한, 전달 대상을 카드로 정리해 드려요.</p>
+                </div>
+            </div>
+            <div class="hwpx-header-card">
+                <div class="hwpx-header-card-title">문서 대화 방식</div>
+                <div class="hwpx-header-card-body">문서를 올리면 업무 카드와 후속 질문이 같은 화면에서 바로 이어집니다.</div>
+            </div>
         </div>
 
-        <div class="text-center mb-8" data-aos="fade-up">
-            <div class="text-6xl mb-3 float-icon">{{ service.icon|default:"📄" }}</div>
-            <h1 class="text-4xl md:text-5xl font-bold text-gray-700 font-title mb-3">공문을 오늘 할 일로 바로 정리하기</h1>
-            <p class="text-lg md:text-xl text-gray-500">공문이나 한글 문서를 올리면 해야 할 일, 기한, 전달 대상을 카드로 정리해 드려요.</p>
-        </div>
+        <div class="hwpx-layout">
+            <aside class="hwpx-panel hwpx-sidebar">
+                <div class="hwpx-sidebar-intro">
+                    <p class="hwpx-sidebar-eyebrow">1단계 업로드</p>
+                    <h2 class="hwpx-sidebar-title">문서만 올리면 바로 정리됩니다</h2>
+                    <p class="hwpx-sidebar-copy">HWPX 파일을 올리면 오른쪽에 업무 카드가 바로 열립니다.</p>
+                </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
-            <div class="lg:col-span-2">
-                <div class="clay-card p-6 md:p-7" data-aos="fade-up">
-                    <p class="text-sm md:text-base text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 leading-relaxed">
-                        한글 문서는 <strong>다른 이름으로 저장 → HWPX</strong>로 바꾼 뒤 올려 주세요. HWP 파일은 바로 읽지 못합니다.
-                    </p>
+                <form
+                    id="hwpx-chat-upload-form"
+                    method="post"
+                    action="{% url 'hwpxchat:chat_process' %}"
+                    hx-post="{% url 'hwpxchat:chat_process' %}"
+                    hx-encoding="multipart/form-data"
+                    hx-target="#hwpx-chat-result"
+                    hx-swap="innerHTML"
+                    hx-indicator="#hwpx-chat-loading"
+                    enctype="multipart/form-data"
+                    class="hwpx-upload-form"
+                >
+                    {% csrf_token %}
 
-                    <p class="text-sm md:text-base text-blue-700 bg-blue-50 border border-blue-200 rounded-xl p-4 mb-5 leading-relaxed">
-                        <strong>권장 범위</strong><br>
-                        30쪽 이하 문서가 가장 안정적입니다. 너무 긴 문서는 나눠 올리면 더 정확하게 정리돼요.
-                    </p>
-
-                    <div class="text-sm md:text-base text-gray-700 bg-white border border-gray-200 rounded-xl p-4 mb-5 leading-relaxed">
-                        <p class="font-bold text-gray-800 mb-2">올리는 순서</p>
-                        <p>1. 공문이나 한글 문서를 HWPX로 저장합니다.</p>
-                        <p>2. 여기서 파일을 올립니다.</p>
-                        <p>3. 정리된 업무 카드와 기한을 확인합니다.</p>
-                        <p>4. 필요한 카드만 다듬고 복사하거나 다운로드합니다.</p>
+                    <div>
+                        <label class="hwpx-upload-label" for="hwpx-file-input">파일 올리기</label>
+                        <div
+                            id="hwpx-drop-zone"
+                            class="hwpx-drop-zone"
+                            @dragenter.prevent="onDragEnter()"
+                            @dragover.prevent="onDragOver($event)"
+                            @dragleave="onDragLeave($event)"
+                            @drop.prevent="onDrop($event)"
+                            :class="{ 'is-active': isDragActive }"
+                        >
+                            <p class="text-sm text-slate-500 mb-3">파일을 여기로 끌어다 놓거나 아래에서 선택해 주세요.</p>
+                            <input
+                                id="hwpx-file-input"
+                                type="file"
+                                name="hwpx_file"
+                                required
+                                accept=".hwpx,.hwp"
+                                x-ref="hwpxFileInput"
+                                @change="handleFileSelection($event)"
+                                class="hwpx-file-input"
+                            >
+                            <p x-show="selectedFileName" class="hwpx-file-name">
+                                선택된 파일: <span x-text="selectedFileName"></span>
+                            </p>
+                        </div>
                     </div>
 
-                    <form
-                        id="hwpx-chat-upload-form"
-                        method="post"
-                        action="{% url 'hwpxchat:chat_process' %}"
-                        hx-post="{% url 'hwpxchat:chat_process' %}"
-                        hx-encoding="multipart/form-data"
-                        hx-target="#hwpx-chat-result"
-                        hx-swap="innerHTML"
-                        hx-indicator="#hwpx-chat-loading"
-                        enctype="multipart/form-data"
-                        class="space-y-4"
-                    >
-                        {% csrf_token %}
+                    <button type="submit" class="hwpx-submit-button">
+                        <i class="fa-solid fa-file-arrow-up"></i>
+                        문서 올리기
+                    </button>
+                </form>
 
-                        <div>
-                            <label class="block text-sm font-bold text-gray-600 mb-1">파일 올리기</label>
-                            <div
-                                id="hwpx-drop-zone"
-                                @dragenter.prevent="onDragEnter()"
-                                @dragover.prevent="onDragOver($event)"
-                                @dragleave="onDragLeave($event)"
-                                @drop.prevent="onDrop($event)"
-                                class="w-full rounded-xl border-2 border-dashed p-4 transition"
-                                :class="isDragActive ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 bg-white'"
-                            >
-                                <p class="text-sm text-gray-500 mb-3">파일을 여기로 끌어다 놓거나 아래에서 선택해 주세요.</p>
-                                <input
-                                    type="file"
-                                    name="hwpx_file"
-                                    required
-                                    accept=".hwpx,.hwp"
-                                    x-ref="hwpxFileInput"
-                                    @change="handleFileSelection($event)"
-                                    class="w-full px-3 py-2.5 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none bg-white"
-                                >
-                                <p x-show="selectedFileName" class="mt-2 text-xs text-emerald-700 font-semibold">
-                                    선택된 파일: <span x-text="selectedFileName"></span>
-                                </p>
-                            </div>
-                        </div>
-
-                        <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-bold text-base shadow-lg hover:shadow-xl transition">
-                            <i class="fa-solid fa-file-arrow-up mr-1"></i>문서 올리기
-                        </button>
-                    </form>
-
-                    <details class="mt-5 rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600">
-                        <summary class="cursor-pointer list-none flex items-center justify-between gap-3">
-                            <span class="font-bold text-gray-800">HWPX로 저장하는 방법</span>
-                            <span class="text-xs text-gray-500">보기</span>
-                        </summary>
-                        <div class="mt-3 space-y-2 leading-relaxed">
-                            <p>1. 한글 문서를 엽니다.</p>
-                            <p>2. <strong>다른 이름으로 저장</strong>에서 <strong>HWPX</strong>를 선택합니다.</p>
-                            <p>3. 파일을 올리고, 나온 결과를 복사해 원하는 AI에 붙여 넣습니다.</p>
-                        </div>
-                    </details>
+                <div class="hwpx-note hwpx-note--warn">
+                    HWP 파일은 바로 읽지 못합니다. <strong>HWPX</strong>로 저장해 올려 주세요.
                 </div>
-            </div>
 
-            <div class="lg:col-span-3">
-                <div id="hwpx-chat-result">
-                    {% include 'hwpxchat/partials/chat_result.html' %}
+                <div class="hwpx-note hwpx-note--info">
+                    <strong>파일 기준</strong><br>
+                    15MB 이하 HWPX가 가장 안정적입니다.
                 </div>
-            </div>
+
+                <details class="hwpx-help-details">
+                    <summary>HWPX로 저장하는 방법</summary>
+                    <div class="hwpx-help-body">
+                        <p>1. 한글 문서를 엽니다.</p>
+                        <p>2. <strong>다른 이름으로 저장</strong>에서 <strong>HWPX</strong>를 선택합니다.</p>
+                        <p>3. 파일을 올리고, 나온 결과를 바로 다듬어 사용합니다.</p>
+                    </div>
+                </details>
+            </aside>
+
+            <section class="hwpx-panel hwpx-stage">
+                <div class="hwpx-stage-header">
+                    <div>
+                        <p class="hwpx-stage-label">2단계 작업 공간</p>
+                        <h2 class="hwpx-stage-title">업무 카드와 추가 질문을 여기서 이어갑니다</h2>
+                        <p class="hwpx-stage-copy">올린 문서의 결과를 바로 확인하고 필요한 것만 이어서 물어보면 됩니다.</p>
+                    </div>
+                    {% if current_document %}
+                    <div class="hwpx-stage-actions">
+                        <form
+                            method="post"
+                            action="{% url 'hwpxchat:chat_reset' %}"
+                            hx-post="{% url 'hwpxchat:chat_reset' %}"
+                            hx-target="#hwpx-chat-result"
+                            hx-swap="innerHTML"
+                            hx-indicator="#hwpx-chat-loading"
+                            class="inline-flex"
+                        >
+                            {% csrf_token %}
+                            <button type="submit" class="hwpx-stage-action">최근 문서 숨기기</button>
+                        </form>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="hwpx-stage-body">
+                    <div id="hwpx-chat-result">
+                        {% include 'hwpxchat/partials/chat_result.html' %}
+                    </div>
+                </div>
+            </section>
         </div>
     </div>
 </section>
 
 <div id="hwpx-chat-loading" class="htmx-indicator fixed inset-0 z-[120] flex items-center justify-center bg-white/55 backdrop-blur-sm">
-    <div class="clay-card px-6 py-5 flex items-center gap-3">
+    <div class="hwpx-panel px-6 py-5 flex items-center gap-3">
         <i class="fa-solid fa-circle-notch fa-spin text-2xl text-emerald-500"></i>
-        <span class="text-gray-700 font-bold">문서를 읽고 해야 할 일을 정리하고 있어요...</span>
+        <span class="text-slate-700 font-bold">문서를 읽고 해야 할 일을 정리하고 있어요...</span>
     </div>
 </div>
 
@@ -263,6 +1031,15 @@
         };
     }
 
+    function escapeHwpxHtml(value) {
+        return String(value || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+    }
+
     function copyHwpxMarkdown() {
         const textarea = document.getElementById("hwpx-markdown-output");
         if (!textarea) {
@@ -381,17 +1158,69 @@
         });
     }
 
+    function removeHwpxQuestionEmptyState(threadBox) {
+        if (!threadBox) {
+            return;
+        }
+        const emptyState = threadBox.querySelector("[data-hwpx-question-empty='true']");
+        if (emptyState) {
+            emptyState.remove();
+        }
+    }
+
+    function buildHwpxQuestionEntryHtml(payload, question) {
+        const citations = Array.isArray(payload.citations) ? payload.citations : [];
+        const answer = payload && payload.answer ? payload.answer : "문서 근거를 찾지 못했습니다.";
+        const badges = [];
+        if (payload && payload.reused) {
+            badges.push('<span class="hwpx-question-badge hwpx-question-badge--cache">저장된 답변</span>');
+        }
+        if (payload && payload.has_insufficient_evidence) {
+            badges.push('<span class="hwpx-question-badge hwpx-question-badge--warn">근거 부족</span>');
+        }
+        const citationHtml = citations.length
+            ? `
+                <div class="hwpx-question-citations">
+                    <div class="hwpx-question-citations-title">근거</div>
+                    <ul>
+                        ${citations.map((citation) => `<li>${escapeHwpxHtml(citation && citation.quote ? citation.quote : "")}</li>`).join("")}
+                    </ul>
+                </div>
+            `
+            : "";
+        return `
+            <article class="hwpx-question-entry">
+                <div class="hwpx-question-user">${escapeHwpxHtml(question)}</div>
+                <div class="hwpx-question-answer">
+                    <div class="hwpx-question-answer-top">
+                        <div class="hwpx-question-answer-label">문서 답변</div>
+                        <div class="hwpx-question-badges">${badges.join("")}</div>
+                    </div>
+                    <div class="hwpx-question-answer-body">${escapeHwpxHtml(answer)}</div>
+                    ${citationHtml}
+                </div>
+            </article>
+        `;
+    }
+
     async function submitHwpxQuestion(form) {
         if (!form) {
             return false;
         }
 
         const resultBox = document.getElementById("hwpx-ask-result");
+        const threadBox = document.getElementById("hwpx-question-thread");
         const button = form.querySelector("button[type='submit']");
+        const textarea = form.querySelector("textarea[name='question']");
         const formData = new FormData(form);
         const question = (formData.get("question") || "").toString().trim();
         if (!question) {
-            window.alert("질문을 입력해 주세요.");
+            Swal.fire({
+                icon: "warning",
+                title: "질문을 입력해 주세요",
+                confirmButtonText: "확인",
+                confirmButtonColor: "#10b981"
+            });
             return false;
         }
 
@@ -399,7 +1228,17 @@
             button.disabled = true;
         }
         if (resultBox) {
-            resultBox.innerHTML = '<div class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">문서에서 근거를 찾는 중입니다...</div>';
+            resultBox.innerHTML = `
+                <article class="hwpx-question-entry">
+                    <div class="hwpx-question-user">${escapeHwpxHtml(question)}</div>
+                    <div class="hwpx-question-answer">
+                        <div class="hwpx-question-answer-top">
+                            <div class="hwpx-question-answer-label">문서 답변 준비 중</div>
+                        </div>
+                        <div class="hwpx-question-answer-body">문서에서 근거를 찾는 중입니다...</div>
+                    </div>
+                </article>
+            `;
         }
 
         try {
@@ -412,19 +1251,32 @@
             });
             const payload = await response.json().catch(() => null);
             if (!response.ok) {
-                window.alert((payload && payload.message) || "질문 처리 중 오류가 발생했습니다.");
+                Swal.fire({
+                    icon: "error",
+                    title: (payload && payload.message) || "질문 처리 중 오류가 발생했습니다.",
+                    confirmButtonText: "확인",
+                    confirmButtonColor: "#10b981"
+                });
                 if (resultBox) {
-                    resultBox.innerHTML = '';
+                    resultBox.innerHTML = "";
                 }
                 return false;
             }
-            if (resultBox) {
-                renderHwpxQuestionResult(resultBox, payload || {});
+            renderHwpxQuestionResult(resultBox, threadBox, payload || {}, question);
+            form.reset();
+            if (textarea) {
+                textarea.focus();
             }
         } catch (error) {
-            window.alert("질문 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+            Swal.fire({
+                icon: "error",
+                title: "질문 처리 중 오류가 발생했습니다",
+                text: "잠시 후 다시 시도해 주세요.",
+                confirmButtonText: "확인",
+                confirmButtonColor: "#10b981"
+            });
             if (resultBox) {
-                resultBox.innerHTML = '';
+                resultBox.innerHTML = "";
             }
         } finally {
             if (button) {
@@ -434,32 +1286,18 @@
         return false;
     }
 
-    function renderHwpxQuestionResult(container, payload) {
-        if (!container) {
-            return;
+    function renderHwpxQuestionResult(resultBox, threadBox, payload, question) {
+        if (threadBox) {
+            removeHwpxQuestionEmptyState(threadBox);
+            threadBox.insertAdjacentHTML("afterbegin", buildHwpxQuestionEntryHtml(payload, question));
+            const firstEntry = threadBox.querySelector(".hwpx-question-entry");
+            if (firstEntry) {
+                firstEntry.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            }
         }
-        const citations = Array.isArray(payload.citations) ? payload.citations : [];
-        const citationHtml = citations.length ? citations.map((citation) => {
-            const quote = citation && citation.quote ? citation.quote : "";
-            return `<li class="text-xs text-gray-500">${quote}</li>`;
-        }).join("") : '<li class="text-xs text-gray-500">확인된 근거가 없습니다.</li>';
-        const answer = payload && payload.answer ? payload.answer : "문서 근거를 찾지 못했습니다.";
-        const badge = payload && payload.reused
-            ? '<span class="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-1">저장된 답변</span>'
-            : '';
-        container.innerHTML = `
-            <div class="rounded-2xl border border-gray-200 bg-white p-4 space-y-3">
-                <div class="flex items-center justify-between gap-2 flex-wrap">
-                    <p class="text-sm font-bold text-gray-700">문서 답변</p>
-                    ${badge}
-                </div>
-                <p class="text-sm text-gray-700 leading-relaxed">${answer}</p>
-                <div>
-                    <p class="text-xs font-bold text-gray-500 mb-2">근거</p>
-                    <ul class="space-y-1">${citationHtml}</ul>
-                </div>
-            </div>
-        `;
+        if (resultBox) {
+            resultBox.innerHTML = "";
+        }
     }
 
     function resolveHwpxHtmxTarget(detail) {
@@ -486,13 +1324,13 @@
         }
 
         result.innerHTML = `
-            <div class="clay-card p-5 md:p-6">
-                <div class="mb-4 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
+            <div class="hwpx-result-shell">
+                <div class="hwpx-alert hwpx-alert--error">
                     <i class="fa-solid fa-circle-exclamation mr-1"></i>${message}
                 </div>
-                <div class="rounded-2xl bg-white border border-gray-200 p-5 md:p-6 text-sm text-gray-500 leading-relaxed space-y-3">
-                    <p class="font-bold text-gray-700">문서를 다시 올려 주세요.</p>
-                    <p>잠시 후 다시 시도해도 같으면 파일 형식이 HWPX인지 먼저 확인해 주세요.</p>
+                <div class="hwpx-empty-state">
+                    <p class="hwpx-empty-state-title">문서를 다시 올려 주세요.</p>
+                    <p class="hwpx-empty-state-copy">잠시 후 다시 시도해도 같으면 파일 형식이 HWPX인지 먼저 확인해 주세요.</p>
                 </div>
             </div>
         `;
@@ -538,7 +1376,13 @@
             }
 
             renderHwpxUploadFallbackError("문서 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
-            window.alert("문서 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+            Swal.fire({
+                icon: "error",
+                title: "문서 처리 중 오류가 발생했습니다",
+                text: "잠시 후 다시 시도해 주세요.",
+                confirmButtonText: "확인",
+                confirmButtonColor: "#10b981"
+            });
         });
 
         document.body.addEventListener("htmx:sendError", function (event) {
@@ -549,14 +1393,21 @@
             }
 
             renderHwpxUploadFallbackError("네트워크 문제로 문서를 보내지 못했습니다. 연결 상태를 확인해 주세요.");
-            window.alert("네트워크 문제로 문서를 보내지 못했습니다. 연결 상태를 확인해 주세요.");
+            Swal.fire({
+                icon: "error",
+                title: "네트워크 문제로 문서를 보내지 못했습니다",
+                text: "연결 상태를 확인해 주세요.",
+                confirmButtonText: "확인",
+                confirmButtonColor: "#10b981"
+            });
         });
     }
 
     function applyMobileCardEditingState() {
-        const isMobile = window.innerWidth < 768;
+        const isMobile = window.matchMedia("(max-width: 767px)").matches;
         const cards = document.querySelectorAll(".hwpx-work-card[data-mobile-extra-card='true']");
         cards.forEach((card) => {
+            card.classList.toggle("is-mobile-readonly", isMobile);
             card.querySelectorAll("[data-edit-field='true']").forEach((field) => {
                 field.disabled = isMobile;
             });
