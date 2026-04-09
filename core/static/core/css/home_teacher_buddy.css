@@ -185,14 +185,17 @@
 .teacher-buddy-style-ascii {
     margin: 0;
     display: block;
-    width: 100%;
+    width: max-content;
+    max-width: 100%;
+    margin-inline: auto;
     color: var(--teacher-buddy-ascii-start, #0f172a);
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
     font-size: 0.83rem;
     font-weight: 700;
     line-height: 1.24;
     letter-spacing: 0;
-    text-align: center;
+    font-variant-ligatures: none;
+    text-align: left;
     white-space: normal;
 }
 
@@ -1811,7 +1814,8 @@ body.teacher-buddy-modal-open {
 .teacher-buddy-settings-item-body {
     align-self: stretch;
     width: 100%;
-    min-height: 8.75rem;
+    min-height: 8.2rem;
+    padding: 0.9rem;
     justify-content: center;
     border-radius: 1.15rem;
     border: 1px solid rgba(148, 163, 184, 0.16);
@@ -1828,8 +1832,8 @@ body.teacher-buddy-modal-open {
 }
 
 .teacher-buddy-collection-ascii {
-    font-size: 0.82rem;
-    line-height: 1.14;
+    font-size: 0.88rem;
+    line-height: 1.12;
 }
 
 .teacher-buddy-settings-item-actions {

@@ -81,15 +81,29 @@
             .replace(/'/g, '&#39;');
     }
 
+    function normalizeAsciiLines(value) {
+        var raw = String(value || '');
+        if (!raw) {
+            return [];
+        }
+        var lines = raw.split(/\r?\n/);
+        var maxWidth = lines.reduce(function (currentMax, line) {
+            return Math.max(currentMax, String(line || '').length);
+        }, 0);
+        return lines.map(function (line) {
+            return String(line || '').padEnd(maxWidth, ' ');
+        });
+    }
+
     function renderAscii(node, value) {
         if (!node) {
             return;
         }
         node.innerHTML = '';
-        String(value || '').split(/\r?\n/).forEach(function (line) {
+        normalizeAsciiLines(value).forEach(function (line) {
             var row = document.createElement('span');
             row.className = 'teacher-buddy-ascii-line';
-            row.textContent = String(line || '').replace(/\s+$/, '');
+            row.textContent = line;
             node.appendChild(row);
         });
     }

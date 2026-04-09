@@ -53,6 +53,7 @@ from core.teacher_buddy_catalog import (
     get_teacher_buddy_skins_for_buddy,
     with_particle,
 )
+from core.templatetags.teacher_buddy_ascii import ascii_display_lines
 from products.models import Product
 
 
@@ -1052,6 +1053,19 @@ class TeacherBuddyCatalogTests(TestCase):
 
         family_counts = {family: len(keys) for family, keys in SILHOUETTE_FAMILY_SHEET.items()}
         self.assertTrue(all(count <= 2 for count in family_counts.values()))
+
+    def test_ascii_display_lines_keeps_fixed_width_canvas(self):
+        buddy = get_teacher_buddy("star_corner")
+        rendered_lines = ascii_display_lines(buddy.idle_ascii)
+
+        self.assertEqual(rendered_lines, buddy.idle_ascii.splitlines())
+        self.assertEqual(len({len(line) for line in rendered_lines}), 1)
+
+    def test_ascii_display_lines_pads_shorter_rows_without_trimming(self):
+        rendered_lines = ascii_display_lines(" /\\ \n<__>")
+
+        self.assertEqual(rendered_lines, [" /\\ ", "<__>"])
+        self.assertEqual(len({len(line) for line in rendered_lines}), 1)
 
     def test_catalog_messages_use_natural_particles(self):
         memo = next(buddy for buddy in all_teacher_buddies() if buddy.key == "memo_sprout")
