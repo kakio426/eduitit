@@ -1689,6 +1689,10 @@ body.teacher-buddy-modal-open {
     gap: 0.82rem;
 }
 
+.teacher-buddy-settings-item .teacher-buddy-settings-item-top {
+    align-items: center;
+}
+
 .teacher-buddy-settings-item-meta {
     display: flex;
     align-items: center;
@@ -1709,7 +1713,10 @@ body.teacher-buddy-modal-open {
 }
 
 .teacher-buddy-settings-item.is-locked {
-    opacity: 0.78;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.94)),
+        linear-gradient(135deg, rgba(226, 232, 240, 0.3), rgba(219, 234, 254, 0.18));
+    border-color: rgba(148, 163, 184, 0.22);
 }
 
 .teacher-buddy-profile-identity {
@@ -1794,6 +1801,7 @@ body.teacher-buddy-modal-open {
     font-size: 0.84rem;
     font-weight: 700;
     line-height: 1.55;
+    min-height: 2.6rem;
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
@@ -1801,6 +1809,9 @@ body.teacher-buddy-modal-open {
 }
 
 .teacher-buddy-settings-item-body {
+    align-self: stretch;
+    width: 100%;
+    min-height: 8.75rem;
     justify-content: center;
     border-radius: 1.15rem;
     border: 1px solid rgba(148, 163, 184, 0.16);
@@ -1809,9 +1820,20 @@ body.teacher-buddy-modal-open {
         rgba(255, 255, 255, 0.7);
 }
 
+.teacher-buddy-settings-item.is-locked .teacher-buddy-settings-item-body {
+    border-style: dashed;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(241, 245, 249, 0.82)),
+        rgba(248, 250, 252, 0.78);
+}
+
 .teacher-buddy-collection-ascii {
-    font-size: 0.76rem;
-    line-height: 1.16;
+    font-size: 0.82rem;
+    line-height: 1.14;
+}
+
+.teacher-buddy-settings-item-actions {
+    margin-top: auto;
 }
 
 .teacher-buddy-status-chip {

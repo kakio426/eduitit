@@ -939,6 +939,25 @@ class TeacherBuddyHomeRenderTests(TestCase):
         self.assertEqual(context["collection_items"][0]["key"], starter_key)
         self.assertFalse(context["collection_items"][0]["is_locked"])
 
+    def test_settings_collection_item_renders_non_empty_ascii_avatar(self):
+        self.client.login(username="buddyhome", password="pass1234")
+
+        response = self.client.get(reverse("settings"))
+        content = response.content.decode("utf-8")
+        starter_key = build_teacher_buddy_settings_context(self.user)["collection_items"][0]["key"]
+        match = re.search(
+            rf'<article[^>]*data-buddy-key="{re.escape(starter_key)}"[^>]*>(.*?)</article>',
+            content,
+            re.S,
+        )
+
+        self.assertIsNotNone(match)
+        article = match.group(1)
+        self.assertRegex(
+            article,
+            r'teacher-buddy-collection-avatar[\s\S]*?data-buddy-avatar-ascii="true"[^>]*>\s*[_./|\\()A-Za-z0-9-]',
+        )
+
     def test_sns_feed_renders_buddy_avatar_for_author(self):
         record_teacher_buddy_progress(self.user, Product.objects.first(), "home_quick")
         Post.objects.create(author=self.user, content="교실 메이트 아바타가 보여야 하는 글입니다.", post_type="general")
@@ -986,15 +1005,15 @@ class TeacherBuddyCatalogTests(TestCase):
         self.assertEqual(with_particle("메모싹", ("과", "와")), "메모싹과")
         self.assertEqual(with_particle("오로라", ("과", "와")), "오로라와")
 
-    def test_catalog_matches_40_buddy_and_44_skin_plan(self):
+    def test_catalog_matches_48_buddy_and_50_skin_plan(self):
         buddies = all_teacher_buddies()
         avatar_marks = [buddy.avatar_mark for buddy in buddies]
         total_skin_count = sum(len(get_teacher_buddy_skins_for_buddy(buddy.key)) for buddy in buddies)
 
-        self.assertEqual(TOTAL_BUDDY_COUNT, 40)
-        self.assertEqual(TOTAL_SKIN_COUNT, 44)
-        self.assertEqual(len(buddies), 40)
-        self.assertEqual(total_skin_count, 44)
+        self.assertEqual(TOTAL_BUDDY_COUNT, 48)
+        self.assertEqual(TOTAL_SKIN_COUNT, 50)
+        self.assertEqual(len(buddies), 48)
+        self.assertEqual(total_skin_count, 50)
         self.assertEqual(len(avatar_marks), len(set(avatar_marks)))
 
     def test_catalog_respects_ascii_and_silhouette_rules(self):

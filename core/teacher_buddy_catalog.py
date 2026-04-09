@@ -49,6 +49,15 @@ LOCKED_BUDDY_ASCII = "\n".join(
     )
 )
 
+LOCKED_AVATAR_ASCII = "\n".join(
+    (
+        " .--. ",
+        "/_.._\\",
+        "|_[]_|",
+        " '--' ",
+    )
+)
+
 
 @dataclass(frozen=True)
 class TeacherBuddyDefinition:
@@ -272,6 +281,20 @@ _BUDDIES = (
         "  /\\/\\    ",
         "   \\/     ",
     )),
+    _buddy("desk_pouch", "책상주머니", RARITY_COMMON, "butter", "DP", "seal", "pouch", "자주 쓰는 작은 준비물을 책상 곁에 포근히 모아 두는 살림 메이트예요.", (
+        "  ____    ",
+        " / __ \\   ",
+        "| |~~| |  ",
+        "| |__| |  ",
+        "'------'  ",
+    )),
+    _buddy("notice_pinwheel", "알림바람개비", RARITY_COMMON, "sky", "PW", "spark", "pinwheel", "수시로 바뀌는 공지와 할 일을 바람개비처럼 가볍게 돌려 알려 줘요.", (
+        "   /\\     ",
+        "  /..\\    ",
+        " <_==_>   ",
+        "  \\/\\/    ",
+        "   ||     ",
+    )),
     _buddy("stamp_captain", "도장반장", RARITY_RARE, "ruby", "SP", "seal", "stamp", "완료해야 할 순간에 도장 한 번 같은 확실함을 남겨 줘요.", (
         " .----.  ",
         "/ .--.\\  ",
@@ -356,6 +379,20 @@ _BUDDIES = (
         "|_|__|_| ",
         "  oo oo  ",
     )),
+    _buddy("seat_mapper", "자리맵퍼", RARITY_RARE, "cobalt", "SM", "grid", "seatmap", "자리와 역할 배치를 한눈에 읽히게 정리해 주는 배치 메이트예요.", (
+        " .-----.  ",
+        "|[] [] |  ",
+        "|  ..  |  ",
+        "|[]_[] |  ",
+        "'------'  ",
+    )),
+    _buddy("label_printer", "라벨프린터", RARITY_RARE, "teal", "LP", "cabinet", "printer", "이름표와 준비물 표기를 또렷하게 뽑아 정리 속도를 높여 줘요.", (
+        " .------. ",
+        "|[__] ..| ",
+        "| |____>| ",
+        "|_|____>| ",
+        "   ||||   ",
+    )),
     _buddy("board_aurora", "칠판오로라", RARITY_EPIC, "cobalt", "BA", "aurora", "aurora", "칠판 위 분위기를 오로라처럼 넓고 맑게 바꿔 주는 에픽 메이트예요.", (
         " .------. ",
         "| .--. *| ",
@@ -433,6 +470,20 @@ _BUDDIES = (
         "| |__| |  ",
         "|_/__\\_|  ",
     )),
+    _buddy("class_greenhouse", "교실온실", RARITY_EPIC, "leaf", "GH", "window", "greenhouse", "작은 아이디어와 교실 변화를 온실처럼 차분히 키워 주는 에픽 메이트예요.", (
+        "  .--.    ",
+        " /_.._\\   ",
+        "| |~~| |  ",
+        "| |__| |  ",
+        "'------'  ",
+    )),
+    _buddy("archive_atrium", "기록아트리움", RARITY_EPIC, "charcoal", "AR", "cabinet", "atrium", "기록, 공지, 수업 메모가 흩어지지 않도록 한가운데에서 흐름을 모아 줘요.", (
+        "  ____    ",
+        " /_[]_\\   ",
+        "| |..| |  ",
+        "| |[]| |  ",
+        "'------'  ",
+    )),
     _buddy("board_lighthouse", "칠판등대", RARITY_LEGENDARY, "nightgold", "LH", "lighthouse", "lighthouse", "교실 전체 흐름을 가장 밝은 방향으로 이끄는 전설 메이트예요.", (
         "    /\\    ",
         "   /++\\   ",
@@ -440,6 +491,22 @@ _BUDDIES = (
         " <| /\\ |> ",
         " <|_||_|> ",
         "   /__\\   ",
+    )),
+    _buddy("homeroom_observatory", "학급천문대", RARITY_LEGENDARY, "nightgold", "HO", "window", "observatory", "교실 전체 흐름을 멀리까지 읽어 내고 다음 움직임을 먼저 비춰 주는 전설 메이트예요.", (
+        "  .--.    ",
+        " /_++_\\   ",
+        "|  /\\  |  ",
+        "| |..| |  ",
+        "|_|__|_|  ",
+        "  /__\\    ",
+    )),
+    _buddy("festival_clocktower", "축제시계탑", RARITY_LEGENDARY, "sunset", "FT", "lighthouse", "clocktower", "행사와 하루의 리듬을 가장 또렷한 울림으로 맞춰 주는 전설 메이트예요.", (
+        "   /\\     ",
+        "  /12\\    ",
+        " | .. |   ",
+        " | || |   ",
+        " |_||_|   ",
+        "  /__\\    ",
     )),
 )
 
@@ -465,6 +532,10 @@ _RARE_SKIN_THEMES = (
     ("ice", "빙하빛", "ice", "IC"),
     ("leaf", "초록빛", "leaf", "LF"),
     ("lilac", "라일락빛", "lilac", "LL"),
+    ("pearl", "펄룸", "ice", "PR"),
+    ("graphite", "그라파이트", "charcoal", "GP"),
+    ("ember", "앰버빛", "sunset", "AM"),
+    ("ocean", "오션룸", "teal", "OC"),
 )
 
 

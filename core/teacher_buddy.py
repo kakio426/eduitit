@@ -25,6 +25,7 @@ from .models import (
 from .seo import SITE_CANONICAL_BASE_URL
 from .teacher_buddy_catalog import (
     COMMON_BUDDY_KEYS,
+    LOCKED_AVATAR_ASCII,
     LOCKED_BUDDY_ASCII,
     RARITY_COMMON,
     RARITY_EPIC,
@@ -278,6 +279,10 @@ def _style_summary_text(*, buddy_unlocked: bool, unlocked_skin_count: int, total
     return f"스타일 {unlocked_styles}/{total_styles}"
 
 
+def _build_avatar_ascii_text(value: str) -> str:
+    return "\n".join(str(value or "").splitlines()[:5])
+
+
 def _compact_style_label(*, label: str, buddy_name: str) -> str:
     normalized = str(label or "").strip()
     if not normalized:
@@ -362,6 +367,7 @@ def _locked_buddy_payload(
     }
     return {
         "key": buddy.key,
+        "is_buddy": True,
         "name": buddy.name,
         "rarity": buddy.rarity,
         "rarity_label": buddy.rarity_label,
@@ -370,6 +376,7 @@ def _locked_buddy_payload(
         "ascii_tokens": _build_ascii_tokens(locked=True),
         "avatar_mark": "?",
         "preview_badge": "?",
+        "avatar_ascii": _build_avatar_ascii_text(LOCKED_AVATAR_ASCII),
         "selected_skin_key": "",
         "selected_skin_label": "",
         "selected_skin_short_label": "기본",
@@ -450,6 +457,7 @@ def _serialize_buddy(
     unlocked_skin_count = len(style_unlock_map)
     return {
         "key": buddy.key,
+        "is_buddy": True,
         "name": buddy.name,
         "rarity": buddy.rarity,
         "rarity_label": buddy.rarity_label,
@@ -461,6 +469,7 @@ def _serialize_buddy(
         ),
         "avatar_mark": buddy.avatar_mark,
         "preview_badge": selected_skin.preview_badge if selected_skin else buddy.avatar_mark,
+        "avatar_ascii": _build_avatar_ascii_text(buddy.idle_ascii),
         "selected_skin_key": selected_skin.key if selected_skin else "",
         "selected_skin_label": selected_skin.label if selected_skin else "기본 스타일",
         "selected_skin_short_label": _compact_style_label(
@@ -499,7 +508,6 @@ def _build_avatar_context_from_buddy_payload(
     sticker_dust: int = 0,
 ) -> dict[str, object]:
     cosmetic_key, cosmetic_label = _cosmetic_tier(sticker_dust)
-    avatar_ascii_lines = str(buddy_payload.get("idle_ascii") or "").splitlines()[:5]
     return {
         "is_buddy": True,
         "initial": initial,
@@ -508,7 +516,7 @@ def _build_avatar_context_from_buddy_payload(
         "rarity_label": buddy_payload["rarity_label"],
         "avatar_mark": buddy_payload["avatar_mark"],
         "preview_badge": buddy_payload.get("preview_badge") or buddy_payload["avatar_mark"],
-        "avatar_ascii": "\n".join(avatar_ascii_lines),
+        "avatar_ascii": buddy_payload.get("avatar_ascii") or _build_avatar_ascii_text(buddy_payload.get("idle_ascii") or ""),
         "palette": buddy_payload["palette"],
         "palette_tokens": buddy_payload["palette_tokens"],
         "title": f"{buddy_payload['name']} 대표 메이트",

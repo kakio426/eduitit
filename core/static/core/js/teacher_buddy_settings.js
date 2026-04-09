@@ -117,6 +117,23 @@
             '</div>';
     }
 
+    function updateCompactAvatar(node, buddy) {
+        var tokens;
+        if (!node || !buddy) {
+            return;
+        }
+        tokens = buddy.palette_tokens || {};
+        node.classList.add('is-buddy');
+        node.style.setProperty('--buddy-avatar-start', tokens.bg_start || '#dbeafe');
+        node.style.setProperty('--buddy-avatar-end', tokens.bg_end || '#e0e7ff');
+        node.style.setProperty('--buddy-avatar-text', tokens.text || '#0f172a');
+        node.style.setProperty('--buddy-avatar-accent', tokens.accent || '#4f46e5');
+        node.setAttribute('title', (buddy.name || '메이트') + ' 프로필');
+        node.innerHTML = '' +
+            '<pre class="teacher-buddy-avatar-ascii" data-buddy-avatar-ascii="true">' + escapeHtml(buddy.avatar_ascii || '') + '</pre>' +
+            '<span class="teacher-buddy-avatar-dot" aria-hidden="true"></span>';
+    }
+
     function getSelectionState(root) {
         var representativeCard = root.querySelector('[data-buddy-preview-card="representative"]');
         return {
@@ -295,8 +312,12 @@
         }
         var summary = card.querySelector('[data-buddy-style-summary="true"]');
         var ascii = card.querySelector('.teacher-buddy-collection-ascii');
+        var avatar = card.querySelector('.teacher-buddy-collection-avatar');
         if (summary && item.style_summary_text) {
             summary.textContent = item.style_summary_text;
+        }
+        if (avatar) {
+            updateCompactAvatar(avatar, item);
         }
         if (ascii) {
             renderAscii(ascii, item.idle_ascii || '');
