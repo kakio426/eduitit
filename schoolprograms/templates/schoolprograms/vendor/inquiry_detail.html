@@ -113,6 +113,10 @@
                         <div class="mt-4 rounded-2xl bg-orange-50 px-4 py-4 text-sm font-bold text-orange-700">
                             제안을 보낸 상태입니다. 교사 확인을 기다리거나, 추가 요청이 오면 아래 대화 스레드에서 이어서 조율하세요.
                         </div>
+                    {% elif thread.status == "on_hold" %}
+                        <div class="mt-4 rounded-2xl bg-amber-50 px-4 py-4 text-sm font-bold text-amber-700">
+                            교사가 내부 검토를 위해 잠시 보류한 상태입니다. 급하게 다시 제안하기보다 추가 요청이 오면 이어서 조율하세요.
+                        </div>
                     {% endif %}
                     <form method="post" class="mt-5 space-y-4">
                         {% csrf_token %}

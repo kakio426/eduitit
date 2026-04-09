@@ -57,14 +57,43 @@
                         {% if thread.status != "closed" %}
                             <div class="mt-4 rounded-2xl bg-white/80 px-4 py-4">
                                 <p class="text-sm font-black text-slate-900">다음 단계</p>
-                                <p class="mt-2 text-sm leading-6 text-slate-700">조건이 맞으면 바로 합의 완료로 정리하고, 더 조율할 내용이 있으면 아래 메시지에서 추가 조건을 보내세요.</p>
-                                <form method="post" class="mt-4">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="action" value="accept_proposal">
-                                    <button type="submit" class="inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-slate-900 px-4 text-sm font-black text-white">
-                                        제안 수락하고 합의 완료
-                                    </button>
-                                </form>
+                                <p class="mt-2 text-sm leading-6 text-slate-700">조건이 맞으면 바로 수락하고, 내부 확인이 더 필요하면 보류로 두고, 가격이나 일정 조정이 필요하면 재협의로 다시 돌릴 수 있습니다.</p>
+                                <div class="mt-4 flex flex-wrap gap-3">
+                                    <form method="post">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="accept_proposal">
+                                        <button type="submit" class="inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-slate-900 px-4 text-sm font-black text-white">
+                                            제안 수락하고 합의 완료
+                                        </button>
+                                    </form>
+                                    <form method="post">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="hold_proposal">
+                                        <button type="submit" class="inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-amber-200 bg-amber-50 px-4 text-sm font-black text-amber-700">
+                                            내부 검토로 보류
+                                        </button>
+                                    </form>
+                                    <form method="post">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="request_revision">
+                                        <button type="submit" class="inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700">
+                                            재협의 요청
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        {% elif thread.is_agreement_reached %}
+                            <div class="mt-4 rounded-2xl bg-emerald-50 px-4 py-4 text-sm font-bold text-emerald-700">
+                                제안을 수락해 합의 완료로 정리된 상태입니다.
+                            </div>
+                        {% else %}
+                            <div class="mt-4 rounded-2xl bg-slate-100 px-4 py-4 text-sm font-bold text-slate-600">
+                                종료된 제안 카드입니다.
+                            </div>
+                        {% endif %}
+                        {% if thread.status == "on_hold" %}
+                            <div class="mt-4 rounded-2xl bg-amber-50 px-4 py-4 text-sm font-bold text-amber-700">
+                                내부 검토를 위해 잠시 보류한 상태입니다. 준비가 되면 아래 메시지로 다시 조율할 수 있습니다.
                             </div>
                         {% endif %}
                         <div class="mt-4 space-y-4 text-sm">

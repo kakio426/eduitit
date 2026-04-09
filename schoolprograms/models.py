@@ -261,6 +261,7 @@ class InquiryThread(models.Model):
         AWAITING_VENDOR = "awaiting_vendor", "업체 답변 대기"
         IN_PROGRESS = "in_progress", "진행 중"
         PROPOSAL_SENT = "proposal_sent", "제안 도착"
+        ON_HOLD = "on_hold", "보류 중"
         CLOSED = "closed", "종료"
 
     class SenderRole(models.TextChoices):
@@ -323,6 +324,8 @@ class InquiryThread(models.Model):
     def teacher_bucket(self) -> str:
         if self.status == self.Status.CLOSED:
             return "closed"
+        if self.status == self.Status.ON_HOLD:
+            return "hold"
         if self.status == self.Status.PROPOSAL_SENT and getattr(self, "proposal", None) is not None:
             return "proposal"
         if self.last_message_sender_role == self.SenderRole.VENDOR:
@@ -333,6 +336,8 @@ class InquiryThread(models.Model):
     def vendor_bucket(self) -> str:
         if self.status == self.Status.CLOSED:
             return "closed"
+        if self.status == self.Status.ON_HOLD:
+            return "hold"
         if self.status == self.Status.PROPOSAL_SENT:
             return "proposal"
         if self.status == self.Status.AWAITING_VENDOR:

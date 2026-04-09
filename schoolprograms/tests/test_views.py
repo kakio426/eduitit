@@ -353,6 +353,71 @@ class SchoolProgramsInquiryTests(TestCase):
         self.assertTrue(thread.is_agreement_reached)
         self.assertEqual(thread.workflow_status_label, "합의 완료")
 
+    def test_teacher_can_hold_proposal_and_thread_moves_to_hold_bucket(self):
+        self.client.force_login(self.teacher_user)
+        self.client.post(reverse("schoolprograms:create_inquiry", args=[self.listing.slug]), self._inquiry_payload())
+        thread = InquiryThread.objects.get(listing=self.listing, teacher=self.teacher_user)
+
+        self.client.force_login(self.company_user)
+        self.client.post(
+            reverse("schoolprograms:vendor_inquiry_detail", args=[thread.id]),
+            {
+                "action": "proposal",
+                "price_text": "총액 140만원부터 또는 학급당 35만원",
+                "included_items": "강사 파견, 체험 재료, 사후 정리",
+                "schedule_note": "5월 둘째 주 화·수 오전 가능",
+                "preparation_note": "빔프로젝터와 책상 배치만 부탁드립니다.",
+                "followup_request": "정확한 반 수와 강당 여부를 알려 주세요.",
+            },
+        )
+
+        self.client.force_login(self.teacher_user)
+        response = self.client.post(
+            reverse("schoolprograms:teacher_inquiry_detail", args=[thread.id]),
+            {"action": "hold_proposal"},
+        )
+
+        self.assertRedirects(response, reverse("schoolprograms:teacher_inquiry_detail", args=[thread.id]))
+        thread.refresh_from_db()
+        self.assertEqual(thread.status, InquiryThread.Status.ON_HOLD)
+        self.assertEqual(thread.teacher_bucket, "hold")
+        self.assertEqual(thread.vendor_bucket, "hold")
+
+        teacher_inquiries = self.client.get(reverse("schoolprograms:teacher_inquiries"), {"tab": "hold"})
+        self.assertContains(teacher_inquiries, "보류 중")
+        self.assertContains(teacher_inquiries, "찾아오는 과학 체험")
+
+    def test_teacher_can_request_revision_and_thread_returns_to_progress(self):
+        self.client.force_login(self.teacher_user)
+        self.client.post(reverse("schoolprograms:create_inquiry", args=[self.listing.slug]), self._inquiry_payload())
+        thread = InquiryThread.objects.get(listing=self.listing, teacher=self.teacher_user)
+
+        self.client.force_login(self.company_user)
+        self.client.post(
+            reverse("schoolprograms:vendor_inquiry_detail", args=[thread.id]),
+            {
+                "action": "proposal",
+                "price_text": "총액 140만원부터 또는 학급당 35만원",
+                "included_items": "강사 파견, 체험 재료, 사후 정리",
+                "schedule_note": "5월 둘째 주 화·수 오전 가능",
+                "preparation_note": "빔프로젝터와 책상 배치만 부탁드립니다.",
+                "followup_request": "정확한 반 수와 강당 여부를 알려 주세요.",
+            },
+        )
+
+        self.client.force_login(self.teacher_user)
+        response = self.client.post(
+            reverse("schoolprograms:teacher_inquiry_detail", args=[thread.id]),
+            {"action": "request_revision"},
+        )
+
+        self.assertRedirects(response, reverse("schoolprograms:teacher_inquiry_detail", args=[thread.id]))
+        thread.refresh_from_db()
+        self.assertEqual(thread.status, InquiryThread.Status.IN_PROGRESS)
+        self.assertEqual(thread.teacher_bucket, "progress")
+        self.assertEqual(thread.vendor_bucket, "progress")
+        self.assertIn("재협의 요청", thread.last_message_preview)
+
 
 class SchoolProgramsSavedListingTests(TestCase):
     def setUp(self):

@@ -819,6 +819,7 @@ def teacher_inquiries(request):
         "new": sum(1 for thread in threads if thread.bucket == "new"),
         "progress": sum(1 for thread in threads if thread.bucket == "progress"),
         "proposal": sum(1 for thread in threads if thread.bucket == "proposal"),
+        "hold": sum(1 for thread in threads if thread.bucket == "hold"),
         "closed": sum(1 for thread in threads if thread.bucket == "closed"),
     }
 
@@ -877,6 +878,38 @@ def teacher_inquiry_detail(request, thread_id):
             thread.is_agreement_reached = True
             thread.save(update_fields=["status", "is_agreement_reached", "updated_at"])
             messages.success(request, "제안을 수락하고 합의 완료로 정리했습니다.")
+            return redirect("schoolprograms:teacher_inquiry_detail", thread_id=thread.id)
+
+        if action == "hold_proposal":
+            if not hasattr(thread, "proposal"):
+                messages.error(request, "보류할 제안 카드가 아직 없습니다.")
+                return redirect("schoolprograms:teacher_inquiry_detail", thread_id=thread.id)
+            InquiryMessage.objects.create(
+                thread=thread,
+                sender=request.user,
+                sender_role=InquiryThread.SenderRole.TEACHER,
+                body="[보류] 내부 일정과 예산을 다시 확인한 뒤 이어서 답변드리겠습니다.",
+            )
+            thread.status = InquiryThread.Status.ON_HOLD
+            thread.is_agreement_reached = False
+            thread.save(update_fields=["status", "is_agreement_reached", "updated_at"])
+            messages.success(request, "제안을 보류 상태로 두었습니다.")
+            return redirect("schoolprograms:teacher_inquiry_detail", thread_id=thread.id)
+
+        if action == "request_revision":
+            if not hasattr(thread, "proposal"):
+                messages.error(request, "재협의를 요청할 제안 카드가 아직 없습니다.")
+                return redirect("schoolprograms:teacher_inquiry_detail", thread_id=thread.id)
+            InquiryMessage.objects.create(
+                thread=thread,
+                sender=request.user,
+                sender_role=InquiryThread.SenderRole.TEACHER,
+                body="[재협의 요청] 제안 조건을 조금 더 조율하고 싶습니다. 아래 메시지에서 세부 요청을 이어가겠습니다.",
+            )
+            thread.status = InquiryThread.Status.IN_PROGRESS
+            thread.is_agreement_reached = False
+            thread.save(update_fields=["status", "is_agreement_reached", "updated_at"])
+            messages.success(request, "재협의 상태로 전환했습니다.")
             return redirect("schoolprograms:teacher_inquiry_detail", thread_id=thread.id)
 
         message_form = InquiryMessageForm(request.POST)
@@ -1086,6 +1119,7 @@ def vendor_inquiries(request):
         "new": sum(1 for thread in threads if thread.bucket == "new"),
         "progress": sum(1 for thread in threads if thread.bucket == "progress"),
         "proposal": sum(1 for thread in threads if thread.bucket == "proposal"),
+        "hold": sum(1 for thread in threads if thread.bucket == "hold"),
         "closed": sum(1 for thread in threads if thread.bucket == "closed"),
     }
 
