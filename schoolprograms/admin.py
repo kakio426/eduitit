@@ -4,6 +4,7 @@ from django.utils import timezone
 from .models import (
     InquiryMessage,
     InquiryProposal,
+    InquiryReview,
     InquiryThread,
     ListingImage,
     ListingViewLog,
@@ -98,6 +99,36 @@ class InquiryMessageAdmin(admin.ModelAdmin):
 class InquiryProposalAdmin(admin.ModelAdmin):
     list_display = ("thread", "sent_by", "price_text", "updated_at")
     search_fields = ("thread__listing__title", "sent_by__username", "price_text")
+
+
+@admin.register(InquiryReview)
+class InquiryReviewAdmin(admin.ModelAdmin):
+    list_display = ("listing", "provider", "teacher", "status", "published_at", "updated_at")
+    list_filter = ("status", "provider")
+    search_fields = ("listing__title", "provider__provider_name", "teacher__username", "headline", "body")
+    readonly_fields = ("created_at", "updated_at", "published_at")
+    actions = ("mark_reviews_published", "mark_reviews_hidden")
+
+    @admin.action(description="선택한 이용후기를 공개")
+    def mark_reviews_published(self, request, queryset):
+        updated = 0
+        now = timezone.now()
+        for review in queryset.select_related("provider", "listing"):
+            review.status = InquiryReview.Status.PUBLISHED
+            if review.published_at is None:
+                review.published_at = now
+            review.save()
+            updated += 1
+        self.message_user(request, f"{updated}개 이용후기를 공개했습니다.")
+
+    @admin.action(description="선택한 이용후기를 비공개")
+    def mark_reviews_hidden(self, request, queryset):
+        updated = 0
+        for review in queryset.select_related("provider", "listing"):
+            review.status = InquiryReview.Status.HIDDEN
+            review.save()
+            updated += 1
+        self.message_user(request, f"{updated}개 이용후기를 비공개로 전환했습니다.")
 
 
 @admin.register(ListingViewLog)

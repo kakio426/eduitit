@@ -139,6 +139,58 @@
                 </div>
             </aside>
         </section>
+
+        <section class="mt-10">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <p class="text-sm font-black uppercase tracking-[0.2em] text-orange-500">이용후기</p>
+                    <h2 class="mt-2 text-3xl font-black text-slate-900">실제 진행 뒤 남긴 후기만 모아봤어요</h2>
+                    <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-600">별점 대신 실제로 어떤 상황에서 진행했고 어땠는지가 보이도록, 합의 완료된 문의의 후기만 운영 검토 후 공개합니다.</p>
+                </div>
+                <div class="inline-flex items-center justify-center rounded-full bg-slate-900 px-4 py-2 text-sm font-black text-white">
+                    공개 후기 {{ published_review_count }}개
+                </div>
+            </div>
+
+            {% if published_reviews %}
+                <div class="mt-5 grid gap-4 lg:grid-cols-2">
+                    {% for review in published_reviews %}
+                        <article class="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm">
+                            <div class="flex flex-wrap gap-2">
+                                <span class="rounded-full bg-orange-100 px-3 py-1 text-xs font-black text-orange-700">이용후기</span>
+                                <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">{{ review.public_context_label }}</span>
+                                {% if review.recommended_for %}
+                                    <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700">추천 상황 있음</span>
+                                {% endif %}
+                            </div>
+                            <blockquote class="mt-5 text-2xl font-black leading-tight text-slate-900">“{{ review.headline }}”</blockquote>
+                            <p class="mt-4 text-sm leading-7 text-slate-600">{{ review.body|linebreaksbr }}</p>
+                            {% if review.recommended_for %}
+                                <div class="mt-4 rounded-2xl bg-slate-50 p-4">
+                                    <p class="text-xs font-black uppercase tracking-[0.18em] text-slate-400">이런 경우 추천</p>
+                                    <p class="mt-2 text-sm font-bold leading-6 text-slate-700">{{ review.recommended_for }}</p>
+                                </div>
+                            {% endif %}
+                            <div class="mt-5 flex flex-wrap items-center justify-between gap-3 text-xs">
+                                <p class="font-black uppercase tracking-[0.18em] text-slate-400">합의 완료 후 공개된 후기</p>
+                                <p class="font-bold text-slate-500">
+                                    {% if review.published_at %}
+                                        {{ review.published_at|date:"Y.m.d" }} 공개
+                                    {% else %}
+                                        {{ review.created_at|date:"Y.m.d" }} 작성
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="mt-5 rounded-[1.75rem] border border-dashed border-slate-300 bg-white px-6 py-8 shadow-sm">
+                    <p class="text-lg font-black text-slate-900">아직 공개된 이용후기는 없어요.</p>
+                    <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">이 업체와 실제로 합의 완료까지 진행한 교사가 후기를 남기면, 운영 검토를 거쳐 이 자리에 공개됩니다.</p>
+                </div>
+            {% endif %}
+        </section>
     </section>
 </main>
 {% endblock %}

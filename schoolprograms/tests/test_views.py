@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from core.models import UserProfile
-from schoolprograms.models import InquiryProposal, InquiryThread, ListingViewLog, ProgramListing, ProviderProfile, SavedListing
+from schoolprograms.models import InquiryProposal, InquiryReview, InquiryThread, ListingViewLog, ProgramListing, ProviderProfile, SavedListing
 
 
 User = get_user_model()
@@ -217,6 +217,26 @@ class SchoolProgramsInquiryTests(TestCase):
             "request_message": "강당 진행 가능 여부와 준비물 범위를 알고 싶습니다.",
         }
 
+    def _create_agreed_thread(self, *, teacher=None, listing=None, school_region="경기 수원", target_audience="초등 5학년 4개 반"):
+        target_listing = listing or self.listing
+        target_teacher = teacher or self.teacher_user
+        return InquiryThread.objects.create(
+            listing=target_listing,
+            provider=target_listing.provider,
+            teacher=target_teacher,
+            category=target_listing.category,
+            school_region=school_region,
+            preferred_schedule="5월 둘째 주 오전",
+            target_audience=target_audience,
+            expected_participants=110,
+            budget_text="학급당 30만원대 희망",
+            status=InquiryThread.Status.CLOSED,
+            is_agreement_reached=True,
+            last_message_at=timezone.now(),
+            last_message_preview="[합의 완료] 제안 내용을 기준으로 진행하겠습니다.",
+            last_message_sender_role=InquiryThread.SenderRole.TEACHER,
+        )
+
     def test_anonymous_and_company_cannot_create_teacher_inquiry(self):
         anonymous_response = self.client.post(reverse("schoolprograms:create_inquiry", args=[self.listing.slug]), self._inquiry_payload())
         self.assertEqual(anonymous_response.status_code, 302)
@@ -352,6 +372,102 @@ class SchoolProgramsInquiryTests(TestCase):
         self.assertEqual(thread.status, InquiryThread.Status.CLOSED)
         self.assertTrue(thread.is_agreement_reached)
         self.assertEqual(thread.workflow_status_label, "합의 완료")
+
+    def test_agreement_detail_accepts_review_submission_without_rating(self):
+        self.client.force_login(self.teacher_user)
+        self.client.post(reverse("schoolprograms:create_inquiry", args=[self.listing.slug]), self._inquiry_payload())
+        thread = InquiryThread.objects.get(listing=self.listing, teacher=self.teacher_user)
+
+        self.client.force_login(self.company_user)
+        self.client.post(
+            reverse("schoolprograms:vendor_inquiry_detail", args=[thread.id]),
+            {
+                "action": "proposal",
+                "price_text": "총액 140만원부터 또는 학급당 35만원",
+                "included_items": "강사 파견, 체험 재료, 사후 정리",
+                "schedule_note": "5월 둘째 주 화·수 오전 가능",
+                "preparation_note": "빔프로젝터와 책상 배치만 부탁드립니다.",
+                "followup_request": "정확한 반 수와 강당 여부를 알려 주세요.",
+            },
+        )
+
+        self.client.force_login(self.teacher_user)
+        self.client.post(
+            reverse("schoolprograms:teacher_inquiry_detail", args=[thread.id]),
+            {"action": "accept_proposal"},
+        )
+        response = self.client.post(
+            reverse("schoolprograms:teacher_inquiry_detail", args=[thread.id]),
+            {
+                "action": "save_review",
+                "headline": "교실 진행 흐름이 안정적이었어요",
+                "body": "시간 안내가 분명했고 학생들이 끝까지 잘 따라왔습니다.",
+                "recommended_for": "학급 단위 체험과 강당 동시 운영",
+            },
+        )
+
+        self.assertRedirects(response, reverse("schoolprograms:teacher_inquiry_detail", args=[thread.id]))
+        review = InquiryReview.objects.get(thread=thread)
+        self.assertEqual(review.status, InquiryReview.Status.PENDING)
+        detail = self.client.get(reverse("schoolprograms:teacher_inquiry_detail", args=[thread.id]))
+        self.assertContains(detail, "남긴 이용후기")
+        self.assertContains(detail, "운영 검토 후 업체 상세에 공개됩니다.")
+        self.assertContains(detail, "교실 진행 흐름이 안정적이었어요")
+
+    def test_provider_detail_shows_only_published_reviews(self):
+        published_thread = self._create_agreed_thread()
+        InquiryReview.objects.create(
+            thread=published_thread,
+            listing=self.listing,
+            provider=self.provider,
+            teacher=self.teacher_user,
+            headline="현장 대응이 빠르고 안정적이었습니다",
+            body="시간 배분이 잘 되어 있어서 학급 운영이 편했습니다.",
+            recommended_for="학년 행사, 교실 순환형 체험",
+            status=InquiryReview.Status.PUBLISHED,
+        )
+        pending_teacher = create_user_with_role(username="teacher-review-pending", role="school", nickname="다른 교사")
+        pending_thread = self._create_agreed_thread(
+            teacher=pending_teacher,
+            school_region="서울 강서구",
+            target_audience="초등 4학년 2개 반",
+        )
+        InquiryReview.objects.create(
+            thread=pending_thread,
+            listing=self.listing,
+            provider=self.provider,
+            teacher=pending_teacher,
+            headline="아직 공개되면 안 되는 후기",
+            body="운영 검토 전 후기입니다.",
+            recommended_for="검토 전",
+            status=InquiryReview.Status.PENDING,
+        )
+
+        response = self.client.get(reverse("schoolprograms:provider_detail", args=[self.provider.slug]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "실제 진행 뒤 남긴 후기만 모아봤어요")
+        self.assertContains(response, "현장 대응이 빠르고 안정적이었습니다")
+        self.assertContains(response, "학년 행사, 교실 순환형 체험")
+        self.assertNotContains(response, "아직 공개되면 안 되는 후기")
+
+    def test_teacher_cannot_leave_review_before_agreement(self):
+        self.client.force_login(self.teacher_user)
+        self.client.post(reverse("schoolprograms:create_inquiry", args=[self.listing.slug]), self._inquiry_payload())
+        thread = InquiryThread.objects.get(listing=self.listing, teacher=self.teacher_user)
+
+        response = self.client.post(
+            reverse("schoolprograms:teacher_inquiry_detail", args=[thread.id]),
+            {
+                "action": "save_review",
+                "headline": "미리 남기면 안 되는 후기",
+                "body": "합의 전 후기",
+                "recommended_for": "",
+            },
+        )
+
+        self.assertRedirects(response, reverse("schoolprograms:teacher_inquiry_detail", args=[thread.id]))
+        self.assertFalse(InquiryReview.objects.filter(thread=thread).exists())
 
     def test_teacher_can_hold_proposal_and_thread_moves_to_hold_bucket(self):
         self.client.force_login(self.teacher_user)

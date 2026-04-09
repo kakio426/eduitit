@@ -414,6 +414,72 @@ class InquiryProposal(models.Model):
         return f"제안 {self.thread_id}"
 
 
+class InquiryReview(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "운영 검토 중"
+        PUBLISHED = "published", "공개중"
+        HIDDEN = "hidden", "비공개"
+
+    thread = models.OneToOneField(
+        InquiryThread,
+        on_delete=models.CASCADE,
+        related_name="review",
+    )
+    listing = models.ForeignKey(
+        ProgramListing,
+        on_delete=models.CASCADE,
+        related_name="reviews",
+    )
+    provider = models.ForeignKey(
+        ProviderProfile,
+        on_delete=models.CASCADE,
+        related_name="reviews",
+    )
+    teacher = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="school_program_reviews",
+    )
+    headline = models.CharField(max_length=120, verbose_name="한 줄 후기")
+    body = models.TextField(max_length=2000, verbose_name="이용후기")
+    recommended_for = models.CharField(max_length=180, blank=True, verbose_name="이런 경우 추천")
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+        verbose_name="공개 상태",
+    )
+    published_at = models.DateTimeField(blank=True, null=True, verbose_name="공개 시각")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-published_at", "-created_at", "-id"]
+        indexes = [
+            models.Index(fields=["provider", "status", "published_at"]),
+            models.Index(fields=["listing", "status", "published_at"]),
+        ]
+        verbose_name = "학교 프로그램 이용후기"
+        verbose_name_plural = "학교 프로그램 이용후기"
+
+    def __str__(self) -> str:
+        return f"{self.listing.title} 후기 {self.id}"
+
+    def save(self, *args, **kwargs):
+        if self.status == self.Status.PUBLISHED and self.published_at is None:
+            self.published_at = timezone.now()
+        elif self.status != self.Status.PUBLISHED:
+            self.published_at = None
+        super().save(*args, **kwargs)
+
+    @property
+    def public_context_label(self) -> str:
+        labels = [self.listing.title]
+        if self.thread.target_audience:
+            labels.append(self.thread.target_audience)
+        return " · ".join(label for label in labels if label)
+
+
 class SavedListing(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

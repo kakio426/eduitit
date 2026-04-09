@@ -19,12 +19,14 @@ from .forms import (
     InquiryCreateForm,
     InquiryMessageForm,
     InquiryProposalForm,
+    InquiryReviewForm,
     ProgramListingForm,
     ProviderProfileForm,
 )
 from .models import (
     InquiryMessage,
     InquiryProposal,
+    InquiryReview,
     InquiryThread,
     ListingImage,
     ListingViewLog,
@@ -584,6 +586,14 @@ def provider_detail(request, slug):
     if not listings:
         raise Http404("공개된 프로그램이 없습니다.")
 
+    published_reviews_queryset = (
+        InquiryReview.objects.select_related("listing", "thread")
+        .filter(provider=provider, status=InquiryReview.Status.PUBLISHED)
+        .order_by("-published_at", "-created_at", "-id")
+    )
+    published_review_count = published_reviews_queryset.count()
+    published_reviews = list(published_reviews_queryset[:4])
+
     selected_listing = _pick_listing_by_slug(
         listings,
         request.POST.get("listing_slug") if request.method == "POST" else request.GET.get("activity"),
@@ -621,6 +631,8 @@ def provider_detail(request, slug):
             "selected_listing": selected_listing,
             "inquiry_form": inquiry_form,
             "provider_inquiry_login_url": provider_inquiry_login_url,
+            "published_reviews": published_reviews,
+            "published_review_count": published_review_count,
         },
         status=400 if request.method == "POST" and inquiry_form is not None and inquiry_form.errors else 200,
     )
@@ -845,14 +857,37 @@ def teacher_inquiry_detail(request, thread_id):
         return denied
 
     thread = get_object_or_404(
-        _inquiry_base_queryset().select_related("proposal"),
+        _inquiry_base_queryset().select_related("proposal", "review"),
         id=thread_id,
         teacher=request.user,
     )
+    review = getattr(thread, "review", None)
     message_form = InquiryMessageForm()
+    review_form = InquiryReviewForm(instance=review) if thread.is_agreement_reached and review is None else None
+    response_status = 200
 
     if request.method == "POST":
         action = str(request.POST.get("action") or "message").strip()
+        if action == "save_review":
+            if not thread.is_agreement_reached:
+                messages.error(request, "합의가 완료된 문의에만 이용후기를 남길 수 있습니다.")
+                return redirect("schoolprograms:teacher_inquiry_detail", thread_id=thread.id)
+            if review is not None:
+                messages.error(request, "이용후기는 한 번만 남길 수 있습니다.")
+                return redirect("schoolprograms:teacher_inquiry_detail", thread_id=thread.id)
+            review_form = InquiryReviewForm(request.POST)
+            if review_form.is_valid():
+                review = review_form.save(commit=False)
+                review.thread = thread
+                review.listing = thread.listing
+                review.provider = thread.provider
+                review.teacher = request.user
+                review.status = InquiryReview.Status.PENDING
+                review.save()
+                messages.success(request, "이용후기를 남겼습니다. 운영 검토 후 업체 상세에 공개됩니다.")
+                return redirect("schoolprograms:teacher_inquiry_detail", thread_id=thread.id)
+            response_status = 400
+
         if action == "close":
             thread.status = InquiryThread.Status.CLOSED
             thread.is_agreement_reached = False
@@ -912,21 +947,23 @@ def teacher_inquiry_detail(request, thread_id):
             messages.success(request, "재협의 상태로 전환했습니다.")
             return redirect("schoolprograms:teacher_inquiry_detail", thread_id=thread.id)
 
-        message_form = InquiryMessageForm(request.POST)
-        if message_form.is_valid():
-            InquiryMessage.objects.create(
-                thread=thread,
-                sender=request.user,
-                sender_role=InquiryThread.SenderRole.TEACHER,
-                body=message_form.cleaned_data["body"],
-            )
-            next_status = InquiryThread.Status.IN_PROGRESS
-            if thread.status != InquiryThread.Status.CLOSED:
-                thread.status = next_status
-                thread.is_agreement_reached = False
-                thread.save(update_fields=["status", "is_agreement_reached", "updated_at"])
-            messages.success(request, "추가 메시지를 보냈습니다.")
-            return redirect("schoolprograms:teacher_inquiry_detail", thread_id=thread.id)
+        if action == "message":
+            message_form = InquiryMessageForm(request.POST)
+            if message_form.is_valid():
+                InquiryMessage.objects.create(
+                    thread=thread,
+                    sender=request.user,
+                    sender_role=InquiryThread.SenderRole.TEACHER,
+                    body=message_form.cleaned_data["body"],
+                )
+                next_status = InquiryThread.Status.IN_PROGRESS
+                if thread.status != InquiryThread.Status.CLOSED:
+                    thread.status = next_status
+                    thread.is_agreement_reached = False
+                    thread.save(update_fields=["status", "is_agreement_reached", "updated_at"])
+                messages.success(request, "추가 메시지를 보냈습니다.")
+                return redirect("schoolprograms:teacher_inquiry_detail", thread_id=thread.id)
+            response_status = 400
 
     return _render_schoolprograms(
         request,
@@ -937,8 +974,11 @@ def teacher_inquiry_detail(request, thread_id):
             "canonical_url": request.build_absolute_uri(reverse("schoolprograms:teacher_inquiry_detail", args=[thread.id])),
             "thread": thread,
             "message_form": message_form,
+            "review": review,
+            "review_form": review_form,
         },
         noindex=True,
+        status=response_status,
     )
 
 

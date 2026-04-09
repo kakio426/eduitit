@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from django import forms
 
-from .models import InquiryProposal, ProgramListing, ProviderProfile
+from .models import InquiryProposal, InquiryReview, ProgramListing, ProviderProfile
 
 
 def _normalize_csv_text(value: str) -> str:
@@ -183,4 +183,34 @@ class InquiryProposalForm(forms.ModelForm):
             "schedule_note": forms.Textarea(attrs={"rows": 3}),
             "preparation_note": forms.Textarea(attrs={"rows": 3}),
             "followup_request": forms.Textarea(attrs={"rows": 3}),
+        }
+
+
+class InquiryReviewForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if isinstance(field.widget, forms.Textarea):
+                field.widget.attrs["class"] = TEXTAREA_CLASS
+            else:
+                field.widget.attrs["class"] = TEXT_INPUT_CLASS
+
+    class Meta:
+        model = InquiryReview
+        fields = [
+            "headline",
+            "body",
+            "recommended_for",
+        ]
+        widgets = {
+            "headline": forms.TextInput(attrs={"placeholder": "예) 준비가 잘 되어 있어서 교실 진행이 매끄러웠어요"}),
+            "body": forms.Textarea(
+                attrs={
+                    "rows": 5,
+                    "placeholder": "실제 진행 분위기, 시간 운영, 학생 반응, 현장 대응에서 좋았던 점을 적어 주세요.",
+                }
+            ),
+            "recommended_for": forms.TextInput(
+                attrs={"placeholder": "예) 학년 행사, 강당 진행, 3개 반 이상 동시 운영"}
+            ),
         }
