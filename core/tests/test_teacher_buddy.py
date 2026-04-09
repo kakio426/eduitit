@@ -947,8 +947,7 @@ class TeacherBuddyHomeRenderTests(TestCase):
         response = self.client.get(reverse("home"))
 
         self.assertContains(response, "teacher-buddy-avatar")
-        self.assertContains(response, 'data-buddy-avatar-badge="true"')
-        self.assertNotContains(response, 'data-buddy-avatar-ascii="true"')
+        self.assertContains(response, 'data-buddy-avatar-ascii="true"')
 
     def test_public_share_page_and_image_are_accessible_anonymously(self):
         record_teacher_buddy_progress(self.user, Product.objects.first(), "home_quick")
@@ -963,7 +962,7 @@ class TeacherBuddyHomeRenderTests(TestCase):
 
         self.assertEqual(page_response.status_code, 200)
         self.assertContains(page_response, "공개 메이트 카드")
-        self.assertContains(page_response, 'data-buddy-avatar-badge="true"')
+        self.assertContains(page_response, 'data-buddy-avatar-ascii="true"')
         self.assertContains(page_response, "teacher-buddy-share-ascii")
         self.assertEqual(image_response.status_code, 200)
         self.assertEqual(image_response["Content-Type"], "image/svg+xml; charset=utf-8")

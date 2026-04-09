@@ -24,7 +24,7 @@
             <div class="teacher-buddy-profile-card-head">
                 <div class="teacher-buddy-profile-identity">
                     <div data-buddy-preview-avatar="representative">
-                        {% include 'core/partials/teacher_buddy_avatar.html' with avatar_context=teacher_buddy_current_avatar size_class='h-16 w-16' extra_class='teacher-buddy-profile-avatar teacher-buddy-avatar--hero' render_mode='badge' %}
+                        {% include 'core/partials/teacher_buddy_avatar.html' with avatar_context=teacher_buddy_current_avatar size_class='h-16 w-16' extra_class='teacher-buddy-profile-avatar teacher-buddy-avatar--hero' %}
                     </div>
                     <div class="teacher-buddy-profile-intro">
                         <p class="teacher-buddy-settings-label">대표 메이트</p>
@@ -163,7 +163,7 @@
             data-buddy-style-total="{{ item.style_total_count }}"
         >
             <div class="teacher-buddy-settings-item-top">
-                {% include 'core/partials/teacher_buddy_avatar.html' with avatar_context=item size_class='h-12 w-12' extra_class='teacher-buddy-collection-avatar' render_mode='badge' %}
+                {% include 'core/partials/teacher_buddy_avatar.html' with avatar_context=item size_class='h-12 w-12' extra_class='teacher-buddy-collection-avatar' %}
                 <div class="min-w-0 flex-1">
                     <div class="teacher-buddy-collection-meta">
                         <p class="teacher-buddy-collection-name">{{ item.name }}</p>

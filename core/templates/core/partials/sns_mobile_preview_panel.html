@@ -42,7 +42,7 @@
         aria-label="소통 글 상세 보기"
     >
         <div class="flex items-start gap-3">
-            {% include 'core/partials/teacher_buddy_avatar.html' with avatar_context=post.teacher_buddy_avatar_context size_class='h-9 w-9' extra_class='teacher-buddy-avatar--sns' render_mode='badge' %}
+            {% include 'core/partials/teacher_buddy_avatar.html' with avatar_context=post.teacher_buddy_avatar_context size_class='h-9 w-9' extra_class='teacher-buddy-avatar--sns' %}
             <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 mb-1">
                     <span class="font-bold text-sm text-slate-800">{% if post.author.userprofile and post.author.userprofile.nickname %}{{ post.author.userprofile.nickname }}{% else %}{{ post.author.username }}{% endif %}</span>

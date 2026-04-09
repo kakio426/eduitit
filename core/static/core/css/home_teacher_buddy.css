@@ -1401,15 +1401,16 @@ body.teacher-buddy-modal-open {
 
 .teacher-buddy-avatar-ascii {
     margin: 0;
+    display: block;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-    font-size: 0.34rem;
+    font-size: 0.35rem;
     font-weight: 800;
-    line-height: 1.04;
-    letter-spacing: -0.01em;
+    line-height: 1;
+    letter-spacing: 0;
+    font-variant-ligatures: none;
     white-space: pre;
     text-align: center;
-    transform: scale(0.86);
-    transform-origin: center;
+    transform-origin: center center;
     color: transparent;
     background: linear-gradient(180deg, var(--buddy-avatar-text), var(--buddy-avatar-accent, var(--buddy-avatar-text)));
     -webkit-background-clip: text;
@@ -1432,6 +1433,11 @@ body.teacher-buddy-modal-open {
     pointer-events: none;
 }
 
+.teacher-buddy-avatar--sns .teacher-buddy-avatar-ascii {
+    font-size: 0.31rem;
+    line-height: 0.98;
+}
+
 .teacher-buddy-avatar--sns .teacher-buddy-avatar-badge {
     font-size: 0.72rem;
 }
@@ -1450,12 +1456,14 @@ body.teacher-buddy-modal-open {
 
 .teacher-buddy-avatar--compose .teacher-buddy-avatar-ascii {
     font-size: 0.39rem;
-    transform: scale(0.94);
 }
 
 .teacher-buddy-avatar--hero .teacher-buddy-avatar-ascii {
     font-size: 0.44rem;
-    transform: scale(1);
+}
+
+.teacher-buddy-collection-avatar .teacher-buddy-avatar-ascii {
+    font-size: 0.37rem;
 }
 
 .teacher-buddy-avatar--glow {

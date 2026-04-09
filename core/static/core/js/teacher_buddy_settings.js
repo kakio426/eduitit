@@ -107,12 +107,12 @@
     function renderAvatarHTML(buddy) {
         var tokens = buddy.palette_tokens || {};
         return '' +
-            '<div class="teacher-buddy-avatar teacher-buddy-avatar--hero teacher-buddy-avatar--badge is-buddy h-16 w-16 teacher-buddy-profile-avatar" ' +
+            '<div class="teacher-buddy-avatar teacher-buddy-avatar--hero is-buddy h-16 w-16 teacher-buddy-profile-avatar" ' +
             'style="--buddy-avatar-start:' + (tokens.bg_start || '#dbeafe') + ';' +
             '--buddy-avatar-end:' + (tokens.bg_end || '#e0e7ff') + ';' +
             '--buddy-avatar-text:' + (tokens.text || '#0f172a') + ';' +
             '--buddy-avatar-accent:' + (tokens.accent || '#4f46e5') + ';">' +
-            '<span class="teacher-buddy-avatar-badge" data-buddy-avatar-badge="true">' + escapeHtml(buddy.preview_badge || buddy.avatar_mark || '?') + '</span>' +
+            '<pre class="teacher-buddy-avatar-ascii" data-buddy-avatar-ascii="true">' + escapeHtml(buddy.avatar_ascii || '') + '</pre>' +
             '<span class="teacher-buddy-avatar-dot" aria-hidden="true"></span>' +
             '</div>';
     }
