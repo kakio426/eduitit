@@ -1,13 +1,17 @@
 {% with avatar=avatar_context %}
 <div
-    class="teacher-buddy-avatar{% if avatar and avatar.is_buddy or avatar and avatar.avatar_mark and not avatar.is_locked %} is-buddy{% endif %}{% if avatar and avatar.cosmetic_tier %} teacher-buddy-avatar--{{ avatar.cosmetic_tier }}{% endif %}{% if avatar and avatar.rarity %} teacher-buddy-avatar--{{ avatar.rarity }}{% endif %} {{ size_class|default:'h-10 w-10' }} {{ extra_class|default:'' }}"
+    class="teacher-buddy-avatar{% if avatar and avatar.is_buddy or avatar and avatar.avatar_mark and not avatar.is_locked %} is-buddy{% endif %}{% if avatar and avatar.cosmetic_tier %} teacher-buddy-avatar--{{ avatar.cosmetic_tier }}{% endif %}{% if avatar and avatar.rarity %} teacher-buddy-avatar--{{ avatar.rarity }}{% endif %}{% if render_mode == 'badge' %} teacher-buddy-avatar--badge{% endif %} {{ size_class|default:'h-10 w-10' }} {{ extra_class|default:'' }}"
     {% if avatar and avatar.is_buddy or avatar and avatar.avatar_mark and not avatar.is_locked %}
     style="--buddy-avatar-start: {{ avatar.palette_tokens.bg_start|default:'#dbeafe' }}; --buddy-avatar-end: {{ avatar.palette_tokens.bg_end|default:'#e0e7ff' }}; --buddy-avatar-text: {{ avatar.palette_tokens.text|default:'#0f172a' }}; --buddy-avatar-accent: {{ avatar.palette_tokens.accent|default:'#4f46e5' }};"
     {% endif %}
     title="{% if avatar and avatar.title %}{{ avatar.title }}{% elif avatar and avatar.name %}{{ avatar.name }} 프로필{% else %}프로필{% endif %}"
 >
     {% if avatar and avatar.is_buddy or avatar and avatar.avatar_mark and not avatar.is_locked %}
+    {% if render_mode == 'badge' %}
+    <span class="teacher-buddy-avatar-badge {{ mark_class|default:'' }}" data-buddy-avatar-badge="true">{{ avatar.preview_badge|default:avatar.avatar_mark|default:'?' }}</span>
+    {% else %}
     <pre class="teacher-buddy-avatar-ascii {{ mark_class|default:'' }}" data-buddy-avatar-ascii="true">{{ avatar.avatar_ascii|default:'' }}</pre>
+    {% endif %}
     <span class="teacher-buddy-avatar-dot" aria-hidden="true"></span>
     {% else %}
     <span class="teacher-buddy-avatar-initial {{ mark_class|default:'' }}">{{ avatar.initial|default:'?' }}</span>

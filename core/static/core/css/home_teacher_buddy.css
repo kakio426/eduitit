@@ -1418,6 +1418,28 @@ body.teacher-buddy-modal-open {
     pointer-events: none;
 }
 
+.teacher-buddy-avatar-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--buddy-avatar-text);
+    font-size: 0.76rem;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    text-transform: uppercase;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.42);
+    pointer-events: none;
+}
+
+.teacher-buddy-avatar--sns .teacher-buddy-avatar-badge {
+    font-size: 0.72rem;
+}
+
+.teacher-buddy-avatar--compose .teacher-buddy-avatar-badge {
+    font-size: 0.88rem;
+}
+
 .teacher-buddy-avatar--compose .teacher-buddy-avatar-ascii {
     font-size: 0.39rem;
     transform: scale(0.94);
