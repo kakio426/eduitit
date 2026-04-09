@@ -7,25 +7,23 @@
     <section class="mx-auto max-w-7xl px-4 sm:px-6">
         <div class="rounded-[2rem] border border-white/70 bg-white/90 p-6 shadow-xl shadow-orange-100 sm:p-8">
             <p class="text-sm font-black uppercase tracking-[0.25em] text-orange-500">학교 체험·행사 찾기</p>
-            <h1 class="mt-3 text-4xl font-black text-slate-900 sm:text-5xl">전국 업체를 먼저 둘러보고 마음에 드는 곳을 고르세요</h1>
-            <p class="mt-4 max-w-4xl text-base leading-7 text-slate-600 sm:text-lg">
-                교사는 먼저 업체 소개를 보고, 들어가서 프로그램 내용과 활동 지역, 대략적인 가격을 확인한 뒤
-                궁금한 점을 바로 문의하면 됩니다.
-            </p>
-
-            <div class="mt-6 grid gap-4 md:grid-cols-3">
-                <div class="rounded-[1.5rem] bg-orange-50 px-5 py-4">
-                    <div class="text-xs font-black uppercase tracking-[0.18em] text-orange-500">승인 업체</div>
-                    <div class="mt-2 text-2xl font-black text-slate-900">{{ provider_count }}곳</div>
+            <div class="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                    <h1 class="text-4xl font-black text-slate-900 sm:text-5xl">학교로 찾아오는 업체를 먼저 둘러보세요</h1>
+                    <p class="mt-3 max-w-4xl text-base leading-7 text-slate-600 sm:text-lg">
+                        전국 업체 소개를 훑어보고, 마음에 드는 활동을 골라 활동 지역과 가격을 확인한 뒤 바로 문의하면 됩니다.
+                    </p>
                 </div>
-                <div class="rounded-[1.5rem] bg-slate-50 px-5 py-4">
-                    <div class="text-xs font-black uppercase tracking-[0.18em] text-slate-400">공개 프로그램</div>
-                    <div class="mt-2 text-2xl font-black text-slate-900">{{ listing_result_count }}개</div>
-                </div>
-                <div class="rounded-[1.5rem] bg-sky-50 px-5 py-4">
-                    <div class="text-xs font-black uppercase tracking-[0.18em] text-sky-500">탐색 순서</div>
-                    <div class="mt-2 text-base font-black text-slate-900">업체 보기 → 프로그램 보기 → 문의 대화</div>
-                </div>
+                {% if can_use_saved_listings %}
+                    <div class="flex flex-wrap gap-2">
+                        <a href="{% url 'schoolprograms:teacher_saved_listings' %}" class="inline-flex min-h-[42px] items-center rounded-full border border-slate-200 bg-white px-4 text-sm font-black text-slate-600 shadow-sm">
+                            저장한 프로그램 {{ saved_count }}
+                        </a>
+                        <a href="{% url 'schoolprograms:teacher_compare_listings' %}" class="inline-flex min-h-[42px] items-center rounded-full border border-slate-200 bg-white px-4 text-sm font-black text-slate-600 shadow-sm">
+                            비교함 {{ compare_count }}
+                        </a>
+                    </div>
+                {% endif %}
             </div>
 
             <div class="mt-6 flex flex-wrap gap-2">
@@ -43,20 +41,106 @@
                         {{ label }}
                     </a>
                 {% endfor %}
-                {% if can_use_saved_listings %}
-                    <a href="{% url 'schoolprograms:teacher_saved_listings' %}" class="inline-flex min-h-[42px] items-center rounded-full border border-slate-200 bg-white px-4 text-sm font-black text-slate-600">
-                        저장한 프로그램 {{ saved_count }}
-                    </a>
-                    <a href="{% url 'schoolprograms:teacher_compare_listings' %}" class="inline-flex min-h-[42px] items-center rounded-full border border-slate-200 bg-white px-4 text-sm font-black text-slate-600">
-                        비교함 {{ compare_count }}
-                    </a>
-                {% endif %}
             </div>
 
+            <form method="get" class="mt-5 space-y-3">
+                {% if selected_category %}
+                    <input type="hidden" name="category" value="{{ selected_category }}">
+                {% endif %}
+                <div class="flex flex-col gap-3 lg:flex-row lg:items-end">
+                    <label class="block lg:w-60">
+                        <span class="mb-2 block text-sm font-black text-slate-700">지역</span>
+                        <select name="province" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700">
+                            <option value="">전국 전체</option>
+                            {% for value, label in province_choices %}
+                                <option value="{{ value }}"{% if selected_province == value %} selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="submit" class="inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-slate-900 px-5 text-sm font-black text-white">
+                            지역 적용
+                        </button>
+                        <a href="{% url 'schoolprograms:landing' %}" class="inline-flex min-h-[48px] items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700">
+                            전체 보기
+                        </a>
+                    </div>
+                </div>
+
+                <details id="advanced-filters-panel"{% if has_advanced_filters %} open{% endif %} class="mt-4 rounded-[1.75rem] border border-slate-200 bg-slate-50/80 p-4 shadow-inner shadow-slate-100">
+                    <summary class="cursor-pointer list-none text-sm font-black text-slate-900">
+                        조건 더 보기
+                    </summary>
+                    <div class="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-[180px_160px_160px_minmax(0,1fr)]">
+                        <label class="block">
+                            <span class="mb-2 block text-sm font-black text-slate-700">세부 지역</span>
+                            <input
+                                type="text"
+                                name="region_text"
+                                list="landing-region-suggestions"
+                                value="{{ selected_region_text }}"
+                                placeholder="예) 수원, 강서구, 분당"
+                                class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700"
+                            >
+                        </label>
+                        <label class="block">
+                            <span class="mb-2 block text-sm font-black text-slate-700">대상 학년</span>
+                            <select name="grade_band" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700">
+                                <option value="">전체 대상</option>
+                                {% for value, label in grade_band_choices %}
+                                    <option value="{{ value }}"{% if selected_grade_band == value %} selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <label class="block">
+                            <span class="mb-2 block text-sm font-black text-slate-700">진행 방식</span>
+                            <select name="delivery_mode" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700">
+                                <option value="">전체 방식</option>
+                                {% for value, label in delivery_mode_choices %}
+                                    <option value="{{ value }}"{% if selected_delivery_mode == value %} selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <label class="block">
+                            <span class="mb-2 block text-sm font-black text-slate-700">주제 검색</span>
+                            <input
+                                type="text"
+                                name="q"
+                                value="{{ q }}"
+                                placeholder="예) 환경, 생태, 협동, 스포츠"
+                                class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700"
+                            >
+                        </label>
+                    </div>
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        <button type="submit" class="inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-orange-500 px-5 text-sm font-black text-white shadow-lg shadow-orange-200">
+                            조건 적용
+                        </button>
+                        {% if has_active_filters %}
+                            <a href="{% url 'schoolprograms:landing' %}" class="inline-flex min-h-[48px] items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700">
+                                조건 모두 지우기
+                            </a>
+                        {% endif %}
+                    </div>
+                </details>
+            </form>
+            {% if has_active_filters %}
+                <div class="mt-4 flex flex-wrap items-center gap-2">
+                    <span class="text-xs font-black uppercase tracking-[0.18em] text-slate-400">현재 조건</span>
+                    {% for label in active_filter_labels %}
+                        <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-700">{{ label }}</span>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            <datalist id="landing-region-suggestions">
+                {% for region in region_suggestions %}
+                    <option value="{{ region }}">
+                {% endfor %}
+            </datalist>
         </div>
     </section>
 
-    <section class="mx-auto mt-12 max-w-7xl px-4 sm:px-6">
+    <section class="mx-auto mt-10 max-w-7xl px-4 sm:px-6">
         <div class="flex items-end justify-between gap-4">
             <div>
                 <p class="text-sm font-black uppercase tracking-[0.2em] text-slate-500">전국 업체</p>
@@ -69,86 +153,77 @@
                 </h2>
             </div>
             <p class="text-sm font-bold text-slate-500">
-                업체 상세로 들어가면 프로그램 내용, 활동 지역, 대략적인 가격을 볼 수 있습니다.
+                업체 소개를 먼저 보고, 자세한 활동과 가격은 업체 상세에서 확인하세요.
             </p>
         </div>
 
         <div class="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {% for card in page_obj %}
-                <article class="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-100">
-                    <div class="flex items-start gap-4">
-                        <div class="h-20 w-20 flex-shrink-0 overflow-hidden rounded-2xl bg-slate-100">
-                            {% if card.representative_listing.primary_image and card.representative_listing.primary_image.image %}
-                                <img src="{{ card.representative_listing.primary_image.image.url }}" alt="{{ card.provider.provider_name }}" class="h-full w-full object-cover">
-                            {% else %}
-                                <div class="flex h-full items-center justify-center text-3xl">🎓</div>
-                            {% endif %}
-                        </div>
-                        <div class="min-w-0 flex-1">
-                            <div class="flex flex-wrap gap-2">
-                                <span class="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-black text-emerald-700">승인 업체</span>
-                                <span class="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-black text-slate-600">공개 활동 {{ card.listing_count }}개</span>
+                <article class="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm shadow-slate-100">
+                    <div class="relative aspect-[4/3] overflow-hidden bg-slate-100">
+                        {% if card.representative_listing.primary_image and card.representative_listing.primary_image.image %}
+                            <img src="{{ card.representative_listing.primary_image.image.url }}" alt="{{ card.provider.provider_name }}" class="h-full w-full object-cover">
+                        {% else %}
+                            <div class="flex h-full items-center justify-center bg-[radial-gradient(circle_at_top,_#fde68a,_#fff7ed_50%,_#e0f2fe)] px-8 text-center text-lg font-black leading-7 text-slate-700">
+                                {{ card.provider.provider_name }}
                             </div>
-                            <h3 class="mt-3 truncate text-lg font-black text-slate-900">{{ card.provider.provider_name }}</h3>
-                            <p class="mt-1 text-sm font-bold text-slate-500">{{ card.summary }}</p>
+                        {% endif %}
+                        <div class="absolute left-4 top-4 flex flex-wrap gap-2">
+                            <span class="rounded-full bg-white/90 px-3 py-1 text-[11px] font-black text-slate-900 shadow-sm">운영 승인</span>
+                            <span class="rounded-full bg-slate-900/90 px-3 py-1 text-[11px] font-black text-white">{{ card.trust_badge }}</span>
                         </div>
                     </div>
 
-                    <div class="mt-4 flex flex-wrap gap-2">
-                        {% for label in card.category_labels %}
-                            <span class="rounded-full bg-orange-50 px-3 py-1 text-xs font-black text-orange-700">{{ label }}</span>
-                        {% endfor %}
-                    </div>
-
-                    <div class="mt-4 rounded-2xl bg-slate-50 p-4">
-                        <div class="text-xs font-black text-slate-400">대표 활동</div>
-                        <div class="mt-2 space-y-2">
-                            {% for listing in card.preview_listings %}
-                                <div class="text-sm font-bold text-slate-700">{{ listing.title }}</div>
+                    <div class="p-5">
+                        <div class="flex flex-wrap gap-2">
+                            <span class="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-black text-slate-600">공개 활동 {{ card.listing_count }}개</span>
+                            {% for label in card.category_labels %}
+                                <span class="rounded-full bg-orange-50 px-3 py-1 text-[11px] font-black text-orange-700">{{ label }}</span>
                             {% endfor %}
                         </div>
-                    </div>
 
-                    <div class="mt-4 flex flex-wrap gap-2">
-                        {% for region_label in card.region_labels %}
-                            <span class="rounded-full bg-sky-50 px-3 py-1 text-xs font-black text-sky-700">{{ region_label }}</span>
-                        {% endfor %}
-                    </div>
+                        <h3 class="mt-4 text-xl font-black text-slate-900">{{ card.provider.provider_name }}</h3>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">{{ card.summary }}</p>
 
-                    <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-                        <div class="rounded-2xl bg-slate-50 px-3 py-3">
-                            <dt class="font-black text-slate-400">주 활동 지역</dt>
-                            <dd class="mt-1 font-bold text-slate-700">{{ card.service_area_text }}</dd>
+                        <div class="mt-4 rounded-2xl bg-slate-50 p-4">
+                            <div class="text-xs font-black uppercase tracking-[0.18em] text-slate-400">대표 활동</div>
+                            <div class="mt-2 text-base font-black text-slate-900">{{ card.headline_listing_title }}</div>
                         </div>
-                        <div class="rounded-2xl bg-slate-50 px-3 py-3">
-                            <dt class="font-black text-slate-400">대표 가격</dt>
-                            <dd class="mt-1 font-bold text-slate-700">{{ card.price_hint }}</dd>
-                        </div>
-                        <div class="rounded-2xl bg-slate-50 px-3 py-3">
-                            <dt class="font-black text-slate-400">최근 관심</dt>
-                            <dd class="mt-1 font-bold text-slate-700">
-                                {% if card.recent_interest %}
-                                    최근 2주 조회 {{ card.recent_interest }}회
-                                {% else %}
-                                    새로 둘러보기 좋은 업체
-                                {% endif %}
-                            </dd>
-                        </div>
-                        <div class="rounded-2xl bg-slate-50 px-3 py-3">
-                            <dt class="font-black text-slate-400">누적 조회</dt>
-                            <dd class="mt-1 font-bold text-slate-700">{{ card.total_view_count }}회</dd>
-                        </div>
-                    </dl>
 
-                    <div class="mt-5 flex gap-3">
-                        <a href="{% url 'schoolprograms:provider_detail' card.provider.slug %}" class="inline-flex min-h-[46px] flex-1 items-center justify-center rounded-2xl bg-slate-900 px-4 text-sm font-black text-white">
-                            업체 자세히 보기
-                        </a>
+                        <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                            <div class="rounded-2xl bg-slate-50 px-3 py-3">
+                                <dt class="font-black text-slate-400">주 활동 지역</dt>
+                                <dd class="mt-1 font-bold text-slate-700">{{ card.service_area_text }}</dd>
+                            </div>
+                            <div class="rounded-2xl bg-slate-50 px-3 py-3">
+                                <dt class="font-black text-slate-400">대표 가격</dt>
+                                <dd class="mt-1 font-bold text-slate-700">{{ card.price_hint }}</dd>
+                            </div>
+                        </dl>
+
+                        <div class="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-4">
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="text-xs font-black uppercase tracking-[0.18em] text-slate-400">신뢰 정보</div>
+                                <div class="text-xs font-black text-slate-500">{{ card.trust_badge }}</div>
+                            </div>
+                            <div class="mt-2 text-sm font-black text-slate-900">{{ card.trust_summary }}</div>
+                            <div class="mt-1 text-sm leading-6 text-slate-600">{{ card.trust_context }}</div>
+                        </div>
+
+                        <div class="mt-5 flex gap-3">
+                            <a href="{% url 'schoolprograms:provider_detail' card.provider.slug %}" class="inline-flex min-h-[48px] flex-1 items-center justify-center rounded-2xl bg-slate-900 px-4 text-sm font-black text-white">
+                                업체 자세히 보기
+                            </a>
+                        </div>
                     </div>
                 </article>
             {% empty %}
                 <div class="rounded-[1.75rem] border border-dashed border-slate-300 bg-white px-6 py-12 text-center text-sm font-bold text-slate-500 md:col-span-2 xl:col-span-3">
-                    조건에 맞는 업체가 없습니다. 아래에서 지역이나 주제를 조금 넓혀 보세요.
+                    <p class="text-base font-black text-slate-900">조건에 맞는 업체가 아직 없습니다.</p>
+                    <p class="mt-2">지역이나 주제를 조금 넓혀서 다시 둘러보세요.</p>
+                    <a href="{% url 'schoolprograms:landing' %}" class="mt-4 inline-flex min-h-[44px] items-center justify-center rounded-full border border-slate-200 bg-white px-4 text-sm font-black text-slate-700">
+                        조건 완화하고 전체 보기
+                    </a>
                 </div>
             {% endfor %}
         </div>
@@ -168,105 +243,6 @@
                 {% endif %}
             </div>
         {% endif %}
-    </section>
-
-    <section class="mx-auto mt-12 max-w-7xl px-4 sm:px-6">
-        <div class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                    <p class="text-sm font-black uppercase tracking-[0.2em] text-slate-500">필터</p>
-                    <h2 class="mt-2 text-2xl font-black text-slate-900">못 찾을 때만 조건으로 더 좁혀보세요</h2>
-                    <p class="mt-3 text-sm leading-6 text-slate-600">
-                        처음에는 전국 업체를 넓게 보고, 필요할 때만 지역이나 주제로 좁히는 구조가 더 편합니다.
-                    </p>
-                </div>
-                <a href="{% url 'schoolprograms:landing' %}" class="inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-slate-200 px-4 text-sm font-black text-slate-600">
-                    전체 업체로 돌아가기
-                </a>
-            </div>
-
-            <form method="get" class="mt-6 grid gap-4 rounded-[1.75rem] bg-slate-50 p-4 sm:grid-cols-2 xl:grid-cols-[150px_180px_160px_160px_160px_minmax(0,1fr)]">
-                <label class="block">
-                    <span class="mb-2 block text-sm font-black text-slate-700">지역</span>
-                    <select name="province" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700">
-                        <option value="">전체 지역</option>
-                        {% for value, label in province_choices %}
-                            <option value="{{ value }}"{% if selected_province == value %} selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </label>
-                <label class="block">
-                    <span class="mb-2 block text-sm font-black text-slate-700">세부 지역</span>
-                    <input
-                        type="text"
-                        name="region_text"
-                        list="landing-region-suggestions"
-                        value="{{ selected_region_text }}"
-                        placeholder="예) 수원, 강서구, 분당"
-                        class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700"
-                    >
-                </label>
-                <label class="block">
-                    <span class="mb-2 block text-sm font-black text-slate-700">카테고리</span>
-                    <select name="category" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700">
-                        <option value="">전체 카테고리</option>
-                        {% for value, label in category_choices %}
-                            <option value="{{ value }}"{% if selected_category == value %} selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </label>
-                <label class="block">
-                    <span class="mb-2 block text-sm font-black text-slate-700">대상 학년</span>
-                    <select name="grade_band" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700">
-                        <option value="">전체 대상</option>
-                        {% for value, label in grade_band_choices %}
-                            <option value="{{ value }}"{% if selected_grade_band == value %} selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </label>
-                <label class="block">
-                    <span class="mb-2 block text-sm font-black text-slate-700">진행 방식</span>
-                    <select name="delivery_mode" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700">
-                        <option value="">전체 방식</option>
-                        {% for value, label in delivery_mode_choices %}
-                            <option value="{{ value }}"{% if selected_delivery_mode == value %} selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </label>
-                <label class="block">
-                    <span class="mb-2 block text-sm font-black text-slate-700">주제 검색</span>
-                    <div class="flex gap-2">
-                        <input
-                            type="text"
-                            name="q"
-                            value="{{ q }}"
-                            placeholder="예) 환경, 생태, 협동, 스포츠"
-                            class="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700"
-                        >
-                        <button type="submit" class="inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-orange-500 px-5 text-sm font-black text-white shadow-lg shadow-orange-200">
-                            조건 적용
-                        </button>
-                    </div>
-                </label>
-            </form>
-            <datalist id="landing-region-suggestions">
-                {% for region in region_suggestions %}
-                    <option value="{{ region }}">
-                {% endfor %}
-            </datalist>
-
-            {% if show_vendor_cta %}
-                <div class="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 px-5 py-4">
-                    <div>
-                        <div class="text-sm font-black text-slate-900">업체라면 학교 대상 프로그램을 등록할 수 있습니다</div>
-                        <div class="mt-1 text-sm text-slate-600">회사 정보와 증빙을 먼저 채운 뒤 프로그램을 심사 요청하는 구조입니다.</div>
-                    </div>
-                    <a href="{% url 'account_login' %}?next={% url 'schoolprograms:vendor_dashboard' %}" class="inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700">
-                        업체 등록 안내 보기
-                    </a>
-                </div>
-            {% endif %}
-        </div>
     </section>
 </main>
 {% endblock %}

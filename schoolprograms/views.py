@@ -174,7 +174,37 @@ def _rank_listing_queryset(queryset):
     ).order_by("-is_featured", "-recent_interest", "-view_count", "-published_at", "-id")
 
 
-def _build_provider_cards(listings):
+def _published_review_meta_for_provider_ids(provider_ids):
+    if not provider_ids:
+        return {}
+
+    review_meta = {}
+    reviews = (
+        InquiryReview.objects.select_related("listing", "thread")
+        .filter(
+            provider_id__in=provider_ids,
+            status=InquiryReview.Status.PUBLISHED,
+        )
+        .order_by("provider_id", "-published_at", "-created_at", "-id")
+    )
+    for review in reviews:
+        info = review_meta.setdefault(
+            review.provider_id,
+            {
+                "count": 0,
+                "headline": "",
+                "context_label": "",
+            },
+        )
+        info["count"] += 1
+        if not info["headline"]:
+            info["headline"] = review.headline
+            info["context_label"] = review.public_context_label
+    return review_meta
+
+
+def _build_provider_cards(listings, *, review_meta=None):
+    review_meta = review_meta or {}
     cards_by_provider = {}
 
     for listing in listings:
@@ -187,14 +217,10 @@ def _build_provider_cards(listings):
                 "listings": [],
                 "category_labels": [],
                 "region_labels": [],
-                "recent_interest": 0,
-                "total_view_count": 0,
             }
             cards_by_provider[provider.pk] = card
 
         card["listings"].append(listing)
-        card["recent_interest"] += int(getattr(listing, "recent_interest", 0) or 0)
-        card["total_view_count"] += int(getattr(listing, "view_count", 0) or 0)
 
         category_label = listing.get_category_display()
         if category_label not in card["category_labels"]:
@@ -207,9 +233,9 @@ def _build_provider_cards(listings):
     cards = list(cards_by_provider.values())
     for card in cards:
         representative_listing = card["representative_listing"]
+        review_info = review_meta.get(card["provider"].pk, {})
         card["listing_count"] = len(card["listings"])
-        card["preview_listings"] = card["listings"][:3]
-        card["category_labels"] = card["category_labels"][:3]
+        card["category_labels"] = card["category_labels"][:2]
         card["region_labels"] = card["region_labels"][:2]
         card["headline_listing_title"] = representative_listing.title
         card["summary"] = card["provider"].summary or representative_listing.summary
@@ -219,6 +245,17 @@ def _build_provider_cards(listings):
             or representative_listing.public_regions_text
         )
         card["price_hint"] = representative_listing.price_text
+        card["review_count"] = int(review_info.get("count") or 0)
+        card["review_headline"] = str(review_info.get("headline") or "").strip()
+        card["review_context_label"] = str(review_info.get("context_label") or "").strip()
+        if card["review_count"]:
+            card["trust_badge"] = f"이용후기 {card['review_count']}개"
+            card["trust_summary"] = card["review_headline"]
+            card["trust_context"] = card["review_context_label"] or "합의 완료 후 공개된 후기"
+        else:
+            card["trust_badge"] = "운영 승인"
+            card["trust_summary"] = f"공개 활동 {card['listing_count']}개"
+            card["trust_context"] = "학교 검색에 공개된 업체"
 
     return cards
 
@@ -259,6 +296,13 @@ def _apply_listing_filters(
             | Q(theme_tags_text__icontains=q)
         )
     return queryset
+
+
+def _choice_label(choices, value):
+    for candidate, label in choices:
+        if candidate == value:
+            return label
+    return value
 
 
 def _teacher_saved_listings_queryset(user):
@@ -447,10 +491,24 @@ def landing(request):
         delivery_mode=delivery_mode,
     )
     ranked_listings = list(_rank_listing_queryset(listings))
-    provider_cards = _build_provider_cards(ranked_listings)
-    featured_provider_cards = provider_cards[:3]
+    review_meta = _published_review_meta_for_provider_ids({listing.provider_id for listing in ranked_listings})
+    provider_cards = _build_provider_cards(ranked_listings, review_meta=review_meta)
     page_obj = Paginator(provider_cards, 12).get_page(request.GET.get("page"))
     has_active_filters = bool(q or province or region_text or category or grade_band or delivery_mode)
+    has_advanced_filters = bool(region_text or grade_band or delivery_mode or q)
+    active_filter_labels = []
+    if category:
+        active_filter_labels.append(_choice_label(ProgramListing.Category.choices, category))
+    if province:
+        active_filter_labels.append(_choice_label(ProgramListing.PROVINCE_CHOICES, province))
+    if region_text:
+        active_filter_labels.append(region_text)
+    if grade_band:
+        active_filter_labels.append(_choice_label(ProgramListing.GRADE_BAND_CHOICES, grade_band))
+    if delivery_mode:
+        active_filter_labels.append(_choice_label(ProgramListing.DeliveryMode.choices, delivery_mode))
+    if q:
+        active_filter_labels.append(f"주제 {q}")
 
     return _render_schoolprograms(
         request,
@@ -459,11 +517,11 @@ def landing(request):
             "page_title": f"{SERVICE_TITLE} | Eduitit",
             "meta_description": "지역과 주제로 학교로 찾아오는 체험학습, 교사연수, 학교행사를 바로 비교하고 문의하세요.",
             "canonical_url": request.build_absolute_uri(reverse("schoolprograms:landing")),
-            "featured_provider_cards": featured_provider_cards,
             "page_obj": page_obj,
             "provider_count": len(provider_cards),
-            "listing_result_count": len(ranked_listings),
             "has_active_filters": has_active_filters,
+            "has_advanced_filters": has_advanced_filters,
+            "active_filter_labels": active_filter_labels,
             "region_suggestions": region_suggestions_for(province),
             "q": q,
             "selected_province": province,
@@ -478,7 +536,6 @@ def landing(request):
                 else 0
             ),
             "compare_count": _compare_count_for_request(request),
-            "show_vendor_cta": not (request.user.is_authenticated and _is_teacher_role(request.user)),
         },
     )
 

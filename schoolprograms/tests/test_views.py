@@ -89,9 +89,10 @@ class SchoolProgramsLandingTests(TestCase):
         response = self.client.get(reverse("schoolprograms:landing"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "전국 업체를 먼저 둘러보고 마음에 드는 곳을 고르세요")
+        self.assertContains(response, "학교로 찾아오는 업체를 먼저 둘러보세요")
         self.assertContains(response, self.provider.provider_name)
-        self.assertNotContains(response, "업체 등록하기")
+        self.assertContains(response, "조건 더 보기")
+        self.assertNotContains(response, "업체 등록 안내 보기")
 
 
 class SchoolProgramsDiscoveryTests(TestCase):
@@ -141,7 +142,7 @@ class SchoolProgramsDiscoveryTests(TestCase):
         response = self.client.get(reverse("schoolprograms:provider_detail", args=[self.provider.slug]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "이 페이지에서 바로 활동을 고르고 문의를 시작할 수 있습니다.")
+        self.assertContains(response, "활동을 고르면 오른쪽에서 바로 문의를 시작할 수 있습니다.")
         self.assertContains(response, "이 활동으로 문의 보내기")
         self.assertEqual(response.context["selected_listing"].pk, self.primary.pk)
 
@@ -162,6 +163,15 @@ class SchoolProgramsDiscoveryTests(TestCase):
         self.assertContains(response, "배움 체험연구소")
         self.assertNotContains(response, "전국 스포츠 랩")
 
+    def test_landing_hides_advanced_filters_by_default_and_removes_internal_metrics(self):
+        response = self.client.get(reverse("schoolprograms:landing"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="advanced-filters-panel"', html=False)
+        self.assertNotContains(response, 'id="advanced-filters-panel" open', html=False)
+        self.assertNotContains(response, "최근 관심")
+        self.assertNotContains(response, "누적 조회")
+
     def test_provider_pagination_handles_multiple_pages(self):
         for index in range(1, 14):
             _, provider = create_provider(username=f"bulkvendor{index}", provider_name=f"전국 체험 파트너 {index:02d}")
@@ -173,7 +183,7 @@ class SchoolProgramsDiscoveryTests(TestCase):
         self.assertContains(response, "2 /")
         self.assertContains(response, "전국 체험 파트너")
 
-    def test_recommendations_prioritize_recent_interest(self):
+    def test_provider_grid_prioritizes_recent_interest(self):
         _, hot_provider = create_provider(username="hotvendor", provider_name="요즘 인기 체험사")
         hot_listing = create_listing(
             provider=hot_provider,
@@ -193,9 +203,44 @@ class SchoolProgramsDiscoveryTests(TestCase):
         response = self.client.get(reverse("schoolprograms:landing"))
 
         self.assertEqual(response.status_code, 200)
-        featured = response.context["featured_provider_cards"]
-        self.assertGreaterEqual(len(featured), 1)
-        self.assertEqual(featured[0]["provider"].pk, hot_provider.pk)
+        provider_cards = response.context["page_obj"].object_list
+        self.assertGreaterEqual(len(provider_cards), 1)
+        self.assertEqual(provider_cards[0]["provider"].pk, hot_provider.pk)
+
+    def test_landing_card_surfaces_published_review_signal(self):
+        agreed_teacher = create_user_with_role(username="landing-review-teacher", role="school", nickname="후기교사")
+        agreed_thread = InquiryThread.objects.create(
+            listing=self.primary,
+            provider=self.provider,
+            teacher=agreed_teacher,
+            category=self.primary.category,
+            school_region="경기 수원",
+            preferred_schedule="5월 둘째 주 오전",
+            target_audience="초등 5학년 4개 반",
+            expected_participants=110,
+            budget_text="학급당 30만원대 희망",
+            status=InquiryThread.Status.CLOSED,
+            is_agreement_reached=True,
+            last_message_at=timezone.now(),
+            last_message_preview="[합의 완료] 진행 확정",
+            last_message_sender_role=InquiryThread.SenderRole.TEACHER,
+        )
+        InquiryReview.objects.create(
+            thread=agreed_thread,
+            listing=self.primary,
+            provider=self.provider,
+            teacher=agreed_teacher,
+            headline="학급 운영이 매끄러웠어요",
+            body="도입과 마무리가 분명해서 진행이 편했습니다.",
+            recommended_for="학급 단위 방문형 체험",
+            status=InquiryReview.Status.PUBLISHED,
+        )
+
+        response = self.client.get(reverse("schoolprograms:landing"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "이용후기 1개")
+        self.assertContains(response, "학급 운영이 매끄러웠어요")
 
 
 class SchoolProgramsInquiryTests(TestCase):
@@ -446,7 +491,7 @@ class SchoolProgramsInquiryTests(TestCase):
         response = self.client.get(reverse("schoolprograms:provider_detail", args=[self.provider.slug]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "실제 진행 뒤 남긴 후기만 모아봤어요")
+        self.assertContains(response, "실제 진행 후 공개된 후기")
         self.assertContains(response, "현장 대응이 빠르고 안정적이었습니다")
         self.assertContains(response, "학년 행사, 교실 순환형 체험")
         self.assertNotContains(response, "아직 공개되면 안 되는 후기")
