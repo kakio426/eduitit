@@ -1,6 +1,40 @@
 <nav class="home-v4-nav-list" data-home-v4-nav="{{ panel_name|default:'desktop' }}">
     {% for section in home_v4_nav_sections %}
     <div class="home-v4-nav-group home-v4-nav-group--{{ section.color }}" data-home-v4-nav-section="{{ section.key }}">
+        {% if section.is_direct %}
+        <a
+            href="{{ section.href }}"
+            class="home-v4-nav-item home-v4-nav-item--section"
+            data-home-v4-nav-direct-link="{{ section.key }}"
+            {% if section.is_external %}target="_blank" rel="noopener"{% endif %}
+            {% if close_action %}@click="{{ close_action }}"{% endif %}
+        >
+            <span class="home-v4-nav-item-main">
+                <span class="home-v4-nav-icon home-v4-nav-icon--{{ section.color }}">
+                    {% if section.icon %}
+                        {% if "fa-" in section.icon %}<i class="{{ section.icon }}"></i>{% else %}{{ section.icon }}{% endif %}
+                    {% else %}
+                        <i class="fa-solid fa-sparkles"></i>
+                    {% endif %}
+                </span>
+                <span class="home-v4-nav-copy min-w-0 flex-1">
+                    <span class="block truncate home-v4-nav-title">{{ section.title }}</span>
+                    {% if section.subtitle %}
+                    <span class="block truncate home-v4-nav-subtitle">{{ section.subtitle }}</span>
+                    {% endif %}
+                </span>
+            </span>
+            <span class="home-v4-nav-item-side">
+                <span class="home-v4-nav-chevron">
+                    {% if section.is_external %}
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                    {% else %}
+                    <i class="fa-solid fa-arrow-right"></i>
+                    {% endif %}
+                </span>
+            </span>
+        </a>
+        {% else %}
         <button
             type="button"
             class="home-v4-nav-item home-v4-nav-item--section"
@@ -99,6 +133,7 @@
             </div>
             {% endfor %}
         </div>
+        {% endif %}
     </div>
     {% endfor %}
 </nav>

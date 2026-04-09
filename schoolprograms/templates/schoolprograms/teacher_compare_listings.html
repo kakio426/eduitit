@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<main class="min-h-screen bg-slate-50 pt-32 pb-20">
+    <section class="mx-auto max-w-7xl px-4 sm:px-6">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <p class="text-sm font-black uppercase tracking-[0.2em] text-sky-500">프로그램 비교함</p>
+                <h1 class="mt-2 text-3xl font-black text-slate-900">후보 {{ compare_count }}개를 나란히 보고 바로 고르세요</h1>
+            </div>
+            <div class="flex flex-wrap gap-3">
+                <a href="{% url 'schoolprograms:teacher_saved_listings' %}" class="inline-flex min-h-[44px] items-center rounded-full bg-white px-4 text-sm font-black text-slate-600 shadow-sm">
+                    저장 {{ saved_count }}
+                </a>
+                <a href="{% url 'schoolprograms:landing' %}" class="inline-flex min-h-[44px] items-center rounded-full bg-slate-900 px-4 text-sm font-black text-white shadow-sm">
+                    프로그램 더 찾기
+                </a>
+            </div>
+        </div>
+
+        {% if compare_listings %}
+            <div class="mt-6 rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
+                <div class="flex flex-wrap items-center gap-3 text-sm font-bold text-slate-500">
+                    <span class="rounded-full bg-sky-50 px-4 py-2 text-sky-700">최대 {{ compare_limit }}개 비교</span>
+                    {% if compare_count < 2 %}
+                        <span class="rounded-full bg-amber-50 px-4 py-2 text-amber-700">한 개 더 담으면 차이가 더 잘 보입니다</span>
+                    {% else %}
+                        <span class="rounded-full bg-emerald-50 px-4 py-2 text-emerald-700">핵심 조건을 한 화면에서 비교 중</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <section class="mt-6 grid gap-4 lg:grid-cols-3">
+                {% for listing in compare_listings %}
+                    <article class="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
+                        <div class="flex flex-wrap gap-2">
+                            <span class="rounded-full bg-orange-100 px-3 py-1 text-xs font-black text-orange-700">{{ listing.get_category_display }}</span>
+                            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">{{ listing.provider.provider_name }}</span>
+                        </div>
+                        <h2 class="mt-4 text-xl font-black text-slate-900">{{ listing.title }}</h2>
+                        <p class="mt-3 text-sm leading-6 text-slate-600">{{ listing.summary }}</p>
+                        <div class="mt-5 flex gap-3">
+                            <a href="{% url 'schoolprograms:listing_detail' listing.slug %}" class="inline-flex min-h-[46px] flex-1 items-center justify-center rounded-2xl bg-slate-900 px-4 text-sm font-black text-white">
+                                상세 보기
+                            </a>
+                            <a href="{% url 'schoolprograms:teacher_compare_listings' %}?open={{ listing.slug }}#compare-inquiry-{{ listing.slug }}" class="inline-flex min-h-[46px] flex-1 items-center justify-center rounded-2xl bg-orange-500 px-4 text-sm font-black text-white">
+                                바로 문의
+                            </a>
+                        </div>
+                        <div class="mt-3">
+                            <form method="post" action="{% url 'schoolprograms:toggle_compare_listing' listing.slug %}" class="flex-1">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                <button type="submit" class="inline-flex min-h-[46px] w-full items-center justify-center rounded-2xl border border-slate-200 px-4 text-sm font-black text-slate-600">
+                                    비교 해제
+                                </button>
+                            </form>
+                        </div>
+                    </article>
+                {% endfor %}
+            </section>
+
+            <div class="mt-6 space-y-4">
+                <section class="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
+                    <h2 class="text-lg font-black text-slate-900">방문 지역</h2>
+                    <div class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {% for listing in compare_listings %}
+                            <div class="rounded-2xl bg-slate-50 p-4">
+                                <p class="text-xs font-black uppercase tracking-[0.15em] text-slate-400">{{ listing.title }}</p>
+                                <p class="mt-2 text-sm font-bold text-slate-700">{{ listing.public_regions_text }}</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <section class="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
+                    <h2 class="text-lg font-black text-slate-900">대상과 진행 방식</h2>
+                    <div class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {% for listing in compare_listings %}
+                            <div class="rounded-2xl bg-slate-50 p-4">
+                                <p class="text-xs font-black uppercase tracking-[0.15em] text-slate-400">{{ listing.title }}</p>
+                                <p class="mt-2 text-sm font-bold text-slate-700">{{ listing.get_delivery_mode_display }}</p>
+                                <div class="mt-3 flex flex-wrap gap-2">
+                                    {% for code, label in grade_band_choices %}
+                                        {% if code in listing.grade_bands %}
+                                            <span class="rounded-full bg-white px-3 py-1 text-xs font-black text-slate-600">{{ label }}</span>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <section class="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
+                    <h2 class="text-lg font-black text-slate-900">시간 · 인원 · 가격</h2>
+                    <div class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {% for listing in compare_listings %}
+                            <div class="rounded-2xl bg-slate-50 p-4">
+                                <p class="text-xs font-black uppercase tracking-[0.15em] text-slate-400">{{ listing.title }}</p>
+                                <dl class="mt-3 space-y-3 text-sm">
+                                    <div>
+                                        <dt class="font-black text-slate-400">진행 시간</dt>
+                                        <dd class="mt-1 font-bold text-slate-700">{{ listing.duration_text }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt class="font-black text-slate-400">수용 인원</dt>
+                                        <dd class="mt-1 font-bold text-slate-700">{{ listing.capacity_text }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt class="font-black text-slate-400">가격 표시</dt>
+                                        <dd class="mt-1 font-bold text-slate-700">{{ listing.price_text }}</dd>
+                                    </div>
+                                </dl>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <section class="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
+                    <h2 class="text-lg font-black text-slate-900">안전과 준비물</h2>
+                    <div class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {% for listing in compare_listings %}
+                            <div class="rounded-2xl bg-slate-50 p-4">
+                                <p class="text-xs font-black uppercase tracking-[0.15em] text-slate-400">{{ listing.title }}</p>
+                                <div class="mt-3 rounded-2xl bg-white p-4">
+                                    <h3 class="text-sm font-black text-slate-500">안전·보험</h3>
+                                    <p class="mt-2 text-sm leading-6 text-slate-700">{{ listing.safety_info|default:"문의 스레드에서 다시 확인할 수 있습니다."|linebreaksbr }}</p>
+                                </div>
+                                <div class="mt-3 rounded-2xl bg-white p-4">
+                                    <h3 class="text-sm font-black text-slate-500">준비물</h3>
+                                    <p class="mt-2 text-sm leading-6 text-slate-700">{{ listing.materials_info|default:"별도 준비 요청은 문의 시 확인 가능합니다."|linebreaksbr }}</p>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </section>
+            </div>
+
+            <section class="mt-6 rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <p class="text-sm font-black uppercase tracking-[0.15em] text-orange-500">바로 문의</p>
+                        <h2 class="mt-2 text-2xl font-black text-slate-900">비교 중인 후보로 바로 문의를 시작하세요</h2>
+                    </div>
+                    <p class="text-sm font-bold text-slate-500">후보를 고른 뒤 상세 화면으로 가지 않아도 됩니다.</p>
+                </div>
+                <div class="mt-5 space-y-4">
+                    {% for entry in compare_entries %}
+                        <details id="compare-inquiry-{{ entry.listing.slug }}" class="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4" {% if entry.is_open %}open{% endif %}>
+                            <summary class="cursor-pointer list-none">
+                                <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                                    <div>
+                                        <div class="flex flex-wrap gap-2">
+                                            <span class="rounded-full bg-white px-3 py-1 text-xs font-black text-orange-700">{{ entry.listing.get_category_display }}</span>
+                                            <span class="rounded-full bg-white px-3 py-1 text-xs font-black text-slate-600">{{ entry.listing.provider.provider_name }}</span>
+                                        </div>
+                                        <h3 class="mt-3 text-lg font-black text-slate-900">{{ entry.listing.title }}</h3>
+                                        <p class="mt-2 text-sm font-bold text-slate-500">{{ entry.listing.public_regions_text }} · {{ entry.listing.price_text }}</p>
+                                    </div>
+                                    <span class="inline-flex min-h-[42px] items-center justify-center rounded-full bg-orange-500 px-4 text-sm font-black text-white">
+                                        문의 카드 열기
+                                    </span>
+                                </div>
+                            </summary>
+                            <form method="post" action="{% url 'schoolprograms:create_compare_inquiry' entry.listing.slug %}" class="mt-5 space-y-4">
+                                {% csrf_token %}
+                                {% if entry.form.non_field_errors %}
+                                    <div class="rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">{{ entry.form.non_field_errors }}</div>
+                                {% endif %}
+                                <div class="grid gap-4 md:grid-cols-2">
+                                    {% for field in entry.form.visible_fields %}
+                                        <label class="block {% if field.name == 'request_message' %}md:col-span-2{% endif %}">
+                                            <span class="mb-2 block text-sm font-black text-slate-700">{{ field.label }}</span>
+                                            {{ field }}
+                                            {% if field.errors %}
+                                                <p class="mt-2 text-sm font-bold text-rose-600">{{ field.errors|join:", " }}</p>
+                                            {% endif %}
+                                        </label>
+                                    {% endfor %}
+                                </div>
+                                <div class="flex flex-col gap-3 sm:flex-row">
+                                    <button type="submit" class="inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-orange-500 px-5 text-sm font-black text-white">
+                                        {{ entry.listing.title }} 문의 보내기
+                                    </button>
+                                    <a href="{% url 'schoolprograms:listing_detail' entry.listing.slug %}" class="inline-flex min-h-[48px] items-center justify-center rounded-2xl border border-slate-200 px-5 text-sm font-black text-slate-600">
+                                        상세 먼저 보기
+                                    </a>
+                                </div>
+                            </form>
+                        </details>
+                    {% endfor %}
+                </div>
+            </section>
+        {% else %}
+            <div class="mt-6 rounded-[1.75rem] border border-dashed border-slate-300 bg-white px-6 py-14 text-center shadow-sm">
+                <p class="text-lg font-black text-slate-900">아직 비교함이 비어 있습니다</p>
+                <p class="mt-3 text-sm leading-6 text-slate-500">상세 화면이나 저장 목록에서 최대 {{ compare_limit }}개까지 담아 두면 여기서 한눈에 비교할 수 있습니다.</p>
+                <a href="{% url 'schoolprograms:landing' %}" class="mt-6 inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-orange-500 px-5 text-sm font-black text-white">
+                    프로그램 찾으러 가기
+                </a>
+            </div>
+        {% endif %}
+    </section>
+</main>
+{% endblock %}

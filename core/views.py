@@ -1424,6 +1424,57 @@ def _filter_home_v4_nav_products(section_key, products):
     ]
 
 
+DIRECT_HOME_NAV_ROUTE_META = {
+    'schoolprograms:landing': {
+        'key': 'schoolprograms',
+        'title': '학교 체험·행사 찾기',
+        'subtitle': '학교로 찾아오는 체험학습·행사를 바로 찾기',
+        'color': 'violet',
+    },
+}
+
+
+def _build_home_v4_direct_nav_section(product, *, fallback_color='slate'):
+    route_name = str(getattr(product, 'launch_route_name', '') or '').strip().lower()
+    meta = DIRECT_HOME_NAV_ROUTE_META.get(route_name, {})
+    href = getattr(product, 'launch_href', '') or ''
+    if not href:
+        return None
+
+    return {
+        'key': meta.get('key') or route_name.replace(':', '-'),
+        'title': getattr(product, 'public_service_name', '') or getattr(product, 'title', '') or meta.get('title') or '도구',
+        'subtitle': getattr(product, 'home_card_summary', '') or getattr(product, 'description', '') or meta.get('subtitle') or '',
+        'icon': getattr(product, 'icon', '') or 'fa-solid fa-sparkles',
+        'color': meta.get('color') or fallback_color,
+        'count': 1,
+        'products': [product],
+        'is_direct': True,
+        'href': href,
+        'is_external': bool(getattr(product, 'launch_is_external', False)),
+        'product_id': getattr(product, 'id', None),
+    }
+
+
+def _split_home_v4_direct_nav_sections(section_key, products, *, fallback_color='slate'):
+    if section_key != 'class_ops':
+        return list(products or []), []
+
+    nav_products = []
+    direct_sections = []
+    for product in list(products or []):
+        route_name = str(getattr(product, 'launch_route_name', '') or '').strip().lower()
+        if route_name not in DIRECT_HOME_NAV_ROUTE_META:
+            nav_products.append(product)
+            continue
+        direct_section = _build_home_v4_direct_nav_section(product, fallback_color=fallback_color)
+        if direct_section is None:
+            nav_products.append(product)
+            continue
+        direct_sections.append(direct_section)
+    return nav_products, direct_sections
+
+
 def _build_home_v4_nav_sections(primary_display_sections, secondary_display_sections, games):
     nav_sections = []
 
@@ -1432,7 +1483,13 @@ def _build_home_v4_nav_sections(primary_display_sections, secondary_display_sect
             *section.get('products', []),
             *section.get('overflow_products', []),
         ])
+        nav_products, direct_sections = _split_home_v4_direct_nav_sections(
+            section['key'],
+            nav_products,
+            fallback_color=section.get('color', 'slate'),
+        )
         if not nav_products:
+            nav_sections.extend(direct_sections)
             continue
         nav_sections.append({
             'key': section['key'],
@@ -1443,6 +1500,7 @@ def _build_home_v4_nav_sections(primary_display_sections, secondary_display_sect
             'count': len(nav_products),
             'products': nav_products,
         })
+        nav_sections.extend(direct_sections)
 
     if games:
         nav_sections.append({

@@ -2669,6 +2669,37 @@ class HomeV4ViewTest(TestCase):
             {product.launch_route_name for product in class_ops_section['products']},
         )
 
+    def test_v4_section_menu_surfaces_schoolprograms_as_direct_link(self):
+        Product.objects.create(
+            title="학교 체험·행사 찾기",
+            description="학교로 찾아오는 프로그램을 바로 찾기",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='schoolprograms:landing',
+            icon='🎪',
+        )
+        self._login('v4schoolprograms')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        nav_sections = response.context['home_v4_nav_sections']
+        class_ops_section = next(section for section in nav_sections if section['key'] == 'class_ops')
+        direct_section = next(section for section in nav_sections if section['key'] == 'schoolprograms')
+
+        self.assertNotIn(
+            'schoolprograms:landing',
+            {product.launch_route_name for product in class_ops_section['products']},
+        )
+        self.assertTrue(direct_section['is_direct'])
+        self.assertEqual(direct_section['href'], reverse('schoolprograms:landing'))
+        self.assertIn(f'href="{reverse("schoolprograms:landing")}"', content)
+        self.assertIn('학교 체험·행사 찾기', content)
+        self.assertTrue(
+            'data-home-v4-nav-direct-link="schoolprograms"' in content
+            or 'data-home-v6-nav-direct-link="schoolprograms"' in content
+        )
+
     def test_v4_games_menu_restores_student_link_launcher(self):
         self._login('v4gameslink')
 
@@ -3284,6 +3315,34 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('.home-v6-page .home-schoolcomm-card-primary', css)
         self.assertIn('--home-v6-radius-panel:', css)
         self.assertIn('.home-v6-page .home-v6-top-sns #feed-scroll-container > *', css)
+
+    def test_v6_nav_surfaces_schoolprograms_as_direct_link(self):
+        Product.objects.create(
+            title="학교 체험·행사 찾기",
+            description="학교로 찾아오는 프로그램을 바로 찾기",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='schoolprograms:landing',
+            icon='🎪',
+        )
+        self._login('v6schoolprograms')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        nav_sections = response.context['home_v4_nav_sections']
+        class_ops_section = next(section for section in nav_sections if section['key'] == 'class_ops')
+        direct_section = next(section for section in nav_sections if section['key'] == 'schoolprograms')
+
+        self.assertNotIn(
+            'schoolprograms:landing',
+            {product.launch_route_name for product in class_ops_section['products']},
+        )
+        self.assertTrue(direct_section['is_direct'])
+        self.assertEqual(direct_section['href'], reverse('schoolprograms:landing'))
+        self.assertIn('data-home-v6-nav-direct-link="schoolprograms"', content)
+        self.assertIn(f'href="{reverse("schoolprograms:landing")}"', content)
+        self.assertIn('학교 체험·행사 찾기', content)
 
     def test_v6_css_keeps_teacher_buddy_and_workbench_controls_distinct(self):
         css = (Path(settings.BASE_DIR) / 'core' / 'static' / 'core' / 'css' / 'home_authenticated_v6.css').read_text(encoding='utf-8')

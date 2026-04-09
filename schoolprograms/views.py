@@ -1,0 +1,1051 @@
+from __future__ import annotations
+
+from datetime import timedelta
+
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.db.models import Case, Count, F, IntegerField, Prefetch, Q, Value, When
+from django.http import Http404, HttpResponseForbidden
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils import timezone
+
+from products.models import Product
+
+from .forms import (
+    InquiryCreateForm,
+    InquiryMessageForm,
+    InquiryProposalForm,
+    ProgramListingForm,
+    ProviderProfileForm,
+)
+from .models import (
+    InquiryMessage,
+    InquiryProposal,
+    InquiryThread,
+    ListingImage,
+    ListingViewLog,
+    ProgramListing,
+    ProviderProfile,
+    SavedListing,
+)
+from .regions import region_suggestions_for
+
+
+COMPARE_SESSION_KEY = "schoolprograms_compare_listing_ids"
+MAX_COMPARE_LISTINGS = 3
+SERVICE_TITLE = "학교 체험·행사 찾기"
+LEGACY_SERVICE_TITLES = ("학교 프로그램 찾기",)
+
+
+def _get_service():
+    service = Product.objects.filter(launch_route_name="schoolprograms:landing").first()
+    if service:
+        return service
+    return Product.objects.filter(title__in=(SERVICE_TITLE, *LEGACY_SERVICE_TITLES)).first()
+
+
+def _role_for_user(user) -> str:
+    profile = getattr(user, "userprofile", None)
+    return str(getattr(profile, "role", "") or "").strip()
+
+
+def _is_teacher_role(user) -> bool:
+    return _role_for_user(user) in {"school", "instructor"}
+
+
+def _is_company_role(user) -> bool:
+    return _role_for_user(user) == "company"
+
+
+def _user_display_name(user) -> str:
+    profile = getattr(user, "userprofile", None)
+    nickname = str(getattr(profile, "nickname", "") or "").strip()
+    full_name = str(getattr(user, "get_full_name", lambda: "")() or "").strip()
+    return nickname or full_name or user.username
+
+
+def _render_schoolprograms(request, template_name, context, *, noindex=False, status=200):
+    payload = {
+        "service": _get_service(),
+        "category_choices": ProgramListing.Category.choices,
+        "province_choices": ProgramListing.PROVINCE_CHOICES,
+        "grade_band_choices": ProgramListing.GRADE_BAND_CHOICES,
+        "delivery_mode_choices": ProgramListing.DeliveryMode.choices,
+    }
+    payload.update(context)
+    if noindex:
+        payload.setdefault("robots", "noindex,nofollow")
+    response = render(request, template_name, payload, status=status)
+    if noindex:
+        response["X-Robots-Tag"] = "noindex, nofollow"
+    return response
+
+
+def _ensure_company_or_403(user):
+    if not getattr(user, "is_authenticated", False) or not _is_company_role(user):
+        return HttpResponseForbidden("업체 계정만 접근할 수 있습니다.")
+    return None
+
+
+def _ensure_teacher_or_403(user):
+    if not getattr(user, "is_authenticated", False) or not _is_teacher_role(user):
+        return HttpResponseForbidden("교사 계정만 접근할 수 있습니다.")
+    return None
+
+
+def _get_or_create_provider(user):
+    provider, _ = ProviderProfile.objects.get_or_create(
+        user=user,
+        defaults={
+            "provider_name": _user_display_name(user),
+            "summary": "학교와 연결될 프로그램 소개를 정리해 주세요.",
+            "contact_email": user.email or "",
+        },
+    )
+    return provider
+
+
+def _listing_base_queryset():
+    return (
+        ProgramListing.objects.select_related("provider", "provider__user", "provider__user__userprofile")
+        .prefetch_related("images")
+    )
+
+
+def _inquiry_base_queryset():
+    return (
+        InquiryThread.objects.select_related(
+            "listing",
+            "provider",
+            "provider__user",
+            "provider__user__userprofile",
+            "teacher",
+            "teacher__userprofile",
+        )
+        .prefetch_related(
+            Prefetch(
+                "messages",
+                queryset=InquiryMessage.objects.select_related("sender", "sender__userprofile"),
+            )
+        )
+    )
+
+
+def _teacher_threads_with_bucket(user):
+    threads = list(
+        _inquiry_base_queryset()
+        .filter(teacher=user)
+        .select_related("proposal")
+        .order_by("-last_message_at", "-updated_at")
+    )
+    for thread in threads:
+        thread.bucket = thread.teacher_bucket
+    return threads
+
+
+def _vendor_threads_with_bucket(provider):
+    threads = list(
+        _inquiry_base_queryset()
+        .filter(provider=provider)
+        .select_related("proposal")
+        .order_by("-last_message_at", "-updated_at")
+    )
+    for thread in threads:
+        thread.bucket = thread.vendor_bucket
+    return threads
+
+
+def _filter_threads_by_tab(threads, tab):
+    if tab == "all":
+        return threads
+    return [thread for thread in threads if getattr(thread, "bucket", "") == tab]
+
+
+def _rank_listing_queryset(queryset):
+    recent_cutoff = timezone.now() - timedelta(days=14)
+    return queryset.annotate(
+        recent_interest=Count("view_logs", filter=Q(view_logs__viewed_at__gte=recent_cutoff))
+    ).order_by("-is_featured", "-recent_interest", "-view_count", "-published_at", "-id")
+
+
+def _apply_listing_filters(
+    queryset,
+    *,
+    q="",
+    province="",
+    region_text="",
+    category="",
+    grade_band="",
+    delivery_mode="",
+):
+    if province:
+        queryset = queryset.filter(province=province)
+    if region_text:
+        queryset = queryset.filter(
+            Q(city__icontains=region_text)
+            | Q(coverage_note__icontains=region_text)
+            | Q(provider__service_area_summary__icontains=region_text)
+        )
+    if category:
+        queryset = queryset.filter(category=category)
+    if grade_band:
+        queryset = queryset.filter(grade_bands_text__icontains=grade_band)
+    if delivery_mode:
+        queryset = queryset.filter(delivery_mode=delivery_mode)
+    if q:
+        queryset = queryset.filter(
+            Q(title__icontains=q)
+            | Q(summary__icontains=q)
+            | Q(description__icontains=q)
+            | Q(provider__provider_name__icontains=q)
+            | Q(city__icontains=q)
+            | Q(coverage_note__icontains=q)
+            | Q(provider__service_area_summary__icontains=q)
+            | Q(theme_tags_text__icontains=q)
+        )
+    return queryset
+
+
+def _teacher_saved_listings_queryset(user):
+    return (
+        _listing_base_queryset()
+        .filter(
+            approval_status=ProgramListing.ApprovalStatus.APPROVED,
+            saved_by_users__user=user,
+        )
+        .distinct()
+        .order_by("-saved_by_users__created_at", "-id")
+    )
+
+
+def _get_compare_listing_ids(request):
+    raw_ids = request.session.get(COMPARE_SESSION_KEY, [])
+    if not isinstance(raw_ids, list):
+        return []
+
+    cleaned_ids = []
+    for raw_value in raw_ids:
+        try:
+            listing_id = int(raw_value)
+        except (TypeError, ValueError):
+            continue
+        if listing_id not in cleaned_ids:
+            cleaned_ids.append(listing_id)
+    return cleaned_ids[:MAX_COMPARE_LISTINGS]
+
+
+def _set_compare_listing_ids(request, listing_ids):
+    cleaned_ids = []
+    for raw_value in listing_ids:
+        try:
+            listing_id = int(raw_value)
+        except (TypeError, ValueError):
+            continue
+        if listing_id not in cleaned_ids:
+            cleaned_ids.append(listing_id)
+    request.session[COMPARE_SESSION_KEY] = cleaned_ids[:MAX_COMPARE_LISTINGS]
+    request.session.modified = True
+
+
+def _compare_count_for_request(request):
+    if not request.user.is_authenticated or not _is_teacher_role(request.user):
+        return 0
+    return len(_get_compare_listing_ids(request))
+
+
+def _teacher_compare_listings_queryset(request):
+    compare_ids = _get_compare_listing_ids(request)
+    if not compare_ids:
+        return _listing_base_queryset().none()
+
+    order_case = Case(
+        *[When(pk=listing_id, then=Value(index)) for index, listing_id in enumerate(compare_ids)],
+        output_field=IntegerField(),
+    )
+    return (
+        _listing_base_queryset()
+        .filter(
+            approval_status=ProgramListing.ApprovalStatus.APPROVED,
+            pk__in=compare_ids,
+        )
+        .annotate(compare_order=order_case)
+        .order_by("compare_order")
+    )
+
+
+def _compare_inquiry_form_prefix(listing):
+    return f"compare-{listing.pk}"
+
+
+def _build_compare_inquiry_entries(compare_listings, *, bound_form=None, open_slug=""):
+    bound_prefix = str(getattr(bound_form, "prefix", "") or "")
+    entries = []
+    for listing in compare_listings:
+        prefix = _compare_inquiry_form_prefix(listing)
+        form = bound_form if bound_prefix == prefix else InquiryCreateForm(prefix=prefix)
+        entries.append(
+            {
+                "listing": listing,
+                "form": form,
+                "is_open": bool(listing.slug == open_slug or bound_prefix == prefix),
+            }
+        )
+    return entries
+
+
+def _create_inquiry_thread(*, listing, teacher, form):
+    thread = InquiryThread.objects.create(
+        listing=listing,
+        provider=listing.provider,
+        teacher=teacher,
+        category=listing.category,
+        school_region=form.cleaned_data["school_region"],
+        preferred_schedule=form.cleaned_data["preferred_schedule"],
+        target_audience=form.cleaned_data["target_audience"],
+        expected_participants=form.cleaned_data["expected_participants"],
+        budget_text=form.cleaned_data["budget_text"],
+        status=InquiryThread.Status.AWAITING_VENDOR,
+    )
+    InquiryMessage.objects.create(
+        thread=thread,
+        sender=teacher,
+        sender_role=InquiryThread.SenderRole.TEACHER,
+        body=form.cleaned_data["request_message"],
+    )
+    return thread
+
+
+def _build_listing_review_status(listing):
+    if listing.approval_status == ProgramListing.ApprovalStatus.REJECTED:
+        return {
+            "title": "수정 후 다시 심사 요청이 필요합니다",
+            "description": "운영 피드백을 반영한 뒤 다시 심사 요청을 보내면 재검토가 시작됩니다.",
+            "next_step": "반려 사유를 확인하고 내용을 보완하세요.",
+            "pill_class": "bg-rose-100 text-rose-700",
+            "panel_class": "border-rose-200 bg-rose-50 text-rose-900",
+            "time_label": "마지막 수정",
+            "time_value": listing.updated_at,
+        }
+    if listing.approval_status == ProgramListing.ApprovalStatus.PENDING:
+        return {
+            "title": "심사 대기 중입니다",
+            "description": "승인 전까지 교사 검색에는 노출되지 않으며, 운영 검토가 끝나면 공개로 전환됩니다.",
+            "next_step": "추가 수정이 있으면 저장 후 다시 확인하세요.",
+            "pill_class": "bg-amber-100 text-amber-700",
+            "panel_class": "border-amber-200 bg-amber-50 text-amber-900",
+            "time_label": "심사 요청",
+            "time_value": listing.submitted_at,
+        }
+    if listing.approval_status == ProgramListing.ApprovalStatus.APPROVED:
+        return {
+            "title": "교사가 검색할 수 있는 공개 상태입니다",
+            "description": "현재 공개 검색과 상세 페이지에서 바로 문의를 받을 수 있습니다.",
+            "next_step": "가격, 안전 정보, 방문 가능 지역을 최신 상태로 유지하세요.",
+            "pill_class": "bg-emerald-100 text-emerald-700",
+            "panel_class": "border-emerald-200 bg-emerald-50 text-emerald-900",
+            "time_label": "공개 시작",
+            "time_value": listing.published_at,
+        }
+    return {
+        "title": "아직 심사 요청 전입니다",
+        "description": "임시 저장 상태라 교사 검색에는 보이지 않습니다. 내용이 갖춰지면 심사 요청을 보내세요.",
+        "next_step": "대표 소개, 대상, 지역, 안전 정보를 먼저 채워 주세요.",
+        "pill_class": "bg-slate-100 text-slate-700",
+        "panel_class": "border-slate-200 bg-slate-50 text-slate-900",
+        "time_label": "현재 상태",
+        "time_value": None,
+    }
+
+
+def landing(request):
+    if request.user.is_authenticated and _is_company_role(request.user):
+        return redirect("schoolprograms:vendor_dashboard")
+
+    listings = _listing_base_queryset().filter(
+        approval_status=ProgramListing.ApprovalStatus.APPROVED,
+    )
+    q = str(request.GET.get("q") or "").strip()
+    province = str(request.GET.get("province") or "").strip()
+    region_text = str(request.GET.get("region_text") or "").strip()
+    category = str(request.GET.get("category") or "").strip()
+    grade_band = str(request.GET.get("grade_band") or "").strip()
+    delivery_mode = str(request.GET.get("delivery_mode") or "").strip()
+
+    listings = _apply_listing_filters(
+        listings,
+        q=q,
+        province=province,
+        region_text=region_text,
+        category=category,
+        grade_band=grade_band,
+        delivery_mode=delivery_mode,
+    )
+    listings = _rank_listing_queryset(listings)
+    featured_listings = list(listings[:3])
+    page_obj = Paginator(listings, 12).get_page(request.GET.get("page"))
+
+    return _render_schoolprograms(
+        request,
+        "schoolprograms/landing.html",
+        {
+            "page_title": f"{SERVICE_TITLE} | Eduitit",
+            "meta_description": "지역과 주제로 학교로 찾아오는 체험학습, 교사연수, 학교행사를 바로 비교하고 문의하세요.",
+            "canonical_url": request.build_absolute_uri(reverse("schoolprograms:landing")),
+            "featured_listings": featured_listings,
+            "page_obj": page_obj,
+            "result_count": page_obj.paginator.count,
+            "region_suggestions": region_suggestions_for(province),
+            "q": q,
+            "selected_province": province,
+            "selected_region_text": region_text,
+            "selected_category": category,
+            "selected_grade_band": grade_band,
+            "selected_delivery_mode": delivery_mode,
+            "can_use_saved_listings": request.user.is_authenticated and _is_teacher_role(request.user),
+            "saved_count": (
+                SavedListing.objects.filter(user=request.user).count()
+                if request.user.is_authenticated and _is_teacher_role(request.user)
+                else 0
+            ),
+            "compare_count": _compare_count_for_request(request),
+        },
+    )
+
+
+def listing_detail(request, slug):
+    listing = get_object_or_404(
+        _listing_base_queryset().filter(approval_status=ProgramListing.ApprovalStatus.APPROVED),
+        slug=slug,
+    )
+    ProgramListing.objects.filter(pk=listing.pk).update(view_count=F("view_count") + 1)
+    viewer_key = ""
+    if request.user.is_authenticated:
+        viewer_key = f"user:{request.user.pk}"
+    else:
+        if not request.session.session_key:
+            request.session.create()
+        viewer_key = f"session:{request.session.session_key}"
+    ListingViewLog.objects.create(listing=listing, viewer_key=viewer_key)
+    listing.refresh_from_db(fields=["view_count"])
+
+    inquiry_form = None
+    is_saved = False
+    is_compared = False
+    if request.user.is_authenticated and _is_teacher_role(request.user):
+        inquiry_form = InquiryCreateForm()
+        is_saved = SavedListing.objects.filter(user=request.user, listing=listing).exists()
+        is_compared = listing.pk in _get_compare_listing_ids(request)
+
+    related_listings = (
+        _listing_base_queryset()
+        .filter(
+            provider=listing.provider,
+            approval_status=ProgramListing.ApprovalStatus.APPROVED,
+        )
+        .exclude(pk=listing.pk)[:3]
+    )
+
+    return _render_schoolprograms(
+        request,
+        "schoolprograms/listing_detail.html",
+        {
+            "page_title": f"{listing.title} | {SERVICE_TITLE}",
+            "meta_description": listing.summary,
+            "canonical_url": request.build_absolute_uri(reverse("schoolprograms:listing_detail", args=[listing.slug])),
+            "listing": listing,
+            "related_listings": related_listings,
+            "inquiry_form": inquiry_form,
+            "is_saved": is_saved,
+            "is_compared": is_compared,
+            "compare_count": _compare_count_for_request(request),
+        },
+    )
+
+
+@login_required
+def create_inquiry(request, slug):
+    denied = _ensure_teacher_or_403(request.user)
+    if denied:
+        return denied
+
+    listing = get_object_or_404(
+        _listing_base_queryset().filter(approval_status=ProgramListing.ApprovalStatus.APPROVED),
+        slug=slug,
+    )
+    if request.method != "POST":
+        return redirect("schoolprograms:listing_detail", slug=listing.slug)
+
+    form = InquiryCreateForm(request.POST)
+    if form.is_valid():
+        thread = _create_inquiry_thread(listing=listing, teacher=request.user, form=form)
+        messages.success(request, "문의가 접수되었습니다. 업체 답변이 오면 여기서 이어서 확인할 수 있습니다.")
+        return redirect("schoolprograms:teacher_inquiry_detail", thread_id=thread.id)
+
+    related_listings = (
+        _listing_base_queryset()
+        .filter(provider=listing.provider, approval_status=ProgramListing.ApprovalStatus.APPROVED)
+        .exclude(pk=listing.pk)[:3]
+    )
+    return _render_schoolprograms(
+        request,
+        "schoolprograms/listing_detail.html",
+        {
+            "page_title": f"{listing.title} | {SERVICE_TITLE}",
+            "meta_description": listing.summary,
+            "canonical_url": request.build_absolute_uri(reverse("schoolprograms:listing_detail", args=[listing.slug])),
+            "listing": listing,
+            "related_listings": related_listings,
+            "inquiry_form": form,
+        },
+        status=400,
+    )
+
+
+def provider_detail(request, slug):
+    provider = get_object_or_404(
+        ProviderProfile.objects.select_related("user", "user__userprofile"),
+        slug=slug,
+    )
+    listings = list(
+        _listing_base_queryset().filter(
+            provider=provider,
+            approval_status=ProgramListing.ApprovalStatus.APPROVED,
+        )
+    )
+    if not listings:
+        raise Http404("공개된 프로그램이 없습니다.")
+
+    return _render_schoolprograms(
+        request,
+        "schoolprograms/provider_detail.html",
+        {
+            "page_title": f"{provider.provider_name} | {SERVICE_TITLE}",
+            "meta_description": provider.summary or provider.description[:120],
+            "canonical_url": request.build_absolute_uri(reverse("schoolprograms:provider_detail", args=[provider.slug])),
+            "provider": provider,
+            "listings": listings,
+        },
+    )
+
+
+@login_required
+def toggle_saved_listing(request, slug):
+    denied = _ensure_teacher_or_403(request.user)
+    if denied:
+        return denied
+
+    listing = get_object_or_404(
+        _listing_base_queryset().filter(approval_status=ProgramListing.ApprovalStatus.APPROVED),
+        slug=slug,
+    )
+    next_url = str(request.POST.get("next") or request.GET.get("next") or "").strip()
+    if not next_url or not url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        next_url = reverse("schoolprograms:listing_detail", args=[listing.slug])
+
+    saved = SavedListing.objects.filter(user=request.user, listing=listing).first()
+    if saved:
+        saved.delete()
+        messages.success(request, "저장한 프로그램에서 제거했습니다.")
+    else:
+        SavedListing.objects.create(user=request.user, listing=listing)
+        messages.success(request, "나중에 다시 볼 수 있게 저장했습니다.")
+    return redirect(next_url)
+
+
+@login_required
+def teacher_saved_listings(request):
+    denied = _ensure_teacher_or_403(request.user)
+    if denied:
+        return denied
+
+    q = str(request.GET.get("q") or "").strip()
+    province = str(request.GET.get("province") or "").strip()
+    region_text = str(request.GET.get("region_text") or "").strip()
+    category = str(request.GET.get("category") or "").strip()
+    grade_band = str(request.GET.get("grade_band") or "").strip()
+    delivery_mode = str(request.GET.get("delivery_mode") or "").strip()
+
+    saved_listings = list(
+        _apply_listing_filters(
+            _teacher_saved_listings_queryset(request.user),
+            q=q,
+            province=province,
+            region_text=region_text,
+            category=category,
+            grade_band=grade_band,
+            delivery_mode=delivery_mode,
+        )
+    )
+    compare_listing_ids = _get_compare_listing_ids(request)
+    return _render_schoolprograms(
+        request,
+        "schoolprograms/teacher_saved_listings.html",
+        {
+            "page_title": f"저장한 프로그램 | {SERVICE_TITLE}",
+            "meta_description": "나중에 다시 비교하려고 저장한 학교 프로그램 목록입니다.",
+            "canonical_url": request.build_absolute_uri(reverse("schoolprograms:teacher_saved_listings")),
+            "saved_listings": saved_listings,
+            "saved_count": SavedListing.objects.filter(user=request.user).count(),
+            "compare_count": len(compare_listing_ids),
+            "compare_listing_ids": compare_listing_ids,
+            "region_suggestions": region_suggestions_for(province),
+            "q": q,
+            "selected_province": province,
+            "selected_region_text": region_text,
+            "selected_category": category,
+            "selected_grade_band": grade_band,
+            "selected_delivery_mode": delivery_mode,
+        },
+        noindex=True,
+    )
+
+
+@login_required
+def toggle_compare_listing(request, slug):
+    denied = _ensure_teacher_or_403(request.user)
+    if denied:
+        return denied
+
+    listing = get_object_or_404(
+        _listing_base_queryset().filter(approval_status=ProgramListing.ApprovalStatus.APPROVED),
+        slug=slug,
+    )
+    next_url = str(request.POST.get("next") or request.GET.get("next") or "").strip()
+    if not next_url or not url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        next_url = reverse("schoolprograms:teacher_compare_listings")
+
+    compare_ids = _get_compare_listing_ids(request)
+    if listing.pk in compare_ids:
+        _set_compare_listing_ids(request, [listing_id for listing_id in compare_ids if listing_id != listing.pk])
+        messages.success(request, "비교함에서 제거했습니다.")
+        return redirect(next_url)
+
+    if len(compare_ids) >= MAX_COMPARE_LISTINGS:
+        messages.error(request, f"비교함은 최대 {MAX_COMPARE_LISTINGS}개까지만 담을 수 있습니다.")
+        return redirect(next_url)
+
+    compare_ids.append(listing.pk)
+    _set_compare_listing_ids(request, compare_ids)
+    messages.success(request, "비교함에 담았습니다. 이제 나란히 확인할 수 있습니다.")
+    return redirect(next_url)
+
+
+@login_required
+def teacher_compare_listings(request):
+    denied = _ensure_teacher_or_403(request.user)
+    if denied:
+        return denied
+
+    compare_listings = list(_teacher_compare_listings_queryset(request))
+    compare_listing_ids = [listing.pk for listing in compare_listings]
+    if compare_listing_ids != _get_compare_listing_ids(request):
+        _set_compare_listing_ids(request, compare_listing_ids)
+    open_slug = str(request.GET.get("open") or "").strip()
+
+    return _render_schoolprograms(
+        request,
+        "schoolprograms/teacher_compare_listings.html",
+        {
+            "page_title": f"프로그램 비교함 | {SERVICE_TITLE}",
+            "meta_description": "저장하거나 담아둔 프로그램을 한눈에 비교하는 비공개 비교함입니다.",
+            "canonical_url": request.build_absolute_uri(reverse("schoolprograms:teacher_compare_listings")),
+            "compare_listings": compare_listings,
+            "compare_entries": _build_compare_inquiry_entries(compare_listings, open_slug=open_slug),
+            "compare_count": len(compare_listing_ids),
+            "compare_limit": MAX_COMPARE_LISTINGS,
+            "saved_count": SavedListing.objects.filter(user=request.user).count(),
+        },
+        noindex=True,
+    )
+
+
+@login_required
+def create_compare_inquiry(request, slug):
+    denied = _ensure_teacher_or_403(request.user)
+    if denied:
+        return denied
+    if request.method != "POST":
+        return redirect("schoolprograms:teacher_compare_listings")
+
+    compare_ids = _get_compare_listing_ids(request)
+    listing = get_object_or_404(
+        _listing_base_queryset().filter(
+            approval_status=ProgramListing.ApprovalStatus.APPROVED,
+            pk__in=compare_ids,
+        ),
+        slug=slug,
+    )
+    form = InquiryCreateForm(request.POST, prefix=_compare_inquiry_form_prefix(listing))
+    if form.is_valid():
+        thread = _create_inquiry_thread(listing=listing, teacher=request.user, form=form)
+        messages.success(request, "비교 중이던 프로그램으로 바로 문의를 보냈습니다.")
+        return redirect("schoolprograms:teacher_inquiry_detail", thread_id=thread.id)
+
+    compare_listings = list(_teacher_compare_listings_queryset(request))
+    compare_listing_ids = [item.pk for item in compare_listings]
+    return _render_schoolprograms(
+        request,
+        "schoolprograms/teacher_compare_listings.html",
+        {
+            "page_title": f"프로그램 비교함 | {SERVICE_TITLE}",
+            "meta_description": "저장하거나 담아둔 프로그램을 한눈에 비교하는 비공개 비교함입니다.",
+            "canonical_url": request.build_absolute_uri(reverse("schoolprograms:teacher_compare_listings")),
+            "compare_listings": compare_listings,
+            "compare_entries": _build_compare_inquiry_entries(compare_listings, bound_form=form),
+            "compare_count": len(compare_listing_ids),
+            "compare_limit": MAX_COMPARE_LISTINGS,
+            "saved_count": SavedListing.objects.filter(user=request.user).count(),
+        },
+        noindex=True,
+        status=400,
+    )
+
+
+@login_required
+def teacher_inquiries(request):
+    denied = _ensure_teacher_or_403(request.user)
+    if denied:
+        return denied
+
+    tab = str(request.GET.get("tab") or "new").strip() or "new"
+    threads = _teacher_threads_with_bucket(request.user)
+    tab_counts = {
+        "new": sum(1 for thread in threads if thread.bucket == "new"),
+        "progress": sum(1 for thread in threads if thread.bucket == "progress"),
+        "proposal": sum(1 for thread in threads if thread.bucket == "proposal"),
+        "closed": sum(1 for thread in threads if thread.bucket == "closed"),
+    }
+
+    return _render_schoolprograms(
+        request,
+        "schoolprograms/teacher_inquiries.html",
+        {
+            "page_title": f"내 문의함 | {SERVICE_TITLE}",
+            "meta_description": "보낸 문의와 업체 답변, 제안 카드를 한곳에서 확인합니다.",
+            "canonical_url": request.build_absolute_uri(reverse("schoolprograms:teacher_inquiries")),
+            "threads": _filter_threads_by_tab(threads, tab),
+            "selected_tab": tab,
+            "tab_counts": tab_counts,
+        },
+        noindex=True,
+    )
+
+
+@login_required
+def teacher_inquiry_detail(request, thread_id):
+    denied = _ensure_teacher_or_403(request.user)
+    if denied:
+        return denied
+
+    thread = get_object_or_404(
+        _inquiry_base_queryset().select_related("proposal"),
+        id=thread_id,
+        teacher=request.user,
+    )
+    message_form = InquiryMessageForm()
+
+    if request.method == "POST":
+        action = str(request.POST.get("action") or "message").strip()
+        if action == "close":
+            thread.status = InquiryThread.Status.CLOSED
+            thread.save(update_fields=["status", "updated_at"])
+            messages.success(request, "문의가 종료되었습니다.")
+            return redirect("schoolprograms:teacher_inquiry_detail", thread_id=thread.id)
+
+        message_form = InquiryMessageForm(request.POST)
+        if message_form.is_valid():
+            InquiryMessage.objects.create(
+                thread=thread,
+                sender=request.user,
+                sender_role=InquiryThread.SenderRole.TEACHER,
+                body=message_form.cleaned_data["body"],
+            )
+            next_status = InquiryThread.Status.PROPOSAL_SENT if hasattr(thread, "proposal") else InquiryThread.Status.IN_PROGRESS
+            if thread.status != InquiryThread.Status.CLOSED:
+                thread.status = next_status
+                thread.save(update_fields=["status", "updated_at"])
+            messages.success(request, "추가 메시지를 보냈습니다.")
+            return redirect("schoolprograms:teacher_inquiry_detail", thread_id=thread.id)
+
+    return _render_schoolprograms(
+        request,
+        "schoolprograms/teacher_inquiry_detail.html",
+        {
+            "page_title": f"{thread.listing.title} 문의 | {SERVICE_TITLE}",
+            "meta_description": thread.last_message_preview or thread.listing.summary,
+            "canonical_url": request.build_absolute_uri(reverse("schoolprograms:teacher_inquiry_detail", args=[thread.id])),
+            "thread": thread,
+            "message_form": message_form,
+        },
+        noindex=True,
+    )
+
+
+@login_required
+def vendor_dashboard(request):
+    denied = _ensure_company_or_403(request.user)
+    if denied:
+        return denied
+
+    provider = _get_or_create_provider(request.user)
+    listings = list(provider.listings.order_by("-updated_at"))
+    for listing in listings:
+        listing.review_status = _build_listing_review_status(listing)
+    recent_threads = _vendor_threads_with_bucket(provider)[:5]
+    seven_days_ago = timezone.now() - timedelta(days=7)
+    action_required_listings = [
+        listing
+        for listing in listings
+        if listing.approval_status in {ProgramListing.ApprovalStatus.DRAFT, ProgramListing.ApprovalStatus.REJECTED}
+    ]
+    pending_review_listings = [
+        listing for listing in listings if listing.approval_status == ProgramListing.ApprovalStatus.PENDING
+    ]
+
+    checklist = {
+        "profile_ready": provider.is_profile_ready,
+        "has_listing": bool(listings),
+        "has_review_ready_listing": provider.listings.filter(
+            approval_status__in=[
+                ProgramListing.ApprovalStatus.PENDING,
+                ProgramListing.ApprovalStatus.APPROVED,
+            ]
+        ).exists(),
+    }
+
+    return _render_schoolprograms(
+        request,
+        "schoolprograms/vendor/dashboard.html",
+        {
+            "page_title": f"업체 대시보드 | {SERVICE_TITLE}",
+            "meta_description": "업체 정보, 프로그램 등록, 문의 답변, 제안 카드 발송을 한곳에서 관리합니다.",
+            "canonical_url": request.build_absolute_uri(reverse("schoolprograms:vendor_dashboard")),
+            "provider": provider,
+            "listings": listings,
+            "recent_threads": recent_threads,
+            "approved_count": provider.listings.filter(approval_status=ProgramListing.ApprovalStatus.APPROVED).count(),
+            "pending_count": provider.listings.filter(approval_status=ProgramListing.ApprovalStatus.PENDING).count(),
+            "new_inquiry_count": provider.inquiries.filter(status=InquiryThread.Status.AWAITING_VENDOR).count(),
+            "view_count_7d": ListingViewLog.objects.filter(
+                listing__provider=provider,
+                viewed_at__gte=seven_days_ago,
+            ).count(),
+            "action_required_listings": action_required_listings,
+            "pending_review_listings": pending_review_listings,
+            "checklist": checklist,
+        },
+        noindex=True,
+    )
+
+
+@login_required
+def vendor_profile_edit(request):
+    denied = _ensure_company_or_403(request.user)
+    if denied:
+        return denied
+
+    provider = _get_or_create_provider(request.user)
+    if request.method == "POST":
+        form = ProviderProfileForm(request.POST, request.FILES, instance=provider, service_area_list_id="provider-region-suggestions")
+        if form.is_valid():
+            form.save()
+            messages.success(request, "업체 정보를 저장했습니다.")
+            return redirect("schoolprograms:vendor_dashboard")
+    else:
+        form = ProviderProfileForm(instance=provider, service_area_list_id="provider-region-suggestions")
+
+    return _render_schoolprograms(
+        request,
+        "schoolprograms/vendor/profile_form.html",
+        {
+            "page_title": f"업체 정보 수정 | {SERVICE_TITLE}",
+            "meta_description": f"{SERVICE_TITLE} 업체 기본 정보를 관리합니다.",
+            "canonical_url": request.build_absolute_uri(reverse("schoolprograms:vendor_profile_edit")),
+            "provider": provider,
+            "form": form,
+            "region_suggestions": region_suggestions_for(""),
+        },
+        noindex=True,
+    )
+
+
+@login_required
+def vendor_listing_create(request):
+    denied = _ensure_company_or_403(request.user)
+    if denied:
+        return denied
+    return _vendor_listing_editor(request)
+
+
+@login_required
+def vendor_listing_edit(request, slug):
+    denied = _ensure_company_or_403(request.user)
+    if denied:
+        return denied
+    provider = _get_or_create_provider(request.user)
+    listing = get_object_or_404(provider.listings.prefetch_related("images"), slug=slug)
+    return _vendor_listing_editor(request, provider=provider, listing=listing)
+
+
+def _vendor_listing_editor(request, provider=None, listing=None):
+    provider = provider or _get_or_create_provider(request.user)
+    selected_province = ""
+    if request.method == "POST":
+        selected_province = str(request.POST.get("province") or "").strip()
+        form = ProgramListingForm(request.POST, instance=listing, region_list_id="listing-region-suggestions")
+        if form.is_valid():
+            existing_status = (
+                listing.approval_status if listing is not None else ProgramListing.ApprovalStatus.DRAFT
+            )
+            listing = form.save(commit=False)
+            listing.provider = provider
+            action = str(request.POST.get("action") or "save").strip()
+            if action == "submit" and existing_status != ProgramListing.ApprovalStatus.APPROVED:
+                listing.mark_pending_review()
+            elif not listing.pk:
+                listing.mark_draft()
+            listing.save()
+            for image in request.FILES.getlist("new_images"):
+                ListingImage.objects.create(listing=listing, image=image, sort_order=listing.images.count())
+            if existing_status == ProgramListing.ApprovalStatus.APPROVED:
+                messages.success(request, "공개중 프로그램 정보를 저장했습니다. 현재 공개 상태는 유지됩니다.")
+            elif action == "submit":
+                messages.success(request, "심사 요청까지 보냈습니다. 승인 전에는 공개 검색에 노출되지 않습니다.")
+            else:
+                messages.success(request, "프로그램을 저장했습니다.")
+            return redirect("schoolprograms:vendor_listing_edit", slug=listing.slug)
+    else:
+        selected_province = getattr(listing, "province", "") if listing else ""
+        form = ProgramListingForm(instance=listing, region_list_id="listing-region-suggestions")
+
+    return _render_schoolprograms(
+        request,
+        "schoolprograms/vendor/listing_form.html",
+        {
+            "page_title": f"프로그램 등록 | {SERVICE_TITLE}" if listing is None else f"프로그램 수정 | {SERVICE_TITLE}",
+            "meta_description": "학교 프로그램 등록 정보를 작성하고 심사 요청을 보냅니다.",
+            "canonical_url": request.build_absolute_uri(
+                reverse("schoolprograms:vendor_listing_create" if listing is None else "schoolprograms:vendor_listing_edit", args=[] if listing is None else [listing.slug])
+            ),
+            "provider": provider,
+            "listing": listing,
+            "review_status": _build_listing_review_status(listing) if listing else None,
+            "form": form,
+            "region_suggestions": region_suggestions_for(selected_province),
+        },
+        noindex=True,
+    )
+
+
+@login_required
+def vendor_inquiries(request):
+    denied = _ensure_company_or_403(request.user)
+    if denied:
+        return denied
+
+    provider = _get_or_create_provider(request.user)
+    tab = str(request.GET.get("tab") or "new").strip() or "new"
+    threads = _vendor_threads_with_bucket(provider)
+    tab_counts = {
+        "new": sum(1 for thread in threads if thread.bucket == "new"),
+        "progress": sum(1 for thread in threads if thread.bucket == "progress"),
+        "proposal": sum(1 for thread in threads if thread.bucket == "proposal"),
+        "closed": sum(1 for thread in threads if thread.bucket == "closed"),
+    }
+
+    return _render_schoolprograms(
+        request,
+        "schoolprograms/vendor/inquiries.html",
+        {
+            "page_title": f"업체 문의함 | {SERVICE_TITLE}",
+            "meta_description": "학교 문의와 제안 카드를 한곳에서 관리합니다.",
+            "canonical_url": request.build_absolute_uri(reverse("schoolprograms:vendor_inquiries")),
+            "provider": provider,
+            "threads": _filter_threads_by_tab(threads, tab),
+            "selected_tab": tab,
+            "tab_counts": tab_counts,
+        },
+        noindex=True,
+    )
+
+
+@login_required
+def vendor_inquiry_detail(request, thread_id):
+    denied = _ensure_company_or_403(request.user)
+    if denied:
+        return denied
+
+    provider = _get_or_create_provider(request.user)
+    thread = get_object_or_404(
+        _inquiry_base_queryset().select_related("proposal"),
+        id=thread_id,
+        provider=provider,
+    )
+    message_form = InquiryMessageForm()
+    proposal_form = InquiryProposalForm(instance=getattr(thread, "proposal", None))
+
+    if request.method == "POST":
+        action = str(request.POST.get("action") or "message").strip()
+        if action == "close":
+            thread.status = InquiryThread.Status.CLOSED
+            thread.save(update_fields=["status", "updated_at"])
+            messages.success(request, "문의 스레드를 종료했습니다.")
+            return redirect("schoolprograms:vendor_inquiry_detail", thread_id=thread.id)
+
+        if action == "proposal":
+            proposal_form = InquiryProposalForm(request.POST, instance=getattr(thread, "proposal", None))
+            if proposal_form.is_valid():
+                proposal = proposal_form.save(commit=False)
+                proposal.thread = thread
+                proposal.sent_by = request.user
+                proposal.save()
+                InquiryMessage.objects.create(
+                    thread=thread,
+                    sender=request.user,
+                    sender_role=InquiryThread.SenderRole.VENDOR,
+                    body=f"[제안 카드] {proposal.price_text} / {proposal.schedule_note}",
+                )
+                thread.status = InquiryThread.Status.PROPOSAL_SENT
+                thread.save(update_fields=["status", "updated_at"])
+                messages.success(request, "제안 카드를 보냈습니다.")
+                return redirect("schoolprograms:vendor_inquiry_detail", thread_id=thread.id)
+        else:
+            message_form = InquiryMessageForm(request.POST)
+            if message_form.is_valid():
+                InquiryMessage.objects.create(
+                    thread=thread,
+                    sender=request.user,
+                    sender_role=InquiryThread.SenderRole.VENDOR,
+                    body=message_form.cleaned_data["body"],
+                )
+                if thread.status != InquiryThread.Status.CLOSED:
+                    thread.status = InquiryThread.Status.IN_PROGRESS
+                    thread.save(update_fields=["status", "updated_at"])
+                messages.success(request, "답변을 보냈습니다.")
+                return redirect("schoolprograms:vendor_inquiry_detail", thread_id=thread.id)
+
+    return _render_schoolprograms(
+        request,
+        "schoolprograms/vendor/inquiry_detail.html",
+        {
+            "page_title": f"{thread.listing.title} 문의 응답 | {SERVICE_TITLE}",
+            "meta_description": thread.last_message_preview or thread.listing.summary,
+            "canonical_url": request.build_absolute_uri(reverse("schoolprograms:vendor_inquiry_detail", args=[thread.id])),
+            "provider": provider,
+            "thread": thread,
+            "message_form": message_form,
+            "proposal_form": proposal_form,
+        },
+        noindex=True,
+    )

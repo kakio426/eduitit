@@ -108,6 +108,7 @@ INSTALLED_APPS = [
     'blockclass.apps.BlockclassConfig',
     'infoboard.apps.InfoboardConfig',
     'teacher_law.apps.TeacherLawConfig',
+    'schoolprograms.apps.SchoolprogramsConfig',
 
     # Auth & Allauth
     'django.contrib.sites',

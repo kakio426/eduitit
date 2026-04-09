@@ -7,6 +7,40 @@
         class="home-v6-nav-group home-v6-nav-group--{{ section.color }}"
         data-home-v6-nav-section="{{ section.key }}"
     >
+        {% if section.is_direct %}
+        <a
+            href="{{ section.href }}"
+            class="home-v6-nav-item home-v6-nav-item--section"
+            data-home-v6-nav-direct-link="{{ section.key }}"
+            {% if section.is_external %}target="_blank" rel="noopener"{% endif %}
+            {% if close_action %}@click="{{ close_action }}"{% endif %}
+        >
+            <span class="home-v6-nav-item-main">
+                <span class="home-v6-nav-icon home-v6-nav-icon--{{ section.color }}">
+                    {% if section.icon %}
+                        {% if "fa-" in section.icon %}<i class="{{ section.icon }}"></i>{% else %}{{ section.icon }}{% endif %}
+                    {% else %}
+                        <i class="fa-solid fa-sparkles"></i>
+                    {% endif %}
+                </span>
+                <span class="home-v6-nav-copy min-w-0 flex-1">
+                    <span class="block truncate home-v6-nav-title">{{ section.title }}</span>
+                    {% if section.subtitle %}
+                    <span class="block truncate home-v6-nav-subtitle">{{ section.subtitle }}</span>
+                    {% endif %}
+                </span>
+            </span>
+            <span class="home-v6-nav-item-side">
+                <span class="home-v6-nav-chevron">
+                    {% if section.is_external %}
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                    {% else %}
+                    <i class="fa-solid fa-arrow-right"></i>
+                    {% endif %}
+                </span>
+            </span>
+        </a>
+        {% else %}
         <button
             type="button"
             class="home-v6-nav-item home-v6-nav-item--section"
@@ -111,6 +145,7 @@
             </div>
             {% endfor %}
         </div>
+        {% endif %}
     </div>
     {% endfor %}
 </nav>

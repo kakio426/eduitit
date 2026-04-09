@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<main class="min-h-screen bg-slate-50 pt-32 pb-20">
+    <section class="mx-auto max-w-7xl px-4 sm:px-6">
+        <div class="mb-5 flex flex-wrap items-center gap-3 text-sm font-bold text-slate-500">
+            <a href="{% url 'schoolprograms:landing' %}" class="rounded-full bg-white px-4 py-2 shadow-sm">목록으로</a>
+            <a href="{% url 'schoolprograms:provider_detail' listing.provider.slug %}" class="rounded-full bg-white px-4 py-2 shadow-sm">업체 보기</a>
+            <span class="rounded-full bg-emerald-100 px-4 py-2 text-emerald-700">승인 완료</span>
+            {% if inquiry_form %}
+                <form method="post" action="{% url 'schoolprograms:toggle_saved_listing' listing.slug %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <button type="submit" class="rounded-full bg-white px-4 py-2 shadow-sm {% if is_saved %}text-orange-600{% else %}text-slate-600{% endif %}">
+                        {% if is_saved %}저장 해제{% else %}저장{% endif %}
+                    </button>
+                </form>
+                <form method="post" action="{% url 'schoolprograms:toggle_compare_listing' listing.slug %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <button type="submit" class="rounded-full bg-white px-4 py-2 shadow-sm {% if is_compared %}text-sky-600{% else %}text-slate-600{% endif %}">
+                        {% if is_compared %}비교 해제{% else %}비교 담기{% endif %}
+                    </button>
+                </form>
+                <a href="{% url 'schoolprograms:teacher_compare_listings' %}" class="rounded-full bg-white px-4 py-2 shadow-sm text-slate-600">
+                    비교함 {{ compare_count }}
+                </a>
+            {% elif not user.is_authenticated %}
+                <a href="{% url 'account_login' %}?next={{ request.get_full_path|urlencode }}" class="rounded-full bg-white px-4 py-2 shadow-sm">로그인 후 저장</a>
+            {% endif %}
+        </div>
+
+        <div class="grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
+            <div class="space-y-6">
+                <article class="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
+                    <div class="grid gap-0 lg:grid-cols-[1.1fr_0.9fr]">
+                        <div class="p-6 sm:p-8">
+                            <p class="text-sm font-black uppercase tracking-[0.25em] text-orange-500">{{ listing.get_category_display }}</p>
+                            <h1 class="mt-3 text-3xl font-black text-slate-900 sm:text-4xl">{{ listing.title }}</h1>
+                            <p class="mt-3 text-base font-bold text-slate-500">{{ listing.provider.provider_name }}</p>
+                            <p class="mt-5 text-base leading-7 text-slate-600">{{ listing.description|linebreaksbr }}</p>
+                            <div class="mt-6 flex flex-wrap gap-2">
+                                {% for tag in listing.theme_tags %}
+                                    <span class="rounded-full bg-orange-50 px-3 py-1 text-xs font-black text-orange-700">#{{ tag }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="min-h-[280px] bg-gradient-to-br from-orange-100 via-amber-50 to-blue-100">
+                            {% if listing.primary_image and listing.primary_image.image %}
+                                <img src="{{ listing.primary_image.image.url }}" alt="{{ listing.title }}" class="h-full w-full object-cover">
+                            {% else %}
+                                <div class="flex h-full items-center justify-center text-6xl">🎪</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </article>
+
+                <section class="grid gap-4 md:grid-cols-2">
+                    <article class="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
+                        <h2 class="text-lg font-black text-slate-900">핵심 정보</h2>
+                        <dl class="mt-4 space-y-4 text-sm">
+                            <div>
+                                <dt class="font-black text-slate-400">방문 가능 지역</dt>
+                                <dd class="mt-1 font-bold text-slate-700">{{ listing.public_regions_text }}</dd>
+                            </div>
+                            <div>
+                                <dt class="font-black text-slate-400">진행 방식</dt>
+                                <dd class="mt-1 font-bold text-slate-700">{{ listing.get_delivery_mode_display }}</dd>
+                            </div>
+                            <div>
+                                <dt class="font-black text-slate-400">진행 시간</dt>
+                                <dd class="mt-1 font-bold text-slate-700">{{ listing.duration_text }}</dd>
+                            </div>
+                            <div>
+                                <dt class="font-black text-slate-400">수용 인원</dt>
+                                <dd class="mt-1 font-bold text-slate-700">{{ listing.capacity_text }}</dd>
+                            </div>
+                            <div>
+                                <dt class="font-black text-slate-400">가격 표시</dt>
+                                <dd class="mt-1 font-bold text-slate-700">{{ listing.price_text }}</dd>
+                            </div>
+                        </dl>
+                    </article>
+
+                    <article class="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
+                        <h2 class="text-lg font-black text-slate-900">대상과 운영 메모</h2>
+                        <div class="mt-4 flex flex-wrap gap-2">
+                            {% for code, label in grade_band_choices %}
+                                {% if code in listing.grade_bands %}
+                                    <span class="rounded-full bg-slate-100 px-3 py-2 text-xs font-black text-slate-700">{{ label }}</span>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        <div class="mt-5 rounded-2xl bg-slate-50 p-4">
+                            <h3 class="text-sm font-black text-slate-500">준비물</h3>
+                            <p class="mt-2 text-sm leading-6 text-slate-700">{{ listing.materials_info|default:"별도 준비 요청이 있으면 문의 스레드에서 조율합니다."|linebreaksbr }}</p>
+                        </div>
+                        <div class="mt-4 rounded-2xl bg-slate-50 p-4">
+                            <h3 class="text-sm font-black text-slate-500">안전·보험</h3>
+                            <p class="mt-2 text-sm leading-6 text-slate-700">{{ listing.safety_info|default:"안전 운영 정보는 업체 상세 및 문의 답변에서 다시 확인할 수 있습니다."|linebreaksbr }}</p>
+                        </div>
+                    </article>
+                </section>
+
+                <section class="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
+                    <h2 class="text-lg font-black text-slate-900">자주 묻는 질문</h2>
+                    <p class="mt-3 text-sm leading-7 text-slate-600">{{ listing.faq|default:"진행 일정, 공간 조건, 준비물, 인원 조정은 문의 스레드에서 바로 조율할 수 있습니다."|linebreaksbr }}</p>
+                </section>
+
+                {% if related_listings %}
+                    <section class="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
+                        <div class="flex items-center justify-between gap-4">
+                            <h2 class="text-lg font-black text-slate-900">같은 업체의 다른 프로그램</h2>
+                            <a href="{% url 'schoolprograms:provider_detail' listing.provider.slug %}" class="text-sm font-black text-orange-600">업체 전체 보기</a>
+                        </div>
+                        <div class="mt-4 grid gap-4 md:grid-cols-3">
+                            {% for item in related_listings %}
+                                <a href="{% url 'schoolprograms:listing_detail' item.slug %}" class="rounded-2xl bg-slate-50 p-4">
+                                    <div class="text-xs font-black text-slate-400">{{ item.get_category_display }}</div>
+                                    <div class="mt-2 text-base font-black text-slate-800">{{ item.title }}</div>
+                                    <p class="mt-2 text-sm leading-6 text-slate-600">{{ item.summary }}</p>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </section>
+                {% endif %}
+            </div>
+
+            <aside class="xl:sticky xl:top-32">
+                <div class="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-lg shadow-slate-100">
+                    <p class="text-sm font-black uppercase tracking-[0.2em] text-orange-500">문의 카드</p>
+                    <h2 class="mt-2 text-2xl font-black text-slate-900">희망 조건을 남기면 업체가 스레드로 답변합니다</h2>
+                    {% if inquiry_form %}
+                        <form method="post" action="{% url 'schoolprograms:create_inquiry' listing.slug %}" class="mt-5 space-y-4">
+                            {% csrf_token %}
+                            {% if inquiry_form.non_field_errors %}
+                                <div class="rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">{{ inquiry_form.non_field_errors }}</div>
+                            {% endif %}
+                            {% for field in inquiry_form.visible_fields %}
+                                <label class="block">
+                                    <span class="mb-2 block text-sm font-black text-slate-700">{{ field.label }}</span>
+                                    {{ field }}
+                                    {% if field.errors %}
+                                        <p class="mt-2 text-sm font-bold text-rose-600">{{ field.errors|join:", " }}</p>
+                                    {% endif %}
+                                </label>
+                            {% endfor %}
+                            <button type="submit" class="inline-flex min-h-[52px] w-full items-center justify-center rounded-2xl bg-orange-500 px-4 py-3 text-sm font-black text-white shadow-lg shadow-orange-200">
+                                문의 보내기
+                            </button>
+                        </form>
+                    {% elif user.is_authenticated and user.userprofile.role == "company" %}
+                        <div class="mt-5 rounded-2xl bg-slate-50 p-4 text-sm font-bold text-slate-600">
+                            업체 계정에서는 문의를 보낼 수 없습니다.
+                        </div>
+                        <a href="{% url 'schoolprograms:vendor_dashboard' %}" class="mt-4 inline-flex min-h-[52px] w-full items-center justify-center rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white">
+                            업체 대시보드 열기
+                        </a>
+                    {% else %}
+                        <div class="mt-5 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+                            검색은 로그인 없이 가능하고, 문의부터 로그인하면 됩니다.
+                        </div>
+                        <a href="{% url 'account_login' %}?next={% url 'schoolprograms:listing_detail' listing.slug %}" class="mt-4 inline-flex min-h-[52px] w-full items-center justify-center rounded-2xl bg-orange-500 px-4 py-3 text-sm font-black text-white">
+                            로그인하고 문의하기
+                        </a>
+                    {% endif %}
+                </div>
+            </aside>
+        </div>
+    </section>
+</main>
+{% endblock %}

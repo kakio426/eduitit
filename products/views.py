@@ -48,6 +48,7 @@ PRODUCT_DETAIL_AUDIENCE_BY_ROUTE = {
     "happy_seed:landing": "긍정 행동 기록과 보상을 학급 루틴으로 운영하고 싶은 교사에게 맞는 도구입니다.",
     "reservations:landing": "특별실 예약이 겹치지 않도록 시간표를 조정해야 하는 교사에게 맞는 도구입니다.",
     "reservations:dashboard_landing": "특별실 예약이 겹치지 않도록 시간표를 조정해야 하는 교사에게 맞는 도구입니다.",
+    "schoolprograms:landing": "지역과 주제로 학교로 찾아오는 프로그램을 비교하고 바로 문의하려는 교사에게 맞는 도구입니다.",
     "tts_announce": "학생들에게 안내, 집중 신호, 정리 멘트를 바로 읽어 줘야 하는 교사에게 맞는 도구입니다.",
 }
 
