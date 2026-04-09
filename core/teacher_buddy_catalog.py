@@ -160,252 +160,280 @@ def _buddy(
 
 
 _BUDDIES = (
-    _buddy("chalk_bean", "분필콩", RARITY_COMMON, "mint", "CK", "spark", "chalk", "분필 한 줄처럼 오늘 수업 흐름을 또박또박 정리해요.", (
+    _buddy("chalk_bean", "분필콩", RARITY_COMMON, "mint", "CK", "spark", "chalk", "칠판 위 첫 줄을 또박하게 잡아 주는 산뜻한 분필 메이트예요.", (
         "  ____  ",
         " / __ \\ ",
         "| |..| |",
         "| |__| |",
         " \\____/ ",
     )),
-    _buddy("memo_sprout", "메모싹", RARITY_COMMON, "coral", "MS", "spark", "memo", "메모 한 장에서 오늘 아이디어가 싹트도록 돕는 메이트예요.", (
+    _buddy("memo_sprout", "메모싹", RARITY_COMMON, "coral", "MS", "spark", "memo", "흩어진 생각을 작은 메모 한 장처럼 살포시 모아 싹틔워 줘요.", (
         " .----.  ",
         "| .^. |  ",
         "| '--' | ",
         "|_____|  ",
         "   /\\    ",
     )),
-    _buddy("eraser_mate", "지우미", RARITY_COMMON, "sky", "EM", "seal", "eraser", "흐트러진 흔적을 지우고 깔끔하게 다시 시작하게 해줘요.", (
+    _buddy("eraser_mate", "지우미", RARITY_COMMON, "sky", "EM", "seal", "eraser", "지워야 할 건 말끔히 덜어 내고 다시 시작할 자리를 만들어 줘요.", (
         " ______ ",
         "| .--. |",
         "| |__| |",
         "|  --  |",
         "|______|",
     )),
-    _buddy("clip_ring", "집게링", RARITY_COMMON, "lemon", "CR", "spark", "clip", "종이와 할 일을 가지런히 묶어 두는 작은 도우미예요.", (
+    _buddy("clip_ring", "집게링", RARITY_COMMON, "lemon", "CR", "spark", "clip", "자료와 할 일을 흐트러짐 없이 살짝 집어 두는 정리 메이트예요.", (
         "  .--.  ",
         " / .. \\ ",
         "| |  | |",
         " \\ __ / ",
         "  '--'  ",
     )),
-    _buddy("star_corner", "별쪽이", RARITY_COMMON, "lilac", "SC", "spark", "star", "칠판 귀퉁이에 반짝이는 별 메모처럼 분위기를 밝혀요.", (
+    _buddy("star_corner", "별쪽이", RARITY_COMMON, "lilac", "SC", "spark", "star", "교실 한쪽 구석까지 반짝임을 데려오는 별빛 메이트예요.", (
         "   /\\    ",
         " _/..\\_  ",
         "<_.--._> ",
         " /_  _\\  ",
         "   \\/    ",
     )),
-    _buddy("sprout_cup", "새싹컵", RARITY_COMMON, "leaf", "SU", "petal", "cup", "작은 새싹 물컵처럼 교실 분위기를 상쾌하게 바꿔 줘요.", (
+    _buddy("sprout_cup", "새싹컵", RARITY_COMMON, "leaf", "SU", "petal", "cup", "맑은 물 한 컵처럼 교실 공기를 산뜻하게 환기해 줘요.", (
         "  ____   ",
         " / ..\\   ",
         " |    |  ",
         " |____|  ",
         "  ||||   ",
     )),
-    _buddy("pencil_tot", "연필총총", RARITY_COMMON, "peach", "PT", "spark", "pencil", "연필 끝에서 아이디어가 또렷하게 서도록 곁을 지켜요.", (
+    _buddy("pencil_tot", "연필총총", RARITY_COMMON, "peach", "PT", "spark", "pencil", "아이디어가 번뜩일 순간을 연필 끝처럼 또렷하게 세워 줘요.", (
         "   /\\    ",
         "  /..\\   ",
         " /_==_\\  ",
         "   ||    ",
         "  _||_   ",
     )),
-    _buddy("magnet_bean", "자석콩", RARITY_COMMON, "teal", "MG", "seal", "magnet", "붙어 있어야 할 일정과 메모를 착 붙여 주는 메이트예요.", (
+    _buddy("magnet_bean", "자석콩", RARITY_COMMON, "teal", "MG", "seal", "magnet", "붙어 있어야 할 공지와 일정에 찰싹 힘을 더해 줘요.", (
         " |\\  /|  ",
         " | .. |  ",
         " | || |  ",
         " |_||_|  ",
         "  /__\\   ",
     )),
-    _buddy("bookmark_leaf", "북마크잎", RARITY_COMMON, "leaf", "BM", "petal", "bookmark", "중요한 페이지와 순간을 잎사귀처럼 살짝 표시해 줘요.", (
+    _buddy("bookmark_leaf", "북마크잎", RARITY_COMMON, "leaf", "BM", "petal", "bookmark", "중요한 장면과 페이지에 잎사귀 표시처럼 살짝 머물러 줘요.", (
         " .----.  ",
         " | /\\ |  ",
         " | \\/ |  ",
         " | __>|  ",
         " '----'  ",
     )),
-    _buddy("post_moon", "포스트문", RARITY_COMMON, "coral", "PM", "spark", "moon", "포스트잇 달빛처럼 조용히 할 일을 비춰 주는 친구예요.", (
+    _buddy("post_moon", "포스트문", RARITY_COMMON, "coral", "PM", "spark", "moon", "포스트잇 한 장에 달빛을 얹듯 해야 할 일을 조용히 비춰 줘요.", (
         "  .--.   ",
         " / () \\  ",
         "|  ..  | ",
         "| '--' | ",
         " '----'  ",
     )),
-    _buddy("attendance_bell", "출석방울", RARITY_COMMON, "butter", "AB", "seal", "attendance", "출석 체크 순간을 가볍고 또렷하게 알려 주는 방울이에요.", (
+    _buddy("attendance_bell", "출석방울", RARITY_COMMON, "butter", "AB", "seal", "attendance", "출석과 시작 신호를 맑고 가볍게 울려 주는 메이트예요.", (
         "  .--.   ",
         " / ()\\   ",
         "|  __  | ",
         "| |__| | ",
         "  /__\\   ",
     )),
-    _buddy("pin_star", "압정별", RARITY_COMMON, "ruby", "PS", "spark", "pin", "게시판 한쪽에 꼭 눌러 둔 반짝 메모 같은 존재예요.", (
+    _buddy("pin_star", "압정별", RARITY_COMMON, "ruby", "PS", "spark", "pin", "게시판의 핵심 한 점을 별처럼 또렷하게 눌러 주는 메이트예요.", (
         "   /\\    ",
         "  <..>   ",
         " /_==_\\  ",
         "   ||    ",
         "   ||    ",
     )),
-    _buddy("highlight_band", "형광띠", RARITY_COMMON, "lemon", "HB", "spark", "marker", "중요한 순간을 형광펜처럼 또렷하게 남겨 줘요.", (
+    _buddy("highlight_band", "형광띠", RARITY_COMMON, "lemon", "HB", "spark", "marker", "꼭 남겨야 할 순간을 형광 한 줄처럼 선명하게 살려 줘요.", (
         " ______  ",
         "|= .. =| ",
         "|=____=| ",
         "  ||||   ",
         "  '--'   ",
     )),
-    _buddy("storage_tray", "수납트레이", RARITY_COMMON, "ice", "SY", "seal", "tray", "작은 준비물을 한 번에 담아 두는 정리 메이트예요.", (
+    _buddy("storage_tray", "정리받침", RARITY_COMMON, "ice", "SY", "seal", "tray", "준비물과 작은 소품을 한자리에 고르게 받쳐 두는 메이트예요.", (
         " ______  ",
         "/_...._\\ ",
         "|      | ",
         "|______| ",
         " \\____/  ",
     )),
-    _buddy("stamp_captain", "도장대장", RARITY_RARE, "ruby", "SP", "seal", "stamp", "도장 한 번처럼 분명하게 완료 감각을 남겨 줘요.", (
+    _buddy("note_pot", "메모화분", RARITY_COMMON, "mint", "NP", "petal", "pot", "짧은 메모와 아이디어를 포근하게 키워 내는 화분 메이트예요.", (
+        "  .--.    ",
+        " / ..\\    ",
+        "| |~~|    ",
+        "| |__|    ",
+        "  /||\\    ",
+    )),
+    _buddy("paper_crane", "종이학", RARITY_COMMON, "sky", "PC", "spark", "crane", "접어 둔 쪽지 한 장처럼 다음 할 일을 가볍게 띄워 줘요.", (
+        "   /\\     ",
+        "  /..\\    ",
+        " <_==_>   ",
+        "  /\\/\\    ",
+        "   \\/     ",
+    )),
+    _buddy("stamp_captain", "도장반장", RARITY_RARE, "ruby", "SP", "seal", "stamp", "완료해야 할 순간에 도장 한 번 같은 확실함을 남겨 줘요.", (
         " .----.  ",
         "/ .--.\\  ",
         "| |##| | ",
         "| '--' | ",
         " '----'  ",
     )),
-    _buddy("bell_ring", "종소링", RARITY_RARE, "teal", "BR", "seal", "bell", "시작과 전환 타이밍을 맑게 울려 주는 메이트예요.", (
+    _buddy("bell_ring", "종소링", RARITY_RARE, "teal", "BR", "seal", "bell", "시작과 전환 타이밍을 가볍고 맑은 울림으로 알려 줘요.", (
         "  .--.   ",
         " / ()\\   ",
         "|  __  | ",
         "| /__\\ | ",
         "  /  \\   ",
     )),
-    _buddy("timetable_fairy", "시간표요정", RARITY_RARE, "cobalt", "TF", "grid", "timetable", "복잡한 시간표도 한눈에 잡히게 정리해 줘요.", (
+    _buddy("timetable_fairy", "시간표요정", RARITY_RARE, "cobalt", "TF", "grid", "timetable", "복잡한 시간표 흐름을 한눈에 읽히는 리듬으로 정리해 줘요.", (
         " .====.  ",
         "| 12  |  ",
         "| --  |  ",
         "|_..__|  ",
         "  /__\\   ",
     )),
-    _buddy("ribbon_file", "리본파일", RARITY_RARE, "rose", "RF", "ribbon", "file", "중요 자료를 예쁘게 묶어 두는 리본 파일이에요.", (
+    _buddy("ribbon_file", "리본파일", RARITY_RARE, "rose", "RF", "ribbon", "file", "소중한 자료를 예쁘고 반듯하게 묶어 두는 파일 메이트예요.", (
         " .-----. ",
         "| >--< | ",
         "| |__| | ",
         "| |  | | ",
         "'------' ",
     )),
-    _buddy("color_flower", "색연필꽃", RARITY_RARE, "sunset", "CF", "petal", "flower", "색연필 끝에서 피어난 꽃처럼 교실을 화사하게 채워요.", (
+    _buddy("color_flower", "색연필꽃", RARITY_RARE, "sunset", "CF", "petal", "flower", "색이 필요한 순간마다 교실 분위기를 환하게 피워 줘요.", (
         "   /\\    ",
         " _<..>_  ",
         " \\\\||//  ",
         "  /__\\   ",
         "   ||    ",
     )),
-    _buddy("drawer_keeper", "서랍지기", RARITY_RARE, "slate", "DK", "cabinet", "drawer", "서랍 속 준비물을 잊지 않게 챙겨 주는 지기예요.", (
+    _buddy("drawer_keeper", "서랍지기", RARITY_RARE, "slate", "DK", "cabinet", "drawer", "잊기 쉬운 준비물도 서랍 속에서 정확히 찾아오게 도와줘요.", (
         " .----.  ",
         "| [] []| ",
         "| [] []| ",
         "|  __  | ",
         "'------' ",
     )),
-    _buddy("timer_ring", "타이머링", RARITY_RARE, "plum", "TR", "spark", "timer", "수업 템포를 놓치지 않도록 시간을 둥글게 감싸요.", (
+    _buddy("timer_ring", "타이머링", RARITY_RARE, "plum", "TR", "spark", "timer", "수업의 템포가 흐트러지지 않도록 시간을 둥글게 감싸 줘요.", (
         "  .--.   ",
         " / 12\\   ",
         "|  .. |  ",
         " \\ -- /  ",
         "  '--'   ",
     )),
-    _buddy("clipboard_ri", "클립보드리", RARITY_RARE, "denim", "CB", "grid", "clipboard", "체크할 목록을 또박또박 들고 다니는 보드 친구예요.", (
+    _buddy("clipboard_ri", "체크보드리", RARITY_RARE, "denim", "CB", "grid", "clipboard", "해야 할 목록을 한 줄씩 또박또박 챙겨 주는 체크 메이트예요.", (
         " .----.  ",
         "|====| | ",
         "| .. | | ",
         "|____|_| ",
         "  ||||   ",
     )),
-    _buddy("ruler_captain", "자대장", RARITY_RARE, "peach", "RL", "grid", "ruler", "길이와 간격을 맞추듯 교실 흐름을 반듯하게 세워 줘요.", (
+    _buddy("ruler_captain", "줄반장", RARITY_RARE, "peach", "RL", "grid", "ruler", "길이와 간격을 맞추듯 교실 흐름을 반듯하게 세워 줘요.", (
         " .-----.  ",
         "|0 5 10|  ",
         "|  ..  |  ",
         "|_____ |  ",
         "   ||     ",
     )),
-    _buddy("file_basket", "파일바구니", RARITY_RARE, "seafoam", "FB", "cabinet", "basket", "여러 장의 자료를 한 번에 담아 정리해 주는 바구니예요.", (
+    _buddy("file_basket", "파일바구니", RARITY_RARE, "seafoam", "FB", "cabinet", "basket", "여러 장의 자료를 한 번에 담아 가지런히 모아 주는 바구니예요.", (
         " .----.  ",
         "/_/\\/\\_\\ ",
         "| .. ..| ",
         "|______| ",
         " /____\\  ",
     )),
-    _buddy("pointer_beam", "포인터빔", RARITY_RARE, "sky", "PB", "spark", "pointer", "시선이 머물 곳을 반짝 선으로 알려 주는 빔이에요.", (
+    _buddy("pointer_beam", "포인터빔", RARITY_RARE, "sky", "PB", "spark", "pointer", "시선이 머물 핵심 지점을 반짝이는 선으로 짚어 줘요.", (
         "   /\\     ",
         "  /..\\--  ",
         " /_==_\\\\  ",
         "    ||    ",
         "    ||    ",
     )),
-    _buddy("book_trolley", "북트롤리", RARITY_RARE, "forest", "BT", "cabinet", "cart", "자료 묶음을 차곡차곡 싣고 다니는 이동 메이트예요.", (
+    _buddy("book_trolley", "북트롤리", RARITY_RARE, "forest", "BT", "cabinet", "cart", "읽을거리와 활동 자료를 차분하게 실어 나르는 이동 메이트예요.", (
         " .----.  ",
         "| [] []| ",
         "| .--. | ",
         "|_|__|_| ",
         "  oo oo  ",
     )),
-    _buddy("board_aurora", "칠판오로라", RARITY_EPIC, "cobalt", "BA", "aurora", "aurora", "칠판 위 공기를 오로라처럼 맑게 바꾸는 에픽 메이트예요.", (
+    _buddy("board_aurora", "칠판오로라", RARITY_EPIC, "cobalt", "BA", "aurora", "aurora", "칠판 위 분위기를 오로라처럼 넓고 맑게 바꿔 주는 에픽 메이트예요.", (
         " .------. ",
         "| .--. *| ",
         "| |..|~ | ",
         "| |__|  | ",
         " '------' ",
     )),
-    _buddy("time_compass", "시간나침반", RARITY_EPIC, "plum", "TC", "spark", "compass", "복잡한 일정 속에서도 다음 방향을 가리키는 나침반이에요.", (
+    _buddy("time_compass", "시간나침반", RARITY_EPIC, "plum", "TC", "spark", "compass", "복잡한 하루 속에서도 다음 한 걸음을 정확히 가리켜 줘요.", (
         "   /\\    ",
         " .-..-.  ",
         "<| 00 |> ",
         " '-..-'  ",
         "   \\/    ",
     )),
-    _buddy("paper_castle", "종이성", RARITY_EPIC, "peach", "PA", "window", "castle", "종이와 계획이 층층이 쌓여 만들어진 교실의 작은 성이에요.", (
+    _buddy("paper_castle", "종이성", RARITY_EPIC, "peach", "PA", "window", "castle", "수업 계획과 자료를 층층이 지켜 주는 작은 성 같은 메이트예요.", (
         "  /\\/\\   ",
         " /_.._\\  ",
         "| |__| | ",
         "| |  | | ",
         "|_|__|_| ",
     )),
-    _buddy("ribbon_cabinet", "리본캐비닛", RARITY_EPIC, "rose", "RC", "cabinet", "cabinet_ribbon", "정리와 장식을 동시에 챙기는 리본 캐비닛 메이트예요.", (
+    _buddy("ribbon_cabinet", "리본캐비닛", RARITY_EPIC, "rose", "RC", "cabinet", "cabinet_ribbon", "정리와 장식을 동시에 챙겨 교실의 결을 곱게 다듬어 줘요.", (
         " .-----. ",
         "| >==< | ",
         "| [] []| ",
         "| [] []| ",
         "'------' ",
     )),
-    _buddy("class_window_star", "교실창별", RARITY_EPIC, "ice", "CW", "window", "window", "교실 창에 비친 별빛처럼 공간을 환하게 열어 줘요.", (
+    _buddy("class_window_star", "교실창별", RARITY_EPIC, "ice", "CW", "window", "window", "창가로 스미는 별빛처럼 교실 전체를 환하게 열어 줘요.", (
         " .-[]-.  ",
         "| *  * | ",
         "|  ..  | ",
         "| *  * | ",
         " '-----' ",
     )),
-    _buddy("desk_arch", "교탁아치", RARITY_EPIC, "charcoal", "DA", "window", "desk", "교탁 위 흐름을 단단하게 감싸는 아치형 메이트예요.", (
+    _buddy("desk_arch", "교탁아치", RARITY_EPIC, "charcoal", "DA", "window", "desk", "수업의 중심이 흔들리지 않도록 교탁 흐름을 단단히 받쳐 줘요.", (
         "  ____   ",
         " / __ \\  ",
         "| |..| | ",
         "| |__| | ",
         "|_|  |_| ",
     )),
-    _buddy("routine_station", "루틴정거장", RARITY_EPIC, "seafoam", "RS", "grid", "station", "교실 루틴이 매번 같은 자리에서 출발하도록 잡아 줘요.", (
+    _buddy("routine_station", "루틴정거장", RARITY_EPIC, "seafoam", "RS", "grid", "station", "매일 같은 루틴이 편안하게 출발하도록 자리를 잡아 줘요.", (
         " .------. ",
         "| [__]  | ",
         "|  ..   | ",
         "|__||___| ",
         "   /__\\   ",
     )),
-    _buddy("class_lantern", "수업등불", RARITY_EPIC, "sunset", "LN", "spark", "lantern", "수업 흐름의 어두운 틈을 조용히 밝혀 주는 등불이에요.", (
+    _buddy("class_lantern", "수업등불", RARITY_EPIC, "sunset", "LN", "spark", "lantern", "수업 흐름의 어두운 틈을 조용한 불빛으로 밝혀 줘요.", (
         "   /\\    ",
         " .-..-.  ",
         "| |..| | ",
         "| |__| | ",
         " '--||'  ",
     )),
-    _buddy("time_display", "시간전광판", RARITY_EPIC, "denim", "TD", "grid", "display", "지금 해야 할 일을 한 번에 보여 주는 전광판 메이트예요.", (
+    _buddy("time_display", "시간전광판", RARITY_EPIC, "denim", "TD", "grid", "display", "지금 해야 할 일을 가장 먼저 보이게 정리해 주는 메이트예요.", (
         " .------. ",
         "| 08:30 | ",
         "|  ..   | ",
         "|______ | ",
         "   /__\\   ",
     )),
-    _buddy("board_lighthouse", "칠판등대", RARITY_LEGENDARY, "nightgold", "LH", "lighthouse", "lighthouse", "칠판 위를 가르는 빛처럼 등장해 교실 전체 분위기를 바꿔 놓는 전설 메이트예요.", (
+    _buddy("notice_garden", "알림정원", RARITY_EPIC, "forest", "NG", "window", "garden", "공지와 일정이 한곳에서 차분히 피어나도록 정리해 주는 정원 메이트예요.", (
+        "  .--.    ",
+        " /_.._\\   ",
+        "|  ..  |  ",
+        "| |~~| |  ",
+        "'------'  ",
+    )),
+    _buddy("library_arch", "독서아치", RARITY_EPIC, "butter", "LA", "window", "library", "읽기와 활동이 오가는 길목을 포근한 아치처럼 이어 줘요.", (
+        "  ____    ",
+        " /_[]_\\   ",
+        "| |..| |  ",
+        "| |__| |  ",
+        "|_/__\\_|  ",
+    )),
+    _buddy("board_lighthouse", "칠판등대", RARITY_LEGENDARY, "nightgold", "LH", "lighthouse", "lighthouse", "교실 전체 흐름을 가장 밝은 방향으로 이끄는 전설 메이트예요.", (
         "    /\\    ",
         "   /++\\   ",
         "  /_==_\\  ",

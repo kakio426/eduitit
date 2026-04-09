@@ -230,6 +230,7 @@ def _serialize_skin(
         "skin_key": resolved_skin_key,
         "buddy_key": buddy.key,
         "label": skin.label if skin else "기본 스타일",
+        "short_label": _compact_style_label(label=skin.label if skin else "기본 스타일", buddy_name=buddy.name),
         "palette": palette_key,
         "palette_tokens": palette_tokens,
         "ascii_tokens": _build_ascii_tokens(palette_tokens=palette_tokens, colored=skin is not None),
@@ -256,6 +257,7 @@ def _serialize_unlocked_skin_result(
         "buddy_key": buddy.key,
         "buddy_name": buddy.name,
         "label": skin.label,
+        "short_label": _compact_style_label(label=skin.label, buddy_name=buddy.name),
         "palette": skin.palette,
         "palette_tokens": palette_tokens,
         "ascii_tokens": _build_ascii_tokens(palette_tokens=palette_tokens, colored=True),
@@ -266,6 +268,7 @@ def _serialize_unlocked_skin_result(
         "rarity": buddy.rarity,
         "rarity_label": buddy.rarity_label,
         "selected_skin_label": skin.label,
+        "selected_skin_short_label": _compact_style_label(label=skin.label, buddy_name=buddy.name),
     }
 
 
@@ -273,6 +276,27 @@ def _style_summary_text(*, buddy_unlocked: bool, unlocked_skin_count: int, total
     total_styles = 1 + total_skin_count
     unlocked_styles = (1 + unlocked_skin_count) if buddy_unlocked else 0
     return f"스타일 {unlocked_styles}/{total_styles}"
+
+
+def _compact_style_label(*, label: str, buddy_name: str) -> str:
+    normalized = str(label or "").strip()
+    if not normalized:
+        return "기본"
+    if normalized == "기본 스타일":
+        return "기본"
+    prefix = f"{str(buddy_name or '').strip()} "
+    if prefix.strip() and normalized.startswith(prefix):
+        compact = normalized[len(prefix):].strip()
+        if compact:
+            return compact
+    return normalized
+
+
+def _build_sync_summary_text(*, active_key: str, profile_key: str, active_skin_key: str, profile_skin_key: str) -> str:
+    is_synced = active_key == profile_key and active_skin_key == profile_skin_key
+    if is_synced:
+        return "홈, SNS, 공유 카드까지 같은 대표 메이트로 가지런히 맞춰 두었어요."
+    return "지금은 대표 메이트와 노출 메이트가 살짝 달라요. 아래에서 다시 고르면 한 번에 맞춰집니다."
 
 
 def _resolve_style_skin_key(state_value: str, buddy_key: str, selected_buddy_key: str) -> str:
@@ -348,6 +372,7 @@ def _locked_buddy_payload(
         "preview_badge": "?",
         "selected_skin_key": "",
         "selected_skin_label": "",
+        "selected_skin_short_label": "기본",
         "share_frame": buddy.share_frame,
         "silhouette_family": buddy.silhouette_family,
         "share_caption": buddy.share_caption,
@@ -438,6 +463,10 @@ def _serialize_buddy(
         "preview_badge": selected_skin.preview_badge if selected_skin else buddy.avatar_mark,
         "selected_skin_key": selected_skin.key if selected_skin else "",
         "selected_skin_label": selected_skin.label if selected_skin else "기본 스타일",
+        "selected_skin_short_label": _compact_style_label(
+            label=selected_skin.label if selected_skin else "기본 스타일",
+            buddy_name=buddy.name,
+        ),
         "share_frame": buddy.share_frame,
         "silhouette_family": buddy.silhouette_family,
         "share_caption": buddy.share_caption,
@@ -946,8 +975,8 @@ def build_teacher_buddy_settings_context(user) -> dict[str, object] | None:
     share_path = reverse("teacher_buddy_share_page", kwargs={"public_share_token": state.public_share_token})
     share_image_path = reverse("teacher_buddy_share_image", kwargs={"public_share_token": state.public_share_token})
     return {
-        "title": "대표 메이트 프로필",
-        "subtitle": "대표 하나만 고르면 홈과 SNS에 함께 보여요.",
+        "title": "메이트 프로필 스튜디오",
+        "subtitle": "대표 메이트, 스타일, 공유 카드까지 한 화면에서 정리해요.",
         "active_buddy": active_buddy,
         "profile_buddy": profile_buddy,
         "collection_items": collection_items,
@@ -970,12 +999,13 @@ def build_teacher_buddy_settings_context(user) -> dict[str, object] | None:
         "share_title": f"{nickname}님의 교실 메이트",
         "selection_mode_default": "profile",
         "is_synced": is_synced,
-        "sync_summary_text": (
-            "현재 홈과 SNS가 같은 메이트로 맞춰져 있어요."
-            if is_synced
-            else "지금은 홈과 SNS가 다르게 보이고 있어요. 아래에서 대표를 다시 고르면 바로 함께 맞춰집니다."
+        "sync_summary_text": _build_sync_summary_text(
+            active_key=active_key,
+            profile_key=profile_key,
+            active_skin_key=active_skin_key,
+            profile_skin_key=profile_skin_key,
         ),
-        "shared_selection_copy": "대표를 고르면 홈과 SNS에 함께 반영돼요.",
+        "shared_selection_copy": "대표를 바꾸면 홈, SNS, 공유 카드가 함께 바뀌어요.",
         "sticker_dust": sticker_dust,
         "sticker_dust_text": f"스타일 조각 {sticker_dust}개",
         "buddy_collection_summary_text": f"{TeacherBuddyUnlock.objects.filter(user=user).count()}/{TOTAL_BUDDY_COUNT} 메이트",
@@ -1682,6 +1712,12 @@ def _build_selection_payload(*, user, state: TeacherBuddyState, message: str) ->
         "active_buddy": active_buddy,
         "profile_buddy": profile_buddy,
         "collection_summary_text": _collection_summary_text(user),
+        "sync_summary_text": _build_sync_summary_text(
+            active_key=active_key,
+            profile_key=profile_key,
+            active_skin_key=_resolve_style_skin_key(state.active_skin_key, active_key, state.active_buddy_key),
+            profile_skin_key=_resolve_style_skin_key(state.profile_skin_key, profile_key, profile_key),
+        ),
         "buddy_collection_summary_text": f"{TeacherBuddyUnlock.objects.filter(user=user).count()}/{TOTAL_BUDDY_COUNT} 메이트",
         "style_collection_summary_text": f"{TeacherBuddySkinUnlock.objects.filter(user=user).count()}/{TOTAL_SKIN_COUNT} 스타일",
         "sticker_dust": int(state.sticker_dust or 0),
@@ -1828,12 +1864,12 @@ def build_teacher_buddy_share_svg(context: dict[str, object]) -> str:
     caption = escape(str(buddy.get("share_caption") or "오늘도 교실 흐름을 돕고 있어요."))
     sticker_dust = int(context.get("sticker_dust") or 0)
     cosmetic_tier = str(context.get("cosmetic_tier") or "starter")
-    ascii_lines = [line.strip() for line in str(buddy.get("idle_ascii") or "").splitlines()[:6]]
+    ascii_lines = [line.rstrip() for line in str(buddy.get("idle_ascii") or "").splitlines()[:6]]
     ascii_y = 230
     ascii_markup = []
     for line in ascii_lines:
         ascii_markup.append(
-            f'<text x="260" y="{ascii_y}" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" '
+            f'<text x="260" y="{ascii_y}" text-anchor="middle" xml:space="preserve" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" '
             f'font-size="28" font-weight="700" fill="url(#buddy-ascii)">{escape(line)}</text>'
         )
         ascii_y += 34
@@ -1869,7 +1905,7 @@ def build_teacher_buddy_share_svg(context: dict[str, object]) -> str:
         f'<rect x="90" y="300" width="340" height="206" rx="28" fill="white" fill-opacity="0.92" stroke="{ring}" stroke-width="2"/>'
         + "".join(ascii_markup)
         + f'<text x="472" y="244" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700" fill="{text}">{caption}</text>'
-        f'<text x="472" y="300" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="{text}">{escape(str(buddy.get("selected_skin_label") or "기본 스타일"))} · {rarity_label}</text>'
+        f'<text x="472" y="300" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="{text}">{escape(str(buddy.get("selected_skin_short_label") or "기본"))} · {rarity_label}</text>'
         f'<text x="472" y="354" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="500" fill="{text}">우리 사이트, 카카오톡, 인스타그램에서 함께 자랑해 보세요.</text>'
         f'<rect x="472" y="410" width="510" height="80" rx="24" fill="{accent}" fill-opacity="0.12"/>'
         f'<text x="506" y="460" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="{accent}">#{buddy_name}  #교실메이트  #Eduitit</text>'

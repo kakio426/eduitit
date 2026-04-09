@@ -89,7 +89,7 @@
         String(value || '').split(/\r?\n/).forEach(function (line) {
             var row = document.createElement('span');
             row.className = 'teacher-buddy-ascii-line';
-            row.textContent = String(line || '').trim();
+            row.textContent = String(line || '').replace(/\s+$/, '');
             node.appendChild(row);
         });
     }
@@ -107,12 +107,12 @@
     function renderAvatarHTML(buddy) {
         var tokens = buddy.palette_tokens || {};
         return '' +
-            '<div class="teacher-buddy-avatar teacher-buddy-avatar--hero is-buddy h-16 w-16 teacher-buddy-profile-avatar" ' +
+            '<div class="teacher-buddy-avatar teacher-buddy-avatar--hero teacher-buddy-avatar--badge is-buddy h-16 w-16 teacher-buddy-profile-avatar" ' +
             'style="--buddy-avatar-start:' + (tokens.bg_start || '#dbeafe') + ';' +
             '--buddy-avatar-end:' + (tokens.bg_end || '#e0e7ff') + ';' +
             '--buddy-avatar-text:' + (tokens.text || '#0f172a') + ';' +
             '--buddy-avatar-accent:' + (tokens.accent || '#4f46e5') + ';">' +
-            '<pre class="teacher-buddy-avatar-ascii" data-buddy-avatar-ascii="true">' + escapeHtml(buddy.avatar_ascii || '') + '</pre>' +
+            '<span class="teacher-buddy-avatar-badge" data-buddy-avatar-badge="true">' + escapeHtml(buddy.preview_badge || buddy.avatar_mark || '?') + '</span>' +
             '<span class="teacher-buddy-avatar-dot" aria-hidden="true"></span>' +
             '</div>';
     }
@@ -176,7 +176,7 @@
             summary.textContent = summaryText;
         }
         if (style) {
-            style.textContent = buddy.selected_skin_label || '기본 스타일';
+            style.textContent = buddy.selected_skin_short_label || '기본';
         }
     }
 
@@ -352,7 +352,7 @@
                     root,
                     payload.profile_buddy || payload.active_buddy,
                     payload.profile_buddy ? (payload.profile_buddy.share_caption || '') : '',
-                    root.dataset.sharedSelectionCopy || '대표를 고르면 홈과 SNS에 함께 반영돼요.'
+                    payload.sync_summary_text || root.dataset.sharedSelectionCopy || '대표를 바꾸면 홈과 SNS가 함께 바뀌어요.'
                 );
                 if (payload.collection_item) {
                     updateCollectionItem(root, payload.collection_item, state);

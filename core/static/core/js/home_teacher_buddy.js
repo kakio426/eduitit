@@ -162,7 +162,7 @@
         String(value || '').split(/\r?\n/).forEach(function (line) {
             var row = document.createElement('span');
             row.className = 'teacher-buddy-ascii-line';
-            row.textContent = String(line || '').trim();
+            row.textContent = String(line || '').replace(/\s+$/, '');
             node.appendChild(row);
         });
     }

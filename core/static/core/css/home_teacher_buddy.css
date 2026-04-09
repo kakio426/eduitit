@@ -1440,6 +1440,14 @@ body.teacher-buddy-modal-open {
     font-size: 0.88rem;
 }
 
+.teacher-buddy-avatar--hero .teacher-buddy-avatar-badge {
+    font-size: 1rem;
+}
+
+.teacher-buddy-collection-avatar .teacher-buddy-avatar-badge {
+    font-size: 0.68rem;
+}
+
 .teacher-buddy-avatar--compose .teacher-buddy-avatar-ascii {
     font-size: 0.39rem;
     transform: scale(0.94);
@@ -1515,22 +1523,26 @@ body.teacher-buddy-modal-open {
 .teacher-buddy-profile-card {
     display: flex;
     flex-direction: column;
-    gap: 0.95rem;
-    padding: 1rem;
-    border-radius: 1.55rem;
-    border: 1px solid var(--buddy-line);
+    gap: 1.05rem;
+    padding: 1.15rem;
+    border-radius: 1.7rem;
+    border: 1px solid rgba(148, 163, 184, 0.18);
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.92)),
         var(--teacher-buddy-hero-gradient, linear-gradient(135deg, rgba(219, 234, 254, 0.4), rgba(224, 231, 255, 0.3)));
     background-blend-mode: screen;
+    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
 }
 
 .teacher-buddy-profile-card--representative {
-    gap: 1.05rem;
+    gap: 1.1rem;
 }
 
 .teacher-buddy-profile-body--hero {
-    min-height: 11.6rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(18rem, 0.9fr);
+    gap: 0.9rem;
+    min-height: 12.4rem;
 }
 
 .teacher-buddy-settings-toolbar {
@@ -1541,12 +1553,44 @@ body.teacher-buddy-modal-open {
     flex-wrap: wrap;
 }
 
+.teacher-buddy-settings-section-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.9rem;
+    flex-wrap: wrap;
+}
+
+.teacher-buddy-settings-section-title {
+    margin: 0.18rem 0 0;
+    color: var(--buddy-text);
+    font-size: 1.05rem;
+    font-weight: 900;
+    line-height: 1.3;
+}
+
+.teacher-buddy-settings-section-subtitle {
+    margin: 0.3rem 0 0;
+    color: var(--buddy-muted);
+    font-size: 0.88rem;
+    line-height: 1.55;
+    max-width: 42rem;
+}
+
+.teacher-buddy-settings-section-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+}
+
 .teacher-buddy-mode-help {
     margin: 0;
-    color: var(--buddy-soft);
+    color: var(--buddy-muted);
     font-size: 0.88rem;
-    font-weight: 700;
+    font-weight: 800;
     line-height: 1.55;
+    max-width: 34rem;
 }
 
 .teacher-buddy-coupon-card {
@@ -1634,6 +1678,7 @@ body.teacher-buddy-modal-open {
 
 .teacher-buddy-settings-item {
     min-width: 0;
+    gap: 0.82rem;
 }
 
 .teacher-buddy-settings-item-meta {
@@ -1657,6 +1702,108 @@ body.teacher-buddy-modal-open {
 
 .teacher-buddy-settings-item.is-locked {
     opacity: 0.78;
+}
+
+.teacher-buddy-profile-identity {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    min-width: 0;
+}
+
+.teacher-buddy-profile-intro {
+    display: grid;
+    gap: 0.38rem;
+    min-width: 0;
+}
+
+.teacher-buddy-profile-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+}
+
+.teacher-buddy-profile-badges {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+}
+
+.teacher-buddy-profile-stage,
+.teacher-buddy-profile-story,
+.teacher-buddy-profile-sync,
+.teacher-buddy-profile-stat {
+    border-radius: 1.25rem;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    background: rgba(255, 255, 255, 0.72);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.teacher-buddy-profile-stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    min-height: 12.4rem;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(248, 250, 252, 0.76)),
+        rgba(255, 255, 255, 0.56);
+}
+
+.teacher-buddy-profile-aside {
+    display: grid;
+    gap: 0.7rem;
+    align-content: start;
+}
+
+.teacher-buddy-profile-story,
+.teacher-buddy-profile-sync {
+    padding: 0.92rem 0.95rem;
+}
+
+.teacher-buddy-profile-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+}
+
+.teacher-buddy-profile-stat {
+    padding: 0.82rem 0.9rem;
+}
+
+.teacher-buddy-profile-stat-value {
+    margin: 0.22rem 0 0;
+    color: var(--buddy-text);
+    font-size: 0.88rem;
+    font-weight: 900;
+    line-height: 1.45;
+}
+
+.teacher-buddy-settings-item-caption {
+    color: var(--buddy-muted);
+    font-size: 0.84rem;
+    font-weight: 700;
+    line-height: 1.55;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+}
+
+.teacher-buddy-settings-item-body {
+    justify-content: center;
+    border-radius: 1.15rem;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(248, 250, 252, 0.78)),
+        rgba(255, 255, 255, 0.7);
+}
+
+.teacher-buddy-collection-ascii {
+    font-size: 0.76rem;
+    line-height: 1.16;
 }
 
 .teacher-buddy-status-chip {
@@ -1866,6 +2013,10 @@ body.teacher-buddy-modal-open {
     .teacher-buddy-settings-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+
+    .teacher-buddy-profile-body--hero {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }
 
 @media (max-width: 767px) {
@@ -1884,7 +2035,9 @@ body.teacher-buddy-modal-open {
     .teacher-buddy-head,
     .teacher-buddy-settings-head,
     .teacher-buddy-profile-card-head,
+    .teacher-buddy-profile-identity,
     .teacher-buddy-settings-toolbar,
+    .teacher-buddy-settings-section-head,
     .teacher-buddy-status-head {
         flex-direction: column;
         align-items: flex-start;
@@ -1892,6 +2045,10 @@ body.teacher-buddy-modal-open {
 
     .teacher-buddy-profile-ascii--hero {
         font-size: 0.92rem;
+    }
+
+    .teacher-buddy-profile-stats {
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .teacher-buddy-status-inline-list {

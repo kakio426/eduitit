@@ -963,7 +963,8 @@ class TeacherBuddyHomeRenderTests(TestCase):
 
         self.assertEqual(page_response.status_code, 200)
         self.assertContains(page_response, "공개 메이트 카드")
-        self.assertContains(page_response, 'data-buddy-avatar-ascii="true"')
+        self.assertContains(page_response, 'data-buddy-avatar-badge="true"')
+        self.assertContains(page_response, "teacher-buddy-share-ascii")
         self.assertEqual(image_response.status_code, 200)
         self.assertEqual(image_response["Content-Type"], "image/svg+xml; charset=utf-8")
 
@@ -986,15 +987,15 @@ class TeacherBuddyCatalogTests(TestCase):
         self.assertEqual(with_particle("메모싹", ("과", "와")), "메모싹과")
         self.assertEqual(with_particle("오로라", ("과", "와")), "오로라와")
 
-    def test_catalog_matches_36_buddy_and_40_skin_plan(self):
+    def test_catalog_matches_40_buddy_and_44_skin_plan(self):
         buddies = all_teacher_buddies()
         avatar_marks = [buddy.avatar_mark for buddy in buddies]
         total_skin_count = sum(len(get_teacher_buddy_skins_for_buddy(buddy.key)) for buddy in buddies)
 
-        self.assertEqual(TOTAL_BUDDY_COUNT, 36)
-        self.assertEqual(TOTAL_SKIN_COUNT, 40)
-        self.assertEqual(len(buddies), 36)
-        self.assertEqual(total_skin_count, 40)
+        self.assertEqual(TOTAL_BUDDY_COUNT, 40)
+        self.assertEqual(TOTAL_SKIN_COUNT, 44)
+        self.assertEqual(len(buddies), 40)
+        self.assertEqual(total_skin_count, 44)
         self.assertEqual(len(avatar_marks), len(set(avatar_marks)))
 
     def test_catalog_respects_ascii_and_silhouette_rules(self):
