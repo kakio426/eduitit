@@ -3,7 +3,7 @@
 {% block title %}서명 요청 만들기 - Eduitit{% endblock %}
 
 {% block content %}
-<main class="pt-24 md:pt-28 pb-16 px-4 min-h-screen">
+<main class="pt-24 md:pt-28 pb-32 md:pb-16 px-4 min-h-screen">
     <div class="max-w-4xl mx-auto space-y-6">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -11,7 +11,7 @@
                     <i class="fa-solid fa-arrow-left mr-1"></i> 목록으로
                 </a>
                 <h1 class="mt-3 text-3xl md:text-4xl font-black text-slate-800">서명 요청 만들기</h1>
-                <p class="mt-2 text-base text-slate-500">제목과 시간만 적으면 바로 링크와 QR을 만들 수 있습니다.</p>
+                <p class="mt-2 text-base text-slate-500">제목과 시간부터 적어 주세요.</p>
             </div>
             {% if sheetbook_prefill_origin_url %}
             <a href="{{ sheetbook_prefill_origin_url }}"
@@ -20,28 +20,6 @@
             </a>
             {% endif %}
         </div>
-
-        <section class="rounded-[1.75rem] border border-indigo-100 bg-gradient-to-br from-white via-indigo-50 to-sky-50 p-5 md:p-6">
-            <div class="flex flex-wrap gap-2">
-                <span class="rounded-full bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm">참석자는 로그인 없이 참여합니다.</span>
-                <span class="rounded-full bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm">서명은 휴대폰에서도 가능합니다.</span>
-                <span class="rounded-full bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm">이 서비스는 학교 내부 참석 확인과 기록용입니다.</span>
-            </div>
-            <div class="mt-4 space-y-2 text-sm text-slate-500">
-                <p>직접 쓴 손서명은 참여 화면에서 저장해 두고, 폰트형 이름 이미지는 정말 급할 때만 보조 도구로 쓰는 흐름을 추천합니다.</p>
-                <div class="flex flex-wrap items-center gap-2">
-                    <span class="font-bold text-slate-400">보관함 & 보조 도구</span>
-                    <a href="{% url 'signatures:style_list' %}"
-                        class="rounded-full bg-white px-3 py-1 font-bold text-slate-600 shadow-sm hover:text-indigo-700 transition">
-                        내 서명 보관함
-                    </a>
-                    <a href="{% url 'signatures:maker' %}"
-                        class="rounded-full bg-white px-3 py-1 font-bold text-slate-600 shadow-sm hover:text-indigo-700 transition">
-                        이름 폰트 도구
-                    </a>
-                </div>
-            </div>
-        </section>
 
         {% if sheetbook_prefill_active or copy_source_session %}
         <section class="rounded-[1.75rem] border {% if copy_source_session and not sheetbook_prefill_active %}border-emerald-200 bg-emerald-50{% else %}border-blue-200 bg-blue-50{% endif %} p-5 md:p-6">
@@ -92,7 +70,7 @@
         </div>
         {% endif %}
 
-        <form method="post" enctype="multipart/form-data" class="clay-card rounded-[1.75rem] p-6 md:p-8 space-y-6">
+        <form method="post" enctype="multipart/form-data" class="clay-card rounded-[1.75rem] p-6 md:p-8 space-y-6" data-create-form>
             {% csrf_token %}
             {% if sheetbook_seed_token %}
             <input type="hidden" name="sheetbook_seed_token" value="{{ sheetbook_seed_token }}">
@@ -110,9 +88,9 @@
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div>
                         <p class="text-xs font-black uppercase tracking-[0.18em] text-amber-700">운영자 전용</p>
-                        <h2 class="mt-2 text-xl md:text-2xl font-black text-slate-800">교사가 부탁한 요청을 대신 준비할 수 있습니다.</h2>
+                        <h2 class="mt-2 text-xl md:text-2xl font-black text-slate-800">교사 대신 바로 이어받을 요청을 준비할 수 있습니다.</h2>
                         <p class="mt-2 text-sm md:text-base font-bold leading-relaxed text-slate-600">
-                            대상 교사를 고르면 그 교사 계정에서 바로 이어받을 수 있게 저장됩니다. 명단이 아직 없으면 아래 칸에 그대로 붙여 넣어도 됩니다.
+                            대상 교사를 고르면 그 교사 계정 요청함에서 바로 이어집니다. 명단이 아직 없으면 받은 이름만 붙여 넣어도 시작할 수 있습니다.
                         </p>
                     </div>
                     <span class="inline-flex min-h-[52px] items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-black text-amber-700 shadow-sm">
@@ -123,7 +101,7 @@
                     <div class="rounded-2xl bg-white p-4 shadow-sm">
                         <label class="mb-2 block text-sm font-black text-slate-700">요청을 맡길 교사</label>
                         {{ form.acting_for_user }}
-                        <p class="mt-2 text-sm font-bold leading-relaxed text-slate-600">비워두면 기존처럼 내 요청으로 만들고, 교사를 고르면 그 교사 요청함에서 바로 보입니다.</p>
+                        <p class="mt-2 text-sm font-bold leading-relaxed text-slate-600">비워두면 내 요청으로 만들고, 교사를 고르면 그 교사 요청함에서 바로 보입니다.</p>
                     </div>
                     <div class="rounded-2xl bg-white p-4 shadow-sm">
                         <label class="mb-2 block text-sm font-black text-slate-700">교사가 보낸 명단 (선택)</label>
@@ -137,7 +115,7 @@
             <section class="space-y-5">
                 <div>
                     <p class="text-xs font-black uppercase tracking-[0.18em] text-slate-400">기본 정보</p>
-                    <h2 class="mt-2 text-xl font-black text-slate-800">무엇을 만들지 먼저 적어주세요.</h2>
+                    <h2 class="mt-2 text-xl font-black text-slate-800">무슨 요청인지 먼저 적어 주세요.</h2>
                 </div>
 
                 <div>
@@ -164,52 +142,57 @@
                 </div>
             </section>
 
-            {% include 'signatures/_attachments_panel.html' %}
-
             <section class="rounded-[1.75rem] border border-indigo-100 bg-gradient-to-br from-white via-indigo-50/80 to-sky-50/80 p-5 md:p-6 space-y-5">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div>
-                        <p class="text-xs font-black uppercase tracking-[0.18em] text-indigo-500">중요한 설정</p>
-                        <h2 class="mt-2 text-xl md:text-2xl font-black text-slate-800">명단과 참여 인원은 여기서 같이 정하세요.</h2>
-                        <p class="mt-2 text-base md:text-lg font-bold leading-relaxed text-slate-600">
-                            누가 안 했는지 이름으로 보거나, 몇 명이 남았는지 확인하려면 이 칸까지 같이 적어 주세요.
-                        </p>
+                        <p class="text-xs font-black uppercase tracking-[0.18em] text-indigo-500">참여 대상 정하기</p>
+                        <h2 class="mt-2 text-xl md:text-2xl font-black text-slate-800">이름으로 확인할지, 인원 수로만 볼지 정하세요.</h2>
+                        <p class="mt-2 text-base md:text-lg font-bold leading-relaxed text-slate-600">둘 중 하나만 정해도 바로 시작할 수 있습니다.</p>
                     </div>
                     <span class="inline-flex min-h-[52px] items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-black text-indigo-700 shadow-sm">
-                        아래 두 칸이 가장 중요합니다
+                        둘 중 하나만 정하면 시작
                     </span>
                 </div>
 
                 <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                    <div class="rounded-2xl bg-white p-4 shadow-sm">
-                        <label class="mb-2 block text-sm font-black text-slate-700">공유 명단 연결 (중요)</label>
+                    <div class="rounded-2xl bg-white p-4 shadow-sm space-y-4">
+                        <div>
+                            <p class="text-xs font-black uppercase tracking-[0.18em] text-slate-400">이름으로 확인하기</p>
+                            <h3 class="mt-2 text-lg font-black text-slate-800">누가 아직 안 했는지 이름으로 보려면 명단을 연결하세요.</h3>
+                        </div>
+
                         {% if restored_roster_group %}
-                        <div class="mb-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                        <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
                             방금 만든 명단 <span class="font-black">{{ restored_roster_group.name }}</span>을 연결해 두었어요.
                         </div>
                         {% endif %}
 
                         {% if has_roster_groups %}
-                        {{ form.shared_roster_group }}
-                        <p class="mt-2 text-sm font-bold leading-relaxed text-slate-600">
-                            {% if is_proxy_mode %}
-                            선택한 교사 계정에 저장된 명단이 있으면 여기서 바로 연결하세요. 새 명단이 아직 없으면 위 칸에 받은 이름을 붙여 넣어도 됩니다.
-                            {% else %}
-                            누가 안 했는지 이름으로 보려면 명단을 연결하세요.
-                            {% endif %}
-                        </p>
+                        <div>
+                            <label class="mb-2 block text-sm font-black text-slate-700">공유 명단 선택</label>
+                            {{ form.shared_roster_group }}
+                            <p class="mt-2 text-sm font-bold leading-relaxed text-slate-600">
+                                {% if is_proxy_mode %}
+                                선택한 교사 계정에 저장된 명단이 있으면 여기서 바로 연결하세요. 새 명단이 아직 없으면 위 칸에 받은 이름을 붙여 넣어도 됩니다.
+                                {% else %}
+                                저장해 둔 명단이 있으면 여기서 바로 연결해 미참여자를 이름으로 확인할 수 있습니다.
+                                {% endif %}
+                            </p>
+                        </div>
                         {% if not is_proxy_mode %}
-                        <div class="mt-4 flex flex-wrap gap-2">
+                        <div class="flex flex-wrap gap-2">
                             <button
                                 type="submit"
                                 formaction="{% url 'signatures:prepare_roster_return' %}"
                                 formmethod="post"
                                 formnovalidate
+                                data-prepare-roster-return
                                 class="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-700 hover:bg-indigo-100 transition"
                             >
                                 <i class="fa-solid fa-plus"></i>새 명단 만들기
                             </button>
                         </div>
+                        <p class="text-xs font-bold leading-relaxed text-slate-500">명단 만들기로 이동할 때 첨부 파일은 함께 보관되지 않으니, 첨부는 돌아와서 올리는 편이 안전합니다.</p>
                         {% endif %}
                         {% else %}
                         <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4">
@@ -218,7 +201,7 @@
                                 {% if is_proxy_mode %}
                                 이 교사 계정에는 아직 저장된 명단이 없습니다. 위 운영자 칸에 받은 명단을 붙여 넣으면 이번 요청은 바로 만들 수 있습니다.
                                 {% else %}
-                                누가 안 했는지 이름으로 보려면 먼저 명단을 만들어 주세요.
+                                이름으로 확인하려면 먼저 명단을 하나 만들어 두면 됩니다.
                                 {% endif %}
                             </p>
                             <div class="mt-4 flex flex-wrap gap-2">
@@ -228,6 +211,7 @@
                                     formaction="{% url 'signatures:prepare_roster_return' %}"
                                     formmethod="post"
                                     formnovalidate
+                                    data-prepare-roster-return
                                     class="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-black text-white hover:bg-indigo-700 transition"
                                 >
                                     <i class="fa-solid fa-plus"></i>명단 만들기
@@ -237,17 +221,26 @@
                                     href="#expectedCountField"
                                     class="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-600 hover:text-slate-800 transition"
                                 >
-                                    이번에는 명단 없이 시작
+                                    이번에는 인원 수만 적기
                                 </a>
                             </div>
+                            {% if not is_proxy_mode %}
+                            <p class="mt-3 text-xs font-bold leading-relaxed text-slate-500">명단 만들기로 이동할 때 첨부 파일은 함께 보관되지 않으니, 첨부는 돌아와서 올리는 편이 안전합니다.</p>
+                            {% endif %}
                         </div>
                         {% endif %}
                     </div>
 
-                    <div class="rounded-2xl bg-white p-4 shadow-sm" id="expectedCountField">
-                        <label class="mb-2 block text-sm font-black text-slate-700">예상 참여 인원 (중요)</label>
-                        {{ form.expected_count }}
-                        <p class="mt-2 text-sm font-bold leading-relaxed text-slate-600">명단을 연결하면 누가 안 했는지 이름으로 보고, 명단 없이 시작하면 남은 인원 수만 확인할 수 있습니다.</p>
+                    <div class="rounded-2xl bg-white p-4 shadow-sm space-y-4" id="expectedCountField">
+                        <div>
+                            <p class="text-xs font-black uppercase tracking-[0.18em] text-slate-400">인원 수로 시작하기</p>
+                            <h3 class="mt-2 text-lg font-black text-slate-800">명단이 아직 없어도 숫자만 적고 바로 시작할 수 있습니다.</h3>
+                        </div>
+                        <div>
+                            <label class="mb-2 block text-sm font-black text-slate-700">예상 참여 인원</label>
+                            {{ form.expected_count }}
+                            <p class="mt-2 text-sm font-bold leading-relaxed text-slate-600">명단이 없으면 남은 인원 수만 보고, 나중에 명단을 연결하면 이름 기준 확인으로 바꿀 수 있습니다.</p>
+                        </div>
                     </div>
                 </div>
 
@@ -260,43 +253,119 @@
                 </div>
             </section>
 
-            <details class="rounded-[1.75rem] border-2 border-indigo-200 bg-indigo-50/70 p-5 md:p-6" {% if form.errors or form.print_title.value or form.description.value %}open{% endif %}>
+            <details class="rounded-[1.75rem] border-2 border-indigo-200 bg-indigo-50/70 p-5 md:p-6" {% if form.errors or form.print_title.value or form.description.value or show_additional_options or attachment_reupload_notice %}open{% endif %}>
                 <summary class="flex cursor-pointer list-none items-center justify-between gap-4">
                     <div>
-                        <p class="text-xs font-black uppercase tracking-[0.18em] text-indigo-500">추가 설정</p>
-                        <p class="mt-2 text-xl font-black text-slate-800">인쇄 제목이나 안내 문구가 더 필요하면 여기서 적으세요.</p>
-                        <p class="mt-2 text-sm md:text-base font-bold leading-relaxed text-slate-600">지금은 닫혀 있어도 됩니다. 버튼을 눌러 두 가지 추가 항목을 펼칠 수 있습니다.</p>
+                        <p class="text-xs font-black uppercase tracking-[0.18em] text-indigo-500">추가 옵션</p>
+                        <p class="mt-2 text-xl font-black text-slate-800">첨부, 인쇄 제목, 안내 문구는 필요할 때만 펼치세요.</p>
+                        <p class="mt-2 text-sm md:text-base font-bold leading-relaxed text-slate-600">기본 요청은 위 정보만으로 충분하고, 아래 옵션은 필요한 경우에만 더하면 됩니다.</p>
                     </div>
                     <span class="inline-flex min-h-[52px] items-center justify-center rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-black text-white shadow-sm">
-                        추가 설정 열기
+                        추가 옵션 열기
                     </span>
                 </summary>
 
-                <div class="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div class="rounded-2xl bg-white p-4">
-                        <label class="mb-2 block text-sm font-black text-slate-700">인쇄 상단 제목 (선택)</label>
-                        {{ form.print_title }}
-                        <p class="mt-2 text-xs text-slate-500">출력/PDF 상단 제목을 따로 쓰고 싶을 때만 적으면 됩니다.</p>
+                <div class="mt-5 space-y-4">
+                    {% if attachment_reupload_notice %}
+                    <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold leading-relaxed text-amber-800">
+                        첨부 파일은 명단 만들기 화면을 다녀오면 유지되지 않습니다. 명단을 만든 뒤 이곳에서 다시 올려 주세요.
                     </div>
-                    <div class="rounded-2xl bg-white p-4">
-                        <label class="mb-2 block text-sm font-black text-slate-700">간단 설명 (선택)</label>
-                        {{ form.description }}
-                        <p class="mt-2 text-xs text-slate-500">참여자에게 꼭 보여 줄 메모가 있을 때만 남겨도 충분합니다.</p>
+                    {% endif %}
+
+                    {% include 'signatures/_attachments_panel.html' %}
+
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div class="rounded-2xl bg-white p-4">
+                            <label class="mb-2 block text-sm font-black text-slate-700">인쇄 상단 제목 (선택)</label>
+                            {{ form.print_title }}
+                            <p class="mt-2 text-xs text-slate-500">출력/PDF 상단 제목을 따로 쓰고 싶을 때만 적으면 됩니다.</p>
+                        </div>
+                        <div class="rounded-2xl bg-white p-4">
+                            <label class="mb-2 block text-sm font-black text-slate-700">간단 설명 (선택)</label>
+                            {{ form.description }}
+                            <p class="mt-2 text-xs text-slate-500">참여자에게 꼭 보여 줄 메모가 있을 때만 남겨도 충분합니다.</p>
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl bg-white p-4 shadow-sm">
+                        <p class="text-xs font-black uppercase tracking-[0.18em] text-slate-400">서명 도구</p>
+                        <h3 class="mt-2 text-lg font-black text-slate-800">직접 쓴 손서명이 기본이고, 보조 도구는 필요할 때만 쓰면 됩니다.</h3>
+                        <p class="mt-2 text-sm font-bold leading-relaxed text-slate-600">참여 화면에서 저장한 손서명을 다시 쓰는 흐름을 우선 추천하고, 이름 폰트 도구는 정말 급할 때만 보조로 쓰면 됩니다.</p>
+                        <div class="mt-4 flex flex-wrap gap-2">
+                            <a href="{% url 'signatures:style_list' %}"
+                                class="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:text-indigo-700 transition">
+                                내 서명 보관함
+                            </a>
+                            <a href="{% url 'signatures:maker' %}"
+                                class="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:text-indigo-700 transition">
+                                이름 폰트 도구
+                            </a>
+                        </div>
                     </div>
                 </div>
             </details>
 
-            <div class="flex flex-col sm:flex-row gap-3 pt-2">
-                <button type="submit"
-                    class="flex-1 rounded-2xl bg-indigo-600 py-4 text-lg font-black text-white hover:bg-indigo-700 transition">
-                    서명 요청 만들기
-                </button>
-                <a href="{% url 'signatures:list' %}"
-                    class="rounded-2xl border border-slate-200 bg-white px-6 py-4 text-center text-lg font-bold text-slate-600 hover:text-slate-800 transition">
-                    취소
-                </a>
+            <div class="fixed inset-x-4 bottom-4 z-30 md:static md:inset-auto">
+                <div class="rounded-[1.5rem] border border-slate-200 bg-white/95 p-3 shadow-2xl backdrop-blur md:rounded-none md:border-0 md:bg-transparent md:p-0 md:shadow-none">
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <button type="submit"
+                            data-create-submit
+                            data-default-label="서명 요청 만들기"
+                            class="flex-1 rounded-2xl bg-indigo-600 py-4 text-lg font-black text-white hover:bg-indigo-700 transition">
+                            서명 요청 만들기
+                        </button>
+                        <a href="{% url 'signatures:list' %}"
+                            class="rounded-2xl border border-slate-200 bg-white px-6 py-4 text-center text-lg font-bold text-slate-600 hover:text-slate-800 transition">
+                            취소
+                        </a>
+                    </div>
+                </div>
             </div>
         </form>
     </div>
 </main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.querySelectorAll('[data-prepare-roster-return]').forEach((button) => {
+        button.addEventListener('click', (event) => {
+            const form = button.form;
+            if (!form) {
+                return;
+            }
+
+            const attachmentInput = form.querySelector('input[name="attachments"]');
+            if (!attachmentInput || !attachmentInput.files || attachmentInput.files.length === 0) {
+                return;
+            }
+
+            const shouldContinue = window.confirm(
+                '명단 만들기 화면으로 이동하면 첨부 파일은 돌아와서 다시 올려야 합니다. 그래도 지금 명단 만들기로 이동할까요?'
+            );
+            if (!shouldContinue) {
+                event.preventDefault();
+            }
+        });
+    });
+
+    document.querySelectorAll('[data-create-form]').forEach((form) => {
+        form.addEventListener('submit', (event) => {
+            const submitter = event.submitter;
+            if (!submitter || !submitter.matches('[data-create-submit]')) {
+                return;
+            }
+
+            if (submitter.dataset.submitting === '1') {
+                event.preventDefault();
+                return;
+            }
+
+            submitter.dataset.submitting = '1';
+            submitter.disabled = true;
+            submitter.classList.add('cursor-not-allowed', 'opacity-60');
+            submitter.textContent = '생성 중...';
+        });
+    });
+</script>
 {% endblock %}

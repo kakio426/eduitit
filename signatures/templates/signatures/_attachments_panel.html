@@ -1,11 +1,14 @@
 <section class="rounded-[1.75rem] border border-emerald-200 bg-emerald-50/70 p-5 md:p-6 space-y-4">
     <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
-            <p class="text-xs font-black uppercase tracking-[0.18em] text-emerald-600">선택 사항</p>
-            <h2 class="mt-2 text-xl md:text-2xl font-black text-slate-800">서명 전에 볼 파일</h2>
+            <p class="text-xs font-black uppercase tracking-[0.18em] text-emerald-600">첨부 파일</p>
+            <h2 class="mt-2 text-xl md:text-2xl font-black text-slate-800">서명 전에 보여 줄 자료가 있으면 함께 넣으세요.</h2>
             <p class="mt-2 text-sm md:text-base font-bold leading-relaxed text-slate-600">
                 PDF, 이미지, 한글 파일을 함께 보낼 수 있습니다. 서명 화면에서는 미리보기 없이 다운로드만 제공합니다.
             </p>
+            {% if is_create_page %}
+            <p class="mt-2 text-xs font-bold leading-relaxed text-slate-500">명단 만들기 화면을 먼저 다녀올 예정이면 첨부는 돌아온 뒤 올리는 편이 안전합니다.</p>
+            {% endif %}
         </div>
         <span class="inline-flex min-h-[52px] items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-black text-emerald-700 shadow-sm">
             최대 {{ attachment_limits.max_files }}개 · 전체 {{ attachment_limits.max_total_mb }}MB

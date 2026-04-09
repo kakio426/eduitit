@@ -3,6 +3,7 @@ from datetime import timedelta
 from urllib.parse import parse_qs, urlparse
 
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -89,20 +90,24 @@ class SignatureTeacherFirstPagesTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "서명 요청 만들기")
-        self.assertContains(response, "참석자는 로그인 없이 참여합니다.")
-        self.assertContains(response, "명단과 참여 인원은 여기서 같이 정하세요.")
-        self.assertContains(response, "아래 두 칸이 가장 중요합니다")
-        self.assertContains(response, "공유 명단 연결 (중요)")
-        self.assertContains(response, "예상 참여 인원 (중요)")
-        self.assertContains(response, "누가 안 했는지 이름으로 보려면 먼저 명단을 만들어 주세요.")
+        self.assertContains(response, "제목과 시간부터 적어 주세요.")
+        self.assertContains(response, "기본 정보")
+        self.assertContains(response, "무슨 요청인지 먼저 적어 주세요.")
+        self.assertContains(response, "이름으로 확인할지, 인원 수로만 볼지 정하세요.")
+        self.assertContains(response, "둘 중 하나만 정하면 시작")
+        self.assertContains(response, "이름으로 확인하기")
+        self.assertContains(response, "인원 수로 시작하기")
+        self.assertContains(response, "이름으로 확인하려면 먼저 명단을 하나 만들어 두면 됩니다.")
         self.assertContains(response, "아직 연결할 명단이 없습니다.")
-        self.assertContains(response, "추가 설정 열기")
-        self.assertContains(response, "인쇄 제목이나 안내 문구가 더 필요하면 여기서 적으세요.")
+        self.assertContains(response, "추가 옵션 열기")
+        self.assertContains(response, "첨부, 인쇄 제목, 안내 문구는 필요할 때만 펼치세요.")
         self.assertContains(response, "내 서명 보관함")
         self.assertContains(response, "이름 폰트 도구")
-        self.assertContains(response, "직접 쓴 손서명은 참여 화면에서 저장해 두고")
+        self.assertContains(response, "직접 쓴 손서명이 기본이고")
         self.assertContains(response, "명단 만들기")
-        self.assertContains(response, "이번에는 명단 없이 시작")
+        self.assertContains(response, "이번에는 인원 수만 적기")
+        self.assertContains(response, 'data-create-form', html=False)
+        self.assertContains(response, 'data-create-submit', html=False)
 
     def test_create_page_shows_secondary_roster_button_when_rosters_exist(self):
         HandoffRosterGroup.objects.create(owner=self.user, name="교무실 명단")
@@ -112,6 +117,42 @@ class SignatureTeacherFirstPagesTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "새 명단 만들기")
         self.assertNotContains(response, "아직 연결할 명단이 없습니다.")
+
+    def test_prepare_roster_return_with_attachments_redirects_back_to_create_with_notice(self):
+        session_dt = timezone.localtime(timezone.now() + timedelta(days=1)).replace(minute=0, second=0, microsecond=0)
+        prepare_response = self.client.post(
+            reverse("signatures:prepare_roster_return"),
+            data={
+                "title": "첨부 후 명단 이동",
+                "print_title": "",
+                "instructor": "강사",
+                "datetime": session_dt.strftime("%Y-%m-%dT%H:%M"),
+                "location": "시청각실",
+                "description": "첨부 포함",
+                "expected_count": "24",
+                "is_active": "on",
+                "attachments": [
+                    SimpleUploadedFile("guide.pdf", b"pdf-bytes", content_type="application/pdf"),
+                ],
+            },
+        )
+
+        self.assertEqual(prepare_response.status_code, 302)
+        redirect_url = prepare_response["Location"]
+        self.assertIn(reverse("handoff:dashboard"), redirect_url)
+
+        return_to = parse_qs(urlparse(redirect_url).query)["return_to"][0]
+        self.assertIn(reverse("signatures:create"), return_to)
+        self.assertIn("reupload_attachments=1", return_to)
+        self.assertIn("show_additional_options=1", return_to)
+
+        restored_response = self.client.get(return_to)
+
+        self.assertEqual(restored_response.status_code, 200)
+        self.assertContains(restored_response, "첨부 파일은 명단 만들기 화면을 다녀오면 유지되지 않습니다.")
+        self.assertEqual(restored_response.context["form"]["title"].value(), "첨부 후 명단 이동")
+        self.assertEqual(str(restored_response.context["form"]["expected_count"].value()), "24")
+        self.assertTrue(restored_response.context["attachment_reupload_notice"])
 
     def test_prepare_roster_return_restores_draft_and_auto_selects_roster(self):
         session_dt = timezone.localtime(timezone.now() + timedelta(days=1)).replace(minute=0, second=0, microsecond=0)

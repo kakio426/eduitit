@@ -1190,6 +1190,8 @@ def prepare_roster_return(request):
     return_to = _append_query_params(
         reverse("signatures:create"),
         draft_token=draft_token,
+        reupload_attachments=1 if request.FILES.getlist("attachments") else "",
+        show_additional_options=1 if request.FILES.getlist("attachments") else "",
     )
     return redirect(
         _append_query_params(
@@ -1296,6 +1298,14 @@ def session_create(request):
         else draft_payload.get("apply_sheetbook_participants"),
         default=True,
     )
+    show_additional_options = _is_truthy_flag(
+        request.GET.get("show_additional_options"),
+        default=False,
+    )
+    attachment_reupload_notice = _is_truthy_flag(
+        request.GET.get("reupload_attachments"),
+        default=False,
+    )
     existing_attachments = []
     selected_remove_attachment_ids = []
 
@@ -1385,10 +1395,10 @@ def session_create(request):
                 )
             if roster_result["total"] > 0:
                 message_parts.append(
-                    f"연수가 생성되었습니다. 공유 명단 '{roster_result['group_name']}'에서 {roster_result['created']}명 가져왔습니다."
+                    f"서명 요청이 생성되었습니다. 공유 명단 '{roster_result['group_name']}'에서 {roster_result['created']}명 가져왔습니다."
                 )
             else:
-                message_parts.append("연수가 생성되었습니다.")
+                message_parts.append("서명 요청이 생성되었습니다.")
             if seed_created_count > 0:
                 message_parts.append(f"연결된 서비스에서 참석자 후보 {seed_created_count}명을 반영했습니다.")
             elif seed_participants and apply_sheetbook_participants and seed_skipped_count > 0:
@@ -1453,6 +1463,9 @@ def session_create(request):
             'existing_attachments': existing_attachments,
             'selected_remove_attachment_ids': selected_remove_attachment_ids,
             'attachment_limits': form.attachment_limits,
+            'show_additional_options': show_additional_options,
+            'attachment_reupload_notice': attachment_reupload_notice,
+            'is_create_page': True,
         },
     )
 
