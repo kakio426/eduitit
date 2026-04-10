@@ -2,6 +2,7 @@ from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth.models import User
 from django.utils import timezone
+from urllib.parse import quote
 from core.models import UserProfile
 from .utils import get_max_booking_date
 from .models import (
@@ -13,6 +14,7 @@ from .models import (
     School,
     SchoolConfig,
     SpecialRoom,
+    build_reservation_owner_key,
 )
 from datetime import date, timedelta
 
@@ -37,6 +39,16 @@ class ReservationsViewTest(TestCase):
         self.room = SpecialRoom.objects.create(school=self.school, name='Science Room')
         self.target_date = date.today()
         self.client.force_login(self.user)
+
+    def set_owner_cookie(self, client, *, grade=0, class_no=0, target_label='', name=''):
+        owner_key = build_reservation_owner_key(
+            grade=grade,
+            class_no=class_no,
+            target_label=target_label,
+            name=name,
+        )
+        client.cookies['reservation_owner_key'] = quote(owner_key, safe='')
+        return owner_key
         
     def test_reservation_index(self):
         # Shell check
@@ -236,6 +248,7 @@ class ReservationsViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, '로그인 없이 바로 예약할 수 있습니다.')
         self.assertContains(response, '주소로 예약')
+        self.assertContains(response, '내 예약 찾기')
 
     def test_readonly_collaborator_can_view_but_cannot_create(self):
         viewer = User.objects.create_user(username='viewer', password='password2', email='viewer@example.com')
@@ -327,6 +340,7 @@ class ReservationsViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
         created = Reservation.objects.filter(room=self.room, date=self.target_date, period=1).first()
         self.assertIsNotNone(created)
+        self.assertEqual(created.owner_key, build_reservation_owner_key(grade=6, class_no=1, name='Tester'))
 
         session = self.client.session
         self.assertIn(created.id, session.get('owned_reservation_ids', []))
@@ -413,6 +427,26 @@ class ReservationsViewTest(TestCase):
         self.assertRedirects(response, reverse('reservations:reservation_index', args=[self.school.slug]))
         self.assertFalse(Reservation.objects.filter(id=reservation.id).exists())
 
+    def test_delete_reservation_by_matching_owner_profile_cookie(self):
+        reservation = Reservation.objects.create(
+            room=self.room,
+            owner_key=build_reservation_owner_key(grade=2, class_no=3, name='이병주'),
+            date=self.target_date,
+            period=6,
+            grade=2,
+            class_no=3,
+            name='이병주',
+        )
+
+        second_client = Client()
+        self.set_owner_cookie(second_client, grade=2, class_no=3, name='이병주')
+
+        url = reverse('reservations:delete_reservation', args=[self.school.slug, reservation.id])
+        response = second_client.post(url)
+
+        self.assertRedirects(response, reverse('reservations:reservation_index', args=[self.school.slug]))
+        self.assertFalse(Reservation.objects.filter(id=reservation.id).exists())
+
     def test_delete_reservation_forbidden_without_ownership(self):
         reservation = Reservation.objects.create(
             room=self.room,
@@ -425,6 +459,26 @@ class ReservationsViewTest(TestCase):
         url = reverse('reservations:delete_reservation', args=[self.school.slug, reservation.id])
 
         response = self.client.post(url)
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(Reservation.objects.filter(id=reservation.id).exists())
+
+    def test_delete_reservation_forbidden_with_non_matching_owner_profile_cookie(self):
+        reservation = Reservation.objects.create(
+            room=self.room,
+            owner_key=build_reservation_owner_key(grade=2, class_no=3, name='이병주'),
+            date=self.target_date,
+            period=5,
+            grade=2,
+            class_no=3,
+            name='이병주',
+        )
+
+        second_client = Client()
+        self.set_owner_cookie(second_client, grade=2, class_no=4, name='이병주')
+
+        url = reverse('reservations:delete_reservation', args=[self.school.slug, reservation.id])
+        response = second_client.post(url)
+
         self.assertEqual(response.status_code, 403)
         self.assertTrue(Reservation.objects.filter(id=reservation.id).exists())
 
@@ -530,7 +584,31 @@ class ReservationsViewTest(TestCase):
         created = Reservation.objects.filter(room=self.room, date=self.target_date, period=5).first()
         self.assertIsNotNone(created)
         self.assertIsNone(created.created_by)
+        self.assertEqual(created.owner_key, build_reservation_owner_key(grade=6, class_no=3, name='Anon Tester'))
         self.assertIn(created.id, self.client.session.get('owned_reservation_ids', []))
+        self.assertIn('reservation_owner_key', response.cookies)
+
+    def test_reservation_grid_shows_profile_matched_reservation_as_editable(self):
+        reservation = Reservation.objects.create(
+            room=self.room,
+            owner_key=build_reservation_owner_key(grade=2, class_no=3, name='이병주'),
+            date=self.target_date,
+            period=2,
+            grade=2,
+            class_no=3,
+            name='이병주',
+        )
+
+        anonymous_client = Client()
+        self.set_owner_cookie(anonymous_client, grade=2, class_no=3, name='이병주')
+
+        response = anonymous_client.get(
+            reverse('reservations:reservation_index', args=[self.school.slug]),
+            HTTP_HX_REQUEST='true',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse('reservations:delete_reservation', args=[self.school.slug, reservation.id]))
 
     def test_authenticated_create_shows_followup_summary_on_next_page(self):
         self.client.force_login(self.user)

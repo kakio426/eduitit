@@ -14,14 +14,29 @@
         selectedRoomId: null,
         selectedPeriod: null,
         selectedPeriodLabel: '',
-        selectedDate: '{{ target_date|date:"Y-m-d" }}', 
+        selectedDate: '{{ target_date|date:"Y-m-d" }}',
         gradeLockActive: false,
         gradeLockGrade: null,
         overrideGradeLock: false,
         profileVersionKey: 'reservation_profile_version',
-        profileVersion: '2026-03-role-reset-1',
+        profileVersion: '2026-04-owner-profile-1',
         profileResetNotice: false,
+        ownerCookieName: 'reservation_owner_key',
+        ownerCookiePath: '/',
         initialOpenReservationPayload: null,
+        rememberInfo: localStorage.getItem('remember_reservation_info') !== '0',
+        profileBookingKind: 'class',
+        profileGrade: '',
+        profileClassNo: '',
+        profileTargetLabel: '',
+        profileName: '',
+        profileApplied: false,
+        bookingKind: 'class',
+        grade: '',
+        classNo: '',
+        targetLabel: '',
+        name: '',
+        memo: '',
         getSubmitUrl() {
             if (this.submitMode === 'edit' && this.editReservationId) {
                 return this.reservationUpdateUrlTemplate.replace('999999', this.editReservationId);
@@ -33,6 +48,8 @@
         },
         init() {
             this.applyProfileVersionReset();
+            this.applySavedInfoToProfile();
+            this.applyProfileToCookie({ refresh: Boolean(this.getProfileOwnerKey()), silent: true });
             this.loadInitialOpenReservationPayload();
             if (this.initialOpenReservationPayload && this.initialOpenReservationPayload.id) {
                 this.$nextTick(() => this.openEditBooking(this.initialOpenReservationPayload));
@@ -50,14 +67,154 @@
             const currentVersion = localStorage.getItem(this.profileVersionKey);
             if (currentVersion !== this.profileVersion) {
                 localStorage.removeItem('my_reservation_info');
+                this.clearOwnerCookie();
                 localStorage.setItem(this.profileVersionKey, this.profileVersion);
                 this.profileResetNotice = true;
             }
         },
-        rememberInfo: localStorage.getItem('remember_reservation_info') !== '0',
-        bookingKind: 'class',
-        grade: '', classNo: '', targetLabel: '', name: '', memo: '',
+        readSavedReservationInfo() {
+            let saved = {};
+            try {
+                saved = JSON.parse(localStorage.getItem('my_reservation_info') || '{}');
+            } catch {
+                saved = {};
+            }
+            return saved;
+        },
+        applySavedInfoToProfile() {
+            const saved = this.readSavedReservationInfo();
+            const savedTarget = (saved.targetLabel || '').trim();
+            if (savedTarget) {
+                this.profileBookingKind = 'custom';
+                this.profileGrade = '';
+                this.profileClassNo = '';
+                this.profileTargetLabel = savedTarget;
+            } else {
+                this.profileBookingKind = 'class';
+                this.profileGrade = saved.grade || '';
+                this.profileClassNo = saved.classNo || '';
+                this.profileTargetLabel = '';
+            }
+            this.profileName = saved.name || '';
+            this.profileApplied = Boolean(this.getProfileOwnerKey());
+        },
+        normalizeOwnerText(value) {
+            return (value ?? '')
+                .toString()
+                .normalize('NFKC')
+                .replace(/\s+/g, '')
+                .trim()
+                .toLowerCase();
+        },
+        buildOwnerKey(kind, grade, classNo, targetLabel, name) {
+            const normalizedName = this.normalizeOwnerText(name);
+            const normalizedTarget = this.normalizeOwnerText(targetLabel);
+            const numericGrade = Number(grade || 0);
+            const numericClassNo = Number(classNo || 0);
+
+            if (normalizedTarget) {
+                return `target|${normalizedTarget}|${normalizedName}`.slice(0, 160);
+            }
+            if (Number.isFinite(numericGrade) && numericGrade > 0 && Number.isFinite(numericClassNo) && numericClassNo > 0) {
+                return `class|${numericGrade}|${numericClassNo}|${normalizedName}`.slice(0, 160);
+            }
+            if (Number.isFinite(numericGrade) && numericGrade > 0) {
+                return `grade|${numericGrade}|${normalizedName}`.slice(0, 160);
+            }
+            if (normalizedName) {
+                return `name|${normalizedName}`.slice(0, 160);
+            }
+            return '';
+        },
+        getProfileOwnerKey() {
+            return this.buildOwnerKey(
+                this.profileBookingKind,
+                this.profileGrade,
+                this.profileClassNo,
+                this.profileTargetLabel,
+                this.profileName,
+            );
+        },
+        setOwnerCookie(ownerKey) {
+            document.cookie = `${this.ownerCookieName}=${encodeURIComponent(ownerKey)}; path=${this.ownerCookiePath}; max-age=${60 * 60 * 24 * 180}; SameSite=Lax`;
+        },
+        clearOwnerCookie() {
+            document.cookie = `${this.ownerCookieName}=; path=${this.ownerCookiePath}; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+        },
+        triggerReservationRefresh() {
+            document.body.dispatchEvent(new CustomEvent('refresh-reservations'));
+        },
+        storeProfileInfo() {
+            if (!this.rememberInfo) {
+                localStorage.removeItem('my_reservation_info');
+                return;
+            }
+            const remembered = this.profileBookingKind === 'custom'
+                ? { grade: '', classNo: '', targetLabel: this.profileTargetLabel, name: this.profileName }
+                : { grade: this.profileGrade, classNo: this.profileClassNo, targetLabel: '', name: this.profileName };
+            localStorage.setItem('my_reservation_info', JSON.stringify({
+                grade: remembered.grade,
+                classNo: remembered.classNo,
+                targetLabel: remembered.targetLabel,
+                name: remembered.name,
+            }));
+        },
+        applyProfileToCookie({ refresh = true, silent = false } = {}) {
+            const ownerKey = this.getProfileOwnerKey();
+            if (!ownerKey) {
+                this.profileApplied = false;
+                this.clearOwnerCookie();
+                if (!silent && (this.profileName || this.profileTargetLabel || this.profileGrade || this.profileClassNo)) {
+                    alert('예약할 때 쓴 학년/반/이름 또는 역할/이름을 함께 입력해 주세요.');
+                }
+                if (refresh) {
+                    this.triggerReservationRefresh();
+                }
+                return false;
+            }
+            this.profileApplied = true;
+            this.setOwnerCookie(ownerKey);
+            if (refresh) {
+                this.triggerReservationRefresh();
+            }
+            return true;
+        },
+        applyProfileSelection() {
+            if (!this.applyProfileToCookie()) {
+                return;
+            }
+            this.storeProfileInfo();
+        },
+        clearProfileSelection() {
+            this.profileBookingKind = 'class';
+            this.profileGrade = '';
+            this.profileClassNo = '';
+            this.profileTargetLabel = '';
+            this.profileName = '';
+            this.profileApplied = false;
+            localStorage.removeItem('my_reservation_info');
+            this.clearOwnerCookie();
+            this.triggerReservationRefresh();
+        },
+        setProfileBookingKind(kind) {
+            this.profileBookingKind = kind === 'custom' ? 'custom' : 'class';
+            if (this.profileBookingKind === 'custom') {
+                this.profileGrade = '';
+                this.profileClassNo = '';
+            } else {
+                this.profileTargetLabel = '';
+            }
+        },
         loadRememberedInfo() {
+            const profileOwnerKey = this.getProfileOwnerKey();
+            if (profileOwnerKey) {
+                this.bookingKind = this.profileBookingKind;
+                this.grade = this.profileBookingKind === 'class' ? this.profileGrade : '';
+                this.classNo = this.profileBookingKind === 'class' ? this.profileClassNo : '';
+                this.targetLabel = this.profileBookingKind === 'custom' ? this.profileTargetLabel : '';
+                this.name = this.profileName || '';
+                return;
+            }
             if (!this.rememberInfo) {
                 this.grade = '';
                 this.classNo = '';
@@ -65,12 +222,7 @@
                 this.name = '';
                 return;
             }
-            let saved = {};
-            try {
-                saved = JSON.parse(localStorage.getItem('my_reservation_info') || '{}');
-            } catch {
-                saved = {};
-            }
+            const saved = this.readSavedReservationInfo();
             const savedTarget = (saved.targetLabel || '').trim();
             if (savedTarget) {
                 this.bookingKind = 'custom';
@@ -84,6 +236,14 @@
                 this.targetLabel = '';
             }
             this.name = saved.name || '';
+        },
+        syncProfileFromBookingForm() {
+            this.profileBookingKind = this.bookingKind;
+            this.profileGrade = this.bookingKind === 'class' ? this.grade : '';
+            this.profileClassNo = this.bookingKind === 'class' ? this.classNo : '';
+            this.profileTargetLabel = this.bookingKind === 'custom' ? this.targetLabel : '';
+            this.profileName = this.name;
+            this.profileApplied = Boolean(this.getProfileOwnerKey());
         },
         setBookingKind(kind) {
             this.bookingKind = kind === 'custom' ? 'custom' : 'class';
@@ -108,24 +268,17 @@
             localStorage.setItem('remember_reservation_info', this.rememberInfo ? '1' : '0');
             if (!this.rememberInfo) {
                 localStorage.removeItem('my_reservation_info');
-            } else {
-                const remembered = this.bookingKind === 'custom'
-                    ? { grade: '', classNo: '', targetLabel: this.targetLabel, name: this.name }
-                    : { grade: this.grade, classNo: this.classNo, targetLabel: '', name: this.name };
-                localStorage.setItem('my_reservation_info', JSON.stringify({
-                    grade: remembered.grade,
-                    classNo: remembered.classNo,
-                    targetLabel: remembered.targetLabel,
-                    name: remembered.name
-                }));
+                return;
             }
+            this.syncProfileFromBookingForm();
+            this.storeProfileInfo();
         },
-        openBooking(roomId, roomName, period, date, periodLabel, lockGrade = null) { 
+        openBooking(roomId, roomName, period, date, periodLabel, lockGrade = null) {
             this.submitMode = 'create';
             this.editReservationId = null;
-            this.selectedRoomId = roomId; 
+            this.selectedRoomId = roomId;
             this.selectedRoom = roomName;
-            this.selectedPeriod = period; 
+            this.selectedPeriod = period;
             this.selectedPeriodLabel = periodLabel;
             this.selectedDate = date;
             const numericLockGrade = this.resolveLockGrade(lockGrade);
@@ -135,7 +288,7 @@
             this.bookingKind = 'class';
             this.loadRememberedInfo();
             this.memo = '';
-            this.showModal = true; 
+            this.showModal = true;
         },
         openEditBooking(payload) {
             this.submitMode = 'edit';
@@ -199,20 +352,10 @@
                 this.overrideGradeLock = true;
             }
 
-            if (this.rememberInfo) {
-                const remembered = this.bookingKind === 'custom'
-                    ? { grade: '', classNo: '', targetLabel: this.targetLabel, name: this.name }
-                    : { grade: this.grade, classNo: this.classNo, targetLabel: this.targetLabel, name: this.name };
-                localStorage.setItem('my_reservation_info', JSON.stringify({
-                    grade: remembered.grade,
-                    classNo: remembered.classNo,
-                    targetLabel: remembered.targetLabel,
-                    name: remembered.name
-                }));
-            } else {
-                localStorage.removeItem('my_reservation_info');
-            }
-            this.showModal = false; 
+            this.syncProfileFromBookingForm();
+            this.storeProfileInfo();
+            this.applyProfileToCookie({ refresh: false, silent: true });
+            this.showModal = false;
         }
     }"
     >
@@ -318,8 +461,76 @@
             </div>
         </div>
         {% if reservation_access.mode == 'public' %}
-        <div class="rounded-2xl border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm font-semibold text-emerald-700">
-            로그인 없이 바로 예약할 수 있습니다. 수정과 취소는 이 브라우저에서 만든 예약만 가능합니다.
+        <div class="space-y-3">
+            <div class="rounded-2xl border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm font-semibold text-emerald-700">
+                로그인 없이 바로 예약할 수 있습니다. 다른 기기에서도 예약할 때 쓴 정보로 다시 들어오면 내 예약을 바로 수정하거나 취소할 수 있습니다.
+            </div>
+            <div class="rounded-2xl border border-white/70 bg-white/85 p-4 shadow-sm">
+                <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-wide text-indigo-500">내 예약 찾기</p>
+                        <p class="mt-1 text-sm text-gray-600">예약할 때 입력한 학년/반/이름 또는 역할/이름을 넣으면 이 기기에서도 내 예약 버튼이 보입니다.</p>
+                    </div>
+                    <div x-show="profileApplied" x-cloak class="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
+                        현재 입력 정보로 내 예약 확인 중
+                    </div>
+                </div>
+
+                <div class="mt-4 space-y-3">
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" @click="setProfileBookingKind('class')"
+                            :class="profileBookingKind === 'class' ? 'bg-purple-100 border-purple-300 text-purple-700' : 'bg-white border-gray-200 text-gray-500'"
+                            class="rounded-xl border px-3 py-2 text-sm font-bold transition-colors">
+                            학급(학년/반)
+                        </button>
+                        <button type="button" @click="setProfileBookingKind('custom')"
+                            :class="profileBookingKind === 'custom' ? 'bg-indigo-100 border-indigo-300 text-indigo-700' : 'bg-white border-gray-200 text-gray-500'"
+                            class="rounded-xl border px-3 py-2 text-sm font-bold transition-colors">
+                            역할/소속
+                        </button>
+                    </div>
+
+                    <div x-show="profileBookingKind === 'class'" class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="mb-1 block text-xs font-bold text-gray-600">학년</label>
+                            <input type="number" x-model="profileGrade" min="1" max="6"
+                                class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-center focus:border-purple-300 focus:ring-2 focus:ring-purple-100"
+                                placeholder="예: 2">
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-bold text-gray-600">반</label>
+                            <input type="number" x-model="profileClassNo" min="1" max="15"
+                                class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-center focus:border-purple-300 focus:ring-2 focus:ring-purple-100"
+                                placeholder="예: 3">
+                        </div>
+                    </div>
+
+                    <div x-show="profileBookingKind === 'custom'">
+                        <label class="mb-1 block text-xs font-bold text-gray-600">역할 또는 소속</label>
+                        <input type="text" x-model="profileTargetLabel" maxlength="40"
+                            class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
+                            placeholder="예: 보건, 사서, 교무실, 돌봄">
+                    </div>
+
+                    <div>
+                        <label class="mb-1 block text-xs font-bold text-gray-600">이름</label>
+                        <input type="text" x-model="profileName" maxlength="20"
+                            class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm focus:border-purple-300 focus:ring-2 focus:ring-purple-100"
+                            placeholder="예: 이병주">
+                    </div>
+
+                    <div class="flex flex-col gap-2 sm:flex-row">
+                        <button type="button" @click="applyProfileSelection()"
+                            class="inline-flex flex-1 items-center justify-center rounded-xl bg-purple-600 px-4 py-3 text-sm font-bold text-white hover:bg-purple-700 transition-colors">
+                            내 예약 보기
+                        </button>
+                        <button type="button" @click="clearProfileSelection()"
+                            class="inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors">
+                            입력 지우기
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
         {% elif not reservation_can_edit %}
         <div class="rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-sm font-semibold text-slate-600">

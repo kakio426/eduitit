@@ -9,6 +9,7 @@ from django.http import HttpResponseForbidden, HttpResponse, JsonResponse
 from django.utils import timezone
 from datetime import datetime, timedelta, date
 import uuid
+from urllib.parse import quote, unquote
 
 from .models import (
     BlackoutDate,
@@ -19,6 +20,7 @@ from .models import (
     School,
     SchoolConfig,
     SpecialRoom,
+    build_reservation_owner_key,
 )
 from .utils import get_max_booking_date, list_user_accessible_schools, remember_recent_reservation_school, resolve_user_reservation_entry_url
 import logging
@@ -28,6 +30,8 @@ OWNED_RESERVATIONS_SESSION_KEY = 'owned_reservation_ids'
 WORKFLOW_ACTION_SEED_SESSION_KEY = 'workflow_action_seeds'
 SHEETBOOK_ACTION_SEED_SESSION_KEY = 'sheetbook_action_seeds'
 RESERVATION_FOLLOWUP_SESSION_KEY = 'reservation_followup_context'
+RESERVATION_OWNER_COOKIE_NAME = 'reservation_owner_key'
+RESERVATION_OWNER_COOKIE_MAX_AGE = 60 * 60 * 24 * 180
 
 
 def _apply_workspace_cache_headers(response):
@@ -121,10 +125,45 @@ def _build_school_collaborator_rows(school):
     ]
 
 
+def _get_reservation_owner_key_from_request(request):
+    raw_value = request.COOKIES.get(RESERVATION_OWNER_COOKIE_NAME, '')
+    if not raw_value:
+        return ''
+    return unquote(raw_value).strip()[:160]
+
+
+def _set_reservation_owner_cookie(response, owner_key):
+    if owner_key:
+        response.set_cookie(
+            RESERVATION_OWNER_COOKIE_NAME,
+            quote(owner_key, safe=''),
+            max_age=RESERVATION_OWNER_COOKIE_MAX_AGE,
+            samesite='Lax',
+            path='/',
+        )
+    else:
+        response.delete_cookie(RESERVATION_OWNER_COOKIE_NAME, path='/', samesite='Lax')
+    return response
+
+
+def _reservation_owner_key_matches(reservation, owner_key):
+    if not reservation or not owner_key:
+        return False
+    reservation_owner_key = reservation.owner_key or build_reservation_owner_key(
+        grade=reservation.grade,
+        class_no=reservation.class_no,
+        target_label=reservation.target_label,
+        name=reservation.name,
+    )
+    return bool(reservation_owner_key and reservation_owner_key == owner_key)
+
+
 def _can_edit_reservation(request, reservation):
-    """예약 생성자(로그인) 또는 동일 세션(익명)만 수정/삭제 허용."""
+    """예약 생성자(로그인) 또는 동일 프로필/세션(익명)만 수정/삭제 허용."""
     owned_ids = set(request.session.get(OWNED_RESERVATIONS_SESSION_KEY, []))
     if reservation.id in owned_ids:
+        return True
+    if _reservation_owner_key_matches(reservation, _get_reservation_owner_key_from_request(request)):
         return True
     if request.user.is_authenticated and reservation.created_by_id == request.user.id:
         return True
@@ -746,9 +785,6 @@ def reservation_index(request, school_slug):
     recurring = RecurringSchedule.objects.filter(room__school=school, day_of_week=target_date.weekday()).select_related('room')
     grade_locks = GradeRecurringLock.objects.filter(room__school=school, day_of_week=target_date.weekday()).select_related('room')
     
-    owned_ids = set(request.session.get(OWNED_RESERVATIONS_SESSION_KEY, []))
-    current_user_id = request.user.id if request.user.is_authenticated else None
-
     # 매트릭스 구성
     reservation_map = {(r.room_id, r.period): r for r in reservations}
     recurring_map = {(r.room_id, r.period): r for r in recurring}
@@ -762,12 +798,7 @@ def reservation_index(request, school_slug):
             res = reservation_map.get((room.id, p['id']))
             rec = recurring_map.get((room.id, p['id']))
             grade_lock = grade_lock_map.get((room.id, p['id']))
-            can_edit = bool(
-                res and (
-                    (res.id in owned_ids)
-                    or (current_user_id and res.created_by_id == current_user_id)
-                )
-            )
+            can_edit = bool(res and _can_edit_reservation(request, res))
             
             # 상태 결정
             state = 'available'
@@ -974,8 +1005,8 @@ def create_reservation(request, school_slug):
     grade = request.POST.get('grade')
     class_no = request.POST.get('class_no')
     target_label = request.POST.get('target_label')
-    name = request.POST.get('name')
-    memo = request.POST.get('memo', '')
+    name = (request.POST.get('name') or '').strip()
+    memo = (request.POST.get('memo') or '').strip()
     override_grade_lock = request.POST.get('override_grade_lock') == '1'
     
     # 유효성 검사
@@ -984,6 +1015,15 @@ def create_reservation(request, school_slug):
         period = int(period)
         room = get_object_or_404(SpecialRoom, id=room_id, school=school)
         grade, class_no, target_label = _normalize_reservation_party(grade, class_no, target_label)
+        owner_key = build_reservation_owner_key(
+            grade=grade,
+            class_no=class_no,
+            target_label=target_label,
+            name=name,
+        )
+
+        if not name:
+            return HttpResponse("이름을 입력해 주세요.", status=400)
         
         # [Weekly Limit Check] 백엔드 검증
         if not access["can_manage"]: # 관리자는 제한 무시
@@ -1020,6 +1060,7 @@ def create_reservation(request, school_slug):
         reservation = Reservation.objects.create(
             room=room,
             created_by=request.user if request.user.is_authenticated else None,
+            owner_key=owner_key,
             date=target_date,
             period=period,
             grade=grade,
@@ -1042,6 +1083,7 @@ def create_reservation(request, school_slug):
         # HTMX Redirect to refresh grid
         response = HttpResponse()
         response['HX-Refresh'] = "true" # 전체 리프레시가 가장 깔끔함 (모달 닫기 등)
+        _set_reservation_owner_cookie(response, owner_key)
         return _apply_workspace_cache_headers(response)
         
     except ValueError:
@@ -1072,8 +1114,8 @@ def update_reservation(request, school_slug, reservation_id):
     grade = request.POST.get('grade')
     class_no = request.POST.get('class_no')
     target_label = request.POST.get('target_label')
-    name = request.POST.get('name')
-    memo = request.POST.get('memo', '')
+    name = (request.POST.get('name') or '').strip()
+    memo = (request.POST.get('memo') or '').strip()
     override_grade_lock = request.POST.get('override_grade_lock') == '1'
 
     try:
@@ -1081,6 +1123,15 @@ def update_reservation(request, school_slug, reservation_id):
         period = int(period)
         room = get_object_or_404(SpecialRoom, id=room_id, school=school)
         grade, class_no, target_label = _normalize_reservation_party(grade, class_no, target_label)
+        owner_key = build_reservation_owner_key(
+            grade=grade,
+            class_no=class_no,
+            target_label=target_label,
+            name=name,
+        )
+
+        if not name:
+            return HttpResponse("이름을 입력해 주세요.", status=400)
 
         if not access["can_manage"]:
             max_date = get_max_booking_date(school)
@@ -1116,13 +1167,15 @@ def update_reservation(request, school_slug, reservation_id):
         reservation.target_label = target_label
         reservation.name = name
         reservation.memo = memo
-        reservation.save(update_fields=['room', 'date', 'period', 'grade', 'class_no', 'target_label', 'name', 'memo'])
+        reservation.owner_key = owner_key
+        reservation.save(update_fields=['room', 'date', 'period', 'grade', 'class_no', 'target_label', 'name', 'memo', 'owner_key'])
 
         messages.success(request, f"{period}교시 예약이 수정되었습니다.")
         _set_reservation_followup_context(request, school, reservation)
 
         response = HttpResponse()
         response['HX-Refresh'] = "true"
+        _set_reservation_owner_cookie(response, owner_key)
         return _apply_workspace_cache_headers(response)
 
     except ValueError:

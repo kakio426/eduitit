@@ -1,6 +1,42 @@
+import re
+import unicodedata
 import uuid
 from django.db import models
 from django.contrib.auth.models import User
+
+
+OWNER_TEXT_WHITESPACE_RE = re.compile(r"\s+")
+
+
+def normalize_reservation_owner_text(value):
+    normalized = unicodedata.normalize("NFKC", str(value or ""))
+    normalized = OWNER_TEXT_WHITESPACE_RE.sub("", normalized).strip().lower()
+    return normalized[:80]
+
+
+def build_reservation_owner_key(*, grade=0, class_no=0, target_label="", name=""):
+    normalized_name = normalize_reservation_owner_text(name)
+    normalized_target_label = normalize_reservation_owner_text(target_label)
+
+    try:
+        grade_value = int(grade or 0)
+    except (TypeError, ValueError):
+        grade_value = 0
+
+    try:
+        class_value = int(class_no or 0)
+    except (TypeError, ValueError):
+        class_value = 0
+
+    if normalized_target_label:
+        return f"target|{normalized_target_label}|{normalized_name}"[:160]
+    if grade_value > 0 and class_value > 0:
+        return f"class|{grade_value}|{class_value}|{normalized_name}"[:160]
+    if grade_value > 0:
+        return f"grade|{grade_value}|{normalized_name}"[:160]
+    if normalized_name:
+        return f"name|{normalized_name}"[:160]
+    return ""
 
 class School(models.Model):
     name = models.CharField(max_length=100)
@@ -102,6 +138,7 @@ class SpecialRoom(models.Model):
 class Reservation(models.Model):
     room = models.ForeignKey(SpecialRoom, on_delete=models.CASCADE)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_reservations')
+    owner_key = models.CharField(max_length=160, blank=True, default="", db_index=True)
     date = models.DateField()
     period = models.IntegerField() # 1~max_periods
     grade = models.IntegerField()
