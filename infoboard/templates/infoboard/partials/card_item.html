@@ -103,4 +103,8 @@
         <span>{{ card.display_author }}</span>
         <span>{{ card.created_at|timesince }} 전</span>
     </div>
+
+    {% if public_mode or board.allow_student_submit or card.total_comment_count %}
+    {% include 'infoboard/partials/card_comment_shell.html' %}
+    {% endif %}
 </article>

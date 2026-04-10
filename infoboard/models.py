@@ -158,6 +158,51 @@ class Card(models.Model):
         return self.author_name or '익명'
 
 
+# ── Card Comment ─────────────────────────────────────────
+
+class CardComment(models.Model):
+    """카드 아래 공개 댓글."""
+    HIDDEN_REASON_CHOICES = [
+        ('', '해당 없음'),
+        ('teacher', '교사 숨김'),
+    ]
+
+    card = models.ForeignKey(Card, on_delete=models.CASCADE, related_name='comments')
+    author_user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='infoboard_comments',
+    )
+    author_name = models.CharField(max_length=100, blank=True)
+    content = models.TextField(max_length=300)
+    is_hidden = models.BooleanField(default=False)
+    hidden_reason = models.CharField(max_length=20, choices=HIDDEN_REASON_CHOICES, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['card', 'is_hidden', 'created_at'], name='infoboard_c_card_id_a2708e_idx'),
+        ]
+        verbose_name = '카드 댓글'
+        verbose_name_plural = '카드 댓글 목록'
+
+    def __str__(self):
+        return f'{self.display_author}: {self.content[:30]}'
+
+    @property
+    def display_author(self):
+        if self.author_user:
+            profile = getattr(self.author_user, 'userprofile', None)
+            if profile and profile.nickname:
+                return profile.nickname
+            return self.author_user.username
+        return self.author_name or '익명'
+
+
 # ── Collection ───────────────────────────────────────────
 
 class Collection(models.Model):

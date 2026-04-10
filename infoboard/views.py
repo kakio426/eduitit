@@ -4,21 +4,24 @@ import logging
 from urllib.parse import urlsplit
 
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from django.db.models import Max, Q, Count, Prefetch
 from django.http import JsonResponse, HttpResponse, Http404, QueryDict
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse, resolve, Resolver404
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from products.models import Product
-from .forms import BoardForm, CardForm, CollectionForm, StudentCardForm
-from .models import Board, Card, Collection, SharedLink, Tag
+from .forms import BoardForm, CardCommentForm, CardForm, CollectionForm, StudentCardForm
+from .models import Board, Card, CardComment, Collection, SharedLink, Tag
 
 logger = logging.getLogger(__name__)
 
 SERVICE_ROUTE = 'infoboard:dashboard'
 SERVICE_TITLE = '인포보드'
 SUBMIT_ACCESS_LEVELS = ('submit', 'edit')
+COMMENT_RATE_LIMITS = ((15, 1), (3600, 20))
 
 
 def _get_service(request):
@@ -195,6 +198,10 @@ def _board_cards_context(board, search_q=''):
         cards = cards.filter(
             Q(title__icontains=search_q) | Q(content__icontains=search_q) | Q(tags__name__icontains=search_q)
         ).distinct()
+    cards = cards.annotate(
+        visible_comment_count=Count('comments', filter=Q(comments__is_hidden=False), distinct=True),
+        total_comment_count=Count('comments', distinct=True),
+    )
 
     return {
         'board': board,
@@ -309,6 +316,124 @@ def _refresh_link_card_metadata(card, previous_url=None):
 
     if changed_fields:
         card.save(update_fields=changed_fields)
+
+
+def _get_request_ip(request):
+    forwarded_for = (request.META.get('HTTP_X_FORWARDED_FOR') or '').strip()
+    if forwarded_for:
+        return forwarded_for.split(',')[0].strip()
+    return (request.META.get('REMOTE_ADDR') or '').strip() or 'unknown'
+
+
+def _comment_rate_limit_exceeded(request, shared_link):
+    now_ts = int(timezone.now().timestamp())
+    actor_key = _get_request_ip(request)
+    for window_seconds, max_count in COMMENT_RATE_LIMITS:
+        slot = now_ts // window_seconds
+        cache_key = f'infoboard:comment:{shared_link.id}:{actor_key}:{window_seconds}:{slot}'
+        current = cache.get(cache_key)
+        if current is None:
+            cache.set(cache_key, 1, timeout=window_seconds + 2)
+            current = 1
+        else:
+            try:
+                current = cache.incr(cache_key)
+            except Exception:
+                current = int(current) + 1
+                cache.set(cache_key, current, timeout=window_seconds + 2)
+        if current > max_count:
+            return True
+    return False
+
+
+def _public_comment_count(card):
+    if hasattr(card, 'visible_comment_count'):
+        return card.visible_comment_count
+    return card.comments.filter(is_hidden=False).count()
+
+
+def _total_comment_count(card):
+    if hasattr(card, 'total_comment_count'):
+        return card.total_comment_count
+    return card.comments.count()
+
+
+def _comment_thread_queryset(card, *, public_mode):
+    queryset = card.comments.select_related('author_user').order_by('created_at')
+    if public_mode:
+        queryset = queryset.filter(is_hidden=False)
+    return queryset
+
+
+def _comment_shell_context(card, *, public_mode, shared=None, form=None, comments_open=False):
+    visible_comment_count = _public_comment_count(card)
+    total_comment_count = _total_comment_count(card)
+    card.visible_comment_count = visible_comment_count
+    card.total_comment_count = total_comment_count
+    can_write_comments = False
+    if public_mode:
+        can_write_comments = bool(
+            shared
+            and card.board.allow_student_submit
+            and shared.access_level in SUBMIT_ACCESS_LEVELS
+        )
+    else:
+        can_write_comments = bool(card.board.allow_student_submit or total_comment_count)
+
+    if form is None and can_write_comments:
+        form = CardCommentForm(require_name=public_mode)
+
+    return {
+        'card': card,
+        'shared': shared,
+        'public_mode': public_mode,
+        'comments_open': comments_open,
+        'comment_thread_url': (
+            reverse('infoboard:public_card_comments', args=[shared.id, card.id])
+            if public_mode and shared
+            else reverse('infoboard:card_comments', args=[card.id])
+        ),
+        'comment_create_url': (
+            reverse('infoboard:public_comment_create', args=[shared.id, card.id])
+            if public_mode and shared
+            else reverse('infoboard:card_comment_create', args=[card.id])
+        ),
+        'comments': _comment_thread_queryset(card, public_mode=public_mode) if comments_open else [],
+        'form': form,
+        'can_write_comments': can_write_comments,
+        'visible_comment_count': visible_comment_count,
+        'total_comment_count': total_comment_count,
+        'show_comment_shell': public_mode or card.board.allow_student_submit or bool(total_comment_count),
+    }
+
+
+def _render_comment_shell(request, card, *, public_mode, shared=None, form=None, comments_open=False, status=200):
+    context = _comment_shell_context(
+        card,
+        public_mode=public_mode,
+        shared=shared,
+        form=form,
+        comments_open=comments_open,
+    )
+    return render(request, 'infoboard/partials/card_comment_shell.html', context, status=status)
+
+
+def _get_public_card(link_id, card_id, *, require_write=False):
+    shared = get_object_or_404(
+        SharedLink.objects.select_related('board'),
+        id=link_id,
+        is_active=True,
+    )
+    if shared.is_expired:
+        raise Http404
+    card = get_object_or_404(
+        Card.objects.select_related('board'),
+        id=card_id,
+        board=shared.board,
+    )
+    if require_write and (not shared.board.allow_student_submit or shared.access_level not in SUBMIT_ACCESS_LEVELS):
+        raise Http404
+    return shared, card
 
 
 # ── 교사 대시보드 ────────────────────────────────────────
@@ -563,6 +688,70 @@ def card_toggle_pin(request, card_id):
     return redirect('infoboard:board_detail', board_id=board.id)
 
 
+# ── 카드 댓글 ────────────────────────────────────────────
+
+@login_required
+def card_comments(request, card_id):
+    """교사용 카드 댓글 스레드."""
+    card = get_object_or_404(Card.objects.select_related('board'), id=card_id, board__owner=request.user)
+    comments_open = request.GET.get('open', '1') != '0'
+    return _render_comment_shell(request, card, public_mode=False, comments_open=comments_open)
+
+
+@login_required
+@require_POST
+def card_comment_create(request, card_id):
+    """교사용 카드 댓글 작성."""
+    card = get_object_or_404(Card.objects.select_related('board'), id=card_id, board__owner=request.user)
+    form = CardCommentForm(request.POST, require_name=False)
+    if form.is_valid():
+        form.save_for_card(card, author_user=request.user)
+        if request.htmx:
+            return _render_comment_shell(request, card, public_mode=False, comments_open=True)
+        return redirect('infoboard:board_detail', board_id=card.board.id)
+
+    if request.htmx:
+        return _render_comment_shell(request, card, public_mode=False, form=form, comments_open=True)
+    return redirect('infoboard:board_detail', board_id=card.board.id)
+
+
+@login_required
+@require_POST
+def comment_hide(request, comment_id):
+    """교사가 카드 댓글을 숨김 처리."""
+    comment = get_object_or_404(
+        CardComment.objects.select_related('card__board'),
+        id=comment_id,
+        card__board__owner=request.user,
+    )
+    if not comment.is_hidden:
+        comment.is_hidden = True
+        comment.hidden_reason = 'teacher'
+        comment.save(update_fields=['is_hidden', 'hidden_reason', 'updated_at'])
+
+    if request.htmx:
+        return _render_comment_shell(request, comment.card, public_mode=False, comments_open=True)
+    return redirect('infoboard:board_detail', board_id=comment.card.board.id)
+
+
+@login_required
+@require_POST
+def comment_delete(request, comment_id):
+    """교사가 카드 댓글을 완전 삭제."""
+    comment = get_object_or_404(
+        CardComment.objects.select_related('card__board'),
+        id=comment_id,
+        card__board__owner=request.user,
+    )
+    board_id = comment.card.board.id
+    card = comment.card
+    comment.delete()
+
+    if request.htmx:
+        return _render_comment_shell(request, card, public_mode=False, comments_open=True)
+    return redirect('infoboard:board_detail', board_id=board_id)
+
+
 # ── 태그 ─────────────────────────────────────────────────
 
 @login_required
@@ -620,6 +809,40 @@ def student_submit(request, link_id):
     if request.htmx:
         return render(request, 'infoboard/partials/student_submit_form.html', context)
     return render(request, 'infoboard/student_submit.html', context)
+
+
+def public_card_comments(request, link_id, card_id):
+    """공개 보드 카드 댓글 스레드."""
+    shared, card = _get_public_card(link_id, card_id)
+    comments_open = request.GET.get('open', '1') != '0'
+    return _render_comment_shell(request, card, public_mode=True, shared=shared, comments_open=comments_open)
+
+
+@require_POST
+def public_comment_create(request, link_id, card_id):
+    """공개 보드 카드 댓글 작성."""
+    shared, card = _get_public_card(link_id, card_id, require_write=True)
+    form = CardCommentForm(request.POST, require_name=True)
+
+    if form.is_valid():
+        if _comment_rate_limit_exceeded(request, shared):
+            return HttpResponse('댓글 작성 속도가 너무 빠릅니다. 잠시 후 다시 시도해주세요.', status=429)
+
+        form.save_for_card(card, author_name=form.cleaned_data['author_name'])
+        if request.htmx:
+            return _render_comment_shell(request, card, public_mode=True, shared=shared, comments_open=True)
+        return redirect('infoboard:public_board', link_id=shared.id)
+
+    if request.htmx:
+        return _render_comment_shell(
+            request,
+            card,
+            public_mode=True,
+            shared=shared,
+            form=form,
+            comments_open=True,
+        )
+    return redirect('infoboard:public_board', link_id=shared.id)
 
 
 # ── 공유 링크 관리 ───────────────────────────────────────

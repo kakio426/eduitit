@@ -1,9 +1,10 @@
 from django import forms
+from django.core.exceptions import ValidationError
 
 from handoff.models import HandoffRosterGroup
 from handoff.shared_roster import infoboard_submitter_choices
 
-from .models import Board, Card, Collection, Tag
+from .models import Board, Card, CardComment, Collection, Tag
 
 
 class CollectionForm(forms.ModelForm):
@@ -289,3 +290,63 @@ class StudentCardForm(forms.ModelForm):
         card.save()
         self.save_m2m()
         return card
+
+
+class CardCommentForm(forms.ModelForm):
+    """카드 댓글 폼."""
+
+    def __init__(self, *args, require_name=False, **kwargs):
+        self.require_name = require_name
+        super().__init__(*args, **kwargs)
+        if not require_name:
+            self.fields.pop('author_name', None)
+        else:
+            self.fields['author_name'].required = True
+            self.fields['author_name'].error_messages['required'] = '이름을 입력해주세요.'
+            self.fields['author_name'].widget.attrs.update({
+                'placeholder': '이름',
+            })
+        self.fields['content'].error_messages['required'] = '댓글 내용을 입력해주세요.'
+        self.fields['content'].widget.attrs.update({
+            'placeholder': '댓글을 남겨보세요',
+        })
+
+    class Meta:
+        model = CardComment
+        fields = ['author_name', 'content']
+        labels = {
+            'author_name': '이름',
+            'content': '댓글',
+        }
+        widgets = {
+            'author_name': forms.TextInput(attrs={
+                'class': 'ib-comment-input',
+                'maxlength': 100,
+            }),
+            'content': forms.Textarea(attrs={
+                'class': 'ib-comment-textarea',
+                'rows': 3,
+                'maxlength': 300,
+            }),
+        }
+
+    def clean_author_name(self):
+        author_name = (self.cleaned_data.get('author_name') or '').strip()
+        if self.require_name and not author_name:
+            raise ValidationError('이름을 입력해주세요.')
+        return author_name
+
+    def clean_content(self):
+        content = (self.cleaned_data.get('content') or '').strip()
+        if not content:
+            raise ValidationError('댓글 내용을 입력해주세요.')
+        return content
+
+    def save_for_card(self, card, *, author_user=None, author_name=''):
+        comment = self.save(commit=False)
+        comment.card = card
+        comment.author_user = author_user
+        comment.author_name = author_name or self.cleaned_data.get('author_name', '')
+        comment.content = self.cleaned_data['content']
+        comment.save()
+        return comment

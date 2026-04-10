@@ -20,6 +20,10 @@ urlpatterns = [
     path('card/<uuid:card_id>/edit/', views.card_edit, name='card_edit'),
     path('card/<uuid:card_id>/delete/', views.card_delete, name='card_delete'),
     path('card/<uuid:card_id>/pin/', views.card_toggle_pin, name='card_toggle_pin'),
+    path('card/<uuid:card_id>/comments/', views.card_comments, name='card_comments'),
+    path('card/<uuid:card_id>/comment/', views.card_comment_create, name='card_comment_create'),
+    path('comment/<int:comment_id>/hide/', views.comment_hide, name='comment_hide'),
+    path('comment/<int:comment_id>/delete/', views.comment_delete, name='comment_delete'),
 
     # ── 태그 ──
     path('tags/json/', views.tags_json, name='tags_json'),
@@ -27,6 +31,8 @@ urlpatterns = [
     # ── 공유 보드 (비로그인) ──
     path('s/<uuid:link_id>/', views.public_board, name='public_board'),
     path('s/<uuid:link_id>/submit/', views.student_submit, name='student_submit'),
+    path('s/<uuid:link_id>/card/<uuid:card_id>/comments/', views.public_card_comments, name='public_card_comments'),
+    path('s/<uuid:link_id>/card/<uuid:card_id>/comment/', views.public_comment_create, name='public_comment_create'),
 
     # ── 공유 링크 관리 ──
     path('board/<uuid:board_id>/share/', views.share_panel, name='share_panel'),

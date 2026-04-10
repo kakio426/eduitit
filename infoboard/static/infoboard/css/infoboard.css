@@ -498,6 +498,159 @@
     font-weight: 700;
 }
 
+.ib-comment-shell {
+    margin-top: 0.95rem;
+    padding-top: 0.85rem;
+    border-top: 1px dashed rgba(156, 163, 175, 0.34);
+}
+
+.ib-comment-toggle,
+.ib-comment-head,
+.ib-comment-author-row,
+.ib-comment-actions,
+.ib-comment-form-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.ib-comment-toggle,
+.ib-comment-item,
+.ib-comment-empty,
+.ib-comment-form {
+    border-radius: 1rem;
+    border: 1px solid rgba(219, 205, 183, 0.9);
+    background: rgba(255, 255, 255, 0.75);
+}
+
+.ib-comment-toggle {
+    width: 100%;
+    justify-content: space-between;
+    padding: 0.8rem 0.95rem;
+    font-size: 0.88rem;
+    font-weight: 800;
+    color: var(--ib-ink);
+}
+
+.ib-comment-toggle.open {
+    background: rgba(255, 249, 240, 0.95);
+}
+
+.ib-comment-toggle-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+}
+
+.ib-comment-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+    height: 30px;
+    padding: 0 0.55rem;
+    border-radius: 999px;
+    background: var(--ib-orange-soft);
+    color: var(--ib-orange);
+    font-size: 0.8rem;
+    font-weight: 900;
+}
+
+.ib-comment-thread,
+.ib-comment-list {
+    display: grid;
+    gap: 0.7rem;
+}
+
+.ib-comment-thread {
+    margin-top: 0.75rem;
+}
+
+.ib-comment-item,
+.ib-comment-empty,
+.ib-comment-form {
+    padding: 0.9rem;
+}
+
+.ib-comment-item.is-hidden {
+    background: #f6f1e8;
+    color: var(--ib-muted);
+}
+
+.ib-comment-head {
+    justify-content: space-between;
+    align-items: flex-start;
+    font-size: 0.78rem;
+    color: var(--ib-muted);
+}
+
+.ib-comment-author-row strong {
+    color: var(--ib-ink);
+    font-size: 0.86rem;
+}
+
+.ib-comment-copy {
+    margin-top: 0.45rem;
+    font-size: 0.9rem;
+    line-height: 1.55;
+    color: #3f4a59;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.ib-comment-actions,
+.ib-comment-form-actions {
+    margin-top: 0.7rem;
+    justify-content: flex-end;
+}
+
+.ib-comment-action-button {
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: var(--ib-muted);
+}
+
+.ib-comment-action-button.danger {
+    color: var(--ib-danger);
+}
+
+.ib-comment-form-row + .ib-comment-form-row {
+    margin-top: 0.55rem;
+}
+
+.ib-comment-input,
+.ib-comment-textarea {
+    width: 100%;
+    border-radius: 0.95rem;
+    border: 1px solid rgba(219, 205, 183, 0.95);
+    background: rgba(255, 255, 255, 0.96);
+    padding: 0.8rem 0.9rem;
+    color: var(--ib-ink);
+    font-size: 0.9rem;
+    outline: none;
+}
+
+.ib-comment-input:focus,
+.ib-comment-textarea:focus {
+    border-color: rgba(15, 118, 110, 0.45);
+    box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
+}
+
+.ib-comment-textarea {
+    min-height: 96px;
+    resize: vertical;
+}
+
+.ib-comment-empty,
+.ib-comment-lock-copy {
+    font-size: 0.83rem;
+    color: var(--ib-muted);
+}
+
+.ib-comment-lock-copy {
+    margin-top: 0.4rem;
+}
+
 .ib-tag {
     background: #f0ece4;
     color: #49505a;

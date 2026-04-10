@@ -1,0 +1,77 @@
+{% if public_mode %}
+{% url 'infoboard:public_card_comments' link_id=shared.id card_id=card.id as comment_thread_url %}
+{% url 'infoboard:public_comment_create' link_id=shared.id card_id=card.id as comment_create_url %}
+{% else %}
+{% url 'infoboard:card_comments' card_id=card.id as comment_thread_url %}
+{% url 'infoboard:card_comment_create' card_id=card.id as comment_create_url %}
+{% endif %}
+<div id="ibCommentShell-{{ card.id }}" class="ib-comment-shell">
+    <button type="button"
+        class="ib-comment-toggle {% if comments_open %}open{% endif %}"
+        hx-get="{{ comment_thread_url }}?open={% if comments_open %}0{% else %}1{% endif %}"
+        hx-target="#ibCommentShell-{{ card.id }}"
+        hx-swap="outerHTML">
+        <span class="ib-comment-toggle-label">
+            <i class="fa-regular fa-comment-dots"></i>
+            {% if comments_open %}댓글 접기{% else %}댓글 보기{% endif %}
+        </span>
+        <span id="ibCommentCount-{{ card.id }}" class="ib-comment-count">{{ card.visible_comment_count|default:0 }}</span>
+    </button>
+
+    {% if comments_open %}
+    <div class="ib-comment-thread">
+        {% if comments %}
+        <div class="ib-comment-list">
+            {% for comment in comments %}
+            {% include 'infoboard/partials/card_comment_item.html' %}
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="ib-comment-empty">
+            <p>아직 댓글이 없어요.</p>
+        </div>
+        {% endif %}
+
+        {% if form and can_write_comments %}
+        <form method="post"
+            action="{{ comment_create_url }}"
+            hx-post="{{ comment_create_url }}"
+            hx-target="#ibCommentShell-{{ card.id }}"
+            hx-swap="outerHTML"
+            class="ib-comment-form">
+            {% csrf_token %}
+            {% if public_mode %}
+            <div class="ib-comment-form-row">
+                <label class="sr-only" for="{{ form.author_name.id_for_label }}">이름</label>
+                {{ form.author_name }}
+            </div>
+            {% include 'infoboard/partials/field_errors.html' with errors=form.author_name.errors %}
+            {% endif %}
+
+            <div class="ib-comment-form-row">
+                <label class="sr-only" for="{{ form.content.id_for_label }}">댓글</label>
+                {{ form.content }}
+            </div>
+            {% include 'infoboard/partials/field_errors.html' with errors=form.content.errors %}
+
+            {% if form.non_field_errors %}
+            <div class="mt-1 space-y-0.5 text-xs font-semibold text-rose-600">
+                {% for error in form.non_field_errors %}
+                <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="ib-comment-form-actions">
+                <button type="submit" class="ib-inline-button">
+                    <i class="fa-solid fa-paper-plane"></i>
+                    {% if public_mode %}댓글 남기기{% else %}답글 남기기{% endif %}
+                </button>
+            </div>
+        </form>
+        {% elif public_mode %}
+        <p class="ib-comment-lock-copy">읽기 전용 링크에서는 댓글을 남길 수 없어요.</p>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>

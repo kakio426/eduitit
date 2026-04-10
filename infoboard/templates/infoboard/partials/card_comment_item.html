@@ -1,0 +1,37 @@
+<article class="ib-comment-item {% if comment.is_hidden %}is-hidden{% endif %}">
+    <div class="ib-comment-head">
+        <div class="ib-comment-author-row">
+            <strong>{{ comment.display_author }}</strong>
+            {% if comment.is_hidden %}
+            <span class="ib-mini-pill muted">숨김</span>
+            {% endif %}
+        </div>
+        <span>{{ comment.created_at|timesince }} 전</span>
+    </div>
+
+    <p class="ib-comment-copy">{{ comment.content|linebreaksbr }}</p>
+
+    {% if not public_mode %}
+    <div class="ib-comment-actions">
+        {% if not comment.is_hidden %}
+        <form method="post"
+            action="{% url 'infoboard:comment_hide' comment_id=comment.id %}"
+            hx-post="{% url 'infoboard:comment_hide' comment_id=comment.id %}"
+            hx-target="#ibCommentShell-{{ card.id }}"
+            hx-swap="outerHTML">
+            {% csrf_token %}
+            <button type="submit" class="ib-comment-action-button">숨기기</button>
+        </form>
+        {% endif %}
+        <form method="post"
+            action="{% url 'infoboard:comment_delete' comment_id=comment.id %}"
+            hx-post="{% url 'infoboard:comment_delete' comment_id=comment.id %}"
+            hx-target="#ibCommentShell-{{ card.id }}"
+            hx-swap="outerHTML"
+            hx-confirm="이 댓글을 삭제할까요?">
+            {% csrf_token %}
+            <button type="submit" class="ib-comment-action-button danger">삭제</button>
+        </form>
+    </div>
+    {% endif %}
+</article>

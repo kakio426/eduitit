@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Board, Card, Collection, SharedLink, Tag
+from .models import Board, Card, CardComment, Collection, SharedLink, Tag
 
 
 @admin.register(Tag)
@@ -35,6 +35,14 @@ class CollectionAdmin(admin.ModelAdmin):
     list_display = ('title', 'owner', 'created_at')
     search_fields = ('title',)
     readonly_fields = ('id',)
+
+
+@admin.register(CardComment)
+class CardCommentAdmin(admin.ModelAdmin):
+    list_display = ('display_author', 'card', 'is_hidden', 'created_at')
+    list_filter = ('is_hidden',)
+    search_fields = ('author_name', 'content', 'author_user__username', 'author_user__userprofile__nickname')
+    readonly_fields = ('created_at', 'updated_at')
 
 
 @admin.register(SharedLink)

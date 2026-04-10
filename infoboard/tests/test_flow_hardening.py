@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from core.models import UserProfile
-from infoboard.models import Board, Card, Collection, SharedLink
+from infoboard.models import Board, Card, CardComment, Collection, SharedLink
 
 
 User = get_user_model()
@@ -437,6 +437,178 @@ class InfoBoardFlowHardeningTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'id="ibPublicCardCount"')
         self.assertNotContains(response, 'id="ibPublicCardCount" hx-swap-oob="true"')
+
+    def test_public_comment_create_htmx_renders_thread_and_updates_count(self):
+        board = self._board(title='댓글 보드', allow_student_submit=True)
+        shared_link = SharedLink.objects.create(board=board, created_by=self.user, access_level='submit')
+        card = Card.objects.create(board=board, title='자료 카드', card_type='text', content='본문')
+
+        self.client.logout()
+        open_response = self.client.get(
+            reverse('infoboard:public_card_comments', args=[shared_link.id, card.id]),
+            {'open': '1'},
+            **self._hx_headers(reverse('infoboard:public_board', args=[shared_link.id])),
+        )
+        self.assertEqual(open_response.status_code, 200)
+        self.assertContains(open_response, '아직 댓글이 없어요.')
+        self.assertContains(open_response, '댓글 남기기')
+
+        response = self.client.post(
+            reverse('infoboard:public_comment_create', args=[shared_link.id, card.id]),
+            data={'author_name': '학생A', 'content': '첫 댓글입니다.'},
+            **self._hx_headers(reverse('infoboard:public_board', args=[shared_link.id])),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '첫 댓글입니다.')
+        self.assertContains(response, 'id="ibCommentCount-')
+        self.assertContains(response, '>1</span>')
+        self.assertEqual(CardComment.objects.filter(card=card, author_name='학생A').count(), 1)
+
+    def test_public_comment_view_link_is_read_only_but_keeps_existing_comments_visible(self):
+        board = self._board(title='읽기 전용 댓글 보드', allow_student_submit=True)
+        shared_link = SharedLink.objects.create(board=board, created_by=self.user, access_level='view')
+        card = Card.objects.create(board=board, title='자료 카드', card_type='text', content='본문')
+        CardComment.objects.create(card=card, author_name='학생A', content='기존 댓글')
+
+        self.client.logout()
+        response = self.client.get(
+            reverse('infoboard:public_card_comments', args=[shared_link.id, card.id]),
+            {'open': '1'},
+            **self._hx_headers(reverse('infoboard:public_board', args=[shared_link.id])),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '기존 댓글')
+        self.assertContains(response, '읽기 전용 링크에서는 댓글을 남길 수 없어요.')
+        self.assertNotContains(response, '댓글 남기기')
+
+        denied = self.client.post(
+            reverse('infoboard:public_comment_create', args=[shared_link.id, card.id]),
+            data={'author_name': '학생B', 'content': '새 댓글'},
+            **self._hx_headers(reverse('infoboard:public_board', args=[shared_link.id])),
+        )
+        self.assertEqual(denied.status_code, 404)
+
+    def test_public_comment_invalid_payload_and_invalid_link_context_return_errors_or_404(self):
+        board = self._board(title='검증 보드', allow_student_submit=True)
+        shared_link = SharedLink.objects.create(board=board, created_by=self.user, access_level='submit')
+        card = Card.objects.create(board=board, title='자료 카드', card_type='text', content='본문')
+        other_card = Card.objects.create(
+            board=self._board(title='다른 보드', allow_student_submit=True),
+            title='다른 카드',
+            card_type='text',
+            content='본문',
+        )
+
+        self.client.logout()
+        invalid_response = self.client.post(
+            reverse('infoboard:public_comment_create', args=[shared_link.id, card.id]),
+            data={'author_name': '   ', 'content': '   '},
+            **self._hx_headers(reverse('infoboard:public_board', args=[shared_link.id])),
+        )
+        self.assertEqual(invalid_response.status_code, 200)
+        self.assertContains(invalid_response, '이름을 입력해주세요.')
+        self.assertContains(invalid_response, '댓글 내용을 입력해주세요.')
+
+        mismatched_response = self.client.post(
+            reverse('infoboard:public_comment_create', args=[shared_link.id, other_card.id]),
+            data={'author_name': '학생A', 'content': '댓글'},
+            **self._hx_headers(reverse('infoboard:public_board', args=[shared_link.id])),
+        )
+        self.assertEqual(mismatched_response.status_code, 404)
+
+        shared_link.is_active = False
+        shared_link.save(update_fields=['is_active'])
+        inactive_response = self.client.get(
+            reverse('infoboard:public_card_comments', args=[shared_link.id, card.id]),
+            {'open': '1'},
+            **self._hx_headers(reverse('infoboard:public_board', args=[shared_link.id])),
+        )
+        self.assertEqual(inactive_response.status_code, 404)
+
+    def test_public_comment_rate_limit_returns_429_without_creating_second_comment(self):
+        board = self._board(title='속도 제한 보드', allow_student_submit=True)
+        shared_link = SharedLink.objects.create(board=board, created_by=self.user, access_level='submit')
+        card = Card.objects.create(board=board, title='자료 카드', card_type='text', content='본문')
+
+        self.client.logout()
+        first = self.client.post(
+            reverse('infoboard:public_comment_create', args=[shared_link.id, card.id]),
+            data={'author_name': '학생A', 'content': '첫 댓글'},
+            **self._hx_headers(reverse('infoboard:public_board', args=[shared_link.id])),
+        )
+        second = self.client.post(
+            reverse('infoboard:public_comment_create', args=[shared_link.id, card.id]),
+            data={'author_name': '학생A', 'content': '두 번째 댓글'},
+            **self._hx_headers(reverse('infoboard:public_board', args=[shared_link.id])),
+        )
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 429)
+        self.assertEqual(CardComment.objects.filter(card=card).count(), 1)
+
+    def test_teacher_can_create_hide_and_delete_comments_while_public_view_updates(self):
+        board = self._board(title='운영 댓글 보드', allow_student_submit=True)
+        shared_link = SharedLink.objects.create(board=board, created_by=self.user, access_level='submit')
+        card = Card.objects.create(board=board, title='자료 카드', card_type='text', content='본문')
+        comment = CardComment.objects.create(card=card, author_name='학생A', content='공개 댓글')
+
+        teacher_create = self.client.post(
+            reverse('infoboard:card_comment_create', args=[card.id]),
+            data={'content': '교사 답글'},
+            **self._hx_headers(reverse('infoboard:board_detail', args=[board.id])),
+        )
+        self.assertEqual(teacher_create.status_code, 200)
+        self.assertContains(teacher_create, '교사 답글')
+        self.assertEqual(CardComment.objects.filter(card=card, author_user=self.user).count(), 1)
+
+        hide_response = self.client.post(
+            reverse('infoboard:comment_hide', args=[comment.id]),
+            data={},
+            **self._hx_headers(reverse('infoboard:board_detail', args=[board.id])),
+        )
+        self.assertEqual(hide_response.status_code, 200)
+        comment.refresh_from_db()
+        self.assertTrue(comment.is_hidden)
+        self.assertContains(hide_response, '숨김')
+        self.assertContains(hide_response, '>1</span>')
+
+        self.client.logout()
+        public_response = self.client.get(
+            reverse('infoboard:public_card_comments', args=[shared_link.id, card.id]),
+            {'open': '1'},
+            **self._hx_headers(reverse('infoboard:public_board', args=[shared_link.id])),
+        )
+        self.assertEqual(public_response.status_code, 200)
+        self.assertNotContains(public_response, '공개 댓글')
+        self.assertContains(public_response, '교사 답글')
+
+        self.client.force_login(self.user)
+        teacher_reply = CardComment.objects.get(card=card, author_user=self.user)
+        delete_response = self.client.post(
+            reverse('infoboard:comment_delete', args=[teacher_reply.id]),
+            data={},
+            **self._hx_headers(reverse('infoboard:board_detail', args=[board.id])),
+        )
+        self.assertEqual(delete_response.status_code, 200)
+        self.assertFalse(CardComment.objects.filter(id=teacher_reply.id).exists())
+        self.assertContains(delete_response, '>0</span>')
+
+    def test_card_delete_cascades_comment_cleanup(self):
+        board = self._board(title='삭제 보드', allow_student_submit=True)
+        card = Card.objects.create(board=board, title='자료 카드', card_type='text', content='본문')
+        CardComment.objects.create(card=card, author_name='학생A', content='댓글')
+
+        response = self.client.post(
+            reverse('infoboard:card_delete', args=[card.id]),
+            data={},
+            **self._hx_headers(reverse('infoboard:board_detail', args=[board.id])),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Card.objects.filter(id=card.id).exists())
+        self.assertEqual(CardComment.objects.count(), 0)
 
     def test_fetch_og_meta_rejects_unsafe_urls_and_returns_safe_payload(self):
         unsafe_response = self.client.get(
