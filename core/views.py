@@ -123,6 +123,7 @@ WORKBENCH_BUNDLE_LIMIT = 6
 WORKBENCH_BUNDLE_PRODUCT_LIMIT = 8
 WORKBENCH_SLOT_COUNT = 4
 WORKBENCH_WEEKLY_BUNDLE_LIMIT = 2
+ADMIN_ACTIVITY_WINDOW_DAYS = 14
 HOME_MOBILE_SECTION_ORDER = (
     'workbench',
     'calendar',
@@ -134,6 +135,15 @@ HOME_MOBILE_SECTION_ORDER = (
 HOME_V5_MOBILE_SECTION_ORDER = HOME_MOBILE_SECTION_ORDER
 HOME_PROMOTED_MOBILE_SERVICE_KEYS = {'quickdrop'}
 HOME_UTILITY_SERVICE_KEYS = {'quickdrop', 'schoolcomm'}
+ADMIN_PAGE_NAME_BY_ROUTE = {
+    'home': '홈',
+    'about': '소개',
+    'dashboard': '내 서비스',
+    'community_feed': '커뮤니티',
+    'prompt_lab': '프롬프트 연구실',
+    'settings': '설정',
+    'policy': '정책',
+}
 
 
 def _get_request_client_ip(request):
@@ -141,6 +151,24 @@ def _get_request_client_ip(request):
     if forwarded_for:
         return forwarded_for.split(',')[0].strip()
     return (request.META.get('REMOTE_ADDR') or '').strip()
+
+
+def _get_admin_dashboard_page_name(path, route_name, product_by_route):
+    route_name = str(route_name or '').strip()
+    if path == '/':
+        return '홈'
+
+    product = product_by_route.get(route_name)
+    if product is not None:
+        return _get_public_product_name(product)
+
+    friendly_name = ADMIN_PAGE_NAME_BY_ROUTE.get(route_name)
+    if friendly_name:
+        return friendly_name
+
+    if route_name:
+        return route_name
+    return path
 
 
 def _record_sheetbook_workspace_metric(request, event_name, *, metadata=None):
@@ -4698,18 +4726,20 @@ def delete_account(request):
 
 @login_required
 def admin_dashboard_view(request):
-    """superuser 전용 방문자 통계 대시보드"""
+    """superuser 전용 활동/방문자 대시보드"""
     if not request.user.is_superuser:
         messages.error(request, '관리자만 접근 가능합니다.')
         return redirect('home')
 
     from .utils import (
         get_daily_visitor_count,
+        get_product_usage_source_stats,
+        get_top_page_views,
+        get_top_product_usage,
         get_unique_visitor_count,
         get_visitor_stats,
         get_weekly_stats,
     )
-    from .models import SiteConfig
     from products.models import Product
     from django.utils import timezone
     import datetime
@@ -4765,10 +4795,58 @@ def admin_dashboard_view(request):
     # Detailed stats (Humans only for the chart)
     daily_stats = get_visitor_stats(30, exclude_bots=True)
     weekly_stats = get_weekly_stats(8, exclude_bots=True)
+    top_page_views = get_top_page_views(
+        days=ADMIN_ACTIVITY_WINDOW_DAYS,
+        exclude_bots=True,
+        limit=8,
+    )
+    top_product_launches = get_top_product_usage(
+        days=ADMIN_ACTIVITY_WINDOW_DAYS,
+        limit=8,
+    )
+    product_source_stats = get_product_usage_source_stats(days=ADMIN_ACTIVITY_WINDOW_DAYS)
 
     # Chart max value
     max_daily = max((s['count'] for s in daily_stats), default=1) or 1
     max_weekly = max((s['count'] for s in weekly_stats), default=1) or 1
+
+    product_by_route = {
+        str(getattr(product, 'launch_route_name', '') or '').strip(): product
+        for product in Product.objects.filter(is_active=True).exclude(launch_route_name='')
+    }
+    product_ids = [row['product_id'] for row in top_product_launches if row.get('product_id')]
+    product_by_id = {
+        product.id: product
+        for product in Product.objects.filter(pk__in=product_ids)
+    }
+    top_page_rows = [
+        {
+            **row,
+            'display_name': _get_admin_dashboard_page_name(
+                row.get('path', ''),
+                row.get('route_name', ''),
+                product_by_route,
+            ),
+        }
+        for row in top_page_views
+    ]
+    source_label_map = dict(ProductUsageLog.SOURCE_CHOICES)
+    top_product_rows = []
+    for row in top_product_launches:
+        product = product_by_id.get(row.get('product_id'))
+        top_product_rows.append(
+            {
+                **row,
+                'display_name': _get_public_product_name(product) if product is not None else row.get('product__title') or '서비스',
+            }
+        )
+    product_source_rows = [
+        {
+            **row,
+            'display_name': source_label_map.get(row.get('source'), row.get('source') or '기타'),
+        }
+        for row in product_source_stats
+    ]
     
     # Get current NotebookLM URL from Product (SIS Compliance)
     notebook_product = Product.objects.filter(title='교사 백과사전').first()
@@ -4789,6 +4867,10 @@ def admin_dashboard_view(request):
         'weekly_stats': weekly_stats,
         'max_daily': max_daily,
         'max_weekly': max_weekly,
+        'activity_window_days': ADMIN_ACTIVITY_WINDOW_DAYS,
+        'top_page_views': top_page_rows,
+        'top_product_launches': top_product_rows,
+        'product_source_stats': product_source_rows,
         'current_notebook_url': current_notebook_url,
     })
 

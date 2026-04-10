@@ -23,6 +23,7 @@ from .models import (
     TeacherBuddySocialRewardLog,
     TeacherBuddyState,
     TeacherBuddyUnlock,
+    PageViewLog,
     UserModeration,
     VisitorLog,
 )
@@ -259,6 +260,18 @@ class ProductUsageLogAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('user', 'product')
+
+
+@admin.register(PageViewLog)
+class PageViewLogAdmin(admin.ModelAdmin):
+    list_display = ['path', 'route_name', 'identity_type', 'user', 'is_bot', 'view_date', 'created_at']
+    list_filter = ['identity_type', 'is_bot', 'view_date', 'route_name']
+    search_fields = ['path', 'route_name', 'user__username', 'visitor_key']
+    readonly_fields = ['created_at']
+    raw_id_fields = ['user']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('user')
 
 
 @admin.register(ProductFavorite)

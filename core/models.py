@@ -762,3 +762,43 @@ class VisitorLog(models.Model):
 
     def __str__(self):
         return f"{self.visit_date} - {self.identity_type}:{self.visitor_key}"
+
+
+class PageViewLog(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="page_view_logs",
+        verbose_name="사용자",
+    )
+    visitor_key = models.CharField(max_length=80, db_index=True, verbose_name="방문 식별자")
+    identity_type = models.CharField(
+        max_length=20,
+        choices=VisitorLog.IDENTITY_CHOICES,
+        default=VisitorLog.IDENTITY_SESSION,
+        verbose_name="식별 기준",
+    )
+    is_bot = models.BooleanField(default=False, verbose_name="봇 여부")
+    path = models.CharField(max_length=255, verbose_name="경로")
+    route_name = models.CharField(max_length=120, blank=True, verbose_name="라우트 이름")
+    view_date = models.DateField(auto_now_add=True, db_index=True, verbose_name="조회 날짜")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="기록 시각")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["view_date", "visitor_key", "path"],
+                name="core_unique_page_view_per_day",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["view_date", "is_bot"]),
+            models.Index(fields=["route_name", "view_date"]),
+        ]
+        verbose_name = "페이지 조회 기록"
+        verbose_name_plural = "페이지 조회 기록"
+
+    def __str__(self):
+        return f"{self.view_date} - {self.path} ({self.identity_type}:{self.visitor_key})"

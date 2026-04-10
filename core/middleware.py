@@ -10,7 +10,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .logging_filters import clear_current_request_id, set_current_request_id
-from .models import SiteConfig, VisitorLog
+from .models import PageViewLog, SiteConfig, VisitorLog
 from .openclo_login import OPENCLO_LOGIN_URL
 from .policy_consent import has_current_policy_consent, user_requires_policy_consent
 
@@ -195,6 +195,11 @@ def build_visitor_session_key(today, visitor_key):
     return f"visitor_recorded_{today.isoformat()}_{digest}"
 
 
+def build_page_view_session_key(today, visitor_key, path):
+    digest = hashlib.sha256(f"{visitor_key}:{path}".encode("utf-8")).hexdigest()[:12]
+    return f"page_view_recorded_{today.isoformat()}_{digest}"
+
+
 def migrate_today_session_log_to_user(*, today, session_visitor_key, user_visitor_key, user, ip, user_agent):
     if not session_visitor_key or session_visitor_key == user_visitor_key:
         return
@@ -224,6 +229,34 @@ def migrate_today_session_log_to_user(*, today, session_visitor_key, user_visito
     session_log.save(update_fields=["visitor_key", "identity_type", "user", "ip_address", "user_agent"])
     return session_log
 
+
+def migrate_today_page_view_to_user(*, today, path, session_visitor_key, user_visitor_key, user):
+    if not session_visitor_key or session_visitor_key == user_visitor_key:
+        return
+
+    session_log = (
+        PageViewLog.objects
+        .filter(view_date=today, path=path, visitor_key=session_visitor_key, is_bot=False)
+        .first()
+    )
+    if not session_log:
+        return
+
+    existing_user_log = (
+        PageViewLog.objects
+        .filter(view_date=today, path=path, visitor_key=user_visitor_key)
+        .first()
+    )
+    if existing_user_log:
+        session_log.delete()
+        return existing_user_log
+
+    session_log.visitor_key = user_visitor_key
+    session_log.identity_type = VisitorLog.IDENTITY_USER
+    session_log.user = user
+    session_log.save(update_fields=["visitor_key", "identity_type", "user"])
+    return session_log
+
 class VisitorTrackingMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
@@ -233,18 +266,21 @@ class VisitorTrackingMiddleware:
         if request.path.startswith('/consent/public/') or is_lightweight_bypass_path(request.path):
             return self.get_response(request)
 
+        should_track_visit = not any(request.path.startswith(p) for p in VISITOR_TRACKING_EXCLUDED_PREFIXES)
+        session = getattr(request, "session", None)
+        identity = None
+        today = timezone.localdate()
+
         # Exclude static, media, and admin paths to reduce DB load
-        if not any(request.path.startswith(p) for p in VISITOR_TRACKING_EXCLUDED_PREFIXES):
+        if should_track_visit:
             ip = get_client_ip(request)
             if not ip:
                 ip = '0.0.0.0' # Fallback for unknown IPs
 
-            today = timezone.localdate()
             user_agent = request.META.get('HTTP_USER_AGENT', '')
             is_bot = is_probable_bot(user_agent)
             identity = build_visitor_identity(request, ip=ip, is_bot=is_bot)
             session_key = build_visitor_session_key(today, identity["visitor_key"])
-            session = getattr(request, "session", None)
             already_recorded = bool(session and session.get(session_key, False))
 
             logger.info(f"[VISITOR] Path: {request.path} | IP: {ip} | Already recorded: {already_recorded}")
@@ -288,6 +324,51 @@ class VisitorTrackingMiddleware:
                     logger.error(f"[VISITOR] Error: {e}", exc_info=True)
 
         response = self.get_response(request)
+        should_track_page_view = (
+            should_track_visit
+            and request.method == "GET"
+            and not request.headers.get("HX-Request")
+            and response.status_code < 400
+            and "text/html" in str(response.get("Content-Type", "")).lower()
+            and identity is not None
+        )
+        if should_track_page_view:
+            page_view_session_key = build_page_view_session_key(today, identity["visitor_key"], request.path)
+            page_already_recorded = bool(session and session.get(page_view_session_key, False))
+            if not page_already_recorded:
+                try:
+                    if identity["identity_type"] == VisitorLog.IDENTITY_USER:
+                        migrate_today_page_view_to_user(
+                            today=today,
+                            path=request.path,
+                            session_visitor_key=identity["session_visitor_key"],
+                            user_visitor_key=identity["visitor_key"],
+                            user=identity["user"],
+                        )
+
+                    resolver_match = getattr(request, "resolver_match", None)
+                    route_name = ""
+                    if resolver_match is not None:
+                        route_name = str(
+                            getattr(resolver_match, "view_name", "")
+                            or getattr(resolver_match, "url_name", "")
+                            or ""
+                        ).strip()[:120]
+                    PageViewLog.objects.update_or_create(
+                        view_date=today,
+                        visitor_key=identity["visitor_key"],
+                        path=request.path,
+                        defaults={
+                            "user": identity["user"],
+                            "identity_type": identity["identity_type"],
+                            "is_bot": bool(identity["identity_type"] == VisitorLog.IDENTITY_BOT),
+                            "route_name": route_name,
+                        },
+                    )
+                    if session is not None:
+                        session[page_view_session_key] = True
+                except Exception as e:
+                    logger.error(f"[PAGE_VIEW] Error: {e}", exc_info=True)
         return set_pending_visitor_cookie(request, response)
 
 

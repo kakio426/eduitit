@@ -1,5 +1,6 @@
 import datetime
 import uuid
+from types import SimpleNamespace
 
 from django.contrib.auth.models import AnonymousUser, User
 from django.contrib.sessions.middleware import SessionMiddleware
@@ -9,7 +10,7 @@ from django.utils import timezone
 
 from core.context_processors import visitor_counts
 from core.middleware import VISITOR_IDENTITY_COOKIE_NAME, VisitorTrackingMiddleware
-from core.models import VisitorLog
+from core.models import PageViewLog, VisitorLog
 from core.utils import get_unique_visitor_count, get_weekly_stats
 
 
@@ -91,6 +92,42 @@ class VisitorTrackingMiddlewareTest(TestCase):
         self.assertEqual(log.identity_type, VisitorLog.IDENTITY_USER)
         self.assertEqual(log.user, user)
         self.assertEqual(log.visitor_key, f"user:{user.pk}")
+
+    def test_same_session_same_page_is_logged_once_per_day(self):
+        request = self._build_request()
+        request.resolver_match = SimpleNamespace(view_name="home", url_name="home")
+
+        self.middleware(request)
+        self.middleware(request)
+
+        self.assertEqual(PageViewLog.objects.filter(is_bot=False).count(), 1)
+        page_log = PageViewLog.objects.get(is_bot=False)
+        self.assertEqual(page_log.path, "/")
+        self.assertEqual(page_log.route_name, "home")
+        self.assertEqual(page_log.identity_type, VisitorLog.IDENTITY_SESSION)
+
+    def test_same_session_different_pages_are_logged_separately(self):
+        first_request = self._build_request()
+        first_request.resolver_match = SimpleNamespace(view_name="home", url_name="home")
+        first_response = self.middleware(first_request)
+
+        visitor_cookie = first_response.cookies[VISITOR_IDENTITY_COOKIE_NAME].value
+
+        second_request = self.factory.get(
+            "/about/",
+            REMOTE_ADDR=self.ip_address,
+            HTTP_USER_AGENT=self.user_agent,
+        )
+        second_request.user = AnonymousUser()
+        second_request.COOKIES[VISITOR_IDENTITY_COOKIE_NAME] = visitor_cookie
+        second_request.resolver_match = SimpleNamespace(view_name="about", url_name="about")
+        _attach_session(second_request)
+
+        self.middleware(second_request)
+
+        page_logs = PageViewLog.objects.filter(is_bot=False).order_by("path")
+        self.assertEqual(page_logs.count(), 2)
+        self.assertEqual(list(page_logs.values_list("path", flat=True)), ["/", "/about/"])
 
 
 class VisitorMetricsUtilsTest(TestCase):

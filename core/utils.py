@@ -1,7 +1,7 @@
 import jwt
 import datetime
 from django.conf import settings
-from django.db.models import Count
+from django.db.models import Count, Max
 from django.db.models.functions import TruncWeek
 from django.utils import timezone
 
@@ -123,6 +123,65 @@ def get_weekly_stats(weeks=8, exclude_bots=False):
         .values('week')
         .annotate(count=Count('visitor_key', distinct=True))
         .order_by('week')
+    )
+    return list(stats)
+
+
+def get_top_page_views(*, days=14, exclude_bots=False, limit=8):
+    """최근 N일 기준으로 많이 본 페이지를 반환한다."""
+    from .models import PageViewLog
+
+    start_date = timezone.localdate() - datetime.timedelta(days=max(days - 1, 0))
+    queryset = PageViewLog.objects.filter(view_date__gte=start_date)
+    if exclude_bots:
+        queryset = queryset.filter(is_bot=False)
+
+    stats = (
+        queryset
+        .values('path', 'route_name')
+        .annotate(
+            unique_visitors=Count('visitor_key', distinct=True),
+            active_days=Count('view_date', distinct=True),
+            last_seen=Max('created_at'),
+        )
+        .order_by('-unique_visitors', '-active_days', 'path')
+    )
+    return list(stats[:limit])
+
+
+def get_top_product_usage(*, days=14, limit=8):
+    """최근 N일 기준으로 홈에서 많이 열린 서비스를 반환한다."""
+    from .models import ProductUsageLog
+
+    start_dt = timezone.now() - datetime.timedelta(days=max(days, 1))
+    stats = (
+        ProductUsageLog.objects
+        .filter(created_at__gte=start_dt)
+        .values('product_id', 'product__title')
+        .annotate(
+            launch_count=Count('id'),
+            unique_users=Count('user', distinct=True),
+            last_used=Max('created_at'),
+        )
+        .order_by('-launch_count', '-unique_users', 'product__title')
+    )
+    return list(stats[:limit])
+
+
+def get_product_usage_source_stats(*, days=14):
+    """최근 N일 기준으로 서비스 진입 위치 집계를 반환한다."""
+    from .models import ProductUsageLog
+
+    start_dt = timezone.now() - datetime.timedelta(days=max(days, 1))
+    stats = (
+        ProductUsageLog.objects
+        .filter(created_at__gte=start_dt)
+        .values('source')
+        .annotate(
+            launch_count=Count('id'),
+            unique_users=Count('user', distinct=True),
+        )
+        .order_by('-launch_count', 'source')
     )
     return list(stats)
 
