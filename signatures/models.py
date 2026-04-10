@@ -70,6 +70,7 @@ class TrainingSession(models.Model):
     )
     created_at = models.DateTimeField('생성일', auto_now_add=True)
     updated_at = models.DateTimeField('수정일', auto_now=True)
+    last_shared_at = models.DateTimeField('마지막 공유 시작 시각', null=True, blank=True)
 
     # Session status
     is_active = models.BooleanField('서명 받기 활성화', default=True)

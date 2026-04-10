@@ -43,6 +43,7 @@ urlpatterns = [
     path('api/buddy/select/', views.teacher_buddy_select_view, name='teacher_buddy_select'),
     path('api/buddy/select/profile/', views.teacher_buddy_select_profile_view, name='teacher_buddy_select_profile'),
     path('api/buddy/skin/unlock/', views.teacher_buddy_unlock_skin_view, name='teacher_buddy_unlock_skin'),
+    path('buddy/share/<uuid:public_share_token>/sheet/', views.teacher_buddy_profile_sheet, name='teacher_buddy_profile_sheet'),
     path('buddy/share/<uuid:public_share_token>/', views.teacher_buddy_share_page, name='teacher_buddy_share_page'),
     path('buddy/share/<uuid:public_share_token>/image.svg', views.teacher_buddy_share_image, name='teacher_buddy_share_image'),
     path('api/favorites/toggle/', views.toggle_product_favorite, name='toggle_product_favorite'),

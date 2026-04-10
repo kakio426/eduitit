@@ -17,6 +17,8 @@ from .models import (
     ProductUsageLog,
     ProductFavorite,
     ProductWorkbenchBundle,
+    TeacherActivityEvent,
+    TeacherActivityProfile,
     TeacherBuddyDailyProgress,
     TeacherBuddyGiftCoupon,
     TeacherBuddySkinUnlock,
@@ -267,6 +269,24 @@ class PageViewLogAdmin(admin.ModelAdmin):
     list_display = ['path', 'route_name', 'identity_type', 'user', 'is_bot', 'view_date', 'created_at']
     list_filter = ['identity_type', 'is_bot', 'view_date', 'route_name']
     search_fields = ['path', 'route_name', 'user__username', 'visitor_key']
+
+
+@admin.register(TeacherActivityProfile)
+class TeacherActivityProfileAdmin(admin.ModelAdmin):
+    list_display = ['user', 'total_score', 'active_day_count', 'last_earned_at', 'updated_at']
+    search_fields = ['user__username', 'user__email']
+    readonly_fields = ['created_at', 'updated_at']
+    raw_id_fields = ['user']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('user')
+
+
+@admin.register(TeacherActivityEvent)
+class TeacherActivityEventAdmin(admin.ModelAdmin):
+    list_display = ['user', 'activity_date', 'category', 'source_key', 'points', 'is_backfilled', 'occurred_at']
+    list_filter = ['category', 'activity_date', 'is_backfilled']
+    search_fields = ['user__username', 'source_key', 'related_object_type', 'related_object_id']
     readonly_fields = ['created_at']
     raw_id_fields = ['user']
 

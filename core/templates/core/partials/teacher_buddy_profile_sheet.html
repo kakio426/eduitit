@@ -1,0 +1,48 @@
+{% load teacher_buddy_ascii %}
+
+<section class="teacher-buddy-profile-sheet">
+    <div class="teacher-buddy-profile-sheet-head">
+        {% include 'core/partials/teacher_buddy_avatar.html' with avatar_context=share_context.buddy size_class='h-16 w-16' extra_class='teacher-buddy-avatar--hero' %}
+        <div class="min-w-0">
+            <p class="teacher-buddy-settings-eyebrow">메이트 프로필</p>
+            <h2 class="teacher-buddy-profile-sheet-title">{{ share_context.nickname }}</h2>
+            <p class="teacher-buddy-profile-sheet-subtitle">{{ share_context.buddy.name }} · {{ share_context.buddy.selected_skin_short_label }}</p>
+        </div>
+    </div>
+
+    <div class="teacher-buddy-profile-sheet-body">
+        <div class="teacher-buddy-profile-sheet-ascii-wrap">
+            {% spaceless %}
+            <pre
+                class="teacher-buddy-share-ascii teacher-buddy-share-ascii--sheet"
+                style="--teacher-buddy-ascii-start: {{ share_context.buddy.ascii_tokens.start|default:'#111827' }}; --teacher-buddy-ascii-end: {{ share_context.buddy.ascii_tokens.end|default:'#111827' }};"
+            >{% for line in share_context.buddy.idle_ascii|ascii_display_lines %}<span class="teacher-buddy-ascii-line">{{ line }}</span>{% endfor %}</pre>
+            {% endspaceless %}
+            <p class="teacher-buddy-profile-sheet-copy">{{ share_context.buddy.share_caption }}</p>
+        </div>
+
+        <section class="teacher-buddy-activity-card teacher-buddy-activity-card--sheet">
+            <div class="teacher-buddy-activity-head">
+                <div>
+                    <p class="teacher-buddy-settings-eyebrow">활동 지수</p>
+                    <h3 class="teacher-buddy-activity-title">{{ share_context.activity_summary.level_label }}</h3>
+                </div>
+                <p class="teacher-buddy-activity-note">장기 활동 기준</p>
+            </div>
+            <div class="teacher-buddy-activity-stats">
+                <article class="teacher-buddy-activity-stat">
+                    <p class="teacher-buddy-activity-label">누적 지수</p>
+                    <p class="teacher-buddy-activity-value">{{ share_context.activity_summary.total_score }}</p>
+                </article>
+                <article class="teacher-buddy-activity-stat">
+                    <p class="teacher-buddy-activity-label">활동일</p>
+                    <p class="teacher-buddy-activity-value">{{ share_context.activity_summary.active_day_count }}일</p>
+                </article>
+            </div>
+        </section>
+    </div>
+
+    <div class="teacher-buddy-profile-sheet-actions">
+        <a href="{{ share_context.share_path }}" class="teacher-buddy-share-button teacher-buddy-share-button--primary">전체 카드 보기</a>
+    </div>
+</section>

@@ -1,6 +1,11 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}실시간 소통 - Eduitit{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'core/css/home_teacher_buddy.css' %}" rel="stylesheet">
+{% endblock %}
 
 {% block content %}
 <section class="min-h-screen bg-[#F8FAFC] px-4 pb-20 pt-28">

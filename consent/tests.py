@@ -21,6 +21,7 @@ from consent.models import (
 from consent.services import PdfRuntimeUnavailable, generate_recipient_evidence_pdf, generate_summary_pdf
 from consent.views import DEFAULT_LEGAL_NOTICE
 from core.models import UserPolicyConsent
+from core.models import TeacherActivityEvent, TeacherActivityProfile
 from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
 from handoff.models import HandoffRosterGroup, HandoffRosterMember
 
@@ -87,6 +88,22 @@ class ConsentFlowTests(TestCase):
         self.request_obj.refresh_from_db()
         self.assertEqual(self.request_obj.status, SignatureRequest.STATUS_SENT)
         self.assertIsNotNone(self.request_obj.sent_at)
+
+    def test_send_awards_teacher_activity_once_per_day(self):
+        self.client.force_login(self.teacher)
+        url = reverse("consent:send", kwargs={"request_id": self.request_obj.request_id})
+
+        self.client.post(url, follow=True)
+        self.client.post(url, follow=True)
+
+        profile = TeacherActivityProfile.objects.get(user=self.teacher)
+        request_events = TeacherActivityEvent.objects.filter(
+            user=self.teacher,
+            category="request_sent",
+        )
+        self.assertEqual(request_events.count(), 1)
+        self.assertEqual(request_events.first().points, 2)
+        self.assertGreaterEqual(profile.total_score, 2)
 
     def test_send_blocks_when_source_document_missing(self):
         self.document.original_file.name = "signatures/consent/originals/missing-file.pdf"

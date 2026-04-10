@@ -23,6 +23,7 @@ from .models import (
     normalize_teacher_buddy_coupon_code,
 )
 from .seo import SITE_CANONICAL_BASE_URL
+from .teacher_activity import build_teacher_activity_summary_for_user
 from .teacher_buddy_catalog import (
     COMMON_BUDDY_KEYS,
     LOCKED_AVATAR_ASCII,
@@ -506,8 +507,14 @@ def _build_avatar_context_from_buddy_payload(
     *,
     initial: str,
     sticker_dust: int = 0,
+    public_share_token=None,
 ) -> dict[str, object]:
     cosmetic_key, cosmetic_label = _cosmetic_tier(sticker_dust)
+    profile_sheet_path = ""
+    share_path = ""
+    if public_share_token:
+        share_path = reverse("teacher_buddy_share_page", kwargs={"public_share_token": public_share_token})
+        profile_sheet_path = reverse("teacher_buddy_profile_sheet", kwargs={"public_share_token": public_share_token})
     return {
         "is_buddy": True,
         "initial": initial,
@@ -523,6 +530,8 @@ def _build_avatar_context_from_buddy_payload(
         "share_frame": buddy_payload.get("share_frame", ""),
         "cosmetic_tier": cosmetic_key,
         "cosmetic_tier_label": cosmetic_label,
+        "share_path": share_path,
+        "profile_sheet_path": profile_sheet_path,
     }
 
 
@@ -542,6 +551,8 @@ def _fallback_avatar_context(*, initial: str, label: str) -> dict[str, object]:
         "share_frame": "",
         "cosmetic_tier": "starter",
         "cosmetic_tier_label": "새싹 링",
+        "share_path": "",
+        "profile_sheet_path": "",
     }
 
 
@@ -1060,11 +1071,12 @@ def build_teacher_buddy_avatar_context(user) -> dict[str, object]:
     )
     if buddy_payload is None:
         return _fallback_avatar_context(initial=initial, label=_safe_nickname_for_user(user))
-    return _build_avatar_context_from_buddy_payload(
-        buddy_payload,
-        initial=initial,
-        sticker_dust=int(getattr(state, "sticker_dust", 0) or 0),
-    )
+        return _build_avatar_context_from_buddy_payload(
+            buddy_payload,
+            initial=initial,
+            sticker_dust=int(getattr(state, "sticker_dust", 0) or 0),
+            public_share_token=getattr(state, "public_share_token", None),
+        )
 
 
 def attach_teacher_buddy_avatar_context(items) -> None:
@@ -1124,6 +1136,7 @@ def attach_teacher_buddy_avatar_context(items) -> None:
                 buddy_payload,
                 initial=initial or "?",
                 sticker_dust=int(state.sticker_dust or 0),
+                public_share_token=getattr(state, "public_share_token", None),
             )
         else:
             label = profile.nickname if profile and profile.nickname else user.username
@@ -1816,9 +1829,11 @@ def build_teacher_buddy_public_share_context(public_share_token) -> dict[str, ob
     share_url = f"{SITE_CANONICAL_BASE_URL}{share_path}"
     share_image_url = f"{SITE_CANONICAL_BASE_URL}{share_image_path}"
     cosmetic_key, cosmetic_label = _cosmetic_tier(int(state.sticker_dust or 0))
+    activity_summary = build_teacher_activity_summary_for_user(state.user)
     return {
         "nickname": nickname,
         "buddy": buddy_payload,
+        "activity_summary": activity_summary,
         "share_copy_text": _build_share_copy_text(nickname=nickname, buddy_payload=buddy_payload),
         "share_path": share_path,
         "share_url": share_url,

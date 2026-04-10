@@ -349,6 +349,55 @@
 
     var unifiedModalPrevBodyOverflow = '';
 
+    function setUnifiedModalTitle(title) {
+        var heading = document.getElementById('unifiedModalTitle');
+        if (heading) {
+            heading.textContent = title || '정보';
+        }
+    }
+
+    function renderRemoteModalError(content, loading, retryCallback) {
+        content.innerHTML = ''
+            + '<div class="flex flex-col items-center justify-center py-20 text-center space-y-6">'
+            + '<i class="fa-solid fa-triangle-exclamation text-7xl text-gray-200"></i>'
+            + '<h3 class="text-3xl font-bold text-gray-700">정보를 불러오지 못했습니다</h3>'
+            + '<p class="text-xl text-gray-400 font-hand">잠시 후 다시 시도해 주세요.</p>'
+            + '<button type="button" class="rounded-full bg-slate-900 px-8 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" data-remote-modal-retry="true">다시 시도</button>'
+            + '</div>';
+        loading.classList.add('hidden');
+        var retryButton = content.querySelector('[data-remote-modal-retry]');
+        if (retryButton && typeof retryCallback === 'function') {
+            retryButton.addEventListener('click', retryCallback);
+        }
+    }
+
+    function loadRemoteModal(url, modalTitle, retryCallback) {
+        window.openUnifiedModal();
+        var content = document.getElementById('modalContent');
+        var loading = document.getElementById('modalLoading');
+        if (!content || !loading || !url) {
+            return;
+        }
+        setUnifiedModalTitle(modalTitle);
+        loading.classList.remove('hidden');
+        content.innerHTML = '';
+
+        fetch(url)
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.text();
+            })
+            .then(function (html) {
+                content.innerHTML = html;
+                loading.classList.add('hidden');
+            })
+            .catch(function () {
+                renderRemoteModalError(content, loading, retryCallback);
+            });
+    }
+
     function resetUnifiedModalState() {
         var modal = document.getElementById('unifiedModal');
         var backdrop = document.getElementById('modalBackdrop');
@@ -395,36 +444,16 @@
     };
 
     window.openModal = function (productId) {
-        window.openUnifiedModal();
-        var content = document.getElementById('modalContent');
-        var loading = document.getElementById('modalLoading');
-        if (!content || !loading) {
-            return;
-        }
-        loading.classList.remove('hidden');
-        content.innerHTML = '';
+        var url = '/products/preview/' + productId + '/?t=' + Date.now();
+        loadRemoteModal(url, '서비스 미리보기', function () {
+            window.openModal(productId);
+        });
+    };
 
-        fetch('/products/preview/' + productId + '/?t=' + Date.now())
-            .then(function (response) {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.text();
-            })
-            .then(function (html) {
-                content.innerHTML = html;
-                loading.classList.add('hidden');
-            })
-            .catch(function () {
-                content.innerHTML = ''
-                    + '<div class="flex flex-col items-center justify-center py-20 text-center space-y-6">'
-                    + '<i class="fa-solid fa-triangle-exclamation text-7xl text-gray-200"></i>'
-                    + '<h3 class="text-3xl font-bold text-gray-700">정보를 불러오지 못했습니다</h3>'
-                    + '<p class="text-xl text-gray-400 font-hand">잠시 후 다시 시도해 주세요.</p>'
-                    + '<button onclick="openModal(' + productId + ')" class="px-8 py-3 bg-purple-500 text-white rounded-full font-bold shadow-clay hover:scale-105 transition">다시 시도</button>'
-                    + '</div>';
-                loading.classList.add('hidden');
-            });
+    window.openRemoteModal = function (url, modalTitle) {
+        loadRemoteModal(url, modalTitle || '정보', function () {
+            window.openRemoteModal(url, modalTitle || '정보');
+        });
     };
 
     window.closeModal = function () {
@@ -573,6 +602,7 @@
         var recentKey = 'eduitit_recent_launcher_items';
         var maxRecent = 5;
         var prevBodyOverflow = null;
+        var trackUsageUrl = '/api/track-usage/';
         var typeColors = {
             collect_sign: 'text-blue-500',
             classroom: 'text-blue-500',
@@ -755,6 +785,23 @@
             }
             var item = visibleItems[index];
             addRecent(item.id);
+            if (item && item.id) {
+                fetch(trackUsageUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken(),
+                    },
+                    body: JSON.stringify({
+                        product_id: parseInt(item.id, 10),
+                        action: 'launch',
+                        source: 'other',
+                    }),
+                    keepalive: true,
+                }).catch(function () {
+                    return null;
+                });
+            }
             window.closeServiceLauncher();
             if (item.is_external) {
                 window.open(item.href, '_blank', 'noopener');
@@ -876,6 +923,23 @@
                 }
             });
         }
+
+        document.addEventListener('click', function (event) {
+            var trigger = event.target.closest('[data-buddy-profile-trigger]');
+            if (!trigger) {
+                return;
+            }
+            var profileUrl = trigger.getAttribute('data-buddy-profile-url');
+            if (!profileUrl || !window.openRemoteModal) {
+                return;
+            }
+            event.preventDefault();
+            event.stopPropagation();
+            window.openRemoteModal(
+                profileUrl,
+                trigger.getAttribute('data-buddy-profile-title') || '메이트 프로필'
+            );
+        });
 
         window.syncGlobalBannerOffset();
         window.syncMobileMenuOffset();

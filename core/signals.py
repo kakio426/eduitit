@@ -5,7 +5,10 @@ from django.dispatch import receiver
 from django.db.models.signals import post_delete, pre_save
 from django.conf import settings
 from django.db.models import Q
+from django.utils import timezone
 import logging
+
+from .teacher_activity import ACTIVITY_CATEGORY_DAILY_LOGIN, award_teacher_activity
 
 logger = logging.getLogger(__name__)
 auth_logger = logging.getLogger("core.auth_security")
@@ -108,6 +111,22 @@ def _looks_like_staff_login(identifier):
 @receiver(user_logged_in)
 def log_staff_login_success(sender, request, user, **kwargs):
     if not getattr(user, "is_staff", False):
+        try:
+            award_teacher_activity(
+                user,
+                category=ACTIVITY_CATEGORY_DAILY_LOGIN,
+                source_key="login",
+                occurred_at=timezone.now(),
+                related_object_type="auth.login",
+                related_object_id=str(getattr(user, "id", "")),
+                metadata={"path": getattr(request, "path", "")},
+            )
+        except Exception:
+            logger.exception(
+                "teacher activity daily_login award failed user_id=%s path=%s",
+                getattr(user, "id", ""),
+                getattr(request, "path", ""),
+            )
         return
 
     auth_logger.info(
@@ -117,6 +136,22 @@ def log_staff_login_success(sender, request, user, **kwargs):
         _client_ip(request),
         getattr(request, "path", ""),
     )
+    try:
+        award_teacher_activity(
+            user,
+            category=ACTIVITY_CATEGORY_DAILY_LOGIN,
+            source_key="login",
+            occurred_at=timezone.now(),
+            related_object_type="auth.login",
+            related_object_id=str(getattr(user, "id", "")),
+            metadata={"path": getattr(request, "path", "")},
+        )
+    except Exception:
+        logger.exception(
+            "teacher activity daily_login award failed user_id=%s path=%s",
+            getattr(user, "id", ""),
+            getattr(request, "path", ""),
+        )
 
 
 @receiver(user_login_failed)

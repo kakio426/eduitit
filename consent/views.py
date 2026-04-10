@@ -53,6 +53,7 @@ from .services import (
     guess_file_type,
 )
 from handoff.shared_roster import consent_recipients as build_shared_roster_recipients
+from core.teacher_activity import ACTIVITY_CATEGORY_REQUEST_SENT, award_teacher_activity
 
 logger = logging.getLogger(__name__)
 
@@ -1514,6 +1515,21 @@ def consent_send(request, request_id):
             ),
         },
     )
+    try:
+        award_teacher_activity(
+            request.user,
+            category=ACTIVITY_CATEGORY_REQUEST_SENT,
+            source_key=f"consent:{consent_request.request_id}",
+            occurred_at=consent_request.sent_at,
+            related_object=consent_request,
+            metadata={"channel": "consent", "resend": already_released},
+        )
+    except Exception:
+        logger.exception(
+            "teacher activity consent send award failed request_id=%s user_id=%s",
+            consent_request.request_id,
+            request.user.id,
+        )
     if already_released:
         if rotated_shared_lookup:
             messages.success(

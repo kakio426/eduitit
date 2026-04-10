@@ -87,6 +87,10 @@ from .teacher_buddy import (
     select_teacher_buddy_profile,
     unlock_teacher_buddy_skin,
 )
+from .teacher_activity import (
+    ACTIVITY_CATEGORY_SERVICE_USE,
+    award_teacher_activity,
+)
 from messagebox.developer_chat import build_developer_chat_home_card_context
 from django.contrib import messages
 from django.db import transaction
@@ -4521,6 +4525,22 @@ def settings_view(request):
 
 
 @require_GET
+def teacher_buddy_profile_sheet(request, public_share_token):
+    try:
+        share_context = build_teacher_buddy_public_share_context(public_share_token)
+    except TeacherBuddyError:
+        return HttpResponse("Not found", status=404)
+
+    return render(
+        request,
+        'core/partials/teacher_buddy_profile_sheet.html',
+        {
+            'share_context': share_context,
+        },
+    )
+
+
+@require_GET
 def teacher_buddy_share_page(request, public_share_token):
     try:
         share_context = build_teacher_buddy_public_share_context(public_share_token)
@@ -4950,6 +4970,23 @@ def track_product_usage(request):
         source=source,
     )
     payload = {'status': 'ok'}
+    if action == 'launch':
+        try:
+            award_teacher_activity(
+                request.user,
+                category=ACTIVITY_CATEGORY_SERVICE_USE,
+                source_key=f"product:{product.id}",
+                occurred_at=timezone.now(),
+                related_object=product,
+                metadata={"source": source, "action": action},
+            )
+        except Exception:
+            logger.exception(
+                "teacher activity service_use award failed user_id=%s product_id=%s source=%s",
+                request.user.id,
+                product.id,
+                source,
+            )
     buddy_payload = record_teacher_buddy_progress(request.user, product, source)
     if buddy_payload:
         payload['buddy'] = buddy_payload

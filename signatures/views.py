@@ -24,6 +24,7 @@ from django.utils.text import get_valid_filename
 from django.utils import timezone
 from django_ratelimit.decorators import ratelimit
 from handoff.models import HandoffRosterGroup
+from core.teacher_activity import ACTIVITY_CATEGORY_REQUEST_SENT, award_teacher_activity
 from .models import (
     SIGNATURE_ATTACHMENT_MAX_FILES,
     SIGNATURE_ATTACHMENT_MAX_TOTAL_BYTES,
@@ -58,6 +59,20 @@ DEFAULT_AFFILIATION_SUGGESTIONS = [
     "상담교사",
     "행정실",
 ]
+
+
+def _record_signature_share_activity(session, *, occurred_at=None):
+    occurred_at = occurred_at or timezone.now()
+    session.last_shared_at = occurred_at
+    session.save(update_fields=["last_shared_at"])
+    award_teacher_activity(
+        session.created_by,
+        category=ACTIVITY_CATEGORY_REQUEST_SENT,
+        source_key=f"signature:{session.uuid}",
+        occurred_at=occurred_at,
+        related_object=session,
+        metadata={"channel": "signatures"},
+    )
 
 User = get_user_model()
 
@@ -1388,6 +1403,15 @@ def session_create(request):
             if draft_token:
                 _pop_signature_create_draft(request, draft_token)
             _sync_calendar_event_for_training(session)
+            if session.is_active:
+                try:
+                    _record_signature_share_activity(session, occurred_at=timezone.now())
+                except Exception:
+                    logger.exception(
+                        "teacher activity signature create award failed session_uuid=%s user_id=%s",
+                        session.uuid,
+                        session.created_by_id,
+                    )
             message_parts = []
             if is_proxy_mode:
                 message_parts.append(
@@ -1595,6 +1619,7 @@ def session_detail(request, uuid):
 def session_edit(request, uuid):
     """연수 수정"""
     session = _get_signature_session_or_404(request.user, uuid)
+    was_active = bool(session.is_active)
     existing_attachments = _get_session_attachments(session)
     selected_remove_attachment_ids = []
     if request.method == 'POST':
@@ -1633,6 +1658,15 @@ def session_edit(request, uuid):
                 message_parts.append(f"첨부 파일 {len(attachment_files)}개를 추가했습니다.")
             if attachments_to_remove:
                 message_parts.append(f"첨부 파일 {len(attachments_to_remove)}개를 제거했습니다.")
+            if not was_active and session.is_active:
+                try:
+                    _record_signature_share_activity(session, occurred_at=timezone.now())
+                except Exception:
+                    logger.exception(
+                        "teacher activity signature edit award failed session_uuid=%s user_id=%s",
+                        session.uuid,
+                        session.created_by_id,
+                    )
             messages.success(request, " ".join(message_parts))
             return redirect('signatures:detail', uuid=session.uuid)
     else:
@@ -2083,6 +2117,15 @@ def toggle_active(request, uuid):
     session = _get_signature_session_or_404(request.user, uuid)
     session.is_active = not session.is_active
     session.save()
+    if session.is_active:
+        try:
+            _record_signature_share_activity(session, occurred_at=timezone.now())
+        except Exception:
+            logger.exception(
+                "teacher activity signature toggle award failed session_uuid=%s user_id=%s",
+                session.uuid,
+                session.created_by_id,
+            )
     return JsonResponse({
         'success': True,
         'is_active': session.is_active,

@@ -446,6 +446,72 @@ class ProductUsageLog(models.Model):
         return f"{self.user.username} → {self.product.title} ({self.action})"
 
 
+class TeacherActivityProfile(models.Model):
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="teacher_activity_profile",
+    )
+    total_score = models.PositiveIntegerField(default=0)
+    active_day_count = models.PositiveIntegerField(default=0)
+    last_earned_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "교사 활동 지수 프로필"
+        verbose_name_plural = "교사 활동 지수 프로필"
+
+    def __str__(self):
+        return f"{self.user.username} 활동 지수"
+
+
+class TeacherActivityEvent(models.Model):
+    CATEGORY_DAILY_LOGIN = "daily_login"
+    CATEGORY_SERVICE_USE = "service_use"
+    CATEGORY_REQUEST_SENT = "request_sent"
+    CATEGORY_CHOICES = [
+        (CATEGORY_DAILY_LOGIN, "일일 로그인"),
+        (CATEGORY_SERVICE_USE, "메뉴/서비스 사용"),
+        (CATEGORY_REQUEST_SENT, "서명·동의 요청 발송"),
+    ]
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="teacher_activity_events",
+    )
+    activity_date = models.DateField()
+    category = models.CharField(max_length=32, choices=CATEGORY_CHOICES)
+    source_key = models.CharField(max_length=120)
+    points = models.PositiveIntegerField(default=0)
+    occurred_at = models.DateTimeField(default=timezone.now)
+    related_object_type = models.CharField(max_length=64, blank=True, default="")
+    related_object_id = models.CharField(max_length=64, blank=True, default="")
+    metadata = models.JSONField(default=dict, blank=True)
+    is_backfilled = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-activity_date", "-occurred_at", "-id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "activity_date", "category", "source_key"],
+                name="core_teacheractivityevent_user_date_category_source_unique",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["user", "-activity_date"]),
+            models.Index(fields=["user", "category", "-activity_date"]),
+            models.Index(fields=["user", "source_key"]),
+        ]
+        verbose_name = "교사 활동 지수 이벤트"
+        verbose_name_plural = "교사 활동 지수 이벤트"
+
+    def __str__(self):
+        return f"{self.user.username} - {self.activity_date} - {self.category}"
+
+
 class ProductFavorite(models.Model):
     """사용자별 서비스 즐겨찾기"""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='product_favorites')
