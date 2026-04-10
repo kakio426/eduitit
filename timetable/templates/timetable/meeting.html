@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}회의용 배정 보기{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'timetable/timetable_hub.css' %}">
+<section class="min-h-screen bg-slate-50 px-4 pb-20 pt-32">
+    <div class="mx-auto max-w-[1520px] space-y-6">
+        <header class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+            <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                <div>
+                    <p class="text-sm font-semibold text-emerald-700">회의용 배정 보기</p>
+                    <h1 class="mt-2 text-3xl font-black text-slate-900">{{ workspace.title }}</h1>
+                    <p class="mt-2 text-sm leading-6 text-slate-500">강사와 과목을 고른 뒤, 배정 가능한 칸만 빠르게 골라 메인 편집기로 반영합니다.</p>
+                </div>
+                <a href="{% url 'timetable:workspace_detail' workspace.id %}"
+                    class="inline-flex items-center justify-center rounded-2xl bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-200">
+                    편집 화면으로 돌아가기
+                </a>
+            </div>
+        </header>
+
+        <section class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+            {% csrf_token %}
+            <div class="flex flex-wrap items-center gap-2 border-b border-slate-100 pb-4">
+                <a href="{% url 'timetable:meeting_view' workspace.id %}{% if selected_teacher %}?teacher={{ selected_teacher.id }}{% endif %}"
+                    class="inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-bold {% if not selected_date %}bg-slate-900 text-white{% else %}bg-slate-100 text-slate-700 hover:bg-slate-200{% endif %}">
+                    주간 기본표
+                </a>
+                <span class="inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-bold {% if selected_date %}bg-emerald-100 text-emerald-700{% else %}bg-slate-100 text-slate-500{% endif %}">
+                    {% if selected_date %}날짜별 일정{% else %}날짜를 고르면 예외 일정 보기{% endif %}
+                </span>
+                {% if selected_date %}
+                <span class="rounded-full bg-amber-50 px-4 py-2 text-sm font-bold text-amber-700">{{ selected_date|date:"Y-m-d" }} {% if selected_week_label %}· {{ selected_week_label }}{% endif %}</span>
+                {% endif %}
+            </div>
+            <div class="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_220px] xl:items-end">
+                <form id="meeting-filter-form" method="get" class="grid gap-4 md:grid-cols-4">
+                    <label class="block">
+                        <span class="mb-2 block text-sm font-semibold text-slate-700">배정할 교사</span>
+                        <select id="meeting-teacher-select" name="teacher" class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800">
+                            {% for teacher in teachers %}
+                            <option value="{{ teacher.id }}" {% if selected_teacher and selected_teacher.id == teacher.id %}selected{% endif %}>{{ teacher.name }} · {{ teacher.get_teacher_type_display }}</option>
+                            {% endfor %}
+                        </select>
+                        <span class="mt-2 block text-xs font-semibold text-slate-500">교사를 바꾸면 표가 바로 다시 그려집니다.</span>
+                    </label>
+                    <label class="block">
+                        <span class="mb-2 block text-sm font-semibold text-slate-700">날짜</span>
+                        <input id="meeting-date" name="date" type="date" value="{% if selected_date %}{{ selected_date|date:'Y-m-d' }}{% endif %}"
+                            class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800">
+                        <span class="mt-2 block text-xs font-semibold text-slate-500">날짜를 고르면 그날 실제 시간표 기준으로 다시 계산합니다.</span>
+                    </label>
+                    <label class="block">
+                        <span class="mb-2 block text-sm font-semibold text-slate-700">과목</span>
+                        <input id="meeting-subject" type="text" value="{% if selected_teacher and selected_teacher.subjects %}{{ selected_teacher.subjects.0 }}{% endif %}"
+                            class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800" placeholder="예: 국악">
+                    </label>
+                    <label class="block">
+                        <span class="mb-2 block text-sm font-semibold text-slate-700">특별실</span>
+                        <select id="meeting-room" class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800">
+                            <option value="">선택 안 함</option>
+                            {% for room in rooms %}
+                            <option value="{{ room.id }}">{{ room.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                </form>
+                <div class="grid gap-2">
+                    <button id="meeting-apply-button" type="button" {% if not selected_teacher %}disabled aria-disabled="true"{% endif %}
+                        class="inline-flex w-full items-center justify-center rounded-2xl px-5 py-2.5 text-sm font-bold {% if selected_teacher %}bg-emerald-600 text-white hover:bg-emerald-700{% else %}cursor-not-allowed bg-slate-200 text-slate-400{% endif %}">
+                        선택한 칸 반영
+                    </button>
+                    <noscript>
+                        <button form="meeting-filter-form" formmethod="get" type="submit"
+                            class="inline-flex w-full items-center justify-center rounded-2xl bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-200">
+                            다른 교사 보기
+                        </button>
+                    </noscript>
+                </div>
+            </div>
+        </section>
+
+        <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <section class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+                {% if selected_teacher %}
+                <div class="mb-4 flex flex-wrap items-center gap-2">
+                    <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">초록: 배정 가능</span>
+                    <span class="rounded-full bg-rose-100 px-3 py-1 text-xs font-bold text-rose-700">빨강: 배정 불가</span>
+                    <span class="rounded-full bg-sky-100 px-3 py-1 text-xs font-bold text-sky-700">파랑: 이미 배정됨</span>
+                    {% if selected_date %}
+                    <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">{{ selected_date|date:"Y-m-d" }} 기준</span>
+                    {% endif %}
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full border-separate border-spacing-2 text-sm">
+                        <thead>
+                            <tr>
+                                <th class="sticky left-0 z-10 rounded-2xl bg-slate-100 px-4 py-3 text-left font-black text-slate-700">반</th>
+                                {% for slot in meeting_matrix.slots %}
+                                <th class="rounded-2xl bg-slate-100 px-4 py-3 text-center font-black text-slate-700">{{ slot.display_label }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody id="meeting-matrix-body" data-apply-url="{% url 'timetable:api_meeting_apply' workspace.id %}" data-teacher-id="{{ selected_teacher.id }}" data-selected-date="{% if selected_date %}{{ selected_date|date:'Y-m-d' }}{% endif %}">
+                            {% for row in meeting_matrix.rows %}
+                            <tr>
+                                <th class="sticky left-0 z-10 rounded-2xl bg-white px-4 py-3 text-left font-black text-slate-900">{{ row.classroom.label }}</th>
+                                {% for cell in row.cells %}
+                                <td>
+                                    <button type="button"
+                                        class="meeting-cell state-{{ cell.state }} w-full rounded-2xl px-3 py-4 text-xs font-black"
+                                        data-state="{{ cell.state }}"
+                                        data-classroom-id="{{ row.classroom.id }}"
+                                        data-classroom-label="{{ row.classroom.label }}"
+                                        data-day-key="{{ cell.day_key }}"
+                                        data-period-no="{{ cell.period_no }}"
+                                        data-slot-label="{{ cell.day_key }}{{ cell.period_no }}"
+                                        data-reason="{{ cell.reason }}">
+                                        {% if cell.state == 'assigned' %}
+                                        배정됨
+                                        {% elif cell.state == 'blocked' %}
+                                        불가
+                                        {% else %}
+                                        가능
+                                        {% endif %}
+                                    </button>
+                                </td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
+                    먼저 조율할 교사를 선택해 주세요.
+                </div>
+                {% endif %}
+            </section>
+
+            <aside class="space-y-6">
+                <section class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+                    <h2 class="text-lg font-black text-slate-900">선택한 칸</h2>
+                    <p id="meeting-status" class="mt-2 text-sm font-semibold text-slate-500">녹색 칸을 눌러 선택하세요.</p>
+                    <ul id="meeting-selection-list" class="mt-4 space-y-2">
+                        <li class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">아직 선택한 칸이 없습니다.</li>
+                    </ul>
+                </section>
+
+                <section class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+                    <h2 class="text-lg font-black text-slate-900">불가 사유</h2>
+                    <div id="meeting-blocked-reason" class="mt-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm leading-6 text-slate-500">
+                        빨간 칸을 누르면 왜 배정할 수 없는지 여기에서 바로 확인할 수 있습니다.
+                    </div>
+                </section>
+
+                <section class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+                    <h2 class="text-lg font-black text-slate-900">반영 결과</h2>
+                    <ul id="meeting-conflict-list" class="mt-4 space-y-2">
+                        <li class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">반영을 시도하면 충돌 안내가 여기에 표시됩니다.</li>
+                    </ul>
+                </section>
+            </aside>
+        </div>
+    </div>
+</section>
+
+<script>
+(() => {
+    const body = document.getElementById("meeting-matrix-body");
+    const applyButton = document.getElementById("meeting-apply-button");
+    const statusNode = document.getElementById("meeting-status");
+    const selectionList = document.getElementById("meeting-selection-list");
+    const blockedReason = document.getElementById("meeting-blocked-reason");
+    const conflictList = document.getElementById("meeting-conflict-list");
+    const teacherSelect = document.getElementById("meeting-teacher-select");
+    const dateInput = document.getElementById("meeting-date");
+    if (!body || !applyButton || !statusNode || !selectionList || !blockedReason || !conflictList || !teacherSelect || !dateInput) {
+        return;
+    }
+
+    const selected = new Map();
+    const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]")?.value;
+    const syncQuery = () => {
+        const params = new URLSearchParams(window.location.search);
+        if (teacherSelect.value) {
+            params.set("teacher", teacherSelect.value);
+        } else {
+            params.delete("teacher");
+        }
+        if (dateInput.value) {
+            params.set("date", dateInput.value);
+        } else {
+            params.delete("date");
+        }
+        window.location.search = params.toString();
+    };
+
+    const renderSelected = () => {
+        selectionList.innerHTML = "";
+        if (!selected.size) {
+            selectionList.innerHTML = '<li class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">아직 선택한 칸이 없습니다.</li>';
+            statusNode.textContent = "녹색 칸을 눌러 선택하세요.";
+            return;
+        }
+
+        selected.forEach((item) => {
+            const node = document.createElement("li");
+            node.className = "rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3";
+            node.innerHTML = `<p class="text-sm font-bold text-slate-900">${item.classroomLabel}</p><p class="mt-1 text-xs font-semibold text-slate-500">${item.slotLabel}</p>`;
+            selectionList.appendChild(node);
+        });
+        statusNode.textContent = `${selected.size}개 칸 선택됨`;
+    };
+
+    const renderBlockedReason = (message, tone) => {
+        const isAlert = tone === "alert";
+        blockedReason.className = isAlert
+            ? "mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-6 text-sm leading-6 text-rose-700"
+            : "mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-sm leading-6 text-slate-600";
+        blockedReason.textContent = message;
+    };
+
+    const renderMeetingConflicts = (messages, tone) => {
+        conflictList.innerHTML = "";
+        if (!messages.length) {
+            conflictList.innerHTML = '<li class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-6 text-center text-sm font-semibold text-emerald-700">현재 확인된 충돌은 없습니다.</li>';
+            return;
+        }
+        messages.forEach((message) => {
+            const item = document.createElement("li");
+            item.className = tone === "error"
+                ? "rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
+                : tone === "success"
+                    ? "rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
+                    : "rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800";
+            item.textContent = message;
+            conflictList.appendChild(item);
+        });
+    };
+
+    body.addEventListener("click", (event) => {
+        const button = event.target.closest(".meeting-cell");
+        if (!button) {
+            return;
+        }
+
+        const key = [button.dataset.classroomId, button.dataset.dayKey, button.dataset.periodNo].join(":");
+        if (button.dataset.state === "blocked") {
+            renderBlockedReason(button.dataset.reason || "이 칸은 현재 배정할 수 없습니다.", "alert");
+            return;
+        }
+
+        if (selected.has(key)) {
+            selected.delete(key);
+            button.classList.remove("is-selected");
+        } else {
+            selected.set(key, {
+                classroomId: button.dataset.classroomId,
+                classroomLabel: button.dataset.classroomLabel,
+                dayKey: button.dataset.dayKey,
+                periodNo: Number(button.dataset.periodNo),
+                slotLabel: `${button.dataset.classroomLabel} · ${button.dataset.slotLabel}`,
+            });
+            button.classList.add("is-selected");
+        }
+        renderBlockedReason("빨간 칸을 누르면 왜 배정할 수 없는지 여기에서 바로 확인할 수 있습니다.");
+        renderSelected();
+    });
+
+    teacherSelect.addEventListener("change", syncQuery);
+    dateInput.addEventListener("change", syncQuery);
+
+    applyButton.addEventListener("click", async () => {
+        if (!selected.size) {
+            statusNode.textContent = "먼저 적용할 칸을 선택해 주세요.";
+            return;
+        }
+        const subject = document.getElementById("meeting-subject").value.trim();
+        if (!subject) {
+            statusNode.textContent = "과목을 입력해 주세요.";
+            return;
+        }
+        const roomId = document.getElementById("meeting-room").value;
+        const selections = Array.from(selected.values()).map((value) => ({
+            classroom_id: value.classroomId,
+            day_key: value.dayKey,
+            period_no: Number(value.periodNo),
+        }));
+
+        applyButton.disabled = true;
+        statusNode.textContent = "반영 중...";
+        try {
+            const response = await fetch(body.dataset.applyUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": csrfToken || "",
+                },
+                body: JSON.stringify({
+                    teacher_id: Number(body.dataset.teacherId),
+                    subject_name: subject,
+                    room_id: roomId ? Number(roomId) : null,
+                    date: body.dataset.selectedDate || null,
+                    selections,
+                }),
+            });
+            const payload = await response.json();
+            if (!response.ok || !payload.ok) {
+                const messages = [
+                    ...(payload.validation?.conflicts || []),
+                    ...(payload.validation?.warnings || []),
+                ];
+                renderMeetingConflicts(messages.slice(0, 6), "error");
+                renderBlockedReason(messages[0] || payload.message || "회의 반영 중 문제가 생겼습니다.", "alert");
+                throw new Error(payload.message || "회의 반영 중 문제가 생겼습니다.");
+            }
+            renderMeetingConflicts(["메인 편집기로 반영합니다."], "success");
+            window.location.href = payload.redirect_url;
+        } catch (error) {
+            statusNode.textContent = error.message;
+            applyButton.disabled = false;
+        }
+    });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,179 @@
+{% extends "timetable/share_shell.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    @page {
+        size: A4 portrait;
+        margin: 12mm;
+    }
+
+    @media print {
+        :root {
+            color-scheme: light;
+        }
+
+        html, body {
+            background: white !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .print-hide { display: none !important; }
+        .print-shell { max-width: none !important; padding: 0 !important; }
+        .print-card {
+            border: none !important;
+            box-shadow: none !important;
+        }
+        .print-table {
+            min-width: 0 !important;
+            border-spacing: 1.5mm !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="px-4 py-6 md:px-6 md:py-8">
+    <div class="print-shell mx-auto max-w-5xl space-y-6">
+        <header class="print-hide rounded-[28px] border border-slate-200 bg-white px-6 py-6 shadow-sm">
+            <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div>
+                    <p class="text-sm font-semibold text-slate-500">{{ workspace.school.name }} · {{ workspace.school_year }}학년도 · {{ workspace.term }}</p>
+                    <h1 class="mt-2 text-3xl font-black text-slate-900">{{ title }}</h1>
+                    <p class="mt-2 text-sm leading-6 text-slate-500">필요한 시간표만 바로 보고, 브라우저 인쇄 메뉴에서 PDF로 저장할 수 있습니다.</p>
+                </div>
+                <button type="button" onclick="window.print()"
+                    class="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-5 py-3 text-sm font-bold text-white hover:bg-slate-800">
+                    프린트 / PDF 저장
+                </button>
+            </div>
+        </header>
+
+        <section class="print-card overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
+            <div class="border-b border-slate-200 px-6 py-5">
+                <h2 class="text-xl font-black text-slate-900">{{ audience_label }}</h2>
+                <p class="mt-1 text-sm text-slate-500">읽기 전용 확정 시간표</p>
+            </div>
+            <div class="overflow-x-auto px-4 py-4">
+                <table class="print-table w-full min-w-[760px] border-separate border-spacing-2 text-sm">
+                    <thead>
+                        <tr>
+                            <th class="rounded-2xl bg-slate-100 px-4 py-3 text-left font-black text-slate-700">교시</th>
+                            {% for day_key in workspace.day_keys %}
+                            <th class="rounded-2xl bg-slate-100 px-4 py-3 text-center font-black text-slate-700">{{ day_key }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in rows %}
+                        <tr>
+                            <th class="rounded-2xl bg-slate-50 px-4 py-3 text-left font-black text-slate-800">{{ row.period_label }}</th>
+                            {% for cell in row.cells %}
+                            <td class="align-top rounded-2xl border border-slate-200 bg-white px-3 py-3">
+                                {% if audience_type == 'teacher' %}
+                                    {% if cell.assignments or cell.events %}
+                                        <div class="space-y-2">
+                                            {% if cell.events %}
+                                            <div class="flex flex-wrap gap-2">
+                                                {% for event in cell.events %}
+                                                <span class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-black text-amber-800">{{ event.scope_label }} · {{ event.title }}</span>
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                            {% for item in cell.assignments %}
+                                            <div class="rounded-2xl border border-sky-200 bg-sky-50 px-3 py-3 text-sky-950">
+                                                <p class="text-xs font-black uppercase tracking-[0.16em] text-sky-600">{{ item.classroom_label }}</p>
+                                                <p class="mt-1 text-sm font-black">{{ item.subject_name }}</p>
+                                                {% if item.room_name %}
+                                                <p class="mt-1 text-xs font-semibold text-sky-700">{{ item.room_name }}</p>
+                                                {% endif %}
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <span class="text-slate-300">-</span>
+                                    {% endif %}
+                                {% else %}
+                                    {% if cell %}
+                                    <div class="space-y-2">
+                                        {% if cell.events %}
+                                        <div class="flex flex-wrap gap-2">
+                                            {% for event in cell.events %}
+                                            <span class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-black text-amber-800">{{ event.scope_label }} · {{ event.title }}</span>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                        {% if cell.text %}
+                                        <div class="rounded-2xl border px-3 py-3 {% if cell.is_external %}border-sky-200 bg-sky-50 text-sky-950{% else %}border-slate-200 bg-slate-50 text-slate-700{% endif %}">
+                                            <p class="text-sm font-bold">{{ cell.text }}</p>
+                                            {% if cell.badge %}
+                                            <p class="mt-2 text-xs font-black uppercase tracking-[0.16em] {% if cell.is_external %}text-sky-600{% else %}text-slate-400{% endif %}">{{ cell.badge }}</p>
+                                            {% endif %}
+                                        </div>
+                                        {% else %}
+                                        <div class="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-3 text-amber-900">
+                                            <p class="text-sm font-bold">공통 행사</p>
+                                            <p class="mt-1 text-xs font-semibold text-amber-700">수업 대신 행사 일정만 표시됩니다.</p>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    {% else %}
+                                    <span class="text-slate-300">-</span>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="print-card overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
+            <div class="border-b border-slate-200 px-6 py-5">
+                <h2 class="text-xl font-black text-slate-900">다가오는 예외 일정</h2>
+                <p class="mt-1 text-sm text-slate-500">특강, 대체수업, 날짜별 일정 변경만 따로 모아 봅니다.</p>
+            </div>
+            <div class="px-4 py-4 md:px-6">
+                {% if upcoming_overrides %}
+                <div class="space-y-3">
+                    {% for item in upcoming_overrides %}
+                    <article class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="rounded-full bg-slate-900 px-3 py-1 text-xs font-black text-white">{{ item.date_label }}</span>
+                            {% if item.week_label %}
+                            <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">{{ item.week_label }}</span>
+                            {% endif %}
+                            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">{{ item.day_key }} {{ item.period_no }}교시</span>
+                            {% if audience_type == 'teacher' %}
+                            <span class="rounded-full bg-sky-100 px-3 py-1 text-xs font-bold text-sky-700">{{ item.classroom_label }}</span>
+                            {% endif %}
+                        </div>
+                        <p class="mt-3 text-base font-black text-slate-900">{{ item.display_text|default:item.subject_name }}</p>
+                        <div class="mt-2 flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
+                            {% if item.teacher_name %}
+                            <span>교사 · {{ item.teacher_name }}</span>
+                            {% endif %}
+                            {% if item.room_name %}
+                            <span>장소 · {{ item.room_name }}</span>
+                            {% endif %}
+                        </div>
+                        {% if item.note %}
+                        <p class="mt-2 text-sm text-slate-600">{{ item.note }}</p>
+                        {% endif %}
+                    </article>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
+                    아직 예정된 날짜별 변경이 없습니다.
+                </div>
+                {% endif %}
+            </div>
+        </section>
+    </div>
+</section>
+{% endblock %}

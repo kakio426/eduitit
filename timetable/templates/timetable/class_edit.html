@@ -1,0 +1,189 @@
+{% extends "timetable/share_shell.html" %}
+{% load static %}
+
+{% block title %}{{ classroom.label }} 시간표 입력{% endblock %}
+
+{% block content %}
+{{ edit_bootstrap|json_script:"class-edit-bootstrap" }}
+<form class="hidden">{% csrf_token %}</form>
+<section class="px-4 py-6 md:px-6 md:py-8">
+    <div class="mx-auto max-w-6xl space-y-6">
+        <header class="rounded-[28px] border border-slate-200 bg-white px-6 py-6 shadow-sm">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                    <p class="text-sm font-semibold text-slate-500">{{ workspace.school.name }} · {{ workspace.school_year }}학년도 · {{ workspace.term }}</p>
+                    <h1 class="mt-2 text-3xl font-black text-slate-900">{{ classroom.label }} 시간표 입력</h1>
+                    <p class="mt-2 text-sm leading-6 text-slate-500">우리 반 시간표만 입력하고, 저장이 끝나면 입력 완료로 바꾸면 됩니다.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="rounded-full px-4 py-2 text-sm font-bold {% if input_status.status == 'reviewed' %}bg-emerald-100 text-emerald-700{% elif input_status.status == 'submitted' %}bg-sky-100 text-sky-700{% elif input_status.status == 'editing' %}bg-amber-100 text-amber-700{% else %}bg-slate-100 text-slate-600{% endif %}">
+                        {{ input_status.get_status_display }}
+                    </span>
+                    {% if selected_week_label %}
+                    <span class="rounded-full bg-amber-100 px-4 py-2 text-sm font-bold text-amber-700">{{ selected_week_label }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+                <label class="block">
+                    <span class="mb-2 block text-sm font-semibold text-slate-700">입력자 이름</span>
+                    <input id="class-editor-name" type="text" value="{{ input_status.editor_name }}" class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800" placeholder="예: 3-4 담임 김선생">
+                </label>
+                <div class="flex flex-wrap gap-2">
+                    <a href="{% url 'timetable:class_edit' link.token %}?mode=weekly"
+                        class="inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-bold {% if mode == 'weekly' %}bg-slate-900 text-white{% else %}bg-slate-100 text-slate-700 hover:bg-slate-200{% endif %}">
+                        주간 기본 시간표
+                    </a>
+                    <a href="{% url 'timetable:class_edit' link.token %}?mode=daily&date={% if selected_date %}{{ selected_date|date:'Y-m-d' }}{% endif %}"
+                        class="inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-bold {% if mode == 'daily' %}bg-emerald-600 text-white{% else %}bg-slate-100 text-slate-700 hover:bg-slate-200{% endif %}">
+                        날짜별 일정
+                    </a>
+                </div>
+            </div>
+            <div class="mt-4 flex flex-wrap gap-2">
+                <button id="class-edit-save-button" type="button" class="inline-flex items-center justify-center rounded-2xl bg-sky-600 px-5 py-3 text-sm font-bold text-white hover:bg-sky-700">
+                    임시 저장
+                </button>
+                <button id="class-edit-submit-button" type="button" class="inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white hover:bg-emerald-700">
+                    입력 완료
+                </button>
+            </div>
+            <div id="class-edit-status" class="mt-4 rounded-2xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-600">
+                저장하기 전에는 입력자 이름을 먼저 적어 주세요.
+            </div>
+        </header>
+
+        {% if mode == 'daily' %}
+        <section class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+            <div class="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-end">
+                <label class="block">
+                    <span class="mb-2 block text-sm font-semibold text-slate-700">날짜</span>
+                    <input id="class-edit-date" type="date" value="{{ selected_date|date:'Y-m-d' }}" class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800">
+                    <span class="mt-2 block text-xs font-semibold text-slate-500">날짜를 바꾸면 그날 시간표 기준으로 다시 보여 줍니다.</span>
+                </label>
+                <div class="flex flex-wrap gap-2">
+                    <span class="rounded-full bg-rose-100 px-4 py-2 text-sm font-bold text-rose-700">빨강: 배정 불가</span>
+                    <span class="rounded-full bg-emerald-100 px-4 py-2 text-sm font-bold text-emerald-700">초록: 배정 가능</span>
+                    <span class="rounded-full bg-amber-100 px-4 py-2 text-sm font-bold text-amber-700">노랑: 이 날짜만 변경</span>
+                </div>
+            </div>
+        </section>
+        {% endif %}
+
+        <section class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+            <div class="flex items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-xl font-black text-slate-900">{% if mode == 'daily' %}날짜별 일정{% else %}주간 기본 시간표{% endif %}</h2>
+                    <p class="mt-2 text-sm text-slate-500">
+                        {% if mode == 'daily' %}
+                        바뀌는 칸만 입력하면 되고, 전담 시간이나 공통 행사 시간은 빨간 칸으로 안내됩니다.
+                        {% else %}
+                        월요일부터 금요일까지 우리 반 기본 시간표를 한 번에 입력합니다.
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+
+            {% if mode == 'weekly' %}
+            <div class="mt-5 overflow-x-auto">
+                <table class="w-full min-w-[760px] border-separate border-spacing-2 text-sm">
+                    <thead>
+                        <tr>
+                            <th class="rounded-2xl bg-slate-100 px-4 py-3 text-left font-black text-slate-700">교시</th>
+                            {% for day_key in workspace.day_keys %}
+                            <th class="rounded-2xl bg-slate-100 px-4 py-3 text-center font-black text-slate-700">{{ day_key }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in weekly_rows %}
+                        <tr>
+                            <th class="rounded-2xl bg-slate-50 px-4 py-3 text-left font-black text-slate-800">{{ row.period_label }}</th>
+                            {% for cell in row.cells %}
+                            <td class="rounded-2xl border border-slate-200 bg-white px-3 py-3">
+                                <input type="text"
+                                    class="weekly-cell-input block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800"
+                                    data-day-key="{{ cell.day_key }}"
+                                    data-period-no="{{ cell.period_no }}"
+                                    value="{{ cell.text }}"
+                                    placeholder="예: 영어(홍길동)">
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="mt-5 overflow-x-auto">
+                <table class="w-full min-w-[820px] border-separate border-spacing-y-3 text-sm">
+                    <thead>
+                        <tr>
+                            <th class="px-3 py-2 text-left font-black text-slate-700">교시</th>
+                            <th class="px-3 py-2 text-left font-black text-slate-700">기본 시간표</th>
+                            <th class="px-3 py-2 text-left font-black text-slate-700">상태</th>
+                            <th class="px-3 py-2 text-left font-black text-slate-700">이 날짜만 변경</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in daily_rows %}
+                        <tr>
+                            <td class="rounded-2xl bg-slate-50 px-3 py-3 font-black text-slate-800">{{ row.period_label }}</td>
+                            <td class="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-slate-700">
+                                {% if row.base_text %}{{ row.base_text }}{% else %}<span class="text-slate-400">빈칸</span>{% endif %}
+                            </td>
+                            <td class="rounded-2xl px-3 py-3 {% if row.status_tone == 'blocked' %}bg-rose-50 text-rose-700{% elif row.status_tone == 'override' %}bg-amber-50 text-amber-800{% else %}bg-emerald-50 text-emerald-700{% endif %}">
+                                <p class="text-sm font-black">{{ row.status_label }}</p>
+                                <p class="mt-1 text-xs font-semibold">{{ row.status_reason }}</p>
+                            </td>
+                            <td class="rounded-2xl border border-slate-200 bg-white px-3 py-3">
+                                <input type="text"
+                                    class="daily-override-input block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 {% if row.status_tone == 'override' %}border-amber-300 bg-amber-50{% elif row.status_tone == 'blocked' %}border-rose-200 bg-rose-50 text-rose-700{% endif %}"
+                                    data-period-no="{{ row.period_no }}"
+                                    value="{{ row.override_text }}"
+                                    {% if row.is_blocked %}disabled aria-disabled="true"{% endif %}
+                                    placeholder="예: 수채화(홍길동) @ 미술실">
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </section>
+
+        <section class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 class="text-xl font-black text-slate-900">확인할 안내</h2>
+            <ul id="class-edit-issues" class="mt-4 space-y-2">
+                <li class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+                    저장하거나 입력 완료를 누르면 확인할 내용이 여기에 표시됩니다.
+                </li>
+            </ul>
+        </section>
+
+        <section class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 class="text-xl font-black text-slate-900">다가오는 날짜별 일정</h2>
+            <div class="mt-4 space-y-3">
+                {% for item in upcoming_overrides %}
+                <article class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="rounded-full bg-slate-900 px-3 py-1 text-xs font-black text-white">{{ item.date_label }}</span>
+                        {% if item.week_label %}
+                        <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">{{ item.week_label }}</span>
+                        {% endif %}
+                        <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">{{ item.day_key }} {{ item.period_no }}교시</span>
+                    </div>
+                    <p class="mt-3 text-sm font-bold text-slate-900">{{ item.display_text }}</p>
+                </article>
+                {% empty %}
+                <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
+                    아직 저장된 날짜별 변경이 없습니다.
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+</section>
+
+<script src="{% static 'timetable/class_edit.js' %}"></script>
+{% endblock %}

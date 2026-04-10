@@ -1,0 +1,27 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer-when-downgrade">
+    <meta name="robots" content="{{ robots|default:'noindex,nofollow' }}">
+    <title>{% block title %}시간표 보기{% endblock %}</title>
+    <link href="{% static 'css/dist.css' %}" rel="stylesheet">
+    <link href="https://hangeul.pstatic.net/hangeul_static/css/nanum-square-round.css" rel="stylesheet">
+    <style>
+        html, body {
+            background: #f8fafc;
+            color: #0f172a;
+        }
+
+        body {
+            font-family: "NanumSquareRound", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="{% block body_class %}bg-slate-50{% endblock %}">
+    {% block content %}{% endblock %}
+</body>
+</html>

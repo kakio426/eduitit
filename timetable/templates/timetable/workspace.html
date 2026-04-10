@@ -1,0 +1,507 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ workspace.title }}{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'vendor/fortune-sheet/index.umd.min.css' %}">
+<link rel="stylesheet" href="{% static 'timetable/timetable_hub.css' %}">
+
+{{ workspace.sheet_data|json_script:"timetable-sheet-data" }}
+{{ validation|json_script:"timetable-validation-data" }}
+{{ teacher_stats|json_script:"timetable-teacher-stats-data" }}
+{{ effective_events|json_script:"timetable-effective-events-data" }}
+{{ editor_bootstrap|json_script:"timetable-editor-bootstrap" }}
+
+<section class="min-h-screen bg-slate-50 px-4 pb-20 pt-32">
+    <div class="mx-auto max-w-[1720px] space-y-6">
+        <header class="rounded-[28px] border border-slate-200 bg-white px-6 py-5 shadow-sm">
+            <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+                <div class="space-y-3">
+                    <div class="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500">
+                        <span>{{ workspace.school.name }}</span>
+                        <span>·</span>
+                        <span>{{ workspace.school_year }}학년도</span>
+                        <span>·</span>
+                        <span>{{ workspace.term }}</span>
+                        <span>·</span>
+                        <span>{{ workspace.grade_label }}</span>
+                    </div>
+                    <div>
+                        <h1 class="text-3xl font-black text-slate-900">{{ workspace.title }}</h1>
+                        <p class="mt-2 text-sm leading-6 text-slate-500">칸을 선택하고 바로 배정한 뒤, 충돌을 확인하고 확정 링크를 전달합니다.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <a href="{% url 'timetable:main' %}"
+                            class="inline-flex items-center justify-center rounded-2xl bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-200">
+                            시간표 목록
+                        </a>
+                        <a href="{% url 'timetable:meeting_view' workspace.id %}"
+                            class="inline-flex items-center justify-center rounded-2xl bg-white px-4 py-2.5 text-sm font-bold text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-50">
+                            회의용 배정 보기
+                        </a>
+                    </div>
+                </div>
+                <div class="flex flex-col gap-3 xl:items-end">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="rounded-full px-3 py-1 text-xs font-black uppercase tracking-[0.18em] {% if workspace.published_snapshot_id %}bg-emerald-100 text-emerald-700{% else %}bg-amber-100 text-amber-700{% endif %}">
+                            {% if workspace.published_snapshot_id %}확정본 있음{% else %}초안 편집 중{% endif %}
+                        </span>
+                        <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">자동 저장</span>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button id="save-snapshot-button" type="button"
+                            class="inline-flex items-center justify-center rounded-2xl bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-200">
+                            스냅샷 저장
+                        </button>
+                        <button id="publish-workspace-button" type="button"
+                            class="inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700">
+                            확정하고 링크 만들기
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800 xl:hidden">
+                모바일에서는 시간표 확인 위주로 보고, 실제 배정과 확정은 데스크톱에서 진행해 주세요.
+            </div>
+        </header>
+
+        <div class="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)_300px] 2xl:grid-cols-[300px_minmax(0,1fr)_340px]">
+            <aside class="space-y-6">
+                <section class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <h2 class="text-lg font-black text-slate-900">현재 선택한 칸</h2>
+                            <p class="mt-1 text-sm text-slate-500">지금 어디에 배정하는지 먼저 확인합니다.</p>
+                        </div>
+                        <span id="selection-state-badge" class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">선택 전</span>
+                    </div>
+                    <div class="mt-4 space-y-3">
+                        <div class="rounded-2xl bg-slate-50 px-4 py-3">
+                            <p class="text-[13px] font-black uppercase tracking-[0.16em] text-slate-400">반</p>
+                            <p id="selection-sheet-label" class="mt-2 text-sm font-bold text-slate-900">먼저 칸을 선택해 주세요</p>
+                        </div>
+                        <div class="rounded-2xl bg-slate-50 px-4 py-3">
+                            <p class="text-[13px] font-black uppercase tracking-[0.16em] text-slate-400">시간</p>
+                            <p id="selection-slot-label" class="mt-2 text-sm font-bold text-slate-900">선택된 시간 없음</p>
+                        </div>
+                        <div class="rounded-2xl bg-slate-50 px-4 py-3">
+                            <p class="text-[13px] font-black uppercase tracking-[0.16em] text-slate-400">선택 범위</p>
+                            <p id="selection-range-label" class="mt-2 text-sm font-bold text-slate-900">한 칸 또는 여러 칸을 선택할 수 있습니다.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+                    <h2 class="text-lg font-black text-slate-900">빠른 배정</h2>
+                    <p class="mt-2 text-sm leading-6 text-slate-500">과목과 교사를 고른 뒤, 선택한 칸에 바로 넣습니다.</p>
+                    <div class="mt-4 space-y-3">
+                        <label class="block">
+                            <span class="mb-2 block text-sm font-semibold text-slate-700">과목</span>
+                            <input id="composer-subject" type="text" class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800" placeholder="예: 영어">
+                        </label>
+                        <label class="block">
+                            <span class="mb-2 block text-sm font-semibold text-slate-700">교사</span>
+                            <select id="composer-teacher" class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800">
+                                <option value="">직접 입력</option>
+                                {% for teacher in teachers %}
+                                <option value="{{ teacher.name }}">{{ teacher.name }} · {{ teacher.get_teacher_type_display }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <label class="block">
+                            <span class="mb-2 block text-sm font-semibold text-slate-700">특별실</span>
+                            <select id="composer-room" class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800">
+                                <option value="">선택 안 함</option>
+                                {% for room in rooms %}
+                                <option value="{{ room.name }}">{{ room.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <label class="block">
+                            <span class="mb-2 block text-sm font-semibold text-slate-700">직접 입력</span>
+                            <input id="composer-free-text" type="text" class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800" placeholder="예: 영어(홍길동) @ 영어실">
+                        </label>
+                    </div>
+                    <div class="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+                        <button id="apply-selection-button" type="button"
+                            class="inline-flex items-center justify-center rounded-2xl bg-sky-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-sky-700">
+                            선택 칸에 넣기
+                        </button>
+                        <button id="clear-selection-button" type="button"
+                            class="inline-flex items-center justify-center rounded-2xl bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-200">
+                            선택 칸 비우기
+                        </button>
+                    </div>
+                </section>
+
+                <section class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+                    <h2 class="text-lg font-black text-slate-900">주요 충돌</h2>
+                    <div class="mt-4 grid grid-cols-3 gap-3">
+                        <div class="rounded-2xl bg-rose-50 px-3 py-3 text-center">
+                            <p class="text-xs font-semibold text-rose-600">충돌</p>
+                            <p id="summary-conflicts" class="mt-1 text-2xl font-black text-rose-700">{{ validation.summary.conflict_count|default:0 }}</p>
+                        </div>
+                        <div class="rounded-2xl bg-amber-50 px-3 py-3 text-center">
+                            <p class="text-xs font-semibold text-amber-600">안내</p>
+                            <p id="summary-warnings" class="mt-1 text-2xl font-black text-amber-700">{{ validation.summary.warning_count|default:0 }}</p>
+                        </div>
+                        <div class="rounded-2xl bg-slate-100 px-3 py-3 text-center">
+                            <p class="text-xs font-semibold text-slate-600">빈칸/형식</p>
+                            <p id="summary-incomplete" class="mt-1 text-2xl font-black text-slate-700">{{ validation.summary.incomplete_count|default:0 }}</p>
+                        </div>
+                    </div>
+                    <ul id="conflict-list" class="mt-4 space-y-2"></ul>
+                </section>
+            </aside>
+
+            <main class="space-y-4">
+                <section class="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm">
+                    <div class="mb-4 flex flex-col gap-3 border-b border-slate-100 px-2 pb-4 md:flex-row md:items-center md:justify-between">
+                        <div>
+                            <h2 class="text-lg font-black text-slate-900">시간표 편집</h2>
+                            <p class="mt-1 text-sm text-slate-500">칸을 선택하고 배정하면 자동 저장되고, 겹침은 빨간색으로 바로 표시됩니다.</p>
+                        </div>
+                        <p id="timetable-save-status" class="rounded-full bg-slate-100 px-4 py-2 text-sm font-bold text-slate-600">아직 변경 사항이 없습니다.</p>
+                    </div>
+                    <div id="timetable-editor-root" class="min-h-[860px] overflow-hidden rounded-2xl border border-slate-200"></div>
+                </section>
+            </main>
+
+            <aside class="space-y-6">
+                <section class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+                    <h2 class="text-lg font-black text-slate-900">교사 시수</h2>
+                    <p class="mt-2 text-sm text-slate-500">목표 시수와 현재 배정량을 바로 확인합니다.</p>
+                    <div id="teacher-stats-list" class="mt-4 space-y-3"></div>
+                </section>
+
+                <section class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <h2 class="text-lg font-black text-slate-900">반별 입력 현황</h2>
+                            <p class="mt-2 text-sm text-slate-500">담임 선생님이 자기 반 입력 링크로 어디까지 작성했는지 바로 봅니다.</p>
+                        </div>
+                        <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">{{ class_input_rows|length }}반</span>
+                    </div>
+                    <div id="class-input-status-list" class="mt-4 space-y-3">
+                        {% for row in class_input_rows %}
+                        <article class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <p class="text-sm font-bold text-slate-900">{{ row.classroom_label }}</p>
+                                    <p class="mt-1 text-xs font-semibold {% if row.status == 'reviewed' %}text-emerald-700{% elif row.status == 'submitted' %}text-sky-700{% elif row.status == 'editing' %}text-amber-700{% else %}text-slate-500{% endif %}">
+                                        {{ row.status_label }}
+                                    </p>
+                                </div>
+                                <button type="button"
+                                    class="class-input-copy inline-flex items-center justify-center rounded-xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100 {% if not row.link_active %}hidden{% endif %}"
+                                    data-link-url="{{ row.link_url }}">
+                                    링크 복사
+                                </button>
+                            </div>
+                            <div class="mt-3 space-y-2 text-xs leading-5 text-slate-600">
+                                {% if row.editor_name %}
+                                <p>입력자 · {{ row.editor_name }}</p>
+                                {% endif %}
+                                {% if row.last_saved_at_label %}
+                                <p>마지막 저장 · {{ row.last_saved_at_label }}</p>
+                                {% endif %}
+                                {% if row.submitted_at_label %}
+                                <p>입력 완료 · {{ row.submitted_at_label }}</p>
+                                {% endif %}
+                                {% if row.reviewed_at_label %}
+                                <p>검토 완료 · {{ row.reviewed_at_label }}</p>
+                                {% endif %}
+                                {% if row.review_note %}
+                                <p>검토 메모 · {{ row.review_note }}</p>
+                                {% endif %}
+                            </div>
+                            <div class="mt-3 rounded-2xl border border-slate-200 bg-white px-3 py-3">
+                                {% if row.link_active %}
+                                <p class="break-all text-xs text-slate-500">{{ row.link_url }}</p>
+                                {% if row.link_expires_at_label %}
+                                <p class="mt-2 text-[13px] font-semibold text-slate-500">만료 · {{ row.link_expires_at_label }}</p>
+                                {% endif %}
+                                {% else %}
+                                <p class="text-sm text-slate-500">아직 입력 링크가 없거나 만료되었습니다.</p>
+                                {% endif %}
+                            </div>
+                            <div class="mt-3 grid gap-2 sm:grid-cols-3">
+                                <button type="button"
+                                    class="class-link-issue-button inline-flex items-center justify-center rounded-2xl bg-slate-900 px-3 py-2.5 text-xs font-bold text-white hover:bg-slate-800"
+                                    data-issue-url="{{ row.issue_url }}"
+                                    data-classroom-id="{{ row.classroom_id }}">
+                                    {% if row.link_active %}재발급{% else %}링크 만들기{% endif %}
+                                </button>
+                                <button type="button"
+                                    class="class-link-revoke-button inline-flex items-center justify-center rounded-2xl bg-slate-100 px-3 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-200 {% if not row.link_id %}opacity-50{% endif %}"
+                                    data-revoke-url="{{ row.revoke_url }}"
+                                    {% if not row.link_id %}disabled aria-disabled="true"{% endif %}>
+                                    링크 끊기
+                                </button>
+                                <button type="button"
+                                    class="class-status-review-button inline-flex items-center justify-center rounded-2xl bg-emerald-50 px-3 py-2.5 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100"
+                                    data-review-url="{{ row.review_url }}">
+                                    검토 완료
+                                </button>
+                            </div>
+                        </article>
+                        {% empty %}
+                        <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+                            아직 반별 입력 현황이 없습니다.
+                        </div>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <section class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <h2 class="text-lg font-black text-slate-900">공통 행사</h2>
+                            <p class="mt-2 text-sm text-slate-500">학교 전체 행사나 {{ workspace.grade_label }} 공통 일정을 시간표와 함께 맞춥니다.</p>
+                        </div>
+                        <span id="shared-events-count" class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">{{ effective_events|length }}개</span>
+                    </div>
+                    <div class="mt-4 space-y-3">
+                        <label class="block">
+                            <span class="mb-2 block text-sm font-semibold text-slate-700">범위</span>
+                            <select id="shared-event-scope" class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800">
+                                <option value="school">학교 전체</option>
+                                <option value="grade">{{ workspace.grade_label }} 공통</option>
+                            </select>
+                        </label>
+                        <label class="block">
+                            <span class="mb-2 block text-sm font-semibold text-slate-700">행사 이름</span>
+                            <input id="shared-event-title" type="text" class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800" placeholder="예: 체육대회">
+                        </label>
+                        <div class="grid gap-3 sm:grid-cols-3">
+                            <label class="block sm:col-span-1">
+                                <span class="mb-2 block text-sm font-semibold text-slate-700">요일</span>
+                                <select id="shared-event-day" class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800">
+                                    {% for day_key in workspace.day_keys %}
+                                    <option value="{{ day_key }}">{{ day_key }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <label class="block">
+                                <span class="mb-2 block text-sm font-semibold text-slate-700">시작 교시</span>
+                                <select id="shared-event-start" class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800">
+                                    {% for period_label in workspace.period_labels %}
+                                    <option value="{{ forloop.counter }}">{{ period_label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <label class="block">
+                                <span class="mb-2 block text-sm font-semibold text-slate-700">종료 교시</span>
+                                <select id="shared-event-end" class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800">
+                                    {% for period_label in workspace.period_labels %}
+                                    <option value="{{ forloop.counter }}">{{ period_label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                        </div>
+                        <label class="block">
+                            <span class="mb-2 block text-sm font-semibold text-slate-700">메모</span>
+                            <textarea id="shared-event-note" rows="2" class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800" placeholder="예: 전 학년 이동 수업 없음"></textarea>
+                        </label>
+                    </div>
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        <button id="save-shared-event-button" type="button" class="inline-flex items-center justify-center rounded-2xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-white hover:bg-amber-600">
+                            행사 저장
+                        </button>
+                        <button id="cancel-shared-event-button" type="button" class="hidden inline-flex items-center justify-center rounded-2xl bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-200">
+                            수정 취소
+                        </button>
+                    </div>
+                    <p id="shared-events-status" class="mt-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600">행사를 저장하면 해당 시간대가 모든 반에 함께 표시됩니다.</p>
+                    <div id="shared-events-list" class="mt-4 space-y-2"></div>
+                </section>
+
+                <section class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+                    <div class="flex items-center justify-between gap-3">
+                        <h2 class="text-lg font-black text-slate-900">최근 스냅샷</h2>
+                        {% if workspace.published_snapshot_id %}
+                        <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">현재 확정본</span>
+                        {% endif %}
+                    </div>
+                    <div id="snapshot-list" class="mt-4 space-y-2">
+                        {% for snapshot in snapshots %}
+                        <div class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <p class="text-sm font-bold text-slate-900">{{ snapshot.name }}</p>
+                                    <p class="mt-1 text-xs text-slate-500">{{ snapshot.created_at_label }}</p>
+                                </div>
+                                <div class="flex flex-wrap items-center justify-end gap-2">
+                                    {% if snapshot.is_published %}
+                                    <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">확정본</span>
+                                    {% endif %}
+                                    <button type="button" class="snapshot-restore-button inline-flex items-center justify-center rounded-xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100" data-restore-url="{{ snapshot.restore_url }}" data-snapshot-name="{{ snapshot.name }}">
+                                        이 상태로 복원
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+                            아직 저장된 스냅샷이 없습니다.
+                        </div>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <section class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <h2 class="text-lg font-black text-slate-900">공유 링크</h2>
+                            <p class="mt-1 text-sm text-slate-500">반별 바로보기 링크를 먼저 전달하고, 교사용 모아보기는 필요할 때만 씁니다.</p>
+                        </div>
+                        <button id="copy-first-share-link" type="button"
+                            class="inline-flex items-center justify-center rounded-2xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200">
+                            첫 바로보기 링크 복사
+                        </button>
+                    </div>
+                    <div id="share-links-list" class="mt-4 space-y-4">
+                        {% if published_class_links or published_teacher_links or published_portal %}
+                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                            <p class="text-xs font-black uppercase tracking-[0.2em] text-slate-400">반별 바로보기</p>
+                            <div class="mt-3 space-y-2">
+                                {% for link in published_class_links %}
+                                <div class="rounded-2xl bg-white px-3 py-3 ring-1 ring-slate-200">
+                                    <p class="text-sm font-bold text-slate-900">{{ link.audience_label }}</p>
+                                    <p class="share-link-url mt-1 break-all text-xs text-slate-500" data-share-primary-url="true">{{ link.url }}</p>
+                                </div>
+                                {% empty %}
+                                <div class="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-6 text-center text-sm text-slate-500">
+                                    아직 반별 링크가 없습니다.
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                            <p class="text-xs font-black uppercase tracking-[0.2em] text-slate-400">전담·강사 바로보기</p>
+                            <div class="mt-3 space-y-2">
+                                {% for link in published_teacher_links %}
+                                <div class="rounded-2xl bg-white px-3 py-3 ring-1 ring-slate-200">
+                                    <p class="text-sm font-bold text-slate-900">{{ link.audience_label }}</p>
+                                    <p class="share-link-url mt-1 break-all text-xs text-slate-500" data-share-primary-url="true">{{ link.url }}</p>
+                                </div>
+                                {% empty %}
+                                <div class="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-6 text-center text-sm text-slate-500">
+                                    아직 전담·강사 링크가 없습니다.
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        {% if published_portal %}
+                        <div class="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-4">
+                            <p class="text-xs font-black uppercase tracking-[0.2em] text-sky-600">교사용 모아보기</p>
+                            <p class="mt-2 text-sm font-bold text-sky-950">{{ published_portal.label }}</p>
+                            <p class="mt-1 break-all text-xs text-sky-700">{{ published_portal.url }}</p>
+                        </div>
+                        {% endif %}
+                        {% else %}
+                        <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+                            확정 후 읽기 전용 링크가 생성됩니다.
+                        </div>
+                        {% endif %}
+                    </div>
+                </section>
+
+                <details class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm" {% if teacher_form.errors %}open{% endif %}>
+                    <summary class="cursor-pointer list-none">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <h2 class="text-lg font-black text-slate-900">더보기 설정</h2>
+                                <p class="mt-1 text-sm text-slate-500">교사 관리, 특별실 설정, 기존 파일 불러오기를 필요할 때만 엽니다.</p>
+                            </div>
+                            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">보조 설정</span>
+                        </div>
+                    </summary>
+
+                    <div class="mt-5 space-y-5 border-t border-slate-100 pt-5">
+                        <section class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <div class="flex items-center justify-between gap-4">
+                                <h3 class="text-base font-black text-slate-900">교사 관리</h3>
+                                <span class="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200">{{ teachers|length }}명</span>
+                            </div>
+                            <form method="post" class="mt-4 space-y-3">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="add_teacher">
+                                {% for field in teacher_form %}
+                                <label class="block">
+                                    <span class="mb-2 block text-sm font-semibold text-slate-700">{{ field.label }}</span>
+                                    {{ field }}
+                                    {% if field.errors %}
+                                    <span class="mt-1 block text-xs font-semibold text-rose-600">{{ field.errors|join:", " }}</span>
+                                    {% endif %}
+                                </label>
+                                {% endfor %}
+                                <button type="submit"
+                                    class="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-800">
+                                    교사 저장
+                                </button>
+                            </form>
+                            <div class="mt-4 space-y-2">
+                                {% for teacher in teachers %}
+                                <div class="rounded-2xl bg-white px-3 py-3 ring-1 ring-slate-200">
+                                    <p class="text-sm font-bold text-slate-900">{{ teacher.name }}</p>
+                                    <p class="mt-1 text-xs text-slate-500">{{ teacher.get_teacher_type_display }} · 목표 {{ teacher.target_weekly_hours }}시간</p>
+                                    {% if teacher.subjects %}
+                                    <p class="mt-2 text-xs text-slate-600">{{ teacher.subjects|join:", " }}</p>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </section>
+
+                        <section class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <div class="flex items-center justify-between gap-4">
+                                <h3 class="text-base font-black text-slate-900">특별실 수용량</h3>
+                                <span class="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200">{{ room_policies|length }}개</span>
+                            </div>
+                            <form method="post" class="mt-4 space-y-3">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="save_room_policies">
+                                {% for policy in room_policies %}
+                                <label class="flex items-center justify-between gap-4 rounded-2xl bg-white px-3 py-3 ring-1 ring-slate-200">
+                                    <span class="text-sm font-semibold text-slate-700">{{ policy.special_room.name }}</span>
+                                    <input type="number" min="1" name="room_policy_{{ policy.special_room.id }}" value="{{ policy.capacity_per_slot }}" class="w-20 rounded-xl border border-slate-300 bg-white px-3 py-2 text-right text-sm font-bold text-slate-800">
+                                </label>
+                                {% endfor %}
+                                <button type="submit"
+                                    class="inline-flex items-center justify-center rounded-2xl bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-200">
+                                    수용량 저장
+                                </button>
+                            </form>
+                        </section>
+
+                        <section class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <h3 class="text-base font-black text-slate-900">기존 파일 불러오기</h3>
+                            <p class="mt-2 text-sm leading-6 text-slate-500">기존 업로드 결과를 현재 시간표에 불러올 때만 사용합니다.</p>
+                            <a href="{{ legacy_import_url }}"
+                                class="mt-4 inline-flex items-center justify-center rounded-2xl bg-white px-4 py-2.5 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100">
+                                기존 파일 불러오기
+                            </a>
+                        </section>
+                    </div>
+                </details>
+            </aside>
+        </div>
+    </div>
+</section>
+
+<script src="{% static 'vendor/react/react.production.min.js' %}"></script>
+<script src="{% static 'vendor/react/react-dom.production.min.js' %}"></script>
+<script>
+if (window.crypto && typeof window.crypto.randomFillSync !== "function" && typeof window.crypto.getRandomValues === "function") {
+    window.crypto.randomFillSync = function (buffer) {
+        return window.crypto.getRandomValues(buffer);
+    };
+}
+</script>
+<script src="{% static 'vendor/fortune-sheet/index.umd.min.js' %}"></script>
+<script src="{% static 'timetable/timetable_hub.js' %}"></script>
+{% endblock %}
