@@ -2088,9 +2088,17 @@ body.teacher-buddy-modal-open {
     color: #0f172a;
 }
 
+.teacher-buddy-activity-copy {
+    margin: 0.9rem 0 0;
+    font-size: 0.88rem;
+    line-height: 1.55;
+    color: #475569;
+    word-break: keep-all;
+}
+
 .teacher-buddy-profile-sheet {
     display: grid;
-    gap: 1rem;
+    gap: 1.1rem;
     padding: 1.15rem;
     background:
         radial-gradient(circle at top right, rgba(167, 243, 208, 0.18), transparent 32%),
@@ -2119,32 +2127,74 @@ body.teacher-buddy-modal-open {
 
 .teacher-buddy-profile-sheet-body {
     display: grid;
-    grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+    grid-template-columns: minmax(0, 1.1fr) minmax(250px, 0.78fr);
     gap: 1rem;
+    align-items: start;
 }
 
-.teacher-buddy-profile-sheet-ascii-wrap {
+.teacher-buddy-profile-sheet-buddy-card {
+    display: grid;
+    gap: 0.9rem;
     padding: 1rem;
     border-radius: 1.4rem;
     border: 1px solid rgba(226, 232, 240, 0.92);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94)),
+        linear-gradient(135deg, rgba(191, 219, 254, 0.14), rgba(221, 214, 254, 0.1));
+}
+
+.teacher-buddy-profile-sheet-buddy-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+
+.teacher-buddy-profile-sheet-stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 13rem;
+    padding: 1rem;
+    border-radius: 1.25rem;
+    border: 1px solid rgba(226, 232, 240, 0.86);
     background: rgba(255, 255, 255, 0.92);
+}
+
+.teacher-buddy-profile-sheet-side {
+    display: grid;
+    gap: 0.8rem;
+    align-content: start;
 }
 
 .teacher-buddy-share-ascii--sheet {
     margin: 0;
-    min-height: 220px;
+    min-height: 0;
+    font-size: 1.02rem;
+    line-height: 1.12;
+}
+
+.teacher-buddy-profile-sheet-copy-block {
+    display: grid;
+    gap: 0.42rem;
+}
+
+.teacher-buddy-profile-sheet-copy-lead {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 800;
+    line-height: 1.6;
+    color: #334155;
 }
 
 .teacher-buddy-profile-sheet-copy {
-    margin: 1rem 0 0;
-    font-size: 0.96rem;
-    line-height: 1.7;
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.65;
     color: #475569;
 }
 
-.teacher-buddy-profile-sheet-actions {
-    display: flex;
-    justify-content: flex-end;
+.teacher-buddy-profile-sheet-link {
+    width: 100%;
 }
 
 .teacher-buddy-share-preview {
@@ -2241,8 +2291,12 @@ body.teacher-buddy-modal-open {
         grid-template-columns: minmax(0, 1fr);
     }
 
-    .teacher-buddy-profile-sheet-actions {
-        justify-content: stretch;
+    .teacher-buddy-profile-sheet-stage {
+        min-height: 11rem;
+    }
+
+    .teacher-buddy-share-ascii--sheet {
+        font-size: 0.92rem;
     }
 
     .teacher-buddy-style-copy-wrap {

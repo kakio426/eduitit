@@ -50,13 +50,14 @@ ACTIVITY_LEVELS: tuple[ActivityLevel, ...] = (
 
 
 def _get_user_role(user) -> str:
-    profile = getattr(user, "userprofile", None)
-    if profile is not None and hasattr(profile, "role"):
-        return str(profile.role or "")
     try:
-        return str(UserProfile.objects.only("role").get(user=user).role or "")
+        fresh_role = str(UserProfile.objects.only("role").get(user=user).role or "")
     except UserProfile.DoesNotExist:
         return ""
+    cached_profile = getattr(user, "_userprofile_cache", None)
+    if cached_profile is not None and getattr(cached_profile, "role", None) != fresh_role:
+        cached_profile.role = fresh_role
+    return fresh_role
 
 
 def is_teacher_activity_eligible(user) -> bool:
@@ -127,6 +128,23 @@ def _build_summary_payload(
     awarded: bool = False,
     points_awarded: int = 0,
 ) -> dict[str, object]:
+    remaining_score_to_next = max(0, int(next_level.min_score) - int(total_score or 0)) if next_level else 0
+    remaining_active_days_to_next = (
+        max(0, int(next_level.min_active_days) - int(active_day_count or 0)) if next_level else 0
+    )
+    if next_level is None:
+        progress_copy = "오래 이어 온 활동이 차곡차곡 쌓여 있어요."
+    elif int(total_score or 0) == 0 and int(active_day_count or 0) == 0:
+        progress_copy = "첫 기록이 쌓이기 시작하면 활동 지수도 함께 올라가요."
+    else:
+        remaining_chunks = []
+        if remaining_score_to_next:
+            remaining_chunks.append(f"{remaining_score_to_next}점")
+        if remaining_active_days_to_next:
+            remaining_chunks.append(f"{remaining_active_days_to_next}일")
+        milestone_text = " · ".join(remaining_chunks) if remaining_chunks else "조금만 더"
+        progress_copy = f"다음 단계인 {next_level.label}까지 {milestone_text} 남았어요."
+
     return {
         "awarded": awarded,
         "points_awarded": int(points_awarded or 0),
@@ -139,6 +157,9 @@ def _build_summary_payload(
         "next_level_label": next_level.label if next_level else "",
         "next_level_min_score": int(next_level.min_score if next_level else 0),
         "next_level_min_active_days": int(next_level.min_active_days if next_level else 0),
+        "remaining_score_to_next": remaining_score_to_next,
+        "remaining_active_days_to_next": remaining_active_days_to_next,
+        "progress_copy": progress_copy,
     }
 
 

@@ -119,7 +119,7 @@ class TeacherActivityServiceTests(TestCase):
             self.assertEqual(response.status_code, 200)
 
         profile = TeacherActivityProfile.objects.get(user=self.user)
-        self.assertEqual(profile.total_score, 2)
+        self.assertEqual(profile.total_score, 3)
         self.assertEqual(profile.active_day_count, 1)
         self.assertEqual(
             TeacherActivityEvent.objects.filter(
@@ -127,6 +127,13 @@ class TeacherActivityServiceTests(TestCase):
                 category=ACTIVITY_CATEGORY_SERVICE_USE,
             ).count(),
             2,
+        )
+        self.assertEqual(
+            TeacherActivityEvent.objects.filter(
+                user=self.user,
+                category=ACTIVITY_CATEGORY_DAILY_LOGIN,
+            ).count(),
+            1,
         )
 
     def test_public_profile_sheet_and_share_page_show_activity_summary(self):
@@ -154,13 +161,28 @@ class TeacherActivityServiceTests(TestCase):
         self.assertContains(sheet_response, "활동 지수")
         self.assertContains(sheet_response, "누적 지수")
         self.assertContains(sheet_response, "3")
+        self.assertContains(sheet_response, "오래 이어 온 기록")
 
         share_response = self.client.get(
             reverse("teacher_buddy_share_page", kwargs={"public_share_token": state.public_share_token})
         )
         self.assertEqual(share_response.status_code, 200)
         self.assertContains(share_response, "활동일")
-        self.assertContains(share_response, "검증된 활동만 반영")
+        self.assertContains(share_response, "다음 단계인")
+
+    def test_activity_summary_includes_progress_copy_for_next_level(self):
+        summary = award_teacher_activity(
+            self.user,
+            category=ACTIVITY_CATEGORY_SERVICE_USE,
+            source_key=f"product:{self.product_one.id}",
+            occurred_at=timezone.now(),
+            related_object=self.product_one,
+        )
+
+        self.assertEqual(summary["level_label"], "첫발")
+        self.assertEqual(summary["remaining_score_to_next"], 59)
+        self.assertEqual(summary["remaining_active_days_to_next"], 29)
+        self.assertIn("다음 단계인 꾸준까지", summary["progress_copy"])
 
     def test_feed_avatar_exposes_profile_sheet_trigger(self):
         viewer = create_teacher("feedviewer")
