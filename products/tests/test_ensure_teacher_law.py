@@ -26,6 +26,7 @@ class EnsureTeacherLawCommandTests(TestCase):
 
         self.assertEqual(product.title, "교사용 AI 법률 가이드")
         self.assertEqual(product.icon, "⚖️")
+        self.assertEqual(product.display_order, -1)
         self.assertFalse(product.is_active)
         self.assertGreaterEqual(product.features.count(), 3)
         self.assertTrue(product.manual.is_published)

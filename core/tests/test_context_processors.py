@@ -205,6 +205,29 @@ class ServiceLauncherContextTests(TestCase):
         titles = [item["title"] for item in payload]
         self.assertIn("문서 미리보기실", titles)
 
+    def test_teacher_law_is_sorted_first_in_guide_group(self):
+        Product.objects.create(
+            title="다른 가이드",
+            description="설명",
+            price=0,
+            is_active=True,
+            service_type="edutech",
+            display_order=0,
+        )
+
+        call_command("ensure_teacher_law")
+
+        context = search_products(self._request())
+        payload = json.loads(context["service_launcher_json"])
+        guide_titles = [item["title"] for item in payload if item["group_key"] == "guide"]
+
+        self.assertIn("교사용 AI 법률 가이드", guide_titles)
+        self.assertIn("다른 가이드", guide_titles)
+        self.assertLess(
+            guide_titles.index("교사용 AI 법률 가이드"),
+            guide_titles.index("다른 가이드"),
+        )
+
     def test_reversi_is_auto_included_in_service_launcher_payload(self):
         call_command("ensure_fairy_games")
 

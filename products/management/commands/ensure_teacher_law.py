@@ -23,7 +23,7 @@ class Command(BaseCommand):
             "icon": "⚖️",
             "color_theme": "blue",
             "card_size": "small",
-            "display_order": 18,
+            "display_order": -1,
             "service_type": "edutech",
             "external_url": "",
             "launch_route_name": self.LAUNCH_ROUTE,
