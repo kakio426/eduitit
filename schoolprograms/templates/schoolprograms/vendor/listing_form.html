@@ -76,17 +76,30 @@
                 {% endif %}
                 <div class="grid gap-5 md:grid-cols-2">
                     {% for field in form %}
-                        <label class="block {% if field.name == 'description' or field.name == 'safety_info' or field.name == 'materials_info' or field.name == 'faq' or field.name == 'grade_bands' %}md:col-span-2{% endif %}">
-                            <span class="mb-2 block text-sm font-black text-slate-700">{{ field.label }}</span>
-                            {{ field }}
-                            {% if field.errors %}
-                                <p class="mt-2 text-sm font-bold text-rose-600">{{ field.errors|join:", " }}</p>
-                            {% endif %}
-                        </label>
+                        {% if field.name != "attachments" %}
+                            <label class="block {% if field.name == 'description' or field.name == 'safety_info' or field.name == 'materials_info' or field.name == 'faq' or field.name == 'grade_bands' %}md:col-span-2{% endif %}">
+                                <span class="mb-2 block text-sm font-black text-slate-700">{{ field.label }}</span>
+                                {{ field }}
+                                {% if field.errors %}
+                                    <p class="mt-2 text-sm font-bold text-rose-600">{{ field.errors|join:", " }}</p>
+                                {% endif %}
+                            </label>
+                        {% endif %}
                     {% endfor %}
                     <label class="block md:col-span-2">
                         <span class="mb-2 block text-sm font-black text-slate-700">사진 추가</span>
                         <input type="file" name="new_images" multiple class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700">
+                    </label>
+                    <label class="block md:col-span-2">
+                        <span class="mb-2 block text-sm font-black text-slate-700">{{ form.attachments.label }}</span>
+                        {{ form.attachments }}
+                        <p class="mt-2 text-sm leading-6 text-slate-500">
+                            PDF, HWP, HWPX, JPG, PNG 파일을 올릴 수 있습니다.
+                            파일당 최대 {{ form.attachment_limits.max_file_mb }}MB, 한 번에 최대 {{ form.attachment_limits.max_files }}개까지 지원합니다.
+                        </p>
+                        {% if form.attachments.errors %}
+                            <p class="mt-2 text-sm font-bold text-rose-600">{{ form.attachments.errors|join:", " }}</p>
+                        {% endif %}
                     </label>
                 </div>
                 <datalist id="listing-region-suggestions">
@@ -104,6 +117,34 @@
                                     <img src="{{ image.image.url }}" alt="{{ image.caption|default:listing.title }}" class="h-40 w-full object-cover">
                                     <figcaption class="px-4 py-3 text-sm font-bold text-slate-600">{{ image.caption|default:"대표 이미지" }}</figcaption>
                                 </figure>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                {% if listing and listing.attachments.all %}
+                    <div class="rounded-[1.5rem] bg-slate-50 p-5">
+                        <div class="flex items-center justify-between gap-4">
+                            <h2 class="text-lg font-black text-slate-900">등록된 상세 안내자료</h2>
+                            <span class="text-xs font-black uppercase tracking-[0.18em] text-slate-400">{{ listing.attachments.all|length }}개</span>
+                        </div>
+                        <div class="mt-4 space-y-3">
+                            {% for attachment in listing.attachments.all %}
+                                <label class="flex items-center justify-between gap-4 rounded-2xl bg-white px-4 py-4 shadow-sm">
+                                    <div class="min-w-0">
+                                        <div class="truncate text-sm font-black text-slate-900">{{ attachment.display_name }}</div>
+                                        <div class="mt-1 text-xs font-bold text-slate-500">{{ attachment.extension_label }} · {{ attachment.file_size|filesizeformat }}</div>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <a href="{% url 'schoolprograms:download_listing_attachment' listing.slug attachment.id %}" class="inline-flex min-h-[40px] items-center justify-center rounded-full border border-slate-200 bg-white px-3 text-xs font-black text-slate-700">
+                                            다운로드
+                                        </a>
+                                        <span class="inline-flex items-center gap-2 text-xs font-black text-rose-600">
+                                            <input type="checkbox" name="remove_attachment_ids" value="{{ attachment.id }}" class="h-4 w-4 rounded border-slate-300 text-rose-500 focus:ring-rose-300">
+                                            삭제
+                                        </span>
+                                    </div>
+                                </label>
                             {% endfor %}
                         </div>
                     </div>

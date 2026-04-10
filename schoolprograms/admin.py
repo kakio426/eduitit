@@ -6,6 +6,7 @@ from .models import (
     InquiryProposal,
     InquiryReview,
     InquiryThread,
+    ListingAttachment,
     ListingImage,
     ListingViewLog,
     ProgramListing,
@@ -17,6 +18,12 @@ from .models import (
 class ListingImageInline(admin.TabularInline):
     model = ListingImage
     extra = 0
+
+
+class ListingAttachmentInline(admin.TabularInline):
+    model = ListingAttachment
+    extra = 0
+    readonly_fields = ("original_name", "content_type", "file_size", "created_at")
 
 
 @admin.register(ProviderProfile)
@@ -45,7 +52,7 @@ class ProgramListingAdmin(admin.ModelAdmin):
     readonly_fields = ("submitted_at", "published_at", "created_at", "updated_at", "view_count")
     list_select_related = ("provider",)
     actions = ("mark_listings_approved", "mark_listings_rejected", "mark_listings_featured", "mark_listings_unfeatured")
-    inlines = [ListingImageInline]
+    inlines = [ListingImageInline, ListingAttachmentInline]
 
     @admin.action(description="선택한 프로그램을 승인 처리")
     def mark_listings_approved(self, request, queryset):

@@ -5,7 +5,7 @@ from django.core.management import call_command
 from django.test import TestCase, override_settings
 
 from schoolprograms.demo_seed import DEMO_PHONE, DEMO_USER_PREFIX
-from schoolprograms.models import InquiryReview, InquiryThread, ListingImage, ProgramListing, ProviderProfile
+from schoolprograms.models import InquiryReview, InquiryThread, ListingAttachment, ListingImage, ProgramListing, ProviderProfile
 
 
 class SeedSchoolProgramsDemoCommandTests(TestCase):
@@ -54,6 +54,7 @@ class SeedSchoolProgramsDemoCommandTests(TestCase):
             1,
         )
         self.assertEqual(ListingImage.objects.filter(listing__in=approved_listings).count(), 12)
+        self.assertEqual(ListingAttachment.objects.filter(listing__in=approved_listings).count(), 12)
 
         reviews = InquiryReview.objects.filter(
             provider__user__username__startswith=DEMO_USER_PREFIX,
@@ -102,6 +103,9 @@ class SeedSchoolProgramsDemoCommandTests(TestCase):
                 provider__user__username__startswith=DEMO_USER_PREFIX,
                 status=InquiryReview.Status.PUBLISHED,
             ).count(),
+            "attachments": ListingAttachment.objects.filter(
+                listing__provider__user__username__startswith=DEMO_USER_PREFIX,
+            ).count(),
         }
 
         call_command("seed_schoolprograms_demo")
@@ -115,6 +119,9 @@ class SeedSchoolProgramsDemoCommandTests(TestCase):
             "reviews": InquiryReview.objects.filter(
                 provider__user__username__startswith=DEMO_USER_PREFIX,
                 status=InquiryReview.Status.PUBLISHED,
+            ).count(),
+            "attachments": ListingAttachment.objects.filter(
+                listing__provider__user__username__startswith=DEMO_USER_PREFIX,
             ).count(),
         }
         self.assertEqual(first_counts, second_counts)

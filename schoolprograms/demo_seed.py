@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 from dataclasses import dataclass
 from datetime import timedelta
 
@@ -13,6 +14,7 @@ from .models import (
     InquiryProposal,
     InquiryReview,
     InquiryThread,
+    ListingAttachment,
     ListingImage,
     ListingViewLog,
     ProgramListing,
@@ -23,6 +25,14 @@ from .models import (
 DEMO_USER_PREFIX = "demo_schoolprograms_"
 DEMO_PHONE = "012-345-6789"
 DEMO_PASSWORD = "pw-123456"
+DEMO_ATTACHMENT_EXTENSIONS = (".pdf", ".hwpx", ".hwp", ".jpg", ".png")
+
+PNG_1X1_BYTES = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9p2VNl8AAAAASUVORK5CYII="
+)
+JPG_1X1_BYTES = base64.b64decode(
+    "/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBxAQEBUQEBAVFRUVFRUVFRUVFRUVFRUVFRUWFhUVFRUYHSggGBolGxUVITEhJSkrLi4uFx8zODMsNygtLisBCgoKDg0OFQ8QFS0dFR0tKy0tLS0rLSstLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLf/AABEIAAEAAgMBIgACEQEDEQH/xAAXAAEBAQEAAAAAAAAAAAAAAAAAAQID/8QAFhEBAQEAAAAAAAAAAAAAAAAAAQAC/9oADAMBAAIQAxAAAAHF4sP/xAAXEAADAQAAAAAAAAAAAAAAAAAAAQIR/9oACAEBAAEFAm2f/8QAFhEAAwAAAAAAAAAAAAAAAAAAAAER/9oACAEDAQE/Aaf/xAAWEQEBAQAAAAAAAAAAAAAAAAAAARH/2gAIAQIBAT8Bp//EABgQAQEBAQEAAAAAAAAAAAAAAAERACEx/9oACAEBAAY/ArRysf/EABoQAQEBAQEBAQAAAAAAAAAAAAERACExQWH/2gAIAQEAAT8hih0nWcl5u9mS6p//2gAMAwEAAgADAAAAEP8A/8QAFxEAAwEAAAAAAAAAAAAAAAAAAAERIf/aAAgBAwEBPxBln//EABYRAQEBAAAAAAAAAAAAAAAAAAABEf/aAAgBAgEBPxBqf//EABsQAQEAAgMBAAAAAAAAAAAAAAERACExQVFh/9oACAEBAAE/EGdb1Kuq3FMuS8M1w0u1qQm9rQkq5s//2Q=="
+)
 
 
 @dataclass(frozen=True)
@@ -86,10 +96,9 @@ def _make_provider_svg(provider_name: str, listing_title: str, accent: str) -> b
   <rect width="1200" height="900" fill="url(#bg)" rx="48" ry="48"/>
   <circle cx="1020" cy="150" r="140" fill="rgba(255,255,255,0.14)"/>
   <circle cx="180" cy="760" r="190" fill="rgba(255,255,255,0.10)"/>
-  <rect x="88" y="94" width="230" height="52" rx="26" fill="rgba(255,255,255,0.18)"/>
-  <text x="116" y="127" fill="#fff7ed" font-size="24" font-family="Pretendard, Arial, sans-serif" font-weight="700">학교 체험·행사 찾기</text>
-  <text x="88" y="390" fill="white" font-size="78" font-family="Pretendard, Arial, sans-serif" font-weight="800">{safe_provider}</text>
-  <text x="88" y="458" fill="#e2e8f0" font-size="34" font-family="Pretendard, Arial, sans-serif" font-weight="600">{safe_listing}</text>
+  <rect x="72" y="612" width="1056" height="170" rx="34" fill="rgba(15,23,42,0.40)"/>
+  <text x="96" y="688" fill="white" font-size="70" font-family="Pretendard, Arial, sans-serif" font-weight="800">{safe_provider}</text>
+  <text x="96" y="744" fill="#e2e8f0" font-size="32" font-family="Pretendard, Arial, sans-serif" font-weight="600">{safe_listing}</text>
 </svg>""".encode("utf-8")
 
 
@@ -101,6 +110,48 @@ def _attach_listing_image(listing: ProgramListing, *, accent: str) -> None:
         ContentFile(svg),
         save=True,
     )
+
+
+def _attachment_payload_for_extension(*, extension: str, listing: ProgramListing) -> tuple[bytes, str]:
+    normalized = extension.lower()
+    if normalized == ".pdf":
+        payload = (
+            "%PDF-1.4\n"
+            "1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n"
+            "2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj\n"
+            "3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 300 144] /Contents 4 0 R >> endobj\n"
+            "4 0 obj << /Length 63 >> stream\n"
+            "BT /F1 18 Tf 24 88 Td (Demo attachment for schoolprograms) Tj ET\n"
+            "endstream endobj\n"
+            "trailer << /Root 1 0 R >>\n"
+            "%%EOF\n"
+        ).encode("utf-8")
+        return payload, "application/pdf"
+    if normalized == ".hwpx":
+        return f"{listing.title} 데모 안내자료 HWPX".encode("utf-8"), "application/vnd.hancom.hwpx"
+    if normalized == ".hwp":
+        return f"{listing.title} 데모 안내자료 HWP".encode("utf-8"), "application/x-hwp"
+    if normalized == ".png":
+        return PNG_1X1_BYTES, "image/png"
+    if normalized in {".jpg", ".jpeg"}:
+        return JPG_1X1_BYTES, "image/jpeg"
+    return f"{listing.title} 데모 안내자료".encode("utf-8"), "application/octet-stream"
+
+
+def _attach_listing_document(listing: ProgramListing, *, index: int) -> None:
+    extension = DEMO_ATTACHMENT_EXTENSIONS[index % len(DEMO_ATTACHMENT_EXTENSIONS)]
+    base_name = slugify(listing.title, allow_unicode=True)
+    filename = f"{base_name}-프로그램안내{extension}"
+    payload, content_type = _attachment_payload_for_extension(extension=extension, listing=listing)
+    attachment = ListingAttachment(
+        listing=listing,
+        original_name=filename,
+        content_type=content_type,
+        file_size=len(payload),
+        sort_order=listing.attachments.count(),
+    )
+    attachment.file.save(filename, ContentFile(payload), save=False)
+    attachment.save()
 
 
 def _build_provider_specs() -> list[DemoProviderSpec]:
@@ -580,6 +631,7 @@ def _build_demo_provider(spec: DemoProviderSpec):
             listing.submitted_at = listing.published_at - timedelta(days=2)
             listing.save(update_fields=["published_at", "submitted_at"])
             _attach_listing_image(listing, accent=listing_spec.accent)
+            _attach_listing_document(listing, index=spec_index - 1)
             if listing_spec.recent_log_count:
                 ListingViewLog.objects.bulk_create(
                     [

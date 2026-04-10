@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from datetime import timedelta
+import mimetypes
 from urllib.parse import quote
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Case, Count, F, IntegerField, Prefetch, Q, Value, When
-from django.http import Http404, HttpResponseForbidden
+from django.http import FileResponse, Http404, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -28,6 +29,7 @@ from .models import (
     InquiryProposal,
     InquiryReview,
     InquiryThread,
+    ListingAttachment,
     ListingImage,
     ListingViewLog,
     ProgramListing,
@@ -114,7 +116,7 @@ def _get_or_create_provider(user):
 def _listing_base_queryset():
     return (
         ProgramListing.objects.select_related("provider", "provider__user", "provider__user__userprofile")
-        .prefetch_related("images")
+        .prefetch_related("images", "attachments")
     )
 
 
@@ -245,6 +247,7 @@ def _build_provider_cards(listings, *, review_meta=None):
             or representative_listing.public_regions_text
         )
         card["price_hint"] = representative_listing.price_text
+        card["attachment_count"] = len(list(representative_listing.attachments.all()))
         card["review_count"] = int(review_info.get("count") or 0)
         card["review_headline"] = str(review_info.get("headline") or "").strip()
         card["review_context_label"] = str(review_info.get("context_label") or "").strip()
@@ -258,6 +261,18 @@ def _build_provider_cards(listings, *, review_meta=None):
             card["trust_context"] = "학교 검색에 공개된 업체"
 
     return cards
+
+
+def _normalize_attachment_removals(raw_ids):
+    cleaned_ids = []
+    for raw_value in raw_ids or []:
+        try:
+            attachment_id = int(raw_value)
+        except (TypeError, ValueError):
+            continue
+        if attachment_id not in cleaned_ids:
+            cleaned_ids.append(attachment_id)
+    return cleaned_ids
 
 
 def _apply_listing_filters(
@@ -588,6 +603,28 @@ def listing_detail(request, slug):
             "compare_count": _compare_count_for_request(request),
         },
     )
+
+
+def download_listing_attachment(request, slug, attachment_id):
+    listing = get_object_or_404(_listing_base_queryset(), slug=slug)
+    is_vendor_owner = (
+        request.user.is_authenticated
+        and _is_company_role(request.user)
+        and listing.provider.user_id == request.user.id
+    )
+    if listing.approval_status != ProgramListing.ApprovalStatus.APPROVED and not is_vendor_owner:
+        raise Http404("첨부 파일을 찾을 수 없습니다.")
+    attachment = get_object_or_404(listing.attachments.all(), pk=attachment_id)
+    try:
+        file_handle = attachment.file.open("rb")
+    except FileNotFoundError as exc:
+        raise Http404("첨부 파일을 찾을 수 없습니다.") from exc
+
+    filename = attachment.display_name
+    content_type = attachment.content_type or mimetypes.guess_type(filename)[0] or "application/octet-stream"
+    response = FileResponse(file_handle, as_attachment=True, filename=filename, content_type=content_type)
+    response["X-Robots-Tag"] = "noindex, nofollow"
+    return response
 
 
 @login_required
@@ -1141,7 +1178,7 @@ def vendor_listing_edit(request, slug):
     if denied:
         return denied
     provider = _get_or_create_provider(request.user)
-    listing = get_object_or_404(provider.listings.prefetch_related("images"), slug=slug)
+    listing = get_object_or_404(provider.listings.prefetch_related("images", "attachments"), slug=slug)
     return _vendor_listing_editor(request, provider=provider, listing=listing)
 
 
@@ -1151,7 +1188,12 @@ def _vendor_listing_editor(request, provider=None, listing=None):
     selected_province = ""
     if request.method == "POST":
         selected_province = str(request.POST.get("province") or "").strip()
-        form = ProgramListingForm(request.POST, instance=listing, region_list_id="listing-region-suggestions")
+        form = ProgramListingForm(
+            request.POST,
+            request.FILES,
+            instance=listing,
+            region_list_id="listing-region-suggestions",
+        )
         if form.is_valid():
             existing_status = (
                 listing.approval_status if listing is not None else ProgramListing.ApprovalStatus.DRAFT
@@ -1167,8 +1209,21 @@ def _vendor_listing_editor(request, provider=None, listing=None):
                 elif not listing.pk:
                     listing.mark_draft()
                 listing.save()
+                remove_attachment_ids = _normalize_attachment_removals(request.POST.getlist("remove_attachment_ids"))
+                if remove_attachment_ids:
+                    listing.attachments.filter(pk__in=remove_attachment_ids).delete()
                 for image in request.FILES.getlist("new_images"):
                     ListingImage.objects.create(listing=listing, image=image, sort_order=listing.images.count())
+                existing_attachment_count = listing.attachments.count()
+                for offset, attachment in enumerate(form.cleaned_data.get("attachments", [])):
+                    ListingAttachment.objects.create(
+                        listing=listing,
+                        file=attachment,
+                        original_name=getattr(attachment, "name", "") or "",
+                        content_type=str(getattr(attachment, "content_type", "") or ""),
+                        file_size=int(getattr(attachment, "size", 0) or 0),
+                        sort_order=existing_attachment_count + offset,
+                    )
                 if existing_status == ProgramListing.ApprovalStatus.APPROVED:
                     messages.success(request, "공개중 프로그램 정보를 저장했습니다. 현재 공개 상태는 유지됩니다.")
                 elif action == "submit":

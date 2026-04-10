@@ -1,11 +1,26 @@
 from __future__ import annotations
 
+from pathlib import Path
 import uuid
 
 from django.conf import settings
 from django.db import models
 from django.utils.text import slugify
 from django.utils import timezone
+
+from .storage import schoolprograms_document_storage
+
+
+LISTING_ATTACHMENT_ALLOWED_EXTENSIONS = {
+    ".pdf",
+    ".hwp",
+    ".hwpx",
+    ".jpg",
+    ".jpeg",
+    ".png",
+}
+LISTING_ATTACHMENT_MAX_FILES = 10
+LISTING_ATTACHMENT_MAX_FILE_BYTES = 25 * 1024 * 1024
 
 
 def _unique_slug(*, model, source: str, current_pk=None, field_name: str = "slug", prefix: str = "item") -> str:
@@ -38,6 +53,7 @@ class ProviderProfile(models.Model):
     service_area_summary = models.CharField(max_length=120, blank=True, verbose_name="주 활동 지역")
     verification_document = models.FileField(
         upload_to="schoolprograms/provider_docs/",
+        storage=schoolprograms_document_storage,
         max_length=500,
         blank=True,
         null=True,
@@ -236,6 +252,59 @@ class ListingImage(models.Model):
 
     def __str__(self) -> str:
         return f"{self.listing.title} 이미지 {self.id}"
+
+
+class ListingAttachment(models.Model):
+    listing = models.ForeignKey(
+        ProgramListing,
+        on_delete=models.CASCADE,
+        related_name="attachments",
+    )
+    file = models.FileField(
+        upload_to="schoolprograms/attachments/",
+        storage=schoolprograms_document_storage,
+        max_length=500,
+        verbose_name="첨부 파일",
+    )
+    original_name = models.CharField(max_length=255, blank=True, verbose_name="원본 파일명")
+    content_type = models.CharField(max_length=120, blank=True, verbose_name="MIME 타입")
+    file_size = models.PositiveBigIntegerField(default=0, verbose_name="파일 크기")
+    sort_order = models.PositiveIntegerField(default=0, verbose_name="정렬 순서")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["sort_order", "id"]
+        verbose_name = "학교 프로그램 첨부파일"
+        verbose_name_plural = "학교 프로그램 첨부파일"
+
+    def __str__(self) -> str:
+        return f"{self.listing.title} 첨부 {self.display_name}"
+
+    def save(self, *args, **kwargs):
+        if self.file and not self.original_name:
+            self.original_name = Path(self.file.name).name
+        if self.file and not self.file_size:
+            try:
+                self.file_size = int(self.file.size or 0)
+            except Exception:
+                self.file_size = 0
+        super().save(*args, **kwargs)
+
+    @property
+    def display_name(self) -> str:
+        return self.original_name or Path(getattr(self.file, "name", "") or "").name or "첨부 파일"
+
+    @property
+    def extension(self) -> str:
+        return Path(self.display_name).suffix.lower()
+
+    @property
+    def extension_label(self) -> str:
+        return (self.extension or "").replace(".", "").upper() or "FILE"
+
+    @property
+    def is_image_preview(self) -> bool:
+        return self.extension in {".jpg", ".jpeg", ".png"}
 
 
 class ListingViewLog(models.Model):

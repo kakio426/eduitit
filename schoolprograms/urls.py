@@ -9,6 +9,11 @@ app_name = "schoolprograms"
 urlpatterns = [
     path("", views.landing, name="landing"),
     path("listings/<str:slug>/", views.listing_detail, name="listing_detail"),
+    path(
+        "listings/<str:slug>/attachments/<int:attachment_id>/download/",
+        views.download_listing_attachment,
+        name="download_listing_attachment",
+    ),
     path("listings/<str:slug>/inquire/", views.create_inquiry, name="create_inquiry"),
     path("listings/<str:slug>/save/", views.toggle_saved_listing, name="toggle_saved_listing"),
     path("listings/<str:slug>/compare/", views.toggle_compare_listing, name="toggle_compare_listing"),

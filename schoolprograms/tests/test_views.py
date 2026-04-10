@@ -7,7 +7,16 @@ from django.urls import reverse
 from django.utils import timezone
 
 from core.models import UserProfile
-from schoolprograms.models import InquiryProposal, InquiryReview, InquiryThread, ListingViewLog, ProgramListing, ProviderProfile, SavedListing
+from schoolprograms.models import (
+    InquiryProposal,
+    InquiryReview,
+    InquiryThread,
+    ListingAttachment,
+    ListingViewLog,
+    ProgramListing,
+    ProviderProfile,
+    SavedListing,
+)
 
 
 User = get_user_model()
@@ -67,6 +76,16 @@ def create_listing(*, provider, title="찾아오는 환경 체험", approval_sta
         listing.published_at = listing.created_at
         listing.save(update_fields=["published_at"])
     return listing
+
+
+def create_attachment(*, listing, name="program-guide.pdf", content=b"%PDF-1.4 demo", content_type="application/pdf"):
+    return ListingAttachment.objects.create(
+        listing=listing,
+        file=SimpleUploadedFile(name, content, content_type=content_type),
+        original_name=name,
+        content_type=content_type,
+        file_size=len(content),
+    )
 
 
 class SchoolProgramsLandingTests(TestCase):
@@ -146,6 +165,18 @@ class SchoolProgramsDiscoveryTests(TestCase):
         self.assertContains(response, "이 활동으로 문의 보내기")
         self.assertEqual(response.context["selected_listing"].pk, self.primary.pk)
 
+    def test_provider_and_listing_detail_surface_attachment_downloads(self):
+        attachment = create_attachment(listing=self.primary, name="program-guide.pdf")
+
+        provider_response = self.client.get(reverse("schoolprograms:provider_detail", args=[self.provider.slug]))
+        listing_response = self.client.get(reverse("schoolprograms:listing_detail", args=[self.primary.slug]))
+
+        download_url = reverse("schoolprograms:download_listing_attachment", args=[self.primary.slug, attachment.id])
+        self.assertContains(provider_response, "상세 안내자료")
+        self.assertContains(provider_response, download_url)
+        self.assertContains(listing_response, "첨부 자료")
+        self.assertContains(listing_response, download_url)
+
     def test_filter_combination_returns_expected_listing(self):
         response = self.client.get(
             reverse("schoolprograms:landing"),
@@ -171,6 +202,42 @@ class SchoolProgramsDiscoveryTests(TestCase):
         self.assertNotContains(response, 'id="advanced-filters-panel" open', html=False)
         self.assertNotContains(response, "최근 관심")
         self.assertNotContains(response, "누적 조회")
+
+    def test_landing_badges_render_below_image_without_absolute_overlay(self):
+        agreed_teacher = create_user_with_role(username="overlay-review-teacher", role="school", nickname="후기교사")
+        agreed_thread = InquiryThread.objects.create(
+            listing=self.primary,
+            provider=self.provider,
+            teacher=agreed_teacher,
+            category=self.primary.category,
+            school_region="경기 수원",
+            preferred_schedule="5월 둘째 주 오전",
+            target_audience="초등 5학년 4개 반",
+            expected_participants=110,
+            budget_text="학급당 30만원대 희망",
+            status=InquiryThread.Status.CLOSED,
+            is_agreement_reached=True,
+            last_message_at=timezone.now(),
+            last_message_preview="[합의 완료] 진행 확정",
+            last_message_sender_role=InquiryThread.SenderRole.TEACHER,
+        )
+        InquiryReview.objects.create(
+            thread=agreed_thread,
+            listing=self.primary,
+            provider=self.provider,
+            teacher=agreed_teacher,
+            headline="학급 운영이 매끄러웠어요",
+            body="도입과 마무리가 분명해서 진행이 편했습니다.",
+            recommended_for="학급 단위 방문형 체험",
+            status=InquiryReview.Status.PUBLISHED,
+        )
+
+        response = self.client.get(reverse("schoolprograms:landing"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "운영 승인")
+        self.assertContains(response, "이용후기 1개")
+        self.assertNotContains(response, "absolute left-4 top-4")
 
     def test_provider_pagination_handles_multiple_pages(self):
         for index in range(1, 14):
@@ -859,3 +926,95 @@ class SchoolProgramsVendorWorkflowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "회사 정보와 증빙 서류를 먼저 완료해 주세요.")
         self.assertFalse(ProgramListing.objects.filter(provider=incomplete_provider, title="심사 보내려는 프로그램").exists())
+
+    def test_vendor_can_upload_supported_attachments_and_remove_existing_one(self):
+        existing_attachment = create_attachment(listing=self.approved_listing, name="old-guide.pdf")
+        self.client.force_login(self.company_user)
+
+        response = self.client.post(
+            reverse("schoolprograms:vendor_listing_edit", args=[self.approved_listing.slug]),
+            {
+                "title": self.approved_listing.title,
+                "category": self.approved_listing.category,
+                "summary": self.approved_listing.summary,
+                "description": self.approved_listing.description,
+                "theme_tags_text": self.approved_listing.theme_tags_text,
+                "grade_bands": self.approved_listing.grade_bands,
+                "delivery_mode": self.approved_listing.delivery_mode,
+                "province": self.approved_listing.province,
+                "city": self.approved_listing.city,
+                "coverage_note": self.approved_listing.coverage_note,
+                "duration_text": self.approved_listing.duration_text,
+                "capacity_text": self.approved_listing.capacity_text,
+                "price_text": self.approved_listing.price_text,
+                "safety_info": self.approved_listing.safety_info,
+                "materials_info": self.approved_listing.materials_info,
+                "faq": self.approved_listing.faq,
+                "attachments": [
+                    SimpleUploadedFile("program-guide.pdf", b"%PDF-1.4 demo", content_type="application/pdf"),
+                    SimpleUploadedFile(
+                        "program-sheet.hwpx",
+                        b"demo hwpx bytes",
+                        content_type="application/octet-stream",
+                    ),
+                ],
+                "remove_attachment_ids": [str(existing_attachment.id)],
+                "action": "save",
+            },
+        )
+
+        self.assertRedirects(response, reverse("schoolprograms:vendor_listing_edit", args=[self.approved_listing.slug]))
+        self.assertFalse(ListingAttachment.objects.filter(pk=existing_attachment.pk).exists())
+        uploaded_names = set(self.approved_listing.attachments.values_list("original_name", flat=True))
+        self.assertIn("program-guide.pdf", uploaded_names)
+        self.assertIn("program-sheet.hwpx", uploaded_names)
+
+    def test_vendor_attachment_rejects_unsupported_extension(self):
+        self.client.force_login(self.company_user)
+
+        response = self.client.post(
+            reverse("schoolprograms:vendor_listing_edit", args=[self.approved_listing.slug]),
+            {
+                "title": self.approved_listing.title,
+                "category": self.approved_listing.category,
+                "summary": self.approved_listing.summary,
+                "description": self.approved_listing.description,
+                "theme_tags_text": self.approved_listing.theme_tags_text,
+                "grade_bands": self.approved_listing.grade_bands,
+                "delivery_mode": self.approved_listing.delivery_mode,
+                "province": self.approved_listing.province,
+                "city": self.approved_listing.city,
+                "coverage_note": self.approved_listing.coverage_note,
+                "duration_text": self.approved_listing.duration_text,
+                "capacity_text": self.approved_listing.capacity_text,
+                "price_text": self.approved_listing.price_text,
+                "safety_info": self.approved_listing.safety_info,
+                "materials_info": self.approved_listing.materials_info,
+                "faq": self.approved_listing.faq,
+                "attachments": [
+                    SimpleUploadedFile("malware.exe", b"demo", content_type="application/octet-stream"),
+                ],
+                "action": "save",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "첨부 자료는 .hwp, .hwpx, .jpeg, .jpg, .pdf, .png 형식만 올릴 수 있습니다.")
+        self.assertEqual(self.approved_listing.attachments.count(), 0)
+
+    def test_public_attachment_download_returns_attachment_response(self):
+        attachment = create_attachment(
+            listing=self.approved_listing,
+            name="event-guide.pdf",
+            content=b"%PDF-1.4 event guide",
+            content_type="application/pdf",
+        )
+
+        response = self.client.get(
+            reverse("schoolprograms:download_listing_attachment", args=[self.approved_listing.slug, attachment.id])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["X-Robots-Tag"], "noindex, nofollow")
+        self.assertIn("attachment;", response["Content-Disposition"])
+        self.assertIn("event-guide.pdf", response["Content-Disposition"])

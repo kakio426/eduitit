@@ -1,8 +1,18 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from django import forms
 
-from .models import InquiryProposal, InquiryReview, ProgramListing, ProviderProfile
+from .models import (
+    InquiryProposal,
+    InquiryReview,
+    LISTING_ATTACHMENT_ALLOWED_EXTENSIONS,
+    LISTING_ATTACHMENT_MAX_FILE_BYTES,
+    LISTING_ATTACHMENT_MAX_FILES,
+    ProgramListing,
+    ProviderProfile,
+)
 
 
 def _normalize_csv_text(value: str) -> str:
@@ -17,6 +27,44 @@ def _normalize_csv_text(value: str) -> str:
 TEXT_INPUT_CLASS = "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700"
 TEXTAREA_CLASS = "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700"
 SELECT_CLASS = "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700"
+
+
+class MultipleFileInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
+
+
+class MultipleFileField(forms.FileField):
+    widget = MultipleFileInput
+
+    def clean(self, data, initial=None):
+        single_file_clean = super().clean
+        if not data:
+            return []
+        if not isinstance(data, (list, tuple)):
+            data = [data]
+        return [single_file_clean(item, initial) for item in data]
+
+
+def validate_listing_attachment_files(files):
+    cleaned_files = list(files or [])
+    errors = []
+    allowed_extensions_text = ", ".join(sorted(LISTING_ATTACHMENT_ALLOWED_EXTENSIONS))
+
+    if len(cleaned_files) > LISTING_ATTACHMENT_MAX_FILES:
+        errors.append(f"첨부 자료는 한 번에 최대 {LISTING_ATTACHMENT_MAX_FILES}개까지 올릴 수 있습니다.")
+        return cleaned_files, errors
+
+    for file_obj in cleaned_files:
+        ext = Path(getattr(file_obj, "name", "") or "").suffix.lower()
+        if ext not in LISTING_ATTACHMENT_ALLOWED_EXTENSIONS:
+            errors.append(f"첨부 자료는 {allowed_extensions_text} 형식만 올릴 수 있습니다.")
+            break
+        if int(getattr(file_obj, "size", 0) or 0) > LISTING_ATTACHMENT_MAX_FILE_BYTES:
+            max_size_mb = LISTING_ATTACHMENT_MAX_FILE_BYTES // (1024 * 1024)
+            errors.append(f"첨부 자료는 파일당 최대 {max_size_mb}MB까지 올릴 수 있습니다.")
+            break
+
+    return cleaned_files, errors
 
 
 class ProviderProfileForm(forms.ModelForm):
@@ -55,6 +103,11 @@ class ProgramListingForm(forms.ModelForm):
         label="대상 학년",
         choices=ProgramListing.GRADE_BAND_CHOICES,
         widget=forms.CheckboxSelectMultiple,
+    )
+    attachments = MultipleFileField(
+        required=False,
+        label="상세 안내자료",
+        widget=MultipleFileInput,
     )
 
     class Meta:
@@ -105,9 +158,16 @@ class ProgramListingForm(forms.ModelForm):
                 field.widget.attrs["class"] = TEXT_INPUT_CLASS
         if region_list_id:
             self.fields["city"].widget.attrs["list"] = region_list_id
+        self.fields["attachments"].widget.attrs["accept"] = ",".join(sorted(LISTING_ATTACHMENT_ALLOWED_EXTENSIONS))
 
     def clean_theme_tags_text(self):
         return _normalize_csv_text(self.cleaned_data.get("theme_tags_text", ""))
+
+    def clean_attachments(self):
+        attachments, errors = validate_listing_attachment_files(self.cleaned_data.get("attachments"))
+        if errors:
+            raise forms.ValidationError(errors)
+        return attachments
 
     def save(self, commit=True):
         instance = super().save(commit=False)
@@ -116,6 +176,15 @@ class ProgramListingForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
+
+    @property
+    def attachment_limits(self):
+        return {
+            "max_files": LISTING_ATTACHMENT_MAX_FILES,
+            "max_file_bytes": LISTING_ATTACHMENT_MAX_FILE_BYTES,
+            "max_file_mb": LISTING_ATTACHMENT_MAX_FILE_BYTES // (1024 * 1024),
+            "allowed_extensions": sorted(LISTING_ATTACHMENT_ALLOWED_EXTENSIONS),
+        }
 
 
 class InquiryCreateForm(forms.Form):

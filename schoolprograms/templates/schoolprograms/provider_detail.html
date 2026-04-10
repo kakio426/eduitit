@@ -42,6 +42,9 @@
                             <div class="flex flex-wrap gap-2">
                                 <span class="rounded-full bg-orange-100 px-3 py-1 text-xs font-black text-orange-700">{{ listing.get_category_display }}</span>
                                 <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">{{ listing.get_delivery_mode_display }}</span>
+                                {% if listing.attachments.all %}
+                                    <span class="rounded-full bg-sky-100 px-3 py-1 text-xs font-black text-sky-700">첨부 {{ listing.attachments.all|length }}개</span>
+                                {% endif %}
                                 {% if selected_listing and selected_listing.pk == listing.pk %}
                                     <span class="rounded-full bg-slate-900 px-3 py-1 text-xs font-black text-white">지금 문의 중</span>
                                 {% endif %}
@@ -99,6 +102,28 @@
                             <span class="font-black text-slate-400">가격 표시</span>
                             <span class="font-bold text-slate-700">{{ selected_listing.price_text }}</span>
                         </div>
+                    </div>
+
+                    <div class="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+                        <div class="flex items-center justify-between gap-3">
+                            <span class="text-xs font-black uppercase tracking-[0.18em] text-slate-400">상세 안내자료</span>
+                            <span class="text-xs font-black text-slate-500">{{ selected_listing.attachments.all|length }}개</span>
+                        </div>
+                        {% if selected_listing.attachments.all %}
+                            <div class="mt-3 space-y-3">
+                                {% for attachment in selected_listing.attachments.all %}
+                                    <a href="{% url 'schoolprograms:download_listing_attachment' selected_listing.slug attachment.id %}" class="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm">
+                                        <div class="min-w-0">
+                                            <div class="font-black text-slate-900">{{ attachment.display_name }}</div>
+                                            <div class="mt-1 text-xs font-bold text-slate-500">{{ attachment.extension_label }} · {{ attachment.file_size|filesizeformat }}</div>
+                                        </div>
+                                        <span class="inline-flex min-h-[38px] shrink-0 items-center justify-center rounded-full bg-white px-3 text-xs font-black text-slate-700">다운로드</span>
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="mt-3 text-sm leading-6 text-slate-500">업체가 상세 안내자료를 올리면 여기에서 바로 내려받을 수 있습니다.</p>
+                        {% endif %}
                     </div>
 
                     {% if inquiry_form %}
