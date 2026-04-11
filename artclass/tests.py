@@ -679,7 +679,7 @@ class ManualPipelineApiTest(TestCase):
         self.assertContains(response, "설치 후 이 수업 시작")
         self.assertContains(response, "상황별 정리")
         self.assertContains(response, "Bridge 0.2.0")
-        self.assertContains(response, "설치 후 브라우저를 다시 열고 초록 버튼을 누르세요.")
+        self.assertContains(response, "설치가 끝나면 브라우저로 돌아와 초록 버튼을 다시 누르세요.")
         self.assertContains(response, "처음 설치")
         self.assertContains(response, "기존 런처가 있으면 이번 한 번만 새 설치파일로 다시 설치하세요.")
         self.assertContains(response, "그다음부터는 초록 버튼만 누르면 됩니다.")
@@ -692,7 +692,7 @@ class ManualPipelineApiTest(TestCase):
         self.assertContains(response, "그래도 실행")
         self.assertContains(response, "이 앱이 디바이스를 변경하도록 허용하시겠습니까?")
         self.assertContains(response, "학교 PC 정책으로 막히면 관리자에게 설치 허용을 요청하세요.")
-        self.assertContains(response, "/artclass/classroom/14/?autostart_launcher=1")
+        self.assertContains(response, "/artclass/classroom/14/?autostart_launcher=1&amp;launcher_retry=1")
 
     def test_launcher_release_manager_uploads_release_bundle_for_staff(self):
         self.client.force_login(self.staff)
@@ -2099,7 +2099,7 @@ class ArtClassAutoMetadataTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "설치 / 업데이트 안내")
-        self.assertContains(response, "설치가 진행되는 동안은 다른 버튼을 누르지 말고 10~20초 정도 기다려 주세요.")
+        self.assertContains(response, "잠시 기다렸는데 반응이 없으면 다음 화면에서 브라우저 확인창과 설치 안내를 바로 보여 드립니다.")
         self.assertContains(response, reverse("artclass:launcher_install_guide"))
         self.assertNotContains(response, "설치파일 받기")
         self.assertNotContains(response, "Bridge 0.2.0")
@@ -2151,7 +2151,13 @@ class ArtClassPresentationUxTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "설치 / 업데이트 안내")
-        self.assertContains(response, "설치가 진행되는 동안은 다른 버튼을 누르지 말고 10~20초 정도 기다려 주세요.")
+        self.assertContains(response, "잠시 기다렸는데 반응이 없으면 이 아래에서 브라우저 확인창과 설치 안내를 바로 보여 드립니다.")
+        self.assertContains(response, "런처 실행이 바로 보이지 않아요")
+        self.assertContains(response, "외부 앱 실행 확인창")
+        self.assertContains(response, "그래도 실행")
+        self.assertContains(response, "다시 실행")
+        self.assertContains(response, "replaceState")
+        self.assertContains(response, "delete('launcher_retry')")
         self.assertContains(response, reverse("artclass:launcher_install_guide"))
         self.assertNotContains(response, "설치파일 받기")
         self.assertNotContains(response, "Bridge 0.2.0")
@@ -2173,6 +2179,7 @@ class ArtClassPresentationUxTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, 'id="btnLaunchRuntime"', html=False)
         self.assertNotContains(response, 'id="launcherPromptBanner"', html=False)
+        self.assertNotContains(response, 'id="launcherInstallFallback"', html=False)
         self.assertNotContains(response, "초록 버튼으로 시작합니다.")
         self.assertContains(response, "수업 목록으로 돌아가기")
 

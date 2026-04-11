@@ -5,7 +5,7 @@ import os
 import re
 import time
 from urllib.request import Request, urlopen
-from urllib.parse import parse_qs, urlencode, urlparse
+from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 from PIL import Image, UnidentifiedImageError
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import Http404, JsonResponse
@@ -294,6 +294,22 @@ def _build_launcher_install_url(next_url="", next_label=""):
     return f"{base_url}?{urlencode(params)}" if params else base_url
 
 
+def _append_launcher_retry_flag(next_url):
+    parsed = urlparse(str(next_url or "").strip())
+    query = parse_qs(parsed.query, keep_blank_values=True)
+    query["launcher_retry"] = ["1"]
+    return urlunparse(
+        (
+            "",
+            "",
+            parsed.path or "/",
+            parsed.params,
+            urlencode(query, doseq=True),
+            parsed.fragment,
+        )
+    )
+
+
 def _get_launcher_release_config(request=None):
     default_bridge_notice = "이미 런처를 설치했다면 이번 한 번은 새 설치파일로 다시 설치해 주세요. 이후부터는 자동 업데이트됩니다."
     default_bridge_version = "0.2.0"
@@ -339,7 +355,7 @@ def _build_launcher_install_guide_context(request):
     next_label = (request.GET.get("label") or "").strip()
 
     if next_url:
-        return_url = next_url
+        return_url = _append_launcher_retry_flag(next_url)
         return_label = next_label or "설치 후 이 수업 시작"
     else:
         return_url = reverse("artclass:setup")

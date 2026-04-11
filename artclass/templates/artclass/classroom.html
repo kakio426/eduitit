@@ -399,7 +399,7 @@
                         </div>
                     </div>
                     <p class="mt-3 text-sm md:text-base font-semibold text-emerald-900/85 leading-relaxed">
-                        초록 버튼을 누르면 런처나 업데이트 창이 잠시 열릴 수 있습니다. 설치가 진행되는 동안은 다른 버튼을 누르지 말고 10~20초 정도 기다려 주세요.
+                        초록 버튼을 누르면 런처나 업데이트 창이 잠시 열릴 수 있습니다. 잠시 기다렸는데 반응이 없으면 이 아래에서 브라우저 확인창과 설치 안내를 바로 보여 드립니다.
                     </p>
                     <p class="mt-2 text-xs font-bold text-emerald-900/80 leading-relaxed">
                         설치했는데도 브라우저가 앱을 찾지 못하면 오른쪽 안내에서 허용 방법을 먼저 확인해 주세요.
@@ -426,6 +426,69 @@
                         <i class="fa-solid fa-circle-info"></i> 설치 / 업데이트 안내
                     </a>
                     {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if can_start_launcher %}
+    <div id="launcherInstallFallback" class="hidden shrink-0 px-4 pb-2 md:px-6">
+        <div class="mx-auto max-w-6xl rounded-[1.75rem] border border-amber-300/80 bg-white/95 px-5 py-5 shadow-2xl">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div class="min-w-0">
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-lg">
+                            <i class="fa-solid fa-download"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-black uppercase tracking-[0.2em] text-amber-700">Install Help</p>
+                            <h2 class="text-xl md:text-2xl font-heavy text-slate-950">런처 실행이 바로 보이지 않아요</h2>
+                        </div>
+                    </div>
+                    <p id="launcherInstallFallbackMessage" class="mt-3 text-sm md:text-base font-semibold leading-relaxed text-slate-700">
+                        브라우저가 외부 앱 실행 확인창을 띄웠는데 눈에 잘 안 보이거나, 이 PC에 런처가 아직 없을 수 있습니다. 먼저 브라우저 확인창을 보고, 없으면 아래 순서대로 설치해 주세요.
+                    </p>
+
+                    <div class="mt-4 grid gap-3 md:grid-cols-3">
+                        <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4">
+                            <p class="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700">1 브라우저 확인</p>
+                            <p class="mt-2 text-sm font-bold leading-relaxed text-emerald-950">브라우저 상단이나 주소창 근처에 외부 앱 실행 확인창이 뜨면 열기 또는 허용을 누르세요.</p>
+                        </div>
+                        <div class="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-4">
+                            <p class="text-[11px] font-black uppercase tracking-[0.16em] text-sky-700">2 설치가 필요하면</p>
+                            <p class="mt-2 text-sm font-bold leading-relaxed text-sky-950">설치파일을 받아 실행하세요. 설치 중 멈춘 것처럼 보여도 잠시 기다려 주세요.</p>
+                        </div>
+                        <div class="rounded-2xl border border-violet-200 bg-violet-50 px-4 py-4">
+                            <p class="text-[11px] font-black uppercase tracking-[0.16em] text-violet-700">3 Windows 파란 화면</p>
+                            <p class="mt-2 text-sm font-bold leading-relaxed text-violet-950"><span class="font-black">추가 정보</span> 뒤 <span class="font-black">그래도 실행</span>, 그다음 <span class="font-black">예</span>를 누르세요.</p>
+                        </div>
+                    </div>
+                    <p class="mt-4 text-sm font-bold leading-relaxed text-slate-700">
+                        설치가 끝나면 아래 <span class="font-black">다시 실행</span> 버튼이나 초록 버튼으로 수업을 시작하면 됩니다.
+                    </p>
+
+                    {% if launcher_bridge_notice %}
+                    <p class="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold leading-relaxed text-emerald-900">
+                        {% if launcher_bridge_version %}Bridge {{ launcher_bridge_version }}. {% endif %}{{ launcher_bridge_notice }}
+                    </p>
+                    {% endif %}
+                </div>
+                <div class="flex flex-wrap gap-2 lg:max-w-sm lg:justify-end">
+                    {% if launcher_download_url %}
+                    <a href="{{ launcher_download_url }}" target="_blank" rel="noopener noreferrer"
+                        class="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-heavy text-white shadow-lg transition-all hover:bg-emerald-700">
+                        <i class="fa-solid fa-download"></i> 설치파일 받기
+                    </a>
+                    {% endif %}
+                    <a href="{{ launcher_install_url }}"
+                        class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-heavy text-slate-700 shadow-sm transition-all hover:bg-slate-50">
+                        <i class="fa-solid fa-circle-info"></i> 설치 방법 자세히 보기
+                    </a>
+                    <button id="btnLauncherRetryStart"
+                        class="inline-flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3 text-sm font-heavy text-amber-900 shadow-sm transition-all hover:bg-amber-100">
+                        <i class="fa-solid fa-rotate-right"></i> 다시 실행
+                    </button>
                 </div>
             </div>
         </div>
@@ -702,6 +765,9 @@
     const launcherPromptBannerEl = document.getElementById('launcherPromptBanner');
     const launcherPromptStatusEl = document.getElementById('launcherPromptStatus');
     const btnLauncherPromptLaunchEl = document.getElementById('btnLauncherPromptLaunch');
+    const launcherInstallFallbackEl = document.getElementById('launcherInstallFallback');
+    const launcherInstallFallbackMessageEl = document.getElementById('launcherInstallFallbackMessage');
+    const btnLauncherRetryStartEl = document.getElementById('btnLauncherRetryStart');
     const btnBackToEditEl = document.getElementById('btnBackToEdit');
     const headerDividerEl = document.getElementById('headerDivider');
     const videoStepMetaDockEl = document.getElementById('videoStepMetaDock');
@@ -728,7 +794,10 @@
     const searchParams = new URLSearchParams(window.location.search);
     const AUTO_START_LAUNCHER = searchParams.get('autostart_launcher') === '1';
     const AUTO_START_LAUNCHER_DISABLED = searchParams.get('autostart_launcher') === '0';
+    const FORCE_LAUNCHER_RETRY = searchParams.get('launcher_retry') === '1';
     const AUTO_START_SESSION_KEY = `artclass_launcher_autostart_${CLASSROOM_ID}`;
+    const LAUNCHER_PROTOCOL_TIMEOUT_MS = 8000;
+    const LAUNCHER_PROTOCOL_BLUR_GRACE_MS = 700;
     const VALID_VIDEO_PROFILES = new Set(['16x9', '4x3', '9x16']);
     const requestedVideoProfile = String(searchParams.get('video_profile') || '')
         .trim()
@@ -774,15 +843,20 @@
         launcherPromptStatusEl.classList.add('text-emerald-800');
     }
 
-    function buildLauncherRecoveryMessage() {
-        const steps = [
-            '설치했는데도 반응이 없으면 시작 메뉴에서 Eduitit Teacher Launcher를 한 번 직접 열어 주세요.',
-            '브라우저에서 앱 열기 또는 프로토콜 허용이 보이면 허용한 뒤 다시 초록 버튼을 눌러 주세요.',
-        ];
-        if (LAUNCHER_INSTALL_URL) {
-            steps.push('계속 안 되면 오른쪽 설치 / 업데이트 안내를 먼저 확인해 주세요.');
+    function showLauncherInstallFallback(message = '') {
+        if (!launcherInstallFallbackEl) return;
+        if (launcherInstallFallbackMessageEl) {
+            launcherInstallFallbackMessageEl.textContent = message || '브라우저가 외부 앱 실행 확인창을 띄웠는데 눈에 잘 안 보이거나, 이 PC에 런처가 아직 없을 수 있습니다. 먼저 브라우저 확인창을 보고, 없으면 아래 순서대로 설치해 주세요.';
         }
-        return steps.join(' ');
+        launcherInstallFallbackEl.classList.remove('hidden');
+        window.requestAnimationFrame(() => {
+            launcherInstallFallbackEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    }
+
+    function hideLauncherInstallFallback() {
+        if (!launcherInstallFallbackEl) return;
+        launcherInstallFallbackEl.classList.add('hidden');
     }
 
     function buildLauncherPermissionMessage() {
@@ -792,57 +866,70 @@
         return '이 수업을 시작할 권한이 없습니다. 내 수업이나 공개 수업에서 다시 시도해 주세요.';
     }
 
-    function waitForLauncherHandoff(launcherUrl) {
-        return new Promise((resolve) => {
-            let finished = false;
-            let handoffDetected = false;
-            let fallbackTimer = null;
+    function clearLauncherRetryFlagFromUrl() {
+        if (!FORCE_LAUNCHER_RETRY || !window.history || typeof window.history.replaceState !== 'function') return;
+        const nextParams = new URLSearchParams(window.location.search);
+        if (!nextParams.has('launcher_retry')) return;
+        nextParams.delete('launcher_retry');
+        const nextQuery = nextParams.toString();
+        const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}${window.location.hash || ''}`;
+        window.history.replaceState(window.history.state, '', nextUrl);
+    }
 
-            const markDetected = () => {
-                handoffDetected = true;
-            };
+    function attemptLauncherProtocolOpen(launcherUrl) {
+        return new Promise((resolve) => {
+            let settled = false;
+            let timeoutId = null;
 
             const cleanup = () => {
-                document.removeEventListener('visibilitychange', handleVisibilityChange, true);
-                window.removeEventListener('blur', markDetected, true);
-                window.removeEventListener('pagehide', markDetected, true);
-                if (fallbackTimer) {
-                    clearTimeout(fallbackTimer);
+                if (timeoutId) {
+                    window.clearTimeout(timeoutId);
                 }
+                document.removeEventListener('visibilitychange', handleVisibilityChange, true);
+                window.removeEventListener('pagehide', handlePageHide, true);
+                window.removeEventListener('blur', handleBlur, true);
             };
 
-            const finish = () => {
-                if (finished) return;
-                finished = true;
+            const settle = (didOpen) => {
+                if (settled) return;
+                settled = true;
                 cleanup();
-                resolve({ handoffDetected });
+                resolve(didOpen);
+            };
+
+            const checkWindowFocusLoss = () => {
+                window.setTimeout(() => {
+                    if (document.visibilityState === 'hidden' || document.hidden || document.hasFocus() === false) {
+                        settle(true);
+                    }
+                }, LAUNCHER_PROTOCOL_BLUR_GRACE_MS);
             };
 
             const handleVisibilityChange = () => {
-                if (document.visibilityState === 'hidden') {
-                    markDetected();
+                if (document.visibilityState === 'hidden' || document.hidden) {
+                    settle(true);
                 }
             };
 
-            document.addEventListener('visibilitychange', handleVisibilityChange, true);
-            window.addEventListener('blur', markDetected, true);
-            window.addEventListener('pagehide', markDetected, true);
+            const handlePageHide = () => {
+                settle(true);
+            };
 
-            fallbackTimer = window.setTimeout(finish, LAUNCHER_HANDOFF_TIMEOUT_MS);
+            const handleBlur = () => {
+                checkWindowFocusLoss();
+            };
+
+            document.addEventListener('visibilitychange', handleVisibilityChange, true);
+            window.addEventListener('pagehide', handlePageHide, true);
+            window.addEventListener('blur', handleBlur, true);
+            timeoutId = window.setTimeout(() => settle(false), LAUNCHER_PROTOCOL_TIMEOUT_MS);
 
             try {
                 window.location.href = launcherUrl;
-            } catch (err) {
-                cleanup();
-                resolve({ handoffDetected: false, error: err });
-                return;
+                checkWindowFocusLoss();
+            } catch (_) {
+                settle(false);
             }
-
-            window.setTimeout(() => {
-                if (handoffDetected) {
-                    finish();
-                }
-            }, 300);
         });
     }
 
@@ -1217,6 +1304,7 @@
             return;
         }
         setLaunchButtonBusy(true);
+        hideLauncherInstallFallback();
         if (isLauncherPromptEligible()) {
             setLauncherPromptStatus('런처 또는 업데이트 창을 여는 중입니다. 설치가 진행될 수 있으니 잠시 기다려 주세요. 다른 버튼은 누르지 마세요.', 'info');
         }
@@ -1244,14 +1332,12 @@
                 throw new Error('missing_launcher_url');
             }
 
-            const launchAttempt = await waitForLauncherHandoff(data.launcherUrl);
-            if (launchAttempt?.error) {
-                throw launchAttempt.error;
-            }
-            if (launchAttempt?.handoffDetected) {
-                notifyLauncherStatus('런처 호출을 보냈습니다. 설치나 업데이트 창이 뜨면 닫지 말고 잠시 기다려 주세요.', 'success');
-            } else {
-                notifyLauncherStatus(buildLauncherRecoveryMessage(), 'warn');
+            const didOpenLauncher = await attemptLauncherProtocolOpen(data.launcherUrl);
+            if (!didOpenLauncher) {
+                const fallbackMessage = '잠시 기다렸는데 런처 창이 바로 보이지 않습니다. 브라우저 확인창이 가려졌거나 설치가 필요할 수 있어요.';
+                showLauncherInstallFallback(fallbackMessage);
+                notifyLauncherStatus('브라우저 상단 확인창을 먼저 보고, 없으면 아래 설치 안내를 따라 주세요.', 'warn');
+                return;
             }
         } catch (err) {
             console.error('Launcher start failed:', err);
@@ -1261,8 +1347,9 @@
                 notifyLauncherStatus(buildLauncherPermissionMessage(), 'warn');
             } else {
                 const fallbackMessage = LAUNCHER_INSTALL_URL
-                    ? buildLauncherRecoveryMessage()
-                    : '런처 실행이 막혔습니다. 같은 버튼을 한 번 더 누르거나 잠시 뒤 다시 시도해 주세요.';
+                    ? '런처 실행 요청을 보내지 못했습니다. 브라우저 확인창이나 아래 설치 안내를 먼저 확인해 주세요.'
+                    : '런처 실행이 막혔습니다. 잠시 후 다시 시도해 주세요.';
+                showLauncherInstallFallback('런처 실행 요청을 보내지 못했습니다. 브라우저 확인창을 먼저 보고, 필요하면 설치 안내를 진행해 주세요.');
                 notifyLauncherStatus(fallbackMessage, 'error');
             }
         } finally {
@@ -1983,6 +2070,12 @@
         };
     }
 
+    if (btnLauncherRetryStartEl) {
+        btnLauncherRetryStartEl.onclick = async () => {
+            await startTeacherLauncher();
+        };
+    }
+
     if (btnCopyShareLinkEl) {
         btnCopyShareLinkEl.onclick = async () => {
             await handleShareCopy();
@@ -1995,7 +2088,11 @@
         if (AUTO_START_LAUNCHER_DISABLED) return;
         if (IS_DASHBOARD_ONLY) return;
         if (RUNTIME_MODE === 'launcher') return;
-        if (sessionStorage.getItem(AUTO_START_SESSION_KEY) === '1') return;
+        if (FORCE_LAUNCHER_RETRY) {
+            clearLauncherRetryFlagFromUrl();
+        } else if (sessionStorage.getItem(AUTO_START_SESSION_KEY) === '1') {
+            return;
+        }
         sessionStorage.setItem(AUTO_START_SESSION_KEY, '1');
         await startTeacherLauncher();
     }
