@@ -503,6 +503,7 @@
             if (state.audioEnabled) {
                 playSound("mode");
             }
+            root.dispatchEvent(new CustomEvent("ppobgi:close-tools"));
         });
         els.resultNextBtn?.addEventListener("click", () => {
             if (!state.nextReady) {

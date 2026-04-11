@@ -29,28 +29,34 @@
 
     <header class="ppb-topbar ppb-host-dock">
         <div class="ppb-command-bar">
-            <div class="ppb-brand">
-                <span class="ppb-brand-icon">✨</span>
-                <div class="ppb-brand-copy">
-                    <h1>별빛 추첨기</h1>
+            <div class="ppb-toolbar-main">
+                <div class="ppb-brand">
+                    <span class="ppb-brand-icon">✨</span>
+                    <div class="ppb-brand-copy">
+                        <h1>별빛 추첨기</h1>
+                    </div>
+                </div>
+                <div class="ppb-toolbar-mode" aria-live="polite">
+                    <span class="ppb-toolbar-mode-kicker">현재</span>
+                    <strong id="ppb-shell-mode-label" class="ppb-toolbar-mode-label">별 하나로 뽑기</strong>
+                    <span id="ppb-shell-mode-desc" class="ppb-toolbar-mode-desc" hidden>별 하나를 누르면 오늘의 주인공이 크게 발표됩니다.</span>
                 </div>
             </div>
-            <div class="ppb-top-controls">
-                <button id="ppb-audio-btn" type="button" class="ppb-ghost-btn ppb-audio-btn" aria-pressed="true">🔊 소리 켜짐</button>
-                <label class="ppb-toggle">
-                    <input id="ppb-reduce-motion" type="checkbox">
-                    <span>애니메이션 줄이기</span>
-                </label>
-                <a href="{% url 'dutyticker' %}" class="ppb-ghost-btn" title="반짝반짝 우리반 알림판">알림판</a>
-                <button id="ppb-fullscreen-btn" type="button" class="ppb-ghost-btn">전체화면</button>
-            </div>
-        </div>
-        <div class="ppb-mode-summary" aria-live="polite">
-            <div class="ppb-mode-summary-copy">
-                <p class="ppb-stage-kicker">현재 모드</p>
-                <h2 id="ppb-shell-mode-label" class="ppb-stage-title">별 하나로 뽑기</h2>
-                <p id="ppb-shell-mode-desc" class="ppb-stage-desc">별 하나를 누르면 오늘의 주인공이 크게 발표됩니다.</p>
-            </div>
+            <details id="ppb-tools-menu" class="ppb-top-controls ppb-tools-menu">
+                <summary class="ppb-ghost-btn ppb-tools-toggle">
+                    <span aria-hidden="true">☰</span>
+                    <span>도구</span>
+                </summary>
+                <div class="ppb-tools-panel">
+                    <button id="ppb-audio-btn" type="button" class="ppb-ghost-btn ppb-audio-btn" aria-pressed="true">🔊 소리 켜짐</button>
+                    <label class="ppb-toggle ppb-tools-motion-toggle">
+                        <input id="ppb-reduce-motion" type="checkbox">
+                        <span>애니메이션 줄이기</span>
+                    </label>
+                    <a id="ppb-tools-link" href="{% url 'dutyticker' %}" class="ppb-ghost-btn ppb-tools-link" title="반짝반짝 우리반 알림판">알림판</a>
+                    <button id="ppb-fullscreen-btn" type="button" class="ppb-ghost-btn">전체화면</button>
+                </div>
+            </details>
         </div>
         <div class="ppb-mode-tabs" role="tablist" aria-label="뽑기 모드 선택">
             <button
@@ -182,8 +188,15 @@
         <section id="ppb-universe" class="ppb-screen is-hidden">
             <div class="ppb-stage-layout">
                 <div class="ppb-universe-main">
-                    <div class="ppb-universe-head">
-                        <div class="ppb-universe-status">
+                    <div id="ppb-orb-grid" class="ppb-orb-grid"></div>
+                    <div class="ppb-bottom-actions">
+                        <button id="ppb-reroll-btn" type="button" class="ppb-soft-btn">같은 명단으로 다시 뽑기</button>
+                        <button id="ppb-reset-from-universe-btn" type="button" class="ppb-ghost-btn">준비 화면으로</button>
+                    </div>
+                </div>
+                <aside class="ppb-control-panel">
+                    <div class="ppb-universe-status ppb-universe-status-card">
+                        <div class="ppb-universe-meta">
                             <div class="ppb-chip-row">
                                 <span class="ppb-chip">총 <strong id="ppb-chip-total">0</strong>명</span>
                                 <span class="ppb-chip">남은 <strong id="ppb-chip-left">0</strong>명</span>
@@ -195,20 +208,13 @@
                                     <span id="ppb-progress-bar" class="ppb-progress-bar"></span>
                                 </div>
                             </div>
-                            <h2 class="ppb-universe-title">별을 누르세요</h2>
                         </div>
-                        <div id="ppb-picked-card" class="ppb-picked-card" aria-live="polite">
-                            <p class="ppb-picked-label">방금 뽑힘</p>
-                            <p id="ppb-picked-name" class="ppb-picked-name">아직 뽑지 않았어요</p>
-                        </div>
+                        <h2 class="ppb-universe-title">빛나는 별 하나를 선택하세요</h2>
                     </div>
-                    <div id="ppb-orb-grid" class="ppb-orb-grid"></div>
-                    <div class="ppb-bottom-actions">
-                        <button id="ppb-reroll-btn" type="button" class="ppb-soft-btn">같은 명단으로 다시 뽑기</button>
-                        <button id="ppb-reset-from-universe-btn" type="button" class="ppb-ghost-btn">준비 화면으로</button>
+                    <div id="ppb-picked-card" class="ppb-picked-card" aria-live="polite">
+                        <p class="ppb-picked-label">방금 뽑힘</p>
+                        <p id="ppb-picked-name" class="ppb-picked-name">아직 뽑지 않았어요</p>
                     </div>
-                </div>
-                <aside class="ppb-control-panel">
                     <div class="ppb-live-card">
                         <p class="ppb-live-label">현재</p>
                         <h3 id="ppb-live-name" class="ppb-live-name">대기 중</h3>

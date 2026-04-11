@@ -442,13 +442,13 @@
 .ppb-result-burst span {
     position: absolute;
     left: 50%;
-    top: 42%;
+    top: 43%;
     width: 2px;
-    height: 110px;
+    height: clamp(138px, 18vw, 216px);
     border-radius: 999px;
     background: linear-gradient(180deg, rgba(255, 212, 92, 0), rgba(255, 212, 92, 0.88), rgba(110, 231, 255, 0));
     transform-origin: center bottom;
-    opacity: 0.82;
+    opacity: 0.9;
 }
 
 .ppb-result-burst span:nth-child(1) { --burst-angle: 0deg; }
@@ -705,8 +705,12 @@
 }
 
 .ppb-result-panel {
-    width: min(960px, calc(100% - 1.2rem));
-    padding: 2.3rem 2rem 2rem;
+    width: min(1040px, calc(100% - 1.2rem));
+    min-height: min(76vh, 680px);
+    padding: 2.45rem 2.1rem 2.15rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
     text-align: center;
     transition: transform 260ms ease, box-shadow 260ms ease, border-color 260ms ease;
 }
@@ -738,6 +742,9 @@
 
 .ppb-result-name {
     margin-top: 0.9rem;
+    font-size: clamp(3.2rem, 10vw, 6.6rem);
+    line-height: 0.95;
+    letter-spacing: 0.01em;
     transition: opacity 220ms ease, transform 220ms ease, filter 220ms ease;
 }
 
@@ -817,6 +824,12 @@
 .ppb-result-panel.is-celebrating .ppb-result-compliment {
     animation: ppbResultCelebrateIn 560ms cubic-bezier(.17,.84,.44,1) both;
     filter: none;
+}
+
+.ppb-result-panel.is-celebrating .ppb-result-name {
+    text-shadow:
+        0 0 34px rgba(255, 212, 92, 0.24),
+        0 0 72px rgba(110, 231, 255, 0.14);
 }
 
 .ppb-result-panel.is-finale {
@@ -963,9 +976,10 @@
     }
 
     .ppb-result-panel {
-        width: min(1120px, calc(100% - 2.4rem));
+        width: min(1180px, calc(100% - 2.4rem));
         max-width: none;
-        padding: 2.6rem 2.55rem 2.35rem;
+        min-height: min(80vh, 760px);
+        padding: 2.75rem 2.7rem 2.45rem;
     }
 
     .ppb-result-badge {
@@ -976,7 +990,7 @@
     }
 
     .ppb-result-name {
-        font-size: clamp(4.2rem, 7vw, 7.6rem);
+        font-size: clamp(4.5rem, 7.2vw, 8rem);
         line-height: 0.96;
     }
 
@@ -1023,12 +1037,120 @@
     }
 
     .ppb-result-panel {
-        width: min(1240px, calc(100% - 3rem));
-        padding: 2.9rem 2.8rem 2.6rem;
+        width: min(1320px, calc(100% - 3rem));
+        min-height: min(82vh, 820px);
+        padding: 3rem 2.95rem 2.7rem;
     }
 
     .ppb-result-name {
-        font-size: clamp(5rem, 7.6vw, 8.4rem);
+        font-size: clamp(5.2rem, 7.9vw, 8.8rem);
+    }
+
+    .pbl-stage-shell,
+    .pps-stage-shell,
+    .ppt-stage-shell,
+    .ppm-stage-shell {
+        grid-template-columns: minmax(0, 1.82fr) minmax(340px, 420px);
+        gap: 1.2rem;
+    }
+
+    .pbl-stage-main,
+    .pps-stage-main,
+    .ppt-stage-main,
+    .ppm-stage-main {
+        padding: 1.35rem;
+    }
+
+    .pbl-live-card,
+    .pps-live-card,
+    .ppt-live-card,
+    .ppm-live-card {
+        min-height: 14rem;
+    }
+
+    .pbl-live-name,
+    .pps-live-name,
+    .ppt-live-name,
+    .ppm-live-name {
+        font-size: clamp(2.2rem, 2.8vw, 3.1rem);
+    }
+
+    .pbl-live-role,
+    .pps-live-meta,
+    .ppt-live-meta,
+    .ppm-live-meta {
+        font-size: 1.08rem;
+    }
+
+    .pbl-svg-wrap {
+        min-height: clamp(580px, 68vh, 820px);
+    }
+
+    .pbl-svg {
+        height: clamp(580px, 68vh, 820px);
+    }
+
+    .pps-order-grid {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.1rem;
+    }
+
+    .pps-order-card {
+        min-height: clamp(200px, 25vh, 238px);
+        padding: 1.2rem;
+    }
+
+    .pps-order-name {
+        font-size: clamp(1.72rem, 1.4rem + 0.85vw, 2.28rem);
+    }
+
+    .ppt-team-grid {
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.1rem;
+    }
+
+    .ppt-team-card {
+        padding: 1.18rem;
+    }
+
+    .ppt-team-title {
+        font-size: clamp(1.58rem, 1.28rem + 0.72vw, 2.02rem);
+    }
+
+    .ppt-member-chip {
+        padding: 0.64rem 1.04rem;
+        font-size: 1rem;
+    }
+
+    .ppm-stage-shell {
+        grid-template-columns: minmax(0, 2.08fr) minmax(340px, 400px);
+    }
+
+    .ppm-sky {
+        min-height: clamp(620px, 74vh, 920px);
+    }
+
+    .ppm-empty {
+        min-height: clamp(470px, 60vh, 740px);
+    }
+
+    .ppm-meteor {
+        width: 210px;
+        height: 64px;
+    }
+
+    .ppm-meteor-core {
+        width: 32px;
+        height: 32px;
+    }
+
+    .ppm-meteor-tail {
+        width: 160px;
+        height: 6px;
+    }
+
+    .ppm-meteor-hint {
+        font-size: 0.86rem;
     }
 }
 
@@ -1446,5 +1568,559 @@
 
     .ppb-bottom-actions > * {
         flex-basis: 100%;
+    }
+}
+
+/* First-screen density tune for draw modes */
+.ppb-root {
+    padding: clamp(0.45rem, 1vw, 0.75rem);
+}
+
+.ppb-topbar {
+    gap: 0.42rem;
+    padding: 0.56rem 0.7rem 0.62rem;
+}
+
+.ppb-command-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.55rem;
+}
+
+.ppb-toolbar-main {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.52rem;
+}
+
+.ppb-brand {
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.ppb-brand-icon {
+    width: 1.9rem;
+    height: 1.9rem;
+    font-size: 0.95rem;
+}
+
+.ppb-brand-copy {
+    gap: 0;
+}
+
+.ppb-brand-copy h1 {
+    font-size: clamp(1rem, 1.55vw, 1.18rem);
+    line-height: 1.04;
+}
+
+.ppb-toolbar-mode {
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.36rem;
+    padding: 0.26rem 0.56rem;
+    border-radius: 999px;
+    background: rgba(8, 23, 56, 0.62);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ppb-toolbar-mode-kicker {
+    color: #fff4bf;
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+}
+
+.ppb-toolbar-mode-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--ppb-display-font);
+    font-size: clamp(0.86rem, 1.15vw, 0.98rem);
+    line-height: 1.1;
+    color: #f9fbff;
+}
+
+.ppb-top-controls {
+    position: relative;
+    flex: 0 0 auto;
+    margin-left: auto;
+}
+
+.ppb-mode-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.ppb-tools-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    list-style: none;
+    cursor: pointer;
+}
+
+.ppb-tools-toggle::-webkit-details-marker {
+    display: none;
+}
+
+.ppb-tools-toggle::marker {
+    display: none;
+}
+
+.ppb-tools-panel {
+    position: absolute;
+    top: calc(100% + 0.35rem);
+    right: 0;
+    z-index: 40;
+    width: min(240px, calc(100vw - 1rem));
+    display: none;
+    padding: 0.42rem;
+    border-radius: 0.9rem;
+    background: rgba(7, 19, 46, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.38);
+}
+
+.ppb-top-controls[open] .ppb-tools-toggle {
+    background: rgba(255, 212, 92, 0.16);
+    border-color: rgba(255, 212, 92, 0.26);
+}
+
+.ppb-top-controls[open] .ppb-tools-panel {
+    display: grid;
+    gap: 0.34rem;
+}
+
+.ppb-tools-panel .ppb-ghost-btn,
+.ppb-tools-panel .ppb-audio-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.ppb-tools-panel .ppb-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.42rem;
+    min-height: 1.95rem;
+    padding: 0.42rem 0.58rem;
+    border-radius: 0.72rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.88);
+}
+
+.ppb-tools-panel .ppb-toggle input {
+    margin: 0;
+}
+
+.ppb-topbar .ppb-ghost-btn,
+.ppb-topbar .ppb-audio-btn {
+    padding: 0.42rem 0.58rem;
+    border-radius: 0.72rem;
+    font-size: 0.78rem;
+}
+
+.ppb-topbar .ppb-toggle {
+    min-height: 1.95rem;
+    padding-inline: 0.15rem;
+    font-size: 0.76rem;
+}
+
+.ppb-mode-tabs {
+    gap: 0.3rem;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 0.08rem;
+    scrollbar-width: none;
+}
+
+.ppb-mode-tab {
+    flex: 0 0 auto;
+    min-height: auto;
+    padding: 0.34rem 0.54rem;
+    gap: 0.26rem;
+}
+
+.ppb-mode-tab-copy strong {
+    font-size: 0.79rem;
+}
+
+.ppb-mode-tab-icon {
+    width: 1.42rem;
+    height: 1.42rem;
+    font-size: 0.8rem;
+}
+
+.ppb-screen {
+    padding-top: 0.28rem;
+    padding-bottom: 0.75rem;
+}
+
+.ppb-stage-layout {
+    width: min(1480px, 100%);
+    gap: 0.72rem;
+}
+
+.ppb-universe-main {
+    padding: 0.66rem;
+}
+
+.ppb-universe-status {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 0.45rem 0.8rem;
+}
+
+.ppb-universe-meta {
+    min-width: 0;
+    display: grid;
+    gap: 0.34rem;
+}
+
+.ppb-universe-title {
+    margin: 0;
+    text-align: right;
+    font-size: clamp(1rem, 1.4vw, 1.18rem);
+    letter-spacing: 0.03em;
+}
+
+.ppb-progress-wrap {
+    margin-top: 0;
+}
+
+.ppb-progress-track {
+    margin-top: 0.22rem;
+}
+
+.ppb-orb-grid {
+    margin-top: 0;
+    min-height: clamp(410px, 58vh, 700px);
+}
+
+.ppb-control-panel {
+    gap: 0.45rem;
+    padding: 0.66rem;
+}
+
+.ppb-universe-status-card {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+    padding: 0.58rem 0.64rem;
+    border-radius: 0.9rem;
+    background: linear-gradient(180deg, rgba(11, 25, 58, 0.86), rgba(7, 19, 45, 0.82));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ppb-universe-status-card .ppb-universe-meta {
+    gap: 0.28rem;
+}
+
+.ppb-universe-status-card .ppb-chip-row {
+    gap: 0.3rem;
+}
+
+.ppb-universe-status-card .ppb-chip {
+    padding: 0.28rem 0.54rem;
+    font-size: 0.76rem;
+}
+
+.ppb-universe-status-card .ppb-universe-title {
+    margin: 0;
+    text-align: left;
+    font-size: 0.84rem;
+    letter-spacing: 0.01em;
+    color: rgba(255, 255, 255, 0.82);
+}
+
+.ppb-universe-status-card .ppb-progress-label {
+    font-size: 0.76rem;
+}
+
+.ppb-universe-status-card .ppb-progress-track {
+    height: 0.45rem;
+}
+
+.ppb-picked-card {
+    width: 100%;
+    margin: 0;
+    padding: 0.58rem 0.68rem;
+    text-align: left;
+}
+
+.ppb-picked-name {
+    font-size: clamp(1.12rem, 1.7vw, 1.55rem);
+}
+
+.ppb-live-card {
+    min-height: 0;
+}
+
+.ppb-panel-info {
+    padding: 0.95rem;
+}
+
+.ppb-panel-info h2 {
+    margin-bottom: 0;
+    font-size: clamp(1rem, 1.4vw, 1.18rem);
+}
+
+.ppb-panel-info .ppb-muted,
+.pbl-stage-guide,
+.pps-stage-guide,
+.ppt-stage-guide,
+.ppm-stage-guide,
+.ppr-guide {
+    display: none;
+}
+
+.ppb-side-actions {
+    display: grid;
+    gap: 0.55rem;
+}
+
+.ppb-side-disclosure {
+    margin-top: 0;
+}
+
+.pbl-stage-main > .ppb-chip-row,
+.pps-stage-main > .ppb-chip-row,
+.ppt-stage-main > .ppb-chip-row,
+.ppm-stage-main > .ppb-chip-row,
+.ppr-main > .ppb-chip-row {
+    margin-bottom: 0.55rem;
+}
+
+.pbl-stage-title,
+.pps-stage-title,
+.ppt-stage-title,
+.ppm-stage-title,
+.ppr-title {
+    font-size: clamp(1.3rem, 2vw, 1.7rem);
+    line-height: 1.08;
+}
+
+.pbl-stage-guide,
+.pps-stage-guide,
+.ppt-stage-guide,
+.ppm-stage-guide,
+.ppr-guide {
+    margin-top: 0.25rem;
+    font-size: 0.89rem;
+    line-height: 1.5;
+}
+
+.pbl-stage-shell,
+.pps-stage-shell,
+.ppt-stage-shell,
+.ppm-stage-shell,
+.ppr-shell {
+    grid-template-columns: minmax(0, 1.68fr) minmax(300px, 390px);
+}
+
+.pbl-stage-main,
+.pps-stage-main,
+.ppt-stage-main,
+.ppm-stage-main,
+.ppr-main {
+    padding: clamp(1rem, 1vw + 0.5rem, 1.32rem);
+}
+
+.pbl-live-card,
+.pps-live-card,
+.ppt-live-card,
+.ppm-live-card,
+.ppr-live-card {
+    min-height: clamp(12rem, 24vh, 14.6rem);
+}
+
+.pbl-live-name,
+.pps-live-name,
+.ppt-live-name,
+.ppm-live-name {
+    font-size: clamp(1.8rem, 2.8vw, 2.65rem);
+    line-height: 1.05;
+    word-break: keep-all;
+}
+
+.pbl-live-role,
+.pps-live-meta,
+.ppt-live-meta,
+.ppm-live-meta,
+.ppr-live-assignee {
+    font-size: clamp(1rem, 1.3vw, 1.12rem);
+    line-height: 1.58;
+}
+
+.ppr-live-role-name {
+    font-size: clamp(1.9rem, 2.6vw, 2.6rem);
+    line-height: 1.06;
+}
+
+.pbl-svg-wrap {
+    min-height: clamp(520px, 64vh, 760px);
+}
+
+.pbl-svg {
+    height: clamp(520px, 64vh, 760px);
+}
+
+.pbl-node-name,
+.pbl-bottom-node {
+    font-size: clamp(0.92rem, 0.92vw, 1.08rem);
+}
+
+.pps-order-grid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+}
+
+.pps-order-card {
+    min-height: clamp(178px, 24vh, 220px);
+    padding: 1.08rem;
+}
+
+.pps-order-name {
+    font-size: clamp(1.5rem, 1.95vw, 2rem);
+    line-height: 1.12;
+}
+
+.ppt-team-grid {
+    grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+    gap: 1rem;
+}
+
+.ppt-team-card {
+    padding: 1.08rem;
+    gap: 0.95rem;
+}
+
+.ppt-team-title {
+    font-size: clamp(1.42rem, 1.8vw, 1.9rem);
+    line-height: 1.12;
+}
+
+.ppt-team-size {
+    font-size: 0.92rem;
+}
+
+.ppt-member-chip {
+    padding: 0.58rem 0.96rem;
+    font-size: clamp(0.95rem, 1vw, 1.05rem);
+}
+
+.ppm-stage-shell {
+    grid-template-columns: minmax(0, 1.92fr) minmax(300px, 380px);
+}
+
+.ppm-sky {
+    min-height: clamp(560px, 70vh, 860px);
+    margin-top: 0.9rem;
+}
+
+.ppm-sky::before {
+    opacity: 0.7;
+}
+
+.ppm-sky::after {
+    background: radial-gradient(circle at center, rgba(251, 191, 36, 0.34), transparent 48%);
+}
+
+.ppm-empty {
+    min-height: clamp(420px, 56vh, 680px);
+}
+
+.ppm-meteor {
+    width: 188px;
+    height: 58px;
+    filter: drop-shadow(0 0 16px rgba(125, 211, 252, 0.26));
+}
+
+.ppm-meteor:hover,
+.ppm-meteor:focus-visible {
+    filter: drop-shadow(0 0 24px rgba(125, 211, 252, 0.46));
+}
+
+.ppm-meteor-core {
+    right: 14px;
+    width: 28px;
+    height: 28px;
+    box-shadow: 0 0 26px rgba(125, 211, 252, 0.92), 0 0 52px rgba(56, 189, 248, 0.42);
+}
+
+.ppm-meteor-tail {
+    left: 12px;
+    width: 142px;
+    height: 5px;
+    box-shadow: 0 0 24px rgba(125, 211, 252, 0.38);
+}
+
+.ppm-meteor-hint {
+    left: 10px;
+    bottom: -4px;
+    font-size: 0.82rem;
+}
+
+@media (max-width: 1180px) {
+    .ppb-command-bar {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .ppb-toolbar-main {
+        width: 100%;
+    }
+
+    .ppb-universe-status {
+        grid-template-columns: 1fr;
+    }
+
+    .ppb-universe-title {
+        text-align: left;
+    }
+}
+
+@media (max-width: 860px) {
+    .ppb-topbar {
+        padding: 0.55rem;
+    }
+
+    .ppb-toolbar-main {
+        align-items: flex-start;
+    }
+
+    .ppb-toolbar-mode {
+        width: 100%;
+    }
+
+    .ppb-top-controls {
+        width: auto;
+        align-self: flex-end;
+    }
+
+    .ppb-mode-tab {
+        flex: 0 0 auto;
+        justify-content: flex-start;
+    }
+
+    .ppb-start-shell,
+    .ppb-stage-layout {
+        gap: 0.75rem;
+    }
+
+    .ppb-universe-main,
+    .ppb-control-panel {
+        padding: 0.85rem;
+    }
+
+    .ppb-orb-grid {
+        min-height: clamp(320px, 52vh, 520px);
     }
 }

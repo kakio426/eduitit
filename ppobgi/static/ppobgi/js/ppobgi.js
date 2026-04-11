@@ -60,6 +60,8 @@
         editorRosterBtn: document.getElementById("ppb-editor-roster-btn"),
         reduceMotion: document.getElementById("ppb-reduce-motion"),
         fullscreenBtn: document.getElementById("ppb-fullscreen-btn"),
+        toolsLink: document.getElementById("ppb-tools-link"),
+        toolsMenu: document.getElementById("ppb-tools-menu"),
     };
 
     const STAR_COLORS = [
@@ -895,6 +897,13 @@
         els.fullscreenBtn.textContent = document.fullscreenElement ? "전체화면 종료" : "전체화면";
     }
 
+    function closeToolsMenu() {
+        if (!els.toolsMenu || !els.toolsMenu.open) {
+            return;
+        }
+        els.toolsMenu.open = false;
+    }
+
     function isStarsModeActive() {
         return !modeStarsView?.classList.contains("is-hidden");
     }
@@ -1023,12 +1032,28 @@
 
         els.reduceMotion?.addEventListener("change", (event) => {
             applyReduceMotion(Boolean(event.target.checked));
+            closeToolsMenu();
         });
-        els.fullscreenBtn?.addEventListener("click", toggleFullscreen);
+        els.fullscreenBtn?.addEventListener("click", () => {
+            toggleFullscreen();
+            window.setTimeout(closeToolsMenu, 0);
+        });
+        els.toolsLink?.addEventListener("click", closeToolsMenu);
         document.addEventListener("fullscreenchange", syncFullscreenBtn);
         document.addEventListener("fullscreenchange", scheduleOrbLayoutRefresh);
         document.addEventListener("keydown", handleKeydown);
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") {
+                closeToolsMenu();
+            }
+        });
+        document.addEventListener("click", (event) => {
+            if (els.toolsMenu?.open && !els.toolsMenu.contains(event.target)) {
+                closeToolsMenu();
+            }
+        });
         window.addEventListener("resize", scheduleOrbLayoutRefresh);
+        root.addEventListener("ppobgi:close-tools", closeToolsMenu);
         root.addEventListener("ppobgi:mode-change", (event) => {
             if (event.detail?.mode === "stars") {
                 scheduleOrbLayoutRefresh();
@@ -2920,6 +2945,10 @@
     }
 
     const MAX_METEOR_NAMES = 40;
+    const METEOR_FOOTPRINT = {
+        width: 210,
+        height: 104,
+    };
 
     const state = {
         sourceNames: [],
@@ -3033,21 +3062,21 @@
         const rawWidth = Math.max(rect?.width || 0, els.sky?.clientWidth || 0, 0);
         const rawHeight = Math.max(rect?.height || 0, els.sky?.clientHeight || 0, 0);
         return {
-            width: Math.max(rawWidth, 520),
-            height: Math.max(rawHeight, 420),
+            width: Math.max(rawWidth, 680),
+            height: Math.max(rawHeight, 540),
         };
     }
 
     function fallbackMeteorPosition(index, total, width, height) {
-        const safeWidth = Math.max(width - 160, 120);
-        const safeHeight = Math.max(height - 120, 120);
+        const safeWidth = Math.max(width - METEOR_FOOTPRINT.width, 120);
+        const safeHeight = Math.max(height - METEOR_FOOTPRINT.height, 120);
         const ratio = total <= 1 ? 0.24 : 0.18 + (index / Math.max(total - 1, 1)) * 0.68;
         const angle = index * 2.399963229728653;
-        const x = 52 + safeWidth * (0.5 + Math.cos(angle) * 0.42 * ratio);
-        const y = 36 + safeHeight * (0.5 + Math.sin(angle) * 0.36 * ratio);
+        const x = METEOR_FOOTPRINT.width * 0.28 + safeWidth * (0.5 + Math.cos(angle) * 0.42 * ratio);
+        const y = METEOR_FOOTPRINT.height * 0.24 + safeHeight * (0.5 + Math.sin(angle) * 0.36 * ratio);
         return {
-            x: Math.min(width - 84, Math.max(36, x)),
-            y: Math.min(height - 72, Math.max(28, y)),
+            x: Math.min(width - METEOR_FOOTPRINT.width * 0.34, Math.max(METEOR_FOOTPRINT.width * 0.22, x)),
+            y: Math.min(height - METEOR_FOOTPRINT.height * 0.3, Math.max(METEOR_FOOTPRINT.height * 0.2, y)),
         };
     }
 
@@ -3058,10 +3087,10 @@
         const { width, height } = meteorFieldSize();
         const layout = new Map();
         const placed = [];
-        const minDistance = Math.max(58, Math.min(width, height) * 0.12);
+        const minDistance = Math.max(84, Math.min(width, height) * 0.14);
         const descriptors = shuffle(names).map((name) => ({
             name,
-            scale: Number((0.82 + Math.random() * 0.44).toFixed(3)),
+            scale: Number((0.9 + Math.random() * 0.42).toFixed(3)),
             tilt: Number((-18 - Math.random() * 16).toFixed(3)),
             duration: Number((4.4 + Math.random() * 3.4).toFixed(2)),
             delay: Number((Math.random() * 2.4).toFixed(2)),
@@ -3070,8 +3099,8 @@
         descriptors.forEach((item, index) => {
             let point = null;
             for (let attempt = 0; attempt < 90; attempt += 1) {
-                const x = 44 + Math.random() * Math.max(width - 164, 120);
-                const y = 34 + Math.random() * Math.max(height - 132, 120);
+                const x = METEOR_FOOTPRINT.width * 0.24 + Math.random() * Math.max(width - METEOR_FOOTPRINT.width * 1.1, 120);
+                const y = METEOR_FOOTPRINT.height * 0.22 + Math.random() * Math.max(height - METEOR_FOOTPRINT.height * 1.06, 120);
                 const conflict = placed.some((placedPoint) => {
                     const dx = placedPoint.x - x;
                     const dy = placedPoint.y - y;
