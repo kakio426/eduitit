@@ -31,12 +31,31 @@ class AchievementGalleryModelTests(TestCase):
         gallery_images = achievement.gallery_images
 
         self.assertEqual(len(gallery_images), 3)
-        self.assertEqual(gallery_images[0]["caption"], "")
+        self.assertEqual(gallery_images[0]["caption"], "AI 연수 운영")
+        self.assertEqual(gallery_images[0]["badge"], "대표 자료")
         self.assertTrue(gallery_images[0]["is_cover"])
         self.assertEqual(
             [item["caption"] for item in gallery_images[1:]],
             ["현장 사진 1", "현장 사진 2"],
         )
+        self.assertEqual(
+            [item["badge"] for item in gallery_images[1:]],
+            ["현장 사진", "현장 사진"],
+        )
+
+    def test_gallery_images_prefer_explicit_cover_caption(self):
+        achievement = Achievement.objects.create(
+            title="AI 수업 사례 발표",
+            issuer="교육청",
+            date_awarded=date(2026, 3, 15),
+            image="portfolio/achievements/cover.jpg",
+            image_caption="발표 자료 메인 포스터",
+        )
+
+        gallery_images = achievement.gallery_images
+
+        self.assertEqual(gallery_images[0]["caption"], "발표 자료 메인 포스터")
+        self.assertEqual(gallery_images[0]["alt"], "발표 자료 메인 포스터")
 
 
 class PortfolioGalleryViewTests(TestCase):
@@ -47,6 +66,7 @@ class PortfolioGalleryViewTests(TestCase):
             date_awarded=date(2026, 4, 1),
             description="대표 실적 설명",
             image="portfolio/achievements/main.jpg",
+            image_caption="프로젝트 공고 메인 포스터",
         )
         AchievementPhoto.objects.create(
             achievement=achievement,
@@ -65,5 +85,10 @@ class PortfolioGalleryViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "AI 수업 컨설팅")
+        self.assertContains(response, "프로젝트 공고 메인 포스터")
         self.assertContains(response, "교실 적용 장면")
         self.assertContains(response, "학생 결과물")
+        self.assertContains(response, "대표 자료")
+        self.assertContains(response, 'id="portfolioLightbox"', html=False)
+        self.assertContains(response, 'data-portfolio-gallery', html=False)
+        self.assertContains(response, 'data-gallery-image', html=False)

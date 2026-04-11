@@ -12,6 +12,12 @@ class Achievement(models.Model):
         blank=True,
         verbose_name="상장/증빙 이미지",
     )
+    image_caption = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name="대표 이미지 설명",
+        help_text="포트폴리오 카드의 대표 이미지 아래에 바로 노출되는 짧은 설명입니다.",
+    )
     
     is_featured = models.BooleanField(default=False, verbose_name="메인 노출 여부")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -36,16 +42,22 @@ class Achievement(models.Model):
             return ""
 
     @property
+    def display_image_caption(self):
+        return (self.image_caption or self.title).strip()
+
+    @property
     def gallery_images(self):
         images = []
 
         cover_url = self.safe_image_url
         if cover_url:
+            cover_caption = self.display_image_caption
             images.append(
                 {
                     "url": cover_url,
-                    "alt": self.title,
-                    "caption": "",
+                    "alt": cover_caption,
+                    "caption": cover_caption,
+                    "badge": "대표 자료",
                     "is_cover": True,
                 }
             )
@@ -58,11 +70,13 @@ class Achievement(models.Model):
             photo_url = photo.safe_image_url
             if not photo_url:
                 continue
+            photo_caption = (photo.caption or self.title).strip()
             images.append(
                 {
                     "url": photo_url,
-                    "alt": photo.caption or self.title,
-                    "caption": photo.caption,
+                    "alt": photo_caption,
+                    "caption": photo_caption,
+                    "badge": "현장 사진",
                     "is_cover": False,
                 }
             )
