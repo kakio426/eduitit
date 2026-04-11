@@ -41,6 +41,11 @@
                 </div>
             </div>
             <div class="mt-4 flex flex-wrap gap-2">
+                <span class="rounded-full px-4 py-2 text-sm font-bold {% if mode == 'weekly' %}bg-slate-900 text-white{% else %}bg-slate-100 text-slate-700{% endif %}">1 주간 기본 시간표</span>
+                <span class="rounded-full px-4 py-2 text-sm font-bold {% if mode == 'daily' %}bg-amber-500 text-white{% else %}bg-slate-100 text-slate-700{% endif %}">2 날짜별 일정</span>
+                <span class="rounded-full px-4 py-2 text-sm font-bold {% if input_status.status == 'submitted' or input_status.status == 'reviewed' or input_status.status == 'published' %}bg-emerald-600 text-white{% else %}bg-slate-100 text-slate-700{% endif %}">3 입력 완료</span>
+            </div>
+            <div class="mt-4 flex flex-wrap gap-2">
                 <button id="class-edit-save-button" type="button" class="inline-flex items-center justify-center rounded-2xl bg-sky-600 px-5 py-3 text-sm font-bold text-white hover:bg-sky-700">
                     임시 저장
                 </button>

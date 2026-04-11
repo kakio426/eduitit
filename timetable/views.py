@@ -300,6 +300,20 @@ def _build_workspace_operational_context(request, workspace, *, validation, incl
 
 
 def _build_workspace_cards(request, workspaces):
+    published_snapshot_ids = [workspace.published_snapshot_id for workspace in workspaces if workspace.published_snapshot_id]
+    portal_map = {
+        item.snapshot_id: item
+        for item in TimetableSharePortal.objects.filter(snapshot_id__in=published_snapshot_ids, is_active=True)
+    } if published_snapshot_ids else {}
+    share_link_map = {}
+    if published_snapshot_ids:
+        for item in TimetableShareLink.objects.filter(snapshot_id__in=published_snapshot_ids, is_active=True).order_by(
+            "snapshot_id",
+            "audience_type",
+            "id",
+        ):
+            share_link_map.setdefault(item.snapshot_id, item)
+
     cards = []
     totals = {
         "workspace_count": len(workspaces),
@@ -310,6 +324,18 @@ def _build_workspace_cards(request, workspaces):
     }
     review_queue = []
     for workspace in workspaces:
+        edit_href = reverse("timetable:workspace_detail", args=[workspace.id])
+        meeting_href = reverse("timetable:meeting_view", args=[workspace.id])
+        share_href = ""
+        if workspace.published_snapshot_id:
+            portal = portal_map.get(workspace.published_snapshot_id)
+            if portal and not portal.is_expired:
+                share_href = reverse("timetable:share_portal", args=[portal.token])
+            else:
+                share_link = share_link_map.get(workspace.published_snapshot_id)
+                if share_link and not share_link.is_expired:
+                    share_href = reverse("timetable:share_view", args=[share_link.token])
+
         classrooms = _workspace_classrooms(workspace)
         _ensure_classroom_input_assets(workspace, issued_by=request.user if request.user.is_authenticated else None)
         progress_summary = build_progress_summary(classrooms, _get_workspace_class_input_status_map(workspace))
@@ -336,7 +362,7 @@ def _build_workspace_cards(request, workspaces):
                 "workspace_title": workspace.title,
                 "classroom_label": item["classroom_label"],
                 "status_label": item["status_label"],
-                "href": reverse("timetable:workspace_detail", args=[workspace.id]),
+                "href": edit_href,
             }
             for item in progress_summary["review_queue"]
         )
@@ -351,7 +377,10 @@ def _build_workspace_cards(request, workspaces):
                 "status_label": status_label,
                 "status_tone": status_tone,
                 "primary_action_label": primary_action_label,
-                "href": reverse("timetable:workspace_detail", args=[workspace.id]),
+                "href": edit_href,
+                "edit_href": edit_href,
+                "meeting_href": meeting_href,
+                "share_href": share_href,
                 "review_required_count": progress_summary["review_required_count"],
                 "review_complete_count": progress_summary["review_complete_count"],
                 "total_classes": progress_summary["total_classes"],
@@ -362,6 +391,77 @@ def _build_workspace_cards(request, workspaces):
     review_queue.sort(key=lambda item: (item["workspace_title"], item["classroom_label"]))
     totals["today_review_items"] = review_queue[:5]
     return {"cards": cards, "totals": totals}
+
+
+def _build_role_entry_options(workspaces):
+    published_snapshot_ids = [workspace.published_snapshot_id for workspace in workspaces if workspace.published_snapshot_id]
+    portal_map = {
+        item.snapshot_id: item
+        for item in TimetableSharePortal.objects.filter(snapshot_id__in=published_snapshot_ids, is_active=True)
+    } if published_snapshot_ids else {}
+    share_link_map = {}
+    if published_snapshot_ids:
+        for item in TimetableShareLink.objects.filter(snapshot_id__in=published_snapshot_ids, is_active=True).order_by(
+            "snapshot_id",
+            "audience_type",
+            "id",
+        ):
+            share_link_map.setdefault(item.snapshot_id, item)
+
+    meeting_targets = []
+    share_targets = []
+    for workspace in workspaces:
+        meeting_targets.append(
+            {
+                "workspace_id": workspace.id,
+                "label": f"{workspace.school_year}학년도 {workspace.term} {workspace.grade_label}",
+                "status_label": workspace.get_status_display(),
+            }
+        )
+        if not workspace.published_snapshot_id:
+            continue
+        portal = portal_map.get(workspace.published_snapshot_id)
+        if portal and not portal.is_expired:
+            share_targets.append(
+                {
+                    "workspace_id": workspace.id,
+                    "label": f"{workspace.school_year}학년도 {workspace.term} {workspace.grade_label}",
+                    "kind_label": "교사용 모아보기",
+                }
+            )
+            continue
+        share_link = share_link_map.get(workspace.published_snapshot_id)
+        if share_link and not share_link.is_expired:
+            share_targets.append(
+                {
+                    "workspace_id": workspace.id,
+                    "label": f"{workspace.school_year}학년도 {workspace.term} {workspace.grade_label}",
+                    "kind_label": "확정본 보기",
+                }
+            )
+    return {
+        "meeting_targets": meeting_targets,
+        "share_targets": share_targets,
+    }
+
+
+def _resolve_workspace_role_redirect(workspaces, *, workspace_id, role):
+    workspace_map = {str(workspace.id): workspace for workspace in workspaces}
+    workspace = workspace_map.get(str(workspace_id))
+    if not workspace:
+        raise ValidationError("열 수 있는 학년 시간표를 다시 선택해 주세요.")
+    if role == "meeting":
+        return reverse("timetable:meeting_view", args=[workspace.id])
+    if role == "share":
+        if workspace.published_snapshot_id:
+            portal = TimetableSharePortal.objects.filter(snapshot_id=workspace.published_snapshot_id, is_active=True).first()
+            if portal and not portal.is_expired:
+                return reverse("timetable:share_portal", args=[portal.token])
+            share_link = TimetableShareLink.objects.filter(snapshot_id=workspace.published_snapshot_id, is_active=True).first()
+            if share_link and not share_link.is_expired:
+                return reverse("timetable:share_view", args=[share_link.token])
+        raise ValidationError("아직 확정본 보기 링크가 준비되지 않았습니다.")
+    raise ValidationError("열 화면 종류를 다시 확인해 주세요.")
 
 
 def _default_class_link_expiry(workspace):
@@ -1543,20 +1643,25 @@ def main(request):
         "share_value": "",
         "share_error": "",
     }
-
-    if request.method == "POST" and request.POST.get("action") == "open_public_link":
-        kind = (request.POST.get("entry_kind") or "").strip()
-        raw_value = (request.POST.get("link_value") or "").strip()
-        if kind not in {"edit", "share"}:
-            messages.error(request, "열 링크 종류를 다시 선택해 주세요.")
-        else:
-            public_link_entry[f"{kind}_value"] = raw_value
-            try:
-                return redirect(_resolve_public_link_redirect(raw_value, kind=kind))
-            except ValidationError as error:
-                public_link_entry[f"{kind}_error"] = "; ".join(error.messages)
+    role_entry = {
+        "meeting_value": "",
+        "meeting_error": "",
+        "share_value": "",
+        "share_error": "",
+    }
 
     if not request.user.is_authenticated:
+        if request.method == "POST" and request.POST.get("action") == "open_public_link":
+            kind = (request.POST.get("entry_kind") or "").strip()
+            raw_value = (request.POST.get("link_value") or "").strip()
+            if kind not in {"edit", "share"}:
+                messages.error(request, "열 링크 종류를 다시 선택해 주세요.")
+            else:
+                public_link_entry[f"{kind}_value"] = raw_value
+                try:
+                    return redirect(_resolve_public_link_redirect(raw_value, kind=kind))
+                except ValidationError as error:
+                    public_link_entry[f"{kind}_error"] = "; ".join(error.messages)
         response = render(
             request,
             "timetable/index.html",
@@ -1577,6 +1682,11 @@ def main(request):
                     "today_review_items": [],
                 },
                 "public_link_entry": public_link_entry,
+                "role_entry": role_entry,
+                "role_targets": {
+                    "meeting_targets": [],
+                    "share_targets": [],
+                },
             },
         )
         return _apply_workspace_cache_headers(response)
@@ -1593,6 +1703,36 @@ def main(request):
             "days_text": ",".join(DEFAULT_DAY_KEYS),
         },
     )
+    workspaces = list(_get_accessible_workspaces(request))
+    role_targets = _build_role_entry_options(workspaces)
+
+    if request.method == "POST":
+        action = (request.POST.get("action") or "").strip()
+        if action == "open_public_link":
+            kind = (request.POST.get("entry_kind") or "").strip()
+            raw_value = (request.POST.get("link_value") or "").strip()
+            if kind not in {"edit", "share"}:
+                messages.error(request, "열 링크 종류를 다시 선택해 주세요.")
+            else:
+                public_link_entry[f"{kind}_value"] = raw_value
+                try:
+                    return redirect(_resolve_public_link_redirect(raw_value, kind=kind))
+                except ValidationError as error:
+                    public_link_entry[f"{kind}_error"] = "; ".join(error.messages)
+        elif action == "open_workspace_meeting":
+            workspace_id = str(request.POST.get("workspace_id") or "").strip()
+            role_entry["meeting_value"] = workspace_id
+            try:
+                return redirect(_resolve_workspace_role_redirect(workspaces, workspace_id=workspace_id, role="meeting"))
+            except ValidationError as error:
+                role_entry["meeting_error"] = "; ".join(error.messages)
+        elif action == "open_workspace_share":
+            workspace_id = str(request.POST.get("workspace_id") or "").strip()
+            role_entry["share_value"] = workspace_id
+            try:
+                return redirect(_resolve_workspace_role_redirect(workspaces, workspace_id=workspace_id, role="share"))
+            except ValidationError as error:
+                role_entry["share_error"] = "; ".join(error.messages)
 
     if request.method == "POST" and request.POST.get("action") == "create_workspace_batch":
         if not has_editable_schools:
@@ -1618,7 +1758,6 @@ def main(request):
                 except (IntegrityError, ValidationError) as error:
                     workspace_form.add_error(None, "; ".join(error.messages) if hasattr(error, "messages") else str(error))
 
-    workspaces = list(_get_accessible_workspaces(request))
     dashboard_bundle = _build_workspace_cards(request, workspaces)
     response = render(
         request,
@@ -1634,6 +1773,8 @@ def main(request):
             "dashboard_summary": dashboard_bundle["totals"],
             "batch_setup_url": reverse("timetable:api_setup_batch_create"),
             "public_link_entry": public_link_entry,
+            "role_entry": role_entry,
+            "role_targets": role_targets,
         },
     )
     return _apply_workspace_cache_headers(response)

@@ -78,10 +78,15 @@ class TimetableViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "새 학기 만들기")
         self.assertContains(response, "반 입력 링크 열기")
+        self.assertContains(response, "업무 담당 교사")
+        self.assertContains(response, "회의 보드 열기")
+        self.assertContains(response, "일반 교사")
         self.assertContains(response, "확정본 링크 열기")
         self.assertNotContains(response, "FortuneSheet")
         content = response.content.decode("utf-8")
         self.assertLess(content.index('id="workspace-create"'), content.index("내 반 입력하기"))
+        self.assertContains(response, "편집 열기")
+        self.assertContains(response, "회의 보드")
 
     def test_main_page_public_link_entry_redirects_to_class_edit(self):
         link = TimetableClassEditLink.objects.create(workspace=self.workspace, classroom=self.classroom)
@@ -90,6 +95,39 @@ class TimetableViewTests(TestCase):
             data={"action": "open_public_link", "entry_kind": "edit", "link_value": link.token},
         )
         self.assertRedirects(response, reverse("timetable:class_edit", args=[link.token]), fetch_redirect_response=False)
+
+    def test_main_page_meeting_entry_redirects_to_meeting_view(self):
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse("timetable:main"),
+            data={"action": "open_workspace_meeting", "workspace_id": self.workspace.id},
+        )
+        self.assertRedirects(
+            response,
+            reverse("timetable:meeting_view", args=[self.workspace.id]),
+            fetch_redirect_response=False,
+        )
+
+    def test_main_page_share_preview_redirects_to_share_portal(self):
+        self.client.force_login(self.user)
+        snapshot = TimetableSnapshot.objects.create(
+            workspace=self.workspace,
+            name="확정본",
+            sheet_data=[self._build_sheet("3-1반", "영어")],
+        )
+        portal = TimetableSharePortal.objects.create(snapshot=snapshot)
+        self.workspace.published_snapshot = snapshot
+        self.workspace.status = TimetableWorkspace.Status.PUBLISHED
+        self.workspace.save(update_fields=["published_snapshot", "status", "updated_at"])
+        response = self.client.post(
+            reverse("timetable:main"),
+            data={"action": "open_workspace_share", "workspace_id": self.workspace.id},
+        )
+        self.assertRedirects(
+            response,
+            reverse("timetable:share_portal", args=[portal.token]),
+            fetch_redirect_response=False,
+        )
 
     def test_batch_create_api_creates_stage_workspaces_and_profile(self):
         self.client.force_login(self.user)
@@ -453,6 +491,9 @@ class TimetableViewTests(TestCase):
         response = self.client.get(reverse("timetable:class_edit", args=[link.token]))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "3-1반 시간표 입력")
+        self.assertContains(response, "1 주간 기본 시간표")
+        self.assertContains(response, "2 날짜별 일정")
+        self.assertContains(response, "3 입력 완료")
 
         link.is_active = False
         link.save(update_fields=["is_active", "updated_at"])
