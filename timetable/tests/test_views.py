@@ -80,6 +80,8 @@ class TimetableViewTests(TestCase):
         self.assertContains(response, "반 입력 링크 열기")
         self.assertContains(response, "확정본 링크 열기")
         self.assertNotContains(response, "FortuneSheet")
+        content = response.content.decode("utf-8")
+        self.assertLess(content.index('id="workspace-create"'), content.index("내 반 입력하기"))
 
     def test_main_page_public_link_entry_redirects_to_class_edit(self):
         link = TimetableClassEditLink.objects.create(workspace=self.workspace, classroom=self.classroom)
