@@ -574,9 +574,9 @@ def build_messagebox_home_card_context(user):
     enabled = bool(getattr(user, "is_authenticated", False)) and _is_message_capture_enabled_for_user(user)
     card = {
         "enabled": enabled,
-        "title": "메시지에서 일정 만들기",
+        "title": "AI가 메시지에서 일정을 자동 등록",
         "description": "",
-        "primary_action_label": "메시지에서 일정 만들기",
+        "primary_action_label": "AI 일정 자동 등록",
         "secondary_action_label": "받은 메시지 보기",
         "url": build_messagebox_main_url(),
     }

@@ -108,7 +108,7 @@ class MessageboxViewTests(TestCase):
         card = build_messagebox_home_card_context(self.user)
 
         self.assertTrue(card["enabled"])
-        self.assertEqual(card["title"], "메시지에서 일정 만들기")
+        self.assertEqual(card["title"], "AI가 메시지에서 일정을 자동 등록")
 
     def test_main_keeps_requested_capture_id_in_context(self):
         response = self.client.get(f"{reverse('messagebox:main')}?capture=test-capture-id")
