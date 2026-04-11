@@ -46,6 +46,12 @@ def _can_manage_art_class(user, art_class):
     return user.is_staff or art_class.created_by_id == user.id
 
 
+def _can_start_art_class_launcher(user, art_class):
+    if art_class.is_shared:
+        return True
+    return _can_manage_art_class(user, art_class)
+
+
 def _resolve_creator_display_name(user):
     if not user:
         return "익명의 선생님"
@@ -295,9 +301,9 @@ def _get_launcher_release_config(request=None):
     env_bridge_version = (os.getenv("ARTCLASS_LAUNCHER_BRIDGE_VERSION") or "").strip()
     env_minimum_required_version = (os.getenv("ARTCLASS_LAUNCHER_MINIMUM_REQUIRED_VERSION") or "").strip()
     current_release = get_current_launcher_release()
-    bridge_version = env_bridge_version or (current_release or {}).get("version") or default_bridge_version
+    bridge_version = env_bridge_version or default_bridge_version
     latest_version = (current_release or {}).get("version") or bridge_version
-    minimum_required_version = env_minimum_required_version or latest_version or bridge_version
+    minimum_required_version = env_minimum_required_version or bridge_version
     download_url = _normalize_http_url(os.getenv("ARTCLASS_LAUNCHER_DOWNLOAD_URL"))
     update_base_url = _normalize_launcher_update_base_url(os.getenv("ARTCLASS_LAUNCHER_UPDATE_BASE_URL"))
 
@@ -1162,6 +1168,7 @@ def classroom_view(request, pk):
     display_mode = "dashboard" if request.GET.get("display") == "dashboard" else "classroom"
     runtime_mode = "launcher" if request.GET.get("runtime") == "launcher" else "web"
     can_manage_classroom = _can_manage_art_class(request.user, art_class)
+    can_start_launcher = _can_start_art_class_launcher(request.user, art_class)
     effective_playback_mode = ARTCLASS_PRIMARY_PLAYBACK_MODE
     should_inline_step_images = runtime_mode == "launcher" and display_mode == "dashboard"
     
@@ -1214,10 +1221,30 @@ def classroom_view(request, pk):
             if can_manage_classroom and art_class.is_shared
             else ""
         ),
+        'classroom_return_url': (
+            reverse("artclass:setup_edit", kwargs={"pk": art_class.pk})
+            if can_manage_classroom
+            else reverse("artclass:library")
+        ),
+        'classroom_return_label': (
+            "편집으로 돌아가기"
+            if can_manage_classroom
+            else "수업 목록으로 돌아가기"
+        ),
+        'classroom_clone_url': (
+            (
+                reverse("artclass:setup_clone", kwargs={"pk": art_class.pk})
+                if request.user.is_authenticated
+                else _build_artclass_share_url(art_class, request=request)
+            )
+            if art_class.is_shared and not can_manage_classroom
+            else ""
+        ),
         'steps': steps,
         'data': data,
         'data_json': json.dumps(data, ensure_ascii=False),
         'can_manage_classroom': can_manage_classroom,
+        'can_start_launcher': can_start_launcher,
         'display_mode': display_mode,
         'runtime_mode': runtime_mode,
         'video_advice': video_advice,
@@ -1378,9 +1405,9 @@ def launcher_release_config_api(request):
 def start_launcher_session_api(request, pk):
     """교사용 런처에서 좌/우 분할 실행에 필요한 payload를 생성한다."""
     art_class = get_object_or_404(ArtClass, pk=pk)
-    if not request.user.is_authenticated:
+    if not _can_start_art_class_launcher(request.user, art_class) and not request.user.is_authenticated:
         return JsonResponse({"error": "AUTH_REQUIRED", "message": "로그인이 필요합니다."}, status=401)
-    if not _can_manage_art_class(request.user, art_class):
+    if not _can_start_art_class_launcher(request.user, art_class):
         return JsonResponse({"error": "FORBIDDEN", "message": "런처를 실행할 권한이 없습니다."}, status=403)
 
     classroom_url = request.build_absolute_uri(reverse("artclass:classroom", kwargs={"pk": art_class.pk}))

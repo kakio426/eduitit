@@ -2,10 +2,27 @@
 
 {% block title %}ArtClass - Eduitit{% endblock %}
 
+{% block extra_css %}
+<style>
+    .artclass-setup-home-shell {
+        background:
+            radial-gradient(circle at top left, rgba(16, 185, 129, 0.18), transparent 32%),
+            radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.12), transparent 28%),
+            linear-gradient(135deg, #f8fffb 0%, #ffffff 52%, #f4fbff 100%);
+        box-shadow: 0 30px 80px rgba(15, 23, 42, 0.08);
+    }
+
+    .artclass-setup-home-shared-card {
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(240, 249, 255, 0.92) 100%);
+        box-shadow: 0 18px 40px rgba(14, 165, 233, 0.08);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <main class="min-h-screen pt-24 md:pt-32 pb-20 px-4">
     <div class="max-w-4xl mx-auto">
-        <section class="relative overflow-hidden rounded-[2.4rem] border border-emerald-100 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.18),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.12),_transparent_28%),linear-gradient(135deg,_#f8fffb_0%,_#ffffff_52%,_#f4fbff_100%)] px-6 py-6 md:px-8 md:py-8 shadow-[0_30px_80px_rgba(15,23,42,0.08)]">
+        <section class="artclass-setup-home-shell relative overflow-hidden rounded-[2.4rem] border border-emerald-100 px-6 py-6 md:px-8 md:py-8">
             <div class="pointer-events-none absolute -left-10 top-10 h-40 w-40 rounded-full bg-emerald-200/40 blur-3xl"></div>
             <div class="pointer-events-none absolute right-0 top-0 h-56 w-56 rounded-full bg-sky-200/30 blur-3xl"></div>
 
@@ -61,7 +78,7 @@
                     {% endif %}
 
                     <a href="{{ library_url }}#shared-classes"
-                        class="group flex min-h-44 flex-col justify-between rounded-[2rem] border border-sky-200 bg-[linear-gradient(180deg,_rgba(255,255,255,0.95)_0%,_rgba(240,249,255,0.92)_100%)] px-6 py-6 text-sky-950 shadow-[0_18px_40px_rgba(14,165,233,0.08)] transition-all hover:-translate-y-1 hover:border-sky-300 hover:bg-sky-50">
+                        class="artclass-setup-home-shared-card group flex min-h-44 flex-col justify-between rounded-[2rem] border border-sky-200 px-6 py-6 text-sky-950 transition-all hover:-translate-y-1 hover:border-sky-300 hover:bg-sky-50">
                         <div>
                             <p class="text-xs font-black uppercase tracking-[0.22em] text-sky-500">Shared</p>
                             <h2 class="mt-3 text-2xl font-black leading-tight">함께 보는 공개 수업</h2>

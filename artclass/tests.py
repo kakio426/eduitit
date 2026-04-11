@@ -578,6 +578,32 @@ class ManualPipelineApiTest(TestCase):
         self.assertEqual(payload["latestVersion"], "0.2.0")
         self.assertEqual(payload["minimumRequiredVersion"], "0.2.0")
 
+    def test_launcher_release_config_api_does_not_force_latest_version_as_minimum_by_default(self):
+        current_release = {
+            "version": "0.2.15",
+            "installer_filename": "Eduitit Teacher Launcher Setup 0.2.15.exe",
+            "blockmap_filename": "Eduitit Teacher Launcher Setup 0.2.15.exe.blockmap",
+            "latest_filename": "latest.yml",
+        }
+
+        with patch.dict(
+            os.environ,
+            {
+                "ARTCLASS_LAUNCHER_DOWNLOAD_URL": "",
+                "ARTCLASS_LAUNCHER_UPDATE_BASE_URL": "",
+                "ARTCLASS_LAUNCHER_BRIDGE_VERSION": "",
+                "ARTCLASS_LAUNCHER_MINIMUM_REQUIRED_VERSION": "",
+            },
+            clear=False,
+        ), patch("artclass.views.get_current_launcher_release", return_value=current_release):
+            response = self.client.get(reverse("artclass:launcher_release_config_api"))
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["bridgeVersion"], "0.2.0")
+        self.assertEqual(payload["latestVersion"], "0.2.15")
+        self.assertEqual(payload["minimumRequiredVersion"], "0.2.0")
+
     def test_launcher_update_index_view_returns_current_release_urls(self):
         current_release = {
             "version": "0.2.0",
@@ -657,8 +683,14 @@ class ManualPipelineApiTest(TestCase):
         self.assertContains(response, "처음 설치")
         self.assertContains(response, "기존 런처가 있으면 이번 한 번만 새 설치파일로 다시 설치하세요.")
         self.assertContains(response, "그다음부터는 초록 버튼만 누르면 됩니다.")
+        self.assertContains(response, "설치했는데도 브라우저가 못 찾는다면")
+        self.assertContains(response, "Eduitit Teacher Launcher")
+        self.assertContains(response, "앱 열기 / 프로토콜 허용")
         self.assertContains(response, "Windows 보호 화면이 나오면")
+        self.assertContains(response, "파란 화면은 Windows가 처음 보는 앱을 한 번 더 확인하는 단계입니다.")
         self.assertContains(response, "추가 정보")
+        self.assertContains(response, "그래도 실행")
+        self.assertContains(response, "이 앱이 디바이스를 변경하도록 허용하시겠습니까?")
         self.assertContains(response, "학교 PC 정책으로 막히면 관리자에게 설치 허용을 요청하세요.")
         self.assertContains(response, "/artclass/classroom/14/?autostart_launcher=1")
 
@@ -769,12 +801,34 @@ class ManualPipelineApiTest(TestCase):
         self.assertEqual(payload["fallback"]["videoUrl"], external_url)
         self.assertEqual(payload["fallback"]["youtubeUrl"], external_url)
 
+    def test_start_launcher_session_api_allows_shared_class_for_anonymous_teacher(self):
+        art_class = ArtClass.objects.create(
+            title="공개 런처 수업",
+            youtube_url="https://www.youtube.com/watch?v=2bBhnfh4StU",
+            default_interval=10,
+            created_by=self.owner,
+            is_shared=True,
+        )
+        url = reverse("artclass:start_launcher_session_api", kwargs={"pk": art_class.pk})
+
+        response = self.client.post(
+            url,
+            data=json.dumps({"source": "shared_anonymous"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["success"])
+        self.assertIn("eduitit-launcher://launch?payload=", payload["launcherUrl"])
+
     def test_start_launcher_session_api_requires_authentication(self):
         art_class = ArtClass.objects.create(
             title="런처 인증 테스트",
             youtube_url="https://www.youtube.com/watch?v=2bBhnfh4StU",
             default_interval=10,
             created_by=self.owner,
+            is_shared=False,
         )
         url = reverse("artclass:start_launcher_session_api", kwargs={"pk": art_class.pk})
 
@@ -793,6 +847,7 @@ class ManualPipelineApiTest(TestCase):
             youtube_url="https://www.youtube.com/watch?v=2bBhnfh4StU",
             default_interval=10,
             created_by=self.owner,
+            is_shared=False,
         )
         url = reverse("artclass:start_launcher_session_api", kwargs={"pk": art_class.pk})
         self.client.force_login(self.other)
@@ -1187,6 +1242,25 @@ class ArtClassV2SetupFlowTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "artclass.geminiReviewClipboard")
         self.assertContains(response, "applyQueuedGeminiResultFromPreviousStep")
+
+    def test_setup_flow_pages_do_not_depend_on_arbitrary_background_utilities(self):
+        review_video_url = "https://www.youtube.com/watch?v=2bBhnfh4StU"
+        responses = [
+            self.client.get(reverse("artclass:setup")),
+            self.client.get(reverse("artclass:create_url")),
+            self.client.get(reverse("artclass:create_gemini"), data={"videoUrl": review_video_url}),
+            self.client.get(reverse("artclass:create_review"), data={"videoUrl": review_video_url}),
+        ]
+
+        for response in responses:
+            self.assertEqual(response.status_code, 200)
+            self.assertNotContains(response, "bg-[linear-gradient")
+            self.assertNotContains(response, "bg-[radial-gradient")
+
+        self.assertContains(responses[0], "artclass-setup-home-shell")
+        self.assertContains(responses[1], "artclass-setup-url-shell")
+        self.assertContains(responses[2], "artclass-gemini-next-card")
+        self.assertContains(responses[3], "artclass-review-hero")
 
     def test_create_review_requires_at_least_one_step(self):
         response = self.client.post(
@@ -2033,14 +2107,27 @@ class ArtClassAutoMetadataTest(TestCase):
 
 
 class ArtClassPresentationUxTest(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="presentation_owner",
+            password="pw123456",
+            email="presentation_owner@example.com",
+        )
+        UserProfile.objects.update_or_create(
+            user=self.owner,
+            defaults={"nickname": "발표교사", "role": "school"},
+        )
+
     def test_classroom_shows_launcher_recommended_state_for_external_mode(self):
         art_class = ArtClass.objects.create(
             title="런처 상태 안내 수업",
             youtube_url="https://www.youtube.com/watch?v=UFQT5Wtamw0",
             default_interval=10,
             playback_mode=ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW,
+            created_by=self.owner,
         )
         ArtStep.objects.create(art_class=art_class, step_number=1, description="기본 단계")
+        self.client.force_login(self.owner)
 
         response = self.client.get(reverse("artclass:classroom", kwargs={"pk": art_class.pk}))
 
@@ -2055,8 +2142,10 @@ class ArtClassPresentationUxTest(TestCase):
             youtube_url="https://www.youtube.com/watch?v=UFQT5Wtamw0",
             default_interval=10,
             playback_mode=ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW,
+            created_by=self.owner,
         )
         ArtStep.objects.create(art_class=art_class, step_number=1, description="기본 단계")
+        self.client.force_login(self.owner)
 
         response = self.client.get(reverse("artclass:classroom", kwargs={"pk": art_class.pk}))
 
@@ -2068,14 +2157,53 @@ class ArtClassPresentationUxTest(TestCase):
         self.assertNotContains(response, "Bridge 0.2.0")
         self.assertNotContains(response, "운영자용 런처 버전 올리기")
 
+    def test_private_classroom_hides_launcher_actions_for_viewer_without_permission(self):
+        art_class = ArtClass.objects.create(
+            title="비공개 보기 전용 수업",
+            youtube_url="https://www.youtube.com/watch?v=UFQT5Wtamw0",
+            default_interval=10,
+            playback_mode=ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW,
+            created_by=self.owner,
+            is_shared=False,
+        )
+        ArtStep.objects.create(art_class=art_class, step_number=1, description="기본 단계")
+
+        response = self.client.get(reverse("artclass:classroom", kwargs={"pk": art_class.pk}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'id="btnLaunchRuntime"', html=False)
+        self.assertNotContains(response, 'id="launcherPromptBanner"', html=False)
+        self.assertNotContains(response, "초록 버튼으로 시작합니다.")
+        self.assertContains(response, "수업 목록으로 돌아가기")
+
+    def test_shared_classroom_shows_clone_shortcut_for_viewer(self):
+        art_class = ArtClass.objects.create(
+            title="공개 보기 수업",
+            youtube_url="https://www.youtube.com/watch?v=UFQT5Wtamw0",
+            default_interval=10,
+            playback_mode=ArtClass.PLAYBACK_MODE_EXTERNAL_WINDOW,
+            created_by=self.owner,
+            is_shared=True,
+        )
+        ArtStep.objects.create(art_class=art_class, step_number=1, description="기본 단계")
+
+        response = self.client.get(reverse("artclass:classroom", kwargs={"pk": art_class.pk}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="btnLaunchRuntime"', html=False)
+        self.assertContains(response, "내 수업으로 가져가기")
+        self.assertContains(response, reverse("artclass:shared"))
+
     def test_classroom_normalizes_legacy_embed_mode_to_launcher_flow(self):
         art_class = ArtClass.objects.create(
             title="브라우저 상태 안내 수업",
             youtube_url="https://www.youtube.com/watch?v=2bBhnfh4StU",
             default_interval=10,
             playback_mode=ArtClass.PLAYBACK_MODE_EMBED,
+            created_by=self.owner,
         )
         ArtStep.objects.create(art_class=art_class, step_number=1, description="기본 단계")
+        self.client.force_login(self.owner)
 
         response = self.client.get(reverse("artclass:classroom", kwargs={"pk": art_class.pk}))
 

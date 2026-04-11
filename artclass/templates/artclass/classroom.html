@@ -290,18 +290,20 @@
     <header id="classroomHeader"
         class="h-16 flex items-center justify-between px-6 glass-dark text-white z-50 fixed top-0 w-full">
         <div class="flex items-center gap-4">
-            <a id="btnBackToEdit" href="{% url 'artclass:setup_edit' art_class.pk %}"
+            <a id="btnBackToEdit" href="{{ classroom_return_url }}"
                 class="flex items-center gap-2 hover:bg-white/10 px-4 py-2 rounded-xl transition-all">
-                <i class="fa-solid fa-arrow-left"></i> <span class="font-bold">편집으로 돌아가기</span>
+                <i class="fa-solid fa-arrow-left"></i> <span class="font-bold">{{ classroom_return_label }}</span>
             </a>
             <div id="headerDivider" class="h-6 w-px bg-white/20"></div>
             <h1 id="headerTitle" class="text-lg font-bold text-white/80 hidden md:block">🎨 {{ art_class.title|default:"미술 수업" }}</h1>
         </div>
         <div class="flex items-center gap-2">
+            {% if can_start_launcher %}
             <button id="btnLaunchRuntime"
                 class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-bold transition-all flex items-center gap-2">
                 <i class="fa-solid fa-rocket"></i> 런처 실행
             </button>
+            {% endif %}
             {% if art_class_share_url %}
             <button id="btnCopyShareLink"
                 class="px-3 py-2 rounded-xl bg-sky-500 hover:bg-sky-600 text-sm font-bold transition-all flex items-center gap-2">
@@ -314,7 +316,7 @@
         </div>
     </header>
 
-    {% if display_mode != 'dashboard' %}
+    {% if display_mode != 'dashboard' and can_start_launcher %}
     <div class="shrink-0 px-4 pt-4 pb-2 md:px-6">
         <div class="mx-auto max-w-6xl rounded-[1.5rem] border border-emerald-300/70 bg-gradient-to-r from-emerald-50 via-white to-lime-50 px-5 py-4 shadow-lg">
             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -381,6 +383,7 @@
     </div>
     {% endif %}
 
+    {% if can_start_launcher or classroom_clone_url %}
     <div id="launcherPromptBanner" class="hidden shrink-0 px-4 pt-4 pb-2 md:px-6">
         <div
             class="mx-auto max-w-6xl rounded-[1.75rem] border border-emerald-300/70 bg-gradient-to-r from-emerald-50 via-white to-lime-50 px-5 py-5 shadow-2xl">
@@ -398,22 +401,36 @@
                     <p class="mt-3 text-sm md:text-base font-semibold text-emerald-900/85 leading-relaxed">
                         초록 버튼을 누르면 런처나 업데이트 창이 잠시 열릴 수 있습니다. 설치가 진행되는 동안은 다른 버튼을 누르지 말고 10~20초 정도 기다려 주세요.
                     </p>
+                    <p class="mt-2 text-xs font-bold text-emerald-900/80 leading-relaxed">
+                        설치했는데도 브라우저가 앱을 찾지 못하면 오른쪽 안내에서 허용 방법을 먼저 확인해 주세요.
+                    </p>
                     <p id="launcherPromptStatus" class="mt-2 hidden text-sm font-bold text-emerald-800">
                     </p>
                 </div>
                 <div class="flex flex-wrap gap-2 lg:justify-end">
+                    {% if can_start_launcher %}
                     <button id="btnLauncherPromptLaunch"
                         class="px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-heavy shadow-lg transition-all">
                         런처 실행
                     </button>
+                    {% endif %}
+                    {% if classroom_clone_url %}
+                    <a href="{{ classroom_clone_url }}"
+                        class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-sky-600 text-white text-sm font-heavy hover:bg-sky-700 transition-all shadow-sm">
+                        <i class="fa-solid fa-copy"></i> 내 수업으로 가져가기
+                    </a>
+                    {% endif %}
+                    {% if can_start_launcher %}
                     <a href="{{ launcher_install_url }}"
                         class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-white/80 border border-emerald-200 text-emerald-800 text-sm font-heavy hover:bg-emerald-50 transition-all shadow-sm">
                         <i class="fa-solid fa-circle-info"></i> 설치 / 업데이트 안내
                     </a>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
+    {% endif %}
 
     <!-- Split Workspace -->
     <div id="classroomWorkspace" class="flex-1 min-h-0 flex flex-col lg:flex-row gap-0 overflow-hidden">
@@ -632,8 +649,10 @@
     const LAUNCHER_START_URL = '{% url "artclass:start_launcher_session_api" art_class.pk %}';
     const STEP_UPDATE_URL_TEMPLATE = '{% url "artclass:update_step_text_api" art_class.pk 0 %}';
     const LAUNCHER_INSTALL_URL = "{{ launcher_install_url|default:''|escapejs }}";
+    const LAUNCHER_CLONE_URL = "{{ classroom_clone_url|default:''|escapejs }}";
     const SHARE_LINK_URL = "{{ art_class_share_url|default:''|escapejs }}";
     const CAN_SAVE_STEP = {{ can_manage_classroom|yesno:"true,false" }};
+    const CAN_START_LAUNCHER = {{ can_start_launcher|yesno:"true,false" }};
     const VIDEO_URL = "{{ data.videoUrl|escapejs }}";
     const VIDEO_ID = extractYouTubeVideoId(VIDEO_URL);
     const VIDEO_SOURCE = String(stepsData.videoSource || (VIDEO_ID ? 'youtube' : 'external'));
@@ -719,6 +738,7 @@
     const BROWSER_SPLIT_LEFT_RATIO = 0.62;
     const BROWSER_SPLIT_MIN_VIDEO_WIDTH = 540;
     const BROWSER_SPLIT_MIN_GUIDE_WIDTH = 360;
+    const LAUNCHER_HANDOFF_TIMEOUT_MS = 2200;
     let stepImageRequestToken = 0;
     let responsiveTokenTimer = null;
     let launcherPromptDismissed = false;
@@ -732,7 +752,7 @@
     }
 
     function isLauncherPromptEligible(mode = playbackMode) {
-        return mode === 'external_window' && !IS_DASHBOARD_ONLY && RUNTIME_MODE !== 'launcher';
+        return CAN_START_LAUNCHER && mode === 'external_window' && !IS_DASHBOARD_ONLY && RUNTIME_MODE !== 'launcher';
     }
 
     function setLauncherPromptStatus(message, tone = 'info') {
@@ -752,6 +772,78 @@
             return;
         }
         launcherPromptStatusEl.classList.add('text-emerald-800');
+    }
+
+    function buildLauncherRecoveryMessage() {
+        const steps = [
+            '설치했는데도 반응이 없으면 시작 메뉴에서 Eduitit Teacher Launcher를 한 번 직접 열어 주세요.',
+            '브라우저에서 앱 열기 또는 프로토콜 허용이 보이면 허용한 뒤 다시 초록 버튼을 눌러 주세요.',
+        ];
+        if (LAUNCHER_INSTALL_URL) {
+            steps.push('계속 안 되면 오른쪽 설치 / 업데이트 안내를 먼저 확인해 주세요.');
+        }
+        return steps.join(' ');
+    }
+
+    function buildLauncherPermissionMessage() {
+        if (LAUNCHER_CLONE_URL) {
+            return '이 수업은 먼저 내 수업으로 가져오면 가장 안정적으로 시작할 수 있습니다. 오른쪽 복사 버튼을 눌러 주세요.';
+        }
+        return '이 수업을 시작할 권한이 없습니다. 내 수업이나 공개 수업에서 다시 시도해 주세요.';
+    }
+
+    function waitForLauncherHandoff(launcherUrl) {
+        return new Promise((resolve) => {
+            let finished = false;
+            let handoffDetected = false;
+            let fallbackTimer = null;
+
+            const markDetected = () => {
+                handoffDetected = true;
+            };
+
+            const cleanup = () => {
+                document.removeEventListener('visibilitychange', handleVisibilityChange, true);
+                window.removeEventListener('blur', markDetected, true);
+                window.removeEventListener('pagehide', markDetected, true);
+                if (fallbackTimer) {
+                    clearTimeout(fallbackTimer);
+                }
+            };
+
+            const finish = () => {
+                if (finished) return;
+                finished = true;
+                cleanup();
+                resolve({ handoffDetected });
+            };
+
+            const handleVisibilityChange = () => {
+                if (document.visibilityState === 'hidden') {
+                    markDetected();
+                }
+            };
+
+            document.addEventListener('visibilitychange', handleVisibilityChange, true);
+            window.addEventListener('blur', markDetected, true);
+            window.addEventListener('pagehide', markDetected, true);
+
+            fallbackTimer = window.setTimeout(finish, LAUNCHER_HANDOFF_TIMEOUT_MS);
+
+            try {
+                window.location.href = launcherUrl;
+            } catch (err) {
+                cleanup();
+                resolve({ handoffDetected: false, error: err });
+                return;
+            }
+
+            window.setTimeout(() => {
+                if (handoffDetected) {
+                    finish();
+                }
+            }, 300);
+        });
     }
 
     async function copyTextToClipboard(text) {
@@ -1120,6 +1212,10 @@
     }
 
     async function startTeacherLauncher() {
+        if (!CAN_START_LAUNCHER) {
+            notifyLauncherStatus(buildLauncherPermissionMessage(), 'warn');
+            return;
+        }
         setLaunchButtonBusy(true);
         if (isLauncherPromptEligible()) {
             setLauncherPromptStatus('런처 또는 업데이트 창을 여는 중입니다. 설치가 진행될 수 있으니 잠시 기다려 주세요. 다른 버튼은 누르지 마세요.', 'info');
@@ -1134,23 +1230,41 @@
                 body: JSON.stringify({ source: 'classroom_header' }),
             });
             if (!response.ok) {
-                throw new Error(`status=${response.status}`);
+                let errorCode = `status=${response.status}`;
+                try {
+                    const errorPayload = await response.json();
+                    if (errorPayload?.error) {
+                        errorCode = errorPayload.error;
+                    }
+                } catch (_) {}
+                throw new Error(errorCode);
             }
             const data = await response.json();
             if (!data || !data.launcherUrl) {
                 throw new Error('missing_launcher_url');
             }
 
-            window.location.href = data.launcherUrl;
-            setTimeout(() => {
+            const launchAttempt = await waitForLauncherHandoff(data.launcherUrl);
+            if (launchAttempt?.error) {
+                throw launchAttempt.error;
+            }
+            if (launchAttempt?.handoffDetected) {
                 notifyLauncherStatus('런처 호출을 보냈습니다. 설치나 업데이트 창이 뜨면 닫지 말고 잠시 기다려 주세요.', 'success');
-            }, 1200);
+            } else {
+                notifyLauncherStatus(buildLauncherRecoveryMessage(), 'warn');
+            }
         } catch (err) {
             console.error('Launcher start failed:', err);
-            const fallbackMessage = LAUNCHER_INSTALL_URL
-                ? '오른쪽 설치 / 업데이트 안내 버튼을 눌러 같은 화면에서 바로 진행해 주세요.'
-                : '런처 실행이 막혔습니다. 같은 버튼을 한 번 더 눌러 주세요.';
-            notifyLauncherStatus(fallbackMessage, 'error');
+            if (err?.message === 'AUTH_REQUIRED') {
+                notifyLauncherStatus('로그인 후 다시 눌러 주세요. 공개 수업은 로그인 뒤 내 수업으로 가져와도 바로 시작할 수 있습니다.', 'warn');
+            } else if (err?.message === 'FORBIDDEN') {
+                notifyLauncherStatus(buildLauncherPermissionMessage(), 'warn');
+            } else {
+                const fallbackMessage = LAUNCHER_INSTALL_URL
+                    ? buildLauncherRecoveryMessage()
+                    : '런처 실행이 막혔습니다. 같은 버튼을 한 번 더 누르거나 잠시 뒤 다시 시도해 주세요.';
+                notifyLauncherStatus(fallbackMessage, 'error');
+            }
         } finally {
             setLaunchButtonBusy(false);
         }

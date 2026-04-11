@@ -2,6 +2,20 @@
 
 {% block title %}ArtClass 2단계 - Eduitit{% endblock %}
 
+{% block extra_css %}
+<style>
+    .artclass-gemini-shell {
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(244, 248, 255, 0.95) 100%);
+        box-shadow: 0 24px 70px rgba(15, 23, 42, 0.08);
+    }
+
+    .artclass-gemini-next-card {
+        background: linear-gradient(160deg, #12b981 0%, #0f766e 100%);
+        box-shadow: 0 24px 60px rgba(16, 185, 129, 0.28);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <main class="min-h-screen pt-24 md:pt-32 pb-20 px-4">
     <div class="max-w-4xl mx-auto">
@@ -11,7 +25,7 @@
             <span>3 답변 불러오기·저장</span>
         </div>
 
-        <section class="rounded-[2.2rem] border border-indigo-100 bg-[linear-gradient(180deg,_rgba(255,255,255,0.98)_0%,_rgba(244,248,255,0.95)_100%)] px-6 py-8 md:px-8 md:py-8 shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
+        <section class="artclass-gemini-shell rounded-[2.2rem] border border-indigo-100 px-6 py-8 md:px-8 md:py-8">
             <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                 <div class="max-w-2xl">
                     <p class="text-xs font-black uppercase tracking-[0.22em] text-indigo-500">2 제미나이</p>
@@ -52,7 +66,7 @@
                     </details>
                 </div>
 
-                <div class="flex flex-col justify-between rounded-[2rem] bg-[linear-gradient(160deg,_#12b981_0%,_#0f766e_100%)] px-6 py-6 text-white shadow-[0_24px_60px_rgba(16,185,129,0.28)] md:px-7 md:py-7">
+                <div class="artclass-gemini-next-card flex flex-col justify-between rounded-[2rem] px-6 py-6 text-white md:px-7 md:py-7">
                     <div>
                         <p class="text-xs font-black uppercase tracking-[0.22em] text-emerald-100/90">Next</p>
                         <h2 class="mt-3 text-3xl font-black leading-tight">결과를 복사했다면 바로 다음으로 가세요</h2>
