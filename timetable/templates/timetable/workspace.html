@@ -29,7 +29,7 @@
                     </div>
                     <div>
                         <h1 class="text-3xl font-black text-slate-900">{{ workspace.title }}</h1>
-                        <p class="mt-2 text-sm leading-6 text-slate-500">칸을 선택하고 바로 배정한 뒤, 충돌을 확인하고 확정 링크를 전달합니다.</p>
+                        <p class="mt-2 text-sm leading-6 text-slate-500">칸을 선택해 배정하고, 반별 입력 현황과 충돌을 함께 확인한 뒤 확정본까지 마무리합니다.</p>
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <a href="{% url 'timetable:main' %}"
@@ -56,10 +56,31 @@
                         </button>
                         <button id="publish-workspace-button" type="button"
                             class="inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700">
-                            확정하고 링크 만들기
+                            확정
                         </button>
                     </div>
                 </div>
+            </div>
+            <div class="mt-5 grid gap-3 lg:grid-cols-4">
+                <div class="rounded-2xl border px-4 py-3 {% if publish_readiness.workflow_stage == 'draft' %}border-sky-200 bg-sky-50{% else %}border-slate-200 bg-slate-50{% endif %}">
+                    <p class="text-xs font-black uppercase tracking-[0.16em] {% if publish_readiness.workflow_stage == 'draft' %}text-sky-600{% else %}text-slate-400{% endif %}">초안</p>
+                    <p class="mt-2 text-sm font-bold {% if publish_readiness.workflow_stage == 'draft' %}text-sky-900{% else %}text-slate-700{% endif %}">배정과 수정 진행 중</p>
+                </div>
+                <div class="rounded-2xl border px-4 py-3 {% if publish_readiness.workflow_stage == 'review_required' %}border-amber-200 bg-amber-50{% else %}border-slate-200 bg-slate-50{% endif %}">
+                    <p class="text-xs font-black uppercase tracking-[0.16em] {% if publish_readiness.workflow_stage == 'review_required' %}text-amber-600{% else %}text-slate-400{% endif %}">검토 필요</p>
+                    <p class="mt-2 text-sm font-bold {% if publish_readiness.workflow_stage == 'review_required' %}text-amber-900{% else %}text-slate-700{% endif %}">반별 입력과 확인 마무리</p>
+                </div>
+                <div class="rounded-2xl border px-4 py-3 {% if publish_readiness.workflow_stage == 'publish_ready' %}border-emerald-200 bg-emerald-50{% else %}border-slate-200 bg-slate-50{% endif %}">
+                    <p class="text-xs font-black uppercase tracking-[0.16em] {% if publish_readiness.workflow_stage == 'publish_ready' %}text-emerald-600{% else %}text-slate-400{% endif %}">확정 가능</p>
+                    <p class="mt-2 text-sm font-bold {% if publish_readiness.workflow_stage == 'publish_ready' %}text-emerald-900{% else %}text-slate-700{% endif %}">지금 확정본 생성 가능</p>
+                </div>
+                <div class="rounded-2xl border px-4 py-3 {% if publish_readiness.workflow_stage == 'published' %}border-emerald-200 bg-emerald-50{% else %}border-slate-200 bg-slate-50{% endif %}">
+                    <p class="text-xs font-black uppercase tracking-[0.16em] {% if publish_readiness.workflow_stage == 'published' %}text-emerald-600{% else %}text-slate-400{% endif %}">확정됨</p>
+                    <p class="mt-2 text-sm font-bold {% if publish_readiness.workflow_stage == 'published' %}text-emerald-900{% else %}text-slate-700{% endif %}">배포용 링크 운영 중</p>
+                </div>
+            </div>
+            <div id="publish-stage-message" class="mt-4 rounded-2xl border {% if publish_readiness.can_publish %}border-emerald-200 bg-emerald-50 text-emerald-800{% else %}border-amber-200 bg-amber-50 text-amber-800{% endif %} px-4 py-3 text-sm font-semibold">
+                {{ publish_readiness.stage_message }}
             </div>
             <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800 xl:hidden">
                 모바일에서는 시간표 확인 위주로 보고, 실제 배정과 확정은 데스크톱에서 진행해 주세요.
@@ -178,26 +199,85 @@
                 <section class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
                     <div class="flex items-center justify-between gap-3">
                         <div>
+                            <h2 class="text-lg font-black text-slate-900">확정 가능 상태</h2>
+                            <p class="mt-2 text-sm text-slate-500">지금 확정을 막는 이유와 바로 확인할 항목을 묶어서 봅니다.</p>
+                        </div>
+                        <span id="publish-readiness-badge" class="rounded-full px-3 py-1 text-xs font-bold {% if publish_readiness.can_publish %}bg-emerald-100 text-emerald-700{% else %}bg-amber-100 text-amber-700{% endif %}">
+                            {{ publish_readiness.workflow_label }}
+                        </span>
+                    </div>
+                    <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                        <div class="rounded-2xl bg-slate-50 px-4 py-3">
+                            <p class="text-xs font-black uppercase tracking-[0.16em] text-slate-400">검토 완료</p>
+                            <p id="progress-review-complete" class="mt-2 text-2xl font-black text-slate-900">{{ progress_summary.review_complete_count }} / {{ progress_summary.total_classes }}</p>
+                        </div>
+                        <div class="rounded-2xl bg-slate-50 px-4 py-3">
+                            <p class="text-xs font-black uppercase tracking-[0.16em] text-slate-400">검토 필요</p>
+                            <p id="progress-review-required" class="mt-2 text-2xl font-black text-amber-700">{{ progress_summary.review_required_count }}</p>
+                        </div>
+                    </div>
+                    <ul id="publish-blocker-list" class="mt-4 space-y-2">
+                        {% for message in publish_readiness.blockers|slice:":4" %}
+                        <li class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{{ message }}</li>
+                        {% empty %}
+                        <li class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">현재 큰 차단 사유 없이 확정 가능한 상태입니다.</li>
+                        {% endfor %}
+                    </ul>
+                </section>
+
+                <section class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
                             <h2 class="text-lg font-black text-slate-900">반별 입력 현황</h2>
                             <p class="mt-2 text-sm text-slate-500">담임 선생님이 자기 반 입력 링크로 어디까지 작성했는지 바로 봅니다.</p>
                         </div>
                         <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">{{ class_input_rows|length }}반</span>
                     </div>
+                    <div class="mt-4 grid gap-3 sm:grid-cols-4">
+                        <div class="rounded-2xl bg-slate-50 px-3 py-3">
+                            <p class="text-xs font-black uppercase tracking-[0.16em] text-slate-400">아직 안 함</p>
+                            <p class="mt-2 text-xl font-black text-slate-900">{{ progress_summary.not_started_count }}</p>
+                        </div>
+                        <div class="rounded-2xl bg-amber-50 px-3 py-3">
+                            <p class="text-xs font-black uppercase tracking-[0.16em] text-amber-600">입력 중</p>
+                            <p class="mt-2 text-xl font-black text-amber-700">{{ progress_summary.editing_count }}</p>
+                        </div>
+                        <div class="rounded-2xl bg-sky-50 px-3 py-3">
+                            <p class="text-xs font-black uppercase tracking-[0.16em] text-sky-600">입력 완료</p>
+                            <p class="mt-2 text-xl font-black text-sky-700">{{ progress_summary.submitted_count }}</p>
+                        </div>
+                        <div class="rounded-2xl bg-emerald-50 px-3 py-3">
+                            <p class="text-xs font-black uppercase tracking-[0.16em] text-emerald-600">검토/확정</p>
+                            <p class="mt-2 text-xl font-black text-emerald-700">{{ progress_summary.review_complete_count }}</p>
+                        </div>
+                    </div>
+                    <label class="mt-4 block">
+                        <span class="mb-2 block text-sm font-semibold text-slate-700">반 검색</span>
+                        <input id="class-input-search" type="search" placeholder="예: 3-4반, 입력 완료, 홍길동"
+                            class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800">
+                    </label>
                     <div id="class-input-status-list" class="mt-4 space-y-3">
                         {% for row in class_input_rows %}
-                        <article class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                        <article class="class-input-row rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4"
+                            data-status="{{ row.status }}"
+                            data-search="{{ row.search_text|lower }}">
                             <div class="flex items-start justify-between gap-3">
                                 <div>
                                     <p class="text-sm font-bold text-slate-900">{{ row.classroom_label }}</p>
-                                    <p class="mt-1 text-xs font-semibold {% if row.status == 'reviewed' %}text-emerald-700{% elif row.status == 'submitted' %}text-sky-700{% elif row.status == 'editing' %}text-amber-700{% else %}text-slate-500{% endif %}">
+                                    <p class="mt-1 text-xs font-semibold {% if row.status == 'published' or row.status == 'reviewed' %}text-emerald-700{% elif row.status == 'submitted' %}text-sky-700{% elif row.status == 'editing' %}text-amber-700{% else %}text-slate-500{% endif %}">
                                         {{ row.status_label }}
                                     </p>
                                 </div>
-                                <button type="button"
-                                    class="class-input-copy inline-flex items-center justify-center rounded-xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100 {% if not row.link_active %}hidden{% endif %}"
-                                    data-link-url="{{ row.link_url }}">
-                                    링크 복사
-                                </button>
+                                <div class="flex flex-wrap items-center justify-end gap-2">
+                                    <span class="rounded-full px-3 py-1 text-xs font-bold {% if row.link_state_tone == 'emerald' %}bg-emerald-100 text-emerald-700{% elif row.link_state_tone == 'amber' %}bg-amber-100 text-amber-700{% elif row.link_state_tone == 'rose' %}bg-rose-100 text-rose-700{% else %}bg-slate-100 text-slate-600{% endif %}">
+                                        {{ row.link_state_label }}
+                                    </span>
+                                    <button type="button"
+                                        class="class-input-copy inline-flex items-center justify-center rounded-xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100 {% if not row.link_active %}hidden{% endif %}"
+                                        data-link-url="{{ row.link_url }}">
+                                        링크 복사
+                                    </button>
+                                </div>
                             </div>
                             <div class="mt-3 space-y-2 text-xs leading-5 text-slate-600">
                                 {% if row.editor_name %}
@@ -211,6 +291,9 @@
                                 {% endif %}
                                 {% if row.reviewed_at_label %}
                                 <p>검토 완료 · {{ row.reviewed_at_label }}</p>
+                                {% endif %}
+                                {% if row.last_accessed_at_label %}
+                                <p>마지막 열기 · {{ row.last_accessed_at_label }}</p>
                                 {% endif %}
                                 {% if row.review_note %}
                                 <p>검토 메모 · {{ row.review_note }}</p>
@@ -249,6 +332,28 @@
                         {% empty %}
                         <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
                             아직 반별 입력 현황이 없습니다.
+                        </div>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <section class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <h2 class="text-lg font-black text-slate-900">최근 활동</h2>
+                            <p class="mt-2 text-sm text-slate-500">링크 발급, 제출, 검토, 확정 같은 주요 변경만 모아 봅니다.</p>
+                        </div>
+                        <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">{{ recent_activity|length }}건</span>
+                    </div>
+                    <div id="recent-activity-list" class="mt-4 space-y-2">
+                        {% for item in recent_activity %}
+                        <article class="rounded-2xl border px-4 py-3 {% if item.tone == 'emerald' %}border-emerald-200 bg-emerald-50{% elif item.tone == 'amber' %}border-amber-200 bg-amber-50{% elif item.tone == 'sky' %}border-sky-200 bg-sky-50{% elif item.tone == 'rose' %}border-rose-200 bg-rose-50{% else %}border-slate-200 bg-slate-50{% endif %}">
+                            <p class="text-sm font-bold text-slate-900">{{ item.message }}</p>
+                            <p class="mt-1 text-xs font-semibold text-slate-500">{{ item.actor_label }} · {{ item.created_at_label }}</p>
+                        </article>
+                        {% empty %}
+                        <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+                            아직 기록된 주요 활동이 없습니다.
                         </div>
                         {% endfor %}
                     </div>

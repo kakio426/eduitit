@@ -5,6 +5,7 @@ from django.utils import timezone
 from reservations.models import RecurringSchedule, School, SpecialRoom
 from timetable.models import (
     TimetableClassroom,
+    TimetableClassInputStatus,
     TimetableDateOverride,
     TimetableRoomPolicy,
     TimetableSharedEvent,
@@ -18,6 +19,8 @@ from timetable.services import (
     build_effective_date_assignments,
     build_effective_event_payloads,
     build_meeting_matrix,
+    build_progress_summary,
+    build_publish_readiness,
     parse_display_text,
     publish_to_reservations,
     validate_workspace_assignments,
@@ -271,3 +274,37 @@ class TimetableServiceTests(TestCase):
         self.assertEqual(result2["updated_count"], 1)
         recurring.refresh_from_db()
         self.assertIn("실험", recurring.name)
+
+    def test_progress_summary_counts_review_state(self):
+        TimetableClassInputStatus.objects.create(
+            workspace=self.workspace,
+            classroom=self.classroom1,
+            status=TimetableClassInputStatus.Status.SUBMITTED,
+            submitted_at=timezone.now(),
+        )
+        TimetableClassInputStatus.objects.create(
+            workspace=self.workspace,
+            classroom=self.classroom2,
+            status=TimetableClassInputStatus.Status.REVIEWED,
+            reviewed_at=timezone.now(),
+        )
+        summary = build_progress_summary(
+            [self.classroom1, self.classroom2],
+            {
+                item.classroom_id: item
+                for item in TimetableClassInputStatus.objects.filter(workspace=self.workspace)
+            },
+        )
+        self.assertEqual(summary["review_required_count"], 1)
+        self.assertEqual(summary["review_complete_count"], 1)
+
+    def test_publish_readiness_blocks_when_review_is_not_finished(self):
+        summary = {
+            "total_classes": 2,
+            "review_required_count": 1,
+            "review_complete_count": 1,
+            "editing_count": 0,
+        }
+        readiness = build_publish_readiness(self.workspace, {"conflicts": [], "warnings": []}, summary)
+        self.assertFalse(readiness["can_publish"])
+        self.assertEqual(readiness["workflow_stage"], "review_required")

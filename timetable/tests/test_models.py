@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from reservations.models import School
 from timetable.models import (
+    TimetableAuditLog,
     TimetableClassroom,
     TimetableClassEditLink,
     TimetableClassInputStatus,
@@ -246,3 +247,28 @@ class TimetableModelTests(TestCase):
                     period_no=1,
                     display_text="대체 일정",
                 )
+
+    def test_audit_log_can_track_workspace_and_classroom_event(self):
+        workspace = TimetableWorkspace.objects.create(
+            school=self.school,
+            school_year=2026,
+            term="1학기",
+            grade=3,
+            title="2026 1학기 3학년",
+        )
+        classroom = TimetableClassroom.objects.create(
+            school=self.school,
+            school_year=2026,
+            grade=3,
+            class_no=1,
+        )
+        log = TimetableAuditLog.objects.create(
+            workspace=workspace,
+            classroom=classroom,
+            actor_name="관리 교사",
+            actor_type=TimetableAuditLog.ActorType.ADMIN,
+            event_type="class_link_issued",
+            payload_json={"classroom_label": classroom.label},
+        )
+        self.assertEqual(log.classroom, classroom)
+        self.assertEqual(log.workspace, workspace)

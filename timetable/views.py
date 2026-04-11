@@ -1,5 +1,7 @@
 import json
+import re
 from datetime import datetime, timedelta
+from urllib.parse import urlparse
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -18,6 +20,7 @@ from reservations.models import ReservationCollaborator, School, SpecialRoom
 from .forms import TimetableTeacherForm, WorkspaceBatchCreateForm, WorkspaceCreateForm
 from .models import (
     DEFAULT_DAY_KEYS,
+    TimetableAuditLog,
     TimetableClassroom,
     TimetableClassEditLink,
     TimetableClassInputStatus,
@@ -44,6 +47,8 @@ from .services import (
     build_week_label,
     build_event_slot_map,
     build_meeting_matrix,
+    build_progress_summary,
+    build_publish_readiness,
     build_teacher_stat_rows,
     build_workspace_sheet_data,
     day_key_for_date,
@@ -51,10 +56,13 @@ from .services import (
     get_workspace_date_overrides,
     get_effective_shared_events,
     legacy_generated_result_to_sheet_data,
+    log_timetable_event,
     normalize_sheet_data,
     parse_display_text,
     publish_to_reservations,
+    resolve_actor_name,
     serialize_validation_result,
+    serialize_recent_activity,
     validate_timetable_workbook,
     validate_workspace_assignments,
 )
@@ -88,13 +96,17 @@ def _json_error(message, *, status=400):
     return JsonResponse({"ok": False, "message": message}, status=status)
 
 
-def _json_validation_error(message, *, validation, teacher_stats, status=409):
+def _json_validation_error(message, *, request, workspace, validation, teacher_stats, status=409):
+    operational = _build_workspace_operational_context(request, workspace, validation=validation)
     return JsonResponse(
         {
             "ok": False,
             "message": message,
             "validation": serialize_validation_result(validation),
             "teacher_stats": _serialize_teacher_stats(teacher_stats),
+            "progress_summary": operational["progress_summary"],
+            "publish_readiness": operational["publish_readiness"],
+            "recent_activity": operational["recent_activity"],
         },
         status=status,
     )
@@ -147,6 +159,48 @@ def _get_accessible_workspaces(request):
         .select_related("school", "published_snapshot")
         .order_by("school__name", "school_year", "term", "grade")
     )
+
+
+def _extract_public_token(raw_value, *, expected):
+    value = str(raw_value or "").strip()
+    if not value:
+        raise ValidationError("전달받은 링크를 붙여 넣어 주세요.")
+
+    parsed_path = urlparse(value).path if "://" in value else value
+    path = str(parsed_path or "").strip().rstrip("/")
+    parts = [part for part in path.split("/") if part]
+    if expected == "edit":
+        if len(parts) >= 3 and parts[-2] == "edit":
+            return parts[-1]
+    if expected == "share":
+        if len(parts) >= 4 and parts[-3] == "share" and parts[-2] == "portal":
+            return parts[-1]
+        if len(parts) >= 3 and parts[-2] == "share":
+            return parts[-1]
+
+    if re.fullmatch(r"[-A-Za-z0-9_=]+", value):
+        return value
+    raise ValidationError("링크 형식을 다시 확인해 주세요.")
+
+
+def _resolve_public_link_redirect(raw_value, *, kind):
+    token = _extract_public_token(raw_value, expected=kind)
+    if kind == "edit":
+        link = TimetableClassEditLink.objects.select_related("workspace", "classroom").filter(
+            token=token,
+            is_active=True,
+        ).first()
+        if not link or link.is_expired:
+            raise ValidationError("사용할 수 없는 반 입력 링크입니다.")
+        return reverse("timetable:class_edit", args=[link.token])
+
+    portal = TimetableSharePortal.objects.filter(token=token, is_active=True).first()
+    if portal and not portal.is_expired:
+        return reverse("timetable:share_portal", args=[portal.token])
+    link = TimetableShareLink.objects.filter(token=token, is_active=True).first()
+    if link and not link.is_expired:
+        return reverse("timetable:share_view", args=[link.token])
+    raise ValidationError("사용할 수 없는 확정본 링크입니다.")
 
 
 def _get_or_create_timetable_profile(school):
@@ -226,6 +280,90 @@ def _format_datetime_label(value):
     return timezone.localtime(value).strftime("%Y-%m-%d %H:%M")
 
 
+def _build_workspace_operational_context(request, workspace, *, validation, include_rows=False):
+    classrooms = _workspace_classrooms(workspace)
+    _ensure_classroom_input_assets(workspace, issued_by=request.user if getattr(request, "user", None) and request.user.is_authenticated else None)
+    status_map = _get_workspace_class_input_status_map(workspace)
+    progress_summary = build_progress_summary(classrooms, status_map)
+    publish_readiness = build_publish_readiness(workspace, validation, progress_summary)
+    recent_activity = serialize_recent_activity(
+        workspace.audit_logs.select_related("classroom").all()
+    )
+    payload = {
+        "progress_summary": progress_summary,
+        "publish_readiness": publish_readiness,
+        "recent_activity": recent_activity,
+    }
+    if include_rows:
+        payload["class_input_rows"] = _serialize_classroom_input_rows(request, workspace)
+    return payload
+
+
+def _build_workspace_cards(request, workspaces):
+    cards = []
+    totals = {
+        "workspace_count": len(workspaces),
+        "draft_count": 0,
+        "published_count": 0,
+        "review_required_count": 0,
+        "editing_count": 0,
+    }
+    review_queue = []
+    for workspace in workspaces:
+        classrooms = _workspace_classrooms(workspace)
+        _ensure_classroom_input_assets(workspace, issued_by=request.user if request.user.is_authenticated else None)
+        progress_summary = build_progress_summary(classrooms, _get_workspace_class_input_status_map(workspace))
+        if workspace.status == TimetableWorkspace.Status.PUBLISHED and workspace.published_snapshot_id:
+            status_label = "확정됨"
+            status_tone = "emerald"
+            primary_action_label = "확정본 보기"
+            totals["published_count"] += 1
+        elif progress_summary["review_required_count"]:
+            status_label = "검토 필요"
+            status_tone = "amber"
+            primary_action_label = "입력 현황 확인"
+            totals["draft_count"] += 1
+        else:
+            status_label = "초안"
+            status_tone = "sky"
+            primary_action_label = "편집 계속"
+            totals["draft_count"] += 1
+        totals["review_required_count"] += progress_summary["review_required_count"]
+        totals["editing_count"] += progress_summary["editing_count"]
+        review_queue.extend(
+            {
+                "workspace_id": workspace.id,
+                "workspace_title": workspace.title,
+                "classroom_label": item["classroom_label"],
+                "status_label": item["status_label"],
+                "href": reverse("timetable:workspace_detail", args=[workspace.id]),
+            }
+            for item in progress_summary["review_queue"]
+        )
+        cards.append(
+            {
+                "id": workspace.id,
+                "title": workspace.title,
+                "school_name": workspace.school.name,
+                "school_year": workspace.school_year,
+                "term": workspace.term,
+                "grade_label": workspace.grade_label,
+                "status_label": status_label,
+                "status_tone": status_tone,
+                "primary_action_label": primary_action_label,
+                "href": reverse("timetable:workspace_detail", args=[workspace.id]),
+                "review_required_count": progress_summary["review_required_count"],
+                "review_complete_count": progress_summary["review_complete_count"],
+                "total_classes": progress_summary["total_classes"],
+                "editing_count": progress_summary["editing_count"],
+                "review_completion_percent": progress_summary["review_completion_percent"],
+            }
+        )
+    review_queue.sort(key=lambda item: (item["workspace_title"], item["classroom_label"]))
+    totals["today_review_items"] = review_queue[:5]
+    return {"cards": cards, "totals": totals}
+
+
 def _default_class_link_expiry(workspace):
     if workspace.term_end_date:
         return timezone.make_aware(datetime.combine(workspace.term_end_date, datetime.max.time().replace(microsecond=0)))
@@ -243,6 +381,18 @@ def _serialize_classroom_input_rows(request, workspace):
         link_url = ""
         if link and link.is_active and not link.is_expired:
             link_url = request.build_absolute_uri(reverse("timetable:class_edit", args=[link.token]))
+        if not link:
+            link_state_label = "링크 없음"
+            link_state_tone = "slate"
+        elif not link.is_active:
+            link_state_label = "끊김"
+            link_state_tone = "rose"
+        elif link.is_expired:
+            link_state_label = "만료됨"
+            link_state_tone = "amber"
+        else:
+            link_state_label = "사용 가능"
+            link_state_tone = "emerald"
         rows.append(
             {
                 "classroom_id": classroom.id,
@@ -258,6 +408,20 @@ def _serialize_classroom_input_rows(request, workspace):
                 "link_url": link_url,
                 "link_active": bool(link and link.is_active and not link.is_expired),
                 "link_expires_at_label": _format_datetime_label(link.expires_at) if link and link.expires_at else "",
+                "link_state_label": link_state_label,
+                "link_state_tone": link_state_tone,
+                "last_accessed_at_label": _format_datetime_label(link.last_accessed_at) if link and link.last_accessed_at else "",
+                "search_text": " ".join(
+                    filter(
+                        None,
+                        [
+                            classroom.label,
+                            status.get_status_display() if status else TimetableClassInputStatus.Status.NOT_STARTED.label,
+                            status.editor_name if status else "",
+                            link_state_label,
+                        ],
+                    )
+                ),
                 "issue_url": reverse("timetable:api_issue_class_link", args=[workspace.id]),
                 "revoke_url": reverse("timetable:api_revoke_class_link", args=[workspace.id, link.id if link else 0]),
                 "review_url": reverse("timetable:api_review_class_status", args=[workspace.id, classroom.id]),
@@ -328,13 +492,24 @@ def _build_classroom_weekly_rows(workspace, classroom):
     return rows
 
 
-def _update_class_input_status(workspace, classroom, *, editor_name, submitted=False, reviewed=False, review_note=""):
+def _update_class_input_status(
+    workspace,
+    classroom,
+    *,
+    editor_name,
+    submitted=False,
+    reviewed=False,
+    published=False,
+    review_note="",
+):
     status, _created = TimetableClassInputStatus.objects.get_or_create(workspace=workspace, classroom=classroom)
     now = timezone.now()
     if editor_name:
         status.editor_name = editor_name
     status.last_saved_at = now
-    if reviewed:
+    if published:
+        status.status = TimetableClassInputStatus.Status.PUBLISHED
+    elif reviewed:
         status.status = TimetableClassInputStatus.Status.REVIEWED
         status.reviewed_at = now
         status.review_note = review_note
@@ -383,6 +558,17 @@ def _persist_class_weekly_entries(workspace, classroom, entries, *, editor_name,
             "period_no",
             "id",
         )
+    )
+    log_timetable_event(
+        workspace,
+        event_type="class_submitted" if submitted else "class_weekly_saved",
+        actor_name=editor_name,
+        actor_type=TimetableAuditLog.ActorType.TEACHER_LINK,
+        classroom=classroom,
+        payload={
+            "classroom_label": classroom.label,
+            "entry_count": len([item for item in entries if item.get("text")]),
+        },
     )
     return {
         "validation": validation,
@@ -497,6 +683,18 @@ def _persist_class_date_override_entries(workspace, classroom, target_date, entr
         _update_class_input_status(workspace, classroom, editor_name=editor_name, submitted=submitted)
 
     link = _get_workspace_class_edit_link_map(workspace)[classroom.id]
+    log_timetable_event(
+        workspace,
+        event_type="class_submitted" if submitted else "class_daily_saved",
+        actor_name=editor_name,
+        actor_type=TimetableAuditLog.ActorType.TEACHER_LINK,
+        classroom=classroom,
+        payload={
+            "classroom_label": classroom.label,
+            "date": target_date.isoformat(),
+            "entry_count": len([item for item in entries if item.get("text")]),
+        },
+    )
     return {
         "validation": validation,
         "teacher_stats": build_teacher_stat_rows(teachers, list(workspace.assignments.select_related("teacher", "classroom"))),
@@ -729,6 +927,25 @@ def _serialize_effective_events(events):
     return [dict(item) for item in events]
 
 
+def _build_api_state_payload(request, workspace, *, validation, teacher_stats, include_rows=False):
+    operational = _build_workspace_operational_context(
+        request,
+        workspace,
+        validation=validation,
+        include_rows=include_rows,
+    )
+    payload = {
+        "validation": serialize_validation_result(validation),
+        "teacher_stats": _serialize_teacher_stats(teacher_stats),
+        "progress_summary": operational["progress_summary"],
+        "publish_readiness": operational["publish_readiness"],
+        "recent_activity": operational["recent_activity"],
+    }
+    if include_rows:
+        payload["class_input_rows"] = operational["class_input_rows"]
+    return payload
+
+
 def _build_effective_events(workspace):
     return build_effective_event_payloads(workspace, get_effective_shared_events(workspace))
 
@@ -787,6 +1004,18 @@ def _create_share_links(snapshot):
 
 def _create_share_portal(snapshot):
     return TimetableSharePortal.objects.create(snapshot=snapshot)
+
+
+def _mark_workspace_statuses_published(workspace):
+    now = timezone.now()
+    statuses = list(workspace.class_input_statuses.select_related("classroom").all())
+    for status in statuses:
+        status.status = TimetableClassInputStatus.Status.PUBLISHED
+        status.last_saved_at = status.last_saved_at or now
+        if not status.reviewed_at:
+            status.reviewed_at = now
+        status.save(update_fields=["status", "last_saved_at", "reviewed_at", "updated_at"])
+    return statuses
 
 
 def _serialize_share_portal(request, portal):
@@ -1308,6 +1537,25 @@ def _create_batch_workspaces(*, school, form, class_counts, user):
 
 def main(request):
     service = _get_service()
+    public_link_entry = {
+        "edit_value": "",
+        "edit_error": "",
+        "share_value": "",
+        "share_error": "",
+    }
+
+    if request.method == "POST" and request.POST.get("action") == "open_public_link":
+        kind = (request.POST.get("entry_kind") or "").strip()
+        raw_value = (request.POST.get("link_value") or "").strip()
+        if kind not in {"edit", "share"}:
+            messages.error(request, "열 링크 종류를 다시 선택해 주세요.")
+        else:
+            public_link_entry[f"{kind}_value"] = raw_value
+            try:
+                return redirect(_resolve_public_link_redirect(raw_value, kind=kind))
+            except ValidationError as error:
+                public_link_entry[f"{kind}_error"] = "; ".join(error.messages)
+
     if not request.user.is_authenticated:
         response = render(
             request,
@@ -1315,13 +1563,26 @@ def main(request):
             {
                 "service": service,
                 "requires_login": True,
+                "is_authenticated": False,
                 "workspace_form": None,
                 "workspaces": [],
+                "has_editable_schools": False,
+                "dashboard_cards": [],
+                "dashboard_summary": {
+                    "workspace_count": 0,
+                    "draft_count": 0,
+                    "published_count": 0,
+                    "review_required_count": 0,
+                    "editing_count": 0,
+                    "today_review_items": [],
+                },
+                "public_link_entry": public_link_entry,
             },
         )
         return _apply_workspace_cache_headers(response)
 
     school_choices, school_map = _get_school_choices(request)
+    has_editable_schools = bool(school_choices)
     workspace_form = WorkspaceBatchCreateForm(
         request.POST if request.method == "POST" and request.POST.get("action") == "create_workspace_batch" else None,
         school_choices=school_choices,
@@ -1334,7 +1595,9 @@ def main(request):
     )
 
     if request.method == "POST" and request.POST.get("action") == "create_workspace_batch":
-        if workspace_form.is_valid():
+        if not has_editable_schools:
+            workspace_form.add_error(None, "시간표를 만들 수 있는 학교 권한이 없습니다.")
+        elif workspace_form.is_valid():
             school = school_map.get(workspace_form.cleaned_data["school_slug"])
             if not school:
                 workspace_form.add_error("school_slug", "선택한 학교를 찾지 못했습니다.")
@@ -1356,17 +1619,21 @@ def main(request):
                     workspace_form.add_error(None, "; ".join(error.messages) if hasattr(error, "messages") else str(error))
 
     workspaces = list(_get_accessible_workspaces(request))
-    school_profiles = {item.school_id: item for item in TimetableSchoolProfile.objects.filter(school_id__in=[workspace.school_id for workspace in workspaces])}
+    dashboard_bundle = _build_workspace_cards(request, workspaces)
     response = render(
         request,
         "timetable/index.html",
         {
             "service": service,
             "requires_login": False,
+            "is_authenticated": True,
             "workspace_form": workspace_form,
             "workspaces": workspaces,
-            "school_profiles": school_profiles,
+            "has_editable_schools": has_editable_schools,
+            "dashboard_cards": dashboard_bundle["cards"],
+            "dashboard_summary": dashboard_bundle["totals"],
             "batch_setup_url": reverse("timetable:api_setup_batch_create"),
+            "public_link_entry": public_link_entry,
         },
     )
     return _apply_workspace_cache_headers(response)
@@ -1408,6 +1675,12 @@ def workspace_detail(request, workspace_id):
             return redirect("timetable:workspace_detail", workspace_id=workspace.id)
 
     state = _build_workspace_state(workspace)
+    operational = _build_workspace_operational_context(
+        request,
+        workspace,
+        validation=state["validation"],
+        include_rows=True,
+    )
     published_links = []
     published_class_links = []
     published_teacher_links = []
@@ -1442,7 +1715,10 @@ def workspace_detail(request, workspace_id):
             "validation": serialize_validation_result(state["validation"]),
             "teacher_stats": _serialize_teacher_stats(state["teacher_stats"]),
             "effective_events": _serialize_effective_events(state["effective_events"]),
-            "class_input_rows": _serialize_classroom_input_rows(request, workspace),
+            "class_input_rows": operational["class_input_rows"],
+            "progress_summary": operational["progress_summary"],
+            "publish_readiness": operational["publish_readiness"],
+            "recent_activity": operational["recent_activity"],
             "date_override_count": len(state["date_overrides"]),
             "editor_bootstrap": {
                 "classrooms": [{"id": classroom.id, "label": classroom.label} for classroom in state["classrooms"]],
@@ -1486,14 +1762,14 @@ def api_autosave(request, workspace_id):
         return _json_error("sheet_data가 필요합니다.")
 
     state = _persist_workspace_sheet_data(workspace, sheet_data, user=request.user)
-    return JsonResponse(
-        {
-            "ok": True,
-            "validation": serialize_validation_result(state["validation"]),
-            "teacher_stats": _serialize_teacher_stats(state["teacher_stats"]),
-            "updated_at": workspace.updated_at.isoformat(),
-        }
+    response_payload = _build_api_state_payload(
+        request,
+        workspace,
+        validation=state["validation"],
+        teacher_stats=state["teacher_stats"],
     )
+    response_payload.update({"ok": True, "updated_at": workspace.updated_at.isoformat()})
+    return JsonResponse(response_payload)
 
 
 @login_required
@@ -1521,13 +1797,14 @@ def api_validate(request, workspace_id):
         validation = state["validation"]
         teacher_stats = state["teacher_stats"]
 
-    return JsonResponse(
-        {
-            "ok": True,
-            "validation": serialize_validation_result(validation),
-            "teacher_stats": _serialize_teacher_stats(teacher_stats),
-        }
+    response_payload = _build_api_state_payload(
+        request,
+        workspace,
+        validation=validation,
+        teacher_stats=teacher_stats,
     )
+    response_payload["ok"] = True
+    return JsonResponse(response_payload)
 
 
 @login_required
@@ -1587,12 +1864,29 @@ def api_issue_class_link(request, workspace_id):
     link.issued_by = request.user
     link.expires_at = _default_class_link_expiry(workspace)
     link.save(update_fields=["token", "is_active", "issued_by", "expires_at", "updated_at"])
-    return JsonResponse(
+    log_timetable_event(
+        workspace,
+        event_type="class_link_issued",
+        actor_name=resolve_actor_name(user=request.user),
+        actor_type=TimetableAuditLog.ActorType.ADMIN,
+        classroom=classroom,
+        payload={"classroom_label": classroom.label},
+    )
+    state = _build_workspace_state(workspace)
+    response_payload = _build_api_state_payload(
+        request,
+        workspace,
+        validation=state["validation"],
+        teacher_stats=state["teacher_stats"],
+        include_rows=True,
+    )
+    response_payload.update(
         {
             "ok": True,
             "link_url": request.build_absolute_uri(reverse("timetable:class_edit", args=[link.token])),
         }
     )
+    return JsonResponse(response_payload)
 
 
 @login_required
@@ -1602,7 +1896,24 @@ def api_revoke_class_link(request, workspace_id, link_id):
     link = get_object_or_404(TimetableClassEditLink, pk=link_id, workspace=workspace)
     link.is_active = False
     link.save(update_fields=["is_active", "updated_at"])
-    return JsonResponse({"ok": True})
+    log_timetable_event(
+        workspace,
+        event_type="class_link_revoked",
+        actor_name=resolve_actor_name(user=request.user),
+        actor_type=TimetableAuditLog.ActorType.ADMIN,
+        classroom=link.classroom,
+        payload={"classroom_label": link.classroom.label},
+    )
+    state = _build_workspace_state(workspace)
+    response_payload = _build_api_state_payload(
+        request,
+        workspace,
+        validation=state["validation"],
+        teacher_stats=state["teacher_stats"],
+        include_rows=True,
+    )
+    response_payload["ok"] = True
+    return JsonResponse(response_payload)
 
 
 @login_required
@@ -1626,7 +1937,24 @@ def api_review_class_status(request, workspace_id, classroom_id):
         reviewed=True,
         review_note=review_note,
     )
-    return JsonResponse({"ok": True, "status": status.status, "status_label": status.get_status_display()})
+    log_timetable_event(
+        workspace,
+        event_type="class_reviewed",
+        actor_name=resolve_actor_name(user=request.user),
+        actor_type=TimetableAuditLog.ActorType.ADMIN,
+        classroom=classroom,
+        payload={"classroom_label": classroom.label, "review_note": review_note},
+    )
+    state = _build_workspace_state(workspace)
+    response_payload = _build_api_state_payload(
+        request,
+        workspace,
+        validation=state["validation"],
+        teacher_stats=state["teacher_stats"],
+        include_rows=True,
+    )
+    response_payload.update({"ok": True, "status": status.status, "status_label": status.get_status_display()})
+    return JsonResponse(response_payload)
 
 
 @login_required
@@ -1642,16 +1970,28 @@ def api_events(request, workspace_id):
         return _json_error("; ".join(exc.messages))
 
     event.save()
+    log_timetable_event(
+        workspace,
+        event_type="shared_event_created",
+        actor_name=resolve_actor_name(user=request.user),
+        actor_type=TimetableAuditLog.ActorType.ADMIN,
+        payload={"title": event.title},
+    )
     state = _build_workspace_state(workspace)
-    return JsonResponse(
+    response_payload = _build_api_state_payload(
+        request,
+        workspace,
+        validation=state["validation"],
+        teacher_stats=state["teacher_stats"],
+    )
+    response_payload.update(
         {
             "ok": True,
             "event_id": event.id,
             "effective_events": _serialize_effective_events(state["effective_events"]),
-            "validation": serialize_validation_result(state["validation"]),
-            "teacher_stats": _serialize_teacher_stats(state["teacher_stats"]),
         }
     )
+    return JsonResponse(response_payload)
 
 
 @login_required
@@ -1668,20 +2008,35 @@ def api_event_detail(request, workspace_id, event_id):
         except ValidationError as exc:
             return _json_error("; ".join(exc.messages))
         event.save()
+        log_timetable_event(
+            workspace,
+            event_type="shared_event_updated",
+            actor_name=resolve_actor_name(user=request.user),
+            actor_type=TimetableAuditLog.ActorType.ADMIN,
+            payload={"title": event.title},
+        )
     elif request.method == "DELETE":
+        event_title = event.title
         event.delete()
+        log_timetable_event(
+            workspace,
+            event_type="shared_event_deleted",
+            actor_name=resolve_actor_name(user=request.user),
+            actor_type=TimetableAuditLog.ActorType.ADMIN,
+            payload={"title": event_title},
+        )
     else:
         return _json_error("지원하지 않는 요청입니다.", status=405)
 
     state = _build_workspace_state(workspace)
-    return JsonResponse(
-        {
-            "ok": True,
-            "effective_events": _serialize_effective_events(state["effective_events"]),
-            "validation": serialize_validation_result(state["validation"]),
-            "teacher_stats": _serialize_teacher_stats(state["teacher_stats"]),
-        }
+    response_payload = _build_api_state_payload(
+        request,
+        workspace,
+        validation=state["validation"],
+        teacher_stats=state["teacher_stats"],
     )
+    response_payload.update({"ok": True, "effective_events": _serialize_effective_events(state["effective_events"])})
+    return JsonResponse(response_payload)
 
 
 @login_required
@@ -1693,6 +2048,13 @@ def api_snapshots(request, workspace_id):
         return _json_error("JSON 형식이 올바르지 않습니다.")
     name = (payload.get("name") or "").strip() or timezone.now().strftime("스냅샷_%m%d_%H%M")
     snapshot = _create_snapshot(workspace, created_by=request.user, name=name)
+    log_timetable_event(
+        workspace,
+        event_type="snapshot_saved",
+        actor_name=resolve_actor_name(user=request.user),
+        actor_type=TimetableAuditLog.ActorType.ADMIN,
+        payload={"snapshot_name": snapshot.name},
+    )
     return JsonResponse(
         {
             "ok": True,
@@ -1715,16 +2077,29 @@ def api_snapshot_restore(request, workspace_id, snapshot_id):
         _restore_snapshot_date_overrides(workspace, snapshot)
         workspace.status = TimetableWorkspace.Status.DRAFT
         workspace.save(update_fields=["status", "updated_at"])
+    log_timetable_event(
+        workspace,
+        event_type="snapshot_restored",
+        actor_name=resolve_actor_name(user=request.user),
+        actor_type=TimetableAuditLog.ActorType.ADMIN,
+        payload={"snapshot_name": snapshot.name},
+    )
     state = _build_workspace_state(workspace)
-    return JsonResponse(
+    response_payload = _build_api_state_payload(
+        request,
+        workspace,
+        validation=state["validation"],
+        teacher_stats=state["teacher_stats"],
+        include_rows=True,
+    )
+    response_payload.update(
         {
             "ok": True,
             "snapshot": {"id": snapshot.id, "name": snapshot.name},
-            "validation": serialize_validation_result(state["validation"]),
-            "teacher_stats": _serialize_teacher_stats(state["teacher_stats"]),
             "redirect_url": reverse("timetable:workspace_detail", args=[workspace.id]),
         }
     )
+    return JsonResponse(response_payload)
 
 
 @login_required
@@ -1739,9 +2114,12 @@ def api_publish(request, workspace_id):
     else:
         state = _build_workspace_state(workspace)
 
-    if _has_blocking_conflicts(state["validation"]):
+    operational = _build_workspace_operational_context(request, workspace, validation=state["validation"])
+    if not operational["publish_readiness"]["can_publish"]:
         return _json_validation_error(
-            "빨간 경고를 해결한 뒤 확정해 주세요.",
+            operational["publish_readiness"]["stage_message"] or "빨간 경고를 해결한 뒤 확정해 주세요.",
+            request=request,
+            workspace=workspace,
             validation=state["validation"],
             teacher_stats=state["teacher_stats"],
             status=409,
@@ -1756,8 +2134,24 @@ def api_publish(request, workspace_id):
     workspace.published_snapshot = snapshot
     workspace.updated_by = request.user
     workspace.save(update_fields=["status", "published_snapshot", "updated_by", "updated_at"])
+    _mark_workspace_statuses_published(workspace)
+    log_timetable_event(
+        workspace,
+        event_type="workspace_published",
+        actor_name=resolve_actor_name(user=request.user),
+        actor_type=TimetableAuditLog.ActorType.ADMIN,
+        payload={"snapshot_name": snapshot.name},
+    )
 
-    return JsonResponse(
+    published_state = _build_workspace_state(workspace)
+    response_payload = _build_api_state_payload(
+        request,
+        workspace,
+        validation=published_state["validation"],
+        teacher_stats=published_state["teacher_stats"],
+        include_rows=True,
+    )
+    response_payload.update(
         {
             "ok": True,
             "publish_result": publish_result,
@@ -1766,6 +2160,7 @@ def api_publish(request, workspace_id):
             "snapshot": {"id": snapshot.id, "name": snapshot.name},
         }
     )
+    return JsonResponse(response_payload)
 
 
 @login_required
@@ -1850,6 +2245,8 @@ def api_meeting_apply(request, workspace_id):
     if _has_blocking_conflicts(preview["validation"]):
         return _json_validation_error(
             "충돌을 해결한 뒤 회의 배정을 반영해 주세요.",
+            request=request,
+            workspace=workspace,
             validation=preview["validation"],
             teacher_stats=preview["teacher_stats"],
             status=409,
@@ -1871,17 +2268,32 @@ def api_meeting_apply(request, workspace_id):
     if not target_date:
         update_fields.insert(0, "sheet_data")
     workspace.save(update_fields=update_fields)
+    log_timetable_event(
+        workspace,
+        event_type="meeting_applied",
+        actor_name=resolve_actor_name(user=request.user),
+        actor_type=TimetableAuditLog.ActorType.ADMIN,
+        payload={
+            "date": target_date.isoformat() if target_date else "",
+            "applied_count": len(preview["normalized_selections"]),
+        },
+    )
 
     state = _build_workspace_state(workspace)
-    return JsonResponse(
+    response_payload = _build_api_state_payload(
+        request,
+        workspace,
+        validation=state["validation"],
+        teacher_stats=state["teacher_stats"],
+    )
+    response_payload.update(
         {
             "ok": True,
             "applied_count": len(preview["normalized_selections"]),
-            "validation": serialize_validation_result(state["validation"]),
-            "teacher_stats": _serialize_teacher_stats(state["teacher_stats"]),
             "redirect_url": reverse("timetable:workspace_detail", args=[workspace.id]),
         }
     )
+    return JsonResponse(response_payload)
 
 
 def class_edit_view(request, token):

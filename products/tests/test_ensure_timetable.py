@@ -12,6 +12,7 @@ class EnsureTimetableCommandTests(TestCase):
         self.assertEqual(product.service_type, "work")
         self.assertIn("공통 행사", product.description)
         self.assertIn("반별 입력", product.description)
+        self.assertNotIn("FortuneSheet", product.description)
 
     def test_command_renames_legacy_title_and_repairs_service_type(self):
         Product.objects.create(

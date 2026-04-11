@@ -51,7 +51,14 @@
   const sharedEventsList = document.getElementById("shared-events-list");
   const sharedEventsCount = document.getElementById("shared-events-count");
   const sharedEventsStatus = document.getElementById("shared-events-status");
+  const publishStageMessage = document.getElementById("publish-stage-message");
+  const publishReadinessBadge = document.getElementById("publish-readiness-badge");
+  const publishBlockerList = document.getElementById("publish-blocker-list");
+  const progressReviewComplete = document.getElementById("progress-review-complete");
+  const progressReviewRequired = document.getElementById("progress-review-required");
+  const recentActivityList = document.getElementById("recent-activity-list");
   const classInputStatusList = document.getElementById("class-input-status-list");
+  const classInputSearch = document.getElementById("class-input-search");
   const sharedEventScope = document.getElementById("shared-event-scope");
   const sharedEventTitle = document.getElementById("shared-event-title");
   const sharedEventDay = document.getElementById("shared-event-day");
@@ -332,6 +339,71 @@
     });
   };
 
+  const renderPublishReadiness = (publishReadiness, progressSummary) => {
+    if (publishReadinessBadge) {
+      publishReadinessBadge.textContent = publishReadiness?.workflow_label || "초안";
+      publishReadinessBadge.className = `rounded-full px-3 py-1 text-xs font-bold ${
+        publishReadiness?.can_publish ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+      }`;
+    }
+    if (publishStageMessage) {
+      publishStageMessage.textContent = publishReadiness?.stage_message || "현재 상태를 확인하는 중입니다.";
+      publishStageMessage.className = `mt-4 rounded-2xl border px-4 py-3 text-sm font-semibold ${
+        publishReadiness?.can_publish
+          ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+          : "border-amber-200 bg-amber-50 text-amber-800"
+      }`;
+    }
+    if (progressReviewComplete && progressSummary) {
+      progressReviewComplete.textContent = `${progressSummary.review_complete_count || 0} / ${progressSummary.total_classes || 0}`;
+    }
+    if (progressReviewRequired && progressSummary) {
+      progressReviewRequired.textContent = progressSummary.review_required_count || 0;
+    }
+    if (publishBlockerList) {
+      const blockers = publishReadiness?.blockers || [];
+      if (!blockers.length) {
+        publishBlockerList.innerHTML = '<li class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">현재 큰 차단 사유 없이 확정 가능한 상태입니다.</li>';
+      } else {
+        publishBlockerList.innerHTML = blockers
+          .slice(0, 4)
+          .map(
+            (message) =>
+              `<li class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">${escapeHtml(message)}</li>`
+          )
+          .join("");
+      }
+    }
+  };
+
+  const renderRecentActivity = (items) => {
+    if (!recentActivityList) {
+      return;
+    }
+    if (!(items || []).length) {
+      recentActivityList.innerHTML = '<div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">아직 기록된 주요 활동이 없습니다.</div>';
+      return;
+    }
+    recentActivityList.innerHTML = (items || [])
+      .map((item) => {
+        const toneClass =
+          item.tone === "emerald"
+            ? "border-emerald-200 bg-emerald-50"
+            : item.tone === "amber"
+              ? "border-amber-200 bg-amber-50"
+              : item.tone === "sky"
+                ? "border-sky-200 bg-sky-50"
+                : item.tone === "rose"
+                  ? "border-rose-200 bg-rose-50"
+                  : "border-slate-200 bg-slate-50";
+        return `<article class="rounded-2xl border px-4 py-3 ${toneClass}">
+          <p class="text-sm font-bold text-slate-900">${escapeHtml(item.message || "")}</p>
+          <p class="mt-1 text-xs font-semibold text-slate-500">${escapeHtml(item.actor_label || "")} · ${escapeHtml(item.created_at_label || "")}</p>
+        </article>`;
+      })
+      .join("");
+  };
+
   const updateSelectionState = () => {
     if (!selectionStateBadge || !selectionSheetLabel || !selectionSlotLabel || !selectionRangeLabel) {
       return;
@@ -376,6 +448,12 @@
     }
     if (payload?.teacher_stats) {
       renderTeacherStats(payload.teacher_stats);
+    }
+    if (payload?.publish_readiness || payload?.progress_summary) {
+      renderPublishReadiness(payload.publish_readiness || {}, payload.progress_summary || {});
+    }
+    if (payload?.recent_activity) {
+      renderRecentActivity(payload.recent_activity);
     }
   };
 
@@ -658,7 +736,7 @@
   const mountWorkbook = () => {
     const Workbook = window.react?.Workbook;
     if (!Workbook || !window.React || !window.ReactDOM) {
-      setSaveStatus("FortuneSheet 자산을 불러오지 못했습니다.", "error");
+      setSaveStatus("시간표 편집기를 불러오지 못했습니다.", "error");
       return;
     }
 
@@ -919,6 +997,14 @@
     } catch (error) {
       setSaveStatus(error.message, "error");
     }
+  });
+
+  classInputSearch?.addEventListener("input", () => {
+    const keyword = classInputSearch.value.trim().toLowerCase();
+    classInputStatusList?.querySelectorAll(".class-input-row").forEach((row) => {
+      const text = row.dataset.search || "";
+      row.classList.toggle("hidden", Boolean(keyword) && !text.includes(keyword));
+    });
   });
 
   resetEventForm();

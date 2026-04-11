@@ -133,6 +133,37 @@ class TimetableWorkspace(models.Model):
         return f"{self.grade}학년"
 
 
+class TimetableAuditLog(models.Model):
+    class ActorType(models.TextChoices):
+        ADMIN = "admin", "관리 교사"
+        TEACHER_LINK = "teacher_link", "반별 입력 링크"
+        SYSTEM = "system", "시스템"
+
+    workspace = models.ForeignKey(
+        TimetableWorkspace,
+        on_delete=models.CASCADE,
+        related_name="audit_logs",
+    )
+    classroom = models.ForeignKey(
+        "TimetableClassroom",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="timetable_audit_logs",
+    )
+    actor_name = models.CharField(max_length=120, blank=True)
+    actor_type = models.CharField(max_length=20, choices=ActorType.choices, default=ActorType.SYSTEM)
+    event_type = models.CharField(max_length=40)
+    payload_json = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self):
+        return f"{self.workspace} | {self.event_type}"
+
+
 class TimetableTeacher(models.Model):
     class TeacherType(models.TextChoices):
         HOMEROOM = "homeroom", "담임"
@@ -426,6 +457,7 @@ class TimetableClassInputStatus(models.Model):
         EDITING = "editing", "입력 중"
         SUBMITTED = "submitted", "입력 완료"
         REVIEWED = "reviewed", "관리자 검토 완료"
+        PUBLISHED = "published", "확정 반영"
 
     workspace = models.ForeignKey(
         TimetableWorkspace,

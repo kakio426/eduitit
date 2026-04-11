@@ -10,6 +10,7 @@ from django.utils import timezone
 from core.models import UserProfile
 from reservations.models import School, SpecialRoom
 from timetable.models import (
+    TimetableAuditLog,
     TimetableClassroom,
     TimetableClassEditLink,
     TimetableClassInputStatus,
@@ -75,9 +76,18 @@ class TimetableViewTests(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(reverse("timetable:main"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "학년 일괄 만들기")
-        self.assertContains(response, "학년 시간표와 반별 링크 만들기")
-        self.assertContains(response, "기존 파일 불러오기")
+        self.assertContains(response, "새 학기 만들기")
+        self.assertContains(response, "반 입력 링크 열기")
+        self.assertContains(response, "확정본 링크 열기")
+        self.assertNotContains(response, "FortuneSheet")
+
+    def test_main_page_public_link_entry_redirects_to_class_edit(self):
+        link = TimetableClassEditLink.objects.create(workspace=self.workspace, classroom=self.classroom)
+        response = self.client.post(
+            reverse("timetable:main"),
+            data={"action": "open_public_link", "entry_kind": "edit", "link_value": link.token},
+        )
+        self.assertRedirects(response, reverse("timetable:class_edit", args=[link.token]), fetch_redirect_response=False)
 
     def test_batch_create_api_creates_stage_workspaces_and_profile(self):
         self.client.force_login(self.user)
@@ -282,6 +292,12 @@ class TimetableViewTests(TestCase):
             name="홍길동",
             teacher_type=TimetableTeacher.TeacherType.INSTRUCTOR,
         )
+        TimetableClassInputStatus.objects.create(
+            workspace=self.workspace,
+            classroom=self.classroom,
+            status=TimetableClassInputStatus.Status.REVIEWED,
+            editor_name="3-1 담임",
+        )
         response = self.client.post(
             reverse("timetable:api_publish", args=[self.workspace.id]),
             data={"sheet_data": [self._build_sheet("3-1반", "영어(홍길동)")], "name": "최종안"},
@@ -294,6 +310,29 @@ class TimetableViewTests(TestCase):
         self.assertIsNotNone(self.workspace.published_snapshot)
         self.assertTrue(TimetableSharePortal.objects.filter(snapshot=self.workspace.published_snapshot).exists())
         self.assertEqual(self.workspace.published_snapshot.events_json, [])
+        status = TimetableClassInputStatus.objects.get(workspace=self.workspace, classroom=self.classroom)
+        self.assertEqual(status.status, TimetableClassInputStatus.Status.PUBLISHED)
+
+    def test_publish_requires_review_complete_status(self):
+        self.client.force_login(self.user)
+        TimetableTeacher.objects.create(
+            school=self.school,
+            name="홍길동",
+            teacher_type=TimetableTeacher.TeacherType.INSTRUCTOR,
+        )
+        TimetableClassInputStatus.objects.create(
+            workspace=self.workspace,
+            classroom=self.classroom,
+            status=TimetableClassInputStatus.Status.SUBMITTED,
+            editor_name="3-1 담임",
+        )
+        response = self.client.post(
+            reverse("timetable:api_publish", args=[self.workspace.id]),
+            data={"sheet_data": [self._build_sheet("3-1반", "영어(홍길동)")], "name": "최종안"},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("관리자 검토 전", response.json()["message"])
 
     def test_api_events_create_returns_effective_events(self):
         self.client.force_login(self.user)
@@ -489,6 +528,7 @@ class TimetableViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         status = TimetableClassInputStatus.objects.get(workspace=self.workspace, classroom=self.classroom)
         self.assertEqual(status.status, TimetableClassInputStatus.Status.SUBMITTED)
+        self.assertTrue(TimetableAuditLog.objects.filter(workspace=self.workspace, event_type="class_submitted").exists())
 
     def test_review_endpoint_marks_classroom_reviewed(self):
         self.client.force_login(self.user)
@@ -507,6 +547,7 @@ class TimetableViewTests(TestCase):
         status = TimetableClassInputStatus.objects.get(workspace=self.workspace, classroom=self.classroom)
         self.assertEqual(status.status, TimetableClassInputStatus.Status.REVIEWED)
         self.assertEqual(status.review_note, "확인 완료")
+        self.assertTrue(TimetableAuditLog.objects.filter(workspace=self.workspace, event_type="class_reviewed").exists())
 
     def test_meeting_apply_conflict_returns_409(self):
         self.client.force_login(self.user)
