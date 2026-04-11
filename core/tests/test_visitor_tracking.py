@@ -3,8 +3,10 @@ import uuid
 from types import SimpleNamespace
 
 from django.contrib.auth.models import AnonymousUser, User
+from django.contrib.messages.storage.fallback import FallbackStorage
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.http import HttpResponse
+from django.template.response import TemplateResponse
 from django.test import RequestFactory, TestCase
 from django.utils import timezone
 
@@ -218,3 +220,57 @@ class VisitorCountsContextTest(TestCase):
         self.assertTrue(context["show_visitor_counts"])
         self.assertEqual(context["today_visitor_count"], 1)
         self.assertEqual(context["total_visitor_count"], 1)
+
+
+class VisitorCountsNavigationRenderTest(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+
+    def _create_log(self, *, visitor_key, visit_date, ip_address, is_bot=False):
+        identity_type = VisitorLog.IDENTITY_BOT if is_bot else VisitorLog.IDENTITY_SESSION
+        log = VisitorLog.objects.create(
+            ip_address=ip_address,
+            visitor_key=f"temp:{uuid.uuid4().hex}",
+            identity_type=identity_type,
+            is_bot=is_bot,
+        )
+        VisitorLog.objects.filter(pk=log.pk).update(visit_date=visit_date, visitor_key=visitor_key)
+        log.refresh_from_db()
+        return log
+
+    def _render_base(self, user):
+        request = self.factory.get("/test-base/")
+        request.user = user
+        _attach_session(request)
+        request._messages = FallbackStorage(request)
+        response = TemplateResponse(request, "base.html", {})
+        response.render()
+        return response
+
+    def test_superuser_sees_visitor_counts_only_in_menu(self):
+        admin = User.objects.create_superuser(
+            username="menuadmin",
+            email="menuadmin@example.com",
+            password="password123",
+        )
+        self._create_log(
+            visitor_key="session:desktop-menu",
+            visit_date=timezone.localdate(),
+            ip_address="203.0.113.30",
+        )
+        response = self._render_base(admin)
+
+        self.assertContains(response, 'data-visitor-counts-menu="desktop"', html=False)
+        self.assertContains(response, 'data-visitor-counts-menu="mobile"', html=False)
+        self.assertNotContains(response, 'title="오늘 고유 방문자 / 누적 고유 방문자"', html=False)
+
+    def test_non_superuser_does_not_render_visitor_count_menu_items(self):
+        user = User.objects.create_user(
+            username="regularuser",
+            email="regular@example.com",
+            password="password123",
+        )
+        response = self._render_base(user)
+
+        self.assertNotContains(response, 'data-visitor-counts-menu="desktop"', html=False)
+        self.assertNotContains(response, 'data-visitor-counts-menu="mobile"', html=False)
