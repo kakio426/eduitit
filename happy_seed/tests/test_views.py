@@ -8,7 +8,18 @@ from django.utils import timezone
 
 from consent.models import SignatureRecipient
 from core.models import UserProfile
-from happy_seed.models import HSBloomDraw, HSClassroom, HSClassroomConfig, HSGuardianConsent, HSPrize, HSStudent, HSStudentGroup
+from happy_seed.models import (
+    HSBloomDraw,
+    HSClassEventLog,
+    HSClassroom,
+    HSClassroomConfig,
+    HSGuardianConsent,
+    HSInterventionLog,
+    HSPrize,
+    HSSeedLedger,
+    HSStudent,
+    HSStudentGroup,
+)
 
 
 User = get_user_model()
@@ -62,17 +73,20 @@ class HappySeedViewTests(TestCase):
         self.client.login(username="teacher2", password="pw12345")
         res = self.client.get(reverse("happy_seed:classroom_detail", kwargs={"classroom_id": self.classroom.id}))
         self.assertEqual(res.status_code, 200)
-        self.assertContains(res, "처음이면 사용 안내 보기")
+        self.assertContains(res, "도움말")
         self.assertContains(res, "오늘 바로 하는 일")
         self.assertContains(res, "학생 보드")
-        self.assertContains(res, 'data-seed-amount-select')
-        self.assertContains(res, 'data-action-mode-select')
+        self.assertContains(res, 'data-seed-amount-chip')
+        self.assertContains(res, 'data-action-mode-chip')
         self.assertContains(res, 'data-student-primary-action')
+        self.assertContains(res, 'data-student-seed-correct-action')
+        self.assertContains(res, "관리 더보기")
         self.assertContains(res, "모둠 미션 보상")
         self.assertContains(res, "등록된 모둠이 없습니다.")
         self.assertContains(res, "꽃밭 보기")
         self.assertNotContains(res, 'data-draw-trigger')
-        self.assertNotContains(res, "빠른 지급")
+        self.assertNotContains(res, 'data-seed-amount-select')
+        self.assertNotContains(res, 'data-action-mode-select')
 
     def test_bloom_run_redirects_to_canonical_classroom_detail(self):
         self.client.login(username="teacher2", password="pw12345")
@@ -435,6 +449,57 @@ class HappySeedViewTests(TestCase):
         self.assertEqual(payload["data"]["student_state"]["seeds_balance"], self.student.seed_count)
         self.assertEqual(self.student.seed_count, 3)
 
+    def test_api_correct_seed_returns_updated_student_state_and_logs(self):
+        self.client.login(username="teacher2", password="pw12345")
+        self.student.seed_count = 4
+        self.student.ticket_count = 2
+        self.student.save(update_fields=["seed_count", "ticket_count"])
+
+        url = reverse("happy_seed:api_correct_seed", kwargs={"classroom_id": self.classroom.id})
+        res = self.client.post(
+            url,
+            data=json.dumps(
+                {
+                    "student_id": str(self.student.id),
+                    "amount": 3,
+                    "idempotency_key": "8d930dc6-c41b-4a22-82ac-1b5c24c01113",
+                }
+            ),
+            content_type="application/json",
+            **{
+                "HTTP_X_REQUEST_ID": "req-test-correct-ok",
+                "HTTP_IDEMPOTENCY_KEY": "8d930dc6-c41b-4a22-82ac-1b5c24c01113",
+            },
+        )
+        self.assertEqual(res.status_code, 200)
+        payload = res.json()
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["data"]["corrected_amount"], 3)
+
+        self.student.refresh_from_db()
+        self.assertEqual(self.student.seed_count, 1)
+        self.assertEqual(self.student.ticket_count, 2)
+        self.assertTrue(HSSeedLedger.objects.filter(student=self.student, reason="teacher_correction", amount=-3).exists())
+        self.assertTrue(HSInterventionLog.objects.filter(student=self.student, action="seed_deduct").exists())
+        self.assertTrue(HSClassEventLog.objects.filter(class_ref=self.classroom, student=self.student, type="SEED_CORRECTED_MANUAL").exists())
+
+    def test_api_correct_seed_rejects_amount_above_current_seed_balance(self):
+        self.client.login(username="teacher2", password="pw12345")
+        self.student.seed_count = 1
+        self.student.save(update_fields=["seed_count"])
+
+        url = reverse("happy_seed:api_correct_seed", kwargs={"classroom_id": self.classroom.id})
+        res = self.client.post(
+            url,
+            data=json.dumps({"student_id": str(self.student.id), "amount": 3}),
+            content_type="application/json",
+            **{"HTTP_X_REQUEST_ID": "req-test-correct-fail"},
+        )
+        self.assertEqual(res.status_code, 400)
+        payload = res.json()
+        self.assertFalse(payload["ok"])
+        self.assertEqual(payload["error"]["code"], "ERR_SEED_BALANCE_TOO_LOW")
+
     def test_consent_regenerate_link_updates_token_and_reactivates(self):
         self.client.login(username="teacher2", password="pw12345")
         self.student.consent.status = "pending"
@@ -595,3 +660,17 @@ class HappySeedViewTests(TestCase):
         payload = res.json()
         self.assertTrue(payload["ok"])
         self.assertEqual(payload["data"]["group_name"], "2모둠")
+
+    def test_student_tooltip_partial_shows_growth_only_copy(self):
+        self.student.seed_count = 4
+        self.student.ticket_count = 2
+        self.student.total_wins = 1
+        self.student.save(update_fields=["seed_count", "ticket_count", "total_wins"])
+
+        url = reverse("happy_seed:student_tooltip_partial", kwargs={"student_id": self.student.id})
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, "지금 씨앗 4개")
+        self.assertContains(res, "다음 꽃까지 6개 남았어요")
+        self.assertNotContains(res, "🌸 티켓:")
+        self.assertNotContains(res, "🏆 당첨:")

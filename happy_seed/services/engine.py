@@ -30,6 +30,10 @@ class NoPrizeAvailableError(Exception):
     pass
 
 
+class InsufficientSeedsError(Exception):
+    pass
+
+
 def _to_ev_name(event_type: str) -> str:
     return event_type if event_type.startswith("EV_") else f"EV_{event_type}"
 
@@ -144,6 +148,37 @@ def add_seeds(student, amount, reason, detail="", request_id=None):
     with transaction.atomic():
         student = HSStudent.objects.select_for_update().get(pk=student.pk)
         return _add_seeds_internal(student, amount, reason, detail, config, request_id)
+
+
+def remove_seeds(student, amount, reason, detail="", request_id=None):
+    """
+    씨앗 정정 (현재 씨앗 잔액만 감소, 티켓/추첨은 되돌리지 않음)
+    """
+    if request_id is None:
+        request_id = uuid.uuid4()
+
+    existing = HSSeedLedger.objects.filter(student=student, request_id=request_id).first()
+    if existing:
+        return existing
+
+    with transaction.atomic():
+        student = HSStudent.objects.select_for_update().get(pk=student.pk)
+        if amount <= 0:
+            raise ValueError("정정 수량은 1개 이상이어야 합니다.")
+        if student.seed_count < amount:
+            raise InsufficientSeedsError("현재 씨앗보다 많이 정정할 수 없습니다.")
+
+        student.seed_count -= amount
+        student.save(update_fields=["seed_count", "updated_at"])
+
+        return HSSeedLedger.objects.create(
+            student=student,
+            amount=-amount,
+            reason=reason,
+            detail=detail,
+            balance_after=student.seed_count,
+            request_id=request_id,
+        )
 
 
 def _add_seeds_internal(student, amount, reason, detail, config, request_id=None):

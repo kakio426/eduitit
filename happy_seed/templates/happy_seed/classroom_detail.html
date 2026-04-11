@@ -3,6 +3,25 @@
 
 {% block extra_css %}
 <style>
+    .happy-seed-ui,
+    .happy-seed-ui button,
+    .happy-seed-ui input,
+    .happy-seed-ui select,
+    .happy-seed-ui textarea {
+        font-family: "Pretendard Variable", "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
+    }
+
+    .happy-seed-ui .font-black {
+        font-weight: 800;
+    }
+
+    .happy-seed-ui .tracking-tight {
+        letter-spacing: -0.025em;
+    }
+
     .happy-seed-stage {
         pointer-events: none;
     }
@@ -32,13 +51,14 @@
 {% endblock %}
 
 {% block content %}
-<section class="min-h-screen px-4 pb-20 pt-32">
+<section class="happy-seed-ui min-h-screen px-4 pb-20 pt-32">
     <div id="happy-seed-detail-root"
          class="mx-auto max-w-7xl"
          data-classroom-id="{{ classroom.id }}"
          data-workspace-url="{% url 'happy_seed:classroom_workspace_partial' classroom_id=classroom.id %}"
          data-draw-api-url="{% url 'happy_seed:api_execute_draw' classroom_id=classroom.id %}"
          data-grant-draw-api-url="{% url 'happy_seed:api_grant_and_execute_draw' classroom_id=classroom.id %}"
+         data-correct-seed-api-url="{% url 'happy_seed:api_correct_seed' classroom_id=classroom.id %}"
          data-group-mission-api-url="{% url 'happy_seed:api_group_mission_success' classroom_id=classroom.id %}">
         <div class="mb-8 flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -48,11 +68,8 @@
                     <span class="font-bold text-slate-800">{{ classroom.name }}</span>{% if classroom.school_name %} · {{ classroom.school_name }}{% endif %}
                 </p>
                 <a href="{% url 'happy_seed:teacher_manual' %}" class="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-green-700">
-                    처음이면 사용 안내 보기
+                    도움말
                 </a>
-            </div>
-            <div class="rounded-[1.75rem] border border-emerald-100 bg-emerald-50/80 px-4 py-3 text-sm font-semibold text-emerald-700 shadow-sm">
-                한 화면에서 지급하고, 같은 화면에서 바로 발표하세요.
             </div>
         </div>
 
@@ -63,7 +80,7 @@
 </section>
 
 <div id="HAPPY_SEED_PRESENTATION"
-     class="hidden fixed inset-0 z-[150] text-white"
+     class="happy-seed-ui hidden fixed inset-0 z-[150] text-white"
      data-accent="idle"
      aria-hidden="true">
     <div class="happy-seed-stage absolute inset-0"></div>
@@ -106,6 +123,49 @@
                         운영으로 복귀
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="HAPPY_SEED_CORRECTION_MODAL"
+     class="happy-seed-ui hidden fixed inset-0 z-[160] bg-slate-950/45 px-4 py-6"
+     aria-hidden="true">
+    <div class="mx-auto flex min-h-full max-w-lg items-center justify-center">
+        <div class="w-full rounded-[2rem] bg-white p-6 shadow-2xl">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <p class="text-xs font-black uppercase tracking-[0.25em] text-slate-400">기록 정정</p>
+                    <h2 id="SEED_CORRECTION_TITLE" class="mt-2 text-2xl font-black tracking-tight text-slate-900">잘못 준 씨앗 정정</h2>
+                </div>
+                <button type="button"
+                        data-seed-correction-close
+                        class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-slate-300 hover:text-slate-700">
+                    <span class="sr-only">닫기</span>
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <p id="SEED_CORRECTION_DESCRIPTION" class="mt-4 text-sm leading-7 text-slate-600">
+                잘못 준 수만 바로 고릅니다.
+            </p>
+
+            <div class="mt-5 rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-4">
+                <p class="text-xs font-black uppercase tracking-[0.2em] text-slate-400">이번 정정</p>
+                <p id="SEED_CORRECTION_META" class="mt-2 text-sm font-semibold leading-6 text-slate-600"></p>
+            </div>
+
+            <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <button type="button"
+                        data-seed-correction-close
+                        class="inline-flex items-center justify-center rounded-[1.1rem] border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600 transition hover:border-slate-300 hover:text-slate-800">
+                    취소
+                </button>
+                <button type="button"
+                        id="BTN_CONFIRM_SEED_CORRECTION"
+                        class="inline-flex items-center justify-center rounded-[1.1rem] bg-slate-900 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800">
+                    씨앗 1개 정정
+                </button>
             </div>
         </div>
     </div>

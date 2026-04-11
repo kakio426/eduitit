@@ -57,6 +57,7 @@ urlpatterns = [
 
     # Seed
     path('student/<uuid:student_id>/seed/grant/', views.seed_grant, name='seed_grant'),
+    path('student/<uuid:student_id>/seed/correct/', views.seed_correct, name='seed_correct'),
 
     # Public Garden
     path('garden/<slug:slug>/', views.garden_public, name='garden_public'),
@@ -70,6 +71,7 @@ urlpatterns = [
     # API v1 (additive, existing UI flow 유지)
     path('api/v1/classes/<uuid:classroom_id>/live:execute-draw', views.api_execute_draw, name='api_execute_draw'),
     path('api/v1/classes/<uuid:classroom_id>/live:grant-and-execute-draw', views.api_grant_and_execute_draw, name='api_grant_and_execute_draw'),
+    path('api/v1/classes/<uuid:classroom_id>/live:correct-seed', views.api_correct_seed, name='api_correct_seed'),
     path('api/v1/classes/<uuid:classroom_id>/live:group-mission-success', views.api_group_mission_success, name='api_group_mission_success'),
     path('api/v1/classes/<uuid:classroom_id>/consents:sync-sign-talk', views.api_consent_sync_sign_talk, name='api_consent_sync_sign_talk'),
 ]

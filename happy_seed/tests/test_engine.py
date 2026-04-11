@@ -6,9 +6,11 @@ from django.test import TestCase
 from happy_seed.models import HSClassroom, HSClassroomConfig, HSGuardianConsent, HSPrize, HSStudent
 from happy_seed.services.engine import (
     ConsentRequiredError,
+    InsufficientSeedsError,
     add_seeds,
     execute_bloom_draw,
     grant_tickets,
+    remove_seeds,
 )
 
 
@@ -34,6 +36,24 @@ class HappySeedEngineTests(TestCase):
         HSGuardianConsent.objects.create(student=student2, status="pending")
         with self.assertRaises(ConsentRequiredError):
             grant_tickets(student2, "participation", 1, "성실 참여")
+
+    def test_remove_seeds_only_decreases_seed_balance(self):
+        self.student.seed_count = 4
+        self.student.ticket_count = 2
+        self.student.save(update_fields=["seed_count", "ticket_count"])
+
+        remove_seeds(self.student, 3, "teacher_correction", "기록 정정")
+
+        self.student.refresh_from_db()
+        self.assertEqual(self.student.seed_count, 1)
+        self.assertEqual(self.student.ticket_count, 2)
+
+    def test_remove_seeds_rejects_amount_above_balance(self):
+        self.student.seed_count = 1
+        self.student.save(update_fields=["seed_count"])
+
+        with self.assertRaises(InsufficientSeedsError):
+            remove_seeds(self.student, 3, "teacher_correction", "기록 정정")
 
     def test_execute_bloom_draw_idempotent_by_request_id(self):
         HSPrize.objects.create(

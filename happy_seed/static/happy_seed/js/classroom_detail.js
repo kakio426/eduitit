@@ -2,8 +2,9 @@
     var root = document.getElementById("happy-seed-detail-root");
     var workspace = document.getElementById("happy-seed-workspace");
     var overlay = document.getElementById("HAPPY_SEED_PRESENTATION");
+    var correctionModal = document.getElementById("HAPPY_SEED_CORRECTION_MODAL");
 
-    if (!root || !workspace || !overlay) {
+    if (!root || !workspace || !overlay || !correctionModal) {
         return;
     }
 
@@ -15,7 +16,13 @@
     var spinnerEl = document.getElementById("PRESENTATION_SPINNER");
     var footerEl = document.getElementById("PRESENTATION_FOOTER");
     var nextButton = document.getElementById("BTN_PRESENTATION_NEXT");
+    var correctionTitleEl = document.getElementById("SEED_CORRECTION_TITLE");
+    var correctionDescriptionEl = document.getElementById("SEED_CORRECTION_DESCRIPTION");
+    var correctionMetaEl = document.getElementById("SEED_CORRECTION_META");
+    var correctionConfirmButton = document.getElementById("BTN_CONFIRM_SEED_CORRECTION");
     var restoreFocusEl = null;
+    var correctionRestoreFocusEl = null;
+    var pendingCorrection = null;
     var storagePrefix = "happy-seed:" + (root.dataset.classroomId || "default");
     var seedAmountStorageKey = storagePrefix + ":seed-amount";
     var actionModeStorageKey = storagePrefix + ":action-mode";
@@ -51,19 +58,20 @@
         return workspace.querySelector("[data-classroom-workspace]");
     }
 
-    function getSeedAmountSelect() {
+    function getDefaultSeedAmount() {
         var workspaceState = getWorkspaceState();
-        return workspaceState ? workspaceState.querySelector("[data-seed-amount-select]") : null;
+        var fallback = workspaceState ? String(workspaceState.dataset.defaultSeedAmount || "1") : "1";
+        return fallback === "3" || fallback === "5" ? fallback : "1";
     }
 
-    function getActionModeSelect() {
+    function getDefaultActionMode() {
         var workspaceState = getWorkspaceState();
-        return workspaceState ? workspaceState.querySelector("[data-action-mode-select]") : null;
+        var fallback = workspaceState ? String(workspaceState.dataset.defaultActionMode || "grant") : "grant";
+        return fallback === "grant_and_draw" || fallback === "draw" ? fallback : "grant";
     }
 
     function getSelectedSeedAmount() {
-        var select = getSeedAmountSelect();
-        var fallback = select ? String(select.value || "1") : "1";
+        var fallback = getDefaultSeedAmount();
         try {
             var storedValue = window.localStorage.getItem(seedAmountStorageKey);
             if (storedValue === "1" || storedValue === "3" || storedValue === "5") {
@@ -76,8 +84,7 @@
     }
 
     function getSelectedActionMode() {
-        var select = getActionModeSelect();
-        var fallback = select ? String(select.value || "grant") : "grant";
+        var fallback = getDefaultActionMode();
         try {
             var storedValue = window.localStorage.getItem(actionModeStorageKey);
             if (storedValue === "grant" || storedValue === "grant_and_draw" || storedValue === "draw") {
@@ -112,8 +119,12 @@
         return !overlay.classList.contains("hidden");
     }
 
+    function isCorrectionModalOpen() {
+        return !correctionModal.classList.contains("hidden");
+    }
+
     function syncBodyScrollLock() {
-        if (isPresentationOpen()) {
+        if (isPresentationOpen() || isCorrectionModalOpen()) {
             document.body.classList.add("overflow-hidden");
         } else {
             document.body.classList.remove("overflow-hidden");
@@ -159,7 +170,6 @@
         var accent = data.accent || state || "idle";
 
         overlay.dataset.accent = accent;
-
         kickerEl.textContent = isLoading ? "추첨 중" : isResult ? "추첨 결과" : "발표 모드";
         iconEl.textContent = data.icon || (accent === "win" ? "🌸" : accent === "grow" ? "🌱" : "✨");
         headlineEl.textContent = data.headline || "발표 준비";
@@ -229,10 +239,116 @@
         }
     }
 
+    function openCorrectionModal(form, trigger) {
+        var card = form ? form.closest("[data-student-card]") : null;
+        var amount = Number(getSelectedSeedAmount() || "1");
+        if (!card || amount < 1) {
+            return;
+        }
+
+        var studentName = card.dataset.studentName || "학생";
+        var studentSeeds = Number(card.dataset.seedsBalance || "0");
+        if (studentSeeds < amount) {
+            showToast(card.dataset.correctionDisabledReason || "현재 씨앗보다 많이 정정할 수 없습니다.", "error");
+            return;
+        }
+
+        pendingCorrection = {
+            card: card,
+            form: form,
+            amount: amount,
+            studentId: card.dataset.studentId,
+            studentName: studentName,
+        };
+        correctionRestoreFocusEl = trigger || correctionRestoreFocusEl;
+        correctionTitleEl.textContent = "잘못 준 씨앗 정정";
+        correctionDescriptionEl.textContent =
+            "벌칙이 아니라 기록 정정이에요. 학생 공개 화면에는 정정 메시지가 보이지 않습니다.";
+        correctionMetaEl.textContent =
+            studentName +
+            " 학생의 현재 씨앗 " +
+            studentSeeds +
+            "개 중 " +
+            amount +
+            "개를 조용히 정정합니다.";
+        correctionConfirmButton.textContent = "씨앗 " + amount + "개 정정";
+        correctionConfirmButton.disabled = false;
+        correctionModal.classList.remove("hidden");
+        correctionModal.setAttribute("aria-hidden", "false");
+        syncBodyScrollLock();
+    }
+
+    function closeCorrectionModal() {
+        correctionModal.classList.add("hidden");
+        correctionModal.setAttribute("aria-hidden", "true");
+        correctionConfirmButton.disabled = false;
+        pendingCorrection = null;
+        syncBodyScrollLock();
+
+        if (correctionRestoreFocusEl && document.contains(correctionRestoreFocusEl) && typeof correctionRestoreFocusEl.focus === "function") {
+            correctionRestoreFocusEl.focus();
+        }
+    }
+
     function createRequestId() {
         return window.crypto && typeof window.crypto.randomUUID === "function"
             ? window.crypto.randomUUID()
             : String(Date.now());
+    }
+
+    function getActionModeLabel(actionMode) {
+        if (actionMode === "grant_and_draw") {
+            return "주고 바로 뽑기";
+        }
+        if (actionMode === "draw") {
+            return "바로 뽑기";
+        }
+        return "씨앗 주기";
+    }
+
+    function getModeButtonClasses(mode, selected) {
+        var palette = {
+            grant: {
+                active: "border-emerald-200 bg-emerald-500 text-white shadow-sm",
+                idle: "border-slate-200 bg-white text-slate-700 hover:border-emerald-200 hover:text-emerald-700",
+            },
+            grant_and_draw: {
+                active: "border-sky-200 bg-sky-500 text-white shadow-sm",
+                idle: "border-slate-200 bg-white text-slate-700 hover:border-sky-200 hover:text-sky-700",
+            },
+            draw: {
+                active: "border-violet-200 bg-violet-500 text-white shadow-sm",
+                idle: "border-slate-200 bg-white text-slate-700 hover:border-violet-200 hover:text-violet-700",
+            },
+        };
+        var current = palette[mode] || palette.grant;
+        return (
+            "rounded-[1.2rem] border px-4 py-3 text-left text-sm font-black transition " +
+            (selected ? current.active : current.idle)
+        );
+    }
+
+    function getSeedChipClasses(selected) {
+        return (
+            "rounded-full border px-4 py-2 text-sm font-black transition " +
+            (selected
+                ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+                : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:text-slate-900")
+        );
+    }
+
+    function getProjectedTicketGain(studentSeeds, seedAmount, seedsPerBloom) {
+        if (seedsPerBloom <= 0) {
+            return 0;
+        }
+        return Math.floor((studentSeeds + seedAmount) / seedsPerBloom);
+    }
+
+    function getRemainingAfterGrant(studentSeeds, seedAmount, seedsPerBloom) {
+        if (seedsPerBloom <= 0) {
+            return 0;
+        }
+        return (studentSeeds + seedAmount) % seedsPerBloom;
     }
 
     function getActionState(card) {
@@ -244,13 +360,29 @@
         var rewardsReady = hasRewards();
         var seedsPerBloom = getSeedsPerBloom();
         var drawDisabledReason = card.dataset.drawDisabledReason || "지금은 바로 뽑기할 수 없어요.";
+        var gainedTickets = getProjectedTicketGain(studentSeeds, seedAmount, seedsPerBloom);
+        var remainingAfterGrant = getRemainingAfterGrant(studentSeeds, seedAmount, seedsPerBloom);
 
         if (actionMode === "grant") {
+            var grantHelper = "";
+            if (gainedTickets > 0) {
+                grantHelper =
+                    "이번 지급으로 꽃피움권 " +
+                    gainedTickets +
+                    "장이 준비돼요." +
+                    (consentApproved ? "" : " 추첨은 동의 완료 후 이어집니다.");
+            } else {
+                grantHelper =
+                    "이번 지급 후 다음 꽃까지 " +
+                    Math.max(seedsPerBloom - remainingAfterGrant, 0) +
+                    "개 남아요." +
+                    (consentApproved ? "" : " 추첨은 동의 완료 후 이어집니다.");
+            }
             return {
                 mode: actionMode,
-                label: "+" + seedAmount + " 지급",
+                label: "씨앗 +" + seedAmount + " 주기",
                 enabled: true,
-                helper: "같은 위치를 눌러 연속 지급할 수 있어요.",
+                helper: grantHelper,
             };
         }
 
@@ -266,27 +398,23 @@
             };
         }
 
-        var projectedTickets = studentTickets;
-        if (seedsPerBloom > 0) {
-            projectedTickets += Math.floor((studentSeeds + seedAmount) / seedsPerBloom);
-        }
-
+        var projectedTickets = studentTickets + gainedTickets;
         var disabledReason = "";
         if (!rewardsReady) {
             disabledReason = "보상 설정 후 사용할 수 있어요.";
         } else if (!consentApproved) {
             disabledReason = "동의 완료 후 사용할 수 있어요.";
         } else if (projectedTickets < 1) {
-            disabledReason = "이번 지급으로는 바로 뽑기할 티켓이 부족해요.";
+            disabledReason = "이번 지급만으로는 바로 뽑기할 티켓이 부족해요.";
         }
 
         return {
             mode: actionMode,
-            label: "+" + seedAmount + " 후 바로 뽑기",
+            label: "씨앗 +" + seedAmount + " 주고 바로 뽑기",
             enabled: disabledReason === "",
             helper:
                 disabledReason === ""
-                    ? "씨앗 지급 뒤 바로 발표 모드로 전환됩니다."
+                    ? "씨앗을 주고 바로 발표 모드로 전환됩니다."
                     : disabledReason,
         };
     }
@@ -307,32 +435,77 @@
 
         if (state.enabled) {
             button.className =
-                "w-full rounded-[1.25rem] bg-slate-900 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800";
-            helper.className = "mt-2 min-h-[20px] text-xs text-slate-400";
+                "w-full rounded-[1.4rem] bg-slate-900 px-4 py-4 text-base font-black text-white transition hover:bg-slate-800";
+            helper.className = "mt-2 min-h-[40px] text-sm leading-6 text-slate-500";
         } else {
             button.className =
-                "w-full cursor-not-allowed rounded-[1.25rem] bg-slate-200 px-4 py-3 text-sm font-black text-slate-400 transition";
-            helper.className = "mt-2 min-h-[20px] text-xs text-amber-600";
+                "w-full cursor-not-allowed rounded-[1.4rem] bg-slate-200 px-4 py-4 text-base font-black text-slate-400 transition";
+            helper.className = "mt-2 min-h-[40px] text-sm leading-6 text-amber-600";
         }
     }
 
+    function applyCorrectionActionState(card) {
+        var form = card.querySelector("[data-seed-correct-form]");
+        var button = card.querySelector("[data-student-seed-correct-action]");
+        var hiddenAmount = card.querySelector("[data-seed-correct-amount]");
+        if (!form || !button || !hiddenAmount) {
+            return;
+        }
+
+        var selectedAmount = Number(getSelectedSeedAmount() || "1");
+        var studentSeeds = Number(card.dataset.seedsBalance || "0");
+        var enabled = studentSeeds >= selectedAmount;
+        hiddenAmount.value = String(selectedAmount);
+        button.textContent = "정정 -" + selectedAmount;
+        button.disabled = !enabled;
+
+        if (enabled) {
+            button.className =
+                "inline-flex w-full items-center justify-center rounded-[1rem] border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-slate-500 transition hover:border-slate-300 hover:text-slate-700";
+        } else {
+            button.className =
+                "inline-flex w-full cursor-not-allowed items-center justify-center rounded-[1rem] border border-slate-200 bg-slate-100 px-3 py-2.5 text-sm font-bold text-slate-400 transition";
+        }
+    }
+
+    function syncSelectionSummary() {
+        var summary = workspace.querySelector("[data-current-selection-summary]");
+        if (!summary) {
+            return;
+        }
+        var actionMode = getSelectedActionMode();
+        var seedAmount = getSelectedSeedAmount();
+        summary.textContent =
+            actionMode === "draw" ? getActionModeLabel(actionMode) : getActionModeLabel(actionMode) + " +" + seedAmount;
+    }
+
     function syncWorkspaceControls() {
-        var seedSelect = getSeedAmountSelect();
-        var actionModeSelect = getActionModeSelect();
         var selectedSeedAmount = getSelectedSeedAmount();
         var selectedActionMode = getSelectedActionMode();
 
-        if (seedSelect) {
-            seedSelect.value = selectedSeedAmount;
-        }
-        if (actionModeSelect) {
-            actionModeSelect.value = selectedActionMode;
-        }
+        Array.prototype.forEach.call(
+            workspace.querySelectorAll("[data-action-mode-chip]"),
+            function (button) {
+                var value = String(button.dataset.value || "grant");
+                button.className = getModeButtonClasses(value, value === selectedActionMode);
+            }
+        );
+
+        Array.prototype.forEach.call(
+            workspace.querySelectorAll("[data-seed-amount-chip]"),
+            function (button) {
+                var value = String(button.dataset.value || "1");
+                button.className = getSeedChipClasses(value === selectedSeedAmount);
+            }
+        );
+
+        syncSelectionSummary();
 
         Array.prototype.forEach.call(
             workspace.querySelectorAll("[data-student-card]"),
             function (card) {
                 applyPrimaryActionState(card);
+                applyCorrectionActionState(card);
             }
         );
     }
@@ -481,6 +654,44 @@
         }
     }
 
+    async function handleSeedCorrection() {
+        if (!pendingCorrection) {
+            return;
+        }
+
+        correctionConfirmButton.disabled = true;
+        try {
+            var requestId = createRequestId();
+            var data = await requestJson(root.dataset.correctSeedApiUrl, {
+                method: "POST",
+                headers: {
+                    Accept: "application/json",
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": getCsrfToken(),
+                    "Idempotency-Key": requestId,
+                    "X-Request-Id": requestId,
+                },
+                body: JSON.stringify({
+                    student_id: pendingCorrection.studentId,
+                    amount: pendingCorrection.amount,
+                    detail: "운영 화면 기록 정정",
+                    idempotency_key: requestId,
+                }),
+            });
+            showToast(
+                data.message || pendingCorrection.studentName + " 학생의 씨앗 기록을 정정했습니다.",
+                "success"
+            );
+            closeCorrectionModal();
+            await refreshWorkspace();
+        } catch (error) {
+            correctionConfirmButton.disabled = false;
+            if (!showToast(error.message || "씨앗 정정에 실패했습니다.", "error")) {
+                window.alert(error.message || "씨앗 정정에 실패했습니다.");
+            }
+        }
+    }
+
     async function handlePrimaryAction(button) {
         var card = button.closest("[data-student-card]");
         if (!card || button.disabled) {
@@ -548,22 +759,23 @@
         }
     }
 
-    document.addEventListener("change", function (event) {
-        var seedAmountSelect = event.target.closest("[data-seed-amount-select]");
-        if (seedAmountSelect) {
-            persistSelection(seedAmountStorageKey, String(seedAmountSelect.value || "1"));
+    document.addEventListener("click", function (event) {
+        var modeChip = event.target.closest("[data-action-mode-chip]");
+        if (modeChip) {
+            event.preventDefault();
+            persistSelection(actionModeStorageKey, String(modeChip.dataset.value || "grant"));
             syncWorkspaceControls();
             return;
         }
 
-        var actionModeSelect = event.target.closest("[data-action-mode-select]");
-        if (actionModeSelect) {
-            persistSelection(actionModeStorageKey, String(actionModeSelect.value || "grant"));
+        var amountChip = event.target.closest("[data-seed-amount-chip]");
+        if (amountChip) {
+            event.preventDefault();
+            persistSelection(seedAmountStorageKey, String(amountChip.dataset.value || "1"));
             syncWorkspaceControls();
+            return;
         }
-    });
 
-    document.addEventListener("click", function (event) {
         var presentationButton = event.target.closest("[data-presentation-open]");
         if (presentationButton) {
             event.preventDefault();
@@ -583,6 +795,20 @@
             return;
         }
 
+        var detailToggle = event.target.closest("[data-student-detail-toggle]");
+        if (detailToggle) {
+            event.preventDefault();
+            var card = detailToggle.closest("[data-student-card]");
+            var detailsPanel = card ? card.querySelector("[data-student-details]") : null;
+            var isHidden = !detailsPanel || detailsPanel.classList.contains("hidden");
+            if (detailsPanel) {
+                detailsPanel.classList.toggle("hidden", !isHidden);
+            }
+            detailToggle.setAttribute("aria-expanded", isHidden ? "true" : "false");
+            detailToggle.textContent = isHidden ? "접기" : "자세히";
+            return;
+        }
+
         var closeButton = event.target.closest("[data-presentation-close]");
         if (closeButton) {
             event.preventDefault();
@@ -594,10 +820,27 @@
         if (nextPresentationButton) {
             event.preventDefault();
             closePresentation();
+            return;
+        }
+
+        var correctionCloseButton = event.target.closest("[data-seed-correction-close]");
+        if (correctionCloseButton) {
+            event.preventDefault();
+            closeCorrectionModal();
         }
     });
 
     document.addEventListener("submit", function (event) {
+        var correctionForm = event.target.closest("[data-seed-correct-form]");
+        if (correctionForm) {
+            event.preventDefault();
+            openCorrectionModal(
+                correctionForm,
+                event.submitter || correctionForm.querySelector("[data-student-seed-correct-action]")
+            );
+            return;
+        }
+
         var groupMissionForm = event.target.closest("[data-group-mission-form]");
         if (!groupMissionForm) {
             return;
@@ -606,14 +849,29 @@
         handleGroupMission(groupMissionForm);
     });
 
+    correctionConfirmButton.addEventListener("click", function (event) {
+        event.preventDefault();
+        handleSeedCorrection();
+    });
+
     overlay.addEventListener("click", function (event) {
         if (event.target === overlay) {
             closePresentation();
         }
     });
 
+    correctionModal.addEventListener("click", function (event) {
+        if (event.target === correctionModal) {
+            closeCorrectionModal();
+        }
+    });
+
     document.addEventListener("keydown", function (event) {
         if (event.key !== "Escape") {
+            return;
+        }
+        if (isCorrectionModalOpen()) {
+            closeCorrectionModal();
             return;
         }
         if (isPresentationOpen()) {

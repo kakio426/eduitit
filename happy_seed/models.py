@@ -214,6 +214,7 @@ class HSSeedLedger(models.Model):
         ('recovery', '회복'),
         ('bloom_convert', '블룸 전환'),
         ('teacher_grant', '교사부여'),
+        ('teacher_correction', '교사 정정'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -449,6 +450,7 @@ class HSClassEventLog(models.Model):
         ("TOKEN_GRANTED_DILIGENT", "성실참여 꽃피움권 지급"),
         ("TOKEN_GRANTED_SCORE_BONUS", "우수성취 추가 꽃피움권 지급"),
         ("SEED_GRANTED_MANUAL", "교사 수동 씨앗 지급"),
+        ("SEED_CORRECTED_MANUAL", "교사 수동 씨앗 정정"),
         ("DRAW_EXECUTED", "꽃피움 실행"),
         ("DRAW_WIN", "꽃피움 당첨"),
         ("DRAW_LOSE", "꽃피움 미당첨"),

@@ -43,6 +43,7 @@ from .models import (
 from .services.engine import (
     ConsentRequiredError,
     InsufficientTicketsError,
+    InsufficientSeedsError,
     NoPrizeAvailableError,
     add_seeds,
     execute_bloom_draw,
@@ -50,6 +51,7 @@ from .services.engine import (
     get_garden_data,
     grant_tickets,
     log_class_event,
+    remove_seeds,
 )
 
 logger = logging.getLogger("happy_seed.views")
@@ -187,6 +189,13 @@ def _build_group_infos(classroom):
     return group_infos
 
 
+def _remaining_seeds_to_next_bloom(seed_count, seeds_per_bloom):
+    if seeds_per_bloom <= 0:
+        return 0
+    current = max(int(seed_count or 0), 0)
+    return max(seeds_per_bloom - min(current, seeds_per_bloom), 0)
+
+
 def _build_classroom_workspace_context(classroom):
     config, _ = HSClassroomConfig.objects.get_or_create(classroom=classroom)
     students = list(
@@ -203,6 +212,12 @@ def _build_classroom_workspace_context(classroom):
         consent = getattr(student, "consent", None)
         consent_status = getattr(consent, "status", "pending")
         is_approved = consent_status == "approved"
+        student.next_bloom_remaining = _remaining_seeds_to_next_bloom(student.seed_count, config.seeds_per_bloom)
+        student.progress_percent = (
+            int(((config.seeds_per_bloom - student.next_bloom_remaining) / config.seeds_per_bloom) * 100)
+            if config.seeds_per_bloom > 0
+            else 0
+        )
         student.is_consent_approved = is_approved
         if is_approved:
             approved_count += 1
@@ -226,6 +241,12 @@ def _build_classroom_workspace_context(classroom):
         else:
             student.operation_status_label = "씨앗 모으는 중"
             student.operation_status_tone = "emerald"
+        if student.seed_count > 0:
+            student.correction_disabled_reason = ""
+            student.correction_hint = "잘못 준 기록만 조용히 정정할 수 있어요."
+        else:
+            student.correction_disabled_reason = "정정할 씨앗이 아직 없어요."
+            student.correction_hint = student.correction_disabled_reason
         if student.can_draw:
             draw_ready_count += 1
 
@@ -1790,6 +1811,146 @@ def seed_grant(request, student_id):
     )
 
 
+@login_required
+@require_POST
+def seed_correct(request, student_id):
+    student = get_object_or_404(HSStudent, id=student_id)
+    classroom = get_teacher_classroom(request, student.classroom_id)
+
+    try:
+        amount = int(request.POST.get("amount", 1))
+    except (TypeError, ValueError):
+        messages.error(request, "정정 수량을 확인해 주세요.")
+        return redirect("happy_seed:classroom_detail", classroom_id=classroom.id)
+
+    if amount not in {1, 3, 5}:
+        messages.error(request, "운영 화면에서는 씨앗을 1, 3, 5개만 정정할 수 있습니다.")
+        return redirect("happy_seed:classroom_detail", classroom_id=classroom.id)
+
+    detail = request.POST.get("detail", "운영 화면 기록 정정")
+
+    try:
+        remove_seeds(
+            student=student,
+            amount=amount,
+            reason="teacher_correction",
+            detail=detail,
+        )
+    except InsufficientSeedsError:
+        messages.error(request, "현재 씨앗보다 많이 정정할 수 없습니다.")
+        return redirect("happy_seed:classroom_detail", classroom_id=classroom.id)
+
+    HSInterventionLog.objects.create(
+        classroom=classroom,
+        student=student,
+        action="seed_deduct",
+        detail=f"{detail} (-{amount})",
+        created_by=request.user,
+    )
+    log_class_event(
+        classroom,
+        "SEED_CORRECTED_MANUAL",
+        student=student,
+        meta={"amount": amount, "detail": detail},
+    )
+    messages.success(request, f"{student.name} 학생의 씨앗 {amount}개를 기록 정정했습니다.")
+    return redirect("happy_seed:classroom_detail", classroom_id=classroom.id)
+
+
+@login_required
+@require_POST
+def api_correct_seed(request, classroom_id):
+    classroom = get_teacher_classroom(request, classroom_id)
+    try:
+        body = json.loads(request.body.decode("utf-8")) if request.body else {}
+    except json.JSONDecodeError:
+        return _api_err(request, "ERR_INVALID_REQUEST", "요청 본문(JSON)을 확인해 주세요.", status=400)
+
+    student_id = body.get("student_id")
+    if not student_id:
+        return _api_err(request, "ERR_INVALID_REQUEST", "student_id가 필요합니다.", status=400)
+    student = HSStudent.objects.filter(id=student_id, classroom=classroom).first()
+    if not student:
+        return _api_err(request, "ERR_NOT_FOUND", "학생을 찾을 수 없습니다.", status=404)
+
+    try:
+        amount = int(body.get("amount", 1))
+    except (TypeError, ValueError):
+        return _api_err(request, "ERR_INVALID_REQUEST", "정정 수량을 확인해 주세요.", status=400)
+
+    if amount not in {1, 3, 5}:
+        return _api_err(
+            request,
+            "ERR_INVALID_SEED_CORRECTION_AMOUNT",
+            "운영 화면에서는 씨앗을 1, 3, 5개만 정정할 수 있습니다.",
+            status=400,
+        )
+
+    raw_key = request.headers.get("Idempotency-Key") or body.get("idempotency_key") or str(uuid.uuid4())
+    try:
+        request_id = uuid.UUID(str(raw_key))
+    except ValueError:
+        request_id = uuid.uuid4()
+
+    existing_ledger = student.seed_ledger.filter(
+        request_id=request_id,
+        reason="teacher_correction",
+    ).first()
+    if existing_ledger:
+        student.refresh_from_db()
+        return _api_ok(
+            request,
+            {
+                "student_state": _build_student_state_payload(student),
+                "corrected_amount": abs(int(existing_ledger.amount or 0)),
+                "message": f"{student.name} 학생의 씨앗 기록을 다시 반영했습니다.",
+            },
+        )
+
+    detail = str(body.get("detail") or "").strip() or "운영 화면 기록 정정"
+
+    try:
+        remove_seeds(
+            student=student,
+            amount=amount,
+            reason="teacher_correction",
+            detail=detail,
+            request_id=request_id,
+        )
+    except InsufficientSeedsError:
+        return _api_err(
+            request,
+            "ERR_SEED_BALANCE_TOO_LOW",
+            "현재 씨앗보다 많이 정정할 수 없습니다.",
+            status=400,
+            details={"current_seed_balance": student.seed_count, "requested_amount": amount},
+        )
+
+    HSInterventionLog.objects.create(
+        classroom=classroom,
+        student=student,
+        action="seed_deduct",
+        detail=f"{detail} (-{amount})",
+        created_by=request.user,
+    )
+    log_class_event(
+        classroom,
+        "SEED_CORRECTED_MANUAL",
+        student=student,
+        meta={"amount": amount, "detail": detail},
+    )
+
+    student.refresh_from_db()
+    return _api_ok(
+        request,
+        {
+            "student_state": _build_student_state_payload(student),
+            "corrected_amount": amount,
+            "message": f"{student.name} 학생의 씨앗 {amount}개를 기록 정정했습니다.",
+        },
+    )
+
+
 def celebration(request, draw_id):
     draw = get_object_or_404(HSBloomDraw, id=draw_id)
     token = request.GET.get("token", "")
@@ -2291,11 +2452,13 @@ def garden_partial(request, classroom_id):
 def student_tooltip_partial(request, student_id):
     student = get_object_or_404(HSStudent, id=student_id, is_active=True)
     config, _ = HSClassroomConfig.objects.get_or_create(classroom=student.classroom)
+    remaining_to_bloom = _remaining_seeds_to_next_bloom(student.seed_count, config.seeds_per_bloom)
     return render(
         request,
         "happy_seed/partials/student_tooltip.html",
         {
             "student": student,
             "config": config,
+            "remaining_to_bloom": remaining_to_bloom,
         },
     )

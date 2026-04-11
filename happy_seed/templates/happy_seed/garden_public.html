@@ -1,18 +1,48 @@
 {% extends 'base.html' %}
 
+{% block extra_css %}
+<style>
+    .happy-seed-ui,
+    .happy-seed-ui button,
+    .happy-seed-ui input,
+    .happy-seed-ui select,
+    .happy-seed-ui textarea {
+        font-family: "Pretendard Variable", "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
+    }
+
+    .happy-seed-ui .font-black {
+        font-weight: 800;
+    }
+
+    .happy-seed-ui .font-title {
+        font-family: "Pretendard Variable", "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<section id="PAGE_DISPLAY_GARDEN" class="pt-32 pb-20 px-4 min-h-screen">
+<section id="PAGE_DISPLAY_GARDEN" class="happy-seed-ui pt-32 pb-20 px-4 min-h-screen">
     <div class="max-w-5xl mx-auto">
 
         <div class="text-center mb-8">
-            <h1 class="text-3xl md:text-4xl font-bold text-gray-800 font-title">🏡 {{ classroom.name }}의 꽃밭</h1>
+            <p class="text-xs font-black uppercase tracking-[0.3em] text-emerald-500">행복의 씨앗</p>
+            <h1 class="mt-2 text-3xl md:text-4xl font-bold text-gray-800 font-title">우리 반 꽃밭</h1>
+            <p class="mt-2 text-sm leading-6 text-gray-500">{{ classroom.name }}의 씨앗이 꽃으로 자라고 있어요.</p>
             {% if classroom.school_name %}
             <p class="text-gray-400 mt-1">{{ classroom.school_name }}</p>
             {% endif %}
         </div>
 
-        <div id="COMP_GARDEN_CANVAS" hx-get="{% url 'happy_seed:garden_partial' classroom_id=classroom.id %}" hx-trigger="every 30s" hx-swap="innerHTML">
+        <div class="rounded-[2rem] border border-emerald-100 bg-white/90 shadow-sm">
+            <div class="border-b border-emerald-50 px-5 py-4 text-sm font-semibold text-gray-500">꽃을 누르면 지금 씨앗을 볼 수 있어요.</div>
+            <div id="COMP_GARDEN_CANVAS" hx-get="{% url 'happy_seed:garden_partial' classroom_id=classroom.id %}" hx-trigger="every 30s" hx-swap="innerHTML">
             {% include 'happy_seed/partials/garden_flowers.html' %}
+            </div>
         </div>
 
         <div class="mt-12 text-center p-6 bg-green-50 rounded-2xl">
