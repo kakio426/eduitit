@@ -3435,7 +3435,7 @@ class HomeV6ViewTest(TestCase):
         css = _read_home_v6_css_bundle()
 
         self.assertIn('.home-v6-page [data-home-v6-favorites-panel="true"] [data-home-v6-favorite-card="true"]', css)
-        self.assertIn('.home-v6-page .teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-card', css)
+        self.assertIn('.home-v6-page .teacher-buddy-panel[data-panel-variant="v6-rail"] .teacher-buddy-card', css)
         self.assertIn('clip-path: inset(0 round var(--home-v6-radius-panel));', css)
         self.assertIn('border-color: rgba(148, 163, 184, 0.24) !important;', css)
 

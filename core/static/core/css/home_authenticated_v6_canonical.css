@@ -992,8 +992,8 @@ border-color: var(--home-v6-star-border-strong);
     transform: translateY(-1px);
 }
 
-.home-v6-page .teacher-buddy-panel[data-panel-variant="v5-mobile"] .teacher-buddy-card,
-.home-v6-page .teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-card {
+.home-v6-page .teacher-buddy-panel[data-panel-variant="v6-mobile"] .teacher-buddy-card,
+.home-v6-page .teacher-buddy-panel[data-panel-variant="v6-rail"] .teacher-buddy-card {
 border-radius: var(--home-v6-radius-panel) !important;
     border-color: rgba(148, 163, 184, 0.24) !important;
     background:
@@ -1007,17 +1007,17 @@ border-radius: var(--home-v6-radius-panel) !important;
     transform: translateZ(0);
 }
 
-.home-v6-page .teacher-buddy-panel[data-panel-variant="v5-mobile"] .teacher-buddy-card[data-buddy-mood="cheer"],
-.home-v6-page .teacher-buddy-panel[data-panel-variant="v5-mobile"] .teacher-buddy-card[data-buddy-mood="complete"],
-.home-v6-page .teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-card[data-buddy-mood="cheer"],
-.home-v6-page .teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-card[data-buddy-mood="complete"] {
+.home-v6-page .teacher-buddy-panel[data-panel-variant="v6-mobile"] .teacher-buddy-card[data-buddy-mood="cheer"],
+.home-v6-page .teacher-buddy-panel[data-panel-variant="v6-mobile"] .teacher-buddy-card[data-buddy-mood="complete"],
+.home-v6-page .teacher-buddy-panel[data-panel-variant="v6-rail"] .teacher-buddy-card[data-buddy-mood="cheer"],
+.home-v6-page .teacher-buddy-panel[data-panel-variant="v6-rail"] .teacher-buddy-card[data-buddy-mood="complete"] {
 border-color: rgba(148, 163, 184, 0.24) !important;
 }
 
-.home-v6-page .teacher-buddy-panel[data-panel-variant="v5-mobile"] .teacher-buddy-compact-ascii-box,
-.home-v6-page .teacher-buddy-panel[data-panel-variant="v5-mobile"] .teacher-buddy-status-card,
-.home-v6-page .teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-compact-ascii-box,
-.home-v6-page .teacher-buddy-panel[data-panel-variant="v5-rail"] .teacher-buddy-status-card {
+.home-v6-page .teacher-buddy-panel[data-panel-variant="v6-mobile"] .teacher-buddy-compact-ascii-box,
+.home-v6-page .teacher-buddy-panel[data-panel-variant="v6-mobile"] .teacher-buddy-status-card,
+.home-v6-page .teacher-buddy-panel[data-panel-variant="v6-rail"] .teacher-buddy-compact-ascii-box,
+.home-v6-page .teacher-buddy-panel[data-panel-variant="v6-rail"] .teacher-buddy-status-card {
 border-radius: var(--home-v6-radius-card) !important;
 }
 
