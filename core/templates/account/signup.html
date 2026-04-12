@@ -3,17 +3,17 @@
 {% load static account socialaccount %}
 
 {% block seo_meta %}
-<meta name="description" content="에듀잇티 계정으로 교사를 위한 AI·학급 운영 도구를 바로 시작하세요.">
+<meta name="description" content="에듀잇티 계정으로 교실 운영 도구를 바로 시작하세요.">
 <meta name="robots" content="noindex,nofollow">
 <link rel="canonical" href="https://eduitit.site/accounts/signup/">
 <meta property="og:title" content="회원가입 | Eduitit">
-<meta property="og:description" content="에듀잇티 계정으로 교사를 위한 AI·학급 운영 도구를 바로 시작하세요.">
+<meta property="og:description" content="에듀잇티 계정으로 교실 운영 도구를 바로 시작하세요.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://eduitit.site/accounts/signup/">
 <meta property="og:image" content="https://eduitit.site/static/images/eduitit_og.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="회원가입 | Eduitit">
-<meta name="twitter:description" content="에듀잇티 계정으로 교사를 위한 AI·학급 운영 도구를 바로 시작하세요.">
+<meta name="twitter:description" content="에듀잇티 계정으로 교실 운영 도구를 바로 시작하세요.">
 <meta name="twitter:image" content="https://eduitit.site/static/images/eduitit_og.png">
 {% endblock %}
 
@@ -36,7 +36,7 @@
                 </a>
                 <p class="auth-shell-kicker">회원가입</p>
                 <h1 class="auth-shell-title">에듀잇티를 바로 시작하세요</h1>
-                <p class="auth-shell-summary">별도의 절차 없이 카카오 계정으로 로그인하고 교실 운영 도구를 같은 자리에서 이어서 사용할 수 있습니다.</p>
+                <p class="auth-shell-summary">카카오 계정으로 로그인하면 바로 사용할 수 있습니다.</p>
             </div>
 
             <div class="auth-shell-stack">
@@ -51,11 +51,8 @@
             </div>
 
             <div class="auth-shell-muted-panel">
-                <p class="auth-shell-muted-panel-title">처음 로그인 안내</p>
-                <p class="auth-shell-muted-panel-copy">
-                    에듀잇티는 선생님이 설명보다 실행에 먼저 들어갈 수 있게 설계된 서비스입니다.
-                    처음 로그인할 때만 약관 동의 후 바로 사용할 수 있어요.
-                </p>
+                <p class="auth-shell-muted-panel-title">처음 1회 약관에 동의합니다.</p>
+                <p class="auth-shell-muted-panel-copy">동의 후 바로 도구를 사용할 수 있습니다.</p>
                 <div class="auth-shell-links">
                     <a href="{% url 'policy' %}#terms" class="auth-shell-link">이용약관</a>
                     <span>·</span>

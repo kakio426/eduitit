@@ -91,16 +91,17 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="mx-auto home-public-v5-stage home-public-v6-stage-shell" style="padding-top: calc(var(--main-nav-height, 88px) + 1rem);">
         <main class="px-4 pb-16 sm:px-5 md:px-6">
             <section class="home-public-v5-mobile-stack" data-home-v6-public-mobile-stack="true">
+                {# Public entry copy stays to one promise so the tool cards remain the primary read. #}
                 <section class="home-public-v5-mobile-surface" data-home-v5-public-hero="true">
                     <span class="home-public-v5-kicker">
                         <span class="home-public-kicker-dot h-2.5 w-2.5 rounded-full"></span>
-                        지금 바로 시작
+                        바로 써보기
                     </span>
-                    <h1 class="home-public-v5-title">로그인 없이도 먼저 써볼 수 있습니다</h1>
-                    <p class="home-public-v5-summary">공개 도구를 먼저 열어 보고, 필요한 순간에만 로그인해서 교실 업무를 이어가세요.</p>
+                    <h1 class="home-public-v5-title">로그인 없이 바로 열 수 있습니다</h1>
+                    <p class="home-public-v5-summary">공개 도구를 먼저 열고, 필요할 때만 로그인하세요.</p>
                     <div class="home-public-v5-keywords">
-                        <span class="home-public-v5-keyword">설명보다 실행</span>
-                        <span class="home-public-v5-keyword">공개 도구 먼저</span>
+                        <span class="home-public-v5-keyword">공개 도구</span>
+                        <span class="home-public-v5-keyword">바로 실행</span>
                     </div>
                 </section>
 
@@ -109,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="home-public-v5-head">
                         <div>
                             <p class="home-public-v5-eyebrow">대표 서비스</p>
-                            <h2 class="home-public-v5-panel-title">먼저 많이 찾는 도구</h2>
+                            <h2 class="home-public-v5-panel-title">많이 찾는 도구</h2>
                         </div>
                     </div>
                     <article class="home-public-v5-featured-card">
@@ -140,7 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <section class="home-public-v5-mobile-surface" data-home-v5-public-grid-panel="true">
                     <div class="home-public-v5-head">
                         <div>
-                            <p class="home-public-v5-eyebrow">지금 바로 써보기</p>
+                            <p class="home-public-v5-eyebrow">바로 써보기</p>
                             <h2 class="home-public-v5-panel-title">공개 도구</h2>
                         </div>
                     </div>
@@ -175,12 +176,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 <section class="home-public-v5-mobile-surface home-public-v5-login-band" data-home-v5-public-login-cta="true">
                     <div class="min-w-0">
-                        <p class="home-public-v5-eyebrow">로그인 후 확장</p>
-                        <h2 class="home-public-v5-panel-title">더 많은 교실 업무를 이어서 처리</h2>
-                        <p class="home-public-v5-login-copy">수합, 문서, 운영 도구는 로그인 후 같은 자리에서 이어집니다.</p>
+                        <p class="home-public-v5-eyebrow">로그인 후</p>
+                        <h2 class="home-public-v5-panel-title">더 많은 교실 업무</h2>
+                        <p class="home-public-v5-login-copy">수합, 문서, 운영 도구까지 바로 엽니다.</p>
                     </div>
                     <a href="{{ login_url }}" class="home-public-v5-secondary-link">
-                        로그인 후 전체 서비스 보기
+                        전체 서비스 보기
                         <i class="fa-solid fa-right-to-bracket text-xs"></i>
                     </a>
                 </section>

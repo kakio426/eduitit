@@ -22,7 +22,7 @@
                 <p class="auth-shell-kicker">가입 마무리</p>
                 <h1 class="auth-shell-title auth-shell-title--compact">거의 다 됐어요</h1>
                 <p class="auth-shell-summary">
-                    {{ provider_name }} 계정으로 로그인했습니다. 서비스 이용에 필요한 마지막 정보를 확인해 주세요.
+                    {{ provider_name }} 계정으로 로그인했습니다. 마지막 정보만 확인하면 시작합니다.
                 </p>
             </div>
 
@@ -82,13 +82,13 @@
             {% endif %}
 
             <button type="submit" class="auth-shell-submit">
-                <span>{% trans "Sign Up" %} 후 시작하기</span>
+                <span>가입하고 시작하기</span>
                 <i class="fa-solid fa-arrow-right"></i>
             </button>
             </form>
 
             <div class="auth-shell-muted-panel">
-                <p class="auth-shell-muted-panel-title">로그인 후 최초 1회 약관 동의가 필요합니다.</p>
+                <p class="auth-shell-muted-panel-title">처음 1회 약관에 동의합니다.</p>
                 <div class="auth-shell-links">
                     <a href="{% url 'policy' %}#terms" class="auth-shell-link">이용약관</a>
                     <span>·</span>

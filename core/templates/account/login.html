@@ -2,17 +2,17 @@
 {% load static socialaccount %}
 
 {% block seo_meta %}
-<meta name="description" content="에듀잇티에 로그인하고 교실 운영, 알림장 작성, 서비스 가이드를 이어서 사용하세요.">
+<meta name="description" content="에듀잇티에 로그인하고 교실 운영 도구를 이어서 사용하세요.">
 <meta name="robots" content="noindex,nofollow">
 <link rel="canonical" href="https://eduitit.site/accounts/login/">
 <meta property="og:title" content="로그인 | Eduitit">
-<meta property="og:description" content="에듀잇티에 로그인하고 교실 운영, 알림장 작성, 서비스 가이드를 이어서 사용하세요.">
+<meta property="og:description" content="에듀잇티에 로그인하고 교실 운영 도구를 이어서 사용하세요.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://eduitit.site/accounts/login/">
 <meta property="og:image" content="https://eduitit.site/static/images/eduitit_og.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="로그인 | Eduitit">
-<meta name="twitter:description" content="에듀잇티에 로그인하고 교실 운영, 알림장 작성, 서비스 가이드를 이어서 사용하세요.">
+<meta name="twitter:description" content="에듀잇티에 로그인하고 교실 운영 도구를 이어서 사용하세요.">
 <meta name="twitter:image" content="https://eduitit.site/static/images/eduitit_og.png">
 {% endblock %}
 
@@ -34,16 +34,16 @@
                     <span>EDUITIT</span>
                 </a>
                 <p class="auth-shell-kicker">로그인</p>
-                <h1 class="auth-shell-title">선택한 교실 업무를 이어서 시작하세요</h1>
+                <h1 class="auth-shell-title">선택한 작업을 이어서 시작합니다</h1>
                 <p class="auth-shell-summary">
-                    카카오 또는 네이버로 로그인하면 방금 보던 도구와 교실 작업이 같은 흐름에서 이어집니다.
+                    카카오 또는 네이버로 로그인해 방금 보던 도구를 이어서 여세요.
                 </p>
             </div>
 
             {% if request.GET.next %}
             <div class="auth-shell-notice">
-                <p class="auth-shell-notice-title">방금 고른 도구로 바로 이어집니다.</p>
-                <p class="auth-shell-notice-copy">로그인하면 선택한 교실 업무 화면으로 곧바로 이동합니다.</p>
+                <p class="auth-shell-notice-title">방금 고른 도구로 이동합니다.</p>
+                <p class="auth-shell-notice-copy">로그인 후 바로 열립니다.</p>
             </div>
             {% endif %}
 
@@ -67,8 +67,8 @@
             </div>
 
             <div class="auth-shell-muted-panel">
-                <p class="auth-shell-muted-panel-title">처음 로그인하면 약관 동의가 필요합니다.</p>
-                <p class="auth-shell-muted-panel-copy">로그인 후에는 교실 운영, 알림장 작성, 서비스 가이드까지 같은 계정에서 이어서 사용할 수 있습니다.</p>
+                <p class="auth-shell-muted-panel-title">처음 로그인 시 약관에 동의합니다.</p>
+                <p class="auth-shell-muted-panel-copy">처음 1회만 확인하면 바로 시작합니다.</p>
                 <div class="auth-shell-links">
                     <a href="{% url 'policy' %}#terms" class="auth-shell-link">이용약관</a>
                     <span>·</span>
