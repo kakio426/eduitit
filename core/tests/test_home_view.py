@@ -361,9 +361,8 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('core/css/home_authenticated_v6.css', content)
         self.assertIn('core/css/home_authenticated_v6_canonical.css', content)
         self.assertIn('data-home-design-version="v6"', content)
-        self.assertIn('data-home-v6-entry-panel="true"', content)
-        self.assertIn('오늘 바로 할 일', content)
-        self.assertIn('오늘 일정 보기', content)
+        self.assertNotIn('data-home-v6-entry-panel="true"', content)
+        self.assertNotIn('오늘 바로 할 일', content)
         self.assertNotIn('core/css/home_authenticated_v2.css', content)
 
     def test_v2_anonymous_has_sections(self):
@@ -3574,6 +3573,8 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('data-home-v6-rail-card="true"', content)
         self.assertIn('data-home-v6-rail-item="true"', content)
         self.assertIn('data-home-v6-rail-action="true"', content)
+        self.assertNotIn('data-home-v6-entry-panel="true"', content)
+        self.assertNotIn('오늘 바로 할 일', content)
 
     def test_v6_first_run_empty_workbench_offers_next_actions(self):
         self._login('v6emptyfirst')
@@ -3586,6 +3587,7 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('자주 쓰는 도구를 아직 고르지 않았어요', content)
         self.assertIn('도구 하나 먼저 열기', content)
         self.assertIn('오늘 일정 먼저 보기', content)
+        self.assertNotIn('data-home-v6-entry-panel="true"', content)
         self.assertIsNotNone(response.context['home_entry_panel'])
 
     @patch('core.views._build_home_recommendations', return_value=[])

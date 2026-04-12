@@ -102,61 +102,6 @@
                     </div>
                 </div>
 
-                {% if home_entry_panel %}
-                <section class="mb-4" data-home-v6-entry-panel="true">
-                    <div
-                        class="home-v6-card rounded-[1.9rem] border border-slate-200 p-4 shadow-sm sm:p-5"
-                        style="background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(240,249,255,0.96) 58%, rgba(236,253,245,0.96) 100%);"
-                    >
-                        <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                            <div class="max-w-2xl">
-                                <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">{{ home_entry_panel.eyebrow }}</p>
-                                <h2 class="mt-1 text-xl font-black text-slate-900 sm:text-2xl">{{ home_entry_panel.title }}</h2>
-                                <p class="mt-2 text-sm font-semibold leading-6 text-slate-600">{{ home_entry_panel.description }}</p>
-                            </div>
-                            {% if home_entry_panel.is_first_run %}
-                            <span class="inline-flex items-center rounded-full bg-white px-3 py-1.5 text-xs font-black text-emerald-700 shadow-sm">
-                                처음 쓰는 흐름
-                            </span>
-                            {% endif %}
-                        </div>
-
-                        <div class="mt-4 grid gap-3 md:grid-cols-2">
-                            {% if home_entry_panel.primary_action %}
-                            <a
-                                href="{{ home_entry_panel.primary_action.href }}"
-                                class="rounded-[1.5rem] border border-emerald-200 bg-white px-4 py-4 transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md"
-                                {% if home_entry_panel.primary_action.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
-                            >
-                                <p class="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-600">추천 시작</p>
-                                <h3 class="mt-2 text-lg font-black text-slate-900">{{ home_entry_panel.primary_action.title }}</h3>
-                                <p class="mt-1 text-sm font-semibold leading-6 text-slate-500">{{ home_entry_panel.primary_action.description }}</p>
-                                <span class="mt-4 inline-flex items-center gap-2 rounded-full bg-emerald-600 px-3.5 py-2 text-sm font-black text-white">
-                                    바로 열기
-                                    <i class="fa-solid fa-{% if home_entry_panel.primary_action.is_external %}arrow-up-right-from-square{% else %}arrow-right{% endif %} text-xs"></i>
-                                </span>
-                            </a>
-                            {% endif %}
-
-                            {% if home_entry_panel.secondary_action %}
-                            <a
-                                href="{{ home_entry_panel.secondary_action.href }}"
-                                class="rounded-[1.5rem] border border-slate-200 bg-white/90 px-4 py-4 transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md"
-                            >
-                                <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">같은 흐름에서 이어서</p>
-                                <h3 class="mt-2 text-lg font-black text-slate-900">{{ home_entry_panel.secondary_action.title }}</h3>
-                                <p class="mt-1 text-sm font-semibold leading-6 text-slate-500">{{ home_entry_panel.secondary_action.description }}</p>
-                                <span class="mt-4 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-black text-slate-700">
-                                    바로 보기
-                                    <i class="fa-solid fa-arrow-right text-xs"></i>
-                                </span>
-                            </a>
-                            {% endif %}
-                        </div>
-                    </div>
-                </section>
-                {% endif %}
-
                 <section class="home-v6-mobile-stack" data-home-v6-mobile-stack="true">
                     {% for mobile_section in home_mobile_section_order %}
                     {% if mobile_section == 'workbench' %}
