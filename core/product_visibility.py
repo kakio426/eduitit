@@ -6,7 +6,9 @@ SHEETBOOK_LEGACY_TITLES = {"교무수첩", "학급 기록 보드"}
 
 
 def is_sheetbook_runtime_available():
-    return bool(getattr(settings, "SHEETBOOK_ENABLED", False))
+    # Sheetbook is retired as a public service. Keep legacy models importable
+    # for companion data paths, but never surface the runtime again.
+    return False
 
 
 def is_sheetbook_discovery_visible():

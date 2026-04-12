@@ -73,6 +73,18 @@ SHEETBOOK_MOBILE_COMPACT_ALLOWED_ACTIONS = {
 logger = logging.getLogger(__name__)
 
 
+def service_retired(request, *args, **kwargs):
+    # Preserve legacy URLs and saved links without leaving users on a dead 404.
+    return render(
+        request,
+        "sheetbook/retired.html",
+        {
+            "home_url": reverse("home"),
+            "calendar_url": f"{reverse('home')}#home-calendar",
+        },
+    )
+
+
 def _log_sheetbook_metric(event_name, **fields):
     payload = {"event": event_name}
     payload.update(fields or {})

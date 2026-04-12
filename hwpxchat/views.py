@@ -2,8 +2,6 @@ import json
 import logging
 import os
 from decimal import Decimal, InvalidOperation
-
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.files.base import ContentFile
@@ -71,7 +69,9 @@ def _get_service():
 
 
 def _is_sheetbook_companion_available():
-    return bool(getattr(settings, "SHEETBOOK_ENABLED", False)) and is_sheetbook_discovery_visible()
+    # The public Sheetbook surface is retired. HWPX chat keeps its parsing and
+    # calendar flow, but no longer exposes the legacy companion send action.
+    return False
 
 
 def _ensure_sheetbook_companion_available():

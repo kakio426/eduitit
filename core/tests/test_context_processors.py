@@ -138,7 +138,7 @@ class ServiceLauncherContextTests(TestCase):
         payload = json.loads(context["service_launcher_json"])
         titles = [item["title"] for item in payload]
 
-        self.assertIn("학급 기록 보드", titles)
+        self.assertNotIn("학급 기록 보드", titles)
         self.assertNotIn("학급 캘린더", titles)
 
     def test_service_launcher_json_hides_sheetbook_when_runtime_disabled(self):

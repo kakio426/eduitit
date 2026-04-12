@@ -2293,7 +2293,9 @@ def _split_integration_key(raw_key):
 
 
 def _sheetbook_runtime_enabled():
-    return bool(getattr(settings, "SHEETBOOK_ENABLED", False))
+    # Sheetbook links remain only as legacy compatibility data and should not
+    # re-open even if old flags are toggled.
+    return False
 
 
 def _resolve_sheetbook_context(user, raw_sheetbook_id, raw_tab_id):

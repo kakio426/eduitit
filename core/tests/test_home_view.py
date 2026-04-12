@@ -1340,10 +1340,10 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('학급 기록 보드', content)
+        self.assertNotIn('학급 기록 보드', content)
         self.assertNotIn('숨김 교무수첩', content)
-        self.assertIn(visible_product.id, [item['product'].id for item in response.context.get('quick_actions', [])])
-        self.assertIn(visible_product.id, [item['product'].id for item in response.context.get('favorite_items', [])])
+        self.assertNotIn(visible_product.id, [item['product'].id for item in response.context.get('quick_actions', [])])
+        self.assertNotIn(visible_product.id, [item['product'].id for item in response.context.get('favorite_items', [])])
         section_product_ids = []
         for section in response.context.get('sections', []):
             section_product_ids.extend(product.id for product in section.get('products', []))
@@ -1351,10 +1351,10 @@ class HomeV2ViewTest(TestCase):
         for section in response.context.get('aux_sections', []):
             section_product_ids.extend(product.id for product in section.get('products', []))
             section_product_ids.extend(product.id for product in section.get('overflow_products', []))
-        self.assertIn(visible_product.id, section_product_ids)
+        self.assertNotIn(visible_product.id, section_product_ids)
         self.assertNotIn(visible_product.id, [product.id for product in response.context.get('games', [])])
         search_payload = json.loads(response.context['service_launcher_json'])
-        self.assertIn('학급 기록 보드', [item['title'] for item in search_payload])
+        self.assertNotIn('학급 기록 보드', [item['title'] for item in search_payload])
 
     def test_v2_home_hides_sheetbook_when_runtime_disabled(self):
         visible_product = self._create_sheetbook_product()
@@ -1368,7 +1368,7 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('학급 기록 보드', content)
         self.assertNotIn(visible_product.id, [item['product'].id for item in response.context.get('quick_actions', [])])
         self.assertNotIn(visible_product.id, [item['product'].id for item in response.context.get('favorite_items', [])])
-        self.assertFalse(response.context['sheetbook_workspace']['enabled'])
+        self.assertNotIn('sheetbook_workspace', response.context)
         search_payload = json.loads(response.context['service_launcher_json'])
         self.assertNotIn('학급 기록 보드', [item['title'] for item in search_payload])
 
@@ -1447,7 +1447,7 @@ class HomeV2ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
 
-        self.assertFalse(response.context['sheetbook_workspace']['enabled'])
+        self.assertNotIn('sheetbook_workspace', response.context)
         self.assertFalse(
             SheetbookMetricEvent.objects.filter(
                 user=user,
@@ -1465,9 +1465,8 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertTrue(response.context['sheetbook_workspace']['enabled'])
-        self.assertGreaterEqual(len(response.context['sheetbook_workspace']['recent_sheetbooks']), 1)
-        self.assertTrue(
+        self.assertNotIn('sheetbook_workspace', response.context)
+        self.assertFalse(
             SheetbookMetricEvent.objects.filter(
                 user=user,
                 event_name='workspace_home_opened',
@@ -1483,10 +1482,7 @@ class HomeV2ViewTest(TestCase):
         Sheetbook.objects.create(owner=user, title='배부 확인 수첩', academic_year=2026)
 
         response = self.client.get(reverse('home'))
-        quick_actions = response.context['sheetbook_workspace']['quick_actions']
-        handoff_action = next(item for item in quick_actions if item['title'] == '배부 체크')
-
-        self.assertEqual(handoff_action['href'], reverse('handoff:landing'))
+        self.assertNotIn('sheetbook_workspace', response.context)
 
     def test_v2_usage_based_quick_actions(self):
         """V2 사용 기록 기반 퀵 액션 반영"""

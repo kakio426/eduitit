@@ -192,8 +192,9 @@ class HwpxChatViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "학급 기록 보드에 보내기")
-        self.assertContains(response, "학급 기록 보드를 선택해 주세요")
+        self.assertContains(response, "업무 카드 전체 복사")
+        self.assertNotContains(response, "학급 기록 보드에 보내기")
+        self.assertNotContains(response, "학급 기록 보드를 선택해 주세요")
         self.assertNotContains(response, "교무수첩")
 
     @patch("hwpxchat.views.generate_structured_workitems")
@@ -318,21 +319,8 @@ class HwpxChatViewTests(TestCase):
             },
         )
 
-        self.assertEqual(response.status_code, 302)
-        execution_tab = SheetTab.objects.get(sheetbook=sheetbook, name="실행업무")
-        self.assertEqual(execution_tab.sort_order, 2)
-        title_column = execution_tab.columns.get(key="title")
-        due_date_column = execution_tab.columns.get(key="due_date")
-        source_column = execution_tab.columns.get(key="source_document")
-        self.assertEqual(execution_tab.rows.count(), 1)
-        row = execution_tab.rows.first()
-        self.assertEqual(SheetCell.objects.get(row=row, column=title_column).value_text, "회신서 안내")
-        self.assertEqual(SheetCell.objects.get(row=row, column=due_date_column).value_date.isoformat(), "2026-03-14")
-        self.assertEqual(SheetCell.objects.get(row=row, column=source_column).value_text, document.document_title)
-
-        event = CalendarEvent.objects.get(integration_source="hwpxchat_workitem")
-        self.assertEqual(event.integration_key, f"{document.id}:{first_item.id}")
-        self.assertEqual(event.title, "회신서 안내")
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(CalendarEvent.objects.filter(integration_source="hwpxchat_workitem").count(), 0)
 
     @override_settings(SHEETBOOK_ENABLED=True, SHEETBOOK_DISCOVERY_VISIBLE=True)
     @patch("hwpxchat.views.generate_structured_workitems")
@@ -351,7 +339,7 @@ class HwpxChatViewTests(TestCase):
         first_item = document.work_items.order_by("sort_order", "id").first()
         commit_url = reverse("hwpxchat:commit_document", kwargs={"document_id": document.id})
 
-        self.client.post(
+        first_commit = self.client.post(
             commit_url,
             data={
                 "sheetbook_id": sheetbook.id,
@@ -368,9 +356,7 @@ class HwpxChatViewTests(TestCase):
             },
         )
 
-        execution_tab = SheetTab.objects.get(sheetbook=sheetbook, name="실행업무")
-        row = execution_tab.rows.first()
-        self.client.post(
+        second_commit = self.client.post(
             commit_url,
             data={
                 "sheetbook_id": sheetbook.id,
@@ -386,11 +372,8 @@ class HwpxChatViewTests(TestCase):
             },
         )
 
-        self.assertEqual(execution_tab.rows.count(), 1)
-        self.assertEqual(execution_tab.rows.first().id, row.id)
-        title_column = execution_tab.columns.get(key="title")
-        updated_title = SheetCell.objects.get(row=row, column=title_column).value_text
-        self.assertEqual(updated_title, "회신서 일정 다시 확인")
+        self.assertEqual(first_commit.status_code, 404)
+        self.assertEqual(second_commit.status_code, 404)
         self.assertEqual(CalendarEvent.objects.filter(integration_source="hwpxchat_workitem").count(), 0)
 
     @patch("hwpxchat.views.answer_document_question")

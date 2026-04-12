@@ -38,7 +38,11 @@ from .policy_meta import (
 )
 from .context_processors import prime_service_launcher_products
 from . import service_launcher as service_launcher_utils
-from .product_visibility import filter_discoverable_products, is_sheetbook_discovery_visible
+from .product_visibility import (
+    filter_discoverable_products,
+    is_sheetbook_discovery_visible,
+    is_sheetbook_runtime_available,
+)
 from .active_classroom import (
     get_active_classroom_for_request,
     set_active_classroom_session,
@@ -178,7 +182,7 @@ def _get_admin_dashboard_page_name(path, route_name, product_by_route):
 def _record_sheetbook_workspace_metric(request, event_name, *, metadata=None):
     if not request.user.is_authenticated:
         return
-    if not getattr(settings, "SHEETBOOK_ENABLED", False):
+    if not is_sheetbook_runtime_available():
         return
     if not is_sheetbook_discovery_visible():
         return
@@ -2052,7 +2056,7 @@ def _build_sheetbook_workspace_context(request, *, require_discovery_visible=Tru
 
     if (
         not request.user.is_authenticated
-        or not getattr(settings, "SHEETBOOK_ENABLED", False)
+        or not is_sheetbook_runtime_available()
         or (require_discovery_visible and not is_sheetbook_discovery_visible())
     ):
         return {"sheetbook_workspace": workspace}

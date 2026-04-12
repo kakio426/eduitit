@@ -57,7 +57,7 @@ class CalendarSheetbookBridgeTests(TestCase):
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_sheetbook_entry_shows_sheetbook_calendar_entry_when_sheetbook_exists(self):
         sheetbook = Sheetbook.objects.create(owner=self.user, title="2026 3-1 교무수첩")
-        calendar_tab = SheetTab.objects.create(
+        SheetTab.objects.create(
             sheetbook=sheetbook,
             name="달력",
             tab_type=SheetTab.TYPE_CALENDAR,
@@ -65,7 +65,7 @@ class CalendarSheetbookBridgeTests(TestCase):
         )
 
         response = self.client.get(reverse("classcalendar:sheetbook_entry"))
-        self.assertRedirects(response, f"{reverse('sheetbook:detail', kwargs={'pk': sheetbook.pk})}?tab={calendar_tab.pk}")
+        self.assertRedirects(response, f"{reverse('home')}#home-calendar", fetch_redirect_response=False)
 
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_sheetbook_entry_prefers_recent_sheetbook_from_session(self):
@@ -89,7 +89,7 @@ class CalendarSheetbookBridgeTests(TestCase):
         session.save()
 
         response = self.client.get(reverse("classcalendar:sheetbook_entry"))
-        self.assertRedirects(response, f"{reverse('sheetbook:detail', kwargs={'pk': recent_sheetbook.pk})}?tab={recent_tab.pk}")
+        self.assertRedirects(response, f"{reverse('home')}#home-calendar", fetch_redirect_response=False)
 
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_sheetbook_entry_prefers_explicit_calendar_link_over_recent_sheetbook(self):
@@ -116,7 +116,7 @@ class CalendarSheetbookBridgeTests(TestCase):
         session.save()
 
         response = self.client.get(reverse("classcalendar:sheetbook_entry"))
-        self.assertRedirects(response, f"{reverse('sheetbook:detail', kwargs={'pk': explicit_sheetbook.pk})}?tab={explicit_tab.pk}")
+        self.assertRedirects(response, f"{reverse('home')}#home-calendar", fetch_redirect_response=False)
 
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_sheetbook_entry_with_legacy_query_redirects_to_main(self):

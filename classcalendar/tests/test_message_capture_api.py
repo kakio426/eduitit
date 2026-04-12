@@ -499,8 +499,9 @@ class MessageCaptureApiTests(TestCase):
         events = events_response.json().get("events", [])
         saved_events = [item for item in events if item.get("id") in created_event_ids]
         self.assertEqual(len(saved_events), 2)
-        self.assertTrue(all(item.get("source_sheetbook_id") == sheetbook.id for item in saved_events))
-        self.assertTrue(all(item.get("source_tab_id") == calendar_tab.id for item in saved_events))
+        self.assertTrue(all(item.get("source_sheetbook_id") == 0 for item in saved_events))
+        self.assertTrue(all(item.get("source_tab_id") == 0 for item in saved_events))
+        self.assertTrue(all(item.get("source_detail_url") == "" for item in saved_events))
 
     @override_settings(SHEETBOOK_ENABLED=False)
     def test_commit_ignores_sheetbook_context_when_service_retired(self):
