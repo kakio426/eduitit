@@ -21,7 +21,7 @@ import logging
 import requests
 from urllib.parse import quote
 
-from core.seo import build_product_route_page_seo, build_route_page_seo
+from core.seo import build_product_route_page_seo, build_public_service_landing_seo, build_route_page_seo
 from .models import CollectionRequest, Submission
 from .forms import CollectionRequestForm
 from .integration import (
@@ -476,12 +476,13 @@ def get_collect_service():
 
 
 def _build_collect_landing_seo(request, service):
-    return build_product_route_page_seo(
+    return build_public_service_landing_seo(
         request,
         product=service,
         title="가뿐 수합 - Eduitit",
         description="QR 또는 입장코드로 파일, 링크, 텍스트, 선택형 응답을 빠르게 모으는 교사용 수합 도구입니다.",
         route_name="collect:landing",
+        landing_name="가뿐 수합",
     )
 
 

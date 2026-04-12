@@ -8,7 +8,7 @@ from django.urls import reverse
 from insights.models import Insight
 from products.models import Product
 
-from .discovery_policy import is_sensitive_discovery_target
+from .discovery_policy import has_public_search_canonical_route, is_sensitive_discovery_target
 from .product_visibility import filter_discoverable_products
 
 
@@ -29,6 +29,24 @@ def build_public_sitemap_entries() -> tuple[PublicSitemapEntry, ...]:
             location=reverse("home"),
             changefreq="daily",
             priority=1.0,
+        ),
+        PublicSitemapEntry(
+            key="core:about",
+            location=reverse("about"),
+            changefreq="monthly",
+            priority=0.7,
+        ),
+        PublicSitemapEntry(
+            key="products:list",
+            location=reverse("product_list"),
+            changefreq="weekly",
+            priority=0.9,
+        ),
+        PublicSitemapEntry(
+            key="portfolio:list",
+            location=reverse("portfolio:list"),
+            changefreq="monthly",
+            priority=0.7,
         ),
         PublicSitemapEntry(
             key="tools:prompt_lab",
@@ -54,6 +72,30 @@ def build_public_sitemap_entries() -> tuple[PublicSitemapEntry, ...]:
             changefreq="weekly",
             priority=0.8,
         ),
+        PublicSitemapEntry(
+            key="services:collect",
+            location=reverse("collect:landing"),
+            changefreq="weekly",
+            priority=0.8,
+        ),
+        PublicSitemapEntry(
+            key="services:handoff",
+            location=reverse("handoff:landing"),
+            changefreq="weekly",
+            priority=0.8,
+        ),
+        PublicSitemapEntry(
+            key="services:schoolprograms",
+            location=reverse("schoolprograms:landing"),
+            changefreq="weekly",
+            priority=0.8,
+        ),
+        PublicSitemapEntry(
+            key="tools:tts_announce",
+            location=reverse("tts_announce"),
+            changefreq="weekly",
+            priority=0.7,
+        ),
     ]
 
     discoverable_products = filter_discoverable_products(
@@ -61,6 +103,8 @@ def build_public_sitemap_entries() -> tuple[PublicSitemapEntry, ...]:
     )
     for product in discoverable_products:
         if is_sensitive_discovery_target(product):
+            continue
+        if has_public_search_canonical_route(product):
             continue
         entries.append(
             PublicSitemapEntry(

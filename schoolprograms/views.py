@@ -14,6 +14,7 @@ from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import timezone
 
+from core.seo import build_public_service_landing_seo
 from products.models import Product
 
 from .forms import (
@@ -486,6 +487,7 @@ def landing(request):
     if request.user.is_authenticated and _is_company_role(request.user):
         return redirect("schoolprograms:vendor_dashboard")
 
+    service = _get_service()
     listings = _listing_base_queryset().filter(
         approval_status=ProgramListing.ApprovalStatus.APPROVED,
     )
@@ -529,9 +531,14 @@ def landing(request):
         request,
         "schoolprograms/landing.html",
         {
-            "page_title": f"{SERVICE_TITLE} | Eduitit",
-            "meta_description": "지역과 주제로 학교로 찾아오는 체험학습, 교사연수, 학교행사를 바로 비교하고 문의하세요.",
-            "canonical_url": request.build_absolute_uri(reverse("schoolprograms:landing")),
+            **build_public_service_landing_seo(
+                request,
+                product=service,
+                title=f"{SERVICE_TITLE} | Eduitit",
+                description="지역과 주제로 학교로 찾아오는 체험학습, 교사연수, 학교행사를 바로 비교하고 문의하세요.",
+                route_name="schoolprograms:landing",
+                landing_name=SERVICE_TITLE,
+            ).as_context(),
             "page_obj": page_obj,
             "provider_count": len(provider_cards),
             "has_active_filters": has_active_filters,

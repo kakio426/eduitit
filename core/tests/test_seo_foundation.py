@@ -71,6 +71,24 @@ class SeoFoundationTests(TestCase):
             launch_route_name="handoff:landing",
             solve_text="배부 여부를 빠르게 기록합니다.",
         )
+        self.noticegen_service = Product.objects.create(
+            title="알림장 멘트 생성기",
+            description="가정통신문과 알림장 멘트를 빠르게 만듭니다.",
+            price=0,
+            is_active=True,
+            service_type="work",
+            launch_route_name="noticegen:main",
+            solve_text="전달 내용을 교사용 문장으로 정리합니다.",
+        )
+        self.schoolprograms_service = Product.objects.create(
+            title="학교 체험·행사 찾기",
+            description="학교로 찾아오는 프로그램을 지역과 주제로 비교합니다.",
+            price=0,
+            is_active=True,
+            service_type="classroom",
+            launch_route_name="schoolprograms:landing",
+            solve_text="학교 프로그램을 비교하고 바로 문의합니다.",
+        )
         self.collect_request = CollectionRequest.objects.create(
             creator=self.user,
             title="과학 실험 보고서",
@@ -120,16 +138,28 @@ class SeoFoundationTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn(reverse("home"), content)
+        self.assertIn(reverse("about"), content)
+        self.assertIn(reverse("product_list"), content)
+        self.assertIn(reverse("portfolio:list"), content)
         self.assertIn(reverse("insights:list"), content)
-        self.assertIn(reverse("product_detail", kwargs={"pk": self.product.pk}), content)
-        self.assertIn(reverse("insights:detail", kwargs={"pk": self.insight.pk}), content)
+        self.assertIn(reverse("prompt_lab"), content)
         self.assertIn(reverse("noticegen:main"), content)
         self.assertIn(reverse("qrgen:landing"), content)
+        self.assertIn(reverse("collect:landing"), content)
+        self.assertIn(reverse("handoff:landing"), content)
+        self.assertIn(reverse("schoolprograms:landing"), content)
+        self.assertIn(reverse("tts_announce"), content)
+        self.assertIn(reverse("product_detail", kwargs={"pk": self.product.pk}), content)
+        self.assertIn(reverse("insights:detail", kwargs={"pk": self.insight.pk}), content)
         self.assertNotIn(reverse("tool_guide"), content)
         self.assertNotIn(reverse("service_guide_list"), content)
         self.assertNotIn(reverse("service_guide_detail", kwargs={"pk": self.manual.pk}), content)
         self.assertNotIn(reverse("service_guide_detail", kwargs={"pk": self.sensitive_manual.pk}), content)
         self.assertNotIn(reverse("product_detail", kwargs={"pk": self.sensitive_product.pk}), content)
+        self.assertNotIn(reverse("product_detail", kwargs={"pk": self.collect_service.pk}), content)
+        self.assertNotIn(reverse("product_detail", kwargs={"pk": self.handoff_service.pk}), content)
+        self.assertNotIn(reverse("product_detail", kwargs={"pk": self.noticegen_service.pk}), content)
+        self.assertNotIn(reverse("product_detail", kwargs={"pk": self.schoolprograms_service.pk}), content)
         self.assertNotIn("/secret-admin-kakio/", content)
         self.assertNotIn(reverse("insights:create"), content)
         self.assertNotIn("/api/", content)
@@ -299,6 +329,22 @@ class SeoFoundationTests(TestCase):
             '<meta name="description" content="명단을 저장해 두고 배부할 때 수령 여부만 빠르게 체크하는 교사용 배부 기록 도구입니다.">',
             content,
         )
+        self.assertIn('"@type":"CollectionPage"', content)
+        self.assertIn('"@type":"BreadcrumbList"', content)
+        self.assertNotIn(DEFAULT_HOME_DESCRIPTION, content)
+
+    def test_schoolprograms_landing_uses_public_service_meta_and_schema(self):
+        response = self.client.get(reverse("schoolprograms:landing"))
+        content = response.content.decode("utf-8")
+        canonical = f"https://eduitit.site{reverse('schoolprograms:landing')}"
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("<title>학교 체험·행사 찾기 | Eduitit</title>", content)
+        self.assertIn(f'<link rel="canonical" href="{canonical}">', content)
+        self.assertIn(f'<meta property="og:url" content="{canonical}">', content)
+        self.assertIn("지역과 주제로 학교로 찾아오는 체험학습, 교사연수, 학교행사를 바로 비교하고 문의하세요.", content)
+        self.assertIn('"@type":"CollectionPage"', content)
+        self.assertIn('"@type":"BreadcrumbList"', content)
         self.assertNotIn(DEFAULT_HOME_DESCRIPTION, content)
 
     def test_collect_and_handoff_landing_pages_get_explicit_meta(self):
@@ -398,3 +444,18 @@ class SeoFoundationTests(TestCase):
         self.assertEqual(product_response.status_code, 200)
         self.assertIn('<meta name="robots" content="noindex,nofollow">', product_content)
         self.assertEqual(product_response["X-Robots-Tag"], "noindex, nofollow")
+
+    def test_route_canonical_products_use_noindex_headers_on_detail_pages(self):
+        cases = (
+            self.handoff_service,
+            self.noticegen_service,
+            self.schoolprograms_service,
+        )
+
+        for product in cases:
+            with self.subTest(product=product.launch_route_name):
+                response = self.client.get(reverse("product_detail", kwargs={"pk": product.pk}))
+                content = response.content.decode("utf-8")
+                self.assertEqual(response.status_code, 200)
+                self.assertIn('<meta name="robots" content="noindex,nofollow">', content)
+                self.assertEqual(response["X-Robots-Tag"], "noindex, nofollow")

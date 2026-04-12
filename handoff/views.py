@@ -16,7 +16,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from core.seo import build_product_route_page_seo
+from core.seo import build_public_service_landing_seo
 from products.models import Product
 
 from .forms import (
@@ -40,12 +40,13 @@ def _get_service():
 
 
 def _build_handoff_landing_seo(request, service):
-    return build_product_route_page_seo(
+    return build_public_service_landing_seo(
         request,
         product=service,
         title="배부 체크 - Eduitit",
         description="명단을 저장해 두고 배부할 때 수령 여부만 빠르게 체크하는 교사용 배부 기록 도구입니다.",
         route_name="handoff:landing",
+        landing_name="배부 체크",
     )
 
 

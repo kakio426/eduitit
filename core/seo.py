@@ -9,7 +9,7 @@ from urllib.parse import urljoin
 from django.urls import reverse
 from django.utils.html import strip_tags
 
-from .discovery_policy import is_sensitive_discovery_target
+from .discovery_policy import has_public_search_canonical_route, is_sensitive_discovery_target
 
 
 SITE_CANONICAL_BASE_URL = "https://eduitit.site"
@@ -347,6 +347,57 @@ def build_product_route_page_seo(
     )
 
 
+def build_public_service_landing_seo(
+    request,
+    *,
+    title: str,
+    description: str,
+    route_name: str,
+    landing_name: str,
+    product=None,
+    route_kwargs: dict[str, Any] | None = None,
+    current_path: str = "",
+    og_image: str = "",
+    og_type: str = "website",
+    robots: str = "index,follow",
+    additional_structured_data: tuple[dict[str, Any], ...] | None = None,
+) -> PageSeoMeta:
+    if route_name:
+        canonical_url = _absolute_url(reverse(route_name, kwargs=route_kwargs or {}))
+    else:
+        canonical_url = _absolute_url(current_path or getattr(request, "path", "/"))
+
+    structured_data = (
+        _collection_page_structured_data(
+            name=landing_name,
+            description=description,
+            url=canonical_url,
+        ),
+        _breadcrumb_list_structured_data(
+            [
+                ("홈", reverse("home")),
+                (landing_name, canonical_url),
+            ]
+        ),
+    )
+    if additional_structured_data:
+        structured_data = (*structured_data, *additional_structured_data)
+
+    return build_product_route_page_seo(
+        request,
+        product=product,
+        title=title,
+        description=description,
+        route_name=route_name,
+        route_kwargs=route_kwargs,
+        current_path=current_path,
+        og_image=og_image,
+        og_type=og_type,
+        robots=robots,
+        structured_data=structured_data,
+    )
+
+
 def build_home_page_seo(request) -> PageSeoMeta:
     canonical_url = _absolute_url(reverse("home"))
     return _build_page_seo(
@@ -558,7 +609,11 @@ def build_product_detail_seo(request, product) -> PageSeoMeta:
         description=page_description,
         canonical_url=canonical_url,
         og_image=image_url or DEFAULT_OG_IMAGE_URL,
-        robots="noindex,nofollow" if is_sensitive_discovery_target(product) else "index,follow",
+        robots=(
+            "noindex,nofollow"
+            if is_sensitive_discovery_target(product) or has_public_search_canonical_route(product)
+            else "index,follow"
+        ),
         structured_data=(
             _article_structured_data(
                 headline=product_name,
