@@ -169,7 +169,8 @@
     width: 100%;
     max-width: 1480px;
     margin: 0 auto;
-    --home-v6-panel-gap: 1rem;
+    /* Keep the home layout intact while normalizing panel density across cards. */
+    --home-v6-panel-gap: 0.9rem;
     --home-v4-panel-gap: var(--home-v6-panel-gap);
 }
 
@@ -218,7 +219,7 @@
     width: 100%;
     max-width: 100%;
     min-width: 0;
-    padding: 1.25rem;
+    padding: 1.12rem;
 }
 
 .home-v6-layout {
@@ -234,12 +235,12 @@
 }
 
 .home-v6-nav-card {
-    padding: 1rem;
+    padding: 0.92rem;
     overflow: hidden;
 }
 
 .home-v6-nav-header {
-    padding: 0.2rem 0.2rem 1rem;
+    padding: 0.18rem 0.18rem 0.84rem;
 }
 
 .home-v6-nav-list {
@@ -515,7 +516,7 @@
     width: 100%;
     max-width: 100%;
     min-width: 0;
-    padding: 0.95rem;
+    padding: 0.88rem;
     overflow-x: clip;
     border-radius: var(--home-v6-radius-panel);
 }
@@ -525,7 +526,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.85rem;
-    margin-bottom: 0.8rem;
+    margin-bottom: 0.68rem;
 }
 
 .home-v6-mobile-panel-title {
@@ -562,7 +563,7 @@
 }
 
 .home-v6-mobile-workbench-title {
-    margin: 0.7rem 0 0;
+    margin: 0.58rem 0 0;
     padding-right: 1rem;
     font-size: 0.84rem;
     font-weight: 800;
@@ -592,7 +593,7 @@
     border: 1px dashed #cbd5e1;
     border-radius: var(--home-v6-radius-panel);
     background: #f8fafc;
-    padding: 1rem;
+    padding: 0.88rem;
     text-align: center;
     color: #64748b;
     font-size: 0.9rem;
@@ -601,7 +602,7 @@
 
 .home-v6-quickdrop-panel {
     display: grid;
-    gap: 0.85rem;
+    gap: 0.75rem;
 }
 
 .home-v6-mobile-quickdrop {

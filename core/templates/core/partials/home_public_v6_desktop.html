@@ -1,4 +1,4 @@
-<section class="home-public-v4-surface rounded-[2rem] px-5 py-8 sm:px-7 md:px-10 md:py-10" data-home-v4-public-belief="true">
+<section class="home-public-v4-surface rounded-[2rem] px-5 py-7 sm:px-7 md:px-9 md:py-9" data-home-v4-public-belief="true">
     <span class="home-public-v4-kicker inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-black">
         <span class="home-public-kicker-dot h-2.5 w-2.5 rounded-full"></span>
         바로 쓰는 교실 도구
@@ -7,10 +7,10 @@
         오늘 필요한 교실 도구를
         <span class="home-public-v4-accent mt-2 block">바로 엽니다</span>
     </h1>
-    <p class="mt-5 max-w-2xl text-base font-semibold leading-7 text-slate-600 break-keep">
+    <p class="mt-4 max-w-2xl text-base font-semibold leading-7 text-slate-600 break-keep">
         공개 도구를 먼저 열고, 필요한 때에만 로그인합니다.
     </p>
-    <div class="mt-6 flex flex-wrap gap-2.5">
+    <div class="mt-5 flex flex-wrap gap-2.5">
         <span class="home-public-v4-keyword rounded-full px-3.5 py-2 text-sm font-black text-slate-700">공개 도구</span>
         <span class="home-public-v4-keyword rounded-full px-3.5 py-2 text-sm font-black text-slate-700">교실 업무</span>
         <span class="home-public-v4-keyword rounded-full px-3.5 py-2 text-sm font-black text-slate-700">빠른 시작</span>
@@ -19,12 +19,12 @@
 
 {% if representative_products %}
 <section class="mt-4" data-home-v4-public-featured="true">
-    <div class="home-public-v4-surface rounded-[1.85rem] p-5 sm:p-6">
+    <div class="home-public-v4-surface rounded-[1.85rem] p-4 sm:p-5">
         <p class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">대표 서비스</p>
         <div class="mt-3 grid gap-3 md:grid-cols-2" data-home-v4-public-representatives="true">
             {% for product in representative_products %}
-            <article class="home-public-v4-card rounded-[1.5rem] p-4 sm:p-5">
-                <div class="flex h-full flex-col gap-5">
+            <article class="home-public-v4-card rounded-[1.5rem] p-4 sm:p-[1.125rem]">
+                <div class="flex h-full flex-col gap-4 xl:gap-[1.125rem]">
                     <div class="flex items-start gap-4">
                         <div class="home-public-v4-icon home-public-service-icon-tone flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl shadow-sm">
                             {% if product.icon %}
@@ -60,10 +60,10 @@
 </section>
 {% elif featured_product %}
 <section class="mt-4" data-home-v4-public-featured="true">
-    <div class="home-public-v4-surface rounded-[1.85rem] p-5 sm:p-6">
+    <div class="home-public-v4-surface rounded-[1.85rem] p-4 sm:p-5">
         <p class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">대표 서비스</p>
-        <div class="home-public-v4-card mt-3 rounded-[1.5rem] p-4 sm:p-5">
-            <div class="flex flex-col gap-5 sm:gap-6 md:flex-row md:items-center md:justify-between">
+        <div class="home-public-v4-card mt-3 rounded-[1.5rem] p-4 sm:p-[1.125rem]">
+            <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between xl:gap-[1.125rem]">
                 <div class="flex items-start gap-4">
                     <div class="home-public-v4-icon home-public-service-icon-tone flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl shadow-sm">
                         {% if featured_product.icon %}
@@ -99,17 +99,17 @@
 
 {% if guest_rotation_cards %}
 <section class="mt-4" data-home-v4-public-rotation="true">
-    <div class="home-public-v4-surface rounded-[1.85rem] p-5 sm:p-6" data-guest-rotation data-guest-rotation-interval="5000">
+    <div class="home-public-v4-surface rounded-[1.85rem] p-4 sm:p-5" data-guest-rotation data-guest-rotation-interval="5000">
         <p class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">로그인 없이</p>
         <h2 class="mt-2 text-2xl font-black text-slate-900 break-keep">바로 열 수 있는 서비스</h2>
-        <div class="mt-4">
+        <div class="mt-3.5">
             {% for card in guest_rotation_cards %}
-            <article class="home-public-v4-card home-public-v4-rotation-slide rounded-[1.5rem] p-4 sm:p-5"
+            <article class="home-public-v4-card home-public-v4-rotation-slide rounded-[1.5rem] p-4 sm:p-[1.125rem]"
                 data-guest-rotation-slide="{{ forloop.counter0 }}"
                 data-guest-rotation-active="{% if forloop.first %}true{% else %}false{% endif %}"
                 aria-hidden="{% if forloop.first %}false{% else %}true{% endif %}"
                 {% if not forloop.first %}hidden{% endif %}>
-                <div class="flex flex-col gap-5 sm:gap-6 md:flex-row md:items-center md:justify-between">
+                <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between xl:gap-[1.125rem]">
                     <div class="flex items-start gap-4">
                         <div class="home-public-v4-icon home-public-service-icon-tone flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl shadow-sm">
                             {% if card.icon %}
@@ -140,7 +140,7 @@
             </article>
             {% endfor %}
         </div>
-        <div class="mt-5 flex items-center justify-center gap-2" data-home-v4-public-rotation-dots="true">
+        <div class="mt-4 flex items-center justify-center gap-2" data-home-v4-public-rotation-dots="true">
             {% for card in guest_rotation_cards %}
             <button type="button"
                 class="home-public-v4-dot"
