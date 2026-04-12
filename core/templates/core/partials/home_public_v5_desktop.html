@@ -1,6 +1,6 @@
 <section class="home-public-v4-surface rounded-[2rem] px-5 py-8 sm:px-7 md:px-10 md:py-10" data-home-v4-public-belief="true">
     <span class="home-public-v4-kicker inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-black">
-        <span class="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+        <span class="home-public-kicker-dot h-2.5 w-2.5 rounded-full"></span>
         오늘 바로 쓰는 교실 도구
     </span>
     <h1 class="home-public-v4-title mt-5 text-4xl font-black leading-[1.02] text-slate-900 break-keep sm:text-5xl md:text-6xl">
@@ -26,7 +26,7 @@
             <article class="home-public-v4-card rounded-[1.5rem] p-4 sm:p-5">
                 <div class="flex h-full flex-col gap-5">
                     <div class="flex items-start gap-4">
-                        <div class="home-public-v4-icon flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl shadow-sm {% if product.service_type == 'collect_sign' %}text-blue-500{% elif product.service_type == 'classroom' %}text-violet-500{% elif product.service_type == 'work' %}text-emerald-500{% elif product.service_type == 'game' %}text-red-500{% elif product.service_type == 'counsel' %}text-pink-500{% elif product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
+                        <div class="home-public-v4-icon home-public-service-icon-tone flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl shadow-sm">
                             {% if product.icon %}
                                 {% if "fa-" in product.icon %}
                                 <i class="{{ product.icon }}"></i>
@@ -65,7 +65,7 @@
         <div class="home-public-v4-card mt-3 rounded-[1.5rem] p-4 sm:p-5">
             <div class="flex flex-col gap-5 sm:gap-6 md:flex-row md:items-center md:justify-between">
                 <div class="flex items-start gap-4">
-                    <div class="home-public-v4-icon flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl shadow-sm {% if featured_product.service_type == 'collect_sign' %}text-blue-500{% elif featured_product.service_type == 'classroom' %}text-violet-500{% elif featured_product.service_type == 'work' %}text-emerald-500{% elif featured_product.service_type == 'game' %}text-red-500{% elif featured_product.service_type == 'counsel' %}text-pink-500{% elif featured_product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
+                    <div class="home-public-v4-icon home-public-service-icon-tone flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl shadow-sm">
                         {% if featured_product.icon %}
                             {% if "fa-" in featured_product.icon %}
                             <i class="{{ featured_product.icon }}"></i>
@@ -111,7 +111,7 @@
                 {% if not forloop.first %}hidden{% endif %}>
                 <div class="flex flex-col gap-5 sm:gap-6 md:flex-row md:items-center md:justify-between">
                     <div class="flex items-start gap-4">
-                        <div class="home-public-v4-icon flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl shadow-sm">
+                        <div class="home-public-v4-icon home-public-service-icon-tone flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl shadow-sm">
                             {% if card.icon %}
                                 {% if "fa-" in card.icon %}
                                 <i class="{{ card.icon }}"></i>

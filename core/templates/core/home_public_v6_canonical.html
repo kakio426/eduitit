@@ -93,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <section class="home-public-v5-mobile-stack" data-home-v6-public-mobile-stack="true">
                 <section class="home-public-v5-mobile-surface" data-home-v5-public-hero="true">
                     <span class="home-public-v5-kicker">
-                        <span class="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+                        <span class="home-public-kicker-dot h-2.5 w-2.5 rounded-full"></span>
                         지금 바로 시작
                     </span>
                     <h1 class="home-public-v5-title">로그인 없이도 먼저 써볼 수 있습니다</h1>
@@ -114,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <article class="home-public-v5-featured-card">
                         <div class="flex items-start gap-3">
-                            <div class="home-public-v5-icon {% if featured_product.service_type == 'collect_sign' %}text-blue-500{% elif featured_product.service_type == 'classroom' %}text-violet-500{% elif featured_product.service_type == 'work' %}text-emerald-500{% elif featured_product.service_type == 'game' %}text-red-500{% elif featured_product.service_type == 'counsel' %}text-pink-500{% elif featured_product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
+                            <div class="home-public-v5-icon home-public-service-icon-tone">
                                 {% if featured_product.icon %}
                                     {% if "fa-" in featured_product.icon %}<i class="{{ featured_product.icon }}"></i>{% else %}{{ featured_product.icon }}{% endif %}
                                 {% else %}
@@ -153,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             {% if card.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
                         >
                             <div class="home-public-v5-grid-head">
-                                <span class="home-public-v5-grid-icon {% if card.service_type == 'collect_sign' %}text-blue-500{% elif card.service_type == 'classroom' %}text-violet-500{% elif card.service_type == 'work' %}text-emerald-500{% elif card.service_type == 'game' %}text-red-500{% elif card.service_type == 'counsel' %}text-pink-500{% elif card.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
+                                <span class="home-public-v5-grid-icon home-public-service-icon-tone">
                                     {% if card.icon %}
                                         {% if "fa-" in card.icon %}<i class="{{ card.icon }}"></i>{% else %}{{ card.icon }}{% endif %}
                                     {% else %}

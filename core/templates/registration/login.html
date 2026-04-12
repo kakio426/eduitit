@@ -1,154 +1,80 @@
 {% extends "base.html" %}
-{% load socialaccount %}
+{% load static socialaccount %}
 
 {% block title %}로그인 - Eduitit{% endblock %}
 
 {% block extra_css %}
-<style>
-    .auth-container {
-        max-width: 480px;
-        margin: 8rem auto;
-    }
-
-    .form-input {
-        width: 100%;
-        padding: 1.2rem 1.5rem;
-        background: #E0E5EC;
-        border: none;
-        border-radius: 20px;
-        box-shadow: inset 6px 6px 10px 0 rgba(163, 177, 198, 0.7), inset -6px -6px 10px 0 rgba(255, 255, 255, 0.8);
-        color: #4A5568;
-        font-family: inherit;
-        font-size: 1.5rem;
-        transition: all 0.3s;
-    }
-
-    .form-input:focus {
-        outline: none;
-        box-shadow: inset 8px 8px 12px 0 rgba(163, 177, 198, 0.8), inset -8px -8px 12px 0 rgba(255, 255, 255, 0.9);
-    }
-
-    .btn-auth {
-        width: 100%;
-        padding: 1.2rem;
-        margin-top: 1rem;
-        background: #E0E5EC;
-        border-radius: 20px;
-        box-shadow: 7px 7px 12px rgb(163, 177, 198, 0.6), -7px -7px 12px rgba(255, 255, 255, 0.5);
-        color: #6366f1;
-        font-weight: bold;
-        font-size: 1.8rem;
-        transition: all 0.3s;
-    }
-
-    .btn-auth:hover {
-        transform: translateY(-2px);
-        box-shadow: 9px 9px 16px rgb(163, 177, 198, 0.7), -9px -9px 16px rgba(255, 255, 255, 0.6);
-    }
-
-    .social-btn {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 12px;
-        width: 100%;
-        padding: 1rem;
-        border-radius: 20px;
-        font-weight: bold;
-        font-size: 1.5rem;
-        transition: all 0.3s;
-        margin-bottom: 1rem;
-    }
-
-    .btn-kakao {
-        background-color: #FEE500;
-        color: #000000;
-    }
-
-    .btn-naver {
-        background-color: #03C75A;
-        color: #FFFFFF;
-    }
-
-    .social-btn:hover {
-        transform: translateY(-2px);
-        filter: brightness(0.95);
-    }
-</style>
+<link href="{% static 'core/css/auth_chrome.css' %}" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
-<div class="auth-container" data-aos="zoom-in">
-    <div class="clay-card p-10 md:p-14">
-        <div class="text-center mb-10">
-            <div
-                class="w-24 h-24 rounded-full shadow-clay-inner flex items-center justify-center text-purple-500 text-5xl mx-auto mb-8 float-icon">
-                <i class="fa-solid fa-user-shield"></i>
-            </div>
-            <h1 class="text-6xl font-bold text-gray-700 mb-2">시작하기</h1>
-            <p class="text-2xl text-gray-400 font-hand">선생님의 스마트한 비서, 에듀잇티</p>
-        </div>
-
-        <!-- Social Login Section -->
-        <div class="mb-10">
-            <a href="{% provider_login_url 'kakao' %}"
-                class="social-btn btn-kakao shadow-sm flex items-center justify-center gap-3">
-                <svg viewBox="0 0 24 24" class="w-6 h-6 fill-[#3C1E1E]" xmlns="http://www.w3.org/2000/svg">
-                    <path
-                        d="M12 3C7.58 3 4 5.79 4 9.24C4 11.41 5.43 13.33 7.62 14.4L6.68 17.84C6.6 18.13 6.95 18.35 7.19 18.15L11.55 14.86C11.7 14.87 11.85 14.87 12 14.87C16.42 14.87 20 12.08 20 8.63C20 5.18 16.42 3 12 3Z" />
-                </svg>
-                <span class="text-[#3C1E1E]">카카오톡으로 시작하기</span>
-            </a>
-            <!-- Naver (Temporarily hidden for developer review)
-            <a href="{% provider_login_url 'naver' %}"
-                class="social-btn btn-naver shadow-sm flex items-center justify-center gap-3">
-                <svg viewBox="0 0 24 24" class="w-5 h-5 fill-white" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M16.273 12.845L7.388 1H1V23H7.818V11.16L16.643 23H23V1H16.273V12.845Z" />
-                </svg>
-                <span>네이버로 시작하기</span>
-            </a>
-            -->
-        </div>
-
-        <div class="flex items-center gap-4 mb-10">
-            <div class="flex-1 h-px bg-gray-200"></div>
-            <span class="text-gray-300 text-xl font-hand">또는</span>
-            <div class="flex-1 h-px bg-gray-200"></div>
-        </div>
-
-        <!-- Classic Login Form -->
-        {% if form.errors %}
-        <div
-            class="p-4 mb-6 rounded-2xl bg-red-50 text-red-500 text-lg shadow-sm border border-red-100 flex items-center gap-3">
-            <i class="fa-solid fa-circle-exclamation"></i>
-            아이디 혹은 비밀번호가 일치하지 않습니다.
-        </div>
-        {% endif %}
-
-        <form method="post" class="space-y-6">
-            {% csrf_token %}
-            <div>
-                <label for="id_username" class="block text-xl font-bold text-gray-600 mb-2 ml-2">아이디</label>
-                <input type="text" name="username" id="id_username" class="form-input" placeholder="Username" required>
-            </div>
-            <div>
-                <label for="id_password" class="block text-xl font-bold text-gray-600 mb-2 ml-2">비밀번호</label>
-                <input type="password" name="password" id="id_password" class="form-input" placeholder="••••••••"
-                    required>
+<main class="auth-shell-page auth-shell-main">
+    <div class="auth-shell-wrap">
+        <section class="auth-shell-card">
+            <div class="auth-shell-header">
+                <a href="/" class="auth-shell-brand">
+                    <span class="auth-shell-brand-icon">
+                        <i class="fa-solid fa-right-to-bracket"></i>
+                    </span>
+                    <span>EDUITIT</span>
+                </a>
+                <p class="auth-shell-kicker">계정 로그인</p>
+                <h1 class="auth-shell-title auth-shell-title--compact">계정으로 계속하기</h1>
+                <p class="auth-shell-summary">소셜 로그인 또는 기존 계정으로 로그인해 교실 업무를 이어서 시작하세요.</p>
             </div>
 
-            <button type="submit" class="btn-auth">
-                로그인
-            </button>
-        </form>
+            <div class="auth-shell-stack">
+                <a href="{% provider_login_url 'kakao' %}" class="auth-shell-provider auth-shell-provider--kakao">
+                    <svg viewBox="0 0 24 24" class="h-6 w-6 fill-[#3C1E1E]" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="M12 3C7.58 3 4 5.79 4 9.24C4 11.41 5.43 13.33 7.62 14.4L6.68 17.84C6.6 18.13 6.95 18.35 7.19 18.15L11.55 14.86C11.7 14.87 11.85 14.87 12 14.87C16.42 14.87 20 12.08 20 8.63C20 5.18 16.42 3 12 3Z" />
+                    </svg>
+                    <span>카카오톡으로 시작하기</span>
+                </a>
+            </div>
 
-        <div class="mt-12 text-center">
-            <p class="text-gray-400 text-2xl font-hand">
-                아직 계정이 없으신가요? <br>
-                <a href="mailto:kakio@naver.com?subject=[Eduitit] 회원가입 문의"
-                    class="text-purple-500 font-bold hover:underline">회원가입 문의하기</a>
-            </p>
-        </div>
+            <div class="auth-shell-divider"><span>또는 계정 로그인</span></div>
+
+            {% if form.errors %}
+            <div class="auth-shell-notice auth-shell-notice--error">
+                <p class="auth-shell-notice-title">아이디 또는 비밀번호를 다시 확인해 주세요.</p>
+                <p class="auth-shell-notice-copy">입력한 계정 정보가 일치하지 않습니다.</p>
+            </div>
+            {% endif %}
+
+            <form method="post" class="auth-shell-form">
+                {% csrf_token %}
+                {% if next %}
+                <input type="hidden" name="next" value="{{ next }}">
+                {% endif %}
+                <div class="auth-shell-field">
+                    <label for="id_username" class="auth-shell-label">아이디</label>
+                    <div class="auth-shell-input-wrap">
+                        <input type="text" name="username" id="id_username" class="auth-shell-input" placeholder="아이디를 입력하세요" required>
+                    </div>
+                </div>
+                <div class="auth-shell-field">
+                    <label for="id_password" class="auth-shell-label">비밀번호</label>
+                    <div class="auth-shell-input-wrap">
+                        <input type="password" name="password" id="id_password" class="auth-shell-input" placeholder="비밀번호를 입력하세요" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="auth-shell-submit">
+                    <span>로그인</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </form>
+
+            <div class="auth-shell-muted-panel">
+                <p class="auth-shell-muted-panel-title">계정이 없으신가요?</p>
+                <p class="auth-shell-muted-panel-copy">
+                    회원가입 문의가 필요하면
+                    <a href="mailto:kakio@naver.com?subject=[Eduitit] 회원가입 문의" class="auth-shell-link">회원가입 문의하기</a>
+                    로 바로 연락해 주세요.
+                </p>
+            </div>
+        </section>
     </div>
-</div>
+</main>
 {% endblock %}

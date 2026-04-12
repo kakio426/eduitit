@@ -2,50 +2,56 @@
     position: relative;
     isolation: isolate;
     overflow-x: hidden;
+    /* Authenticated home keeps one calm brand accent instead of competing category colors. */
     background:
-        radial-gradient(circle at 16% 10%, rgba(56, 189, 248, 0.1), transparent 42%),
-        radial-gradient(circle at 84% 16%, rgba(16, 185, 129, 0.08), transparent 36%),
-        linear-gradient(180deg, #f7fafc 0%, #f2f7fb 48%, #fbfdff 100%);
+        radial-gradient(circle at 16% 10%, rgba(91, 44, 207, 0.12), transparent 42%),
+        radial-gradient(circle at 84% 16%, rgba(198, 165, 107, 0.11), transparent 34%),
+        linear-gradient(180deg, #f7f6fc 0%, #f3f4fb 48%, #fbfbfe 100%);
+    --home-v6-brand-rgb: 91, 44, 207;
+    --home-v6-brand: var(--color-brand-700);
+    --home-v6-brand-strong: var(--color-brand-900);
+    --home-v6-brand-soft: rgba(238, 232, 255, 0.86);
+    --home-v6-brand-soft-strong: rgba(245, 241, 255, 0.96);
     --home-v6-ink: #172033;
     --home-v6-ink-soft: #5f6c81;
     --home-v6-border: rgba(100, 116, 139, 0.14);
     --home-v6-border-strong: rgba(100, 116, 139, 0.24);
     --home-v6-border-soft: rgba(100, 116, 139, 0.08);
     --home-v6-star-border: rgba(148, 163, 184, 0.26);
-    --home-v6-star-border-strong: rgba(59, 130, 246, 0.34);
+    --home-v6-star-border-strong: rgba(91, 44, 207, 0.28);
     --home-v6-star-bg: rgba(255, 255, 255, 0.96);
     --home-v6-star-bg-hover:
-        linear-gradient(180deg, rgba(249, 252, 255, 0.99) 0%, rgba(239, 247, 255, 0.98) 100%);
+        linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(245, 241, 255, 0.96) 100%);
     --home-v6-star-bg-active:
-        linear-gradient(180deg, rgba(22, 50, 79, 1) 0%, rgba(34, 74, 114, 1) 100%);
+        linear-gradient(135deg, var(--home-v6-brand-strong) 0%, var(--home-v6-brand) 100%);
     --home-v6-star-text: #64748b;
     --home-v6-star-text-strong: #ffffff;
     --home-v6-surface-hero:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.995) 0%, rgba(246, 250, 253, 0.985) 100%);
+        linear-gradient(180deg, rgba(255, 255, 255, 0.995) 0%, rgba(249, 248, 255, 0.985) 100%);
     --home-v6-surface-primary:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.992) 0%, rgba(247, 250, 253, 0.975) 100%);
+        linear-gradient(180deg, rgba(255, 255, 255, 0.992) 0%, rgba(248, 249, 255, 0.976) 100%);
     --home-v6-surface-secondary:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.985) 0%, rgba(248, 251, 254, 0.965) 100%);
+        linear-gradient(180deg, rgba(255, 255, 255, 0.985) 0%, rgba(249, 249, 255, 0.968) 100%);
     --home-v6-surface-tile:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.992) 0%, rgba(247, 250, 253, 0.972) 100%);
+        linear-gradient(180deg, rgba(255, 255, 255, 0.992) 0%, rgba(248, 249, 255, 0.972) 100%);
     --home-v6-shadow-hero:
         0 24px 56px rgba(15, 23, 42, 0.08),
-        0 6px 18px rgba(56, 189, 248, 0.04),
+        0 6px 18px rgba(91, 44, 207, 0.035),
         inset 0 1px 0 rgba(255, 255, 255, 0.82);
     --home-v6-shadow-panel:
         0 18px 40px rgba(15, 23, 42, 0.075),
-        0 5px 14px rgba(56, 189, 248, 0.03),
+        0 5px 14px rgba(91, 44, 207, 0.026),
         inset 0 1px 0 rgba(255, 255, 255, 0.82);
     --home-v6-shadow-tile:
         0 12px 24px rgba(15, 23, 42, 0.06),
-        0 4px 12px rgba(56, 189, 248, 0.02),
+        0 4px 12px rgba(91, 44, 207, 0.02),
         inset 0 1px 0 rgba(255, 255, 255, 0.76);
     --home-v6-rail-item-border: rgba(148, 163, 184, 0.18);
     --home-v6-rail-item-border-strong: rgba(148, 163, 184, 0.3);
     --home-v6-rail-item-bg:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(246, 249, 252, 0.965) 100%);
+        linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(248, 249, 255, 0.966) 100%);
     --home-v6-rail-item-bg-hover:
-        linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(244, 248, 252, 0.985) 100%);
+        linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(247, 246, 255, 0.986) 100%);
     --home-v6-rail-item-shadow:
         0 14px 28px rgba(15, 23, 42, 0.065),
         inset 0 1px 0 rgba(255, 255, 255, 0.82);
@@ -74,7 +80,7 @@
     left: -5rem;
     width: 18rem;
     height: 18rem;
-    background: radial-gradient(circle, rgba(56, 189, 248, 0.14) 0%, rgba(56, 189, 248, 0) 74%);
+    background: radial-gradient(circle, rgba(91, 44, 207, 0.15) 0%, rgba(91, 44, 207, 0) 74%);
     animation: homeV6Drift 22s ease-in-out infinite alternate;
 }
 
@@ -83,7 +89,7 @@
     right: -5rem;
     width: 16rem;
     height: 16rem;
-    background: radial-gradient(circle, rgba(220, 252, 231, 0.48) 0%, rgba(220, 252, 231, 0) 76%);
+    background: radial-gradient(circle, rgba(198, 165, 107, 0.22) 0%, rgba(198, 165, 107, 0) 76%);
     animation: homeV6Drift 26s ease-in-out infinite alternate-reverse;
 }
 
@@ -126,7 +132,7 @@
     top: 18rem;
     width: 14rem;
     height: 14rem;
-    background: radial-gradient(circle, rgba(191, 219, 254, 0.2) 0%, rgba(191, 219, 254, 0) 74%);
+    background: radial-gradient(circle, rgba(238, 232, 255, 0.56) 0%, rgba(238, 232, 255, 0) 74%);
     animation: homeV6Float 22s ease-in-out infinite;
 }
 

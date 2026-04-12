@@ -1,100 +1,77 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load static i18n %}
 
 {% block head_title %}{% trans "Signup" %}{% endblock %}
+{% block title %}가입 마무리 | Eduitit{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'core/css/auth_chrome.css' %}" rel="stylesheet">
+{% endblock %}
 
 {% block content %}
-<div class="min-h-[80vh] flex items-center justify-center px-4 py-12 relative overflow-hidden">
-    <!-- Background Decor -->
-    <div class="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
-        <div
-            class="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-300/30 rounded-full blur-3xl mix-blend-multiply filter animate-blob">
-        </div>
-        <div
-            class="absolute top-1/3 right-1/4 w-96 h-96 bg-blue-300/30 rounded-full blur-3xl mix-blend-multiply filter animate-blob animation-delay-2000">
-        </div>
-        <div
-            class="absolute bottom-1/4 left-1/2 w-96 h-96 bg-pink-300/30 rounded-full blur-3xl mix-blend-multiply filter animate-blob animation-delay-4000">
-        </div>
-    </div>
-
-    <!-- Main Card -->
-    <div class="w-full max-w-lg clay-card p-8 md:p-10 relative bg-[#E0E5EC]/80 backdrop-blur-xl" data-aos="fade-up">
-
-        <!-- Header -->
-        <div class="text-center mb-8">
-            <div
-                class="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-white to-purple-50 shadow-clay-inner flex items-center justify-center mb-6 logo-icon-box">
-                <i
-                    class="fa-solid fa-user-plus text-4xl text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-500"></i>
+<main class="auth-shell-page auth-shell-main">
+    <div class="auth-shell-wrap">
+        <section class="auth-shell-card">
+            <div class="auth-shell-header">
+                <a href="/" class="auth-shell-brand">
+                    <span class="auth-shell-brand-icon">
+                        <i class="fa-solid fa-user-check"></i>
+                    </span>
+                    <span>EDUITIT</span>
+                </a>
+                <p class="auth-shell-kicker">가입 마무리</p>
+                <h1 class="auth-shell-title auth-shell-title--compact">거의 다 됐어요</h1>
+                <p class="auth-shell-summary">
+                    {{ provider_name }} 계정으로 로그인했습니다. 서비스 이용에 필요한 마지막 정보를 확인해 주세요.
+                </p>
             </div>
-            <h1 class="text-3xl font-extrabold text-gray-800 mb-2">거의 다 왔어요!</h1>
-            <p class="text-gray-500 font-medium">
-                {{ provider_name }} 계정으로 로그인하셨습니다.<br>
-                서비스 이용을 위해 마지막 단계를 완료해주세요.
-            </p>
-        </div>
-
-        <!-- Form -->
-        <form class="signup space-y-6" id="signup_form" method="post" action="{% url 'socialaccount_signup' %}">
-            {% csrf_token %}
 
             {% if form.errors %}
-            <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl mb-6">
-                <div class="flex">
-                    <div class="flex-shrink-0">
-                        <i class="fa-solid fa-circle-exclamation text-red-500"></i>
-                    </div>
-                    <div class="ml-3">
-                        <h3 class="text-sm font-bold text-red-800">입력 정보를 확인해주세요</h3>
-                        <div class="mt-2 text-sm text-red-700">
-                            {{ form.non_field_errors }}
-                        </div>
-                    </div>
-                </div>
+            <div class="auth-shell-notice auth-shell-notice--error">
+                <p class="auth-shell-notice-title">입력 정보를 다시 확인해 주세요.</p>
+                <p class="auth-shell-notice-copy">{{ form.non_field_errors|striptags|default:"필수 항목이 비어 있거나 형식이 맞지 않습니다." }}</p>
             </div>
             {% endif %}
+
+            <form class="signup auth-shell-form" id="signup_form" method="post" action="{% url 'socialaccount_signup' %}">
+            {% csrf_token %}
 
             {% for field in form %}
             {% if field.is_hidden %}
             {{ field }}
             {% elif field.field.widget.input_type == 'checkbox' %}
-            <div class="rounded-2xl border border-slate-200 bg-white/70 px-4 py-4 shadow-sm">
-                <label for="{{ field.id_for_label }}" class="flex cursor-pointer items-start gap-3">
+            <div class="auth-shell-checkbox-card{% if field.errors %} has-error{% endif %}">
+                <label for="{{ field.id_for_label }}" class="auth-shell-checkbox-row">
                     {{ field }}
                     <span class="min-w-0 flex-1">
-                        <span class="block text-sm font-bold text-gray-700">{{ field.label }}</span>
+                        <span class="auth-shell-label block">{{ field.label }}</span>
                         {% if field.help_text %}
-                        <span class="mt-1 block text-xs leading-5 text-gray-500">{{ field.help_text }}</span>
+                        <span class="auth-shell-help mt-1 block">{{ field.help_text }}</span>
                         {% endif %}
                     </span>
                 </label>
                 {% if field.errors %}
-                <p class="mt-2 text-xs font-bold text-red-500">{{ field.errors.0 }}</p>
+                <p class="auth-shell-error mt-2">{{ field.errors.0 }}</p>
                 {% endif %}
             </div>
             {% else %}
-            <div class="space-y-2 group">
-                <label for="{{ field.id_for_label }}"
-                    class="block text-sm font-bold text-gray-700 ml-1 group-focus-within:text-purple-600 transition-colors">
-                    {{ field.label }} {% if field.field.required %}<span class="text-red-500">*</span>{% endif %}
+            <div class="auth-shell-field{% if field.errors %} has-error{% endif %}">
+                <label for="{{ field.id_for_label }}" class="auth-shell-label">
+                    {{ field.label }} {% if field.field.required %}<span class="auth-shell-required">*</span>{% endif %}
                 </label>
-                <div class="relative">
+                <div class="auth-shell-input-wrap">
+                    {{ field }}
                     {% if field.errors %}
-                    {{ field }}
-                    <!-- Errors will be handled by widget attributes or separate error block, but adding error class manually below if possible -->
-                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                        <i class="fa-solid fa-circle-exclamation text-red-500"></i>
-                    </div>
-                    {% else %}
-                    {{ field }}
+                    <span class="auth-shell-field-icon" aria-hidden="true">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                    </span>
                     {% endif %}
                 </div>
                 {% if field.help_text %}
-                <p class="text-xs text-gray-500 mt-1 ml-1">{{ field.help_text }}</p>
+                <p class="auth-shell-help">{{ field.help_text }}</p>
                 {% endif %}
                 {% if field.errors %}
-                <p class="text-xs text-red-500 mt-1 ml-1 font-bold">{{ field.errors.0 }}</p>
+                <p class="auth-shell-error">{{ field.errors.0 }}</p>
                 {% endif %}
             </div>
             {% endif %}
@@ -104,87 +81,23 @@
             <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
             {% endif %}
 
-            <div class="pt-4">
-                <button type="submit"
-                    class="w-full py-4 px-6 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white text-lg font-bold rounded-2xl shadow-lg shadow-purple-200 transform hover:-translate-y-1 hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 group">
-                    <span>{% trans "Sign Up" %} & 시작하기</span>
-                    <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
-                </button>
+            <button type="submit" class="auth-shell-submit">
+                <span>{% trans "Sign Up" %} 후 시작하기</span>
+                <i class="fa-solid fa-arrow-right"></i>
+            </button>
+            </form>
+
+            <div class="auth-shell-muted-panel">
+                <p class="auth-shell-muted-panel-title">로그인 후 최초 1회 약관 동의가 필요합니다.</p>
+                <div class="auth-shell-links">
+                    <a href="{% url 'policy' %}#terms" class="auth-shell-link">이용약관</a>
+                    <span>·</span>
+                    <a href="{% url 'policy' %}#privacy" class="auth-shell-link">개인정보처리방침</a>
+                    <span>·</span>
+                    <a href="{% url 'policy' %}#operations" class="auth-shell-link">운영정책</a>
+                </div>
             </div>
-        </form>
-
-        <p class="text-center mt-8 text-sm text-gray-400">
-            로그인 후 최초 1회 <a href="{% url 'policy' %}#terms" class="text-purple-500 hover:underline font-bold">이용약관</a>, <a
-                href="{% url 'policy' %}#privacy" class="text-purple-500 hover:underline font-bold">개인정보처리방침</a>, <a
-                href="{% url 'policy' %}#operations" class="text-purple-500 hover:underline font-bold">운영정책</a>을 확인할 수 있습니다.
-        </p>
+        </section>
     </div>
-</div>
-
-<style>
-    /* Custom Field Styling */
-    form.signup input[type="text"],
-    form.signup input[type="email"],
-    form.signup input[type="password"] {
-        width: 100%;
-        padding: 0.875rem 1rem;
-        border-radius: 1rem;
-        border: 1px solid #e2e8f0;
-        background-color: rgba(255, 255, 255, 0.7);
-        backdrop-filter: blur(4px);
-        font-size: 1rem;
-        transition: all 0.3s ease;
-        box-shadow: inset 2px 2px 5px rgba(163, 177, 198, 0.1);
-    }
-
-    form.signup input:focus {
-        outline: none;
-        border-color: #8b5cf6;
-        background-color: #ffffff;
-        box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.1);
-    }
-
-    form.signup input::placeholder {
-        color: #94a3b8;
-    }
-
-    form.signup input[type="checkbox"] {
-        width: 1.15rem;
-        height: 1.15rem;
-        margin-top: 0.15rem;
-        accent-color: #7c3aed;
-        flex-shrink: 0;
-    }
-
-    /* Blob Animation */
-    @keyframes blob {
-        0% {
-            transform: translate(0px, 0px) scale(1);
-        }
-
-        33% {
-            transform: translate(30px, -50px) scale(1.1);
-        }
-
-        66% {
-            transform: translate(-20px, 20px) scale(0.9);
-        }
-
-        100% {
-            transform: translate(0px, 0px) scale(1);
-        }
-    }
-
-    .animate-blob {
-        animation: blob 7s infinite;
-    }
-
-    .animation-delay-2000 {
-        animation-delay: 2s;
-    }
-
-    .animation-delay-4000 {
-        animation-delay: 4s;
-    }
-</style>
+</main>
 {% endblock %}

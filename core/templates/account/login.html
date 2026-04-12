@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load socialaccount %}
+{% load static socialaccount %}
 
 {% block seo_meta %}
 <meta name="description" content="에듀잇티에 로그인하고 교실 운영, 알림장 작성, 서비스 가이드를 이어서 사용하세요.">
@@ -19,72 +19,62 @@
 {% block title %}로그인 | Eduitit{% endblock %}
 
 {% block extra_css %}
-<style>
-    #mainNav,
-    #mobileMenu,
-    footer {
-        display: none !important;
-    }
-
-    body {
-        background:
-            radial-gradient(circle at top, rgba(124, 58, 237, 0.08), transparent 28rem),
-            linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
-    }
- </style>
+<link href="{% static 'core/css/auth_chrome.css' %}" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
-<main class="px-4" style="padding-top: max(env(safe-area-inset-top), 1.5rem); padding-bottom: max(env(safe-area-inset-bottom), 1.5rem);">
-    <div class="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-md items-center justify-center" data-aos="fade-up">
-        <section class="w-full rounded-[2rem] border border-slate-200/80 bg-white/95 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.08)] backdrop-blur sm:p-8">
-            <div class="text-center">
-                <a href="/" class="inline-flex items-center gap-3 rounded-full bg-slate-50 px-4 py-2 text-sm font-black text-purple-700">
-                    <span class="flex h-9 w-9 items-center justify-center rounded-full bg-white text-base shadow-sm">
+<main class="auth-shell-page auth-shell-main">
+    <div class="auth-shell-wrap">
+        <section class="auth-shell-card">
+            <div class="auth-shell-header">
+                <a href="/" class="auth-shell-brand">
+                    <span class="auth-shell-brand-icon">
                         <i class="fa-solid fa-cloud"></i>
                     </span>
                     <span>EDUITIT</span>
                 </a>
-                <h1 class="mt-6 text-3xl font-black tracking-tight text-slate-900">로그인</h1>
-                <p class="mt-2 text-sm font-medium leading-6 tracking-tight text-slate-600">
-                    네이버 또는 카카오톡으로 바로 시작하세요.
+                <p class="auth-shell-kicker">로그인</p>
+                <h1 class="auth-shell-title">선택한 교실 업무를 이어서 시작하세요</h1>
+                <p class="auth-shell-summary">
+                    카카오 또는 네이버로 로그인하면 방금 보던 도구와 교실 작업이 같은 흐름에서 이어집니다.
                 </p>
             </div>
 
             {% if request.GET.next %}
-            <div class="mt-6 rounded-[1.25rem] border border-emerald-200 bg-emerald-50 px-4 py-3 text-left">
-                <p class="text-sm font-black text-emerald-800">방금 고른 도구로 바로 이어집니다.</p>
-                <p class="mt-1 text-xs font-medium leading-5 text-emerald-700">로그인하면 선택한 교실 업무 화면으로 곧바로 이동합니다.</p>
+            <div class="auth-shell-notice">
+                <p class="auth-shell-notice-title">방금 고른 도구로 바로 이어집니다.</p>
+                <p class="auth-shell-notice-copy">로그인하면 선택한 교실 업무 화면으로 곧바로 이동합니다.</p>
             </div>
             {% endif %}
 
-            <div class="mt-8 space-y-4">
+            <div class="auth-shell-stack">
                 <a href="{% provider_login_url 'kakao' %}"
-                    class="flex min-h-[64px] w-full items-center justify-center gap-3 rounded-[1.5rem] border border-[#E7D341] bg-[#FEE500] px-5 py-4 text-lg font-black text-[#2F1A1A] shadow-[0_10px_24px_rgba(234,211,65,0.28)] transition-transform hover:-translate-y-0.5 active:translate-y-0">
+                    class="auth-shell-provider auth-shell-provider--kakao">
                     <svg viewBox="0 0 24 24" class="h-7 w-7 fill-[#2F1A1A]" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                         <path
                             d="M12 3C7.58 3 4 5.79 4 9.24C4 11.41 5.43 13.33 7.62 14.4L6.68 17.84C6.6 18.13 6.95 18.35 7.19 18.15L11.55 14.86C11.7 14.87 11.85 14.87 12 14.87C16.42 14.87 20 12.08 20 8.63C20 5.18 16.42 3 12 3Z" />
                     </svg>
-                    <span class="tracking-tight">카카오톡으로 로그인</span>
+                    <span>카카오톡으로 로그인</span>
                 </a>
 
                 <a href="{% provider_login_url 'naver' %}"
-                    class="flex min-h-[64px] w-full items-center justify-center gap-3 rounded-[1.5rem] border border-[#02b14f] bg-[#03C75A] px-5 py-4 text-lg font-black text-white shadow-[0_10px_24px_rgba(3,199,90,0.22)] transition-transform hover:-translate-y-0.5 active:translate-y-0">
+                    class="auth-shell-provider auth-shell-provider--naver">
                     <svg viewBox="0 0 24 24" class="h-6 w-6 fill-white" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                         <path d="M16.273 12.845L7.388 1H1V23H7.818V11.16L16.643 23H23V1H16.273V12.845Z" />
                     </svg>
-                    <span class="tracking-tight">네이버로 로그인</span>
+                    <span>네이버로 로그인</span>
                 </a>
             </div>
 
-            <div class="mt-6 rounded-[1.25rem] bg-slate-50 px-4 py-3 text-center">
-                <p class="text-xs font-medium leading-5 text-slate-500">처음 로그인하면 약관 동의가 필요합니다.</p>
-                <div class="mt-2 flex flex-wrap justify-center gap-x-2 gap-y-1 text-xs font-bold text-slate-700">
-                    <a href="{% url 'policy' %}#terms" class="hover:underline">이용약관</a>
-                    <span class="text-slate-300">·</span>
-                    <a href="{% url 'policy' %}#privacy" class="hover:underline">개인정보처리방침</a>
-                    <span class="text-slate-300">·</span>
-                    <a href="{% url 'policy' %}#operations" class="hover:underline">운영정책</a>
+            <div class="auth-shell-muted-panel">
+                <p class="auth-shell-muted-panel-title">처음 로그인하면 약관 동의가 필요합니다.</p>
+                <p class="auth-shell-muted-panel-copy">로그인 후에는 교실 운영, 알림장 작성, 서비스 가이드까지 같은 계정에서 이어서 사용할 수 있습니다.</p>
+                <div class="auth-shell-links">
+                    <a href="{% url 'policy' %}#terms" class="auth-shell-link">이용약관</a>
+                    <span>·</span>
+                    <a href="{% url 'policy' %}#privacy" class="auth-shell-link">개인정보처리방침</a>
+                    <span>·</span>
+                    <a href="{% url 'policy' %}#operations" class="auth-shell-link">운영정책</a>
                 </div>
             </div>
         </section>

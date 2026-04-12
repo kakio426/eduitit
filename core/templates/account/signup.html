@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% load i18n %}
-{% load account socialaccount %}
+{% load static account socialaccount %}
 
 {% block seo_meta %}
 <meta name="description" content="에듀잇티 계정으로 교사를 위한 AI·학급 운영 도구를 바로 시작하세요.">
@@ -19,71 +19,57 @@
 
 {% block title %}회원가입 | Eduitit{% endblock %}
 
+{% block extra_css %}
+<link href="{% static 'core/css/auth_chrome.css' %}" rel="stylesheet">
+{% endblock %}
+
 {% block content %}
-<main class="pt-32 pb-20 px-4 md:px-8 min-h-screen flex items-center justify-center">
-    <div class="w-full max-w-lg" data-aos="zoom-in">
-        <div class="clay-card p-10 md:p-12 bg-[#E0E5EC]">
-            <!-- Header -->
-            <div class="text-center mb-10">
-                <div
-                    class="w-20 h-20 rounded-full bg-white mx-auto flex items-center justify-center shadow-clay text-blue-500 text-4xl mb-6">
-                    <i class="fa-solid fa-user-plus"></i>
-                </div>
-                <h1 class="text-4xl md:text-5xl font-black tracking-tight text-slate-900 mb-2 break-keep">선생님 환영합니다!</h1>
-                <p class="mt-3 text-base md:text-lg font-medium leading-7 text-slate-500 break-keep">에듀잇티와 함께 스마트한 교실을 만들어봐요.</p>
+<main class="auth-shell-page auth-shell-main">
+    <div class="auth-shell-wrap">
+        <section class="auth-shell-card">
+            <div class="auth-shell-header">
+                <a href="/" class="auth-shell-brand">
+                    <span class="auth-shell-brand-icon">
+                        <i class="fa-solid fa-user-plus"></i>
+                    </span>
+                    <span>EDUITIT</span>
+                </a>
+                <p class="auth-shell-kicker">회원가입</p>
+                <h1 class="auth-shell-title">에듀잇티를 바로 시작하세요</h1>
+                <p class="auth-shell-summary">별도의 절차 없이 카카오 계정으로 로그인하고 교실 운영 도구를 같은 자리에서 이어서 사용할 수 있습니다.</p>
             </div>
 
-            <!-- Social Login Prompt -->
-            <div class="space-y-8 animate-fade-in-up">
-                <p class="text-center text-base md:text-lg text-slate-600 mb-8 font-medium leading-7 text-balance">
-                    별도의 회원가입 절차 없이,<br>
-                    카카오 계정으로 바로 이용할 수 있어요.
+            <div class="auth-shell-stack">
+                <a href="{% provider_login_url 'kakao' %}"
+                    class="auth-shell-provider auth-shell-provider--kakao">
+                    <svg viewBox="0 0 24 24" class="h-7 w-7 fill-[#3C1E1E]" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path
+                            d="M12 3C7.58 3 4 5.79 4 9.24C4 11.41 5.43 13.33 7.62 14.4L6.68 17.84C6.6 18.13 6.95 18.35 7.19 18.15L11.55 14.86C11.7 14.87 11.85 14.87 12 14.87C16.42 14.87 20 12.08 20 8.63C20 5.18 16.42 3 12 3Z" />
+                    </svg>
+                    <span>카카오톡으로 시작하기</span>
+                </a>
+            </div>
+
+            <div class="auth-shell-muted-panel">
+                <p class="auth-shell-muted-panel-title">처음 로그인 안내</p>
+                <p class="auth-shell-muted-panel-copy">
+                    에듀잇티는 선생님이 설명보다 실행에 먼저 들어갈 수 있게 설계된 서비스입니다.
+                    처음 로그인할 때만 약관 동의 후 바로 사용할 수 있어요.
                 </p>
-
-                <div class="space-y-4">
-                    <a href="{% provider_login_url 'kakao' %}"
-                        class="flex items-center justify-center gap-3 py-4 rounded-2xl bg-[#FEE500] shadow-clay hover:shadow-clay-hover hover:scale-[1.02] active:scale-[0.98] transition-all group">
-                        <svg viewBox="0 0 24 24" class="w-8 h-8 fill-[#3C1E1E]" xmlns="http://www.w3.org/2000/svg">
-                            <path
-                                d="M12 3C7.58 3 4 5.79 4 9.24C4 11.41 5.43 13.33 7.62 14.4L6.68 17.84C6.6 18.13 6.95 18.35 7.19 18.15L11.55 14.86C11.7 14.87 11.85 14.87 12 14.87C16.42 14.87 20 12.08 20 8.63C20 5.18 16.42 3 12 3Z" />
-                        </svg>
-                        <span class="text-lg md:text-xl font-extrabold tracking-tight text-[#3C1E1E]">카카오톡으로 시작하기</span>
-                    </a>
-
-                    <!-- Naver (Temporarily hidden for developer review)
-                    <a href="{% provider_login_url 'naver' %}"
-                        class="flex items-center justify-center gap-3 py-4 rounded-2xl bg-[#03C75A] shadow-clay hover:shadow-clay-hover hover:scale-[1.02] active:scale-[0.98] transition-all group">
-                        <svg viewBox="0 0 24 24" class="w-6 h-6 fill-white" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M16.273 12.845L7.388 1H1V23H7.818V11.16L16.643 23H23V1H16.273V12.845Z" />
-                        </svg>
-                        <span class="text-xl md:text-2xl font-bold text-white">네이버로 시작하기</span>
-                    </a>
-                    -->
-                </div>
-
-                <div
-                    class="mt-12 p-6 rounded-[2rem] bg-indigo-50 border border-indigo-100 shadow-sm relative overflow-hidden group">
-                    <div
-                        class="absolute -right-4 -bottom-4 text-indigo-100 text-6xl rotate-12 group-hover:rotate-0 transition-transform duration-500">
-                        <i class="fa-solid fa-heart"></i>
-                    </div>
-                    <div class="relative z-10">
-                        <h4 class="text-lg font-black tracking-tight text-indigo-700 mb-2 flex items-center gap-2">
-                            <i class="fa-solid fa-face-smile text-lg"></i> 현직 선생님의 진심
-                        </h4>
-                        <p class="text-base font-medium leading-7 text-slate-600">
-                            에듀잇티는 선생님들을 위한 1인 개발 서비스입니다.<br>
-                            개인 정보는 최소한만 수집하며 안전하게 보호됩니다.
-                        </p>
-                    </div>
-                </div>
-
-                <div class="text-center mt-8">
-                    <a href="{% url 'account_login' %}"
-                        class="text-sm font-bold tracking-tight text-slate-500 hover:text-slate-800 transition">이미 가입하셨나요? 로그인하기</a>
+                <div class="auth-shell-links">
+                    <a href="{% url 'policy' %}#terms" class="auth-shell-link">이용약관</a>
+                    <span>·</span>
+                    <a href="{% url 'policy' %}#privacy" class="auth-shell-link">개인정보처리방침</a>
+                    <span>·</span>
+                    <a href="{% url 'policy' %}#operations" class="auth-shell-link">운영정책</a>
                 </div>
             </div>
-        </div>
+
+            <p class="auth-shell-footer">
+                이미 가입하셨나요?
+                <a href="{% url 'account_login' %}" class="auth-shell-link">로그인하기</a>
+            </p>
+        </section>
     </div>
 </main>
 {% endblock %}
