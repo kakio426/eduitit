@@ -3643,13 +3643,27 @@ class HomeV6ViewTest(TestCase):
     def test_v6_anonymous_home_loads_royal_luxe_public_override(self):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
+        public_css = (
+            Path(settings.BASE_DIR)
+            / 'core'
+            / 'static'
+            / 'core'
+            / 'css'
+            / 'home_public_v6.css'
+        ).read_text(encoding='utf-8')
 
-        self.assertTemplateUsed(response, 'core/home_public_v5.html')
+        self.assertTemplateUsed(response, 'core/home_public_v6_canonical.html')
         self.assertEqual(response.context['home_design_version'], 'v6')
         self.assertIn('core/css/home_public_v5.css', content)
         self.assertIn('core/css/home_public_v6.css', content)
         self.assertIn('home-public-v6-page', content)
+        self.assertIn('data-home-v6-public-shell="true"', content)
+        self.assertIn('home-public-v6-stage-shell', content)
         self.assertIn('data-home-design-version="v6"', content)
+        self.assertIn('--home-v6-radius-panel: 0.95rem;', public_css)
+        self.assertIn('border-radius: var(--home-public-v6-radius-shell);', public_css)
+        self.assertIn('border-radius: var(--home-public-v6-radius-panel);', public_css)
+        self.assertIn('border-radius: var(--home-public-v6-radius-card);', public_css)
 
 @override_settings(HOME_V2_ENABLED=True)
 class TrackUsageAPITest(TestCase):

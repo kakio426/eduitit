@@ -3197,10 +3197,10 @@ def _home_public_v5(request, products, posts, page_obj, feed_scope, pinned_notic
 
 
 def _home_public_v6(request, products, posts, page_obj, feed_scope, pinned_notice_posts):
-    """로열 럭스 테마를 실험하는 공개 홈 V6."""
+    """비로그인 첫 진입의 canonical 공개 홈 V6."""
     return render(
         request,
-        'core/home_public_v5.html',
+        'core/home_public_v6_canonical.html',
         {
             **_build_home_public_landing_context(request, products),
             'home_design_version': 'v6',

@@ -1,8 +1,43 @@
 .home-public-v6-page {
+    --home-v6-ink: #172033;
+    --home-v6-ink-soft: #5f6c81;
+    --home-v6-border: rgba(100, 116, 139, 0.14);
+    --home-v6-border-strong: rgba(100, 116, 139, 0.24);
+    --home-v6-surface-primary:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.992) 0%, rgba(247, 250, 253, 0.975) 100%);
+    --home-v6-surface-secondary:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.985) 0%, rgba(248, 251, 254, 0.965) 100%);
+    --home-v6-shadow-panel:
+        0 18px 40px rgba(15, 23, 42, 0.075),
+        0 5px 14px rgba(56, 189, 248, 0.03),
+        inset 0 1px 0 rgba(255, 255, 255, 0.82);
+    --home-v6-shadow-tile:
+        0 12px 24px rgba(15, 23, 42, 0.06),
+        0 4px 12px rgba(56, 189, 248, 0.02),
+        inset 0 1px 0 rgba(255, 255, 255, 0.76);
+    --home-v6-radius-hero: 1rem;
+    --home-v6-radius-panel: 0.95rem;
+    --home-v6-radius-card: 0.82rem;
+    --home-v6-radius-chip: 0.72rem;
+    --home-public-v6-radius-shell: 1.5rem;
+    --home-public-v6-radius-panel: calc(var(--home-v6-radius-panel) + 0.5rem);
+    --home-public-v6-radius-card: calc(var(--home-v6-radius-card) + 0.5rem);
+    --home-public-v6-radius-icon: calc(var(--home-v6-radius-card) + 0.26rem);
     background:
         radial-gradient(circle at top left, rgba(91, 44, 207, 0.14), transparent 25%),
         radial-gradient(circle at top right, rgba(198, 165, 107, 0.14), transparent 18%),
         linear-gradient(180deg, #f7f6fc 0%, #f3f2fb 48%, #faf9fe 100%);
+}
+
+.home-public-v6-stage-shell {
+    border: 1px solid rgba(91, 44, 207, 0.08);
+    border-radius: var(--home-public-v6-radius-shell);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(248, 248, 255, 0.58) 100%);
+    box-shadow:
+        0 24px 56px rgba(15, 23, 42, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.76);
+    overflow: hidden;
 }
 
 .home-public-v6-page .home-public-v5-mobile-surface,
@@ -11,8 +46,23 @@
 .home-public-v6-page .home-public-v5-grid-card,
 .home-public-v6-page .home-public-v4-card {
     border-color: rgba(91, 44, 207, 0.12);
-    background: rgba(255, 255, 255, 0.96);
-    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.07);
+    background: var(--home-v6-surface-primary);
+    box-shadow: var(--home-v6-shadow-panel);
+}
+
+.home-public-v6-page .home-public-v5-mobile-surface,
+.home-public-v6-page .home-public-v4-surface {
+    border-radius: var(--home-public-v6-radius-panel);
+    clip-path: inset(0 round var(--home-public-v6-radius-panel));
+}
+
+.home-public-v6-page .home-public-v5-featured-card,
+.home-public-v6-page .home-public-v5-grid-card,
+.home-public-v6-page .home-public-v4-card {
+    border-radius: var(--home-public-v6-radius-card);
+    background: var(--home-v6-surface-secondary);
+    box-shadow: var(--home-v6-shadow-tile);
+    clip-path: inset(0 round var(--home-public-v6-radius-card));
 }
 
 .home-public-v6-page .home-public-v5-kicker,
@@ -78,6 +128,7 @@
 .home-public-v6-page .home-public-v5-icon,
 .home-public-v6-page .home-public-v5-grid-icon,
 .home-public-v6-page .home-public-v4-icon {
+    border-radius: var(--home-public-v6-radius-icon);
     background: linear-gradient(180deg, rgba(238, 232, 255, 0.9) 0%, #ffffff 100%);
     box-shadow: inset 0 0 0 1px rgba(91, 44, 207, 0.08);
 }
@@ -89,4 +140,10 @@
 .home-public-v6-page .text-pink-500,
 .home-public-v6-page .text-cyan-500 {
     color: var(--color-brand-700) !important;
+}
+
+@media (max-width: 767px) {
+    .home-public-v6-stage-shell {
+        border-radius: calc(var(--home-public-v6-radius-shell) - 0.28rem);
+    }
 }
