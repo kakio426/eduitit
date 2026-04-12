@@ -75,10 +75,20 @@ logger = logging.getLogger(__name__)
 
 def service_retired(request, *args, **kwargs):
     # Preserve legacy URLs and saved links without leaving users on a dead 404.
+    page_title = "학급 기록 보드 종료"
+    page_description = (
+        "학급 기록 보드는 종료되었으며, 현재 운영 중인 홈과 학급 캘린더에서 같은 흐름을 이어서 사용할 수 있습니다."
+    )
     return render(
         request,
         "sheetbook/retired.html",
         {
+            "page_title": page_title,
+            "meta_description": page_description,
+            "og_title": page_title,
+            "og_description": page_description,
+            "canonical_url": request.build_absolute_uri(request.path),
+            "og_url": request.build_absolute_uri(request.path),
             "home_url": reverse("home"),
             "calendar_url": f"{reverse('home')}#home-calendar",
         },
