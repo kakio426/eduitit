@@ -8,179 +8,108 @@
 <link href="{% static 'core/css/home_public_v6.css' %}" rel="stylesheet">
 {% endblock %}
 
-{% block extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    const rotationRoot = document.querySelector('[data-guest-rotation]');
-    if (!rotationRoot) return;
-
-    const slides = Array.from(rotationRoot.querySelectorAll('[data-guest-rotation-slide]'));
-    const dots = Array.from(rotationRoot.querySelectorAll('[data-guest-rotation-dot]'));
-    if (!slides.length) return;
-
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const intervalMs = Number(rotationRoot.dataset.guestRotationInterval || '5000');
-    let activeIndex = Math.max(0, slides.findIndex((slide) => slide.dataset.guestRotationActive === 'true'));
-    let timerId = null;
-
-    const syncState = (nextIndex) => {
-        activeIndex = nextIndex;
-        slides.forEach((slide, index) => {
-            const isActive = index === nextIndex;
-            slide.hidden = !isActive;
-            slide.dataset.guestRotationActive = isActive ? 'true' : 'false';
-            slide.setAttribute('aria-hidden', isActive ? 'false' : 'true');
-        });
-
-        dots.forEach((dot, index) => {
-            const isActive = index === nextIndex;
-            dot.setAttribute('aria-current', isActive ? 'true' : 'false');
-            dot.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-        });
-    };
-
-    const stopRotation = () => {
-        if (timerId) {
-            window.clearInterval(timerId);
-            timerId = null;
-        }
-    };
-
-    const startRotation = () => {
-        if (prefersReducedMotion || slides.length < 2 || timerId || document.hidden) return;
-        timerId = window.setInterval(() => {
-            syncState((activeIndex + 1) % slides.length);
-        }, intervalMs);
-    };
-
-    dots.forEach((dot, index) => {
-        dot.addEventListener('click', () => {
-            stopRotation();
-            syncState(index);
-            startRotation();
-        });
-    });
-
-    rotationRoot.addEventListener('mouseenter', stopRotation);
-    rotationRoot.addEventListener('mouseleave', startRotation);
-    rotationRoot.addEventListener('focusin', stopRotation);
-    rotationRoot.addEventListener('focusout', () => {
-        window.setTimeout(() => {
-            if (!rotationRoot.contains(document.activeElement)) {
-                startRotation();
-            }
-        }, 0);
-    });
-
-    document.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
-            stopRotation();
-            return;
-        }
-        startRotation();
-    });
-
-    syncState(activeIndex);
-    startRotation();
-});
-</script>
-{% endblock %}
-
 {% block content %}
 <div class="min-h-screen home-public-v6-page" data-home-v6-public-shell="true" data-home-design-version="v6">
     <div class="mx-auto home-public-v5-stage home-public-v6-stage-shell" style="padding-top: calc(var(--main-nav-height, 88px) + 1rem);">
-        <main class="px-4 pb-16 sm:px-5 md:px-6">
-            <section class="home-public-v5-mobile-stack" data-home-v6-public-mobile-stack="true">
-                {# Public entry copy stays to one promise so the tool cards remain the primary read. #}
-                <section class="home-public-v5-mobile-surface" data-home-v5-public-hero="true">
+        <main class="home-public-v6-main px-4 pb-16 sm:px-5 md:px-6">
+            <section class="home-public-v6-hero" data-home-v6-public-hero="true">
+                <div class="home-public-v6-hero-copy">
                     <span class="home-public-v5-kicker">
                         <span class="home-public-kicker-dot h-2.5 w-2.5 rounded-full"></span>
-                        로그인 없이 시작
+                        로그인 없이
                     </span>
-                    <h1 class="home-public-v5-title">오늘 필요한 교실 일, 바로 시작</h1>
-                    <p class="home-public-v5-summary">로그인 없이 먼저 열고, 필요할 때 이어서 씁니다.</p>
-                    <div class="home-public-v5-keywords">
-                        <span class="home-public-v5-keyword">지금 바로</span>
-                        <span class="home-public-v5-keyword">로그인 후 이어서</span>
-                    </div>
-                </section>
+                    <h1 class="home-public-v6-hero-title">오늘 쓸 교실 도구, 바로 시작</h1>
+                    <p class="home-public-v6-hero-summary">먼저 열고 써본 뒤, 필요할 때 로그인해서 이어갑니다.</p>
+                </div>
 
-                {% if featured_product %}
-                <section class="home-public-v5-mobile-surface" data-home-v5-public-featured-mobile="true">
-                    <div class="home-public-v5-head">
+                <article class="home-public-v6-primary-card" data-home-v6-public-primary-card="true">
+                    <div class="home-public-v6-primary-head">
                         <div>
-                            <p class="home-public-v5-eyebrow">대표 서비스</p>
-                            <h2 class="home-public-v5-panel-title">많이 찾는 도구</h2>
+                            <p class="home-public-v6-section-eyebrow">지금 시작</p>
+                            <h2 class="home-public-v6-section-title">
+                                {% if public_primary_action_card %}바로 열리는 도구{% else %}로그인 후 이어서{% endif %}
+                            </h2>
                         </div>
+                        {% if public_primary_action_card %}
+                        <span class="home-public-v6-primary-status">{{ public_primary_action_card.access_status_label }}</span>
+                        {% endif %}
                     </div>
-                    <article class="home-public-v5-featured-card">
-                        <div class="flex items-start gap-3">
-                            <div class="home-public-v5-icon home-public-service-icon-tone" data-home-accent="{{ featured_product.home_accent_token|default:'external' }}">
-                                <i class="{{ featured_product.home_icon_class|default:'fa-solid fa-star' }}"></i>
-                            </div>
-                            <div class="min-w-0">
-                                <h3 class="home-public-v5-featured-title">{{ featured_product.public_service_name|default:featured_product.title }}</h3>
-                                <p class="home-public-v5-featured-summary">{{ featured_product.home_landing_summary|truncatechars:82 }}</p>
-                            </div>
-                        </div>
-                        <a href="{{ featured_product.home_landing_cta_href }}"
-                            {% if featured_product.home_landing_cta_is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
-                            class="home-public-v5-primary-link">
-                            {{ featured_product.home_landing_cta_label }}
-                            <i class="fa-solid fa-{% if featured_product.home_landing_cta_is_external %}arrow-up-right-from-square{% else %}arrow-right{% endif %} text-xs"></i>
-                        </a>
-                    </article>
-                </section>
-                {% endif %}
 
-                {% if guest_public_cards %}
-                <section class="home-public-v5-mobile-surface" data-home-v5-public-grid-panel="true">
-                    <div class="home-public-v5-head">
-                        <div>
-                            <p class="home-public-v5-eyebrow">로그인 없이</p>
-                            <h2 class="home-public-v5-panel-title">바로 열 수 있는 서비스</h2>
+                    {% if public_primary_action_card %}
+                    <div class="home-public-v6-primary-body">
+                        <div class="home-public-v6-primary-icon home-public-service-icon-tone" data-home-accent="{{ public_primary_action_card.home_accent_token|default:'external' }}">
+                            <i class="{{ public_primary_action_card.home_icon_class|default:'fa-solid fa-star' }}"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <h3 class="home-public-v6-primary-title">{{ public_primary_action_card.title }}</h3>
+                            <p class="home-public-v6-primary-summary">{{ public_primary_action_card.description|truncatechars:42 }}</p>
                         </div>
                     </div>
-                    <div class="home-public-v5-grid" data-home-v5-public-grid="true">
-                        {% for card in guest_public_cards %}
-                        <a
-                            href="{{ card.href }}"
-                            class="home-public-v5-grid-card"
-                            data-home-v5-public-card="true"
-                            {% if card.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
-                        >
-                            <div class="home-public-v5-grid-head">
-                                <span class="home-public-v5-grid-icon home-public-service-icon-tone" data-home-accent="{{ card.home_accent_token|default:'external' }}">
-                                    <i class="{{ card.home_icon_class|default:'fa-solid fa-star' }}"></i>
-                                </span>
-                                <span class="home-public-v5-grid-badge">{{ card.access_status_label }}</span>
-                            </div>
-                            <h3 class="home-public-v5-grid-title">{{ card.title }}</h3>
-                            <p class="home-public-v5-grid-summary">{{ card.description|truncatechars:52 }}</p>
-                            <span class="home-public-v5-grid-cta">
-                                {% if card.is_external %}새 창에서 시작{% else %}바로 시작{% endif %}
-                            </span>
-                        </a>
-                        {% endfor %}
-                    </div>
-                </section>
-                {% endif %}
-
-                <section class="home-public-v5-mobile-surface home-public-v5-login-band" data-home-v5-public-login-cta="true">
-                    <div class="min-w-0">
-                        <p class="home-public-v5-eyebrow">로그인 후</p>
-                        <h2 class="home-public-v5-panel-title">전체 서비스</h2>
-                        <p class="home-public-v5-login-copy">문서·수합·운영</p>
-                    </div>
-                    <a href="{{ login_url }}" class="home-public-v5-secondary-link">
-                        전체 서비스 보기
+                    <a href="{{ public_primary_action_card.href }}"
+                        {% if public_primary_action_card.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+                        class="home-public-v5-primary-link">
+                        {% if public_primary_action_card.is_external %}새 창에서 시작{% else %}바로 시작{% endif %}
+                        <i class="fa-solid fa-{% if public_primary_action_card.is_external %}arrow-up-right-from-square{% else %}arrow-right{% endif %} text-xs"></i>
+                    </a>
+                    {% else %}
+                    <p class="home-public-v6-primary-summary">문서, 수합, 운영 도구는 로그인 후 바로 이어집니다.</p>
+                    <a href="{{ guest_continue_url|default:login_url }}" class="home-public-v5-secondary-link">
+                        로그인하고 이어서
                         <i class="fa-solid fa-right-to-bracket text-xs"></i>
                     </a>
-                </section>
+                    {% endif %}
+                </article>
             </section>
 
-            <section class="home-public-v5-desktop" data-home-v6-public-desktop="true">
-                {% include 'core/partials/home_public_v6_desktop.html' %}
+            {% if public_secondary_cards %}
+            <section class="home-public-v6-section-surface" data-home-v6-public-grid-panel="true">
+                <div class="home-public-v6-section-header">
+                    <div>
+                        <p class="home-public-v6-section-eyebrow">바로 시작</p>
+                        <h2 class="home-public-v6-section-title">지금 열 수 있는 도구</h2>
+                    </div>
+                </div>
+
+                <div class="home-public-v6-grid" data-home-v6-public-grid="true">
+                    {% for card in public_secondary_cards %}
+                    <a
+                        href="{{ card.href }}"
+                        class="home-public-v6-grid-card"
+                        data-home-v6-public-card="true"
+                        {% if card.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+                    >
+                        <div class="home-public-v6-grid-head">
+                            <span class="home-public-v6-grid-icon home-public-service-icon-tone" data-home-accent="{{ card.home_accent_token|default:'external' }}">
+                                <i class="{{ card.home_icon_class|default:'fa-solid fa-star' }}"></i>
+                            </span>
+                            <span class="home-public-v6-grid-badge">{{ card.access_status_label }}</span>
+                        </div>
+                        <h3 class="home-public-v6-grid-title">{{ card.title }}</h3>
+                        <p class="home-public-v6-grid-summary">{{ card.description|truncatechars:38 }}</p>
+                        <span class="home-public-v6-grid-cta">
+                            {% if card.is_external %}새 창에서 시작{% else %}바로 시작{% endif %}
+                        </span>
+                    </a>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+
+            <section class="home-public-v6-section-surface home-public-v6-continue-band" data-home-v6-public-login-band="true">
+                <div class="home-public-v6-continue-copy">
+                    <p class="home-public-v6-section-eyebrow">로그인 후</p>
+                    <h2 class="home-public-v6-section-title">이어서 하는 업무</h2>
+                    <p class="home-public-v6-continue-summary">수합, 문서, 운영 도구를 같은 흐름에서 이어갑니다.</p>
+                    <div class="home-public-v6-chip-row">
+                        {% for label in guest_continue_category_labels %}
+                        <span class="home-public-v6-chip">{{ label }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                <a href="{{ guest_continue_url|default:login_url }}" class="home-public-v5-secondary-link">
+                    로그인하고 이어서
+                    <i class="fa-solid fa-right-to-bracket text-xs"></i>
+                </a>
             </section>
         </main>
     </div>

@@ -34,7 +34,7 @@ class AuthChromeTemplateTests(TestCase):
         self.assertContains(response, "core/css/auth_chrome.css")
         self.assertContains(response, "auth-shell-brand")
         self.assertContains(response, "fa-solid fa-cloud")
-        self.assertContains(response, "에듀잇티에 오신 걸 환영합니다")
+        self.assertContains(response, "로그인하고 교실 업무 이어서")
         self.assertNotContains(response, "bot_login_input")
 
     def test_signup_page_uses_same_brand_icon_as_login(self):

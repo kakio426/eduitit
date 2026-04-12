@@ -2490,6 +2490,30 @@ GUEST_LOCKED_SECTION_ORDER = {
     "class_activity": 6,
 }
 
+PUBLIC_HOME_PRIMARY_ACTION_ROUTE_PRIORITY = (
+    "collect:landing",
+    "noticegen:main",
+    "qrgen:landing",
+    "happy_seed:landing",
+    "timetable:main",
+    "ssambti:main",
+)
+
+PUBLIC_HOME_PRIMARY_ACTION_TITLE_PRIORITY = (
+    "간편 수합",
+    "알림장 & 주간학습 멘트 생성기",
+    "수업 QR 생성기",
+    "행복의 씨앗",
+    "전담 시간표·특별실 배치 도우미",
+    "쌤BTI",
+)
+
+PUBLIC_HOME_CONTINUE_CATEGORY_LABELS = (
+    "수합·서명",
+    "문서·작성",
+    "학급 운영",
+)
+
 
 def _product_requires_guest_login(product):
     return getattr(product, "home_access_status_label", "") == "로그인 필요"
@@ -2501,6 +2525,7 @@ def _guest_access_status_copy(product):
 
 def _build_home_guest_highlight_card(product, *, login_url=""):
     access_status_label = _guest_access_status_copy(product)
+    route_name = _product_route_name(product)
     launch_href = getattr(product, "launch_href", "") or ""
     launch_is_external = bool(getattr(product, "launch_is_external", False))
     href = launch_href
@@ -2517,6 +2542,7 @@ def _build_home_guest_highlight_card(product, *, login_url=""):
         "home_icon_class": getattr(product, "home_icon_class", "") or service_launcher_utils.resolve_home_icon_class(product),
         "home_accent_token": getattr(product, "home_accent_token", "") or service_launcher_utils.resolve_home_accent_token(product),
         "service_type": getattr(product, "service_type", ""),
+        "route_name": route_name,
         "href": href,
         "is_external": is_external,
         "guide_url": getattr(product, "guide_url", "") or "",
@@ -2588,6 +2614,66 @@ def _build_home_guest_rotation_cards(product_list, *, login_url=""):
         for card in cards
         if card.get("href")
     ]
+
+
+def _build_home_public_primary_action_card(guest_public_cards, games):
+    candidate_cards = [card for card in list(guest_public_cards or []) if card.get("href")]
+    if not candidate_cards:
+        for game in list(games or []):
+            launch_href = str(getattr(game, "launch_href", "") or "").strip()
+            if not launch_href:
+                continue
+            return {
+                "id": getattr(game, "id", ""),
+                "title": getattr(game, "public_service_name", "") or getattr(game, "title", "") or "교실 활동",
+                "description": getattr(game, "home_card_summary", "") or "학생과 바로 시작할 수 있는 공개 활동입니다.",
+                "service_name": "",
+                "home_icon_class": getattr(game, "home_icon_class", "") or service_launcher_utils.resolve_home_icon_class(game),
+                "home_accent_token": getattr(game, "home_accent_token", "") or service_launcher_utils.resolve_home_accent_token(game),
+                "service_type": getattr(game, "service_type", ""),
+                "route_name": _product_route_name(game),
+                "href": launch_href,
+                "is_external": bool(getattr(game, "launch_is_external", False)),
+                "access_status_label": "미리보기 가능",
+            }
+        return None
+
+    for route_name in PUBLIC_HOME_PRIMARY_ACTION_ROUTE_PRIORITY:
+        matched_card = next(
+            (card for card in candidate_cards if str(card.get("route_name", "") or "").strip().lower() == route_name),
+            None,
+        )
+        if matched_card:
+            return matched_card
+
+    normalized_title_map = {
+        str(card.get("title", "") or "").strip(): card
+        for card in candidate_cards
+    }
+    for title in PUBLIC_HOME_PRIMARY_ACTION_TITLE_PRIORITY:
+        matched_card = normalized_title_map.get(title)
+        if matched_card:
+            return matched_card
+
+    return next(
+        (card for card in candidate_cards if not card.get("is_external")),
+        candidate_cards[0],
+    )
+
+
+def _build_home_public_secondary_cards(guest_public_cards, primary_action_card, *, limit=5):
+    secondary_cards = []
+    primary_id = primary_action_card.get("id") if primary_action_card else None
+
+    for card in list(guest_public_cards or []):
+        if not card.get("href"):
+            continue
+        if primary_id and card.get("id") == primary_id:
+            continue
+        secondary_cards.append(card)
+        if limit and len(secondary_cards) >= limit:
+            break
+    return secondary_cards
 
 
 def _build_home_featured_summary(product):
@@ -3668,13 +3754,31 @@ def _build_home_public_landing_context(request, products):
         featured_product,
         login_url=login_url,
     )
+    guest_entry_context = _build_home_guest_entry_context(
+        product_list,
+        guest_public_cards,
+        [],
+        login_url=login_url,
+    )
+    public_primary_action_card = _build_home_public_primary_action_card(
+        guest_public_cards,
+        [],
+    )
+    public_secondary_cards = _build_home_public_secondary_cards(
+        guest_public_cards,
+        public_primary_action_card,
+    )
     return {
         'products': products,
         'featured_product': featured_product,
         'representative_products': representative_products,
         'guest_rotation_cards': guest_rotation_cards,
         'guest_public_cards': guest_public_cards,
+        'public_primary_action_card': public_primary_action_card,
+        'public_secondary_cards': public_secondary_cards,
+        'guest_continue_category_labels': PUBLIC_HOME_CONTINUE_CATEGORY_LABELS,
         'login_url': login_url,
+        **guest_entry_context,
         **build_home_page_seo(request).as_context(),
     }
 
@@ -4160,6 +4264,16 @@ def build_home_surface_context(
             user=request.user,
         ),
     )
+    quick_action_items = _build_home_surface_safe_value(
+        request,
+        label='quick action items',
+        fallback_factory=list,
+        builder=lambda: _build_product_link_items(
+            quick_actions,
+            include_section_meta=True,
+            user=request.user,
+        ),
+    )
     recent_items = _build_home_surface_safe_value(
         request,
         label='recent items',
@@ -4278,6 +4392,7 @@ def build_home_surface_context(
         primary_display_sections=primary_display_sections,
         secondary_display_sections=secondary_display_sections,
         games=games,
+        quick_actions=quick_action_items,
         favorite_items=favorite_items,
         recent_items=recent_items,
         discovery_items=discovery_items,
@@ -4489,6 +4604,7 @@ def build_guest_home_surface_context(
         primary_display_sections=primary_display_sections,
         secondary_display_sections=secondary_display_sections,
         games=games,
+        quick_actions=[],
         favorite_items=favorite_items,
         recent_items=recent_items,
         discovery_items=discovery_items,
@@ -4687,23 +4803,8 @@ def home(request):
         ),
     )
 
-    home_layout_version = _get_home_layout_version()
-
     if request.user.is_authenticated:
         return _home_v6(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
-
-    if home_layout_version in {'', 'v6'}:
-        return _home_guest_v6(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
-
-    if home_layout_version == 'v4':
-        return _home_public_v4(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
-
-    if home_layout_version == 'v5':
-        return _home_public_v4(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
-
-    # V2 홈: Feature flag on 시 분기
-    if home_layout_version == 'v2':
-        return _home_v2(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
 
     return _home_guest_v6(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
 

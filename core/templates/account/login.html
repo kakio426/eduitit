@@ -2,17 +2,17 @@
 {% load static socialaccount %}
 
 {% block seo_meta %}
-<meta name="description" content="에듀잇티에 로그인하고 바로 시작하세요.">
+<meta name="description" content="에듀잇티에 로그인하고 교실 업무를 이어서 시작하세요.">
 <meta name="robots" content="noindex,nofollow">
 <link rel="canonical" href="https://eduitit.site/accounts/login/">
 <meta property="og:title" content="로그인 | Eduitit">
-<meta property="og:description" content="에듀잇티에 로그인하고 바로 시작하세요.">
+<meta property="og:description" content="에듀잇티에 로그인하고 교실 업무를 이어서 시작하세요.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://eduitit.site/accounts/login/">
 <meta property="og:image" content="https://eduitit.site/static/images/eduitit_og.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="로그인 | Eduitit">
-<meta name="twitter:description" content="에듀잇티에 로그인하고 바로 시작하세요.">
+<meta name="twitter:description" content="에듀잇티에 로그인하고 교실 업무를 이어서 시작하세요.">
 <meta name="twitter:image" content="https://eduitit.site/static/images/eduitit_og.png">
 {% endblock %}
 
@@ -34,14 +34,19 @@
                     <span>EDUITIT</span>
                 </a>
                 <p class="auth-shell-kicker">로그인</p>
-                <h1 class="auth-shell-title auth-shell-title--compact">에듀잇티에 오신 걸 환영합니다</h1>
-                <p class="auth-shell-summary">로그인하고 바로 시작하세요.</p>
+                {% if request.GET.next %}
+                <h1 class="auth-shell-title auth-shell-title--compact">방금 고른 도구를 이어서 시작</h1>
+                <p class="auth-shell-summary">카카오·네이버로 로그인하면 바로 열립니다.</p>
+                {% else %}
+                <h1 class="auth-shell-title auth-shell-title--compact">로그인하고 교실 업무 이어서</h1>
+                <p class="auth-shell-summary">카카오·네이버로 바로 시작하세요.</p>
+                {% endif %}
             </div>
 
             {% if request.GET.next %}
             <div class="auth-shell-notice">
-                <p class="auth-shell-notice-title">로그인 후 바로 이동합니다.</p>
-                <p class="auth-shell-notice-copy">방금 보던 화면으로 이어집니다.</p>
+                <p class="auth-shell-notice-title">방금 고른 도구로 이동합니다.</p>
+                <p class="auth-shell-notice-copy">로그인 후 바로 열립니다.</p>
             </div>
             {% endif %}
 
@@ -52,7 +57,7 @@
                         <path
                             d="M12 3C7.58 3 4 5.79 4 9.24C4 11.41 5.43 13.33 7.62 14.4L6.68 17.84C6.6 18.13 6.95 18.35 7.19 18.15L11.55 14.86C11.7 14.87 11.85 14.87 12 14.87C16.42 14.87 20 12.08 20 8.63C20 5.18 16.42 3 12 3Z" />
                     </svg>
-                    <span>카카오로 로그인</span>
+                    <span class="tracking-tight">카카오로 로그인</span>
                 </a>
 
                 <a href="{% provider_login_url 'naver' %}"
@@ -60,7 +65,7 @@
                     <svg viewBox="0 0 24 24" class="h-6 w-6 fill-white" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                         <path d="M16.273 12.845L7.388 1H1V23H7.818V11.16L16.643 23H23V1H16.273V12.845Z" />
                     </svg>
-                    <span>네이버로 로그인</span>
+                    <span class="tracking-tight">네이버로 로그인</span>
                 </a>
             </div>
 

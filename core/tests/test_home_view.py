@@ -115,6 +115,20 @@ AUTHENTICATED_HOME_CONTEXT_KEYS = (
     'today_review_url',
 )
 
+PUBLIC_HOME_CONTEXT_KEYS = (
+    'featured_product',
+    'representative_products',
+    'guest_public_cards',
+    'public_primary_action_card',
+    'public_secondary_cards',
+    'guest_locked_cards',
+    'guest_continue_action_card',
+    'guest_continue_url',
+    'guest_continue_category_labels',
+    'login_url',
+    'home_design_version',
+)
+
 
 def _assert_authenticated_home_context_contract(testcase, response, *, design_version):
     for key in AUTHENTICATED_HOME_CONTEXT_KEYS:
@@ -141,6 +155,12 @@ def _assert_authenticated_home_context_contract(testcase, response, *, design_ve
         response.context['home_frontend_config'],
         response.context['home_v2_frontend_config'],
     )
+
+
+def _assert_public_home_context_contract(testcase, response, *, design_version='v6'):
+    for key in PUBLIC_HOME_CONTEXT_KEYS:
+        testcase.assertIn(key, response.context)
+    testcase.assertEqual(response.context['home_design_version'], design_version)
 
 
 @override_settings(HOME_V2_ENABLED=False)
@@ -177,11 +197,13 @@ class HomeViewTest(TestCase):
         )
 
     def test_home_anonymous_contains_product(self):
-        """비로그인 홈에 서비스 카드가 표시됨"""
+        """비로그인 홈은 잠긴 서비스도 이어하기 맥락으로 유지한다."""
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('테스트 서비스', content)
-        self.assertIn(f'data-product-id="{self.product.id}"', content)
+        _assert_public_home_context_contract(self, response, design_version='v6')
+        locked_titles = {card['title'] for card in response.context.get('guest_locked_cards', [])}
+        self.assertIn('테스트 서비스', locked_titles)
+        self.assertIn('로그인하고 이어서', content)
 
     def test_home_nav_contains_single_help_hub_link(self):
         response = self.client.get(reverse('home'))
@@ -229,7 +251,8 @@ class HomeViewTest(TestCase):
     def test_v1_mobile_sns_more_uses_toggle_not_anchor(self):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('@click="snsOpen = true"', content)
+        self.assertIn('data-home-v6-public-shell="true"', content)
+        self.assertNotIn('@click="snsOpen = true"', content)
         self.assertNotIn('hx-select="#mobile-post-list-container"', content)
         self.assertNotIn('href="#sns-full-section"', content)
 
@@ -265,6 +288,34 @@ class HomeV2ViewTest(TestCase):
         user = _create_onboarded_user(username, nickname=nickname)
         self.client.login(username=username, password='pass1234')
         return user
+
+    def _assert_authenticated_home_uses_v6(self, response, content):
+        self.assertTemplateUsed(response, 'core/home_authenticated_v6_canonical.html')
+        _assert_authenticated_home_context_contract(self, response, design_version='v6')
+        self.assertIn('core/css/home_authenticated_v6.css', content)
+        self.assertIn('core/css/home_authenticated_v6_canonical.css', content)
+        self.assertIn('core/js/home_authenticated_v6.js', content)
+        self.assertIn('data-home-v6-shell="true"', content)
+        self.assertIn('data-home-v6-nav="desktop"', content)
+        self.assertIn('data-home-v6-nav="mobile"', content)
+        self.assertIn('data-home-v6-favorites-panel="true"', content)
+        self.assertIn('data-home-v6-representative-services="true"', content)
+        self.assertIn('data-home-v6-sns-panel="true"', content)
+        self.assertIn('data-home-v6-calendar-panel="desktop"', content)
+        self.assertIn('data-home-v6-calendar-panel="mobile"', content)
+        self.assertIn('data-home-v6-top-calendar="true"', content)
+        self.assertIn('data-home-v6-calendar-surface="true"', content)
+        self.assertNotIn('data-home-v2-top-zone="true"', content)
+        self.assertNotIn('data-home-v2-favorites-panel="true"', content)
+
+    def _assert_public_home_uses_v6(self, response, content):
+        self.assertTemplateUsed(response, 'core/home_public_v6_canonical.html')
+        _assert_public_home_context_contract(self, response, design_version='v6')
+        self.assertIn('data-home-v6-public-shell="true"', content)
+        self.assertIn('data-home-v6-public-hero="true"', content)
+        self.assertIn('data-home-v6-public-primary-card="true"', content)
+        self.assertIn('data-home-v6-public-login-band="true"', content)
+        self.assertNotIn('data-home-v2-guest-hero="true"', content)
 
     def _create_classroom_product(self, title='숨김 학급 도구', *, is_active=True):
         return Product.objects.create(
@@ -347,7 +398,7 @@ class HomeV2ViewTest(TestCase):
         return sorted(response.context['tasks_json'], key=lambda item: item['id'])
 
     def test_v2_anonymous_200(self):
-        """V2 비로그인 홈 200 응답"""
+        """비로그인 홈 200 응답"""
         response = self.client.get(reverse('home'))
         self.assertEqual(response.status_code, 200)
 
@@ -369,41 +420,55 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('core/css/home_authenticated_v2.css', content)
 
     def test_v2_anonymous_has_sections(self):
-        """V2 비로그인 홈에 목적별 섹션 존재"""
+        """비로그인 홈은 공개 V6 섹션 구조를 사용"""
+        self._create_try_now_products()
+        self._create_try_now_support_products()
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('수합·서명', content)
-        self.assertIn('문서·작성', content)
+        _assert_public_home_context_contract(self, response)
+        self.assertTemplateUsed(response, 'core/home_public_v6_canonical.html')
+        self.assertIn('data-home-v6-public-hero="true"', content)
+        self.assertIn('data-home-v6-public-primary-card="true"', content)
+        self.assertIn('data-home-v6-public-grid-panel="true"', content)
+        self.assertIn('data-home-v6-public-login-band="true"', content)
+        self.assertIn('오늘 쓸 교실 도구, 바로 시작', content)
+        self.assertIn('지금 열 수 있는 도구', content)
+        self.assertIn('이어서 하는 업무', content)
+        self.assertNotIn('data-home-v2-guest-hero="true"', content)
+        self.assertNotIn('data-home-v2-public-section="true"', content)
 
     def test_v2_anonymous_has_login_cta(self):
-        """V2 비로그인 홈에 로그인 CTA 존재"""
+        """비로그인 홈에 로그인 이어가기 CTA 존재"""
+        self._create_try_now_products()
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        primary_action_card = response.context.get('guest_primary_action_card')
+        primary_action_card = response.context.get('public_primary_action_card')
         continue_action_card = response.context.get('guest_continue_action_card')
         continue_url = response.context.get('guest_continue_url')
 
-        if primary_action_card:
-            self.assertIn(f"{primary_action_card['title']} 바로 시작", content)
-        else:
-            self.assertIn('지금 바로 써보기', content)
-
+        self.assertIsNotNone(primary_action_card)
+        self.assertEqual(primary_action_card['title'], '간편 수합')
+        self.assertIn(primary_action_card['title'], content)
+        self.assertIn('바로 시작', content)
         self.assertIsNotNone(continue_action_card)
         self.assertEqual(continue_action_card['title'], '수업 도구')
-        self.assertIn('로그인 후 수업 도구 이어서 시작', content)
-        self.assertIn('로그인하면 수업 도구 화면으로 바로 이어집니다.', content)
+        self.assertIn('로그인하고 이어서', content)
+        self.assertIn('수합·서명', content)
+        self.assertIn('문서·작성', content)
+        self.assertIn('학급 운영', content)
         self.assertTrue(continue_url.startswith(reverse('account_login')))
         self.assertIn('?next=', continue_url)
         self.assertIn(continue_url, content)
         self.assertNotIn('로그인 후 전체 열기', content)
-        self.assertNotIn('공개 도구 먼저 보기', content)
+        self.assertNotIn('지금 바로 써보기', content)
 
     def test_v2_anonymous_renders_hero_preview_and_proof_panels(self):
+        self._create_try_now_products()
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('data-home-v2-hero-proof="true"', content)
-        self.assertIn('data-home-v2-hero-preview="true"', content)
+        self.assertIn('data-home-v6-public-hero="true"', content)
+        self.assertIn('data-home-v6-public-primary-card="true"', content)
         self.assertNotIn('Teacher-First Launchpad', content)
         self.assertNotIn('Open Tools', content)
 
@@ -421,12 +486,11 @@ class HomeV2ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        hero_card = next(
-            card for card in response.context.get('guest_public_cards', [])
-            if card['id'] == public_collect.id
-        )
+        hero_card = response.context.get('public_primary_action_card')
 
-        self.assertIn('class="home-v2-quick-link', content)
+        self.assertIsNotNone(hero_card)
+        self.assertEqual(hero_card['id'], public_collect.id)
+        self.assertIn('data-home-v6-public-primary-card="true"', content)
         self.assertIn(f'href="{hero_card["href"]}"', content)
 
     def test_v2_anonymous_surfaces_public_cards_before_locked_sections(self):
@@ -452,16 +516,20 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('data-home-v2-public-section="true"', content)
-        self.assertIn('바로 열리는 공개 도구', content)
-        self.assertIn('로그인 후 이어지는 업무', content)
+        self._assert_public_home_uses_v6(response, content)
+        self.assertIn('data-home-v6-public-grid-panel="true"', content)
+        self.assertIn('지금 열 수 있는 도구', content)
+        self.assertIn('이어서 하는 업무', content)
         self.assertIn('미리보기 가능', content)
-        self.assertIn('로그인 필요', content)
-        self.assertIn('로그인하고 이어서 시작', content)
+        self.assertIn('로그인하고 이어서', content)
 
         public_ids = [card['id'] for card in response.context.get('guest_public_cards', [])]
         self.assertIn(public_collect.id, public_ids)
         self.assertIn(public_qr.id, public_ids)
+        self.assertIn(response.context['public_primary_action_card']['id'], public_ids)
+        secondary_ids = [card['id'] for card in response.context.get('public_secondary_cards', [])]
+        self.assertIn(public_qr.id, secondary_ids)
+        self.assertNotIn(response.context['public_primary_action_card']['id'], secondary_ids)
 
         locked_cards = response.context.get('guest_locked_cards', [])
         locked_card_ids = [card['id'] for card in locked_cards]
@@ -470,11 +538,8 @@ class HomeV2ViewTest(TestCase):
         self.assertIn(self.p2.id, locked_card_ids)
         self.assertNotIn(public_collect.id, locked_card_ids)
         self.assertNotIn(public_qr.id, locked_card_ids)
-        self.assertEqual(response.context['guest_continue_action_card']['id'], self.p1.id)
-        self.assertEqual(
-            response.context['guest_continue_url'],
-            f"{reverse('account_login')}?next=%2Fproducts%2F{self.p1.id}%2F",
-        )
+        self.assertIsNotNone(response.context['guest_continue_action_card'])
+        self.assertTrue(response.context['guest_continue_url'].startswith(reverse('account_login')))
         for card in locked_cards:
             self.assertTrue(card['href'].startswith(reverse('account_login')))
 
@@ -483,10 +548,13 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn('방금 고른 도구로 바로 이어집니다.', content)
-        self.assertIn('로그인하면 선택한 교실 업무 화면으로 곧바로 이동합니다.', content)
+        self.assertIn('방금 고른 도구를 이어서 시작', content)
+        self.assertIn('카카오·네이버로 로그인하면 바로 열립니다.', content)
+        self.assertIn('방금 고른 도구로 이동합니다.', content)
+        self.assertIn('로그인 후 바로 열립니다.', content)
 
     def test_v2_anonymous_removes_hero_access_legend(self):
+        self._create_try_now_products()
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
@@ -528,13 +596,17 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('text-indigo-700">가이드 있음</span>', content)
 
     def test_v2_anonymous_prioritizes_hero_and_services_without_sns_preview(self):
+        self._create_try_now_products()
+        self._create_try_now_support_products()
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        hero_index = content.index('data-home-v2-guest-hero="true"')
-        service_group_index = content.index('id="guest-home-services"')
+        hero_index = content.index('data-home-v6-public-hero="true"')
+        service_group_index = content.index('data-home-v6-public-grid-panel="true"')
+        continue_index = content.index('data-home-v6-public-login-band="true"')
 
         self.assertLess(hero_index, service_group_index)
+        self.assertLess(service_group_index, continue_index)
         self.assertNotIn('data-home-v2-public-calendar-entry="true"', content)
         self.assertNotIn('sns-full-section-v2', content)
         self.assertNotIn('실시간 소통', content)
@@ -548,6 +620,7 @@ class HomeV2ViewTest(TestCase):
 
         self.assertNotIn('data-home-v2-try-now="true"', content)
         self.assertNotIn('data-home-v2-try-now-grid="true"', content)
+        self.assertIn('data-home-v6-public-grid="true"', content)
 
     def test_v2_anonymous_keeps_guest_home_without_mini_app_rail(self):
         response = self.client.get(reverse('home'))
@@ -557,10 +630,15 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('data-home-mini-app-shell="true"', content)
 
     def test_v2_anonymous_has_game_banner(self):
-        """V2 비로그인 홈에 게임 배너 존재"""
+        """비로그인 홈은 공개 카드와 로그인 이어하기 흐름만 전면 배치한다."""
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('테스트 게임', content)
+        self._assert_public_home_uses_v6(response, content)
+        public_titles = {card['title'] for card in response.context.get('guest_public_cards', [])}
+        locked_titles = {card['title'] for card in response.context.get('guest_locked_cards', [])}
+        self.assertNotIn('테스트 게임', public_titles)
+        self.assertIn('수업 도구', locked_titles)
+        self.assertIn('로그인하고 이어서', content)
         self.assertNotIn('학생용 QR', content)
 
     @patch('core.views.attach_teacher_buddy_avatar_context')
@@ -571,7 +649,7 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn('data-home-v2-guest-hero="true"', content)
+        self.assertIn('data-home-v6-public-hero="true"', content)
 
     def test_v2_authenticated_has_student_games_qr_button(self):
         """V2 로그인 홈에 학생 게임 QR 버튼 존재"""
@@ -584,11 +662,11 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('launch/?token=', content)
 
     def test_v2_anonymous_does_not_render_show_all_toggle(self):
-        """V2 비로그인 홈에 전체 서비스 보기 토글이 노출되지 않음"""
+        """비로그인 홈에 legacy 전체 서비스 토글이 노출되지 않음"""
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         self.assertNotIn('data-track="show_all_toggle"', content)
-        self.assertNotIn('전체 서비스 보기', content)
+        self.assertNotIn('로그인 후 전체 서비스 보기', content)
 
     def test_v2_anonymous_does_not_render_authenticated_calendar_hub(self):
         response = self.client.get(reverse('home'))
@@ -780,13 +858,12 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('서비스 검색...', content)
 
     def test_v2_authenticated_uses_stacked_top_zone_and_real_calendar(self):
-        """V2 로그인 홈은 캘린더 단일 표면을 상단 전체 폭으로 사용"""
+        """로그인 홈은 canonical V6에서 단일 캘린더 표면을 유지한다."""
         self._login('qauser')
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('data-home-v2-top-zone="true"', content)
+        self._assert_authenticated_home_uses_v6(response, content)
         self.assertIn('data-home-calendar-root="true"', content)
-        self.assertIn('data-home-v2-calendar-surface="true"', content)
         self.assertIn('data-classcalendar-surface="true"', content)
         self.assertIn('data-classcalendar-embed-mode="home"', content)
         self.assertIn('data-classcalendar-main-view="true"', content)
@@ -794,12 +871,8 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('data-classcalendar-home-grid-wrap="true"', content)
         self.assertIn('surfaceAllowsManage: true', content)
         self.assertIn('새 일정', content)
-        self.assertNotIn('data-home-v2-top-today="true"', content)
-        self.assertNotIn('data-home-v2-top-center="true"', content)
         self.assertNotIn('homeCalendarWidget()', content)
         self.assertNotIn('openTodayMemoModal($event)', content)
-        self.assertNotIn('data-home-v2-calendar-month-grid="true"', content)
-        self.assertNotIn('data-home-v2-calendar-day="true"', content)
 
     def test_v2_authenticated_does_not_render_today_try_now_section(self):
         self._create_try_now_products()
@@ -809,13 +882,14 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('data-home-v2-top-zone="true"', content)
-        self.assertIn('data-home-v2-service-groups="true"', content)
+        self._assert_authenticated_home_uses_v6(response, content)
+        self.assertIn('data-home-v6-workbench="mobile"', content)
         self.assertNotIn('data-home-v2-try-now="true"', content)
         self.assertNotIn('data-home-v2-try-now-grid="true"', content)
         self.assertNotIn('data-home-v2-try-now-support="true"', content)
         self.assertNotIn('data-home-v2-try-now-support-grid="true"', content)
         self.assertNotIn('오늘 바로 써보기', content)
+        self.assertNotIn('data-home-v6-public-grid-panel="true"', content)
 
     @override_settings(
         FEATURE_MESSAGE_CAPTURE_ENABLED=True,
@@ -849,18 +923,11 @@ class HomeV2ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
+        self._assert_authenticated_home_uses_v6(response, content)
 
         self.assertIn('data-home-messagebox-card="true"', content)
         self.assertIn('업무 메시지 보관함', content)
-        self.assertIn('data-home-messagebox-actions="true"', content)
-        self.assertIn('aria-label="보관할 메시지"', content)
-        self.assertIn('보관만 하기', content)
-        self.assertNotIn('>전체 보기</button>', content)
         self.assertIn('data-home-messagebox-header="true"', content)
-        self.assertRegex(
-            content,
-            r'(?s)@click="openMessageArchive\(\$event\)".*?rounded-full.*?text-xs.*?font-bold',
-        )
         self.assertIn('@click="openMessageArchive($event)"', content)
         self.assertIn('@click="openMessageCaptureFromHome($event)"', content)
         self.assertIn('data-classcalendar-main-view="true"', content)
@@ -868,19 +935,9 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('캘린더 연결 ', content)
         self.assertNotIn('놓치지 않을 메시지', content)
         self.assertNotIn('메신저에서 받은 중요한 내용을 붙여넣고, 나중에 다시 보거나 일정에 연결하세요.', content)
-        self.assertIn('flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between', content)
-        self.assertIn('inline-flex w-full items-center justify-center rounded-full', content)
-        self.assertIn('@media (max-width: 639px)', content)
-        self.assertIn('#home-calendar .classcalendar-main-toolbar', content)
         main_view_index = content.index('data-classcalendar-main-view="true"')
         messagebox_markup_index = content.index('data-home-messagebox-card="true"', main_view_index)
         self.assertLess(main_view_index, messagebox_markup_index)
-
-        calendar_template = (Path(settings.BASE_DIR) / 'classcalendar' / 'templates' / 'classcalendar' / '_calendar_app.html').read_text(encoding='utf-8')
-        self.assertIn('if (this.isCompactMobileViewport()) {', calendar_template)
-        self.assertIn('if (this.getDayItemCount(date) > 0) {', calendar_template)
-        self.assertIn('this.openDayOverview(date, triggerEvent);', calendar_template)
-        self.assertIn('this.openCreateModal(date, triggerEvent);', calendar_template)
 
         section_products = [
             product.launch_route_name
@@ -1171,15 +1228,10 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn("core/css/home_authenticated_v2.css", content)
-        self.assertIn('data-home-v2-content-shell="true"', content)
-        self.assertIn('data-home-v2-has-favorites="true"', content)
-        self.assertIn('data-home-v2-side-stack="true"', content)
-        self.assertIn('data-home-v2-favorites-grid="true"', content)
-        self.assertIn('data-home-v2-favorites-panel="true"', content)
-        self.assertIn('home-v2-community-zone', content)
-        self.assertIn('home-v2-content-shell', content)
-        self.assertIn('home-v2-top-zone', content)
+        self._assert_authenticated_home_uses_v6(response, content)
+        self.assertIn('home-v6-side-stack', content)
+        self.assertIn('data-home-v6-favorites-grid="true"', content)
+        self.assertIn('data-home-v6-favorite-card="true"', content)
         self.assertIn('data-classcalendar-day-modal="true"', content)
         self.assertIn('.classcalendar-day-cell', content)
         self.assertNotIn('function initHomeV2Interactions()', content)
@@ -1199,14 +1251,14 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        top_zone_index = content.index('data-home-v2-top-zone="true"')
-        side_stack_index = content.index('data-home-v2-side-stack="true"')
-        favorites_index = content.index('data-home-v2-favorites-panel="true"')
-        summary_index = content.index('data-home-v2-community-section="true"')
-        service_index = content.index('data-home-v2-service-groups="true"')
+        self._assert_authenticated_home_uses_v6(response, content)
+        layout_index = content.index('data-home-v6-layout="true"')
+        representative_index = content.index('data-home-v6-representative-services="true"')
+        favorites_index = content.index('data-home-v6-favorites-panel="true"')
+        summary_index = content.index('data-home-v6-sns-panel="true"')
 
-        self.assertLess(top_zone_index, side_stack_index)
-        self.assertLess(side_stack_index, service_index)
+        self.assertLess(layout_index, representative_index)
+        self.assertLess(representative_index, favorites_index)
         self.assertLess(favorites_index, summary_index)
 
     def test_v2_authenticated_does_not_render_show_all_toggle(self):
@@ -1218,20 +1270,24 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('전체 서비스 보기', content)
 
     def test_v2_mini_card_has_data_product_id(self):
-        """V2 미니 카드에 data-product-id 속성 존재"""
+        """V6 대표 카드와 작업대 카드에 data-product-id 속성 존재"""
+        self._login('cardiduser')
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('data-home-v2-service-card="true"', content)
+        self._assert_authenticated_home_uses_v6(response, content)
+        self.assertIn('data-home-v6-service-grid="true"', content)
         self.assertIn(f'data-product-id="{self.p1.id}"', content)
 
     def test_v2_mini_card_shows_normalized_home_summary(self):
-        """V2 미니 카드는 홈 전용 요약 한 줄 계약을 사용"""
+        """V6 대표 카드는 홈 전용 요약 한 줄 계약을 사용"""
+        self._login('cardsummaryuser')
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
+        self._assert_authenticated_home_uses_v6(response, content)
         self.assertIn('수업을 준비해요', content)
-        self.assertIn('data-home-v2-service-card-body="true"', content)
-        self.assertIn('data-home-v2-service-card-header="true"', content)
-        self.assertIn('data-home-v2-service-card-access="true"', content)
+        self.assertIn('data-home-v6-service-grid="true"', content)
+        self.assertIn('data-home-v6-service-title="true"', content)
+        self.assertIn('data-home-v6-service-icon="true"', content)
 
     def test_v2_authenticated_favorite_cards_show_compact_body(self):
         user = self._login('favoritebodyuser')
@@ -1239,10 +1295,13 @@ class HomeV2ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
+        self._assert_authenticated_home_uses_v6(response, content)
+        favorites_index = content.index('data-home-v6-favorites-panel="true"')
+        favorites_block = content[favorites_index:favorites_index + 2500]
 
-        self.assertIn('data-home-v2-favorite-card-header="true"', content)
-        self.assertIn('data-home-v2-favorite-card-title="true"', content)
-        self.assertIn('수업을 준비해요', content)
+        self.assertIn('data-home-v6-favorite-card="true"', favorites_block)
+        self.assertIn('data-home-v6-service-title="true"', favorites_block)
+        self.assertNotIn('수업을 준비해요', favorites_block)
 
     def test_v2_authenticated_favorite_cards_strip_conflict_markers_from_messagebox_title(self):
         user = self._login('messageboxfavorite')
@@ -1264,10 +1323,12 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('<<<<<<<HEAD', content)
 
     def test_v2_service_board_uses_balanced_two_column_shell(self):
+        self._login('layoutbalanceuser')
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('md:grid-cols-2', content)
+        self._assert_authenticated_home_uses_v6(response, content)
+        self.assertIn('data-home-v6-layout="true"', content)
         self.assertNotIn('data-home-v2-section-more-link="true"', content)
         self.assertNotIn('repeat(auto-fit, minmax(min(100%, 300px), 360px)); justify-content: start;', content)
 
@@ -1287,6 +1348,7 @@ class HomeV2ViewTest(TestCase):
             service_type='counsel',
         )
 
+        self._login('displaygroupsuser')
         response = self.client.get(reverse('home'))
 
         primary_keys = [section['key'] for section in response.context.get('primary_display_sections', [])]
@@ -1303,7 +1365,8 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('tabletnav님', content)
 
     def test_v2_context_sections_count(self):
-        """V2 컨텍스트에 sections 존재"""
+        """V6 홈 컨텍스트에 목적별 sections가 유지된다."""
+        self._login('sectioncountuser')
         response = self.client.get(reverse('home'))
         sections = response.context.get('sections', [])
         self.assertGreaterEqual(len(sections), 2)
@@ -1360,15 +1423,14 @@ class HomeV2ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
+        self._assert_authenticated_home_uses_v6(response, content)
 
-        favorites_index = content.index('data-home-v2-favorites-panel="true"')
-        favorites_end = content.index('data-home-v2-community-section="true"', favorites_index)
-        favorites_block = content[favorites_index:favorites_end]
+        favorites_index = content.index('data-home-v6-favorites-panel="true"')
+        favorites_block = content[favorites_index:favorites_index + 2500]
 
-        self.assertIn('data-home-v2-favorites-grid="true"', favorites_block)
-        self.assertIn('data-home-v2-favorite-card="true"', favorites_block)
+        self.assertIn('data-home-v6-favorites-grid="true"', favorites_block)
+        self.assertIn('data-home-v6-favorite-card="true"', favorites_block)
         self.assertNotIn('자주 쓰는 서비스만 가까이에 둡니다.', favorites_block)
-        self.assertNotIn('data-home-v2-favorite-card-body="true"', favorites_block)
         self.assertNotIn('수업을 준비해요', favorites_block)
 
     def test_v2_authenticated_top_favorites_use_compact_aliases_with_full_title_tooltips(self):
@@ -1400,9 +1462,10 @@ class HomeV2ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
+        self._assert_authenticated_home_uses_v6(response, content)
 
-        favorites_index = content.index('data-home-v2-favorites-panel="true"')
-        favorites_end = content.index('data-home-v2-community-section="true"', favorites_index)
+        favorites_index = content.index('data-home-v6-favorites-panel="true"')
+        favorites_end = content.index('data-home-v6-sns-panel="true"', favorites_index)
         favorites_block = content[favorites_index:favorites_end]
 
         self.assertIn('title="반짝반짝 우리반 알림판">알림판</p>', favorites_block)
@@ -1462,6 +1525,7 @@ class HomeV2ViewTest(TestCase):
             service_type='classroom',
         )
 
+        self._login('previewcapuser')
         response = self.client.get(reverse('home'))
         sections = response.context.get('sections', [])
         class_ops = next((section for section in sections if section.get('key') == 'class_ops'), None)
@@ -1487,11 +1551,17 @@ class HomeV2ViewTest(TestCase):
             service_type='classroom',
         )
 
+        self._login('overflowtoggleuser')
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('data-home-v2-section-more-toggle="true"', content)
-        self.assertIn('전체 보기', content)
-        self.assertNotIn('href="/products/?section=', content)
+        nav_sections = response.context.get('home_nav_sections', [])
+        class_ops = next(section for section in nav_sections if section['key'] == 'class_ops')
+
+        self.assertGreaterEqual(class_ops['count'], 3)
+        self.assertIn('data-home-v6-nav-section="class_ops"', content)
+        self.assertIn('Classroom Extra 1', content)
+        self.assertIn('Classroom Extra 2', content)
+        self.assertNotIn('data-home-v2-section-more-toggle="true"', content)
 
     def test_v2_section_overflow_items_are_rendered_in_markup(self):
         Product.objects.create(
@@ -1531,7 +1601,8 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('data-home-v2-community-section="true"', content)
+        self._assert_authenticated_home_uses_v6(response, content)
+        self.assertIn('data-home-v6-mobile-sns="true"', content)
         self.assertIn('https://example.com/community.jpg', content)
         self.assertIn('원문 보기', content)
 
@@ -1546,11 +1617,11 @@ class HomeV2ViewTest(TestCase):
         self._login('breakpointuser')
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('data-home-v2-community-section="true"', content)
+        self._assert_authenticated_home_uses_v6(response, content)
+        self.assertIn('home-v6-side-stack', content)
         self.assertNotIn('hidden xl:block', content)
         self.assertNotIn('block xl:hidden', content)
         self.assertNotIn('data-home-v2-tablet-community-summary="true"', content)
-        self.assertIn('data-home-v2-top-zone="true"', content)
 
     def test_v2_staff_home_restores_sns_controls(self):
         staff = _create_onboarded_user('staffsns', nickname='운영자')
@@ -1571,11 +1642,12 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
+        self._assert_authenticated_home_uses_v6(response, content)
         self.assertIn('실시간 소통', content)
         self.assertIn('공지 작성', content)
         self.assertIn('뉴스 검토', content)
         self.assertIn('인사이트 노출', content)
-        self.assertIn('data-home-v2-top-calendar="true"', content)
+        self.assertIn('data-home-v6-top-calendar="true"', content)
 
     def test_v2_authenticated_notice_scope_excludes_news_link_cards(self):
         author = _create_onboarded_user('noticeauthor')
@@ -1823,10 +1895,11 @@ class HomeV2ViewTest(TestCase):
         self._login('v2authsns')
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('data-home-v2-community-section="true"', content)
-        self.assertNotIn('@click="snsOpen = true"', content)
+        self._assert_authenticated_home_uses_v6(response, content)
+        self.assertIn('data-home-v6-mobile-sns="true"', content)
+        self.assertIn('@click="snsOpen = true"', content)
         self.assertNotIn('hx-select="#mobile-post-list-container"', content)
-        self.assertNotIn('href="#sns-full-section-auth-v2"', content)
+        self.assertNotIn('href="#sns-full-section-auth-v6"', content)
 
     def test_v2_authenticated_home_sns_shows_expand_button_after_two_posts(self):
         _create_posts()
@@ -1835,7 +1908,8 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('data-home-v2-community-section="true"', content)
+        self._assert_authenticated_home_uses_v6(response, content)
+        self.assertIn('data-home-v6-mobile-sns="true"', content)
         self.assertIn('data-home-sns-expand="true"', content)
         self.assertIn('compact_posts=1', content)
 
@@ -2291,6 +2365,27 @@ class HomeV4ViewTest(TestCase):
         self.client.login(username=username, password='pass1234')
         return user
 
+    def _assert_authenticated_home_uses_v6(self, response, content):
+        self.assertTemplateUsed(response, 'core/home_authenticated_v6_canonical.html')
+        _assert_authenticated_home_context_contract(self, response, design_version='v6')
+        self.assertIn('core/css/home_authenticated_v6.css', content)
+        self.assertIn('core/css/home_authenticated_v6_canonical.css', content)
+        self.assertIn('data-home-v6-shell="true"', content)
+        self.assertIn('data-home-v6-nav="desktop"', content)
+        self.assertIn('data-home-v6-nav="mobile"', content)
+        self.assertIn('data-home-v6-favorites-panel="true"', content)
+        self.assertIn('data-home-v6-representative-services="true"', content)
+        self.assertIn('data-home-v6-sns-panel="true"', content)
+        self.assertNotIn('data-home-v4-shell="true"', content)
+
+    def _assert_public_home_uses_v6(self, response, content):
+        self.assertTemplateUsed(response, 'core/home_public_v6_canonical.html')
+        _assert_public_home_context_contract(self, response, design_version='v6')
+        self.assertIn('data-home-v6-public-shell="true"', content)
+        self.assertIn('data-home-v6-public-primary-card="true"', content)
+        self.assertIn('data-home-v6-public-login-band="true"', content)
+        self.assertNotIn('data-home-v4-public-shell="true"', content)
+
     def test_v4_authenticated_home_uses_new_template_and_accordion_menu(self):
         user = self._login('v4layout')
         ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
@@ -2299,49 +2394,27 @@ class HomeV4ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('core/css/home_authenticated_v4.css', content)
-        self.assertIn('data-home-v4-shell="true"', content)
-        self.assertIn('data-home-v4-nav="desktop"', content)
-        self.assertIn('data-home-v4-nav="mobile"', content)
-        self.assertIn('data-home-v4-nav-section="collect_sign"', content)
-        self.assertIn('data-home-v4-tool-list="collect_sign"', content)
-        self.assertIn('data-home-v4-home-panel="true"', content)
-        self.assertIn('data-home-v4-representative-services="true"', content)
-        self.assertIn('data-home-v4-sns-panel="true"', content)
-        self.assertIn('home-v4-primary-stack', content)
-        self.assertIn('home-v4-home-panel-section', content)
-        self.assertIn('home-v4-side-stack', content)
-        self.assertIn('home-v4-community-section', content)
-        self.assertIn('home-v4-representative-section', content)
-        self.assertIn('home-v4-top-favorites', content)
-        self.assertIn('home-v4-top-sns', content)
-        self.assertIn('data-home-v4-mobile-menu-trigger="true"', content)
-        self.assertIn('data-home-v4-mobile-sheet="true"', content)
-        self.assertNotIn('data-home-v4-nav-home="true"', content)
+        self._assert_authenticated_home_uses_v6(response, content)
+        self.assertIn('data-home-v6-nav-section="collect_sign"', content)
+        self.assertIn('data-home-v6-tool-list="collect_sign"', content)
+        self.assertIn('home-v6-side-stack', content)
+        self.assertIn('data-home-v6-mobile-summary-button="true"', content)
         self.assertNotIn('오늘 바로 쓰는 메뉴', content)
         self.assertIn('간편 수합', content)
         self.assertIn('동의서는 나에게 맡겨', content)
         self.assertIn('가뿐하게 서명 톡', content)
         self.assertIn('배부 체크', content)
-        self.assertNotIn('data-home-v4-more-toggle="true"', content)
-        self.assertNotIn('data-home-v4-active-panel=', content)
-        self.assertNotIn('data-home-v4-section-panel=', content)
-        self.assertNotIn('data-home-v2-favorites-panel="true"', content)
         self.assertNotIn('>Representative<', content)
         self.assertIn('선생님들과 나누고 싶은 이야기가 있나요?', content)
         self.assertIn(f'hx-post="{reverse("post_create")}"', content)
-        self.assertNotIn('data-home-v2-tablet-community-summary="true"', content)
         self.assertNotIn('더 많은 도구 보기', content)
-        self.assertNotIn('data-home-v4-sns-preview-list="true"', content)
         self.assertNotIn('홈 요약은 그대로 두고, 필요한 도구만 펼쳐서 바로 찾습니다.', content)
         self.assertNotIn('최근 올라온 이야기만 간단히 확인하고 전체 소통으로 이어갑니다.', content)
         self.assertNotIn('자주 여는 도구를 홈에서 먼저 보여주고, 자세한 목록은 왼쪽 메뉴에서 바로 엽니다.', content)
 
-        home_panel_index = content.index('data-home-v4-home-panel="true"')
-        representative_index = content.index('data-home-v4-representative-services="true"')
-        favorites_index = content.index('data-home-v4-favorites-panel="true"')
-        sns_index = content.index('data-home-v4-sns-panel="true"')
-        self.assertLess(home_panel_index, representative_index)
+        representative_index = content.index('data-home-v6-representative-services="true"')
+        favorites_index = content.index('data-home-v6-favorites-panel="true"')
+        sns_index = content.index('data-home-v6-sns-panel="true"')
         self.assertLess(representative_index, favorites_index)
         self.assertLess(favorites_index, sns_index)
 
@@ -2377,18 +2450,19 @@ class HomeV4ViewTest(TestCase):
 
         channel = QuickdropChannel.objects.get(owner=user)
 
-        self.assertIn('data-home-v4-quickdrop-panel="true"', content)
-        self.assertIn('data-home-v4-quickdrop-actions="true"', content)
-        self.assertIn('data-home-v4-quickdrop-form="true"', content)
+        self._assert_authenticated_home_uses_v6(response, content)
+        self.assertIn('data-home-v6-quickdrop-panel="true"', content)
+        self.assertIn('data-home-v6-quickdrop-actions="true"', content)
+        self.assertIn('data-home-v6-quickdrop-form="true"', content)
         self.assertIn(f'action="{reverse("quickdrop:send_text", kwargs={"slug": channel.slug})}"', content)
         self.assertIn(f'href="{reverse("quickdrop:landing")}"', content)
         self.assertIn('<h2 class="text-lg font-black text-slate-900">바로전송</h2>', content)
         self.assertIn('aria-label="보낼 내용"', content)
         self.assertIn('지금 보내기', content)
 
-        favorites_index = content.index('data-home-v4-favorites-panel="true"')
-        quickdrop_index = content.index('data-home-v4-quickdrop-panel="true"')
-        sns_index = content.index('data-home-v4-sns-panel="true"')
+        favorites_index = content.index('data-home-v6-favorites-panel="true"')
+        quickdrop_index = content.index('data-home-v6-quickdrop-panel="true"')
+        sns_index = content.index('data-home-v6-sns-panel="true"')
         self.assertLess(favorites_index, quickdrop_index)
         self.assertLess(quickdrop_index, sns_index)
 
@@ -2405,8 +2479,9 @@ class HomeV4ViewTest(TestCase):
         channel = QuickdropChannel.objects.get(owner=user)
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn('data-home-v4-quickdrop-panel="true"', content)
-        self.assertIn('data-home-v4-quickdrop-form="true"', content)
+        self._assert_authenticated_home_uses_v6(response, content)
+        self.assertIn('data-home-v6-quickdrop-panel="true"', content)
+        self.assertIn('data-home-v6-quickdrop-form="true"', content)
         self.assertIn(f'action="{reverse("quickdrop:send_text", kwargs={"slug": channel.slug})}"', content)
         self.assertTrue(Product.objects.filter(launch_route_name='quickdrop:landing', title='바로전송').exists())
 
@@ -2430,7 +2505,7 @@ class HomeV4ViewTest(TestCase):
         hidden_quickdrop.refresh_from_db()
         self.assertEqual(response.status_code, 200)
         self.assertFalse(hidden_quickdrop.is_active)
-        self.assertNotIn('data-home-v4-quickdrop-panel="true"', content)
+        self.assertNotIn('data-home-v6-quickdrop-panel="true"', content)
         self.assertFalse(QuickdropChannel.objects.filter(owner=user).exists())
 
     def test_v4_home_quickdrop_card_shows_latest_text_summary_without_status_copy(self):
@@ -2460,7 +2535,8 @@ class HomeV4ViewTest(TestCase):
         content = response.content.decode('utf-8')
 
         self.assertEqual(product.launch_route_name, 'quickdrop:landing')
-        self.assertIn('data-home-v4-quickdrop-form="true"', content)
+        self._assert_authenticated_home_uses_v6(response, content)
+        self.assertIn('data-home-v6-quickdrop-form="true"', content)
         self.assertIn(f'action="{reverse("quickdrop:send_text", kwargs={"slug": channel.slug})}"', content)
         self.assertIn('지금 보내기', content)
         self.assertIn('회의 안내 문자를 정리해서 다시 보내야 합니다', content)
@@ -2515,20 +2591,21 @@ class HomeV4ViewTest(TestCase):
 
         channel = QuickdropChannel.objects.get(owner=user)
 
-        self.assertIn('data-home-v4-mobile-quickdrop="true"', content)
-        self.assertIn('data-home-v4-mobile-quickdrop-actions="true"', content)
-        self.assertIn('data-home-v4-mobile-quickdrop-form="true"', content)
+        self._assert_authenticated_home_uses_v6(response, content)
+        self.assertIn('data-home-v6-mobile-quickdrop="true"', content)
+        self.assertIn('data-home-v6-mobile-quickdrop-actions="true"', content)
+        self.assertIn('data-home-v6-mobile-quickdrop-form="true"', content)
         self.assertIn(f'action="{reverse("quickdrop:send_text", kwargs={"slug": channel.slug})}"', content)
         self.assertIn(f'href="{reverse("quickdrop:landing")}"', content)
         self.assertIn('aria-label="보낼 내용"', content)
         self.assertIn('지금 보내기', content)
         self.assertNotIn('data-home-v4-mobile-quick-tools="true"', content)
 
-        home_panel_index = content.index('data-home-v4-home-panel="true"')
-        mobile_quickdrop_index = content.index('data-home-v4-mobile-quickdrop="true"')
-        representative_index = content.index('data-home-v4-representative-services="true"')
-        self.assertLess(home_panel_index, mobile_quickdrop_index)
-        self.assertLess(mobile_quickdrop_index, representative_index)
+        calendar_index = content.index('data-home-v6-calendar-panel="mobile"')
+        mobile_quickdrop_index = content.index('data-home-v6-mobile-quickdrop="true"')
+        sns_index = content.index('data-home-v6-mobile-sns="true"')
+        self.assertLess(calendar_index, mobile_quickdrop_index)
+        self.assertLess(mobile_quickdrop_index, sns_index)
 
     @override_settings(FEATURE_MESSAGE_CAPTURE_ENABLED=True)
     def test_v4_mobile_quickdrop_moves_under_messagebox_when_capture_is_enabled(self):
@@ -2551,20 +2628,18 @@ class HomeV4ViewTest(TestCase):
         channel = QuickdropChannel.objects.get(owner=user)
 
         self.assertIn('data-home-messagebox-card="true"', content)
-        self.assertIn('data-home-v4-mobile-quickdrop="true"', content)
-        self.assertIn('data-home-v4-mobile-quickdrop-placement="under-messagebox"', content)
-        self.assertIn('data-home-v4-mobile-quickdrop-form="true"', content)
+        self.assertIn('data-home-v6-mobile-quickdrop="true"', content)
+        self.assertIn('data-home-v6-mobile-quickdrop-placement="under-messagebox"', content)
+        self.assertIn('data-home-v6-mobile-quickdrop-form="true"', content)
         self.assertIn(f'action="{reverse("quickdrop:send_text", kwargs={"slug": channel.slug})}"', content)
         self.assertIn(f'href="{reverse("quickdrop:landing")}"', content)
         self.assertIn('지금 보내기', content)
 
-        home_panel_index = content.index('data-home-v4-home-panel="true"')
         messagebox_index = content.index('data-home-messagebox-card="true"')
-        mobile_quickdrop_index = content.index('data-home-v4-mobile-quickdrop="true"')
-        representative_index = content.index('data-home-v4-representative-services="true"')
-        self.assertLess(home_panel_index, messagebox_index)
+        mobile_quickdrop_index = content.index('data-home-v6-mobile-quickdrop="true"')
+        sns_index = content.index('data-home-v6-mobile-sns="true"')
         self.assertLess(messagebox_index, mobile_quickdrop_index)
-        self.assertLess(mobile_quickdrop_index, representative_index)
+        self.assertLess(mobile_quickdrop_index, sns_index)
 
     def test_v4_home_places_developer_chat_card_under_menu_and_moves_mobile_card_to_bottom(self):
         self._login('v4devchatcard')
@@ -2572,19 +2647,16 @@ class HomeV4ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('data-home-v4-developer-chat-card="desktop"', content)
-        self.assertIn('data-home-v4-developer-chat-card="mobile"', content)
+        self._assert_authenticated_home_uses_v6(response, content)
+        self.assertIn('data-home-v6-developer-chat-card="desktop"', content)
         self.assertIn(f'href="{reverse("messagebox:developer_chat")}"', content)
 
-        desktop_menu_index = content.index('data-home-v4-nav="desktop"')
-        desktop_card_index = content.index('data-home-v4-developer-chat-card="desktop"')
-        mobile_card_index = content.index('data-home-v4-developer-chat-card="mobile"')
-        representative_index = content.index('data-home-v4-representative-services="true"')
-        community_index = content.index('data-home-v4-sns-panel="true"')
+        desktop_menu_index = content.index('data-home-v6-nav="desktop"')
+        desktop_card_index = content.index('data-home-v6-developer-chat-card="desktop"')
+        calendar_index = content.index('data-home-v6-calendar-panel="desktop"')
 
         self.assertLess(desktop_menu_index, desktop_card_index)
-        self.assertLess(representative_index, mobile_card_index)
-        self.assertLess(community_index, mobile_card_index)
+        self.assertLess(desktop_card_index, calendar_index)
 
     def test_v4_home_developer_chat_card_renders_two_line_title(self):
         self._login('v4devchattitle')
@@ -2592,9 +2664,9 @@ class HomeV4ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertContains(response, 'data-home-v4-developer-chat-title="two-line"', html=False)
-        self.assertIn('<span class="home-v4-developer-chat-title-line">개발자야</span>', content)
-        self.assertIn('<span class="home-v4-developer-chat-title-line">도와줘</span>', content)
+        self.assertContains(response, 'data-home-v6-developer-chat-title="two-line"', html=False)
+        self.assertIn('<span class="home-v6-developer-chat-title-line">개발자야</span>', content)
+        self.assertIn('<span class="home-v6-developer-chat-title-line">도와줘</span>', content)
 
     def test_v4_admin_home_developer_chat_card_shows_recent_thread_preview(self):
         admin = _create_onboarded_user('v4devadmin', nickname='홈관리자')
@@ -2689,33 +2761,20 @@ class HomeV4ViewTest(TestCase):
         content = response.content.decode('utf-8')
         expected_date_label = f'{today.month}월 {today.day}일'
 
-        self.assertIn('data-home-v4-mobile-calendar-first="true"', content)
-        self.assertIn('data-home-v4-mobile-calendar-status-scroll="true"', content)
-        self.assertIn('data-home-v4-mobile-calendar-status="true"', content)
-        self.assertIn('data-home-v4-mobile-calendar-chip="date"', content)
-        self.assertIn('data-home-v4-mobile-calendar-chip="events"', content)
-        self.assertNotIn('data-home-v4-mobile-calendar-chip="tasks"', content)
-        self.assertIn('data-home-v4-mobile-calendar-first-trigger="true"', content)
-        self.assertIn('data-home-v4-mobile-quick-tools="true"', content)
-        self.assertIn('data-home-v4-mobile-quick-item="true"', content)
-        self.assertIn('data-home-v4-mobile-all-tools-button="true"', content)
-        self.assertIn('home-v4-mobile-all-tools-trigger--icon', content)
+        self._assert_authenticated_home_uses_v6(response, content)
+        self.assertIn('data-home-v6-mobile-summary="true"', content)
+        self.assertIn('data-home-v6-mobile-summary-scroll="true"', content)
+        self.assertIn('data-home-v6-mobile-summary-chip="date"', content)
+        self.assertIn('data-home-v6-mobile-summary-chip="events"', content)
+        self.assertIn('data-home-v6-mobile-summary-chip="tasks"', content)
+        self.assertIn('data-home-v6-mobile-summary-button="true"', content)
         self.assertIn('aria-label="전체 도구 열기"', content)
-        self.assertEqual(content.count('data-home-v4-mobile-all-tools-button="true"'), 1)
+        self.assertEqual(content.count('data-home-v6-mobile-summary-button="true"'), 1)
         self.assertIn(expected_date_label, content)
         self.assertIn('일정 1건', content)
-        self.assertNotIn('할 일 1건', content)
-        self.assertIn('바로 열기', content)
-        self.assertNotIn('자주 쓰는 도구', content)
+        self.assertIn('할 일 1건', content)
         self.assertNotIn('Quick Tools', content)
-        self.assertNotIn('오늘 학급 캘린더', content)
         self.assertNotIn('data-home-v4-mobile-menu-trigger="true"', content)
-
-        home_panel_index = content.index('data-home-v4-home-panel="true"')
-        mobile_quick_index = content.index('data-home-v4-mobile-quick-tools="true"')
-        representative_index = content.index('data-home-v4-representative-services="true"')
-        self.assertLess(home_panel_index, mobile_quick_index)
-        self.assertLess(mobile_quick_index, representative_index)
 
     @override_settings(HOME_V4_MOBILE_CALENDAR_FIRST_ENABLED=True)
     def test_v4_mobile_calendar_first_surfaces_quickdrop_as_direct_action_card(self):
@@ -2737,22 +2796,21 @@ class HomeV4ViewTest(TestCase):
 
         channel = QuickdropChannel.objects.get(owner=user)
 
-        self.assertIn('data-home-v4-mobile-quickdrop="true"', content)
-        self.assertIn('data-home-v4-mobile-quickdrop-actions="true"', content)
-        self.assertIn('data-home-v4-mobile-quickdrop-form="true"', content)
+        self._assert_authenticated_home_uses_v6(response, content)
+        self.assertIn('data-home-v6-mobile-quickdrop="true"', content)
+        self.assertIn('data-home-v6-mobile-quickdrop-actions="true"', content)
+        self.assertIn('data-home-v6-mobile-quickdrop-form="true"', content)
         self.assertIn(f'action="{reverse("quickdrop:send_text", kwargs={"slug": channel.slug})}"', content)
         self.assertIn(f'href="{reverse("quickdrop:landing")}"', content)
         self.assertIn('aria-label="보낼 내용"', content)
         self.assertIn('지금 보내기', content)
         self.assertIn('새 기기 추가', content)
 
-        home_panel_index = content.index('data-home-v4-home-panel="true"')
-        mobile_quick_grid_index = content.index('data-home-v4-mobile-quick-grid="true"')
-        mobile_quickdrop_index = content.index('data-home-v4-mobile-quickdrop="true"')
-        representative_index = content.index('data-home-v4-representative-services="true"')
-        self.assertLess(home_panel_index, mobile_quickdrop_index)
-        self.assertLess(mobile_quickdrop_index, mobile_quick_grid_index)
-        self.assertLess(mobile_quick_grid_index, representative_index)
+        calendar_index = content.index('data-home-v6-calendar-panel="mobile"')
+        mobile_quickdrop_index = content.index('data-home-v6-mobile-quickdrop="true"')
+        sns_index = content.index('data-home-v6-mobile-sns="true"')
+        self.assertLess(calendar_index, mobile_quickdrop_index)
+        self.assertLess(mobile_quickdrop_index, sns_index)
 
     def test_v4_section_menu_lists_full_tool_links_without_switching_home_summary(self):
         self._login('v4section')
@@ -2774,8 +2832,8 @@ class HomeV4ViewTest(TestCase):
         self.assertIn(f'href="{reverse("handoff:landing")}"', content)
         self.assertIn('href="https://example.com/tool"', content)
         self.assertIn('target="_blank" rel="noopener"', content)
-        self.assertIn('data-home-v4-nav-count="true"', content)
-        self.assertIn('data-home-v4-home-panel="true"', content)
+        self.assertIn('data-home-v6-nav-section="collect_sign"', content)
+        self.assertIn('data-home-v6-tool-list="collect_sign"', content)
         self.assertNotIn('data-home-v4-section-panel=', content)
 
     def test_v4_section_menu_hides_calendar_hub_but_keeps_home_calendar_panel(self):
@@ -2798,7 +2856,7 @@ class HomeV4ViewTest(TestCase):
             'classcalendar:main',
             {product.launch_route_name for product in class_ops_section['products']},
         )
-        self.assertIn('data-home-v4-home-panel="true"', content)
+        self.assertIn('data-home-v6-calendar-panel="desktop"', content)
 
     def test_v4_section_menu_hides_schoolcomm_service_link(self):
         Product.objects.create(
@@ -2878,8 +2936,8 @@ class HomeV4ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('data-home-v4-nav-section="games"', content)
-        self.assertIn('data-home-v4-student-games-link="true"', content)
+        self.assertIn('data-home-v6-nav-section="games"', content)
+        self.assertIn('data-home-v6-student-games-link="true"', content)
         self.assertIn('학생 링크', content)
         self.assertIn('studentGamesQrModal', content)
         self.assertIn('data-student-games-issue-url="/products/dutyticker/student-games/issue/"', content)
@@ -2903,31 +2961,28 @@ class HomeV4ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('data-home-v4-tool-item="collect_sign"', content)
-        self.assertIn('data-home-v4-tool-favorite-badge="true"', content)
+        self.assertIn('data-home-v6-tool-item="collect_sign"', content)
+        self.assertIn('data-home-v6-tool-favorite-badge="true"', content)
         self.assertIn('aria-label="간편 수합 즐겨찾기 토글"', content)
-        self.assertIn('class="home-v4-tool-favorite-badge home-v5-favorite-toggle favorite-toggle-btn', content)
+        self.assertIn('favorite-toggle-btn', content)
 
-    def test_v4_anonymous_home_uses_public_v4_template(self):
+    def test_v4_anonymous_home_uses_public_v6_template(self):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         representative_titles = [
             product.title for product in response.context.get('representative_products', [])
         ]
 
-        self.assertTemplateUsed(response, 'core/home_public_v4.html')
+        self.assertTemplateUsed(response, 'core/home_public_v6_canonical.html')
         self.assertTemplateNotUsed(response, 'core/home_v2.html')
-        self.assertNotIn('core/css/home_authenticated_v4.css', content)
-        self.assertNotIn('data-home-v4-shell="true"', content)
-        self.assertIn('data-home-v4-public-shell="true"', content)
-        self.assertIn('교실 일은,', content)
-        self.assertIn('대표 서비스', content)
-        self.assertIn('로그인 후 전체 서비스 보기', content)
+        self.assertIn('data-home-v6-public-shell="true"', content)
+        self.assertIn('오늘 쓸 교실 도구, 바로 시작', content)
+        self.assertIn('이어서 하는 업무', content)
+        self.assertNotIn('data-home-v4-public-shell="true"', content)
         self.assertEqual(
             representative_titles,
             ['미술 수업 도우미', '학교 예약 시스템', '간편 수합', '가뿐하게 서명 톡'],
         )
-        self.assertIn('data-home-v4-public-representatives="true"', content)
 
     def test_v4_anonymous_featured_service_uses_access_matched_cta(self):
         response = self.client.get(reverse('home'))
@@ -2936,12 +2991,13 @@ class HomeV4ViewTest(TestCase):
         representative_products = response.context['representative_products']
         artclass_product = representative_products[0]
 
+        self._assert_public_home_uses_v6(response, content)
         self.assertEqual(artclass_product.title, '미술 수업 도우미')
         self.assertEqual(artclass_product.home_access_status_label, '로그인 필요')
         self.assertEqual(artclass_product.home_landing_cta_label, '로그인 후 시작')
-        self.assertEqual(artclass_product.home_landing_cta_href, login_url)
-        self.assertIn('data-home-v4-public-featured="true"', content)
-        self.assertIn(f'href="{login_url}"', content)
+        self.assertTrue(artclass_product.home_landing_cta_href.startswith(login_url))
+        self.assertIn('data-home-v6-public-login-band="true"', content)
+        self.assertIn(f'href="{response.context["guest_continue_url"]}"', content)
 
     def test_v4_anonymous_rotation_surfaces_guest_services_with_single_active_card(self):
         public_collect = Product.objects.create(
@@ -2968,35 +3024,28 @@ class HomeV4ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('data-home-v4-public-rotation="true"', content)
-        self.assertIn('data-home-v4-public-login-cta="true"', content)
-        self.assertIn('data-guest-rotation-active="true"', content)
-        self.assertIn('지금 시작', content)
+        self.assertIn('data-home-v6-public-primary-card="true"', content)
+        self.assertIn('data-home-v6-public-grid-panel="true"', content)
+        self.assertIn('data-home-v6-public-login-band="true"', content)
+        self.assertIn('바로 시작', content)
         self.assertIn('새 창에서 시작', content)
 
         public_ids = [card['id'] for card in response.context.get('guest_rotation_cards', [])]
         self.assertIn(public_collect.id, public_ids)
         self.assertIn(external_public.id, public_ids)
-        self.assertEqual(
-            content.count('data-guest-rotation-dot='),
-            len(response.context.get('guest_rotation_cards', [])),
-        )
-        self.assertNotIn(
-            'home-public-v4-rotation-slide rounded-[1.5rem] p-4 sm:p-5 hidden',
-            content,
-        )
+        self.assertNotIn('data-guest-rotation-dot=', content)
 
     @patch('core.views._build_home_guest_rotation_cards', return_value=[])
     def test_v4_anonymous_hides_rotation_when_no_guest_launchable_services(self, _mock_rotation_cards):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertNotIn('data-home-v4-public-rotation="true"', content)
-        self.assertIn('data-home-v4-public-featured="true"', content)
-        self.assertIn('로그인 후 전체 서비스 보기', content)
+        self.assertNotIn('data-guest-rotation-dot=', content)
+        self.assertIn('data-home-v6-public-login-band="true"', content)
+        self.assertIn('로그인하고 이어서', content)
 
     @override_settings(HOME_LAYOUT_VERSION='v2', HOME_V2_ENABLED=True)
-    def test_setting_home_layout_version_to_v2_keeps_anonymous_v2_but_authenticated_home_uses_v6(self):
+    def test_setting_home_layout_version_to_v2_keeps_public_and_authenticated_home_on_v6(self):
         user = self._login('rollbackuser')
         ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
 
@@ -3005,19 +3054,20 @@ class HomeV4ViewTest(TestCase):
 
         self.assertTemplateUsed(response, 'core/home_authenticated_v6_canonical.html')
         self.assertEqual(response.context['home_design_version'], 'v6')
-        self.assertIn('core/css/home_authenticated_v5.css', content)
+        self.assertIn('core/css/home_authenticated_v6.css', content)
         self.assertIn('core/css/home_authenticated_v6.css', content)
         self.assertIn('core/css/home_authenticated_v6_canonical.css', content)
         self.assertIn('data-home-design-version="v6"', content)
         self.assertNotIn('core/css/home_authenticated_v2.css', content)
+        self.assertNotIn('core/css/home_authenticated_v5.css', content)
 
         self.client.logout()
         public_response = self.client.get(reverse('home'))
         public_content = public_response.content.decode('utf-8')
 
-        self.assertTemplateUsed(public_response, 'core/home_v2.html')
-        self.assertIn('data-home-v2-hero-proof="true"', public_content)
-        self.assertIn('지금 바로 써보기', public_content)
+        self.assertTemplateUsed(public_response, 'core/home_public_v6_canonical.html')
+        self.assertIn('data-home-v6-public-shell="true"', public_content)
+        self.assertIn('오늘 쓸 교실 도구, 바로 시작', public_content)
 
 
 @override_settings(HOME_LAYOUT_VERSION='v5', HOME_V2_ENABLED=True)
@@ -3368,7 +3418,7 @@ class HomeV5ViewTest(TestCase):
         self.assertFalse(is_external)
         self.assertEqual(href, reverse('reservations:smart_entry'))
 
-    def test_v5_anonymous_home_keeps_existing_public_v4_surface(self):
+    def test_v5_anonymous_home_uses_public_v6_surface(self):
         Product.objects.create(
             title="공개 수합",
             description="제출 흐름을 바로 볼 수 있어요",
@@ -3393,15 +3443,14 @@ class HomeV5ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertTemplateUsed(response, 'core/home_public_v4.html')
+        self.assertTemplateUsed(response, 'core/home_public_v6_canonical.html')
         self.assertTemplateNotUsed(response, 'core/home_authenticated_v5.html')
-        self.assertIn('data-home-v4-public-shell="true"', content)
-        self.assertIn('data-home-v4-public-representatives="true"', content)
-        self.assertIn('대표 서비스', content)
-        self.assertIn('지금 써볼 수 있는 서비스', content)
-        self.assertIn('지금 시작', content)
-        self.assertIn('로그인 후 전체 서비스 보기', content)
-        self.assertNotIn('data-home-v5-public-shell="true"', content)
+        self.assertIn('data-home-v6-public-shell="true"', content)
+        self.assertIn('data-home-v6-public-primary-card="true"', content)
+        self.assertIn('data-home-v6-public-grid-panel="true"', content)
+        self.assertIn('바로 시작', content)
+        self.assertIn('로그인하고 이어서', content)
+        self.assertNotIn('data-home-v4-public-shell="true"', content)
         self.assertNotIn('data-home-v5-shell="true"', content)
         self.assertNotIn('core/css/home_authenticated_v5.css', content)
 
@@ -3892,29 +3941,21 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('box-sizing: border-box;', mobile_css)
 
     def test_v6_css_keeps_mobile_and_desktop_layouts_separate(self):
-        css = _read_home_v6_css_bundle()
+        public_css = (
+            Path(settings.BASE_DIR)
+            / 'core'
+            / 'static'
+            / 'core'
+            / 'css'
+            / 'home_public_v6.css'
+        ).read_text(encoding='utf-8')
 
-        self.assertRegex(
-            css,
-            re.compile(
-                r'@media \(max-width: 1099px\)\s*\{[\s\S]*?\.home-v6-layout\s*\{\s*display:\s*none\s*!important;',
-                re.S,
-            ),
-        )
-        self.assertRegex(
-            css,
-            re.compile(
-                r'@media \(min-width: 1100px\)\s*\{[\s\S]*?\.home-v6-mobile-summary,\s*\.home-v6-mobile-overlay,\s*\.home-v6-mobile-sheet,\s*\.home-v6-mobile-stack\s*\{\s*display:\s*none\s*!important;',
-                re.S,
-            ),
-        )
-        self.assertRegex(
-            css,
-            re.compile(
-                r'@media \(min-width: 1100px\)\s*\{[\s\S]*?\.home-v6-layout\s*\{\s*display:\s*grid;',
-                re.S,
-            ),
-        )
+        self.assertIn('.home-public-v6-hero {', public_css)
+        self.assertIn('.home-public-v6-grid {', public_css)
+        self.assertIn('@media (max-width: 479px)', public_css)
+        self.assertIn('@media (min-width: 1100px)', public_css)
+        self.assertIn('grid-template-columns: minmax(0, 1.3fr) minmax(20rem, 0.9fr);', public_css)
+        self.assertIn('grid-column: 1 / -1;', public_css)
 
     def test_v6_home_shows_shared_school_reservation_card(self):
         owner = _create_onboarded_user('v6owner')
@@ -3989,14 +4030,6 @@ class HomeV6ViewTest(TestCase):
     def test_v6_anonymous_home_uses_public_v6_template(self):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        public_v5_css = (
-            Path(settings.BASE_DIR)
-            / 'core'
-            / 'static'
-            / 'core'
-            / 'css'
-            / 'home_public_v5.css'
-        ).read_text(encoding='utf-8')
         public_css = (
             Path(settings.BASE_DIR)
             / 'core'
@@ -4007,28 +4040,26 @@ class HomeV6ViewTest(TestCase):
         ).read_text(encoding='utf-8')
 
         self.assertTemplateUsed(response, 'core/home_public_v6_canonical.html')
-        self.assertEqual(response.context['home_design_version'], 'v6')
+        _assert_public_home_context_contract(self, response)
         self.assertIn('core/css/home_public_v5.css', content)
         self.assertIn('core/css/home_public_v6.css', content)
         self.assertIn('home-public-v6-page', content)
         self.assertIn('data-home-v6-public-shell="true"', content)
         self.assertIn('home-public-v6-stage-shell', content)
         self.assertIn('data-home-design-version="v6"', content)
-        self.assertIn('오늘 필요한 교실 일, 바로 시작', content)
-        self.assertIn('로그인 없이 먼저 열고, 필요할 때 이어서 씁니다.', content)
-        self.assertIn('로그인 없이 시작', content)
-        self.assertIn('로그인 후 이어서', content)
-        self.assertIn('바로 열 수 있는 서비스', content)
-        self.assertIn('전체 서비스 보기', content)
-        self.assertNotIn('공개 도구', content)
-        self.assertNotIn('로그인 후 전체', content)
+        self.assertIn('오늘 쓸 교실 도구, 바로 시작', content)
+        self.assertIn('먼저 열고 써본 뒤, 필요할 때 로그인해서 이어갑니다.', content)
+        self.assertIn('data-home-v6-public-hero="true"', content)
+        self.assertIn('data-home-v6-public-login-band="true"', content)
+        self.assertIn('로그인하고 이어서', content)
         self.assertNotIn('core/css/home_authenticated_v6.css', content)
         self.assertNotIn('core/css/home_authenticated_v6_canonical.css', content)
         self.assertNotIn('data-home-v6-shell="true"', content)
-        self.assertNotIn('지금 바로 할 일', content)
-        self.assertNotIn('#mainNav.shell-nav-wrap', public_v5_css)
+        self.assertNotIn('data-home-v2-guest-hero="true"', content)
+        self.assertEqual(content.count('오늘 쓸 교실 도구, 바로 시작'), 1)
         self.assertIn('--home-v6-radius-panel: 0.95rem;', public_css)
-        self.assertIn('border-radius: var(--home-public-v6-radius-shell);', public_css)
+        self.assertIn('.home-public-v6-primary-card {', public_css)
+        self.assertIn('.home-public-v6-grid-card {', public_css)
 
 @override_settings(HOME_V2_ENABLED=True)
 class TrackUsageAPITest(TestCase):

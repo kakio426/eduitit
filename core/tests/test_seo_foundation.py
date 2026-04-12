@@ -316,7 +316,7 @@ class SeoFoundationTests(TestCase):
 
     def test_auth_pages_use_noindex_and_specific_meta(self):
         cases = (
-            ("account_login", "로그인 | Eduitit", "https://eduitit.site/accounts/login/", "에듀잇티에 로그인하고 바로 시작하세요."),
+            ("account_login", "로그인 | Eduitit", "https://eduitit.site/accounts/login/", "에듀잇티에 로그인하고 교실 업무를 이어서 시작하세요."),
             ("account_signup", "회원가입 | Eduitit", "https://eduitit.site/accounts/signup/", "에듀잇티 계정으로 바로 시작하세요."),
         )
 

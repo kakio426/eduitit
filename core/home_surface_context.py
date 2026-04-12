@@ -69,6 +69,7 @@ class HomeSurfaceTemplateParts:
     primary_display_sections: Sequence[Any]
     secondary_display_sections: Sequence[Any]
     games: Sequence[Any]
+    quick_actions: Sequence[Mapping[str, Any]]
     favorite_items: Sequence[Mapping[str, Any]]
     recent_items: Sequence[Mapping[str, Any]]
     discovery_items: Sequence[Mapping[str, Any]]
@@ -179,6 +180,7 @@ def build_home_surface_template_context(parts: HomeSurfaceTemplateParts) -> dict
         'primary_display_sections': parts.primary_display_sections,
         'secondary_display_sections': parts.secondary_display_sections,
         'games': parts.games,
+        'quick_actions': parts.quick_actions,
         'favorite_items': parts.favorite_items,
         'favorite_product_ids': parts.home_surface_slots.workbench['favorite_product_ids'],
         'recent_items': parts.recent_items,
