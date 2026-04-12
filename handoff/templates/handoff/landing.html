@@ -3,14 +3,14 @@
 {% block title %}배부 체크 - Eduitit{% endblock %}
 
 {% block content %}
-<main class="pt-32 pb-20 px-4 min-h-screen bg-[#E0E5EC]">
+<main id="main-content" tabindex="-1" aria-labelledby="handoff-page-title" class="pt-32 pb-20 px-4 min-h-screen bg-[#E0E5EC]">
     <div class="max-w-5xl mx-auto">
         {% if is_authenticated_landing %}
         <header class="text-center mb-10" data-aos="fade-up">
             <div class="inline-flex items-center justify-center w-24 h-24 rounded-full bg-blue-100 text-blue-600 text-5xl shadow-clay mb-5">
                 {{ service.icon|default:"📦" }}
             </div>
-            <h1 class="text-4xl md:text-5xl font-black text-gray-700 mb-3">배부 체크</h1>
+            <h1 id="handoff-page-title" class="text-4xl md:text-5xl font-black text-gray-700 mb-3">배부 체크</h1>
             <p class="text-lg md:text-xl text-gray-500 font-bold">내 명부를 고른 뒤 바로 배부를 시작하거나, 필요한 명단을 먼저 손보세요.</p>
         </header>
 
@@ -177,7 +177,7 @@
             <div class="inline-flex items-center justify-center w-24 h-24 rounded-full bg-blue-100 text-blue-600 text-5xl shadow-clay mb-5">
                 {{ service.icon|default:"📦" }}
             </div>
-            <h1 class="text-4xl md:text-5xl font-black text-gray-700 mb-3">배부 체크</h1>
+            <h1 id="handoff-page-title" class="text-4xl md:text-5xl font-black text-gray-700 mb-3">배부 체크</h1>
             <p class="text-lg md:text-xl text-gray-500 font-bold">명단을 저장해두고, 배부할 때 수령 여부만 빠르게 체크하세요.</p>
         </header>
 

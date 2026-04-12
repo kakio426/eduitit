@@ -4,11 +4,11 @@
 {% block title %}{% if is_edit %}제출물 수정{% else %}{{ req.title }} - 제출하기{% endif %}{% endblock %}
 
 {% block content %}
-<section class="pt-32 pb-20 px-4 md:px-6 min-h-screen bg-[#E0E5EC]">
+<main id="main-content" tabindex="-1" aria-labelledby="collect-submit-title" class="pt-32 pb-20 px-4 md:px-6 min-h-screen bg-[#E0E5EC]">
     <div class="max-w-2xl mx-auto">
         <div class="text-center mb-8">
             <div class="text-5xl mb-3">{% if is_edit %}✍️{% else %}📥{% endif %}</div>
-            <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-2">{% if is_edit %}제출물 수정{% else %}{{ req.title }}{% endif %}</h1>
+            <h1 id="collect-submit-title" class="text-3xl md:text-4xl font-bold text-gray-800 mb-2">{% if is_edit %}제출물 수정{% else %}{{ req.title }}{% endif %}</h1>
             {% if is_edit %}
             <p class="text-gray-500"><strong>{{ submission.contributor_name }}</strong>님의 제출 정보를 수정합니다.</p>
             {% else %}
@@ -58,12 +58,13 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div>
-                        <label class="block text-sm font-bold text-gray-600 mb-1">이름 <span class="text-red-500">*</span></label>
                         {% if req.expected_submitters_list %}
-                        <div x-data="{ customName: false }">
+                        <fieldset x-data="{ customName: false }">
+                            <legend class="block text-sm font-bold text-gray-600 mb-1">이름 <span class="text-red-500">*</span></legend>
                             <template x-if="!customName">
                                 <div class="flex gap-2">
-                                    <select name="contributor_name_select" required @change="if ($event.target.value === '__custom__') { customName = true; $nextTick(() => $refs.customInput.focus()); }" class="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none">
+                                    <label for="contributor-name-select" class="sr-only">이름 선택</label>
+                                    <select id="contributor-name-select" name="contributor_name_select" required @change="if ($event.target.value === '__custom__') { customName = true; $nextTick(() => $refs.customInput.focus()); }" class="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none">
                                         <option value="">-- 이름 선택 --</option>
                                         {% if prefill_contributor_name and prefill_contributor_name not in req.expected_submitters_list %}
                                         <option value="{{ prefill_contributor_name }}" selected>{{ prefill_contributor_name }} (연동값)</option>
@@ -77,23 +78,25 @@
                             </template>
                             <template x-if="customName">
                                 <div class="flex gap-2">
-                                    <input type="text" name="contributor_name_custom" x-ref="customInput" :required="customName" class="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none" placeholder="이름을 직접 입력하세요">
-                                    <button type="button" @click="customName = false" class="px-3 py-2 bg-gray-100 text-gray-500 rounded-xl text-sm hover:bg-gray-200 transition"><i class="fa-solid fa-list"></i></button>
+                                    <label for="contributor-name-custom" class="sr-only">이름 직접 입력</label>
+                                    <input id="contributor-name-custom" type="text" name="contributor_name_custom" x-ref="customInput" :required="customName" class="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none" placeholder="이름을 직접 입력하세요">
+                                    <button type="button" @click="customName = false" aria-label="이름 선택 목록으로 돌아가기" class="px-3 py-2 bg-gray-100 text-gray-500 rounded-xl text-sm hover:bg-gray-200 transition"><i class="fa-solid fa-list"></i></button>
                                 </div>
                             </template>
-                        </div>
+                        </fieldset>
                         {% else %}
-                        <input type="text" name="contributor_name" required value="{% if is_edit %}{{ submission.contributor_name }}{% elif form_data %}{{ form_data.contributor_name }}{% elif prefill_contributor_name %}{{ prefill_contributor_name }}{% endif %}" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none" placeholder="이름을 입력하세요">
+                        <label for="contributor-name" class="block text-sm font-bold text-gray-600 mb-1">이름 <span class="text-red-500">*</span></label>
+                        <input id="contributor-name" type="text" name="contributor_name" required value="{% if is_edit %}{{ submission.contributor_name }}{% elif form_data %}{{ form_data.contributor_name }}{% elif prefill_contributor_name %}{{ prefill_contributor_name }}{% endif %}" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none" placeholder="이름을 입력하세요">
                         {% endif %}
                     </div>
                     <div>
-                        <label class="block text-sm font-bold text-gray-600 mb-1">소속 <span class="text-gray-400 font-normal">(선택)</span></label>
-                        <input type="text" name="contributor_affiliation" value="{% if is_edit %}{{ submission.contributor_affiliation }}{% elif form_data %}{{ form_data.contributor_affiliation }}{% elif prefill_contributor_affiliation %}{{ prefill_contributor_affiliation }}{% endif %}" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none" placeholder="예: OO학교, OO반">
+                        <label for="contributor-affiliation" class="block text-sm font-bold text-gray-600 mb-1">소속 <span class="text-gray-400 font-normal">(선택)</span></label>
+                        <input id="contributor-affiliation" type="text" name="contributor_affiliation" value="{% if is_edit %}{{ submission.contributor_affiliation }}{% elif form_data %}{{ form_data.contributor_affiliation }}{% elif prefill_contributor_affiliation %}{{ prefill_contributor_affiliation }}{% endif %}" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none" placeholder="예: OO학교, OO반">
                     </div>
                 </div>
 
-                <div class="mb-6">
-                    <label class="block text-sm font-bold text-gray-600 mb-2">제출 유형</label>
+                <fieldset class="mb-6">
+                    <legend class="block text-sm font-bold text-gray-600 mb-2">제출 유형</legend>
                     {% if is_edit %}
                     <div class="mb-4">
                         <span class="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-xl font-bold text-sm border border-emerald-200">
@@ -113,10 +116,10 @@
                     <input type="hidden" name="submission_type" value="choice">
                     {% else %}
                     <div class="flex gap-2 mb-4">
-                        {% if req.allow_file %}<button type="button" @click="tab='file'" :class="tab==='file' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-gray-100 text-gray-600'" class="px-4 py-2 rounded-xl font-bold text-sm transition-all"><i class="fa-solid fa-file mr-1"></i>파일</button>{% endif %}
-                        {% if req.allow_link %}<button type="button" @click="tab='link'" :class="tab==='link' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-gray-100 text-gray-600'" class="px-4 py-2 rounded-xl font-bold text-sm transition-all"><i class="fa-solid fa-link mr-1"></i>링크</button>{% endif %}
-                        {% if req.allow_text %}<button type="button" @click="tab='text'" :class="tab==='text' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-gray-100 text-gray-600'" class="px-4 py-2 rounded-xl font-bold text-sm transition-all"><i class="fa-solid fa-align-left mr-1"></i>텍스트</button>{% endif %}
-                        {% if req.allow_choice %}<button type="button" @click="tab='choice'" :class="tab==='choice' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-gray-100 text-gray-600'" class="px-4 py-2 rounded-xl font-bold text-sm transition-all"><i class="fa-solid fa-list-check mr-1"></i>선택형</button>{% endif %}
+                        {% if req.allow_file %}<button type="button" @click="tab='file'" :aria-pressed="tab==='file'" aria-controls="collect-submit-panel-file" :class="tab==='file' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-gray-100 text-gray-600'" class="px-4 py-2 rounded-xl font-bold text-sm transition-all"><i class="fa-solid fa-file mr-1"></i>파일</button>{% endif %}
+                        {% if req.allow_link %}<button type="button" @click="tab='link'" :aria-pressed="tab==='link'" aria-controls="collect-submit-panel-link" :class="tab==='link' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-gray-100 text-gray-600'" class="px-4 py-2 rounded-xl font-bold text-sm transition-all"><i class="fa-solid fa-link mr-1"></i>링크</button>{% endif %}
+                        {% if req.allow_text %}<button type="button" @click="tab='text'" :aria-pressed="tab==='text'" aria-controls="collect-submit-panel-text" :class="tab==='text' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-gray-100 text-gray-600'" class="px-4 py-2 rounded-xl font-bold text-sm transition-all"><i class="fa-solid fa-align-left mr-1"></i>텍스트</button>{% endif %}
+                        {% if req.allow_choice %}<button type="button" @click="tab='choice'" :aria-pressed="tab==='choice'" aria-controls="collect-submit-panel-choice" :class="tab==='choice' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-gray-100 text-gray-600'" class="px-4 py-2 rounded-xl font-bold text-sm transition-all"><i class="fa-solid fa-list-check mr-1"></i>선택형</button>{% endif %}
                     </div>
                     <input type="hidden" name="submission_type" :value="tab">
                     {% endif %}
@@ -133,7 +136,7 @@
                     </div>
                     {% endif %}
 
-                    <div x-show="tab==='file'">
+                    <div id="collect-submit-panel-file" x-show="tab==='file'">
                         <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center transition-colors mb-3" :class="{'border-red-400 bg-red-50': fileError, 'border-emerald-400 bg-emerald-50': fileName && !fileError}">
                             <input type="file" name="file" @change="checkFileSize($event)" class="hidden" id="file-input" :required="tab==='file' && !isEdit">
                             <label for="file-input" class="cursor-pointer">
@@ -148,21 +151,30 @@
                             <div x-show="fileError" class="mt-3 text-sm text-red-600 font-medium"><i class="fa-solid fa-circle-exclamation mr-1"></i><span x-text="fileError"></span></div>
                         </div>
                         <p class="text-xs text-gray-500 mb-4"><i class="fa-solid fa-info-circle mr-1"></i>파일이 {{ req.max_file_size_mb }}MB를 초과하면 링크 제출을 이용하세요.</p>
-                        <textarea name="file_description" rows="3" placeholder="파일 설명이나 메모를 입력하세요 (선택)" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none mb-1">{% if is_edit and submission.submission_type == 'file' %}{{ submission.text_content }}{% elif form_data %}{{ form_data.file_description }}{% endif %}</textarea>
+                        <label for="collect-file-description" class="block text-sm font-bold text-gray-600 mb-1">파일 설명 <span class="text-gray-400 font-normal">(선택)</span></label>
+                        <textarea id="collect-file-description" name="file_description" rows="3" placeholder="파일 설명이나 메모를 입력하세요 (선택)" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none mb-1">{% if is_edit and submission.submission_type == 'file' %}{{ submission.text_content }}{% elif form_data %}{{ form_data.file_description }}{% endif %}</textarea>
                     </div>
 
-                    <div x-show="tab==='link'" class="space-y-3">
-                        <input type="url" name="link_url" placeholder="https://drive.google.com/..." value="{% if is_edit %}{{ submission.link_url }}{% elif form_data %}{{ form_data.link_url }}{% endif %}" :required="tab==='link'" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none">
-                        <input type="text" name="link_description" placeholder="링크 설명 (선택)" value="{% if is_edit %}{{ submission.link_description }}{% elif form_data %}{{ form_data.link_description }}{% endif %}" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none">
+                    <div id="collect-submit-panel-link" x-show="tab==='link'" class="space-y-3">
+                        <div>
+                            <label for="collect-link-url" class="block text-sm font-bold text-gray-600 mb-1">링크 주소 <span class="text-red-500">*</span></label>
+                            <input id="collect-link-url" type="url" name="link_url" placeholder="https://drive.google.com/..." value="{% if is_edit %}{{ submission.link_url }}{% elif form_data %}{{ form_data.link_url }}{% endif %}" :required="tab==='link'" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label for="collect-link-description" class="block text-sm font-bold text-gray-600 mb-1">링크 설명 <span class="text-gray-400 font-normal">(선택)</span></label>
+                            <input id="collect-link-description" type="text" name="link_description" placeholder="링크 설명 (선택)" value="{% if is_edit %}{{ submission.link_description }}{% elif form_data %}{{ form_data.link_description }}{% endif %}" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none">
+                        </div>
                     </div>
 
-                    <div x-show="tab==='text'">
-                        <textarea name="text_content" rows="6" placeholder="내용을 입력하세요..." :required="tab==='text'" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none">{% if is_edit %}{{ submission.text_content }}{% elif form_data %}{{ form_data.text_content }}{% endif %}</textarea>
+                    <div id="collect-submit-panel-text" x-show="tab==='text'">
+                        <label for="collect-text-content" class="block text-sm font-bold text-gray-600 mb-1">텍스트 내용 <span class="text-red-500">*</span></label>
+                        <textarea id="collect-text-content" name="text_content" rows="6" placeholder="내용을 입력하세요..." :required="tab==='text'" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none">{% if is_edit %}{{ submission.text_content }}{% elif form_data %}{{ form_data.text_content }}{% endif %}</textarea>
                     </div>
 
                     {% if req.allow_choice or submission.submission_type == 'choice' %}
-                    <div x-show="tab==='choice'" class="space-y-3">
-                        <div class="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                    <div id="collect-submit-panel-choice" x-show="tab==='choice'" class="space-y-3">
+                        <fieldset class="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                            <legend class="text-sm font-bold text-gray-700 px-1">선택형 응답</legend>
                             <p class="text-sm text-gray-600 mb-3">
                                 <i class="fa-solid fa-list-check mr-1 text-emerald-600"></i>
                                 {% if req.choice_mode == 'single' %}
@@ -175,8 +187,9 @@
                             {% if req.normalized_choice_options %}
                             <div class="space-y-2">
                                 {% for option in req.normalized_choice_options %}
-                                <label class="flex items-center gap-2 text-sm text-gray-700">
+                                <div class="flex items-center gap-2 text-sm text-gray-700">
                                     <input
+                                        id="choice-answer-{{ forloop.counter }}"
                                         type="{% if req.choice_mode == 'single' %}radio{% else %}checkbox{% endif %}"
                                         name="choice_answers"
                                         value="{{ option }}"
@@ -184,15 +197,16 @@
                                         {% if option in choice_values %}checked{% endif %}
                                         {% if req.choice_mode == 'single' %}:required="tab==='choice'" @change="useOtherChoice = false"{% endif %}
                                     >
-                                    <span>{{ option }}</span>
-                                </label>
+                                    <label for="choice-answer-{{ forloop.counter }}">{{ option }}</label>
+                                </div>
                                 {% endfor %}
                             </div>
 
                             {% if req.choice_allow_other %}
                             <div class="mt-3 pt-3 border-t border-gray-200">
-                                <label class="flex items-center gap-2 text-sm text-gray-700 mb-2">
+                                <div class="flex items-center gap-2 text-sm text-gray-700 mb-2">
                                     <input
+                                        id="choice-answer-other"
                                         type="{% if req.choice_mode == 'single' %}radio{% else %}checkbox{% endif %}"
                                         name="choice_answers"
                                         value="__other__"
@@ -200,9 +214,11 @@
                                         {% if "__other__" in choice_values %}checked{% endif %}
                                         {% if req.choice_mode == 'single' %}:required="tab==='choice'" @change="useOtherChoice = true"{% else %}@change="useOtherChoice = $event.target.checked"{% endif %}
                                     >
-                                    <span>기타(직접 입력)</span>
-                                </label>
+                                    <label for="choice-answer-other">기타(직접 입력)</label>
+                                </div>
+                                <label for="choice-other-text" class="block text-sm font-bold text-gray-600 mb-1">기타 입력</label>
                                 <input
+                                    id="choice-other-text"
                                     type="text"
                                     name="choice_other_text"
                                     value="{{ choice_other_text }}"
@@ -216,7 +232,7 @@
                             {% else %}
                             <p class="text-sm text-red-600">선택형 보기가 설정되지 않았습니다. 요청 생성자에게 문의해주세요.</p>
                             {% endif %}
-                        </div>
+                        </fieldset>
                         <p class="text-xs text-gray-500">
                             {% if req.choice_mode == 'single' %}
                             단일 선택 요청입니다.
@@ -231,7 +247,7 @@
                         </p>
                     </div>
                     {% endif %}
-                </div>
+                </fieldset>
 
                 <button type="submit" :disabled="(tab==='file' && fileError) || isSubmitting" class="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                     <template x-if="!isSubmitting"><span><i class="fa-solid fa-paper-plane mr-2"></i><span x-text="isEdit ? '수정 완료' : '제출하기'"></span></span></template>
@@ -244,7 +260,7 @@
             </form>
         </div>
     </div>
-</section>
+</main>
 
 {% if is_edit %}
 <div x-data="{ show: false }" @open-delete-modal.window="show = true" x-show="show" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" style="display: none;">
@@ -302,4 +318,3 @@
     }
 </script>
 {% endblock %}
-

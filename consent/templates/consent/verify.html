@@ -3,21 +3,21 @@
 {% block title %}본인 확인{% endblock %}
 
 {% block content %}
-<main class="pt-32 pb-16 px-4 min-h-screen bg-[#E0E5EC]">
+<main id="main-content" tabindex="-1" aria-labelledby="consent-verify-title" class="pt-32 pb-16 px-4 min-h-screen bg-[#E0E5EC]">
   <div class="max-w-xl mx-auto">
     <div class="clay-card p-6">
-      <h1 class="text-2xl font-bold text-gray-800 mb-1">본인 확인</h1>
+      <h1 id="consent-verify-title" class="text-2xl font-bold text-gray-800 mb-1">본인 확인</h1>
       <p class="text-sm text-gray-500 mb-4">{{ recipient.request.title }}</p>
 
       <form method="post" class="space-y-4">
         {% csrf_token %}
         <div>
-          <label class="block text-sm font-semibold mb-1">학부모 이름</label>
+          <label for="{{ form.parent_name.id_for_label }}" class="block text-sm font-semibold mb-1">학부모 이름</label>
           {{ form.parent_name }}
           {{ form.parent_name.errors }}
         </div>
         <div>
-          <label class="block text-sm font-semibold mb-1">연락처 끝 4자리</label>
+          <label for="{{ form.phone_last4.id_for_label }}" class="block text-sm font-semibold mb-1">연락처 끝 4자리</label>
           {{ form.phone_last4 }}
           {{ form.phone_last4.errors }}
         </div>

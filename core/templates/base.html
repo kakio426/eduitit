@@ -45,6 +45,7 @@
 </head>
 
 <body class="overflow-x-hidden">
+    <a href="#main-content" class="skip-link" data-skip-link="true">본문으로 건너뛰기</a>
     <div id="app-root" class="w-full relative overflow-x-hidden min-h-screen">
 
         <!-- Toast Notification System -->
@@ -609,6 +610,33 @@
         {% if active_classroom %}{{ active_classroom.name|json_script:"hs-active-classroom-name" }}{% endif %}
         {% endif %}
 
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                const primaryMain = document.getElementById("main-content") || document.querySelector("main");
+                const skipLink = document.querySelector("[data-skip-link='true']");
+
+                if (!primaryMain) {
+                    return;
+                }
+
+                if (!primaryMain.id) {
+                    primaryMain.id = "main-content";
+                }
+
+                if (!primaryMain.hasAttribute("tabindex")) {
+                    primaryMain.setAttribute("tabindex", "-1");
+                }
+
+                if (skipLink) {
+                    skipLink.setAttribute("href", "#main-content");
+                    skipLink.addEventListener("click", function () {
+                        window.requestAnimationFrame(function () {
+                            primaryMain.focus();
+                        });
+                    });
+                }
+            });
+        </script>
         {% block extra_js %}{% endblock %}
     </div><!-- #app-root -->
 

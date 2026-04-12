@@ -4,11 +4,11 @@
 {% block title %}가뿐 수합 - Eduitit{% endblock %}
 
 {% block content %}
-<main class="pt-32 pb-20 px-6 md:px-8 min-h-screen overflow-x-hidden bg-[#E0E5EC]">
+<main id="main-content" tabindex="-1" aria-labelledby="collect-landing-title" class="pt-32 pb-20 px-6 md:px-8 min-h-screen overflow-x-hidden bg-[#E0E5EC]">
     <div class="max-w-4xl mx-auto">
         <header class="text-center mb-12" data-aos="fade-up">
             <div class="text-7xl mb-4 float-icon">{{ service.icon|default:"📥" }}</div>
-            <h1 class="text-5xl md:text-6xl font-bold text-gray-800 mb-4 font-title">{{ service.title|default:"가뿐 수합" }}</h1>
+            <h1 id="collect-landing-title" class="text-5xl md:text-6xl font-bold text-gray-800 mb-4 font-title">{{ service.title|default:"가뿐 수합" }}</h1>
             <p class="text-xl md:text-2xl text-gray-600 font-medium leading-relaxed break-keep">
                 {{ service.lead_text|default:"QR 또는 입장코드로 파일, 링크, 텍스트, 선택형 응답을 빠르게 수합하세요." }}
             </p>
@@ -64,9 +64,10 @@
                     {% endif %}
 
                     <form action="{% url 'collect:join' %}" method="get" class="mb-4">
+                        <label for="collect-join-code" class="sr-only">입장코드 입력</label>
                         <div class="flex gap-1.5 md:gap-2">
-                            <input type="text" name="code" placeholder="입장코드 6자리" maxlength="6" class="flex-1 min-w-0 px-2 md:px-3 py-3 rounded-xl border-2 border-teal-300 focus:border-teal-500 focus:outline-none text-base md:text-lg font-bold text-center" required>
-                            <button type="submit" class="shrink-0 px-4 md:px-5 py-3 bg-gradient-to-r from-teal-500 to-emerald-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition hover:scale-105">
+                            <input id="collect-join-code" type="text" name="code" placeholder="입장코드 6자리" maxlength="6" class="flex-1 min-w-0 px-2 md:px-3 py-3 rounded-xl border-2 border-teal-300 focus:border-teal-500 focus:outline-none text-base md:text-lg font-bold text-center" required>
+                            <button type="submit" aria-label="입장코드로 제출 참여 화면 열기" class="shrink-0 px-4 md:px-5 py-3 bg-gradient-to-r from-teal-500 to-emerald-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition hover:scale-105">
                                 <i class="fa-solid fa-arrow-right"></i>
                             </button>
                         </div>
