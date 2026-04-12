@@ -85,7 +85,7 @@
     }
     .hwpx-sidebar {
         position: sticky;
-        top: 7.25rem;
+        top: calc(var(--main-nav-height, 88px) + 1rem);
         padding: 1.2rem;
         display: flex;
         flex-direction: column;
@@ -776,7 +776,7 @@
     }
 </style>
 
-<section class="hwpx-shell pt-28 pb-20 px-4 min-h-screen" x-data="hwpxChatPage()">
+<section class="hwpx-shell service-shell--compact pb-20 px-4 min-h-screen" x-data="hwpxChatPage()">
     <div class="hwpx-frame">
         <div class="hwpx-header">
             <div class="hwpx-header-copy">

@@ -1,6 +1,7 @@
 .rg-root {
-    min-height: calc(100vh - 88px);
-    margin-top: 88px;
+    min-height: calc(100vh - var(--main-nav-height, 88px));
+    min-height: calc(100dvh - var(--main-nav-height, 88px));
+    margin-top: var(--main-nav-height, 88px);
     padding: 18px;
     font-family: "Pretendard", "Noto Sans KR", "Malgun Gothic", sans-serif;
     color: #e5ecff;
@@ -294,8 +295,6 @@
 
 @media (max-width: 900px) {
     .rg-root {
-        margin-top: 76px;
-        min-height: calc(100vh - 76px);
         padding: 12px;
     }
 
@@ -321,4 +320,3 @@
         min-height: 180px;
     }
 }
-

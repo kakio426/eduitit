@@ -3,7 +3,7 @@
 {% block title %}{{ page_title }}{% endblock %}
 
 {% block content %}
-<main class="min-h-screen bg-slate-50 pt-32 pb-20">
+<main class="service-shell min-h-screen bg-slate-50 pb-20">
     <section class="mx-auto max-w-7xl px-4 sm:px-6">
         <div class="mb-5 flex flex-wrap items-center gap-3 text-sm font-bold text-slate-500">
             <a href="{% url 'schoolprograms:provider_detail' listing.provider.slug %}?activity={{ listing.slug }}" class="rounded-full bg-white px-4 py-2 shadow-sm">업체 문의</a>

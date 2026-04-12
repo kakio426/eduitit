@@ -8,10 +8,11 @@
     #yut-game-wrapper {
         font-family: 'Malgun Gothic', sans-serif;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        min-height: calc(100vh - 90px);
+        min-height: calc(100vh - var(--main-nav-height, 88px));
+        min-height: calc(100dvh - var(--main-nav-height, 88px));
         overflow-y: auto;
         position: relative;
-        margin-top: 90px;
+        margin-top: var(--main-nav-height, 88px);
         padding-bottom: 40px;
     }
 
@@ -23,7 +24,8 @@
         display: grid;
         grid-template-columns: 300px 1fr 300px;
         grid-template-rows: auto 1fr;
-        min-height: calc(100vh - 130px);
+        min-height: calc(100vh - var(--main-nav-height, 88px) - 2.5rem);
+        min-height: calc(100dvh - var(--main-nav-height, 88px) - 2.5rem);
         gap: 15px;
         padding: 15px;
     }

@@ -17,7 +17,7 @@
 
 .ib-page {
     min-height: 100vh;
-    padding: 8rem 1rem 4rem;
+    padding: calc(var(--main-nav-height, 88px) + 1rem) 1rem 4rem;
     background:
         radial-gradient(circle at top left, rgba(255, 255, 255, 0.7), transparent 32%),
         radial-gradient(circle at bottom right, rgba(221, 122, 58, 0.08), transparent 28%),
@@ -1089,7 +1089,7 @@
 
 @media (max-width: 640px) {
     .ib-page {
-        padding-top: 7rem;
+        padding-top: calc(var(--main-nav-height, 88px) + 0.75rem);
         padding-bottom: 5rem;
     }
 

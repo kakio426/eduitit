@@ -175,6 +175,48 @@ body {
     scroll-margin-top: calc(var(--global-banner-height, 0px) + 6.5rem);
 }
 
+/*
+ * Service entry screens should clear the measured shell height instead of
+ * hardcoding pt-32 / 88px values that drift when the navbar changes.
+ */
+.service-shell,
+.service-shell--compact,
+.service-shell--spacious {
+    padding-top: calc(var(--main-nav-height, 88px) + var(--service-shell-gap, 1rem)) !important;
+}
+
+.service-shell {
+    --service-shell-gap: 1rem;
+}
+
+.service-shell--compact {
+    --service-shell-gap: 0.75rem;
+}
+
+.service-shell--spacious {
+    --service-shell-gap: 1.35rem;
+}
+
+.service-shell-fixed {
+    top: var(--main-nav-height, 88px) !important;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 30 !important;
+    min-height: calc(100vh - var(--main-nav-height, 88px));
+    min-height: calc(100dvh - var(--main-nav-height, 88px));
+}
+
+@media (max-width: 767px) {
+    .service-shell {
+        --service-shell-gap: 0.75rem;
+    }
+
+    .service-shell--spacious {
+        --service-shell-gap: 1rem;
+    }
+}
+
 ::selection {
     background: var(--color-accent-soft);
     color: var(--color-ink-primary);
