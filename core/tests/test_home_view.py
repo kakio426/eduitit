@@ -122,10 +122,15 @@ PUBLIC_HOME_CONTEXT_KEYS = (
     'guest_public_cards',
     'public_primary_action_card',
     'public_secondary_cards',
+    'public_platform_showcase_items',
+    'public_platform_groups',
+    'public_portfolio_panel',
+    'public_primary_cta',
     'guest_locked_cards',
     'guest_continue_action_card',
     'guest_continue_url',
     'guest_continue_category_labels',
+    'hide_navbar',
     'login_url',
     'home_design_version',
 )
@@ -162,6 +167,7 @@ def _assert_public_home_context_contract(testcase, response, *, design_version='
     for key in PUBLIC_HOME_CONTEXT_KEYS:
         testcase.assertIn(key, response.context)
     testcase.assertEqual(response.context['home_design_version'], design_version)
+    testcase.assertTrue(response.context['hide_navbar'])
 
 
 @override_settings(HOME_V2_ENABLED=False)
@@ -198,13 +204,13 @@ class HomeViewTest(TestCase):
         )
 
     def test_home_anonymous_contains_product(self):
-        """비로그인 홈은 잠긴 서비스도 이어하기 맥락으로 유지한다."""
+        """비로그인 홈은 서비스 맵 안에 잠긴 서비스도 유지한다."""
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         _assert_public_home_context_contract(self, response, design_version='v6')
         locked_titles = {card['title'] for card in response.context.get('guest_locked_cards', [])}
         self.assertIn('테스트 서비스', locked_titles)
-        self.assertIn('로그인 후 더 많이 쓰는 도구', content)
+        self.assertIn('업무별로 바로 찾는 에듀잇티', content)
 
     def test_home_nav_contains_single_help_hub_link(self):
         response = self.client.get(reverse('home'))
@@ -314,8 +320,10 @@ class HomeV2ViewTest(TestCase):
         _assert_public_home_context_contract(self, response, design_version='v6')
         self.assertIn('data-home-v6-public-shell="true"', content)
         self.assertIn('data-home-v6-public-hero="true"', content)
-        self.assertIn('data-home-v6-public-primary-card="true"', content)
-        self.assertIn('data-home-v6-public-login-band="true"', content)
+        self.assertIn('data-home-v6-public-header="true"', content)
+        self.assertIn('data-home-v6-public-showcase="true"', content)
+        self.assertIn('data-home-v6-public-map="true"', content)
+        self.assertIn('data-home-v6-public-portfolio="true"', content)
         self.assertNotIn('data-home-v2-guest-hero="true"', content)
 
     def _create_classroom_product(self, title='숨김 학급 도구', *, is_active=True):
@@ -429,12 +437,13 @@ class HomeV2ViewTest(TestCase):
         _assert_public_home_context_contract(self, response)
         self.assertTemplateUsed(response, 'core/home_public_v6_canonical.html')
         self.assertIn('data-home-v6-public-hero="true"', content)
-        self.assertIn('data-home-v6-public-primary-card="true"', content)
-        self.assertIn('data-home-v6-public-grid-panel="true"', content)
-        self.assertIn('data-home-v6-public-login-band="true"', content)
-        self.assertIn('교실 일을 바로 여는 도구', content)
-        self.assertIn('로그인 없이 열 수 있는 도구', content)
-        self.assertIn('로그인 후 더 많이 쓰는 도구', content)
+        self.assertIn('data-home-v6-public-header="true"', content)
+        self.assertIn('data-home-v6-public-showcase="true"', content)
+        self.assertIn('data-home-v6-public-map="true"', content)
+        self.assertIn('data-home-v6-public-portfolio="true"', content)
+        self.assertIn('교사의 하루 업무를 한곳에서 잇는 전문 교원 도구', content)
+        self.assertIn('업무별로 바로 찾는 에듀잇티', content)
+        self.assertIn('에듀잇티 포트폴리오', content)
         self.assertNotIn('data-home-v2-guest-hero="true"', content)
         self.assertNotIn('data-home-v2-public-section="true"', content)
 
@@ -443,15 +452,11 @@ class HomeV2ViewTest(TestCase):
         self._create_try_now_products()
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        continue_url = response.context.get('guest_notice_trial_login_url')
 
-        self.assertIn('알림장 쓰기', content)
-        self.assertIn('주간학습 쓰기', content)
-        self.assertIn('로그인하고 전체 보기', content)
-        self.assertTrue(continue_url.startswith(reverse('account_login')))
-        self.assertIn('?next=', continue_url)
-        self.assertIn(continue_url, content)
-        self.assertNotIn('로그인 후 전체 열기', content)
+        self.assertIn('업무 둘러보기', content)
+        self.assertIn('로그인', content)
+        self.assertIn(f'href="{reverse("account_login")}"', content)
+        self.assertNotIn('로그인하고 전체 보기', content)
 
     def test_v2_anonymous_collect_card_uses_guest_join_copy(self):
         self._create_try_now_products()
@@ -471,7 +476,8 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
 
         self.assertIn('data-home-v6-public-hero="true"', content)
-        self.assertIn('data-home-v6-public-primary-card="true"', content)
+        self.assertIn('data-home-v6-public-showcase="true"', content)
+        self.assertIn('data-home-v6-public-portfolio="true"', content)
         self.assertNotIn('Teacher-First Launchpad', content)
         self.assertNotIn('Open Tools', content)
 
@@ -489,12 +495,13 @@ class HomeV2ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        trial_actions = response.context.get('guest_notice_trial_actions', [])
+        showcase_items = response.context.get('public_platform_showcase_items', [])
 
-        self.assertEqual(len(trial_actions), 2)
-        self.assertIn('data-home-v6-public-primary-card="true"', content)
-        self.assertIn(reverse('noticegen:main'), trial_actions[0]['href'])
-        self.assertIn(escape(trial_actions[0]['href']), content)
+        self.assertIn('data-public-primary-cta="launcher"', content)
+        self.assertIn('aria-controls="serviceLauncherModal"', content)
+        self.assertTrue(showcase_items)
+        self.assertIn(reverse('collect:landing'), {item['href'] for item in showcase_items})
+        self.assertIn(escape(reverse('collect:landing')), content)
 
     def test_v2_anonymous_surfaces_public_cards_before_locked_sections(self):
         public_collect = Product.objects.create(
@@ -520,11 +527,8 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
 
         self._assert_public_home_uses_v6(response, content)
-        self.assertIn('data-home-v6-public-grid-panel="true"', content)
-        self.assertIn('로그인 없이 열 수 있는 도구', content)
-        self.assertIn('로그인 후 더 많이 쓰는 도구', content)
-        self.assertIn('알림장 쓰기', content)
-        self.assertIn('주간학습 쓰기', content)
+        self.assertIn('업무별로 바로 찾는 에듀잇티', content)
+        self.assertIn('에듀잇티 포트폴리오', content)
 
         public_ids = [card['id'] for card in response.context.get('guest_public_cards', [])]
         self.assertIn(public_collect.id, public_ids)
@@ -533,6 +537,14 @@ class HomeV2ViewTest(TestCase):
         secondary_ids = [card['id'] for card in response.context.get('public_secondary_cards', [])]
         self.assertIn(public_qr.id, secondary_ids)
         self.assertNotIn(response.context['public_primary_action_card']['id'], secondary_ids)
+
+        showcase_ids = [item['id'] for item in response.context.get('public_platform_showcase_items', [])]
+        self.assertIn(public_collect.id, showcase_ids)
+        self.assertIn(public_qr.id, showcase_ids)
+
+        group_titles = {group['title'] for group in response.context.get('public_platform_groups', [])}
+        self.assertIn('수합·서명', group_titles)
+        self.assertIn('일정·예약', group_titles)
 
         locked_cards = response.context.get('guest_locked_cards', [])
         locked_card_ids = [card['id'] for card in locked_cards]
@@ -604,11 +616,13 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
 
         hero_index = content.index('data-home-v6-public-hero="true"')
-        service_group_index = content.index('data-home-v6-public-grid-panel="true"')
-        continue_index = content.index('data-home-v6-public-login-band="true"')
+        showcase_index = content.index('data-home-v6-public-showcase="true"')
+        service_map_index = content.index('data-home-v6-public-map="true"')
+        portfolio_index = content.index('data-home-v6-public-portfolio="true"')
 
-        self.assertLess(hero_index, service_group_index)
-        self.assertLess(service_group_index, continue_index)
+        self.assertLess(hero_index, showcase_index)
+        self.assertLess(showcase_index, service_map_index)
+        self.assertLess(service_map_index, portfolio_index)
         self.assertNotIn('data-home-v2-public-calendar-entry="true"', content)
         self.assertNotIn('sns-full-section-v2', content)
         self.assertNotIn('실시간 소통', content)
@@ -622,7 +636,7 @@ class HomeV2ViewTest(TestCase):
 
         self.assertNotIn('data-home-v2-try-now="true"', content)
         self.assertNotIn('data-home-v2-try-now-grid="true"', content)
-        self.assertIn('data-home-v6-public-grid="true"', content)
+        self.assertIn('data-home-v6-public-showcase="true"', content)
 
     def test_v2_anonymous_keeps_guest_home_without_mini_app_rail(self):
         response = self.client.get(reverse('home'))
@@ -632,7 +646,7 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('data-home-mini-app-shell="true"', content)
 
     def test_v2_anonymous_has_game_banner(self):
-        """비로그인 홈은 공개 카드와 로그인 이어하기 흐름만 전면 배치한다."""
+        """비로그인 홈은 게임보다 교원 업무 흐름을 먼저 노출한다."""
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         self._assert_public_home_uses_v6(response, content)
@@ -640,7 +654,7 @@ class HomeV2ViewTest(TestCase):
         locked_titles = {card['title'] for card in response.context.get('guest_locked_cards', [])}
         self.assertNotIn('테스트 게임', public_titles)
         self.assertIn('수업 도구', locked_titles)
-        self.assertIn('로그인 후 더 많이 쓰는 도구', content)
+        self.assertIn('전문 교원 플랫폼', content)
         self.assertNotIn('학생용 QR', content)
 
     @patch('core.views.attach_teacher_buddy_avatar_context')
@@ -891,7 +905,7 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('data-home-v2-try-now-support="true"', content)
         self.assertNotIn('data-home-v2-try-now-support-grid="true"', content)
         self.assertNotIn('오늘 바로 써보기', content)
-        self.assertNotIn('data-home-v6-public-grid-panel="true"', content)
+        self.assertNotIn('data-home-v6-public-showcase="true"', content)
 
     @override_settings(
         FEATURE_MESSAGE_CAPTURE_ENABLED=True,
@@ -1382,11 +1396,13 @@ class HomeV2ViewTest(TestCase):
         self.assertGreaterEqual(len(quick_actions), 1)
 
     def test_v2_has_global_service_launcher_trigger(self):
-        """V2 홈은 전역 상단바 런처 트리거를 사용"""
+        """비로그인 v6 홈은 히어로 CTA로 전역 런처를 연다."""
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('data-global-service-launcher-trigger="true"', content)
-        self.assertIn('서비스 찾기', content)
+        self.assertIn('data-public-primary-cta="launcher"', content)
+        self.assertIn('aria-controls="serviceLauncherModal"', content)
+        self.assertIn('업무 둘러보기', content)
+        self.assertNotIn('data-global-service-launcher-trigger="true"', content)
         self.assertNotIn('서비스 검색...', content)
         self.assertNotIn('slice(0, 8)', content)
         self.assertNotIn('window.openModal(p.id)', content)
@@ -2384,8 +2400,10 @@ class HomeV4ViewTest(TestCase):
         self.assertTemplateUsed(response, 'core/home_public_v6_canonical.html')
         _assert_public_home_context_contract(self, response, design_version='v6')
         self.assertIn('data-home-v6-public-shell="true"', content)
-        self.assertIn('data-home-v6-public-primary-card="true"', content)
-        self.assertIn('data-home-v6-public-login-band="true"', content)
+        self.assertIn('data-home-v6-public-header="true"', content)
+        self.assertIn('data-home-v6-public-showcase="true"', content)
+        self.assertIn('data-home-v6-public-map="true"', content)
+        self.assertIn('data-home-v6-public-portfolio="true"', content)
         self.assertNotIn('data-home-v4-public-shell="true"', content)
 
     def test_v4_authenticated_home_uses_new_template_and_accordion_menu(self):
@@ -2978,8 +2996,8 @@ class HomeV4ViewTest(TestCase):
         self.assertTemplateUsed(response, 'core/home_public_v6_canonical.html')
         self.assertTemplateNotUsed(response, 'core/home_v2.html')
         self.assertIn('data-home-v6-public-shell="true"', content)
-        self.assertIn('교실 일을 바로 여는 도구', content)
-        self.assertIn('로그인 후 더 많이 쓰는 도구', content)
+        self.assertIn('교사의 하루 업무를 한곳에서 잇는 전문 교원 도구', content)
+        self.assertIn('업무별로 바로 찾는 에듀잇티', content)
         self.assertNotIn('data-home-v4-public-shell="true"', content)
         self.assertEqual(
             representative_titles,
@@ -2998,8 +3016,8 @@ class HomeV4ViewTest(TestCase):
         self.assertEqual(artclass_product.home_access_status_label, '로그인 필요')
         self.assertEqual(artclass_product.home_landing_cta_label, '로그인 후 시작')
         self.assertTrue(artclass_product.home_landing_cta_href.startswith(login_url))
-        self.assertIn('data-home-v6-public-login-band="true"', content)
-        self.assertIn(f'href="{response.context["guest_notice_trial_login_url"]}"', content)
+        self.assertIn('data-public-primary-cta="launcher"', content)
+        self.assertIn(f'href="{login_url}"', content)
 
     def test_v4_anonymous_rotation_surfaces_guest_services_with_single_active_card(self):
         public_collect = Product.objects.create(
@@ -3026,11 +3044,9 @@ class HomeV4ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('data-home-v6-public-primary-card="true"', content)
-        self.assertIn('data-home-v6-public-grid-panel="true"', content)
-        self.assertIn('data-home-v6-public-login-band="true"', content)
-        self.assertIn('알림장 쓰기', content)
-        self.assertIn('주간학습 쓰기', content)
+        self.assertIn('data-home-v6-public-showcase="true"', content)
+        self.assertIn('data-home-v6-public-map="true"', content)
+        self.assertIn('업무 둘러보기', content)
         self.assertIn('간편 수합', content)
         self.assertIn('가뿐하게 서명 톡', content)
 
@@ -3045,8 +3061,8 @@ class HomeV4ViewTest(TestCase):
         content = response.content.decode('utf-8')
 
         self.assertNotIn('data-guest-rotation-dot=', content)
-        self.assertIn('data-home-v6-public-login-band="true"', content)
-        self.assertIn('로그인 후 더 많이 쓰는 도구', content)
+        self.assertIn('data-home-v6-public-map="true"', content)
+        self.assertIn('업무별로 바로 찾는 에듀잇티', content)
 
     @override_settings(HOME_LAYOUT_VERSION='v2', HOME_V2_ENABLED=True)
     def test_setting_home_layout_version_to_v2_keeps_public_and_authenticated_home_on_v6(self):
@@ -3071,7 +3087,7 @@ class HomeV4ViewTest(TestCase):
 
         self.assertTemplateUsed(public_response, 'core/home_public_v6_canonical.html')
         self.assertIn('data-home-v6-public-shell="true"', public_content)
-        self.assertIn('교실 일을 바로 여는 도구', public_content)
+        self.assertIn('교사의 하루 업무를 한곳에서 잇는 전문 교원 도구', public_content)
 
 
 @override_settings(HOME_LAYOUT_VERSION='v5', HOME_V2_ENABLED=True)
@@ -3450,10 +3466,10 @@ class HomeV5ViewTest(TestCase):
         self.assertTemplateUsed(response, 'core/home_public_v6_canonical.html')
         self.assertTemplateNotUsed(response, 'core/home_authenticated_v5.html')
         self.assertIn('data-home-v6-public-shell="true"', content)
-        self.assertIn('data-home-v6-public-primary-card="true"', content)
-        self.assertIn('data-home-v6-public-grid-panel="true"', content)
-        self.assertIn('알림장 쓰기', content)
-        self.assertIn('로그인 후 더 많이 쓰는 도구', content)
+        self.assertIn('data-home-v6-public-showcase="true"', content)
+        self.assertIn('data-home-v6-public-map="true"', content)
+        self.assertIn('교사의 하루 업무를 한곳에서 잇는 전문 교원 도구', content)
+        self.assertIn('업무별로 바로 찾는 에듀잇티', content)
         self.assertNotIn('data-home-v4-public-shell="true"', content)
         self.assertNotIn('data-home-v5-shell="true"', content)
         self.assertNotIn('core/css/home_authenticated_v5.css', content)
@@ -3830,9 +3846,8 @@ class HomeV6ViewTest(TestCase):
             trial_action_icons,
             {'fa-solid fa-note-sticky', 'fa-solid fa-calendar-week'},
         )
-        self.assertIn('fa-solid fa-pen-to-square', content)
-        self.assertIn('fa-solid fa-note-sticky', content)
-        self.assertIn('fa-solid fa-calendar-week', content)
+        self.assertIn('fa-solid fa-file-lines', content)
+        self.assertIn('fa-solid fa-school', content)
         self.assertNotRegex(content, r'>\s*🎪\s*<')
         self.assertNotRegex(content, r'>\s*📝\s*<')
 
@@ -4055,22 +4070,23 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('core/css/home_public_v6.css', content)
         self.assertIn('home-public-v6-page', content)
         self.assertIn('data-home-v6-public-shell="true"', content)
-        self.assertIn('home-public-v6-stage-shell', content)
+        self.assertIn('data-home-v6-public-header="true"', content)
         self.assertIn('data-home-design-version="v6"', content)
-        self.assertIn('교실 일을 바로 여는 도구', content)
-        self.assertIn('수합, 서명, 예약, 수업 준비처럼 자주 하는 일을 빠르게 엽니다.', content)
+        self.assertIn('교사의 하루 업무를 한곳에서 잇는 전문 교원 도구', content)
+        self.assertIn('알림장, 수합, 서명, 예약, 캘린더, 법률 확인까지 교실의 반복 업무를 한 흐름으로 이어갑니다.', content)
         self.assertIn('data-home-v6-public-hero="true"', content)
-        self.assertIn('data-home-v6-public-overview="true"', content)
-        self.assertIn('data-home-v6-public-login-band="true"', content)
-        self.assertIn('로그인 후 더 많이 쓰는 도구', content)
+        self.assertIn('data-home-v6-public-showcase="true"', content)
+        self.assertIn('data-home-v6-public-map="true"', content)
+        self.assertIn('data-home-v6-public-portfolio="true"', content)
+        self.assertIn('에듀잇티 포트폴리오', content)
         self.assertNotIn('core/css/home_authenticated_v6.css', content)
         self.assertNotIn('core/css/home_authenticated_v6_canonical.css', content)
         self.assertNotIn('data-home-v6-shell="true"', content)
         self.assertNotIn('data-home-v2-guest-hero="true"', content)
-        self.assertEqual(content.count('교실 일을 바로 여는 도구'), 1)
+        self.assertEqual(content.count('교사의 하루 업무를 한곳에서 잇는 전문 교원 도구'), 1)
         self.assertIn('--home-v6-radius-panel: 0.95rem;', public_css)
-        self.assertIn('.home-public-v6-primary-card {', public_css)
-        self.assertIn('.home-public-v6-grid-card {', public_css)
+        self.assertIn('.home-public-v6-showcase {', public_css)
+        self.assertIn('.home-public-v6-group-card {', public_css)
 
 @override_settings(HOME_V2_ENABLED=True)
 class TrackUsageAPITest(TestCase):

@@ -2633,6 +2633,111 @@ PUBLIC_HOME_CONTINUE_CATEGORY_LABELS = (
     "학급 운영",
 )
 
+PUBLIC_PLATFORM_SHOWCASE_PRIORITY_SPECS = (
+    {
+        "route_names": ("noticegen:main",),
+        "titles": ("알림장 & 주간학습 멘트 생성기",),
+    },
+    {
+        "route_names": ("collect:landing",),
+        "titles": ("간편 수합",),
+    },
+    {
+        "route_names": ("signatures:list",),
+        "titles": ("가뿐하게 서명 톡",),
+    },
+    {
+        "route_names": ("reservations:dashboard_landing", "reservations:landing"),
+        "titles": ("학교 예약 시스템",),
+    },
+    {
+        "route_names": ("classcalendar:main",),
+        "titles": ("학급 캘린더", "교무수첩"),
+    },
+    {
+        "route_names": ("teacher_law:main",),
+        "titles": ("교사용 AI 법률 가이드",),
+    },
+)
+
+PUBLIC_PLATFORM_GROUP_SPECS = (
+    {
+        "key": "family_contact",
+        "title": "가정 연락",
+        "summary": "알림장과 안내문을 빠르게 정리해 가정에 전합니다.",
+        "preferred_routes": ("noticegen:main", "parentcomm:main"),
+        "preferred_titles": ("알림장 & 주간학습 멘트 생성기",),
+        "fallback_group_keys": ("family_contact",),
+    },
+    {
+        "key": "collect_sign",
+        "title": "수합·서명",
+        "summary": "응답, 동의, 서명을 링크로 받고 상태를 바로 확인합니다.",
+        "preferred_routes": ("collect:landing", "consent:landing", "signatures:list", "handoff:landing"),
+        "preferred_titles": ("간편 수합", "동의서는 나에게 맡겨", "가뿐하게 서명 톡", "배부 체크"),
+        "fallback_group_keys": ("collect_sign",),
+    },
+    {
+        "key": "schedule_reservation",
+        "title": "일정·예약",
+        "summary": "오늘 일정과 특별실 예약을 한 흐름으로 이어서 처리합니다.",
+        "preferred_routes": ("classcalendar:main", "reservations:dashboard_landing", "reservations:landing"),
+        "preferred_titles": ("학급 캘린더", "학교 예약 시스템", "교무수첩"),
+        "fallback_group_keys": ("schedule_reservation",),
+    },
+    {
+        "key": "records",
+        "title": "기록·정리",
+        "summary": "문서와 전달 내용을 정리하고 필요한 업무로 바로 이어집니다.",
+        "preferred_routes": ("quickdrop:landing", "hwpxchat:main", "infoboard:dashboard"),
+        "preferred_titles": ("바로전송", "한글문서 AI야 읽어줘", "인포보드"),
+        "fallback_group_keys": ("records", "family_contact"),
+    },
+    {
+        "key": "teacher_support",
+        "title": "교사 지원",
+        "summary": "법률 근거와 참고 도구를 필요할 때 바로 확인합니다.",
+        "preferred_routes": ("teacher_law:main", "schoolprograms:landing"),
+        "preferred_titles": ("교사용 AI 법률 가이드", "학교 체험·행사 찾기"),
+        "fallback_group_keys": ("teacher_support",),
+    },
+)
+
+PUBLIC_PLATFORM_GROUP_KEY_BY_ROUTE = {
+    "noticegen:main": "family_contact",
+    "parentcomm:main": "family_contact",
+    "collect:landing": "collect_sign",
+    "consent:landing": "collect_sign",
+    "consent:dashboard": "collect_sign",
+    "signatures:landing": "collect_sign",
+    "signatures:list": "collect_sign",
+    "handoff:landing": "collect_sign",
+    "classcalendar:main": "schedule_reservation",
+    "reservations:dashboard_landing": "schedule_reservation",
+    "reservations:landing": "schedule_reservation",
+    "quickdrop:landing": "records",
+    "hwpxchat:main": "records",
+    "infoboard:dashboard": "records",
+    "teacher_law:main": "teacher_support",
+    "schoolprograms:landing": "teacher_support",
+}
+
+PUBLIC_PLATFORM_GROUP_KEY_BY_HOME_SECTION = {
+    "collect_sign": "collect_sign",
+    "class_ops": "schedule_reservation",
+    "doc_write": "records",
+    "guide": "teacher_support",
+    "refresh": "teacher_support",
+}
+
+PUBLIC_PLATFORM_GROUP_SORT_ORDER = {
+    "family_contact": 0,
+    "collect_sign": 1,
+    "schedule_reservation": 2,
+    "records": 3,
+    "teacher_support": 4,
+}
+
 
 def _product_requires_guest_login(product):
     return getattr(product, "home_access_status_label", "") == "로그인 필요"
@@ -2802,6 +2907,199 @@ def _build_home_public_secondary_cards(guest_public_cards, primary_action_card, 
         if limit and len(secondary_cards) >= limit:
             break
     return secondary_cards
+
+
+def _resolve_public_platform_group_key(product):
+    route_name = _product_route_name(product)
+    if route_name in PUBLIC_PLATFORM_GROUP_KEY_BY_ROUTE:
+        return PUBLIC_PLATFORM_GROUP_KEY_BY_ROUTE[route_name]
+
+    home_section_key = _resolve_home_section_key(product)
+    return PUBLIC_PLATFORM_GROUP_KEY_BY_HOME_SECTION.get(home_section_key, "")
+
+
+def _build_home_public_platform_item(product, *, login_url, section_key=""):
+    if not product:
+        return None
+
+    if not getattr(product, "launch_href", ""):
+        return None
+
+    if getattr(product, "service_type", "") == "game":
+        return None
+
+    prepared_product = _attach_home_guest_landing_meta(product, login_url=login_url)
+    if not prepared_product or not getattr(prepared_product, "home_landing_cta_href", ""):
+        return None
+
+    group_key = section_key or _resolve_public_platform_group_key(prepared_product)
+    if not group_key:
+        return None
+
+    return {
+        "id": getattr(prepared_product, "id", ""),
+        "title": getattr(prepared_product, "public_service_name", "") or getattr(prepared_product, "title", "") or "도구",
+        "summary": getattr(prepared_product, "home_landing_summary", "") or getattr(prepared_product, "home_card_summary", "") or "",
+        "href": getattr(prepared_product, "home_landing_cta_href", "") or "",
+        "cta_label": getattr(prepared_product, "home_landing_cta_label", "") or "열기",
+        "is_external": bool(getattr(prepared_product, "home_landing_cta_is_external", False)),
+        "access_status_label": _guest_access_status_copy(prepared_product),
+        "home_icon_class": getattr(prepared_product, "home_icon_class", "") or service_launcher_utils.resolve_home_icon_class(prepared_product),
+        "home_accent_token": getattr(prepared_product, "home_accent_token", "") or service_launcher_utils.resolve_home_accent_token(prepared_product),
+        "section_key": group_key,
+        "route_name": _product_route_name(prepared_product),
+        "service_name": getattr(prepared_product, "teacher_first_task_label", "") or "",
+        "context_chips": list(getattr(prepared_product, "home_context_chips", []) or [])[:3],
+    }
+
+
+def _match_public_platform_product(product_list, *, route_names=(), titles=(), excluded_ids=None):
+    excluded_ids = set(excluded_ids or ())
+    normalized_titles = {str(title or "").strip() for title in titles if str(title or "").strip()}
+    normalized_routes = {str(route_name or "").strip().lower() for route_name in route_names if str(route_name or "").strip()}
+
+    for product in product_list:
+        product_id = getattr(product, "id", None)
+        if product_id in excluded_ids:
+            continue
+
+        if normalized_routes and _product_route_name(product) in normalized_routes:
+            return product
+
+        if normalized_titles and str(getattr(product, "public_service_name", "") or getattr(product, "title", "") or "").strip() in normalized_titles:
+            return product
+
+    return None
+
+
+def _build_home_public_platform_showcase_items(product_list, *, login_url, limit=6):
+    showcase_items = []
+    seen_ids = set()
+
+    for spec in PUBLIC_PLATFORM_SHOWCASE_PRIORITY_SPECS:
+        matched_product = _match_public_platform_product(
+            product_list,
+            route_names=spec.get("route_names", ()),
+            titles=spec.get("titles", ()),
+            excluded_ids=seen_ids,
+        )
+        item = _build_home_public_platform_item(matched_product, login_url=login_url)
+        if not item:
+            continue
+        showcase_items.append(item)
+        seen_ids.add(item["id"])
+
+    if len(showcase_items) >= limit:
+        return showcase_items[:limit]
+
+    def _fallback_sort_key(product):
+        group_key = _resolve_public_platform_group_key(product)
+        return (
+            PUBLIC_PLATFORM_GROUP_SORT_ORDER.get(group_key, 99),
+            getattr(product, "display_order", 9999),
+            str(getattr(product, "title", "") or ""),
+        )
+
+    for product in sorted(product_list, key=_fallback_sort_key):
+        product_id = getattr(product, "id", None)
+        if product_id in seen_ids:
+            continue
+        item = _build_home_public_platform_item(product, login_url=login_url)
+        if not item:
+            continue
+        showcase_items.append(item)
+        seen_ids.add(product_id)
+        if len(showcase_items) >= limit:
+            break
+
+    return showcase_items
+
+
+def _build_home_public_platform_groups(product_list, *, login_url, showcase_items=None, limit=3):
+    showcase_items = list(showcase_items or [])
+    groups = []
+
+    for spec in PUBLIC_PLATFORM_GROUP_SPECS:
+        items = []
+        seen_ids = set()
+
+        for route_name in spec.get("preferred_routes", ()):
+            matched_product = _match_public_platform_product(
+                product_list,
+                route_names=(route_name,),
+                excluded_ids=seen_ids,
+            )
+            item = _build_home_public_platform_item(
+                matched_product,
+                login_url=login_url,
+                section_key=spec["key"],
+            )
+            if not item:
+                continue
+            items.append(item)
+            seen_ids.add(item["id"])
+            if len(items) >= limit:
+                break
+
+        if len(items) < limit:
+            for title in spec.get("preferred_titles", ()):
+                matched_product = _match_public_platform_product(
+                    product_list,
+                    titles=(title,),
+                    excluded_ids=seen_ids,
+                )
+                item = _build_home_public_platform_item(
+                    matched_product,
+                    login_url=login_url,
+                    section_key=spec["key"],
+                )
+                if not item:
+                    continue
+                items.append(item)
+                seen_ids.add(item["id"])
+                if len(items) >= limit:
+                    break
+
+        if len(items) < limit:
+            for product in product_list:
+                if getattr(product, "id", None) in seen_ids:
+                    continue
+                item = _build_home_public_platform_item(product, login_url=login_url)
+                if not item:
+                    continue
+                if item["section_key"] not in spec.get("fallback_group_keys", ()):
+                    continue
+                item["section_key"] = spec["key"]
+                items.append(item)
+                seen_ids.add(item["id"])
+                if len(items) >= limit:
+                    break
+
+        if len(items) < limit:
+            for showcase_item in showcase_items:
+                if showcase_item.get("id") in seen_ids:
+                    continue
+                if showcase_item.get("section_key") not in spec.get("fallback_group_keys", ()):
+                    continue
+                items.append({
+                    **showcase_item,
+                    "section_key": spec["key"],
+                })
+                seen_ids.add(showcase_item.get("id"))
+                if len(items) >= limit:
+                    break
+
+        if items:
+            groups.append(
+                {
+                    "key": spec["key"],
+                    "title": spec["title"],
+                    "summary": spec["summary"],
+                    "items": items[:limit],
+                }
+            )
+
+    return groups
 
 
 def _build_home_featured_summary(product):
@@ -3918,6 +4216,43 @@ def _build_home_public_landing_context(request, products):
     }
 
 
+def _build_home_public_v6_landing_context(request, products):
+    context = _build_home_public_landing_context(request, products)
+    product_list = _attach_product_launch_meta(list(products), user=request.user)
+    login_url = context["login_url"]
+    showcase_items = _build_home_public_platform_showcase_items(
+        product_list,
+        login_url=login_url,
+    )
+    platform_groups = _build_home_public_platform_groups(
+        product_list,
+        login_url=login_url,
+        showcase_items=showcase_items,
+    )
+    context.update(
+        {
+            "public_platform_showcase_items": showcase_items,
+            "public_platform_groups": platform_groups,
+            "public_portfolio_panel": {
+                "href": reverse("portfolio:list"),
+                "eyebrow": "현장 사례",
+                "title": "에듀잇티 포트폴리오",
+                "summary": "교실 적용 사례와 협업 기록으로 에듀잇티가 어떤 방향으로 다듬어졌는지 확인합니다.",
+                "cta_label": "포트폴리오 보기",
+                "chips": ("교실 적용", "연수·협업", "도입 맥락"),
+            },
+            "public_primary_cta": {
+                "label": "업무 둘러보기",
+                "fallback_href": "#public-platform-map",
+                "fallback_target_id": "public-platform-map",
+                "aria_label": "업무 둘러보기",
+            },
+            "hide_navbar": True,
+        }
+    )
+    return context
+
+
 def _home_public_v4(request, products, posts, page_obj, feed_scope, pinned_notice_posts):
     """비로그인 사용자를 위한 공개 홈 V4."""
     return render(
@@ -3945,7 +4280,7 @@ def _home_public_v6(request, products, posts, page_obj, feed_scope, pinned_notic
         request,
         'core/home_public_v6_canonical.html',
         {
-            **_build_home_public_landing_context(request, products),
+            **_build_home_public_v6_landing_context(request, products),
             'home_design_version': 'v6',
         },
     )

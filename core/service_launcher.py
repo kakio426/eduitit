@@ -521,7 +521,7 @@ def build_service_launcher_items(products, user=None):
                 "id": product.id,
                 "title": title,
                 "summary": summary,
-                "icon": getattr(product, "icon", "") or "",
+                "icon": resolve_home_icon_class(product),
                 "service_type": getattr(product, "service_type", "") or "",
                 "group_key": group_meta["key"],
                 "group_title": group_meta["title"],
