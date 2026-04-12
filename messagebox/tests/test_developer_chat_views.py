@@ -1,3 +1,6 @@
+from pathlib import Path
+
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
@@ -175,3 +178,31 @@ class DeveloperChatViewTests(TestCase):
         self.assertEqual(len(payload["threads"]), 1)
         self.assertNotEqual(payload["threads"][0]["id"], thread.id)
         self.assertEqual(payload["threads"][0]["unread_count"], 0)
+
+    def test_threads_api_strips_html_from_last_message_preview(self):
+        thread = get_or_create_developer_chat_thread(self.teacher)
+        DeveloperChatMessage.objects.create(
+            thread=thread,
+            sender=self.teacher,
+            sender_role=DeveloperChatMessage.SenderRole.USER,
+            body='<img src=x onerror=alert(1)> 문의 <b>요청</b>',
+        )
+        self.client.force_login(self.admin)
+
+        response = self.client.get(reverse("messagebox:developer_chat_threads"))
+
+        self.assertEqual(response.status_code, 200)
+        preview = response.json()["threads"][0]["last_message_preview"]
+        self.assertEqual(preview, "문의 요청")
+        self.assertNotIn("<", preview)
+        self.assertNotIn(">", preview)
+
+    def test_developer_chat_script_renders_thread_and_message_text_without_innerhtml(self):
+        script_path = Path(settings.BASE_DIR) / "messagebox" / "static" / "messagebox" / "developer_chat_page.js"
+        script = script_path.read_text(encoding="utf-8")
+
+        self.assertNotIn("button.innerHTML =", script)
+        self.assertNotIn("row.innerHTML =", script)
+        self.assertIn('appendTextElement(topLeft, "div", "developer-chat-thread-title", thread.title || "");', script)
+        self.assertIn('appendTextElement(button, "div", "developer-chat-thread-preview", thread.last_message_preview || "");', script)
+        self.assertIn('appendTextElement(bubble, "p", "developer-chat-message-sender", message.sender_name || "");', script)

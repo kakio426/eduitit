@@ -1,5 +1,7 @@
+from pathlib import Path
 from unittest.mock import patch
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
@@ -629,3 +631,15 @@ class InfoBoardFlowHardeningTests(TestCase):
 
         self.assertEqual(safe_response.status_code, 200)
         self.assertEqual(safe_response.json()['og_title'], '예제 제목')
+
+    def test_infoboard_script_builds_tags_and_og_preview_with_text_nodes(self):
+        script_path = Path(settings.BASE_DIR) / 'infoboard' / 'static' / 'infoboard' / 'js' / 'infoboard.js'
+        script = script_path.read_text(encoding='utf-8')
+
+        self.assertNotIn('chip.innerHTML =', script)
+        self.assertNotIn('container.innerHTML = html;', script)
+        self.assertIn("chip.appendChild(document.createTextNode(`#${name} `));", script)
+        self.assertIn("messageEl.textContent = message || '';", script)
+        self.assertIn("ibAppendTextElement(textWrap, 'div', 'ib-og-preview-title', meta.og_title);", script)
+        self.assertIn("ibAppendTextElement(textWrap, 'div', 'ib-og-preview-desc', meta.og_description);", script)
+        self.assertIn("ibAppendTextElement(textWrap, 'div', 'ib-og-preview-site', meta.og_site_name);", script)

@@ -1,6 +1,5 @@
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 import datetime
 import json
@@ -723,7 +722,6 @@ def get_dutyticker_data(request):
     })
 
 @require_http_methods(["POST"])
-@csrf_exempt
 def update_assignment_status(request, assignment_id):
     try:
         data = json.loads(request.body)
@@ -752,7 +750,6 @@ def update_assignment_status(request, assignment_id):
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
 @require_http_methods(["POST"])
-@csrf_exempt
 def toggle_student_mission_status(request, student_id):
     try:
         if not request.user.is_authenticated:
@@ -778,7 +775,6 @@ def toggle_student_mission_status(request, student_id):
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
 @require_http_methods(["POST"])
-@csrf_exempt
 def update_broadcast_message(request):
     try:
         data = json.loads(request.body)
@@ -801,7 +797,6 @@ def update_broadcast_message(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
 @require_http_methods(["POST"])
-@csrf_exempt
 def update_mission(request):
     try:
         data = json.loads(request.body)
@@ -828,7 +823,6 @@ def update_mission(request):
 
 
 @require_http_methods(["POST"])
-@csrf_exempt
 def update_mission_automations(request):
     try:
         data = _safe_json_body(request)
@@ -908,7 +902,6 @@ def update_mission_automations(request):
 
 
 @require_http_methods(["POST"])
-@csrf_exempt
 def update_spotlight_student(request):
     try:
         data = _safe_json_body(request)
@@ -946,7 +939,6 @@ def update_spotlight_student(request):
         return JsonResponse({"success": False, "error": str(e)}, status=400)
 
 @require_http_methods(["POST"])
-@csrf_exempt
 def assign_role(request):
     try:
         data = json.loads(request.body)

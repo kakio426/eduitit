@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.utils.html import strip_tags
 
 
 DEVELOPER_CHAT_SENDER_ROLE_CHOICES = (
@@ -9,7 +10,7 @@ DEVELOPER_CHAT_SENDER_ROLE_CHOICES = (
 
 
 def _build_message_preview(text, *, limit=200):
-    normalized = " ".join(str(text or "").strip().split())
+    normalized = " ".join(strip_tags(str(text or "")).strip().split())
     if len(normalized) <= limit:
         return normalized
     return f"{normalized[: limit - 1]}…"

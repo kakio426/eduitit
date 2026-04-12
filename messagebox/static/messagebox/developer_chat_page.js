@@ -26,6 +26,16 @@
         return String(template || "").replace("__thread_id__", String(threadId));
     }
 
+    function appendTextElement(parent, tagName, className, value) {
+        const element = document.createElement(tagName);
+        if (className) {
+            element.className = className;
+        }
+        element.textContent = value || "";
+        parent.appendChild(element);
+        return element;
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
         const root = document.querySelector('[data-developer-chat-root="true"]');
         if (!root) return;
@@ -133,20 +143,23 @@
                     button.classList.add("is-selected");
                 }
                 button.dataset.threadId = String(thread.id);
-                button.innerHTML = `
-                    <div class="developer-chat-thread-top">
-                        <div class="min-w-0">
-                            <div class="developer-chat-thread-title">${thread.title}</div>
-                            <div class="developer-chat-thread-subtitle">${thread.subtitle || ""}</div>
-                        </div>
-                        ${thread.unread_count ? `<span class="developer-chat-thread-unread">${thread.unread_count}</span>` : ""}
-                    </div>
-                    <div class="developer-chat-thread-preview">${thread.last_message_preview || ""}</div>
-                    <div class="developer-chat-thread-bottom">
-                        <span class="developer-chat-thread-status">${thread.status_label || "대화"}</span>
-                        <span class="developer-chat-thread-time">${formatRelativeDate(thread.last_message_at)}</span>
-                    </div>
-                `;
+                const top = document.createElement("div");
+                top.className = "developer-chat-thread-top";
+                const topLeft = document.createElement("div");
+                topLeft.className = "min-w-0";
+                appendTextElement(topLeft, "div", "developer-chat-thread-title", thread.title || "");
+                appendTextElement(topLeft, "div", "developer-chat-thread-subtitle", thread.subtitle || "");
+                top.appendChild(topLeft);
+                if (thread.unread_count) {
+                    appendTextElement(top, "span", "developer-chat-thread-unread", String(thread.unread_count));
+                }
+                button.appendChild(top);
+                appendTextElement(button, "div", "developer-chat-thread-preview", thread.last_message_preview || "");
+                const bottom = document.createElement("div");
+                bottom.className = "developer-chat-thread-bottom";
+                appendTextElement(bottom, "span", "developer-chat-thread-status", thread.status_label || "대화");
+                appendTextElement(bottom, "span", "developer-chat-thread-time", formatRelativeDate(thread.last_message_at));
+                button.appendChild(bottom);
                 button.addEventListener("click", () => {
                     selectThread(thread.id);
                 });
@@ -178,16 +191,15 @@
             messages.forEach((message) => {
                 const row = document.createElement("div");
                 row.className = `developer-chat-message-row ${message.is_mine ? "developer-chat-message-row--mine" : "developer-chat-message-row--other"}`;
-                row.innerHTML = `
-                    <div class="developer-chat-message-bubble ${message.is_mine ? "developer-chat-message-bubble--mine" : "developer-chat-message-bubble--other"}">
-                        <p class="developer-chat-message-sender">${message.sender_name}</p>
-                        <p class="developer-chat-message-body"></p>
-                        <div class="developer-chat-message-meta">
-                            <span class="developer-chat-message-time">${formatRelativeDate(message.created_at)}</span>
-                        </div>
-                    </div>
-                `;
-                row.querySelector(".developer-chat-message-body").textContent = message.body || "";
+                const bubble = document.createElement("div");
+                bubble.className = `developer-chat-message-bubble ${message.is_mine ? "developer-chat-message-bubble--mine" : "developer-chat-message-bubble--other"}`;
+                appendTextElement(bubble, "p", "developer-chat-message-sender", message.sender_name || "");
+                appendTextElement(bubble, "p", "developer-chat-message-body", message.body || "");
+                const meta = document.createElement("div");
+                meta.className = "developer-chat-message-meta";
+                appendTextElement(meta, "span", "developer-chat-message-time", formatRelativeDate(message.created_at));
+                bubble.appendChild(meta);
+                row.appendChild(bubble);
                 elements.messageList.appendChild(row);
             });
 

@@ -183,7 +183,7 @@ class DutyTickerRotationCsrfTests(TestCase):
         self.client.login(username="rotation_csrf_teacher", password="pw123456")
 
     def _csrf_token(self):
-        self.client.get(reverse("dt_admin_dashboard"))
+        self.client.get(reverse("dutyticker"))
         return self.client.cookies["csrftoken"].value
 
     def test_rotation_trigger_rejects_missing_csrf(self):
@@ -252,6 +252,62 @@ class DutyTickerRotationCsrfTests(TestCase):
         self.assertIsNone(assignment.student)
         self.assertFalse(assignment.is_completed)
 
+    def test_assign_role_rejects_missing_csrf(self):
+        role = DTRole.objects.create(user=self.user, name="역할1", time_slot="아침")
+        student = DTStudent.objects.create(user=self.user, name="학생1", number=1)
+
+        response = self.client.post(
+            reverse("dt_api_assign"),
+            data=f'{{"role_id":{role.id},"student_id":{student.id}}}',
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_assign_role_accepts_valid_csrf_and_creates_assignment(self):
+        role = DTRole.objects.create(user=self.user, name="역할1", time_slot="아침")
+        student = DTStudent.objects.create(user=self.user, name="학생1", number=1)
+        token = self._csrf_token()
+
+        response = self.client.post(
+            reverse("dt_api_assign"),
+            data=f'{{"role_id":{role.id},"student_id":{student.id}}}',
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=token,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json().get("success"))
+
+        assignment = DTRoleAssignment.objects.get(user=self.user, role=role)
+        self.assertEqual(assignment.student_id, student.id)
+
+    def test_update_mission_rejects_missing_csrf(self):
+        response = self.client.post(
+            reverse("dt_api_mission_update"),
+            data='{"title":"오늘 미션","description":"줄 맞추기"}',
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_update_mission_accepts_valid_csrf_and_updates_settings(self):
+        token = self._csrf_token()
+
+        response = self.client.post(
+            reverse("dt_api_mission_update"),
+            data='{"title":"오늘 미션","description":"줄 맞추기"}',
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=token,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json().get("success"))
+
+        settings = DTSettings.objects.get(user=self.user)
+        self.assertEqual(settings.mission_title, "오늘 미션")
+        self.assertEqual(settings.mission_desc, "줄 맞추기")
+
 class DutyTickerMainResetTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
@@ -308,3 +364,40 @@ class DutyTickerMainResetTests(TestCase):
 
         settings.refresh_from_db()
         self.assertIsNone(settings.spotlight_student)
+
+
+class DutyTickerGuestCsrfTests(TestCase):
+    def setUp(self):
+        self.client = Client(enforce_csrf_checks=True)
+
+    def test_guest_assign_role_rejects_missing_csrf(self):
+        response = self.client.post(
+            reverse("dt_api_assign"),
+            data='{"role_id":1,"student_id":1}',
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_guest_assign_role_accepts_valid_csrf_and_updates_guest_session(self):
+        response = self.client.get(reverse("dutyticker"))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("csrftoken", self.client.cookies)
+        data_response = self.client.get(reverse("dt_api_data"))
+        self.assertEqual(data_response.status_code, 200)
+        self.assertIn("guest_dt_data", self.client.session)
+
+        response = self.client.post(
+            reverse("dt_api_assign"),
+            data='{"role_id":1,"student_id":1}',
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=self.client.cookies["csrftoken"].value,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json().get("success"))
+
+        guest_data = self.client.session["guest_dt_data"]
+        assignment = next(item for item in guest_data["assignments"] if item["role_id"] == 1)
+        self.assertEqual(assignment["student_id"], 1)
+        self.assertEqual(assignment["student_name"], "김철수")

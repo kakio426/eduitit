@@ -1,6 +1,7 @@
 import html
 
 from django.contrib.auth import get_user_model
+from django.template.loader import render_to_string
 from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -157,6 +158,13 @@ class SeoFoundationTests(TestCase):
         self.assertNotIn("og_title", context)
         self.assertNotIn("og_description", context)
         self.assertNotIn("robots", context)
+
+    def test_base_template_renders_with_default_meta_when_og_context_is_missing(self):
+        content = render_to_string("base.html", {"page_title": "기본 메타 테스트"})
+
+        self.assertIn('name="description"', content)
+        self.assertIn('property="og:description"', content)
+        self.assertIn("기본 메타 테스트", content)
 
     def test_robots_txt_only_exposes_sitemap_without_internal_hints(self):
         response = self.client.get("/robots.txt")

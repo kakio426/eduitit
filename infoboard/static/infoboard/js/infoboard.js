@@ -7,6 +7,16 @@ function ibSetOverlayHidden(overlay, hidden) {
     overlay.classList.toggle('hidden', hidden);
 }
 
+function ibAppendTextElement(parent, tagName, className, text) {
+    const element = document.createElement(tagName);
+    if (className) {
+        element.className = className;
+    }
+    element.textContent = text || '';
+    parent.appendChild(element);
+    return element;
+}
+
 function ibOpenSearch() {
     const overlay = document.getElementById('ibSearchOverlay');
     if (overlay) {
@@ -126,7 +136,15 @@ function ibAddTagUI(name) {
     const chip = document.createElement('span');
     chip.className = 'ib-tag';
     chip.dataset.tagName = name;
-    chip.innerHTML = `#${name} <button type="button" onclick="ibRemoveTag(this.parentElement)" class="ml-1 text-gray-400 hover:text-red-400">&times;</button>`;
+    chip.appendChild(document.createTextNode(`#${name} `));
+    const removeButton = document.createElement('button');
+    removeButton.type = 'button';
+    removeButton.className = 'ml-1 text-gray-400 hover:text-red-400';
+    removeButton.textContent = '\u00d7';
+    removeButton.addEventListener('click', function() {
+        ibRemoveTag(chip);
+    });
+    chip.appendChild(removeButton);
     container.appendChild(chip);
 }
 
@@ -290,7 +308,11 @@ function ibFetchOgMeta(url) {
             urlField.appendChild(container);
         }
         const colorClass = tone === 'error' ? 'text-rose-500' : 'text-gray-400';
-        container.innerHTML = `<p class="text-xs ${colorClass}">${message}</p>`;
+        container.textContent = '';
+        const messageEl = document.createElement('p');
+        messageEl.className = `text-xs ${colorClass}`;
+        messageEl.textContent = message || '';
+        container.appendChild(messageEl);
     };
 
     setPreviewMessage('🔍 메타 정보 가져오는 중...', 'info');
@@ -313,7 +335,7 @@ function ibFetchOgMeta(url) {
             if (!container) return;
 
             if (!meta.og_title && !meta.og_image) {
-                container.innerHTML = '';
+                container.textContent = '';
                 return;
             }
 
@@ -323,15 +345,29 @@ function ibFetchOgMeta(url) {
                 titleInput.value = meta.og_title;
             }
 
-            // Show preview
-            let html = '<div class="ib-og-preview" style="cursor:default">';
-            if (meta.og_image) html += `<img src="${meta.og_image}" alt="" style="width:80px;height:60px;object-fit:cover;border-radius:0.5rem">`;
-            html += '<div class="ib-og-preview-text">';
-            if (meta.og_title) html += `<div class="ib-og-preview-title">${meta.og_title}</div>`;
-            if (meta.og_description) html += `<div class="ib-og-preview-desc">${meta.og_description}</div>`;
-            if (meta.og_site_name) html += `<div class="ib-og-preview-site">${meta.og_site_name}</div>`;
-            html += '</div></div>';
-            container.innerHTML = html;
+            container.textContent = '';
+            const preview = document.createElement('div');
+            preview.className = 'ib-og-preview';
+            preview.style.cursor = 'default';
+            if (meta.og_image) {
+                const image = document.createElement('img');
+                image.src = meta.og_image;
+                image.alt = '';
+                image.style.width = '80px';
+                image.style.height = '60px';
+                image.style.objectFit = 'cover';
+                image.style.borderRadius = '0.5rem';
+                preview.appendChild(image);
+            }
+            const textWrap = document.createElement('div');
+            textWrap.className = 'ib-og-preview-text';
+            if (meta.og_title) ibAppendTextElement(textWrap, 'div', 'ib-og-preview-title', meta.og_title);
+            if (meta.og_description) ibAppendTextElement(textWrap, 'div', 'ib-og-preview-desc', meta.og_description);
+            if (meta.og_site_name) ibAppendTextElement(textWrap, 'div', 'ib-og-preview-site', meta.og_site_name);
+            if (textWrap.childNodes.length) {
+                preview.appendChild(textWrap);
+            }
+            container.appendChild(preview);
         })
         .catch(error => {
             setPreviewMessage(error.message || '미리보기 정보를 가져오지 못했어요.', 'error');
