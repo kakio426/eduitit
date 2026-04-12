@@ -18,46 +18,49 @@
 
     .home-v2-shell {
         background:
-            radial-gradient(circle at 0% 0%, rgba(14, 165, 233, 0.10), transparent 26%),
-            radial-gradient(circle at 100% 10%, rgba(16, 185, 129, 0.08), transparent 22%),
-            linear-gradient(180deg, #f4f8fc 0%, #eef4f7 44%, #f8fafc 100%);
+            radial-gradient(circle at 0% 0%, rgba(36, 87, 197, 0.06), transparent 24%),
+            radial-gradient(circle at 100% 8%, rgba(148, 163, 184, 0.09), transparent 20%),
+            linear-gradient(180deg, #f4f7fb 0%, #eef3f8 44%, #f8fafc 100%);
     }
 
     .home-v2-hero {
         position: relative;
         overflow: hidden;
-        border: 1px solid rgba(203, 213, 225, 0.9);
-        background: linear-gradient(135deg, #ffffff 0%, #f8fbff 58%, #f1faf5 100%);
-        box-shadow: 0 20px 48px rgba(148, 163, 184, 0.16);
+        border: 1px solid rgba(203, 213, 225, 0.82);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(247, 250, 253, 0.96) 100%);
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
     }
 
     .home-v2-hero::before {
         content: "";
         position: absolute;
-        right: -5rem;
-        top: -6rem;
-        width: 18rem;
-        height: 18rem;
+        right: -4.5rem;
+        top: -5rem;
+        width: 14rem;
+        height: 14rem;
         border-radius: 999px;
-        background: radial-gradient(circle, rgba(56, 189, 248, 0.18), transparent 68%);
+        background: radial-gradient(circle, rgba(36, 87, 197, 0.08), transparent 68%);
         pointer-events: none;
     }
 
     .home-v2-hero::after {
         content: "";
         position: absolute;
-        left: -5rem;
-        bottom: -7rem;
-        width: 16rem;
-        height: 16rem;
+        left: -4rem;
+        bottom: -5.5rem;
+        width: 13rem;
+        height: 13rem;
         border-radius: 999px;
-        background: radial-gradient(circle, rgba(52, 211, 153, 0.14), transparent 68%);
+        background: radial-gradient(circle, rgba(148, 163, 184, 0.08), transparent 68%);
         pointer-events: none;
     }
 
     .home-v2-hero-grid {
         position: relative;
         z-index: 1;
+        display: grid;
+        gap: 1.5rem;
+        align-items: start;
     }
 
     .home-v2-kicker {
@@ -67,24 +70,24 @@
     }
 
     .home-v2-hero-accent {
-        color: #0f766e;
+        color: #2457c5;
     }
 
     .home-v2-cta-primary {
-        background: #0f766e;
-        box-shadow: 0 14px 30px rgba(15, 118, 110, 0.18);
+        background: #2457c5;
+        box-shadow: 0 14px 30px rgba(36, 87, 197, 0.18);
     }
 
     .home-v2-cta-primary:hover {
         transform: translateY(-1px);
-        background: #115e59;
-        box-shadow: 0 18px 32px rgba(15, 118, 110, 0.24);
+        background: #173b67;
+        box-shadow: 0 18px 32px rgba(23, 59, 103, 0.22);
     }
 
     .home-v2-cta-secondary {
         border: 1px solid #cbd5e1;
         background: rgba(255, 255, 255, 0.92);
-        box-shadow: 0 10px 24px rgba(148, 163, 184, 0.10);
+        box-shadow: 0 10px 24px rgba(148, 163, 184, 0.08);
     }
 
     .home-v2-proof-grid {
@@ -95,15 +98,15 @@
 
     .home-v2-proof-card {
         border: 1px solid #dbe7f1;
-        background: rgba(255, 255, 255, 0.78);
-        box-shadow: 0 8px 18px rgba(226, 232, 240, 0.6);
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 8px 18px rgba(148, 163, 184, 0.08);
     }
 
     .home-v2-quick-panel,
     .home-v2-followup-card {
         border: 1px solid #dbe7f1;
-        background: rgba(255, 255, 255, 0.90);
-        box-shadow: 0 16px 32px rgba(148, 163, 184, 0.12);
+        background: rgba(255, 255, 255, 0.94);
+        box-shadow: 0 16px 32px rgba(148, 163, 184, 0.1);
     }
 
     .home-v2-quick-link {
@@ -115,18 +118,242 @@
 
     .home-v2-quick-link:hover {
         transform: translateY(-1px);
-        border-color: #99f6e4;
-        box-shadow: 0 14px 28px rgba(148, 163, 184, 0.14);
+        border-color: #cbd5e1;
+        box-shadow: 0 14px 28px rgba(148, 163, 184, 0.12);
     }
 
     .home-v2-token {
         border: 1px solid #dbe7f1;
-        background: rgba(248, 250, 252, 0.95);
+        background: rgba(255, 255, 255, 0.95);
+    }
+
+    /*
+     * Public home keeps the existing information order, but typography and
+     * icon surfaces are tightened into one calm enterprise system instead of
+     * mixing heavy black weights and per-service neon colors.
+     */
+    .home-v2-hero-title {
+        max-width: 9ch;
+        font-size: clamp(2.55rem, 4vw, 3.85rem);
+        font-weight: 700;
+        line-height: 1.08;
+        letter-spacing: -0.038em;
+    }
+
+    .home-v2-hero-copy {
+        max-width: 30rem;
+        font-size: 1rem;
+        font-weight: 500;
+        line-height: 1.62;
+        letter-spacing: -0.008em;
+        color: #475569;
+    }
+
+    .home-v2-side-stack {
+        display: grid;
+        gap: 1rem;
+        align-content: start;
+    }
+
+    .home-v2-support-copy {
+        font-size: 0.92rem;
+        font-weight: 500;
+        line-height: 1.6;
+        color: #64748b;
+    }
+
+    .home-v2-section-eyebrow {
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: #94a3b8;
+    }
+
+    .home-v2-section-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        line-height: 1.3;
+        letter-spacing: -0.02em;
+        color: #0f172a;
+    }
+
+    .home-v2-section-copy {
+        font-size: 0.94rem;
+        font-weight: 500;
+        line-height: 1.65;
+        color: #64748b;
+    }
+
+    .home-v2-proof-label {
+        font-size: 0.76rem;
+        font-weight: 700;
+        color: #64748b;
+    }
+
+    .home-v2-proof-value {
+        margin-top: 0.3rem;
+        font-size: 1.95rem;
+        font-weight: 700;
+        line-height: 1.08;
+        letter-spacing: -0.03em;
+        color: #0f172a;
+    }
+
+    .home-v2-inline-icon,
+    .home-v2-card-icon,
+    .home-v2-game-icon {
+        --home-v2-item-accent: #475569;
+        --home-v2-item-accent-border: rgba(71, 85, 105, 0.16);
+        border: 1px solid var(--home-v2-item-accent-border);
+        background: #ffffff;
+        color: var(--home-v2-item-accent);
+        box-shadow:
+            0 8px 18px rgba(15, 23, 42, 0.05),
+            inset 0 1px 0 rgba(255, 255, 255, 0.86);
+    }
+
+    .home-v2-inline-icon[data-home-accent="collect_sign"],
+    .home-v2-card-icon[data-home-accent="collect_sign"],
+    .home-v2-game-icon[data-home-accent="collect_sign"] {
+        --home-v2-item-accent: #2457c5;
+        --home-v2-item-accent-border: rgba(36, 87, 197, 0.18);
+    }
+
+    .home-v2-inline-icon[data-home-accent="doc_write"],
+    .home-v2-card-icon[data-home-accent="doc_write"],
+    .home-v2-game-icon[data-home-accent="doc_write"] {
+        --home-v2-item-accent: #0f766e;
+        --home-v2-item-accent-border: rgba(15, 118, 110, 0.18);
+    }
+
+    .home-v2-inline-icon[data-home-accent="class_ops"],
+    .home-v2-inline-icon[data-home-accent="schoolprograms"],
+    .home-v2-card-icon[data-home-accent="class_ops"],
+    .home-v2-card-icon[data-home-accent="schoolprograms"],
+    .home-v2-game-icon[data-home-accent="class_ops"],
+    .home-v2-game-icon[data-home-accent="schoolprograms"] {
+        --home-v2-item-accent: #334155;
+        --home-v2-item-accent-border: rgba(51, 65, 85, 0.16);
+    }
+
+    .home-v2-inline-icon[data-home-accent="class_activity"],
+    .home-v2-inline-icon[data-home-accent="games"],
+    .home-v2-card-icon[data-home-accent="class_activity"],
+    .home-v2-card-icon[data-home-accent="games"],
+    .home-v2-game-icon[data-home-accent="class_activity"],
+    .home-v2-game-icon[data-home-accent="games"] {
+        --home-v2-item-accent: #0369a1;
+        --home-v2-item-accent-border: rgba(3, 105, 161, 0.18);
+    }
+
+    .home-v2-inline-icon[data-home-accent="refresh"],
+    .home-v2-card-icon[data-home-accent="refresh"],
+    .home-v2-game-icon[data-home-accent="refresh"] {
+        --home-v2-item-accent: #b45309;
+        --home-v2-item-accent-border: rgba(180, 83, 9, 0.18);
+    }
+
+    .home-v2-inline-icon[data-home-accent="guide"],
+    .home-v2-inline-icon[data-home-accent="external"],
+    .home-v2-card-icon[data-home-accent="guide"],
+    .home-v2-card-icon[data-home-accent="external"],
+    .home-v2-game-icon[data-home-accent="guide"],
+    .home-v2-game-icon[data-home-accent="external"] {
+        --home-v2-item-accent: #475569;
+        --home-v2-item-accent-border: rgba(71, 85, 105, 0.18);
+    }
+
+    .home-v2-status-chip {
+        font-size: 0.69rem;
+        font-weight: 700;
+        letter-spacing: 0;
+    }
+
+    .home-v2-status-chip[data-home-status="로그인 필요"] {
+        background: #fff7ed;
+        color: #b45309;
+    }
+
+    .home-v2-status-chip[data-home-status="외부 이동"] {
+        background: #eff6ff;
+        color: #2457c5;
+    }
+
+    .home-v2-status-chip[data-home-status="미리보기 가능"] {
+        background: #f8fafc;
+        color: #334155;
+    }
+
+    .home-v2-card-title,
+    .home-v2-quick-title,
+    .home-v2-followup-title,
+    .home-v2-game-title {
+        font-weight: 700;
+        line-height: 1.32;
+        letter-spacing: -0.018em;
+        color: #0f172a;
+    }
+
+    .home-v2-card-copy,
+    .home-v2-quick-copy,
+    .home-v2-followup-copy {
+        font-weight: 500;
+        line-height: 1.6;
+        color: #64748b;
+    }
+
+    .home-v2-card-action {
+        font-weight: 700;
+    }
+
+    .home-v2-card-action[data-home-status="로그인 필요"] {
+        background: #fff7ed;
+        color: #b45309;
+    }
+
+    .home-v2-card-action[data-home-status="외부 이동"] {
+        background: #eff6ff;
+        color: #2457c5;
+    }
+
+    .home-v2-card-action[data-home-status="미리보기 가능"] {
+        background: #2457c5;
+        color: #ffffff;
+    }
+
+    .home-v2-game-link {
+        border-color: #e2e8f0;
+        background: #ffffff;
+    }
+
+    .home-v2-game-link:hover {
+        border-color: #cbd5e1;
+    }
+
+    .home-v2-detail-pill {
+        background: rgba(255, 255, 255, 0.96);
     }
 
     @media (max-width: 767px) {
         .home-v2-proof-card {
             width: 100%;
+        }
+
+        .home-v2-hero-title {
+            max-width: 9.5ch;
+            font-size: clamp(2.25rem, 10vw, 3rem);
+        }
+
+        .home-v2-hero-copy {
+            font-size: 0.98rem;
+        }
+    }
+
+    @media (min-width: 1280px) {
+        .home-v2-hero-grid {
+            grid-template-columns: minmax(0, 0.94fr) minmax(22rem, 0.74fr);
+            gap: 2rem;
         }
     }
 </style>
@@ -184,25 +411,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
             <!-- Hero 섹션 -->
             <section class="mb-6 md:mb-8 lg:mb-10" data-aos="fade-up" data-home-v2-guest-hero="true">
-                <div class="home-v2-hero rounded-[2.5rem]">
-                    <div class="home-v2-hero-grid grid gap-7 px-5 py-6 sm:px-6 md:px-8 md:py-9 xl:grid-cols-[minmax(0,1.08fr)_minmax(320px,0.92fr)] xl:gap-10">
+                <div class="home-v2-hero rounded-[2rem]">
+                    <div class="home-v2-hero-grid px-5 py-6 sm:px-6 md:px-8 md:py-8 xl:px-10 xl:py-9">
                         <div class="relative z-10">
-                            <span class="home-v2-kicker inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-black">
+                            <span class="home-v2-kicker inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold">
                                 <span class="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
                                 오늘 바로 열리는 교실 도구
                             </span>
-                            <h1 class="mt-5 max-w-3xl text-4xl font-black tracking-[-0.04em] leading-[1.02] text-slate-900 break-keep sm:text-5xl md:text-6xl">
+                            <h1 class="home-v2-hero-title mt-5 text-slate-900 break-keep">
                                 로그인 안 해도
                                 <span class="home-v2-hero-accent mt-2 block">바로 시작되는 교실 업무</span>
                             </h1>
-                            <p class="mt-5 max-w-2xl text-sm font-semibold leading-7 text-slate-600 sm:text-base">
-                                수합, QR, 안내문처럼 자주 쓰는 도구부터 먼저 열어보세요. 더 많은 업무는 로그인 후 같은 흐름으로 이어집니다.
-                            </p>
+                            <p class="home-v2-hero-copy mt-5">공개 도구부터 열고, 필요할 때 로그인합니다.</p>
 
                             <div class="mt-7 flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap">
                                 <a href="{{ guest_primary_action_card.href|default:'#guest-home-try-now' }}"
                                     {% if guest_primary_action_card.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
-                                    class="home-v2-cta-primary inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3.5 text-sm font-black text-white transition">
+                                    class="home-v2-cta-primary inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3.5 text-sm font-bold text-white transition">
                                     <i class="fa-solid fa-circle-play"></i>
                                     {% if guest_primary_action_card %}
                                     {{ guest_primary_action_card.title }} 바로 시작
@@ -210,57 +435,20 @@ document.addEventListener('DOMContentLoaded', () => {
                                     지금 바로 써보기
                                     {% endif %}
                                 </a>
-                                <a href="{{ guest_continue_url|default:login_url }}" class="home-v2-cta-secondary inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3.5 text-sm font-black text-slate-800 transition hover:-translate-y-0.5 hover:text-indigo-700">
+                                <a href="{{ guest_continue_url|default:login_url }}" class="home-v2-cta-secondary inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3.5 text-sm font-bold text-slate-800 transition hover:-translate-y-0.5 hover:text-slate-900">
                                     <i class="fa-solid fa-right-to-bracket"></i>
-                                    로그인 후 {{ guest_continue_action_card.title|default:'교실 업무' }} 이어서 시작
+                                    로그인 후 계속
                                 </a>
-                            </div>
-                            {% if guest_primary_action_card or guest_continue_action_card %}
-                            <p class="mt-4 text-xs font-semibold leading-5 text-slate-500">
-                                {% if guest_primary_action_card %}지금은 {{ guest_primary_action_card.title }}부터{% else %}지금 바로 필요한 공개 도구부터{% endif %}
-                                {% if guest_continue_action_card %}, 로그인하면 {{ guest_continue_action_card.title }} 화면으로 바로 이어집니다.{% else %}, 로그인 후에도 같은 흐름으로 이어집니다.{% endif %}
-                            </p>
-                            {% endif %}
-
-                            <div class="mt-7 home-v2-proof-grid" data-home-v2-hero-proof="true">
-                                <div class="home-v2-proof-card rounded-[1.35rem] px-4 py-3">
-                                    <p class="text-xs font-black text-slate-500">공개 도구</p>
-                                    <p class="mt-1 text-2xl font-black text-slate-900">{{ preview_count }}개</p>
-                                </div>
-                                <div class="home-v2-proof-card rounded-[1.35rem] px-4 py-3">
-                                    <p class="text-xs font-black text-slate-500">로그인 후 확장</p>
-                                    <p class="mt-1 text-2xl font-black text-slate-900">{{ locked_count }}묶음</p>
-                                </div>
-                                <div class="home-v2-proof-card rounded-[1.35rem] px-4 py-3">
-                                    <p class="text-xs font-black text-slate-500">시작 방식</p>
-                                    <p class="mt-1 text-2xl font-black text-slate-900">설치 없이</p>
-                                </div>
-                            </div>
-
-                            <div class="mt-5 flex flex-wrap gap-2">
-                                <span class="home-v2-token inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-black text-slate-700">
-                                    <i class="fa-solid fa-bolt text-[10px] text-emerald-500"></i>
-                                    바로 열리는 도구 먼저
-                                </span>
-                                <span class="home-v2-token inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-black text-slate-700">
-                                    <i class="fa-solid fa-check text-[10px] text-sky-500"></i>
-                                    설명보다 다음 행동 먼저
-                                </span>
-                                <span class="home-v2-token inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-black text-slate-700">
-                                    <i class="fa-solid fa-layer-group text-[10px] text-indigo-500"></i>
-                                    필요한 업무만 위에서 시작
-                                </span>
                             </div>
                         </div>
 
-                        <div class="relative z-10 grid gap-4" data-home-v2-hero-preview="true">
+                        <div class="home-v2-side-stack relative z-10" data-home-v2-hero-preview="true">
                             <div class="home-v2-quick-panel rounded-[1.85rem] p-5">
                                 <div class="flex items-start justify-between gap-3">
                                     <div>
-                                        <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">빠른 시작</p>
-                                        <h2 class="mt-2 text-xl font-black text-slate-900">오늘 바로 할 일</h2>
+                                        <p class="home-v2-section-eyebrow">빠른 시작</p>
+                                        <h2 class="home-v2-section-title mt-2">오늘 바로 할 일</h2>
                                     </div>
-                                    <span class="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-black text-slate-600">{{ preview_count }}개</span>
                                 </div>
                                 <div class="mt-4 space-y-3">
                                     {% if guest_public_cards %}
@@ -270,15 +458,15 @@ document.addEventListener('DOMContentLoaded', () => {
                                             class="home-v2-quick-link rounded-[1.3rem] p-3.5">
                                             <div class="flex items-start justify-between gap-3">
                                                 <div class="flex min-w-0 items-start gap-3">
-                                                    <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-50 text-base shadow-sm {% if card.service_type == 'collect_sign' %}text-blue-500{% elif card.service_type == 'classroom' %}text-violet-500{% elif card.service_type == 'work' %}text-emerald-500{% elif card.service_type == 'game' %}text-red-500{% elif card.service_type == 'counsel' %}text-pink-500{% elif card.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
+                                                    <div class="home-v2-inline-icon flex h-11 w-11 items-center justify-center rounded-2xl text-base shadow-sm" data-home-accent="{{ card.home_accent_token|default:'external' }}">
                                                         <i class="{{ card.home_icon_class|default:'fa-solid fa-star' }}"></i>
                                                     </div>
                                                     <div class="min-w-0">
-                                                        <p class="truncate text-sm font-black text-slate-900">{{ card.title }}</p>
-                                                        <p class="mt-1 text-xs font-medium leading-5 text-slate-500">{{ card.description|truncatechars:46 }}</p>
+                                                        <p class="home-v2-quick-title truncate text-sm">{{ card.title }}</p>
+                                                        <p class="home-v2-quick-copy mt-1 text-xs">{{ card.description|truncatechars:30 }}</p>
                                                     </div>
                                                 </div>
-                                                <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black {% if card.is_external %}bg-sky-50 text-sky-700{% else %}bg-emerald-50 text-emerald-700{% endif %}">
+                                                <span class="home-v2-status-chip shrink-0 rounded-full px-2.5 py-1" data-home-status="{{ card.access_status_label }}">
                                                     {% if card.is_external %}새 창 열기{% else %}바로 열기{% endif %}
                                                 </span>
                                             </div>
@@ -291,26 +479,22 @@ document.addEventListener('DOMContentLoaded', () => {
                                             class="home-v2-quick-link rounded-[1.3rem] p-3.5">
                                             <div class="flex items-start justify-between gap-3">
                                                 <div class="flex min-w-0 items-start gap-3">
-                                                    <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-rose-50 text-base text-rose-500 shadow-sm">
-                                                        {% if "fa-" in game.icon %}
-                                                        <i class="{{ game.icon }}"></i>
-                                                        {% else %}
-                                                        {{ game.icon }}
-                                                        {% endif %}
+                                                    <div class="home-v2-inline-icon flex h-11 w-11 items-center justify-center rounded-2xl text-base shadow-sm" data-home-accent="{{ game.home_accent_token|default:'games' }}">
+                                                        <i class="{{ game.home_icon_class|default:'fa-solid fa-gamepad' }}"></i>
                                                     </div>
                                                     <div class="min-w-0">
-                                                        <p class="truncate text-sm font-black text-slate-900">{{ game.title }}</p>
-                                                        <p class="mt-1 text-xs font-medium leading-5 text-slate-500">학생도 바로 들어올 수 있는 공개 활동</p>
+                                                        <p class="home-v2-quick-title truncate text-sm">{{ game.title }}</p>
+                                                        <p class="home-v2-quick-copy mt-1 text-xs">학생도 바로 들어올 수 있는 공개 활동</p>
                                                     </div>
                                                 </div>
-                                                <span class="shrink-0 rounded-full bg-rose-50 px-2.5 py-1 text-[10px] font-black text-rose-700">바로 시작</span>
+                                                <span class="home-v2-status-chip shrink-0 rounded-full px-2.5 py-1" data-home-status="미리보기 가능">바로 시작</span>
                                             </div>
                                         </a>
                                         {% endfor %}
                                     {% else %}
                                         <a href="{{ guest_continue_url|default:login_url }}" class="home-v2-quick-link rounded-[1.3rem] p-3.5">
-                                            <p class="text-sm font-black text-slate-900">로그인 후 바로 이어서 시작</p>
-                                            <p class="mt-1 text-xs font-medium leading-5 text-slate-500">수합, 문서, 학급 운영 흐름을 끊기지 않게 이어갑니다.</p>
+                                            <p class="home-v2-quick-title text-sm">로그인 후 바로 이어서 시작</p>
+                                            <p class="home-v2-quick-copy mt-1 text-xs">바로 이어질 대표 업무를 엽니다.</p>
                                         </a>
                                     {% endif %}
                                 </div>
@@ -319,9 +503,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             <a href="{{ guest_continue_url|default:login_url }}" class="home-v2-followup-card block rounded-[1.75rem] p-5 transition hover:-translate-y-0.5">
                                 <div class="flex items-start justify-between gap-3">
                                     <div>
-                                        <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">로그인 후</p>
-                                        <h3 class="mt-2 text-lg font-black text-slate-900">{{ guest_continue_action_card.title|default:'이어서 하는 업무' }}</h3>
-                                        <p class="mt-1 text-sm font-semibold leading-6 text-slate-500">로그인하면 방금 고른 흐름을 잃지 않고 바로 이어서 시작합니다.</p>
+                                        <p class="home-v2-section-eyebrow">로그인 후</p>
+                                        <h3 class="home-v2-followup-title mt-2 text-lg">{{ guest_continue_action_card.title|default:'이어서 하는 업무' }}</h3>
+                                        <p class="home-v2-followup-copy mt-1 text-sm">지금 고른 흐름 그대로 이어집니다.</p>
                                     </div>
                                     <span class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-500 shadow-sm">
                                         <i class="fa-solid fa-arrow-right"></i>
@@ -330,12 +514,12 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <div class="mt-4 flex flex-wrap gap-2">
                                     {% if guest_locked_cards %}
                                         {% for card in guest_locked_cards|slice:":3" %}
-                                        <span class="rounded-full bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm">{{ card.title }}</span>
+                                        <span class="rounded-full bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm">{{ card.title }}</span>
                                         {% endfor %}
                                     {% else %}
-                                    <span class="rounded-full bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm">수합·서명</span>
-                                    <span class="rounded-full bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm">문서·작성</span>
-                                    <span class="rounded-full bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm">학급 운영</span>
+                                    <span class="rounded-full bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm">수합·서명</span>
+                                    <span class="rounded-full bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm">문서·작성</span>
+                                    <span class="rounded-full bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm">학급 운영</span>
                                     {% endif %}
                                 </div>
                             </a>
@@ -349,13 +533,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="rounded-[1.9rem] border border-white/60 bg-white/80 p-4 shadow-[0_18px_40px_rgba(148,163,184,0.12)] backdrop-blur-sm md:p-5">
                     <div class="mb-4 flex flex-col gap-2">
                         <div>
-                            <p class="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">공개 도구</p>
-                            <h2 class="mt-1 text-lg md:text-xl font-black text-slate-900">바로 열리는 공개 도구</h2>
-                            <p class="mt-1 text-sm font-bold text-slate-500">로그인 없이 바로 시작할 수 있는 도구입니다.</p>
+                            <p class="home-v2-section-eyebrow">공개 도구</p>
+                            <h2 class="home-v2-section-title mt-1 text-lg md:text-xl">바로 열리는 공개 도구</h2>
+                            <p class="home-v2-section-copy mt-1 text-sm">로그인 없이 바로 시작합니다.</p>
                         </div>
                     </div>
                     {% if guest_public_cards %}
-                    <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4" data-home-v2-public-grid="true">
+                    <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-2" data-home-v2-public-grid="true">
                         {% for card in guest_public_cards %}
                         {% include 'core/includes/guest_access_highlight_card.html' with card=card %}
                         {% endfor %}
@@ -375,9 +559,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="rounded-[1.9rem] border border-white/60 bg-white/80 p-4 shadow-[0_18px_40px_rgba(148,163,184,0.12)] backdrop-blur-sm md:p-5">
                     <div class="mb-4 flex flex-col gap-2">
                         <div>
-                            <p class="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">로그인 도구</p>
-                            <h2 class="mt-1 text-lg md:text-xl font-black text-slate-900">로그인 후 이어지는 업무</h2>
-                            <p class="mt-1 text-sm font-bold text-slate-500">카탈로그를 먼저 보여주기보다, 바로 이어서 쓸 대표 업무만 추려서 보여드립니다.</p>
+                            <p class="home-v2-section-eyebrow">로그인 도구</p>
+                            <h2 class="home-v2-section-title mt-1 text-lg md:text-xl">로그인 후 이어지는 업무</h2>
+                            <p class="home-v2-section-copy mt-1 text-sm">로그인 후 바로 이어질 대표 업무입니다.</p>
                         </div>
                     </div>
                     <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3" data-home-v2-public-grid="true">
@@ -388,10 +572,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="mt-5 rounded-[1.6rem] border border-slate-200 bg-slate-50 px-4 py-4 sm:px-5">
                         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div>
-                                <p class="text-sm font-black text-slate-900">로그인하면 방금 고른 업무로 바로 이동합니다.</p>
-                                <p class="mt-1 text-xs font-semibold leading-5 text-slate-500">다시 홈에서 찾지 않도록, 선택한 도구의 시작 화면까지 연결합니다.</p>
+                                <p class="text-sm font-bold text-slate-900">로그인하면 바로 이어집니다.</p>
+                                <p class="mt-1 text-xs font-medium leading-5 text-slate-500">선택한 시작 화면으로 바로 이동합니다.</p>
                             </div>
-                            <a href="{{ guest_continue_url|default:login_url }}" class="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-black text-white transition hover:bg-slate-800">
+                            <a href="{{ guest_continue_url|default:login_url }}" class="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800">
                                 로그인하고 이어서 시작
                             </a>
                         </div>
