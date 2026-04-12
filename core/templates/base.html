@@ -25,6 +25,7 @@
     <link rel="apple-touch-icon" href="{% static 'images/favicon.png' %}">
     <title>{% block title %}{% firstof page_title og_title default_og_title default_page_title '교사를 위한 AI·학급 운영 도구 | Eduitit' %}{% endblock %}</title>
     <link href="{% static 'css/dist.css' %}" rel="stylesheet">
+    <link href="{% static 'css/dist_fallbacks.css' %}" rel="stylesheet">
     <link href="{% static 'core/css/base.css' %}" rel="stylesheet">
     <link href="https://hangeul.pstatic.net/hangeul_static/css/nanum-square-round.css" rel="stylesheet">
     <link
