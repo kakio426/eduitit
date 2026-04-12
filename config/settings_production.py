@@ -144,6 +144,7 @@ MIDDLEWARE = [
     'core.middleware.PolicyConsentMiddleware',  # 소셜 로그인 사용자 약관 동의 필수
     'core.middleware.OnboardingMiddleware',  # 모든 사용자 정보 입력 필수
     'core.middleware.BlockKnownProbePathsMiddleware',
+    'core.middleware.SeoMetaFallbackMiddleware',
     'core.middleware.VisitorTrackingMiddleware',
 ]
 

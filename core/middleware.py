@@ -1,5 +1,7 @@
 import hashlib
+import html
 import logging
+import re
 import time
 import uuid
 from urllib.parse import quote
@@ -7,12 +9,14 @@ from urllib.parse import quote
 from django.http import HttpResponse, HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect
 from django.urls import reverse
+from django.utils.html import strip_tags
 from django.utils import timezone
 
 from .logging_filters import clear_current_request_id, set_current_request_id
 from .models import PageViewLog, SiteConfig, VisitorLog
 from .openclo_login import OPENCLO_LOGIN_URL
 from .policy_consent import has_current_policy_consent, user_requires_policy_consent
+from .seo import DEFAULT_HOME_DESCRIPTION, DEFAULT_HOME_TITLE, DEFAULT_HOME_TITLE_KO
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +36,119 @@ REQUEST_CACHE_MISS = object()
 VISITOR_IDENTITY_SESSION_KEY = "visitor_identity"
 VISITOR_IDENTITY_COOKIE_NAME = "eduitit_visitor"
 VISITOR_IDENTITY_COOKIE_MAX_AGE = 60 * 60 * 24 * 365
+
+
+class SeoMetaFallbackMiddleware:
+    """
+    Promote the final rendered page title and first meaningful paragraph into
+    SEO tags when a page falls back to the global home defaults.
+    """
+
+    TITLE_RE = re.compile(r"<title>(?P<value>.*?)</title>", re.IGNORECASE | re.DOTALL)
+    PARAGRAPH_RE = re.compile(r"<p\b[^>]*>(?P<value>.*?)</p>", re.IGNORECASE | re.DOTALL)
+    META_TAG_TEMPLATE = r'(<meta\s+(?:property|name)=["\']{meta_key}["\']\s+content=["\'])(?P<value>.*?)(["\'][^>]*>)'
+    TITLE_META_KEYS = ("og:title", "twitter:title")
+    DESCRIPTION_META_KEYS = ("description", "og:description", "twitter:description")
+    HOME_TITLE_FALLBACKS = {DEFAULT_HOME_TITLE, DEFAULT_HOME_TITLE_KO}
+    HOME_DESCRIPTION_FALLBACKS = {DEFAULT_HOME_DESCRIPTION}
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    @staticmethod
+    def _collapse_text(raw_value):
+        return " ".join(strip_tags(html.unescape(str(raw_value or ""))).split()).strip()
+
+    @staticmethod
+    def _truncate_text(raw_value, *, limit=160):
+        text = str(raw_value or "").strip()
+        if len(text) <= limit:
+            return text
+        return f"{text[: limit - 3].rstrip()}..."
+
+    def _extract_title(self, content):
+        match = self.TITLE_RE.search(content)
+        if not match:
+            return ""
+        return self._collapse_text(match.group("value"))
+
+    def _extract_description_candidate(self, content):
+        for match in self.PARAGRAPH_RE.finditer(content):
+            candidate = self._collapse_text(match.group("value"))
+            if len(candidate) < 20:
+                continue
+            if candidate in self.HOME_DESCRIPTION_FALLBACKS:
+                continue
+            return self._truncate_text(candidate)
+        return ""
+
+    def _replace_meta_if_default(self, content, meta_key, replacement, *, defaults):
+        pattern = re.compile(
+            self.META_TAG_TEMPLATE.format(meta_key=re.escape(meta_key)),
+            re.IGNORECASE | re.DOTALL,
+        )
+        normalized_defaults = {self._collapse_text(value) for value in defaults if str(value or "").strip()}
+
+        def _replacer(match):
+            current_value = self._collapse_text(match.group("value"))
+            if current_value and current_value not in normalized_defaults:
+                return match.group(0)
+            escaped_replacement = html.escape(replacement, quote=True)
+            return f"{match.group(1)}{escaped_replacement}{match.group(3)}"
+
+        updated_content, replaced_count = pattern.subn(_replacer, content, count=1)
+        return updated_content, bool(replaced_count and updated_content != content)
+
+    def __call__(self, request):
+        response = self.get_response(request)
+
+        if request.path == "/" or getattr(response, "streaming", False):
+            return response
+
+        if hasattr(response, "render") and callable(response.render) and not getattr(response, "is_rendered", True):
+            response = response.render()
+
+        content_type = str(response.get("Content-Type", "")).lower()
+        if response.status_code >= 400 or "text/html" not in content_type:
+            return response
+
+        charset = getattr(response, "charset", None) or "utf-8"
+        try:
+            content = response.content.decode(charset)
+        except (AttributeError, UnicodeDecodeError):
+            return response
+
+        page_title = self._extract_title(content)
+        page_description = self._extract_description_candidate(content)
+        updated_content = content
+        updated = False
+
+        if page_title and page_title not in self.HOME_TITLE_FALLBACKS:
+            for meta_key in self.TITLE_META_KEYS:
+                updated_content, changed = self._replace_meta_if_default(
+                    updated_content,
+                    meta_key,
+                    page_title,
+                    defaults=self.HOME_TITLE_FALLBACKS,
+                )
+                updated = updated or changed
+
+        if page_description:
+            for meta_key in self.DESCRIPTION_META_KEYS:
+                updated_content, changed = self._replace_meta_if_default(
+                    updated_content,
+                    meta_key,
+                    page_description,
+                    defaults=self.HOME_DESCRIPTION_FALLBACKS,
+                )
+                updated = updated or changed
+
+        if not updated:
+            return response
+
+        response.content = updated_content.encode(charset)
+        response["Content-Length"] = str(len(response.content))
+        return response
 
 
 def normalize_visitor_id(raw_value):

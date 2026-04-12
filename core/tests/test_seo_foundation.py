@@ -1,8 +1,10 @@
 import html
 
+from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from collect.models import CollectionRequest
 from core.guide_links import SERVICE_GUIDE_PADLET_URL
 from core.seo import DEFAULT_HOME_DESCRIPTION
 from insights.models import Insight
@@ -12,6 +14,13 @@ from products.models import Product, ServiceManual
 @override_settings(HOME_V2_ENABLED=True)
 class SeoFoundationTests(TestCase):
     def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="seo-user",
+            email="seo-user@example.com",
+            password="test-pass-123",
+        )
+        self.user.userprofile.nickname = "SEO교사"
+        self.user.userprofile.save(update_fields=["nickname"])
         self.product = Product.objects.create(
             title="미술 수업 도우미",
             description="유튜브 기반 수업 흐름을 빠르게 정리합니다.",
@@ -41,6 +50,32 @@ class SeoFoundationTests(TestCase):
             title="학급 캘린더 시작하기",
             description="바로 열고 바로 일정 등록하는 흐름을 안내합니다.",
             is_published=True,
+        )
+        self.collect_service = Product.objects.create(
+            title="간편 수합",
+            description="QR 또는 입장코드로 파일, 링크, 텍스트, 선택형 응답을 빠르게 모읍니다.",
+            price=0,
+            is_active=True,
+            service_type="collect_sign",
+            launch_route_name="collect:landing",
+            solve_text="자료와 의견을 빠르게 모읍니다.",
+        )
+        self.handoff_service = Product.objects.create(
+            title="배부 체크",
+            description="명단을 저장해 두고 배부할 때 수령 여부를 빠르게 체크합니다.",
+            price=0,
+            is_active=True,
+            service_type="classroom",
+            launch_route_name="handoff:landing",
+            solve_text="배부 여부를 빠르게 기록합니다.",
+        )
+        self.collect_request = CollectionRequest.objects.create(
+            creator=self.user,
+            title="과학 실험 보고서",
+            description="실험 사진과 관찰 기록을 제출해 주세요.",
+            allow_file=True,
+            allow_link=True,
+            allow_text=True,
         )
         self.insight = Insight.objects.create(
             title="교실 AI 운영 팁",
@@ -89,6 +124,7 @@ class SeoFoundationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn('<link rel="canonical" href="https://eduitit.site/">', content)
         self.assertIn('<meta property="og:url" content="https://eduitit.site/">', content)
+        self.assertIn('<meta property="og:title" content="에듀잇티 - 선생님의 스마트한 하루">', content)
         self.assertIn("<title>에듀잇티 - 선생님의 스마트한 하루</title>", content)
         self.assertIn('<link rel="icon" href="/favicon.ico" sizes="any">', content)
         self.assertIn("eduitit_og.png", content)
@@ -190,6 +226,113 @@ class SeoFoundationTests(TestCase):
                 self.assertIn("eduitit_og.png", content)
                 self.assertIn(html.escape(description), content)
                 self.assertNotIn(DEFAULT_HOME_DESCRIPTION, content)
+
+    def test_page_title_only_view_promotes_title_and_hero_copy_into_meta(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("ocrdesk:main"))
+        content = response.content.decode("utf-8")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("<title>사진 글자 읽기 - Eduitit</title>", content)
+        self.assertIn('<meta property="og:title" content="사진 글자 읽기 - Eduitit">', content)
+        self.assertIn('<meta name="twitter:title" content="사진 글자 읽기 - Eduitit">', content)
+        self.assertIn(
+            '<meta property="og:description" content="사진을 놓거나 고르면 미리보기를 보여주고 바로 읽기를 시작합니다.',
+            content,
+        )
+        self.assertNotIn(DEFAULT_HOME_DESCRIPTION, content)
+
+    def test_handoff_landing_uses_explicit_meta(self):
+        response = self.client.get(reverse("handoff:landing"))
+        content = response.content.decode("utf-8")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("<title>배부 체크 - Eduitit</title>", content)
+        self.assertIn('<link rel="canonical" href="https://eduitit.site/handoff/">', content)
+        self.assertIn('<meta property="og:title" content="배부 체크 - Eduitit">', content)
+        self.assertIn('<meta name="twitter:title" content="배부 체크 - Eduitit">', content)
+        self.assertIn(
+            '<meta name="description" content="명단을 저장해 두고 배부할 때 수령 여부만 빠르게 체크하는 교사용 배부 기록 도구입니다.">',
+            content,
+        )
+        self.assertNotIn(DEFAULT_HOME_DESCRIPTION, content)
+
+    def test_collect_and_handoff_landing_pages_get_explicit_meta(self):
+        cases = (
+            (
+                reverse("collect:landing"),
+                "가뿐 수합 - Eduitit",
+                "https://eduitit.site/collect/",
+                "QR 또는 입장코드로 파일, 링크, 텍스트, 선택형 응답을 빠르게 모으는 교사용 수합 도구입니다.",
+            ),
+            (
+                reverse("handoff:landing"),
+                "배부 체크 - Eduitit",
+                "https://eduitit.site/handoff/",
+                "명단을 저장해 두고 배부할 때 수령 여부만 빠르게 체크하는 교사용 배부 기록 도구입니다.",
+            ),
+        )
+
+        for path, title, canonical, description in cases:
+            with self.subTest(path=path):
+                response = self.client.get(path)
+                content = response.content.decode("utf-8")
+                self.assertEqual(response.status_code, 200)
+                self.assertIn(f"<title>{html.escape(title)}</title>", content)
+                self.assertIn(f'<link rel="canonical" href="{canonical}">', content)
+                self.assertIn(f'<meta property="og:url" content="{canonical}">', content)
+                self.assertIn(html.escape(description), content)
+                self.assertNotIn(DEFAULT_HOME_DESCRIPTION, content)
+
+    def test_collect_submit_page_is_noindex_with_request_specific_meta(self):
+        response = self.client.get(reverse("collect:submit", kwargs={"request_id": self.collect_request.id}))
+        content = response.content.decode("utf-8")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("<title>과학 실험 보고서 - 제출하기</title>", content)
+        self.assertIn('<meta name="robots" content="noindex,nofollow">', content)
+        self.assertIn(
+            f'<link rel="canonical" href="https://eduitit.site{reverse("collect:submit", kwargs={"request_id": self.collect_request.id})}">',
+            content,
+        )
+        self.assertIn("실험 사진과 관찰 기록을 제출해 주세요.", content)
+        self.assertNotIn(DEFAULT_HOME_DESCRIPTION, content)
+
+    def test_game_pages_use_explicit_canonical_meta(self):
+        chess_response = self.client.get(f"{reverse('chess:play')}?mode=ai&difficulty=hard")
+        chess_content = chess_response.content.decode("utf-8")
+
+        self.assertEqual(chess_response.status_code, 200)
+        self.assertIn('<link rel="canonical" href="https://eduitit.site/chess/play/">', chess_content)
+        self.assertIn("로컬 대전 또는 AI 대전으로 체스를 바로 플레이할 수 있는 게임 화면입니다.", chess_content)
+        self.assertNotIn(DEFAULT_HOME_DESCRIPTION, chess_content)
+
+        fairy_response = self.client.get(reverse("fairy_games:play", kwargs={"variant": "dobutsu"}))
+        fairy_content = fairy_response.content.decode("utf-8")
+
+        self.assertEqual(fairy_response.status_code, 200)
+        self.assertIn("<title>동물 장기 플레이 - Eduitit</title>", fairy_content)
+        self.assertIn('<link rel="canonical" href="https://eduitit.site/fairy-games/dobutsu/play/">', fairy_content)
+        self.assertIn("3x4 작은 판에서 사자를 지키는 전략 게임 지금 바로 동물 장기를 플레이해 보세요.", fairy_content)
+        self.assertNotIn(DEFAULT_HOME_DESCRIPTION, fairy_content)
+
+    def test_public_pages_expose_semantic_landmarks(self):
+        cases = (
+            (reverse("collect:landing"), ("<main", "<header", "<article", "<nav")),
+            (reverse("handoff:landing"), ("<main", "<header", "<article", "<nav")),
+            (reverse("chess:index"), ("<main", "<header", "<article", "<nav")),
+            (reverse("chess:play"), ("<main", "<header", "<section", "<aside")),
+            (reverse("fairy_games:rules", kwargs={"variant": "dobutsu"}), ("<main", "<article", "<nav")),
+        )
+
+        for path, markers in cases:
+            with self.subTest(path=path):
+                response = self.client.get(path)
+                content = response.content.decode("utf-8")
+                self.assertEqual(response.status_code, 200)
+                for marker in markers:
+                    self.assertIn(marker, content)
 
     def test_product_detail_uses_specific_meta(self):
         product_response = self.client.get(reverse("product_detail", kwargs={"pk": self.product.pk}))

@@ -73,6 +73,15 @@ def _serialize_structured_data(value: dict[str, Any]) -> str:
     return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
 
 
+def _image_field_url(image_field: Any) -> str:
+    if not image_field:
+        return ""
+    try:
+        return image_field.url or ""
+    except ValueError:
+        return ""
+
+
 def _publisher_structured_data() -> dict[str, Any]:
     return {
         "@type": "Organization",
@@ -259,6 +268,69 @@ def build_default_page_seo(request) -> PageSeoMeta:
     )
 
 
+def build_route_page_seo(
+    request,
+    *,
+    title: str,
+    description: str,
+    route_name: str = "",
+    route_kwargs: dict[str, Any] | None = None,
+    current_path: str = "",
+    og_image: str = "",
+    og_type: str = "website",
+    robots: str = "index,follow",
+    structured_data: tuple[dict[str, Any], ...] | None = None,
+) -> PageSeoMeta:
+    if route_name:
+        canonical_url = _absolute_url(reverse(route_name, kwargs=route_kwargs or {}))
+    else:
+        resolved_path = current_path or getattr(request, "path", "/")
+        canonical_url = _absolute_url(resolved_path or "/")
+    return _build_page_seo(
+        title=title,
+        description=description,
+        canonical_url=canonical_url,
+        og_image=og_image,
+        og_type=og_type,
+        robots=robots,
+        structured_data=structured_data,
+    )
+
+
+def build_product_route_page_seo(
+    request,
+    *,
+    product=None,
+    title: str,
+    description: str = "",
+    route_name: str = "",
+    route_kwargs: dict[str, Any] | None = None,
+    current_path: str = "",
+    og_image: str = "",
+    og_type: str = "website",
+    robots: str = "index,follow",
+    structured_data: tuple[dict[str, Any], ...] | None = None,
+) -> PageSeoMeta:
+    product_description = (
+        getattr(product, "lead_text", "")
+        or getattr(product, "solve_text", "")
+        or getattr(product, "description", "")
+    )
+    product_image_url = _image_field_url(getattr(product, "image", None))
+    return build_route_page_seo(
+        request,
+        title=title,
+        description=description or product_description or DEFAULT_HOME_DESCRIPTION,
+        route_name=route_name,
+        route_kwargs=route_kwargs,
+        current_path=current_path,
+        og_image=og_image or product_image_url,
+        og_type=og_type,
+        robots=robots,
+        structured_data=structured_data,
+    )
+
+
 def build_home_page_seo(request) -> PageSeoMeta:
     canonical_url = _absolute_url(reverse("home"))
     return _build_page_seo(
@@ -359,13 +431,7 @@ def build_service_guide_detail_seo(request, manual) -> PageSeoMeta:
     canonical_url = _absolute_url(reverse("service_guide_detail", kwargs={"pk": manual.pk}))
     article_title = f"{public_title} - 서비스 가이드 - Eduitit"
     article_description = description or f"{product_name} 사용 흐름을 빠르게 따라갈 수 있는 안내입니다."
-    image_url = ""
-    image_field = getattr(getattr(manual, "product", None), "image", None)
-    if image_field:
-        try:
-            image_url = image_field.url or ""
-        except ValueError:
-            image_url = ""
+    image_url = _image_field_url(getattr(getattr(manual, "product", None), "image", None))
     return _build_page_seo(
         title=article_title,
         description=article_description,
@@ -467,13 +533,7 @@ def build_product_detail_seo(request, product) -> PageSeoMeta:
         or getattr(product, "solve_text", "")
         or getattr(product, "description", "")
     )
-    image_url = ""
-    image_field = getattr(product, "image", None)
-    if image_field:
-        try:
-            image_url = image_field.url or ""
-        except ValueError:
-            image_url = ""
+    image_url = _image_field_url(getattr(product, "image", None))
     canonical_url = _absolute_url(reverse("product_detail", kwargs={"pk": product.pk}))
     page_title = f"{product_name} - Eduitit"
     page_description = description or f"{product_name} 소개 페이지입니다."

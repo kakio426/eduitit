@@ -4,32 +4,33 @@
 {% block title %}교실 장기 - Eduitit{% endblock %}
 
 {% block content %}
-<section class="pt-32 pb-20 px-4 min-h-screen overflow-x-hidden">
+<main class="pt-32 pb-20 px-4 min-h-screen overflow-x-hidden">
     <div class="max-w-6xl mx-auto">
-        <div class="text-center mb-10 sm:mb-12">
+        <header class="text-center mb-10 sm:mb-12">
             <div class="text-5xl sm:text-6xl mb-4">🎯</div>
             <h1 class="text-3xl sm:text-4xl md:text-5xl font-black text-gray-700 font-title">두뇌 대결의 교실 장기</h1>
             <p class="text-base sm:text-lg md:text-xl text-gray-500 mt-4">로컬 대전과 AI 대전을 한 화면에서 바로 시작합니다.</p>
-        </div>
+        </header>
 
-        <div class="grid md:grid-cols-2 gap-4 sm:gap-6">
-            <div class="clay-card p-5 sm:p-8">
+        <section class="grid md:grid-cols-2 gap-4 sm:gap-6" aria-labelledby="janggi-mode-title">
+            <h2 id="janggi-mode-title" class="sr-only">장기 게임 모드</h2>
+            <article class="clay-card p-5 sm:p-8">
                 <h2 class="text-2xl sm:text-3xl font-bold text-gray-700 mb-3">👥 로컬 대전</h2>
                 <p class="text-gray-600 mb-6">같은 화면에서 두 명이 번갈아 장기를 둘 수 있습니다.</p>
                 <a href="{% url 'janggi:play' %}?mode=local" class="block w-full text-center py-3 sm:py-4 bg-purple-600 text-white rounded-2xl font-bold">로컬 게임 시작</a>
-            </div>
-            <div class="clay-card p-5 sm:p-8">
+            </article>
+            <article class="clay-card p-5 sm:p-8">
                 <h2 class="text-2xl sm:text-3xl font-bold text-gray-700 mb-3">🤖 AI 대전</h2>
                 <p class="text-gray-600 mb-6">브라우저에서 바로 AI가 수를 계산해 자연스럽게 대전을 이어 갑니다.</p>
                 <a href="{% url 'janggi:play' %}?mode=ai" class="block w-full text-center py-3 sm:py-4 bg-blue-600 text-white rounded-2xl font-bold">AI 대전 시작</a>
-            </div>
-        </div>
+            </article>
+        </section>
 
-        <div class="text-center mt-8">
+        <nav class="text-center mt-8" aria-label="장기 안내 이동">
             <a href="{% url 'janggi:rules' %}" class="inline-flex w-full sm:w-auto justify-center items-center gap-2 px-6 sm:px-8 py-4 clay-card text-gray-700 font-bold text-base sm:text-lg">
                 장기 규칙 보기 <i class="fa-solid fa-arrow-right"></i>
             </a>
-        </div>
+        </nav>
     </div>
-</section>
+</main>
 {% endblock %}

@@ -16,6 +16,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from core.seo import build_product_route_page_seo
 from products.models import Product
 
 from .forms import (
@@ -35,6 +36,16 @@ def _get_service():
     return (
         Product.objects.filter(launch_route_name="handoff:landing").first()
         or Product.objects.filter(title="배부 체크").first()
+    )
+
+
+def _build_handoff_landing_seo(request, service):
+    return build_product_route_page_seo(
+        request,
+        product=service,
+        title="배부 체크 - Eduitit",
+        description="명단을 저장해 두고 배부할 때 수령 여부만 빠르게 체크하는 교사용 배부 기록 도구입니다.",
+        route_name="handoff:landing",
     )
 
 
@@ -561,6 +572,7 @@ def _get_handoff_landing_groups(user):
 
 def landing(request):
     service = _get_service()
+    seo_context = _build_handoff_landing_seo(request, service).as_context()
     if request.user.is_authenticated:
         teacher_query = _get_handoff_teacher_query(request)
         proxy_target_user = _get_handoff_proxy_target_user(
@@ -584,9 +596,18 @@ def landing(request):
                     teacher_query=teacher_query,
                     selected_user=proxy_target_user,
                 ),
+                **seo_context,
             },
         )
-    return render(request, "handoff/landing.html", {"service": service, "is_authenticated_landing": False})
+    return render(
+        request,
+        "handoff/landing.html",
+        {
+            "service": service,
+            "is_authenticated_landing": False,
+            **seo_context,
+        },
+    )
 
 
 @login_required

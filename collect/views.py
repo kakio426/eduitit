@@ -21,6 +21,7 @@ import logging
 import requests
 from urllib.parse import quote
 
+from core.seo import build_product_route_page_seo, build_route_page_seo
 from .models import CollectionRequest, Submission
 from .forms import CollectionRequestForm
 from .integration import (
@@ -217,16 +218,24 @@ def _render_submit_error(
     response = render(
         request,
         "collect/submit.html",
-        _get_submit_context(
-            collection_req,
-            submission=submission,
-            is_edit=is_edit,
-            error=error_message,
-            form_data=posted,
-            initial_submission_type=submission_type,
-            choice_values=choice_values,
-            choice_other_text=choice_other_text,
-        ),
+        {
+            **_get_submit_context(
+                collection_req,
+                submission=submission,
+                is_edit=is_edit,
+                error=error_message,
+                form_data=posted,
+                initial_submission_type=submission_type,
+                choice_values=choice_values,
+                choice_other_text=choice_other_text,
+            ),
+            **_build_collect_submit_seo(
+                request,
+                collection_req,
+                is_edit=is_edit,
+                submission=submission,
+            ).as_context(),
+        },
     )
     return _apply_sensitive_cache_headers(response)
 
@@ -466,6 +475,79 @@ def get_collect_service():
     return Product.objects.filter(title__icontains="간편 수합").first()
 
 
+def _build_collect_landing_seo(request, service):
+    return build_product_route_page_seo(
+        request,
+        product=service,
+        title="가뿐 수합 - Eduitit",
+        description="QR 또는 입장코드로 파일, 링크, 텍스트, 선택형 응답을 빠르게 모으는 교사용 수합 도구입니다.",
+        route_name="collect:landing",
+    )
+
+
+def _build_collect_join_error_seo(request, service):
+    return build_product_route_page_seo(
+        request,
+        product=service,
+        title="가뿐 수합 - Eduitit",
+        description="입장코드를 다시 확인하고 참여 링크로 접속해 주세요.",
+        route_name="collect:landing",
+        robots="noindex,follow",
+    )
+
+
+def _build_collect_submit_seo(request, collection_req, *, is_edit=False, submission=None):
+    if is_edit and submission is not None:
+        return build_route_page_seo(
+            request,
+            title="제출물 수정",
+            description="이미 제출한 파일, 링크, 텍스트, 선택형 응답을 다시 수정하는 비공개 화면입니다.",
+            route_name="collect:submission_edit",
+            route_kwargs={"management_id": submission.management_id},
+            robots="noindex,nofollow",
+        )
+
+    return build_route_page_seo(
+        request,
+        title=f"{collection_req.title} - 제출하기",
+        description=collection_req.description or "받은 링크에서 파일, 링크, 텍스트, 선택형 응답을 제출하는 비공개 참여 화면입니다.",
+        route_name="collect:submit",
+        route_kwargs={"request_id": collection_req.id},
+        robots="noindex,nofollow",
+    )
+
+
+def _build_collect_manage_seo(request, submission):
+    return build_route_page_seo(
+        request,
+        title=f"제출 관리 - {submission.collection_request.title}",
+        description="제출 내용을 확인하고 수정 또는 삭제를 진행하는 비공개 관리 화면입니다.",
+        route_name="collect:submission_manage",
+        route_kwargs={"management_id": submission.management_id},
+        robots="noindex,nofollow",
+    )
+
+
+def _build_collect_closed_seo(request, collection_req, *, reason=""):
+    return build_route_page_seo(
+        request,
+        title=f"수합 마감 - {collection_req.title}",
+        description=reason or "이 요청은 마감되어 더 이상 제출을 받지 않습니다.",
+        route_name="collect:submit",
+        route_kwargs={"request_id": collection_req.id},
+        robots="noindex,nofollow",
+    )
+
+
+def _render_collect_closed(request, collection_req, *, reason=""):
+    context = {"req": collection_req}
+    if reason:
+        context["reason"] = reason
+    context.update(_build_collect_closed_seo(request, collection_req, reason=reason).as_context())
+    response = render(request, "collect/request_closed.html", context)
+    return _apply_sensitive_cache_headers(response)
+
+
 def generate_qr(url):
     """QR 코드 생성 (Base64 반환)"""
     qr = qrcode.QRCode(version=1, box_size=10, border=4)
@@ -498,6 +580,7 @@ def landing(request):
     response = render(request, 'collect/landing.html', {
         'service': service,
         'features': features,
+        **_build_collect_landing_seo(request, service).as_context(),
     })
     return _apply_workspace_cache_headers(response)
 
@@ -821,8 +904,7 @@ def short_link(request, code):
     collection_req = get_object_or_404(CollectionRequest, access_code=code)
     
     if collection_req.status != 'active':
-        response = render(request, 'collect/request_closed.html', {'req': collection_req})
-        return _apply_sensitive_cache_headers(response)
+        return _render_collect_closed(request, collection_req)
         
     return redirect('collect:submit', request_id=collection_req.id)
 
@@ -841,11 +923,12 @@ def join(request):
         # 마감된 수합인지 확인
         closed_req = CollectionRequest.objects.filter(access_code=code).first()
         if closed_req:
-            response = render(request, 'collect/request_closed.html', {'req': closed_req})
-            return _apply_sensitive_cache_headers(response)
+            return _render_collect_closed(request, closed_req)
+        service = get_collect_service()
         response = render(request, 'collect/landing.html', {
-            'service': get_collect_service(),
+            'service': service,
             'error': '유효하지 않은 입장코드입니다.',
+            **_build_collect_join_error_seo(request, service).as_context(),
         })
         return _apply_sensitive_cache_headers(response)
 
@@ -858,8 +941,7 @@ def submit(request, request_id):
     collection_req = get_object_or_404(CollectionRequest, id=request_id)
 
     if collection_req.status != 'active':
-        response = render(request, 'collect/request_closed.html', {'req': collection_req})
-        return _apply_sensitive_cache_headers(response)
+        return _render_collect_closed(request, collection_req)
 
     # 마감일 초과 확인
     if collection_req.is_deadline_passed:
@@ -867,23 +949,22 @@ def submit(request, request_id):
         if not collection_req.closed_at:
             collection_req.closed_at = timezone.now()
         collection_req.save(update_fields=["status", "closed_at", "updated_at"])
-        response = render(request, 'collect/request_closed.html', {'req': collection_req})
-        return _apply_sensitive_cache_headers(response)
+        return _render_collect_closed(request, collection_req)
 
     # 최대 제출 수 확인
     if collection_req.submission_count >= collection_req.max_submissions:
-        response = render(request, 'collect/request_closed.html', {
-            'req': collection_req,
-            'reason': '최대 제출 건수에 도달했습니다.',
-        })
-        return _apply_sensitive_cache_headers(response)
+        return _render_collect_closed(
+            request,
+            collection_req,
+            reason='최대 제출 건수에 도달했습니다.',
+        )
 
     if not collection_req.allowed_submission_types:
-        response = render(request, 'collect/request_closed.html', {
-            'req': collection_req,
-            'reason': '이 요청은 현재 제출 가능한 유형이 없습니다.',
-        })
-        return _apply_sensitive_cache_headers(response)
+        return _render_collect_closed(
+            request,
+            collection_req,
+            reason='이 요청은 현재 제출 가능한 유형이 없습니다.',
+        )
 
     prefill = _get_submit_prefill_context(request, collection_req)
     initial_submission_type = None
@@ -898,6 +979,7 @@ def submit(request, request_id):
         choice_values=choice_values,
     )
     context.update(prefill)
+    context.update(_build_collect_submit_seo(request, collection_req).as_context())
     response = render(request, 'collect/submit.html', context)
     return _apply_sensitive_cache_headers(response)
 
@@ -909,16 +991,15 @@ def submit_process(request, request_id):
     collection_req = get_object_or_404(CollectionRequest, id=request_id)
 
     if collection_req.status != 'active':
-        response = render(request, 'collect/request_closed.html', {'req': collection_req})
-        return _apply_sensitive_cache_headers(response)
+        return _render_collect_closed(request, collection_req)
 
     allowed_types = collection_req.allowed_submission_types
     if not allowed_types:
-        response = render(request, 'collect/request_closed.html', {
-            'req': collection_req,
-            'reason': '이 요청은 현재 제출 가능한 유형이 없습니다.',
-        })
-        return _apply_sensitive_cache_headers(response)
+        return _render_collect_closed(
+            request,
+            collection_req,
+            reason='이 요청은 현재 제출 가능한 유형이 없습니다.',
+        )
 
     # 이름: 직접 입력 > 셀렉트 > 일반 입력
     contributor_name = request.POST.get('contributor_name_custom', '').strip()
@@ -1043,7 +1124,8 @@ def submission_manage(request, management_id):
     response = render(request, 'collect/submission_manage.html', {
         'submission': submission,
         'req': submission.collection_request,
-        'can_manage': can_manage
+        'can_manage': can_manage,
+        **_build_collect_manage_seo(request, submission).as_context(),
     })
     return _apply_sensitive_cache_headers(response)
 
@@ -1147,7 +1229,15 @@ def submission_edit(request, management_id):
     response = render(
         request,
         'collect/submit.html',
-        _get_submit_context(submission.collection_request, submission=submission, is_edit=True),
+        {
+            **_get_submit_context(submission.collection_request, submission=submission, is_edit=True),
+            **_build_collect_submit_seo(
+                request,
+                submission.collection_request,
+                is_edit=True,
+                submission=submission,
+            ).as_context(),
+        },
     )
     return _apply_sensitive_cache_headers(response)
 

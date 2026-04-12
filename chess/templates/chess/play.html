@@ -176,11 +176,11 @@
 {% endblock %}
 
 {% block content %}
-<div class="min-h-screen pt-32 pb-20 px-6">
+<main class="min-h-screen pt-32 pb-20 px-6">
     <div class="max-w-7xl mx-auto">
 
         <!-- Game Header -->
-        <div class="text-center mb-8">
+        <header class="text-center mb-8">
             <h1 class="text-4xl md:text-5xl font-black text-gray-700 mb-2">
                 {% if mode == 'ai' %}
                 🤖 AI와 대전
@@ -197,13 +197,14 @@
                 {% else %}🔥 최강{% endif %}
             </p>
             {% endif %}
-        </div>
+        </header>
 
         <div class="grid lg:grid-cols-3 gap-8">
 
             <!-- Chessboard -->
-            <div class="lg:col-span-2">
+            <section class="lg:col-span-2" aria-labelledby="chess-play-board-title">
                 <div class="clay-card p-6">
+                    <h2 id="chess-play-board-title" class="sr-only">체스 게임 보드</h2>
                     <div class="board-container">
                         <div id="myBoard"></div>
                     </div>
@@ -214,12 +215,12 @@
                         <span>AI가 수를 계산하는 중...</span>
                     </div>
                 </div>
-            </div>
+            </section>
 
             <!-- Game Info Panel -->
-            <div class="lg:col-span-1">
-                <div class="game-info mb-4">
-                    <h2 class="text-2xl font-bold text-gray-700 mb-4">게임 정보</h2>
+            <aside class="lg:col-span-1" aria-label="체스 게임 정보">
+                <section class="game-info mb-4" aria-labelledby="chess-play-info-title">
+                    <h2 id="chess-play-info-title" class="text-2xl font-bold text-gray-700 mb-4">게임 정보</h2>
 
                     <!-- Status -->
                     <div class="mb-4">
@@ -241,23 +242,23 @@
                             메인으로
                         </a>
                     </div>
-                </div>
+                </section>
 
                 <!-- Move History -->
-                <div class="game-info">
-                    <h2 class="text-2xl font-bold text-gray-700 mb-4 flex items-center gap-2">
+                <section class="game-info" aria-labelledby="chess-play-history-title">
+                    <h2 id="chess-play-history-title" class="text-2xl font-bold text-gray-700 mb-4 flex items-center gap-2">
                         <i class="fa-solid fa-history text-purple-500"></i>
                         이동 기록
                     </h2>
                     <div id="moveHistory" class="move-history">
                         <p class="text-gray-400 italic">게임이 시작되지 않았습니다</p>
                     </div>
-                </div>
-            </div>
+                </section>
+            </aside>
         </div>
 
     </div>
-</div>
+</main>
 
 <!-- Game Over Modal -->
 <div id="gameOverModal" class="fixed inset-0 z-[100] hidden" role="dialog" aria-modal="true">

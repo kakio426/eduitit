@@ -518,21 +518,21 @@
     </div>
 </div>
 
-<section class="pt-32 pb-20 px-3 sm:px-4 min-h-screen overflow-x-hidden">
+<main class="pt-32 pb-20 px-3 sm:px-4 min-h-screen overflow-x-hidden">
     <div class="max-w-7xl mx-auto">
-        <div class="text-center mb-8">
+        <header class="text-center mb-8">
             <h1 class="text-2xl sm:text-4xl font-black text-gray-700 font-title">
                 {% if mode == 'ai' %}AI 장기 대전{% else %}로컬 장기 대전{% endif %}
             </h1>
             <p class="text-sm sm:text-base text-gray-500 mt-2">
                 {% if mode == 'ai' %}브라우저에서 바로 AI가 다음 수를 둡니다.{% else %}한 화면에서 번갈아 두세요.{% endif %}
             </p>
-        </div>
+        </header>
 
         <div class="grid lg:grid-cols-3 gap-4 sm:gap-6">
-            <div class="lg:col-span-2">
+            <section class="lg:col-span-2" aria-labelledby="janggi-board-title">
                 <div class="clay-card p-3 sm:p-6">
-                    <h2 class="text-lg sm:text-xl font-bold text-gray-700 mb-2">장기 보드 (10x9)</h2>
+                    <h2 id="janggi-board-title" class="text-lg sm:text-xl font-bold text-gray-700 mb-2">장기 보드 (10x9)</h2>
                     <p class="text-xs sm:text-sm text-gray-500 mb-4">기물을 선택한 뒤 이동 칸을 눌러 주세요.</p>
                     <div class="janggi-board-wrap">
                         <svg class="janggi-board-overlay" viewBox="0 0 9 10" preserveAspectRatio="none" aria-hidden="true">
@@ -546,11 +546,11 @@
                         <div id="janggiBoard" class="janggi-board"></div>
                     </div>
                 </div>
-            </div>
+            </section>
 
-            <div class="lg:col-span-1 space-y-4">
-                <div class="clay-card p-4 sm:p-5">
-                    <h2 class="text-base sm:text-lg font-bold text-gray-700 mb-3">AI 모드</h2>
+            <aside class="lg:col-span-1 space-y-4" aria-label="장기 보조 정보">
+                <section class="clay-card p-4 sm:p-5" aria-labelledby="janggi-ai-title">
+                    <h2 id="janggi-ai-title" class="text-base sm:text-lg font-bold text-gray-700 mb-3">AI 모드</h2>
                     {% if mode == 'ai' %}
                     <p class="text-sm text-gray-600">브라우저에서 바로 AI가 응수하므로 같은 화면에서 자연스럽게 이어집니다.</p>
                     <div class="mt-3">
@@ -559,10 +559,10 @@
                     {% else %}
                     <p class="text-sm text-gray-600">현재 로컬 대전 모드입니다.</p>
                     {% endif %}
-                </div>
+                </section>
 
-                <div class="clay-card p-4 sm:p-5">
-                    <h2 class="text-base sm:text-lg font-bold text-gray-700 mb-3">대국 상태</h2>
+                <section class="clay-card p-4 sm:p-5" aria-labelledby="janggi-status-title">
+                    <h2 id="janggi-status-title" class="text-base sm:text-lg font-bold text-gray-700 mb-3">대국 상태</h2>
                     <div id="turnIndicator" class="turn-indicator is-red" aria-live="polite">
                         <p class="turn-kicker">지금 둘 차례</p>
                         <div class="turn-main">
@@ -597,18 +597,18 @@
                         <button id="flipBoardBtn" class="flex-1 min-w-0 px-3 py-2 bg-indigo-100 text-indigo-700 rounded-xl text-xs sm:text-sm font-bold">보드 뒤집기</button>
                         <button id="openRulesBtn" class="flex-1 min-w-0 px-3 py-2 bg-sky-100 text-sky-700 rounded-xl text-xs sm:text-sm font-bold">규칙 팝업</button>
                     </div>
-                </div>
+                </section>
 
-                <div class="clay-card p-4 sm:p-5">
-                    <h2 class="text-base sm:text-lg font-bold text-gray-700 mb-3">수순</h2>
+                <section class="clay-card p-4 sm:p-5" aria-labelledby="janggi-history-title">
+                    <h2 id="janggi-history-title" class="text-base sm:text-lg font-bold text-gray-700 mb-3">수순</h2>
                     <div id="moveHistory" class="text-xs text-gray-700 max-h-44 sm:max-h-56 overflow-y-auto whitespace-pre-wrap">-</div>
-                </div>
+                </section>
 
                 <a href="{% url 'janggi:index' %}" class="block text-center px-4 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold text-sm sm:text-base">메인으로</a>
-            </div>
+            </aside>
         </div>
     </div>
-</section>
+</main>
 {% endblock %}
 
 {% block extra_js %}
