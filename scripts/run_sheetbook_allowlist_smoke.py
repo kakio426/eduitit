@@ -6,6 +6,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+from _smoke_runtime import managed_smoke_database
+
 
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[1]
@@ -225,24 +227,25 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    _setup_django()
     root = _repo_root()
     output_path = Path(args.output)
     if not output_path.is_absolute():
         output_path = root / output_path
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    stamp = time.strftime("%Y%m%d-%H%M%S")
-    users = _prepare_users()
-    beta_only_result = _run_case_beta_only(users, stamp)
-    global_enabled_result = _run_case_global_enabled(users, stamp)
+    with managed_smoke_database(root):
+        _setup_django()
+        stamp = time.strftime("%Y%m%d-%H%M%S")
+        users = _prepare_users()
+        beta_only_result = _run_case_beta_only(users, stamp)
+        global_enabled_result = _run_case_global_enabled(users, stamp)
 
-    summary = {
-        "started_at": time.strftime("%Y-%m-%d %H:%M:%S"),
-        "users": users,
-        "beta_only_allowlist": beta_only_result,
-        "global_enabled": global_enabled_result,
-    }
+        summary = {
+            "started_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "users": users,
+            "beta_only_allowlist": beta_only_result,
+            "global_enabled": global_enabled_result,
+        }
     summary["evaluation"] = _evaluate(summary)
 
     output_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")

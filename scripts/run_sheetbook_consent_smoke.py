@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+from _smoke_runtime import managed_smoke_database
+
 
 SUMMARY_RE = re.compile(
     r"현재 입력 기준:\s*(?P<input>\d+)줄\s*·\s*(?P<accepted>\d+)명 반영"
@@ -538,83 +540,84 @@ def main() -> int:
     duplicate_count = max(1, int(args.duplicate_count))
     invalid_count = max(1, int(args.invalid_count))
 
-    desktop_data = _prepare_smoke_data(
-        valid_count=valid_count,
-        duplicate_count=duplicate_count,
-        invalid_count=invalid_count,
-    )
-    tablet_data = _prepare_smoke_data(
-        valid_count=valid_count,
-        duplicate_count=duplicate_count,
-        invalid_count=invalid_count,
-    )
-    base_url = f"http://127.0.0.1:{args.port}"
+    with managed_smoke_database(root):
+        desktop_data = _prepare_smoke_data(
+            valid_count=valid_count,
+            duplicate_count=duplicate_count,
+            invalid_count=invalid_count,
+        )
+        tablet_data = _prepare_smoke_data(
+            valid_count=valid_count,
+            duplicate_count=duplicate_count,
+            invalid_count=invalid_count,
+        )
+        base_url = f"http://127.0.0.1:{args.port}"
 
-    runserver_env = os.environ.copy()
-    runserver_env["SHEETBOOK_ENABLED"] = "True"
-    runserver_env.setdefault("PYTHONUNBUFFERED", "1")
-    server_proc = subprocess.Popen(
-        [sys.executable, "manage.py", "runserver", f"127.0.0.1:{args.port}", "--noreload"],
-        cwd=str(root),
-        env=runserver_env,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
+        runserver_env = os.environ.copy()
+        runserver_env["SHEETBOOK_ENABLED"] = "True"
+        runserver_env.setdefault("PYTHONUNBUFFERED", "1")
+        server_proc = subprocess.Popen(
+            [sys.executable, "manage.py", "runserver", f"127.0.0.1:{args.port}", "--noreload"],
+            cwd=str(root),
+            env=runserver_env,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
 
-    started_at = time.strftime("%Y-%m-%d %H:%M:%S")
-    try:
-        _wait_for_http(f"{base_url}/health/", timeout_sec=90)
-        from playwright.sync_api import sync_playwright
+        started_at = time.strftime("%Y-%m-%d %H:%M:%S")
+        try:
+            _wait_for_http(f"{base_url}/health/", timeout_sec=90)
+            from playwright.sync_api import sync_playwright
 
-        with sync_playwright() as playwright:
-            desktop = _run_scenario(
-                playwright,
-                label="desktop",
-                base_url=base_url,
-                review_path=desktop_data["review_path"],
-                expected_seed_token=desktop_data["seed_token"],
-                session_cookie_name=desktop_data["session_cookie_name"],
-                session_cookie_value=desktop_data["session_cookie_value"],
-            )
-            tablet = _run_scenario(
-                playwright,
-                label="tablet",
-                base_url=base_url,
-                review_path=tablet_data["review_path"],
-                expected_seed_token=tablet_data["seed_token"],
-                session_cookie_name=tablet_data["session_cookie_name"],
-                session_cookie_value=tablet_data["session_cookie_value"],
-                device_name="iPad Pro 11",
-            )
+            with sync_playwright() as playwright:
+                desktop = _run_scenario(
+                    playwright,
+                    label="desktop",
+                    base_url=base_url,
+                    review_path=desktop_data["review_path"],
+                    expected_seed_token=desktop_data["seed_token"],
+                    session_cookie_name=desktop_data["session_cookie_name"],
+                    session_cookie_value=desktop_data["session_cookie_value"],
+                )
+                tablet = _run_scenario(
+                    playwright,
+                    label="tablet",
+                    base_url=base_url,
+                    review_path=tablet_data["review_path"],
+                    expected_seed_token=tablet_data["seed_token"],
+                    session_cookie_name=tablet_data["session_cookie_name"],
+                    session_cookie_value=tablet_data["session_cookie_value"],
+                    device_name="iPad Pro 11",
+                )
 
-        summary = {
-            "started_at": started_at,
-            "base_url": base_url,
-            "expected": {
-                "valid_count": valid_count,
-                "duplicate_count": duplicate_count,
-                "invalid_count": invalid_count,
-                "total_lines": desktop_data["expected"]["total_lines"],
-            },
-            "datasets": {
-                "desktop": desktop_data,
-                "tablet": tablet_data,
-            },
-            "desktop": desktop,
-            "tablet": tablet,
-        }
-        summary["evaluation"] = _evaluate(summary)
-        output_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
-        print(json.dumps(summary, ensure_ascii=False))
-        return 0 if summary["evaluation"]["pass"] else 2
-    finally:
-        if server_proc.poll() is None:
-            server_proc.terminate()
-            try:
-                server_proc.wait(timeout=10)
-            except subprocess.TimeoutExpired:  # pragma: no cover
-                server_proc.kill()
-                server_proc.wait(timeout=5)
+            summary = {
+                "started_at": started_at,
+                "base_url": base_url,
+                "expected": {
+                    "valid_count": valid_count,
+                    "duplicate_count": duplicate_count,
+                    "invalid_count": invalid_count,
+                    "total_lines": desktop_data["expected"]["total_lines"],
+                },
+                "datasets": {
+                    "desktop": desktop_data,
+                    "tablet": tablet_data,
+                },
+                "desktop": desktop,
+                "tablet": tablet,
+            }
+            summary["evaluation"] = _evaluate(summary)
+            output_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+            print(json.dumps(summary, ensure_ascii=False))
+            return 0 if summary["evaluation"]["pass"] else 2
+        finally:
+            if server_proc.poll() is None:
+                server_proc.terminate()
+                try:
+                    server_proc.wait(timeout=10)
+                except subprocess.TimeoutExpired:  # pragma: no cover
+                    server_proc.kill()
+                    server_proc.wait(timeout=5)
 
 
 if __name__ == "__main__":

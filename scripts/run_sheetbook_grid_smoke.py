@@ -10,6 +10,8 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
+from _smoke_runtime import managed_smoke_database
+
 
 RENDER_LOG_RE = re.compile(
     r"render rows=(?P<rows_loaded>\d+)/(?P<rows_total>\d+), "
@@ -496,72 +498,73 @@ def main() -> int:
         output_path = root / output_path
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    data = _prepare_smoke_data(rows=args.rows, cols=args.cols, batch_size=args.batch_size)
+    with managed_smoke_database(root):
+        data = _prepare_smoke_data(rows=args.rows, cols=args.cols, batch_size=args.batch_size)
 
-    base_url = f"http://127.0.0.1:{args.port}"
-    runserver_env = os.environ.copy()
-    runserver_env["SHEETBOOK_ENABLED"] = "True"
-    runserver_env.setdefault("PYTHONUNBUFFERED", "1")
+        base_url = f"http://127.0.0.1:{args.port}"
+        runserver_env = os.environ.copy()
+        runserver_env["SHEETBOOK_ENABLED"] = "True"
+        runserver_env.setdefault("PYTHONUNBUFFERED", "1")
 
-    server_proc = subprocess.Popen(
-        [sys.executable, "manage.py", "runserver", f"127.0.0.1:{args.port}", "--noreload"],
-        cwd=str(root),
-        env=runserver_env,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-
-    started_at = time.strftime("%Y-%m-%d %H:%M:%S")
-    try:
-        _wait_for_http(f"{base_url}/health/", timeout_sec=90)
-
-        from playwright.sync_api import sync_playwright
-
-        with sync_playwright() as playwright:
-            desktop = _run_scenario(
-                playwright,
-                label="desktop",
-                base_url=base_url,
-                session_cookie_name=data["session_cookie_name"],
-                session_cookie_value=data["session_cookie_value"],
-                sheetbook_id=data["sheetbook_id"],
-                tab_id=data["tab_id"],
-            )
-            tablet = _run_scenario(
-                playwright,
-                label="tablet",
-                base_url=base_url,
-                session_cookie_name=data["session_cookie_name"],
-                session_cookie_value=data["session_cookie_value"],
-                sheetbook_id=data["sheetbook_id"],
-                tab_id=data["tab_id"],
-                device_name="iPad Pro 11",
-            )
-
-        summary = {
-            "started_at": started_at,
-            "base_url": base_url,
-            "dataset": data,
-            "desktop": desktop,
-            "tablet": tablet,
-        }
-        summary["evaluation"] = _evaluate_pass_fail(
-            summary,
-            max_final_render_ms=float(args.max_final_render_ms),
-            warn_initial_render_ms=float(args.warn_initial_render_ms),
+        server_proc = subprocess.Popen(
+            [sys.executable, "manage.py", "runserver", f"127.0.0.1:{args.port}", "--noreload"],
+            cwd=str(root),
+            env=runserver_env,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
         )
 
-        output_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
-        print(json.dumps(summary, ensure_ascii=False))
-        return 0 if summary["evaluation"]["pass"] else 2
-    finally:
-        if server_proc.poll() is None:
-            server_proc.terminate()
-            try:
-                server_proc.wait(timeout=10)
-            except subprocess.TimeoutExpired:  # pragma: no cover - environment dependent
-                server_proc.kill()
-                server_proc.wait(timeout=5)
+        started_at = time.strftime("%Y-%m-%d %H:%M:%S")
+        try:
+            _wait_for_http(f"{base_url}/health/", timeout_sec=90)
+
+            from playwright.sync_api import sync_playwright
+
+            with sync_playwright() as playwright:
+                desktop = _run_scenario(
+                    playwright,
+                    label="desktop",
+                    base_url=base_url,
+                    session_cookie_name=data["session_cookie_name"],
+                    session_cookie_value=data["session_cookie_value"],
+                    sheetbook_id=data["sheetbook_id"],
+                    tab_id=data["tab_id"],
+                )
+                tablet = _run_scenario(
+                    playwright,
+                    label="tablet",
+                    base_url=base_url,
+                    session_cookie_name=data["session_cookie_name"],
+                    session_cookie_value=data["session_cookie_value"],
+                    sheetbook_id=data["sheetbook_id"],
+                    tab_id=data["tab_id"],
+                    device_name="iPad Pro 11",
+                )
+
+            summary = {
+                "started_at": started_at,
+                "base_url": base_url,
+                "dataset": data,
+                "desktop": desktop,
+                "tablet": tablet,
+            }
+            summary["evaluation"] = _evaluate_pass_fail(
+                summary,
+                max_final_render_ms=float(args.max_final_render_ms),
+                warn_initial_render_ms=float(args.warn_initial_render_ms),
+            )
+
+            output_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+            print(json.dumps(summary, ensure_ascii=False))
+            return 0 if summary["evaluation"]["pass"] else 2
+        finally:
+            if server_proc.poll() is None:
+                server_proc.terminate()
+                try:
+                    server_proc.wait(timeout=10)
+                except subprocess.TimeoutExpired:  # pragma: no cover - environment dependent
+                    server_proc.kill()
+                    server_proc.wait(timeout=5)
 
 
 if __name__ == "__main__":
