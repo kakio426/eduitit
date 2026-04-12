@@ -2,7 +2,8 @@ from django.core.management.base import BaseCommand
 from products.models import Product, ProductFeature, ServiceManual, ManualSection
 
 TARGET_ROUTE = "classcalendar:main"
-LEGACY_TITLES = ("교무수첩", "학급 캘린더")
+PRODUCT_TITLE = "학급 캘린더"
+LEGACY_TITLES = ("교무수첩", "학급 기록 보드")
 
 
 class Command(BaseCommand):
@@ -16,7 +17,7 @@ class Command(BaseCommand):
             product = Product.objects.filter(title__in=LEGACY_TITLES).order_by("-is_active", "id").first()
         if not product:
             product = Product.objects.create(
-                title='교무수첩',
+                title=PRODUCT_TITLE,
                 lead_text='학급 일정을 한눈에 관리하세요!',
                 description='학급 운영 일정을 한곳에서 정리하고 공유하는 학급 전용 캘린더입니다.',
                 price=0.00,
@@ -48,11 +49,14 @@ class Command(BaseCommand):
             if not (product.icon or "").strip():
                 product.icon = "📅"
                 update_fields.append("icon")
+            if (product.title or "").strip() in LEGACY_TITLES:
+                product.title = PRODUCT_TITLE
+                update_fields.append("title")
             if update_fields:
                 product.save(update_fields=update_fields)
                 self.stdout.write(self.style.SUCCESS(f'Updated product essentials: {product.title}'))
 
-        # 1-1. 레거시 타이틀 제품도 라우트를 SSOT로 보정 (교무수첩 상세 fallback 방지)
+        # 1-1. 레거시 타이틀 제품도 라우트와 공개명을 SSOT로 보정
         legacy_count = 0
         for legacy in Product.objects.filter(title__in=LEGACY_TITLES):
             legacy_updates = []
@@ -62,6 +66,9 @@ class Command(BaseCommand):
             if legacy.external_url:
                 legacy.external_url = ""
                 legacy_updates.append("external_url")
+            if (legacy.title or "").strip() != PRODUCT_TITLE:
+                legacy.title = PRODUCT_TITLE
+                legacy_updates.append("title")
             if legacy_updates:
                 legacy.save(update_fields=legacy_updates)
                 legacy_count += 1
@@ -95,13 +102,13 @@ class Command(BaseCommand):
         manual, _ = ServiceManual.objects.get_or_create(
             product=product,
             defaults={
-                'title': f'{product.title} 사용법',
+                'title': f'{PRODUCT_TITLE} 사용법',
                 'description': '학급 일정 등록부터 확인까지 바로 따라갈 수 있습니다.',
                 'is_published': True
             }
         )
         manual_update_fields = []
-        expected_manual_title = f'{product.title} 사용법'
+        expected_manual_title = f'{PRODUCT_TITLE} 사용법'
         if manual.title != expected_manual_title:
             manual.title = expected_manual_title
             manual_update_fields.append('title')

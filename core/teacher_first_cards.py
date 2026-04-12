@@ -4,14 +4,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .service_launcher import sanitize_public_display_text
+from .service_launcher import get_public_product_name, sanitize_public_display_text
 
 
 WORKBENCH_TITLE_ALIASES = (
     ("씨앗 퀴즈", "씨앗 퀴즈"),
     ("반짝반짝", "반짝반짝"),
-    ("교무수첩", "학급 기록 보드"),
-    ("학급 기록 보드", "학급 기록 보드"),
     ("학교 예약", "학교 예약"),
     ("가뿐하게 서명", "가뿐하게 서명"),
     ("교육 자료실", "교육 자료실"),
@@ -31,8 +29,6 @@ FAVORITE_TITLE_ALIASES = (
     ("선생님 사주", "사주"),
     ("선생님 운세", "운세"),
     ("미술 수업", "미술 수업"),
-    ("교무수첩", "학급 기록 보드"),
-    ("학급 기록 보드", "학급 기록 보드"),
     ("학교 예약", "학교 예약"),
     ("교육 자료실", "교육 자료실"),
     ("수업 발표 메이커", "수업 발표 메이커"),
@@ -79,7 +75,7 @@ def _build_summary(task_label: str, service_label: str, support_label: str) -> s
 
 
 def build_workbench_card_meta(product) -> WorkbenchCardMeta:
-    service_label = _clean_text(getattr(product, "title", ""))
+    service_label = _clean_text(get_public_product_name(product) or getattr(product, "title", ""))
     task_label = _clean_text(getattr(product, "teacher_first_task_label", "") or getattr(product, "solve_text", ""))
     support_label = _clean_text(
         getattr(product, "teacher_first_support_label", "")

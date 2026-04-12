@@ -1956,15 +1956,15 @@ class HomeSupplementaryViewTest(TestCase):
             launch_route_name='collect:landing',
         )
         Product.objects.create(
-            title="교무수첩",
-            description="교무수첩 설명",
+            title="학급 운영 캘린더",
+            description="학급 운영 캘린더 설명",
             price=0,
             is_active=True,
             service_type='classroom',
             launch_route_name='classcalendar:main',
         )
         Product.objects.create(
-            title="교무수첩",
+            title="숨김 학급 운영 캘린더",
             description="기록 도구",
             price=0,
             is_active=False,
@@ -1978,7 +1978,7 @@ class HomeSupplementaryViewTest(TestCase):
 
         self.assertIn('간편 수합', titles)
         self.assertIn('학급 캘린더', titles)
-        self.assertNotIn('학급 기록 보드', titles)
+        self.assertNotIn('숨김 학급 운영 캘린더', titles)
 
 
 class PromptLabViewTest(TestCase):
@@ -2838,7 +2838,7 @@ class HomeV4ViewTest(TestCase):
 
     def test_v4_section_menu_hides_calendar_hub_but_keeps_home_calendar_panel(self):
         Product.objects.create(
-            title="교무수첩",
+            title="학급 캘린더",
             description="캘린더 허브",
             price=0,
             is_active=True,

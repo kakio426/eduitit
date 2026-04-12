@@ -17,7 +17,6 @@ SENSITIVE_DISCOVERY_ROUTE_NAMES = {
 SENSITIVE_DISCOVERY_PRODUCT_TITLES = {
     "가뿐하게 서명 톡",
     "간편 수합",
-    "교무수첩",
     "동의서는 나에게 맡겨",
     "우리반BTI",
     "전담 시간표·특별실 배치 도우미",

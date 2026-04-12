@@ -8,7 +8,7 @@ from products.models import Product, ServiceManual
 class ServiceGuideDetailLaunchTests(TestCase):
     def test_service_guide_detail_redirects_to_padlet(self):
         product = Product.objects.create(
-            title="교무수첩",
+            title="학급 캘린더",
             description="학급 운영 캘린더",
             price=0,
             is_active=True,
@@ -21,7 +21,7 @@ class ServiceGuideDetailLaunchTests(TestCase):
         )
         manual = ServiceManual.objects.create(
             product=product,
-            title="교무수첩 사용법",
+            title="학급 캘린더 사용법",
             description="설명",
             is_published=True,
         )

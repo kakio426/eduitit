@@ -326,7 +326,6 @@ class ClassroomCatalogVisibilityTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotIn('학급 캘린더', product_titles)
         self.assertIn('운영 도구', product_titles)
-        self.assertNotContains(response, '교무수첩')
         self.assertEqual(response.context['total_count'], expected_count)
 
     def test_catalog_cards_use_start_copy_and_public_meta_contract(self):

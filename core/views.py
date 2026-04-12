@@ -5437,7 +5437,7 @@ TEACHER_FIRST_SERVICE_GUIDE_SECTIONS = [
     {
         'key': 'classroom',
         'title': '학급 운영',
-        'description': '학급 캘린더, 학급 기록 보드, 학급 운영 도구처럼 매일 쓰는 흐름을 먼저 보여줍니다.',
+        'description': '학급 캘린더와 학급 운영 도구처럼 매일 쓰는 흐름을 먼저 보여줍니다.',
     },
     {
         'key': 'counsel',
