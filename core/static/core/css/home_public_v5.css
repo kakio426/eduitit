@@ -189,14 +189,23 @@
     font-size: 0.88rem;
     font-weight: 800;
     letter-spacing: -0.014em;
-    transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+    text-decoration: none;
+    transition:
+        border-color 0.2s ease,
+        background-color 0.2s ease,
+        color 0.2s ease,
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
 }
 
 .home-public-v5-primary-link {
     width: 100%;
+    border: 1px solid rgba(91, 44, 207, 0.08);
     background: linear-gradient(135deg, var(--home-public-accent) 0%, var(--color-brand-500) 100%);
     color: #ffffff;
-    box-shadow: 0 14px 28px rgba(91, 44, 207, 0.18);
+    box-shadow:
+        0 14px 28px rgba(91, 44, 207, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 
 .home-public-v5-primary-link:hover,
@@ -204,6 +213,9 @@
     background: var(--home-public-accent-strong);
     color: #ffffff;
     transform: translateY(-1px);
+    box-shadow:
+        0 16px 30px rgba(91, 44, 207, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.26);
 }
 
 .home-public-v5-primary-link:focus-visible {
@@ -211,10 +223,16 @@
     box-shadow: var(--home-public-focus-ring), 0 12px 24px rgba(91, 44, 207, 0.16);
 }
 
+.home-public-v5-primary-link:active,
+.home-public-v5-secondary-link:active {
+    transform: translateY(0);
+}
+
 .home-public-v5-secondary-link {
     border: 1px solid var(--home-public-border);
     background: #ffffff;
     color: #0f172a;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
 }
 
 .home-public-v5-secondary-link:hover,
@@ -223,6 +241,9 @@
     background: rgba(238, 232, 255, 0.36);
     color: var(--home-public-accent-strong);
     transform: translateY(-1px);
+    box-shadow:
+        0 10px 20px rgba(15, 23, 42, 0.06),
+        inset 0 1px 0 rgba(255, 255, 255, 0.86);
 }
 
 .home-public-v5-secondary-link:focus-visible {
@@ -284,7 +305,9 @@
     color: var(--home-public-accent);
     font-size: 0.68rem;
     font-weight: 900;
+    letter-spacing: 0.015em;
     text-align: center;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
 }
 
 .home-public-v5-grid-title {

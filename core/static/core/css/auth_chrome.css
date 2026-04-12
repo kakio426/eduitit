@@ -168,8 +168,24 @@ body {
 .auth-shell-notice,
 .auth-shell-muted-panel,
 .auth-shell-checkbox-card {
+    position: relative;
+    overflow: hidden;
     border-radius: 1.2rem;
     padding: 0.92rem 0.98rem;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.auth-shell-notice::before,
+.auth-shell-muted-panel::before,
+.auth-shell-checkbox-card::before {
+    content: "";
+    position: absolute;
+    left: 1rem;
+    right: 1rem;
+    top: 0;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.18) 100%);
+    pointer-events: none;
 }
 
 .auth-shell-notice {
@@ -219,6 +235,7 @@ body {
     font-size: 1.02rem;
     font-weight: 800;
     letter-spacing: -0.015em;
+    text-decoration: none;
     transition:
         transform 180ms ease,
         box-shadow 180ms ease,
@@ -236,6 +253,10 @@ body {
 .auth-shell-provider:focus-visible {
     outline: none;
     box-shadow: var(--auth-shell-focus-ring);
+}
+
+.auth-shell-provider:active {
+    transform: translateY(0);
 }
 
 .auth-shell-provider svg {
@@ -291,6 +312,15 @@ body {
 .auth-shell-link {
     color: var(--color-brand-700);
     font-weight: 800;
+    text-decoration-color: rgba(91, 44, 207, 0.24);
+    text-decoration-thickness: 0.08em;
+    text-underline-offset: 0.16em;
+    transition: color 160ms ease, text-decoration-color 160ms ease;
+}
+
+.auth-shell-link:hover {
+    color: var(--color-brand-900);
+    text-decoration-color: rgba(91, 44, 207, 0.42);
 }
 
 .auth-shell-link:focus-visible {
@@ -375,11 +405,24 @@ body {
     font-size: 0.98rem;
     font-weight: 500;
     line-height: 1.45;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+    box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.03),
+        inset 0 1px 0 rgba(255, 255, 255, 0.72);
     transition:
         border-color 160ms ease,
         box-shadow 160ms ease,
         background-color 160ms ease;
+}
+
+.auth-shell-form input[type="text"]:hover,
+.auth-shell-form input[type="email"]:hover,
+.auth-shell-form input[type="password"]:hover,
+.auth-shell-form input[type="url"]:hover,
+.auth-shell-form select:hover,
+.auth-shell-form textarea:hover,
+.auth-shell-input:hover {
+    border-color: rgba(148, 163, 184, 0.3);
+    background: #ffffff;
 }
 
 .auth-shell-form textarea {
@@ -400,7 +443,9 @@ body {
     outline: none;
     border-color: var(--auth-shell-focus-border);
     background: #ffffff;
-    box-shadow: var(--auth-shell-focus-ring);
+    box-shadow:
+        var(--auth-shell-focus-ring),
+        0 10px 18px rgba(91, 44, 207, 0.08);
 }
 
 .auth-shell-field.has-error input,
@@ -436,6 +481,13 @@ body {
     background: rgba(255, 241, 244, 0.9);
 }
 
+.auth-shell-checkbox-card:focus-within {
+    border-color: rgba(91, 44, 207, 0.22);
+    box-shadow:
+        var(--auth-shell-focus-ring),
+        inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
 .auth-shell-checkbox-row {
     display: flex;
     align-items: flex-start;
@@ -464,7 +516,10 @@ body {
     font-size: 0.98rem;
     font-weight: 800;
     letter-spacing: -0.015em;
-    box-shadow: 0 12px 24px rgba(91, 44, 207, 0.16);
+    text-decoration: none;
+    box-shadow:
+        0 12px 24px rgba(91, 44, 207, 0.16),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
     transition:
         transform 180ms ease,
         box-shadow 180ms ease,
@@ -476,9 +531,14 @@ body {
     transform: translateY(-1px);
     box-shadow:
         var(--auth-shell-focus-ring),
-        0 14px 28px rgba(91, 44, 207, 0.18);
+        0 14px 28px rgba(91, 44, 207, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.24);
     color: #ffffff;
     text-decoration: none;
+}
+
+.auth-shell-submit:active {
+    transform: translateY(0);
 }
 
 .auth-shell-submit:disabled {
