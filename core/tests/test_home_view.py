@@ -10,6 +10,7 @@ from django.conf import settings
 from django.test import TestCase, Client, RequestFactory, override_settings
 from django.urls import reverse
 from django.contrib.auth.models import AnonymousUser, User
+from django.utils.html import escape
 from django.utils import timezone
 
 from classcalendar.models import CalendarCollaborator, CalendarEvent, CalendarTask, EventPageBlock
@@ -203,7 +204,7 @@ class HomeViewTest(TestCase):
         _assert_public_home_context_contract(self, response, design_version='v6')
         locked_titles = {card['title'] for card in response.context.get('guest_locked_cards', [])}
         self.assertIn('테스트 서비스', locked_titles)
-        self.assertIn('로그인하고 이어서', content)
+        self.assertIn('계속 쓰려면 로그인', content)
 
     def test_home_nav_contains_single_help_hub_link(self):
         response = self.client.get(reverse('home'))
@@ -431,9 +432,9 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('data-home-v6-public-primary-card="true"', content)
         self.assertIn('data-home-v6-public-grid-panel="true"', content)
         self.assertIn('data-home-v6-public-login-band="true"', content)
-        self.assertIn('오늘 쓸 교실 도구, 바로 시작', content)
-        self.assertIn('지금 열 수 있는 도구', content)
-        self.assertIn('이어서 하는 업무', content)
+        self.assertIn('알림장·주간학습 멘트 바로 작성', content)
+        self.assertIn('두 가지로 시작', content)
+        self.assertIn('계속 쓰려면 로그인', content)
         self.assertNotIn('data-home-v2-guest-hero="true"', content)
         self.assertNotIn('data-home-v2-public-section="true"', content)
 
@@ -442,31 +443,20 @@ class HomeV2ViewTest(TestCase):
         self._create_try_now_products()
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        primary_action_card = response.context.get('public_primary_action_card')
-        continue_action_card = response.context.get('guest_continue_action_card')
-        continue_url = response.context.get('guest_continue_url')
+        continue_url = response.context.get('guest_notice_trial_login_url')
 
-        self.assertIsNotNone(primary_action_card)
-        self.assertEqual(primary_action_card['title'], '간편 수합')
-        self.assertIn(primary_action_card['title'], content)
-        self.assertIn('바로 시작', content)
-        self.assertIsNotNone(continue_action_card)
-        self.assertEqual(continue_action_card['title'], '수업 도구')
-        self.assertIn('로그인하고 이어서', content)
-        self.assertIn('수합·서명', content)
-        self.assertIn('문서·작성', content)
-        self.assertIn('학급 운영', content)
+        self.assertIn('알림장 쓰기', content)
+        self.assertIn('주간학습 쓰기', content)
+        self.assertIn('계속 쓰려면 로그인', content)
         self.assertTrue(continue_url.startswith(reverse('account_login')))
         self.assertIn('?next=', continue_url)
         self.assertIn(continue_url, content)
         self.assertNotIn('로그인 후 전체 열기', content)
-        self.assertNotIn('지금 바로 써보기', content)
 
     def test_v2_anonymous_collect_card_uses_guest_join_copy(self):
         self._create_try_now_products()
 
         response = self.client.get(reverse('home'))
-        content = response.content.decode('utf-8')
         primary_action_card = response.context.get('public_primary_action_card')
 
         self.assertIsNotNone(primary_action_card)
@@ -474,7 +464,6 @@ class HomeV2ViewTest(TestCase):
         self.assertEqual(primary_action_card['access_status_label'], '비로그인 참여')
         self.assertEqual(primary_action_card['cta_label'], '참여 열기')
         self.assertIn('입장코드나 QR이 있으면 바로 제출에 참여합니다.', primary_action_card['description'])
-        self.assertIn('참여 열기', content)
 
     def test_v2_anonymous_renders_hero_preview_and_proof_panels(self):
         self._create_try_now_products()
@@ -500,12 +489,12 @@ class HomeV2ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        hero_card = response.context.get('public_primary_action_card')
+        trial_actions = response.context.get('guest_notice_trial_actions', [])
 
-        self.assertIsNotNone(hero_card)
-        self.assertEqual(hero_card['id'], public_collect.id)
+        self.assertEqual(len(trial_actions), 2)
         self.assertIn('data-home-v6-public-primary-card="true"', content)
-        self.assertIn(f'href="{hero_card["href"]}"', content)
+        self.assertIn(reverse('noticegen:main'), trial_actions[0]['href'])
+        self.assertIn(escape(trial_actions[0]['href']), content)
 
     def test_v2_anonymous_surfaces_public_cards_before_locked_sections(self):
         public_collect = Product.objects.create(
@@ -532,10 +521,10 @@ class HomeV2ViewTest(TestCase):
 
         self._assert_public_home_uses_v6(response, content)
         self.assertIn('data-home-v6-public-grid-panel="true"', content)
-        self.assertIn('지금 열 수 있는 도구', content)
-        self.assertIn('이어서 하는 업무', content)
-        self.assertIn('미리보기 가능', content)
-        self.assertIn('로그인하고 이어서', content)
+        self.assertIn('두 가지로 시작', content)
+        self.assertIn('계속 쓰려면 로그인', content)
+        self.assertIn('알림장 쓰기', content)
+        self.assertIn('주간학습 쓰기', content)
 
         public_ids = [card['id'] for card in response.context.get('guest_public_cards', [])]
         self.assertIn(public_collect.id, public_ids)
@@ -605,7 +594,6 @@ class HomeV2ViewTest(TestCase):
             if card['id'] == external_public.id
         )
         self.assertEqual(external_card['access_status_label'], '외부 이동')
-        self.assertIn('외부 이동', content)
         self.assertNotIn('text-slate-600">파일 필요</span>', content)
         self.assertNotIn('text-indigo-700">가이드 있음</span>', content)
 
@@ -652,7 +640,7 @@ class HomeV2ViewTest(TestCase):
         locked_titles = {card['title'] for card in response.context.get('guest_locked_cards', [])}
         self.assertNotIn('테스트 게임', public_titles)
         self.assertIn('수업 도구', locked_titles)
-        self.assertIn('로그인하고 이어서', content)
+        self.assertIn('계속 쓰려면 로그인', content)
         self.assertNotIn('학생용 QR', content)
 
     @patch('core.views.attach_teacher_buddy_avatar_context')
@@ -2990,8 +2978,8 @@ class HomeV4ViewTest(TestCase):
         self.assertTemplateUsed(response, 'core/home_public_v6_canonical.html')
         self.assertTemplateNotUsed(response, 'core/home_v2.html')
         self.assertIn('data-home-v6-public-shell="true"', content)
-        self.assertIn('오늘 쓸 교실 도구, 바로 시작', content)
-        self.assertIn('이어서 하는 업무', content)
+        self.assertIn('알림장·주간학습 멘트 바로 작성', content)
+        self.assertIn('계속 쓰려면 로그인', content)
         self.assertNotIn('data-home-v4-public-shell="true"', content)
         self.assertEqual(
             representative_titles,
@@ -3011,7 +2999,7 @@ class HomeV4ViewTest(TestCase):
         self.assertEqual(artclass_product.home_landing_cta_label, '로그인 후 시작')
         self.assertTrue(artclass_product.home_landing_cta_href.startswith(login_url))
         self.assertIn('data-home-v6-public-login-band="true"', content)
-        self.assertIn(f'href="{response.context["guest_continue_url"]}"', content)
+        self.assertIn(f'href="{response.context["guest_notice_trial_login_url"]}"', content)
 
     def test_v4_anonymous_rotation_surfaces_guest_services_with_single_active_card(self):
         public_collect = Product.objects.create(
@@ -3041,8 +3029,8 @@ class HomeV4ViewTest(TestCase):
         self.assertIn('data-home-v6-public-primary-card="true"', content)
         self.assertIn('data-home-v6-public-grid-panel="true"', content)
         self.assertIn('data-home-v6-public-login-band="true"', content)
-        self.assertIn('바로 시작', content)
-        self.assertIn('새 창에서 시작', content)
+        self.assertIn('알림장 쓰기', content)
+        self.assertIn('주간학습 쓰기', content)
 
         public_ids = [card['id'] for card in response.context.get('guest_rotation_cards', [])]
         self.assertIn(public_collect.id, public_ids)
@@ -3056,7 +3044,7 @@ class HomeV4ViewTest(TestCase):
 
         self.assertNotIn('data-guest-rotation-dot=', content)
         self.assertIn('data-home-v6-public-login-band="true"', content)
-        self.assertIn('로그인하고 이어서', content)
+        self.assertIn('계속 쓰려면 로그인', content)
 
     @override_settings(HOME_LAYOUT_VERSION='v2', HOME_V2_ENABLED=True)
     def test_setting_home_layout_version_to_v2_keeps_public_and_authenticated_home_on_v6(self):
@@ -3081,7 +3069,7 @@ class HomeV4ViewTest(TestCase):
 
         self.assertTemplateUsed(public_response, 'core/home_public_v6_canonical.html')
         self.assertIn('data-home-v6-public-shell="true"', public_content)
-        self.assertIn('오늘 쓸 교실 도구, 바로 시작', public_content)
+        self.assertIn('알림장·주간학습 멘트 바로 작성', public_content)
 
 
 @override_settings(HOME_LAYOUT_VERSION='v5', HOME_V2_ENABLED=True)
@@ -3462,8 +3450,8 @@ class HomeV5ViewTest(TestCase):
         self.assertIn('data-home-v6-public-shell="true"', content)
         self.assertIn('data-home-v6-public-primary-card="true"', content)
         self.assertIn('data-home-v6-public-grid-panel="true"', content)
-        self.assertIn('바로 시작', content)
-        self.assertIn('로그인하고 이어서', content)
+        self.assertIn('알림장 쓰기', content)
+        self.assertIn('계속 쓰려면 로그인', content)
         self.assertNotIn('data-home-v4-public-shell="true"', content)
         self.assertNotIn('data-home-v5-shell="true"', content)
         self.assertNotIn('core/css/home_authenticated_v5.css', content)
@@ -3830,13 +3818,19 @@ class HomeV6ViewTest(TestCase):
         )
         content = response.content.decode('utf-8')
         guest_card = next(card for card in context['guest_public_cards'] if card['id'] == guest_doc.id)
+        trial_action_icons = {action['icon_class'] for action in context['guest_notice_trial_actions']}
 
         self.assertEqual(context['featured_product'].home_icon_class, 'fa-solid fa-school')
         self.assertEqual(context['featured_product'].home_accent_token, 'schoolprograms')
         self.assertEqual(guest_card['home_icon_class'], 'fa-solid fa-file-lines')
         self.assertEqual(guest_card['home_accent_token'], 'doc_write')
-        self.assertIn('fa-solid fa-school', content)
-        self.assertIn('fa-solid fa-file-lines', content)
+        self.assertSetEqual(
+            trial_action_icons,
+            {'fa-solid fa-note-sticky', 'fa-solid fa-calendar-week'},
+        )
+        self.assertIn('fa-solid fa-pen-to-square', content)
+        self.assertIn('fa-solid fa-note-sticky', content)
+        self.assertIn('fa-solid fa-calendar-week', content)
         self.assertNotRegex(content, r'>\s*🎪\s*<')
         self.assertNotRegex(content, r'>\s*📝\s*<')
 
@@ -4061,16 +4055,16 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('data-home-v6-public-shell="true"', content)
         self.assertIn('home-public-v6-stage-shell', content)
         self.assertIn('data-home-design-version="v6"', content)
-        self.assertIn('오늘 쓸 교실 도구, 바로 시작', content)
-        self.assertIn('먼저 열고 써본 뒤, 필요할 때 로그인해서 이어갑니다.', content)
+        self.assertIn('알림장·주간학습 멘트 바로 작성', content)
+        self.assertIn('알림장과 주간학습 멘트를 로그인 없이 2회까지 바로 써봅니다.', content)
         self.assertIn('data-home-v6-public-hero="true"', content)
         self.assertIn('data-home-v6-public-login-band="true"', content)
-        self.assertIn('로그인하고 이어서', content)
+        self.assertIn('계속 쓰려면 로그인', content)
         self.assertNotIn('core/css/home_authenticated_v6.css', content)
         self.assertNotIn('core/css/home_authenticated_v6_canonical.css', content)
         self.assertNotIn('data-home-v6-shell="true"', content)
         self.assertNotIn('data-home-v2-guest-hero="true"', content)
-        self.assertEqual(content.count('오늘 쓸 교실 도구, 바로 시작'), 1)
+        self.assertEqual(content.count('알림장·주간학습 멘트 바로 작성'), 1)
         self.assertIn('--home-v6-radius-panel: 0.95rem;', public_css)
         self.assertIn('.home-public-v6-primary-card {', public_css)
         self.assertIn('.home-public-v6-grid-card {', public_css)

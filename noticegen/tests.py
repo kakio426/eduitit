@@ -29,12 +29,12 @@ class NoticeGenViewTests(TestCase):
         base.update(kwargs)
         return base
 
-    def test_guest_daily_limit_is_3(self):
+    def test_guest_trial_limit_is_2(self):
         session = self.client.session
         session.save()
         session_key = session.session_key
 
-        for _ in range(3):
+        for _ in range(2):
             NoticeGenerationAttempt.objects.create(
                 session_key=session_key,
                 target="student_low",
@@ -51,7 +51,8 @@ class NoticeGenViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 429)
-        self.assertContains(response, "오늘 멘트 생성 횟수(3회)를 모두 사용했습니다.", status_code=429)
+        self.assertContains(response, "비회원 체험 2회를 모두 사용했습니다. 로그인 후 계속 쓸 수 있습니다.", status_code=429)
+        self.assertContains(response, "로그인하고 계속", status_code=429)
 
     def test_member_daily_limit_is_10(self):
         user = get_user_model().objects.create_user(
@@ -81,6 +82,51 @@ class NoticeGenViewTests(TestCase):
 
         self.assertEqual(response.status_code, 429)
         self.assertContains(response, "오늘 멘트 생성 횟수(10회)를 모두 사용했습니다.", status_code=429)
+
+    def test_guest_trial_limit_blocks_even_when_cache_exists(self):
+        session = self.client.session
+        session.save()
+        session_key = session.session_key
+
+        for _ in range(2):
+            NoticeGenerationAttempt.objects.create(
+                session_key=session_key,
+                target="parent",
+                topic="notice",
+                tone=get_tone_for_target("parent"),
+                charged=True,
+                status=NoticeGenerationAttempt.STATUS_LLM_SUCCESS,
+            )
+
+        payload = self._payload(target="parent", topic="notice", keywords="수학 준비물 챙기기")
+        tone = get_tone_for_target(payload["target"])
+        key_data = _build_cache_key_data(
+            payload["target"],
+            payload["topic"],
+            tone,
+            payload["keywords"],
+            [],
+        )
+        NoticeGenerationCache.objects.create(
+            key_hash=key_data["key_hash"],
+            prompt_version=PROMPT_VERSION,
+            target=payload["target"],
+            topic=payload["topic"],
+            tone=tone,
+            keywords_norm=key_data["keywords_norm"],
+            context_norm=key_data["context_norm"],
+            signature=key_data["signature"],
+            result_text="준비물을 꼭 챙겨주세요.",
+        )
+
+        response = self.client.post(
+            reverse("noticegen:generate"),
+            payload,
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 429)
+        self.assertContains(response, "비회원 체험 2회를 모두 사용했습니다. 로그인 후 계속 쓸 수 있습니다.", status_code=429)
 
     def test_exact_cache_hit_does_not_charge(self):
         payload = self._payload(target="parent", topic="notice", keywords="수학 준비물 챙기기")
@@ -251,12 +297,12 @@ class NoticeGenViewTests(TestCase):
         self.assertContains(response, 'data-mini-app-state="error"', status_code=400, html=False)
         self.assertContains(response, "전달 사항을 2글자 이상 적어 주세요.", status_code=400)
 
-    def test_generate_mini_daily_limit_uses_compact_error_panel(self):
+    def test_generate_mini_guest_limit_uses_compact_error_panel(self):
         session = self.client.session
         session.save()
         session_key = session.session_key
 
-        for _ in range(3):
+        for _ in range(2):
             NoticeGenerationAttempt.objects.create(
                 session_key=session_key,
                 target="student_low",
@@ -274,7 +320,8 @@ class NoticeGenViewTests(TestCase):
 
         self.assertEqual(response.status_code, 429)
         self.assertContains(response, 'data-mini-app-state="error"', status_code=429, html=False)
-        self.assertContains(response, "오늘 멘트 생성 횟수(3회)를 모두 사용했습니다.", status_code=429)
+        self.assertContains(response, "비회원 체험 2회를 모두 사용했습니다. 로그인 후 계속 쓸 수 있습니다.", status_code=429)
+        self.assertContains(response, "로그인", status_code=429)
 
     def test_parent_prompt_has_length_and_natural_flow_rules(self):
         system_prompt = build_system_prompt("parent", LENGTH_LONG)
@@ -369,8 +416,8 @@ class NoticeGenViewTests(TestCase):
     def test_main_uses_teacher_first_sections(self):
         response = self.client.get(reverse("noticegen:main"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "바로 쓰는 안내문 문장")
-        self.assertContains(response, "그냥 적어 주세요")
+        self.assertContains(response, "로그인 없이 2회")
+        self.assertContains(response, "알림장·주간학습 멘트")
         self.assertContains(response, "직접 조정")
         self.assertContains(response, "생성 결과")
         self.assertContains(response, "문장 만들기")
@@ -378,6 +425,27 @@ class NoticeGenViewTests(TestCase):
         self.assertEqual(response.context["initial_topic"], "notice")
         self.assertEqual(response.context["initial_length_style"], "medium")
         self.assertNotContains(response, "동의서로 이어서 만들기")
+
+    def test_main_shows_login_gate_when_guest_trial_is_complete(self):
+        session = self.client.session
+        session.save()
+        session_key = session.session_key
+        for _ in range(2):
+            NoticeGenerationAttempt.objects.create(
+                session_key=session_key,
+                target="student_low",
+                topic="safety",
+                tone=get_tone_for_target("student_low"),
+                charged=True,
+                status=NoticeGenerationAttempt.STATUS_LLM_SUCCESS,
+            )
+
+        response = self.client.get(reverse("noticegen:main"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "비회원 체험 2회 완료")
+        self.assertContains(response, "로그인 후 계속 작성합니다.")
+        self.assertNotContains(response, "문장 만들기")
 
     def test_main_uses_workspace_cache_headers(self):
         response = self.client.get(reverse("noticegen:main"))
@@ -518,7 +586,7 @@ class NoticeGenViewTests(TestCase):
 
         response = self.client.get(f"{reverse('noticegen:main')}?sb_seed=seed-token")
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "교무수첩에서 가져온 내용을 넣어두었어요.")
+        self.assertContains(response, "이전에 정리한 내용을 넣어두었어요.")
         self.assertContains(response, "체험학습 준비물 안내")
         self.assertEqual(response.context["initial_target"], "parent")
         self.assertEqual(response.context["initial_topic"], "notice")

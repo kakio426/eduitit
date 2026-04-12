@@ -208,6 +208,14 @@
     letter-spacing: -0.012em;
 }
 
+.home-public-v6-primary-note {
+    margin: 0;
+    color: #475569;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: -0.012em;
+}
+
 .home-public-v6-section-surface {
     padding: 0.96rem;
 }
@@ -216,6 +224,10 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.7rem;
+}
+
+.home-public-v6-grid--trial {
+    grid-template-columns: 1fr;
 }
 
 .home-public-v6-grid-card {
@@ -327,6 +339,10 @@
     }
 
     .home-public-v6-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .home-public-v6-grid--trial {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }

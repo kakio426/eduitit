@@ -10,108 +10,87 @@
 
 {% block content %}
 <div class="min-h-screen home-public-v6-page" data-home-v6-public-shell="true" data-home-design-version="v6">
-    <div class="mx-auto home-public-v5-stage home-public-v6-stage-shell" style="padding-top: calc(var(--main-nav-height, 88px) + 1rem);">
-        <main class="home-public-v6-main px-4 pb-16 sm:px-5 md:px-6">
-            <section class="home-public-v6-hero" data-home-v6-public-hero="true">
-                <div class="home-public-v6-hero-copy">
-                    <span class="home-public-v5-kicker">
-                        <span class="home-public-kicker-dot h-2.5 w-2.5 rounded-full"></span>
-                        로그인 없이
-                    </span>
-                    <h1 class="home-public-v6-hero-title">오늘 쓸 교실 도구, 바로 시작</h1>
-                    <p class="home-public-v6-hero-summary">먼저 열고 써본 뒤, 필요할 때 로그인해서 이어갑니다.</p>
-                </div>
-
-                <article class="home-public-v6-primary-card" data-home-v6-public-primary-card="true">
-                    <div class="home-public-v6-primary-head">
-                        <div>
-                            <p class="home-public-v6-section-eyebrow">지금 시작</p>
-                            <h2 class="home-public-v6-section-title">
-                                {% if public_primary_action_card %}바로 열리는 도구{% else %}로그인 후 이어서{% endif %}
-                            </h2>
-                        </div>
-                        {% if public_primary_action_card %}
-                        <span class="home-public-v6-primary-status">{{ public_primary_action_card.access_status_label }}</span>
-                        {% endif %}
-                    </div>
-
-                    {% if public_primary_action_card %}
-                    <div class="home-public-v6-primary-body">
-                        <div class="home-public-v6-primary-icon home-public-service-icon-tone" data-home-accent="{{ public_primary_action_card.home_accent_token|default:'external' }}">
-                            <i class="{{ public_primary_action_card.home_icon_class|default:'fa-solid fa-star' }}"></i>
-                        </div>
-                        <div class="min-w-0">
-                            <h3 class="home-public-v6-primary-title">{{ public_primary_action_card.title }}</h3>
-                            <p class="home-public-v6-primary-summary">{{ public_primary_action_card.description|truncatechars:42 }}</p>
-                        </div>
-                    </div>
-                    <a href="{{ public_primary_action_card.href }}"
-                        {% if public_primary_action_card.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
-                        class="home-public-v5-primary-link">
-                        {{ public_primary_action_card.cta_label|default:'바로 시작' }}
-                        <i class="fa-solid fa-{% if public_primary_action_card.is_external %}arrow-up-right-from-square{% else %}arrow-right{% endif %} text-xs"></i>
-                    </a>
-                    {% else %}
-                    <p class="home-public-v6-primary-summary">문서, 수합, 운영 도구는 로그인 후 바로 이어집니다.</p>
-                    <a href="{{ guest_continue_url|default:login_url }}" class="home-public-v5-secondary-link">
-                        로그인하고 이어서
-                        <i class="fa-solid fa-right-to-bracket text-xs"></i>
-                    </a>
-                    {% endif %}
-                </article>
-            </section>
-
-            {% if public_secondary_cards %}
-            <section class="home-public-v6-section-surface" data-home-v6-public-grid-panel="true">
-                <div class="home-public-v6-section-header">
-                    <div>
-                        <p class="home-public-v6-section-eyebrow">바로 시작</p>
-                        <h2 class="home-public-v6-section-title">지금 열 수 있는 도구</h2>
-                    </div>
-                </div>
-
-                <div class="home-public-v6-grid" data-home-v6-public-grid="true">
-                    {% for card in public_secondary_cards %}
-                    <a
-                        href="{{ card.href }}"
-                        class="home-public-v6-grid-card"
-                        data-home-v6-public-card="true"
-                        {% if card.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
-                    >
-                        <div class="home-public-v6-grid-head">
-                            <span class="home-public-v6-grid-icon home-public-service-icon-tone" data-home-accent="{{ card.home_accent_token|default:'external' }}">
-                                <i class="{{ card.home_icon_class|default:'fa-solid fa-star' }}"></i>
-                            </span>
-                            <span class="home-public-v6-grid-badge">{{ card.access_status_label }}</span>
-                        </div>
-                        <h3 class="home-public-v6-grid-title">{{ card.title }}</h3>
-                        <p class="home-public-v6-grid-summary">{{ card.description|truncatechars:38 }}</p>
-                        <span class="home-public-v6-grid-cta">
-                            {{ card.cta_label|default:'바로 시작' }}
+    <div style="padding-top: calc(var(--main-nav-height, 88px) + 1rem);">
+        <div class="mx-auto home-public-v5-stage home-public-v6-stage-shell">
+            <main class="home-public-v6-main px-4 pb-16 sm:px-5 md:px-6">
+                <section class="home-public-v6-hero" data-home-v6-public-hero="true">
+                    <div class="home-public-v6-hero-copy">
+                        <span class="home-public-v5-kicker">
+                            <span class="home-public-kicker-dot h-2.5 w-2.5 rounded-full"></span>
+                            로그인 없이 2회
                         </span>
-                    </a>
-                    {% endfor %}
-                </div>
-            </section>
-            {% endif %}
+                        <h1 class="home-public-v6-hero-title">알림장·주간학습 멘트 바로 작성</h1>
+                        <p class="home-public-v6-hero-summary">{{ guest_notice_trial_summary }}</p>
+                    </div>
 
-            <section class="home-public-v6-section-surface home-public-v6-continue-band" data-home-v6-public-login-band="true">
-                <div class="home-public-v6-continue-copy">
-                    <p class="home-public-v6-section-eyebrow">로그인 후</p>
-                    <h2 class="home-public-v6-section-title">이어서 하는 업무</h2>
-                    <p class="home-public-v6-continue-summary">수합, 문서, 운영 도구를 같은 흐름에서 이어갑니다.</p>
-                    <div class="home-public-v6-chip-row">
-                        {% for label in guest_continue_category_labels %}
-                        <span class="home-public-v6-chip">{{ label }}</span>
+                    <article class="home-public-v6-primary-card" data-home-v6-public-primary-card="true">
+                        <div class="home-public-v6-primary-head">
+                            <div>
+                                <p class="home-public-v6-section-eyebrow">비로그인 체험</p>
+                                <h2 class="home-public-v6-section-title">먼저 써보기</h2>
+                            </div>
+                            <span class="home-public-v6-primary-status">{{ guest_notice_trial_status_label }}</span>
+                        </div>
+
+                        <div class="home-public-v6-primary-body">
+                            <div class="home-public-v6-primary-icon home-public-service-icon-tone" data-home-accent="doc_write">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <h3 class="home-public-v6-primary-title">알림장·주간학습 멘트</h3>
+                                <p class="home-public-v6-primary-summary">메모처럼 적고 바로 문장으로 정리합니다.</p>
+                            </div>
+                        </div>
+
+                        {% if guest_notice_trial_completed %}
+                        <a href="{{ guest_notice_trial_login_url }}" class="home-public-v5-secondary-link">
+                            로그인하고 계속
+                            <i class="fa-solid fa-right-to-bracket text-xs"></i>
+                        </a>
+                        {% else %}
+                        <p class="home-public-v6-primary-note">남은 체험 {{ guest_notice_trial_remaining_count }} / {{ guest_notice_trial_limit }}</p>
+                        {% endif %}
+                    </article>
+                </section>
+
+                <section class="home-public-v6-section-surface" data-home-v6-public-grid-panel="true">
+                    <div class="home-public-v6-section-header">
+                        <div>
+                            <p class="home-public-v6-section-eyebrow">지금 해볼 작업</p>
+                            <h2 class="home-public-v6-section-title">두 가지로 시작</h2>
+                        </div>
+                    </div>
+
+                    <div class="home-public-v6-grid home-public-v6-grid--trial" data-home-v6-public-grid="true">
+                        {% for action in guest_notice_trial_actions %}
+                        <a href="{{ action.href }}" class="home-public-v6-grid-card" data-home-v6-public-card="true">
+                            <div class="home-public-v6-grid-head">
+                                <span class="home-public-v6-grid-icon home-public-service-icon-tone" data-home-accent="doc_write">
+                                    <i class="{{ action.icon_class }}"></i>
+                                </span>
+                                <span class="home-public-v6-grid-badge">{{ action.badge_label }}</span>
+                            </div>
+                            <h3 class="home-public-v6-grid-title">{{ action.title }}</h3>
+                            <p class="home-public-v6-grid-summary">{{ action.description }}</p>
+                            <span class="home-public-v6-grid-cta">{{ action.cta_label }}</span>
+                        </a>
                         {% endfor %}
                     </div>
-                </div>
-                <a href="{{ guest_continue_url|default:login_url }}" class="home-public-v5-secondary-link">
-                    로그인하고 이어서
-                    <i class="fa-solid fa-right-to-bracket text-xs"></i>
-                </a>
-            </section>
-        </main>
+                </section>
+
+                <section class="home-public-v6-section-surface home-public-v6-continue-band" data-home-v6-public-login-band="true">
+                    <div class="home-public-v6-continue-copy">
+                        <p class="home-public-v6-section-eyebrow">그 다음</p>
+                        <h2 class="home-public-v6-section-title">계속 쓰려면 로그인</h2>
+                        <p class="home-public-v6-continue-summary">{{ guest_notice_trial_login_summary }}</p>
+                    </div>
+                    <a href="{{ guest_notice_trial_login_url }}" class="home-public-v5-secondary-link">
+                        로그인
+                        <i class="fa-solid fa-right-to-bracket text-xs"></i>
+                    </a>
+                </section>
+            </main>
+        </div>
     </div>
 </div>
 {% endblock %}

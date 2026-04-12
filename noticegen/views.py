@@ -4,6 +4,7 @@ import os
 import re
 import secrets
 from difflib import SequenceMatcher
+from urllib.parse import urlencode
 
 from django.contrib.auth.decorators import login_required
 from django_ratelimit.core import is_ratelimited
@@ -158,7 +159,10 @@ def _result_defaults():
         "limit_message": "",
         "remaining_count": None,
         "daily_limit": None,
+        "usage_limit_label": "",
         "similar_items": [],
+        "guest_login_url": "",
+        "guest_trial_completed": False,
     }
 
 
@@ -302,7 +306,17 @@ def _ensure_session_key(request):
 
 
 def _daily_limit(request):
-    return 10 if request.user.is_authenticated else 3
+    return 10 if request.user.is_authenticated else 2
+
+
+def _usage_limit_label(request):
+    return "오늘 남은 생성 횟수" if request.user.is_authenticated else "남은 체험"
+
+
+def _guest_login_continue_url():
+    noticegen_url = reverse("noticegen:main")
+    login_url = reverse("account_login")
+    return f"{login_url}?{urlencode({'next': noticegen_url})}"
 
 
 def _noticegen_ratelimit_key(group, request):
@@ -324,10 +338,9 @@ def _is_generation_rate_limited(request):
 
 
 def _usage_count_today(request):
-    today = timezone.localdate()
-    qs = NoticeGenerationAttempt.objects.filter(charged=True, created_at__date=today)
+    qs = NoticeGenerationAttempt.objects.filter(charged=True)
     if request.user.is_authenticated:
-        return qs.filter(user=request.user).count()
+        return qs.filter(user=request.user, created_at__date=timezone.localdate()).count()
     session_key = _ensure_session_key(request)
     return qs.filter(user__isnull=True, session_key=session_key).count()
 
@@ -336,6 +349,18 @@ def _remaining_count(request):
     limit = _daily_limit(request)
     used = _usage_count_today(request)
     return max(limit - used, 0)
+
+
+def _build_usage_context(request):
+    remaining_count = _remaining_count(request)
+    guest_trial_completed = (not request.user.is_authenticated) and remaining_count <= 0
+    return {
+        "remaining_count": remaining_count,
+        "daily_limit": _daily_limit(request),
+        "usage_limit_label": _usage_limit_label(request),
+        "guest_login_url": _guest_login_continue_url() if guest_trial_completed else "",
+        "guest_trial_completed": guest_trial_completed,
+    }
 
 
 def _record_attempt(
@@ -791,6 +816,7 @@ def _render_mini_result(request, payload, *, status=200):
             "state_message": message,
             "result_text": payload.get("result_text", ""),
             "form_id": "home-mini-noticegen-form",
+            "guest_login_url": payload.get("guest_login_url", ""),
         },
         status=status,
     )
@@ -827,6 +853,7 @@ def main(request):
 
     context = _build_page_context(prefill=prefill)
     context.update(_result_defaults())
+    context.update(_build_usage_context(request))
     context.update(build_noticegen_page_seo(request).as_context())
     response = render(request, "noticegen/main.html", context)
     return _apply_workspace_cache_headers(response)
@@ -841,6 +868,7 @@ def _generate_notice_payload(request):
         )
         return 429, {
             "limit_message": "짧은 시간에 생성 요청이 많았습니다. 잠시 후 다시 시도해 주세요.",
+            **_build_usage_context(request),
         }
 
     generation_inputs = _prepare_generation_inputs(request)
@@ -872,6 +900,22 @@ def _generate_notice_payload(request):
     key_data = _build_cache_key_data(target, topic, tone, normalized_keywords, manual_context_values, length_style)
     key_hash = key_data["key_hash"]
 
+    if (not request.user.is_authenticated) and _usage_count_today(request) >= _daily_limit(request):
+        _record_attempt(
+            request,
+            target=target,
+            topic=topic,
+            tone=tone,
+            status=NoticeGenerationAttempt.STATUS_LIMIT_BLOCKED,
+            charged=False,
+            key_hash=key_hash,
+            error_code="GUEST_TRIAL_REACHED",
+        )
+        return 429, {
+            "limit_message": "비회원 체험 2회를 모두 사용했습니다. 로그인 후 계속 쓸 수 있습니다.",
+            **_build_usage_context(request),
+        }
+
     exact_cache = _find_exact_cache(key_hash)
     if exact_cache:
         _touch_cache(exact_cache)
@@ -886,8 +930,7 @@ def _generate_notice_payload(request):
         )
         return 200, {
             "result_text": exact_cache.result_text,
-            "remaining_count": _remaining_count(request),
-            "daily_limit": _daily_limit(request),
+            **_build_usage_context(request),
         }
 
     if _usage_count_today(request) >= _daily_limit(request):
@@ -901,10 +944,13 @@ def _generate_notice_payload(request):
             key_hash=key_hash,
             error_code="DAILY_LIMIT_REACHED",
         )
+        if request.user.is_authenticated:
+            limit_message = f"오늘 멘트 생성 횟수({_daily_limit(request)}회)를 모두 사용했습니다."
+        else:
+            limit_message = "비회원 체험 2회를 모두 사용했습니다. 로그인 후 계속 쓸 수 있습니다."
         return 429, {
-            "limit_message": f"오늘 멘트 생성 횟수({_daily_limit(request)}회)를 모두 사용했습니다.",
-            "remaining_count": 0,
-            "daily_limit": _daily_limit(request),
+            "limit_message": limit_message,
+            **_build_usage_context(request),
         }
 
     similar_scored = _collect_similar_caches(
@@ -938,9 +984,8 @@ def _generate_notice_payload(request):
         )
         return 200, {
             "result_text": reused_cache.result_text,
-            "remaining_count": _remaining_count(request),
-            "daily_limit": _daily_limit(request),
             "similar_items": similar_items,
+            **_build_usage_context(request),
         }
 
     attempt = _record_attempt(
@@ -980,9 +1025,8 @@ def _generate_notice_payload(request):
         )
         return 200, {
             "error_message": FALLBACK_ERROR_MESSAGE,
-            "remaining_count": _remaining_count(request),
-            "daily_limit": _daily_limit(request),
             "similar_items": similar_items,
+            **_build_usage_context(request),
         }
 
     NoticeGenerationAttempt.objects.filter(pk=attempt.pk).update(
@@ -1011,9 +1055,8 @@ def _generate_notice_payload(request):
     )
     return 200, {
         "result_text": result_text,
-        "remaining_count": _remaining_count(request),
-        "daily_limit": _daily_limit(request),
         "similar_items": similar_items,
+        **_build_usage_context(request),
     }
 
 

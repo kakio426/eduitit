@@ -2504,6 +2504,91 @@ def _build_home_login_continue_url(next_url, *, login_url=""):
     return f"{base_login_url}?{urlencode({'next': candidate})}"
 
 
+GUEST_NOTICE_TRIAL_LIMIT = 2
+GUEST_NOTICE_TRIAL_ACTION_SPECS = (
+    {
+        "title": "알림장 쓰기",
+        "description": "학부모 안내 문장을 바로 만듭니다.",
+        "icon_class": "fa-solid fa-note-sticky",
+        "topic": "notice",
+    },
+    {
+        "title": "주간학습 쓰기",
+        "description": "이번 주 학습 안내 문장을 바로 만듭니다.",
+        "icon_class": "fa-solid fa-calendar-week",
+        "topic": "activity",
+    },
+)
+
+
+def _get_guest_notice_trial_used_count(request):
+    if getattr(request.user, "is_authenticated", False):
+        return 0
+
+    session = getattr(request, "session", None)
+    if session is None:
+        return 0
+
+    session_key = str(getattr(session, "session_key", "") or "").strip()
+    if not session_key:
+        return 0
+
+    from noticegen.models import NoticeGenerationAttempt
+
+    return NoticeGenerationAttempt.objects.filter(
+        user__isnull=True,
+        session_key=session_key,
+        charged=True,
+    ).count()
+
+
+def _build_guest_notice_trial_context(request, *, login_url):
+    noticegen_url = reverse("noticegen:main")
+    used_count = _get_guest_notice_trial_used_count(request)
+    remaining_count = max(GUEST_NOTICE_TRIAL_LIMIT - used_count, 0)
+    trial_completed = remaining_count <= 0
+    login_continue_url = _build_home_login_continue_url(noticegen_url, login_url=login_url)
+    action_cards = []
+
+    for spec in GUEST_NOTICE_TRIAL_ACTION_SPECS:
+        base_href = f"{noticegen_url}?{urlencode({'target': 'parent', 'topic': spec['topic']})}"
+        action_cards.append(
+            {
+                "title": spec["title"],
+                "description": spec["description"],
+                "icon_class": spec["icon_class"],
+                "href": (
+                    _build_home_login_continue_url(base_href, login_url=login_url)
+                    if trial_completed
+                    else base_href
+                ),
+                "badge_label": "로그인 후" if trial_completed else "로그인 없이",
+                "cta_label": "로그인하고 쓰기" if trial_completed else spec["title"],
+            }
+        )
+
+    summary = (
+        "알림장과 주간학습 멘트를 로그인 없이 2회까지 바로 써봅니다."
+        if not trial_completed
+        else "비회원 체험 2회를 모두 사용했습니다. 로그인 후 계속 작성합니다."
+    )
+    return {
+        "guest_notice_trial_actions": action_cards,
+        "guest_notice_trial_limit": GUEST_NOTICE_TRIAL_LIMIT,
+        "guest_notice_trial_used_count": used_count,
+        "guest_notice_trial_remaining_count": remaining_count,
+        "guest_notice_trial_completed": trial_completed,
+        "guest_notice_trial_status_label": (
+            "체험 완료"
+            if trial_completed
+            else f"남은 체험 {remaining_count} / {GUEST_NOTICE_TRIAL_LIMIT}"
+        ),
+        "guest_notice_trial_summary": summary,
+        "guest_notice_trial_login_url": login_continue_url,
+        "guest_notice_trial_login_summary": "체험 2회 이후에는 로그인 후 같은 화면에서 이어서 씁니다.",
+    }
+
+
 GUEST_PUBLIC_SECTION_ORDER = {
     "collect_sign": 0,
     "class_ops": 1,
@@ -3270,7 +3355,7 @@ def _build_guest_home_action_context(request, *, product_list):
         primary_action = {
             **primary_action,
             "eyebrow": "지금 바로 할 일",
-            "meta": "비회원은 하루 3회까지 바로 써볼 수 있어요.",
+            "meta": "비회원은 2회까지 바로 써볼 수 있어요.",
         }
     support_actions = _dedupe_home_actions(
         [
@@ -3772,6 +3857,10 @@ def _home_v2(request, products, posts, page_obj, feed_scope, pinned_notice_posts
 def _build_home_public_landing_context(request, products):
     product_list = _attach_product_launch_meta(list(products), user=request.user)
     login_url = reverse('account_login')
+    guest_notice_trial_context = _build_guest_notice_trial_context(
+        request,
+        login_url=login_url,
+    )
     guest_rotation_cards = _build_home_guest_rotation_cards(product_list, login_url=login_url)
     guest_public_cards = _build_home_guest_highlight_cards(
         product_list,
@@ -3823,6 +3912,7 @@ def _build_home_public_landing_context(request, products):
         'public_secondary_cards': public_secondary_cards,
         'guest_continue_category_labels': PUBLIC_HOME_CONTINUE_CATEGORY_LABELS,
         'login_url': login_url,
+        **guest_notice_trial_context,
         **guest_entry_context,
         **build_home_page_seo(request).as_context(),
     }
