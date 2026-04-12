@@ -204,7 +204,7 @@ class HomeViewTest(TestCase):
         _assert_public_home_context_contract(self, response, design_version='v6')
         locked_titles = {card['title'] for card in response.context.get('guest_locked_cards', [])}
         self.assertIn('테스트 서비스', locked_titles)
-        self.assertIn('계속 쓰려면 로그인', content)
+        self.assertIn('로그인 후 더 많이 쓰는 도구', content)
 
     def test_home_nav_contains_single_help_hub_link(self):
         response = self.client.get(reverse('home'))
@@ -432,9 +432,9 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('data-home-v6-public-primary-card="true"', content)
         self.assertIn('data-home-v6-public-grid-panel="true"', content)
         self.assertIn('data-home-v6-public-login-band="true"', content)
-        self.assertIn('알림장·주간학습 멘트 바로 작성', content)
-        self.assertIn('두 가지로 시작', content)
-        self.assertIn('계속 쓰려면 로그인', content)
+        self.assertIn('교실 일을 바로 여는 도구', content)
+        self.assertIn('로그인 없이 열 수 있는 도구', content)
+        self.assertIn('로그인 후 더 많이 쓰는 도구', content)
         self.assertNotIn('data-home-v2-guest-hero="true"', content)
         self.assertNotIn('data-home-v2-public-section="true"', content)
 
@@ -447,7 +447,7 @@ class HomeV2ViewTest(TestCase):
 
         self.assertIn('알림장 쓰기', content)
         self.assertIn('주간학습 쓰기', content)
-        self.assertIn('계속 쓰려면 로그인', content)
+        self.assertIn('로그인하고 전체 보기', content)
         self.assertTrue(continue_url.startswith(reverse('account_login')))
         self.assertIn('?next=', continue_url)
         self.assertIn(continue_url, content)
@@ -521,8 +521,8 @@ class HomeV2ViewTest(TestCase):
 
         self._assert_public_home_uses_v6(response, content)
         self.assertIn('data-home-v6-public-grid-panel="true"', content)
-        self.assertIn('두 가지로 시작', content)
-        self.assertIn('계속 쓰려면 로그인', content)
+        self.assertIn('로그인 없이 열 수 있는 도구', content)
+        self.assertIn('로그인 후 더 많이 쓰는 도구', content)
         self.assertIn('알림장 쓰기', content)
         self.assertIn('주간학습 쓰기', content)
 
@@ -640,7 +640,7 @@ class HomeV2ViewTest(TestCase):
         locked_titles = {card['title'] for card in response.context.get('guest_locked_cards', [])}
         self.assertNotIn('테스트 게임', public_titles)
         self.assertIn('수업 도구', locked_titles)
-        self.assertIn('계속 쓰려면 로그인', content)
+        self.assertIn('로그인 후 더 많이 쓰는 도구', content)
         self.assertNotIn('학생용 QR', content)
 
     @patch('core.views.attach_teacher_buddy_avatar_context')
@@ -2978,8 +2978,8 @@ class HomeV4ViewTest(TestCase):
         self.assertTemplateUsed(response, 'core/home_public_v6_canonical.html')
         self.assertTemplateNotUsed(response, 'core/home_v2.html')
         self.assertIn('data-home-v6-public-shell="true"', content)
-        self.assertIn('알림장·주간학습 멘트 바로 작성', content)
-        self.assertIn('계속 쓰려면 로그인', content)
+        self.assertIn('교실 일을 바로 여는 도구', content)
+        self.assertIn('로그인 후 더 많이 쓰는 도구', content)
         self.assertNotIn('data-home-v4-public-shell="true"', content)
         self.assertEqual(
             representative_titles,
@@ -3031,6 +3031,8 @@ class HomeV4ViewTest(TestCase):
         self.assertIn('data-home-v6-public-login-band="true"', content)
         self.assertIn('알림장 쓰기', content)
         self.assertIn('주간학습 쓰기', content)
+        self.assertIn('간편 수합', content)
+        self.assertIn('가뿐하게 서명 톡', content)
 
         public_ids = [card['id'] for card in response.context.get('guest_rotation_cards', [])]
         self.assertIn(public_collect.id, public_ids)
@@ -3044,7 +3046,7 @@ class HomeV4ViewTest(TestCase):
 
         self.assertNotIn('data-guest-rotation-dot=', content)
         self.assertIn('data-home-v6-public-login-band="true"', content)
-        self.assertIn('계속 쓰려면 로그인', content)
+        self.assertIn('로그인 후 더 많이 쓰는 도구', content)
 
     @override_settings(HOME_LAYOUT_VERSION='v2', HOME_V2_ENABLED=True)
     def test_setting_home_layout_version_to_v2_keeps_public_and_authenticated_home_on_v6(self):
@@ -3069,7 +3071,7 @@ class HomeV4ViewTest(TestCase):
 
         self.assertTemplateUsed(public_response, 'core/home_public_v6_canonical.html')
         self.assertIn('data-home-v6-public-shell="true"', public_content)
-        self.assertIn('알림장·주간학습 멘트 바로 작성', public_content)
+        self.assertIn('교실 일을 바로 여는 도구', public_content)
 
 
 @override_settings(HOME_LAYOUT_VERSION='v5', HOME_V2_ENABLED=True)
@@ -3451,7 +3453,7 @@ class HomeV5ViewTest(TestCase):
         self.assertIn('data-home-v6-public-primary-card="true"', content)
         self.assertIn('data-home-v6-public-grid-panel="true"', content)
         self.assertIn('알림장 쓰기', content)
-        self.assertIn('계속 쓰려면 로그인', content)
+        self.assertIn('로그인 후 더 많이 쓰는 도구', content)
         self.assertNotIn('data-home-v4-public-shell="true"', content)
         self.assertNotIn('data-home-v5-shell="true"', content)
         self.assertNotIn('core/css/home_authenticated_v5.css', content)
@@ -4055,16 +4057,17 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('data-home-v6-public-shell="true"', content)
         self.assertIn('home-public-v6-stage-shell', content)
         self.assertIn('data-home-design-version="v6"', content)
-        self.assertIn('알림장·주간학습 멘트 바로 작성', content)
-        self.assertIn('알림장과 주간학습 멘트를 로그인 없이 2회까지 바로 써봅니다.', content)
+        self.assertIn('교실 일을 바로 여는 도구', content)
+        self.assertIn('수합, 서명, 예약, 수업 준비처럼 자주 하는 일을 빠르게 엽니다.', content)
         self.assertIn('data-home-v6-public-hero="true"', content)
+        self.assertIn('data-home-v6-public-overview="true"', content)
         self.assertIn('data-home-v6-public-login-band="true"', content)
-        self.assertIn('계속 쓰려면 로그인', content)
+        self.assertIn('로그인 후 더 많이 쓰는 도구', content)
         self.assertNotIn('core/css/home_authenticated_v6.css', content)
         self.assertNotIn('core/css/home_authenticated_v6_canonical.css', content)
         self.assertNotIn('data-home-v6-shell="true"', content)
         self.assertNotIn('data-home-v2-guest-hero="true"', content)
-        self.assertEqual(content.count('알림장·주간학습 멘트 바로 작성'), 1)
+        self.assertEqual(content.count('교실 일을 바로 여는 도구'), 1)
         self.assertIn('--home-v6-radius-panel: 0.95rem;', public_css)
         self.assertIn('.home-public-v6-primary-card {', public_css)
         self.assertIn('.home-public-v6-grid-card {', public_css)
