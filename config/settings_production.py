@@ -29,7 +29,10 @@ DEBUG = os.environ.get('DJANGO_DEBUG', 'False').lower() in ('true', '1', 'yes')
 
 # SECURITY WARNING: keep the secret key used in production secret!
 # Render blueprint uses SECRET_KEY, while older local tooling may still set DJANGO_SECRET_KEY.
-SECRET_KEY = os.environ.get('SECRET_KEY') or os.environ.get('DJANGO_SECRET_KEY')
+SECRET_KEY = (
+    (os.environ.get('SECRET_KEY') or '').strip()
+    or (os.environ.get('DJANGO_SECRET_KEY') or '').strip()
+)
 if not SECRET_KEY:
     if TESTING:
         SECRET_KEY = 'test-only-production-secret-key'

@@ -40,8 +40,8 @@ if os.name == 'nt' and not os.environ.get('SSL_CERT_FILE'):
 # SECURITY: SECRET_KEY from environment variable
 # Prefer the production-compatible SECRET_KEY name, but keep the local-dev fallback.
 SECRET_KEY = (
-    os.environ.get('DJANGO_SECRET_KEY')
-    or os.environ.get('SECRET_KEY')
+    (os.environ.get('SECRET_KEY') or '').strip()
+    or (os.environ.get('DJANGO_SECRET_KEY') or '').strip()
     or 'django-insecure-dev-only-change-in-production'
 )
 

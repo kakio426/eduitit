@@ -25,8 +25,11 @@ class ProductionSettingsTest(TestCase):
     def test_secret_key_from_environment(self):
         """SECRET_KEY가 환경변수에서 로드되어야 함"""
         from config import settings_production
-        # Production에서는 하드코딩된 키 대신 환경변수 사용
-        self.assertNotIn('insecure', settings_production.SECRET_KEY.lower())
+        with patch.dict(os.environ, {"SECRET_KEY": "env-secret-key"}, clear=False):
+            reloaded = importlib.reload(settings_production)
+            self.assertEqual(reloaded.SECRET_KEY, "env-secret-key")
+
+        importlib.reload(settings_production)
 
     def test_production_settings_prefers_secret_key_environment_variable(self):
         """Render에서 쓰는 SECRET_KEY 환경변수를 우선 사용해야 함"""
@@ -42,7 +45,7 @@ class ProductionSettingsTest(TestCase):
         """테스트 실행이 아닐 때는 production SECRET_KEY가 반드시 있어야 함"""
         from config import settings_production
 
-        with patch.dict(os.environ, {"SECRET_KEY": "", "DJANGO_SECRET_KEY": ""}, clear=False):
+        with patch.dict(os.environ, {"SECRET_KEY": "   ", "DJANGO_SECRET_KEY": "\t"}, clear=False):
             with patch.object(sys, "argv", ["gunicorn"]):
                 with self.assertRaises(ImproperlyConfigured):
                     importlib.reload(settings_production)
