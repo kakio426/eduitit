@@ -4824,15 +4824,13 @@ def _home_v6(request, products, posts, page_obj, feed_scope, pinned_notice_posts
 
 def _home_guest_v6(request, products, posts, page_obj, feed_scope, pinned_notice_posts):
     """비로그인 홈의 canonical V6 렌더러."""
-    return _build_home_guest_surface_response(
+    return _home_public_v6(
         request,
         products,
         posts,
         page_obj,
         feed_scope,
         pinned_notice_posts,
-        template_name='core/home_authenticated_v6_canonical.html',
-        home_design_version='v6',
     )
 
 

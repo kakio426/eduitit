@@ -4053,30 +4053,35 @@ class HomeV6ViewTest(TestCase):
         self.assertLess(quickdrop_index, reservation_index)
         self.assertLess(reservation_index, sns_index)
 
-    def test_v6_anonymous_home_uses_shared_canonical_shell(self):
+    def test_v6_anonymous_home_uses_public_v6_template(self):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
+        public_css = (
+            Path(settings.BASE_DIR)
+            / 'core'
+            / 'static'
+            / 'core'
+            / 'css'
+            / 'home_public_v6.css'
+        ).read_text(encoding='utf-8')
 
-        self.assertTemplateUsed(response, 'core/home_authenticated_v6_canonical.html')
+        self.assertTemplateUsed(response, 'core/home_public_v6_canonical.html')
         self.assertEqual(response.context['home_design_version'], 'v6')
-        self.assertEqual(response.context['home_user_mode'], 'guest')
-        self.assertIn('core/css/home_authenticated_v6.css', content)
-        self.assertIn('core/css/home_authenticated_v6_canonical.css', content)
-        self.assertIn('data-home-v6-shell="true"', content)
-        self.assertIn('data-home-v6-start-panel="mobile"', content)
-        self.assertIn('data-home-v6-start-panel="desktop"', content)
+        self.assertIn('core/css/home_public_v5.css', content)
+        self.assertIn('core/css/home_public_v6.css', content)
+        self.assertIn('home-public-v6-page', content)
+        self.assertIn('data-home-v6-public-shell="true"', content)
+        self.assertIn('home-public-v6-stage-shell', content)
         self.assertIn('data-home-design-version="v6"', content)
-        self.assertIn('지금 바로 할 일', content)
-        self.assertIn('알림장 &amp; 주간학습 멘트 생성기', content)
-        self.assertIn('비회원은 하루 3회까지 바로 써볼 수 있어요.', content)
-        self.assertIn('지금 바로 써보기', content)
-        self.assertIn('로그인 후 이어지는 흐름', content)
-        self.assertNotIn('home-public-v6-page', content)
-        self.assertNotIn('data-home-v6-public-shell="true"', content)
-        self.assertEqual(
-            [action['title'] for action in response.context['home_support_actions']],
-            ['간편 수합', '수업 QR 생성기'],
-        )
+        self.assertIn('로그인 없이 바로 열 수 있습니다', content)
+        self.assertIn('공개 도구', content)
+        self.assertIn('전체 서비스 보기', content)
+        self.assertNotIn('core/css/home_authenticated_v6.css', content)
+        self.assertNotIn('core/css/home_authenticated_v6_canonical.css', content)
+        self.assertNotIn('data-home-v6-shell="true"', content)
+        self.assertNotIn('지금 바로 할 일', content)
+        self.assertIn('--home-v6-radius-panel: 0.95rem;', public_css)
+        self.assertIn('border-radius: var(--home-public-v6-radius-shell);', public_css)
 
 @override_settings(HOME_V2_ENABLED=True)
 class TrackUsageAPITest(TestCase):
