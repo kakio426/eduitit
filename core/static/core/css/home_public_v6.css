@@ -167,6 +167,40 @@
     color: var(--color-brand-700);
 }
 
+/* Desktop partial still uses utility tokens, so we scope them here to keep one polished public-home tone. */
+.home-public-v6-page .text-slate-400 {
+    color: #94a3b8 !important;
+}
+
+.home-public-v6-page .text-slate-500 {
+    color: #64748b !important;
+}
+
+.home-public-v6-page .text-slate-600 {
+    color: var(--home-v6-ink-soft) !important;
+}
+
+.home-public-v6-page .text-slate-700 {
+    color: #334155 !important;
+}
+
+.home-public-v6-page .text-slate-900 {
+    color: var(--home-v6-ink) !important;
+}
+
+.home-public-v6-page .bg-white {
+    background-color: rgba(255, 255, 255, 0.97) !important;
+}
+
+.home-public-v6-page .border-slate-200,
+.home-public-v6-page .border-slate-300 {
+    border-color: rgba(91, 44, 207, 0.14) !important;
+}
+
+.home-public-v6-page .hover\:border-slate-300:hover {
+    border-color: rgba(124, 92, 250, 0.24) !important;
+}
+
 .home-public-v6-page .home-public-v4-dot[aria-current="true"] {
     background: var(--color-brand-700);
     border-color: var(--color-brand-700);
