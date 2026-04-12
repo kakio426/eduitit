@@ -969,6 +969,19 @@ class TeacherBuddyHomeRenderTests(TestCase):
         self.assertContains(response, "teacher-buddy-avatar")
         self.assertContains(response, 'data-buddy-avatar-ascii="true"')
 
+    def test_home_compose_uses_current_buddy_avatar(self):
+        record_teacher_buddy_progress(self.user, Product.objects.first(), "home_quick")
+        self.client.login(username="buddyhome", password="pass1234")
+
+        response = self.client.get(reverse("home"))
+        content = response.content.decode("utf-8")
+
+        self.assertContains(response, 'teacher-buddy-avatar--compose')
+        self.assertRegex(
+            content,
+            r'teacher-buddy-avatar--compose[\s\S]*?data-buddy-avatar-ascii="true"[^>]*>\s*[_./|\\()A-Za-z0-9-]',
+        )
+
     def test_public_share_page_and_image_are_accessible_anonymously(self):
         record_teacher_buddy_progress(self.user, Product.objects.first(), "home_quick")
         state = TeacherBuddyState.objects.get(user=self.user)

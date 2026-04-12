@@ -1071,12 +1071,12 @@ def build_teacher_buddy_avatar_context(user) -> dict[str, object]:
     )
     if buddy_payload is None:
         return _fallback_avatar_context(initial=initial, label=_safe_nickname_for_user(user))
-        return _build_avatar_context_from_buddy_payload(
-            buddy_payload,
-            initial=initial,
-            sticker_dust=int(getattr(state, "sticker_dust", 0) or 0),
-            public_share_token=getattr(state, "public_share_token", None),
-        )
+    return _build_avatar_context_from_buddy_payload(
+        buddy_payload,
+        initial=initial,
+        sticker_dust=int(getattr(state, "sticker_dust", 0) or 0),
+        public_share_token=getattr(state, "public_share_token", None),
+    )
 
 
 def attach_teacher_buddy_avatar_context(items) -> None:
