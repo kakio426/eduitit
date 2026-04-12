@@ -775,7 +775,7 @@ HOME_TRY_NOW_CARD_SPECS = [
         "preferred_routes": ["noticegen:main"],
         "fallback_route": "noticegen:main",
         "service_type": "work",
-        "is_guest_allowed": False,
+        "is_guest_allowed": True,
     },
     {
         "key": "collect",
@@ -972,7 +972,7 @@ def _build_product_state_labels(
         route_name = _product_route_name(product)
         service_type = str(getattr(product, "service_type", "") or "").strip()
         launch_is_external = bool(getattr(product, "launch_is_external", False))
-        is_guest_allowed = bool(getattr(product, "is_guest_allowed", False))
+        is_guest_allowed = bool(getattr(product, "is_guest_allowed", False) or is_guest_allowed)
 
     supports_guest_preview = service_launcher_utils.product_supports_guest_preview(
         product,
@@ -2536,6 +2536,7 @@ def _build_home_try_now_card_entries(product_list, specs):
             {
                 "key": spec["key"],
                 "product_id": getattr(product, "id", ""),
+                "service_name": spec["service_name"],
                 "title": spec["title"],
                 "description": spec["description"],
                 "icon": getattr(product, "icon", "") if product and "fa-" in str(getattr(product, "icon", "")) else spec["icon"],
@@ -2916,6 +2917,428 @@ def _build_home_entry_panel_context(
         "secondary_action": secondary_action,
         "is_first_run": not bool(favorite_items),
     }
+
+
+def _build_home_action_from_link_item(item, *, cta_label="바로 열기"):
+    if not item:
+        return None
+    href = str(item.get("href", "") or "").strip()
+    if not href:
+        return None
+    title = (
+        item.get("favorite_full_title")
+        or item.get("favorite_title")
+        or getattr(item.get("product"), "public_service_name", "")
+        or getattr(item.get("product"), "title", "")
+        or "도구"
+    )
+    description = (
+        item.get("workbench_summary")
+        or item.get("section_subtitle")
+        or item.get("section_title")
+        or getattr(item.get("product"), "home_card_summary", "")
+        or "필요한 순간 바로 열 수 있습니다."
+    )
+    return {
+        "title": title,
+        "description": description,
+        "href": href,
+        "is_external": bool(item.get("is_external", False)),
+        "cta_label": cta_label,
+    }
+
+
+def _build_home_action_from_recommendation(item, *, cta_label="열기"):
+    if not item:
+        return None
+    href = str(item.get("href", "") or "").strip()
+    if not href:
+        return None
+    return {
+        "title": item.get("title") or "도구",
+        "description": item.get("reason_label") or "추천 도구",
+        "href": href,
+        "is_external": bool(item.get("is_external", False)),
+        "cta_label": cta_label,
+    }
+
+
+def _build_home_action_from_card(card, *, cta_label="바로 시작"):
+    if not card:
+        return None
+    href = str(card.get("href", "") or "").strip()
+    if not href:
+        return None
+    return {
+        "title": card.get("service_name") or card.get("title") or "도구",
+        "description": card.get("description") or "필요한 순간 바로 열 수 있습니다.",
+        "href": href,
+        "is_external": bool(card.get("is_external", False)),
+        "cta_label": cta_label,
+        "access_status_label": card.get("access_status_label", ""),
+    }
+
+
+def _dedupe_home_actions(actions, *, limit=None):
+    deduped = []
+    seen = set()
+    for action in actions:
+        if not action or not action.get("href"):
+            continue
+        key = (
+            str(action.get("href", "")).strip(),
+            str(action.get("title", "")).strip(),
+        )
+        if key in seen:
+            continue
+        deduped.append(action)
+        seen.add(key)
+        if limit and len(deduped) >= limit:
+            break
+    return deduped
+
+
+def _dedupe_home_actions_by_href(actions, *, limit=None):
+    deduped = []
+    seen_hrefs = set()
+    for action in actions:
+        if not action or not action.get("href"):
+            continue
+        href = str(action.get("href", "")).strip()
+        if href in seen_hrefs:
+            continue
+        deduped.append(action)
+        seen_hrefs.add(href)
+        if limit and len(deduped) >= limit:
+            break
+    return deduped
+
+
+def _build_home_today_primary_action(*, home_user_mode, calendar_surface):
+    calendar_href = (
+        str(calendar_surface.get("today_create_url", "") or "").strip()
+        or str(calendar_surface.get("main_url", "") or "").strip()
+        or str(calendar_surface.get("today_url", "") or "").strip()
+        or str(calendar_surface.get("calendar_center_url", "") or "").strip()
+    )
+    if not calendar_href:
+        return None
+
+    if home_user_mode == "authenticated":
+        return {
+            "title": "오늘 일정 추가",
+            "description": "일정을 하나 넣어두면 필요한 도구로 바로 이어집니다.",
+            "href": calendar_href,
+            "is_external": False,
+            "cta_label": "오늘 일정 추가",
+        }
+
+    return {
+        "title": "로그인 후 일정 이어보기",
+        "description": "일정과 메모는 로그인 후 그대로 이어갈 수 있습니다.",
+        "href": _build_home_login_continue_url(calendar_href),
+        "is_external": False,
+        "cta_label": "로그인 후 일정 이어보기",
+    }
+
+
+def _build_home_empty_action_board(*, home_user_mode, primary_action, support_actions, calendar_surface):
+    today_primary_action = _build_home_today_primary_action(
+        home_user_mode=home_user_mode,
+        calendar_surface=calendar_surface,
+    )
+    recovery_actions = _dedupe_home_actions_by_href(
+        [today_primary_action, *list(support_actions or [])],
+        limit=3,
+    )
+
+    if home_user_mode == "guest":
+        return {
+            "workbench": {
+                "title": "로그인 없이 먼저 써볼 수 있어요",
+                "description": "가벼운 업무부터 바로 열고, 마음에 들면 로그인 후 작업대로 이어가세요.",
+                "primary_action": primary_action,
+                "secondary_actions": recovery_actions,
+            },
+            "recommendations": {
+                "title": "지금 많이 쓰는 공개 도구를 먼저 보여드릴게요",
+                "description": "첫 화면에서는 바로 끝나는 교실 업무 도구만 압축해서 보여줍니다.",
+                "primary_action": primary_action,
+                "secondary_actions": recovery_actions,
+            },
+            "today_flow": {
+                "title": "로그인하면 오늘 일정까지 이어집니다",
+                "description": "비회원 체험 후 일정과 메모는 로그인해서 그대로 이어갈 수 있어요.",
+                "primary_action": today_primary_action,
+                "secondary_actions": _dedupe_home_actions_by_href(
+                    [primary_action, *support_actions],
+                    limit=2,
+                ),
+            },
+        }
+
+    return {
+        "workbench": {
+            "title": "자주 쓰는 도구를 아직 고르지 않았어요",
+            "description": "먼저 열어 본 도구를 다음부터 작업대로 더 빠르게 이어갈 수 있습니다.",
+            "primary_action": primary_action,
+            "secondary_actions": recovery_actions,
+        },
+        "recommendations": {
+            "title": "아직 띄울 추천 도구가 없습니다",
+            "description": "첫 도구를 먼저 열면 다음에 이어질 흐름까지 맞춰 추천해 드립니다.",
+            "primary_action": primary_action,
+            "secondary_actions": recovery_actions,
+        },
+        "today_flow": {
+            "title": "오늘 일정이 아직 없습니다",
+            "description": "일정을 하나 넣어두면 멘트, 수합, 준비 흐름으로 바로 이어집니다.",
+            "primary_action": today_primary_action,
+            "secondary_actions": _dedupe_home_actions_by_href(
+                [primary_action, *support_actions],
+                limit=2,
+            ),
+        },
+    }
+
+
+def _build_authenticated_home_default_actions(*, product_list, calendar_surface):
+    try_now_cards = _build_home_try_now_cards(product_list)
+    cards_by_key = {
+        card.get("key"): card
+        for card in try_now_cards
+        if card.get("key")
+    }
+    primary_action = _build_home_action_from_card(
+        cards_by_key.get("notice"),
+        cta_label="알림장 멘트 바로 만들기",
+    )
+    if primary_action is not None:
+        primary_action = {
+            **primary_action,
+            "eyebrow": "지금 바로 할 일",
+            "meta": "처음에는 교실 업무 하나부터 바로 끝내는 흐름이 가장 덜 헷갈립니다.",
+        }
+    support_actions = _dedupe_home_actions_by_href(
+        [
+            _build_home_action_from_card(
+                cards_by_key.get("collect"),
+                cta_label="간편 수합 시작",
+            ),
+            _build_home_today_primary_action(
+                home_user_mode="authenticated",
+                calendar_surface=calendar_surface,
+            ),
+        ],
+        limit=2,
+    )
+    return primary_action, support_actions
+
+
+def _build_authenticated_home_action_context(
+    *,
+    product_list,
+    favorite_items,
+    recent_items,
+    representative_slots,
+    representative_recommendations,
+    home_entry_panel,
+    calendar_surface,
+):
+    primary_action = None
+    secondary_action = None
+    if home_entry_panel:
+        primary_action = home_entry_panel.get("primary_action")
+        secondary_action = home_entry_panel.get("secondary_action")
+    if primary_action is None and favorite_items:
+        primary_action = _build_home_action_from_link_item(favorite_items[0])
+    if primary_action is None and representative_slots:
+        primary_action = _build_home_entry_action_from_product(representative_slots[0].get("product"))
+    if primary_action is not None:
+        primary_action = {
+            **primary_action,
+            "eyebrow": "지금 바로 할 일",
+            "meta": "설명보다 바로 열리는 첫 도구 하나가 오늘 흐름을 가장 빠르게 만듭니다.",
+            "cta_label": primary_action.get("cta_label") or "바로 열기",
+        }
+
+    support_actions = _dedupe_home_actions(
+        [
+            {
+                **secondary_action,
+                "cta_label": secondary_action.get("cta_label") or "오늘 흐름 보기",
+            }
+            if secondary_action
+            else None,
+            *[
+                _build_home_action_from_recommendation(item, cta_label="열기")
+                for item in representative_recommendations[:2]
+            ],
+            _build_home_action_from_link_item(recent_items[0], cta_label="다시 열기")
+            if recent_items
+            else None,
+        ],
+        limit=3,
+    )
+    is_first_run = bool(home_entry_panel and home_entry_panel.get("is_first_run"))
+    if is_first_run and not favorite_items and not recent_items:
+        default_primary_action, default_support_actions = _build_authenticated_home_default_actions(
+            product_list=product_list,
+            calendar_surface=calendar_surface,
+        )
+        if default_primary_action is not None:
+            primary_action = default_primary_action
+        if default_support_actions:
+            support_actions = default_support_actions
+    return {
+        "home_primary_action": primary_action,
+        "home_support_actions": support_actions,
+        "home_empty_action_board": _build_home_empty_action_board(
+            home_user_mode="authenticated",
+            primary_action=primary_action,
+            support_actions=support_actions,
+            calendar_surface=calendar_surface,
+        ),
+        "home_locked_sections": [],
+    }
+
+
+def _build_home_guest_calendar_surface(request):
+    home_surface_url = _home_calendar_surface_url()
+    today_key = timezone.localdate().isoformat()
+    return {
+        "messagebox_home_card": {
+            "enabled": False,
+            "title": "AI 업무 메시지 보관함",
+            "description": "",
+            "primary_action_label": "새 메시지 보관",
+            "url": "",
+        },
+        "today_workspace": {
+            "date_label": "비회원 체험",
+            "date_key": today_key,
+            "focus_heading": "",
+            "focus_description": "",
+            "focus_empty_message": "로그인하면 오늘 일정과 메모를 바로 이어서 볼 수 있어요.",
+            "today_event_count": 0,
+            "today_task_count": 0,
+            "today_events": [],
+            "today_memos": [],
+            "review_groups": [],
+            "has_items": False,
+            "today_all_url": home_surface_url,
+            "today_memo_url": home_surface_url,
+            "today_review_url": home_surface_url,
+        },
+        "today_url": home_surface_url,
+        "today_focus": "all",
+        "today_all_url": home_surface_url,
+        "today_memo_url": home_surface_url,
+        "today_review_url": home_surface_url,
+        "main_url": home_surface_url,
+        "calendar_center_url": home_surface_url,
+        "home_surface_url": home_surface_url,
+        "calendar_page_url": home_surface_url,
+        "calendar_api_base_url": "",
+        "calendar_load_error": False,
+        "calendar_load_error_title": "",
+        "calendar_load_error_message": "",
+        "calendar_load_error_retry_url": "",
+        "calendar_load_error_retry_label": "",
+        "calendar_load_error_secondary_url": "",
+        "calendar_load_error_secondary_label": "",
+        "initial_selected_date": today_key,
+        "initial_open_create": False,
+        "initial_open_event_id": "",
+        "initial_open_task_id": "",
+        "initial_focus_search": False,
+        "initial_search_query": "",
+        "embedded_sheetbook_context": None,
+        "embedded_sheetbook_context_json": {},
+        "calendar_embed_mode": "home",
+        "is_embedded_in_sheetbook": False,
+        "is_embedded_on_home": True,
+        "hide_navbar": False,
+    }
+
+
+def _build_guest_home_action_context(request, *, product_list):
+    login_url = reverse("account_login")
+    try_now_cards = _build_home_try_now_cards(product_list)
+    support_cards = _build_home_try_now_support_cards(product_list)
+    all_cards_by_key = {
+        card.get("key"): card
+        for card in [*try_now_cards, *support_cards]
+        if card.get("key")
+    }
+    primary_card = all_cards_by_key.get("notice") or (try_now_cards[0] if try_now_cards else None)
+    primary_action = _build_home_action_from_card(primary_card, cta_label="바로 만들기")
+    if primary_action is not None:
+        primary_action = {
+            **primary_action,
+            "eyebrow": "지금 바로 할 일",
+            "meta": "비회원은 하루 3회까지 바로 써볼 수 있어요.",
+        }
+    support_actions = _dedupe_home_actions(
+        [
+            _build_home_action_from_card(all_cards_by_key.get("collect"), cta_label="수합 시작"),
+            _build_home_action_from_card(all_cards_by_key.get("qrgen"), cta_label="QR 만들기"),
+        ],
+        limit=2,
+    )
+    locked_cards = _build_home_guest_highlight_cards(
+        product_list,
+        requires_login=True,
+        limit=3,
+        login_url=login_url,
+    )
+    locked_actions = _dedupe_home_actions(
+        [
+            {
+                **_build_home_action_from_card(card, cta_label="로그인 후 열기"),
+                "description": card.get("description")
+                or "로그인하면 지금 하던 흐름과 이어서 열 수 있습니다.",
+            }
+            for card in locked_cards
+        ],
+        limit=3,
+    )
+    calendar_surface = _build_home_guest_calendar_surface(request)
+    return {
+        "home_primary_action": primary_action,
+        "home_support_actions": support_actions,
+        "home_empty_action_board": _build_home_empty_action_board(
+            home_user_mode="guest",
+            primary_action=primary_action,
+            support_actions=support_actions,
+            calendar_surface=calendar_surface,
+        ),
+        "home_locked_sections": locked_actions,
+        "home_calendar_surface": calendar_surface,
+    }
+
+
+def _build_home_guest_representative_slots(product_list, *, exclude_ids=None, limit=4):
+    exclude_ids = set(exclude_ids or [])
+    candidates = _build_home_guest_highlight_cards(
+        product_list,
+        requires_login=False,
+        limit=max(len(product_list), 1),
+        include_games=False,
+    )
+    product_map = {getattr(product, "id", None): product for product in product_list}
+    selected_products = []
+    for card in candidates:
+        product_id = card.get("id")
+        if not product_id or product_id in exclude_ids:
+            continue
+        product = product_map.get(product_id)
+        if product is None:
+            continue
+        selected_products.append(product)
+        if len(selected_products) >= limit:
+            break
+    return [{"product": product, "slot_kind": "guest"} for product in selected_products]
 
 
 def _filter_home_sections_by_access(sections, *, requires_login):
@@ -3818,6 +4241,11 @@ def _build_home_surface_template_context(
     pinned_notice_posts,
     feed_scope,
     slots,
+    home_user_mode,
+    home_primary_action,
+    home_support_actions,
+    home_empty_action_board,
+    home_locked_sections,
 ):
     return {
         'products': products,
@@ -3852,6 +4280,11 @@ def _build_home_surface_template_context(
         'feed_scope': feed_scope,
         'sns_compose_prefill': _get_sns_compose_prefill(request),
         'home_surface_slots': slots,
+        'home_user_mode': home_user_mode,
+        'home_primary_action': home_primary_action,
+        'home_support_actions': home_support_actions,
+        'home_empty_action_board': home_empty_action_board,
+        'home_locked_sections': home_locked_sections,
     }
 
 
@@ -4081,6 +4514,15 @@ def build_home_surface_context(
         community_summary=community_summary,
         sns_preview_posts=sns_preview_posts,
     )
+    action_context = _build_authenticated_home_action_context(
+        product_list=product_list,
+        favorite_items=favorite_items,
+        recent_items=recent_items,
+        representative_slots=representative_slots,
+        representative_recommendations=representative_recommendations,
+        home_entry_panel=home_entry_panel,
+        calendar_surface=provider_cards['calendar'],
+    )
     template_context = _build_home_surface_template_context(
         request=request,
         products=products,
@@ -4109,6 +4551,11 @@ def build_home_surface_context(
         pinned_notice_posts=pinned_notice_posts,
         feed_scope=feed_scope,
         slots=slots,
+        home_user_mode='authenticated',
+        home_primary_action=action_context['home_primary_action'],
+        home_support_actions=action_context['home_support_actions'],
+        home_empty_action_board=action_context['home_empty_action_board'],
+        home_locked_sections=action_context['home_locked_sections'],
     )
     template_context.update(
         _build_home_surface_legacy_aliases(
@@ -4144,6 +4591,207 @@ def build_home_surface_context(
     }
 
 
+def build_guest_home_surface_context(
+    request,
+    *,
+    products,
+    page_obj,
+    pinned_notice_posts,
+    feed_scope,
+    home_design_version,
+):
+    product_list = _build_home_surface_safe_value(
+        request,
+        label='guest product launch meta',
+        fallback_factory=list,
+        builder=lambda: _attach_product_launch_meta(list(products), user=request.user),
+    )
+
+    section_product_list = [
+        product
+        for product in product_list
+        if str(getattr(product, 'launch_route_name', '') or '').strip().lower() != 'messagebox:main'
+    ]
+    sections, aux_sections, games = _build_home_surface_safe_value(
+        request,
+        label='guest purpose sections',
+        fallback_factory=lambda: ([], [], []),
+        builder=lambda: get_purpose_sections(
+            section_product_list,
+            preview_limit=2,
+        ),
+    )
+    primary_display_sections, secondary_display_sections = _build_home_surface_safe_value(
+        request,
+        label='guest display groups',
+        fallback_factory=lambda: ([], [], []),
+        builder=lambda: _build_home_display_groups(sections, aux_sections),
+    )
+    sns_summary_posts = _build_home_surface_safe_value(
+        request,
+        label='guest community summary',
+        fallback_factory=list,
+        builder=lambda: _build_home_community_summary_posts(
+            page_obj,
+            pinned_notice_posts=pinned_notice_posts,
+            limit=2,
+        ),
+    )
+    sns_preview_posts = _build_home_surface_safe_value(
+        request,
+        label='guest community preview',
+        fallback_factory=list,
+        builder=lambda: _build_sns_preview_posts(
+            page_obj,
+            pinned_notice_posts=pinned_notice_posts,
+            limit=3,
+        ),
+    )
+    community_summary = {
+        'title': '실시간 소통',
+        'posts': sns_summary_posts,
+        'full_url': reverse('community_feed'),
+    }
+
+    guest_action_context = _build_guest_home_action_context(
+        request,
+        product_list=product_list,
+    )
+    login_url = reverse('account_login')
+    for product in product_list:
+        if _product_requires_guest_login(product):
+            launch_href = str(getattr(product, 'launch_href', '') or '').strip()
+            product.launch_href = _build_home_login_continue_url(launch_href, login_url=login_url)
+            product.launch_is_external = False
+    home_nav_sections = _build_home_surface_safe_value(
+        request,
+        label='guest navigation sections',
+        fallback_factory=list,
+        builder=lambda: _ensure_home_direct_nav_sections(
+            _build_home_nav_sections(
+                primary_display_sections,
+                secondary_display_sections,
+                games,
+            ),
+            product_list,
+        ),
+    )
+    home_calendar_surface = guest_action_context['home_calendar_surface']
+    home_primary_action = guest_action_context['home_primary_action']
+    home_support_actions = guest_action_context['home_support_actions']
+    home_empty_action_board = guest_action_context['home_empty_action_board']
+    home_locked_sections = guest_action_context['home_locked_sections']
+
+    excluded_product_ids = {
+        getattr(product, 'id', None)
+        for product in product_list
+        if getattr(product, 'launch_route_name', '') in {'noticegen:main', 'collect:landing', 'qrgen:landing'}
+    }
+    representative_slots = _build_home_guest_representative_slots(
+        product_list,
+        exclude_ids=excluded_product_ids,
+        limit=4,
+    )
+    representative_recommendations = [
+        {
+            'title': action.get('title') or '도구',
+            'href': action.get('href') or '',
+            'is_external': bool(action.get('is_external', False)),
+            'reason_label': '로그인 후 이어짐',
+        }
+        for action in home_locked_sections[:3]
+        if action.get('href')
+    ]
+
+    favorite_items = []
+    recent_items = []
+    discovery_items = []
+    home_mobile_workbench_items = []
+    home_mobile_recommend_items = representative_recommendations
+    home_frontend_config = _build_home_surface_frontend_config()
+    home_mobile_section_order = HOME_MOBILE_SECTION_ORDER
+    provider_cards = {
+        'quickdrop_home_card': None,
+        'reservation_home_card': None,
+        'developer_chat_home_card': None,
+        'calendar': home_calendar_surface,
+        'teacher_buddy': {},
+    }
+    slots = _build_home_surface_slots(
+        home_nav_sections=home_nav_sections,
+        home_mobile_section_order=home_mobile_section_order,
+        favorite_items=favorite_items,
+        favorite_products=[],
+        recent_items=recent_items,
+        home_mobile_workbench_items=home_mobile_workbench_items,
+        representative_slots=representative_slots,
+        representative_recommendations=representative_recommendations,
+        home_mobile_recommend_items=home_mobile_recommend_items,
+        discovery_items=discovery_items,
+        schoolcomm_home_card=None,
+        provider_cards=provider_cards,
+        community_summary=community_summary,
+        sns_preview_posts=sns_preview_posts,
+    )
+    template_context = _build_home_surface_template_context(
+        request=request,
+        products=products,
+        sections=sections,
+        aux_sections=aux_sections,
+        primary_display_sections=primary_display_sections,
+        secondary_display_sections=secondary_display_sections,
+        games=games,
+        favorite_items=favorite_items,
+        recent_items=recent_items,
+        discovery_items=discovery_items,
+        provider_cards=provider_cards,
+        schoolcomm_home_card=None,
+        representative_slots=representative_slots,
+        representative_recommendations=representative_recommendations,
+        home_nav_sections=home_nav_sections,
+        home_mobile_section_order=home_mobile_section_order,
+        home_mobile_workbench_items=home_mobile_workbench_items,
+        home_mobile_recommend_items=home_mobile_recommend_items,
+        home_frontend_config=home_frontend_config,
+        home_design_version=home_design_version,
+        community_summary=community_summary,
+        sns_preview_posts=sns_preview_posts,
+        home_entry_panel=None,
+        page_obj=page_obj,
+        pinned_notice_posts=pinned_notice_posts,
+        feed_scope=feed_scope,
+        slots=slots,
+        home_user_mode='guest',
+        home_primary_action=home_primary_action,
+        home_support_actions=home_support_actions,
+        home_empty_action_board=home_empty_action_board,
+        home_locked_sections=home_locked_sections,
+    )
+    template_context.update(
+        _build_home_surface_legacy_aliases(
+            home_nav_sections=home_nav_sections,
+            home_mobile_calendar_first_enabled=False,
+            home_mobile_quick_items=[],
+            home_mobile_workbench_items=home_mobile_workbench_items,
+            home_mobile_recommend_items=home_mobile_recommend_items,
+            home_frontend_config=home_frontend_config,
+        )
+    )
+    template_context.update(home_calendar_surface)
+    template_context.update(
+        _build_home_surface_safe_value(
+            request,
+            label='guest home seo',
+            fallback_factory=dict,
+            builder=lambda: build_home_page_seo(request).as_context(),
+        )
+    )
+    return {
+        'slots': slots,
+        'legacy_context': template_context,
+    }
+
+
 def _build_home_authenticated_surface_response(
     request,
     products,
@@ -4157,6 +4805,28 @@ def _build_home_authenticated_surface_response(
 ):
     """환경변수로 안전하게 롤아웃하는 인증 홈 공통 응답."""
     home_surface = build_home_surface_context(
+        request,
+        products=products,
+        page_obj=page_obj,
+        pinned_notice_posts=pinned_notice_posts,
+        feed_scope=feed_scope,
+        home_design_version=home_design_version,
+    )
+    return render(request, template_name, home_surface['legacy_context'])
+
+
+def _build_home_guest_surface_response(
+    request,
+    products,
+    posts,
+    page_obj,
+    feed_scope,
+    pinned_notice_posts,
+    *,
+    template_name='core/home_authenticated_v6_canonical.html',
+    home_design_version='v6',
+):
+    home_surface = build_guest_home_surface_context(
         request,
         products=products,
         page_obj=page_obj,
@@ -4212,6 +4882,20 @@ def _home_v6(request, products, posts, page_obj, feed_scope, pinned_notice_posts
     )
 
 
+def _home_guest_v6(request, products, posts, page_obj, feed_scope, pinned_notice_posts):
+    """비로그인 홈의 canonical V6 렌더러."""
+    return _build_home_guest_surface_response(
+        request,
+        products,
+        posts,
+        page_obj,
+        feed_scope,
+        pinned_notice_posts,
+        template_name='core/home_authenticated_v6_canonical.html',
+        home_design_version='v6',
+    )
+
+
 def home(request):
     feed_scope = _get_post_feed_scope(request)
 
@@ -4255,47 +4939,25 @@ def home(request):
         ),
     )
 
+    home_layout_version = _get_home_layout_version()
+
     if request.user.is_authenticated:
         return _home_v6(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
 
-    home_layout_version = _get_home_layout_version()
+    if home_layout_version in {'', 'v6'}:
+        return _home_guest_v6(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
 
     if home_layout_version == 'v4':
-        if request.user.is_authenticated:
-            return _home_v4(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
         return _home_public_v4(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
 
     if home_layout_version == 'v5':
-        if request.user.is_authenticated:
-            return _home_v5(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
         return _home_public_v4(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
-
-    if home_layout_version == 'v6':
-        if request.user.is_authenticated:
-            return _home_v6(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
-        return _home_public_v6(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
 
     # V2 홈: Feature flag on 시 분기
     if home_layout_version == 'v2':
         return _home_v2(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
 
-    # Else show the public home
-    products = _attach_product_launch_meta(list(products), user=request.user)
-    featured_product = next((product for product in products if product.is_featured), None)
-    # Fallback if no featured product
-    if not featured_product:
-        featured_product = products[0] if products else None
-
-    return render(request, 'core/home.html', {
-        'products': products,
-        'featured_product': featured_product,
-        'posts': page_obj,
-        'page_obj': page_obj,
-        'pinned_notice_posts': pinned_notice_posts,
-        'feed_scope': feed_scope,
-        'sns_compose_prefill': _get_sns_compose_prefill(request),
-        **build_home_page_seo(request).as_context(),
-    })
+    return _home_guest_v6(request, products, posts, page_obj, feed_scope, pinned_notice_posts)
 
 
 def community_feed(request):
@@ -4432,7 +5094,7 @@ def comment_create(request, pk):
         return HttpResponse("Not found", status=404)
 
     if request.method == 'POST':
-        content = request.POST.get('content')
+        content = (request.POST.get('content') or '').strip()
         if _has_active_comment_restriction(request.user):
             if request.headers.get('HX-Request'):
                 return HttpResponse("댓글 작성이 일시 제한되었습니다.", status=429)
@@ -4449,12 +5111,17 @@ def comment_create(request, pk):
             messages.error(request, '댓글 작성 속도가 너무 빠릅니다. 잠시 후 다시 시도해주세요.')
             return redirect('home')
 
-        if content:
-            Comment.objects.create(
-                post=post,
-                author=request.user,
-                content=content
-            )
+        if not content:
+            if request.headers.get('HX-Request'):
+                return HttpResponse("댓글 내용을 먼저 입력해 주세요.", status=400)
+            messages.error(request, '댓글 내용을 먼저 입력해 주세요.')
+            return redirect('home')
+
+        Comment.objects.create(
+            post=post,
+            author=request.user,
+            content=content
+        )
             
     if request.headers.get('HX-Request'):
         _attach_teacher_buddy_avatar_context_safe(
@@ -4503,12 +5170,14 @@ def post_edit(request, pk):
             ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 
             if image.size > MAX_SIZE:
-                messages.error(request, '이미지 크기는 10MB 이하만 가능합니다.')
-                return render(request, 'core/partials/post_edit_form.html', {'post': post})
+                form_error_message = '이미지 크기는 10MB 이하만 가능합니다.'
+                messages.error(request, form_error_message)
+                return render(request, 'core/partials/post_edit_form.html', {'post': post, 'form_error_message': form_error_message})
 
             if image.content_type not in ALLOWED_TYPES:
-                messages.error(request, '허용되지 않는 파일 형식입니다. (JPEG, PNG, GIF, WebP만 가능)')
-                return render(request, 'core/partials/post_edit_form.html', {'post': post})
+                form_error_message = '허용되지 않는 파일 형식입니다. JPEG, PNG, GIF, WebP만 올릴 수 있어요.'
+                messages.error(request, form_error_message)
+                return render(request, 'core/partials/post_edit_form.html', {'post': post, 'form_error_message': form_error_message})
 
             try:
                 img = Image.open(image)
@@ -4516,19 +5185,23 @@ def post_edit(request, pk):
                 image.seek(0)
                 post.image = image
             except Exception:
-                messages.error(request, '올바른 이미지 파일이 아닙니다.')
-                return render(request, 'core/partials/post_edit_form.html', {'post': post})
+                form_error_message = '올바른 이미지 파일이 아닙니다.'
+                messages.error(request, form_error_message)
+                return render(request, 'core/partials/post_edit_form.html', {'post': post, 'form_error_message': form_error_message})
 
-        if content:
-            post.content = content
-            post.save()
-            # Return the updated post item (expanded)
-            _attach_teacher_buddy_avatar_context_safe(
-                [post],
-                user=request.user,
-                label='post edit partial',
-            )
-            return render(request, 'core/partials/post_item.html', {'post': post, 'is_first': True})
+        if not (content or '').strip():
+            form_error_message = '게시글 내용을 먼저 입력해 주세요.'
+            return render(request, 'core/partials/post_edit_form.html', {'post': post, 'form_error_message': form_error_message})
+
+        post.content = content
+        post.save()
+        # Return the updated post item (expanded)
+        _attach_teacher_buddy_avatar_context_safe(
+            [post],
+            user=request.user,
+            label='post edit partial',
+        )
+        return render(request, 'core/partials/post_item.html', {'post': post, 'is_first': True})
             
     # GET: Return the edit form
     return render(request, 'core/partials/post_edit_form.html', {'post': post})
@@ -4567,11 +5240,19 @@ def comment_edit(request, pk):
         return HttpResponse("Unauthorized", status=403)
         
     if request.method == 'POST':
-        content = request.POST.get('content')
+        content = (request.POST.get('content') or '').strip()
         if content:
             comment.content = content
             comment.save()
             return render(request, 'core/partials/comment_item.html', {'comment': comment})
+        return render(
+            request,
+            'core/partials/comment_edit_form.html',
+            {
+                'comment': comment,
+                'form_error_message': '댓글 내용을 먼저 입력해 주세요.',
+            },
+        )
             
     # GET: Return the edit form
     return render(request, 'core/partials/comment_edit_form.html', {'comment': comment})

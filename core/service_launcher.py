@@ -296,7 +296,7 @@ def resolve_product_launch_route_name(product, user=None):
 def product_supports_guest_preview(product=None, *, route_name="", is_guest_allowed=False):
     if product is not None:
         route_name = getattr(product, "launch_route_name", "")
-        is_guest_allowed = bool(getattr(product, "is_guest_allowed", False))
+        is_guest_allowed = bool(getattr(product, "is_guest_allowed", False) or is_guest_allowed)
 
     normalized_route_name = str(route_name or "").strip().lower()
     if normalized_route_name in FORCE_LOGIN_ROUTE_NAMES:

@@ -306,7 +306,7 @@ def _ensure_session_key(request):
 
 
 def _daily_limit(request):
-    return 10 if request.user.is_authenticated else 5
+    return 10 if request.user.is_authenticated else 3
 
 
 def _noticegen_ratelimit_key(group, request):

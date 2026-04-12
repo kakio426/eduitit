@@ -24,14 +24,138 @@
         return match ? decodeURIComponent(match[1]) : '';
     }
 
+    function ensureFallbackToastRoot() {
+        var root = document.getElementById('home-feedback-fallback-root');
+        if (root) {
+            return root;
+        }
+        root = document.createElement('div');
+        root.id = 'home-feedback-fallback-root';
+        root.style.position = 'fixed';
+        root.style.right = '1rem';
+        root.style.bottom = '1rem';
+        root.style.zIndex = '9999';
+        root.style.display = 'grid';
+        root.style.gap = '0.5rem';
+        document.body.appendChild(root);
+        return root;
+    }
+
+    function renderFallbackToast(message, type) {
+        var root = ensureFallbackToastRoot();
+        var toast = document.createElement('div');
+        var tone = (type || 'info') === 'error'
+            ? { border: '#fecaca', background: '#fff1f2', color: '#9f1239' }
+            : { border: '#cbd5e1', background: '#ffffff', color: '#0f172a' };
+        toast.textContent = message;
+        toast.style.maxWidth = '22rem';
+        toast.style.padding = '0.8rem 0.95rem';
+        toast.style.borderRadius = '0.9rem';
+        toast.style.border = '1px solid ' + tone.border;
+        toast.style.background = tone.background;
+        toast.style.color = tone.color;
+        toast.style.fontSize = '0.9rem';
+        toast.style.fontWeight = '700';
+        toast.style.boxShadow = '0 14px 30px rgba(15, 23, 42, 0.12)';
+        root.appendChild(toast);
+        window.setTimeout(function () {
+            toast.remove();
+        }, 3200);
+    }
+
     function showFeedback(message, type) {
         if (window.showToast) {
             window.showToast(message, type || 'info');
             return;
         }
-        if ((type || 'info') === 'error') {
-            alert(message);
+        renderFallbackToast(message, type || 'info');
+    }
+
+    function getHtmxSource(event) {
+        if (!event || !event.detail) {
+            return null;
         }
+        if (event.detail.requestConfig && event.detail.requestConfig.elt) {
+            return event.detail.requestConfig.elt;
+        }
+        return event.target || null;
+    }
+
+    function getInlineErrorBox(source) {
+        if (!source || !source.dataset || !source.dataset.inlineErrorTarget) {
+            return null;
+        }
+        return document.querySelector(source.dataset.inlineErrorTarget);
+    }
+
+    function clearInlineError(source) {
+        var box = getInlineErrorBox(source);
+        if (!box) {
+            return;
+        }
+        box.hidden = true;
+        box.classList.add('hidden');
+        var message = box.querySelector('[data-inline-error-message]');
+        if (message) {
+            message.textContent = '';
+        }
+        var retry = box.querySelector('[data-inline-error-retry]');
+        if (retry) {
+            retry.onclick = null;
+        }
+    }
+
+    function extractResponseMessage(event, fallback) {
+        var xhr = event && event.detail ? event.detail.xhr : null;
+        if (!xhr) {
+            return fallback;
+        }
+        var responseText = String(xhr.responseText || '').trim();
+        if (!responseText) {
+            return fallback;
+        }
+        if (responseText.charAt(0) === '{') {
+            try {
+                var parsed = JSON.parse(responseText);
+                if (parsed && parsed.error) {
+                    return String(parsed.error);
+                }
+            } catch (error) {
+                // Ignore JSON parse errors and keep trying plain text extraction.
+            }
+        }
+        try {
+            var doc = new DOMParser().parseFromString(responseText, 'text/html');
+            var text = doc && doc.body ? String(doc.body.textContent || '').replace(/\s+/g, ' ').trim() : '';
+            return text || fallback;
+        } catch (error) {
+            return responseText || fallback;
+        }
+    }
+
+    function renderInlineError(source, message) {
+        var box = getInlineErrorBox(source);
+        if (!box) {
+            return;
+        }
+        var messageNode = box.querySelector('[data-inline-error-message]');
+        if (messageNode) {
+            messageNode.textContent = message;
+        }
+        var retry = box.querySelector('[data-inline-error-retry]');
+        if (retry) {
+            retry.onclick = function () {
+                if (source.tagName === 'FORM' && typeof source.requestSubmit === 'function') {
+                    source.requestSubmit();
+                    return;
+                }
+                if (typeof source.click === 'function') {
+                    source.click();
+                }
+            };
+        }
+        box.hidden = false;
+        box.classList.remove('hidden');
     }
 
     window.homeV6Shell = function () {
@@ -301,6 +425,47 @@
                 .catch(function (error) {
                     showFeedback(error && error.message ? error.message : '사용 기록 저장 중 네트워크 오류가 발생했습니다.', 'error');
                 });
+        });
+
+        document.body.addEventListener('htmx:beforeRequest', function (event) {
+            clearInlineError(getHtmxSource(event));
+        });
+
+        document.body.addEventListener('htmx:afterRequest', function (event) {
+            var source = getHtmxSource(event);
+            if (!source || !event.detail || !event.detail.successful) {
+                return;
+            }
+            clearInlineError(source);
+            if (
+                source.dataset
+                && source.dataset.resetOnSuccess === 'true'
+                && source.tagName === 'FORM'
+                && typeof source.reset === 'function'
+            ) {
+                source.reset();
+            }
+        });
+
+        document.body.addEventListener('htmx:responseError', function (event) {
+            var source = getHtmxSource(event);
+            if (!source || !source.dataset || !source.dataset.inlineErrorTarget) {
+                return;
+            }
+            var fallback = (source.dataset.inlineErrorAction || '요청') + ' 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
+            var message = extractResponseMessage(event, fallback);
+            renderInlineError(source, message);
+            showFeedback(message, 'error');
+        });
+
+        document.body.addEventListener('htmx:sendError', function (event) {
+            var source = getHtmxSource(event);
+            if (!source || !source.dataset || !source.dataset.inlineErrorTarget) {
+                return;
+            }
+            var message = (source.dataset.inlineErrorAction || '요청') + ' 중 네트워크 오류가 발생했습니다. 같은 내용으로 다시 시도해 주세요.';
+            renderInlineError(source, message);
+            showFeedback(message, 'error');
         });
 
         syncFavoriteButtons();

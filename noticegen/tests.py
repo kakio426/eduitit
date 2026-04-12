@@ -29,12 +29,12 @@ class NoticeGenViewTests(TestCase):
         base.update(kwargs)
         return base
 
-    def test_guest_daily_limit_is_5(self):
+    def test_guest_daily_limit_is_3(self):
         session = self.client.session
         session.save()
         session_key = session.session_key
 
-        for _ in range(5):
+        for _ in range(3):
             NoticeGenerationAttempt.objects.create(
                 session_key=session_key,
                 target="student_low",
@@ -51,7 +51,7 @@ class NoticeGenViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 429)
-        self.assertContains(response, "오늘 멘트 생성 횟수(5회)를 모두 사용했습니다.", status_code=429)
+        self.assertContains(response, "오늘 멘트 생성 횟수(3회)를 모두 사용했습니다.", status_code=429)
 
     def test_member_daily_limit_is_10(self):
         user = get_user_model().objects.create_user(
@@ -256,7 +256,7 @@ class NoticeGenViewTests(TestCase):
         session.save()
         session_key = session.session_key
 
-        for _ in range(5):
+        for _ in range(3):
             NoticeGenerationAttempt.objects.create(
                 session_key=session_key,
                 target="student_low",
@@ -274,7 +274,7 @@ class NoticeGenViewTests(TestCase):
 
         self.assertEqual(response.status_code, 429)
         self.assertContains(response, 'data-mini-app-state="error"', status_code=429, html=False)
-        self.assertContains(response, "오늘 멘트 생성 횟수(5회)를 모두 사용했습니다.", status_code=429)
+        self.assertContains(response, "오늘 멘트 생성 횟수(3회)를 모두 사용했습니다.", status_code=429)
 
     def test_parent_prompt_has_length_and_natural_flow_rules(self):
         system_prompt = build_system_prompt("parent", LENGTH_LONG)

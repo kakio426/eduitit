@@ -1,8 +1,21 @@
 <form data-post-root hx-post="{% url 'post_edit' post.id %}" hx-target="closest [data-post-root]"
     hx-encoding="multipart/form-data" hx-swap="outerHTML"
     hx-indicator="find .js-post-edit-loading" hx-disabled-elt="find button[type='submit']"
-    hx-on::response-error="alert('게시글 수정 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
+    data-inline-error-target="#post-edit-inline-error-{{ post.id }}"
+    data-inline-error-action="게시글 수정"
     class="bg-white p-4 rounded-2xl border border-indigo-200 shadow-md transition-all">
+
+    <div id="post-edit-inline-error-{{ post.id }}" class="{% if form_error_message %}{% else %}hidden {% endif %}mb-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3" data-inline-error-box {% if not form_error_message %}hidden{% endif %}>
+        <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+                <p class="text-xs font-black text-rose-800" data-inline-error-message>{% if form_error_message %}{{ form_error_message }}{% endif %}</p>
+                <p class="mt-1 text-[11px] font-semibold text-rose-600">작성한 내용은 그대로 유지한 채 다시 시도할 수 있어요.</p>
+            </div>
+            <button type="button" class="inline-flex flex-shrink-0 items-center rounded-full border border-rose-200 bg-white px-3 py-1.5 text-[11px] font-black text-rose-700" data-inline-error-retry>
+                다시 시도
+            </button>
+        </div>
+    </div>
 
     <div class="mb-3">
         <label class="block text-xs font-bold text-slate-500 mb-1">내용 수정</label>

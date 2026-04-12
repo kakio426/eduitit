@@ -27,7 +27,8 @@
                 <button hx-post="{% url 'comment_report' comment.id %}" hx-target="closest [data-comment-root]"
                     hx-swap="outerHTML" hx-vals='{"reason":"other"}' title="신고하기"
                     hx-indicator="find .js-comment-report-loading" hx-disabled-elt="this"
-                    hx-on::response-error="alert('댓글 신고 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
+                    data-inline-error-target="#comment-inline-error-{{ comment.id }}"
+                    data-inline-error-action="댓글 신고"
                     class="text-slate-400 hover:text-amber-600 p-1 md:p-0.5 inline-flex items-center gap-1">
                     <span class="js-comment-report-loading htmx-indicator">
                         <i class="ph ph-spinner-gap animate-spin text-xs"></i>
@@ -51,5 +52,16 @@
             </div>
         </div>
         <p class="text-slate-600 leading-snug mt-0.5 text-xs whitespace-pre-wrap break-words [&_a]:break-all [&_a]:font-semibold [&_a]:text-indigo-600 [&_a]:underline [&_a]:underline-offset-2">{{ comment.content|urlize }}</p>
+        <div id="comment-inline-error-{{ comment.id }}" class="mt-2 hidden rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5" data-inline-error-box hidden>
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="text-[11px] font-black text-rose-800" data-inline-error-message></p>
+                    <p class="mt-1 text-[10px] font-semibold text-rose-600">같은 버튼으로 바로 다시 시도할 수 있어요.</p>
+                </div>
+                <button type="button" class="inline-flex flex-shrink-0 items-center rounded-full border border-rose-200 bg-white px-2.5 py-1 text-[10px] font-black text-rose-700" data-inline-error-retry>
+                    다시 시도
+                </button>
+            </div>
+        </div>
     </div>
 </div>

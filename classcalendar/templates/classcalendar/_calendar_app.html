@@ -727,7 +727,11 @@
                 </div>
                 {% else %}
                 <section class="rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 px-5 py-12 text-center" data-classcalendar-today-empty="true">
+                    {% if is_embedded_on_home and home_empty_action_board.today_flow %}
+                    {% include 'core/partials/home_v6_action_board.html' with board=home_empty_action_board.today_flow surface_key='calendar-today-empty' %}
+                    {% else %}
                     <p class="text-base font-black text-slate-700">{{ today_workspace.focus_empty_message }}</p>
+                    {% endif %}
                 </section>
                 {% endif %}
             </div>

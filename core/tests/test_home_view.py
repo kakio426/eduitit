@@ -361,8 +361,9 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('core/css/home_authenticated_v6.css', content)
         self.assertIn('core/css/home_authenticated_v6_canonical.css', content)
         self.assertIn('data-home-design-version="v6"', content)
-        self.assertNotIn('data-home-v6-entry-panel="true"', content)
-        self.assertNotIn('오늘 바로 할 일', content)
+        self.assertIn('data-home-v6-start-panel="mobile"', content)
+        self.assertIn('data-home-v6-start-panel="desktop"', content)
+        self.assertIn('지금 바로 할 일', content)
         self.assertNotIn('core/css/home_authenticated_v2.css', content)
 
     def test_v2_anonymous_has_sections(self):
@@ -3533,6 +3534,8 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('data-home-v6-shell="true"', content)
         self.assertIn('data-home-v6-mobile-summary="true"', content)
         self.assertIn('data-home-v6-mobile-sheet="true"', content)
+        self.assertIn('data-home-v6-start-panel="mobile"', content)
+        self.assertIn('data-home-v6-start-panel="desktop"', content)
         self.assertIn('data-home-v6-nav="desktop"', content)
         self.assertIn('data-home-v6-nav="mobile"', content)
         self.assertIn('data-home-v6-workbench="mobile"', content)
@@ -3569,8 +3572,11 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('data-home-v6-rail-card="true"', content)
         self.assertIn('data-home-v6-rail-item="true"', content)
         self.assertIn('data-home-v6-rail-action="true"', content)
+        self.assertIn('지금 바로 할 일', content)
         self.assertNotIn('data-home-v6-entry-panel="true"', content)
-        self.assertNotIn('오늘 바로 할 일', content)
+        self.assertIn('data-home-v6-start-panel="mobile"', content)
+        self.assertIn('data-home-v6-start-panel="desktop"', content)
+        self.assertIn('지금 바로 할 일', content)
 
     def test_v6_first_run_empty_workbench_offers_next_actions(self):
         self._login('v6emptyfirst')
@@ -3581,8 +3587,8 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('data-home-v6-empty-state="mobile-workbench"', content)
         self.assertIn('data-home-v6-empty-state="desktop-workbench"', content)
         self.assertIn('자주 쓰는 도구를 아직 고르지 않았어요', content)
-        self.assertIn('도구 하나 먼저 열기', content)
-        self.assertIn('오늘 일정 먼저 보기', content)
+        self.assertIn('먼저 열어 본 도구를 다음부터 작업대로 더 빠르게 이어갈 수 있습니다.', content)
+        self.assertIn('오늘 일정 추가', content)
         self.assertNotIn('data-home-v6-entry-panel="true"', content)
         self.assertIsNotNone(response.context['home_entry_panel'])
 
@@ -3596,8 +3602,8 @@ class HomeV6ViewTest(TestCase):
 
         self.assertIn('data-home-v6-empty-state="recommendations"', content)
         self.assertIn('아직 띄울 추천 도구가 없습니다', content)
-        self.assertIn('도구 하나 먼저 열기', content)
-        self.assertIn('오늘 일정 보기', content)
+        self.assertIn('첫 도구를 먼저 열면 다음에 이어질 흐름까지 맞춰 추천해 드립니다.', content)
+        self.assertIn('오늘 일정 추가', content)
         self.assertNotIn('data-home-v6-service-grid="true"', content)
         self.assertIsNotNone(response.context['home_entry_panel'])
 
@@ -3912,30 +3918,30 @@ class HomeV6ViewTest(TestCase):
         self.assertLess(quickdrop_index, reservation_index)
         self.assertLess(reservation_index, sns_index)
 
-    def test_v6_anonymous_home_loads_royal_luxe_public_override(self):
+    def test_v6_anonymous_home_uses_shared_canonical_shell(self):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        public_css = (
-            Path(settings.BASE_DIR)
-            / 'core'
-            / 'static'
-            / 'core'
-            / 'css'
-            / 'home_public_v6.css'
-        ).read_text(encoding='utf-8')
 
-        self.assertTemplateUsed(response, 'core/home_public_v6_canonical.html')
+        self.assertTemplateUsed(response, 'core/home_authenticated_v6_canonical.html')
         self.assertEqual(response.context['home_design_version'], 'v6')
-        self.assertIn('core/css/home_public_v5.css', content)
-        self.assertIn('core/css/home_public_v6.css', content)
-        self.assertIn('home-public-v6-page', content)
-        self.assertIn('data-home-v6-public-shell="true"', content)
-        self.assertIn('home-public-v6-stage-shell', content)
+        self.assertEqual(response.context['home_user_mode'], 'guest')
+        self.assertIn('core/css/home_authenticated_v6.css', content)
+        self.assertIn('core/css/home_authenticated_v6_canonical.css', content)
+        self.assertIn('data-home-v6-shell="true"', content)
+        self.assertIn('data-home-v6-start-panel="mobile"', content)
+        self.assertIn('data-home-v6-start-panel="desktop"', content)
         self.assertIn('data-home-design-version="v6"', content)
-        self.assertIn('--home-v6-radius-panel: 0.95rem;', public_css)
-        self.assertIn('border-radius: var(--home-public-v6-radius-shell);', public_css)
-        self.assertIn('border-radius: var(--home-public-v6-radius-panel);', public_css)
-        self.assertIn('border-radius: var(--home-public-v6-radius-card);', public_css)
+        self.assertIn('지금 바로 할 일', content)
+        self.assertIn('알림장 &amp; 주간학습 멘트 생성기', content)
+        self.assertIn('비회원은 하루 3회까지 바로 써볼 수 있어요.', content)
+        self.assertIn('지금 바로 써보기', content)
+        self.assertIn('로그인 후 이어지는 흐름', content)
+        self.assertNotIn('home-public-v6-page', content)
+        self.assertNotIn('data-home-v6-public-shell="true"', content)
+        self.assertEqual(
+            [action['title'] for action in response.context['home_support_actions']],
+            ['간편 수합', '수업 QR 생성기'],
+        )
 
 @override_settings(HOME_V2_ENABLED=True)
 class TrackUsageAPITest(TestCase):
