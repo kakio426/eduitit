@@ -6,19 +6,23 @@ footer {
 }
 
 body {
-    background-color: #f7f6fc;
+    background-color: #f4f7fb;
 }
 
 .auth-shell-page {
-    --auth-shell-focus-ring: 0 0 0 3px rgba(91, 44, 207, 0.13);
-    --auth-shell-focus-border: rgba(91, 44, 207, 0.28);
+    /*
+     * Auth chrome mirrors the home correction: quiet surfaces, blue-only emphasis,
+     * and enough contrast for trust without decorative glow.
+     */
+    --auth-shell-focus-ring: 0 0 0 3px rgba(36, 87, 197, 0.13);
+    --auth-shell-focus-border: rgba(36, 87, 197, 0.28);
     position: relative;
     min-height: 100vh;
     overflow: hidden;
     background:
-        radial-gradient(circle at 14% 12%, rgba(91, 44, 207, 0.1), transparent 28rem),
-        radial-gradient(circle at 86% 10%, rgba(198, 165, 107, 0.1), transparent 20rem),
-        linear-gradient(180deg, #f7f6fc 0%, #f3f4fb 52%, #fbfbfe 100%);
+        radial-gradient(circle at 14% 12%, rgba(36, 87, 197, 0.08), transparent 28rem),
+        radial-gradient(circle at 86% 10%, rgba(148, 163, 184, 0.12), transparent 20rem),
+        linear-gradient(180deg, #f4f7fb 0%, #eef3f8 52%, #fafbfd 100%);
 }
 
 .auth-shell-page::before,
@@ -36,7 +40,7 @@ body {
     left: -4rem;
     width: 14rem;
     height: 14rem;
-    background: radial-gradient(circle, rgba(238, 232, 255, 0.9) 0%, rgba(238, 232, 255, 0) 74%);
+    background: radial-gradient(circle, rgba(231, 239, 255, 0.9) 0%, rgba(231, 239, 255, 0) 74%);
 }
 
 .auth-shell-page::after {
@@ -44,7 +48,7 @@ body {
     bottom: 4rem;
     width: 12rem;
     height: 12rem;
-    background: radial-gradient(circle, rgba(255, 245, 230, 0.82) 0%, rgba(255, 245, 230, 0) 76%);
+    background: radial-gradient(circle, rgba(226, 232, 240, 0.86) 0%, rgba(226, 232, 240, 0) 76%);
 }
 
 .auth-shell-main {
@@ -66,7 +70,7 @@ body {
 .auth-shell-card {
     width: 100%;
     max-width: 35rem;
-    border: 1px solid rgba(91, 44, 207, 0.12);
+    border: 1px solid rgba(148, 163, 184, 0.2);
     border-radius: 1.85rem;
     background: rgba(255, 255, 255, 0.98);
     box-shadow:
@@ -87,9 +91,9 @@ body {
     gap: 0.7rem;
     min-height: 2.8rem;
     padding: 0.4rem 1rem 0.4rem 0.5rem;
-    border: 1px solid rgba(91, 44, 207, 0.12);
+    border: 1px solid rgba(36, 87, 197, 0.14);
     border-radius: 999px;
-    background: rgba(245, 241, 255, 0.88);
+    background: rgba(237, 243, 255, 0.9);
     color: var(--color-brand-700);
     font-size: 0.84rem;
     font-weight: 900;
@@ -117,7 +121,7 @@ body {
     border-radius: 999px;
     background: #ffffff;
     color: var(--color-brand-700);
-    box-shadow: 0 10px 20px rgba(91, 44, 207, 0.12);
+    box-shadow: 0 10px 20px rgba(36, 87, 197, 0.12);
 }
 
 .auth-shell-kicker {
@@ -190,8 +194,8 @@ body {
 
 .auth-shell-notice {
     margin-top: 1.2rem;
-    border: 1px solid rgba(91, 44, 207, 0.16);
-    background: rgba(245, 241, 255, 0.82);
+    border: 1px solid rgba(36, 87, 197, 0.15);
+    background: rgba(237, 243, 255, 0.88);
 }
 
 .auth-shell-notice--error {
@@ -312,7 +316,7 @@ body {
 .auth-shell-link {
     color: var(--color-brand-700);
     font-weight: 800;
-    text-decoration-color: rgba(91, 44, 207, 0.24);
+    text-decoration-color: rgba(36, 87, 197, 0.24);
     text-decoration-thickness: 0.08em;
     text-underline-offset: 0.16em;
     transition: color 160ms ease, text-decoration-color 160ms ease;
@@ -320,7 +324,7 @@ body {
 
 .auth-shell-link:hover {
     color: var(--color-brand-900);
-    text-decoration-color: rgba(91, 44, 207, 0.42);
+    text-decoration-color: rgba(36, 87, 197, 0.42);
 }
 
 .auth-shell-link:focus-visible {
@@ -445,7 +449,7 @@ body {
     background: #ffffff;
     box-shadow:
         var(--auth-shell-focus-ring),
-        0 10px 18px rgba(91, 44, 207, 0.08);
+        0 10px 18px rgba(36, 87, 197, 0.08);
 }
 
 .auth-shell-field.has-error input,
@@ -482,7 +486,7 @@ body {
 }
 
 .auth-shell-checkbox-card:focus-within {
-    border-color: rgba(91, 44, 207, 0.22);
+    border-color: rgba(36, 87, 197, 0.22);
     box-shadow:
         var(--auth-shell-focus-ring),
         inset 0 1px 0 rgba(255, 255, 255, 0.82);
@@ -518,7 +522,7 @@ body {
     letter-spacing: -0.015em;
     text-decoration: none;
     box-shadow:
-        0 12px 24px rgba(91, 44, 207, 0.16),
+        0 12px 24px rgba(36, 87, 197, 0.16),
         inset 0 1px 0 rgba(255, 255, 255, 0.2);
     transition:
         transform 180ms ease,
@@ -531,7 +535,7 @@ body {
     transform: translateY(-1px);
     box-shadow:
         var(--auth-shell-focus-ring),
-        0 14px 28px rgba(91, 44, 207, 0.18),
+        0 14px 28px rgba(36, 87, 197, 0.18),
         inset 0 1px 0 rgba(255, 255, 255, 0.24);
     color: #ffffff;
     text-decoration: none;

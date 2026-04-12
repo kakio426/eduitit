@@ -4,19 +4,23 @@
 
 :root {
     color-scheme: light;
-    --color-page: #f6f7fb;
+    --color-page: #f4f7fb;
     --color-surface: #ffffff;
-    --color-surface-alt: #fbfaff;
+    --color-surface-alt: #f7f9fc;
     --color-border: #e4e7ec;
     --color-border-strong: #cfd5df;
     --color-text-strong: #101828;
     --color-text: #344054;
     --color-text-muted: #667085;
     --color-text-inverse: #ffffff;
-    --color-brand-900: #43206f;
-    --color-brand-700: #5b2ccf;
-    --color-brand-500: #7c5cfa;
-    --color-brand-100: #eee8ff;
+    /*
+     * Global shell aligns with the corrected home system: neutral surfaces first,
+     * restrained blue accents second, no purple-dominant chrome.
+     */
+    --color-brand-900: #173b67;
+    --color-brand-700: #2457c5;
+    --color-brand-500: #4f7bd9;
+    --color-brand-100: #e7efff;
     --color-accent-champagne: #c6a56b;
     --color-success: #2f8f73;
     --color-success-soft: #eaf7f1;
@@ -42,16 +46,16 @@
     --color-ink-secondary: var(--color-text);
     --color-ink-tertiary: var(--color-text-muted);
     --color-ink-inverse: var(--color-text-inverse);
-    --color-ink-brand: #251a4c;
-    --color-ink-brand-muted: rgba(46, 37, 95, 0.58);
+    --color-ink-brand: #17314f;
+    --color-ink-brand-muted: rgba(23, 49, 79, 0.58);
     --color-accent-primary: var(--color-brand-700);
     --color-accent-strong: var(--color-brand-900);
-    --color-accent-muted: rgba(91, 44, 207, 0.52);
+    --color-accent-muted: rgba(36, 87, 197, 0.52);
     --color-accent-soft: var(--color-brand-100);
-    --color-accent-tint: #f5f1ff;
-    --color-focus-ring: rgba(91, 44, 207, 0.18);
-    --color-focus-ring-strong: rgba(91, 44, 207, 0.28);
-    --color-accent-shadow-soft: rgba(37, 26, 76, 0.08);
+    --color-accent-tint: #f4f8ff;
+    --color-focus-ring: rgba(36, 87, 197, 0.18);
+    --color-focus-ring-strong: rgba(36, 87, 197, 0.28);
+    --color-accent-shadow-soft: rgba(23, 59, 103, 0.1);
     --color-shell-surface: rgba(241, 244, 250, 0.92);
     --color-shell-surface-strong: rgba(241, 244, 250, 0.96);
     --color-shell-surface-border: rgba(255, 255, 255, 0.58);
@@ -59,8 +63,8 @@
     --color-shell-pill-bg-strong: rgba(255, 255, 255, 0.9);
     --color-shell-pill-bg-hover: rgba(255, 255, 255, 0.98);
     --color-shell-pill-soft: rgba(241, 244, 250, 0.76);
-    --color-shell-accent-surface: rgba(238, 232, 255, 0.9);
-    --color-shell-accent-surface-strong: rgba(232, 226, 255, 0.98);
+    --color-shell-accent-surface: rgba(231, 239, 255, 0.92);
+    --color-shell-accent-surface-strong: rgba(223, 233, 251, 0.98);
     --space-shell-nav-outer-x: 0.5rem;
     --space-shell-nav-outer-y: 0.9rem;
     --space-shell-nav-inner-x: 1rem;
@@ -329,7 +333,7 @@ h4,
     letter-spacing: -0.05em;
     margin-top: 0;
     color: var(--color-ink-brand);
-    text-shadow: 0 8px 18px rgba(37, 26, 76, 0.04);
+    text-shadow: 0 8px 18px rgba(23, 59, 103, 0.04);
 }
 
 @media (min-width: 768px) {
@@ -360,14 +364,14 @@ h4,
         color var(--motion-duration-base) var(--motion-ease-standard);
     color: var(--color-accent-primary);
     border-radius: 1.35rem;
-    border: 1px solid rgba(37, 26, 76, 0.06);
-    box-shadow: 0 12px 26px rgba(37, 26, 76, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(23, 59, 103, 0.06);
+    box-shadow: 0 12px 26px rgba(23, 59, 103, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.94);
 }
 
 .nav-logo-group:hover .logo-icon-box {
     transform: translateY(var(--motion-lift-subtle));
     background: #ffffff;
-    box-shadow: 0 13px 24px rgba(37, 26, 76, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.94);
+    box-shadow: 0 13px 24px rgba(23, 59, 103, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.94);
 }
 
 /*
@@ -598,7 +602,7 @@ h4,
 
 .shell-stats-panel {
     border-color: rgba(207, 216, 226, 0.72);
-    background: linear-gradient(135deg, rgba(255, 248, 236, 0.86) 0%, rgba(255, 255, 255, 0.96) 50%, rgba(245, 241, 255, 0.92) 100%);
+    background: linear-gradient(135deg, rgba(238, 243, 251, 0.9) 0%, rgba(255, 255, 255, 0.96) 52%, rgba(231, 239, 255, 0.92) 100%);
 }
 
 .shell-footer-shell {
@@ -652,7 +656,7 @@ h4,
 }
 
 .shell-modal-panel {
-    border-color: rgba(91, 44, 207, 0.12);
+    border-color: rgba(36, 87, 197, 0.12);
     padding: var(--space-shell-modal-padding);
     transform-origin: center top;
 }
