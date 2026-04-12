@@ -274,6 +274,357 @@ def _build_attachment_download_response(attachment):
     return _apply_sensitive_cache_headers(response)
 
 
+def _resolve_signature_pdf_font_name():
+    try:
+        from reportlab.pdfbase import pdfmetrics
+    except Exception:
+        return "Helvetica"
+
+    font_path = Path(__file__).resolve().parents[1] / "NanumGothic-Regular.ttf"
+    if font_path.exists():
+        try:
+            from reportlab.pdfbase.ttfonts import TTFont
+
+            if "NanumGothic" not in pdfmetrics.getRegisteredFontNames():
+                pdfmetrics.registerFont(TTFont("NanumGothic", str(font_path)))
+            return "NanumGothic"
+        except Exception:
+            logger.exception("failed to register NanumGothic font for signatures PDF")
+
+    try:
+        from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+
+        for candidate in ("HYGothic-Medium", "HYSMyeongJo-Medium"):
+            try:
+                pdfmetrics.registerFont(UnicodeCIDFont(candidate))
+                return candidate
+            except Exception:
+                continue
+    except Exception:
+        pass
+    return "Helvetica"
+
+
+def _trim_pdf_text(text, *, font_name, font_size, max_width):
+    from reportlab.pdfbase import pdfmetrics
+
+    value = str(text or "").strip() or "-"
+    if pdfmetrics.stringWidth(value, font_name, font_size) <= max_width:
+        return value
+
+    ellipsis = "..."
+    trimmed = value
+    while trimmed and pdfmetrics.stringWidth(f"{trimmed}{ellipsis}", font_name, font_size) > max_width:
+        trimmed = trimmed[:-1]
+    return f"{trimmed}{ellipsis}" if trimmed else ellipsis
+
+
+def _draw_signature_image_for_pdf(c, signature_data, *, x, y, width, height):
+    if not str(signature_data or "").startswith("data:image"):
+        return
+
+    try:
+        from reportlab.lib.utils import ImageReader
+    except Exception:
+        return
+
+    try:
+        _, payload = signature_data.split(",", 1)
+        image = ImageReader(io.BytesIO(base64.b64decode(payload)))
+        src_w, src_h = image.getSize()
+    except Exception:
+        return
+
+    pad = 2.0
+    avail_w = max(width - (pad * 2), 1)
+    avail_h = max(height - (pad * 2), 1)
+    scale = min(avail_w / src_w, avail_h / src_h)
+    draw_w = src_w * scale
+    draw_h = src_h * scale
+    draw_x = x + pad + ((avail_w - draw_w) / 2)
+    draw_y = y + pad + ((avail_h - draw_h) / 2)
+    c.drawImage(
+        image,
+        draw_x,
+        draw_y,
+        width=draw_w,
+        height=draw_h,
+        preserveAspectRatio=True,
+        mask="auto",
+    )
+
+
+def _draw_signature_register_table(
+    c,
+    *,
+    items,
+    start_index,
+    x,
+    top_y,
+    table_width,
+    font_name,
+):
+    from reportlab.lib import colors
+
+    header_height = 20
+    row_height = 16
+    total_rows = 30
+    widths = [0.12, 0.30, 0.28, 0.30]
+    col_widths = [table_width * ratio for ratio in widths]
+    table_height = header_height + (row_height * total_rows)
+    bottom_y = top_y - table_height
+
+    c.setStrokeColor(colors.black)
+    c.setLineWidth(0.6)
+    c.rect(x, bottom_y, table_width, table_height, stroke=1, fill=0)
+
+    c.setFillColor(colors.HexColor("#f3f4f6"))
+    c.rect(x, top_y - header_height, table_width, header_height, stroke=0, fill=1)
+    c.setFillColor(colors.black)
+
+    current_x = x
+    for width_value in col_widths[:-1]:
+        current_x += width_value
+        c.line(current_x, bottom_y, current_x, top_y)
+
+    c.line(x, top_y - header_height, x + table_width, top_y - header_height)
+    for row_index in range(total_rows):
+        line_y = top_y - header_height - (row_height * (row_index + 1))
+        c.line(x, line_y, x + table_width, line_y)
+
+    headers = ["순번", "직위/학년반", "성명", "확인서명"]
+    c.setFont(font_name, 8)
+    header_x = x
+    for header, width_value in zip(headers, col_widths):
+        c.drawCentredString(header_x + (width_value / 2), top_y - 13, header)
+        header_x += width_value
+
+    font_size = 7
+    for row_index in range(total_rows):
+        item = items[row_index] if row_index < len(items) else None
+        row_top = top_y - header_height - (row_height * row_index)
+        row_bottom = row_top - row_height
+        baseline_y = row_bottom + 5
+        c.setFont(font_name, font_size)
+        c.drawCentredString(x + (col_widths[0] / 2), baseline_y, str(start_index + row_index))
+
+        affiliation_x = x + col_widths[0] + 3
+        affiliation_text = _trim_pdf_text(
+            item["affiliation"] if item else "",
+            font_name=font_name,
+            font_size=font_size,
+            max_width=col_widths[1] - 6,
+        )
+        c.drawString(affiliation_x, baseline_y, affiliation_text if item else "")
+
+        name_x = x + col_widths[0] + col_widths[1] + 3
+        name_text = _trim_pdf_text(
+            item["name"] if item else "",
+            font_name=font_name,
+            font_size=font_size,
+            max_width=col_widths[2] - 6,
+        )
+        c.drawString(name_x, baseline_y, name_text if item else "")
+
+        if item and item.get("signature_data"):
+            signature_x = x + col_widths[0] + col_widths[1] + col_widths[2] + 2
+            _draw_signature_image_for_pdf(
+                c,
+                item["signature_data"],
+                x=signature_x,
+                y=row_bottom + 1,
+                width=col_widths[3] - 4,
+                height=row_height - 2,
+            )
+
+
+def _build_signature_print_context(session):
+    signature_sort_mode = _get_signature_sort_mode(session)
+    participant_sort_mode = _get_participant_sort_mode(session)
+
+    print_items = []
+    signed_count = 0
+
+    if session.expected_participants.exists():
+        participants = _sort_expected_participants_for_display(
+            session.expected_participants.all(),
+            participant_sort_mode,
+        )
+
+        for participant in participants:
+            item = {
+                "name": participant.name,
+                "affiliation": participant.display_affiliation,
+                "original_affiliation": participant.affiliation,
+                "is_affiliation_corrected": bool(participant.corrected_affiliation),
+                "signature_data": participant.matched_signature.signature_data if participant.matched_signature else None,
+            }
+            print_items.append(item)
+            if item["signature_data"]:
+                signed_count += 1
+
+        matched_sig_ids = [participant.matched_signature.id for participant in participants if participant.matched_signature]
+        unmatched_sigs = _sort_signatures_for_display(
+            session.signatures.exclude(id__in=matched_sig_ids),
+            signature_sort_mode,
+        )
+
+        for sig in unmatched_sigs:
+            print_items.append(
+                {
+                    "name": sig.participant_name,
+                    "affiliation": sig.display_affiliation,
+                    "original_affiliation": sig.participant_affiliation,
+                    "is_affiliation_corrected": bool(sig.corrected_affiliation),
+                    "signature_data": sig.signature_data,
+                }
+            )
+            signed_count += 1
+
+        total_expected = session.expected_count or len(participants)
+    else:
+        signatures = _sort_signatures_for_display(session.signatures.all(), signature_sort_mode)
+        for sig in signatures:
+            print_items.append(
+                {
+                    "name": sig.participant_name,
+                    "affiliation": sig.display_affiliation,
+                    "original_affiliation": sig.participant_affiliation,
+                    "is_affiliation_corrected": bool(sig.corrected_affiliation),
+                    "signature_data": sig.signature_data,
+                }
+            )
+        signed_count = len(print_items)
+        total_expected = session.expected_count or signed_count
+
+    total_items = len(print_items)
+    sigs_per_page = 60
+    pages = []
+
+    for page_num in range(0, total_items, sigs_per_page):
+        page_items = print_items[page_num:page_num + sigs_per_page]
+        left_items = page_items[:30]
+        right_items = page_items[30:60]
+        current_base_idx = page_num
+
+        pages.append(
+            {
+                "page_number": (page_num // sigs_per_page) + 1,
+                "left_items": left_items,
+                "right_items": right_items,
+                "left_start_index": current_base_idx + 1,
+                "right_start_index": current_base_idx + 31,
+                "left_padding": range(30 - len(left_items)),
+                "right_padding": range(30 - len(right_items)),
+            }
+        )
+
+    if not pages:
+        pages.append(
+            {
+                "page_number": 1,
+                "left_items": [],
+                "right_items": [],
+                "left_start_index": 1,
+                "right_start_index": 31,
+                "left_padding": range(30),
+                "right_padding": range(30),
+            }
+        )
+
+    generated_at = timezone.localtime(timezone.now())
+    return {
+        "session": session,
+        "pages": pages,
+        "total_count": total_expected,
+        "signed_count": signed_count,
+        "unsigned_count": max(0, total_expected - signed_count),
+        "total_pages": len(pages),
+        "signature_sort_mode": signature_sort_mode,
+        "document_title": session.print_title.strip() if session.print_title else f"{generated_at.year} 연수등록부",
+        "generated_at_display": generated_at.strftime("%Y. %m. %d. %H:%M"),
+    }
+
+
+def _build_signature_register_pdf_bytes(print_context):
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.pdfgen import canvas
+    except ModuleNotFoundError as exc:
+        raise RuntimeError("PDF 엔진(reportlab)이 준비되지 않았습니다.") from exc
+
+    packet = io.BytesIO()
+    c = canvas.Canvas(packet, pagesize=A4)
+    width, height = A4
+    font_name = _resolve_signature_pdf_font_name()
+    margin_x = 30
+    gap = 8
+    table_width = (width - (margin_x * 2) - gap) / 2
+
+    for index, page in enumerate(print_context["pages"]):
+        title_y = height - 42
+        c.setFont(font_name, 18)
+        title = print_context["document_title"]
+        if print_context["total_pages"] > 1:
+            title = f"{title} ({page['page_number']}/{print_context['total_pages']})"
+        c.drawCentredString(width / 2, title_y, title)
+
+        c.setFont(font_name, 10)
+        info_y = title_y - 28
+        local_dt = timezone.localtime(print_context["session"].datetime)
+        c.drawString(
+            margin_x,
+            info_y,
+            f"일시 및 장소 : {local_dt.year}년 {local_dt.month}월 {local_dt.day}일 {local_dt:%H시 %M분}, {print_context['session'].location}",
+        )
+        c.drawString(margin_x, info_y - 16, f"강사 : {print_context['session'].instructor}")
+        c.drawString(margin_x, info_y - 32, f"내용 : {print_context['session'].title}")
+
+        c.setFont(font_name, 9)
+        c.drawString(
+            margin_x,
+            info_y - 50,
+            f"총 {print_context['total_count']}명 / 서명 {print_context['signed_count']}명 / 미서명 {print_context['unsigned_count']}명",
+        )
+
+        table_top = info_y - 68
+        _draw_signature_register_table(
+            c,
+            items=page["left_items"],
+            start_index=page["left_start_index"],
+            x=margin_x,
+            top_y=table_top,
+            table_width=table_width,
+            font_name=font_name,
+        )
+        _draw_signature_register_table(
+            c,
+            items=page["right_items"],
+            start_index=page["right_start_index"],
+            x=margin_x + table_width + gap,
+            top_y=table_top,
+            table_width=table_width,
+            font_name=font_name,
+        )
+
+        footer_y = 72
+        c.setFont(font_name, 9)
+        c.drawString(margin_x, footer_y, f"출력일시 : {print_context['generated_at_display']}")
+        c.drawRightString(width - margin_x, footer_y, f"페이지 {page['page_number']} / {print_context['total_pages']}")
+
+        if index < print_context["total_pages"] - 1:
+            c.showPage()
+
+    c.save()
+    packet.seek(0)
+    return packet.read()
+
+
+def _build_signature_print_download_name(session):
+    raw_name = f"{session.print_title or session.title or 'attendance-register'}-signed.pdf"
+    return _safe_attachment_download_name(raw_name, fallback="attendance-register")
+
+
 def _normalize_affiliation_text(value):
     normalized = str(value or "").strip()
     if not normalized:
@@ -998,7 +1349,7 @@ def _build_session_stage_payload(session, *, signature_count, pending_count=None
     detail_href = reverse("signatures:detail", kwargs={"uuid": session.uuid})
     copy_href = f"{reverse('signatures:create')}?copy_from={session.uuid}"
     share_href = reverse("signatures:sign", kwargs={"uuid": session.uuid})
-    print_href = reverse("signatures:print", kwargs={"uuid": session.uuid})
+    pdf_href = reverse("signatures:print_pdf", kwargs={"uuid": session.uuid})
 
     if not session.is_active:
         stage = "closed"
@@ -1016,8 +1367,8 @@ def _build_session_stage_payload(session, *, signature_count, pending_count=None
         }
         list_secondary_actions = [
             {
-                "label": "출력/PDF",
-                "href": print_href,
+                "label": "PDF 다운로드",
+                "href": pdf_href,
             },
             {
                 "label": "복제하기",
@@ -1032,9 +1383,9 @@ def _build_session_stage_payload(session, *, signature_count, pending_count=None
                 "variant": "primary",
             },
             {
-                "label": "출력/PDF 저장",
+                "label": "PDF 다운로드",
                 "kind": "link",
-                "href": print_href,
+                "href": pdf_href,
                 "variant": "secondary",
             },
             {
@@ -1065,8 +1416,8 @@ def _build_session_stage_payload(session, *, signature_count, pending_count=None
                 "href": share_href,
             },
             {
-                "label": "출력/PDF",
-                "href": print_href,
+                "label": "PDF 다운로드",
+                "href": pdf_href,
             },
         ]
         primary_actions = [
@@ -1103,8 +1454,8 @@ def _build_session_stage_payload(session, *, signature_count, pending_count=None
                 "href": share_href,
             },
             {
-                "label": "출력/PDF",
-                "href": print_href,
+                "label": "PDF 다운로드",
+                "href": pdf_href,
             },
         ]
         pending_action_label = "미참여 보기" if can_show_absentees else "남은 인원 보기"
@@ -1154,6 +1505,11 @@ def session_list(request):
     can_proxy_create = _is_signature_proxy_manager(request.user)
     sessions = _get_signature_accessible_sessions(request.user)
     session_cards = []
+    dashboard_counts = {
+        "ready": 0,
+        "collecting": 0,
+        "closed": 0,
+    }
     for session in sessions:
         signature_count = session.signatures.count()
         can_show_absentees = session.expected_participants.exists()
@@ -1170,23 +1526,32 @@ def session_list(request):
             pending_count=pending_count,
             can_show_absentees=can_show_absentees,
         )
-        session_cards.append(
-            {
-                "session": session,
-                "signature_count": signature_count,
-                "pending_count": pending_count,
-                "can_show_absentees": can_show_absentees,
-                "show_owner_label": bool(can_proxy_create and session.created_by_id != request.user.id),
-                "owner_label": _get_signature_user_display_name(session.created_by),
-                **stage_payload,
-            }
-        )
+        card = {
+            "session": session,
+            "signature_count": signature_count,
+            "pending_count": pending_count,
+            "can_show_absentees": can_show_absentees,
+            "show_owner_label": bool(can_proxy_create and session.created_by_id != request.user.id),
+            "owner_label": _get_signature_user_display_name(session.created_by),
+            **stage_payload,
+        }
+        session_cards.append(card)
+        dashboard_counts[card["stage"]] += 1
+
+    actionable_cards = [
+        *[card for card in session_cards if card["stage"] == "ready"],
+        *[card for card in session_cards if card["stage"] == "collecting"],
+    ]
+    closed_cards = [card for card in session_cards if card["stage"] == "closed"]
 
     return render(
         request,
         'signatures/list.html',
         {
             'session_cards': session_cards,
+            'dashboard_counts': dashboard_counts,
+            'actionable_cards': actionable_cards,
+            'closed_cards': closed_cards,
             'can_proxy_create': can_proxy_create,
         },
     )
@@ -1602,6 +1967,7 @@ def session_detail(request, uuid):
             'share_link': share_link,
             'share_qr_data_url': share_qr_data_url,
             'share_package_text': share_package_text,
+            'print_pdf_href': reverse("signatures:print_pdf", kwargs={"uuid": session.uuid}),
             'attachment_rows': attachment_rows,
             'attachment_state': attachment_state,
             'access_code_state': access_code_state,
@@ -1881,111 +2247,35 @@ def sign_attachment_download(request, uuid, attachment_id):
 def print_view(request, uuid):
     """출석부 인쇄 페이지 - 명단 유무에 따라 동작 변경"""
     session = _get_signature_session_or_404(request.user, uuid)
-    signature_sort_mode = _get_signature_sort_mode(session)
-    participant_sort_mode = _get_participant_sort_mode(session)
-    
-    # 데이터 준비
-    print_items = []
-    signed_count = 0
-    
-    if session.expected_participants.exists():
-        # Case A: 명단이 있는 경우 (Phase 2) -> 명단 기준 + 미매칭 서명
-        participants = _sort_expected_participants_for_display(
-            session.expected_participants.all(),
-            participant_sort_mode,
-        )
-        
-        # 1. 예상 참석자 추가
-        for p in participants:
-            item = {
-                'name': p.name,
-                'affiliation': p.display_affiliation,
-                'original_affiliation': p.affiliation,
-                'is_affiliation_corrected': bool(p.corrected_affiliation),
-                'signature_data': p.matched_signature.signature_data if p.matched_signature else None,
-            }
-            print_items.append(item)
-            if item['signature_data']:
-                signed_count += 1
-                
-        # 2. 명단에 없는 추가 서명(Walk-ins) 추가
-        matched_sig_ids = [p.matched_signature.id for p in participants if p.matched_signature]
-        unmatched_sigs = _sort_signatures_for_display(
-            session.signatures.exclude(id__in=matched_sig_ids),
-            signature_sort_mode,
-        )
-        
-        for sig in unmatched_sigs:
-            print_items.append({
-                'name': sig.participant_name,
-                'affiliation': sig.display_affiliation,
-                'original_affiliation': sig.participant_affiliation,
-                'is_affiliation_corrected': bool(sig.corrected_affiliation),
-                'signature_data': sig.signature_data,
-            })
-            signed_count += 1
-            
-        total_expected = session.expected_count or len(participants)
-        
-    else:
-        # Case B: 명단이 없는 경우 (Phase 1) -> 서명 기준
-        signatures = _sort_signatures_for_display(session.signatures.all(), signature_sort_mode)
-        for sig in signatures:
-            print_items.append({
-                'name': sig.participant_name,
-                'affiliation': sig.display_affiliation,
-                'original_affiliation': sig.participant_affiliation,
-                'is_affiliation_corrected': bool(sig.corrected_affiliation),
-                'signature_data': sig.signature_data,
-            })
-        signed_count = len(print_items)
-        total_expected = session.expected_count or signed_count
-    
-    # 페이지네이션 처리
-    total_items = len(print_items)
-    SIGS_PER_PAGE = 60
-    pages = []
-    
-    for page_num in range(0, total_items, SIGS_PER_PAGE):
-        # 이번 페이지의 아이템들 (최대 60개)
-        page_items = print_items[page_num:page_num + SIGS_PER_PAGE]
-        
-        # 좌우 분할 (30개씩)
-        left_items = page_items[:30]
-        right_items = page_items[30:60]
-        
-        # 빈 줄 채우기 (항상 30줄이 되도록)
-        # left_rows/right_rows는 순번만 계산
-        current_base_idx = page_num
-        
-        pages.append({
-            'page_number': (page_num // SIGS_PER_PAGE) + 1,
-            'left_items': left_items,
-            'right_items': right_items,
-            'left_start_index': current_base_idx + 1,
-            'right_start_index': current_base_idx + 31,
-            'left_padding': range(30 - len(left_items)),
-            'right_padding': range(30 - len(right_items)),
-        })
-    
-    # 페이지가 하나도 없으면 빈 페이지 하나 생성
-    if not pages:
-        pages.append({
-            'page_number': 1,
-            'left_items': [], 'right_items': [],
-            'left_start_index': 1, 'right_start_index': 31,
-            'left_padding': range(30), 'right_padding': range(30)
-        })
+    print_context = _build_signature_print_context(session)
+    response = render(
+        request,
+        'signatures/print_view.html',
+        {
+            **print_context,
+            'print_pdf_href': reverse("signatures:print_pdf", kwargs={"uuid": session.uuid}),
+        },
+    )
+    return _apply_sensitive_cache_headers(response)
 
-    response = render(request, 'signatures/print_view.html', {
-        'session': session,
-        'pages': pages,
-        'total_count': total_expected,
-        'signed_count': signed_count,
-        'unsigned_count': max(0, total_expected - signed_count),
-        'total_pages': len(pages),
-        'signature_sort_mode': signature_sort_mode,
-    })
+
+@login_required
+def print_pdf_download(request, uuid):
+    session = _get_signature_session_or_404(request.user, uuid)
+
+    try:
+        pdf_bytes = _build_signature_register_pdf_bytes(_build_signature_print_context(session))
+    except Exception:
+        logger.exception("failed to build signatures PDF download session=%s", session.pk)
+        messages.error(request, "PDF 파일을 바로 만들지 못했습니다. 잠시 후 다시 시도해 주세요.")
+        return redirect("signatures:detail", uuid=session.uuid)
+
+    response = FileResponse(
+        io.BytesIO(pdf_bytes),
+        as_attachment=True,
+        filename=_build_signature_print_download_name(session),
+        content_type="application/pdf",
+    )
     return _apply_sensitive_cache_headers(response)
 
 

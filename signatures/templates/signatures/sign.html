@@ -180,12 +180,13 @@
                 {% if show_roster_selection %}
                 <p class="mt-2 text-sm text-slate-500">명단에서 이름을 고르면 직위/학년반이 자동으로 채워집니다.</p>
                 {% endif %}
-                {% if affiliation_suggestions and not show_roster_selection %}
+                {% if affiliation_suggestions %}
                 <datalist id="affiliationSuggestions">
                     {% for option in affiliation_suggestions %}
                     <option value="{{ option }}"></option>
                     {% endfor %}
                 </datalist>
+                {% if not show_roster_selection or walk_in_mode %}
                 <div class="mt-3 flex flex-wrap gap-2">
                     {% for option in affiliation_suggestions|slice:":8" %}
                     <button
@@ -197,6 +198,7 @@
                     </button>
                     {% endfor %}
                 </div>
+                {% endif %}
                 {% endif %}
             </div>
 

@@ -17,6 +17,7 @@ urlpatterns = [
         views.session_attachment_download,
         name="attachment_download",
     ),
+    path("<uuid:uuid>/print/download/", views.print_pdf_download, name="print_pdf"),
     path("<uuid:uuid>/print/", views.print_view, name="print"),
     path("<uuid:uuid>/signature-sort-mode/", views.update_signature_sort_mode, name="update_signature_sort_mode"),
     path("<uuid:uuid>/toggle/", views.toggle_active, name="toggle"),

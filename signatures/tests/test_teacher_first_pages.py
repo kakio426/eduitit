@@ -8,7 +8,8 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from core.models import UserProfile
+from core.models import UserPolicyConsent, UserProfile
+from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
 from handoff.models import HandoffRosterGroup
 from signatures.models import ExpectedParticipant, Signature, TrainingSession
 
@@ -64,26 +65,91 @@ class SignatureTeacherFirstPagesTests(TestCase):
         response = self.client.get(reverse("signatures:list"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "가뿐하게 서명 톡")
-        self.assertContains(response, "연수·회의 참석 서명을 링크와 QR로 간편하게 받으세요.")
-        self.assertContains(response, "로그인 없이 참여 가능")
+        self.assertContains(response, "오늘 바로 하는 일")
+        self.assertContains(response, "연수·회의 출석 서명 받기")
+        self.assertContains(response, "지금 상태")
+        self.assertContains(response, "공유 전")
+        self.assertContains(response, "진행 중")
+        self.assertContains(response, "마감됨")
+        self.assertContains(response, "지금 처리할 요청")
+        self.assertContains(response, "최근 마감된 요청")
+        self.assertContains(response, "보조 도구")
         self.assertContains(response, "서명 요청 만들기")
-        self.assertNotContains(response, "예시 보기")
-        self.assertNotContains(response, 'id="signatureExamples"', html=False)
         self.assertContains(response, "공유 시작")
         self.assertContains(response, "참여 현황")
         self.assertContains(response, "결과 보기")
+        self.assertContains(response, "PDF 다운로드")
         self.assertContains(response, "내 서명 보관함")
         self.assertContains(response, "이름 폰트 도구")
-        self.assertContains(response, "직접 쓴 손서명은 참여 화면에서 저장해 두고 다시 쓰세요.")
         self.assertContains(response, "참여 링크 열기")
+        self.assertNotContains(response, "연수·회의 참석 서명을 링크와 QR로 간편하게 받으세요.")
+        self.assertNotContains(response, "로그인 없이 참여 가능")
+        self.assertNotContains(response, "휴대폰으로 바로 서명")
+        self.assertNotContains(response, "링크/QR 둘 다 가능")
+        self.assertNotContains(response, "학교 내부 기록용")
+        self.assertNotContains(response, "직접 쓴 손서명은 참여 화면에서 저장해 두고 다시 쓰세요.")
+        self.assertNotContains(response, "1. 서명 요청 만들기")
+        self.assertNotContains(response, "2. 링크 또는 QR 보내기")
+        self.assertNotContains(response, "3. 참여 현황 확인하기")
         self.assertContains(response, reverse("signatures:sign", kwargs={"uuid": ready_session.uuid}))
         self.assertContains(response, reverse("signatures:sign", kwargs={"uuid": collecting_session.uuid}))
         self.assertContains(response, f"{reverse('signatures:create')}?copy_from={closed_session.uuid}")
+        self.assertContains(response, reverse("signatures:print_pdf", kwargs={"uuid": ready_session.uuid}))
+        self.assertContains(response, reverse("signatures:print_pdf", kwargs={"uuid": collecting_session.uuid}))
+        self.assertContains(response, reverse("signatures:print_pdf", kwargs={"uuid": closed_session.uuid}))
         self.assertNotContains(response, "첫 연수 만들기")
         self.assertContains(response, reverse("signatures:detail", kwargs={"uuid": ready_session.uuid}))
         self.assertContains(response, reverse("signatures:detail", kwargs={"uuid": collecting_session.uuid}))
         self.assertContains(response, reverse("signatures:detail", kwargs={"uuid": closed_session.uuid}))
+        self.assertEqual(response.context["dashboard_counts"], {"ready": 1, "collecting": 1, "closed": 1})
+        self.assertEqual(
+            [card["stage"] for card in response.context["actionable_cards"]],
+            ["ready", "collecting"],
+        )
+        self.assertEqual(
+            [card["session"].id for card in response.context["closed_cards"]],
+            [closed_session.id],
+        )
+
+    def test_list_page_empty_state_keeps_single_primary_start_point(self):
+        response = self.client.get(reverse("signatures:list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "오늘 바로 하는 일")
+        self.assertContains(response, "지금 바로 처리할 요청이 없습니다.")
+        self.assertContains(response, "최근 마감된 요청이 없습니다.")
+        self.assertEqual(response.context["dashboard_counts"], {"ready": 0, "collecting": 0, "closed": 0})
+        self.assertEqual(len(response.context["actionable_cards"]), 0)
+        self.assertEqual(len(response.context["closed_cards"]), 0)
+        self.assertEqual(response.content.decode().count("서명 요청 만들기"), 1)
+
+    def test_list_page_shows_delegate_button_for_proxy_manager(self):
+        proxy_user = User.objects.create_superuser(
+            username="kakio",
+            password="pw12345",
+            email="kakio@example.com",
+        )
+        UserProfile.objects.update_or_create(
+            user=proxy_user,
+            defaults={"nickname": "proxy_manager", "role": "school"},
+        )
+        UserPolicyConsent.objects.create(
+            user=proxy_user,
+            provider="direct",
+            terms_version=TERMS_VERSION,
+            privacy_version=PRIVACY_VERSION,
+            agreed_at=timezone.now(),
+            agreement_source="required_gate",
+            ip_address="127.0.0.1",
+            user_agent="test-agent",
+        )
+        self.client.force_login(proxy_user)
+
+        response = self.client.get(reverse("signatures:list"), follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "교사 대신 만들기")
+        self.assertContains(response, f'{reverse("signatures:create")}?delegate=1')
 
     def test_create_page_surfaces_optional_expected_count(self):
         response = self.client.get(reverse("signatures:create"))
@@ -333,9 +399,104 @@ class SignatureTeacherFirstPagesTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["stage"], "closed")
         self.assertContains(response, "결과를 확인하세요")
-        self.assertContains(response, "출력/PDF 저장")
+        self.assertContains(response, "PDF 다운로드")
         self.assertContains(response, "다시 열기")
         self.assertContains(response, "복제해서 새로 만들기")
+        self.assertContains(response, reverse("signatures:print_pdf", kwargs={"uuid": session.uuid}))
+
+    def test_teacher_can_download_signed_pdf_directly(self):
+        try:
+            import reportlab  # noqa: F401
+        except ModuleNotFoundError:
+            self.skipTest("reportlab unavailable")
+
+        session = TrainingSession.objects.create(
+            title="PDF 다운로드 테스트",
+            instructor="강사",
+            datetime=timezone.now() + timedelta(days=1),
+            location="교실",
+            created_by=self.user,
+            is_active=False,
+        )
+        Signature.objects.create(
+            training_session=session,
+            participant_name="홍길동",
+            participant_affiliation="교사",
+            signature_data="data:image/png;base64,SIG1",
+        )
+
+        response = self.client.get(reverse("signatures:print_pdf", kwargs={"uuid": session.uuid}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertEqual(response["Cache-Control"], "no-store, private")
+        self.assertIn("attachment;", response["Content-Disposition"])
+        self.assertTrue(b"".join(response.streaming_content).startswith(b"%PDF"))
+
+    def test_teacher_flow_from_create_to_public_sign_to_pdf_download_has_no_blocker(self):
+        try:
+            import reportlab  # noqa: F401
+        except ModuleNotFoundError:
+            self.skipTest("reportlab unavailable")
+
+        session_dt = timezone.localtime(timezone.now() + timedelta(days=1)).replace(minute=0, second=0, microsecond=0)
+        create_response = self.client.post(
+            reverse("signatures:create"),
+            data={
+                "title": "생성부터 PDF까지 확인",
+                "print_title": "",
+                "instructor": "강사",
+                "datetime": session_dt.strftime("%Y-%m-%dT%H:%M"),
+                "location": "시청각실",
+                "description": "",
+                "shared_roster_group": "",
+                "expected_count": "5",
+                "is_active": "on",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(create_response.status_code, 200)
+        self.assertContains(create_response, "서명 요청이 생성되었습니다.")
+        session = TrainingSession.objects.get(title="생성부터 PDF까지 확인", created_by=self.user)
+
+        list_ready_response = self.client.get(reverse("signatures:list"))
+        self.assertEqual(list_ready_response.context["dashboard_counts"], {"ready": 1, "collecting": 0, "closed": 0})
+        self.assertEqual(
+            [card["stage"] for card in list_ready_response.context["actionable_cards"]],
+            ["ready"],
+        )
+        self.assertContains(list_ready_response, reverse("signatures:print_pdf", kwargs={"uuid": session.uuid}))
+
+        self.client.logout()
+        sign_response = self.client.post(
+            reverse("signatures:sign", kwargs={"uuid": session.uuid}),
+            data={
+                "participant_affiliation": "교사",
+                "participant_name": "홍길동",
+                "signature_data": "data:image/png;base64,SIG",
+            },
+        )
+
+        self.assertEqual(sign_response.status_code, 200)
+        self.assertContains(sign_response, "출석·참여 확인")
+        self.assertTrue(Signature.objects.filter(training_session=session, participant_name="홍길동").exists())
+
+        self.client.force_login(self.user)
+        list_collecting_response = self.client.get(reverse("signatures:list"))
+        self.assertEqual(list_collecting_response.context["dashboard_counts"], {"ready": 0, "collecting": 1, "closed": 0})
+        self.assertEqual(
+            [card["stage"] for card in list_collecting_response.context["actionable_cards"]],
+            ["collecting"],
+        )
+        self.assertContains(list_collecting_response, "참여 현황")
+        self.assertContains(list_collecting_response, reverse("signatures:print_pdf", kwargs={"uuid": session.uuid}))
+
+        pdf_response = self.client.get(reverse("signatures:print_pdf", kwargs={"uuid": session.uuid}))
+
+        self.assertEqual(pdf_response.status_code, 200)
+        self.assertEqual(pdf_response["Content-Type"], "application/pdf")
+        self.assertTrue(b"".join(pdf_response.streaming_content).startswith(b"%PDF"))
 
     def test_public_sign_page_shows_quick_participation_prompts(self):
         session = TrainingSession.objects.create(
