@@ -44,7 +44,7 @@
     {% block extra_css %}{% endblock %}
 </head>
 
-<body class="selection:bg-purple-200 overflow-x-hidden">
+<body class="overflow-x-hidden">
     <div id="app-root" class="w-full relative overflow-x-hidden min-h-screen">
 
         <!-- Toast Notification System -->
@@ -81,7 +81,7 @@
                     style="min-width: 280px;">
                     <i class="fa-solid mt-0.5 text-lg" :class="[tagIcon(toast.tag), tagColor(toast.tag)]"></i>
                     <span class="flex-1 text-sm font-bold text-gray-700" x-text="toast.message"></span>
-                    <button @click="removeToast(toast.id)" class="text-gray-400 hover:text-gray-600 transition ml-2">
+                    <button @click="removeToast(toast.id)" class="shell-dismiss-button ml-2">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
                 </div>
@@ -132,7 +132,7 @@
                 <span>{{ banner_text }}</span>
                 {% endif %}
                 <button @click="hideForToday()"
-                    class="ml-4 text-white/80 hover:text-white transition">
+                    class="shell-dismiss-button shell-dismiss-button--inverse ml-4">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
@@ -141,14 +141,14 @@
 
         <!-- Navbar -->
         {% if not hide_navbar %}
-        <nav id="mainNav" class="fixed w-full z-50 left-0 px-2 md:px-6 py-4 transition-all duration-300"
+        <nav id="mainNav" class="shell-nav-wrap fixed w-full z-50 left-0 transition-all duration-300"
             style="will-change: transform, opacity; top: var(--global-banner-height, 0px);">
             <div
-                class="max-w-7xl mx-auto clay-card clay-card--overflow-visible px-3 md:px-6 py-3 flex justify-between items-center bg-[#E0E5EC]/90 backdrop-blur-sm">
-                <div class="flex items-center gap-3">
-                    <a href="/" class="flex items-center gap-3 group nav-logo-group" aria-label="에듀잇티 홈">
+                class="max-w-7xl mx-auto clay-card clay-card--overflow-visible shell-nav-surface shell-nav-bar flex justify-between items-center backdrop-blur-sm">
+                <div class="flex items-center shell-nav-brand">
+                    <a href="/" class="flex items-center shell-nav-brand group nav-logo-group" aria-label="에듀잇티 홈">
                         <div
-                            class="w-12 h-12 rounded-xl shadow-clay-inner flex items-center justify-center text-indigo-700 text-[1.55rem] bg-white/95 logo-icon-box">
+                            class="w-12 h-12 rounded-xl shadow-clay-inner flex items-center justify-center text-[1.55rem] logo-icon-box">
                             <i class="fa-solid fa-cloud"></i>
                         </div>
                         <span class="logo-lockup">
@@ -159,29 +159,29 @@
                 </div>
 
                 <!-- Desktop Navigation -->
-                <div class="hidden lg:flex gap-4 xl:gap-6 mt-1 text-base xl:text-lg font-bold text-gray-500 items-center min-w-0">
-                    <a href="{% url 'portfolio:list' %}" class="hover:text-purple-600 transition">포트폴리오</a>
+                <div class="shell-nav-actions hidden lg:flex text-base xl:text-lg font-bold text-gray-500 min-w-0">
+                    <a href="{% url 'portfolio:list' %}" class="shell-link transition">포트폴리오</a>
                     <a href="https://padlet.com/kakio1q2w/eduitit-wrjbzmk8oufxdzcv"
                         target="_blank" rel="noopener noreferrer"
-                        class="hover:text-purple-600 transition"
+                        class="shell-link transition"
                         aria-label="이용 안내 열기 (새 탭)">
                         이용 안내
                     </a>
                     {% if service_launcher_json %}
                     <button type="button"
                         onclick="if(window.openServiceLauncher) openServiceLauncher()"
-                        class="inline-flex items-center gap-3 rounded-full bg-white/80 px-4 py-2 text-sm font-bold text-slate-500 shadow-clay-inner transition hover:text-indigo-600"
+                        class="inline-flex items-center gap-3 rounded-full shell-pill px-4 py-2 text-sm font-bold shadow-clay-inner"
                         data-global-service-launcher-trigger="true"
                         title="Ctrl+K"
                         aria-label="서비스 찾기 열기"
                         aria-keyshortcuts="Control+K Meta+K">
                         <i class="fa-solid fa-magnifying-glass text-xs"></i>
                         <span>서비스 찾기</span>
-                        <kbd class="rounded border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-400">Ctrl+K</kbd>
+                        <kbd class="shell-kbd rounded border px-1.5 py-0.5 text-[10px] font-bold">Ctrl+K</kbd>
                     </button>
                     {% endif %}
-                    <div class="flex items-center gap-2 px-4 py-2 rounded-full bg-white/70 shadow-clay-inner text-sm font-bold text-slate-600">
-                        <i class="fa-solid fa-clock text-slate-400"></i>
+                    <div class="flex items-center gap-2 px-4 py-2 rounded-full shell-pill shell-pill--strong shadow-clay-inner text-sm font-bold">
+                        <i class="fa-solid fa-clock shell-icon-muted"></i>
                         <span id="navbarClock">--:--:--</span>
                     </div>
                     {% if user.is_authenticated %}
@@ -195,20 +195,20 @@
                         data-current-classroom-name="{% if active_classroom %}{{ active_classroom.name }}{% endif %}"
                         data-default-classroom-id="{% if default_classroom_id %}{{ default_classroom_id }}{% endif %}">
                         <button id="classroomMenuBtn" type="button"
-                            class="flex items-center gap-2 px-4 py-2 rounded-full shadow-clay-inner bg-[#E0E5EC]/50 hover:bg-white/50 transition-all font-bold text-gray-700 text-sm xl:text-base"
+                            class="flex items-center gap-2 px-4 py-2 rounded-full shell-pill shell-pill--soft shadow-clay-inner transition-all font-bold text-sm xl:text-base"
                             title="{% if active_classroom %}현재 학급: {{ active_classroom.name }} (로그인 시 자동 선택){% else %}기본 학급을 선택하면 로그인 직후 자동으로 적용됩니다.{% endif %}"
                             aria-haspopup="true"
                             aria-expanded="false"
                             aria-controls="desktopClassroomMenu">
-                            <i class="fa-solid fa-chalkboard-user text-purple-400"></i>
+                            <i class="fa-solid fa-chalkboard-user shell-icon-accent-soft"></i>
                             <span id="desktopClassroomCurrentLabel" data-classroom-current-label class="max-w-[120px] truncate">
                                 {% if active_classroom %}{{ active_classroom.name }}{% else %}학급 선택{% endif %}
                             </span>
                             <i data-classroom-menu-icon class="fa-solid fa-chevron-down text-sm transition-transform"></i>
                         </button>
                         <div id="desktopClassroomMenu"
-                            class="absolute right-0 top-full mt-3 w-72 z-[60] hidden">
-                            <div class="clay-card p-2 bg-white/90 backdrop-blur-xl border border-white/50">
+                            class="shell-popover absolute right-0 top-full w-72 z-[60] hidden">
+                            <div class="clay-card shell-menu-surface shell-menu-panel backdrop-blur-xl">
                                 <p class="text-xs text-gray-400 font-normal px-3 pt-1">기본 학급 선택</p>
                                 <p class="text-[11px] text-slate-500 px-3 pb-2 leading-4">
                                     선택 시 로그인 직후 자동 적용되고, 별빛 추첨기/우리반BTI 명단에도 바로 반영됩니다.
@@ -218,20 +218,20 @@
                                     data-classroom-select="true"
                                     data-classroom-id="{{ cls.id }}"
                                     data-classroom-name="{{ cls.name }}"
-                                    class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-purple-50 transition-all text-left {% if active_classroom and cls.id == active_classroom.id|stringformat:'s' %}bg-purple-50 text-purple-600 font-bold{% else %}text-gray-600{% endif %}">
-                                    <i class="fa-solid fa-chalkboard-user text-purple-300 text-sm"></i>
+                                    class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl shell-menu-item transition-all text-left {% if active_classroom and cls.id == active_classroom.id|stringformat:'s' %}shell-menu-item--selected font-bold{% endif %}">
+                                    <i class="fa-solid fa-chalkboard-user shell-icon-accent-soft text-sm"></i>
                                     <span class="text-xl font-bold truncate">{{ cls.name }}</span>
-                                    <span data-classroom-default-badge class="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-600 font-bold{% if not cls.is_default %} hidden{% endif %}">기본</span>
+                                    <span data-classroom-default-badge class="shell-badge shell-badge--accent ml-auto text-[10px] px-2 py-0.5 rounded-full font-bold{% if not cls.is_default %} hidden{% endif %}">기본</span>
                                 </button>
                                 {% endfor %}
-                                <div class="h-px bg-gray-100 my-1"></div>
+                                <div class="shell-divider h-px my-1"></div>
                                 <button type="button" data-classroom-clear="true"
-                                    class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-50 text-gray-400 hover:text-red-400 transition-all text-left text-xl">
+                                    class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl shell-menu-item shell-menu-item--danger transition-all text-left text-xl">
                                     <i class="fa-solid fa-xmark text-sm"></i>
                                     <span>선택 해제</span>
                                 </button>
                                 <a href="{% url 'happy_seed:dashboard' %}"
-                                    class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 transition-all text-sm">
+                                    class="w-full flex items-center gap-2 px-3 py-2 rounded-xl shell-link-accent transition-all text-sm">
                                     <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
                                     <span>학생 명단 관리</span>
                                 </a>
@@ -243,9 +243,9 @@
                     <!-- User Dropdown -->
                     <div class="relative flex-shrink-0" x-data="{ open: false }" @click.outside="open = false">
                         <button id="userMenuBtn" type="button" @click.stop="open = !open" onclick="if(!window.Alpine){toggleDesktopMenu()}"
-                            class="flex items-center gap-3 px-4 py-2 rounded-full shadow-clay-inner bg-[#E0E5EC]/50 hover:bg-white/50 transition-all font-bold text-gray-700">
+                            class="flex items-center gap-3 px-4 py-2 rounded-full shell-pill shell-pill--soft shadow-clay-inner transition-all font-bold">
                             <div
-                                class="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-500 text-sm shadow-sm">
+                                class="w-8 h-8 rounded-full shell-avatar flex items-center justify-center text-sm shadow-sm">
                                 <i class="fa-solid fa-user"></i>
                             </div>
                             <span class="text-sm xl:text-base max-w-[120px] truncate">
@@ -255,54 +255,54 @@
                         </button>
                         <!-- Dropdown Menu -->
                         <div id="desktopDropdownMenu" x-show="open" x-cloak @click.stop
-                            class="absolute right-0 top-full mt-4 w-56 transition-all duration-300 transform z-[60]"
+                            class="shell-popover absolute right-0 top-full w-56 transition-all duration-300 transform z-[60]"
                             x-transition:enter="transition ease-out duration-200"
                             x-transition:enter-start="opacity-0 translate-y-2 scale-95"
                             x-transition:enter-end="opacity-100 translate-y-0 scale-100"
                             x-transition:leave="transition ease-in duration-150"
                             x-transition:leave-start="opacity-100 translate-y-0 scale-100"
                             x-transition:leave-end="opacity-0 translate-y-2 scale-95">
-                            <div class="clay-card p-3 bg-white/90 backdrop-blur-xl border border-white/50">
+                            <div class="clay-card shell-menu-surface shell-menu-panel backdrop-blur-xl">
                                 <a href="{% url 'dashboard' %}"
-                                    class="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-purple-50 text-gray-600 hover:text-purple-600 transition-all">
+                                    class="flex items-center gap-3 px-4 py-3 rounded-2xl shell-menu-item transition-all">
                                     <i class="fa-solid fa-gauge-high"></i>
                                     <span>내 홈페이지</span>
                                 </a>
                                 <a href="{% url 'settings' %}"
-                                    class="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-purple-50 text-gray-600 hover:text-purple-600 transition-all">
+                                    class="flex items-center gap-3 px-4 py-3 rounded-2xl shell-menu-item transition-all">
                                     <i class="fa-solid fa-gear"></i>
                                     <span>내 설정</span>
                                 </a>
                                 {% if show_visitor_counts %}
-                                <div class="mx-1 my-2 rounded-2xl border border-slate-200/70 bg-gradient-to-br from-orange-50 via-white to-violet-50 px-3 py-3 shadow-sm"
+                                <div class="shell-stats-panel mx-1 my-2 rounded-2xl border px-3 py-3 shadow-sm"
                                     data-visitor-counts-menu="desktop">
                                     <div class="flex items-center justify-between gap-2">
                                         <p class="text-[11px] font-black tracking-[0.18em] text-slate-400">방문 통계</p>
-                                        <span class="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-bold text-slate-500 shadow-sm">관리자</span>
+                                        <span class="shell-badge rounded-full px-2 py-0.5 text-[10px] font-bold shadow-sm">관리자</span>
                                     </div>
                                     <div class="mt-2 space-y-2">
-                                        <div class="flex items-center justify-between rounded-xl bg-white/90 px-3 py-2">
+                                        <div class="shell-stats-card flex items-center justify-between rounded-xl px-3 py-2">
                                             <span class="inline-flex items-center gap-2 text-xs font-bold text-slate-500">
                                                 <i class="fa-solid fa-user-clock text-orange-400"></i>
                                                 오늘
                                             </span>
                                             <span class="text-sm font-black text-orange-500">{{ today_visitor_count|default:"0" }}</span>
                                         </div>
-                                        <div class="flex items-center justify-between rounded-xl bg-white/90 px-3 py-2">
+                                        <div class="shell-stats-card flex items-center justify-between rounded-xl px-3 py-2">
                                             <span class="inline-flex items-center gap-2 text-xs font-bold text-slate-500">
-                                                <i class="fa-solid fa-users-line text-violet-400"></i>
+                                                <i class="fa-solid fa-users-line shell-icon-accent-soft"></i>
                                                 누적
                                             </span>
-                                            <span class="text-sm font-black text-violet-500">{{ total_visitor_count|default:"0" }}</span>
+                                            <span class="shell-stat-value--accent text-sm font-black">{{ total_visitor_count|default:"0" }}</span>
                                         </div>
                                     </div>
                                 </div>
                                 {% endif %}
-                                <div class="h-px bg-gray-100 my-2"></div>
+                                <div class="shell-divider h-px my-2"></div>
                                 <form action="{% url 'account_logout' %}" method="post" class="block">
                                     {% csrf_token %}
                                     <button type="submit"
-                                        class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-red-50 text-red-400 hover:text-red-500 transition-all text-left">
+                                        class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl shell-menu-item shell-menu-item--danger transition-all text-left">
                                         <i class="fa-solid fa-arrow-right-from-bracket"></i>
                                         <span>로그아웃</span>
                                     </button>
@@ -312,7 +312,7 @@
                     </div>
                     {% else %}
                     <a href="{% url 'account_login' %}"
-                        class="hover:text-purple-600 transition px-5 py-1.5 rounded-full shadow-clay text-purple-600 font-bold bg-[#E0E5EC] hover:shadow-clay-hover">
+                        class="shell-pill shell-pill--accent transition px-5 py-1.5 rounded-full shadow-clay font-bold hover:shadow-clay-hover">
                         <i class="fa-solid fa-user-lock mr-1"></i> 로그인
                     </a>
                     {% endif %}
@@ -323,7 +323,7 @@
                     {% if service_launcher_json %}
                     <button type="button"
                         onclick="if(window.openServiceLauncher) openServiceLauncher()"
-                        class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/80 text-slate-500 shadow-clay transition hover:text-indigo-600"
+                        class="inline-flex h-11 w-11 items-center justify-center rounded-full shell-icon-button shadow-clay transition"
                         data-global-service-launcher-trigger="true"
                         title="서비스 찾기"
                         aria-label="서비스 찾기 열기">
@@ -331,8 +331,8 @@
                     </button>
                     {% endif %}
                     {% if user.is_authenticated %}
-                    <div class="inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-2 shadow-clay-inner text-sm font-bold text-gray-700">
-                        <span class="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100 text-purple-500">
+                    <div class="inline-flex items-center gap-2 rounded-full shell-pill shell-pill--strong px-3 py-2 shadow-clay-inner text-sm font-bold">
+                        <span class="flex h-8 w-8 items-center justify-center rounded-full shell-avatar">
                             <i class="fa-solid fa-user text-xs"></i>
                         </span>
                         <span class="max-w-[120px] truncate">
@@ -340,7 +340,7 @@
                         </span>
                     </div>
                     {% else %}
-                    <a href="{% url 'account_login' %}" class="inline-flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-sm font-bold text-purple-600 shadow-clay">
+                    <a href="{% url 'account_login' %}" class="inline-flex items-center gap-2 rounded-full shell-pill shell-pill--accent px-4 py-2 text-sm font-bold shadow-clay">
                         <i class="fa-solid fa-user-lock text-xs"></i>
                         로그인
                     </a>
@@ -350,7 +350,7 @@
                 {% if service_launcher_json %}
                 <button type="button"
                     onclick="if(window.openServiceLauncher) openServiceLauncher()"
-                    class="md:hidden lg:hidden w-12 h-12 rounded-full shadow-clay-inner flex items-center justify-center text-gray-500 hover:text-indigo-600 transition"
+                    class="md:hidden lg:hidden w-12 h-12 rounded-full shell-icon-button shadow-clay-inner flex items-center justify-center transition"
                     data-global-service-launcher-trigger="true"
                     aria-label="서비스 찾기 열기">
                     <i class="fa-solid fa-magnifying-glass text-lg"></i>
@@ -359,7 +359,7 @@
 
                 <!-- Mobile Hamburger Button -->
                 <button id="mobileMenuBtn" onclick="toggleMobileMenu()"
-                    class="lg:hidden w-12 h-12 rounded-full shadow-clay-inner flex items-center justify-center text-gray-500 hover:text-purple-600 transition"
+                    class="lg:hidden w-12 h-12 rounded-full shell-icon-button shadow-clay-inner flex items-center justify-center transition"
                     aria-label="메뉴 열기" aria-expanded="false" aria-controls="mobileMenu">
                     <i class="fa-solid fa-bars text-xl" id="menuIcon"></i>
                 </button>
@@ -372,36 +372,36 @@
             class="fixed inset-x-0 z-40 lg:hidden transform -translate-y-full opacity-0 transition-all duration-300 ease-in-out pointer-events-none"
             style="top: var(--mobile-menu-top, 88px); max-height: calc(100vh - var(--mobile-menu-top, 88px)); overflow-y: auto;"
             aria-hidden="true">
-            <div class="mx-3 sm:mx-4 clay-card p-5 sm:p-6 bg-[#E0E5EC]/95 backdrop-blur-sm" style="padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);">
-                <div class="flex flex-col gap-3 sm:gap-4 text-base sm:text-lg font-bold text-gray-600 leading-snug">
+            <div class="mx-3 sm:mx-4 clay-card shell-mobile-surface shell-mobile-panel backdrop-blur-sm" style="padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);">
+                <div class="shell-mobile-stack flex flex-col text-base sm:text-lg font-bold leading-snug">
                     <a href="{% url 'portfolio:list' %}"
-                        class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
-                        <i class="fa-solid fa-briefcase mr-3 text-blue-400"></i> 포트폴리오
+                        class="shell-link transition py-2 border-b shell-section-divider">
+                        <i class="fa-solid fa-briefcase mr-3 shell-icon-accent-soft"></i> 포트폴리오
                     </a>
                     <a href="https://padlet.com/kakio1q2w/eduitit-wrjbzmk8oufxdzcv"
                         target="_blank" rel="noopener noreferrer"
-                        class="hover:text-purple-600 transition py-2 border-b border-gray-200/50"
+                        class="shell-link transition py-2 border-b shell-section-divider"
                         aria-label="이용 안내 열기 (새 탭)">
-                        <i class="fa-solid fa-book-open mr-3 text-violet-400"></i> 이용 안내
+                        <i class="fa-solid fa-book-open mr-3 shell-icon-accent-soft"></i> 이용 안내
                     </a>
 
                     {% if show_visitor_counts %}
                     <!-- Visitor Count (Mobile / Superuser only) -->
                     <div
-                        class="flex lg:hidden items-center gap-4 px-4 py-3 rounded-2xl bg-white/60 shadow-inner text-gray-500 font-bold text-sm justify-center mb-2"
+                        class="flex lg:hidden items-center gap-4 px-4 py-3 rounded-2xl shell-pill shell-pill--strong shadow-inner text-sm font-bold justify-center mb-2"
                         data-visitor-counts-menu="mobile">
-                        <span class="text-orange-500 flex items-center gap-2"><i class="fa-solid fa-user-clock"></i>
+                        <span class="shell-stat-value--warning flex items-center gap-2"><i class="fa-solid fa-user-clock"></i>
                             오늘:
                             {{ today_visitor_count|default:"0" }}</span>
-                        <span class="text-gray-400">|</span>
-                        <span class="text-purple-600 flex items-center gap-2"><i class="fa-solid fa-users-line"></i>
+                        <span class="shell-text-muted">|</span>
+                        <span class="shell-text-brand flex items-center gap-2"><i class="fa-solid fa-users-line"></i>
                             누적:
                             {{ total_visitor_count|default:"0" }}</span>
                     </div>
                     {% endif %}
 
                     {% if user.is_authenticated %}
-                    <div class="py-2 border-b border-gray-200/50 flex items-center gap-3 text-purple-500">
+                    <div class="py-2 border-b shell-section-divider flex items-center gap-3 shell-text-brand">
                         <i class="fa-solid fa-user-circle text-2xl"></i>
                         <span>{% if user.userprofile.nickname %}{{ user.userprofile.nickname }}{% elif user.username %}{{user.username }}{% else %}사용자{% endif %}님</span>
                     </div>
@@ -409,7 +409,7 @@
                     {% if has_hs_classrooms %}
                     <!-- 모바일 학급 단축키 -->
                     <div id="mobileClassroomPicker"
-                        class="py-2 border-b border-gray-200/50"
+                        class="py-2 border-b shell-section-divider"
                         data-classroom-picker-root="mobile">
                         <div class="px-3 mb-2">
                             <p class="text-sm text-slate-600 font-extrabold">현재 학급 단축키</p>
@@ -421,21 +421,21 @@
                                 data-classroom-select="true"
                                 data-classroom-id="{{ cls.id }}"
                                 data-classroom-name="{{ cls.name }}"
-                                class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left {% if active_classroom and cls.id == active_classroom.id|stringformat:'s' %}bg-purple-100 text-purple-600 font-bold{% else %}text-gray-600 hover:bg-purple-50{% endif %}">
-                                <i class="fa-solid fa-chalkboard-user text-purple-300 text-sm"></i>
+                                class="flex items-center gap-3 px-3 py-2.5 rounded-xl shell-menu-item transition-all text-left {% if active_classroom and cls.id == active_classroom.id|stringformat:'s' %}shell-menu-item--selected font-bold{% endif %}">
+                                <i class="fa-solid fa-chalkboard-user shell-icon-accent-soft text-sm"></i>
                                 <span class="font-bold">{{ cls.name }}</span>
-                                <span data-classroom-default-badge class="ml-auto mr-2 text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-600 font-bold{% if not cls.is_default %} hidden{% endif %}">기본</span>
-                                <i data-classroom-check class="fa-solid fa-check text-purple-500 text-sm{% if not active_classroom or cls.id != active_classroom.id|stringformat:'s' %} hidden{% endif %}"></i>
+                                <span data-classroom-default-badge class="shell-badge shell-badge--accent ml-auto mr-2 text-[10px] px-2 py-0.5 rounded-full font-bold{% if not cls.is_default %} hidden{% endif %}">기본</span>
+                                <i data-classroom-check class="fa-solid fa-check shell-text-brand text-sm{% if not active_classroom or cls.id != active_classroom.id|stringformat:'s' %} hidden{% endif %}"></i>
                             </button>
                             {% endfor %}
                             <button type="button"
                                 data-classroom-clear="true"
                                 data-classroom-clear-conditional="true"
-                                class="flex items-center gap-2 px-3 py-1.5 text-red-400 hover:text-red-500 text-sm transition-all{% if not active_classroom %} hidden{% endif %}">
+                                class="flex items-center gap-2 px-3 py-1.5 shell-link-danger text-sm transition-all{% if not active_classroom %} hidden{% endif %}">
                                 <i class="fa-solid fa-xmark text-xs"></i> 선택 해제
                             </button>
                             <a href="{% url 'happy_seed:dashboard' %}"
-                                class="mt-1 flex items-center gap-2 px-3 py-1.5 text-indigo-500 hover:text-indigo-600 text-sm transition-all">
+                                class="mt-1 flex items-center gap-2 px-3 py-1.5 shell-link-accent text-sm transition-all">
                                 <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i> 학생 명단 관리
                             </a>
                         </div>
@@ -443,18 +443,18 @@
                     {% endif %}
 
                     <a href="{% url 'settings' %}"
-                        class="hover:text-purple-600 transition py-2 border-b border-gray-200/50">
-                        <i class="fa-solid fa-gear mr-3 text-gray-400"></i> 내 설정
+                        class="shell-link transition py-2 border-b shell-section-divider">
+                        <i class="fa-solid fa-gear mr-3 shell-icon-muted"></i> 내 설정
                     </a>
                     <form action="{% url 'account_logout' %}" method="post" class="py-2">
                         {% csrf_token %}
-                        <button type="submit" class="w-full text-left text-red-500 hover:text-red-600 transition">
+                        <button type="submit" class="w-full text-left shell-link-danger transition">
                             <i class="fa-solid fa-arrow-right-from-bracket mr-3"></i> 로그아웃
                         </button>
                     </form>
                     {% else %}
                     <a href="{% url 'account_login' %}"
-                        class="py-3 mt-2 text-center rounded-full shadow-clay text-purple-600 hover:shadow-clay-hover transition">
+                        class="shell-pill shell-pill--accent py-3 mt-2 text-center rounded-full shadow-clay hover:shadow-clay-hover transition">
                         <i class="fa-solid fa-user-lock mr-2"></i> 로그인
                     </a>
                     {% endif %}
@@ -467,12 +467,12 @@
         </div>
 
         <!-- Footer -->
-        <footer class="{% block footer_class %}py-16 px-6 bg-white/30 backdrop-blur-md mt-20 border-t border-white/20{% endblock %}">
-            <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-10">
-                <div class="text-center md:text-left space-y-4">
+        <footer class="{% block footer_class %}shell-footer-shell bg-white/30 backdrop-blur-md border-t border-white/20{% endblock %}">
+            <div class="shell-footer-layout max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center">
+                <div class="shell-footer-meta text-center md:text-left">
                     <div class="flex items-center justify-center md:justify-start gap-3">
                         <div
-                            class="w-10 h-10 rounded-xl bg-white shadow-clay flex items-center justify-center text-purple-600">
+                            class="w-10 h-10 rounded-xl bg-white shadow-clay flex items-center justify-center shell-text-brand">
                             <i class="fa-solid fa-cloud"></i>
                         </div>
                         <span class="text-2xl font-extrabold tracking-[-0.03em] text-slate-800">EDUITIT</span>
@@ -480,7 +480,7 @@
                     <p class="text-lg font-medium tracking-tight text-gray-500 md:text-xl">선생님의 칼퇴를 응원합니다.</p>
                     <div class="text-sm text-gray-400 font-medium">
                         대표 워너비풀스택 | <a href="mailto:kakio@korea.kr"
-                            class="hover:text-purple-600 transition">kakio@korea.kr</a><br>
+                            class="shell-footer-link">kakio@korea.kr</a><br>
                         © 2026 {{ brand_site_name|default:'Eduitit' }}. All rights reserved.
                     </div>
                     <p class="max-w-2xl text-xs md:text-sm text-gray-400 leading-relaxed">
@@ -490,9 +490,9 @@
                 </div>
 
                 <div class="flex flex-wrap justify-center gap-8 text-sm font-bold text-gray-500">
-                    <a href="{% url 'policy' %}#terms" class="hover:text-purple-600 transition">이용약관</a>
-                    <a href="{% url 'policy' %}#privacy" class="hover:text-purple-600 transition">개인정보처리방침</a>
-                    <a href="{% url 'policy' %}#operations" class="hover:text-purple-600 transition">운영정책</a>
+                    <a href="{% url 'policy' %}#terms" class="shell-footer-link">이용약관</a>
+                    <a href="{% url 'policy' %}#privacy" class="shell-footer-link">개인정보처리방침</a>
+                    <a href="{% url 'policy' %}#operations" class="shell-footer-link">운영정책</a>
                 </div>
             </div>
         </footer>
@@ -504,26 +504,26 @@
             <div class="fixed inset-0 z-10 w-screen overflow-y-auto">
                 <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
                     <div
-                        class="relative transform overflow-hidden rounded-[2.5rem] bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-md border-2 border-purple-100 p-8">
-                        <div class="flex flex-col items-center text-center space-y-6">
+                        class="shell-modal-panel relative transform overflow-hidden rounded-[2.5rem] bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-md border-2">
+                        <div class="shell-modal-stack flex flex-col items-center text-center">
                             <div
-                                class="w-20 h-20 rounded-full bg-purple-50 flex items-center justify-center text-purple-500 text-3xl shadow-clay-inner">
+                                class="w-20 h-20 rounded-full shell-modal-icon flex items-center justify-center text-3xl shadow-clay-inner">
                                 <i class="fa-solid fa-clock-rotate-left float-icon"></i>
                             </div>
                             <div>
                                 <h3 id="autoLogoutModalTitle" class="text-2xl font-bold text-gray-800 mb-2">자동 로그아웃 안내</h3>
                                 <p class="text-gray-500 font-medium">보안을 위해 장기간 활동이 없어<br><span id="logoutTimer"
-                                        class="text-purple-600 font-bold">60</span>초 후 자동으로 로그아웃됩니다.</p>
+                                        class="shell-modal-accent font-bold">60</span>초 후 자동으로 로그아웃됩니다.</p>
                             </div>
-                            <div class="flex flex-col w-full gap-3">
+                            <div class="shell-modal-actions flex flex-col w-full">
                                 <button onclick="extendSession()"
-                                    class="w-full py-4 bg-purple-600 text-white rounded-2xl font-bold shadow-clay hover:bg-purple-700 transition transform hover:scale-[1.02] active:scale-[0.98]">
+                                    class="shell-button-primary w-full py-4 rounded-2xl font-bold shadow-clay">
                                     로그인 연장하기
                                 </button>
                                 <form action="{% url 'account_logout' %}" method="post" class="w-full">
                                     {% csrf_token %}
                                     <button type="submit"
-                                        class="w-full py-4 text-gray-400 font-bold hover:text-gray-600 transition">
+                                        class="shell-dismiss-button w-full py-4 font-bold">
                                         지금 로그아웃
                                     </button>
                                 </form>
@@ -550,14 +550,14 @@
                     <div id="modalLoading"
                         class="absolute inset-0 z-20 flex items-center justify-center bg-white/80 rounded-2xl md:rounded-3xl hidden">
                         <div class="flex flex-col items-center gap-4">
-                            <i class="fa-solid fa-circle-notch fa-spin text-5xl text-purple-500"></i>
+                            <i class="fa-solid fa-circle-notch fa-spin text-5xl shell-spinner"></i>
                             <p class="text-lg font-bold text-gray-500">정보를 가져오는 중...</p>
                         </div>
                     </div>
 
                     <!-- Close Button -->
                     <button onclick="closeModal()"
-                        class="absolute top-4 right-4 z-30 w-10 h-10 rounded-full bg-gray-100/80 hover:bg-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
+                        class="shell-modal-close absolute top-4 right-4 z-30 w-10 h-10 rounded-full flex items-center justify-center"
                         aria-label="Close modal">
                         <i class="fa-solid fa-xmark text-lg"></i>
                     </button>
