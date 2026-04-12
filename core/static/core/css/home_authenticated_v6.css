@@ -370,6 +370,18 @@
     font-size: 0.88rem;
 }
 
+.home-v6-nav-icon i,
+.home-v6-tool-icon i,
+.home-v6-mobile-workbench-icon i,
+.home-v6-service-icon-tone i {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1em;
+    line-height: 1;
+    text-align: center;
+}
+
 .home-v6-nav-subtitle {
     margin-top: 0.2rem;
     font-size: 0.76rem;

@@ -1585,7 +1585,7 @@ def _build_home_direct_nav_section(product, *, fallback_color='slate'):
         'key': meta.get('key') or route_name.replace(':', '-'),
         'title': getattr(product, 'public_service_name', '') or getattr(product, 'title', '') or meta.get('title') or '도구',
         'subtitle': getattr(product, 'home_card_summary', '') or getattr(product, 'description', '') or meta.get('subtitle') or '',
-        'icon': getattr(product, 'icon', '') or 'fa-solid fa-sparkles',
+        'icon': getattr(product, 'icon', '') or 'fa-solid fa-star',
         'color': meta.get('color') or fallback_color,
         'count': 1,
         'products': [product],

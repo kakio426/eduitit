@@ -147,7 +147,7 @@
                                 tabindex="0"
                             >
                                 <div class="home-v6-mobile-workbench-icon home-v6-service-icon-tone" data-home-v6-service-icon="true" data-home-accent="{{ item.product.home_accent_token|default:'external' }}">
-                                    <i class="{{ item.product.home_icon_class|default:'fa-solid fa-sparkles' }}"></i>
+                                    <i class="{{ item.product.home_icon_class|default:'fa-solid fa-star' }}"></i>
                                 </div>
                                 <p class="home-v6-mobile-workbench-title" data-home-v6-service-title="true" title="{{ item.favorite_full_title }}">{{ favorite_title }}</p>
                                 {% if home_user_mode == 'authenticated' %}
@@ -383,7 +383,7 @@
                                         tabindex="0">
                                         <div class="home-v6-favorite-card-body">
                                             <div class="home-v6-service-icon-tone flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl text-sm" data-home-v6-service-icon="true" data-home-accent="{{ item.product.home_accent_token|default:'external' }}">
-                                                <i class="{{ item.product.home_icon_class|default:'fa-solid fa-sparkles' }}"></i>
+                                                <i class="{{ item.product.home_icon_class|default:'fa-solid fa-star' }}"></i>
                                             </div>
                                             <div class="home-v6-favorite-card-copy">
                                                 <p class="home-v6-favorite-card-title" data-home-v6-service-title="true" title="{{ item.favorite_full_title }}">{{ favorite_title }}</p>

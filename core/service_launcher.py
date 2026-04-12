@@ -83,7 +83,7 @@ HOME_AUXILIARY_SECTIONS = [
         "key": "external",
         "title": "외부 서비스",
         "subtitle": "연동/제휴 서비스",
-        "icon": "fa-solid fa-up-right-from-square",
+        "icon": "fa-solid fa-arrow-up-right-from-square",
         "color": "emerald",
     },
 ]
@@ -222,6 +222,11 @@ HOME_ICON_CLASS_BY_SERVICE_TYPE = {
     "etc": "fa-solid fa-arrow-up-right-from-square",
 }
 
+HOME_ICON_CLASS_ALIASES = {
+    "fa-solid fa-sparkles": "fa-solid fa-star",
+    "fa-solid fa-up-right-from-square": "fa-solid fa-arrow-up-right-from-square",
+}
+
 HOME_ICON_CLASS_BY_ROUTE = {
     "collect:landing": "fa-solid fa-inbox",
     "collect:dashboard": "fa-solid fa-inbox",
@@ -248,16 +253,24 @@ HOME_ICON_CLASS_BY_ROUTE = {
     "reflex_game:main": "fa-solid fa-bolt",
     "yut_game": "fa-solid fa-dice-four",
     "teacher_law:main": "fa-solid fa-scale-balanced",
-    "ssambti:main": "fa-solid fa-user-group",
+    "ssambti:main": "fa-solid fa-id-badge",
     "studentmbti:landing": "fa-solid fa-users",
     "studentmbti:start": "fa-solid fa-users",
-    "fortune:saju": "fa-solid fa-sparkles",
-    "fortune:landing": "fa-solid fa-sparkles",
-    "saju:landing": "fa-solid fa-sparkles",
+    "fortune:saju": "fa-solid fa-star",
+    "fortune:landing": "fa-solid fa-star",
+    "saju:landing": "fa-solid fa-star",
 }
 
 HOME_ICON_CLASS_BY_ROUTE_PREFIX = (
     ("fairy_games:", "fa-solid fa-puzzle-piece"),
+)
+
+HOME_ICON_CLASS_BY_TITLE_KEYWORD = (
+    ("쌤bti", "fa-solid fa-id-badge"),
+    ("우리반bti", "fa-solid fa-users"),
+    ("사주", "fa-solid fa-star"),
+    ("운세", "fa-solid fa-star"),
+    ("법", "fa-solid fa-scale-balanced"),
 )
 
 FORCE_LOGIN_ROUTE_NAMES = {
@@ -333,6 +346,13 @@ def product_title_text(product):
     return sanitize_public_display_text(getattr(product, "title", ""))
 
 
+def normalize_home_icon_class(icon_class):
+    normalized_icon_class = " ".join(str(icon_class or "").strip().split()).lower()
+    if not normalized_icon_class:
+        return ""
+    return HOME_ICON_CLASS_ALIASES.get(normalized_icon_class, normalized_icon_class)
+
+
 def resolve_home_section_key(product):
     route_name = product_route_name(product)
     if route_name in HOME_SECTION_BY_ROUTE:
@@ -368,15 +388,16 @@ def resolve_home_accent_token(product=None, *, section_key="", route_name="", se
     return HOME_ACCENT_TOKEN_BY_SECTION_KEY.get(normalized_section_key, "external")
 
 
-def resolve_home_icon_class(product=None, *, icon="", route_name="", service_type=""):
+def resolve_home_icon_class(product=None, *, icon="", route_name="", service_type="", title=""):
     if product is not None:
         icon = getattr(product, "icon", "")
         route_name = product_route_name(product)
         service_type = str(getattr(product, "service_type", "") or "").strip().lower()
+        title = product_title_text(product)
 
     normalized_icon = str(icon or "").strip()
     if "fa-" in normalized_icon:
-        return normalized_icon
+        return normalize_home_icon_class(normalized_icon)
 
     normalized_route_name = str(route_name or "").strip().lower()
     if normalized_route_name in HOME_ICON_CLASS_BY_ROUTE:
@@ -385,11 +406,16 @@ def resolve_home_icon_class(product=None, *, icon="", route_name="", service_typ
         if normalized_route_name.startswith(prefix):
             return icon_class
 
+    normalized_title = str(title or "").strip().lower()
+    for keyword, icon_class in HOME_ICON_CLASS_BY_TITLE_KEYWORD:
+        if keyword in normalized_title:
+            return icon_class
+
     normalized_service_type = str(service_type or "").strip().lower()
     if normalized_service_type in HOME_ICON_CLASS_BY_SERVICE_TYPE:
         return HOME_ICON_CLASS_BY_SERVICE_TYPE[normalized_service_type]
 
-    return "fa-solid fa-sparkles"
+    return "fa-solid fa-star"
 
 
 def resolve_product_launch_route_name(product, user=None):
