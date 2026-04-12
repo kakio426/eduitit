@@ -246,8 +246,16 @@ def _render_post_list_partial(request, page_obj, feed_scope, *, pinned_notice_po
         empty_subtitle = "새 공지가 올라오면 여기서 바로 확인할 수 있어요."
     if pinned_notice_posts is None:
         pinned_notice_posts = _build_pinned_notice_queryset(feed_scope=feed_scope)
-    attach_teacher_buddy_avatar_context(getattr(page_obj, "object_list", []))
-    attach_teacher_buddy_avatar_context(pinned_notice_posts)
+    _attach_teacher_buddy_avatar_context_safe(
+        getattr(page_obj, "object_list", []),
+        user=request.user,
+        label='post list partial page posts',
+    )
+    _attach_teacher_buddy_avatar_context_safe(
+        pinned_notice_posts,
+        user=request.user,
+        label='post list partial pinned notices',
+    )
 
     return render(
         request,
@@ -261,7 +269,10 @@ def _render_post_list_partial(request, page_obj, feed_scope, *, pinned_notice_po
             'compact_posts': _get_compact_posts(request),
             'empty_title': empty_title,
             'empty_subtitle': empty_subtitle,
-            'teacher_buddy_current_avatar': build_teacher_buddy_avatar_context(request.user) if request.user.is_authenticated else None,
+            'teacher_buddy_current_avatar': _build_teacher_buddy_avatar_context_safe(
+                request.user,
+                source='post list partial',
+            ),
             'sns_compose_prefill': str(request.GET.get('compose') or '').strip(),
         },
     )
@@ -350,12 +361,18 @@ def _get_teacher_buddy_home_context(user):
         return {
             'teacher_buddy_panel': None,
             'teacher_buddy_urls': {},
-            'teacher_buddy_current_avatar': build_teacher_buddy_avatar_context(user) if getattr(user, 'is_authenticated', False) else None,
+            'teacher_buddy_current_avatar': _build_teacher_buddy_avatar_context_safe(
+                user,
+                source='teacher buddy home empty panel',
+            ),
         }
     return {
         'teacher_buddy_panel': panel,
         'teacher_buddy_urls': build_teacher_buddy_urls(),
-        'teacher_buddy_current_avatar': build_teacher_buddy_avatar_context(user) if getattr(user, 'is_authenticated', False) else None,
+        'teacher_buddy_current_avatar': _build_teacher_buddy_avatar_context_safe(
+            user,
+            source='teacher buddy home panel',
+        ),
     }
 
 
@@ -384,7 +401,10 @@ def _build_home_surface_teacher_buddy_provider(user):
         return {
             'teacher_buddy_panel': None,
             'teacher_buddy_urls': {},
-            'teacher_buddy_current_avatar': build_teacher_buddy_avatar_context(user) if getattr(user, 'is_authenticated', False) else None,
+            'teacher_buddy_current_avatar': _build_teacher_buddy_avatar_context_safe(
+                user,
+                source='teacher buddy provider fallback',
+            ),
         }
 
 
@@ -397,6 +417,31 @@ def _build_home_surface_developer_chat_provider(user):
             getattr(user, 'id', None),
         )
         return _build_home_surface_developer_chat_card_fallback(user)
+
+
+def _build_teacher_buddy_avatar_context_safe(user, *, source):
+    if not getattr(user, 'is_authenticated', False):
+        return None
+    try:
+        return build_teacher_buddy_avatar_context(user)
+    except Exception:
+        logger.exception(
+            '[home surface] teacher buddy avatar context failed source=%s user_id=%s',
+            source,
+            getattr(user, 'id', None),
+        )
+        return None
+
+
+def _attach_teacher_buddy_avatar_context_safe(items, *, user, label):
+    try:
+        attach_teacher_buddy_avatar_context(items)
+    except Exception:
+        logger.exception(
+            '[home surface] teacher buddy avatar attach failed label=%s user_id=%s',
+            label,
+            getattr(user, 'id', None),
+        )
 
 
 def _get_sns_compose_prefill(request):
@@ -3631,6 +3676,147 @@ def _build_home_surface_discovery_state(
     }
 
 
+def _build_home_surface_mobile_recommend_items(*, representative_recommendations, discovery_items):
+    home_mobile_recommend_items = list(representative_recommendations)
+    if home_mobile_recommend_items:
+        return home_mobile_recommend_items
+
+    return [
+        {
+            'title': item.get('favorite_title')
+            or getattr(item.get('product'), 'public_service_name', '')
+            or getattr(item.get('product'), 'title', '')
+            or '도구',
+            'href': item.get('href', ''),
+            'is_external': item.get('is_external', False),
+            'reason_label': item.get('section_title') or '추천 도구',
+        }
+        for item in discovery_items[:4]
+        if item.get('href')
+    ]
+
+
+def _build_home_surface_frontend_config():
+    return {
+        'toggleFavoriteUrl': reverse('toggle_product_favorite'),
+        'trackUsageUrl': reverse('track_product_usage'),
+    }
+
+
+def _build_home_surface_slots(
+    *,
+    home_nav_sections,
+    home_mobile_section_order,
+    favorite_items,
+    favorite_products,
+    recent_items,
+    home_mobile_workbench_items,
+    representative_slots,
+    representative_recommendations,
+    home_mobile_recommend_items,
+    discovery_items,
+    schoolcomm_home_card,
+    provider_cards,
+    community_summary,
+    sns_preview_posts,
+):
+    return {
+        'navigation': {
+            'sections': home_nav_sections,
+            'mobile_section_order': home_mobile_section_order,
+        },
+        'workbench': {
+            'favorite_items': favorite_items,
+            'favorite_product_ids': [product.id for product in favorite_products],
+            'recent_items': recent_items,
+            'mobile_items': home_mobile_workbench_items,
+        },
+        'recommendations': {
+            'representative_slots': representative_slots,
+            'representative_recommendations': representative_recommendations,
+            'mobile_recommend_items': home_mobile_recommend_items,
+            'discovery_items': discovery_items,
+        },
+        'cards': {
+            'schoolcomm_home_card': schoolcomm_home_card,
+            'quickdrop_home_card': provider_cards['quickdrop_home_card'],
+            'reservation_home_card': provider_cards['reservation_home_card'],
+            'developer_chat_home_card': provider_cards['developer_chat_home_card'],
+        },
+        'community': {
+            'community_summary': community_summary,
+            'sns_preview_posts': sns_preview_posts,
+        },
+        'calendar': provider_cards['calendar'],
+    }
+
+
+def _build_home_surface_template_context(
+    *,
+    request,
+    products,
+    sections,
+    aux_sections,
+    primary_display_sections,
+    secondary_display_sections,
+    games,
+    favorite_items,
+    recent_items,
+    discovery_items,
+    provider_cards,
+    schoolcomm_home_card,
+    representative_slots,
+    representative_recommendations,
+    home_nav_sections,
+    home_mobile_section_order,
+    home_mobile_workbench_items,
+    home_mobile_recommend_items,
+    home_frontend_config,
+    home_design_version,
+    community_summary,
+    sns_preview_posts,
+    home_entry_panel,
+    page_obj,
+    pinned_notice_posts,
+    feed_scope,
+    slots,
+):
+    return {
+        'products': products,
+        'sections': sections,
+        'aux_sections': aux_sections,
+        'primary_display_sections': primary_display_sections,
+        'secondary_display_sections': secondary_display_sections,
+        'games': games,
+        'favorite_items': favorite_items,
+        'favorite_product_ids': slots['workbench']['favorite_product_ids'],
+        'recent_items': recent_items,
+        'discovery_items': discovery_items,
+        'quickdrop_home_card': provider_cards['quickdrop_home_card'],
+        'schoolcomm_home_card': schoolcomm_home_card,
+        'representative_slots': representative_slots,
+        'representative_recommendations': representative_recommendations,
+        'home_nav_sections': home_nav_sections,
+        'home_mobile_section_order': home_mobile_section_order,
+        'home_mobile_workbench_items': home_mobile_workbench_items,
+        'home_mobile_recommend_items': home_mobile_recommend_items,
+        'developer_chat_home_card': provider_cards['developer_chat_home_card'],
+        'reservation_home_card': provider_cards['reservation_home_card'],
+        'home_calendar_surface': provider_cards['calendar'],
+        'home_frontend_config': home_frontend_config,
+        'home_design_version': home_design_version,
+        'community_summary': community_summary,
+        'sns_preview_posts': sns_preview_posts,
+        'home_entry_panel': home_entry_panel,
+        'posts': page_obj,
+        'page_obj': page_obj,
+        'pinned_notice_posts': pinned_notice_posts,
+        'feed_scope': feed_scope,
+        'sns_compose_prefill': _get_sns_compose_prefill(request),
+        'home_surface_slots': slots,
+    }
+
+
 def build_home_surface_context(
     request,
     *,
@@ -3835,89 +4021,57 @@ def build_home_surface_context(
         fallback_factory=list,
         builder=lambda: _filter_home_mobile_workbench_items(favorite_items, limit=6),
     )
-    home_mobile_recommend_items = list(representative_recommendations)
-    if not home_mobile_recommend_items:
-        home_mobile_recommend_items = [
-            {
-                'title': item.get('favorite_title')
-                or getattr(item.get('product'), 'public_service_name', '')
-                or getattr(item.get('product'), 'title', '')
-                or '도구',
-                'href': item.get('href', ''),
-                'is_external': item.get('is_external', False),
-                'reason_label': item.get('section_title') or '추천 도구',
-            }
-            for item in discovery_items[:4]
-            if item.get('href')
-        ]
-    home_frontend_config = {
-        'toggleFavoriteUrl': reverse('toggle_product_favorite'),
-        'trackUsageUrl': reverse('track_product_usage'),
-    }
+    home_mobile_recommend_items = _build_home_surface_mobile_recommend_items(
+        representative_recommendations=representative_recommendations,
+        discovery_items=discovery_items,
+    )
+    home_frontend_config = _build_home_surface_frontend_config()
     home_mobile_section_order = HOME_MOBILE_SECTION_ORDER
-    slots = {
-        'navigation': {
-            'sections': home_nav_sections,
-            'mobile_section_order': home_mobile_section_order,
-        },
-        'workbench': {
-            'favorite_items': favorite_items,
-            'favorite_product_ids': [product.id for product in favorite_products],
-            'recent_items': recent_items,
-            'mobile_items': home_mobile_workbench_items,
-        },
-        'recommendations': {
-            'representative_slots': representative_slots,
-            'representative_recommendations': representative_recommendations,
-            'mobile_recommend_items': home_mobile_recommend_items,
-            'discovery_items': discovery_items,
-        },
-        'cards': {
-            'schoolcomm_home_card': schoolcomm_home_card,
-            'quickdrop_home_card': provider_cards['quickdrop_home_card'],
-            'reservation_home_card': provider_cards['reservation_home_card'],
-            'developer_chat_home_card': provider_cards['developer_chat_home_card'],
-        },
-        'community': {
-            'community_summary': community_summary,
-            'sns_preview_posts': sns_preview_posts,
-        },
-        'calendar': provider_cards['calendar'],
-    }
-    template_context = {
-        'products': products,
-        'sections': sections,
-        'aux_sections': aux_sections,
-        'primary_display_sections': primary_display_sections,
-        'secondary_display_sections': secondary_display_sections,
-        'games': games,
-        'favorite_items': favorite_items,
-        'favorite_product_ids': slots['workbench']['favorite_product_ids'],
-        'recent_items': recent_items,
-        'discovery_items': discovery_items,
-        'quickdrop_home_card': provider_cards['quickdrop_home_card'],
-        'schoolcomm_home_card': schoolcomm_home_card,
-        'representative_slots': representative_slots,
-        'representative_recommendations': representative_recommendations,
-        'home_nav_sections': home_nav_sections,
-        'home_mobile_section_order': home_mobile_section_order,
-        'home_mobile_workbench_items': home_mobile_workbench_items,
-        'home_mobile_recommend_items': home_mobile_recommend_items,
-        'developer_chat_home_card': provider_cards['developer_chat_home_card'],
-        'reservation_home_card': provider_cards['reservation_home_card'],
-        'home_calendar_surface': provider_cards['calendar'],
-        'home_frontend_config': home_frontend_config,
-        'home_design_version': home_design_version,
-        'community_summary': community_summary,
-        'sns_preview_posts': sns_preview_posts,
-        'home_entry_panel': home_entry_panel,
-        'posts': page_obj,
-        'page_obj': page_obj,
-        'pinned_notice_posts': pinned_notice_posts,
-        'feed_scope': feed_scope,
-        'sns_compose_prefill': _get_sns_compose_prefill(request),
-        'home_surface_slots': slots,
-    }
+    slots = _build_home_surface_slots(
+        home_nav_sections=home_nav_sections,
+        home_mobile_section_order=home_mobile_section_order,
+        favorite_items=favorite_items,
+        favorite_products=favorite_products,
+        recent_items=recent_items,
+        home_mobile_workbench_items=home_mobile_workbench_items,
+        representative_slots=representative_slots,
+        representative_recommendations=representative_recommendations,
+        home_mobile_recommend_items=home_mobile_recommend_items,
+        discovery_items=discovery_items,
+        schoolcomm_home_card=schoolcomm_home_card,
+        provider_cards=provider_cards,
+        community_summary=community_summary,
+        sns_preview_posts=sns_preview_posts,
+    )
+    template_context = _build_home_surface_template_context(
+        request=request,
+        products=products,
+        sections=sections,
+        aux_sections=aux_sections,
+        primary_display_sections=primary_display_sections,
+        secondary_display_sections=secondary_display_sections,
+        games=games,
+        favorite_items=favorite_items,
+        recent_items=recent_items,
+        discovery_items=discovery_items,
+        provider_cards=provider_cards,
+        schoolcomm_home_card=schoolcomm_home_card,
+        representative_slots=representative_slots,
+        representative_recommendations=representative_recommendations,
+        home_nav_sections=home_nav_sections,
+        home_mobile_section_order=home_mobile_section_order,
+        home_mobile_workbench_items=home_mobile_workbench_items,
+        home_mobile_recommend_items=home_mobile_recommend_items,
+        home_frontend_config=home_frontend_config,
+        home_design_version=home_design_version,
+        community_summary=community_summary,
+        sns_preview_posts=sns_preview_posts,
+        home_entry_panel=home_entry_panel,
+        page_obj=page_obj,
+        pinned_notice_posts=pinned_notice_posts,
+        feed_scope=feed_scope,
+        slots=slots,
+    )
     template_context.update(
         _build_home_surface_legacy_aliases(
             home_nav_sections=home_nav_sections,
@@ -3929,9 +4083,23 @@ def build_home_surface_context(
         )
     )
     template_context.update(provider_cards['teacher_buddy'])
-    template_context.update(_build_home_student_games_qr_context(request))
+    template_context.update(
+        _build_home_surface_safe_value(
+            request,
+            label='student games qr',
+            fallback_factory=dict,
+            builder=lambda: _build_home_student_games_qr_context(request),
+        )
+    )
     template_context.update(provider_cards['calendar'])
-    template_context.update(build_home_page_seo(request).as_context())
+    template_context.update(
+        _build_home_surface_safe_value(
+            request,
+            label='home seo',
+            fallback_factory=dict,
+            builder=lambda: build_home_page_seo(request).as_context(),
+        )
+    )
     return {
         'slots': slots,
         'legacy_context': template_context,
@@ -4007,13 +4175,6 @@ def _home_v6(request, products, posts, page_obj, feed_scope, pinned_notice_posts
 
 
 def home(request):
-    # Order by display_order first, then by creation date
-    products = prime_service_launcher_products(
-        request,
-        filter_discoverable_products(
-        Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
-        ),
-    )
     feed_scope = _get_post_feed_scope(request)
 
     # SNS Posts - 모든 사용자에게 제공 (최신순 정렬)
@@ -4024,10 +4185,6 @@ def home(request):
     paginator = Paginator(posts, 5) # 한 페이지에 5개씩
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    if request.user.is_authenticated:
-        build_teacher_buddy_avatar_context(request.user)
-    attach_teacher_buddy_avatar_context(getattr(page_obj, 'object_list', []))
-    attach_teacher_buddy_avatar_context(pinned_notice_posts)
 
     # HTMX 요청이면 post_list 영역만 반환
     if request.headers.get('HX-Request'):
@@ -4037,6 +4194,28 @@ def home(request):
             feed_scope,
             pinned_notice_posts=pinned_notice_posts,
         )
+
+    _build_teacher_buddy_avatar_context_safe(
+        request.user,
+        source='home main request',
+    )
+    _attach_teacher_buddy_avatar_context_safe(
+        getattr(page_obj, 'object_list', []),
+        user=request.user,
+        label='home main page posts',
+    )
+    _attach_teacher_buddy_avatar_context_safe(
+        pinned_notice_posts,
+        user=request.user,
+        label='home main pinned notices',
+    )
+    # 홈 전체 렌더가 아닐 때는 서비스 런처용 제품 목록이 필요 없다.
+    products = prime_service_launcher_products(
+        request,
+        filter_discoverable_products(
+            Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
+        ),
+    )
 
     if request.user.is_authenticated:
         return _home_v6(request, products, posts, page_obj, feed_scope, pinned_notice_posts)

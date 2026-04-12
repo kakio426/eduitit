@@ -620,6 +620,75 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('수업 도구', content)
         self.assertIn('data-classcalendar-main-view="true"', content)
 
+    @patch('core.views._build_home_student_games_qr_context')
+    def test_v2_authenticated_home_survives_student_games_context_failure(self, mock_student_games_context):
+        self._login('gamesfallbackuser')
+        mock_student_games_context.side_effect = RuntimeError('student games context failed')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(response.status_code, 200)
+        _assert_authenticated_home_context_contract(self, response, design_version='v6')
+        self.assertIn('data-classcalendar-main-view="true"', content)
+
+    @patch('core.views.build_home_page_seo')
+    def test_v2_authenticated_home_survives_home_seo_failure(self, mock_build_home_page_seo):
+        self._login('seofallbackuser')
+        mock_build_home_page_seo.side_effect = RuntimeError('home seo failed')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(response.status_code, 200)
+        _assert_authenticated_home_context_contract(self, response, design_version='v6')
+        self.assertIn('data-classcalendar-main-view="true"', content)
+
+    @patch('core.views.build_teacher_buddy_avatar_context')
+    def test_v2_authenticated_home_survives_teacher_buddy_avatar_context_failure(self, mock_build_teacher_buddy_avatar_context):
+        self._login('buddyavatarfailuser')
+        mock_build_teacher_buddy_avatar_context.side_effect = RuntimeError('teacher buddy avatar context failed')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(response.status_code, 200)
+        _assert_authenticated_home_context_contract(self, response, design_version='v6')
+        self.assertIsNone(response.context['teacher_buddy_current_avatar'])
+        self.assertIn('data-classcalendar-main-view="true"', content)
+
+    @patch('core.views.attach_teacher_buddy_avatar_context')
+    def test_v2_home_htmx_post_feed_survives_teacher_buddy_avatar_attach_failure(self, mock_attach_teacher_buddy_avatar_context):
+        _create_posts(username='buddyattachfailauthor')
+        mock_attach_teacher_buddy_avatar_context.side_effect = RuntimeError('teacher buddy avatar attach failed')
+
+        response = self.client.get(
+            reverse('home'),
+            {'target': 'post-list-container', 'compact_posts': '1'},
+            HTTP_HX_REQUEST='true',
+        )
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('data-home-sns-expand="true"', content)
+        self.assertIn('더보기', content)
+
+    @patch('core.views.prime_service_launcher_products')
+    def test_v2_home_htmx_post_feed_skips_service_launcher_product_loading(self, mock_prime_service_launcher_products):
+        _create_posts(username='htmxskipproductauthor')
+        mock_prime_service_launcher_products.side_effect = RuntimeError('service launcher products should not load for htmx feed')
+
+        response = self.client.get(
+            reverse('home'),
+            {'target': 'post-list-container', 'compact_posts': '1'},
+            HTTP_HX_REQUEST='true',
+        )
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('data-home-sns-expand="true"', content)
+        self.assertFalse(mock_prime_service_launcher_products.called)
+
     def test_v2_authenticated_uses_compact_top_row_without_large_greeting(self):
         """V2 로그인 홈은 큰 인사말 대신 압축된 상단 행을 사용"""
         self._login('greetuser', nickname='홍길동')
