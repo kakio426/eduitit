@@ -13,7 +13,7 @@
                 <div>
                     <p class="text-sm font-semibold text-slate-500">{{ workspace.school.name }} · {{ workspace.school_year }}학년도 · {{ workspace.term }}</p>
                     <h1 class="mt-2 text-3xl font-black text-slate-900">{{ classroom.label }} 시간표 입력</h1>
-                    <p class="mt-2 text-sm leading-6 text-slate-500">우리 반 시간표만 입력하고, 저장이 끝나면 입력 완료로 바꾸면 됩니다.</p>
+                    <p class="mt-2 text-sm leading-6 text-slate-500">우리 반 시간표 입력</p>
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
                     <span class="rounded-full px-4 py-2 text-sm font-bold {% if input_status.status == 'reviewed' %}bg-emerald-100 text-emerald-700{% elif input_status.status == 'submitted' %}bg-sky-100 text-sky-700{% elif input_status.status == 'editing' %}bg-amber-100 text-amber-700{% else %}bg-slate-100 text-slate-600{% endif %}">
@@ -41,9 +41,9 @@
                 </div>
             </div>
             <div class="mt-4 flex flex-wrap gap-2">
-                <span class="rounded-full px-4 py-2 text-sm font-bold {% if mode == 'weekly' %}bg-slate-900 text-white{% else %}bg-slate-100 text-slate-700{% endif %}">1 주간 기본 시간표</span>
-                <span class="rounded-full px-4 py-2 text-sm font-bold {% if mode == 'daily' %}bg-amber-500 text-white{% else %}bg-slate-100 text-slate-700{% endif %}">2 날짜별 일정</span>
-                <span class="rounded-full px-4 py-2 text-sm font-bold {% if input_status.status == 'submitted' or input_status.status == 'reviewed' or input_status.status == 'published' %}bg-emerald-600 text-white{% else %}bg-slate-100 text-slate-700{% endif %}">3 입력 완료</span>
+                <span class="rounded-full px-4 py-2 text-sm font-bold {% if mode == 'weekly' %}bg-slate-900 text-white{% else %}bg-slate-100 text-slate-700{% endif %}">주간 기본</span>
+                <span class="rounded-full px-4 py-2 text-sm font-bold {% if mode == 'daily' %}bg-amber-500 text-white{% else %}bg-slate-100 text-slate-700{% endif %}">날짜별 변경</span>
+                <span class="rounded-full px-4 py-2 text-sm font-bold {% if input_status.status == 'submitted' or input_status.status == 'reviewed' or input_status.status == 'published' %}bg-emerald-600 text-white{% else %}bg-slate-100 text-slate-700{% endif %}">입력 완료</span>
             </div>
             <div class="mt-4 flex flex-wrap gap-2">
                 <button id="class-edit-save-button" type="button" class="inline-flex items-center justify-center rounded-2xl bg-sky-600 px-5 py-3 text-sm font-bold text-white hover:bg-sky-700">
@@ -54,7 +54,7 @@
                 </button>
             </div>
             <div id="class-edit-status" class="mt-4 rounded-2xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-600">
-                저장하기 전에는 입력자 이름을 먼저 적어 주세요.
+                입력자 이름 필요
             </div>
         </header>
 
@@ -64,7 +64,7 @@
                 <label class="block">
                     <span class="mb-2 block text-sm font-semibold text-slate-700">날짜</span>
                     <input id="class-edit-date" type="date" value="{{ selected_date|date:'Y-m-d' }}" class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800">
-                    <span class="mt-2 block text-xs font-semibold text-slate-500">날짜를 바꾸면 그날 시간표 기준으로 다시 보여 줍니다.</span>
+                    <span class="mt-2 block text-xs font-semibold text-slate-500">변경 즉시 반영</span>
                 </label>
                 <div class="flex flex-wrap gap-2">
                     <span class="rounded-full bg-rose-100 px-4 py-2 text-sm font-bold text-rose-700">빨강: 배정 불가</span>
@@ -81,9 +81,9 @@
                     <h2 class="text-xl font-black text-slate-900">{% if mode == 'daily' %}날짜별 일정{% else %}주간 기본 시간표{% endif %}</h2>
                     <p class="mt-2 text-sm text-slate-500">
                         {% if mode == 'daily' %}
-                        바뀌는 칸만 입력하면 되고, 전담 시간이나 공통 행사 시간은 빨간 칸으로 안내됩니다.
+                        바뀌는 칸만 입력
                         {% else %}
-                        월요일부터 금요일까지 우리 반 기본 시간표를 한 번에 입력합니다.
+                        월요일부터 금요일 입력
                         {% endif %}
                     </p>
                 </div>
@@ -158,10 +158,10 @@
         </section>
 
         <section class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 class="text-xl font-black text-slate-900">확인할 안내</h2>
+            <h2 class="text-xl font-black text-slate-900">확인할 항목</h2>
             <ul id="class-edit-issues" class="mt-4 space-y-2">
                 <li class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
-                    저장하거나 입력 완료를 누르면 확인할 내용이 여기에 표시됩니다.
+                    저장 후 표시
                 </li>
             </ul>
         </section>
@@ -182,7 +182,7 @@
                 </article>
                 {% empty %}
                 <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
-                    아직 저장된 날짜별 변경이 없습니다.
+                    저장된 날짜 변경 없음
                 </div>
                 {% endfor %}
             </div>

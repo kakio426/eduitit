@@ -467,7 +467,7 @@
                 <div data-quickdrop-helper-bar="true" class="px-5 py-3 sm:px-6">
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <div class="flex flex-wrap gap-2">
-                        <span id="session-expiry" data-quickdrop-chip="true">오늘 기록은 내일 정리됩니다</span>
+                        <span id="session-expiry" data-quickdrop-chip="true">오늘 기록은 내일 정리</span>
                     </div>
                     {% if is_owner %}
                     <a href="{{ landing_url }}" data-quickdrop-helper-link="true">새 기기 추가</a>
@@ -480,8 +480,8 @@
                     <div id="empty-state">
                         <div id="empty-icon" data-quickdrop-empty-icon="true" class="mx-auto">↔</div>
                         <p id="empty-badge" class="mt-4 text-[11px] font-black uppercase tracking-[0.18em] text-[#64748b]">전송 준비</p>
-                        <h2 id="empty-title" class="mt-3 text-lg font-black leading-tight text-[#0f172a] sm:text-[32px]">아직 받은 내용이 없습니다.</h2>
-                        <p id="empty-body" class="mx-auto mt-3 max-w-xl text-[14px] leading-6 text-slate-500 sm:text-[15px] sm:leading-7">보낸 내용이 여기에 쌓입니다.</p>
+                        <h2 id="empty-title" class="mt-3 text-lg font-black leading-tight text-[#0f172a] sm:text-[32px]">받은 내용 없음</h2>
+                        <p id="empty-body" class="mx-auto mt-3 max-w-xl text-[14px] leading-6 text-slate-500 sm:text-[15px] sm:leading-7">보낸 내용 표시</p>
                         <div id="empty-pill-row" class="hidden"></div>
                     </div>
 
@@ -503,7 +503,7 @@
                                     <div class="min-w-0">
                                         <p class="text-xs font-black uppercase tracking-[0.14em] text-[#64748b]">파일</p>
                                         <p id="file-output-name" class="mt-1 truncate text-base font-black text-[#0f172a]"></p>
-                                        <p class="mt-1 text-xs text-slate-500">파일 받기 버튼으로 바로 내려받을 수 있습니다.</p>
+                                        <p class="mt-1 text-xs text-slate-500">바로 저장</p>
                                     </div>
                                 </div>
                             </div>
@@ -512,7 +512,7 @@
 
                     <div id="history-panel" data-quickdrop-history-panel="true" class="hidden sm:block" tabindex="-1">
                         <p id="history-summary" class="hidden"></p>
-                        <div id="history-empty">아직 보낸 내용이 없습니다.</div>
+                        <div id="history-empty">보낸 내용 없음</div>
                         <div id="history-list" class="mt-3 space-y-3"></div>
                     </div>
                 </div>

@@ -35,13 +35,13 @@
     }
 
     if (hasFile) {
-      setElementText(state.dropzoneTitle, "사진이 올라왔습니다. 바로 읽는 중이거나, 아래 버튼으로 다시 읽을 수 있습니다.");
-      setElementText(state.dropzoneHelp, "다른 사진으로 바꾸려면 이 카드에 다시 놓거나, 아래의 사진 다시 고르기를 누르세요.");
+      setElementText(state.dropzoneTitle, "사진 선택됨");
+      setElementText(state.dropzoneHelp, "다시 고르기 가능");
       return;
     }
 
     setElementText(state.dropzoneTitle, "여기에 사진을 놓거나 눌러서 고르세요");
-    setElementText(state.dropzoneHelp, "사진을 고르면 미리보기가 바뀌고, 읽은 글자는 바로 결과 카드에 채워집니다.");
+    setElementText(state.dropzoneHelp, "사진 선택 후 읽기");
   }
 
   function setDropzoneState(options) {
@@ -97,15 +97,15 @@
     }
 
     var state = getState();
-    setElementText(state.previewAlert, "사진을 읽는 중입니다. 결과 카드가 곧 채워집니다.");
+    setElementText(state.previewAlert, "읽는 중");
 
     var emptyTitle = document.querySelector("#ocrdesk-result-panel [data-result-empty-title]");
     var emptyHelp = document.querySelector("#ocrdesk-result-panel [data-result-empty-help]");
     if (emptyTitle) {
-      setElementText(emptyTitle, "사진을 읽는 중입니다.");
+      setElementText(emptyTitle, "읽는 중");
     }
     if (emptyHelp) {
-      setElementText(emptyHelp, "잠시만 기다리면 이 카드에 편집 가능한 글자가 들어옵니다.");
+      setElementText(emptyHelp, "잠시만");
     }
   }
 
@@ -132,8 +132,8 @@
       state.image.src = "";
       state.image.classList.add("hidden");
       state.emptyState.classList.remove("hidden");
-      setElementText(state.fileName, "아직 고른 사진이 없습니다.");
-      setElementText(state.previewAlert, "사진을 고르면 이 자리에서 바로 읽기를 시작합니다.");
+      setElementText(state.fileName, "사진 없음");
+      setElementText(state.previewAlert, "선택 후 읽기");
       setDropzoneState({ hasFile: false, dragging: false });
       syncSubmitState();
       return;
@@ -145,7 +145,7 @@
     clearFormErrors();
 
     if (!window.FileReader) {
-      setElementText(state.previewAlert, "이 브라우저에서는 미리보기를 보여주지 못하지만, 읽기는 가능합니다.");
+      setElementText(state.previewAlert, "미리보기 없음");
       state.image.src = "";
       state.image.classList.add("hidden");
       state.emptyState.classList.remove("hidden");
@@ -157,13 +157,13 @@
       state.image.src = event.target && event.target.result ? event.target.result : "";
       state.image.classList.remove("hidden");
       state.emptyState.classList.add("hidden");
-      setElementText(state.previewAlert, "사진이 들어왔습니다. 바로 읽기를 시작합니다.");
+      setElementText(state.previewAlert, "읽기 준비 완료");
     };
     reader.onerror = function () {
       state.image.src = "";
       state.image.classList.add("hidden");
       state.emptyState.classList.remove("hidden");
-      setElementText(state.previewAlert, "사진 미리보기를 불러오지 못했습니다. 다른 사진으로 다시 시도해 주세요.");
+      setElementText(state.previewAlert, "미리보기 실패");
     };
     reader.readAsDataURL(file);
   }
@@ -191,7 +191,7 @@
   function tryAssignDroppedFiles(fileList) {
     var state = getState();
     if (!state.input) {
-      window.alert("사진 입력 칸을 찾지 못했습니다. 페이지를 다시 열어 주세요.");
+      window.alert("사진 입력칸 없음");
       return false;
     }
 
@@ -199,7 +199,7 @@
       state.input.files = fileList;
       return true;
     } catch (error) {
-      window.alert("드롭한 사진을 불러오지 못했습니다. 버튼을 눌러 사진을 다시 골라 주세요.");
+      window.alert("사진을 불러오지 못했습니다.");
       return false;
     }
   }
@@ -292,7 +292,7 @@
 
     try {
       await navigator.clipboard.writeText(value);
-      setElementText(status, "복사했습니다. 필요한 곳에 바로 붙여넣으면 됩니다.");
+      setElementText(status, "복사했습니다.");
     } catch (error) {
       textarea.focus();
       textarea.select();
@@ -346,9 +346,9 @@
       var state = getState();
       var resultText = byId("ocrdesk-result-text");
       if (resultText) {
-        setElementText(state.previewAlert, "읽은 결과가 결과 카드에 채워졌습니다.");
+        setElementText(state.previewAlert, "결과 준비 완료");
       } else {
-        setElementText(state.previewAlert, "사진을 다시 고르면 새 결과를 바로 읽습니다.");
+        setElementText(state.previewAlert, "다시 고르기 가능");
       }
 
       focusResultPanel();
@@ -373,7 +373,7 @@
       clearBusyState();
       var state = getState();
       setElementText(state.previewAlert, "네트워크 문제로 사진을 보내지 못했습니다.");
-      window.alert("네트워크 문제로 사진을 보내지 못했습니다. 연결 상태를 확인해 주세요.");
+      window.alert("네트워크 오류. 연결 확인 후 다시 시도해 주세요.");
     });
   }
 

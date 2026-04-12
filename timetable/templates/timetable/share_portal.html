@@ -8,7 +8,7 @@
         <header class="rounded-[28px] border border-slate-200 bg-white px-6 py-6 shadow-sm">
             <p class="text-sm font-semibold text-slate-500">{{ workspace.school.name }} · {{ workspace.school_year }}학년도 · {{ workspace.term }}</p>
             <h1 class="mt-2 text-3xl font-black text-slate-900">시간표 모아보기</h1>
-            <p class="mt-2 text-sm leading-6 text-slate-500">필요한 보기만 골라 바로 여세요. 반 시간표와 전담 시간표를 한 화면에서 나눠 확인할 수 있습니다.</p>
+            <p class="mt-2 text-sm leading-6 text-slate-500">원하는 시간표 열기</p>
         </header>
 
         <div class="grid gap-6 lg:grid-cols-2">
@@ -16,7 +16,7 @@
                 <div class="space-y-2">
                     <p class="text-xs font-black uppercase tracking-[0.2em] text-sky-600">담임 교사용</p>
                     <h2 class="text-2xl font-black text-slate-900">우리 반 시간표 보기</h2>
-                    <p class="text-sm leading-6 text-slate-500">반별 링크를 열면 바로 주간 시간표와 출력 화면이 보입니다.</p>
+                    <p class="text-sm leading-6 text-slate-500">반별 링크</p>
                 </div>
                 <div class="mt-5 space-y-3">
                     {% for link in class_links %}
@@ -27,7 +27,7 @@
                     </a>
                     {% empty %}
                     <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
-                        아직 공유할 반 시간표가 없습니다.
+                        반 시간표 없음
                     </div>
                     {% endfor %}
                 </div>
@@ -37,7 +37,7 @@
                 <div class="space-y-2">
                     <p class="text-xs font-black uppercase tracking-[0.2em] text-emerald-600">전담·강사용</p>
                     <h2 class="text-2xl font-black text-slate-900">내 전담 시간표 보기</h2>
-                    <p class="text-sm leading-6 text-slate-500">교사별 링크를 열면 담당한 반과 과목을 시간대별로 볼 수 있습니다.</p>
+                    <p class="text-sm leading-6 text-slate-500">교사별 링크</p>
                 </div>
                 <div class="mt-5 space-y-3">
                     {% for link in teacher_links %}
@@ -48,7 +48,7 @@
                     </a>
                     {% empty %}
                     <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
-                        아직 공유할 교사 시간표가 없습니다.
+                        교사 시간표 없음
                     </div>
                     {% endfor %}
                 </div>

@@ -9,10 +9,8 @@
             <p class="text-sm font-black uppercase tracking-[0.25em] text-orange-500">학교 체험·행사 찾기</p>
             <div class="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                    <h1 class="text-4xl font-black text-slate-900 sm:text-5xl">학교로 찾아오는 업체를 먼저 둘러보세요</h1>
-                    <p class="mt-3 max-w-4xl text-base leading-7 text-slate-600 sm:text-lg">
-                        전국 업체 소개를 훑어보고, 마음에 드는 활동을 골라 활동 지역과 가격을 확인한 뒤 바로 문의하면 됩니다.
-                    </p>
+                    <h1 class="text-4xl font-black text-slate-900 sm:text-5xl">학교 체험 업체 찾기</h1>
+                    <p class="mt-3 max-w-4xl text-base leading-7 text-slate-600 sm:text-lg">지역, 학년, 방식으로 고르기</p>
                 </div>
                 {% if can_use_saved_listings %}
                     <div class="flex flex-wrap gap-2">
@@ -148,13 +146,11 @@
                     {% if has_active_filters %}
                         조건에 맞는 업체 {{ provider_count }}곳
                     {% else %}
-                        전국에서 바로 둘러볼 수 있는 업체 {{ provider_count }}곳
+                        전국 업체 {{ provider_count }}곳
                     {% endif %}
                 </h2>
             </div>
-            <p class="text-sm font-bold text-slate-500">
-                업체 소개를 먼저 보고, 자세한 활동과 가격은 업체 상세에서 확인하세요.
-            </p>
+            <p class="text-sm font-bold text-slate-500">상세에서 가격 확인</p>
         </div>
 
         <div class="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -223,8 +219,8 @@
                 </article>
             {% empty %}
                 <div class="rounded-[1.75rem] border border-dashed border-slate-300 bg-white px-6 py-12 text-center text-sm font-bold text-slate-500 md:col-span-2 xl:col-span-3">
-                    <p class="text-base font-black text-slate-900">조건에 맞는 업체가 아직 없습니다.</p>
-                    <p class="mt-2">지역이나 주제를 조금 넓혀서 다시 둘러보세요.</p>
+                    <p class="text-base font-black text-slate-900">조건에 맞는 업체 없음</p>
+                    <p class="mt-2">조건 넓혀서 다시 보기</p>
                     <a href="{% url 'schoolprograms:landing' %}" class="mt-4 inline-flex min-h-[44px] items-center justify-center rounded-full border border-slate-200 bg-white px-4 text-sm font-black text-slate-700">
                         조건 완화하고 전체 보기
                     </a>

@@ -9,7 +9,7 @@
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8" data-aos="fade-down">
             <div>
                 <h1 class="text-4xl md:text-5xl font-black text-gray-700 mb-2">공용 명부 허브</h1>
-                <p class="text-lg text-gray-500 font-bold">하나의 명부를 만들고, 사인·동의서·알림판·행복씨앗은 필요한 항목만 자동으로 가져가게 두세요.</p>
+                <p class="text-lg text-gray-500 font-bold">명부 하나로 연결</p>
             </div>
             <a href="/" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-gray-600 font-bold shadow-clay hover:text-blue-600 transition-colors">
                 <i class="fa-solid fa-house"></i>
@@ -37,7 +37,7 @@
 
         {% if return_to %}
         <div class="mb-6 rounded-2xl border border-indigo-200 bg-indigo-50 px-5 py-4 text-sm text-indigo-800" data-aos="fade-down" data-aos-delay="60">
-            이전 작업에서 공용 명부를 만들러 오셨습니다. 명부를 만든 뒤 아래 버튼으로 바로 돌아갈 수 있어요.
+            명부 생성 후 돌아가기
         </div>
         {% endif %}
 
@@ -46,11 +46,11 @@
             <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
                     <p class="text-xs font-black uppercase tracking-[0.18em] text-amber-700">운영자 전용</p>
-                    <h2 class="mt-2 text-2xl font-black text-slate-800">교사 대신 공용 명부를 만들어 넣을 수 있습니다.</h2>
-                    <p class="mt-2 text-sm font-bold leading-relaxed text-slate-600">대상 교사를 고른 뒤 여기서 만든 명부는 그 교사 계정에 저장되고, 교사는 본인 명부처럼 바로 사용할 수 있습니다. 교사가 많으면 아이디나 별명으로 먼저 찾아보세요.</p>
+                    <h2 class="mt-2 text-2xl font-black text-slate-800">교사 명부 관리</h2>
+                    <p class="mt-2 text-sm font-bold leading-relaxed text-slate-600">교사 선택 후 저장</p>
                 </div>
                 <span class="inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-white px-4 py-3 text-sm font-black text-amber-700 shadow-sm">
-                    {% if proxy_target_user %}{{ proxy_target_user_label }} 선생님 계정 작업 중{% else %}비워두면 내 명부 관리{% endif %}
+                    {% if proxy_target_user %}{{ proxy_target_user_label }} 작업 중{% else %}내 명부{% endif %}
                 </span>
             </div>
             <form method="get" class="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_160px_auto]">
@@ -78,11 +78,11 @@
                     </select>
                 </div>
                 <button type="submit" class="inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-amber-600 px-4 py-3 text-sm font-black text-white transition hover:bg-amber-500">
-                    교사 명부 보기
+                    교사 열기
                 </button>
                 {% if proxy_target_user %}
                 <a href="{{ own_dashboard_url }}" class="inline-flex min-h-[48px] items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-600 transition hover:text-slate-800">
-                    내 명부로 돌아가기
+                    내 명부
                 </a>
                 {% endif %}
                 {% if teacher_query %}
@@ -92,7 +92,7 @@
                 {% endif %}
             </form>
             <p class="mt-3 text-xs font-bold text-slate-600">
-                {% if teacher_query %}"{{ teacher_query }}" 검색 결과 {{ proxy_target_options|length }}명{% else %}아이디, 별명, 이메일로 교사를 빠르게 찾을 수 있습니다.{% endif %}
+                {% if teacher_query %}"{{ teacher_query }}" {{ proxy_target_options|length }}명{% else %}아이디·별명·이메일{% endif %}
             </p>
         </div>
         {% endif %}
@@ -103,15 +103,15 @@
                     <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl shadow-sm">
                         <i class="fa-solid fa-users"></i>
                     </div>
-                    <h2 class="text-2xl font-black text-gray-700">
-                        {% if proxy_target_user %}{{ proxy_target_user_label }} 선생님 명부 만들기{% else %}공용 명부 만들기{% endif %}
-                    </h2>
+                        <h2 class="text-2xl font-black text-gray-700">
+                            {% if proxy_target_user %}{{ proxy_target_user_label }} 명부 만들기{% else %}공용 명부 만들기{% endif %}
+                        </h2>
                 </div>
                 <p class="mb-4 text-sm font-bold text-gray-500">
                     {% if proxy_target_user %}
-                    이 화면에서 저장하면 {{ proxy_target_user_label }} 선생님 계정에 바로 들어갑니다.
+                    {{ proxy_target_user_label }} 계정 저장
                     {% else %}
-                    학생명, 소속/학년반, 보호자명, 연락처 뒤 4자리, 번호를 한 번만 정리하면 됩니다.
+                    이름부터 추가
                     {% endif %}
                 </p>
 
@@ -152,9 +152,9 @@
                         </h2>
                         <p class="text-sm text-gray-500 font-bold mt-1">
                             {% if proxy_target_user %}
-                            여기서 손본 명부는 {{ proxy_target_user_label }} 선생님 화면에 그대로 보입니다.
+                            {{ proxy_target_user_label }} 화면
                             {% else %}
-                            명부를 먼저 정리한 뒤, 필요한 작업은 각 명부 안에서 이어갑니다.
+                            바로 사용
                             {% endif %}
                         </p>
                     </div>
@@ -191,7 +191,7 @@
                             활성 {{ group.active_member_count }}명 / 전체 {{ group.total_member_count }}명
                         </div>
                         {% if not group.active_member_count %}
-                        <p class="text-xs text-slate-500 font-bold mb-3">활성 멤버를 넣어야 배부 체크를 시작할 수 있습니다.</p>
+                        <p class="text-xs text-slate-500 font-bold mb-3">활성 멤버 필요</p>
                         {% endif %}
                         <div class="flex flex-wrap gap-2">
                             <a href="{{ group.manage_url }}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 font-bold text-sm">
@@ -201,21 +201,21 @@
                             {% if group.active_session_url %}
                             <a href="{{ group.active_session_url }}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 font-bold text-sm border border-indigo-100">
                                 <i class="fa-solid fa-arrow-rotate-right"></i>
-                                <span>진행 중 세션 이어하기</span>
+                                <span>진행 중 세션</span>
                             </a>
                             {% endif %}
                             {% if group.continue_url %}
                             <a href="{{ group.continue_url }}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-bold text-sm">
                                 <i class="fa-solid fa-arrow-right"></i>
-                                <span>이 명부로 이전 작업 계속하기</span>
+                                <span>이 명부로 계속</span>
                             </a>
                             {% endif %}
                         </div>
                         {% if can_copy_from_current_view %}
                         <details class="mt-4 rounded-2xl border border-amber-200 bg-amber-50/70 px-4 py-3">
                             <summary class="cursor-pointer list-none text-sm font-black text-amber-800 flex items-center justify-between gap-3">
-                                <span>다른 교사에게 이 명부 복사</span>
-                                <span class="text-xs text-amber-600">원본은 그대로 유지</span>
+                                <span>다른 교사에게 복사</span>
+                                <span class="text-xs text-amber-600">원본 유지</span>
                             </summary>
                             <form action="{% url 'handoff:group_copy' group.id %}" method="post" class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
                                 {% csrf_token %}
@@ -228,17 +228,17 @@
                                 <div class="min-w-0 flex-1">
                                     <label for="copy-target-{{ group.id }}" class="mb-2 block text-xs font-black text-amber-800">복사할 교사</label>
                                     <select id="copy-target-{{ group.id }}" name="copy_to_user" class="w-full rounded-xl border border-amber-200 bg-white px-3 py-2.5 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-300">
-                                        <option value="">{% if teacher_query and not proxy_target_options %}검색 결과가 없습니다{% else %}교사를 선택하세요{% endif %}</option>
+                                        <option value="">{% if teacher_query and not proxy_target_options %}검색 결과가 없습니다{% else %}교사 선택{% endif %}</option>
                                         {% for option in proxy_target_options %}
                                         <option value="{{ option.id }}">{{ option.label }}</option>
                                         {% endfor %}
                                     </select>
                                 </div>
                                 <button type="submit" class="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-amber-500" {% if not proxy_target_options %}disabled{% endif %}>
-                                    이 명부 복사
+                                    복사
                                 </button>
                             </form>
-                            <p class="mt-3 text-xs font-bold text-amber-700">위에서 교사를 먼저 검색하면 여기 복사 대상 목록도 같이 줄어듭니다.</p>
+                            <p class="mt-3 text-xs font-bold text-amber-700">위 검색 사용</p>
                         </details>
                         {% endif %}
                     </div>
@@ -248,11 +248,11 @@
                 <div class="py-10 text-center text-gray-400">
                     <i class="fa-solid fa-users-slash text-4xl mb-3"></i>
                     {% if proxy_target_user %}
-                    <p class="font-bold">{{ proxy_target_user_label }} 선생님 계정에는 아직 공용 명부가 없습니다.</p>
-                    <p class="text-sm">왼쪽 폼에서 첫 명부를 만들어 바로 넣어주세요.</p>
+                    <p class="font-bold">{{ proxy_target_user_label }} 명부 없음</p>
+                    <p class="text-sm">왼쪽에서 만들기</p>
                     {% else %}
-                    <p class="font-bold">아직 공용 명부가 없습니다.</p>
-                    <p class="text-sm">왼쪽 폼에서 첫 명부를 만들어주세요.</p>
+                    <p class="font-bold">공용 명부 없음</p>
+                    <p class="text-sm">왼쪽에서 만들기</p>
                     {% endif %}
                 </div>
                 {% endif %}

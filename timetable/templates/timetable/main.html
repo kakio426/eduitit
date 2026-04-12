@@ -55,7 +55,7 @@
 
                 {% if optional_sheet_names %}
                 <details class="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <summary class="cursor-pointer text-sm font-bold text-slate-800">세부 조정용 시트 보기</summary>
+                    <summary class="cursor-pointer text-sm font-bold text-slate-800">세부 조정 시트</summary>
                     <div class="mt-3">
                         <div class="flex flex-wrap gap-2">
                             {% for sheet_name in optional_sheet_names %}
@@ -67,11 +67,11 @@
                 {% endif %}
 
                 <details class="mt-5 rounded-xl border border-indigo-200 bg-indigo-50 p-4">
-                    <summary class="cursor-pointer text-sm font-bold text-indigo-900">배치 조건 메모</summary>
+                    <summary class="cursor-pointer text-sm font-bold text-indigo-900">기본 조건</summary>
                     <ul class="mt-3 space-y-2 text-xs text-indigo-900 leading-relaxed">
-                        <li>기본은 같은 학급·교과 하루 1회입니다.</li>
-                        <li>2시간 이상은 <span class="font-bold">나눠배치(예: 2+1)</span>를 넣어야 허용됩니다.</li>
-                        <li>순환배치는 기본으로 켜져 있고, 필요하면 배치조건에서 끌 수 있습니다.</li>
+                        <li>같은 학급·교과 하루 1회</li>
+                        <li>2시간 이상 분산</li>
+                        <li>순환배치 기본</li>
                     </ul>
                 </details>
             </section>
@@ -101,7 +101,7 @@
                     </div>
 
                     <details class="rounded-xl border border-slate-200 bg-slate-50 p-4" {% if form.reservation_school_slug.value or form.reservation_school_slug.errors or form.overwrite_existing.errors %}open{% endif %}>
-                        <summary class="cursor-pointer text-sm font-bold text-slate-800">예약 반영 설정</summary>
+                        <summary class="cursor-pointer text-sm font-bold text-slate-800">예약 반영</summary>
                         <div class="mt-4 space-y-4">
                             <div>
                                 <label for="{{ form.reservation_school_slug.id_for_label }}" class="block text-sm font-bold text-slate-700 mb-2">예약 반영 학교 (선택)</label>
@@ -137,7 +137,7 @@
                     <button type="submit"
                         class="inline-flex items-center justify-center w-full md:w-auto px-5 py-3 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition-colors">
                         <i class="fa-solid fa-check mr-2"></i>
-                        업로드하고 점검하기
+                        점검하기
                     </button>
                 </form>
             </section>
@@ -150,16 +150,16 @@
                     <i class="fa-solid fa-circle-check"></i>
                 </span>
                 <div>
-                    <h2 class="text-lg font-black text-emerald-700">점검 완료: 입력 형식이 올바릅니다.</h2>
-                    <p class="text-sm text-slate-600">다음 단계에서 자동 배치 기능을 적용할 수 있습니다.</p>
+                    <h2 class="text-lg font-black text-emerald-700">점검 완료</h2>
+                    <p class="text-sm text-slate-600">자동 배치 가능</p>
                 </div>
                 {% else %}
                 <span class="w-10 h-10 rounded-full bg-red-100 text-red-700 flex items-center justify-center text-lg">
                     <i class="fa-solid fa-triangle-exclamation"></i>
                 </span>
                 <div>
-                    <h2 class="text-lg font-black text-red-700">점검 결과: 수정이 필요한 항목이 있습니다.</h2>
-                    <p class="text-sm text-slate-600">아래 오류를 먼저 해결한 뒤 다시 업로드해 주세요.</p>
+                    <h2 class="text-lg font-black text-red-700">수정 필요</h2>
+                    <p class="text-sm text-slate-600">오류 수정 후 다시 업로드</p>
                 </div>
                 {% endif %}
             </div>
@@ -192,7 +192,7 @@
 
             {% if check_result.warnings %}
             <div>
-                <h3 class="text-sm font-black text-amber-700 mb-2">안내</h3>
+                <h3 class="text-sm font-black text-amber-700 mb-2">주의</h3>
                 <ul class="space-y-2">
                     {% for item in check_result.warnings %}
                     <li class="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">{{ item }}</li>
@@ -236,7 +236,7 @@
                 </span>
                 <div>
                     <h2 class="text-lg font-black text-emerald-700">자동 배치 완료</h2>
-                    <p class="text-sm text-slate-600">전담 시간표와 특별실 결과를 확인해 주세요.</p>
+                    <p class="text-sm text-slate-600">결과 확인</p>
                 </div>
                 {% else %}
                 <span class="w-10 h-10 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-lg">
@@ -244,7 +244,7 @@
                 </span>
                 <div>
                     <h2 class="text-lg font-black text-amber-700">부분 완료</h2>
-                    <p class="text-sm text-slate-600">배치 결과와 오류 안내를 함께 확인해 주세요.</p>
+                    <p class="text-sm text-slate-600">결과와 오류 확인</p>
                 </div>
                 {% endif %}
             </div>
@@ -272,7 +272,7 @@
 
             {% if integration_result %}
             <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
-                <h3 class="text-sm font-black text-slate-800">예약 시스템 반영 결과 ({{ integration_result.school_name }})</h3>
+                <h3 class="text-sm font-black text-slate-800">예약 반영 ({{ integration_result.school_name }})</h3>
                 <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
                     <div class="rounded-lg bg-white border border-slate-200 px-3 py-2">
                         <p class="text-xs text-slate-500">새로 반영</p>
@@ -317,11 +317,8 @@
 
             {% if preview_apply_info and preview_apply_info.preview_count > 0 %}
             <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-4 space-y-3">
-                <h3 class="text-sm font-black text-indigo-800">미리보기 항목 수동 반영</h3>
-                <p class="text-sm text-indigo-800">
-                    현재 <span class="font-black">{{ preview_apply_info.preview_count }}</span>개 항목이 `미리보기`로 설정되어 있습니다.
-                    아래 버튼을 누르면 예약 시스템에 반영됩니다.
-                </p>
+                <h3 class="text-sm font-black text-indigo-800">미리보기 반영</h3>
+                <p class="text-sm text-indigo-800">미리보기 {{ preview_apply_info.preview_count }}개</p>
                 <form method="post" class="space-y-3">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="apply_preview">
@@ -330,12 +327,12 @@
                     {% if can_use_overwrite_option %}
                     <label class="inline-flex items-start gap-2 text-sm text-indigo-900">
                         <input type="checkbox" name="overwrite_existing" class="h-4 w-4 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500">
-                        <span>기존 고정시간표 덮어쓰기 (관리자 전용)</span>
+                        <span>기존값 덮어쓰기</span>
                     </label>
                     {% endif %}
                     <div>
                         <button type="submit" class="inline-flex items-center px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700">
-                            미리보기 항목 예약 반영하기
+                            예약 반영
                         </button>
                     </div>
                 </form>
@@ -344,7 +341,7 @@
 
             {% if generated_result.errors %}
             <div>
-                <h3 class="text-sm font-black text-red-700 mb-2">오류 안내</h3>
+                <h3 class="text-sm font-black text-red-700 mb-2">오류</h3>
                 <ul class="space-y-2">
                     {% for item in generated_result.errors %}
                     <li class="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{{ item }}</li>
@@ -355,7 +352,7 @@
 
             {% if generated_result.warnings %}
             <div>
-                <h3 class="text-sm font-black text-amber-700 mb-2">추가 안내</h3>
+                <h3 class="text-sm font-black text-amber-700 mb-2">주의</h3>
                 <ul class="space-y-2">
                     {% for item in generated_result.warnings %}
                     <li class="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">{{ item }}</li>
@@ -403,7 +400,7 @@
 
             {% if generated_result.class_tables %}
             <details class="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                <summary class="cursor-pointer text-sm font-black text-slate-800">담임 참고용: 학급별 전담 점유표 보기</summary>
+                <summary class="cursor-pointer text-sm font-black text-slate-800">학급별 전담 점유표</summary>
                 <div class="mt-4 space-y-4">
                     {% for table in generated_result.class_tables %}
                     <div class="border border-slate-200 rounded-xl overflow-x-auto bg-white">
@@ -444,7 +441,7 @@
 
             {% if generated_result.room_tables %}
             <div class="space-y-4">
-                <h3 class="text-base font-black text-slate-800">특별실 자동배치 시간표</h3>
+                <h3 class="text-base font-black text-slate-800">특별실 시간표</h3>
                 {% for table in generated_result.room_tables %}
                 <div class="border border-slate-200 rounded-xl overflow-x-auto">
                     <div class="px-4 py-3 bg-slate-100 border-b border-slate-200">
@@ -483,7 +480,7 @@
 
             {% if generated_result.reservation_rows %}
             <div class="space-y-3">
-                <h3 class="text-base font-black text-slate-800">예약 연동 대상 목록</h3>
+                <h3 class="text-base font-black text-slate-800">예약 연동 목록</h3>
                 <div class="overflow-x-auto border border-slate-200 rounded-xl">
                     <table class="w-full min-w-[760px] text-sm">
                         <thead class="bg-slate-100 text-slate-700">
@@ -561,17 +558,6 @@
                     CSV 다운로드
                 </a>
             </div>
-            <details class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <summary class="cursor-pointer text-sm font-bold text-slate-800">조회 방법 보기</summary>
-                <div class="mt-3 space-y-2 text-sm text-slate-600">
-                    <p>학교와 날짜를 고른 뒤 조회하면 같은 조건으로 CSV를 내려받을 수 있습니다.</p>
-                    {% if request.user.is_superuser %}
-                    <p class="text-xs text-slate-500">관리자는 전체 학교와 전체 사용자 반영 내역을 볼 수 있습니다.</p>
-                    {% else %}
-                    <p class="text-xs text-slate-500">일반 계정은 내 계정으로 실행한 반영 내역만 보입니다.</p>
-                    {% endif %}
-                </div>
-            </details>
             <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <div class="md:col-span-2">
                     <label class="block text-xs font-bold text-slate-600 mb-1">학교 선택</label>
@@ -594,10 +580,10 @@
                 </div>
                 <div class="md:col-span-4 flex flex-wrap gap-2">
                     <button type="submit" class="inline-flex items-center px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700">
-                        조회하기
+                        조회
                     </button>
                     <a href="{% url 'timetable:main' %}" class="inline-flex items-center px-3 py-2 rounded-lg bg-slate-100 text-slate-700 text-sm font-bold hover:bg-slate-200">
-                        조건 초기화
+                        초기화
                     </a>
                 </div>
             </form>
@@ -638,7 +624,7 @@
                         {% endfor %}
                         {% else %}
                         <tr class="border-t border-slate-200">
-                            <td colspan="9" class="px-3 py-6 text-center text-slate-500">조건에 맞는 반영 내역이 없습니다.</td>
+                            <td colspan="9" class="px-3 py-6 text-center text-slate-500">반영 내역 없음</td>
                         </tr>
                         {% endif %}
                     </tbody>

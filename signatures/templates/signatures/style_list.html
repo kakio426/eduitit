@@ -7,8 +7,8 @@
     <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between mb-8">
         <div>
             <p class="text-sm font-black uppercase tracking-[0.24em] text-indigo-600">내 서명 보관함</p>
-            <h1 class="mt-2 text-4xl font-black text-gray-800">직접 쓴 손서명을 먼저 보관하세요</h1>
-            <p class="mt-3 text-lg text-gray-500 font-medium">참여 화면에서 직접 쓴 서명을 저장해 두면 다음번에도 바로 꺼내 쓸 수 있습니다. 폰트형 이름 스타일은 아래 보조 도구로 따로 보관합니다.</p>
+            <h1 class="mt-2 text-4xl font-black text-gray-800">내 손서명 보관함</h1>
+            <p class="mt-3 text-lg text-gray-500 font-medium">저장한 서명 다시 쓰기</p>
         </div>
         <div class="flex flex-wrap gap-2">
             <a href="{% url 'signatures:list' %}"
@@ -27,10 +27,10 @@
             <div>
                 <p class="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">우선 보관할 것</p>
                 <h2 class="mt-2 text-2xl font-black text-slate-800">손으로 쓴 내 서명</h2>
-                <p class="mt-2 text-sm md:text-base font-bold leading-relaxed text-slate-600">이 보관함은 참여 화면에서 직접 그린 서명만 담습니다. 폰트로 만든 이름 이미지는 아래 보조 섹션에서 따로 관리합니다.</p>
+                <p class="mt-2 text-sm md:text-base font-bold leading-relaxed text-slate-600">참여 화면 서명 보관</p>
             </div>
             <span class="inline-flex min-h-[52px] items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-black text-emerald-700 shadow-sm">
-                다음 서명 참여 화면에서 바로 불러오기 가능
+                다음 참여에서 사용
             </span>
         </div>
 
@@ -43,7 +43,7 @@
                 </div>
                 <p class="mt-4 text-xs font-black uppercase tracking-[0.14em] text-slate-400">손으로 쓴 서명</p>
                 <p class="mt-2 text-sm font-bold text-slate-800">{{ signature.created_at|date:"Y.m.d H:i" }} 저장</p>
-                <p class="mt-2 text-sm leading-relaxed text-slate-500">참여자가 서명 칸에 직접 쓴 이미지를 그대로 다시 불러오는 용도입니다.</p>
+                <p class="mt-2 text-sm leading-relaxed text-slate-500">저장한 서명</p>
                 <div class="mt-4 flex gap-2">
                     <button
                         type="button"
@@ -61,8 +61,8 @@
             <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
                 <i class="fa-solid fa-signature text-xl"></i>
             </div>
-            <h3 class="mt-4 text-2xl font-black text-slate-800">아직 저장한 손서명이 없습니다.</h3>
-            <p class="mt-3 text-sm md:text-base font-bold leading-relaxed text-slate-600">서명 참여 화면에서 직접 이름 서명을 쓴 뒤 `이 손서명 저장`을 누르면 여기에 차곡차곡 모입니다.</p>
+            <h3 class="mt-4 text-2xl font-black text-slate-800">저장한 손서명이 없습니다.</h3>
+            <p class="mt-3 text-sm md:text-base font-bold leading-relaxed text-slate-600">참여 화면에서 저장</p>
         </div>
         {% endif %}
     </section>
@@ -72,7 +72,7 @@
             <div>
                 <p class="text-xs font-black uppercase tracking-[0.18em] text-slate-400">보조 도구</p>
                 <h2 class="mt-2 text-2xl font-black text-slate-800">폰트형 이름 스타일</h2>
-                <p class="mt-2 text-sm md:text-base font-bold leading-relaxed text-slate-600">직접 손서명을 쓰기 어려운 특별한 상황에서만 쓰는 보조 자산입니다.</p>
+                <p class="mt-2 text-sm md:text-base font-bold leading-relaxed text-slate-600">보조 서명</p>
             </div>
             <a href="{% url 'signatures:maker' %}"
                 class="inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-black text-white transition hover:bg-indigo-700">
@@ -107,8 +107,8 @@
         </div>
         {% else %}
         <div class="mt-6 text-center py-16 bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200">
-            <h3 class="text-2xl font-black text-slate-500">아직 저장된 폰트 스타일이 없습니다.</h3>
-            <p class="text-slate-400 mt-2 mb-8 font-bold">손서명이 어려운 상황에서만 필요하다면 이름 폰트 도구에서 하나 만들어 둘 수 있습니다.</p>
+            <h3 class="text-2xl font-black text-slate-500">저장된 폰트 스타일이 없습니다.</h3>
+            <p class="text-slate-400 mt-2 mb-8 font-bold">필요할 때 만들기</p>
             <a href="{% url 'signatures:maker' %}"
                 class="inline-block py-4 px-10 bg-indigo-600 text-white rounded-2xl font-black hover:bg-indigo-700 transition shadow-xl">
                 이름 폰트 도구 가기

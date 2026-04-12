@@ -14,47 +14,18 @@
 
             <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/70 text-gray-600 shadow-clay-inner text-sm font-semibold">
                 <i class="fa-regular fa-file-pdf text-red-500"></i>
-                <span>브라우저 안에서 바로 PDF 확인</span>
+                <span>PDF 보기</span>
             </div>
         </div>
 
         <div class="text-center mb-8" data-aos="fade-up">
             <div class="text-6xl mb-3 float-icon">{{ service.icon|default:"📑" }}</div>
             <h1 class="text-4xl md:text-5xl font-bold text-gray-700 font-title mb-3">문서 미리보기실</h1>
-            <p class="text-lg md:text-xl text-gray-500 max-w-3xl mx-auto">
-                PDF를 올리면 같은 화면에서 바로 넘겨 보고, 확대하고, 인쇄용 새 탭까지 열 수 있는 교사용 미리보기 도구입니다.
-            </p>
+            <p class="text-lg md:text-xl text-gray-500 max-w-3xl mx-auto">PDF 올리고 확인</p>
         </div>
 
         <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
             <div class="xl:col-span-4 space-y-6">
-                <div class="clay-card p-6 md:p-7" data-aos="fade-up">
-                    <div class="flex items-start gap-3 mb-5">
-                        <div class="w-12 h-12 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center text-xl shadow-clay-inner">
-                            <i class="fa-solid fa-route"></i>
-                        </div>
-                        <div>
-                            <h2 class="text-2xl font-bold text-gray-700 font-title">교사 작업 흐름</h2>
-                            <p class="text-sm md:text-base text-gray-500">와이어프레임 기준으로, 다음 행동이 바로 보이게 고정했습니다.</p>
-                        </div>
-                    </div>
-
-                    <div class="space-y-3 text-sm md:text-base text-gray-700">
-                        <div class="rounded-2xl bg-white/75 border border-white/60 px-4 py-4">
-                            <p class="font-bold text-gray-800 mb-1">1. PDF 선택</p>
-                            <p>파일을 올리면 오른쪽 미리보기 화면이 즉시 열립니다.</p>
-                        </div>
-                        <div class="rounded-2xl bg-white/75 border border-white/60 px-4 py-4">
-                            <p class="font-bold text-gray-800 mb-1">2. 빠르게 검수</p>
-                            <p>페이지 이동과 확대/축소로 필요한 부분만 바로 확인합니다.</p>
-                        </div>
-                        <div class="rounded-2xl bg-white/75 border border-white/60 px-4 py-4">
-                            <p class="font-bold text-gray-800 mb-1">3. 다음 행동 선택</p>
-                            <p>인쇄용 새 탭을 열거나, 다른 PDF로 바로 바꿔 봅니다.</p>
-                        </div>
-                    </div>
-                </div>
-
                 <div class="clay-card p-6 md:p-7" data-aos="fade-up" data-aos-delay="50">
                     <div class="flex items-start gap-3 mb-5">
                         <div class="w-12 h-12 rounded-2xl bg-red-100 text-red-500 flex items-center justify-center text-xl shadow-clay-inner">
@@ -62,7 +33,7 @@
                         </div>
                         <div>
                             <h2 class="text-2xl font-bold text-gray-700 font-title">문서 열기</h2>
-                            <p class="text-sm md:text-base text-gray-500">업로드한 파일은 브라우저 메모리에서만 미리보기 합니다.</p>
+                            <p class="text-sm md:text-base text-gray-500">PDF 선택</p>
                         </div>
                     </div>
 
@@ -76,13 +47,11 @@
                             accept="application/pdf,.pdf"
                             class="w-full px-3 py-2.5 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none bg-white text-sm md:text-base"
                         >
-                        <p class="mt-3 text-sm text-gray-500 leading-relaxed">
-                            파일을 여기로 끌어다 놓거나 선택해 주세요. 서버 저장 없이 바로 미리보기만 진행합니다.
-                        </p>
+                        <p class="mt-3 text-sm text-gray-500 leading-relaxed">끌어놓기 또는 파일 선택</p>
                     </div>
 
                     <div id="docviewer-status" class="mt-4 rounded-2xl bg-blue-50 text-blue-700 border border-blue-100 px-4 py-3 text-sm md:text-base">
-                        PDF를 선택하면 오른쪽에서 바로 확인할 수 있어요.
+                        PDF를 선택하세요.
                     </div>
 
                     <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -105,28 +74,11 @@
                     </div>
                 </div>
 
-                <div class="clay-card p-6 md:p-7" data-aos="fade-up" data-aos-delay="100">
-                    <h2 class="text-2xl font-bold text-gray-700 font-title mb-4">바로 보기 체크</h2>
-                    <ul class="space-y-3 text-sm md:text-base text-gray-600">
-                        <li class="flex items-start gap-3">
-                            <i class="fa-solid fa-check text-emerald-500 mt-1"></i>
-                            <span>학부모 안내문, 회의 자료, 연수 자료처럼 PDF만 빠르게 확인할 때 쓰기 좋습니다.</span>
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <i class="fa-solid fa-check text-emerald-500 mt-1"></i>
-                            <span>페이지 수가 보이므로 “몇 쪽까지 봤는지”를 놓치지 않습니다.</span>
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <i class="fa-solid fa-check text-emerald-500 mt-1"></i>
-                            <span>인쇄는 별도 편집 없이 새 탭에서 바로 진행할 수 있습니다.</span>
-                        </li>
-                    </ul>
-                    <noscript>
-                        <p class="mt-4 rounded-2xl bg-amber-50 text-amber-800 border border-amber-200 px-4 py-3 text-sm">
-                            이 서비스는 브라우저 JavaScript가 켜져 있어야 미리보기가 가능합니다.
-                        </p>
-                    </noscript>
-                </div>
+                <noscript>
+                    <p class="rounded-2xl bg-amber-50 text-amber-800 border border-amber-200 px-4 py-3 text-sm">
+                        JavaScript 필요
+                    </p>
+                </noscript>
             </div>
 
             <div class="xl:col-span-8">
@@ -135,7 +87,7 @@
                         <div>
                             <h2 class="text-2xl font-bold text-gray-700 font-title">미리보기 화면</h2>
                             <p id="docviewer-file-meta" class="text-sm md:text-base text-gray-500">
-                                아직 열린 PDF가 없습니다.
+                                PDF 없음
                             </p>
                         </div>
 
@@ -186,20 +138,16 @@
                             <div class="w-20 h-20 mx-auto rounded-full bg-white shadow-clay-inner flex items-center justify-center text-3xl text-red-500 mb-4">
                                 <i class="fa-regular fa-file-pdf"></i>
                             </div>
-                            <h3 class="text-2xl font-bold text-gray-700 font-title mb-2">PDF를 열면 여기서 바로 보입니다</h3>
-                            <p class="text-sm md:text-base text-gray-500 leading-relaxed">
-                                왼쪽에서 PDF를 선택하면 첫 페이지를 즉시 렌더링하고, 쪽 넘김과 확대/축소 버튼이 활성화됩니다.
-                            </p>
+                            <h3 class="text-2xl font-bold text-gray-700 font-title mb-2">PDF 대기 중</h3>
+                            <p class="text-sm md:text-base text-gray-500 leading-relaxed">왼쪽에서 파일 선택</p>
                         </div>
 
                         <div id="docviewer-loading-state" class="hidden text-center max-w-md">
                             <div class="w-20 h-20 mx-auto rounded-full bg-white shadow-clay-inner flex items-center justify-center text-3xl text-blue-500 mb-4">
                                 <i class="fa-solid fa-circle-notch fa-spin"></i>
                             </div>
-                            <h3 class="text-2xl font-bold text-gray-700 font-title mb-2">PDF를 불러오는 중입니다</h3>
-                            <p class="text-sm md:text-base text-gray-500 leading-relaxed">
-                                페이지 수와 첫 화면을 준비하고 있습니다. 잠시만 기다려 주세요.
-                            </p>
+                            <h3 class="text-2xl font-bold text-gray-700 font-title mb-2">불러오는 중</h3>
+                            <p class="text-sm md:text-base text-gray-500 leading-relaxed">잠시만</p>
                         </div>
 
                         <div id="docviewer-canvas-wrap" class="hidden w-full">
@@ -210,15 +158,15 @@
                     <div class="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-3">
                         <div class="rounded-2xl bg-white/75 border border-white/60 px-4 py-4">
                             <p class="text-xs uppercase tracking-[0.2em] text-gray-400 mb-2">현재 위치</p>
-                            <p id="docviewer-page-summary" class="text-base font-semibold text-gray-700">문서를 열면 현재 쪽 정보가 보입니다.</p>
+                            <p id="docviewer-page-summary" class="text-base font-semibold text-gray-700">PDF 선택 전</p>
                         </div>
                         <div class="rounded-2xl bg-white/75 border border-white/60 px-4 py-4">
                             <p class="text-xs uppercase tracking-[0.2em] text-gray-400 mb-2">확대 비율</p>
                             <p id="docviewer-scale-summary" class="text-base font-semibold text-gray-700">기본값 100%</p>
                         </div>
                         <div class="rounded-2xl bg-white/75 border border-white/60 px-4 py-4">
-                            <p class="text-xs uppercase tracking-[0.2em] text-gray-400 mb-2">다음 행동</p>
-                            <p id="docviewer-next-step" class="text-base font-semibold text-gray-700">먼저 PDF를 선택해 주세요.</p>
+                            <p class="text-xs uppercase tracking-[0.2em] text-gray-400 mb-2">다음</p>
+                            <p id="docviewer-next-step" class="text-base font-semibold text-gray-700">PDF 선택</p>
                         </div>
                     </div>
                 </div>

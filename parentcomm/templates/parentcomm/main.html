@@ -10,7 +10,7 @@
                     <div class="w-14 h-14 rounded-2xl bg-white shadow-clay-inner flex items-center justify-center text-3xl">📨</div>
                     <div>
                         <h1 class="text-3xl font-bold text-gray-700">{{ service.title|default:"학부모 소통 허브" }}</h1>
-                        <p class="text-gray-600 mt-2">먼저 확인할 일을 보고, 필요한 소통만 바로 이어서 처리하세요.</p>
+                        <p class="text-gray-600 mt-2">오늘 할 일부터</p>
                     </div>
                 </div>
                 <div class="flex flex-wrap gap-2 text-xs font-semibold">
@@ -46,7 +46,7 @@
 
         <div x-show="tab==='today'" x-cloak class="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <section class="clay-card p-5">
-                <h2 class="text-xl font-bold text-gray-700 mb-3">긴급 안내</h2>
+                <h2 class="text-xl font-bold text-gray-700 mb-3">긴급</h2>
                 <ul class="space-y-3">
                     {% for alert in urgent_unchecked|slice:":6" %}
                     <li class="p-3 rounded-xl border border-red-300 bg-red-50">
@@ -61,7 +61,7 @@
                         </form>
                     </li>
                     {% empty %}
-                    <li class="text-gray-500">미확인 긴급 안내가 없습니다.</li>
+                    <li class="text-gray-500">미확인 긴급 없음</li>
                     {% endfor %}
                 </ul>
             </section>
@@ -76,7 +76,7 @@
                         <button type="button" @click="tab='messages'" class="mt-2 px-3 py-1 rounded-lg bg-slate-700 text-white text-sm">쪽지함으로 이동</button>
                     </li>
                     {% empty %}
-                    <li class="text-gray-500">지금 답장할 쪽지가 없습니다.</li>
+                    <li class="text-gray-500">답장할 쪽지 없음</li>
                     {% endfor %}
                 </ul>
             </section>
@@ -91,7 +91,7 @@
                         <button type="button" @click="tab='consult'" class="mt-2 px-3 py-1 rounded-lg bg-indigo-600 text-white text-sm">상담 조율로 이동</button>
                     </li>
                     {% empty %}
-                    <li class="text-gray-500">조율 중인 상담이 없습니다.</li>
+                    <li class="text-gray-500">조율 중 상담 없음</li>
                     {% endfor %}
                 </ul>
             </section>
@@ -134,7 +134,7 @@
                             <p class="text-sm text-gray-700 whitespace-pre-wrap mt-1">{{ message.body }}</p>
                         </div>
                         {% empty %}
-                        <p class="text-sm text-gray-500">아직 작성된 내용이 없습니다.</p>
+                        <p class="text-sm text-gray-500">내용 없음</p>
                         {% endfor %}
                     </div>
                     <form method="post" class="mt-3">
@@ -186,7 +186,7 @@
                     <p class="text-sm text-gray-700 mt-2">{{ req.reason }}</p>
 
                     <div class="mt-4 p-3 rounded-xl bg-[#E0E5EC] shadow-clay-inner">
-                        <p class="font-semibold text-gray-700 mb-2">1단계: 상담 방법 제안</p>
+                        <p class="font-semibold text-gray-700 mb-2">상담 수단</p>
                         <form method="post" class="space-y-2">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="create_proposal">
@@ -203,21 +203,21 @@
                             {{ proposal_form.note }}
                             {% if proposal_form.note.errors %}<p class="text-red-600 text-sm">{{ proposal_form.note.errors|join:", " }}</p>{% endif %}
                             {% endwith %}
-                            <button type="submit" class="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm">상담 방법 저장</button>
+                            <button type="submit" class="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm">수단 저장</button>
                         </form>
                     </div>
 
                     <div class="mt-3 space-y-2">
                         {% for proposal in req.proposals.all %}
                         <div class="p-3 rounded-xl bg-white border border-gray-200">
-                            <p class="font-semibold text-gray-700">제안된 방법: {{ proposal.allowed_method_labels|join:", " }}</p>
+                            <p class="font-semibold text-gray-700">수단: {{ proposal.allowed_method_labels|join:", " }}</p>
                             {% if proposal.note %}<p class="text-sm text-gray-600 mt-1">{{ proposal.note }}</p>{% endif %}
                             <form method="post" class="mt-2 space-y-2">
                                 {% csrf_token %}
                                 <input type="hidden" name="action" value="add_slot">
                                 <input type="hidden" name="proposal_id" value="{{ proposal.id }}">
                                 {% with slot_form=proposal_slot_forms|get_item:proposal.id %}
-                                <p class="text-sm font-semibold text-gray-700">2단계: 가능한 시간 제안</p>
+                                <p class="text-sm font-semibold text-gray-700">가능 시간</p>
                                 {{ slot_form.method }}
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                                     {{ slot_form.starts_at }}
@@ -238,12 +238,12 @@
                             </ul>
                         </div>
                         {% empty %}
-                        <p class="text-sm text-gray-500">아직 상담 방법 제안이 없습니다.</p>
+                        <p class="text-sm text-gray-500">상담 수단 없음</p>
                         {% endfor %}
                     </div>
                 </article>
                 {% empty %}
-                <div class="clay-card p-6 text-gray-500">상담 조율 항목이 없습니다.</div>
+                <div class="clay-card p-6 text-gray-500">상담 조율 없음</div>
                 {% endfor %}
             </section>
         </div>
@@ -252,7 +252,7 @@
             <section class="clay-card p-6 space-y-3">
                 {% if notice_prefill_active %}
                 <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-                    <p class="font-semibold">{{ notice_prefill_source_label|default:'연결된 서비스에서 가져온 내용을 먼저 채워두었어요.' }}</p>
+                    <p class="font-semibold">{{ notice_prefill_source_label|default:'연결 내용 불러옴' }}</p>
                     {% if notice_prefill_origin_url %}
                     <a href="{{ notice_prefill_origin_url }}" class="mt-2 inline-flex items-center gap-1 text-xs font-bold text-emerald-700 underline underline-offset-2">{{ notice_prefill_origin_label|default:'원래 화면으로 돌아가기' }}</a>
                     {% endif %}
@@ -307,7 +307,7 @@
                 <article class="clay-card p-6 space-y-4">
                     <div>
                         <h2 class="text-2xl font-bold text-gray-700">학부모 연락처</h2>
-                        <p class="text-sm text-gray-600 mt-1">연락처는 바로 추가하고, 여러 명 등록은 필요할 때만 펼쳐서 진행하세요.</p>
+                        <p class="text-sm text-gray-600 mt-1">바로 추가</p>
                     </div>
 
                     <form method="post" class="space-y-3">
@@ -387,7 +387,7 @@
                         연락처: {{ contact.contact_phone|default:"-" }}
                     </p>
                     <div class="mt-2 flex flex-wrap gap-2 items-center">
-                        <a href="{% url 'parentcomm:urgent_entry' access_id=contact.emergency_access_id %}" class="px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm font-semibold">긴급안내 페이지</a>
+                        <a href="{% url 'parentcomm:urgent_entry' access_id=contact.emergency_access_id %}" class="px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm font-semibold">긴급전송</a>
                         <button type="button"
                                 class="px-3 py-1.5 rounded-lg bg-slate-700 text-white text-sm"
                                 data-link="{{ request.scheme }}://{{ request.get_host }}{% url 'parentcomm:urgent_entry' access_id=contact.emergency_access_id %}"

@@ -8,9 +8,9 @@
         <header class="rounded-[2rem] border border-white/70 bg-white/85 p-6 shadow-sm md:p-8">
             <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                 <div class="max-w-3xl">
-                    <p class="text-sm font-black uppercase tracking-[0.24em] text-indigo-600">오늘 해야 할 일부터 찾는 서비스 카탈로그</p>
-                    <h1 class="mt-2 text-3xl font-black text-slate-900 md:text-4xl">먼저 홈의 오늘 실행판에서 시작하세요</h1>
-                    <p class="mt-3 text-sm leading-7 text-slate-600 md:text-base">앱 이름을 몰라도, 오늘 할 일과 상황에 맞는 서비스를 먼저 찾을 수 있습니다.</p>
+                    <p class="text-sm font-black uppercase tracking-[0.24em] text-indigo-600">서비스 카탈로그</p>
+                    <h1 class="mt-2 text-3xl font-black text-slate-900 md:text-4xl">할 일로 서비스 찾기</h1>
+                    <p class="mt-3 text-sm leading-7 text-slate-600 md:text-base">홈 실행판 기준</p>
                 </div>
                 <div class="flex flex-wrap gap-2 lg:justify-end">
                     <a href="{% url 'home' %}" class="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:border-slate-400">
@@ -28,8 +28,6 @@
 
             <div class="mt-5 flex flex-wrap gap-2">
                 <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">현재 노출 서비스 {{ total_count }}개</span>
-                <span class="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">홈 실행판 기준 정렬</span>
-                <span class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">업무 상황 중심 탐색</span>
                 {% if selected_scenario_section %}
                 <span class="inline-flex items-center rounded-full bg-violet-50 px-3 py-1 text-xs font-bold text-violet-700">선택된 보기 {{ selected_scenario_section.title }}</span>
                 <a href="{% url 'product_list' %}" class="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-bold text-slate-600 transition hover:border-indigo-300 hover:text-indigo-600">
@@ -45,7 +43,7 @@
                 <div>
                     <p class="text-xs font-black uppercase tracking-[0.24em] text-indigo-500">대표 허브</p>
                     <h2 class="mt-2 text-2xl font-black text-slate-900 md:text-3xl">{{ catalog_hub.title }}</h2>
-                    <p class="mt-3 max-w-2xl text-sm leading-7 text-slate-600 md:text-base">{{ catalog_hub.description }}</p>
+                    <p class="mt-3 max-w-2xl text-sm leading-7 text-slate-600 md:text-base">대표 시작점</p>
                 </div>
                 <div class="flex flex-wrap gap-3">
                     <a href="{{ catalog_hub.href }}" {% if catalog_hub.is_external %}target="_blank" rel="noopener noreferrer"{% endif %} class="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white transition hover:bg-indigo-600">
@@ -56,7 +54,7 @@
                         {% if catalog_hub.guide_is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
                         class="inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-black text-slate-700 transition hover:border-indigo-300 hover:text-indigo-600">
                         <i class="fa-solid fa-book-open-reader"></i>
-                        처음 시작 안내
+                        사용 가이드
                     </a>
                 </div>
             </div>
@@ -67,7 +65,7 @@
         <section class="space-y-4">
             <div>
                 <h2 class="text-2xl font-black text-slate-900">{{ section.title }}</h2>
-                <p class="mt-1 text-sm leading-6 text-slate-500">{{ section.description }}</p>
+                <p class="mt-1 text-sm leading-6 text-slate-500">관련 서비스</p>
             </div>
             <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {% for product in section.products %}

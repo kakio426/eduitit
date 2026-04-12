@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}모바일 제한 안내 - Eduitit{% endblock %}
+{% block title %}모바일 제한 - Eduitit{% endblock %}
 
 {% block content %}
 <main class="min-h-screen px-4 pb-20 pt-32 flex items-center justify-center bg-[#E0E5EC]">
@@ -10,7 +10,7 @@
         </div>
 
         <div class="mt-6 space-y-3">
-            <span class="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">큰 화면에서 먼저 쓰는 기능</span>
+            <span class="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">큰 화면 권장</span>
             <h1 class="text-3xl font-black text-slate-900 md:text-4xl">{{ service_name }}</h1>
             <p class="text-base leading-7 text-slate-600">{{ reason }}</p>
         </div>
@@ -33,7 +33,7 @@
         </div>
 
         {% if continue_url %}
-        <p class="mt-4 text-xs text-slate-500">작은 화면에서는 일부 기능이 불안정할 수 있습니다.</p>
+        <p class="mt-4 text-xs text-slate-500">일부 기능 제한</p>
         {% endif %}
     </section>
 </main>

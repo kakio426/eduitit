@@ -19,14 +19,14 @@
                 <div>
                     <p class="text-sm font-bold text-blue-600">끼리끼리 채팅방</p>
                     {% if service_unavailable %}
-                    <h1 id="schoolcomm-page-title" class="mt-2 text-3xl font-black tracking-[-0.03em] text-slate-900">잠시만요, 지금 다시 준비하고 있어요.</h1>
+                    <h1 id="schoolcomm-page-title" class="mt-2 text-3xl font-black tracking-[-0.03em] text-slate-900">지금 준비 중입니다.</h1>
                     <p class="mt-2 text-sm text-slate-500">{{ service_unavailable_message }}</p>
                     {% elif workspace %}
                     <h1 id="schoolcomm-page-title" class="mt-2 text-3xl font-black tracking-[-0.03em] text-slate-900">{{ workspace.name }}</h1>
-                    <p class="mt-2 text-sm text-slate-500">공지, 자료, 대화, 끼리끼리 캘린더를 한 화면에서 빠르게 확인합니다.</p>
+                    <p class="mt-2 text-sm text-slate-500">공지, 자료, 대화, 캘린더</p>
                     {% else %}
                     <h1 id="schoolcomm-page-title" class="mt-2 text-3xl font-black tracking-[-0.03em] text-slate-900">끼리끼리 채팅방 시작</h1>
-                    <p class="mt-2 text-sm text-slate-500">동학년 선생님부터 편하게 공지와 자료, 대화를 나눌 수 있어요.</p>
+                    <p class="mt-2 text-sm text-slate-500">채팅방 하나로 시작</p>
                     {% endif %}
                 </div>
                 {% if dashboard and not service_unavailable %}
@@ -47,8 +47,7 @@
 
         {% if service_unavailable %}
         <section class="schoolcomm-panel rounded-[2rem] p-6">
-            <h2 class="text-xl font-black text-slate-900">조금 뒤에 다시 열어 주세요</h2>
-            <p class="mt-2 text-sm text-slate-500">서비스 준비가 끝나면 바로 같은 화면으로 이어서 사용할 수 있습니다.</p>
+            <h2 class="text-xl font-black text-slate-900">잠시 후 다시 열기</h2>
             <div class="mt-4">
                 <a href="{% url 'home' %}" class="inline-flex items-center rounded-full bg-slate-900 px-5 py-3 text-sm font-black text-white">
                     홈으로 돌아가기
@@ -59,7 +58,7 @@
         <div class="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
             <section class="schoolcomm-panel rounded-[2rem] p-6">
                 <h2 class="text-xl font-black text-slate-900">채팅방 만들기</h2>
-                <p class="mt-2 text-sm text-slate-500">채팅방 이름만 정하면 바로 시작할 수 있어요.</p>
+                <p class="mt-2 text-sm text-slate-500">이름만 정하기</p>
                 <form method="post" action="{% url 'schoolcomm:create_workspace' %}" class="mt-5 space-y-4">
                     {% csrf_token %}
                     <div>
@@ -73,22 +72,21 @@
             </section>
 
             <section class="schoolcomm-panel rounded-[2rem] p-6">
-                <h2 class="text-xl font-black text-slate-900">들어오는 방식</h2>
+                <h2 class="text-xl font-black text-slate-900">시작 흐름</h2>
                 <div class="mt-4 space-y-3">
                     <div class="rounded-2xl border border-slate-200 px-4 py-4">
-                        <p class="text-sm font-black text-slate-900">1. 채팅방 만들기</p>
-                        <p class="mt-1 text-sm text-slate-500">동학년, 교과, 업무 모임 이름만 정하면 바로 시작됩니다.</p>
+                        <p class="text-sm font-black text-slate-900">채팅방 만들기</p>
+                        <p class="mt-1 text-sm text-slate-500">이름만 정하기</p>
                     </div>
                     <div class="rounded-2xl border border-slate-200 px-4 py-4">
-                        <p class="text-sm font-black text-slate-900">2. 초대 링크 보내기</p>
-                        <p class="mt-1 text-sm text-slate-500">함께 쓸 선생님에게 링크만 전달하면 됩니다.</p>
+                        <p class="text-sm font-black text-slate-900">초대 링크 보내기</p>
+                        <p class="mt-1 text-sm text-slate-500">링크 공유</p>
                     </div>
                     <div class="rounded-2xl border border-slate-200 px-4 py-4">
-                        <p class="text-sm font-black text-slate-900">3. 링크로 바로 입장</p>
-                        <p class="mt-1 text-sm text-slate-500">초대 링크가 있는 사람만 바로 들어올 수 있어요.</p>
+                        <p class="text-sm font-black text-slate-900">링크로 입장</p>
+                        <p class="mt-1 text-sm text-slate-500">초대한 사람만 입장</p>
                     </div>
                 </div>
-                <p class="mt-4 text-sm text-slate-500">따로 승인 대기를 거치지 않아도 바로 공지, 자료, 대화를 이어갈 수 있습니다.</p>
             </section>
         </div>
         {% else %}
@@ -190,7 +188,7 @@
                         <div class="flex items-start justify-between gap-3">
                             <div>
                                 <p class="text-sm font-black text-slate-900">공지</p>
-                                <p class="mt-1 text-sm text-slate-500">{{ dashboard.notice_room.summary|default:"중요 공지를 먼저 확인하세요." }}</p>
+                                <p class="mt-1 text-sm text-slate-500">{{ dashboard.notice_room.summary|default:"공지 확인" }}</p>
                             </div>
                             <span class="inline-flex min-w-10 justify-center rounded-full bg-amber-50 px-3 py-1 text-sm font-black text-amber-700">{{ dashboard.notice_room.unread_count }}</span>
                         </div>
@@ -201,7 +199,7 @@
                         <div class="flex items-start justify-between gap-3">
                             <div>
                                 <p class="text-sm font-black text-slate-900">자료공유</p>
-                                <p class="mt-1 text-sm text-slate-500">{{ dashboard.shared_room.summary|default:"수업자료와 업무자료를 바로 나눌 수 있습니다." }}</p>
+                                <p class="mt-1 text-sm text-slate-500">{{ dashboard.shared_room.summary|default:"자료 공유" }}</p>
                             </div>
                             <span class="inline-flex min-w-10 justify-center rounded-full bg-blue-50 px-3 py-1 text-sm font-black text-blue-700">{{ dashboard.shared_room.unread_count }}</span>
                         </div>
@@ -235,7 +233,7 @@
                     <div class="flex items-center justify-between gap-3">
                         <div>
                             <h2 class="text-xl font-black text-slate-900">최근 대화</h2>
-                            <p class="mt-1 text-sm text-slate-500">자주 여는 1:1, 그룹 대화를 여기서 바로 이어갑니다.</p>
+                            <p class="mt-1 text-sm text-slate-500">최근 대화</p>
                         </div>
                     </div>
 
@@ -244,13 +242,13 @@
                         <a href="{{ room.url }}" class="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-4">
                             <div class="min-w-0">
                                 <p class="text-sm font-black text-slate-900">{{ room.name }}</p>
-                                <p class="mt-1 truncate text-sm text-slate-500">{{ room.summary|default:"새 대화를 시작해 보세요." }}</p>
+                                <p class="mt-1 truncate text-sm text-slate-500">{{ room.summary|default:"새 대화" }}</p>
                             </div>
                             <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">{{ room.unread_count }}</span>
                         </a>
                         {% empty %}
                         <div class="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
-                            아직 시작한 대화가 없습니다.
+                            대화 없음
                         </div>
                         {% endfor %}
                     </div>
@@ -259,7 +257,7 @@
                         <summary class="flex items-center justify-between gap-3">
                             <div>
                                 <p class="text-sm font-black text-slate-900">새 대화 시작</p>
-                                <p class="mt-1 text-xs text-slate-500">한 명을 고르면 1:1 대화, 여러 명을 고르면 그룹 대화가 만들어집니다.</p>
+                                <p class="mt-1 text-xs text-slate-500">한 명은 1:1, 여러 명은 그룹</p>
                             </div>
                             <span class="inline-flex rounded-full bg-slate-900 px-3 py-1.5 text-xs font-black text-white"><span data-schoolcomm-selected-count="true">0</span>명 선택</span>
                         </summary>
@@ -285,14 +283,14 @@
                                 {% endif %}
                                 {% endfor %}
                             </div>
-                            <p class="mt-3 text-xs text-slate-500">최대 4명까지 선택할 수 있습니다. 나를 포함하면 그룹 대화는 최대 5명입니다.</p>
+                            <p class="mt-3 text-xs text-slate-500">최대 4명</p>
                             <p class="mt-2 hidden rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700" data-schoolcomm-member-feedback="true"></p>
                             <button type="submit" class="mt-4 inline-flex rounded-full bg-slate-900 px-4 py-2.5 text-sm font-black text-white" data-schoolcomm-member-submit="true">
                                 대화방 만들기
                             </button>
                         </form>
                         {% else %}
-                        <p class="mt-4 text-sm text-slate-500">먼저 다른 선생님을 초대하면 대화를 시작할 수 있습니다.</p>
+                        <p class="mt-4 text-sm text-slate-500">초대 후 시작</p>
                         {% endif %}
                     </details>
                 </section>
@@ -306,7 +304,7 @@
                     <summary class="flex items-center justify-between gap-3">
                         <div>
                             <h2 class="text-xl font-black text-slate-900">관리</h2>
-                            <p class="mt-1 text-sm text-slate-500">초대 링크와 멤버를 여기서만 관리합니다.</p>
+                            <p class="mt-1 text-sm text-slate-500">초대와 멤버 관리</p>
                         </div>
                         <div class="flex flex-wrap justify-end gap-2">
                             <span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">선생님 {{ dashboard.member_count }}명</span>

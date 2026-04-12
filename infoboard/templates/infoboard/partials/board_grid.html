@@ -1,8 +1,8 @@
 {% if not all_board_count %}
 <section class="ib-empty-state">
     <div class="ib-empty-emoji">📥</div>
-    <h2>첫 제출보드를 만들면 바로 링크까지 준비돼요</h2>
-    <p>수업 자료, 수행평가 결과물, 링크 모음처럼 학생이 바로 올려야 하는 일을 가장 먼저 시작해보세요.</p>
+    <h2>첫 제출보드 만들기</h2>
+    <p>바로 링크 생성</p>
     <button type="button"
         hx-get="{% url 'infoboard:board_create' %}?preset=submit"
         hx-target="#ibModal"

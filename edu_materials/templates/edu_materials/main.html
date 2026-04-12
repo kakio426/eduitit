@@ -208,24 +208,24 @@
                 <div>
                     {% if request.user.is_authenticated %}
                     <p class="text-sm font-bold uppercase tracking-[0.32em] text-emerald-600">AI 수업자료 메이커</p>
-                    <h1 class="text-4xl md:text-5xl font-black text-slate-900 mt-2">수업에 바로 쓰는 자료를 찾고, 내 자료를 정리하고, 필요하면 직접 만들기</h1>
-                    <p class="text-slate-600 mt-4 max-w-4xl text-lg">공개 자료실에서 좋은 수업 예시를 먼저 훑고, 내 보관함에서 다시 쓰는 자료를 정리하고, 새 자료 만들기는 따로 분리해 교실 업무 흐름이 섞이지 않게 했습니다.</p>
+                    <h1 class="text-4xl md:text-5xl font-black text-slate-900 mt-2">수업 자료 찾기, 정리, 만들기</h1>
+                    <p class="text-slate-600 mt-4 max-w-4xl text-lg">공개 자료실, 내 보관함, 새 자료 만들기.</p>
                     {% else %}
                     <p class="text-sm font-bold uppercase tracking-[0.32em] text-emerald-600">AI 수업자료 메이커</p>
-                    <h1 class="text-4xl md:text-5xl font-black text-slate-900 mt-2">로그인 없이도 교사들이 만든 수업 자료를 먼저 체험해보세요</h1>
-                    <p class="text-slate-600 mt-4 max-w-4xl text-lg">대표 자료는 움직이는 화면으로 바로 체험하고, 아래 공개 자료실에서는 가벼운 카드로 빠르게 훑을 수 있습니다. 마음에 드는 흐름이 보이면 로그인 후 내 자료로 가져와 다듬을 수 있습니다.</p>
+                    <h1 class="text-4xl md:text-5xl font-black text-slate-900 mt-2">공개 수업 자료 보기</h1>
+                    <p class="text-slate-600 mt-4 max-w-4xl text-lg">대표 자료 체험 후 공개 자료실 확인.</p>
                     {% endif %}
                 </div>
                 <div class="grid gap-3 sm:grid-cols-2 xl:min-w-[320px]">
                     <div class="rounded-[28px] border border-emerald-100 bg-emerald-50/80 px-5 py-4">
                         <div class="text-xs font-bold uppercase tracking-[0.24em] text-emerald-700">공개 자료</div>
                         <div class="mt-2 text-3xl font-black text-slate-900">{{ shared_material_count }}</div>
-                        <div class="mt-1 text-sm text-slate-600">교실에서 바로 둘러볼 수 있는 자료</div>
+                        <div class="mt-1 text-sm text-slate-600">둘러보기</div>
                     </div>
                     <div class="rounded-[28px] border border-slate-200 bg-white/90 px-5 py-4">
                         <div class="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">내 자료</div>
                         <div class="mt-2 text-3xl font-black text-slate-900">{% if request.user.is_authenticated %}{{ my_material_count }}{% else %}-{% endif %}</div>
-                        <div class="mt-1 text-sm text-slate-600">{% if request.user.is_authenticated %}수정하고 다시 쓰는 내 보관함{% else %}로그인하면 내 보관함이 열립니다{% endif %}</div>
+                        <div class="mt-1 text-sm text-slate-600">{% if request.user.is_authenticated %}내 보관함{% else %}로그인 후 사용{% endif %}</div>
                     </div>
                 </div>
             </div>
@@ -239,7 +239,7 @@
             {% else %}
             <div class="mt-6 flex flex-wrap items-center gap-3">
                 <a href="{% url 'account_login' %}?next={{ request.get_full_path|urlencode }}" class="rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-emerald-600/15">로그인하고 내 자료실 열기</a>
-                <span class="text-sm text-slate-500">로그인하면 자료 만들기, 분류 수정, 내 자료로 복사해 수정하기가 열립니다.</span>
+                <span class="text-sm text-slate-500">로그인 후 편집 가능</span>
             </div>
             {% endif %}
         </div>
@@ -251,8 +251,8 @@
                     <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                         <div>
                             <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">검색과 필터</div>
-                            <h2 class="text-2xl font-black text-slate-900 mt-2">{% if active_tab == 'my' %}내 자료를 빨리 다시 찾기{% else %}필요한 공개 자료를 바로 찾기{% endif %}</h2>
-                            <p class="text-sm text-slate-500 mt-1">검색어, 과목, 자료 유형, 학년, 태그, 정렬 순서를 한 번에 잡아 원하는 자료만 남기세요.</p>
+                            <h2 class="text-2xl font-black text-slate-900 mt-2">{% if active_tab == 'my' %}내 자료 찾기{% else %}공개 자료 찾기{% endif %}</h2>
+                            <p class="text-sm text-slate-500 mt-1">조건 선택</p>
                         </div>
                         <div class="rounded-full bg-emerald-50 border border-emerald-100 px-4 py-2 text-sm font-black text-emerald-700 flex items-center gap-2">
                             <span class="edu-materials-summary-label">검색 필터 열기</span>
@@ -334,20 +334,20 @@
             <div class="edu-materials-panel rounded-[32px] p-6 md:p-8">
                 <div class="mb-6">
                     <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">새 자료 만들기</div>
-                    <h2 class="text-3xl font-black text-slate-900 mt-2">저장하면 바로 학생에게 보여 줄 준비가 끝납니다</h2>
-                    <p class="text-sm text-slate-500 mt-2">새 자료는 저장과 동시에 학생 공유가 켜집니다. 수업 시작판에서는 미리보기와 공유판만 바로 확인하면 됩니다.</p>
+                    <h2 class="text-3xl font-black text-slate-900 mt-2">새 자료 만들기</h2>
+                    <p class="text-sm text-slate-500 mt-2">저장 후 공개</p>
                 </div>
 
                 <div class="grid gap-3 md:grid-cols-2">
                     <button type="button" class="edu-create-mode-button rounded-[28px] p-5 text-left" data-create-mode-button data-mode="paste" data-active="true">
-                        <div class="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600">AI 도움으로 만들기</div>
-                        <div class="mt-2 text-2xl font-black text-slate-900">주제를 적고 만든 자료 붙여넣기</div>
-                        <p class="mt-2 text-sm leading-6 text-slate-600">학습 주제를 적으면 안내문이 준비됩니다. AI가 만든 자료 전체를 붙여넣어 바로 저장합니다.</p>
+                        <div class="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600">AI</div>
+                        <div class="mt-2 text-2xl font-black text-slate-900">주제 입력 후 붙여넣기</div>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">주제 입력 후 HTML 붙여넣기</p>
                     </button>
                     <button type="button" class="edu-create-mode-button rounded-[28px] p-5 text-left" data-create-mode-button data-mode="file" data-active="false">
-                        <div class="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600">완성 자료 올리기</div>
-                        <div class="mt-2 text-2xl font-black text-slate-900">만들어 둔 파일 바로 올리기</div>
-                        <p class="mt-2 text-sm leading-6 text-slate-600">이미 만들어 둔 자료 파일이 있으면 제목만 적고 바로 올립니다.</p>
+                        <div class="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600">파일</div>
+                        <div class="mt-2 text-2xl font-black text-slate-900">HTML 파일 올리기</div>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">파일 선택 후 저장</p>
                     </button>
                 </div>
 
@@ -360,8 +360,8 @@
                             <div class="edu-materials-helper-card rounded-[28px] p-5 text-white space-y-4">
                                 <div class="flex items-start justify-between gap-3">
                                     <div>
-                                        <p class="text-xs font-bold uppercase tracking-[0.28em] text-emerald-200">AI로 자료 만들기</p>
-                                        <h3 class="text-2xl font-black mt-2">학습 주제만 쓰면 안내문이 바로 준비됩니다</h3>
+                                        <p class="text-xs font-bold uppercase tracking-[0.28em] text-emerald-200">AI 준비</p>
+                                        <h3 class="text-2xl font-black mt-2">주제 입력</h3>
                                     </div>
                                     <span class="rounded-full bg-white/10 px-3 py-1 text-xs font-black text-emerald-100 border border-white/15">AI 제작 도움</span>
                                 </div>
@@ -373,19 +373,19 @@
 
                                 <div>
                                     <div class="flex items-center justify-between gap-3">
-                                        <label for="lesson-prompt-preview" class="block text-sm font-bold text-emerald-50">AI에 넣을 안내문</label>
-                                        <span class="text-xs text-emerald-100/90">학습 주제만 바꾸면 자동 갱신</span>
+                                        <label for="lesson-prompt-preview" class="block text-sm font-bold text-emerald-50">AI 프롬프트</label>
+                                        <span class="text-xs text-emerald-100/90">자동 갱신</span>
                                     </div>
                                     <textarea id="lesson-prompt-preview" class="edu-materials-input edu-prompt-preview mt-2" readonly></textarea>
                                 </div>
 
                                 <div class="grid gap-2 sm:grid-cols-2">
-                                    <button type="button" id="copy-prompt-button" class="rounded-2xl bg-white px-4 py-3 text-sm font-black text-slate-900">안내문 복사</button>
-                                    <button type="button" id="open-gemini-guide-button" class="edu-materials-gemini-button rounded-2xl px-4 py-3 text-sm font-black">복사 후 AI 열기</button>
+                                    <button type="button" id="copy-prompt-button" class="rounded-2xl bg-white px-4 py-3 text-sm font-black text-slate-900">프롬프트 복사</button>
+                                    <button type="button" id="open-gemini-guide-button" class="edu-materials-gemini-button rounded-2xl px-4 py-3 text-sm font-black">AI 열기</button>
                                 </div>
 
-                                <p id="prompt-copy-status" class="min-h-[20px] text-xs text-emerald-100/90">학습 주제를 적고 안내문을 복사하면 바로 제작을 시작할 수 있습니다.</p>
-                                <p class="text-xs text-emerald-100/90">완성되면 AI에서 받은 자료 전체를 아래 칸에 그대로 붙여넣으면 됩니다.</p>
+                                <p id="prompt-copy-status" class="min-h-[20px] text-xs text-emerald-100/90">주제 입력 후 복사</p>
+                                <p class="text-xs text-emerald-100/90">완성 HTML 붙여넣기</p>
                             </div>
 
                             <div>
@@ -395,9 +395,9 @@
                             <div>
                                 <label class="block text-sm font-bold text-slate-700 mb-2">완성된 자료 붙여넣기</label>
                                 <textarea name="html_content" class="edu-materials-input min-h-[220px]" placeholder="AI에서 받은 자료 전체를 그대로 붙여넣으세요." required></textarea>
-                                <p class="text-xs text-slate-500 mt-2">저장과 동시에 학생 공유가 켜집니다. 다음 화면에서는 미리보기와 공유판만 확인하면 됩니다.</p>
+                                <p class="text-xs text-slate-500 mt-2">저장 후 시작판 확인</p>
                             </div>
-                            <button type="submit" class="w-full rounded-2xl bg-emerald-600 py-4 text-white text-lg font-black shadow-lg shadow-emerald-600/15 hover:-translate-y-0.5 transition">저장하고 바로 시작판 보기</button>
+                            <button type="submit" class="w-full rounded-2xl bg-emerald-600 py-4 text-white text-lg font-black shadow-lg shadow-emerald-600/15 hover:-translate-y-0.5 transition">저장하고 시작판 보기</button>
                         </form>
                     </div>
 
@@ -408,8 +408,8 @@
 
                             <div class="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
                                 <div class="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600">파일 업로드</div>
-                                <h3 class="mt-2 text-2xl font-black text-slate-900">만들어 둔 파일을 바로 시작판으로 보내기</h3>
-                                <p class="mt-2 text-sm leading-6 text-slate-600">자료 파일을 올리면 저장과 동시에 학생 공유가 켜지고, 바로 시작판에서 확인할 수 있습니다.</p>
+                                <h3 class="mt-2 text-2xl font-black text-slate-900">HTML 파일 올리기</h3>
+                                <p class="mt-2 text-sm leading-6 text-slate-600">저장 후 시작판 확인</p>
                             </div>
 
                             <div>
@@ -419,9 +419,9 @@
                             <div>
                                 <label class="block text-sm font-bold text-slate-700 mb-2">자료 파일 올리기</label>
                                 <input type="file" name="html_file" accept=".html,.htm,text/html" class="edu-materials-input" required>
-                                <p class="text-xs text-slate-500 mt-2">웹자료 파일(.html) 하나만 올리면 됩니다. 저장하면 학생 공유가 바로 켜집니다.</p>
+                                <p class="text-xs text-slate-500 mt-2">HTML 파일 1개</p>
                             </div>
-                            <button type="submit" class="w-full rounded-2xl bg-emerald-600 py-4 text-white text-lg font-black shadow-lg shadow-emerald-600/15 hover:-translate-y-0.5 transition">저장하고 바로 시작판 보기</button>
+                            <button type="submit" class="w-full rounded-2xl bg-emerald-600 py-4 text-white text-lg font-black shadow-lg shadow-emerald-600/15 hover:-translate-y-0.5 transition">저장하고 시작판 보기</button>
                         </form>
                     </div>
                 </div>
@@ -429,22 +429,12 @@
 
             <aside class="space-y-6">
                 <div class="edu-materials-panel rounded-[32px] p-6">
-                    <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">저장 후 바로 할 일</div>
-                    <h2 class="text-2xl font-black text-slate-900 mt-2">저장 직후에는 이 세 가지만 보면 됩니다</h2>
+                    <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">저장 후</div>
+                    <h2 class="text-2xl font-black text-slate-900 mt-2">다음 확인</h2>
                     <div class="mt-5 space-y-3 text-sm text-slate-600">
-                        <div class="rounded-[24px] border border-slate-200 bg-white p-4">1. 수업 시작판에서 미리보기가 실제로 움직이는지 확인합니다.</div>
-                        <div class="rounded-[24px] border border-slate-200 bg-white p-4">2. 과목, 학년, 유형, 요약을 분류 수정에서 다듬습니다.</div>
-                        <div class="rounded-[24px] border border-slate-200 bg-white p-4">3. 전체화면 공유판을 열어 QR과 6자리 코드를 교실 화면에 띄웁니다.</div>
-                    </div>
-                </div>
-
-                <div class="edu-materials-panel rounded-[32px] p-6">
-                    <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">처음 써도 쉬운 자료</div>
-                    <h2 class="text-2xl font-black text-slate-900 mt-2">저장 직후에도 이 세 가지만 바로 보이면 좋습니다</h2>
-                    <div class="mt-5 space-y-3 text-sm text-slate-600">
-                        <div class="rounded-[24px] border border-slate-200 bg-white p-4">제목만 읽어도 학생이 어떤 활동인지 알 수 있는 자료</div>
-                        <div class="rounded-[24px] border border-slate-200 bg-white p-4">미리보기에서 멈춤 없이 실행되는 자료</div>
-                        <div class="rounded-[24px] border border-slate-200 bg-white p-4">교사가 다음 단계로 넘어갈 때 설명이 거의 필요 없는 자료</div>
+                        <div class="rounded-[24px] border border-slate-200 bg-white p-4">미리보기 확인</div>
+                        <div class="rounded-[24px] border border-slate-200 bg-white p-4">분류 수정</div>
+                        <div class="rounded-[24px] border border-slate-200 bg-white p-4">QR 열기</div>
                     </div>
                 </div>
             </aside>
@@ -455,7 +445,7 @@
                 <div>
                     <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">내 보관함</div>
                     <h2 class="text-3xl font-black text-slate-900 mt-2">내 자료를 다시 쓰기 쉽게 정리하기</h2>
-                    <p class="text-sm text-slate-500 mt-2">수업 준비 중인 자료는 큰 미리보기로 빠르게 확인하고, 분류 수정이나 공유판 확인은 카드에서 바로 이어집니다.</p>
+                    <p class="text-sm text-slate-500 mt-2">미리보기, 수정, 공유판.</p>
                 </div>
                 <a href="?tab=create" class="rounded-2xl bg-emerald-600 px-5 py-3 text-center text-sm font-black text-white shadow-lg shadow-emerald-600/15">새 자료 만들기</a>
             </div>
@@ -470,8 +460,8 @@
             </div>
             {% else %}
             <div class="edu-materials-panel rounded-[28px] p-10 text-center text-slate-500">
-                <p class="text-lg font-bold text-slate-700">아직 내 보관함에 저장된 자료가 없습니다.</p>
-                <p class="mt-2">새 자료 만들기에서 첫 자료를 저장하면, 여기서 분류 수정과 공유판 확인을 바로 이어갈 수 있습니다.</p>
+                <p class="text-lg font-bold text-slate-700">보관 자료 없음</p>
+                <p class="mt-2">첫 자료를 저장하세요.</p>
             </div>
             {% endif %}
 
@@ -492,8 +482,8 @@
             <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                 <div>
                     <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">공개 자료실</div>
-                    <h2 class="text-3xl font-black text-slate-900 mt-2">좋은 수업 자료를 먼저 훑고, 필요하면 바로 가져오기</h2>
-                    <p class="text-sm text-slate-500 mt-2">대표 자료는 움직이는 화면으로 먼저 체험하고, 아래 목록에서는 가벼운 카드로 빠르게 비교할 수 있습니다.</p>
+                    <h2 class="text-3xl font-black text-slate-900 mt-2">공개 자료 둘러보기</h2>
+                    <p class="text-sm text-slate-500 mt-2">대표 자료와 전체 목록.</p>
                 </div>
                 {% if request.user.is_authenticated %}
                 <a href="?tab=my" class="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-center text-sm font-black text-slate-700">내 보관함 보기</a>
@@ -504,7 +494,7 @@
             <div class="space-y-3">
                 <div>
                     <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">대표 체험 화면</div>
-                    <p class="text-sm text-slate-500 mt-1">공개 자료실에서 먼저 눈에 들어와야 할 자료는 한 장만 크게 보여 주고, 아래 목록은 가볍게 유지합니다.</p>
+                    <p class="text-sm text-slate-500 mt-1">대표 자료 1개</p>
                 </div>
                 <div class="edu-materials-board-wrap rounded-[32px] p-3 md:p-4">
                     <div class="grid gap-5">
@@ -518,7 +508,7 @@
             <div class="space-y-3">
                 <div>
                     <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">전체 공개 자료</div>
-                    <p class="text-sm text-slate-500 mt-1">목록은 스크롤이 가볍게 내려가도록 작은 카드 중심으로 정리했습니다.</p>
+                    <p class="text-sm text-slate-500 mt-1">전체 목록</p>
                 </div>
                 <div class="edu-materials-board-wrap rounded-[32px] p-3 md:p-4">
                     <div class="grid gap-5 xl:grid-cols-2">
@@ -531,7 +521,7 @@
             {% elif not featured_public_material %}
             <div class="edu-materials-panel rounded-[28px] p-10 text-center text-slate-500">
                 <p class="text-lg font-bold text-slate-700">조건에 맞는 공개 자료가 없습니다.</p>
-                <p class="mt-2">검색어나 필터를 조금 넓혀서 다시 찾아보세요.</p>
+                <p class="mt-2">조건을 바꿔 다시 검색하세요.</p>
             </div>
             {% endif %}
 
@@ -555,38 +545,38 @@
     <div class="edu-modal-panel w-full max-w-2xl rounded-[32px] bg-white border border-slate-200 p-6 md:p-8">
         <div class="flex items-start justify-between gap-4">
             <div>
-                <p class="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600">AI 사용 안내</p>
-                <h3 class="text-3xl font-black text-slate-900 mt-2">이 순서대로 하면 가장 덜 헷갈립니다</h3>
-                <p class="text-sm text-slate-500 mt-2">프롬프트는 이미 복사되어 있으니 새 탭에서 바로 붙여넣어 시작하시면 됩니다.</p>
+                <p class="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600">AI 열기</p>
+                <h3 class="text-3xl font-black text-slate-900 mt-2">복사 -> AI -> 붙여넣기</h3>
+                <p class="text-sm text-slate-500 mt-2">순서만 확인</p>
             </div>
             <button type="button" data-close-gemini-guide class="rounded-full border border-slate-200 px-3 py-2 text-sm font-bold text-slate-600">닫기</button>
         </div>
 
         <div class="mt-6 grid gap-3 md:grid-cols-2">
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p class="text-xs font-bold uppercase tracking-[0.24em] text-emerald-600">1단계</p>
-                <p class="mt-2 text-base font-bold text-slate-900">AI(제미나이, GPT 등)에서 <span class="text-emerald-700">Canvas·Artifacts 같은 작업 화면</span>을 먼저 여세요.</p>
+                <p class="text-xs font-bold uppercase tracking-[0.24em] text-emerald-600">1</p>
+                <p class="mt-2 text-base font-bold text-slate-900">AI 열기</p>
             </div>
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p class="text-xs font-bold uppercase tracking-[0.24em] text-emerald-600">2단계</p>
-                <p class="mt-2 text-base font-bold text-slate-900">가능하면 <span class="text-emerald-700">사고모델 이상 또는 고급 추론 모드</span>로 실행하도록 권장합니다.</p>
+                <p class="text-xs font-bold uppercase tracking-[0.24em] text-emerald-600">2</p>
+                <p class="mt-2 text-base font-bold text-slate-900">프롬프트 붙여넣기</p>
             </div>
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p class="text-xs font-bold uppercase tracking-[0.24em] text-emerald-600">3단계</p>
-                <p class="mt-2 text-base font-bold text-slate-900">완성되면 결과 화면의 <span class="text-emerald-700">코드/HTML</span> 부분을 열어 전체 HTML을 복사하세요.</p>
+                <p class="text-xs font-bold uppercase tracking-[0.24em] text-emerald-600">3</p>
+                <p class="mt-2 text-base font-bold text-slate-900">HTML 전체 복사</p>
             </div>
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p class="text-xs font-bold uppercase tracking-[0.24em] text-emerald-600">4단계</p>
-                <p class="mt-2 text-base font-bold text-slate-900">이 화면으로 돌아와 <span class="text-emerald-700">완성된 HTML 코드 붙여넣기</span> 칸에 그대로 넣고 저장하세요.</p>
+                <p class="text-xs font-bold uppercase tracking-[0.24em] text-emerald-600">4</p>
+                <p class="mt-2 text-base font-bold text-slate-900">여기에 붙여넣기</p>
             </div>
         </div>
 
         <div class="mt-6 rounded-2xl bg-emerald-50 border border-emerald-100 p-4 text-sm text-emerald-900">
-            한 단계 더 줄이기는 외부 AI 서비스 보안 정책 때문에 한계가 있지만, 지금은 <span class="font-black">학습 주제 입력 → 복사 → AI 열기 → 코드 전체 복사 → 붙여넣기</span>로 가장 짧게 줄여 둔 상태입니다.
+            <span class="font-black">주제 입력 → 복사 → AI → HTML 복사 → 붙여넣기</span>
         </div>
 
         <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-            <button type="button" data-close-gemini-guide class="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-black text-slate-700 bg-white">이 화면으로 돌아가기</button>
+            <button type="button" data-close-gemini-guide class="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-black text-slate-700 bg-white">돌아가기</button>
             <a id="gemini-link-button" href="https://gemini.google.com/app" target="_blank" rel="noopener" class="rounded-2xl bg-emerald-600 px-5 py-3 text-center text-sm font-black text-white shadow-lg shadow-emerald-600/20">AI 도구 열기 (예: 제미나이)</a>
         </div>
     </div>
@@ -667,9 +657,9 @@
                 '',
                 '[출력 구조]',
                 '',
-                '1. 수업 설계 의도: 이 자료를 어떻게 활용하면 좋을지 교사를 위한 짧은 가이드를 먼저 제공합니다.',
-                '2. HTML 코드: 주석을 상세히 달아 코드를 설명하고, 가독성 높은 단일 HTML 파일 전체를 제공합니다.',
-                '3. 학습 질문: 자료를 활용해 학생들에게 던질 수 있는 핵심 질문 3가지를 제안합니다.'
+                '1. 교사용 한 줄: 수업에서 어떻게 쓰면 좋은지 한 줄로 정리합니다.',
+                '2. HTML 코드: 주석을 포함한 단일 HTML 전체를 제공합니다.',
+                '3. 학습 질문: 핵심 질문 3개를 제안합니다.'
             ].join('\n');
         };
 
@@ -706,7 +696,7 @@
                         throw new Error('copy-failed');
                     }
                 }
-                setCopyStatus('프롬프트를 복사했습니다. 제미나이에서 바로 붙여넣어 시작하세요.', false);
+                setCopyStatus('프롬프트 복사 완료', false);
                 return true;
             } catch (error) {
                 if (promptPreview) {
@@ -714,7 +704,7 @@
                     promptPreview.select();
                     promptPreview.setSelectionRange(0, promptPreview.value.length);
                 }
-                setCopyStatus('자동 복사가 막혀 있어 프롬프트를 선택해 두었습니다. 직접 복사해서 사용해 주세요.', true);
+                setCopyStatus('프롬프트 선택됨. 직접 복사', true);
                 return false;
             }
         };

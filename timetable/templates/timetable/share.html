@@ -42,7 +42,7 @@
                 <div>
                     <p class="text-sm font-semibold text-slate-500">{{ workspace.school.name }} · {{ workspace.school_year }}학년도 · {{ workspace.term }}</p>
                     <h1 class="mt-2 text-3xl font-black text-slate-900">{{ title }}</h1>
-                    <p class="mt-2 text-sm leading-6 text-slate-500">필요한 시간표만 바로 보고, 브라우저 인쇄 메뉴에서 PDF로 저장할 수 있습니다.</p>
+                    <p class="mt-2 text-sm leading-6 text-slate-500">시간표 확인 · PDF</p>
                 </div>
                 <button type="button" onclick="window.print()"
                     class="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-5 py-3 text-sm font-bold text-white hover:bg-slate-800">
@@ -54,7 +54,7 @@
         <section class="print-card overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
             <div class="border-b border-slate-200 px-6 py-5">
                 <h2 class="text-xl font-black text-slate-900">{{ audience_label }}</h2>
-                <p class="mt-1 text-sm text-slate-500">읽기 전용 확정 시간표</p>
+                <p class="mt-1 text-sm text-slate-500">읽기 전용</p>
             </div>
             <div class="overflow-x-auto px-4 py-4">
                 <table class="print-table w-full min-w-[760px] border-separate border-spacing-2 text-sm">
@@ -115,7 +115,7 @@
                                         {% else %}
                                         <div class="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-3 text-amber-900">
                                             <p class="text-sm font-bold">공통 행사</p>
-                                            <p class="mt-1 text-xs font-semibold text-amber-700">수업 대신 행사 일정만 표시됩니다.</p>
+                                            <p class="mt-1 text-xs font-semibold text-amber-700">행사만 표시</p>
                                         </div>
                                         {% endif %}
                                     </div>
@@ -135,7 +135,7 @@
         <section class="print-card overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
             <div class="border-b border-slate-200 px-6 py-5">
                 <h2 class="text-xl font-black text-slate-900">다가오는 예외 일정</h2>
-                <p class="mt-1 text-sm text-slate-500">특강, 대체수업, 날짜별 일정 변경만 따로 모아 봅니다.</p>
+                <p class="mt-1 text-sm text-slate-500">날짜별 변경</p>
             </div>
             <div class="px-4 py-4 md:px-6">
                 {% if upcoming_overrides %}
@@ -169,7 +169,7 @@
                 </div>
                 {% else %}
                 <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
-                    아직 예정된 날짜별 변경이 없습니다.
+                    예정된 변경 없음
                 </div>
                 {% endif %}
             </div>

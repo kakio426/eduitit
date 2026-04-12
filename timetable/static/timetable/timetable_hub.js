@@ -137,7 +137,7 @@
       saveSharedEventButton.textContent = "행사 저장";
     }
     cancelSharedEventButton?.classList.add("hidden");
-    setEventStatus("행사를 저장하면 해당 시간대가 모든 반에 함께 표시됩니다.", "idle");
+    setEventStatus("저장 시 공통 반영", "idle");
   };
 
   const fillEventForm = (event) => {
@@ -164,7 +164,7 @@
       saveSharedEventButton.textContent = "행사 수정 저장";
     }
     cancelSharedEventButton?.classList.remove("hidden");
-    setEventStatus("수정할 행사 내용을 바꾼 뒤 저장하세요.", "idle");
+    setEventStatus("행사 수정 후 저장", "idle");
   };
 
   const renderSharedEvents = () => {
@@ -176,7 +176,7 @@
       sharedEventsCount.textContent = `${events.length}개`;
     }
     if (!events.length) {
-      sharedEventsList.innerHTML = '<div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">아직 적용된 공통 행사가 없습니다.</div>';
+      sharedEventsList.innerHTML = '<div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">공통 행사 없음</div>';
       return;
     }
     sharedEventsList.innerHTML = events
@@ -363,7 +363,7 @@
     if (publishBlockerList) {
       const blockers = publishReadiness?.blockers || [];
       if (!blockers.length) {
-        publishBlockerList.innerHTML = '<li class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">현재 큰 차단 사유 없이 확정 가능한 상태입니다.</li>';
+        publishBlockerList.innerHTML = '<li class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">확정 가능</li>';
       } else {
         publishBlockerList.innerHTML = blockers
           .slice(0, 4)
@@ -381,7 +381,7 @@
       return;
     }
     if (!(items || []).length) {
-      recentActivityList.innerHTML = '<div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">아직 기록된 주요 활동이 없습니다.</div>';
+      recentActivityList.innerHTML = '<div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">주요 활동 없음</div>';
       return;
     }
     recentActivityList.innerHTML = (items || [])
@@ -412,9 +412,9 @@
     if (!range) {
       selectionStateBadge.textContent = "선택 전";
       selectionStateBadge.className = "rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600";
-      selectionSheetLabel.textContent = "먼저 칸을 선택해 주세요";
+      selectionSheetLabel.textContent = "칸 선택 전";
       selectionSlotLabel.textContent = "선택된 시간 없음";
-      selectionRangeLabel.textContent = "한 칸 또는 여러 칸을 선택할 수 있습니다.";
+      selectionRangeLabel.textContent = "한 칸 또는 여러 칸";
       return;
     }
 
@@ -433,7 +433,7 @@
         ? `${firstDay} ${firstPeriod}`
         : `${firstDay} ${firstPeriod} ~ ${lastDay} ${lastPeriod}`;
     selectionRangeLabel.textContent =
-      cellCount > 1 ? `${cellCount}칸에 같은 배정을 한 번에 넣습니다.` : "이 칸에만 배정이 들어갑니다.";
+      cellCount > 1 ? `${cellCount}칸 선택` : "한 칸 선택";
   };
 
   const syncValidationUI = (payload) => {
@@ -647,13 +647,13 @@
     };
 
     if ((!links || !links.length) && !portalUrl) {
-      shareLinksList.innerHTML = '<div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">확정 후 읽기 전용 링크가 생성됩니다.</div>';
+      shareLinksList.innerHTML = '<div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">확정 후 링크 생성</div>';
       return;
     }
 
     shareLinksList.innerHTML = `
-      ${renderGroup("반별 바로보기", "아직 반별 링크가 없습니다.", grouped.classLinks)}
-      ${renderGroup("전담·강사 바로보기", "아직 전담·강사 링크가 없습니다.", grouped.teacherLinks)}
+      ${renderGroup("반별 바로보기", "반별 링크 없음", grouped.classLinks)}
+      ${renderGroup("전담·강사 바로보기", "전담·강사 링크 없음", grouped.teacherLinks)}
       ${
         portalUrl
           ? `<div class="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-4">
@@ -689,9 +689,9 @@
     const publishConflicts = payload.publish_result?.conflicts || [];
     const publishWarnings = payload.publish_result?.warnings || [];
     if (publishConflicts.length || publishWarnings.length) {
-      setSaveStatus("확정은 완료했고, 일부 예약 반영 안내가 있습니다. 화면을 새로고침합니다.", "success");
+      setSaveStatus("확정 완료, 일부 예약 반영 확인 필요", "success");
     } else {
-      setSaveStatus("확정과 링크 생성이 완료되었습니다. 화면을 새로고침합니다.", "success");
+      setSaveStatus("확정과 링크 생성 완료", "success");
     }
     window.setTimeout(() => window.location.reload(), 500);
   };
@@ -723,7 +723,7 @@
   const applySelectionValue = (value) => {
     const range = resolveSelectionRange();
     if (!range || !state.workbookApi) {
-      setSaveStatus("먼저 시트에서 칸을 선택해 주세요.", "error");
+      setSaveStatus("칸 선택 필요", "error");
       return;
     }
     for (let row = range.startRow; row <= range.endRow; row += 1) {
@@ -874,7 +874,7 @@
   document.getElementById("apply-selection-button")?.addEventListener("click", () => {
     const text = buildComposerText();
     if (!text) {
-      setSaveStatus("과목 또는 교사 정보를 먼저 입력해 주세요.", "error");
+      setSaveStatus("과목 또는 교사 입력", "error");
       return;
     }
     applySelectionValue(text);
@@ -903,7 +903,7 @@
   document.getElementById("copy-first-share-link")?.addEventListener("click", async () => {
     const firstLink = shareLinksList.querySelector("[data-share-primary-url='true']");
     if (!firstLink) {
-      setSaveStatus("아직 복사할 바로보기 링크가 없습니다.", "error");
+      setSaveStatus("복사할 링크 없음", "error");
       return;
     }
     try {

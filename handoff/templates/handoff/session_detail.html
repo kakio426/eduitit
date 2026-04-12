@@ -76,7 +76,7 @@
 
         {% if session.status == "closed" %}
         <div class="mb-5 rounded-2xl bg-yellow-50 border border-yellow-200 px-4 py-3 text-sm text-yellow-800 font-bold">
-            세션이 마감되어 체크를 수정할 수 없습니다. 다시 열기를 누르면 수정할 수 있습니다.
+            세션 마감 상태
         </div>
         {% endif %}
 
@@ -107,7 +107,7 @@
                 </div>
                 <div class="flex items-center gap-2">
                     <button id="copyPendingBtn" type="button" class="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-black">
-                        미수령 안내문 복사
+                        미수령 복사
                     </button>
                     <a href="{% url 'handoff:session_export_csv' session.id %}" class="px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-700 text-sm font-black">
                         CSV
@@ -161,7 +161,7 @@
         </div>
 
         <div id="emptyState" class="hidden mt-6 rounded-2xl border border-gray-200 bg-white/70 p-8 text-center text-gray-400 font-bold">
-            조건에 맞는 대상이 없습니다.
+            대상 없음
         </div>
     </div>
 </section>

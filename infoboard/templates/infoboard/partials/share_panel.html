@@ -2,7 +2,7 @@
     <div class="flex items-center justify-between mb-5">
         <div>
             <p class="ib-eyebrow">공유 운영</p>
-            <h2 class="text-xl font-black text-gray-900">링크와 QR 정리</h2>
+            <h2 class="text-xl font-black text-gray-900">링크 / QR</h2>
         </div>
         <button type="button" onclick="ibCloseModal()" class="ib-icon-button" aria-label="닫기">
             <i class="fa-solid fa-xmark"></i>
@@ -72,8 +72,8 @@
         {% else %}
         <div class="ib-empty-state compact">
             <div class="ib-empty-emoji">🔗</div>
-            <h3>아직 활성 링크가 없어요</h3>
-            <p>{% if board.allow_student_submit %}제출 링크를 만들면 학생이 바로 벽에 자료를 올릴 수 있어요.{% else %}열람 링크를 만들면 누구나 이 보드를 볼 수 있어요.{% endif %}</p>
+            <h3>활성 링크 없음</h3>
+            <p>{% if board.allow_student_submit %}제출 링크 만들기{% else %}열람 링크 만들기{% endif %}</p>
             <form method="post" action="{% url 'infoboard:share_create' board_id=board.id %}"
                 hx-post="{% url 'infoboard:share_create' board_id=board.id %}"
                 hx-target="#ibModal"

@@ -131,19 +131,19 @@
 
                     {% if session.access_code %}
                     <div class="mt-6 p-4 bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl">
-                        <p class="text-sm text-gray-600 mb-2">입장 코드로 접속</p>
+                        <p class="text-sm text-gray-600 mb-2">입장 코드</p>
                         <div class="text-4xl font-black text-purple-600 tracking-widest">
                             {{ session.access_code }}
                         </div>
                         <div class="mt-3 p-2 bg-white/70 rounded-lg">
-                            <p class="text-xs text-gray-700 font-bold mb-1">📱 학생 접속 방법:</p>
+                            <p class="text-xs text-gray-700 font-bold mb-1">학생 접속</p>
                             <p class="text-sm text-purple-700 font-mono font-bold">eduitit.site/m</p>
-                            <p class="text-xs text-gray-500 mt-1">위 주소에서 입장 코드 입력</p>
+                            <p class="text-xs text-gray-500 mt-1">코드 입력</p>
                         </div>
                     </div>
                     {% endif %}
 
-                    <p class="text-gray-500 mt-4 text-sm">학생들이 이 QR 코드를 스캔하면<br>검사를 시작할 수 있습니다.</p>
+                    <p class="text-gray-500 mt-4 text-sm">QR로 시작</p>
 
                     <button @click="showFullscreen = true"
                         class="mt-4 px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition">
@@ -154,12 +154,12 @@
                     {% if session.is_active %}
                     <div class="mt-4 p-3 bg-green-100 rounded-xl text-green-700 text-sm">
                         <i class="fa-solid fa-circle-check mr-1"></i>
-                        검사가 활성화 상태입니다
+                        검사 진행 중
                     </div>
                     {% else %}
                     <div class="mt-4 p-3 bg-red-100 rounded-xl text-red-600 text-sm">
                         <i class="fa-solid fa-circle-xmark mr-1"></i>
-                        검사가 종료되었습니다
+                        검사 종료
                     </div>
                     {% endif %}
 

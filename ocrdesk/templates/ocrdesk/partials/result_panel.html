@@ -8,8 +8,8 @@
     <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
             <p class="text-sm font-black text-sky-700">2. 읽은 글자</p>
-            <h2 class="mt-1 text-2xl font-black tracking-tight text-slate-900">결과가 여기 채워집니다.</h2>
-            <p class="mt-2 text-sm leading-6 text-slate-500">읽은 글자는 자동으로 정리하지 않았습니다. 필요한 줄만 고치고 바로 복사해서 쓰면 됩니다.</p>
+            <h2 class="mt-1 text-2xl font-black tracking-tight text-slate-900">읽은 결과</h2>
+            <p class="mt-2 text-sm leading-6 text-slate-500">필요한 줄만 수정 후 복사</p>
         </div>
         <span class="rounded-full {% if result_text %}bg-emerald-50 text-emerald-700{% else %}bg-slate-100 text-slate-500{% endif %} px-3 py-1.5 text-xs font-bold">
             {% if result_text %}편집 가능{% else %}결과 대기 중{% endif %}
@@ -30,7 +30,7 @@
     <div class="mt-5 space-y-4">
         <div class="rounded-[24px] bg-slate-50 p-4">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p class="text-sm font-semibold text-slate-600">필요 없는 줄만 지우고 그대로 복사하면 됩니다.</p>
+                <p class="text-sm font-semibold text-slate-600">수정 후 복사</p>
                 <div class="flex flex-wrap gap-2">
                     <button type="button" data-ocrdesk-copy-btn="true" data-target="#ocrdesk-result-text" class="inline-flex min-h-[46px] items-center justify-center rounded-2xl bg-slate-900 px-5 text-sm font-black text-white transition hover:bg-slate-700">
                         결과 복사
@@ -56,16 +56,16 @@
         <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white text-3xl shadow-[inset_0_2px_10px_rgba(148,163,184,0.18)]">📝</div>
         <p data-result-empty-title class="mt-5 text-xl font-black tracking-tight text-slate-900">
             {% if ocr_attempted %}
-            사진을 다시 고르면 이 칸에 새 결과가 들어옵니다.
+            다시 읽기 대기 중
             {% else %}
-            사진을 고르면 이 칸이 바로 채워집니다.
+            결과 대기 중
             {% endif %}
         </p>
         <p data-result-empty-help class="mt-3 text-sm leading-6 text-slate-500">
             {% if ocr_attempted %}
-            글씨가 작거나 흐리면 잘 읽지 못할 수 있습니다. 화면 위 사진 카드에서 다시 고르면 바로 다시 읽습니다.
+            사진 다시 선택
             {% else %}
-            큰 화면에서는 오른쪽에서, 휴대폰에서는 바로 아래에서 결과를 확인할 수 있습니다.
+            사진 선택 후 결과 확인
             {% endif %}
         </p>
         </div>

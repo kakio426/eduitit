@@ -29,7 +29,7 @@
                     </div>
                     <div>
                         <h1 class="text-3xl font-black text-slate-900">{{ workspace.title }}</h1>
-                        <p class="mt-2 text-sm leading-6 text-slate-500">칸을 선택해 배정하고, 반별 입력 현황과 충돌을 함께 확인한 뒤 확정본까지 마무리합니다.</p>
+                        <p class="mt-2 text-sm leading-6 text-slate-500">칸 선택 후 배정 · 확인 · 확정</p>
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <a href="{% url 'timetable:main' %}"
@@ -93,14 +93,13 @@
                     <div class="flex items-center justify-between gap-3">
                         <div>
                             <h2 class="text-lg font-black text-slate-900">현재 선택한 칸</h2>
-                            <p class="mt-1 text-sm text-slate-500">지금 어디에 배정하는지 먼저 확인합니다.</p>
                         </div>
                         <span id="selection-state-badge" class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">선택 전</span>
                     </div>
                     <div class="mt-4 space-y-3">
                         <div class="rounded-2xl bg-slate-50 px-4 py-3">
                             <p class="text-[13px] font-black uppercase tracking-[0.16em] text-slate-400">반</p>
-                            <p id="selection-sheet-label" class="mt-2 text-sm font-bold text-slate-900">먼저 칸을 선택해 주세요</p>
+                            <p id="selection-sheet-label" class="mt-2 text-sm font-bold text-slate-900">칸 선택 전</p>
                         </div>
                         <div class="rounded-2xl bg-slate-50 px-4 py-3">
                             <p class="text-[13px] font-black uppercase tracking-[0.16em] text-slate-400">시간</p>
@@ -108,14 +107,14 @@
                         </div>
                         <div class="rounded-2xl bg-slate-50 px-4 py-3">
                             <p class="text-[13px] font-black uppercase tracking-[0.16em] text-slate-400">선택 범위</p>
-                            <p id="selection-range-label" class="mt-2 text-sm font-bold text-slate-900">한 칸 또는 여러 칸을 선택할 수 있습니다.</p>
+                            <p id="selection-range-label" class="mt-2 text-sm font-bold text-slate-900">한 칸 또는 여러 칸</p>
                         </div>
                     </div>
                 </section>
 
                 <section class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
                     <h2 class="text-lg font-black text-slate-900">빠른 배정</h2>
-                    <p class="mt-2 text-sm leading-6 text-slate-500">과목과 교사를 고른 뒤, 선택한 칸에 바로 넣습니다.</p>
+                    <p class="mt-2 text-sm leading-6 text-slate-500">과목 · 교사 · 특별실</p>
                     <div class="mt-4 space-y-3">
                         <label class="block">
                             <span class="mb-2 block text-sm font-semibold text-slate-700">과목</span>
@@ -164,7 +163,7 @@
                             <p id="summary-conflicts" class="mt-1 text-2xl font-black text-rose-700">{{ validation.summary.conflict_count|default:0 }}</p>
                         </div>
                         <div class="rounded-2xl bg-amber-50 px-3 py-3 text-center">
-                            <p class="text-xs font-semibold text-amber-600">안내</p>
+                            <p class="text-xs font-semibold text-amber-600">주의</p>
                             <p id="summary-warnings" class="mt-1 text-2xl font-black text-amber-700">{{ validation.summary.warning_count|default:0 }}</p>
                         </div>
                         <div class="rounded-2xl bg-slate-100 px-3 py-3 text-center">
@@ -181,9 +180,9 @@
                     <div class="mb-4 flex flex-col gap-3 border-b border-slate-100 px-2 pb-4 md:flex-row md:items-center md:justify-between">
                         <div>
                             <h2 class="text-lg font-black text-slate-900">시간표 편집</h2>
-                            <p class="mt-1 text-sm text-slate-500">칸을 선택하고 배정하면 자동 저장되고, 겹침은 빨간색으로 바로 표시됩니다.</p>
+                            <p class="mt-1 text-sm text-slate-500">선택 후 자동 저장</p>
                         </div>
-                        <p id="timetable-save-status" class="rounded-full bg-slate-100 px-4 py-2 text-sm font-bold text-slate-600">아직 변경 사항이 없습니다.</p>
+                        <p id="timetable-save-status" class="rounded-full bg-slate-100 px-4 py-2 text-sm font-bold text-slate-600">변경 없음</p>
                     </div>
                     <div id="timetable-editor-root" class="min-h-[860px] overflow-hidden rounded-2xl border border-slate-200"></div>
                 </section>
@@ -192,7 +191,7 @@
             <aside class="space-y-6">
                 <section class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
                     <h2 class="text-lg font-black text-slate-900">교사 시수</h2>
-                    <p class="mt-2 text-sm text-slate-500">목표 시수와 현재 배정량을 바로 확인합니다.</p>
+                    <p class="mt-2 text-sm text-slate-500">목표 · 현재 시수</p>
                     <div id="teacher-stats-list" class="mt-4 space-y-3"></div>
                 </section>
 
@@ -200,7 +199,7 @@
                     <div class="flex items-center justify-between gap-3">
                         <div>
                             <h2 class="text-lg font-black text-slate-900">확정 가능 상태</h2>
-                            <p class="mt-2 text-sm text-slate-500">지금 확정을 막는 이유와 바로 확인할 항목을 묶어서 봅니다.</p>
+                            <p class="mt-2 text-sm text-slate-500">확정 전 확인</p>
                         </div>
                         <span id="publish-readiness-badge" class="rounded-full px-3 py-1 text-xs font-bold {% if publish_readiness.can_publish %}bg-emerald-100 text-emerald-700{% else %}bg-amber-100 text-amber-700{% endif %}">
                             {{ publish_readiness.workflow_label }}
@@ -229,13 +228,13 @@
                     <div class="flex items-center justify-between gap-3">
                         <div>
                             <h2 class="text-lg font-black text-slate-900">반별 입력 현황</h2>
-                            <p class="mt-2 text-sm text-slate-500">담임 선생님이 자기 반 입력 링크로 어디까지 작성했는지 바로 봅니다.</p>
+                            <p class="mt-2 text-sm text-slate-500">반별 입력 상태</p>
                         </div>
                         <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">{{ class_input_rows|length }}반</span>
                     </div>
                     <div class="mt-4 grid gap-3 sm:grid-cols-4">
                         <div class="rounded-2xl bg-slate-50 px-3 py-3">
-                            <p class="text-xs font-black uppercase tracking-[0.16em] text-slate-400">아직 안 함</p>
+                            <p class="text-xs font-black uppercase tracking-[0.16em] text-slate-400">미입력</p>
                             <p class="mt-2 text-xl font-black text-slate-900">{{ progress_summary.not_started_count }}</p>
                         </div>
                         <div class="rounded-2xl bg-amber-50 px-3 py-3">
@@ -331,7 +330,7 @@
                         </article>
                         {% empty %}
                         <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
-                            아직 반별 입력 현황이 없습니다.
+                            반별 입력 현황 없음
                         </div>
                         {% endfor %}
                     </div>
@@ -353,7 +352,7 @@
                         </article>
                         {% empty %}
                         <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
-                            아직 기록된 주요 활동이 없습니다.
+                            주요 활동 없음
                         </div>
                         {% endfor %}
                     </div>
@@ -418,7 +417,7 @@
                             수정 취소
                         </button>
                     </div>
-                    <p id="shared-events-status" class="mt-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600">행사를 저장하면 해당 시간대가 모든 반에 함께 표시됩니다.</p>
+                    <p id="shared-events-status" class="mt-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600">저장 시 공통 반영</p>
                     <div id="shared-events-list" class="mt-4 space-y-2"></div>
                 </section>
 
@@ -449,7 +448,7 @@
                         </div>
                         {% empty %}
                         <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
-                            아직 저장된 스냅샷이 없습니다.
+                            스냅샷 없음
                         </div>
                         {% endfor %}
                     </div>
@@ -459,11 +458,11 @@
                     <div class="flex items-center justify-between gap-3">
                         <div>
                             <h2 class="text-lg font-black text-slate-900">공유 링크</h2>
-                            <p class="mt-1 text-sm text-slate-500">반별 바로보기 링크를 먼저 전달하고, 교사용 모아보기는 필요할 때만 씁니다.</p>
+                            <p class="mt-1 text-sm text-slate-500">반별 링크 우선</p>
                         </div>
                         <button id="copy-first-share-link" type="button"
                             class="inline-flex items-center justify-center rounded-2xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200">
-                            첫 바로보기 링크 복사
+                            첫 링크 복사
                         </button>
                     </div>
                     <div id="share-links-list" class="mt-4 space-y-4">
@@ -478,7 +477,7 @@
                                 </div>
                                 {% empty %}
                                 <div class="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-6 text-center text-sm text-slate-500">
-                                    아직 반별 링크가 없습니다.
+                                    반별 링크 없음
                                 </div>
                                 {% endfor %}
                             </div>
@@ -494,7 +493,7 @@
                                 </div>
                                 {% empty %}
                                 <div class="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-6 text-center text-sm text-slate-500">
-                                    아직 전담·강사 링크가 없습니다.
+                                    전담·강사 링크 없음
                                 </div>
                                 {% endfor %}
                             </div>
@@ -509,7 +508,7 @@
                         {% endif %}
                         {% else %}
                         <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
-                            확정 후 읽기 전용 링크가 생성됩니다.
+                            확정 후 링크 생성
                         </div>
                         {% endif %}
                     </div>

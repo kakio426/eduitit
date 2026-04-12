@@ -53,7 +53,7 @@
                 </div>
                 <div class="flex-1">
                     <p class="text-base font-black text-slate-800">첨부된 서류</p>
-                    <p class="mt-1 text-sm text-slate-600">파일을 내려받아 확인한 뒤 아래에서 바로 서명해 주세요.</p>
+                    <p class="mt-1 text-sm text-slate-600">필요하면 다운로드</p>
                     <ul class="mt-4 space-y-3">
                         {% for attachment in public_attachments %}
                         <li class="rounded-2xl bg-white px-4 py-3 shadow-sm">
@@ -83,7 +83,7 @@
             {% csrf_token %}
             {% if form.non_field_errors or form.access_code.errors or form.participant_name.errors or form.participant_affiliation.errors or form.signature_data.errors or form.expected_participant_id.errors %}
             <div class="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-700">
-                <p class="font-black">입력 내용을 다시 확인해 주세요.</p>
+                <p class="font-black">입력 확인</p>
                 <ul class="mt-2 space-y-1">
                     {% for error in form.non_field_errors %}
                     <li>{{ error }}</li>
@@ -116,18 +116,18 @@
                     <div class="flex-1">
                         <p class="text-base font-black text-slate-800">현장 코드 확인</p>
                         {% if access_code_state.is_active %}
-                        <p class="mt-1 text-sm text-slate-600">담당 교사가 지금 안내한 코드를 입력해 주세요. {{ access_code_state.duration_minutes }}분 동안만 사용할 수 있습니다.</p>
+                        <p class="mt-1 text-sm text-slate-600">코드 입력</p>
                         <div class="mt-4">
                             <label class="mb-2 block text-sm font-black text-slate-700">
                                 <i class="fa-solid fa-shield-halved mr-1"></i> 현장 코드
                             </label>
                             {{ form.access_code }}
-                            <p class="mt-2 text-xs text-slate-500">현재 코드는 {{ access_code_state.expires_at|date:"H:i" }}까지 유효합니다.</p>
+                            <p class="mt-2 text-xs text-slate-500">{{ access_code_state.expires_at|date:"H:i" }}까지</p>
                         </div>
                         {% elif access_code_state.is_expired %}
-                        <p class="mt-1 text-sm text-red-700">현장 코드 시간이 끝났습니다. 담당 교사에게 새 코드를 받아 다시 입력해 주세요.</p>
+                        <p class="mt-1 text-sm text-red-700">코드 만료</p>
                         {% else %}
-                        <p class="mt-1 text-sm text-red-700">담당 교사가 아직 현장 코드를 열지 않았습니다. 잠시 후 다시 시도해 주세요.</p>
+                        <p class="mt-1 text-sm text-red-700">코드 대기 중</p>
                         {% endif %}
                     </div>
                 </div>
@@ -166,7 +166,7 @@
                         onclick="toggleWalkInMode()"
                         class="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-4 py-2 font-bold text-indigo-700 hover:bg-indigo-100 transition"
                     >
-                        명단에 이름이 없어요
+                        명단 외 제출
                     </button>
                 </div>
             </div>
@@ -178,7 +178,7 @@
                 </label>
                 {{ form.participant_affiliation }}
                 {% if show_roster_selection %}
-                <p class="mt-2 text-sm text-slate-500">명단에서 이름을 고르면 직위/학년반이 자동으로 채워집니다.</p>
+                <p class="mt-2 text-sm text-slate-500">이름 선택 시 자동 입력</p>
                 {% endif %}
                 {% if affiliation_suggestions %}
                 <datalist id="affiliationSuggestions">
@@ -208,7 +208,7 @@
                 </label>
                 {{ form.participant_name }}
                 {% if show_roster_selection %}
-                <p class="mt-2 text-sm text-slate-500">명단에 없다면 이름과 직위/학년반을 직접 적어 제출할 수 있습니다.</p>
+                <p class="mt-2 text-sm text-slate-500">명단에 없으면 직접 입력</p>
                 {% endif %}
             </div>
 
@@ -231,11 +231,11 @@
                     {% endif %}
                 </div>
                 <div class="mb-4 rounded-[1.5rem] border border-indigo-100 bg-indigo-50/70 px-4 py-4">
-                    <p class="text-sm font-black text-slate-800">서명은 직접 손으로 써 주세요.</p>
+                    <p class="text-sm font-black text-slate-800">직접 서명</p>
                     {% if user.is_authenticated %}
-                    <p class="mt-1 text-sm text-slate-600">지금 쓴 손서명을 보관함에 저장해 두면 다음번에도 바로 불러올 수 있습니다.</p>
+                    <p class="mt-1 text-sm text-slate-600">저장 가능</p>
                     {% else %}
-                    <p class="mt-1 text-sm text-slate-600">로그인하면 지금 쓴 손서명을 보관함에 저장해 다음번에도 바로 불러올 수 있습니다.</p>
+                    <p class="mt-1 text-sm text-slate-600">로그인 시 저장 가능</p>
                     {% endif %}
                 </div>
                 <div class="signature-pad-wrapper">
@@ -247,7 +247,7 @@
                 </div>
                 {{ form.signature_data }}
                 <div id="signatureVaultNotice" class="hidden mt-3 rounded-2xl px-4 py-3 text-sm font-bold"></div>
-                <p class="mt-2 text-center text-sm text-slate-500">손가락, 펜, 마우스로 직접 이름 서명을 써 주세요.</p>
+                <p class="mt-2 text-center text-sm text-slate-500">손가락 · 펜 · 마우스</p>
             </div>
 
             <div id="signatureModal"
@@ -380,7 +380,7 @@
 
     async function saveCurrentSignature() {
         if (signaturePad.isEmpty()) {
-            alert('먼저 손으로 서명을 써 주세요.');
+            alert('서명 작성 필요');
             return;
         }
 
@@ -458,7 +458,7 @@
             participantAffiliationInput.readOnly = !!rosterSelect && !isWalkInMode;
         }
         if (walkInToggleBtn) {
-            walkInToggleBtn.textContent = isWalkInMode ? '명단에서 선택하기' : '명단에 이름이 없어요';
+            walkInToggleBtn.textContent = isWalkInMode ? '명단에서 선택하기' : '명단 외 제출';
         }
 
         if (rosterSelect && !isWalkInMode) {
@@ -588,7 +588,7 @@
                 signatureList.appendChild(card);
             });
         } else {
-            signatureList.innerHTML = '<p class="text-gray-400 col-span-2 text-center py-4">아직 저장한 손서명이 없습니다.</p>';
+            signatureList.innerHTML = '<p class="text-gray-400 col-span-2 text-center py-4">저장한 손서명 없음</p>';
         }
     }
 

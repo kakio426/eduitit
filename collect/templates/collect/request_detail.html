@@ -232,8 +232,8 @@
                                 {% endif %}
 
                                 <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm md:text-base text-amber-800">
-                                    <p class="font-bold"><i class="fa-solid fa-circle-info mr-1"></i>자동 정리 안내</p>
-                                    <p class="mt-1">자동 삭제와 정리는 백그라운드에서 처리됩니다. 제출 기간은 마감 연장으로, 보관 기간은 보관 연장으로 조정할 수 있습니다.</p>
+                                    <p class="font-bold"><i class="fa-solid fa-circle-info mr-1"></i>자동 정리</p>
+                                    <p class="mt-1">제출 기간과 보관 기간 연장 가능</p>
                                 </div>
 
                                 <form action="{% url 'collect:request_delete' req.id %}" method="post" class="mt-4" onsubmit="return confirm('이 수합 요청을 삭제하시겠습니까? 모든 제출물도 함께 삭제됩니다.');">
@@ -248,7 +248,7 @@
 
                     {% if show_created_banner %}
                     <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-base md:text-lg font-semibold text-emerald-800">
-                        요청이 만들어졌어요. 이제 링크를 보내면 됩니다.
+                        요청 생성 완료
                     </div>
                     {% endif %}
                 </div>
@@ -258,7 +258,7 @@
                     <div class="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)] lg:items-center">
                         <div class="text-center">
                             <img src="data:image/png;base64,{{ qr_code_base64 }}" alt="QR Code" class="qr-image">
-                            <p class="mt-3 text-sm md:text-base text-gray-500">QR을 스캔하면 제출 페이지로 이동합니다.</p>
+                            <p class="mt-3 text-sm md:text-base text-gray-500">QR로 제출</p>
                         </div>
                         <div class="space-y-3">
                             <div class="rounded-2xl bg-slate-50 p-4">
@@ -291,7 +291,7 @@
                     <h2 class="text-2xl md:text-3xl font-bold text-gray-700">
                         <i class="fa-solid fa-user-check mr-2 text-emerald-500"></i>미제출 현황
                     </h2>
-                    <p class="mt-1 text-base md:text-lg text-gray-500">누가 아직 제출하지 않았는지 바로 확인할 수 있습니다.</p>
+                    <p class="mt-1 text-base md:text-lg text-gray-500">미제출 바로 확인</p>
                 </div>
                 {% if expected_count %}
                 <span class="rounded-full bg-slate-100 px-3 py-1 text-sm md:text-base font-bold text-slate-700">{{ expected_count }}명 대상</span>
@@ -316,7 +316,7 @@
                     {% endif %}
                 {% else %}
                 <div class="rounded-2xl bg-slate-50 px-4 py-4 text-base md:text-lg text-slate-600">
-                    제출 대상자를 따로 지정하지 않았습니다. 제출 건수만 확인하며 바로 공유하는 흐름에 맞춰 사용할 수 있습니다.
+                    대상 미지정
                 </div>
                 {% endif %}
             </div>
@@ -328,7 +328,7 @@
                     <h2 id="submissions-heading" tabindex="-1" class="text-3xl md:text-4xl font-bold text-gray-700 flex items-center gap-2 outline-none">
                         <i class="fa-solid fa-inbox text-emerald-500"></i>제출물 목록
                     </h2>
-                    <p class="text-base md:text-lg text-gray-500">실시간 제출 현황과 파일, 링크, 텍스트 응답을 여기서 확인합니다.</p>
+                    <p class="text-base md:text-lg text-gray-500">실시간 제출 확인</p>
                 </div>
                 <div class="flex items-center gap-2 flex-wrap">
                     <span id="submission-filter-pill" class="hidden px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-base md:text-lg font-bold"></span>

@@ -68,7 +68,7 @@
     function buildEvidenceOverviewHtml(lawCitations, caseCitations) {
         if (!lawCitations.length && !caseCitations.length) return "";
         return `
-            <div class="teacher-law-section-title">이번 답변에서 먼저 본 것</div>
+            <div class="teacher-law-section-title">근거</div>
             <div class="teacher-law-evidence-overview">
                 ${lawCitations.slice(0, 2).map(function (citation) {
                     return `
@@ -102,7 +102,7 @@
         const caseCitations = partitioned.caseCitations;
         const actionHtml = actionItems.length
             ? `
-                <div class="teacher-law-section-title">지금 바로 할 일</div>
+                <div class="teacher-law-section-title">할 일</div>
                 <ul class="teacher-law-list">
                     ${actionItems.map(function (item) { return `<li>${escapeHtml(item)}</li>`; }).join("")}
                 </ul>
@@ -166,8 +166,8 @@
     function buildLatestEmptyHtml() {
         return `
             <div class="teacher-law-empty" data-teacher-law-latest-empty="true">
-                <p class="text-lg font-black text-slate-900">질문을 보내면 가장 최근 답변이 여기 가장 크게 표시됩니다.</p>
-                <p class="mt-2 text-sm leading-6">상황을 적고 사건 유형과 궁금한 것을 고르면 답변이 나옵니다.</p>
+                <p class="text-lg font-black text-slate-900">최신 답변 대기 중</p>
+                <p class="mt-2 text-sm leading-6">질문 보내기</p>
             </div>
         `;
     }
@@ -186,8 +186,8 @@
     function buildHistoryEmptyHtml() {
         return `
             <div class="teacher-law-empty" data-teacher-law-history-empty="true">
-                <p class="text-base font-black text-slate-900">아직 이전 답변은 없습니다.</p>
-                <p class="mt-2 text-sm leading-6">첫 질문을 보내면 최신 답변 아래에 이전 기록이 차례대로 쌓입니다.</p>
+                <p class="text-base font-black text-slate-900">이전 답변이 없습니다.</p>
+                <p class="mt-2 text-sm leading-6">첫 질문 대기 중</p>
             </div>
         `;
     }
@@ -274,14 +274,14 @@
             const requirement = currentRequirement();
             const question = String(input.value || "").trim();
 
-            if (!question) errors.question = "질문을 입력해 주세요.";
-            if (!incidentType) errors.incident_type = "사건 유형을 먼저 골라 주세요.";
-            if (!legalGoal) errors.legal_goal = "지금 궁금한 것을 먼저 골라 주세요.";
+            if (!question) errors.question = "질문 입력";
+            if (!incidentType) errors.incident_type = "사건 유형 선택";
+            if (!legalGoal) errors.legal_goal = "궁금한 것 선택";
             if (requirement === "scene" && !getCheckedValue(root, "scene")) {
-                errors.scene = "장면을 하나 골라 주세요.";
+                errors.scene = "장면 선택";
             }
             if (requirement === "counterpart" && !getCheckedValue(root, "counterpart")) {
-                errors.counterpart = "상대를 하나 골라 주세요.";
+                errors.counterpart = "상대 선택";
             }
             return errors;
         }
@@ -363,20 +363,20 @@
         function startProgressSequence() {
             if (!progress || !progressText) return;
             progress.classList.add("is-visible");
-            progressText.textContent = "관련 법령 확인 중...";
-            renderLatestPair(buildLatestPlaceholderHtml("관련 법령 확인 중..."));
+            progressText.textContent = "법령 확인 중";
+            renderLatestPair(buildLatestPlaceholderHtml("법령 확인 중"));
             progressTimers = [
                 window.setTimeout(function () {
-                    progressText.textContent = "허용된 법령 안에서 조문 찾는 중...";
-                    syncPlaceholderText("허용된 법령 안에서 조문 찾는 중...");
+                    progressText.textContent = "조문 확인 중";
+                    syncPlaceholderText("조문 확인 중");
                 }, 2000),
                 window.setTimeout(function () {
-                    progressText.textContent = "답변 정리 중...";
-                    syncPlaceholderText("답변 정리 중...");
+                    progressText.textContent = "답변 정리 중";
+                    syncPlaceholderText("답변 정리 중");
                 }, 4500),
             ];
             longWaitTimer = window.setTimeout(function () {
-                const message = "조금 오래 걸리고 있어요. 근거를 다시 확인하는 중입니다.";
+                const message = "근거 다시 확인 중";
                 progressText.textContent = message;
                 syncPlaceholderText(message);
             }, 9000);
@@ -403,7 +403,7 @@
             const fieldErrors = buildFieldErrors();
             applyFieldErrors(fieldErrors);
             if (Object.keys(fieldErrors).length) {
-                const message = Object.values(fieldErrors)[0] || "필수 항목을 먼저 선택해 주세요.";
+                const message = Object.values(fieldErrors)[0] || "필수 항목 선택";
                 showInlineError(errorBox, message);
                 dispatchToast(message, "warning");
                 updateSubmitEnabled();
@@ -455,7 +455,7 @@
                 updateSubmitEnabled();
                 scrollConversationToBottom({ page: true });
                 if ((data.status || "ok") === "clarify") {
-                    dispatchToast("추가 정보를 더 확인해야 해서 보수적으로 안내했어요.", "info");
+                    dispatchToast("추가 확인 필요", "info");
                 }
             } catch (error) {
                 stopProgressSequence();

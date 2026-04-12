@@ -35,30 +35,29 @@
                         </a>
                     {% else %}
                         <a href="{% url 'schoolprograms:vendor_profile_edit' %}" class="inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-orange-500 px-5 text-sm font-black text-white">
-                            회사 정보 먼저 입력
+                            회사 정보 입력
                         </a>
                     {% endif %}
                     <a href="{% url 'schoolprograms:vendor_inquiries' %}" class="inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-white px-5 text-sm font-black text-slate-900">
                         문의함 보기
                     </a>
                     <a href="{% url 'schoolprograms:vendor_profile_edit' %}" class="inline-flex min-h-[48px] items-center justify-center rounded-2xl border border-white/20 px-5 text-sm font-black text-white">
-                        {% if checklist.profile_ready %}회사 정보 수정{% else %}업체 정보 이어서 작성{% endif %}
+                        {% if checklist.profile_ready %}회사 정보 수정{% else %}회사 정보 입력{% endif %}
                     </a>
                 </div>
             </div>
 
             <aside class="rounded-[2rem] border border-white/10 bg-white/10 p-6 shadow-2xl backdrop-blur sm:p-8">
-                <p class="text-sm font-black uppercase tracking-[0.2em] text-orange-300">지금 해야 할 일</p>
+                    <p class="text-sm font-black uppercase tracking-[0.2em] text-orange-300">지금 할 일</p>
                 <div class="mt-5 space-y-3">
                     {% if not checklist.profile_ready %}
                         <article class="rounded-2xl bg-white/10 p-4">
                             <div class="flex items-center justify-between gap-3">
-                                <div class="text-sm font-black">회사 정보와 증빙 서류</div>
-                                <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-700">먼저 완료</span>
+                                <div class="text-sm font-black">회사 정보</div>
+                                <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-700">필수</span>
                             </div>
-                            <p class="mt-3 text-sm leading-6 text-slate-200">업체 소개와 증빙이 완료되어야 심사 요청 버튼이 열립니다. 지금 단계에서는 회사 정보를 먼저 채우는 것이 가장 빠릅니다.</p>
                             <a href="{% url 'schoolprograms:vendor_profile_edit' %}" class="mt-4 inline-flex min-h-[42px] items-center justify-center rounded-2xl bg-white px-4 text-sm font-black text-slate-900">
-                                회사 정보 입력하기
+                                회사 정보 입력
                             </a>
                         </article>
                     {% elif action_required_listings %}
@@ -68,12 +67,12 @@
                                     <div class="text-sm font-black">{{ listing.title }}</div>
                                     <span class="rounded-full px-3 py-1 text-xs font-black {{ listing.review_status.pill_class }}">{{ listing.get_approval_status_display }}</span>
                                 </div>
-                                <p class="mt-3 text-sm leading-6 text-slate-200">{{ listing.review_status.next_step }}</p>
+                                <p class="mt-3 text-sm leading-6 text-slate-200">수정 필요</p>
                                 {% if listing.admin_note %}
                                     <p class="mt-3 rounded-2xl bg-white/10 px-3 py-3 text-sm font-bold leading-6 text-orange-100">{{ listing.admin_note|linebreaksbr }}</p>
                                 {% endif %}
                                 <a href="{% url 'schoolprograms:vendor_listing_edit' listing.slug %}" class="mt-4 inline-flex min-h-[42px] items-center justify-center rounded-2xl bg-white px-4 text-sm font-black text-slate-900">
-                                    바로 수정
+                                    수정
                                 </a>
                             </article>
                         {% endfor %}
@@ -84,7 +83,7 @@
                                     <div class="text-sm font-black">{{ listing.title }}</div>
                                     <span class="rounded-full px-3 py-1 text-xs font-black {{ listing.review_status.pill_class }}">{{ listing.get_approval_status_display }}</span>
                                 </div>
-                                <p class="mt-3 text-sm leading-6 text-slate-200">{{ listing.review_status.description }}</p>
+                                <p class="mt-3 text-sm leading-6 text-slate-200">{{ listing.review_status.title }}</p>
                                 {% if listing.review_status.time_value %}
                                     <p class="mt-3 text-xs font-black text-slate-300">심사 요청 {{ listing.review_status.time_value|date:"Y.m.d H:i" }}</p>
                                 {% endif %}
@@ -92,22 +91,22 @@
                         {% endfor %}
                     {% else %}
                         <div class="rounded-2xl bg-emerald-500/20 px-4 py-4 text-sm font-bold text-emerald-100">
-                            지금 당장 처리할 승인 이슈는 없습니다. 공개중 프로그램 응답 속도와 정보 최신화만 챙기면 됩니다.
+                            대기 없음
                         </div>
                     {% endif %}
                 </div>
 
                 <div class="mt-8">
-                    <p class="text-sm font-black uppercase tracking-[0.2em] text-orange-300">온보딩 체크</p>
+                    <p class="text-sm font-black uppercase tracking-[0.2em] text-orange-300">준비 현황</p>
                     <div class="mt-4 space-y-3">
                         <div class="rounded-2xl px-4 py-4 {% if checklist.profile_ready %}bg-emerald-500/20 text-emerald-100{% else %}bg-white/10 text-slate-200{% endif %}">
-                            회사 정보와 증빙 서류
+                            회사 정보
                         </div>
                         <div class="rounded-2xl px-4 py-4 {% if checklist.has_listing %}bg-emerald-500/20 text-emerald-100{% else %}bg-white/10 text-slate-200{% endif %}">
-                            대표 프로그램 등록
+                            프로그램 등록
                         </div>
                         <div class="rounded-2xl px-4 py-4 {% if checklist.has_review_ready_listing %}bg-emerald-500/20 text-emerald-100{% else %}bg-white/10 text-slate-200{% endif %}">
-                            심사 요청 보내기
+                            심사 요청
                         </div>
                     </div>
                 </div>
@@ -133,7 +132,6 @@
                                     <p class="mt-2 text-sm leading-6 text-slate-200">{{ listing.summary }}</p>
                                     <div class="mt-3 rounded-2xl bg-white/10 px-4 py-3">
                                         <p class="text-xs font-black text-slate-300">{{ listing.review_status.title }}</p>
-                                        <p class="mt-2 text-sm leading-6 text-slate-100">{{ listing.review_status.description }}</p>
                                         {% if listing.review_status.time_value %}
                                             <p class="mt-2 text-xs font-black text-slate-300">{{ listing.review_status.time_label }} {{ listing.review_status.time_value|date:"Y.m.d H:i" }}</p>
                                         {% endif %}
@@ -158,7 +156,7 @@
                         </article>
                     {% empty %}
                         <div class="rounded-2xl border border-dashed border-white/20 px-5 py-10 text-center text-sm font-bold text-slate-200">
-                            아직 등록한 프로그램이 없습니다.
+                            등록한 프로그램 없음
                         </div>
                     {% endfor %}
                 </div>
@@ -181,7 +179,7 @@
                         </a>
                     {% empty %}
                         <div class="rounded-2xl border border-dashed border-white/20 px-5 py-10 text-center text-sm font-bold text-slate-200">
-                            새 문의가 들어오면 여기서 바로 확인할 수 있습니다.
+                            문의 없음
                         </div>
                     {% endfor %}
                 </div>

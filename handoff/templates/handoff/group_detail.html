@@ -19,12 +19,12 @@
                     {% if continue_to_signatures_url %}
                     <a href="{{ continue_to_signatures_url }}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-black shadow-clay hover:bg-indigo-500 transition-colors">
                         <i class="fa-solid fa-arrow-right"></i>
-                        <span>이 명부로 이전 작업 계속하기</span>
+                        <span>이 명부로 계속</span>
                     </a>
                     {% else %}
                     <span class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-100 text-slate-500 font-bold shadow-sm">
                         <i class="fa-solid fa-circle-info"></i>
-                        <span>활성 멤버를 먼저 넣어야 연결할 수 있습니다</span>
+                        <span>활성 멤버 필요</span>
                     </span>
                     {% endif %}
                 {% endif %}
@@ -37,7 +37,7 @@
 
         {% if is_proxy_mode %}
         <div class="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900" data-aos="fade-down" data-aos-delay="30">
-            {{ proxy_target_user_label }} 선생님 계정에 저장되는 명부를 대신 준비 중입니다. 여기서 저장한 내용은 해당 교사가 본인 명부처럼 바로 사용할 수 있습니다.
+            {{ proxy_target_user_label }} 작업 중
         </div>
         {% endif %}
 
@@ -67,7 +67,7 @@
                     </div>
                     <div>
                         <h2 class="text-2xl font-black text-gray-700">명부 정보</h2>
-                        <p class="text-sm text-gray-500 font-bold mt-1">사인, 동의서, 알림판, 행복씨앗이 이 명부에서 필요한 항목만 읽어갑니다.</p>
+                        <p class="text-sm text-gray-500 font-bold mt-1">공유 명부</p>
                     </div>
                 </div>
                 <form action="{% url 'handoff:group_update' group.id %}" method="post" class="space-y-4">
@@ -85,10 +85,10 @@
                     </div>
                     <label class="inline-flex items-center gap-2 text-sm font-bold text-gray-600 cursor-pointer">
                         {{ group_form.is_favorite }}
-                        <span>즐겨찾기 명부로 고정</span>
+                        <span>즐겨찾기</span>
                     </label>
                     <button type="submit" class="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black transition">
-                        공용 명부 저장
+                        명부 저장
                     </button>
                 </form>
             </div>
@@ -100,8 +100,8 @@
                             <i class="fa-solid fa-clipboard-check"></i>
                         </div>
                         <div>
-                            <h2 class="text-2xl font-black text-gray-700">이 명부로 배부 체크 시작</h2>
-                            <p class="text-sm text-gray-500 font-bold mt-1">명부를 확인한 뒤, 필요할 때만 바로 배부 세션을 시작하면 됩니다.</p>
+                            <h2 class="text-2xl font-black text-gray-700">배부 시작</h2>
+                            <p class="text-sm text-gray-500 font-bold mt-1">바로 시작</p>
                         </div>
                     </div>
                     <form action="{% url 'handoff:session_create' %}" method="post" class="space-y-4">
@@ -131,24 +131,24 @@
                             <label class="block text-sm font-black text-gray-600 mb-1">{{ session_form.note.label }}</label>
                             {{ session_form.note }}
                         </div>
-                        <p class="text-xs font-bold text-gray-500">현재 활성 멤버 {{ active_member_count }}명 기준으로 세션이 만들어집니다.</p>
+                        <p class="text-xs font-bold text-gray-500">활성 {{ active_member_count }}명</p>
                         {% if active_member_count %}
                         <button type="submit" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black transition">
-                            <i class="fa-solid fa-play mr-1"></i>배부 세션 시작
+                            <i class="fa-solid fa-play mr-1"></i>세션 시작
                         </button>
                         {% else %}
                         <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">
-                            활성 멤버를 먼저 추가해야 배부 세션을 시작할 수 있습니다.
+                            활성 멤버 필요
                         </div>
                         <button type="button" class="w-full py-3 rounded-xl bg-slate-200 text-slate-500 font-black cursor-not-allowed" disabled>
-                            <i class="fa-solid fa-play mr-1"></i>배부 세션 시작
+                            <i class="fa-solid fa-play mr-1"></i>세션 시작
                         </button>
                         {% endif %}
                     </form>
                 </div>
 
                 <div class="clay-card p-6 md:p-7" data-aos="fade-up" data-aos-delay="80">
-                    <h2 class="text-2xl font-black text-gray-700 mb-4">채워진 항목</h2>
+                    <h2 class="text-2xl font-black text-gray-700 mb-4">입력 상태</h2>
                     <div class="space-y-3 text-sm font-bold text-gray-600">
                         <div class="rounded-2xl border border-slate-100 bg-white/80 px-4 py-3 flex items-center justify-between gap-3">
                             <span>소속/학년반</span>
@@ -164,7 +164,7 @@
                         </div>
                     </div>
                     <div class="mt-5 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm text-slate-500">
-                        사인은 <strong>이름+소속</strong>, 동의서는 <strong>이름+보호자+전화 뒤 4자리</strong>, 행복씨앗은 <strong>번호+이름</strong>, 알림판은 <strong>이름</strong>만 사용합니다.
+                        사인 이름+소속 · 동의서 이름+보호자 · 행복씨앗 번호+이름 · 알림판 이름
                     </div>
                 </div>
             </div>
@@ -174,8 +174,8 @@
         <div class="clay-card p-6 md:p-7 mb-8" data-aos="fade-up" data-aos-delay="100">
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
                 <div>
-                    <h2 class="text-2xl font-black text-gray-700">이 명부의 최근 배부 세션</h2>
-                    <p class="text-sm text-gray-500 font-bold mt-1">같은 명부에서 진행했던 배부 기록만 여기서 다시 이어서 봅니다.</p>
+                    <h2 class="text-2xl font-black text-gray-700">최근 세션</h2>
+                    <p class="text-sm text-gray-500 font-bold mt-1">이 명부 기록</p>
                 </div>
                 <span class="text-sm text-gray-500 font-bold">{{ recent_sessions|length }}건</span>
             </div>
@@ -211,7 +211,7 @@
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <a href="{% url 'handoff:session_detail' session.id %}" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-bold text-sm">
-                            체크 화면
+                            세션 열기
                         </a>
                         <a href="{% url 'handoff:session_edit' session.id %}" class="px-3 py-1.5 rounded-lg bg-white text-gray-700 font-bold text-sm border border-gray-200">
                             수정
@@ -225,7 +225,7 @@
 
         <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
             <div class="clay-card p-6 md:p-7" data-aos="fade-up">
-                <h2 class="text-2xl font-black text-gray-700 mb-4">빠른 추가</h2>
+                <h2 class="text-2xl font-black text-gray-700 mb-4">이름 붙여넣기</h2>
                 <form action="{% url 'handoff:group_members_add' group.id %}" method="post" class="space-y-4">
                     {% csrf_token %}
                     {% if return_to %}
@@ -234,16 +234,16 @@
                     <div>
                         <label class="block text-sm font-black text-gray-600 mb-1">{{ bulk_form.names_text.label }}</label>
                         {{ bulk_form.names_text }}
-                        <p class="mt-2 text-xs font-bold text-gray-500">붙여넣기는 이름과 소속까지 빠르게 받고, 보호자/전화/번호까지 한 번에 넣으려면 오른쪽 CSV를 사용하세요.</p>
+                        <p class="mt-2 text-xs font-bold text-gray-500">붙여넣기 또는 CSV</p>
                     </div>
                     <button type="submit" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black transition">
-                        <i class="fa-solid fa-user-plus mr-1"></i>빠르게 추가
+                        <i class="fa-solid fa-user-plus mr-1"></i>이름 추가
                     </button>
                 </form>
             </div>
 
             <div class="clay-card p-6 md:p-7" data-aos="fade-up" data-aos-delay="80">
-                <h2 class="text-2xl font-black text-gray-700 mb-4">CSV 가져오기</h2>
+                <h2 class="text-2xl font-black text-gray-700 mb-4">CSV 업로드</h2>
                 <form action="{% url 'handoff:group_members_upload' group.id %}" method="post" enctype="multipart/form-data" class="space-y-4">
                     {% csrf_token %}
                     {% if return_to %}
@@ -258,10 +258,10 @@
                             </a>
                         </div>
                         <input type="file" name="csv_file" accept=".csv" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white focus:border-blue-500 focus:outline-none">
-                        <p class="mt-2 text-xs font-bold text-gray-500">열 순서는 <code>이름, 소속/학년반, 보호자명, 연락처 뒤 4자리, 번호, 메모</code> 입니다. 헤더를 그대로 써도 됩니다.</p>
+                        <p class="mt-2 text-xs font-bold text-gray-500">열: <code>이름, 소속/학년반, 보호자명, 연락처 뒤 4자리, 번호, 메모</code></p>
                     </div>
                     <button type="submit" class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black transition">
-                        <i class="fa-solid fa-file-csv mr-1"></i>CSV로 가져오기
+                        <i class="fa-solid fa-file-csv mr-1"></i>CSV 가져오기
                     </button>
                 </form>
             </div>
@@ -271,7 +271,7 @@
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
                 <div>
                     <h2 class="text-2xl font-black text-gray-700">멤버 수정</h2>
-                    <p class="text-sm text-gray-500 font-bold mt-1">이 화면에서 수정한 값이 연결된 서비스에 그대로 반영됩니다.</p>
+                    <p class="text-sm text-gray-500 font-bold mt-1">바로 반영</p>
                 </div>
                 <div class="text-xs font-bold text-gray-500">
                     알림판 {{ linked_service_counts.infoboard }}건 · 행복씨앗 {{ linked_service_counts.happy_seed }}건 연결

@@ -12,7 +12,7 @@
                 <div>
                     <p class="text-sm font-semibold text-emerald-700">업무 담당 교사 회의 보드</p>
                     <h1 class="mt-2 text-3xl font-black text-slate-900">{{ workspace.title }}</h1>
-                    <p class="mt-2 text-sm leading-6 text-slate-500">강사, 과목, 날짜를 고른 뒤 배정 가능한 칸만 골라 메인 편집기로 반영합니다.</p>
+                    <p class="mt-2 text-sm leading-6 text-slate-500">교사, 과목, 날짜 선택 후 칸 반영</p>
                 </div>
                 <a href="{% url 'timetable:workspace_detail' workspace.id %}"
                     class="inline-flex items-center justify-center rounded-2xl bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-200">
@@ -44,13 +44,13 @@
                             <option value="{{ teacher.id }}" {% if selected_teacher and selected_teacher.id == teacher.id %}selected{% endif %}>{{ teacher.name }} · {{ teacher.get_teacher_type_display }}</option>
                             {% endfor %}
                         </select>
-                        <span class="mt-2 block text-xs font-semibold text-slate-500">교사를 바꾸면 표가 바로 다시 그려집니다.</span>
+                        <span class="mt-2 block text-xs font-semibold text-slate-500">선택 후 표 변경</span>
                     </label>
                     <label class="block">
                         <span class="mb-2 block text-sm font-semibold text-slate-700">날짜</span>
                         <input id="meeting-date" name="date" type="date" value="{% if selected_date %}{{ selected_date|date:'Y-m-d' }}{% endif %}"
                             class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800">
-                        <span class="mt-2 block text-xs font-semibold text-slate-500">날짜를 고르면 그날 실제 시간표 기준으로 다시 계산합니다.</span>
+                        <span class="mt-2 block text-xs font-semibold text-slate-500">선택 시 일정 반영</span>
                     </label>
                     <label class="block">
                         <span class="mb-2 block text-sm font-semibold text-slate-700">과목</span>
@@ -135,7 +135,7 @@
                 </div>
                 {% else %}
                 <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
-                    먼저 조율할 교사를 선택해 주세요.
+                    교사 선택
                 </div>
                 {% endif %}
             </section>
@@ -145,28 +145,28 @@
                     <h2 class="text-lg font-black text-slate-900">선택한 칸</h2>
                     <p id="meeting-status" class="mt-2 text-sm font-semibold text-slate-500">녹색 칸을 눌러 선택하세요.</p>
                     <ul id="meeting-selection-list" class="mt-4 space-y-2">
-                        <li class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">아직 선택한 칸이 없습니다.</li>
+                        <li class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">선택 칸 없음</li>
                     </ul>
                 </section>
 
                 <section class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
                     <h2 class="text-lg font-black text-slate-900">반영 전 확인</h2>
                     <div id="meeting-preflight-summary" class="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-sm leading-6 text-slate-600">
-                        교사, 과목, 날짜를 정한 뒤 녹색 칸을 선택하면 여기에서 반영 내용을 먼저 확인할 수 있습니다.
+                        선택 내용 표시
                     </div>
                 </section>
 
                 <section class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
                     <h2 class="text-lg font-black text-slate-900">불가 사유</h2>
                     <div id="meeting-blocked-reason" class="mt-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm leading-6 text-slate-500">
-                        빨간 칸을 누르면 왜 배정할 수 없는지 여기에서 바로 확인할 수 있습니다.
+                        불가 사유 표시
                     </div>
                 </section>
 
                 <section class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
                     <h2 class="text-lg font-black text-slate-900">반영 결과</h2>
                     <ul id="meeting-conflict-list" class="mt-4 space-y-2">
-                        <li class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">반영을 시도하면 충돌 안내가 여기에 표시됩니다.</li>
+                        <li class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">반영 후 표시</li>
                     </ul>
                 </section>
             </aside>
@@ -209,10 +209,10 @@
     const renderSelected = () => {
         selectionList.innerHTML = "";
         if (!selected.size) {
-            selectionList.innerHTML = '<li class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">아직 선택한 칸이 없습니다.</li>';
+            selectionList.innerHTML = '<li class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">선택 칸 없음</li>';
             statusNode.textContent = "녹색 칸을 눌러 선택하세요.";
             preflightSummary.className = "mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-sm leading-6 text-slate-600";
-            preflightSummary.textContent = "교사, 과목, 날짜를 정한 뒤 녹색 칸을 선택하면 여기에서 반영 내용을 먼저 확인할 수 있습니다.";
+            preflightSummary.textContent = "선택 내용 표시";
             return;
         }
 
@@ -282,7 +282,7 @@
             });
             button.classList.add("is-selected");
         }
-        renderBlockedReason("빨간 칸을 누르면 왜 배정할 수 없는지 여기에서 바로 확인할 수 있습니다.");
+        renderBlockedReason("불가 사유 표시");
         renderSelected();
     });
 
@@ -291,7 +291,7 @@
 
     applyButton.addEventListener("click", async () => {
         if (!selected.size) {
-            statusNode.textContent = "먼저 적용할 칸을 선택해 주세요.";
+            statusNode.textContent = "칸 선택 필요";
             return;
         }
         const subject = document.getElementById("meeting-subject").value.trim();
