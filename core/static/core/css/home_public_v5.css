@@ -7,10 +7,11 @@
     --home-public-accent-soft-strong: rgba(238, 232, 255, 0.94);
     --home-public-border: rgba(148, 163, 184, 0.24);
     --home-public-border-strong: rgba(91, 44, 207, 0.12);
+    --home-public-focus-ring: 0 0 0 3px rgba(91, 44, 207, 0.12);
     --home-public-surface: rgba(255, 255, 255, 0.96);
     --home-public-surface-raised: linear-gradient(180deg, #ffffff 0%, #fbfaff 100%);
-    --home-public-shadow-panel: 0 14px 30px rgba(15, 23, 42, 0.06);
-    --home-public-shadow-card: 0 12px 24px rgba(15, 23, 42, 0.06);
+    --home-public-shadow-panel: 0 12px 26px rgba(15, 23, 42, 0.055);
+    --home-public-shadow-card: 0 10px 20px rgba(15, 23, 42, 0.055);
 }
 
 .home-public-v5-page {
@@ -204,6 +205,11 @@
     transform: translateY(-1px);
 }
 
+.home-public-v5-primary-link:focus-visible {
+    outline: none;
+    box-shadow: var(--home-public-focus-ring), 0 12px 24px rgba(91, 44, 207, 0.16);
+}
+
 .home-public-v5-secondary-link {
     border: 1px solid var(--home-public-border);
     background: #ffffff;
@@ -216,6 +222,11 @@
     background: rgba(238, 232, 255, 0.36);
     color: var(--home-public-accent-strong);
     transform: translateY(-1px);
+}
+
+.home-public-v5-secondary-link:focus-visible {
+    outline: none;
+    box-shadow: var(--home-public-focus-ring);
 }
 
 .home-public-v5-grid {
@@ -241,6 +252,11 @@
     border-color: var(--home-public-border-strong);
     background: #ffffff;
     transform: translateY(-1px);
+}
+
+.home-public-v5-grid-card:focus-visible {
+    outline: none;
+    box-shadow: var(--home-public-focus-ring), var(--home-public-shadow-card);
 }
 
 .home-public-v5-grid-head {

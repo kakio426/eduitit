@@ -10,12 +10,14 @@ body {
 }
 
 .auth-shell-page {
+    --auth-shell-focus-ring: 0 0 0 3px rgba(91, 44, 207, 0.13);
+    --auth-shell-focus-border: rgba(91, 44, 207, 0.28);
     position: relative;
     min-height: 100vh;
     overflow: hidden;
     background:
-        radial-gradient(circle at 14% 12%, rgba(91, 44, 207, 0.14), transparent 28rem),
-        radial-gradient(circle at 86% 10%, rgba(198, 165, 107, 0.13), transparent 20rem),
+        radial-gradient(circle at 14% 12%, rgba(91, 44, 207, 0.1), transparent 28rem),
+        radial-gradient(circle at 86% 10%, rgba(198, 165, 107, 0.1), transparent 20rem),
         linear-gradient(180deg, #f7f6fc 0%, #f3f4fb 52%, #fbfbfe 100%);
 }
 
@@ -25,8 +27,8 @@ body {
     position: absolute;
     pointer-events: none;
     border-radius: 999px;
-    filter: blur(18px);
-    opacity: 0.7;
+    filter: blur(14px);
+    opacity: 0.52;
 }
 
 .auth-shell-page::before {
@@ -66,12 +68,12 @@ body {
     max-width: 35rem;
     border: 1px solid rgba(91, 44, 207, 0.12);
     border-radius: 1.85rem;
-    background: rgba(255, 255, 255, 0.96);
+    background: rgba(255, 255, 255, 0.98);
     box-shadow:
-        0 26px 64px rgba(15, 23, 42, 0.1),
+        0 20px 44px rgba(15, 23, 42, 0.08),
         inset 0 1px 0 rgba(255, 255, 255, 0.82);
     padding: clamp(1.5rem, 4vw, 2.4rem);
-    backdrop-filter: blur(20px);
+    backdrop-filter: blur(16px);
 }
 
 .auth-shell-header {
@@ -98,6 +100,11 @@ body {
 .auth-shell-brand:focus-visible {
     color: var(--color-brand-900);
     text-decoration: none;
+}
+
+.auth-shell-brand:focus-visible {
+    outline: none;
+    box-shadow: var(--auth-shell-focus-ring);
 }
 
 .auth-shell-brand-icon {
@@ -225,6 +232,11 @@ body {
     filter: brightness(0.985);
 }
 
+.auth-shell-provider:focus-visible {
+    outline: none;
+    box-shadow: var(--auth-shell-focus-ring);
+}
+
 .auth-shell-provider svg {
     flex-shrink: 0;
 }
@@ -233,14 +245,14 @@ body {
     border-color: rgba(231, 211, 65, 0.82);
     background: #fee500;
     color: #2f1a1a;
-    box-shadow: 0 14px 28px rgba(234, 211, 65, 0.24);
+    box-shadow: 0 10px 20px rgba(234, 211, 65, 0.2);
 }
 
 .auth-shell-provider--naver {
     border-color: rgba(3, 199, 90, 0.28);
     background: #03c75a;
     color: #ffffff;
-    box-shadow: 0 14px 28px rgba(3, 199, 90, 0.18);
+    box-shadow: 0 10px 20px rgba(3, 199, 90, 0.16);
 }
 
 .auth-shell-muted-panel {
@@ -278,6 +290,12 @@ body {
 .auth-shell-link {
     color: var(--color-brand-700);
     font-weight: 800;
+}
+
+.auth-shell-link:focus-visible {
+    outline: none;
+    border-radius: 0.35rem;
+    box-shadow: var(--auth-shell-focus-ring);
 }
 
 .auth-shell-footer {
@@ -379,16 +397,16 @@ body {
 .auth-shell-form textarea:focus,
 .auth-shell-input:focus {
     outline: none;
-    border-color: rgba(91, 44, 207, 0.34);
+    border-color: var(--auth-shell-focus-border);
     background: #ffffff;
-    box-shadow: 0 0 0 4px rgba(91, 44, 207, 0.1);
+    box-shadow: var(--auth-shell-focus-ring);
 }
 
 .auth-shell-field.has-error input,
 .auth-shell-field.has-error select,
 .auth-shell-field.has-error textarea {
     border-color: rgba(196, 73, 99, 0.3);
-    box-shadow: 0 0 0 4px rgba(196, 73, 99, 0.08);
+    box-shadow: 0 0 0 3px rgba(196, 73, 99, 0.08);
 }
 
 .auth-shell-help,
@@ -445,7 +463,7 @@ body {
     font-size: 0.98rem;
     font-weight: 800;
     letter-spacing: -0.015em;
-    box-shadow: 0 16px 30px rgba(91, 44, 207, 0.18);
+    box-shadow: 0 12px 24px rgba(91, 44, 207, 0.16);
     transition:
         transform 180ms ease,
         box-shadow 180ms ease,
@@ -455,7 +473,9 @@ body {
 .auth-shell-submit:hover,
 .auth-shell-submit:focus-visible {
     transform: translateY(-1px);
-    box-shadow: 0 18px 32px rgba(91, 44, 207, 0.22);
+    box-shadow:
+        var(--auth-shell-focus-ring),
+        0 14px 28px rgba(91, 44, 207, 0.18);
     color: #ffffff;
     text-decoration: none;
 }

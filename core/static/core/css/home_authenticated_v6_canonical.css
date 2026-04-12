@@ -590,8 +590,8 @@ border-color: rgba(148, 163, 184, 0.18);
 .home-v6-page .home-v6-quickdrop-textarea:focus,
 .home-v6-page .home-v6-mobile-quickdrop-textarea:focus {
 outline: none;
-    border-color: rgba(59, 130, 246, 0.28);
-    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+    border-color: rgba(var(--home-v6-brand-rgb), 0.24);
+    box-shadow: var(--home-v6-focus-ring);
 }
 
 .home-v6-page .home-v6-quickdrop-error,
@@ -627,9 +627,9 @@ border-color: rgba(148, 163, 184, 0.18);
 .home-v6-page .home-v6-quickdrop-secondary:focus-visible,
 .home-v6-page .home-v6-mobile-quickdrop-secondary:hover,
 .home-v6-page .home-v6-mobile-quickdrop-secondary:focus-visible {
-border-color: rgba(59, 130, 246, 0.22);
-    background: rgba(239, 246, 255, 0.96);
-    color: #1d4ed8;
+border-color: rgba(var(--home-v6-brand-rgb), 0.22);
+    background: rgba(245, 241, 255, 0.96);
+    color: var(--home-v6-brand-strong);
 }
 
 .home-v6-page .home-v6-developer-chat-card {
@@ -657,8 +657,8 @@ border: 1px solid #dbe4ee;
 
 .home-v6-page .home-v6-developer-chat-item:hover,
 .home-v6-page .home-v6-developer-chat-item:focus-visible {
-border-color: #93c5fd;
-    box-shadow: 0 14px 28px rgba(59, 130, 246, 0.08);
+border-color: rgba(var(--home-v6-brand-rgb), 0.22);
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
     transform: translateY(-1px);
 }
 
@@ -748,9 +748,9 @@ display: flex;
 .home-v6-page .home-schoolcomm-card-shortcut:focus-visible,
 .home-v6-page .home-schoolcomm-card-secondary:hover,
 .home-v6-page .home-schoolcomm-card-secondary:focus-visible {
-border-color: rgba(37, 99, 235, 0.32);
-    background: rgba(239, 246, 255, 0.98);
-    color: #1e40af;
+border-color: rgba(var(--home-v6-brand-rgb), 0.24);
+    background: rgba(245, 241, 255, 0.98);
+    color: var(--home-v6-brand-strong);
 }
 
 .home-v6-page .home-schoolcomm-card-chip {
@@ -1222,6 +1222,33 @@ background-color: rgba(245, 241, 255, 0.7) !important;
 .home-v6-page .hover\:text-indigo-600:hover,
 .home-v6-page .hover\:text-indigo-700:hover {
 color: var(--home-v6-brand-strong) !important;
+}
+
+/* Dense dashboard controls share one calm focus ring so keyboard navigation stays obvious without louder motion. */
+.home-v6-page .home-v6-mobile-summary-button:focus-visible,
+.home-v6-page .home-v6-mobile-sheet-close:focus-visible,
+.home-v6-page .home-v6-inline-secondary-action:focus-visible,
+.home-v6-page .home-v6-nav-item:focus-visible,
+.home-v6-page .home-v6-tool-link:focus-visible,
+.home-v6-page .home-v6-mobile-workbench-card:focus-visible,
+.home-v6-page .home-v6-favorite-card:focus-visible,
+.home-v6-page .home-mini-card--v6:focus-visible,
+.home-v6-page [data-home-v6-rail-item="true"]:focus-visible,
+.home-v6-page [data-home-v6-rail-action="true"]:focus-visible,
+.home-v6-page .favorite-toggle-btn:focus-visible,
+.home-v6-page .home-v6-mobile-workbench-star:focus-visible,
+.home-v6-page .home-v6-quickdrop-primary:focus-visible,
+.home-v6-page .home-v6-mobile-quickdrop-primary:focus-visible,
+.home-v6-page .home-v6-developer-chat-primary:focus-visible,
+.home-v6-page .home-v6-quickdrop-secondary:focus-visible,
+.home-v6-page .home-v6-mobile-quickdrop-secondary:focus-visible,
+.home-v6-page .home-v6-developer-chat-item:focus-visible,
+.home-v6-page .home-schoolcomm-card-shortcut:focus-visible,
+.home-v6-page .home-schoolcomm-card-primary:focus-visible,
+.home-v6-page .home-schoolcomm-card-secondary:focus-visible,
+.home-v6-page [data-home-reservations-item="true"]:focus-visible {
+outline: none;
+    box-shadow: var(--home-v6-focus-ring);
 }
 
 @media (max-width: 1099px) {

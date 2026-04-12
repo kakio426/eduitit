@@ -21,11 +21,11 @@
         linear-gradient(180deg, rgba(255, 255, 255, 0.985) 0%, rgba(248, 251, 254, 0.965) 100%);
     --home-v6-shadow-panel:
         0 18px 40px rgba(15, 23, 42, 0.075),
-        0 5px 14px rgba(56, 189, 248, 0.03),
+        0 5px 14px rgba(91, 44, 207, 0.028),
         inset 0 1px 0 rgba(255, 255, 255, 0.82);
     --home-v6-shadow-tile:
         0 12px 24px rgba(15, 23, 42, 0.06),
-        0 4px 12px rgba(56, 189, 248, 0.02),
+        0 4px 12px rgba(91, 44, 207, 0.018),
         inset 0 1px 0 rgba(255, 255, 255, 0.76);
     --home-v6-radius-hero: 1rem;
     --home-v6-radius-panel: 0.95rem;
@@ -47,7 +47,7 @@
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(249, 248, 255, 0.54) 100%);
     box-shadow:
-        0 24px 56px rgba(15, 23, 42, 0.08),
+        0 20px 44px rgba(15, 23, 42, 0.07),
         inset 0 1px 0 rgba(255, 255, 255, 0.76);
     overflow: hidden;
 }
@@ -88,7 +88,7 @@
 .home-public-v6-page .home-public-v4-primary-link {
     background: linear-gradient(135deg, var(--color-brand-700) 0%, var(--color-brand-500) 100%);
     color: var(--color-text-inverse);
-    box-shadow: 0 16px 30px rgba(91, 44, 207, 0.18);
+    box-shadow: 0 12px 24px rgba(91, 44, 207, 0.16);
 }
 
 .home-public-v6-page .home-public-v5-primary-link:hover,

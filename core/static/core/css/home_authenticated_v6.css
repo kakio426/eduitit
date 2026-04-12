@@ -3,9 +3,10 @@
     isolation: isolate;
     overflow-x: hidden;
     /* Authenticated home keeps one calm brand accent instead of competing category colors. */
+    --home-v6-focus-ring: 0 0 0 3px rgba(91, 44, 207, 0.12);
     background:
-        radial-gradient(circle at 16% 10%, rgba(91, 44, 207, 0.12), transparent 42%),
-        radial-gradient(circle at 84% 16%, rgba(198, 165, 107, 0.11), transparent 34%),
+        radial-gradient(circle at 16% 10%, rgba(91, 44, 207, 0.09), transparent 42%),
+        radial-gradient(circle at 84% 16%, rgba(198, 165, 107, 0.08), transparent 34%),
         linear-gradient(180deg, #f7f6fc 0%, #f3f4fb 48%, #fbfbfe 100%);
     --home-v6-brand-rgb: 91, 44, 207;
     --home-v6-brand: var(--color-brand-700);
@@ -70,8 +71,8 @@
     position: absolute;
     inset: auto;
     pointer-events: none;
-    filter: blur(24px);
-    opacity: 0.38;
+    filter: blur(18px);
+    opacity: 0.24;
     z-index: 0;
 }
 
@@ -80,8 +81,7 @@
     left: -5rem;
     width: 18rem;
     height: 18rem;
-    background: radial-gradient(circle, rgba(91, 44, 207, 0.15) 0%, rgba(91, 44, 207, 0) 74%);
-    animation: homeV6Drift 22s ease-in-out infinite alternate;
+    background: radial-gradient(circle, rgba(91, 44, 207, 0.11) 0%, rgba(91, 44, 207, 0) 74%);
 }
 
 .home-v6-page::after {
@@ -89,8 +89,7 @@
     right: -5rem;
     width: 16rem;
     height: 16rem;
-    background: radial-gradient(circle, rgba(198, 165, 107, 0.22) 0%, rgba(198, 165, 107, 0) 76%);
-    animation: homeV6Drift 26s ease-in-out infinite alternate-reverse;
+    background: radial-gradient(circle, rgba(198, 165, 107, 0.14) 0%, rgba(198, 165, 107, 0) 76%);
 }
 
 .home-v6-page > .mx-auto,
@@ -133,7 +132,6 @@
     width: 14rem;
     height: 14rem;
     background: radial-gradient(circle, rgba(238, 232, 255, 0.56) 0%, rgba(238, 232, 255, 0) 74%);
-    animation: homeV6Float 22s ease-in-out infinite;
 }
 
 @keyframes homeV6Drift {
