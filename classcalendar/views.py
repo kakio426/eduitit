@@ -1,7 +1,6 @@
 import logging
 import hashlib
 import json
-import mimetypes
 import os
 import secrets
 import uuid
@@ -29,7 +28,7 @@ from korean_lunar_calendar import KoreanLunarCalendar
 from core.active_classroom import get_active_classroom_for_request
 from products.models import Product
 
-from .forms import CalendarEventCreateForm, MessageCaptureCommitForm, MessageCaptureParseForm
+from .forms import CalendarEventCreateForm, MessageCaptureCommitForm
 from .integrations import (
     SOURCE_COLLECT_DEADLINE,
     SOURCE_CONSENT_EXPIRY,
@@ -41,6 +40,17 @@ from .integrations import (
     sync_user_calendar_integrations,
 )
 from .message_capture import parse_message_capture_draft
+from .message_capture_service import (
+    MESSAGE_CAPTURE_RULE_VERSION,
+    MESSAGE_CAPTURE_UPLOAD_CONFIG,
+    MessageCaptureUploadConfig,
+    create_message_capture_attachments as _create_message_capture_attachments,
+    create_message_capture_candidates as _create_message_capture_candidates,
+    extract_message_capture_submission as _extract_message_capture_submission,
+    extract_upload_extension as _extract_upload_extension,
+    find_existing_message_capture as _find_existing_message_capture,
+    validate_message_capture_uploads as _validate_message_capture_uploads,
+)
 from .message_capture_llm import refine_message_capture_candidates
 from .message_capture_classifier import (
     DEFAULT_ASSIST_THRESHOLD,
@@ -58,7 +68,6 @@ from .models import (
     CalendarEventAttachment,
     CalendarIntegrationSetting,
     CalendarMessageCapture,
-    CalendarMessageCaptureAttachment,
     CalendarMessageCaptureCandidate,
     CalendarTask,
     EventPageBlock,
@@ -82,29 +91,11 @@ OPENCLO_WEBHOOK_INTEGRATION_SOURCE = "openclo_webhook"
 User = get_user_model()
 logger = logging.getLogger(__name__)
 
-MESSAGE_CAPTURE_MAX_FILES = 3
-MESSAGE_CAPTURE_MAX_FILE_BYTES = 8 * 1024 * 1024
-MESSAGE_CAPTURE_ALLOWED_EXTENSIONS = {
-    "pdf",
-    "xls",
-    "xlsx",
-    "doc",
-    "docx",
-    "hwp",
-    "hwpx",
-}
-MESSAGE_CAPTURE_ALLOWED_MIME_TYPES = {
-    "application/pdf",
-    "application/vnd.ms-excel",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/x-hwp",
-    "application/haansofthwp",
-    "application/octet-stream",
-}
-MESSAGE_CAPTURE_ALLOWED_MIME_PREFIXES = ()
-MESSAGE_CAPTURE_RULE_VERSION = "mvp-v3"
+MESSAGE_CAPTURE_MAX_FILES = MESSAGE_CAPTURE_UPLOAD_CONFIG.max_files
+MESSAGE_CAPTURE_MAX_FILE_BYTES = MESSAGE_CAPTURE_UPLOAD_CONFIG.max_file_bytes
+MESSAGE_CAPTURE_ALLOWED_EXTENSIONS = MESSAGE_CAPTURE_UPLOAD_CONFIG.allowed_extensions
+MESSAGE_CAPTURE_ALLOWED_MIME_TYPES = MESSAGE_CAPTURE_UPLOAD_CONFIG.allowed_mime_types
+MESSAGE_CAPTURE_ALLOWED_MIME_PREFIXES = MESSAGE_CAPTURE_UPLOAD_CONFIG.allowed_mime_prefixes
 MESSAGE_CAPTURE_CLASSIFIER_ASSIST_THRESHOLD = float(
     getattr(settings, "FEATURE_MESSAGE_CAPTURE_CLASSIFIER_ASSIST_THRESHOLD", DEFAULT_ASSIST_THRESHOLD)
 )
@@ -524,6 +515,16 @@ def _build_message_capture_limits_payload():
         "max_file_bytes": MESSAGE_CAPTURE_MAX_FILE_BYTES,
         "allowed_extensions": sorted(MESSAGE_CAPTURE_ALLOWED_EXTENSIONS),
     }
+
+
+def _current_message_capture_upload_config():
+    return MessageCaptureUploadConfig(
+        max_files=MESSAGE_CAPTURE_MAX_FILES,
+        max_file_bytes=MESSAGE_CAPTURE_MAX_FILE_BYTES,
+        allowed_extensions=frozenset(MESSAGE_CAPTURE_ALLOWED_EXTENSIONS),
+        allowed_mime_types=frozenset(MESSAGE_CAPTURE_ALLOWED_MIME_TYPES),
+        allowed_mime_prefixes=tuple(MESSAGE_CAPTURE_ALLOWED_MIME_PREFIXES),
+    )
 
 
 def _build_message_capture_urls_payload():
@@ -1814,189 +1815,6 @@ def _serialize_message_capture_archive_detail(capture):
         }
     )
     return payload
-
-
-def _guess_upload_mime_type(uploaded_file):
-    hinted_type = (getattr(uploaded_file, "content_type", "") or "").strip().lower()
-    if hinted_type:
-        return hinted_type
-    guessed, _ = mimetypes.guess_type(uploaded_file.name or "")
-    return (guessed or "application/octet-stream").lower()
-
-
-def _extract_upload_extension(uploaded_file):
-    file_name = (
-        getattr(uploaded_file, "name", "")
-        or getattr(uploaded_file, "original_name", "")
-        or getattr(getattr(uploaded_file, "file", None), "name", "")
-    )
-    _, extension = os.path.splitext(file_name or "")
-    return extension.lower().lstrip(".")
-
-
-def _is_allowed_message_capture_file(uploaded_file):
-    extension = _extract_upload_extension(uploaded_file)
-    mime_type = _guess_upload_mime_type(uploaded_file)
-
-    extension_allowed = extension in MESSAGE_CAPTURE_ALLOWED_EXTENSIONS
-    mime_allowed = mime_type in MESSAGE_CAPTURE_ALLOWED_MIME_TYPES or any(
-        mime_type.startswith(prefix) for prefix in MESSAGE_CAPTURE_ALLOWED_MIME_PREFIXES
-    )
-    return extension_allowed and mime_allowed
-
-
-def _validate_message_capture_uploads(*, uploaded_files, user_id, operation_label):
-    attachment_checksums = []
-    for uploaded_file in uploaded_files:
-        file_size = int(getattr(uploaded_file, "size", 0) or 0)
-        if file_size > MESSAGE_CAPTURE_MAX_FILE_BYTES:
-            logger.warning(
-                "[ClassCalendar][MessageCapture] %s_failed user_id=%s reason=file_too_large file=%s size=%s",
-                operation_label,
-                user_id,
-                uploaded_file.name,
-                file_size,
-            )
-            return None, JsonResponse(
-                {
-                    "status": "error",
-                    "code": "file_too_large",
-                    "message": f"{uploaded_file.name} 파일이 용량 제한({MESSAGE_CAPTURE_MAX_FILE_BYTES // (1024 * 1024)}MB)을 초과했습니다.",
-                },
-                status=413,
-            )
-        if not _is_allowed_message_capture_file(uploaded_file):
-            logger.warning(
-                "[ClassCalendar][MessageCapture] %s_failed user_id=%s reason=invalid_file_type file=%s",
-                operation_label,
-                user_id,
-                uploaded_file.name,
-            )
-            return None, JsonResponse(
-                {
-                    "status": "error",
-                    "code": "validation_error",
-                    "message": f"{uploaded_file.name} 파일 형식은 지원하지 않습니다.",
-                },
-                status=400,
-            )
-        attachment_checksums.append(_calculate_upload_sha256(uploaded_file))
-    return attachment_checksums, None
-
-
-def _message_capture_error_response(*, message, code="validation_error", status=400, errors=None):
-    payload = {
-        "status": "error",
-        "code": code,
-        "message": message,
-    }
-    if errors is not None:
-        payload["errors"] = errors
-    return JsonResponse(payload, status=status)
-
-
-def _extract_message_capture_submission(request, *, operation_label):
-    form = MessageCaptureParseForm(request.POST)
-    if not form.is_valid():
-        logger.warning(
-            "[ClassCalendar][MessageCapture] %s_failed user_id=%s reason=form_invalid",
-            operation_label,
-            request.user.id,
-        )
-        return None, _message_capture_error_response(
-            message="입력값을 확인해 주세요.",
-            errors=form.errors.get_json_data(),
-        )
-
-    raw_text = form.cleaned_data.get("raw_text") or ""
-    uploaded_files = request.FILES.getlist("files")
-    if not raw_text.strip() and not uploaded_files:
-        logger.warning(
-            "[ClassCalendar][MessageCapture] %s_failed user_id=%s reason=empty_input",
-            operation_label,
-            request.user.id,
-        )
-        return None, _message_capture_error_response(
-            message="메시지 텍스트 또는 첨부파일 중 하나는 반드시 입력해 주세요.",
-        )
-
-    if len(uploaded_files) > MESSAGE_CAPTURE_MAX_FILES:
-        logger.warning(
-            "[ClassCalendar][MessageCapture] %s_failed user_id=%s reason=too_many_files files=%s",
-            operation_label,
-            request.user.id,
-            len(uploaded_files),
-        )
-        return None, _message_capture_error_response(
-            message=f"첨부파일은 최대 {MESSAGE_CAPTURE_MAX_FILES}개까지 업로드할 수 있습니다.",
-        )
-
-    return (
-        {
-            "form": form,
-            "raw_text": raw_text,
-            "source_hint": (form.cleaned_data.get("source_hint") or "unknown").strip()[:30] or "unknown",
-            "idempotency_key": (form.cleaned_data.get("idempotency_key") or uuid.uuid4().hex).strip()[:64] or uuid.uuid4().hex,
-            "manual_date": form.cleaned_data.get("manual_date"),
-            "manual_note": form.cleaned_data.get("manual_note") or "",
-            "uploaded_files": uploaded_files,
-        },
-        None,
-    )
-
-
-def _find_existing_message_capture(*, user, idempotency_key):
-    return (
-        CalendarMessageCapture.objects.filter(author=user, idempotency_key=idempotency_key)
-        .prefetch_related("attachments", "candidates")
-        .first()
-    )
-
-
-def _calculate_upload_sha256(uploaded_file):
-    digest = hashlib.sha256()
-    for chunk in uploaded_file.chunks():
-        digest.update(chunk)
-    if hasattr(uploaded_file, "seek"):
-        uploaded_file.seek(0)
-    return digest.hexdigest()
-
-
-def _create_message_capture_attachments(capture, uploaded_files, attachment_checksums, *, uploaded_by):
-    for uploaded_file, checksum in zip(uploaded_files, attachment_checksums):
-        CalendarMessageCaptureAttachment.objects.create(
-            capture=capture,
-            uploaded_by=uploaded_by,
-            file=uploaded_file,
-            original_name=(os.path.basename(uploaded_file.name or "") or "attachment")[:255],
-            mime_type=_guess_upload_mime_type(uploaded_file)[:120],
-            size_bytes=int(getattr(uploaded_file, "size", 0) or 0),
-            checksum_sha256=checksum,
-            is_selected=True,
-        )
-
-
-def _create_message_capture_candidates(capture, parsed_candidates):
-    for index, candidate in enumerate(parsed_candidates or []):
-        candidate_kind = str(candidate.get("kind") or CalendarMessageCaptureCandidate.CandidateKind.EVENT).strip().lower()
-        if candidate_kind not in _allowed_message_capture_candidate_kinds():
-            candidate_kind = CalendarMessageCaptureCandidate.CandidateKind.EVENT
-        CalendarMessageCaptureCandidate.objects.create(
-            capture=capture,
-            sort_order=index,
-            candidate_kind=candidate_kind,
-            title=(candidate.get("title") or "")[:200],
-            summary=candidate.get("summary") or "",
-            start_time=candidate.get("start_time"),
-            end_time=candidate.get("end_time"),
-            is_all_day=bool(candidate.get("is_all_day")),
-            confidence_score=candidate.get("confidence_score") or 0,
-            is_recommended=bool(candidate.get("is_recommended", True)),
-            needs_check=bool(candidate.get("needs_check")),
-            evidence_text=(candidate.get("evidence_text") or "")[:1000],
-            evidence_payload=candidate.get("evidence_payload") or {},
-            commit_status=CalendarMessageCaptureCandidate.CommitStatus.PENDING,
-        )
 
 
 def _build_message_capture_parse_result(*, user, raw_text, source_hint, uploaded_files, attachment_checksums):
@@ -4549,16 +4367,18 @@ def api_message_capture_save(request):
     submission, error_response = _extract_message_capture_submission(
         request,
         operation_label="save",
+        logger=logger,
+        upload_config=_current_message_capture_upload_config(),
     )
     if error_response:
         return error_response
 
-    raw_text = submission["raw_text"]
-    source_hint = submission["source_hint"]
-    idempotency_key = submission["idempotency_key"]
-    manual_date = submission["manual_date"]
-    manual_note = submission["manual_note"]
-    uploaded_files = submission["uploaded_files"]
+    raw_text = submission.raw_text
+    source_hint = submission.source_hint
+    idempotency_key = submission.idempotency_key
+    manual_date = submission.manual_date
+    manual_note = submission.manual_note
+    uploaded_files = submission.uploaded_files
 
     existing_capture = _find_existing_message_capture(
         user=request.user,
@@ -4578,6 +4398,8 @@ def api_message_capture_save(request):
         uploaded_files=uploaded_files,
         user_id=request.user.id,
         operation_label="save",
+        logger=logger,
+        upload_config=_current_message_capture_upload_config(),
     )
     if upload_error_response:
         return upload_error_response
@@ -4660,16 +4482,18 @@ def api_message_capture_parse(request):
     submission, error_response = _extract_message_capture_submission(
         request,
         operation_label="parse",
+        logger=logger,
+        upload_config=_current_message_capture_upload_config(),
     )
     if error_response:
         return error_response
 
-    raw_text = submission["raw_text"]
-    source_hint = submission["source_hint"]
-    idempotency_key = submission["idempotency_key"]
-    manual_date = submission["manual_date"]
-    manual_note = submission["manual_note"]
-    uploaded_files = submission["uploaded_files"]
+    raw_text = submission.raw_text
+    source_hint = submission.source_hint
+    idempotency_key = submission.idempotency_key
+    manual_date = submission.manual_date
+    manual_note = submission.manual_note
+    uploaded_files = submission.uploaded_files
 
     existing_capture = _find_existing_message_capture(
         user=request.user,
@@ -4697,6 +4521,8 @@ def api_message_capture_parse(request):
         uploaded_files=uploaded_files,
         user_id=request.user.id,
         operation_label="parse",
+        logger=logger,
+        upload_config=_current_message_capture_upload_config(),
     )
     if upload_error_response:
         return upload_error_response
@@ -4772,7 +4598,11 @@ def api_message_capture_parse(request):
             uploaded_by=request.user,
         )
 
-        _create_message_capture_candidates(capture, parsed.get("candidates") or [])
+        _create_message_capture_candidates(
+            capture,
+            parsed.get("candidates") or [],
+            allowed_candidate_kinds=_allowed_message_capture_candidate_kinds(),
+        )
 
     capture = CalendarMessageCapture.objects.prefetch_related("attachments", "candidates").get(id=capture.id)
     parse_elapsed_ms = int((timezone.now() - parse_started_at).total_seconds() * 1000)
@@ -4839,7 +4669,11 @@ def api_message_capture_parse_saved(request, capture_id):
         )
         capture_for_update.save(update_fields=update_fields)
         capture_for_update.candidates.all().delete()
-        _create_message_capture_candidates(capture_for_update, parse_result["parsed"].get("candidates") or [])
+        _create_message_capture_candidates(
+            capture_for_update,
+            parse_result["parsed"].get("candidates") or [],
+            allowed_candidate_kinds=_allowed_message_capture_candidate_kinds(),
+        )
 
     capture = CalendarMessageCapture.objects.filter(author=request.user).prefetch_related("attachments", "candidates").get(id=capture.id)
     parse_elapsed_ms = int((timezone.now() - parse_started_at).total_seconds() * 1000)
