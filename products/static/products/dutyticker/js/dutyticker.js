@@ -45,26 +45,8 @@ class DutyTickerManager {
         this.roleTickerStorageKey = 'dt-role-ticker-enabled-v1';
         this.randomDrawnStudentIds = new Set();
         this.randomCurrentStudentId = null;
-        this.bgmTracks = window.dtBgmTracks || {};
-        this.bgmTrackOrder = Object.keys(this.bgmTracks);
-        this.bgmTrackKey = this.bgmTrackOrder[0] || '';
-        this.bgmEnabled = false;
-        this.bgmLoopMode = 'all';
-        this.bgmEnabledTrackKeys = new Set(this.bgmTrackOrder);
-        this.bgmAwaitUserGesture = false;
-        this.bgmAudioEl = null;
-        this.bgmFadeRaf = null;
-        this.bgmStorageKey = 'dt-bgm-state-v1';
-        this.bgmDefaultVolumePercent = 140;
-        this.bgmGainBoost = 2.2;
-        this.bgmTrackVolumeCap = 0.72;
         this.soundEffectGainBoost = 2.2;
         this.soundEffectVolumeCap = 0.34;
-        this.bgmVolumePercent = this.bgmDefaultVolumePercent;
-        this.boundBgmUnlock = null;
-        this.bgmTrackPanelOpen = false;
-        this.boundBgmPanelOutsideClick = null;
-        this.boundBgmPanelEscape = null;
         this.missionFontSizeOrder = ['xxxs', 'xxs', 'xs', 'sm', 'md', 'lg', 'xl', 'xxl', 'xxxl'];
         this.missionFontSize = 'md';
         this.missionFontStorageKey = 'dt-mission-font-size-v1';
@@ -126,9 +108,6 @@ class DutyTickerManager {
         this.updateTimerDisplay();
         this.restoreTtsAutoAnnouncementHistory();
         this.updateSoundUI();
-        this.setupBgm();
-        this.restoreBgmState();
-        this.updateBgmUI();
         this.bindGlobalShortcuts();
 
         // Anti-cache check
@@ -228,6 +207,127 @@ class DutyTickerManager {
             this.headerClockMinuteKey = minuteKey;
             this.renderSchedule();
         }
+    }
+
+    getCurrentPeriodSlot(now = new Date()) {
+        const currentTime = now.getTime();
+        return this.todaySchedule.find((slot) => {
+            const slotType = String(slot?.slot_type || '').trim();
+            if (slotType !== 'period') return false;
+            const startAt = this.getScheduleSlotDate(slot, 'startTime', now);
+            const endAt = this.getScheduleSlotDate(slot, 'endTime', now);
+            if (!startAt || !endAt || endAt <= startAt) return false;
+            return currentTime >= startAt.getTime() && currentTime < endAt.getTime();
+        }) || null;
+    }
+
+    getHeaderOperationSnapshot(now = new Date()) {
+        const soundText = this.isSoundEnabled ? '방송 소리 켜짐' : '방송 소리 꺼짐';
+        const ttsText = this.ttsEnabled ? `${this.ttsMinutesBefore}분 전 자동 안내` : '자동 안내 꺼짐';
+        const activeAutomation = this.getActiveMissionAutomation(now);
+        const currentSlot = this.getCurrentMissionAutomationSlot(now) || this.getCurrentPeriodSlot(now);
+        const nextAnnouncement = this.getNextScheduleAnnouncement(now);
+        const activeSlotLabel = String(currentSlot?.slot_label || '').trim() || this.getSchedulePeriodLabel(currentSlot);
+
+        if (this.isBroadcasting && String(this.broadcastMessage || '').trim()) {
+            return {
+                tone: 'alert',
+                badge: '알림',
+                value: '교실 안내 송출 중',
+                hint: String(this.broadcastMessage || '').trim().slice(0, 52),
+            };
+        }
+
+        if (activeAutomation) {
+            return {
+                tone: 'active',
+                badge: '자동',
+                value: activeAutomation.name || '자동 운영',
+                hint: `${activeAutomation.startTime} - ${activeAutomation.endTime} · ${soundText}`,
+            };
+        }
+
+        if (currentSlot) {
+            const slotType = String(currentSlot?.slot_type || '').trim();
+            const detailText = slotType === 'period'
+                ? (this.getScheduleSubjectName(currentSlot) || `${currentSlot.startTime} - ${currentSlot.endTime}`)
+                : `${currentSlot.startTime} - ${currentSlot.endTime}`;
+            return {
+                tone: 'active',
+                badge: slotType === 'period' ? '수업' : '운영',
+                value: slotType === 'period' ? `${activeSlotLabel} 진행 중` : `${activeSlotLabel} 운영 중`,
+                hint: `${detailText} · ${soundText}`,
+            };
+        }
+
+        if (nextAnnouncement && nextAnnouncement.status !== 'past') {
+            return {
+                tone: 'pending',
+                badge: '대기',
+                value: `${nextAnnouncement.periodLabel} 준비`,
+                hint: `${nextAnnouncement.subjectName} · ${nextAnnouncement.announceTime} · ${soundText}`,
+            };
+        }
+
+        return {
+            tone: 'idle',
+            badge: '기본',
+            value: '일반 운영',
+            hint: `${soundText} · ${ttsText}`,
+        };
+    }
+
+    renderHeaderOverview() {
+        const roleValueEl = document.getElementById('headerRoleSummaryValue');
+        const roleHintEl = document.getElementById('headerRoleSummaryHint');
+        const studentValueEl = document.getElementById('headerStudentSummaryValue');
+        const studentHintEl = document.getElementById('headerStudentSummaryHint');
+        const opsCardEl = document.getElementById('headerOpsSummaryCard');
+        const opsBadgeEl = document.getElementById('headerOpsSummaryBadge');
+        const opsValueEl = document.getElementById('headerOpsSummaryValue');
+        const opsHintEl = document.getElementById('headerOpsSummaryHint');
+
+        if (!roleValueEl || !roleHintEl || !studentValueEl || !studentHintEl || !opsCardEl || !opsBadgeEl || !opsValueEl || !opsHintEl) {
+            return;
+        }
+
+        if (!this.hasLoadedData) {
+            roleValueEl.textContent = '연결 준비';
+            roleHintEl.textContent = '역할 현황을 불러오는 중입니다.';
+            studentValueEl.textContent = '연결 준비';
+            studentHintEl.textContent = '학생 현황을 불러오는 중입니다.';
+            opsBadgeEl.textContent = '대기';
+            opsValueEl.textContent = '운영 보드 준비 중';
+            opsHintEl.textContent = this.isSoundEnabled ? '방송 소리 켜짐' : '방송 소리 꺼짐';
+            opsCardEl.dataset.state = 'idle';
+            opsBadgeEl.dataset.state = 'idle';
+            return;
+        }
+
+        const totalRoles = this.roles.length;
+        const assignedRoles = this.roles.filter((role) => Number.isFinite(Number(role.assigneeId))).length;
+        const completedRoles = this.roles.filter((role) => role.status === 'completed').length;
+        const pendingRoles = Math.max(totalRoles - assignedRoles, 0);
+        roleValueEl.textContent = totalRoles ? `${assignedRoles}/${totalRoles}` : '역할 없음';
+        roleHintEl.textContent = totalRoles
+            ? `완료 ${completedRoles} · 미배정 ${pendingRoles}`
+            : '설정에서 역할을 추가해 주세요.';
+
+        const totalStudents = this.students.length;
+        const doneStudents = this.students.filter((student) => student.status === 'done').length;
+        const remainingStudents = Math.max(totalStudents - doneStudents, 0);
+        const progressPercent = totalStudents ? Math.round((doneStudents / totalStudents) * 100) : 0;
+        studentValueEl.textContent = totalStudents ? `${doneStudents}/${totalStudents}` : '학생 없음';
+        studentHintEl.textContent = totalStudents
+            ? `미션 완료 ${progressPercent}% · 남음 ${remainingStudents}`
+            : '설정에서 학생을 불러와 주세요.';
+
+        const snapshot = this.getHeaderOperationSnapshot(new Date());
+        opsCardEl.dataset.state = snapshot.tone;
+        opsBadgeEl.dataset.state = snapshot.tone;
+        opsBadgeEl.textContent = snapshot.badge;
+        opsValueEl.textContent = snapshot.value;
+        opsHintEl.textContent = snapshot.hint;
     }
 
     setupAdaptiveLayoutObserver() {
@@ -2346,6 +2446,8 @@ class DutyTickerManager {
                 </div>
             `;
         }
+
+        this.renderHeaderOverview();
     }
 
     renderAll() {
@@ -2354,6 +2456,7 @@ class DutyTickerManager {
         this.renderRoleList();
         this.renderStudentGrid();
         this.renderNotices();
+        this.renderHeaderOverview();
         this.renderRandomPicker();
         this.requestAdaptiveLayoutRefresh();
         const callModal = document.getElementById('callModeModal');
@@ -2375,6 +2478,7 @@ class DutyTickerManager {
 
         if (periodSchedule.length === 0) {
             container.innerHTML = '<span class="dt-header-schedule-empty">오늘 시간표 없음</span>';
+            this.renderHeaderOverview();
             return;
         }
 
@@ -2427,6 +2531,7 @@ class DutyTickerManager {
                     </span>
                 `;
             }).join('');
+            this.renderHeaderOverview();
             return;
         }
 
@@ -2439,6 +2544,7 @@ class DutyTickerManager {
                 && app.getAttribute('data-layout-density') !== 'hero';
             const emptyMessage = isWindowedDense ? '다음 교시 대기 중' : '다음 교시 10분 전부터 표시됩니다';
             container.innerHTML = `<span class="dt-header-schedule-empty">${emptyMessage}</span>`;
+            this.renderHeaderOverview();
             return;
         }
 
@@ -2456,6 +2562,7 @@ class DutyTickerManager {
                 <span class="dt-header-schedule-subject">${this.escapeHtml(focusSlot.subjectName)}</span>
             </span>
         `;
+        this.renderHeaderOverview();
     }
 
     renderMission() {
@@ -2573,6 +2680,7 @@ class DutyTickerManager {
             `;
             this.stopRoleTicker();
             this.updateRoleCardSubtitle();
+            this.renderHeaderOverview();
             return;
         }
 
@@ -2639,6 +2747,7 @@ class DutyTickerManager {
         this.ensureRoleTickerRunning();
         const activeRow = this.paintRoleTickerFocus({ force: true });
         if (activeRow) this.scrollRoleRowIntoViewIfNeeded(activeRow);
+        this.renderHeaderOverview();
     }
 
     setupRoleTickerControls() {
@@ -2911,6 +3020,8 @@ class DutyTickerManager {
             if (divider) divider.classList.add('hidden');
             if (card) card.classList.add('dt-notice-card-empty');
         }
+
+        this.renderHeaderOverview();
     }
 
     syncRandomPickerStudents() {
@@ -3035,12 +3146,14 @@ class DutyTickerManager {
         if (total === 0) {
             if (bar) bar.style.width = '0%';
             if (text) text.textContent = '0% (0/0)';
+            this.renderHeaderOverview();
             return;
         }
         const done = this.students.filter(s => s.status === 'done').length;
         const percent = Math.round((done / total) * 100);
         if (bar) bar.style.width = `${percent}%`;
         if (text) text.textContent = `${percent}% (${done}/${total})`;
+        this.renderHeaderOverview();
     }
 
     // --- Actions ---
@@ -4302,456 +4415,10 @@ class DutyTickerManager {
         });
     }
 
-    // --- BGM ---
-    setupBgm() {
-        if (!this.bgmTrackOrder.length) return;
-
-        const audioContainer = document.getElementById('audioContainer');
-        if (audioContainer) {
-            const audioEl = document.createElement('audio');
-            audioEl.id = 'bgmAudio';
-            audioEl.preload = 'metadata';
-            audioEl.loop = false;
-            audioEl.volume = 0;
-            audioEl.setAttribute('aria-hidden', 'true');
-            audioEl.addEventListener('ended', () => this.handleBgmTrackEnded());
-            audioContainer.innerHTML = '';
-            audioContainer.appendChild(audioEl);
-            this.bgmAudioEl = audioEl;
-        }
-
-        const rail = document.getElementById('bgmTrackRail');
-        if (rail) {
-            rail.addEventListener('click', (event) => {
-                const target = event.target;
-                if (!(target instanceof HTMLElement)) return;
-                const playKey = target.dataset.bgmPlay || '';
-                if (!playKey) return;
-                event.preventDefault();
-                this.setBgmTrack(playKey, { persist: true, userInitiated: true, autoplay: true });
-            });
-
-            rail.addEventListener('change', (event) => {
-                const target = event.target;
-                if (!(target instanceof HTMLInputElement)) return;
-                if (target.type !== 'checkbox') return;
-                const trackKey = target.dataset.bgmToggle || '';
-                if (!trackKey) return;
-
-                if (target.checked) this.bgmEnabledTrackKeys.add(trackKey);
-                else this.bgmEnabledTrackKeys.delete(trackKey);
-
-                const playableKeys = this.getPlayableBgmTrackKeys();
-                if (!playableKeys.length) {
-                    this.bgmEnabled = false;
-                    this.bgmTrackKey = this.bgmTrackOrder[0] || '';
-                    this.pauseBgm({ save: false });
-                } else if (!this.bgmEnabledTrackKeys.has(this.bgmTrackKey)) {
-                    this.bgmTrackKey = playableKeys[0];
-                    if (this.bgmEnabled) this.playBgm({ userInitiated: true, forceReload: true });
-                }
-
-                this.saveBgmState();
-                this.updateBgmUI();
-            });
-        }
-
-        const volumeRange = document.getElementById('bgmVolumeRange');
-        if (volumeRange && volumeRange.dataset.dtBound !== '1') {
-            volumeRange.addEventListener('input', (event) => {
-                const target = event.target;
-                if (!(target instanceof HTMLInputElement)) return;
-                this.setBgmVolumePercent(target.value, { persist: false, applyNow: true });
-            });
-            volumeRange.addEventListener('change', (event) => {
-                const target = event.target;
-                if (!(target instanceof HTMLInputElement)) return;
-                this.setBgmVolumePercent(target.value, { persist: true, applyNow: true });
-            });
-            volumeRange.dataset.dtBound = '1';
-        }
-
-        if (!this.boundBgmPanelOutsideClick) {
-            this.boundBgmPanelOutsideClick = (event) => {
-                const controls = document.getElementById('bgmControls');
-                if (!controls || !(event.target instanceof Node)) return;
-                if (controls.contains(event.target)) return;
-                this.toggleBgmTrackPanel(false);
-            };
-            document.addEventListener('click', this.boundBgmPanelOutsideClick, true);
-        }
-
-        if (!this.boundBgmPanelEscape) {
-            this.boundBgmPanelEscape = (event) => {
-                if (event.key !== 'Escape') return;
-                this.toggleBgmTrackPanel(false);
-            };
-            document.addEventListener('keydown', this.boundBgmPanelEscape);
-        }
-
-        this.renderBgmTrackRail();
-        this.updateBgmUI();
-        this.ensureBgmUnlockListener();
-    }
-
-    toggleBgmTrackPanel(forceOpen = null) {
-        const rail = document.getElementById('bgmTrackRail');
-        const shouldOpen = forceOpen === null ? !this.bgmTrackPanelOpen : !!forceOpen;
-        this.bgmTrackPanelOpen = shouldOpen;
-        if (!rail) return;
-        rail.classList.toggle('is-open', shouldOpen);
-    }
-
-    ensureBgmUnlockListener() {
-        if (this.boundBgmUnlock) return;
-        this.boundBgmUnlock = () => {
-            this.resumeAudioContext();
-            if (this.bgmAwaitUserGesture && this.bgmEnabled) {
-                this.playBgm({ userInitiated: true });
-            }
-        };
-        document.addEventListener('pointerdown', this.boundBgmUnlock, { passive: true });
-        document.addEventListener('keydown', this.boundBgmUnlock);
-    }
-
-    saveBgmState() {
-        try {
-            localStorage.setItem(this.bgmStorageKey, JSON.stringify({
-                enabled: this.bgmEnabled,
-                trackKey: this.bgmTrackKey,
-                loopMode: this.bgmLoopMode,
-                enabledTrackKeys: [...this.bgmEnabledTrackKeys],
-                volumePercent: this.bgmVolumePercent,
-            }));
-        } catch (error) {
-            console.warn('DutyTicker: failed to save BGM state', error);
-        }
-    }
-
-    restoreBgmState() {
-        if (!this.bgmTrackOrder.length) return;
-        try {
-            const raw = localStorage.getItem(this.bgmStorageKey);
-            if (!raw) {
-                this.bgmEnabledTrackKeys = new Set(this.bgmTrackOrder);
-                this.bgmLoopMode = 'all';
-                this.bgmTrackKey = this.bgmTrackOrder[0];
-                this.bgmVolumePercent = this.bgmDefaultVolumePercent;
-                this.renderBgmTrackRail();
-                this.updateBgmUI();
-                this.saveBgmState();
-                return;
-            }
-
-            const parsed = JSON.parse(raw);
-            const validTrackSet = new Set(this.bgmTrackOrder);
-            const rawRestoredTrackKeys = Array.isArray(parsed.enabledTrackKeys)
-                ? parsed.enabledTrackKeys.filter((key) => validTrackSet.has(String(key)))
-                : this.bgmTrackOrder.slice();
-            const restoredTrackKeys = rawRestoredTrackKeys.length ? rawRestoredTrackKeys : this.bgmTrackOrder.slice();
-
-            this.bgmEnabledTrackKeys = new Set(restoredTrackKeys);
-            this.bgmLoopMode = parsed.loopMode === 'one' ? 'one' : 'all';
-            this.bgmVolumePercent = this.normalizeBgmVolumePercent(parsed.volumePercent, this.bgmDefaultVolumePercent);
-
-            const requestedTrack = String(parsed.trackKey || '');
-            if (validTrackSet.has(requestedTrack)) this.bgmTrackKey = requestedTrack;
-            else this.bgmTrackKey = this.bgmTrackOrder[0];
-
-            const canPlay = this.getPlayableBgmTrackKeys().length > 0;
-            this.bgmEnabled = parsed.enabled === true && canPlay;
-
-            this.renderBgmTrackRail();
-            this.updateBgmUI();
-            if (this.bgmEnabled) this.playBgm({ userInitiated: false, forceReload: true });
-        } catch (error) {
-            console.warn('DutyTicker: failed to restore BGM state', error);
-            this.renderBgmTrackRail();
-            this.updateBgmUI();
-        }
-    }
-
-    getPlayableBgmTrackKeys() {
-        return this.bgmTrackOrder.filter((key) => this.bgmEnabledTrackKeys.has(key));
-    }
-
-    normalizeBgmVolumePercent(value, fallback = this.bgmDefaultVolumePercent) {
-        const numeric = Number(value);
-        if (!Number.isFinite(numeric)) return fallback;
-        const rounded = Math.round(numeric);
-        return Math.max(0, Math.min(200, rounded));
-    }
-
-    getBgmMasterVolumeGain() {
-        return this.normalizeBgmVolumePercent(this.bgmVolumePercent, this.bgmDefaultVolumePercent) / 100;
-    }
-
-    getBgmTrackTargetVolume(track) {
-        const trackVolume = Number(track?.volume);
-        const baseVolume = Math.max(0.08, Math.min(0.32, Number.isFinite(trackVolume) ? trackVolume : 0.16));
-        const gain = this.getBgmMasterVolumeGain();
-        // Keep classroom TV output comfortably audible even on quieter speakers.
-        return Math.max(0, Math.min(this.bgmTrackVolumeCap, baseVolume * this.bgmGainBoost * gain));
-    }
-
     getSoundEffectVolume(volume) {
         const numeric = Number(volume);
         const baseVolume = Number.isFinite(numeric) ? numeric : 0.2;
-        const masterGain = this.getBgmMasterVolumeGain();
-        return Math.max(0, Math.min(this.soundEffectVolumeCap, baseVolume * this.soundEffectGainBoost * masterGain));
-    }
-
-    setBgmVolumePercent(value, { persist = true, applyNow = true } = {}) {
-        this.bgmVolumePercent = this.normalizeBgmVolumePercent(value, this.bgmVolumePercent);
-
-        if (applyNow && this.bgmAudioEl) {
-            const track = this.bgmTracks[this.bgmTrackKey] || {};
-            const nextVolume = this.getBgmTrackTargetVolume(track);
-            if (this.bgmEnabled && !this.bgmAudioEl.paused) {
-                void this.fadeBgmVolume(nextVolume, 120);
-            } else {
-                this.bgmAudioEl.volume = nextVolume;
-            }
-        }
-
-        if (persist) this.saveBgmState();
-        this.updateBgmUI();
-    }
-
-    renderBgmTrackRail() {
-        const rail = document.getElementById('bgmTrackRail');
-        if (!rail) return;
-        if (!this.bgmTrackOrder.length) {
-            rail.innerHTML = '<span class="text-[10px] text-slate-500 font-bold px-1">곡 없음</span>';
-            return;
-        }
-
-        rail.innerHTML = this.bgmTrackOrder.map((trackKey, index) => {
-            const track = this.bgmTracks[trackKey] || {};
-            const enabled = this.bgmEnabledTrackKeys.has(trackKey);
-            const isCurrent = this.bgmTrackKey === trackKey;
-            const rawLabel = String(track.label || `트랙 ${index + 1}`);
-            const shortLabel = rawLabel.includes('·') ? rawLabel.split('·').pop().trim() : rawLabel;
-            const chipLabel = `${String(index + 1).padStart(2, '0')} ${this.escapeHtml(shortLabel)}`;
-            const checked = enabled ? 'checked' : '';
-            const chipClass = `dt-bgm-chip ${isCurrent ? 'is-current' : ''} ${enabled ? '' : 'is-muted'}`;
-
-            return `
-                <div class="${chipClass}">
-                    <input type="checkbox" data-bgm-toggle="${this.escapeHtml(trackKey)}" ${checked} aria-label="${this.escapeHtml(rawLabel)} 재생 포함">
-                    <button type="button" class="dt-bgm-chip-btn" data-bgm-play="${this.escapeHtml(trackKey)}" title="${this.escapeHtml(rawLabel)}">${chipLabel}</button>
-                </div>
-            `;
-        }).join('');
-    }
-
-    updateBgmUI() {
-        const toggleBtn = document.getElementById('bgmToggleBtn');
-        const loopBtn = document.getElementById('bgmLoopModeBtn');
-        const prevBtn = document.getElementById('bgmPrevBtn');
-        const nextBtn = document.getElementById('bgmNextBtn');
-        const panelBtn = document.getElementById('bgmTrackPanelBtn');
-        const volumeRange = document.getElementById('bgmVolumeRange');
-        const volumeValue = document.getElementById('bgmVolumeValue');
-
-        const playableCount = this.getPlayableBgmTrackKeys().length;
-        const hasTracks = this.bgmTrackOrder.length > 0;
-        const canPlay = hasTracks && playableCount > 0;
-
-        if (toggleBtn) {
-            toggleBtn.disabled = !canPlay;
-            toggleBtn.textContent = !canPlay
-                ? 'BGM 없음'
-                : this.bgmEnabled
-                    ? (this.bgmAwaitUserGesture ? '재생대기' : 'BGM ON')
-                    : 'BGM OFF';
-            toggleBtn.classList.toggle('opacity-60', !canPlay);
-            toggleBtn.classList.toggle('cursor-not-allowed', !canPlay);
-            toggleBtn.classList.toggle('bg-indigo-600', this.bgmEnabled && canPlay);
-            toggleBtn.classList.toggle('text-white', this.bgmEnabled && canPlay);
-        }
-
-        if (loopBtn) {
-            loopBtn.disabled = !canPlay;
-            loopBtn.textContent = this.bgmLoopMode === 'one' ? '1곡' : '전체';
-            loopBtn.classList.toggle('opacity-60', !canPlay);
-            loopBtn.classList.toggle('cursor-not-allowed', !canPlay);
-        }
-
-        if (prevBtn) {
-            prevBtn.disabled = playableCount <= 1;
-            prevBtn.classList.toggle('opacity-60', playableCount <= 1);
-            prevBtn.classList.toggle('cursor-not-allowed', playableCount <= 1);
-        }
-
-        if (nextBtn) {
-            nextBtn.disabled = playableCount <= 1;
-            nextBtn.classList.toggle('opacity-60', playableCount <= 1);
-            nextBtn.classList.toggle('cursor-not-allowed', playableCount <= 1);
-        }
-
-        if (panelBtn) {
-            panelBtn.disabled = !hasTracks;
-            panelBtn.textContent = `목록 ${playableCount}/${this.bgmTrackOrder.length}`;
-            panelBtn.classList.toggle('opacity-60', !hasTracks);
-            panelBtn.classList.toggle('cursor-not-allowed', !hasTracks);
-        }
-
-        if (volumeRange) {
-            volumeRange.value = String(this.bgmVolumePercent);
-            volumeRange.disabled = !hasTracks;
-            volumeRange.classList.toggle('opacity-50', !hasTracks);
-            volumeRange.classList.toggle('cursor-not-allowed', !hasTracks);
-        }
-
-        if (volumeValue) volumeValue.textContent = `${this.bgmVolumePercent}%`;
-
-        if (!hasTracks) this.toggleBgmTrackPanel(false);
-
-        this.renderBgmTrackRail();
-    }
-
-    toggleBgm() {
-        if (!this.getPlayableBgmTrackKeys().length) {
-            this.bgmEnabled = false;
-            this.updateBgmUI();
-            return;
-        }
-
-        this.bgmEnabled = !this.bgmEnabled;
-        if (this.bgmEnabled) this.playBgm({ userInitiated: true });
-        else this.pauseBgm({ save: false });
-        this.saveBgmState();
-        this.updateBgmUI();
-    }
-
-    toggleBgmLoopMode() {
-        this.bgmLoopMode = this.bgmLoopMode === 'one' ? 'all' : 'one';
-        if (this.bgmAudioEl) this.bgmAudioEl.loop = this.bgmLoopMode === 'one';
-        this.saveBgmState();
-        this.updateBgmUI();
-    }
-
-    setBgmTrack(trackKey, { persist = true, userInitiated = false, autoplay = true } = {}) {
-        const nextTrackKey = String(trackKey || '');
-        if (!this.bgmTrackOrder.includes(nextTrackKey)) return;
-
-        this.bgmTrackKey = nextTrackKey;
-        this.bgmEnabledTrackKeys.add(nextTrackKey);
-
-        if (persist) this.saveBgmState();
-        this.updateBgmUI();
-        if (autoplay && this.bgmEnabled) this.playBgm({ userInitiated, forceReload: true });
-    }
-
-    nextBgmTrack(userInitiated = true) {
-        const playable = this.getPlayableBgmTrackKeys();
-        if (!playable.length) return;
-        const currentIndex = Math.max(0, playable.indexOf(this.bgmTrackKey));
-        const nextTrack = playable[(currentIndex + 1) % playable.length];
-        this.setBgmTrack(nextTrack, { persist: true, userInitiated, autoplay: true });
-    }
-
-    prevBgmTrack(userInitiated = true) {
-        const playable = this.getPlayableBgmTrackKeys();
-        if (!playable.length) return;
-        const currentIndex = Math.max(0, playable.indexOf(this.bgmTrackKey));
-        const prevTrack = playable[(currentIndex - 1 + playable.length) % playable.length];
-        this.setBgmTrack(prevTrack, { persist: true, userInitiated, autoplay: true });
-    }
-
-    async fadeBgmVolume(targetVolume, duration = 260) {
-        const audio = this.bgmAudioEl;
-        if (!audio) return;
-        const safeTarget = Math.max(0, Math.min(1, Number(targetVolume) || 0));
-        if (duration <= 0) {
-            audio.volume = safeTarget;
-            return;
-        }
-
-        const startVolume = Number(audio.volume) || 0;
-        const startAt = performance.now();
-
-        if (this.bgmFadeRaf) cancelAnimationFrame(this.bgmFadeRaf);
-
-        await new Promise((resolve) => {
-            const step = (now) => {
-                const progress = Math.min(1, (now - startAt) / duration);
-                const eased = 1 - ((1 - progress) * (1 - progress));
-                audio.volume = startVolume + ((safeTarget - startVolume) * eased);
-                if (progress < 1) {
-                    this.bgmFadeRaf = requestAnimationFrame(step);
-                } else {
-                    this.bgmFadeRaf = null;
-                    resolve();
-                }
-            };
-            this.bgmFadeRaf = requestAnimationFrame(step);
-        });
-    }
-
-    async playBgm({ userInitiated = false, forceReload = false } = {}) {
-        const audio = this.bgmAudioEl;
-        if (!audio || !this.bgmEnabled) return;
-
-        const playable = this.getPlayableBgmTrackKeys();
-        if (!playable.length) {
-            this.bgmEnabled = false;
-            this.updateBgmUI();
-            return;
-        }
-
-        if (!this.bgmEnabledTrackKeys.has(this.bgmTrackKey)) {
-            this.bgmTrackKey = playable[0];
-        }
-
-        const track = this.bgmTracks[this.bgmTrackKey];
-        if (!track || !track.src) return;
-
-        const targetVolume = this.getBgmTrackTargetVolume(track);
-        const currentTrack = audio.dataset.trackKey || '';
-        const shouldReload = forceReload || currentTrack !== this.bgmTrackKey;
-
-        if (shouldReload) {
-            if (!audio.paused) await this.fadeBgmVolume(0, 180);
-            audio.pause();
-            audio.src = String(track.src);
-            audio.load();
-            audio.dataset.trackKey = this.bgmTrackKey;
-        }
-
-        audio.loop = this.bgmLoopMode === 'one';
-        audio.volume = 0.001;
-        this.resumeAudioContext();
-
-        try {
-            await audio.play();
-            this.bgmAwaitUserGesture = false;
-            await this.fadeBgmVolume(targetVolume, userInitiated ? 300 : 460);
-            this.saveBgmState();
-            this.updateBgmUI();
-        } catch (error) {
-            this.bgmAwaitUserGesture = true;
-            this.updateBgmUI();
-        }
-    }
-
-    async pauseBgm({ save = true } = {}) {
-        const audio = this.bgmAudioEl;
-        if (!audio) return;
-        await this.fadeBgmVolume(0, 180);
-        audio.pause();
-        if (save) this.saveBgmState();
-        this.updateBgmUI();
-    }
-
-    handleBgmTrackEnded() {
-        if (!this.bgmEnabled) return;
-        if (this.bgmLoopMode === 'one') {
-            this.playBgm({ userInitiated: false, forceReload: true });
-            return;
-        }
-        this.nextBgmTrack(false);
+        return Math.max(0, Math.min(this.soundEffectVolumeCap, baseVolume * this.soundEffectGainBoost));
     }
 
     // --- Utils ---
@@ -4857,6 +4524,7 @@ class DutyTickerManager {
         btn.classList.toggle('text-indigo-400', this.isSoundEnabled);
         btn.setAttribute('title', this.isSoundEnabled ? '방송 소리 켜짐' : '방송 소리 꺼짐');
         this.updateBroadcastModalTtsInfo();
+        this.renderHeaderOverview();
     }
 
     openCurrentPageInNewWindow() {

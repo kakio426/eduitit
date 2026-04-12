@@ -83,13 +83,6 @@
         --dt-progress-track-bg: rgba(15, 23, 42, 0.68);
         --dt-progress-label: #cbd5e1;
         --dt-progress-value: #a7f3d0;
-        --dt-bgm-panel-bg: rgba(15, 23, 42, 0.96);
-        --dt-bgm-panel-border: rgba(148, 163, 184, 0.3);
-        --dt-bgm-chip-bg: rgba(15, 23, 42, 0.52);
-        --dt-bgm-chip-text: #cbd5e1;
-        --dt-bgm-chip-current-bg: rgba(99, 102, 241, 0.24);
-        --dt-bgm-chip-current-border: rgba(129, 140, 248, 0.6);
-        --dt-bgm-chip-current-text: #e0e7ff;
         --dt-cycle-focus-bg: rgba(79, 70, 229, 0.18);
         --dt-cycle-focus-border: rgba(165, 180, 252, 0.92);
         --dt-cycle-focus-shadow: rgba(79, 70, 229, 0.22);
@@ -301,13 +294,6 @@
         --dt-progress-track-bg: #ffffff;
         --dt-progress-label: #9a3412;
         --dt-progress-value: #166534;
-        --dt-bgm-panel-bg: rgba(255, 250, 244, 0.98);
-        --dt-bgm-panel-border: rgba(154, 52, 18, 0.18);
-        --dt-bgm-chip-bg: #fff7ed;
-        --dt-bgm-chip-text: #7c2d12;
-        --dt-bgm-chip-current-bg: #ffedd5;
-        --dt-bgm-chip-current-border: #fb923c;
-        --dt-bgm-chip-current-text: #9a3412;
         --dt-cycle-focus-bg: rgba(251, 191, 36, 0.16);
         --dt-cycle-focus-border: rgba(217, 119, 6, 0.72);
         --dt-cycle-focus-shadow: rgba(217, 119, 6, 0.18);
@@ -399,13 +385,6 @@
         --dt-progress-track-bg: #ffffff;
         --dt-progress-label: #115e59;
         --dt-progress-value: #166534;
-        --dt-bgm-panel-bg: rgba(247, 255, 252, 0.98);
-        --dt-bgm-panel-border: rgba(15, 118, 110, 0.18);
-        --dt-bgm-chip-bg: #ecfdf5;
-        --dt-bgm-chip-text: #0f766e;
-        --dt-bgm-chip-current-bg: #ccfbf1;
-        --dt-bgm-chip-current-border: #14b8a6;
-        --dt-bgm-chip-current-text: #115e59;
         --dt-cycle-focus-bg: rgba(20, 184, 166, 0.14);
         --dt-cycle-focus-border: rgba(13, 148, 136, 0.62);
         --dt-cycle-focus-shadow: rgba(15, 118, 110, 0.16);
@@ -497,13 +476,6 @@
         --dt-progress-track-bg: #ffffff;
         --dt-progress-label: #9d174d;
         --dt-progress-value: #166534;
-        --dt-bgm-panel-bg: rgba(255, 248, 248, 0.98);
-        --dt-bgm-panel-border: rgba(190, 24, 93, 0.18);
-        --dt-bgm-chip-bg: #fff1f2;
-        --dt-bgm-chip-text: #9d174d;
-        --dt-bgm-chip-current-bg: #ffe4e6;
-        --dt-bgm-chip-current-border: #fb7185;
-        --dt-bgm-chip-current-text: #881337;
         --dt-cycle-focus-bg: rgba(244, 63, 94, 0.14);
         --dt-cycle-focus-border: rgba(225, 29, 72, 0.58);
         --dt-cycle-focus-shadow: rgba(225, 29, 72, 0.16);
@@ -1632,61 +1604,6 @@
         color: var(--dt-progress-value) !important;
     }
 
-    #bgmControls {
-        background: var(--dt-control-surface) !important;
-        border-color: var(--dt-control-border) !important;
-        box-shadow: 0 14px 32px rgba(15, 23, 42, 0.12);
-    }
-
-    #bgmToggleBtn,
-    #bgmLoopModeBtn,
-    #bgmPrevBtn,
-    #bgmNextBtn,
-    #bgmTrackPanelBtn,
-    #bgmVolumeWrap {
-        background: rgba(255, 255, 255, 0.06) !important;
-        border-color: var(--dt-control-border) !important;
-        color: var(--dt-control-text) !important;
-    }
-
-    #bgmToggleBtn:hover,
-    #bgmLoopModeBtn:hover,
-    #bgmPrevBtn:hover,
-    #bgmNextBtn:hover,
-    #bgmTrackPanelBtn:hover,
-    #bgmVolumeWrap:hover {
-        background: var(--dt-control-surface-hover) !important;
-        color: var(--dt-control-text) !important;
-    }
-
-    #bgmToggleBtn.bg-indigo-600 {
-        background: linear-gradient(135deg, var(--dt-timer-from), var(--dt-timer-to)) !important;
-        color: #ffffff !important;
-        border-color: transparent !important;
-    }
-
-    #bgmVolumeWrap span,
-    #bgmVolumeValue {
-        color: var(--dt-control-muted) !important;
-    }
-
-    #bgmTrackRail {
-        background: var(--dt-bgm-panel-bg) !important;
-        border-color: var(--dt-bgm-panel-border) !important;
-    }
-
-    .dt-bgm-chip {
-        background: var(--dt-bgm-chip-bg) !important;
-        color: var(--dt-bgm-chip-text) !important;
-        border-color: var(--dt-control-border) !important;
-    }
-
-    .dt-bgm-chip.is-current {
-        background: var(--dt-bgm-chip-current-bg) !important;
-        border-color: var(--dt-bgm-chip-current-border) !important;
-        color: var(--dt-bgm-chip-current-text) !important;
-    }
-
     .dt-phrase-list-item.is-selected {
         border-color: rgba(165, 180, 252, 0.7);
         background: linear-gradient(180deg, rgba(49, 46, 129, 0.46), rgba(30, 41, 59, 0.88));
@@ -2697,36 +2614,198 @@
         font-size: clamp(0.92rem, 0.88rem + 0.12vw, 0.98rem);
     }
 
+    .dt-topbar-shell {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        padding: clamp(1rem, 0.82rem + 0.92vw, 1.45rem);
+        border-radius: 1.75rem;
+        border: 1px solid rgba(148, 163, 184, 0.24);
+        background:
+            radial-gradient(circle at top right, rgba(129, 140, 248, 0.2), transparent 28%),
+            linear-gradient(145deg, rgba(15, 23, 42, 0.28), rgba(15, 23, 42, 0.08)),
+            var(--dt-control-surface);
+        box-shadow: 0 24px 54px rgba(2, 6, 23, 0.24);
+        overflow: hidden;
+    }
+
+    .dt-topbar-main {
+        display: grid;
+        grid-template-columns: minmax(0, 1.08fr) minmax(0, 1.42fr) auto;
+        grid-template-areas: "brand meta actions";
+        gap: 1rem;
+        align-items: start;
+    }
+
+    .dt-topbar-brand {
+        grid-area: brand;
+        min-width: 0;
+    }
+
+    .dt-topbar-brand-link {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.95rem;
+        min-width: 0;
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .dt-topbar-brand-link:hover {
+        opacity: 0.92;
+    }
+
+    .dt-topbar-brand-mark {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 3.8rem;
+        height: 3.8rem;
+        flex-shrink: 0;
+        border-radius: 1.15rem;
+        background: linear-gradient(135deg, var(--dt-timer-from), var(--dt-timer-to));
+        box-shadow: 0 18px 30px rgba(79, 70, 229, 0.28);
+        color: #ffffff;
+        font-size: 1.3rem;
+    }
+
+    .dt-topbar-brand-copy {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.22rem;
+    }
+
+    .dt-topbar-eyebrow {
+        font-size: 0.7rem;
+        font-weight: 900;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--dt-control-muted);
+    }
+
+    .dt-topbar-title {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        margin: 0;
+        font-size: clamp(1.55rem, 1.3rem + 0.72vw, 2.08rem);
+        font-weight: 900;
+        line-height: 1.02;
+        letter-spacing: -0.04em;
+        color: #ffffff;
+    }
+
+    .dt-topbar-title-accent {
+        color: #a5b4fc;
+    }
+
+    .dt-topbar-desc {
+        margin: 0;
+        color: rgba(226, 232, 240, 0.82);
+        font-size: 0.95rem;
+        font-weight: 700;
+        line-height: 1.38;
+    }
+
+    .dt-topbar-meta {
+        grid-area: meta;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.78rem;
+    }
+
+    .dt-topbar-meta-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.6rem;
+    }
+
+    .dt-topbar-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        min-height: 2.55rem;
+        padding: 0.55rem 0.9rem;
+        border-radius: 9999px;
+        border: 1px solid rgba(148, 163, 184, 0.24);
+        background: rgba(15, 23, 42, 0.38);
+        color: var(--dt-control-text);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    }
+
+    .dt-topbar-chip-label {
+        font-size: 0.7rem;
+        font-weight: 900;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--dt-control-muted);
+    }
+
+    .dt-topbar-chip i {
+        color: #a5b4fc;
+    }
+
+    .dt-topbar-chip--clock {
+        background: linear-gradient(135deg, rgba(79, 70, 229, 0.24), rgba(59, 130, 246, 0.2));
+        border-color: rgba(129, 140, 248, 0.38);
+    }
+
+    .dt-header-meta-shell {
+        display: flex;
+        flex-direction: column;
+        gap: 0.72rem;
+        min-width: 0;
+        padding: 0.92rem 1rem;
+        border-radius: 1.28rem;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        background: rgba(15, 23, 42, 0.34);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    }
+
+    .dt-header-meta-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        font-size: 0.74rem;
+        font-weight: 900;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--dt-control-muted);
+    }
+
     #headerScheduleStrip {
+        display: flex;
         align-items: center;
         flex-wrap: wrap;
         justify-content: flex-start;
-        gap: 0.72rem;
-        max-width: min(80vw, 1120px);
+        gap: 0.62rem;
+        max-width: 100%;
         overflow: visible;
-        padding: 0.16rem 0;
         white-space: normal;
     }
 
     .dt-header-schedule-item {
         display: inline-flex;
         align-items: center;
-        gap: 0.56rem;
-        padding: 0.58rem 1.06rem;
-        min-height: 2.88rem;
+        gap: 0.48rem;
+        max-width: min(100%, 22rem);
+        min-height: 2.52rem;
+        padding: 0.5rem 0.84rem;
         border-radius: 9999px;
-        background: rgba(15, 23, 42, 0.7);
-        border: 1.5px solid rgba(148, 163, 184, 0.32);
-        box-shadow: 0 6px 16px rgba(2, 6, 23, 0.24);
-        font-size: clamp(1.08rem, 0.98rem + 0.34vw, 1.38rem);
-        font-weight: 900;
-        line-height: 1.08;
+        background: rgba(15, 23, 42, 0.68);
+        border: 1px solid rgba(148, 163, 184, 0.28);
+        box-shadow: 0 8px 20px rgba(2, 6, 23, 0.18);
         white-space: nowrap;
-        max-width: 19rem;
     }
 
     .dt-header-schedule-period {
         color: #a5b4fc;
+        font-size: 0.92rem;
+        font-weight: 900;
         letter-spacing: -0.01em;
     }
 
@@ -2736,31 +2815,31 @@
     }
 
     .dt-header-schedule-subject {
-        color: #f1f5f9;
-        font-weight: 900;
-        letter-spacing: -0.01em;
         min-width: 0;
-        max-width: 12.6rem;
+        max-width: 14rem;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        color: #f8fafc;
+        font-size: 0.96rem;
+        font-weight: 900;
+        letter-spacing: -0.02em;
     }
 
     .dt-header-schedule-item.is-current {
-        background: linear-gradient(135deg, rgba(79, 70, 229, 0.9), rgba(67, 56, 202, 0.84));
-        border-color: rgba(165, 180, 252, 0.92);
-        box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.48), 0 10px 24px rgba(30, 64, 175, 0.38);
-        transform: translateY(-1px);
+        background: linear-gradient(135deg, rgba(79, 70, 229, 0.92), rgba(67, 56, 202, 0.84));
+        border-color: rgba(165, 180, 252, 0.88);
+        box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.34), 0 12px 26px rgba(49, 46, 129, 0.28);
     }
 
     .dt-header-schedule-item.is-upcoming {
-        background: linear-gradient(135deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.9));
-        border-color: rgba(251, 191, 36, 0.62);
-        box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.25), 0 8px 20px rgba(15, 23, 42, 0.32);
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.88));
+        border-color: rgba(251, 191, 36, 0.48);
+        box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.16), 0 10px 22px rgba(15, 23, 42, 0.2);
     }
 
     .dt-header-schedule-item.is-current .dt-header-schedule-period {
-        color: #dbeafe;
+        color: #e0e7ff;
     }
 
     .dt-header-schedule-item.is-upcoming .dt-header-schedule-period {
@@ -2768,7 +2847,7 @@
     }
 
     .dt-header-schedule-item.is-current .dt-header-schedule-sep {
-        color: rgba(219, 234, 254, 0.84);
+        color: rgba(224, 231, 255, 0.86);
     }
 
     .dt-header-schedule-item.is-current .dt-header-schedule-subject {
@@ -2776,124 +2855,249 @@
     }
 
     .dt-header-schedule-empty {
-        color: rgba(148, 163, 184, 0.75);
-        font-size: 1.08rem;
+        color: rgba(148, 163, 184, 0.78);
+        font-size: 0.96rem;
         font-weight: 800;
-        padding-inline: 0.5rem;
     }
 
     .dt-header-nowrap {
         white-space: nowrap;
     }
 
-    .dt-header-meta-shell {
-        transition: padding 180ms ease, gap 180ms ease;
-    }
-
-    .dt-header-date-wrap,
-    .dt-header-time-wrap {
+    .dt-topbar-actions {
+        grid-area: actions;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.55rem;
         min-width: 0;
     }
 
-    @media (min-width: 768px) {
-        #mainAppContainer[data-display-mode="windowed"][data-layout-density="presentation"] .dt-header-meta-shell {
-            gap: 1.12rem;
-            padding: 1rem 1.45rem;
-        }
+    .dt-topbar-actions-label {
+        font-size: 0.72rem;
+        font-weight: 900;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--dt-control-muted);
+    }
 
-        #mainAppContainer[data-display-mode="windowed"][data-layout-density="presentation"] #headerScheduleStrip {
-            max-width: min(78vw, 980px);
-            gap: 0.62rem;
-        }
+    .dt-topbar-action-grid {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 0.52rem;
+    }
 
-        #mainAppContainer[data-display-mode="windowed"][data-layout-density="presentation"] .dt-header-schedule-item {
-            font-size: clamp(1.02rem, 0.98rem + 0.24vw, 1.24rem);
-            padding: 0.52rem 0.96rem;
-            min-height: 2.68rem;
-            max-width: min(100%, 25rem);
-        }
+    .dt-topbar-action {
+        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.14);
+        transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease, border-color 160ms ease;
+    }
 
-        #mainAppContainer[data-display-mode="windowed"][data-layout-density="presentation"] .dt-header-date,
-        #mainAppContainer[data-display-mode="windowed"][data-layout-density="presentation"] .dt-header-clock {
-            font-size: clamp(1.08rem, 1.02rem + 0.24vw, 1.26rem);
-        }
+    .dt-topbar-action:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 16px 28px rgba(15, 23, 42, 0.18);
+    }
 
-        #mainAppContainer[data-display-mode="windowed"][data-layout-density="presentation"] .dt-header-schedule-empty {
-            font-size: 0.98rem;
-        }
+    .dt-topbar-summary {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.82rem;
+    }
 
-        #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"] .dt-header-meta-shell,
-        #mainAppContainer[data-display-mode="windowed"][data-layout-density="compact"] .dt-header-meta-shell {
-            display: grid !important;
-            grid-template-columns: minmax(0, auto) minmax(0, auto);
-            align-items: center;
-            justify-content: start;
-            column-gap: 1rem;
-            row-gap: 0.58rem;
-            padding: 0.92rem 1.18rem;
-        }
+    .dt-header-stat-card {
+        min-width: 0;
+        padding: 0.94rem 1rem;
+        border-radius: 1.25rem;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        background: rgba(15, 23, 42, 0.38);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    }
 
-        #mainAppContainer[data-display-mode="windowed"][data-layout-density="compact"] .dt-header-meta-shell {
-            column-gap: 0.82rem;
-            row-gap: 0.48rem;
-            padding: 0.82rem 1rem;
-        }
+    .dt-header-stat-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.65rem;
+        margin-bottom: 0.42rem;
+    }
 
-        #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"] .dt-header-separator,
-        #mainAppContainer[data-display-mode="windowed"][data-layout-density="compact"] .dt-header-separator {
-            display: none !important;
-        }
+    .dt-header-stat-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.42rem;
+        min-width: 0;
+        color: var(--dt-control-muted);
+        font-size: 0.76rem;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
 
-        #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"] #headerScheduleStrip,
-        #mainAppContainer[data-display-mode="windowed"][data-layout-density="compact"] #headerScheduleStrip {
-            display: flex !important;
-            grid-column: 1 / -1;
-            max-width: none;
-            gap: 0.55rem;
-            padding: 0;
-        }
+    .dt-header-stat-label i {
+        color: #a5b4fc;
+    }
 
-        #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"] .dt-header-schedule-item {
-            font-size: clamp(0.96rem, 0.92rem + 0.2vw, 1.16rem);
-            padding: 0.48rem 0.88rem;
-            min-height: 2.55rem;
-            max-width: min(100%, 24rem);
-        }
+    .dt-header-stat-value {
+        margin: 0;
+        color: #ffffff;
+        font-size: clamp(1.18rem, 1.04rem + 0.38vw, 1.52rem);
+        font-weight: 900;
+        line-height: 1.04;
+        letter-spacing: -0.03em;
+    }
 
-        #mainAppContainer[data-display-mode="windowed"][data-layout-density="compact"] .dt-header-schedule-item {
-            font-size: clamp(0.88rem, 0.84rem + 0.18vw, 1.02rem);
-            padding: 0.42rem 0.78rem;
-            min-height: 2.36rem;
-            max-width: min(100%, 22rem);
-        }
+    .dt-header-stat-hint {
+        margin: 0.34rem 0 0;
+        color: rgba(226, 232, 240, 0.82);
+        font-size: 0.86rem;
+        font-weight: 700;
+        line-height: 1.38;
+        word-break: keep-all;
+    }
 
-        #mainAppContainer[data-display-mode="windowed"][data-layout-density="compact"] .dt-header-schedule-subject {
-            max-width: min(14rem, 46vw);
-        }
+    .dt-header-stat-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 3.2rem;
+        padding: 0.3rem 0.58rem;
+        border-radius: 9999px;
+        border: 1px solid rgba(148, 163, 184, 0.28);
+        background: rgba(15, 23, 42, 0.46);
+        color: #e2e8f0;
+        font-size: 0.72rem;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
 
-        #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"] .dt-header-date,
-        #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"] .dt-header-clock {
-            font-size: clamp(1rem, 0.96rem + 0.24vw, 1.18rem);
-        }
+    #headerOpsSummaryCard[data-state="idle"] {
+        border-color: rgba(148, 163, 184, 0.24);
+    }
 
-        #mainAppContainer[data-display-mode="windowed"][data-layout-density="compact"] .dt-header-date,
-        #mainAppContainer[data-display-mode="windowed"][data-layout-density="compact"] .dt-header-clock {
-            font-size: clamp(0.92rem, 0.88rem + 0.18vw, 1.06rem);
-        }
+    #headerOpsSummaryCard[data-state="active"] {
+        border-color: rgba(99, 102, 241, 0.42);
+        background: linear-gradient(135deg, rgba(79, 70, 229, 0.24), rgba(15, 23, 42, 0.42));
+    }
 
-        #mainAppContainer[data-display-mode="windowed"][data-layout-density="balanced"] .dt-header-schedule-empty,
-        #mainAppContainer[data-display-mode="windowed"][data-layout-density="compact"] .dt-header-schedule-empty {
-            font-size: 0.94rem;
-            padding-inline: 0;
-        }
+    #headerOpsSummaryCard[data-state="pending"] {
+        border-color: rgba(251, 191, 36, 0.4);
+        background: linear-gradient(135deg, rgba(245, 158, 11, 0.16), rgba(15, 23, 42, 0.38));
+    }
+
+    #headerOpsSummaryCard[data-state="alert"] {
+        border-color: rgba(248, 113, 113, 0.42);
+        background: linear-gradient(135deg, rgba(190, 24, 93, 0.18), rgba(15, 23, 42, 0.42));
+    }
+
+    #headerOpsSummaryBadge[data-state="idle"] {
+        border-color: rgba(148, 163, 184, 0.24);
+        background: rgba(15, 23, 42, 0.46);
+        color: #e2e8f0;
+    }
+
+    #headerOpsSummaryBadge[data-state="active"] {
+        border-color: rgba(129, 140, 248, 0.44);
+        background: rgba(99, 102, 241, 0.24);
+        color: #e0e7ff;
+    }
+
+    #headerOpsSummaryBadge[data-state="pending"] {
+        border-color: rgba(251, 191, 36, 0.36);
+        background: rgba(245, 158, 11, 0.18);
+        color: #fde68a;
+    }
+
+    #headerOpsSummaryBadge[data-state="alert"] {
+        border-color: rgba(248, 113, 113, 0.4);
+        background: rgba(244, 63, 94, 0.2);
+        color: #fecdd3;
+    }
+
+    #mainAppContainer[data-layout-density="balanced"] .dt-topbar-shell,
+    #mainAppContainer[data-layout-density="compact"] .dt-topbar-shell {
+        gap: 0.82rem;
+        padding: 0.94rem 1rem;
+    }
+
+    #mainAppContainer[data-layout-density="compact"] .dt-header-stat-card,
+    #mainAppContainer[data-layout-density="compact"] .dt-header-meta-shell {
+        padding: 0.82rem 0.9rem;
+    }
+
+    #mainAppContainer[data-layout-density="compact"] .dt-header-stat-value {
+        font-size: 1.1rem;
+    }
+
+    #mainAppContainer[data-layout-density="compact"] .dt-header-schedule-item {
+        min-height: 2.28rem;
+        padding: 0.42rem 0.74rem;
+    }
+
+    html[data-theme="sunny"] .dt-topbar-shell,
+    html[data-theme="pastel"] .dt-topbar-shell,
+    html[data-theme="vivid"] .dt-topbar-shell {
+        border-color: rgba(148, 163, 184, 0.18);
+        background:
+            radial-gradient(circle at top right, rgba(99, 102, 241, 0.12), transparent 28%),
+            linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
+        box-shadow: 0 20px 44px rgba(15, 23, 42, 0.08);
+    }
+
+    html[data-theme="sunny"] .dt-topbar-title,
+    html[data-theme="pastel"] .dt-topbar-title,
+    html[data-theme="vivid"] .dt-topbar-title,
+    html[data-theme="sunny"] .dt-header-stat-value,
+    html[data-theme="pastel"] .dt-header-stat-value,
+    html[data-theme="vivid"] .dt-header-stat-value {
+        color: var(--dt-readable-main);
+    }
+
+    html[data-theme="sunny"] .dt-topbar-desc,
+    html[data-theme="pastel"] .dt-topbar-desc,
+    html[data-theme="vivid"] .dt-topbar-desc,
+    html[data-theme="sunny"] .dt-header-stat-hint,
+    html[data-theme="pastel"] .dt-header-stat-hint,
+    html[data-theme="vivid"] .dt-header-stat-hint {
+        color: var(--dt-readable-muted);
+    }
+
+    html[data-theme="sunny"] .dt-topbar-chip,
+    html[data-theme="pastel"] .dt-topbar-chip,
+    html[data-theme="vivid"] .dt-topbar-chip,
+    html[data-theme="sunny"] .dt-header-meta-shell,
+    html[data-theme="pastel"] .dt-header-meta-shell,
+    html[data-theme="vivid"] .dt-header-meta-shell,
+    html[data-theme="sunny"] .dt-header-stat-card,
+    html[data-theme="pastel"] .dt-header-stat-card,
+    html[data-theme="vivid"] .dt-header-stat-card {
+        background: rgba(255, 255, 255, 0.84);
+        border-color: rgba(148, 163, 184, 0.26);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.56);
+    }
+
+    html[data-theme="sunny"] .dt-topbar-chip--clock,
+    html[data-theme="pastel"] .dt-topbar-chip--clock,
+    html[data-theme="vivid"] .dt-topbar-chip--clock {
+        background: linear-gradient(135deg, rgba(224, 231, 255, 0.96), rgba(239, 246, 255, 0.94));
+        border-color: rgba(99, 102, 241, 0.28);
+    }
+
+    html[data-theme="sunny"] .dt-topbar-chip i,
+    html[data-theme="pastel"] .dt-topbar-chip i,
+    html[data-theme="vivid"] .dt-topbar-chip i,
+    html[data-theme="sunny"] .dt-header-stat-label i,
+    html[data-theme="pastel"] .dt-header-stat-label i,
+    html[data-theme="vivid"] .dt-header-stat-label i {
+        color: var(--dt-readable-accent);
     }
 
     html[data-theme="sunny"] .dt-header-schedule-item,
     html[data-theme="pastel"] .dt-header-schedule-item,
     html[data-theme="vivid"] .dt-header-schedule-item {
-        background: rgba(255, 255, 255, 0.84);
-        border-color: rgba(148, 163, 184, 0.45);
-        box-shadow: 0 5px 12px rgba(15, 23, 42, 0.08);
+        background: rgba(255, 255, 255, 0.92);
+        border-color: rgba(148, 163, 184, 0.34);
+        box-shadow: 0 8px 18px rgba(148, 163, 184, 0.12);
     }
 
     html[data-theme="sunny"] .dt-header-schedule-period,
@@ -2920,23 +3124,26 @@
     html[data-theme="sunny"] .dt-header-schedule-item.is-current,
     html[data-theme="pastel"] .dt-header-schedule-item.is-current,
     html[data-theme="vivid"] .dt-header-schedule-item.is-current {
-        background: rgba(99, 102, 241, 0.16);
-        border-color: rgba(99, 102, 241, 0.52);
-        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2), 0 8px 18px rgba(15, 23, 42, 0.12);
+        background: linear-gradient(135deg, rgba(224, 231, 255, 0.98), rgba(199, 210, 254, 0.9));
+        border-color: rgba(99, 102, 241, 0.34);
+        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.12), 0 10px 20px rgba(99, 102, 241, 0.12);
     }
 
     html[data-theme="sunny"] .dt-header-schedule-item.is-upcoming,
     html[data-theme="pastel"] .dt-header-schedule-item.is-upcoming,
     html[data-theme="vivid"] .dt-header-schedule-item.is-upcoming {
-        background: rgba(251, 191, 36, 0.14);
-        border-color: rgba(217, 119, 6, 0.42);
-        box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.16), 0 6px 14px rgba(15, 23, 42, 0.08);
+        background: rgba(255, 255, 255, 0.96);
+        border-color: rgba(251, 146, 60, 0.28);
+        box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.08), 0 8px 16px rgba(148, 163, 184, 0.12);
     }
 
     html[data-theme="sunny"] .dt-header-schedule-item.is-current .dt-header-schedule-period,
     html[data-theme="pastel"] .dt-header-schedule-item.is-current .dt-header-schedule-period,
-    html[data-theme="vivid"] .dt-header-schedule-item.is-current .dt-header-schedule-period {
-        color: var(--dt-readable-accent);
+    html[data-theme="vivid"] .dt-header-schedule-item.is-current .dt-header-schedule-period,
+    html[data-theme="sunny"] .dt-header-schedule-item.is-current .dt-header-schedule-subject,
+    html[data-theme="pastel"] .dt-header-schedule-item.is-current .dt-header-schedule-subject,
+    html[data-theme="vivid"] .dt-header-schedule-item.is-current .dt-header-schedule-subject {
+        color: var(--dt-readable-main);
     }
 
     html[data-theme="sunny"] .dt-header-schedule-item.is-current .dt-header-schedule-sep,
@@ -2945,10 +3152,50 @@
         color: var(--dt-readable-muted);
     }
 
-    html[data-theme="sunny"] .dt-header-schedule-item.is-current .dt-header-schedule-subject,
-    html[data-theme="pastel"] .dt-header-schedule-item.is-current .dt-header-schedule-subject,
-    html[data-theme="vivid"] .dt-header-schedule-item.is-current .dt-header-schedule-subject {
-        color: var(--dt-readable-main);
+    @media (max-width: 1280px) {
+        .dt-topbar-main {
+            grid-template-columns: minmax(0, 1fr) auto;
+            grid-template-areas:
+                "brand actions"
+                "meta meta";
+        }
+    }
+
+    @media (max-width: 900px) {
+        .dt-topbar-summary {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 767px) {
+        .dt-topbar-shell {
+            padding: 0.92rem;
+            border-radius: 1.4rem;
+        }
+
+        .dt-topbar-main {
+            grid-template-columns: minmax(0, 1fr);
+            grid-template-areas:
+                "brand"
+                "meta"
+                "actions";
+        }
+
+        .dt-topbar-actions {
+            align-items: stretch;
+        }
+
+        .dt-topbar-action-grid {
+            justify-content: flex-start;
+        }
+
+        .dt-topbar-summary {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .dt-header-schedule-item {
+            max-width: 100%;
+        }
     }
 
     #randomDrawName {
@@ -2966,107 +3213,6 @@
 
     #timerControls .dt-touch-action {
         touch-action: manipulation;
-    }
-
-    #bgmTrackRail {
-        position: absolute;
-        top: calc(100% + 0.45rem);
-        right: 0;
-        width: min(22rem, 72vw);
-        max-height: 17.5rem;
-        display: none;
-        flex-direction: column;
-        gap: 0.32rem;
-        overflow-y: auto;
-        overflow-x: hidden;
-        padding: 0.6rem;
-        border-radius: 0.9rem;
-        border: 1px solid rgba(148, 163, 184, 0.3);
-        background: rgba(15, 23, 42, 0.96);
-        box-shadow: 0 18px 40px rgba(2, 6, 23, 0.55);
-        z-index: 60;
-        scrollbar-width: thin;
-    }
-
-    #bgmTrackRail.is-open {
-        display: flex;
-    }
-
-    .dt-bgm-chip {
-        display: flex;
-        width: 100%;
-        align-items: center;
-        gap: 0.4rem;
-        padding: 0.34rem 0.46rem;
-        border-radius: 0.58rem;
-        border: 1px solid rgba(148, 163, 184, 0.28);
-        background: rgba(15, 23, 42, 0.52);
-        font-size: 0.74rem;
-        font-weight: 800;
-        color: #cbd5e1;
-    }
-
-    .dt-bgm-chip input[type="checkbox"] {
-        accent-color: #6366f1;
-        width: 0.92rem;
-        height: 0.92rem;
-        margin: 0;
-    }
-
-    .dt-bgm-chip-btn {
-        border: 0;
-        background: transparent;
-        color: inherit;
-        font: inherit;
-        cursor: pointer;
-        padding: 0;
-        line-height: 1.2;
-        flex: 1;
-        text-align: left;
-        min-width: 0;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .dt-bgm-chip.is-current {
-        border-color: rgba(99, 102, 241, 0.6);
-        background: rgba(99, 102, 241, 0.24);
-        color: #e0e7ff;
-    }
-
-    .dt-bgm-chip.is-muted {
-        opacity: 0.48;
-    }
-
-    html[data-theme="sunny"] .dt-bgm-chip,
-    html[data-theme="pastel"] .dt-bgm-chip,
-    html[data-theme="vivid"] .dt-bgm-chip {
-        background: rgba(255, 255, 255, 0.86);
-        color: var(--dt-readable-main);
-        border-color: rgba(148, 163, 184, 0.44);
-    }
-
-    html[data-theme="sunny"] .dt-bgm-chip.is-current,
-    html[data-theme="pastel"] .dt-bgm-chip.is-current,
-    html[data-theme="vivid"] .dt-bgm-chip.is-current {
-        border-color: rgba(99, 102, 241, 0.45);
-        background: rgba(99, 102, 241, 0.16);
-        color: var(--dt-readable-accent);
-    }
-
-    #bgmVolumeWrap {
-        min-width: 6.2rem;
-    }
-
-    #bgmVolumeRange {
-        width: 4.2rem;
-        accent-color: #6366f1;
-    }
-
-    #bgmVolumeValue {
-        min-width: 2.5rem;
-        text-align: right;
     }
 
     @media (max-width: 1023px) {
@@ -3325,116 +3471,127 @@
     class="fixed inset-0 bg-slate-900 text-white p-4 md:p-6 font-sans overflow-x-hidden overflow-y-auto flex flex-col z-[100]">
 
     <!-- Header -->
-    <header class="flex-shrink-0 flex justify-between items-center mb-5 px-2">
-        <div class="flex items-center gap-3">
-            <a href="/" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                <div class="bg-indigo-600 p-2.5 rounded-xl shadow-lg shadow-indigo-500/20">
-                    <i class="fa-solid fa-wand-magic-sparkles text-yellow-300 text-xl"></i>
+    <header class="flex-shrink-0 mb-5 px-2">
+        <div class="dt-topbar-shell">
+            <div class="dt-topbar-main">
+                <div class="dt-topbar-brand">
+                    <a href="/" class="dt-topbar-brand-link">
+                        <span class="dt-topbar-brand-mark">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        </span>
+                        <div class="dt-topbar-brand-copy">
+                            <span class="dt-topbar-eyebrow">EDUITIT CLASS OPS</span>
+                            <h1 class="dt-topbar-title">
+                                <span class="dt-topbar-title-accent">Duty</span>Ticker
+                            </h1>
+                            <p class="dt-topbar-desc">오늘 역할, 학생 진행, 교시 흐름을 한눈에 정리한 교실 운영 보드</p>
+                        </div>
+                    </a>
                 </div>
-                <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-white flex items-center gap-2">
-                    <span class="text-indigo-400 font-extrabold">EDUITIT</span>
-                </h1>
-            </a>
-        </div>
 
-        <div class="flex items-center gap-3">
-            <div
-                class="dt-header-meta-shell hidden md:flex min-w-0 items-center gap-3.5 bg-slate-800/50 backdrop-blur-xl px-6 py-2.5 rounded-full border border-slate-700/50 shadow-xl">
-                <div class="dt-header-date-wrap flex items-center gap-2 text-slate-300 shrink-0 dt-header-nowrap">
-                    <i class="fa-regular fa-calendar text-indigo-400"></i>
-                    <span class="dt-header-date dt-header-nowrap" id="headerDate">--. --. (.)</span>
+                <div class="dt-topbar-meta">
+                    <div class="dt-topbar-meta-row">
+                        <span class="dt-topbar-chip">
+                            <span class="dt-topbar-chip-label">오늘 운영</span>
+                        </span>
+                        <span class="dt-topbar-chip">
+                            <i class="fa-regular fa-calendar"></i>
+                            <span class="dt-header-date dt-header-nowrap" id="headerDate">--. --. (.)</span>
+                        </span>
+                        <span class="dt-topbar-chip dt-topbar-chip--clock">
+                            <i class="fa-regular fa-clock"></i>
+                            <span id="headerTime" class="dt-header-clock dt-header-nowrap">--:--</span>
+                        </span>
+                    </div>
+                    <div class="dt-header-meta-shell">
+                        <div class="dt-header-meta-label">
+                            <i class="fa-solid fa-table-cells-large"></i>
+                            <span>오늘 수업 흐름</span>
+                        </div>
+                        <div id="headerScheduleStrip">
+                            <!-- JS Populated -->
+                        </div>
+                    </div>
                 </div>
-                <!-- Schedule Strip -->
-                <div class="dt-header-separator dt-header-separator-primary h-4 w-px bg-slate-700 hidden md:block"></div>
-                <div id="headerScheduleStrip"
-                    class="hidden md:flex flex-wrap items-center content-center min-w-0 max-w-[520px] lg:max-w-[860px] xl:max-w-[1160px] gap-2">
-                    <!-- JS Populated -->
-                </div>
-                <div class="dt-header-separator dt-header-separator-secondary h-4 w-px bg-slate-700"></div>
-                <div class="dt-header-time-wrap flex items-center gap-2 text-white font-mono shrink-0 dt-header-nowrap">
-                    <i class="fa-regular fa-clock text-indigo-400"></i>
-                    <span id="headerTime" class="dt-header-clock dt-header-nowrap">--:--</span>
+
+                <div class="dt-topbar-actions">
+                    <div class="dt-topbar-actions-label">빠른 실행</div>
+                    <div class="dt-topbar-action-grid">
+                        {% if student_games_issue_url %}
+                        <button data-student-games-open="studentGamesQrModal"
+                            class="dt-topbar-action w-10 h-10 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl flex items-center justify-center border border-indigo-400/40 transition"
+                            title="학생 게임 QR">
+                            <i class="fa-solid fa-qrcode"></i>
+                        </button>
+                        {% endif %}
+                        <a href="{% url 'ppobgi:main' %}"
+                            class="dt-topbar-action w-10 h-10 bg-amber-500/20 hover:bg-amber-500/35 text-amber-200 rounded-xl flex items-center justify-center border border-amber-300/30 transition"
+                            title="별빛 추첨기">
+                            <i class="fa-solid fa-shuffle"></i>
+                        </a>
+                        <button id="openBroadcastModalBtn" type="button" onclick="window.dtApp.openBroadcastModal()"
+                            class="dt-topbar-action w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
+                            title="알림 / 교시 안내">
+                            <i class="fa-solid fa-bullhorn"></i>
+                        </button>
+                        <button id="toggleSoundBtn" onclick="window.dtApp.toggleBroadcastSound()"
+                            class="dt-topbar-action w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
+                            title="소리 설정">
+                            <i class="fa-solid fa-volume-high"></i>
+                        </button>
+                        <a href="{% url 'dt_admin_dashboard' %}"
+                            class="dt-topbar-action w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
+                            title="설정">
+                            <i class="fa-solid fa-gear"></i>
+                        </a>
+                        <button type="button" onclick="window.dtApp && window.dtApp.openCurrentPageInNewWindow()"
+                            class="dt-topbar-action w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
+                            title="새 창으로 열기">
+                            <i class="fa-solid fa-up-right-from-square"></i>
+                        </button>
+                        <button onclick="window.dtApp.toggleFullscreen()"
+                            class="dt-topbar-action w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
+                            title="전체화면">
+                            <i class="fa-solid fa-expand"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <!-- Global Controls -->
-            <div class="flex items-center gap-2">
-                {% if student_games_issue_url %}
-                <button data-student-games-open="studentGamesQrModal"
-                    class="w-10 h-10 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl flex items-center justify-center border border-indigo-400/40 transition"
-                    title="학생 게임 QR">
-                    <i class="fa-solid fa-qrcode"></i>
-                </button>
-                {% endif %}
-                <a href="{% url 'ppobgi:main' %}"
-                    class="w-10 h-10 bg-amber-500/20 hover:bg-amber-500/35 text-amber-200 rounded-xl flex items-center justify-center border border-amber-300/30 transition"
-                    title="별빛 추첨기">
-                    <i class="fa-solid fa-shuffle"></i>
-                </a>
-                <button id="openBroadcastModalBtn" type="button" onclick="window.dtApp.openBroadcastModal()"
-                    class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
-                    title="알림 / 교시 안내">
-                    <i class="fa-solid fa-bullhorn"></i>
-                </button>
-                <button id="toggleSoundBtn" onclick="window.dtApp.toggleBroadcastSound()"
-                    class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
-                    title="소리 설정">
-                    <i class="fa-solid fa-volume-high"></i>
-                </button>
-                <div id="bgmControls"
-                    class="hidden lg:flex relative items-center gap-1 px-1.5 py-1 bg-slate-800/70 rounded-xl border border-slate-700/70">
-                    <button id="bgmToggleBtn" type="button" onclick="window.dtApp.toggleBgm()"
-                        class="h-7 px-2 rounded-md bg-slate-700/70 text-slate-200 text-[10px] font-black border border-slate-600 hover:bg-indigo-600 hover:text-white transition"
-                        title="배경음악 켜기/끄기">
-                        BGM OFF
-                    </button>
-                    <button id="bgmLoopModeBtn" type="button" onclick="window.dtApp.toggleBgmLoopMode()"
-                        class="h-7 px-1.5 rounded-md bg-slate-700/60 text-slate-300 text-[10px] font-black border border-slate-600 hover:bg-slate-600 hover:text-white transition"
-                        title="반복 모드">
-                        전체
-                    </button>
-                    <button id="bgmPrevBtn" type="button" onclick="window.dtApp.prevBgmTrack()"
-                        class="h-7 w-7 rounded-md bg-slate-700/60 text-slate-300 text-[10px] font-black border border-slate-600 hover:bg-slate-600 hover:text-white transition"
-                        title="이전 곡">
-                        ◀
-                    </button>
-                    <button id="bgmNextBtn" type="button" onclick="window.dtApp.nextBgmTrack()"
-                        class="h-7 w-7 rounded-md bg-slate-700/60 text-slate-300 text-[10px] font-black border border-slate-600 hover:bg-slate-600 hover:text-white transition"
-                        title="다음 곡">
-                        ▶
-                    </button>
-                    <label id="bgmVolumeWrap"
-                        class="flex h-7 px-1.5 rounded-md bg-slate-700/55 border border-slate-600 items-center gap-1"
-                        for="bgmVolumeRange" title="배경음악과 벨소리 음량">
-                        <span class="text-[10px] font-black text-slate-300">음량</span>
-                        <input id="bgmVolumeRange" type="range" min="0" max="200" step="1" value="140"
-                            class="cursor-pointer" aria-label="배경음악과 벨소리 음량 조절">
-                        <span id="bgmVolumeValue" class="text-[10px] font-black text-slate-300">140%</span>
-                    </label>
-                    <button id="bgmTrackPanelBtn" type="button" onclick="window.dtApp.toggleBgmTrackPanel()"
-                        class="h-7 px-2 rounded-md bg-slate-700/60 text-slate-200 text-[10px] font-black border border-slate-600 hover:bg-slate-600 hover:text-white transition"
-                        title="배경음악 목록 열기/닫기">
-                        목록
-                    </button>
-                    <div id="bgmTrackRail" class="custom-scrollbar" aria-label="배경음악 트랙 선택 영역">
-                        <!-- JS Populated -->
+            <div class="dt-topbar-summary">
+                <article class="dt-header-stat-card">
+                    <div class="dt-header-stat-head">
+                        <p class="dt-header-stat-label">
+                            <i class="fa-solid fa-user-check"></i>
+                            <span>역할 배정</span>
+                        </p>
                     </div>
-                </div>
-                <a href="{% url 'dt_admin_dashboard' %}"
-                    class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
-                    title="설정">
-                    <i class="fa-solid fa-gear"></i>
-                </a>
-                <button type="button" onclick="window.dtApp && window.dtApp.openCurrentPageInNewWindow()"
-                    class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
-                    title="새 창으로 열기">
-                    <i class="fa-solid fa-up-right-from-square"></i>
-                </button>
-                <button onclick="window.dtApp.toggleFullscreen()"
-                    class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
-                    title="전체화면">
-                    <i class="fa-solid fa-expand"></i>
-                </button>
+                    <p id="headerRoleSummaryValue" class="dt-header-stat-value">연결 준비</p>
+                    <p id="headerRoleSummaryHint" class="dt-header-stat-hint">역할 현황을 불러오는 중입니다.</p>
+                </article>
+
+                <article class="dt-header-stat-card">
+                    <div class="dt-header-stat-head">
+                        <p class="dt-header-stat-label">
+                            <i class="fa-solid fa-people-group"></i>
+                            <span>학생 진행</span>
+                        </p>
+                    </div>
+                    <p id="headerStudentSummaryValue" class="dt-header-stat-value">연결 준비</p>
+                    <p id="headerStudentSummaryHint" class="dt-header-stat-hint">학생 현황을 불러오는 중입니다.</p>
+                </article>
+
+                <article id="headerOpsSummaryCard" class="dt-header-stat-card" data-state="idle">
+                    <div class="dt-header-stat-head">
+                        <p class="dt-header-stat-label">
+                            <i class="fa-solid fa-tower-broadcast"></i>
+                            <span>운영 상태</span>
+                        </p>
+                        <span id="headerOpsSummaryBadge" class="dt-header-stat-badge" data-state="idle">대기</span>
+                    </div>
+                    <p id="headerOpsSummaryValue" class="dt-header-stat-value">운영 보드 준비 중</p>
+                    <p id="headerOpsSummaryHint" class="dt-header-stat-hint">방송 소리 상태와 다음 운영 흐름을 표시합니다.</p>
+                </article>
             </div>
         </div>
     </header>
@@ -4100,9 +4257,6 @@
         </div>
     </div>
 
-
-    <!-- Audio Elements -->
-    <div id="audioContainer"></div>
 </div>
 
 {% endblock %}
@@ -4124,41 +4278,9 @@
         toggleMissionUrlTemplate: "{% url 'dt_api_toggle_mission' 999999 %}",
         toggleAssignmentUrlTemplate: "{% url 'dt_api_toggle' 999999 %}",
     };
-    window.dtBgmTracks = {
-        denis_pavlov_music_brazilian_bossa_nova_jazz_acoustic_guitar_podcast_music_201763: { label: "Jazz · Brazilian Bossa Nova Jazz Acoustic Guitar Podcast Music", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-brazilian-bossa-nova-jazz-acoustic-guitar-podcast-music-201763.mp3' %}", volume: 0.16 },
-        denis_pavlov_music_cozy_jazz_cafe_relaxing_podcast_r_background_music_202447: { label: "Jazz · Cozy Jazz Cafe Relaxing Podcast R Background Music", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-cozy-jazz-cafe-relaxing-podcast-r-background-music-202447.mp3' %}", volume: 0.16 },
-        denis_pavlov_music_cozy_relax_jazz_podcast_coffee_ambiance_271621: { label: "Jazz · Cozy Relax Jazz Podcast Coffee Ambiance", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-cozy-relax-jazz-podcast-coffee-ambiance-271621.mp3' %}", volume: 0.16 },
-        denis_pavlov_music_easy_cozy_morning_jazz_coffee_podcast_192585: { label: "Jazz · Easy Cozy Morning Jazz Coffee Podcast", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-easy-cozy-morning-jazz-coffee-podcast-192585.mp3' %}", volume: 0.16 },
-        denis_pavlov_music_instrumental_jazz_bossa_nova_brazilian_guitar_vibes_485111: { label: "Jazz · Instrumental Jazz Bossa Nova Brazilian Guitar Vibes", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-instrumental-jazz-bossa-nova-brazilian-guitar-vibes-485111.mp3' %}", volume: 0.16 },
-        denis_pavlov_music_piano_jazz_bossa_nova_cozy_cafe_coffee_shop_music_203916: { label: "Jazz · Piano Jazz Bossa Nova Cozy Cafe Coffee Shop Music", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-piano-jazz-bossa-nova-cozy-cafe-coffee-shop-music-203916.mp3' %}", volume: 0.16 },
-        denis_pavlov_music_podcast_jazz_easy_listening_music_219314: { label: "Jazz · Podcast Jazz Easy Listening Music", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-podcast-jazz-easy-listening-music-219314.mp3' %}", volume: 0.16 },
-        denis_pavlov_music_podcast_jazz_music_168726: { label: "Jazz · Podcast Jazz Music", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-podcast-jazz-music-168726.mp3' %}", volume: 0.16 },
-        denis_pavlov_music_podcast_jazz_waltz_cozy_relaxing_vibes_233733: { label: "Jazz · Podcast Jazz Waltz Cozy Relaxing Vibes", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-podcast-jazz-waltz-cozy-relaxing-vibes-233733.mp3' %}", volume: 0.16 },
-        denis_pavlov_music_podcast_smooth_jazz_instrumental_music_225674: { label: "Jazz · Podcast Smooth Jazz Instrumental Music", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-podcast-smooth-jazz-instrumental-music-225674.mp3' %}", volume: 0.16 },
-        denis_pavlov_music_relaxing_jazz_podcast_coffee_shop_music_192283: { label: "Jazz · Relaxing Jazz Podcast Coffee Shop Music", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-relaxing-jazz-podcast-coffee-shop-music-192283.mp3' %}", volume: 0.16 },
-        denis_pavlov_music_relaxing_soft_warm_jazz_piano_bossa_nova_podcast_music_203913: { label: "Jazz · Relaxing Soft Warm Jazz Piano Bossa Nova Podcast Music", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-relaxing-soft-warm-jazz-piano-bossa-nova-podcast-music-203913.mp3' %}", volume: 0.16 },
-        denis_pavlov_music_romantic_jazz_rendezvous_relaxing_evening_fireplace_208122: { label: "Jazz · Romantic Jazz Rendezvous Relaxing Evening Fireplace", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-romantic-jazz-rendezvous-relaxing-evening-fireplace-208122.mp3' %}", volume: 0.16 },
-        denis_pavlov_music_smooth_jazz_travel_vlog_podcast_music_290508: { label: "Jazz · Smooth Jazz Travel Vlog Podcast Music", src: "{% static 'products/dutyticker/audio/denis-pavlov-music-smooth-jazz-travel-vlog-podcast-music-290508.mp3' %}", volume: 0.16 },
-        freegroove_seduction_jazz_112149: { label: "Jazz · Seduction Jazz", src: "{% static 'products/dutyticker/audio/freegroove-seduction-jazz-112149.mp3' %}", volume: 0.16 },
-        hitslab_lofi_chill_background_music_313055: { label: "Lofi · Lofi Chill Background Music", src: "{% static 'products/dutyticker/audio/hitslab-lofi-chill-background-music-313055.mp3' %}", volume: 0.14 },
-        innertune_relaxing_birds_and_piano_music_137153: { label: "Piano · Relaxing Birds And Piano Music", src: "{% static 'products/dutyticker/audio/innertune-relaxing-birds-and-piano-music-137153.mp3' %}", volume: 0.15 },
-        lexin_music_everythingx27s_gonna_be_alright_124710: { label: "Instrumental · Everything's Gonna Be Alright", src: "{% static 'products/dutyticker/audio/lexin_music-everythingx27s-gonna-be-alright-124710.mp3' %}", volume: 0.15 },
-        lexin_music_when_you_smile_151423: { label: "Instrumental · When You Smile", src: "{% static 'products/dutyticker/audio/lexin_music-when-you-smile-151423.mp3' %}", volume: 0.15 },
-        music_for_videos_a_jazz_piano_110481: { label: "Jazz · A Jazz Piano", src: "{% static 'products/dutyticker/audio/music_for_videos-a-jazz-piano-110481.mp3' %}", volume: 0.16 },
-        music_for_videos_restaurant_music_110483: { label: "Instrumental · Restaurant Music", src: "{% static 'products/dutyticker/audio/music_for_videos-restaurant-music-110483.mp3' %}", volume: 0.15 },
-        musicbyscandinavianz_scandinavianz_tranvik_free_download_158258: { label: "Instrumental · Scandinavianz Tranvik Free Download", src: "{% static 'products/dutyticker/audio/musicbyscandinavianz-scandinavianz-tranvik-free-download-158258.mp3' %}", volume: 0.15 },
-        nengjemping_lofi_music_background_hits_352712: { label: "Lofi · Lofi Music Background Hits", src: "{% static 'products/dutyticker/audio/nengjemping-lofi-music-background-hits-352712.mp3' %}", volume: 0.14 },
-        ogifeelthebeat_ogi_feel_the_beat_jazz_expresso_191266: { label: "Jazz · Ogi Feel The Beat Jazz Expresso", src: "{% static 'products/dutyticker/audio/ogifeelthebeat-ogi-feel-the-beat-jazz-expresso-191266.mp3' %}", volume: 0.16 },
-        paoloargento_dinner_at_the_luxury_hotel_166721: { label: "Instrumental · Dinner At The Luxury Hotel", src: "{% static 'products/dutyticker/audio/paoloargento-dinner-at-the-luxury-hotel-166721.mp3' %}", volume: 0.15 },
-        redproductions_inspiring_story_157524: { label: "Instrumental · Inspiring Story", src: "{% static 'products/dutyticker/audio/redproductions-inspiring-story-157524.mp3' %}", volume: 0.15 },
-        sergequadrado_moment_14023: { label: "Instrumental · Moment", src: "{% static 'products/dutyticker/audio/sergequadrado-moment-14023.mp3' %}", volume: 0.15 },
-        tobylane_save_as_115826: { label: "Instrumental · Save As", src: "{% static 'products/dutyticker/audio/tobylane-save-as-115826.mp3' %}", volume: 0.15 },
-        tramp963_relaxing_piano_lo_fi_music_268029: { label: "Piano · Relaxing Piano Lofi Music", src: "{% static 'products/dutyticker/audio/tramp963-relaxing-piano-lo-fi-music-268029.mp3' %}", volume: 0.15 },
-        u_sr0ywmbcog_lofi_sweet_song_265674: { label: "Lofi · Lofi Sweet Song", src: "{% static 'products/dutyticker/audio/u_sr0ywmbcog-lofi-sweet-song-265674.mp3' %}", volume: 0.14 },
-    };
 </script>
 <script src="{% static 'products/dutyticker/js/student_games_launcher.js' %}?v=20260327a"></script>
-<script src="{% static 'products/dutyticker/js/dutyticker.js' %}?v=20260327b"></script>
+<script src="{% static 'products/dutyticker/js/dutyticker.js' %}?v=20260412a"></script>
 <script>
     // App Init (DOMContentLoaded 이후에도 안전하게 초기화)
     function bootDutyTicker() {
