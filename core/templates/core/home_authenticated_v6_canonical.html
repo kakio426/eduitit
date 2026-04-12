@@ -208,8 +208,23 @@
                             {% endfor %}
                         </div>
                         {% else %}
-                        <div class="home-v6-mobile-empty" data-home-v6-mobile-workbench-empty="true">
-                            즐겨찾기가 없습니다.
+                        <div class="home-v6-mobile-empty rounded-[1.4rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-center" data-home-v6-mobile-workbench-empty="true" data-home-v6-empty-state="mobile-workbench">
+                            <p class="text-sm font-black text-slate-900">자주 쓰는 도구를 아직 고르지 않았어요</p>
+                            <p class="mt-2 text-xs font-semibold leading-5 text-slate-500">도구 카드의 별표를 누르면 다음부터 여기서 바로 엽니다.</p>
+                            <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-center">
+                                {% if home_entry_panel and home_entry_panel.primary_action %}
+                                <a
+                                    href="{{ home_entry_panel.primary_action.href }}"
+                                    class="inline-flex items-center justify-center rounded-full bg-slate-900 px-4 py-2.5 text-sm font-black text-white transition hover:bg-slate-800"
+                                    {% if home_entry_panel.primary_action.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+                                >
+                                    도구 하나 먼저 열기
+                                </a>
+                                {% endif %}
+                                <a href="{% if home_entry_panel and home_entry_panel.secondary_action %}{{ home_entry_panel.secondary_action.href }}{% else %}{{ today_all_url|default:main_url }}{% endif %}" class="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-700 transition hover:border-indigo-200 hover:text-indigo-700">
+                                    오늘 일정 먼저 보기
+                                </a>
+                            </div>
                         </div>
                         {% endif %}
                     </article>
@@ -332,8 +347,23 @@
                                         {% endfor %}
                                     </div>
                                     {% else %}
-                                    <div class="rounded-[1.6rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center">
-                                        <p class="text-sm font-bold text-slate-600">추천 도구가 없습니다.</p>
+                                    <div class="rounded-[1.6rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center" data-home-v6-empty-state="recommendations">
+                                        <p class="text-sm font-black text-slate-900">아직 띄울 추천 도구가 없습니다</p>
+                                        <p class="mt-2 text-sm font-semibold leading-6 text-slate-500">첫 도구를 먼저 열거나 오늘 일정부터 시작해 보세요.</p>
+                                        <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-center">
+                                            {% if home_entry_panel and home_entry_panel.primary_action %}
+                                            <a
+                                                href="{{ home_entry_panel.primary_action.href }}"
+                                                class="inline-flex items-center justify-center rounded-full bg-slate-900 px-4 py-2.5 text-sm font-black text-white transition hover:bg-slate-800"
+                                                {% if home_entry_panel.primary_action.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+                                            >
+                                                도구 하나 먼저 열기
+                                            </a>
+                                            {% endif %}
+                                            <a href="{% if home_entry_panel and home_entry_panel.secondary_action %}{{ home_entry_panel.secondary_action.href }}{% else %}{{ today_all_url|default:main_url }}{% endif %}" class="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-700 transition hover:border-indigo-200 hover:text-indigo-700">
+                                                오늘 일정 보기
+                                            </a>
+                                        </div>
                                     </div>
                                     {% endif %}
 
@@ -406,8 +436,23 @@
                                     {% endfor %}
                                 </div>
                                 {% else %}
-                                <div class="rounded-[1.4rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center">
-                                    <p class="text-sm font-bold text-slate-600">즐겨찾기가 없습니다.</p>
+                                <div class="rounded-[1.4rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center" data-home-v6-empty-state="desktop-workbench">
+                                    <p class="text-sm font-black text-slate-900">자주 쓰는 도구를 아직 고르지 않았어요</p>
+                                    <p class="mt-2 text-sm font-semibold leading-6 text-slate-500">도구 카드의 별표를 누르면 다음부터 여기서 바로 엽니다.</p>
+                                    <div class="mt-4 flex flex-col gap-2">
+                                        {% if home_entry_panel and home_entry_panel.primary_action %}
+                                        <a
+                                            href="{{ home_entry_panel.primary_action.href }}"
+                                            class="inline-flex items-center justify-center rounded-full bg-slate-900 px-4 py-2.5 text-sm font-black text-white transition hover:bg-slate-800"
+                                            {% if home_entry_panel.primary_action.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+                                        >
+                                            도구 하나 먼저 열기
+                                        </a>
+                                        {% endif %}
+                                        <a href="{% if home_entry_panel and home_entry_panel.secondary_action %}{{ home_entry_panel.secondary_action.href }}{% else %}{{ today_all_url|default:main_url }}{% endif %}" class="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-700 transition hover:border-indigo-200 hover:text-indigo-700">
+                                            오늘 일정 먼저 보기
+                                        </a>
+                                    </div>
                                 </div>
                                 {% endif %}
                             </article>

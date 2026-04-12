@@ -25,7 +25,11 @@ from core.mini_apps import (
 )
 from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
 from core.service_launcher import resolve_product_launch_url
-from core.views import HOME_MOBILE_SECTION_ORDER, HOME_V5_MOBILE_SECTION_ORDER, _build_home_representative_slots
+from core.views import (
+    HOME_MOBILE_SECTION_ORDER,
+    HOME_V5_MOBILE_SECTION_ORDER,
+    _build_home_representative_slots,
+)
 from messagebox.developer_chat import get_or_create_developer_chat_thread, mark_thread_as_read
 from messagebox.models import DeveloperChatMessage
 from products.models import Product
@@ -3495,6 +3499,34 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('data-home-v6-rail-card="true"', content)
         self.assertIn('data-home-v6-rail-item="true"', content)
         self.assertIn('data-home-v6-rail-action="true"', content)
+
+    def test_v6_first_run_empty_workbench_offers_next_actions(self):
+        self._login('v6emptyfirst')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('data-home-v6-empty-state="mobile-workbench"', content)
+        self.assertIn('data-home-v6-empty-state="desktop-workbench"', content)
+        self.assertIn('자주 쓰는 도구를 아직 고르지 않았어요', content)
+        self.assertIn('도구 하나 먼저 열기', content)
+        self.assertIn('오늘 일정 먼저 보기', content)
+        self.assertIsNotNone(response.context['home_entry_panel'])
+
+    @patch('core.views._build_home_recommendations', return_value=[])
+    @patch('core.views._build_home_representative_slots', return_value=[])
+    def test_v6_recommendation_empty_state_offers_recovery_actions(self, _mock_slots, _mock_recommendations):
+        self._login('v6emptyrecommend')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('data-home-v6-empty-state="recommendations"', content)
+        self.assertIn('아직 띄울 추천 도구가 없습니다', content)
+        self.assertIn('도구 하나 먼저 열기', content)
+        self.assertIn('오늘 일정 보기', content)
+        self.assertNotIn('data-home-v6-service-grid="true"', content)
+        self.assertIsNotNone(response.context['home_entry_panel'])
 
     def test_v6_schoolcomm_card_uses_v6_markup_and_styles(self):
         user = self._login('v6schoolcomm')
