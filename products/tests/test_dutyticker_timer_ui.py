@@ -223,6 +223,8 @@ class DutyTickerTimerUiTests(TestCase):
         self.assertIn('measureMissionStackState()', script)
         self.assertIn('resolveAdaptiveDensity(app, displayMode, baseDensity)', script)
         self.assertIn('applyAdaptiveLayoutState()', script)
+        self.assertIn("const shouldShowAllMorningSlots = showAllMorningSlots && displayMode === 'fullscreen';", script)
+        self.assertIn("if (!candidateSlots.length && showAllMorningSlots && displayMode === 'windowed') {", script)
         self.assertIn("data-mission-stack-fit', this.missionPanelCollapsed ? 'normal' : resolvedLayout.fit", script)
         self.assertIn("data-display-mode', displayMode", script)
         self.assertIn("data-layout-density', density", script)

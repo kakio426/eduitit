@@ -2484,6 +2484,8 @@ class DutyTickerManager {
 
         const now = new Date();
         const nowMinutes = (now.getHours() * 60) + now.getMinutes();
+        const app = document.getElementById('mainAppContainer');
+        const displayMode = app?.getAttribute('data-display-mode') || 'windowed';
         const morningSlot = this.getTodaySlotByCode('morning');
         const morningStart = this.timeStringToMinutes(morningSlot?.startTime);
         const morningEnd = this.timeStringToMinutes(morningSlot?.endTime);
@@ -2491,6 +2493,7 @@ class DutyTickerManager {
             && Number.isFinite(morningEnd)
             && nowMinutes >= morningStart
             && nowMinutes < morningEnd;
+        const shouldShowAllMorningSlots = showAllMorningSlots && displayMode === 'fullscreen';
 
         const normalizedSlots = periodSchedule.map((slot) => {
             const periodLabel = this.getSchedulePeriodLabel(slot);
@@ -2515,7 +2518,7 @@ class DutyTickerManager {
             };
         });
 
-        if (showAllMorningSlots) {
+        if (shouldShowAllMorningSlots) {
             container.innerHTML = normalizedSlots.map((slot) => {
                 const titleText = slot.hasTimeRange
                     ? `${slot.periodLabel} · ${slot.subjectName} (${slot.startTime}-${slot.endTime})`
@@ -2535,10 +2538,16 @@ class DutyTickerManager {
             return;
         }
 
-        const candidateSlots = normalizedSlots.filter((slot) => slot.hasTimeRange && (slot.isCurrent || slot.isUpcoming));
+        let candidateSlots = normalizedSlots.filter((slot) => slot.hasTimeRange && (slot.isCurrent || slot.isUpcoming));
+
+        if (!candidateSlots.length && showAllMorningSlots && displayMode === 'windowed') {
+            const firstMorningPeriod = normalizedSlots.find((slot) => slot.hasTimeRange && slot.startMinutes >= nowMinutes);
+            if (firstMorningPeriod) {
+                candidateSlots = [{ ...firstMorningPeriod, isUpcoming: true }];
+            }
+        }
 
         if (!candidateSlots.length) {
-            const app = document.getElementById('mainAppContainer');
             const isWindowedDense = app
                 && app.getAttribute('data-display-mode') === 'windowed'
                 && app.getAttribute('data-layout-density') !== 'hero';
