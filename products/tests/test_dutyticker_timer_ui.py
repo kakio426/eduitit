@@ -90,6 +90,11 @@ class DutyTickerTimerUiTests(TestCase):
         self.assertContains(response, 'data-display-mode="windowed"')
         self.assertContains(response, 'data-mission-stack-fit="normal"')
         self.assertContains(response, 'id="headerScheduleStrip"')
+        self.assertNotContains(response, 'service-shell-fixed')
+        self.assertContains(
+            response,
+            'class="fixed inset-0 z-[100] bg-slate-900 text-white p-4 md:p-6 font-sans overflow-x-hidden overflow-y-auto flex flex-col"',
+        )
         self.assertContains(response, 'class="dt-student-card-head')
         self.assertContains(response, 'id="randomDrawName"')
         self.assertContains(response, 'id="randomDrawBtn"')
