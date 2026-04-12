@@ -118,7 +118,9 @@
                 </div>
 
                 <section class="home-v6-mobile-stack" data-home-v6-mobile-stack="true">
+                    {% if home_user_mode == 'guest' %}
                     {% include 'core/partials/home_v6_start_panel.html' with panel_name='mobile' %}
+                    {% endif %}
                     {% for mobile_section in home_mobile_section_order %}
                     {% if mobile_section == 'workbench' %}
                     <article class="home-v6-mobile-panel home-v6-workbench-panel" data-home-v6-workbench="mobile" data-home-v6-rail-card="true">
@@ -299,7 +301,9 @@
                     </aside>
 
                     <div class="home-v6-main">
+                        {% if home_user_mode == 'guest' %}
                         {% include 'core/partials/home_v6_start_panel.html' with panel_name='desktop' %}
+                        {% endif %}
                         <div class="home-v6-primary-stack">
                             <section class="home-v6-calendar-section" data-home-v6-calendar-panel="desktop">
                                 <div class="home-v6-calendar-wrap">
