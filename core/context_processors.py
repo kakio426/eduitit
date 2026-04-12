@@ -7,7 +7,13 @@ from .active_classroom import (
 )
 from .product_visibility import filter_discoverable_products
 from .service_launcher import build_service_launcher_items
-from .seo import build_default_page_seo
+from .seo import (
+    DEFAULT_HOME_TITLE_KO,
+    SITE_NAME,
+    SITE_NAME_KO,
+    SITE_WORDMARK,
+    build_default_page_seo,
+)
 from django.utils import timezone
 from django.contrib import messages as django_messages
 import json
@@ -174,6 +180,11 @@ def seo_meta(request):
     """기본 SEO/OpenGraph 메타태그 제공."""
     default_meta = build_default_page_seo(request)
     return {
+        'brand_site_name': SITE_NAME,
+        'brand_site_name_ko': SITE_NAME_KO,
+        'brand_wordmark': SITE_WORDMARK,
+        'brand_nav_wordmark': SITE_NAME_KO,
+        'brand_home_title_ko': DEFAULT_HOME_TITLE_KO,
         'default_og_title': default_meta.title,
         'default_og_description': default_meta.description,
         'default_og_image': default_meta.og_image,

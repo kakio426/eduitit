@@ -4879,7 +4879,7 @@ class DutyTickerManager {
             console.warn('DutyTicker: failed to focus display window', error);
         }
 
-        this.showToast('알림판을 새 창으로 열었습니다. 이 창에서는 Eduitit을 계속 사용하시면 됩니다.', 'success');
+        this.showToast('알림판을 새 창으로 열었습니다. 이 창에서는 에듀잇티를 계속 사용하시면 됩니다.', 'success');
     }
 
     toggleFullscreen() {

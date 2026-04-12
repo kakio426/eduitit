@@ -1150,7 +1150,7 @@ function createVideoCurtainWindow() {
         <html>
           <body style="margin:0;background:#050816;color:#e2e8f0;font-family:'Segoe UI',Arial,sans-serif;display:flex;align-items:center;justify-content:center;">
             <div style="text-align:center;padding:32px;">
-              <div style="font-size:20px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#86efac;">Eduitit</div>
+              <div style="font-size:20px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#86efac;">EDUITIT</div>
               <div style="margin-top:14px;font-size:34px;font-weight:900;">영상이 가려져 있습니다</div>
               <div style="margin-top:14px;font-size:16px;font-weight:700;color:#cbd5e1;">왼쪽 아래 제어 바에서 다시 재생하거나 수업을 종료해 주세요.</div>
             </div>

@@ -19,11 +19,11 @@ def get_policy_meta():
         "privacy_version": PRIVACY_VERSION,
         "last_updated_display": LAST_UPDATED_DISPLAY,
         "summary": (
-            "Eduitit 이용을 위해 현재 이용약관 및 개인정보처리방침 동의가 필요합니다. "
+            "에듀잇티 이용을 위해 현재 이용약관 및 개인정보처리방침 동의가 필요합니다. "
             "내용을 확인한 뒤 동의해 주세요."
         ),
         "service_summary": (
-            "동의 후 Eduitit의 캘린더, 수합, 서명, 동의서, 예약, 메시지 저장, "
+            "동의 후 에듀잇티의 캘린더, 수합, 서명, 동의서, 예약, 메시지 저장, "
             "커뮤니티, AI 기능을 이용할 수 있습니다."
         ),
     }

@@ -7,17 +7,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="no-referrer-when-downgrade">
     {% block seo_meta %}
-    <meta name="description" content="{{ meta_description|default:og_description|default:default_og_description|default:'알림장, 수업 QR, 서비스 가이드, 교실 운영 도구까지. 교사가 오늘 바로 쓰는 AI·디지털 도구를 Eduitit에서 한 번에 찾으세요.' }}">
+    <meta name="description" content="{{ meta_description|default:og_description|default:default_og_description|default:'알림장, 수업 QR, 서비스 가이드, 교실 운영 도구까지. 교사가 오늘 바로 쓰는 AI·디지털 도구를 에듀잇티에서 한 번에 찾으세요.' }}">
     <meta name="robots" content="{{ robots|default:'index,follow' }}">
     <link rel="canonical" href="{{ canonical_url|default:og_url|default:'https://eduitit.site/' }}">
     <meta property="og:title" content="{{ og_title|default:page_title|default:default_og_title|default:'교사를 위한 AI·학급 운영 도구 | Eduitit' }}">
-    <meta property="og:description" content="{{ og_description|default:meta_description|default:default_og_description|default:'알림장, 수업 QR, 서비스 가이드, 교실 운영 도구까지. 교사가 오늘 바로 쓰는 AI·디지털 도구를 Eduitit에서 한 번에 찾으세요.' }}">
+    <meta property="og:description" content="{{ og_description|default:meta_description|default:default_og_description|default:'알림장, 수업 QR, 서비스 가이드, 교실 운영 도구까지. 교사가 오늘 바로 쓰는 AI·디지털 도구를 에듀잇티에서 한 번에 찾으세요.' }}">
     <meta property="og:type" content="{{ og_type|default:'website' }}">
     <meta property="og:url" content="{{ og_url|default:canonical_url|default:'https://eduitit.site/' }}">
     <meta property="og:image" content="{{ og_image|default:default_og_image|default:'https://eduitit.site/static/images/eduitit_og_teacher_first.png' }}">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ og_title|default:page_title|default:default_og_title|default:'교사를 위한 AI·학급 운영 도구 | Eduitit' }}">
-    <meta name="twitter:description" content="{{ og_description|default:meta_description|default:default_og_description|default:'알림장, 수업 QR, 서비스 가이드, 교실 운영 도구까지. 교사가 오늘 바로 쓰는 AI·디지털 도구를 Eduitit에서 한 번에 찾으세요.' }}">
+    <meta name="twitter:description" content="{{ og_description|default:meta_description|default:default_og_description|default:'알림장, 수업 QR, 서비스 가이드, 교실 운영 도구까지. 교사가 오늘 바로 쓰는 AI·디지털 도구를 에듀잇티에서 한 번에 찾으세요.' }}">
     <meta name="twitter:image" content="{{ og_image|default:default_og_image|default:'https://eduitit.site/static/images/eduitit_og_teacher_first.png' }}">
     {% endblock %}
     <link rel="icon" href="{% url 'favicon_ico' %}" sizes="any">
@@ -151,7 +151,7 @@
                             class="w-12 h-12 rounded-2xl shadow-clay-inner flex items-center justify-center text-purple-600 text-2xl bg-white logo-icon-box">
                             <i class="fa-solid fa-cloud"></i>
                         </div>
-                        <span class="logo-text">EDUITIT</span>
+                        <span class="logo-text logo-text--korean">{{ brand_nav_wordmark|default:'에듀잇티' }}</span>
                     </a>
                 </div>
 
@@ -478,10 +478,10 @@
                     <div class="text-sm text-gray-400 font-medium">
                         대표 워너비풀스택 | <a href="mailto:kakio@korea.kr"
                             class="hover:text-purple-600 transition">kakio@korea.kr</a><br>
-                        © 2026 Eduitit. All rights reserved.
+                        © 2026 {{ brand_site_name|default:'Eduitit' }}. All rights reserved.
                     </div>
                     <p class="max-w-2xl text-xs md:text-sm text-gray-400 leading-relaxed">
-                        COPYRIGHT © 2026 Eduitit. ALL RIGHTS RESERVED. 본 서비스의 콘텐츠, 화면 구성,
+                        COPYRIGHT © 2026 {{ brand_site_name|default:'Eduitit' }}. ALL RIGHTS RESERVED. 본 서비스의 콘텐츠, 화면 구성,
                         기능 구현은 관련 법령에 따라 보호되며, 무단 복제·배포·재사용은 제한될 수 있습니다.
                     </p>
                 </div>

@@ -1,7 +1,7 @@
 {% extends "admin/base.html" %}
 {% load i18n static %}
 
-{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('에듀잇잇 운영실') }}{% endblock %}
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('에듀잇티 운영실') }}{% endblock %}
 
 {% block extrastyle %}
 {{ block.super }}
@@ -14,7 +14,7 @@
 {% endblock %}
 
 {% block branding %}
-<div id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('에듀잇잇 관리자') }}</a></div>
+<div id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('에듀잇티 관리자') }}</a></div>
 <p class="admin-brand-caption">운영 메뉴를 용도별로 다시 묶었습니다.</p>
 {% if user.is_anonymous %}
   {% include "admin/color_theme_toggle.html" %}

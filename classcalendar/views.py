@@ -473,7 +473,7 @@ def _build_ical_event_lines(item, *, dtstamp_utc):
 
 
 def _render_external_ical_feed(*, user, hub_items):
-    calendar_name = f"Eduitit 캘린더 - {_display_user_name(user)}"
+    calendar_name = f"에듀잇티 캘린더 - {_display_user_name(user)}"
     dtstamp_utc = timezone.now().astimezone(timezone.UTC).strftime("%Y%m%dT%H%M%SZ")
     lines = [
         "BEGIN:VCALENDAR",

@@ -89,7 +89,7 @@ class SeoFoundationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn('<link rel="canonical" href="https://eduitit.site/">', content)
         self.assertIn('<meta property="og:url" content="https://eduitit.site/">', content)
-        self.assertIn("<title>교사를 위한 AI·학급 운영 도구 | Eduitit</title>", content)
+        self.assertIn("<title>에듀잇티 - 선생님의 스마트한 하루</title>", content)
         self.assertIn('<link rel="icon" href="/favicon.ico" sizes="any">', content)
         self.assertIn("eduitit_og.png", content)
         self.assertIn('"@type":"WebSite"', content)
@@ -155,10 +155,10 @@ class SeoFoundationTests(TestCase):
 
     def test_public_landing_pages_get_unique_meta(self):
         cases = (
-            ("product_list", "교사용 서비스 카탈로그 | Eduitit", "https://eduitit.site/products/", "수업 준비, 학급 운영, 문서 작성, 활동 도구를 상황별로 정리한 Eduitit 서비스 카탈로그입니다."),
+            ("product_list", "교사용 서비스 카탈로그 | Eduitit", "https://eduitit.site/products/", "수업 준비, 학급 운영, 문서 작성, 활동 도구를 상황별로 정리한 에듀잇티 서비스 카탈로그입니다."),
             ("portfolio:list", "AI 연수·협업 포트폴리오 | Eduitit", "https://eduitit.site/portfolio/", "AI 활용 연수, 에듀테크 설계, 교실 적용 사례와 협업 제안을 한 곳에서 확인하는 포트폴리오입니다."),
             ("insights:list", "교실 AI 인사이트 | Eduitit", "https://eduitit.site/insights/", "수업, 학급 운영, AI 활용에 도움이 되는 실전 인사이트를 교사 관점으로 정리했습니다."),
-            ("about", "Eduitit 소개 | 교사의 스마트한 하루", "https://eduitit.site/about/", "교사의 시간을 아껴 주는 도구를 왜, 어떻게 만들고 있는지 Eduitit의 방향과 철학을 소개합니다."),
+            ("about", "에듀잇티 소개 | 교사의 스마트한 하루", "https://eduitit.site/about/", "교사의 시간을 아껴 주는 도구를 왜, 어떻게 만들고 있는지 에듀잇티의 방향과 철학을 소개합니다."),
         )
 
         for route_name, title, canonical, description in cases:
@@ -174,8 +174,8 @@ class SeoFoundationTests(TestCase):
 
     def test_auth_pages_use_noindex_and_specific_meta(self):
         cases = (
-            ("account_login", "로그인 | Eduitit", "https://eduitit.site/accounts/login/", "에듀이티잇에 로그인하고 교실 운영, 알림장 작성, 서비스 가이드를 이어서 사용하세요."),
-            ("account_signup", "회원가입 | Eduitit", "https://eduitit.site/accounts/signup/", "에듀이티잇 계정으로 교사를 위한 AI·학급 운영 도구를 바로 시작하세요."),
+            ("account_login", "로그인 | Eduitit", "https://eduitit.site/accounts/login/", "에듀잇티에 로그인하고 교실 운영, 알림장 작성, 서비스 가이드를 이어서 사용하세요."),
+            ("account_signup", "회원가입 | Eduitit", "https://eduitit.site/accounts/signup/", "에듀잇티 계정으로 교사를 위한 AI·학급 운영 도구를 바로 시작하세요."),
         )
 
         for route_name, title, canonical, description in cases:

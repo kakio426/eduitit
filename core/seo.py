@@ -14,11 +14,14 @@ from .discovery_policy import is_sensitive_discovery_target
 
 SITE_CANONICAL_BASE_URL = "https://eduitit.site"
 SITE_NAME = "Eduitit"
+SITE_NAME_KO = "에듀잇티"
+SITE_WORDMARK = "EDUITIT"
 SITE_LANGUAGE = "ko-KR"
 DEFAULT_OG_IMAGE_URL = f"{SITE_CANONICAL_BASE_URL}/static/images/eduitit_og.png"
 DEFAULT_FAVICON_URL = f"{SITE_CANONICAL_BASE_URL}/favicon.ico"
 DEFAULT_HOME_TITLE = "교사를 위한 AI·학급 운영 도구 | Eduitit"
-DEFAULT_HOME_DESCRIPTION = "알림장, 수업 QR, 서비스 가이드, 교실 운영 도구까지. 교사가 오늘 바로 쓰는 AI·디지털 도구를 Eduitit에서 한 번에 찾으세요."
+DEFAULT_HOME_TITLE_KO = f"{SITE_NAME_KO} - 선생님의 스마트한 하루"
+DEFAULT_HOME_DESCRIPTION = f"알림장, 수업 QR, 서비스 가이드, 교실 운영 도구까지. 교사가 오늘 바로 쓰는 AI·디지털 도구를 {SITE_NAME_KO}에서 한 번에 찾으세요."
 
 
 @dataclass(frozen=True)
@@ -259,13 +262,13 @@ def build_default_page_seo(request) -> PageSeoMeta:
 def build_home_page_seo(request) -> PageSeoMeta:
     canonical_url = _absolute_url(reverse("home"))
     return _build_page_seo(
-        title=DEFAULT_HOME_TITLE,
+        title=DEFAULT_HOME_TITLE_KO,
         description=DEFAULT_HOME_DESCRIPTION,
         canonical_url=canonical_url,
         structured_data=(
             _web_site_structured_data(),
             _collection_page_structured_data(
-                name=DEFAULT_HOME_TITLE,
+                name=DEFAULT_HOME_TITLE_KO,
                 description=DEFAULT_HOME_DESCRIPTION,
                 url=canonical_url,
             ),
@@ -291,7 +294,7 @@ def build_tool_guide_page_seo(request) -> PageSeoMeta:
 
 def build_service_guide_list_seo(request) -> PageSeoMeta:
     canonical_url = _absolute_url(reverse("service_guide_list"))
-    description = "Eduitit 주요 서비스를 설명 없이도 따라갈 수 있도록 첫 사용 흐름만 빠르게 정리한 안내 모음입니다."
+    description = f"{SITE_NAME_KO} 주요 서비스를 설명 없이도 따라갈 수 있도록 첫 사용 흐름만 빠르게 정리한 안내 모음입니다."
     return _build_page_seo(
         title="서비스 시작 가이드 | Eduitit",
         description=description,
@@ -315,7 +318,7 @@ def build_service_guide_list_seo(request) -> PageSeoMeta:
 def build_product_list_page_seo(request) -> PageSeoMeta:
     return _build_page_seo(
         title="교사용 서비스 카탈로그 | Eduitit",
-        description="수업 준비, 학급 운영, 문서 작성, 활동 도구를 상황별로 정리한 Eduitit 서비스 카탈로그입니다.",
+        description=f"수업 준비, 학급 운영, 문서 작성, 활동 도구를 상황별로 정리한 {SITE_NAME_KO} 서비스 카탈로그입니다.",
         canonical_url=_absolute_url(reverse("product_list")),
     )
 
@@ -330,8 +333,8 @@ def build_portfolio_page_seo(request) -> PageSeoMeta:
 
 def build_about_page_seo(request) -> PageSeoMeta:
     return _build_page_seo(
-        title="Eduitit 소개 | 교사의 스마트한 하루",
-        description="교사의 시간을 아껴 주는 도구를 왜, 어떻게 만들고 있는지 Eduitit의 방향과 철학을 소개합니다.",
+        title=f"{SITE_NAME_KO} 소개 | 교사의 스마트한 하루",
+        description=f"교사의 시간을 아껴 주는 도구를 왜, 어떻게 만들고 있는지 {SITE_NAME_KO}의 방향과 철학을 소개합니다.",
         canonical_url=_absolute_url(reverse("about")),
     )
 
@@ -394,9 +397,9 @@ def build_insight_list_seo(request, *, current_category: str = "", current_tag: 
     base_canonical = _absolute_url(reverse("insights:list"))
     filtered = bool(current_category or current_tag or (current_sort and current_sort != "recent"))
     if filtered and current_tag:
-        description = f"#{current_tag} 관련 교실 AI 인사이트를 모아봤습니다. 상세 글은 Eduitit에서 이어서 확인하세요."
+        description = f"#{current_tag} 관련 교실 AI 인사이트를 모아봤습니다. 상세 글은 {SITE_NAME_KO}에서 이어서 확인하세요."
     elif filtered and current_category:
-        description = f"{current_category} 주제의 교실 AI 인사이트를 모아봤습니다. Eduitit에서 전체 글을 확인하세요."
+        description = f"{current_category} 주제의 교실 AI 인사이트를 모아봤습니다. {SITE_NAME_KO}에서 전체 글을 확인하세요."
     else:
         description = "수업, 학급 운영, AI 활용에 도움이 되는 실전 인사이트를 교사 관점으로 정리했습니다."
     return _build_page_seo(

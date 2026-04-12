@@ -31,8 +31,8 @@ from .models import (
 )
 
 
-admin.site.site_header = "에듀잇잇 관리자"
-admin.site.site_title = "에듀잇잇 운영실"
+admin.site.site_header = "에듀잇티 관리자"
+admin.site.site_title = "에듀잇티 운영실"
 admin.site.index_title = "찾기 쉬운 운영 메뉴"
 
 

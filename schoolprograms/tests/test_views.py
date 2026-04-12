@@ -35,7 +35,7 @@ def create_user_with_role(*, username, role, nickname=None):
     return user
 
 
-def create_provider(*, username="vendor", provider_name="에듀이티잇 체험랩", summary="학교로 찾아가는 환경·과학 체험 프로그램", verified=True):
+def create_provider(*, username="vendor", provider_name="에듀잇티 체험랩", summary="학교로 찾아가는 환경·과학 체험 프로그램", verified=True):
     user = create_user_with_role(username=username, role="company", nickname=provider_name)
     provider = ProviderProfile.objects.create(
         user=user,
