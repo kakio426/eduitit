@@ -16,6 +16,10 @@
     --home-public-item-accent-border: rgba(71, 85, 105, 0.18);
 }
 
+#mainNav.shell-nav-wrap {
+    padding-top: max(1.1rem, calc(env(safe-area-inset-top) + 0.75rem));
+}
+
 .home-public-v5-page {
     background:
         radial-gradient(circle at top left, rgba(36, 87, 197, 0.08), transparent 28%),

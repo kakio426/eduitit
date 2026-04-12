@@ -4056,6 +4056,14 @@ class HomeV6ViewTest(TestCase):
     def test_v6_anonymous_home_uses_public_v6_template(self):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
+        public_v5_css = (
+            Path(settings.BASE_DIR)
+            / 'core'
+            / 'static'
+            / 'core'
+            / 'css'
+            / 'home_public_v5.css'
+        ).read_text(encoding='utf-8')
         public_css = (
             Path(settings.BASE_DIR)
             / 'core'
@@ -4073,13 +4081,20 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('data-home-v6-public-shell="true"', content)
         self.assertIn('home-public-v6-stage-shell', content)
         self.assertIn('data-home-design-version="v6"', content)
-        self.assertIn('로그인 없이 바로 열 수 있습니다', content)
+        self.assertIn('로그인 없이 바로 엽니다', content)
+        self.assertIn('오늘 쓸 도구를', content)
+        self.assertIn('필요할 때만 로그인', content)
+        self.assertIn('로그인 후 전체', content)
         self.assertIn('공개 도구', content)
         self.assertIn('전체 서비스 보기', content)
+        self.assertNotIn('로그인 없이 바로 열 수 있습니다', content)
+        self.assertNotIn('공개 도구를 먼저 열고, 필요할 때만 로그인하세요.', content)
         self.assertNotIn('core/css/home_authenticated_v6.css', content)
         self.assertNotIn('core/css/home_authenticated_v6_canonical.css', content)
         self.assertNotIn('data-home-v6-shell="true"', content)
         self.assertNotIn('지금 바로 할 일', content)
+        self.assertIn('#mainNav.shell-nav-wrap', public_v5_css)
+        self.assertIn('padding-top: max(1.1rem, calc(env(safe-area-inset-top) + 0.75rem));', public_v5_css)
         self.assertIn('--home-v6-radius-panel: 0.95rem;', public_css)
         self.assertIn('border-radius: var(--home-public-v6-radius-shell);', public_css)
 
