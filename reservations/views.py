@@ -207,6 +207,16 @@ def _period_display_label(school, period):
     return f"{period}교시"
 
 
+def _grade_lock_override_required_response(grade_lock):
+    return HttpResponse(
+        (
+            f"이 슬롯은 현재 {grade_lock.grade}학년 고정입니다. "
+            "다른 학년 예약은 이번 예약에서만 예외로 진행할 수 있으며, 다음 주 고정은 유지됩니다."
+        ),
+        status=409,
+    )
+
+
 def _build_reservation_modal_payload(reservation, *, period_label, lock_grade=None):
     return {
         'id': reservation.id,
@@ -1046,11 +1056,7 @@ def create_reservation(request, school_slug):
         grade_lock = GradeRecurringLock.objects.filter(room=room, day_of_week=target_date.weekday(), period=period).first()
         if grade_lock and grade != grade_lock.grade:
             if not override_grade_lock:
-                return HttpResponse(
-                    f"이 슬롯은 현재 {grade_lock.grade}학년 고정입니다. 다른 학년으로 예약하려면 고정을 해제하고 진행해 주세요.",
-                    status=409,
-                )
-            grade_lock.delete()
+                return _grade_lock_override_required_response(grade_lock)
             
         # 3. 중복 예약 체크 (Optimistic Locking 대용: Unique Constraint가 DB에서 막아주지만, 여기서도 체크)
         if Reservation.objects.filter(room=room, date=target_date, period=period).exists():
@@ -1150,11 +1156,7 @@ def update_reservation(request, school_slug, reservation_id):
         grade_lock = GradeRecurringLock.objects.filter(room=room, day_of_week=target_date.weekday(), period=period).first()
         if grade_lock and grade != grade_lock.grade:
             if not override_grade_lock:
-                return HttpResponse(
-                    f"이 슬롯은 현재 {grade_lock.grade}학년 고정입니다. 다른 학년으로 예약하려면 고정을 해제하고 진행해 주세요.",
-                    status=409,
-                )
-            grade_lock.delete()
+                return _grade_lock_override_required_response(grade_lock)
 
         if Reservation.objects.filter(room=room, date=target_date, period=period).exclude(id=reservation.id).exists():
             return HttpResponse("이미 예약된 시간입니다.", status=409)

@@ -815,7 +815,7 @@ class ReservationsViewTest(TestCase):
         self.assertFalse(Reservation.objects.filter(room=self.room, date=self.target_date, period=1).exists())
         self.assertTrue(GradeRecurringLock.objects.filter(room=self.room, day_of_week=self.target_date.weekday(), period=1).exists())
 
-    def test_grade_lock_override_allows_booking_and_removes_lock(self):
+    def test_grade_lock_override_allows_booking_and_keeps_lock_for_future_weeks(self):
         GradeRecurringLock.objects.create(
             room=self.room,
             day_of_week=self.target_date.weekday(),
@@ -837,7 +837,41 @@ class ReservationsViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers.get('HX-Refresh'), 'true')
         self.assertTrue(Reservation.objects.filter(room=self.room, date=self.target_date, period=2).exists())
-        self.assertFalse(GradeRecurringLock.objects.filter(room=self.room, day_of_week=self.target_date.weekday(), period=2).exists())
+        self.assertTrue(GradeRecurringLock.objects.filter(room=self.room, day_of_week=self.target_date.weekday(), period=2).exists())
+
+    def test_update_grade_lock_override_keeps_lock_for_future_weeks(self):
+        GradeRecurringLock.objects.create(
+            room=self.room,
+            day_of_week=self.target_date.weekday(),
+            period=4,
+            grade=2,
+        )
+        reservation = Reservation.objects.create(
+            room=self.room,
+            created_by=self.user,
+            date=self.target_date,
+            period=4,
+            grade=2,
+            class_no=1,
+            name='Before',
+        )
+
+        url = reverse('reservations:update_reservation', args=[self.school.slug, reservation.id])
+        response = self.client.post(url, {
+            'room_id': self.room.id,
+            'date': self.target_date.strftime('%Y-%m-%d'),
+            'period': 4,
+            'grade': 5,
+            'class_no': 1,
+            'name': 'After',
+            'override_grade_lock': '1',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        reservation.refresh_from_db()
+        self.assertEqual(reservation.grade, 5)
+        self.assertEqual(reservation.name, 'After')
+        self.assertTrue(GradeRecurringLock.objects.filter(room=self.room, day_of_week=self.target_date.weekday(), period=4).exists())
 
     def test_grade_lock_same_grade_reserves_without_unlock(self):
         GradeRecurringLock.objects.create(

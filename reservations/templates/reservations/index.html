@@ -343,7 +343,7 @@
                     ? `${this.targetLabel.trim()} 예약으로 변경하면`
                     : `${numericGrade}학년으로 예약하면`;
                 const shouldOverride = confirm(
-                    `이 슬롯은 ${this.gradeLockGrade}학년 고정입니다.\n${modeText} 고정이 해제됩니다.\n계속할까요?`
+                    `이 슬롯은 ${this.gradeLockGrade}학년 고정입니다.\n${modeText} 이번 예약만 예외로 처리되고 다음 주 고정은 유지됩니다.\n계속할까요?`
                 );
                 if (!shouldOverride) {
                     event.preventDefault();
