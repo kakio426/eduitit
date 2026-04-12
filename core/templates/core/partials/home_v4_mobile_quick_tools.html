@@ -17,7 +17,7 @@
                 {% if item.icon %}
                     {% if "fa-" in item.icon %}<i class="{{ item.icon }}"></i>{% else %}{{ item.icon }}{% endif %}
                 {% else %}
-                    <i class="fa-solid fa-sparkles"></i>
+                    <i class="{{ card.home_icon_class|default:'fa-solid fa-star' }}"></i>
                 {% endif %}
             </span>
             <span class="home-v4-mobile-quick-title">{{ item.title }}</span>

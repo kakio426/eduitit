@@ -271,15 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                             <div class="flex items-start justify-between gap-3">
                                                 <div class="flex min-w-0 items-start gap-3">
                                                     <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-50 text-base shadow-sm {% if card.service_type == 'collect_sign' %}text-blue-500{% elif card.service_type == 'classroom' %}text-violet-500{% elif card.service_type == 'work' %}text-emerald-500{% elif card.service_type == 'game' %}text-red-500{% elif card.service_type == 'counsel' %}text-pink-500{% elif card.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
-                                                        {% if card.icon %}
-                                                            {% if "fa-" in card.icon %}
-                                                            <i class="{{ card.icon }}"></i>
-                                                            {% else %}
-                                                            {{ card.icon }}
-                                                            {% endif %}
-                                                        {% else %}
-                                                        <i class="fa-solid fa-sparkles"></i>
-                                                        {% endif %}
+                                                        <i class="{{ card.home_icon_class|default:'fa-solid fa-star' }}"></i>
                                                     </div>
                                                     <div class="min-w-0">
                                                         <p class="truncate text-sm font-black text-slate-900">{{ card.title }}</p>

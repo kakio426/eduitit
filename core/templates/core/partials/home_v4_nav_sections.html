@@ -11,11 +11,7 @@
         >
             <span class="home-v4-nav-item-main">
                 <span class="home-v4-nav-icon home-v4-nav-icon--{{ section.color }}">
-                    {% if section.icon %}
-                        {% if "fa-" in section.icon %}<i class="{{ section.icon }}"></i>{% else %}{{ section.icon }}{% endif %}
-                    {% else %}
-                        <i class="fa-solid fa-sparkles"></i>
-                    {% endif %}
+                    <i class="{{ section.home_icon_class|default:section.icon|default:'fa-solid fa-star' }}"></i>
                 </span>
                 <span class="home-v4-nav-copy min-w-0 flex-1">
                     <span class="block truncate home-v4-nav-title">{{ section.title }}</span>
@@ -44,7 +40,7 @@
         >
             <span class="home-v4-nav-item-main">
                 <span class="home-v4-nav-icon home-v4-nav-icon--{{ section.color }}">
-                    <i class="{{ section.icon }}"></i>
+                    <i class="{{ section.home_icon_class|default:section.icon|default:'fa-solid fa-star' }}"></i>
                 </span>
                 <span class="home-v4-nav-copy min-w-0 flex-1">
                     <span class="block truncate home-v4-nav-title">{{ section.title }}</span>
@@ -99,11 +95,7 @@
                 >
                     <span class="home-v4-tool-leading">
                         <span class="home-v4-tool-icon">
-                            {% if product.icon %}
-                                {% if "fa-" in product.icon %}<i class="{{ product.icon }}"></i>{% else %}{{ product.icon }}{% endif %}
-                            {% else %}
-                                <i class="fa-solid fa-sparkles"></i>
-                            {% endif %}
+                            <i class="{{ product.home_icon_class|default:'fa-solid fa-star' }}"></i>
                         </span>
                     </span>
                     <span class="home-v4-tool-copy min-w-0 flex-1">

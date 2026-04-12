@@ -135,11 +135,7 @@
                                 tabindex="0"
                             >
                                 <div class="home-v5-mobile-workbench-icon {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-violet-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-pink-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}" data-home-v6-service-icon="true">
-                                    {% if item.product.icon %}
-                                        {% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }}"></i>{% else %}{{ item.product.icon }}{% endif %}
-                                    {% else %}
-                                        <i class="fa-solid fa-sparkles"></i>
-                                    {% endif %}
+                                    <i class="{{ item.product.home_icon_class|default:item.home_icon_class|default:'fa-solid fa-star' }}"></i>
                                 </div>
                                 <p class="home-v5-mobile-workbench-title" data-home-v6-service-title="true" title="{{ item.favorite_full_title }}">{{ favorite_title }}</p>
                                 <button
@@ -370,11 +366,7 @@
                                         tabindex="0">
                                         <div class="home-v5-favorite-card-body">
                                             <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white text-sm shadow-sm {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-violet-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-pink-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}" data-home-v6-service-icon="true">
-                                                {% if item.product.icon %}
-                                                    {% if "fa-" in item.product.icon %}<i class="{{ item.product.icon }}"></i>{% else %}{{ item.product.icon }}{% endif %}
-                                                {% else %}
-                                                    <i class="fa-solid fa-sparkles"></i>
-                                                {% endif %}
+                                                <i class="{{ item.product.home_icon_class|default:item.home_icon_class|default:'fa-solid fa-star' }}"></i>
                                             </div>
                                             <div class="home-v5-favorite-card-copy">
                                                 <p class="home-v5-favorite-card-title" data-home-v6-service-title="true" title="{{ item.favorite_full_title }}">{{ favorite_title }}</p>

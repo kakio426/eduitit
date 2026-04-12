@@ -211,7 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                             {{ product.icon }}
                                             {% endif %}
                                         {% else %}
-                                        <i class="fa-solid fa-sparkles"></i>
+                                        <i class="{{ product.home_icon_class|default:'fa-solid fa-star' }}"></i>
                                         {% endif %}
                                     </div>
                                     <div class="min-w-0">
@@ -250,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                         {{ featured_product.icon }}
                                         {% endif %}
                                     {% else %}
-                                    <i class="fa-solid fa-sparkles"></i>
+                                    <i class="{{ featured_product.home_icon_class|default:'fa-solid fa-star' }}"></i>
                                     {% endif %}
                                 </div>
                                 <div class="min-w-0">
@@ -296,7 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                             {{ card.icon }}
                                             {% endif %}
                                         {% else %}
-                                        <i class="fa-solid fa-sparkles"></i>
+                                        <i class="{{ card.home_icon_class|default:'fa-solid fa-star' }}"></i>
                                         {% endif %}
                                     </div>
                                     <div class="min-w-0">
