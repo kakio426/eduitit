@@ -9,6 +9,14 @@ from django.core.cache import cache
 from products.models import Product, ServiceManual
 from .forms import UserProfileUpdateForm
 from .guide_links import SERVICE_GUIDE_PADLET_URL
+from .home_surface_context import (
+    HomeSurfaceProviderCards,
+    HomeSurfaceProviderSpec,
+    HomeSurfaceTemplateParts,
+    build_home_surface_legacy_aliases,
+    build_home_surface_slots,
+    build_home_surface_template_context,
+)
 from .models import (
     UserProfile,
     UserPolicyConsent,
@@ -4001,53 +4009,68 @@ def _build_home_surface_calendar_provider(request):
         return _build_home_surface_calendar_fallback(request)
 
 
-HOME_SURFACE_LEGACY_ALIAS_KEY_MAP = {
-    'home_v4_nav_sections': 'home_nav_sections',
-    'home_v4_mobile_calendar_first_enabled': 'home_mobile_calendar_first_enabled',
-    'home_v4_mobile_quick_items': 'home_mobile_quick_items',
-    'home_v5_mobile_workbench_items': 'home_mobile_workbench_items',
-    'home_v5_mobile_recommend_items': 'home_mobile_recommend_items',
-    'home_v2_frontend_config': 'home_frontend_config',
-}
-
-
-def _build_home_surface_legacy_aliases(
-    *,
-    home_nav_sections,
-    home_mobile_calendar_first_enabled,
-    home_mobile_quick_items,
-    home_mobile_workbench_items,
-    home_mobile_recommend_items,
-    home_frontend_config,
-):
-    neutral_values = {
-        'home_nav_sections': home_nav_sections,
-        'home_mobile_calendar_first_enabled': home_mobile_calendar_first_enabled,
-        'home_mobile_quick_items': home_mobile_quick_items,
-        'home_mobile_workbench_items': home_mobile_workbench_items,
-        'home_mobile_recommend_items': home_mobile_recommend_items,
-        'home_frontend_config': home_frontend_config,
-    }
-    legacy_values = {
-        legacy_key: neutral_values[neutral_key]
-        for legacy_key, neutral_key in HOME_SURFACE_LEGACY_ALIAS_KEY_MAP.items()
-    }
-    legacy_values['home_v5_mobile_section_order'] = HOME_V5_MOBILE_SECTION_ORDER
-    return legacy_values
+def _build_home_surface_provider_registry(request, *, favorite_products, product_list):
+    # Keep provider definitions centralized so the home surface can add/remove cards
+    # without reshaping the view contract or touching the templates.
+    return (
+        HomeSurfaceProviderSpec(
+            key='reservation_home_card',
+            label='reservation provider',
+            fallback_factory=lambda: None,
+            builder=lambda: _build_home_surface_reservation_provider(request.user),
+        ),
+        HomeSurfaceProviderSpec(
+            key='developer_chat_home_card',
+            label='developer chat provider',
+            fallback_factory=lambda: _build_home_surface_developer_chat_card_fallback(request.user),
+            builder=lambda: _build_home_surface_developer_chat_provider(request.user),
+        ),
+        HomeSurfaceProviderSpec(
+            key='teacher_buddy',
+            label='teacher buddy provider',
+            fallback_factory=lambda: {
+                'teacher_buddy_panel': None,
+                'teacher_buddy_urls': {},
+                'teacher_buddy_current_avatar': _build_teacher_buddy_avatar_context_safe(
+                    request.user,
+                    source='teacher buddy provider registry fallback',
+                ),
+            },
+            builder=lambda: _build_home_surface_teacher_buddy_provider(request.user),
+        ),
+        HomeSurfaceProviderSpec(
+            key='quickdrop_home_card',
+            label='quickdrop provider',
+            fallback_factory=lambda: None,
+            builder=lambda: _build_home_surface_quickdrop_provider(
+                request,
+                favorite_products=favorite_products,
+                product_list=product_list,
+            ),
+        ),
+        HomeSurfaceProviderSpec(
+            key='calendar',
+            label='calendar provider',
+            fallback_factory=lambda: _build_home_surface_calendar_fallback(request),
+            builder=lambda: _build_home_surface_calendar_provider(request),
+        ),
+    )
 
 
 def _build_home_surface_provider_cards(request, *, favorite_products, product_list):
-    return {
-        'reservation_home_card': _build_home_surface_reservation_provider(request.user),
-        'developer_chat_home_card': _build_home_surface_developer_chat_provider(request.user),
-        'teacher_buddy': _build_home_surface_teacher_buddy_provider(request.user),
-        'quickdrop_home_card': _build_home_surface_quickdrop_provider(
+    provider_values = {}
+    for provider_spec in _build_home_surface_provider_registry(
+        request,
+        favorite_products=favorite_products,
+        product_list=product_list,
+    ):
+        provider_values[provider_spec.key] = _build_home_surface_safe_value(
             request,
-            favorite_products=favorite_products,
-            product_list=product_list,
-        ),
-        'calendar': _build_home_surface_calendar_provider(request),
-    }
+            label=provider_spec.label,
+            fallback_factory=provider_spec.fallback_factory,
+            builder=provider_spec.builder,
+        )
+    return HomeSurfaceProviderCards.from_mapping(provider_values)
 
 
 def _build_home_surface_safe_value(request, *, label, fallback_factory, builder):
@@ -4161,130 +4184,6 @@ def _build_home_surface_frontend_config():
     return {
         'toggleFavoriteUrl': reverse('toggle_product_favorite'),
         'trackUsageUrl': reverse('track_product_usage'),
-    }
-
-
-def _build_home_surface_slots(
-    *,
-    home_nav_sections,
-    home_mobile_section_order,
-    favorite_items,
-    favorite_products,
-    recent_items,
-    home_mobile_workbench_items,
-    representative_slots,
-    representative_recommendations,
-    home_mobile_recommend_items,
-    discovery_items,
-    schoolcomm_home_card,
-    provider_cards,
-    community_summary,
-    sns_preview_posts,
-):
-    return {
-        'navigation': {
-            'sections': home_nav_sections,
-            'mobile_section_order': home_mobile_section_order,
-        },
-        'workbench': {
-            'favorite_items': favorite_items,
-            'favorite_product_ids': [product.id for product in favorite_products],
-            'recent_items': recent_items,
-            'mobile_items': home_mobile_workbench_items,
-        },
-        'recommendations': {
-            'representative_slots': representative_slots,
-            'representative_recommendations': representative_recommendations,
-            'mobile_recommend_items': home_mobile_recommend_items,
-            'discovery_items': discovery_items,
-        },
-        'cards': {
-            'schoolcomm_home_card': schoolcomm_home_card,
-            'quickdrop_home_card': provider_cards['quickdrop_home_card'],
-            'reservation_home_card': provider_cards['reservation_home_card'],
-            'developer_chat_home_card': provider_cards['developer_chat_home_card'],
-        },
-        'community': {
-            'community_summary': community_summary,
-            'sns_preview_posts': sns_preview_posts,
-        },
-        'calendar': provider_cards['calendar'],
-    }
-
-
-def _build_home_surface_template_context(
-    *,
-    request,
-    products,
-    sections,
-    aux_sections,
-    primary_display_sections,
-    secondary_display_sections,
-    games,
-    favorite_items,
-    recent_items,
-    discovery_items,
-    provider_cards,
-    schoolcomm_home_card,
-    representative_slots,
-    representative_recommendations,
-    home_nav_sections,
-    home_mobile_section_order,
-    home_mobile_workbench_items,
-    home_mobile_recommend_items,
-    home_frontend_config,
-    home_design_version,
-    community_summary,
-    sns_preview_posts,
-    home_entry_panel,
-    page_obj,
-    pinned_notice_posts,
-    feed_scope,
-    slots,
-    home_user_mode,
-    home_primary_action,
-    home_support_actions,
-    home_empty_action_board,
-    home_locked_sections,
-):
-    return {
-        'products': products,
-        'sections': sections,
-        'aux_sections': aux_sections,
-        'primary_display_sections': primary_display_sections,
-        'secondary_display_sections': secondary_display_sections,
-        'games': games,
-        'favorite_items': favorite_items,
-        'favorite_product_ids': slots['workbench']['favorite_product_ids'],
-        'recent_items': recent_items,
-        'discovery_items': discovery_items,
-        'quickdrop_home_card': provider_cards['quickdrop_home_card'],
-        'schoolcomm_home_card': schoolcomm_home_card,
-        'representative_slots': representative_slots,
-        'representative_recommendations': representative_recommendations,
-        'home_nav_sections': home_nav_sections,
-        'home_mobile_section_order': home_mobile_section_order,
-        'home_mobile_workbench_items': home_mobile_workbench_items,
-        'home_mobile_recommend_items': home_mobile_recommend_items,
-        'developer_chat_home_card': provider_cards['developer_chat_home_card'],
-        'reservation_home_card': provider_cards['reservation_home_card'],
-        'home_calendar_surface': provider_cards['calendar'],
-        'home_frontend_config': home_frontend_config,
-        'home_design_version': home_design_version,
-        'community_summary': community_summary,
-        'sns_preview_posts': sns_preview_posts,
-        'home_entry_panel': home_entry_panel,
-        'posts': page_obj,
-        'page_obj': page_obj,
-        'pinned_notice_posts': pinned_notice_posts,
-        'feed_scope': feed_scope,
-        'sns_compose_prefill': _get_sns_compose_prefill(request),
-        'home_surface_slots': slots,
-        'home_user_mode': home_user_mode,
-        'home_primary_action': home_primary_action,
-        'home_support_actions': home_support_actions,
-        'home_empty_action_board': home_empty_action_board,
-        'home_locked_sections': home_locked_sections,
     }
 
 
@@ -4456,7 +4355,7 @@ def build_home_surface_context(
             favorite_items=favorite_items,
             representative_slots=representative_slots,
             discovery_items=discovery_items,
-            calendar_surface=provider_cards['calendar'],
+            calendar_surface=provider_cards.calendar,
         ),
     )
     representative_recommendations = _build_home_surface_safe_value(
@@ -4498,7 +4397,7 @@ def build_home_surface_context(
     )
     home_frontend_config = _build_home_surface_frontend_config()
     home_mobile_section_order = HOME_MOBILE_SECTION_ORDER
-    slots = _build_home_surface_slots(
+    slots = build_home_surface_slots(
         home_nav_sections=home_nav_sections,
         home_mobile_section_order=home_mobile_section_order,
         favorite_items=favorite_items,
@@ -4521,10 +4420,9 @@ def build_home_surface_context(
         representative_slots=representative_slots,
         representative_recommendations=representative_recommendations,
         home_entry_panel=home_entry_panel,
-        calendar_surface=provider_cards['calendar'],
+        calendar_surface=provider_cards.calendar,
     )
-    template_context = _build_home_surface_template_context(
-        request=request,
+    template_context = build_home_surface_template_context(HomeSurfaceTemplateParts(
         products=products,
         sections=sections,
         aux_sections=aux_sections,
@@ -4550,24 +4448,26 @@ def build_home_surface_context(
         page_obj=page_obj,
         pinned_notice_posts=pinned_notice_posts,
         feed_scope=feed_scope,
-        slots=slots,
+        home_surface_slots=slots,
         home_user_mode='authenticated',
         home_primary_action=action_context['home_primary_action'],
         home_support_actions=action_context['home_support_actions'],
         home_empty_action_board=action_context['home_empty_action_board'],
         home_locked_sections=action_context['home_locked_sections'],
-    )
+        sns_compose_prefill=_get_sns_compose_prefill(request),
+    ))
     template_context.update(
-        _build_home_surface_legacy_aliases(
+        build_home_surface_legacy_aliases(
             home_nav_sections=home_nav_sections,
             home_mobile_calendar_first_enabled=home_mobile_calendar_first_enabled,
             home_mobile_quick_items=home_mobile_quick_items,
             home_mobile_workbench_items=home_mobile_workbench_items,
             home_mobile_recommend_items=home_mobile_recommend_items,
             home_frontend_config=home_frontend_config,
+            home_v5_mobile_section_order=HOME_V5_MOBILE_SECTION_ORDER,
         )
     )
-    template_context.update(provider_cards['teacher_buddy'])
+    template_context.update(provider_cards.teacher_buddy)
     template_context.update(
         _build_home_surface_safe_value(
             request,
@@ -4576,7 +4476,7 @@ def build_home_surface_context(
             builder=lambda: _build_home_student_games_qr_context(request),
         )
     )
-    template_context.update(provider_cards['calendar'])
+    template_context.update(provider_cards.calendar)
     template_context.update(
         _build_home_surface_safe_value(
             request,
@@ -4586,7 +4486,7 @@ def build_home_surface_context(
         )
     )
     return {
-        'slots': slots,
+        'slots': slots.as_dict(),
         'legacy_context': template_context,
     }
 
@@ -4710,14 +4610,14 @@ def build_guest_home_surface_context(
     home_mobile_recommend_items = representative_recommendations
     home_frontend_config = _build_home_surface_frontend_config()
     home_mobile_section_order = HOME_MOBILE_SECTION_ORDER
-    provider_cards = {
-        'quickdrop_home_card': None,
-        'reservation_home_card': None,
-        'developer_chat_home_card': None,
-        'calendar': home_calendar_surface,
-        'teacher_buddy': {},
-    }
-    slots = _build_home_surface_slots(
+    provider_cards = HomeSurfaceProviderCards(
+        quickdrop_home_card=None,
+        reservation_home_card=None,
+        developer_chat_home_card=None,
+        calendar=home_calendar_surface,
+        teacher_buddy={},
+    )
+    slots = build_home_surface_slots(
         home_nav_sections=home_nav_sections,
         home_mobile_section_order=home_mobile_section_order,
         favorite_items=favorite_items,
@@ -4733,8 +4633,7 @@ def build_guest_home_surface_context(
         community_summary=community_summary,
         sns_preview_posts=sns_preview_posts,
     )
-    template_context = _build_home_surface_template_context(
-        request=request,
+    template_context = build_home_surface_template_context(HomeSurfaceTemplateParts(
         products=products,
         sections=sections,
         aux_sections=aux_sections,
@@ -4760,21 +4659,23 @@ def build_guest_home_surface_context(
         page_obj=page_obj,
         pinned_notice_posts=pinned_notice_posts,
         feed_scope=feed_scope,
-        slots=slots,
+        home_surface_slots=slots,
         home_user_mode='guest',
         home_primary_action=home_primary_action,
         home_support_actions=home_support_actions,
         home_empty_action_board=home_empty_action_board,
         home_locked_sections=home_locked_sections,
-    )
+        sns_compose_prefill=_get_sns_compose_prefill(request),
+    ))
     template_context.update(
-        _build_home_surface_legacy_aliases(
+        build_home_surface_legacy_aliases(
             home_nav_sections=home_nav_sections,
             home_mobile_calendar_first_enabled=False,
             home_mobile_quick_items=[],
             home_mobile_workbench_items=home_mobile_workbench_items,
             home_mobile_recommend_items=home_mobile_recommend_items,
             home_frontend_config=home_frontend_config,
+            home_v5_mobile_section_order=HOME_V5_MOBILE_SECTION_ORDER,
         )
     )
     template_context.update(home_calendar_surface)
@@ -4787,7 +4688,7 @@ def build_guest_home_surface_context(
         )
     )
     return {
-        'slots': slots,
+        'slots': slots.as_dict(),
         'legacy_context': template_context,
     }
 
