@@ -60,6 +60,10 @@
 - `main` 반영 전에 `git status --short`와 브랜치 상태를 확인해 현재 작업 범위 밖의 변경이 섞이지 않게 한다.
 - 이미 `main`에 들어간 변경을 다시 푸시하지 않는다. 먼저 `origin/main`과의 실제 차이를 확인한다.
 - 작업 시작 전과 종료 전에 `git branch -vv`, `git worktree list`, `git rev-list --left-right --count origin/main...<branch>`로 각 브랜치가 `main`에 이미 들어갔는지와 어떤 `worktree`가 물려 있는지 확인한다.
+- Python/Django 명령은 시스템 `python`/`python3`를 기본값으로 쓰지 않는다. 먼저 프로젝트 가상환경을 확인하고, 가능하면 그 인터프리터만 사용한다.
+- 저장소 루트에 `.venv`가 있으면 `manage.py`, 테스트, Django import 확인, `pip` 확인은 기본적으로 `./.venv/bin/python` 기준으로 실행한다.
+- 임시 `worktree`에는 `.venv`가 없을 수 있으므로, 이 경우 원본 저장소의 `.venv/bin/python` 경로를 명시적으로 사용한다.
+- `ModuleNotFoundError`, `Django가 안 깔렸다`, `패키지가 없다` 같은 판단은 시스템 Python이 아니라 프로젝트 `.venv/bin/python`으로 다시 확인하기 전에는 단정하지 않는다.
 - 오래된 로컬 변경이 `main`보다 뒤처진 상태면 재사용하지 말고 버릴지, 새로 적용할지 먼저 판단한다.
 - 사용자의 미커밋 변경이 있는 더러운 작업트리는 보존한다. `main` 반영이나 `push`를 위해 그 작업트리를 강제로 `main`으로 돌리거나 정리하지 않는다.
 - 더러운 작업트리에서 통합이 필요하면, 반영 작업은 별도 임시 `worktree`에서 수행하고 원래 작업트리에는 요청 범위 밖의 변경을 남겨 둔다.
@@ -126,7 +130,9 @@
 - 신규 서비스는 독립 앱 + URL namespace를 기본으로 한다.
 - 신규 서비스 등록 시 `ensure_<app>`에서 `Product`와 함께 `ServiceManual(is_published=True)` 및 `ManualSection` 3개 이상을 동시에 생성한다.
 - 머지 전 최소 검증:
-  - `python manage.py check`
+  - 프로젝트 가상환경 Python으로 `manage.py check`
+  - 예: 저장소 루트에서는 `./.venv/bin/python manage.py check`
+  - 예: `worktree`에서는 원본 저장소 `.venv/bin/python manage.py check`
   - 변경 JS에 대한 `node --check`
   - 핵심 화면 런타임 스모크(주요 탭/버튼 1회) + 브라우저 콘솔 `ReferenceError` 0건
 - UX 중심 변경의 추가 검증:
