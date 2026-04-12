@@ -693,6 +693,71 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('data-home-sns-expand="true"', content)
         self.assertFalse(mock_prime_service_launcher_products.called)
 
+    @patch('core.views.attach_teacher_buddy_avatar_context')
+    def test_post_like_htmx_survives_teacher_buddy_avatar_attach_failure(self, mock_attach_teacher_buddy_avatar_context):
+        user = self._login('postlikeavatarfailuser')
+        post = Post.objects.create(author=user, content='좋아요 테스트')
+        mock_attach_teacher_buddy_avatar_context.side_effect = RuntimeError('teacher buddy avatar attach failed')
+
+        response = self.client.get(
+            reverse('post_like', args=[post.id]),
+            HTTP_HX_REQUEST='true',
+        )
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('좋아요 테스트', content)
+
+    @patch('core.views.attach_teacher_buddy_avatar_context')
+    def test_comment_create_htmx_survives_teacher_buddy_avatar_attach_failure(self, mock_attach_teacher_buddy_avatar_context):
+        user = self._login('commentavatarfailuser')
+        post = Post.objects.create(author=user, content='댓글 테스트')
+        mock_attach_teacher_buddy_avatar_context.side_effect = RuntimeError('teacher buddy avatar attach failed')
+
+        response = self.client.post(
+            reverse('comment_create', args=[post.id]),
+            {'content': '새 댓글'},
+            HTTP_HX_REQUEST='true',
+        )
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('댓글 테스트', content)
+        self.assertEqual(post.comments.count(), 1)
+
+    @patch('core.views.attach_teacher_buddy_avatar_context')
+    def test_post_edit_htmx_survives_teacher_buddy_avatar_attach_failure(self, mock_attach_teacher_buddy_avatar_context):
+        user = self._login('posteditavatarfailuser')
+        post = Post.objects.create(author=user, content='수정 전')
+        mock_attach_teacher_buddy_avatar_context.side_effect = RuntimeError('teacher buddy avatar attach failed')
+
+        response = self.client.post(
+            reverse('post_edit', args=[post.id]),
+            {'content': '수정 후'},
+            HTTP_HX_REQUEST='true',
+        )
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(response.status_code, 200)
+        post.refresh_from_db()
+        self.assertEqual(post.content, '수정 후')
+        self.assertIn('수정 후', content)
+
+    @patch('core.views.attach_teacher_buddy_avatar_context')
+    def test_post_detail_partial_survives_teacher_buddy_avatar_attach_failure(self, mock_attach_teacher_buddy_avatar_context):
+        user = self._login('postdetailavatarfailuser')
+        post = Post.objects.create(author=user, content='상세 보기 테스트')
+        mock_attach_teacher_buddy_avatar_context.side_effect = RuntimeError('teacher buddy avatar attach failed')
+
+        response = self.client.get(
+            reverse('post_detail_partial', args=[post.id]),
+            HTTP_HX_REQUEST='true',
+        )
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('상세 보기 테스트', content)
+
     def test_v2_authenticated_uses_compact_top_row_without_large_greeting(self):
         """V2 로그인 홈은 큰 인사말 대신 압축된 상단 행을 사용"""
         self._login('greetuser', nickname='홍길동')

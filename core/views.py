@@ -4378,7 +4378,11 @@ def post_like(request, pk):
         post.likes.add(request.user)
         
     if request.headers.get('HX-Request'):
-        attach_teacher_buddy_avatar_context([post])
+        _attach_teacher_buddy_avatar_context_safe(
+            [post],
+            user=request.user,
+            label='post like partial',
+        )
         return render(request, 'core/partials/post_item.html', {'post': post})
         
     return redirect('home')
@@ -4415,7 +4419,11 @@ def comment_create(request, pk):
             )
             
     if request.headers.get('HX-Request'):
-        attach_teacher_buddy_avatar_context([post])
+        _attach_teacher_buddy_avatar_context_safe(
+            [post],
+            user=request.user,
+            label='comment create partial',
+        )
         return render(request, 'core/partials/post_item.html', {'post': post})
         
     return redirect('home')
@@ -4477,7 +4485,11 @@ def post_edit(request, pk):
             post.content = content
             post.save()
             # Return the updated post item (expanded)
-            attach_teacher_buddy_avatar_context([post])
+            _attach_teacher_buddy_avatar_context_safe(
+                [post],
+                user=request.user,
+                label='post edit partial',
+            )
             return render(request, 'core/partials/post_item.html', {'post': post, 'is_first': True})
             
     # GET: Return the edit form
@@ -4490,7 +4502,11 @@ def post_detail_partial(request, pk):
     if post is None:
         return HttpResponse("Not found", status=404)
     # Force expansion when returning from edit mode
-    attach_teacher_buddy_avatar_context([post])
+    _attach_teacher_buddy_avatar_context_safe(
+        [post],
+        user=request.user,
+        label='post detail partial',
+    )
     return render(request, 'core/partials/post_item.html', {'post': post, 'is_first': True})
 
 @login_required
