@@ -4,6 +4,8 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 
+from core.seo import build_route_page_seo
+
 from .forms import OCRImageUploadForm
 from .services import OCRProcessingError, OCREngineUnavailable, extract_text_from_upload, get_service
 
@@ -17,15 +19,22 @@ def _apply_workspace_cache_headers(response):
     return response
 
 
-def _build_page_context(*, form, result_text="", result_error="", result_notice="", ocr_attempted=False):
+def _build_page_context(request, *, form, result_text="", result_error="", result_notice="", ocr_attempted=False):
+    seo = build_route_page_seo(
+        request,
+        title="사진 글자 읽기 - Eduitit",
+        description="사진을 놓거나 고르면 미리보기를 보여주고 바로 읽기를 시작합니다. 읽은 글자는 결과 카드에서 바로 확인할 수 있습니다.",
+        route_name="ocrdesk:main",
+        robots="noindex,nofollow",
+    )
     return {
+        **seo.as_context(),
         "service": get_service(),
         "form": form,
         "result_text": result_text,
         "result_error": result_error,
         "result_notice": result_notice,
         "ocr_attempted": ocr_attempted,
-        "page_title": "사진 글자 읽기 - Eduitit",
     }
 
 
@@ -60,6 +69,7 @@ def main(request):
         form = OCRImageUploadForm()
 
     context = _build_page_context(
+        request,
         form=form,
         result_text=result_text,
         result_error=result_error,

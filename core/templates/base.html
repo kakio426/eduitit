@@ -7,23 +7,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="no-referrer-when-downgrade">
     {% block seo_meta %}
-    <meta name="description" content="{{ meta_description|default:og_description|default:default_og_description|default:'알림장, 수업 QR, 서비스 가이드, 교실 운영 도구까지. 교사가 오늘 바로 쓰는 AI·디지털 도구를 에듀잇티에서 한 번에 찾으세요.' }}">
-    <meta name="robots" content="{{ robots|default:'index,follow' }}">
-    <link rel="canonical" href="{{ canonical_url|default:og_url|default:'https://eduitit.site/' }}">
-    <meta property="og:title" content="{{ og_title|default:page_title|default:default_og_title|default:'교사를 위한 AI·학급 운영 도구 | Eduitit' }}">
-    <meta property="og:description" content="{{ og_description|default:meta_description|default:default_og_description|default:'알림장, 수업 QR, 서비스 가이드, 교실 운영 도구까지. 교사가 오늘 바로 쓰는 AI·디지털 도구를 에듀잇티에서 한 번에 찾으세요.' }}">
-    <meta property="og:type" content="{{ og_type|default:'website' }}">
-    <meta property="og:url" content="{{ og_url|default:canonical_url|default:'https://eduitit.site/' }}">
+    <meta name="description" content="{{ meta_description|default:og_description|default:default_meta_description|default:default_og_description|default:'알림장, 수업 QR, 서비스 가이드, 교실 운영 도구까지. 교사가 오늘 바로 쓰는 AI·디지털 도구를 에듀잇티에서 한 번에 찾으세요.' }}">
+    <meta name="robots" content="{{ robots|default:default_robots|default:'index,follow' }}">
+    <link rel="canonical" href="{{ canonical_url|default:og_url|default:default_canonical_url|default:default_og_url|default:'https://eduitit.site/' }}">
+    <meta property="og:title" content="{{ og_title|default:page_title|default:default_page_title|default:default_og_title|default:'교사를 위한 AI·학급 운영 도구 | Eduitit' }}">
+    <meta property="og:description" content="{{ og_description|default:meta_description|default:default_meta_description|default:default_og_description|default:'알림장, 수업 QR, 서비스 가이드, 교실 운영 도구까지. 교사가 오늘 바로 쓰는 AI·디지털 도구를 에듀잇티에서 한 번에 찾으세요.' }}">
+    <meta property="og:type" content="{{ og_type|default:default_og_type|default:'website' }}">
+    <meta property="og:url" content="{{ og_url|default:canonical_url|default:default_og_url|default:default_canonical_url|default:'https://eduitit.site/' }}">
     <meta property="og:image" content="{{ og_image|default:default_og_image|default:'https://eduitit.site/static/images/eduitit_og_teacher_first.png' }}">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="{{ og_title|default:page_title|default:default_og_title|default:'교사를 위한 AI·학급 운영 도구 | Eduitit' }}">
-    <meta name="twitter:description" content="{{ og_description|default:meta_description|default:default_og_description|default:'알림장, 수업 QR, 서비스 가이드, 교실 운영 도구까지. 교사가 오늘 바로 쓰는 AI·디지털 도구를 에듀잇티에서 한 번에 찾으세요.' }}">
+    <meta name="twitter:title" content="{{ og_title|default:page_title|default:default_page_title|default:default_og_title|default:'교사를 위한 AI·학급 운영 도구 | Eduitit' }}">
+    <meta name="twitter:description" content="{{ og_description|default:meta_description|default:default_meta_description|default:default_og_description|default:'알림장, 수업 QR, 서비스 가이드, 교실 운영 도구까지. 교사가 오늘 바로 쓰는 AI·디지털 도구를 에듀잇티에서 한 번에 찾으세요.' }}">
     <meta name="twitter:image" content="{{ og_image|default:default_og_image|default:'https://eduitit.site/static/images/eduitit_og_teacher_first.png' }}">
     {% endblock %}
     <link rel="icon" href="{% url 'favicon_ico' %}" sizes="any">
     <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
     <link rel="apple-touch-icon" href="{% static 'images/favicon.png' %}">
-    <title>{% block title %}{{ page_title|default:'교사를 위한 AI·학급 운영 도구 | Eduitit' }}{% endblock %}</title>
+    <title>{% block title %}{{ page_title|default:default_page_title|default:'교사를 위한 AI·학급 운영 도구 | Eduitit' }}{% endblock %}</title>
     <link href="{% static 'css/dist.css' %}" rel="stylesheet">
     <link href="{% static 'core/css/base.css' %}" rel="stylesheet">
     <link href="https://hangeul.pstatic.net/hangeul_static/css/nanum-square-round.css" rel="stylesheet">
@@ -37,7 +37,7 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
     <script defer src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <script defer src="{% static 'core/js/base.js' %}"></script>
-    {% for structured_data_json in structured_data_json_scripts %}
+    {% for structured_data_json in structured_data_json_scripts|default:default_structured_data_json_scripts %}
     <script type="application/ld+json">{{ structured_data_json|safe }}</script>
     {% endfor %}
     {% block extra_head %}{% endblock %}

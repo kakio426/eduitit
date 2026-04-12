@@ -1,10 +1,11 @@
 import html
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase, override_settings
+from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 
 from collect.models import CollectionRequest
+from core.context_processors import seo_meta
 from core.guide_links import SERVICE_GUIDE_PADLET_URL
 from core.seo import DEFAULT_HOME_DESCRIPTION
 from insights.models import Insight
@@ -14,6 +15,7 @@ from products.models import Product, ServiceManual
 @override_settings(HOME_V2_ENABLED=True)
 class SeoFoundationTests(TestCase):
     def setUp(self):
+        self.request_factory = RequestFactory()
         self.user = get_user_model().objects.create_user(
             username="seo-user",
             email="seo-user@example.com",
@@ -84,6 +86,21 @@ class SeoFoundationTests(TestCase):
             thumbnail_url="https://eduitit.site/static/images/test-thumb.png",
             tags="#AI,#교실",
         )
+
+    def test_context_processor_exposes_default_fallback_keys_only(self):
+        context = seo_meta(self.request_factory.get("/ocrdesk/"))
+
+        self.assertIn("default_page_title", context)
+        self.assertIn("default_canonical_url", context)
+        self.assertIn("default_og_title", context)
+        self.assertIn("default_meta_description", context)
+        self.assertEqual(context["default_canonical_url"], "https://eduitit.site/ocrdesk/")
+        self.assertNotIn("page_title", context)
+        self.assertNotIn("meta_description", context)
+        self.assertNotIn("canonical_url", context)
+        self.assertNotIn("og_title", context)
+        self.assertNotIn("og_description", context)
+        self.assertNotIn("robots", context)
 
     def test_robots_txt_only_exposes_sitemap_without_internal_hints(self):
         response = self.client.get("/robots.txt")
@@ -227,7 +244,7 @@ class SeoFoundationTests(TestCase):
                 self.assertIn(html.escape(description), content)
                 self.assertNotIn(DEFAULT_HOME_DESCRIPTION, content)
 
-    def test_page_title_only_view_promotes_title_and_hero_copy_into_meta(self):
+    def test_ocrdesk_page_uses_explicit_noindex_meta(self):
         self.client.force_login(self.user)
 
         response = self.client.get(reverse("ocrdesk:main"))
@@ -235,12 +252,38 @@ class SeoFoundationTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("<title>사진 글자 읽기 - Eduitit</title>", content)
+        self.assertIn('<meta name="robots" content="noindex,nofollow">', content)
+        self.assertIn(f'<link rel="canonical" href="https://eduitit.site{reverse("ocrdesk:main")}">', content)
         self.assertIn('<meta property="og:title" content="사진 글자 읽기 - Eduitit">', content)
         self.assertIn('<meta name="twitter:title" content="사진 글자 읽기 - Eduitit">', content)
         self.assertIn(
             '<meta property="og:description" content="사진을 놓거나 고르면 미리보기를 보여주고 바로 읽기를 시작합니다.',
             content,
         )
+        self.assertNotIn(DEFAULT_HOME_DESCRIPTION, content)
+
+    def test_schoolcomm_main_uses_noindex_meta(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("schoolcomm:main"))
+        content = response.content.decode("utf-8")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("<title>끼리끼리 채팅방 | Eduitit</title>", content)
+        self.assertIn('<meta name="robots" content="noindex,nofollow">', content)
+        self.assertIn(f'<link rel="canonical" href="https://eduitit.site{reverse("schoolcomm:main")}">', content)
+        self.assertIn("동학년 선생님과 공지, 자료, 대화, 끼리끼리 캘린더를 한 화면에서 정리하는 교사용 채팅방입니다.", content)
+        self.assertNotIn(DEFAULT_HOME_DESCRIPTION, content)
+
+    def test_tts_announce_page_gets_explicit_meta(self):
+        response = self.client.get(reverse("tts_announce"))
+        content = response.content.decode("utf-8")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("<title>교실 방송 TTS - Eduitit</title>", content)
+        self.assertIn(f'<link rel="canonical" href="https://eduitit.site{reverse("tts_announce")}">', content)
+        self.assertIn('<meta property="og:title" content="교실 방송 TTS - Eduitit">', content)
+        self.assertIn("학생들에게 안내, 집중 신호, 정리 멘트를 바로 읽어 줘야 하는 교사에게 맞는 도구입니다.", content)
         self.assertNotIn(DEFAULT_HOME_DESCRIPTION, content)
 
     def test_handoff_landing_uses_explicit_meta(self):

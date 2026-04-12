@@ -18,7 +18,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
 
 from core.guide_links import SERVICE_GUIDE_PADLET_URL
-from core.seo import build_product_detail_seo, build_product_list_page_seo
+from core.seo import build_product_detail_seo, build_product_list_page_seo, build_route_page_seo
 from core.product_visibility import filter_discoverable_products
 
 from .dutyticker_scope import apply_classroom_scope, get_active_classroom_for_request, get_or_create_settings_for_scope
@@ -560,6 +560,12 @@ def product_preview(request, pk):
 
 
 def tts_announce_view(request):
+    seo = build_route_page_seo(
+        request,
+        title="교실 방송 TTS - Eduitit",
+        description=PRODUCT_DETAIL_AUDIENCE_BY_ROUTE["tts_announce"],
+        route_name="tts_announce",
+    )
     classroom = get_active_classroom_for_request(request) if request.user.is_authenticated else None
     today = timezone.localdate()
     today_js_day = (today.weekday() + 1) % 7
@@ -607,8 +613,8 @@ def tts_announce_view(request):
         request,
         "products/tts_announce.html",
         {
+            **seo.as_context(),
             "hide_navbar": True,
-            "page_title": "교실 방송 TTS",
             "broadcast_groups": broadcast_groups,
             "broadcast_template_count": broadcast_template_count,
             "schedule_rows": schedule_rows,

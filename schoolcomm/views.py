@@ -11,6 +11,8 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.views.decorators.http import require_GET, require_POST
 
+from core.seo import build_route_page_seo
+
 from .models import CalendarSuggestion, MessageReaction, RoomMessage, SchoolMembership, SharedAsset, WorkspaceInvite
 from .services import (
     MembershipRequiredError,
@@ -58,6 +60,17 @@ logger = logging.getLogger(__name__)
 
 SERVICE_PUBLIC_NAME = "끼리끼리 채팅방"
 SERVICE_UNAVAILABLE_MESSAGE = "지금은 채팅방을 준비하는 중입니다. 잠시 후 다시 열어 주세요."
+
+
+def _build_noindex_seo(request, *, title, description):
+    return build_route_page_seo(
+        request,
+        title=title,
+        description=description,
+        route_name="schoolcomm:main" if request is None else "",
+        current_path=getattr(request, "path", ""),
+        robots="noindex,nofollow",
+    )
 
 
 def _json_error(message, *, status=400, code="validation_error", extra=None):
@@ -191,8 +204,13 @@ def _parse_calendar_form_datetimes(request):
 
 
 def _service_unavailable_context():
+    seo = _build_noindex_seo(
+        None,
+        title=f"{SERVICE_PUBLIC_NAME} | Eduitit",
+        description="동학년 선생님과 공지, 자료, 대화, 캘린더를 한 화면에서 정리하는 교사용 채팅방입니다.",
+    )
     return {
-        "page_title": SERVICE_PUBLIC_NAME,
+        **seo.as_context(),
         "service_unavailable": True,
         "service_unavailable_message": SERVICE_UNAVAILABLE_MESSAGE,
         "user_ws_url": "",
@@ -237,8 +255,21 @@ def main(request):
                 )
                 search_results = _build_search_display(search_results, request.user)
 
+        if workspace is not None:
+            seo = _build_noindex_seo(
+                request,
+                title=f"{workspace.name} | {SERVICE_PUBLIC_NAME}",
+                description="공지, 자료, 대화, 끼리끼리 캘린더를 한 화면에서 빠르게 확인하는 교사용 채팅방입니다.",
+            )
+        else:
+            seo = _build_noindex_seo(
+                request,
+                title=f"{SERVICE_PUBLIC_NAME} | Eduitit",
+                description="동학년 선생님과 공지, 자료, 대화, 끼리끼리 캘린더를 한 화면에서 정리하는 교사용 채팅방입니다.",
+            )
+
         context = {
-            "page_title": SERVICE_PUBLIC_NAME,
+            **seo.as_context(),
             "service_product": get_service_product(),
             "workspace": workspace,
             "workspace_name_suggestion": school_name_suggestion_for_user(request.user),
@@ -290,9 +321,13 @@ def invite_accept(request, token):
             except ValidationError as exc:
                 messages.error(request, str(exc))
         context = {
+            **_build_noindex_seo(
+                request,
+                title="끼리끼리 채팅방 초대 수락 - Eduitit",
+                description="초대 링크로 채팅방에 들어가기 전 참여 여부를 확인하는 화면입니다.",
+            ).as_context(),
             "invite": invite,
             "membership": accepted_membership or membership,
-            "page_title": "초대 수락",
         }
         return render(request, "schoolcomm/invite_accept.html", context)
     except DatabaseError:
@@ -319,7 +354,11 @@ def room_detail(request, room_id):
         workspace = room.workspace
         dashboard = build_workspace_dashboard(workspace, request.user)
         context = {
-            "page_title": room.name,
+            **_build_noindex_seo(
+                request,
+                title=f"{room.name} | {SERVICE_PUBLIC_NAME}",
+                description="채팅방 대화, 공지, 자료를 교사끼리 빠르게 이어가는 내부 업무 화면입니다.",
+            ).as_context(),
             "room": room,
             "membership": membership,
             "workspace": workspace,

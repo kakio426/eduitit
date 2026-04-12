@@ -185,19 +185,7 @@ def seo_meta(request):
         'brand_wordmark': SITE_WORDMARK,
         'brand_nav_wordmark': SITE_NAME_KO,
         'brand_home_title_ko': DEFAULT_HOME_TITLE_KO,
-        'default_og_title': default_meta.title,
-        'default_og_description': default_meta.description,
-        'default_og_image': default_meta.og_image,
-        'page_title': default_meta.title,
-        'meta_description': default_meta.description,
-        'canonical_url': default_meta.canonical_url,
-        'og_title': default_meta.og_title,
-        'og_description': default_meta.og_description,
-        'og_url': default_meta.canonical_url,
-        'og_image': default_meta.og_image,
-        'og_type': default_meta.og_type,
-        'robots': default_meta.robots,
-        'structured_data_json_scripts': default_meta.as_context().get('structured_data_json_scripts', []),
+        **default_meta.as_fallback_context(),
     }
 
 

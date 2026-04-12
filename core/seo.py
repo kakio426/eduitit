@@ -52,6 +52,22 @@ class PageSeoMeta:
             ],
         }
 
+    def as_fallback_context(self) -> dict[str, Any]:
+        return {
+            "default_page_title": self.title,
+            "default_meta_description": self.description,
+            "default_canonical_url": self.canonical_url,
+            "default_og_title": self.og_title or self.title,
+            "default_og_description": self.og_description or self.description,
+            "default_og_url": self.canonical_url,
+            "default_og_image": self.og_image or DEFAULT_OG_IMAGE_URL,
+            "default_og_type": self.og_type,
+            "default_robots": self.robots,
+            "default_structured_data_json_scripts": [
+                _serialize_structured_data(item) for item in self.structured_data
+            ],
+        }
+
 
 def _truncate_text(value: Any, *, limit: int = 160) -> str:
     text = " ".join(strip_tags(str(value or "")).split()).strip()
