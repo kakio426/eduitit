@@ -313,22 +313,6 @@
                                     </div>
                                     {% endif %}
 
-                                    {% if representative_recommendations %}
-                                    <div class="mt-4 border-t border-slate-100 pt-4">
-                                        <div class="mb-2 flex items-center gap-2 text-sm font-black text-slate-700">
-                                            <i class="fa-solid fa-compass home-v6-title-icon"></i>
-                                            추천 도구
-                                        </div>
-                                        <div class="home-v6-recommend-row" data-home-v6-recommendations="true">
-                                            {% for item in representative_recommendations %}
-                                            <a href="{{ item.href }}" class="home-v6-recommend-pill" {% if item.is_external %}target="_blank" rel="noopener"{% endif %}>
-                                                <span class="truncate">{{ item.title }}</span>
-                                                <span class="text-slate-400">{{ item.reason_label }}</span>
-                                            </a>
-                                            {% endfor %}
-                                        </div>
-                                    </div>
-                                    {% endif %}
                                 </div>
                             </section>
                         </div>

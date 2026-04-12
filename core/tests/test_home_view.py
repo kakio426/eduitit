@@ -3601,6 +3601,27 @@ class HomeV6ViewTest(TestCase):
         self.assertNotIn('data-home-v6-service-grid="true"', content)
         self.assertIsNotNone(response.context['home_entry_panel'])
 
+    @patch(
+        'core.views._build_home_recommendations',
+        return_value=[
+            {
+                'title': '숨겨져야 하는 추천 칩',
+                'href': '/tools/hidden-pill/',
+                'is_external': False,
+                'reason_label': '테스트 추천',
+            }
+        ],
+    )
+    def test_v6_keeps_recommendation_data_but_hides_secondary_recommend_row(self, _mock_recommendations):
+        self._login('v6recommendfocus')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(response.context['representative_recommendations'][0]['title'], '숨겨져야 하는 추천 칩')
+        self.assertNotIn('data-home-v6-recommendations="true"', content)
+        self.assertNotIn('숨겨져야 하는 추천 칩', content)
+
     @patch('classcalendar.views.build_calendar_surface_context', side_effect=RuntimeError('calendar boom'))
     def test_v6_calendar_failure_shows_recovery_banner(self, _mock_calendar_surface):
         self._login('v6calendarerror')
