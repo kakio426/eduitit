@@ -4,5 +4,38 @@
     data-home-v6-top-calendar="true"
     data-home-v6-calendar-surface="true"
 >
+    {% if calendar_load_error %}
+    <section
+        class="rounded-[1.5rem] border border-rose-200 bg-rose-50/90 px-4 py-4 text-left shadow-sm sm:px-5"
+        data-home-v6-calendar-error="true"
+        role="alert"
+    >
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div class="min-w-0">
+                <p class="text-[11px] font-black uppercase tracking-[0.18em] text-rose-500">일정 연결 오류</p>
+                <h2 class="mt-1 text-lg font-black text-rose-950">{{ calendar_load_error_title }}</h2>
+                <p class="mt-1 text-sm font-medium leading-6 text-rose-700">{{ calendar_load_error_message }}</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                {% if calendar_load_error_retry_url %}
+                <a
+                    href="{{ calendar_load_error_retry_url }}"
+                    class="inline-flex items-center justify-center rounded-full border border-rose-200 bg-white px-4 py-2.5 text-sm font-black text-rose-700 transition hover:border-rose-300 hover:text-rose-800"
+                >
+                    {{ calendar_load_error_retry_label }}
+                </a>
+                {% endif %}
+                {% if calendar_load_error_secondary_url %}
+                <a
+                    href="{{ calendar_load_error_secondary_url }}"
+                    class="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-700 transition hover:border-indigo-200 hover:text-indigo-700"
+                >
+                    {{ calendar_load_error_secondary_label }}
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+    {% endif %}
     {% include "classcalendar/_calendar_app.html" %}
 </div>

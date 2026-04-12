@@ -3436,6 +3436,7 @@ def _build_home_surface_quickdrop_provider(request, *, favorite_products, produc
 
 def _build_home_surface_calendar_fallback(request):
     home_surface_url = _home_calendar_surface_url()
+    home_reload_url = _safe_reverse('home') or home_surface_url
     calendar_center_url = _safe_reverse('classcalendar:center') or home_surface_url
     calendar_api_base_url = _safe_reverse('classcalendar:main')
     today_key = timezone.localdate().isoformat()
@@ -3451,7 +3452,7 @@ def _build_home_surface_calendar_fallback(request):
         'date_key': today_key,
         'focus_heading': '',
         'focus_description': '',
-        'focus_empty_message': '오늘 일정이 없습니다.',
+        'focus_empty_message': '일시적인 문제로 오늘 일정을 아직 보여드리지 못했습니다.',
         'today_event_count': 0,
         'today_task_count': 0,
         'today_events': [],
@@ -3508,6 +3509,13 @@ def _build_home_surface_calendar_fallback(request):
         'home_surface_url': home_surface_url,
         'calendar_page_url': home_surface_url,
         'calendar_api_base_url': calendar_api_base_url,
+        'calendar_load_error': True,
+        'calendar_load_error_title': '일정을 불러오지 못했습니다',
+        'calendar_load_error_message': '잠시 후 다시 시도하거나 전체 캘린더에서 확인해 주세요.',
+        'calendar_load_error_retry_url': home_reload_url,
+        'calendar_load_error_retry_label': '홈 다시 불러오기',
+        'calendar_load_error_secondary_url': calendar_center_url or calendar_api_base_url,
+        'calendar_load_error_secondary_label': '전체 캘린더 열기',
         'initial_selected_date': today_key,
         'initial_open_create': False,
         'initial_open_event_id': '',
@@ -3527,11 +3535,19 @@ def _build_home_surface_calendar_provider(request):
     try:
         from classcalendar.views import build_calendar_surface_context
 
-        return build_calendar_surface_context(
+        calendar_surface = build_calendar_surface_context(
             request,
             page_variant='main',
             embedded_surface='home',
         )
+        calendar_surface.setdefault('calendar_load_error', False)
+        calendar_surface.setdefault('calendar_load_error_title', '')
+        calendar_surface.setdefault('calendar_load_error_message', '')
+        calendar_surface.setdefault('calendar_load_error_retry_url', '')
+        calendar_surface.setdefault('calendar_load_error_retry_label', '')
+        calendar_surface.setdefault('calendar_load_error_secondary_url', '')
+        calendar_surface.setdefault('calendar_load_error_secondary_label', '')
+        return calendar_surface
     except Exception:
         logger.exception(
             '[home surface] calendar provider failed user_id=%s',

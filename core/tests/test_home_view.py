@@ -3593,6 +3593,25 @@ class HomeV6ViewTest(TestCase):
         self.assertNotIn('data-home-v6-service-grid="true"', content)
         self.assertIsNotNone(response.context['home_entry_panel'])
 
+    @patch('classcalendar.views.build_calendar_surface_context', side_effect=RuntimeError('calendar boom'))
+    def test_v6_calendar_failure_shows_recovery_banner(self, _mock_calendar_surface):
+        self._login('v6calendarerror')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context['calendar_load_error'])
+        self.assertEqual(response.context['calendar_load_error_retry_url'], reverse('home'))
+        self.assertIn('data-home-v6-calendar-error="true"', content)
+        self.assertIn('일정을 불러오지 못했습니다', content)
+        self.assertIn('홈 다시 불러오기', content)
+        self.assertIn('전체 캘린더 열기', content)
+        self.assertEqual(
+            response.context['today_workspace']['focus_empty_message'],
+            '일시적인 문제로 오늘 일정을 아직 보여드리지 못했습니다.',
+        )
+
     def test_v6_schoolcomm_card_uses_v6_markup_and_styles(self):
         user = self._login('v6schoolcomm')
         ProductFavorite.objects.create(user=user, product=self.favorite_product, pin_order=1)
