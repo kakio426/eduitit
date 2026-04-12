@@ -303,6 +303,17 @@ class SeoFoundationTests(TestCase):
                 self.assertIn(html.escape(description), content)
                 self.assertNotIn(DEFAULT_HOME_DESCRIPTION, content)
 
+    def test_policy_page_uses_route_specific_fallback_meta(self):
+        response = self.client.get(reverse("policy"))
+        content = response.content.decode("utf-8")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("<title>이용약관, 개인정보처리방침 및 운영정책 - Eduitit</title>", content)
+        self.assertIn('<link rel="canonical" href="https://eduitit.site/policy/">', content)
+        self.assertIn('<meta property="og:title" content="이용약관, 개인정보처리방침 및 운영정책 - Eduitit">', content)
+        self.assertIn("에듀잇티 서비스의 이용약관, 개인정보 처리 기준, 운영정책을 한 곳에서 확인할 수 있습니다.", content)
+        self.assertNotIn(DEFAULT_HOME_DESCRIPTION, content)
+
     def test_auth_pages_use_noindex_and_specific_meta(self):
         cases = (
             ("account_login", "로그인 | Eduitit", "https://eduitit.site/accounts/login/", "에듀잇티에 로그인하고 교실 운영 도구를 이어서 사용하세요."),
@@ -321,6 +332,48 @@ class SeoFoundationTests(TestCase):
                 self.assertIn("eduitit_og.png", content)
                 self.assertIn(html.escape(description), content)
                 self.assertNotIn(DEFAULT_HOME_DESCRIPTION, content)
+
+    def test_select_role_page_uses_noindex_route_specific_fallback_meta(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("select_role"))
+        content = response.content.decode("utf-8")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("<title>에듀잇티 - 역할 선택</title>", content)
+        self.assertIn('<meta name="robots" content="noindex,nofollow">', content)
+        self.assertIn('<link rel="canonical" href="https://eduitit.site/select-role/">', content)
+        self.assertIn('<meta property="og:title" content="에듀잇티 - 역할 선택">', content)
+        self.assertIn("서비스 시작 전에 역할과 별명을 고르는 비공개 초기 설정 화면입니다.", content)
+        self.assertNotIn(DEFAULT_HOME_DESCRIPTION, content)
+
+    def test_settings_page_uses_noindex_route_specific_fallback_meta(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("settings"))
+        content = response.content.decode("utf-8")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("<title>내 정보와 공용 명부 - Eduitit</title>", content)
+        self.assertIn('<meta name="robots" content="noindex,nofollow">', content)
+        self.assertIn('<link rel="canonical" href="https://eduitit.site/settings/">', content)
+        self.assertIn('<meta property="og:title" content="내 정보와 공용 명부 - Eduitit">', content)
+        self.assertIn("프로필과 공용 명부를 관리하는 비공개 설정 화면입니다.", content)
+        self.assertNotIn(DEFAULT_HOME_DESCRIPTION, content)
+
+    def test_delete_account_page_uses_noindex_route_specific_fallback_meta(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("delete_account"))
+        content = response.content.decode("utf-8")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("<title>회원 탈퇴 - Eduitit</title>", content)
+        self.assertIn('<meta name="robots" content="noindex,nofollow">', content)
+        self.assertIn('<link rel="canonical" href="https://eduitit.site/delete-account/">', content)
+        self.assertIn('<meta property="og:title" content="회원 탈퇴 - Eduitit">', content)
+        self.assertIn("계정과 저장된 정보를 삭제하기 전에 마지막으로 확인하는 비공개 화면입니다.", content)
+        self.assertNotIn(DEFAULT_HOME_DESCRIPTION, content)
 
     def test_ocrdesk_page_uses_explicit_noindex_meta(self):
         self.client.force_login(self.user)

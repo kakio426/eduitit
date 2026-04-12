@@ -307,6 +307,37 @@ def _build_page_seo(
 
 
 def build_default_page_seo(request) -> PageSeoMeta:
+    resolver_match = getattr(request, "resolver_match", None) if request else None
+    route_name = (
+        getattr(resolver_match, "view_name", "")
+        or getattr(resolver_match, "url_name", "")
+        or ""
+    )
+    route_fallback_builders = {
+        "home": build_home_page_seo,
+        "prompt_lab": build_prompt_lab_page_seo,
+        "tool_guide": build_tool_guide_page_seo,
+        "service_guide_list": build_service_guide_list_seo,
+        "product_list": build_product_list_page_seo,
+        "portfolio:list": build_portfolio_page_seo,
+        "about": build_about_page_seo,
+        "policy": build_policy_page_seo,
+        "settings": build_settings_page_seo,
+        "select_role": build_select_role_page_seo,
+        "update_email": build_update_email_page_seo,
+        "delete_account": build_delete_account_page_seo,
+        "policy_consent": build_policy_consent_page_seo,
+        "admin_dashboard": build_admin_dashboard_page_seo,
+        "noticegen:main": build_noticegen_page_seo,
+        "qrgen:landing": build_qrgen_page_seo,
+        "fortune:saju": build_fortune_saju_page_seo,
+        "fortune:history": build_fortune_history_page_seo,
+        "fortune:chat_main": build_fortune_chat_page_seo,
+    }
+    builder = route_fallback_builders.get(route_name)
+    if builder is not None:
+        return builder(request)
+
     current_path = getattr(request, "path", "/") if request else "/"
     return _build_page_seo(
         title=DEFAULT_HOME_TITLE,
@@ -612,6 +643,68 @@ def build_about_page_seo(request) -> PageSeoMeta:
         title=f"{SITE_NAME_KO} 소개 | 교사의 스마트한 하루",
         description=f"교사의 시간을 아껴 주는 도구를 왜, 어떻게 만들고 있는지 {SITE_NAME_KO}의 방향과 철학을 소개합니다.",
         canonical_url=_absolute_url(reverse("about")),
+    )
+
+
+def build_policy_page_seo(request) -> PageSeoMeta:
+    return _build_page_seo(
+        title="이용약관, 개인정보처리방침 및 운영정책 - Eduitit",
+        description=f"{SITE_NAME_KO} 서비스의 이용약관, 개인정보 처리 기준, 운영정책을 한 곳에서 확인할 수 있습니다.",
+        canonical_url=_absolute_url(reverse("policy")),
+    )
+
+
+def build_settings_page_seo(request) -> PageSeoMeta:
+    return _build_page_seo(
+        title="내 정보와 공용 명부 - Eduitit",
+        description="프로필과 공용 명부를 관리하는 비공개 설정 화면입니다.",
+        canonical_url=_absolute_url(reverse("settings")),
+        robots="noindex,nofollow",
+    )
+
+
+def build_select_role_page_seo(request) -> PageSeoMeta:
+    return _build_page_seo(
+        title="에듀잇티 - 역할 선택",
+        description="서비스 시작 전에 역할과 별명을 고르는 비공개 초기 설정 화면입니다.",
+        canonical_url=_absolute_url(reverse("select_role")),
+        robots="noindex,nofollow",
+    )
+
+
+def build_update_email_page_seo(request) -> PageSeoMeta:
+    return _build_page_seo(
+        title="계정 프로필 완성하기 - Eduitit",
+        description="서비스 이용 전에 이름과 이메일을 확인하는 비공개 계정 설정 화면입니다.",
+        canonical_url=_absolute_url(reverse("update_email")),
+        robots="noindex,nofollow",
+    )
+
+
+def build_delete_account_page_seo(request) -> PageSeoMeta:
+    return _build_page_seo(
+        title="회원 탈퇴 - Eduitit",
+        description="계정과 저장된 정보를 삭제하기 전에 마지막으로 확인하는 비공개 화면입니다.",
+        canonical_url=_absolute_url(reverse("delete_account")),
+        robots="noindex,nofollow",
+    )
+
+
+def build_policy_consent_page_seo(request) -> PageSeoMeta:
+    return _build_page_seo(
+        title="서비스 이용을 위한 약관 동의 - Eduitit",
+        description="서비스 이용 전에 최신 약관과 개인정보처리방침에 동의하는 비공개 확인 화면입니다.",
+        canonical_url=_absolute_url(reverse("policy_consent")),
+        robots="noindex,nofollow",
+    )
+
+
+def build_admin_dashboard_page_seo(request) -> PageSeoMeta:
+    return _build_page_seo(
+        title="관리자 대시보드 - Eduitit",
+        description="운영 지표와 방문 흐름을 확인하는 관리자 전용 비공개 대시보드입니다.",
+        canonical_url=_absolute_url(reverse("admin_dashboard")),
+        robots="noindex,nofollow",
     )
 
 

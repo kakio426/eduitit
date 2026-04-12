@@ -10,20 +10,20 @@
     <meta name="description" content="{% firstof meta_description og_description default_meta_description default_og_description '알림장, 수업 QR, 서비스 가이드, 교실 운영 도구까지. 교사가 오늘 바로 쓰는 AI·디지털 도구를 에듀잇티에서 한 번에 찾으세요.' %}">
     <meta name="robots" content="{% firstof robots default_robots 'index,follow' %}">
     <link rel="canonical" href="{% firstof canonical_url og_url default_canonical_url default_og_url 'https://eduitit.site/' %}">
-    <meta property="og:title" content="{% firstof og_title page_title default_page_title default_og_title '교사를 위한 AI·학급 운영 도구 | Eduitit' %}">
+    <meta property="og:title" content="{% firstof og_title page_title default_og_title default_page_title '교사를 위한 AI·학급 운영 도구 | Eduitit' %}">
     <meta property="og:description" content="{% firstof og_description meta_description default_meta_description default_og_description '알림장, 수업 QR, 서비스 가이드, 교실 운영 도구까지. 교사가 오늘 바로 쓰는 AI·디지털 도구를 에듀잇티에서 한 번에 찾으세요.' %}">
     <meta property="og:type" content="{% firstof og_type default_og_type 'website' %}">
     <meta property="og:url" content="{% firstof og_url canonical_url default_og_url default_canonical_url 'https://eduitit.site/' %}">
-    <meta property="og:image" content="{% firstof og_image default_og_image 'https://eduitit.site/static/images/eduitit_og_teacher_first.png' %}">
+    <meta property="og:image" content="{% firstof og_image default_og_image 'https://eduitit.site/static/images/eduitit_og.png' %}">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="{% firstof og_title page_title default_page_title default_og_title '교사를 위한 AI·학급 운영 도구 | Eduitit' %}">
+    <meta name="twitter:title" content="{% firstof og_title page_title default_og_title default_page_title '교사를 위한 AI·학급 운영 도구 | Eduitit' %}">
     <meta name="twitter:description" content="{% firstof og_description meta_description default_meta_description default_og_description '알림장, 수업 QR, 서비스 가이드, 교실 운영 도구까지. 교사가 오늘 바로 쓰는 AI·디지털 도구를 에듀잇티에서 한 번에 찾으세요.' %}">
-    <meta name="twitter:image" content="{% firstof og_image default_og_image 'https://eduitit.site/static/images/eduitit_og_teacher_first.png' %}">
+    <meta name="twitter:image" content="{% firstof og_image default_og_image 'https://eduitit.site/static/images/eduitit_og.png' %}">
     {% endblock %}
     <link rel="icon" href="{% url 'favicon_ico' %}" sizes="any">
     <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
     <link rel="apple-touch-icon" href="{% static 'images/favicon.png' %}">
-    <title>{% block title %}{% firstof page_title default_page_title '교사를 위한 AI·학급 운영 도구 | Eduitit' %}{% endblock %}</title>
+    <title>{% block title %}{% firstof page_title og_title default_og_title default_page_title '교사를 위한 AI·학급 운영 도구 | Eduitit' %}{% endblock %}</title>
     <link href="{% static 'css/dist.css' %}" rel="stylesheet">
     <link href="{% static 'core/css/base.css' %}" rel="stylesheet">
     <link href="https://hangeul.pstatic.net/hangeul_static/css/nanum-square-round.css" rel="stylesheet">
