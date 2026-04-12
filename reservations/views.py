@@ -607,54 +607,113 @@ def recurring_settings(request, school_slug):
     })
     return _apply_sensitive_cache_headers(response)
 
+
+def _build_grade_lock_matrix_context(school):
+    config, _ = SchoolConfig.objects.get_or_create(school=school)
+    periods = config.get_period_slots()
+    day_names = ['월', '화', '수', '목', '금']
+    days = range(len(day_names))
+    rooms = school.specialroom_set.all()
+    grade_choices = range(1, 7)
+
+    rooms_data = []
+    total_locks = 0
+    for room in rooms:
+        recurring_map = {
+            (schedule.day_of_week, schedule.period): schedule
+            for schedule in RecurringSchedule.objects.filter(room=room, day_of_week__in=days)
+        }
+        lock_map = {
+            (lock.day_of_week, lock.period): lock
+            for lock in GradeRecurringLock.objects.filter(room=room, day_of_week__in=days)
+        }
+        total_locks += len(lock_map)
+
+        rows = []
+        for period_info in periods:
+            slots = []
+            for day in days:
+                slots.append({
+                    'day_index': day,
+                    'recurring': recurring_map.get((day, period_info['id'])),
+                    'lock': lock_map.get((day, period_info['id'])),
+                })
+            rows.append({
+                'period': period_info,
+                'slots': slots,
+            })
+
+        rooms_data.append({
+            'room': room,
+            'rows': rows,
+        })
+
+    return {
+        'school': school,
+        'rooms_data': rooms_data,
+        'day_names': day_names,
+        'grade_choices': grade_choices,
+        'lock_total': total_locks,
+    }
+
+
+def _render_grade_lock_matrix(request, school, *, status=200):
+    response = render(
+        request,
+        'reservations/partials/grade_lock_matrix.html',
+        _build_grade_lock_matrix_context(school),
+        status=status,
+    )
+    return _apply_sensitive_cache_headers(response)
+
+
 @login_required
 def grade_lock_settings(request, school_slug):
     school = get_object_or_404(School, slug=school_slug, owner=request.user)
 
     if request.method == 'POST':
         action = request.POST.get('action')
+        room_id = request.POST.get('room_id')
+        day_of_week = request.POST.get('day_of_week')
+        period = request.POST.get('period')
 
-        if action == 'add':
-            room_id = request.POST.get('room_id')
-            day_of_week = request.POST.get('day_of_week')
-            period = request.POST.get('period')
-            grade = request.POST.get('grade')
+        try:
+            room = get_object_or_404(SpecialRoom, id=int(room_id), school=school)
+            day_of_week = int(day_of_week)
+            period = int(period)
 
-            try:
-                room = get_object_or_404(SpecialRoom, id=int(room_id), school=school)
-                day_of_week = int(day_of_week)
-                period = int(period)
-                grade = int(grade)
+            if day_of_week < 0 or day_of_week > 4 or period < 1:
+                raise ValueError("invalid-range")
 
-                if day_of_week < 0 or day_of_week > 6 or grade < 1 or grade > 6 or period < 1:
-                    raise ValueError("invalid-range")
+            if action in {'set', 'add'}:
+                grade = int(request.POST.get('grade'))
+                if grade < 1 or grade > 6:
+                    raise ValueError("invalid-grade")
 
                 if RecurringSchedule.objects.filter(room=room, day_of_week=day_of_week, period=period).exists():
-                    messages.error(request, "해당 슬롯에는 이미 고정 수업이 있어 학년 고정을 설정할 수 없습니다.")
-                else:
-                    GradeRecurringLock.objects.update_or_create(
-                        room=room,
-                        day_of_week=day_of_week,
-                        period=period,
-                        defaults={'grade': grade},
+                    return HttpResponse(
+                        "해당 칸에는 이미 고정 수업이 있어 학년 고정을 설정할 수 없습니다.",
+                        status=409,
                     )
-                    messages.success(request, "학년 고정 슬롯이 저장되었습니다.")
-            except Exception:
-                messages.error(request, "학년 고정 설정 값이 올바르지 않습니다.")
 
-        elif action == 'delete':
-            item_id = request.POST.get('item_id')
-            GradeRecurringLock.objects.filter(id=item_id, room__school=school).delete()
-            messages.success(request, "학년 고정 슬롯이 해제되었습니다.")
+                GradeRecurringLock.objects.update_or_create(
+                    room=room,
+                    day_of_week=day_of_week,
+                    period=period,
+                    defaults={'grade': grade},
+                )
+            elif action == 'delete':
+                GradeRecurringLock.objects.filter(
+                    room=room,
+                    day_of_week=day_of_week,
+                    period=period,
+                ).delete()
+            else:
+                return HttpResponse("학년 고정 요청 방식이 올바르지 않습니다.", status=400)
+        except (TypeError, ValueError):
+            return HttpResponse("학년 고정 설정 값이 올바르지 않습니다.", status=400)
 
-    config, _ = SchoolConfig.objects.get_or_create(school=school)
-    grade_locks = GradeRecurringLock.objects.filter(room__school=school).select_related('room').order_by('day_of_week', 'period', 'room__name')
-    response = render(request, 'reservations/partials/grade_lock_list.html', {
-        'school': school,
-        'grade_locks': grade_locks,
-        'period_slots': config.get_period_slots(),
-    })
-    return _apply_sensitive_cache_headers(response)
+    return _render_grade_lock_matrix(request, school)
 
 @login_required
 @require_POST

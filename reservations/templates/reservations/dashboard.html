@@ -440,74 +440,26 @@
 
             <!-- 5. 학년 고정 슬롯 -->
             <div class="lg:col-span-2 clay-card p-5 md:p-8" data-aos="fade-up" data-aos-delay="450">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-xl md:text-2xl font-bold text-gray-700 flex items-center gap-2">
-                        <i class="fas fa-user-lock text-purple-500"></i> 학년 고정 슬롯 설정
-                    </h2>
-                    <p class="hidden md:block text-sm text-gray-500">
-                        * 반과 무관하게 특정 학년만 우선 예약하도록 지정합니다.
-                    </p>
+                <div class="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                    <div>
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-700 flex items-center gap-2">
+                            <i class="fas fa-user-lock text-purple-500"></i> 학년 고정 슬롯 설정
+                        </h2>
+                        <p class="mt-2 text-sm text-gray-500">
+                            특별실 시간표에서 칸을 눌러 바로 학년을 고정하거나 해제하세요.
+                        </p>
+                    </div>
+                    <div class="flex flex-wrap gap-2 text-xs font-bold text-gray-500">
+                        <span class="rounded-full bg-purple-50 px-3 py-1 text-purple-700">보라색: 학년 고정</span>
+                        <span class="rounded-full bg-gray-100 px-3 py-1 text-gray-600">회색: 고정 수업 있음</span>
+                    </div>
                 </div>
 
-                <form hx-post="{% url 'reservations:grade_lock_settings' school.slug %}"
-                    hx-target="#grade-lock-list-container" hx-swap="innerHTML"
-                    hx-indicator="#grade-lock-save-indicator" hx-disabled-elt="find button[type='submit']"
-                    hx-on::response-error="alert('학년 고정 설정 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
-                    class="grid grid-cols-1 md:grid-cols-5 gap-3 items-end mb-4">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="add">
-
-                    <div>
-                        <label class="block text-xs font-bold text-gray-600 mb-1">특별실</label>
-                        <select name="room_id" class="w-full clay-inner p-3 rounded-xl bg-white text-sm" required>
-                            {% for room in rooms %}
-                            <option value="{{ room.id }}">{{ room.icon }} {{ room.name }}</option>
-                            {% endfor %}
-                        </select>
+                <div id="grade-lock-matrix-container" hx-get="{% url 'reservations:grade_lock_settings' school.slug %}"
+                    hx-trigger="load" class="overflow-x-auto no-scrollbar">
+                    <div class="flex justify-center py-12">
+                        <i class="fas fa-circle-notch fa-spin text-4xl text-gray-400"></i>
                     </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-gray-600 mb-1">요일</label>
-                        <select name="day_of_week" class="w-full clay-inner p-3 rounded-xl bg-white text-sm" required>
-                            <option value="0">월요일</option>
-                            <option value="1">화요일</option>
-                            <option value="2">수요일</option>
-                            <option value="3">목요일</option>
-                            <option value="4">금요일</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-gray-600 mb-1">교시</label>
-                        <select name="period" class="w-full clay-inner p-3 rounded-xl bg-white text-sm" required>
-                            {% for p in period_slots %}
-                            <option value="{{ p.id }}">{{ p.display_label }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-gray-600 mb-1">학년</label>
-                        <select name="grade" class="w-full clay-inner p-3 rounded-xl bg-white text-sm" required>
-                            <option value="1">1학년</option>
-                            <option value="2">2학년</option>
-                            <option value="3">3학년</option>
-                            <option value="4">4학년</option>
-                            <option value="5">5학년</option>
-                            <option value="6">6학년</option>
-                        </select>
-                    </div>
-
-                    <button type="submit" class="clay-btn-primary px-4 py-3 font-bold inline-flex items-center justify-center gap-2">
-                        <span id="grade-lock-save-indicator" class="htmx-indicator">
-                            <i class="fas fa-circle-notch fa-spin"></i>
-                        </span>
-                        <span>학년 고정 저장</span>
-                    </button>
-                </form>
-
-                <div id="grade-lock-list-container">
-                    {% include 'reservations/partials/grade_lock_list.html' %}
                 </div>
             </div>
 

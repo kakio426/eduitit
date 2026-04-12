@@ -134,6 +134,14 @@ class ReservationsViewTest(TestCase):
         response = self.client.get(reverse('reservations:admin_dashboard', args=[self.school.slug]))
         self.assertEqual(response['Cache-Control'], 'no-store, private')
 
+    def test_admin_dashboard_uses_grade_lock_matrix_shell(self):
+        response = self.client.get(reverse('reservations:admin_dashboard', args=[self.school.slug]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'grade-lock-matrix-container')
+        self.assertContains(response, '특별실 시간표에서 칸을 눌러 바로 학년을 고정하거나 해제하세요.')
+        self.assertNotContains(response, '학년 고정 저장')
+
     def test_smart_entry_redirects_directly_when_user_has_one_school(self):
         response = self.client.get(reverse('reservations:smart_entry'))
 
@@ -692,6 +700,75 @@ class ReservationsViewTest(TestCase):
         self.assertContains(response, '로그인 없이도 열리는 주소입니다.')
         self.assertContains(response, '학교 목록')
         self.assertNotContains(response, '내 학교 목록')
+
+    def test_grade_lock_settings_get_renders_matrix(self):
+        response = self.client.get(reverse('reservations:grade_lock_settings', args=[self.school.slug]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '칸을 눌러 학년을 바로 고정하거나 해제합니다.')
+        self.assertContains(response, 'Science Room')
+        self.assertContains(response, '1학년')
+        self.assertContains(response, '학년 고정')
+
+    def test_grade_lock_settings_can_set_update_and_delete_by_slot(self):
+        url = reverse('reservations:grade_lock_settings', args=[self.school.slug])
+
+        response = self.client.post(url, {
+            'action': 'set',
+            'room_id': self.room.id,
+            'day_of_week': 1,
+            'period': 2,
+            'grade': 2,
+        })
+
+        self.assertEqual(response.status_code, 200)
+        lock = GradeRecurringLock.objects.get(room=self.room, day_of_week=1, period=2)
+        self.assertEqual(lock.grade, 2)
+
+        response = self.client.post(url, {
+            'action': 'set',
+            'room_id': self.room.id,
+            'day_of_week': 1,
+            'period': 2,
+            'grade': 5,
+        })
+
+        self.assertEqual(response.status_code, 200)
+        lock.refresh_from_db()
+        self.assertEqual(lock.grade, 5)
+
+        response = self.client.post(url, {
+            'action': 'delete',
+            'room_id': self.room.id,
+            'day_of_week': 1,
+            'period': 2,
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(GradeRecurringLock.objects.filter(room=self.room, day_of_week=1, period=2).exists())
+
+    def test_grade_lock_settings_rejects_slots_with_recurring_schedule(self):
+        RecurringSchedule.objects.create(
+            room=self.room,
+            day_of_week=2,
+            period=3,
+            name='6-1 고정수업',
+        )
+
+        response = self.client.post(
+            reverse('reservations:grade_lock_settings', args=[self.school.slug]),
+            {
+                'action': 'set',
+                'room_id': self.room.id,
+                'day_of_week': 2,
+                'period': 3,
+                'grade': 4,
+            },
+        )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertIn('이미 고정 수업이 있어', response.content.decode('utf-8'))
+        self.assertFalse(GradeRecurringLock.objects.filter(room=self.room, day_of_week=2, period=3).exists())
 
     def test_admin_delete_reservation(self):
         reservation = Reservation.objects.create(
