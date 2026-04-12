@@ -2,17 +2,17 @@
 {% load static socialaccount %}
 
 {% block seo_meta %}
-<meta name="description" content="에듀잇티에 로그인하고 교실 운영 도구를 이어서 사용하세요.">
+<meta name="description" content="에듀잇티에 로그인하고 바로 시작하세요.">
 <meta name="robots" content="noindex,nofollow">
 <link rel="canonical" href="https://eduitit.site/accounts/login/">
 <meta property="og:title" content="로그인 | Eduitit">
-<meta property="og:description" content="에듀잇티에 로그인하고 교실 운영 도구를 이어서 사용하세요.">
+<meta property="og:description" content="에듀잇티에 로그인하고 바로 시작하세요.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://eduitit.site/accounts/login/">
 <meta property="og:image" content="https://eduitit.site/static/images/eduitit_og.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="로그인 | Eduitit">
-<meta name="twitter:description" content="에듀잇티에 로그인하고 교실 운영 도구를 이어서 사용하세요.">
+<meta name="twitter:description" content="에듀잇티에 로그인하고 바로 시작하세요.">
 <meta name="twitter:image" content="https://eduitit.site/static/images/eduitit_og.png">
 {% endblock %}
 
@@ -34,16 +34,14 @@
                     <span>EDUITIT</span>
                 </a>
                 <p class="auth-shell-kicker">로그인</p>
-                <h1 class="auth-shell-title">선택한 작업을 이어서 시작합니다</h1>
-                <p class="auth-shell-summary">
-                    카카오 또는 네이버로 로그인해 방금 보던 도구를 이어서 여세요.
-                </p>
+                <h1 class="auth-shell-title auth-shell-title--compact">에듀잇티에 오신 걸 환영합니다</h1>
+                <p class="auth-shell-summary">로그인하고 바로 시작하세요.</p>
             </div>
 
             {% if request.GET.next %}
             <div class="auth-shell-notice">
-                <p class="auth-shell-notice-title">방금 고른 도구로 이동합니다.</p>
-                <p class="auth-shell-notice-copy">로그인 후 바로 열립니다.</p>
+                <p class="auth-shell-notice-title">로그인 후 바로 이동합니다.</p>
+                <p class="auth-shell-notice-copy">방금 보던 화면으로 이어집니다.</p>
             </div>
             {% endif %}
 
@@ -54,7 +52,7 @@
                         <path
                             d="M12 3C7.58 3 4 5.79 4 9.24C4 11.41 5.43 13.33 7.62 14.4L6.68 17.84C6.6 18.13 6.95 18.35 7.19 18.15L11.55 14.86C11.7 14.87 11.85 14.87 12 14.87C16.42 14.87 20 12.08 20 8.63C20 5.18 16.42 3 12 3Z" />
                     </svg>
-                    <span>카카오톡으로 로그인</span>
+                    <span>카카오로 로그인</span>
                 </a>
 
                 <a href="{% provider_login_url 'naver' %}"
@@ -67,8 +65,8 @@
             </div>
 
             <div class="auth-shell-muted-panel">
-                <p class="auth-shell-muted-panel-title">처음 로그인 시 약관에 동의합니다.</p>
-                <p class="auth-shell-muted-panel-copy">처음 1회만 확인하면 바로 시작합니다.</p>
+                <p class="auth-shell-muted-panel-title">처음이신가요?</p>
+                <p class="auth-shell-muted-panel-copy">처음 1회 필수 동의를 확인하면 바로 시작합니다.</p>
                 <div class="auth-shell-links">
                     <a href="{% url 'policy' %}#terms" class="auth-shell-link">이용약관</a>
                     <span>·</span>
@@ -77,17 +75,14 @@
                     <a href="{% url 'policy' %}#operations" class="auth-shell-link">운영정책</a>
                 </div>
             </div>
+
+            <p class="auth-shell-footer">
+                처음 시작하시나요?
+                <a href="{% url 'account_signup' %}" class="auth-shell-link">회원가입</a>
+            </p>
         </section>
     </div>
 </main>
-
-<!-- Bot Hidden Entry -->
-<div id="bot-portal" style="position: absolute; left: -9999px; top: -9999px; width: 1px; height: 1px; overflow: hidden;" aria-hidden="true">
-    <form method="post" action="{% url 'account_login' %}">
-        {% csrf_token %}
-        <input type="text" name="login" id="bot_login_input" placeholder="User">
-        <input type="password" name="password" id="bot_password_input" placeholder="Pass">
-        <button type="submit" id="bot_login_submit">Login</button>
-    </form>
-</div>
 {% endblock %}
+
+{% block hidden_login_portal %}{% endblock %}

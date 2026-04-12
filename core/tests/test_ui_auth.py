@@ -3,7 +3,6 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from core.guide_links import SERVICE_GUIDE_PADLET_URL
 from core.models import UserPolicyConsent, UserProfile
 from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
 from happy_seed.models import HSClassroom
@@ -41,17 +40,12 @@ class UIAuthTestCase(TestCase):
         self.client.logout()
         response = self.client.get("/accounts/login/")
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "이 도구는 로그인 후 이어집니다")
-        self.assertContains(response, "내 일정과 학급 설정 저장")
-        self.assertContains(response, "제출 결과와 기록 보호")
-        self.assertContains(response, "데모 둘러보기")
-        self.assertContains(response, "가이드 보기")
-        self.assertContains(response, "카카오톡으로 시작하기")
-        self.assertContains(response, "네이버로 시작하기")
-        self.assertContains(response, "최초 1회 이용약관 및 개인정보처리방침 동의가 필요합니다")
+        self.assertContains(response, "에듀잇티에 오신 걸 환영합니다")
+        self.assertContains(response, "로그인하고 바로 시작하세요.")
+        self.assertContains(response, "카카오로 로그인")
+        self.assertContains(response, "네이버로 로그인")
+        self.assertContains(response, "처음이신가요?")
         self.assertContains(response, "운영정책")
-        self.assertContains(response, SERVICE_GUIDE_PADLET_URL)
-        self.assertContains(response, f'{reverse("home")}#guest-home-try-now')
         self.assertNotContains(response, "관리자 접속")
         self.assertNotContains(response, "bot_login_input")
         self.assertNotContains(response, "bot_password_input")

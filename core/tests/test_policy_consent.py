@@ -71,6 +71,14 @@ class PolicyConsentTestCase(TestCase):
         self.assertContains(response, '필수 약관 동의 후 서비스를 이용할 수 있습니다.')
         self.assertEqual(UserPolicyConsent.objects.count(), 0)
 
+    def test_policy_consent_page_starts_with_unchecked_required_boxes_and_clear_button_hint(self):
+        response = self.client.get(reverse('policy_consent'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '필수 2개를 확인하면 버튼이 켜집니다.')
+        self.assertFalse(bool(response.context['form'].fields['agree_terms'].initial))
+        self.assertFalse(bool(response.context['form'].fields['agree_privacy'].initial))
+
     def test_policy_consent_submission_saves_record_and_redirects(self):
         response = self.client.post(
             reverse('policy_consent'),

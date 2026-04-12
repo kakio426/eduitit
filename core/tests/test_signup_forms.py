@@ -1,3 +1,6 @@
+from types import SimpleNamespace
+
+from allauth.socialaccount.forms import SignupForm as SocialSignupForm
 from django.contrib.auth.models import User
 from django.test import RequestFactory, TestCase
 
@@ -8,6 +11,14 @@ from core.signup_forms import CustomSignupForm
 class CustomSignupFormTestCase(TestCase):
     def setUp(self):
         self.factory = RequestFactory()
+
+    def _build_sociallogin(self, *, email="social@example.com"):
+        user = User(email=email, username="")
+        return SimpleNamespace(
+            user=user,
+            email_addresses=[],
+            provider=SimpleNamespace(name="Kakao"),
+        )
 
     def test_signup_saves_marketing_email_consent_when_checked(self):
         user = User.objects.create_user(
@@ -55,3 +66,17 @@ class CustomSignupFormTestCase(TestCase):
         form.signup(request, user)
 
         self.assertFalse(UserMarketingEmailConsent.objects.filter(user=user).exists())
+
+    def test_social_signup_form_only_exposes_email_nickname_and_marketing_opt_in(self):
+        form = SocialSignupForm(sociallogin=self._build_sociallogin())
+
+        self.assertEqual(
+            list(form.fields.keys()),
+            ["email", "nickname", "marketing_email_opt_in"],
+        )
+        self.assertEqual(form.fields["nickname"].label, "닉네임")
+
+    def test_social_signup_form_keeps_marketing_opt_in_unchecked_by_default(self):
+        form = SocialSignupForm(sociallogin=self._build_sociallogin())
+
+        self.assertFalse(bool(form.fields["marketing_email_opt_in"].initial))

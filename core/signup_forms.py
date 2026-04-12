@@ -22,14 +22,14 @@ class CustomSignupForm(forms.Form):
     allauth ACCOUNT_SIGNUP_FORM_CLASS용 커스텀 폼.
     allauth의 BaseSignupForm이 이 클래스를 상속하므로,
     nickname 필드와 signup() 메서드만 정의하면 됩니다.
-    email/username은 allauth가 자동 처리합니다.
+    이메일은 allauth가 처리하고, 사용자명은 내부에서 자동 생성합니다.
     """
     nickname = forms.CharField(
         max_length=50,
         required=True,
-        label="별명",
+        label="닉네임",
         widget=forms.TextInput(attrs={
-            'placeholder': '별명을 입력해주세요 (필수)',
+            'placeholder': '닉네임을 입력해주세요',
             'autocomplete': 'nickname'
         })
     )

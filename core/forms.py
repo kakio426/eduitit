@@ -6,10 +6,10 @@ class UserProfileUpdateForm(forms.ModelForm):
     nickname = forms.CharField(
         max_length=50,
         required=False,
-        label="별명",
+        label="닉네임",
         widget=forms.TextInput(attrs={
             'class': 'w-full px-6 py-4 rounded-2xl shadow-clay-inner bg-[#E0E5EC] focus:outline-none focus:ring-2 focus:ring-purple-400 transition-all font-bold text-xl',
-            'placeholder': '멋진 별명을 입력해 주세요'
+            'placeholder': '닉네임을 입력해 주세요'
         })
     )
     role = forms.ChoiceField(

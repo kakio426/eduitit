@@ -666,7 +666,7 @@ def build_settings_page_seo(request) -> PageSeoMeta:
 def build_select_role_page_seo(request) -> PageSeoMeta:
     return _build_page_seo(
         title="에듀잇티 - 역할 선택",
-        description="서비스 시작 전에 역할과 별명을 고르는 비공개 초기 설정 화면입니다.",
+        description="서비스 시작 전에 역할과 닉네임을 고르는 비공개 초기 설정 화면입니다.",
         canonical_url=_absolute_url(reverse("select_role")),
         robots="noindex,nofollow",
     )
@@ -675,7 +675,7 @@ def build_select_role_page_seo(request) -> PageSeoMeta:
 def build_update_email_page_seo(request) -> PageSeoMeta:
     return _build_page_seo(
         title="계정 프로필 완성하기 - Eduitit",
-        description="서비스 이용 전에 이름과 이메일을 확인하는 비공개 계정 설정 화면입니다.",
+        description="서비스 이용 전에 닉네임과 이메일을 확인하는 비공개 계정 설정 화면입니다.",
         canonical_url=_absolute_url(reverse("update_email")),
         robots="noindex,nofollow",
     )

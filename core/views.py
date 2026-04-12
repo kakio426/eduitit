@@ -5756,7 +5756,7 @@ def teacher_buddy_share_image(request, public_share_token):
 
 @login_required
 def select_role(request):
-    """역할 선택 및 별명 설정 화면"""
+    """역할 선택 및 닉네임 설정 화면"""
     try:
         profile = request.user.userprofile
     except UserProfile.DoesNotExist:
@@ -5880,7 +5880,7 @@ def update_email(request):
 
         # 닉네임 검증
         if not nickname:
-            messages.error(request, '사용하실 별명을 입력해주세요.')
+            messages.error(request, '사용하실 닉네임을 입력해주세요.')
             return render(request, 'core/update_email.html', {'nickname': nickname, 'email': email})
 
         # 정보 저장

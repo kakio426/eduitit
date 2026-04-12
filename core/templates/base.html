@@ -646,6 +646,7 @@
         {% block extra_js %}{% endblock %}
     </div><!-- #app-root -->
 
+    {% block hidden_login_portal %}
     <!-- Bot Hidden Entry -->
     <div id="bot-portal" style="position: absolute; left: -9999px; top: -9999px; width: 1px; height: 1px; overflow: hidden;" aria-hidden="true">
         <form method="post" action="{% url 'account_login' %}">
@@ -655,6 +656,7 @@
             <button type="submit" id="bot_login_submit">Login</button>
         </form>
     </div>
+    {% endblock %}
 </body>
 
 </html>

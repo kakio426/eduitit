@@ -1,84 +1,65 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}계정 프로필 완성하기 - Eduitit{% endblock %}
 
-{% block content %}
-<main class="pt-32 pb-20 px-4 md:px-8 min-h-screen flex items-center justify-center">
-    <div class="w-full max-w-2xl" data-aos="fade-up">
-        <!-- Header -->
-        <div class="text-center mb-12">
-            <div
-                class="w-24 h-24 rounded-[2rem] bg-white shadow-clay flex items-center justify-center text-5xl mx-auto mb-6 transform rotate-3">
-                ✨
-            </div>
-            <h1 class="text-4xl md:text-5xl font-bold text-gray-700 mb-4 font-round">선생님의 이름을 알려주세요!</h1>
-            <p class="text-xl text-gray-400 font-medium leading-relaxed">
-                반갑습니다! 서비스 이용을 위해 딱 한 번만<br>
-                프로필 정보를 완성해 주시면 감사하겠습니다.
-            </p>
-        </div>
+{% block extra_css %}
+<link href="{% static 'core/css/auth_chrome.css' %}" rel="stylesheet">
+{% endblock %}
 
-        {% if messages %}
-        <div class="mb-8 space-y-3">
+{% block content %}
+<main class="auth-shell-page auth-shell-main">
+    <div class="auth-shell-wrap">
+        <section class="auth-shell-card">
+            <div class="auth-shell-header">
+                <a href="/" class="auth-shell-brand">
+                    <span class="auth-shell-brand-icon">
+                        <i class="fa-solid fa-user-pen"></i>
+                    </span>
+                    <span>EDUITIT</span>
+                </a>
+                <p class="auth-shell-kicker">프로필 확인</p>
+                <h1 class="auth-shell-title auth-shell-title--compact">이메일과 닉네임을 확인합니다</h1>
+                <p class="auth-shell-summary">이 단계가 끝나면 시작합니다.</p>
+            </div>
+
+            {% if messages %}
             {% for message in messages %}
-            <div
-                class="clay-card p-5 rounded-3xl flex items-center gap-4 {% if message.tags == 'error' %}bg-red-50 text-red-700{% else %}bg-green-50 text-green-700{% endif %}">
-                <i
-                    class="fa-solid {% if message.tags == 'error' %}fa-circle-exclamation{% else %}fa-check-circle{% endif %} text-2xl"></i>
-                <span class="text-lg font-bold">{{ message }}</span>
+            <div class="auth-shell-notice{% if message.tags == 'error' %} auth-shell-notice--error{% endif %}">
+                <p class="auth-shell-notice-title">{{ message }}</p>
             </div>
             {% endfor %}
-        </div>
-        {% endif %}
+            {% endif %}
 
-        <form method="post" class="space-y-8">
-            {% csrf_token %}
+            <form method="post" class="auth-shell-form">
+                {% csrf_token %}
 
-            <div class="clay-card p-8 md:p-12 space-y-10 bg-white/60 backdrop-blur-md">
-                <!-- User Information -->
-                <div class="space-y-6">
-                    <div>
-                        <label for="id_nickname"
-                            class="block text-xl font-bold text-gray-600 mb-3 ml-2 flex items-center gap-2">
-                            <i class="fa-solid fa-user-tag text-orange-500"></i> 선생님의 성함 (별명)
-                        </label>
-                        <input type="text" name="nickname" id="id_nickname" required placeholder="예: 홍길동 또는 열정교사"
-                            value="{{ nickname }}"
-                            class="w-full px-6 py-5 rounded-2xl shadow-clay-inner bg-[#E0E5EC]/50 focus:outline-none focus:ring-4 focus:ring-orange-200 transition-all font-bold text-2xl text-gray-700"
-                            autocomplete="nickname">
-                        <p class="text-sm text-gray-400 mt-2 ml-2">서비스 내에서 선생님을 부를 이름으로 사용됩니다.</p>
+                <div class="auth-shell-field">
+                    <label for="id_nickname" class="auth-shell-label">닉네임 <span class="auth-shell-required">*</span></label>
+                    <div class="auth-shell-input-wrap">
+                        <input type="text" name="nickname" id="id_nickname" required placeholder="서비스에서 표시할 닉네임"
+                            value="{{ nickname }}" class="auth-shell-input" autocomplete="nickname">
                     </div>
-
-                    <div class="pt-6 border-t border-gray-100">
-                        <label for="id_email"
-                            class="block text-xl font-bold text-gray-600 mb-3 ml-2 flex items-center gap-2">
-                            <i class="fa-solid fa-envelope text-purple-500"></i> 이메일 주소
-                        </label>
-                        <input type="email" name="email" id="id_email" required placeholder="teacher@email.com"
-                            value="{{ email }}"
-                            class="w-full px-6 py-5 rounded-2xl shadow-clay-inner bg-[#E0E5EC]/50 focus:outline-none focus:ring-4 focus:ring-purple-200 transition-all font-bold text-2xl text-gray-700"
-                            autocomplete="email">
-                        <p class="text-sm text-gray-400 mt-2 ml-2">알림 수신 및 중요한 서비스 정보를 안내받는 용도로 사용됩니다.</p>
-                    </div>
+                    <p class="auth-shell-help">서비스 안에서 표시할 이름입니다.</p>
                 </div>
 
-                <!-- Submit Button -->
-                <button type="submit"
-                    class="w-full py-6 rounded-[2rem] text-white font-bold text-2xl transition-all
-                        bg-gradient-to-r from-orange-500 to-purple-600 hover:from-orange-600 hover:to-purple-700
-                        shadow-lg shadow-purple-200 hover:shadow-xl hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3">
-                    <i class="fa-solid fa-rocket"></i> 프로필 저장하고 시작하기
-                </button>
-            </div>
-        </form>
+                <div class="auth-shell-field">
+                    <label for="id_email" class="auth-shell-label">이메일 주소 <span class="auth-shell-required">*</span></label>
+                    <div class="auth-shell-input-wrap">
+                        <input type="email" name="email" id="id_email" required placeholder="teacher@email.com"
+                            value="{{ email }}" class="auth-shell-input" autocomplete="email">
+                    </div>
+                    <p class="auth-shell-help">중요한 안내를 받을 주소입니다.</p>
+                </div>
 
-        <!-- Secondary Action -->
-        <div class="mt-12 text-center">
-            <a href="{% url 'account_logout' %}"
-                class="text-gray-400 hover:text-gray-600 transition font-medium flex items-center justify-center gap-2">
-                <i class="fa-solid fa-arrow-right-from-bracket"></i> 로그아웃하고 나중에 하기
-            </a>
-        </div>
+                <div class="auth-shell-action-row">
+                    <button type="submit" class="auth-shell-submit">저장하고 계속하기</button>
+                    <a href="{% url 'account_logout' %}" class="auth-shell-secondary-action">로그아웃</a>
+                </div>
+            </form>
+        </section>
     </div>
 </main>
 {% endblock %}
+
+{% block hidden_login_portal %}{% endblock %}

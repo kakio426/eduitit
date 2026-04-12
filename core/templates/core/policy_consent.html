@@ -1,141 +1,95 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}서비스 이용을 위한 약관 동의 - Eduitit{% endblock %}
 
 {% block extra_css %}
-<style>
-    .policy-consent-shell {
-        min-height: 100vh;
-        background:
-            radial-gradient(circle at top left, rgba(124, 58, 237, 0.18), transparent 34%),
-            radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.16), transparent 28%),
-            linear-gradient(180deg, #eef2ff 0%, #e2e8f0 100%);
-    }
-
-    .policy-consent-dim {
-        background: rgba(15, 23, 42, 0.32);
-        backdrop-filter: blur(14px);
-    }
-
-    .policy-consent-card {
-        background: rgba(255, 255, 255, 0.94);
-        border: 1px solid rgba(226, 232, 240, 0.95);
-        box-shadow: 0 32px 80px rgba(15, 23, 42, 0.16);
-    }
-
-    .policy-check-row {
-        border: 1px solid #dbeafe;
-        background: #f8fbff;
-        transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
-    }
-
-    .policy-check-row:focus-within {
-        border-color: #6366f1;
-        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
-        transform: translateY(-1px);
-    }
-
-    .policy-check-input {
-        width: 1.25rem;
-        height: 1.25rem;
-        accent-color: #4f46e5;
-        flex-shrink: 0;
-        margin-top: 0.1rem;
-    }
-    @media (max-width: 640px) {
-        .policy-consent-card {
-            border-radius: 1.75rem;
-        }
-    }
-</style>
+<link href="{% static 'core/css/auth_chrome.css' %}" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
-<main class="policy-consent-shell relative isolate overflow-hidden px-4 py-10 sm:px-6 sm:py-14">
-    <div class="policy-consent-dim absolute inset-0 -z-10"></div>
-
-    <div class="mx-auto flex min-h-[calc(100vh-5rem)] max-w-3xl items-center justify-center">
-        <section class="policy-consent-card w-full rounded-[2rem] p-6 sm:p-8 lg:p-10">
-            <div class="mb-8 text-center">
-                <span class="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-700">
-                    <i class="fa-solid fa-shield-halved"></i>
-                    {{ provider_label }} 계정 확인
-                </span>
-                <h1 class="mt-5 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
-                    서비스 이용을 위한 약관 동의
-                </h1>
-                <p class="mt-4 text-base leading-7 text-slate-600 sm:text-lg">
-                    {{ policy_meta.summary }}
-                </p>
-                <p class="mt-3 text-sm leading-6 text-slate-500 sm:text-base">
-                    {{ policy_meta.service_summary }}
-                </p>
-                <p class="mt-4 text-xs font-semibold tracking-wide text-slate-400 sm:text-sm">
-                    이용약관 버전 {{ policy_meta.terms_version }} · 개인정보처리방침 버전 {{ policy_meta.privacy_version }}
-                </p>
+<main class="auth-shell-page auth-shell-main">
+    <div class="auth-shell-wrap">
+        <section class="auth-shell-card">
+            <div class="auth-shell-header">
+                <a href="/" class="auth-shell-brand">
+                    <span class="auth-shell-brand-icon">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </span>
+                    <span>EDUITIT</span>
+                </a>
+                <p class="auth-shell-kicker">필수 동의</p>
+                <h1 class="auth-shell-title auth-shell-title--compact">필수 동의 후 시작합니다</h1>
+                <p class="auth-shell-summary">{{ provider_label }} 계정으로 계속합니다. 필수 2개만 확인하면 됩니다.</p>
+                <p class="auth-shell-help">이용약관 버전 {{ policy_meta.terms_version }} · 개인정보처리방침 버전 {{ policy_meta.privacy_version }}</p>
             </div>
 
-            <form method="post" class="space-y-4" novalidate>
+            <form method="post" class="auth-shell-form" novalidate>
                 {% csrf_token %}
                 <input type="hidden" name="next" value="{{ next_url }}">
 
                 {% if form.non_field_errors %}
-                <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+                <div class="auth-shell-notice auth-shell-notice--error">
+                    <p class="auth-shell-notice-title">필수 동의를 확인해 주세요.</p>
                     {% for error in form.non_field_errors %}
-                    <p>{{ error }}</p>
+                    <p class="auth-shell-notice-copy">{{ error }}</p>
                     {% endfor %}
                 </div>
                 {% endif %}
 
-                <label class="policy-check-row flex cursor-pointer items-start gap-4 rounded-[1.5rem] px-4 py-4 sm:px-5">
-                    {{ form.agree_terms }}
-                    <span class="min-w-0 flex-1">
-                        <span class="block text-base font-black text-slate-900 sm:text-lg">{{ form.agree_terms.label }}</span>
-                        <span class="mt-1 block text-sm leading-6 text-slate-500">
-                            서비스 이용 기준, 이용자 책임, 업로드 데이터와 AI 기능 사용 기준을 확인할 수 있습니다.
+                <div class="auth-shell-checkbox-card{% if form.agree_terms.errors %} has-error{% endif %}">
+                    <label class="auth-shell-checkbox-row" for="{{ form.agree_terms.id_for_label }}">
+                        {{ form.agree_terms }}
+                        <span class="min-w-0 flex-1">
+                            <span class="auth-shell-label block">{{ form.agree_terms.label }}</span>
+                            <span class="auth-shell-help mt-1 block">서비스 이용 기준과 이용자 책임을 확인합니다.</span>
+                            <a href="{{ terms_url }}" target="_blank" rel="noopener noreferrer" class="auth-shell-link">전문 보기</a>
                         </span>
-                        <a href="{{ terms_url }}" target="_blank" rel="noopener noreferrer" class="mt-3 inline-flex items-center gap-2 text-sm font-bold text-indigo-600 hover:text-indigo-700">
-                            전문 보기
-                            <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
-                        </a>
-                        {% if form.agree_terms.errors %}
-                        <p class="mt-2 text-sm font-semibold text-rose-600">{{ form.agree_terms.errors.0 }}</p>
-                        {% endif %}
-                    </span>
-                </label>
-
-                <label class="policy-check-row flex cursor-pointer items-start gap-4 rounded-[1.5rem] px-4 py-4 sm:px-5">
-                    {{ form.agree_privacy }}
-                    <span class="min-w-0 flex-1">
-                        <span class="block text-base font-black text-slate-900 sm:text-lg">{{ form.agree_privacy.label }}</span>
-                        <span class="mt-1 block text-sm leading-6 text-slate-500">
-                            계정 정보, 캘린더·수합·서명·예약·메시지 저장·커뮤니티·AI 입력 데이터 처리 기준을 확인할 수 있습니다.
-                        </span>
-                        <a href="{{ privacy_url }}" target="_blank" rel="noopener noreferrer" class="mt-3 inline-flex items-center gap-2 text-sm font-bold text-indigo-600 hover:text-indigo-700">
-                            전문 보기
-                            <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
-                        </a>
-                        {% if form.agree_privacy.errors %}
-                        <p class="mt-2 text-sm font-semibold text-rose-600">{{ form.agree_privacy.errors.0 }}</p>
-                        {% endif %}
-                    </span>
-                </label>
-
-                <div class="rounded-[1.5rem] bg-slate-50 px-4 py-4 text-sm leading-6 text-slate-500">
-                    <p class="font-bold text-slate-700">현재 문서 기준</p>
-                    <p class="mt-1">최종 수정일 {{ policy_meta.last_updated_display }} 기준 문서에 동의하면 같은 버전에서는 다시 묻지 않습니다.</p>
-                    <p class="mt-2">
-                        커뮤니티, 외부 링크, 신고 및 이용 제한 기준은
-                        <a href="{{ operations_url }}" target="_blank" rel="noopener noreferrer" class="font-bold text-indigo-600 hover:text-indigo-700">운영정책</a>
-                        에서 확인할 수 있습니다.
-                    </p>
+                    </label>
+                    {% if form.agree_terms.errors %}
+                    <p class="auth-shell-error mt-2">{{ form.agree_terms.errors.0 }}</p>
+                    {% endif %}
                 </div>
 
-                <div class="pt-2 sm:flex sm:items-center sm:gap-3">
-                    <button type="submit" class="w-full rounded-[1.5rem] bg-indigo-600 px-5 py-4 text-base font-black text-white transition hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-200 sm:flex-1" data-policy-submit="true">
-                        동의하고 시작하기
+                <div class="auth-shell-checkbox-card{% if form.agree_privacy.errors %} has-error{% endif %}">
+                    <label class="auth-shell-checkbox-row" for="{{ form.agree_privacy.id_for_label }}">
+                        {{ form.agree_privacy }}
+                        <span class="min-w-0 flex-1">
+                            <span class="auth-shell-label block">{{ form.agree_privacy.label }}</span>
+                            <span class="auth-shell-help mt-1 block">계정과 서비스 데이터 처리 기준을 확인합니다.</span>
+                            <a href="{{ privacy_url }}" target="_blank" rel="noopener noreferrer" class="auth-shell-link">전문 보기</a>
+                        </span>
+                    </label>
+                    {% if form.agree_privacy.errors %}
+                    <p class="auth-shell-error mt-2">{{ form.agree_privacy.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="auth-shell-muted-panel">
+                    <p class="auth-shell-muted-panel-title">버튼 안내</p>
+                    <p class="auth-shell-muted-panel-copy" data-policy-submit-hint="true" aria-live="polite">필수 2개를 확인하면 버튼이 켜집니다.</p>
+                    <div class="auth-shell-links">
+                        <a href="{{ operations_url }}" target="_blank" rel="noopener noreferrer" class="auth-shell-link">운영정책</a>
+                    </div>
+                </div>
+
+                <noscript>
+                    <div class="auth-shell-muted-panel">
+                        <p class="auth-shell-muted-panel-copy">자바스크립트 없이도 체크 후 바로 제출할 수 있습니다.</p>
+                    </div>
+                </noscript>
+
+                <div class="auth-shell-action-row">
+                    <button
+                        type="submit"
+                        class="auth-shell-submit"
+                        data-policy-submit="true"
+                        data-policy-submit-label-locked="필수 2개 확인 후 시작"
+                        data-policy-submit-label-ready="동의하고 시작하기"
+                        aria-disabled="true">
+                        <span data-policy-submit-label="true">필수 2개 확인 후 시작</span>
                     </button>
-                    <a href="{% url 'account_logout' %}" class="mt-3 inline-flex w-full items-center justify-center rounded-[1.5rem] border border-slate-200 bg-white px-5 py-4 text-base font-bold text-slate-600 transition hover:border-slate-300 hover:text-slate-900 sm:mt-0 sm:w-auto">
+                    <a href="{% url 'account_logout' %}" class="auth-shell-secondary-action">
                         로그아웃
                     </a>
                 </div>
@@ -148,14 +102,28 @@
     (function () {
         var checkboxes = Array.prototype.slice.call(document.querySelectorAll('[data-policy-required="true"]'));
         var submitButton = document.querySelector('[data-policy-submit="true"]');
+        var submitLabel = document.querySelector('[data-policy-submit-label="true"]');
+        var submitHint = document.querySelector('[data-policy-submit-hint="true"]');
         if (!checkboxes.length || !submitButton) {
             return;
         }
 
         function syncState() {
-            submitButton.disabled = !checkboxes.every(function (input) { return input.checked; });
+            var ready = checkboxes.every(function (input) { return input.checked; });
+            submitButton.disabled = !ready;
+            submitButton.setAttribute('aria-disabled', submitButton.disabled ? 'true' : 'false');
             submitButton.classList.toggle('opacity-60', submitButton.disabled);
             submitButton.classList.toggle('cursor-not-allowed', submitButton.disabled);
+            if (submitLabel) {
+                submitLabel.textContent = ready
+                    ? (submitButton.getAttribute('data-policy-submit-label-ready') || '동의하고 시작하기')
+                    : (submitButton.getAttribute('data-policy-submit-label-locked') || '필수 2개 확인 후 시작');
+            }
+            if (submitHint) {
+                submitHint.textContent = ready
+                    ? '동의하고 시작할 수 있습니다.'
+                    : '필수 2개를 확인하면 버튼이 켜집니다.';
+            }
         }
 
         checkboxes.forEach(function (input) {
@@ -166,3 +134,5 @@
     })();
 </script>
 {% endblock %}
+
+{% block hidden_login_portal %}{% endblock %}

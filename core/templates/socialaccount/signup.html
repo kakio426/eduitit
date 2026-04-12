@@ -20,10 +20,8 @@
                     <span>EDUITIT</span>
                 </a>
                 <p class="auth-shell-kicker">가입 마무리</p>
-                <h1 class="auth-shell-title auth-shell-title--compact">거의 다 됐어요</h1>
-                <p class="auth-shell-summary">
-                    {{ provider_name }} 계정으로 로그인했습니다. 마지막 정보만 확인하면 시작합니다.
-                </p>
+                <h1 class="auth-shell-title auth-shell-title--compact">이메일과 닉네임을 확인합니다</h1>
+                <p class="auth-shell-summary">{{ provider_name }} 계정으로 로그인했습니다. 선택 동의는 비워 두고 바로 시작할 수 있습니다.</p>
             </div>
 
             {% if form.errors %}
@@ -33,53 +31,88 @@
             </div>
             {% endif %}
 
+            <div class="auth-shell-muted-panel">
+                <p class="auth-shell-muted-panel-title">지금 확인하는 항목</p>
+                <div class="auth-shell-pills">
+                    <span class="auth-shell-pill">이메일</span>
+                    <span class="auth-shell-pill">닉네임</span>
+                    <span class="auth-shell-pill">선택 동의</span>
+                </div>
+            </div>
+
             <form class="signup auth-shell-form" id="signup_form" method="post" action="{% url 'socialaccount_signup' %}">
             {% csrf_token %}
 
-            {% for field in form %}
-            {% if field.is_hidden %}
+            {% for field in form.hidden_fields %}
             {{ field }}
-            {% elif field.field.widget.input_type == 'checkbox' %}
-            <div class="auth-shell-checkbox-card{% if field.errors %} has-error{% endif %}">
-                <label for="{{ field.id_for_label }}" class="auth-shell-checkbox-row">
-                    {{ field }}
-                    <span class="min-w-0 flex-1">
-                        <span class="auth-shell-label block">{{ field.label }}</span>
-                        {% if field.help_text %}
-                        <span class="auth-shell-help mt-1 block">{{ field.help_text }}</span>
-                        {% endif %}
-                    </span>
-                </label>
-                {% if field.errors %}
-                <p class="auth-shell-error mt-2">{{ field.errors.0 }}</p>
-                {% endif %}
-            </div>
-            {% else %}
-            <div class="auth-shell-field{% if field.errors %} has-error{% endif %}">
-                <label for="{{ field.id_for_label }}" class="auth-shell-label">
-                    {{ field.label }} {% if field.field.required %}<span class="auth-shell-required">*</span>{% endif %}
+            {% endfor %}
+
+            {% if form.email %}
+            <div class="auth-shell-field{% if form.email.errors %} has-error{% endif %}">
+                <label for="{{ form.email.id_for_label }}" class="auth-shell-label">
+                    {{ form.email.label }} {% if form.email.field.required %}<span class="auth-shell-required">*</span>{% endif %}
                 </label>
                 <div class="auth-shell-input-wrap">
-                    {{ field }}
-                    {% if field.errors %}
+                    {{ form.email }}
+                    {% if form.email.errors %}
                     <span class="auth-shell-field-icon" aria-hidden="true">
                         <i class="fa-solid fa-circle-exclamation"></i>
                     </span>
                     {% endif %}
                 </div>
-                {% if field.help_text %}
-                <p class="auth-shell-help">{{ field.help_text }}</p>
+                {% if form.email.help_text %}
+                <p class="auth-shell-help">{{ form.email.help_text }}</p>
                 {% endif %}
-                {% if field.errors %}
-                <p class="auth-shell-error">{{ field.errors.0 }}</p>
+                {% if form.email.errors %}
+                <p class="auth-shell-error">{{ form.email.errors.0 }}</p>
                 {% endif %}
             </div>
             {% endif %}
-            {% endfor %}
+
+            {% if form.nickname %}
+            <div class="auth-shell-field{% if form.nickname.errors %} has-error{% endif %}">
+                <label for="{{ form.nickname.id_for_label }}" class="auth-shell-label">
+                    {{ form.nickname.label }} {% if form.nickname.field.required %}<span class="auth-shell-required">*</span>{% endif %}
+                </label>
+                <div class="auth-shell-input-wrap">
+                    {{ form.nickname }}
+                    {% if form.nickname.errors %}
+                    <span class="auth-shell-field-icon" aria-hidden="true">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                    </span>
+                    {% endif %}
+                </div>
+                {% if form.nickname.help_text %}
+                <p class="auth-shell-help">{{ form.nickname.help_text }}</p>
+                {% endif %}
+                {% if form.nickname.errors %}
+                <p class="auth-shell-error">{{ form.nickname.errors.0 }}</p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% if form.marketing_email_opt_in %}
+            <div class="auth-shell-checkbox-card{% if form.marketing_email_opt_in.errors %} has-error{% endif %}">
+                <label for="{{ form.marketing_email_opt_in.id_for_label }}" class="auth-shell-checkbox-row">
+                    {{ form.marketing_email_opt_in }}
+                    <span class="min-w-0 flex-1">
+                        <span class="auth-shell-label block">{{ form.marketing_email_opt_in.label }}</span>
+                        {% if form.marketing_email_opt_in.help_text %}
+                        <span class="auth-shell-help mt-1 block">{{ form.marketing_email_opt_in.help_text }}</span>
+                        {% endif %}
+                    </span>
+                </label>
+                {% if form.marketing_email_opt_in.errors %}
+                <p class="auth-shell-error mt-2">{{ form.marketing_email_opt_in.errors.0 }}</p>
+                {% endif %}
+            </div>
+            {% endif %}
 
             {% if redirect_field_value %}
             <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
             {% endif %}
+
+            <p class="auth-shell-help">선택 동의는 나중에 설정에서 바꿀 수 있습니다.</p>
 
             <button type="submit" class="auth-shell-submit">
                 <span>가입하고 시작하기</span>
@@ -101,3 +134,5 @@
     </div>
 </main>
 {% endblock %}
+
+{% block hidden_login_portal %}{% endblock %}
