@@ -3471,127 +3471,75 @@
     class="fixed inset-0 bg-slate-900 text-white p-4 md:p-6 font-sans overflow-x-hidden overflow-y-auto flex flex-col z-[100]">
 
     <!-- Header -->
-    <header class="flex-shrink-0 mb-5 px-2">
-        <div class="dt-topbar-shell">
-            <div class="dt-topbar-main">
-                <div class="dt-topbar-brand">
-                    <a href="/" class="dt-topbar-brand-link">
-                        <span class="dt-topbar-brand-mark">
-                            <i class="fa-solid fa-wand-magic-sparkles"></i>
-                        </span>
-                        <div class="dt-topbar-brand-copy">
-                            <span class="dt-topbar-eyebrow">EDUITIT CLASS OPS</span>
-                            <h1 class="dt-topbar-title">
-                                <span class="dt-topbar-title-accent">Duty</span>Ticker
-                            </h1>
-                            <p class="dt-topbar-desc">오늘 역할, 학생 진행, 교시 흐름을 한눈에 정리한 교실 운영 보드</p>
-                        </div>
-                    </a>
+    <header class="flex-shrink-0 flex justify-between items-center mb-5 px-2">
+        <div class="flex items-center gap-3">
+            <a href="/" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                <div class="bg-indigo-600 p-2.5 rounded-xl shadow-lg shadow-indigo-500/20">
+                    <i class="fa-solid fa-wand-magic-sparkles text-yellow-300 text-xl"></i>
                 </div>
+                <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-white flex items-center gap-2">
+                    <span class="text-indigo-400 font-extrabold">EDUITIT</span>
+                </h1>
+            </a>
+        </div>
 
-                <div class="dt-topbar-meta">
-                    <div class="dt-topbar-meta-row">
-                        <span class="dt-topbar-chip">
-                            <span class="dt-topbar-chip-label">오늘 운영</span>
-                        </span>
-                        <span class="dt-topbar-chip">
-                            <i class="fa-regular fa-calendar"></i>
-                            <span class="dt-header-date dt-header-nowrap" id="headerDate">--. --. (.)</span>
-                        </span>
-                        <span class="dt-topbar-chip dt-topbar-chip--clock">
-                            <i class="fa-regular fa-clock"></i>
-                            <span id="headerTime" class="dt-header-clock dt-header-nowrap">--:--</span>
-                        </span>
-                    </div>
-                    <div class="dt-header-meta-shell">
-                        <div class="dt-header-meta-label">
-                            <i class="fa-solid fa-table-cells-large"></i>
-                            <span>오늘 수업 흐름</span>
-                        </div>
-                        <div id="headerScheduleStrip">
-                            <!-- JS Populated -->
-                        </div>
-                    </div>
+        <div class="flex items-center gap-3">
+            <div
+                class="hidden md:flex min-w-0 items-center gap-3.5 bg-slate-800/50 backdrop-blur-xl px-6 py-2.5 rounded-full border border-slate-700/50 shadow-xl">
+                <div class="flex items-center gap-2 text-slate-300 shrink-0 dt-header-nowrap">
+                    <i class="fa-regular fa-calendar text-indigo-400"></i>
+                    <span class="dt-header-date dt-header-nowrap" id="headerDate">--. --. (.)</span>
                 </div>
-
-                <div class="dt-topbar-actions">
-                    <div class="dt-topbar-actions-label">빠른 실행</div>
-                    <div class="dt-topbar-action-grid">
-                        {% if student_games_issue_url %}
-                        <button data-student-games-open="studentGamesQrModal"
-                            class="dt-topbar-action w-10 h-10 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl flex items-center justify-center border border-indigo-400/40 transition"
-                            title="학생 게임 QR">
-                            <i class="fa-solid fa-qrcode"></i>
-                        </button>
-                        {% endif %}
-                        <a href="{% url 'ppobgi:main' %}"
-                            class="dt-topbar-action w-10 h-10 bg-amber-500/20 hover:bg-amber-500/35 text-amber-200 rounded-xl flex items-center justify-center border border-amber-300/30 transition"
-                            title="별빛 추첨기">
-                            <i class="fa-solid fa-shuffle"></i>
-                        </a>
-                        <button id="openBroadcastModalBtn" type="button" onclick="window.dtApp.openBroadcastModal()"
-                            class="dt-topbar-action w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
-                            title="알림 / 교시 안내">
-                            <i class="fa-solid fa-bullhorn"></i>
-                        </button>
-                        <button id="toggleSoundBtn" onclick="window.dtApp.toggleBroadcastSound()"
-                            class="dt-topbar-action w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
-                            title="소리 설정">
-                            <i class="fa-solid fa-volume-high"></i>
-                        </button>
-                        <a href="{% url 'dt_admin_dashboard' %}"
-                            class="dt-topbar-action w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
-                            title="설정">
-                            <i class="fa-solid fa-gear"></i>
-                        </a>
-                        <button type="button" onclick="window.dtApp && window.dtApp.openCurrentPageInNewWindow()"
-                            class="dt-topbar-action w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
-                            title="새 창으로 열기">
-                            <i class="fa-solid fa-up-right-from-square"></i>
-                        </button>
-                        <button onclick="window.dtApp.toggleFullscreen()"
-                            class="dt-topbar-action w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
-                            title="전체화면">
-                            <i class="fa-solid fa-expand"></i>
-                        </button>
-                    </div>
+                <div class="h-4 w-px bg-slate-700 hidden md:block"></div>
+                <div id="headerScheduleStrip"
+                    class="hidden md:flex flex-wrap items-center content-center min-w-0 max-w-[560px] lg:max-w-[920px] xl:max-w-[1180px] gap-2">
+                    <!-- JS Populated -->
+                </div>
+                <div class="h-4 w-px bg-slate-700"></div>
+                <div class="flex items-center gap-2 text-white font-mono shrink-0 dt-header-nowrap">
+                    <i class="fa-regular fa-clock text-indigo-400"></i>
+                    <span id="headerTime" class="dt-header-clock dt-header-nowrap">--:--</span>
                 </div>
             </div>
 
-            <div class="dt-topbar-summary">
-                <article class="dt-header-stat-card">
-                    <div class="dt-header-stat-head">
-                        <p class="dt-header-stat-label">
-                            <i class="fa-solid fa-user-check"></i>
-                            <span>역할 배정</span>
-                        </p>
-                    </div>
-                    <p id="headerRoleSummaryValue" class="dt-header-stat-value">연결 준비</p>
-                    <p id="headerRoleSummaryHint" class="dt-header-stat-hint">역할 현황을 불러오는 중입니다.</p>
-                </article>
-
-                <article class="dt-header-stat-card">
-                    <div class="dt-header-stat-head">
-                        <p class="dt-header-stat-label">
-                            <i class="fa-solid fa-people-group"></i>
-                            <span>학생 진행</span>
-                        </p>
-                    </div>
-                    <p id="headerStudentSummaryValue" class="dt-header-stat-value">연결 준비</p>
-                    <p id="headerStudentSummaryHint" class="dt-header-stat-hint">학생 현황을 불러오는 중입니다.</p>
-                </article>
-
-                <article id="headerOpsSummaryCard" class="dt-header-stat-card" data-state="idle">
-                    <div class="dt-header-stat-head">
-                        <p class="dt-header-stat-label">
-                            <i class="fa-solid fa-tower-broadcast"></i>
-                            <span>운영 상태</span>
-                        </p>
-                        <span id="headerOpsSummaryBadge" class="dt-header-stat-badge" data-state="idle">대기</span>
-                    </div>
-                    <p id="headerOpsSummaryValue" class="dt-header-stat-value">운영 보드 준비 중</p>
-                    <p id="headerOpsSummaryHint" class="dt-header-stat-hint">방송 소리 상태와 다음 운영 흐름을 표시합니다.</p>
-                </article>
+            <div class="flex items-center gap-2">
+                {% if student_games_issue_url %}
+                <button data-student-games-open="studentGamesQrModal"
+                    class="w-10 h-10 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl flex items-center justify-center border border-indigo-400/40 transition"
+                    title="학생 게임 QR">
+                    <i class="fa-solid fa-qrcode"></i>
+                </button>
+                {% endif %}
+                <a href="{% url 'ppobgi:main' %}"
+                    class="w-10 h-10 bg-amber-500/20 hover:bg-amber-500/35 text-amber-200 rounded-xl flex items-center justify-center border border-amber-300/30 transition"
+                    title="별빛 추첨기">
+                    <i class="fa-solid fa-shuffle"></i>
+                </a>
+                <button id="openBroadcastModalBtn" type="button" onclick="window.dtApp.openBroadcastModal()"
+                    class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
+                    title="알림 / 교시 안내">
+                    <i class="fa-solid fa-bullhorn"></i>
+                </button>
+                <button id="toggleSoundBtn" onclick="window.dtApp.toggleBroadcastSound()"
+                    class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
+                    title="소리 설정">
+                    <i class="fa-solid fa-volume-high"></i>
+                </button>
+                <a href="{% url 'dt_admin_dashboard' %}"
+                    class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
+                    title="설정">
+                    <i class="fa-solid fa-gear"></i>
+                </a>
+                <button type="button" onclick="window.dtApp && window.dtApp.openCurrentPageInNewWindow()"
+                    class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
+                    title="새 창으로 열기">
+                    <i class="fa-solid fa-up-right-from-square"></i>
+                </button>
+                <button onclick="window.dtApp.toggleFullscreen()"
+                    class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center border border-slate-700 transition"
+                    title="전체화면">
+                    <i class="fa-solid fa-expand"></i>
+                </button>
             </div>
         </div>
     </header>
