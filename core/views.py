@@ -2533,6 +2533,17 @@ def _build_home_guest_start_cards(product_list):
     return cards[:4]
 
 
+def _build_home_login_continue_url(next_url, *, login_url=""):
+    base_login_url = str(login_url or reverse("account_login") or "").strip()
+    if not base_login_url:
+        return ""
+
+    candidate = str(next_url or "").strip()
+    if not candidate or not candidate.startswith("/") or candidate.startswith("//"):
+        return base_login_url
+    return f"{base_login_url}?{urlencode({'next': candidate})}"
+
+
 GUEST_PUBLIC_SECTION_ORDER = {
     "collect_sign": 0,
     "class_ops": 1,
@@ -2562,7 +2573,15 @@ def _guest_access_status_copy(product):
     return getattr(product, "home_access_status_label", "") or "미리보기 가능"
 
 
-def _build_home_guest_highlight_card(product):
+def _build_home_guest_highlight_card(product, *, login_url=""):
+    access_status_label = _guest_access_status_copy(product)
+    launch_href = getattr(product, "launch_href", "") or ""
+    launch_is_external = bool(getattr(product, "launch_is_external", False))
+    href = launch_href
+    is_external = launch_is_external
+    if access_status_label == "로그인 필요":
+        href = _build_home_login_continue_url(launch_href, login_url=login_url)
+        is_external = False
     return {
         "id": getattr(product, "id", ""),
         "title": getattr(product, "public_service_name", "") or getattr(product, "title", "") or "도구",
@@ -2570,15 +2589,22 @@ def _build_home_guest_highlight_card(product):
         "service_name": getattr(product, "teacher_first_task_label", "") or "",
         "icon": getattr(product, "icon", ""),
         "service_type": getattr(product, "service_type", ""),
-        "href": getattr(product, "launch_href", "") or "",
-        "is_external": bool(getattr(product, "launch_is_external", False)),
+        "href": href,
+        "is_external": is_external,
         "guide_url": getattr(product, "guide_url", "") or "",
-        "access_status_label": _guest_access_status_copy(product),
+        "access_status_label": access_status_label,
         "state_badges": list(getattr(product, "home_state_badges", []) or []),
     }
 
 
-def _build_home_guest_highlight_cards(product_list, *, requires_login, limit=4, include_games=False):
+def _build_home_guest_highlight_cards(
+    product_list,
+    *,
+    requires_login,
+    limit=4,
+    include_games=False,
+    login_url="",
+):
     section_order = GUEST_LOCKED_SECTION_ORDER if requires_login else GUEST_PUBLIC_SECTION_ORDER
     cards = []
     seen_ids = set()
@@ -2600,7 +2626,7 @@ def _build_home_guest_highlight_cards(product_list, *, requires_login, limit=4, 
             continue
         if not include_games and getattr(product, "service_type", "") == "game":
             continue
-        card = _build_home_guest_highlight_card(product)
+        card = _build_home_guest_highlight_card(product, login_url=login_url)
         if not card["href"]:
             continue
         cards.append(card)
@@ -2610,13 +2636,14 @@ def _build_home_guest_highlight_cards(product_list, *, requires_login, limit=4, 
     return cards
 
 
-def _build_home_guest_rotation_cards(product_list):
+def _build_home_guest_rotation_cards(product_list, *, login_url=""):
     rotation_limit = max(len(product_list), 1)
     cards = _build_home_guest_highlight_cards(
         product_list,
         requires_login=False,
         limit=rotation_limit,
         include_games=True,
+        login_url=login_url,
     )
     return [
         {
@@ -2660,7 +2687,7 @@ def _attach_home_guest_landing_meta(product, *, login_url):
         cta_href = launch_href
         cta_label = "새 창에서 시작"
     elif access_status == "로그인 필요":
-        cta_href = login_url
+        cta_href = _build_home_login_continue_url(launch_href, login_url=login_url)
         cta_label = "로그인 후 시작"
     else:
         cta_href = launch_href or login_url
@@ -2719,6 +2746,109 @@ def _build_home_public_representative_products(product_list, *, login_url):
         seen_ids.add(getattr(matched_product, "id", None))
 
     return representative_products
+
+
+def _build_home_guest_entry_context(product_list, guest_public_cards, games, *, login_url):
+    guest_locked_cards = _build_home_guest_highlight_cards(
+        product_list,
+        requires_login=True,
+        limit=3,
+        login_url=login_url,
+    )
+    guest_primary_action_card = next(
+        (card for card in guest_public_cards if not card.get("is_external")),
+        guest_public_cards[0] if guest_public_cards else None,
+    )
+    if guest_primary_action_card is None:
+        guest_game = next(
+            (game for game in list(games or []) if getattr(game, "launch_href", "")),
+            None,
+        )
+        if guest_game is not None:
+            guest_primary_action_card = {
+                "title": getattr(guest_game, "public_service_name", "") or getattr(guest_game, "title", "") or "교실 활동",
+                "description": getattr(guest_game, "home_card_summary", "") or "학생과 함께 바로 열 수 있는 공개 활동입니다.",
+                "href": getattr(guest_game, "launch_href", "") or "",
+                "is_external": bool(getattr(guest_game, "launch_is_external", False)),
+                "access_status_label": "미리보기 가능",
+            }
+    guest_continue_action_card = guest_locked_cards[0] if guest_locked_cards else None
+    guest_continue_url = (
+        guest_continue_action_card.get("href", "")
+        if guest_continue_action_card
+        else _build_home_login_continue_url("", login_url=login_url)
+    )
+    return {
+        "guest_locked_cards": guest_locked_cards,
+        "guest_primary_action_card": guest_primary_action_card,
+        "guest_continue_action_card": guest_continue_action_card,
+        "guest_continue_url": guest_continue_url,
+    }
+
+
+def _build_home_entry_action_from_product(product):
+    if product is None:
+        return None
+    href = str(getattr(product, "launch_href", "") or "").strip()
+    if not href:
+        return None
+    return {
+        "title": getattr(product, "public_service_name", "") or getattr(product, "title", "") or "도구",
+        "description": getattr(product, "home_card_summary", "") or getattr(product, "teacher_first_support_label", "") or "필요한 순간 바로 열 수 있습니다.",
+        "href": href,
+        "is_external": bool(getattr(product, "launch_is_external", False)),
+    }
+
+
+def _build_home_entry_panel_context(
+    *,
+    favorite_items,
+    representative_slots,
+    discovery_items,
+    calendar_surface,
+):
+    starter_product = None
+    starter_title = "처음이라면 여기서 시작하세요"
+    starter_description = "게스트 홈에서 보던 흐름 그대로, 도구 하나를 먼저 열고 오늘 일정으로 이어갈 수 있습니다."
+
+    if favorite_items:
+        starter_product = favorite_items[0].get("product")
+        starter_title = "자주 쓰는 도구부터 다시 시작하세요"
+        starter_description = "가장 먼저 쓸 도구 하나를 열고, 필요하면 오늘 일정으로 바로 이어가세요."
+    elif representative_slots:
+        starter_product = next(
+            (slot.get("product") for slot in representative_slots if slot.get("product") is not None),
+            None,
+        )
+    elif discovery_items:
+        starter_product = discovery_items[0].get("product")
+
+    primary_action = _build_home_entry_action_from_product(starter_product)
+    calendar_href = (
+        str(calendar_surface.get("main_url", "") or "").strip()
+        or str(calendar_surface.get("today_url", "") or "").strip()
+        or str(calendar_surface.get("calendar_center_url", "") or "").strip()
+    )
+    secondary_action = None
+    if calendar_href:
+        secondary_action = {
+            "title": "오늘 일정 보기",
+            "description": "하루 흐름을 먼저 확인하고 필요한 도구로 이어갑니다.",
+            "href": calendar_href,
+            "is_external": False,
+        }
+
+    if primary_action is None and secondary_action is None:
+        return None
+
+    return {
+        "eyebrow": "오늘 바로 할 일",
+        "title": starter_title,
+        "description": starter_description,
+        "primary_action": primary_action,
+        "secondary_action": secondary_action,
+        "is_first_run": not bool(favorite_items),
+    }
 
 
 def _filter_home_sections_by_access(sections, *, requires_login):
@@ -2964,6 +3094,7 @@ def _build_guide_groups(manuals, products_without_manual):
 def _home_v2(request, products, posts, page_obj, feed_scope, pinned_notice_posts):
     """Feature flag on 시 호출되는 V2 홈."""
     product_list = _attach_product_launch_meta(list(products), user=request.user)
+    login_url = reverse("account_login")
     section_product_list = [
         product
         for product in product_list
@@ -2984,6 +3115,12 @@ def _home_v2(request, products, posts, page_obj, feed_scope, pinned_notice_posts
             limit=4,
             include_games=True,
         )
+    guest_entry_context = _build_home_guest_entry_context(
+        product_list,
+        guest_public_cards,
+        games,
+        login_url=login_url,
+    )
     guest_primary_display_sections = _filter_home_sections_by_access(
         primary_display_sections,
         requires_login=True,
@@ -3142,6 +3279,7 @@ def _home_v2(request, products, posts, page_obj, feed_scope, pinned_notice_posts
         'games': games,
         'community_summary': community_summary,
         'public_calendar_entry': _build_public_calendar_entry_context(),
+        **guest_entry_context,
         'posts': page_obj,
         'page_obj': page_obj,
         'pinned_notice_posts': pinned_notice_posts,
@@ -3154,11 +3292,12 @@ def _home_v2(request, products, posts, page_obj, feed_scope, pinned_notice_posts
 def _build_home_public_landing_context(request, products):
     product_list = _attach_product_launch_meta(list(products), user=request.user)
     login_url = reverse('account_login')
-    guest_rotation_cards = _build_home_guest_rotation_cards(product_list)
+    guest_rotation_cards = _build_home_guest_rotation_cards(product_list, login_url=login_url)
     guest_public_cards = _build_home_guest_highlight_cards(
         product_list,
         requires_login=False,
         limit=6,
+        login_url=login_url,
     )
     if not guest_public_cards:
         guest_public_cards = _build_home_guest_highlight_cards(
@@ -3166,6 +3305,7 @@ def _build_home_public_landing_context(request, products):
             requires_login=False,
             limit=6,
             include_games=True,
+            login_url=login_url,
         )
     representative_products = _build_home_public_representative_products(
         product_list,
@@ -3651,6 +3791,17 @@ def build_home_surface_context(
         ),
     )
     representative_slots = discovery_state['representative_slots']
+    home_entry_panel = _build_home_surface_safe_value(
+        request,
+        label='home entry panel',
+        fallback_factory=lambda: None,
+        builder=lambda: _build_home_entry_panel_context(
+            favorite_items=favorite_items,
+            representative_slots=representative_slots,
+            discovery_items=discovery_items,
+            calendar_surface=provider_cards['calendar'],
+        ),
+    )
     representative_recommendations = _build_home_surface_safe_value(
         request,
         label='representative recommendations',
@@ -3759,6 +3910,7 @@ def build_home_surface_context(
         'home_design_version': home_design_version,
         'community_summary': community_summary,
         'sns_preview_posts': sns_preview_posts,
+        'home_entry_panel': home_entry_panel,
         'posts': page_obj,
         'page_obj': page_obj,
         'pinned_notice_posts': pinned_notice_posts,

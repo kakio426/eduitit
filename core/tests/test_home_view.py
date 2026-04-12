@@ -354,10 +354,12 @@ class HomeV2ViewTest(TestCase):
 
         self.assertTemplateUsed(response, 'core/home_authenticated_v6_canonical.html')
         self.assertEqual(response.context['home_design_version'], 'v6')
-        self.assertIn('core/css/home_authenticated_v5.css', content)
         self.assertIn('core/css/home_authenticated_v6.css', content)
         self.assertIn('core/css/home_authenticated_v6_canonical.css', content)
         self.assertIn('data-home-design-version="v6"', content)
+        self.assertIn('data-home-v6-entry-panel="true"', content)
+        self.assertIn('오늘 바로 할 일', content)
+        self.assertIn('오늘 일정 보기', content)
         self.assertNotIn('core/css/home_authenticated_v2.css', content)
 
     def test_v2_anonymous_has_sections(self):
@@ -371,10 +373,24 @@ class HomeV2ViewTest(TestCase):
         """V2 비로그인 홈에 로그인 CTA 존재"""
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('지금 바로 써보기', content)
-        self.assertIn('로그인 후 전체 열기', content)
+        primary_action_card = response.context.get('guest_primary_action_card')
+        continue_action_card = response.context.get('guest_continue_action_card')
+        continue_url = response.context.get('guest_continue_url')
+
+        if primary_action_card:
+            self.assertIn(f"{primary_action_card['title']} 바로 시작", content)
+        else:
+            self.assertIn('지금 바로 써보기', content)
+
+        self.assertIsNotNone(continue_action_card)
+        self.assertEqual(continue_action_card['title'], '수업 도구')
+        self.assertIn('로그인 후 수업 도구 이어서 시작', content)
+        self.assertIn('로그인하면 수업 도구 화면으로 바로 이어집니다.', content)
+        self.assertTrue(continue_url.startswith(reverse('account_login')))
+        self.assertIn('?next=', continue_url)
+        self.assertIn(continue_url, content)
+        self.assertNotIn('로그인 후 전체 열기', content)
         self.assertNotIn('공개 도구 먼저 보기', content)
-        self.assertEqual(content.count('로그인 후 전체 열기'), 1)
 
     def test_v2_anonymous_renders_hero_preview_and_proof_panels(self):
         response = self.client.get(reverse('home'))
@@ -431,28 +447,38 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
 
         self.assertIn('data-home-v2-public-section="true"', content)
-        self.assertIn('지금 바로 써보기', content)
         self.assertIn('바로 열리는 공개 도구', content)
         self.assertIn('로그인 후 이어지는 업무', content)
         self.assertIn('미리보기 가능', content)
         self.assertIn('로그인 필요', content)
+        self.assertIn('로그인하고 이어서 시작', content)
 
         public_ids = [card['id'] for card in response.context.get('guest_public_cards', [])]
         self.assertIn(public_collect.id, public_ids)
         self.assertIn(public_qr.id, public_ids)
 
-        locked_section_ids = []
-        for section in response.context.get('guest_primary_display_sections', []):
-            locked_section_ids.extend(product.id for product in section.get('products', []))
-            locked_section_ids.extend(product.id for product in section.get('overflow_products', []))
-        for section in response.context.get('guest_secondary_display_sections', []):
-            locked_section_ids.extend(product.id for product in section.get('products', []))
-            locked_section_ids.extend(product.id for product in section.get('overflow_products', []))
+        locked_cards = response.context.get('guest_locked_cards', [])
+        locked_card_ids = [card['id'] for card in locked_cards]
 
-        self.assertIn(self.p1.id, locked_section_ids)
-        self.assertIn(self.p2.id, locked_section_ids)
-        self.assertNotIn(public_collect.id, locked_section_ids)
-        self.assertNotIn(public_qr.id, locked_section_ids)
+        self.assertIn(self.p1.id, locked_card_ids)
+        self.assertIn(self.p2.id, locked_card_ids)
+        self.assertNotIn(public_collect.id, locked_card_ids)
+        self.assertNotIn(public_qr.id, locked_card_ids)
+        self.assertEqual(response.context['guest_continue_action_card']['id'], self.p1.id)
+        self.assertEqual(
+            response.context['guest_continue_url'],
+            f"{reverse('account_login')}?next=%2Fproducts%2F{self.p1.id}%2F",
+        )
+        for card in locked_cards:
+            self.assertTrue(card['href'].startswith(reverse('account_login')))
+
+    def test_v2_anonymous_login_page_explains_continue_flow_when_next_exists(self):
+        response = self.client.get(f"{reverse('account_login')}?next=/products/{self.p1.id}/")
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('방금 고른 도구로 바로 이어집니다.', content)
+        self.assertIn('로그인하면 선택한 교실 업무 화면으로 곧바로 이동합니다.', content)
 
     def test_v2_anonymous_removes_hero_access_legend(self):
         response = self.client.get(reverse('home'))

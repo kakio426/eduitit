@@ -200,15 +200,27 @@ document.addEventListener('DOMContentLoaded', () => {
                             </p>
 
                             <div class="mt-7 flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap">
-                                <a href="{% if guest_public_cards or games %}#guest-home-try-now{% else %}#guest-home-services{% endif %}" class="home-v2-cta-primary inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3.5 text-sm font-black text-white transition">
+                                <a href="{{ guest_primary_action_card.href|default:'#guest-home-try-now' }}"
+                                    {% if guest_primary_action_card.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+                                    class="home-v2-cta-primary inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3.5 text-sm font-black text-white transition">
                                     <i class="fa-solid fa-circle-play"></i>
+                                    {% if guest_primary_action_card %}
+                                    {{ guest_primary_action_card.title }} 바로 시작
+                                    {% else %}
                                     지금 바로 써보기
+                                    {% endif %}
                                 </a>
-                                <a href="{{ login_url }}" class="home-v2-cta-secondary inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3.5 text-sm font-black text-slate-800 transition hover:-translate-y-0.5 hover:text-indigo-700">
+                                <a href="{{ guest_continue_url|default:login_url }}" class="home-v2-cta-secondary inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3.5 text-sm font-black text-slate-800 transition hover:-translate-y-0.5 hover:text-indigo-700">
                                     <i class="fa-solid fa-right-to-bracket"></i>
-                                    로그인 후 전체 열기
+                                    로그인 후 {{ guest_continue_action_card.title|default:'교실 업무' }} 이어서 시작
                                 </a>
                             </div>
+                            {% if guest_primary_action_card or guest_continue_action_card %}
+                            <p class="mt-4 text-xs font-semibold leading-5 text-slate-500">
+                                {% if guest_primary_action_card %}지금은 {{ guest_primary_action_card.title }}부터{% else %}지금 바로 필요한 공개 도구부터{% endif %}
+                                {% if guest_continue_action_card %}, 로그인하면 {{ guest_continue_action_card.title }} 화면으로 바로 이어집니다.{% else %}, 로그인 후에도 같은 흐름으로 이어집니다.{% endif %}
+                            </p>
+                            {% endif %}
 
                             <div class="mt-7 home-v2-proof-grid" data-home-v2-hero-proof="true">
                                 <div class="home-v2-proof-card rounded-[1.35rem] px-4 py-3">
@@ -246,7 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <div class="flex items-start justify-between gap-3">
                                     <div>
                                         <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">빠른 시작</p>
-                                        <h2 class="mt-2 text-xl font-black text-slate-900">바로 열어볼 도구</h2>
+                                        <h2 class="mt-2 text-xl font-black text-slate-900">오늘 바로 할 일</h2>
                                     </div>
                                     <span class="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-black text-slate-600">{{ preview_count }}개</span>
                                 </div>
@@ -304,33 +316,29 @@ document.addEventListener('DOMContentLoaded', () => {
                                         </a>
                                         {% endfor %}
                                     {% else %}
-                                        <a href="#guest-home-services" class="home-v2-quick-link rounded-[1.3rem] p-3.5">
-                                            <p class="text-sm font-black text-slate-900">로그인 후 전체 도구 보기</p>
-                                            <p class="mt-1 text-xs font-medium leading-5 text-slate-500">수합, 문서, 학급 운영 흐름을 아래에서 바로 이어갈 수 있습니다.</p>
+                                        <a href="{{ guest_continue_url|default:login_url }}" class="home-v2-quick-link rounded-[1.3rem] p-3.5">
+                                            <p class="text-sm font-black text-slate-900">로그인 후 바로 이어서 시작</p>
+                                            <p class="mt-1 text-xs font-medium leading-5 text-slate-500">수합, 문서, 학급 운영 흐름을 끊기지 않게 이어갑니다.</p>
                                         </a>
                                     {% endif %}
                                 </div>
                             </div>
 
-                            <a href="{{ login_url }}" class="home-v2-followup-card block rounded-[1.75rem] p-5 transition hover:-translate-y-0.5">
+                            <a href="{{ guest_continue_url|default:login_url }}" class="home-v2-followup-card block rounded-[1.75rem] p-5 transition hover:-translate-y-0.5">
                                 <div class="flex items-start justify-between gap-3">
                                     <div>
                                         <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">로그인 후</p>
-                                        <h3 class="mt-2 text-lg font-black text-slate-900">이어서 하는 업무</h3>
-                                        <p class="mt-1 text-sm font-semibold leading-6 text-slate-500">학급 운영에 자주 쓰는 흐름만 묶어 두었습니다.</p>
+                                        <h3 class="mt-2 text-lg font-black text-slate-900">{{ guest_continue_action_card.title|default:'이어서 하는 업무' }}</h3>
+                                        <p class="mt-1 text-sm font-semibold leading-6 text-slate-500">로그인하면 방금 고른 흐름을 잃지 않고 바로 이어서 시작합니다.</p>
                                     </div>
                                     <span class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-500 shadow-sm">
                                         <i class="fa-solid fa-arrow-right"></i>
                                     </span>
                                 </div>
                                 <div class="mt-4 flex flex-wrap gap-2">
-                                    {% if guest_primary_display_sections %}
-                                        {% for section in guest_primary_display_sections|slice:":3" %}
-                                        <span class="rounded-full bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm">{{ section.title }}</span>
-                                        {% endfor %}
-                                    {% elif guest_secondary_display_sections %}
-                                        {% for section in guest_secondary_display_sections|slice:":3" %}
-                                        <span class="rounded-full bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm">{{ section.title }}</span>
+                                    {% if guest_locked_cards %}
+                                        {% for card in guest_locked_cards|slice:":3" %}
+                                        <span class="rounded-full bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm">{{ card.title }}</span>
                                         {% endfor %}
                                     {% else %}
                                     <span class="rounded-full bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm">수합·서명</span>
@@ -370,24 +378,32 @@ document.addEventListener('DOMContentLoaded', () => {
             </section>
             {% endif %}
 
-            {% if guest_primary_display_sections or guest_secondary_display_sections %}
+            {% if guest_locked_cards %}
             <section id="guest-home-services" class="mb-6" data-aos="fade-up" data-aos-delay="50" data-home-v2-service-groups="true">
                 <div class="rounded-[1.9rem] border border-white/60 bg-white/80 p-4 shadow-[0_18px_40px_rgba(148,163,184,0.12)] backdrop-blur-sm md:p-5">
                     <div class="mb-4 flex flex-col gap-2">
                         <div>
                             <p class="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">로그인 도구</p>
                             <h2 class="mt-1 text-lg md:text-xl font-black text-slate-900">로그인 후 이어지는 업무</h2>
-                            <p class="mt-1 text-sm font-bold text-slate-500">수합, 문서, 학급 운영 흐름을 같은 자리에서 이어갑니다.</p>
+                            <p class="mt-1 text-sm font-bold text-slate-500">카탈로그를 먼저 보여주기보다, 바로 이어서 쓸 대표 업무만 추려서 보여드립니다.</p>
                         </div>
                     </div>
-                    {% if guest_primary_display_sections %}
-                    {% include 'core/includes/purpose_sections.html' with sections=guest_primary_display_sections show_access_state=True %}
-                    {% endif %}
-                    {% if guest_secondary_display_sections %}
-                    <div class="{% if guest_primary_display_sections %}mt-5 border-t border-slate-200 pt-5{% endif %}">
-                        {% include 'core/includes/purpose_sections.html' with sections=guest_secondary_display_sections show_access_state=True %}
+                    <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3" data-home-v2-public-grid="true">
+                        {% for card in guest_locked_cards %}
+                        {% include 'core/includes/guest_access_highlight_card.html' with card=card %}
+                        {% endfor %}
                     </div>
-                    {% endif %}
+                    <div class="mt-5 rounded-[1.6rem] border border-slate-200 bg-slate-50 px-4 py-4 sm:px-5">
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <p class="text-sm font-black text-slate-900">로그인하면 방금 고른 업무로 바로 이동합니다.</p>
+                                <p class="mt-1 text-xs font-semibold leading-5 text-slate-500">다시 홈에서 찾지 않도록, 선택한 도구의 시작 화면까지 연결합니다.</p>
+                            </div>
+                            <a href="{{ guest_continue_url|default:login_url }}" class="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-black text-white transition hover:bg-slate-800">
+                                로그인하고 이어서 시작
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </section>
             {% endif %}
