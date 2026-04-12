@@ -510,8 +510,8 @@
         }
         if (els.universeTitle) {
             els.universeTitle.textContent = total > 0 && left === 0
-                ? "모든 별이 사라졌어요"
-                : "빛나는 별 하나를 선택하세요";
+                ? "완료"
+                : "별빛";
         }
     }
 
@@ -557,10 +557,10 @@
 
     function setLiveCard(name, meta) {
         if (els.liveName) {
-            els.liveName.textContent = name || "대기 중";
+            els.liveName.textContent = name || "대기";
         }
         if (els.liveMeta) {
-            els.liveMeta.textContent = meta || "별을 선택하면 여기에 결과가 나타납니다.";
+            els.liveMeta.textContent = meta || "";
         }
         els.liveCard?.classList.toggle("is-selected", Boolean(name));
     }
@@ -568,7 +568,7 @@
     function setPickedPanel(name) {
         const pickedName = normalizeName(name);
         if (els.pickedName) {
-            els.pickedName.textContent = pickedName || "아직 뽑지 않았어요";
+            els.pickedName.textContent = pickedName || "대기";
         }
         els.pickedCard?.classList.toggle("is-picked", Boolean(pickedName));
     }
@@ -654,7 +654,7 @@
         updateCounterUI();
         renderHistory();
         renderOrbs();
-        setLiveCard("준비 완료", `${names.length}명 명단으로 추첨을 시작하세요.`);
+        setLiveCard("", "");
         setPickedPanel("");
         closeResultModal(false);
         if (message) {
@@ -696,12 +696,7 @@
         renderHistory();
         renderParticles();
         const left = state.remainingNames.length;
-        setLiveCard(
-            name,
-            left > 0
-                ? `남은 인원 ${left}명 · 스페이스바로 다음 추첨`
-                : "모든 학생 추첨 완료",
-        );
+        setLiveCard(name, "");
         setPickedPanel(name);
         openResultModal(name, left);
 
@@ -736,7 +731,7 @@
         updateCounterUI();
         renderHistory();
         renderOrbs();
-        setLiveCard("다시 시작", `${state.totalNames.length}명 명단으로 추첨을 다시 시작합니다.`);
+        setLiveCard("", "");
         setPickedPanel("");
         closeResultModal(false);
     }
@@ -753,7 +748,7 @@
         updateCounterUI();
         renderHistory();
         renderOrbs();
-        setLiveCard("되돌리기", `${recent.name} 학생을 추첨 후보에 다시 추가했습니다.`);
+        setLiveCard(state.history[0]?.name || "", "");
         setPickedPanel(state.history[0]?.name || "");
         dispatchSfx("undo");
         closeResultModal(false);
@@ -811,7 +806,7 @@
         }
         closeEditor();
         applyRosterAndStart(parsed.valid);
-        setLiveCard("명단 업데이트 완료", `${parsed.valid.length}명 명단으로 새 추첨을 시작합니다.`);
+        setLiveCard("", "");
     }
 
     async function loadRosterNames(target) {
@@ -1084,7 +1079,6 @@
         const stored = root.dataset.classroomUrl ? [] : loadStoredRoster();
         if (stored.length > 0) {
             applyRosterAndStart(stored, `저장된 명단 ${stored.length}명을 불러왔습니다.`);
-            setLiveCard("지난 명단 불러옴", "바로 별을 선택해 추첨을 시작할 수 있습니다.");
         } else {
             setSetupMessage("명단을 입력하거나 당번 명단을 불러오세요.", "info");
         }
@@ -1257,8 +1251,8 @@
 
         setMessage(
             els.setupMessage,
-            warnings.length ? warnings.join(" / ") : "사다리 생성 준비가 완료되었습니다.",
-            warnings.length ? "warn" : "info",
+            warnings.length ? warnings.join(" / ") : "",
+            warnings.length ? "warn" : null,
         );
 
         const valid = participants.valid.length >= 2 && (mode === "single" || roles.valid.length > 0);
@@ -1450,18 +1444,20 @@
     function updateAutoButton() {
         if (!els.autoBtn) return;
         if (!state.scene || state.mode !== "roles") {
+            els.autoBtn.hidden = true;
             els.autoBtn.disabled = true;
-            els.autoBtn.textContent = "역할 발표 쇼 시작";
+            els.autoBtn.textContent = "자동 공개";
             return;
         }
+        els.autoBtn.hidden = false;
         if (state.autoRun) {
             els.autoBtn.disabled = false;
-            els.autoBtn.textContent = "자동 발표 중지";
+            els.autoBtn.textContent = "자동 중지";
             return;
         }
         const left = unresolvedIndexes().length;
         els.autoBtn.disabled = left === 0;
-        els.autoBtn.textContent = left === 0 ? "모든 역할 발표 완료" : "역할 발표 쇼 시작";
+        els.autoBtn.textContent = left === 0 ? "공개 완료" : "자동 공개";
     }
 
     function showLive(name, outcome) {
@@ -1536,7 +1532,7 @@
         updateCounters();
         renderFeed();
         showLive(name, outcome);
-        setMessage(els.stageMessage, outcome === "당첨" ? `${name} 학생이 당첨되었습니다!` : `${name} 학생 결과: ${outcome}`, "info");
+        setMessage(els.stageMessage, "", null);
         root.dispatchEvent(new CustomEvent("ppobgi:present", {
             detail: {
                 badge: outcome === "당첨"
@@ -1561,7 +1557,7 @@
 
         if (state.revealedTop.size === scene.participants.length) {
             state.autoRun = false;
-            setMessage(els.stageMessage, "모든 발표가 완료되었습니다.", "info");
+            setMessage(els.stageMessage, "", null);
         }
         updateAutoButton();
         state.animating = false;
@@ -1572,18 +1568,18 @@
         if (state.autoRun) {
             state.autoRun = false;
             updateAutoButton();
-            setMessage(els.stageMessage, "자동 발표를 중지했습니다.", "warn");
+            setMessage(els.stageMessage, "", null);
             return;
         }
         const queue = shuffle(unresolvedIndexes());
         if (!queue.length) {
-            setMessage(els.stageMessage, "이미 모든 역할 발표가 완료되었습니다.", "info");
+            setMessage(els.stageMessage, "", null);
             updateAutoButton();
             return;
         }
         state.autoRun = true;
         updateAutoButton();
-        setMessage(els.stageMessage, "역할 발표 쇼를 시작합니다.", "info");
+        setMessage(els.stageMessage, "", null);
         dispatchSfx("auto");
         for (const idx of queue) {
             if (!state.autoRun) break;
@@ -1593,7 +1589,7 @@
         }
         state.autoRun = false;
         updateAutoButton();
-        if (!unresolvedIndexes().length) setMessage(els.stageMessage, "역할 발표 쇼가 끝났습니다.", "info");
+        if (!unresolvedIndexes().length) setMessage(els.stageMessage, "", null);
     }
 
     function startLadder() {
@@ -1624,14 +1620,14 @@
         updateCounters();
         renderFeed();
         updateAutoButton();
-        showLive("준비 완료", "사다리 결과가 여기 표시됩니다.");
+        showLive("대기", "");
         if (els.stageTitle) {
             els.stageTitle.textContent =
                 mode === "roles"
-                    ? "역할 배정 쇼: 이름을 누르거나 자동 발표를 시작하세요"
-                    : "당첨 1명을 찾기 위해 이름을 선택하세요";
+                    ? "역할 사다리"
+                    : "사다리";
         }
-        setMessage(els.stageMessage, "사다리 생성이 완료되었습니다. 상단 이름을 눌러 결과를 공개하세요.", "info");
+        setMessage(els.stageMessage, "", null);
         setLadderScreen("stage");
         dispatchSfx("launch");
     }
@@ -1649,8 +1645,8 @@
         updateCounters();
         renderFeed();
         updateAutoButton();
-        showLive("준비 완료", "사다리 결과가 여기 표시됩니다.");
-        setMessage(els.stageMessage, "새 사다리로 다시 준비되었습니다.", "info");
+        showLive("대기", "");
+        setMessage(els.stageMessage, "", null);
     }
 
     async function loadRosterInto(targetInput, button, setupMsg) {
@@ -1920,16 +1916,14 @@
             setSetupMessage(messages.join(" "), "warn");
             return;
         }
-        setSetupMessage("순서를 만들 준비가 되었습니다.", "info");
+        setSetupMessage("", null);
     }
 
     function updateStageTitle() {
         if (!els.stageTitle) {
             return;
         }
-        els.stageTitle.textContent = state.order.length
-            ? `${state.order.length}명의 순서를 준비했어요`
-            : "오늘의 순서를 준비했어요";
+        els.stageTitle.textContent = "순서";
     }
 
     function updateCounters() {
@@ -1959,9 +1953,9 @@
 
     function renderLiveCard() {
         if (!state.currentName) {
-            if (els.liveIndex) els.liveIndex.textContent = "대기 중";
-            if (els.liveName) els.liveName.textContent = "아직 시작하지 않았어요";
-            if (els.liveMeta) els.liveMeta.textContent = "순서를 만들고 한 명씩 공개해 보세요.";
+            if (els.liveIndex) els.liveIndex.textContent = "";
+            if (els.liveName) els.liveName.textContent = "대기";
+            if (els.liveMeta) els.liveMeta.textContent = "";
             if (els.fortuneBtn) els.fortuneBtn.disabled = true;
             return;
         }
@@ -1973,9 +1967,7 @@
             els.liveName.textContent = state.currentName;
         }
         if (els.liveMeta) {
-            els.liveMeta.textContent = state.revealedCount >= total
-                ? `전체 ${total}명의 순서를 모두 공개했습니다.`
-                : `전체 ${total}명 중 ${state.revealedCount}번째 순서입니다.`;
+            els.liveMeta.textContent = "";
         }
         if (els.fortuneBtn) {
             els.fortuneBtn.disabled = false;
@@ -1998,15 +1990,11 @@
             if (revealed) classes.push("is-revealed");
             if (current) classes.push("is-current");
             if (!revealed && next) classes.push("is-next");
-            const label = revealed ? escapeHtml(name) : (next ? "곧 공개" : "비밀 순서");
-            const meta = current
-                ? "방금 공개"
-                : (revealed ? "공개 완료" : (next ? "다음 차례" : "대기 중"));
+            const label = revealed ? escapeHtml(name) : "?";
             return `
                 <article class="${classes.join(" ")}">
                     <span class="pps-order-index">${index + 1}번째</span>
                     <strong class="pps-order-name">${label}</strong>
-                    <span class="pps-order-meta">${meta}</span>
                 </article>
             `;
         }).join("");
@@ -2017,7 +2005,7 @@
         const left = Math.max(total - state.revealedCount, 0);
         if (els.nextBtn) {
             els.nextBtn.disabled = total === 0 || left === 0;
-            els.nextBtn.textContent = left === 0 && total > 0 ? "모든 순서 공개 완료" : "다음 순서 공개";
+            els.nextBtn.textContent = left === 0 && total > 0 ? "완료" : "다음 공개";
         }
         if (els.autoBtn) {
             if (!total) {
@@ -2025,10 +2013,10 @@
                 els.autoBtn.textContent = "순서가 필요합니다";
             } else if (state.autoRun) {
                 els.autoBtn.disabled = false;
-                els.autoBtn.textContent = "자동 발표 중지";
+                els.autoBtn.textContent = "자동 중지";
             } else {
                 els.autoBtn.disabled = left === 0;
-                els.autoBtn.textContent = left === 0 ? "모든 순서 공개 완료" : "자동 발표 쇼 시작";
+                els.autoBtn.textContent = left === 0 ? "공개 완료" : "자동 공개";
             }
         }
         if (els.rerollBtn) {
@@ -2060,7 +2048,7 @@
         }
         setSequenceScreen("stage");
         syncStage();
-        setStageMessage(message || `총 ${names.length}명의 순서를 만들었습니다.`, "info");
+        setStageMessage("", null);
         dispatchSfx("launch");
     }
 
@@ -2096,7 +2084,7 @@
             state.history = state.history.slice(0, state.order.length);
         }
         syncStage();
-        setStageMessage(`${order}번째 순서로 ${name} 학생을 공개했습니다.`, "info");
+        setStageMessage("", null);
         root.dispatchEvent(new CustomEvent("ppobgi:present", {
             detail: {
                 badge: order === 1 ? "첫 발표 스타" : (state.revealedCount < state.order.length ? "오늘의 발표 스타" : "순서 공개 피날레"),
@@ -2134,7 +2122,7 @@
         if (state.autoRun) {
             state.autoRun = false;
             updateActionButtons();
-            setStageMessage("자동 발표를 중지했습니다.", "warn");
+            setStageMessage("", null);
             return;
         }
         if (state.revealedCount >= state.order.length) {
@@ -2144,7 +2132,7 @@
         }
         state.autoRun = true;
         updateActionButtons();
-        setStageMessage("순서 자동 발표를 시작합니다.", "info");
+        setStageMessage("", null);
         dispatchSfx("auto");
         while (state.autoRun && state.revealedCount < state.order.length) {
             revealNext("auto");
@@ -2156,7 +2144,7 @@
         state.autoRun = false;
         updateActionButtons();
         if (state.revealedCount >= state.order.length) {
-            setStageMessage("오늘 순서 공개가 모두 끝났습니다.", "info");
+            setStageMessage("", null);
         }
     }
 
@@ -2171,7 +2159,7 @@
         state.currentName = "";
         setSequenceScreen("stage");
         syncStage();
-        setStageMessage("순서를 다시 섞었습니다.", "info");
+        setStageMessage("", null);
     }
 
     function resetToSetup() {
@@ -2519,16 +2507,14 @@
             setSetupMessage(messages.join(" "), "warn");
             return;
         }
-        setSetupMessage(`${state.teamCount}팀 편성을 만들 준비가 되었습니다.`, "info");
+        setSetupMessage("", null);
     }
 
     function updateStageTitle() {
         if (!els.stageTitle) {
             return;
         }
-        els.stageTitle.textContent = state.plan.length
-            ? `${state.teamCount}팀 편성을 준비했어요`
-            : "팀 편성을 준비했어요";
+        els.stageTitle.textContent = `${state.teamCount}팀`;
     }
 
     function updateCounters() {
@@ -2557,9 +2543,9 @@
 
     function renderLiveCard() {
         if (!state.currentAssignment) {
-            if (els.liveTeam) els.liveTeam.textContent = "대기 중";
-            if (els.liveName) els.liveName.textContent = "아직 시작하지 않았어요";
-            if (els.liveMeta) els.liveMeta.textContent = "팀 편성을 만들고 한 명씩 공개해 보세요.";
+            if (els.liveTeam) els.liveTeam.textContent = "";
+            if (els.liveName) els.liveName.textContent = "대기";
+            if (els.liveMeta) els.liveMeta.textContent = "";
             if (els.fortuneBtn) els.fortuneBtn.disabled = true;
             return;
         }
@@ -2570,7 +2556,7 @@
             els.liveName.textContent = state.currentAssignment.name;
         }
         if (els.liveMeta) {
-            els.liveMeta.textContent = `${state.currentAssignment.order}번째 배치로 ${state.currentAssignment.teamLabel}에 들어갔습니다.`;
+            els.liveMeta.textContent = "";
         }
         if (els.fortuneBtn) {
             els.fortuneBtn.disabled = false;
@@ -2599,13 +2585,13 @@
                     }
                     return `<button type="button" class="${classes.join(" ")}" data-name="${escapeHtml(member.name)}" data-team-label="${escapeHtml(member.teamLabel)}">${escapeHtml(member.name)}</button>`;
                 }).join("")
-                : '<span class="ppt-member-empty">아직 배치된 학생이 없습니다.</span>';
+                : '<span class="ppt-member-empty">대기</span>';
             return `
                 <article class="ppt-team-card">
                     <div class="ppt-team-head">
                         <div>
                             <h3 class="ppt-team-title">${team.label}</h3>
-                            <p class="ppt-team-size">현재 ${team.members.length}명 / 예정 ${team.targetSize}명</p>
+                            <p class="ppt-team-size">${team.members.length}/${team.targetSize}명</p>
                         </div>
                     </div>
                     <div class="ppt-member-list">${members}</div>
@@ -2619,7 +2605,7 @@
         const left = Math.max(total - state.assignedCount, 0);
         if (els.nextBtn) {
             els.nextBtn.disabled = total === 0 || left === 0;
-            els.nextBtn.textContent = left === 0 && total > 0 ? "모든 팀 배치 완료" : "다음 팀 배치 공개";
+            els.nextBtn.textContent = left === 0 && total > 0 ? "완료" : "다음 배치";
         }
         if (els.autoBtn) {
             if (!total) {
@@ -2627,10 +2613,10 @@
                 els.autoBtn.textContent = "팀 편성이 필요합니다";
             } else if (state.autoRun) {
                 els.autoBtn.disabled = false;
-                els.autoBtn.textContent = "자동 발표 중지";
+                els.autoBtn.textContent = "자동 중지";
             } else {
                 els.autoBtn.disabled = left === 0;
-                els.autoBtn.textContent = left === 0 ? "모든 팀 배치 완료" : "자동 발표 쇼 시작";
+                els.autoBtn.textContent = left === 0 ? "공개 완료" : "자동 공개";
             }
         }
         if (els.rerollBtn) {
@@ -2663,7 +2649,7 @@
         }
         setTeamScreen("stage");
         syncStage();
-        setStageMessage(message || `${state.teamCount}팀 편성을 만들었습니다.`, "info");
+        setStageMessage("", null);
         dispatchSfx("launch");
     }
 
@@ -2702,7 +2688,7 @@
             state.history = state.history.slice(0, state.plan.length);
         }
         syncStage();
-        setStageMessage(`${assignment.name} 학생을 ${assignment.teamLabel}에 배치했습니다.`, "info");
+        setStageMessage("", null);
         root.dispatchEvent(new CustomEvent("ppobgi:present", {
             detail: {
                 badge: state.assignedCount < state.plan.length ? `${assignment.teamLabel} 합류 발표` : "팀 편성 피날레",
@@ -2738,7 +2724,7 @@
         if (state.autoRun) {
             state.autoRun = false;
             updateActionButtons();
-            setStageMessage("자동 발표를 중지했습니다.", "warn");
+            setStageMessage("", null);
             return;
         }
         if (state.assignedCount >= state.plan.length) {
@@ -2748,7 +2734,7 @@
         }
         state.autoRun = true;
         updateActionButtons();
-        setStageMessage("팀 배치 자동 발표를 시작합니다.", "info");
+        setStageMessage("", null);
         dispatchSfx("auto");
         while (state.autoRun && state.assignedCount < state.plan.length) {
             revealNextAssignment("auto");
@@ -2760,7 +2746,7 @@
         state.autoRun = false;
         updateActionButtons();
         if (state.assignedCount >= state.plan.length) {
-            setStageMessage("오늘 팀 배치 공개가 모두 끝났습니다.", "info");
+            setStageMessage("", null);
         }
     }
 
@@ -2775,7 +2761,7 @@
         state.currentAssignment = null;
         setTeamScreen("stage");
         syncStage();
-        setStageMessage("팀을 다시 섞었습니다.", "info");
+        setStageMessage("", null);
     }
 
     function resetToSetup() {
@@ -2832,7 +2818,7 @@
         renderTeamGrid();
         renderLiveCard();
         updateActionButtons();
-        setStageMessage(`${teamLabel}의 ${name} 학생을 선택했습니다.`, "info");
+        setStageMessage("", null);
     }
 
     function openFortuneForCurrent() {
@@ -3159,16 +3145,14 @@
             setSetupMessage(messages.join(" "), "warn");
             return;
         }
-        setSetupMessage("유성우를 펼칠 준비가 되었습니다.", "info");
+        setSetupMessage("", null);
     }
 
     function updateStageTitle() {
         if (!els.stageTitle) {
             return;
         }
-        els.stageTitle.textContent = state.remainingNames.length
-            ? `밤하늘에 ${state.remainingNames.length}개의 유성이 남아 있어요`
-            : "오늘 유성우 공개가 모두 끝났어요";
+        els.stageTitle.textContent = "유성우";
     }
 
     function updateCounters() {
@@ -3199,9 +3183,9 @@
 
     function renderLiveCard() {
         if (!state.currentName) {
-            if (els.liveOrder) els.liveOrder.textContent = "대기 중";
-            if (els.liveName) els.liveName.textContent = "아직 시작하지 않았어요";
-            if (els.liveMeta) els.liveMeta.textContent = "유성을 누르거나 자동 발표 쇼를 시작해 보세요.";
+            if (els.liveOrder) els.liveOrder.textContent = "";
+            if (els.liveName) els.liveName.textContent = "대기";
+            if (els.liveMeta) els.liveMeta.textContent = "";
             if (els.fortuneBtn) els.fortuneBtn.disabled = true;
             return;
         }
@@ -3213,9 +3197,7 @@
             els.liveName.textContent = state.currentName;
         }
         if (els.liveMeta) {
-            els.liveMeta.textContent = state.remainingNames.length
-                ? `전체 ${state.sourceNames.length}명 중 ${order}번째로 공개되었습니다.`
-                : `전체 ${state.sourceNames.length}명의 유성우 공개를 모두 마쳤습니다.`;
+            els.liveMeta.textContent = "";
         }
         if (els.fortuneBtn) {
             els.fortuneBtn.disabled = false;
@@ -3227,7 +3209,7 @@
         const left = state.remainingNames.length;
         if (els.autoRandomBtn) {
             els.autoRandomBtn.disabled = total === 0 || left === 0;
-            els.autoRandomBtn.textContent = left === 0 && total > 0 ? "모든 유성 공개 완료" : "무작위 유성 공개";
+            els.autoRandomBtn.textContent = left === 0 && total > 0 ? "완료" : "무작위 공개";
         }
         if (els.autoBtn) {
             if (!total) {
@@ -3235,10 +3217,10 @@
                 els.autoBtn.textContent = "유성우가 필요합니다";
             } else if (state.autoRun) {
                 els.autoBtn.disabled = false;
-                els.autoBtn.textContent = "자동 발표 중지";
+                els.autoBtn.textContent = "자동 중지";
             } else {
                 els.autoBtn.disabled = left === 0;
-                els.autoBtn.textContent = left === 0 ? "모든 유성 공개 완료" : "자동 발표 쇼 시작";
+                els.autoBtn.textContent = left === 0 ? "공개 완료" : "자동 공개";
             }
         }
         if (els.rerollBtn) {
@@ -3296,7 +3278,6 @@
                 >
                     <span class="ppm-meteor-core" aria-hidden="true"></span>
                     <span class="ppm-meteor-tail" aria-hidden="true"></span>
-                    <span class="ppm-meteor-hint">비밀 유성</span>
                 </button>
             `;
         }).join("");
@@ -3323,7 +3304,7 @@
         }
         setMeteorScreen("stage");
         syncStage();
-        setStageMessage(message || `총 ${names.length}명의 유성을 펼쳤습니다.`, "info");
+        setStageMessage("", null);
         dispatchSfx("launch");
     }
 
@@ -3357,7 +3338,7 @@
         }
         syncStage();
         triggerBurst();
-        setStageMessage(`${order}번째 유성으로 ${name} 학생을 공개했습니다.`, "info");
+        setStageMessage("", null);
         root.dispatchEvent(new CustomEvent("ppobgi:present", {
             detail: {
                 badge: state.remainingNames.length ? `${order}번째 유성 주인공` : "유성우 피날레 주인공",
@@ -3406,7 +3387,7 @@
         if (state.autoRun) {
             state.autoRun = false;
             updateActionButtons();
-            setStageMessage("자동 발표를 중지했습니다.", "warn");
+            setStageMessage("", null);
             return;
         }
         if (!state.remainingNames.length) {
@@ -3416,7 +3397,7 @@
         }
         state.autoRun = true;
         updateActionButtons();
-        setStageMessage("유성우 자동 발표를 시작합니다.", "info");
+        setStageMessage("", null);
         dispatchSfx("auto");
         while (state.autoRun && state.remainingNames.length) {
             revealRandomMeteor("auto");
@@ -3428,7 +3409,7 @@
         state.autoRun = false;
         updateActionButtons();
         if (!state.remainingNames.length) {
-            setStageMessage("오늘 유성우 공개가 모두 끝났습니다.", "info");
+            setStageMessage("", null);
         }
     }
 
@@ -3443,7 +3424,7 @@
         state.meteorLayout = buildMeteorLayout(state.sourceNames);
         setMeteorScreen("stage");
         syncStage();
-        setStageMessage("유성우를 다시 펼쳤습니다.", "info");
+        setStageMessage("", null);
     }
 
     function resetToSetup() {
@@ -3676,19 +3657,18 @@
 
     function renderLiveCard(role) {
         if (!role) {
-            if (els.liveRoleName) els.liveRoleName.textContent = "준비 중";
-            if (els.liveAssignee) els.liveAssignee.textContent = "오늘의 1인 1역을 불러오면 여기에 표시됩니다.";
+            if (els.liveRoleName) els.liveRoleName.textContent = "역할";
+            if (els.liveAssignee) els.liveAssignee.textContent = "대기";
             if (els.fortuneBtn) els.fortuneBtn.disabled = true;
             return;
         }
         const roleName = role.role_name || "이름 없는 역할";
         const assigneeName = role.assignee_name || "미배정";
-        const slot = role.time_slot || "오늘";
         if (els.liveRoleName) els.liveRoleName.textContent = roleName;
         if (els.liveAssignee) {
             els.liveAssignee.textContent = role.is_unassigned
-                ? "아직 담당 학생이 정해지지 않았습니다. 알림판에서 먼저 배정해 주세요."
-                : `${assigneeName} 학생이 ${slot}에 맡습니다.`;
+                ? "미배정"
+                : assigneeName;
         }
         if (els.fortuneBtn) {
             els.fortuneBtn.disabled = role.is_unassigned;
@@ -3707,17 +3687,10 @@
         if (revealed) classes.push("is-revealed");
         if (role.is_completed) classes.push("is-completed");
         if (role.is_unassigned) classes.push("is-unassigned");
-        const description = escapeHtml(role.description || "오늘 맡은 역할을 차분히 완수해 보면 좋겠어요.");
         const safeRoleName = escapeHtml(role.role_name || "이름 없는 역할");
         const safeAssignee = escapeHtml(role.assignee_name || "미배정");
         const safeSlot = escapeHtml(role.time_slot || "오늘");
         const safeIcon = escapeHtml(role.icon || "📋");
-        const status = role.is_unassigned
-            ? "미배정 역할"
-            : (role.is_completed ? "이미 완료된 역할" : "오늘 맡은 역할");
-        const hint = role.is_unassigned
-            ? "아직 담당 학생이 정해지지 않았습니다. 먼저 알림판에서 배정해 주세요."
-            : "카드를 열어 담당 학생을 확인하세요.";
         return `
             <button type="button" class="${classes.join(" ")}" data-index="${index}" aria-label="${safeRoleName} 카드 열기">
                 <span class="ppr-card-inner">
@@ -3729,19 +3702,16 @@
                             </span>
                             <span class="ppr-card-title">${safeRoleName}</span>
                         </span>
-                        <span class="ppr-card-hint">${hint}</span>
                         <span class="ppr-card-foot">
                             <span class="ppr-card-number">${index + 1}번째 카드</span>
-                            <span class="ppr-card-cta">눌러서 공개</span>
                         </span>
                     </span>
                     <span class="ppr-card-face ppr-card-back">
                         <span>
-                            <span class="ppr-card-back-label">${status}</span>
+                            <span class="ppr-card-back-label">${safeRoleName}</span>
                             <span class="ppr-card-assignee">${safeAssignee}</span>
-                            <span class="ppr-card-desc">${description}</span>
                         </span>
-                        <span class="ppr-card-status">${safeSlot}</span>
+                        <span class="ppr-card-status">${role.is_unassigned ? "미배정" : safeSlot}</span>
                     </span>
                 </span>
             </button>
@@ -3750,11 +3720,11 @@
 
     function renderCards() {
         if (state.loading) {
-            els.cardGrid.innerHTML = '<div class="ppr-empty">오늘의 역할을 불러오는 중입니다.</div>';
+            els.cardGrid.innerHTML = '<div class="ppr-empty">역할 불러오는 중</div>';
             return;
         }
         if (!state.roles.length) {
-            els.cardGrid.innerHTML = '<div class="ppr-empty">표시할 역할이 없습니다. 알림판에서 1인 1역을 먼저 설정해 주세요.</div>';
+            els.cardGrid.innerHTML = '<div class="ppr-empty">오늘 역할이 없습니다.</div>';
             return;
         }
         els.cardGrid.innerHTML = state.roles.map((role, index) => cardMarkup(role, index)).join("");
@@ -3765,23 +3735,26 @@
             return;
         }
         if (state.loading) {
+            els.autoBtn.hidden = true;
             els.autoBtn.disabled = true;
             els.autoBtn.textContent = "불러오는 중...";
             return;
         }
         if (!state.roles.length) {
+            els.autoBtn.hidden = true;
             els.autoBtn.disabled = true;
             els.autoBtn.textContent = "역할이 필요합니다";
             return;
         }
+        els.autoBtn.hidden = false;
         if (state.autoRun) {
             els.autoBtn.disabled = false;
-            els.autoBtn.textContent = "자동 발표 중지";
+            els.autoBtn.textContent = "자동 중지";
             return;
         }
         const left = unrevealedIndexes().length;
         els.autoBtn.disabled = left === 0;
-        els.autoBtn.textContent = left === 0 ? "모든 역할 공개 완료" : "자동 발표 쇼 시작";
+        els.autoBtn.textContent = left === 0 ? "공개 완료" : "자동 공개";
     }
 
     function hydrate(payload) {
@@ -3799,7 +3772,7 @@
         renderLiveCard(null);
         updateCounters();
         updateAutoButton();
-        setMessage(payload.message || "오늘 역할을 준비했습니다.", state.roles.length ? "info" : "warn");
+        setMessage("", null);
     }
 
     async function loadRoleCards() {
@@ -3814,7 +3787,7 @@
         state.autoRun = false;
         renderCards();
         updateAutoButton();
-        setMessage("오늘 역할을 불러오는 중입니다.", "info");
+        setMessage("", null);
         if (els.refreshBtn) {
             els.refreshBtn.disabled = true;
             els.refreshBtn.textContent = "불러오는 중...";
@@ -3845,7 +3818,7 @@
             updateAutoButton();
             if (els.refreshBtn) {
                 els.refreshBtn.disabled = false;
-                els.refreshBtn.textContent = "오늘 역할 불러오기";
+                els.refreshBtn.textContent = "역할 새로고침";
             }
             renderCards();
         }
@@ -3881,12 +3854,7 @@
         renderLiveCard(role);
         updateCounters();
         updateAutoButton();
-        setMessage(
-            role.is_unassigned
-                ? `${roleName} 역할은 아직 미배정 상태입니다.`
-                : `${roleName} 역할 담당은 ${assigneeName} 학생입니다.`,
-            "info",
-        );
+        setMessage("", null);
         root.dispatchEvent(new CustomEvent("ppobgi:present", {
             detail: {
                 badge: role.is_unassigned ? `미배정 역할 · ${roleName}` : roleName,
@@ -3928,18 +3896,18 @@
         if (state.autoRun) {
             state.autoRun = false;
             updateAutoButton();
-            setMessage("자동 발표를 중지했습니다.", "warn");
+            setMessage("", null);
             return;
         }
         const queue = shuffle(unrevealedIndexes());
         if (!queue.length) {
-            setMessage("이미 모든 역할이 공개되었습니다.", "info");
+            setMessage("", null);
             updateAutoButton();
             return;
         }
         state.autoRun = true;
         updateAutoButton();
-        setMessage("역할 카드 자동 발표를 시작합니다.", "info");
+        setMessage("", null);
         dispatchSfx("auto");
         for (const index of queue) {
             if (!state.autoRun) {
@@ -3954,7 +3922,7 @@
         state.autoRun = false;
         updateAutoButton();
         if (!unrevealedIndexes().length) {
-            setMessage("오늘 역할 공개가 모두 끝났습니다.", "info");
+            setMessage("", null);
         }
     }
 

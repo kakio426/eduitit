@@ -190,7 +190,7 @@
                 <div class="ppb-universe-main">
                     <div id="ppb-orb-grid" class="ppb-orb-grid"></div>
                     <div class="ppb-bottom-actions">
-                        <button id="ppb-reroll-btn" type="button" class="ppb-soft-btn">같은 명단으로 다시 뽑기</button>
+                        <button id="ppb-reroll-btn" type="button" class="ppb-soft-btn">다시 뽑기</button>
                         <button id="ppb-reset-from-universe-btn" type="button" class="ppb-ghost-btn">준비 화면으로</button>
                     </div>
                 </div>
@@ -209,16 +209,15 @@
                                 </div>
                             </div>
                         </div>
-                        <h2 class="ppb-universe-title">빛나는 별 하나를 선택하세요</h2>
+                        <h2 class="ppb-universe-title">별빛</h2>
                     </div>
                     <div id="ppb-picked-card" class="ppb-picked-card" aria-live="polite">
-                        <p class="ppb-picked-label">방금 뽑힘</p>
-                        <p id="ppb-picked-name" class="ppb-picked-name">아직 뽑지 않았어요</p>
+                        <p class="ppb-picked-label">방금</p>
+                        <p id="ppb-picked-name" class="ppb-picked-name">대기</p>
                     </div>
                     <div class="ppb-live-card">
                         <p class="ppb-live-label">현재</p>
-                        <h3 id="ppb-live-name" class="ppb-live-name">대기 중</h3>
-                        <p id="ppb-live-meta" class="ppb-live-meta">결과가 여기에 표시됩니다.</p>
+                        <h3 id="ppb-live-name" class="ppb-live-name">대기</h3>
                     </div>
                     <div class="ppb-side-actions">
                         <button id="ppb-undo-btn" type="button" class="ppb-soft-btn">직전 추첨 되돌리기</button>
@@ -241,15 +240,9 @@
             <div class="ppb-result-burst" aria-hidden="true">
                 <span></span><span></span><span></span><span></span><span></span><span></span>
             </div>
-            <p id="ppb-result-phase" class="ppb-result-phase">결과</p>
-            <p id="ppb-result-label" class="ppb-result-label">방금 뽑힘</p>
-            <p id="ppb-result-source" class="ppb-result-source">별빛 추첨 결과</p>
             <p id="ppb-result-badge" class="ppb-result-badge">오늘의 주인공</p>
             <h2 id="ppb-result-name" class="ppb-result-name">-</h2>
-            <p id="ppb-result-compliment" class="ppb-result-compliment">오늘의 무대가 이 학생을 기다리고 있었어요.</p>
-            <p id="ppb-result-meta" class="ppb-result-meta">다음을 누르면 계속합니다.</p>
             <div class="ppb-result-actions">
-                <span id="ppb-result-wait" class="ppb-result-wait" aria-live="polite">연출 중</span>
                 <button id="ppb-result-next-btn" type="button" class="ppb-primary-btn ppb-result-next-btn">계속</button>
                 <button id="ppb-result-fortune-btn" type="button" class="ppb-soft-btn ppb-result-fortune-btn">희망 포춘쿠키</button>
             </div>
@@ -381,8 +374,8 @@
                         <span class="ppb-chip">남은 <strong id="pbl-chip-left">0</strong>명</span>
                     </div>
 
-                    <h2 id="pbl-stage-title" class="ppb-universe-title pbl-stage-title">참가자를 선택해 사다리를 타세요</h2>
-                    <p class="pbl-stage-guide">상단 이름을 누르면 네온 경로를 따라 결과가 공개됩니다.</p>
+                    <h2 id="pbl-stage-title" class="ppb-universe-title pbl-stage-title">사다리</h2>
+                    <p class="pbl-stage-guide"></p>
 
                     <div class="pbl-board-wrap">
                         <div id="pbl-top-row" class="pbl-top-row"></div>
@@ -395,17 +388,22 @@
                     <div id="pbl-stage-message" class="ppb-message pbl-stage-message" aria-live="polite"></div>
 
                     <div class="ppb-bottom-actions pbl-bottom-actions">
-                        <button id="pbl-auto-btn" type="button" class="ppb-soft-btn">역할 발표 쇼 시작</button>
-                        <button id="pbl-reroll-btn" type="button" class="ppb-soft-btn">사다리 다시 생성</button>
-                        <button id="pbl-reset-btn" type="button" class="ppb-ghost-btn">준비 화면으로</button>
+                        <button id="pbl-auto-btn" type="button" class="ppb-soft-btn">자동 공개</button>
+                        <button id="pbl-reroll-btn" type="button" class="ppb-soft-btn">다시 생성</button>
+                        <details class="ppb-stage-more">
+                            <summary class="ppb-ghost-btn ppb-stage-more-toggle">더보기</summary>
+                            <div class="ppb-stage-more-menu">
+                                <button id="pbl-reset-btn" type="button" class="ppb-ghost-btn">준비 화면으로</button>
+                            </div>
+                        </details>
                     </div>
                 </div>
 
                 <aside class="pbl-side-panel">
                     <div class="pbl-live-card">
-                        <p class="pbl-live-label">지금 발표</p>
-                        <h3 id="pbl-live-name" class="pbl-live-name">준비 완료</h3>
-                        <p id="pbl-live-role" class="pbl-live-role">사다리 결과가 여기 표시됩니다.</p>
+                        <p class="pbl-live-label">발표</p>
+                        <h3 id="pbl-live-name" class="pbl-live-name">대기</h3>
+                        <p id="pbl-live-role" class="pbl-live-role"></p>
                         <div id="pbl-live-sparks" class="pbl-live-sparks" aria-hidden="true"></div>
                     </div>
 
@@ -481,8 +479,8 @@
 
                     <div class="pps-head">
                         <div>
-                            <h2 id="pps-stage-title" class="ppb-universe-title pps-stage-title">오늘의 순서를 준비했어요</h2>
-                            <p class="pps-stage-guide">다음 순서를 한 명씩 공개하며 수업 흐름을 이어가세요.</p>
+                            <h2 id="pps-stage-title" class="ppb-universe-title pps-stage-title">순서</h2>
+                            <p class="pps-stage-guide"></p>
                         </div>
                     </div>
 
@@ -490,19 +488,23 @@
                     <div id="pps-order-grid" class="pps-order-grid"></div>
 
                     <div class="ppb-bottom-actions pps-bottom-actions">
-                        <button id="pps-next-btn" type="button" class="ppb-primary-btn">다음 순서 공개</button>
-                        <button id="pps-auto-btn" type="button" class="ppb-soft-btn">자동 발표 쇼 시작</button>
-                        <button id="pps-reroll-btn" type="button" class="ppb-soft-btn">순서 다시 섞기</button>
-                        <button id="pps-reset-btn" type="button" class="ppb-ghost-btn">준비 화면으로</button>
+                        <button id="pps-next-btn" type="button" class="ppb-primary-btn">다음 공개</button>
+                        <button id="pps-auto-btn" type="button" class="ppb-soft-btn">자동 공개</button>
+                        <details class="ppb-stage-more">
+                            <summary class="ppb-ghost-btn ppb-stage-more-toggle">더보기</summary>
+                            <div class="ppb-stage-more-menu">
+                                <button id="pps-reroll-btn" type="button" class="ppb-soft-btn">다시 섞기</button>
+                                <button id="pps-reset-btn" type="button" class="ppb-ghost-btn">준비 화면으로</button>
+                            </div>
+                        </details>
                     </div>
                 </div>
 
                 <aside class="pps-side-panel">
                     <div class="pps-live-card">
-                        <p class="pps-live-label">지금 공개</p>
-                        <p id="pps-live-index" class="pps-live-index">대기 중</p>
-                        <h3 id="pps-live-name" class="pps-live-name">아직 시작하지 않았어요</h3>
-                        <p id="pps-live-meta" class="pps-live-meta">순서를 만들고 한 명씩 공개해 보세요.</p>
+                        <p class="pps-live-label">순서</p>
+                        <p id="pps-live-index" class="pps-live-index"></p>
+                        <h3 id="pps-live-name" class="pps-live-name">대기</h3>
                         <button id="pps-fortune-btn" type="button" class="ppb-soft-btn pps-fortune-btn" disabled>희망 포춘쿠키</button>
                     </div>
 
@@ -590,8 +592,8 @@
 
                     <div class="ppt-head">
                         <div>
-                            <h2 id="ppt-stage-title" class="ppb-universe-title ppt-stage-title">팀 편성을 준비했어요</h2>
-                            <p class="ppt-stage-guide">다음 학생을 한 명씩 배치하며 팀 구성을 공개하세요.</p>
+                            <h2 id="ppt-stage-title" class="ppb-universe-title ppt-stage-title">팀</h2>
+                            <p class="ppt-stage-guide"></p>
                         </div>
                     </div>
 
@@ -599,19 +601,23 @@
                     <div id="ppt-team-grid" class="ppt-team-grid"></div>
 
                     <div class="ppb-bottom-actions ppt-bottom-actions">
-                        <button id="ppt-next-btn" type="button" class="ppb-primary-btn">다음 팀 배치 공개</button>
-                        <button id="ppt-auto-btn" type="button" class="ppb-soft-btn">자동 발표 쇼 시작</button>
-                        <button id="ppt-reroll-btn" type="button" class="ppb-soft-btn">팀 다시 섞기</button>
-                        <button id="ppt-reset-btn" type="button" class="ppb-ghost-btn">준비 화면으로</button>
+                        <button id="ppt-next-btn" type="button" class="ppb-primary-btn">다음 배치</button>
+                        <button id="ppt-auto-btn" type="button" class="ppb-soft-btn">자동 공개</button>
+                        <details class="ppb-stage-more">
+                            <summary class="ppb-ghost-btn ppb-stage-more-toggle">더보기</summary>
+                            <div class="ppb-stage-more-menu">
+                                <button id="ppt-reroll-btn" type="button" class="ppb-soft-btn">다시 섞기</button>
+                                <button id="ppt-reset-btn" type="button" class="ppb-ghost-btn">준비 화면으로</button>
+                            </div>
+                        </details>
                     </div>
                 </div>
 
                 <aside class="ppt-side-panel">
                     <div class="ppt-live-card">
-                        <p class="ppt-live-label">방금 배치</p>
-                        <p id="ppt-live-team" class="ppt-live-team">대기 중</p>
-                        <h3 id="ppt-live-name" class="ppt-live-name">아직 시작하지 않았어요</h3>
-                        <p id="ppt-live-meta" class="ppt-live-meta">팀 편성을 만들고 한 명씩 공개해 보세요.</p>
+                        <p class="ppt-live-label">팀</p>
+                        <p id="ppt-live-team" class="ppt-live-team"></p>
+                        <h3 id="ppt-live-name" class="ppt-live-name">대기</h3>
                         <button id="ppt-fortune-btn" type="button" class="ppb-soft-btn ppt-fortune-btn" disabled>희망 포춘쿠키</button>
                     </div>
 
@@ -687,8 +693,8 @@
 
                     <div class="ppm-head">
                         <div>
-                            <h2 id="ppm-stage-title" class="ppb-universe-title ppm-stage-title">밤하늘에 유성이 준비됐어요</h2>
-                            <p class="ppm-stage-guide">유성을 누르면 그 안에 숨은 학생이 반짝이며 공개됩니다.</p>
+                            <h2 id="ppm-stage-title" class="ppb-universe-title ppm-stage-title">유성우</h2>
+                            <p class="ppm-stage-guide"></p>
                         </div>
                     </div>
 
@@ -696,19 +702,23 @@
                     <div id="ppm-sky" class="ppm-sky" aria-live="polite"></div>
 
                     <div class="ppb-bottom-actions ppm-bottom-actions">
-                        <button id="ppm-auto-random-btn" type="button" class="ppb-primary-btn">무작위 유성 공개</button>
-                        <button id="ppm-auto-btn" type="button" class="ppb-soft-btn">자동 발표 쇼 시작</button>
-                        <button id="ppm-reroll-btn" type="button" class="ppb-soft-btn">유성우 다시 펼치기</button>
-                        <button id="ppm-reset-btn" type="button" class="ppb-ghost-btn">준비 화면으로</button>
+                        <button id="ppm-auto-random-btn" type="button" class="ppb-primary-btn">무작위 공개</button>
+                        <button id="ppm-auto-btn" type="button" class="ppb-soft-btn">자동 공개</button>
+                        <details class="ppb-stage-more">
+                            <summary class="ppb-ghost-btn ppb-stage-more-toggle">더보기</summary>
+                            <div class="ppb-stage-more-menu">
+                                <button id="ppm-reroll-btn" type="button" class="ppb-soft-btn">다시 펼치기</button>
+                                <button id="ppm-reset-btn" type="button" class="ppb-ghost-btn">준비 화면으로</button>
+                            </div>
+                        </details>
                     </div>
                 </div>
 
                 <aside class="ppm-side-panel">
                     <div class="ppm-live-card">
-                        <p class="ppm-live-label">방금 공개된 유성</p>
-                        <p id="ppm-live-order" class="ppm-live-order">대기 중</p>
-                        <h3 id="ppm-live-name" class="ppm-live-name">아직 시작하지 않았어요</h3>
-                        <p id="ppm-live-meta" class="ppm-live-meta">유성을 누르거나 자동 발표 쇼를 시작해 보세요.</p>
+                        <p class="ppm-live-label">유성</p>
+                        <p id="ppm-live-order" class="ppm-live-order"></p>
+                        <h3 id="ppm-live-name" class="ppm-live-name">대기</h3>
                         <button id="ppm-fortune-btn" type="button" class="ppb-soft-btn ppm-fortune-btn" disabled>희망 포춘쿠키</button>
                     </div>
 
@@ -734,24 +744,29 @@
                     </div>
                     <div class="ppr-head">
                         <div>
-                            <h2 class="ppb-universe-title ppr-title">오늘의 역할 카드</h2>
-                            <p class="ppr-guide">알림판의 1인 1역을 카드 쇼로 공개합니다.</p>
+                            <h2 class="ppb-universe-title ppr-title">역할</h2>
+                            <p class="ppr-guide"></p>
                         </div>
                         <span id="ppr-classroom-badge" class="ppr-classroom-badge">기본 명단</span>
                     </div>
                     <div id="ppr-message" class="ppb-message" aria-live="polite"></div>
                     <div id="ppr-card-grid" class="ppr-card-grid"></div>
                     <div class="ppb-bottom-actions ppr-bottom-actions">
-                        <button id="ppr-refresh-btn" type="button" class="ppb-soft-btn">오늘 역할 불러오기</button>
-                        <button id="ppr-auto-btn" type="button" class="ppb-soft-btn">자동 발표 쇼 시작</button>
-                        <a href="{% url 'dutyticker' %}" class="ppb-ghost-btn">알림판에서 역할 편집</a>
+                        <button id="ppr-refresh-btn" type="button" class="ppb-soft-btn">역할 새로고침</button>
+                        <button id="ppr-auto-btn" type="button" class="ppb-soft-btn">자동 공개</button>
+                        <details class="ppb-stage-more">
+                            <summary class="ppb-ghost-btn ppb-stage-more-toggle">더보기</summary>
+                            <div class="ppb-stage-more-menu">
+                                <a href="{% url 'dutyticker' %}" class="ppb-ghost-btn">알림판에서 역할 편집</a>
+                            </div>
+                        </details>
                     </div>
                 </div>
                 <aside class="ppr-side-panel">
                     <div class="ppr-live-card">
-                        <p class="ppr-live-label">방금 공개된 역할</p>
-                        <h3 id="ppr-live-role-name" class="ppr-live-role-name">준비 중</h3>
-                        <p id="ppr-live-assignee" class="ppr-live-assignee">오늘의 1인 1역을 불러오면 여기에 표시됩니다.</p>
+                        <p class="ppr-live-label">역할</p>
+                        <p id="ppr-live-role-name" class="ppr-live-role-name">역할</p>
+                        <h3 id="ppr-live-assignee" class="ppr-live-assignee">대기</h3>
                         <button id="ppr-fortune-btn" type="button" class="ppb-soft-btn ppr-fortune-btn" disabled>희망 포춘쿠키</button>
                     </div>
                     <details class="ppb-side-disclosure">

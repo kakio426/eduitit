@@ -253,15 +253,10 @@
     }
 
     function buildSuspenseCopy(payload) {
-        const isRoleMode = payload.mode === "roles";
         return {
-            name: isRoleMode ? "담당 학생 공개 준비 중" : "이름 공개 준비 중",
-            compliment: isRoleMode
-                ? "카드가 완전히 펼쳐질 때까지 담당 학생 이름은 숨겨 둡니다."
-                : "이름은 아직 숨겨 두고, 축하 연출이 시작되는 순간 크게 보여 줍니다.",
-            meta: payload.celebration === "finale"
-                ? "마지막 발표를 위한 긴장감을 모으고 있습니다."
-                : "지금은 결과 이름이 먼저 보이지 않도록 무대를 가리고 있습니다.",
+            name: payload.winnerName,
+            compliment: "",
+            meta: "",
         };
     }
 
@@ -339,7 +334,7 @@
     }
 
     function openPresentation(detail) {
-        if (!els.resultModal || !els.resultName || !els.resultMeta || !els.resultPanel) {
+        if (!els.resultModal || !els.resultName || !els.resultPanel) {
             return;
         }
         clearPresentationTimers();
