@@ -561,6 +561,16 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('테스트 게임', content)
         self.assertNotIn('학생용 QR', content)
 
+    @patch('core.views.attach_teacher_buddy_avatar_context')
+    def test_v2_anonymous_home_survives_sns_preview_avatar_attach_failure(self, mock_attach_teacher_buddy_avatar_context):
+        mock_attach_teacher_buddy_avatar_context.side_effect = RuntimeError('teacher buddy avatar attach failed')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('data-home-v2-guest-hero="true"', content)
+
     def test_v2_authenticated_has_student_games_qr_button(self):
         """V2 로그인 홈에 학생 게임 QR 버튼 존재"""
         self._login('gameqruser')

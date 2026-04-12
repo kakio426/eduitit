@@ -433,6 +433,20 @@ def _build_teacher_buddy_avatar_context_safe(user, *, source):
         return None
 
 
+def _build_teacher_buddy_settings_context_safe(user, *, source):
+    if not getattr(user, 'is_authenticated', False):
+        return None
+    try:
+        return build_teacher_buddy_settings_context(user)
+    except Exception:
+        logger.exception(
+            '[teacher buddy] settings context failed source=%s user_id=%s',
+            source,
+            getattr(user, 'id', None),
+        )
+        return None
+
+
 def _attach_teacher_buddy_avatar_context_safe(items, *, user, label):
     try:
         attach_teacher_buddy_avatar_context(items)
@@ -2231,7 +2245,11 @@ def _build_sns_preview_posts(page_obj, *, pinned_notice_posts=None, limit=3):
         merged.append(post)
         if len(merged) >= limit:
             break
-    attach_teacher_buddy_avatar_context(merged)
+    _attach_teacher_buddy_avatar_context_safe(
+        merged,
+        user=None,
+        label='sns preview posts',
+    )
     return merged
 
 
@@ -5027,7 +5045,10 @@ def settings_view(request):
             return redirect('settings')
     else:
         form = UserProfileUpdateForm(instance=profile)
-    buddy_settings = build_teacher_buddy_settings_context(request.user)
+    buddy_settings = _build_teacher_buddy_settings_context_safe(
+        request.user,
+        source='settings view',
+    )
     if buddy_settings:
         buddy_settings = {
             **buddy_settings,
@@ -5045,7 +5066,10 @@ def settings_view(request):
             'profile': profile,
             'teacher_buddy_settings': buddy_settings,
             'teacher_buddy_urls': build_teacher_buddy_urls() if buddy_settings else {},
-            'teacher_buddy_current_avatar': build_teacher_buddy_avatar_context(request.user),
+            'teacher_buddy_current_avatar': _build_teacher_buddy_avatar_context_safe(
+                request.user,
+                source='settings view',
+            ),
             'kakao_js_key': getattr(settings, 'KAKAO_JS_KEY', ''),
         },
     )

@@ -51,6 +51,27 @@ class APIKeyTest(TestCase):
         self.assertNotContains(response, "Gemini API Key")
         self.assertNotContains(response, "사주 보관함")
 
+    @patch('core.views.build_teacher_buddy_settings_context')
+    def test_settings_view_survives_teacher_buddy_settings_failure(self, mock_build_teacher_buddy_settings_context):
+        mock_build_teacher_buddy_settings_context.side_effect = RuntimeError('teacher buddy settings failed')
+
+        response = self.client.get(reverse('settings'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "내 정보와 공용 명부")
+        self.assertIsNone(response.context['teacher_buddy_settings'])
+        self.assertEqual(response.context['teacher_buddy_urls'], {})
+
+    @patch('core.views.build_teacher_buddy_avatar_context')
+    def test_settings_view_survives_teacher_buddy_avatar_failure(self, mock_build_teacher_buddy_avatar_context):
+        mock_build_teacher_buddy_avatar_context.side_effect = RuntimeError('teacher buddy avatar failed')
+
+        response = self.client.get(reverse('settings'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "내 정보와 공용 명부")
+        self.assertIsNone(response.context['teacher_buddy_current_avatar'])
+
     @patch('os.environ.get')
     def test_article_create_uses_server_key_only(self, mock_env_get):
         """Article creation now uses only the configured server key."""
