@@ -28,7 +28,7 @@
     <link href="{% static 'core/css/base.css' %}" rel="stylesheet">
     <link href="https://hangeul.pstatic.net/hangeul_static/css/nanum-square-round.css" rel="stylesheet">
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Dongle:wght@300;400;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Dongle:wght@300;400;700&family=Noto+Sans+KR:wght@700;800;900&display=swap"
         rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@800;900&display=swap" rel="stylesheet">
@@ -146,12 +146,15 @@
             <div
                 class="max-w-7xl mx-auto clay-card clay-card--overflow-visible px-3 md:px-6 py-3 flex justify-between items-center bg-[#E0E5EC]/90 backdrop-blur-sm">
                 <div class="flex items-center gap-3">
-                    <a href="/" class="flex items-center gap-3 group nav-logo-group">
+                    <a href="/" class="flex items-center gap-3 group nav-logo-group" aria-label="에듀잇티 홈">
                         <div
-                            class="w-12 h-12 rounded-2xl shadow-clay-inner flex items-center justify-center text-purple-600 text-2xl bg-white logo-icon-box">
+                            class="w-12 h-12 rounded-xl shadow-clay-inner flex items-center justify-center text-indigo-700 text-[1.55rem] bg-white/95 logo-icon-box">
                             <i class="fa-solid fa-cloud"></i>
                         </div>
-                        <span class="logo-text logo-text--korean">{{ brand_nav_wordmark|default:'에듀잇티' }}</span>
+                        <span class="logo-lockup">
+                            <span class="logo-kicker" aria-hidden="true">EDUITIT</span>
+                            <span class="logo-text logo-text--korean">{{ brand_nav_wordmark|default:'에듀잇티' }}</span>
+                        </span>
                     </a>
                 </div>
 

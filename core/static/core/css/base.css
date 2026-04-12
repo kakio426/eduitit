@@ -161,34 +161,72 @@ h4,
     background-clip: text;
     -webkit-text-fill-color: transparent;
     letter-spacing: -0.04em;
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: transform 0.28s ease, filter 0.28s ease;
     display: inline-block;
     margin-top: 4px;
 }
 
+.logo-lockup {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0.12rem;
+}
+
+.logo-kicker {
+    display: block;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.58rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: rgba(46, 37, 95, 0.58);
+    padding-left: 0.1rem;
+}
+
 .logo-text--korean {
-    font-family: 'NanumSquareRound', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
-    letter-spacing: -0.08em;
+    font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    font-weight: 800;
+    font-size: 1.42rem;
+    line-height: 1;
+    letter-spacing: -0.05em;
     margin-top: 0;
+    color: #251a4c;
+    text-shadow: 0 8px 18px rgba(37, 26, 76, 0.04);
 }
 
 @media (min-width: 768px) {
     .logo-text {
         font-size: 2.2rem;
     }
+
+    .logo-kicker {
+        font-size: 0.64rem;
+        letter-spacing: 0.34em;
+    }
+
+    .logo-text--korean {
+        font-size: 1.94rem;
+    }
 }
 
 .nav-logo-group:hover .logo-text {
-    transform: scale(1.08) rotate(-2deg);
-    filter: drop-shadow(0 4px 12px rgba(91, 44, 207, 0.28));
+    transform: translateY(-1px);
+    filter: drop-shadow(0 10px 18px rgba(37, 26, 76, 0.08));
 }
 
 .logo-icon-box {
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: transform 0.28s ease, box-shadow 0.28s ease, background-color 0.28s ease;
+    color: #4f3fc2;
+    border-radius: 1.35rem;
+    border: 1px solid rgba(37, 26, 76, 0.06);
+    box-shadow: 0 12px 26px rgba(37, 26, 76, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.94);
 }
 
 .nav-logo-group:hover .logo-icon-box {
-    transform: scale(1.15) rotate(10deg);
+    transform: translateY(-1px);
     background: #ffffff;
-    box-shadow: 0 12px 24px rgba(91, 44, 207, 0.16);
+    box-shadow: 0 15px 28px rgba(37, 26, 76, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.94);
 }
