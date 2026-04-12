@@ -15,7 +15,7 @@ from django.utils import timezone
 from .logging_filters import clear_current_request_id, set_current_request_id
 from .models import PageViewLog, SiteConfig, VisitorLog
 from .openclo_login import OPENCLO_LOGIN_URL
-from .policy_consent import has_current_policy_consent, user_requires_policy_consent
+from .policy_consent import get_pending_policy_consent_redirect
 from .seo import DEFAULT_HOME_DESCRIPTION, DEFAULT_HOME_TITLE, DEFAULT_HOME_TITLE_KO
 
 logger = logging.getLogger(__name__)
@@ -497,16 +497,11 @@ class PolicyConsentMiddleware:
         if is_lightweight_bypass_path(request.path):
             return self.get_response(request)
 
-        if not request.user.is_authenticated:
-            return self.get_response(request)
-
         if is_public_access_path(request.path):
             return self.get_response(request)
 
-        if not user_requires_policy_consent(request.user):
-            return self.get_response(request)
-
-        if has_current_policy_consent(request.user, request.session):
+        redirect_url = get_pending_policy_consent_redirect(request)
+        if not redirect_url:
             return self.get_response(request)
 
         consent_path = reverse('policy_consent')
@@ -523,8 +518,6 @@ class PolicyConsentMiddleware:
         ]
         if any(request.path.startswith(prefix) for prefix in allowed_prefixes):
             return self.get_response(request)
-
-        redirect_url = f"{consent_path}?next={quote(request.get_full_path())}"
 
         if request.path.startswith('/api/') or '/api/' in request.path:
             return JsonResponse(

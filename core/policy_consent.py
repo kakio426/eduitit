@@ -1,4 +1,7 @@
+from urllib.parse import quote
+
 from allauth.socialaccount.models import SocialAccount
+from django.urls import reverse
 
 from .models import UserPolicyConsent
 from .policy_meta import (
@@ -53,6 +56,30 @@ def has_current_policy_consent(user, session=None):
     if consent and session is not None:
         mark_current_policy_consent(session, user)
     return consent is not None
+
+
+def get_policy_consent_redirect_url(request, *, next_url=""):
+    consent_path = reverse("policy_consent")
+    candidate = (next_url or "").strip()
+    if not candidate and request is not None and hasattr(request, "get_full_path"):
+        candidate = request.get_full_path()
+    if not candidate or candidate == consent_path:
+        return consent_path
+    return f"{consent_path}?next={quote(candidate)}"
+
+
+def get_pending_policy_consent_redirect(request, *, next_url=""):
+    user = getattr(request, "user", None)
+    if not getattr(user, "is_authenticated", False):
+        return ""
+
+    if not user_requires_policy_consent(user):
+        return ""
+
+    if has_current_policy_consent(user, getattr(request, "session", None)):
+        return ""
+
+    return get_policy_consent_redirect_url(request, next_url=next_url)
 
 
 def mark_current_policy_consent(session, user):

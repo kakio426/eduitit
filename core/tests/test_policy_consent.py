@@ -2,10 +2,13 @@ from datetime import timedelta
 
 from allauth.socialaccount.models import SocialAccount
 from django.contrib.auth.models import User
+from django.contrib.sessions.middleware import SessionMiddleware
 from django.test import TestCase, override_settings
+from django.test.client import RequestFactory
 from django.urls import reverse
 from django.utils import timezone
 
+from core.account_adapter import EduititAccountAdapter
 from core.models import UserPolicyConsent
 from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
 
@@ -58,6 +61,11 @@ class PolicyConsentTestCase(TestCase):
         response = self.client.get(reverse('select_role'))
 
         self.assertRedirects(response, f"{reverse('policy_consent')}?next={reverse('select_role')}")
+
+    def test_social_user_without_consent_redirects_from_update_email(self):
+        response = self.client.get(reverse('update_email'))
+
+        self.assertRedirects(response, f"{reverse('policy_consent')}?next={reverse('update_email')}")
 
     def test_social_user_without_consent_can_open_public_portfolio(self):
         response = self.client.get(reverse('portfolio:list'))
@@ -246,3 +254,66 @@ class PolicyConsentAdminExceptionTestCase(TestCase):
 
         self.assertEqual(admin_response.status_code, 200)
         self.assertRedirects(home_response, f"{reverse('policy_consent')}?next={reverse('home')}")
+
+
+class PolicyConsentRedirectAdapterTestCase(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.adapter = EduititAccountAdapter()
+        self.user = User.objects.create_user(
+            username='adapter_social_user',
+            email='adapter-social@example.com',
+            password='password123',
+        )
+        profile = self.user.userprofile
+        profile.nickname = '리다이렉트선생'
+        profile.save(update_fields=['nickname'])
+        SocialAccount.objects.create(
+            user=self.user,
+            provider='kakao',
+            uid='adapter-social-user',
+            extra_data={},
+        )
+
+    def _build_request(self, path='/accounts/kakao/login/callback/'):
+        request = self.factory.get(path)
+        middleware = SessionMiddleware(lambda req: None)
+        middleware.process_request(request)
+        request.session.save()
+        request.user = self.user
+        return request
+
+    def test_login_redirect_routes_social_user_without_consent_to_policy_gate(self):
+        request = self._build_request()
+
+        response_url = self.adapter.get_login_redirect_url(request)
+
+        self.assertEqual(
+            response_url,
+            f"{reverse('policy_consent')}?next={reverse('select_role')}",
+        )
+
+    def test_signup_redirect_routes_social_user_without_consent_to_policy_gate(self):
+        request = self._build_request('/accounts/3rdparty/signup/')
+
+        response_url = self.adapter.get_signup_redirect_url(request)
+
+        self.assertEqual(
+            response_url,
+            f"{reverse('policy_consent')}?next={reverse('select_role')}",
+        )
+
+    def test_login_redirect_keeps_default_target_after_current_consent(self):
+        UserPolicyConsent.objects.create(
+            user=self.user,
+            provider='kakao',
+            terms_version=TERMS_VERSION,
+            privacy_version=PRIVACY_VERSION,
+            agreed_at=timezone.now(),
+            agreement_source='social_first_login',
+        )
+        request = self._build_request()
+
+        response_url = self.adapter.get_login_redirect_url(request)
+
+        self.assertEqual(response_url, reverse('select_role'))

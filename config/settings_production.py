@@ -367,6 +367,7 @@ ACCOUNT_LOGIN_METHODS = {'email', 'username'}
 ACCOUNT_SIGNUP_FIELDS = ['email*']
 ACCOUNT_EMAIL_VERIFICATION = 'none'  # ✅ 이메일 인증 선택 (필수 아님)
 ACCOUNT_SIGNUP_FORM_CLASS = 'core.signup_forms.CustomSignupForm'
+ACCOUNT_ADAPTER = 'core.account_adapter.EduititAccountAdapter'
 ACCOUNT_SESSION_REMEMBER = False  # 기본적으로 자동 로그인 해제 (보안을 위해)
 ACCOUNT_RATE_LIMITS = {
     'login_failed': '10/m/ip,5/300s/key',

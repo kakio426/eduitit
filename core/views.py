@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect, reverse, get_object_or_404
+from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST, require_GET
@@ -33,6 +34,7 @@ from .forms import PolicyConsentForm
 from .policy_consent import (
     get_agreement_source,
     get_latest_social_provider,
+    get_pending_policy_consent_redirect,
     has_current_policy_consent,
     mark_current_policy_consent,
     user_requires_policy_consent,
@@ -5565,6 +5567,13 @@ def teacher_buddy_share_image(request, public_share_token):
 @login_required
 def select_role(request):
     """역할 선택 및 닉네임 설정 화면"""
+    policy_redirect_url = get_pending_policy_consent_redirect(
+        request,
+        next_url=request.get_full_path(),
+    )
+    if policy_redirect_url:
+        return redirect(policy_redirect_url)
+
     try:
         profile = request.user.userprofile
     except UserProfile.DoesNotExist:
@@ -5671,6 +5680,13 @@ def update_email(request):
     기존 사용자 이메일 및 닉네임 업데이트
     - 이메일이나 프로필 정보가 부족한 사용자에게 필무 정보 입력 요구
     """
+    policy_redirect_url = get_pending_policy_consent_redirect(
+        request,
+        next_url=request.get_full_path(),
+    )
+    if policy_redirect_url:
+        return redirect(policy_redirect_url)
+
     profile = request.user.userprofile
     
     # 이미 이메일과 닉네임이 모두 있으면 홈으로
@@ -5719,6 +5735,7 @@ def delete_account(request):
     """사용자 계정 탈퇴 처리"""
     if request.method == 'POST':
         user = request.user
+        logout(request)
         user.delete()
         messages.success(request, '그동안 이용해주셔서 감사합니다. 계정이 안전하게 삭제되었습니다.')
         return redirect('home')
