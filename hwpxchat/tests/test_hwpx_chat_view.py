@@ -6,7 +6,7 @@ from unittest.mock import patch
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
@@ -14,8 +14,6 @@ from classcalendar.models import CalendarEvent
 from classcalendar.views import _resolve_integration_source_meta
 from core.models import UserProfile
 from hwpxchat.models import HwpxDocument, HwpxDocumentQuestion, HwpxWorkItem
-from sheetbook.models import SheetCell, SheetTab, Sheetbook
-from sheetbook.views import _create_default_tabs
 
 
 def _build_sample_hwpx_file(name="sample.hwpx", body_text="학부모 회신서를 3월 14일까지 제출해 주세요."):
@@ -156,48 +154,6 @@ class HwpxChatViewTests(TestCase):
         self.assertEqual(mock_generate_structured_workitems.call_count, 1)
 
     @patch("hwpxchat.views.generate_structured_workitems")
-    def test_hidden_sheetbook_companion_stays_hidden_and_commit_returns_404(self, mock_generate_structured_workitems):
-        mock_generate_structured_workitems.return_value = self._structured_payload()
-
-        response = self.client.post(
-            reverse("hwpxchat:chat_process"),
-            data={"hwpx_file": _build_sample_hwpx_file()},
-            HTTP_HX_REQUEST="true",
-            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
-        )
-        document = HwpxDocument.objects.first()
-        commit_response = self.client.post(
-            reverse("hwpxchat:commit_document", kwargs={"document_id": document.id}),
-            data={},
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "업무 카드 전체 복사")
-        self.assertNotContains(response, "교무수첩")
-        self.assertNotContains(response, "학급 기록 보드에 보내기")
-        self.assertEqual(commit_response.status_code, 404)
-
-    @override_settings(SHEETBOOK_ENABLED=True, SHEETBOOK_DISCOVERY_VISIBLE=True)
-    @patch("hwpxchat.views.generate_structured_workitems")
-    def test_visible_sheetbook_companion_uses_public_name(self, mock_generate_structured_workitems):
-        mock_generate_structured_workitems.return_value = self._structured_payload()
-        sheetbook = Sheetbook.objects.create(owner=self.user, title="2026 3-1반 기록 보드")
-        _create_default_tabs(sheetbook)
-
-        response = self.client.post(
-            reverse("hwpxchat:chat_process"),
-            data={"hwpx_file": _build_sample_hwpx_file()},
-            HTTP_HX_REQUEST="true",
-            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "업무 카드 전체 복사")
-        self.assertNotContains(response, "학급 기록 보드에 보내기")
-        self.assertNotContains(response, "학급 기록 보드를 선택해 주세요")
-        self.assertNotContains(response, "교무수첩")
-
-    @patch("hwpxchat.views.generate_structured_workitems")
     def test_reupload_same_file_reuses_document_without_second_structure_call(self, mock_generate_structured_workitems):
         mock_generate_structured_workitems.return_value = self._structured_payload()
         upload = _build_sample_hwpx_file()
@@ -285,96 +241,6 @@ class HwpxChatViewTests(TestCase):
         self.assertEqual(document.work_items.count(), 1)
         self.assertEqual(document.work_items.first().title, "문서 확인 필요")
         self.assertTrue(mock_rate_limit_exceeded.called)
-
-    @override_settings(SHEETBOOK_ENABLED=True, SHEETBOOK_DISCOVERY_VISIBLE=True)
-    @patch("hwpxchat.views.generate_structured_workitems")
-    def test_commit_creates_execution_tab_row_and_calendar_event(self, mock_generate_structured_workitems):
-        mock_generate_structured_workitems.return_value = self._structured_payload()
-        sheetbook = Sheetbook.objects.create(owner=self.user, title="2026 3-1반 기록 보드")
-        _create_default_tabs(sheetbook)
-
-        self.client.post(
-            reverse("hwpxchat:chat_process"),
-            data={"hwpx_file": _build_sample_hwpx_file()},
-            HTTP_HX_REQUEST="true",
-            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
-        )
-        document = HwpxDocument.objects.first()
-        first_item = document.work_items.order_by("sort_order", "id").first()
-
-        response = self.client.post(
-            reverse("hwpxchat:commit_document", kwargs={"document_id": document.id}),
-            data={
-                "sheetbook_id": sheetbook.id,
-                f"selected_{first_item.id}": "on",
-                f"calendar_enabled_{first_item.id}": "on",
-                f"title_{first_item.id}": "회신서 안내",
-                f"action_text_{first_item.id}": "학부모에게 회신서 제출 일정을 안내합니다.",
-                f"due_date_{first_item.id}": "2026-03-14",
-                f"assignee_text_{first_item.id}": "담임",
-                f"target_text_{first_item.id}": "학부모",
-                f"materials_text_{first_item.id}": "회신문",
-                f"delivery_required_{first_item.id}": "on",
-                f"evidence_text_{first_item.id}": "학부모 회신서를 3월 14일까지 제출해 주세요.",
-            },
-        )
-
-        self.assertEqual(response.status_code, 404)
-        self.assertEqual(CalendarEvent.objects.filter(integration_source="hwpxchat_workitem").count(), 0)
-
-    @override_settings(SHEETBOOK_ENABLED=True, SHEETBOOK_DISCOVERY_VISIBLE=True)
-    @patch("hwpxchat.views.generate_structured_workitems")
-    def test_recommit_updates_existing_row_and_can_remove_calendar_event(self, mock_generate_structured_workitems):
-        mock_generate_structured_workitems.return_value = self._structured_payload()
-        sheetbook = Sheetbook.objects.create(owner=self.user, title="2026 3-1반 기록 보드")
-        _create_default_tabs(sheetbook)
-
-        self.client.post(
-            reverse("hwpxchat:chat_process"),
-            data={"hwpx_file": _build_sample_hwpx_file()},
-            HTTP_HX_REQUEST="true",
-            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
-        )
-        document = HwpxDocument.objects.first()
-        first_item = document.work_items.order_by("sort_order", "id").first()
-        commit_url = reverse("hwpxchat:commit_document", kwargs={"document_id": document.id})
-
-        first_commit = self.client.post(
-            commit_url,
-            data={
-                "sheetbook_id": sheetbook.id,
-                f"selected_{first_item.id}": "on",
-                f"calendar_enabled_{first_item.id}": "on",
-                f"title_{first_item.id}": "회신서 안내",
-                f"action_text_{first_item.id}": "학부모에게 회신서 제출 일정을 안내합니다.",
-                f"due_date_{first_item.id}": "2026-03-14",
-                f"assignee_text_{first_item.id}": "담임",
-                f"target_text_{first_item.id}": "학부모",
-                f"materials_text_{first_item.id}": "회신문",
-                f"delivery_required_{first_item.id}": "on",
-                f"evidence_text_{first_item.id}": "학부모 회신서를 3월 14일까지 제출해 주세요.",
-            },
-        )
-
-        second_commit = self.client.post(
-            commit_url,
-            data={
-                "sheetbook_id": sheetbook.id,
-                f"selected_{first_item.id}": "on",
-                f"title_{first_item.id}": "회신서 일정 다시 확인",
-                f"action_text_{first_item.id}": "일정을 다시 공지합니다.",
-                f"due_date_{first_item.id}": "2026-03-15",
-                f"assignee_text_{first_item.id}": "담임",
-                f"target_text_{first_item.id}": "학부모",
-                f"materials_text_{first_item.id}": "회신문",
-                f"delivery_required_{first_item.id}": "on",
-                f"evidence_text_{first_item.id}": "학부모 회신서를 3월 14일까지 제출해 주세요.",
-            },
-        )
-
-        self.assertEqual(first_commit.status_code, 404)
-        self.assertEqual(second_commit.status_code, 404)
-        self.assertEqual(CalendarEvent.objects.filter(integration_source="hwpxchat_workitem").count(), 0)
 
     @patch("hwpxchat.views.answer_document_question")
     @patch("hwpxchat.views.generate_structured_workitems")

@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block title %}{{ title }}{% endblock %}
-{% block footer_class %}{% if is_embedded_in_sheetbook %}hidden{% else %}py-16 px-6 bg-white/30 backdrop-blur-md mt-20 border-t border-white/20{% endif %}{% endblock %}
+{% block footer_class %}{% if is_embedded_on_home %}hidden{% else %}py-16 px-6 bg-white/30 backdrop-blur-md mt-20 border-t border-white/20{% endif %}{% endblock %}
 
 {% block content %}
 {% include "classcalendar/_calendar_app.html" %}

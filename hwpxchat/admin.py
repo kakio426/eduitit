@@ -2,10 +2,10 @@ from django.contrib import admin
 
 from core.admin_helpers import ReadOnlyModelAdmin
 
-from .models import HwpxDocument, HwpxDocumentQuestion, HwpxWorkItem, HwpxWorkItemSync
+from .models import HwpxDocument, HwpxDocumentQuestion, HwpxWorkItem
 
 
 admin.site.register(
-    [HwpxDocument, HwpxDocumentQuestion, HwpxWorkItem, HwpxWorkItemSync],
+    [HwpxDocument, HwpxDocumentQuestion, HwpxWorkItem],
     ReadOnlyModelAdmin,
 )

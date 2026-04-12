@@ -56,7 +56,6 @@ CONTACT_HEADER_ALIASES = {
     "relationship": {"relationship", "관계"},
 }
 WORKFLOW_ACTION_SEED_SESSION_KEY = 'workflow_action_seeds'
-SHEETBOOK_ACTION_SEED_SESSION_KEY = 'sheetbook_action_seeds'
 logger = logging.getLogger(__name__)
 
 
@@ -134,17 +133,15 @@ def _peek_action_seed(request, token, *, expected_action=''):
     token = (token or '').strip()
     if not token:
         return None
-    for session_key in (WORKFLOW_ACTION_SEED_SESSION_KEY, SHEETBOOK_ACTION_SEED_SESSION_KEY):
-        seeds = request.session.get(session_key, {})
-        if not isinstance(seeds, dict):
-            continue
-        seed = seeds.get(token)
-        if not isinstance(seed, dict):
-            continue
-        if expected_action and seed.get('action') != expected_action:
-            continue
-        return seed
-    return None
+    seeds = request.session.get(WORKFLOW_ACTION_SEED_SESSION_KEY, {})
+    if not isinstance(seeds, dict):
+        return None
+    seed = seeds.get(token)
+    if not isinstance(seed, dict):
+        return None
+    if expected_action and seed.get('action') != expected_action:
+        return None
+    return seed
 
 
 def _pop_action_seed(request, token, *, expected_action=''):
@@ -152,19 +149,13 @@ def _pop_action_seed(request, token, *, expected_action=''):
     if not token:
         return None
     found_seed = None
-    for session_key in (WORKFLOW_ACTION_SEED_SESSION_KEY, SHEETBOOK_ACTION_SEED_SESSION_KEY):
-        seeds = request.session.get(session_key, {})
-        if not isinstance(seeds, dict):
-            continue
+    seeds = request.session.get(WORKFLOW_ACTION_SEED_SESSION_KEY, {})
+    if isinstance(seeds, dict):
         seed = seeds.get(token)
-        if not isinstance(seed, dict):
-            continue
-        if expected_action and seed.get('action') != expected_action:
-            continue
-        if found_seed is None:
+        if isinstance(seed, dict) and (not expected_action or seed.get('action') == expected_action):
             found_seed = seed
-        seeds.pop(token, None)
-        request.session[session_key] = seeds
+            seeds.pop(token, None)
+            request.session[WORKFLOW_ACTION_SEED_SESSION_KEY] = seeds
     if found_seed is not None:
         request.session.modified = True
     return found_seed

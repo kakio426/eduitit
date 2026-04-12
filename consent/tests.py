@@ -946,10 +946,10 @@ class ConsentFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "문서 업로드 처리 중 오류가 발생했습니다.")
 
-    def test_create_step1_prefills_from_sheetbook_seed(self):
+    def test_create_step1_prefills_from_workflow_seed(self):
         self.client.login(username="teacher", password="pw123456")
         session = self.client.session
-        session["sheetbook_action_seeds"] = {
+        session["workflow_action_seeds"] = {
             "seed-token": {
                 "action": "consent",
                 "data": {
@@ -966,7 +966,7 @@ class ConsentFlowTests(TestCase):
         self.assertContains(response, "교무수첩에서 가져온 내용으로")
         self.assertContains(response, "교무수첩 동의서")
         self.assertContains(response, "교무수첩에서 가져온 안내문입니다.")
-        self.assertContains(response, 'name="sheetbook_seed_token"')
+        self.assertContains(response, 'name="prefill_seed_token"')
 
     def test_create_step1_shows_upload_preview_shell(self):
         self.client.login(username="teacher", password="pw123456")
@@ -980,7 +980,7 @@ class ConsentFlowTests(TestCase):
     def test_create_step1_seed_auto_adds_recipients(self):
         self.client.login(username="teacher", password="pw123456")
         session = self.client.session
-        session["sheetbook_action_seeds"] = {
+        session["workflow_action_seeds"] = {
             "seed-token-2": {
                 "action": "consent",
                 "data": {
@@ -995,7 +995,7 @@ class ConsentFlowTests(TestCase):
         response = self.client.post(
             url,
             {
-                "sheetbook_seed_token": "seed-token-2",
+                "prefill_seed_token": "seed-token-2",
                 "title": "교무수첩 연동 동의서",
                 "message": "안내",
                 "legal_notice": "",
@@ -1017,7 +1017,7 @@ class ConsentFlowTests(TestCase):
     def test_create_step1_seed_auto_add_handles_exception_without_500(self, mocked_get_or_create):
         self.client.login(username="teacher", password="pw123456")
         session = self.client.session
-        session["sheetbook_action_seeds"] = {
+        session["workflow_action_seeds"] = {
             "seed-token-2b": {
                 "action": "consent",
                 "data": {
@@ -1034,7 +1034,7 @@ class ConsentFlowTests(TestCase):
         response = self.client.post(
             url,
             {
-                "sheetbook_seed_token": "seed-token-2b",
+                "prefill_seed_token": "seed-token-2b",
                 "title": "교무수첩 연동 동의서 실패",
                 "message": "안내",
                 "legal_notice": "",
@@ -1051,7 +1051,7 @@ class ConsentFlowTests(TestCase):
     def test_create_step1_seed_can_skip_auto_add_recipients(self):
         self.client.login(username="teacher", password="pw123456")
         session = self.client.session
-        session["sheetbook_action_seeds"] = {
+        session["workflow_action_seeds"] = {
             "seed-token-3": {
                 "action": "consent",
                 "data": {
@@ -1071,7 +1071,7 @@ class ConsentFlowTests(TestCase):
         post_response = self.client.post(
             reverse("consent:create_step1"),
             {
-                "sheetbook_seed_token": "seed-token-3",
+                "prefill_seed_token": "seed-token-3",
                 "apply_seed_recipients": "0",
                 "title": "교무수첩 수신자 선택 테스트",
                 "message": "안내",

@@ -43,4 +43,4 @@ class SignatureWorkflowSeedPrefillTests(TestCase):
         self.assertContains(response, "안내문 멘트 생성기로 돌아가기")
         self.assertContains(response, "준비물 확인 서명")
         self.assertContains(response, "참석자 후보 2명")
-        self.assertContains(response, 'name="sheetbook_seed_token"', html=False)
+        self.assertContains(response, 'name="prefill_seed_token"', html=False)

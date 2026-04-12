@@ -29,7 +29,7 @@
 ## 기준선 상태
 - 홈/카탈로그 teacher-first 기준선: 진행 중인 baseline 구현 존재
 - 대표 서비스 첫 화면 표준화: `noticegen`, `timetable`, `parentcomm`, `reservations` 적용 baseline 존재
-- `sheetbook + calendar + message`: 단일 달력 원칙으로 정리된 baseline 존재
+- `classroom_workspace + calendar + message`: 단일 달력 원칙으로 정리된 baseline 존재
 
 ## 완료 판단
 - 교사가 홈에서 1번 클릭으로 핵심 서비스에 들어간다.

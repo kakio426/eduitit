@@ -76,8 +76,6 @@ from .models import (
 SERVICE_ROUTE = "classcalendar:main"
 INTEGRATION_SYNC_SESSION_KEY = "classcalendar_last_integration_sync_epoch"
 INTEGRATION_SYNC_MIN_INTERVAL_SECONDS = 120
-SHEETBOOK_RECENT_SHEETBOOK_ID_SESSION_KEY = "sheetbook_recent_sheetbook_id"
-SHEETBOOK_SOURCE_SOURCES = {"sheetbook_action_calendar", "sheetbook_schedule_sync", "sheetbook_calendar_embed", "sheetbook_message_capture"}
 HOME_CALENDAR_ANCHOR = "home-calendar"
 HOME_CALENDAR_QUERY_KEYS = ("date", "action", "open_event", "open_task", "focus")
 CENTER_CALENDAR_QUERY_KEYS = ("date", "action", "open_event", "open_task")
@@ -1189,16 +1187,13 @@ def _build_message_capture_initial_extract_payload(parsed):
     }
 
 
-def _build_message_capture_final_payload(cleaned_data, *, selected_attachment_ids=None, source_context=None):
+def _build_message_capture_final_payload(cleaned_data, *, selected_attachment_ids=None):
     item_type = cleaned_data.get("confirmed_item_type") or CalendarMessageCapture.ItemType.EVENT
     payload = {
         "item_type": item_type,
         "title": cleaned_data.get("title") or "",
         "selected_attachment_ids": list(selected_attachment_ids or []),
     }
-    if source_context:
-        payload["source_sheetbook_id"] = source_context.get("sheetbook_id")
-        payload["source_tab_id"] = source_context.get("tab_id")
 
     if item_type == CalendarMessageCapture.ItemType.TASK:
         payload.update(
@@ -2110,70 +2105,6 @@ def _split_integration_key(raw_key):
     return raw_key.split(":", 1)
 
 
-def _sheetbook_runtime_enabled():
-    # Sheetbook links remain only as legacy compatibility data and should not
-    # re-open even if old flags are toggled.
-    return False
-
-
-def _resolve_sheetbook_context(user, raw_sheetbook_id, raw_tab_id):
-    if not _sheetbook_runtime_enabled():
-        return None
-    try:
-        sheetbook_id = int(raw_sheetbook_id or 0)
-        tab_id = int(raw_tab_id or 0)
-    except (TypeError, ValueError):
-        return None
-    if not sheetbook_id or not tab_id:
-        return None
-    try:
-        from sheetbook.models import SheetTab, Sheetbook
-    except Exception:
-        logger.exception("[ClassCalendar] failed to import sheetbook models for context resolution")
-        return None
-
-    sheetbook = Sheetbook.objects.filter(owner=user, id=sheetbook_id).only("id", "title").first()
-    if not sheetbook:
-        return None
-    tab = SheetTab.objects.filter(sheetbook_id=sheetbook.id, id=tab_id).only("id", "name", "tab_type").first()
-    if not tab:
-        return None
-    detail_url = reverse("sheetbook:detail", kwargs={"pk": sheetbook.id})
-    detail_url = f"{detail_url}?{urlencode({'tab': tab.id, 'source': 'calendar'})}"
-    return {
-        "sheetbook_id": sheetbook.id,
-        "sheetbook_title": sheetbook.title,
-        "tab_id": tab.id,
-        "tab_name": tab.name,
-        "tab_type": tab.tab_type,
-        "detail_url": detail_url,
-    }
-
-
-def _resolve_sheetbook_source_meta(event, *, current_user_id):
-    if not _sheetbook_runtime_enabled():
-        return None
-    source = (event.integration_source or "").strip()
-    if source not in SHEETBOOK_SOURCE_SOURCES or event.author_id != current_user_id:
-        return None
-    key_parts = str(event.integration_key or "").split(":")
-    if len(key_parts) < 2:
-        return None
-    context = _resolve_sheetbook_context(event.author, key_parts[0], key_parts[1])
-    if not context:
-        return None
-    return {
-        "source_sheetbook_id": context["sheetbook_id"],
-        "source_sheetbook_title": context["sheetbook_title"],
-        "source_tab_id": context["tab_id"],
-        "source_tab_name": context["tab_name"],
-        "source_tab_type": context["tab_type"],
-        "source_detail_url": context["detail_url"],
-        "source_url": context["detail_url"],
-        "source_label": "연결된 수첩으로 돌아가기",
-    }
-
-
 def _resolve_integration_source_meta(event):
     source = (event.integration_source or "").strip()
     key = (event.integration_key or "").strip()
@@ -2595,10 +2526,6 @@ def _persist_primary_note(event, note_value):
 
 def _serialize_event(event, *, current_user_id, editable_owner_ids, source_record_lookup=None):
     source_url, source_label = _resolve_integration_source_meta(event)
-    sheetbook_source_meta = _resolve_sheetbook_source_meta(event, current_user_id=current_user_id) or {}
-    if sheetbook_source_meta.get("source_url"):
-        source_url = sheetbook_source_meta.get("source_url") or source_url
-        source_label = sheetbook_source_meta.get("source_label") or source_label
     attachments = list(event.attachments.all())
     attachments.sort(key=lambda attachment: (attachment.sort_order, attachment.id))
     hub_meta = _build_event_hub_meta(
@@ -2620,12 +2547,6 @@ def _serialize_event(event, *, current_user_id, editable_owner_ids, source_recor
         "integration_source": event.integration_source,
         "source_url": source_url,
         "source_label": source_label,
-        "source_sheetbook_id": sheetbook_source_meta.get("source_sheetbook_id") or 0,
-        "source_sheetbook_title": sheetbook_source_meta.get("source_sheetbook_title") or "",
-        "source_tab_id": sheetbook_source_meta.get("source_tab_id") or 0,
-        "source_tab_name": sheetbook_source_meta.get("source_tab_name") or "",
-        "source_tab_type": sheetbook_source_meta.get("source_tab_type") or "",
-        "source_detail_url": sheetbook_source_meta.get("source_detail_url") or "",
         "is_locked": event.is_locked,
         "calendar_owner_id": str(event.author_id),
         "calendar_owner_name": _display_user_name(event.author),
@@ -3523,131 +3444,8 @@ def _build_shared_event_groups(events):
     return grouped
 
 
-def _resolve_sheetbook_calendar_entry_for_user(request, user):
-    result = {
-        "sheetbook_enabled": _sheetbook_runtime_enabled(),
-        "sheetbook_exists": False,
-        "sheetbook_title": "",
-        "sheetbook_entry_url": "",
-        "sheetbook_index_url": "",
-        "sheetbook_context_label": "",
-    }
-    if not result["sheetbook_enabled"]:
-        return result
-
-    try:
-        from sheetbook.models import Sheetbook, SheetTab
-    except Exception:
-        logger.exception(
-            "[ClassCalendar] sheetbook import failed for bridge user_id=%s",
-            getattr(user, "id", None),
-        )
-        return result
-
-    try:
-        result["sheetbook_index_url"] = reverse("sheetbook:index")
-    except Exception:
-        return result
-
-    recent_sheetbook_id = 0
-    try:
-        recent_sheetbook_id = int(request.session.get(SHEETBOOK_RECENT_SHEETBOOK_ID_SESSION_KEY) or 0)
-    except (TypeError, ValueError):
-        recent_sheetbook_id = 0
-
-    sheetbooks = list(
-        Sheetbook.objects.filter(owner=user)
-        .prefetch_related("tabs")
-        .order_by("-updated_at", "-id")
-    )
-    if not sheetbooks:
-        return result
-
-    resolved_sheetbooks = []
-    for sheetbook in sheetbooks:
-        ordered_tabs = sorted(sheetbook.tabs.all(), key=lambda item: (item.sort_order, item.id))
-        preferred_calendar_tab_id = getattr(sheetbook, "preferred_calendar_tab_id", 0) or 0
-        explicit_calendar_tab = None
-        if preferred_calendar_tab_id:
-            explicit_calendar_tab = next(
-                (
-                    tab for tab in ordered_tabs
-                    if tab.id == preferred_calendar_tab_id and tab.tab_type == SheetTab.TYPE_CALENDAR
-                ),
-                None,
-            )
-        calendar_tab = explicit_calendar_tab or next(
-            (tab for tab in ordered_tabs if tab.tab_type == SheetTab.TYPE_CALENDAR),
-            None,
-        )
-        if calendar_tab is None:
-            continue
-        resolved_sheetbooks.append(
-            {
-                "sheetbook": sheetbook,
-                "calendar_tab": calendar_tab,
-                "is_explicit": explicit_calendar_tab is not None,
-            }
-        )
-
-    if not resolved_sheetbooks:
-        return result
-
-    prioritized_sheetbooks = []
-    prioritized_ids = set()
-
-    explicit_entry = next((item for item in resolved_sheetbooks if item["is_explicit"]), None)
-    if explicit_entry is not None:
-        prioritized_sheetbooks.append(explicit_entry)
-        prioritized_ids.add(explicit_entry["sheetbook"].id)
-
-    if recent_sheetbook_id:
-        recent_entry = next(
-            (item for item in resolved_sheetbooks if item["sheetbook"].id == recent_sheetbook_id),
-            None,
-        )
-        if recent_entry is not None and recent_entry["sheetbook"].id not in prioritized_ids:
-            prioritized_sheetbooks.append(recent_entry)
-            prioritized_ids.add(recent_entry["sheetbook"].id)
-
-    for item in resolved_sheetbooks:
-        sheetbook_id = item["sheetbook"].id
-        if sheetbook_id in prioritized_ids:
-            continue
-        prioritized_sheetbooks.append(item)
-        prioritized_ids.add(sheetbook_id)
-
-    selected_entry = prioritized_sheetbooks[0]
-    selected_sheetbook = selected_entry["sheetbook"]
-    detail_url = reverse("sheetbook:detail", kwargs={"pk": selected_sheetbook.id})
-    detail_url = f"{detail_url}?tab={selected_entry['calendar_tab'].id}"
-
-    if selected_entry["is_explicit"]:
-        context_label = "직접 연결한 수첩"
-    elif selected_sheetbook.id == recent_sheetbook_id:
-        context_label = "최근 열어본 수첩"
-    else:
-        context_label = "최근 수정한 수첩"
-
-    result.update(
-        {
-            "sheetbook_exists": True,
-            "sheetbook_title": selected_sheetbook.title,
-            "sheetbook_entry_url": detail_url,
-            "sheetbook_context_label": context_label,
-        }
-    )
-    return result
-
-
 @login_required
 def main_entry(request):
-    if not _sheetbook_runtime_enabled():
-        return redirect(_build_home_calendar_surface_url(request, include_request_state=False))
-
-    bridge_context = _resolve_sheetbook_calendar_entry_for_user(request, request.user)
-    if bridge_context.get("sheetbook_entry_url"):
-        return redirect(bridge_context["sheetbook_entry_url"])
     return redirect(_build_home_calendar_surface_url(request, include_request_state=False))
 
 
@@ -3665,12 +3463,12 @@ def _redirect_legacy_today_panel(request):
 def build_calendar_surface_context(
     request,
     *,
-    embedded_sheetbook_context=None,
+    embedded_context=None,
     page_variant="main",
     embedded_surface="page",
 ):
     normalized_surface = str(embedded_surface or "page").strip().lower()
-    if normalized_surface not in {"page", "sheetbook", "home"}:
+    if normalized_surface not in {"page", "home"}:
         normalized_surface = "page"
     visible_owner_ids, editable_owner_ids, incoming_calendars = _get_calendar_access_for_user(request.user)
     integration_setting = _get_integration_setting_for_user(request.user)
@@ -3691,8 +3489,6 @@ def build_calendar_surface_context(
     home_surface_url = _build_home_calendar_surface_url(request, include_request_state=False)
     if normalized_surface == "home":
         calendar_page_url = _build_home_calendar_surface_url(request, include_request_state=True)
-    elif normalized_surface == "sheetbook":
-        calendar_page_url = _build_calendar_center_url(request, include_request_state=True)
     else:
         calendar_page_url = _build_calendar_center_url(request, include_request_state=True)
     calendar_api_base_url = reverse("classcalendar:main")
@@ -3778,22 +3574,18 @@ def build_calendar_surface_context(
         "initial_message_capture_id": initial_message_capture_id,
         "initial_focus_search": initial_focus_search,
         "initial_search_query": initial_search_query,
-        "embedded_sheetbook_context": embedded_sheetbook_context,
-        "embedded_sheetbook_context_json": embedded_sheetbook_context or {},
         "calendar_embed_mode": normalized_surface,
-        "is_embedded_in_sheetbook": normalized_surface == "sheetbook",
         "is_embedded_on_home": normalized_surface == "home",
-        "hide_navbar": normalized_surface == "sheetbook",
+        "is_compact_surface": normalized_surface != "page",
+        "hide_navbar": False,
     }
 
 
-def _build_calendar_page_context(request, *, embedded_sheetbook_context=None, page_variant="main"):
-    embedded_surface = "sheetbook" if embedded_sheetbook_context else "page"
+def _build_calendar_page_context(request, *, page_variant="main"):
     return build_calendar_surface_context(
         request,
-        embedded_sheetbook_context=embedded_sheetbook_context,
         page_variant=page_variant,
-        embedded_surface=embedded_surface,
+        embedded_surface="page",
     )
 
 
@@ -4249,11 +4041,6 @@ def api_create_event(request):
         return _permission_denied_response("선택한 달력에 일정을 추가할 권한이 없습니다.")
 
     classroom = _get_active_classroom_for_user(request) if event_owner.id == request.user.id else None
-    source_context = _resolve_sheetbook_context(
-        request.user,
-        request.POST.get("source_sheetbook_id"),
-        request.POST.get("source_tab_id"),
-    )
     create_kwargs = {
         "title": form.cleaned_data["title"],
         "start_time": form.cleaned_data["start_time"],
@@ -4265,9 +4052,6 @@ def api_create_event(request):
         "classroom": classroom,
         "source": CalendarEvent.SOURCE_LOCAL,
     }
-    if source_context and event_owner.id == request.user.id:
-        create_kwargs["integration_source"] = "sheetbook_calendar_embed"
-        create_kwargs["integration_key"] = f"{source_context['sheetbook_id']}:{source_context['tab_id']}:{uuid.uuid4().hex[:8]}"
     event = CalendarEvent.objects.create(**create_kwargs)
     _persist_primary_note(event, form.cleaned_data.get("note", ""))
     event = CalendarEvent.objects.select_related("author").prefetch_related("blocks").get(id=event.id)
@@ -4909,11 +4693,6 @@ def api_message_capture_commit(request, capture_id):
                 status=400,
             )
 
-        source_context = _resolve_sheetbook_context(
-            request.user,
-            payload.get("source_sheetbook_id"),
-            payload.get("source_tab_id"),
-        )
         classroom = _get_active_classroom_for_user(request)
         _, editable_owner_ids, _ = _get_calendar_access_for_user(request.user)
 
@@ -5043,9 +4822,6 @@ def api_message_capture_commit(request, capture_id):
                     "classroom": classroom,
                     "source": CalendarEvent.SOURCE_LOCAL,
                 }
-                if source_context:
-                    create_kwargs["integration_source"] = "sheetbook_message_capture"
-                    create_kwargs["integration_key"] = f"{source_context['sheetbook_id']}:{source_context['tab_id']}:{candidate.id}"
                 event = CalendarEvent.objects.create(**create_kwargs)
                 _persist_primary_note(event, summary)
                 copied, warnings = _copy_capture_attachments_to_event(
@@ -5096,8 +4872,6 @@ def api_message_capture_commit(request, capture_id):
                 "item_type": "event_multi",
                 "selected_candidates": selected_snapshot,
                 "selected_attachment_ids": [str(attachment.id) for attachment in capture_attachments],
-                "source_sheetbook_id": source_context.get("sheetbook_id") if source_context else None,
-                "source_tab_id": source_context.get("tab_id") if source_context else None,
             }
             capture_for_update.parse_status = CalendarMessageCapture.ParseStatus.PARSED
             capture_for_update.save(
@@ -5135,10 +4909,6 @@ def api_message_capture_commit(request, capture_id):
                 "attachments": [],
                 "warnings": list(dict.fromkeys(attachment_warnings)),
                 "message": _build_message_capture_commit_message(created_events, reused_events),
-                "sheetbook_sync": {
-                    "status": "pending",
-                    "enabled": _sheetbook_runtime_enabled(),
-                },
             },
             status=201,
         )
@@ -5222,15 +4992,9 @@ def api_message_capture_commit(request, capture_id):
 
         processing_ms = int((timezone.now() - capture_for_update.created_at).total_seconds() * 1000)
         classroom = _get_active_classroom_for_user(request)
-        source_context = _resolve_sheetbook_context(
-            request.user,
-            payload.get("source_sheetbook_id"),
-            payload.get("source_tab_id"),
-        )
         final_payload = _build_message_capture_final_payload(
             form.cleaned_data,
             selected_attachment_ids=[str(attachment.id) for attachment in capture_attachments],
-            source_context=source_context,
         )
         edit_diff_payload = _build_message_capture_edit_diff(capture_for_update, final_payload)
         manual_edit_count = _count_message_capture_manual_edits_from_diff(edit_diff_payload)
@@ -5253,9 +5017,6 @@ def api_message_capture_commit(request, capture_id):
                 "classroom": classroom,
                 "source": CalendarEvent.SOURCE_LOCAL,
             }
-            if source_context:
-                create_kwargs["integration_source"] = "sheetbook_message_capture"
-                create_kwargs["integration_key"] = f"{source_context['sheetbook_id']}:{source_context['tab_id']}:{capture_for_update.id}"
             event = CalendarEvent.objects.create(**create_kwargs)
             _persist_primary_note(event, form.cleaned_data.get("todo_summary", ""))
             copied_attachments, attachment_warnings = _copy_capture_attachments_to_event(
@@ -5274,9 +5035,6 @@ def api_message_capture_commit(request, capture_id):
                 "priority": form.cleaned_data.get("priority") or CalendarTask.Priority.NORMAL,
                 "status": CalendarTask.Status.OPEN,
             }
-            if source_context:
-                task_kwargs["integration_source"] = "sheetbook_message_capture"
-                task_kwargs["integration_key"] = f"{source_context['sheetbook_id']}:{source_context['tab_id']}:{capture_for_update.id}"
             task = CalendarTask.objects.create(**task_kwargs)
             if capture_attachments:
                 attachment_warnings.append("첨부파일은 할 일에 저장되지 않아 제외했습니다.")
@@ -5329,10 +5087,6 @@ def api_message_capture_commit(request, capture_id):
                 "task": _serialize_task(task, current_user_id=request.user.id),
                 "attachments": [],
                 "warnings": attachment_warnings,
-                "sheetbook_sync": {
-                    "status": "not_applicable",
-                    "enabled": _sheetbook_runtime_enabled(),
-                },
             },
             status=201,
         )
@@ -5349,10 +5103,6 @@ def api_message_capture_commit(request, capture_id):
             ),
             "attachments": copied_attachments,
             "warnings": attachment_warnings,
-            "sheetbook_sync": {
-                "status": "pending",
-                "enabled": _sheetbook_runtime_enabled(),
-            },
         },
         status=201,
     )

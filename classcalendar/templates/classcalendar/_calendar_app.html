@@ -504,15 +504,15 @@
 </style>
 
 <section
-    class="{% if is_embedded_in_sheetbook or is_embedded_on_home %}pt-0 pb-0 px-0 min-h-0{% else %}pt-24 md:pt-28 pb-6 md:pb-12 px-3 sm:px-6 lg:px-8 min-h-screen{% endif %} ui-pilot-calendar-shell"
+    class="{% if is_compact_surface %}pt-0 pb-0 px-0 min-h-0{% else %}pt-24 md:pt-28 pb-6 md:pb-12 px-3 sm:px-6 lg:px-8 min-h-screen{% endif %} ui-pilot-calendar-shell"
     data-classcalendar-surface="true"
     data-classcalendar-page-variant="{{ calendar_page_variant }}"
     data-classcalendar-embed-mode="{{ calendar_embed_mode|default:'page' }}"
     x-data="calendarApp()"
     x-effect="syncCalendarSurfaceScrollLock()"
 >
-    <div class="{% if is_embedded_in_sheetbook or is_embedded_on_home %}max-w-none mx-0{% else %}max-w-7xl mx-auto{% endif %}">
-        {% if calendar_page_variant == "today" and not is_embedded_in_sheetbook and not is_embedded_on_home %}
+    <div class="{% if is_compact_surface %}max-w-none mx-0{% else %}max-w-7xl mx-auto{% endif %}">
+        {% if calendar_page_variant == "today" and not is_compact_surface %}
         <div class="mb-3 sm:mb-4 flex flex-col gap-2.5 md:flex-row md:items-center md:justify-between">
             <div class="min-w-0">
                 <p class="classcalendar-eyebrow font-semibold text-slate-400">메인 캘린더</p>
@@ -568,7 +568,7 @@
         {% endif %}
 
         <div
-            class="{% if is_embedded_in_sheetbook %}bg-white rounded-none border-0 shadow-none p-0{% elif is_embedded_on_home %}bg-white rounded-[1.5rem] sm:rounded-[2rem] border border-slate-200 shadow-sm p-3 sm:p-5{% else %}bg-white rounded-[1.5rem] sm:rounded-[2rem] border border-slate-200 shadow-xl p-2.5 sm:p-5{% endif %}"
+            class="{% if is_embedded_on_home %}bg-white rounded-[1.5rem] sm:rounded-[2rem] border border-slate-200 shadow-sm p-3 sm:p-5{% else %}bg-white rounded-[1.5rem] sm:rounded-[2rem] border border-slate-200 shadow-xl p-2.5 sm:p-5{% endif %}"
             {% if is_embedded_on_home %}data-classcalendar-home-card="true"{% endif %}
         >
             {% if calendar_page_variant == "today" %}
@@ -736,7 +736,7 @@
                 {% endif %}
             </div>
             {% else %}
-            {% if not is_embedded_on_home and not is_embedded_in_sheetbook %}
+            {% if not is_compact_surface %}
             <div class="space-y-5" data-classcalendar-center="true">
                 <section class="classcalendar-center-hero p-5 sm:p-6">
                     <div class="min-w-0">
@@ -855,7 +855,7 @@
                     </template>
                 </div>
             </div>
-            {% if not is_embedded_on_home and not is_embedded_in_sheetbook %}
+            {% if not is_compact_surface %}
                         </div>
                     </div>
 
@@ -1019,27 +1019,16 @@
                     </template>
                 </div>
             </div>
-            <div
-                x-show="selectedEvent && selectedEvent.source_sheetbook_title"
-                class="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5"
-            >
-                <p class="text-xs font-bold text-slate-700">연결된 수첩</p>
-                <p class="mt-1 text-sm text-slate-700">
-                    <span x-text="selectedEvent ? selectedEvent.source_sheetbook_title : ''"></span>
-                    <span class="mx-1 text-slate-400">/</span>
-                    <span x-text="selectedEvent ? selectedEvent.source_tab_name : ''"></span>
-                </p>
-            </div>
             <a
                 x-show="selectedEvent && selectedEvent.source_url"
                 :href="selectedEvent ? selectedEvent.source_url : '#'"
-                :target="embeddedSheetbookContext ? '_top' : '_blank'"
-                :rel="embeddedSheetbookContext ? null : 'noopener noreferrer'"
+                target="_blank"
+                rel="noopener noreferrer"
                 class="mb-4 inline-flex items-center rounded-xl border border-indigo-200 bg-indigo-50 px-3.5 py-2 text-sm font-bold text-indigo-800 hover:bg-indigo-100 transition"
             >
                 <i class="fa-solid fa-arrow-up-right-from-square mr-1.5"></i>
                 <span x-text="selectedEvent && selectedEvent.source_label ? selectedEvent.source_label : '원본 서비스로 이동'"></span>
-                <span x-show="!embeddedSheetbookContext" class="ml-1">(새 탭)</span>
+                <span class="ml-1">(새 탭)</span>
             </a>
             <div x-show="selectedEvent && hasSelectedItemMessageCapture()" class="mb-4 flex flex-wrap items-center gap-2">
                 <button
@@ -1313,20 +1302,12 @@
                             </template>
                         </div>
                     </div>
-                    <div x-show="selectedEvent && selectedEvent.source_sheetbook_title" class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-                        <p class="text-xs font-bold text-slate-700">연결된 수첩</p>
-                        <p class="mt-1 text-sm text-slate-700">
-                            <span x-text="selectedEvent ? selectedEvent.source_sheetbook_title : ''"></span>
-                            <span class="mx-1 text-slate-400">/</span>
-                            <span x-text="selectedEvent ? selectedEvent.source_tab_name : ''"></span>
-                        </p>
-                    </div>
                     <p x-show="getReadonlyEventHint()" class="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm font-semibold text-amber-900" x-text="getReadonlyEventHint()"></p>
                     <div x-show="selectedEvent && selectedEvent.source_url" class="flex flex-wrap gap-2">
-                        <a x-show="selectedEvent && selectedEvent.source_url" :href="selectedEvent ? selectedEvent.source_url : '#'" :target="embeddedSheetbookContext ? '_top' : '_blank'" :rel="embeddedSheetbookContext ? null : 'noopener noreferrer'" class="inline-flex items-center rounded-xl border border-indigo-200 bg-indigo-50 px-3.5 py-2 text-sm font-bold text-indigo-800 transition hover:bg-indigo-100">
+                        <a x-show="selectedEvent && selectedEvent.source_url" :href="selectedEvent ? selectedEvent.source_url : '#'" target="_blank" rel="noopener noreferrer" class="inline-flex items-center rounded-xl border border-indigo-200 bg-indigo-50 px-3.5 py-2 text-sm font-bold text-indigo-800 transition hover:bg-indigo-100">
                             <i class="fa-solid fa-arrow-up-right-from-square mr-1.5"></i>
                             <span x-text="selectedEvent && selectedEvent.source_label ? selectedEvent.source_label : '원본 서비스로 이동'"></span>
-                            <span x-show="!embeddedSheetbookContext" class="ml-1">(새 탭)</span>
+                            <span class="ml-1">(새 탭)</span>
                         </a>
                     </div>
                     <div x-show="selectedEvent && hasSelectedItemMessageCapture()" class="flex flex-wrap items-center gap-2">
@@ -1424,12 +1405,8 @@
 {{ calendar_owner_options_json|json_script:"calendar-owner-options-data" }}
 {{ message_capture_limits_json|json_script:"message-capture-limits-data" }}
 {{ message_capture_urls_json|json_script:"message-capture-urls-data" }}
-{{ embedded_sheetbook_context_json|json_script:"calendar-embed-context-data" }}
-
 <script src="{% static 'classcalendar/js/message_hub.js' %}"></script>
 <script>
-const CALENDAR_EMBEDDED_IN_SHEETBOOK = {{ is_embedded_in_sheetbook|yesno:"true,false" }};
-
 function ensureCalendarToastBridge() {
     if (typeof window.showToast === 'function') return;
     const rootId = 'calendar-toast-root';
@@ -1460,12 +1437,9 @@ function ensureCalendarToastBridge() {
 ensureCalendarToastBridge();
 
 function notifyEmbeddedCalendarHeight() {
-    if (!CALENDAR_EMBEDDED_IN_SHEETBOOK) return;
 }
 
 function dispatchCalendarHostEvent(type, payload = {}) {
-    if (!CALENDAR_EMBEDDED_IN_SHEETBOOK) return;
-    document.dispatchEvent(new CustomEvent(type, { detail: payload }));
 }
 
 function copyCalendarShareUrl() {
@@ -1543,7 +1517,6 @@ function calendarApp() {
         messageArchiveLoadedOnce: false,
         messageCaptureEnabled: {{ message_capture_enabled|yesno:"true,false" }},
         messageCaptureItemTypesEnabled: {{ message_capture_item_types_enabled|yesno:"true,false" }},
-        embeddedSheetbookContext: null,
         calendarOwnerOptions: [],
         defaultCalendarOwnerId: '',
         createForm: { title: '', note: '', calendar_owner_id: '', start_date: '', end_date: '', has_time: false, start_clock: '09:00', end_clock: '10:00', end_clock_auto: true, color: 'indigo' },
@@ -1641,7 +1614,6 @@ function calendarApp() {
 
         init() {
             this.loadCalendarOwnerOptions();
-            this.loadEmbeddedSheetbookContext();
             this.loadIntegrationSettingsFromScript();
             this.loadMessageCaptureLimitsFromScript();
             this.initializeCalendarMessageHub();
@@ -1722,15 +1694,6 @@ function calendarApp() {
             } catch (e) {
                 this.calendarOwnerOptions = [];
                 this.defaultCalendarOwnerId = '';
-            }
-        },
-
-        loadEmbeddedSheetbookContext() {
-            try {
-                const raw = JSON.parse(document.getElementById('calendar-embed-context-data').textContent || '{}');
-                this.embeddedSheetbookContext = raw && raw.sheetbook_id ? raw : null;
-            } catch (e) {
-                this.embeddedSheetbookContext = null;
             }
         },
 
@@ -1942,37 +1905,7 @@ function calendarApp() {
         },
 
         registerEmbeddedActionBridge() {
-            if (!CALENDAR_EMBEDDED_IN_SHEETBOOK) return;
-            const self = this;
-            window.sheetbookCalendarBridge = {
-                openMessageCapture() {
-                    if (!self.messageCaptureEnabled) {
-                        const message = '메시지 기능이 아직 열리지 않았습니다.';
-                        self.notifyEmbeddedHost('classcalendar:action-blocked', {
-                            action: 'message-capture',
-                            message,
-                        });
-                        return { ok: false, message };
-                    }
-                    self.openMessageHub({ currentTarget: document.activeElement }, 'capture', { resetCapture: true });
-                    self.$nextTick(() => notifyEmbeddedCalendarHeight());
-                    self.notifyEmbeddedHost('classcalendar:action-opened', { action: 'message-capture' });
-                    return { ok: true };
-                },
-                openCreateEvent() {
-                    self.openCreateModalForSelectedDate();
-                    self.$nextTick(() => notifyEmbeddedCalendarHeight());
-                    self.notifyEmbeddedHost('classcalendar:action-opened', { action: 'create-event' });
-                    return { ok: true };
-                },
-                refreshEvents(options = {}) {
-                    return self.refreshEvents(options);
-                },
-            };
-            self.notifyEmbeddedHost('classcalendar:ready', {
-                sheetbook_id: self.embeddedSheetbookContext ? self.embeddedSheetbookContext.sheetbook_id : null,
-                tab_id: self.embeddedSheetbookContext ? self.embeddedSheetbookContext.tab_id : null,
-            });
+            return;
         },
 
         getCsrfToken() {
@@ -2145,7 +2078,7 @@ function calendarApp() {
         },
 
         syncPageState(overrides = {}) {
-            if (this.calendarEmbedMode === 'sheetbook' || !window.history || typeof window.history.replaceState !== 'function') {
+            if (this.calendarEmbedMode !== 'page' || !window.history || typeof window.history.replaceState !== 'function') {
                 return;
             }
             const nextUrl = this.buildPageStateUrl({
@@ -2827,10 +2760,6 @@ function calendarApp() {
                 selected_candidates: selectedCandidates,
                 selected_attachment_ids: this.messageCaptureServerAttachments.map((attachment) => attachment.id),
             };
-            if (this.embeddedSheetbookContext) {
-                body.source_sheetbook_id = this.embeddedSheetbookContext.sheetbook_id;
-                body.source_tab_id = this.embeddedSheetbookContext.tab_id;
-            }
 
             this.isCommittingMessageCapture = true;
             this.messageCaptureErrorText = '';
@@ -3447,10 +3376,6 @@ function calendarApp() {
             body.set('title', this.createForm.title);
             body.set('note', this.createForm.note || '');
             if (this.createForm.calendar_owner_id) body.set('calendar_owner_id', this.createForm.calendar_owner_id);
-            if (this.embeddedSheetbookContext) {
-                body.set('source_sheetbook_id', String(this.embeddedSheetbookContext.sheetbook_id || ''));
-                body.set('source_tab_id', String(this.embeddedSheetbookContext.tab_id || ''));
-            }
             body.set('start_time', eventTimes.start_time);
             body.set('end_time', eventTimes.end_time);
             body.set('color', this.createForm.color);
@@ -3924,8 +3849,6 @@ function calendarApp() {
                 can_edit: false,
                 is_shared_calendar: false,
                 attachments: [],
-                source_sheetbook_title: '',
-                source_tab_name: '',
                 source_url: '',
                 source_label: '',
                 message_capture_id: '',

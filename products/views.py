@@ -442,7 +442,6 @@ def product_list(request):
         _attach_product_launch_meta,
         _build_catalog_hub_context,
         _build_catalog_scenario_sections,
-        _is_sheetbook_cross_surface_hidden,
         _normalize_catalog_section_key,
     )
 
@@ -450,7 +449,7 @@ def product_list(request):
         Product.objects.filter(is_active=True).order_by('display_order', '-created_at')
     )
     product_list = _attach_product_launch_meta(list(products), user=request.user)
-    surface_products = [product for product in product_list if not _is_sheetbook_cross_surface_hidden(product)]
+    surface_products = [product for product in product_list if bool(getattr(product, "is_active", False))]
     selected_section_key = _normalize_catalog_section_key(request.GET.get('section'))
     scenario_sections = _build_catalog_scenario_sections(
         surface_products,

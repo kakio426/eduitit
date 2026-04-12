@@ -44,7 +44,6 @@ from io import BytesIO
 logger = logging.getLogger(__name__)
 CALENDAR_INTEGRATION_SOURCE = "signatures_training"
 WORKFLOW_ACTION_SEED_SESSION_KEY = "workflow_action_seeds"
-SHEETBOOK_ACTION_SEED_SESSION_KEY = "sheetbook_action_seeds"
 SIGNATURE_CREATE_DRAFT_SESSION_KEY = "signature_create_drafts"
 SIGNATURE_PROXY_MANAGER_USERNAMES = {"kakio"}
 DEFAULT_AFFILIATION_SUGGESTIONS = [
@@ -1127,47 +1126,39 @@ def _sync_expected_participants_from_shared_roster(session):
     return {"created": created, "skipped": skipped, "total": members.count(), "group_name": group.name}
 
 
-def _peek_sheetbook_seed(request, token, *, expected_action=""):
+def _peek_workflow_seed(request, token, *, expected_action=""):
     token = (token or "").strip()
     if not token:
         return None
-    for session_key in (WORKFLOW_ACTION_SEED_SESSION_KEY, SHEETBOOK_ACTION_SEED_SESSION_KEY):
-        seeds = request.session.get(session_key, {})
-        if not isinstance(seeds, dict):
-            continue
-        seed = seeds.get(token)
-        if not isinstance(seed, dict):
-            continue
-        if expected_action and seed.get("action") != expected_action:
-            continue
-        return seed
-    return None
+    seeds = request.session.get(WORKFLOW_ACTION_SEED_SESSION_KEY, {})
+    if not isinstance(seeds, dict):
+        return None
+    seed = seeds.get(token)
+    if not isinstance(seed, dict):
+        return None
+    if expected_action and seed.get("action") != expected_action:
+        return None
+    return seed
 
 
-def _pop_sheetbook_seed(request, token, *, expected_action=""):
+def _pop_workflow_seed(request, token, *, expected_action=""):
     token = (token or "").strip()
     if not token:
         return None
     found_seed = None
-    for session_key in (WORKFLOW_ACTION_SEED_SESSION_KEY, SHEETBOOK_ACTION_SEED_SESSION_KEY):
-        seeds = request.session.get(session_key, {})
-        if not isinstance(seeds, dict):
-            continue
+    seeds = request.session.get(WORKFLOW_ACTION_SEED_SESSION_KEY, {})
+    if isinstance(seeds, dict):
         seed = seeds.get(token)
-        if not isinstance(seed, dict):
-            continue
-        if expected_action and seed.get("action") != expected_action:
-            continue
-        if found_seed is None:
+        if isinstance(seed, dict) and (not expected_action or seed.get("action") == expected_action):
             found_seed = seed
-        seeds.pop(token, None)
-        request.session[session_key] = seeds
+            seeds.pop(token, None)
+            request.session[WORKFLOW_ACTION_SEED_SESSION_KEY] = seeds
     if found_seed is not None:
         request.session.modified = True
     return found_seed
 
 
-def _parse_sheetbook_signature_participants(text, max_count=300):
+def _parse_prefill_signature_participants(text, max_count=300):
     participants = []
     seen = set()
     for raw_line in str(text or "").splitlines():
@@ -1273,10 +1264,10 @@ def _build_signature_create_draft_payload(data):
         "acting_for_user": str(data.get("acting_for_user") or "").strip(),
         "proxy_participants_text": str(data.get("proxy_participants_text") or "").strip()[:5000],
         "copy_from_uuid": str(data.get("copy_from_uuid") or "").strip(),
-        "sheetbook_seed_token": str(data.get("sheetbook_seed_token") or "").strip(),
+        "prefill_seed_token": str(data.get("prefill_seed_token") or "").strip(),
         "draft_token": str(data.get("draft_token") or "").strip(),
-        "apply_sheetbook_participants": _is_truthy_flag(
-            data.get("apply_sheetbook_participants"),
+        "apply_prefill_participants": _is_truthy_flag(
+            data.get("apply_prefill_participants"),
             default=True,
         ),
         "is_active": _is_truthy_flag(data.get("is_active"), default=False),
@@ -1606,21 +1597,21 @@ def session_create(request):
         or request.GET.get("copy_from")
         or ""
     ).strip()
-    sheetbook_seed_token = (
-        request.POST.get("sheetbook_seed_token")
-        or draft_payload.get("sheetbook_seed_token", "")
+    prefill_seed_token = (
+        request.POST.get("prefill_seed_token")
+        or draft_payload.get("prefill_seed_token", "")
         or request.GET.get("sb_seed")
         or ""
     ).strip()
-    sheetbook_seed = _peek_sheetbook_seed(
+    prefill_seed = _peek_workflow_seed(
         request,
-        sheetbook_seed_token,
+        prefill_seed_token,
         expected_action="signature",
     )
-    seed_data = sheetbook_seed.get("data", {}) if isinstance(sheetbook_seed, dict) else {}
+    seed_data = prefill_seed.get("data", {}) if isinstance(prefill_seed, dict) else {}
     seed_data = seed_data if isinstance(seed_data, dict) else {}
-    seed_participants = _parse_sheetbook_signature_participants(seed_data.get("participants_text", ""))
-    prefill_source_label = (str(seed_data.get("source_label") or "").strip() if seed_data else "") or "교무수첩에서 가져온 내용으로 먼저 채워두었어요."
+    seed_participants = _parse_prefill_signature_participants(seed_data.get("participants_text", ""))
+    prefill_source_label = (str(seed_data.get("source_label") or "").strip() if seed_data else "") or "연결된 내용으로 먼저 채워두었어요."
     prefill_origin_label = str(seed_data.get("origin_label") or "").strip() if seed_data else ""
     prefill_origin_url = str(seed_data.get("origin_url") or "").strip() if seed_data else ""
     copy_source_session = None
@@ -1672,10 +1663,10 @@ def session_create(request):
     if selected_roster_group is not None:
         prefill_initial["shared_roster_group"] = str(selected_roster_group.id)
 
-    apply_sheetbook_participants = _is_truthy_flag(
-        request.POST.get("apply_sheetbook_participants")
+    apply_prefill_participants = _is_truthy_flag(
+        request.POST.get("apply_prefill_participants")
         if request.method == "POST"
-        else draft_payload.get("apply_sheetbook_participants"),
+        else draft_payload.get("apply_prefill_participants"),
         default=True,
     )
     show_additional_options = _is_truthy_flag(
@@ -1722,7 +1713,7 @@ def session_create(request):
             proxy_participants = _parse_expected_participants_text(
                 form.cleaned_data.get("proxy_participants_text", "")
             )
-            if seed_participants and apply_sheetbook_participants:
+            if seed_participants and apply_prefill_participants:
                 for participant in seed_participants:
                     _, was_created = ExpectedParticipant.objects.get_or_create(
                         training_session=session,
@@ -1759,10 +1750,10 @@ def session_create(request):
                 new_files=attachment_files,
                 attachments_to_remove=[],
             )
-            if sheetbook_seed:
-                _pop_sheetbook_seed(
+            if prefill_seed:
+                _pop_workflow_seed(
                     request,
-                    sheetbook_seed_token,
+                    prefill_seed_token,
                     expected_action="signature",
                 )
             if draft_token:
@@ -1790,7 +1781,7 @@ def session_create(request):
                 message_parts.append("서명 요청이 생성되었습니다.")
             if seed_created_count > 0:
                 message_parts.append(f"연결된 서비스에서 참석자 후보 {seed_created_count}명을 반영했습니다.")
-            elif seed_participants and apply_sheetbook_participants and seed_skipped_count > 0:
+            elif seed_participants and apply_prefill_participants and seed_skipped_count > 0:
                 message_parts.append("연결된 서비스 참석자 후보는 이미 모두 포함되어 있었어요.")
             if proxy_created_count > 0:
                 message_parts.append(f"교사가 보낸 명단 {proxy_created_count}명도 바로 넣었습니다.")
@@ -1835,14 +1826,14 @@ def session_create(request):
             'draft_token': draft_token,
             'copy_from_uuid': copy_from_uuid if copy_source_session else "",
             'copy_source_session': copy_source_session,
-            'sheetbook_seed_token': sheetbook_seed_token if seed_data else "",
-            'sheetbook_prefill_active': bool(seed_data),
-            'sheetbook_prefill_source_label': prefill_source_label if seed_data else "",
-            'sheetbook_prefill_origin_label': prefill_origin_label,
-            'sheetbook_prefill_origin_url': prefill_origin_url,
-            'sheetbook_prefill_participants_count': len(seed_participants) or len(copy_source_participants),
-            'sheetbook_prefill_participants_preview': participant_preview,
-            'apply_sheetbook_participants': apply_sheetbook_participants,
+            'prefill_seed_token': prefill_seed_token if seed_data else "",
+            'prefill_active': bool(seed_data),
+            'prefill_source_label': prefill_source_label if seed_data else "",
+            'prefill_origin_label': prefill_origin_label,
+            'prefill_origin_url': prefill_origin_url,
+            'prefill_participants_count': len(seed_participants) or len(copy_source_participants),
+            'prefill_participants_preview': participant_preview,
+            'apply_prefill_participants': apply_prefill_participants,
             'can_proxy_create': can_proxy_create,
             'is_proxy_mode': is_proxy_mode,
             'proxy_target_user': proxy_target_user,

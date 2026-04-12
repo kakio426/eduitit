@@ -152,14 +152,14 @@ class HomeViewTest(TestCase):
             is_active=True, service_type='classroom',
         )
 
-    def _create_sheetbook_product(self, title='숨김 교무수첩', *, is_active=True):
+    def _create_classroom_product(self, title='숨김 학급 도구', *, is_active=True):
         return Product.objects.create(
             title=title,
             description='표 작업',
             price=0,
             is_active=is_active,
             service_type='classroom',
-            launch_route_name='sheetbook:index',
+            launch_route_name='classcalendar:main',
         )
 
     def test_home_anonymous_200(self):
@@ -202,23 +202,23 @@ class HomeViewTest(TestCase):
         response = self.client.get(reverse('home'))
         self.assertIn('service_launcher_json', response.context)
 
-    def test_v1_home_hides_inactive_sheetbook_product(self):
-        self._create_sheetbook_product(is_active=False)
+    def test_v1_home_hides_inactive_classroom_product(self):
+        self._create_classroom_product(is_active=False)
 
         response = self.client.get(reverse('home'))
         product_titles = [product.title for product in response.context['products']]
 
-        self.assertNotIn('숨김 교무수첩', product_titles)
-        self.assertNotContains(response, '숨김 교무수첩')
+        self.assertNotIn('숨김 학급 도구', product_titles)
+        self.assertNotContains(response, '숨김 학급 도구')
 
-    def test_v1_service_launcher_json_hides_inactive_sheetbook(self):
-        self._create_sheetbook_product(is_active=False)
+    def test_v1_service_launcher_json_hides_inactive_classroom_product(self):
+        self._create_classroom_product(is_active=False)
 
         response = self.client.get(reverse('home'))
         payload = json.loads(response.context['service_launcher_json'])
         titles = [item['title'] for item in payload]
 
-        self.assertNotIn('학급 기록 보드', titles)
+        self.assertNotIn('숨김 학급 도구', titles)
 
     @override_settings(GLOBAL_SEARCH_ENABLED=False)
     def test_service_launcher_json_absent_when_global_search_disabled(self):
@@ -266,14 +266,14 @@ class HomeV2ViewTest(TestCase):
         self.client.login(username=username, password='pass1234')
         return user
 
-    def _create_sheetbook_product(self, title='숨김 교무수첩', *, is_active=True):
+    def _create_classroom_product(self, title='숨김 학급 도구', *, is_active=True):
         return Product.objects.create(
             title=title,
             description='표 작업',
             price=0,
             is_active=is_active,
             service_type='classroom',
-            launch_route_name='sheetbook:index',
+            launch_route_name='classcalendar:main',
         )
 
     def _create_try_now_products(self):
@@ -1333,18 +1333,13 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         self.assertIn('service_launcher_json', response.context)
 
-    @override_settings(SHEETBOOK_ENABLED=True, SHEETBOOK_DISCOVERY_VISIBLE=True)
-    def test_v2_home_includes_active_sheetbook_on_discovery_surfaces(self):
-        visible_product = self._create_sheetbook_product()
-        user = self._login('sheetbookvisiblev2')
+    def test_v2_home_hides_inactive_classroom_product_from_discovery_surfaces(self):
+        visible_product = self._create_classroom_product(is_active=False)
+        user = self._login('hiddenclassroomv2')
         ProductFavorite.objects.create(user=user, product=visible_product, pin_order=1)
         ProductUsageLog.objects.create(user=user, product=visible_product, action='launch', source='home_quick')
 
         response = self.client.get(reverse('home'))
-        content = response.content.decode('utf-8')
-
-        self.assertNotIn('학급 기록 보드', content)
-        self.assertNotIn('숨김 교무수첩', content)
         self.assertNotIn(visible_product.id, [item['product'].id for item in response.context.get('quick_actions', [])])
         self.assertNotIn(visible_product.id, [item['product'].id for item in response.context.get('favorite_items', [])])
         section_product_ids = []
@@ -1357,23 +1352,7 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn(visible_product.id, section_product_ids)
         self.assertNotIn(visible_product.id, [product.id for product in response.context.get('games', [])])
         search_payload = json.loads(response.context['service_launcher_json'])
-        self.assertNotIn('학급 기록 보드', [item['title'] for item in search_payload])
-
-    def test_v2_home_hides_sheetbook_when_runtime_disabled(self):
-        visible_product = self._create_sheetbook_product()
-        user = self._login('sheetbookhiddenv2')
-        ProductFavorite.objects.create(user=user, product=visible_product, pin_order=1)
-        ProductUsageLog.objects.create(user=user, product=visible_product, action='launch', source='home_quick')
-
-        response = self.client.get(reverse('home'))
-        content = response.content.decode('utf-8')
-
-        self.assertNotIn('학급 기록 보드', content)
-        self.assertNotIn(visible_product.id, [item['product'].id for item in response.context.get('quick_actions', [])])
-        self.assertNotIn(visible_product.id, [item['product'].id for item in response.context.get('favorite_items', [])])
-        self.assertNotIn('sheetbook_workspace', response.context)
-        search_payload = json.loads(response.context['service_launcher_json'])
-        self.assertNotIn('학급 기록 보드', [item['title'] for item in search_payload])
+        self.assertNotIn('숨김 학급 도구', [item['title'] for item in search_payload])
 
     def test_v2_authenticated_top_favorites_use_compact_title_only_cards(self):
         user = self._login('favoritecompact')
@@ -1440,52 +1419,6 @@ class HomeV2ViewTest(TestCase):
         self.assertEqual(build_favorite_service_title("글솜씨 뚝딱! 소식지"), "소식지")
         self.assertEqual(build_favorite_service_title("학교 예약 시스템"), "학교 예약")
         self.assertEqual(build_favorite_service_title("AI 업무 메시지 보관함"), "메시지 보관")
-
-    @override_settings(SHEETBOOK_ENABLED=True, SHEETBOOK_DISCOVERY_VISIBLE=False)
-    def test_v2_workspace_context_disabled_when_sheetbook_discovery_hidden(self):
-        from sheetbook.models import Sheetbook, SheetbookMetricEvent
-
-        user = self._login('workspacehidden')
-        Sheetbook.objects.create(owner=user, title='비노출 수첩', academic_year=2026)
-
-        response = self.client.get(reverse('home'))
-
-        self.assertNotIn('sheetbook_workspace', response.context)
-        self.assertFalse(
-            SheetbookMetricEvent.objects.filter(
-                user=user,
-                event_name='workspace_home_opened',
-            ).exists()
-        )
-
-    @override_settings(SHEETBOOK_ENABLED=True, SHEETBOOK_DISCOVERY_VISIBLE=True)
-    def test_v2_workspace_context_enabled_when_sheetbook_discovery_visible(self):
-        from sheetbook.models import Sheetbook, SheetbookMetricEvent
-
-        user = self._login('workspacevisible')
-        Sheetbook.objects.create(owner=user, title='노출 수첩', academic_year=2026)
-
-        response = self.client.get(reverse('home'))
-        content = response.content.decode('utf-8')
-
-        self.assertNotIn('sheetbook_workspace', response.context)
-        self.assertFalse(
-            SheetbookMetricEvent.objects.filter(
-                user=user,
-                event_name='workspace_home_opened',
-            ).exists()
-        )
-        self.assertNotIn('교무수첩 워크스페이스', content)
-
-    @override_settings(SHEETBOOK_ENABLED=True, SHEETBOOK_DISCOVERY_VISIBLE=True)
-    def test_v2_workspace_quick_action_uses_handoff_landing(self):
-        from sheetbook.models import Sheetbook
-
-        user = self._login('workspacehandoff')
-        Sheetbook.objects.create(owner=user, title='배부 확인 수첩', academic_year=2026)
-
-        response = self.client.get(reverse('home'))
-        self.assertNotIn('sheetbook_workspace', response.context)
 
     def test_v2_usage_based_quick_actions(self):
         """V2 사용 기록 기반 퀵 액션 반영"""
@@ -1962,7 +1895,7 @@ class HomeSupplementaryViewTest(TestCase):
             price=0,
             is_active=False,
             service_type='classroom',
-            launch_route_name='sheetbook:index',
+            launch_route_name='classcalendar:main',
         )
 
         response = self.client.get(reverse('home'))

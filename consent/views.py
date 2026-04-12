@@ -70,7 +70,6 @@ SCHEMA_UNAVAILABLE_MESSAGE = (
 )
 
 WORKFLOW_ACTION_SEED_SESSION_KEY = "workflow_action_seeds"
-SHEETBOOK_ACTION_SEED_SESSION_KEY = "sheetbook_action_seeds"
 
 
 def _normalize_audience_type(value):
@@ -162,41 +161,33 @@ def _snapshot_file_metadata(file_obj):
     return name, size, digest.hexdigest()
 
 
-def _peek_sheetbook_seed(request, token, *, expected_action=""):
+def _peek_workflow_seed(request, token, *, expected_action=""):
     token = (token or "").strip()
     if not token:
         return None
-    for session_key in (WORKFLOW_ACTION_SEED_SESSION_KEY, SHEETBOOK_ACTION_SEED_SESSION_KEY):
-        seeds = request.session.get(session_key, {})
-        if not isinstance(seeds, dict):
-            continue
-        seed = seeds.get(token)
-        if not isinstance(seed, dict):
-            continue
-        if expected_action and seed.get("action") != expected_action:
-            continue
-        return seed
-    return None
+    seeds = request.session.get(WORKFLOW_ACTION_SEED_SESSION_KEY, {})
+    if not isinstance(seeds, dict):
+        return None
+    seed = seeds.get(token)
+    if not isinstance(seed, dict):
+        return None
+    if expected_action and seed.get("action") != expected_action:
+        return None
+    return seed
 
 
-def _pop_sheetbook_seed(request, token, *, expected_action=""):
+def _pop_workflow_seed(request, token, *, expected_action=""):
     token = (token or "").strip()
     if not token:
         return None
     found_seed = None
-    for session_key in (WORKFLOW_ACTION_SEED_SESSION_KEY, SHEETBOOK_ACTION_SEED_SESSION_KEY):
-        seeds = request.session.get(session_key, {})
-        if not isinstance(seeds, dict):
-            continue
+    seeds = request.session.get(WORKFLOW_ACTION_SEED_SESSION_KEY, {})
+    if isinstance(seeds, dict):
         seed = seeds.get(token)
-        if not isinstance(seed, dict):
-            continue
-        if expected_action and seed.get("action") != expected_action:
-            continue
-        if found_seed is None:
+        if isinstance(seed, dict) and (not expected_action or seed.get("action") == expected_action):
             found_seed = seed
-        seeds.pop(token, None)
-        request.session[session_key] = seeds
+            seeds.pop(token, None)
+            request.session[WORKFLOW_ACTION_SEED_SESSION_KEY] = seeds
     if found_seed is not None:
         request.session.modified = True
     return found_seed
@@ -994,17 +985,17 @@ def consent_create_step1(request):
     audience_type = _normalize_audience_type(
         request.POST.get("audience_type") or request.GET.get("audience_type")
     )
-    sheetbook_seed_token = (
-        request.POST.get("sheetbook_seed_token")
+    prefill_seed_token = (
+        request.POST.get("prefill_seed_token")
         or request.GET.get("sb_seed")
         or ""
     ).strip()
-    sheetbook_seed = _peek_sheetbook_seed(
+    prefill_seed = _peek_workflow_seed(
         request,
-        sheetbook_seed_token,
+        prefill_seed_token,
         expected_action="consent",
     )
-    seed_data = sheetbook_seed.get("data", {}) if isinstance(sheetbook_seed, dict) else {}
+    seed_data = prefill_seed.get("data", {}) if isinstance(prefill_seed, dict) else {}
     if audience_type != SignatureRequest.AUDIENCE_GUARDIAN:
         seed_data = {}
     seed_recipients, seed_invalid_rows = (
@@ -1015,7 +1006,7 @@ def consent_create_step1(request):
         if seed_data
         else ([], [])
     )
-    prefill_source_label = (str(seed_data.get("source_label") or "").strip() if seed_data else "") or "교무수첩에서 가져온 내용으로 먼저 채워두었어요."
+    prefill_source_label = (str(seed_data.get("source_label") or "").strip() if seed_data else "") or "연결된 내용으로 먼저 채워두었어요."
     prefill_origin_label = str(seed_data.get("origin_label") or "").strip() if seed_data else ""
     prefill_origin_url = str(seed_data.get("origin_url") or "").strip() if seed_data else ""
     prefill_recipients_count = len(seed_recipients)
@@ -1102,31 +1093,31 @@ def consent_create_step1(request):
                             "수신자 자동 넣기 중 오류가 발생했습니다. 안내문을 다시 확인하고 한 번 더 시도해 주세요.",
                         )
                     else:
-                        _pop_sheetbook_seed(
+                        _pop_workflow_seed(
                             request,
-                            sheetbook_seed_token,
+                            prefill_seed_token,
                             expected_action="consent",
                         )
                         if created:
                             messages.info(
                                 request,
-                                f"교무수첩에서 가져온 수신자 {created}명을 미리 넣어두었어요.",
+                                f"연결된 서비스에서 가져온 수신자 {created}명을 미리 넣어두었어요.",
                             )
                         if invalid_seed_rows:
                             messages.warning(
                                 request,
-                                f"교무수첩 수신자 후보 {len(invalid_seed_rows)}줄은 연락처 뒤 4자리가 없어 자동으로 넣지 않았어요. 다음 단계에서 확인해 주세요.",
+                                f"연결된 수신자 후보 {len(invalid_seed_rows)}줄은 연락처 뒤 4자리가 없어 자동으로 넣지 않았어요. 다음 단계에서 확인해 주세요.",
                             )
                         return redirect("consent:recipients", request_id=consent_request.request_id)
                 else:
                     if recipients_text:
                         messages.info(
                             request,
-                            "교무수첩 수신자 자동 넣기는 꺼두었어요. 다음 단계에서 직접 추가해 주세요.",
+                            "연결된 수신자 자동 넣기는 꺼두었어요. 다음 단계에서 직접 추가해 주세요.",
                         )
-                    _pop_sheetbook_seed(
+                    _pop_workflow_seed(
                         request,
-                        sheetbook_seed_token,
+                        prefill_seed_token,
                         expected_action="consent",
                     )
                     return redirect("consent:recipients", request_id=consent_request.request_id)
@@ -1152,8 +1143,8 @@ def consent_create_step1(request):
         {
             "document_form": document_form,
             "request_form": request_form,
-            "sheetbook_seed_token": sheetbook_seed_token,
-            "sheetbook_prefill_active": bool(seed_data),
+            "prefill_seed_token": prefill_seed_token,
+            "prefill_active": bool(seed_data),
             "prefill_source_label": prefill_source_label if seed_data else "",
             "prefill_origin_label": prefill_origin_label,
             "prefill_origin_url": prefill_origin_url,

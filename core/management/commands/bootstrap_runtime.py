@@ -16,7 +16,6 @@ class Command(BaseCommand):
             ("migrate", lambda: call_command("migrate", "--noinput")),
             ("check_consent_schema", lambda: call_command("check_consent_schema")),
             ("check_collect_schema", lambda: call_command("check_collect_schema")),
-            ("check_sheetbook_rollout", self._check_sheetbook_rollout),
             ("createcachetable_if_needed", self._create_cache_table_if_needed),
             ("ensure_ssambti", lambda: call_command("ensure_ssambti")),
             ("ensure_studentmbti", lambda: call_command("ensure_studentmbti")),
@@ -43,7 +42,6 @@ class Command(BaseCommand):
             ("ensure_quickdrop", lambda: call_command("ensure_quickdrop")),
             ("ensure_ocrdesk", lambda: call_command("ensure_ocrdesk")),
             ("warm_ocrdesk", lambda: self._run_optional_command("warm_ocrdesk")),
-            ("ensure_sheetbook", lambda: self._run_optional_command("ensure_sheetbook")),
             ("ensure_parentcomm", lambda: call_command("ensure_parentcomm")),
             ("ensure_insights", lambda: call_command("ensure_insights")),
             ("ensure_docviewer", lambda: call_command("ensure_docviewer")),
@@ -74,29 +72,6 @@ class Command(BaseCommand):
             self.stdout.write(f"[bootstrap] skip createcachetable: '{cache_table}' exists")
             return
         call_command("createcachetable")
-
-    def _check_sheetbook_rollout(self):
-        if not self._command_exists("check_sheetbook_rollout"):
-            self.stdout.write("[bootstrap] skip check_sheetbook_rollout: command not available")
-            return
-
-        if getattr(settings, "SHEETBOOK_ROLLOUT_STRICT_STARTUP", False):
-            call_command("check_sheetbook_rollout", "--strict")
-        else:
-            call_command("check_sheetbook_rollout")
-
-        if getattr(settings, "SHEETBOOK_ROLLOUT_RECOMMEND_STARTUP", False):
-            raw_days = getattr(settings, "SHEETBOOK_ROLLOUT_RECOMMEND_DAYS", 14)
-            try:
-                recommend_days = int(raw_days)
-            except (TypeError, ValueError):
-                recommend_days = 14
-            if recommend_days < 1:
-                recommend_days = 14
-            if self._command_exists("recommend_sheetbook_thresholds"):
-                call_command("recommend_sheetbook_thresholds", "--days", str(recommend_days))
-            else:
-                self.stdout.write("[bootstrap] skip recommend_sheetbook_thresholds: command not available")
 
     def _run_optional_command(self, command_name, *args):
         if not self._command_exists(command_name):

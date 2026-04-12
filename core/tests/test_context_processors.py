@@ -115,47 +115,30 @@ class ServiceLauncherContextTests(TestCase):
         self.assertEqual(item["href"], reverse("hwpxchat:main"))
         self.assertFalse(item["is_external"])
 
-    @override_settings(SHEETBOOK_ENABLED=True, SHEETBOOK_DISCOVERY_VISIBLE=True)
     def test_service_launcher_json_respects_product_is_active(self):
-        Product.objects.create(
-            title="교무수첩",
-            description="표 작업",
-            price=0,
-            is_active=True,
-            service_type="classroom",
-            launch_route_name="sheetbook:index",
-        )
         Product.objects.create(
             title="학급 캘린더",
             description="일정",
             price=0,
-            is_active=False,
+            is_active=True,
             service_type="classroom",
             launch_route_name="classcalendar:main",
         )
-
-        context = search_products(self._request())
-        payload = json.loads(context["service_launcher_json"])
-        titles = [item["title"] for item in payload]
-
-        self.assertNotIn("학급 기록 보드", titles)
-        self.assertNotIn("학급 캘린더", titles)
-
-    def test_service_launcher_json_hides_sheetbook_when_runtime_disabled(self):
         Product.objects.create(
-            title="교무수첩",
+            title="숨김 학급 도구",
             description="표 작업",
             price=0,
-            is_active=True,
+            is_active=False,
             service_type="classroom",
-            launch_route_name="sheetbook:index",
+            launch_route_name="collect:landing",
         )
 
         context = search_products(self._request())
         payload = json.loads(context["service_launcher_json"])
         titles = [item["title"] for item in payload]
 
-        self.assertNotIn("학급 기록 보드", titles)
+        self.assertIn("학급 캘린더", titles)
+        self.assertNotIn("숨김 학급 도구", titles)
 
     def test_service_launcher_json_supports_external_services(self):
         Product.objects.create(

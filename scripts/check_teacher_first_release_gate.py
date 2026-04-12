@@ -17,7 +17,7 @@ BASE_COMMANDS = [
     ['python', 'manage.py', 'test', 'core.tests.test_teacher_first_guides', 'products.tests.test_teacher_first_catalog', '-v', '1'],
     ['python', 'manage.py', 'test', 'noticegen.test_workflow_followup', 'consent.test_workflow_seed_prefill', 'signatures.tests.test_workflow_seed_prefill', '-v', '1'],
     ['python', 'manage.py', 'test', 'reservations.tests.ReservationsViewTest', 'parentcomm.tests.ParentCommViewTests', '-v', '1'],
-    ['python', 'manage.py', 'test', 'tests.test_sheetbook_retired', 'classcalendar.tests.test_sheetbook_bridge', 'classcalendar.tests.test_message_capture_api', '-v', '1'],
+    ['python', 'manage.py', 'test', 'classcalendar.tests.test_entry_route', 'classcalendar.tests.test_message_capture_api', '-v', '1'],
 ]
 
 BLOCKED_PATTERNS = (
@@ -110,7 +110,7 @@ def main():
     parser = argparse.ArgumentParser(description='Teacher-first release gate runner.')
     parser.add_argument('--dry-run', action='store_true', help='Print planned checks without executing them.')
     parser.add_argument('--skip-smoke', action='store_true', help='Skip both browser smoke scripts.')
-    parser.add_argument('--skip-calendar-smoke', action='store_true', help='Deprecated compatibility flag after sheetbook retirement.')
+    parser.add_argument('--skip-calendar-smoke', action='store_true', help='Deprecated compatibility flag.')
     parser.add_argument('--skip-home-smoke', action='store_true', help='Skip home/workbench smoke.')
     parser.add_argument('--smoke-only', action='store_true', help='Run browser smoke checks only.')
     parser.add_argument('--calendar-port', type=int, default=8018)

@@ -128,7 +128,6 @@ CACHE_SIMILAR_HINT_THRESHOLD = 0.7
 SIMILAR_CANDIDATE_LIMIT = 60
 FALLBACK_ERROR_MESSAGE = "멘트 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
 WORKFLOW_ACTION_SEED_SESSION_KEY = "workflow_action_seeds"
-SHEETBOOK_ACTION_SEED_SESSION_KEY = "sheetbook_action_seeds"
 
 
 def _request_client_ip(request):
@@ -163,21 +162,19 @@ def _result_defaults():
     }
 
 
-def _peek_sheetbook_seed(request, token, *, expected_action=""):
+def _peek_workflow_seed(request, token, *, expected_action=""):
     token = (token or "").strip()
     if not token:
         return None
-    for session_key in (WORKFLOW_ACTION_SEED_SESSION_KEY, SHEETBOOK_ACTION_SEED_SESSION_KEY):
-        seeds = request.session.get(session_key, {})
-        if not isinstance(seeds, dict):
-            continue
-        seed = seeds.get(token)
-        if not isinstance(seed, dict):
-            continue
-        if expected_action and seed.get("action") != expected_action:
-            continue
-        return seed
-    return None
+    seeds = request.session.get(WORKFLOW_ACTION_SEED_SESSION_KEY, {})
+    if not isinstance(seeds, dict):
+        return None
+    seed = seeds.get(token)
+    if not isinstance(seed, dict):
+        return None
+    if expected_action and seed.get("action") != expected_action:
+        return None
+    return seed
 
 
 def _store_action_seed(request, *, action, data):
@@ -187,16 +184,15 @@ def _store_action_seed(request, *, action, data):
         "data": data,
         "created_at": timezone.now().isoformat(),
     }
-    for session_key in (WORKFLOW_ACTION_SEED_SESSION_KEY, SHEETBOOK_ACTION_SEED_SESSION_KEY):
-        seeds = request.session.get(session_key, {})
-        if not isinstance(seeds, dict):
-            seeds = {}
-        seeds[token] = seed
-        if len(seeds) > 20:
-            overflow = len(seeds) - 20
-            for old_key in list(seeds.keys())[:overflow]:
-                seeds.pop(old_key, None)
-        request.session[session_key] = seeds
+    seeds = request.session.get(WORKFLOW_ACTION_SEED_SESSION_KEY, {})
+    if not isinstance(seeds, dict):
+        seeds = {}
+    seeds[token] = seed
+    if len(seeds) > 20:
+        overflow = len(seeds) - 20
+        for old_key in list(seeds.keys())[:overflow]:
+            seeds.pop(old_key, None)
+    request.session[WORKFLOW_ACTION_SEED_SESSION_KEY] = seeds
     request.session.modified = True
     return token
 
@@ -804,7 +800,7 @@ def _render_mini_result(request, payload, *, status=200):
 def main(request):
     prefill = {}
     seed_token = (request.GET.get("sb_seed") or "").strip()
-    seed = _peek_sheetbook_seed(request, seed_token, expected_action="notice")
+    seed = _peek_workflow_seed(request, seed_token, expected_action="notice")
     if isinstance(seed, dict):
         seed_data = seed.get("data", {}) if isinstance(seed.get("data"), dict) else {}
         prefill = {
@@ -813,7 +809,7 @@ def main(request):
             "length_style": seed_data.get("length_style"),
             "keywords": seed_data.get("keywords"),
             "contexts": seed_data.get("contexts") or [],
-            "source_label": (seed_data.get("source_label") or "교무수첩에서 가져온 내용을 넣어두었어요."),
+            "source_label": (seed_data.get("source_label") or "이전에 정리한 내용을 넣어두었어요."),
             "origin_url": seed_data.get("origin_url"),
             "origin_label": seed_data.get("origin_label"),
         }

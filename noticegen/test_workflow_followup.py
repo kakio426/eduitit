@@ -84,9 +84,7 @@ class NoticeGenWorkflowFollowupTests(TestCase):
         seed_token = response["Location"].split("sb_seed=")[-1]
         session = self.client.session
         workflow_seed = session["workflow_action_seeds"][seed_token]
-        legacy_seed = session["sheetbook_action_seeds"][seed_token]
         self.assertEqual(workflow_seed["action"], "consent")
-        self.assertEqual(legacy_seed["action"], "consent")
         self.assertIn("origin_url", workflow_seed["data"])
         self.assertEqual(workflow_seed["data"]["message"], "내일은 준비물을 꼭 챙겨 주세요.")
 
@@ -107,8 +105,6 @@ class NoticeGenWorkflowFollowupTests(TestCase):
         seed_token = response["Location"].split("sb_seed=")[-1]
         session = self.client.session
         workflow_seed = session["workflow_action_seeds"][seed_token]
-        legacy_seed = session["sheetbook_action_seeds"][seed_token]
         self.assertEqual(workflow_seed["action"], "signature")
-        self.assertEqual(legacy_seed["action"], "signature")
         self.assertIn("origin_url", workflow_seed["data"])
         self.assertIn("확인 서명", workflow_seed["data"]["title"])

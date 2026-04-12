@@ -1,7 +1,7 @@
 # 교사 여정 크로스 서비스 QA 체크리스트 (2026-03-01)
 
 ## 범위
-- 대상 서비스: `reservations`, `happy_seed`, `core(SNS)`, `sheetbook`
+- 대상 서비스: `reservations`, `happy_seed`, `core(SNS)`, `classroom_workspace`
 - 연계 점검: `collect`, `classcalendar` (새 탭 명시성)
 - 기준: `CLAUDE.md`의 교사 여정 UX 가드레일
   - 다음 행동 가시성
@@ -31,7 +31,7 @@
 6. 서비스 플로우 회귀 테스트
 - 명령:
   - `python manage.py test reservations.tests happy_seed.tests.test_flow collect.tests.test_collect_flow classcalendar.tests.test_integration_links_and_settings`
-  - `python manage.py test sheetbook.tests.SheetbookOwnershipTests core.tests.test_home_view`
+  - `python manage.py test classroom_workspace.tests.SheetbookOwnershipTests core.tests.test_home_view`
 - 결과: PASS (총 103 tests)
 
 ## 서비스별 확인 포인트 (교사 기준)
@@ -50,7 +50,7 @@
 - 좋아요/댓글 작성/댓글 신고/수정 저장: 처리중 표시 + 실패 알림
 - 뉴스 링크 카드: `원문 보기 (새 탭)` 문구 확인
 
-4. `sheetbook`
+4. `classroom_workspace`
 - 탭 추가/이름변경/위로/아래로/삭제: 처리중 표시 + 클릭 잠금
 - 삭제 확인창 이후 요청중 인지가 가능한지 확인
 
@@ -80,7 +80,7 @@
 | reservations 저장/삭제 처리중 인지 | PC / Chrome |  |  |
 | happy_seed 학생/동의 액션 처리중 인지 | PC / Chrome |  |  |
 | core SNS 작성/좋아요/댓글 처리중 인지 | PC / Chrome |  |  |
-| sheetbook 탭 액션 처리중 인지 | PC / Chrome |  |  |
+| classroom_workspace 탭 액션 처리중 인지 | PC / Chrome |  |  |
 | collect/classcalendar 새 탭 표기 + 동작 | PC / Chrome |  |  |
 | 핵심 액션 처리중 인지 | Mobile / Safari |  |  |
 | 새 탭 표기 + 동작 | Mobile / Safari |  |  |

@@ -12,7 +12,6 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('classcalendar', '0012_calendarmessagecapture_confirmed_item_type_and_more'),
-        ('sheetbook', '0007_sheetbook_preferred_calendar_tab_and_more'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
@@ -83,24 +82,6 @@ class Migration(migrations.Migration):
                 'ordering': ['sort_order', 'created_at', 'id'],
             },
         ),
-        migrations.CreateModel(
-            name='HwpxWorkItemSync',
-            fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('calendar_enabled', models.BooleanField(default=True)),
-                ('last_committed_at', models.DateTimeField(blank=True, null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('calendar_event', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='hwpx_work_item_syncs', to='classcalendar.calendarevent')),
-                ('row', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='hwpx_work_item_syncs', to='sheetbook.sheetrow')),
-                ('sheetbook', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='hwpx_work_item_syncs', to='sheetbook.sheetbook')),
-                ('tab', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='hwpx_work_item_syncs', to='sheetbook.sheettab')),
-                ('work_item', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='syncs', to='hwpxchat.hwpxworkitem')),
-            ],
-            options={
-                'ordering': ['-updated_at', '-created_at'],
-            },
-        ),
         migrations.AddIndex(
             model_name='hwpxdocument',
             index=models.Index(fields=['owner', 'created_at'], name='hwpxchat_hw_owner_i_e35dc0_idx'),
@@ -120,17 +101,5 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name='hwpxworkitem',
             index=models.Index(fields=['document', 'sort_order'], name='hwpxchat_hw_documen_644eec_idx'),
-        ),
-        migrations.AddIndex(
-            model_name='hwpxworkitemsync',
-            index=models.Index(fields=['sheetbook', 'updated_at'], name='hwpxchat_hw_sheetbo_7b7ee7_idx'),
-        ),
-        migrations.AddIndex(
-            model_name='hwpxworkitemsync',
-            index=models.Index(fields=['work_item', 'sheetbook'], name='hwpxchat_hw_work_it_63afd3_idx'),
-        ),
-        migrations.AddConstraint(
-            model_name='hwpxworkitemsync',
-            constraint=models.UniqueConstraint(fields=('work_item', 'sheetbook'), name='hwpx_work_item_sync_unique_item_per_sheetbook'),
         ),
     ]

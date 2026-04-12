@@ -151,8 +151,8 @@ class ProductDetailHeroTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "한 줄 가치 제안")
         self.assertContains(response, "누구를 위한가")
-        self.assertContains(response, "로그인 필요 여부")
-        self.assertContains(response, "1분 데모/스크린샷")
+        self.assertContains(response, "접속")
+        self.assertContains(response, "미리보기")
         self.assertContains(response, "대상 고르기")
         self.assertContains(response, "문구 만들기")
         self.assertContains(response, SERVICE_GUIDE_PADLET_URL)
@@ -247,17 +247,9 @@ class ProductDetailHeroTests(TestCase):
         self.assertEqual(teacher_response.context["start_href"], reverse("happy_seed:dashboard"))
 
 
-class SheetbookDiscoveryVisibilityTests(TestCase):
+class ClassroomCatalogVisibilityTests(TestCase):
     def setUp(self):
         self.client = Client()
-        self.sheetbook_product = Product.objects.create(
-            title="교무수첩",
-            description="표 작업",
-            price=0,
-            is_active=True,
-            service_type='classroom',
-            launch_route_name='sheetbook:index',
-        )
         self.calendar_product = Product.objects.create(
             title="학급 캘린더",
             description="일정 관리",
@@ -293,34 +285,36 @@ class SheetbookDiscoveryVisibilityTests(TestCase):
             is_published=True,
         )
 
-    @override_settings(SHEETBOOK_ENABLED=True, SHEETBOOK_DISCOVERY_VISIBLE=True)
-    def test_catalog_shows_active_sheetbook_and_calendar_products(self):
+    def test_catalog_shows_active_classroom_and_calendar_products(self):
         response = self.client.get(reverse('product_list'))
 
         product_titles = [product.title for product in response.context['products']]
         expected_count = Product.objects.filter(is_active=True).count()
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn('교무수첩', product_titles)
         self.assertIn('학급 캘린더', product_titles)
         self.assertIn('운영 도구', product_titles)
-        self.assertContains(response, '학급 기록 보드')
         self.assertEqual(response.context['total_count'], expected_count)
         self.assertEqual(response.context['catalog_hub']['title'], '메인 캘린더는 홈에서 시작합니다')
 
-    def test_catalog_hides_sheetbook_when_runtime_disabled(self):
+    def test_catalog_hides_inactive_classroom_product(self):
+        hidden_product = Product.objects.create(
+            title="숨김 학급 도구",
+            description="표 작업",
+            price=0,
+            is_active=False,
+            service_type='classroom',
+            launch_route_name='collect:landing',
+        )
         response = self.client.get(reverse('product_list'))
 
         product_titles = [product.title for product in response.context['products']]
 
         self.assertEqual(response.status_code, 200)
-        self.assertNotIn('교무수첩', product_titles)
         self.assertIn('학급 캘린더', product_titles)
-        self.assertNotContains(response, '학급 기록 보드')
+        self.assertNotIn(hidden_product.title, product_titles)
 
-    def test_catalog_hides_sheetbook_and_calendar_when_inactive(self):
-        self.sheetbook_product.is_active = False
-        self.sheetbook_product.save(update_fields=['is_active'])
+    def test_catalog_hides_calendar_when_inactive(self):
         self.calendar_product.is_active = False
         self.calendar_product.save(update_fields=['is_active'])
 
@@ -330,7 +324,6 @@ class SheetbookDiscoveryVisibilityTests(TestCase):
         expected_count = Product.objects.filter(is_active=True).count()
 
         self.assertEqual(response.status_code, 200)
-        self.assertNotIn('교무수첩', product_titles)
         self.assertNotIn('학급 캘린더', product_titles)
         self.assertIn('운영 도구', product_titles)
         self.assertNotContains(response, '교무수첩')

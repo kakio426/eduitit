@@ -83,7 +83,7 @@ class Migration(migrations.Migration):
             name='CalendarEventSyncTask',
             fields=[
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('target_type', models.CharField(choices=[('sheetbook_schedule', 'Sheetbook Schedule')], default='sheetbook_schedule', max_length=30)),
+                ('target_type', models.CharField(choices=[('calendar_sync', 'Calendar Sync')], default='calendar_sync', max_length=30)),
                 ('status', models.CharField(choices=[('pending', 'Pending'), ('success', 'Success'), ('failed', 'Failed')], default='pending', max_length=20)),
                 ('retry_count', models.PositiveIntegerField(default=0)),
                 ('target_ref', models.JSONField(blank=True, default=dict)),

@@ -501,9 +501,9 @@ class NoticeGenViewTests(TestCase):
         self.assertEqual(response.status_code, 429)
         self.assertContains(response, "짧은 시간에 생성 요청이 많았습니다.", status_code=429)
 
-    def test_main_prefills_from_sheetbook_seed(self):
+    def test_main_prefills_from_workflow_seed(self):
         session = self.client.session
-        session["sheetbook_action_seeds"] = {
+        session["workflow_action_seeds"] = {
             "seed-token": {
                 "action": "notice",
                 "data": {

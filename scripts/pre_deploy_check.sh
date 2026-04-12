@@ -15,19 +15,7 @@ if [ -n "$UNAPPLIED" ]; then
 fi
 echo "  OK - All migrations applied"
 
-echo "[3/4] Running sheetbook preflight..."
-if python manage.py help check_sheetbook_preflight >/dev/null 2>&1; then
-    if [ "${SHEETBOOK_PREFLIGHT_STRICT:-False}" = "True" ] || [ "${SHEETBOOK_ENABLED:-False}" = "True" ]; then
-        python manage.py check_sheetbook_preflight --strict --recommend-days "${SHEETBOOK_ROLLOUT_RECOMMEND_DAYS:-14}"
-    else
-        python manage.py check_sheetbook_preflight --recommend-days "${SHEETBOOK_ROLLOUT_RECOMMEND_DAYS:-14}"
-    fi
-else
-    echo "  SKIP - check_sheetbook_preflight command not available"
-fi
-echo "  OK"
-
-echo "[4/4] Checking requirements.txt syntax..."
+echo "[3/3] Checking requirements.txt syntax..."
 pip check 2>/dev/null || echo "  WARNING: pip check found issues (non-blocking)"
 
 echo ""

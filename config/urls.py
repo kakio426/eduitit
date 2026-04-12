@@ -85,8 +85,5 @@ urlpatterns = [
     path('m/', include('studentmbti.urls', namespace='studentmbti_short')),  # 짧은 URL 별칭에 고유 네임스페이스 부여
 ]
 
-if 'sheetbook.apps.SheetbookConfig' in settings.INSTALLED_APPS:
-    urlpatterns.append(path('sheetbook/', include('sheetbook.urls', namespace='sheetbook')))
-
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

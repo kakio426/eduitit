@@ -52,7 +52,7 @@
 ### Phase C. 공통 서비스 셸 전사 확장
 상태: 우선 서비스군 + 남은 후보 완료
 
-- 완료 서비스: `sheetbook`, `classcalendar`, `noticegen`, `timetable`, `parentcomm`, `reservations`, `consent`, `signatures`, `hwpxchat`, `textbooks`, `slidesmith`, `happy_seed`
+- 완료 서비스: `classroom_workspace`, `classcalendar`, `noticegen`, `timetable`, `parentcomm`, `reservations`, `consent`, `signatures`, `hwpxchat`, `textbooks`, `slidesmith`, `happy_seed`
 - 남은 후보 없음
 - 상세 기준: [CHECKLIST_teacher_first_service_shell_2026-03-08.md](/C:/Users/kakio/eduitit/docs/plans/CHECKLIST_teacher_first_service_shell_2026-03-08.md)
 

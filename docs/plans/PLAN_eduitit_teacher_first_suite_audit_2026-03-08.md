@@ -16,7 +16,7 @@
 
 - `home_authenticated_v2.html` + `products/list.html` teacher-first 재설계는 현재 기준선 작업으로 취급한다.
 - `noticegen`, `timetable`, `parentcomm`, `reservations` 첫 화면 표준화는 대표 서비스 셸 기준선으로 취급한다.
-- `sheetbook + calendar + message`는 별도 정리된 canonical workspace 기준선으로 취급한다.
+- `classroom_workspace + calendar + message`는 별도 정리된 canonical workspace 기준선으로 취급한다.
 - 다음 전역 작업은 이 기준선 위에서만 진행한다.
 
 ## 2. 현재 구조 요약
@@ -60,7 +60,7 @@
 
 ### B. 대표 교사형 서비스 문제
 
-1. `sheetbook/classcalendar/message`
+1. `classroom_workspace/classcalendar/message`
 - 최근 정리로 많이 개선됐지만, 여전히 전체 제품 구조 안에서는 교사 작업의 canonical workspace로 충분히 승격되지 못했다.
 - 홈에서 강하게 보이긴 하나, 다른 섹션/즐겨찾기/SNS와 같은 층위에서 경쟁한다.
 
@@ -123,7 +123,7 @@
 - `SNS 위젯` 운영 메뉴
 - `reservations` 관리자 대시보드 링크
 - `classcalendar`의 공유/협업/연동 묶음
-- `sheetbook/detail`의 탭 관리
+- `classroom_workspace/detail`의 탭 관리
 
 3. 상위 탐색 구조가 과도하게 평면적이다.
 - 교사형 핵심 도구와 실험형/게임형/외부형 도구가 같은 깊이로 나열된다.
@@ -171,7 +171,7 @@
 - 공유/협업/설정/관리/설명은 접힘 또는 2차 위치
 
 적용 우선 서비스:
-- `sheetbook`
+- `classroom_workspace`
 - `classcalendar`
 - `parentcomm`
 - `reservations`
@@ -220,7 +220,7 @@
 - [ ] 홈에서 `지금 할 일` 외의 영역을 절반 이하로 줄인다.
 - [ ] `products/list.html`를 teacher-first 카탈로그로 교체한다.
 - [ ] `SNS 위젯`의 홈 기본 노출 여부를 재결정한다.
-- [ ] `sheetbook/classcalendar`를 홈의 canonical workspace로 고정한다.
+- [ ] `classroom_workspace/classcalendar`를 홈의 canonical workspace로 고정한다.
 - [ ] `parentcomm`를 `오늘 처리 / 기록 / 설정` 구조로 재배치한다.
 - [ ] `reservations` 첫 화면에서 예약 외의 상태/정책 노출을 줄인다.
 - [ ] `timetable`를 `업로드 -> 점검 -> 배치 -> 반영` 단계형으로 분리한다.

@@ -69,17 +69,11 @@ class TeacherJourneyUIContractTests(SimpleTestCase):
         self.assertIn("hx-indicator=", dashboard_sns)
         self.assertIn("hx-disabled-elt=", dashboard_sns)
 
-    def test_sheetbook_collect_classcalendar_contracts(self):
-        sheetbook_detail = self._read("sheetbook/templates/sheetbook/detail.html")
-        sheetbook_tab_list = self._read("sheetbook/templates/sheetbook/_tab_list.html")
+    def test_collect_classcalendar_contracts(self):
         collect_submit = self._read("collect/templates/collect/submit.html")
         collect_submissions = self._read("collect/templates/collect/partials/submissions_list.html")
         classcalendar_main = self._read("classcalendar/templates/classcalendar/main.html")
 
-        self.assertIn("hx-indicator=", sheetbook_detail)
-        self.assertIn("hx-disabled-elt=", sheetbook_detail)
-        self.assertIn("hx-indicator=", sheetbook_tab_list)
-        self.assertIn("hx-disabled-elt=", sheetbook_tab_list)
         self.assertIn("(새 탭)", collect_submit)
         self.assertIn("(새 탭)", collect_submissions)
         self.assertIn("(새 탭)", classcalendar_main)

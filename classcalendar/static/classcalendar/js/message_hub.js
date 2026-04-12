@@ -1600,10 +1600,6 @@ function initCalendarMessageHub(host, options = {}) {
                 selected_candidates: selectedCandidates,
                 selected_attachment_ids: this.messageCaptureServerAttachments.map((attachment) => attachment.id),
             };
-            if (this.embeddedSheetbookContext) {
-                body.source_sheetbook_id = this.embeddedSheetbookContext.sheetbook_id;
-                body.source_tab_id = this.embeddedSheetbookContext.tab_id;
-            }
             this.isCommittingMessageCapture = true;
             this.messageCaptureErrorText = '';
             try {

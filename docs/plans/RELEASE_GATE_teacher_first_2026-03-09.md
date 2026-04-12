@@ -14,9 +14,9 @@
 - `python manage.py test core.tests.test_home_view -v 1`
 - `python manage.py test noticegen.test_workflow_followup consent.test_workflow_seed_prefill signatures.tests.test_workflow_seed_prefill -v 1`
 - `python manage.py test reservations.tests.ReservationsViewTest parentcomm.tests.ParentCommViewTests -v 1`
-- `python manage.py test tests.test_sheetbook_navigation_contracts classcalendar.tests.test_sheetbook_bridge classcalendar.tests.test_message_capture_api -v 1`
+- `python manage.py test classcalendar.tests.test_entry_route classcalendar.tests.test_entry_route classcalendar.tests.test_message_capture_api -v 1`
 - 홈 inline JS `node --check`
-- `python scripts/run_sheetbook_calendar_embed_smoke.py --port 8018`
+- `python scripts/run_classroom_workspace_calendar_embed_smoke.py --port 8018`
 - `python scripts/run_teacher_first_home_smoke.py --port 8020`
 
 ## Runtime Smoke
@@ -67,7 +67,7 @@
 - 2026-03-09 local escalated full gate: `PASS`
 - `python scripts/check_teacher_first_release_gate.py` 통과
 - `python scripts/run_teacher_first_home_smoke.py --port 8020` desktop / tablet / mobile PASS
-- `python scripts/run_sheetbook_calendar_embed_smoke.py --port 8018` PASS
+- `python scripts/run_classroom_workspace_calendar_embed_smoke.py --port 8018` PASS
 
 ## Pass / Fail
 - 위 명령과 정적 계약 검사, smoke가 모두 통과하면 `PASS`

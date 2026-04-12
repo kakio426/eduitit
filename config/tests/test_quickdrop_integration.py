@@ -19,9 +19,8 @@ class QuickdropProductionIntegrationTests(SimpleTestCase):
             called_commands.append(name)
 
         with patch("core.management.commands.bootstrap_runtime.call_command", side_effect=fake_call_command):
-            with patch.object(Command, "_check_sheetbook_rollout", lambda self: None):
-                with patch.object(Command, "_create_cache_table_if_needed", lambda self: None):
-                    with patch.object(Command, "_run_optional_command", lambda self, *args: None):
-                        command.handle()
+            with patch.object(Command, "_create_cache_table_if_needed", lambda self: None):
+                with patch.object(Command, "_run_optional_command", lambda self, *args: None):
+                    command.handle()
 
         self.assertIn("ensure_quickdrop", called_commands)

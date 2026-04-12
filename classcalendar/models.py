@@ -464,7 +464,7 @@ class CalendarEventAttachment(models.Model):
 
 class CalendarEventSyncTask(models.Model):
     class TargetType(models.TextChoices):
-        SHEETBOOK_SCHEDULE = "sheetbook_schedule", "Sheetbook Schedule"
+        CALENDAR_SYNC = "calendar_sync", "Calendar Sync"
 
     class SyncStatus(models.TextChoices):
         PENDING = "pending", "Pending"
@@ -480,7 +480,7 @@ class CalendarEventSyncTask(models.Model):
     target_type = models.CharField(
         max_length=30,
         choices=TargetType.choices,
-        default=TargetType.SHEETBOOK_SCHEDULE,
+        default=TargetType.CALENDAR_SYNC,
     )
     status = models.CharField(
         max_length=20,

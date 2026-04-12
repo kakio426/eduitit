@@ -28,7 +28,6 @@ import logging
 logger = logging.getLogger(__name__)
 OWNED_RESERVATIONS_SESSION_KEY = 'owned_reservation_ids'
 WORKFLOW_ACTION_SEED_SESSION_KEY = 'workflow_action_seeds'
-SHEETBOOK_ACTION_SEED_SESSION_KEY = 'sheetbook_action_seeds'
 RESERVATION_FOLLOWUP_SESSION_KEY = 'reservation_followup_context'
 RESERVATION_OWNER_COOKIE_NAME = 'reservation_owner_key'
 RESERVATION_OWNER_COOKIE_MAX_AGE = 60 * 60 * 24 * 180
@@ -292,16 +291,15 @@ def _store_action_seed(request, *, action, data):
         'data': data,
         'created_at': timezone.now().isoformat(),
     }
-    for session_key in (WORKFLOW_ACTION_SEED_SESSION_KEY, SHEETBOOK_ACTION_SEED_SESSION_KEY):
-        seeds = request.session.get(session_key, {})
-        if not isinstance(seeds, dict):
-            seeds = {}
-        seeds[token] = seed
-        if len(seeds) > 20:
-            overflow = len(seeds) - 20
-            for old_key in list(seeds.keys())[:overflow]:
-                seeds.pop(old_key, None)
-        request.session[session_key] = seeds
+    seeds = request.session.get(WORKFLOW_ACTION_SEED_SESSION_KEY, {})
+    if not isinstance(seeds, dict):
+        seeds = {}
+    seeds[token] = seed
+    if len(seeds) > 20:
+        overflow = len(seeds) - 20
+        for old_key in list(seeds.keys())[:overflow]:
+            seeds.pop(old_key, None)
+    request.session[WORKFLOW_ACTION_SEED_SESSION_KEY] = seeds
     request.session.modified = True
     return token
 

@@ -11,7 +11,6 @@ import os
 import sys
 import dj_database_url
 from pathlib import Path
-from importlib.util import find_spec
 from django.core.exceptions import ImproperlyConfigured
 from config.database import apply_database_network_overrides, normalize_database_url
 
@@ -647,37 +646,6 @@ def _rollout_env_csv(name, aliases=None):
     return [item.strip() for item in str(raw).split(',') if item.strip()]
 
 
-SHEETBOOK_ENABLED = _rollout_env_bool('SHEETBOOK_ENABLED', default='False', aliases=('sheetbook_enabled',))
-SHEETBOOK_DISCOVERY_VISIBLE = _rollout_env_bool(
-    'SHEETBOOK_DISCOVERY_VISIBLE',
-    default='False',
-    aliases=('sheetbook_discovery_visible',),
-)
-SHEETBOOK_APP_AVAILABLE = find_spec('sheetbook.apps') is not None
-if SHEETBOOK_APP_AVAILABLE:
-    INSTALLED_APPS.append('sheetbook.apps.SheetbookConfig')
-elif SHEETBOOK_ENABLED:
-    print('[SHEETBOOK] disabled: sheetbook package not available')
-    SHEETBOOK_ENABLED = False
-    SHEETBOOK_DISCOVERY_VISIBLE = False
-SHEETBOOK_BETA_USERNAMES = _rollout_env_csv('SHEETBOOK_BETA_USERNAMES', aliases=('sheetbook_beta_usernames',))
-SHEETBOOK_BETA_EMAILS = _rollout_env_csv('SHEETBOOK_BETA_EMAILS', aliases=('sheetbook_beta_emails',))
-SHEETBOOK_BETA_USER_IDS = _rollout_env_csv('SHEETBOOK_BETA_USER_IDS', aliases=('sheetbook_beta_user_ids',))
-SHEETBOOK_SCHEDULE_DEFAULT_DURATION_MINUTES = int(os.environ.get('SHEETBOOK_SCHEDULE_DEFAULT_DURATION_MINUTES', '50'))
-SHEETBOOK_PERIOD_FIRST_CLASS_HOUR = int(os.environ.get('SHEETBOOK_PERIOD_FIRST_CLASS_HOUR', '9'))
-SHEETBOOK_PERIOD_FIRST_CLASS_MINUTE = int(os.environ.get('SHEETBOOK_PERIOD_FIRST_CLASS_MINUTE', '0'))
-SHEETBOOK_GRID_BULK_BATCH_SIZE = int(os.environ.get('SHEETBOOK_GRID_BULK_BATCH_SIZE', '400'))
-SHEETBOOK_WORKSPACE_TO_CREATE_TARGET_RATE = float(os.environ.get('SHEETBOOK_WORKSPACE_TO_CREATE_TARGET_RATE', '60'))
-SHEETBOOK_WORKSPACE_CREATE_TO_ACTION_TARGET_RATE = float(
-    os.environ.get('SHEETBOOK_WORKSPACE_CREATE_TO_ACTION_TARGET_RATE', '50')
-)
-SHEETBOOK_WORKSPACE_TO_CREATE_MIN_SAMPLE = int(os.environ.get('SHEETBOOK_WORKSPACE_TO_CREATE_MIN_SAMPLE', '5'))
-SHEETBOOK_WORKSPACE_CREATE_TO_ACTION_MIN_SAMPLE = int(
-    os.environ.get('SHEETBOOK_WORKSPACE_CREATE_TO_ACTION_MIN_SAMPLE', '5')
-)
-SHEETBOOK_ROLLOUT_STRICT_STARTUP = os.environ.get('SHEETBOOK_ROLLOUT_STRICT_STARTUP', 'False').lower() in ('true', '1', 'yes')
-SHEETBOOK_ROLLOUT_RECOMMEND_STARTUP = os.environ.get('SHEETBOOK_ROLLOUT_RECOMMEND_STARTUP', 'False').lower() in ('true', '1', 'yes')
-SHEETBOOK_ROLLOUT_RECOMMEND_DAYS = int(os.environ.get('SHEETBOOK_ROLLOUT_RECOMMEND_DAYS', '14'))
 FEATURE_MESSAGE_CAPTURE_ENABLED = _rollout_env_bool(
     'FEATURE_MESSAGE_CAPTURE_ENABLED',
     default='False',

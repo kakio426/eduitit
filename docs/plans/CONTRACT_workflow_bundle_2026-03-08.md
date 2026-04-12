@@ -5,9 +5,9 @@ Teacher-first 서비스 묶음이 `도구 전환`이 아니라 `업무 이어서
 
 ## Session Keys
 - canonical: `workflow_action_seeds`
-- compatibility: `sheetbook_action_seeds`
+- compatibility: `workflow_action_seeds`
 
-현재 구현은 두 키에 같은 seed를 함께 저장합니다. 기존 `sheetbook` 연동은 그대로 유지하고, 새 서비스 연동은 canonical key를 우선으로 봅니다.
+현재 구현은 두 키에 같은 seed를 함께 저장합니다. 기존 `classroom_workspace` 연동은 그대로 유지하고, 새 서비스 연동은 canonical key를 우선으로 봅니다.
 
 ## Seed Shape
 ```json
@@ -33,7 +33,7 @@ Teacher-first 서비스 묶음이 `도구 전환`이 아니라 `업무 이어서
 ## Current Bundle Coverage
 - `noticegen -> consent:create_step1` (validated)
 - `noticegen -> signatures:create` (validated)
-- `sheetbook -> noticegen/consent/signatures` legacy seed compatibility 유지 (validated)
+- `classroom_workspace -> noticegen/consent/signatures` legacy seed compatibility 유지 (validated)
 - `reservations -> noticegen` (validated)
 - `reservations -> parentcomm` (validated)
 

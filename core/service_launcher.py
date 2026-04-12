@@ -8,14 +8,12 @@ logger = logging.getLogger(__name__)
 
 
 CALENDAR_HUB_PUBLIC_NAME = "학급 캘린더"
-SHEETBOOK_PUBLIC_NAME = "학급 기록 보드"
 
 PUBLIC_SERVICE_TITLE_BY_ROUTE = {
     "classcalendar:main": CALENDAR_HUB_PUBLIC_NAME,
     "messagebox:main": "AI 업무 메시지 보관함",
     "schoolcomm:main": "끼리끼리 채팅방",
     "quickdrop:landing": "바로전송",
-    "sheetbook:index": SHEETBOOK_PUBLIC_NAME,
 }
 
 CLASS_ACTIVITY_ROUTE_NAMES = {
@@ -465,23 +463,8 @@ def resolve_product_launch_url(product, user=None):
     return reverse("product_detail", kwargs={"pk": product.pk}), False
 
 
-def is_sheetbook_product(product):
-    route_name = product_route_name(product)
-    title = product_title_text(product)
-    if route_name.startswith("sheetbook:"):
-        return True
-    if route_name:
-        return False
-    return title in {"교무수첩", SHEETBOOK_PUBLIC_NAME}
-
-
 def is_calendar_hub_product(product):
     return product_route_name(product) == "classcalendar:main"
-
-
-def is_sheetbook_cross_surface_hidden(product):
-    return not bool(getattr(product, "is_active", False))
-
 
 def get_public_product_name(product):
     route_name = product_route_name(product)
@@ -495,8 +478,12 @@ def replace_public_service_terms(text, product=None):
     cleaned = sanitize_public_display_text(text)
     if not cleaned:
         return ""
-    replacement = get_public_product_name(product) if product is not None else SHEETBOOK_PUBLIC_NAME
-    swapped = cleaned.replace("교무수첩", replacement).replace("교무 수첩", replacement)
+    replacement = get_public_product_name(product) if product is not None else "서비스"
+    swapped = (
+        cleaned.replace("교무수첩", replacement)
+        .replace("교무 수첩", replacement)
+        .replace("학급 기록 보드", replacement)
+    )
     return sanitize_public_display_text(swapped)
 
 

@@ -8,13 +8,13 @@
 1. `main`
 - 기존 서비스(artclass/core/seed_quiz/signatures 등) 개발과 배포는 기본적으로 여기서 진행한다.
 
-2. `feature/sheetbook`
-- `sheetbook` 관련 작업 전용 브랜치로 사용한다.
-- `sheetbook`과 무관한 파일 변경은 커밋 대상에서 제외한다.
+2. `feature/classroom_workspace`
+- `classroom_workspace` 관련 작업 전용 브랜치로 사용한다.
+- `classroom_workspace`과 무관한 파일 변경은 커밋 대상에서 제외한다.
 
 3. `spike/*`
 - 실험/프로토타입 전용 브랜치.
-- 검증 전에는 `main`, `feature/sheetbook`으로 직접 반영하지 않는다.
+- 검증 전에는 `main`, `feature/classroom_workspace`으로 직접 반영하지 않는다.
 
 ## 2) 작업 시작 전 30초 체크
 
@@ -31,7 +31,7 @@ git log --oneline -n 3
 ### A. Sheetbook 개발
 
 ```bash
-git checkout feature/sheetbook
+git checkout feature/classroom_workspace
 git pull
 ```
 
@@ -39,11 +39,11 @@ git pull
 
 ```bash
 # 커밋 전 수동 가드 점검
-python scripts/branch_path_guard.py --branch feature/sheetbook --staged
+python scripts/branch_path_guard.py --branch feature/classroom_workspace --staged
 
-git add <sheetbook 관련 파일>
+git add <classroom_workspace 관련 파일>
 git commit -m "..."
-git push origin feature/sheetbook
+git push origin feature/classroom_workspace
 ```
 
 ### B. 기존 서비스 고도화 (Sheetbook 아님)
@@ -68,15 +68,15 @@ git push origin main
 ```bash
 git checkout main
 git pull
-git checkout -b release/sheetbook-YYYYMMDD
-git cherry-pick <sheetbook 커밋들>
+git checkout -b release/classroom_workspace-YYYYMMDD
+git cherry-pick <classroom_workspace 커밋들>
 ```
 
 검증 후:
 
 ```bash
 git checkout main
-git merge --ff-only release/sheetbook-YYYYMMDD
+git merge --ff-only release/classroom_workspace-YYYYMMDD
 git push origin main
 ```
 
@@ -114,7 +114,7 @@ git branch backup/<name>-YYYYMMDD
 예:
 
 ```bash
-git branch backup/feature-sheetbook-before-clean-20260302
+git branch backup/feature-classroom_workspace-before-clean-20260302
 ```
 
 ## 5) 문제 발생 시 복구 순서
@@ -140,20 +140,20 @@ git stash apply "stash@{0}"
 아래 문장을 그대로 사용해도 된다.
 
 1. Sheetbook 작업 지시
-- `feature/sheetbook에서 sheetbook 관련 파일만 수정해. 커밋 전 가드 검사하고 위반 파일이 있으면 멈추고 보고해.`
+- `feature/classroom_workspace에서 classroom_workspace 관련 파일만 수정해. 커밋 전 가드 검사하고 위반 파일이 있으면 멈추고 보고해.`
 
 2. 기존 서비스 작업 지시
-- `main에서 artclass만 수정해. sheetbook 파일이 섞이면 제외하고 진행해.`
+- `main에서 artclass만 수정해. classroom_workspace 파일이 섞이면 제외하고 진행해.`
 
 3. 병합 지시
-- `feature/sheetbook의 커밋 중 sheetbook 관련만 선별해서 main에 옮겨. 시작 전에 backup 브랜치 만들고 진행해.`
+- `feature/classroom_workspace의 커밋 중 classroom_workspace 관련만 선별해서 main에 옮겨. 시작 전에 backup 브랜치 만들고 진행해.`
 
 4. 안전모드 지시
 - `작업 전에 현재 브랜치, 변경 파일, 대상 커밋을 먼저 요약하고 승인받은 뒤 진행해.`
 
 ## 7) 금지/주의
 
-1. `feature/sheetbook`에서 `artclass/core/config` 변경 커밋 금지
+1. `feature/classroom_workspace`에서 `artclass/core/config` 변경 커밋 금지
 2. `main`에서 대규모 실험 작업 금지
 3. 백업 없이 `--force` 계열 명령 실행 금지
 4. 같은 작업을 서로 다른 브랜치에서 동시에 장시간 진행 금지
@@ -170,6 +170,6 @@ git status --short
 # 최근 커밋
 git log --oneline -n 5
 
-# sheetbook 브랜치 가드 수동 점검
-python scripts/branch_path_guard.py --branch feature/sheetbook --staged
+# classroom_workspace 브랜치 가드 수동 점검
+python scripts/branch_path_guard.py --branch feature/classroom_workspace --staged
 ```

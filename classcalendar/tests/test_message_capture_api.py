@@ -19,7 +19,6 @@ from classcalendar.models import (
 )
 from classcalendar.views import _locked_message_capture_candidates_queryset
 from core.models import UserProfile
-from sheetbook.models import SheetTab, Sheetbook
 
 User = get_user_model()
 
@@ -463,85 +462,6 @@ class MessageCaptureApiTests(TestCase):
 
         self.assertNotIn("JOIN", sql)
         self.assertTrue(queryset.query.select_for_update)
-
-    @override_settings(SHEETBOOK_ENABLED=True)
-    def test_commit_can_link_saved_events_back_to_sheetbook_context(self):
-        sheetbook = Sheetbook.objects.create(owner=self.user, title="2026 3-1 교무수첩")
-        calendar_tab = SheetTab.objects.create(
-            sheetbook=sheetbook,
-            name="달력",
-            tab_type=SheetTab.TYPE_CALENDAR,
-            sort_order=1,
-        )
-        parse_response = self.client.post(
-            self.parse_url,
-            data={
-                "raw_text": "3월 19일 학부모총회 실시\n12일(목)까지 연수물 수정 부탁드립니다.",
-                "idempotency_key": "capture-multi-source-meta",
-            },
-        )
-        self.assertEqual(parse_response.status_code, 201)
-        parse_payload = parse_response.json()
-
-        commit_response = self._commit(
-            parse_payload["capture_id"],
-            {
-                "selected_candidates": self._build_selected_candidates(parse_payload),
-                "source_sheetbook_id": sheetbook.id,
-                "source_tab_id": calendar_tab.id,
-            },
-        )
-        self.assertEqual(commit_response.status_code, 201)
-        created_event_ids = [item["id"] for item in commit_response.json().get("created_events", [])]
-
-        events_response = self.client.get(reverse("classcalendar:api_events"))
-        self.assertEqual(events_response.status_code, 200)
-        events = events_response.json().get("events", [])
-        saved_events = [item for item in events if item.get("id") in created_event_ids]
-        self.assertEqual(len(saved_events), 2)
-        self.assertTrue(all(item.get("source_sheetbook_id") == 0 for item in saved_events))
-        self.assertTrue(all(item.get("source_tab_id") == 0 for item in saved_events))
-        self.assertTrue(all(item.get("source_detail_url") == "" for item in saved_events))
-
-    @override_settings(SHEETBOOK_ENABLED=False)
-    def test_commit_ignores_sheetbook_context_when_service_retired(self):
-        sheetbook = Sheetbook.objects.create(owner=self.user, title="숨긴 교무수첩")
-        calendar_tab = SheetTab.objects.create(
-            sheetbook=sheetbook,
-            name="달력",
-            tab_type=SheetTab.TYPE_CALENDAR,
-            sort_order=1,
-        )
-        parse_response = self.client.post(
-            self.parse_url,
-            data={
-                "raw_text": "3월 19일 학부모총회 실시",
-                "idempotency_key": "capture-retired-sheetbook",
-            },
-        )
-        self.assertEqual(parse_response.status_code, 201)
-        parse_payload = parse_response.json()
-
-        commit_response = self._commit(
-            parse_payload["capture_id"],
-            {
-                "selected_candidates": self._build_selected_candidates(parse_payload),
-                "source_sheetbook_id": sheetbook.id,
-                "source_tab_id": calendar_tab.id,
-            },
-        )
-        self.assertEqual(commit_response.status_code, 201)
-        created_event_ids = [item["id"] for item in commit_response.json().get("created_events", [])]
-        self.assertGreaterEqual(len(created_event_ids), 1)
-
-        events_response = self.client.get(reverse("classcalendar:api_events"))
-        self.assertEqual(events_response.status_code, 200)
-        events = events_response.json().get("events", [])
-        saved_events = [item for item in events if item.get("id") in created_event_ids]
-        self.assertEqual(len(saved_events), len(created_event_ids))
-        self.assertTrue(all(item.get("source_sheetbook_id") == 0 for item in saved_events))
-        self.assertTrue(all(item.get("source_tab_id") == 0 for item in saved_events))
-        self.assertTrue(all(item.get("source_detail_url") == "" for item in saved_events))
 
     def test_commit_can_create_manual_candidate_when_user_corrects_parser(self):
         save_response = self.client.post(

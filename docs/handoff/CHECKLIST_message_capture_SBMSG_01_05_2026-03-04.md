@@ -11,7 +11,7 @@
 
 ## 1) 선행 조건
 
-1. `PLAN_message_capture_calendar_sheetbook_2026-03-04.md` 최신본 확인
+1. `PLAN_message_capture_calendar_classroom_workspace_2026-03-04.md` 최신본 확인
 2. 기능 플래그 준비:
    - `FEATURE_MESSAGE_CAPTURE_ENABLED=False` (기본)
    - 내부 계정 allowlist만 ON
@@ -84,7 +84,7 @@
    - 출력: `capture_id`, `parse_status`, `confidence_score`, `draft_event`, `attachments[]`, `warnings[]`
 2. `POST /classcalendar/api/message-captures/{capture_id}/commit/`
    - 입력: 확인 카드 수정값 + `selected_attachment_ids`
-   - 출력: `event`, `attachments`, `sheetbook_sync`
+   - 출력: `event`, `attachments`, `sync_status`
 
 ### 3-1) 구현 응답 스키마 요약 (2026-03-05 반영)
 
@@ -96,7 +96,7 @@
    - `event`(생성된 캘린더 이벤트 직렬화)
    - `attachments`(이벤트 첨부로 복사된 목록)
    - `warnings`(첨부 복사 실패 등 경고)
-   - `sheetbook_sync`(현재 `pending`/`enabled` 메타 반환)
+   - `sync_status`(현재 `pending`/`enabled` 메타 반환)
 
 ## 4) 1인 개발 검증 체크리스트
 
