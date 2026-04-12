@@ -281,8 +281,8 @@ class SchoolcommViewTests(SchoolcommTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "채팅방 이름")
-        self.assertContains(response, "들어오는 방식")
-        self.assertContains(response, "초대 링크가 있는 사람만 바로 들어올 수 있어요.")
+        self.assertContains(response, "시작 흐름")
+        self.assertContains(response, "초대한 사람만 입장")
         self.assertNotContains(response, "학교 이름")
         self.assertNotContains(response, "학년도")
         self.assertNotContains(response, "승인 기다리는 학교")

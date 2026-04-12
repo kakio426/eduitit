@@ -588,7 +588,7 @@
                     <section class="rounded-[1.5rem] border border-slate-200 bg-white p-4 sm:p-5" data-classcalendar-today-events="true">
                         <div class="flex items-center justify-between gap-3">
                             <div>
-                                <p class="classcalendar-eyebrow font-black text-slate-400">오늘 일정</p>
+                                <p class="classcalendar-eyebrow font-black text-slate-400">일정</p>
                                 <h3 class="mt-1 text-lg font-extrabold text-slate-900">오늘 확인할 일정</h3>
                             </div>
                             <a href="{{ main_url }}" class="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:border-indigo-300 hover:text-indigo-600">
@@ -629,8 +629,8 @@
                     <section class="rounded-[1.5rem] border border-slate-200 bg-white p-4 sm:p-5" data-classcalendar-today-memos="true">
                         <div class="flex items-center justify-between gap-3">
                             <div>
-                                <p class="classcalendar-eyebrow font-black text-slate-400">오늘의 메모</p>
-                                <h3 class="mt-1 text-lg font-extrabold text-slate-900">오늘 일정에 붙은 메모</h3>
+                                <p class="classcalendar-eyebrow font-black text-slate-400">메모</p>
+                                <h3 class="mt-1 text-lg font-extrabold text-slate-900">오늘 일정 메모</h3>
                             </div>
                             <a href="{{ today_memo_url }}" class="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700 transition hover:bg-amber-100">
                                 오늘의 메모
@@ -664,8 +664,8 @@
                 {% elif today_focus == "memos" and today_workspace.today_memos %}
                 <section class="rounded-[1.5rem] border border-slate-200 bg-white p-4 sm:p-5" data-classcalendar-today-memos="true">
                     <div>
-                        <p class="classcalendar-eyebrow font-black text-slate-400">오늘의 메모</p>
-                        <h3 class="mt-1 text-lg font-extrabold text-slate-900">오늘 일정에 붙은 메모</h3>
+                        <p class="classcalendar-eyebrow font-black text-slate-400">메모</p>
+                        <h3 class="mt-1 text-lg font-extrabold text-slate-900">오늘 일정 메모</h3>
                     </div>
                     <div class="mt-4 space-y-3">
                         {% for item in today_workspace.today_memos %}
