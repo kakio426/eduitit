@@ -2,6 +2,7 @@ from urllib.parse import quote
 
 from allauth.socialaccount.models import SocialAccount
 from django.urls import reverse
+from django.utils import timezone
 
 from .models import UserPolicyConsent
 from .policy_meta import (
@@ -10,6 +11,8 @@ from .policy_meta import (
     TERMS_VERSION,
     get_current_policy_version_key,
 )
+
+SOCIAL_SIGNUP_CONSENT_SESSION_KEY = "core.social_signup_consent"
 
 
 def get_latest_social_provider(user):
@@ -66,6 +69,72 @@ def get_policy_consent_redirect_url(request, *, next_url=""):
     if not candidate or candidate == consent_path:
         return consent_path
     return f"{consent_path}?next={quote(candidate)}"
+
+
+def get_pending_social_signup(request):
+    from allauth.socialaccount.internal.flows.signup import get_pending_signup
+
+    return get_pending_signup(request)
+
+
+def get_current_social_signup_consent(session):
+    if session is None:
+        return None
+    data = session.get(SOCIAL_SIGNUP_CONSENT_SESSION_KEY)
+    if not isinstance(data, dict):
+        return None
+    if data.get("terms_version") != TERMS_VERSION:
+        return None
+    if data.get("privacy_version") != PRIVACY_VERSION:
+        return None
+    return data
+
+
+def has_current_social_signup_consent(session):
+    return get_current_social_signup_consent(session) is not None
+
+
+def mark_current_social_signup_consent(session, *, provider, marketing_email_opt_in):
+    if session is None:
+        return
+    session[SOCIAL_SIGNUP_CONSENT_SESSION_KEY] = {
+        "provider": (provider or "direct").strip() or "direct",
+        "terms_version": TERMS_VERSION,
+        "privacy_version": PRIVACY_VERSION,
+        "marketing_email_opt_in": bool(marketing_email_opt_in),
+        "agreed_at": timezone.now().isoformat(),
+    }
+
+
+def clear_current_social_signup_consent(session):
+    if session is None:
+        return
+    session.pop(SOCIAL_SIGNUP_CONSENT_SESSION_KEY, None)
+
+
+def get_social_signup_consent_redirect_url():
+    return reverse("social_signup_consent")
+
+
+def get_pending_social_signup_consent_redirect(request):
+    session = getattr(request, "session", None)
+    sociallogin = get_pending_social_signup(request)
+    if not sociallogin:
+        clear_current_social_signup_consent(session)
+        return ""
+
+    consent_path = get_social_signup_consent_redirect_url()
+    if request.path.startswith(consent_path):
+        return ""
+
+    if has_current_social_signup_consent(session):
+        return ""
+
+    signup_path = reverse("socialaccount_signup")
+    if request.path.startswith(signup_path):
+        return consent_path
+
+    return ""
 
 
 def get_pending_policy_consent_redirect(request, *, next_url=""):

@@ -5,6 +5,8 @@ from allauth.socialaccount.models import SocialAccount
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 
+from .policy_consent import clear_current_social_signup_consent
+
 def _collect_social_emails(sociallogin):
     emails = []
 
@@ -74,4 +76,5 @@ def maybe_connect_existing_user_by_email(request, sociallogin):
 class EduititSocialAccountAdapter(DefaultSocialAccountAdapter):
     def pre_social_login(self, request, sociallogin):
         super().pre_social_login(request, sociallogin)
+        clear_current_social_signup_consent(getattr(request, "session", None))
         maybe_connect_existing_user_by_email(request, sociallogin)

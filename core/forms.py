@@ -51,4 +51,17 @@ class PolicyConsentForm(forms.Form):
             raise forms.ValidationError('필수 약관 동의 후 서비스를 이용할 수 있습니다.')
         return cleaned_data
 
+
+class SocialSignupConsentForm(PolicyConsentForm):
+    marketing_email_opt_in = forms.BooleanField(
+        required=False,
+        label='[선택] 신규 기능, 이벤트, 혜택 안내 이메일 받기',
+        help_text=(
+            '서비스 운영 안내와 별도로, 신규 기능과 이벤트 소식을 이메일로 받습니다.'
+        ),
+        widget=forms.CheckboxInput(attrs={
+            'class': 'policy-check-input',
+        }),
+    )
+
 # CustomSignupForm moved to core/signup_forms.py

@@ -1,7 +1,9 @@
+from types import SimpleNamespace
+from unittest.mock import patch
 from datetime import timedelta
 
 from allauth.socialaccount.models import SocialAccount
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AnonymousUser, User
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.test import TestCase, override_settings
 from django.test.client import RequestFactory
@@ -10,7 +12,12 @@ from django.utils import timezone
 
 from core.account_adapter import EduititAccountAdapter
 from core.models import UserPolicyConsent
+from core.policy_consent import (
+    get_current_social_signup_consent,
+    mark_current_social_signup_consent,
+)
 from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
+from core.views import social_signup_consent_view
 
 
 class PolicyConsentTestCase(TestCase):
@@ -317,3 +324,89 @@ class PolicyConsentRedirectAdapterTestCase(TestCase):
         response_url = self.adapter.get_login_redirect_url(request)
 
         self.assertEqual(response_url, reverse('select_role'))
+
+
+class SocialSignupConsentFlowTestCase(TestCase):
+    def _build_sociallogin(self, provider='kakao'):
+        return SimpleNamespace(
+            account=SimpleNamespace(provider=provider),
+            provider=SimpleNamespace(name=provider.title()),
+        )
+
+    def test_social_signup_page_redirects_to_consent_before_email_and_nickname(self):
+        with patch(
+            'core.policy_consent.get_pending_social_signup',
+            return_value=self._build_sociallogin(),
+        ):
+            response = self.client.get(reverse('socialaccount_signup'))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse('social_signup_consent'))
+
+    def test_social_signup_consent_page_starts_with_unchecked_required_boxes(self):
+        with patch(
+            'core.views.get_pending_social_signup',
+            return_value=self._build_sociallogin(),
+        ):
+            response = self.client.get(reverse('social_signup_consent'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '동의 후 시작합니다')
+        self.assertFalse(bool(response.context['form'].fields['agree_terms'].initial))
+        self.assertFalse(bool(response.context['form'].fields['agree_privacy'].initial))
+        self.assertFalse(bool(response.context['form'].fields['marketing_email_opt_in'].initial))
+
+    def test_social_signup_consent_submission_stashes_consent_in_session(self):
+        with patch(
+            'core.views.get_pending_social_signup',
+            return_value=self._build_sociallogin('naver'),
+        ):
+            response = self.client.post(
+                reverse('social_signup_consent'),
+                {
+                    'agree_terms': 'on',
+                    'agree_privacy': 'on',
+                    'marketing_email_opt_in': 'on',
+                },
+            )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse('socialaccount_signup'))
+        consent = get_current_social_signup_consent(self.client.session)
+        self.assertIsNotNone(consent)
+        self.assertEqual(consent['provider'], 'naver')
+        self.assertTrue(consent['marketing_email_opt_in'])
+
+    def test_social_signup_consent_requires_both_required_checkboxes(self):
+        with patch(
+            'core.views.get_pending_social_signup',
+            return_value=self._build_sociallogin(),
+        ):
+            response = self.client.post(
+                reverse('social_signup_consent'),
+                {'agree_terms': 'on'},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '필수 약관 동의 후 서비스를 이용할 수 있습니다.')
+        self.assertIsNone(get_current_social_signup_consent(self.client.session))
+
+    def test_social_signup_consent_page_redirects_to_signup_when_already_confirmed(self):
+        request = RequestFactory().get(reverse('social_signup_consent'))
+        middleware = SessionMiddleware(lambda req: None)
+        middleware.process_request(request)
+        request.session.save()
+        mark_current_social_signup_consent(
+            request.session,
+            provider='kakao',
+            marketing_email_opt_in=False,
+        )
+        request.user = AnonymousUser()
+        with patch(
+            'core.views.get_pending_social_signup',
+            return_value=self._build_sociallogin(),
+        ):
+            response = social_signup_consent_view(request)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse('socialaccount_signup'))

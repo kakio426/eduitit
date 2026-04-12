@@ -30,10 +30,16 @@ from .models import (
     ProductWorkbenchBundle,
     UserModeration,
 )
-from .forms import PolicyConsentForm
+from .forms import PolicyConsentForm, SocialSignupConsentForm
+from allauth.account.internal.decorators import login_not_required
 from .policy_consent import (
+    clear_current_social_signup_consent,
     get_agreement_source,
     get_latest_social_provider,
+    get_pending_social_signup,
+    get_social_signup_consent_redirect_url,
+    has_current_social_signup_consent,
+    mark_current_social_signup_consent,
     get_pending_policy_consent_redirect,
     has_current_policy_consent,
     mark_current_policy_consent,
@@ -5813,6 +5819,45 @@ def policy_consent_view(request):
 def policy_view(request):
     """이용약관 및 개인정보처리방침 페이지"""
     return render(request, 'core/policy.html', {'policy_meta': get_policy_meta()})
+
+
+@login_not_required
+def social_signup_consent_view(request):
+    sociallogin = get_pending_social_signup(request)
+    if not sociallogin:
+        clear_current_social_signup_consent(getattr(request, 'session', None))
+        return redirect('account_login')
+
+    if has_current_social_signup_consent(getattr(request, 'session', None)):
+        return redirect('socialaccount_signup')
+
+    provider = getattr(getattr(sociallogin, 'account', None), 'provider', '') or 'direct'
+    form = SocialSignupConsentForm(request.POST or None)
+
+    if request.method == 'POST' and form.is_valid():
+        mark_current_social_signup_consent(
+            request.session,
+            provider=provider,
+            marketing_email_opt_in=form.cleaned_data.get('marketing_email_opt_in'),
+        )
+        return redirect('socialaccount_signup')
+
+    policy_meta = get_policy_meta()
+    return render(
+        request,
+        'core/social_signup_consent.html',
+        {
+            'form': form,
+            'policy_meta': policy_meta,
+            'provider': provider,
+            'provider_label': get_provider_label(provider),
+            'next_url': get_social_signup_consent_redirect_url(),
+            'terms_url': f"{reverse('policy')}#terms",
+            'privacy_url': f"{reverse('policy')}#privacy",
+            'operations_url': f"{reverse('policy')}#operations",
+            'hide_navbar': True,
+        },
+    )
 
 @login_required
 def update_email(request):

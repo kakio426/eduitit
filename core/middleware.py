@@ -15,7 +15,11 @@ from django.utils import timezone
 from .logging_filters import clear_current_request_id, set_current_request_id
 from .models import PageViewLog, SiteConfig, VisitorLog
 from .openclo_login import OPENCLO_LOGIN_URL
-from .policy_consent import get_pending_policy_consent_redirect
+from .policy_consent import (
+    get_pending_policy_consent_redirect,
+    get_pending_social_signup_consent_redirect,
+    get_social_signup_consent_redirect_url,
+)
 from .seo import DEFAULT_HOME_DESCRIPTION, DEFAULT_HOME_TITLE, DEFAULT_HOME_TITLE_KO
 
 logger = logging.getLogger(__name__)
@@ -497,6 +501,10 @@ class PolicyConsentMiddleware:
         if is_lightweight_bypass_path(request.path):
             return self.get_response(request)
 
+        social_signup_redirect_url = get_pending_social_signup_consent_redirect(request)
+        if social_signup_redirect_url:
+            return redirect(social_signup_redirect_url)
+
         if is_public_access_path(request.path):
             return self.get_response(request)
 
@@ -507,6 +515,7 @@ class PolicyConsentMiddleware:
         consent_path = reverse('policy_consent')
         allowed_prefixes = [
             consent_path,
+            get_social_signup_consent_redirect_url(),
             reverse('policy'),
             '/accounts/logout/',
             '/delete-account/',

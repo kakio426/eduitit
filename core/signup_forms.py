@@ -3,9 +3,16 @@ from django.utils import timezone
 
 from .models import (
     MARKETING_EMAIL_CONSENT_VERSION,
+    UserPolicyConsent,
     UserMarketingEmailConsent,
     UserProfile,
 )
+from .policy_consent import (
+    clear_current_social_signup_consent,
+    get_current_social_signup_consent,
+    mark_current_policy_consent,
+)
+from .policy_meta import PRIVACY_VERSION, TERMS_VERSION
 
 
 def _get_request_client_ip(request):
@@ -33,24 +40,30 @@ class CustomSignupForm(forms.Form):
             'autocomplete': 'nickname'
         })
     )
-    marketing_email_opt_in = forms.BooleanField(
-        required=False,
-        label="[선택] 신규 기능, 이벤트, 혜택 안내 이메일 받기",
-        help_text=(
-            "서비스 운영에 꼭 필요한 안내 메일과는 별도로, "
-            "신규 기능과 이벤트 소식을 이메일로 받을 수 있어요."
-        ),
-        widget=forms.CheckboxInput(attrs={
-            'class': 'signup-check-input',
-        }),
-    )
-
     def signup(self, request, user):
         profile, _ = UserProfile.objects.get_or_create(user=user)
         profile.nickname = self.cleaned_data['nickname']
         profile.save()
 
-        if not self.cleaned_data.get('marketing_email_opt_in'):
+        social_signup_consent = get_current_social_signup_consent(getattr(request, 'session', None))
+        if social_signup_consent:
+            provider = social_signup_consent.get('provider') or 'direct'
+            UserPolicyConsent.objects.get_or_create(
+                user=user,
+                terms_version=TERMS_VERSION,
+                privacy_version=PRIVACY_VERSION,
+                defaults={
+                    'provider': provider,
+                    'agreed_at': timezone.now(),
+                    'agreement_source': 'social_first_login',
+                    'ip_address': _get_request_client_ip(request) or None,
+                    'user_agent': (request.META.get('HTTP_USER_AGENT') or '').strip() if request else '',
+                },
+            )
+            mark_current_policy_consent(request.session, user)
+
+        if not social_signup_consent or not social_signup_consent.get('marketing_email_opt_in'):
+            clear_current_social_signup_consent(getattr(request, 'session', None))
             return
 
         UserMarketingEmailConsent.objects.update_or_create(
@@ -64,3 +77,4 @@ class CustomSignupForm(forms.Form):
                 'revoked_at': None,
             },
         )
+        clear_current_social_signup_consent(getattr(request, 'session', None))

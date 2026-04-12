@@ -21,7 +21,7 @@
                 </a>
                 <p class="auth-shell-kicker">가입 마무리</p>
                 <h1 class="auth-shell-title auth-shell-title--compact">이메일과 닉네임을 확인합니다</h1>
-                <p class="auth-shell-summary">{{ provider_name }} 계정으로 로그인했습니다. 선택 동의는 비워 두고 바로 시작할 수 있습니다.</p>
+                <p class="auth-shell-summary">{{ provider_name }} 계정 동의 확인이 끝났습니다. 이메일과 닉네임만 입력하면 됩니다.</p>
             </div>
 
             {% if form.errors %}
@@ -36,7 +36,6 @@
                 <div class="auth-shell-pills">
                     <span class="auth-shell-pill">이메일</span>
                     <span class="auth-shell-pill">닉네임</span>
-                    <span class="auth-shell-pill">선택 동의</span>
                 </div>
             </div>
 
@@ -91,28 +90,9 @@
             </div>
             {% endif %}
 
-            {% if form.marketing_email_opt_in %}
-            <div class="auth-shell-checkbox-card{% if form.marketing_email_opt_in.errors %} has-error{% endif %}">
-                <label for="{{ form.marketing_email_opt_in.id_for_label }}" class="auth-shell-checkbox-row">
-                    {{ form.marketing_email_opt_in }}
-                    <span class="min-w-0 flex-1">
-                        <span class="auth-shell-label block">{{ form.marketing_email_opt_in.label }}</span>
-                        {% if form.marketing_email_opt_in.help_text %}
-                        <span class="auth-shell-help mt-1 block">{{ form.marketing_email_opt_in.help_text }}</span>
-                        {% endif %}
-                    </span>
-                </label>
-                {% if form.marketing_email_opt_in.errors %}
-                <p class="auth-shell-error mt-2">{{ form.marketing_email_opt_in.errors.0 }}</p>
-                {% endif %}
-            </div>
-            {% endif %}
-
             {% if redirect_field_value %}
             <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
             {% endif %}
-
-            <p class="auth-shell-help">선택 동의는 나중에 설정에서 바꿀 수 있습니다.</p>
 
             <button type="submit" class="auth-shell-submit">
                 <span>가입하고 시작하기</span>
@@ -121,7 +101,7 @@
             </form>
 
             <div class="auth-shell-muted-panel">
-                <p class="auth-shell-muted-panel-title">처음 1회 약관에 동의합니다.</p>
+                <p class="auth-shell-muted-panel-title">이미 확인한 항목</p>
                 <div class="auth-shell-links">
                     <a href="{% url 'policy' %}#terms" class="auth-shell-link">이용약관</a>
                     <span>·</span>
