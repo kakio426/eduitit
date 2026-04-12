@@ -297,8 +297,8 @@ class SeoFoundationTests(TestCase):
 
     def test_auth_pages_use_noindex_and_specific_meta(self):
         cases = (
-            ("account_login", "로그인 | Eduitit", "https://eduitit.site/accounts/login/", "에듀잇티에 로그인하고 교실 운영, 알림장 작성, 서비스 가이드를 이어서 사용하세요."),
-            ("account_signup", "회원가입 | Eduitit", "https://eduitit.site/accounts/signup/", "에듀잇티 계정으로 교사를 위한 AI·학급 운영 도구를 바로 시작하세요."),
+            ("account_login", "로그인 | Eduitit", "https://eduitit.site/accounts/login/", "에듀잇티에 로그인하고 교실 운영 도구를 이어서 사용하세요."),
+            ("account_signup", "회원가입 | Eduitit", "https://eduitit.site/accounts/signup/", "에듀잇티 계정으로 교실 운영 도구를 바로 시작하세요."),
         )
 
         for route_name, title, canonical, description in cases:
