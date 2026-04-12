@@ -190,36 +190,40 @@
 }
 
 .home-public-v6-page .home-public-v4-title {
-    max-width: 10.5ch;
-    margin-top: 1.2rem;
-    font-size: clamp(3.3rem, 5vw, 4.8rem) !important;
+    max-width: 9.4ch;
+    margin-top: 1rem;
+    font-size: clamp(2.8rem, 4.2vw, 4rem) !important;
     font-weight: 700;
-    line-height: 1.08 !important;
+    line-height: 1.03 !important;
     letter-spacing: -0.038em;
 }
 
 .home-public-v6-page .home-public-v4-accent {
-    margin-top: 0.55rem;
+    margin-top: 0.45rem;
 }
 
-.home-public-v6-page [data-home-v4-public-belief="true"] > p {
-    max-width: 36rem;
-    margin-top: 1.5rem !important;
-    font-size: 1.08rem;
+.home-public-v6-page .home-public-v5-desktop-copy {
+    margin-top: 0 !important;
+}
+
+.home-public-v6-page .home-public-v5-desktop-copy > p {
+    max-width: 32rem;
+    margin-top: 1rem !important;
+    font-size: 1rem;
     font-weight: 500 !important;
-    line-height: 1.72 !important;
+    line-height: 1.64 !important;
     letter-spacing: -0.006em;
 }
 
-.home-public-v6-page [data-home-v4-public-belief="true"] > div:last-child {
-    margin-top: 1.45rem !important;
-    gap: 0.72rem !important;
+.home-public-v6-page .home-public-v5-desktop-copy > div:last-child {
+    margin-top: 0.95rem !important;
+    gap: 0.62rem !important;
 }
 
 .home-public-v6-page .home-public-v4-keyword {
-    min-height: 2.75rem;
-    padding: 0.68rem 1rem;
-    font-size: 0.9rem;
+    min-height: 2.45rem;
+    padding: 0.58rem 0.92rem;
+    font-size: 0.84rem;
     font-weight: 700 !important;
 }
 

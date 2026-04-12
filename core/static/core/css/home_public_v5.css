@@ -16,10 +16,6 @@
     --home-public-item-accent-border: rgba(71, 85, 105, 0.18);
 }
 
-#mainNav.shell-nav-wrap {
-    padding-top: max(1.1rem, calc(env(safe-area-inset-top) + 0.75rem));
-}
-
 .home-public-v5-page {
     background:
         radial-gradient(circle at top left, rgba(36, 87, 197, 0.08), transparent 28%),
@@ -75,20 +71,20 @@
 
 .home-public-v5-title {
     margin: 0.8rem 0 0;
-    font-size: clamp(1.82rem, 5.6vw, 2.55rem);
+    font-size: clamp(1.68rem, 4.9vw, 2.2rem);
     font-weight: 700;
-    line-height: 1.18;
+    line-height: 1.12;
     letter-spacing: -0.03em;
     color: #0f172a;
     word-break: keep-all;
 }
 
 .home-public-v5-summary {
-    margin: 0.7rem 0 0;
+    margin: 0.62rem 0 0;
     color: #475569;
-    font-size: 0.95rem;
+    font-size: 0.92rem;
     font-weight: 500;
-    line-height: 1.7;
+    line-height: 1.6;
     letter-spacing: -0.006em;
 }
 
@@ -96,7 +92,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
-    margin-top: 0.85rem;
+    margin-top: 0.78rem;
 }
 
 .home-public-v5-keyword {
@@ -132,6 +128,12 @@
     line-height: 1.36;
     letter-spacing: -0.018em;
     color: #0f172a;
+}
+
+.home-public-v5-desktop-copy {
+    max-width: 34rem;
+    display: grid;
+    align-content: start;
 }
 
 .home-public-v5-featured-card {
