@@ -2,7 +2,11 @@
 Test 1.1 & 1.2: Production settings 로딩 및 환경변수 기반 DB 연결 테스트
 RED Phase - 이 테스트는 config/settings_production.py가 없으므로 실패해야 함
 """
+import importlib
 import os
+import sys
+from unittest.mock import patch
+from django.core.exceptions import ImproperlyConfigured
 from django.test import TestCase, override_settings
 
 
@@ -23,6 +27,27 @@ class ProductionSettingsTest(TestCase):
         from config import settings_production
         # Production에서는 하드코딩된 키 대신 환경변수 사용
         self.assertNotIn('insecure', settings_production.SECRET_KEY.lower())
+
+    def test_production_settings_prefers_secret_key_environment_variable(self):
+        """Render에서 쓰는 SECRET_KEY 환경변수를 우선 사용해야 함"""
+        from config import settings_production
+
+        with patch.dict(os.environ, {"SECRET_KEY": "render-secret-key", "DJANGO_SECRET_KEY": "legacy-secret-key"}, clear=False):
+            reloaded = importlib.reload(settings_production)
+            self.assertEqual(reloaded.SECRET_KEY, "render-secret-key")
+
+        importlib.reload(settings_production)
+
+    def test_production_settings_requires_secret_key_outside_tests(self):
+        """테스트 실행이 아닐 때는 production SECRET_KEY가 반드시 있어야 함"""
+        from config import settings_production
+
+        with patch.dict(os.environ, {"SECRET_KEY": "", "DJANGO_SECRET_KEY": ""}, clear=False):
+            with patch.object(sys, "argv", ["gunicorn"]):
+                with self.assertRaises(ImproperlyConfigured):
+                    importlib.reload(settings_production)
+
+        importlib.reload(settings_production)
     
     def test_allowed_hosts_configured(self):
         """ALLOWED_HOSTS가 설정되어 있어야 함"""

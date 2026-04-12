@@ -12,6 +12,7 @@ import sys
 import dj_database_url
 from pathlib import Path
 from importlib.util import find_spec
+from django.core.exceptions import ImproperlyConfigured
 from config.database import apply_database_network_overrides, normalize_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -21,12 +22,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY SETTINGS
 # =============================================================================
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'fallback-key-for-development-only')
+TESTING = 'test' in sys.argv
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False').lower() in ('true', '1', 'yes')
-TESTING = 'test' in sys.argv
+
+# SECURITY WARNING: keep the secret key used in production secret!
+# Render blueprint uses SECRET_KEY, while older local tooling may still set DJANGO_SECRET_KEY.
+SECRET_KEY = os.environ.get('SECRET_KEY') or os.environ.get('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    if TESTING:
+        SECRET_KEY = 'test-only-production-secret-key'
+    else:
+        raise ImproperlyConfigured(
+            'Production SECRET_KEY is missing. Set SECRET_KEY or DJANGO_SECRET_KEY before starting config.settings_production.'
+        )
 
 # Allowed hosts
 env_hosts = os.environ.get('ALLOWED_HOSTS', '').split(',')

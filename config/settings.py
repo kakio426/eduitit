@@ -38,7 +38,12 @@ if os.name == 'nt' and not os.environ.get('SSL_CERT_FILE'):
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY: SECRET_KEY from environment variable
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-dev-only-change-in-production')
+# Prefer the production-compatible SECRET_KEY name, but keep the local-dev fallback.
+SECRET_KEY = (
+    os.environ.get('DJANGO_SECRET_KEY')
+    or os.environ.get('SECRET_KEY')
+    or 'django-insecure-dev-only-change-in-production'
+)
 
 # SECURITY: DEBUG from environment (default False for safety)
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
