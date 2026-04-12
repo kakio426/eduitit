@@ -28,9 +28,10 @@
                 {% if calendar_load_error_secondary_url %}
                 <a
                     href="{{ calendar_load_error_secondary_url }}"
-                    class="home-v6-inline-secondary-action inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-black transition"
+                    class="home-v6-inline-secondary-action home-v6-inline-secondary-action--compact"
                 >
                     {{ calendar_load_error_secondary_label }}
+                    <i class="fa-solid fa-chevron-right text-[10px]" aria-hidden="true"></i>
                 </a>
                 {% endif %}
             </div>

@@ -180,6 +180,67 @@ border-color: rgba(var(--home-v6-brand-rgb), 0.22);
     color: var(--home-v6-brand-strong);
 }
 
+/* Empty-state actions keep one obvious primary button and demote the fallback path. */
+.home-v6-page .home-v6-empty-primary-action {
+display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.75rem;
+    padding: 0 1rem;
+    border-radius: 999px;
+    background: #0f172a;
+    color: #ffffff;
+    font-size: 0.92rem;
+    font-weight: 800;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+
+.home-v6-page .home-v6-empty-primary-action:hover,
+.home-v6-page .home-v6-empty-primary-action:focus-visible {
+background: #111827;
+    color: #ffffff;
+    text-decoration: none;
+    transform: translateY(-1px);
+}
+
+.home-v6-page .home-v6-inline-secondary-action--quiet,
+.home-v6-page .home-v6-inline-secondary-action--compact {
+display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.32rem;
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+    color: #667085;
+    text-decoration: none;
+}
+
+.home-v6-page .home-v6-inline-secondary-action--quiet {
+min-height: auto;
+    padding: 0.15rem 0;
+    font-size: 0.88rem;
+    font-weight: 800;
+}
+
+.home-v6-page .home-v6-inline-secondary-action--compact {
+min-height: auto;
+    padding: 0.1rem 0;
+    font-size: 0.8rem;
+    font-weight: 800;
+}
+
+.home-v6-page .home-v6-inline-secondary-action--quiet:hover,
+.home-v6-page .home-v6-inline-secondary-action--quiet:focus-visible,
+.home-v6-page .home-v6-inline-secondary-action--compact:hover,
+.home-v6-page .home-v6-inline-secondary-action--compact:focus-visible {
+border-color: transparent;
+    background: transparent;
+    color: var(--home-v6-brand-strong);
+    box-shadow: none;
+}
+
 .home-v6-page .home-v6-title-icon,
 .home-v6-page .home-v6-favorites-icon {
 color: var(--home-v6-brand);
@@ -1226,6 +1287,7 @@ color: var(--home-v6-brand-strong) !important;
 
 /* Dense dashboard controls share one calm focus ring so keyboard navigation stays obvious without louder motion. */
 .home-v6-page .home-v6-mobile-summary-button:focus-visible,
+.home-v6-page .home-v6-empty-primary-action:focus-visible,
 .home-v6-page .home-v6-mobile-sheet-close:focus-visible,
 .home-v6-page .home-v6-inline-secondary-action:focus-visible,
 .home-v6-page .home-v6-nav-item:focus-visible,

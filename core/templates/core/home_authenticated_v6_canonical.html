@@ -161,14 +161,15 @@
                                 {% if home_entry_panel and home_entry_panel.primary_action %}
                                 <a
                                     href="{{ home_entry_panel.primary_action.href }}"
-                                    class="inline-flex items-center justify-center rounded-full bg-slate-900 px-4 py-2.5 text-sm font-black text-white transition hover:bg-slate-800"
+                                    class="home-v6-empty-primary-action"
                                     {% if home_entry_panel.primary_action.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
                                 >
                                     도구 열기
                                 </a>
                                 {% endif %}
-                                <a href="{% if home_entry_panel and home_entry_panel.secondary_action %}{{ home_entry_panel.secondary_action.href }}{% else %}{{ today_all_url|default:main_url }}{% endif %}" class="home-v6-inline-secondary-action inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-black transition">
+                                <a href="{% if home_entry_panel and home_entry_panel.secondary_action %}{{ home_entry_panel.secondary_action.href }}{% else %}{{ today_all_url|default:main_url }}{% endif %}" class="home-v6-inline-secondary-action home-v6-inline-secondary-action--quiet">
                                     오늘 일정 보기
+                                    <i class="fa-solid fa-chevron-right text-[11px]" aria-hidden="true"></i>
                                 </a>
                             </div>
                         </div>
@@ -193,10 +194,11 @@
                             </div>
                             <a
                                 href="{{ reservation_home_card.dashboard_url }}"
-                                class="home-v6-inline-secondary-action inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold transition"
+                                class="home-v6-inline-secondary-action home-v6-inline-secondary-action--compact"
                                 data-home-v6-rail-action="true"
                             >
                                 전체 보기
+                                <i class="fa-solid fa-chevron-right text-[10px]" aria-hidden="true"></i>
                             </a>
                         </div>
                         <div class="space-y-3">
@@ -300,14 +302,15 @@
                                             {% if home_entry_panel and home_entry_panel.primary_action %}
                                             <a
                                                 href="{{ home_entry_panel.primary_action.href }}"
-                                                class="inline-flex items-center justify-center rounded-full bg-slate-900 px-4 py-2.5 text-sm font-black text-white transition hover:bg-slate-800"
+                                                class="home-v6-empty-primary-action"
                                                 {% if home_entry_panel.primary_action.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
                                             >
                                                 도구 열기
                                             </a>
                                             {% endif %}
-                                            <a href="{% if home_entry_panel and home_entry_panel.secondary_action %}{{ home_entry_panel.secondary_action.href }}{% else %}{{ today_all_url|default:main_url }}{% endif %}" class="home-v6-inline-secondary-action inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-black transition">
+                                            <a href="{% if home_entry_panel and home_entry_panel.secondary_action %}{{ home_entry_panel.secondary_action.href }}{% else %}{{ today_all_url|default:main_url }}{% endif %}" class="home-v6-inline-secondary-action home-v6-inline-secondary-action--quiet">
                                                 오늘 일정 보기
+                                                <i class="fa-solid fa-chevron-right text-[11px]" aria-hidden="true"></i>
                                             </a>
                                         </div>
                                     </div>
@@ -373,14 +376,15 @@
                                         {% if home_entry_panel and home_entry_panel.primary_action %}
                                         <a
                                             href="{{ home_entry_panel.primary_action.href }}"
-                                            class="inline-flex items-center justify-center rounded-full bg-slate-900 px-4 py-2.5 text-sm font-black text-white transition hover:bg-slate-800"
+                                            class="home-v6-empty-primary-action"
                                             {% if home_entry_panel.primary_action.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
                                         >
                                             도구 열기
                                         </a>
                                         {% endif %}
-                                        <a href="{% if home_entry_panel and home_entry_panel.secondary_action %}{{ home_entry_panel.secondary_action.href }}{% else %}{{ today_all_url|default:main_url }}{% endif %}" class="home-v6-inline-secondary-action inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-black transition">
+                                        <a href="{% if home_entry_panel and home_entry_panel.secondary_action %}{{ home_entry_panel.secondary_action.href }}{% else %}{{ today_all_url|default:main_url }}{% endif %}" class="home-v6-inline-secondary-action home-v6-inline-secondary-action--quiet">
                                             오늘 일정 보기
+                                            <i class="fa-solid fa-chevron-right text-[11px]" aria-hidden="true"></i>
                                         </a>
                                     </div>
                                 </div>
@@ -398,10 +402,11 @@
                                     </div>
                                     <a
                                         href="{{ reservation_home_card.dashboard_url }}"
-                                        class="home-v6-inline-secondary-action inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold transition"
+                                        class="home-v6-inline-secondary-action home-v6-inline-secondary-action--compact"
                                         data-home-v6-rail-action="true"
                                     >
                                         전체 보기
+                                        <i class="fa-solid fa-chevron-right text-[10px]" aria-hidden="true"></i>
                                     </a>
                                 </div>
 
