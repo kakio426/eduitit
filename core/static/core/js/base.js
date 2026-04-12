@@ -493,8 +493,8 @@
         var top = 88;
         var navHeight = 88;
         if (nav) {
-            navHeight = Math.max(0, Math.ceil(nav.getBoundingClientRect().height));
             top = Math.max(0, Math.ceil(nav.getBoundingClientRect().bottom));
+            navHeight = top;
         }
         document.documentElement.style.setProperty('--main-nav-height', navHeight + 'px');
         document.documentElement.style.setProperty('--mobile-menu-top', top + 'px');
