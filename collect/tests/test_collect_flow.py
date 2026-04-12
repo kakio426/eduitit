@@ -29,6 +29,16 @@ class CollectFlowTest(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, reverse("collect:submit", args=[req.id]))
 
+    def test_public_landing_prioritizes_guest_join_before_teacher_login(self):
+        response = self.client.get(reverse("collect:landing"))
+        content = response.content.decode("utf-8")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("제출 참여는 비로그인", content)
+        self.assertIn("요청 만들기는 로그인 후", content)
+        self.assertIn("로그인 후 만들기", content)
+        self.assertLess(content.index("제출 참여"), content.index("요청 만들기"))
+
     def test_guest_submit_file_and_teacher_download(self):
         req = CollectionRequest.objects.create(
             creator=self.teacher,

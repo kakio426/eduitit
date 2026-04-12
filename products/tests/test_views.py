@@ -239,12 +239,37 @@ class ProductDetailHeroTests(TestCase):
         teacher_profile.nickname = "행복교사"
         teacher_profile.role = "school"
         teacher_profile.save(update_fields=["nickname", "role"])
+
         self.client.force_login(teacher)
         teacher_response = self.client.get(reverse("product_detail", kwargs={"pk": product.pk}))
 
         self.assertEqual(teacher_response.status_code, 200)
         self.assertEqual(teacher_response.context["launch_href"], reverse("happy_seed:dashboard"))
         self.assertEqual(teacher_response.context["start_href"], reverse("happy_seed:dashboard"))
+
+    def test_collect_detail_explains_guest_join_and_teacher_login_separately(self):
+        product = Product.objects.create(
+            title="간편 수합",
+            lead_text="파일과 링크, 응답을 모읍니다.",
+            description="QR과 입장코드로 제출을 받고, 교사는 대시보드에서 확인합니다.",
+            solve_text="안내 뒤 제출을 빠르게 받고 싶어요",
+            price=0,
+            is_active=True,
+            is_guest_allowed=True,
+            service_type="collect_sign",
+            launch_route_name="collect:landing",
+        )
+
+        response = self.client.get(reverse("product_detail", kwargs={"pk": product.pk}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["launch_href"], reverse("collect:landing"))
+        self.assertEqual(response.context["start_href"], reverse("collect:landing"))
+        self.assertEqual(response.context["start_label"], "참여 열기")
+        self.assertContains(
+            response,
+            "입장코드나 QR로 제출 참여는 로그인 없이 열리고, 새 요청 만들기는 로그인 후 이어집니다.",
+        )
 
 
 class ClassroomCatalogVisibilityTests(TestCase):

@@ -115,6 +115,10 @@ def _build_product_audience_copy(product):
 
 
 def _build_product_access_copy(product):
+    override_copy = str(getattr(product, "product_access_copy_override", "") or "").strip()
+    if override_copy:
+        return override_copy
+
     access_label = str(getattr(product, "home_access_status_label", "") or "").strip()
     if access_label in PUBLIC_PREVIEW_ACCESS_LABELS:
         return "로그인 없이도 핵심 흐름을 먼저 확인할 수 있습니다."
@@ -495,7 +499,7 @@ def product_detail(request, pk):
     access_label = getattr(product, "home_access_status_label", "") or "로그인 필요"
 
     start_href = launch_href if can_start else ""
-    start_label = "바로 시작"
+    start_label = getattr(product, "product_start_label_override", "") or "바로 시작"
     start_is_external = can_start and launch_is_external
     if can_start and access_label == "로그인 필요" and not request.user.is_authenticated and not launch_is_external:
         start_href = f"{reverse('account_login')}?{urlencode({'next': launch_href})}"
@@ -506,7 +510,7 @@ def product_detail(request, pk):
     elif can_start and launch_is_external:
         start_label = "새 창에서 시작"
     elif can_start and access_label in PUBLIC_PREVIEW_ACCESS_LABELS:
-        start_label = "바로 체험하기"
+        start_label = getattr(product, "product_start_label_override", "") or "바로 체험하기"
 
     guide_href = getattr(product, "guide_url", "") or SERVICE_GUIDE_PADLET_URL
     guide_label = "1분 가이드 보기" if getattr(product, "guide_url", "") else "가이드 찾기"

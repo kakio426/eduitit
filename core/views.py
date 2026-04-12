@@ -1056,6 +1056,22 @@ def _build_home_card_summary(product):
     return _replace_public_service_terms(fallback, product)
 
 
+def _build_guest_entry_copy_meta(product):
+    route_name = _product_route_name(product)
+    access_status_label = getattr(product, "home_access_status_label", "") or ""
+
+    if route_name == "collect:landing" and access_status_label != "로그인 필요":
+        return {
+            "home_guest_status_label": "비로그인 참여",
+            "home_guest_summary": "입장코드나 QR이 있으면 바로 제출에 참여합니다.",
+            "home_guest_cta_label": "참여 열기",
+            "detail_access_copy": "입장코드나 QR로 제출 참여는 로그인 없이 열리고, 새 요청 만들기는 로그인 후 이어집니다.",
+            "detail_start_label": "참여 열기",
+        }
+
+    return {}
+
+
 def _is_home_utility_product(product):
     return _canonical_home_service_key(product) in HOME_UTILITY_SERVICE_KEYS
 
@@ -1186,6 +1202,18 @@ def _attach_product_launch_meta(products, user=None):
             for attr_name, attr_value in _build_teacher_first_product_labels(product).items():
                 setattr(product, attr_name, attr_value)
             product.home_card_summary = _build_home_card_summary(product)
+            guest_entry_meta = _build_guest_entry_copy_meta(product)
+            product.home_guest_status_label = (
+                guest_entry_meta.get("home_guest_status_label")
+                or getattr(product, "home_access_status_label", "")
+            )
+            product.home_guest_summary = (
+                guest_entry_meta.get("home_guest_summary")
+                or product.home_card_summary
+            )
+            product.home_guest_cta_label = guest_entry_meta.get("home_guest_cta_label", "")
+            product.product_access_copy_override = guest_entry_meta.get("detail_access_copy", "")
+            product.product_start_label_override = guest_entry_meta.get("detail_start_label", "")
             product.home_compact_title = ""
             product.home_icon_class = service_launcher_utils.resolve_home_icon_class(product)
             product.home_accent_token = service_launcher_utils.resolve_home_accent_token(product)
@@ -2520,7 +2548,11 @@ def _product_requires_guest_login(product):
 
 
 def _guest_access_status_copy(product):
-    return getattr(product, "home_access_status_label", "") or "미리보기 가능"
+    return (
+        getattr(product, "home_guest_status_label", "")
+        or getattr(product, "home_access_status_label", "")
+        or "미리보기 가능"
+    )
 
 
 def _build_home_guest_highlight_card(product, *, login_url=""):
@@ -2530,13 +2562,17 @@ def _build_home_guest_highlight_card(product, *, login_url=""):
     launch_is_external = bool(getattr(product, "launch_is_external", False))
     href = launch_href
     is_external = launch_is_external
+    cta_label = "새 창에서 시작" if launch_is_external else "지금 시작"
     if access_status_label == "로그인 필요":
         href = _build_home_login_continue_url(launch_href, login_url=login_url)
         is_external = False
+        cta_label = "로그인 후 시작"
+    elif not launch_is_external:
+        cta_label = getattr(product, "home_guest_cta_label", "") or cta_label
     return {
         "id": getattr(product, "id", ""),
         "title": getattr(product, "public_service_name", "") or getattr(product, "title", "") or "도구",
-        "description": getattr(product, "home_card_summary", "") or getattr(product, "teacher_first_support_label", "") or getattr(product, "description", ""),
+        "description": getattr(product, "home_guest_summary", "") or getattr(product, "home_card_summary", "") or getattr(product, "teacher_first_support_label", "") or getattr(product, "description", ""),
         "service_name": getattr(product, "teacher_first_task_label", "") or "",
         "icon": getattr(product, "icon", ""),
         "home_icon_class": getattr(product, "home_icon_class", "") or service_launcher_utils.resolve_home_icon_class(product),
@@ -2545,6 +2581,7 @@ def _build_home_guest_highlight_card(product, *, login_url=""):
         "route_name": route_name,
         "href": href,
         "is_external": is_external,
+        "cta_label": cta_label,
         "guide_url": getattr(product, "guide_url", "") or "",
         "access_status_label": access_status_label,
         "state_badges": list(getattr(product, "home_state_badges", []) or []),
@@ -2698,6 +2735,8 @@ def _attach_home_guest_landing_meta(product, *, login_url):
     access_status = _guest_access_status_copy(product)
     launch_href = getattr(product, "launch_href", "") or ""
     launch_is_external = bool(getattr(product, "launch_is_external", False))
+    guest_summary = getattr(product, "home_guest_summary", "") or _build_home_featured_summary(product)
+    guest_cta_label = getattr(product, "home_guest_cta_label", "") or "지금 시작"
 
     if launch_is_external:
         cta_href = launch_href
@@ -2707,9 +2746,9 @@ def _attach_home_guest_landing_meta(product, *, login_url):
         cta_label = "로그인 후 시작"
     else:
         cta_href = launch_href or login_url
-        cta_label = "지금 시작"
+        cta_label = guest_cta_label
 
-    product.home_landing_summary = _build_home_featured_summary(product)
+    product.home_landing_summary = guest_summary
     product.home_landing_cta_href = cta_href
     product.home_landing_cta_label = cta_label
     product.home_landing_cta_is_external = launch_is_external

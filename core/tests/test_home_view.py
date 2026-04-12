@@ -462,6 +462,20 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('로그인 후 전체 열기', content)
         self.assertNotIn('지금 바로 써보기', content)
 
+    def test_v2_anonymous_collect_card_uses_guest_join_copy(self):
+        self._create_try_now_products()
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        primary_action_card = response.context.get('public_primary_action_card')
+
+        self.assertIsNotNone(primary_action_card)
+        self.assertEqual(primary_action_card['title'], '간편 수합')
+        self.assertEqual(primary_action_card['access_status_label'], '비로그인 참여')
+        self.assertEqual(primary_action_card['cta_label'], '참여 열기')
+        self.assertIn('입장코드나 QR이 있으면 바로 제출에 참여합니다.', primary_action_card['description'])
+        self.assertIn('참여 열기', content)
+
     def test_v2_anonymous_renders_hero_preview_and_proof_panels(self):
         self._create_try_now_products()
         response = self.client.get(reverse('home'))

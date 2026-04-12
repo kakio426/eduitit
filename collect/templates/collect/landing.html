@@ -12,35 +12,23 @@
             <p class="text-xl md:text-2xl text-gray-600 font-medium leading-relaxed break-keep">
                 {{ service.lead_text|default:"QR 또는 입장코드로 파일, 링크, 텍스트, 선택형 응답을 빠르게 수합하세요." }}
             </p>
+            <div class="mt-5 flex flex-wrap justify-center gap-2.5">
+                <span class="inline-flex items-center rounded-full bg-teal-100 px-4 py-2 text-sm font-black text-teal-700">제출 참여는 비로그인</span>
+                <span class="inline-flex items-center rounded-full bg-white/70 px-4 py-2 text-sm font-black text-gray-700">요청 만들기는 로그인 후</span>
+            </div>
         </header>
 
         <section class="clay-card p-4 md:p-10 mb-8" data-aos="zoom-in" aria-labelledby="collect-landing-overview">
             <div class="grid md:grid-cols-2 gap-4 md:gap-6">
-                <article class="w-full max-w-full overflow-hidden bg-white/50 rounded-2xl p-4 md:p-5 border-2 border-emerald-200">
-                    <header class="flex items-center gap-3 mb-4">
-                        <div class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xl md:text-2xl">
-                            <i class="fa-solid fa-chalkboard-user"></i>
-                        </div>
-                        <h3 class="text-xl md:text-2xl font-bold text-gray-800">요청 만들기</h3>
-                    </header>
-                    <p class="text-sm md:text-base text-gray-600 mb-6 leading-relaxed">요청 만들고 공유</p>
-                    {% if user.is_authenticated %}
-                    <a href="{% url 'collect:dashboard' %}" class="block w-full py-3 md:py-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-bold text-base md:text-lg text-center hover:shadow-lg hover:-translate-y-0.5 transition-all">
-                        대시보드 가기 <i class="fa-solid fa-arrow-right ml-2"></i>
-                    </a>
-                    {% else %}
-                    <a href="{% url 'account_login' %}?next={% url 'collect:dashboard' %}" class="block w-full py-3 md:py-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-bold text-base md:text-lg text-center hover:shadow-lg hover:-translate-y-0.5 transition-all">
-                        로그인하기 <i class="fa-solid fa-sign-in-alt ml-2"></i>
-                    </a>
-                    {% endif %}
-                </article>
-
-                <article class="w-full max-w-full overflow-hidden bg-white/50 rounded-2xl p-4 md:p-5 border-2 border-teal-200">
+                <article class="w-full max-w-full overflow-hidden bg-white/60 rounded-2xl p-4 md:p-5 border-2 border-teal-300">
                     <header class="flex items-center gap-3 mb-4">
                         <div class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-teal-500 text-white flex items-center justify-center text-xl md:text-2xl">
                             <i class="fa-solid fa-paper-plane"></i>
                         </div>
-                        <h3 class="text-xl md:text-2xl font-bold text-gray-800">제출 참여</h3>
+                        <div class="min-w-0">
+                            <p class="text-xs font-black uppercase tracking-[0.18em] text-teal-600">비로그인</p>
+                            <h3 class="text-xl md:text-2xl font-bold text-gray-800">제출 참여</h3>
+                        </div>
                     </header>
                     <p class="text-sm md:text-base text-gray-600 mb-4 leading-relaxed">코드 입력 또는 QR</p>
 
@@ -66,6 +54,28 @@
                         </div>
                         <p class="text-xs md:text-sm text-gray-600 font-medium">QR은 교사가 공유</p>
                     </div>
+                </article>
+
+                <article class="w-full max-w-full overflow-hidden bg-white/50 rounded-2xl p-4 md:p-5 border-2 border-emerald-200">
+                    <header class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xl md:text-2xl">
+                            <i class="fa-solid fa-chalkboard-user"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-xs font-black uppercase tracking-[0.18em] text-emerald-600">교사용</p>
+                            <h3 class="text-xl md:text-2xl font-bold text-gray-800">요청 만들기</h3>
+                        </div>
+                    </header>
+                    <p class="text-sm md:text-base text-gray-600 mb-6 leading-relaxed">새 요청 생성과 제출 확인</p>
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'collect:dashboard' %}" class="block w-full py-3 md:py-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-bold text-base md:text-lg text-center hover:shadow-lg hover:-translate-y-0.5 transition-all">
+                        대시보드 가기 <i class="fa-solid fa-arrow-right ml-2"></i>
+                    </a>
+                    {% else %}
+                    <a href="{% url 'account_login' %}?next={% url 'collect:dashboard' %}" class="block w-full py-3 md:py-4 bg-white text-emerald-700 border-2 border-emerald-300 rounded-xl font-bold text-base md:text-lg text-center hover:shadow-lg hover:-translate-y-0.5 transition-all">
+                        로그인 후 만들기 <i class="fa-solid fa-arrow-right ml-2"></i>
+                    </a>
+                    {% endif %}
                 </article>
             </div>
         </section>

@@ -48,7 +48,7 @@
                     <a href="{{ public_primary_action_card.href }}"
                         {% if public_primary_action_card.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
                         class="home-public-v5-primary-link">
-                        {% if public_primary_action_card.is_external %}새 창에서 시작{% else %}바로 시작{% endif %}
+                        {{ public_primary_action_card.cta_label|default:'바로 시작' }}
                         <i class="fa-solid fa-{% if public_primary_action_card.is_external %}arrow-up-right-from-square{% else %}arrow-right{% endif %} text-xs"></i>
                     </a>
                     {% else %}
@@ -87,7 +87,7 @@
                         <h3 class="home-public-v6-grid-title">{{ card.title }}</h3>
                         <p class="home-public-v6-grid-summary">{{ card.description|truncatechars:38 }}</p>
                         <span class="home-public-v6-grid-cta">
-                            {% if card.is_external %}새 창에서 시작{% else %}바로 시작{% endif %}
+                            {{ card.cta_label|default:'바로 시작' }}
                         </span>
                     </a>
                     {% endfor %}
