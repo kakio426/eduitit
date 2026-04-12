@@ -562,6 +562,38 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         self.assertEqual(response.status_code, 200)
 
+    @patch('core.views._build_home_representative_slots')
+    def test_v2_authenticated_home_survives_representative_slot_builder_failure(self, mock_slots):
+        self._login('stablehome')
+        mock_slots.side_effect = RuntimeError('representative slots failed')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(response.status_code, 200)
+        _assert_authenticated_home_context_contract(self, response, design_version='v6')
+        self.assertEqual(response.context['representative_slots'], [])
+        self.assertIn('data-classcalendar-main-view="true"', content)
+
+    @patch('core.views._resolve_product_launch_url')
+    def test_v2_authenticated_home_survives_single_product_launch_meta_failure(self, mock_resolve_product_launch_url):
+        self._login('launchfailuser')
+
+        def side_effect(product, user=None):
+            if getattr(product, 'title', '') == '행정 도구':
+                raise RuntimeError('broken product launch meta')
+            return resolve_product_launch_url(product, user=user)
+
+        mock_resolve_product_launch_url.side_effect = side_effect
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(response.status_code, 200)
+        _assert_authenticated_home_context_contract(self, response, design_version='v6')
+        self.assertIn('수업 도구', content)
+        self.assertIn('data-classcalendar-main-view="true"', content)
+
     def test_v2_authenticated_uses_compact_top_row_without_large_greeting(self):
         """V2 로그인 홈은 큰 인사말 대신 압축된 상단 행을 사용"""
         self._login('greetuser', nickname='홍길동')

@@ -41,6 +41,19 @@ class CalendarSheetbookBridgeTests(TestCase):
         response = self.client.get(reverse("classcalendar:sheetbook_entry"))
         self.assertRedirects(response, f"{reverse('home')}#home-calendar", fetch_redirect_response=False)
 
+    @override_settings(SHEETBOOK_ENABLED=False)
+    def test_sheetbook_entry_ignores_existing_sheetbook_when_service_retired(self):
+        sheetbook = Sheetbook.objects.create(owner=self.user, title="숨긴 교무수첩")
+        SheetTab.objects.create(
+            sheetbook=sheetbook,
+            name="달력",
+            tab_type=SheetTab.TYPE_CALENDAR,
+            sort_order=1,
+        )
+
+        response = self.client.get(reverse("classcalendar:sheetbook_entry"))
+        self.assertRedirects(response, f"{reverse('home')}#home-calendar", fetch_redirect_response=False)
+
     @override_settings(SHEETBOOK_ENABLED=True)
     def test_sheetbook_entry_shows_sheetbook_calendar_entry_when_sheetbook_exists(self):
         sheetbook = Sheetbook.objects.create(owner=self.user, title="2026 3-1 교무수첩")

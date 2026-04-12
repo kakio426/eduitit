@@ -1884,6 +1884,75 @@ def _validate_message_capture_uploads(*, uploaded_files, user_id, operation_labe
     return attachment_checksums, None
 
 
+def _message_capture_error_response(*, message, code="validation_error", status=400, errors=None):
+    payload = {
+        "status": "error",
+        "code": code,
+        "message": message,
+    }
+    if errors is not None:
+        payload["errors"] = errors
+    return JsonResponse(payload, status=status)
+
+
+def _extract_message_capture_submission(request, *, operation_label):
+    form = MessageCaptureParseForm(request.POST)
+    if not form.is_valid():
+        logger.warning(
+            "[ClassCalendar][MessageCapture] %s_failed user_id=%s reason=form_invalid",
+            operation_label,
+            request.user.id,
+        )
+        return None, _message_capture_error_response(
+            message="입력값을 확인해 주세요.",
+            errors=form.errors.get_json_data(),
+        )
+
+    raw_text = form.cleaned_data.get("raw_text") or ""
+    uploaded_files = request.FILES.getlist("files")
+    if not raw_text.strip() and not uploaded_files:
+        logger.warning(
+            "[ClassCalendar][MessageCapture] %s_failed user_id=%s reason=empty_input",
+            operation_label,
+            request.user.id,
+        )
+        return None, _message_capture_error_response(
+            message="메시지 텍스트 또는 첨부파일 중 하나는 반드시 입력해 주세요.",
+        )
+
+    if len(uploaded_files) > MESSAGE_CAPTURE_MAX_FILES:
+        logger.warning(
+            "[ClassCalendar][MessageCapture] %s_failed user_id=%s reason=too_many_files files=%s",
+            operation_label,
+            request.user.id,
+            len(uploaded_files),
+        )
+        return None, _message_capture_error_response(
+            message=f"첨부파일은 최대 {MESSAGE_CAPTURE_MAX_FILES}개까지 업로드할 수 있습니다.",
+        )
+
+    return (
+        {
+            "form": form,
+            "raw_text": raw_text,
+            "source_hint": (form.cleaned_data.get("source_hint") or "unknown").strip()[:30] or "unknown",
+            "idempotency_key": (form.cleaned_data.get("idempotency_key") or uuid.uuid4().hex).strip()[:64] or uuid.uuid4().hex,
+            "manual_date": form.cleaned_data.get("manual_date"),
+            "manual_note": form.cleaned_data.get("manual_note") or "",
+            "uploaded_files": uploaded_files,
+        },
+        None,
+    )
+
+
+def _find_existing_message_capture(*, user, idempotency_key):
+    return (
+        CalendarMessageCapture.objects.filter(author=user, idempotency_key=idempotency_key)
+        .prefetch_related("attachments", "candidates")
+        .first()
+    )
+
+
 def _calculate_upload_sha256(uploaded_file):
     digest = hashlib.sha256()
     for chunk in uploaded_file.chunks():
@@ -2086,6 +2155,28 @@ def _extract_selected_candidates(payload):
     return normalized
 
 
+def _select_message_capture_attachments(capture, payload):
+    selected_attachment_ids = set(_extract_selected_attachment_ids(payload))
+    capture_attachments = list(capture.attachments.all().order_by("created_at", "id"))
+    if selected_attachment_ids:
+        capture_attachments = [
+            attachment
+            for attachment in capture_attachments
+            if str(attachment.id) in selected_attachment_ids
+        ]
+
+    changed_attachments = []
+    for attachment in capture.attachments.all():
+        is_selected = (not selected_attachment_ids) or (str(attachment.id) in selected_attachment_ids)
+        if attachment.is_selected != is_selected:
+            attachment.is_selected = is_selected
+            changed_attachments.append(attachment)
+    for attachment in changed_attachments:
+        attachment.save(update_fields=["is_selected"])
+
+    return capture_attachments
+
+
 def _normalize_selected_candidate_kind(raw_kind):
     normalized = str(raw_kind or "").strip().lower()
     allowed = _allowed_message_capture_candidate_kinds()
@@ -2201,7 +2292,13 @@ def _split_integration_key(raw_key):
     return raw_key.split(":", 1)
 
 
+def _sheetbook_runtime_enabled():
+    return bool(getattr(settings, "SHEETBOOK_ENABLED", False))
+
+
 def _resolve_sheetbook_context(user, raw_sheetbook_id, raw_tab_id):
+    if not _sheetbook_runtime_enabled():
+        return None
     try:
         sheetbook_id = int(raw_sheetbook_id or 0)
         tab_id = int(raw_tab_id or 0)
@@ -2234,6 +2331,8 @@ def _resolve_sheetbook_context(user, raw_sheetbook_id, raw_tab_id):
 
 
 def _resolve_sheetbook_source_meta(event, *, current_user_id):
+    if not _sheetbook_runtime_enabled():
+        return None
     source = (event.integration_source or "").strip()
     if source not in SHEETBOOK_SOURCE_SOURCES or event.author_id != current_user_id:
         return None
@@ -3606,7 +3705,7 @@ def _build_shared_event_groups(events):
 
 def _resolve_sheetbook_calendar_entry_for_user(request, user):
     result = {
-        "sheetbook_enabled": bool(getattr(settings, "SHEETBOOK_ENABLED", False)),
+        "sheetbook_enabled": _sheetbook_runtime_enabled(),
         "sheetbook_exists": False,
         "sheetbook_title": "",
         "sheetbook_entry_url": "",
@@ -3723,7 +3822,7 @@ def _resolve_sheetbook_calendar_entry_for_user(request, user):
 
 @login_required
 def main_entry(request):
-    if not getattr(settings, "SHEETBOOK_ENABLED", False):
+    if not _sheetbook_runtime_enabled():
         return redirect(_build_home_calendar_surface_url(request, include_request_state=False))
 
     bridge_context = _resolve_sheetbook_calendar_entry_for_user(request, request.user)
@@ -4445,62 +4544,23 @@ def api_message_capture_save(request):
         return _feature_disabled_response("메시지 기능이 아직 활성화되지 않았습니다.")
 
     save_started_at = timezone.now()
-    form = MessageCaptureParseForm(request.POST)
-    if not form.is_valid():
-        logger.warning(
-            "[ClassCalendar][MessageCapture] save_failed user_id=%s reason=form_invalid",
-            request.user.id,
-        )
-        return JsonResponse(
-            {
-                "status": "error",
-                "code": "validation_error",
-                "errors": form.errors.get_json_data(),
-                "message": "입력값을 확인해 주세요.",
-            },
-            status=400,
-        )
+    submission, error_response = _extract_message_capture_submission(
+        request,
+        operation_label="save",
+    )
+    if error_response:
+        return error_response
 
-    raw_text = form.cleaned_data.get("raw_text") or ""
-    source_hint = (form.cleaned_data.get("source_hint") or "unknown").strip()[:30] or "unknown"
-    idempotency_key = (form.cleaned_data.get("idempotency_key") or uuid.uuid4().hex).strip()[:64] or uuid.uuid4().hex
-    manual_date = form.cleaned_data.get("manual_date")
-    manual_note = form.cleaned_data.get("manual_note") or ""
-    uploaded_files = request.FILES.getlist("files")
+    raw_text = submission["raw_text"]
+    source_hint = submission["source_hint"]
+    idempotency_key = submission["idempotency_key"]
+    manual_date = submission["manual_date"]
+    manual_note = submission["manual_note"]
+    uploaded_files = submission["uploaded_files"]
 
-    if not raw_text.strip() and not uploaded_files:
-        logger.warning(
-            "[ClassCalendar][MessageCapture] save_failed user_id=%s reason=empty_input",
-            request.user.id,
-        )
-        return JsonResponse(
-            {
-                "status": "error",
-                "code": "validation_error",
-                "message": "메시지 텍스트 또는 첨부파일 중 하나는 반드시 입력해 주세요.",
-            },
-            status=400,
-        )
-
-    if len(uploaded_files) > MESSAGE_CAPTURE_MAX_FILES:
-        logger.warning(
-            "[ClassCalendar][MessageCapture] save_failed user_id=%s reason=too_many_files files=%s",
-            request.user.id,
-            len(uploaded_files),
-        )
-        return JsonResponse(
-            {
-                "status": "error",
-                "code": "validation_error",
-                "message": f"첨부파일은 최대 {MESSAGE_CAPTURE_MAX_FILES}개까지 업로드할 수 있습니다.",
-            },
-            status=400,
-        )
-
-    existing_capture = (
-        CalendarMessageCapture.objects.filter(author=request.user, idempotency_key=idempotency_key)
-        .prefetch_related("attachments", "candidates")
-        .first()
+    existing_capture = _find_existing_message_capture(
+        user=request.user,
+        idempotency_key=idempotency_key,
     )
     if existing_capture:
         _update_message_capture_manual_inputs(
@@ -4552,10 +4612,9 @@ def api_message_capture_save(request):
                 content_cache_key="",
             )
         except IntegrityError:
-            capture = (
-                CalendarMessageCapture.objects.filter(author=request.user, idempotency_key=idempotency_key)
-                .prefetch_related("attachments", "candidates")
-                .first()
+            capture = _find_existing_message_capture(
+                user=request.user,
+                idempotency_key=idempotency_key,
             )
             if capture:
                 _update_message_capture_manual_inputs(
@@ -4596,62 +4655,23 @@ def api_message_capture_parse(request):
         return _feature_disabled_response("메시지 바로 등록 기능이 아직 활성화되지 않았습니다.")
     parse_started_at = timezone.now()
 
-    form = MessageCaptureParseForm(request.POST)
-    if not form.is_valid():
-        logger.warning(
-            "[ClassCalendar][MessageCapture] parse_failed user_id=%s reason=form_invalid",
-            request.user.id,
-        )
-        return JsonResponse(
-            {
-                "status": "error",
-                "code": "validation_error",
-                "errors": form.errors.get_json_data(),
-                "message": "입력값을 확인해 주세요.",
-            },
-            status=400,
-        )
+    submission, error_response = _extract_message_capture_submission(
+        request,
+        operation_label="parse",
+    )
+    if error_response:
+        return error_response
 
-    raw_text = form.cleaned_data.get("raw_text") or ""
-    source_hint = (form.cleaned_data.get("source_hint") or "unknown").strip()[:30] or "unknown"
-    idempotency_key = (form.cleaned_data.get("idempotency_key") or uuid.uuid4().hex).strip()[:64] or uuid.uuid4().hex
-    manual_date = form.cleaned_data.get("manual_date")
-    manual_note = form.cleaned_data.get("manual_note") or ""
-    uploaded_files = request.FILES.getlist("files")
+    raw_text = submission["raw_text"]
+    source_hint = submission["source_hint"]
+    idempotency_key = submission["idempotency_key"]
+    manual_date = submission["manual_date"]
+    manual_note = submission["manual_note"]
+    uploaded_files = submission["uploaded_files"]
 
-    if not raw_text.strip() and not uploaded_files:
-        logger.warning(
-            "[ClassCalendar][MessageCapture] parse_failed user_id=%s reason=empty_input",
-            request.user.id,
-        )
-        return JsonResponse(
-            {
-                "status": "error",
-                "code": "validation_error",
-                "message": "메시지 텍스트 또는 첨부파일 중 하나는 반드시 입력해 주세요.",
-            },
-            status=400,
-        )
-
-    if len(uploaded_files) > MESSAGE_CAPTURE_MAX_FILES:
-        logger.warning(
-            "[ClassCalendar][MessageCapture] parse_failed user_id=%s reason=too_many_files files=%s",
-            request.user.id,
-            len(uploaded_files),
-        )
-        return JsonResponse(
-            {
-                "status": "error",
-                "code": "validation_error",
-                "message": f"첨부파일은 최대 {MESSAGE_CAPTURE_MAX_FILES}개까지 업로드할 수 있습니다.",
-            },
-            status=400,
-        )
-
-    existing_capture = (
-        CalendarMessageCapture.objects.filter(author=request.user, idempotency_key=idempotency_key)
-        .prefetch_related("attachments", "candidates")
-        .first()
+    existing_capture = _find_existing_message_capture(
+        user=request.user,
+        idempotency_key=idempotency_key,
     )
     if existing_capture:
         _update_message_capture_manual_inputs(
@@ -4730,10 +4750,9 @@ def api_message_capture_parse(request):
             )
             capture.save()
         except IntegrityError:
-            capture = (
-                CalendarMessageCapture.objects.filter(author=request.user, idempotency_key=idempotency_key)
-                .prefetch_related("attachments", "candidates")
-                .first()
+            capture = _find_existing_message_capture(
+                user=request.user,
+                idempotency_key=idempotency_key,
             )
             if capture:
                 _update_message_capture_manual_inputs(
@@ -5042,23 +5061,7 @@ def api_message_capture_commit(request, capture_id):
     )
 
     if selected_candidates:
-        selected_attachment_ids = set(_extract_selected_attachment_ids(payload))
-        capture_attachments = list(capture.attachments.all().order_by("created_at", "id"))
-        if selected_attachment_ids:
-            capture_attachments = [
-                attachment
-                for attachment in capture_attachments
-                if str(attachment.id) in selected_attachment_ids
-            ]
-
-        changed_attachments = []
-        for attachment in capture.attachments.all():
-            is_selected = (not selected_attachment_ids) or (str(attachment.id) in selected_attachment_ids)
-            if attachment.is_selected != is_selected:
-                attachment.is_selected = is_selected
-                changed_attachments.append(attachment)
-        for attachment in changed_attachments:
-            attachment.save(update_fields=["is_selected"])
+        capture_attachments = _select_message_capture_attachments(capture, payload)
 
         if not any(item.get("selected", True) for item in selected_candidates):
             return JsonResponse(
@@ -5298,7 +5301,7 @@ def api_message_capture_commit(request, capture_id):
                 "message": _build_message_capture_commit_message(created_events, reused_events),
                 "sheetbook_sync": {
                     "status": "pending",
-                    "enabled": bool(getattr(settings, "SHEETBOOK_ENABLED", False)),
+                    "enabled": _sheetbook_runtime_enabled(),
                 },
             },
             status=201,
@@ -5363,23 +5366,7 @@ def api_message_capture_commit(request, capture_id):
         )
     form.cleaned_data["confirmed_item_type"] = confirmed_item_type
 
-    selected_attachment_ids = set(_extract_selected_attachment_ids(payload))
-    capture_attachments = list(capture.attachments.all().order_by("created_at", "id"))
-    if selected_attachment_ids:
-        capture_attachments = [
-            attachment
-            for attachment in capture_attachments
-            if str(attachment.id) in selected_attachment_ids
-        ]
-
-    changed_attachments = []
-    for attachment in capture.attachments.all():
-        is_selected = (not selected_attachment_ids) or (str(attachment.id) in selected_attachment_ids)
-        if attachment.is_selected != is_selected:
-            attachment.is_selected = is_selected
-            changed_attachments.append(attachment)
-    for attachment in changed_attachments:
-        attachment.save(update_fields=["is_selected"])
+    capture_attachments = _select_message_capture_attachments(capture, payload)
 
     _, editable_owner_ids, _ = _get_calendar_access_for_user(request.user)
     selected_attachment_count = len(capture_attachments)
@@ -5508,7 +5495,7 @@ def api_message_capture_commit(request, capture_id):
                 "warnings": attachment_warnings,
                 "sheetbook_sync": {
                     "status": "not_applicable",
-                    "enabled": bool(getattr(settings, "SHEETBOOK_ENABLED", False)),
+                    "enabled": _sheetbook_runtime_enabled(),
                 },
             },
             status=201,
@@ -5528,7 +5515,7 @@ def api_message_capture_commit(request, capture_id):
             "warnings": attachment_warnings,
             "sheetbook_sync": {
                 "status": "pending",
-                "enabled": bool(getattr(settings, "SHEETBOOK_ENABLED", False)),
+                "enabled": _sheetbook_runtime_enabled(),
             },
         },
         status=201,

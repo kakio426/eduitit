@@ -1138,19 +1138,27 @@ def _attach_product_launch_meta(products, user=None):
     guide_url_map = _build_product_guide_url_map(products)
     prepared = []
     for product in products:
-        launch_href, launch_is_external = _resolve_product_launch_url(product, user=user)
-        product.launch_href = launch_href
-        product.launch_is_external = launch_is_external
-        product.guide_url = guide_url_map.get(product.id, "")
-        product.sample_url = ""
-        for attr_name, attr_value in _build_teacher_first_product_labels(product).items():
-            setattr(product, attr_name, attr_value)
-        product.home_card_summary = _build_home_card_summary(product)
-        product.home_compact_title = ""
-        if _product_route_name(product) == "messagebox:main":
-            product.home_compact_title = "메시지 보관"
-        prepared.append(product)
+        try:
+            launch_href, launch_is_external = _resolve_product_launch_url(product, user=user)
+            product.launch_href = launch_href
+            product.launch_is_external = launch_is_external
+            product.guide_url = guide_url_map.get(product.id, "")
+            product.sample_url = ""
+            for attr_name, attr_value in _build_teacher_first_product_labels(product).items():
+                setattr(product, attr_name, attr_value)
+            product.home_card_summary = _build_home_card_summary(product)
+            product.home_compact_title = ""
+            if _product_route_name(product) == "messagebox:main":
+                product.home_compact_title = "메시지 보관"
+            prepared.append(product)
+        except Exception:
+            logger.exception(
+                "[home surface] product launch meta failed user_id=%s product_id=%s",
+                getattr(user, "id", None),
+                getattr(product, "id", None),
+            )
     return prepared
+
 
 def _get_user_favorite_products(user, product_list, limit=None):
     """홈에서 사용할 사용자 즐겨찾기 서비스 목록 반환."""
@@ -1285,30 +1293,37 @@ def _build_product_link_items(products, include_section_meta=False, user=None):
     """템플릿에서 공통으로 쓰는 서비스 링크 아이템 구성."""
     items = []
     for product in products:
-        href, is_external = _resolve_product_launch_url(product, user=user)
-        workbench_meta = build_workbench_card_meta(product)
-        favorite_full_title = (
-            service_launcher_utils.sanitize_public_display_text(
-                getattr(product, "public_service_name", "") or getattr(product, "title", "")
+        try:
+            href, is_external = _resolve_product_launch_url(product, user=user)
+            workbench_meta = build_workbench_card_meta(product)
+            favorite_full_title = (
+                service_launcher_utils.sanitize_public_display_text(
+                    getattr(product, "public_service_name", "") or getattr(product, "title", "")
+                )
+                or "도구"
             )
-            or "도구"
-        )
-        item = {
-            'product': product,
-            'href': href,
-            'is_external': is_external,
-            'workbench_title': workbench_meta.title,
-            'workbench_summary': workbench_meta.summary,
-            'favorite_title': build_favorite_service_title(favorite_full_title) or favorite_full_title,
-            'favorite_full_title': favorite_full_title,
-        }
-        if include_section_meta:
-            section_key = _resolve_home_section_key(product)
-            section_meta = HOME_SECTION_META_BY_KEY.get(section_key, {})
-            item['section_key'] = section_key
-            item['section_title'] = section_meta.get('title', '추천 도구')
-            item['section_subtitle'] = section_meta.get('subtitle', '')
-        items.append(item)
+            item = {
+                'product': product,
+                'href': href,
+                'is_external': is_external,
+                'workbench_title': workbench_meta.title,
+                'workbench_summary': workbench_meta.summary,
+                'favorite_title': build_favorite_service_title(favorite_full_title) or favorite_full_title,
+                'favorite_full_title': favorite_full_title,
+            }
+            if include_section_meta:
+                section_key = _resolve_home_section_key(product)
+                section_meta = HOME_SECTION_META_BY_KEY.get(section_key, {})
+                item['section_key'] = section_key
+                item['section_title'] = section_meta.get('title', '추천 도구')
+                item['section_subtitle'] = section_meta.get('subtitle', '')
+            items.append(item)
+        except Exception:
+            logger.exception(
+                "[home surface] product link item failed user_id=%s product_id=%s",
+                getattr(user, "id", None),
+                getattr(product, "id", None),
+            )
     return items
 
 
@@ -3375,52 +3390,33 @@ def _build_home_surface_legacy_aliases(
     return legacy_values
 
 
-def build_home_surface_context(
-    request,
-    *,
-    products,
-    page_obj,
-    pinned_notice_posts,
-    feed_scope,
-    home_design_version,
-):
-    product_list = _attach_product_launch_meta(list(products), user=request.user)
-    section_product_list = [
-        product
-        for product in product_list
-        if str(getattr(product, 'launch_route_name', '') or '').strip().lower() != 'messagebox:main'
-    ]
-    sections, aux_sections, games = get_purpose_sections(
-        section_product_list,
-        preview_limit=2,
-    )
-    primary_display_sections, secondary_display_sections = _build_home_display_groups(sections, aux_sections)
-    home_nav_sections = _build_home_nav_sections(
-        primary_display_sections,
-        secondary_display_sections,
-        games,
-    )
-    home_nav_sections = _ensure_home_direct_nav_sections(
-        home_nav_sections,
-        product_list,
-    )
-    sns_summary_posts = _build_home_community_summary_posts(
-        page_obj,
-        pinned_notice_posts=pinned_notice_posts,
-        limit=2,
-    )
-    sns_preview_posts = _build_sns_preview_posts(
-        page_obj,
-        pinned_notice_posts=pinned_notice_posts,
-        limit=3,
-    )
-    community_summary = {
-        'title': '실시간 소통',
-        'posts': sns_summary_posts,
-        'full_url': reverse('community_feed'),
+def _build_home_surface_provider_cards(request, *, favorite_products, product_list):
+    return {
+        'reservation_home_card': _build_home_surface_reservation_provider(request.user),
+        'developer_chat_home_card': _build_home_surface_developer_chat_provider(request.user),
+        'teacher_buddy': _build_home_surface_teacher_buddy_provider(request.user),
+        'quickdrop_home_card': _build_home_surface_quickdrop_provider(
+            request,
+            favorite_products=favorite_products,
+            product_list=product_list,
+        ),
+        'calendar': _build_home_surface_calendar_provider(request),
     }
 
-    UserProfile.objects.get_or_create(user=request.user)
+
+def _build_home_surface_safe_value(request, *, label, fallback_factory, builder):
+    try:
+        return builder()
+    except Exception:
+        logger.exception(
+            '[home surface] %s failed user_id=%s',
+            label,
+            getattr(request.user, 'id', None),
+        )
+        return fallback_factory()
+
+
+def _build_home_surface_usage_state(request, *, product_list):
     favorite_products = _get_user_favorite_products(request.user, product_list)
     recent_products = _get_recently_used_products(
         request.user,
@@ -3429,7 +3425,24 @@ def build_home_surface_context(
         limit=4,
     )
     quick_actions = _get_usage_based_quick_actions(request.user, product_list)
+    return {
+        'favorite_products': favorite_products,
+        'recent_products': recent_products,
+        'quick_actions': quick_actions,
+    }
 
+
+def _build_home_surface_discovery_state(
+    request,
+    *,
+    product_list,
+    favorite_products,
+    recent_products,
+    quick_actions,
+    sections,
+    aux_sections,
+    games,
+):
     workflow_seed_products = []
     seen_seed_ids = set()
     for seed_product in [*favorite_products, *recent_products, *quick_actions]:
@@ -3461,37 +3474,6 @@ def build_home_surface_context(
             limit=4,
         )
 
-    favorite_items = _build_product_link_items(
-        favorite_products,
-        include_section_meta=True,
-        user=request.user,
-    )
-    recent_items = _build_product_link_items(
-        recent_products,
-        include_section_meta=True,
-        user=request.user,
-    )
-    discovery_items = _build_product_link_items(
-        discovery_products,
-        include_section_meta=True,
-        user=request.user,
-    )
-    provider_cards = {
-        'reservation_home_card': _build_home_surface_reservation_provider(request.user),
-        'developer_chat_home_card': _build_home_surface_developer_chat_provider(request.user),
-        'teacher_buddy': _build_home_surface_teacher_buddy_provider(request.user),
-        'quickdrop_home_card': _build_home_surface_quickdrop_provider(
-            request,
-            favorite_products=favorite_products,
-            product_list=product_list,
-        ),
-        'calendar': _build_home_surface_calendar_provider(request),
-    }
-    schoolcomm_home_card = _build_home_schoolcomm_card(
-        request.user,
-        favorite_products=favorite_products,
-        product_list=product_list,
-    )
     representative_slots = _build_home_representative_slots(
         request.user,
         favorite_products=favorite_products,
@@ -3502,24 +3484,206 @@ def build_home_surface_context(
         aux_sections=aux_sections,
         games=games,
     )
-    representative_recommendations = _build_home_recommendations(
-        companion_items,
-        discovery_items,
-        exclude_ids=(
-            {product.id for product in favorite_products}
-            | {slot['product'].id for slot in representative_slots}
+    return {
+        'companion_items': companion_items,
+        'discovery_products': discovery_products,
+        'representative_slots': representative_slots,
+    }
+
+
+def build_home_surface_context(
+    request,
+    *,
+    products,
+    page_obj,
+    pinned_notice_posts,
+    feed_scope,
+    home_design_version,
+):
+    product_list = _build_home_surface_safe_value(
+        request,
+        label='product launch meta',
+        fallback_factory=list,
+        builder=lambda: _attach_product_launch_meta(list(products), user=request.user),
+    )
+    section_product_list = [
+        product
+        for product in product_list
+        if str(getattr(product, 'launch_route_name', '') or '').strip().lower() != 'messagebox:main'
+    ]
+    sections, aux_sections, games = _build_home_surface_safe_value(
+        request,
+        label='purpose sections',
+        fallback_factory=lambda: ([], [], []),
+        builder=lambda: get_purpose_sections(
+            section_product_list,
+            preview_limit=2,
         ),
-        limit=3,
+    )
+    primary_display_sections, secondary_display_sections = _build_home_surface_safe_value(
+        request,
+        label='display groups',
+        fallback_factory=lambda: ([], []),
+        builder=lambda: _build_home_display_groups(sections, aux_sections),
+    )
+    home_nav_sections = _build_home_surface_safe_value(
+        request,
+        label='navigation sections',
+        fallback_factory=list,
+        builder=lambda: _ensure_home_direct_nav_sections(
+            _build_home_nav_sections(
+                primary_display_sections,
+                secondary_display_sections,
+                games,
+            ),
+            product_list,
+        ),
+    )
+    sns_summary_posts = _build_home_surface_safe_value(
+        request,
+        label='community summary',
+        fallback_factory=list,
+        builder=lambda: _build_home_community_summary_posts(
+            page_obj,
+            pinned_notice_posts=pinned_notice_posts,
+            limit=2,
+        ),
+    )
+    sns_preview_posts = _build_home_surface_safe_value(
+        request,
+        label='community preview',
+        fallback_factory=list,
+        builder=lambda: _build_sns_preview_posts(
+            page_obj,
+            pinned_notice_posts=pinned_notice_posts,
+            limit=3,
+        ),
+    )
+    community_summary = {
+        'title': '실시간 소통',
+        'posts': sns_summary_posts,
+        'full_url': reverse('community_feed'),
+    }
+
+    UserProfile.objects.get_or_create(user=request.user)
+    usage_state = _build_home_surface_safe_value(
+        request,
+        label='usage state',
+        fallback_factory=lambda: {
+            'favorite_products': [],
+            'recent_products': [],
+            'quick_actions': [],
+        },
+        builder=lambda: _build_home_surface_usage_state(
+            request,
+            product_list=product_list,
+        ),
+    )
+    favorite_products = usage_state['favorite_products']
+    recent_products = usage_state['recent_products']
+    quick_actions = usage_state['quick_actions']
+
+    discovery_state = _build_home_surface_safe_value(
+        request,
+        label='discovery state',
+        fallback_factory=lambda: {
+            'companion_items': [],
+            'discovery_products': [],
+            'representative_slots': [],
+        },
+        builder=lambda: _build_home_surface_discovery_state(
+            request,
+            product_list=product_list,
+            favorite_products=favorite_products,
+            recent_products=recent_products,
+            quick_actions=quick_actions,
+            sections=sections,
+            aux_sections=aux_sections,
+            games=games,
+        ),
+    )
+    companion_items = discovery_state['companion_items']
+    discovery_products = discovery_state['discovery_products']
+
+    favorite_items = _build_home_surface_safe_value(
+        request,
+        label='favorite items',
+        fallback_factory=list,
+        builder=lambda: _build_product_link_items(
+            favorite_products,
+            include_section_meta=True,
+            user=request.user,
+        ),
+    )
+    recent_items = _build_home_surface_safe_value(
+        request,
+        label='recent items',
+        fallback_factory=list,
+        builder=lambda: _build_product_link_items(
+            recent_products,
+            include_section_meta=True,
+            user=request.user,
+        ),
+    )
+    discovery_items = _build_home_surface_safe_value(
+        request,
+        label='discovery items',
+        fallback_factory=list,
+        builder=lambda: _build_product_link_items(
+            discovery_products,
+            include_section_meta=True,
+            user=request.user,
+        ),
+    )
+    provider_cards = _build_home_surface_provider_cards(
+        request,
+        favorite_products=favorite_products,
+        product_list=product_list,
+    )
+    schoolcomm_home_card = _build_home_surface_safe_value(
+        request,
+        label='schoolcomm card',
+        fallback_factory=lambda: None,
+        builder=lambda: _build_home_schoolcomm_card(
+            request.user,
+            favorite_products=favorite_products,
+            product_list=product_list,
+        ),
+    )
+    representative_slots = discovery_state['representative_slots']
+    representative_recommendations = _build_home_surface_safe_value(
+        request,
+        label='representative recommendations',
+        fallback_factory=list,
+        builder=lambda: _build_home_recommendations(
+            companion_items,
+            discovery_items,
+            exclude_ids=(
+                {product.id for product in favorite_products}
+                | {slot['product'].id for slot in representative_slots}
+            ),
+            limit=3,
+        ),
     )
     home_mobile_calendar_first_enabled = bool(
         getattr(settings, 'HOME_V4_MOBILE_CALENDAR_FIRST_ENABLED', False)
     )
-    home_mobile_quick_items = _build_home_mobile_quick_items(
-        favorite_products,
-        home_nav_sections,
-        limit=4,
+    home_mobile_quick_items = _build_home_surface_safe_value(
+        request,
+        label='mobile quick items',
+        fallback_factory=list,
+        builder=lambda: _build_home_mobile_quick_items(
+            favorite_products,
+            home_nav_sections,
+            limit=4,
+        ),
     )
-    home_mobile_workbench_items = _filter_home_mobile_workbench_items(favorite_items, limit=6)
+    home_mobile_workbench_items = _build_home_surface_safe_value(
+        request,
+        label='mobile workbench items',
+        fallback_factory=list,
+        builder=lambda: _filter_home_mobile_workbench_items(favorite_items, limit=6),
+    )
     home_mobile_recommend_items = list(representative_recommendations)
     if not home_mobile_recommend_items:
         home_mobile_recommend_items = [

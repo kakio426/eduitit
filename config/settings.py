@@ -544,6 +544,11 @@ elif SHEETBOOK_ENABLED:
     print('[SHEETBOOK] disabled: sheetbook package not available')
     SHEETBOOK_ENABLED = False
     SHEETBOOK_DISCOVERY_VISIBLE = False
+# Sheetbook is intentionally retired as a user-facing service.
+# Keep the app importable for companion code paths that still depend on its
+# models/helpers, but force runtime access and discovery off.
+SHEETBOOK_ENABLED = False
+SHEETBOOK_DISCOVERY_VISIBLE = False
 SHEETBOOK_BETA_USERNAMES = _rollout_env_csv('SHEETBOOK_BETA_USERNAMES', aliases=('sheetbook_beta_usernames',))
 SHEETBOOK_BETA_EMAILS = _rollout_env_csv('SHEETBOOK_BETA_EMAILS', aliases=('sheetbook_beta_emails',))
 SHEETBOOK_BETA_USER_IDS = _rollout_env_csv('SHEETBOOK_BETA_USER_IDS', aliases=('sheetbook_beta_user_ids',))

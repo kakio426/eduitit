@@ -110,6 +110,42 @@ function parseCalendarMessageHubScript(scriptId, fallbackValue) {
     }
 }
 
+async function calendarMessageHubRequestJson(url, fetchOptions = {}, options = {}) {
+    const response = await fetch(url, fetchOptions);
+    const rawText = await response.text().catch(() => '');
+    let payload = {};
+    if (rawText) {
+        try {
+            payload = JSON.parse(rawText);
+        } catch (error) {
+            payload = {};
+        }
+    }
+    if (!response.ok) {
+        const statusLabel = response.status ? `${response.status}` : '';
+        const resolvedMessage = payload.message
+            || payload.detail
+            || (response.status >= 500
+                ? `서버에서 저장 중 오류가 났습니다. (${statusLabel || '500'})`
+                : `요청 처리에 실패했습니다. (${statusLabel || '오류'})`);
+        const enrichedError = new Error(resolvedMessage);
+        enrichedError.payload = payload;
+        enrichedError.status = response.status || 0;
+        enrichedError.rawText = rawText.slice(0, 400);
+        const logContext = String(options.logContext || 'message-hub');
+        if (typeof console !== 'undefined' && typeof console.error === 'function') {
+            console.error(`[${logContext}] request failed`, {
+                url,
+                status: response.status,
+                payload,
+                rawText: rawText.slice(0, 400),
+            });
+        }
+        throw enrichedError;
+    }
+    return payload;
+}
+
 function initCalendarMessageHub(host, options = {}) {
     const defaults = buildCalendarMessageHubState();
     Object.keys(defaults).forEach((key) => {
@@ -173,14 +209,9 @@ function initCalendarMessageHub(host, options = {}) {
     }
     if (typeof host.requestJson !== 'function') {
         host.requestJson = async function(url, fetchOptions = {}) {
-            const response = await fetch(url, fetchOptions);
-            const payload = await response.json().catch(() => ({}));
-            if (!response.ok) {
-                const error = new Error(payload.message || '요청 처리에 실패했습니다.');
-                error.payload = payload;
-                throw error;
-            }
-            return payload;
+            return calendarMessageHubRequestJson(url, fetchOptions, {
+                logContext: 'message-hub',
+            });
         };
     }
 
