@@ -31,7 +31,7 @@
 }
 
 .home-public-v5-stage {
-    max-width: 980px;
+    max-width: 1160px;
 }
 
 .home-public-v5-mobile-stack {
@@ -131,7 +131,7 @@
 }
 
 .home-public-v5-desktop-copy {
-    max-width: 34rem;
+    max-width: 42rem;
     display: grid;
     align-content: start;
 }

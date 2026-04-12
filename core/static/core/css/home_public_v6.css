@@ -177,7 +177,7 @@
  * filling the card edge-to-edge.
  */
 .home-public-v6-page [data-home-v4-public-belief="true"] {
-    padding: clamp(2rem, 4vw, 2.85rem) clamp(2rem, 4vw, 3rem) clamp(2.15rem, 4.2vw, 2.95rem);
+    padding: clamp(2.1rem, 4vw, 3rem) clamp(2.15rem, 4.6vw, 3.55rem) clamp(2.25rem, 4.4vw, 3.15rem);
 }
 
 .home-public-v6-page .home-public-v4-kicker {
@@ -190,12 +190,12 @@
 }
 
 .home-public-v6-page .home-public-v4-title {
-    max-width: 9.4ch;
+    max-width: 12.4ch;
     margin-top: 1rem;
-    font-size: clamp(2.8rem, 4.2vw, 4rem) !important;
+    font-size: clamp(2.55rem, 3.75vw, 3.65rem) !important;
     font-weight: 700;
-    line-height: 1.03 !important;
-    letter-spacing: -0.038em;
+    line-height: 1.08 !important;
+    letter-spacing: -0.032em;
 }
 
 .home-public-v6-page .home-public-v4-accent {
@@ -204,6 +204,7 @@
 
 .home-public-v6-page .home-public-v5-desktop-copy {
     margin-top: 0 !important;
+    max-width: 44rem;
 }
 
 .home-public-v6-page .home-public-v5-desktop-copy > p {

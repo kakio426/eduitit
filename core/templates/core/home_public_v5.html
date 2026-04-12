@@ -89,8 +89,8 @@ document.addEventListener('DOMContentLoaded', () => {
 {% endblock %}
 
 {% block content %}
-<div class="min-h-screen home-public-v5-page{% if home_design_version == 'v6' %} home-public-v6-page{% endif %}" data-home-v5-public-shell="true" data-home-design-version="{{ home_design_version|default:'v5' }}">
-    <div class="mx-auto home-public-v5-stage" style="padding-top: calc(var(--main-nav-height, 88px) + 1rem);">
+<div class="min-h-screen home-public-v5-page{% if home_design_version == 'v6' %} home-public-v6-page{% endif %}" data-home-v5-public-shell="true" data-home-v6-public-shell="true" data-home-design-version="{{ home_design_version|default:'v5' }}">
+    <div class="mx-auto home-public-v5-stage{% if home_design_version == 'v6' %} home-public-v6-stage-shell{% endif %}" style="padding-top: calc(var(--main-nav-height, 88px) + 1.35rem);">
         <main class="px-4 pb-16 sm:px-5 md:px-6">
             <section class="home-public-v5-mobile-stack" data-home-v5-public-mobile-stack="true">
                 {# Public entry copy stays to one promise so the tool cards remain the primary read. #}

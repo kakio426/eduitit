@@ -384,7 +384,7 @@ h4,
 
 .shell-nav-wrap {
     padding-inline: var(--space-shell-nav-outer-x);
-    padding-top: calc(var(--space-shell-nav-outer-y) + 0.45rem + env(safe-area-inset-top));
+    padding-top: calc(var(--space-shell-nav-outer-y) + 0.75rem + env(safe-area-inset-top));
     padding-bottom: var(--space-shell-nav-outer-y);
 }
 
