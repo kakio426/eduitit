@@ -1,10 +1,10 @@
 .home-public-v6-page {
     /* v6 now refines the shared public-home system instead of introducing a second palette. */
     --home-public-border: rgba(100, 116, 139, 0.2);
-    --home-public-border-strong: rgba(91, 44, 207, 0.12);
+    --home-public-border-strong: rgba(100, 116, 139, 0.18);
     --home-public-surface: rgba(255, 255, 255, 0.972);
     --home-public-surface-raised:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(250, 248, 255, 0.96) 100%);
+        linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(246, 248, 251, 0.97) 100%);
     --home-public-shadow-panel:
         0 18px 40px rgba(15, 23, 42, 0.075),
         inset 0 1px 0 rgba(255, 255, 255, 0.82);
@@ -21,11 +21,11 @@
         linear-gradient(180deg, rgba(255, 255, 255, 0.985) 0%, rgba(248, 251, 254, 0.965) 100%);
     --home-v6-shadow-panel:
         0 18px 40px rgba(15, 23, 42, 0.075),
-        0 5px 14px rgba(91, 44, 207, 0.028),
+        0 5px 14px rgba(51, 65, 85, 0.028),
         inset 0 1px 0 rgba(255, 255, 255, 0.82);
     --home-v6-shadow-tile:
         0 12px 24px rgba(15, 23, 42, 0.06),
-        0 4px 12px rgba(91, 44, 207, 0.018),
+        0 4px 12px rgba(51, 65, 85, 0.018),
         inset 0 1px 0 rgba(255, 255, 255, 0.76);
     --home-v6-radius-hero: 1rem;
     --home-v6-radius-panel: 0.95rem;
@@ -36,16 +36,16 @@
     --home-public-v6-radius-card: calc(var(--home-v6-radius-card) + 0.5rem);
     --home-public-v6-radius-icon: calc(var(--home-v6-radius-card) + 0.26rem);
     background:
-        radial-gradient(circle at top left, rgba(91, 44, 207, 0.12), transparent 25%),
-        radial-gradient(circle at top right, rgba(198, 165, 107, 0.12), transparent 18%),
-        linear-gradient(180deg, #f7f6fc 0%, #f3f2fb 48%, #faf9fe 100%);
+        radial-gradient(circle at top left, rgba(36, 87, 197, 0.08), transparent 28%),
+        radial-gradient(circle at top right, rgba(148, 163, 184, 0.12), transparent 20%),
+        linear-gradient(180deg, #f4f7fa 0%, #eef3f8 48%, #fafcfe 100%);
 }
 
 .home-public-v6-stage-shell {
-    border: 1px solid rgba(91, 44, 207, 0.1);
+    border: 1px solid var(--home-v6-border);
     border-radius: var(--home-public-v6-radius-shell);
     background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(249, 248, 255, 0.54) 100%);
+        linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(244, 248, 252, 0.58) 100%);
     box-shadow:
         0 20px 44px rgba(15, 23, 42, 0.07),
         inset 0 1px 0 rgba(255, 255, 255, 0.76);
@@ -57,7 +57,7 @@
 .home-public-v6-page .home-public-v5-featured-card,
 .home-public-v6-page .home-public-v5-grid-card,
 .home-public-v6-page .home-public-v4-card {
-    border-color: var(--home-public-border-strong);
+    border-color: var(--home-public-border);
     background: var(--home-v6-surface-primary);
     box-shadow: var(--home-public-shadow-panel);
 }
@@ -79,17 +79,17 @@
 
 .home-public-v6-page .home-public-v5-kicker,
 .home-public-v6-page .home-public-v4-kicker {
-    background: rgba(238, 232, 255, 0.9);
-    color: var(--color-brand-700);
-    border-color: rgba(91, 44, 207, 0.14);
+    background: var(--home-public-accent-soft);
+    color: var(--home-public-accent);
+    border-color: var(--home-public-border-strong);
 }
 
 .home-public-v6-page .home-public-v5-primary-link,
 .home-public-v6-page .home-public-v4-primary-link {
-    background: linear-gradient(135deg, var(--color-brand-700) 0%, var(--color-brand-500) 100%);
+    background: linear-gradient(135deg, var(--home-public-accent) 0%, #3d74df 100%);
     color: var(--color-text-inverse);
     box-shadow:
-        0 12px 24px rgba(91, 44, 207, 0.16),
+        0 12px 24px rgba(36, 87, 197, 0.16),
         inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 
@@ -97,10 +97,10 @@
 .home-public-v6-page .home-public-v5-primary-link:focus-visible,
 .home-public-v6-page .home-public-v4-primary-link:hover,
 .home-public-v6-page .home-public-v4-primary-link:focus-visible {
-    background: var(--color-brand-900);
+    background: var(--home-public-accent-strong);
     color: var(--color-text-inverse);
     box-shadow:
-        0 14px 28px rgba(91, 44, 207, 0.2),
+        0 14px 28px rgba(36, 87, 197, 0.2),
         inset 0 1px 0 rgba(255, 255, 255, 0.24);
 }
 
@@ -109,15 +109,15 @@
     outline: none;
     box-shadow:
         var(--home-public-focus-ring),
-        0 14px 28px rgba(91, 44, 207, 0.2),
+        0 14px 28px rgba(36, 87, 197, 0.2),
         inset 0 1px 0 rgba(255, 255, 255, 0.24);
 }
 
 .home-public-v6-page .home-public-v5-secondary-link,
 .home-public-v6-page .home-public-v4-secondary-link {
-    border-color: rgba(91, 44, 207, 0.12);
+    border-color: var(--home-v6-border);
     background: rgba(255, 255, 255, 0.94);
-    color: var(--color-brand-900);
+    color: #334155;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84);
 }
 
@@ -125,8 +125,8 @@
 .home-public-v6-page .home-public-v5-secondary-link:focus-visible,
 .home-public-v6-page .home-public-v4-secondary-link:hover,
 .home-public-v6-page .home-public-v4-secondary-link:focus-visible {
-    border-color: rgba(124, 92, 250, 0.26);
-    background: rgba(238, 232, 255, 0.56);
+    border-color: var(--home-v6-border-strong);
+    background: rgba(248, 250, 252, 0.96);
     box-shadow:
         0 10px 20px rgba(15, 23, 42, 0.06),
         inset 0 1px 0 rgba(255, 255, 255, 0.88);
@@ -145,7 +145,7 @@
 .home-public-v6-page .home-public-v5-grid-card:focus-visible,
 .home-public-v6-page .home-public-v4-card:hover,
 .home-public-v6-page .home-public-v4-card:focus-visible {
-    border-color: rgba(124, 92, 250, 0.28);
+    border-color: var(--home-v6-border-strong);
     background: #ffffff;
     box-shadow:
         0 16px 30px rgba(15, 23, 42, 0.07),
@@ -155,16 +155,19 @@
 .home-public-v6-page .home-public-v5-keyword,
 .home-public-v6-page .home-public-v4-keyword,
 .home-public-v6-page .home-public-v5-grid-badge {
-    border-color: rgba(91, 44, 207, 0.1);
-    background: rgba(238, 232, 255, 0.62);
-    color: var(--color-brand-700);
+    border-color: var(--home-public-border);
+    background: #eef3f8;
+    color: #334155;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
 }
 
-.home-public-v6-page .home-public-v5-grid-cta,
+.home-public-v6-page .home-public-v5-grid-cta {
+    color: #334155;
+}
+
 .home-public-v6-page .home-public-v4-accent,
 .home-public-v6-page .home-public-v4-dot[aria-current="true"] {
-    color: var(--color-brand-700);
+    color: var(--home-public-accent);
 }
 
 /* Desktop partial still uses utility tokens, so we scope them here to keep one polished public-home tone. */
@@ -194,24 +197,27 @@
 
 .home-public-v6-page .border-slate-200,
 .home-public-v6-page .border-slate-300 {
-    border-color: rgba(91, 44, 207, 0.14) !important;
+    border-color: var(--home-v6-border) !important;
 }
 
 .home-public-v6-page .hover\:border-slate-300:hover {
-    border-color: rgba(124, 92, 250, 0.24) !important;
+    border-color: var(--home-v6-border-strong) !important;
 }
 
 .home-public-v6-page .home-public-v4-dot[aria-current="true"] {
-    background: var(--color-brand-700);
-    border-color: var(--color-brand-700);
+    background: var(--home-public-accent);
+    border-color: var(--home-public-accent);
 }
 
 .home-public-v6-page .home-public-v5-icon,
 .home-public-v6-page .home-public-v5-grid-icon,
 .home-public-v6-page .home-public-v4-icon {
     border-radius: var(--home-public-v6-radius-icon);
-    background: linear-gradient(180deg, rgba(238, 232, 255, 0.9) 0%, #ffffff 100%);
-    box-shadow: inset 0 0 0 1px rgba(91, 44, 207, 0.08);
+    border-color: var(--home-public-item-accent-border, var(--home-public-border));
+    background: #ffffff;
+    box-shadow:
+        0 8px 18px rgba(15, 23, 42, 0.05),
+        inset 0 1px 0 rgba(255, 255, 255, 0.86);
 }
 
 @media (max-width: 767px) {

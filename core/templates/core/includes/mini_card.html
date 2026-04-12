@@ -1,7 +1,7 @@
 {# 미니 서비스 카드 - teacher-first 공통 카드 #}
 {# 사용: {% include 'core/includes/mini_card.html' with product=product %} #}
 {% with card_title=product.home_compact_title|default:product.public_service_name|default:product.title card_body=product.home_card_summary|default:product.teacher_first_support_label|default:product.solve_text|default:product.description %}
-<div class="relative rounded-[1.45rem] border border-slate-200 bg-white px-4 {% if product.launch_route_name == 'messagebox:main' %}py-3{% else %}py-3.5{% endif %} shadow-sm transition-all cursor-pointer group product-card {% if home_design_version == 'v5' %}home-mini-card--v5{% elif home_design_version == 'v6' %}home-mini-card--v6{% endif %} hover:border-indigo-200 hover:shadow-md"
+<div class="relative rounded-[1.45rem] border border-slate-200 bg-white px-4 {% if product.launch_route_name == 'messagebox:main' %}py-3{% else %}py-3.5{% endif %} shadow-sm transition-all cursor-pointer group product-card {% if home_design_version == 'v5' %}home-mini-card--v5{% elif home_design_version == 'v6' %}home-mini-card--v6{% endif %} hover:border-slate-300 hover:shadow-md"
     data-home-v2-service-card="true"
     data-teacher-first-card="true"
     data-service-type="{{ product.service_type|default:'etc' }}"
@@ -13,15 +13,11 @@
     role="button" tabindex="0">
     <div class="space-y-2">
         <div class="flex items-start gap-3" data-home-v2-service-card-header="true">
-            <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-base shadow-sm {% if product.service_type == 'collect_sign' %}text-blue-500{% elif product.service_type == 'classroom' %}text-violet-500{% elif product.service_type == 'work' %}text-emerald-500{% elif product.service_type == 'game' %}text-red-500{% elif product.service_type == 'counsel' %}text-pink-500{% elif product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}" data-home-v6-service-icon="true">
-                {% if product.icon %}
-                    {% if "fa-" in product.icon %}<i class="{{ product.icon }}"></i>{% else %}{{ product.icon }}{% endif %}
-                {% else %}
-                    <i class="fa-solid fa-sparkles"></i>
-                {% endif %}
+            <div class="home-v6-service-icon-tone flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl text-base" data-home-v6-service-icon="true" data-home-accent="{{ product.home_accent_token|default:'external' }}">
+                <i class="{{ product.home_icon_class|default:'fa-solid fa-sparkles' }}"></i>
             </div>
             <div class="min-w-0 flex-1 pt-0.5">
-                <h4 class="{% if product.launch_route_name == 'messagebox:main' %}text-[1.05rem] md:text-[1.15rem] line-clamp-1{% else %}text-[1.15rem] md:text-[1.28rem] line-clamp-2{% endif %} font-black leading-6 text-slate-900 group-hover:text-indigo-600 transition-colors" data-home-v6-service-title="true">
+                <h4 class="{% if product.launch_route_name == 'messagebox:main' %}text-[1.05rem] md:text-[1.15rem] line-clamp-1{% else %}text-[1.15rem] md:text-[1.28rem] line-clamp-2{% endif %} font-black leading-6 text-slate-900 transition-colors" data-home-v6-service-title="true">
                     {{ card_title }}
                 </h4>
             </div>

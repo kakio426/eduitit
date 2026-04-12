@@ -117,12 +117,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <article class="home-public-v5-featured-card">
                         <div class="flex items-start gap-3">
-                            <div class="home-public-v5-icon home-public-service-icon-tone">
-                                {% if featured_product.icon %}
-                                    {% if "fa-" in featured_product.icon %}<i class="{{ featured_product.icon }}"></i>{% else %}{{ featured_product.icon }}{% endif %}
-                                {% else %}
-                                    <i class="fa-solid fa-sparkles"></i>
-                                {% endif %}
+                            <div class="home-public-v5-icon home-public-service-icon-tone" data-home-accent="{{ featured_product.home_accent_token|default:'external' }}">
+                                <i class="{{ featured_product.home_icon_class|default:'fa-solid fa-sparkles' }}"></i>
                             </div>
                             <div class="min-w-0">
                                 <h3 class="home-public-v5-featured-title">{{ featured_product.public_service_name|default:featured_product.title }}</h3>
@@ -156,12 +152,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             {% if card.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
                         >
                             <div class="home-public-v5-grid-head">
-                                <span class="home-public-v5-grid-icon home-public-service-icon-tone">
-                                    {% if card.icon %}
-                                        {% if "fa-" in card.icon %}<i class="{{ card.icon }}"></i>{% else %}{{ card.icon }}{% endif %}
-                                    {% else %}
-                                        <i class="fa-solid fa-sparkles"></i>
-                                    {% endif %}
+                                <span class="home-public-v5-grid-icon home-public-service-icon-tone" data-home-accent="{{ card.home_accent_token|default:'external' }}">
+                                    <i class="{{ card.home_icon_class|default:'fa-solid fa-sparkles' }}"></i>
                                 </span>
                                 <span class="home-public-v5-grid-badge">{{ card.access_status_label }}</span>
                             </div>

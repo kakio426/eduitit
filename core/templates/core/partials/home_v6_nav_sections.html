@@ -4,8 +4,9 @@
 >
     {% for section in home_nav_sections %}
     <div
-        class="home-v6-nav-group home-v6-nav-group--{{ section.color }}"
+        class="home-v6-nav-group"
         data-home-v6-nav-section="{{ section.key }}"
+        data-home-accent="{{ section.home_accent_token|default:'external' }}"
     >
         {% if section.is_direct %}
         <a
@@ -16,12 +17,8 @@
             {% if close_action %}@click="{{ close_action }}"{% endif %}
         >
             <span class="home-v6-nav-item-main">
-                <span class="home-v6-nav-icon home-v6-nav-icon--{{ section.color }}">
-                    {% if section.icon %}
-                        {% if "fa-" in section.icon %}<i class="{{ section.icon }}"></i>{% else %}{{ section.icon }}{% endif %}
-                    {% else %}
-                        <i class="fa-solid fa-sparkles"></i>
-                    {% endif %}
+                <span class="home-v6-nav-icon" data-home-accent="{{ section.home_accent_token|default:'external' }}">
+                    <i class="{{ section.home_icon_class|default:'fa-solid fa-sparkles' }}"></i>
                 </span>
                 <span class="home-v6-nav-copy min-w-0 flex-1">
                     <span class="block truncate home-v6-nav-title">{{ section.title }}</span>
@@ -49,8 +46,8 @@
             :aria-expanded="openSection === '{{ section.key }}' ? 'true' : 'false'"
         >
             <span class="home-v6-nav-item-main">
-                <span class="home-v6-nav-icon home-v6-nav-icon--{{ section.color }}">
-                    <i class="{{ section.icon }}"></i>
+                <span class="home-v6-nav-icon" data-home-accent="{{ section.home_accent_token|default:'external' }}">
+                    <i class="{{ section.home_icon_class|default:'fa-solid fa-sparkles' }}"></i>
                 </span>
                 <span class="home-v6-nav-copy min-w-0 flex-1">
                     <span class="block truncate home-v6-nav-title">{{ section.title }}</span>
@@ -86,7 +83,7 @@
                     {% if close_action %}@click="{{ close_action }}"{% endif %}
                 >
                     <span class="home-v6-tool-leading">
-                        <span class="home-v6-tool-icon">
+                        <span class="home-v6-tool-icon" data-home-accent="games">
                             <i class="fa-solid fa-link"></i>
                         </span>
                     </span>
@@ -110,12 +107,8 @@
                     {% if close_action %}@click="{{ close_action }}"{% endif %}
                 >
                     <span class="home-v6-tool-leading">
-                        <span class="home-v6-tool-icon">
-                            {% if product.icon %}
-                                {% if "fa-" in product.icon %}<i class="{{ product.icon }}"></i>{% else %}{{ product.icon }}{% endif %}
-                            {% else %}
-                                <i class="fa-solid fa-sparkles"></i>
-                            {% endif %}
+                        <span class="home-v6-tool-icon" data-home-accent="{{ product.home_accent_token|default:'external' }}">
+                            <i class="{{ product.home_icon_class|default:'fa-solid fa-sparkles' }}"></i>
                         </span>
                     </span>
                     <span class="home-v6-tool-copy min-w-0 flex-1">

@@ -7,9 +7,9 @@ from datetime import date, datetime, time, timedelta
 from unittest.mock import patch
 
 from django.conf import settings
-from django.test import TestCase, Client, override_settings
+from django.test import TestCase, Client, RequestFactory, override_settings
 from django.urls import reverse
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AnonymousUser, User
 from django.utils import timezone
 
 from classcalendar.models import CalendarCollaborator, CalendarEvent, CalendarTask, EventPageBlock
@@ -28,7 +28,9 @@ from core.service_launcher import resolve_product_launch_url
 from core.views import (
     HOME_MOBILE_SECTION_ORDER,
     HOME_V5_MOBILE_SECTION_ORDER,
+    _build_home_public_landing_context,
     _build_home_representative_slots,
+    _home_public_v6,
 )
 from messagebox.developer_chat import get_or_create_developer_chat_thread, mark_thread_as_read
 from messagebox.models import DeveloperChatMessage
@@ -3475,6 +3477,7 @@ class HomeV5ViewTest(TestCase):
 class HomeV6ViewTest(TestCase):
     def setUp(self):
         self.client = Client()
+        self.factory = RequestFactory()
         self.favorite_product = Product.objects.create(
             title="로열 수업 도구",
             description="브랜드 홈 테스트",
@@ -3708,6 +3711,138 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('data-home-v6-nav-direct-link="schoolprograms"', content)
         self.assertIn(f'href="{reverse("schoolprograms:landing")}"', content)
         self.assertIn('학교 체험·행사 찾기', content)
+
+    def test_v6_home_uses_normalized_icon_fields_across_nav_workbench_and_favorites(self):
+        user = self._login('v6iconfields')
+        emoji_product = Product.objects.create(
+            title="이모지 문서 도구",
+            description="문서 정리",
+            price=0,
+            is_active=True,
+            service_type='work',
+            launch_route_name='noticegen:main',
+            icon='📝',
+        )
+        ProductFavorite.objects.create(user=user, product=emoji_product, pin_order=1)
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        nav_sections = response.context['home_nav_sections']
+        nav_product = next(
+            product
+            for section in nav_sections
+            for product in section.get('products', [])
+            if product.id == emoji_product.id
+        )
+        favorite_item = next(item for item in response.context['favorite_items'] if item['product'].id == emoji_product.id)
+        workbench_item = next(item for item in response.context['home_mobile_workbench_items'] if item['product'].id == emoji_product.id)
+
+        self.assertEqual(nav_product.home_icon_class, 'fa-solid fa-file-lines')
+        self.assertEqual(nav_product.home_accent_token, 'doc_write')
+        self.assertEqual(favorite_item['home_icon_class'], 'fa-solid fa-file-lines')
+        self.assertEqual(favorite_item['home_accent_token'], 'doc_write')
+        self.assertEqual(favorite_item['product'].home_icon_class, 'fa-solid fa-file-lines')
+        self.assertEqual(workbench_item['home_icon_class'], 'fa-solid fa-file-lines')
+        self.assertEqual(workbench_item['home_accent_token'], 'doc_write')
+        self.assertEqual(workbench_item['product'].home_icon_class, 'fa-solid fa-file-lines')
+        self.assertIn('fa-solid fa-file-lines', content)
+        self.assertNotRegex(content, r'>\s*📝\s*<')
+
+    def test_v6_home_nav_sections_use_enterprise_home_accent_tokens(self):
+        Product.objects.create(
+            title="업무 메시지 보관함",
+            description="학교 공지와 메시지를 정리",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='messagebox:main',
+            icon='📥',
+        )
+        Product.objects.create(
+            title="교사 법률 지원",
+            description="교육 현장 판단을 빠르게 확인",
+            price=0,
+            is_active=True,
+            service_type='counsel',
+            launch_route_name='teacher_law:main',
+            icon='⚖️',
+        )
+        Product.objects.create(
+            title="학교 체험·행사 찾기",
+            description="학교로 찾아오는 프로그램을 바로 찾기",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='schoolprograms:landing',
+            icon='🎪',
+        )
+        self._login('v6accenttokens')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        nav_sections = response.context['home_nav_sections']
+        class_ops_section = next(section for section in nav_sections if section['key'] == 'class_ops')
+        refresh_section = next(section for section in nav_sections if section['key'] == 'refresh')
+        schoolprograms_section = next(section for section in nav_sections if section['key'] == 'schoolprograms')
+
+        self.assertEqual(class_ops_section['home_accent_token'], 'class_ops')
+        self.assertEqual(refresh_section['home_accent_token'], 'refresh')
+        self.assertEqual(schoolprograms_section['home_accent_token'], 'schoolprograms')
+        self.assertEqual(schoolprograms_section['home_icon_class'], 'fa-solid fa-school')
+        self.assertNotIn('schoolprograms:landing', {product.launch_route_name for product in class_ops_section['products']})
+        self.assertIn('fa-solid fa-school', content)
+        self.assertIn('fa-solid fa-scale-balanced', content)
+        self.assertNotRegex(content, r'>\s*🎪\s*<')
+        self.assertNotRegex(content, r'>\s*📥\s*<')
+
+    def test_v6_public_home_uses_normalized_icons_without_raw_emoji(self):
+        featured = Product.objects.create(
+            title="학교 체험·행사 찾기",
+            description="학교로 찾아오는 프로그램을 바로 찾기",
+            price=0,
+            is_active=True,
+            is_guest_allowed=True,
+            is_featured=True,
+            service_type='classroom',
+            launch_route_name='schoolprograms:landing',
+            icon='🎪',
+        )
+        guest_doc = Product.objects.create(
+            title="공개 문서 도구",
+            description="가정통신문 초안을 바로 정리",
+            price=0,
+            is_active=True,
+            is_guest_allowed=True,
+            service_type='work',
+            launch_route_name='noticegen:main',
+            icon='📝',
+        )
+        request = self.factory.get(reverse('home'))
+        request.user = AnonymousUser()
+
+        context = _build_home_public_landing_context(
+            request,
+            Product.objects.filter(id__in=[featured.id, guest_doc.id]),
+        )
+        response = _home_public_v6(
+            request,
+            Product.objects.filter(id__in=[featured.id, guest_doc.id]),
+            [],
+            None,
+            '',
+            [],
+        )
+        content = response.content.decode('utf-8')
+        guest_card = next(card for card in context['guest_public_cards'] if card['id'] == guest_doc.id)
+
+        self.assertEqual(context['featured_product'].home_icon_class, 'fa-solid fa-school')
+        self.assertEqual(context['featured_product'].home_accent_token, 'schoolprograms')
+        self.assertEqual(guest_card['home_icon_class'], 'fa-solid fa-file-lines')
+        self.assertEqual(guest_card['home_accent_token'], 'doc_write')
+        self.assertIn('fa-solid fa-school', content)
+        self.assertIn('fa-solid fa-file-lines', content)
+        self.assertNotRegex(content, r'>\s*🎪\s*<')
+        self.assertNotRegex(content, r'>\s*📝\s*<')
 
     def test_v6_css_keeps_teacher_buddy_and_workbench_controls_distinct(self):
         css = _read_home_v6_css_bundle()

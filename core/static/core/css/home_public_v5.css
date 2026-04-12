@@ -1,24 +1,26 @@
 .home-public-v5-page,
 .home-public-v6-page {
-    /* Public home keeps one restrained accent so discovery feels consistent across tools. */
-    --home-public-accent: var(--color-brand-700);
-    --home-public-accent-strong: var(--color-brand-900);
-    --home-public-accent-soft: rgba(238, 232, 255, 0.86);
-    --home-public-accent-soft-strong: rgba(238, 232, 255, 0.94);
+    /* Public home keeps neutral surfaces first and uses accent only for CTA and icon guidance. */
+    --home-public-accent: #2457c5;
+    --home-public-accent-strong: #173b67;
+    --home-public-accent-soft: rgba(240, 244, 255, 0.9);
+    --home-public-accent-soft-strong: rgba(246, 249, 255, 0.96);
     --home-public-border: rgba(148, 163, 184, 0.24);
-    --home-public-border-strong: rgba(91, 44, 207, 0.12);
-    --home-public-focus-ring: 0 0 0 3px rgba(91, 44, 207, 0.12);
-    --home-public-surface: rgba(255, 255, 255, 0.96);
-    --home-public-surface-raised: linear-gradient(180deg, #ffffff 0%, #fbfaff 100%);
+    --home-public-border-strong: rgba(100, 116, 139, 0.18);
+    --home-public-focus-ring: 0 0 0 3px rgba(36, 87, 197, 0.14);
+    --home-public-surface: rgba(255, 255, 255, 0.97);
+    --home-public-surface-raised: linear-gradient(180deg, #ffffff 0%, #f6f8fb 100%);
     --home-public-shadow-panel: 0 12px 26px rgba(15, 23, 42, 0.055);
     --home-public-shadow-card: 0 10px 20px rgba(15, 23, 42, 0.055);
+    --home-public-item-accent: #475569;
+    --home-public-item-accent-border: rgba(71, 85, 105, 0.18);
 }
 
 .home-public-v5-page {
     background:
-        radial-gradient(circle at top left, rgba(91, 44, 207, 0.11), transparent 26%),
-        radial-gradient(circle at top right, rgba(198, 165, 107, 0.11), transparent 18%),
-        linear-gradient(180deg, #f7f6fc 0%, #f3f4fb 52%, #fafbfe 100%);
+        radial-gradient(circle at top left, rgba(36, 87, 197, 0.08), transparent 28%),
+        radial-gradient(circle at top right, rgba(148, 163, 184, 0.12), transparent 22%),
+        linear-gradient(180deg, #f4f7fa 0%, #eef3f8 52%, #fafcfe 100%);
 }
 
 .home-public-v5-title,
@@ -39,7 +41,7 @@
 }
 
 .home-public-v5-mobile-surface {
-    border: 1px solid var(--home-public-border-strong);
+    border: 1px solid var(--home-public-border);
     border-radius: 1.55rem;
     background: var(--home-public-surface);
     padding: 0.92rem;
@@ -64,7 +66,7 @@
 
 .home-public-kicker-dot {
     background: var(--home-public-accent);
-    box-shadow: 0 0 0 4px rgba(91, 44, 207, 0.12);
+    box-shadow: 0 0 0 4px rgba(36, 87, 197, 0.12);
 }
 
 .home-public-v5-title {
@@ -143,8 +145,11 @@
     align-items: center;
     justify-content: center;
     border-radius: 0.95rem;
-    background: linear-gradient(180deg, var(--home-public-accent-soft) 0%, #ffffff 100%);
-    box-shadow: inset 0 0 0 1px rgba(91, 44, 207, 0.08);
+    border: 1px solid var(--home-public-item-accent-border, var(--home-public-border));
+    background: #ffffff;
+    box-shadow:
+        0 8px 18px rgba(15, 23, 42, 0.05),
+        inset 0 1px 0 rgba(255, 255, 255, 0.86);
 }
 
 .home-public-v5-icon {
@@ -155,7 +160,40 @@
 }
 
 .home-public-service-icon-tone {
-    color: var(--home-public-accent);
+    color: var(--home-public-item-accent, var(--home-public-accent));
+}
+
+.home-public-service-icon-tone[data-home-accent="collect_sign"] {
+    --home-public-item-accent: #2457c5;
+    --home-public-item-accent-border: rgba(36, 87, 197, 0.18);
+}
+
+.home-public-service-icon-tone[data-home-accent="doc_write"] {
+    --home-public-item-accent: #0f766e;
+    --home-public-item-accent-border: rgba(15, 118, 110, 0.18);
+}
+
+.home-public-service-icon-tone[data-home-accent="class_ops"],
+.home-public-service-icon-tone[data-home-accent="schoolprograms"] {
+    --home-public-item-accent: #334155;
+    --home-public-item-accent-border: rgba(51, 65, 85, 0.16);
+}
+
+.home-public-service-icon-tone[data-home-accent="class_activity"],
+.home-public-service-icon-tone[data-home-accent="games"] {
+    --home-public-item-accent: #0369a1;
+    --home-public-item-accent-border: rgba(3, 105, 161, 0.18);
+}
+
+.home-public-service-icon-tone[data-home-accent="refresh"] {
+    --home-public-item-accent: #b45309;
+    --home-public-item-accent-border: rgba(180, 83, 9, 0.18);
+}
+
+.home-public-service-icon-tone[data-home-accent="guide"],
+.home-public-service-icon-tone[data-home-accent="external"] {
+    --home-public-item-accent: #475569;
+    --home-public-item-accent-border: rgba(71, 85, 105, 0.18);
 }
 
 .home-public-v5-featured-title {
@@ -200,11 +238,11 @@
 
 .home-public-v5-primary-link {
     width: 100%;
-    border: 1px solid rgba(91, 44, 207, 0.08);
-    background: linear-gradient(135deg, var(--home-public-accent) 0%, var(--color-brand-500) 100%);
+    border: 1px solid rgba(36, 87, 197, 0.08);
+    background: linear-gradient(135deg, var(--home-public-accent) 0%, #3d74df 100%);
     color: #ffffff;
     box-shadow:
-        0 14px 28px rgba(91, 44, 207, 0.18),
+        0 14px 28px rgba(36, 87, 197, 0.18),
         inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 
@@ -214,13 +252,13 @@
     color: #ffffff;
     transform: translateY(-1px);
     box-shadow:
-        0 16px 30px rgba(91, 44, 207, 0.2),
+        0 16px 30px rgba(36, 87, 197, 0.2),
         inset 0 1px 0 rgba(255, 255, 255, 0.26);
 }
 
 .home-public-v5-primary-link:focus-visible {
     outline: none;
-    box-shadow: var(--home-public-focus-ring), 0 12px 24px rgba(91, 44, 207, 0.16);
+    box-shadow: var(--home-public-focus-ring), 0 12px 24px rgba(36, 87, 197, 0.16);
 }
 
 .home-public-v5-primary-link:active,
@@ -238,8 +276,8 @@
 .home-public-v5-secondary-link:hover,
 .home-public-v5-secondary-link:focus-visible {
     border-color: var(--home-public-border-strong);
-    background: rgba(238, 232, 255, 0.36);
-    color: var(--home-public-accent-strong);
+    background: rgba(248, 250, 252, 0.96);
+    color: #0f172a;
     transform: translateY(-1px);
     box-shadow:
         0 10px 20px rgba(15, 23, 42, 0.06),
@@ -300,9 +338,9 @@
     min-height: 1.5rem;
     padding: 0 0.45rem;
     border-radius: 999px;
-    border: 1px solid var(--home-public-border-strong);
-    background: var(--home-public-accent-soft);
-    color: var(--home-public-accent);
+    border: 1px solid var(--home-public-border);
+    background: #eef3f8;
+    color: #334155;
     font-size: 0.68rem;
     font-weight: 900;
     letter-spacing: 0.015em;
@@ -331,7 +369,7 @@
 }
 
 .home-public-v5-grid-cta {
-    color: var(--home-public-accent);
+    color: #334155;
     font-size: 0.78rem;
     font-weight: 800;
     letter-spacing: -0.012em;
@@ -348,8 +386,8 @@
 
 .home-public-v4-shell {
     background:
-        radial-gradient(circle at top, rgba(91, 44, 207, 0.11), transparent 28%),
-        linear-gradient(180deg, #f7f6fc 0%, #f3f4fb 52%, #fafbfe 100%);
+        radial-gradient(circle at top, rgba(36, 87, 197, 0.08), transparent 28%),
+        linear-gradient(180deg, #f4f7fa 0%, #eef3f8 52%, #fafcfe 100%);
 }
 
 .home-public-v4-stage {
@@ -357,7 +395,7 @@
 }
 
 .home-public-v4-surface {
-    border: 1px solid var(--home-public-border-strong);
+    border: 1px solid var(--home-public-border);
     background: var(--home-public-surface);
     box-shadow: 0 22px 50px rgba(15, 23, 42, 0.08);
 }
@@ -387,13 +425,16 @@
 }
 
 .home-public-v4-icon {
-    border: 1px solid rgba(91, 44, 207, 0.08);
-    background: linear-gradient(180deg, var(--home-public-accent-soft) 0%, #ffffff 100%);
+    border: 1px solid var(--home-public-item-accent-border, var(--home-public-border));
+    background: #ffffff;
+    box-shadow:
+        0 8px 18px rgba(15, 23, 42, 0.05),
+        inset 0 1px 0 rgba(255, 255, 255, 0.86);
 }
 
 .home-public-v4-primary-link {
-    background: linear-gradient(135deg, var(--home-public-accent) 0%, var(--color-brand-500) 100%);
-    box-shadow: 0 14px 28px rgba(91, 44, 207, 0.18);
+    background: linear-gradient(135deg, var(--home-public-accent) 0%, #3d74df 100%);
+    box-shadow: 0 14px 28px rgba(36, 87, 197, 0.18);
 }
 
 .home-public-v4-primary-link:hover {
@@ -415,7 +456,7 @@
     height: 0.7rem;
     border-radius: 999px;
     border: 1px solid var(--home-public-border);
-    background: rgba(91, 44, 207, 0.12);
+    background: rgba(148, 163, 184, 0.22);
     transition: all 0.2s ease;
 }
 

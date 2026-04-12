@@ -611,6 +611,19 @@ def _resolve_section_preview_limit(section_key, preview_limit):
     return preview_limit
 
 
+def _build_home_section_surface_meta(*, section_key="", icon="", route_name=""):
+    return {
+        "home_icon_class": service_launcher_utils.resolve_home_icon_class(
+            icon=icon,
+            route_name=route_name,
+        ),
+        "home_accent_token": service_launcher_utils.resolve_home_accent_token(
+            section_key=section_key,
+            route_name=route_name,
+        ),
+    }
+
+
 def _build_section_payload(section, items, preview_limit=None):
     resolved_preview_limit = _resolve_section_preview_limit(section["key"], preview_limit)
     if resolved_preview_limit and resolved_preview_limit > 0:
@@ -621,6 +634,10 @@ def _build_section_payload(section, items, preview_limit=None):
     remaining_count = max(0, len(items) - len(preview_items))
     return {
         **section,
+        **_build_home_section_surface_meta(
+            section_key=section.get("key", ""),
+            icon=section.get("icon", ""),
+        ),
         "products": preview_items,
         "overflow_products": overflow_items,
         "total_count": len(items),
@@ -1219,6 +1236,8 @@ def _attach_product_launch_meta(products, user=None):
                 setattr(product, attr_name, attr_value)
             product.home_card_summary = _build_home_card_summary(product)
             product.home_compact_title = ""
+            product.home_icon_class = service_launcher_utils.resolve_home_icon_class(product)
+            product.home_accent_token = service_launcher_utils.resolve_home_accent_token(product)
             if _product_route_name(product) == "messagebox:main":
                 product.home_compact_title = "메시지 보관"
             prepared.append(product)
@@ -1381,6 +1400,8 @@ def _build_product_link_items(products, include_section_meta=False, user=None):
                 'workbench_summary': workbench_meta.summary,
                 'favorite_title': build_favorite_service_title(favorite_full_title) or favorite_full_title,
                 'favorite_full_title': favorite_full_title,
+                'home_icon_class': getattr(product, 'home_icon_class', '') or service_launcher_utils.resolve_home_icon_class(product),
+                'home_accent_token': getattr(product, 'home_accent_token', '') or service_launcher_utils.resolve_home_accent_token(product),
             }
             if include_section_meta:
                 section_key = _resolve_home_section_key(product)
@@ -1572,6 +1593,12 @@ def _build_home_direct_nav_section(product, *, fallback_color='slate'):
         'href': href,
         'is_external': bool(getattr(product, 'launch_is_external', False)),
         'product_id': getattr(product, 'id', None),
+        'launch_route_name': route_name,
+        **_build_home_section_surface_meta(
+            section_key=meta.get('key') or route_name.replace(':', '-'),
+            icon=getattr(product, 'icon', ''),
+            route_name=route_name,
+        ),
     }
 
 
@@ -1618,6 +1645,10 @@ def _build_home_nav_sections(primary_display_sections, secondary_display_section
             'color': section.get('color', 'slate'),
             'count': len(nav_products),
             'products': nav_products,
+            'home_icon_class': section.get('home_icon_class')
+            or service_launcher_utils.resolve_home_icon_class(icon=section.get('icon', '')),
+            'home_accent_token': section.get('home_accent_token')
+            or service_launcher_utils.resolve_home_accent_token(section_key=section.get('key', '')),
         })
         nav_sections.extend(direct_sections)
 
@@ -1630,6 +1661,8 @@ def _build_home_nav_sections(primary_display_sections, secondary_display_section
             'color': 'rose',
             'count': len(games),
             'products': games,
+            'home_icon_class': 'fa-solid fa-gamepad',
+            'home_accent_token': service_launcher_utils.resolve_home_accent_token(section_key='games'),
         })
 
     return nav_sections
@@ -2664,6 +2697,8 @@ def _build_home_guest_highlight_card(product, *, login_url=""):
         "description": getattr(product, "home_card_summary", "") or getattr(product, "teacher_first_support_label", "") or getattr(product, "description", ""),
         "service_name": getattr(product, "teacher_first_task_label", "") or "",
         "icon": getattr(product, "icon", ""),
+        "home_icon_class": getattr(product, "home_icon_class", "") or service_launcher_utils.resolve_home_icon_class(product),
+        "home_accent_token": getattr(product, "home_accent_token", "") or service_launcher_utils.resolve_home_accent_token(product),
         "service_type": getattr(product, "service_type", ""),
         "href": href,
         "is_external": is_external,
@@ -2727,6 +2762,8 @@ def _build_home_guest_rotation_cards(product_list, *, login_url=""):
             "title": card["title"],
             "description": card["description"],
             "icon": card["icon"],
+            "home_icon_class": card.get("home_icon_class", ""),
+            "home_accent_token": card.get("home_accent_token", ""),
             "href": card["href"],
             "is_external": card["is_external"],
             "cta_label": "새 창에서 시작" if card["is_external"] else "지금 시작",
@@ -2773,6 +2810,8 @@ def _attach_home_guest_landing_meta(product, *, login_url):
     product.home_landing_cta_href = cta_href
     product.home_landing_cta_label = cta_label
     product.home_landing_cta_is_external = launch_is_external
+    product.home_icon_class = getattr(product, "home_icon_class", "") or service_launcher_utils.resolve_home_icon_class(product)
+    product.home_accent_token = getattr(product, "home_accent_token", "") or service_launcher_utils.resolve_home_accent_token(product)
     return product
 
 

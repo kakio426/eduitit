@@ -26,16 +26,8 @@
             <article class="home-public-v4-card rounded-[1.5rem] p-4 sm:p-[1.125rem]">
                 <div class="flex h-full flex-col gap-4 xl:gap-[1.125rem]">
                     <div class="flex items-start gap-4">
-                        <div class="home-public-v4-icon home-public-service-icon-tone flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl shadow-sm">
-                            {% if product.icon %}
-                                {% if "fa-" in product.icon %}
-                                <i class="{{ product.icon }}"></i>
-                                {% else %}
-                                {{ product.icon }}
-                                {% endif %}
-                            {% else %}
-                            <i class="fa-solid fa-sparkles"></i>
-                            {% endif %}
+                        <div class="home-public-v4-icon home-public-service-icon-tone flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl shadow-sm" data-home-accent="{{ product.home_accent_token|default:'external' }}">
+                            <i class="{{ product.home_icon_class|default:'fa-solid fa-sparkles' }}"></i>
                         </div>
                         <div class="min-w-0">
                             <h2 class="text-2xl font-black text-slate-900 break-keep">
@@ -65,16 +57,8 @@
         <div class="home-public-v4-card mt-3 rounded-[1.5rem] p-4 sm:p-[1.125rem]">
             <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between xl:gap-[1.125rem]">
                 <div class="flex items-start gap-4">
-                    <div class="home-public-v4-icon home-public-service-icon-tone flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl shadow-sm">
-                        {% if featured_product.icon %}
-                            {% if "fa-" in featured_product.icon %}
-                            <i class="{{ featured_product.icon }}"></i>
-                            {% else %}
-                            {{ featured_product.icon }}
-                            {% endif %}
-                        {% else %}
-                        <i class="fa-solid fa-sparkles"></i>
-                        {% endif %}
+                    <div class="home-public-v4-icon home-public-service-icon-tone flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl shadow-sm" data-home-accent="{{ featured_product.home_accent_token|default:'external' }}">
+                        <i class="{{ featured_product.home_icon_class|default:'fa-solid fa-sparkles' }}"></i>
                     </div>
                     <div class="min-w-0">
                         <h2 class="text-2xl font-black text-slate-900 break-keep">
@@ -111,16 +95,8 @@
                 {% if not forloop.first %}hidden{% endif %}>
                 <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between xl:gap-[1.125rem]">
                     <div class="flex items-start gap-4">
-                        <div class="home-public-v4-icon home-public-service-icon-tone flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl shadow-sm">
-                            {% if card.icon %}
-                                {% if "fa-" in card.icon %}
-                                <i class="{{ card.icon }}"></i>
-                                {% else %}
-                                {{ card.icon }}
-                                {% endif %}
-                            {% else %}
-                            <i class="fa-solid fa-sparkles"></i>
-                            {% endif %}
+                        <div class="home-public-v4-icon home-public-service-icon-tone flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl shadow-sm" data-home-accent="{{ card.home_accent_token|default:'external' }}">
+                            <i class="{{ card.home_icon_class|default:'fa-solid fa-sparkles' }}"></i>
                         </div>
                         <div class="min-w-0">
                             <p class="text-xs font-black text-slate-400">공개 도구</p>

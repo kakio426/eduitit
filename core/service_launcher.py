@@ -126,8 +126,11 @@ HOME_SECTION_BY_ROUTE = {
     "fairy_games:play_reversi": "class_activity",
     "reflex_game:main": "class_activity",
     "yut_game": "class_activity",
+    "studentmbti:landing": "refresh",
     "studentmbti:start": "refresh",
     "ssambti:main": "refresh",
+    "teacher_law:main": "guide",
+    "fortune:saju": "refresh",
     "fortune:landing": "refresh",
     "saju:landing": "refresh",
     "notebooklm_guide:main": "guide",
@@ -193,6 +196,69 @@ HOME_SECTION_META_BY_KEY = {
     section["key"]: section
     for section in [*HOME_MAIN_SECTIONS, *HOME_AUXILIARY_SECTIONS]
 }
+
+HOME_ACCENT_TOKEN_BY_SECTION_KEY = {
+    "collect_sign": "collect_sign",
+    "doc_write": "doc_write",
+    "class_ops": "class_ops",
+    "class_activity": "class_activity",
+    "games": "games",
+    "refresh": "refresh",
+    "guide": "guide",
+    "external": "external",
+}
+
+HOME_ACCENT_TOKEN_BY_ROUTE = {
+    "schoolprograms:landing": "schoolprograms",
+}
+
+HOME_ICON_CLASS_BY_SERVICE_TYPE = {
+    "collect_sign": "fa-solid fa-inbox",
+    "work": "fa-solid fa-file-lines",
+    "classroom": "fa-solid fa-chalkboard-user",
+    "game": "fa-solid fa-gamepad",
+    "counsel": "fa-solid fa-heart",
+    "edutech": "fa-solid fa-lightbulb",
+    "etc": "fa-solid fa-arrow-up-right-from-square",
+}
+
+HOME_ICON_CLASS_BY_ROUTE = {
+    "collect:landing": "fa-solid fa-inbox",
+    "collect:dashboard": "fa-solid fa-inbox",
+    "consent:landing": "fa-solid fa-clipboard-check",
+    "consent:dashboard": "fa-solid fa-clipboard-check",
+    "signatures:landing": "fa-solid fa-file-signature",
+    "signatures:list": "fa-solid fa-file-signature",
+    "handoff:landing": "fa-solid fa-box-open",
+    "classcalendar:main": "fa-solid fa-calendar-days",
+    "messagebox:main": "fa-solid fa-box-archive",
+    "schoolcomm:main": "fa-solid fa-comments",
+    "quickdrop:landing": "fa-solid fa-paper-plane",
+    "reservations:dashboard_landing": "fa-solid fa-calendar-check",
+    "reservations:landing": "fa-solid fa-calendar-check",
+    "textbooks:main": "fa-solid fa-book-open",
+    "edu_materials:main": "fa-solid fa-layer-group",
+    "qrgen:landing": "fa-solid fa-qrcode",
+    "tts_announce": "fa-solid fa-bullhorn",
+    "schoolprograms:landing": "fa-solid fa-school",
+    "chess:index": "fa-solid fa-chess-knight",
+    "chess:play": "fa-solid fa-chess-knight",
+    "janggi:index": "fa-solid fa-chess-rook",
+    "janggi:play": "fa-solid fa-chess-rook",
+    "reflex_game:main": "fa-solid fa-bolt",
+    "yut_game": "fa-solid fa-dice-four",
+    "teacher_law:main": "fa-solid fa-scale-balanced",
+    "ssambti:main": "fa-solid fa-user-group",
+    "studentmbti:landing": "fa-solid fa-users",
+    "studentmbti:start": "fa-solid fa-users",
+    "fortune:saju": "fa-solid fa-sparkles",
+    "fortune:landing": "fa-solid fa-sparkles",
+    "saju:landing": "fa-solid fa-sparkles",
+}
+
+HOME_ICON_CLASS_BY_ROUTE_PREFIX = (
+    ("fairy_games:", "fa-solid fa-puzzle-piece"),
+)
 
 FORCE_LOGIN_ROUTE_NAMES = {
     "infoboard:dashboard",
@@ -282,6 +348,48 @@ def resolve_home_section_key(product):
         return "external"
 
     return HOME_SECTION_FALLBACK_BY_TYPE.get(getattr(product, "service_type", ""), "guide")
+
+
+def resolve_home_accent_token(product=None, *, section_key="", route_name="", service_type=""):
+    if product is not None:
+        route_name = product_route_name(product)
+        service_type = str(getattr(product, "service_type", "") or "").strip().lower()
+
+    normalized_route_name = str(route_name or "").strip().lower()
+    if normalized_route_name in HOME_ACCENT_TOKEN_BY_ROUTE:
+        return HOME_ACCENT_TOKEN_BY_ROUTE[normalized_route_name]
+
+    normalized_section_key = str(section_key or "").strip().lower()
+    if not normalized_section_key and normalized_route_name in HOME_SECTION_BY_ROUTE:
+        normalized_section_key = HOME_SECTION_BY_ROUTE[normalized_route_name]
+    if not normalized_section_key and service_type:
+        normalized_section_key = HOME_SECTION_FALLBACK_BY_TYPE.get(service_type, "")
+
+    return HOME_ACCENT_TOKEN_BY_SECTION_KEY.get(normalized_section_key, "external")
+
+
+def resolve_home_icon_class(product=None, *, icon="", route_name="", service_type=""):
+    if product is not None:
+        icon = getattr(product, "icon", "")
+        route_name = product_route_name(product)
+        service_type = str(getattr(product, "service_type", "") or "").strip().lower()
+
+    normalized_icon = str(icon or "").strip()
+    if "fa-" in normalized_icon:
+        return normalized_icon
+
+    normalized_route_name = str(route_name or "").strip().lower()
+    if normalized_route_name in HOME_ICON_CLASS_BY_ROUTE:
+        return HOME_ICON_CLASS_BY_ROUTE[normalized_route_name]
+    for prefix, icon_class in HOME_ICON_CLASS_BY_ROUTE_PREFIX:
+        if normalized_route_name.startswith(prefix):
+            return icon_class
+
+    normalized_service_type = str(service_type or "").strip().lower()
+    if normalized_service_type in HOME_ICON_CLASS_BY_SERVICE_TYPE:
+        return HOME_ICON_CLASS_BY_SERVICE_TYPE[normalized_service_type]
+
+    return "fa-solid fa-sparkles"
 
 
 def resolve_product_launch_route_name(product, user=None):

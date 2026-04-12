@@ -79,7 +79,7 @@ content: "";
     inset: 0;
     background:
         radial-gradient(circle at 12% 18%, rgba(var(--home-v6-brand-rgb), 0.08), transparent 38%),
-        radial-gradient(circle at 88% 22%, rgba(198, 165, 107, 0.16), transparent 34%);
+        radial-gradient(circle at 88% 22%, rgba(148, 163, 184, 0.14), transparent 34%);
     pointer-events: none;
 }
 
@@ -154,18 +154,12 @@ border-color: rgba(148, 163, 184, 0.22);
     box-shadow: 0 24px 56px rgba(15, 23, 42, 0.16);
 }
 
-/* Auth home uses one brand accent so dense dashboard surfaces stay readable and enterprise-like. */
-.home-v6-page .home-v6-nav-group,
-.home-v6-page .home-v6-nav-group--blue,
-.home-v6-page .home-v6-nav-group--emerald,
-.home-v6-page .home-v6-nav-group--violet,
-.home-v6-page .home-v6-nav-group--cyan,
-.home-v6-page .home-v6-nav-group--rose,
-.home-v6-page .home-v6-nav-group--red {
---home-v6-accent-rgb: var(--home-v6-brand-rgb);
-    --home-v6-nav-accent: var(--home-v6-brand);
-    --home-v6-nav-accent-soft: rgba(245, 241, 255, 0.78);
-    --home-v6-nav-accent-border: rgba(var(--home-v6-brand-rgb), 0.14);
+/* Dense nav clusters stay neutral overall, then pick up a restrained accent from each section token. */
+.home-v6-page .home-v6-nav-group {
+    --home-v6-accent-rgb: 71, 85, 105;
+    --home-v6-nav-accent: #475569;
+    --home-v6-nav-accent-soft: rgba(248, 250, 252, 0.96);
+    --home-v6-nav-accent-border: rgba(100, 116, 139, 0.14);
 }
 
 .home-v6-page .home-v6-inline-secondary-action {
@@ -177,7 +171,7 @@ border-color: rgba(148, 163, 184, 0.18);
 .home-v6-page .home-v6-inline-secondary-action:hover,
 .home-v6-page .home-v6-inline-secondary-action:focus-visible {
 border-color: rgba(var(--home-v6-brand-rgb), 0.22);
-    background: rgba(245, 241, 255, 0.94);
+    background: rgba(242, 247, 255, 0.94);
     color: var(--home-v6-brand-strong);
 }
 
@@ -392,9 +386,11 @@ font-family: var(--font-display);
 }
 
 .home-v6-page .home-v6-nav-item {
-border-color: rgba(148, 163, 184, 0.12);
-    background: rgba(255, 255, 255, 0.52);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+border-color: rgba(148, 163, 184, 0.16);
+    background: rgba(255, 255, 255, 0.88);
+    box-shadow:
+        0 10px 22px rgba(15, 23, 42, 0.04),
+        inset 0 1px 0 rgba(255, 255, 255, 0.72);
 }
 
 .home-v6-page .home-v6-nav-item::before {
@@ -410,14 +406,14 @@ color: rgba(95, 108, 129, 0.9);
 .home-v6-page .home-v6-nav-item:hover,
 .home-v6-page .home-v6-nav-item:focus-visible {
 border-color: rgba(var(--home-v6-accent-rgb), 0.16);
-    background: rgba(255, 255, 255, 0.8);
+    background: #ffffff;
     box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
 }
 
 .home-v6-page .home-v6-nav-item--section.is-open {
 border-color: rgba(var(--home-v6-accent-rgb), 0.2);
     background:
-        linear-gradient(135deg, rgba(var(--home-v6-accent-rgb), 0.05) 0%, rgba(255, 255, 255, 0.98) 72%, rgba(246, 249, 252, 0.96) 100%);
+        linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(246, 248, 251, 0.98) 100%);
     box-shadow: 0 14px 28px rgba(15, 23, 42, 0.07);
 }
 
@@ -428,10 +424,8 @@ opacity: 1;
 
 .home-v6-page .home-v6-nav-icon {
 border-color: rgba(var(--home-v6-accent-rgb), 0.16);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(var(--home-v6-accent-rgb), 0.12) 100%);
-    box-shadow:
-        inset 0 0 0 1px rgba(255, 255, 255, 0.62),
-        0 12px 22px rgba(var(--home-v6-accent-rgb), 0.12);
+    background: #ffffff;
+    box-shadow: 0 10px 18px rgba(15, 23, 42, 0.05);
     color: var(--home-v6-nav-accent);
 }
 
@@ -459,9 +453,9 @@ transform: translateY(-2px);
 .home-v6-page .home-v6-tool-link {
 position: relative;
     border-color: rgba(148, 163, 184, 0.18);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.985) 0%, rgba(247, 250, 253, 0.96) 100%);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(247, 249, 252, 0.97) 100%);
     box-shadow:
-        0 14px 26px rgba(15, 23, 42, 0.06),
+        0 12px 24px rgba(15, 23, 42, 0.05),
         inset 0 1px 0 rgba(255, 255, 255, 0.84);
     transition: border-color 0.22s ease, background-color 0.22s ease, box-shadow 0.22s ease;
 }
@@ -469,26 +463,23 @@ position: relative;
 .home-v6-page .home-v6-tool-link:hover,
 .home-v6-page .home-v6-tool-link:focus-visible {
 border-color: rgba(var(--home-v6-accent-rgb), 0.18);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(246, 249, 252, 0.985) 100%);
+    background: #ffffff;
     box-shadow:
-        0 18px 32px rgba(15, 23, 42, 0.08),
+        0 16px 30px rgba(15, 23, 42, 0.07),
         0 0 0 1px rgba(var(--home-v6-accent-rgb), 0.04);
 }
 
 .home-v6-page .home-v6-tool-icon {
-background: linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(var(--home-v6-accent-rgb), 0.07) 100%);
-    box-shadow:
-        inset 0 0 0 1px rgba(var(--home-v6-accent-rgb), 0.12),
-        0 8px 16px rgba(15, 23, 42, 0.05);
+background: #ffffff;
+    border: 1px solid rgba(var(--home-v6-accent-rgb), 0.14);
+    box-shadow: 0 8px 16px rgba(15, 23, 42, 0.04);
     color: var(--home-v6-nav-accent);
     transition: box-shadow 0.22s ease, transform 0.22s ease;
 }
 
 .home-v6-page .home-v6-tool-link:hover .home-v6-tool-icon,
 .home-v6-page .home-v6-tool-link:focus-visible .home-v6-tool-icon {
-box-shadow:
-        inset 0 0 0 1px rgba(var(--home-v6-accent-rgb), 0.18),
-        0 12px 22px rgba(15, 23, 42, 0.07);
+box-shadow: 0 10px 20px rgba(15, 23, 42, 0.06);
     transform: translateY(-1px);
 }
 
@@ -1043,7 +1034,7 @@ content: "";
     width: 9rem;
     height: 9rem;
     border-radius: 999px;
-    background: radial-gradient(circle, rgba(238, 232, 255, 0.42) 0%, rgba(238, 232, 255, 0) 72%);
+    background: radial-gradient(circle, rgba(228, 236, 248, 0.42) 0%, rgba(228, 236, 248, 0) 72%);
     pointer-events: none;
 }
 
@@ -1386,7 +1377,7 @@ color: var(--home-v6-ink) !important;
 .home-v6-page .text-pink-500,
 .home-v6-page .text-cyan-500,
 .home-v6-page .text-sky-500 {
-color: var(--home-v6-brand) !important;
+color: #334155 !important;
 }
 
 .home-v6-page .bg-violet-100,
@@ -1395,7 +1386,7 @@ color: var(--home-v6-brand) !important;
 .home-v6-page .bg-slate-50,
 .home-v6-page .bg-indigo-50,
 .home-v6-page .bg-indigo-100 {
-background-color: rgba(245, 241, 255, 0.94) !important;
+background-color: rgba(248, 250, 252, 0.94) !important;
 }
 
 .home-v6-page .bg-white,
@@ -1405,7 +1396,7 @@ background-color: rgba(255, 255, 255, 0.96) !important;
 
 .home-v6-page .text-violet-700,
 .home-v6-page .text-amber-700 {
-color: var(--home-v6-brand-strong) !important;
+color: #334155 !important;
 }
 
 .home-v6-page .border-slate-100 {
@@ -1418,23 +1409,23 @@ border-color: rgba(226, 232, 240, 0.72) !important;
 .home-v6-page .border-emerald-300,
 .home-v6-page .border-indigo-200,
 .home-v6-page .border-indigo-300 {
-border-color: rgba(var(--home-v6-brand-rgb), 0.18) !important;
+border-color: rgba(148, 163, 184, 0.22) !important;
 }
 
 .home-v6-page .hover\:border-emerald-300:hover,
 .home-v6-page .hover\:border-indigo-300:hover,
 .home-v6-page .hover\:border-indigo-200:hover {
-border-color: rgba(var(--home-v6-brand-rgb), 0.28) !important;
+border-color: rgba(148, 163, 184, 0.32) !important;
 }
 
 .home-v6-page .hover\:bg-indigo-50\/60:hover,
 .home-v6-page .hover\:bg-indigo-50\/70:hover {
-background-color: rgba(245, 241, 255, 0.7) !important;
+background-color: rgba(248, 250, 252, 0.85) !important;
 }
 
 .home-v6-page .hover\:text-indigo-600:hover,
 .home-v6-page .hover\:text-indigo-700:hover {
-color: var(--home-v6-brand-strong) !important;
+color: #334155 !important;
 }
 
 /* Dense dashboard controls share one calm focus ring so keyboard navigation stays obvious without louder motion. */
