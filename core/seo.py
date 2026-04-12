@@ -163,6 +163,37 @@ def _web_site_structured_data() -> dict[str, Any]:
     }
 
 
+def build_organization_structured_data(
+    *,
+    name: str,
+    url: str,
+    description: str = "",
+    email: str = "",
+    telephone: str = "",
+    same_as: str = "",
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "@id": f"{_absolute_url(url)}#organization",
+        "name": str(name or "").strip() or SITE_NAME,
+        "url": _absolute_url(url),
+    }
+    normalized_description = _truncate_text(description or "", limit=180)
+    if normalized_description:
+        payload["description"] = normalized_description
+    normalized_email = str(email or "").strip()
+    if normalized_email:
+        payload["email"] = normalized_email
+    normalized_phone = str(telephone or "").strip()
+    if normalized_phone:
+        payload["telephone"] = normalized_phone
+    normalized_same_as = _absolute_url(same_as)
+    if normalized_same_as:
+        payload["sameAs"] = normalized_same_as
+    return payload
+
+
 def _normalize_keywords(value: Any) -> list[str]:
     if isinstance(value, (list, tuple, set)):
         raw_items = value
@@ -393,6 +424,112 @@ def build_public_service_landing_seo(
         current_path=current_path,
         og_image=og_image,
         og_type=og_type,
+        robots=robots,
+        structured_data=structured_data,
+    )
+
+
+def build_public_collection_page_seo(
+    request,
+    *,
+    title: str,
+    description: str,
+    route_name: str,
+    collection_name: str,
+    breadcrumb_items: tuple[tuple[str, str], ...],
+    product=None,
+    route_kwargs: dict[str, Any] | None = None,
+    current_path: str = "",
+    og_image: str = "",
+    og_type: str = "website",
+    robots: str = "index,follow",
+    additional_structured_data: tuple[dict[str, Any], ...] | None = None,
+) -> PageSeoMeta:
+    if route_name:
+        canonical_url = _absolute_url(reverse(route_name, kwargs=route_kwargs or {}))
+    else:
+        canonical_url = _absolute_url(current_path or getattr(request, "path", "/"))
+
+    structured_data = (
+        _collection_page_structured_data(
+            name=collection_name,
+            description=description,
+            url=canonical_url,
+        ),
+        _breadcrumb_list_structured_data(list(breadcrumb_items)),
+    )
+    if additional_structured_data:
+        structured_data = (*structured_data, *additional_structured_data)
+
+    return build_product_route_page_seo(
+        request,
+        product=product,
+        title=title,
+        description=description,
+        route_name=route_name,
+        route_kwargs=route_kwargs,
+        current_path=current_path,
+        og_image=og_image,
+        og_type=og_type,
+        robots=robots,
+        structured_data=structured_data,
+    )
+
+
+def build_public_article_page_seo(
+    request,
+    *,
+    title: str,
+    description: str,
+    route_name: str,
+    article_name: str,
+    breadcrumb_items: tuple[tuple[str, str], ...],
+    product=None,
+    route_kwargs: dict[str, Any] | None = None,
+    current_path: str = "",
+    og_image: str = "",
+    robots: str = "index,follow",
+    date_published: Any = None,
+    date_modified: Any = None,
+    article_section: str = "",
+    about_name: str = "",
+    keywords: Any = None,
+    same_as: str = "",
+    additional_structured_data: tuple[dict[str, Any], ...] | None = None,
+) -> PageSeoMeta:
+    if route_name:
+        canonical_url = _absolute_url(reverse(route_name, kwargs=route_kwargs or {}))
+    else:
+        canonical_url = _absolute_url(current_path or getattr(request, "path", "/"))
+
+    structured_data = (
+        _article_structured_data(
+            headline=article_name,
+            description=description,
+            url=canonical_url,
+            image_url=og_image,
+            date_published=date_published,
+            date_modified=date_modified,
+            article_section=article_section,
+            about_name=about_name,
+            keywords=keywords,
+            same_as=same_as,
+        ),
+        _breadcrumb_list_structured_data(list(breadcrumb_items)),
+    )
+    if additional_structured_data:
+        structured_data = (*structured_data, *additional_structured_data)
+
+    return build_product_route_page_seo(
+        request,
+        product=product,
+        title=title,
+        description=description,
+        route_name=route_name,
+        route_kwargs=route_kwargs,
+        current_path=current_path,
+        og_image=og_image,
+        og_type="article",
         robots=robots,
         structured_data=structured_data,
     )

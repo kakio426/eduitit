@@ -7,6 +7,7 @@ from django.urls import reverse
 
 from insights.models import Insight
 from products.models import Product
+from schoolprograms.models import ProgramListing, ProviderProfile
 
 from .discovery_policy import has_public_search_canonical_route, is_sensitive_discovery_target
 from .product_visibility import filter_discoverable_products
@@ -113,6 +114,32 @@ def build_public_sitemap_entries() -> tuple[PublicSitemapEntry, ...]:
                 changefreq="weekly",
                 priority=0.6,
                 lastmod_source=product.updated_at,
+            )
+        )
+
+    approved_listings = ProgramListing.objects.filter(
+        approval_status=ProgramListing.ApprovalStatus.APPROVED
+    ).select_related("provider")
+    for listing in approved_listings.order_by("-published_at", "-id"):
+        entries.append(
+            PublicSitemapEntry(
+                key=f"schoolprograms:listing:{listing.pk}",
+                location=reverse("schoolprograms:listing_detail", args=[listing.slug]),
+                changefreq="weekly",
+                priority=0.7,
+                lastmod_source=listing.updated_at,
+            )
+        )
+
+    approved_provider_ids = approved_listings.values_list("provider_id", flat=True).distinct()
+    for provider in ProviderProfile.objects.filter(pk__in=approved_provider_ids).order_by("provider_name", "id"):
+        entries.append(
+            PublicSitemapEntry(
+                key=f"schoolprograms:provider:{provider.pk}",
+                location=reverse("schoolprograms:provider_detail", args=[provider.slug]),
+                changefreq="monthly",
+                priority=0.6,
+                lastmod_source=provider.updated_at,
             )
         )
 

@@ -3,6 +3,7 @@ import html
 from django.contrib.auth import get_user_model
 from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from collect.models import CollectionRequest
 from core.context_processors import seo_meta
@@ -10,6 +11,7 @@ from core.guide_links import SERVICE_GUIDE_PADLET_URL
 from core.seo import DEFAULT_HOME_DESCRIPTION
 from insights.models import Insight
 from products.models import Product, ServiceManual
+from schoolprograms.models import ProgramListing, ProviderProfile
 
 
 @override_settings(HOME_V2_ENABLED=True)
@@ -89,6 +91,42 @@ class SeoFoundationTests(TestCase):
             launch_route_name="schoolprograms:landing",
             solve_text="학교 프로그램을 비교하고 바로 문의합니다.",
         )
+        self.provider_user = get_user_model().objects.create_user(
+            username="provider-user",
+            email="provider@example.com",
+            password="test-pass-123",
+        )
+        self.schoolprogram_provider = ProviderProfile.objects.create(
+            user=self.provider_user,
+            provider_name="상상체험 교육연구소",
+            summary="찾아오는 과학 체험과 교사연수를 운영합니다.",
+            description="학교 방문형 과학 체험학습과 교사 연수를 함께 운영하는 프로그램 업체입니다.",
+            contact_email="hello@example.com",
+            contact_phone="02-1234-5678",
+            website="https://example.com/programs",
+            service_area_summary="서울 · 경기",
+        )
+        self.schoolprogram_listing = ProgramListing.objects.create(
+            provider=self.schoolprogram_provider,
+            title="찾아오는 과학 실험 교실",
+            summary="교실에서 바로 진행하는 안전한 과학 실험 체험입니다.",
+            description="학교로 찾아가 학급 단위로 운영하는 과학 실험 체험 프로그램입니다.",
+            category=ProgramListing.Category.FIELDTRIP,
+            theme_tags=["과학", "실험"],
+            grade_bands=["elementary_high", "middle"],
+            delivery_mode=ProgramListing.DeliveryMode.VISITING,
+            province="seoul",
+            city="강남구",
+            coverage_note="경기 일부 방문 가능",
+            duration_text="90분",
+            capacity_text="학급당 30명",
+            price_text="학급당 30만원",
+            safety_info="체험 강사 배상 책임 보험에 가입되어 있습니다.",
+            materials_info="교실 책상 배치만 준비해 주세요.",
+            faq="우천 시에도 실내에서 운영 가능합니다.",
+            approval_status=ProgramListing.ApprovalStatus.APPROVED,
+            published_at=timezone.now(),
+        )
         self.collect_request = CollectionRequest.objects.create(
             creator=self.user,
             title="과학 실험 보고서",
@@ -148,6 +186,8 @@ class SeoFoundationTests(TestCase):
         self.assertIn(reverse("collect:landing"), content)
         self.assertIn(reverse("handoff:landing"), content)
         self.assertIn(reverse("schoolprograms:landing"), content)
+        self.assertIn(reverse("schoolprograms:listing_detail", args=[self.schoolprogram_listing.slug]), content)
+        self.assertIn(reverse("schoolprograms:provider_detail", args=[self.schoolprogram_provider.slug]), content)
         self.assertIn(reverse("tts_announce"), content)
         self.assertIn(reverse("product_detail", kwargs={"pk": self.product.pk}), content)
         self.assertIn(reverse("insights:detail", kwargs={"pk": self.insight.pk}), content)
@@ -345,6 +385,49 @@ class SeoFoundationTests(TestCase):
         self.assertIn("지역과 주제로 학교로 찾아오는 체험학습, 교사연수, 학교행사를 바로 비교하고 문의하세요.", content)
         self.assertIn('"@type":"CollectionPage"', content)
         self.assertIn('"@type":"BreadcrumbList"', content)
+        self.assertNotIn(DEFAULT_HOME_DESCRIPTION, content)
+
+    def test_schoolprograms_filtered_landing_uses_canonical_root_and_noindex(self):
+        response = self.client.get(
+            reverse("schoolprograms:landing"),
+            {"category": ProgramListing.Category.FIELDTRIP},
+        )
+        content = response.content.decode("utf-8")
+        canonical = f"https://eduitit.site{reverse('schoolprograms:landing')}"
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(f'<link rel="canonical" href="{canonical}">', content)
+        self.assertIn('<meta name="robots" content="noindex,follow">', content)
+        self.assertEqual(response["X-Robots-Tag"], "noindex, follow")
+
+    def test_schoolprograms_listing_detail_uses_article_meta_and_schema(self):
+        response = self.client.get(reverse("schoolprograms:listing_detail", args=[self.schoolprogram_listing.slug]))
+        content = response.content.decode("utf-8")
+        canonical = f"https://eduitit.site{reverse('schoolprograms:listing_detail', args=[self.schoolprogram_listing.slug])}"
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(f"<title>{html.escape(self.schoolprogram_listing.title)} | 학교 체험·행사 찾기</title>", content)
+        self.assertIn(f'<link rel="canonical" href="{canonical}">', content)
+        self.assertIn(f'<meta property="og:url" content="{canonical}">', content)
+        self.assertIn('<meta property="og:type" content="article">', content)
+        self.assertIn('"@type":"Article"', content)
+        self.assertIn('"@type":"BreadcrumbList"', content)
+        self.assertIn(self.schoolprogram_provider.provider_name, content)
+        self.assertNotIn(DEFAULT_HOME_DESCRIPTION, content)
+
+    def test_schoolprograms_provider_detail_uses_collection_meta_and_schema(self):
+        response = self.client.get(reverse("schoolprograms:provider_detail", args=[self.schoolprogram_provider.slug]))
+        content = response.content.decode("utf-8")
+        canonical = f"https://eduitit.site{reverse('schoolprograms:provider_detail', args=[self.schoolprogram_provider.slug])}"
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(f"<title>{html.escape(self.schoolprogram_provider.provider_name)} | 학교 체험·행사 찾기</title>", content)
+        self.assertIn(f'<link rel="canonical" href="{canonical}">', content)
+        self.assertIn(f'<meta property="og:url" content="{canonical}">', content)
+        self.assertIn('"@type":"CollectionPage"', content)
+        self.assertIn('"@type":"Organization"', content)
+        self.assertIn('"@type":"BreadcrumbList"', content)
+        self.assertIn(self.schoolprogram_provider.contact_email, content)
         self.assertNotIn(DEFAULT_HOME_DESCRIPTION, content)
 
     def test_collect_and_handoff_landing_pages_get_explicit_meta(self):

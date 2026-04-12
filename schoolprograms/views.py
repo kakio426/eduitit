@@ -14,7 +14,12 @@ from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import timezone
 
-from core.seo import build_public_service_landing_seo
+from core.seo import (
+    build_organization_structured_data,
+    build_public_article_page_seo,
+    build_public_collection_page_seo,
+    build_public_service_landing_seo,
+)
 from products.models import Product
 
 from .forms import (
@@ -84,10 +89,26 @@ def _render_schoolprograms(request, template_name, context, *, noindex=False, st
     payload.update(context)
     if noindex:
         payload.setdefault("robots", "noindex,nofollow")
+    if payload.get("page_title"):
+        payload.setdefault("og_title", payload["page_title"])
+    if payload.get("meta_description"):
+        payload.setdefault("og_description", payload["meta_description"])
+    if payload.get("canonical_url"):
+        payload.setdefault("og_url", payload["canonical_url"])
+    robots_value = str(payload.get("robots") or "").strip()
     response = render(request, template_name, payload, status=status)
-    if noindex:
-        response["X-Robots-Tag"] = "noindex, nofollow"
+    if noindex or robots_value.startswith("noindex"):
+        response["X-Robots-Tag"] = (robots_value or "noindex,nofollow").replace(",", ", ")
     return response
+
+
+def _listing_primary_image_url(listing) -> str:
+    primary_image = getattr(listing, "primary_image", None)
+    image_field = getattr(primary_image, "image", None)
+    try:
+        return image_field.url if image_field else ""
+    except Exception:
+        return ""
 
 
 def _ensure_company_or_403(user):
@@ -526,6 +547,7 @@ def landing(request):
         active_filter_labels.append(_choice_label(ProgramListing.DeliveryMode.choices, delivery_mode))
     if q:
         active_filter_labels.append(f"주제 {q}")
+    robots = "noindex,follow" if has_active_filters or page_obj.number > 1 else "index,follow"
 
     return _render_schoolprograms(
         request,
@@ -538,6 +560,7 @@ def landing(request):
                 description="지역과 주제로 학교로 찾아오는 체험학습, 교사연수, 학교행사를 바로 비교하고 문의하세요.",
                 route_name="schoolprograms:landing",
                 landing_name=SERVICE_TITLE,
+                robots=robots,
             ).as_context(),
             "page_obj": page_obj,
             "provider_count": len(provider_cards),
@@ -594,14 +617,32 @@ def listing_detail(request, slug):
         )
         .exclude(pk=listing.pk)[:3]
     )
+    seo = build_public_article_page_seo(
+        request,
+        title=f"{listing.title} | {SERVICE_TITLE}",
+        description=listing.summary,
+        route_name="schoolprograms:listing_detail",
+        route_kwargs={"slug": listing.slug},
+        article_name=listing.title,
+        breadcrumb_items=(
+            ("홈", reverse("home")),
+            (SERVICE_TITLE, reverse("schoolprograms:landing")),
+            (listing.title, reverse("schoolprograms:listing_detail", args=[listing.slug])),
+        ),
+        og_image=_listing_primary_image_url(listing),
+        date_published=listing.published_at or listing.created_at,
+        date_modified=listing.updated_at,
+        article_section=listing.get_category_display(),
+        about_name=listing.provider.provider_name,
+        keywords=listing.theme_tags,
+        same_as=listing.provider.website,
+    )
 
     return _render_schoolprograms(
         request,
         "schoolprograms/listing_detail.html",
         {
-            "page_title": f"{listing.title} | {SERVICE_TITLE}",
-            "meta_description": listing.summary,
-            "canonical_url": request.build_absolute_uri(reverse("schoolprograms:listing_detail", args=[listing.slug])),
+            **seo.as_context(),
             "listing": listing,
             "related_listings": related_listings,
             "inquiry_form": inquiry_form,
@@ -658,13 +699,31 @@ def create_inquiry(request, slug):
         .filter(provider=listing.provider, approval_status=ProgramListing.ApprovalStatus.APPROVED)
         .exclude(pk=listing.pk)[:3]
     )
+    seo = build_public_article_page_seo(
+        request,
+        title=f"{listing.title} | {SERVICE_TITLE}",
+        description=listing.summary,
+        route_name="schoolprograms:listing_detail",
+        route_kwargs={"slug": listing.slug},
+        article_name=listing.title,
+        breadcrumb_items=(
+            ("홈", reverse("home")),
+            (SERVICE_TITLE, reverse("schoolprograms:landing")),
+            (listing.title, reverse("schoolprograms:listing_detail", args=[listing.slug])),
+        ),
+        og_image=_listing_primary_image_url(listing),
+        date_published=listing.published_at or listing.created_at,
+        date_modified=listing.updated_at,
+        article_section=listing.get_category_display(),
+        about_name=listing.provider.provider_name,
+        keywords=listing.theme_tags,
+        same_as=listing.provider.website,
+    )
     return _render_schoolprograms(
         request,
         "schoolprograms/listing_detail.html",
         {
-            "page_title": f"{listing.title} | {SERVICE_TITLE}",
-            "meta_description": listing.summary,
-            "canonical_url": request.build_absolute_uri(reverse("schoolprograms:listing_detail", args=[listing.slug])),
+            **seo.as_context(),
             "listing": listing,
             "related_listings": related_listings,
             "inquiry_form": form,
@@ -719,14 +778,35 @@ def provider_detail(request, slug):
 
     provider_inquiry_next_url = f"{reverse('schoolprograms:provider_detail', args=[provider.slug])}?activity={selected_listing.slug}"
     provider_inquiry_login_url = f"{reverse('account_login')}?next={quote(provider_inquiry_next_url)}"
+    seo = build_public_collection_page_seo(
+        request,
+        title=f"{provider.provider_name} | {SERVICE_TITLE}",
+        description=provider.summary or provider.description[:120],
+        route_name="schoolprograms:provider_detail",
+        route_kwargs={"slug": provider.slug},
+        collection_name=provider.provider_name,
+        breadcrumb_items=(
+            ("홈", reverse("home")),
+            (SERVICE_TITLE, reverse("schoolprograms:landing")),
+            (provider.provider_name, reverse("schoolprograms:provider_detail", args=[provider.slug])),
+        ),
+        additional_structured_data=(
+            build_organization_structured_data(
+                name=provider.provider_name,
+                url=reverse("schoolprograms:provider_detail", args=[provider.slug]),
+                description=provider.summary or provider.description[:120],
+                email=provider.contact_email,
+                telephone=provider.contact_phone,
+                same_as=provider.website,
+            ),
+        ),
+    )
 
     return _render_schoolprograms(
         request,
         "schoolprograms/provider_detail.html",
         {
-            "page_title": f"{provider.provider_name} | {SERVICE_TITLE}",
-            "meta_description": provider.summary or provider.description[:120],
-            "canonical_url": request.build_absolute_uri(reverse("schoolprograms:provider_detail", args=[provider.slug])),
+            **seo.as_context(),
             "provider": provider,
             "listings": listings,
             "selected_listing": selected_listing,
