@@ -24,6 +24,10 @@
     --color-warning-soft: #fff4de;
     --color-danger: #c44963;
     --color-danger-soft: #fff1f4;
+    /* Shared type tokens keep core screens consistent without changing layout. */
+    --font-ui: 'Inter', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', 'Segoe UI', 'NanumSquareRound', sans-serif;
+    --font-display: 'Inter', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', 'Segoe UI', 'NanumSquareRound', sans-serif;
+    --font-brand: 'Outfit', 'Inter', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
 }
 
 *,
@@ -42,10 +46,13 @@ body {
 body {
     background-color: var(--color-page);
     color: var(--color-text);
-    font-family: 'NanumSquareRound', sans-serif;
+    font-family: var(--font-ui);
     font-size: 1rem;
+    font-weight: 500;
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.01em;
+    text-rendering: optimizeLegibility;
 }
 
 button,
@@ -59,9 +66,10 @@ h2,
 h3,
 h4,
 .font-title {
+    font-family: var(--font-display);
     font-weight: 800;
-    line-height: 1.3;
-    letter-spacing: -0.02em;
+    line-height: 1.22;
+    letter-spacing: -0.032em;
 }
 
 .bento-grid {
@@ -153,14 +161,14 @@ h4,
 }
 
 .logo-text {
-    font-family: 'Outfit', sans-serif;
-    font-weight: 900;
-    font-size: 1.4rem;
+    font-family: var(--font-brand);
+    font-weight: 800;
+    font-size: 1.32rem;
     background: linear-gradient(135deg, var(--color-brand-900) 0%, var(--color-brand-700) 55%, var(--color-brand-500) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-    letter-spacing: -0.04em;
+    letter-spacing: -0.03em;
     transition: transform 0.28s ease, filter 0.28s ease;
     display: inline-block;
     margin-top: 4px;
@@ -199,7 +207,7 @@ h4,
 
 @media (min-width: 768px) {
     .logo-text {
-        font-size: 2.2rem;
+        font-size: 2.02rem;
     }
 
     .logo-kicker {

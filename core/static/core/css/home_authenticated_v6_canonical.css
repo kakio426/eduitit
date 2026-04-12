@@ -204,16 +204,17 @@ background: var(--home-v6-surface-primary);
 .home-v6-page .home-v6-quickdrop-head h2,
 .home-v6-page [data-home-reservations-card="true"] h2,
 .home-v6-page .home-v6-developer-chat-heading h2 {
-font-family: 'Outfit', 'NanumSquareRound', sans-serif;
-    letter-spacing: -0.035em;
+font-family: var(--font-display);
+    font-weight: 800;
+    letter-spacing: -0.028em;
 }
 
 .home-v6-page .home-v6-nav-title {
-font-family: 'Outfit', 'NanumSquareRound', sans-serif;
-    font-size: 1rem;
-    font-weight: 900;
-    line-height: 1.25;
-    letter-spacing: -0.02em;
+font-family: var(--font-display);
+    font-size: 0.98rem;
+    font-weight: 800;
+    line-height: 1.3;
+    letter-spacing: -0.022em;
     color: var(--home-v6-ink);
 }
 

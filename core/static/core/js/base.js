@@ -361,7 +361,7 @@
             + '<div class="flex flex-col items-center justify-center py-20 text-center space-y-6">'
             + '<i class="fa-solid fa-triangle-exclamation text-7xl text-gray-200"></i>'
             + '<h3 class="text-3xl font-bold text-gray-700">정보를 불러오지 못했습니다</h3>'
-            + '<p class="text-xl text-gray-400 font-hand">잠시 후 다시 시도해 주세요.</p>'
+            + '<p class="text-base font-medium tracking-tight text-slate-500">잠시 후 다시 시도해 주세요.</p>'
             + '<button type="button" class="rounded-full bg-slate-900 px-8 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" data-remote-modal-retry="true">다시 시도</button>'
             + '</div>';
         loading.classList.add('hidden');

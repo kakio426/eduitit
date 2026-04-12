@@ -5,6 +5,13 @@
         linear-gradient(180deg, #f4f8f6 0%, #edf3f1 52%, #f8fbfa 100%);
 }
 
+.home-public-v5-title,
+.home-public-v5-panel-title,
+.home-public-v5-featured-title,
+.home-public-v5-grid-title {
+    font-family: var(--font-display);
+}
+
 .home-public-v5-stage {
     max-width: 980px;
 }
@@ -31,18 +38,18 @@
     border-radius: 999px;
     background: rgba(15, 118, 110, 0.08);
     color: #0f766e;
-    font-size: 0.72rem;
-    font-weight: 900;
-    letter-spacing: 0.16em;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
 }
 
 .home-public-v5-title {
     margin: 0.9rem 0 0;
-    font-size: clamp(1.9rem, 6vw, 2.8rem);
-    font-weight: 900;
-    line-height: 1.04;
-    letter-spacing: -0.05em;
+    font-size: clamp(1.82rem, 5.6vw, 2.55rem);
+    font-weight: 800;
+    line-height: 1.12;
+    letter-spacing: -0.042em;
     color: #0f172a;
     word-break: keep-all;
 }
@@ -51,8 +58,9 @@
     margin: 0.8rem 0 0;
     color: #475569;
     font-size: 0.95rem;
-    font-weight: 700;
+    font-weight: 600;
     line-height: 1.7;
+    letter-spacing: -0.012em;
 }
 
 .home-public-v5-keywords {
@@ -82,17 +90,18 @@
 .home-public-v5-eyebrow {
     margin: 0;
     font-size: 0.68rem;
-    font-weight: 900;
-    letter-spacing: 0.18em;
+    font-weight: 800;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
     color: #94a3b8;
 }
 
 .home-public-v5-panel-title {
     margin: 0.18rem 0 0;
-    font-size: 1.02rem;
-    font-weight: 900;
-    line-height: 1.25;
+    font-size: 1.05rem;
+    font-weight: 800;
+    line-height: 1.3;
+    letter-spacing: -0.024em;
     color: #0f172a;
 }
 
@@ -125,9 +134,10 @@
 .home-public-v5-featured-title {
     margin: 0;
     color: #0f172a;
-    font-size: 1rem;
-    font-weight: 900;
-    line-height: 1.3;
+    font-size: 1.02rem;
+    font-weight: 800;
+    line-height: 1.35;
+    letter-spacing: -0.02em;
 }
 
 .home-public-v5-featured-summary,
@@ -135,8 +145,9 @@
     margin: 0.4rem 0 0;
     color: #475569;
     font-size: 0.9rem;
-    font-weight: 700;
+    font-weight: 600;
     line-height: 1.65;
+    letter-spacing: -0.012em;
 }
 
 .home-public-v5-primary-link,
@@ -149,7 +160,8 @@
     border-radius: 999px;
     padding: 0 1rem;
     font-size: 0.88rem;
-    font-weight: 900;
+    font-weight: 800;
+    letter-spacing: -0.014em;
     transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 
@@ -234,9 +246,10 @@
 .home-public-v5-grid-title {
     margin: 0;
     color: #0f172a;
-    font-size: 0.9rem;
-    font-weight: 900;
-    line-height: 1.35;
+    font-size: 0.94rem;
+    font-weight: 800;
+    line-height: 1.4;
+    letter-spacing: -0.018em;
     word-break: keep-all;
     overflow-wrap: anywhere;
 }
@@ -245,14 +258,16 @@
     margin: 0;
     color: #64748b;
     font-size: 0.76rem;
-    font-weight: 700;
+    font-weight: 600;
     line-height: 1.55;
+    letter-spacing: -0.01em;
 }
 
 .home-public-v5-grid-cta {
     color: #0f766e;
     font-size: 0.78rem;
-    font-weight: 900;
+    font-weight: 800;
+    letter-spacing: -0.012em;
 }
 
 .home-public-v5-login-band {

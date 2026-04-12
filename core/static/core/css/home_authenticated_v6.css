@@ -292,6 +292,14 @@
     min-width: 0;
 }
 
+.home-v6-nav-title,
+.home-v6-mobile-panel-title,
+.home-v6-tool-title,
+.home-v6-mobile-workbench-title,
+.home-v6-developer-chat-title {
+    font-family: var(--font-display);
+}
+
 .home-v6-nav-item-side {
     display: inline-flex;
     align-items: center;
@@ -314,9 +322,10 @@
 
 .home-v6-nav-subtitle {
     margin-top: 0.2rem;
-    font-size: 0.74rem;
-    font-weight: 700;
-    line-height: 1.35;
+    font-size: 0.76rem;
+    font-weight: 600;
+    line-height: 1.45;
+    letter-spacing: -0.012em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -389,11 +398,25 @@
     word-break: keep-all;
 }
 
+.home-v6-tool-title {
+    margin: 0;
+    color: #0f172a;
+    font-size: 0.94rem;
+    font-weight: 800;
+    line-height: 1.35;
+    letter-spacing: -0.018em;
+}
+
 .home-v6-tool-summary {
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 1;
     overflow: hidden;
+    color: #5f6c81;
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 1.45;
+    letter-spacing: -0.01em;
 }
 
 .home-v6-tool-favorite-badge {
@@ -503,9 +526,10 @@
 
 .home-v6-mobile-panel-title {
     margin: 0.18rem 0 0;
-    font-size: 1.02rem;
-    font-weight: 900;
-    line-height: 1.25;
+    font-size: 1.05rem;
+    font-weight: 800;
+    line-height: 1.3;
+    letter-spacing: -0.026em;
     color: #0f172a;
 }
 
@@ -537,8 +561,9 @@
     margin: 0.7rem 0 0;
     padding-right: 1rem;
     font-size: 0.84rem;
-    font-weight: 900;
-    line-height: 1.35;
+    font-weight: 800;
+    line-height: 1.4;
+    letter-spacing: -0.014em;
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
@@ -626,12 +651,16 @@
 
 .home-v6-quickdrop-summary {
     font-size: 0.93rem;
+    font-weight: 600;
     line-height: 1.6;
+    letter-spacing: -0.012em;
 }
 
 .home-v6-mobile-quickdrop-summary {
     font-size: 0.9rem;
+    font-weight: 600;
     line-height: 1.55;
+    letter-spacing: -0.012em;
 }
 
 .home-v6-quickdrop-form,
@@ -716,7 +745,8 @@
     border-radius: var(--home-v6-radius-card);
     padding: 0 1rem;
     font-size: 0.88rem;
-    font-weight: 900;
+    font-weight: 800;
+    letter-spacing: -0.014em;
     transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 
@@ -765,8 +795,8 @@
     display: flex;
     flex-direction: column;
     gap: 0.05rem;
-    line-height: 1.08;
-    letter-spacing: -0.02em;
+    line-height: 1.14;
+    letter-spacing: -0.024em;
 }
 
 .home-v6-developer-chat-title-line {
@@ -973,4 +1003,3 @@
     overflow-y: auto;
     padding: 0 1rem 1rem;
 }
-
