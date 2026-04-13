@@ -17,23 +17,17 @@
     <div class="home-public-v6-grid-layer" aria-hidden="true"></div>
     <div class="home-public-v6-ambient-orb home-public-v6-ambient-orb-primary" aria-hidden="true"></div>
     <div class="home-public-v6-ambient-orb home-public-v6-ambient-orb-secondary" aria-hidden="true"></div>
-    <div class="home-public-v6-cursor-layer" aria-hidden="true">
-        <span class="home-public-v6-cursor-cloud" data-public-cursor-cloud="true"></span>
-        <span class="home-public-v6-cursor-aura" data-public-cursor-aura="true"></span>
-        <span class="home-public-v6-cursor-follower" data-public-cursor-follower="true">
-            <span class="home-public-v6-cursor-label" data-public-cursor-label="true">OPEN</span>
-        </span>
-        <span class="home-public-v6-cursor-dot" data-public-cursor-dot="true"></span>
-    </div>
-
     <div class="home-public-v6-page-top-spacer">
         <div class="mx-auto home-public-v6-stage px-4 pb-24 sm:px-5 md:px-6">
             <header class="home-public-v6-header" data-home-v6-public-header="true">
                 <a href="{% url 'home' %}" class="home-public-v6-brand" aria-label="에듀잇티 홈">
-                    <span class="home-public-v6-brand-icon">
-                        <i class="fa-solid fa-layer-group"></i>
+                    <span class="w-12 h-12 rounded-xl shadow-clay-inner flex items-center justify-center text-[1.55rem] logo-icon-box" aria-hidden="true">
+                        <i class="fa-solid fa-cloud"></i>
                     </span>
-                    <strong class="home-public-v6-brand-title">{{ brand_nav_wordmark|default:'에듀잇티' }}</strong>
+                    <span class="logo-lockup">
+                        <span class="logo-kicker" aria-hidden="true">EDUITIT</span>
+                        <span class="logo-text logo-text--korean">{{ brand_nav_wordmark|default:'에듀잇티' }}</span>
+                    </span>
                 </a>
 
                 <div class="home-public-v6-header-actions">
@@ -53,47 +47,43 @@
             <main class="home-public-v6-main">
                 <section class="home-public-v6-hero home-public-v6-grid home-public-v6-hero-grid" data-home-v6-public-hero="true">
                     <div class="home-public-v6-hero-copy">
-                        <span class="home-public-v6-kicker" data-public-hero-reveal="true" data-public-hero-delay="0">
-                            <span class="home-public-v6-kicker-dot"></span>
-                            교실 업무의 기준
-                        </span>
-
-                        <h1 class="home-public-v6-hero-title" data-public-hero-reveal="true" data-public-hero-delay="120">
+                        <h1 class="home-public-v6-hero-title" data-public-hero-reveal="true" data-public-hero-delay="0">
                             <span class="home-public-v6-hero-title-line">교실 업무를</span>
                             <span class="home-public-v6-hero-title-line home-public-v6-hero-title-line-accent">바로 여는 플랫폼</span>
                         </h1>
 
-                        <p class="home-public-v6-hero-summary" data-public-hero-reveal="true" data-public-hero-delay="220">
-                            수합은 로그인 없이 바로 열고, 서명·예약·일정은 한 흐름으로 이어집니다.
+                        <p class="home-public-v6-hero-summary" data-public-hero-reveal="true" data-public-hero-delay="140">
+                            에듀잇티는 선생님의 시선에서 선생님을 바라봅니다.
                         </p>
 
-                        <div class="home-public-v6-hero-actions" data-public-hero-reveal="true" data-public-hero-delay="320">
+                        <div class="home-public-v6-hero-actions" data-public-hero-reveal="true" data-public-hero-delay="240">
                             {% if service_launcher_json and service_launcher_json != '[]' %}
                             <button
                                 type="button"
-                                class="home-public-v6-primary-link"
+                                class="home-public-v6-primary-link home-public-v6-primary-link--magnetic"
                                 data-public-primary-cta="launcher"
+                                data-magnetic-button="true"
                                 data-public-primary-href="{{ public_primary_action_card.href|default:'' }}"
                                 data-public-fallback-target="{{ public_primary_cta.fallback_target_id }}"
                                 aria-controls="serviceLauncherModal"
-                                aria-label="무료로 시작하기">
-                                무료로 시작하기
-                                <i class="fa-solid fa-arrow-right text-xs"></i>
+                                aria-label="지금 열기">
+                                <span class="home-public-v6-primary-link-content" data-magnetic-inner="true">
+                                    <span>지금 열기</span>
+                                    <i class="fa-solid fa-arrow-right text-xs"></i>
+                                </span>
                             </button>
                             {% else %}
                             <a
                                 href="{% if public_primary_action_card %}{{ public_primary_action_card.href }}{% else %}{{ public_primary_cta.fallback_href }}{% endif %}"
-                                class="home-public-v6-primary-link"
-                                aria-label="무료로 시작하기">
-                                무료로 시작하기
-                                <i class="fa-solid fa-arrow-right text-xs"></i>
+                                class="home-public-v6-primary-link home-public-v6-primary-link--magnetic"
+                                data-magnetic-button="true"
+                                aria-label="지금 열기">
+                                <span class="home-public-v6-primary-link-content" data-magnetic-inner="true">
+                                    <span>지금 열기</span>
+                                    <i class="fa-solid fa-arrow-right text-xs"></i>
+                                </span>
                             </a>
                             {% endif %}
-
-                            <a href="#public-platform-map" class="home-public-v6-secondary-link">
-                                업무 둘러보기
-                                <i class="fa-solid fa-arrow-down text-xs"></i>
-                            </a>
                         </div>
                     </div>
                 </section>
