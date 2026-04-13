@@ -47,7 +47,7 @@
                             <!-- User Delete -->
                             {% if s.can_edit %}
                             <button
-                                @click="openEditBooking({ id: {{ s.reservation.id }}, roomId: {{ room_data.room.id }}, roomName: '{{ room_data.room.name|escapejs }}', period: {{ p.id }}, date: '{{ target_date|date:"Y-m-d" }}', periodLabel: '{{ p.display_label|escapejs }}', grade: {{ s.reservation.grade }}, classNo: {{ s.reservation.class_no }}, targetLabel: '{{ s.reservation.target_label|default_if_none:''|escapejs }}', name: '{{ s.reservation.name|escapejs }}', memo: '{{ s.reservation.memo|default_if_none:''|escapejs }}', lockGrade: {% if s.grade_lock %}{{ s.grade_lock.grade }}{% else %}null{% endif %} })"
+                                @click="openEditBooking({ id: {{ s.reservation.id }}, roomId: {{ room_data.room.id }}, roomName: '{{ room_data.room.name|escapejs }}', period: {{ p.id }}, date: '{{ target_date|date:"Y-m-d" }}', periodLabel: '{{ p.display_label|escapejs }}', grade: {{ s.reservation.grade }}, classNo: {{ s.reservation.class_no }}, targetLabel: '{{ s.reservation.target_label|default_if_none:''|escapejs }}', name: '{{ s.reservation.name|escapejs }}', memo: '{{ s.reservation.memo|default_if_none:''|escapejs }}', lockGrade: {% if s.grade_lock %}{{ s.grade_lock.grade }}{% else %}null{% endif %}, hasEditCode: {% if s.reservation.edit_code_hash %}true{% else %}false{% endif %} })"
                                 type="button"
                                 class="absolute bottom-1 right-8 text-indigo-300 hover:text-indigo-500 hidden group-hover:block"
                                 onclick="event.stopPropagation()">
@@ -66,6 +66,17 @@
                                     <i class="fas fa-circle-notch fa-spin"></i>
                                 </span>
                                 <i class="fas fa-trash-alt text-xs"></i>
+                            </button>
+                            {% endif %}
+
+                            {% if not s.can_edit and reservation_can_edit and reservation_access.mode != 'owner' %}
+                            <button
+                                @click="openClaimReservation({ id: {{ s.reservation.id }}, roomName: '{{ room_data.room.name|escapejs }}', party: '{{ s.reservation_party|escapejs }}', date: '{{ target_date|date:"Y-m-d" }}', periodLabel: '{{ p.display_label|escapejs }}', hasEditCode: {% if s.reservation.edit_code_hash %}true{% else %}false{% endif %} })"
+                                type="button"
+                                class="absolute bottom-1 right-1 text-amber-400 hover:text-amber-600 hidden group-hover:block"
+                                onclick="event.stopPropagation()"
+                                title="수정 코드 입력">
+                                <i class="fas fa-key text-xs"></i>
                             </button>
                             {% endif %}
 
@@ -175,7 +186,7 @@
                     <!-- User Delete -->
                     {% if s.can_edit %}
                     <button
-                        @click="openEditBooking({ id: {{ s.reservation.id }}, roomId: {{ room_data.room.id }}, roomName: '{{ room_data.room.name|escapejs }}', period: {{ s.period }}, date: '{{ target_date|date:"Y-m-d" }}', periodLabel: '{{ s.display_label|escapejs }}', grade: {{ s.reservation.grade }}, classNo: {{ s.reservation.class_no }}, targetLabel: '{{ s.reservation.target_label|default_if_none:''|escapejs }}', name: '{{ s.reservation.name|escapejs }}', memo: '{{ s.reservation.memo|default_if_none:''|escapejs }}', lockGrade: {% if s.grade_lock %}{{ s.grade_lock.grade }}{% else %}null{% endif %} })"
+                        @click="openEditBooking({ id: {{ s.reservation.id }}, roomId: {{ room_data.room.id }}, roomName: '{{ room_data.room.name|escapejs }}', period: {{ s.period }}, date: '{{ target_date|date:"Y-m-d" }}', periodLabel: '{{ s.display_label|escapejs }}', grade: {{ s.reservation.grade }}, classNo: {{ s.reservation.class_no }}, targetLabel: '{{ s.reservation.target_label|default_if_none:''|escapejs }}', name: '{{ s.reservation.name|escapejs }}', memo: '{{ s.reservation.memo|default_if_none:''|escapejs }}', lockGrade: {% if s.grade_lock %}{{ s.grade_lock.grade }}{% else %}null{% endif %}, hasEditCode: {% if s.reservation.edit_code_hash %}true{% else %}false{% endif %} })"
                         type="button"
                         class="absolute bottom-1 right-8 text-indigo-500 hover:text-indigo-700 p-1 inline-flex items-center gap-1"
                         onclick="event.stopPropagation()">
@@ -194,6 +205,16 @@
                             <i class="fas fa-circle-notch fa-spin"></i>
                         </span>
                         <i class="fas fa-trash-alt text-[10px]"></i>
+                    </button>
+                    {% endif %}
+
+                    {% if not s.can_edit and reservation_can_edit and reservation_access.mode != 'owner' %}
+                    <button
+                        @click="openClaimReservation({ id: {{ s.reservation.id }}, roomName: '{{ room_data.room.name|escapejs }}', party: '{{ s.reservation_party|escapejs }}', date: '{{ target_date|date:"Y-m-d" }}', periodLabel: '{{ s.display_label|escapejs }}', hasEditCode: {% if s.reservation.edit_code_hash %}true{% else %}false{% endif %} })"
+                        type="button"
+                        class="absolute bottom-1 right-2 text-amber-500 hover:text-amber-700 p-1 inline-flex items-center gap-1"
+                        onclick="event.stopPropagation()">
+                        <i class="fas fa-key text-[10px]"></i>
                     </button>
                     {% endif %}
 

@@ -1,11 +1,13 @@
 import re
 import unicodedata
 import uuid
+from django.contrib.auth.hashers import check_password, make_password
 from django.db import models
 from django.contrib.auth.models import User
 
 
 OWNER_TEXT_WHITESPACE_RE = re.compile(r"\s+")
+EDIT_CODE_RE = re.compile(r"^\d{4}$")
 
 
 def normalize_reservation_owner_text(value):
@@ -37,6 +39,21 @@ def build_reservation_owner_key(*, grade=0, class_no=0, target_label="", name=""
     if normalized_name:
         return f"name|{normalized_name}"[:160]
     return ""
+
+
+def normalize_reservation_edit_code(value):
+    return str(value or "").strip()
+
+
+def validate_reservation_edit_code(value):
+    normalized = normalize_reservation_edit_code(value)
+    if not EDIT_CODE_RE.fullmatch(normalized):
+        raise ValueError("invalid-edit-code")
+    return normalized
+
+
+def hash_reservation_edit_code(value):
+    return make_password(validate_reservation_edit_code(value))
 
 class School(models.Model):
     name = models.CharField(max_length=100)
@@ -139,6 +156,7 @@ class Reservation(models.Model):
     room = models.ForeignKey(SpecialRoom, on_delete=models.CASCADE)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_reservations')
     owner_key = models.CharField(max_length=160, blank=True, default="", db_index=True)
+    edit_code_hash = models.CharField(max_length=256, blank=True, default="")
     date = models.DateField()
     period = models.IntegerField() # 1~max_periods
     grade = models.IntegerField()
@@ -163,6 +181,19 @@ class Reservation(models.Model):
         else:
             who = self.name
         return f"{self.date} {self.period}교시 - {self.room.name} ({who})"
+
+    def has_edit_code(self):
+        return bool(self.edit_code_hash)
+
+    def set_edit_code(self, edit_code):
+        self.edit_code_hash = hash_reservation_edit_code(edit_code)
+
+    def check_edit_code(self, edit_code):
+        try:
+            normalized = validate_reservation_edit_code(edit_code)
+        except ValueError:
+            return False
+        return bool(self.edit_code_hash and check_password(normalized, self.edit_code_hash))
 
 class RecurringSchedule(models.Model):
     room = models.ForeignKey(SpecialRoom, on_delete=models.CASCADE)

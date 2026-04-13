@@ -23,6 +23,7 @@ urlpatterns = [
     path('<str:school_slug>/rooms/overview/', views.room_overview, name='room_overview'),
     path('<str:school_slug>/', views.reservation_index, name='reservation_index'),
     path('<str:school_slug>/create/', views.create_reservation, name='create_reservation'),
+    path('<str:school_slug>/claim/<int:reservation_id>/', views.claim_reservation_access, name='claim_reservation_access'),
     path('<str:school_slug>/update/<int:reservation_id>/', views.update_reservation, name='update_reservation'),
     path('<str:school_slug>/workflow/notice/<int:reservation_id>/', views.start_notice_followup, name='start_notice_followup'),
     path('<str:school_slug>/workflow/parentcomm/<int:reservation_id>/', views.start_parentcomm_followup, name='start_parentcomm_followup'),

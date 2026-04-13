@@ -21,6 +21,8 @@ from .models import (
     SchoolConfig,
     SpecialRoom,
     build_reservation_owner_key,
+    hash_reservation_edit_code,
+    validate_reservation_edit_code,
 )
 from .utils import get_max_booking_date, list_user_accessible_schools, remember_recent_reservation_school, resolve_user_reservation_entry_url
 import logging
@@ -230,6 +232,7 @@ def _build_reservation_modal_payload(reservation, *, period_label, lock_grade=No
         'name': reservation.name or '',
         'memo': reservation.memo or '',
         'lockGrade': lock_grade,
+        'hasEditCode': reservation.has_edit_code(),
     }
 
 
@@ -304,7 +307,7 @@ def _store_action_seed(request, *, action, data):
     return token
 
 
-def _build_reservation_followup_context(school, reservation):
+def _build_reservation_followup_context(school, reservation, *, edit_code=""):
     return {
         'school_slug': school.slug,
         'reservation_id': reservation.id,
@@ -313,11 +316,16 @@ def _build_reservation_followup_context(school, reservation):
         'period_label': _period_display_label(school, reservation.period),
         'date_label': reservation.date.strftime('%Y년 %m월 %d일'),
         'memo': (reservation.memo or '').strip(),
+        'edit_code': edit_code,
     }
 
 
-def _set_reservation_followup_context(request, school, reservation):
-    request.session[RESERVATION_FOLLOWUP_SESSION_KEY] = _build_reservation_followup_context(school, reservation)
+def _set_reservation_followup_context(request, school, reservation, *, edit_code=""):
+    request.session[RESERVATION_FOLLOWUP_SESSION_KEY] = _build_reservation_followup_context(
+        school,
+        reservation,
+        edit_code=edit_code,
+    )
     request.session.modified = True
 
 
@@ -1074,6 +1082,7 @@ def create_reservation(request, school_slug):
     target_label = request.POST.get('target_label')
     name = (request.POST.get('name') or '').strip()
     memo = (request.POST.get('memo') or '').strip()
+    edit_code = request.POST.get('edit_code')
     override_grade_lock = request.POST.get('override_grade_lock') == '1'
     
     # 유효성 검사
@@ -1082,6 +1091,7 @@ def create_reservation(request, school_slug):
         period = int(period)
         room = get_object_or_404(SpecialRoom, id=room_id, school=school)
         grade, class_no, target_label = _normalize_reservation_party(grade, class_no, target_label)
+        edit_code = validate_reservation_edit_code(edit_code)
         owner_key = build_reservation_owner_key(
             grade=grade,
             class_no=class_no,
@@ -1124,6 +1134,7 @@ def create_reservation(request, school_slug):
             room=room,
             created_by=request.user if request.user.is_authenticated else None,
             owner_key=owner_key,
+            edit_code_hash=hash_reservation_edit_code(edit_code),
             date=target_date,
             period=period,
             grade=grade,
@@ -1141,7 +1152,7 @@ def create_reservation(request, school_slug):
             request.session.modified = True
         
         messages.success(request, f"{period}교시 예약이 완료되었습니다.")
-        _set_reservation_followup_context(request, school, reservation)
+        _set_reservation_followup_context(request, school, reservation, edit_code=edit_code)
         
         # HTMX Redirect to refresh grid
         response = HttpResponse()
@@ -1149,7 +1160,9 @@ def create_reservation(request, school_slug):
         _set_reservation_owner_cookie(response, owner_key)
         return _apply_workspace_cache_headers(response)
         
-    except ValueError:
+    except ValueError as exc:
+        if str(exc) == "invalid-edit-code":
+            return HttpResponse("수정 코드 4자리를 입력해 주세요.", status=400)
         return HttpResponse("학년/반 또는 기타 대상을 올바르게 입력해 주세요.", status=400)
     except Exception as e:
         logger.error(f"[Reservation Error] {e}")
@@ -1179,6 +1192,7 @@ def update_reservation(request, school_slug, reservation_id):
     target_label = request.POST.get('target_label')
     name = (request.POST.get('name') or '').strip()
     memo = (request.POST.get('memo') or '').strip()
+    edit_code = (request.POST.get('edit_code') or '').strip()
     override_grade_lock = request.POST.get('override_grade_lock') == '1'
 
     try:
@@ -1218,6 +1232,14 @@ def update_reservation(request, school_slug, reservation_id):
         if Reservation.objects.filter(room=room, date=target_date, period=period).exclude(id=reservation.id).exists():
             return HttpResponse("이미 예약된 시간입니다.", status=409)
 
+        edit_code_changed = ""
+        if edit_code:
+            edit_code = validate_reservation_edit_code(edit_code)
+            reservation.edit_code_hash = hash_reservation_edit_code(edit_code)
+            edit_code_changed = edit_code
+        elif not reservation.has_edit_code():
+            return HttpResponse("예전 예약이라 수정 코드가 없습니다. 이번에 4자리를 입력해 저장해 주세요.", status=400)
+
         reservation.room = room
         reservation.date = target_date
         reservation.period = period
@@ -1227,21 +1249,86 @@ def update_reservation(request, school_slug, reservation_id):
         reservation.name = name
         reservation.memo = memo
         reservation.owner_key = owner_key
-        reservation.save(update_fields=['room', 'date', 'period', 'grade', 'class_no', 'target_label', 'name', 'memo', 'owner_key'])
+        update_fields = ['room', 'date', 'period', 'grade', 'class_no', 'target_label', 'name', 'memo', 'owner_key']
+        if edit_code or not reservation.has_edit_code():
+            update_fields.append('edit_code_hash')
+        reservation.save(update_fields=update_fields)
 
         messages.success(request, f"{period}교시 예약이 수정되었습니다.")
-        _set_reservation_followup_context(request, school, reservation)
+        _set_reservation_followup_context(request, school, reservation, edit_code=edit_code_changed)
 
         response = HttpResponse()
         response['HX-Refresh'] = "true"
         _set_reservation_owner_cookie(response, owner_key)
         return _apply_workspace_cache_headers(response)
 
-    except ValueError:
+    except ValueError as exc:
+        if str(exc) == "invalid-edit-code":
+            return HttpResponse("수정 코드는 숫자 4자리로 입력해 주세요.", status=400)
         return HttpResponse("학년/반 또는 기타 대상을 올바르게 입력해 주세요.", status=400)
     except Exception as e:
         logger.error(f"[Reservation Update Error] {e}")
         return HttpResponse("예약 수정 중 오류가 발생했습니다.", status=500)
+
+
+@require_POST
+def claim_reservation_access(request, school_slug, reservation_id):
+    school, access, access_response = _get_school_or_share_required(request, school_slug)
+    if access_response is not None:
+        return access_response
+    if not access["can_edit"]:
+        return HttpResponseForbidden("이 예약판은 읽기 전용입니다.")
+
+    reservation = get_object_or_404(Reservation, id=reservation_id, room__school=school)
+
+    if _can_edit_reservation(request, reservation):
+        redirect_url = (
+            f"{reverse('reservations:reservation_index', args=[school.slug])}"
+            f"?date={reservation.date.strftime('%Y-%m-%d')}&reservation={reservation.id}"
+        )
+        if request.htmx:
+            response = HttpResponse()
+            response['HX-Redirect'] = redirect_url
+            return _apply_workspace_cache_headers(response)
+        return redirect(redirect_url)
+
+    if not reservation.has_edit_code():
+        return HttpResponse(
+            "이 예약은 아직 수정 코드가 없습니다. 예약했던 기기에서 한 번 열어 코드 4자리를 저장해 주세요.",
+            status=400,
+        )
+
+    try:
+        edit_code = validate_reservation_edit_code(request.POST.get('edit_code'))
+    except ValueError:
+        return HttpResponse("수정 코드는 숫자 4자리로 입력해 주세요.", status=400)
+
+    if not reservation.check_edit_code(edit_code):
+        logger.warning(
+            "[Reservation] Invalid edit code | reservation_id=%s | school=%s",
+            reservation_id,
+            school.slug,
+        )
+        return HttpResponse("수정 코드가 맞지 않습니다.", status=403)
+
+    owned_ids = request.session.get(OWNED_RESERVATIONS_SESSION_KEY, [])
+    if reservation.id not in owned_ids:
+        owned_ids.append(reservation.id)
+        request.session[OWNED_RESERVATIONS_SESSION_KEY] = owned_ids
+        request.session.modified = True
+
+    redirect_url = (
+        f"{reverse('reservations:reservation_index', args=[school.slug])}"
+        f"?date={reservation.date.strftime('%Y-%m-%d')}&reservation={reservation.id}"
+    )
+    messages.success(request, "내 예약을 열었습니다.")
+    if request.htmx:
+        response = HttpResponse()
+        response['HX-Redirect'] = redirect_url
+    else:
+        response = redirect(redirect_url)
+    _set_reservation_owner_cookie(response, reservation.owner_key)
+    return _apply_workspace_cache_headers(response) if request.htmx else response
 
 @require_POST
 def delete_reservation(request, school_slug, reservation_id):

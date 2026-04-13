@@ -75,10 +75,22 @@
                     required placeholder="예: 홍길동" autocomplete="off">
             </div>
 
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-1"
+                    x-text="submitMode === 'edit' ? (editingRequiresCodeSetup ? '수정 코드 4자리' : '새 수정 코드 (선택)') : '수정 코드 4자리'"></label>
+                <input type="password" name="edit_code" x-model="editCode"
+                    class="w-full clay-inner p-3 rounded-xl text-center tracking-[0.35em]"
+                    inputmode="numeric" maxlength="4" autocomplete="one-time-code"
+                    :required="submitMode === 'create' || editingRequiresCodeSetup"
+                    :placeholder="submitMode === 'edit' && !editingRequiresCodeSetup ? '변경할 때만 입력' : '예: 1234'">
+                <p class="mt-1 ml-1 text-xs text-gray-400"
+                    x-text="submitMode === 'edit' && !editingRequiresCodeSetup ? '비워두면 기존 코드 유지' : '다른 기기에서 수정하거나 취소할 때 씁니다.'"></p>
+            </div>
+
             <label class="flex items-center gap-2 text-xs text-gray-500 ml-1">
                 <input type="checkbox" class="rounded border-gray-300 text-purple-600 focus:ring-purple-400"
                     x-model="rememberInfo" @change="toggleRememberInfo()">
-                <span>이 기기에서 정보 기억 (학년/반/기타대상/이름)</span>
+                <span>이 기기에서 정보 기억 (학년/반/기타대상/이름/수정코드)</span>
             </label>
 
             <div>

@@ -15,6 +15,7 @@ from .models import (
     SchoolConfig,
     SpecialRoom,
     build_reservation_owner_key,
+    hash_reservation_edit_code,
 )
 from datetime import date, timedelta
 
@@ -38,6 +39,7 @@ class ReservationsViewTest(TestCase):
              
         self.room = SpecialRoom.objects.create(school=self.school, name='Science Room')
         self.target_date = date.today()
+        self.default_edit_code = '2468'
         self.client.force_login(self.user)
 
     def set_owner_cookie(self, client, *, grade=0, class_no=0, target_label='', name=''):
@@ -254,7 +256,7 @@ class ReservationsViewTest(TestCase):
         response = self.client.get(reverse('reservations:reservation_index', args=[self.school.slug]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, '로그인 없이 바로 예약할 수 있습니다.')
+        self.assertContains(response, '로그인 없이 예약 가능. 다른 기기에서는 예약 칸의 코드 버튼으로 수정하거나 취소합니다.')
         self.assertContains(response, '주소로 예약')
         self.assertContains(response, '내 예약 찾기')
 
@@ -279,6 +281,7 @@ class ReservationsViewTest(TestCase):
                 'grade': 6,
                 'class_no': 1,
                 'name': '조회교사',
+                'edit_code': self.default_edit_code,
             },
         )
         self.assertEqual(create_response.status_code, 403)
@@ -300,6 +303,7 @@ class ReservationsViewTest(TestCase):
                 'grade': 5,
                 'class_no': 2,
                 'name': '공유교사',
+                'edit_code': self.default_edit_code,
             },
         )
 
@@ -342,13 +346,15 @@ class ReservationsViewTest(TestCase):
             'period': 1,
             'grade': 6,
             'class_no': 1,
-            'name': 'Tester'
+            'name': 'Tester',
+            'edit_code': self.default_edit_code,
         }
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, 200)
         created = Reservation.objects.filter(room=self.room, date=self.target_date, period=1).first()
         self.assertIsNotNone(created)
         self.assertEqual(created.owner_key, build_reservation_owner_key(grade=6, class_no=1, name='Tester'))
+        self.assertTrue(created.check_edit_code(self.default_edit_code))
 
         session = self.client.session
         self.assertIn(created.id, session.get('owned_reservation_ids', []))
@@ -366,6 +372,7 @@ class ReservationsViewTest(TestCase):
             'target_label': '보건',
             'name': '김선생',
             'memo': '응급키트 점검',
+            'edit_code': self.default_edit_code,
         }
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, 200)
@@ -375,7 +382,23 @@ class ReservationsViewTest(TestCase):
         self.assertEqual(reservation.class_no, 0)
         self.assertEqual(reservation.target_label, '보건')
         self.assertEqual(reservation.name, '김선생')
-        
+
+    def test_create_reservation_requires_edit_code(self):
+        response = self.client.post(
+            reverse('reservations:create_reservation', args=[self.school.slug]),
+            {
+                'room_id': self.room.id,
+                'date': self.target_date.strftime('%Y-%m-%d'),
+                'period': 2,
+                'grade': 6,
+                'class_no': 1,
+                'name': '무코드',
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('수정 코드 4자리를 입력해 주세요.', response.content.decode('utf-8'))
+
     def test_delete_reservation(self):
         reservation = Reservation.objects.create(
             room=self.room,
@@ -470,6 +493,51 @@ class ReservationsViewTest(TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertTrue(Reservation.objects.filter(id=reservation.id).exists())
 
+    def test_claim_reservation_access_by_edit_code_restores_session_ownership(self):
+        reservation = Reservation.objects.create(
+            room=self.room,
+            owner_key=build_reservation_owner_key(grade=2, class_no=3, name='이병주'),
+            edit_code_hash=hash_reservation_edit_code('1357'),
+            date=self.target_date,
+            period=5,
+            grade=2,
+            class_no=3,
+            name='이병주',
+        )
+
+        second_client = Client()
+        response = second_client.post(
+            reverse('reservations:claim_reservation_access', args=[self.school.slug, reservation.id]),
+            {'edit_code': '1357'},
+            HTTP_HX_REQUEST='true',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(f"reservation={reservation.id}", response.headers.get('HX-Redirect'))
+        self.assertIn(reservation.id, second_client.session.get('owned_reservation_ids', []))
+        self.assertIn('reservation_owner_key', response.cookies)
+
+    def test_claim_reservation_access_rejects_wrong_edit_code(self):
+        reservation = Reservation.objects.create(
+            room=self.room,
+            edit_code_hash=hash_reservation_edit_code('1357'),
+            date=self.target_date,
+            period=5,
+            grade=2,
+            class_no=3,
+            name='이병주',
+        )
+
+        second_client = Client()
+        response = second_client.post(
+            reverse('reservations:claim_reservation_access', args=[self.school.slug, reservation.id]),
+            {'edit_code': '9999'},
+            HTTP_HX_REQUEST='true',
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(second_client.session.get('owned_reservation_ids', []), [])
+
     def test_delete_reservation_forbidden_with_non_matching_owner_profile_cookie(self):
         reservation = Reservation.objects.create(
             room=self.room,
@@ -495,6 +563,7 @@ class ReservationsViewTest(TestCase):
         reservation = Reservation.objects.create(
             room=self.room,
             created_by=self.user,
+            edit_code_hash=hash_reservation_edit_code(self.default_edit_code),
             date=self.target_date,
             period=2,
             grade=5,
@@ -512,6 +581,7 @@ class ReservationsViewTest(TestCase):
             'class_no': 3,
             'name': 'After Update',
             'memo': 'new memo',
+            'edit_code': '',
         })
 
         self.assertEqual(response.status_code, 200)
@@ -526,6 +596,7 @@ class ReservationsViewTest(TestCase):
         reservation = Reservation.objects.create(
             room=self.room,
             created_by=self.user,
+            edit_code_hash=hash_reservation_edit_code(self.default_edit_code),
             date=self.target_date,
             period=5,
             grade=3,
@@ -541,6 +612,7 @@ class ReservationsViewTest(TestCase):
             'target_label': '사서',
             'name': 'After',
             'memo': '도서관 수업',
+            'edit_code': '',
         })
 
         self.assertEqual(response.status_code, 200)
@@ -549,6 +621,45 @@ class ReservationsViewTest(TestCase):
         self.assertEqual(reservation.class_no, 0)
         self.assertEqual(reservation.target_label, '사서')
         self.assertEqual(reservation.name, 'After')
+
+    def test_update_legacy_reservation_requires_new_edit_code(self):
+        reservation = Reservation.objects.create(
+            room=self.room,
+            created_by=self.user,
+            date=self.target_date,
+            period=6,
+            grade=2,
+            class_no=1,
+            name='Legacy',
+        )
+
+        url = reverse('reservations:update_reservation', args=[self.school.slug, reservation.id])
+        response = self.client.post(url, {
+            'room_id': self.room.id,
+            'date': self.target_date.strftime('%Y-%m-%d'),
+            'period': 6,
+            'grade': 2,
+            'class_no': 1,
+            'name': 'Legacy',
+            'edit_code': '',
+        })
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('예전 예약이라 수정 코드가 없습니다.', response.content.decode('utf-8'))
+
+        response = self.client.post(url, {
+            'room_id': self.room.id,
+            'date': self.target_date.strftime('%Y-%m-%d'),
+            'period': 6,
+            'grade': 2,
+            'class_no': 1,
+            'name': 'Legacy',
+            'edit_code': '1357',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        reservation.refresh_from_db()
+        self.assertTrue(reservation.check_edit_code('1357'))
 
     def test_update_reservation_forbidden_without_ownership(self):
         other_user = User.objects.create_user(username='other', password='password2', email='other@example.com')
@@ -585,7 +696,8 @@ class ReservationsViewTest(TestCase):
             'period': 5,
             'grade': 6,
             'class_no': 3,
-            'name': 'Anon Tester'
+            'name': 'Anon Tester',
+            'edit_code': self.default_edit_code,
         }
         response = self.client.post(create_url, data)
         self.assertEqual(response.status_code, 200)
@@ -593,6 +705,7 @@ class ReservationsViewTest(TestCase):
         self.assertIsNotNone(created)
         self.assertIsNone(created.created_by)
         self.assertEqual(created.owner_key, build_reservation_owner_key(grade=6, class_no=3, name='Anon Tester'))
+        self.assertTrue(created.check_edit_code(self.default_edit_code))
         self.assertIn(created.id, self.client.session.get('owned_reservation_ids', []))
         self.assertIn('reservation_owner_key', response.cookies)
 
@@ -630,6 +743,7 @@ class ReservationsViewTest(TestCase):
                 'class_no': 2,
                 'name': '김선생',
                 'memo': '실험 수업',
+                'edit_code': self.default_edit_code,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -638,6 +752,7 @@ class ReservationsViewTest(TestCase):
         page = self.client.get(reverse('reservations:reservation_index', args=[self.school.slug]))
         self.assertContains(page, '방금 예약한 내용')
         self.assertContains(page, '실험 수업')
+        self.assertContains(page, self.default_edit_code)
         self.assertNotContains(page, '안내문으로 이어서 만들기')
         self.assertNotContains(page, '학부모 연락으로 이어서 하기')
 
@@ -697,7 +812,7 @@ class ReservationsViewTest(TestCase):
         self.assertContains(response, 'navigator.clipboard.writeText(this.shareUrl).then(() => {', html=False)
         self.assertContains(response, '복사에 실패했습니다. 다시 시도해 주세요.')
         self.assertContains(response, '공유할 선생님 추가')
-        self.assertContains(response, '로그인 없이도 열리는 주소입니다.')
+        self.assertContains(response, '로그인 없이 열림')
         self.assertContains(response, '학교 목록')
         self.assertNotContains(response, '내 학교 목록')
 
@@ -826,7 +941,8 @@ class ReservationsViewTest(TestCase):
             'period': 1,
             'grade': 6,
             'class_no': 1,
-            'name': 'Tester'
+            'name': 'Tester',
+            'edit_code': self.default_edit_code,
         }
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, 400)
@@ -866,8 +982,10 @@ class ReservationsViewTest(TestCase):
         self.assertContains(response, "예: 홍길동")
         self.assertContains(response, "remember_reservation_info")
         self.assertContains(response, "my_reservation_info")
+        self.assertContains(response, "reservation_edit_code")
         self.assertContains(response, "reservation_profile_version")
         self.assertContains(response, "학년/반 또는 역할을 다시 입력")
+        self.assertContains(response, "수정 코드 4자리")
 
     def test_grade_lock_blocks_different_grade_without_override(self):
         GradeRecurringLock.objects.create(
@@ -885,6 +1003,7 @@ class ReservationsViewTest(TestCase):
             'grade': 4,
             'class_no': 1,
             'name': 'Tester',
+            'edit_code': self.default_edit_code,
         })
 
         self.assertEqual(response.status_code, 409)
@@ -909,6 +1028,7 @@ class ReservationsViewTest(TestCase):
             'class_no': 1,
             'name': 'Tester',
             'override_grade_lock': '1',
+            'edit_code': self.default_edit_code,
         })
 
         self.assertEqual(response.status_code, 200)
@@ -926,6 +1046,7 @@ class ReservationsViewTest(TestCase):
         reservation = Reservation.objects.create(
             room=self.room,
             created_by=self.user,
+            edit_code_hash=hash_reservation_edit_code(self.default_edit_code),
             date=self.target_date,
             period=4,
             grade=2,
@@ -942,6 +1063,7 @@ class ReservationsViewTest(TestCase):
             'class_no': 1,
             'name': 'After',
             'override_grade_lock': '1',
+            'edit_code': '',
         })
 
         self.assertEqual(response.status_code, 200)
@@ -966,6 +1088,7 @@ class ReservationsViewTest(TestCase):
             'grade': 6,
             'class_no': 2,
             'name': 'Tester',
+            'edit_code': self.default_edit_code,
         })
 
         self.assertEqual(response.status_code, 200)

@@ -5,9 +5,11 @@
 <div class="service-shell--relaxed pb-20 min-h-screen bg-[#E0E5EC]"
     x-data="{ 
         showModal: false,
+        showClaimModal: false,
         submitMode: 'create',
         editReservationId: null,
         reservationCreateUrl: '{% url 'reservations:create_reservation' school.slug %}',
+        reservationClaimUrlTemplate: '{% url 'reservations:claim_reservation_access' school.slug 999999 %}',
         reservationUpdateUrlTemplate: '{% url 'reservations:update_reservation' school.slug 999999 %}',
         selectedRoom: null,
         selectedRoomId: null,
@@ -20,6 +22,7 @@
         profileVersionKey: 'reservation_profile_version',
         profileVersion: '2026-04-owner-profile-1',
         profileResetNotice: false,
+        editCodeStorageKey: 'reservation_edit_code',
         ownerCookieName: 'reservation_owner_key',
         ownerCookiePath: '/',
         initialOpenReservationPayload: null,
@@ -36,11 +39,23 @@
         targetLabel: '',
         name: '',
         memo: '',
+        editCode: '',
+        editingRequiresCodeSetup: false,
+        claimReservationId: null,
+        claimRoomName: '',
+        claimParty: '',
+        claimDate: '',
+        claimPeriodLabel: '',
+        claimHasEditCode: true,
+        claimEditCode: '',
         getSubmitUrl() {
             if (this.submitMode === 'edit' && this.editReservationId) {
                 return this.reservationUpdateUrlTemplate.replace('999999', this.editReservationId);
             }
             return this.reservationCreateUrl;
+        },
+        getClaimUrl() {
+            return this.reservationClaimUrlTemplate.replace('999999', this.claimReservationId || '999999');
         },
         getSubmitLabel() {
             return this.submitMode === 'edit' ? '수정하기' : '예약하기';
@@ -79,6 +94,10 @@
                 saved = {};
             }
             return saved;
+        },
+        readSavedEditCode() {
+            const saved = (localStorage.getItem(this.editCodeStorageKey) || '').trim();
+            return /^\d{4}$/.test(saved) ? saved : '';
         },
         applySavedInfoToProfile() {
             const saved = this.readSavedReservationInfo();
@@ -157,6 +176,17 @@
                 targetLabel: remembered.targetLabel,
                 name: remembered.name,
             }));
+        },
+        storeEditCode(value = this.editCode) {
+            if (!this.rememberInfo) {
+                localStorage.removeItem(this.editCodeStorageKey);
+                return;
+            }
+            const normalized = (value || '').toString().trim();
+            if (!/^\d{4}$/.test(normalized)) {
+                return;
+            }
+            localStorage.setItem(this.editCodeStorageKey, normalized);
         },
         applyProfileToCookie({ refresh = true, silent = false } = {}) {
             const ownerKey = this.getProfileOwnerKey();
@@ -267,10 +297,12 @@
             localStorage.setItem('remember_reservation_info', this.rememberInfo ? '1' : '0');
             if (!this.rememberInfo) {
                 localStorage.removeItem('my_reservation_info');
+                localStorage.removeItem(this.editCodeStorageKey);
                 return;
             }
             this.syncProfileFromBookingForm();
             this.storeProfileInfo();
+            this.storeEditCode();
         },
         openBooking(roomId, roomName, period, date, periodLabel, lockGrade = null) {
             this.submitMode = 'create';
@@ -285,8 +317,10 @@
             this.gradeLockGrade = numericLockGrade;
             this.overrideGradeLock = false;
             this.bookingKind = 'class';
+            this.editingRequiresCodeSetup = false;
             this.loadRememberedInfo();
             this.memo = '';
+            this.editCode = this.readSavedEditCode();
             this.showModal = true;
         },
         openEditBooking(payload) {
@@ -302,6 +336,7 @@
             this.gradeLockActive = numericLockGrade !== null;
             this.gradeLockGrade = numericLockGrade;
             this.overrideGradeLock = false;
+            this.editingRequiresCodeSetup = !payload.hasEditCode;
 
             this.bookingKind = payload.targetLabel ? 'custom' : 'class';
             this.grade = payload.grade > 0 ? payload.grade : '';
@@ -309,10 +344,39 @@
             this.targetLabel = payload.targetLabel ?? '';
             this.name = payload.name ?? '';
             this.memo = payload.memo ?? '';
+            this.editCode = this.editingRequiresCodeSetup ? this.readSavedEditCode() : '';
             this.showModal = true;
+        },
+        openClaimReservation(payload) {
+            this.claimReservationId = payload.id;
+            this.claimRoomName = payload.roomName;
+            this.claimParty = payload.party;
+            this.claimDate = payload.date;
+            this.claimPeriodLabel = payload.periodLabel;
+            this.claimHasEditCode = payload.hasEditCode;
+            this.claimEditCode = this.readSavedEditCode();
+            this.showClaimModal = true;
+        },
+        prepareClaimSubmit(event) {
+            if (!this.claimHasEditCode) {
+                alert('이 예약은 아직 수정 코드가 없습니다. 아래 내 예약 찾기로 먼저 연 뒤 코드를 저장해 주세요.');
+                event.preventDefault();
+                return;
+            }
+            const normalizedEditCode = (this.claimEditCode || '').trim();
+            if (!/^\d{4}$/.test(normalizedEditCode)) {
+                alert('수정 코드는 숫자 4자리로 입력해 주세요.');
+                event.preventDefault();
+                return;
+            }
+            this.claimEditCode = normalizedEditCode;
+            this.storeEditCode(normalizedEditCode);
+            this.showClaimModal = false;
         },
         prepareReservationSubmit(event) {
             const numericGrade = this.bookingKind === 'class' ? Number(this.grade) : 0;
+            const normalizedEditCode = (this.editCode || '').trim();
+            const requiresEditCode = this.submitMode === 'create' || this.editingRequiresCodeSetup;
             this.overrideGradeLock = false;
 
             if (this.bookingKind === 'custom') {
@@ -331,6 +395,13 @@
                 }
                 this.targetLabel = '';
             }
+
+            if ((requiresEditCode || normalizedEditCode) && !/^\d{4}$/.test(normalizedEditCode)) {
+                alert('수정 코드는 숫자 4자리로 입력해 주세요.');
+                event.preventDefault();
+                return;
+            }
+            this.editCode = normalizedEditCode;
 
             if (
                 this.gradeLockActive &&
@@ -353,6 +424,7 @@
 
             this.syncProfileFromBookingForm();
             this.storeProfileInfo();
+            this.storeEditCode(normalizedEditCode);
             this.applyProfileToCookie({ refresh: false, silent: true });
             this.showModal = false;
         }
@@ -370,6 +442,12 @@
                     <p class="mt-1 text-sm text-gray-600">{{ reservation_followup.date_label }} · {{ reservation_followup.period_label }} · {{ reservation_followup.room_name }}</p>
                     {% if reservation_followup.memo %}
                     <p class="mt-2 text-sm text-gray-500">메모: {{ reservation_followup.memo }}</p>
+                    {% endif %}
+                    {% if reservation_followup.edit_code %}
+                    <div class="mt-3 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-sm font-black text-indigo-700 shadow-sm">
+                        <span>수정 코드</span>
+                        <span class="tracking-[0.25em]">{{ reservation_followup.edit_code }}</span>
+                    </div>
                     {% endif %}
                 </div>
             </div>
@@ -462,13 +540,13 @@
         {% if reservation_access.mode == 'public' %}
         <div class="space-y-3">
             <div class="rounded-2xl border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm font-semibold text-emerald-700">
-                로그인 없이 예약 가능
+                로그인 없이 예약 가능. 다른 기기에서는 예약 칸의 코드 버튼으로 수정하거나 취소합니다.
             </div>
             <div class="rounded-2xl border border-white/70 bg-white/85 p-4 shadow-sm">
                 <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                     <div>
                         <p class="text-xs font-bold uppercase tracking-wide text-indigo-500">내 예약 찾기</p>
-                        <p class="mt-1 text-sm text-gray-600">예약 정보 입력 후 내 예약 확인</p>
+                        <p class="mt-1 text-sm text-gray-600">예전 예약은 예약할 때 쓴 정보로 찾은 뒤, 수정 코드 4자리를 저장합니다.</p>
                     </div>
                     <div x-show="profileApplied" x-cloak class="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
                         현재 입력 정보로 내 예약 확인 중
@@ -551,6 +629,7 @@
 
     <!-- Booking Modal -->
     {% include 'reservations/partials/booking_modal.html' %}
+    {% include 'reservations/partials/claim_modal.html' %}
 
 </div>
 
