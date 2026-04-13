@@ -40,7 +40,7 @@
                 </div>
             </div>
             <div class="teacher-buddy-profile-body teacher-buddy-profile-body--hero">
-                <div class="teacher-buddy-profile-stage teacher-buddy-profile-stage--compact">
+                <div class="teacher-buddy-profile-stage">
                     {% spaceless %}
                     <pre
                         class="teacher-buddy-profile-ascii teacher-buddy-profile-ascii--hero"
@@ -49,50 +49,95 @@
                     >{% for line in teacher_buddy_settings.profile_buddy.idle_ascii|ascii_display_lines %}<span class="teacher-buddy-ascii-line">{{ line }}</span>{% endfor %}</pre>
                     {% endspaceless %}
                 </div>
-                <div class="teacher-buddy-profile-aside teacher-buddy-profile-aside--compact">
-                    <div class="teacher-buddy-profile-quick">
+                <div class="teacher-buddy-profile-aside">
+                    <section class="teacher-buddy-profile-story">
                         <p class="teacher-buddy-settings-label">이 메이트가 하는 일</p>
                         <p class="teacher-buddy-profile-caption" data-buddy-preview-caption="representative">{{ teacher_buddy_settings.profile_buddy.share_caption }}</p>
+                    </section>
+                    <div class="teacher-buddy-profile-stats">
+                        <article class="teacher-buddy-profile-stat">
+                            <p class="teacher-buddy-settings-label">보유 메이트</p>
+                            <p class="teacher-buddy-profile-stat-value">{{ teacher_buddy_settings.buddy_collection_summary_text }}</p>
+                        </article>
+                        <article class="teacher-buddy-profile-stat">
+                            <p class="teacher-buddy-settings-label">보유 스타일</p>
+                            <p class="teacher-buddy-profile-stat-value">{{ teacher_buddy_settings.style_collection_summary_text }}</p>
+                        </article>
+                        <article class="teacher-buddy-profile-stat">
+                            <p class="teacher-buddy-settings-label">스타일 조각</p>
+                            <p class="teacher-buddy-profile-stat-value">{{ teacher_buddy_settings.sticker_dust_text }}</p>
+                        </article>
+                        <article class="teacher-buddy-profile-stat">
+                            <p class="teacher-buddy-settings-label">전설 개방</p>
+                            <p class="teacher-buddy-profile-stat-value">{{ teacher_buddy_settings.legendary_progress_text }}</p>
+                        </article>
                     </div>
-                    <div class="teacher-buddy-profile-quick teacher-buddy-profile-quick--summary">
+                    <section class="teacher-buddy-profile-sync">
                         <p class="teacher-buddy-settings-label">대표 상태</p>
                         <p class="teacher-buddy-profile-summary" data-buddy-preview-summary="representative">{{ teacher_buddy_settings.sync_summary_text }}</p>
-                    </div>
-                    <div class="teacher-buddy-profile-metrics">
-                        <p class="teacher-buddy-profile-metric">
-                            <span class="teacher-buddy-profile-metric-label">보유 메이트</span>
-                            <strong class="teacher-buddy-profile-metric-value">{{ teacher_buddy_settings.buddy_collection_summary_text }}</strong>
-                        </p>
-                        <p class="teacher-buddy-profile-metric">
-                            <span class="teacher-buddy-profile-metric-label">보유 스타일</span>
-                            <strong class="teacher-buddy-profile-metric-value">{{ teacher_buddy_settings.style_collection_summary_text }}</strong>
-                        </p>
-                        <p class="teacher-buddy-profile-metric">
-                            <span class="teacher-buddy-profile-metric-label">스타일 조각</span>
-                            <strong class="teacher-buddy-profile-metric-value">{{ teacher_buddy_settings.sticker_dust_text }}</strong>
-                        </p>
-                        <p class="teacher-buddy-profile-metric">
-                            <span class="teacher-buddy-profile-metric-label">전설 개방</span>
-                            <strong class="teacher-buddy-profile-metric-value">{{ teacher_buddy_settings.legendary_progress_text }}</strong>
-                        </p>
-                    </div>
+                    </section>
                 </div>
             </div>
         </article>
     </div>
 
-    <p class="teacher-buddy-mode-help">{{ teacher_buddy_settings.shared_selection_copy }}</p>
+    <div class="teacher-buddy-settings-toolbar">
+        <p class="teacher-buddy-mode-help">{{ teacher_buddy_settings.shared_selection_copy }}</p>
+        <button type="button" class="teacher-buddy-share-button teacher-buddy-share-button--primary" data-buddy-share-open="true">자랑하기</button>
+    </div>
 
     <div class="teacher-buddy-settings-section-head">
         <div>
             <p class="teacher-buddy-settings-eyebrow">메이트 보관함</p>
-            <h3 class="teacher-buddy-settings-section-title">대표 메이트 고르기</h3>
+            <h3 class="teacher-buddy-settings-section-title">대표로 고를 메이트와 스타일</h3>
+            <p class="teacher-buddy-settings-section-subtitle">잠금 해제한 메이트는 바로 적용하고, 스타일이 있는 메이트는 펼쳐서 더 세밀하게 고를 수 있어요.</p>
         </div>
         <div class="teacher-buddy-settings-section-meta">
             <span class="teacher-buddy-status-chip" data-buddy-settings-buddy-summary="true">{{ teacher_buddy_settings.buddy_collection_summary_text }}</span>
             <span class="teacher-buddy-status-chip teacher-buddy-status-chip--style" data-buddy-settings-style-summary="true">{{ teacher_buddy_settings.style_collection_summary_text }}</span>
         </div>
     </div>
+
+    {% if teacher_buddy_settings.admin_shortcuts %}
+    <section class="teacher-buddy-admin-shortcuts">
+        <div class="teacher-buddy-coupon-copy">
+            <p class="teacher-buddy-settings-label">관리자 빠른 이동</p>
+            <p class="teacher-buddy-coupon-help">쿠폰 만들기와 인원 관리 화면을 여기서 바로 열 수 있어요.</p>
+        </div>
+        <div class="teacher-buddy-admin-actions">
+            {% for shortcut in teacher_buddy_settings.admin_shortcuts %}
+            <a
+                href="{{ shortcut.href }}"
+                class="teacher-buddy-share-button{% if shortcut.is_primary %} teacher-buddy-share-button--primary{% endif %}"
+            >{{ shortcut.label }}</a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <section class="teacher-buddy-coupon-card">
+        <div class="teacher-buddy-coupon-copy">
+            <p class="teacher-buddy-settings-label">선물 쿠폰 등록</p>
+            <p class="teacher-buddy-coupon-help">받은 메이트 쿠폰 코드를 넣으면 뽑기권이 바로 들어와요.</p>
+        </div>
+        <form method="post" action="{{ teacher_buddy_urls.redeem_coupon }}" class="teacher-buddy-coupon-form" data-buddy-coupon-form="true">
+            {% csrf_token %}
+            <label class="teacher-buddy-coupon-field">
+                <span class="sr-only">메이트 쿠폰 코드</span>
+                <input
+                    type="text"
+                    name="coupon_code"
+                    class="teacher-buddy-coupon-input"
+                    data-buddy-coupon-input="true"
+                    placeholder="예: MATE-ABCD-92KF"
+                    autocomplete="off"
+                    autocapitalize="characters"
+                    spellcheck="false"
+                >
+            </label>
+            <button type="submit" class="teacher-buddy-share-button teacher-buddy-share-button--primary" data-buddy-coupon-submit="true">쿠폰 등록</button>
+        </form>
+    </section>
 
     <div
         class="teacher-buddy-share-data"
@@ -132,6 +177,15 @@
                         {% endif %}
                     </p>
                 </div>
+            </div>
+
+            <div class="teacher-buddy-settings-item-body">
+                {% spaceless %}
+                <pre
+                    class="teacher-buddy-collection-ascii"
+                    style="--teacher-buddy-ascii-start: {{ item.ascii_tokens.start|default:'#111827' }}; --teacher-buddy-ascii-end: {{ item.ascii_tokens.end|default:'#111827' }};"
+                >{% for line in item.idle_ascii|ascii_display_lines %}<span class="teacher-buddy-ascii-line">{{ line }}</span>{% endfor %}</pre>
+                {% endspaceless %}
             </div>
 
             <div class="teacher-buddy-settings-item-meta">
@@ -222,69 +276,6 @@
         </article>
         {% endfor %}
     </div>
-
-    <details class="teacher-buddy-utility-panel">
-        <summary class="teacher-buddy-utility-summary">
-            <span class="teacher-buddy-utility-title">추가 메뉴</span>
-            <span class="teacher-buddy-status-chip teacher-buddy-status-chip--soft">
-                {% if teacher_buddy_settings.admin_shortcuts %}
-                공유 · 쿠폰 · 관리
-                {% else %}
-                공유 · 쿠폰
-                {% endif %}
-            </span>
-        </summary>
-        <div class="teacher-buddy-utility-body">
-            <section class="teacher-buddy-utility-block">
-                <div class="teacher-buddy-coupon-copy">
-                    <p class="teacher-buddy-settings-label">메이트 자랑하기</p>
-                    <p class="teacher-buddy-coupon-help">링크, 문구, 이미지를 한 번에 준비합니다.</p>
-                </div>
-                <button type="button" class="teacher-buddy-share-button teacher-buddy-share-button--primary" data-buddy-share-open="true">자랑하기</button>
-            </section>
-
-            <section class="teacher-buddy-coupon-card">
-                <div class="teacher-buddy-coupon-copy">
-                    <p class="teacher-buddy-settings-label">선물 쿠폰 등록</p>
-                    <p class="teacher-buddy-coupon-help">받은 메이트 쿠폰 코드를 넣으면 뽑기권이 바로 들어와요.</p>
-                </div>
-                <form method="post" action="{{ teacher_buddy_urls.redeem_coupon }}" class="teacher-buddy-coupon-form" data-buddy-coupon-form="true">
-                    {% csrf_token %}
-                    <label class="teacher-buddy-coupon-field">
-                        <span class="sr-only">메이트 쿠폰 코드</span>
-                        <input
-                            type="text"
-                            name="coupon_code"
-                            class="teacher-buddy-coupon-input"
-                            data-buddy-coupon-input="true"
-                            placeholder="예: MATE-ABCD-92KF"
-                            autocomplete="off"
-                            autocapitalize="characters"
-                            spellcheck="false"
-                        >
-                    </label>
-                    <button type="submit" class="teacher-buddy-share-button teacher-buddy-share-button--primary" data-buddy-coupon-submit="true">쿠폰 등록</button>
-                </form>
-            </section>
-
-            {% if teacher_buddy_settings.admin_shortcuts %}
-            <section class="teacher-buddy-admin-shortcuts">
-                <div class="teacher-buddy-coupon-copy">
-                    <p class="teacher-buddy-settings-label">관리자 빠른 이동</p>
-                    <p class="teacher-buddy-coupon-help">쿠폰 만들기와 인원 관리 화면을 바로 엽니다.</p>
-                </div>
-                <div class="teacher-buddy-admin-actions">
-                    {% for shortcut in teacher_buddy_settings.admin_shortcuts %}
-                    <a
-                        href="{{ shortcut.href }}"
-                        class="teacher-buddy-share-button{% if shortcut.is_primary %} teacher-buddy-share-button--primary{% endif %}"
-                    >{{ shortcut.label }}</a>
-                    {% endfor %}
-                </div>
-            </section>
-            {% endif %}
-        </div>
-    </details>
 
     <div class="teacher-buddy-share-modal" data-buddy-share-modal="true" hidden>
         <button type="button" class="teacher-buddy-share-modal-backdrop" data-buddy-share-close="true" aria-label="공유 닫기"></button>
