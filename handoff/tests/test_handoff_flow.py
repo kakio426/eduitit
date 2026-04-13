@@ -252,6 +252,7 @@ class HandoffFlowTest(TestCase):
         self.assertContains(response, session.title)
         self.assertContains(response, reverse("handoff:session_detail", args=[session.id]))
         self.assertContains(response, f"{reverse('handoff:group_detail', args=[group.id])}#start-session", html=False)
+        self.assertNotContains(response, "선택 후 시작")
 
     def test_landing_shows_roster_selection_cards_when_no_open_session(self):
         group, members = self._create_group_with_members()
@@ -283,6 +284,7 @@ class HandoffFlowTest(TestCase):
             f"{reverse('handoff:group_detail', args=[second_group.id])}#start-session",
             html=False,
         )
+        self.assertNotContains(response, "교사 선택 후 이동")
         self.assertNotContains(response, "명부에서 바로 시작")
 
     def test_dashboard_is_roster_first_and_group_detail_owns_sessions(self):

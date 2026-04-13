@@ -109,6 +109,8 @@ class TextbookAiViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "PDF 분석 도우미")
         self.assertContains(response, "PDF 읽기 시작")
+        self.assertNotContains(response, "구조를 먼저 정리해 둡니다")
+        self.assertNotContains(response, "최근 올린 PDF를 다시 확인합니다")
         self.assertNotContains(response, "로컬 파서 준비 필요")
         self.assertNotContains(response, "v1은")
         self.assertNotContains(response, "외부 LLM")

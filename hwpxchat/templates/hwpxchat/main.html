@@ -46,30 +46,6 @@
     .hwpx-back-link:hover {
         color: #0f172a;
     }
-    .hwpx-header-card {
-        min-width: 280px;
-        max-width: 360px;
-        border-radius: 30px;
-        border: 1px solid rgba(148, 163, 184, 0.18);
-        background: rgba(255, 255, 255, 0.88);
-        padding: 1rem 1.1rem;
-        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
-        backdrop-filter: blur(14px);
-    }
-    .hwpx-header-card-title {
-        font-size: 0.76rem;
-        font-weight: 900;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: #059669;
-    }
-    .hwpx-header-card-body {
-        margin-top: 0.55rem;
-        font-size: 0.94rem;
-        line-height: 1.7;
-        color: #334155;
-        font-weight: 700;
-    }
     .hwpx-layout {
         display: grid;
         gap: 1.25rem;
@@ -90,32 +66,6 @@
         display: flex;
         flex-direction: column;
         gap: 1rem;
-    }
-    .hwpx-sidebar-intro {
-        border-radius: 28px;
-        background: linear-gradient(180deg, rgba(16, 185, 129, 0.08), rgba(248, 250, 252, 0.96));
-        border: 1px solid rgba(16, 185, 129, 0.14);
-        padding: 1rem 1.05rem;
-    }
-    .hwpx-sidebar-eyebrow {
-        font-size: 0.78rem;
-        font-weight: 900;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: #059669;
-    }
-    .hwpx-sidebar-title {
-        margin-top: 0.5rem;
-        font-size: 1.35rem;
-        line-height: 1.35;
-        font-weight: 900;
-        color: #0f172a;
-    }
-    .hwpx-sidebar-copy {
-        margin-top: 0.5rem;
-        font-size: 0.95rem;
-        line-height: 1.75;
-        color: #475569;
     }
     .hwpx-note {
         border-radius: 24px;
@@ -754,10 +704,6 @@
             flex-direction: column;
             align-items: stretch;
         }
-        .hwpx-header-card {
-            min-width: 0;
-            max-width: none;
-        }
         .hwpx-stage {
             min-height: auto;
         }
@@ -789,20 +735,10 @@
                     <p class="text-base md:text-lg leading-8 text-slate-600">공문이나 한글 문서를 올리면 해야 할 일, 기한, 전달 대상을 카드로 정리해 드려요.</p>
                 </div>
             </div>
-            <div class="hwpx-header-card">
-                <div class="hwpx-header-card-title">문서 대화 방식</div>
-                <div class="hwpx-header-card-body">문서를 올리면 업무 카드와 후속 질문이 같은 화면에서 바로 이어집니다.</div>
-            </div>
         </div>
 
         <div class="hwpx-layout">
             <aside class="hwpx-panel hwpx-sidebar">
-                <div class="hwpx-sidebar-intro">
-                    <p class="hwpx-sidebar-eyebrow">1단계 업로드</p>
-                    <h2 class="hwpx-sidebar-title">문서만 올리면 바로 정리됩니다</h2>
-                    <p class="hwpx-sidebar-copy">HWPX 파일을 올리면 오른쪽에 업무 카드가 바로 열립니다.</p>
-                </div>
-
                 <form
                     id="hwpx-chat-upload-form"
                     method="post"

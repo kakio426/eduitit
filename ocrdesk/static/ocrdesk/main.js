@@ -41,7 +41,7 @@
     }
 
     setElementText(state.dropzoneTitle, "여기에 사진을 놓거나 눌러서 고르세요");
-    setElementText(state.dropzoneHelp, "사진 선택 후 읽기");
+    setElementText(state.dropzoneHelp, "사진 넣기");
   }
 
   function setDropzoneState(options) {
@@ -133,7 +133,7 @@
       state.image.classList.add("hidden");
       state.emptyState.classList.remove("hidden");
       setElementText(state.fileName, "사진 없음");
-      setElementText(state.previewAlert, "선택 후 읽기");
+      setElementText(state.previewAlert, "");
       setDropzoneState({ hasFile: false, dragging: false });
       syncSubmitState();
       return;
@@ -157,7 +157,7 @@
       state.image.src = event.target && event.target.result ? event.target.result : "";
       state.image.classList.remove("hidden");
       state.emptyState.classList.add("hidden");
-      setElementText(state.previewAlert, "읽기 준비 완료");
+      setElementText(state.previewAlert, "읽기 준비");
     };
     reader.onerror = function () {
       state.image.src = "";

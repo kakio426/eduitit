@@ -11,7 +11,6 @@
                 {{ service.icon|default:"📦" }}
             </div>
             <h1 id="handoff-page-title" class="text-4xl md:text-5xl font-black text-gray-700 mb-3">배부 체크</h1>
-            <p class="text-lg md:text-xl text-gray-500 font-bold">명부 고르고 시작</p>
         </header>
 
         {% if can_proxy_manage %}
@@ -20,7 +19,6 @@
                 <div>
                     <p class="text-xs font-black uppercase tracking-[0.18em] text-amber-700">운영자 전용</p>
                     <h2 id="handoff-proxy-manage-title" class="mt-2 text-2xl font-black text-slate-800">다른 교사 명부 관리</h2>
-                    <p class="mt-2 text-sm font-bold leading-relaxed text-slate-600">교사 선택 후 이동</p>
                 </div>
                 <a href="{{ dashboard_url }}" class="inline-flex min-h-[48px] items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-600 transition hover:text-slate-800">
                     내 명부 관리
@@ -67,7 +65,6 @@
                 <div>
                     <p class="text-sm font-black text-blue-600 mb-2">오늘 할 일</p>
                     <h2 id="handoff-start-title" class="text-3xl font-black text-gray-700">내 명부 선택</h2>
-                    <p class="mt-3 text-sm md:text-base text-gray-500 font-bold">선택 후 시작</p>
                 </div>
                 <nav class="flex flex-wrap gap-3" aria-label="배부 체크 시작 작업">
                     <a href="{{ dashboard_url }}" class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-clay transition hover:bg-blue-500">

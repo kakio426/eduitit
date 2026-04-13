@@ -26,6 +26,8 @@ class HwpxChatTeacherFirstMainTests(TestCase):
         self.assertContains(response, "HWPX로 저장하는 방법")
         self.assertContains(response, 'hx-encoding="multipart/form-data"')
         self.assertContains(response, "htmx:beforeSwap")
+        self.assertNotContains(response, "문서 대화 방식")
+        self.assertNotContains(response, "문서만 올리면 바로 정리됩니다")
         self.assertNotContains(response, "교무수첩")
         self.assertNotContains(response, "왜 이 도구를 쓰나요?")
         self.assertNotContains(response, "사용 방법")
