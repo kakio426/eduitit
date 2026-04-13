@@ -2664,7 +2664,7 @@ PUBLIC_PLATFORM_GROUP_SPECS = (
     {
         "key": "family_contact",
         "title": "가정 연락",
-        "summary": "알림장과 안내문을 빠르게 정리해 가정에 전합니다.",
+        "summary": "알림과 안내를 바로 정리합니다.",
         "preferred_routes": ("noticegen:main", "parentcomm:main"),
         "preferred_titles": ("알림장 & 주간학습 멘트 생성기",),
         "fallback_group_keys": ("family_contact",),
@@ -2672,15 +2672,23 @@ PUBLIC_PLATFORM_GROUP_SPECS = (
     {
         "key": "collect_sign",
         "title": "수합·서명",
-        "summary": "응답, 동의, 서명을 링크로 받고 상태를 바로 확인합니다.",
+        "summary": "응답과 서명을 바로 받습니다.",
         "preferred_routes": ("collect:landing", "consent:landing", "signatures:list", "handoff:landing"),
         "preferred_titles": ("간편 수합", "동의서는 나에게 맡겨", "가뿐하게 서명 톡", "배부 체크"),
         "fallback_group_keys": ("collect_sign",),
     },
     {
+        "key": "class_preparation",
+        "title": "수업 준비",
+        "summary": "수업 도구를 바로 엽니다.",
+        "preferred_routes": ("artclass:setup",),
+        "preferred_titles": ("미술 수업 도우미", "몽글몽글 미술 수업"),
+        "fallback_group_keys": ("class_preparation",),
+    },
+    {
         "key": "schedule_reservation",
         "title": "일정·예약",
-        "summary": "오늘 일정과 특별실 예약을 한 흐름으로 이어서 처리합니다.",
+        "summary": "일정과 예약을 한 번에 봅니다.",
         "preferred_routes": ("classcalendar:main", "reservations:dashboard_landing", "reservations:landing"),
         "preferred_titles": ("학급 캘린더", "학교 예약 시스템", "교무수첩"),
         "fallback_group_keys": ("schedule_reservation",),
@@ -2688,7 +2696,7 @@ PUBLIC_PLATFORM_GROUP_SPECS = (
     {
         "key": "records",
         "title": "문서·자료 정리",
-        "summary": "한글 문서를 읽고, 자료를 보내고, 공유 보드를 정리합니다.",
+        "summary": "문서와 자료를 빠르게 정리합니다.",
         "preferred_routes": ("quickdrop:landing", "hwpxchat:main", "infoboard:dashboard"),
         "preferred_titles": ("바로전송", "한글문서 AI야 읽어줘", "인포보드"),
         "fallback_group_keys": ("records", "family_contact"),
@@ -2696,7 +2704,7 @@ PUBLIC_PLATFORM_GROUP_SPECS = (
     {
         "key": "teacher_support",
         "title": "법률·참고",
-        "summary": "교사 법률 근거와 학교 행사 참고 서비스를 바로 찾습니다.",
+        "summary": "법률과 참고 도구를 바로 찾습니다.",
         "preferred_routes": ("teacher_law:main", "schoolprograms:landing"),
         "preferred_titles": ("교사용 AI 법률 가이드", "학교 체험·행사 찾기"),
         "fallback_group_keys": ("teacher_support",),
@@ -2712,6 +2720,7 @@ PUBLIC_PLATFORM_GROUP_KEY_BY_ROUTE = {
     "signatures:landing": "collect_sign",
     "signatures:list": "collect_sign",
     "handoff:landing": "collect_sign",
+    "artclass:setup": "class_preparation",
     "classcalendar:main": "schedule_reservation",
     "reservations:dashboard_landing": "schedule_reservation",
     "reservations:landing": "schedule_reservation",
@@ -2733,9 +2742,10 @@ PUBLIC_PLATFORM_GROUP_KEY_BY_HOME_SECTION = {
 PUBLIC_PLATFORM_GROUP_SORT_ORDER = {
     "family_contact": 0,
     "collect_sign": 1,
-    "schedule_reservation": 2,
-    "records": 3,
-    "teacher_support": 4,
+    "class_preparation": 2,
+    "schedule_reservation": 3,
+    "records": 4,
+    "teacher_support": 5,
 }
 
 

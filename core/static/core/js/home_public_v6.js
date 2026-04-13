@@ -1,4 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
+    const page = document.querySelector(".home-public-v6-page");
     const primaryLauncherButton = document.querySelector("[data-public-primary-cta='launcher']");
     const heroRevealItems = Array.from(
         document.querySelectorAll("[data-public-hero-reveal='true']")
@@ -7,6 +8,12 @@ document.addEventListener("DOMContentLoaded", () => {
         document.querySelectorAll("[data-public-reveal='true']")
     );
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const supportsFinePointer = window.matchMedia("(pointer: fine)").matches
+        && window.matchMedia("(hover: hover)").matches;
+    const cursorDot = document.querySelector("[data-public-cursor-dot='true']");
+    const cursorFollower = document.querySelector("[data-public-cursor-follower='true']");
+    const cursorAura = document.querySelector("[data-public-cursor-aura='true']");
+    const pointerCleanup = [];
 
     const markVisible = (element) => {
         if (!element) return;
@@ -37,6 +44,85 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    if (page && supportsFinePointer && !prefersReducedMotion && cursorDot && cursorFollower && cursorAura) {
+        document.documentElement.setAttribute("data-home-public-v6-pointer", "true");
+
+        let mouseX = window.innerWidth * 0.5;
+        let mouseY = window.innerHeight * 0.5;
+        let followerX = mouseX;
+        let followerY = mouseY;
+        let auraX = mouseX;
+        let auraY = mouseY;
+        let frameId = 0;
+
+        page.dataset.pointerVisible = "false";
+        page.dataset.pointerHover = "false";
+
+        const interactiveTargets = Array.from(page.querySelectorAll("a, button"));
+
+        const handleMouseMove = (event) => {
+            mouseX = event.clientX;
+            mouseY = event.clientY;
+            page.dataset.pointerVisible = "true";
+            cursorDot.style.transform = `translate3d(${mouseX}px, ${mouseY}px, 0)`;
+        };
+
+        const handleMouseEnter = () => {
+            page.dataset.pointerVisible = "true";
+        };
+
+        const handleMouseLeave = () => {
+            page.dataset.pointerVisible = "false";
+            page.dataset.pointerHover = "false";
+        };
+
+        const handlePointerHoverOn = () => {
+            page.dataset.pointerHover = "true";
+        };
+
+        const handlePointerHoverOff = () => {
+            page.dataset.pointerHover = "false";
+        };
+
+        const renderPointer = () => {
+            followerX += (mouseX - followerX) * 0.18;
+            followerY += (mouseY - followerY) * 0.18;
+            auraX += (mouseX - auraX) * 0.08;
+            auraY += (mouseY - auraY) * 0.08;
+
+            const isVisible = page.dataset.pointerVisible === "true";
+            const isHoveringInteractive = page.dataset.pointerHover === "true";
+            const followerScale = isHoveringInteractive ? 1.72 : 1;
+            const auraScale = isHoveringInteractive ? 1.18 : 1;
+
+            cursorFollower.style.transform = `translate3d(${followerX}px, ${followerY}px, 0) scale(${followerScale})`;
+            cursorFollower.style.opacity = isVisible ? "1" : "0";
+            cursorAura.style.transform = `translate3d(${auraX}px, ${auraY}px, 0) scale(${auraScale})`;
+            cursorAura.style.opacity = isVisible ? (isHoveringInteractive ? "0.88" : "0.62") : "0";
+            cursorDot.style.opacity = isVisible ? "1" : "0";
+
+            frameId = window.requestAnimationFrame(renderPointer);
+        };
+
+        window.addEventListener("mousemove", handleMouseMove, { passive: true });
+        page.addEventListener("mouseenter", handleMouseEnter);
+        page.addEventListener("mouseleave", handleMouseLeave);
+        pointerCleanup.push(() => window.removeEventListener("mousemove", handleMouseMove));
+        pointerCleanup.push(() => page.removeEventListener("mouseenter", handleMouseEnter));
+        pointerCleanup.push(() => page.removeEventListener("mouseleave", handleMouseLeave));
+
+        interactiveTargets.forEach((target) => {
+            target.addEventListener("pointerenter", handlePointerHoverOn);
+            target.addEventListener("pointerleave", handlePointerHoverOff);
+            pointerCleanup.push(() => target.removeEventListener("pointerenter", handlePointerHoverOn));
+            pointerCleanup.push(() => target.removeEventListener("pointerleave", handlePointerHoverOff));
+        });
+
+        frameId = window.requestAnimationFrame(renderPointer);
+        pointerCleanup.push(() => window.cancelAnimationFrame(frameId));
+        pointerCleanup.push(() => document.documentElement.removeAttribute("data-home-public-v6-pointer"));
+    }
+
     if (prefersReducedMotion) {
         heroRevealItems.forEach(markVisible);
         revealItems.forEach(markVisible);
@@ -49,6 +135,14 @@ document.addEventListener("DOMContentLoaded", () => {
             markVisible(item);
         }, delayMs);
     });
+
+    window.addEventListener(
+        "pagehide",
+        () => {
+            pointerCleanup.forEach((cleanup) => cleanup());
+        },
+        { once: true }
+    );
 
     if (!revealItems.length) return;
 
