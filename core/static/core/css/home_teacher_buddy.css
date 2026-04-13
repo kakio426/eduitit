@@ -2241,6 +2241,143 @@ body.teacher-buddy-modal-open {
     box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
 }
 
+.teacher-buddy-panel .teacher-buddy-card--panel-compact {
+    padding: 0.95rem;
+    border-radius: 1.55rem;
+}
+
+.teacher-buddy-panel .teacher-buddy-card--panel-compact .teacher-buddy-head {
+    align-items: center;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+}
+
+.teacher-buddy-panel .teacher-buddy-card--panel-compact .teacher-buddy-title {
+    margin-top: 0;
+    font-size: 1.08rem;
+}
+
+.teacher-buddy-panel .teacher-buddy-card--panel-compact .teacher-buddy-head-badges {
+    gap: 0.35rem;
+}
+
+.teacher-buddy-panel .teacher-buddy-card--panel-compact .teacher-buddy-token {
+    min-height: 1.88rem;
+    padding: 0.38rem 0.72rem;
+    font-size: 0.74rem;
+}
+
+.teacher-buddy-panel .teacher-buddy-compact-hero--panel {
+    align-items: center;
+    gap: 0.72rem;
+    margin-top: 0.72rem;
+}
+
+.teacher-buddy-panel .teacher-buddy-compact-ascii-box--panel {
+    min-width: 5.95rem;
+    min-height: 6.5rem;
+    padding: 0.5rem 0.56rem;
+    border-radius: 1.08rem;
+}
+
+.teacher-buddy-panel .teacher-buddy-ascii--panel-compact {
+    font-size: 0.67rem;
+    line-height: 1.06;
+}
+
+.teacher-buddy-panel .teacher-buddy-compact-copy.teacher-buddy-copy--panel {
+    gap: 0.28rem;
+    justify-content: center;
+    min-width: 0;
+}
+
+.teacher-buddy-panel .teacher-buddy-copy--compact.teacher-buddy-copy--panel {
+    margin-top: 0.68rem;
+    gap: 0.58rem;
+}
+
+.teacher-buddy-panel .teacher-buddy-card--panel-compact .teacher-buddy-name {
+    font-size: 0.94rem;
+}
+
+.teacher-buddy-panel .teacher-buddy-card--panel-compact .teacher-buddy-rarity {
+    padding: 0.2rem 0.46rem;
+    font-size: 0.67rem;
+}
+
+.teacher-buddy-panel .teacher-buddy-card--panel-compact .teacher-buddy-reaction--compact {
+    font-size: 0.84rem;
+    line-height: 1.34;
+}
+
+.teacher-buddy-panel .teacher-buddy-status-stack--panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+    align-items: stretch;
+    gap: 0.55rem;
+}
+
+.teacher-buddy-panel .teacher-buddy-status-inline-list--panel {
+    align-content: stretch;
+    gap: 0.5rem;
+}
+
+.teacher-buddy-panel .teacher-buddy-status-card--panel {
+    min-width: 0;
+    gap: 0.38rem;
+    padding: 0.72rem 0.78rem;
+    border-radius: 1.05rem;
+}
+
+.teacher-buddy-panel .teacher-buddy-status-card--panel .teacher-buddy-status-head {
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.teacher-buddy-panel .teacher-buddy-status-card--panel .teacher-buddy-status-label {
+    font-size: 0.68rem;
+    white-space: nowrap;
+    overflow-wrap: normal;
+}
+
+.teacher-buddy-panel .teacher-buddy-status-card--panel .teacher-buddy-status-value {
+    font-size: 0.78rem;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow-wrap: normal;
+}
+
+.teacher-buddy-panel .teacher-buddy-status-card--panel .teacher-buddy-status-value--primary {
+    font-size: 0.94rem;
+}
+
+.teacher-buddy-panel .teacher-buddy-status-card--panel .teacher-buddy-status-micro {
+    font-size: 0.71rem;
+    line-height: 1.3;
+}
+
+.teacher-buddy-panel .teacher-buddy-status-card--panel .teacher-buddy-progress-steps {
+    gap: 0.35rem;
+}
+
+.teacher-buddy-panel .teacher-buddy-status-card--panel .teacher-buddy-progress-step {
+    height: 0.42rem;
+}
+
+.teacher-buddy-panel .teacher-buddy-actions--panel {
+    grid-template-columns: minmax(0, 1.3fr) minmax(9.2rem, 1fr);
+    gap: 0.5rem;
+}
+
+.teacher-buddy-panel .teacher-buddy-actions--panel .teacher-buddy-primary,
+.teacher-buddy-panel .teacher-buddy-actions--panel .teacher-buddy-secondary {
+    min-height: 2.62rem;
+    padding: 0.62rem 0.85rem;
+    border-radius: 0.95rem;
+    font-size: 0.81rem;
+    white-space: nowrap;
+}
+
 @media (max-width: 1120px) {
     .teacher-buddy-status-list {
         grid-template-columns: minmax(0, 1fr);
@@ -2376,5 +2513,123 @@ body.teacher-buddy-modal-open {
         min-height: 3rem;
         padding-inline: 0.85rem;
         font-size: 0.84rem;
+    }
+}
+
+@media (max-width: 767px) {
+    .teacher-buddy-panel .teacher-buddy-card--panel-compact {
+        padding: 0.88rem;
+        border-radius: 1.35rem;
+    }
+
+    .teacher-buddy-panel .teacher-buddy-card--panel-compact .teacher-buddy-head {
+        flex-direction: row;
+        align-items: center;
+        gap: 0.45rem;
+    }
+
+    .teacher-buddy-panel .teacher-buddy-card--panel-compact .teacher-buddy-title {
+        font-size: 1.02rem;
+    }
+
+    .teacher-buddy-panel .teacher-buddy-card--panel-compact .teacher-buddy-token {
+        min-height: 1.78rem;
+        padding: 0.34rem 0.64rem;
+        font-size: 0.7rem;
+    }
+
+    .teacher-buddy-panel .teacher-buddy-compact-hero--panel {
+        gap: 0.62rem;
+        margin-top: 0.64rem;
+    }
+
+    .teacher-buddy-panel .teacher-buddy-compact-ascii-box--panel {
+        width: 5.35rem;
+        min-width: 5.35rem;
+        min-height: 5.9rem;
+        padding: 0.42rem 0.48rem;
+    }
+
+    .teacher-buddy-panel .teacher-buddy-ascii--panel-compact {
+        font-size: 0.61rem;
+        line-height: 1.01;
+    }
+
+    .teacher-buddy-panel .teacher-buddy-compact-copy.teacher-buddy-copy--panel {
+        gap: 0.22rem;
+    }
+
+    .teacher-buddy-panel .teacher-buddy-copy--compact.teacher-buddy-copy--panel {
+        margin-top: 0.62rem;
+        gap: 0.5rem;
+    }
+
+    .teacher-buddy-panel .teacher-buddy-card--panel-compact .teacher-buddy-name {
+        font-size: 0.88rem;
+    }
+
+    .teacher-buddy-panel .teacher-buddy-card--panel-compact .teacher-buddy-rarity {
+        padding: 0.18rem 0.42rem;
+        font-size: 0.63rem;
+    }
+
+    .teacher-buddy-panel .teacher-buddy-card--panel-compact .teacher-buddy-reaction--compact {
+        font-size: 0.79rem;
+        line-height: 1.28;
+    }
+
+    .teacher-buddy-panel .teacher-buddy-status-stack--panel {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.5rem;
+    }
+
+    .teacher-buddy-panel .teacher-buddy-status-inline-list--panel {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.45rem;
+    }
+
+    .teacher-buddy-panel .teacher-buddy-status-card--panel {
+        padding: 0.64rem 0.7rem;
+    }
+
+    .teacher-buddy-panel .teacher-buddy-status-card--panel .teacher-buddy-status-head {
+        flex-direction: row;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .teacher-buddy-panel .teacher-buddy-status-card--panel .teacher-buddy-status-label {
+        font-size: 0.63rem;
+    }
+
+    .teacher-buddy-panel .teacher-buddy-status-card--panel .teacher-buddy-status-value {
+        font-size: 0.73rem;
+    }
+
+    .teacher-buddy-panel .teacher-buddy-status-card--panel .teacher-buddy-status-value--primary {
+        font-size: 0.88rem;
+    }
+
+    .teacher-buddy-panel .teacher-buddy-status-card--panel .teacher-buddy-status-micro {
+        font-size: 0.67rem;
+    }
+
+    .teacher-buddy-panel .teacher-buddy-actions--panel {
+        grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+        gap: 0.45rem;
+    }
+
+    .teacher-buddy-panel .teacher-buddy-actions--panel .teacher-buddy-primary,
+    .teacher-buddy-panel .teacher-buddy-actions--panel .teacher-buddy-secondary {
+        min-height: 2.42rem;
+        padding: 0.56rem 0.72rem;
+        font-size: 0.75rem;
+    }
+}
+
+@media (max-width: 380px) {
+    .teacher-buddy-panel .teacher-buddy-status-inline-list--panel,
+    .teacher-buddy-panel .teacher-buddy-actions--panel {
+        grid-template-columns: minmax(0, 1fr);
     }
 }
