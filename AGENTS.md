@@ -150,6 +150,9 @@
   - 예: `worktree`에서는 원본 저장소 `.venv/bin/python manage.py check`
   - 변경 JS에 대한 `node --check`
   - 핵심 화면 런타임 스모크(주요 탭/버튼 1회) + 브라우저 콘솔 `ReferenceError` 0건
+- 모델 변경, 신규 앱 추가, `migrations/*.py` 생성이 포함된 턴에서는 `manage.py makemigrations --check --dry-run`으로 누락 마이그레이션 0건을 확인한다.
+- 신규 마이그레이션이 포함된 턴에서는 최종 보고에 `배포/서버에서 manage.py migrate --noinput 필요` 여부를 반드시 적는다. 자동 배포 훅에 `migrate`가 있어도 이 안내를 생략하지 않는다.
+- 신규 앱 또는 신규 마이그레이션이 포함된 배포성 작업은 `manage.py showmigrations <app>` 또는 동등한 확인으로 대상 마이그레이션 상태를 확인하기 전에는 완료로 보지 않는다. 서버 접근이 불가능한 세션이면 남은 적용 확인 항목을 최종 보고에 명시한다.
 - UX 중심 변경의 추가 검증:
   - 중복 상단바 0
   - 상단바 안전영역 침범 0
