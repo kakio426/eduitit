@@ -8,12 +8,13 @@ from urllib.parse import quote
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import OperationalError, ProgrammingError
-from django.http import FileResponse, Http404, HttpResponse
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
 from core.document_signing import (
     basename,
+    get_file_field_bytes,
     get_pdf_bytes_from_file_field,
     get_pdf_page_sizes,
     guess_file_type,
@@ -258,10 +259,14 @@ def job_download_signed(request, job_id: int):
     if not job.is_signed or not job.signed_pdf:
         raise Http404("사인된 PDF가 아직 없습니다.")
 
-    response = FileResponse(
-        job.signed_pdf.open("rb"),
+    filename = build_signed_download_name(job)
+    response = HttpResponse(
+        get_file_field_bytes(
+            job.signed_pdf,
+            file_type="pdf",
+            filename_hint=filename,
+        ),
         content_type="application/pdf",
-        as_attachment=True,
-        filename=build_signed_download_name(job),
     )
+    response["Content-Disposition"] = f"attachment; filename*=UTF-8''{quote(filename)}"
     return _apply_sensitive_cache_headers(response)

@@ -16,6 +16,7 @@ from django.utils import timezone
 from core.models import UserPolicyConsent
 from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
 from docsign.models import DocumentSignJob
+from docsign.services import build_signed_storage_name
 
 
 def build_test_pdf_bytes(label: str = "docsign-source", *, page_size=(612, 792)) -> bytes:
@@ -240,4 +241,49 @@ class DocumentSignFlowTests(TestCase):
             job.source_file,
             file_type="pdf",
             filename_hint="기존문서.pdf",
+        )
+
+    def test_signed_storage_name_is_ascii_only(self):
+        job = DocumentSignJob(
+            id=17,
+            owner=self.teacher,
+            title="한글 제목",
+            source_file_name_snapshot="학교 안내문.pdf",
+            source_file_sha256_snapshot="abc123",
+        )
+
+        filename = build_signed_storage_name(job)
+
+        self.assertEqual(filename, "docsign-signed-17-6367c48dd193d56e.pdf")
+        self.assertRegex(filename, r"^[A-Za-z0-9._-]+$")
+
+    @patch("docsign.views.get_file_field_bytes", return_value=b"%PDF-1.4 signed-helper")
+    def test_download_signed_uses_file_bytes_helper_for_response(self, file_bytes_mock):
+        self.client.force_login(self.teacher)
+        job = DocumentSignJob.objects.create(
+            owner=self.teacher,
+            title="완료 문서",
+            source_file=SimpleUploadedFile(
+                "source.pdf",
+                build_test_pdf_bytes("download-doc"),
+                content_type="application/pdf",
+            ),
+            source_file_name_snapshot="완료문서.pdf",
+            source_file_size_snapshot=0,
+            source_file_sha256_snapshot="abc",
+            file_type="pdf",
+            signed_pdf="docsign/signed/missing-cloudinary-id",
+            signed_at=timezone.now(),
+        )
+
+        response = self.client.get(reverse("docsign:download", kwargs={"job_id": job.id}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertIn("attachment;", response["Content-Disposition"])
+        self.assertEqual(response.content, b"%PDF-1.4 signed-helper")
+        file_bytes_mock.assert_called_once_with(
+            job.signed_pdf,
+            file_type="pdf",
+            filename_hint="완료문서-signed.pdf",
         )

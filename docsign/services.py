@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import os
 
 from django.core.files.base import ContentFile
@@ -16,6 +17,15 @@ def sanitize_filename_base(value: str, *, fallback: str = "signed-document") -> 
 def build_signed_download_name(job) -> str:
     base = sanitize_filename_base(job.source_file_name_snapshot or job.title)
     return f"{base}-signed.pdf"
+
+
+def build_signed_storage_name(job) -> str:
+    fingerprint = (
+        job.source_file_sha256_snapshot
+        or f"{job.owner_id}-{job.id}-{timezone.now().timestamp()}"
+    )
+    suffix = hashlib.sha1(str(fingerprint).encode("utf-8")).hexdigest()[:16]
+    return f"docsign-signed-{job.id or 'job'}-{suffix}.pdf"
 
 
 def generate_signed_pdf(job, signature_data: str):
@@ -41,8 +51,8 @@ def generate_signed_pdf(job, signature_data: str):
     if job.signed_pdf:
         job.signed_pdf.delete(save=False)
 
-    filename = build_signed_download_name(job)
-    job.signed_pdf.save(filename, ContentFile(signed_pdf_bytes, name=filename), save=False)
+    storage_name = build_signed_storage_name(job)
+    job.signed_pdf.save(storage_name, ContentFile(signed_pdf_bytes, name=storage_name), save=False)
     job.signed_at = timezone.now()
     job.save(update_fields=["signed_pdf", "signed_at", "updated_at"])
     return job
