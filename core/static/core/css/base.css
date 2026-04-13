@@ -181,6 +181,7 @@ body {
  */
 .service-shell,
 .service-shell--compact,
+.service-shell--relaxed,
 .service-shell--spacious {
     padding-top: calc(var(--main-nav-height, 88px) + var(--service-shell-gap, 1rem)) !important;
 }
@@ -193,8 +194,16 @@ body {
     --service-shell-gap: 0.75rem;
 }
 
+.service-shell--relaxed {
+    --service-shell-gap: 1.25rem;
+}
+
 .service-shell--spacious {
     --service-shell-gap: 1.35rem;
+}
+
+.service-shell--hero {
+    padding-top: calc(var(--main-nav-height, 88px) + 1.75rem) !important;
 }
 
 .service-shell-fixed {
@@ -212,8 +221,16 @@ body {
         --service-shell-gap: 0.75rem;
     }
 
+    .service-shell--relaxed {
+        --service-shell-gap: 1rem;
+    }
+
     .service-shell--spacious {
         --service-shell-gap: 1rem;
+    }
+
+    .service-shell--hero {
+        padding-top: calc(var(--main-nav-height, 88px) + 1.25rem) !important;
     }
 }
 

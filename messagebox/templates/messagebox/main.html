@@ -42,8 +42,7 @@
 
 {% block content %}
 <section
-    class="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(251,191,36,0.18),_transparent_32%),linear-gradient(180deg,#fffaf0_0%,#ffffff_28%,#f8fafc_100%)] px-4 pb-10 pt-0 sm:px-6 lg:px-8"
-    style="padding-top: calc(var(--main-nav-height, 88px) + 0.75rem);"
+    class="service-shell--compact min-h-screen bg-[radial-gradient(circle_at_top,_rgba(251,191,36,0.18),_transparent_32%),linear-gradient(180deg,#fffaf0_0%,#ffffff_28%,#f8fafc_100%)] px-4 pb-10 sm:px-6 lg:px-8"
     data-messagebox-root="true"
     x-data="messageboxPage({
         enabled: {{ message_capture_enabled|yesno:'true,false' }},
