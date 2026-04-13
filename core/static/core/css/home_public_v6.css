@@ -252,7 +252,7 @@ html[data-home-public-v6-pointer="true"] .home-public-v6-page button {
 .home-public-v6-main {
     display: grid;
     gap: clamp(4rem, 8vw, 7rem);
-    padding-top: clamp(1rem, 2vw, 2rem);
+    padding-top: clamp(0.35rem, 1.2vw, 1rem);
 }
 
 .home-public-v6-grid {
@@ -366,18 +366,18 @@ html[data-home-public-v6-pointer="true"] .home-public-v6-page button {
 }
 
 .home-public-v6-hero {
-    min-height: calc(100vh - 9rem);
+    min-height: calc(100vh - 11.25rem);
     display: grid;
-    place-items: center;
+    place-items: start center;
     position: relative;
-    padding: clamp(3rem, 9vw, 7rem) 0 0;
+    padding: clamp(1.6rem, 4.4vw, 3.85rem) 0 0;
 }
 
 .home-public-v6-hero-copy,
 .home-public-v6-portfolio-copy {
     display: grid;
     justify-items: center;
-    gap: 1.35rem;
+    gap: 1.1rem;
     grid-column: 1 / -1;
     width: 100%;
     text-align: center;
@@ -435,9 +435,21 @@ html[data-home-public-v6-pointer="true"] .home-public-v6-page button {
 }
 
 .home-public-v6-hero-title {
-    max-width: 10.4ch;
-    font-size: clamp(3.9rem, 10vw, 7.5rem);
-    line-height: 0.92;
+    max-width: 11.5ch;
+    font-size: clamp(3.65rem, 9.2vw, 7.1rem);
+    line-height: 0.9;
+}
+
+.home-public-v6-hero-title-line {
+    display: block;
+}
+
+.home-public-v6-hero-title-line + .home-public-v6-hero-title-line {
+    margin-top: 0.06em;
+}
+
+.home-public-v6-hero-title-line-accent {
+    color: var(--home-public-v6-accent-strong);
 }
 
 .home-public-v6-hero-summary,
@@ -456,8 +468,9 @@ html[data-home-public-v6-pointer="true"] .home-public-v6-page button {
 }
 
 .home-public-v6-hero-summary {
-    max-width: 46rem;
-    font-size: clamp(1.05rem, 1.9vw, 1.5rem);
+    max-width: 38rem;
+    font-size: clamp(1rem, 1.45vw, 1.24rem);
+    line-height: 1.65;
 }
 
 .home-public-v6-motion-band {
@@ -1311,12 +1324,12 @@ html[data-home-public-v6-pointer="true"] .home-public-v6-page button {
 
     .home-public-v6-hero {
         min-height: auto;
-        padding-top: 3rem;
+        padding-top: 2rem;
     }
 
     .home-public-v6-hero-title {
-        max-width: 11ch;
-        font-size: clamp(3.2rem, 15vw, 4.7rem);
+        max-width: 9.8ch;
+        font-size: clamp(2.95rem, 14vw, 4.35rem);
     }
 
     .home-public-v6-motion-band {
