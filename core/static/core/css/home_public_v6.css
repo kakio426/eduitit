@@ -511,6 +511,19 @@ html[data-home-public-v6-pointer="true"] .home-public-v6-page button {
     text-transform: uppercase;
 }
 
+.home-public-v6-hero-wordmark {
+    margin: 0;
+    padding-left: 0.38em;
+    color: #5b4dff;
+    font-family: var(--font-display);
+    font-size: clamp(1.06rem, 1.48vw, 1.32rem);
+    font-weight: 950;
+    letter-spacing: 0.34em;
+    line-height: 1;
+    text-transform: uppercase;
+    text-shadow: 0 0 18px rgba(91, 77, 255, 0.18);
+}
+
 .home-public-v6-kicker {
     display: inline-flex;
     align-items: center;
@@ -1495,6 +1508,12 @@ html[data-home-public-v6-pointer="true"] .home-public-v6-page button {
     .home-public-v6-hero-title {
         max-width: 9.8ch;
         font-size: clamp(2.95rem, 14vw, 4.35rem);
+    }
+
+    .home-public-v6-hero-wordmark {
+        padding-left: 0.29em;
+        font-size: 0.92rem;
+        letter-spacing: 0.29em;
     }
 
     .home-public-v6-hero-summary {
