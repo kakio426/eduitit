@@ -93,9 +93,10 @@
     canvas.width = Math.floor(width * ratio);
     canvas.height = Math.floor(height * ratio);
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 4;
     ctx.lineCap = "round";
-    ctx.strokeStyle = "#0f172a";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "#020617";
     ctx.clearRect(0, 0, width, height);
     hidden.value = "";
   }
