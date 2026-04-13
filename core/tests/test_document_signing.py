@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import io
 from unittest.mock import Mock, patch
 
 from django.test import SimpleTestCase, override_settings
 
-from core.document_signing import get_pdf_bytes_from_file_field
+from core.document_signing import get_pdf_bytes_from_file_field, normalize_pdf_bytes
 
 
 class _CloudinaryPdfFieldStub:
@@ -41,3 +42,33 @@ class DocumentSigningFallbackTests(SimpleTestCase):
             type="upload",
         )
         requests_get_mock.assert_called_once_with("https://signed.example.com/image-upload.pdf", timeout=(5, 30))
+
+    def test_normalize_pdf_bytes_flattens_page_rotation(self):
+        try:
+            from reportlab.pdfgen import canvas
+            from pypdf import PdfReader, PdfWriter
+        except ModuleNotFoundError:
+            self.skipTest("pdf runtime unavailable")
+
+        packet = io.BytesIO()
+        pdf = canvas.Canvas(packet, pagesize=(400, 200))
+        pdf.drawString(40, 140, "rotated")
+        pdf.showPage()
+        pdf.save()
+        packet.seek(0)
+
+        reader = PdfReader(packet)
+        writer = PdfWriter()
+        page = reader.pages[0]
+        page.rotate(90)
+        writer.add_page(page)
+        rotated_payload = io.BytesIO()
+        writer.write(rotated_payload)
+
+        normalized = normalize_pdf_bytes(rotated_payload.getvalue())
+        normalized_reader = PdfReader(io.BytesIO(normalized))
+        normalized_page = normalized_reader.pages[0]
+
+        self.assertEqual(int(getattr(normalized_page, "rotation", 0) or 0) % 360, 0)
+        self.assertEqual(round(float(normalized_page.mediabox.width)), 200)
+        self.assertEqual(round(float(normalized_page.mediabox.height)), 400)

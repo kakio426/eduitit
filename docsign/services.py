@@ -6,7 +6,12 @@ import os
 from django.core.files.base import ContentFile
 from django.utils import timezone
 
-from core.document_signing import basename, build_signed_pdf_bytes, get_pdf_bytes_from_file_field
+from core.document_signing import (
+    basename,
+    build_signed_pdf_bytes,
+    get_pdf_bytes_from_file_field,
+    normalize_pdf_bytes,
+)
 
 
 def sanitize_filename_base(value: str, *, fallback: str = "signed-document") -> str:
@@ -37,6 +42,7 @@ def generate_signed_pdf(job, signature_data: str):
         file_type=job.file_type,
         filename_hint=job.source_file_name_snapshot,
     )
+    source_pdf_bytes = normalize_pdf_bytes(source_pdf_bytes)
     signed_pdf_bytes = build_signed_pdf_bytes(
         source_pdf_bytes,
         page_number=job.signature_page,

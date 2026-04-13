@@ -18,6 +18,7 @@ from core.document_signing import (
     get_pdf_bytes_from_file_field,
     get_pdf_page_sizes,
     guess_file_type,
+    normalize_pdf_bytes,
     snapshot_file_metadata,
 )
 
@@ -72,13 +73,24 @@ def _build_stage_meta(job: DocumentSignJob) -> tuple[str, str]:
     return mapping.get(job.stage_key, ("진행 중", "이어하기"))
 
 
-def _page_sizes(job: DocumentSignJob):
-    source_pdf_bytes = get_pdf_bytes_from_file_field(
-        job.source_file,
-        file_type=job.file_type,
-        filename_hint=job.source_file_name_snapshot,
+def _source_pdf_bytes(job: DocumentSignJob) -> bytes:
+    return normalize_pdf_bytes(
+        get_pdf_bytes_from_file_field(
+            job.source_file,
+            file_type=job.file_type,
+            filename_hint=job.source_file_name_snapshot,
+        )
     )
-    return get_pdf_page_sizes(source_pdf_bytes)
+
+
+def _inline_pdf_response(pdf_bytes: bytes, *, filename: str):
+    response = HttpResponse(pdf_bytes, content_type="application/pdf")
+    response["Content-Disposition"] = f"inline; filename*=UTF-8''{quote(filename)}"
+    return _apply_sensitive_cache_headers(response)
+
+
+def _page_sizes(job: DocumentSignJob):
+    return get_pdf_page_sizes(_source_pdf_bytes(job))
 
 
 @login_required
@@ -140,6 +152,16 @@ def job_detail(request, job_id: int):
         "primary_action_label": action_label,
         "next_href": next_href,
         "auto_download": request.GET.get("download") == "1" and job.is_signed,
+        "preview_document_url": (
+            reverse("docsign:signed_document", kwargs={"job_id": job.id})
+            if job.is_signed
+            else reverse("docsign:source_document", kwargs={"job_id": job.id})
+        ),
+        "preview_document_name": (
+            build_signed_download_name(job)
+            if job.is_signed
+            else job.source_file_name_snapshot or basename(job.source_file.name)
+        ),
     }
     return render(request, "docsign/detail.html", context)
 
@@ -152,16 +174,23 @@ def job_source_document(request, job_id: int):
         raise Http404("문서를 찾지 못했습니다.")
 
     filename = basename(job.source_file_name_snapshot or job.source_file.name)
-    response = HttpResponse(
-        get_pdf_bytes_from_file_field(
-            job.source_file,
-            file_type=job.file_type,
-            filename_hint=job.source_file_name_snapshot,
+    return _inline_pdf_response(_source_pdf_bytes(job), filename=filename)
+
+
+@login_required
+@_docsign_runtime_guard
+def job_signed_document(request, job_id: int):
+    job = _owned_job_or_404(request.user, job_id)
+    if not job.is_signed or not job.signed_pdf:
+        raise Http404("사인된 PDF가 아직 없습니다.")
+    return _inline_pdf_response(
+        get_file_field_bytes(
+            job.signed_pdf,
+            file_type="pdf",
+            filename_hint=build_signed_download_name(job),
         ),
-        content_type="application/pdf",
+        filename=build_signed_download_name(job),
     )
-    response["Content-Disposition"] = f"inline; filename*=UTF-8''{quote(filename)}"
-    return _apply_sensitive_cache_headers(response)
 
 
 @login_required

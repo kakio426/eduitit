@@ -48,6 +48,22 @@ def build_signature_data_url() -> str:
     return "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode("ascii")
 
 
+def build_rotated_pdf_bytes(label: str = "rotated-doc", *, page_size=(400, 200), rotation: int = 90) -> bytes:
+    try:
+        from pypdf import PdfReader, PdfWriter
+    except ModuleNotFoundError as exc:
+        raise unittest.SkipTest("pypdf unavailable") from exc
+
+    reader = PdfReader(io.BytesIO(build_test_pdf_bytes(label, page_size=page_size)))
+    writer = PdfWriter()
+    page = reader.pages[0]
+    page.rotate(rotation)
+    writer.add_page(page)
+    payload = io.BytesIO()
+    writer.write(payload)
+    return payload.getvalue()
+
+
 def seed_current_policy_consent(user):
     return UserPolicyConsent.objects.create(
         user=user,
@@ -218,13 +234,17 @@ class DocumentSignFlowTests(TestCase):
         self.assertEqual(response.status_code, 503)
         self.assertContains(response, "잠시만요", status_code=503)
 
-    @patch("docsign.views.get_pdf_bytes_from_file_field", return_value=b"%PDF-1.4 from-helper")
-    def test_source_document_uses_pdf_helper_for_response(self, pdf_bytes_mock):
+    def test_source_document_uses_pdf_helper_for_response(self):
         self.client.force_login(self.teacher)
+        helper_payload = build_test_pdf_bytes("from-helper")
         job = DocumentSignJob.objects.create(
             owner=self.teacher,
             title="기존 문서",
-            source_file="docsign/source/missing-cloudinary-id",
+            source_file=SimpleUploadedFile(
+                "source.pdf",
+                helper_payload,
+                content_type="application/pdf",
+            ),
             source_file_name_snapshot="기존문서.pdf",
             source_file_size_snapshot=0,
             source_file_sha256_snapshot="abc",
@@ -236,12 +256,7 @@ class DocumentSignFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "application/pdf")
         self.assertIn("inline;", response["Content-Disposition"])
-        self.assertEqual(response.content, b"%PDF-1.4 from-helper")
-        pdf_bytes_mock.assert_called_once_with(
-            job.source_file,
-            file_type="pdf",
-            filename_hint="기존문서.pdf",
-        )
+        self.assertEqual(response.content, helper_payload)
 
     def test_signed_storage_name_is_ascii_only(self):
         job = DocumentSignJob(
@@ -287,3 +302,88 @@ class DocumentSignFlowTests(TestCase):
             file_type="pdf",
             filename_hint="완료문서-signed.pdf",
         )
+
+    def test_detail_uses_signed_preview_url_after_completion(self):
+        self.client.force_login(self.teacher)
+        job = DocumentSignJob.objects.create(
+            owner=self.teacher,
+            title="완료 문서",
+            source_file=SimpleUploadedFile(
+                "source.pdf",
+                build_test_pdf_bytes("detail-doc"),
+                content_type="application/pdf",
+            ),
+            source_file_name_snapshot="완료문서.pdf",
+            source_file_size_snapshot=0,
+            source_file_sha256_snapshot="abc",
+            file_type="pdf",
+            signed_pdf="docsign/signed/ready.pdf",
+            signed_at=timezone.now(),
+        )
+
+        response = self.client.get(reverse("docsign:detail", kwargs={"job_id": job.id}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse("docsign:signed_document", kwargs={"job_id": job.id}))
+        self.assertNotContains(response, reverse("docsign:source_document", kwargs={"job_id": job.id}))
+
+    @patch("docsign.views.get_file_field_bytes", return_value=b"%PDF-1.4 signed-preview")
+    def test_signed_document_uses_signed_pdf_bytes_for_inline_preview(self, file_bytes_mock):
+        self.client.force_login(self.teacher)
+        job = DocumentSignJob.objects.create(
+            owner=self.teacher,
+            title="완료 문서",
+            source_file=SimpleUploadedFile(
+                "source.pdf",
+                build_test_pdf_bytes("preview-doc"),
+                content_type="application/pdf",
+            ),
+            source_file_name_snapshot="완료문서.pdf",
+            source_file_size_snapshot=0,
+            source_file_sha256_snapshot="abc",
+            file_type="pdf",
+            signed_pdf="docsign/signed/ready.pdf",
+            signed_at=timezone.now(),
+        )
+
+        response = self.client.get(reverse("docsign:signed_document", kwargs={"job_id": job.id}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertIn("inline;", response["Content-Disposition"])
+        self.assertEqual(response.content, b"%PDF-1.4 signed-preview")
+        file_bytes_mock.assert_called_once_with(
+            job.signed_pdf,
+            file_type="pdf",
+            filename_hint="완료문서-signed.pdf",
+        )
+
+    def test_source_document_flattens_rotated_pdf_for_preview_alignment(self):
+        try:
+            from pypdf import PdfReader
+        except ModuleNotFoundError:
+            self.skipTest("pypdf unavailable")
+
+        self.client.force_login(self.teacher)
+        job = DocumentSignJob.objects.create(
+            owner=self.teacher,
+            title="회전 문서",
+            source_file=SimpleUploadedFile(
+                "rotated.pdf",
+                build_rotated_pdf_bytes(),
+                content_type="application/pdf",
+            ),
+            source_file_name_snapshot="rotated.pdf",
+            source_file_size_snapshot=0,
+            source_file_sha256_snapshot="abc",
+            file_type="pdf",
+        )
+
+        response = self.client.get(reverse("docsign:source_document", kwargs={"job_id": job.id}))
+
+        self.assertEqual(response.status_code, 200)
+        reader = PdfReader(io.BytesIO(response.content))
+        page = reader.pages[0]
+        self.assertEqual(int(getattr(page, "rotation", 0) or 0) % 360, 0)
+        self.assertEqual(round(float(page.mediabox.width)), 200)
+        self.assertEqual(round(float(page.mediabox.height)), 400)

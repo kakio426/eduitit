@@ -222,6 +222,38 @@ def get_pdf_page_sizes(source_pdf_bytes: bytes) -> list[tuple[float, float]]:
     ]
 
 
+def normalize_pdf_bytes(source_pdf_bytes: bytes) -> bytes:
+    ensure_pdf_runtime()
+    from pypdf import PdfReader, PdfWriter
+
+    reader = PdfReader(io.BytesIO(source_pdf_bytes))
+    if not reader.pages:
+        return source_pdf_bytes
+
+    writer = PdfWriter()
+    changed = False
+
+    for page in reader.pages:
+        rotation = int(getattr(page, "rotation", 0) or 0) % 360
+        if rotation:
+            page.transfer_rotation_to_content()
+            changed = True
+        writer.add_page(page)
+
+    if not changed:
+        return source_pdf_bytes
+
+    metadata = {}
+    if reader.metadata:
+        metadata = {key: value for key, value in reader.metadata.items() if value is not None}
+        if metadata:
+            writer.add_metadata(metadata)
+
+    output = io.BytesIO()
+    writer.write(output)
+    return output.getvalue()
+
+
 def draw_signature_image(pdf_canvas, signature_data: str, *, x: float, y: float, width: float, height: float):
     from reportlab.lib.utils import ImageReader
 

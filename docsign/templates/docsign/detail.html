@@ -69,9 +69,9 @@
     <section class="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
       <div
         data-consent-document-preview
-        data-source-url="{% url 'docsign:source_document' job_id=job.id %}"
+        data-source-url="{{ preview_document_url }}"
         data-file-type="pdf"
-        data-file-name="{{ job.source_file_name_snapshot }}"
+        data-file-name="{{ preview_document_name }}"
         data-file-size="{{ job.source_file_size_snapshot }}"
         data-max-width="920"
       >
