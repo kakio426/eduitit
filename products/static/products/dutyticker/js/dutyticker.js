@@ -38,6 +38,7 @@ class DutyTickerManager {
         this.resizeRaf = null;
         this.layoutRaf = null;
         this.layoutObserver = null;
+        this.adaptiveLayoutSettleTimers = [];
         this.roleTickerEnabled = true;
         this.roleTickerIntervalMs = 4200;
         this.roleTickerTimer = null;
@@ -352,6 +353,16 @@ class DutyTickerManager {
             this.layoutRaf = null;
             this.applyAdaptiveLayoutState();
         });
+    }
+
+    scheduleAdaptiveLayoutSettleRefresh(delays = [120, 260]) {
+        if (Array.isArray(this.adaptiveLayoutSettleTimers) && this.adaptiveLayoutSettleTimers.length) {
+            this.adaptiveLayoutSettleTimers.forEach((timerId) => window.clearTimeout(timerId));
+        }
+
+        this.adaptiveLayoutSettleTimers = delays.map((delay) => window.setTimeout(() => {
+            this.requestAdaptiveLayoutRefresh();
+        }, delay));
     }
 
     getAdaptiveDensityOrder(displayMode = 'windowed') {
@@ -2669,6 +2680,7 @@ class DutyTickerManager {
 
         this.applyStudentGridLayoutMode();
         this.requestAdaptiveLayoutRefresh();
+        this.scheduleAdaptiveLayoutSettleRefresh();
     }
 
     toggleMissionPanel() {
