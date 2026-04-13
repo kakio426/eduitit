@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import json
 import os
+from functools import wraps
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db import OperationalError, ProgrammingError
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -20,6 +22,32 @@ from core.document_signing import (
 from .forms import DocumentSignPositionForm, DocumentSignSignatureForm, DocumentSignUploadForm
 from .models import DocumentSignJob
 from .services import build_signed_download_name, generate_signed_pdf
+
+
+def _is_docsign_schema_error(exc: Exception) -> bool:
+    message = str(exc).lower()
+    return (
+        "docsign_documentsignjob" in message
+        or "no such table" in message
+        or "does not exist" in message
+    )
+
+
+def _render_docsign_unavailable(request):
+    return render(request, "docsign/unavailable.html", status=503)
+
+
+def _docsign_runtime_guard(view_func):
+    @wraps(view_func)
+    def wrapped(request, *args, **kwargs):
+        try:
+            return view_func(request, *args, **kwargs)
+        except (OperationalError, ProgrammingError) as exc:
+            if _is_docsign_schema_error(exc):
+                return _render_docsign_unavailable(request)
+            raise
+
+    return wrapped
 
 
 def _owned_job_or_404(user, job_id: int) -> DocumentSignJob:
@@ -48,6 +76,7 @@ def _page_sizes(job: DocumentSignJob):
 
 
 @login_required
+@_docsign_runtime_guard
 def job_list(request):
     jobs = list(DocumentSignJob.objects.filter(owner=request.user).order_by("-updated_at", "-id"))
     for job in jobs:
@@ -63,6 +92,7 @@ def job_list(request):
 
 
 @login_required
+@_docsign_runtime_guard
 def job_create(request):
     if request.method == "POST":
         form = DocumentSignUploadForm(request.POST, request.FILES)
@@ -87,6 +117,7 @@ def job_create(request):
 
 
 @login_required
+@_docsign_runtime_guard
 def job_detail(request, job_id: int):
     job = _owned_job_or_404(request.user, job_id)
     stage_label, action_label = _build_stage_meta(job)
@@ -108,6 +139,7 @@ def job_detail(request, job_id: int):
 
 
 @login_required
+@_docsign_runtime_guard
 def job_source_document(request, job_id: int):
     job = _owned_job_or_404(request.user, job_id)
     if not job.source_file:
@@ -123,6 +155,7 @@ def job_source_document(request, job_id: int):
 
 
 @login_required
+@_docsign_runtime_guard
 def job_position(request, job_id: int):
     job = _owned_job_or_404(request.user, job_id)
     page_sizes = _page_sizes(job)
@@ -184,6 +217,7 @@ def job_position(request, job_id: int):
 
 
 @login_required
+@_docsign_runtime_guard
 def job_sign(request, job_id: int):
     job = _owned_job_or_404(request.user, job_id)
     if not job.is_position_configured:
@@ -209,6 +243,7 @@ def job_sign(request, job_id: int):
 
 
 @login_required
+@_docsign_runtime_guard
 def job_download_signed(request, job_id: int):
     job = _owned_job_or_404(request.user, job_id)
     if not job.is_signed or not job.signed_pdf:

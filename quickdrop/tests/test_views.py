@@ -1,6 +1,7 @@
 import json
 import os
 from datetime import timedelta
+from io import StringIO
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -517,6 +518,19 @@ class QuickdropViewTests(TestCase):
         self.assertEqual(session.status, QuickdropSession.STATUS_ENDED)
         self.assertFalse(session.current_text)
         self.assertEqual(QuickdropItem.objects.filter(channel=self.channel).count(), 0)
+
+    def test_cleanup_command_skips_when_migrations_are_pending(self):
+        from django.core.management import call_command
+
+        stdout = StringIO()
+        with patch(
+            "quickdrop.management.commands.cleanup_quickdrop.Command._has_pending_migrations",
+            return_value=True,
+        ), patch("quickdrop.management.commands.cleanup_quickdrop.cleanup_stale_activity") as cleanup:
+            call_command("cleanup_quickdrop", stdout=stdout)
+
+        cleanup.assert_not_called()
+        self.assertIn("pending migrations", stdout.getvalue())
 
     def test_landing_does_not_cleanup_previous_day_history_inline(self):
         stale_item = QuickdropItem.objects.create(

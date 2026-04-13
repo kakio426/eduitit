@@ -4,8 +4,10 @@ import io
 import tempfile
 import unittest
 import base64
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
+from django.db import OperationalError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -202,3 +204,15 @@ class DocumentSignFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, own_job.title)
         self.assertNotContains(response, "다른 문서")
+
+    def test_list_returns_503_when_schema_not_ready(self):
+        self.client.force_login(self.teacher)
+
+        with patch(
+            "docsign.views.DocumentSignJob.objects.filter",
+            side_effect=OperationalError("no such table: docsign_documentsignjob"),
+        ):
+            response = self.client.get(reverse("docsign:list"))
+
+        self.assertEqual(response.status_code, 503)
+        self.assertContains(response, "잠시만요", status_code=503)
