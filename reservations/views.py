@@ -1340,7 +1340,15 @@ def delete_reservation(request, school_slug, reservation_id):
     school, access, access_response = _get_school_or_share_required(request, school_slug)
     if access_response is not None:
         return access_response
-    reservation = get_object_or_404(Reservation, id=reservation_id, room__school=school)
+    reservation = Reservation.objects.filter(id=reservation_id, room__school=school).first()
+    if reservation is None:
+        messages.warning(request, "이미 삭제되었거나 찾을 수 없는 예약입니다.")
+        redirect_url = reverse('reservations:reservation_index', args=[school.slug])
+        if request.htmx:
+            response = HttpResponse()
+            response['HX-Redirect'] = redirect_url
+            return _apply_workspace_cache_headers(response)
+        return redirect(redirect_url)
 
     owned_ids = request.session.get(OWNED_RESERVATIONS_SESSION_KEY, [])
     if not access["can_edit"] or not _can_edit_reservation(request, reservation):
@@ -1372,7 +1380,15 @@ def admin_delete_reservation(request, school_slug, reservation_id):
     관리자용 예약 강제 삭제 (Admin Override)
     """
     school = get_object_or_404(School, slug=school_slug, owner=request.user)
-    reservation = get_object_or_404(Reservation, id=reservation_id, room__school=school)
+    reservation = Reservation.objects.filter(id=reservation_id, room__school=school).first()
+    if reservation is None:
+        messages.warning(request, "이미 삭제되었거나 찾을 수 없는 예약입니다.")
+        redirect_url = reverse('reservations:reservation_index', args=[school.slug])
+        if request.htmx:
+            response = HttpResponse()
+            response['HX-Redirect'] = redirect_url
+            return _apply_sensitive_cache_headers(response)
+        return redirect(redirect_url)
     
     reservation.delete()
     logger.info(f"[Reservation] Action: ADMIN_OVERRIDE | User: {request.user} | Deleted Reservation {reservation_id}")
