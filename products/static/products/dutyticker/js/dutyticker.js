@@ -859,12 +859,33 @@ class DutyTickerManager {
         return Math.max(0, Math.ceil((endAt.getTime() - now.getTime()) / 1000));
     }
 
+    buildMissionSnapshot(snapshot = {}) {
+        return {
+            title: this.sanitizeMissionText(snapshot.title || '', 'title'),
+            desc: this.sanitizeMissionText(snapshot.desc || '', 'desc'),
+        };
+    }
+
     isMissionMatchingSnapshot(snapshot) {
         if (!snapshot) return false;
-        const currentTitle = this.sanitizeMissionText(this.missionTitle, 'title');
-        const currentDesc = this.sanitizeMissionText(this.missionDesc, 'desc');
-        return currentTitle === this.sanitizeMissionText(snapshot.title || '', 'title')
-            && currentDesc === this.sanitizeMissionText(snapshot.desc || '', 'desc');
+        const currentSnapshot = this.buildMissionSnapshot({
+            title: this.missionTitle,
+            desc: this.missionDesc,
+        });
+        const targetSnapshot = this.buildMissionSnapshot(snapshot);
+        return currentSnapshot.title === targetSnapshot.title
+            && currentSnapshot.desc === targetSnapshot.desc;
+    }
+
+    doesMissionAutomationRunMatchItem(run, item) {
+        if (!run || !item?.phrase) return false;
+        const appliedSnapshot = this.buildMissionSnapshot({
+            title: run.appliedTitle,
+            desc: run.appliedDesc,
+        });
+        const targetSnapshot = this.buildMissionSnapshot(item.phrase);
+        return appliedSnapshot.title === targetSnapshot.title
+            && appliedSnapshot.desc === targetSnapshot.desc;
     }
 
     applyMissionLocally({ title, desc } = {}) {
@@ -1382,12 +1403,36 @@ class DutyTickerManager {
 
         const existingRun = this.getMissionAutomationRun(activeAutomationId, now);
         if (existingRun) {
+            const appliedSnapshot = this.buildMissionSnapshot({
+                title: existingRun.appliedTitle,
+                desc: existingRun.appliedDesc,
+            });
+            const needsRefresh = !this.doesMissionAutomationRunMatchItem(existingRun, activeAutomation);
+
+            if (needsRefresh) {
+                const targetSnapshot = this.buildMissionSnapshot(activeAutomation.phrase);
+                const refreshedRun = {
+                    ...existingRun,
+                    appliedAt: now.getTime(),
+                    appliedTitle: targetSnapshot.title,
+                    appliedDesc: targetSnapshot.desc,
+                    prevTitle: this.sanitizeMissionText(existingRun.prevTitle || '', 'title'),
+                    prevDesc: this.sanitizeMissionText(existingRun.prevDesc || '', 'desc'),
+                };
+                this.setMissionAutomationRun(activeAutomationId, refreshedRun, now);
+
+                if (
+                    this.missionAutomationActiveId !== activeAutomationId
+                    || this.isMissionMatchingSnapshot(appliedSnapshot)
+                ) {
+                    this.restoreMissionAutomationFromRun(activeAutomationId, refreshedRun);
+                }
+                return;
+            }
+
             if (
                 this.missionAutomationActiveId !== activeAutomationId
-                || this.isMissionMatchingSnapshot({
-                    title: existingRun.appliedTitle,
-                    desc: existingRun.appliedDesc,
-                })
+                || this.isMissionMatchingSnapshot(appliedSnapshot)
             ) {
                 this.restoreMissionAutomationFromRun(activeAutomationId, existingRun);
             }
@@ -2561,11 +2606,13 @@ class DutyTickerManager {
             || [...candidateSlots].sort((a, b) => a.startMinutes - b.startMinutes)[0];
 
         const chipClass = `dt-header-schedule-item ${focusSlot.isCurrent ? 'is-current' : 'is-upcoming'}`;
-        const periodText = focusSlot.isUpcoming ? `곧 ${focusSlot.periodLabel}` : focusSlot.periodLabel;
+        const statusMarkup = focusSlot.isUpcoming ? '<span class="dt-header-schedule-status">곧</span>' : '';
+        const periodText = focusSlot.periodLabel;
         const titleText = `${focusSlot.periodLabel} · ${focusSlot.subjectName} (${focusSlot.startTime}-${focusSlot.endTime})`;
 
         container.innerHTML = `
             <span class="${chipClass}" title="${this.escapeHtml(titleText)}">
+                ${statusMarkup}
                 <span class="dt-header-schedule-period">${this.escapeHtml(periodText)}</span>
                 <span class="dt-header-schedule-sep">·</span>
                 <span class="dt-header-schedule-subject">${this.escapeHtml(focusSlot.subjectName)}</span>

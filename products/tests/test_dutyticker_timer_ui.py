@@ -90,6 +90,8 @@ class DutyTickerTimerUiTests(TestCase):
         self.assertContains(response, 'data-display-mode="windowed"')
         self.assertContains(response, 'data-mission-stack-fit="normal"')
         self.assertContains(response, 'id="headerScheduleStrip"')
+        self.assertContains(response, '.dt-header-toolbar {')
+        self.assertContains(response, '.dt-header-schedule-status {')
         self.assertNotContains(response, 'service-shell-fixed')
         self.assertContains(
             response,
@@ -190,6 +192,8 @@ class DutyTickerTimerUiTests(TestCase):
         self.assertIn('restoreMissionAutomationRuntime()', script)
         self.assertIn('setTimeSlots(data.timeSlots || []);', script)
         self.assertIn('setMissionAutomations(data.automations || []);', script)
+        self.assertIn('buildMissionSnapshot(snapshot = {})', script)
+        self.assertIn('doesMissionAutomationRunMatchItem(run, item)', script)
         self.assertIn('getActiveMissionAutomation(now = new Date())', script)
         self.assertIn('syncMissionAutomationState(now = new Date())', script)
         self.assertIn('missionAutomationPanelExpanded = false;', script)
@@ -225,6 +229,9 @@ class DutyTickerTimerUiTests(TestCase):
         self.assertIn('applyAdaptiveLayoutState()', script)
         self.assertIn("const shouldShowAllMorningSlots = showAllMorningSlots && displayMode === 'fullscreen';", script)
         self.assertIn("if (!candidateSlots.length && showAllMorningSlots && displayMode === 'windowed') {", script)
+        self.assertIn("const statusMarkup = focusSlot.isUpcoming ? '<span class=\"dt-header-schedule-status\">곧</span>' : '';", script)
+        self.assertIn('const needsRefresh = !this.doesMissionAutomationRunMatchItem(existingRun, activeAutomation);', script)
+        self.assertIn('this.setMissionAutomationRun(activeAutomationId, refreshedRun, now);', script)
         self.assertIn("data-mission-stack-fit', this.missionPanelCollapsed ? 'normal' : resolvedLayout.fit", script)
         self.assertIn("data-display-mode', displayMode", script)
         self.assertIn("data-layout-density', density", script)
