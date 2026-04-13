@@ -1,11 +1,23 @@
 document.addEventListener("DOMContentLoaded", () => {
-    const showcaseRoot = document.querySelector("[data-public-platform-showcase='true']");
     const primaryLauncherButton = document.querySelector("[data-public-primary-cta='launcher']");
+    const heroRevealItems = Array.from(
+        document.querySelectorAll("[data-public-hero-reveal='true']")
+    );
+    const revealItems = Array.from(
+        document.querySelectorAll("[data-public-reveal='true']")
+    );
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const markVisible = (element) => {
+        if (!element) return;
+        element.classList.add("is-visible");
+    };
 
     const scrollToFallbackTarget = (targetId) => {
+        if (!targetId) return;
         const target = document.getElementById(targetId);
         if (!target) return;
-        target.scrollIntoView({ behavior: "smooth", block: "start" });
+        target.scrollIntoView({ behavior: prefersReducedMotion ? "auto" : "smooth", block: "start" });
     };
 
     if (primaryLauncherButton) {
@@ -15,74 +27,46 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            const fallbackTarget = primaryLauncherButton.dataset.publicFallbackTarget;
-            if (fallbackTarget) {
-                scrollToFallbackTarget(fallbackTarget);
+            const directHref = primaryLauncherButton.dataset.publicPrimaryHref;
+            if (directHref) {
+                window.location.assign(directHref);
+                return;
             }
+
+            scrollToFallbackTarget(primaryLauncherButton.dataset.publicFallbackTarget);
         });
     }
 
-    if (!showcaseRoot) return;
+    if (prefersReducedMotion) {
+        heroRevealItems.forEach(markVisible);
+        revealItems.forEach(markVisible);
+        return;
+    }
 
-    const triggers = Array.from(
-        showcaseRoot.querySelectorAll("[data-platform-showcase-trigger]")
-    );
-    const panels = Array.from(
-        showcaseRoot.querySelectorAll("[data-platform-showcase-panel]")
-    );
-
-    if (!triggers.length || !panels.length) return;
-
-    const activate = (index) => {
-        triggers.forEach((trigger, triggerIndex) => {
-            const isActive = triggerIndex === index;
-            trigger.setAttribute("aria-selected", isActive ? "true" : "false");
-            trigger.setAttribute("tabindex", isActive ? "0" : "-1");
-            trigger.dataset.platformShowcaseActive = isActive ? "true" : "false";
-        });
-
-        panels.forEach((panel, panelIndex) => {
-            const isActive = panelIndex === index;
-            panel.hidden = !isActive;
-            panel.dataset.platformShowcaseActive = isActive ? "true" : "false";
-        });
-    };
-
-    triggers.forEach((trigger, index) => {
-        trigger.addEventListener("click", () => {
-            activate(index);
-        });
-
-        trigger.addEventListener("focus", () => {
-            activate(index);
-        });
-
-        trigger.addEventListener("keydown", (event) => {
-            let nextIndex = null;
-
-            if (event.key === "ArrowRight" || event.key === "ArrowDown") {
-                nextIndex = (index + 1) % triggers.length;
-            } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
-                nextIndex = (index - 1 + triggers.length) % triggers.length;
-            } else if (event.key === "Home") {
-                nextIndex = 0;
-            } else if (event.key === "End") {
-                nextIndex = triggers.length - 1;
-            }
-
-            if (nextIndex === null) return;
-
-            event.preventDefault();
-            activate(nextIndex);
-            triggers[nextIndex].focus();
-        });
+    heroRevealItems.forEach((item) => {
+        const delayMs = Number(item.dataset.publicHeroDelay || "0");
+        window.setTimeout(() => {
+            markVisible(item);
+        }, delayMs);
     });
 
-    const initialIndex = Math.max(
-        0,
-        triggers.findIndex(
-            (trigger) => trigger.getAttribute("aria-selected") === "true"
-        )
+    if (!revealItems.length) return;
+
+    const revealObserver = new IntersectionObserver(
+        (entries, observer) => {
+            entries.forEach((entry) => {
+                if (!entry.isIntersecting) return;
+                markVisible(entry.target);
+                observer.unobserve(entry.target);
+            });
+        },
+        {
+            threshold: 0.16,
+            rootMargin: "0px 0px -10% 0px",
+        }
     );
-    activate(initialIndex);
+
+    revealItems.forEach((item) => {
+        revealObserver.observe(item);
+    });
 });

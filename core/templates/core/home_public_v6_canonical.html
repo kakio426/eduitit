@@ -15,11 +15,11 @@
 {% block content %}
 <div class="min-h-screen home-public-v6-page" data-home-v6-public-shell="true" data-home-design-version="v6">
     <div class="home-public-v6-page-top-spacer">
-        <div class="mx-auto home-public-v6-stage px-4 pb-12 sm:px-5 md:px-6">
+        <div class="mx-auto home-public-v6-stage px-4 pb-16 sm:px-5 md:px-6">
             <header class="home-public-v6-header" data-home-v6-public-header="true">
                 <a href="{% url 'home' %}" class="home-public-v6-brand" aria-label="에듀잇티 홈">
                     <span class="home-public-v6-brand-icon">
-                        <i class="fa-solid fa-cloud"></i>
+                        <i class="fa-solid fa-layer-group"></i>
                     </span>
                     <span class="home-public-v6-brand-copy">
                         <span class="home-public-v6-brand-kicker">EDUITIT</span>
@@ -41,135 +41,267 @@
             </header>
 
             <main class="home-public-v6-main">
-                <section class="home-public-v6-hero home-public-v6-grid" data-home-v6-public-hero="true">
-                    <div class="home-public-v6-hero-copy">
-                        <span class="home-public-v5-kicker">
-                            <span class="home-public-kicker-dot h-2.5 w-2.5 rounded-full"></span>
-                            전문 교원 플랫폼
-                        </span>
-                        <h1 class="home-public-v6-hero-title">교사의 하루 업무를 한곳에서 잇는 전문 교원 도구</h1>
-                        <p class="home-public-v6-hero-summary">알림장, 수합, 서명, 예약, 캘린더, 법률 확인까지 교실의 반복 업무를 한 흐름으로 이어갑니다.</p>
+                <section class="home-public-v6-hero" data-home-v6-public-hero="true">
+                    <div class="home-public-v6-grid home-public-v6-hero-grid">
+                        <div class="home-public-v6-hero-copy">
+                            <span class="home-public-v6-kicker" data-public-hero-reveal="true" data-public-hero-delay="0">
+                                <span class="home-public-v6-kicker-dot"></span>
+                                전문 교원 플랫폼
+                            </span>
+                            <h1 class="home-public-v6-hero-title" data-public-hero-reveal="true" data-public-hero-delay="120">
+                                교사의 하루 업무를 한곳에서 잇는 전문 교원 도구
+                            </h1>
+                            <p class="home-public-v6-hero-summary" data-public-hero-reveal="true" data-public-hero-delay="220">
+                                알림장, 수합, 서명, 예약, 캘린더, 법률 확인까지 교실의 반복 업무를 한 흐름으로 이어갑니다.
+                            </p>
 
-                        <div class="home-public-v6-hero-actions">
-                            {% if service_launcher_json and service_launcher_json != '[]' %}
-                            <button
-                                type="button"
-                                class="home-public-v6-primary-link"
-                                data-public-primary-cta="launcher"
-                                data-public-fallback-target="{{ public_primary_cta.fallback_target_id }}"
-                                aria-controls="serviceLauncherModal"
-                                aria-label="{{ public_primary_cta.aria_label }}">
-                                {{ public_primary_cta.label }}
-                                <i class="fa-solid fa-arrow-right text-xs"></i>
-                            </button>
-                            {% else %}
-                            <a
-                                href="{{ public_primary_cta.fallback_href }}"
-                                class="home-public-v6-primary-link"
-                                data-public-primary-cta="anchor"
-                                aria-label="{{ public_primary_cta.aria_label }}">
-                                {{ public_primary_cta.label }}
-                                <i class="fa-solid fa-arrow-down text-xs"></i>
-                            </a>
-                            {% endif %}
-                            <p class="home-public-v6-hero-action-note">첫 화면에서는 전체 흐름을 보고, 필요한 순간 바로 시작합니다.</p>
+                            <div class="home-public-v6-hero-actions" data-public-hero-reveal="true" data-public-hero-delay="320">
+                                <div class="home-public-v6-hero-primary-actions">
+                                    {% if service_launcher_json and service_launcher_json != '[]' %}
+                                    <button
+                                        type="button"
+                                        class="home-public-v6-primary-link"
+                                        data-public-primary-cta="launcher"
+                                        data-public-primary-href="{{ public_primary_action_card.href|default:'' }}"
+                                        data-public-fallback-target="{{ public_primary_cta.fallback_target_id }}"
+                                        aria-controls="serviceLauncherModal"
+                                        aria-label="무료로 시작하기">
+                                        무료로 시작하기
+                                        <i class="fa-solid fa-arrow-right text-xs"></i>
+                                    </button>
+                                    {% else %}
+                                    <a
+                                        href="{% if public_primary_action_card %}{{ public_primary_action_card.href }}{% else %}{{ public_primary_cta.fallback_href }}{% endif %}"
+                                        class="home-public-v6-primary-link"
+                                        aria-label="무료로 시작하기">
+                                        무료로 시작하기
+                                        <i class="fa-solid fa-arrow-right text-xs"></i>
+                                    </a>
+                                    {% endif %}
+                                    <a href="#public-platform-map" class="home-public-v6-secondary-link">
+                                        업무 둘러보기
+                                        <i class="fa-solid fa-arrow-down text-xs"></i>
+                                    </a>
+                                </div>
+                                <a href="{{ login_url }}" class="home-public-v6-muted-link home-public-v6-login-inline">
+                                    로그인
+                                    <i class="fa-solid fa-right-to-bracket text-xs"></i>
+                                </a>
+                            </div>
+
+                            <div class="home-public-v6-trust-strip" data-public-hero-reveal="true" data-public-hero-delay="420">
+                                <article class="home-public-v6-trust-card">
+                                    <span class="home-public-v6-trust-label">로그인 없이</span>
+                                    <strong class="home-public-v6-trust-value">바로 시작</strong>
+                                    <p class="home-public-v6-trust-copy">처음 진입부터 핵심 업무를 직접 확인합니다.</p>
+                                </article>
+                                <article class="home-public-v6-trust-card">
+                                    <span class="home-public-v6-trust-label">현장 기준</span>
+                                    <strong class="home-public-v6-trust-value">교실 업무 흐름</strong>
+                                    <p class="home-public-v6-trust-copy">보여주기용 기능보다 실제 반복 업무를 먼저 둡니다.</p>
+                                </article>
+                                <article class="home-public-v6-trust-card">
+                                    <span class="home-public-v6-trust-label">공개 검증</span>
+                                    <strong class="home-public-v6-trust-value">포트폴리오 공개</strong>
+                                    <p class="home-public-v6-trust-copy">적용 사례와 개선 방향을 함께 확인할 수 있습니다.</p>
+                                </article>
+                            </div>
                         </div>
 
-                        <div class="home-public-v6-hero-chips" aria-label="대표 업무">
-                            <span class="home-public-v6-chip">가정 연락</span>
-                            <span class="home-public-v6-chip">수합·서명</span>
-                            <span class="home-public-v6-chip">일정·예약</span>
-                            <span class="home-public-v6-chip">기록·정리</span>
-                            <span class="home-public-v6-chip">교사 지원</span>
-                        </div>
-                    </div>
+                        <div class="home-public-v6-hero-visual" data-public-hero-reveal="true" data-public-hero-delay="260">
+                            <div class="home-public-v6-hero-glow" aria-hidden="true"></div>
 
-                    {% if public_platform_showcase_items %}
-                    <section class="home-public-v6-showcase" data-home-v6-public-showcase="true" data-public-platform-showcase="true">
-                        <div class="home-public-v6-showcase-rail" role="tablist" aria-label="대표 교원 업무 흐름">
-                            {% for item in public_platform_showcase_items %}
-                            <button
-                                type="button"
-                                class="home-public-v6-showcase-trigger"
-                                id="public-platform-tab-{{ forloop.counter }}"
-                                data-platform-showcase-trigger="{{ forloop.counter0 }}"
-                                role="tab"
-                                aria-controls="public-platform-panel-{{ forloop.counter }}"
-                                aria-selected="{% if forloop.first %}true{% else %}false{% endif %}"
-                                tabindex="{% if forloop.first %}0{% else %}-1{% endif %}">
-                                <span class="home-public-v6-showcase-trigger-icon home-public-service-icon-tone" data-home-accent="{{ item.home_accent_token }}">
-                                    <i class="{{ item.home_icon_class }}"></i>
-                                </span>
-                                <span class="home-public-v6-showcase-trigger-copy">
-                                    <strong class="home-public-v6-showcase-trigger-title">{{ item.title }}</strong>
-                                    <span class="home-public-v6-showcase-trigger-meta">{{ item.access_status_label }}</span>
-                                </span>
-                            </button>
-                            {% endfor %}
-                        </div>
-
-                        <div class="home-public-v6-showcase-panels">
-                            {% for item in public_platform_showcase_items %}
-                            <article
-                                class="home-public-v6-showcase-panel"
-                                id="public-platform-panel-{{ forloop.counter }}"
-                                data-platform-showcase-panel="{{ forloop.counter0 }}"
-                                data-platform-showcase-active="{% if forloop.first %}true{% else %}false{% endif %}"
-                                role="tabpanel"
-                                aria-labelledby="public-platform-tab-{{ forloop.counter }}"
-                                {% if not forloop.first %}hidden{% endif %}>
-                                <div class="home-public-v6-showcase-track" aria-hidden="true">
-                                    {% for flow_item in public_platform_showcase_items %}
-                                    <span class="home-public-v6-showcase-step{% if flow_item.route_name == item.route_name %} is-active{% endif %}">
-                                        <i class="{{ flow_item.home_icon_class }}"></i>
-                                    </span>
-                                    {% endfor %}
+                            {% if public_primary_action_card %}
+                            <article class="home-public-v6-console-card">
+                                <div class="home-public-v6-console-head">
+                                    <div class="home-public-v6-console-title-wrap">
+                                        <span class="home-public-v6-console-eyebrow">오늘 바로 쓰는 도구</span>
+                                        <div class="home-public-v6-console-main">
+                                            <span class="home-public-v6-console-icon home-public-service-icon-tone" data-home-accent="{{ public_primary_action_card.home_accent_token|default:'collect_sign' }}">
+                                                <i class="{{ public_primary_action_card.home_icon_class|default:'fa-solid fa-star' }}"></i>
+                                            </span>
+                                            <div class="min-w-0">
+                                                <h2 class="home-public-v6-console-title">{{ public_primary_action_card.title }}</h2>
+                                                <p class="home-public-v6-console-summary">{{ public_primary_action_card.description|truncatechars:88 }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <span class="home-public-v6-console-badge">{{ public_primary_action_card.access_status_label }}</span>
                                 </div>
 
-                                <div class="home-public-v6-showcase-panel-body">
-                                    <div class="home-public-v6-showcase-panel-icon home-public-service-icon-tone" data-home-accent="{{ item.home_accent_token }}">
-                                        <i class="{{ item.home_icon_class }}"></i>
-                                    </div>
-                                    <div class="home-public-v6-showcase-panel-copy">
-                                        <p class="home-public-v6-section-eyebrow">대표 업무</p>
-                                        <h2 class="home-public-v6-showcase-panel-title">{{ item.title }}</h2>
-                                        <p class="home-public-v6-showcase-panel-summary">{{ item.summary }}</p>
-                                    </div>
-                                    <span class="home-public-v6-showcase-panel-badge">{{ item.access_status_label }}</span>
+                                <div class="home-public-v6-console-actions">
+                                    <a href="{{ public_primary_action_card.href }}" class="home-public-v6-console-link"{% if public_primary_action_card.is_external %} target="_blank" rel="noopener noreferrer"{% endif %}>
+                                        {{ public_primary_action_card.cta_label|default:'바로 열기' }}
+                                        <i class="fa-solid fa-arrow-right text-xs"></i>
+                                    </a>
+                                    <a href="{{ login_url }}" class="home-public-v6-console-secondary">
+                                        로그인 후 확장
+                                    </a>
                                 </div>
 
-                                {% if item.context_chips %}
-                                <div class="home-public-v6-showcase-panel-chips">
-                                    {% for chip in item.context_chips %}
-                                    <span class="home-public-v6-showcase-panel-chip">{{ chip }}</span>
+                                {% if public_secondary_cards %}
+                                <div class="home-public-v6-console-stack">
+                                    {% for card in public_secondary_cards|slice:":3" %}
+                                    <a href="{{ card.href }}"
+                                        class="home-public-v6-console-mini"
+                                        {% if card.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}>
+                                        <span class="home-public-v6-console-mini-icon home-public-service-icon-tone" data-home-accent="{{ card.home_accent_token|default:'external' }}">
+                                            <i class="{{ card.home_icon_class|default:'fa-solid fa-star' }}"></i>
+                                        </span>
+                                        <span class="home-public-v6-console-mini-copy">
+                                            <strong class="home-public-v6-console-mini-title">{{ card.title }}</strong>
+                                            <span class="home-public-v6-console-mini-meta">{{ card.access_status_label }}</span>
+                                        </span>
+                                    </a>
                                     {% endfor %}
                                 </div>
                                 {% endif %}
-
-                                <a href="{{ item.href }}" class="home-public-v6-showcase-link"{% if item.is_external %} target="_blank" rel="noopener noreferrer"{% endif %}>
-                                    {{ item.cta_label }}
-                                    <i class="fa-solid fa-arrow-right text-xs"></i>
-                                </a>
                             </article>
-                            {% endfor %}
+                            {% endif %}
+
+                            {% if guest_locked_cards %}
+                            <div class="home-public-v6-console-side-stack">
+                                {% for card in guest_locked_cards|slice:":2" %}
+                                <a href="{{ card.href }}"
+                                    class="home-public-v6-console-side-card"
+                                    {% if card.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}>
+                                    <span class="home-public-v6-console-side-eyebrow">로그인 후</span>
+                                    <strong class="home-public-v6-console-side-title">{{ card.title }}</strong>
+                                    <span class="home-public-v6-console-side-meta">{{ card.access_status_label }}</span>
+                                </a>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
                         </div>
-                    </section>
-                    {% endif %}
+                    </div>
                 </section>
 
-                {% if public_platform_groups %}
-                <section class="home-public-v6-section-surface" id="public-platform-map" data-home-v6-public-map="true">
+                <section class="home-public-v6-section-surface home-public-v6-showcase-section" data-home-v6-public-showcase="true">
                     <div class="home-public-v6-section-header">
                         <div>
-                            <p class="home-public-v6-section-eyebrow">서비스 맵</p>
-                            <h2 class="home-public-v6-section-title">업무별로 바로 찾는 에듀잇티</h2>
+                            <p class="home-public-v6-section-eyebrow">Features</p>
+                            <h2 class="home-public-v6-section-title">교사가 바로 이해하는 핵심 기능</h2>
                         </div>
-                        <p class="home-public-v6-section-summary">오늘 자주 하는 일을 기준으로 필요한 도구를 바로 고릅니다.</p>
+                        <p class="home-public-v6-section-summary">알림장 작성, 응답 수합, 서명 요청, 예약 확인처럼 자주 하는 일을 먼저 보여줍니다.</p>
+                    </div>
+
+                    <div class="home-public-v6-showcase">
+                        <div class="home-public-v6-bento-grid">
+                            {% for item in public_platform_showcase_items|slice:":4" %}
+                            <a
+                                href="{{ item.href }}"
+                                class="home-public-v6-bento-card{% if forloop.first %} is-spotlight{% elif forloop.counter == 2 %} is-tall{% endif %}"
+                                data-public-reveal="true"
+                                style="--reveal-order: {{ forloop.counter0 }};"
+                                {% if item.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}>
+                                <div class="home-public-v6-bento-card-head">
+                                    <span class="home-public-v6-bento-icon home-public-service-icon-tone" data-home-accent="{{ item.home_accent_token|default:'external' }}">
+                                        <i class="{{ item.home_icon_class|default:'fa-solid fa-star' }}"></i>
+                                    </span>
+                                    <span class="home-public-v6-bento-badge">{{ item.access_status_label }}</span>
+                                </div>
+                                <div class="home-public-v6-bento-copy">
+                                    <p class="home-public-v6-bento-eyebrow">{% if forloop.first %}대표 흐름{% else %}핵심 기능{% endif %}</p>
+                                    <h3 class="home-public-v6-bento-title">{{ item.title }}</h3>
+                                    <p class="home-public-v6-bento-summary">{{ item.summary|truncatechars:90 }}</p>
+                                </div>
+                                {% if item.context_chips %}
+                                <div class="home-public-v6-bento-chips">
+                                    {% for chip in item.context_chips %}
+                                    <span class="home-public-v6-bento-chip">{{ chip }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                <span class="home-public-v6-bento-link">
+                                    {{ item.cta_label }}
+                                    <i class="fa-solid fa-arrow-right text-xs"></i>
+                                </span>
+                            </a>
+                            {% endfor %}
+
+                            {% if guest_continue_action_card %}
+                            <a href="{{ guest_continue_url }}"
+                                class="home-public-v6-bento-card is-proof"
+                                data-public-reveal="true"
+                                style="--reveal-order: 4;">
+                                <div class="home-public-v6-bento-card-head">
+                                    <span class="home-public-v6-bento-badge is-soft">로그인 후 확장</span>
+                                </div>
+                                <div class="home-public-v6-bento-copy">
+                                    <p class="home-public-v6-bento-eyebrow">운영 기능</p>
+                                    <h3 class="home-public-v6-bento-title">{{ guest_continue_action_card.title }}</h3>
+                                    <p class="home-public-v6-bento-summary">공개 홈에서 시작한 뒤, 이어서 문서·운영·협업 기능까지 연결합니다.</p>
+                                </div>
+                                <span class="home-public-v6-bento-link">
+                                    로그인하고 이어서
+                                    <i class="fa-solid fa-right-to-bracket text-xs"></i>
+                                </span>
+                            </a>
+                            {% endif %}
+
+                            <a href="{{ public_portfolio_panel.href }}"
+                                class="home-public-v6-bento-card is-portfolio"
+                                data-public-reveal="true"
+                                style="--reveal-order: 5;">
+                                <div class="home-public-v6-bento-card-head">
+                                    <span class="home-public-v6-bento-badge is-soft">{{ public_portfolio_panel.eyebrow }}</span>
+                                </div>
+                                <div class="home-public-v6-bento-copy">
+                                    <h3 class="home-public-v6-bento-title">{{ public_portfolio_panel.title }}</h3>
+                                    <p class="home-public-v6-bento-summary">{{ public_portfolio_panel.summary }}</p>
+                                </div>
+                                <div class="home-public-v6-bento-chips">
+                                    {% for chip in public_portfolio_panel.chips %}
+                                    <span class="home-public-v6-bento-chip">{{ chip }}</span>
+                                    {% endfor %}
+                                </div>
+                                <span class="home-public-v6-bento-link">
+                                    {{ public_portfolio_panel.cta_label }}
+                                    <i class="fa-solid fa-arrow-right text-xs"></i>
+                                </span>
+                            </a>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="home-public-v6-section-surface home-public-v6-proof-section" id="public-platform-map" data-home-v6-public-map="true">
+                    <div class="home-public-v6-section-header">
+                        <div>
+                            <p class="home-public-v6-section-eyebrow">Social Proof</p>
+                            <h2 class="home-public-v6-section-title">처음 보는 교사도 바로 이해하는 흐름</h2>
+                        </div>
+                        <p class="home-public-v6-section-summary">현장 사례, 로그인 없는 체험, 로그인 후 확장 구조를 한 페이지 안에서 자연스럽게 이어 줍니다.</p>
+                    </div>
+
+                    <div class="home-public-v6-proof-grid">
+                        <article class="home-public-v6-proof-card" data-public-reveal="true" style="--reveal-order: 0;">
+                            <span class="home-public-v6-proof-label">현장 사례</span>
+                            <strong class="home-public-v6-proof-title">교실 적용 기록 공개</strong>
+                            <p class="home-public-v6-proof-copy">도입 맥락과 실제 적용 사례를 포트폴리오에서 바로 확인할 수 있습니다.</p>
+                        </article>
+                        <article class="home-public-v6-proof-card" data-public-reveal="true" style="--reveal-order: 1;">
+                            <span class="home-public-v6-proof-label">첫 진입</span>
+                            <strong class="home-public-v6-proof-title">로그인 없이 시작</strong>
+                            <p class="home-public-v6-proof-copy">회원가입 전에 도구 흐름을 먼저 열어 보고, 필요할 때만 이어서 로그인합니다.</p>
+                        </article>
+                        <article class="home-public-v6-proof-card" data-public-reveal="true" style="--reveal-order: 2;">
+                            <span class="home-public-v6-proof-label">업무 확장</span>
+                            <strong class="home-public-v6-proof-title">문서·수합·운영까지 연결</strong>
+                            <p class="home-public-v6-proof-copy">공개 홈의 진입 경험을 유지한 채 로그인 후 더 깊은 교실 운영 도구로 확장합니다.</p>
+                        </article>
+                    </div>
+
+                    <div class="home-public-v6-map-header" data-public-reveal="true" style="--reveal-order: 3;">
+                        <div>
+                            <p class="home-public-v6-section-eyebrow">서비스 맵</p>
+                            <h2 class="home-public-v6-map-title">업무별로 바로 찾는 에듀잇티</h2>
+                        </div>
+                        <p class="home-public-v6-section-summary">오늘 하려는 일을 기준으로 필요한 도구를 즉시 찾습니다.</p>
                     </div>
 
                     <div class="home-public-v6-group-grid">
                         {% for group in public_platform_groups %}
-                        <section class="home-public-v6-group-card" data-home-v6-public-group="{{ group.key }}">
+                        <section class="home-public-v6-group-card" data-public-reveal="true" style="--reveal-order: {{ forloop.counter|add:'3' }};">
                             <div class="home-public-v6-group-head">
                                 <div>
                                     <p class="home-public-v6-group-eyebrow">{{ forloop.counter|stringformat:"02d" }}</p>
@@ -180,8 +312,8 @@
                             <div class="home-public-v6-group-items">
                                 {% for item in group.items %}
                                 <a href="{{ item.href }}" class="home-public-v6-group-item"{% if item.is_external %} target="_blank" rel="noopener noreferrer"{% endif %}>
-                                    <span class="home-public-v6-group-item-icon home-public-service-icon-tone" data-home-accent="{{ item.home_accent_token }}">
-                                        <i class="{{ item.home_icon_class }}"></i>
+                                    <span class="home-public-v6-group-item-icon home-public-service-icon-tone" data-home-accent="{{ item.home_accent_token|default:'external' }}">
+                                        <i class="{{ item.home_icon_class|default:'fa-solid fa-star' }}"></i>
                                     </span>
                                     <span class="home-public-v6-group-item-copy">
                                         <strong class="home-public-v6-group-item-title">{{ item.title }}</strong>
@@ -194,10 +326,9 @@
                         {% endfor %}
                     </div>
                 </section>
-                {% endif %}
 
                 <section class="home-public-v6-portfolio" data-home-v6-public-portfolio="true">
-                    <div class="home-public-v6-portfolio-copy">
+                    <div class="home-public-v6-portfolio-copy" data-public-reveal="true" style="--reveal-order: 0;">
                         <p class="home-public-v6-section-eyebrow">{{ public_portfolio_panel.eyebrow }}</p>
                         <h2 class="home-public-v6-portfolio-title">{{ public_portfolio_panel.title }}</h2>
                         <p class="home-public-v6-portfolio-summary">{{ public_portfolio_panel.summary }}</p>
@@ -207,20 +338,20 @@
                             {% endfor %}
                         </div>
                     </div>
-                    <a href="{{ public_portfolio_panel.href }}" class="home-public-v6-secondary-link">
-                        {{ public_portfolio_panel.cta_label }}
-                        <i class="fa-solid fa-arrow-right text-xs"></i>
-                    </a>
-                </section>
-
-                <section class="home-public-v6-secondary-links" data-home-v6-public-secondary-links="true">
-                    <a
-                        href="https://padlet.com/kakio1q2w/eduitit-wrjbzmk8oufxdzcv"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="home-public-v6-muted-link">
-                        이용 안내
-                    </a>
+                    <div class="home-public-v6-portfolio-actions" data-public-reveal="true" style="--reveal-order: 1;">
+                        <a href="{{ public_portfolio_panel.href }}" class="home-public-v6-primary-link">
+                            {{ public_portfolio_panel.cta_label }}
+                            <i class="fa-solid fa-arrow-right text-xs"></i>
+                        </a>
+                        <a
+                            href="https://padlet.com/kakio1q2w/eduitit-wrjbzmk8oufxdzcv"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="home-public-v6-secondary-link">
+                            이용 안내
+                            <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                        </a>
+                    </div>
                 </section>
             </main>
         </div>
