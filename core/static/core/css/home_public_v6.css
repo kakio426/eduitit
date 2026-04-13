@@ -1100,8 +1100,6 @@ html[data-home-public-v6-pointer="true"] .home-public-v6-page button {
 .home-public-v6-map-shell {
     display: grid;
     gap: 1.5rem;
-    padding-top: 0.5rem;
-    border-top: 1px solid var(--home-public-v6-line);
 }
 
 .home-public-v6-group-grid {
