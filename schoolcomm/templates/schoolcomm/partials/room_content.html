@@ -1,5 +1,7 @@
 {% if room_is_chat %}
 {% include "schoolcomm/partials/room_content_chat.html" %}
+{% elif room.room_kind == 'shared' %}
+{% include "schoolcomm/partials/room_content_shared.html" %}
 {% else %}
 {% include "schoolcomm/partials/room_content_board.html" %}
 {% endif %}

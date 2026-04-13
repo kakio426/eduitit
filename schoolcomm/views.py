@@ -13,7 +13,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from core.seo import build_route_page_seo
 
-from .models import CalendarSuggestion, MessageReaction, RoomMessage, SchoolMembership, SharedAsset, WorkspaceInvite
+from .models import CalendarSuggestion, MessageReaction, RoomMessage, SchoolMembership, SharedAsset, UserAssetCategory, WorkspaceInvite
 from .services import (
     MembershipRequiredError,
     ValidationError,
@@ -60,6 +60,15 @@ logger = logging.getLogger(__name__)
 
 SERVICE_PUBLIC_NAME = "끼리끼리 채팅방"
 SERVICE_UNAVAILABLE_MESSAGE = "지금은 채팅방을 준비하는 중입니다. 잠시 후 다시 열어 주세요."
+SHARED_BOARD_FILTERS = (
+    ("all", "전체"),
+    (UserAssetCategory.Category.LESSON, "수업"),
+    (UserAssetCategory.Category.ASSESSMENT, "평가"),
+    (UserAssetCategory.Category.WORK, "행정"),
+    ("social", "친목"),
+    (UserAssetCategory.Category.OTHER, "기타"),
+    (UserAssetCategory.Category.UNCLASSIFIED, "미분류"),
+)
 
 
 def _build_noindex_seo(request, *, title, description):
@@ -119,6 +128,113 @@ def _build_room_items(room, user):
 
 def _build_room_chat_items(room, user):
     return [serialize_message(message, user=user) for message in _room_message_queryset(room)]
+
+
+def _short_preview(text, limit=72):
+    compact = " ".join(str(text or "").split())
+    if len(compact) <= limit:
+        return compact
+    return f"{compact[: limit - 3]}..."
+
+
+def _normalize_shared_board_category(raw_value):
+    allowed = {code for code, _label in SHARED_BOARD_FILTERS}
+    value = str(raw_value or "").strip()
+    if value in allowed:
+        return value
+    return "all"
+
+
+def _room_base_url(room):
+    return reverse("schoolcomm:room_detail", kwargs={"room_id": room.id})
+
+
+def _room_refresh_url(request, room):
+    params = request.GET.copy()
+    params["fragment"] = "content"
+    return f"{_room_base_url(room)}?{params.urlencode()}"
+
+
+def _shared_board_filter_tabs(room, *, active_category, category_counts):
+    tabs = []
+    room_url = _room_base_url(room)
+    for code, label in SHARED_BOARD_FILTERS:
+        count = category_counts.get(code, 0)
+        tabs.append(
+            {
+                "code": code,
+                "label": label,
+                "count": count,
+                "is_active": code == active_category,
+                "url": room_url if code == "all" else f"{room_url}?{urlencode({'category': code})}",
+            }
+        )
+    return tabs
+
+
+def _build_shared_board_asset_entry(asset, source_item, *, room):
+    created_at = parse_datetime(source_item.get("created_at") or "")
+    local_date = timezone.localtime(created_at).date() if created_at else None
+    message_id = source_item.get("id")
+    return {
+        **asset,
+        "message_id": message_id,
+        "message_url": f"#message-{message_id}" if message_id else "#schoolcomm-room-composer",
+        "message_preview": _short_preview(source_item.get("body") or ""),
+        "posted_at": source_item.get("created_at") or "",
+        "posted_at_label": source_item.get("created_at_label") or "",
+        "posted_by": source_item.get("sender_name") or asset.get("uploader_name") or "",
+        "is_reply_asset": bool(source_item.get("parent_message_id")),
+        "is_today": local_date == timezone.localdate() if local_date else False,
+    }
+
+
+def _build_shared_room_board(room, room_items, *, active_category):
+    category_labels = {code: label for code, label in SHARED_BOARD_FILTERS}
+    all_assets = []
+    for item in room_items:
+        for asset in item.get("assets", []):
+            all_assets.append(_build_shared_board_asset_entry(asset, item, room=room))
+        for reply in item.get("replies", []):
+            for asset in reply.get("assets", []):
+                all_assets.append(_build_shared_board_asset_entry(asset, reply, room=room))
+
+    all_assets.sort(key=lambda asset_item: asset_item.get("posted_at") or "", reverse=True)
+    category_counts = {"all": len(all_assets)}
+    for code, _label in SHARED_BOARD_FILTERS:
+        if code == "all":
+            continue
+        category_counts[code] = sum(1 for asset_item in all_assets if asset_item.get("category") == code)
+
+    if active_category == "all":
+        section_codes = [code for code, _label in SHARED_BOARD_FILTERS if code != "all" and category_counts.get(code)]
+    else:
+        section_codes = [active_category]
+
+    sections = []
+    for code in section_codes:
+        section_items = [asset_item for asset_item in all_assets if asset_item.get("category") == code]
+        sections.append(
+            {
+                "code": code,
+                "label": category_labels.get(code, "자료"),
+                "count": len(section_items),
+                "items": section_items,
+            }
+        )
+    visible_asset_count = sum(len(section["items"]) for section in sections)
+
+    return {
+        "active_category": active_category,
+        "filter_tabs": _shared_board_filter_tabs(room, active_category=active_category, category_counts=category_counts),
+        "sections": sections,
+        "total_asset_count": len(all_assets),
+        "today_asset_count": sum(1 for asset_item in all_assets if asset_item.get("is_today")),
+        "unclassified_count": category_counts.get(UserAssetCategory.Category.UNCLASSIFIED, 0),
+        "manual_asset_count": sum(1 for asset_item in all_assets if asset_item.get("category_source") == UserAssetCategory.Source.MANUAL),
+        "has_assets": bool(all_assets),
+        "has_visible_assets": bool(visible_asset_count),
+    }
 
 
 def _build_search_display(search_results, user):
@@ -351,6 +467,12 @@ def room_detail(request, room_id):
         mark_room_read(request.user, room, latest_message=latest_message)
         room_items = [] if room_is_chat else _build_room_items(room, request.user)
         chat_items = _build_room_chat_items(room, request.user) if room_is_chat else []
+        active_category = _normalize_shared_board_category(request.GET.get("category"))
+        shared_board = (
+            _build_shared_room_board(room, room_items, active_category=active_category)
+            if room.room_kind == room.RoomKind.SHARED
+            else None
+        )
         workspace = room.workspace
         dashboard = build_workspace_dashboard(workspace, request.user)
         context = {
@@ -364,11 +486,13 @@ def room_detail(request, room_id):
             "workspace": workspace,
             "room_items": room_items,
             "chat_items": chat_items,
+            "shared_board": shared_board,
             "dashboard": dashboard,
             "room_is_chat": room_is_chat,
             "can_post_top_level": membership_can_post_notice(membership) or room.room_kind != room.RoomKind.NOTICE,
             "room_ws_url": _build_ws_path(f"schoolcomm/ws/rooms/{room.id}/"),
-            "room_refresh_url": f"{reverse('schoolcomm:room_detail', kwargs={'room_id': room.id})}?fragment=content",
+            "room_base_url": _room_base_url(room),
+            "room_refresh_url": _room_refresh_url(request, room),
             "user_ws_url": _build_ws_path("schoolcomm/ws/users/me/"),
         }
         if request.GET.get("fragment") == "content":

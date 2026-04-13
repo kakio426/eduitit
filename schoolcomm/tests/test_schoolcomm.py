@@ -130,6 +130,21 @@ class SchoolcommServiceTests(SchoolcommTestCase):
         with self.assertRaises(Exception):
             create_room_message(self.shared_room, self.member_membership, text="중첩 답글", parent_message=reply)
 
+    def test_auto_category_detects_social_assets_from_filename_and_message(self):
+        upload = SimpleUploadedFile("친목_간식_정산.xlsx", b"social-bytes", content_type="application/octet-stream")
+
+        message = create_room_message(self.shared_room, self.owner_membership, text="간식비 정리 파일", uploads=[upload])
+        asset = message.asset_links.select_related("asset__blob").first().asset
+
+        category = ensure_user_asset_category(
+            self.member,
+            asset,
+            message_text=message.body,
+            room_kind=self.shared_room.room_kind,
+        )
+
+        self.assertEqual(category.category, "social")
+
 
 class SchoolcommViewTests(SchoolcommTestCase):
     def setUp(self):
@@ -219,8 +234,42 @@ class SchoolcommViewTests(SchoolcommTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "schoolcomm/partials/room_content.html")
+        self.assertContains(response, 'data-schoolcomm-shared-board="true"')
         self.assertContains(response, 'data-schoolcomm-thread-panel="')
         self.assertNotContains(response, "<html", html=False)
+
+    def test_shared_room_detail_prioritizes_info_board_over_thread_feed(self):
+        lesson_upload = SimpleUploadedFile("3학년_수업_활동지.hwp", b"lesson", content_type="application/octet-stream")
+        social_upload = SimpleUploadedFile("친목_간식_공지.xlsx", b"social", content_type="application/octet-stream")
+        parent = create_room_message(self.shared_room, self.owner_membership, text="수업 자료 올립니다", uploads=[lesson_upload])
+        create_room_message(self.shared_room, self.member_membership, text="간식비 정리입니다", parent_message=parent, uploads=[social_upload])
+
+        self.client.force_login(self.owner)
+        response = self.client.get(reverse("schoolcomm:room_detail", kwargs={"room_id": self.shared_room.id}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-schoolcomm-shared-board="true"')
+        self.assertContains(response, "자료 올리기")
+        self.assertContains(response, "수업")
+        self.assertContains(response, "친목")
+        self.assertContains(response, "대화")
+        self.assertContains(response, "자료 1개 보기")
+        self.assertNotContains(response, "확인 0")
+        self.assertNotContains(response, "이 글 아래에서만 이어집니다.")
+        self.assertNotContains(response, "올라온 자료")
+
+    def test_shared_room_filter_keeps_category_during_fragment_refresh(self):
+        social_upload = SimpleUploadedFile("친목_다과_목록.xlsx", b"social", content_type="application/octet-stream")
+        create_room_message(self.shared_room, self.owner_membership, text="다과 목록", uploads=[social_upload])
+
+        self.client.force_login(self.owner)
+        response = self.client.get(
+            reverse("schoolcomm:room_detail", kwargs={"room_id": self.shared_room.id}),
+            {"category": "social"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "category=social&amp;fragment=content")
 
     def test_dm_room_renders_chat_style_stream_and_reply_composer(self):
         dm_room = get_or_create_dm_room(

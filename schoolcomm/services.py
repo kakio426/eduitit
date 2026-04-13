@@ -83,13 +83,15 @@ CATEGORY_LABELS = {
     UserAssetCategory.Category.UNCLASSIFIED: "미분류",
     UserAssetCategory.Category.LESSON: "수업자료",
     UserAssetCategory.Category.ASSESSMENT: "평가자료",
-    UserAssetCategory.Category.WORK: "업무",
+    UserAssetCategory.Category.WORK: "행정",
+    "social": "친목",
     UserAssetCategory.Category.OTHER: "기타",
 }
 HEURISTIC_CATEGORY_HINTS = [
     (UserAssetCategory.Category.ASSESSMENT, ("평가", "시험", "중간", "기말", "수행", "채점", "정답", "문항")),
     (UserAssetCategory.Category.LESSON, ("수업", "차시", "활동지", "학습", "교과", "지도안", "worksheet", "lesson")),
-    (UserAssetCategory.Category.WORK, ("업무", "공문", "기안", "회의", "결재", "행정", "출장", "안내")),
+    (UserAssetCategory.Category.WORK, ("업무", "공문", "기안", "회의", "결재", "행정", "출장", "안내", "문서")),
+    ("social", ("친목", "회식", "간식", "축하", "송별", "환영", "모임", "번개", "커피", "다과")),
 ]
 
 
@@ -915,8 +917,11 @@ def _normalize_category_code(raw_value):
         "lesson": UserAssetCategory.Category.LESSON,
         "평가자료": UserAssetCategory.Category.ASSESSMENT,
         "assessment": UserAssetCategory.Category.ASSESSMENT,
+        "행정": UserAssetCategory.Category.WORK,
         "업무": UserAssetCategory.Category.WORK,
         "work": UserAssetCategory.Category.WORK,
+        "친목": "social",
+        "social": "social",
         "기타": UserAssetCategory.Category.OTHER,
         "other": UserAssetCategory.Category.OTHER,
         "미분류": UserAssetCategory.Category.UNCLASSIFIED,
@@ -942,7 +947,7 @@ def _call_category_classifier_llm(*, payload, timeout_seconds=20):
     prompt = (
         "당신은 학교 교사들이 주고받은 파일을 분류하는 도우미입니다. "
         "반드시 JSON 객체만 반환하세요. category, confidence, reason 세 필드만 포함하세요. "
-        "category는 lesson, assessment, work, other, unclassified 중 하나만 허용합니다. "
+        "category는 lesson, assessment, work, social, other, unclassified 중 하나만 허용합니다. "
         "판단 시 파일명에 포함된 연도, 학기, 고사명, 과목명 규칙을 최우선으로 해석하세요."
     )
 

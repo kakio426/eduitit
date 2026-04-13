@@ -56,6 +56,7 @@
                 method="post"
                 action="{% url 'schoolcomm:api_room_messages' room.id %}"
                 enctype="multipart/form-data"
+                id="schoolcomm-room-composer"
                 class="schoolcomm-room-composer {% if room_is_chat %}is-chat{% endif %} rounded-[2rem] p-4 sm:p-5"
                 {% if room_is_chat %}data-schoolcomm-chat-composer="true"{% endif %}
             >
@@ -72,19 +73,27 @@
                 </div>
                 <input type="hidden" name="parent_message_id" value="" data-schoolcomm-chat-parent-input="true">
                 {% endif %}
-                <label class="mb-2 block text-sm font-black text-slate-900" for="id_text">{% if room_is_chat %}메시지 보내기{% else %}새 메시지{% endif %}</label>
+                <label class="mb-2 block text-sm font-black text-slate-900" for="id_text">
+                    {% if room_is_chat %}
+                    메시지 보내기
+                    {% elif room.room_kind == 'shared' %}
+                    자료 올리기
+                    {% else %}
+                    새 메시지
+                    {% endif %}
+                </label>
                 <textarea
                     id="id_text"
                     name="text"
                     rows="3"
                     class="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-                    placeholder="{% if room_is_chat %}메시지를 입력하세요.{% else %}메시지나 파일 설명을 남겨 주세요.{% endif %}"
+                    placeholder="{% if room_is_chat %}메시지를 입력하세요.{% elif room.room_kind == 'shared' %}자료 제목이나 메모{% else %}메시지나 파일 설명을 남겨 주세요.{% endif %}"
                     {% if room_is_chat %}data-schoolcomm-chat-composer-text="true"{% endif %}
                 ></textarea>
                 <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <input type="file" name="files" multiple class="block text-sm text-slate-600">
                     <button type="submit" class="inline-flex rounded-full bg-slate-900 px-5 py-2.5 text-sm font-black text-white">
-                        보내기
+                        {% if room.room_kind == 'shared' %}올리기{% else %}보내기{% endif %}
                     </button>
                 </div>
             </form>

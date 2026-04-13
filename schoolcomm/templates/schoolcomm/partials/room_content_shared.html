@@ -1,0 +1,249 @@
+<div class="schoolcomm-room-content schoolcomm-room-content-shared" data-schoolcomm-shared-board="true">
+    <section class="schoolcomm-shared-main">
+        <section class="schoolcomm-panel rounded-[2rem] p-5">
+            <div>
+                <div>
+                    <h2 class="text-xl font-black text-slate-900">자료</h2>
+                    <p class="mt-1 text-sm text-slate-500">전체 {{ shared_board.total_asset_count }}개 · 오늘 {{ shared_board.today_asset_count }}개</p>
+                </div>
+            </div>
+
+            <div class="schoolcomm-shared-filter-row mt-4">
+                {% for tab in shared_board.filter_tabs %}
+                <a href="{{ tab.url }}" class="schoolcomm-shared-filter-chip {% if tab.is_active %}is-active{% endif %}">
+                    <span>{{ tab.label }}</span>
+                    <span>{{ tab.count }}</span>
+                </a>
+                {% endfor %}
+            </div>
+
+            {% if shared_board.has_visible_assets %}
+            <div class="schoolcomm-shared-sections mt-5">
+                {% for section in shared_board.sections %}
+                <section class="schoolcomm-shared-section">
+                    <div class="mb-3 flex items-center justify-between gap-3">
+                        <h3 class="text-lg font-black text-slate-900">{{ section.label }}</h3>
+                        <span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-700">{{ section.count }}</span>
+                    </div>
+
+                    <div class="schoolcomm-shared-card-grid">
+                        {% for asset in section.items %}
+                        <article id="asset-{{ asset.id }}" class="schoolcomm-shared-asset-card">
+                            {% if asset.is_reply_asset or asset.category_source == 'manual' %}
+                            <div class="flex flex-wrap items-center gap-2">
+                                {% if asset.is_reply_asset %}
+                                <span class="inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">답글</span>
+                                {% endif %}
+                                {% if asset.category_source == 'manual' %}
+                                <span class="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">직접 정리</span>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+
+                            <a href="{{ asset.download_url }}" class="mt-3 block text-base font-black text-slate-900">{{ asset.original_name }}</a>
+                            <p class="mt-2 text-xs text-slate-500">
+                                {{ asset.posted_by }}
+                                {% if asset.extension %} · {{ asset.extension|upper }}{% endif %}
+                                {% if asset.posted_at_label %} · {{ asset.posted_at_label }}{% endif %}
+                            </p>
+                            {% if asset.message_preview %}
+                            <p class="mt-3 text-sm leading-6 text-slate-600">{{ asset.message_preview }}</p>
+                            {% endif %}
+
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <a href="{{ asset.download_url }}" class="inline-flex rounded-full bg-slate-900 px-4 py-2 text-sm font-black text-white">받기</a>
+                                <a href="{{ asset.message_url }}" class="inline-flex rounded-full border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700">대화</a>
+                            </div>
+
+                            <details class="schoolcomm-message-asset-details mt-4 rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-3" data-schoolcomm-asset-panel="{{ asset.id }}">
+                                <summary class="flex items-center justify-between gap-3">
+                                    <span class="text-sm font-bold text-slate-700">내 기준 바꾸기</span>
+                                    <span class="text-xs font-bold {% if asset.category_source == 'manual' %}text-emerald-700{% else %}text-slate-500{% endif %}">
+                                        {% if asset.category_source == 'manual' %}직접 정리{% else %}자동 추천{% endif %}
+                                    </span>
+                                </summary>
+                                <form method="post" action="{{ asset.category_update_url }}" class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                                    {% csrf_token %}
+                                    <select name="category" class="min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                        <option value="lesson" {% if asset.category == 'lesson' %}selected{% endif %}>수업자료</option>
+                                        <option value="assessment" {% if asset.category == 'assessment' %}selected{% endif %}>평가자료</option>
+                                        <option value="work" {% if asset.category == 'work' %}selected{% endif %}>행정</option>
+                                        <option value="social" {% if asset.category == 'social' %}selected{% endif %}>친목</option>
+                                        <option value="other" {% if asset.category == 'other' %}selected{% endif %}>기타</option>
+                                        <option value="unclassified" {% if asset.category == 'unclassified' %}selected{% endif %}>미분류</option>
+                                    </select>
+                                    <button type="submit" class="inline-flex rounded-full border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700">
+                                        저장
+                                    </button>
+                                </form>
+                            </details>
+                        </article>
+                        {% endfor %}
+                    </div>
+                </section>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="schoolcomm-shared-empty mt-5">
+                <p class="text-sm font-bold text-slate-700">
+                    {% if shared_board.has_assets %}
+                    선택한 분류에 자료가 없습니다.
+                    {% else %}
+                    아직 올라온 자료가 없습니다.
+                    {% endif %}
+                </p>
+            </div>
+            {% endif %}
+        </section>
+
+        <details class="schoolcomm-panel-details rounded-[2rem] p-5" {% if not shared_board.has_assets %}open{% endif %}>
+            <summary class="flex items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-lg font-black text-slate-900">대화</h2>
+                    <p class="mt-1 text-sm text-slate-500">메모와 답글</p>
+                </div>
+                <span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">{{ room_items|length }}개 글</span>
+            </summary>
+
+            <section class="schoolcomm-room-list mt-4">
+                {% for item in room_items %}
+                <article id="message-{{ item.id }}" class="schoolcomm-panel rounded-[1.7rem] p-5">
+                    <div class="min-w-0">
+                        <p class="text-sm font-black text-slate-900">{{ item.sender_name }}</p>
+                        <p class="mt-1 text-xs text-slate-500">{{ item.created_at_label|default:item.created_at }}</p>
+                    </div>
+
+                    {% if item.body %}
+                    <p class="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-700">{{ item.body }}</p>
+                    {% endif %}
+
+                    {% if item.assets %}
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        <a href="#asset-{{ item.assets.0.id }}" class="inline-flex rounded-full border border-slate-300 px-3 py-1.5 text-xs font-bold text-slate-700">
+                            자료 {{ item.assets|length }}개 보기
+                        </a>
+                    </div>
+                    {% endif %}
+
+                    <details class="schoolcomm-thread-details mt-4 rounded-[1.6rem] border border-slate-200 bg-slate-50 p-4" data-schoolcomm-thread-panel="{{ item.id }}">
+                        <summary class="flex items-center justify-between gap-3">
+                            <div>
+                                <p class="text-sm font-black text-slate-900">답글 {{ item.reply_count }}개</p>
+                            </div>
+                            <span class="text-xs font-bold text-slate-500">열기</span>
+                        </summary>
+
+                        <div class="mt-4 space-y-3">
+                            {% for reply in item.replies %}
+                            <div class="rounded-[1.4rem] bg-white px-4 py-4 ring-1 ring-slate-200">
+                                <p class="text-sm font-black text-slate-900">{{ reply.sender_name }}</p>
+                                <p class="mt-1 text-xs text-slate-500">{{ reply.created_at_label|default:reply.created_at }}</p>
+                                {% if reply.body %}
+                                <p class="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">{{ reply.body }}</p>
+                                {% endif %}
+                                {% if reply.assets %}
+                                <div class="mt-3 flex flex-wrap gap-2">
+                                    <a href="#asset-{{ reply.assets.0.id }}" class="inline-flex rounded-full border border-slate-300 px-3 py-1.5 text-xs font-bold text-slate-700">
+                                        자료 {{ reply.assets|length }}개 보기
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% empty %}
+                            <p class="rounded-[1.3rem] border border-dashed border-slate-300 px-4 py-5 text-sm text-slate-500">답글 없음</p>
+                            {% endfor %}
+                        </div>
+
+                        <form method="post" action="{{ item.reply_post_url }}" enctype="multipart/form-data" class="mt-4 space-y-3" data-schoolcomm-reply-form="true">
+                            {% csrf_token %}
+                            <input type="hidden" name="parent_message_id" value="{{ item.id }}">
+                            <textarea
+                                name="text"
+                                rows="2"
+                                class="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
+                                placeholder="이 글에 답글 남기기"
+                                data-schoolcomm-reply-textarea="{{ item.id }}"
+                            ></textarea>
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <input type="file" name="files" multiple class="block text-sm text-slate-600">
+                                <button type="submit" class="inline-flex rounded-full border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700">
+                                    답글 올리기
+                                </button>
+                            </div>
+                        </form>
+                    </details>
+                </article>
+                {% empty %}
+                <div class="schoolcomm-panel rounded-[1.7rem] px-5 py-10 text-center text-sm text-slate-500">
+                    대화 없음
+                </div>
+                {% endfor %}
+            </section>
+        </details>
+    </section>
+
+    {% if dashboard.calendar_suggestions or dashboard.notice_room or dashboard.shared_room %}
+    <aside class="schoolcomm-room-sidebar">
+        {% if dashboard.notice_room or dashboard.shared_room %}
+        <section class="schoolcomm-panel rounded-[2rem] p-5">
+            <h2 class="text-lg font-black text-slate-900">바로가기</h2>
+            <div class="mt-4 space-y-2">
+                <a href="{% url 'schoolcomm:main' %}?workspace={{ workspace.id }}" class="block rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700">끼리끼리 채팅방 홈</a>
+                {% if dashboard.notice_room and dashboard.notice_room.url != request.path %}
+                <a href="{{ dashboard.notice_room.url }}" class="block rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">공지방</a>
+                {% endif %}
+                {% if dashboard.shared_room and dashboard.shared_room.url != request.path %}
+                <a href="{{ dashboard.shared_room.url }}" class="block rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">자료공유방</a>
+                {% endif %}
+            </div>
+        </section>
+        {% endif %}
+
+        {% if shared_board.unclassified_count or shared_board.manual_asset_count %}
+        <section class="schoolcomm-panel rounded-[2rem] p-5">
+            <h2 class="text-lg font-black text-slate-900">정리 필요</h2>
+            <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                {% if shared_board.unclassified_count %}
+                <a href="{{ room_base_url }}?category=unclassified" class="block rounded-2xl border border-slate-200 px-4 py-4">
+                    <p class="text-xs font-bold text-slate-500">미분류</p>
+                    <p class="mt-2 text-2xl font-black text-slate-900">{{ shared_board.unclassified_count }}</p>
+                </a>
+                {% endif %}
+                {% if shared_board.manual_asset_count %}
+                <div class="rounded-2xl border border-slate-200 px-4 py-4">
+                    <p class="text-xs font-bold text-slate-500">직접 정리</p>
+                    <p class="mt-2 text-2xl font-black text-slate-900">{{ shared_board.manual_asset_count }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+        {% endif %}
+
+        {% if dashboard.calendar_suggestions %}
+        <section class="schoolcomm-panel rounded-[2rem] p-5">
+            <h2 class="text-lg font-black text-slate-900">추천 일정</h2>
+            <div class="mt-4 space-y-3">
+                {% for suggestion in dashboard.calendar_suggestions %}
+                <div class="rounded-2xl border border-slate-200 px-4 py-4">
+                    <p class="text-sm font-black text-slate-900">{{ suggestion.title }}</p>
+                    {% if suggestion.start_time_label %}
+                    <p class="mt-1 text-sm text-slate-500">{{ suggestion.start_time_label }}</p>
+                    {% endif %}
+                    {% if suggestion.note %}
+                    <p class="mt-2 text-sm text-slate-600">{{ suggestion.note }}</p>
+                    {% endif %}
+                    <form method="post" action="{{ suggestion.apply_url }}" class="mt-3">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{% url 'schoolcomm:room_detail' room.id %}">
+                        <button type="submit" class="inline-flex rounded-full bg-emerald-600 px-4 py-2 text-sm font-black text-white">
+                            {{ suggestion.apply_label }}
+                        </button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+    </aside>
+    {% endif %}
+</div>
