@@ -25,30 +25,6 @@
     .teacher-law-header-copy {
         max-width: 48rem;
     }
-    .teacher-law-header-card {
-        min-width: 280px;
-        max-width: 340px;
-        border-radius: 28px;
-        border: 1px solid rgba(148, 163, 184, 0.18);
-        background: rgba(255, 255, 255, 0.84);
-        padding: 1rem 1.1rem;
-        box-shadow: 0 22px 50px rgba(15, 23, 42, 0.08);
-        backdrop-filter: blur(14px);
-    }
-    .teacher-law-header-card-title {
-        font-size: 0.76rem;
-        font-weight: 900;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: #0f766e;
-    }
-    .teacher-law-header-card-body {
-        margin-top: 0.55rem;
-        font-size: 0.94rem;
-        line-height: 1.7;
-        color: #334155;
-        font-weight: 700;
-    }
     .teacher-law-layout {
         display: grid;
         gap: 1.25rem;
@@ -70,32 +46,6 @@
         position: sticky;
         top: calc(var(--main-nav-height, 88px) + 1rem);
     }
-    .teacher-law-sidebar-intro {
-        border-radius: 28px;
-        background: linear-gradient(180deg, rgba(15, 118, 110, 0.08), rgba(248, 250, 252, 0.96));
-        border: 1px solid rgba(15, 118, 110, 0.14);
-        padding: 1rem 1.05rem;
-    }
-    .teacher-law-sidebar-eyebrow {
-        font-size: 0.78rem;
-        font-weight: 900;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: #0f766e;
-    }
-    .teacher-law-sidebar-title {
-        margin-top: 0.5rem;
-        font-size: 1.35rem;
-        line-height: 1.35;
-        font-weight: 900;
-        color: #0f172a;
-    }
-    .teacher-law-sidebar-copy {
-        margin-top: 0.5rem;
-        font-size: 0.95rem;
-        line-height: 1.75;
-        color: #475569;
-    }
     .teacher-law-sidebar-note {
         border-radius: 24px;
         background: #f8fafc;
@@ -110,34 +60,6 @@
         flex-direction: column;
         min-height: 0;
         overflow: visible;
-    }
-    .teacher-law-chat-header {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 1rem;
-        padding: 1.25rem 1.25rem 1rem;
-        border-bottom: 1px solid rgba(226, 232, 240, 0.8);
-    }
-    .teacher-law-chat-label {
-        font-size: 0.76rem;
-        font-weight: 900;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: #64748b;
-    }
-    .teacher-law-chat-title {
-        margin-top: 0.45rem;
-        font-size: 1.55rem;
-        line-height: 1.3;
-        font-weight: 900;
-        color: #0f172a;
-    }
-    .teacher-law-chat-copy {
-        margin-top: 0.45rem;
-        font-size: 0.95rem;
-        line-height: 1.75;
-        color: #64748b;
     }
     .teacher-law-chat-pills {
         display: flex;
@@ -538,30 +460,19 @@
         padding: 1.15rem 1.2rem 1.25rem;
         border-bottom: 1px solid rgba(226, 232, 240, 0.8);
     }
+    .teacher-law-composer-meta {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 1rem;
+    }
     .teacher-law-composer-stack {
         display: flex;
         flex-direction: column;
         gap: 1rem;
     }
-    .teacher-law-composer-step {
-        font-size: 0.76rem;
-        font-weight: 900;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: #0f766e;
-    }
     .teacher-law-composer-picker-grid {
         display: grid;
         gap: 0.9rem;
-    }
-    .teacher-law-composer-label {
-        display: block;
-        font-size: 0.82rem;
-        font-weight: 900;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        color: #475569;
-        margin-bottom: 0.65rem;
     }
     .teacher-law-textarea {
         min-height: 170px;
@@ -589,7 +500,7 @@
     .teacher-law-composer-actions {
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        justify-content: flex-end;
         gap: 1rem;
         margin-top: 0.9rem;
     }
@@ -618,11 +529,6 @@
         cursor: not-allowed;
         transform: none;
         box-shadow: none;
-    }
-    .teacher-law-helper {
-        font-size: 0.92rem;
-        line-height: 1.7;
-        color: #475569;
     }
     .teacher-law-progress {
         display: none;
@@ -692,11 +598,7 @@
             flex-direction: column;
             align-items: stretch;
         }
-        .teacher-law-header-card {
-            min-width: 0;
-            max-width: none;
-        }
-        .teacher-law-chat-header,
+        .teacher-law-composer-meta,
         .teacher-law-composer-actions {
             flex-direction: column;
             align-items: stretch;
@@ -729,12 +631,7 @@
                 </div>
                 <div class="mt-4 space-y-3">
                     <h1 class="text-4xl md:text-5xl font-black text-slate-950 leading-tight">지금 상황만 적어 주세요</h1>
-                    <p class="text-base md:text-lg leading-8 text-slate-600">상황 입력 후 질문</p>
                 </div>
-            </div>
-            <div class="teacher-law-header-card">
-                <div class="teacher-law-header-card-title">입력 순서</div>
-                <div class="teacher-law-header-card-body">유형 선택 · 질문 입력</div>
             </div>
         </header>
 
@@ -754,14 +651,8 @@
         <form action="{{ ask_url }}" method="post" data-teacher-law-form="true" novalidate class="teacher-law-layout">
             {% csrf_token %}
             <aside class="teacher-law-panel teacher-law-sidebar">
-                <div class="teacher-law-sidebar-intro">
-                    <p class="teacher-law-sidebar-eyebrow">빠르게 시작</p>
-                    <h2 class="teacher-law-sidebar-title">빠른 질문</h2>
-                    <p class="teacher-law-sidebar-copy">눌러서 채우기</p>
-                </div>
-
                 <div class="teacher-law-section-group">
-                    <div class="teacher-law-section-heading">빠른 질문</div>
+                    <div class="teacher-law-section-heading">예시 질문</div>
                     <div class="teacher-law-quick-list">
                         {% for preset in quick_questions %}
                         <button
@@ -787,21 +678,14 @@
             </aside>
 
             <section class="teacher-law-panel teacher-law-workspace">
-                <div class="teacher-law-chat-header">
-                    <div>
-                        <p class="teacher-law-chat-label">대화 창</p>
-                        <h2 class="teacher-law-chat-title">선택 후 질문</h2>
-                        <p class="teacher-law-chat-copy">같은 화면에서 답변 확인</p>
-                    </div>
-                    <div class="teacher-law-chat-pills">
-                        <span class="teacher-law-chat-pill">최근 기록 {{ history_pairs|length }}개</span>
-                        <span class="teacher-law-chat-pill">하루 {{ daily_limit_per_user }}회</span>
-                    </div>
-                </div>
-
                 <div class="teacher-law-composer">
+                    <div class="teacher-law-composer-meta">
+                        <div class="teacher-law-chat-pills">
+                            <span class="teacher-law-chat-pill">최근 기록 {{ history_pairs|length }}개</span>
+                            <span class="teacher-law-chat-pill">하루 {{ daily_limit_per_user }}회</span>
+                        </div>
+                    </div>
                     <div class="teacher-law-composer-stack">
-                        <div class="teacher-law-composer-step">유형 선택</div>
                         <div class="teacher-law-composer-picker-grid">
                             <section class="teacher-law-picker" data-teacher-law-field-group="incident_type">
                                 <div class="teacher-law-picker-title">사건 유형</div>
@@ -889,12 +773,10 @@
                             </section>
                         </div>
 
-                        <div class="teacher-law-composer-step">질문 입력</div>
-                        <label class="teacher-law-composer-label" for="teacher-law-question">질문 입력</label>
+                        <label class="sr-only" for="teacher-law-question">상황</label>
                         <textarea id="teacher-law-question" name="question" class="teacher-law-textarea" data-teacher-law-input="true" placeholder="예: 학생 사진을 학급 밴드에 올리려면 어떤 동의가 필요한가요?" {% if ui_blocked %}disabled{% endif %}></textarea>
                     </div>
                     <div class="teacher-law-composer-actions">
-                        <div class="teacher-law-helper">하루 {{ daily_limit_per_user }}회</div>
                         <button type="submit" class="teacher-law-send-button" data-teacher-law-send="true" {% if ui_blocked %}disabled{% endif %}>
                             <i class="fa-solid fa-paper-plane"></i>
                             질문 보내기
