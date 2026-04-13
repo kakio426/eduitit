@@ -2814,107 +2814,122 @@
     .dt-header-schedule-item {
         display: inline-flex;
         align-items: center;
-        gap: 0.58rem;
-        max-width: min(100%, 24rem);
-        min-height: 2.92rem;
-        padding: 0.54rem 0.98rem;
         border-radius: 9999px;
-        background: linear-gradient(135deg, rgba(30, 41, 59, 0.72), rgba(15, 23, 42, 0.64));
-        border: 1px solid rgba(148, 163, 184, 0.22);
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.76), rgba(15, 23, 42, 0.68));
+        border: 1px solid rgba(148, 163, 184, 0.24);
         box-shadow: 0 8px 18px rgba(2, 6, 23, 0.16);
         white-space: nowrap;
     }
 
-    .dt-header-schedule-status {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-        min-height: 1.56rem;
-        padding: 0.22rem 0.5rem;
-        border-radius: 999px;
-        background: rgba(251, 191, 36, 0.14);
-        border: 1px solid rgba(251, 191, 36, 0.22);
-        color: #fde68a;
-        font-size: 0.8rem;
-        font-weight: 900;
-        letter-spacing: 0.02em;
-        line-height: 1;
+    .dt-header-schedule-item--focus {
+        gap: 0.9rem;
+        max-width: min(100%, 33rem);
+        min-height: 3.34rem;
+        padding: 0.62rem 1.22rem;
     }
 
-    .dt-header-schedule-period {
+    .dt-header-schedule-item--list {
+        gap: 0.48rem;
+        max-width: min(100%, 18.6rem);
+        min-height: 2.54rem;
+        padding: 0.44rem 0.84rem;
+    }
+
+    .dt-header-schedule-primary {
         display: inline-flex;
         align-items: center;
-        justify-content: center;
+        gap: 0.38rem;
+        min-width: 0;
         flex-shrink: 0;
-        min-height: 1.7rem;
-        padding: 0.24rem 0.58rem;
-        border-radius: 999px;
-        background: rgba(99, 102, 241, 0.14);
-        border: 1px solid rgba(129, 140, 248, 0.24);
-        color: #c7d2fe;
+    }
+
+    .dt-header-schedule-kicker {
+        color: #fbbf24;
         font-size: 1.08rem;
-        font-weight: 950;
+        font-weight: 900;
         letter-spacing: -0.02em;
         line-height: 1;
     }
 
-    .dt-header-schedule-sep {
-        color: rgba(148, 163, 184, 0.58);
-        font-size: 0.84rem;
-        font-weight: 900;
+    .dt-header-schedule-period {
+        color: #eef2ff;
+        font-size: clamp(1.42rem, 1.24rem + 0.24vw, 1.6rem);
+        font-weight: 950;
+        letter-spacing: -0.04em;
+        line-height: 1;
+    }
+
+    .dt-header-schedule-divider {
+        width: 1px;
+        height: 1.72rem;
+        flex-shrink: 0;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.38);
     }
 
     .dt-header-schedule-subject {
         min-width: 0;
-        max-width: 14.8rem;
+        max-width: 15.6rem;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        color: #f8fafc;
-        font-size: clamp(1.08rem, 0.98rem + 0.16vw, 1.18rem);
+        color: #ffffff;
+        font-size: clamp(1.38rem, 1.2rem + 0.2vw, 1.54rem);
         font-weight: 900;
-        letter-spacing: -0.025em;
-        line-height: 1.02;
+        letter-spacing: -0.03em;
+        line-height: 1;
+    }
+
+    .dt-header-schedule-item--list .dt-header-schedule-primary,
+    .dt-header-schedule-item--list .dt-header-schedule-divider,
+    .dt-header-schedule-item--list .dt-header-schedule-kicker {
+        display: none;
+    }
+
+    .dt-header-schedule-item--list .dt-header-schedule-period {
+        color: #c7d2fe;
+        font-size: 1rem;
+        font-weight: 900;
+        letter-spacing: -0.02em;
+    }
+
+    .dt-header-schedule-item--list .dt-header-schedule-subject {
+        max-width: 12rem;
+        font-size: 1.04rem;
+        font-weight: 850;
+        color: #e2e8f0;
     }
 
     .dt-header-schedule-item.is-current {
-        background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.74));
-        border-color: rgba(129, 140, 248, 0.38);
-        box-shadow: 0 0 0 1px rgba(129, 140, 248, 0.14), 0 10px 20px rgba(15, 23, 42, 0.18);
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.84), rgba(15, 23, 42, 0.76));
+        border-color: rgba(129, 140, 248, 0.46);
+        box-shadow: 0 0 0 1px rgba(129, 140, 248, 0.16), 0 12px 22px rgba(15, 23, 42, 0.2);
     }
 
     .dt-header-schedule-item.is-upcoming {
-        background: linear-gradient(135deg, rgba(30, 41, 59, 0.74), rgba(15, 23, 42, 0.68));
-        border-color: rgba(251, 191, 36, 0.28);
-        box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.1), 0 8px 18px rgba(15, 23, 42, 0.16);
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.72));
+        border-color: rgba(251, 191, 36, 0.4);
+        box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.12), 0 10px 20px rgba(15, 23, 42, 0.18);
     }
 
     .dt-header-schedule-item.is-current .dt-header-schedule-period {
-        background: linear-gradient(135deg, rgba(99, 102, 241, 0.96), rgba(79, 70, 229, 0.88));
-        border-color: rgba(199, 210, 254, 0.38);
-        color: #ffffff;
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+        color: #e0e7ff;
     }
 
     .dt-header-schedule-item.is-upcoming .dt-header-schedule-period {
-        background: rgba(251, 191, 36, 0.16);
-        border-color: rgba(251, 191, 36, 0.22);
-        color: #fde68a;
+        color: #fef3c7;
     }
 
-    .dt-header-schedule-item.is-current .dt-header-schedule-sep {
-        color: rgba(224, 231, 255, 0.44);
+    .dt-header-schedule-item.is-current .dt-header-schedule-divider {
+        background: rgba(199, 210, 254, 0.32);
     }
 
-    .dt-header-schedule-item.is-current .dt-header-schedule-subject {
-        color: #ffffff;
+    .dt-header-schedule-item.is-upcoming .dt-header-schedule-kicker {
+        color: #fbbf24;
     }
 
-    .dt-header-schedule-item.is-upcoming .dt-header-schedule-status {
-        background: rgba(251, 191, 36, 0.18);
-        border-color: rgba(251, 191, 36, 0.24);
-        color: #fde68a;
+    .dt-header-schedule-item.is-upcoming .dt-header-schedule-divider {
+        background: rgba(251, 191, 36, 0.28);
     }
 
     .dt-header-schedule-empty {
@@ -3106,28 +3121,44 @@
     }
 
     #mainAppContainer[data-layout-density="compact"] .dt-header-schedule-item {
-        min-height: 2.46rem;
-        padding: 0.42rem 0.82rem;
         gap: 0.5rem;
     }
 
-    #mainAppContainer[data-layout-density="compact"] .dt-header-schedule-status,
-    #mainAppContainer[data-layout-density="compact"] .dt-header-schedule-period {
-        min-height: 1.46rem;
-        padding: 0.18rem 0.46rem;
+    #mainAppContainer[data-layout-density="compact"] .dt-header-schedule-item--focus {
+        min-height: 3rem;
+        max-width: min(100%, 28rem);
+        padding: 0.5rem 1rem;
     }
 
-    #mainAppContainer[data-layout-density="compact"] .dt-header-schedule-status {
-        font-size: 0.76rem;
+    #mainAppContainer[data-layout-density="compact"] .dt-header-schedule-item--list {
+        min-height: 2.26rem;
+        padding: 0.36rem 0.72rem;
+    }
+
+    #mainAppContainer[data-layout-density="compact"] .dt-header-schedule-kicker {
+        font-size: 0.96rem;
     }
 
     #mainAppContainer[data-layout-density="compact"] .dt-header-schedule-period {
-        font-size: 0.98rem;
+        font-size: 1.22rem;
+    }
+
+    #mainAppContainer[data-layout-density="compact"] .dt-header-schedule-divider {
+        height: 1.42rem;
     }
 
     #mainAppContainer[data-layout-density="compact"] .dt-header-schedule-subject {
-        max-width: 12.8rem;
-        font-size: 1rem;
+        max-width: 13.2rem;
+        font-size: 1.18rem;
+    }
+
+    #mainAppContainer[data-layout-density="compact"] .dt-header-schedule-item--list .dt-header-schedule-period {
+        font-size: 0.94rem;
+    }
+
+    #mainAppContainer[data-layout-density="compact"] .dt-header-schedule-item--list .dt-header-schedule-subject {
+        max-width: 10.8rem;
+        font-size: 0.98rem;
     }
 
     html[data-theme="sunny"] .dt-topbar-shell,
@@ -3196,25 +3227,21 @@
         box-shadow: 0 6px 14px rgba(148, 163, 184, 0.1);
     }
 
-    html[data-theme="sunny"] .dt-header-schedule-status,
-    html[data-theme="pastel"] .dt-header-schedule-status,
-    html[data-theme="vivid"] .dt-header-schedule-status {
-        background: rgba(251, 146, 60, 0.12);
-        border-color: rgba(251, 146, 60, 0.18);
-        color: #9a3412;
+    html[data-theme="sunny"] .dt-header-schedule-kicker,
+    html[data-theme="pastel"] .dt-header-schedule-kicker,
+    html[data-theme="vivid"] .dt-header-schedule-kicker {
+        color: #c2410c;
     }
 
     html[data-theme="sunny"] .dt-header-schedule-period,
     html[data-theme="pastel"] .dt-header-schedule-period,
     html[data-theme="vivid"] .dt-header-schedule-period {
-        background: rgba(99, 102, 241, 0.08);
-        border-color: rgba(99, 102, 241, 0.14);
         color: var(--dt-readable-accent);
     }
 
-    html[data-theme="sunny"] .dt-header-schedule-sep,
-    html[data-theme="pastel"] .dt-header-schedule-sep,
-    html[data-theme="vivid"] .dt-header-schedule-sep,
+    html[data-theme="sunny"] .dt-header-schedule-divider,
+    html[data-theme="pastel"] .dt-header-schedule-divider,
+    html[data-theme="vivid"] .dt-header-schedule-divider,
     html[data-theme="sunny"] .dt-header-schedule-empty,
     html[data-theme="pastel"] .dt-header-schedule-empty,
     html[data-theme="vivid"] .dt-header-schedule-empty {
@@ -3246,20 +3273,15 @@
     html[data-theme="sunny"] .dt-header-schedule-item.is-current .dt-header-schedule-period,
     html[data-theme="pastel"] .dt-header-schedule-item.is-current .dt-header-schedule-period,
     html[data-theme="vivid"] .dt-header-schedule-item.is-current .dt-header-schedule-period {
-        background: rgba(99, 102, 241, 0.14);
-        border-color: rgba(99, 102, 241, 0.18);
-        box-shadow: none;
         color: #3730a3;
     }
 
-    html[data-theme="sunny"] .dt-header-schedule-item.is-upcoming .dt-header-schedule-status,
-    html[data-theme="pastel"] .dt-header-schedule-item.is-upcoming .dt-header-schedule-status,
-    html[data-theme="vivid"] .dt-header-schedule-item.is-upcoming .dt-header-schedule-status,
+    html[data-theme="sunny"] .dt-header-schedule-item.is-upcoming .dt-header-schedule-kicker,
+    html[data-theme="pastel"] .dt-header-schedule-item.is-upcoming .dt-header-schedule-kicker,
+    html[data-theme="vivid"] .dt-header-schedule-item.is-upcoming .dt-header-schedule-kicker,
     html[data-theme="sunny"] .dt-header-schedule-item.is-upcoming .dt-header-schedule-period,
     html[data-theme="pastel"] .dt-header-schedule-item.is-upcoming .dt-header-schedule-period,
     html[data-theme="vivid"] .dt-header-schedule-item.is-upcoming .dt-header-schedule-period {
-        background: rgba(251, 146, 60, 0.12);
-        border-color: rgba(251, 146, 60, 0.18);
         color: #9a3412;
     }
 
@@ -3269,10 +3291,10 @@
         color: var(--dt-readable-main);
     }
 
-    html[data-theme="sunny"] .dt-header-schedule-item.is-current .dt-header-schedule-sep,
-    html[data-theme="pastel"] .dt-header-schedule-item.is-current .dt-header-schedule-sep,
-    html[data-theme="vivid"] .dt-header-schedule-item.is-current .dt-header-schedule-sep {
-        color: var(--dt-readable-muted);
+    html[data-theme="sunny"] .dt-header-schedule-item.is-current .dt-header-schedule-divider,
+    html[data-theme="pastel"] .dt-header-schedule-item.is-current .dt-header-schedule-divider,
+    html[data-theme="vivid"] .dt-header-schedule-item.is-current .dt-header-schedule-divider {
+        background: rgba(148, 163, 184, 0.32);
     }
 
     @media (max-width: 1280px) {

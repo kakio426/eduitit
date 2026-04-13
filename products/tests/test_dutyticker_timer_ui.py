@@ -91,7 +91,8 @@ class DutyTickerTimerUiTests(TestCase):
         self.assertContains(response, 'data-mission-stack-fit="normal"')
         self.assertContains(response, 'id="headerScheduleStrip"')
         self.assertContains(response, '.dt-header-toolbar {')
-        self.assertContains(response, '.dt-header-schedule-status {')
+        self.assertContains(response, '.dt-header-schedule-item--focus {')
+        self.assertContains(response, '.dt-header-schedule-primary {')
         self.assertNotContains(response, 'service-shell-fixed')
         self.assertContains(
             response,
@@ -229,7 +230,8 @@ class DutyTickerTimerUiTests(TestCase):
         self.assertIn('applyAdaptiveLayoutState()', script)
         self.assertIn("const shouldShowAllMorningSlots = showAllMorningSlots && displayMode === 'fullscreen';", script)
         self.assertIn("if (!candidateSlots.length && showAllMorningSlots && displayMode === 'windowed') {", script)
-        self.assertIn("const statusMarkup = focusSlot.isUpcoming ? '<span class=\"dt-header-schedule-status\">곧</span>' : '';", script)
+        self.assertIn("const chipClass = `dt-header-schedule-item dt-header-schedule-item--focus ${focusSlot.isCurrent ? 'is-current' : 'is-upcoming'}`;", script)
+        self.assertIn("const kickerMarkup = focusSlot.isUpcoming ? '<span class=\"dt-header-schedule-kicker\">곧</span>' : '';", script)
         self.assertIn('const needsRefresh = !this.doesMissionAutomationRunMatchItem(existingRun, activeAutomation);', script)
         self.assertIn('this.setMissionAutomationRun(activeAutomationId, refreshedRun, now);', script)
         self.assertIn("data-mission-stack-fit', this.missionPanelCollapsed ? 'normal' : resolvedLayout.fit", script)

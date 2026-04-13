@@ -2569,12 +2569,11 @@ class DutyTickerManager {
                     ? `${slot.periodLabel} · ${slot.subjectName} (${slot.startTime}-${slot.endTime})`
                     : `${slot.periodLabel} · ${slot.subjectName}`;
                 const chipClass = slot.isCurrent
-                    ? 'dt-header-schedule-item is-current'
-                    : (slot.isUpcoming ? 'dt-header-schedule-item is-upcoming' : 'dt-header-schedule-item');
+                    ? 'dt-header-schedule-item dt-header-schedule-item--list is-current'
+                    : (slot.isUpcoming ? 'dt-header-schedule-item dt-header-schedule-item--list is-upcoming' : 'dt-header-schedule-item dt-header-schedule-item--list');
                 return `
                     <span class="${chipClass}" title="${this.escapeHtml(titleText)}">
                         <span class="dt-header-schedule-period">${this.escapeHtml(slot.periodLabel)}</span>
-                        <span class="dt-header-schedule-sep">·</span>
                         <span class="dt-header-schedule-subject">${this.escapeHtml(slot.subjectName)}</span>
                     </span>
                 `;
@@ -2605,16 +2604,18 @@ class DutyTickerManager {
         const focusSlot = candidateSlots.find((slot) => slot.isCurrent)
             || [...candidateSlots].sort((a, b) => a.startMinutes - b.startMinutes)[0];
 
-        const chipClass = `dt-header-schedule-item ${focusSlot.isCurrent ? 'is-current' : 'is-upcoming'}`;
-        const statusMarkup = focusSlot.isUpcoming ? '<span class="dt-header-schedule-status">곧</span>' : '';
+        const chipClass = `dt-header-schedule-item dt-header-schedule-item--focus ${focusSlot.isCurrent ? 'is-current' : 'is-upcoming'}`;
+        const kickerMarkup = focusSlot.isUpcoming ? '<span class="dt-header-schedule-kicker">곧</span>' : '';
         const periodText = focusSlot.periodLabel;
         const titleText = `${focusSlot.periodLabel} · ${focusSlot.subjectName} (${focusSlot.startTime}-${focusSlot.endTime})`;
 
         container.innerHTML = `
             <span class="${chipClass}" title="${this.escapeHtml(titleText)}">
-                ${statusMarkup}
-                <span class="dt-header-schedule-period">${this.escapeHtml(periodText)}</span>
-                <span class="dt-header-schedule-sep">·</span>
+                <span class="dt-header-schedule-primary">
+                    ${kickerMarkup}
+                    <span class="dt-header-schedule-period">${this.escapeHtml(periodText)}</span>
+                </span>
+                <span class="dt-header-schedule-divider" aria-hidden="true"></span>
                 <span class="dt-header-schedule-subject">${this.escapeHtml(focusSlot.subjectName)}</span>
             </span>
         `;
