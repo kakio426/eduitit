@@ -10,6 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const supportsFinePointer = window.matchMedia("(pointer: fine)").matches
         && window.matchMedia("(hover: hover)").matches;
+    const cursorCloud = document.querySelector("[data-public-cursor-cloud='true']");
     const cursorDot = document.querySelector("[data-public-cursor-dot='true']");
     const cursorFollower = document.querySelector("[data-public-cursor-follower='true']");
     const cursorAura = document.querySelector("[data-public-cursor-aura='true']");
@@ -45,7 +46,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    if (page && supportsFinePointer && !prefersReducedMotion && cursorDot && cursorFollower && cursorAura) {
+    if (page && supportsFinePointer && !prefersReducedMotion && cursorCloud && cursorDot && cursorFollower && cursorAura) {
         document.documentElement.setAttribute("data-home-public-v6-pointer", "true");
 
         let mouseX = window.innerWidth * 0.5;
@@ -54,6 +55,8 @@ document.addEventListener("DOMContentLoaded", () => {
         let followerY = mouseY;
         let auraX = mouseX;
         let auraY = mouseY;
+        let cloudX = 0;
+        let cloudY = 0;
         let frameId = 0;
 
         page.dataset.pointerVisible = "false";
@@ -63,12 +66,12 @@ document.addEventListener("DOMContentLoaded", () => {
         const interactiveTargets = Array.from(page.querySelectorAll("a, button"));
 
         const resolvePointerLabel = (target) => {
-            if (!target) return "열기";
-            if (target.matches(".home-public-v6-brand")) return "홈";
-            if (target.matches(".home-public-v6-primary-link, .home-public-v6-login-link")) return "시작";
-            if (target.matches(".home-public-v6-secondary-link, .home-public-v6-header-link")) return "탐색";
-            if (target.matches(".home-public-v6-preview-login")) return "로그인";
-            return "열기";
+            if (!target) return "OPEN";
+            if (target.matches(".home-public-v6-brand")) return "HOME";
+            if (target.matches(".home-public-v6-primary-link, .home-public-v6-login-link")) return "START";
+            if (target.matches(".home-public-v6-secondary-link, .home-public-v6-header-link")) return "VIEW";
+            if (target.matches(".home-public-v6-preview-login")) return "LOGIN";
+            return "OPEN";
         };
 
         const resolvePointerTone = (target) => {
@@ -95,6 +98,9 @@ document.addEventListener("DOMContentLoaded", () => {
             page.dataset.pointerVisible = "false";
             page.dataset.pointerHover = "false";
             page.dataset.pointerTone = "violet";
+            if (cursorLabel) {
+                cursorLabel.textContent = "OPEN";
+            }
         };
 
         const handlePointerHoverOn = (event) => {
@@ -110,7 +116,7 @@ document.addEventListener("DOMContentLoaded", () => {
             page.dataset.pointerHover = "false";
             page.dataset.pointerTone = "violet";
             if (cursorLabel) {
-                cursorLabel.textContent = "열기";
+                cursorLabel.textContent = "OPEN";
             }
         };
 
@@ -119,12 +125,17 @@ document.addEventListener("DOMContentLoaded", () => {
             followerY += (mouseY - followerY) * 0.18;
             auraX += (mouseX - auraX) * 0.08;
             auraY += (mouseY - auraY) * 0.08;
+            cloudX += ((mouseX - window.innerWidth * 0.5) - cloudX) * 0.14;
+            cloudY += ((mouseY - window.innerHeight * 0.5) - cloudY) * 0.14;
 
             const isVisible = page.dataset.pointerVisible === "true";
             const isHoveringInteractive = page.dataset.pointerHover === "true";
-            const followerScale = isHoveringInteractive ? 2.15 : 1;
-            const auraScale = isHoveringInteractive ? 1.26 : 1;
+            const followerScale = isHoveringInteractive ? 2.45 : 1;
+            const auraScale = isHoveringInteractive ? 1.42 : 1;
+            const cloudScale = isHoveringInteractive ? 1.14 : 0.98;
 
+            cursorCloud.style.transform = `translate3d(${cloudX}px, ${cloudY}px, 0) scale(${cloudScale})`;
+            cursorCloud.style.opacity = isVisible ? (isHoveringInteractive ? "1" : "0.78") : "0";
             cursorFollower.style.transform = `translate3d(${followerX}px, ${followerY}px, 0) scale(${followerScale})`;
             cursorFollower.style.opacity = isVisible ? "1" : "0";
             cursorAura.style.transform = `translate3d(${auraX}px, ${auraY}px, 0) scale(${auraScale})`;
