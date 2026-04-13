@@ -454,7 +454,7 @@ class HomeV2ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('지금 열기', content)
+        self.assertIn('LOGIN', content)
         self.assertNotIn('업무 둘러보기', content)
         self.assertIn('로그인', content)
         self.assertIn(f'href="{reverse("account_login")}"', content)
@@ -499,8 +499,9 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
         showcase_items = response.context.get('public_platform_showcase_items', [])
 
-        self.assertIn('data-public-primary-cta="launcher"', content)
-        self.assertIn('aria-controls="serviceLauncherModal"', content)
+        self.assertNotIn('data-public-primary-cta="launcher"', content)
+        self.assertNotIn('aria-controls="serviceLauncherModal"', content)
+        self.assertIn(f'href="{reverse("account_login")}"', content)
         self.assertTrue(showcase_items)
         self.assertIn(reverse('collect:landing'), {item['href'] for item in showcase_items})
         self.assertIn(escape(reverse('collect:landing')), content)
@@ -1397,13 +1398,14 @@ class HomeV2ViewTest(TestCase):
         self.assertLessEqual(len(quick_actions), 5)
         self.assertGreaterEqual(len(quick_actions), 1)
 
-    def test_v2_has_global_service_launcher_trigger(self):
-        """비로그인 v6 홈은 히어로 CTA로 전역 런처를 연다."""
+    def test_v2_has_login_magnetic_hero_cta(self):
+        """비로그인 v6 홈은 히어로 CTA로 로그인으로 이동한다."""
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        self.assertIn('data-public-primary-cta="launcher"', content)
-        self.assertIn('aria-controls="serviceLauncherModal"', content)
-        self.assertIn('지금 열기', content)
+        self.assertNotIn('data-public-primary-cta="launcher"', content)
+        self.assertNotIn('aria-controls="serviceLauncherModal"', content)
+        self.assertIn('LOGIN', content)
+        self.assertIn(f'href="{reverse("account_login")}"', content)
         self.assertNotIn('업무 둘러보기', content)
         self.assertNotIn('data-global-service-launcher-trigger="true"', content)
         self.assertNotIn('서비스 검색...', content)
@@ -3051,7 +3053,7 @@ class HomeV4ViewTest(TestCase):
         self.assertIn('data-home-v6-public-showcase="true"', content)
         self.assertIn('data-home-v6-public-map="true"', content)
         self.assertNotIn('업무 둘러보기', content)
-        self.assertIn('지금 열기', content)
+        self.assertIn('LOGIN', content)
         self.assertIn('간편 수합', content)
         self.assertIn('가뿐하게 서명 톡', content)
 
@@ -4087,7 +4089,7 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('data-home-v6-public-map="true"', content)
         self.assertIn('data-home-v6-public-portfolio="true"', content)
         self.assertIn('에듀잇티 포트폴리오', content)
-        self.assertIn('지금 열기', content)
+        self.assertIn('LOGIN', content)
         self.assertNotIn('교실 업무의 기준', content)
         self.assertNotIn('업무 둘러보기', content)
         self.assertNotIn('core/css/home_authenticated_v6.css', content)

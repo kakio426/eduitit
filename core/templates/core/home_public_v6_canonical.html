@@ -64,29 +64,6 @@
                         </p>
 
                         <div class="home-public-v6-hero-actions" data-public-hero-reveal="true" data-public-hero-delay="240">
-                            {% if service_launcher_json and service_launcher_json != '[]' %}
-                            <div class="home-public-v6-primary-goo-shell" data-home-public-v6-goo-shell="true">
-                                <div class="home-public-v6-primary-goo-blob-layer" aria-hidden="true">
-                                    <span class="home-public-v6-primary-goo-orb home-public-v6-primary-goo-orb--left"></span>
-                                    <span class="home-public-v6-primary-goo-core" data-magnetic-blob="true"></span>
-                                    <span class="home-public-v6-primary-goo-orb home-public-v6-primary-goo-orb--right"></span>
-                                </div>
-                                <button
-                                    type="button"
-                                    class="home-public-v6-primary-link home-public-v6-primary-link--gooey"
-                                    data-public-primary-cta="launcher"
-                                    data-magnetic-button="true"
-                                    data-public-primary-href="{{ public_primary_action_card.href|default:'' }}"
-                                    data-public-fallback-target="{{ public_primary_cta.fallback_target_id }}"
-                                    aria-controls="serviceLauncherModal"
-                                    aria-label="지금 열기">
-                                    <span class="home-public-v6-primary-link-content" data-magnetic-inner="true">
-                                        <span aria-hidden="true">OPEN</span>
-                                        <span class="sr-only">지금 열기</span>
-                                    </span>
-                                </button>
-                            </div>
-                            {% else %}
                             <div class="home-public-v6-primary-goo-shell" data-home-public-v6-goo-shell="true">
                                 <div class="home-public-v6-primary-goo-blob-layer" aria-hidden="true">
                                     <span class="home-public-v6-primary-goo-orb home-public-v6-primary-goo-orb--left"></span>
@@ -94,17 +71,16 @@
                                     <span class="home-public-v6-primary-goo-orb home-public-v6-primary-goo-orb--right"></span>
                                 </div>
                                 <a
-                                    href="{% if public_primary_action_card %}{{ public_primary_action_card.href }}{% else %}{{ public_primary_cta.fallback_href }}{% endif %}"
+                                    href="{{ login_url }}"
                                     class="home-public-v6-primary-link home-public-v6-primary-link--gooey"
                                     data-magnetic-button="true"
-                                    aria-label="지금 열기">
+                                    aria-label="로그인">
                                     <span class="home-public-v6-primary-link-content" data-magnetic-inner="true">
-                                        <span aria-hidden="true">OPEN</span>
-                                        <span class="sr-only">지금 열기</span>
+                                        <span aria-hidden="true">LOGIN</span>
+                                        <span class="sr-only">로그인</span>
                                     </span>
                                 </a>
                             </div>
-                            {% endif %}
                         </div>
                     </div>
                 </section>
