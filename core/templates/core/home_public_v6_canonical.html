@@ -19,7 +19,9 @@
     <div class="home-public-v6-ambient-orb home-public-v6-ambient-orb-secondary" aria-hidden="true"></div>
     <div class="home-public-v6-cursor-layer" aria-hidden="true">
         <span class="home-public-v6-cursor-aura" data-public-cursor-aura="true"></span>
-        <span class="home-public-v6-cursor-follower" data-public-cursor-follower="true"></span>
+        <span class="home-public-v6-cursor-follower" data-public-cursor-follower="true">
+            <span class="home-public-v6-cursor-label" data-public-cursor-label="true">열기</span>
+        </span>
         <span class="home-public-v6-cursor-dot" data-public-cursor-dot="true"></span>
     </div>
 
@@ -94,37 +96,67 @@
                     </div>
                 </section>
 
-                <section class="home-public-v6-motion-band" data-public-reveal="true" style="--reveal-order: 0;" aria-label="플랫폼 시그널">
-                    <div class="home-public-v6-motion-band-track">
-                        <div class="home-public-v6-motion-band-row">
-                            <span>Teacher First</span>
+                <section class="home-public-v6-motion-band" data-public-reveal="true" data-public-reveal-style="band" style="--reveal-order: 0;" aria-label="플랫폼 시그널">
+                    <div class="home-public-v6-motion-band-track home-public-v6-motion-band-track-primary">
+                        <div class="home-public-v6-motion-band-row home-public-v6-motion-band-row-primary">
+                            <span>교실 업무</span>
                             <i class="fa-solid fa-diamond"></i>
-                            <span>No Login Start</span>
+                            <span class="home-public-v6-motion-band-outline">Teacher Flow</span>
                             <i class="fa-solid fa-diamond"></i>
-                            <span>Approval Flow</span>
+                            <span>NO LOGIN START</span>
                             <i class="fa-solid fa-diamond"></i>
-                            <span>AI Writing</span>
+                            <span>한 흐름으로</span>
                             <i class="fa-solid fa-diamond"></i>
-                            <span>Service Portfolio</span>
+                            <span class="home-public-v6-motion-band-glow">EDUITIT PLATFORM</span>
                             <i class="fa-solid fa-diamond"></i>
                         </div>
-                        <div class="home-public-v6-motion-band-row" aria-hidden="true">
-                            <span>Teacher First</span>
+                        <div class="home-public-v6-motion-band-row home-public-v6-motion-band-row-primary" aria-hidden="true">
+                            <span>교실 업무</span>
                             <i class="fa-solid fa-diamond"></i>
-                            <span>No Login Start</span>
+                            <span class="home-public-v6-motion-band-outline">Teacher Flow</span>
                             <i class="fa-solid fa-diamond"></i>
-                            <span>Approval Flow</span>
+                            <span>NO LOGIN START</span>
                             <i class="fa-solid fa-diamond"></i>
-                            <span>AI Writing</span>
+                            <span>한 흐름으로</span>
                             <i class="fa-solid fa-diamond"></i>
-                            <span>Service Portfolio</span>
+                            <span class="home-public-v6-motion-band-glow">EDUITIT PLATFORM</span>
                             <i class="fa-solid fa-diamond"></i>
+                        </div>
+                    </div>
+                    <div class="home-public-v6-motion-band-track home-public-v6-motion-band-track-secondary">
+                        <div class="home-public-v6-motion-band-row home-public-v6-motion-band-row-secondary">
+                            <span>알림장</span>
+                            <i class="fa-solid fa-plus"></i>
+                            <span>수합</span>
+                            <i class="fa-solid fa-plus"></i>
+                            <span>서명</span>
+                            <i class="fa-solid fa-plus"></i>
+                            <span>예약</span>
+                            <i class="fa-solid fa-plus"></i>
+                            <span>캘린더</span>
+                            <i class="fa-solid fa-plus"></i>
+                            <span>법률 확인</span>
+                            <i class="fa-solid fa-plus"></i>
+                        </div>
+                        <div class="home-public-v6-motion-band-row home-public-v6-motion-band-row-secondary" aria-hidden="true">
+                            <span>알림장</span>
+                            <i class="fa-solid fa-plus"></i>
+                            <span>수합</span>
+                            <i class="fa-solid fa-plus"></i>
+                            <span>서명</span>
+                            <i class="fa-solid fa-plus"></i>
+                            <span>예약</span>
+                            <i class="fa-solid fa-plus"></i>
+                            <span>캘린더</span>
+                            <i class="fa-solid fa-plus"></i>
+                            <span>법률 확인</span>
+                            <i class="fa-solid fa-plus"></i>
                         </div>
                     </div>
                 </section>
 
                 <section class="home-public-v6-showcase" data-home-v6-public-showcase="true">
-                    <div class="home-public-v6-preview-wrap" data-public-reveal="true" style="--reveal-order: 0;">
+                    <div class="home-public-v6-preview-wrap" data-public-reveal="true" data-public-reveal-style="showcase" style="--reveal-order: 0;">
                         <div class="home-public-v6-preview-shadow" aria-hidden="true"></div>
 
                         <article class="home-public-v6-preview-window">
@@ -210,7 +242,7 @@
                     </div>
 
                     <div class="home-public-v6-section-surface home-public-v6-features-surface">
-                        <div class="home-public-v6-section-header">
+                        <div class="home-public-v6-section-header" data-public-reveal="true" data-public-reveal-style="section-head" style="--reveal-order: 0;">
                             <div>
                                 <p class="home-public-v6-section-eyebrow">Features</p>
                                 <h2 class="home-public-v6-section-title">핵심 기능만 가장 완벽하게.</h2>
@@ -227,6 +259,7 @@
                                 class="home-public-v6-bento-card"
                                 data-feature-index="{{ forloop.counter|stringformat:'02d' }}"
                                 data-public-reveal="true"
+                                data-public-reveal-style="card"
                                 style="--reveal-order: {{ forloop.counter0|add:'1' }};"
                                 {% if item.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}>
                                 <div class="home-public-v6-bento-top">
@@ -253,7 +286,7 @@
                 </section>
 
                 <section class="home-public-v6-section-surface home-public-v6-proof-section" id="public-platform-map" data-home-v6-public-map="true">
-                    <div class="home-public-v6-section-header">
+                    <div class="home-public-v6-section-header" data-public-reveal="true" data-public-reveal-style="section-head" style="--reveal-order: 0;">
                         <div>
                             <p class="home-public-v6-section-eyebrow">Social Proof</p>
                             <h2 class="home-public-v6-section-title">학교 현장에서 먼저 검증한 흐름</h2>
@@ -264,19 +297,19 @@
                     </div>
 
                     <div class="home-public-v6-proof-grid">
-                        <article class="home-public-v6-proof-card" data-public-reveal="true" style="--reveal-order: 0;">
+                        <article class="home-public-v6-proof-card" data-public-reveal="true" data-public-reveal-style="proof" style="--reveal-order: 0;">
                             <span class="home-public-v6-proof-label">첫 경험</span>
                             <strong class="home-public-v6-proof-title">로그인 없이 시작</strong>
                             <p class="home-public-v6-proof-copy">회원가입 전에 핵심 도구를 먼저 엽니다.</p>
                         </article>
 
-                        <article class="home-public-v6-proof-card" data-public-reveal="true" style="--reveal-order: 1;">
+                        <article class="home-public-v6-proof-card" data-public-reveal="true" data-public-reveal-style="proof" style="--reveal-order: 1;">
                             <span class="home-public-v6-proof-label">현장 기록</span>
                             <strong class="home-public-v6-proof-title">교실 적용 사례 공개</strong>
                             <p class="home-public-v6-proof-copy">도입 사례와 적용 흐름을 바로 봅니다.</p>
                         </article>
 
-                        <article class="home-public-v6-proof-card" data-public-reveal="true" style="--reveal-order: 2;">
+                        <article class="home-public-v6-proof-card" data-public-reveal="true" data-public-reveal-style="proof" style="--reveal-order: 2;">
                             <span class="home-public-v6-proof-label">업무 확장</span>
                             <strong class="home-public-v6-proof-title">{% if guest_continue_action_card %}{{ guest_continue_action_card.title }}{% else %}로그인 후 확장{% endif %}</strong>
                             <p class="home-public-v6-proof-copy">공개 홈에서 시작해 내부 도구로 이어집니다.</p>
@@ -284,7 +317,7 @@
                     </div>
 
                     <div class="home-public-v6-map-shell">
-                        <div class="home-public-v6-map-header" data-public-reveal="true" style="--reveal-order: 3;">
+                        <div class="home-public-v6-map-header" data-public-reveal="true" data-public-reveal-style="section-head" style="--reveal-order: 3;">
                             <div>
                                 <p class="home-public-v6-section-eyebrow">Service Map</p>
                                 <h2 class="home-public-v6-map-title">업무별로 바로 찾는 에듀잇티</h2>
@@ -294,7 +327,7 @@
 
                         <div class="home-public-v6-group-grid">
                             {% for group in public_platform_groups %}
-                            <section class="home-public-v6-group-card" data-public-reveal="true" style="--reveal-order: {{ forloop.counter|add:'3' }};">
+                            <section class="home-public-v6-group-card" data-public-reveal="true" data-public-reveal-style="panel" style="--reveal-order: {{ forloop.counter|add:'3' }};">
                                 <div class="home-public-v6-group-head">
                                     <p class="home-public-v6-group-eyebrow">{{ forloop.counter|stringformat:"02d" }}</p>
                                     <h3 class="home-public-v6-group-title">{{ group.title }}</h3>
@@ -324,7 +357,7 @@
                 </section>
 
                 <section class="home-public-v6-portfolio" data-home-v6-public-portfolio="true">
-                    <div class="home-public-v6-portfolio-copy" data-public-reveal="true" style="--reveal-order: 0;">
+                    <div class="home-public-v6-portfolio-copy" data-public-reveal="true" data-public-reveal-style="portfolio" style="--reveal-order: 0;">
                         <p class="home-public-v6-section-eyebrow">{{ public_portfolio_panel.eyebrow }}</p>
                         <h2 class="home-public-v6-portfolio-title">{{ public_portfolio_panel.title }}</h2>
                         <p class="home-public-v6-portfolio-summary">{{ public_portfolio_panel.summary }}</p>
@@ -335,7 +368,7 @@
                         </div>
                     </div>
 
-                    <div class="home-public-v6-portfolio-actions" data-public-reveal="true" style="--reveal-order: 1;">
+                    <div class="home-public-v6-portfolio-actions" data-public-reveal="true" data-public-reveal-style="portfolio" style="--reveal-order: 1;">
                         <a href="{{ public_portfolio_panel.href }}" class="home-public-v6-primary-link">
                             {{ public_portfolio_panel.cta_label }}
                             <i class="fa-solid fa-arrow-right text-xs"></i>

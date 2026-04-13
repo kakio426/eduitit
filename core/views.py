@@ -2680,9 +2680,9 @@ PUBLIC_PLATFORM_GROUP_SPECS = (
     {
         "key": "class_preparation",
         "title": "수업 준비",
-        "summary": "수업 도구를 바로 엽니다.",
-        "preferred_routes": ("artclass:setup",),
-        "preferred_titles": ("미술 수업 도우미", "몽글몽글 미술 수업"),
+        "summary": "수업 도구와 활동을 바로 엽니다.",
+        "preferred_routes": ("artclass:setup", "happy_seed:landing", "seed_quiz:landing"),
+        "preferred_titles": ("미술 수업 도우미", "몽글몽글 미술 수업", "행복의 씨앗", "씨앗 퀴즈", "씨앗퀴즈"),
         "fallback_group_keys": ("class_preparation",),
     },
     {
@@ -2721,6 +2721,8 @@ PUBLIC_PLATFORM_GROUP_KEY_BY_ROUTE = {
     "signatures:list": "collect_sign",
     "handoff:landing": "collect_sign",
     "artclass:setup": "class_preparation",
+    "happy_seed:landing": "class_preparation",
+    "seed_quiz:landing": "class_preparation",
     "classcalendar:main": "schedule_reservation",
     "reservations:dashboard_landing": "schedule_reservation",
     "reservations:landing": "schedule_reservation",
