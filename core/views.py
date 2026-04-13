@@ -690,6 +690,7 @@ PRODUCT_CONTEXT_CHIP_OVERRIDES = {
     "noticegen:main": ["안내문 준비", "PC 권장", "학급 전체", "10분 안팎"],
     "collect:landing": ["안내 뒤 회수", "휴대폰 응답", "학급 전체", "10분 안팎"],
     "consent:landing": ["안내 뒤 회수", "휴대폰 응답", "학급 전체", "10분 안팎"],
+    "docsign:list": ["내 문서 사인", "PDF 업로드", "교사 1인", "3분 안팎"],
     "signatures:landing": ["서명 받아야 할 때", "휴대폰 응답", "학급 전체", "10분 안팎"],
     "handoff:landing": ["배부 뒤 확인", "휴대폰 응답", "학급 전체", "10분 안팎"],
     "reservations:dashboard_landing": ["일정 잡을 때", "PC·모바일", "개별·소그룹", "5분 안팎"],
@@ -752,7 +753,7 @@ HOME_SHORTCUT_SPECS = [
         "title": "수합/서명",
         "description": "응답, 동의, 서명을 한 번에 받는 흐름입니다.",
         "icon": "fa-solid fa-inbox",
-        "preferred_routes": ["collect:landing", "consent:landing", "signatures:landing", "handoff:landing"],
+        "preferred_routes": ["collect:landing", "consent:landing", "docsign:list", "signatures:landing", "handoff:landing"],
         "fallback_route": "collect:landing",
     },
     {
@@ -834,7 +835,7 @@ GUEST_START_CARD_SPECS = [
         "title": "수합/서명 받기",
         "description": "응답과 확인을 링크로 빠르게 모읍니다.",
         "icon": "fa-solid fa-file-signature",
-        "preferred_routes": ["collect:landing", "consent:landing", "signatures:landing"],
+        "preferred_routes": ["collect:landing", "consent:landing", "docsign:list", "signatures:landing"],
         "fallback_route": "collect:landing",
     },
     {
@@ -2643,6 +2644,10 @@ PUBLIC_PLATFORM_SHOWCASE_PRIORITY_SPECS = (
         "titles": ("간편 수합",),
     },
     {
+        "route_names": ("docsign:list",),
+        "titles": ("인쇄 NONO 온라인 사인",),
+    },
+    {
         "route_names": ("signatures:list",),
         "titles": ("가뿐하게 서명 톡",),
     },
@@ -2673,8 +2678,8 @@ PUBLIC_PLATFORM_GROUP_SPECS = (
         "key": "collect_sign",
         "title": "수합·서명",
         "summary": "응답과 서명을 바로 받습니다.",
-        "preferred_routes": ("collect:landing", "consent:landing", "signatures:list", "handoff:landing"),
-        "preferred_titles": ("간편 수합", "동의서는 나에게 맡겨", "가뿐하게 서명 톡", "배부 체크"),
+        "preferred_routes": ("collect:landing", "consent:landing", "docsign:list", "signatures:list", "handoff:landing"),
+        "preferred_titles": ("간편 수합", "동의서는 나에게 맡겨", "인쇄 NONO 온라인 사인", "가뿐하게 서명 톡", "배부 체크"),
         "fallback_group_keys": ("collect_sign",),
     },
     {
@@ -2717,6 +2722,7 @@ PUBLIC_PLATFORM_GROUP_KEY_BY_ROUTE = {
     "collect:landing": "collect_sign",
     "consent:landing": "collect_sign",
     "consent:dashboard": "collect_sign",
+    "docsign:list": "collect_sign",
     "signatures:landing": "collect_sign",
     "signatures:list": "collect_sign",
     "handoff:landing": "collect_sign",
@@ -3806,7 +3812,7 @@ def _resolve_catalog_scenario_key(product):
 
     if route_name in {"classcalendar:main", "reservations:dashboard_landing", "reservations:landing"}:
         return "today_ops"
-    if route_name in {"collect:landing", "consent:landing", "signatures:landing", "handoff:landing"} or service_type == "collect_sign":
+    if route_name in {"collect:landing", "consent:landing", "docsign:list", "signatures:landing", "handoff:landing"} or service_type == "collect_sign":
         return "collect"
     if service_type == "game" or route_name in CLASS_ACTIVITY_ROUTE_NAMES:
         return "activity"

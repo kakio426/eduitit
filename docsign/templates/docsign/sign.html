@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}문서 사인{% endblock %}
+
+{% block extra_css %}
+<style>
+  #signaturePad {
+    width: 100%;
+    height: 220px;
+    border-radius: 24px;
+    background: white;
+    touch-action: none;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="service-shell min-h-screen bg-slate-50 px-4 py-8">
+  <div class="mx-auto max-w-6xl space-y-6">
+    <div class="space-y-2">
+      <a href="{% url 'docsign:position' job_id=job.id %}" class="text-sm font-semibold text-slate-500 hover:text-slate-700">사인 위치</a>
+      <h1 class="text-3xl font-black tracking-tight text-slate-900">3. 사인</h1>
+      <p class="text-sm font-medium text-slate-500">{{ job.signature_page }}쪽에 들어갑니다.</p>
+    </div>
+
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)]">
+      <section class="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+        <div
+          data-consent-document-preview
+          data-source-url="{{ document_preview_url }}"
+          data-file-type="pdf"
+          data-file-name="{{ document_file_name }}"
+          data-file-size="{{ job.source_file_size_snapshot }}"
+          data-max-width="920"
+        >
+          <div class="flex min-h-[520px] items-center justify-center overflow-auto rounded-3xl border border-slate-200 bg-slate-50 p-3">
+            <p data-preview-placeholder class="text-sm font-medium text-slate-400">문서를 불러오는 중입니다.</p>
+            <canvas data-preview-canvas class="hidden mx-auto"></canvas>
+            <img data-preview-image class="hidden mx-auto max-w-full rounded-2xl" alt="문서 미리보기">
+          </div>
+          <div class="mt-3 flex items-center justify-between gap-3">
+            <p data-preview-status class="text-xs font-medium text-slate-500">문서를 불러오는 중입니다.</p>
+            <p data-preview-meta class="text-xs text-slate-400"></p>
+          </div>
+          <div data-preview-pagination class="mt-3 hidden items-center justify-center gap-2">
+            <button type="button" data-preview-prev class="min-h-10 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-50">이전</button>
+            <span data-preview-page class="min-w-[72px] text-center text-xs font-bold text-slate-600">1 / 1쪽</span>
+            <button type="button" data-preview-next class="min-h-10 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-50">다음</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+        <form method="post" id="docsignForm" class="space-y-4">
+          {% csrf_token %}
+          <div class="space-y-2">
+            <h2 class="text-lg font-bold text-slate-900">내 사인</h2>
+            <canvas id="signaturePad" class="border border-slate-200 shadow-sm"></canvas>
+            {{ form.signature_data }}
+            {% if form.signature_data.errors %}
+            <p class="text-sm font-semibold text-red-600">{{ form.signature_data.errors|join:", " }}</p>
+            {% endif %}
+            <p id="signatureWarning" class="hidden text-sm font-semibold text-red-600">사인을 먼저 입력해 주세요.</p>
+          </div>
+          <div class="flex gap-2">
+            <button type="button" id="clearBtn" class="inline-flex min-h-11 flex-1 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+              지우기
+            </button>
+            <button type="submit" class="inline-flex min-h-11 flex-1 items-center justify-center rounded-2xl bg-blue-600 px-4 py-3 text-sm font-bold text-white hover:bg-blue-700">
+              PDF 만들기
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+  </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module" src="{% static 'consent/pdf_preview.js' %}"></script>
+<script>
+  const canvas = document.getElementById("signaturePad");
+  const clearBtn = document.getElementById("clearBtn");
+  const hidden = document.getElementById("id_signature_data");
+  const ctx = canvas.getContext("2d");
+  let drawing = false;
+
+  function fitCanvas() {
+    const ratio = window.devicePixelRatio || 1;
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    canvas.width = Math.floor(width * ratio);
+    canvas.height = Math.floor(height * ratio);
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "#0f172a";
+    ctx.clearRect(0, 0, width, height);
+    hidden.value = "";
+  }
+
+  function point(event) {
+    const rect = canvas.getBoundingClientRect();
+    const source = event.touches ? event.touches[0] : event;
+    return { x: source.clientX - rect.left, y: source.clientY - rect.top };
+  }
+
+  function start(event) {
+    drawing = true;
+    const current = point(event);
+    ctx.beginPath();
+    ctx.moveTo(current.x, current.y);
+    event.preventDefault();
+  }
+
+  function move(event) {
+    if (!drawing) {
+      return;
+    }
+    const current = point(event);
+    ctx.lineTo(current.x, current.y);
+    ctx.stroke();
+    hidden.value = canvas.toDataURL("image/png");
+    event.preventDefault();
+  }
+
+  function end() {
+    drawing = false;
+  }
+
+  clearBtn.addEventListener("click", () => {
+    ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+    hidden.value = "";
+  });
+
+  canvas.addEventListener("mousedown", start);
+  canvas.addEventListener("mousemove", move);
+  window.addEventListener("mouseup", end);
+  canvas.addEventListener("touchstart", start, { passive: false });
+  canvas.addEventListener("touchmove", move, { passive: false });
+  window.addEventListener("touchend", end);
+  window.addEventListener("resize", fitCanvas);
+  fitCanvas();
+
+  document.getElementById("docsignForm").addEventListener("submit", (event) => {
+    if (!(hidden.value || "").startsWith("data:image")) {
+      event.preventDefault();
+      document.getElementById("signatureWarning").classList.remove("hidden");
+      canvas.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  });
+</script>
+{% endblock %}

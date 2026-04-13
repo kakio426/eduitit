@@ -49,6 +49,7 @@ urlpatterns = [
     path('artclass/', include('artclass.urls', namespace='artclass')),
     path('signatures/', include('signatures.urls', namespace='signatures')),
     path('consent/', include('consent.urls', namespace='consent')),
+    path('docsign/', include('docsign.urls', namespace='docsign')),
     path('chess/', include('chess.urls', namespace='chess')),
     path('janggi/', include('janggi.urls', namespace='janggi')),
     path('fairy-games/', include('fairy_games.urls', namespace='fairy_games')),

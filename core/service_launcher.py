@@ -89,6 +89,7 @@ HOME_AUXILIARY_SECTIONS = [
 HOME_SECTION_BY_ROUTE = {
     "collect:landing": "collect_sign",
     "consent:landing": "collect_sign",
+    "docsign:list": "collect_sign",
     "signatures:landing": "collect_sign",
     "signatures:list": "collect_sign",
     "handoff:landing": "collect_sign",
@@ -230,6 +231,7 @@ HOME_ICON_CLASS_BY_ROUTE = {
     "collect:dashboard": "fa-solid fa-inbox",
     "consent:landing": "fa-solid fa-clipboard-check",
     "consent:dashboard": "fa-solid fa-clipboard-check",
+    "docsign:list": "fa-solid fa-file-signature",
     "signatures:landing": "fa-solid fa-file-signature",
     "signatures:list": "fa-solid fa-file-signature",
     "handoff:landing": "fa-solid fa-box-open",

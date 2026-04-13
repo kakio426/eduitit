@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}사인 위치{% endblock %}
+
+{% block extra_css %}
+<style>
+  #docsign-stage {
+    position: relative;
+    display: inline-block;
+    overflow: hidden;
+    border-radius: 24px;
+    border: 1px solid rgb(226 232 240);
+    background: white;
+  }
+
+  #docsign-pdf-canvas {
+    display: block;
+  }
+
+  .docsign-box {
+    position: absolute;
+    border: 2px dashed #2563eb;
+    background: rgba(37, 99, 235, 0.12);
+    cursor: move;
+    touch-action: none;
+  }
+
+  .docsign-box.active {
+    border-style: solid;
+  }
+
+  .docsign-box-label {
+    position: absolute;
+    top: -22px;
+    left: 0;
+    border-radius: 999px;
+    background: #2563eb;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+  }
+
+  .docsign-box-handle {
+    position: absolute;
+    right: -8px;
+    bottom: -8px;
+    height: 16px;
+    width: 16px;
+    border-radius: 999px;
+    background: #2563eb;
+    cursor: nwse-resize;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="service-shell min-h-screen bg-slate-50 px-4 py-8">
+  <div class="mx-auto max-w-6xl space-y-6">
+    <div class="space-y-2">
+      <a href="{% url 'docsign:detail' job_id=job.id %}" class="text-sm font-semibold text-slate-500 hover:text-slate-700">문서 상세</a>
+      <h1 class="text-3xl font-black tracking-tight text-slate-900">2. 사인 위치</h1>
+      <p class="text-sm font-medium text-slate-500">{{ document_file_name }} · {{ page_count }}쪽</p>
+    </div>
+
+    {% if form.non_field_errors %}
+    <div class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+      {{ form.non_field_errors }}
+    </div>
+    {% endif %}
+
+    <section class="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+      <div class="flex flex-wrap items-center gap-2">
+        <button type="button" id="prevPageBtn" class="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700">이전</button>
+        <div class="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700">
+          <span>쪽</span>
+          <input id="pageInput" type="number" min="1" max="{{ page_count }}" class="w-16 rounded-lg border border-slate-200 bg-white px-2 py-1 text-center text-xs font-bold text-slate-900">
+          <span>/ {{ page_count }}</span>
+        </div>
+        <button type="button" id="nextPageBtn" class="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700">다음</button>
+        <button type="button" id="resetBoxBtn" class="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700">기본 위치</button>
+        <p id="positionStatus" class="ml-auto text-xs font-semibold text-slate-500">박스를 옮기고 크기를 맞춰 주세요.</p>
+      </div>
+
+      <div class="mt-4 overflow-auto rounded-3xl bg-slate-50 p-3">
+        <div id="docsign-stage">
+          <canvas id="docsign-pdf-canvas"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <form method="post" class="flex flex-wrap gap-3">
+      {% csrf_token %}
+      {{ form.position_json }}
+      <a href="{% url 'docsign:create' %}" class="inline-flex min-h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+        다시 올리기
+      </a>
+      <button type="submit" class="inline-flex min-h-11 items-center justify-center rounded-2xl bg-blue-600 px-5 py-3 text-sm font-bold text-white hover:bg-blue-700">
+        다음
+      </button>
+    </form>
+  </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module">
+  const pdfModuleUrl = "{% static 'consent/vendor/pdfjs/pdf.min.mjs' %}";
+  const pdfWorkerUrl = "{% static 'consent/vendor/pdfjs/pdf.worker.min.mjs' %}";
+  const documentUrl = "{{ document_preview_url|escapejs }}";
+  const initialPayload = {{ initial_position_json|safe }};
+  const stage = document.getElementById("docsign-stage");
+  const canvas = document.getElementById("docsign-pdf-canvas");
+  const context = canvas.getContext("2d");
+  const hidden = document.getElementById("id_position_json");
+  const pageInput = document.getElementById("pageInput");
+  const prevPageBtn = document.getElementById("prevPageBtn");
+  const nextPageBtn = document.getElementById("nextPageBtn");
+  const resetBoxBtn = document.getElementById("resetBoxBtn");
+  const positionStatus = document.getElementById("positionStatus");
+
+  const box = {
+    page: Number(initialPayload.page || 1),
+    x_ratio: Number(initialPayload.x_ratio ?? 0.58),
+    y_ratio: Number(initialPayload.y_ratio ?? 0.08),
+    w_ratio: Number(initialPayload.w_ratio ?? 0.28),
+    h_ratio: Number(initialPayload.h_ratio ?? 0.12),
+  };
+
+  let pdfDoc = null;
+  let pageWidth = 1;
+  let pageHeight = 1;
+  let dragState = null;
+
+  const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+  function syncHidden() {
+    hidden.value = JSON.stringify(box);
+  }
+
+  function setStatus(text) {
+    positionStatus.textContent = text;
+  }
+
+  function removeBox() {
+    stage.querySelectorAll(".docsign-box").forEach((node) => node.remove());
+  }
+
+  function drawBox() {
+    removeBox();
+    if (box.page !== Number(pageInput.value || 1)) {
+      syncHidden();
+      return;
+    }
+
+    const node = document.createElement("div");
+    node.className = "docsign-box active";
+    node.style.left = `${box.x_ratio * pageWidth}px`;
+    node.style.top = `${(1 - box.y_ratio - box.h_ratio) * pageHeight}px`;
+    node.style.width = `${box.w_ratio * pageWidth}px`;
+    node.style.height = `${box.h_ratio * pageHeight}px`;
+    node.innerHTML = '<span class="docsign-box-label">사인</span><span class="docsign-box-handle"></span>';
+    stage.appendChild(node);
+
+    node.addEventListener("pointerdown", (event) => {
+      dragState = {
+        pointerId: event.pointerId,
+        mode: event.target.classList.contains("docsign-box-handle") ? "resize" : "move",
+        startX: event.clientX,
+        startY: event.clientY,
+        left: parseFloat(node.style.left),
+        top: parseFloat(node.style.top),
+        width: parseFloat(node.style.width),
+        height: parseFloat(node.style.height),
+      };
+      node.setPointerCapture(event.pointerId);
+    });
+
+    node.addEventListener("pointermove", (event) => {
+      if (!dragState || dragState.pointerId !== event.pointerId) {
+        return;
+      }
+
+      const dx = event.clientX - dragState.startX;
+      const dy = event.clientY - dragState.startY;
+      if (dragState.mode === "move") {
+        const nextLeft = clamp(dragState.left + dx, 0, pageWidth - dragState.width);
+        const nextTop = clamp(dragState.top + dy, 0, pageHeight - dragState.height);
+        node.style.left = `${nextLeft}px`;
+        node.style.top = `${nextTop}px`;
+      } else {
+        const nextWidth = clamp(dragState.width + dx, 80, pageWidth - dragState.left);
+        const nextHeight = clamp(dragState.height + dy, 36, pageHeight - dragState.top);
+        node.style.width = `${nextWidth}px`;
+        node.style.height = `${nextHeight}px`;
+      }
+    });
+
+    node.addEventListener("pointerup", (event) => {
+      if (!dragState || dragState.pointerId !== event.pointerId) {
+        return;
+      }
+
+      const left = parseFloat(node.style.left);
+      const top = parseFloat(node.style.top);
+      const width = parseFloat(node.style.width);
+      const height = parseFloat(node.style.height);
+      box.page = Number(pageInput.value || 1);
+      box.x_ratio = clamp(left / pageWidth, 0, 1);
+      box.y_ratio = clamp(1 - ((top + height) / pageHeight), 0, 1);
+      box.w_ratio = clamp(width / pageWidth, 0.05, 1);
+      box.h_ratio = clamp(height / pageHeight, 0.03, 1);
+      dragState = null;
+      syncHidden();
+      setStatus(`${box.page}쪽에 저장했습니다.`);
+    });
+  }
+
+  async function renderPage(pageNumber) {
+    const safePage = clamp(pageNumber, 1, pdfDoc.numPages);
+    pageInput.value = safePage;
+    box.page = box.page || safePage;
+
+    const page = await pdfDoc.getPage(safePage);
+    const maxWidth = Math.min(window.innerWidth - 96, 980);
+    const baseViewport = page.getViewport({ scale: 1 });
+    const scale = Math.max(0.7, maxWidth / baseViewport.width);
+    const viewport = page.getViewport({ scale });
+
+    pageWidth = viewport.width;
+    pageHeight = viewport.height;
+    canvas.width = Math.ceil(viewport.width);
+    canvas.height = Math.ceil(viewport.height);
+    stage.style.width = `${viewport.width}px`;
+    stage.style.height = `${viewport.height}px`;
+
+    await page.render({ canvasContext: context, viewport }).promise;
+    drawBox();
+    syncHidden();
+    prevPageBtn.disabled = safePage <= 1;
+    nextPageBtn.disabled = safePage >= pdfDoc.numPages;
+  }
+
+  resetBoxBtn.addEventListener("click", () => {
+    box.page = Number(pageInput.value || 1);
+    box.x_ratio = 0.58;
+    box.y_ratio = 0.08;
+    box.w_ratio = 0.28;
+    box.h_ratio = 0.12;
+    drawBox();
+    syncHidden();
+    setStatus("기본 위치로 되돌렸습니다.");
+  });
+
+  prevPageBtn.addEventListener("click", () => renderPage(Number(pageInput.value || 1) - 1));
+  nextPageBtn.addEventListener("click", () => renderPage(Number(pageInput.value || 1) + 1));
+  pageInput.addEventListener("change", () => renderPage(Number(pageInput.value || 1)));
+  window.addEventListener("resize", () => renderPage(Number(pageInput.value || 1)));
+
+  const pdfjsLib = await import(pdfModuleUrl);
+  pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+  pdfDoc = await pdfjsLib.getDocument(documentUrl).promise;
+  await renderPage(box.page || 1);
+</script>
+{% endblock %}

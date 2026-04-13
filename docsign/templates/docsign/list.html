@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}인쇄 NONO 온라인 사인{% endblock %}
+
+{% block content %}
+<main class="service-shell min-h-screen bg-slate-50 px-4 py-8">
+  <div class="mx-auto max-w-5xl space-y-6">
+    <section class="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+      <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div class="space-y-3">
+          <p class="text-sm font-semibold text-blue-600">인쇄 NONO 온라인 사인</p>
+          <h1 class="text-3xl font-black tracking-tight text-slate-900">PDF 올리고, 위치 잡고, 바로 받기</h1>
+          <div class="flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
+            <span class="rounded-full bg-slate-100 px-3 py-1">1 올리기</span>
+            <span class="rounded-full bg-slate-100 px-3 py-1">2 위치</span>
+            <span class="rounded-full bg-slate-100 px-3 py-1">3 사인</span>
+          </div>
+        </div>
+        <a href="{% url 'docsign:create' %}" class="inline-flex min-h-11 items-center justify-center rounded-2xl bg-blue-600 px-5 py-3 text-sm font-bold text-white hover:bg-blue-700">
+          새 문서
+        </a>
+      </div>
+    </section>
+
+    <section class="grid gap-4 md:grid-cols-2">
+      <article class="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+        <p class="text-sm font-semibold text-slate-500">진행 중</p>
+        <p class="mt-2 text-3xl font-black text-slate-900">{{ draft_count }}</p>
+      </article>
+      <article class="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+        <p class="text-sm font-semibold text-slate-500">완료</p>
+        <p class="mt-2 text-3xl font-black text-slate-900">{{ done_count }}</p>
+      </article>
+    </section>
+
+    <section class="space-y-3">
+      {% if jobs %}
+        {% for job in jobs %}
+        <article class="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+          <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div class="min-w-0 space-y-2">
+              <div class="flex flex-wrap items-center gap-2">
+                <h2 class="truncate text-lg font-bold text-slate-900">{{ job.title }}</h2>
+                <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{{ job.stage_label }}</span>
+              </div>
+              <p class="truncate text-sm text-slate-500">{{ job.source_file_name_snapshot }}</p>
+              <p class="text-xs text-slate-400">{{ job.updated_at|date:"Y-m-d H:i" }}</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <a href="{% url 'docsign:detail' job_id=job.id %}" class="inline-flex min-h-11 items-center justify-center rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                열기
+              </a>
+              {% if job.is_signed %}
+              <a href="{% url 'docsign:download' job_id=job.id %}" class="inline-flex min-h-11 items-center justify-center rounded-2xl bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700">
+                다운로드
+              </a>
+              {% elif job.is_position_configured %}
+              <a href="{% url 'docsign:sign' job_id=job.id %}" class="inline-flex min-h-11 items-center justify-center rounded-2xl bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700">
+                {{ job.primary_action_label }}
+              </a>
+              {% else %}
+              <a href="{% url 'docsign:position' job_id=job.id %}" class="inline-flex min-h-11 items-center justify-center rounded-2xl bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700">
+                {{ job.primary_action_label }}
+              </a>
+              {% endif %}
+            </div>
+          </div>
+        </article>
+        {% endfor %}
+      {% else %}
+      <article class="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center">
+        <p class="text-base font-semibold text-slate-900">올릴 문서가 없습니다.</p>
+        <a href="{% url 'docsign:create' %}" class="mt-4 inline-flex min-h-11 items-center justify-center rounded-2xl bg-blue-600 px-5 py-3 text-sm font-bold text-white hover:bg-blue-700">
+          PDF 올리기
+        </a>
+      </article>
+      {% endif %}
+    </section>
+  </div>
+</main>
+{% endblock %}

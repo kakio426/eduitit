@@ -36,6 +36,7 @@ class HomeIconMappingTests(SimpleTestCase):
     def test_fortune_routes_use_supported_star_icon(self):
         self.assertEqual(resolve_home_icon_class(route_name="fortune:saju"), "fa-solid fa-star")
         self.assertEqual(resolve_home_icon_class(route_name="saju:landing"), "fa-solid fa-star")
+        self.assertEqual(resolve_home_icon_class(route_name="docsign:list"), "fa-solid fa-file-signature")
 
     def test_legacy_home_icon_aliases_are_normalized_for_home_surfaces(self):
         self.assertEqual(

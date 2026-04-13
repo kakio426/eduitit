@@ -23,3 +23,14 @@ class HomeSectionRoutingTests(SimpleTestCase):
 
         self.assertEqual(_resolve_home_section_key(textbook_product), "class_ops")
         self.assertEqual(_resolve_home_section_key(material_product), "class_ops")
+
+    def test_docsign_route_maps_to_collect_sign(self):
+        product = Product(
+            title="인쇄 NONO 온라인 사인",
+            description="desc",
+            price=0,
+            service_type="collect_sign",
+            launch_route_name="docsign:list",
+        )
+
+        self.assertEqual(_resolve_home_section_key(product), "collect_sign")

@@ -1,4 +1,3 @@
-import base64
 import hashlib
 import io
 import logging
@@ -7,76 +6,27 @@ from datetime import datetime
 from django.core.files.base import ContentFile
 from django.utils import timezone
 
+from core.document_signing import (
+    PdfRuntimeUnavailable,
+    basename as _basename,
+    ensure_pdf_runtime as _ensure_pdf_runtime,
+    get_file_field_bytes,
+    get_pdf_bytes_from_file_field,
+    guess_file_type,
+    split_data_url as _split_data_url,
+)
+
 from .models import SignatureDocument, SignatureRecipient, SignatureRequest
 
 logger = logging.getLogger(__name__)
 
 
-class PdfRuntimeUnavailable(RuntimeError):
-    """PDF 생성 런타임(reportlab/pypdf) 의존성이 누락된 상태."""
-
-
-def _ensure_pdf_runtime():
-    missing = []
-    try:
-        import reportlab  # noqa: F401
-    except ModuleNotFoundError:
-        missing.append("reportlab")
-    try:
-        import pypdf  # noqa: F401
-    except ModuleNotFoundError:
-        missing.append("pypdf")
-    if missing:
-        joined = ", ".join(missing)
-        raise PdfRuntimeUnavailable(f"PDF 엔진 의존성이 누락되었습니다: {joined}")
-
-
-def _split_data_url(data_url: str):
-    if "," not in data_url:
-        raise ValueError("Invalid data URL")
-    _, payload = data_url.split(",", 1)
-    return base64.b64decode(payload)
-
-
-def _basename(path: str) -> str:
-    return (path or "").replace("\\", "/").split("/")[-1]
-
-
-def _image_to_pdf_bytes(image_bytes: bytes):
-    from reportlab.lib.utils import ImageReader
-    from reportlab.pdfgen import canvas
-
-    image = ImageReader(io.BytesIO(image_bytes))
-    width, height = image.getSize()
-    packet = io.BytesIO()
-    c = canvas.Canvas(packet, pagesize=(width, height))
-    c.drawImage(image, 0, 0, width=width, height=height, preserveAspectRatio=True, mask="auto")
-    c.showPage()
-    c.save()
-    packet.seek(0)
-    return packet.read()
-
-
 def get_document_original_bytes(document: SignatureDocument) -> bytes:
-    file_field = document.original_file
-    if not file_field:
-        raise ValueError("Document file is missing")
-    with file_field.open("rb") as f:
-        return f.read()
+    return get_file_field_bytes(document.original_file)
 
 
 def get_document_pdf_bytes(document: SignatureDocument) -> bytes:
-    original_bytes = get_document_original_bytes(document)
-    if document.file_type == SignatureDocument.FILE_TYPE_PDF:
-        return original_bytes
-    return _image_to_pdf_bytes(original_bytes)
-
-
-def guess_file_type(filename: str):
-    lower = (filename or "").lower()
-    if lower.endswith(".pdf"):
-        return SignatureDocument.FILE_TYPE_PDF
-    return SignatureDocument.FILE_TYPE_IMAGE
+    return get_pdf_bytes_from_file_field(document.original_file, file_type=document.file_type)
 
 
 def hash_document_bytes(document: SignatureDocument) -> str:

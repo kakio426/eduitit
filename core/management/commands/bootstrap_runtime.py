@@ -25,6 +25,7 @@ class Command(BaseCommand):
             ("ensure_qrgen", lambda: call_command("ensure_qrgen")),
             ("ensure_hwpxchat", lambda: call_command("ensure_hwpxchat")),
             ("ensure_consent", lambda: call_command("ensure_consent")),
+            ("ensure_docsign", lambda: call_command("ensure_docsign")),
             ("ensure_reservations", lambda: call_command("ensure_reservations")),
             ("ensure_version_manager", lambda: call_command("ensure_version_manager")),
             ("ensure_janggi", lambda: call_command("ensure_janggi")),

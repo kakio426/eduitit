@@ -88,6 +88,7 @@ INSTALLED_APPS = [
     'ssambti.apps.SsambtiConfig',  # Teachable Zoo MBTI (쌤BTI)
     'signatures.apps.SignaturesConfig',
     'consent.apps.ConsentConfig',
+    'docsign.apps.DocsignConfig',
     'artclass.apps.ArtclassConfig',
     'chess.apps.ChessConfig',
     'janggi.apps.JanggiConfig',
