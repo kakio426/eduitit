@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import io
+import base64
 from unittest.mock import Mock, patch
 
 from django.test import SimpleTestCase, override_settings
 
-from core.document_signing import get_pdf_bytes_from_file_field, normalize_pdf_bytes
+from core.document_signing import (
+    get_pdf_bytes_from_file_field,
+    get_signature_image_bytes,
+    normalize_pdf_bytes,
+)
 
 
 class _CloudinaryPdfFieldStub:
@@ -72,3 +77,22 @@ class DocumentSigningFallbackTests(SimpleTestCase):
         self.assertEqual(int(getattr(normalized_page, "rotation", 0) or 0) % 360, 0)
         self.assertEqual(round(float(normalized_page.mediabox.width)), 200)
         self.assertEqual(round(float(normalized_page.mediabox.height)), 400)
+
+    def test_signature_image_bytes_trim_transparent_margins(self):
+        try:
+            from PIL import Image, ImageDraw
+        except ModuleNotFoundError:
+            self.skipTest("Pillow unavailable")
+
+        image = Image.new("RGBA", (400, 220), (255, 255, 255, 0))
+        draw = ImageDraw.Draw(image)
+        draw.line((18, 160, 40, 120, 62, 150, 86, 98), fill=(15, 23, 42, 255), width=6)
+        original = io.BytesIO()
+        image.save(original, format="PNG")
+        data_url = "data:image/png;base64," + base64.b64encode(original.getvalue()).decode("ascii")
+
+        trimmed = get_signature_image_bytes(data_url)
+
+        with Image.open(io.BytesIO(trimmed)) as trimmed_image:
+            self.assertLess(trimmed_image.width, 160)
+            self.assertLess(trimmed_image.height, 120)

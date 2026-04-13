@@ -254,10 +254,39 @@ def normalize_pdf_bytes(source_pdf_bytes: bytes) -> bytes:
     return output.getvalue()
 
 
+def get_signature_image_bytes(signature_data: str) -> bytes:
+    image_bytes = split_data_url(signature_data)
+    try:
+        from PIL import Image
+    except ModuleNotFoundError:
+        return image_bytes
+
+    try:
+        with Image.open(io.BytesIO(image_bytes)) as image:
+            rgba = image.convert("RGBA")
+            alpha = rgba.getchannel("A")
+            bbox = alpha.getbbox()
+            if not bbox:
+                return image_bytes
+
+            pad = 8
+            left = max(bbox[0] - pad, 0)
+            top = max(bbox[1] - pad, 0)
+            right = min(bbox[2] + pad, rgba.width)
+            bottom = min(bbox[3] + pad, rgba.height)
+            cropped = rgba.crop((left, top, right, bottom))
+
+            output = io.BytesIO()
+            cropped.save(output, format="PNG")
+            return output.getvalue()
+    except Exception:
+        return image_bytes
+
+
 def draw_signature_image(pdf_canvas, signature_data: str, *, x: float, y: float, width: float, height: float):
     from reportlab.lib.utils import ImageReader
 
-    image = ImageReader(io.BytesIO(split_data_url(signature_data)))
+    image = ImageReader(io.BytesIO(get_signature_image_bytes(signature_data)))
     src_width, src_height = image.getSize()
     padding = 4.0
     available_width = max(width - (padding * 2), 1.0)
