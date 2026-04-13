@@ -329,6 +329,16 @@ def _set_reservation_followup_context(request, school, reservation, *, edit_code
     request.session.modified = True
 
 
+def _stale_reservation_response(request, school):
+    messages.warning(request, "이미 삭제되었거나 찾을 수 없는 예약입니다.")
+    redirect_url = reverse('reservations:reservation_index', args=[school.slug])
+    if request.htmx:
+        response = HttpResponse()
+        response['HX-Redirect'] = redirect_url
+        return _apply_workspace_cache_headers(response)
+    return redirect(redirect_url)
+
+
 def _pop_reservation_followup_context(request, school_slug):
     context = request.session.get(RESERVATION_FOLLOWUP_SESSION_KEY)
     if not isinstance(context, dict):
@@ -1038,7 +1048,9 @@ def start_notice_followup(request, school_slug, reservation_id):
     school, access, access_response = _get_school_or_share_required(request, school_slug)
     if access_response is not None:
         return access_response
-    reservation = get_object_or_404(Reservation.objects.select_related('room'), id=reservation_id, room__school=school)
+    reservation = Reservation.objects.select_related('room').filter(id=reservation_id, room__school=school).first()
+    if reservation is None:
+        return _stale_reservation_response(request, school)
     if not access["can_edit"] or not _can_edit_reservation(request, reservation):
         return HttpResponseForbidden('후속 작업을 열 권한이 없습니다.')
     seed_token = _store_action_seed(
@@ -1055,7 +1067,9 @@ def start_parentcomm_followup(request, school_slug, reservation_id):
     school, access, access_response = _get_school_or_share_required(request, school_slug)
     if access_response is not None:
         return access_response
-    reservation = get_object_or_404(Reservation.objects.select_related('room'), id=reservation_id, room__school=school)
+    reservation = Reservation.objects.select_related('room').filter(id=reservation_id, room__school=school).first()
+    if reservation is None:
+        return _stale_reservation_response(request, school)
     if not access["can_edit"] or not _can_edit_reservation(request, reservation):
         return HttpResponseForbidden('후속 작업을 열 권한이 없습니다.')
     seed_token = _store_action_seed(
@@ -1174,7 +1188,9 @@ def update_reservation(request, school_slug, reservation_id):
     school, access, access_response = _get_school_or_share_required(request, school_slug)
     if access_response is not None:
         return access_response
-    reservation = get_object_or_404(Reservation, id=reservation_id, room__school=school)
+    reservation = Reservation.objects.filter(id=reservation_id, room__school=school).first()
+    if reservation is None:
+        return _stale_reservation_response(request, school)
 
     if not access["can_edit"] or not _can_edit_reservation(request, reservation):
         logger.warning(
@@ -1279,7 +1295,9 @@ def claim_reservation_access(request, school_slug, reservation_id):
     if not access["can_edit"]:
         return HttpResponseForbidden("이 예약판은 읽기 전용입니다.")
 
-    reservation = get_object_or_404(Reservation, id=reservation_id, room__school=school)
+    reservation = Reservation.objects.filter(id=reservation_id, room__school=school).first()
+    if reservation is None:
+        return _stale_reservation_response(request, school)
 
     if _can_edit_reservation(request, reservation):
         redirect_url = (
@@ -1342,13 +1360,7 @@ def delete_reservation(request, school_slug, reservation_id):
         return access_response
     reservation = Reservation.objects.filter(id=reservation_id, room__school=school).first()
     if reservation is None:
-        messages.warning(request, "이미 삭제되었거나 찾을 수 없는 예약입니다.")
-        redirect_url = reverse('reservations:reservation_index', args=[school.slug])
-        if request.htmx:
-            response = HttpResponse()
-            response['HX-Redirect'] = redirect_url
-            return _apply_workspace_cache_headers(response)
-        return redirect(redirect_url)
+        return _stale_reservation_response(request, school)
 
     owned_ids = request.session.get(OWNED_RESERVATIONS_SESSION_KEY, [])
     if not access["can_edit"] or not _can_edit_reservation(request, reservation):

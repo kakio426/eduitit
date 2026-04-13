@@ -584,6 +584,32 @@ class ReservationsViewTest(TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(second_client.session.get('owned_reservation_ids', []), [])
 
+    def test_claim_reservation_access_redirects_when_reservation_missing(self):
+        reservation = Reservation.objects.create(
+            room=self.room,
+            edit_code_hash=hash_reservation_edit_code('1357'),
+            date=self.target_date,
+            period=5,
+            grade=2,
+            class_no=3,
+            name='이병주',
+        )
+        reservation_id = reservation.id
+        reservation.delete()
+
+        second_client = Client()
+        response = second_client.post(
+            reverse('reservations:claim_reservation_access', args=[self.school.slug, reservation_id]),
+            {'edit_code': '1357'},
+            HTTP_HX_REQUEST='true',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.headers.get('HX-Redirect'),
+            reverse('reservations:reservation_index', args=[self.school.slug]),
+        )
+
     def test_delete_reservation_forbidden_with_non_matching_owner_profile_cookie(self):
         reservation = Reservation.objects.create(
             room=self.room,
@@ -706,6 +732,37 @@ class ReservationsViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
         reservation.refresh_from_db()
         self.assertTrue(reservation.check_edit_code('1357'))
+
+    def test_update_reservation_redirects_when_reservation_missing(self):
+        reservation = Reservation.objects.create(
+            room=self.room,
+            created_by=self.user,
+            edit_code_hash=hash_reservation_edit_code(self.default_edit_code),
+            date=self.target_date,
+            period=6,
+            grade=2,
+            class_no=1,
+            name='Legacy',
+        )
+        reservation_id = reservation.id
+        reservation.delete()
+
+        url = reverse('reservations:update_reservation', args=[self.school.slug, reservation_id])
+        response = self.client.post(url, {
+            'room_id': self.room.id,
+            'date': self.target_date.strftime('%Y-%m-%d'),
+            'period': 6,
+            'grade': 2,
+            'class_no': 1,
+            'name': 'Legacy',
+            'edit_code': self.default_edit_code,
+        }, HTTP_HX_REQUEST='true')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.headers.get('HX-Redirect'),
+            reverse('reservations:reservation_index', args=[self.school.slug]),
+        )
 
     def test_update_reservation_forbidden_without_ownership(self):
         other_user = User.objects.create_user(username='other', password='password2', email='other@example.com')
