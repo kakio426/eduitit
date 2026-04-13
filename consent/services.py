@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_document_original_bytes(document: SignatureDocument) -> bytes:
-    return get_file_field_bytes(document.original_file)
+    return get_file_field_bytes(document.original_file, file_type=document.file_type)
 
 
 def get_document_pdf_bytes(document: SignatureDocument) -> bytes:

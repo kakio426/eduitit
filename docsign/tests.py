@@ -216,3 +216,28 @@ class DocumentSignFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 503)
         self.assertContains(response, "잠시만요", status_code=503)
+
+    @patch("docsign.views.get_pdf_bytes_from_file_field", return_value=b"%PDF-1.4 from-helper")
+    def test_source_document_uses_pdf_helper_for_response(self, pdf_bytes_mock):
+        self.client.force_login(self.teacher)
+        job = DocumentSignJob.objects.create(
+            owner=self.teacher,
+            title="기존 문서",
+            source_file="docsign/source/missing-cloudinary-id",
+            source_file_name_snapshot="기존문서.pdf",
+            source_file_size_snapshot=0,
+            source_file_sha256_snapshot="abc",
+            file_type="pdf",
+        )
+
+        response = self.client.get(reverse("docsign:source_document", kwargs={"job_id": job.id}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertIn("inline;", response["Content-Disposition"])
+        self.assertEqual(response.content, b"%PDF-1.4 from-helper")
+        pdf_bytes_mock.assert_called_once_with(
+            job.source_file,
+            file_type="pdf",
+            filename_hint="기존문서.pdf",
+        )

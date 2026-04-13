@@ -3,11 +3,12 @@ from __future__ import annotations
 import json
 import os
 from functools import wraps
+from urllib.parse import quote
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import OperationalError, ProgrammingError
-from django.http import FileResponse, Http404
+from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
@@ -71,7 +72,11 @@ def _build_stage_meta(job: DocumentSignJob) -> tuple[str, str]:
 
 
 def _page_sizes(job: DocumentSignJob):
-    source_pdf_bytes = get_pdf_bytes_from_file_field(job.source_file, file_type=job.file_type)
+    source_pdf_bytes = get_pdf_bytes_from_file_field(
+        job.source_file,
+        file_type=job.file_type,
+        filename_hint=job.source_file_name_snapshot,
+    )
     return get_pdf_page_sizes(source_pdf_bytes)
 
 
@@ -145,12 +150,16 @@ def job_source_document(request, job_id: int):
     if not job.source_file:
         raise Http404("문서를 찾지 못했습니다.")
 
-    response = FileResponse(
-        job.source_file.open("rb"),
+    filename = basename(job.source_file_name_snapshot or job.source_file.name)
+    response = HttpResponse(
+        get_pdf_bytes_from_file_field(
+            job.source_file,
+            file_type=job.file_type,
+            filename_hint=job.source_file_name_snapshot,
+        ),
         content_type="application/pdf",
-        as_attachment=False,
-        filename=basename(job.source_file_name_snapshot or job.source_file.name),
     )
+    response["Content-Disposition"] = f"inline; filename*=UTF-8''{quote(filename)}"
     return _apply_sensitive_cache_headers(response)
 
 

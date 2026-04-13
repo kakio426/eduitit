@@ -5,6 +5,7 @@ import hashlib
 import io
 import os
 
+import requests
 from django.conf import settings
 from django.core.files.storage import default_storage
 
@@ -102,11 +103,84 @@ def snapshot_file_metadata(file_obj):
     return name, size, digest.hexdigest()
 
 
-def get_file_field_bytes(file_field) -> bytes:
+def _resolve_file_type(file_field, *, file_type: str = "", filename_hint: str = "") -> str:
+    return (file_type or guess_file_type(filename_hint or getattr(file_field, "name", ""))).lower()
+
+
+def _is_cloudinary_file_field(file_field) -> bool:
+    storage_module = getattr(getattr(file_field, "storage", None), "__class__", type("X", (), {})).__module__
+    if "cloudinary" in (storage_module or "").lower():
+        return True
+    try:
+        return "res.cloudinary.com" in (file_field.url or "")
+    except Exception:
+        return False
+
+
+def _cloudinary_private_download_urls(file_field, *, file_type: str = "", filename_hint: str = "") -> list[str]:
+    if not getattr(settings, "USE_CLOUDINARY", False):
+        return []
+
+    public_id = (getattr(file_field, "name", "") or "").lstrip("/")
+    if not public_id:
+        return []
+
+    try:
+        from cloudinary.utils import private_download_url
+    except Exception:
+        return []
+
+    normalized_type = _resolve_file_type(file_field, file_type=file_type, filename_hint=filename_hint)
+    requested_format = "pdf" if normalized_type == PDF_FILE_TYPE else ""
+    urls = []
+    seen = set()
+    for resource_type in ("image", "raw"):
+        try:
+            url = private_download_url(
+                public_id,
+                requested_format,
+                resource_type=resource_type,
+                type="upload",
+            )
+        except Exception:
+            continue
+        if not url or url in seen:
+            continue
+        seen.add(url)
+        urls.append(url)
+    return urls
+
+
+def get_file_field_bytes(file_field, *, file_type: str = "", filename_hint: str = "") -> bytes:
     if not file_field:
         raise ValueError("File is missing")
-    with file_field.open("rb") as handle:
-        return handle.read()
+    try:
+        with file_field.open("rb") as handle:
+            return handle.read()
+    except Exception as open_exc:
+        if not _is_cloudinary_file_field(file_field):
+            raise
+
+        last_download_exc = None
+        for url in _cloudinary_private_download_urls(
+            file_field,
+            file_type=file_type,
+            filename_hint=filename_hint,
+        ):
+            response = None
+            try:
+                response = requests.get(url, timeout=(5, 30))
+                response.raise_for_status()
+                return response.content
+            except requests.RequestException as download_exc:
+                last_download_exc = download_exc
+            finally:
+                if response is not None:
+                    response.close()
+
+        if last_download_exc is not None:
+            raise last_download_exc from open_exc
+        raise
 
 
 def _image_to_pdf_bytes(image_bytes: bytes) -> bytes:
@@ -124,9 +198,13 @@ def _image_to_pdf_bytes(image_bytes: bytes) -> bytes:
     return packet.read()
 
 
-def get_pdf_bytes_from_file_field(file_field, *, file_type: str = "") -> bytes:
-    original_bytes = get_file_field_bytes(file_field)
-    normalized_type = (file_type or guess_file_type(getattr(file_field, "name", ""))).lower()
+def get_pdf_bytes_from_file_field(file_field, *, file_type: str = "", filename_hint: str = "") -> bytes:
+    normalized_type = _resolve_file_type(file_field, file_type=file_type, filename_hint=filename_hint)
+    original_bytes = get_file_field_bytes(
+        file_field,
+        file_type=normalized_type,
+        filename_hint=filename_hint,
+    )
     if normalized_type == PDF_FILE_TYPE:
         return original_bytes
     ensure_pdf_runtime()

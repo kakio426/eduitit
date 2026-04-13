@@ -22,7 +22,11 @@ def generate_signed_pdf(job, signature_data: str):
     if not job.is_position_configured:
         raise ValueError("서명 위치가 아직 없습니다.")
 
-    source_pdf_bytes = get_pdf_bytes_from_file_field(job.source_file, file_type=job.file_type)
+    source_pdf_bytes = get_pdf_bytes_from_file_field(
+        job.source_file,
+        file_type=job.file_type,
+        filename_hint=job.source_file_name_snapshot,
+    )
     signed_pdf_bytes = build_signed_pdf_bytes(
         source_pdf_bytes,
         page_number=job.signature_page,

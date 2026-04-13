@@ -1,0 +1,43 @@
+from __future__ import annotations
+
+from unittest.mock import Mock, patch
+
+from django.test import SimpleTestCase, override_settings
+
+from core.document_signing import get_pdf_bytes_from_file_field
+
+
+class _CloudinaryPdfFieldStub:
+    name = "media/docsign/source/2026/04/13/sample_pdf_asset"
+    url = "https://res.cloudinary.com/demo/image/upload/v1/media/docsign/source/2026/04/13/sample_pdf_asset"
+    storage = type("CloudinaryStorageStub", (), {"__module__": "cloudinary_storage.storage"})()
+
+    def open(self, mode="rb"):
+        raise RuntimeError("401 Client Error: Unauthorized for url")
+
+
+@override_settings(USE_CLOUDINARY=True)
+class DocumentSigningFallbackTests(SimpleTestCase):
+    @patch("core.document_signing.requests.get")
+    @patch("cloudinary.utils.private_download_url")
+    def test_pdf_bytes_fall_back_to_private_download_url_when_storage_open_fails(self, private_download_url_mock, requests_get_mock):
+        private_download_url_mock.side_effect = [
+            "https://signed.example.com/image-upload.pdf",
+            "https://signed.example.com/raw-upload.pdf",
+        ]
+        response = Mock()
+        response.content = b"%PDF-1.4 fallback"
+        response.raise_for_status.return_value = None
+        response.close.return_value = None
+        requests_get_mock.return_value = response
+
+        payload = get_pdf_bytes_from_file_field(_CloudinaryPdfFieldStub(), file_type="pdf")
+
+        self.assertEqual(payload, b"%PDF-1.4 fallback")
+        private_download_url_mock.assert_any_call(
+            "media/docsign/source/2026/04/13/sample_pdf_asset",
+            "pdf",
+            resource_type="image",
+            type="upload",
+        )
+        requests_get_mock.assert_called_once_with("https://signed.example.com/image-upload.pdf", timeout=(5, 30))
